@@ -48,6 +48,7 @@ export type {
   WorkspaceCompletedHubHandoffInteraction,
   WorkspaceCommandIntent,
   WorkspaceEncounterInteraction,
+  WorkspaceEncounterCustomizationInteraction,
   WorkspaceNemesisEventInteraction,
   WorkspaceNemesisEventDomain,
   WorkspaceNemesisFeatureInteraction,

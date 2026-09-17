@@ -11,11 +11,132 @@ import {
   encounterPhaseCandidateSupportForProjectEvaluationAssembly,
   simulateProjectAssembly,
 } from '../../src/simulation';
-import { assembleExecutionProduct, compileExecutionPlan } from '../../src/execution-plan';
+import {
+  assembleExecutionProduct,
+  compileExecutionPlan,
+  decodeExecutionPlan,
+} from '../../src/execution-plan';
+import { overview as decodeExecutionOverview } from '../../src/execution-plan/codec/overview';
 import { createGoldenFGHIProject } from '@run-planner/test-fixtures/underworld';
+import { loadSurfaceNOPQProject } from '@run-planner/test-fixtures/surface';
 import { authorLegalTraitOffers } from '@run-planner/test-fixtures/shared';
 
 describe('resolved execution encounters', () => {
+  it('strictly decodes closed bounded execution customization values', () => {
+    expect(() =>
+      decodeExecutionOverview(
+        {
+          encounterPhases: [
+            {
+              slotKey: 'Encounter',
+              encounterKey: 'BossEris02',
+              kind: 'boss',
+              customization: [
+                {
+                  decisionKey: 'earlySummons',
+                  kind: 'orderedPrefix',
+                  choices: [
+                    { choiceKey: 'harpy', nativeId: 'ErisEMSummonHarpy' },
+                    { choiceKey: 'harpy', nativeId: 'ErisEMSummonHarpy' },
+                  ],
+                },
+              ],
+            },
+          ],
+          requiredObjects: [],
+        },
+        'overview',
+      ),
+    ).toThrow(/distinct/);
+    expect(() =>
+      decodeExecutionOverview(
+        { encounterPhases: [], requiredObjects: [], customization: [] },
+        'overview',
+      ),
+    ).toThrow(/unknown field customization/);
+  });
+
+  it('publishes Underworld Scylla native choice operands from the resolved fixed phase', () => {
+    let project = applyProjectCommand(createGoldenFGHIProject(), catalog, {
+      kind: 'ReplaceFearVowRank',
+      route: { kind: 'route', routeKey: 'Underworld' },
+      vowKey: 'BossDifficultyShrineUpgrade',
+      rank: 2,
+    });
+    const boss = project.route.biomes
+      .find((biome) => biome.biomeKey === 'G')
+      ?.topology?.occurrences.find((occurrence) => occurrence.gameName === 'G_Boss02');
+    if (boss === undefined) throw new Error('Rival Scylla is missing');
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceEncounterCustomization',
+      phase: createEncounterPhaseAddress(
+        createBiomeAddress('Underworld', 'G'),
+        { kind: 'occurrence', occurrenceId: boss.occurrenceId },
+        'Encounter',
+      ),
+      decisionKey: 'featuredPerformer',
+      value: { kind: 'single', choiceKey: 'charybdis' },
+    });
+    const plan = compileExecutionPlan({
+      product: assembleExecutionProduct({ assembly: simulateProjectAssembly(catalog, project) }),
+    });
+    const phase = plan.occurrences
+      .find((occurrence) => occurrence.id === boss.occurrenceId)
+      ?.overview.encounterPhases.find((candidate) => candidate.slotKey === 'Encounter');
+    expect(phase).toMatchObject({
+      encounterKey: 'BossScylla02',
+      customization: [
+        {
+          decisionKey: 'featuredPerformer',
+          kind: 'single',
+          choiceKey: 'charybdis',
+          nativeId: 'Charybdis',
+        },
+      ],
+    });
+    expect(decodeExecutionPlan(JSON.parse(JSON.stringify(plan)))).toEqual(plan);
+  });
+
+  it('publishes Surface Eris ordered prefixes with bounded native operands', () => {
+    let project = applyProjectCommand(loadSurfaceNOPQProject(), catalog, {
+      kind: 'ReplaceFearVowRank',
+      route: { kind: 'route', routeKey: 'Surface' },
+      vowKey: 'BossDifficultyShrineUpgrade',
+      rank: 2,
+    });
+    const boss = project.route.biomes
+      .find((biome) => biome.biomeKey === 'O')
+      ?.topology?.occurrences.find((occurrence) => occurrence.gameName === 'O_Boss02');
+    if (boss === undefined) throw new Error('Rival Eris is missing');
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceEncounterCustomization',
+      phase: createEncounterPhaseAddress(
+        createBiomeAddress('Surface', 'O'),
+        { kind: 'occurrence', occurrenceId: boss.occurrenceId },
+        'Encounter',
+      ),
+      decisionKey: 'earlySummons',
+      value: { kind: 'orderedPrefix', choiceKeys: ['harpy', 'swab'] },
+    });
+    const plan = compileExecutionPlan({
+      product: assembleExecutionProduct({ assembly: simulateProjectAssembly(catalog, project) }),
+    });
+    const phase = plan.occurrences
+      .find((occurrence) => occurrence.id === boss.occurrenceId)
+      ?.overview.encounterPhases.find((candidate) => candidate.slotKey === 'Encounter');
+    expect(phase?.customization).toEqual([
+      {
+        decisionKey: 'earlySummons',
+        kind: 'orderedPrefix',
+        choices: [
+          { choiceKey: 'harpy', nativeId: 'ErisEMSummonHarpy' },
+          { choiceKey: 'swab', nativeId: 'ErisEMSummonSwab' },
+        ],
+      },
+    ]);
+    expect(decodeExecutionPlan(JSON.parse(JSON.stringify(plan)))).toEqual(plan);
+  });
+
   it.each([
     ['F', 'golden-f-b8-e1', 'F_Combat12', 'GeneratedF'],
     ['G', 'golden-g-b7-e1', 'G_Combat12', 'GeneratedG'],

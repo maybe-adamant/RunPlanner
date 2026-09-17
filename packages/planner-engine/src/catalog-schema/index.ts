@@ -419,7 +419,34 @@ export interface EncounterDefinition {
     };
     readonly hOptionalCapacityReservation: 1;
   };
+  /** Closed native encounter-customization domain for this concrete encounter. */
+  readonly customization?: readonly EncounterCustomizationDecision[];
 }
+
+export interface EncounterCustomizationChoice {
+  readonly key: string;
+  readonly label: string;
+  readonly nativeId: string;
+}
+
+export type EncounterCustomizationDecision =
+  | {
+      readonly key: string;
+      readonly label: string;
+      readonly selection: {
+        readonly kind: 'single';
+        readonly choices: readonly EncounterCustomizationChoice[];
+      };
+    }
+  | {
+      readonly key: string;
+      readonly label: string;
+      readonly selection: {
+        readonly kind: 'orderedPrefix';
+        readonly choices: readonly EncounterCustomizationChoice[];
+        readonly maximumLength: 2;
+      };
+    };
 
 /** Closed concrete identity mapping for one persisted authored encounter choice. */
 export type EncounterChoiceResolution =

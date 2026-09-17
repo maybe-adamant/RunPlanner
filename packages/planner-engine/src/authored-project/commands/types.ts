@@ -527,6 +527,13 @@ export type EncounterOccurrenceCommand =
       readonly value: boolean;
     }
   | {
+      /** Null restores the native Default by removing this sparse decision. */
+      readonly kind: 'ReplaceEncounterCustomization';
+      readonly phase: EncounterPhaseAddress;
+      readonly decisionKey: string;
+      readonly value: import('../model').AuthoredEncounterCustomization | null;
+    }
+  | {
       readonly kind: 'ReplaceGorgonDeathDefianceCondition';
       readonly phase: EncounterPhaseAddress;
       readonly value: boolean;

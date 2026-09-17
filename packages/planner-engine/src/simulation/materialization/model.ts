@@ -24,11 +24,13 @@ import type {
   TargetAddress,
 } from '../../authored-project/addresses';
 import type {
+  AuthoredEncounterCustomization,
   OccurrenceId,
   RoomActionState,
   RoomEncounterState,
   FieldsSpatialState,
 } from '../../authored-project/model';
+import type { EncounterCustomizationDecision } from '../../catalog-schema';
 import type {
   AuthoredLevelResolution,
   AuthoredTraitOffer,
@@ -178,6 +180,11 @@ export interface CanonicalAuthoredRoom {
     readonly slotKey: string;
     readonly encounterKey: string;
     readonly kind: import('../../catalog-schema').EncounterPhaseKind;
+    /** Resolved concrete customization product for execution publication. */
+    readonly customization?: readonly (EncounterCustomizationDecision & {
+      readonly value?: AuthoredEncounterCustomization;
+      readonly valueSupported: boolean;
+    })[];
   }[];
   /** Native Encounter carriers intentionally omitted from simulated phases. */
   readonly unmodeledEncounterKeys?: readonly string[];

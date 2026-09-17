@@ -47,6 +47,7 @@ export function structurallyActiveEncounterRooms(
   if (snapshot.kind === 'biomePrefix' && snapshot.frontier?.kind === 'exitDecision') {
     rooms.push(...snapshot.frontier.additional.map((continuation) => continuation.room));
   }
+  rooms.push(...(snapshot.fixedRoomLinks ?? []).map((link) => link.target));
   const seen = new Set<string>();
   return Object.freeze(
     rooms.filter((room) => {

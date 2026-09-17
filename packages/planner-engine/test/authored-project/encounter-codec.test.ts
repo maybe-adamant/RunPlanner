@@ -168,6 +168,16 @@ describe('schema-54 occurrence-owned encounter persistence', () => {
     expect(decoded.schemaVersion).toBe(PROJECT_DOCUMENT_SCHEMA_VERSION);
   });
 
+  it('keeps schema 84 encounter customization absent when every decision uses Default', () => {
+    const project = loadSurfaceNOPProject();
+    const document = encoded(project);
+    const encounters = occurrence(document, 'N', nOccurrenceIds.preHub).encounters as JsonRecord;
+
+    expect(PROJECT_DOCUMENT_SCHEMA_VERSION).toBe(84);
+    expect(encounters.customizationByPhase).toBeUndefined();
+    expect(decodeProjectDocument(document, catalog)).toEqual(project);
+  });
+
   it('rejects schema-57 Purging Pool documents at the strict Stygian Well boundary', () => {
     const document = encoded(loadSurfaceNOPProject());
     document.schemaVersion = 57;

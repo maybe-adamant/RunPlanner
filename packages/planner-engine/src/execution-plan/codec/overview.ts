@@ -13,6 +13,50 @@ import { reward } from './rewards';
 import { roomReference } from './room';
 import type { ExecutionFieldsLayout } from '../model';
 
+function encounterCustomization(value: unknown, label: string) {
+  const decisions = array(value, label, 16).map((entry, index) => {
+    const row = object(entry, `${label}[${index}]`);
+    const decisionLabel = `${label}[${index}]`;
+    const kind = stringValue(row.kind, `${decisionLabel}.kind`);
+    if (kind === 'single') {
+      exact(row, ['decisionKey', 'kind', 'choiceKey', 'nativeId'], [], decisionLabel);
+      return Object.freeze({
+        decisionKey: stringValue(row.decisionKey, `${decisionLabel}.decisionKey`),
+        kind: 'single' as const,
+        choiceKey: stringValue(row.choiceKey, `${decisionLabel}.choiceKey`),
+        nativeId: stringValue(row.nativeId, `${decisionLabel}.nativeId`),
+      });
+    }
+    if (kind === 'orderedPrefix') {
+      exact(row, ['decisionKey', 'kind', 'choices'], [], decisionLabel);
+      const choices = array(row.choices, `${decisionLabel}.choices`, 2).map(
+        (choice, choiceIndex) => {
+          const choiceLabel = `${decisionLabel}.choices[${choiceIndex}]`;
+          const choiceRecord = object(choice, choiceLabel);
+          exact(choiceRecord, ['choiceKey', 'nativeId'], [], choiceLabel);
+          return Object.freeze({
+            choiceKey: stringValue(choiceRecord.choiceKey, `${choiceLabel}.choiceKey`),
+            nativeId: stringValue(choiceRecord.nativeId, `${choiceLabel}.nativeId`),
+          });
+        },
+      );
+      if (choices.length === 0) fail(`${decisionLabel}.choices must be a non-empty prefix`);
+      if (new Set(choices.map((choice) => choice.choiceKey)).size !== choices.length)
+        fail(`${decisionLabel}.choices must be distinct`);
+      return Object.freeze({
+        decisionKey: stringValue(row.decisionKey, `${decisionLabel}.decisionKey`),
+        kind: 'orderedPrefix' as const,
+        choices: Object.freeze(choices),
+      });
+    }
+    fail(`${decisionLabel}.kind is unsupported`);
+  });
+  if (decisions.length === 0) fail(`${label} must be non-empty when present`);
+  if (new Set(decisions.map((decision) => decision.decisionKey)).size !== decisions.length)
+    fail(`${label} has duplicate decision keys`);
+  return Object.freeze(decisions);
+}
+
 function fields(value: unknown, label: string): ExecutionFieldsLayout {
   const record = object(value, label);
   exact(record, ['entryPair', 'cagePoints', 'optionalRewards'], ['nemesisPointId'], label);
@@ -102,7 +146,7 @@ export function overview(value: unknown, label: string) {
       exact(
         row,
         ['slotKey', 'encounterKey', 'kind'],
-        ['figLeafSkip'],
+        ['figLeafSkip', 'customization'],
         `${label}.encounterPhases[${index}]`,
       );
       return Object.freeze({
@@ -118,6 +162,14 @@ export function overview(value: unknown, label: string) {
               figLeafSkip: booleanValue(
                 row.figLeafSkip,
                 `${label}.encounterPhases[${index}].figLeafSkip`,
+              ),
+            }),
+        ...(row.customization === undefined
+          ? {}
+          : {
+              customization: encounterCustomization(
+                row.customization,
+                `${label}.encounterPhases[${index}].customization`,
               ),
             }),
       });

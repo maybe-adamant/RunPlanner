@@ -1,5 +1,9 @@
 import type { Catalog, EncounterSlotBinding, RoomDeclaration } from '../../../catalog-schema';
-import type { AuthoredNemesisRandomEventOutcome, RoomEncounterState } from '../../model';
+import type {
+  AuthoredEncounterCustomization,
+  AuthoredNemesisRandomEventOutcome,
+  RoomEncounterState,
+} from '../../model';
 import {
   normalizeAuthoredTranscendentEmbryoOutcome,
   type AuthoredTraitOffer,
@@ -20,6 +24,11 @@ import {
   directEncounterDefinitionKeyForSlot,
   encounterSetForBinding,
 } from '../encounter-envelope';
+import {
+  customizationDecisionOwned,
+  customizationValueKnown,
+  encounterCustomizationDeclarations,
+} from '../encounter-customization';
 import {
   decodeEncounterTraitOffer,
   legalTraitOfferEncounterKeys,
@@ -42,6 +51,7 @@ export function decodeRoomEncounterState(
       'gorgonResultByPhase',
       ...(state.traitOffersByPhase === undefined ? [] : ['traitOffersByPhase']),
       ...(state.nemesisRandomEventByPhase === undefined ? [] : ['nemesisRandomEventByPhase']),
+      ...(state.customizationByPhase === undefined ? [] : ['customizationByPhase']),
       ...(state.steadyGrowthTargetByPhase === undefined ? [] : ['steadyGrowthTargetByPhase']),
       ...(state.judgmentArcanaKeysByPhase === undefined ? [] : ['judgmentArcanaKeysByPhase']),
       ...(state.figurineArcanaKeysByPhase === undefined ? [] : ['figurineArcanaKeysByPhase']),
@@ -342,6 +352,88 @@ export function decodeRoomEncounterState(
         'is required for the selected Nemesis random event',
       );
   }
+  const customizationByPhase: Record<string, Record<string, AuthoredEncounterCustomization>> = {};
+  if (state.customizationByPhase !== undefined) {
+    const rawByPhase = expectRecord(state.customizationByPhase, `${path}.customizationByPhase`);
+    for (const [phaseKey, rawDecisions] of Object.entries(rawByPhase)) {
+      const binding = bindings.get(phaseKey);
+      if (binding === undefined)
+        failProjectDocument(`${path}.customizationByPhase.${phaseKey}`, 'unknown encounter phase');
+      const declarations = encounterCustomizationDeclarations(catalog, room, binding);
+      const decisions: Record<string, AuthoredEncounterCustomization> = {};
+      for (const [decisionKey, rawValue] of Object.entries(
+        expectRecord(rawDecisions, `${path}.customizationByPhase.${phaseKey}`),
+      )) {
+        if (!customizationDecisionOwned(declarations.active, decisionKey))
+          failProjectDocument(
+            `${path}.customizationByPhase.${phaseKey}.${decisionKey}`,
+            'is not declared for this encounter phase',
+          );
+        const value = expectRecord(
+          rawValue,
+          `${path}.customizationByPhase.${phaseKey}.${decisionKey}`,
+        );
+        const kind = expectString(
+          value.kind,
+          `${path}.customizationByPhase.${phaseKey}.${decisionKey}.kind`,
+        );
+        if (kind === 'single') {
+          expectExactKeys(
+            value,
+            ['kind', 'choiceKey'],
+            `${path}.customizationByPhase.${phaseKey}.${decisionKey}`,
+          );
+          const choiceKey = expectNonBlankString(
+            value.choiceKey,
+            `${path}.customizationByPhase.${phaseKey}.${decisionKey}.choiceKey`,
+          );
+          const parsed = Object.freeze({ kind: 'single' as const, choiceKey });
+          if (!customizationValueKnown(declarations.structural, decisionKey, parsed))
+            failProjectDocument(
+              `${path}.customizationByPhase.${phaseKey}.${decisionKey}.choiceKey`,
+              'is not declaration-known',
+            );
+          decisions[decisionKey] = Object.freeze({ kind: 'single', choiceKey });
+        } else if (kind === 'orderedPrefix') {
+          expectExactKeys(
+            value,
+            ['kind', 'choiceKeys'],
+            `${path}.customizationByPhase.${phaseKey}.${decisionKey}`,
+          );
+          const choiceKeys = expectArray(
+            value.choiceKeys,
+            `${path}.customizationByPhase.${phaseKey}.${decisionKey}.choiceKeys`,
+          ).map((choice, index) =>
+            expectNonBlankString(
+              choice,
+              `${path}.customizationByPhase.${phaseKey}.${decisionKey}.choiceKeys[${index}]`,
+            ),
+          );
+          const parsed = Object.freeze({
+            kind: 'orderedPrefix' as const,
+            choiceKeys: Object.freeze(choiceKeys),
+          });
+          if (!customizationValueKnown(declarations.structural, decisionKey, parsed))
+            failProjectDocument(
+              `${path}.customizationByPhase.${phaseKey}.${decisionKey}.choiceKeys`,
+              'must be a distinct bounded declaration-known prefix',
+            );
+          decisions[decisionKey] = Object.freeze({
+            kind: 'orderedPrefix',
+            choiceKeys: Object.freeze(choiceKeys),
+          });
+        } else {
+          failProjectDocument(
+            `${path}.customizationByPhase.${phaseKey}.${decisionKey}.kind`,
+            'is unsupported',
+          );
+        }
+      }
+      if (Object.keys(decisions).length === 0)
+        failProjectDocument(`${path}.customizationByPhase.${phaseKey}`, 'must not be empty');
+      customizationByPhase[phaseKey] = decisions;
+    }
+  }
   return Object.freeze({
     encounterKeyByPhase: Object.freeze(encounterKeyByPhase),
     figLeafSkipByPhase: Object.freeze(figLeafSkipByPhase),
@@ -366,5 +458,8 @@ export function decodeRoomEncounterState(
     ...(Object.keys(nemesisRandomEventByPhase).length === 0
       ? {}
       : { nemesisRandomEventByPhase: Object.freeze(nemesisRandomEventByPhase) }),
+    ...(Object.keys(customizationByPhase).length === 0
+      ? {}
+      : { customizationByPhase: Object.freeze(customizationByPhase) }),
   });
 }

@@ -167,6 +167,7 @@ function commandContractAddress(
     case 'SelectEncounter':
     case 'ResetEncounter':
     case 'ReplaceFigLeafSkip':
+    case 'ReplaceEncounterCustomization':
     case 'ReplaceGorgonDeathDefianceCondition':
       return command.phase;
     case 'SelectNemesisRandomEventFamily':

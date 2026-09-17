@@ -22,8 +22,8 @@ function fail(detail: string): never {
 export function resolvedEncounterPhaseForDefinition(
   catalog: Catalog,
   phase: Pick<
-    ResolvedEncounterPhase,
-    'slotKey' | 'envelopeKey' | 'figLeafSkip' | 'rewardAttachment'
+    MaterializedEncounterPhase,
+    'slotKey' | 'envelopeKey' | 'figLeafSkip' | 'rewardAttachment' | 'customizationByDecision'
   >,
   encounterKey: string,
 ): ResolvedEncounterPhase {
@@ -43,6 +43,31 @@ export function resolvedEncounterPhaseForDefinition(
     hostsGorgon: definition.hostsGorgon === true,
     skipEndEncounterEffects: definition.skipEndEncounterEffects === true,
     figLeafSkip: phase.figLeafSkip,
+    ...(definition.customization === undefined
+      ? {}
+      : {
+          customization: Object.freeze(
+            definition.customization.map((decision) => {
+              const value = phase.customizationByDecision?.[decision.key];
+              const valueSupported =
+                value === undefined ||
+                (value.kind === decision.selection.kind &&
+                  (value.kind === 'single'
+                    ? decision.selection.choices.some((choice) => choice.key === value.choiceKey)
+                    : decision.selection.kind === 'orderedPrefix' &&
+                      value.choiceKeys.length <= decision.selection.maximumLength &&
+                      new Set(value.choiceKeys).size === value.choiceKeys.length &&
+                      value.choiceKeys.every((key: string) =>
+                        decision.selection.choices.some((choice) => choice.key === key),
+                      )));
+              return Object.freeze({
+                ...decision,
+                valueSupported,
+                ...(value === undefined ? {} : { value }),
+              });
+            }),
+          ),
+        }),
     ...(phase.rewardAttachment === undefined ? {} : { rewardAttachment: phase.rewardAttachment }),
     ...(definition.sequenceEffect === undefined
       ? {}
@@ -134,6 +159,9 @@ export function materializeEncounterPhases(
         envelopeKey: room.encounterEnvelopeKey,
         authoredChoiceKey: encounterKey,
         figLeafSkip: encounters.figLeafSkipByPhase[slotKey] === true,
+        ...(encounters.customizationByPhase?.[slotKey] === undefined
+          ? {}
+          : { customizationByDecision: encounters.customizationByPhase[slotKey] }),
         ...(slot.rewardAttachment === undefined ? {} : { rewardAttachment: slot.rewardAttachment }),
       });
     }),

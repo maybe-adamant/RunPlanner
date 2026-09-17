@@ -112,7 +112,35 @@ export interface RawEncounterDefinitionDeclaration {
     };
     readonly hOptionalCapacityReservation: 1;
   };
+  /** Closed native encounter-customization domains. Absence means no planner control. */
+  readonly customization?: readonly RawEncounterCustomizationDecisionDeclaration[];
 }
+
+export interface RawEncounterCustomizationChoice {
+  readonly key: string;
+  readonly label: string;
+  /** The native result identity consumed by the downstream Boss adapter. */
+  readonly nativeId: string;
+}
+
+export type RawEncounterCustomizationDecisionDeclaration =
+  | {
+      readonly key: string;
+      readonly label: string;
+      readonly selection: {
+        readonly kind: 'single';
+        readonly choices: readonly RawEncounterCustomizationChoice[];
+      };
+    }
+  | {
+      readonly key: string;
+      readonly label: string;
+      readonly selection: {
+        readonly kind: 'orderedPrefix';
+        readonly choices: readonly RawEncounterCustomizationChoice[];
+        readonly maximumLength: 2;
+      };
+    };
 
 export interface RawEncounterSetDeclaration {
   readonly key: string;

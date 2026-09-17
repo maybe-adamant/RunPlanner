@@ -8,7 +8,7 @@ import type {
 
 /** The single room-session execution artifact supported by the app compiler. */
 export const EXECUTION_PLAN_FORMAT = 'run-planner-execution' as const;
-export const EXECUTION_PROTOCOL_VERSION = 38 as const;
+export const EXECUTION_PROTOCOL_VERSION = 39 as const;
 export const EXECUTION_CATALOG_VERSION = '0.55.0-anvil-of-fates' as const;
 export type ExecutionBiomeKey = 'F' | 'G' | 'H' | 'I' | 'N' | 'O' | 'P' | 'Q';
 
@@ -498,6 +498,20 @@ export interface ExecutionOverview {
     readonly kind: string;
     /** Native Fig Leaf decision for this exact eligible phase, when supported. */
     readonly figLeafSkip?: boolean;
+    /** Sparse resolved encounter settings, using declaration identity and native operands. */
+    readonly customization?: readonly (
+      | {
+          readonly decisionKey: string;
+          readonly kind: 'single';
+          readonly choiceKey: string;
+          readonly nativeId: string;
+        }
+      | {
+          readonly decisionKey: string;
+          readonly kind: 'orderedPrefix';
+          readonly choices: readonly { readonly choiceKey: string; readonly nativeId: string }[];
+        }
+    )[];
   }[];
   /** Exact active ShipCombat wheel materialization for each encounter phase. */
   readonly rewardWheels?: readonly {

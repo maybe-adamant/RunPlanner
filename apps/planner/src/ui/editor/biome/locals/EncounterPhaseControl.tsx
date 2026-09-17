@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { AuthoredNemesisRandomEventKind } from '@run-planner/engine/authored-project';
 import {
   requireWorkspaceInteraction,
@@ -16,6 +16,202 @@ import { NemesisEventSelector } from '../NemesisEventEditor';
 
 const emptyEncounterPicker: import('@planner/projections/contextual/contextualPicker').ContextualPickerModel<string> =
   Object.freeze({ sections: Object.freeze([]) });
+
+function EncounterCustomizationControl({
+  interactions,
+  phase,
+}: {
+  readonly interactions: WorkspaceInteractionCatalog;
+  readonly phase: WorkspaceEncounterPhase;
+}) {
+  const executeIntent = useCommandIntent();
+  const [manualOpen, setManualOpen] = useState(false);
+  const dialogRef = useRef<HTMLDialogElement>(null);
+  const interaction = requireWorkspaceInteraction(
+    interactions.encounterCustomizations,
+    workspaceInteractionKey(phase.address),
+  );
+  const findingTarget = useFindingTarget();
+  const triggerTarget = findingTarget(phase.address);
+  const customizationId = semanticOwnerControlElementId(phase.address);
+  useEffect(() => {
+    const dialog = dialogRef.current;
+    if (dialog === null) return;
+    if (manualOpen && !dialog.open) {
+      if (typeof dialog.showModal === 'function') {
+        try {
+          dialog.showModal();
+        } catch {
+          dialog.setAttribute('open', '');
+        }
+      } else dialog.setAttribute('open', '');
+    }
+    if (!manualOpen && dialog.open) {
+      if (typeof dialog.close === 'function') dialog.close();
+      else dialog.removeAttribute('open');
+    }
+  }, [manualOpen]);
+  const close = (): void => {
+    setManualOpen(false);
+  };
+  const retainedLabel = (decision: NonNullable<typeof phase.customization>[number], key: string) =>
+    decision.retainedChoiceLabels?.find((choice) => choice.key === key)?.label ??
+    'Unavailable choice';
+  return (
+    <>
+      <button
+        {...triggerTarget}
+        className="quiet-action"
+        disabled={triggerTarget['aria-disabled']}
+        onClick={() => setManualOpen(true)}
+        type="button"
+      >
+        Customize encounter
+      </button>
+      {manualOpen ? (
+        <dialog
+          aria-labelledby={`encounter-customization-title-${customizationId}`}
+          aria-modal="true"
+          className="trait-offer-dialog-backdrop"
+          onCancel={(event) => {
+            event.preventDefault();
+            close();
+          }}
+          ref={dialogRef}
+        >
+          <div className="trait-offer-dialog encounter-customization-dialog">
+            <header className="encounter-customization-header">
+              <h2 id={`encounter-customization-title-${customizationId}`}>Customize</h2>
+              <button
+                aria-label="Close encounter customization"
+                className="quiet-action"
+                onClick={close}
+                type="button"
+              >
+                Close
+              </button>
+            </header>
+            <div className="encounter-customization-fields">
+              {phase.customization?.map((decision) => {
+                const value = decision.value;
+                if (decision.selection.kind === 'single') {
+                  const selected = value?.kind === 'single' ? value.choiceKey : '';
+                  return (
+                    <label className="encounter-customization-row" key={decision.key}>
+                      <span>{decision.label}</span>
+                      <select
+                        aria-label={decision.label}
+                        id={`encounter-customization-${customizationId}-${decision.key}`}
+                        onChange={(event) =>
+                          executeIntent(
+                            interaction.intentFor(
+                              decision.key,
+                              event.target.value === ''
+                                ? null
+                                : { kind: 'single', choiceKey: event.target.value },
+                            ),
+                          )
+                        }
+                        value={selected}
+                      >
+                        <option value="">Default</option>
+                        {!decision.valueSupported &&
+                        selected !== '' &&
+                        !decision.selection.choices.some((choice) => choice.key === selected) ? (
+                          <option disabled value={selected}>
+                            {`${retainedLabel(decision, selected)} (unavailable)`}
+                          </option>
+                        ) : null}
+                        {decision.selection.choices.map((choice) => (
+                          <option key={choice.key} value={choice.key}>
+                            {choice.label}
+                          </option>
+                        ))}
+                      </select>
+                      {!decision.valueSupported && value !== undefined ? (
+                        <span className="encounter-customization-repair">Needs repair</span>
+                      ) : null}
+                    </label>
+                  );
+                }
+                const selected = value?.kind === 'orderedPrefix' ? value.choiceKeys : [];
+                const replace = (index: number, choiceKey: string): void => {
+                  const next =
+                    choiceKey === ''
+                      ? selected.slice(0, index)
+                      : (() => {
+                          const preserved = [...selected];
+                          preserved[index] = choiceKey;
+                          return preserved;
+                        })();
+                  executeIntent(
+                    interaction.intentFor(
+                      decision.key,
+                      next.length === 0 ? null : { kind: 'orderedPrefix', choiceKeys: next },
+                    ),
+                  );
+                };
+                return (
+                  <section
+                    aria-labelledby={`encounter-customization-group-${customizationId}-${decision.key}`}
+                    className="encounter-customization-group"
+                    key={decision.key}
+                  >
+                    <h3 id={`encounter-customization-group-${customizationId}-${decision.key}`}>
+                      {decision.label}
+                    </h3>
+                    {Array.from({ length: decision.selection.maximumLength }, (_, index) => (
+                      <label className="encounter-customization-row" key={index}>
+                        <span>Use {index + 1}</span>
+                        <select
+                          aria-label={`${decision.label} use ${index + 1}`}
+                          disabled={index > 0 && selected[0] === undefined}
+                          {...(index === 0
+                            ? {
+                                id: `encounter-customization-${customizationId}-${decision.key}`,
+                              }
+                            : {})}
+                          onChange={(event) => replace(index, event.target.value)}
+                          value={selected[index] ?? ''}
+                        >
+                          <option value="">Default</option>
+                          {!decision.valueSupported &&
+                          selected[index] !== undefined &&
+                          !decision.selection.choices.some(
+                            (choice) => choice.key === selected[index],
+                          ) ? (
+                            <option disabled value={selected[index]}>
+                              {`${retainedLabel(decision, selected[index]!)} (unavailable)`}
+                            </option>
+                          ) : null}
+                          {decision.selection.choices.map((choice) => (
+                            <option
+                              disabled={selected.some(
+                                (selectedKey, selectedIndex) =>
+                                  selectedIndex !== index && selectedKey === choice.key,
+                              )}
+                              key={choice.key}
+                              value={choice.key}
+                            >
+                              {choice.label}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                    ))}
+                    {!decision.valueSupported && value !== undefined ? (
+                      <p className="encounter-customization-repair">Needs repair</p>
+                    ) : null}
+                  </section>
+                );
+              })}
+            </div>
+          </div>
+        </dialog>
+      ) : null}
+    </>
+  );
+}
 
 export function CustomizableEncounterPhaseControl({
   interaction,
@@ -139,40 +335,40 @@ export function EncounterPhaseControl({
             <NemesisEventSelector interaction={interaction} />
           );
         })();
-  if (!phase.customizable) {
-    return (
-      <section
-        {...findingTarget(phase.address)}
-        tabIndex={-1}
-        aria-label={ariaLabel}
-        className="encounter-phase-control"
-        data-read-only="true"
-      >
-        <div className="local-reward-heading">
-          <h4>{phase.label}</h4>
-        </div>
-        <div className="encounter-phase-settings">
-          <p className="fixed-room-state">Encounter: {phase.selectedEncounter.label}</p>
-          {figLeafControl}
-          {gorgonControl}
-          {nemesisEventSelector}
-        </div>
-      </section>
+  const customizationControl =
+    phase.customization === undefined ? null : (
+      <EncounterCustomizationControl interactions={interactions} phase={phase} />
     );
-  }
-  const interaction = requireWorkspaceInteraction(
-    interactions.encounterPhases,
-    workspaceInteractionKey(phase.address),
-  );
   return (
-    <section aria-label={ariaLabel} className="encounter-phase-control">
+    <section
+      {...(!phase.customizable && customizationControl === null
+        ? { ...findingTarget(phase.address), tabIndex: -1 }
+        : {})}
+      aria-label={ariaLabel}
+      className="encounter-phase-control"
+    >
       <div className="local-reward-heading">
         <h4>{phase.label}</h4>
       </div>
       <div className="encounter-phase-settings">
-        <CustomizableEncounterPhaseControl interaction={interaction} phase={phase} />
+        {phase.customizable ? (
+          <CustomizableEncounterPhaseControl
+            interaction={requireWorkspaceInteraction(
+              interactions.encounterPhases,
+              workspaceInteractionKey(phase.address),
+            )}
+            phase={phase}
+          />
+        ) : (
+          <div className="field-control field-control-inline">
+            <span>Encounter</span>
+            <div className="encounter-fixed-value">{phase.selectedEncounter.label}</div>
+          </div>
+        )}
+        {customizationControl}
         {figLeafControl}
         {gorgonControl}
+        {phase.customizable ? null : nemesisEventSelector}
       </div>
     </section>
   );

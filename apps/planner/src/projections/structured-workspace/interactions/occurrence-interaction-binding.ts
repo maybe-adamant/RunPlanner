@@ -33,6 +33,7 @@ import {
 import type { WorkspaceCandidateInteraction } from '../contract';
 import type {
   WorkspaceEncounterInteraction,
+  WorkspaceEncounterCustomizationInteraction,
   WorkspaceNemesisEventDomain,
   WorkspaceNemesisFeatureInteraction,
   WorkspaceFigLeafInteraction,
@@ -69,6 +70,7 @@ import {
 export interface WorkspaceOccurrenceLocalInteractionCatalog {
   readonly fieldsSpatialPoints: ReadonlyMap<string, WorkspaceFieldsSpatialPointInteraction>;
   readonly encounterPhases: ReadonlyMap<string, WorkspaceEncounterInteraction>;
+  readonly encounterCustomizations: ReadonlyMap<string, WorkspaceEncounterCustomizationInteraction>;
   readonly nemesisEvents: ReadonlyMap<
     string,
     import('../contract').WorkspaceNemesisEventInteraction
@@ -214,6 +216,7 @@ export function bindOccurrenceLocalInteractions(
 ): WorkspaceOccurrenceLocalInteractionCatalog {
   const fieldsSpatialPoints = new Map<string, WorkspaceFieldsSpatialPointInteraction>();
   const encounterPhases = new Map<string, WorkspaceEncounterInteraction>();
+  const encounterCustomizations = new Map<string, WorkspaceEncounterCustomizationInteraction>();
   const nemesisEvents = new Map<string, import('../contract').WorkspaceNemesisEventInteraction>();
   const nemesisFeatures = new Map<string, WorkspaceNemesisFeatureInteraction>();
   const figLeafSkips = new Map<string, WorkspaceFigLeafInteraction>();
@@ -439,6 +442,29 @@ export function bindOccurrenceLocalInteractions(
                 owner: phase.owner,
                 ...(nemesisSelection === undefined ? {} : { nemesisEvent: nemesisSelection }),
                 selected: phase.selectedEncounterKey,
+              }),
+            );
+          }
+          if (phase.customization !== undefined) {
+            encounterCustomizations.set(
+              key,
+              Object.freeze({
+                key,
+                owner: phase.owner,
+                intentFor: (
+                  decisionKey: string,
+                  value:
+                    | import('@run-planner/engine/authored-project').AuthoredEncounterCustomization
+                    | null,
+                ) =>
+                  Object.freeze({
+                    command: Object.freeze({
+                      kind: 'ReplaceEncounterCustomization' as const,
+                      phase: phase.owner,
+                      decisionKey,
+                      value,
+                    }),
+                  }),
               }),
             );
           }
@@ -1091,6 +1117,7 @@ export function bindOccurrenceLocalInteractions(
   return Object.freeze({
     fieldsSpatialPoints,
     encounterPhases,
+    encounterCustomizations,
     nemesisEvents,
     nemesisFeatures,
     roomActions,

@@ -294,6 +294,7 @@ export function materializeAuthoredRoom(
             slotKey: phase.slotKey,
             encounterKey: resolved.encounterKey,
             kind: resolved.kind,
+            ...(resolved.customization === undefined ? {} : { customization: resolved.customization }),
           }),
         ];
   });

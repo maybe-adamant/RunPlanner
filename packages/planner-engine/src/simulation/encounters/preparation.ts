@@ -211,6 +211,32 @@ function slotActivationFinding(
   });
 }
 
+function customizationFinding(
+  origin: EncounterPhaseAddress,
+  beforeSequence: number,
+  decisionKey: string,
+): SemanticFinding {
+  return Object.freeze({
+    code: 'encounterCustomizationUnavailable',
+    severity: 'error',
+    phase: 'encounterResolution',
+    origin,
+    evidence: Object.freeze({ beforeSequence, decisionKey }),
+  });
+}
+
+function appendCustomizationFindings(
+  findings: SemanticFinding[],
+  phase: ResolvedEncounterPhase,
+  origin: EncounterPhaseAddress,
+  beforeSequence: number,
+): void {
+  for (const decision of phase.customization ?? []) {
+    if (!decision.valueSupported)
+      findings.push(customizationFinding(origin, beforeSequence, decision.key));
+  }
+}
+
 function slotActivationSatisfied(
   catalog: Catalog,
   room: EncounterAuthoringRoom,
@@ -312,6 +338,7 @@ export function prepareRoomEncounterPhases(
         continue;
       }
       if (prefixValid) {
+        appendCustomizationFindings(findings, resolvedPhase, origin, preparation.sequence);
         validPrefix.push(resolvedPhase);
         preparation = projectEncounterRecordPreparation(
           preparation,
@@ -415,6 +442,7 @@ export function prepareRoomEncounterPhases(
       );
       if (resolvedPhase === undefined)
         throw new Error(`${set.key}.${phase.authoredChoiceKey} lacks resolution`);
+      appendCustomizationFindings(findings, resolvedPhase, origin, preparation.sequence);
       validPrefix.push(resolvedPhase);
       preparation = projectEncounterRecordPreparation(
         preparation,

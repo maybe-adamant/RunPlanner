@@ -1,21 +1,27 @@
 # Encounter-Owned Boss Customization
 
-Status: execution-locked by user approval; Gate A resumes under this contract. Superseded
-Gate A wiring, migrations and protocol/fixture changes have been removed.
-The researched encounter declarations and their compiling catalog support are
-retained for reshaping into the declaration-driven contract below. No runtime
-adapters have been implemented.
+Status: Gate A implemented and independently reviewed; the user accepted its
+functionality and requested the included Timeline/dialog polish. Runtime
+adapters B–D and integrated closure E remain pending. No deployment yet.
 
-Planning bases: planner `0c52ed61` (previous plan commit; retained catalog work
-remains uncommitted), game module `c3e241e`. Unrelated Room Capture edits are preserved.
-No implementation gate has passed acceptance under this revised contract.
+Implementation bases: planner `5ad66aa1`, game module `c3e241e`. Unrelated Room
+Capture edits are preserved.
+
+Gate A verification: catalog 265 tests; focused engine bundles 64 and 87 tests;
+encounter UI/layout 37 tests, with the final dialog changes rechecked by three
+focused workflows; package typechecks and changed-source ESLint passed. The
+game module passed 509 Lua tests and Luacheck. All 13 execution fixture mirrors
+match byte-for-byte with only protocol/fingerprint scalar changes. Independent
+review's misplaced-wire-field and retained-choice-label findings were resolved.
+The complete repository gate remains scheduled for E.
 
 ## Outcome and scope
 
-Add **Customize encounter** beside the existing encounter control on the
-Timeline. The editor configures selected native decisions of that exact
-encounter. It is available for supported fixed Boss encounters even though
-their identity cannot be changed through an encounter picker.
+Show every active encounter row on the Timeline, including fixed ordinary,
+passive and Boss phases. Add **Customize encounter** beside the existing
+encounter control when that exact resolved encounter declares customization.
+The editor configures selected native decisions of that exact encounter; fixed
+identity never hides the row or its supported customization.
 
 Include normal and Rival Hecate, Scylla, Cerberus (both howl and burrow), and
 Eris. Every decision supports **Default**, meaning no intervention. No other
@@ -182,8 +188,9 @@ have different native IDs, but an ordinal such as wave 1 must not silently
 switch to a different enemy family.
 
 A contextual finding belongs to the exact encounter phase with the affected
-decision identified in its evidence. The application uses one repair target
-for navigation and highlighting: that decision inside Customize encounter.
+decision identified in its evidence. The application uses the phase as the
+single repair target: navigation opens its Timeline and focuses/highlights the
+Customize encounter button; the popup remains a deliberate manual action.
 Default always provides a repair path. Missing customization is never an
 incompleteness finding.
 
@@ -252,7 +259,10 @@ Readiness comes from the existing encounter owner's authoring region. Do not
 use selected-room status or successful evaluation as a substitute. Invalid
 settings cannot hide the encounter row/editor; unknown context cannot be
 presented as a validated option domain. Findings must open the correct Timeline
-and customization control from either another room or another tab in this room.
+and focus the Customize encounter control from either another room or another
+tab in this room; they do not open the popup automatically.
+Every active phase remains visible even when it is fixed and has no additional
+control; only semantic dormancy removes a row.
 
 ## Native realization
 
@@ -313,9 +323,11 @@ Primary acceptance:
   encounter/domain, preserves compatible choices and retains an incompatible
   Scylla choice for repair. No customization-local vow calculation.
 - Phase addressing is tested directly; supported fixed encounters remain
-  customizable. Do not fabricate a multi-Boss room to prove isolation.
+  customizable, and ordinary fixed/passive/Boss encounter rows remain visible.
+  Do not fabricate a multi-Boss room to prove isolation.
 - A real editor workflow sets a choice, changes Rival, follows the resulting
-  finding, repairs it, saves/reloads and publishes. Include an Eris prefix
+  finding to its highlighted Customize encounter control, repairs it,
+  saves/reloads and publishes. Include an Eris prefix
   workflow and incomplete-predecessor readiness at the interaction root.
 - Publication and both decoders agree on encounter-local placement, closed
   payloads and Default neutrality. No additional action/clock/ledger effects.
