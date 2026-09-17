@@ -43,6 +43,7 @@ export type {
   WorkspaceBatchRewardStoreInteraction,
   WorkspaceCompletedHubHandoffInteraction,
   WorkspaceExitSelectionInteraction,
+  WorkspaceHubBoardResetInteraction,
   WorkspaceHubSlotCloseInteraction,
   WorkspaceHubSlotInteraction,
   WorkspaceHubSlotOpeningAttempt,
@@ -146,6 +147,7 @@ import type { WorkspaceRunStateLauncher } from './contracts/run-state';
 import type {
   WorkspaceBatchRewardStoreInteraction,
   WorkspaceExitSelectionInteraction,
+  WorkspaceHubBoardResetInteraction,
   WorkspaceHubSlotInteraction,
   WorkspaceHubVisitOrderInteraction,
   WorkspaceStartInteraction,
@@ -327,6 +329,7 @@ export interface WorkspaceInteractionCatalog {
   readonly fieldsSpatialPoints: ReadonlyMap<string, WorkspaceFieldsSpatialPointInteraction>;
   readonly roomActions: ReadonlyMap<string, WorkspaceRoomActionInteraction>;
   readonly hubSlots: ReadonlyMap<string, WorkspaceHubSlotInteraction>;
+  readonly hubBoardResets: ReadonlyMap<string, WorkspaceHubBoardResetInteraction>;
   readonly hubVisitOrders: ReadonlyMap<string, WorkspaceHubVisitOrderInteraction>;
   readonly rewards: ReadonlyMap<string, WorkspaceRewardInteraction>;
   readonly acquisitionConversions: ReadonlyMap<string, WorkspaceAcquisitionConversionInteraction>;

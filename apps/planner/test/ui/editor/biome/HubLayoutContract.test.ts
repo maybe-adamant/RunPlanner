@@ -19,10 +19,9 @@ function firstCssBlock(selector: string): string {
 }
 
 describe('Hub layout contract', () => {
-  it('insets board headings to match the Overview and Timeline content', () => {
+  it('insets the Overview board heading to match its content', () => {
     expect(firstCssBlock('.hub-board-heading')).toContain('padding: 12px 12px 0;');
     expect(firstCssBlock('.hub-overview-room-grid')).toContain('padding: 12px;');
-    expect(firstCssBlock('.hub-ranked-room-board')).toContain('padding: 12px;');
   });
 
   it('gives open and closed rewards a picker-height row that can grow with wrapped text', () => {
@@ -44,20 +43,7 @@ describe('Hub layout contract', () => {
     );
   });
 
-  it('keeps timeline cards on one explicit five-region roster layout before responsive stacking', () => {
-    expect(firstCssBlock('.hub-roster-primary')).toContain(
-      'grid-template-columns: 28px 26px minmax(10rem, 2fr) minmax(10rem, 1.35fr) auto;',
-    );
-    expect(firstCssBlock('.hub-timeline-reward-preview')).toContain(
-      'grid-template-columns: auto minmax(0, 1fr);',
-    );
-    const compactStyles = styles.slice(styles.indexOf('@container (max-width: 760px)'));
-    expect(compactStyles).toMatch(
-      /> \.hub-timeline-reward-preview \{\s*grid-column: 3 \/ -1;\s*grid-row: 2;/,
-    );
-  });
-
-  it('aligns room labels with membership and visit controls across Hub views', () => {
+  it('aligns Overview room labels with their membership controls', () => {
     expect(firstCssBlock('.hub-roster-primary')).toContain('align-items: center;');
     expect(firstCssBlock('.hub-roster-identity')).toContain('align-content: center;');
     expect(firstCssBlock('.hub-slot-heading')).toContain('align-items: center;');
@@ -66,14 +52,5 @@ describe('Hub layout contract', () => {
         ".hub-open-room-card[data-hub-card-presentation='overview'] .hub-roster-primary",
       ),
     ).toContain('grid-template-columns: minmax(0, 1fr) auto;');
-
-    const narrowStyles = styles.slice(styles.indexOf('@container (max-width: 560px)'));
-    expect(narrowStyles).toMatch(
-      /\.hub-roster-primary \{\s*grid-template-columns: 28px 24px minmax\(0, 1fr\);/,
-    );
-    expect(narrowStyles).toMatch(/> \.hub-roster-identity \{\s*grid-column: 3;\s*grid-row: 1;/);
-    expect(narrowStyles).toMatch(
-      /> \.hub-timeline-reward-preview \{\s*grid-column: 1 \/ -1;\s*grid-row: 2;/,
-    );
   });
 });

@@ -187,6 +187,8 @@ describe('surface product loop', () => {
     expect(screen.getByRole('tab', { name: 'Hub Overview' }).getAttribute('aria-selected')).toBe(
       'true',
     );
+    expect(screen.getByRole('region', { name: 'Ephyra Hub map' })).toBeTruthy();
+    await view.user.click(screen.getByRole('button', { name: 'Details →' }));
     expect(screen.getByRole('heading', { name: 'Open rooms' })).toBeTruthy();
     expect(screen.getAllByRole('checkbox', { name: / open$/ })).toHaveLength(26);
     expect(
@@ -305,7 +307,7 @@ describe('surface product loop', () => {
     application.dispose();
   });
 
-  it('records an N Hub order move as one undoable semantic command and autosaves both states', async () => {
+  it('records an N Hub Reset visits edit as one undoable semantic command and autosaves both states', async () => {
     const recovery = createRecoveryPersistence();
     const application = createApplication({
       autosaveRecovery: recovery.adapter,
@@ -320,28 +322,20 @@ describe('surface product loop', () => {
     await view.user.click(hubRailButton());
     await view.user.click(screen.getByRole('tab', { name: 'Hub Timeline' }));
 
-    const moveFinalVisit = screen.getByRole('button', { name: 'Move Combat 09 earlier' });
     const historyBefore = currentHistory(application).past.length;
 
-    await view.user.click(moveFinalVisit);
+    await view.user.click(screen.getByRole('button', { name: 'Reset visits' }));
 
     const edited = currentProject(application);
     const nTopology = edited.route.biomes.find((biome) => biome.biomeKey === 'N')?.topology;
     const hub = nTopology?.decisions.find((decision) => decision.kind === 'hub');
     if (hub === undefined || hub.kind !== 'hub') throw new Error('edited Hub is missing');
-    expect(hub.visitOrder).toEqual([
-      'combat05',
-      'miniBoss01',
-      'combat02',
-      'combat11',
-      'combat09',
-      'combat23',
-    ]);
+    expect(hub.visitOrder).toEqual([]);
     expect(
       nTopology?.decisions.some(
         (decision) => decision.kind === 'exit' && decision.source.kind === 'hubDecision',
       ),
-    ).toBe(true);
+    ).toBe(false);
     expect(edited).not.toEqual(authored);
     expect(currentHistory(application).past).toHaveLength(historyBefore + 1);
     expect(recovery.hasPendingAutosave()).toBe(true);
@@ -380,6 +374,7 @@ describe('surface product loop', () => {
     await view.user.click(screen.getByRole('button', { name: 'Ephyra' }));
     await view.user.click(hubRailButton());
 
+    await view.user.click(screen.getByRole('button', { name: 'Details →' }));
     const card = screen.getByRole('article', { name: 'Combat 03 Hub room' });
     const checkbox = within(card).getByRole('checkbox', {
       name: 'Combat 03 open',

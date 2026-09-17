@@ -77,6 +77,9 @@ describe('structured workspace interaction binding', () => {
     });
 
     const hub = createHubDecisionAddress(nBiome, 'hub');
+    expect(interactions.hubBoardResets.get(semanticAddressKey(hub))?.intent).toEqual({
+      command: { kind: 'ResetHubBoard', hub },
+    });
     const visitOrder = interactions.hubVisitOrders.get(semanticAddressKey(hub));
     if (visitOrder === undefined) throw new Error('Hub visit-order interaction is missing');
     expect(interactions.hubVisitOrders).toHaveLength(1);

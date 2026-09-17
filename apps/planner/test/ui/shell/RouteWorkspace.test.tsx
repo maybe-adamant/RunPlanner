@@ -148,7 +148,7 @@ describe('RouteWorkspace', () => {
 
     const markup = routeWorkspaceMarkup(application, 'Surface');
     expect(markup).toContain('Hub Overview');
-    expect(markup).toContain('Open rooms');
+    expect(markup).toContain('Ephyra Hub map');
     expect(markup).toContain('data-open="true"');
     expect(markup).toContain(
       semanticOwnerControlElementId(

@@ -140,6 +140,7 @@ function applyUnchecked(
     case 'ReconcileBatchExitCapacity':
     case 'ReplaceWithHubDecision':
     case 'RemoveHubDecision':
+    case 'ResetHubBoard':
     case 'OpenHubSlot':
     case 'CloseHubSlot':
     case 'ReplaceHubVisitOrder':

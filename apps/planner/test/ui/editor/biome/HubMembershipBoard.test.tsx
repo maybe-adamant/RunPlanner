@@ -41,6 +41,7 @@ describe('HubMembershipBoard', () => {
       kind: 'ReplaceWithHubDecision',
     });
     const view = renderHubDecisionWorkbench(project);
+    await view.user.click(screen.getByRole('button', { name: 'Details →' }));
     await waitFor(() => expect(screen.getAllByLabelText(/Hub room$/)).toHaveLength(26));
     const firstClosed = screen.getByLabelText('Combat 01 open');
     act(() => firstClosed.focus());
@@ -70,6 +71,7 @@ describe('HubMembershipBoard', () => {
       },
     });
     renderHubDecisionWorkbench(project, 'Surface', 'N', application);
+    fireEvent.click(screen.getByRole('button', { name: 'Details →' }));
     const opening = screen.getByRole('checkbox', { name: 'Combat 04 open' });
 
     expect(allocated).toEqual([]);
@@ -119,6 +121,7 @@ describe('HubMembershipBoard', () => {
   it('keeps keyboard opening in the closed-room batch at the maximum', async () => {
     const project = loadSurfaceNProject();
     const view = renderHubDecisionWorkbench(project);
+    await view.user.click(screen.getByRole('button', { name: 'Details →' }));
     const opening = screen.getByRole('checkbox', { name: 'Combat 04 open' });
     act(() => opening.focus());
     await view.user.keyboard('[Space]');
@@ -139,6 +142,7 @@ describe('HubMembershipBoard', () => {
 
   it('loads a ten-door invalid board picker without offering a singleton already on a peer', async () => {
     const view = renderHubDecisionWorkbench(invalidTenDoorHubProject);
+    await view.user.click(screen.getByRole('button', { name: 'Details →' }));
     const editedCard = screen.getByRole('article', { name: 'Combat 09 Hub room' });
 
     await view.user.click(within(editedCard).getByLabelText('Reward'));

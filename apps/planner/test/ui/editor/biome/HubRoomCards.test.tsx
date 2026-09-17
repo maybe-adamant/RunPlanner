@@ -23,6 +23,7 @@ describe('HubRoomCards', () => {
   it('opens, edits, and closes an unvisited room through its compact card', async () => {
     const project = loadSurfaceNProject();
     const view = renderHubDecisionWorkbench(project);
+    await view.user.click(screen.getByRole('button', { name: 'Details →' }));
     const closedCard = screen.getByRole('article', { name: 'Combat 04 Hub room' });
     const open = within(closedCard).getByRole('checkbox', { name: 'Combat 04 open' });
     const overviewSlotOrder = (): readonly string[] =>
@@ -147,19 +148,21 @@ describe('HubRoomCards', () => {
     );
   });
 
-  it('keeps a visited Medea encounter trait offer out of the Hub room card', () => {
+  it('keeps a visited Medea encounter trait offer out of the Hub room card', async () => {
     const project = loadSurfaceNStoryBoardProject();
-    renderHubDecisionWorkbench(project);
+    const view = renderHubDecisionWorkbench(project);
+    await view.user.click(screen.getByRole('button', { name: 'Details →' }));
     const story = screen.getByRole('article', { name: 'Medea Hub room' });
 
     expect(within(story).queryByRole('button', { name: /^Edit Trait/ })).toBeNull();
     expect(within(story).queryByRole('button', { name: 'Open details for Medea' })).toBeNull();
   });
 
-  it('keeps exact closed-slot focus visible in the complete Overview set without authoring history', () => {
+  it('keeps exact closed-slot focus visible in the complete Overview set without authoring history', async () => {
     const project = loadSurfaceNProject();
     const view = renderHubDecisionWorkbench(project);
     const historyBefore = view.application.store.getState().projectWorkspace.history!.past.length;
+    await view.user.click(screen.getByRole('button', { name: 'Details →' }));
 
     act(() =>
       view.application.store.dispatch(
@@ -175,13 +178,13 @@ describe('HubRoomCards', () => {
     );
   });
 
-  it('keeps the board-owned reward as the exact reward focus destination', () => {
+  it('keeps the board-owned reward as the exact reward focus destination', async () => {
     const project = loadSurfaceNProject();
     const view = renderHubDecisionWorkbench(project);
+    await view.user.click(screen.getByRole('button', { name: 'Details →' }));
     const combatCard = screen.getByRole('article', { name: 'Combat 05 Hub room' });
     const rewardOwner = createIncomingRewardAddress(nBiome, nOccurrenceId('combat05'));
 
-    expect(document.querySelector('.hub-visit-timeline')).toBeNull();
     expect(combatCard.dataset.focusedMainReward).toBeUndefined();
 
     act(() => view.application.store.dispatch(semanticOwnerFocused(rewardOwner)));

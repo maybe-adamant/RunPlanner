@@ -19,11 +19,14 @@ WebPs unless replacing them from a source image. For example:
 convert source.png -quality 90 -define webp:method=6 -define webp:lossless=false RoomName.webp
 ```
 
-Annotations belong in the image itself. `N_Hub.webp` is the annotated board;
-individual main and side rooms keep their own images. Fields labels identify
-Entry, Cage, and Optional positions. Stitch split captures and verify the full
-room's markers before exporting the final image; never use one half as the
-complete map.
+Fields annotations belong in the image itself and identify Entry, Cage, and
+Optional positions. Stitch split captures and verify the full room's markers
+before exporting the final image; never use one half as the complete map.
+
+`N_Hub.webp` is a clean background. `HubMapAnnotations.tsx` owns the door positions
+shared by read-only inspection and both interactive Hub maps. When replacing
+this image, align those coordinates to the new capture rather than baking labels
+into it. Individual main and side rooms keep their own images.
 
 After a swap, run the asset test and check the viewer:
 

@@ -567,6 +567,15 @@ export interface WorkspaceExitSelectionInteraction {
   readonly targets: readonly WorkspaceInteractionChoice<string>[];
 }
 
+/** Clears Hub-owned contents while retaining the decision and its source. */
+export interface WorkspaceHubBoardResetInteraction {
+  readonly intent: WorkspaceCommandIntent<
+    Extract<ProjectCommand, { readonly kind: 'ResetHubBoard' }>
+  >;
+  readonly key: string;
+  readonly owner: HubDecisionAddress;
+}
+
 /** One explicitly activated opening attempt owns its provisional occurrence identity. */
 export interface WorkspaceHubSlotOpeningAttempt extends WorkspaceCandidateInteraction<boolean> {
   readonly intentFor: (

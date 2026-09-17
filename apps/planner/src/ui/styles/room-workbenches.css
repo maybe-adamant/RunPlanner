@@ -564,34 +564,11 @@
   min-width: 0;
 }
 
-.hub-view-switch {
-  display: flex;
-  justify-content: flex-end;
-  gap: 6px;
-  flex-shrink: 0;
-  margin-left: auto;
-}
-
-.hub-view-switch [aria-pressed='true'] {
-  border-color: #e2b971;
-  color: #f4d28f;
-  background: rgb(226 185 113 / 14%);
-}
-
-.hub-timeline-toolbar-actions {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  flex-wrap: wrap;
-  gap: 12px;
-  margin-left: auto;
-}
-
 .hub-map-overview {
   padding: 12px;
 }
 
-.hub-map-overview > .room-map-viewport > .room-map-scroll {
+.hub-map-overview > .room-map-viewport > .room-map-canvas > .room-map-scroll {
   height: min(720px, calc(100vh - 280px));
   min-height: 340px;
 }
@@ -622,16 +599,15 @@
   gap: 12px;
 }
 
+.hub-board-heading-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
 .hub-board-heading p {
   color: #aaa7af;
   font-size: 0.88rem;
-}
-
-.hub-ranked-room-board {
-  display: grid;
-  position: relative;
-  gap: 10px;
-  padding: 12px;
 }
 
 .hub-overview-room-grid {
@@ -640,146 +616,6 @@
   align-items: stretch;
   gap: 8px;
   padding: 12px;
-}
-
-.hub-ranked-visit-prefix,
-.hub-ranked-tail {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  gap: 6px;
-}
-
-.hub-ranked-room-board[tabindex='-1']:focus {
-  outline: 2px solid #e2b971;
-  outline-offset: 3px;
-}
-
-.hub-open-room-card[data-drop-before]::before,
-.hub-open-room-card[data-drop-after]::after {
-  position: absolute;
-  z-index: 2;
-  right: 6px;
-  left: 46px;
-  border-top: 1px dashed rgb(143 139 148 / 60%);
-  content: '';
-  pointer-events: none;
-}
-
-.hub-open-room-card[data-drop-before]::before {
-  top: -4px;
-}
-
-.hub-open-room-card[data-drop-after]::after {
-  bottom: -4px;
-}
-
-.hub-open-room-card[data-drop-before='available']::before,
-.hub-open-room-card[data-drop-after='available']::after {
-  border-color: #e2b971;
-  border-style: solid;
-  border-width: 2px;
-  box-shadow: 0 0 0 3px rgb(226 185 113 / 12%);
-}
-
-.hub-open-room-card[data-drop-before='unavailable']::before,
-.hub-open-room-card[data-drop-after='unavailable']::after {
-  border-color: #8a7478;
-}
-
-.hub-next-visit-target {
-  display: flex;
-  min-height: 48px;
-  align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 10px;
-  padding: 9px 11px;
-  border: 1px dashed #4a4b56;
-  border-radius: 9px;
-  color: #b6b0a8;
-  background: rgb(255 255 255 / 1.5%);
-  font-size: 0.8rem;
-}
-
-.hub-next-visit-target[data-active='true'][data-available='true'] {
-  border-color: #e2b971;
-  background: rgb(226 185 113 / 8%);
-  box-shadow: 0 0 0 2px rgb(226 185 113 / 12%);
-}
-
-.hub-next-visit-target[data-active='true']:not([data-available='true']) {
-  border-color: #8a7478;
-}
-
-.hub-next-visit-copy {
-  display: flex;
-  min-width: 0;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 4px 9px;
-}
-
-.hub-next-visit-copy > :first-child {
-  color: #e2b971;
-  font-variant-numeric: tabular-nums;
-  font-weight: 700;
-}
-
-.hub-next-visit-copy > :nth-child(2) {
-  color: #aaa7af;
-}
-
-.hub-next-visit-owner-markers {
-  display: flex;
-  min-width: 0;
-  align-items: center;
-  flex: 1 1 190px;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-  gap: 4px;
-}
-
-.hub-next-visit-owner {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 3px 5px;
-  border: 1px solid #3d3e48;
-  border-radius: 999px;
-  color: #aaa7af;
-  font-size: 0.72rem;
-  white-space: nowrap;
-}
-
-.hub-next-visit-owner-label {
-  color: #d8d0c4;
-  font-variant-numeric: tabular-nums;
-  font-weight: 700;
-}
-
-.hub-next-visit-owner-assessment[data-assessment='unassessed'] {
-  color: #d3bd94;
-}
-
-.hub-next-visit-owner-assessment[data-assessment='blocked'] {
-  color: #d0c8d7;
-}
-
-.hub-visit-boundary {
-  display: flex;
-  min-height: 32px;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  padding: 7px 2px;
-  border-block: 1px solid rgb(226 185 113 / 26%);
-  color: #d8c39d;
-  font-size: 0.8rem;
-}
-
-.hub-visit-boundary > :last-child {
-  color: #aaa7af;
-  text-align: end;
 }
 
 .hub-open-room-card {
@@ -890,47 +726,6 @@
   flex-wrap: nowrap;
   gap: 4px;
   margin: 0;
-}
-
-.hub-replacement-popover {
-  z-index: 40;
-  width: min(19rem, calc(100vw - 36px));
-}
-
-.hub-replacement-menu {
-  display: grid;
-  gap: 8px;
-  padding: 10px;
-  border: 1px solid #5b5c68;
-  border-radius: 8px;
-  color: #f2ede5;
-  background: #20212a;
-  box-shadow: 0 12px 28px rgb(0 0 0 / 40%);
-}
-
-.hub-replacement-menu p {
-  margin: 0;
-  font-size: 0.82rem;
-}
-
-.hub-replacement-options {
-  display: grid;
-  gap: 5px;
-}
-
-.hub-replacement-options button {
-  padding: 6px 8px;
-  border: 1px solid #4b4c58;
-  border-radius: 6px;
-  color: #ebe6dc;
-  background: rgb(255 255 255 / 4%);
-  text-align: start;
-}
-
-.hub-replacement-options button:hover,
-.hub-replacement-options button:focus-visible {
-  border-color: #e2b971;
-  background: rgb(226 185 113 / 12%);
 }
 
 .room-action-position-control {
@@ -1358,22 +1153,6 @@
   grid-column: 1 / -1;
 }
 
-.hub-timeline-reward-preview {
-  display: grid;
-  min-width: 0;
-  grid-template-columns: auto minmax(0, 1fr);
-  align-items: baseline;
-  gap: 8px;
-  color: #aaa7af;
-  font-size: 0.8rem;
-}
-
-.hub-timeline-reward-preview strong {
-  min-width: 0;
-  color: #e7dfd5;
-  overflow-wrap: anywhere;
-}
-
 .hub-membership-control {
   display: flex;
   align-items: center;
@@ -1451,67 +1230,11 @@
     grid-column: auto;
     grid-row: auto;
   }
-
-  .hub-open-room-card[data-hub-card-presentation='timeline'] .hub-roster-primary {
-    grid-template-columns: 28px 24px minmax(0, 1fr) auto;
-  }
-
-  .hub-open-room-card[data-hub-card-presentation='timeline']
-    .hub-roster-primary
-    > .hub-timeline-reward-preview {
-    grid-column: 3 / -1;
-    grid-row: 2;
-  }
-
-  .hub-open-room-card[data-hub-card-presentation='timeline']
-    .hub-roster-primary
-    > .hub-rank-actions {
-    grid-column: 4;
-    grid-row: 1;
-    justify-self: end;
-  }
 }
 
 @container (max-width: 560px) {
   .hub-overview-room-grid {
     grid-template-columns: minmax(0, 1fr);
-  }
-
-  .hub-open-room-card[data-hub-card-presentation='timeline'] .hub-roster-primary {
-    grid-template-columns: 28px 24px minmax(0, 1fr);
-  }
-
-  .hub-open-room-card[data-hub-card-presentation='timeline']
-    .hub-roster-primary
-    > .hub-roster-identity {
-    grid-column: 3;
-    grid-row: 1;
-  }
-
-  .hub-open-room-card[data-hub-card-presentation='timeline']
-    .hub-roster-primary
-    > .hub-timeline-reward-preview {
-    grid-column: 1 / -1;
-    grid-row: 2;
-  }
-
-  .hub-open-room-card[data-hub-card-presentation='timeline']
-    .hub-roster-primary
-    > .hub-rank-actions {
-    grid-column: 1 / -1;
-    grid-row: 3;
-    justify-self: end;
-  }
-}
-
-@container (max-width: 500px) {
-  .hub-visit-boundary {
-    align-items: flex-start;
-    flex-direction: column;
-  }
-
-  .hub-visit-boundary > :last-child {
-    text-align: start;
   }
 }
 

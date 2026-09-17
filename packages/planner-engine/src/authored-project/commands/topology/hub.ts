@@ -146,7 +146,7 @@ export function updateHub(
   command: Extract<
     TopologyCommand,
     {
-      readonly kind: 'OpenHubSlot' | 'CloseHubSlot' | 'ReplaceHubVisitOrder';
+      readonly kind: 'OpenHubSlot' | 'CloseHubSlot' | 'ReplaceHubVisitOrder' | 'ResetHubBoard';
     }
   >,
 ): ProjectDocument {
@@ -300,6 +300,23 @@ export function updateHub(
   }
   if (command.hub.hubKey !== descriptor.hubKey)
     failCommand(command, 'Hub address does not match this decision');
+  if (command.kind === 'ResetHubBoard') {
+    if (hub.openTargets.length === 0) return document;
+    const impact = describeHubDecisionRemovalImpact(topology, hub.hubKey);
+    if (impact === undefined) throw new Error('Hub decision disappeared during reset');
+    return updateTopology(
+      document,
+      located,
+      appendDecision(
+        applyTopologyRemovalImpact(topology, impact),
+        Object.freeze({
+          ...hub,
+          openTargets: Object.freeze([]),
+          visitOrder: Object.freeze([]),
+        }),
+      ),
+    );
+  }
   if (
     !Array.isArray(command.hubSlotKeys) ||
     !command.hubSlotKeys.every((hubSlotKey) => typeof hubSlotKey === 'string')

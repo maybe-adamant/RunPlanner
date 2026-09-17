@@ -8,6 +8,7 @@ import type { OccurrenceIdFactory } from '@planner/workspace/occurrenceIds';
 
 import { StructuredWorkspaceProjectionContractError } from '../contract';
 import type {
+  WorkspaceHubBoardResetInteraction,
   WorkspaceHubSlotInteraction,
   WorkspaceHubVisitOrderInteraction,
   WorkspaceHubVisitOrderProposal,
@@ -15,6 +16,7 @@ import type {
 import type { WorkspaceHubInteractionRequirement } from './interaction-requirements';
 
 export interface WorkspaceHubInteractionCatalog {
+  readonly hubBoardResets: ReadonlyMap<string, WorkspaceHubBoardResetInteraction>;
   readonly hubSlots: ReadonlyMap<string, WorkspaceHubSlotInteraction>;
   readonly hubVisitOrders: ReadonlyMap<string, WorkspaceHubVisitOrderInteraction>;
 }
@@ -24,6 +26,7 @@ export function bindHubInteractions(
   candidates: CandidateProjectionSession,
   requirements: Iterable<WorkspaceHubInteractionRequirement>,
 ): WorkspaceHubInteractionCatalog {
+  const hubBoardResets = new Map<string, WorkspaceHubBoardResetInteraction>();
   const hubSlots = new Map<string, WorkspaceHubSlotInteraction>();
   const hubVisitOrders = new Map<string, WorkspaceHubVisitOrderInteraction>();
   const assertCandidateMayBeAuthored = <T>(
@@ -134,6 +137,16 @@ export function bindHubInteractions(
       );
     }
     const proposals = new Map<string, WorkspaceHubVisitOrderProposal>();
+    hubBoardResets.set(
+      key,
+      Object.freeze({
+        intent: Object.freeze({
+          command: Object.freeze({ kind: 'ResetHubBoard' as const, hub: requirement.owner }),
+        }),
+        key,
+        owner: requirement.owner,
+      }),
+    );
     hubVisitOrders.set(
       key,
       Object.freeze({
@@ -181,5 +194,5 @@ export function bindHubInteractions(
       }),
     );
   }
-  return Object.freeze({ hubSlots, hubVisitOrders });
+  return Object.freeze({ hubBoardResets, hubSlots, hubVisitOrders });
 }

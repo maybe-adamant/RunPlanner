@@ -5,22 +5,33 @@
 Status: Gate A is committed as `41915681`; Gate B's independently reviewed map
 ordering checkpoint is `1e15ce01`. Panel polish is committed as `532d4d85`.
 Focused tests, static checks, and browser checks passed for those checkpoints.
-Gate B.2 below is locked for the user-approved Timeline List retirement.
+Gate B.2 and its presentation polish are user-approved for this checkpoint.
+Timeline uses append/Reset with visible reward icons; Overview defaults to Map
+with Details as the canonical finding fallback. The clean background and shared
+annotations replace the capture markers. Engine reorder commands remain intact.
+Independent reviews found no actionable issues in the simplified Timeline,
+reward icons, or atomic Reset Board command. Focused command/binding/Hub checks
+(37), architecture and related UI checks (92), and final presentation/product-loop
+checks (80) pass, along with planner typecheck and touched lint/format. The icon
+production build passed. Desktop/narrow browser checks cover map alignment,
+icon interaction, Reset/Undo, Details/Back focus, control placement and overflow.
 Gate C's complete repository gate and documentation closure have not started.
 
 Planning base: `7d42d084` (`feat(planner): support dragging zoomed room maps`).
 The unrelated Room Capture progress document is outside this change.
 
-Give Ephyra Hub Overview interchangeable List and Map presentations, and make
+Give Ephyra Hub Overview a primary Map and detailed List fallback, and make
 Timeline a single map-based sequence editor. Both consume the same application
 interactions and engine-owned ordered visit model.
 
 ## Scope and authorities
 
-Application/UI only: Hub membership, reward-control presentation, visit-order
-proposals, map assets/annotations, and finding/focus integration. No catalog,
+Hub membership, reward-control presentation, visit-order proposals, map
+assets/annotations, and finding/focus integration. The sole engine addition is
+the atomic `ResetHubBoard` command, reusing existing topology-removal closure
+while retaining the Hub decision and source. No catalog,
 authored schema, simulation, candidate-policy, execution-protocol, or game-module
-changes. Existing engine commands retain ownership of topology and cleanup.
+changes. Engine commands retain ownership of topology and cleanup.
 
 Read these exact authorities when implementing the affected boundary:
 
@@ -63,26 +74,31 @@ The persisted Hub has a dense ordered list of distinct open slot keys. It does
 not store independent per-room ranks. Conflicting numbers and ordinal gaps are
 not new supported states in this work.
 
-The current ranked-roster helper can promote a tail room when removing from a
-full prefix, and can evict the last visit when adding to it. Those implicit
-substitutions are unsuitable for the agreed explicit replacement interaction.
-Its generic `RankedPrefix` functions also serve room-action ordering: do not
-change those unrelated consumers or globally change their semantics.
+The Timeline no longer needs a ranked-roster presentation model. Append and
+Reset send complete proposals through the existing Hub interaction. Retain the
+engine's full visit-order command and its application binding, including support
+for reorder proposals; this is a UI simplification, not a domain restriction.
+Generic `RankedPrefix` functions still serve room-action ordering and must not
+change with the retirement of Hub-only presentation helpers.
 
 ## Agreed experience
 
 ### Two views, one source
 
-- Overview exposes `List | Map`, initially List. Timeline is map-only; Hub Exit
-  retains its existing presentation. Neither has a view switch.
+- Overview opens in Map by default. `Details →` beneath Reset Board opens the
+  detailed List; its header offers `Back to Map`. Findings still open List at
+  the exact repair control, including on initial navigation. Timeline is
+  map-only; Hub Exit retains its existing presentation.
 - Remember Overview's view choice locally for the current Hub host. View,
   selected marker, popover, drag, zoom and pan are not authored state or Undo
   entries. Changing the project/Hub host cannot retain stale marker selections.
 - Overview List retains its compact layout and controls, with no inline Hub map. Map
   gets the available workbench width, not a second full editor beside it.
-- Overview views share a panel shell, with `List | Map` at its top right and the
-  List heading or Map zoom controls at the left. Timeline puts zoom controls on
-  the left and Reset visits on the right. The Hub uses the standard room
+- Overview views share a panel shell. Both maps overlay Zoom/Fit at the
+  viewport's top left; Overview places Reset Board and Details beside the
+  top-right legend, and Timeline places Reset visits there. Neither map has
+  a toolbar row above the canvas. Controls and legends stay fixed while the
+  image pans or zooms. The Hub uses the standard room
   panel and heading with right-aligned status counts. `Run State` and `Remove Hub`
   sit to the right of the Hub tabs, outside the tablist, across all views.
 - Switching views preserves authored values immediately; there is no map draft,
@@ -97,8 +113,8 @@ change those unrelated consumers or globally change their semantics.
 - Clicking a closed door attempts to open it using the existing bound membership
   interaction and shows its reward editor as soon as that opening is published.
   It does not schedule a visit or navigate to the room.
-- An open door has a compact `Opened`/reward badge. Clicking that badge (or the
-  open marker) exposes the existing reward control, not another reward picker
+- An open door shows its room number above a small authored-reward icon. Clicking it
+  exposes the existing reward control, not another reward picker
   implementation. Show missing authored reward state honestly.
 - Keep full controls in one active anchored popover rather than placing editors
   beside all 26 circles. Include an explicit Close room action there, subject
@@ -106,6 +122,11 @@ change those unrelated consumers or globally change their semantics.
 - Opening/closing and reward edits dispatch their existing single intents.
   Re-read the current slot by stable identity after publication; do not retain
   stale bound interactions inside a popover.
+- `Reset Board` closes every slot, clears visits and Hub-owned room/handoff
+  contents, and retains the Hub itself. It dispatches one bound `ResetHubBoard`
+  intent, never a UI loop of slot closures. One Undo restores all contents.
+  Render it beside the legend in Map and in List's header; disable it on an
+  empty board or when Hub authoring is locked. No confirmation or schema change.
 
 ### Timeline: construct a sequence
 
@@ -117,29 +138,34 @@ change those unrelated consumers or globally change their semantics.
   retains its existing meaning. The Map has no separate sequence strip.
   Capacity comes from the existing workspace product (currently six), not a
   second limit declaration.
-- Clicking an unvisited room appends it at the next position when space remains.
-  At capacity, it opens an explicit chooser naming each visit to replace. Merely
-  opening/canceling that chooser changes nothing. Replacement keeps that visit's
-  position and returns the displaced room to the unvisited open set.
-- A Timeline-only Reset visits button on the right of the map toolbar, with a
+- Both map editors show the authored reward icon inside the existing circle,
+  below its room label. Keep icons and labels opaque while only unvisited
+  backgrounds are translucent. Full projected reward names remain available
+  to hover and assistive technology; unknown/missing rewards are not guessed.
+  Package normalized transparent icons locally and map from the existing
+  structured reward identity, never summary text. Closed rooms retain `Closed`.
+  This adds no engine, schema, or click-behavior changes.
+- Clicking an unvisited room appends it at the next position when space remains,
+  without opening a menu that interrupts sequential room selection.
+  Visited rooms and all rooms at capacity have no click action; no implicit
+  replacement occurs. Keep markers focusable for exact finding navigation and
+  reward descriptions, with inactive controls identified accessibly.
+- A Timeline-only Reset visits button beside the top-right map legend, with a
   subtle red border, clears the sequence with one undoable
   empty-prefix proposal. It preserves open rooms
   and their rewards, uses existing engine-owned handoff cleanup, and requires
   no confirmation. Disable it when empty or when Hub editing is locked. The
   author can then click unvisited markers to rebuild the sequence in order.
-- Clicking a visited marker opens Remove visit and Move to each other position
-  in the authored prefix. Moving C first in `A → B → C` yields `C → A → B`:
-  intervening visits shift, not swap. No gaps or duplicate ranks are introduced.
-  Removal shortens the prefix and compacts later visits without closing the
-  room or promoting any unvisited room. Both marker menus support keyboard
-  activation and never navigate the rail.
+- Reward icons, hover titles and accessible descriptions provide the Timeline's
+  reward preview; there is no click-to-preview popover.
+  There are no Move-to, swap, replacement, or individual removal actions.
+  Reset rebuilds the sequence; Undo corrects accidental edits.
 - The map is the sole Timeline editor. Remove the List roster, drag/arrow path,
   and transient unvisited-tail ordering; no hidden editor or alternate route
   may silently substitute another room.
 - Produce one complete visit-order proposal through the existing bound candidate
   interaction and `ReplaceHubVisitOrder`. These are sequence edits, not a new
-  validator. Respect candidate/readiness outcomes rather than promising every
-  proposed permutation will be accepted. The engine alone reconciles topology,
+  validator. Respect candidate/readiness outcomes. The engine alone reconciles topology,
   occurrence liveness and any completed-handoff removal.
 
 ### Findings and interaction continuity
@@ -159,7 +185,7 @@ change those unrelated consumers or globally change their semantics.
   authoring is locked. Never use missing evaluation to hide retained authorship.
   Visit-order editing uses the Hub-decision interaction's readiness,
   not the readiness of each visited occurrence. Incomplete room content
-  cannot prevent rearranging the Hub sequence; an incomplete prerequisite before
+  cannot prevent appending or resetting the Hub sequence; an incomplete prerequisite before
   the Hub still locks its edits. Exact visit finding targets remain distinct.
 - Use accessible buttons and existing popover primitives. One active popover,
   collision-aware positioning, keyboard access and Escape/focus return suffice;
@@ -173,28 +199,22 @@ change those unrelated consumers or globally change their semantics.
 
 ## Map asset and code ownership
 
-The canonical background is the untouched 2560 × 1440 `Hades II_556.png`
-recapture, also saved as `N_Hub_Background.png`. Its replacement annotation
-source is available at:
+The canonical background is the untouched, clean 2560 × 1440 capture:
+
+`C:/Users/Mohammed Ayyat/Saved Games/Hades II/Screenshots/Hades II_557.png`
+
+`HubMapAnnotations.tsx` owns all 26 door positions and the user-approved
+Perfect/Good/Bad/Special categories. Coordinates are expressed directly against
+this capture: no image padding, image translation, runtime offset or retained
+old coordinate system. An external reference overlay is available at:
 
 `C:/Users/Mohammed Ayyat/Saved Games/Hades II/Screenshots/New folder/Annotated/N_Hub.overlay.svg`
 
-The background files are in the parent `New folder` directory. The SVG contains
-all 26 recalibrated door positions and the user-approved Perfect/Good/Bad/Special
-categories. Coordinates are expressed directly against this capture: no image
-padding, image translation, runtime offset or retained old coordinate system.
-
 These categories are presentation metadata, not game legality or opening state.
 Keep categorization separate from Opened/Unvisited/Visit status. The screenshot
-retains the game's small door numbers and door graphics as fixed scenery; hiding
-a closed-room annotation means hiding our overlay, not erasing native scenery.
-
-Asset preparation replaces the existing flattened `N_Hub.webp` with a render of
-this new source pair so today's reference viewer also uses the new capture.
-The earlier annotated image and padded recapture are superseded, not alternate
-backgrounds. Gate A replaces the flattened runtime image with the background
-and shared live annotation layer; it does not keep two independently maintained
-maps for inspection and editing.
+contains no capture labels or reward markers; room numbers, rewards and status
+come from the shared live annotation layer. Inspection and editing use the same
+`N_Hub.webp` background without a second flattened runtime map.
 
 - Package the verified background and one typed annotation description with the
   Hub UI. Map declared game-room identities to the workspace's stable slot keys;
@@ -209,6 +229,10 @@ maps for inspection and editing.
   into the asset discovery glob. Other room images stay ordinary static assets.
 - Export the new background as WebP quality 90, preserving dimensions. Package
   it with browser and desktop builds; no runtime Windows paths or network fetch.
+- Reward icons live beside the Hub editor, outside the room-image glob. Sources
+  are the user's `Hades/Items` PNGs; trim transparent margins, fit to 112 × 112
+  inside a transparent 128 × 128 canvas, and export lossless WebP. Both maps
+  share one structured-identity mapping and marker-content component.
 - Keep Hub-specific composition with the existing `ui/editor/biome` Hub files;
   a cohesive `hub-map/` child is appropriate for the map layer and its asset.
   Shared viewport changes are limited to image-aligned overlay composition and
@@ -240,40 +264,22 @@ disabled/locked marker and badge cannot bypass controls; close uses the same
 engine-owned cleanup; finding navigation from Map reaches the exact List field.
 Visually verify dense clusters and marker alignment at Fit and zoom.
 
-### B — Map Timeline and explicit shared Hub sequence actions
+### B — Map Timeline checkpoint
 
-Deliver the open-only layer, visit badges, direct position menus,
-append/reorder/remove, and explicit full-sequence replacement. Adapt List actions to the same Hub
-proposals. Keep generic ranked-prefix behavior for room actions unchanged; share
-only applicable ordering and drag primitives, not implicit tail substitutions.
-Finish mode/finding/focus continuity across both tabs.
+Delivered as `1e15ce01`. Its local move/replacement menus and List companion
+are superseded by B.2. Retain engine visit-order operations and generic room
+action ordering; the final application acceptance is defined below.
 
-Primary policy tests: `test/projections/structured-workspace/presentation/`
-owns the complete Hub sequence-edit matrix. Bound-intent contacts stay in
-`test/projections/structured-workspace/interactions/hub-interaction-binding.test.ts`.
-`test/ui/editor/biome/HubVisitRanking.test.tsx` and focused map tests prove actual
-controls; retain generic room-action ordering coverage with its existing owner.
-
-Acceptance: partial-prefix append; prefix-only reorder; remove from a full
-prefix does not substitute a tail room; explicit replacement names and replaces
-the chosen visit only; cancellation does not edit; closed rooms cannot be visited;
-List and Map display the same result after switching/Undo. Use an existing
-completed-Hub fixture to verify removal's real engine handoff cleanup and Undo
-without recreating that policy in an application helper. A real incomplete
-first-visit fixture must still allow editing later visits through the Hub-owned
-sequence interaction, while the later room's interior remains locked. Preserve
-the witness that an incomplete pre-Hub prerequisite locks sequence edits.
-
-### B.2 — Retire Timeline List
+### B.2 — Append and Reset on the Timeline map
 
 Base: `532d4d85`. Application-only simplification of the accepted Map behavior.
 No new engine product, command, schema, eligibility policy, or map library.
 
-Deliver Timeline directly as Map; retain Overview's List/Map choice and its
-finding navigation. Preserve Reset, append, exact-position moves, removal,
-explicit replacement, Undo, pre-Hub readiness, keyboard/Escape, and pan/zoom.
-Reordering can invalidate room contents; those findings remain owned by the
-room editor. Do not claim that all route contents remain valid after reordering.
+Deliver Timeline directly as Map; retain Overview's Map/Details navigation and its
+finding navigation. Deliver append, visible reward/visit markers, Reset,
+Undo, pre-Hub readiness, keyboard interaction, and pan/zoom. Reset retains the native
+command's downstream cleanup; Undo restores it as one semantic edit. Room
+content findings remain owned by the room editor. No separate draft state.
 
 The existing `hubVisitOrderIncomplete` finding still needs a repair destination.
 Bind the next missing visit's exact marker to the existing planned-count status,
@@ -284,16 +290,19 @@ hidden List, hidden editor targets, new status language, or second finding path.
 
 Expected deletions: `HubVisitTimeline.tsx`, Timeline-only pieces of
 `HubVisitRanking.tsx` and `HubRoomCards.tsx`, roster drag/scroll/focus state,
-Timeline view-switch state, roster-only CSS and test support. Move the live
-replacement chooser beside its Map consumer if its old module becomes obsolete.
-Prune dead Hub-only helpers without changing generic RankedPrefix behavior used
-by room actions. Overview room cards remain compact membership/reward cards.
+Timeline view-switch and preview-popover state, roster-only CSS and test support, local reorder and
+replacement menus, and their Hub-only projection helpers/exports/tests. Preserve
+the bound complete-order interaction and engine commands/tests, and do not
+change generic RankedPrefix behavior used by room actions. Overview room cards
+remain compact membership/reward cards.
 
-Primary tests: retain Map workflows from `HubVisitRanking.test.tsx` under their
-live owner; migrate List consumer contacts in `BiomeWorkspace.test.tsx`,
+Primary tests: focused `hub-map/HubMapTimeline.test.tsx` owns append-to-capacity,
+readable inactive markers with no history mutation, Reset with real
+handoff cleanup and Undo, and the incomplete-first-room readiness witness.
+Migrate consumer contacts in `BiomeWorkspace.test.tsx`,
 `HubDecisionWorkbench.interaction.test.tsx`, and `HubRoomCards.test.tsx`.
-Retire List-only UI/drag/layout tests; preserve relevant semantic proposal tests
-and shared room-action tests. Add a real incomplete-prefix finding-navigation
+Retire obsolete List/menu UI and Hub-only presentation-policy tests; preserve
+engine command, bound proposal, and shared room-action tests. Keep the real incomplete-prefix finding-navigation
 witness proving exact count focus/border and continued room selection. Preserve
 the existing missing-first-room and locked-pre-Hub witnesses.
 
@@ -306,13 +315,13 @@ commit implementation until requested.
 ### C — Product review and closure
 
 Keep one representative real application workflow using existing Surface
-checkpoints: Overview membership/reward edits → Timeline append/reorder/replace
+checkpoints: Overview membership/reward edits → Timeline append/Reset
 → finding repair → Undo/Redo, plus Overview view switching. Add no large new execution fixture
 or duplicated engine policy matrix for this presentation work.
 
 Perform real-browser checks at desktop and narrow widths: nearest marker pairs,
 long reward labels, edge popovers, keyboard/Escape, pan versus click, zoomed hit
-testing, destination menus and pointer cancellation. Verify Fields and ordinary
+testing, inactive Timeline markers and pointer cancellation. Verify Fields and ordinary
 map dialogs remain usable. User visual review is part of acceptance; don't
 claim it from jsdom dimensions alone.
 
