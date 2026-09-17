@@ -358,6 +358,36 @@ Commit coherent planner and matching decoder changes separately by repository
 after review. Intermediate decoded-but-unrealized settings are not a delivered
 feature; do not deploy/release until their adapters are implemented.
 
+### A.1 — Same-map Rival encounter correction
+
+Locked prerequisite before runtime adapters: `I_Boss01` and `P_Boss01` retain
+their physical map but must resolve respectively to `BossChronos02` at Rivals
+rank 4 and `BossPrometheus02` at rank 3 or higher. Native RoomDataI/RoomDataP
+declare both legal encounters; EncounterData_Boss gates them with
+`BossDifficultyActive` (`ShrineLogic.IsBossDifficultyShrineUpgradeActive`).
+The current fixed-normal catalog bindings bypass that selection when published.
+
+- Declare both concrete encounters and the Rival alternative on each owning
+  fixed binding. Keep them fixed, not a user-selectable encounter pool.
+- Resolve from configured Rivals and route position in one engine authority,
+  shared with physical completion-map selection. Rivals is not Circe-removable.
+- Materialization receives the necessary explicit loadout fact and carries the
+  resolved fixed identity forward; history, preparation and publication must
+  not independently rediscover it. The authored-first encounter domain uses the
+  same resolver so incomplete downstream rooms still display the right identity.
+- Preserve occurrence IDs, fixed links, empty fixed encounter selections,
+  defaults, save/load and Undo/Redo. No schema/protocol bump, persisted duplicate
+  Vow state, manual encounter selector, or I/P-specific executor branch.
+- Primary coverage: catalog bindings/normalization; engine rank thresholds,
+  lowering and full/prefix materialization; real Underworld/Surface publication;
+  representative application projection and generic native forcing contacts.
+  Existing physical-map Rival bosses remain unchanged. Refresh only execution
+  fixtures whose semantic product changes, preserving formatting and mirrors.
+- Independent review and bounded remediation precede handoff. This correction
+  does not implement customization hooks or authorize deployment. Record the
+  durable identity rule in the existing encounter documentation, not a new
+  bug-history document.
+
 ### B — Hecate and Scylla realization
 
 Implement their selection adapters. Prove normal/Rival domains, explicit
