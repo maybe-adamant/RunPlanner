@@ -19,8 +19,8 @@ WebPs unless replacing them from a source image. For example:
 convert source.png -quality 90 -define webp:method=6 -define webp:lossless=false RoomName.webp
 ```
 
-Fields annotations belong in the image itself and identify Entry, Cage, and
-Optional positions. Stitch split captures and verify the full room's markers
+Fields annotations belong in the image itself and identify Entry, Cage, Optional,
+and Exit positions. Stitch split captures and verify the full room's markers
 before exporting the final image; never use one half as the complete map.
 
 `N_Hub.webp` is a clean background. `HubMapAnnotations.tsx` owns the door positions
