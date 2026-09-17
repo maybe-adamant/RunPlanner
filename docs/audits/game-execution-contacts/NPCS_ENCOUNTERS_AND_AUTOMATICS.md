@@ -135,10 +135,9 @@ the declared boss-defeated window.
 | Devotion                                                                                                       | Covered where its chosen/spurned acquisitions are published.                                                                                                   |
 | P PreCombat plus room-ending encounter, H bonus encounter, N side rooms, O wheels, I goals, Q structured rooms | Covered through the generic phase adapter, Ephyra and ShipCombat adapters, and ordinary resolved I/Q room products; complete-route live proof remains pending. |
 
-Enemy composition, wave counts, and Fear-modified enemy generation are not
-currently authored execution facts. They remain outside the blocking execution
-boundary even though a future first slice may expose wave count and dominant
-enemy type.
+General enemy composition, wave counts, and Fear-modified enemy generation are
+not authored execution facts. The bounded Boss decisions below select existing
+native behaviors, not independently authored enemy waves.
 
 ### Native encounter and phase identity
 
@@ -172,6 +171,44 @@ unique transaction index.
 This identity model serves both fixed routes, including H cage encounters and O
 multi-phase rooms, without a second encounter cursor or a different
 phase-binding scheme.
+
+### Boss decisions
+
+Room and encounter identity are distinct. `RoomDataI.lua` and `RoomDataP.lua`
+retain `I_Boss01` and `P_Boss01` for both variants; `EncounterData_Boss.lua`
+gates their concrete definitions through `BossDifficultyActive`, interpreted by
+`ShrineLogic.lua:IsBossDifficultyShrineUpgradeActive`. Configured Rivals rank 4
+selects `BossChronos02`; rank 3 or higher selects `BossPrometheus02`. Lower ranks
+select the corresponding `01` encounter. The planner resolves this before
+publication, through the same route-position rule as physical Boss-map selection.
+
+| Decision                  | Native domain                                                                       | Selection and application evidence                                                                                                                                                                                            | Planner disposition                                                                                                                                                                                                                       |
+| ------------------------- | ----------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Hecate interlude          | Six patterns; corresponding `_EM` variants in Rival                                 | `EnemyAILogic.lua:HecateStageTransition1` appends and remembers the selected weapon; transition two reuses `MidPhaseWeapon`. `WeaponData_Hecate.lua` declares prior-clear restrictions rechecked by `IsEnemyWeaponEligible`.  | One choice serves both transitions. Explicit selection replaces the remembered/appended result and omits only that selected weapon's top-level progression requirements at eligibility. Polymorph and other eligibility remain native.    |
+| Scylla featured performer | Scylla, Roxy (`Drummer`), Jetty (`Keytarist`); Rival adds Charybdis                 | `EncounterLogic.lua:ApplyScyllaFightSpotlight` draws a flag, then first-fight branches force Jetty or Charybdis. `EnemyData_Scylla.lua` declares the flags and effects.                                                       | A private flag input maps both deterministic branch keys to the selected performer. Native code applies music, presentation and effects once.                                                                                             |
+| Cerberus howl             | Small, medium or large corrupted shades; corresponding elite variants in Rival      | `WeaponData_InfestedCerberus.lua:InfestedCerberusHowlSummonSelector` chooses a `SpawnBurstOnFire` weapon, requiring 12 attacks and allowing one use. The second-phase howl is commented out of active weapon lists.           | Narrow the first selector's resolved weapon-data pool; retain readiness, use limits and spawning. No second-phase choice.                                                                                                                 |
+| Cerberus burrow           | `CerberusSpawns01..05`; Rival `CerberusEMSpawns01..04`                              | `EnemyData_InfestedCerberus.lua` supplies stage `RandomSpawnEncounter`; `EnemyAILogic.lua:StagedAI` applies Rival stage overrides and spawns before `CerberusStageExit`. The Rival list repeats `04` and omits declared `05`. | Copy the enemy's burrow stage before `StagedAI`, supplying the selected encounter to both normal and Rival inputs. Default preserves native weighting. Native thresholds (50% normal, 65% Rival), timeouts and re-entry remain unchanged. |
+| Eris early summons        | Normal `ErisSummon01/02`; Rival Harpy, Swab, Jellyfish, Turtle                      | `WeaponData_Eris.lua:ErisSummonSelector` / `ErisEMSummonSelector` own the pools.                                                                                                                                              | Each decision accepts zero, one or two distinct choices in actual-use order; the remaining tail stays native.                                                                                                                             |
+| Eris late summons         | Normal `ErisSummon03/04`; Rival FishmanRanged, FishmanMelee, FishSwarmer, Automaton | `WeaponData_Eris.lua:ErisSummonSelector2` / `ErisEMSummonSelector2` own the pools. Rival grenade chains reach these same selectors.                                                                                           | Apply the same prefix contract. Do not choose the Automaton's inner `SpawnerOptions`.                                                                                                                                                     |
+
+Explicit Hecate/Scylla choices intentionally override those save-progression
+selection restrictions; Default preserves them. No save clear count is edited.
+All decisions are conditional on native gameplay reaching the move. Fast
+combat may skip an optional howl or summon without creating an unmet obligation.
+
+`EnemyAILogic.lua:GetWeaponAIData` resolves conditional inputs before
+`DoAttackerAILoop` selects a chained weapon. Cerberus/Eris narrow only that local
+result. Eris selectors allow two uses and each concrete variant one; native
+`WeaponHistory` is the use authority. The getter runs before the current weapon
+is appended, so prefix position counts only recorded concrete variants from the
+full native selector pool, never selector/grenade entries or getter calls.
+
+Preplaced Boss units do not own an `Encounter` field. These contacts use the
+current native room encounter's existing phase binding. Burrow subencounters
+do not replace that outer identity. The adapters need no thread-spanning scope:
+Hecate retains its native remembered weapon, Scylla receives private arguments,
+burrow receives enemy-local stages before native AI, and chained selectors
+receive local resolved weapon data. Shared declarations remain unchanged.
 
 ## Closed automatic transaction union
 

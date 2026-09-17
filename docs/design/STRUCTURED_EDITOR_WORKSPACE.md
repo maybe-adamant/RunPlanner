@@ -234,25 +234,26 @@ remains the navigation to room details.
 
 One image viewport serves inspection dialogs and inline editing references.
 Fields Layout keeps placement controls on the left and a larger reference on
-the right. Hub Overview and Timeline share a top-right map toggle; individual
-main/side-room dialogs remain independent of that Hub reference. Side-room
-tables retain their full editing width. Inline references are sticky only
-beside controls and stack above them in normal flow when space is narrow.
-Images fit a bounded viewport with optional zoom and scrolling; Close/Escape
-returns focus to the invoking control when it still exists.
+the right. Individual main/side-room dialogs remain independent of the Hub
+editor, and side-room tables retain their full editing width. Inline references
+are sticky only beside controls and stack above them in normal flow when space
+is narrow. Images fit a bounded viewport with zoom and dragging to pan;
+Close/Escape returns focus to the invoking control when it still exists.
 
 Visibility and zoom belong to the local host, not the authored project. Edits
 within that host preserve the reference; changing its room image resets Fit,
 and changing the host cannot inherit another room's open reference. Images,
-including placeholders and baked-in annotations, are replaceable static assets,
-not previews generated from room contents or live spatial-authoring controls.
+including placeholders and Fields annotations, are replaceable static assets.
+The Hub uses a clean background with shared door coordinates: read-only
+inspection and the interactive Overview/Timeline project their own markers
+over that same image. Coordinates are presentation data, not room topology.
 See the [asset replacement note](../../apps/planner/src/ui/room-maps/README.md).
 
 ### Encounter Phase Products
 
-Each structurally active pool-backed encounter phase is a first-class
-workspace owner. Its exact `EncounterPhaseAddress` resolves to the containing
-occurrence inspector, one marker, one focus destination, and—if
+Each structurally active encounter phase, including fixed and passive phases,
+is a first-class workspace owner. Its exact `EncounterPhaseAddress` resolves to
+the containing occurrence inspector, one marker, one focus destination, and—if
 the declared set has meaningful choice cardinality—one bound selection
 interaction. The projector consumes the engine's context-free
 `EncounterPhaseAuthoringDomain`, whose activation comes from catalog,
@@ -270,6 +271,14 @@ finding, or route-NPC index entry. Singleton phases preserve their exact
 semantic destination without producing no-op controls. This gives finding
 navigation and closure the same phase identity regardless of whether the
 presentation has a visible picker.
+
+The resolved definition's customization domain supplies a separate **Customize
+encounter** control, including for fixed identities. One dialog renders declared
+single choices and bounded ordered prefixes; it does not switch on Boss names
+or calculate Rivals. Changes dispatch immediately through bound commands and
+Undo. Unsupported retained choices remain visible for repair, and Default is
+always available. Finding navigation selects the occurrence Timeline and
+focuses/highlights the launcher without automatically opening the dialog.
 
 P uses the same exact-phase presentation. Its workspace labels are **Opening
 encounter** for `Intro` and **Follow-up encounter** for `Combat`.
@@ -598,9 +607,8 @@ language, but its center is not an ordinary decision spine. The
 - one complete room and incoming reward for each open slot;
 - Hub Overview for the complete fixed-slot set, open/closed membership, and
   each open room's reward editor; Hub Timeline for the exact dense authored
-  visit prefix (through six positions), compact next-position target for every
-  remaining visit owner, presentation-only unvisited tail, and read-only
-  reward context; and Hub Exit's fixed `Preboss` card for the existing completed-Hub handoff;
+  visit prefix (through six positions) on the map, with read-only reward context;
+  and Hub Exit's fixed `Preboss` card for the existing completed-Hub handoff;
 - side-room generation and entry state under visited parents;
 - derived Hub returns and parent restores;
 - the fixed completed-Hub handoff to the width-one Preboss Shop and its derived
@@ -616,35 +624,39 @@ children open the side occurrence Timeline; and the uncommitted completed-Hub
 handoff opens Exit. React consumes that explicit destination and does not infer
 tab ownership from semantic-address shapes or rendered ancestry.
 
-The board remains a joint generation region. Its authored prefix is the only
-traversal order; its unvisited tail is React-local presentation state and is
-not persisted, evaluated, or placed in Undo history. A visible boundary keeps
-that distinction explicit. Open-set membership and visit order remain separate
-semantic controls.
+The board remains a joint generation region. Open-set membership and the dense
+authored visit prefix are distinct engine-owned products. There is no persisted
+map position or unvisited ordering.
 
-One Hub-decision-owned interaction supplies complete visit-prefix proposals.
-It never replaces the exact `HubVisitAddress` markers, inspector destinations,
-or positional assessment products: those remain reachable for both authored
-and unplanned visit positions. Tail-only moves are presentation changes;
-any prefix change dispatches one aggregate semantic command after the bound
-candidate interaction has evaluated the complete proposed prefix.
+Overview opens in Map. Clicking a closed door lazily invokes its bound opening
+attempt and opens the existing reward editor on success; rendering markers does
+not allocate occurrences or eagerly prepare every candidate. Open doors expose
+that same editor. **Details** opens the fixed-slot List, which remains the stable
+repair home for membership and reward findings; **Back to Map** returns to the
+visual editor. Finding navigation selects Details even when Map was open.
+The List keeps all 26 cards in declaration order, with four/two/one columns as
+space narrows and equal reward-control/closed-placeholder height.
 
-Hub Overview renders all 26 fixed slots in declaration order so membership
-changes never move a card. An open card exposes the existing main-reward
-editor; a closed card reserves the same reward region with an instruction to
-open the room, preventing row-height shifts when participation changes. Hub
-Timeline renders only open slots as a ranked roster with read-only reward
-summaries. A visible pointer drag grip is an optional direct-manipulation
-surface, with named arrow controls retained for keyboard operation.
+**Reset Board** dispatches one atomic command that closes all slots and removes
+their owned visits, rooms and handoff subtree while retaining the Hub and its
+source. It differs from Remove Hub and participates in ordinary Undo/Redo.
 
-The Hub Timeline roster reserves one shared column layout for its drag handle,
-rank, room identity, reward preview, and reorder controls. Long room labels
-wrap within the identity column; they do not move later columns. On narrow
-layouts, the reward preview moves below the room identity.
-The Overview board uses four equal columns at its normal workbench width, two
-at an intermediate container width, and one on narrow layouts. All 26 fixed
-slots remain in declaration order at every breakpoint, and these layout rules
-are presentation-only.
+Timeline is map-only. Open doors retain their stable room labels and reward
+icons; transparent markers are unvisited, solid markers carry the authored
+visit badge above the room circle. Clicking an unvisited door appends it to the
+dense prefix when capacity permits; visited doors do not reorder or open a
+second reward preview. **Reset visits** submits the empty prefix as one undoable
+edit, including normal downstream cleanup. The engine and application retain
+complete visit-order proposal/reordering support even though this UI uses only
+append and Reset.
+
+The existing Hub-owned interaction assesses complete proposals with Hub-level
+readiness, not the interior readiness of each visited room. Exact visit markers
+and the count target remain available for findings. Map controls, reward icons
+and badges are projections of the same workspace owners as Details; they do not
+create another membership, legality or chronology path. Zoom/Fit, Reset and
+Details controls stay fixed over the viewport while the background and door
+markers pan together.
 
 The N rail gives its fixed Opening and PreHub stages and each authored Hub
 visit one read-only primary-reward token when the room projects one. This is
@@ -672,13 +684,10 @@ semantic interactions.
 
 Hub membership changes are batch composition rather than navigation. Their
 bound `OpenHubSlot` and `CloseHubSlot` intents have no semantic-focus product:
-opening or closing a room must not select the moved slot or jump the inspector
-to its room configuration. Pointer and touch changes preserve the current
-viewport. Keyboard changes use transient React-local continuity to move to the
-nearest enabled membership control in the source region (then its documented
-local fallback), never the card that just moved. This focus continuity is not
-persisted or stored in Redux. Explicit rail, reward, and finding actions
-continue to use their exact semantic owner destinations.
+opening or closing a room must not jump the inspector to its room configuration.
+The local reward popover and keyboard focus remain transient presentation state;
+neither changes the rail selection or enters authored history. Explicit rail
+and finding actions retain their exact semantic owner destinations.
 
 ## Progressive Coverage and Findings
 

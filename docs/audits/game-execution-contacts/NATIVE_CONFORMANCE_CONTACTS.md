@@ -91,6 +91,13 @@ digits so distinct double-precision values remain distinguishable.
 
 ## Named room-exit facts
 
+Postboss admission runs before the wrapped native `StartRoom`. The marked
+occurrence's expanded `roomEntered` diagnostics supply expected values to these
+same nine conformance families, alongside native weapon/aspect comparison.
+Other diagnostic sections remain nonblocking; admission does not add readers
+or compare the entire diagnostic frame. A match adopts the restored native room
+without rebuilding its contents.
+
 Room-exit conformance runs immediately before the wrapped native `LeaveRoom`.
 
 Native `AttemptUseDoor` (`RoomLogic.lua:749`) rejects unusable doors before

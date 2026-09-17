@@ -716,10 +716,36 @@ repair.
 
 Concrete identity resolution belongs to the engine's encounter resolver, not
 the command or editor. A reward edit may change the resolved definition behind
-Combat without changing the persisted choice. The resolver maps identity
-independently of eligibility; an unavailable selected NPC receives a finding
-rather than being replaced by Combat. The room lifecycle authority owns the
+Combat without changing the persisted choice. A fixed binding may declare a
+Rival alternative on the same physical map. It resolves from configured Rivals
+and route position, using the same rule as completion-map selection, without
+persisting an encounter choice. Materialization carries the resolved fixed
+identity; authored-first controls use that same resolver even before evaluation.
+The resolver maps identity independently of eligibility; an unavailable
+selected NPC receives a finding rather than being replaced by Combat. The room lifecycle authority owns the
 resolved product and its exact chronological assessment.
+
+#### Encounter customization
+
+Concrete Encounter Definitions may declare optional decisions with stable keys,
+display labels, native operands and either a single-choice or a bounded distinct
+ordered-prefix domain. The resolved definition owns the active domain, including
+normal/Rival differences; customization does not independently calculate Rivals.
+
+`encounters.customizationByPhase[phaseKey][decisionKey]` retains sparse authored
+choices. Omission means Default, with no required edit. Fixed encounter identity
+does not prevent customization. Commands and decoding enforce structural shape
+and declaration-known values; preparation assesses support against the resolved
+encounter. Same-family values made unavailable by an upstream edit remain
+repairable rather than silently changing. Dormant phases emit no active settings
+or findings, and structural replacement reconciles compatible phase ownership.
+
+The exact phase owns each finding, with the decision identified in evidence.
+Valid resolved choices travel with that phase into execution publication, not as
+room features or additional Timeline actions. A choice steers a native decision
+if reached; it does not oblige an attack, advance a clock or create a checkpoint.
+
+#### Encounter trait offers
 
 An Encounter Definition may additionally declare one `traitOfferProducer`.
 The owning room occurrence then persists its complete offer outcome
