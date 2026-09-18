@@ -3,20 +3,15 @@
 }
 
 .editor-panel {
-  display: grid;
+  display: flex;
+  flex-direction: column;
   min-height: 0;
   box-sizing: border-box;
-  grid-template-rows: auto minmax(0, 1fr);
   overflow: hidden;
 }
 
-.editor-panel > .project-findings {
-  position: static;
-  z-index: auto;
-  margin-top: 0;
-}
-
 .editor-panel-content {
+  flex: 1;
   min-height: 0;
   padding: 10px 10px 0 0;
   overflow-y: auto;
@@ -32,6 +27,7 @@
 .editor-panel-content[data-editor-layout='biome'] {
   display: grid;
   grid-template-rows: auto minmax(0, 1fr);
+  padding-top: 0;
   overflow: hidden;
   scrollbar-gutter: auto;
 }
@@ -85,8 +81,16 @@
   line-height: 1.5;
 }
 
-.route-npc-index {
-  max-width: 720px;
+.route-index-panel {
+  min-width: 0;
+  padding: 16px;
+  border: 1px solid #3a3b45;
+  border-radius: 12px;
+  background: rgb(13 14 18 / 32%);
+}
+
+.route-index-panel > .panel-heading {
+  margin-bottom: 16px;
 }
 
 .route-npc-index-empty {
@@ -98,7 +102,6 @@
 .route-npc-index-groups {
   display: grid;
   gap: 14px;
-  margin-top: 16px;
 }
 
 .route-npc-index-group {

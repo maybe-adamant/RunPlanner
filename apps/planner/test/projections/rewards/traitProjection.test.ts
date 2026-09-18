@@ -246,8 +246,8 @@ describe('route trait projection', () => {
     expect(feedback.options[selectedIndex]?.reasons).toHaveLength(2);
     expect(feedback.options[selectedIndex]?.reasons).toEqual(
       expect.arrayContaining([
-        expect.stringContaining('Trait is already equipped'),
-        expect.stringContaining('Ordinary boon slot is occupied'),
+        'Trait already equipped (same branch evidence)',
+        'Boon slot occupied (slot evidence)',
       ]),
     );
   });
@@ -370,8 +370,7 @@ describe('route trait projection', () => {
     });
     expect(feedback.options[2]?.reasons).toEqual([expect.stringContaining('banned')]);
     expect(feedback.options[0]?.reasons).toEqual([]);
-    expect(feedback.contextMessage).toContain('Trait offer cannot occur here');
-    expect(feedback.contextMessage?.match(/Trait offer cannot occur here/g)).toHaveLength(1);
+    expect(feedback.contextMessage).toBe('Trait choices cannot appear together');
   });
 
   it('projects an active rarity-floor finding as repairable option copy', () => {
@@ -406,9 +405,7 @@ describe('route trait projection', () => {
       },
     });
     expect(feedback.options[0]?.legal).toBe(false);
-    expect(feedback.options[0]?.reasons).toEqual([
-      expect.stringContaining('Rarity roll is unavailable'),
-    ]);
+    expect(feedback.options[0]?.reasons).toEqual(['Rarity unavailable in this offer (Rare)']);
     expect(feedback.options[1]?.reasons).toEqual([]);
     expect(feedback.options[2]?.reasons).toEqual([]);
   });
@@ -434,7 +431,7 @@ describe('route trait projection', () => {
         },
       },
     });
-    expect(feedback.contextMessage).toContain('Choose a materialized trait');
+    expect(feedback.contextMessage).toBe('Choose an offered trait');
   });
 
   it('presents prerequisite evidence with player-facing trait labels', () => {
@@ -477,7 +474,7 @@ describe('route trait projection', () => {
         })[traitKey] ?? traitKey,
     );
     expect(feedback.options[0]?.reasons).toEqual([
-      'Trait prerequisite is missing: Requires one of Flutter Strike or Nova Strike.',
+      'Missing trait prerequisite: Requires one of Flutter Strike or Nova Strike.',
     ]);
     expect(feedback.options[0]?.reasons.join(' ')).not.toContain('WeaponBoon');
   });

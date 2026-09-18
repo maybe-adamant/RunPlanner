@@ -161,6 +161,13 @@ export function RouteWorkspace({
     pendingNpcPhaseFocus.current = phase;
     dispatch(semanticOwnerNavigated(phase));
   };
+  const repairBanner = (
+    <ProjectFindings
+      catalog={catalog}
+      issue={routeEvaluation.issue}
+      focusByOwner={workspace.focusByOwner}
+    />
+  );
 
   return (
     <div className="editor-workspace">
@@ -326,11 +333,7 @@ export function RouteWorkspace({
         </nav>
       </div>
       <div className="editor-panel" aria-live="polite">
-        <ProjectFindings
-          catalog={catalog}
-          issue={routeEvaluation.issue}
-          focusByOwner={workspace.focusByOwner}
-        />
+        {contentLayout === 'biome' ? null : repairBanner}
         <div className="editor-panel-content" data-editor-layout={contentLayout}>
           {contextMessage === undefined ? null : (
             <p
@@ -375,6 +378,7 @@ export function RouteWorkspace({
               biome={activeBiomeProjection}
               focusByOwner={workspace.focusByOwner}
               interactions={interactions}
+              repairBanner={repairBanner}
               runStateLaunchers={workspace.runStateLaunchers}
             />
           )}

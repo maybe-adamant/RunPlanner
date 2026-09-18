@@ -301,16 +301,13 @@
 }
 
 .project-findings {
-  position: sticky;
-  z-index: 20;
-  top: 12px;
-  margin-top: 12px;
+  flex: 0 0 auto;
 }
 
 .assessment-issue-summary {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 3px 8px;
+  display: grid;
+  gap: 3px;
+  line-height: 1.1rem;
 }
 
 .findings-count {

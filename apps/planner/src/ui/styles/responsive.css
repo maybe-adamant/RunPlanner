@@ -12,12 +12,19 @@
   }
 
   .biome-structure-region {
+    display: block;
     height: auto;
     max-height: none;
     padding-right: 0;
     padding-bottom: 18px;
     border-right: 0;
     border-bottom: 1px solid #30313a;
+    overflow-y: visible;
+    scrollbar-gutter: auto;
+  }
+
+  .biome-structure-scroll {
+    max-height: none;
     overflow-y: visible;
     scrollbar-gutter: auto;
   }

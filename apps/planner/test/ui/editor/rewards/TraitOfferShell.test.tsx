@@ -119,7 +119,7 @@ describe('ordinary offer shell', () => {
     await user.click(screen.getByRole('button', { name: 'Remove last option' }));
     await waitFor(() => expect(save.hasAttribute('disabled')).toBe(true));
     expect(screen.getByRole('button', { name: 'Add option' }).hasAttribute('disabled')).toBe(false);
-    expect(await screen.findByText(/Trait offer cannot occur here/)).toBeTruthy();
+    expect(await screen.findByText(/Trait choices cannot appear together/)).toBeTruthy();
     await user.click(screen.getByRole('button', { name: 'Remove last option' }));
     await user.click(screen.getByRole('button', { name: 'Remove last option' }));
     expect(screen.getByText('Fallback Gold')).toBeTruthy();

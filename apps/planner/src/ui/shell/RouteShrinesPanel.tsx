@@ -10,7 +10,7 @@ export function RouteShrinesPanel({
 }) {
   const dispatch = useAppDispatch();
   return (
-    <section aria-labelledby="route-shrines-title" className="route-traits-panel">
+    <section aria-labelledby="route-shrines-title" className="route-index-panel route-traits-panel">
       <header className="panel-heading">
         <div>
           <p className="eyebrow">Room features</p>

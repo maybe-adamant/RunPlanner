@@ -157,7 +157,7 @@ describe('trait option domain projection', () => {
 
     expect(itemValues(rarity)).toContain('Common');
     expect(rarity.selected?.state).toBe('impossible');
-    expect(rarity.selected?.explanation).toContain('fresh boon rarity cannot occur');
+    expect(rarity.selected?.explanation).toBe('Rarity unavailable in this offer');
     expect(projection.preferredOptionFor(first)?.rarity).toBe('Rare');
   });
 

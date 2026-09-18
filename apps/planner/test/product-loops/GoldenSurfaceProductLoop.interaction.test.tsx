@@ -679,9 +679,7 @@ describe('surface product loop', () => {
     if (action === null) throw new Error('invalid Hammer pickup action is missing');
     await view.user.click(within(action).getByRole('button', { name: /Edit Trait/ }));
     const dialog = await screen.findByRole('dialog');
-    expect(
-      within(dialog).getAllByText(/Hammer is incompatible with this loadout/),
-    ).not.toHaveLength(0);
+    expect(within(dialog).getAllByText(/Hammer incompatible with loadout/)).not.toHaveLength(0);
 
     const interaction = application
       .selectStructuredWorkspace(application.store.getState())!

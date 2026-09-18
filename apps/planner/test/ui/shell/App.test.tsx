@@ -131,8 +131,7 @@ describe('App', () => {
       biomeKey: 'F',
     });
     expect(application.store.getState().projectWorkspace.history!).toBe(historyBeforeNavigation);
-    expect(markup).toContain('Start this biome');
-    expect(markup).toContain('Create its opening room before building the route.');
+    expect(markup).toContain('Create the opening room');
     expect(markup).toContain(semanticOwnerControlElementId(finding.origin));
     expect(markup).not.toContain('biomeTopologyMissing');
   });

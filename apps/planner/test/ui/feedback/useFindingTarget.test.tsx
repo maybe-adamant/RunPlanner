@@ -78,6 +78,7 @@ it.each([false, true])(
     fireEvent.change(input, { target: { value: 'keyboard draft' } });
     view.rerender(ui([second]));
     expect(target.getAttribute('data-has-findings')).toBe('true');
+    expect(target.getAttribute('aria-description')).toBe('Reward cannot be acquired');
     expect(screen.getByRole('textbox', { name: 'Draft' })).toBe(input);
     expect((input as HTMLInputElement).value).toBe('keyboard draft');
     expect(document.activeElement).toBe(input);

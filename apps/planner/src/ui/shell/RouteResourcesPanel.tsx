@@ -19,7 +19,10 @@ function resourceFamilyLabel(family: WorkspaceRoute['resources'][number]['family
 export function RouteResourcesPanel({ route }: { readonly route: WorkspaceRoute }) {
   const dispatch = useAppDispatch();
   return (
-    <section className="route-resources-panel" aria-labelledby="route-resources-title">
+    <section
+      className="route-index-panel route-resources-panel"
+      aria-labelledby="route-resources-title"
+    >
       <header className="panel-heading">
         <div>
           <p className="eyebrow">Route outcomes</p>
