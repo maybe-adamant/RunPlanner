@@ -3,8 +3,8 @@ import {
   type BiomeCandidateArtifacts,
 } from '../evaluation/candidate-artifacts';
 import type { MaterializedBiomePrefix } from '../materialization';
-import type { FindingRegionEntry } from '../finding-regions';
-import { isRequiredMissingInputFinding } from '../model';
+import { assessmentRepairOwner, type FindingRegionEntry } from '../finding-regions';
+import { createAssessmentIssue } from '../assessment-issue';
 import type { BiomeRewardSimulation } from '../rewards';
 import type { TraitChildSettlementCheckpoints } from '../rewards/biome';
 import {
@@ -55,6 +55,11 @@ export function clampSelectedProducts(
     authoredPrefix,
     selectedProducts.findingRegions,
     unsupported.regionKey,
+  );
+  const issue = createAssessmentIssue(
+    unsupported.repairOwner ?? assessmentRepairOwner(unsupported.finding.origin),
+    unsupported.regionKey,
+    retainedFindings,
   );
   const clamped = clampPrefix(authoredPrefix, unsupported, selectedProducts.history);
   if (clamped.entryRoom === undefined) return null;
@@ -109,9 +114,8 @@ export function clampSelectedProducts(
           : interactionPrefix,
       findings: mergedFindings(evaluated.evaluation, retainedFindings),
       blockedAt: unsupported.finding.origin,
-      blockedKind: retainedFindings.some(isRequiredMissingInputFinding)
-        ? ('incomplete' as const)
-        : ('invalid' as const),
+      issue,
+      blockedKind: issue.kind,
       blockedRegionKey: unsupported.regionKey,
       blockedLocation: findingLocation(unsupported),
     }),

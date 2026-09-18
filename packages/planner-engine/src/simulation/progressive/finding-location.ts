@@ -773,7 +773,7 @@ export function locateOwner(
     repairRow?.stale === true ||
     (repairRow?.rank === null && repairRow.participation === 'required') ||
     address.kind === 'occurrence' ||
-    address.kind === 'roomFeature' ||
+    (address.kind === 'roomFeature' && chronology?.kind !== 'history') ||
     (chronology?.kind !== 'history' &&
       reward !== undefined &&
       same(reward, address) &&
@@ -794,6 +794,7 @@ export interface LocatedFinding extends OwnerLocation {
   readonly finding: SemanticFinding;
   /** Evaluator-owned atomic region used for first-blocking retention. */
   readonly regionKey: string;
+  readonly repairOwner?: SemanticAddress;
   readonly aggregate?: FindingAggregate;
 }
 
@@ -833,6 +834,7 @@ export function locateFinding(
   atomicRegion: string = ownerRegion(finding.origin),
   chronology?: FindingRegionEntry['chronology'],
   aggregate?: FindingAggregate,
+  repairOwner?: SemanticAddress,
 ): LocatedFinding | undefined {
   const location = locateOwner(prefix, finding.origin, chronology);
   return location === undefined
@@ -841,6 +843,7 @@ export function locateFinding(
         ...location,
         finding,
         regionKey: atomicRegion,
+        ...(repairOwner === undefined ? {} : { repairOwner }),
         ...(aggregate === undefined ? {} : { aggregate }),
       });
 }
@@ -861,6 +864,7 @@ export function firstUnsupportedFinding(
       entry.atomicRegion,
       entry.chronology,
       entry.aggregate,
+      entry.repairOwner,
     );
     if (location === undefined) {
       if (finding.severity === 'error') {
@@ -873,15 +877,6 @@ export function firstUnsupportedFinding(
     if (location.regionKey !== excludedRegionKey) located.push(location);
   }
   return located.sort(compareLocatedFindings)[0];
-}
-
-/**
- * Fig Leaf authored selections are intentionally repairable in place. Their
- * lifecycle phase still executes normally when chronology rejects the skip,
- * so the finding must not clamp the later authored topology/history prefix.
- */
-export function isProgressiveBlockingFinding(finding: SemanticFinding): boolean {
-  return finding.code !== 'figLeafSkipUnavailable';
 }
 
 export function findingsAtRegion(

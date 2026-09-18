@@ -1,6 +1,6 @@
 # First Assessment Issue
 
-Status: Locked for implementation; begin with Gate A.
+Status: Gate A accepted after two independent reviews. Gate B is next.
 Base: planner `ae636aba`, including the separately verified P Fig Leaf interaction fix.
 
 ## Outcome
@@ -93,10 +93,12 @@ do not build an issue registry or extensible diagnostic framework.
 
 Detailed evidence is not a second user-facing backlog. Preserve evidence and
 capabilities required by validation, candidates, local editors and delivery
-placement at their owning products. Inventory actual consumers before changing
-the flat public findings array. Do not truncate it blindly, or retain a second
-independently assembled public issue list for compatibility. The primary issue
-must be derived from the same selection that governs assessment publication.
+placement at their owning products. Project and route `findings` retain their
+detailed evidence for workspace markers and session reconciliation; the selected
+`issue` alone supplies the aggregate repair agenda in Gate B. Delivery rescheduling
+reads the owning reward evidence. Do not introduce another independently selected
+issue list. The primary issue must be derived from the same selection that governs
+assessment publication.
 
 ### Assessment is not edit locking
 
@@ -122,7 +124,9 @@ placement, use the existing `roomExited` effect boundary: an earlier same-room
 trait or encounter failure must win over a resource effect failure. Do not let
 the generic `roomFeature` location sort it ahead of the entire timeline. When
 the host is missing or not yet reachable, retain the truthful structural
-prerequisite/owner stop instead of fabricating an exit event. Use existing
+prerequisite/owner stop instead of fabricating an exit event. An already generated
+but unpicked host has a structural repair at its actual `roomCreated` boundary;
+its resource feature remains removable without entering that room. Use existing
 resource assessment and effective-placement policy; do not invent an element
 grant for an invalid placement or rewrite resource timing.
 
@@ -262,9 +266,9 @@ and truthful coverage together, not just finding-array length.
 
 ## Deletions and review guardrails
 
-- Remove competing first-issue inference, obsolete publication concatenation,
-  and the two exception paths when their replacements land. Keep internal
-  completeness evidence only where it has a real materialization/repair consumer.
+- Remove competing first-issue inference and the two exception paths when their
+  replacements land. Retain detailed finding aggregation for local repair consumers;
+  it must not select the aggregate issue or become the route's repair agenda.
 - Retire the multi-card banner, empty findings panel and obsolete list-only CSS
   in B. Keep reusable local-editor feedback and semantic destination contracts.
 - Do not sort error codes, parse region strings, reuse normalized edit-lock
@@ -279,3 +283,18 @@ and truthful coverage together, not just finding-array length.
 Before locking, challenge the plan against false single-issue grouping, repair
 deadlocks, findings-dependent semantic consumers, valid-output changes and
 unnecessary abstraction. User approval and a committed plan precede execution.
+
+## Delivery verification
+
+- Gate A's first review identified detailed-evidence truncation, dormant resource
+  repair, and missing resource findings in hub candidate replay. All three were
+  corrected and verified by that reviewer.
+- A second independent review of the whole Gate A diff found no actionable
+  findings. It traced chronology, exact repair products, Fig Leaf clamping,
+  resource hosts, and findings-dependent consumers.
+- Before review remediation, the full engine lane passed 1,955 tests. After
+  remediation, 121 targeted engine/application tests passed, including the new
+  dormant-resource repair witness, readiness, hub chronology, trait repair,
+  Hermes rescheduling, and work-count coverage. Whole-workspace typecheck,
+  lint, and diff whitespace checks passed.
+- The full repository closure gate and visual acceptance remain Gate C work.

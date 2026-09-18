@@ -404,6 +404,11 @@ describe('progressive selected and blocked products', () => {
     const session = createPreparedProjectCandidateSession(catalog, blockedAssembly);
 
     expect(blocked.coverage.blockedAt).toEqual(child);
+    expect(blocked.issue).toMatchObject({
+      kind: 'incomplete',
+      owner: trait,
+      reasons: [expect.objectContaining({ origin: child })],
+    });
     expect(retainedAssessment).toEqual(baselineAssessment);
     expect(artifacts?.traitOffers.at(trait)).toBeDefined();
     expect(

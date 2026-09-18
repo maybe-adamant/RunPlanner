@@ -82,9 +82,9 @@ export function evaluateBiomeRoomGenerationAssemblyInternal(
     string,
     import('./candidate-artifacts').ZagreusContractCandidateCapability
   >();
-  const addFinding = (value: SemanticFinding, region = ownerRegion(value.origin)): void => {
+  const addFinding = (value: SemanticFinding, owner = value.origin): void => {
     findings.push(value);
-    findingRegions.push(findingRegion(value, region, undefined, 'generation'));
+    findingRegions.push(findingRegion(value, ownerRegion(owner), undefined, 'generation', owner));
   };
   const layout = catalog.biomeLayouts.byKey[snapshot.biomeKey];
   if (layout === undefined) {
@@ -169,7 +169,7 @@ export function evaluateBiomeRoomGenerationAssemblyInternal(
         gameName,
         enteredBiomeCount,
       );
-      support.findings.forEach((value) => addFinding(value, ownerRegion(batch.origin)));
+      support.findings.forEach((value) => addFinding(value, batch.origin));
       if (!support.selectedPossible) {
         addFinding(
           finding('targetRoomUnavailable', batch.origin, {
@@ -177,7 +177,7 @@ export function evaluateBiomeRoomGenerationAssemblyInternal(
             requiredExitKeys: support.requiredExitKeys,
             requiredTargetCount: support.requiredTargetCount,
           }),
-          ownerRegion(batch.origin),
+          batch.origin,
         );
       }
       continue;
@@ -226,7 +226,7 @@ export function evaluateBiomeRoomGenerationAssemblyInternal(
             support.origin,
             fieldsCageOutcomeEvidence(support),
           ),
-          ownerRegion(batch.origin),
+          batch.origin,
         );
       }
     }
@@ -277,7 +277,13 @@ export function evaluateBiomeRoomGenerationAssemblyInternal(
       const chronology = generationFindingChronology(history, entry.finding.origin);
       return chronology === undefined
         ? entry
-        : findingRegion(entry.finding, entry.atomicRegion, chronology, entry.aggregate);
+        : findingRegion(
+            entry.finding,
+            entry.atomicRegion,
+            chronology,
+            entry.aggregate,
+            entry.repairOwner,
+          );
     }),
   );
   const validation: GeneratedRoomGenerationValidation = Object.freeze({

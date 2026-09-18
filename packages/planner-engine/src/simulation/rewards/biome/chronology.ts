@@ -123,7 +123,8 @@ import {
 } from '../../keepsakes/branch-transitions';
 import type { OfferProcessingPeer } from '../offer-generation';
 import type { AcquisitionRoleFrontier } from '../acquisition/contracts';
-import { addRewardFinding } from '../findings';
+import { addRewardFinding, mergeRewardFindingEmissions } from '../findings';
+import { resourcePlacementFindingRegions } from '../../resources';
 import { mergeEquivalentRewardBranches, type RewardBranchState } from '../branch-primitives';
 import type {
   ReachedTraitChildCheckpoint,
@@ -245,6 +246,7 @@ export function evaluateBiomeRewardChronology(
   routeLoadout: RouteLoadout,
   initialBranches: readonly RewardBranch[] | undefined = undefined,
   resourcePlacements: ResourcePlacements = EMPTY_RESOURCE_PLACEMENTS,
+  resourceFindings: readonly import('../../model').SemanticFinding[] = [],
 ): BiomeRewardEvaluationAssembly {
   if (snapshot.biomeKey !== history.biomeKey || snapshot.routeKey !== history.routeKey) {
     throw new BiomeRewardSimulationContractError('reward inputs do not share one biome owner');
@@ -1368,6 +1370,10 @@ export function evaluateBiomeRewardChronology(
         break;
       }
       case 'roomCreated': {
+        mergeRewardFindingEmissions(
+          findings,
+          resourcePlacementFindingRegions(event, resourceFindings),
+        );
         const transition = applyRoomCreatedTransition({
           catalog,
           snapshot,
@@ -1835,6 +1841,7 @@ export function evaluateBiomeRewardChronology(
           views.get(semanticAddressKey(event.origin)),
           resourcePlacements,
           branches,
+          resourceFindings,
         );
         if (exited.runStateCheckpoint !== undefined)
           captureRunState(
@@ -1843,6 +1850,7 @@ export function evaluateBiomeRewardChronology(
             exited.runStateCheckpoint.view,
           );
         branches = exited.branches;
+        mergeRewardFindingEmissions(findings, exited.findingRegions);
         break;
       }
       default:

@@ -6,8 +6,10 @@ import type { BiomeGenerationValidation } from '../progressive/products';
 import type { BiomeRewardSimulation } from '../rewards/model';
 import type { SemanticFinding } from '../model';
 import type { ResourceExecutionPolicy } from '../resources';
+import type { AssessmentIssue } from '../assessment-issue';
 
 export interface BiomeEvaluationBase {
+  readonly issue?: AssessmentIssue;
   readonly biomeKey: string;
   readonly origin: BiomeAddress;
   readonly authoring: 'incomplete' | 'complete';
@@ -129,6 +131,8 @@ export interface RouteEvaluationSummary {
 }
 
 export interface ProjectRouteEvaluation {
+  /** The sole selected assessment stop; findings retain local repair evidence. */
+  readonly issue?: AssessmentIssue;
   readonly routeKey: string;
   readonly status: 'empty' | 'incomplete' | 'invalid' | 'valid';
   readonly configuredBiomeKeys: readonly string[];
@@ -141,6 +145,8 @@ export interface ProjectRouteEvaluation {
 }
 
 export interface ProjectEvaluation {
+  /** The sole selected assessment stop; findings retain local repair evidence. */
+  readonly issue?: AssessmentIssue;
   readonly status: 'empty' | 'incomplete' | 'invalid' | 'valid';
   readonly projectId: string;
   readonly catalogVersion: string;

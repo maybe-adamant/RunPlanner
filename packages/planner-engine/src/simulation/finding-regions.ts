@@ -6,6 +6,7 @@ import type { ReachedLevelResolutionEvaluation } from './traits/level-effects';
 export interface FindingRegionEntry {
   readonly finding: SemanticFinding;
   readonly atomicRegion: string;
+  readonly repairOwner?: SemanticAddress;
   /** Evaluator-owned chronology for non-linear structures. */
   readonly chronology?: FindingChronology;
   readonly aggregate?: FindingAggregate;
@@ -63,6 +64,22 @@ export function ownerRegion(origin: SemanticAddress): string {
   return `owner:${semanticAddressKey(origin)}`;
 }
 
+/** Nested trait repairs belong to their offer without replacing the blocked leaf. */
+export function assessmentRepairOwner(origin: SemanticAddress): SemanticAddress {
+  switch (origin.kind) {
+    case 'traitAcquisitionTarget':
+    case 'circeResolution':
+    case 'echoPomTarget':
+    case 'naturalSelectionResult':
+    case 'echoLastRunBoon':
+    case 'echoLastReward':
+    case 'allTogetherSet':
+      return assessmentRepairOwner(origin.trait);
+    default:
+      return origin;
+  }
+}
+
 /**
  * Atomic authoring identity for generated sibling sets. This remains engine
  * vocabulary: consumers compare the opaque key and never reconstruct these
@@ -109,10 +126,12 @@ export function findingRegion(
   atomicRegion: string = ownerRegion(finding.origin),
   chronology?: FindingChronology,
   aggregate?: FindingAggregate,
+  repairOwner: SemanticAddress = assessmentRepairOwner(finding.origin),
 ): FindingRegionEntry {
   return Object.freeze({
     finding,
     atomicRegion,
+    repairOwner,
     ...(chronology === undefined ? {} : { chronology }),
     ...(aggregate === undefined ? {} : { aggregate }),
   });

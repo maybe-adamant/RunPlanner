@@ -477,35 +477,38 @@ describe('workspace inspector destinations', () => {
     ).toBe(false);
   });
 
-  it('keeps a resource retained at an unsupported room available for removal', () => {
-    const original = createGoldenFGHIProject();
-    const occurrenceId = createOccurrenceId('golden-f-preboss-shop:postboss');
-    const document: ProjectDocument = {
-      ...original,
-      route: {
-        ...original.route,
-        resourcePlacements: {
-          ...original.route.resourcePlacements,
-          Fishing: { biomeKey: 'F', occurrenceId },
+  it.each(['golden-f-preboss-shop:postboss', 'golden-f-b3-e2'])(
+    'keeps a resource retained at unsupported or dormant room %s available for removal',
+    (id) => {
+      const original = createGoldenFGHIProject();
+      const occurrenceId = createOccurrenceId(id);
+      const document: ProjectDocument = {
+        ...original,
+        route: {
+          ...original.route,
+          resourcePlacements: {
+            ...original.route.resourcePlacements,
+            Fishing: { biomeKey: 'F', occurrenceId },
+          },
         },
-      },
-    };
-    const assembled = assembly(document);
-    const finding = assembled.evaluation.findings.find(
-      (entry) => entry.code === 'resourcePlacementUnavailable',
-    );
-    if (finding === undefined) throw new Error('resource finding missing');
-    const workspace = structuredWorkspace.project(assembled);
-    const room = occurrenceWorkbenchFor(biome(workspace, 'F'), occurrenceId);
-    expect(room.room.resources).toContainEqual(
-      expect.objectContaining({ family: 'Fishing', action: 'remove', legal: false }),
-    );
-    expect(destination(workspace, finding.origin)).toMatchObject({
-      focusAddress: finding.origin,
-      roomTab: 'overview',
-      inspectorSubject: { kind: 'node', nodeKey: room.key },
-    });
-  });
+      };
+      const assembled = assembly(document);
+      const finding = assembled.evaluation.findings.find(
+        (entry) => entry.code === 'resourcePlacementUnavailable',
+      );
+      if (finding === undefined) throw new Error('resource finding missing');
+      const workspace = structuredWorkspace.project(assembled);
+      const room = occurrenceWorkbenchFor(biome(workspace, 'F'), occurrenceId);
+      expect(room.room.resources).toContainEqual(
+        expect.objectContaining({ family: 'Fishing', action: 'remove', legal: false }),
+      );
+      expect(destination(workspace, finding.origin)).toMatchObject({
+        focusAddress: finding.origin,
+        roomTab: 'overview',
+        inspectorSubject: { kind: 'node', nodeKey: room.key },
+      });
+    },
+  );
 
   it('routes forced-missing Shrine inventory findings to repairable offer rows', () => {
     const document = removeForcedShrineInventory(loadSurfaceNOCheckpoint());

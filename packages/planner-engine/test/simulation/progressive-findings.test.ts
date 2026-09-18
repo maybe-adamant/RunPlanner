@@ -121,6 +121,11 @@ describe('progressive finding ancestry and chronology', () => {
         finding.origin.owner.occurrenceId === goldenFOccurrenceId(8, 1),
     );
     expect(retainedHammerFindings).toHaveLength(3);
+    expect(evaluation?.issue).toMatchObject({
+      kind: 'invalid',
+      owner: retainedHammerFindings?.[0]?.origin,
+    });
+    expect(evaluation?.issue?.reasons).toEqual(retainedHammerFindings);
     expect(new Set(retainedHammerFindings?.map((finding) => finding.evidence.traitKey)).size).toBe(
       3,
     );

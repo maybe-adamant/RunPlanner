@@ -334,6 +334,7 @@ export function evaluateHubDecisionGenerationInternal(
       ownerRegion(openSet.entries[0]?.origin ?? decision.board.origin),
       hubBoardChronology(history, decision.room.origin),
       'generation',
+      openSet.entries[0]?.origin ?? decision.board.origin,
     ),
   );
   const views = roomViews(history);

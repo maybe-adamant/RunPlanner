@@ -13,8 +13,12 @@ import { completePendingShopAcquisitionSite } from '../../shop/settlement';
 import type { RewardBranchState } from '../../branch-primitives';
 import { advanceRewardBranches } from '../../branch-lifecycle';
 import { BiomeRewardSimulationContractError } from '../biome-contract';
+import type { FindingRegionEntry } from '../../../finding-regions';
+import { resourcePlacementFindingRegions } from '../../../resources';
+import type { SemanticFinding } from '../../../model';
 
 export interface RoomExitedTransition {
+  readonly findingRegions: readonly FindingRegionEntry[];
   readonly branches: readonly RewardBranchState[];
   readonly runStateCheckpoint?: {
     readonly owner: ReturnType<typeof createRoomRunStateCheckpointAddress>;
@@ -34,6 +38,7 @@ export function applyRoomExitedTransition(
   roomView: ProgressiveRoomHistoryViews | undefined,
   resourcePlacements: ResourcePlacements,
   branches: readonly RewardBranchState[],
+  resourceFindings: readonly SemanticFinding[] = [],
 ): RoomExitedTransition {
   let next = branches;
   if (room?.entryState?.kind === 'shop')
@@ -104,6 +109,7 @@ export function applyRoomExitedTransition(
     }),
   );
   return Object.freeze({
+    findingRegions: resourcePlacementFindingRegions(event, resourceFindings),
     branches: advanceRewardBranches(next, event.sequence),
     ...(checkpoint === undefined ? {} : { runStateCheckpoint: checkpoint }),
   });
