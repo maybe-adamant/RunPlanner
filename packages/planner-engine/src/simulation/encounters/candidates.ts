@@ -5,7 +5,7 @@ import {
   type OccurrenceAddress,
 } from '../../authored-project/addresses';
 import { projectRoomPreparationCheckpoint } from '../history/facts';
-import type { HistoryStateView } from '../history/model';
+import type { HistoryEvent, HistoryStateView } from '../history/model';
 import type { CanonicalAuthoredRoom, CanonicalLocalVisitRoom } from '../materialization';
 import type { SemanticFinding } from '../model';
 import {
@@ -125,6 +125,7 @@ export function evaluateEncounterCandidatesInternal(
   gorgonStatus: GorgonLifecycleStatus | undefined = undefined,
   gorgonPhaseCandidates: readonly GorgonPhaseCandidateSupport[] = [],
   nemesisRandomEventCandidates: readonly NemesisRandomEventCandidateSupport[] = [],
+  historyEvents: readonly HistoryEvent[] = [],
 ): EncounterCandidateEvaluation & { readonly findingRegions: readonly FindingRegionEntry[] } {
   const entries = new Map<string, EncounterPhaseCandidateSupport>();
   const statuses = new Map<string, EncounterPhaseSequenceStatus>();
@@ -211,7 +212,18 @@ export function evaluateEncounterCandidatesInternal(
     for (const entry of prepared.statuses) {
       const key = semanticAddressKey(entry.origin);
       if (statuses.has(key)) throw new Error(`duplicate encounter phase status ${key}`);
-      statuses.set(key, entry.status);
+      const started = historyEvents.find(
+        (event) =>
+          event.kind === 'encounterStarted' &&
+          semanticAddressKey(event.origin) === semanticAddressKey(room.origin) &&
+          event.phaseKey === entry.origin.phaseKey,
+      );
+      statuses.set(
+        key,
+        entry.status.kind === 'active' && started?.kind === 'encounterStarted'
+          ? Object.freeze({ ...entry.status, execution: started.execution })
+          : entry.status,
+      );
     }
     findings.push(...prepared.findings);
     prepared.findings.forEach((finding) => {

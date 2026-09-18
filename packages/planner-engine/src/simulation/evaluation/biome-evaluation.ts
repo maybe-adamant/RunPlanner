@@ -199,6 +199,7 @@ function generation(
     gorgonStatus,
     rewards.gorgonPhaseCandidates,
     rewards.nemesisRandomEventCandidates,
+    history.events,
   );
   const encounterArtifacts = encounters.artifacts;
   const validation: BiomeGenerationValidation = Object.freeze({

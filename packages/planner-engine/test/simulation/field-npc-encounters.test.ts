@@ -16,6 +16,7 @@ import {
   createOccurrenceId,
   createOccurrenceAddress,
   createRewardWheelOfferAddress,
+  createRouteStartKeepsakeSelectionAddress,
   createSteadyGrowthOutcomeAddress,
   semanticAddressKey,
   type BiomeAddress,
@@ -81,6 +82,7 @@ import {
   loadSurfaceNStoryBoardProject,
   loadSurfaceNOPQProject,
   oBiome,
+  reachedPOutdoorIcarusFixture,
 } from '@run-planner/test-fixtures/surface';
 
 let goldenFGHIProject: ReturnType<typeof createGoldenFGHIProject>;
@@ -146,40 +148,6 @@ function surfaceProjectWithEnteredRankIHammer(): ProjectDocument {
     hubSlotKeys: ['combat05', 'miniBoss01', 'combat02', 'combat11', 'combat23', 'combat03'],
   });
   return authorLegalTraitOffers(project);
-}
-
-function reachedPOutdoorIcarusFixture(): {
-  readonly project: ProjectDocument;
-  readonly occurrenceId: OccurrenceId;
-  readonly encounter: ReturnType<typeof phase>;
-} {
-  const occurrenceId = pOccurrenceId('P_Combat07', 4, 1);
-  let project = applyProjectCommand(loadSurfaceNOPQProject(), catalog, {
-    kind: 'ReplaceOccurrenceRoom',
-    occurrence: createOccurrenceAddress(pBiome, pOccurrenceId('P_Combat11', 4, 2)),
-    gameName: 'P_Combat07',
-  });
-  project = applyProjectCommand(project, catalog, {
-    kind: 'ReplaceOccurrenceRoom',
-    occurrence: createOccurrenceAddress(pBiome, occurrenceId),
-    gameName: 'P_Combat11',
-  });
-  project = applyProjectCommand(project, catalog, {
-    kind: 'ReplaceOccurrenceRoom',
-    occurrence: createOccurrenceAddress(pBiome, pOccurrenceId('P_Combat09', 5, 2)),
-    gameName: 'P_Combat13',
-  });
-  project = applyProjectCommand(project, catalog, {
-    kind: 'ReplaceOccurrenceRoom',
-    occurrence: createOccurrenceAddress(pBiome, pOccurrenceId('P_Combat13', 6, 2)),
-    gameName: 'P_Combat09',
-  });
-  project = applyProjectCommand(project, catalog, {
-    kind: 'ReplaceIncomingReward',
-    reward: createIncomingRewardAddress(pBiome, occurrenceId),
-    value: { rewardType: 'TalentDrop' },
-  });
-  return Object.freeze({ project, occurrenceId, encounter: phase(pBiome, occurrenceId, 'Combat') });
 }
 
 function evaluatedBiome(project: ProjectDocument, biomeKey: 'F' | 'G' | 'H' | 'I') {
@@ -1682,6 +1650,64 @@ describe('field NPC encounter requirements', () => {
     ).toMatchObject({ giverKey: 'Icarus', providerKind: 'npc' });
   });
 
+  it('records Fig-skipped P Icarus without acquiring his offer, and restores it when unskipped', () => {
+    const fixture = reachedPOutdoorIcarusFixture();
+    let project = applyProjectCommand(fixture.project, catalog, {
+      kind: 'ReplaceStartingKeepsake',
+      selection: createRouteStartKeepsakeSelectionAddress('Surface'),
+      keepsakeKey: 'SkipEncounterKeepsake',
+    });
+    project = select(project, fixture.encounter, 'IcarusCombatP');
+    const intro = phase(pBiome, fixture.occurrenceId, 'Intro');
+    const skip = (value: boolean, source = project) =>
+      applyProjectCommand(source, catalog, { kind: 'ReplaceFigLeafSkip', phase: intro, value });
+    const missingButSkipped = evaluatedSurfaceBiome(skip(true), 'P').biome;
+    expect(missingButSkipped.validity).toBe('valid');
+
+    project = authorLegalTraitOffers(project);
+    const traitAddress = createTraitOfferAddress(fixture.encounter, 'selection');
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceTraitSelection',
+      trait: traitAddress,
+      selectedOptionKey: 'option3',
+    });
+    const skipped = skip(true);
+    const assembly = simulateProjectAssembly(catalog, skipped);
+    const p = assembly.evaluation.route.biomes.find((biome) => biome.biomeKey === 'P');
+    if (p?.authoring !== 'complete') throw new Error('P must be reached');
+    expect(p.validity).toBe('valid');
+    const events = p.history.events.filter(
+      (event) =>
+        event.origin.kind === 'occurrence' && event.origin.occurrenceId === fixture.occurrenceId,
+    );
+    expect(events.filter((event) => event.kind === 'encounterRecorded')).toHaveLength(2);
+    expect(events).toContainEqual(
+      expect.objectContaining({ kind: 'encounterRecorded', encounterKey: 'IcarusCombatP' }),
+    );
+    expect(events.filter((event) => event.kind === 'encounterEndEffectsApplied')).toEqual([
+      expect.objectContaining({ phaseKey: 'Combat', execution: 'skippedByFigLeaf' }),
+    ]);
+    expect(events.some((event) => event.kind === 'encounterInteractionReached')).toBe(false);
+    expect(events.some((event) => event.kind === 'roomCommitted')).toBe(true);
+    expect(p.rewards.branches[0]?.traitHistory?.equippedTraits.OmegaExplodeBoon).toBeUndefined();
+    expect(
+      p.rewards.selectedTraitOffers.some(
+        (offer) => semanticAddressKey(offer.address) === semanticAddressKey(traitAddress),
+      ),
+    ).toBe(false);
+    expect(
+      encounterPhaseSequenceStatusForProjectEvaluationAssembly(assembly, fixture.encounter),
+    ).toMatchObject({ kind: 'active', execution: 'skippedByFigLeaf' });
+    expect(
+      authoredOccurrence(skipped, 'P', fixture.occurrenceId).encounters.traitOffersByPhase,
+    ).toEqual(authoredOccurrence(project, 'P', fixture.occurrenceId).encounters.traitOffersByPhase);
+    const restored = evaluatedSurfaceBiome(skip(false, skipped), 'P').biome;
+    expect(restored.validity).toBe('valid');
+    expect(
+      restored.rewards.branches[0]?.traitHistory?.equippedTraits.OmegaExplodeBoon,
+    ).toMatchObject({ giverKey: 'Icarus' });
+  });
+
   it('applies reached Latest Model through the encounter-owned offer and exhausts its exact Hammer target', () => {
     const occurrenceId = oOccurrenceIds.combat01;
     const icarusPhase = phase(oBiome, occurrenceId, 'Combat1');
@@ -2079,11 +2105,11 @@ describe('field NPC encounter requirements', () => {
       selectedEncounterKey: 'GeneratedP',
       selectedPossible: true,
     });
-    expect(baseline.combatSequence).toEqual({ kind: 'active' });
+    expect(baseline.combatSequence).toMatchObject({ kind: 'active' });
     expect(baseline.unavailableSequence).toBeUndefined();
 
     expect(selectedP.combatSupport).toBeUndefined();
-    expect(selectedP.introSequence).toEqual({ kind: 'active' });
+    expect(selectedP.introSequence).toMatchObject({ kind: 'active' });
     expect(selectedP.combatSequence).toEqual({ kind: 'dormantSuffix' });
     expect(selectedP.state).toEqual(originalState);
     expect(selectedP.encounterKeyByPhase).toMatchObject({
@@ -2100,8 +2126,8 @@ describe('field NPC encounter requirements', () => {
       selectedPossible: false,
     });
     expect(selectedN.combatSupport).toBeUndefined();
-    expect(selectedN.introSequence).toEqual({ kind: 'active' });
-    expect(selectedN.combatSequence).toEqual({ kind: 'active' });
+    expect(selectedN.introSequence).toMatchObject({ kind: 'active' });
+    expect(selectedN.combatSequence).toMatchObject({ kind: 'active' });
     expect(selectedN.findings).not.toContainEqual(expect.objectContaining({ origin: combat }));
 
     expect(restoredCombatSupport).toMatchObject({

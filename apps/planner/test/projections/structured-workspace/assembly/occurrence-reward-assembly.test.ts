@@ -1,4 +1,6 @@
 import { describe, expect, it } from 'vitest';
+import { reachedPOutdoorIcarusFixture } from '@run-planner/test-fixtures/surface';
+import { authorLegalTraitOffers } from '@run-planner/test-fixtures/shared';
 import {
   assemble,
   applyProjectCommand,
@@ -39,6 +41,64 @@ import {
 } from '@planner-test/support/structured-workspace/occurrence-assembly.test-support';
 
 describe('structured workspace reward assembly', () => {
+  it('keeps skipped P Icarus selectable while hiding his dormant interaction and restoring its editor', () => {
+    const fixture = reachedPOutdoorIcarusFixture();
+    let project = applyProjectCommand(fixture.project, catalog, {
+      kind: 'ReplaceStartingKeepsake',
+      selection: createRouteStartKeepsakeSelectionAddress('Surface'),
+      keepsakeKey: 'SkipEncounterKeepsake',
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'SelectEncounter',
+      phase: fixture.encounter,
+      encounterKey: 'IcarusCombatP',
+    });
+    const projectRoom = (value = project) =>
+      assemble(value, 'Surface', 'P', fixture.occurrenceId).assembly.node.room;
+    const missing = projectRoom().encounterPhases.find(
+      (phase) => phase.address.phaseKey === 'Combat',
+    );
+    expect(missing?.traitOffer).toMatchObject({ offer: null });
+    project = authorLegalTraitOffers(project);
+    const original = projectRoom().encounterPhases.find(
+      (phase) => phase.address.phaseKey === 'Combat',
+    )?.traitOffer?.offer;
+    const intro = createEncounterPhaseAddress(
+      pBiome,
+      { kind: 'occurrence', occurrenceId: fixture.occurrenceId },
+      'Intro',
+    );
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceFigLeafSkip',
+      phase: intro,
+      value: true,
+    });
+    const skipped = projectRoom();
+    expect(skipped.encounterPhases.map((phase) => phase.address.phaseKey)).toEqual([
+      'Intro',
+      'Combat',
+    ]);
+    expect(skipped.encounterPhases[1]?.selectedEncounter.key).toBe('IcarusCombatP');
+    expect(skipped.encounterPhases[1]?.traitOffer).toBeUndefined();
+    expect(skipped.roomActions).toBeDefined();
+    expect(
+      skipped.roomActions?.rows.some((row) => row.reference.kind === 'interactEncounter'),
+    ).toBe(false);
+    const visibleKeys = new Set(skipped.roomActions?.rows.map((row) => row.key));
+    for (const entry of skipped.roomActions?.timeline.entries ?? []) {
+      if (entry.kind === 'action') expect(visibleKeys.has(entry.actionKey)).toBe(true);
+    }
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceFigLeafSkip',
+      phase: intro,
+      value: false,
+    });
+    const restored = projectRoom();
+    expect(restored.encounterPhases[1]?.traitOffer?.offer).toEqual(original);
+    expect(
+      restored.roomActions?.rows.some((row) => row.reference.kind === 'interactEncounter'),
+    ).toBe(true);
+  });
   it('projects a selected SpellDrop child from exact engine candidate capability', () => {
     const predecessor = goldenFOccurrenceId(9, 1);
     const occurrenceId = goldenFOccurrenceId(10, 2);

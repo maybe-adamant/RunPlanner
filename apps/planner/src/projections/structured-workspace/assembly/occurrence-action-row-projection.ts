@@ -109,8 +109,21 @@ function roomActionsForOccurrence(
     reference.entryKey === ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY;
   const goldNeedsPlacement =
     goldCapability !== undefined && !input.occurrence.roomActions.order.some(isGoldPickup);
+  const skippedInteractionKeys = new Set(
+    roster.rows.flatMap((row) => {
+      if (row.reference.kind !== 'interactEncounter') return [];
+      const phase = createEncounterPhaseAddress(
+        input.biome,
+        { kind: 'occurrence', occurrenceId: input.occurrence.occurrenceId },
+        row.reference.phaseKey,
+      );
+      const status = input.encounterPhaseStatus(phase);
+      return status?.kind === 'active' && status.execution === 'skippedByFigLeaf' ? [row.key] : [];
+    }),
+  );
   const presentedRows = roster.rows.filter(
-    (row) => !goldNeedsPlacement || !isGoldPickup(row.reference),
+    (row) =>
+      !skippedInteractionKeys.has(row.key) && (!goldNeedsPlacement || !isGoldPickup(row.reference)),
   );
   const presentedActionKeys = new Set(presentedRows.map((row) => row.key));
   const proposals = roster.proposals
@@ -607,6 +620,7 @@ function roomActionsForOccurrence(
   ]);
   const unrankedOrStaleRows = Object.freeze(
     lifecycleTimeline.repairRows.flatMap(({ key }) => {
+      if (skippedInteractionKeys.has(key)) return [];
       const projected = allProjectedRows.find((row) => row.key === key);
       if (projected === undefined) {
         throw new Error(`Room action timeline repair row ${key} has no projected row`);
@@ -644,7 +658,12 @@ function roomActionsForOccurrence(
   const activeLifecycleTimeline = scopeRoomLifecycleTimeline(
     appendTranscendentEmbryoTimelineEffects(
       appendSteadyGrowthTimelineEffects(
-        lifecycleTimeline,
+        {
+          ...lifecycleTimeline,
+          entries: lifecycleTimeline.entries.filter(
+            (entry) => entry.kind !== 'action' || !skippedInteractionKeys.has(entry.action.key),
+          ),
+        },
         steadyGrowthOutcomes.map((outcome) => outcome.address),
       ),
       transcendentEmbryoOutcomes.map((outcome) => outcome.address),

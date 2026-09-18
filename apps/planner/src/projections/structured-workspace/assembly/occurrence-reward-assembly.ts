@@ -773,7 +773,8 @@ export function activeEncounterPhasesForOwner(
     { ...options, includeFixedPhases: true, configuredRivalsRank: input.configuredRivalsRank },
   )) {
     const address = domain.origin;
-    if (input.encounterPhaseStatus(address)?.kind === 'dormantSuffix') continue;
+    const phaseStatus = input.encounterPhaseStatus(address);
+    if (phaseStatus?.kind === 'dormantSuffix') continue;
     const figLeafSupport = input.figLeafSupport?.(address);
     const gorgonSupport = input.gorgonSupport?.(address);
     const gorgonSupported = gorgonSupport?.supported === true;
@@ -843,7 +844,9 @@ export function activeEncounterPhasesForOwner(
         : undefined;
     const producer = selectedDefinition?.traitOfferProducer;
     const authoredTraitOffer =
-      input.facts.detailsActive && producer !== undefined
+      input.facts.detailsActive &&
+      producer !== undefined &&
+      phaseStatus?.execution !== 'skippedByFigLeaf'
         ? encounters.traitOffersByPhase?.[domain.slotKey]?.[selectedDefinition!.key]
         : undefined;
     const gorgonPhaseAddress = createGorgonPhaseAddress(address);
