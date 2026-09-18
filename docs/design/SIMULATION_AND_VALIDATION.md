@@ -66,10 +66,11 @@ also carries opaque candidate artifacts from the same execution. Candidate
 queries do not rerun the project to reconstruct them.
 
 The result contains status, route processing regions, covered histories and
-snapshots, findings and summary. An unconfigured project has explicit empty
-status; incomplete and invalid authored plans are ordinary results. Malformed
-input, impossible catalog construction and violated internal contacts throw
-contract errors rather than masquerading as user findings.
+snapshots, findings, an optional selected assessment issue and summary. An
+unconfigured project has explicit empty status; incomplete and invalid authored
+plans are ordinary results. Malformed input, impossible catalog construction
+and violated internal contacts throw contract errors rather than masquerading
+as user findings.
 
 Evaluation rebuilds synchronously for a new authored snapshot. Application
 caching may reuse a complete assembly for the identical immutable project,
@@ -185,10 +186,23 @@ identity to findings. Progressive retention uses existing materialization,
 generation and lifecycle chronology to locate them; finding-array order and
 presentation phase alone cannot determine the first region.
 
-All distinct co-owned error findings at that region remain available. Exact
-duplicates collapse by code, severity, phase, origin and structural evidence;
-different evidence remains distinct. Warnings do not establish a block.
+An incomplete or invalid configured route publishes exactly one assessment
+issue: its semantic repair owner, stable region identity, incomplete/invalid
+kind and nonempty collection of reasons. Valid and empty routes have none.
+Related reasons retain their exact child origins even when repair belongs to
+the containing offer. Exact duplicates collapse by semantic identity and
+evidence; warnings do not establish a block. Independent repairs sharing a
+checkpoint follow the engine's semantic ordering, never presentation order.
 An unlocatable error is a broken engine contract.
+
+Detailed findings remain available to their owning repair, candidate and
+delivery-placement consumers. They are not a competing route-level agenda.
+The selected issue comes from the same assessment stop that governs coverage;
+its containing repair owner neither moves that stop nor sets edit readiness.
+Reached resource-placement errors participate at their room-exit effect
+boundary, while an unpicked generated host retains its structural repair.
+Invalid Fig Leaf choices remain repairable but cannot publish a normally
+executed encounter as assessed continuation.
 
 The blocking owner retains its repair capability when reached. Later history
 effects, findings and capabilities do not become true merely because their

@@ -80,9 +80,10 @@ narrow widths.
 
 At desktop widths, the application shell occupies one viewport and gives the
 editor all height remaining below the compact project header.
-The document itself is not a vertical scrollport. The route rail, Route
-structure, Details region, and bounded findings list own overflow at their
-respective presentation boundaries, so scrolling one never moves the others.
+The document itself is not a vertical scrollport. The structure room list and
+Details region own overflow at their respective presentation boundaries. The
+compact repair banner and biome title stay above the scrolling room list;
+the banner has no separate scrolling reasons list.
 The desktop shell uses the available widescreen width rather than constraining
 the authoring surface to a narrow content column. A short structure rail does
 not advertise overflow merely because its connector decoration extends beyond
@@ -698,9 +699,10 @@ authorship stays visible but unassessed and locked. Invalidity alone does not
 lock repair, and an upstream block is never restated as fabricated downstream
 invalidity.
 
-The route rail, inspector, tabs, and Findings panel reference the same semantic
-destination. The owning control receives the persistent error treatment;
-summaries may show aggregate status but never create a second finding location.
+The route rail, inspector, tabs, and compact repair banner reference the same
+semantic destination. The engine-selected issue supplies the route's one
+repair agenda and global error treatment; detailed local explanations retain
+their exact child destinations. Summaries never create a second finding location.
 Color remains supplementary to labels, icons, descriptions, and accessible
 names.
 
