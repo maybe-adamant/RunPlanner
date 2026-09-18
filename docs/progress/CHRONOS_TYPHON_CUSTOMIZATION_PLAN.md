@@ -2,7 +2,10 @@
 
 ## Status and objective
 
-Locked following user approval. Gate A is complete; Gate B is next.
+Gates A and B are delivered. Gate C code verification and documentation are
+complete; full live acceptance is deliberately deferred by the user to the
+combined boss/generated-encounter in-game testing pass. Retain this document
+only for that pending checklist, not as an additional design authority.
 
 - Planner base: `68f763ca71b0b637cb50447131773fc646e51191`.
 - Game-module base: `a37e389e18c933155718ceb64c626b44f1ad1dbc`.
@@ -186,3 +189,33 @@ executors and fresh independent reviewers follow the repository gate routine.
   passed again. The reviewer independently ran five changed suites: 88 passed.
 - Formatting and diff checks passed. Full phase closure and game adapters remain
   pending; no live enforcement claim is made by Gate A.
+
+### Gates B and C
+
+- Game delivery: `95c479b`. Separate Chronos/Typhon adapters use local resolved
+  weapon data and a private reached stage respectively. No protocol, schema,
+  transaction, or conformance additions.
+- Shared fixture delivery: `7add7ec9`. The existing Surface NOPQ product now
+  includes normal Typhon's two egg choices. Its wire diff is 20 insertions and
+  2 deletions; all planner/game execution fixture pairs compare byte-for-byte.
+- Independent runtime review passed. Main-session oversight corrected absent
+  pool diagnostic handling before review completed. The reviewer independently
+  passed all 11 focused runtime tests and both native-source probes.
+- Full game suite: 545 tests passed. Production Luacheck: zero warnings/errors
+  across 103 files.
+- Full planner gate passed typechecks, 22 fixture-integrity tests, 3,292
+  correctness tests across 314 files, 18 performance-unit tests, and all eight
+  performance comparisons against pre-feature base `68f763ca`. Lint then found
+  one unused test import from the fixture change; it was removed and the
+  remaining lint/format/build stages passed separately, without repeating
+  the successful correctness suite.
+- Native evidence and feature-to-hook mappings live in their existing owning
+  audit documents. No extra design-contract rewrite was necessary.
+
+### Deferred live acceptance
+
+All five live acceptance bullets under Gate C remain pending. The user will
+exercise them together with generated encounter customization. Automated checks
+and source probes are not a claim of live enforcement. After that acceptance,
+remove this temporary plan; any discovered source discrepancy belongs in the
+existing Boss decisions audit.
