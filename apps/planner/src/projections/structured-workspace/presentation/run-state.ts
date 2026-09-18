@@ -22,7 +22,7 @@ const coreTraitSlots = Object.freeze([
   Object.freeze({ label: 'Cast', slotKey: 'Ranged' }),
   Object.freeze({ label: 'Sprint', slotKey: 'Rush' }),
   Object.freeze({ label: 'Magick', slotKey: 'Mana' }),
-  Object.freeze({ label: 'Spell', slotKey: 'Spell' }),
+  Object.freeze({ label: 'Hex', slotKey: 'Spell' }),
 ] as const);
 
 function count(value: DecisionRewardBagCount): string {
@@ -191,8 +191,18 @@ export function presentRunState(
             baseCapacity: hexBase,
             ...(hexEffective === undefined ? {} : { effectiveCapacity: hexEffective }),
           }),
-      godSentAdded: snapshot.hexProgress.godSentAdded === true,
-      talentDropsClosed: snapshot.hexProgress.talentDropsClosed === true,
+      godSentLabel:
+        equippedSpell === undefined
+          ? 'No Hex'
+          : snapshot.hexProgress.godSentAdded === true
+            ? 'Added'
+            : 'Not added',
+      pathOfStarsLabel:
+        equippedSpell === undefined
+          ? 'Ineligible — no Hex'
+          : snapshot.hexProgress.talentDropsClosed === true
+            ? 'Ineligible — tree full'
+            : 'Eligible',
       bankedPathPoints: snapshot.hexProgress.bankedPathPoints,
       investedPathPoints: snapshot.hexProgress.investedPathPoints,
     }),

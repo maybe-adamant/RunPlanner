@@ -233,11 +233,38 @@ describe('Run State presentation', () => {
       layoutLabel: 'Maze',
       baseCapacity: 22,
       effectiveCapacity: 24,
-      godSentAdded: true,
-      talentDropsClosed: false,
+      godSentLabel: 'Added',
+      pathOfStarsLabel: 'Eligible',
       bankedPathPoints: 2,
       investedPathPoints: 5,
     });
+    const withoutHex = presentRunState(catalog, {
+      ...snapshot,
+      traits: { ...snapshot.traits, equippedSlots: {}, equippedTraits: {} },
+      hexProgress: { bankedPathPoints: 5, investedPathPoints: 0 },
+    }).hexProgress;
+    expect(withoutHex).toMatchObject({
+      godSentLabel: 'No Hex',
+      pathOfStarsLabel: 'Ineligible — no Hex',
+      bankedPathPoints: 5,
+    });
+    for (const godSentAdded of [false, true]) {
+      for (const talentDropsClosed of [false, true]) {
+        const projected = presentRunState(catalog, {
+          ...snapshot,
+          hexProgress: {
+            ...snapshot.hexProgress,
+            godSentAdded,
+            talentDropsClosed,
+            investedPathPoints: talentDropsClosed ? (godSentAdded ? 24 : 22) : 5,
+          },
+        }).hexProgress;
+        expect(projected.godSentLabel).toBe(godSentAdded ? 'Added' : 'Not added');
+        expect(projected.pathOfStarsLabel).toBe(
+          talentDropsClosed ? 'Ineligible — tree full' : 'Eligible',
+        );
+      }
+    }
     expect(state.keepsakes.olympianSources).toEqual([
       expect.objectContaining({
         providerKey: 'Zeus',
@@ -327,7 +354,7 @@ describe('Run State presentation', () => {
         { label: 'Sprint', slotKey: 'Rush' },
         { label: 'Magick', slotKey: 'Mana' },
         {
-          label: 'Spell',
+          label: 'Hex',
           slotKey: 'Spell',
           trait: { label: 'Sky Fall', traitKey: 'SpellMoonBeamTrait' },
         },

@@ -16,7 +16,11 @@ export type {
   WorkspaceMarker,
   WorkspaceRoomTab,
 } from './contracts/navigation';
-export type { WorkspaceRunStateBagSection, WorkspaceRunStateLauncher } from './contracts/run-state';
+export type {
+  WorkspaceRunStateBagSection,
+  WorkspaceRunStateLauncher,
+  WorkspaceRunStateTrait,
+} from './contracts/run-state';
 export type {
   StructuredWorkspaceProjection,
   StructuredWorkspaceProjectionService,

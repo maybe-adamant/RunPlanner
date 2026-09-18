@@ -95,9 +95,9 @@ describe('Run State product loop', () => {
       name: 'State before the first action in Opening 01',
     });
     expect(within(sheet).getByRole('heading', { name: 'Gods in pool' })).toBeTruthy();
-    expect(within(sheet).getByRole('heading', { name: 'More Info' })).toBeTruthy();
-    expect(within(sheet).getByText('Counters')).toBeTruthy();
-    expect(within(sheet).getByText('Reward Bags')).toBeTruthy();
+    await view.user.click(within(sheet).getByRole('tab', { name: 'More Info' }));
+    expect(within(sheet).getByRole('heading', { name: 'Counters' })).toBeTruthy();
+    expect(within(sheet).getByRole('heading', { name: 'Reward Bags' })).toBeTruthy();
     await view.user.click(within(sheet).getByRole('button', { name: 'Close Run State' }));
     expect(screen.queryByRole('region', { name: /State before/ })).toBeNull();
     expect(document.activeElement).toBe(launcher);
@@ -134,7 +134,8 @@ describe('Run State product loop', () => {
     events.length = 0;
     await view.user.click(launcher);
     const sheet = screen.getByRole('region', { name: 'State before Hub' });
-    expect(within(sheet).getByText(/Major Reward \(RunProgress\)/)).toBeTruthy();
+    await view.user.click(within(sheet).getByRole('tab', { name: 'More Info' }));
+    expect(within(sheet).getByRole('heading', { name: 'Major Reward' })).toBeTruthy();
     await view.user.keyboard('{Escape}');
     expect(screen.queryByRole('region', { name: /State before/ })).toBeNull();
     expect(document.activeElement).toBe(launcher);

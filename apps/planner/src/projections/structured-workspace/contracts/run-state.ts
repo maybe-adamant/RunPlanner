@@ -22,8 +22,8 @@ export interface WorkspaceRunStatePresentation {
     readonly layoutLabel?: string;
     readonly baseCapacity?: number;
     readonly effectiveCapacity?: number;
-    readonly godSentAdded: boolean;
-    readonly talentDropsClosed: boolean;
+    readonly godSentLabel: 'No Hex' | 'Not added' | 'Added';
+    readonly pathOfStarsLabel: 'Ineligible — no Hex' | 'Eligible' | 'Ineligible — tree full';
     readonly bankedPathPoints: number;
     readonly investedPathPoints: number;
   };
