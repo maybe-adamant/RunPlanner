@@ -477,10 +477,24 @@ Verification and remaining obligations:
   is claimed. Gate D realization and Gate E broad closure/in-game checks remain.
   The user approved committing Gate C and proceeding to Gate D.
 
-| Gate | Status                                   |
-| ---- | ---------------------------------------- |
-| A    | Complete; independently reviewed         |
-| B    | Complete; independently reviewed         |
-| C    | Complete; review findings addressed      |
-| D    | Implementation starting                  |
-| E    | Not started; requires in-game acceptance |
+Gate D realizes the optional generated operands through one composition-owned
+synchronous preparation scope shared by navigation and encounter selection.
+Native generation retains difficulty, eligibility, type side effects, rounding,
+caps and spawning. Unsupported selections record bounded diagnostics without
+adding mismatch or transaction obligations.
+
+- Independent review and remediation addressed neutral nested scopes, void-return
+  call cardinality, generated-identity share mapping, and composition test wiring.
+- Game-module suite: 534 tests passed. Production-hook native-source probes:
+  13 tests passed, including fixed-entry/remainder allocation, native caps,
+  Hordes and later Fangs contact. Production Lua lint and diff checks passed.
+- No deployment or live acceptance is claimed. Gate D is committed in the game module;
+  Gate E still owns full planner closure and the required in-game witnesses.
+
+| Gate | Status                                          |
+| ---- | ----------------------------------------------- |
+| A    | Complete; independently reviewed                |
+| B    | Complete; independently reviewed                |
+| C    | Complete; review findings addressed             |
+| D    | Complete; independently reviewed                |
+| E    | Closure checks started; live acceptance pending |
