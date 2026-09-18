@@ -66,7 +66,10 @@ import type {
 import { summarizeRewardOffer } from '@planner/projections/rewards/rewardPicker';
 import { resolveWorkspaceFixedRewardOffer } from './catalog-room';
 import { StructuredWorkspaceProjectionContractError } from '../contract';
-import type { WorkspaceEncounterPhase } from '../contracts/locals';
+import type {
+  WorkspaceEncounterCustomizationDecision,
+  WorkspaceEncounterPhase,
+} from '../contracts/locals';
 import type { WorkspaceRewardControl } from '../contracts/rewards';
 import type { WorkspaceMarkerDestinationEmitter } from '../navigation/marker-builder';
 import type { WorkspaceMarker } from '../contracts/navigation';
@@ -797,27 +800,64 @@ export function activeEncounterPhasesForOwner(
       domain.customization === undefined
         ? undefined
         : Object.freeze(
-            domain.customization.flatMap((decision) => {
-              if (decision.selection.kind === 'generated') return [];
-              return [
-                Object.freeze({
-                  key: decision.key,
-                  label: decision.label,
+            domain.customization.map((decision): WorkspaceEncounterCustomizationDecision => {
+              const common = {
+                key: decision.key,
+                label: decision.label,
+                valueSupported: decision.valueSupported,
+                ...(decision.value === undefined ? {} : { value: decision.value }),
+                ...(decision.retainedChoiceLabels === undefined
+                  ? {}
+                  : { retainedChoiceLabels: decision.retainedChoiceLabels }),
+              };
+              if (decision.selection.kind === 'generated') {
+                return Object.freeze({
+                  ...common,
                   selection: Object.freeze({
-                    ...decision.selection,
+                    kind: 'generated' as const,
+                    choices: Object.freeze(
+                      decision.selection.choices.map((choice) =>
+                        Object.freeze({
+                          key: choice.key,
+                          label: choice.label,
+                          elite: choice.elite,
+                        }),
+                      ),
+                    ),
+                    fixedEnemies: Object.freeze(
+                      decision.selection.fixedEnemies.map((enemy) =>
+                        Object.freeze({ key: enemy.key, label: enemy.label }),
+                      ),
+                    ),
+                    waveCount: Object.freeze({ ...decision.selection.waveCount }),
+                  }),
+                });
+              }
+              if (decision.selection.kind === 'single') {
+                return Object.freeze({
+                  ...common,
+                  selection: Object.freeze({
+                    kind: 'single' as const,
                     choices: Object.freeze(
                       decision.selection.choices.map((choice) =>
                         Object.freeze({ key: choice.key, label: choice.label }),
                       ),
                     ),
                   }),
-                  valueSupported: decision.valueSupported,
-                  ...(decision.value === undefined ? {} : { value: decision.value }),
-                  ...(decision.retainedChoiceLabels === undefined
-                    ? {}
-                    : { retainedChoiceLabels: decision.retainedChoiceLabels }),
+                });
+              }
+              return Object.freeze({
+                ...common,
+                selection: Object.freeze({
+                  kind: 'orderedPrefix' as const,
+                  maximumLength: decision.selection.maximumLength,
+                  choices: Object.freeze(
+                    decision.selection.choices.map((choice) =>
+                      Object.freeze({ key: choice.key, label: choice.label }),
+                    ),
+                  ),
                 }),
-              ];
+              });
             }),
           );
     const candidateChoices = Object.freeze(
@@ -1048,6 +1088,9 @@ export function activeEncounterPhasesForOwner(
         selectedEncounter: Object.freeze({
           key: selectedChoice.key,
           label: selectedChoice.label,
+          ...(domain.selectedEncounterDefinitionKey === undefined
+            ? {}
+            : { nativeEncounterDefinitionKey: domain.selectedEncounterDefinitionKey }),
         }),
         ...(fieldsPassive &&
         domain.choices.some(

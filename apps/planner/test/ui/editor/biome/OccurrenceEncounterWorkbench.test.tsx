@@ -89,6 +89,67 @@ afterEach(() => {
 });
 
 describe('OccurrenceEncounterWorkbench', () => {
+  it('keeps an ordinary generated encounter Default until a compact customization edit', async () => {
+    const occurrenceId = goldenFOccurrenceId(5, 1);
+    const project = createGoldenFGHIProject();
+    const canonical = encodeProjectDocument(project);
+    const view = renderOccurrenceWorkbench(
+      project,
+      'Underworld',
+      'F',
+      occurrenceById(occurrenceId),
+    );
+    openRoomTab('Room Timeline');
+    const launcher = screen.getByRole('button', { name: 'Customize encounter' });
+    await view.user.click(launcher);
+    await screen.findByRole('dialog', { name: 'Customize' });
+    await view.user.click(screen.getByRole('button', { name: 'Close encounter customization' }));
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(
+      encodeProjectDocument(view.application.store.getState().projectWorkspace.history!.present),
+    ).toBe(canonical);
+    await view.user.click(launcher);
+    const dialog = await screen.findByRole('dialog', { name: 'Customize' });
+    await view.user.selectOptions(within(dialog).getByRole('combobox', { name: 'Waves' }), '3');
+    await waitFor(() =>
+      expect(
+        view.application.store
+          .getState()
+          .projectWorkspace.history!.present.route.biomes.find((biome) => biome.biomeKey === 'F')
+          ?.topology?.occurrences.find((occurrence) => occurrence.occurrenceId === occurrenceId)
+          ?.encounters.customizationByPhase?.Encounter?.generatedComposition,
+      ).toMatchObject({ kind: 'generated', waveCount: 3 }),
+    );
+    await view.user.selectOptions(
+      within(dialog).getByRole('combobox', { name: 'Shared highlight' }),
+      'Guard',
+    );
+    const enemy = await within(dialog).findByRole('combobox', { name: 'Wave 2 enemy 2' });
+    await view.user.selectOptions(enemy, 'Brawler');
+    await waitFor(() =>
+      expect(
+        view.application.store
+          .getState()
+          .projectWorkspace.history!.present.route.biomes.find((biome) => biome.biomeKey === 'F')
+          ?.topology?.occurrences.find((occurrence) => occurrence.occurrenceId === occurrenceId)
+          ?.encounters.customizationByPhase?.Encounter?.generatedComposition,
+      ).toMatchObject({
+        kind: 'generated',
+        waveCount: 3,
+        highlightKey: 'Guard',
+        waves: [{ waveIndex: 2, typeKeys: ['Brawler'] }],
+      }),
+    );
+    view.application.store.dispatch(authoredProjectUndoRequested());
+    expect(
+      view.application.store
+        .getState()
+        .projectWorkspace.history!.present.route.biomes.find((biome) => biome.biomeKey === 'F')
+        ?.topology?.occurrences.find((occurrence) => occurrence.occurrenceId === occurrenceId)
+        ?.encounters.customizationByPhase?.Encounter?.generatedComposition,
+    ).toMatchObject({ waveCount: 3, highlightKey: 'Guard' });
+  });
+
   it('edits a fixed Scylla phase in place and retains a now-invalid choice for finding repair', async () => {
     const project = applyProjectCommand(createGoldenFGHIProject(), catalog, {
       kind: 'ReplaceFearVowRank',

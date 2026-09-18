@@ -100,10 +100,12 @@ Default interaction:
   assessment. A known concrete change that conflicts with active authored
   composition stays visible for repair.
 
-For an active authored wave, the highlight/fixed template member is shown once
-as read-only context; the editable list describes the remaining types. The
-engine exposes supported domains and composition validity. React does not
-calculate quotas or enemy eligibility. Existing native type identities keep
+For an active wave, the highlight/fixed template members occupy read-only enemy
+slots alongside the editable remaining types. The engine exposes total and
+additional type bounds, seeded identities, ordered candidate domains and precise
+composition issues. Candidate availability does not create another type slot:
+the engine's wave capacity limits editable positions. React does not calculate
+quotas or enemy eligibility. Existing native type identities keep
 normal and elite variants distinct; this is not Fangs-perk authoring.
 
 An exact composition also fixes its type count within the native possibilities.
@@ -276,11 +278,43 @@ No deployment with new customization is ready until D passes.
 
 ### C — Optional encounter editor
 
-Adapt the existing phase product, dialog, candidate loader and bound semantic
-commands. Show compact wave/highlight controls and per-wave sections only when
-meaningful. Fixed facts are read-only; Default and Reset remain obvious. Use
-friendly enemy labels and context explanations, not leaked native IDs or an
-extra global customization-mode workflow.
+Adapt the existing phase product, dialog and bound semantic commands. Publish
+the current generated assessment with the authored snapshot; ordinary picker
+candidates remain lazy. After the count/highlight prerequisites are known, show each wave's
+supported enemy slots together in a horizontal grid, with labels above controls.
+Allow four columns at ordinary popup widths and wrap on narrower screens. The
+highlight and fixed members occupy noneditable slots with matching visual weight.
+All supported additional positions are visible from the outset; unfilled suffix
+positions stay disabled until their predecessor is selected. Use ordinary
+dropdowns initially. No endless append row or empty extra picker after capacity.
+
+State each wave's total requirement and distinguish required from optional
+additional positions where native count can vary. Default remains the whole-wave
+native configuration; an empty position is a selection placeholder, not a request
+for native filling inside an exact authored composition. Setting prerequisites or
+opening the dialog must not author wave selections. Keep each independent reset.
+
+Place compact weight inputs beside generated enemy controls, including the
+highlight. Show `NA` while weights are native; the first weight edit initializes
+the other generated members to 1. Explain native versus relative weighting once
+per wave. Fixed scripted members have no weight control. Align red-tinted weight
+and wave resets with the wave heading, and customization reset with the section
+heading. Show the resolved native encounter identity below the section heading.
+
+Retain invalid choices, including excess stored types, in an explicit removable
+repair area rather than silently discarding or hiding them. Do not reinterpret
+stored suffixes when an earlier type is edited. A range/eligibility conflict must
+remain repairable without requiring a full customization reset.
+Remove populated positions from the end; replacing an earlier choice preserves
+the later choices for validation and repair.
+
+Give issues typed semantic evidence at the engine authority (wave, relevant type
+or position, actual count and allowed bounds as appropriate). Project concise,
+actionable messages beside the affected wave/control rather than concatenating
+generic sentences at the dialog bottom. For example, a highlight-only first wave
+with two stored additions says to remove those two additions. This tightens B's
+assessment product; it changes no catalog rules, persisted schema or execution
+protocol and introduces no generic form framework.
 
 Primary owners: focused projection/interaction tests and UI tests beside the
 encounter workbench. Representative real-plan workflows cover ordinary combat,
@@ -288,6 +322,13 @@ an NPC, H mixed composition and a multi-phase O or P occurrence; verify opening
 and closing changes no authored state, untouched defaults need no findings,
 explicit invalid values remain repairable, and finding navigation targets the
 launcher without opening the dialog. Check narrow-width layout manually.
+Include the user's P_Combat08 shape: two waves with a Satyr Goldpike highlight
+and Harpy Raptor/Auto-Seeker additions in both. Report 3 versus 1/2 total types,
+retain removable excess, and reach valid state by removing both additions from
+wave 1 and either from wave 2. Cover fixed H seeds, required/optional slots,
+progressive disabling, and the absence of a trailing selectable position once
+the wave is full. Keep the complete slot/evidence matrix in engine tests and
+representative repair workflows in application tests.
 
 Commit boundary: complete application presentation over B's supported engine
 product, with existing boss customization unchanged.
@@ -386,10 +427,55 @@ Recorded Gate B checks:
   no remaining actionable findings. Broad phase closure and in-game validation
   remain E; no intermediate feature deployment was performed.
 
+Gate C extends the existing Timeline customization dialog with atomically published
+exact-context assessment, count/highlight controls, sparse wave composition and relative weights.
+Default preserves dormant rows, independent resets remove overrides, and retained
+invalid values remain repairable. Findings distinguish the encounter picker from
+the customization launcher without opening the dialog. Existing boss editors remain
+unchanged.
+
+Initial Gate C checks (before the fixed-slot authoring revision):
+
+- Focused UI/workspace workflows and shared interaction/finding hooks: 4 files /
+  46 tests passed, including real ordinary, NPC, H mixed, O phase and Devotion
+  contacts, weights, reset/Undo, retained repair, and unchanged opening/closing.
+- Application typecheck and affected TypeScript lint/Prettier passed.
+- Workspace contract suite: 75 passed; one pre-existing button-classification
+  failure in unchanged `RunStateSheet.tsx:190` (introduced by `321fcb66`) remains
+  for closure. All candidate, projection, ownership and render-purity checks passed.
+- Chromium inspection at 700px and 360px verified usable dialog layout without
+  horizontal overflow, including relative-weight inputs.
+- Independent review's retained-row/reset and witness gaps were addressed; final
+  review reported no actionable findings. No deployment or game realization is
+  claimed by this UI gate.
+
+Fixed-slot revision verification:
+
+- Seven focused engine, export, authored-command, UI and shared-hook files passed
+  (64 tests). Engine/application typechecks, affected lint, formatting and diff
+  checks passed.
+- Independent review passed after restricting removal to the last populated
+  position; replacing an earlier enemy preserves the remaining selections.
+- The durable P repair workflow uses the reachable `P_Combat02` fixture with the
+  same `GeneratedP` policy. Separately, the user's exact `(51)` save was repaired
+  through Chromium in `P_Combat08`: removing the three excess selections restored
+  all four biomes to valid. The original file was not changed.
+- Chromium inspection at 1280px and 360px confirmed horizontal slots and usable
+  narrow layout. A one-off comparison across 39 encounter families and 4,968
+  inputs found no change to validity, exported operands or blacklist products.
+- No schema, protocol or fixture migration; no deployment. The previously noted
+  unrelated Run State contract-test failure remains a closure obligation.
+- Final UI refinements retain native dropdowns as the checkpoint: inline weights
+  and budget shares, persistent empty-slot placeholders, and compact shared reset
+  styling. Replacement carries the previous member's weight. Assessment is
+  published atomically; browser instrumentation confirmed wave/input identity and
+  focus survive edits with no control removal. Evaluation latency remains about
+  200 ms in the sampled development-browser edit, separate from the removed flash.
+
 | Gate | Status                                   |
 | ---- | ---------------------------------------- |
 | A    | Complete; independently reviewed         |
 | B    | Complete; independently reviewed         |
-| C    | Not started                              |
+| C    | Complete; independently reviewed         |
 | D    | Not started                              |
 | E    | Not started; requires in-game acceptance |
