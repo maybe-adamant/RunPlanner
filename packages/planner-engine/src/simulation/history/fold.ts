@@ -149,6 +149,9 @@ function encounterEntry(
     slotKey: event.phaseKey,
     encounterKey: event.encounterKey,
     phaseKind: event.phaseKind,
+    ...(event.kind !== 'encounterRecorded' || event.generatedCustomization === undefined
+      ? {}
+      : { knownEnemyBlacklistAdditions: event.generatedCustomization.knownRunBlacklistAdditions }),
   });
 }
 

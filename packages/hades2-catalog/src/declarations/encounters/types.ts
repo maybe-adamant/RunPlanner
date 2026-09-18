@@ -1,6 +1,7 @@
 import type {
   EncounterSlotActivation,
   EncounterPhaseKind,
+  GeneratedEncounterSelection,
 } from '@run-planner/engine/catalog-schema';
 import type { RequirementExpression } from '@run-planner/engine/requirements';
 import type { RawCountedRewardBinding } from '../rewards/types';
@@ -124,6 +125,11 @@ export interface RawEncounterCustomizationChoice {
 }
 
 export type RawEncounterCustomizationDecisionDeclaration =
+  | {
+      readonly key: string;
+      readonly label: string;
+      readonly selection: GeneratedEncounterSelection;
+    }
   | {
       readonly key: string;
       readonly label: string;

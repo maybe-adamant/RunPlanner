@@ -176,6 +176,7 @@ export interface EncounterHistoryEntry {
   readonly slotKey: string;
   readonly encounterKey: string;
   readonly phaseKind: EncounterPhaseKind;
+  readonly knownEnemyBlacklistAdditions?: readonly string[];
 }
 
 export interface EnteredRewardStoreHistoryEntry {

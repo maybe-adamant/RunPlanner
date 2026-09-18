@@ -24,6 +24,10 @@ import type { CanonicalAuthoredRoom } from '../materialization';
 import type { SemanticFinding } from '../model';
 import type { ResolvedEncounterPhase } from './model';
 import {
+  prepareGeneratedEncounter,
+  type GeneratedEncounterCandidateCapability,
+} from './generation-preparation';
+import {
   encounterResolutionContext,
   resolveEncounterAuthoringProfile,
   resolveMaterializedEncounterPhase,
@@ -78,6 +82,7 @@ export interface PreparedEncounterPhases {
   readonly valid: boolean;
   readonly validPrefix: readonly ResolvedEncounterPhase[];
   readonly candidates: readonly EncounterPhaseCandidateSupport[];
+  readonly generation: readonly GeneratedEncounterCandidateCapability[];
   readonly statuses: readonly EncounterPhaseSequenceStatusEntry[];
   readonly findings: readonly SemanticFinding[];
   readonly blockedAt?: EncounterPhaseAddress;
@@ -175,6 +180,7 @@ function requirementContext(
 export interface EncounterPreparationRunState {
   readonly pendingSpellDrop?: boolean;
   readonly allSpellInvested?: boolean;
+  readonly rewardGeneration?: HistoryStateView | undefined;
 }
 
 function phaseAddress(room: EncounterAuthoringRoom, slotKey: string): EncounterPhaseAddress {
@@ -288,6 +294,7 @@ export function prepareRoomEncounterPhases(
     ]),
   );
   const candidates: EncounterPhaseCandidateSupport[] = [];
+  const generation: GeneratedEncounterCandidateCapability[] = [];
   const statuses: EncounterPhaseSequenceStatusEntry[] = [];
   const findings: SemanticFinding[] = [];
   const validPrefix: ResolvedEncounterPhase[] = [];
@@ -298,6 +305,12 @@ export function prepareRoomEncounterPhases(
   let preparation = preparationCheckpoint;
   let prefixValid = true;
   let suffixTerminated = false;
+
+  const prepareCustomization = (phase: ResolvedEncounterPhase, origin: EncounterPhaseAddress) => {
+    const result = prepareGeneratedEncounter(phase, origin, preparation, runState.rewardGeneration);
+    if (result.capability !== undefined) generation.push(result.capability);
+    return result.phase;
+  };
 
   for (const phase of room.encounterPhases) {
     const origin = phaseAddress(room, phase.slotKey);
@@ -328,7 +341,7 @@ export function prepareRoomEncounterPhases(
     );
     const resolution = encounterResolutionContext(room, declaration);
     if (binding.kind === 'fixed') {
-      const resolvedPhase = resolveMaterializedEncounterPhase(
+      let resolvedPhase = resolveMaterializedEncounterPhase(
         catalog,
         declaration,
         phase,
@@ -344,6 +357,7 @@ export function prepareRoomEncounterPhases(
         continue;
       }
       if (prefixValid) {
+        resolvedPhase = prepareCustomization(resolvedPhase, origin);
         appendCustomizationFindings(findings, resolvedPhase, origin, preparation.sequence);
         validPrefix.push(resolvedPhase);
         preparation = projectEncounterRecordPreparation(
@@ -440,7 +454,7 @@ export function prepareRoomEncounterPhases(
       continue;
     }
     if (prefixValid) {
-      const resolvedPhase = resolveMaterializedEncounterPhase(
+      let resolvedPhase = resolveMaterializedEncounterPhase(
         catalog,
         declaration,
         phase,
@@ -448,6 +462,7 @@ export function prepareRoomEncounterPhases(
       );
       if (resolvedPhase === undefined)
         throw new Error(`${set.key}.${phase.authoredChoiceKey} lacks resolution`);
+      resolvedPhase = prepareCustomization(resolvedPhase, origin);
       appendCustomizationFindings(findings, resolvedPhase, origin, preparation.sequence);
       validPrefix.push(resolvedPhase);
       preparation = projectEncounterRecordPreparation(
@@ -464,6 +479,7 @@ export function prepareRoomEncounterPhases(
     valid: blockedAt === undefined,
     validPrefix: Object.freeze(validPrefix),
     candidates: Object.freeze(candidates),
+    generation: Object.freeze(generation),
     statuses: Object.freeze(statuses),
     findings: Object.freeze(findings),
     ...(blockedAt === undefined ? {} : { blockedAt }),

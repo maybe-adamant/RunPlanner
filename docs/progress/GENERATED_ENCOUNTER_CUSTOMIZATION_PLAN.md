@@ -363,10 +363,33 @@ Recorded checks:
   Independent follow-up verification closed all four with no remaining material
   findings. Production realization and in-game acceptance are still pending.
 
+Gate B delivers all 39 normalized declarations, sparse phase-owned authored
+customization, exact preparation assessment/candidates, and lossless execution
+operands. Known ordinary-addition blacklist consequences travel through the
+existing encounter record; native Default rosters remain unknown. Devotion uses
+the source target-generation checkpoint rather than destination entry. The
+application currently retains its boss editor; generated controls belong to C.
+
+Recorded Gate B checks:
+
+- Catalog: 34 files / 268 tests passed, including updated normalized snapshots.
+- Focused engine: 9 files / 179 tests passed, covering authored codec/history,
+  reconciliation, ordered composition, exact candidate repair, existing boss
+  behavior, real-route publication and execution fixture compatibility.
+- Game protocol: 47 tests passed. Both decoders admit the same closed sparse
+  generated payload under execution protocol 40; no authored-schema bump.
+- All workspace/fixture typechecks and affected TypeScript lint passed; protocol
+  production Lua is warning-free.
+- All 13 execution fixtures changed only version and fingerprint; their game
+  mirrors are byte-identical. Temporary fixture-refresh code was removed.
+- Independent declaration/order review and final integration review reported
+  no remaining actionable findings. Broad phase closure and in-game validation
+  remain E; no intermediate feature deployment was performed.
+
 | Gate | Status                                   |
 | ---- | ---------------------------------------- |
 | A    | Complete; independently reviewed         |
-| B    | Not started                              |
+| B    | Complete; independently reviewed         |
 | C    | Not started                              |
 | D    | Not started                              |
 | E    | Not started; requires in-game acceptance |

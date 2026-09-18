@@ -1,3 +1,4 @@
+import { generatedEncounterChoices } from './generated/policies';
 import type { RawEncounterDefinitionDeclaration, RawEncounterSetDeclaration } from './types';
 import {
   arachneEncounterKeys,
@@ -12,6 +13,7 @@ import {
 export const gEncounterDefinitions = [
   {
     key: 'GeneratedG',
+    customization: [generatedEncounterChoices.GeneratedG],
     label: 'Combat',
     kind: 'combat',
     countsEncounterDepth: true,
@@ -20,6 +22,7 @@ export const gEncounterDefinitions = [
   },
   {
     key: 'DevotionTestG',
+    customization: [generatedEncounterChoices.DevotionTestG],
     label: 'Devotion combat',
     kind: 'combat',
     countsEncounterDepth: true,
@@ -27,6 +30,7 @@ export const gEncounterDefinitions = [
   },
   {
     key: 'ArtemisCombatG',
+    customization: [generatedEncounterChoices.ArtemisCombatG],
     label: 'Artemis combat',
     kind: 'combat',
     countsEncounterDepth: true,
@@ -87,6 +91,7 @@ export const gEncounterDefinitions = [
   },
   {
     key: 'NemesisCombatG',
+    customization: [generatedEncounterChoices.NemesisCombatG],
     label: 'Nemesis combat',
     kind: 'combat',
     countsEncounterDepth: true,

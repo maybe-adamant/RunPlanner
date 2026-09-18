@@ -1,8 +1,10 @@
+import { generatedEncounterChoices } from './generated/policies';
 import type { RawEncounterDefinitionDeclaration, RawEncounterSetDeclaration } from './types';
 
 export const qEncounterDefinitions = [
   {
     key: 'GeneratedQ',
+    customization: [generatedEncounterChoices.GeneratedQ],
     label: 'Combat',
     kind: 'combat',
     countsEncounterDepth: true,
@@ -11,6 +13,7 @@ export const qEncounterDefinitions = [
   },
   {
     key: 'GeneratedQ_Islands',
+    customization: [generatedEncounterChoices.GeneratedQ_Islands],
     label: 'Islands combat',
     kind: 'combat',
     countsEncounterDepth: true,
@@ -19,6 +22,7 @@ export const qEncounterDefinitions = [
   },
   {
     key: 'GeneratedQ_Large',
+    customization: [generatedEncounterChoices.GeneratedQ_Large],
     label: 'Preboss combat',
     kind: 'combat',
     countsEncounterDepth: true,

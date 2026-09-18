@@ -583,6 +583,14 @@ export function retainBlockedRegionProducts(
     encounterCapability === undefined
       ? retainedArtifacts.encounters
       : Object.freeze({
+          generationAt: (
+            address: import('../../authored-project/addresses').EncounterPhaseAddress,
+          ) =>
+            blockedAt.kind === 'encounterPhase' &&
+            semanticAddressKey(address) === semanticAddressKey(blockedAt)
+              ? (selectedArtifacts.encounters.generationAt(address) ??
+                blockedArtifacts.encounters.generationAt(address))
+              : retainedArtifacts.encounters.generationAt(address),
           at: (address: import('../../authored-project/addresses').EncounterPhaseAddress) =>
             blockedAt.kind === 'encounterPhase' &&
             semanticAddressKey(address) === semanticAddressKey(blockedAt)

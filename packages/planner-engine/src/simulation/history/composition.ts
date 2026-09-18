@@ -28,6 +28,7 @@ import type {
 } from './model';
 import type { ResolvedEncounterPhase } from '../encounters/model';
 import { assessFigLeafSkip } from '../encounters/fig-leaf';
+import { targetRewardGenerationCheckpoint } from '../encounters/generation-preparation';
 
 export interface FigLeafLifecycleState {
   readonly remainingUses: number;
@@ -63,6 +64,7 @@ interface EventBuilder {
 export interface HistorySegmentWriter {
   append(event: SegmentHistoryEventData): void;
   current(): HistoryStateView;
+  rewardGeneration(origin: CanonicalLifecycleRoom['origin']): HistoryStateView | undefined;
   readonly validatesEncounterResolution: boolean;
   readonly pendingSpellDrop: boolean;
   readonly allSpellInvested: boolean;
@@ -200,6 +202,12 @@ function segmentWriter(builder: EventBuilder): HistorySegmentWriter {
     current(): HistoryStateView {
       return foldBiomeHistoryPrefixEvents(builder.events, builder.seed).current;
     },
+    rewardGeneration(origin: CanonicalLifecycleRoom['origin']): HistoryStateView | undefined {
+      return targetRewardGenerationCheckpoint(
+        foldBiomeHistoryPrefixEvents(builder.events, builder.seed).rooms,
+        origin,
+      );
+    },
     validatesEncounterResolution: builder.validateEncounterResolution,
     pendingSpellDrop: builder.pendingSpellDrop,
     allSpellInvested: builder.allSpellInvested,
@@ -297,6 +305,9 @@ export function appendRoomLifecycle(
           {
             pendingSpellDrop: writer.pendingSpellDrop,
             allSpellInvested: writer.allSpellInvested,
+            ...(authoringRoom.incomingReward?.offer.rewardType === 'Devotion'
+              ? { rewardGeneration: writer.rewardGeneration(authoringRoom.origin) }
+              : {}),
           },
         )
       : undefined;

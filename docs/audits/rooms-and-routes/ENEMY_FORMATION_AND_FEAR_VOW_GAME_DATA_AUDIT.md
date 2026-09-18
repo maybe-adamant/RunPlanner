@@ -142,8 +142,15 @@ The initial highlight type target for wave `i` is
 Here `typeDepth` is `GetBiomeDepth(CurrentRun)` unless
 `UseEncounterDepthForTypes` selects `CurrentRun.BiomeEncounterDepth` (with the
 native missing-value fallback of one). `GetBiomeDepth` counts backward through
-room history to the biome boundary; it is not an alias for `BiomeDepthCache`.
-The exact preparation-time context matters, not a rendered room/phase index.
+room history to the biome boundary. At ordinary target-entry preparation,
+`RoomLogic.lua:4373–4387` commits the predecessor and updates the caches before
+choosing target encounters; `UpdateRunHistoryCache` sets `BiomeDepthCache` from
+`GetBiomeDepth` (`RunLogic.lua:1867–1869`). Those values therefore agree at this
+contact, including repeated H/O/P preparation calls; no phase-local increment
+is added. Devotion instead generates during outgoing `SetupRoomReward`
+(`RoomLogic.lua:3960`, `RewardLogic.lua:259–264`), before that commit, and reads
+the source-room generation state. Its type depth and enemy cached-depth gates
+must not borrow the destination's later preparation counters.
 
 Thus 1/2/3 highlight progression is not universal: escalating N/O generators
 can request multiple types even in the first wave. Remaining types are selected

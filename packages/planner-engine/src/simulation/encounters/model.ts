@@ -41,6 +41,12 @@ export interface ResolvedEncounterPhase {
     readonly value?: AuthoredEncounterCustomization;
     readonly valueSupported: boolean;
   })[];
+  /** Evaluated generation operands, owned by the concrete preparation checkpoint. */
+  readonly generatedCustomization?: {
+    readonly decisionKey: string;
+    readonly operands?: import('./generation').GeneratedEncounterOperands;
+    readonly knownRunBlacklistAdditions: readonly string[];
+  };
   readonly sequenceEffect?: { readonly kind: 'terminateSuffix' };
   readonly rewardAttachment?: EncounterSlotRewardAttachment;
 }

@@ -266,8 +266,23 @@ export type AuthoredNemesisRandomEventOutcome =
 
 /** Sparse explicit encounter decisions. Omission is the declaration's native Default. */
 export type AuthoredEncounterCustomization =
+  | AuthoredGeneratedEncounterCustomization
   | { readonly kind: 'single'; readonly choiceKey: string }
   | { readonly kind: 'orderedPrefix'; readonly choiceKeys: readonly string[] };
+
+export interface AuthoredGeneratedEncounterCustomization {
+  readonly kind: 'generated';
+  readonly waveCount?: number;
+  readonly highlightKey?: string;
+  /** Unlisted native wave indices remain Default. */
+  readonly waves?: readonly {
+    readonly waveIndex: number;
+    /** Remaining generated types, excluding the shared highlight and fixed spawns. */
+    readonly typeKeys: readonly string[];
+    /** Identity-owned positive relative weights, including the generated highlight. */
+    readonly weights?: Readonly<Record<string, number>>;
+  }[];
+}
 
 export type SideRoomGeneration = 'generated' | 'notGenerated';
 

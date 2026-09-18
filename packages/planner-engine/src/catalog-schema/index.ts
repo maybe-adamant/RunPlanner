@@ -7,6 +7,8 @@ import type { RewardKernelCatalog } from '../reward-kernel/model';
 import type { CounterAxis, RequirementExpression, RoomStructuralTag } from '../requirements/model';
 import type { ProducerLifecyclePointKey } from '../reward-kernel/model';
 import type { CatalogCollection } from '../normalized/collection';
+import type { GeneratedEncounterSelection } from './encounter-generation';
+export type { EncounterEnemyChoice, GeneratedEncounterSelection } from './encounter-generation';
 
 export type {
   AspectDeclaration,
@@ -430,6 +432,11 @@ export interface EncounterCustomizationChoice {
 }
 
 export type EncounterCustomizationDecision =
+  | {
+      readonly key: string;
+      readonly label: string;
+      readonly selection: GeneratedEncounterSelection;
+    }
   | {
       readonly key: string;
       readonly label: string;

@@ -180,9 +180,11 @@ and type generation. These are conditional native inputs, not user controls.
 The same overrides survive into derived NPC/Devotion identities unless replaced.
 For example, a hard O lineage can escape its ordinary two-type cap; this does
 not mean every O encounter can actually acquire the hard flag. The actual room
-and reward-generation context must supply it. The matrix records the conditional
-declaration, not an assertion that all combinations are reachable. Dream-run
-overrides are outside the currently supported ordinary-route scope.
+and reward-generation context must supply it. The inspected script baseline has
+no assignment to `MakeHardEncounter`; declaration presence or a rarity boost
+does not establish that flag. The matrix records conditional native support,
+not additional reachable planner states. Dream-run overrides remain outside
+the supported ordinary-route scope.
 
 ## Field-NPC combats
 

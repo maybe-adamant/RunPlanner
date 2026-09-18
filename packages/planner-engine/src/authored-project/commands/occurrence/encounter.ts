@@ -30,6 +30,7 @@ import { createUnresolvedPickupRewardState } from '../../traits/state';
 import { nemesisGeneratedPickupSiteKey } from '../../acquisition/pickup-producers';
 import { sameOccurrenceValue } from './leaf-value';
 import type { EncounterOccurrenceCommand, NemesisRandomEventInteraction } from '../types';
+import { decodeGeneratedEncounterCustomization } from '../../room-state/decoding/generated-encounter-codec';
 
 function validateNemesisInteraction(
   catalog: Catalog,
@@ -412,7 +413,11 @@ function updatedCustomization(
   const prior = current.customizationByPhase ?? {};
   const phaseValues = { ...(prior[phase.phaseKey] ?? {}) };
   if (value === null) delete phaseValues[command.decisionKey];
-  else phaseValues[command.decisionKey] = Object.freeze(value) as AuthoredEncounterCustomization;
+  else
+    phaseValues[command.decisionKey] =
+      value.kind === 'generated'
+        ? decodeGeneratedEncounterCustomization(value, command.decisionKey)
+        : (Object.freeze(value) as AuthoredEncounterCustomization);
   const next = { ...prior };
   if (Object.keys(phaseValues).length === 0) delete next[phase.phaseKey];
   else next[phase.phaseKey] = Object.freeze(phaseValues);

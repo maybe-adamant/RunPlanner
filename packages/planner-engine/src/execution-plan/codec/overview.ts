@@ -12,12 +12,14 @@ import {
 import { reward } from './rewards';
 import { roomReference } from './room';
 import type { ExecutionFieldsLayout } from '../model';
+import { generatedEncounter } from './generated-encounter';
 
 function encounterCustomization(value: unknown, label: string) {
   const decisions = array(value, label, 16).map((entry, index) => {
     const row = object(entry, `${label}[${index}]`);
     const decisionLabel = `${label}[${index}]`;
     const kind = stringValue(row.kind, `${decisionLabel}.kind`);
+    if (kind === 'generated') return generatedEncounter(row, decisionLabel);
     if (kind === 'single') {
       exact(row, ['decisionKey', 'kind', 'choiceKey', 'nativeId'], [], decisionLabel);
       return Object.freeze({

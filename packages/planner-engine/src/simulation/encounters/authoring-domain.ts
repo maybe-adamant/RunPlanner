@@ -15,6 +15,11 @@ import {
   encounterSetForBinding,
   fixedEncounterDefinitionKey,
 } from '../../authored-project/room-state/encounter-envelope';
+import {
+  customizationValueKnown,
+  supportsGeneratedEncounterCustomization,
+} from '../../authored-project/room-state/encounter-customization';
+import { resolveEncounterAuthoringProfile, type EncounterResolutionContext } from './resolve';
 
 /**
  * The authored encounter surface for one active room phase. Set-backed phases
@@ -54,6 +59,7 @@ export type EncounterPhaseAuthoringOwner = EncounterPhaseAddress['owner'];
  * structural facts, not contextual candidate eligibility.
  */
 export interface EncounterPhaseAuthoringRoomOptions {
+  readonly resolutionContext?: EncounterResolutionContext;
   readonly configuredRivalsRank?: number;
   readonly shipEncounterCount?: 2 | 3;
   readonly fieldsCageRewardCount?: number;
@@ -150,16 +156,10 @@ export function encounterPhaseAuthoringDomainForRoom(
     const selectedEncounterDefinitionKey =
       binding.kind === 'fixed'
         ? selectedEncounterKey
-        : profiles.find((candidate) => candidate.key === selectedEncounterKey)!.resolution.kind ===
-            'direct'
-          ? (
-              profiles.find((candidate) => candidate.key === selectedEncounterKey)!
-                .resolution as Extract<
-                (typeof profiles)[number]['resolution'],
-                { readonly kind: 'direct' }
-              >
-            ).encounterDefinitionKey
-          : undefined;
+        : resolveEncounterAuthoringProfile(
+            profiles.find((candidate) => candidate.key === selectedEncounterKey)!,
+            options.resolutionContext ?? { kind: 'unavailable' },
+          );
     const definition =
       selectedEncounterDefinitionKey === undefined
         ? undefined
@@ -168,24 +168,28 @@ export function encounterPhaseAuthoringDomainForRoom(
       definition?.customization === undefined
         ? undefined
         : Object.freeze(
-            definition.customization.map((decision) => {
-              const value = encounters.customizationByPhase?.[binding.slotKey]?.[decision.key];
-              const valueSupported =
-                value === undefined ||
-                (value.kind === decision.selection.kind &&
-                  (value.kind === 'single'
-                    ? decision.selection.choices.some((choice) => choice.key === value.choiceKey)
-                    : decision.selection.kind === 'orderedPrefix' &&
-                      value.choiceKeys.length <= decision.selection.maximumLength &&
-                      new Set(value.choiceKeys).size === value.choiceKeys.length &&
-                      value.choiceKeys.every((choiceKey) =>
-                        decision.selection.choices.some((choice) => choice.key === choiceKey),
-                      )));
-              const retainedChoiceLabels =
-                value === undefined
-                  ? []
-                  : (value.kind === 'single' ? [value.choiceKey] : value.choiceKeys).flatMap(
-                      (choiceKey) => {
+            definition.customization
+              .filter(
+                (decision) =>
+                  decision.selection.kind !== 'generated' ||
+                  supportsGeneratedEncounterCustomization(room),
+              )
+              .map((decision) => {
+                const value = encounters.customizationByPhase?.[binding.slotKey]?.[decision.key];
+                const valueSupported =
+                  value === undefined || customizationValueKnown([decision], decision.key, value);
+                const retainedChoiceLabels =
+                  value === undefined
+                    ? []
+                    : (value.kind === 'single'
+                        ? [value.choiceKey]
+                        : value.kind === 'orderedPrefix'
+                          ? value.choiceKeys
+                          : [
+                              ...(value.highlightKey === undefined ? [] : [value.highlightKey]),
+                              ...(value.waves ?? []).flatMap((wave) => wave.typeKeys),
+                            ]
+                      ).flatMap((choiceKey) => {
                         const choice = catalog.encounterDefinitions.values
                           .flatMap((candidate) => candidate.customization ?? [])
                           .filter((candidate) => candidate.key === decision.key)
@@ -194,15 +198,14 @@ export function encounterPhaseAuthoringDomainForRoom(
                         return choice === undefined
                           ? []
                           : [Object.freeze({ key: choiceKey, label: choice.label })];
-                      },
-                    );
-              return Object.freeze({
-                ...decision,
-                valueSupported,
-                ...(value === undefined ? {} : { value }),
-                ...(retainedChoiceLabels.length === 0 ? {} : { retainedChoiceLabels }),
-              });
-            }),
+                      });
+                return Object.freeze({
+                  ...decision,
+                  valueSupported,
+                  ...(value === undefined ? {} : { value }),
+                  ...(retainedChoiceLabels.length === 0 ? {} : { retainedChoiceLabels }),
+                });
+              }),
           );
     domains.push(
       Object.freeze({

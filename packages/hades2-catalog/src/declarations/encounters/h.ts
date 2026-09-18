@@ -1,3 +1,4 @@
+import { generatedEncounterChoices } from './generated/policies';
 import type { RawEncounterDefinitionDeclaration, RawEncounterSetDeclaration } from './types';
 import {
   nemesisEncounterKeys,
@@ -8,6 +9,7 @@ import {
 export const hEncounterDefinitions = [
   {
     key: 'GeneratedH_Passive',
+    customization: [generatedEncounterChoices.GeneratedH_Passive],
     label: 'Passive combat',
     kind: 'combat',
     countsEncounterDepth: false,
@@ -15,6 +17,7 @@ export const hEncounterDefinitions = [
   },
   {
     key: 'GeneratedH_PassiveSmall',
+    customization: [generatedEncounterChoices.GeneratedH_PassiveSmall],
     label: 'Small passive combat',
     kind: 'combat',
     countsEncounterDepth: false,
@@ -22,6 +25,7 @@ export const hEncounterDefinitions = [
   },
   {
     key: 'GeneratedH',
+    customization: [generatedEncounterChoices.GeneratedH],
     label: 'Combat',
     kind: 'combat',
     countsEncounterDepth: true,
@@ -30,6 +34,7 @@ export const hEncounterDefinitions = [
   },
   {
     key: 'GeneratedH_Treant2',
+    customization: [generatedEncounterChoices.GeneratedH_Treant2],
     label: 'Treant combat',
     kind: 'combat',
     countsEncounterDepth: true,
@@ -38,6 +43,7 @@ export const hEncounterDefinitions = [
   },
   {
     key: 'GeneratedH_Screamer2',
+    customization: [generatedEncounterChoices.GeneratedH_Screamer2],
     label: 'Screamer combat',
     kind: 'combat',
     countsEncounterDepth: true,
@@ -46,6 +52,7 @@ export const hEncounterDefinitions = [
   },
   {
     key: 'NemesisCombatH',
+    customization: [generatedEncounterChoices.NemesisCombatH],
     label: 'Nemesis combat',
     kind: 'combat',
     countsEncounterDepth: true,
