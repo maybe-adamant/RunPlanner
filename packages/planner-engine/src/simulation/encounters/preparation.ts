@@ -55,7 +55,12 @@ export interface EncounterPhaseCandidateSupport {
  * preparation coverage at all.
  */
 export type EncounterPhaseSequenceStatus =
-  { readonly kind: 'active' } | { readonly kind: 'dormantSuffix' };
+  | {
+      readonly kind: 'active';
+      /** Present only after this phase actually starts; preparation alone is not execution. */
+      readonly execution?: 'normal' | 'skippedByFigLeaf';
+    }
+  | { readonly kind: 'dormantSuffix' };
 
 export interface EncounterPhaseSequenceStatusEntry {
   readonly origin: EncounterPhaseAddress;

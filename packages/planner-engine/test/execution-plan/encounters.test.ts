@@ -6,6 +6,7 @@ import {
   createEncounterPhaseAddress,
   createIncomingRewardAddress,
   createOccurrenceId,
+  createRouteStartKeepsakeSelectionAddress,
 } from '../../src/authored-project';
 import {
   encounterPhaseCandidateSupportForProjectEvaluationAssembly,
@@ -18,10 +19,48 @@ import {
 } from '../../src/execution-plan';
 import { overview as decodeExecutionOverview } from '../../src/execution-plan/codec/overview';
 import { createGoldenFGHIProject } from '@run-planner/test-fixtures/underworld';
-import { loadSurfaceNOPQProject } from '@run-planner/test-fixtures/surface';
+import {
+  loadSurfaceNOPQProject,
+  pBiome,
+  reachedPOutdoorIcarusFixture,
+} from '@run-planner/test-fixtures/surface';
 import { authorLegalTraitOffers } from '@run-planner/test-fixtures/shared';
 
 describe('resolved execution encounters', () => {
+  it('publishes skipped P Icarus as an encounter without an NPC acquisition transaction', () => {
+    const fixture = reachedPOutdoorIcarusFixture();
+    let project = applyProjectCommand(fixture.project, catalog, {
+      kind: 'ReplaceStartingKeepsake',
+      selection: createRouteStartKeepsakeSelectionAddress('Surface'),
+      keepsakeKey: 'SkipEncounterKeepsake',
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'SelectEncounter',
+      phase: fixture.encounter,
+      encounterKey: 'IcarusCombatP',
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceFigLeafSkip',
+      phase: createEncounterPhaseAddress(
+        pBiome,
+        { kind: 'occurrence', occurrenceId: fixture.occurrenceId },
+        'Intro',
+      ),
+      value: true,
+    });
+    project = authorLegalTraitOffers(project);
+    const assembly = simulateProjectAssembly(catalog, project);
+    const plan = compileExecutionPlan({ product: assembleExecutionProduct({ assembly }) });
+    const room = plan.occurrences.find((value) => value.id === fixture.occurrenceId);
+    expect(room?.overview.encounterPhases).toEqual([
+      expect.objectContaining({ slotKey: 'Intro', figLeafSkip: true }),
+      expect.objectContaining({ slotKey: 'Combat', encounterKey: 'IcarusCombatP' }),
+    ]);
+    expect(room?.timeline.transactions.some((entry) => entry.kind === 'encounterInteraction')).toBe(
+      false,
+    );
+    expect(room?.timeline.transactions.some((entry) => entry.kind === 'acquisition')).toBe(true);
+  });
   it.each([
     ['Underworld', 4, 'I_Boss01', 'BossChronos02', createGoldenFGHIProject],
     ['Surface', 3, 'P_Boss01', 'BossPrometheus02', loadSurfaceNOPQProject],

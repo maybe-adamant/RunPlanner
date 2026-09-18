@@ -127,9 +127,9 @@ These definitions replace neither P Intro nor room reward ownership. All
 requirements operate on exact concrete definition keys, not an NPC-family
 ledger.
 
-When either definition is selected and entered, its exact Combat phase owns the
-corresponding three-choice trait offer and folds the selected trait at encounter
-completion. Athena uses selectable Common/Rare/Epic rarity. Icarus is
+When either definition executes normally, its exact Combat phase owns the
+corresponding three-choice trait offer and folds the selected trait at the NPC
+interaction. Athena uses selectable Common/Rare/Epic rarity. Icarus is
 player-rarityless, and Latest Model may target one exact eligible equipped
 Rank-I Hammer for the shared Rank-II transition.
 
@@ -137,7 +137,11 @@ Encounter completion and encounter-end effects are distinct checkpoints. A
 normal P room advances encounter depth once and runs end effects only after the
 terminal Combat completes. A successful Fig Leaf result at the eligible Intro
 suppresses enemy spawns across both prepared positions without removing either
-start/completion identity or the terminal end-effect checkpoint. Heracles runs
+start/completion identity or the terminal end-effect checkpoint. Icarus is still
+recorded (consuming his run occurrence), but the skipped waves do not spawn him:
+his interaction and retained offer are dormant. Native `SetupRoomMultipleEncountersData`
+records both positions before `HandleEncounterPreSpawns` applies the skip;
+`HandleEnemySpawns` returns before Icarus's wave-start spawn event. Heracles runs
 one start/completion/end-effect sequence. Encounter-counted Chaos curses and
 Experimental Hammer duration consume the end-effect checkpoint, not P phase
 names, encounter depth, or completion alone.

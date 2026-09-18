@@ -178,6 +178,7 @@ function generation(
     attestGorgonBranchState(rewards.branches),
     rewards.gorgonPhaseCandidates,
     rewards.nemesisRandomEventCandidates,
+    history.events,
   );
   const validation: BiomeGenerationValidation = Object.freeze({
     validity:

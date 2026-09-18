@@ -803,7 +803,7 @@ describe('authored encounter occurrence commands', () => {
     });
     expect(
       encounterPhaseSequenceStatusForProjectEvaluationAssembly(withAssembly(repicked), storyPhase),
-    ).toEqual({
+    ).toMatchObject({
       kind: 'active',
     });
   });

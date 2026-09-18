@@ -378,27 +378,21 @@ function encounterSequenceOperationHandler(
   schedule?: RoomActionSchedule,
 ): ExecutionState {
   let next = state;
-  const skipOwnerIndex = context.encounterPhases.findIndex(
-    (phase) => phase.figLeafSkip && phase.canEncounterSkip,
-  );
   const phases = schedule?.encounterPhases(context.encounterPhases) ?? context.encounterPhases;
   for (const encounterPhase of phases) {
     if (schedule !== undefined) {
       next = schedule.beforeEncounterPhase(encounterPhase, operationIndex, next);
       if (next.blockedAt !== undefined) return next;
     }
-    const phaseIndex = context.encounterPhases.indexOf(encounterPhase);
-    const skipped =
-      skipOwnerIndex >= 0 &&
-      phaseIndex >= skipOwnerIndex &&
-      (context.encounterPhases[skipOwnerIndex]?.skipEndEncounterEffects === true ||
-        phaseIndex === skipOwnerIndex);
+    const skipped = figLeafSkipsPhase(context, encounterPhase.slotKey);
     const phaseContext: OperationContext = {
       ...context,
       operationIndex,
       encounterPhase,
       ...(skipped ? { figLeafSkipped: true } : {}),
-      ...(skipped && phaseIndex === skipOwnerIndex ? { figLeafSkipOwner: true } : {}),
+      ...(skipped && encounterPhase.figLeafSkip && encounterPhase.canEncounterSkip
+        ? { figLeafSkipOwner: true }
+        : {}),
     };
     next = applyEffects(operation, phaseContext, next);
     if (schedule !== undefined) {
@@ -412,6 +406,19 @@ function encounterSequenceOperationHandler(
     }
   }
   return next;
+}
+
+function figLeafSkipsPhase(context: ExecutionContext, phaseKey: string): boolean {
+  const skipOwnerIndex = context.encounterPhases.findIndex(
+    (phase) => phase.figLeafSkip && phase.canEncounterSkip,
+  );
+  const phaseIndex = context.encounterPhases.findIndex((phase) => phase.slotKey === phaseKey);
+  return (
+    skipOwnerIndex >= 0 &&
+    phaseIndex >= skipOwnerIndex &&
+    (context.encounterPhases[skipOwnerIndex]?.skipEndEncounterEffects === true ||
+      phaseIndex === skipOwnerIndex)
+  );
 }
 
 const operationDispatchRegistry = Object.freeze({
@@ -582,12 +589,20 @@ function createRoomActionSchedule(context: ExecutionContext): RoomActionSchedule
     );
   }
   const origin = context.input.origin;
+  // Skipped enemy waves never spawn their NPC. Keep the prepared encounter
+  // and its end effects, but leave the authored interaction dormant.
+  const skippedInteraction = (row: RoomActionRow) =>
+    row.reference.kind === 'interactEncounter' &&
+    figLeafSkipsPhase(context, row.reference.phaseKey);
   const rankedRows = roster.rows
     // A retained Pool sale must reach its declared lifecycle point even when
     // its slot was later cleared. Reward simulation owns the precise stale
     // finding and deliberately leaves the authored action intact.
     .filter(
-      (row) => row.rank !== null && (!row.stale || row.reference.kind === 'sellPurgingPoolTrait'),
+      (row) =>
+        row.rank !== null &&
+        !skippedInteraction(row) &&
+        (!row.stale || row.reference.kind === 'sellPurgingPoolTrait'),
     )
     .sort((left, right) => left.rank! - right.rank!);
   let cursor = 0;
@@ -642,7 +657,11 @@ function createRoomActionSchedule(context: ExecutionContext): RoomActionSchedule
   const firstMissingRequired = (predicate: (row: RoomActionRow) => boolean) =>
     roster.rows.find(
       (row) =>
-        row.rank === null && row.participation === 'required' && !row.stale && predicate(row),
+        row.rank === null &&
+        row.participation === 'required' &&
+        !row.stale &&
+        !skippedInteraction(row) &&
+        predicate(row),
     );
 
   const playerAction = (

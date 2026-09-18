@@ -514,6 +514,17 @@ export function executionTimelineTransactions(
       timeline.action.reference.kind === 'interactGorgon'
     ) {
       const phaseKey = timeline.phaseKey ?? timeline.action.reference.phaseKey;
+      if (
+        timeline.action.reference.kind === 'interactEncounter' &&
+        biome.history.events.some(
+          (event) =>
+            event.kind === 'encounterStarted' &&
+            semanticAddressKey(event.origin) === semanticAddressKey(room.origin) &&
+            event.phaseKey === phaseKey &&
+            event.execution === 'skippedByFigLeaf',
+        )
+      )
+        continue;
       const encounterKey = room.encounters.encounterKeyByPhase[phaseKey];
       const phase = createEncounterPhaseAddress(
         createBiomeAddress(room.origin.routeKey, room.origin.biomeKey),

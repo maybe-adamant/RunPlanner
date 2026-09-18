@@ -4,6 +4,8 @@ import {
   createAcquisitionEntryAddress,
   createAcquisitionSiteAddress,
   createBiomeAddress,
+  createEncounterPhaseAddress,
+  createIncomingRewardAddress,
   createOccurrenceAddress,
   createOccurrenceId,
   createShopOfferAddress,
@@ -376,6 +378,34 @@ export function createRepresentativeNOPQShopTraitProject(): ProjectDocument {
     ['MajorNonBoon'],
   );
   return authorLegalTraitOffers(project);
+}
+
+/** A reached outdoor P combat with an Icarus-compatible incoming reward. */
+export function reachedPOutdoorIcarusFixture() {
+  const occurrenceId = pOccurrenceId('P_Combat07', 4, 1);
+  let project = loadSurfaceNOPQProject();
+  for (const [original, batch, slot, replacement] of [
+    ['P_Combat11', 4, 2, 'P_Combat07'],
+    ['P_Combat07', 4, 1, 'P_Combat11'],
+    ['P_Combat09', 5, 2, 'P_Combat13'],
+    ['P_Combat13', 6, 2, 'P_Combat09'],
+  ] as const) {
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceOccurrenceRoom',
+      occurrence: createOccurrenceAddress(pBiome, pOccurrenceId(original, batch, slot)),
+      gameName: replacement,
+    });
+  }
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceIncomingReward',
+    reward: createIncomingRewardAddress(pBiome, occurrenceId),
+    value: { rewardType: 'TalentDrop' },
+  });
+  return Object.freeze({
+    project,
+    occurrenceId,
+    encounter: createEncounterPhaseAddress(pBiome, { kind: 'occurrence', occurrenceId }, 'Combat'),
+  });
 }
 
 export { authorLegalTraitOffers };
