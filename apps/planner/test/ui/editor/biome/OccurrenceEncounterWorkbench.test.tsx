@@ -21,6 +21,7 @@ import {
   semanticAddressKey,
   roomActionKey,
 } from '@run-planner/engine/authored-project';
+import { assembleExecutionProduct, compileExecutionPlan } from '@run-planner/engine/execution-plan';
 import { simulateProject } from '@run-planner/engine/simulation';
 import { act, cleanup, fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -203,6 +204,69 @@ describe('OccurrenceEncounterWorkbench', () => {
     expect(reopened.isConnected).toBe(false);
     view.application.store.dispatch(authoredProjectUndoRequested());
     view.application.store.dispatch(authoredProjectRedoRequested());
+  });
+
+  it('selects, resets, and undoes a fixed Typhon egg-wave customization in the shared dialog', async () => {
+    const project = loadSurfaceNOPQProject();
+    const boss = project.route.biomes
+      .find((biome) => biome.biomeKey === 'Q')
+      ?.topology?.occurrences.find((occurrence) => occurrence.gameName === 'Q_Boss01');
+    if (boss === undefined) throw new Error('normal Typhon Boss occurrence is missing');
+    const view = renderOccurrenceWorkbench(
+      project,
+      'Surface',
+      'Q',
+      occurrenceById(boss.occurrenceId),
+    );
+    openRoomTab('Room Timeline');
+    await view.user.click(screen.getByRole('button', { name: 'Customize encounter' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Customize' });
+    const firstEggWave = within(dialog).getByRole('combobox', { name: 'First egg wave' });
+    await view.user.selectOptions(firstEggWave, 'eidolons');
+    await waitFor(() => {
+      const occurrence = view.application.store
+        .getState()
+        .projectWorkspace.history!.present.route.biomes.find((biome) => biome.biomeKey === 'Q')
+        ?.topology?.occurrences.find((candidate) => candidate.occurrenceId === boss.occurrenceId);
+      expect(occurrence?.encounters.customizationByPhase?.Encounter?.firstEggWave).toEqual({
+        kind: 'single',
+        choiceKey: 'eidolons',
+      });
+    });
+    const workspace = view.application.store.getState().projectWorkspace;
+    if (workspace.kind !== 'openProject') throw new Error('Typhon workspace is not open');
+    const plan = compileExecutionPlan({
+      product: assembleExecutionProduct({ assembly: workspace.assembly }),
+    });
+    expect(
+      plan.occurrences
+        .find((occurrence) => occurrence.id === boss.occurrenceId)
+        ?.overview.encounterPhases.find((phase) => phase.slotKey === 'Encounter')?.customization,
+    ).toContainEqual({
+      decisionKey: 'firstEggWave',
+      kind: 'single',
+      choiceKey: 'eidolons',
+      nativeId: 'TyphonHeadCastSummon03',
+    });
+    await view.user.selectOptions(firstEggWave, '');
+    await waitFor(() => {
+      const occurrence = view.application.store
+        .getState()
+        .projectWorkspace.history!.present.route.biomes.find((biome) => biome.biomeKey === 'Q')
+        ?.topology?.occurrences.find((candidate) => candidate.occurrenceId === boss.occurrenceId);
+      expect(occurrence?.encounters.customizationByPhase).toBeUndefined();
+    });
+    view.application.store.dispatch(authoredProjectUndoRequested());
+    await waitFor(() => {
+      const occurrence = view.application.store
+        .getState()
+        .projectWorkspace.history!.present.route.biomes.find((biome) => biome.biomeKey === 'Q')
+        ?.topology?.occurrences.find((candidate) => candidate.occurrenceId === boss.occurrenceId);
+      expect(occurrence?.encounters.customizationByPhase?.Encounter?.firstEggWave).toEqual({
+        kind: 'single',
+        choiceKey: 'eidolons',
+      });
+    });
   });
 
   it('routes a reached retained Scylla finding to the manual popup trigger', async () => {
