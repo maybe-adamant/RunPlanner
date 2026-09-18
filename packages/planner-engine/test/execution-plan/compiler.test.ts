@@ -95,6 +95,7 @@ import {
   surfaceScheduledLifecycleProject,
   surfaceScheduledLifecycleWithQSupplyChainSlicesProject,
 } from './support/scheduled-lifecycle-fixture';
+import { typhonCustomizationProject } from './support/typhon-customization-fixture';
 import { executionTimelineTransactions } from '../../src/execution-plan/assembly/timeline-transactions';
 import { orderedExecutionRooms } from '../../src/execution-plan/assembly/route';
 import {
@@ -1775,7 +1776,7 @@ describe('execution-plan compiler and codec', () => {
     ['automatic-boss', bossAutomaticOutcomeProject(), automaticBossFixture],
     ['surface-no', loadSurfaceNOProject(), surfaceNOFixture],
     ['surface-nop', loadSurfaceNOPProject(), surfaceNOPFixture],
-    ['surface-nopq', loadSurfaceNOPQProject(), surfaceNOPQFixture],
+    ['surface-nopq', typhonCustomizationProject(), surfaceNOPQFixture],
     [
       'surface-scheduled-lifecycle',
       surfaceScheduledLifecycleProject(),
