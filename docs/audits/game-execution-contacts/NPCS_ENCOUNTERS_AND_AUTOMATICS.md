@@ -191,6 +191,20 @@ publication, through the same route-position rule as physical Boss-map selection
 | Eris early summons        | Normal `ErisSummon01/02`; Rival Harpy, Swab, Jellyfish, Turtle                      | `WeaponData_Eris.lua:ErisSummonSelector` / `ErisEMSummonSelector` own the pools.                                                                                                                                              | Each decision accepts zero, one or two distinct choices in actual-use order; the remaining tail stays native.                                                                                                                             |
 | Eris late summons         | Normal `ErisSummon03/04`; Rival FishmanRanged, FishmanMelee, FishSwarmer, Automaton | `WeaponData_Eris.lua:ErisSummonSelector2` / `ErisEMSummonSelector2` own the pools. Rival grenade chains reach these same selectors.                                                                                           | Apply the same prefix contract. Do not choose the Automaton's inner `SpawnerOptions`.                                                                                                                                                     |
 
+Chronos and Typhon use these additional native summon domains:
+
+| Decision                      | Native domain                                                                                                                                                                                                                                                            | Selection and application evidence                                                                                                                                                               | Planner disposition                                                                                                                                                                     |
+| ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Chronos late first-bar summon | Normal: `ChronosEliteSpawn1/2/3`, pairs of elite Satyr Lancers, Gold Elementals or Satyr Rat Catchers. Rival: one of seven `ChronosSuperEliteSpawn1.SpawnerOptions` (Screamer, Treant, Octofish, Vampire, Lamia, Clockwork Heavy Melee, Satyr Rat Catcher super-elites). | `EnemyData_Chronos.lua` enters `ChronosDefense3` or `ChronosDefense3_SuperElite` at 25% first-bar health. `WeaponData_Chronos.lua` owns the random weapon and spawner pools.                     | One optional choice from the concrete variant's domain. Narrow the local resolved weapon input, retaining native timing and quantities. The fixed 75% Cultist summon is not authorable. |
+| Typhon first egg wave         | Normal: `TyphonHeadCastSummon01` (5 `Simple2` eggs) or `03` (3 `Mudman2` eggs). Rival: fixed Captain pattern.                                                                                                                                                            | `EnemyData_TyphonHead.lua` stage 2 `FireRandomWeapon` and its Rival override; summon attacks define projectile and launch count. `Enemy_BiomeQ_Projectiles.sjson` maps projectiles to egg units. | Normal-only optional pattern choice. Rival Captain eggs remain native, without an unnecessary selector.                                                                                 |
+| Typhon second egg wave        | Normal: `TyphonHeadCastSummon02` (2 `Brute2` eggs) or `05` (4 `FishmanMelee2` eggs). Rival: two Boar or two Dragon eggs.                                                                                                                                                 | The same source's stage 4 selects the normal or Rival attack pool. `StagedAI` applies `EMStageDataOverrides` before `BossStageTransition` draws its `FireRandomWeapon`.                          | Independent optional choice. Supply a private reached-stage input after the native Rival override; preserve launching, placement, health, hatching and presentation.                    |
+
+Egg counts describe configured launch patterns, not a guaranteed live roster.
+Prometheus is native-only here: both variants' active phase-2/3 selectors choose
+three Sappers and three Lancers respectively. Harpy/Dragon alternatives declared
+in `WeaponData_Prometheus.lua` are commented out of the active selectors and are
+not planner choices.
+
 Explicit Hecate/Scylla choices intentionally override those save-progression
 selection restrictions; Default preserves them. No save clear count is edited.
 All decisions are conditional on native gameplay reaching the move. Fast
@@ -207,8 +221,10 @@ Preplaced Boss units do not own an `Encounter` field. These contacts use the
 current native room encounter's existing phase binding. Burrow subencounters
 do not replace that outer identity. The adapters need no thread-spanning scope:
 Hecate retains its native remembered weapon, Scylla receives private arguments,
-burrow receives enemy-local stages before native AI, and chained selectors
-receive local resolved weapon data. Shared declarations remain unchanged.
+burrow receives enemy-local stages before native AI, Typhon receives a private
+reached-stage input, and weapon selectors receive local resolved weapon data.
+Shared declarations remain unchanged. Summon customization failure is diagnostic
+only; these optional choices add no acquisition or conformance obligations.
 
 ## Closed automatic transaction union
 

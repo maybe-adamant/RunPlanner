@@ -89,6 +89,16 @@ domains, progression overrides and native call ordering.
 | Generated highlight and wave types | `room/timeline/encounters/generated.lua` | `IsEnemyEligible`, `FillEnemyTypes`, `RemoveRandomValue`                    | Select        | Eligibility pass identifies the highlight draw; copied encounter/wave scopes identify additions. One prefilled roster would bypass blacklist/group/cap side effects. Missing candidates fall back natively with diagnostics.                     | Eligibility, fixed seeds, selection side effects, spawning; Default and unrelated calls.   |
 | Generated relative allocation      | `room/timeline/encounters/generated.lua` | `FillEnemyCounts`, `RandomNormal`                                           | Select        | Map native sample branches by full spawn-array index, then resolve the published share by generated enemy identity. Scope ends on synchronous return/error; native remainder branches are not sampled.                                           | Fixed counts, native rounding, minimums, caps and remainder allocation; later Vow effects. |
 
+Chronos and Typhon extend the same exact-phase boss customization contract:
+
+| Planner feature / published fact | Executor owner                         | Native hook           | Approach | Why this contact / lifetime                                                                                                                                                                                   | Native work retained                                                                      |
+| -------------------------------- | -------------------------------------- | --------------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| Chronos late first-bar summon    | `room/timeline/encounters/chronos.lua` | `GetWeaponAIData`     | Insert   | Narrow the normal defense's random summon weapon or the Rival summon weapon's enemy pool in the resolved local result. Exact boss/variant binding isolates it from other summons; no retained callback scope. | Thresholds, defense move, spawn counts, positions and enemy behavior.                     |
+| Typhon egg-wave pattern          | `room/timeline/encounters/typhon.lua`  | `BossStageTransition` | Insert   | A private stage input narrows the reached egg attack after native Rival overrides and before native selection. No thread-spanning scope or earlier AI rewrite.                                                | Pattern launch count, presentation, egg placement, hatching and fixed Rival Captain wave. |
+
+Both additions are optional and diagnostic-only, not transaction or conformance
+obligations. Their native choice pools are owned by the Boss source audit above.
+
 ## Inventory, purchases and transformations
 
 Source families: `StoreLogic.lua`, `SurfaceShopLogic.lua`, `SellTraitLogic.lua`,

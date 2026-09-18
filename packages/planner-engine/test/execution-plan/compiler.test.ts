@@ -26,7 +26,6 @@ import { authorLegalTraitOffers } from '@run-planner/test-fixtures/shared';
 import {
   loadSurfaceNOProject,
   loadSurfaceNOPProject,
-  loadSurfaceNOPQProject,
   oBiome,
   oOccurrenceIds,
 } from '@run-planner/test-fixtures/surface';
