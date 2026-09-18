@@ -117,7 +117,7 @@
   font-variant-numeric: tabular-nums;
 }
 
-.biome-structure-region,
+.biome-structure-scroll,
 .biome-inspector {
   min-height: 0;
   min-width: 0;
@@ -127,8 +127,25 @@
 }
 
 .biome-structure-region {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
   padding-right: 12px;
   border-right: 1px solid #30313a;
+  overflow: hidden;
+}
+
+.biome-structure-region > .project-findings {
+  margin-bottom: 12px;
+}
+
+.biome-structure-heading {
+  flex: 0 0 auto;
+}
+
+.biome-structure-scroll {
+  flex: 1;
   scrollbar-gutter: auto;
 }
 
@@ -429,6 +446,10 @@
 .biome-inspector > .room-card,
 .biome-inspector > .frontier-actions {
   margin-top: 12px;
+}
+
+.biome-inspector > :is(.decision-card, .room-card, .frontier-actions):first-child {
+  margin-top: 0;
 }
 
 .biome-candidate-select select {

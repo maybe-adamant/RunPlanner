@@ -14,7 +14,7 @@ export function RouteNpcIndex({
   readonly onNavigate: (phase: EncounterPhaseAddress) => void;
 }) {
   return (
-    <section className="route-npc-index" aria-labelledby="route-npc-index-title">
+    <section className="route-index-panel route-npc-index" aria-labelledby="route-npc-index-title">
       <header className="panel-heading">
         <div>
           <p className="eyebrow">Route history</p>

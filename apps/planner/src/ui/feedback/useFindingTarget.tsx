@@ -1,7 +1,10 @@
 import { semanticAddressKey, type SemanticAddress } from '@run-planner/engine/authored-project';
 import { createContext, useContext, useMemo, useRef, type ReactNode } from 'react';
 import type { StructuredWorkspaceProjection } from '@planner/projections/structured-workspace';
-import { presentFinding } from '@planner/projections/evaluationProjection';
+import {
+  formatFindingExplanation,
+  presentFinding,
+} from '@planner/projections/evaluationProjection';
 import { useAppSelector } from '@planner/state/store';
 import { semanticOwnerControlElementId } from './semanticOwner';
 
@@ -90,12 +93,7 @@ export function useFindingTarget() {
       'aria-description':
         findings.length === 0
           ? undefined
-          : findings
-              .map((finding) => {
-                const copy = presentFinding(finding);
-                return `${copy.title}: ${copy.description}`;
-              })
-              .join(' '),
+          : findings.map((finding) => formatFindingExplanation(presentFinding(finding))).join(' '),
       ref: (element) => {
         if (element === null || !selectedAtTarget || handledRequest.current === request) return;
         handledRequest.current = request;

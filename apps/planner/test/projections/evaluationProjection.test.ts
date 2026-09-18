@@ -87,131 +87,28 @@ describe('evaluation presentation', () => {
     for (const code of allFindingCodes) {
       const presentation = presentFinding(finding(code));
       expect(presentation.title).not.toBe(code);
-      expect(presentation.description).not.toContain(code);
       expect(presentation.title).not.toContain('F_Combat01');
-      expect(presentation.description).not.toContain('F_Combat01');
+      if (presentation.description !== undefined) {
+        expect(presentation.description).not.toContain(code);
+        expect(presentation.description).not.toContain('F_Combat01');
+      }
     }
   });
 
-  it('translates finding copy without changing Shop purchase-order wording', () => {
-    const expected = [
-      [
-        'batchRewardStoreMissing',
-        'Choose a reward pool',
-        'Choose the reward pool before choosing rooms for these doors.',
-      ],
-      [
-        'batchStateMissing',
-        'Finish setting up these doors',
-        'Choose the door setup before choosing rooms for these doors.',
-      ],
-      [
-        'biomeFieldMissing',
-        'Choose the biome setting',
-        'Choose the required biome setting before building its doors.',
-      ],
-      ['continuationMissing', 'Continue this route', 'Continue from here to complete this route.'],
-      [
-        'hubOpenSetIncomplete',
-        'Choose open Hub rooms',
-        'Choose nine or ten Ephyra rooms to keep open in the Hub.',
-      ],
-      [
-        'hubVisitOrderIncomplete',
-        'Choose all six Hub visits',
-        'Choose six different open Hub rooms in the order you enter them.',
-      ],
-      [
-        'hubOpenSlotUnavailable',
-        'Hub room cannot be open together',
-        'This Ephyra room cannot stay open with the selected Hub rooms.',
-      ],
-      [
-        'pickedShopStateMissing',
-        'Finish setting up this Shop',
-        'Choose every Shop offer before continuing.',
-      ],
-      [
-        'pickedTargetMissing',
-        'Choose the door taken',
-        'Choose the one door taken from these doors.',
-      ],
-      ['targetMissing', 'Choose a room for every door', 'Choose a room for this door.'],
-      [
-        'targetRoomSupportEmpty',
-        'No room can appear here',
-        'The game has no room to offer when this door appears.',
-      ],
-      [
-        'targetRoomUnavailable',
-        'Room cannot appear here',
-        'The selected room is not among the rooms that can be offered for this door.',
-      ],
-      [
-        'encounterUnavailable',
-        'Encounter cannot occur here',
-        'The selected encounter is unavailable when this room begins.',
-      ],
-      [
-        'encounterSlotActivationUnavailable',
-        'Encounter phase is not active',
-        'The selected room setup does not activate this encounter phase.',
-      ],
-      [
-        'sideRoomGenerationUnavailable',
-        'Side room generation cannot occur here',
-        'This side-room setup is not available with the selected Hub rooms.',
-      ],
-      [
-        'baseRewardStoreUnavailable',
-        'Reward pool cannot appear here',
-        'The selected reward pool is unavailable at this point in the route.',
-      ],
-      [
-        'rewardAcquisitionUnavailable',
-        'Reward cannot be acquired',
-        'The selected reward cannot be acquired here.',
-      ],
-      [
-        'rewardBagSupportEmpty',
-        'Reward pool has no possible offer',
-        'This reward pool cannot offer a reward here.',
-      ],
-      [
-        'rewardBagEntryUnavailable',
-        'Reward is unavailable from this pool',
-        'The selected reward is not available from this reward pool.',
-      ],
-      [
-        'rewardSourceUnavailable',
-        'Reward source is unavailable',
-        'The selected reward source cannot be offered at this point in the route.',
-      ],
-      [
-        'shopOfferUnavailable',
-        'Shop offer is unavailable',
-        'These Shop offers cannot appear together.',
-      ],
-      [
-        'shopPurchaseUnavailable',
-        'Shop purchase is unavailable',
-        'The selected purchase order cannot be completed.',
-      ],
-      [
-        'freshRarityUnavailable',
-        'Fresh rarity is unavailable',
-        'This rarity is not offered when the trait is acquired fresh.',
-      ],
-      [
-        'rarityRollUnavailable',
-        'Rarity roll is unavailable',
-        'This fresh boon rarity cannot occur from the reached offer context.',
-      ],
-    ] as const satisfies readonly (readonly [FindingCode, string, string])[];
-
-    for (const [code, title, description] of expected) {
-      expect(presentFinding(finding(code))).toEqual({ title, description });
-    }
+  it('keeps concise repair titles and only details that add constraints', () => {
+    expect(presentFinding(finding('continuationMissing'))).toEqual({
+      title: 'Continue route',
+    });
+    expect(presentFinding(finding('wrongHammerLoadout'))).toEqual({
+      title: 'Hammer incompatible with loadout',
+    });
+    expect(presentFinding(finding('shopPurchaseUnavailable'))).toEqual({
+      title: 'Purchase order unavailable',
+    });
+    expect(presentFinding(finding('hubVisitOrderIncomplete'))).toEqual({
+      title: 'Choose six Hub visits',
+      description: 'Visit six different open rooms.',
+    });
   });
 
   it('presents each closed keepsake equip-result family truthfully', () => {
@@ -222,27 +119,23 @@ describe('evaluation presentation', () => {
 
     expect(presentFinding(finding('keepsakeEquipResultMissing', jeweledPom))).toEqual({
       title: 'Choose Jeweled Pom result',
-      description: 'Record the Hades trait granted when Jeweled Pom is equipped.',
+      description: 'Choose the granted Hades trait.',
     });
     expect(presentFinding(finding('keepsakeEquipResultUnavailable', jeweledPom))).toEqual({
-      title: 'Jeweled Pom result is unavailable',
-      description: 'Choose a Hades trait eligible when Jeweled Pom is equipped.',
+      title: 'Jeweled Pom result unavailable',
     });
     expect(presentFinding(finding('keepsakeEquipResultMissing', experimentalHammer))).toEqual({
       title: 'Choose Experimental Hammer result',
-      description: 'Record the Hammer trait granted when Experimental Hammer is equipped.',
     });
     expect(presentFinding(finding('keepsakeEquipResultUnavailable', experimentalHammer))).toEqual({
-      title: 'Experimental Hammer result is unavailable',
-      description: 'Choose a Hammer trait compatible with the active weapon and aspect.',
+      title: 'Experimental Hammer unavailable',
+      description: 'Choose a Hammer compatible with the weapon and aspect.',
     });
     expect(presentFinding(finding('keepsakeEquipResultMissing', transcendentEmbryo))).toEqual({
-      title: 'Choose Transcendent Embryo result',
-      description: 'Record the Chaos blessing granted when Transcendent Embryo is equipped.',
+      title: 'Choose Embryo blessing',
     });
     expect(presentFinding(finding('keepsakeEquipResultUnavailable', transcendentEmbryo))).toEqual({
-      title: 'Transcendent Embryo result is unavailable',
-      description: 'Choose a Chaos blessing eligible when Transcendent Embryo is equipped.',
+      title: 'Embryo blessing unavailable',
     });
     expect(findingDestinationLabel(catalog, jeweledPom)).toBe('Jeweled Pom result');
     expect(findingDestinationLabel(catalog, experimentalHammer)).toBe('Experimental Hammer result');
@@ -251,9 +144,8 @@ describe('evaluation presentation', () => {
 
   it('presents the missing Echo Pom child with both legal settlement shapes', () => {
     expect(presentFinding(finding('echoPomTargetMissing'))).toEqual({
-      title: 'Choose the Echo Pom target',
-      description:
-        'Choose a greatest-level Pom-eligible trait, or record that no eligible target exists.',
+      title: 'Choose Echo Pom target',
+      description: 'Choose a highest-level Pom-eligible trait, or no target if none is eligible.',
     });
   });
 

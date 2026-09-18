@@ -199,7 +199,17 @@ Only start after A is accepted. Start in `projections/evaluationProjection.ts`,
 owning styles/tests.
 
 Replace the route-wide card grid with one compact issue: clear repair title,
-specific destination and concise explanation. Reuse the existing semantic
+specific destination and optional detail only when it adds a constraint or
+repair choice. Use the shared finding copy for the banner, accessible feedback
+and trait candidate explanations, preserving specific prerequisite evidence.
+Place the location below the title, with optional detail on a third row;
+omitted detail reserves no row.
+In a biome, place it above the biome title in the structure rail, replacing the redundant Route structure
+heading. The issue and title remain outside the scrolling room list so the
+inspector retains its full height. Route overview and read-only index panels use
+the same component across the content width; stacked layouts naturally give the
+rail banner full width. It always describes the route's selected issue, including
+when the user is viewing a different biome. Reuse the existing semantic
 navigation/highlight path. For a trait issue, navigate to its Timeline editor
 launcher; do not automatically open a dialog or introduce a second routing path.
 Detailed option/target explanations remain inside the owning editor.
@@ -312,4 +322,11 @@ unnecessary abstraction. User approval and a committed plan precede execution.
   three-reason Hammer issue rendered as one repair, and nested Natural Selection
   navigation. At 1600×900 and 700×900, the compact banner wrapped without horizontal
   overflow and preserved the selected occurrence and explicit dialog opening.
-  User acceptance of the final visual feel remains pending.
+- The follow-up layout/copy pass passed 976 application tests and 10 focused
+  product-loop tests, planner typecheck, changed-file lint and formatting.
+  Chromium verified the title-only Hammer repair and navigation without an empty
+  detail row or horizontal overflow. The approved copy review table is retired;
+  the projection remains the single copy authority. The user accepted the final
+  presentation after browser measurements confirmed one-line headers and at most
+  two-line details in the desktop biome rail. Gate C verification and document
+  closure are still pending.

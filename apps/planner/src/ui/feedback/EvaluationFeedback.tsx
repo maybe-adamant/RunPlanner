@@ -103,7 +103,9 @@ export function ProjectFindings({
             {findingDestinationLabel(catalog, destination?.focusAddress ?? issue.owner)}
           </span>
         </span>
-        <span className="finding-description">{copy.description}</span>
+        {copy.description !== undefined && (
+          <span className="finding-description">{copy.description}</span>
+        )}
       </button>
     </section>
   );

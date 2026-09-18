@@ -128,7 +128,7 @@ describe('RouteWorkspace', () => {
     );
 
     const markup = routeWorkspaceMarkup(application, 'Underworld');
-    expect(markup).toContain('Route structure');
+    expect(markup).not.toContain('<p class="eyebrow">Route structure</p>');
     expect(markup).toContain('<strong>Opening</strong>');
     expect(markup).toContain('aria-label="Entering Opening 01"');
     expect(markup).not.toContain('<p class="eyebrow">Details</p>');

@@ -17,7 +17,7 @@ import type {
   CandidateProjectionEvaluation,
 } from '../candidates/candidateProjection';
 import { candidateSupport } from '../candidates/candidateProjection';
-import { presentTraitCandidateFinding } from '../evaluationProjection';
+import { formatFindingExplanation, presentTraitCandidateFinding } from '../evaluationProjection';
 import type { WorkspaceInteractionCatalog } from '../structured-workspace';
 
 export interface TraitOfferOptionFeedback {
@@ -148,12 +148,11 @@ function presentTraitCandidateReason(
       return `${copy.title}: Cannot be equipped alongside ${alternatives}.`;
     }
   }
+  const explanation = formatFindingExplanation(copy);
   if (finding.code === 'targetedAcquisitionTargetUnavailable' && finding.detail !== undefined) {
-    return `${copy.title}: ${copy.description} (${traitLabel(finding.detail)})`;
+    return `${explanation} (${traitLabel(finding.detail)})`;
   }
-  return finding.detail === undefined
-    ? `${copy.title}: ${copy.description}`
-    : `${copy.title}: ${copy.description} (${finding.detail})`;
+  return finding.detail === undefined ? explanation : `${explanation} (${finding.detail})`;
 }
 
 /**

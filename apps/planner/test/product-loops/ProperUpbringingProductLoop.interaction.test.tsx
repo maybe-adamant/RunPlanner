@@ -72,7 +72,7 @@ describe('Q Miniboss rarity repair product loop', () => {
       if (launcher === null) throw new Error('Q Miniboss trait launcher is missing');
       await view.user.click(launcher);
       const dialog = await screen.findByRole('dialog');
-      expect(await within(dialog).findByText(/Trait offer cannot occur here/)).toBeDefined();
+      expect(await within(dialog).findByText(/Trait choices cannot appear together/)).toBeDefined();
       expect(
         within(dialog).getByRole('button', { name: 'Save trait offer' }).hasAttribute('disabled'),
       ).toBe(true);

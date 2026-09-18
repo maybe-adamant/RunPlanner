@@ -82,6 +82,7 @@ it('shows one grouped issue and selects its Timeline launcher without opening it
   const repair = screen.getByRole('button', { name: /choose a trait offer/i });
   expect(screen.getAllByRole('button')).toHaveLength(1);
   expect(repair.textContent).not.toContain('cannot be generated');
+  expect(repair.querySelector('.finding-description')).toBeNull();
 
   fireEvent.click(repair);
 
@@ -91,4 +92,22 @@ it('shows one grouped issue and selects its Timeline launcher without opening it
   });
   expect(application.store.getState().editorSession.focusedSemanticOwner).toEqual(trait);
   expect(application.store.getState().editorSession.traitDialogTarget).toBeNull();
+});
+
+it('keeps details that explain how to repair the issue', () => {
+  const application = createOpenTestApplication();
+  render(
+    <Provider store={application.store}>
+      <ProjectFindings
+        catalog={catalog}
+        focusByOwner={new Map([[semanticAddressKey(trait), destination]])}
+        issue={{ ...issue, reasons: [{ ...firstReason, code: 'replacementRarityMismatch' }] }}
+      />
+    </Provider>,
+  );
+
+  const repair = screen.getByRole('button', { name: /wrong replacement rarity/i });
+  expect(repair.querySelector('.finding-description')?.textContent).toBe(
+    'Use the next rarity above the equipped boon.',
+  );
 });

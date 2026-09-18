@@ -479,6 +479,56 @@ function allTogetherFindingFixture() {
 }
 
 describe('planner history interaction', () => {
+  it('places the same route repair in the biome rail or above non-biome content', async () => {
+    const application = createApplication();
+    application.store.dispatch(authoredProjectReplaced(createGoldenFGHProject()));
+    application.store.dispatch(
+      authoredProjectCommandDispatched({
+        kind: 'ReplaceRouteLoadout',
+        route: createRouteAddress('Underworld'),
+        weaponKey: 'WeaponDagger',
+        aspectKey: 'DaggerBackstabAspect',
+      }),
+    );
+    const issue = application.store.getState().projectWorkspace.assembly!.evaluation.issue;
+    if (issue === undefined) throw new Error('weapon change must produce a repair');
+    const { user } = renderPlannerForInteraction({ application });
+    const repair = () => {
+      const headings = screen.getAllByRole('heading', { name: 'Next repair' });
+      expect(headings).toHaveLength(1);
+      return headings[0]!.closest('section')!;
+    };
+
+    await user.click(screen.getByRole('button', { name: 'Erebus' }));
+    const copy = repair().textContent;
+    expect(repair().parentElement).toBe(
+      screen.getByRole('region', { name: 'Erebus route structure' }),
+    );
+    expect(repair().nextElementSibling?.textContent).toContain('Erebus');
+    expect(screen.queryByText('Route structure')).toBeNull();
+
+    await user.click(screen.getByRole('button', { name: 'Oceanus' }));
+    expect(repair().parentElement).toBe(
+      screen.getByRole('region', { name: 'Oceanus route structure' }),
+    );
+    expect(repair().textContent).toBe(copy);
+    await user.click(within(repair()).getByRole('button'));
+    expect(application.store.getState().editorSession.selectedFinding).toMatchObject({
+      key: issue.regionKey,
+      origin: issue.owner,
+    });
+    expect(repair().parentElement).toBe(
+      screen.getByRole('region', { name: 'Erebus route structure' }),
+    );
+    expect(screen.queryByRole('dialog')).toBeNull();
+
+    for (const label of ['Route', 'Traits']) {
+      await user.click(screen.getByRole('button', { name: label }));
+      expect(repair().parentElement?.className).toBe('editor-panel');
+      expect(repair().textContent).toBe(copy);
+    }
+  });
+
   it('repeatedly routes the selected Fields Optional 3 issue to its Overview picker', async () => {
     const application = createApplication();
     const original = createGoldenFGHProject();
@@ -1542,9 +1592,9 @@ describe('planner history interaction', () => {
     if (action === null) throw new Error('invalid Hammer pickup action is missing');
     await view.user.click(within(action).getByRole('button', { name: /Edit Trait/ }));
     const dialog = await screen.findByRole('dialog');
-    expect(
-      within(dialog).getAllByText(/Hammer is incompatible with this loadout/).length,
-    ).toBeGreaterThan(0);
+    expect(within(dialog).getAllByText(/Hammer incompatible with loadout/).length).toBeGreaterThan(
+      0,
+    );
     expect(within(dialog).getByRole('status')).toBeTruthy();
 
     const interaction = application

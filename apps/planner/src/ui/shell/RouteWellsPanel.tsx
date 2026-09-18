@@ -6,7 +6,7 @@ import type { RouteStygianWellIndexRow } from '@planner/projections/routeRoomFea
 export function RouteWellsPanel({ rows }: { readonly rows: readonly RouteStygianWellIndexRow[] }) {
   const dispatch = useAppDispatch();
   return (
-    <section aria-labelledby="route-wells-title" className="route-traits-panel">
+    <section aria-labelledby="route-wells-title" className="route-index-panel route-traits-panel">
       <header className="panel-heading">
         <div>
           <p className="eyebrow">Room features</p>

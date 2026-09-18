@@ -29,6 +29,7 @@ interface BiomeWorkspaceProps {
   readonly biome: WorkspaceBiome;
   readonly focusByOwner: StructuredWorkspaceProjection['focusByOwner'];
   readonly interactions: WorkspaceInteractionCatalog;
+  readonly repairBanner?: ReactNode;
   readonly runStateLaunchers: StructuredWorkspaceProjection['runStateLaunchers'];
 }
 
@@ -375,6 +376,7 @@ export function BiomeWorkspace({
   biome,
   focusByOwner,
   interactions,
+  repairBanner,
   runStateLaunchers,
 }: BiomeWorkspaceProps) {
   const runStateTarget = useAppSelector((state) => state.editorSession.runStateTarget);
@@ -476,9 +478,9 @@ export function BiomeWorkspace({
         data-source={biome.source}
         data-status={biome.status}
       >
+        {repairBanner}
         <header className="biome-structure-heading">
           <div className="biome-structure-title">
-            <p className="eyebrow">Route structure</p>
             <div className="biome-structure-title-row">
               <h2>{biome.label}</h2>
               {clearTopology === undefined ? null : (
@@ -492,17 +494,19 @@ export function BiomeWorkspace({
             </div>
           </div>
         </header>
-        <div className="biome-rail">
-          {biome.rail.map((entry) => (
-            <RailEntry entry={entry} key={entry.key} selectedRailKey={selectedRailKey} />
-          ))}
+        <div className="biome-structure-scroll">
+          <div className="biome-rail">
+            {biome.rail.map((entry) => (
+              <RailEntry entry={entry} key={entry.key} selectedRailKey={selectedRailKey} />
+            ))}
+          </div>
+          <CompletionOutline
+            completion={biome.completionOutline}
+            {...(subject?.kind === 'node' && subject.node.kind === 'occurrenceWorkbench'
+              ? { selectedNodeKey: subject.node.key }
+              : {})}
+          />
         </div>
-        <CompletionOutline
-          completion={biome.completionOutline}
-          {...(subject?.kind === 'node' && subject.node.kind === 'occurrenceWorkbench'
-            ? { selectedNodeKey: subject.node.key }
-            : {})}
-        />
       </section>
       <aside aria-label="Details" className="biome-inspector">
         {rendersTitledWorkbench ? null : (

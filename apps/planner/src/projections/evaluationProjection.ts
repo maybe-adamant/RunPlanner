@@ -12,7 +12,7 @@ export type FindingIndex = ReadonlyMap<string, readonly SemanticFinding[]>;
 
 export interface FindingPresentation {
   readonly title: string;
-  readonly description: string;
+  readonly description?: string;
 }
 
 /** Candidate-only trait findings reuse the engine's semantic finding codes. */
@@ -61,500 +61,422 @@ export type BiomeStatusEvaluation =
 const findingCopy = {
   batchRewardStoreMissing: {
     title: 'Choose a reward pool',
-    description: 'Choose the reward pool before choosing rooms for these doors.',
   },
   batchStateMissing: {
-    title: 'Finish setting up these doors',
-    description: 'Choose the door setup before choosing rooms for these doors.',
+    title: 'Configure doors',
   },
   biomeFieldMissing: {
-    title: 'Choose the biome setting',
-    description: 'Choose the required biome setting before building its doors.',
+    title: 'Choose a biome setting',
   },
   fieldsCageOutcomeUnavailable: {
-    title: 'Fields door roll cannot occur here',
-    description: 'The selected Min or Max outcome is unavailable at this point in the Fields.',
+    title: 'Fields door roll unavailable',
+    description: 'Choose an available Min or Max outcome.',
   },
   biomeTopologyMissing: {
-    title: 'Start this biome',
-    description: 'Create its opening room before building the route.',
+    title: 'Create the opening room',
   },
   continuationMissing: {
-    title: 'Continue this route',
-    description: 'Continue from here to complete this route.',
+    title: 'Continue route',
   },
   hubOpenSetIncomplete: {
     title: 'Choose open Hub rooms',
-    description: 'Choose nine or ten Ephyra rooms to keep open in the Hub.',
+    description: 'Open nine or ten rooms.',
   },
   hubVisitOrderIncomplete: {
-    title: 'Choose all six Hub visits',
-    description: 'Choose six different open Hub rooms in the order you enter them.',
+    title: 'Choose six Hub visits',
+    description: 'Visit six different open rooms.',
   },
   hubOpenSlotUnavailable: {
-    title: 'Hub room cannot be open together',
-    description: 'This Ephyra room cannot stay open with the selected Hub rooms.',
+    title: 'Hub rooms conflict',
   },
   pickedShopStateMissing: {
-    title: 'Finish setting up this Shop',
-    description: 'Choose every Shop offer before continuing.',
+    title: 'Complete Shop inventory',
   },
   pickedTargetMissing: {
     title: 'Choose the door taken',
-    description: 'Choose the one door taken from these doors.',
   },
   targetMissing: {
-    title: 'Choose a room for every door',
-    description: 'Choose a room for this door.',
+    title: 'Choose a room',
   },
   targetRoomSupportEmpty: {
-    title: 'No room can appear here',
-    description: 'The game has no room to offer when this door appears.',
+    title: 'No eligible room',
   },
   targetRoomUnavailable: {
-    title: 'Room cannot appear here',
-    description: 'The selected room is not among the rooms that can be offered for this door.',
+    title: 'Room unavailable',
   },
   encounterUnavailable: {
-    title: 'Encounter cannot occur here',
-    description: 'The selected encounter is unavailable when this room begins.',
+    title: 'Encounter unavailable',
   },
   encounterCustomizationUnavailable: {
-    title: 'Encounter customization needs repair',
-    description: 'Choose a result available for this encounter variant, or restore Default.',
+    title: 'Encounter customization unavailable',
+    description: 'Choose an available result or restore Default.',
   },
   encounterSlotActivationUnavailable: {
-    title: 'Encounter phase is not active',
-    description: 'The selected room setup does not activate this encounter phase.',
+    title: 'Encounter phase inactive',
+    description: 'The room setup does not activate this phase.',
   },
   sideRoomGenerationUnavailable: {
-    title: 'Side room generation cannot occur here',
-    description: 'This side-room setup is not available with the selected Hub rooms.',
+    title: 'Side room generation unavailable',
+    description: 'Check the open Hub rooms.',
   },
   baseRewardStoreUnavailable: {
-    title: 'Reward pool cannot appear here',
-    description: 'The selected reward pool is unavailable at this point in the route.',
+    title: 'Reward pool unavailable',
   },
   rewardAcquisitionUnavailable: {
     title: 'Reward cannot be acquired',
-    description: 'The selected reward cannot be acquired here.',
   },
   rewardBagSupportEmpty: {
-    title: 'Reward pool has no possible offer',
-    description: 'This reward pool cannot offer a reward here.',
+    title: 'No reward available from pool',
   },
   rewardBagEntryUnavailable: {
-    title: 'Reward is unavailable from this pool',
-    description: 'The selected reward is not available from this reward pool.',
+    title: 'Reward unavailable from pool',
   },
   rewardPayloadInvalid: {
-    title: 'Reward details are invalid',
-    description: 'The selected reward and its configured details do not form a valid offer.',
+    title: 'Invalid reward details',
   },
   rewardMissing: {
     title: 'Choose a reward',
-    description: 'This active reward has not been authored yet.',
   },
   traitOfferMissing: {
     title: 'Choose a trait offer',
-    description: 'This generated trait offer has not been authored yet.',
   },
   rewardSourceUnavailable: {
-    title: 'Reward source is unavailable',
-    description: 'The selected reward source cannot be offered at this point in the route.',
+    title: 'Reward source unavailable',
   },
   shopOfferUnavailable: {
-    title: 'Shop offer is unavailable',
-    description: 'These Shop offers cannot appear together.',
+    title: 'Shop offers conflict',
   },
   shopPurchaseUnavailable: {
-    title: 'Shop purchase is unavailable',
-    description: 'The selected purchase order cannot be completed.',
+    title: 'Purchase order unavailable',
   },
   alreadyEquipped: {
-    title: 'Trait is already equipped',
-    description: 'This trait cannot be offered again while it is equipped.',
+    title: 'Trait already equipped',
   },
   previouslyPicked: {
-    title: 'Trait was already picked',
-    description: 'This one-time trait cannot be offered again after it was picked earlier.',
+    title: 'One-time trait already picked',
   },
   missingPrerequisite: {
-    title: 'Trait prerequisite is missing',
-    description: 'The current equipped-trait history does not satisfy this prerequisite.',
+    title: 'Missing trait prerequisite',
   },
   negativePrerequisite: {
-    title: 'Trait prerequisite is blocked',
-    description: 'A trait that must be absent is currently equipped.',
+    title: 'Conflicting trait equipped',
   },
   offerContext: {
-    title: 'Trait offer context is blocked',
-    description: 'This trait is not legal in the current reward or room context.',
+    title: 'Trait unavailable in this offer',
   },
   elementThreshold: {
-    title: 'Element threshold is unmet',
-    description: 'The equipped element totals are below this trait offer requirement.',
+    title: 'Not enough elements',
   },
   rarityCount: {
-    title: 'Rarity threshold is unmet',
-    description: 'The equipped god-boon rarity totals are outside this trait offer requirement.',
+    title: 'Boon rarity requirement unmet',
   },
   rarifiableTarget: {
-    title: 'No rarifiable trait is equipped',
-    description: 'This offer requires an equipped trait that can be rarified.',
+    title: 'No trait can be rarified',
   },
   targetedAcquisitionNoEligibleTarget: {
-    title: 'No eligible acquisition target is equipped',
-    description: 'This offer requires an equipped trait that can receive its acquisition effect.',
+    title: 'No eligible target trait',
   },
   targetedAcquisitionTargetMissing: {
-    title: 'Acquisition target is missing',
-    description: 'Choose which eligible equipped trait received this acquisition effect.',
+    title: 'Choose a target trait',
   },
   targetedAcquisitionTargetUnavailable: {
-    title: 'Acquisition target is unavailable',
-    description: 'The selected equipped trait cannot receive this acquisition effect.',
+    title: 'Target trait unavailable',
   },
   occupiedBoonSlot: {
-    title: 'Ordinary boon slot is occupied',
-    description: 'The ordinary boon slot for this trait already has an equipped trait.',
+    title: 'Boon slot occupied',
   },
   freshRarityUnavailable: {
-    title: 'Fresh rarity is unavailable',
-    description: 'This rarity is not offered when the trait is acquired fresh.',
+    title: 'Initial rarity unavailable',
   },
   rarityRollUnavailable: {
-    title: 'Rarity roll is unavailable',
-    description: 'This fresh boon rarity cannot occur from the reached offer context.',
+    title: 'Rarity unavailable in this offer',
   },
   replacementUnavailable: {
-    title: 'Trait replacement is unavailable',
-    description: 'This occupied boon slot cannot be replaced by the selected giver.',
+    title: 'Boon replacement unavailable',
+    description: 'This god cannot replace the equipped boon.',
   },
   replacementMaximumRarity: {
-    title: 'Trait is already Heroic',
-    description: 'A Heroic occupant has no supported replacement rarity.',
+    title: 'Heroic boon cannot be replaced',
   },
   replacementRarityMismatch: {
-    title: 'Replacement rarity is incorrect',
-    description: 'Use the exact next rarity required by the occupied trait.',
+    title: 'Wrong replacement rarity',
+    description: 'Use the next rarity above the equipped boon.',
   },
   wrongHammerLoadout: {
-    title: 'Hammer is incompatible with this loadout',
-    description: 'This Hammer trait does not support the selected weapon and aspect.',
+    title: 'Hammer incompatible with loadout',
   },
   missingPomTarget: {
     title: 'Choose a Pom target',
-    description: 'Record the trait that receives this Pom.',
   },
   pomWrongOfferCount: {
-    title: 'Pom target count is incorrect',
-    description: 'Use the complete target list available at this point.',
+    title: 'Wrong Pom target count',
   },
   pomSelectedTargetNotOffered: {
     title: 'Pom target was not offered',
-    description: 'Choose one of this Pom’s recorded targets.',
+    description: 'Choose from the recorded targets.',
   },
   pomTargetUnavailable: {
-    title: 'Pom target is unavailable',
-    description: 'This trait cannot receive the Pom at this point in the route.',
+    title: 'Pom target unavailable',
   },
   judgmentOutcomeMissing: {
     title: 'Choose Judgment cards',
-    description: 'Record the exact inactive Arcana cards activated after this Boss.',
+    description: 'Choose inactive Arcana.',
   },
   judgmentOutcomeWrongCardinality: {
-    title: 'Judgment card count is incorrect',
-    description: 'Choose the complete number of inactive Arcana cards for Judgment.',
+    title: 'Wrong Judgment card count',
   },
   judgmentOutcomeTargetUnavailable: {
-    title: 'Judgment target is unavailable',
-    description: 'Choose distinct Arcana cards that were inactive before this Boss completed.',
+    title: 'Judgment card unavailable',
+    description: 'Choose distinct eligible inactive Arcana.',
   },
   figurineOutcomeMissing: {
     title: 'Choose Crystal Figurine cards',
-    description: 'Record the exact inactive Arcana cards activated by Crystal Figurine.',
+    description: 'Choose inactive Arcana.',
   },
   figurineOutcomeWrongCardinality: {
-    title: 'Crystal Figurine card count is incorrect',
-    description: 'Choose the complete number of inactive Arcana cards for Crystal Figurine.',
+    title: 'Wrong Crystal Figurine card count',
   },
   figurineOutcomeTargetUnavailable: {
-    title: 'Crystal Figurine target is unavailable',
-    description: 'Choose distinct Arcana cards that remained inactive after Judgment.',
+    title: 'Crystal Figurine card unavailable',
+    description: 'Cards must still be inactive after Judgment.',
   },
   keepsakeUnavailable: {
-    title: 'Keepsake is unavailable',
-    description: 'Choose a keepsake that remains available at this rack frontier.',
+    title: 'Keepsake unavailable',
   },
   keepsakeEquipResultMissing: {
     title: 'Choose Jeweled Pom result',
-    description: 'Record the Hades trait granted when Jeweled Pom is equipped.',
+    description: 'Choose the granted Hades trait.',
   },
   keepsakeEquipResultUnavailable: {
-    title: 'Jeweled Pom result is unavailable',
-    description: 'Choose a Hades trait eligible when Jeweled Pom is equipped.',
+    title: 'Jeweled Pom result unavailable',
   },
   circeResolutionMissing: {
-    title: 'Choose the Circe outcome',
-    description: 'Record the exact Arcana or Vow outcome for the selected Circe trait.',
+    title: "Choose Circe's outcome",
+    description: 'Choose the Arcana or Vow affected by this trait.',
   },
   circeResolutionWrongCardinality: {
-    title: 'Circe outcome count is incorrect',
-    description: 'Choose the complete number of targets for this Circe trait.',
+    title: 'Wrong Circe target count',
   },
   circeResolutionTargetUnavailable: {
-    title: 'Circe target is unavailable',
-    description: 'Choose a target available before this Circe acquisition.',
+    title: 'Circe target unavailable',
   },
   circeOptionUnavailable: {
-    title: 'Circe trait is unavailable',
-    description: 'This Circe trait has no removable configured Vow at this point.',
+    title: 'Circe trait unavailable',
+    description: 'No configured Vow can be removed.',
   },
   echoPomTargetMissing: {
-    title: 'Choose the Echo Pom target',
-    description:
-      'Choose a greatest-level Pom-eligible trait, or record that no eligible target exists.',
+    title: 'Choose Echo Pom target',
+    description: 'Choose a highest-level Pom-eligible trait, or no target if none is eligible.',
   },
   echoPomNoTargetUnavailable: {
-    title: 'Echo Pom has eligible targets',
-    description: 'Choose a greatest-level Pom-eligible trait instead of recording no target.',
+    title: 'Echo Pom needs a target',
+    description: 'A Pom-eligible trait exists; choose one with the highest level.',
   },
   echoPomTargetUnavailable: {
-    title: 'Echo Pom target is unavailable',
-    description: 'Choose a Pom-eligible trait tied at the greatest pre-Echo level.',
+    title: 'Echo Pom target unavailable',
+    description: 'Choose a Pom-eligible trait with the highest level.',
   },
   echoLastRunBoonMissing: {
-    title: 'Choose the Boon Boon Boon outcomes',
-    description: 'Author one to three source-resolved previous-run boon outcomes.',
+    title: 'Choose Boon Boon Boon outcomes',
+    description: 'Choose one to three boons from the previous run.',
   },
   echoLastRunBoonOptionUnavailable: {
-    title: 'Boon Boon Boon outcome is unavailable',
-    description: 'Choose a source-resolved boon that is eligible at the pre-Echo frontier.',
+    title: 'Boon Boon Boon outcome unavailable',
   },
   traitOfferSelectionUnavailable: {
-    title: 'Choose a materialized trait',
-    description: 'The selected trait must be one of this offer’s displayed choices.',
+    title: 'Choose an offered trait',
   },
   allTogetherResultMissing: {
-    title: 'Complete the All Together outcome',
-    description: 'Choose one direct trait outcome for every element set.',
+    title: 'Complete All Together',
+    description: 'Choose a trait for each element set.',
   },
   allTogetherResultUnavailable: {
     title: 'All Together outcome unavailable',
-    description: 'Repair every element set against the reached pre-acquisition trait history.',
   },
   bannedTrait: {
-    title: 'Trait banned by Vow of Denial',
-    description: 'This trait was left unselected in an earlier Denial offer.',
+    title: 'Trait banned by Denial',
+    description: 'It was left unpicked in an earlier offer.',
   },
   chaosRejectedBlockMissing: {
-    title: 'Rejected needs a blocked option',
-    description: 'Choose one visible, unselected option to block while Rejected is active.',
+    title: "Choose Rejected's blocked option",
+    description: 'Choose a visible option other than your pick.',
   },
   chaosRejectedBlockUnavailable: {
-    title: 'Rejected block is unavailable',
-    description: 'The blocked option must be visible and cannot be the selected option.',
+    title: 'Invalid Rejected block',
+    description: 'The blocked option must be visible and cannot be your pick.',
   },
   chaosPairUnavailable: {
     title: 'Chaos pair unavailable',
-    description: 'This selected Chaos pair does not meet its current run prerequisite.',
+    description: 'A run prerequisite is unmet.',
   },
   callingCardRarificationUnavailable: {
-    title: 'Calling Card cannot rarify this row',
-    description: 'This rarification action is not available at the reached offer frontier.',
+    title: 'Calling Card rarification unavailable',
   },
   timePieceConversionUnavailable: {
-    title: 'Time Piece cannot convert this acquisition',
-    description:
-      'This reward is not a free, eligible acquisition with a remaining Time Piece charge.',
+    title: 'Time Piece conversion unavailable',
+    description: 'Requires an eligible free pickup and a remaining charge.',
   },
   artificerConversionUnavailable: {
-    title: 'Artificer cannot convert this acquisition',
-    description:
-      'This source is not a free eligible metaprogression pickup with an active remaining Artificer use.',
+    title: 'Artificer conversion unavailable',
+    description: 'Requires an eligible free minor reward and a remaining use.',
   },
   seaStarDuplicationUnavailable: {
     title: 'Sea Star duplication unavailable',
-    description: 'This acquisition is not eligible for Sea Star on every reached source branch.',
   },
   concaveStoneResultMissing: {
     title: 'Choose Concave Stone result',
-    description: 'Record whether Concave Stone procs and, if so, which residual boon it acquires.',
   },
   concaveStoneResultUnavailable: {
-    title: 'Concave Stone result is unavailable',
-    description: 'Choose a supported proc result for the frozen residual boon rows.',
+    title: 'Concave Stone result unavailable',
+    description: 'Choose an eligible unpicked boon from the offer.',
   },
   artificerReplacementUnavailable: {
-    title: 'Artificer replacement unavailable',
-    description: 'Choose a reward currently reachable from the RunProgress bag.',
+    title: 'Artificer reward unavailable',
+    description: 'Choose from the current major reward pool.',
   },
   figLeafSkipUnavailable: {
     title: 'Fig Leaf skip unavailable',
-    description: 'This combat cannot be skipped with the remaining Fig Leaf uses.',
   },
   naturalSelectionResultMissing: {
-    title: 'Natural Selection result missing',
-    description: 'Choose the successful level targets for this selected trait.',
+    title: 'Choose Natural Selection targets',
   },
   naturalSelectionResultUnavailable: {
-    title: 'Natural Selection result unavailable',
-    description: 'Repair this sequence using the current eligible target order.',
+    title: 'Natural Selection targets unavailable',
+    description: 'Each target must be eligible when its turn is reached.',
   },
   steadyGrowthOutcomeMissing: {
-    title: 'Steady Growth target missing',
-    description: 'Choose the rarity target at this completed encounter.',
+    title: 'Choose Steady Growth target',
   },
   steadyGrowthOutcomeUnavailable: {
     title: 'Steady Growth target unavailable',
-    description: 'Choose a trait that can gain rarity at this checkpoint.',
+    description: 'Choose a trait that can gain rarity.',
   },
   transcendentEmbryoOutcomeMissing: {
-    title: 'Transcendent Embryo blessing missing',
-    description: 'Choose the Chaos blessing granted at this transformation checkpoint.',
+    title: 'Choose Embryo blessing',
   },
   transcendentEmbryoOutcomeUnavailable: {
-    title: 'Transcendent Embryo blessing unavailable',
-    description: 'Choose a Chaos blessing eligible at this transformation checkpoint.',
+    title: 'Embryo blessing unavailable',
   },
   fountainRarityResultMissing: {
-    title: 'Aromatic Phial target missing',
-    description: 'Choose the Common boon promoted at this fountain.',
+    title: 'Choose Aromatic Phial target',
+    description: 'Choose a Common boon.',
   },
   fountainRarityResultUnavailable: {
     title: 'Aromatic Phial target unavailable',
-    description: 'Choose a boon eligible for the Phial at this fountain.',
+    description: 'Choose a Common boon eligible at this fountain.',
   },
   fieldsOptionalCapacityUnavailable: {
-    title: 'Nemesis needs one reward position',
-    description: 'Reduce optional rewards by one while the Nemesis room feature is active.',
+    title: 'Nemesis needs a reward position',
+    description: 'Remove one optional reward.',
   },
   fieldsSpatialPointMissing: {
-    title: 'Fields location missing',
-    description: 'Choose a physical point for this active Fields item.',
+    title: 'Choose a Fields position',
   },
   fieldsSpatialPointUnavailable: {
-    title: 'Fields location unavailable',
-    description: 'Choose a physical point supported by this room and active layout.',
+    title: 'Fields position unavailable',
   },
   fieldsSpatialPointDuplicate: {
-    title: 'Fields location is already used',
-    description: 'Choose a different physical point for this active Fields item.',
+    title: 'Fields position already used',
   },
   resourcePlacementUnavailable: {
-    title: 'Resource success needs repair',
-    description:
-      'Move or remove this selected success so its room, spacing, and capacity remain legal.',
+    title: 'Resource success unavailable',
+    description: 'Move or remove the success to satisfy room, spacing, and placement limits.',
   },
   purgingPoolTraitMissing: {
-    title: 'Pool trait missing',
-    description: 'Choose every currently eligible trait offered by this Pool.',
+    title: 'Choose a Pool trait',
   },
   purgingPoolTraitUnavailable: {
     title: 'Pool trait unavailable',
-    description: 'Choose a trait currently eligible for this Pool.',
   },
   purgingPoolTraitDuplicate: {
-    title: 'Pool trait is repeated',
-    description: 'Each Pool slot must name a different trait.',
+    title: 'Duplicate Pool trait',
   },
   purgingPoolWrongCardinality: {
-    title: 'Pool has the wrong number of traits',
-    description: 'Use exactly the number of traits currently eligible for this Pool.',
+    title: 'Wrong Pool offer count',
   },
   purgingPoolSaleUnavailable: {
     title: 'Pool sale unavailable',
-    description: 'Remove this stale sale or restore its valid Pool trait.',
+    description: 'Remove the sale or restore its eligible trait.',
   },
   hermesShrinePlacementUnavailable: {
     title: 'Shrine placement unavailable',
-    description: 'Remove this ordinary Shrine or restore a legal placement window.',
+    description: 'Remove the Shrine or choose an eligible room.',
   },
   hermesShrineInventoryMissing: {
-    title: 'Shrine offer missing',
-    description: 'Choose every visible Hermes Shrine offer.',
+    title: 'Choose a Shrine offer',
   },
   hermesShrineInventoryWrongGroup: {
-    title: 'Shrine offer has the wrong group',
-    description: 'Choose an offer from this Shrine slot’s declared group.',
+    title: 'Wrong Shrine offer group',
+    description: 'Choose an offer allowed in this slot.',
   },
   hermesShrineInventoryDuplicate: {
-    title: 'Shrine offer is repeated',
-    description: 'The two second-group Shrine offers must be distinct.',
+    title: 'Duplicate Shrine offer',
+    description: 'The two second-group offers must differ.',
   },
   hermesShrineInventoryRequirement: {
     title: 'Shrine offer unavailable',
-    description: 'Choose an offer supported at this Shrine entry.',
   },
   hermesShrineDeliveryPlacementRequired: {
-    title: 'Shrine delivery needs placement',
-    description: 'Place this delivered Shrine reward at its due room before authoring its pickup.',
+    title: 'Place Shrine delivery',
+    description: 'Place it in its delivery room before choosing its outcome.',
   },
   echoGoldPickupPlacementRequired: {
-    title: 'Echo Gold pickup needs placement',
-    description:
-      'Place this required Echo Gold pickup on the timeline before authoring its outcome.',
+    title: 'Place Echo Gold pickup',
+    description: 'Place it on the timeline before choosing its outcome.',
   },
   hermesShrineTravelDealRefillMissing: {
-    title: 'Travel Deal refill missing',
-    description: 'Choose the required fourth Shrine offer.',
+    title: 'Choose Travel Deal offer',
   },
   hermesShrineTravelDealRefillUnavailable: {
-    title: 'Travel Deal refill unavailable',
-    description: 'Repair this retained Shrine refill or its qualifying purchase prefix.',
+    title: 'Travel Deal offer unavailable',
+    description: 'Check the offer and the purchase that triggers it.',
   },
   stygianWellMissing: {
-    title: 'Well offer missing',
-    description: 'Choose every visible Stygian Well offer.',
+    title: 'Choose a Well offer',
   },
   stygianWellWrongGroup: {
-    title: 'Well offer has the wrong group',
-    description: 'Choose an item from this Well slot’s declared group.',
+    title: 'Wrong Well offer group',
+    description: 'Choose an item allowed in this slot.',
   },
   stygianWellDuplicate: {
-    title: 'Well offer is repeated',
-    description: 'Choose three distinct initial Well items.',
+    title: 'Duplicate Well item',
+    description: 'The three initial items must differ.',
   },
   stygianWellPlacementUnavailable: {
     title: 'Well placement unavailable',
-    description: 'Remove this ordinary Well or restore its spacing and physical host.',
+    description: 'Check room eligibility and spacing between Wells.',
   },
   stygianWellTravelDealRefillUnavailable: {
-    title: 'Well Travel Deal refill unavailable',
-    description: 'Repair this retained refill or its qualifying first purchase.',
+    title: 'Well Travel Deal offer unavailable',
+    description: 'Check the offer and the first purchase that triggers it.',
   },
   stygianWellTwistInvalid: {
-    title: 'Twist result unavailable',
-    description: 'Repair this retained Twist result or its purchased parent item.',
+    title: 'Fateful Twist result unavailable',
+    description: 'Check the result and whether Fateful Twist was purchased.',
   },
   ixionChaosMissing: {
-    title: 'Ixion Chaos gate missing',
-    description: 'Author the forced Chaos exit at the first capable physical host.',
+    title: "Add Ixion's Chaos gate",
+    description: 'Use the first room that can offer a Chaos exit.',
   },
   ixionChaosUnavailable: {
-    title: 'Ixion Chaos gate unavailable',
-    description: 'Remove this generated Chaos exit or restore a pending Ixion use.',
+    title: "Ixion's Chaos gate unavailable",
+    description: 'Remove the gate or restore the pending Ixion effect.',
   },
   nemesisOutcomeMissing: {
-    title: 'Choose the Nemesis event result',
-    description: 'Record what Nemesis asks or offers at this interaction.',
+    title: 'Choose Nemesis event result',
   },
   nemesisOutcomeUnavailable: {
     title: 'Nemesis event result unavailable',
-    description: 'Choose a result supported by every reached branch at this interaction.',
   },
   persephoneLevelBonusUnavailable: {
-    title: 'Persephone level bonus unavailable',
-    description: 'Choose a contribution within the active Persephone range for this trait.',
+    title: 'Persephone bonus unavailable',
+    description: 'Choose a value within the allowed range.',
   },
   traitOfferGenerationUnavailable: {
-    title: 'Trait offer cannot occur here',
-    description: 'This set of choices is not supported by the current native offer stages.',
+    title: 'Trait choices cannot appear together',
   },
   unsupportedSparseTraitOffer: {
-    title: 'This offer needs three choices',
-    description: 'This provider has a fixed three-choice offer.',
+    title: 'Offer requires three choices',
   },
 } as const satisfies Readonly<Record<FindingCode, FindingPresentation>>;
 
@@ -614,32 +536,33 @@ export function presentFinding(finding: SemanticFinding): FindingPresentation {
       if (finding.code === 'keepsakeEquipResultMissing') {
         return Object.freeze({
           title: 'Choose Experimental Hammer result',
-          description: 'Record the Hammer trait granted when Experimental Hammer is equipped.',
         });
       }
       if (finding.code === 'keepsakeEquipResultUnavailable') {
         return Object.freeze({
-          title: 'Experimental Hammer result is unavailable',
-          description: 'Choose a Hammer trait compatible with the active weapon and aspect.',
+          title: 'Experimental Hammer unavailable',
+          description: 'Choose a Hammer compatible with the weapon and aspect.',
         });
       }
     }
     if (finding.origin.resultKind === 'transcendentEmbryo') {
       if (finding.code === 'keepsakeEquipResultMissing') {
         return Object.freeze({
-          title: 'Choose Transcendent Embryo result',
-          description: 'Record the Chaos blessing granted when Transcendent Embryo is equipped.',
+          title: 'Choose Embryo blessing',
         });
       }
       if (finding.code === 'keepsakeEquipResultUnavailable') {
         return Object.freeze({
-          title: 'Transcendent Embryo result is unavailable',
-          description: 'Choose a Chaos blessing eligible when Transcendent Embryo is equipped.',
+          title: 'Embryo blessing unavailable',
         });
       }
     }
   }
   return findingCopy[finding.code];
+}
+
+export function formatFindingExplanation(copy: FindingPresentation): string {
+  return copy.description === undefined ? copy.title : `${copy.title}: ${copy.description}`;
 }
 
 /** The engine selects the repair region; presentation only adapts its explanation. */
@@ -659,8 +582,7 @@ export function presentAssessmentIssue(issue: AssessmentIssue): FindingPresentat
 export function presentTraitCandidateFinding(code: TraitCandidateFindingCode): FindingPresentation {
   if (code === 'duplicateOfferedTrait') {
     return {
-      title: 'Trait is offered more than once',
-      description: 'Each offered trait must be distinct.',
+      title: 'Trait already offered',
     };
   }
   return findingCopy[code];

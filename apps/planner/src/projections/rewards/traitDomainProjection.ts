@@ -23,7 +23,7 @@ import {
   explainCandidateEvaluation,
   type CandidateExplanation,
 } from '../contextual/contextualOptions';
-import { presentTraitCandidateFinding } from '../evaluationProjection';
+import { formatFindingExplanation, presentTraitCandidateFinding } from '../evaluationProjection';
 
 export interface PreparedTraitOptionDomain {
   readonly optionKey: TraitOptionKey;
@@ -135,7 +135,7 @@ function candidateExplanation(
     const finding = evaluation.result.findings[0];
     if (finding === undefined) return undefined;
     const copy = presentTraitCandidateFinding(finding.code);
-    return Object.freeze({ kind: 'trait', message: `${copy.title}: ${copy.description}` });
+    return Object.freeze({ kind: 'trait', message: formatFindingExplanation(copy) });
   }
   if (evaluation.kind !== 'traitOfferFocusedOption') {
     return explainCandidateEvaluation(catalog, evaluation);
@@ -174,7 +174,7 @@ function candidateExplanation(
       message: `${traitLabel(finding.traitKey)} is already offered in another option.`,
     });
   }
-  return Object.freeze({ kind: 'trait', message: `${copy.title}: ${copy.description}` });
+  return Object.freeze({ kind: 'trait', message: formatFindingExplanation(copy) });
 }
 
 function representativeCandidate(

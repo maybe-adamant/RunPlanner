@@ -21,7 +21,7 @@ describe('biome rail layout contract', () => {
     expect(stacked).toContain('overflow-y: auto;');
     expect(stacked).toContain('grid-template-columns: minmax(0, 1fr);');
     expect(stacked).toContain('grid-template-rows: auto auto;');
-    for (const region of ['biome-structure-region', 'biome-inspector']) {
+    for (const region of ['biome-structure-region', 'biome-structure-scroll', 'biome-inspector']) {
       const regionStyles = stacked?.split(`.${region} {`)[1]?.split('}')[0];
       expect(regionStyles).toContain('overflow-y: visible;');
       expect(regionStyles).toContain('max-height: none;');
