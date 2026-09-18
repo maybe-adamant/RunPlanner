@@ -100,8 +100,8 @@ Default interaction:
   assessment. A known concrete change that conflicts with active authored
   composition stays visible for repair.
 
-For an active wave, the highlight/fixed template members occupy read-only enemy
-slots alongside the editable remaining types. The engine exposes total and
+For an active wave, the picker confirms highlight/fixed template members before
+selecting the remaining types. Completed members appear as badges. The engine exposes total and
 additional type bounds, seeded identities, ordered candidate domains and precise
 composition issues. Candidate availability does not create another type slot:
 the engine's wave capacity limits editable positions. React does not calculate
@@ -133,7 +133,7 @@ subject to the existing identity checkpoint; customization does not exempt it.
 - Weights are optional positive relative weights over an explicit generated
   composition, with bounded finite values. Default means the unchanged native
   allocation. Zero is not a back door to remove a type.
-- The engine derives normalized requested shares; the UI can show percentages.
+- The engine derives normalized requested shares; the UI edits relative weights.
   The user need not manually make weights sum to 100. Initializing custom
   weights is an explicit edit, not a side effect of opening the dialog.
 - For all-generated waves, shares request portions of that wave's native
@@ -280,33 +280,49 @@ No deployment with new customization is ready until D passes.
 
 Adapt the existing phase product, dialog and bound semantic commands. Publish
 the current generated assessment with the authored snapshot; ordinary picker
-candidates remain lazy. After the count/highlight prerequisites are known, show each wave's
-supported enemy slots together in a horizontal grid, with labels above controls.
-Allow four columns at ordinary popup widths and wrap on narrower screens. The
-highlight and fixed members occupy noneditable slots with matching visual weight.
-All supported additional positions are visible from the outset; unfilled suffix
-positions stay disabled until their predecessor is selected. Use ordinary
-dropdowns initially. No endless append row or empty extra picker after capacity.
+candidates remain lazy. After the count/highlight prerequisites are known, show
+each wave's selected enemies as wrapping badges within its picker surface, with
+weights attached to their corresponding badges. Identify highlight and fixed
+members explicitly; fixed members have no weight input. Clicking a badge reopens
+the whole-wave draft. Use one staged contextual picker per wave.
+The draft confirms fixed/highlight members in their own stages with only the
+declared seed available, then selects generated additions against the engine's
+current prefix domain. Each selection advances within that wave only. As soon as
+the engine accepts that composition, put **Finish Wave** first in a separate
+section with a separator beneath it, before enemy options. Even a full wave is
+committed by Finish Wave, not automatically. Cancel discards the draft.
 
-State each wave's total requirement and distinguish required from optional
-additional positions where native count can vary. Default remains the whole-wave
-native configuration; an empty position is a selection placeholder, not a request
-for native filling inside an exact authored composition. Setting prerequisites or
+The application adapts the existing exact-phase assessment capability for local
+draft queries; React must not reproduce count or eligibility rules. Intermediate
+choices do not dispatch authored commands or rebuild the route. Finish publishes
+one wave edit and one Undo entry. After completion, show the roster in the existing
+badges with inline weights. Keep the global highlight as an independent
+contextual picker and wave count as Default plus supported-count radio choices
+(fixed counts remain read-only). No generic wizard or
+new scheduler is needed.
+
+The staged picker distinguishes required from optional additions and offers Finish
+Wave when the composition is valid. Default remains the whole-wave native
+configuration; a partial picker draft is not a request for native filling inside
+an exact authored composition. Setting prerequisites or
 opening the dialog must not author wave selections. Keep each independent reset.
 
 Place compact weight inputs beside generated enemy controls, including the
 highlight. Show `NA` while weights are native; the first weight edit initializes
 the other generated members to 1. Explain native versus relative weighting once
-per wave. Fixed scripted members have no weight control. Align red-tinted weight
+above the waves. Fixed scripted members have no weight control. Align red-tinted weight
 and wave resets with the wave heading, and customization reset with the section
-heading. Show the resolved native encounter identity below the section heading.
+heading. Show the resolved native encounter identity beside the section heading.
+Panel each wave; place Select/Edit enemies beside its title. Show neither
+percentage badges nor a duplicate type-count summary outside the picker.
 
 Retain invalid choices, including excess stored types, in an explicit removable
 repair area rather than silently discarding or hiding them. Do not reinterpret
-stored suffixes when an earlier type is edited. A range/eligibility conflict must
-remain repairable without requiring a full customization reset.
-Remove populated positions from the end; replacing an earlier choice preserves
-the later choices for validation and repair.
+persisted choices while drafting. A completed replacement wave explicitly replaces
+that wave; Cancel leaves its old values intact. Preserve per-position weight
+inheritance on replacement, initialize added members to 1 only when custom weights
+already exist, and drop removed members. Existing excess-removal repair can remain.
+A range/eligibility conflict must remain repairable without a full reset.
 
 Give issues typed semantic evidence at the engine authority (wave, relevant type
 or position, actual count and allowed bounds as appropriate). Project concise,
@@ -326,8 +342,8 @@ Include the user's P_Combat08 shape: two waves with a Satyr Goldpike highlight
 and Harpy Raptor/Auto-Seeker additions in both. Report 3 versus 1/2 total types,
 retain removable excess, and reach valid state by removing both additions from
 wave 1 and either from wave 2. Cover fixed H seeds, required/optional slots,
-progressive disabling, and the absence of a trailing selectable position once
-the wave is full. Keep the complete slot/evidence matrix in engine tests and
+staged eligibility, Cancel and single-edit Finish/Undo, Finish Wave ordering and
+separator, and no trailing candidate stage once the wave is full. Keep the complete slot/evidence matrix in engine tests and
 representative repair workflows in application tests.
 
 Commit boundary: complete application presentation over B's supported engine
@@ -427,55 +443,44 @@ Recorded Gate B checks:
   no remaining actionable findings. Broad phase closure and in-game validation
   remain E; no intermediate feature deployment was performed.
 
-Gate C extends the existing Timeline customization dialog with atomically published
-exact-context assessment, count/highlight controls, sparse wave composition and relative weights.
-Default preserves dormant rows, independent resets remove overrides, and retained
-invalid values remain repairable. Findings distinguish the encounter picker from
-the customization launcher without opening the dialog. Existing boss editors remain
-unchanged.
+Gate C delivers the existing Timeline customization dialog with count radios,
+a shared-highlight picker, whole-wave staged pickers, and completed enemy badges
+with relative weights. Exact-phase assessment is published atomically; intermediate
+wave choices remain local until Finish Wave publishes one authored edit.
+Default retains dormant composition and weights, independent resets remove
+overrides, and invalid retained values remain repairable. Findings target the
+Timeline launcher without opening the dialog, with detailed repair messages beside
+the affected controls inside it. Existing boss editors remain unchanged.
 
-Initial Gate C checks (before the fixed-slot authoring revision):
+Verification and remaining obligations:
 
-- Focused UI/workspace workflows and shared interaction/finding hooks: 4 files /
-  46 tests passed, including real ordinary, NPC, H mixed, O phase and Devotion
-  contacts, weights, reset/Undo, retained repair, and unchanged opening/closing.
-- Application typecheck and affected TypeScript lint/Prettier passed.
-- Workspace contract suite: 75 passed; one pre-existing button-classification
-  failure in unchanged `RunStateSheet.tsx:190` (introduced by `321fcb66`) remains
-  for closure. All candidate, projection, ownership and render-purity checks passed.
-- Chromium inspection at 700px and 360px verified usable dialog layout without
-  horizontal overflow, including relative-weight inputs.
-- Independent review's retained-row/reset and witness gaps were addressed; final
-  review reported no actionable findings. No deployment or game realization is
-  claimed by this UI gate.
-
-Fixed-slot revision verification:
-
-- Seven focused engine, export, authored-command, UI and shared-hook files passed
-  (64 tests). Engine/application typechecks, affected lint, formatting and diff
-  checks passed.
-- Independent review passed after restricting removal to the last populated
-  position; replacing an earlier enemy preserves the remaining selections.
-- The durable P repair workflow uses the reachable `P_Combat02` fixture with the
-  same `GeneratedP` policy. Separately, the user's exact `(51)` save was repaired
-  through Chromium in `P_Combat08`: removing the three excess selections restored
-  all four biomes to valid. The original file was not changed.
-- Chromium inspection at 1280px and 360px confirmed horizontal slots and usable
-  narrow layout. A one-off comparison across 39 encounter families and 4,968
-  inputs found no change to validity, exported operands or blacklist products.
-- No schema, protocol or fixture migration; no deployment. The previously noted
-  unrelated Run State contract-test failure remains a closure obligation.
-- Final UI refinements retain native dropdowns as the checkpoint: inline weights
-  and budget shares, persistent empty-slot placeholders, and compact shared reset
-  styling. Replacement carries the previous member's weight. Assessment is
-  published atomically; browser instrumentation confirmed wave/input identity and
-  focus survive edits with no control removal. Evaluation latency remains about
-  200 ms in the sampled development-browser edit, separate from the removed flash.
+- Focused engine and application checks cover ordinary, NPC, H mixed, O/P phase
+  and Devotion contacts, retained repair, weight inheritance, reset/Undo, and
+  unchanged opening/closing. Picker witnesses cover staged eligibility, Cancel,
+  single-edit Finish, and Finish Wave ordering.
+- Browser checks covered desktop/narrow layouts, staged P-wave completion,
+  retained weights, and scaled popup stability. The user's exact `(51)` save
+  was repaired without modifying the original file.
+- Coherent review covers Slice B `79e90e5e` through the entire Gate C worktree,
+  including checkpoint `15c8035f`. Remediation preserves weights through
+  Default/highlight round trips and removes obsolete app-projection fields.
+  Ambiguous retained weight maps remain intact for explicit repair rather than
+  guessing which key belonged to the dormant highlight.
+- Remediation verification: generated/occurrence workbenches passed 45 tests;
+  the final generated workbench passed 12 tests after adding the ambiguous-weight
+  repair witness. Application typecheck, affected ESLint, formatting and diff
+  checks passed. The independent review findings are addressed.
+- The prior workspace contract run had 75 passes and one pre-existing
+  button-classification failure in `RunStateSheet.tsx:190` (introduced by
+  `321fcb66`). This remains a closure obligation.
+- No schema, protocol or fixture migration; no deployment or game realization
+  is claimed. Gate D realization and Gate E broad closure/in-game checks remain.
+  The user approved committing Gate C and proceeding to Gate D.
 
 | Gate | Status                                   |
 | ---- | ---------------------------------------- |
 | A    | Complete; independently reviewed         |
 | B    | Complete; independently reviewed         |
-| C    | Complete; independently reviewed         |
-| D    | Not started                              |
+| C    | Complete; review findings addressed      |
+| D    | Implementation starting                  |
 | E    | Not started; requires in-game acceptance |

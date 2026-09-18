@@ -99,27 +99,42 @@ export interface WorkspaceEncounterCustomizationInteraction {
    * intent and authored choices. Absent only when context is genuinely unavailable.
    */
   readonly generatedAssessment?: WorkspaceGeneratedEncounterAssessment;
+  /** Contextual generated-highlight domain, including the explicit Default value. */
+  readonly generatedHighlightPicker?: ContextualPickerModel<string>;
+  /**
+   * Assesses a local whole-wave draft against this exact phase without
+   * publishing intermediate authored state.
+   */
+  readonly generatedWaveDraftFor?: (
+    waveIndex: number,
+    confirmedSeedCount: number,
+    typeKeys: readonly string[],
+  ) => WorkspaceGeneratedWaveDraft;
+}
+
+export type WorkspaceGeneratedWaveDraftChoice =
+  | { readonly kind: 'finish' }
+  | { readonly kind: 'confirmSeed'; readonly key: string }
+  | { readonly kind: 'enemy'; readonly key: string };
+
+export interface WorkspaceGeneratedWaveDraft {
+  readonly picker: ContextualPickerModel<WorkspaceGeneratedWaveDraftChoice>;
+  readonly stepLabel: string;
 }
 
 export interface WorkspaceGeneratedEncounterAssessment {
-  readonly supported: boolean;
-  readonly issues: readonly { readonly message: string; readonly waveIndex?: number }[];
-  readonly effectiveWaveCount?: number;
+  readonly issues: readonly {
+    readonly message: string;
+    readonly waveIndex?: number;
+    readonly field?: 'waveCount' | 'highlight';
+  }[];
   readonly composition: 'active' | 'nativeWaveCount' | 'nativeHighlight';
-  readonly eligibleHighlightKeys: readonly string[];
   readonly waves: readonly {
     readonly waveIndex: number;
-    readonly typeCount: { readonly min: number; readonly max: number };
     readonly additionalTypeCount: { readonly min: number; readonly max: number };
     readonly seeds: readonly { readonly key: string; readonly kind: 'fixed' | 'highlight' }[];
-    /** Native eligibility ran out before the declared lower bound. */
-    readonly exhausted: boolean;
-    /** Ordered engine-assessed domains for the bounded editable positions. */
-    readonly eligibleKeysByPosition: readonly (readonly string[])[];
     /** Complete generated members when the explicit row is valid. */
     readonly generatedMemberKeys?: readonly string[];
-    /** Engine-normalized requested shares, aligned with generatedMemberKeys. */
-    readonly normalizedShares?: readonly number[];
   }[];
 }
 
@@ -347,7 +362,6 @@ export type WorkspaceEncounterCustomizationDecision =
         readonly choices: readonly {
           readonly key: string;
           readonly label: string;
-          readonly elite: boolean;
         }[];
         readonly fixedEnemies: readonly { readonly key: string; readonly label: string }[];
         readonly waveCount: { readonly min: number; readonly max: number };

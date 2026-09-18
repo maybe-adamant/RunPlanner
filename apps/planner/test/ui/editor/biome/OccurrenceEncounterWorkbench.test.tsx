@@ -110,7 +110,7 @@ describe('OccurrenceEncounterWorkbench', () => {
     ).toBe(canonical);
     await view.user.click(launcher);
     const dialog = await screen.findByRole('dialog', { name: 'Customize' });
-    await view.user.selectOptions(within(dialog).getByRole('combobox', { name: 'Waves' }), '3');
+    await view.user.click(within(dialog).getByRole('radio', { name: '3' }));
     await waitFor(() =>
       expect(
         view.application.store
@@ -120,12 +120,12 @@ describe('OccurrenceEncounterWorkbench', () => {
           ?.encounters.customizationByPhase?.Encounter?.generatedComposition,
       ).toMatchObject({ kind: 'generated', waveCount: 3 }),
     );
-    await view.user.selectOptions(
-      within(dialog).getByRole('combobox', { name: 'Shared highlight' }),
-      'Guard',
-    );
-    const enemy = await within(dialog).findByRole('combobox', { name: 'Wave 2 enemy 2' });
-    await view.user.selectOptions(enemy, 'Brawler');
+    await view.user.click(within(dialog).getByRole('button', { name: 'Shared highlight' }));
+    await view.user.click(await screen.findByRole('option', { name: 'Whisper' }));
+    await view.user.click(within(dialog).getByRole('button', { name: 'Wave 2 enemies' }));
+    await view.user.click(await screen.findByRole('option', { name: 'Whisper' }));
+    await view.user.click(await screen.findByRole('option', { name: 'Wastrel' }));
+    await view.user.click(await screen.findByRole('option', { name: 'Finish Wave' }));
     await waitFor(() =>
       expect(
         view.application.store

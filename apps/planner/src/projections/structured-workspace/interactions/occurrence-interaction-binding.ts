@@ -7,6 +7,7 @@ import {
   semanticAddressKey,
   type AuthoredNemesisRandomEventKind,
   type AuthoredNemesisRandomEventOutcome,
+  type AuthoredGeneratedEncounterCustomization,
   type OccurrenceId,
   type SideRoomGeneration,
 } from '@run-planner/engine/authored-project';
@@ -63,7 +64,11 @@ import type {
 } from '../contracts/features';
 import type { WorkspaceOccurrenceInteractionRequirement } from './interaction-requirements';
 import { candidateInteraction } from './interaction-binding-primitives';
-import { projectGeneratedEncounterAssessment } from './generated-encounter-projection';
+import {
+  projectGeneratedEncounterAssessment,
+  projectGeneratedEncounterHighlightPicker,
+  projectGeneratedEncounterWaveDraft,
+} from './generated-encounter-projection';
 import {
   createMemoizedStableIdentityPickerLoad,
   projectStableIdentityPicker,
@@ -459,23 +464,66 @@ export function bindOccurrenceLocalInteractions(
               generatedDecision === undefined
                 ? undefined
                 : generatedEncounterSupportForProjectEvaluationAssembly(assembly, phase.owner);
-            const generatedAssessment =
+            const generatedValue =
+              generatedDecision?.value?.kind === 'generated'
+                ? generatedDecision.value
+                : { kind: 'generated' as const };
+            const generatedLabels =
+              generatedSelection === undefined
+                ? []
+                : [
+                    ...generatedSelection.choices,
+                    ...generatedSelection.fixedEnemies,
+                    ...(generatedDecision?.retainedChoiceLabels ?? []),
+                  ];
+            const generatedEngineAssessment =
               generatedDecision === undefined ||
               generatedSelection === undefined ||
               generatedCapability?.decisionKey !== generatedDecision.key
                 ? undefined
-                : projectGeneratedEncounterAssessment(
-                    generatedCapability.assess(
-                      generatedDecision.value?.kind === 'generated'
-                        ? generatedDecision.value
-                        : { kind: 'generated' },
-                    ),
-                    [
-                      ...generatedSelection.choices,
-                      ...generatedSelection.fixedEnemies,
-                      ...(generatedDecision.retainedChoiceLabels ?? []),
-                    ],
+                : generatedCapability.assess(generatedValue);
+            const generatedAssessment =
+              generatedEngineAssessment === undefined
+                ? undefined
+                : projectGeneratedEncounterAssessment(generatedEngineAssessment, generatedLabels);
+            const generatedHighlightPicker =
+              generatedDecision === undefined || generatedSelection === undefined
+                ? undefined
+                : projectGeneratedEncounterHighlightPicker(
+                    generatedEngineAssessment,
+                    generatedValue.highlightKey,
+                    generatedLabels,
+                    generatedSelection.choices.map((choice) => choice.key),
                   );
+            const generatedWaveDraftFor =
+              generatedDecision === undefined ||
+              generatedSelection === undefined ||
+              generatedCapability?.decisionKey !== generatedDecision.key
+                ? undefined
+                : (waveIndex: number, confirmedSeedCount: number, typeKeys: readonly string[]) => {
+                    const waves = [
+                      ...(generatedValue.waves?.filter((wave) => wave.waveIndex !== waveIndex) ??
+                        []),
+                      Object.freeze({ waveIndex, typeKeys: Object.freeze([...typeKeys]) }),
+                    ].sort((left, right) => left.waveIndex - right.waveIndex);
+                    const draft: AuthoredGeneratedEncounterCustomization = Object.freeze({
+                      kind: 'generated',
+                      ...(generatedValue.waveCount === undefined
+                        ? {}
+                        : { waveCount: generatedValue.waveCount }),
+                      ...(generatedValue.highlightKey === undefined
+                        ? {}
+                        : { highlightKey: generatedValue.highlightKey }),
+                      waves: Object.freeze(waves),
+                    });
+                    return projectGeneratedEncounterWaveDraft(
+                      generatedCapability.assess(draft),
+                      waveIndex,
+                      confirmedSeedCount,
+                      typeKeys,
+                      generatedLabels,
+                    );
+                  };
             encounterCustomizations.set(
               key,
               Object.freeze({
@@ -496,6 +544,8 @@ export function bindOccurrenceLocalInteractions(
                     }),
                   }),
                 ...(generatedAssessment === undefined ? {} : { generatedAssessment }),
+                ...(generatedHighlightPicker === undefined ? {} : { generatedHighlightPicker }),
+                ...(generatedWaveDraftFor === undefined ? {} : { generatedWaveDraftFor }),
               }),
             );
           }
