@@ -165,16 +165,6 @@
     border-bottom: 1px solid #30313a;
   }
 
-  .project-findings {
-    position: static;
-    max-height: none;
-  }
-
-  .findings-list {
-    overflow-y: visible;
-    scrollbar-gutter: auto;
-  }
-
   .navigation-label {
     display: none;
   }

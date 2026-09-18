@@ -1,7 +1,5 @@
 import { semanticAddressKey } from '@run-planner/engine/authored-project';
-import type { SemanticFinding } from '@run-planner/engine/simulation';
-
-import { semanticFindingKey } from '../projections/evaluationProjection';
+import type { AssessmentIssue } from '@run-planner/engine/simulation';
 import type {
   StructuredWorkspaceProjection,
   StructuredWorkspaceProjectionService,
@@ -19,7 +17,7 @@ export interface EditorSessionReconciliationCoordinator {
 }
 
 export interface EditorSessionReconciliationInput {
-  readonly findings: readonly SemanticFinding[];
+  readonly issue: AssessmentIssue | undefined;
   readonly focusByOwner: StructuredWorkspaceProjection['focusByOwner'];
   readonly session: EditorSessionState;
   readonly availableRunStateOwnerKeys?: ReadonlySet<string>;
@@ -35,13 +33,11 @@ function hasExactDestination(
 
 function selectedFindingStillExists(
   selection: FindingSelection,
-  findings: readonly SemanticFinding[],
+  issue: AssessmentIssue | undefined,
 ): boolean {
-  const originKey = semanticAddressKey(selection.origin);
-  return findings.some(
-    (finding) =>
-      semanticFindingKey(finding) === selection.key &&
-      semanticAddressKey(finding.origin) === originKey,
+  return (
+    issue?.regionKey === selection.key &&
+    semanticAddressKey(issue.owner) === semanticAddressKey(selection.origin)
   );
 }
 
@@ -53,10 +49,10 @@ function selectedFindingStillExists(
 export function deriveEditorSessionReconciliation(
   input: EditorSessionReconciliationInput,
 ): EditorSessionReconciliation | null {
-  const { focusByOwner, findings, session } = input;
+  const { focusByOwner, issue, session } = input;
   const selectedFinding = session.selectedFinding;
   const selectedFindingSurvives =
-    selectedFinding !== null && selectedFindingStillExists(selectedFinding, findings);
+    selectedFinding !== null && selectedFindingStillExists(selectedFinding, issue);
   if (selectedFindingSurvives && selectedFinding !== null) {
     const ownerKey = semanticAddressKey(selectedFinding.origin);
     if (!hasExactDestination(focusByOwner, ownerKey)) {
@@ -136,7 +132,7 @@ export function createEditorSessionReconciliationCoordinator(options: {
     );
     const reconciliation = deriveEditorSessionReconciliation({
       availableRunStateOwnerKeys,
-      findings: assembly.evaluation.findings,
+      issue: assembly.evaluation.issue,
       focusByOwner: workspace.focusByOwner,
       session: state.editorSession,
     });

@@ -87,7 +87,7 @@ describe('App', () => {
     const application = createOpenTestApplication();
     const markup = appMarkup(application);
 
-    expect(markup).toContain('class="project-findings"');
+    expect(markup).not.toContain('class="project-findings"');
     expect(markup).toContain('class="app-route-identity">Underworld');
     expect(markup).toContain('About</button>');
     expect(markup).not.toContain('Planner sections');

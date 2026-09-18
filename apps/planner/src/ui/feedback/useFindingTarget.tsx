@@ -1,7 +1,7 @@
 import { semanticAddressKey, type SemanticAddress } from '@run-planner/engine/authored-project';
 import { createContext, useContext, useMemo, useRef, type ReactNode } from 'react';
 import type { StructuredWorkspaceProjection } from '@planner/projections/structured-workspace';
-import { presentFinding, semanticFindingKey } from '@planner/projections/evaluationProjection';
+import { presentFinding } from '@planner/projections/evaluationProjection';
 import { useAppSelector } from '@planner/state/store';
 import { semanticOwnerControlElementId } from './semanticOwner';
 
@@ -77,10 +77,7 @@ export function useFindingTarget() {
     const key = semanticAddressKey(address);
     const locked = authoringReadiness?.(readinessOwner) === 'locked';
     const findings = findingsByTarget.get(key) ?? [];
-    const selectedAtTarget =
-      selectedKey !== undefined &&
-      focusKey === key &&
-      findings.some((finding) => semanticFindingKey(finding) === selectedKey);
+    const selectedAtTarget = selectedKey !== undefined && focusKey === key;
     const request = `${revision}:${selectedKey ?? ''}:${key}`;
     return {
       id,

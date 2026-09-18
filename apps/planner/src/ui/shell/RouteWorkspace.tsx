@@ -328,12 +328,7 @@ export function RouteWorkspace({
       <div className="editor-panel" aria-live="polite">
         <ProjectFindings
           catalog={catalog}
-          emptyMessage={
-            routeEvaluation.status === 'empty'
-              ? 'Configure a biome in this route to begin simulation.'
-              : 'No findings in this route.'
-          }
-          findings={routeEvaluation.findings}
+          issue={routeEvaluation.issue}
           focusByOwner={workspace.focusByOwner}
         />
         <div className="editor-panel-content" data-editor-layout={contentLayout}>

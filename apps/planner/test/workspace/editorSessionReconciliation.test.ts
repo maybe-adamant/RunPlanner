@@ -8,12 +8,11 @@ import {
   semanticAddressKey,
   type SemanticAddress,
 } from '@run-planner/engine/authored-project';
-import type { SemanticFinding } from '@run-planner/engine/simulation';
+import type { AssessmentIssue, SemanticFinding } from '@run-planner/engine/simulation';
 import type { WorkspaceInspectorDestination } from '@planner/projections/structured-workspace';
 import type { EditorSessionState, FindingSelection } from '@planner/state/editorSessionSlice';
 import { describe, expect, it } from 'vitest';
 
-import { semanticFindingKey } from '@planner/projections/evaluationProjection';
 import { deriveEditorSessionReconciliation } from '@planner/workspace/editorSessionReconciliation';
 
 const owner = createBiomeAddress('Underworld', 'F');
@@ -26,6 +25,15 @@ function finding(origin: SemanticAddress): SemanticFinding {
     origin,
     phase: 'completeness',
     severity: 'error',
+  });
+}
+
+function issue(owner: SemanticAddress, reason = finding(owner)): AssessmentIssue {
+  return Object.freeze({
+    kind: 'incomplete',
+    owner,
+    regionKey: `region:${semanticAddressKey(owner)}`,
+    reasons: Object.freeze([reason]),
   });
 }
 
@@ -73,7 +81,7 @@ describe('editor-session reconciliation', () => {
     );
     expect(
       deriveEditorSessionReconciliation({
-        findings: [],
+        issue: undefined,
         focusByOwner: destinations(),
         session: session({ levelResolutionDialogTarget: target }),
       }),
@@ -92,7 +100,7 @@ describe('editor-session reconciliation', () => {
     expect(
       deriveEditorSessionReconciliation({
         availableRunStateOwnerKeys: new Set(),
-        findings: [],
+        issue: undefined,
         focusByOwner: destinations(),
         session: session({ runStateTarget: target }),
       }),
@@ -104,14 +112,15 @@ describe('editor-session reconciliation', () => {
   });
   it('retains independently live focus and finding references', () => {
     const selected = finding(owner);
+    const selectedIssue = issue(owner, selected);
 
     expect(
       deriveEditorSessionReconciliation({
-        findings: [selected],
+        issue: selectedIssue,
         focusByOwner: destinations(owner),
         session: session({
           focusedSemanticOwner: owner,
-          selectedFinding: { key: semanticFindingKey(selected), origin: owner },
+          selectedFinding: { key: selectedIssue.regionKey, origin: owner },
         }),
       }),
     ).toBeNull();
@@ -120,7 +129,7 @@ describe('editor-session reconciliation', () => {
   it('clears a deleted finding while retaining its still-routable focus', () => {
     expect(
       deriveEditorSessionReconciliation({
-        findings: [],
+        issue: undefined,
         focusByOwner: destinations(owner),
         session: session({
           focusedSemanticOwner: owner,
@@ -130,31 +139,46 @@ describe('editor-session reconciliation', () => {
     ).toEqual({ clearFocusedSemanticOwner: false, clearSelectedFinding: true });
   });
 
-  it('clears a removed focus independently from a surviving selected finding', () => {
-    const selected = finding(owner);
+  it('clears a replaced issue selection without moving independently live focus', () => {
+    const previousIssue = issue(owner);
+    const nextIssue = issue(otherOwner);
 
     expect(
       deriveEditorSessionReconciliation({
-        findings: [selected],
+        issue: nextIssue,
+        focusByOwner: destinations(owner, otherOwner),
+        session: session({
+          focusedSemanticOwner: owner,
+          selectedFinding: { key: previousIssue.regionKey, origin: owner },
+        }),
+      }),
+    ).toEqual({ clearFocusedSemanticOwner: false, clearSelectedFinding: true });
+  });
+
+  it('clears a removed focus independently from a surviving selected finding', () => {
+    const selected = finding(owner);
+    const selectedIssue = issue(owner, selected);
+
+    expect(
+      deriveEditorSessionReconciliation({
+        issue: selectedIssue,
         focusByOwner: destinations(owner),
         session: session({
           focusedSemanticOwner: otherOwner,
-          selectedFinding: { key: semanticFindingKey(selected), origin: owner },
+          selectedFinding: { key: selectedIssue.regionKey, origin: owner },
         }),
       }),
     ).toEqual({ clearFocusedSemanticOwner: true, clearSelectedFinding: false });
   });
 
   it('clears both references after their selected owner disappears', () => {
-    const selected = finding(owner);
-
     expect(
       deriveEditorSessionReconciliation({
-        findings: [],
+        issue: undefined,
         focusByOwner: destinations(),
         session: session({
           focusedSemanticOwner: owner,
-          selectedFinding: { key: semanticFindingKey(selected), origin: owner },
+          selectedFinding: { key: 'region:removed', origin: owner },
         }),
       }),
     ).toEqual({ clearFocusedSemanticOwner: true, clearSelectedFinding: true });
@@ -162,13 +186,14 @@ describe('editor-session reconciliation', () => {
 
   it('rejects a live selected finding without its exact workspace destination', () => {
     const selected = finding(owner);
+    const selectedIssue = issue(owner, selected);
     const misrouted = new Map([[semanticAddressKey(owner), destination(otherOwner)]]);
 
     expect(() =>
       deriveEditorSessionReconciliation({
-        findings: [selected],
+        issue: selectedIssue,
         focusByOwner: misrouted,
-        session: session({ selectedFinding: { key: semanticFindingKey(selected), origin: owner } }),
+        session: session({ selectedFinding: { key: selectedIssue.regionKey, origin: owner } }),
       }),
     ).toThrow(/has no exact workspace destination/);
   });

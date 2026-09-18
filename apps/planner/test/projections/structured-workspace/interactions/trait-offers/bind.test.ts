@@ -485,7 +485,7 @@ describe('trait-offers/bind', () => {
         ? undefined
         : childFor(invalidInteraction.optionDomain(invalidOffer, 'option2'), 'circeResolution')
             ?.child.marker.findingCount,
-    ).toBeGreaterThan(0);
+    ).toBe(0);
   });
 
   it('binds four active All Together children and keeps retained detail dormant off-selection', () => {

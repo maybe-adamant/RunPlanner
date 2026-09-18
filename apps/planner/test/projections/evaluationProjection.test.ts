@@ -20,6 +20,7 @@ import {
 } from '@run-planner/engine/authored-project';
 import {
   type FindingCode,
+  type AssessmentIssue,
   type ProjectBiomeEvaluation,
   type ProjectEvaluation,
   type ProjectRouteEvaluation,
@@ -313,12 +314,19 @@ describe('evaluation presentation', () => {
 
   it('projects aggregate feedback and coverage context through the route hierarchy', () => {
     const fFinding = finding('biomeTopologyMissing');
+    const fIssue = {
+      kind: 'incomplete',
+      owner: biome,
+      regionKey: 'underworld-f-start',
+      reasons: [fFinding, finding('continuationMissing')],
+    } as const satisfies AssessmentIssue;
     const fEvaluation = {
       biomeKey: 'F',
       origin: biome,
       authoring: 'incomplete',
       frontier: biome,
       coverage: { kind: 'none', reason: 'notEvaluated' },
+      issue: fIssue,
       findings: [fFinding],
     } as const satisfies ProjectBiomeEvaluation;
     const underworld = {
@@ -331,6 +339,7 @@ describe('evaluation presentation', () => {
         active: { kind: 'incomplete', biomeKey: 'F' },
         blockedSuffix: ['G'],
       },
+      issue: fIssue,
       findings: [fFinding],
       resources: emptyResourceExecutionPolicy,
       summary: {
@@ -348,6 +357,7 @@ describe('evaluation presentation', () => {
       projectId: 'feedback-project',
       catalogVersion: catalog.version,
       authoringHorizon: { kind: 'open' },
+      issue: fIssue,
       route: underworld,
       findings: [fFinding],
       summary: underworld.summary,
