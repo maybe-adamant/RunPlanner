@@ -4,6 +4,7 @@ import { catalog } from '@run-planner/hades2-catalog';
 import {
   applyProjectCommand,
   applyProjectHistoryCommand,
+  createAdditionalExitAddress,
   createBatchRewardStoreAddress,
   createBiomeAddress,
   createExitDecisionAddress,
@@ -13,6 +14,7 @@ import {
   createIncomingRewardAddress,
   createOccurrenceAddress,
   createOccurrenceId,
+  createPostbossKeepsakeSelectionAddress,
   createProjectHistory,
   createTargetAddress,
   createTraitOfferAddress,
@@ -23,6 +25,8 @@ import {
   undoProjectHistory,
 } from '@run-planner/engine/authored-project';
 import { replaceTestShopOfferActions } from '@run-planner/test-fixtures/shared';
+import { loadSurfaceNOPQCheckpoint } from '@run-planner/test-fixtures/checkpoints/surface';
+import { loadUnderworldFGHICheckpoint } from '@run-planner/test-fixtures/checkpoints/underworld';
 import { loadSurfaceNProject } from '@run-planner/test-fixtures/surface';
 import {
   composeBiomeHistoryPrefix,
@@ -52,6 +56,182 @@ function startedNTopology(project: ReturnType<typeof nProject>) {
 }
 
 describe('authored-project commands and topology', () => {
+  it.each([
+    ['full Underworld', loadUnderworldFGHICheckpoint],
+    ['full Surface', loadSurfaceNOPQCheckpoint],
+  ])('strictly round-trips every selectable authored exit on the %s fixture', (_, loadProject) => {
+    const project = loadProject();
+    const route = project.route;
+    if (route === null) throw new Error('fixture route is required');
+    for (const biome of route.biomes) {
+      const topology = biome.topology;
+      if (topology === null) continue;
+      const address = createBiomeAddress(route.routeKey, biome.biomeKey);
+      for (const decision of topology.decisions) {
+        if (decision.kind !== 'exit') continue;
+        const source = decision.source;
+        const additional =
+          source.kind === 'occurrence'
+            ? (topology.occurrences.find(
+                (occurrence) => occurrence.occurrenceId === source.occurrenceId,
+              )?.additionalExits ?? [])
+            : [];
+        const values =
+          decision.normal.targets.length === 1 && additional.length === 0
+            ? [{ kind: 'derived' as const }]
+            : [
+                ...decision.normal.targets.map((target) => ({
+                  kind: 'normal' as const,
+                  exitKey: target.exitKey,
+                })),
+                ...additional.map((exit) => ({
+                  kind: 'additional' as const,
+                  additionalExitKey: exit.key,
+                })),
+                { kind: 'unresolved' as const },
+              ];
+        for (const value of values) {
+          const command = {
+            kind: 'SetExitSelection' as const,
+            selection: createExitSelectionAddress(address, source),
+            value,
+          };
+          const history = applyProjectHistoryCommand(
+            createProjectHistory(project),
+            catalog,
+            command,
+          );
+          expect(
+            decodeProjectDocument(JSON.parse(encodeProjectDocument(history.present)), catalog),
+          ).toEqual(history.present);
+          expect(undoProjectHistory(history).present).toEqual(project);
+          expect(redoProjectHistory(undoProjectHistory(history)).present).toEqual(history.present);
+          const after = history.present.route?.biomes.find(
+            (candidate) => candidate.biomeKey === biome.biomeKey,
+          )?.topology;
+          const afterDecision = after?.decisions.find(
+            (candidate): candidate is typeof decision =>
+              candidate.kind === 'exit' &&
+              JSON.stringify(candidate.source) === JSON.stringify(source),
+          );
+          expect(afterDecision?.normal.targets).toEqual(decision.normal.targets);
+          expect(afterDecision?.selection).toEqual(value);
+          expect(
+            source.kind === 'occurrence'
+              ? after?.occurrences.find(
+                  (occurrence) => occurrence.occurrenceId === source.occurrenceId,
+                )?.additionalExits
+              : [],
+          ).toEqual(additional);
+          for (const nextValue of values) {
+            if (JSON.stringify(nextValue) === JSON.stringify(value)) continue;
+            const nextHistory = applyProjectHistoryCommand(
+              createProjectHistory(history.present),
+              catalog,
+              {
+                ...command,
+                value: nextValue,
+              },
+            );
+            expect(
+              decodeProjectDocument(
+                JSON.parse(encodeProjectDocument(nextHistory.present)),
+                catalog,
+              ),
+            ).toEqual(nextHistory.present);
+            expect(undoProjectHistory(nextHistory).present).toEqual(history.present);
+            expect(redoProjectHistory(undoProjectHistory(nextHistory)).present).toEqual(
+              nextHistory.present,
+            );
+            const nextTopology = nextHistory.present.route?.biomes.find(
+              (candidate) => candidate.biomeKey === biome.biomeKey,
+            )?.topology;
+            const nextDecision = nextTopology?.decisions.find(
+              (candidate): candidate is typeof decision =>
+                candidate.kind === 'exit' &&
+                JSON.stringify(candidate.source) === JSON.stringify(source),
+            );
+            expect(nextDecision?.normal.targets).toEqual(decision.normal.targets);
+            expect(nextDecision?.selection).toEqual(nextValue);
+            expect(
+              source.kind === 'occurrence'
+                ? nextTopology?.occurrences.find(
+                    (occurrence) => occurrence.occurrenceId === source.occurrenceId,
+                  )?.additionalExits
+                : [],
+            ).toEqual(additional);
+          }
+        }
+      }
+    }
+  });
+
+  it('reanchors a completed N Hub between PreHub and Chaos without replacing its board or handoff', () => {
+    const opening = createOccurrenceId('round-trip-n-opening');
+    const preHub = createOccurrenceId('round-trip-n-prehub');
+    const chaos = createOccurrenceId('n-hub-reanchor-chaos');
+    const selection = createExitSelectionAddress(nBiome, {
+      kind: 'occurrence',
+      occurrenceId: opening,
+    });
+    let project = createCompleteNProject();
+    const before = startedNTopology(project);
+    const hub = before.decisions.find((decision) => decision.kind === 'hub');
+    if (hub?.kind !== 'hub') throw new Error('N Hub decision is required');
+    const local = before.decisions.find(
+      (decision) =>
+        decision.kind === 'localVisit' && decision.sourceOccurrenceId === 'round-trip-n-combat02',
+    );
+    if (local === undefined) throw new Error('N Hub local decision is required');
+
+    project = applyProjectCommand(project, catalog, {
+      kind: 'AddChaos',
+      additional: createAdditionalExitAddress(nBiome, opening, 'chaos'),
+      occurrenceId: chaos,
+    });
+    const command = {
+      kind: 'SetExitSelection' as const,
+      selection,
+      value: { kind: 'additional' as const, additionalExitKey: 'chaos' },
+    };
+    const reanchoredHistory = applyProjectHistoryCommand(
+      createProjectHistory(project),
+      catalog,
+      command,
+    );
+    const reanchored = reanchoredHistory.present;
+    const topology = startedNTopology(reanchored);
+
+    expect(topology.decisions.find((decision) => decision.kind === 'hub')).toEqual({
+      ...hub,
+      source: { kind: 'occurrence', occurrenceId: chaos },
+    });
+    expect(topology.decisions.find((decision) => decision.kind === 'localVisit')).toEqual(local);
+    expect(topology.fixedRoomLinks).toEqual(before.fixedRoomLinks);
+    expect(decodeProjectDocument(JSON.parse(encodeProjectDocument(reanchored)), catalog)).toEqual(
+      reanchored,
+    );
+    expect(undoProjectHistory(reanchoredHistory).present).toEqual(project);
+    expect(redoProjectHistory(undoProjectHistory(reanchoredHistory)).present).toEqual(reanchored);
+
+    const restored = applyProjectCommand(reanchored, catalog, {
+      ...command,
+      value: { kind: 'normal', exitKey: 'prehub' },
+    });
+    expect(
+      startedNTopology(restored).decisions.find((decision) => decision.kind === 'hub'),
+    ).toEqual(hub);
+    expect(startedNTopology(restored).fixedRoomLinks).toEqual(before.fixedRoomLinks);
+    expect(decodeProjectDocument(JSON.parse(encodeProjectDocument(restored)), catalog)).toEqual(
+      restored,
+    );
+    expect(
+      startedNTopology(restored).occurrences.some(
+        (occurrence) => occurrence.occurrenceId === preHub,
+      ),
+    ).toBe(true);
+  });
+
   it('resets a Hub board with its main, side and handoff rooms as one reversible edit', () => {
     const project = createEnteredNLocalProject();
     const before = startedNTopology(project);
@@ -1582,6 +1762,165 @@ describe('authored-project commands and topology', () => {
     });
   });
 
+  it.each(['exit1', 'exit2'] as const)(
+    'reconciles a selected two-door takeover onto one door from %s without inventing identities',
+    (selectedExitKey) => {
+      const opening = createOccurrenceId(`takeover-width-${selectedExitKey}-opening`);
+      const fork = createOccurrenceId(`takeover-width-${selectedExitKey}-fork`);
+      const wide = createOccurrenceId(`takeover-width-${selectedExitKey}-wide`);
+      const narrow = createOccurrenceId(`takeover-width-${selectedExitKey}-narrow`);
+      const firstPreboss = createOccurrenceId(`takeover-width-${selectedExitKey}-first`);
+      const secondPreboss = createOccurrenceId(`takeover-width-${selectedExitKey}-second`);
+      const openingSource = { kind: 'occurrence' as const, occurrenceId: opening };
+      let project = applyProjectCommand(fProject(), catalog, {
+        kind: 'CreateStart',
+        biome: fBiome,
+        occurrenceId: opening,
+        gameName: 'F_Opening01',
+      });
+      project = applyProjectCommand(project, catalog, {
+        kind: 'CreateBatch',
+        decision: createExitDecisionAddress(fBiome, openingSource),
+      });
+      project = applyProjectCommand(project, catalog, {
+        kind: 'ReplaceBatchRewardStore',
+        rewardStore: createBatchRewardStoreAddress(fBiome, openingSource),
+        storeKey: 'RunProgress',
+      });
+      project = applyProjectCommand(project, catalog, {
+        kind: 'CreateTarget',
+        target: createTargetAddress(fBiome, openingSource, 'exit1'),
+        occurrenceId: fork,
+        gameName: 'F_Combat08',
+      });
+      const forkSource = { kind: 'occurrence' as const, occurrenceId: fork };
+      project = applyProjectCommand(project, catalog, {
+        kind: 'CreateBatch',
+        decision: createExitDecisionAddress(fBiome, forkSource),
+      });
+      project = applyProjectCommand(project, catalog, {
+        kind: 'ReplaceBatchRewardStore',
+        rewardStore: createBatchRewardStoreAddress(fBiome, forkSource),
+        storeKey: 'RunProgress',
+      });
+      project = applyProjectCommand(project, catalog, {
+        kind: 'CreateTarget',
+        target: createTargetAddress(fBiome, forkSource, 'exit1'),
+        occurrenceId: wide,
+        gameName: 'F_Combat02',
+      });
+      project = applyProjectCommand(project, catalog, {
+        kind: 'CreateTarget',
+        target: createTargetAddress(fBiome, forkSource, 'exit2'),
+        occurrenceId: narrow,
+        gameName: 'F_Combat01',
+      });
+      project = applyProjectCommand(project, catalog, {
+        kind: 'SetExitSelection',
+        selection: createExitSelectionAddress(fBiome, forkSource),
+        value: { kind: 'normal', exitKey: 'exit1' },
+      });
+      project = applyProjectCommand(project, catalog, {
+        kind: 'CreateTakeoverBatch',
+        decision: createExitDecisionAddress(fBiome, { kind: 'occurrence', occurrenceId: wide }),
+        gameName: 'F_PreBoss01',
+        targetOccurrenceIds: { exit1: firstPreboss, exit2: secondPreboss },
+      });
+      project = applyProjectCommand(project, catalog, {
+        kind: 'SetExitSelection',
+        selection: createExitSelectionAddress(fBiome, { kind: 'occurrence', occurrenceId: wide }),
+        value: { kind: 'normal', exitKey: selectedExitKey },
+      });
+      const postboss = fTopology(project).occurrences.find(
+        (occurrence) => occurrence.gameName === 'F_PostBoss01',
+      );
+      if (postboss === undefined) throw new Error('selected Preboss must own a Postboss');
+      project = applyProjectCommand(project, catalog, {
+        kind: 'ReplacePostbossKeepsake',
+        selection: createPostbossKeepsakeSelectionAddress(
+          createOccurrenceAddress(fBiome, postboss.occurrenceId),
+        ),
+        keepsakeKey: 'HadesAndPersephoneKeepsake',
+      });
+      const before = fTopology(project);
+
+      const switched = applyProjectHistoryCommand(createProjectHistory(project), catalog, {
+        kind: 'SetExitSelection',
+        selection: createExitSelectionAddress(fBiome, forkSource),
+        value: { kind: 'normal', exitKey: 'exit2' },
+      });
+      const topology = fTopology(switched.present);
+      const reanchored = topology.decisions.find(
+        (decision) =>
+          decision.kind === 'exit' &&
+          decision.source.kind === 'occurrence' &&
+          decision.source.occurrenceId === narrow,
+      );
+      expect(reanchored).toMatchObject({
+        normal: { targets: [{ exitKey: 'exit1', occurrenceId: firstPreboss }] },
+        selection: { kind: 'derived' },
+      });
+      expect(
+        topology.occurrences.some((occurrence) => occurrence.occurrenceId === secondPreboss),
+      ).toBe(false);
+      expect(
+        decodeProjectDocument(JSON.parse(encodeProjectDocument(switched.present)), catalog),
+      ).toEqual(switched.present);
+      expect(undoProjectHistory(switched).present).toEqual(project);
+      expect(redoProjectHistory(undoProjectHistory(switched)).present).toEqual(switched.present);
+      if (selectedExitKey === 'exit1') {
+        expect(topology.fixedRoomLinks).toEqual(before.fixedRoomLinks);
+        const retainedIds = new Set([
+          firstPreboss,
+          ...before.fixedRoomLinks.map((link) => link.targetOccurrenceId),
+        ]);
+        expect(
+          topology.occurrences.filter((occurrence) => retainedIds.has(occurrence.occurrenceId)),
+        ).toEqual(
+          before.occurrences.filter((occurrence) => retainedIds.has(occurrence.occurrenceId)),
+        );
+        expect(
+          before.occurrences
+            .filter(
+              (occurrence) =>
+                !topology.occurrences.some(
+                  (retained) => retained.occurrenceId === occurrence.occurrenceId,
+                ),
+            )
+            .map((occurrence) => occurrence.occurrenceId),
+        ).toEqual([secondPreboss]);
+      } else {
+        expect(
+          topology.fixedRoomLinks.some((link) => link.sourceOccurrenceId === secondPreboss),
+        ).toBe(false);
+        expect(
+          topology.fixedRoomLinks.some((link) => link.sourceOccurrenceId === firstPreboss),
+        ).toBe(true);
+      }
+
+      const grown = applyProjectCommand(switched.present, catalog, {
+        kind: 'SetExitSelection',
+        selection: createExitSelectionAddress(fBiome, forkSource),
+        value: { kind: 'normal', exitKey: 'exit1' },
+      });
+      expect(
+        fTopology(grown).decisions.some(
+          (decision) =>
+            decision.kind === 'exit' &&
+            decision.source.kind === 'occurrence' &&
+            decision.source.occurrenceId === wide,
+        ),
+      ).toBe(false);
+      expect(fTopology(grown).fixedRoomLinks).toEqual([]);
+      expect(
+        fTopology(grown).occurrences.some((occurrence) => occurrence.occurrenceId === firstPreboss),
+      ).toBe(false);
+      expect(decodeProjectDocument(JSON.parse(encodeProjectDocument(grown)), catalog)).toEqual(
+        grown,
+      );
+    },
+  );
+
   it('keeps I Preboss in the ordinary batch but respects its one-creation-per-source policy', () => {
     let project = applyProjectCommand(iProject(), catalog, {
       kind: 'CreateStart',
@@ -1649,12 +1988,21 @@ describe('authored-project commands and topology', () => {
       kind: 'CreateBatch',
       decision: peerDecision,
     });
-    expect(() =>
-      applyProjectCommand(project, catalog, {
-        kind: 'SetExitSelection',
-        selection: createExitSelectionAddress(iBiome, twoExitDecision.source),
-        value: { kind: 'normal', exitKey: 'exit1' },
+    project = applyProjectCommand(project, catalog, {
+      kind: 'SetExitSelection',
+      selection: createExitSelectionAddress(iBiome, twoExitDecision.source),
+      value: { kind: 'normal', exitKey: 'exit1' },
+    });
+    const topology = project.route?.biomes[3]?.topology;
+    const completion = topology?.fixedRoomLinks.find(
+      (link) => link.sourceOccurrenceId === 'i-preboss',
+    );
+    expect(completion).toBeDefined();
+    expect(topology?.occurrences).toContainEqual(
+      expect.objectContaining({
+        occurrenceId: completion?.targetOccurrenceId,
+        gameName: 'I_Boss01',
       }),
-    ).toThrow(/cannot rebase the prior selected continuation onto this target/);
+    );
   });
 });

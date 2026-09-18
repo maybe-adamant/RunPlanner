@@ -1,6 +1,6 @@
 # Topology Edit Closure
 
-Status: Locked for implementation. Gate A accepted; Gates B/C are pending.
+Status: Locked for implementation. Gates A/B accepted; Gate C is pending.
 Source assessment base: planner `b3e81978`; locked-plan commit: `003d6b1b`.
 
 Gate A verification: 48 focused topology/removal command tests, engine
@@ -8,6 +8,17 @@ typecheck, changed-file lint/format checks, and independent review passed.
 The supplied real plan also passed all 25 outgoing-decision removals through
 strict encode/decode and exact Undo/Redo. Full repository checks remain at
 Gate C closure.
+
+Gate B verification: 45 focused selection/detour command tests, engine
+typecheck, changed-file lint/format checks, and independent review passed.
+The checked-in full Underworld and Surface fixtures now exhaust every authored
+exit choice and distinct pairwise choice transition through strict encode/decode,
+exact Undo/Redo, requested selection, and retained parent offerings. These cover
+326 command steps; the same probe on the supplied plan brings the total to 445,
+all passing. Focused witnesses additionally check N Hub reanchoring and exact
+Preboss/completion-state retention across physical exit-width changes. The
+review's narrowing over-deletion finding and its regression-coverage follow-up
+are resolved. Gate C owns application witnesses and the full repository check.
 
 ## Outcome and bounds
 
