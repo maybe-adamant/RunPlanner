@@ -4,6 +4,7 @@ import {
   applyTopologyRemovalImpact,
   describeClearTopologyImpact,
   describeExitDecisionRemovalImpact,
+  describeHubDecisionRemovalImpact,
   describeTopologyRemovalImpact,
 } from '../../topology/impact';
 import type {
@@ -11,6 +12,7 @@ import type {
   ExitDecision,
   ExitSelection,
   ExitTargetReference,
+  HubDecision,
   OccurrenceId,
   ProjectDocument,
 } from '../../model';
@@ -419,6 +421,88 @@ export function createTarget(
   );
 }
 
+function hasCompatibleRewardStore(
+  located: LocatedBiome,
+  sourceRoomValue: ReturnType<typeof sourceRoom>,
+  decision: ExitDecision,
+): boolean {
+  const progression = normalDecisionProgressionForLayout(located.layout);
+  const sourceRoomTemplateKey =
+    sourceRoomValue?.mode.kind === 'authored' ? sourceRoomValue.mode.templateKey : undefined;
+  const policy =
+    progression !== undefined && sourceRoomTemplateKey !== undefined
+      ? (progression.rewardStoreOverrides.find(
+          (override) => override.sourceRoomTemplateKey === sourceRoomTemplateKey,
+        )?.policy ?? progression.rewardStorePolicy)
+      : undefined;
+  if (policy === undefined || decision.normal.rewardStore.kind !== policy.kind) return false;
+  if (policy.kind !== 'authoredBaseStore') return true;
+  const store = decision.normal.rewardStore;
+  if (store.kind !== 'authoredBaseStore') return false;
+  return store.baseRewardStoreKey === null || policy.storeKeys.includes(store.baseRewardStoreKey);
+}
+
+function hasCompleteTakeoverShapeForSource(
+  catalog: Catalog,
+  located: LocatedBiome,
+  topology: BiomeTopology,
+  occurrenceId: OccurrenceId,
+  decision: ExitDecision,
+  command: Extract<TopologyCommand, { readonly kind: 'SetExitSelection' }>,
+): boolean {
+  const isTakeover = decision.normal.targets.some((target) => {
+    const occurrence = topology.occurrences.find(
+      (candidate) => candidate.occurrenceId === target.occurrenceId,
+    );
+    return (
+      occurrence !== undefined &&
+      catalog.rooms.byKey[occurrence.gameName]?.prebossBatchPolicy?.kind === 'takeOverNormalDoors'
+    );
+  });
+  if (!isTakeover) return true;
+  const exitKeys = exitKeysForSource(
+    catalog,
+    located,
+    { kind: 'occurrence', occurrenceId },
+    command,
+  );
+  return exitKeys.every((exitKey) =>
+    decision.normal.targets.some((target) => target.exitKey === exitKey),
+  );
+}
+
+function selectedPrebossFromContinuation(
+  catalog: Catalog,
+  topology: BiomeTopology,
+  occurrenceId: OccurrenceId | undefined,
+): OccurrenceId | undefined {
+  let currentOccurrenceId = occurrenceId;
+  const visited = new Set<OccurrenceId>();
+  while (currentOccurrenceId !== undefined && !visited.has(currentOccurrenceId)) {
+    visited.add(currentOccurrenceId);
+    const occurrence = topology.occurrences.find(
+      (candidate) => candidate.occurrenceId === currentOccurrenceId,
+    );
+    if (occurrence === undefined) return undefined;
+    if (catalog.rooms.byKey[occurrence.gameName]?.kind === 'Preboss') return currentOccurrenceId;
+    const decision = exitDecisionForSource(topology, {
+      kind: 'occurrence',
+      occurrenceId: currentOccurrenceId,
+    });
+    const continuation =
+      decision === undefined
+        ? undefined
+        : selectedExitContinuation(decision, additionalExitsForDecision(topology, decision));
+    currentOccurrenceId =
+      continuation?.kind === 'normal'
+        ? continuation.target.occurrenceId
+        : continuation?.kind === 'additional'
+          ? continuation.exit.occurrenceId
+          : undefined;
+  }
+  return undefined;
+}
+
 function rebaseSelectedContinuationDecision(
   topology: BiomeTopology,
   catalog: Catalog,
@@ -427,72 +511,153 @@ function rebaseSelectedContinuationDecision(
   nextOccurrenceId: OccurrenceId | undefined,
   command: Extract<TopologyCommand, { readonly kind: 'SetExitSelection' }>,
 ): BiomeTopology {
-  if (
-    previousOccurrenceId === undefined ||
-    nextOccurrenceId === undefined ||
-    previousOccurrenceId === nextOccurrenceId
-  )
+  if (previousOccurrenceId === undefined || previousOccurrenceId === nextOccurrenceId)
     return topology;
+
+  const previousOccurrence = topology.occurrences.find(
+    (occurrence) => occurrence.occurrenceId === previousOccurrenceId,
+  );
+  if (previousOccurrence === undefined) {
+    failCommand(command, 'previous selected occurrence is missing');
+  }
+  const withoutPreviousExtras =
+    previousOccurrence.additionalExits.length === 0
+      ? topology
+      : applyTopologyRemovalImpact(
+          topology,
+          describeTopologyRemovalImpact(
+            topology,
+            new Set(previousOccurrence.additionalExits.map((exit) => exit.occurrenceId)),
+          ),
+        );
+
   const outgoing = topology.decisions.find(
     (candidate): candidate is ExitDecision =>
       candidate.kind === 'exit' &&
       candidate.source.kind === 'occurrence' &&
       candidate.source.occurrenceId === previousOccurrenceId,
   );
-  if (outgoing === undefined) return topology;
-  const previousRoom = sourceRoom(
-    catalog,
-    located,
-    { kind: 'occurrence', occurrenceId: previousOccurrenceId },
-    command,
+  const hub = topology.decisions.find(
+    (candidate): candidate is HubDecision =>
+      candidate.kind === 'hub' && candidate.source.occurrenceId === previousOccurrenceId,
   );
+  if (nextOccurrenceId === undefined) {
+    if (outgoing !== undefined) {
+      const impact = describeExitDecisionRemovalImpact(withoutPreviousExtras, outgoing.source);
+      return impact === undefined
+        ? withoutPreviousExtras
+        : applyTopologyRemovalImpact(withoutPreviousExtras, impact);
+    }
+    if (hub !== undefined) {
+      const impact = describeHubDecisionRemovalImpact(withoutPreviousExtras, hub.hubKey);
+      return impact === undefined
+        ? withoutPreviousExtras
+        : applyTopologyRemovalImpact(withoutPreviousExtras, impact);
+    }
+    return withoutPreviousExtras;
+  }
+
   const nextRoom = sourceRoom(
     catalog,
     located,
     { kind: 'occurrence', occurrenceId: nextOccurrenceId },
     command,
   );
-  const targetAlreadyOwnsDecision = topology.decisions.some(
+  const targetAlreadyOwnsDecision = withoutPreviousExtras.decisions.some(
     (candidate) =>
-      candidate.kind === 'exit' &&
-      candidate.source.kind === 'occurrence' &&
-      candidate.source.occurrenceId === nextOccurrenceId,
+      (candidate.kind === 'exit' &&
+        candidate.source.kind === 'occurrence' &&
+        candidate.source.occurrenceId === nextOccurrenceId) ||
+      (candidate.kind === 'hub' && candidate.source.occurrenceId === nextOccurrenceId),
   );
-  const fixedParticipant = topology.fixedRoomLinks.some(
+  const nextIsFixedParticipant = withoutPreviousExtras.fixedRoomLinks.some(
     (link) =>
-      link.sourceOccurrenceId === previousOccurrenceId ||
-      link.targetOccurrenceId === previousOccurrenceId ||
-      link.sourceOccurrenceId === nextOccurrenceId ||
-      link.targetOccurrenceId === nextOccurrenceId,
+      link.sourceOccurrenceId === nextOccurrenceId || link.targetOccurrenceId === nextOccurrenceId,
   );
-  const downstreamRoots = new Set([
-    ...outgoing.normal.targets.map((target) => target.occurrenceId),
-    ...additionalExitsForDecision(topology, outgoing).map((exit) => exit.occurrenceId),
-  ]);
-  const wouldCycle = describeTopologyRemovalImpact(
-    topology,
-    downstreamRoots,
-  ).removedOccurrenceIds.includes(nextOccurrenceId);
-  if (
-    previousRoom?.kind === 'Preboss' ||
-    nextRoom?.kind === 'Preboss' ||
-    fixedParticipant ||
-    targetAlreadyOwnsDecision ||
-    wouldCycle
-  ) {
+  if (targetAlreadyOwnsDecision || nextIsFixedParticipant) {
     failCommand(command, 'cannot rebase the prior selected continuation onto this target');
   }
-  const reanchored = Object.freeze({
+
+  if (hub !== undefined) {
+    const terminal = hubTerminalTakeoverForSource(catalog, located.layout, withoutPreviousExtras, {
+      kind: 'occurrence',
+      occurrenceId: nextOccurrenceId,
+    });
+    if (terminal === undefined || terminal.hubKey !== hub.hubKey) {
+      const impact = describeHubDecisionRemovalImpact(withoutPreviousExtras, hub.hubKey);
+      return impact === undefined
+        ? withoutPreviousExtras
+        : applyTopologyRemovalImpact(withoutPreviousExtras, impact);
+    }
+    const reanchoredHub = Object.freeze({
+      ...hub,
+      source: Object.freeze({ kind: 'occurrence' as const, occurrenceId: nextOccurrenceId }),
+    });
+    return Object.freeze({
+      ...withoutPreviousExtras,
+      decisions: Object.freeze(
+        withoutPreviousExtras.decisions.map((candidate) =>
+          candidate === hub ? reanchoredHub : candidate,
+        ),
+      ),
+    });
+  }
+
+  if (outgoing === undefined) return withoutPreviousExtras;
+  const downstreamRoots = new Set([
+    ...outgoing.normal.targets.map((target) => target.occurrenceId),
+  ]);
+  const wouldCycle = describeTopologyRemovalImpact(
+    withoutPreviousExtras,
+    downstreamRoots,
+  ).removedOccurrenceIds.includes(nextOccurrenceId);
+  if (wouldCycle) {
+    failCommand(command, 'cannot rebase the prior selected continuation onto this target');
+  }
+  if (nextRoom?.kind === 'Preboss') {
+    const impact = describeExitDecisionRemovalImpact(withoutPreviousExtras, outgoing.source);
+    return impact === undefined
+      ? withoutPreviousExtras
+      : applyTopologyRemovalImpact(withoutPreviousExtras, impact);
+  }
+  if (
+    !hasCompatibleRewardStore(located, nextRoom, outgoing) ||
+    !hasCompleteTakeoverShapeForSource(
+      catalog,
+      located,
+      withoutPreviousExtras,
+      nextOccurrenceId,
+      outgoing,
+      command,
+    )
+  ) {
+    const impact = describeExitDecisionRemovalImpact(withoutPreviousExtras, outgoing.source);
+    return impact === undefined
+      ? withoutPreviousExtras
+      : applyTopologyRemovalImpact(withoutPreviousExtras, impact);
+  }
+  const normalizedOutgoing: ExitDecision = Object.freeze({
     ...outgoing,
+    selection:
+      outgoing.selection.kind === 'additional'
+        ? outgoing.normal.targets.length === 1
+          ? Object.freeze({ kind: 'derived' })
+          : Object.freeze({ kind: 'unresolved' })
+        : outgoing.selection,
+  });
+  const reanchored = Object.freeze({
+    ...normalizedOutgoing,
     source: Object.freeze({
       kind: 'occurrence' as const,
       occurrenceId: nextOccurrenceId,
     }),
   });
   const withReanchoredDecision = Object.freeze({
-    ...topology,
+    ...withoutPreviousExtras,
     decisions: Object.freeze(
-      topology.decisions.map((candidate) => (candidate === outgoing ? reanchored : candidate)),
+      withoutPreviousExtras.decisions.map((candidate) =>
+        candidate === outgoing ? reanchored : candidate,
+      ),
     ),
   });
   return reconcileExitDecisionToDeclaredCapacity(
@@ -550,7 +715,7 @@ export function setExitSelection(
   const nextSelectedOccurrenceId = selectedOccurrenceId(nextContinuation);
   const previousSelectedOccurrenceId = selectedOccurrenceId(previousContinuation);
   const selectionTopology = rebaseSelectedContinuationDecision(
-    topology,
+    replaceDecision(topology, nextDecision),
     catalog,
     located,
     previousSelectedOccurrenceId,
@@ -567,20 +732,16 @@ export function setExitSelection(
     command,
   );
   const selectedTopology = replaceDecision(withSelectionState, nextDecision);
-  const prebossFor = (
-    topologyValue: BiomeTopology,
-    occurrenceId: OccurrenceId | undefined,
-  ): OccurrenceId | undefined => {
-    if (occurrenceId === undefined) return undefined;
-    const occurrence = topologyValue.occurrences.find(
-      (candidate) => candidate.occurrenceId === occurrenceId,
-    );
-    return occurrence !== undefined && catalog.rooms.byKey[occurrence.gameName]?.kind === 'Preboss'
-      ? occurrenceId
-      : undefined;
-  };
-  const previousPreboss = prebossFor(topology, previousSelectedOccurrenceId);
-  const nextPreboss = prebossFor(selectedTopology, nextSelectedOccurrenceId);
+  const previousPreboss = selectedPrebossFromContinuation(
+    catalog,
+    topology,
+    previousSelectedOccurrenceId,
+  );
+  const nextPreboss = selectedPrebossFromContinuation(
+    catalog,
+    selectedTopology,
+    nextSelectedOccurrenceId,
+  );
   return updateTopology(
     document,
     located,

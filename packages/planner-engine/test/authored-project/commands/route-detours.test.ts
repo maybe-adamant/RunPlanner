@@ -941,7 +941,7 @@ describe('authored-project route detour commands', () => {
     ).toBe(true);
   });
 
-  it('retains a source-owned contract when its normal selection re-anchors to a peer', () => {
+  it('closes a dead host’s source-owned contract when its normal selection re-anchors to a peer', () => {
     const opening = createOccurrenceId('detour-reanchor-opening');
     const fork = createOccurrenceId('detour-reanchor-fork');
     const shop = createOccurrenceId('detour-reanchor-shop');
@@ -1011,7 +1011,12 @@ describe('authored-project route detour commands', () => {
       biomeTopology(reanchored, 'Underworld', 'F').occurrences.find(
         (occurrence) => occurrence.occurrenceId === shop,
       )?.additionalExits,
-    ).toEqual([{ kind: 'zagreusContract', key: 'zagreusContract', occurrenceId: contract }]);
+    ).toEqual([]);
+    expect(
+      biomeTopology(reanchored, 'Underworld', 'F').occurrences.some(
+        (occurrence) => occurrence.occurrenceId === contract,
+      ),
+    ).toBe(false);
     const restored = applyProjectCommand(reanchored, catalog, {
       kind: 'SetExitSelection',
       selection: createExitSelectionAddress(fBiome, forkSource),
@@ -1029,6 +1034,6 @@ describe('authored-project route detour commands', () => {
     expect(
       restoredTopology.occurrences.find((occurrence) => occurrence.occurrenceId === shop)
         ?.additionalExits,
-    ).toEqual([{ kind: 'zagreusContract', key: 'zagreusContract', occurrenceId: contract }]);
+    ).toEqual([]);
   });
 });
