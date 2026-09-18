@@ -33,6 +33,7 @@ reader-facing taxonomy, not a package or runtime boundary.
 
 - [Encounter selection and composition](rooms-and-routes/ENCOUNTER_SELECTION_AND_COMPOSITION_FINDINGS.md) — Encounter envelopes, selectable compositions, and their room-level constraints.
 - [Enemy formation and Fear Vows](rooms-and-routes/ENEMY_FORMATION_AND_FEAR_VOW_GAME_DATA_AUDIT.md) — Generated Combat and Devotion waves, enemy types and counts, and the intervention order for Hordes, Menace, Fangs, Return, and adjacent Vows.
+- [Combat-room encounter composition matrix](rooms-and-routes/COMBAT_ENCOUNTER_COMPOSITION_MATRIX.md) — Supported Combat-room encounters and O Devotion, including field NPCs, exact enemy pools, wave/type limits, and explicit customization exclusions.
 - [H Fields spatial points](rooms-and-routes/H_FIELDS_SPATIAL_POINTS_GAME_DATA_AUDIT.md) — Player-entry pairs, cage and optional-reward point inventories, runtime placement, map coordinates, and spatial discrepancies for all 15 H combat maps.
 - [I/Q World Shop phases](rooms-and-routes/I_Q_WORLD_SHOP_PHASE_GAME_DATA_AUDIT.md) — World Shop phase and inventory timing across I and Q.
 - [Noncombat and Empty encounter normalization](rooms-and-routes/NONCOMBAT_AND_EMPTY_ENCOUNTER_NORMALIZATION_AUDIT.md) — Native `Empty` placeholders, retained noncombat phases, and exact Intro, Fountain, Story, Shop, Preboss, Postboss, Hub, and Chaos encounter identities.

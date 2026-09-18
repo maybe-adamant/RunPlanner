@@ -11,12 +11,22 @@ that process. It was read directly against the installed Steam build on
 - build ID: `24556151`;
 - routes: Underworld F/G/H/I and Surface N/O/P/Q.
 
+Wave, highlight, type-selection and budget-allocation contacts were reread on
+2026-09-18 against the same installed build. The local source snapshot's 125
+encounter/enemy declaration, room declaration and supporting logic files were
+byte-equal to the installed scripts. The companion
+[Combat Encounter Composition Matrix](COMBAT_ENCOUNTER_COMPOSITION_MATRIX.md)
+owns the concrete encounter domains and enemy pools; this document owns the
+shared generation algorithm and Vow interactions.
+
 The primary scope is the generated encounter used by an ordinary main Combat
 room and the generated `DevotionTest*` encounter used by a Devotion room. The
-same lower-level functions may be reused elsewhere, but this audit does not
-claim a disposition for opening, NPC, challenge, passive Fields, side-room,
-miniboss, or boss encounters. Minibosses are deliberately excluded; Vow of
-Shadow and miniboss-specific encounter selection are separate questions.
+same lower-level functions may be reused elsewhere, but this audit does not by
+itself claim a disposition for opening, NPC, challenge, passive Fields,
+side-room, miniboss, or boss encounters. The companion matrix separately
+identifies generated and scripted contacts inside supported Combat rooms.
+Minibosses are deliberately excluded; Vow of Shadow and miniboss-specific
+encounter selection are separate questions.
 
 This audit distinguishes four different concepts that should not be collapsed:
 
@@ -99,6 +109,86 @@ Wave count and type count are declaration/depth decisions. Vow of Hordes does
 not directly increase either. It increases the budget used to populate the
 already chosen waves and separately raises the simultaneous cap.
 
+### Wave count, depth and highlight
+
+`RunLogic.lua:GenerateEncounter` chooses `RandomInt(MinWaves, MaxWaves)` after
+encounter overrides. It does not derive extra waves from depth. Depth may
+instead change which encounter definition is eligible; P's ordinary and large
+generators are an example. Encounter difficulty and type count have separate
+depth inputs and must not be inferred from that wave count.
+
+Highlight generation applies exactly when the encounter does not block it,
+the resolved wave count exceeds one, and no pre-existing `SpawnWaves` entry
+was counted during wave setup. A `ManualWaveTemplates` entry is not itself a
+pre-existing wave: it is copied while constructing a missing wave.
+
+The game chooses exactly one highlight type against a temporary first-wave
+`TypeCount = 1`, so `BlockSolo` enemies are ineligible for that role. It applies
+`BlockHighlightEliteTypes` to that first wave and inserts the chosen type first
+in every wave. The highlight occupies a type slot; it is not an extra enemy
+type beyond the quota. It receives no special difficulty-share multiplier.
+
+The initial highlight type target for wave `i` is
+`min(i, floor(MaxTypes + TypeCountDepthRamp * GetBiomeDepth(CurrentRun)))`.
+`FillEnemyTypes` then applies the encounter's ordinary rules:
+
+- `EscalateTypeCount`: replace that target with
+  `floor(MaxTypes + TypeCountDepthRamp * typeDepth)`;
+- otherwise: retain an already-set target, or draw between `wave.MinTypes`
+  (falling back to `MinTypes`) and `wave.MaxTypes` (falling back to
+  `floor(MaxTypes + TypeCountDepthRamp * typeDepth)`);
+- clamp the result to `MaxTypesCap`.
+
+Here `typeDepth` is `GetBiomeDepth(CurrentRun)` unless
+`UseEncounterDepthForTypes` selects `CurrentRun.BiomeEncounterDepth` (with the
+native missing-value fallback of one). `GetBiomeDepth` counts backward through
+room history to the biome boundary; it is not an alias for `BiomeDepthCache`.
+The exact preparation-time context matters, not a rendered room/phase index.
+
+Thus 1/2/3 highlight progression is not universal: escalating N/O generators
+can request multiple types even in the first wave. Remaining types are selected
+per wave, but shared exclusions can constrain later waves. The shared
+highlight is not a shared complete composition.
+
+### Wave budgets and type-budget slices
+
+`EncounterData.lua:WaveDifficultyPatterns` supplies fixed shares of the
+encounter's difficulty rating:
+
+| Wave count | Shares in wave order    |
+| ---------- | ----------------------- |
+| 1          | 100%                    |
+| 2          | 50%, 50%                |
+| 3          | 30%, 15%, 55%           |
+| 4          | 30%, 10%, 20%, 40%      |
+| 5          | 25%, 10%, 15%, 15%, 35% |
+
+Four-wave patterns matter for supported NPC combats. These shares are not
+enemy-count percentages. `FillEnemyCounts` is a finite pass over formed types,
+not repeated sampling of individual enemies until a meter is full:
+
+1. Account for the cost of fixed pre-authored spawns and count generated entries.
+2. For ordinary all-generated waves, each entry except the final one samples
+   `RandomNormal(waveDifficulty / generatedCount, mean / 3)` and clamps that
+   slice to remaining difficulty. The final entry receives the remainder.
+3. Raise the slice to at least that type's `GeneratorData.DifficultyRating`,
+   then use `ceil(slice / rating)` to obtain its count.
+4. Apply `MaxCount`; the native capped-entry path can transfer spare difficulty
+   to a previously encountered uncapped type.
+5. Accumulate actual cost through `CalculateEnemyDifficultyRating` and continue.
+
+Minimum-one and rounding can overspend the nominal wave budget. Type order
+matters: the highlight is first and the last generated type ordinarily receives
+the remainder. Mixed fixed/generated templates need separate attention: the
+native final-slice test compares the full spawn-array index with the number of
+generated entries, not a separate generated-entry ordinal.
+
+There is no native per-type percentage field. Authored shares would steer
+requested difficulty slices, not guarantee exact final spending or quantities.
+Zero allocation would not remove a selected type because of the minimum-one
+rule. Enemy-set entry multiplicity weights **type selection**, not this later
+budget allocation; these are different kinds of weight.
+
 ### Enemy eligibility is run dependent
 
 `IsEnemyEligible` can remove an enemy type because:
@@ -116,6 +206,18 @@ already chosen waves and separately raises the simultaneous cap.
 Type selection can further remove related enemies, enforce per-group type
 caps, and carry blacklists across waves. Consequently, encounter name, room
 name, and biome depth are insufficient to derive one exact wave roster.
+
+These are ordered selection rules, not only final-set predicates. Highlight
+and template spawns are seeded before filling. Elite counts and type exclusions
+inspect existing spawns during eligibility, but `MaxTypesPerGroup` removes
+further candidates only after a new type is added in the ordinary fill loop.
+Consequently a seeded group member can be followed by another member before
+that group closes. The generated-placeholder loop also differs from ordinary
+filling: it resolves unnamed template entries without running the ordinary
+post-add exclusion/blacklist/cap-update block. A validator must preserve these
+contacts rather than assume all declared limits are unconditional final-set
+constraints. The concrete affected templates and pool restrictions belong to
+the companion matrix.
 
 ### Introduction replacement occurs after initial generation
 
@@ -144,11 +246,14 @@ introducing a separate enemy-composition algorithm. In particular,
 usually a fixed active cap, while the biome parent supplies the relevant enemy
 set.
 
-The installed main-room declarations expose Devotion encounters in F, G, I,
-N, and O. H and P retain commented Devotion contacts while their ordinary room
-data blocks the reward, and Q has no declared `DevotionTestQ` implementation.
-This availability fact does not change how an eligible Devotion encounter is
-formed.
+The supported main-room reward contacts expose Devotion in F, G, I and O.
+`BaseN.DevotionEncounters` also declares `DevotionTestN`, but N Combat rooms
+force `HubRewards`, whose Devotion entry is commented out
+(`RoomDataN.lua:N_CombatData`, `LootData.lua:HubRewards`). That declaration is
+not a viable ordinary hub reward. H and P retain commented Devotion contacts
+while their ordinary room data blocks the reward, and Q has no declared
+`DevotionTestQ` implementation. Declaration presence alone does not establish
+room availability or change how an eligible Devotion encounter is formed.
 
 ## Fear Vow Intervention Matrix
 
@@ -371,27 +476,22 @@ should not precompute a single combined Vow-adjusted roster, and it should not
 extend miniboss or boss conclusions from ordinary Combat and Devotion without
 a separate source audit.
 
-### Bounded first composition slice for future reassessment
+### Prospective composition boundary
 
-If the Planner later begins authoring generated combat composition, the
-smallest source-shaped first slice is:
+The source supports assessing wave count, a shared highlight when applicable,
+and per-wave enemy-type composition separately from enemy quantities. Optional
+requested per-type difficulty shares are another potential steering input;
+they are not a native data field or an exact count contract. Encounter
+difficulty, the fixed distribution between waves, quantity calculation,
+spawning, attributes, substitutions and respawns remain native-owned.
 
-1. author the resolved wave count within the selected encounter declaration's
-   `MinWaves` through `MaxWaves` domain; and
-2. when that resolved encounter takes the highlight-generation path, author
-   one eligible highlight enemy for the encounter.
+These controls are not implemented. The companion matrix records all currently
+supported encounter identities in biome Combat rooms plus `O_Devotion01`,
+including fixed rosters and non-generator contacts that cannot inherit an
+ordinary-generation policy merely because they occur in a Combat room.
 
-The highlight is encounter-wide. `GenerateEncounter` selects it once and adds
-that same enemy type to every generated wave; it does not select an independent
-dominant type for each wave. All additional enemy types, difficulty slices,
-counts, spawn substitutions, elite attributes, and respawn outcomes should
-remain game-resolved in this first slice.
-
-This boundary is independent of the Vow interventions: Hordes changes the
-difficulty budget and active cap but not the declared wave-count domain, Fangs
-enhances formed elite types, Menace substitutes individual spawns, and Return
-acts after deaths. Planner possibility is source-backed by the declared wave
-range and progressively derived enemy eligibility. A runtime adapter capable
-of enforcing the chosen wave count and highlight without bypassing ordinary
-encounter setup remains unproven and requires separate execution evidence
-before implementation.
+Runtime steering before generation, profile/introduction policy, ordered
+composition validation and mixed-template budget steering still require a
+bounded disposition before implementation. Static source feasibility is not
+evidence of a tested runtime adapter. No enemy quantity simulation or promise
+about every final live enemy follows from authoring the generated roster.
