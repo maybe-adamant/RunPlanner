@@ -93,8 +93,13 @@ describe('underworld product loop', () => {
     const sheet = screen.getByRole('region', {
       name: 'State before the first action in Opening 01',
     });
-    expect(within(sheet).getByText('Banked Path points: 5')).toBeTruthy();
-    expect(within(sheet).getByText(/Aggregate invested Path points: 0/)).toBeTruthy();
+    await view.user.click(within(sheet).getByRole('tab', { name: 'Hex' }));
+    expect(
+      within(sheet).getByText('Banked', { selector: 'dt' }).nextElementSibling?.textContent,
+    ).toBe('5');
+    expect(
+      within(sheet).getByText('Invested', { selector: 'dt' }).nextElementSibling?.textContent,
+    ).toBe('0Sim-neutral nodes');
     expect(within(sheet).queryByRole('button', { name: /Hex node|Path node/i })).toBeNull();
     application.dispose();
   });
@@ -129,9 +134,9 @@ describe('underworld product loop', () => {
     const sheet = screen.getByRole('region', {
       name: 'State before the first action in Opening 01',
     });
-    expect(
-      within(sheet).getByText('Zeus (ordinary): force 1, rarification 1, source cap 3'),
-    ).toBeTruthy();
+    const zeus = within(sheet).getByText('Zeus', { selector: 'dt' }).nextElementSibling!;
+    expect(within(zeus as HTMLElement).getByText('Force 1 · Rarification 1')).toBeTruthy();
+    expect(within(zeus as HTMLElement).getByText('Source cap 3 · ordinary')).toBeTruthy();
     expect(within(sheet).queryByRole('button', { name: /Olympian|force/i })).toBeNull();
     application.dispose();
   });

@@ -454,16 +454,45 @@ describe('BiomeWorkspace', () => {
 
     await user.click(launcher);
     const sheet = screen.getByRole('region', { name: /State before/ });
-    const keepsakes = within(sheet).getByText(/Keepsakes/, { selector: 'summary' });
-    const arcana = within(sheet).getByText(/Arcana/, { selector: 'summary' });
-    const fear = within(sheet).getByText(/Fear/, { selector: 'summary' });
-    expect(keepsakes.closest('details')?.open).toBe(false);
-    expect(arcana.closest('details')?.open).toBe(false);
-    expect(fear.closest('details')?.open).toBe(false);
-    await user.click(keepsakes);
-    expect(within(sheet).getByText(/1st Biome:/).parentElement?.textContent).toContain(
+    expect(within(sheet).getByRole('heading', { name: 'Run State', level: 2 })).toBeTruthy();
+    expect(
+      within(sheet)
+        .getAllByRole('tab')
+        .map((tab) => tab.textContent),
+    ).toEqual(['Overview', 'Arcana', 'Fear', 'Hex', 'More Info']);
+    expect(within(sheet).getByRole('tabpanel', { name: 'Overview' })).toBeTruthy();
+    const keepsakeHeading = within(sheet).getByRole('heading', { name: 'Keepsake' });
+    expect(keepsakeHeading.closest('details')).toBeNull();
+    expect(within(sheet).getByText('1st Biome').nextElementSibling?.textContent).toContain(
       'Silver Wheel',
     );
+    expect(within(sheet).queryByRole('heading', { name: 'More Info' })).toBeNull();
+    await user.click(within(sheet).getByRole('tab', { name: 'Hex' }));
+    expect(within(sheet).queryByRole('heading', { name: 'Equipped traits' })).toBeNull();
+    expect(within(sheet).getByRole('tabpanel', { name: 'Hex' })).toBeTruthy();
+    expect(within(sheet).getByText('Hex', { selector: 'dt' }).nextElementSibling?.textContent).toBe(
+      'None',
+    );
+    expect(within(sheet).getByRole('heading', { name: 'Path points' })).toBeTruthy();
+    expect(
+      within(sheet).getByText('God Sent', { selector: 'dt' }).nextElementSibling?.textContent,
+    ).toBe('No Hex');
+    expect(
+      within(sheet).getByText('Path of Stars', { selector: 'dt' }).nextElementSibling?.textContent,
+    ).toBe('Ineligible — no Hex');
+    expect(within(sheet).getByText('Banked', { selector: 'dt' })).toBeTruthy();
+    await user.keyboard('{Home}{ArrowRight}');
+    expect(within(sheet).getByRole('tabpanel', { name: 'Arcana' })).toBeTruthy();
+    expect(within(sheet).getByRole('heading', { name: 'Arcana' })).toBeTruthy();
+    await user.keyboard('{ArrowRight}');
+    expect(within(sheet).getByRole('tabpanel', { name: 'Fear' })).toBeTruthy();
+    expect(within(sheet).getByText('Vow of Forfeit', { selector: 'dt' })).toBeTruthy();
+    expect(
+      within(sheet).getByRole('heading', { name: 'Banned traits' }).nextElementSibling?.textContent,
+    ).toBe('None');
+    await user.keyboard('{End}{ArrowRight}');
+    expect(within(sheet).getByRole('tabpanel', { name: 'Overview' })).toBeTruthy();
+    expect(document.activeElement).toBe(within(sheet).getByRole('tab', { name: 'Overview' }));
     const godHeading = within(sheet).getByRole('heading', { name: 'Gods in pool' });
     const godSection = godHeading.closest('section');
     if (godSection === null) throw new Error('Gods in pool section is missing');
@@ -473,37 +502,47 @@ describe('BiomeWorkspace', () => {
     const traitHeading = within(sheet).getByRole('heading', { name: 'Equipped traits' });
     const traitSection = traitHeading.closest('section');
     if (traitSection === null) throw new Error('Equipped traits section is missing');
-    expect(within(traitSection).getByText('Nova Strike · Common · Lv. 2')).toBeTruthy();
-    expect(within(traitSection).getByText('Heaven Flourish · Common · Lv. 1')).toBeTruthy();
-    expect(within(traitSection).getByText('Engagement Ring · Common · Lv. 1')).toBeTruthy();
+    for (const [name, level] of [
+      ['Nova Strike', 2],
+      ['Heaven Flourish', 1],
+      ['Engagement Ring', 1],
+    ] as const) {
+      const trait = within(traitSection).getByText(name).parentElement!;
+      expect(within(trait).getByText('Common')).toBeTruthy();
+      expect(within(trait).getByText(`Lv. ${level}`)).toBeTruthy();
+    }
     expect(within(traitSection).getByRole('heading', { name: 'All other traits' })).toBeTruthy();
-    expect(within(traitSection).getByText('Wicked Thrasher · Rank I')).toBeTruthy();
+    expect(
+      within(within(traitSection).getByText('Wicked Thrasher').parentElement!).getByText('Rank I'),
+    ).toBeTruthy();
     expect(within(traitSection).getByText('Sprint:').nextElementSibling?.textContent).toBe('None');
     expect(within(traitSection).getByText('Magick:').nextElementSibling?.textContent).toBe('None');
-    expect(
-      within(traitSection).getByRole('heading', { name: 'Banned traits' }).nextElementSibling
-        ?.textContent,
-    ).toBe('None');
+    expect(within(traitSection).getByText('Hex:').nextElementSibling?.textContent).toBe('None');
+    expect(within(sheet).queryByRole('heading', { name: 'Banned traits' })).toBeNull();
     expect(traitSection.textContent).not.toContain('ApolloWeaponBoon');
     expect(traitSection.textContent).not.toContain('WeaponUpgrade');
-    expect(within(sheet).getByRole('heading', { name: 'More Info' })).toBeTruthy();
-    const counterSummary = within(sheet).getByText('Counters');
-    const counterDisclosure = counterSummary.closest('details');
-    if (counterDisclosure === null) throw new Error('Counters disclosure is missing');
-    expect(counterDisclosure.open).toBe(false);
-    await user.click(counterSummary);
-    expect(counterDisclosure.open).toBe(true);
-    expect(within(counterDisclosure).getByText('biomeDepthCache')).toBeTruthy();
-    const rewardBagsSummary = within(sheet).getByText('Reward Bags');
-    const rewardBagsDisclosure = rewardBagsSummary.closest('details');
-    if (rewardBagsDisclosure === null) throw new Error('Reward Bags disclosure is missing');
-    expect(rewardBagsDisclosure.open).toBe(false);
-    await user.click(rewardBagsSummary);
-    expect(rewardBagsDisclosure.open).toBe(true);
-    const bagSummary = within(sheet).getByText(/Major Reward \(RunProgress\)/);
-    expect(bagSummary.textContent).toMatch(/x3.*Eligible now x0.*Ineligible now x3/);
-    await user.click(bagSummary);
-    await user.click(within(sheet).getAllByText(/Max Health \(MaxHealthDrop\)/)[0]!);
+    await user.click(within(sheet).getByRole('tab', { name: 'More Info' }));
+    expect(within(sheet).getByRole('tabpanel', { name: 'More Info' })).toBeTruthy();
+    expect(within(sheet).getByRole('heading', { name: 'Counters' }).closest('details')).toBeNull();
+    expect(within(sheet).getByText('biomeDepthCache')).toBeTruthy();
+    expect(
+      within(sheet).getByRole('heading', { name: 'Reward Bags' }).closest('details'),
+    ).toBeNull();
+    const bag = within(sheet).getByRole('heading', { name: 'Major Reward' }).closest('article')!;
+    expect(bag.closest('details')).toBeNull();
+    expect(within(bag).getByText('RunProgress')).toBeTruthy();
+    expect(within(bag).getByText('Remaining').nextElementSibling?.textContent).toBe('x3');
+    expect(
+      within(bag).getByText('Eligible', { selector: 'dt' }).nextElementSibling?.textContent,
+    ).toBe('x0');
+    expect(
+      within(bag).getByText('Ineligible', { selector: 'dt' }).nextElementSibling?.textContent,
+    ).toBe('x3');
+    const entry = within(bag).getByText('Max Health', { selector: 'summary' });
+    expect(entry.closest('details')?.open).toBe(false);
+    await user.click(entry);
+    expect(entry.closest('details')?.open).toBe(true);
+    expect(within(bag).getByText('MaxHealthDrop')).toBeTruthy();
     expect(
       within(sheet).getAllByRole('list', { name: 'Max Health conditions' })[0]!.textContent,
     ).toContain('No additional condition.');
@@ -518,6 +557,7 @@ describe('BiomeWorkspace', () => {
     expect(evaluationEvents).toEqual(beforeEvaluationEvents);
 
     await user.click(launcher);
+    expect(screen.getByRole('tabpanel', { name: 'Overview' })).toBeTruthy();
     await user.keyboard('{Escape}');
     expect(screen.queryByRole('region', { name: /State before/ })).toBeNull();
     expect(document.activeElement).toBe(launcher);
