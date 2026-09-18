@@ -190,6 +190,7 @@ export function RunStateSheet({ launcher }: { readonly launcher: WorkspaceRunSta
             <button
               aria-controls={panelId}
               aria-selected={activeTab === tab}
+              className="run-state-tab"
               id={tabId(tab)}
               key={tab}
               onClick={() => setActiveTab(tab)}

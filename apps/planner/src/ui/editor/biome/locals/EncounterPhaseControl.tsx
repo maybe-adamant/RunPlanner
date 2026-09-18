@@ -42,13 +42,15 @@ function EncounterCustomizationControl({
     workspaceInteractionKey(phase.address),
   );
   const findingTarget = useFindingTarget();
+  const customizationId = phase.customizable
+    ? `encounter-customization-${semanticOwnerControlElementId(phase.address)}`
+    : semanticOwnerControlElementId(phase.address);
   const triggerTarget = findingTarget(
     phase.address,
-    semanticOwnerControlElementId(phase.address),
+    customizationId,
     phase.address,
     (finding) => finding.code === 'encounterCustomizationUnavailable',
   );
-  const customizationId = semanticOwnerControlElementId(phase.address);
   useEffect(() => {
     const dialog = dialogRef.current;
     if (dialog === null) return;
@@ -244,11 +246,9 @@ function EncounterCustomizationControl({
 export function CustomizableEncounterPhaseControl({
   interaction,
   phase,
-  usePhaseFindingTarget = true,
 }: {
   readonly interaction: WorkspaceEncounterInteraction;
   readonly phase: WorkspaceEncounterPhase;
-  readonly usePhaseFindingTarget?: boolean;
 }) {
   const findingTarget = useFindingTarget();
   const executeIntent = useCommandIntent();
@@ -268,17 +268,11 @@ export function CustomizableEncounterPhaseControl({
       closeOnSelect={false}
       findingTarget={findingTarget(
         phase.address,
-        usePhaseFindingTarget
-          ? semanticOwnerControlElementId(phase.address)
-          : `encounter-picker-${semanticOwnerControlElementId(phase.address)}`,
+        semanticOwnerControlElementId(phase.address),
         phase.address,
-        (finding) => usePhaseFindingTarget || finding.code !== 'encounterCustomizationUnavailable',
+        (finding) => finding.code !== 'encounterCustomizationUnavailable',
       )}
-      id={
-        usePhaseFindingTarget
-          ? semanticOwnerControlElementId(phase.address)
-          : `encounter-picker-${semanticOwnerControlElementId(phase.address)}`
-      }
+      id={semanticOwnerControlElementId(phase.address)}
       label="Encounter"
       layout="inline"
       loading={step === 'encounter' && candidates.pending}
@@ -399,7 +393,6 @@ export function EncounterPhaseControl({
               workspaceInteractionKey(phase.address),
             )}
             phase={phase}
-            usePhaseFindingTarget={phase.customization === undefined}
           />
         ) : (
           <div className="field-control field-control-inline">

@@ -275,11 +275,19 @@ presentation has a visible picker.
 
 The resolved definition's customization domain supplies a separate **Customize
 encounter** control, including for fixed identities. One dialog renders declared
-single choices and bounded ordered prefixes; it does not switch on Boss names
+single choices, bounded ordered prefixes and generated compositions; it does not switch on Boss names
 or calculate Rivals. Changes dispatch immediately through bound commands and
 Undo. Unsupported retained choices remain visible for repair, and Default is
 always available. Finding navigation selects the occurrence Timeline and
 focuses/highlights the launcher without automatically opening the dialog.
+
+Generated composition uses count radios, a shared-highlight picker and a staged
+whole-wave picker backed by the exact engine assessment. Intermediate wave
+choices are local; Finish Wave publishes one replacement and one Undo entry,
+while Cancel is inert. Finish appears first whenever the composition is valid.
+Completed enemy badges carry inline relative weights; count, highlight, weight
+and reset edits remain immediate. Retained invalid values and per-control repair
+messages stay visible. The dialog itself is not another saved draft.
 
 P uses the same exact-phase presentation. Its workspace labels are **Opening
 encounter** for `Intro` and **Follow-up encounter** for `Combat`.

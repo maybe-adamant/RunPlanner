@@ -408,9 +408,9 @@ commented out (`RoomDataN.lua:2849`, `LootData.lua:842–859`). The selection au
 owns placement/profile evidence; these exclusions are not missing customization
 work.
 
-## Prospective planner disposition and implementation boundaries
+## Planner disposition and runtime boundaries
 
-The chosen direction is encounter-owned optional wave/type customization,
+The implementation uses encounter-owned optional wave/type customization,
 including field-NPC generated combats, not a room-wide default-combat override.
 Default leaves native generation untouched and requires no authoring. A resolved
 wave count determines highlight participation; one highlight type is shared,
@@ -418,26 +418,25 @@ remaining types belong to individual waves. Exact wave composition requires an
 explicit highlight when that branch uses one. Optional type-budget weights are
 best-effort requests within each native wave budget, not a guarantee of realized
 shares, enemy counts or encounter difficulty. Realization failures warrant
-diagnostics, not synchronization failure or new conformance obligations. This
-is the accepted direction, not shipped behavior.
+diagnostics, not synchronization failure or new conformance obligations.
 
-Native-source contact probes establish a narrow implementation route; they do
-not establish shipped or in-game enforcement. The remaining boundaries are:
+Production-hook native-source probes verify these contacts, not live in-game
+acceptance. The implementation preserves the following boundaries:
 
-1. Carry preparation ownership into the proven synchronous native contacts,
-   including reward-owned Devotion and repeated H/O/P phases. The current
+1. Preparation ownership follows synchronous native contacts,
+   including reward-owned Devotion and repeated H/O/P phases. The
    executor resolves the phase before `ChooseEncounter`, but binds the resulting
-   object after it returns. Carrying that known phase into preparation needs
-   an explicit handoff; attaching fields only to the returned encounter is too
+   object after it returns. An explicit handoff carries that known phase into
+   preparation; attaching fields only to the returned encounter would be too
    late. Devotion retains its native predecessor-derived generation context
    while the planner identity belongs to the stamped destination.
-2. How supported profile/introduction assumptions apply to enemy candidates.
+2. Profile/introduction assumptions remain distinct from enemy candidates.
    Existing boss-choice progression overrides do not automatically authorize
    bypassing enemy intros, room packages or native intro replacement.
 3. Ordered type-choice possibility, including highlight/placeholder seeding,
    P group gates, run blacklists and declaration-owned hard context. A blanket
    independent-per-wave or final-set validator would misstate native support.
-4. Translate requested shares into the proven `FillEnemyCounts` sample
+4. Requested shares steer the proven `FillEnemyCounts` sample
    contacts, keyed by copied encounter, wave and native spawn-array branch.
    There is no native share field. Fixed entries and the full-index remainder
    rule make a generic next-random-draw override unsound; rounding/caps remain

@@ -187,6 +187,15 @@ room bindings. H cage phases, O ship phases and P's two-phase composition remain
 explicit rather than inferred from a template name. NPC grouping keys are
 presentation metadata, never requirement or history identity.
 
+Definitions may additionally declare optional generated-composition decisions:
+wave bounds, shared-highlight rules, fixed seeds, native enemy identities and
+ordered type exclusions. Normalization preserves family-specific depth/hard
+context and fixed-template rules; it does not turn every Combat-room encounter
+into a generic generator. The
+[composition matrix](../audits/rooms-and-routes/COMBAT_ENCOUNTER_COMPOSITION_MATRIX.md)
+owns the supported inventory. Engine assessment, not catalog declarations,
+determines whether an authored composition is possible in its exact context.
+
 ## Rewards and Acquisitions
 
 Reward declarations compose payload domains, reward types, concrete acquisition

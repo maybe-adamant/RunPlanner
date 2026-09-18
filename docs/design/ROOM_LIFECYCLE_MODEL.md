@@ -550,6 +550,13 @@ The event carries the definition key, envelope key, stable slot key, and exact
 room-instance origin. Encounter effects and execution publication consume that
 concrete identity, not the authored choice.
 
+Optional generated-composition assessment uses this resolved phase's exact
+preparation context. Ordered selection accounts for fixed/highlight seeds,
+exclusions and known prior explicit selections; native Default rosters do not
+become invented blacklist facts. Assessment returns typed repair evidence and
+active native operands, without simulating enemy counts or combat. It introduces
+no additional lifecycle operation, reward obligation or conformance checkpoint.
+
 A later slot in the same room evaluates against the preceding recorded prefix.
 It can therefore observe exact earlier encounter identities, while encounter
 counters remain at the post-predecessor snapshot until the matching
