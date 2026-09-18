@@ -731,8 +731,8 @@ resolved product and its exact chronological assessment.
 #### Encounter customization
 
 Concrete Encounter Definitions may declare optional decisions with stable keys,
-display labels, native operands and either a single-choice or a bounded distinct
-ordered-prefix domain. The resolved definition owns the active domain, including
+display labels, native operands and a single-choice, bounded distinct
+ordered-prefix, or generated-composition domain. The resolved definition owns the active domain, including
 normal/Rival differences; customization does not independently calculate Rivals.
 
 `encounters.customizationByPhase[phaseKey][decisionKey]` retains sparse authored
@@ -747,6 +747,13 @@ The exact phase owns each finding, with the decision identified in evidence.
 Valid resolved choices travel with that phase into execution publication, not as
 room features or additional Timeline actions. A choice steers a native decision
 if reached; it does not oblige an attack, advance a clock or create a checkpoint.
+
+Generated composition stores an optional wave count, shared highlight and sparse
+per-wave additional enemy types with optional positive relative weights.
+Fixed seeds remain declaration-owned. Default prerequisites retain dependent
+choices as dormant; they are not published until active. Known incompatible
+choices remain repairable rather than being erased. Counts, perks and spawn
+positions are not authored, and weights do not promise exact enemy quantities.
 
 #### Encounter trait offers
 

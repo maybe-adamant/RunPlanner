@@ -138,6 +138,11 @@ vi.mock('@run-planner/engine/simulation', async (importOriginal) => {
     ...actual,
     assertProjectEvaluationAssembly: (assembly: ProjectEvaluationAssembly) =>
       actual.assertProjectEvaluationAssembly(source(assembly)),
+    generatedEncounterSupportForProjectEvaluationAssembly: (
+      ...[assembly, ...args]: Parameters<
+        typeof actual.generatedEncounterSupportForProjectEvaluationAssembly
+      >
+    ) => actual.generatedEncounterSupportForProjectEvaluationAssembly(source(assembly), ...args),
     encounterPhaseCandidateSupportForProjectEvaluationAssembly: (
       ...[assembly, ...args]: Parameters<
         typeof actual.encounterPhaseCandidateSupportForProjectEvaluationAssembly

@@ -131,6 +131,16 @@ Explicit decisions steer reached behavior without adding required attacks,
 transactions or conformance facts. The [encounter audit](../audits/game-execution-contacts/NPCS_ENCOUNTERS_AND_AUTOMATICS.md#boss-decisions)
 owns the supported native contacts and narrowly agreed progression overrides.
 
+Generated composition publishes only active wave/highlight/type/share operands;
+each wave's generated list includes its highlight but excludes fixed template
+enemies. Generation steering carries the existing exact phase into synchronous
+native preparation, with a stamped destination handoff for reward-owned Devotion.
+The native game retains difficulty, eligibility, selection side effects, counts,
+rounding, caps and spawning. Default delegates unchanged. Scope is restored on
+return or error; unrelated work and introduction replacements never inherit an
+override. Failure to realize optional composition is diagnostic-only, not a new
+transaction or mismatch boundary.
+
 Commands fall into three execution dispositions:
 
 | Disposition | Examples                                                                | Contract                                                                  |

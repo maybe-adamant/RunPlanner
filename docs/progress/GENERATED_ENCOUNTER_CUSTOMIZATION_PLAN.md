@@ -470,9 +470,8 @@ Verification and remaining obligations:
   the final generated workbench passed 12 tests after adding the ambiguous-weight
   repair witness. Application typecheck, affected ESLint, formatting and diff
   checks passed. The independent review findings are addressed.
-- The prior workspace contract run had 75 passes and one pre-existing
-  button-classification failure in `RunStateSheet.tsx:190` (introduced by
-  `321fcb66`). This remains a closure obligation.
+- The prior workspace contract run had a pre-existing Run State
+  button-classification failure; Gate E repaired it with an explicit tab class.
 - No schema, protocol or fixture migration; no deployment or game realization
   is claimed. Gate D realization and Gate E broad closure/in-game checks remain.
   The user approved committing Gate C and proceeding to Gate D.
@@ -489,12 +488,48 @@ adding mismatch or transaction obligations.
   13 tests passed, including fixed-entry/remainder allocation, native caps,
   Hordes and later Fangs contact. Production Lua lint and diff checks passed.
 - No deployment or live acceptance is claimed. Gate D is committed in the game module;
-  Gate E still owns full planner closure and the required in-game witnesses.
+  Gate E owns closure and the required in-game witnesses.
 
-| Gate | Status                                          |
-| ---- | ----------------------------------------------- |
-| A    | Complete; independently reviewed                |
-| B    | Complete; independently reviewed                |
-| C    | Complete; review findings addressed             |
-| D    | Complete; independently reviewed                |
-| E    | Closure checks started; live acceptance pending |
+Gate E code closure is verified; preliminary in-game testing passed.
+
+- The full planner check passed all typechecks and fixture-integrity checks.
+  Correctness reported 3,280 passes and four failures: Run State tab class,
+  two malformed-finding test capability forwards, and NPC-index focus using the
+  customization launcher's canonical ID. All four were repaired; the affected
+  five files then passed 116 tests. The entire correctness suite was not rerun.
+- Remaining check stages passed separately: application typecheck after repair,
+  full ESLint/Prettier checks, production build, performance-unit checks and
+  the eight-metric comparison against feature base `317dc863`. No performance
+  regression crossed the comparison thresholds.
+- Game closure: 534 tests and production Lua lint passed. All execution fixture
+  mirrors match byte-for-byte. Native-source probes passed 13 tests in Gate D.
+- Independent feature review and bounded remediation review found no remaining
+  actionable issue. Owning model/audit sections and feature-to-hook mapping now
+  describe the implemented contract rather than a prospective feature.
+- Game delivery commit: `a37e389`; planner Gate C: `36e72fae`.
+  The user approved committing closure repairs/documents after reporting that
+  preliminary in-game testing works. Specific scenarios were not enumerated,
+  so the acceptance rows below remain unverified rather than inferred passed.
+  Retain this plan until the remaining acceptance is recorded.
+
+### Live acceptance still required
+
+Use an Underworld and a Surface test route where practical, combining compatible
+checks rather than creating a fixture per row.
+
+| Route      | Native behavior to observe                                                             | Status  |
+| ---------- | -------------------------------------------------------------------------------------- | ------- |
+| Either     | Untouched Default encounter                                                            | Pending |
+| Either     | Explicit variable waves/highlight, including unequal weights with native caps/rounding | Pending |
+| Either     | Fixed-wave field NPC                                                                   | Pending |
+| Underworld | H cage phases and fixed-plus-generated mixed template                                  | Pending |
+| Surface    | O repeated ship phases and reward-owned Devotion                                       | Pending |
+| Surface    | P supported generated phases; prescribed vignettes unchanged                           | Pending |
+
+| Gate | Status                                               |
+| ---- | ---------------------------------------------------- |
+| A    | Complete; independently reviewed                     |
+| B    | Complete; independently reviewed                     |
+| C    | Complete; review findings addressed                  |
+| D    | Complete; independently reviewed                     |
+| E    | Code verified; preliminary live pass; matrix pending |

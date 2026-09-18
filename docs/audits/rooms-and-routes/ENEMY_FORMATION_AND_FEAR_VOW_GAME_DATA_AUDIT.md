@@ -459,41 +459,28 @@ The following are established by static source:
 
 The following are not collapsed into deterministic Planner facts:
 
-1. the exact wave, type, count, attribute, replacement, or respawn RNG result;
+1. unauthored wave/type draws and all count, attribute, replacement or respawn RNG results;
 2. native-engine behavior around fractional active-cap comparisons beyond the
    visible Lua arithmetic;
 3. one universally legal enemy roster independent of introduction and profile
-   history; and
-4. a safe runtime intervention seam for forcing an exact roster.
+   history.
 
 ## Planner Disposition
 
-The Planner currently persists configured Fear ranks and run-local suppression
-but does not author enemy waves, types, counts, attributes, or respawn rolls.
-Because health, damage, combat success, and combat duration are not modeled,
-the combat consequences documented here remain simulation-neutral today.
+The Planner persists configured Fear ranks and run-local suppression. Supported
+generated encounters additionally allow optional wave counts, shared highlights,
+per-wave enemy types and relative weights. It does not simulate health, damage,
+combat success, duration, enemy quantities, attributes or respawn rolls.
+The four native formation stages remain separate; customization does not
+precompute a combined Vow-adjusted live roster.
 
-That disposition must not be mistaken for “unmodeled Vows have no game
-effect.” The effective Vow state remains meaningful run state, and this audit
-preserves the exact formation contacts for a future encounter-execution or
-combat-composition slice.
-
-Any future slice should preserve the four stage boundaries in this audit. It
-should not precompute a single combined Vow-adjusted roster, and it should not
-extend miniboss or boss conclusions from ordinary Combat and Devotion without
-a separate source audit.
-
-### Prospective composition boundary
-
-The source supports assessing wave count, a shared highlight when applicable,
-and per-wave enemy-type composition separately from enemy quantities. Optional
-requested per-type difficulty shares are another potential steering input;
-they are not a native data field or an exact count contract. Encounter
+Requested per-type difficulty shares are steering operands, not a native data
+field or an exact count contract. Encounter
 difficulty, the fixed distribution between waves, quantity calculation,
 spawning, attributes, substitutions and respawns remain native-owned.
 
-These controls are not implemented. The companion matrix records all currently
-supported encounter identities in biome Combat rooms plus `O_Devotion01`,
+The companion matrix records the supported encounter identities in biome
+Combat rooms plus `O_Devotion01`,
 including fixed rosters and non-generator contacts that cannot inherit an
 ordinary-generation policy merely because they occur in a Combat room.
 
@@ -504,6 +491,6 @@ replacements must not inherit an outer customization scope. Count samples map
 to the allocator's native spawn-array branches, not generic RNG call order.
 
 Profile/introduction assumptions and ordered composition validity remain
-catalog/engine boundaries. These probes are not evidence of a deployed or
-in-game-tested adapter. No enemy quantity simulation or promise about every
+catalog/engine boundaries. Production-hook source probes verify these contacts,
+not live in-game acceptance. No enemy quantity simulation or promise about every
 final live enemy follows from authoring the generated roster.
