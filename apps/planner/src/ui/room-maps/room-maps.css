@@ -1,7 +1,7 @@
 .room-map-dialog-backdrop {
-  width: min(1080px, calc(100vw - 32px));
+  width: min(1080px, calc(100 * var(--app-vw) - 32px));
   max-width: none;
-  max-height: min(900px, calc(100vh - 32px));
+  max-height: min(900px, calc(100 * var(--app-vh) - 32px));
   padding: 0;
   border: 1px solid #4b4c58;
   border-radius: 12px;
@@ -18,7 +18,7 @@
   display: flex;
   flex-direction: column;
   min-height: 0;
-  max-height: min(900px, calc(100vh - 32px));
+  max-height: min(900px, calc(100 * var(--app-vh) - 32px));
   padding: 18px;
 }
 
@@ -130,7 +130,7 @@
 }
 
 .room-map-scroll {
-  height: min(650px, calc(100vh - 250px));
+  height: min(650px, calc(100 * var(--app-vh) - 250px));
   min-height: 240px;
   overflow: auto;
   border: 1px solid #363742;
@@ -207,7 +207,7 @@
   color: #101923;
   background: color-mix(in srgb, var(--hub-marker-color) var(--hub-marker-opacity), transparent);
   box-shadow: 0 2px 8px rgb(0 0 0 / 48%);
-  font-size: clamp(7px, 1.1vw, 15px);
+  font-size: clamp(7px, calc(1.1 * var(--app-vw)), 15px);
   font-weight: 800;
   line-height: 1;
   cursor: pointer;
@@ -257,7 +257,7 @@
 .hub-map-marker-status {
   display: block;
   margin-top: 3px;
-  font-size: clamp(6px, 0.7vw, 10px);
+  font-size: clamp(6px, calc(0.7 * var(--app-vw)), 10px);
   font-weight: 600;
 }
 
@@ -297,7 +297,7 @@
   color: #fff5da;
   background: rgb(20 29 38 / 92%);
   box-shadow: 0 1px 4px rgb(0 0 0 / 42%);
-  font-size: clamp(6px, 0.65vw, 10px);
+  font-size: clamp(6px, calc(0.65 * var(--app-vw)), 10px);
   font-weight: 700;
   line-height: 1;
   white-space: nowrap;
@@ -319,7 +319,7 @@
   border-radius: 6px;
   color: #f2f6fa;
   background: rgb(17 25 35 / 88%);
-  font-size: clamp(6px, 0.92vw, 15px);
+  font-size: clamp(6px, calc(0.92 * var(--app-vw)), 15px);
   pointer-events: none;
 }
 
@@ -351,7 +351,7 @@
 
 .hub-map-popover {
   z-index: 30;
-  width: min(360px, calc(100vw - 24px));
+  width: min(360px, calc(100 * var(--app-vw) - 24px));
   display: grid;
   gap: 10px;
   padding: 12px;
@@ -396,7 +396,7 @@
 }
 
 .room-map-reference > .room-map-viewport > .room-map-scroll {
-  height: min(30rem, 52vh);
+  height: min(30rem, calc(52 * var(--app-vh)));
   min-height: 14rem;
 }
 

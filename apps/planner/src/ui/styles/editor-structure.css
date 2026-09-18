@@ -1,5 +1,5 @@
 .editor-panel {
-  padding: clamp(14px, 1.5vw, 22px);
+  padding: clamp(14px, calc(1.5 * var(--app-vw)), 22px);
 }
 
 .editor-panel {
@@ -38,7 +38,7 @@
 }
 
 .editor-panel h2 {
-  font-size: clamp(1.6rem, 3vw, 2.25rem);
+  font-size: clamp(1.6rem, calc(3 * var(--app-vw)), 2.25rem);
 }
 
 .panel-heading {
@@ -263,8 +263,8 @@ select {
 
 .contextual-picker-popover {
   z-index: 50;
-  width: max(var(--radix-popover-trigger-width), 320px);
-  max-width: min(460px, calc(100vw - 24px));
+  width: max(calc(var(--radix-popover-trigger-width) / var(--app-scale, 1)), 320px);
+  max-width: min(460px, calc(100 * var(--app-vw) - 24px));
   padding: 6px;
   border: 1px solid #484954;
   border-radius: 10px;
@@ -313,7 +313,7 @@ select {
 }
 
 .contextual-picker-popover [cmdk-list] {
-  max-height: min(380px, 55vh);
+  max-height: min(380px, calc(55 * var(--app-vh)));
   overflow-y: auto;
   overscroll-behavior: contain;
 }

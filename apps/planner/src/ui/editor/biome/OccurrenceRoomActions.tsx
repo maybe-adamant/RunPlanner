@@ -465,7 +465,7 @@ export function RoomActionsWorkbench({
         aria-hidden="true"
         className="hub-roster-drag-preview"
         style={{
-          transform: `translate3d(${pointerDrag.x + 14}px, ${pointerDrag.y + 14}px, 0)`,
+          transform: `translate3d(calc(${pointerDrag.x + 14}px / var(--app-scale, 1)), calc(${pointerDrag.y + 14}px / var(--app-scale, 1)), 0)`,
         }}
       >
         <span>⠿</span>

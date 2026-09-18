@@ -129,7 +129,7 @@
 
   .fields-layout-reference-layout > .room-map-reference > .room-map-viewport > .room-map-scroll {
     min-height: 0;
-    max-height: max(8rem, calc(100dvh - 22rem));
+    max-height: max(8rem, calc(100 * var(--app-vh) - 22rem));
   }
 }
 
@@ -232,7 +232,7 @@
   cursor: not-allowed;
 }
 
-@media (max-width: 700px) {
+@container app-viewport (max-width: 700px) {
   .fields-layout-controls .local-reward-heading.fields-layout-heading {
     grid-template-columns: minmax(0, 1fr) auto;
   }
@@ -615,7 +615,7 @@
 }
 
 .hub-map-overview > .room-map-viewport > .room-map-canvas > .room-map-scroll {
-  height: min(720px, calc(100vh - 280px));
+  height: min(720px, calc(100 * var(--app-vh) - 280px));
   min-height: 340px;
 }
 
@@ -1234,7 +1234,7 @@
   top: 0;
   left: 0;
   min-width: 150px;
-  max-width: min(280px, calc(100vw - 28px));
+  max-width: min(280px, calc(100 * var(--app-vw) - 28px));
   align-items: center;
   gap: 8px;
   padding: 8px 10px;
@@ -1392,7 +1392,7 @@
   right: 0;
   bottom: 100%;
   width: 16rem;
-  max-width: calc(100vw - 32px);
+  max-width: calc(100 * var(--app-vw) - 32px);
   padding: 8px 10px;
   border: 1px solid #42434d;
   border-radius: 8px;

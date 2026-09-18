@@ -249,6 +249,12 @@ These are separate authorities:
 The normalized `ProjectDocument` is the profile file. Paths, filenames, save
 baselines, Redux state and recovery metadata never enter it.
 
+Application scale is a local presentation preference, independent of project
+files, recovery and Undo/Redo. The shell owns keyboard/wheel shortcuts and CSS
+scaling; a browser-storage adapter persists the preference for web and desktop.
+Map zoom remains independent. Responsive layout uses the scaled available space;
+pointer gestures and floating overlays account for screen versus layout coordinates.
+
 ### File operations
 
 The file menu provides New, Load, Save, desktop Save As and Publish to Game.

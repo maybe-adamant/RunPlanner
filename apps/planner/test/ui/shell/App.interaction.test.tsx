@@ -633,7 +633,9 @@ describe('planner history interaction', () => {
     expect(within(about).getByText('Catalog')).toBeTruthy();
     expect(within(about).queryByText('MIT')).toBeNull();
     expect(within(about).getByRole('heading', { name: 'Keyboard shortcuts' })).toBeTruthy();
-    expect(within(about).getAllByText('Ctrl/Cmd', { selector: 'kbd' })).toHaveLength(2);
+    expect(within(about).getByText('App scale', { selector: 'dt' })).toBeTruthy();
+    expect(within(about).getByText('Reset scale', { selector: 'dt' })).toBeTruthy();
+    expect(within(about).getAllByText('Ctrl/Cmd', { selector: 'kbd' })).toHaveLength(4);
     expect(within(about).queryByText('Rooms')).toBeNull();
     expect(screen.getByRole('button', { name: 'Route' })).toBeTruthy();
   });

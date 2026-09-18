@@ -101,7 +101,7 @@
   border-radius: 0.65rem;
   box-shadow: 0 1.5rem 4rem rgb(0 0 0 / 30%);
   color: #ede8df;
-  max-height: calc(100dvh - 2rem);
+  max-height: calc(100 * var(--app-vh) - 2rem);
   max-width: 54rem;
   min-width: 0;
   overflow-x: hidden;
@@ -506,7 +506,7 @@
   font-size: 0.82rem;
 }
 
-@media (max-width: 700px) {
+@container app-viewport (max-width: 700px) {
   .trait-offer-options {
     grid-template-columns: minmax(0, 1fr);
   }

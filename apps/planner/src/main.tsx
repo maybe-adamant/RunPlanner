@@ -17,10 +17,12 @@ import { createApplication } from './composition/createApplication';
 import './ui/styles.css';
 import { App } from './ui/shell/App';
 import { ApplicationFaultBoundary } from './ui/shell/ApplicationFaultBoundary';
+import { createBrowserAppScalePreference } from './persistence/appScalePreference';
 
 const devBrowserErrorReporter = installDevBrowserErrorReporter();
 const rootElement = document.getElementById('root');
 const tauriHost = isTauri();
+const appScalePreference = createBrowserAppScalePreference(() => globalThis.localStorage);
 const autosaveRecovery = createBrowserAutosaveRecoveryAdapter({
   storage: () => globalThis.localStorage,
 });
@@ -95,6 +97,7 @@ createRoot(rootElement, devBrowserErrorReporter?.rootOptions).render(
     >
       <Provider store={application.store}>
         <App
+          appScalePreference={appScalePreference}
           catalog={application.catalog}
           catalogSummary={application.catalogSummary}
           editorNavigation={application.editorNavigation}

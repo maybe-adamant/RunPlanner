@@ -154,8 +154,10 @@ export function RoomMapViewport({
     const scroll = scrollRef.current;
     const pan = panRef.current;
     if (scroll === null || pan === undefined || pan.pointerId !== event.pointerId) return;
-    scroll.scrollLeft = pan.left + pan.x - event.clientX;
-    scroll.scrollTop = pan.top + pan.y - event.clientY;
+    // Pointer coordinates include app scale; scroll offsets are local CSS pixels.
+    const scale = scroll.getBoundingClientRect().width / scroll.offsetWidth;
+    scroll.scrollLeft = pan.left + (pan.x - event.clientX) / scale;
+    scroll.scrollTop = pan.top + (pan.y - event.clientY) / scale;
   };
 
   const endPan = (event: PointerEvent<HTMLDivElement>) => {

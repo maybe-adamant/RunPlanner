@@ -1,5 +1,5 @@
 /* Sidebar (148px), rail (280px), and gutters take about half the app at this width. */
-@media (max-width: 1000px) {
+@container app-viewport (max-width: 1000px) {
   .editor-panel-content[data-editor-layout='biome'] {
     display: block;
     overflow-y: auto;
@@ -38,7 +38,7 @@
   }
 }
 
-@media (max-width: 700px) {
+@container app-viewport (max-width: 700px) {
   body {
     overflow: auto;
   }
@@ -52,7 +52,7 @@
     display: block;
     width: calc(100% - 24px);
     height: auto;
-    min-height: 100dvh;
+    min-height: calc(100 * var(--app-vh));
     padding: 24px 0;
     overflow: visible;
   }
