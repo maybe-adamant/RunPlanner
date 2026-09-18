@@ -824,6 +824,7 @@ select {
 }
 
 .decision-card > .workbench-action-row {
+  justify-content: flex-end;
   padding: 10px 14px;
   border-top: 1px solid #34353e;
   background: rgb(255 255 255 / 2%);
