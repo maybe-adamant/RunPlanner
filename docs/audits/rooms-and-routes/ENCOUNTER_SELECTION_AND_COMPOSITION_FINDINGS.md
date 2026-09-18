@@ -834,6 +834,12 @@ That audit also records how ordinary Combat and Devotion reuse the generator
 and where Vows of Hordes, Menace, Fangs, Return, and the unit-modifying Vows
 intervene.
 
+The companion [Combat Room Encounter Composition Matrix](COMBAT_ENCOUNTER_COMPOSITION_MATRIX.md)
+records the concrete wave/type declarations for every supported encounter in
+Combat rooms, including field-NPC combats and prescribed phases, plus
+`O_Devotion01`. Room membership, rather than the default Combat label, defines
+that inventory.
+
 The encounter-selection conclusions in this document stop once
 `SetupEncounter` receives the selected declaration. Concrete waves still
 depend on run and profile history, room and map facts, enemy declarations,
