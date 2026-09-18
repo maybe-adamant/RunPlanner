@@ -53,6 +53,7 @@ import {
 } from '@run-planner/test-fixtures/surface';
 import { renderPlannerForInteraction } from '../fixtures/renderPlanner';
 import { semanticOwnerControlElementId } from '@planner/ui/feedback/semanticOwner';
+import { loadSurfaceNNaturalSelectionFrontierCheckpoint } from '@run-planner/test-fixtures/checkpoints/surface';
 
 afterEach(() => {
   cleanup();
@@ -441,7 +442,7 @@ describe('surface product loop', () => {
     expect(recovery.readStoredJson()).toBe(encodeProjectDocument(authored));
   });
 
-  it('routes a selected-route Findings click to the owning decision inspector', async () => {
+  it('routes the selected issue to the owning decision inspector', async () => {
     const application = createApplication();
     const target = createTargetAddress(
       pBiome,
@@ -459,23 +460,19 @@ describe('surface product loop', () => {
     );
     application.store.dispatch(authoredProjectReplaced(invalidProject));
     const view = renderPlannerForInteraction({ application });
-    const surfaceEvaluation = currentEvaluation(application).route;
-    if (surfaceEvaluation === undefined) throw new Error('Surface evaluation is missing');
-    const findingIndex = surfaceEvaluation.findings.findIndex(
-      (finding) =>
-        finding.code === 'targetRoomUnavailable' &&
-        semanticAddressKey(finding.origin) === semanticAddressKey(target),
-    );
-    if (findingIndex < 0) {
-      throw new Error('The selected Surface Findings panel omitted the Olympus target finding');
+    const issue = currentEvaluation(application).issue;
+    if (issue === undefined || semanticAddressKey(issue.owner) !== semanticAddressKey(target)) {
+      throw new Error('Olympus target must be the selected assessment issue');
     }
-    const findings = screen.getByRole('heading', { name: 'Findings' }).closest('section');
-    if (findings === null) throw new Error('Findings is missing its section');
     const historyBefore = currentHistory(application);
-    const findingButton = within(findings).getAllByRole('button')[findingIndex];
-    if (findingButton === undefined) throw new Error('Findings omitted the target finding');
-    await view.user.click(findingButton);
+    const repair = screen.getByRole('heading', { name: 'Next repair' }).closest('section');
+    if (repair === null) throw new Error('selected repair banner is missing');
+    await view.user.click(within(repair).getByRole('button'));
 
+    expect(application.store.getState().editorSession.selectedFinding).toMatchObject({
+      key: issue.regionKey,
+      origin: issue.owner,
+    });
     expect(application.store.getState().editorSession.focusedSemanticOwner).toEqual(target);
     expect(application.store.getState().editorSession.activeSection).toBe('route');
     expect(application.store.getState().editorSession.activePanel).toEqual({
@@ -486,6 +483,44 @@ describe('surface product loop', () => {
     const inspector = screen.getByRole('complementary', { name: 'Details' });
     expect(inspector.querySelector('.biome-batch-workbench')).not.toBeNull();
     expect(within(inspector).getByRole('article', { name: 'Combat 02 room offer' })).toBeTruthy();
+  });
+
+  it('routes the selected nested Natural Selection issue to its Timeline pickup without opening a dialog', async () => {
+    const application = createApplication();
+    application.store.dispatch(
+      authoredProjectReplaced(loadSurfaceNNaturalSelectionFrontierCheckpoint()),
+    );
+    const issue = currentEvaluation(application).issue;
+    if (
+      issue?.owner.kind !== 'traitOffer' ||
+      !issue.reasons.some((reason) => reason.code === 'naturalSelectionResultMissing')
+    ) {
+      throw new Error('Natural Selection result must be the selected assessment issue');
+    }
+    const destination = application
+      .selectStructuredWorkspace(application.store.getState())!
+      .focusByOwner.get(semanticAddressKey(issue.owner));
+    if (destination === undefined) throw new Error('Natural Selection destination is missing');
+
+    const view = renderPlannerForInteraction({ application });
+    const repair = screen.getByRole('heading', { name: 'Next repair' }).closest('section');
+    if (repair === null) throw new Error('selected repair banner is missing');
+    await view.user.click(within(repair).getByRole('button'));
+
+    expect(application.store.getState().editorSession.selectedFinding).toMatchObject({
+      key: issue.regionKey,
+      origin: issue.owner,
+    });
+    expect(application.store.getState().editorSession.focusedSemanticOwner).toEqual(
+      destination.focusAddress,
+    );
+    expect(application.store.getState().editorSession.traitDialogTarget).toBeNull();
+    expect(screen.queryByRole('dialog')).toBeNull();
+    await waitFor(() =>
+      expect(
+        document.getElementById(semanticOwnerControlElementId(destination.focusAddress)),
+      ).toBeTruthy(),
+    );
   });
 
   it('completes an Olympian replacement through the shared trait editor', async () => {
@@ -610,15 +645,18 @@ describe('surface product loop', () => {
       (finding) => finding.origin.kind === 'traitOffer',
     );
     if (invalid === undefined) throw new Error('reached Hammer finding is missing');
+    const issue = currentEvaluation(application).issue;
+    if (
+      issue === undefined ||
+      semanticAddressKey(issue.owner) !== semanticAddressKey(invalid.origin)
+    ) {
+      throw new Error('Hammer must be the selected assessment issue');
+    }
 
     const view = renderPlannerForInteraction({ application });
-    const findings = screen.getByRole('heading', { name: 'Findings' }).closest('section');
-    if (findings === null) throw new Error('Findings panel is missing');
-    const findingButton = within(findings)
-      .getAllByRole('button')
-      .find((button) => button.textContent?.includes('Hammer is incompatible'));
-    if (findingButton === undefined) throw new Error('Hammer finding is not presented');
-    await view.user.click(findingButton);
+    const repair = screen.getByRole('heading', { name: 'Next repair' }).closest('section');
+    if (repair === null) throw new Error('selected repair banner is missing');
+    await view.user.click(within(repair).getByRole('button'));
 
     const destination = application
       .selectStructuredWorkspace(application.store.getState())!
@@ -629,6 +667,10 @@ describe('surface product loop', () => {
       focusAddress: { kind: 'roomAction' },
     });
     expect(destination).not.toHaveProperty('traitDialogTarget');
+    expect(application.store.getState().editorSession.selectedFinding).toMatchObject({
+      key: issue.regionKey,
+      origin: issue.owner,
+    });
     expect(screen.queryByRole('dialog')).toBeNull();
     expect(
       document.getElementById(semanticOwnerControlElementId(destination.focusAddress)),

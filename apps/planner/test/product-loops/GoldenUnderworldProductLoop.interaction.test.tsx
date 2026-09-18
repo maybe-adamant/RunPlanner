@@ -33,7 +33,7 @@ import {
   authoredProjectReplaced,
   authoredProjectUndoRequested,
 } from '@planner/state/projectWorkspaceSlice';
-import { semanticOwnerFocused } from '@planner/state/editorSessionSlice';
+import { routePanelSelected, semanticOwnerFocused } from '@planner/state/editorSessionSlice';
 import { authorLegalTraitOffers } from '@run-planner/test-fixtures/shared';
 import {
   createGoldenFGHIProject,
@@ -234,7 +234,7 @@ describe('underworld product loop', () => {
     expect(document.body.textContent).not.toContain('Linear topology');
   });
 
-  it('repairs a stale Echo replay identity through the focused generated Room Action row', async () => {
+  it('repairs the selected stale Echo replay issue and advances to the next repair', async () => {
     const application = createApplication();
     const bridgeId = createOccurrenceId('golden-h-bridge01');
     const combat09 = createOccurrenceId('golden-h-combat09');
@@ -307,7 +307,13 @@ describe('underworld product loop', () => {
         semanticAddressKey(finding.origin) === semanticAddressKey(replayEntry),
     );
     if (staleFinding === undefined) throw new Error('stale Echo replay finding is missing');
-    const findingIndex = currentEvaluation(application).findings.indexOf(staleFinding);
+    const issue = currentEvaluation(application).issue;
+    if (
+      issue === undefined ||
+      semanticAddressKey(issue.owner) !== semanticAddressKey(replayEntry)
+    ) {
+      throw new Error('stale Echo replay must be the selected assessment issue');
+    }
     const rewardInteraction = application
       .selectStructuredWorkspace(application.store.getState())!
       .interactions.rewards.get(semanticAddressKey(replayEntry));
@@ -316,12 +322,14 @@ describe('underworld product loop', () => {
     const repairRewardType = rewardInteraction.authoredRewardTypes[0];
     if (repairRewardType === undefined) throw new Error('Echo replay has no repair reward');
     const view = renderPlannerForInteraction({ application });
-    const findings = screen.getByRole('heading', { name: 'Findings' }).closest('section');
-    if (findings === null) throw new Error('Findings panel is missing');
-    const findingButton = within(findings).getAllByRole('button')[findingIndex];
-    if (findingButton === undefined) throw new Error('stale Echo replay finding is not presented');
-    await view.user.click(findingButton);
+    const repair = screen.getByRole('heading', { name: 'Next repair' }).closest('section');
+    if (repair === null) throw new Error('selected repair banner is missing');
+    await view.user.click(within(repair).getByRole('button'));
 
+    expect(application.store.getState().editorSession.selectedFinding).toMatchObject({
+      key: issue.regionKey,
+      origin: issue.owner,
+    });
     expect(application.store.getState().editorSession.focusedSemanticOwner).toEqual(replayEntry);
     expect(application.store.getState().editorSession.activePanel).toEqual({
       kind: 'biome',
@@ -350,6 +358,7 @@ describe('underworld product loop', () => {
         (finding) => semanticAddressKey(finding.origin) === semanticAddressKey(replayEntry),
       ),
     ).toBe(false);
+    expect(currentEvaluation(application).issue?.regionKey).not.toBe(issue.regionKey);
 
     act(() => application.store.dispatch(authoredProjectUndoRequested()));
     expect(authoredOccurrence()?.acquisitionSites?.roomExit).toMatchObject({
@@ -361,7 +370,7 @@ describe('underworld product loop', () => {
     });
   });
 
-  it('routes a missing Boon Boon Boon finding through its forced child pickup', async () => {
+  it('opens a nested Boon Boon Boon child through semantic focus without selecting a global issue', async () => {
     const application = createApplication();
     const bridgeId = createOccurrenceId('golden-h-bridge01');
     const echoOwner = createTraitOfferAddress(
@@ -397,34 +406,22 @@ describe('underworld product loop', () => {
       },
     });
     application.store.dispatch(authoredProjectReplaced(project));
-    const finding = currentEvaluation(application).findings.find(
-      (candidate) =>
-        candidate.code === 'echoLastRunBoonMissing' &&
-        semanticAddressKey(candidate.origin) === semanticAddressKey(child),
-    );
-    if (finding === undefined) throw new Error('BBB child finding is missing');
-
-    const view = renderPlannerForInteraction({ application });
-    const findings = screen.getByRole('heading', { name: 'Findings' }).closest('section');
-    if (findings === null) throw new Error('Findings panel is missing');
-    await view.user.click(
-      within(findings).getByRole('button', { name: /Choose the Boon Boon Boon outcomes/ }),
-    );
-
     const destination = application
       .selectStructuredWorkspace(application.store.getState())!
       .focusByOwner.get(semanticAddressKey(child));
     if (destination === undefined) throw new Error('BBB child destination is missing');
-    expect(destination).toMatchObject({
-      ownerAddress: child,
-      focusAddress: { kind: 'roomAction' },
-    });
-    expect(destination).not.toHaveProperty('traitDialogTarget');
-    expect(application.store.getState().editorSession.traitDialogTarget).toBeNull();
-    expect(application.store.getState().editorSession.focusedSemanticOwner).toEqual(
-      destination.focusAddress,
+    application.store.dispatch(
+      routePanelSelected({ routeKey: 'Underworld', panel: { kind: 'biome', biomeKey: 'H' } }),
     );
-    expect(screen.queryByRole('dialog')).toBeNull();
+    application.store.dispatch(semanticOwnerFocused(destination.focusAddress));
+
+    const view = renderPlannerForInteraction({ application });
+    await waitFor(() =>
+      expect(
+        document.getElementById(semanticOwnerControlElementId(destination.focusAddress)),
+      ).toBeTruthy(),
+    );
+    expect(application.store.getState().editorSession.selectedFinding).toBeNull();
     const childAction = document.getElementById(
       semanticOwnerControlElementId(destination.focusAddress),
     );

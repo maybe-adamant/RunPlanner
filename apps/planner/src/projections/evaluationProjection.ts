@@ -1,6 +1,7 @@
 import { semanticAddressKey, type SemanticAddress } from '@run-planner/engine/authored-project';
 import { type Catalog } from '@run-planner/engine/catalog-schema';
 import {
+  type AssessmentIssue,
   type FindingCode,
   type ProjectEvaluation,
   type ProjectRouteEvaluation,
@@ -641,6 +642,15 @@ export function presentFinding(finding: SemanticFinding): FindingPresentation {
   return findingCopy[finding.code];
 }
 
+/** The engine selects the repair region; presentation only adapts its explanation. */
+export function presentAssessmentIssue(issue: AssessmentIssue): FindingPresentation {
+  const reason = issue.reasons[0];
+  if (reason === undefined) {
+    throw new Error(`Assessment issue ${issue.regionKey} has no reason`);
+  }
+  return presentFinding(reason);
+}
+
 /**
  * Present an engine candidate finding without re-running its eligibility
  * policy. Candidate findings are not project findings, so they do not have a
@@ -686,6 +696,17 @@ export function presentBiomeStatus(
   return evaluation.validity === 'valid' ? validBiomeStatus : invalidBiomeStatus;
 }
 
+function issueBelongsToBiome(
+  issue: AssessmentIssue | undefined,
+  routeKey: string,
+  biomeKey: string,
+): boolean {
+  if (issue === undefined || !('routeKey' in issue.owner) || !('biomeKey' in issue.owner)) {
+    return false;
+  }
+  return issue.owner.routeKey === routeKey && issue.owner.biomeKey === biomeKey;
+}
+
 function biomeFeedback(route: ProjectRouteEvaluation, biomeKey: string): BiomeFeedbackPresentation {
   const evaluation = route.biomes.find((candidate) => candidate.biomeKey === biomeKey);
   if (evaluation === undefined) {
@@ -711,7 +732,7 @@ function biomeFeedback(route: ProjectRouteEvaluation, biomeKey: string): BiomeFe
   return Object.freeze({
     biomeKey,
     context,
-    findingCount: evaluation.findings.length,
+    findingCount: issueBelongsToBiome(route.issue, route.routeKey, biomeKey) ? 1 : 0,
     status: presentBiomeStatus(evaluation),
   });
 }
@@ -731,12 +752,12 @@ export function projectFeedbackHierarchy(
   );
   const routeFeedback = Object.freeze({
     biomes,
-    findingCount: route.findings.length,
+    findingCount: route.issue === undefined ? 0 : 1,
     routeKey: route.routeKey,
     status: presentRouteStatus(route),
   });
   const projected = Object.freeze({
-    findingCount: evaluation.findings.length,
+    findingCount: evaluation.issue === undefined ? 0 : 1,
     route: routeFeedback,
     status: presentProjectStatus(evaluation),
   });

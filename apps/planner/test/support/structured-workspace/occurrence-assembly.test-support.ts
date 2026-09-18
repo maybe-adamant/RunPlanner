@@ -165,7 +165,11 @@ export function assemble(
           ? 'assessed'
           : 'unassessed',
     biome: source.biome,
-    findingCountFor: (address) => source.findingsFor(address).length,
+    findingCountFor: (address) =>
+      source.assessmentIssue !== undefined &&
+      semanticAddressKey(source.assessmentIssue.owner) === semanticAddressKey(address)
+        ? 1
+        : 0,
     routeKey,
   });
   const assembly = assembleWorkspaceOccurrence({

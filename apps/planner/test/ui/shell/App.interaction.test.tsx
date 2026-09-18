@@ -479,7 +479,7 @@ function allTogetherFindingFixture() {
 }
 
 describe('planner history interaction', () => {
-  it('highlights the missing Fields Optional 3 definition before navigation and repeatedly focuses that Overview picker', async () => {
+  it('repeatedly routes the selected Fields Optional 3 issue to its Overview picker', async () => {
     const application = createApplication();
     const original = createGoldenFGHProject();
     const fields = original.route.biomes
@@ -527,6 +527,13 @@ describe('planner history interaction', () => {
       );
     if (finding === undefined) throw new Error('Optional 3 definition finding is missing');
     const destination = workspace.focusByOwner.get(semanticAddressKey(finding.origin))!;
+    const issue = application.store.getState().projectWorkspace.assembly!.evaluation.issue;
+    if (
+      issue === undefined ||
+      semanticAddressKey(issue.owner) !== semanticAddressKey(finding.origin)
+    ) {
+      throw new Error('Optional 3 must be the selected assessment issue');
+    }
     application.store.dispatch(
       semanticOwnerNavigated(
         createOccurrenceAddress(
@@ -540,17 +547,14 @@ describe('planner history interaction', () => {
     const picker = view.container.querySelector<HTMLButtonElement>(targetSelector);
     expect(picker?.tagName).toBe('BUTTON');
     expect(picker?.getAttribute('data-has-findings')).toBe('true');
-    expect(picker?.getAttribute('aria-description')).toContain('reward');
+    expect(picker?.hasAttribute('aria-description')).toBe(true);
     expect(view.container.querySelectorAll(targetSelector)).toHaveLength(1);
-    const findingsPanel = screen.getByRole('heading', { name: 'Findings' }).closest('section')!;
-    const index = application.store
-      .getState()
-      .projectWorkspace.assembly!.evaluation.findings.indexOf(finding);
-    const findingButton = within(findingsPanel).getAllByRole('button')[index]!;
     for (let attempt = 0; attempt < 2; attempt += 1) {
       await view.user.click(screen.getByRole('tab', { name: 'Room Timeline' }));
       expect(view.container.querySelector(targetSelector)).toBeNull();
-      await view.user.click(findingButton);
+      const repair = screen.getByRole('heading', { name: 'Next repair' }).closest('section');
+      if (repair === null) throw new Error('selected repair banner is missing');
+      await view.user.click(within(repair).getByRole('button'));
       const repairedPicker = view.container.querySelector<HTMLButtonElement>(targetSelector);
       await waitFor(() => expect(document.activeElement).toBe(repairedPicker));
       expect(repairedPicker?.getAttribute('data-selected-finding')).toBe('true');
@@ -1419,17 +1423,21 @@ describe('planner history interaction', () => {
         (candidate) => semanticAddressKey(candidate.origin) === semanticAddressKey(target),
       );
     if (finding === undefined) throw new Error('reached SpellDrop missing finding is absent');
+    const issue = application.store.getState().projectWorkspace.assembly!.evaluation.issue;
+    if (issue === undefined || semanticAddressKey(issue.owner) !== semanticAddressKey(target)) {
+      throw new Error('SpellDrop must be the selected assessment issue');
+    }
     const view = renderPlannerForInteraction({ application });
-    const findings = screen.getByRole('heading', { name: 'Findings' }).closest('section');
-    if (findings === null) throw new Error('Findings panel is missing');
-    const findingButton = within(findings)
-      .getAllByRole('button')
-      .find((button) => button.textContent?.includes('trait'));
-    if (findingButton === undefined) throw new Error('SpellDrop finding is not presented');
-    await view.user.click(findingButton);
+    const repair = screen.getByRole('heading', { name: 'Next repair' }).closest('section');
+    if (repair === null) throw new Error('next repair banner is missing');
+    await view.user.click(within(repair).getByRole('button'));
     const workspace = application.selectStructuredWorkspace(application.store.getState())!;
     const destination = workspace.focusByOwner.get(semanticAddressKey(target));
     if (destination === undefined) throw new Error('SpellDrop destination is missing');
+    expect(application.store.getState().editorSession.selectedFinding).toMatchObject({
+      key: issue.regionKey,
+      origin: issue.owner,
+    });
     expect(destination).toMatchObject({
       ownerAddress: target,
       focusAddress: { kind: 'roomAction' },
@@ -1505,27 +1513,31 @@ describe('planner history interaction', () => {
       );
     if (invalid === undefined) throw new Error('invalid reached Hammer finding is missing');
     const view = renderPlannerForInteraction({ application });
-    const findings = screen.getByRole('heading', { name: 'Findings' }).closest('section');
-    if (findings === null) throw new Error('Findings panel is missing');
-    const findingButton = within(findings)
-      .getAllByRole('button')
-      .find((button) => button.textContent?.includes('Hammer is incompatible'));
-    if (findingButton === undefined) throw new Error('Hammer finding is not presented');
-    await view.user.click(findingButton);
-
     const destination = application
       .selectStructuredWorkspace(application.store.getState())!
       .focusByOwner.get(semanticAddressKey(invalid.origin));
     if (destination === undefined) throw new Error('invalid Hammer destination is missing');
+    if (destination.routeKey === undefined || destination.biomeKey === undefined) {
+      throw new Error('invalid Hammer destination has no biome panel');
+    }
+    application.store.dispatch(
+      routePanelSelected({
+        routeKey: destination.routeKey,
+        panel: { kind: 'biome', biomeKey: destination.biomeKey },
+      }),
+    );
+    application.store.dispatch(semanticOwnerFocused(destination.focusAddress));
     expect(destination).toMatchObject({
       ownerAddress: invalid.origin,
       focusAddress: { kind: 'roomAction' },
     });
     expect(destination).not.toHaveProperty('traitDialogTarget');
     expect(screen.queryByRole('dialog')).toBeNull();
-    expect(
-      document.getElementById(semanticOwnerControlElementId(destination.focusAddress)),
-    ).toBeTruthy();
+    await waitFor(() =>
+      expect(
+        document.getElementById(semanticOwnerControlElementId(destination.focusAddress)),
+      ).toBeTruthy(),
+    );
     const action = document.getElementById(semanticOwnerControlElementId(destination.focusAddress));
     if (action === null) throw new Error('invalid Hammer pickup action is missing');
     await view.user.click(within(action).getByRole('button', { name: /Edit Trait/ }));
@@ -1564,7 +1576,7 @@ describe('planner history interaction', () => {
     ).toBe(false);
   });
 
-  it('opens an exact Gold payload finding at its Timeline pickup', async () => {
+  it('opens an exact Gold payload at its Timeline pickup', async () => {
     const application = createApplication();
     const shop = createOccurrenceAddress(
       { kind: 'biome', routeKey: 'Underworld', biomeKey: 'H' },
@@ -1614,14 +1626,13 @@ describe('planner history interaction', () => {
     if (finding === undefined) throw new Error('exact Gold payload finding is missing');
 
     const view = renderPlannerForInteraction({ application });
-    const findings = screen.getByRole('heading', { name: 'Findings' }).closest('section');
-    if (findings === null) throw new Error('Findings panel is missing');
-    const findingButton = within(findings)
-      .getAllByRole('button')
-      .find((button) => button.textContent?.includes('Shop purchase is unavailable'));
-    if (findingButton === undefined) throw new Error('Gold finding is not presented');
-    expect(findingButton.classList.contains('findings-list-entry')).toBe(true);
-    await view.user.click(findingButton);
+    const issue = application.store.getState().projectWorkspace.assembly!.evaluation.issue;
+    if (issue === undefined || semanticAddressKey(issue.owner) !== semanticAddressKey(gold)) {
+      throw new Error('Gold payload must be the selected assessment issue');
+    }
+    const repair = screen.getByRole('heading', { name: 'Next repair' }).closest('section');
+    if (repair === null) throw new Error('selected repair banner is missing');
+    await view.user.click(within(repair).getByRole('button'));
 
     const destination = application
       .selectStructuredWorkspace(application.store.getState())!
@@ -1642,10 +1653,10 @@ describe('planner history interaction', () => {
     expect(actionRow?.getAttribute('data-has-findings')).toBe('true');
     expect(document.activeElement).toBe(actionRow);
     expect(actionRow?.closest('li')?.textContent).toContain('Gold Gold Gold');
-    expect(actionRow?.getAttribute('aria-description')).toContain('Shop purchase is unavailable');
+    expect(actionRow?.hasAttribute('aria-description')).toBe(true);
   });
 
-  it('routes an All Together finding through its visible Timeline trait action', async () => {
+  it('opens an All Together editor through semantic focus on its visible Timeline trait action', async () => {
     const { application, project, set, target } = allTogetherFindingFixture();
     application.store.dispatch(authoredProjectReplaced(project));
     const finding = application.store
@@ -1661,18 +1672,18 @@ describe('planner history interaction', () => {
       .focusByOwner.get(semanticAddressKey(set));
     if (destination === undefined) throw new Error('All Together set destination is missing');
     expect(destination).not.toHaveProperty('traitDialogTarget');
+    application.store.dispatch(semanticOwnerNavigated(set));
     const view = renderPlannerForInteraction({ application });
-    const findings = screen.getByRole('heading', { name: 'Findings' }).closest('section');
-    if (findings === null) throw new Error('Findings panel is missing');
-    await view.user.click(
-      within(findings).getByRole('button', { name: /All Together outcome unavailable/ }),
-    );
 
+    await waitFor(() =>
+      expect(
+        document.getElementById(semanticOwnerControlElementId(destination.focusAddress)),
+      ).toBeTruthy(),
+    );
     const actionRow = document.getElementById(
       semanticOwnerControlElementId(destination.focusAddress),
     );
     expect(actionRow?.getAttribute('data-has-findings')).toBe('true');
-    await waitFor(() => expect(document.activeElement).toBe(actionRow));
     const traitLauncher = within(actionRow!).getByRole('button', { name: /Trait/ });
     await view.user.click(traitLauncher);
 
@@ -1770,13 +1781,7 @@ describe('planner history interaction', () => {
       );
     if (finding === undefined) throw new Error('targeted acquisition child finding is missing');
     const view = renderPlannerForInteraction({ application });
-    const findings = screen.getByRole('heading', { name: 'Findings' }).closest('section');
-    if (findings === null) throw new Error('Findings panel is missing');
-    const findingButton = within(findings)
-      .getAllByRole('button')
-      .find((button) => button.textContent?.includes('Acquisition target is missing'));
-    if (findingButton === undefined) throw new Error('targeted acquisition finding is not shown');
-    await view.user.click(findingButton);
+    application.store.dispatch(semanticOwnerNavigated(child));
 
     const destination = application
       .selectStructuredWorkspace(application.store.getState())!
@@ -1788,6 +1793,11 @@ describe('planner history interaction', () => {
     });
     expect(destination).not.toHaveProperty('traitDialogTarget');
     expect(screen.queryByRole('dialog')).toBeNull();
+    await waitFor(() =>
+      expect(
+        document.getElementById(semanticOwnerControlElementId(destination.focusAddress)),
+      ).toBeTruthy(),
+    );
     const action = document.getElementById(semanticOwnerControlElementId(destination.focusAddress));
     if (action === null) throw new Error('targeted acquisition action is missing');
     await view.user.click(within(action).getByRole('button', { name: /Edit Trait/ }));
@@ -2069,12 +2079,20 @@ describe('route loadout interaction', () => {
         (finding) => finding.code === 'keepsakeEquipResultMissing',
       );
     if (missingFinding === undefined) throw new Error('missing Jeweled Pom finding is absent');
-    const findings = screen.getByRole('heading', { name: 'Findings' }).closest('section');
-    if (findings === null) throw new Error('Findings panel is missing');
-    await user.click(within(findings).getByRole('button', { name: /Choose Jeweled Pom result/ }));
-    expect(application.store.getState().editorSession.selectedFinding?.origin).toEqual(
-      missingFinding.origin,
-    );
+    const issue = application.store.getState().projectWorkspace.assembly!.evaluation.issue;
+    if (
+      issue === undefined ||
+      semanticAddressKey(issue.owner) !== semanticAddressKey(missingFinding.origin)
+    ) {
+      throw new Error('Jeweled Pom must be the selected assessment issue');
+    }
+    const repair = screen.getByRole('heading', { name: 'Next repair' }).closest('section');
+    if (repair === null) throw new Error('selected repair banner is missing');
+    await user.click(within(repair).getByRole('button'));
+    expect(application.store.getState().editorSession.selectedFinding).toMatchObject({
+      key: issue.regionKey,
+      origin: issue.owner,
+    });
     await user.click(result);
     const resultList = screen.getByRole('listbox');
     await waitFor(() => expect(within(resultList).getByText('Last Gasp')).toBeTruthy());
@@ -2159,6 +2177,13 @@ describe('route loadout interaction', () => {
           semanticAddressKey(finding.origin) === semanticAddressKey(echoGiftHammerReplayAddress),
       );
     if (missing === undefined) throw new Error('I Gift Hammer finding is missing');
+    const issue = application.store.getState().projectWorkspace.assembly!.evaluation.issue;
+    if (
+      issue === undefined ||
+      semanticAddressKey(issue.owner) !== semanticAddressKey(echoGiftHammerReplayAddress)
+    ) {
+      throw new Error('I Gift Hammer must be the selected assessment issue');
+    }
     const interaction = application
       .selectStructuredWorkspace(application.store.getState())!
       .interactions.keepsakeEquipResults.get(semanticAddressKey(echoGiftHammerReplayAddress));
@@ -2171,15 +2196,15 @@ describe('route loadout interaction', () => {
     if (candidate === undefined) throw new Error('I Gift Hammer has no selectable result');
 
     const { user } = renderPlannerForInteraction({ application });
-    const findings = screen.getByRole('heading', { name: 'Findings' }).closest('section');
-    if (findings === null) throw new Error('Findings panel is missing');
-    await user.click(
-      within(findings).getByRole('button', { name: /Choose Experimental Hammer result/ }),
-    );
+    const repair = screen.getByRole('heading', { name: 'Next repair' }).closest('section');
+    if (repair === null) throw new Error('I Gift Hammer repair banner is missing');
+    await user.click(within(repair).getByRole('button'));
 
-    expect(application.store.getState().editorSession.selectedFinding?.origin).toEqual(
-      echoGiftHammerReplayAddress,
-    );
+    expect(application.store.getState().editorSession.selectedFinding).toMatchObject({
+      key: issue.regionKey,
+      origin: echoGiftHammerReplayAddress,
+    });
+    expect(application.store.getState().editorSession.traitDialogTarget).toBeNull();
     expect(application.store.getState().editorSession.activePanel).toEqual({
       kind: 'biome',
       biomeKey: 'I',

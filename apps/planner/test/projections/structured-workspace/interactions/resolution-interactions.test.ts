@@ -89,7 +89,7 @@ describe('resolution-interactions', () => {
         expect.objectContaining({ value: 'ZeusWeaponBoon', disabled: true, selected: true }),
       ]),
     );
-    expect(pom?.child.marker.findingCount).toBeGreaterThan(0);
+    expect(pom?.child.marker.findingCount).toBe(0);
     expect(bound.assembly.preliminaryFocusDestinations.has(semanticAddressKey(child))).toBe(true);
     expect(pom?.update(pomOffer, 'ApolloWeaponBoon').options[2]).toMatchObject({
       traitKey: 'EchoDoubleLevelBoon',

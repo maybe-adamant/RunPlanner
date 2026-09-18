@@ -446,7 +446,11 @@ export function assembleWorkspaceBiomeSemantics(
   const markerBuilder = createWorkspaceBiomeMarkerDestinationBuilder({
     assessmentFor: (address) => assessmentForSource(source, address),
     biome,
-    findingCountFor: (address) => source.findingsFor(address).length,
+    findingCountFor: (address) =>
+      source.assessmentIssue !== undefined &&
+      semanticAddressKey(source.assessmentIssue.owner) === semanticAddressKey(address)
+        ? 1
+        : 0,
     routeKey: biome.routeKey,
   });
   const { emitter: markerDestinations } = markerBuilder;

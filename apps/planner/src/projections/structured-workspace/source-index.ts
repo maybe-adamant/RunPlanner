@@ -58,6 +58,7 @@ import type {
   OccurrenceOutgoingStatus,
   RouteResourceAuthoring,
   AcquisitionConversionCandidateCapability,
+  AssessmentIssue,
 } from '@run-planner/engine/simulation';
 import {
   evaluateBiomeCompleteness,
@@ -89,6 +90,8 @@ export interface WorkspaceBiomeSource {
   /** Exact engine-published reached/pending Gorgon capability. */
   readonly gorgonSupport: (phase: EncounterPhaseAddress) => GorgonPhaseCandidateSupport | undefined;
   readonly evaluation: ProjectBiomeEvaluation | undefined;
+  /** Sole route assessment issue, retained separately from detailed findings. */
+  readonly assessmentIssue?: AssessmentIssue;
   readonly exitDecisions: readonly ExitDecision[];
   readonly findings: readonly SemanticFinding[];
   readonly layout: BiomeLayout;
@@ -674,6 +677,7 @@ function createWorkspaceBiomeSource(
   chaosGateForced: WorkspaceBiomeSource['chaosGateForced'],
   zagreusContractAssessment: WorkspaceBiomeSource['zagreusContractAssessment'],
   isActiveShopOffer: WorkspaceBiomeSource['isActiveShopOffer'],
+  assessmentIssue: AssessmentIssue | undefined,
 ): WorkspaceBiomeSource {
   const biome = createBiomeAddress(routeKey, plan.biomeKey);
   const layout = catalog.biomeLayouts.byKey[plan.biomeKey];
@@ -786,6 +790,7 @@ function createWorkspaceBiomeSource(
     gorgonSupport,
     ...(overlay.entryRoom === undefined ? {} : { entryRoom: overlay.entryRoom }),
     evaluation,
+    ...(assessmentIssue === undefined ? {} : { assessmentIssue }),
     evaluatedAdditional: (owner: ExitDecisionAddress) =>
       overlay.additional.get(semanticAddressKey(owner)) ?? Object.freeze([]),
     evaluatedBatch: (owner: ExitDecisionAddress) => overlay.batches.get(semanticAddressKey(owner)),
@@ -910,6 +915,7 @@ export function createWorkspaceProjectSourceIndex(
             (owner) => ixionGeneratedChaos.has(semanticAddressKey(owner)),
             zagreusContractAssessment,
             isActiveShopOffer,
+            routeEvaluation?.issue,
           ),
         ),
       ),

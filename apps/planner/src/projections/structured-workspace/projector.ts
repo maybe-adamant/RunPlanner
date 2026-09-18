@@ -532,7 +532,7 @@ export function createStructuredWorkspaceProjection(
         address: routeAddress,
         assessment:
           routeSource.evaluation === undefined ? ('blocked' as const) : ('assessed' as const),
-        findingCount: routeSource.evaluation?.findings.length ?? 0,
+        findingCount: routeSource.evaluation?.issue === undefined ? 0 : 1,
         focusKey: semanticAddressKey(routeAddress),
       });
       const routeDestination = (ownerAddress: typeof routeAddress | typeof routeStartKeepsake) =>
@@ -674,12 +674,15 @@ export function createStructuredWorkspaceProjection(
       const result = Object.freeze({
         authoringReadiness: (owner: SemanticAddress) => authoringReadinessAt(assembly, owner),
         focusByOwner,
-        findingsByRepairTarget: indexFindingsByRepairTarget(evaluation.findings, focusByOwner),
+        findingsByRepairTarget: indexFindingsByRepairTarget(
+          evaluation.issue?.reasons ?? Object.freeze([]),
+          focusByOwner,
+        ),
         interactions,
         marker: Object.freeze({
           address: projectAddress,
           assessment: 'assessed' as const,
-          findingCount: evaluation.findings.length,
+          findingCount: evaluation.issue === undefined ? 0 : 1,
           focusKey: semanticAddressKey(projectAddress),
         }),
         runStateLaunchers,

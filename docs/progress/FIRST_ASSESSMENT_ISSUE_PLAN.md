@@ -1,6 +1,6 @@
 # First Assessment Issue
 
-Status: Gate A accepted after two independent reviews. Gate B is next.
+Status: Gates A and B accepted after independent review. Gate C closure is next.
 Base: planner `ae636aba`, including the separately verified P Fig Leaf interaction fix.
 
 ## Outcome
@@ -94,8 +94,9 @@ do not build an issue registry or extensible diagnostic framework.
 Detailed evidence is not a second user-facing backlog. Preserve evidence and
 capabilities required by validation, candidates, local editors and delivery
 placement at their owning products. Project and route `findings` retain their
-detailed evidence for workspace markers and session reconciliation; the selected
-`issue` alone supplies the aggregate repair agenda in Gate B. Delivery rescheduling
+detailed evidence for local editor capabilities and precise destinations; the selected
+`issue` alone supplies the aggregate repair agenda, global highlights and selected
+repair identity. Delivery rescheduling
 reads the owning reward evidence. Do not introduce another independently selected
 issue list. The primary issue must be derived from the same selection that governs
 assessment publication.
@@ -298,3 +299,17 @@ unnecessary abstraction. User approval and a committed plan precede execution.
   Hermes rescheduling, and work-count coverage. Whole-workspace typecheck,
   lint, and diff whitespace checks passed.
 - The full repository closure gate and visual acceptance remain Gate C work.
+- Gate B's independent review found a global-highlight path still exposing later
+  detailed findings. It now uses only the selected issue's reasons; local evidence
+  and exact repair destinations remain intact. The reviewer accepted remediation
+  and the final selected-issue product-loop witnesses.
+- Gate B passed all 1,002 application correctness tests across 123 files, including
+  product loops. Whole-workspace typecheck, lint, formatting and whitespace checks passed.
+  The real fixture witnesses cover repair-to-next-issue progression, Undo and a
+  nested Natural Selection issue navigating to its Timeline launcher without a
+  dialog. The existing Publish profile/slot test passed unchanged.
+- Isolated Chromium checks covered valid state without an empty banner, a
+  three-reason Hammer issue rendered as one repair, and nested Natural Selection
+  navigation. At 1600×900 and 700×900, the compact banner wrapped without horizontal
+  overflow and preserved the selected occurrence and explicit dialog opening.
+  User acceptance of the final visual feel remains pending.
