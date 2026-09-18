@@ -187,11 +187,100 @@ describe('topology removal impact', () => {
       removedOccurrenceIds: [retained, contract, hostReturn, returnChild],
     });
     if (impact === undefined) throw new Error('root exit is required');
+    expect(applyTopologyRemovalImpact(topology, impact)).toEqual({
+      startOccurrenceId: root,
+      occurrences: [
+        {
+          occurrenceId: root,
+          gameName: 'TestRoom',
+          state: { kind: 'none' },
+          encounters: { encounterKeyByPhase: {}, figLeafSkipByPhase: {}, gorgonResultByPhase: {} },
+          roomActions: { order: [] },
+          additionalExits: [],
+        },
+      ],
+      fixedRoomLinks: [],
+      decisions: [],
+    });
+  });
+
+  it('clears a surviving source reference when only its unselected additional target closes', () => {
+    const contract = createOccurrenceId('impact-unselected-contract');
+    const chaos = createOccurrenceId('impact-unselected-chaos');
+    const topology = {
+      startOccurrenceId: root,
+      occurrences: [root, retained, contract, chaos].map((occurrenceId) => ({
+        occurrenceId,
+        gameName: 'TestRoom',
+        state: { kind: 'none' as const },
+        encounters: { encounterKeyByPhase: {}, figLeafSkipByPhase: {}, gorgonResultByPhase: {} },
+        roomActions: { order: [] },
+        additionalExits:
+          occurrenceId === root
+            ? [
+                {
+                  kind: 'zagreusContract' as const,
+                  key: 'zagreusContract' as const,
+                  occurrenceId: contract,
+                },
+                { kind: 'chaos' as const, key: 'chaos' as const, occurrenceId: chaos },
+              ]
+            : [],
+      })),
+      fixedRoomLinks: [],
+      decisions: [
+        {
+          kind: 'exit' as const,
+          source: { kind: 'occurrence' as const, occurrenceId: root },
+          normal: normalBatch([{ exitKey: 'exit1', occurrenceId: retained }]),
+          selection: { kind: 'normal' as const, exitKey: 'exit1' },
+        },
+      ],
+    };
+
     expect(
-      applyTopologyRemovalImpact(topology, impact).occurrences.map(
-        (occurrence) => occurrence.occurrenceId,
+      applyTopologyRemovalImpact(
+        topology,
+        describeTopologyRemovalImpact(topology, new Set([contract])),
       ),
-    ).toEqual([root]);
+    ).toEqual({
+      startOccurrenceId: root,
+      occurrences: [
+        {
+          occurrenceId: root,
+          gameName: 'TestRoom',
+          state: { kind: 'none' },
+          encounters: { encounterKeyByPhase: {}, figLeafSkipByPhase: {}, gorgonResultByPhase: {} },
+          roomActions: { order: [] },
+          additionalExits: [{ kind: 'chaos', key: 'chaos', occurrenceId: chaos }],
+        },
+        {
+          occurrenceId: retained,
+          gameName: 'TestRoom',
+          state: { kind: 'none' },
+          encounters: { encounterKeyByPhase: {}, figLeafSkipByPhase: {}, gorgonResultByPhase: {} },
+          roomActions: { order: [] },
+          additionalExits: [],
+        },
+        {
+          occurrenceId: chaos,
+          gameName: 'TestRoom',
+          state: { kind: 'none' },
+          encounters: { encounterKeyByPhase: {}, figLeafSkipByPhase: {}, gorgonResultByPhase: {} },
+          roomActions: { order: [] },
+          additionalExits: [],
+        },
+      ],
+      fixedRoomLinks: [],
+      decisions: [
+        {
+          kind: 'exit',
+          source: { kind: 'occurrence', occurrenceId: root },
+          normal: normalBatch([{ exitKey: 'exit1', occurrenceId: retained }]),
+          selection: { kind: 'normal', exitKey: 'exit1' },
+        },
+      ],
+    });
   });
 
   it('removes a Hub through its persisted PreHub source, not a linked-entry special case', () => {

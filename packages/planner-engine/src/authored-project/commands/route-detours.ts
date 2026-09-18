@@ -604,13 +604,7 @@ function removeZagreusContract(
     ...retainedDecision,
     selection,
   });
-  const withDecision = replaceDecision(
-    replaceOccurrence(
-      withoutContract,
-      Object.freeze({ ...occurrence, additionalExits: Object.freeze(remainingAdditional) }),
-    ),
-    nextDecision,
-  );
+  const withDecision = replaceDecision(withoutContract, nextDecision);
   return updateTopology(
     document,
     located,
@@ -760,17 +754,8 @@ function removeChaos(
     failCommand(command, 'only an Ixion-generated Chaos gate can be removed internally');
   const impact = describeTopologyRemovalImpact(topology, new Set([additional.occurrenceId]));
   const withoutChaos = applyTopologyRemovalImpact(topology, impact);
-  const withoutFeature = replaceOccurrence(
-    withoutChaos,
-    Object.freeze({
-      ...occurrence,
-      additionalExits: Object.freeze(
-        occurrence.additionalExits.filter((candidate) => candidate.key !== additional.key),
-      ),
-    }),
-  );
   if (decision === undefined) {
-    return updateTopology(document, located, withoutFeature);
+    return updateTopology(document, located, withoutChaos);
   }
   const retainedDecision = exitDecisionForSource(withoutChaos, source);
   if (retainedDecision === undefined) {
@@ -787,7 +772,7 @@ function removeChaos(
         ? Object.freeze({ kind: 'unresolved' })
         : retainedDecision.selection;
   const nextDecision = Object.freeze({ ...retainedDecision, selection });
-  const withDecision = replaceDecision(withoutFeature, nextDecision);
+  const withDecision = replaceDecision(withoutChaos, nextDecision);
   return updateTopology(
     document,
     located,

@@ -458,6 +458,39 @@ describe('authored-project route detour commands', () => {
       gameName: 'F_Combat02',
     });
 
+    const removeDecision = {
+      kind: 'RemoveExitDecision' as const,
+      decision: createExitDecisionAddress(fBiome, source),
+    };
+    const removedDecision = applyProjectHistoryCommand(
+      createProjectHistory(project),
+      catalog,
+      removeDecision,
+    );
+    expect(
+      decodeProjectDocument(JSON.parse(encodeProjectDocument(removedDecision.present)), catalog),
+    ).toEqual(removedDecision.present);
+    expect(undoProjectHistory(removedDecision).present).toEqual(project);
+    expect(redoProjectHistory(undoProjectHistory(removedDecision)).present).toEqual(
+      removedDecision.present,
+    );
+    const afterDecisionRemoval = biomeTopology(removedDecision.present, 'Underworld', 'F');
+    expect(
+      afterDecisionRemoval.occurrences.find((occurrence) => occurrence.occurrenceId === shop),
+    ).toMatchObject({ additionalExits: [] });
+    expect(afterDecisionRemoval.occurrences.map((occurrence) => occurrence.occurrenceId)).toEqual([
+      createOccurrenceId('detour-f-opening'),
+      shop,
+    ]);
+    expect(
+      afterDecisionRemoval.decisions.filter(
+        (candidate) =>
+          candidate.kind === 'exit' &&
+          candidate.source.kind === 'occurrence' &&
+          candidate.source.occurrenceId === shop,
+      ),
+    ).toEqual([]);
+
     const history = createProjectHistory(project);
     const removed = applyProjectHistoryCommand(history, catalog, {
       kind: 'RemoveZagreusContract',
