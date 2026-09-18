@@ -357,7 +357,16 @@ export function applyTopologyRemovalImpact(
   return Object.freeze({
     ...topology,
     occurrences: Object.freeze(
-      topology.occurrences.filter((occurrence) => !removedOccurrences.has(occurrence.occurrenceId)),
+      topology.occurrences
+        .filter((occurrence) => !removedOccurrences.has(occurrence.occurrenceId))
+        .map((occurrence) => {
+          const additionalExits = occurrence.additionalExits.filter(
+            (additionalExit) => !removedOccurrences.has(additionalExit.occurrenceId),
+          );
+          return additionalExits.length === occurrence.additionalExits.length
+            ? occurrence
+            : Object.freeze({ ...occurrence, additionalExits: Object.freeze(additionalExits) });
+        }),
     ),
     fixedRoomLinks: Object.freeze(
       topology.fixedRoomLinks.filter(

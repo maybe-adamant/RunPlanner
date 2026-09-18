@@ -1,7 +1,13 @@
 # Topology Edit Closure
 
-Status: Locked for implementation. Gate A is next; Gates B/C are pending.
-Base: planner `b3e81978`.
+Status: Locked for implementation. Gate A accepted; Gates B/C are pending.
+Source assessment base: planner `b3e81978`; locked-plan commit: `003d6b1b`.
+
+Gate A verification: 48 focused topology/removal command tests, engine
+typecheck, changed-file lint/format checks, and independent review passed.
+The supplied real plan also passed all 25 outgoing-decision removals through
+strict encode/decode and exact Undo/Redo. Full repository checks remain at
+Gate C closure.
 
 ## Outcome and bounds
 
