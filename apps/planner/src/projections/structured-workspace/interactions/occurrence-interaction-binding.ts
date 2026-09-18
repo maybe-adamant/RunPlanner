@@ -13,6 +13,7 @@ import {
 import type { Catalog } from '@run-planner/engine/catalog-schema';
 import type { ResolvedRewardOffer } from '@run-planner/engine/reward-kernel';
 import {
+  generatedEncounterSupportForProjectEvaluationAssembly,
   nemesisRandomEventCandidateSupportForProjectEvaluationAssembly,
   type NemesisRandomEventCandidateSupport,
   type ProjectEvaluationAssembly,
@@ -62,6 +63,7 @@ import type {
 } from '../contracts/features';
 import type { WorkspaceOccurrenceInteractionRequirement } from './interaction-requirements';
 import { candidateInteraction } from './interaction-binding-primitives';
+import { projectGeneratedEncounterAssessment } from './generated-encounter-projection';
 import {
   createMemoizedStableIdentityPickerLoad,
   projectStableIdentityPicker,
@@ -446,6 +448,34 @@ export function bindOccurrenceLocalInteractions(
             );
           }
           if (phase.customization !== undefined) {
+            const generatedDecision = phase.customization.find(
+              (decision) => decision.selection.kind === 'generated',
+            );
+            const generatedSelection =
+              generatedDecision?.selection.kind === 'generated'
+                ? generatedDecision.selection
+                : undefined;
+            const generatedCapability =
+              generatedDecision === undefined
+                ? undefined
+                : generatedEncounterSupportForProjectEvaluationAssembly(assembly, phase.owner);
+            const generatedAssessment =
+              generatedDecision === undefined ||
+              generatedSelection === undefined ||
+              generatedCapability?.decisionKey !== generatedDecision.key
+                ? undefined
+                : projectGeneratedEncounterAssessment(
+                    generatedCapability.assess(
+                      generatedDecision.value?.kind === 'generated'
+                        ? generatedDecision.value
+                        : { kind: 'generated' },
+                    ),
+                    [
+                      ...generatedSelection.choices,
+                      ...generatedSelection.fixedEnemies,
+                      ...(generatedDecision.retainedChoiceLabels ?? []),
+                    ],
+                  );
             encounterCustomizations.set(
               key,
               Object.freeze({
@@ -465,6 +495,7 @@ export function bindOccurrenceLocalInteractions(
                       value,
                     }),
                   }),
+                ...(generatedAssessment === undefined ? {} : { generatedAssessment }),
               }),
             );
           }

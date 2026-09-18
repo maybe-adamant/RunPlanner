@@ -4,6 +4,7 @@ import type { StructuredWorkspaceProjection } from '@planner/projections/structu
 import {
   formatFindingExplanation,
   presentFinding,
+  semanticFindingKey,
 } from '@planner/projections/evaluationProjection';
 import { useAppSelector } from '@planner/state/store';
 import { semanticOwnerControlElementId } from './semanticOwner';
@@ -61,6 +62,8 @@ export interface FindingTargetProps {
   readonly ref: (element: HTMLElement | null) => void;
 }
 
+export type FindingTargetFilter = (finding: { readonly code: string }) => boolean;
+
 /** Binds feedback directly to an existing control or truthful group, including mapped controls. */
 // eslint-disable-next-line react-refresh/only-export-components -- The scope and hook form one feedback boundary.
 export function useFindingTarget() {
@@ -76,11 +79,17 @@ export function useFindingTarget() {
     address: SemanticAddress,
     id = semanticOwnerControlElementId(address),
     readinessOwner: SemanticAddress = address,
+    filter?: FindingTargetFilter,
   ): FindingTargetProps => {
     const key = semanticAddressKey(address);
     const locked = authoringReadiness?.(readinessOwner) === 'locked';
-    const findings = findingsByTarget.get(key) ?? [];
-    const selectedAtTarget = selectedKey !== undefined && focusKey === key;
+    const allFindings = findingsByTarget.get(key) ?? [];
+    const findings = filter === undefined ? allFindings : allFindings.filter(filter);
+    const selectedAtTarget =
+      selectedKey !== undefined &&
+      focusKey === key &&
+      (filter === undefined ||
+        findings.some((finding) => semanticFindingKey(finding) === selectedKey));
     const request = `${revision}:${selectedKey ?? ''}:${key}`;
     return {
       id,

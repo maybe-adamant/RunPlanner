@@ -94,6 +94,33 @@ export interface WorkspaceEncounterCustomizationInteraction {
   >;
   readonly key: string;
   readonly owner: EncounterPhaseAddress;
+  /**
+   * Current exact-assembly assessment, published atomically with the bound
+   * intent and authored choices. Absent only when context is genuinely unavailable.
+   */
+  readonly generatedAssessment?: WorkspaceGeneratedEncounterAssessment;
+}
+
+export interface WorkspaceGeneratedEncounterAssessment {
+  readonly supported: boolean;
+  readonly issues: readonly { readonly message: string; readonly waveIndex?: number }[];
+  readonly effectiveWaveCount?: number;
+  readonly composition: 'active' | 'nativeWaveCount' | 'nativeHighlight';
+  readonly eligibleHighlightKeys: readonly string[];
+  readonly waves: readonly {
+    readonly waveIndex: number;
+    readonly typeCount: { readonly min: number; readonly max: number };
+    readonly additionalTypeCount: { readonly min: number; readonly max: number };
+    readonly seeds: readonly { readonly key: string; readonly kind: 'fixed' | 'highlight' }[];
+    /** Native eligibility ran out before the declared lower bound. */
+    readonly exhausted: boolean;
+    /** Ordered engine-assessed domains for the bounded editable positions. */
+    readonly eligibleKeysByPosition: readonly (readonly string[])[];
+    /** Complete generated members when the explicit row is valid. */
+    readonly generatedMemberKeys?: readonly string[];
+    /** Engine-normalized requested shares, aligned with generatedMemberKeys. */
+    readonly normalizedShares?: readonly number[];
+  }[];
 }
 
 export interface WorkspaceNemesisEventSelection {
@@ -255,23 +282,7 @@ export interface WorkspaceEncounterPhase {
    */
   readonly customizable: boolean;
   /** Concrete encounter-owned behavior decisions; absent means no customization capability. */
-  readonly customization?: readonly {
-    readonly key: string;
-    readonly label: string;
-    readonly selection:
-      | {
-          readonly kind: 'single';
-          readonly choices: readonly { readonly key: string; readonly label: string }[];
-        }
-      | {
-          readonly kind: 'orderedPrefix';
-          readonly choices: readonly { readonly key: string; readonly label: string }[];
-          readonly maximumLength: 2;
-        };
-    readonly value?: AuthoredEncounterCustomization;
-    readonly valueSupported: boolean;
-    readonly retainedChoiceLabels?: readonly { readonly key: string; readonly label: string }[];
-  }[];
+  readonly customization?: readonly WorkspaceEncounterCustomizationDecision[];
   /** H Passive selection is presented by the room-feature control, not a second picker. */
   readonly nemesisFeature?: {
     readonly encounterKey: string;
@@ -297,6 +308,8 @@ export interface WorkspaceEncounterPhase {
   readonly selectedEncounter: {
     readonly key: string;
     readonly label: string;
+    /** Resolved declaration identity when this phase maps to a native encounter. */
+    readonly nativeEncounterDefinitionKey?: string;
   };
   readonly nemesisEvent?: {
     readonly marker: WorkspaceMarker;
@@ -305,6 +318,41 @@ export interface WorkspaceEncounterPhase {
     readonly value: AuthoredNemesisRandomEventOutcome | null;
   };
 }
+
+type WorkspaceEncounterCustomizationDecisionBase = {
+  readonly key: string;
+  readonly label: string;
+  readonly value?: AuthoredEncounterCustomization;
+  readonly valueSupported: boolean;
+  readonly retainedChoiceLabels?: readonly { readonly key: string; readonly label: string }[];
+};
+
+export type WorkspaceEncounterCustomizationDecision =
+  | (WorkspaceEncounterCustomizationDecisionBase & {
+      readonly selection: {
+        readonly kind: 'single';
+        readonly choices: readonly { readonly key: string; readonly label: string }[];
+      };
+    })
+  | (WorkspaceEncounterCustomizationDecisionBase & {
+      readonly selection: {
+        readonly kind: 'orderedPrefix';
+        readonly choices: readonly { readonly key: string; readonly label: string }[];
+        readonly maximumLength: 2;
+      };
+    })
+  | (WorkspaceEncounterCustomizationDecisionBase & {
+      readonly selection: {
+        readonly kind: 'generated';
+        readonly choices: readonly {
+          readonly key: string;
+          readonly label: string;
+          readonly elite: boolean;
+        }[];
+        readonly fixedEnemies: readonly { readonly key: string; readonly label: string }[];
+        readonly waveCount: { readonly min: number; readonly max: number };
+      };
+    });
 
 interface WorkspaceLocalVisitSlotBase {
   readonly address: LocalVisitSlotAddress;

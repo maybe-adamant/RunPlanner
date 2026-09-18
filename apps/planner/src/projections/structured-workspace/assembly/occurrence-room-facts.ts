@@ -22,6 +22,7 @@ import {
 } from '@run-planner/engine/authored-project';
 import type { RoomDeclaration } from '@run-planner/engine/catalog-schema';
 import {
+  encounterResolutionContext,
   fieldsOptionalRewardCountSupport,
   type CanonicalAuthoredRoom,
 } from '@run-planner/engine/simulation';
@@ -53,6 +54,28 @@ export interface WorkspaceOccurrenceRewardLocalAssembly {
   readonly rewardControls: readonly WorkspaceRewardControl[];
 }
 
+function encounterResolutionFacts(
+  input: WorkspaceOccurrenceRoomInput,
+  roomLocal: WorkspaceRoomLocal,
+) {
+  if (input.evaluatedRoom !== undefined) return input.evaluatedRoom;
+  if (roomLocal.kind === 'incomingReward' && roomLocal.clockworkReward === 'goal')
+    return Object.freeze({ clockworkReward: 'goal' as const });
+  const offer =
+    roomLocal.kind === 'incomingReward'
+      ? roomLocal.control.offer
+      : roomLocal.kind === 'fixed'
+        ? roomLocal.offer
+        : undefined;
+  return offer === undefined
+    ? Object.freeze({})
+    : offer === null
+      ? Object.freeze({ unresolvedIncomingReward: true })
+      : Object.freeze({
+          incomingReward: Object.freeze({ offer: { rewardType: offer.rewardType } }),
+        });
+}
+
 export function assembleOccurrenceRewardLocal(
   input: WorkspaceOccurrenceRoomInput,
   room: RoomDeclaration,
@@ -69,6 +92,7 @@ export function assembleOccurrenceRewardLocal(
         room.gameName,
       ) === 'NemesisRandomEvent',
   );
+  const roomLocal = roomLocalForOccurrence(input, room, baseRewardControls);
   const encounterPhases =
     input.facts.detailsActive || hasRetainedNemesisEvent
       ? activeEncounterPhasesForOwner(
@@ -77,6 +101,10 @@ export function assembleOccurrenceRewardLocal(
           { kind: 'occurrence', occurrenceId: input.occurrence.occurrenceId },
           input.occurrence.encounters,
           {
+            resolutionContext: encounterResolutionContext(
+              encounterResolutionFacts(input, roomLocal),
+              room,
+            ),
             ...(input.occurrence.state.kind === 'shipCombat'
               ? { shipEncounterCount: input.occurrence.state.encounterCount }
               : {}),
@@ -86,7 +114,6 @@ export function assembleOccurrenceRewardLocal(
           },
         )
       : Object.freeze([]);
-  const roomLocal = roomLocalForOccurrence(input, room, baseRewardControls);
   const pickupRewardControls =
     !input.facts.detailsActive || input.occurrence.acquisitionSites === undefined
       ? Object.freeze([])

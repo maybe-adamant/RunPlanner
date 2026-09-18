@@ -13,9 +13,19 @@ import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
 import { ContextualPicker } from '@planner/ui/controls/ContextualPicker';
 import { useWorkspaceInteraction } from '@planner/ui/controls/useWorkspaceInteraction';
 import { NemesisEventSelector } from '../NemesisEventEditor';
+import { GeneratedEncounterCustomizationControl } from './GeneratedEncounterCustomizationControl';
 
 const emptyEncounterPicker: import('@planner/projections/contextual/contextualPicker').ContextualPickerModel<string> =
   Object.freeze({ sections: Object.freeze([]) });
+
+function isGeneratedEncounterDecision(
+  decision: NonNullable<WorkspaceEncounterPhase['customization']>[number],
+): decision is Extract<
+  NonNullable<WorkspaceEncounterPhase['customization']>[number],
+  { readonly selection: { readonly kind: 'generated' } }
+> {
+  return decision.selection.kind === 'generated';
+}
 
 function EncounterCustomizationControl({
   interactions,
@@ -32,7 +42,12 @@ function EncounterCustomizationControl({
     workspaceInteractionKey(phase.address),
   );
   const findingTarget = useFindingTarget();
-  const triggerTarget = findingTarget(phase.address);
+  const triggerTarget = findingTarget(
+    phase.address,
+    semanticOwnerControlElementId(phase.address),
+    phase.address,
+    (finding) => finding.code === 'encounterCustomizationUnavailable',
+  );
   const customizationId = semanticOwnerControlElementId(phase.address);
   useEffect(() => {
     const dialog = dialogRef.current;
@@ -94,6 +109,19 @@ function EncounterCustomizationControl({
             <div className="encounter-customization-fields">
               {phase.customization?.map((decision) => {
                 const value = decision.value;
+                if (isGeneratedEncounterDecision(decision)) {
+                  return (
+                    <GeneratedEncounterCustomizationControl
+                      decision={decision}
+                      encounterKey={
+                        phase.selectedEncounter.nativeEncounterDefinitionKey ??
+                        phase.selectedEncounter.key
+                      }
+                      interaction={interaction}
+                      key={decision.key}
+                    />
+                  );
+                }
                 if (decision.selection.kind === 'single') {
                   const selected = value?.kind === 'single' ? value.choiceKey : '';
                   return (
@@ -216,9 +244,11 @@ function EncounterCustomizationControl({
 export function CustomizableEncounterPhaseControl({
   interaction,
   phase,
+  usePhaseFindingTarget = true,
 }: {
   readonly interaction: WorkspaceEncounterInteraction;
   readonly phase: WorkspaceEncounterPhase;
+  readonly usePhaseFindingTarget?: boolean;
 }) {
   const findingTarget = useFindingTarget();
   const executeIntent = useCommandIntent();
@@ -236,8 +266,19 @@ export function CustomizableEncounterPhaseControl({
       cancelLabel="Cancel"
       choiceLabel={step === 'event' ? 'Nemesis event' : 'Encounter'}
       closeOnSelect={false}
-      findingTarget={findingTarget(phase.address)}
-      id={semanticOwnerControlElementId(phase.address)}
+      findingTarget={findingTarget(
+        phase.address,
+        usePhaseFindingTarget
+          ? semanticOwnerControlElementId(phase.address)
+          : `encounter-picker-${semanticOwnerControlElementId(phase.address)}`,
+        phase.address,
+        (finding) => usePhaseFindingTarget || finding.code !== 'encounterCustomizationUnavailable',
+      )}
+      id={
+        usePhaseFindingTarget
+          ? semanticOwnerControlElementId(phase.address)
+          : `encounter-picker-${semanticOwnerControlElementId(phase.address)}`
+      }
       label="Encounter"
       layout="inline"
       loading={step === 'encounter' && candidates.pending}
@@ -358,6 +399,7 @@ export function EncounterPhaseControl({
               workspaceInteractionKey(phase.address),
             )}
             phase={phase}
+            usePhaseFindingTarget={phase.customization === undefined}
           />
         ) : (
           <div className="field-control field-control-inline">

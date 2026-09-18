@@ -254,6 +254,7 @@ export {
   resolveEncounterAuthoringProfile,
   type EncounterResolutionContext,
   type EncounterResolutionRoomFacts,
+  type GeneratedEncounterAssessment,
   type ResolvedEncounterPhase,
 } from './encounters';
 export {

@@ -21,18 +21,53 @@ export interface GeneratedEncounterOperands {
 
 export interface GeneratedEncounterAssessment {
   readonly supported: boolean;
-  readonly issues: readonly { readonly reason: string; readonly waveIndex?: number }[];
+  readonly issues: readonly GeneratedEncounterIssue[];
   readonly effectiveWaveCount?: number;
   readonly composition: 'active' | 'nativeWaveCount' | 'nativeHighlight';
   readonly eligibleHighlightKeys: readonly string[];
   readonly waves: readonly {
     readonly waveIndex: number;
+    /** Complete native count, including fixed/template and highlight members. */
     readonly typeCount: { readonly min: number; readonly max: number };
+    /** Editable generated additions after the declaration-owned seeds. */
+    readonly additionalTypeCount: { readonly min: number; readonly max: number };
+    readonly seeds: readonly { readonly key: string; readonly kind: 'fixed' | 'highlight' }[];
+    /** A legal native roster can stop below the declared minimum when its pool is exhausted. */
+    readonly exhausted: boolean;
+    /** One domain per legal editable position; never includes a trailing dead slot. */
     readonly eligibleKeysByPosition: readonly (readonly string[])[];
   }[];
   readonly operands?: GeneratedEncounterOperands;
   readonly knownRunBlacklistAdditions: readonly string[];
 }
+
+export type GeneratedEncounterIssue =
+  | {
+      readonly reason: 'waveCount';
+      readonly actual: number;
+      readonly allowed: { readonly min: number; readonly max: number };
+    }
+  | { readonly reason: 'highlight'; readonly key: string }
+  | { readonly reason: 'waveOutsideCount'; readonly waveIndex: number; readonly allowed: number }
+  | {
+      readonly reason: 'enemyUnavailable';
+      readonly waveIndex: number;
+      readonly position: number;
+      readonly key: string;
+    }
+  | {
+      readonly reason: 'typeCount';
+      readonly waveIndex: number;
+      readonly actual: number;
+      readonly allowed: { readonly min: number; readonly max: number };
+    }
+  | {
+      readonly reason: 'placeholderCount';
+      readonly waveIndex: number;
+      readonly actual: number;
+      readonly allowed: number;
+    }
+  | { readonly reason: 'weightMembers'; readonly waveIndex: number };
 
 /** All scoped generators use the native multi-wave highlight branch. Fixed
  * templates have one wave; no scoped identity blocks highlight globally. */
@@ -41,9 +76,7 @@ export function assessGeneratedEncounter(
   authored: AuthoredGeneratedEncounterCustomization,
   context: EncounterGenerationContext,
 ): GeneratedEncounterAssessment {
-  const issues: { reason: string; waveIndex?: number }[] = [];
-  const issue = (reason: string, waveIndex?: number) =>
-    issues.push({ reason, ...(waveIndex === undefined ? {} : { waveIndex }) });
+  const issues: GeneratedEncounterIssue[] = [];
   const waveCount =
     authored.waveCount ??
     (policy.waveCount.min === policy.waveCount.max ? policy.waveCount.min : undefined);
@@ -51,7 +84,7 @@ export function assessGeneratedEncounter(
     waveCount !== undefined &&
     (waveCount < policy.waveCount.min || waveCount > policy.waveCount.max)
   )
-    issue('waveCount');
+    issues.push({ reason: 'waveCount', actual: waveCount, allowed: policy.waveCount });
   const possibleHighlight = policy.waveCount.max > 1;
   const usesHighlight = waveCount !== undefined && waveCount > 1;
   const choices = new Map(policy.choices.map((choice) => [choice.key, choice]));
@@ -83,7 +116,7 @@ export function assessGeneratedEncounter(
     authored.highlightKey !== undefined &&
     !eligibleHighlights.some((choice) => choice.key === authored.highlightKey)
   )
-    issue('highlight');
+    issues.push({ reason: 'highlight', key: authored.highlightKey });
   const composition =
     waveCount === undefined
       ? 'nativeWaveCount'
@@ -93,6 +126,9 @@ export function assessGeneratedEncounter(
   const waveDomains: {
     waveIndex: number;
     typeCount: { min: number; max: number };
+    additionalTypeCount: { min: number; max: number };
+    seeds: readonly { readonly key: string; readonly kind: 'fixed' | 'highlight' }[];
+    exhausted: boolean;
     eligibleKeysByPosition: readonly (readonly string[])[];
   }[] = [];
   const waves: NonNullable<GeneratedEncounterOperands['waves']>[number][] = [];
@@ -103,7 +139,8 @@ export function assessGeneratedEncounter(
   ) {
     if (usesHighlight && highlight !== undefined) encounterBlacklist.add(highlight.key);
     for (const row of authored.waves ?? [])
-      if (row.waveIndex > waveCount) issue('waveOutsideCount', row.waveIndex);
+      if (row.waveIndex > waveCount)
+        issues.push({ reason: 'waveOutsideCount', waveIndex: row.waveIndex, allowed: waveCount });
     for (let waveIndex = 1; waveIndex <= waveCount; waveIndex++) {
       const row = authored.waves?.find((wave) => wave.waveIndex === waveIndex);
       const max = Math.floor(
@@ -131,13 +168,30 @@ export function assessGeneratedEncounter(
         eligible(choice, seeds, selectedCount, blockElites),
       );
       const spawns = [...seeds];
-      let valid = true;
-      for (const key of row?.typeKeys ?? []) {
-        positions.push(Object.freeze(pool.map((choice) => choice.key)));
+      // Fixed templates retain their native seed and author exactly one generated companion.
+      const additionalMin =
+        policy.fixedEnemies.length === 0 ? Math.max(0, minCount - seeds.length) : 1;
+      const additionalMax =
+        policy.fixedEnemies.length === 0 ? Math.max(0, maxCount - seeds.length) : 1;
+      const selectedKeys = row?.typeKeys ?? [];
+      let exhausted = false;
+      for (let index = 0; index < additionalMax; index++) {
+        const key = selectedKeys[index];
+        const domain = Object.freeze(pool.map((choice) => choice.key));
+        positions.push(domain);
+        if (key === undefined) {
+          exhausted = domain.length === 0;
+          // Only the first open slot is reachable. Later slots depend on a choice here.
+          break;
+        }
         const selected = pool.find((choice) => choice.key === key);
         if (selected === undefined) {
-          issue('enemyUnavailable', waveIndex);
-          valid = false;
+          issues.push({
+            reason: 'enemyUnavailable',
+            waveIndex,
+            position: seeds.length + index + 1,
+            key,
+          });
           break;
         }
         spawns.push(selected);
@@ -160,17 +214,35 @@ export function assessGeneratedEncounter(
           });
         }
       }
-      positions.push(Object.freeze(valid ? pool.map((choice) => choice.key) : []));
       waveDomains.push({
         waveIndex,
         typeCount: { min: minCount, max: maxCount },
+        additionalTypeCount: { min: additionalMin, max: additionalMax },
+        seeds: Object.freeze([
+          ...policy.fixedEnemies.map((enemy) => ({ key: enemy.key, kind: 'fixed' as const })),
+          ...(usesHighlight && highlight !== undefined
+            ? [{ key: highlight.key, kind: 'highlight' as const }]
+            : []),
+        ]),
+        exhausted,
         eligibleKeysByPosition: Object.freeze(positions),
       });
       if (row === undefined) continue; // Native rosters never become fabricated blacklist facts.
       if (policy.fixedEnemies.length !== 0) {
-        if (row.typeKeys.length !== 1) issue('placeholderCount', waveIndex);
+        if (row.typeKeys.length !== 1)
+          issues.push({
+            reason: 'placeholderCount',
+            waveIndex,
+            actual: row.typeKeys.length,
+            allowed: 1,
+          });
       } else if (exactSize > maxCount || (exactSize < minCount && pool.length > 0))
-        issue('typeCount', waveIndex);
+        issues.push({
+          reason: 'typeCount',
+          waveIndex,
+          actual: exactSize,
+          allowed: { min: minCount, max: maxCount },
+        });
       const generated = [
         ...(usesHighlight && highlight !== undefined ? [highlight.key] : []),
         ...row.typeKeys,
@@ -184,7 +256,7 @@ export function assessGeneratedEncounter(
           generated.some((key) => row.weights?.[key] === undefined) ||
           keys.some((key) => !generated.includes(key))
         )
-          issue('weightMembers', waveIndex);
+          issues.push({ reason: 'weightMembers', waveIndex });
         else {
           const total = generated.reduce((sum, key) => sum + row.weights![key]!, 0);
           shares = Object.freeze(generated.map((key) => row.weights![key]! / total));
@@ -215,7 +287,11 @@ export function assessGeneratedEncounter(
     eligibleHighlightKeys: Object.freeze(eligibleHighlights.map((choice) => choice.key)),
     waves: Object.freeze(
       waveDomains.map((wave) =>
-        Object.freeze({ ...wave, typeCount: Object.freeze(wave.typeCount) }),
+        Object.freeze({
+          ...wave,
+          typeCount: Object.freeze(wave.typeCount),
+          additionalTypeCount: Object.freeze(wave.additionalTypeCount),
+        }),
       ),
     ),
     ...(supported && Object.keys(operands).length !== 0 ? { operands } : {}),

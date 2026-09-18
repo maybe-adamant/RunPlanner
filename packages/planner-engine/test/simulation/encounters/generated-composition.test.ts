@@ -60,7 +60,58 @@ describe('native generated composition possibility', () => {
     });
     expect(
       assess('GeneratedF', { waveCount: 2, highlightKey: 'Guard', waves: [row] }).issues,
-    ).toContainEqual({ reason: 'waveOutsideCount', waveIndex: 3 });
+    ).toContainEqual({ reason: 'waveOutsideCount', waveIndex: 3, allowed: 2 });
+  });
+
+  it('exposes only reachable fixed-capacity slots and marks native pool exhaustion', () => {
+    const generated = assess('GeneratedF', { waveCount: 3, highlightKey: 'Guard' });
+    expect(generated.waves).toMatchObject([
+      {
+        typeCount: { min: 1, max: 1 },
+        additionalTypeCount: { min: 0, max: 0 },
+        seeds: [{ key: 'Guard', kind: 'highlight' }],
+        eligibleKeysByPosition: [],
+      },
+      {
+        typeCount: { min: 2, max: 2 },
+        additionalTypeCount: { min: 1, max: 1 },
+        seeds: [{ key: 'Guard', kind: 'highlight' }],
+      },
+      {
+        typeCount: { min: 3, max: 3 },
+        additionalTypeCount: { min: 2, max: 2 },
+        // The next slot is reachable; the suffix is not a fabricated domain.
+        eligibleKeysByPosition: expect.any(Array),
+      },
+    ]);
+    expect(generated.waves[2]?.eligibleKeysByPosition).toHaveLength(1);
+
+    const source = policy('GeneratedF');
+    const onlyChoice = source.choices.find((choice) => !choice.blockSolo)!;
+    const exhausted = assessGeneratedEncounter(
+      {
+        ...source,
+        waveCount: { min: 1, max: 1 },
+        types: { ...source.types, min: 2, max: 2, depthRamp: 0 },
+        choices: [onlyChoice],
+      },
+      { kind: 'generated', waves: [{ waveIndex: 1, typeKeys: [onlyChoice.key] }] },
+      { biomeDepthCache: 8, biomeEncounterDepth: 8, knownRunBlacklist: [] },
+    );
+    expect(exhausted).toMatchObject({ supported: true, waves: [{ exhausted: true }] });
+    expect(exhausted.waves[0]?.eligibleKeysByPosition).toEqual([[onlyChoice.key], []]);
+
+    const underfilled = assess('GeneratedF', {
+      waveCount: 1,
+      waves: [{ waveIndex: 1, typeKeys: [] }],
+    });
+    expect(underfilled.issues.filter((issue) => issue.reason === 'typeCount')).toHaveLength(1);
+    expect(underfilled.issues).toContainEqual({
+      reason: 'typeCount',
+      waveIndex: 1,
+      actual: 0,
+      allowed: { min: 2, max: 3 },
+    });
   });
 
   it('uses native highlight escalation and exact depth axes', () => {
