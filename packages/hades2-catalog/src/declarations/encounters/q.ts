@@ -76,6 +76,30 @@ export const qEncounterDefinitions = [
     kind: 'boss',
     countsEncounterDepth: false,
     blocksGorgon: true,
+    customization: [
+      {
+        key: 'firstEggWave',
+        label: 'First egg wave',
+        selection: {
+          kind: 'single',
+          choices: [
+            { key: 'polyps', label: '5 Polyp eggs', nativeId: 'TyphonHeadCastSummon01' },
+            { key: 'eidolons', label: '3 Eidolon eggs', nativeId: 'TyphonHeadCastSummon03' },
+          ],
+        },
+      },
+      {
+        key: 'secondEggWave',
+        label: 'Second egg wave',
+        selection: {
+          kind: 'single',
+          choices: [
+            { key: 'horrors', label: '2 Horror eggs', nativeId: 'TyphonHeadCastSummon02' },
+            { key: 'lurkers', label: '4 Lurker eggs', nativeId: 'TyphonHeadCastSummon05' },
+          ],
+        },
+      },
+    ],
   },
   {
     key: 'BossTyphonHead02',
@@ -83,6 +107,27 @@ export const qEncounterDefinitions = [
     kind: 'boss',
     countsEncounterDepth: false,
     blocksGorgon: true,
+    customization: [
+      {
+        key: 'secondEggWave',
+        label: 'Second egg wave',
+        selection: {
+          kind: 'single',
+          choices: [
+            {
+              key: 'erymanthianBoars',
+              label: '2 Erymanthian Boar eggs',
+              nativeId: 'TyphonHeadCastSummonBoar',
+            },
+            {
+              key: 'skyDracons',
+              label: '2 Sky-Dracon eggs',
+              nativeId: 'TyphonHeadCastSummonDragon',
+            },
+          ],
+        },
+      },
+    ],
   },
 ] as const satisfies readonly RawEncounterDefinitionDeclaration[];
 

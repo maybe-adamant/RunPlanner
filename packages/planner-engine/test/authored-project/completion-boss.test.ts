@@ -26,6 +26,7 @@ import {
   evaluateBiomeCompleteness,
   materializeBiome,
   materializeBiomePrefix,
+  simulateProject,
 } from '@run-planner/engine/simulation';
 
 describe('completion Boss variants', () => {
@@ -190,6 +191,50 @@ describe('completion Boss variants', () => {
         value: { kind: 'single', choiceKey: 'sorceress' },
       }),
     ).toThrow(/not a declared customization/);
+  });
+
+  it('retains an incompatible Chronos late summon for repair when Rivals changes', () => {
+    let project = createGoldenFGHIProject();
+    const boss = project.route.biomes
+      .find((biome) => biome.biomeKey === 'I')!
+      .topology!.occurrences.find((occurrence) => occurrence.gameName === 'I_Boss01');
+    if (boss === undefined) throw new Error('normal Chronos Boss occurrence is missing');
+    const phase = createEncounterPhaseAddress(
+      createBiomeAddress('Underworld', 'I'),
+      { kind: 'occurrence', occurrenceId: boss.occurrenceId },
+      'Encounter',
+    );
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceEncounterCustomization',
+      phase,
+      decisionKey: 'lateSummon',
+      value: { kind: 'single', choiceKey: 'goldwraiths' },
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceFearVowRank',
+      route: { kind: 'route', routeKey: 'Underworld' },
+      vowKey: 'BossDifficultyShrineUpgrade',
+      rank: 4,
+    });
+
+    const rival = project.route.biomes
+      .find((biome) => biome.biomeKey === 'I')!
+      .topology!.occurrences.find((occurrence) => occurrence.occurrenceId === boss.occurrenceId);
+    expect(rival).toMatchObject({
+      gameName: 'I_Boss01',
+      encounters: {
+        customizationByPhase: {
+          Encounter: { lateSummon: { kind: 'single', choiceKey: 'goldwraiths' } },
+        },
+      },
+    });
+    expect(simulateProject(catalog, project).findings).toContainEqual(
+      expect.objectContaining({
+        code: 'encounterCustomizationUnavailable',
+        origin: phase,
+        evidence: expect.objectContaining({ decisionKey: 'lateSummon' }),
+      }),
+    );
   });
 
   it('keeps the route-selected Tartarus Preboss out of alternative selection', () => {

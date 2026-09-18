@@ -175,6 +175,99 @@ describe('encounter envelope catalog', () => {
     ]);
   });
 
+  it('publishes the Chronos and Typhon native summon decision matrix', () => {
+    const definitions = createCatalog(declarations).encounterDefinitions.byKey;
+    expect(definitions.BossChronos01?.customization).toEqual([
+      {
+        key: 'lateSummon',
+        label: 'Late summon',
+        selection: {
+          kind: 'single',
+          choices: [
+            { key: 'satyrHoplites', label: 'Elite Satyr Hoplites', nativeId: 'ChronosEliteSpawn1' },
+            { key: 'goldwraiths', label: 'Elite Goldwraiths', nativeId: 'ChronosEliteSpawn2' },
+            {
+              key: 'satyrVierophants',
+              label: 'Elite Satyr Vierophants',
+              nativeId: 'ChronosEliteSpawn3',
+            },
+          ],
+        },
+      },
+    ]);
+    expect(definitions.BossChronos02?.customization).toEqual([
+      {
+        key: 'lateSummon',
+        label: 'Late summon',
+        selection: {
+          kind: 'single',
+          choices: [
+            { key: 'dreadWailer', label: 'Dread-Wailer', nativeId: 'Screamer2_SuperElite' },
+            { key: 'brushStalker', label: 'Brush-Stalker', nativeId: 'Treant2_SuperElite' },
+            { key: 'octofish', label: 'Octofish', nativeId: 'Octofish_SuperElite' },
+            { key: 'vampire', label: 'Vampire', nativeId: 'Vampire_SuperElite' },
+            { key: 'lamia', label: 'Lamia', nativeId: 'Lamia_SuperElite' },
+            {
+              key: 'wretchedThug',
+              label: 'Wretched Thug',
+              nativeId: 'ClockworkHeavyMelee_SuperElite',
+            },
+            {
+              key: 'satyrVierophant',
+              label: 'Satyr Vierophant',
+              nativeId: 'SatyrRatCatcher_SuperElite',
+            },
+          ],
+        },
+      },
+    ]);
+    expect(definitions.BossTyphonHead01?.customization).toEqual([
+      {
+        key: 'firstEggWave',
+        label: 'First egg wave',
+        selection: {
+          kind: 'single',
+          choices: [
+            { key: 'polyps', label: '5 Polyp eggs', nativeId: 'TyphonHeadCastSummon01' },
+            { key: 'eidolons', label: '3 Eidolon eggs', nativeId: 'TyphonHeadCastSummon03' },
+          ],
+        },
+      },
+      {
+        key: 'secondEggWave',
+        label: 'Second egg wave',
+        selection: {
+          kind: 'single',
+          choices: [
+            { key: 'horrors', label: '2 Horror eggs', nativeId: 'TyphonHeadCastSummon02' },
+            { key: 'lurkers', label: '4 Lurker eggs', nativeId: 'TyphonHeadCastSummon05' },
+          ],
+        },
+      },
+    ]);
+    expect(definitions.BossTyphonHead02?.customization).toEqual([
+      {
+        key: 'secondEggWave',
+        label: 'Second egg wave',
+        selection: {
+          kind: 'single',
+          choices: [
+            {
+              key: 'erymanthianBoars',
+              label: '2 Erymanthian Boar eggs',
+              nativeId: 'TyphonHeadCastSummonBoar',
+            },
+            {
+              key: 'skyDracons',
+              label: '2 Sky-Dracon eggs',
+              nativeId: 'TyphonHeadCastSummonDragon',
+            },
+          ],
+        },
+      },
+    ]);
+  });
+
   it('publishes the complete declaration-owned Gorgon matrix', () => {
     const built = createCatalog(declarations);
     const definitions = built.encounterDefinitions.byKey;

@@ -112,6 +112,24 @@ export const iEncounterDefinitions = [
     kind: 'boss',
     countsEncounterDepth: false,
     blocksGorgon: true,
+    customization: [
+      {
+        key: 'lateSummon',
+        label: 'Late summon',
+        selection: {
+          kind: 'single',
+          choices: [
+            { key: 'satyrHoplites', label: 'Elite Satyr Hoplites', nativeId: 'ChronosEliteSpawn1' },
+            { key: 'goldwraiths', label: 'Elite Goldwraiths', nativeId: 'ChronosEliteSpawn2' },
+            {
+              key: 'satyrVierophants',
+              label: 'Elite Satyr Vierophants',
+              nativeId: 'ChronosEliteSpawn3',
+            },
+          ],
+        },
+      },
+    ],
   },
   {
     key: 'BossChronos02',
@@ -119,6 +137,32 @@ export const iEncounterDefinitions = [
     kind: 'boss',
     countsEncounterDepth: false,
     blocksGorgon: true,
+    customization: [
+      {
+        key: 'lateSummon',
+        label: 'Late summon',
+        selection: {
+          kind: 'single',
+          choices: [
+            { key: 'dreadWailer', label: 'Dread-Wailer', nativeId: 'Screamer2_SuperElite' },
+            { key: 'brushStalker', label: 'Brush-Stalker', nativeId: 'Treant2_SuperElite' },
+            { key: 'octofish', label: 'Octofish', nativeId: 'Octofish_SuperElite' },
+            { key: 'vampire', label: 'Vampire', nativeId: 'Vampire_SuperElite' },
+            { key: 'lamia', label: 'Lamia', nativeId: 'Lamia_SuperElite' },
+            {
+              key: 'wretchedThug',
+              label: 'Wretched Thug',
+              nativeId: 'ClockworkHeavyMelee_SuperElite',
+            },
+            {
+              key: 'satyrVierophant',
+              label: 'Satyr Vierophant',
+              nativeId: 'SatyrRatCatcher_SuperElite',
+            },
+          ],
+        },
+      },
+    ],
   },
 ] as const satisfies readonly RawEncounterDefinitionDeclaration[];
 

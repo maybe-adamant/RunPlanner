@@ -158,6 +158,133 @@ describe('resolved execution encounters', () => {
     expect(decodeExecutionPlan(JSON.parse(JSON.stringify(plan)))).toEqual(plan);
   });
 
+  it.each([
+    {
+      label: 'normal Chronos late summon',
+      routeKey: 'Underworld',
+      biomeKey: 'I',
+      gameName: 'I_Boss01',
+      encounterKey: 'BossChronos01',
+      build: createGoldenFGHIProject,
+      customization: [
+        {
+          decisionKey: 'lateSummon',
+          choiceKey: 'goldwraiths',
+          nativeId: 'ChronosEliteSpawn2',
+        },
+      ],
+    },
+    {
+      label: 'Rival Chronos late summon',
+      routeKey: 'Underworld',
+      biomeKey: 'I',
+      gameName: 'I_Boss01',
+      encounterKey: 'BossChronos02',
+      rivalsRank: 4,
+      build: createGoldenFGHIProject,
+      customization: [
+        {
+          decisionKey: 'lateSummon',
+          choiceKey: 'dreadWailer',
+          nativeId: 'Screamer2_SuperElite',
+        },
+      ],
+    },
+    {
+      label: 'normal Typhon egg waves',
+      routeKey: 'Surface',
+      biomeKey: 'Q',
+      gameName: 'Q_Boss01',
+      encounterKey: 'BossTyphonHead01',
+      build: loadSurfaceNOPQProject,
+      customization: [
+        {
+          decisionKey: 'firstEggWave',
+          choiceKey: 'eidolons',
+          nativeId: 'TyphonHeadCastSummon03',
+        },
+        {
+          decisionKey: 'secondEggWave',
+          choiceKey: 'lurkers',
+          nativeId: 'TyphonHeadCastSummon05',
+        },
+      ],
+    },
+    {
+      label: 'Rival Typhon second egg wave',
+      routeKey: 'Surface',
+      biomeKey: 'Q',
+      gameName: 'Q_Boss02',
+      encounterKey: 'BossTyphonHead02',
+      rivalsRank: 4,
+      build: loadSurfaceNOPQProject,
+      customization: [
+        {
+          decisionKey: 'secondEggWave',
+          choiceKey: 'skyDracons',
+          nativeId: 'TyphonHeadCastSummonDragon',
+        },
+      ],
+    },
+  ] as const)('publishes $label native operands from the resolved fixed phase', (fixture) => {
+    let project = fixture.build();
+    if (fixture.rivalsRank !== undefined) {
+      project = applyProjectCommand(project, catalog, {
+        kind: 'ReplaceFearVowRank',
+        route: { kind: 'route', routeKey: fixture.routeKey },
+        vowKey: 'BossDifficultyShrineUpgrade',
+        rank: fixture.rivalsRank,
+      });
+    }
+    const boss = project.route.biomes
+      .find((biome) => biome.biomeKey === fixture.biomeKey)
+      ?.topology?.occurrences.find((occurrence) => occurrence.gameName === fixture.gameName);
+    if (boss === undefined) throw new Error(`${fixture.label} Boss occurrence is missing`);
+    const phase = createEncounterPhaseAddress(
+      createBiomeAddress(fixture.routeKey, fixture.biomeKey),
+      { kind: 'occurrence', occurrenceId: boss.occurrenceId },
+      'Encounter',
+    );
+    for (const customization of fixture.customization) {
+      project = applyProjectCommand(project, catalog, {
+        kind: 'ReplaceEncounterCustomization',
+        phase,
+        decisionKey: customization.decisionKey,
+        value: { kind: 'single', choiceKey: customization.choiceKey },
+      });
+    }
+    const plan = compileExecutionPlan({
+      product: assembleExecutionProduct({ assembly: simulateProjectAssembly(catalog, project) }),
+    });
+    expect(
+      plan.occurrences
+        .find((occurrence) => occurrence.id === boss.occurrenceId)
+        ?.overview.encounterPhases.find((candidate) => candidate.slotKey === 'Encounter'),
+    ).toEqual({
+      slotKey: 'Encounter',
+      encounterKey: fixture.encounterKey,
+      kind: 'boss',
+      customization: fixture.customization.map(({ decisionKey, choiceKey, nativeId }) => ({
+        decisionKey,
+        kind: 'single',
+        choiceKey,
+        nativeId,
+      })),
+    });
+  });
+
+  it('omits Default Chronos customization from execution publication', () => {
+    const plan = compileExecutionPlan({
+      product: assembleExecutionProduct({
+        assembly: simulateProjectAssembly(catalog, createGoldenFGHIProject()),
+      }),
+    });
+    expect(
+      plan.occurrences.find((occurrence) => occurrence.gameName === 'I_Boss01')?.overview
+        .encounterPhases,
+    ).toEqual([{ slotKey: 'Encounter', encounterKey: 'BossChronos01', kind: 'boss' }]);
+  });
+
   it('publishes Surface Eris ordered prefixes with bounded native operands', () => {
     let project = applyProjectCommand(loadSurfaceNOPQProject(), catalog, {
       kind: 'ReplaceFearVowRank',

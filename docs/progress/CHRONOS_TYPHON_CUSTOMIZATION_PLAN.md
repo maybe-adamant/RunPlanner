@@ -2,7 +2,7 @@
 
 ## Status and objective
 
-Locked following user approval. Gate A is next; implementation has not started.
+Locked following user approval. Gate A is complete; Gate B is next.
 
 - Planner base: `68f763ca71b0b637cb50447131773fc646e51191`.
 - Game-module base: `a37e389e18c933155718ceb64c626b44f1ad1dbc`.
@@ -166,3 +166,23 @@ their primary test owner. Do not add a boss registry, dynamic script parser,
 spawn ledger, generic selector framework, combat simulator, or percentage/count
 authoring. Main-session oversight owns commits and final closure; focused
 executors and fresh independent reviewers follow the repository gate routine.
+
+## Delivery record
+
+### Gate A
+
+- Production changes are limited to I/Q encounter declarations. Existing engine,
+  application, UI, and single-choice protocol paths required no changes.
+- Catalog matrix and normalized I/Q snapshot hashes updated; engine witnesses
+  cover all four concrete identities, Default omission, and retained Chronos
+  choices after a Rivals change. The Typhon dialog witness covers selection,
+  publication from the current application assembly, Default reset, and Undo.
+- `npm run test:catalog`: 34 files, 269 tests passed.
+- Focused execution-plan, completion-boss, and encounter-workbench suites:
+  3 files, 62 tests passed. All three workspace typechecks passed.
+- Independent review confirmed native domains and found one UI-to-publication
+  witness gap. Remediation added the assertion to the existing dialog test;
+  the main session verified it. Its 35-test UI suite and application typecheck
+  passed again. The reviewer independently ran five changed suites: 88 passed.
+- Formatting and diff checks passed. Full phase closure and game adapters remain
+  pending; no live enforcement claim is made by Gate A.
