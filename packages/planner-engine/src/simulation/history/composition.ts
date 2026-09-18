@@ -1,3 +1,4 @@
+import type { ResolvedRoutePosition } from '../../authored-project/route-context';
 import type { BiomeTransitionCounterReset, Catalog } from '../../catalog-schema';
 import { createBiomeAddress, type BiomeAddress } from '../../authored-project/addresses';
 import {
@@ -54,6 +55,7 @@ interface EventBuilder {
   readonly validateEncounterResolution: boolean;
   readonly pendingSpellDrop: boolean;
   readonly allSpellInvested: boolean;
+  readonly routePosition: ResolvedRoutePosition;
   readonly figLeafState?: {
     remainingUses: number;
     activatedThisBiome: boolean;
@@ -68,6 +70,7 @@ export interface HistorySegmentWriter {
   readonly validatesEncounterResolution: boolean;
   readonly pendingSpellDrop: boolean;
   readonly allSpellInvested: boolean;
+  readonly routePosition: ResolvedRoutePosition;
   resolveFigLeafEncounterPhases(
     room: CanonicalLifecycleRoom,
     phases: readonly ResolvedEncounterPhase[],
@@ -159,6 +162,7 @@ interface BiomeHistoryEnvelopeOptions<
 > {
   readonly catalog: Catalog;
   readonly routeKey: string;
+  readonly routePosition: ResolvedRoutePosition;
   readonly biomeKey: string;
   readonly initialCounters: HistoryCounters;
   readonly seed?: HistoryStateView;
@@ -211,6 +215,7 @@ function segmentWriter(builder: EventBuilder): HistorySegmentWriter {
     validatesEncounterResolution: builder.validateEncounterResolution,
     pendingSpellDrop: builder.pendingSpellDrop,
     allSpellInvested: builder.allSpellInvested,
+    routePosition: builder.routePosition,
     resolveFigLeafEncounterPhases(
       _room: CanonicalLifecycleRoom,
       phases: readonly ResolvedEncounterPhase[],
@@ -301,6 +306,7 @@ export function appendRoomLifecycle(
       ? prepareRoomEncounterPhases(
           catalog,
           authoringRoom,
+          writer.routePosition,
           projectRoomPreparationCheckpoint(beforeEncounterPreparation!),
           {
             pendingSpellDrop: writer.pendingSpellDrop,
@@ -390,6 +396,7 @@ export function appendRoomLifecycle(
 
 interface BiomeHistoryPrefixOptions {
   readonly routeKey: string;
+  readonly routePosition: ResolvedRoutePosition;
   readonly biomeKey: string;
   readonly initialCounters: HistoryCounters;
   readonly seed?: HistoryStateView;
@@ -402,6 +409,7 @@ interface BiomeHistoryPrefixOptions {
 
 function composeBiomeHistoryPrefixResult({
   routeKey,
+  routePosition,
   biomeKey,
   initialCounters,
   seed,
@@ -418,6 +426,7 @@ function composeBiomeHistoryPrefixResult({
     validateEncounterResolution,
     pendingSpellDrop,
     allSpellInvested,
+    routePosition,
     ...(figLeafState === undefined
       ? {}
       : {
@@ -464,6 +473,7 @@ function composeBiomeHistoryPrefixResult({
 
 export function composeBiomeHistoryPrefix({
   routeKey,
+  routePosition,
   biomeKey,
   initialCounters,
   seed,
@@ -471,6 +481,7 @@ export function composeBiomeHistoryPrefix({
 }: Omit<BiomeHistoryPrefixOptions, 'validateEncounterResolution'>): BiomeHistoryPrefix {
   const result = composeBiomeHistoryPrefixResult({
     routeKey,
+    routePosition,
     biomeKey,
     initialCounters,
     ...(seed === undefined ? {} : { seed }),
@@ -526,6 +537,7 @@ function composeBiomeHistoryEnvelopeResult<
 >({
   catalog,
   routeKey,
+  routePosition,
   biomeKey,
   initialCounters,
   seed,
@@ -552,6 +564,7 @@ function composeBiomeHistoryEnvelopeResult<
     validateEncounterResolution,
     pendingSpellDrop,
     allSpellInvested,
+    routePosition,
     ...(figLeafState === undefined
       ? {}
       : {

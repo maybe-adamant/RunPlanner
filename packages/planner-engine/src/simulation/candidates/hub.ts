@@ -18,6 +18,7 @@ import type {
   OccurrenceId,
   ProjectDocument,
 } from '../../authored-project/model';
+import { resolveRoutePosition } from '../../authored-project/route-context';
 import {
   evaluateHubOpenSetConstraints,
   type HubSideRoomGenerationSupportEntry,
@@ -44,7 +45,6 @@ import { CandidateEvaluationContractError } from './contract';
 import {
   candidateBiome,
   candidateBlockedAt,
-  completeBiomeCount,
   planFor,
   type CandidateBiomeEvaluation,
 } from './evaluated-biome';
@@ -183,7 +183,7 @@ function hubAlternativeContext(
   const previous = previousCompleteValidBiome(evaluation, routeKey, biomeKey);
   const resourceAuthoring = routeResourceAuthoring(catalog, route);
   return Object.freeze({
-    enteredBiomeCount: completeBiomeCount(evaluation, routeKey, biomeKey),
+    routePosition: resolveRoutePosition(catalog, route, biomeKey),
     loadout: route.loadout,
     resourcePlacements: effectiveRouteResourcePlacements(resourceAuthoring),
     resourceFindings: resourcePlacementFindings(routeKey, resourceAuthoring),

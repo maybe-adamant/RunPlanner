@@ -10,6 +10,7 @@ import type {
   RouteLoadout,
   ResourcePlacements,
 } from '../../authored-project/model';
+import type { ResolvedRoutePosition } from '../../authored-project/route-context';
 import { evaluateBiomeRoomGenerationAssemblyInternal } from '../generation/biome';
 import { evaluateHubDecisionGenerationInternal } from '../generation/hub';
 import {
@@ -79,9 +80,9 @@ export interface ProgressiveSeed {
 }
 
 export interface ProgressiveBiomeContext {
-  readonly enteredBiomeCount: number;
+  /** Exact position from the authored route context. */
+  readonly routePosition: ResolvedRoutePosition;
   readonly forcedChaosOccurrenceKeys?: ReadonlySet<string>;
-  /** A Postboss rack is reached only when this configured route continues. */
   readonly loadout: RouteLoadout;
   /** Direct biome evaluators supply the explicit empty record; route simulation supplies its owned record. */
   readonly resourcePlacements: ResourcePlacements;
@@ -139,7 +140,7 @@ function generation(
     readonly entryRoom: NonNullable<MaterializedBiomePrefix['entryRoom']>;
   },
   history: BiomeHistoryPrefix,
-  enteredBiomeCount: number,
+  routePosition: ResolvedRoutePosition,
   rewards: BiomeRewardSimulation,
   rewardProducers: RewardProducerCandidateArtifacts,
   roomLifecycles: RoomLifecycleCandidateArtifacts,
@@ -162,7 +163,7 @@ function generation(
     catalog,
     productPrefix,
     history,
-    enteredBiomeCount,
+    routePosition.ordinal,
     rewards.targetHistory,
     forcedChaosOccurrenceKeys,
   );
@@ -175,6 +176,7 @@ function generation(
     catalog,
     structurallyActiveEncounterRooms(encounterPrefix),
     new Map(history.rooms.map((room) => [semanticAddressKey(room.origin), room.preparation])),
+    routePosition,
     encounterBoundary,
     rewards.figLeafPhaseCandidates,
     attestGorgonBranchState(rewards.branches),
@@ -244,6 +246,7 @@ function products(
   const composed = composeBiomeHistoryPrefixWithEncounterValidation(
     catalog,
     prefix,
+    context.routePosition,
     context.seed?.history.afterTransition,
     lifecycleFigLeafState,
     lifecyclePendingSpellDrop,
@@ -273,7 +276,7 @@ function products(
       readonly entryRoom: NonNullable<MaterializedBiomePrefix['entryRoom']>;
     },
     history,
-    context.enteredBiomeCount,
+    context.routePosition,
     context.loadout,
     context.seed?.rewardBranches,
     context.resourcePlacements,
@@ -288,7 +291,7 @@ function products(
       readonly entryRoom: NonNullable<MaterializedBiomePrefix['entryRoom']>;
     },
     history,
-    context.enteredBiomeCount,
+    context.routePosition,
     rewards.simulation,
     rewards.producerArtifacts,
     rewards.lifecycleArtifacts,
@@ -348,7 +351,13 @@ export function evaluateProgressiveBiomeAssemblyBeforeClamp(
   plan: AuthoredBiomePlan,
   context: ProgressiveBiomeContext,
 ): ProgressiveBiomeEvaluationAssembly | null {
-  const initial = materializeBiomePrefix(catalog, biome, plan, context.loadout);
+  const initial = materializeBiomePrefix(
+    catalog,
+    biome,
+    context.routePosition,
+    plan,
+    context.loadout,
+  );
   if (initial?.entryRoom === undefined) return null;
   const materializedPrefix = Object.freeze({
     ...initial,
@@ -431,7 +440,13 @@ export function evaluateProgressiveBiomeAssembly(
   plan: AuthoredBiomePlan,
   context: ProgressiveBiomeContext,
 ): ProgressiveBiomeEvaluationAssembly | null {
-  const initial = materializeBiomePrefix(catalog, biome, plan, context.loadout);
+  const initial = materializeBiomePrefix(
+    catalog,
+    biome,
+    context.routePosition,
+    plan,
+    context.loadout,
+  );
   if (initial?.entryRoom === undefined) return null;
   const authoredPrefix = Object.freeze({
     ...initial,
@@ -545,7 +560,13 @@ export function evaluateProgressiveBiomeAssemblyFromSelectedProducts(
   context: ProgressiveBiomeContext,
   selectedProducts: ProgressiveBiomeSelectedProducts,
 ): ProgressiveBiomeEvaluationAssembly | null {
-  const initial = materializeBiomePrefix(catalog, biome, plan, context.loadout);
+  const initial = materializeBiomePrefix(
+    catalog,
+    biome,
+    context.routePosition,
+    plan,
+    context.loadout,
+  );
   if (initial?.entryRoom === undefined) return null;
   const authoredPrefix = Object.freeze({
     ...initial,

@@ -2,7 +2,7 @@ import type { RawBiomeLayoutDeclaration } from './types';
 
 export const fBiomeLayout = {
   biomeKey: 'F',
-  initialCounters: { biomeDepthCache: 0, biomeEncounterDepth: 1 },
+  initialCounters: { biomeEncounterDepth: 1 },
   start: {
     kind: 'authoredChoice',
     roomGameNames: ['F_Opening01', 'F_Opening02', 'F_Opening03'],

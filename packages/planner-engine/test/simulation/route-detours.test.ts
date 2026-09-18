@@ -1,3 +1,4 @@
+import { ordinaryPositionFor } from '../support/route-position';
 import { describe, expect, it } from 'vitest';
 
 import { catalog } from '@run-planner/hades2-catalog';
@@ -83,13 +84,19 @@ function prefix(
   const snapshot = materializeBiomePrefix(
     catalog,
     biome,
+    ordinaryPositionFor(catalog, biome),
     plan(authored, biome),
     traitContext(authored, biome),
   );
   if (snapshot === null || snapshot.entryRoom === undefined) {
     throw new Error(`${biome.biomeKey} did not materialize an entry prefix`);
   }
-  const history = composeBiomeHistoryPrefix(catalog, snapshot, seed);
+  const history = composeBiomeHistoryPrefix(
+    catalog,
+    snapshot,
+    ordinaryPositionFor(catalog, snapshot),
+    seed,
+  );
   if (history === null) throw new Error(`${biome.biomeKey} did not compose prefix history`);
   return { snapshot: { ...snapshot, entryRoom: snapshot.entryRoom }, history };
 }
@@ -178,8 +185,8 @@ function replaceIncomingReward(
   rewardType:
     | 'MaxHealthDrop'
     | 'MaxManaDrop'
-    | 'MetaCurrencyDrop'
-    | 'MetaCardPointsCommonDrop'
+    | 'MetaCurrencyBigDrop'
+    | 'MetaCardPointsCommonBigDrop'
     | 'RoomMoneyDrop',
 ): ProjectDocument {
   return applyProjectCommand(project, catalog, {
@@ -297,8 +304,8 @@ function buildAnomalyProject(success: boolean) {
   project = replaceBatchStore(project, gBiome, combat01, 'MetaProgress');
   project = addTarget(project, gBiome, combat01, 'exit1', combat02, 'G_Combat02');
   project = addTarget(project, gBiome, combat01, 'exit2', combat01Peer, 'G_Combat03');
-  project = replaceIncomingReward(project, gBiome, combat02, 'MetaCurrencyDrop');
-  project = replaceIncomingReward(project, gBiome, combat01Peer, 'MetaCardPointsCommonDrop');
+  project = replaceIncomingReward(project, gBiome, combat02, 'MetaCurrencyBigDrop');
+  project = replaceIncomingReward(project, gBiome, combat01Peer, 'MetaCardPointsCommonBigDrop');
   project = setNormalSelection(project, gBiome, combat01, 'exit1');
   project = createBatch(project, gBiome, combat02);
   project = replaceBatchStore(project, gBiome, combat02, 'RunProgress');
@@ -836,7 +843,7 @@ describe('route-detour simulation', () => {
       catalog,
       snapshot,
       history,
-      1,
+      ordinaryPositionFor(catalog, snapshot),
       traitContext(project, gBiome),
     );
     expect(rewards.branches[0]?.traitHistory?.events).toContainEqual(
@@ -854,7 +861,7 @@ describe('route-detour simulation', () => {
       catalog,
       snapshot,
       history,
-      1,
+      ordinaryPositionFor(catalog, snapshot),
       traitContext(project, fBiome),
     );
     expect(
@@ -907,7 +914,7 @@ describe('route-detour simulation', () => {
         catalog,
         snapshot,
         history,
-        1,
+        ordinaryPositionFor(catalog, snapshot),
         traitContext(project, gBiome),
       );
       expect(rewards.findings).toEqual([]);
@@ -1016,7 +1023,7 @@ describe('route-detour simulation', () => {
       catalog,
       snapshot,
       history,
-      1,
+      ordinaryPositionFor(catalog, snapshot),
       traitContext(project, gBiome),
     );
 
@@ -1089,7 +1096,7 @@ describe('route-detour simulation', () => {
         catalog,
         snapshot,
         history,
-        1,
+        ordinaryPositionFor(catalog, snapshot),
         traitContext(project, gBiome),
       );
       const traces = rewards.selectedTraitOffers.filter(
@@ -1141,7 +1148,7 @@ describe('route-detour simulation', () => {
       catalog,
       snapshot,
       history,
-      1,
+      ordinaryPositionFor(catalog, snapshot),
       traitContext(project, fBiome),
     );
     expect(
@@ -1292,7 +1299,7 @@ describe('route-detour simulation', () => {
       catalog,
       snapshot,
       history,
-      1,
+      ordinaryPositionFor(catalog, snapshot),
       traitContext(project, fBiome),
     );
     const shopBatch = snapshot.decisions.find(

@@ -1,4 +1,5 @@
 import type { Catalog } from '../../../../catalog-schema';
+import type { ResolvedRoutePosition } from '../../../../authored-project/route-context';
 import {
   createAdditionalExitAddress,
   createBiomeAddress,
@@ -70,7 +71,7 @@ export function applyRoomEnteredTransition(
   ixionGeneratedChaosSourceOccurrenceIds: ReadonlySet<string>,
   branches: readonly RewardBranchState[],
   findingChronology: FindingChronology,
-  enteredBiomeCount: number,
+  routePosition: ResolvedRoutePosition,
   alreadyAssessed: {
     readonly purgingPool: boolean;
     readonly hermesShrine: boolean;
@@ -179,9 +180,7 @@ export function applyRoomEnteredTransition(
   }
   const declaration = room === undefined ? undefined : catalog.rooms.byKey[room.gameName];
   const isFinalPreboss =
-    room?.origin.kind === 'occurrence' &&
-    declaration?.kind === 'Preboss' &&
-    catalog.routes.byKey[room.origin.routeKey]?.biomeKeys.at(-1) === room.origin.biomeKey;
+    room?.origin.kind === 'occurrence' && declaration?.kind === 'Preboss' && routePosition.isLast;
   if (isFinalPreboss) {
     next = Object.freeze(
       next.map((branch) =>
@@ -291,7 +290,7 @@ export function applyRoomEnteredTransition(
                     sourceDeclaration: declaration,
                     view: entry,
                     history: branch.history,
-                    enteredBiomeCount,
+                    enteredBiomeCount: routePosition.ordinal,
                     currentBatchRoomGameNames: createdPeerGameNames(
                       catalog,
                       entry,

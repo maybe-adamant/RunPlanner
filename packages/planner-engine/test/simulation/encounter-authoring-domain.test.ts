@@ -1,3 +1,4 @@
+import { ordinaryPositionFor } from '../support/route-position';
 import { catalog } from '@run-planner/hades2-catalog';
 import {
   applyProjectCommand,
@@ -179,7 +180,12 @@ describe('encounter phase authored domains', () => {
       )?.preparation;
       if (room === undefined || preparation === undefined)
         throw new Error('I preparation contact is missing');
-      const resolved = prepareRoomEncounterPhases(catalog, room, preparation);
+      const resolved = prepareRoomEncounterPhases(
+        catalog,
+        room,
+        ordinaryPositionFor(catalog, room.origin),
+        preparation,
+      );
       expect(resolved.valid).toBe(true);
       expect(resolved.candidates[0]).toMatchObject({
         selectedEncounterKey: authoredKey,

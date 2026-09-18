@@ -1,3 +1,4 @@
+import { ordinaryPositionFor } from '../support/route-position';
 import { describe, expect, it } from 'vitest';
 
 import { catalog } from '@run-planner/hades2-catalog';
@@ -307,8 +308,12 @@ describe('Nemesis random events', () => {
       expect.objectContaining({ kind: 'interactIncomingReward' }),
     );
     expect(
-      assembleRoomActionDomain({ catalog, biome: goldenFBiome, occurrence: selectedOccurrence })
-        .contributions,
+      assembleRoomActionDomain({
+        routePosition: ordinaryPositionFor(catalog, goldenFBiome),
+        catalog,
+        biome: goldenFBiome,
+        occurrence: selectedOccurrence,
+      }).contributions,
     ).not.toContainEqual(
       expect.objectContaining({
         reference: expect.objectContaining({ kind: 'interactIncomingReward' }),
@@ -450,7 +455,12 @@ describe('Nemesis random events', () => {
     );
     if (occurrence === undefined) throw new Error('missing declined event occurrence');
     expect(
-      assembleRoomActionDomain({ catalog, biome: goldenFBiome, occurrence }).contributions,
+      assembleRoomActionDomain({
+        routePosition: ordinaryPositionFor(catalog, goldenFBiome),
+        catalog,
+        biome: goldenFBiome,
+        occurrence,
+      }).contributions,
     ).not.toContainEqual(
       expect.objectContaining({
         reference: expect.objectContaining({ kind: 'interactAcquisitionEntry' }),
@@ -579,6 +589,7 @@ describe('Nemesis random events', () => {
     expect(selected.state.optionalRewards).toEqual(retainedOptionals);
     expect(selected.state.optionalRewardCount).toBe(4);
     const eventAction = assembleRoomActionDomain({
+      routePosition: ordinaryPositionFor(catalog, goldenHBiome),
       catalog,
       biome: goldenHBiome,
       occurrence: selected,

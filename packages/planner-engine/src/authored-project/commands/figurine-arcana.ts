@@ -5,6 +5,7 @@ import type { ProjectDocument } from '../model';
 import type { FigurineArcanaCommand } from './types';
 import { failCommand, requireOccurrence, type LocatedBiome } from './contract';
 import { updateOccurrence } from './occurrence/mutation';
+import { resolveRoutePosition } from '../route-context';
 
 /** Stores only a declaration-canonical set; the reached post-Judgment domain remains engine-owned. */
 export function applyFigurineArcanaCommand(
@@ -30,6 +31,7 @@ export function applyFigurineArcanaCommand(
     catalog,
     biome: createBiomeAddress(command.figurine.routeKey, command.figurine.biomeKey),
     occurrence: boss,
+    routePosition: resolveRoutePosition(catalog, document.route, command.figurine.biomeKey),
   }).lifecycleStructure;
   if (
     !lifecycle.points.some(

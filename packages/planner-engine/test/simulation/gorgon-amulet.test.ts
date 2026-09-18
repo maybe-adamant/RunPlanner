@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { ordinaryRoutePosition } from '../support/route-position';
 
 import { catalog } from '@run-planner/hades2-catalog';
 import {
@@ -180,7 +181,7 @@ describe('Gorgon Amulet lifecycle', () => {
       keepsakes: seed.keepsakes,
     }));
     const progressive = evaluateProgressiveBiomeAssembly(catalog, goldenGBiome, plan, {
-      enteredBiomeCount: 2,
+      routePosition: ordinaryRoutePosition(catalog, 'Underworld', 'G'),
       resourcePlacements: EMPTY_RESOURCE_PLACEMENTS,
       loadout: route.loadout,
       seed: { history: previous.history, rewardBranches: initialBranches },
@@ -1174,7 +1175,7 @@ describe('Gorgon Amulet lifecycle', () => {
       }),
     );
     const progressive = evaluateProgressiveBiomeAssembly(catalog, pBiome, plan, {
-      enteredBiomeCount: 3,
+      routePosition: ordinaryRoutePosition(catalog, 'Surface', 'P'),
       resourcePlacements: EMPTY_RESOURCE_PLACEMENTS,
       loadout: createDefaultRouteLoadout(catalog),
       seed: { history: previous.history, rewardBranches },

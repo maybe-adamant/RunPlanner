@@ -1,3 +1,4 @@
+import { ordinaryPositionFor } from '../../../support/route-position';
 import {
   applyProjectCommand,
   createBiomeAddress,
@@ -330,13 +331,20 @@ describe('canonical I Clockwork materialization and history', () => {
       kind: 'RemoveExitDecision',
     });
     project = applyProjectCommand(project, catalog, { decision, kind: 'CreateBatch' });
-    const snapshot = materializeBiomePrefix(catalog, biome, plan(project), traitContext(project));
+    const snapshot = materializeBiomePrefix(
+      catalog,
+      biome,
+      ordinaryPositionFor(catalog, biome),
+      plan(project),
+      traitContext(project),
+    );
     if (snapshot?.entryRoom === undefined) {
       throw new Error('empty I decision fixture did not materialize a prefix');
     }
     const history = composeBiomeHistoryPrefix(
       catalog,
       Object.freeze({ ...snapshot, entryRoom: snapshot.entryRoom }),
+      ordinaryPositionFor(catalog, Object.freeze({ ...snapshot, entryRoom: snapshot.entryRoom })),
       carriedHHistory().afterTransition,
     );
     if (history === null) throw new Error('empty I decision fixture has no history');
@@ -360,7 +368,13 @@ describe('canonical I Clockwork materialization and history', () => {
   it('keeps I entry and terminal Boss materialization deterministic', () => {
     const project = completeProject();
     const encodedBefore = encodeProjectDocument(project);
-    const snapshot = materializeBiome(catalog, biome, complete(project), traitContext(project));
+    const snapshot = materializeBiome(
+      catalog,
+      biome,
+      ordinaryPositionFor(catalog, biome),
+      complete(project),
+      traitContext(project),
+    );
     const snapshotBatches = batches(snapshot);
 
     expect(snapshot.entryRoom).toMatchObject({
@@ -368,9 +382,15 @@ describe('canonical I Clockwork materialization and history', () => {
       gameName: 'I_Intro',
       entered: true,
     });
-    expect(materializeBiome(catalog, biome, complete(project), traitContext(project))).toEqual(
-      snapshot,
-    );
+    expect(
+      materializeBiome(
+        catalog,
+        biome,
+        ordinaryPositionFor(catalog, biome),
+        complete(project),
+        traitContext(project),
+      ),
+    ).toEqual(snapshot);
     const prebosses = snapshotBatches
       .flatMap((batch) => batch.targets)
       .filter((target) => target.room.gameName === 'I_PreBoss02');
@@ -389,11 +409,17 @@ describe('canonical I Clockwork materialization and history', () => {
     const snapshot = materializeBiome(
       catalog,
       biome,
+      ordinaryPositionFor(catalog, biome),
       complete(completeFixture),
       traitContext(completeFixture),
     );
     const snapshotBatches = batches(snapshot);
-    const history = composeBiomeHistory(catalog, snapshot, carriedHHistory().afterTransition);
+    const history = composeBiomeHistory(
+      catalog,
+      snapshot,
+      ordinaryPositionFor(catalog, snapshot),
+      carriedHHistory().afterTransition,
+    );
     const events = history.events;
     const started = events.find((event) => event.kind === 'biomeStarted');
 
@@ -491,15 +517,31 @@ describe('canonical I Clockwork materialization and history', () => {
       ],
     };
     expect(() =>
-      composeBiomeHistory(catalog, malformed, carriedHHistory().afterTransition),
+      composeBiomeHistory(
+        catalog,
+        malformed,
+        ordinaryPositionFor(catalog, malformed),
+        carriedHHistory().afterTransition,
+      ),
     ).toThrowError(HistoryFoldContractError);
   });
 
   it('enters an authored Story without changing either Clockwork counter', () => {
     const project = projectWithPickedStory();
-    const snapshot = materializeBiome(catalog, biome, complete(project), traitContext(project));
+    const snapshot = materializeBiome(
+      catalog,
+      biome,
+      ordinaryPositionFor(catalog, biome),
+      complete(project),
+      traitContext(project),
+    );
     const snapshotBatches = batches(snapshot);
-    const history = composeBiomeHistory(catalog, snapshot, carriedHHistory().afterTransition);
+    const history = composeBiomeHistory(
+      catalog,
+      snapshot,
+      ordinaryPositionFor(catalog, snapshot),
+      carriedHHistory().afterTransition,
+    );
     const storyTarget = snapshotBatches[1]?.targets[1];
 
     expect(storyTarget).toMatchObject({
@@ -553,12 +595,23 @@ describe('canonical I Clockwork materialization and history', () => {
 
   it('rejects a two-exit room after the authored non-goal limit is exhausted', () => {
     const project = projectWithExhaustedLimitDomain();
-    const snapshot = materializeBiomePrefix(catalog, biome, plan(project), traitContext(project));
+    const snapshot = materializeBiomePrefix(
+      catalog,
+      biome,
+      ordinaryPositionFor(catalog, biome),
+      plan(project),
+      traitContext(project),
+    );
     if (snapshot === null || snapshot.entryRoom === undefined) {
       throw new Error('exhausted Clockwork fixture did not materialize a prefix');
     }
     const prefix = Object.freeze({ ...snapshot, entryRoom: snapshot.entryRoom });
-    const history = composeBiomeHistoryPrefix(catalog, prefix, carriedHHistory().afterTransition);
+    const history = composeBiomeHistoryPrefix(
+      catalog,
+      prefix,
+      ordinaryPositionFor(catalog, prefix),
+      carriedHHistory().afterTransition,
+    );
     if (history === null) throw new Error('exhausted Clockwork fixture has no history');
     const generation = evaluateBiomeRoomGeneration(catalog, prefix, history, 4);
     const target = createTargetAddress(
@@ -603,9 +656,20 @@ describe('canonical I Clockwork materialization and history', () => {
         spurnedSource: 'ZeusUpgrade',
       },
     });
-    const snapshot = materializeBiome(catalog, biome, complete(project), traitContext(project));
+    const snapshot = materializeBiome(
+      catalog,
+      biome,
+      ordinaryPositionFor(catalog, biome),
+      complete(project),
+      traitContext(project),
+    );
     const snapshotBatches = batches(snapshot);
-    const history = composeBiomeHistory(catalog, snapshot, carriedHHistory().afterTransition);
+    const history = composeBiomeHistory(
+      catalog,
+      snapshot,
+      ordinaryPositionFor(catalog, snapshot),
+      carriedHHistory().afterTransition,
+    );
     const devotionOrigin = snapshotBatches[2]?.targets[1]?.room.origin;
     if (devotionOrigin === undefined) {
       throw new Error('fixture lost picked Devotion NonGoal room');

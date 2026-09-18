@@ -1,3 +1,4 @@
+import { ordinaryPositionFor } from '../support/route-position';
 import {
   catalog,
   createShopOfferAddress,
@@ -64,6 +65,7 @@ describe('Shop trait acquisition processing', () => {
       }),
     });
     const canonical = materializeAuthoredRoom({
+      routePosition: ordinaryPositionFor(catalog, biome),
       catalog,
       biome,
       room,
@@ -149,6 +151,7 @@ describe('Shop trait acquisition processing', () => {
       roomActions: Object.freeze({ order: Object.freeze([]) }),
     });
     const canonical = materializeAuthoredRoom({
+      routePosition: ordinaryPositionFor(catalog, biome),
       catalog,
       biome,
       room,
@@ -207,6 +210,7 @@ describe('Shop trait acquisition processing', () => {
     expect(unpurchased[0]?.traitHistory?.equippedTraits.ApolloWeaponBoon?.level).toBe(1);
 
     const purchasedCanonical = materializeAuthoredRoom({
+      routePosition: ordinaryPositionFor(catalog, biome),
       catalog,
       biome,
       room,
@@ -252,6 +256,7 @@ describe('Shop trait acquisition processing', () => {
     expect(purchased[0]?.traitHistory?.equippedTraits.ApolloWeaponBoon?.level).toBe(2);
 
     const giftCanonical = materializeAuthoredRoom({
+      routePosition: ordinaryPositionFor(catalog, biome),
       catalog,
       biome,
       room,
@@ -352,6 +357,7 @@ describe('Shop trait acquisition processing', () => {
       }),
     });
     const canonical = materializeAuthoredRoom({
+      routePosition: ordinaryPositionFor(catalog, biome),
       catalog,
       biome,
       room,
@@ -486,6 +492,7 @@ describe('Shop trait acquisition processing', () => {
         }),
       });
       const canonical = materializeAuthoredRoom({
+        routePosition: ordinaryPositionFor(catalog, biome),
         catalog,
         biome,
         room,
@@ -692,6 +699,7 @@ describe('Shop trait acquisition processing', () => {
       }),
     } as const;
     const canonical = materializeAuthoredRoom({
+      routePosition: ordinaryPositionFor(catalog, biome),
       catalog,
       biome,
       room,

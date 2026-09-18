@@ -12,6 +12,8 @@ import { createDefaultRouteLoadout } from './loadout';
 export interface CreateProjectDocumentOptions {
   readonly projectId: string;
   readonly routeKey: string;
+  /** Internal complete itinerary; ordinary presets always use their declaration order. */
+  readonly itineraryBiomeKeys?: readonly string[];
   readonly configuredBiomeCount?: number;
 }
 
@@ -32,25 +34,40 @@ export function createProjectDocument(
     throw new ProjectDocumentContractError('routeKey', `unknown route ${options.routeKey}`);
   }
   const configuredCount = options.configuredBiomeCount ?? 0;
+  const itineraryBiomeKeys = options.itineraryBiomeKeys ?? route.biomeKeys;
+  if (itineraryBiomeKeys.length === 0) {
+    throw new ProjectDocumentContractError('itineraryBiomeKeys', 'must not be empty');
+  }
   if (!Number.isInteger(configuredCount) || configuredCount < 0) {
     throw new ProjectDocumentContractError(
       'configuredBiomeCount',
       'must be a non-negative integer',
     );
   }
-  if (configuredCount > route.biomeKeys.length) {
+  if (configuredCount > itineraryBiomeKeys.length) {
     throw new ProjectDocumentContractError(
       'configuredBiomeCount',
-      `exceeds the ${route.biomeKeys.length}-biome route`,
+      `exceeds the ${itineraryBiomeKeys.length}-biome route`,
+    );
+  }
+  if (
+    route.key !== 'Dream' &&
+    (itineraryBiomeKeys.length !== route.biomeKeys.length ||
+      itineraryBiomeKeys.some((biomeKey, index) => biomeKey !== route.biomeKeys[index]))
+  ) {
+    throw new ProjectDocumentContractError(
+      'itineraryBiomeKeys',
+      'must equal the route preset declaration',
     );
   }
   const routePlan = (() => {
     const loadout = createDefaultRouteLoadout(catalog);
     return {
       routeKey: route.key,
+      itineraryBiomeKeys: Object.freeze([...itineraryBiomeKeys]),
       loadout,
       resourcePlacements: EMPTY_RESOURCE_PLACEMENTS,
-      biomes: route.biomeKeys.slice(0, configuredCount).map((biomeKey) => {
+      biomes: itineraryBiomeKeys.slice(0, configuredCount).map((biomeKey) => {
         const layout = catalog.biomeLayouts.byKey[biomeKey];
         if (layout === undefined) {
           throw new ProjectDocumentContractError(

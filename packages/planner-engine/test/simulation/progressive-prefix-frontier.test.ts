@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { ordinaryRoutePosition } from '../support/route-position';
 
 import * as fixture from './support/progressive-biome-fixtures';
 
@@ -362,7 +363,7 @@ describe('progressive prefix and frontier products', () => {
       throw new Error('invalid Fields fixture has no valid G seed or H plan');
     }
     const options = {
-      enteredBiomeCount: 3,
+      routePosition: ordinaryRoutePosition(catalog, 'Underworld', 'H'),
       resourcePlacements: EMPTY_RESOURCE_PLACEMENTS,
       loadout: defaultRouteLoadout,
       seed: { history: previous.history, rewardBranches: previous.rewards.branches },

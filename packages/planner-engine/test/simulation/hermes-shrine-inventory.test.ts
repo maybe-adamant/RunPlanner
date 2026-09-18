@@ -1,3 +1,4 @@
+import { ordinaryPositionFor } from '../support/route-position';
 import { describe, expect, it } from 'vitest';
 
 import { catalog } from '@run-planner/hades2-catalog';
@@ -197,15 +198,27 @@ function evaluateShrineOutgoingPrefix(
       decisions: Object.freeze(plan.topology.decisions.slice(0, cutoff + 1)),
     }),
   });
-  const snapshot = materializeBiomePrefix(catalog, oBiome, prefixPlan, route.loadout);
-  const history = snapshot === null ? undefined : composeBiomeHistoryPrefix(catalog, snapshot);
+  const snapshot = materializeBiomePrefix(
+    catalog,
+    oBiome,
+    ordinaryPositionFor(catalog, oBiome),
+    prefixPlan,
+    route.loadout,
+  );
+  const history =
+    snapshot === null
+      ? undefined
+      : composeBiomeHistoryPrefix(catalog, snapshot, ordinaryPositionFor(catalog, snapshot));
   if (snapshot?.entryRoom === undefined || history === null || history === undefined)
     throw new Error(`fixture lost ${outgoingOccurrenceId} outgoing prefix`);
   const rewards = evaluateBiomeRewards(
     catalog,
     snapshot as typeof snapshot & { readonly entryRoom: NonNullable<typeof snapshot.entryRoom> },
     history,
-    2,
+    ordinaryPositionFor(
+      catalog,
+      snapshot as typeof snapshot & { readonly entryRoom: NonNullable<typeof snapshot.entryRoom> },
+    ),
     route.loadout,
     outgoingSeedBranches(rewardType),
   );
@@ -607,7 +620,12 @@ describe('Hermes Shrine delayed deliveries', () => {
       'interactIncomingReward',
     ]);
     if (occurrence === undefined) throw new Error('delivery host occurrence is missing');
-    const domain = assembleRoomActionDomain({ catalog, biome: pBiome, occurrence });
+    const domain = assembleRoomActionDomain({
+      routePosition: ordinaryPositionFor(catalog, pBiome),
+      catalog,
+      biome: pBiome,
+      occurrence,
+    });
     const roster = assembleRoomActionRoster({
       owner: host,
       order: occurrence.roomActions.order,
@@ -694,8 +712,17 @@ describe('Hermes Shrine Travel Deal generation', () => {
     const route = project.route;
     const plan = route?.biomes.find((candidate) => candidate.biomeKey === 'O');
     if (route === undefined || plan === undefined) throw new Error('fixture lost Surface O');
-    const snapshot = materializeBiomePrefix(catalog, oBiome, plan, route.loadout);
-    const history = snapshot == null ? undefined : composeBiomeHistoryPrefix(catalog, snapshot);
+    const snapshot = materializeBiomePrefix(
+      catalog,
+      oBiome,
+      ordinaryPositionFor(catalog, oBiome),
+      plan,
+      route.loadout,
+    );
+    const history =
+      snapshot == null
+        ? undefined
+        : composeBiomeHistoryPrefix(catalog, snapshot, ordinaryPositionFor(catalog, snapshot));
     if (snapshot == null || snapshot.entryRoom === undefined || history == null)
       throw new Error('fixture lost O history');
     const materializedRefillHost = prefixAuthoredRooms(snapshot).find(
@@ -722,7 +749,7 @@ describe('Hermes Shrine Travel Deal generation', () => {
       catalog,
       completeSnapshot,
       history,
-      2,
+      ordinaryPositionFor(catalog, completeSnapshot),
       route.loadout,
       branchesWithTravelDeal(),
     );
@@ -764,7 +791,13 @@ describe('Hermes Shrine Travel Deal generation', () => {
     ] as const) {
       const cleanedPlan = cleaned.route?.biomes.find((candidate) => candidate.biomeKey === 'O');
       if (cleanedPlan === undefined) throw new Error('fixture lost cleaned O');
-      const cleanedSnapshot = materializeBiomePrefix(catalog, oBiome, cleanedPlan, route.loadout);
+      const cleanedSnapshot = materializeBiomePrefix(
+        catalog,
+        oBiome,
+        ordinaryPositionFor(catalog, oBiome),
+        cleanedPlan,
+        route.loadout,
+      );
       const cleanedHost =
         cleanedSnapshot === null
           ? undefined
@@ -798,9 +831,21 @@ describe('Hermes Shrine Travel Deal generation', () => {
     });
     const secondPlan = bothRushed.route?.biomes.find((candidate) => candidate.biomeKey === 'O');
     if (secondPlan === undefined) throw new Error('fixture lost O after second rush');
-    const secondSnapshot = materializeBiomePrefix(catalog, oBiome, secondPlan, route.loadout);
+    const secondSnapshot = materializeBiomePrefix(
+      catalog,
+      oBiome,
+      ordinaryPositionFor(catalog, oBiome),
+      secondPlan,
+      route.loadout,
+    );
     const secondHistory =
-      secondSnapshot === null ? undefined : composeBiomeHistoryPrefix(catalog, secondSnapshot);
+      secondSnapshot === null
+        ? undefined
+        : composeBiomeHistoryPrefix(
+            catalog,
+            secondSnapshot,
+            ordinaryPositionFor(catalog, secondSnapshot),
+          );
     if (
       secondSnapshot?.entryRoom === undefined ||
       secondHistory === null ||
@@ -813,7 +858,12 @@ describe('Hermes Shrine Travel Deal generation', () => {
         readonly entryRoom: NonNullable<typeof secondSnapshot.entryRoom>;
       },
       secondHistory,
-      2,
+      ordinaryPositionFor(
+        catalog,
+        secondSnapshot as typeof secondSnapshot & {
+          readonly entryRoom: NonNullable<typeof secondSnapshot.entryRoom>;
+        },
+      ),
       route.loadout,
       branchesWithTravelDeal(),
     );

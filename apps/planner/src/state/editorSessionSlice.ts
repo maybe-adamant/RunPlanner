@@ -242,10 +242,11 @@ function requirePanel(catalog: Catalog, selection: RoutePanelSelection): void {
   if (route === undefined) {
     throw new Error(`Editor navigation references unknown route ${selection.routeKey}`);
   }
-  if (selection.panel.kind === 'biome' && !route.biomeKeys.includes(selection.panel.biomeKey)) {
-    throw new Error(
-      `Editor navigation references biome ${selection.panel.biomeKey} outside route ${selection.routeKey}`,
-    );
+  if (
+    selection.panel.kind === 'biome' &&
+    catalog.biomes.byKey[selection.panel.biomeKey] === undefined
+  ) {
+    throw new Error(`Editor navigation references unknown biome ${selection.panel.biomeKey}`);
   }
 }
 

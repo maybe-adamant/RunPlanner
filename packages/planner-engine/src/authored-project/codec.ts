@@ -19,6 +19,7 @@ import {
   failProjectDocument as fail,
 } from './validation';
 import { reconcileChaosTopology } from './chaos-gate-reconciliation';
+import { resolveRoutePosition } from './route-context';
 
 function decodeHexTree(
   value: unknown,
@@ -53,7 +54,7 @@ export { ProjectDocumentContractError } from './validation';
 function decodeBiomePlan(
   value: unknown,
   path: string,
-  routeKey: string,
+  route: Pick<AuthoredRoutePlan, 'routeKey' | 'itineraryBiomeKeys'>,
   expectedBiomeKey: string,
   catalog: Catalog,
 ): AuthoredBiomePlan {
@@ -73,7 +74,14 @@ function decodeBiomePlan(
   const topology =
     plan.topology === null
       ? null
-      : decodeBiomeTopology(plan.topology, catalog, layout, routeKey, `${path}.topology`);
+      : decodeBiomeTopology(
+          plan.topology,
+          catalog,
+          layout,
+          route.routeKey,
+          resolveRoutePosition(catalog, route, expectedBiomeKey),
+          `${path}.topology`,
+        );
   return Object.freeze({
     biomeKey,
     state: decodeBiomeState(plan.state, layout, `${path}.state`),
@@ -104,12 +112,39 @@ function decodeRoutePlan(
   const arcanaCards = catalog.arcanaCards;
   const fearVows = catalog.fearVows;
   const plan = expectRecord(value, path);
-  expectExactKeys(plan, ['routeKey', 'loadout', 'resourcePlacements', 'biomes'], path);
+  expectExactKeys(
+    plan,
+    ['routeKey', 'itineraryBiomeKeys', 'loadout', 'resourcePlacements', 'biomes'],
+    path,
+  );
 
   const routeKey = expectString(plan.routeKey, `${path}.routeKey`);
   if (routeKey !== route.key) {
     fail(`${path}.routeKey`, `expected ${route.key}, received ${routeKey}`);
   }
+  const itineraryBiomeKeys = expectArray(plan.itineraryBiomeKeys, `${path}.itineraryBiomeKeys`).map(
+    (value, index) => expectString(value, `${path}.itineraryBiomeKeys[${index}]`),
+  );
+  if (itineraryBiomeKeys.length === 0) fail(`${path}.itineraryBiomeKeys`, 'must not be empty');
+  if (itineraryBiomeKeys.length > 4) fail(`${path}.itineraryBiomeKeys`, 'exceeds supported bounds');
+  const itinerarySet = new Set<string>();
+  for (const [index, biomeKey] of itineraryBiomeKeys.entries()) {
+    if (catalog.biomes.byKey[biomeKey] === undefined)
+      fail(`${path}.itineraryBiomeKeys[${index}]`, `unknown biome ${biomeKey}`);
+    if (itinerarySet.has(biomeKey))
+      fail(`${path}.itineraryBiomeKeys[${index}]`, `duplicates biome ${biomeKey}`);
+    itinerarySet.add(biomeKey);
+  }
+  if (
+    route.key !== 'Dream' &&
+    (itineraryBiomeKeys.length !== route.biomeKeys.length ||
+      itineraryBiomeKeys.some((biomeKey, index) => biomeKey !== route.biomeKeys[index]))
+  )
+    fail(`${path}.itineraryBiomeKeys`, 'must equal the route preset declaration');
+  const routeContext = Object.freeze({
+    routeKey,
+    itineraryBiomeKeys: Object.freeze(itineraryBiomeKeys),
+  });
   const rawResources = expectRecord(plan.resourcePlacements, `${path}.resourcePlacements`);
   expectExactKeys(
     rawResources,
@@ -207,16 +242,22 @@ function decodeRoutePlan(
       : undefined;
 
   const rawBiomes = expectArray(plan.biomes, `${path}.biomes`);
-  if (rawBiomes.length > route.biomeKeys.length) {
-    fail(`${path}.biomes`, `exceeds the ${route.biomeKeys.length}-biome route`);
+  if (rawBiomes.length > itineraryBiomeKeys.length) {
+    fail(`${path}.biomes`, `exceeds the ${itineraryBiomeKeys.length}-biome itinerary`);
   }
 
   const biomes = rawBiomes.map((biome, index) => {
-    const expectedBiomeKey = route.biomeKeys[index];
+    const expectedBiomeKey = itineraryBiomeKeys[index];
     if (expectedBiomeKey === undefined) {
       fail(`${path}.biomes[${index}]`, 'has no matching route biome');
     }
-    return decodeBiomePlan(biome, `${path}.biomes[${index}]`, routeKey, expectedBiomeKey, catalog);
+    return decodeBiomePlan(
+      biome,
+      `${path}.biomes[${index}]`,
+      routeContext,
+      expectedBiomeKey,
+      catalog,
+    );
   });
   const resourcePlacements = Object.freeze(
     Object.fromEntries(
@@ -252,6 +293,7 @@ function decodeRoutePlan(
 
   return Object.freeze({
     routeKey,
+    itineraryBiomeKeys: Object.freeze(itineraryBiomeKeys),
     resourcePlacements,
     loadout: Object.freeze({
       weaponKey,

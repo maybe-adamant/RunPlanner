@@ -1,3 +1,4 @@
+import { ordinaryRoutePosition } from '../support/route-position';
 import { describe, expect, it } from 'vitest';
 
 import { catalog } from '@run-planner/hades2-catalog';
@@ -62,6 +63,7 @@ import {
 } from '../../src/simulation/traits';
 import { initializeTestRewardBranches } from '../support/arcana-fear';
 import { installHexTree } from '../../src/simulation/hex-progress';
+import { resolveRoutePosition } from '../../src/authored-project/route-context';
 
 const giftTraitKey = 'EchoRepeatKeepsakeBoon';
 const giftIdentity = 'echo-gift-1';
@@ -192,9 +194,11 @@ function replayBiome(
       events: Object.freeze([]),
       rooms: Object.freeze([]),
     },
-    2,
+    resolveRoutePosition(catalog, route().value, 'G'),
     route().value.loadout,
     branches,
+    undefined,
+    undefined,
   );
 }
 
@@ -207,9 +211,11 @@ function replayBiomeAt(
     catalog,
     { ...evaluated.snapshot, biomeKey },
     { ...evaluated.history, biomeKey, events: Object.freeze([]), rooms: Object.freeze([]) },
-    2,
+    ordinaryRoutePosition(catalog, biomeKey === 'I' ? 'Underworld' : 'Surface', biomeKey),
     route().value.loadout,
     branches,
+    undefined,
+    undefined,
   );
 }
 

@@ -25,6 +25,7 @@ import {
   recoveryDiscarded,
 } from '../state/profileSessionSlice';
 import type { PreparedProjectWorkspace } from '../state/projectWorkspaceSlice';
+import { assertPublicProjectAdmission } from './project-admission';
 import { selectPresentProject, selectProfileSession, type PlannerStore } from '../state/store';
 
 export type ProjectOperation =
@@ -114,6 +115,9 @@ export function createProjectOperations(
     saveAsAvailable: options.profileFile.supportsSaveAs === true,
     async createNew(routeKey: string): Promise<ProjectOperationResult> {
       try {
+        const route = options.catalog.routes.byKey[routeKey];
+        if (route === undefined || (route.key !== 'Underworld' && route.key !== 'Surface'))
+          throw new Error(`Route ${routeKey} is not available for new projects`);
         const project = createInitialProject(options.catalog, routeKey);
         await options.profileFile.clearActive();
         activeProfileFile = null;
@@ -260,6 +264,7 @@ export function createProjectOperations(
           return result('loadProfile', 'cancelled', 'Load Profile cancelled.');
         }
         const project = parseProjectDocument(loaded.json, options.catalog);
+        assertPublicProjectAdmission(options.catalog, project);
         const baselineJson = encodeProjectDocument(project);
         const fileName = loadedProfileFileName(loaded.file.fileName);
         const prepared = options.prepareProjectWorkspace(project);

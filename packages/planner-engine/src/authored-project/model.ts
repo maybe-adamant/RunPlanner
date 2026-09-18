@@ -512,6 +512,8 @@ export interface AuthoredBiomePlan {
 
 export interface AuthoredRoutePlan {
   readonly routeKey: string;
+  /** Complete selected order; distinct from the currently authored prefix. */
+  readonly itineraryBiomeKeys: readonly string[];
   readonly loadout: RouteLoadout;
   readonly resourcePlacements: ResourcePlacements;
   readonly biomes: readonly AuthoredBiomePlan[];

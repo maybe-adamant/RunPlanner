@@ -19,6 +19,7 @@ export type {
   StygianWellGenerationKey,
   StygianWellSlotKey,
 } from './model';
+export { resolveRoutePosition, type ResolvedRoutePosition } from './route-context';
 export {
   SEA_STAR_DUPLICATE_ENTRY_KEY,
   seaStarDuplicateAcquisitionSite,

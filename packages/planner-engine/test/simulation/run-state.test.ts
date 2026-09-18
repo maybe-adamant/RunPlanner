@@ -13,6 +13,7 @@ import {
   semanticAddressKey,
 } from '@run-planner/engine/authored-project';
 import { describe, expect, it } from 'vitest';
+import { ordinaryRoutePosition } from '../support/route-position';
 
 import {
   authorLegalTraitOffers,
@@ -785,7 +786,7 @@ describe('decision run-state snapshots', () => {
     const plan = project.route?.biomes[0];
     if (plan === undefined) throw new Error('missing F plan');
     const progressive = evaluateProgressiveBiome(catalog, biomeAddress, plan, {
-      enteredBiomeCount: 1,
+      routePosition: ordinaryRoutePosition(catalog, 'Underworld', 'F'),
       resourcePlacements: EMPTY_RESOURCE_PLACEMENTS,
       loadout: project.route!.loadout,
     });

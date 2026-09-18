@@ -28,6 +28,7 @@ import type {
 } from '../model';
 import type { TraitOfferContext } from '../../traits/offer-domain';
 import type { ResolvedRewardOffer } from '../../../reward-kernel/model';
+import type { ResolvedRoutePosition } from '../../../authored-project/route-context';
 
 function fail(detail: string): never {
   throw new Error(detail);
@@ -61,6 +62,7 @@ export type AuthoredRoomRole = 'ordinary' | 'prebossFreeReward' | 'prebossShop';
 export interface AuthoredRoomMaterializationContext {
   readonly catalog: Catalog;
   readonly biome: BiomeAddress;
+  readonly routePosition: ResolvedRoutePosition;
   readonly room: RoomDeclaration;
   readonly occurrence: RoomOccurrence;
   readonly role: AuthoredRoomRole;

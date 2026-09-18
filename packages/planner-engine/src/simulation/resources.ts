@@ -9,6 +9,7 @@ import type { SemanticFinding } from './model';
 import { findingRegion, ownerRegion, type FindingRegionEntry } from './finding-regions';
 import type { HistoryEvent } from './history';
 import type { AuthoredRoutePlan, ResourcePlacement } from '../authored-project/model';
+import { resolveRoutePosition } from '../authored-project/route-context';
 import { composeBiomeHistoryPrefix } from './history/compose';
 import type { RoomHistoryOrigin } from './lifecycle/model';
 import { materializeBiomePrefix } from './materialization';
@@ -133,14 +134,16 @@ export function routeResourceAuthoring(
 ): RouteResourceAuthoring {
   const entered: ResourceEnteredRoom[] = [];
   for (const biome of route.biomes) {
+    const routePosition = resolveRoutePosition(catalog, route, biome.biomeKey);
     const prefix = materializeBiomePrefix(
       catalog,
       createBiomeAddress(route.routeKey, biome.biomeKey),
+      routePosition,
       biome,
       route.loadout,
     );
     if (prefix?.entryRoom === undefined) break;
-    const history = composeBiomeHistoryPrefix(catalog, prefix);
+    const history = composeBiomeHistoryPrefix(catalog, prefix, routePosition);
     if (history === null) break;
     const names = new Map<string, string>();
     for (const event of history.events) {

@@ -1076,7 +1076,6 @@ export type ProgressionDescriptor = GeneratedProgressionDescriptor | HubDecision
 export interface BiomeLayout {
   readonly biomeKey: string;
   readonly initialCounters: {
-    readonly biomeDepthCache: number;
     readonly biomeEncounterDepth: number;
   };
   readonly start: StartDescriptor;

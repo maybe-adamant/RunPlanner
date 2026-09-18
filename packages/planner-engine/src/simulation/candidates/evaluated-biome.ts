@@ -85,16 +85,6 @@ export function planFor(
   return plan;
 }
 
-export function completeBiomeCount(
-  evaluation: ProjectEvaluation,
-  routeKey: string,
-  biomeKey: string,
-): number {
-  const route = evaluation.route.routeKey === routeKey ? evaluation.route : undefined;
-  const index = route?.biomes.findIndex((candidate) => candidate.biomeKey === biomeKey) ?? -1;
-  return index + 1;
-}
-
 export function prefixAuthoredRooms(
   prefix: MaterializedBiomePrefix,
 ): readonly CanonicalAuthoredRoom[] {

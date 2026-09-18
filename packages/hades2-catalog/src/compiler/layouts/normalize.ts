@@ -104,10 +104,6 @@ export function normalizeBiomeLayouts(
     return Object.freeze({
       biomeKey: layout.biomeKey,
       initialCounters: Object.freeze({
-        biomeDepthCache: requireNonNegativeInteger(
-          layout.initialCounters.biomeDepthCache,
-          `${path}.initialCounters.biomeDepthCache`,
-        ),
         biomeEncounterDepth: requireNonNegativeInteger(
           layout.initialCounters.biomeEncounterDepth,
           `${path}.initialCounters.biomeEncounterDepth`,

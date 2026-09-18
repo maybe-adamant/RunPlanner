@@ -1,3 +1,4 @@
+import { ordinaryPositionFor } from '../support/route-position';
 import { describe, expect, it } from 'vitest';
 
 import { catalog } from '@run-planner/hades2-catalog';
@@ -62,8 +63,20 @@ describe('completion Boss variants', () => {
         });
         const completeness = evaluateBiomeCompleteness(catalog, biome, plan);
         if (completeness.completion !== 'complete') throw new Error('fixture biome is incomplete');
-        const full = materializeBiome(catalog, biome, completeness, project.route.loadout);
-        const prefix = materializeBiomePrefix(catalog, biome, plan, project.route.loadout);
+        const full = materializeBiome(
+          catalog,
+          biome,
+          ordinaryPositionFor(catalog, biome),
+          completeness,
+          project.route.loadout,
+        );
+        const prefix = materializeBiomePrefix(
+          catalog,
+          biome,
+          ordinaryPositionFor(catalog, biome),
+          plan,
+          project.route.loadout,
+        );
         const expected = `${encounter}${rank >= threshold ? '02' : '01'}`;
         for (const snapshot of [full, prefix]) {
           expect(
@@ -95,7 +108,12 @@ describe('completion Boss variants', () => {
   ] as const)('resolves rank %s against route position and the shared I map', (rank, expected) => {
     expect(
       ['F', 'G', 'H', 'I'].map(
-        (biome) => resolveCompletionBoss(catalog, 'Underworld', biome, rank).gameName,
+        (biome) =>
+          resolveCompletionBoss(
+            catalog,
+            ordinaryPositionFor(catalog, createBiomeAddress('Underworld', biome)),
+            rank,
+          ).gameName,
       ),
     ).toEqual(expected);
   });

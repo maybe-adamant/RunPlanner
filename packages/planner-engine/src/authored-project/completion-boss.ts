@@ -1,29 +1,21 @@
 import type { Catalog, RoomDeclaration } from '../catalog-schema';
+import type { ResolvedRoutePosition } from './route-context';
 
 /** Rivals applies to the first configured number of biomes on the route. */
-export function rivalsActiveForBiome(
-  catalog: Catalog,
-  routeKey: string,
-  biomeKey: string,
-  rivalsRank: number,
-): boolean {
-  const route = catalog.routes.byKey[routeKey];
-  const routePosition = route?.biomeKeys.indexOf(biomeKey) ?? -1;
-  if (routePosition < 0) throw new Error(`cannot resolve Rivals for ${routeKey}:${biomeKey}`);
-  return rivalsRank >= routePosition + 1;
+export function rivalsActiveForBiome(position: ResolvedRoutePosition, rivalsRank: number): boolean {
+  return rivalsRank >= position.ordinal;
 }
 
 /** Resolves the physical completion map from route position and configured Rivals rank. */
 export function resolveCompletionBoss(
   catalog: Catalog,
-  routeKey: string,
-  biomeKey: string,
+  position: ResolvedRoutePosition,
   rivalsRank: number,
 ): RoomDeclaration {
-  const rivalsActive = rivalsActiveForBiome(catalog, routeKey, biomeKey, rivalsRank);
+  const biomeKey = position.biomeKey;
+  const rivalsActive = rivalsActiveForBiome(position, rivalsRank);
   const layout = catalog.biomeLayouts.byKey[biomeKey];
-  if (layout === undefined)
-    throw new Error(`cannot resolve completion Boss for ${routeKey}:${biomeKey}`);
+  if (layout === undefined) throw new Error(`cannot resolve completion Boss for ${biomeKey}`);
   const gameName =
     layout.completion.rivalsBossRoomGameName !== undefined && rivalsActive
       ? layout.completion.rivalsBossRoomGameName

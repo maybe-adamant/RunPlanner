@@ -31,6 +31,7 @@ import type {
   CanonicalRoomReference,
 } from './model';
 import { materializeAuthoredRoom } from './rooms/assemble';
+import type { ResolvedRoutePosition } from '../../authored-project/route-context';
 
 export class HubMaterializationContractError extends Error {
   constructor(detail: string) {
@@ -150,6 +151,7 @@ function hubSourceReference(
 function materializeLocalSlots(
   catalog: Catalog,
   biome: BiomeAddress,
+  routePosition: ResolvedRoutePosition,
   occurrence: RoomOccurrence,
   room: RoomDeclaration,
   localDecision: LocalVisitDecision | undefined,
@@ -179,6 +181,7 @@ function materializeLocalSlots(
       const materialized = materializeAuthoredRoom({
         catalog,
         biome,
+        routePosition,
         room: sideRoom,
         occurrence: authored,
         role: 'ordinary',
@@ -210,6 +213,7 @@ function materializeLocalSlots(
 function materializeBoard(
   catalog: Catalog,
   biome: BiomeAddress,
+  routePosition: ResolvedRoutePosition,
   descriptor: HubDecisionDescriptor,
   decision: HubDecision,
   occurrences: ReadonlyMap<OccurrenceId, RoomOccurrence>,
@@ -235,6 +239,7 @@ function materializeBoard(
             room: materializeAuthoredRoom({
               catalog,
               biome,
+              routePosition,
               room: declaration,
               occurrence,
               role: 'ordinary',
@@ -252,6 +257,7 @@ function materializeBoard(
 function materializeVisits(
   catalog: Catalog,
   biome: BiomeAddress,
+  routePosition: ResolvedRoutePosition,
   descriptor: HubDecisionDescriptor,
   decision: HubDecision,
   localDecisions: readonly LocalVisitDecision[],
@@ -272,6 +278,7 @@ function materializeVisits(
       const localSlots = materializeLocalSlots(
         catalog,
         biome,
+        routePosition,
         occurrence,
         declaration,
         localDecision,
@@ -317,6 +324,7 @@ function materializeVisits(
 export function materializeHubDecision(
   catalog: Catalog,
   biome: BiomeAddress,
+  routePosition: ResolvedRoutePosition,
   descriptor: HubDecisionDescriptor,
   decision: HubDecision,
   localDecisions: readonly LocalVisitDecision[],
@@ -330,7 +338,16 @@ export function materializeHubDecision(
     fail(`Hub decision ${decision.hubKey} does not match ${descriptor.hubKey}`);
   }
   const room = materializeHubRoom(catalog, biome, descriptor);
-  const board = materializeBoard(catalog, biome, descriptor, decision, occurrences, room, loadout);
+  const board = materializeBoard(
+    catalog,
+    biome,
+    routePosition,
+    descriptor,
+    decision,
+    occurrences,
+    room,
+    loadout,
+  );
   return Object.freeze({
     kind: 'hub',
     origin: createHubDecisionAddress(biome, descriptor.hubKey),
@@ -340,6 +357,7 @@ export function materializeHubDecision(
     visits: materializeVisits(
       catalog,
       biome,
+      routePosition,
       descriptor,
       decision,
       localDecisions,

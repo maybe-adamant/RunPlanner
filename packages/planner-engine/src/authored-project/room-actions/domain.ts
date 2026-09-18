@@ -20,6 +20,7 @@ import {
   type BiomeAddress,
   type SemanticAddress,
 } from '../addresses';
+import type { ResolvedRoutePosition } from '../route-context';
 import { authoredShopOffer } from '../shop';
 import {
   acquisitionSiteFromStorageKey,
@@ -240,6 +241,7 @@ function travelDealDependencies(
 function baseContribution(
   catalog: Catalog,
   biome: BiomeAddress,
+  routePosition: ResolvedRoutePosition,
   declaration: RoomDeclaration,
   lifecycleProfileKey: string,
   occurrence: RoomOccurrence,
@@ -505,8 +507,7 @@ function baseContribution(
         hermesDelivery.biomeKey === biome.biomeKey &&
         hermesDelivery.sourceOccurrenceId === occurrence.occurrenceId;
       const finalPrebossHost =
-        catalog.rooms.byKey[occurrence.gameName]?.kind === 'Preboss' &&
-        catalog.routes.byKey[biome.routeKey]?.biomeKeys.at(-1) === biome.biomeKey;
+        catalog.rooms.byKey[occurrence.gameName]?.kind === 'Preboss' && routePosition.isLast;
       return contribution(
         biome,
         occurrence,
@@ -619,6 +620,7 @@ export function assembleRoomActionDomain(options: {
   readonly catalog: Catalog;
   readonly biome: BiomeAddress;
   readonly occurrence: RoomOccurrence;
+  readonly routePosition: ResolvedRoutePosition;
   readonly lifecycleProfileKey?: string;
   readonly activeEncounterSlotKeys?: readonly string[];
   readonly activeRewardWheelKeys?: readonly string[];
@@ -643,6 +645,7 @@ export function assembleRoomActionDomain(options: {
     options.catalog,
     options.biome,
     options.occurrence,
+    options.routePosition,
     {
       ...(options.activeEncounterSlotKeys === undefined
         ? {}
@@ -686,6 +689,7 @@ export function assembleRoomActionDomain(options: {
     baseContribution(
       options.catalog,
       options.biome,
+      options.routePosition,
       declaration,
       lifecycleProfileKey,
       options.occurrence,

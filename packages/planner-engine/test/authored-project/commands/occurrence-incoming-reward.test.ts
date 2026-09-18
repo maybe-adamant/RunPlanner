@@ -1,3 +1,4 @@
+import { ordinaryPositionFor } from '../../support/route-position';
 import { describe, expect, it } from 'vitest';
 
 import { catalog } from '@run-planner/hades2-catalog';
@@ -370,7 +371,12 @@ describe('authored-project incoming reward commands', () => {
       entryKey: SEA_STAR_DUPLICATE_ENTRY_KEY,
     });
     if (occurrence === undefined) throw new Error('Sea Star source occurrence is missing');
-    const domain = assembleRoomActionDomain({ catalog, biome: goldenFBiome, occurrence });
+    const domain = assembleRoomActionDomain({
+      routePosition: ordinaryPositionFor(catalog, goldenFBiome),
+      catalog,
+      biome: goldenFBiome,
+      occurrence,
+    });
     const source = domain.contributions.find(
       (entry) =>
         entry.kind === 'action' &&
@@ -551,7 +557,12 @@ describe('authored-project incoming reward commands', () => {
       ),
       'self',
     );
-    const domain = assembleRoomActionDomain({ catalog, biome: goldenFBiome, occurrence });
+    const domain = assembleRoomActionDomain({
+      routePosition: ordinaryPositionFor(catalog, goldenFBiome),
+      catalog,
+      biome: goldenFBiome,
+      occurrence,
+    });
     const child = domain.contributions.find(
       (entry) =>
         entry.kind === 'action' &&

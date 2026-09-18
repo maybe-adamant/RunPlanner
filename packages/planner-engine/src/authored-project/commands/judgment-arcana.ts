@@ -5,6 +5,7 @@ import { updateOccurrence } from './occurrence/mutation';
 import type { JudgmentArcanaCommand } from './types';
 import { assembleRoomActionDomain } from '../room-actions/domain';
 import { createBiomeAddress } from '../addresses';
+import { resolveRoutePosition } from '../route-context';
 
 /** Stores only a declaration-canonical set; progressive state determines whether it is active. */
 export function applyJudgmentArcanaCommand(
@@ -30,6 +31,7 @@ export function applyJudgmentArcanaCommand(
     catalog,
     biome: createBiomeAddress(command.judgment.routeKey, command.judgment.biomeKey),
     occurrence: boss,
+    routePosition: resolveRoutePosition(catalog, document.route, command.judgment.biomeKey),
   }).lifecycleStructure;
   if (
     !lifecycle.points.some(

@@ -1,3 +1,4 @@
+import { ordinaryPositionFor } from '../support/route-position';
 import { describe, expect, it } from 'vitest';
 
 import { catalog } from '@run-planner/hades2-catalog';
@@ -51,7 +52,13 @@ function materialize(project: ProjectDocument) {
   if (completeness.completion !== 'complete') throw new Error('F fixture is incomplete');
   const loadout = project.route?.loadout;
   if (loadout === undefined) throw new Error('F fixture has no loadout');
-  return materializeBiome(catalog, fBiome, completeness, loadout);
+  return materializeBiome(
+    catalog,
+    fBiome,
+    ordinaryPositionFor(catalog, fBiome),
+    completeness,
+    loadout,
+  );
 }
 
 function completeBiomeSnapshot(project: ProjectDocument, biomeKey: 'H' | 'I' | 'N') {
@@ -66,7 +73,13 @@ function completeBiomeSnapshot(project: ProjectDocument, biomeKey: 'H' | 'I' | '
   if (completeness.completion !== 'complete') {
     throw new Error(`${biomeKey} fixture is incomplete`);
   }
-  return materializeBiome(catalog, biome, completeness, loadout);
+  return materializeBiome(
+    catalog,
+    biome,
+    ordinaryPositionFor(catalog, biome),
+    completeness,
+    loadout,
+  );
 }
 
 describe('batch materialization', () => {
@@ -259,7 +272,13 @@ describe('batch materialization', () => {
     if (plan === undefined || loadout === undefined) {
       throw new Error('Contract fixture has no Underworld materialization inputs');
     }
-    const snapshot = materializeBiomePrefix(catalog, fBiome, plan, loadout);
+    const snapshot = materializeBiomePrefix(
+      catalog,
+      fBiome,
+      ordinaryPositionFor(catalog, fBiome),
+      plan,
+      loadout,
+    );
     if (snapshot?.frontier?.kind !== 'exitDecision') {
       throw new Error('Contract fixture did not publish its selected source frontier');
     }

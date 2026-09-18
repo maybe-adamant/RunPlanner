@@ -233,7 +233,7 @@ Preboss/Postboss arrays. `AuthoredRoutePlan` in `authored-project/model.ts`
 stores only its configured biome prefix, not a separate complete itinerary.
 
 The minimal missing product is an engine-owned resolved route position, derived
-from explicit mode and complete supplied order: biome identity, ordinal,
+from explicit route identity and complete supplied order: biome identity, ordinal,
 previous/next position, first/last status, and declaration-backed completion
 identities. It is not a dependency-injection context or a registry of simulation
 services. Catalog owns game mappings; the engine resolves their applicability.
@@ -241,7 +241,7 @@ Consumers must not infer the full route from its currently authored prefix.
 
 How an order was chosen is outside this product. The foundation needs neither
 Dream ordering restrictions nor a player-facing order picker. Separate the
-internal mode vocabulary from selectable project presets: today
+internal route identity from selectable project presets: today
 `apps/planner/src/projections/editorNavigation.ts` enumerates every catalog route
 and `ui/shell/App.tsx` passes those directly to `ui/project/ProjectFileControls.tsx`.
 Adding an unfinished Dream catalog preset would expose it immediately.

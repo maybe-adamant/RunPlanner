@@ -10,23 +10,20 @@ import type {
 import type { RoomEncounterState } from '../model';
 import type { AuthoredTraitOffer } from '../traits/state';
 import { failProjectDocument } from '../validation';
-import type { BiomeAddress } from '../addresses';
+import type { ResolvedRoutePosition } from '../route-context';
 import { rivalsActiveForBiome } from '../completion-boss';
 
 export function fixedEncounterDefinitionKey(
-  catalog: Catalog,
   binding: Extract<EncounterSlotBinding, { readonly kind: 'fixed' }>,
-  context?: { readonly biome: BiomeAddress; readonly configuredRivalsRank: number },
+  context?: {
+    readonly routePosition: ResolvedRoutePosition;
+    readonly configuredRivalsRank: number;
+  },
 ): string {
   if (binding.rivalsEncounterDefinitionKey === undefined) return binding.encounterDefinitionKey;
   if (context === undefined)
     throw new Error(`${binding.encounterDefinitionKey} requires Rivals context`);
-  return rivalsActiveForBiome(
-    catalog,
-    context.biome.routeKey,
-    context.biome.biomeKey,
-    context.configuredRivalsRank,
-  )
+  return rivalsActiveForBiome(context.routePosition, context.configuredRivalsRank)
     ? binding.rivalsEncounterDefinitionKey
     : binding.encounterDefinitionKey;
 }

@@ -1,3 +1,4 @@
+import { ordinaryPositionFor } from '../support/route-position';
 import { catalog } from '@run-planner/hades2-catalog';
 import {
   acquisitionSiteStorageKey,
@@ -687,6 +688,7 @@ export function echoGoldShop(
     }),
   });
   const canonical = materializeAuthoredRoom({
+    routePosition: ordinaryPositionFor(catalog, roomBiome),
     catalog,
     biome: roomBiome,
     room,

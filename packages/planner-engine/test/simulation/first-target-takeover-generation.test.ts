@@ -1,3 +1,4 @@
+import { ordinaryPositionFor } from '../support/route-position';
 import { describe, expect, it } from 'vitest';
 import { catalog } from '@run-planner/hades2-catalog';
 import {
@@ -36,10 +37,20 @@ function prefix(project: ProjectDocument) {
   const plan = project.route.biomes.find((biome) => biome.biomeKey === detourGBiome.biomeKey);
   const route = project.route;
   if (plan === undefined || route === undefined) throw new Error('G detour fixture is missing');
-  const snapshot = materializeBiomePrefix(catalog, detourGBiome, plan, route.loadout);
+  const snapshot = materializeBiomePrefix(
+    catalog,
+    detourGBiome,
+    ordinaryPositionFor(catalog, detourGBiome),
+    plan,
+    route.loadout,
+  );
   if (snapshot === null || snapshot.entryRoom === undefined)
     throw new Error('G detour prefix is absent');
-  const history = composeBiomeHistoryPrefix(catalog, snapshot);
+  const history = composeBiomeHistoryPrefix(
+    catalog,
+    snapshot,
+    ordinaryPositionFor(catalog, snapshot),
+  );
   if (history === null) throw new Error('G detour history is absent');
   return { snapshot: { ...snapshot, entryRoom: snapshot.entryRoom }, history };
 }

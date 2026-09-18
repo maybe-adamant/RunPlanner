@@ -1,3 +1,4 @@
+import { resolveRoutePosition } from '../../authored-project/route-context';
 import type { Catalog } from '../../catalog-schema';
 import { semanticAddressKey, type ExitDecisionAddress } from '../../authored-project/addresses';
 import type { HubDecision, ProjectDocument } from '../../authored-project/model';
@@ -15,7 +16,6 @@ import {
   candidateAssessmentPrefix,
   candidateBiome,
   candidatePrefix,
-  completeBiomeCount,
   planFor,
   prefixAuthoredRooms,
   prefixBiome,
@@ -109,7 +109,7 @@ function evaluatePrefixTakeover(
       owner,
       ownerHistory,
       query.gameName,
-      completeBiomeCount(evaluation, query.source.routeKey, query.source.biomeKey),
+      resolveRoutePosition(catalog, project.route, query.source.biomeKey).ordinal,
       ordinaryBatchCount(catalog, prefix.decisions),
     ),
   });
@@ -194,7 +194,7 @@ export function evaluateTakeoverPrebossBatch(
       candidate.history,
       query.source,
       query.gameName,
-      completeBiomeCount(evaluation, query.source.routeKey, query.source.biomeKey),
+      resolveRoutePosition(catalog, project.route, query.source.biomeKey).ordinal,
     ),
   });
 }

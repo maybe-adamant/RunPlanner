@@ -1,6 +1,6 @@
 import type { Catalog, EncounterAuthoringProfile, RoomDeclaration } from '../../catalog-schema';
 import type { RoomEncounterState } from '../../authored-project/model';
-import type { BiomeAddress } from '../../authored-project/addresses';
+import type { ResolvedRoutePosition } from '../../authored-project/route-context';
 import {
   encounterEnvelopeSlots,
   encounterAuthoringProfileForKey,
@@ -126,7 +126,10 @@ export function materializeEncounterPhases(
   encounters: RoomEncounterState,
   activeSlotKeys: readonly string[],
   path: string,
-  rivalsContext?: { readonly biome: BiomeAddress; readonly configuredRivalsRank: number },
+  rivalsContext?: {
+    readonly routePosition: ResolvedRoutePosition;
+    readonly configuredRivalsRank: number;
+  },
 ): readonly MaterializedEncounterPhase[] {
   const slots = encounterEnvelopeSlots(catalog, room, path);
   const slotByKey = new Map(slots.map((slot) => [slot.key, slot]));
@@ -154,7 +157,7 @@ export function materializeEncounterPhases(
       );
       const binding = encounterBindingsBySlot(catalog, room, path).get(slotKey)!;
       if (binding.kind === 'fixed')
-        encounterKey = fixedEncounterDefinitionKey(catalog, binding, rivalsContext);
+        encounterKey = fixedEncounterDefinitionKey(binding, rivalsContext);
       return Object.freeze({
         slotKey,
         envelopeKey: room.encounterEnvelopeKey,

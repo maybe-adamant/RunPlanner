@@ -230,6 +230,7 @@ function locatedBiome(
   if (layout === undefined) throw new Error(`unknown biome layout ${plan.biomeKey}`);
   return Object.freeze({
     routeKey: route.routeKey,
+    routePosition: resolveRoutePosition(catalog, route, plan.biomeKey),
     biomeIndex,
     loadout: route.loadout,
     plan,
@@ -388,3 +389,4 @@ export function reconcileChaosTopology(
   }
   return next;
 }
+import { resolveRoutePosition } from './route-context';

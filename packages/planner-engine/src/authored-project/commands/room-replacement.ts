@@ -31,6 +31,7 @@ import {
   selectedOrdinaryBatchIndex,
 } from '../topology/query';
 import { fieldsDefaultActiveCageCount } from '../fields';
+import { resolveRoutePosition } from '../route-context';
 
 import {
   failCommand,
@@ -136,6 +137,7 @@ function reconcileReplacementAcquisitionSites(
 
 function reconcileReplacementRoomLocalState(
   catalog: Catalog,
+  route: ProjectDocument['route'],
   located: LocatedBiome,
   previous: RoomOccurrence,
   replacement: RoomOccurrence,
@@ -148,7 +150,12 @@ function reconcileReplacementRoomLocalState(
   });
   const biome = createBiomeAddress(located.routeKey, located.layout.biomeKey);
   const activeKeys = new Set(
-    activeRoomActionReferences(catalog, biome, withSites).map(roomActionKey),
+    activeRoomActionReferences(
+      catalog,
+      biome,
+      withSites,
+      resolveRoutePosition(catalog, route, located.layout.biomeKey),
+    ).map(roomActionKey),
   );
   const retained = previous.roomActions.order.filter((reference) =>
     activeKeys.has(roomActionKey(reference)),
@@ -482,6 +489,7 @@ export function applyRoomReplacementCommand(
   });
   const replacement = reconcileReplacementRoomLocalState(
     catalog,
+    document.route,
     located,
     occurrence,
     replacementDraft,

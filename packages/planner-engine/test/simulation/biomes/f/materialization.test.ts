@@ -1,3 +1,4 @@
+import { ordinaryPositionFor } from '../../../support/route-position';
 import { describe, expect, it } from 'vitest';
 
 import { catalog } from '@run-planner/hades2-catalog';
@@ -35,7 +36,13 @@ function materialize(project: ProjectDocument) {
       `fixture is incomplete: ${completeness.findings.map((finding) => finding.code)}`,
     );
   }
-  return materializeBiome(catalog, fBiome, completeness, traitContext(project));
+  return materializeBiome(
+    catalog,
+    fBiome,
+    ordinaryPositionFor(catalog, fBiome),
+    completeness,
+    traitContext(project),
+  );
 }
 
 describe('F takeover materialization', () => {
@@ -50,7 +57,7 @@ describe('F takeover materialization', () => {
     const incomplete = evaluateBiomeCompleteness(catalog, fBiome, fPlan(createFProject()));
 
     expect(() =>
-      materializeBiome(catalog, fBiome, incomplete as never, {
+      materializeBiome(catalog, fBiome, ordinaryPositionFor(catalog, fBiome), incomplete as never, {
         weaponKey: 'Staff',
         aspectKey: 'BaseStaffAspect',
         fearRanks: {},
@@ -67,10 +74,16 @@ describe('F takeover materialization', () => {
       fPlan(createCompleteFTakeoverProject()),
     );
     if (completeness.completion !== 'complete') throw new Error('F fixture is incomplete');
-    // @ts-expect-error public materialization requires a route-owned loadout
-    expect(() => materializeBiome(catalog, fBiome, completeness, {})).toThrowError(
-      'public biome materialization requires a route weapon and aspect loadout',
-    );
+    expect(() =>
+      materializeBiome(
+        catalog,
+        fBiome,
+        ordinaryPositionFor(catalog, fBiome),
+        completeness,
+        // @ts-expect-error public materialization requires a route-owned loadout
+        {},
+      ),
+    ).toThrowError('public biome materialization requires a route weapon and aspect loadout');
   });
 
   it('materializes ordinary and takeover batches as one ordered decision spine', () => {

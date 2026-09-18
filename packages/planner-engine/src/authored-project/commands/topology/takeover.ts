@@ -110,8 +110,7 @@ function completionChainForSelection(
   if (route === undefined) failCommand(command, 'unknown route for selected biome');
   const bossRoom = resolveCompletionBoss(
     catalog,
-    located.routeKey,
-    located.layout.biomeKey,
+    located.routePosition,
     located.loadout.fearRanks.BossDifficultyShrineUpgrade ?? 0,
   );
   const postbossGameName = route.postbossRoomGameNames[located.biomeIndex];

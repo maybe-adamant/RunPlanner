@@ -1,3 +1,4 @@
+import { ordinaryPositionFor } from '../support/route-position';
 import { describe, expect, it } from 'vitest';
 
 import { catalog } from '@run-planner/hades2-catalog';
@@ -1627,7 +1628,7 @@ describe('Chaos paired-trait history', () => {
         catalog,
         p.snapshot,
         terminalHistory,
-        3,
+        ordinaryPositionFor(catalog, p.snapshot),
         route.loadout,
         [branchWithHistory(oneUseRemaining)],
       ).simulation;

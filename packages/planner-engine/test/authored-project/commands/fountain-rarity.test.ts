@@ -1,3 +1,4 @@
+import { ordinaryPositionFor } from '../../support/route-position';
 import { describe, expect, it } from 'vitest';
 
 import { catalog } from '@run-planner/hades2-catalog';
@@ -108,9 +109,12 @@ describe('Aromatic Phial authored fountain result', () => {
     const topology = document.route?.biomes[0]?.topology;
     const nonFountain = topology?.occurrences.find(
       (candidate) =>
-        !activeRoomActionReferences(catalog, goldenFBiome, candidate).some(
-          (reference) => reference.kind === 'useFountain',
-        ),
+        !activeRoomActionReferences(
+          catalog,
+          goldenFBiome,
+          candidate,
+          ordinaryPositionFor(catalog, goldenFBiome),
+        ).some((reference) => reference.kind === 'useFountain'),
     );
     if (nonFountain === undefined) throw new Error('missing non-fountain topology occurrence');
     const forged = createFountainRarityOutcomeAddress(

@@ -1,5 +1,6 @@
 import type { BiomeLayout, Catalog } from '../../catalog-schema';
 import type { BiomeTopology } from '../model';
+import type { ResolvedRoutePosition } from '../route-context';
 import { decodeRoomOccurrence } from './occurrence-codec';
 import { decodeTopologyStructure } from './decoding/coordinator';
 
@@ -8,6 +9,7 @@ export function decodeBiomeTopology(
   catalog: Catalog,
   layout: BiomeLayout,
   routeKey: string,
+  routePosition: ResolvedRoutePosition,
   path: string,
 ): BiomeTopology {
   const structure = decodeTopologyStructure(value, catalog, layout, routeKey, path);
@@ -15,7 +17,7 @@ export function decodeBiomeTopology(
     startOccurrenceId: structure.startOccurrenceId,
     occurrences: Object.freeze(
       structure.occurrences.map((occurrence) =>
-        decodeRoomOccurrence({ occurrence, catalog, layout, routeKey }),
+        decodeRoomOccurrence({ occurrence, catalog, layout, routeKey, routePosition }),
       ),
     ),
     decisions: structure.decisions,

@@ -1,3 +1,4 @@
+import type { ResolvedRoutePosition } from '../../authored-project/route-context';
 import type { Catalog, EncounterEnvelopeSlot, RoomDeclaration } from '../../catalog-schema';
 import {
   createBiomeAddress,
@@ -98,20 +99,10 @@ function roomsEntered(view: HistoryStateView): Readonly<Record<string, number>> 
   return Object.freeze(counts);
 }
 
-function enteredBiomeCount(catalog: Catalog, room: EncounterAuthoringRoom): number {
-  const route = catalog.routes.byKey[room.origin.routeKey];
-  const index = route?.biomeKeys.indexOf(room.origin.biomeKey) ?? -1;
-  if (index < 0) {
-    throw new Error(
-      `${room.origin.routeKey} does not place ${room.origin.biomeKey} for encounter preparation`,
-    );
-  }
-  return index + 1;
-}
-
 function requirementContext(
   catalog: Catalog,
   room: EncounterAuthoringRoom,
+  routePosition: ResolvedRoutePosition,
   declaration: RoomDeclaration,
   view: HistoryStateView,
   pendingSpellDrop: boolean,
@@ -130,7 +121,7 @@ function requirementContext(
       biomeDepthCache: view.ledgers.counters.biomeDepthCache,
       biomeEncounterDepth: view.ledgers.counters.biomeEncounterDepth,
       encounterDepth: view.ledgers.counters.routeEncounterDepth,
-      enteredBiomes: enteredBiomeCount(catalog, room),
+      enteredBiomes: routePosition.ordinal,
       // Encounter declarations do not consume reward-owned trait facts; keep
       // this required context axis neutral rather than inventing a ledger.
       upgradableTraitCount: 0,
@@ -252,6 +243,7 @@ function appendCustomizationFindings(
 function slotActivationSatisfied(
   catalog: Catalog,
   room: EncounterAuthoringRoom,
+  routePosition: ResolvedRoutePosition,
   declaration: RoomDeclaration,
   slot: EncounterEnvelopeSlot,
   before: HistoryStateView,
@@ -262,7 +254,15 @@ function slotActivationSatisfied(
     slot.activationRequirement === undefined ||
     evaluateRequirement(
       slot.activationRequirement,
-      requirementContext(catalog, room, declaration, before, pendingSpellDrop, allSpellInvested),
+      requirementContext(
+        catalog,
+        room,
+        routePosition,
+        declaration,
+        before,
+        pendingSpellDrop,
+        allSpellInvested,
+      ),
     )
   );
 }
@@ -277,6 +277,7 @@ function slotActivationSatisfied(
 export function prepareRoomEncounterPhases(
   catalog: Catalog,
   room: EncounterAuthoringRoom,
+  routePosition: ResolvedRoutePosition,
   preparationCheckpoint: HistoryStateView,
   runState: EncounterPreparationRunState = Object.freeze({}),
 ): PreparedEncounterPhases {
@@ -333,6 +334,7 @@ export function prepareRoomEncounterPhases(
     const activationSatisfied = slotActivationSatisfied(
       catalog,
       room,
+      routePosition,
       declaration,
       slot,
       preparation,
@@ -375,6 +377,7 @@ export function prepareRoomEncounterPhases(
     const context = requirementContext(
       catalog,
       room,
+      routePosition,
       declaration,
       preparation,
       pendingSpellDrop,

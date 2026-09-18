@@ -1,3 +1,4 @@
+import { resolveRoutePosition } from '../route-context';
 import type { Catalog } from '../../catalog-schema';
 import { createInitialBiomeState, replaceBiomeStateField } from '../biomeState';
 import { assessStartingArcanaGrasp } from '../loadout';
@@ -50,10 +51,10 @@ function configureRoutePrefix(
   if (!Number.isInteger(configuredBiomeCount) || configuredBiomeCount < 0) {
     failCommand(command, 'configuredBiomeCount must be a non-negative integer');
   }
-  if (configuredBiomeCount > routeDeclaration.biomeKeys.length) {
+  if (configuredBiomeCount > document.route.itineraryBiomeKeys.length) {
     failCommand(
       command,
-      `configuredBiomeCount exceeds the ${routeDeclaration.biomeKeys.length}-biome route`,
+      `configuredBiomeCount exceeds the ${document.route.itineraryBiomeKeys.length}-biome itinerary`,
     );
   }
   if (document.route.routeKey !== command.route.routeKey) {
@@ -65,7 +66,7 @@ function configureRoutePrefix(
   }
 
   const retainedBiomes = route.biomes.slice(0, configuredBiomeCount);
-  const addedBiomes = routeDeclaration.biomeKeys
+  const addedBiomes = route.itineraryBiomeKeys
     .slice(route.biomes.length, configuredBiomeCount)
     .map((biomeKey) => {
       const layout = catalog.biomeLayouts.byKey[biomeKey];
@@ -96,7 +97,11 @@ function reconcileCompletionBosses(
   const biomes = route.biomes.map((plan) => {
     const topology = plan.topology;
     if (topology === null) return plan;
-    const expected = resolveCompletionBoss(catalog, route.routeKey, plan.biomeKey, rivalsRank);
+    const expected = resolveCompletionBoss(
+      catalog,
+      resolveRoutePosition(catalog, route, plan.biomeKey),
+      rivalsRank,
+    );
     const occurrences = topology.occurrences.map((occurrence) => {
       const prebossLink = topology.fixedRoomLinks.find(
         (link) => link.targetOccurrenceId === occurrence.occurrenceId,

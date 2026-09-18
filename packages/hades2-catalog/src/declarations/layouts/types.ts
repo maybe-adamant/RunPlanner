@@ -43,7 +43,6 @@ export type RawProgressionDeclaration =
 export interface RawBiomeLayoutDeclaration {
   readonly biomeKey: string;
   readonly initialCounters: {
-    readonly biomeDepthCache: number;
     readonly biomeEncounterDepth: number;
   };
   readonly start:

@@ -3,6 +3,7 @@ import {
   applyProjectCommand,
   createOccurrenceAddress,
   createRouteAddress,
+  createProjectDocument,
   encodeProjectDocument,
   semanticAddressKey,
 } from '@run-planner/engine/authored-project';
@@ -157,6 +158,27 @@ function createPublicationAutosaveFixture(): {
 }
 
 describe('project profile operations', () => {
+  it('keeps internal Dream projects outside public new and load workflows', async () => {
+    const profile = createProfileFixture();
+    const application = createApplication({ profileFile: profile.adapter });
+    await application.projectOperations.createNew('Underworld');
+    const project = selectPresentProject(application.store.getState());
+    await expect(application.projectOperations.createNew('Dream')).resolves.toMatchObject({
+      status: 'failure',
+    });
+    const internal = createProjectDocument(catalog, {
+      projectId: 'internal-dream',
+      routeKey: 'Dream',
+      itineraryBiomeKeys: ['H', 'N', 'F', 'Q'],
+    });
+    profile.setLoadJson(encodeProjectDocument(internal));
+    await expect(application.projectOperations.loadProfile()).resolves.toMatchObject({
+      status: 'failure',
+      message: expect.stringContaining('only supports opening Underworld and Surface'),
+    });
+    expect(selectPresentProject(application.store.getState())).toBe(project);
+  });
+
   it('publishes a complete F prefix through the separate game capability', async () => {
     const published: { targetId: string; slotNumber: number; json: string }[] = [];
     const profile = createProfileFixture();
@@ -558,8 +580,18 @@ describe('project profile operations', () => {
 
   it('loads a reached Steady Growth outcome at a blocked Shrine frontier', async () => {
     const profile = createProfileFixture();
+    const checkpoint = surfaceCheckpointArtifacts['surface-p-steady-growth-shrine-frontier']
+      .raw as {
+      readonly route: Record<string, unknown>;
+    };
     profile.setLoadJson(
-      JSON.stringify(surfaceCheckpointArtifacts['surface-p-steady-growth-shrine-frontier'].raw),
+      JSON.stringify({
+        ...checkpoint,
+        route: {
+          ...checkpoint.route,
+          itineraryBiomeKeys: catalog.routes.byKey.Surface!.biomeKeys,
+        },
+      }),
       'surface-p-steady-growth-shrine-frontier.runplanner.json',
     );
     const application = createApplication({ profileFile: profile.adapter });

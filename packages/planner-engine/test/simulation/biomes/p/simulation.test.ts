@@ -19,6 +19,7 @@ import {
   simulateProject,
 } from '@run-planner/engine/simulation';
 import { describe, expect, it } from 'vitest';
+import { ordinaryRoutePosition } from '../../../support/route-position';
 
 import { replaceTestShopOfferActions } from '@run-planner/test-fixtures/shared';
 import {
@@ -238,7 +239,7 @@ describe('P core loop', () => {
     const progressive =
       previous?.authoring === 'complete' && previous.validity === 'valid' && plan !== undefined
         ? evaluateProgressiveBiomeAssembly(catalog, pBiome, plan, {
-            enteredBiomeCount: 3,
+            routePosition: ordinaryRoutePosition(catalog, 'Surface', 'P'),
             resourcePlacements: EMPTY_RESOURCE_PLACEMENTS,
             loadout: defaultRouteLoadout,
             seed: {

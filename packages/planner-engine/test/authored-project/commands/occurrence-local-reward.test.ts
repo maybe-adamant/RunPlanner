@@ -1,3 +1,4 @@
+import { ordinaryRoutePosition } from '../../support/route-position';
 import { describe, expect, it } from 'vitest';
 
 import { catalog } from '@run-planner/hades2-catalog';
@@ -69,6 +70,7 @@ describe('authored-project local reward commands', () => {
     const combatId = createOccurrenceId('round-trip-n-combat02');
     const located = {
       routeKey: 'Surface',
+      routePosition: ordinaryRoutePosition(catalog, 'Surface', 'N'),
       biomeIndex: 0,
       loadout: initial.route.loadout,
       plan: initial.route.biomes[0]!,
@@ -121,6 +123,7 @@ describe('authored-project local reward commands', () => {
     const initial = createGoldenFGHProject();
     const located = {
       routeKey: 'Underworld',
+      routePosition: ordinaryRoutePosition(catalog, 'Underworld', 'F'),
       biomeIndex: 0,
       loadout: initial.route!.loadout,
       plan: initial.route!.biomes[0]!,
@@ -150,6 +153,7 @@ describe('authored-project local reward commands', () => {
     const fieldsOccurrenceId = createOccurrenceId('golden-h-combat02');
     const fieldsLocated = {
       routeKey: 'Underworld',
+      routePosition: ordinaryRoutePosition(catalog, 'Underworld', 'H'),
       biomeIndex: 2,
       loadout: fieldsProject.route!.loadout,
       plan: fieldsProject.route!.biomes[2]!,
@@ -184,6 +188,7 @@ describe('authored-project local reward commands', () => {
     const shipOccurrenceId = oOccurrenceIds.combat04;
     const surfaceLocated = {
       routeKey: 'Surface',
+      routePosition: ordinaryRoutePosition(catalog, 'Surface', 'O'),
       biomeIndex: 1,
       loadout: surfaceProject.route.loadout,
       plan: surfaceProject.route.biomes[1]!,

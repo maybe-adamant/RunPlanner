@@ -17,6 +17,7 @@ import {
   semanticAddressKey,
 } from '@run-planner/engine/authored-project';
 import { describe, expect, it } from 'vitest';
+import { ordinaryRoutePosition } from '../support/route-position';
 
 import {
   createCompleteFGProject,
@@ -60,7 +61,7 @@ function replayEnteredFieldsForfeit(rank: 0 | 1) {
     throw new Error('expected complete-valid G seed and authored Fields fixture');
   const arcanaFear = createArcanaFearState(catalog, route.loadout);
   const progressive = evaluateProgressiveBiomeAssembly(catalog, goldenHBiome, plan, {
-    enteredBiomeCount: 3,
+    routePosition: ordinaryRoutePosition(catalog, 'Underworld', 'H'),
     resourcePlacements: EMPTY_RESOURCE_PLACEMENTS,
     loadout: route.loadout,
     seed: {

@@ -1,3 +1,4 @@
+import { ordinaryPositionFor } from '../support/route-position';
 import { describe, expect, it } from 'vitest';
 
 import { catalog } from '@run-planner/hades2-catalog';
@@ -115,7 +116,7 @@ function replayThroughRealLifecycle(
     catalog,
     evaluated.snapshot,
     evaluated.history,
-    1,
+    ordinaryPositionFor(catalog, evaluated.snapshot),
     route(project).loadout,
     [equippedBranch(project, remainingUses)],
   ).simulation;
@@ -328,7 +329,7 @@ describe('Experimental Hammer', () => {
       catalog,
       evaluatedBiome(project, 'H').snapshot,
       evaluatedBiome(project, 'H').history,
-      3,
+      ordinaryPositionFor(catalog, evaluatedBiome(project, 'H').snapshot),
       route(project).loadout,
       [branch],
     ).simulation;
@@ -361,7 +362,7 @@ describe('Experimental Hammer', () => {
       catalog,
       evaluated.snapshot,
       evaluated.history,
-      2,
+      ordinaryPositionFor(catalog, evaluated.snapshot),
       route(project).loadout,
       [equippedBranch(project, 20)],
     ).simulation;
@@ -458,7 +459,7 @@ describe('Experimental Hammer', () => {
       catalog,
       evaluated.snapshot,
       evaluated.history,
-      2,
+      ordinaryPositionFor(catalog, evaluated.snapshot),
       routePlan.loadout,
       [equippedBranch(createCompleteFGProject(), 20)],
     ).simulation;
@@ -605,7 +606,9 @@ describe('Experimental Hammer', () => {
         ...evaluated.snapshot,
       },
       evaluated.history,
-      1,
+      ordinaryPositionFor(catalog, {
+        ...evaluated.snapshot,
+      }),
       route(project).loadout,
       [carried],
     );
@@ -658,7 +661,9 @@ describe('Experimental Hammer', () => {
         ...evaluated.snapshot,
       },
       evaluated.history,
-      1,
+      ordinaryPositionFor(catalog, {
+        ...evaluated.snapshot,
+      }),
       route(project).loadout,
       [carried],
     );
@@ -721,7 +726,7 @@ describe('Experimental Hammer', () => {
         catalog,
         biome.snapshot,
         biome.history,
-        1,
+        ordinaryPositionFor(catalog, biome.snapshot),
         project.route!.loadout,
         [seed],
       ).simulation.branches[0]!.keepsakes.experimentalHammers.at(-1)?.remainingUses;
@@ -735,7 +740,7 @@ describe('Experimental Hammer', () => {
       catalog,
       evaluatedBiome(unchangedProject, 'F').snapshot,
       evaluatedBiome(unchangedProject, 'F').history,
-      1,
+      ordinaryPositionFor(catalog, evaluatedBiome(unchangedProject, 'F').snapshot),
       route(unchangedProject).loadout,
       [equippedBranch(unchangedProject, 20)],
     ).simulation.branches[0]!;
@@ -744,7 +749,7 @@ describe('Experimental Hammer', () => {
       catalog,
       evaluatedBiome(replacedProject, 'F').snapshot,
       evaluatedBiome(replacedProject, 'F').history,
-      1,
+      ordinaryPositionFor(catalog, evaluatedBiome(replacedProject, 'F').snapshot),
       route(replacedProject).loadout,
       [equippedBranch(replacedProject, 20)],
     ).simulation.branches[0]!;

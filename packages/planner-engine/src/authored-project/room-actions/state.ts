@@ -17,6 +17,7 @@ import {
 import { seaStarDuplicateSourceIsActive } from '../acquisition/sea-star';
 import { rewardSourceResolvesAtAcquisition } from '../acquisition/reward-state';
 import { authoredShopOffer } from '../shop';
+import type { ResolvedRoutePosition } from '../route-context';
 export { roomActionKey } from './key';
 import { roomActionKey } from './key';
 
@@ -42,6 +43,7 @@ export function activeRoomActionReferences(
   catalog: Catalog,
   biome: import('../addresses').BiomeAddress,
   occurrence: RoomOccurrence,
+  routePosition: ResolvedRoutePosition,
   scope?: {
     readonly activeEncounterSlotKeys?: readonly string[];
     readonly activeRewardWheelKeys?: readonly string[];
@@ -291,9 +293,7 @@ export function activeRoomActionReferences(
           shrineDelivery.routeKey === biome.routeKey &&
           shrineDelivery.biomeKey === biome.biomeKey &&
           shrineDelivery.sourceOccurrenceId === occurrence.occurrenceId;
-        const finalPrebossHost =
-          room.kind === 'Preboss' &&
-          catalog.routes.byKey[biome.routeKey]?.biomeKeys.at(-1) === biome.biomeKey;
+        const finalPrebossHost = room.kind === 'Preboss' && routePosition.isLast;
         // A retained cross-occurrence entry is not a timeline action until
         // its exact delivery contact is reached. Final-Preboss entry is the
         // sole phase-less cross-occurrence contact and uses post-outgoing.
