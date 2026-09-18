@@ -233,6 +233,12 @@ an automatic member.
 
 ## Live-witness gaps
 
+Boss customization has focused tests and isolated native-function evidence,
+not complete live acceptance. Remaining live checks cover normal/Rival explicit
+choices versus Default, Hecate's second-transition reuse, Scylla's Charybdis,
+both Cerberus decisions, and Eris partial/skipped uses. Save-progression cases
+not reproducible on the available save retain harness evidence only.
+
 The executor has unit coverage for all four automatic shapes, but byte-product
 fixtures should not be mistaken for complete native contact evidence. Current
 fixture coverage is strongest for F/G room flow, ordinary offers, Chaos, Wells,

@@ -249,17 +249,10 @@ type ExitSelection =
   | { kind: 'normal'; exitKey: string }
   | { kind: 'additional'; additionalExitKey: string };
 
-type AdditionalExit = {
-  kind: 'zagreusContract';
-  key: 'zagreusContract';
-  occurrenceId: OccurrenceId;
-};
-
 interface ExitDecision {
   kind: 'exit';
   source: ExitDecisionSource;
   normal: NormalDoorBatch;
-  additional: readonly AdditionalExit[];
   selection: ExitSelection;
 }
 
@@ -299,17 +292,27 @@ target is a real dead leaf but cannot own a downstream exit decision. Cycles,
 detached decisions, duplicate sources, multiply-owned occurrences, and orphan
 occurrences are contract errors.
 
-Changing the picked continuation is one authored edit. If the previously picked
-occurrence owns the next exit decision, that decision is re-anchored to the
-newly picked occurrence and reconciled against that occurrence's declared
-physical exits. This applies between ordinary targets and closed additional
-exits such as Chaos and the Zagreus contract. Matching exit targets and their
-descendants survive; excess targets and incompatible additional exits do not
-become dormant detour state. Occurrence identity and room-local authored state
-never move between the two continuations. The old occurrence becomes an
-unselected leaf and the new occurrence becomes the decision's sole source.
-Re-anchoring rejects an existing decision at the destination, Preboss or
-fixed-completion participants, and cycles.
+Changing the picked continuation is one authored edit, assessed against the
+proposed selected spine. A compatible ordinary decision reanchors to the new
+source using its reward-store and physical-exit declarations. Matching targets
+and their descendants retain identity and compatible room-local state. A Hub
+likewise reanchors only to a declaration-supported Hub source, preserving its
+board, visits, main/side occurrences and completed handoff.
+
+An incompatible continuation is removed, not a reason to reject the selection.
+Reanchoring may prune unavailable physical keys, but cannot invent identities
+to fill a wider atomic takeover. Selecting Preboss establishes its fixed
+completion chain instead of attaching an ordinary or Hub continuation. The
+same reachable Preboss keeps its authored Boss/Postboss state; a different
+Preboss receives declaration-owned completion defaults.
+
+Extra doors owned by the old selected target are removed with their branches;
+they never transfer to the new host. The parent decision's offered normal and
+additional siblings remain. An unresolved selection retains those offerings
+but closes the old target's downstream continuation and fixed completion.
+The old target becomes an unselected leaf; room-local state never transfers
+between it and the new target. Actual cycles, duplicate ownership and an
+already-owned destination remain contract errors.
 
 ## Starts, Batches, Preboss, and Completion
 
@@ -862,8 +865,10 @@ commands including `SelectEncounter` and `ResetEncounter`, plus the closed
 Anomaly and Zagreus detour commands. The current union is defined by
 `packages/planner-engine/src/authored-project/commands/types.ts`.
 
-`RemoveExitDecision` explicitly removes its targets and downstream selected
-subtree. Removing N's Opening decision therefore removes PreHub, its
+`RemoveExitDecision` keeps the source occurrence but removes its normal and
+additional branches, clearing references on surviving owners in the same edit.
+Removal follows ordinary, Hub, local-visit and fixed-link ownership, not array
+order. Removing N's Opening decision therefore removes PreHub, its
 source-bearing Hub, and any completed-Hub batch through persisted ownership.
 Navigation and focus are not commands and do not enter authored history.
 

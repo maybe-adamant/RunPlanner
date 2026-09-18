@@ -152,9 +152,9 @@ is diagnostic evidence, not a UI rule. F/G/H/O/P/Q can become required through
 this policy; O and Q differ only in their physical width-one takeover shape.
 I remains outside this family because its Preboss is an ordinary target.
 
-Takeover concerns normal exits only. An additional special exit belongs
-to the enclosing decision but is not replaced, counted, or selected by the
-current takeover policy.
+Takeover concerns normal exits only. An additional special exit belongs to the
+source occurrence and is exposed by its outgoing decision; it is not replaced,
+counted, or selected by the takeover policy.
 
 ## Reward stores and leaves
 

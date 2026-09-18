@@ -199,21 +199,29 @@ value presentation belong to [Contextual Editor UX](CONTEXTUAL_EDITOR_UX.md#trai
 
 ## Findings and Navigation
 
-The engine emits semantic findings and evidence. The application resolves each
-to one completed repair destination used both for navigation and inline
-feedback. It never scans for a matching game room name or uses rendered
-position as identity.
+The engine publishes one assessment issue for a blocked route, with its
+semantic repair owner and detailed reasons. The application consumes that
+selection directly; it does not sort findings into its own repair agenda.
+Issue and reason owners resolve through the same destination map for navigation
+and inline feedback, never through matching game names or rendered positions.
 
 The destination selects route, biome, rail stop, inspector, tab and dialog as
 needed. Navigation must work when entering from another biome and when already
 inside the same occurrence on the wrong tab. Redirected focus scrolls/focuses
 that same repair target rather than independently rerouting the finding.
 
-Current findings apply a persistent red border to the existing control or the
+The compact repair banner shows a title, its location below, and optional detail
+only when it adds a constraint or repair choice. It sits above the biome title
+in the structure rail, or across the content width on Route and read-only index
+panels. A valid route reserves no empty banner. Multiple reasons for one repair
+do not become multiple tasks or an expanded findings list.
+
+Global counts, highlights and selected-repair identity use this one issue;
+detailed explanations and exact child feedback remain in their local editors.
+Repair feedback applies a persistent red border to the existing control or the
 smallest truthful container. No numbered inline badge requires separate
-placement. Several findings may share a target; their individual explanations
-remain in the route-scoped Findings panel. Aggregate counts are navigation
-summaries, not replacement control identities.
+placement, and later detailed findings do not become additional highlighted
+route tasks.
 
 Fine-grained findings require exact existing destinations. A truly coarse
 finding may belong to its biome shell, but a missing child destination is a
@@ -221,8 +229,10 @@ projection failure, not grounds for silently falling back to the Timeline tab.
 
 For example, a missing optional reward choice belongs to its Overview control;
 the later pickup action does not inherit the border merely because simulation
-encountered the missing value there. A nested trait finding can open its dialog
-through the timeline launcher without hiding that launcher's occurrence.
+encountered the missing value there. A nested trait issue selects its Timeline
+launcher without hiding the occurrence or opening the dialog automatically.
+The dialog remains an explicit editing action. Advancing to the next issue
+does not steal focus, navigate, change authorship or create an Undo entry.
 
 After authored publication, reconcile stale session selections against exact
 live owners. Clear a vanished finding selection independently from vanished
