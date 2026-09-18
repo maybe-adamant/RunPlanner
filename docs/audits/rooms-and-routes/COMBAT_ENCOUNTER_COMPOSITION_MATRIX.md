@@ -406,7 +406,7 @@ commented out (`RoomDataN.lua:2849`, `LootData.lua:842–859`). The selection au
 owns placement/profile evidence; these exclusions are not missing customization
 work.
 
-## Prospective planner disposition and bounded unknowns
+## Prospective planner disposition and implementation boundaries
 
 The chosen direction is encounter-owned optional wave/type customization,
 including field-NPC generated combats, not a room-wide default-combat override.
@@ -419,23 +419,27 @@ shares, enemy counts or encounter difficulty. Realization failures warrant
 diagnostics, not synchronization failure or new conformance obligations. This
 is the accepted direction, not shipped behavior.
 
-The following need explicit resolution rather than guesses during implementation:
+Native-source contact probes establish a narrow implementation route; they do
+not establish shipped or in-game enforcement. The remaining boundaries are:
 
-1. A verified pre-generation runtime contact for each preparation path,
+1. Carry preparation ownership into the proven synchronous native contacts,
    including reward-owned Devotion and repeated H/O/P phases. The current
    executor resolves the phase before `ChooseEncounter`, but binds the resulting
    object after it returns. Carrying that known phase into preparation needs
-   proof; attaching fields only to the returned encounter is too late.
+   an explicit handoff; attaching fields only to the returned encounter is too
+   late. Devotion retains its native predecessor-derived generation context
+   while the planner identity belongs to the stamped destination.
 2. How supported profile/introduction assumptions apply to enemy candidates.
    Existing boss-choice progression overrides do not automatically authorize
    bypassing enemy intros, room packages or native intro replacement.
 3. Ordered type-choice possibility, including highlight/placeholder seeding,
    P group gates, run blacklists and declaration-owned hard context. A blanket
    independent-per-wave or final-set validator would misstate native support.
-4. The narrow contact for requested budget shares. There is no native share
-   field; sampling interception, final remainder, rounding/caps and mixed
-   fixed/generated templates need bounded evidence. These are steering
-   constraints, not grounds for validating realized percentages.
+4. Translate requested shares into the proven `FillEnemyCounts` sample
+   contacts, keyed by copied encounter, wave and native spawn-array branch.
+   There is no native share field. Fixed entries and the full-index remainder
+   rule make a generic next-random-draw override unsound; rounding/caps remain
+   native constraints, not grounds for validating realized percentages.
 
 NPC assist logic, all prescribed spawns, enemy quantities, perks, spawn timing,
 Menace substitutions and Return respawns remain native-owned. This audit does
