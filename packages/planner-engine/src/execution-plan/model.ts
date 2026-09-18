@@ -8,7 +8,7 @@ import type {
 
 /** The single room-session execution artifact supported by the app compiler. */
 export const EXECUTION_PLAN_FORMAT = 'run-planner-execution' as const;
-export const EXECUTION_PROTOCOL_VERSION = 39 as const;
+export const EXECUTION_PROTOCOL_VERSION = 40 as const;
 export const EXECUTION_CATALOG_VERSION = '0.55.0-anvil-of-fates' as const;
 export type ExecutionBiomeKey = 'F' | 'G' | 'H' | 'I' | 'N' | 'O' | 'P' | 'Q';
 
@@ -463,6 +463,18 @@ export interface ExecutionStartingLoadout {
   };
 }
 
+export interface ExecutionGeneratedEncounterCustomization {
+  readonly decisionKey: string;
+  readonly kind: 'generated';
+  readonly waveCount?: number;
+  readonly highlight?: { readonly choiceKey: string; readonly nativeId: string };
+  readonly waves?: readonly {
+    readonly waveIndex: number;
+    readonly types: readonly { readonly choiceKey: string; readonly nativeId: string }[];
+    readonly shares?: readonly number[];
+  }[];
+}
+
 export interface ExecutionOverview {
   /** Persistent N Hub board, published on the selected occurrence that reaches the Hub. */
   readonly hub?: {
@@ -511,6 +523,7 @@ export interface ExecutionOverview {
           readonly kind: 'orderedPrefix';
           readonly choices: readonly { readonly choiceKey: string; readonly nativeId: string }[];
         }
+      | ExecutionGeneratedEncounterCustomization
     )[];
   }[];
   /** Exact active ShipCombat wheel materialization for each encounter phase. */

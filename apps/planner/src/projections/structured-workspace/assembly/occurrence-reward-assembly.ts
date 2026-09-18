@@ -797,24 +797,27 @@ export function activeEncounterPhasesForOwner(
       domain.customization === undefined
         ? undefined
         : Object.freeze(
-            domain.customization.map((decision) => {
-              return Object.freeze({
-                key: decision.key,
-                label: decision.label,
-                selection: Object.freeze({
-                  ...decision.selection,
-                  choices: Object.freeze(
-                    decision.selection.choices.map((choice) =>
-                      Object.freeze({ key: choice.key, label: choice.label }),
+            domain.customization.flatMap((decision) => {
+              if (decision.selection.kind === 'generated') return [];
+              return [
+                Object.freeze({
+                  key: decision.key,
+                  label: decision.label,
+                  selection: Object.freeze({
+                    ...decision.selection,
+                    choices: Object.freeze(
+                      decision.selection.choices.map((choice) =>
+                        Object.freeze({ key: choice.key, label: choice.label }),
+                      ),
                     ),
-                  ),
+                  }),
+                  valueSupported: decision.valueSupported,
+                  ...(decision.value === undefined ? {} : { value: decision.value }),
+                  ...(decision.retainedChoiceLabels === undefined
+                    ? {}
+                    : { retainedChoiceLabels: decision.retainedChoiceLabels }),
                 }),
-                valueSupported: decision.valueSupported,
-                ...(decision.value === undefined ? {} : { value: decision.value }),
-                ...(decision.retainedChoiceLabels === undefined
-                  ? {}
-                  : { retainedChoiceLabels: decision.retainedChoiceLabels }),
-              });
+              ];
             }),
           );
     const candidateChoices = Object.freeze(

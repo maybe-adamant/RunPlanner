@@ -423,6 +423,7 @@ export {
   chaosCandidateForProjectEvaluationAssembly,
   zagreusContractCandidateForProjectEvaluationAssembly,
   encounterPhaseCandidateSupportForProjectEvaluationAssembly,
+  generatedEncounterSupportForProjectEvaluationAssembly,
   encounterPhaseFigLeafSupportForProjectEvaluationAssembly,
   encounterPhaseGorgonSupportForProjectEvaluationAssembly,
   nemesisRandomEventCandidateSupportForProjectEvaluationAssembly,

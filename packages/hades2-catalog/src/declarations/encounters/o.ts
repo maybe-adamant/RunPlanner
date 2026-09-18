@@ -1,3 +1,4 @@
+import { generatedEncounterChoices } from './generated/policies';
 import type { RawEncounterDefinitionDeclaration, RawEncounterSetDeclaration } from './types';
 import {
   fieldNpcIncomingRewardExclusions,
@@ -10,6 +11,7 @@ import {
 export const oEncounterDefinitions = [
   {
     key: 'GeneratedO_Intro01',
+    customization: [generatedEncounterChoices.GeneratedO_Intro01],
     label: 'Ship intro',
     kind: 'combat',
     countsEncounterDepth: false,
@@ -18,6 +20,7 @@ export const oEncounterDefinitions = [
   },
   {
     key: 'GeneratedO',
+    customization: [generatedEncounterChoices.GeneratedO],
     label: 'Ship combat',
     kind: 'combat',
     countsEncounterDepth: true,
@@ -26,6 +29,7 @@ export const oEncounterDefinitions = [
   },
   {
     key: 'HeraclesCombatO',
+    customization: [generatedEncounterChoices.HeraclesCombatO],
     label: 'Heracles combat',
     kind: 'combat',
     countsEncounterDepth: true,
@@ -61,6 +65,7 @@ export const oEncounterDefinitions = [
   },
   {
     key: 'IcarusCombatO',
+    customization: [generatedEncounterChoices.IcarusCombatO],
     label: 'Icarus combat',
     kind: 'combat',
     countsEncounterDepth: true,
@@ -116,6 +121,7 @@ export const oEncounterDefinitions = [
   },
   {
     key: 'DevotionTestO',
+    customization: [generatedEncounterChoices.DevotionTestO],
     label: 'Devotion combat',
     kind: 'combat',
     countsEncounterDepth: true,

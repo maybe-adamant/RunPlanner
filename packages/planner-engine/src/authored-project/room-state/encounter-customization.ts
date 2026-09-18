@@ -6,6 +6,11 @@ import type {
 } from '../../catalog-schema';
 import type { AuthoredEncounterCustomization } from '../model';
 import { encounterSetForBinding } from './encounter-envelope';
+import { decodeGeneratedEncounterCustomization } from './decoding/generated-encounter-codec';
+
+export function supportsGeneratedEncounterCustomization(room: RoomDeclaration): boolean {
+  return room.kind === 'Combat' || room.gameName === 'O_Devotion01';
+}
 
 /** Structural customization family for one declared phase; active options stay concrete elsewhere. */
 export function encounterCustomizationDeclarations(
@@ -22,8 +27,12 @@ export function encounterCustomizationDeclarations(
       : encounterSetForBinding(catalog, binding, room.gameName).encounterDefinitionKeys;
   return Object.freeze({
     active: Object.freeze(
-      activeDefinitionKeys.flatMap(
-        (key) => catalog.encounterDefinitions.byKey[key]?.customization ?? [],
+      activeDefinitionKeys.flatMap((key) =>
+        (catalog.encounterDefinitions.byKey[key]?.customization ?? []).filter(
+          (decision) =>
+            decision.selection.kind !== 'generated' ||
+            supportsGeneratedEncounterCustomization(room),
+        ),
       ),
     ),
     structural: Object.freeze(
@@ -44,6 +53,22 @@ export function customizationValueKnown(
   decisionKey: string,
   value: AuthoredEncounterCustomization,
 ): boolean {
+  if (value.kind === 'generated') {
+    const choices = declarations
+      .filter((decision) => decision.key === decisionKey && decision.selection.kind === 'generated')
+      .flatMap((decision) => decision.selection.choices);
+    if (choices.length === 0) return false;
+    const parsed = decodeGeneratedEncounterCustomization(value, 'generated customization');
+    const known = new Set(choices.map((choice) => choice.key));
+    return (
+      (parsed.highlightKey === undefined || known.has(parsed.highlightKey)) &&
+      (parsed.waves ?? []).every(
+        (wave) =>
+          wave.typeKeys.every((key) => known.has(key)) &&
+          Object.keys(wave.weights ?? {}).every((key) => known.has(key)),
+      )
+    );
+  }
   return declarations.some(
     (decision) =>
       decision.key === decisionKey &&

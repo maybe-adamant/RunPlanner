@@ -1,3 +1,4 @@
+import { generatedEncounterChoices } from './generated/policies';
 import type { RawEncounterDefinitionDeclaration, RawEncounterSetDeclaration } from './types';
 import {
   nemesisEncounterKeys,
@@ -8,6 +9,7 @@ import {
 export const iEncounterDefinitions = [
   {
     key: 'GeneratedI',
+    customization: [generatedEncounterChoices.GeneratedI],
     label: 'Combat',
     kind: 'combat',
     countsEncounterDepth: true,
@@ -16,6 +18,7 @@ export const iEncounterDefinitions = [
   },
   {
     key: 'GeneratedI_GoalReward',
+    customization: [generatedEncounterChoices.GeneratedI_GoalReward],
     label: 'Combat',
     kind: 'combat',
     countsEncounterDepth: true,
@@ -24,6 +27,7 @@ export const iEncounterDefinitions = [
   },
   {
     key: 'GeneratedI_Small',
+    customization: [generatedEncounterChoices.GeneratedI_Small],
     label: 'Combat',
     kind: 'combat',
     countsEncounterDepth: true,
@@ -32,6 +36,7 @@ export const iEncounterDefinitions = [
   },
   {
     key: 'GeneratedI_Small_GoalReward',
+    customization: [generatedEncounterChoices.GeneratedI_Small_GoalReward],
     label: 'Combat',
     kind: 'combat',
     countsEncounterDepth: true,
@@ -40,6 +45,7 @@ export const iEncounterDefinitions = [
   },
   {
     key: 'DevotionTestI',
+    customization: [generatedEncounterChoices.DevotionTestI],
     label: 'Devotion combat',
     kind: 'combat',
     countsEncounterDepth: true,
@@ -47,6 +53,7 @@ export const iEncounterDefinitions = [
   },
   {
     key: 'NemesisCombatI',
+    customization: [generatedEncounterChoices.NemesisCombatI],
     label: 'Nemesis combat',
     kind: 'combat',
     countsEncounterDepth: true,

@@ -678,6 +678,7 @@ function executionEncounterCustomization(
   customization: ResolvedEncounterCustomization | undefined,
   room: CanonicalAuthoredRoom,
   slotKey: string,
+  generated: import('../../simulation/encounters/model').ResolvedEncounterPhase['generatedCustomization'],
 ): ExecutionOverview['encounterPhases'][number]['customization'] | undefined {
   if (customization === undefined) return undefined;
   const published: NonNullable<
@@ -685,6 +686,43 @@ function executionEncounterCustomization(
   >[number][] = [];
   for (const decision of customization) {
     const value = decision.value;
+    if (decision.selection.kind === 'generated') {
+      const operands = generated?.decisionKey === decision.key ? generated.operands : undefined;
+      if (operands === undefined) continue;
+      const choice = (key: string) => {
+        const found = decision.selection.choices.find((entry) => entry.key === key);
+        if (found === undefined)
+          throw new CompilerError(
+            'executionCoverageMissing',
+            `${room.gameName}.${slotKey} lost generated enemy ${key}`,
+          );
+        return Object.freeze({ choiceKey: found.key, nativeId: found.nativeId });
+      };
+      published.push(
+        Object.freeze({
+          decisionKey: decision.key,
+          kind: 'generated',
+          ...(operands.waveCount === undefined ? {} : { waveCount: operands.waveCount }),
+          ...(operands.highlightKey === undefined
+            ? {}
+            : { highlight: choice(operands.highlightKey) }),
+          ...(operands.waves === undefined
+            ? {}
+            : {
+                waves: Object.freeze(
+                  operands.waves.map((wave) =>
+                    Object.freeze({
+                      waveIndex: wave.waveIndex,
+                      types: Object.freeze(wave.typeKeys.map(choice)),
+                      ...(wave.shares === undefined ? {} : { shares: wave.shares }),
+                    }),
+                  ),
+                ),
+              }),
+        }),
+      );
+      continue;
+    }
     if (value === undefined) continue;
     if (!decision.valueSupported) {
       throw new CompilerError(
@@ -716,6 +754,11 @@ function executionEncounterCustomization(
       );
       continue;
     }
+    if (value.kind !== 'orderedPrefix')
+      throw new CompilerError(
+        'executionCoverageMissing',
+        `${room.gameName}.${slotKey} lost ordered customization`,
+      );
     const choices = value.choiceKeys.map((choiceKey) => {
       const choice = decision.selection.choices.find((candidate) => candidate.key === choiceKey);
       if (choice === undefined)
@@ -796,6 +839,7 @@ export function assembleExecutionOverview(
             structural?.customization,
             room,
             phase.slotKey,
+            recorded?.generatedCustomization,
           );
           return Object.freeze({
             slotKey: phase.slotKey,

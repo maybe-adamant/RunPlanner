@@ -14,6 +14,7 @@ import {
 } from '../common';
 import { fail } from '../errors';
 import { normalizeRequirement } from '../requirements';
+import { normalizeEncounterGeneration } from './generation';
 
 const encounterPhaseKinds = new Set<EncounterPhaseKind>([
   'boss',
@@ -145,6 +146,15 @@ export function normalizeEncounterDefinitions(
                   return values;
                 };
                 switch (decision.selection.kind) {
+                  case 'generated':
+                    return Object.freeze({
+                      key,
+                      label,
+                      selection: normalizeEncounterGeneration(
+                        decision.selection,
+                        `${decisionPath}.selection`,
+                      ),
+                    });
                   case 'single':
                     return Object.freeze({
                       key,

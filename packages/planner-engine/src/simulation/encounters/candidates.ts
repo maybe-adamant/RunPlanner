@@ -5,7 +5,11 @@ import {
   type OccurrenceAddress,
 } from '../../authored-project/addresses';
 import { projectRoomPreparationCheckpoint } from '../history/facts';
-import type { HistoryEvent, HistoryStateView } from '../history/model';
+import type { HistoryEvent, HistoryStateView, ProgressiveRoomHistoryViews } from '../history/model';
+import {
+  targetRewardGenerationCheckpoint,
+  type GeneratedEncounterCandidateCapability,
+} from './generation-preparation';
 import type { CanonicalAuthoredRoom, CanonicalLocalVisitRoom } from '../materialization';
 import type { SemanticFinding } from '../model';
 import {
@@ -30,6 +34,9 @@ import type { NemesisRandomEventCandidateSupport } from '../rewards/model';
 
 /** Private capability from the exact simulation assembly. */
 export interface EncounterCandidateArtifacts {
+  readonly generationAt: (
+    origin: EncounterPhaseAddress,
+  ) => GeneratedEncounterCandidateCapability | undefined;
   readonly at: (origin: EncounterPhaseAddress) => EncounterPhaseCandidateSupport | undefined;
   readonly statusAt: (origin: EncounterPhaseAddress) => EncounterPhaseSequenceStatus | undefined;
   /** Exact reached/pending Gorgon control capability for this phase. */
@@ -48,6 +55,7 @@ export interface EncounterCandidateArtifacts {
 
 export function createEmptyEncounterCandidateArtifacts(): EncounterCandidateArtifacts {
   return Object.freeze({
+    generationAt: () => undefined,
     at: () => undefined,
     statusAt: () => undefined,
     gorgonAt: () => undefined,
@@ -126,8 +134,10 @@ export function evaluateEncounterCandidatesInternal(
   gorgonPhaseCandidates: readonly GorgonPhaseCandidateSupport[] = [],
   nemesisRandomEventCandidates: readonly NemesisRandomEventCandidateSupport[] = [],
   historyEvents: readonly HistoryEvent[] = [],
+  historyRooms: readonly ProgressiveRoomHistoryViews[] = [],
 ): EncounterCandidateEvaluation & { readonly findingRegions: readonly FindingRegionEntry[] } {
   const entries = new Map<string, EncounterPhaseCandidateSupport>();
+  const generation = new Map<string, GeneratedEncounterCandidateCapability>();
   const statuses = new Map<string, EncounterPhaseSequenceStatus>();
   const roomsByOwner = new Map<string, EncounterRoomCandidateCapability>();
   const findings: SemanticFinding[] = [];
@@ -136,7 +146,10 @@ export function evaluateEncounterCandidatesInternal(
     if (!room.entered) continue;
     const context = candidateContext(room, views, boundary);
     if (context === undefined) continue;
-    const preparedSource = prepareRoomEncounterPhases(catalog, room, context);
+    const preparationState = {
+      rewardGeneration: targetRewardGenerationCheckpoint(historyRooms, room.origin),
+    };
+    const preparedSource = prepareRoomEncounterPhases(catalog, room, context, preparationState);
     const gorgonEffect = catalog.keepsakes.values.find(
       (keepsake) => keepsake.effect?.kind === 'gorgonAmulet',
     )?.effect;
@@ -200,6 +213,7 @@ export function evaluateEncounterCandidatesInternal(
               catalog,
               Object.freeze({ ...room, encounterPhases: phases }),
               context,
+              preparationState,
             ),
         }),
       );
@@ -209,6 +223,8 @@ export function evaluateEncounterCandidatesInternal(
       if (entries.has(key)) throw new Error(`duplicate encounter candidate ${key}`);
       entries.set(key, support);
     }
+    for (const capability of prepared.generation)
+      generation.set(semanticAddressKey(capability.origin), capability);
     for (const entry of prepared.statuses) {
       const key = semanticAddressKey(entry.origin);
       if (statuses.has(key)) throw new Error(`duplicate encounter phase status ${key}`);
@@ -266,6 +282,7 @@ export function evaluateEncounterCandidatesInternal(
   }
   return Object.freeze({
     artifacts: Object.freeze({
+      generationAt: (origin: EncounterPhaseAddress) => generation.get(semanticAddressKey(origin)),
       at: (origin: EncounterPhaseAddress) => privateEntries.get(semanticAddressKey(origin)),
       statusAt: (origin: EncounterPhaseAddress) => privateStatuses.get(semanticAddressKey(origin)),
       gorgonAt: (origin: EncounterPhaseAddress) => gorgonSupport.get(semanticAddressKey(origin)),

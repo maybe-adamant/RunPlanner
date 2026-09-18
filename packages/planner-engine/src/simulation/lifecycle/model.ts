@@ -55,6 +55,7 @@ export type RoomLifecycleEvent =
       readonly encounterEnvelopeKey: string;
       readonly encounterKey: string;
       readonly phaseKind: EncounterPhaseKind;
+      readonly generatedCustomization?: import('../encounters/model').ResolvedEncounterPhase['generatedCustomization'];
     })
   | (RoomLifecycleEventBase & {
       readonly kind: 'encounterStarted';

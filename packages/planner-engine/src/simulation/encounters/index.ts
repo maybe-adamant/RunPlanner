@@ -9,6 +9,8 @@ export {
 } from './resolve';
 export type { EncounterResolutionContext, EncounterResolutionRoomFacts } from './resolve';
 export type { ResolvedEncounterPhase } from './model';
+export type { GeneratedEncounterCandidateCapability } from './generation-preparation';
+export type { GeneratedEncounterAssessment, GeneratedEncounterOperands } from './generation';
 export type {
   EncounterCandidateExclusion,
   EncounterRequirementEvidence,

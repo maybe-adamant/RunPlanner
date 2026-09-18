@@ -279,6 +279,16 @@ export function zagreusContractCandidateForProjectEvaluationAssembly(
  * composition may ask whether a particular declared phase has an evaluated
  * candidate capability, but cannot traverse the artifact graph itself.
  */
+export function generatedEncounterSupportForProjectEvaluationAssembly(
+  assembly: ProjectEvaluationAssembly,
+  phase: EncounterPhaseAddress,
+):
+  import('../encounters/generation-preparation').GeneratedEncounterCandidateCapability | undefined {
+  return candidateArtifactsForProjectEvaluationAssembly(assembly)
+    .biomeAt(createBiomeAddress(phase.routeKey, phase.biomeKey))
+    ?.encounters.generationAt(phase);
+}
+
 export function encounterPhaseCandidateSupportForProjectEvaluationAssembly(
   assembly: ProjectEvaluationAssembly,
   phase: EncounterPhaseAddress,

@@ -138,6 +138,9 @@ export function projectEncounterRecordPreparation(
     slotKey: phase.slotKey,
     encounterKey: phase.encounterKey,
     phaseKind: phase.kind,
+    ...(phase.generatedCustomization === undefined
+      ? {}
+      : { knownEnemyBlacklistAdditions: phase.generatedCustomization.knownRunBlacklistAdditions }),
   });
   return Object.freeze({
     sequence,

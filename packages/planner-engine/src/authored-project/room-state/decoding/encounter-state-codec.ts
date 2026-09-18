@@ -35,6 +35,7 @@ import {
 } from './encounter-trait-offer-codec';
 import { decodeGorgonPhaseResults } from './gorgon-outcome-codec';
 import { decodeNemesisRandomEventOutcome } from './nemesis-outcome-codec';
+import { decodeGeneratedEncounterCustomization } from './generated-encounter-codec';
 
 export function decodeRoomEncounterState(
   value: unknown,
@@ -377,7 +378,15 @@ export function decodeRoomEncounterState(
           value.kind,
           `${path}.customizationByPhase.${phaseKey}.${decisionKey}.kind`,
         );
-        if (kind === 'single') {
+        if (kind === 'generated') {
+          const parsed = decodeGeneratedEncounterCustomization(
+            value,
+            `${path}.customizationByPhase.${phaseKey}.${decisionKey}`,
+          );
+          if (!customizationValueKnown(declarations.structural, decisionKey, parsed))
+            failProjectDocument(path, 'has unknown generated enemy identities');
+          decisions[decisionKey] = parsed;
+        } else if (kind === 'single') {
           expectExactKeys(
             value,
             ['kind', 'choiceKey'],

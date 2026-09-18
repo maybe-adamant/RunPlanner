@@ -181,6 +181,7 @@ function generation(
     rewards.gorgonPhaseCandidates,
     rewards.nemesisRandomEventCandidates,
     history.events,
+    history.rooms,
   );
   const validation: BiomeGenerationValidation = Object.freeze({
     validity:

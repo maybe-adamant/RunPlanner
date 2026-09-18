@@ -1,3 +1,4 @@
+import { generatedEncounterChoices } from './generated/policies';
 import type { RawEncounterDefinitionDeclaration } from './types';
 import {
   athenaEncounterKeys,
@@ -146,6 +147,7 @@ export const pEncounterDefinitions = [
   },
   {
     key: 'GeneratedP_PreCombat',
+    customization: [generatedEncounterChoices.GeneratedP_PreCombat],
     label: 'Pre-combat',
     kind: 'combat',
     countsEncounterDepth: false,
@@ -623,6 +625,7 @@ export const pEncounterDefinitions = [
   },
   {
     key: 'GeneratedP',
+    customization: [generatedEncounterChoices.GeneratedP],
     label: 'Combat',
     kind: 'combat',
     countsEncounterDepth: true,
@@ -632,6 +635,7 @@ export const pEncounterDefinitions = [
   },
   {
     key: 'GeneratedP_Large',
+    customization: [generatedEncounterChoices.GeneratedP_Large],
     label: 'Large combat',
     kind: 'combat',
     countsEncounterDepth: true,
@@ -641,6 +645,7 @@ export const pEncounterDefinitions = [
   },
   {
     key: 'HeraclesCombatP',
+    customization: [generatedEncounterChoices.HeraclesCombatP],
     label: 'Heracles combat',
     kind: 'combat',
     countsEncounterDepth: true,
@@ -678,6 +683,7 @@ export const pEncounterDefinitions = [
   },
   {
     key: 'IcarusCombatP',
+    customization: [generatedEncounterChoices.IcarusCombatP],
     label: 'Icarus combat',
     kind: 'combat',
     countsEncounterDepth: true,
@@ -710,6 +716,7 @@ export const pEncounterDefinitions = [
   },
   {
     key: 'AthenaCombatP',
+    customization: [generatedEncounterChoices.AthenaCombatP],
     label: 'Athena combat',
     kind: 'combat',
     countsEncounterDepth: true,

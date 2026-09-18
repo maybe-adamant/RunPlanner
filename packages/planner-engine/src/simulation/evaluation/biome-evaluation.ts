@@ -215,6 +215,7 @@ function generation(
     rewards.gorgonPhaseCandidates,
     rewards.nemesisRandomEventCandidates,
     history.events,
+    history.rooms,
   );
   const encounterArtifacts = encounters.artifacts;
   const validation: BiomeGenerationValidation = Object.freeze({

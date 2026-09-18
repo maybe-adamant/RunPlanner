@@ -1,3 +1,4 @@
+import { generatedEncounterChoices } from './generated/policies';
 import type { RawEncounterDefinitionDeclaration, RawEncounterSetDeclaration } from './types';
 import {
   artemisEncounterKeys,
@@ -26,6 +27,7 @@ export const nEncounterDefinitions = [
   },
   {
     key: 'GeneratedN',
+    customization: [generatedEncounterChoices.GeneratedN],
     label: 'Combat',
     kind: 'combat',
     countsEncounterDepth: true,
@@ -34,6 +36,7 @@ export const nEncounterDefinitions = [
   },
   {
     key: 'ArtemisCombatN',
+    customization: [generatedEncounterChoices.ArtemisCombatN],
     label: 'Artemis combat',
     kind: 'combat',
     countsEncounterDepth: true,
@@ -65,6 +68,7 @@ export const nEncounterDefinitions = [
   },
   {
     key: 'HeraclesCombatN',
+    customization: [generatedEncounterChoices.HeraclesCombatN],
     label: 'Heracles combat',
     kind: 'combat',
     countsEncounterDepth: true,
@@ -100,6 +104,7 @@ export const nEncounterDefinitions = [
   },
   {
     key: 'GeneratedN_Smaller',
+    customization: [generatedEncounterChoices.GeneratedN_Smaller],
     label: 'Small combat',
     kind: 'combat',
     countsEncounterDepth: true,
@@ -108,6 +113,7 @@ export const nEncounterDefinitions = [
   },
   {
     key: 'GeneratedN_Bigger',
+    customization: [generatedEncounterChoices.GeneratedN_Bigger],
     label: 'Large combat',
     kind: 'combat',
     countsEncounterDepth: true,

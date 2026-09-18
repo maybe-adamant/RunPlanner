@@ -9,6 +9,10 @@ import {
   fixedEncounterDefinitionKey,
 } from '../../authored-project/room-state/encounter-envelope';
 import type { MaterializedEncounterPhase, ResolvedEncounterPhase } from './model';
+import {
+  customizationValueKnown,
+  supportsGeneratedEncounterCustomization,
+} from '../../authored-project/room-state/encounter-customization';
 
 export class EncounterResolutionContractError extends Error {
   constructor(detail: string) {
@@ -52,16 +56,7 @@ export function resolvedEncounterPhaseForDefinition(
             definition.customization.map((decision) => {
               const value = phase.customizationByDecision?.[decision.key];
               const valueSupported =
-                value === undefined ||
-                (value.kind === decision.selection.kind &&
-                  (value.kind === 'single'
-                    ? decision.selection.choices.some((choice) => choice.key === value.choiceKey)
-                    : decision.selection.kind === 'orderedPrefix' &&
-                      value.choiceKeys.length <= decision.selection.maximumLength &&
-                      new Set(value.choiceKeys).size === value.choiceKeys.length &&
-                      value.choiceKeys.every((key: string) =>
-                        decision.selection.choices.some((choice) => choice.key === key),
-                      )));
+                value === undefined || customizationValueKnown([decision], decision.key, value);
               return Object.freeze({
                 ...decision,
                 valueSupported,
@@ -203,9 +198,16 @@ export function resolveMaterializedEncounterPhase(
           );
           return resolveEncounterAuthoringProfile(profile, context);
         })();
-  return definitionKey === undefined
-    ? undefined
-    : resolvedEncounterPhaseForDefinition(catalog, phase, definitionKey);
+  if (definitionKey === undefined) return undefined;
+  const resolved = resolvedEncounterPhaseForDefinition(catalog, phase, definitionKey);
+  if (supportsGeneratedEncounterCustomization(room) || resolved.customization === undefined)
+    return resolved;
+  return Object.freeze({
+    ...resolved,
+    customization: Object.freeze(
+      resolved.customization.filter((decision) => decision.selection.kind !== 'generated'),
+    ),
+  });
 }
 
 export function resolveMaterializedEncounterPhases(

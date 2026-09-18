@@ -199,6 +199,9 @@ const lifecycleEffectRegistry = Object.freeze({
         encounterEnvelopeKey: phase.envelopeKey,
         encounterKey: phase.encounterKey,
         phaseKind: phase.kind,
+        ...(phase.generatedCustomization === undefined
+          ? {}
+          : { generatedCustomization: phase.generatedCustomization }),
       });
     }
     return next;
