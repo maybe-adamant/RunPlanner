@@ -820,7 +820,6 @@ export function activeEncounterPhasesForOwner(
                         Object.freeze({
                           key: choice.key,
                           label: choice.label,
-                          elite: choice.elite,
                         }),
                       ),
                     ),

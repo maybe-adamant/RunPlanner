@@ -53,6 +53,8 @@ export type {
   WorkspaceCommandIntent,
   WorkspaceEncounterInteraction,
   WorkspaceEncounterCustomizationInteraction,
+  WorkspaceGeneratedEncounterAssessment,
+  WorkspaceGeneratedWaveDraftChoice,
   WorkspaceNemesisEventInteraction,
   WorkspaceNemesisEventDomain,
   WorkspaceNemesisFeatureInteraction,

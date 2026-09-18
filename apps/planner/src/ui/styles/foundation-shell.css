@@ -32,7 +32,8 @@
 
 [data-radix-popper-content-wrapper] > * {
   zoom: var(--app-scale, 1);
-  max-height: calc(var(--radix-popper-available-height) / var(--app-scale, 1));
+  /* Keep fractional zoom measurements from resizing the observed popup again. */
+  max-height: round(down, calc(var(--radix-popper-available-height) / var(--app-scale, 1)), 1px);
   overflow-y: auto;
 }
 

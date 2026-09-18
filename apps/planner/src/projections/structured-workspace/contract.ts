@@ -15,6 +15,8 @@ export type {
   WorkspaceEncounterInteraction,
   WorkspaceEncounterCustomizationInteraction,
   WorkspaceEncounterPhase,
+  WorkspaceGeneratedEncounterAssessment,
+  WorkspaceGeneratedWaveDraftChoice,
   WorkspaceFieldsCageDescriptor,
   WorkspaceFieldsCageOutcomeInteraction,
   WorkspaceFieldsOptionalRewardDescriptor,
