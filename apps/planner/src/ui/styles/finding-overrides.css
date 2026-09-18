@@ -1,7 +1,7 @@
 /* Finding feedback wins over ordinary structural, selection, and drag-state shadows. */
 [data-semantic-owner][data-has-findings='true'] {
   box-shadow: inset 0 0 0 2px #da7373;
-  scroll-margin-block: 35vh;
+  scroll-margin-block: calc(35 * var(--app-vh));
 }
 
 /* Native checkboxes need an outer stroke; their native fill can hide inset shadows. */

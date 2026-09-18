@@ -17,6 +17,7 @@ import {
 } from '@planner/state/store';
 import type { ProjectOperations } from '@planner/workspace/projectOperations';
 import type { StructuredWorkspaceProjection } from '@planner/projections/structured-workspace';
+import type { AppScalePreference } from '@planner/persistence/appScalePreference';
 import { PomResolutionDialog } from '../editor/rewards/PomResolutionEditor';
 import { TraitOfferDialog } from '../editor/rewards/TraitOfferEditor';
 import { ProjectFileControls } from '../project/ProjectFileControls';
@@ -24,8 +25,10 @@ import { ProjectHistoryControls } from '../project/ProjectHistoryControls';
 import { ActionIcon } from '../controls/ActionIcon';
 import { RouteWorkspace } from './RouteWorkspace';
 import { FindingTargetScope } from '../feedback/useFindingTarget';
+import { useAppScale } from './useAppScale';
 
 interface AppProps {
+  readonly appScalePreference?: AppScalePreference;
   readonly catalog: Catalog;
   readonly catalogSummary: CatalogSummary;
   readonly editorNavigation: EditorNavigation;
@@ -36,12 +39,14 @@ interface AppProps {
 }
 
 export function App({
+  appScalePreference,
   catalog,
   catalogSummary,
   editorNavigation,
   projectOperations,
   selectStructuredWorkspace,
 }: AppProps) {
+  useAppScale(appScalePreference);
   const project = useAppSelector(selectPresentProject);
   const [entryOpen, setEntryOpen] = useState(project === undefined);
   const evaluation = useAppSelector(selectProjectEvaluation);
@@ -124,6 +129,20 @@ export function App({
                         >
                           <h2 id="about-shortcuts-title">Keyboard shortcuts</h2>
                           <dl>
+                            <div>
+                              <dt>App scale</dt>
+                              <dd>
+                                <kbd>Ctrl/Cmd</kbd> + <kbd>+</kbd> / <kbd>−</kbd>
+                                <span className="shortcut-alternative">or</span>
+                                <kbd>Ctrl</kbd> + mouse wheel
+                              </dd>
+                            </div>
+                            <div>
+                              <dt>Reset scale</dt>
+                              <dd>
+                                <kbd>Ctrl/Cmd</kbd> + <kbd>0</kbd>
+                              </dd>
+                            </div>
                             <div>
                               <dt>Undo</dt>
                               <dd>

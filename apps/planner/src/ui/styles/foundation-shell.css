@@ -1,4 +1,10 @@
 :root {
+  /* Layout breakpoints and viewport lengths use the available unscaled space. */
+  --app-vw: calc(1vw / var(--app-scale, 1));
+  --app-vh: calc(1dvh / var(--app-scale, 1));
+  zoom: var(--app-scale, 1);
+  container: app-viewport / inline-size;
+
   --surface: #1c1d23;
   --border: #3b3c46;
   --muted: #aaa7af;
@@ -19,8 +25,19 @@
   text-rendering: optimizeLegibility;
 }
 
+/* Radix positions floating wrappers in screen pixels; scale only their content. */
+[data-radix-popper-content-wrapper] {
+  zoom: calc(1 / var(--app-scale, 1));
+}
+
+[data-radix-popper-content-wrapper] > * {
+  zoom: var(--app-scale, 1);
+  max-height: calc(var(--radix-popper-available-height) / var(--app-scale, 1));
+  overflow-y: auto;
+}
+
 .application-fault-shell {
-  min-height: 100vh;
+  min-height: calc(100 * var(--app-vh));
   display: grid;
   place-items: center;
   padding: 32px;
@@ -73,7 +90,7 @@ body,
 
 body {
   min-width: 320px;
-  min-height: 100vh;
+  min-height: calc(100 * var(--app-vh));
   margin: 0;
   background: radial-gradient(circle at 15% 0%, rgb(79 52 105 / 30%), transparent 38rem), #111216;
   overflow: hidden;
@@ -106,7 +123,7 @@ select:focus-visible {
 .app-shell {
   display: flex;
   width: min(1800px, calc(100% - 24px));
-  height: 100dvh;
+  height: calc(100 * var(--app-vh));
   min-height: 0;
   flex-direction: column;
   margin: 0 auto;
@@ -174,7 +191,7 @@ select:focus-visible {
 }
 
 .app-header h1 {
-  font-size: clamp(1.75rem, 2.5vw, 2.25rem);
+  font-size: clamp(1.75rem, calc(2.5 * var(--app-vw)), 2.25rem);
 }
 
 .eyebrow {

@@ -562,7 +562,7 @@
 
 .keepsake-equip-result-control {
   display: flex;
-  min-width: min(16rem, 30vw);
+  min-width: min(16rem, calc(30 * var(--app-vw)));
   align-items: center;
   gap: 8px;
 }

@@ -28,7 +28,7 @@
 
 .about-popover {
   z-index: 100;
-  width: min(480px, calc(100vw - 24px));
+  width: min(480px, calc(100 * var(--app-vw) - 24px));
   padding: 16px;
   border: 1px solid #41424c;
   border-radius: 10px;

@@ -8,6 +8,10 @@ import { RoomMapViewport } from '@planner/ui/room-maps/RoomMapViewport';
 beforeEach(() => {
   vi.spyOn(HTMLElement.prototype, 'clientWidth', 'get').mockReturnValue(500);
   vi.spyOn(HTMLElement.prototype, 'clientHeight', 'get').mockReturnValue(400);
+  vi.spyOn(HTMLElement.prototype, 'offsetWidth', 'get').mockReturnValue(500);
+  vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockReturnValue(
+    new DOMRect(0, 0, 500, 400),
+  );
 });
 
 afterEach(() => {
@@ -52,6 +56,17 @@ function renderMap(
 const pointer = { pointerId: 1, pointerType: 'mouse', button: 0, clientX: 300, clientY: 260 };
 
 describe('RoomMapViewport', () => {
+  it.each([0.5, 2])('keeps map dragging aligned at %s app scale', (scale) => {
+    const { scroll, stage } = renderMap();
+    vi.spyOn(scroll, 'getBoundingClientRect').mockReturnValue(
+      new DOMRect(0, 0, 500 * scale, 400 * scale),
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Zoom in' }));
+    fireEvent.pointerDown(stage, pointer);
+    fireEvent.pointerMove(stage, { ...pointer, clientX: 250, clientY: 230 });
+    expect(scroll.scrollLeft).toBeCloseTo(62.5 + 50 / scale);
+    expect(scroll.scrollTop).toBeCloseTo(50 + 30 / scale);
+  });
   it('keeps overlaid zoom controls outside the scrolling image and its pan gesture', () => {
     const { scroll, image, capture } = renderMap(1000, 800, 'overlay');
     const zoom = screen.getByRole('button', { name: 'Zoom in' });
