@@ -490,8 +490,13 @@ supported encounter identities in biome Combat rooms plus `O_Devotion01`,
 including fixed rosters and non-generator contacts that cannot inherit an
 ordinary-generation policy merely because they occur in a Combat room.
 
-Runtime steering before generation, profile/introduction policy, ordered
-composition validation and mixed-template budget steering still require a
-bounded disposition before implementation. Static source feasibility is not
-evidence of a tested runtime adapter. No enemy quantity simulation or promise
-about every final live enemy follows from authoring the generated roster.
+Native-source probes establish synchronous preparation, highlight/type-fill
+and count-sample contacts without replacing these algorithms. Ownership follows
+the copied encounter and wave; unmatched nested work and introduction
+replacements must not inherit an outer customization scope. Count samples map
+to the allocator's native spawn-array branches, not generic RNG call order.
+
+Profile/introduction assumptions and ordered composition validity remain
+catalog/engine boundaries. These probes are not evidence of a deployed or
+in-game-tested adapter. No enemy quantity simulation or promise about every
+final live enemy follows from authoring the generated roster.

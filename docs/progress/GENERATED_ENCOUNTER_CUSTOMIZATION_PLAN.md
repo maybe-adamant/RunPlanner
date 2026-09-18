@@ -195,7 +195,24 @@ semantics; this feature does not silently repair unrelated preparation rules.
 Candidate contacts are copied `MinWaves/MaxWaves` before generation, the native
 highlight draw, `FillEnemyTypes` for ordinary additions/placeholders, and
 `FillEnemyCounts` for requested allocation slices. The exact narrow draw/sample
-interception is subject to Gate A proof, not assumed from function names.
+contacts are established by Gate A's opt-in native-source probes:
+
+- Carry occurrence/phase from the existing encounter selector into synchronous
+  `SetupEncounter` preparation; match the concrete declaration, then follow its
+  copied encounter and actual wave objects. Native intro replacement or nested
+  unowned work runs under a neutral scope, not the parent's override.
+- Override wave bounds on that copy. Observe the initial highlight eligibility
+  pass before steering its draw; type-filling draws belong to their exact wave.
+  An unseeded random type count can use the authored list size, without changing
+  deterministic escalation or highlight counts. Native filling retains its
+  blacklist, group-pruning and active-cap side effects.
+- Map allocation samples from the native spawn-array branches, including fixed
+  entries, already-counted entries and the full-index remainder rule. The
+  mapping belongs only to that `FillEnemyCounts` invocation; the native allocator
+  still performs rounding, caps and remainder allocation.
+
+These probes establish contacts, not a shipped adapter or authored schema.
+Engine normalization of relative weights and live enforcement remain later gates.
 
 Do not prepopulate `SpawnWaves` to bypass native generation, replace completed
 rosters after counts are calculated, or preseed arbitrary types and lose native
@@ -324,9 +341,31 @@ map for the accepted contract, without copying the matrix or adding a bug log.
 
 ## Progress
 
+Gate A verification uses the game module's opt-in
+`tests/probes/test_generated_encounter_native.lua`, which loads unmodified native
+function bodies from `HADES2_SCRIPTS_PATH` (or an explicit Scripts-directory
+argument). It does not vendor game source or add a local-game dependency to the
+ordinary test suite. The prepared inputs are controlled generator examples,
+not an exhaustive test of the catalog's 39 concrete identities.
+
+Recorded checks:
+
+- Native-source probe: 10 passing witnesses, covering Default parity, copied
+  count/highlight/type steering, exact ordinary fill side effects, allocation
+  mapping and native caps/remainders, H mixed templates, Devotion destination
+  versus native context, repeated phases through existing encounter hooks,
+  integrated diagnostic continuation, nested/native-fault cleanup, and native
+  intro replacement.
+- Existing module suite: 528 passing tests.
+- `luacheck src/ tests/probes/`: no warnings or errors.
+- Initial independent review identified four contact-evidence gaps; the bounded
+  remediation replaced disconnected assertions with the native call chains.
+  Independent follow-up verification closed all four with no remaining material
+  findings. Production realization and in-game acceptance are still pending.
+
 | Gate | Status                                   |
 | ---- | ---------------------------------------- |
-| A    | Not started                              |
+| A    | Complete; independently reviewed         |
 | B    | Not started                              |
 | C    | Not started                              |
 | D    | Not started                              |
