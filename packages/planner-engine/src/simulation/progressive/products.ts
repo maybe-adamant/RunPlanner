@@ -1,4 +1,5 @@
 import type { SemanticAddress } from '../../authored-project/addresses';
+import type { AssessmentIssue } from '../assessment-issue';
 import type {
   GeneratedRoomGenerationValidation,
   HubRoomGenerationValidation,
@@ -32,6 +33,7 @@ export interface ProgressiveBiomeEvaluation {
   readonly rewards: BiomeRewardSimulation;
   readonly findings: readonly SemanticFinding[];
   readonly blockedAt?: SemanticAddress;
+  readonly issue?: AssessmentIssue;
   /** Cause and location of the selected progressive stop. */
   readonly blockedKind?: 'incomplete' | 'invalid';
   readonly blockedRegionKey?: string;

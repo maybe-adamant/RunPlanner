@@ -472,23 +472,12 @@ export function composeBiomeHistoryPrefix({
   return result.history;
 }
 
-export function composeBiomeHistoryPrefixWithEncounterValidation({
-  routeKey,
-  biomeKey,
-  initialCounters,
-  seed,
-  compose,
-}: Omit<
-  BiomeHistoryPrefixOptions,
-  'validateEncounterResolution'
->): EncounterValidatedPrefixHistory {
+export function composeBiomeHistoryPrefixWithEncounterValidation(
+  options: Omit<BiomeHistoryPrefixOptions, 'validateEncounterResolution'>,
+): EncounterValidatedPrefixHistory {
   return composeBiomeHistoryPrefixResult({
-    routeKey,
-    biomeKey,
-    initialCounters,
-    ...(seed === undefined ? {} : { seed }),
+    ...options,
     validateEncounterResolution: true,
-    compose,
   });
 }
 

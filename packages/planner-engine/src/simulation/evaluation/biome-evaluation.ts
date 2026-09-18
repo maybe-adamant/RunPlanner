@@ -7,7 +7,8 @@ import {
   type NemesisRandomEventAddress,
 } from '../../authored-project/addresses';
 import type { AuthoredBiomePlan, ProjectDocument } from '../../authored-project/model';
-import { evaluateBiomeCompleteness } from '../completeness';
+import { evaluateBiomeCompleteness, type IncompleteBiomeCompletenessResult } from '../completeness';
+import { createAssessmentIssue } from '../assessment-issue';
 import { evaluateBiomeRoomGenerationAssemblyInternal } from '../generation/biome';
 import { evaluateHubDecisionGenerationInternal } from '../generation/hub';
 import {
@@ -18,7 +19,7 @@ import {
 import { attestFigLeafBranchState, attestGorgonBranchState } from '../keepsakes/encounter-effects';
 import { attestPendingHermesSpellDrop } from '../commerce/hermes-shrine';
 import { attestTalentDropsClosed } from '../hex-progress';
-import { authoringRegion } from '../finding-regions';
+import { assessmentRepairOwner, authoringRegion } from '../finding-regions';
 import {
   composeBiomeHistoryWithEncounterValidation,
   type BiomeHistoryPrefix,
@@ -43,7 +44,11 @@ import {
 } from '../progressive/biome';
 import { locateOwner } from '../progressive/finding-location';
 import type { BiomeGenerationValidation } from '../progressive/products';
-import { effectiveRouteResourcePlacements } from '../resources';
+import {
+  effectiveRouteResourcePlacements,
+  resourcePlacementFindings,
+  routeResourceAuthoring,
+} from '../resources';
 import { evaluateBiomeRewardsAssemblyInternal } from '../rewards/biome';
 import type { BiomeRewardSimulation } from '../rewards/model';
 import {
@@ -67,6 +72,16 @@ import { ProjectSimulationContractError } from './project-evaluation-assembly';
 interface BiomeProjectEvaluationAssembly {
   readonly evaluation: ProjectBiomeEvaluation;
   readonly candidateArtifacts: BiomeCandidateArtifacts;
+}
+
+function completenessIssue(completeness: IncompleteBiomeCompletenessResult) {
+  const owner = completeness.requiredInput ?? completeness.frontier;
+  const regionKey = authoringRegion(owner);
+  return createAssessmentIssue(
+    assessmentRepairOwner(owner),
+    regionKey,
+    completeness.findings.filter((finding) => authoringRegion(finding.origin) === regionKey),
+  );
 }
 
 interface BiomeGenerationAssembly {
@@ -355,10 +370,12 @@ export function replayProjectBiomeFromEvaluatedPredecessor(
       `${biome.biomeKey} candidate replay predecessor is not complete and valid`,
     );
   }
+  const resourceAuthoring = routeResourceAuthoring(catalog, route);
   return evaluateBiome(catalog, route.routeKey, plan, {
     enteredBiomeCount: biomeIndex + 1,
     loadout: route.loadout,
-    resourcePlacements: effectiveRouteResourcePlacements(catalog, route),
+    resourcePlacements: effectiveRouteResourcePlacements(resourceAuthoring),
+    resourceFindings: resourcePlacementFindings(route.routeKey, resourceAuthoring),
     ...(previous === undefined
       ? {}
       : {
@@ -392,6 +409,7 @@ export function evaluateBiomeAssembly(
           requiredInputRegion: authoringRegion(requiredInput),
           coverage: Object.freeze({ kind: 'none', reason: 'notEvaluated' }),
           findings: completeness.findings,
+          issue: completenessIssue(completeness),
         }),
         candidateArtifacts: createEmptyBiomeCandidateArtifacts(origin),
       });
@@ -421,6 +439,7 @@ export function evaluateBiomeAssembly(
         origin,
         authoring: 'incomplete',
         frontier: completeness.frontier,
+        issue: progressive.evaluation.issue ?? completenessIssue(completeness),
         ...(requiredInput === undefined
           ? {}
           : {
@@ -554,6 +573,9 @@ export function evaluateBiomeAssembly(
         roomGeneration: progressive.evaluation.roomGeneration,
         rewards: reconciledRewards,
         findings: progressive.evaluation.findings,
+        ...(progressive.evaluation.issue === undefined
+          ? {}
+          : { issue: progressive.evaluation.issue }),
       }),
       candidateArtifacts: progressive.candidateArtifacts,
     });
@@ -567,6 +589,7 @@ export function evaluateBiomeAssembly(
     context.loadout,
     context.seed?.rewardBranches,
     context.resourcePlacements,
+    context.resourceFindings,
   );
   const roomGeneration = generation(
     catalog,
@@ -728,6 +751,9 @@ export function evaluateBiomeAssembly(
       roomGeneration: progressive.evaluation.roomGeneration,
       rewards: reconciledRewards,
       findings: progressive.evaluation.findings,
+      ...(progressive.evaluation.issue === undefined
+        ? {}
+        : { issue: progressive.evaluation.issue }),
     }),
     candidateArtifacts: progressive.candidateArtifacts,
   });

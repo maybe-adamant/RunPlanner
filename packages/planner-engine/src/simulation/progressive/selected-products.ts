@@ -583,11 +583,27 @@ export function retainBlockedRegionProducts(
     encounterCapability === undefined
       ? retainedArtifacts.encounters
       : Object.freeze({
-          at: retainedArtifacts.encounters.at,
-          statusAt: retainedArtifacts.encounters.statusAt,
+          at: (address: import('../../authored-project/addresses').EncounterPhaseAddress) =>
+            blockedAt.kind === 'encounterPhase' &&
+            semanticAddressKey(address) === semanticAddressKey(blockedAt)
+              ? selectedArtifacts.encounters.at(address)
+              : retainedArtifacts.encounters.at(address),
+          statusAt: (address: import('../../authored-project/addresses').EncounterPhaseAddress) => {
+            if (
+              blockedAt.kind !== 'encounterPhase' ||
+              semanticAddressKey(address) !== semanticAddressKey(blockedAt)
+            )
+              return retainedArtifacts.encounters.statusAt(address);
+            const status = selectedArtifacts.encounters.statusAt(address);
+            return status?.kind === 'active' ? Object.freeze({ kind: 'active' as const }) : status;
+          },
           gorgonAt: retainedArtifacts.encounters.gorgonAt,
           nemesisAt: retainedArtifacts.encounters.nemesisAt,
-          figLeafAt: retainedArtifacts.encounters.figLeafAt,
+          figLeafAt: (address: import('../../authored-project/addresses').EncounterPhaseAddress) =>
+            blockedAt.kind === 'encounterPhase' &&
+            semanticAddressKey(address) === semanticAddressKey(blockedAt)
+              ? selectedArtifacts.encounters.figLeafAt(address)
+              : retainedArtifacts.encounters.figLeafAt(address),
           roomAt: (owner: OccurrenceAddress) =>
             occurrenceOwner !== undefined &&
             semanticAddressKey(owner) === semanticAddressKey(occurrenceOwner)

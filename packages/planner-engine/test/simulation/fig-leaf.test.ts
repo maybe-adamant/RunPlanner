@@ -84,7 +84,8 @@ describe('Fig Leaf state contract', () => {
       phase: laterPhase,
       value: true,
     });
-    const evaluation = simulateProject(catalog, project);
+    const assembly = simulateProjectAssembly(catalog, project);
+    const evaluation = assembly.evaluation;
     const biome = evaluation.route?.biomes.find((entry) => entry.biomeKey === 'F');
     if (biome === undefined || !('rewards' in biome))
       throw new Error('F reward evaluation missing');
@@ -93,10 +94,9 @@ describe('Fig Leaf state contract', () => {
       remainingUses: 2,
       activatedThisBiome: true,
     });
-    const laterSameBiome = biome.rewards.figLeafPhaseCandidates.find(
-      (candidate) =>
-        candidate.origin.owner.kind === 'occurrence' &&
-        candidate.origin.owner.occurrenceId === createOccurrenceId('golden-f-b3-e1'),
+    const laterSameBiome = encounterPhaseFigLeafSupportForProjectEvaluationAssembly(
+      assembly,
+      laterPhase,
     );
     expect(laterSameBiome).toMatchObject({ supported: false, selected: true });
     const laterEvents = biome.history.events
@@ -106,8 +106,8 @@ describe('Fig Leaf state contract', () => {
           event.origin.kind === 'occurrence' &&
           event.origin.occurrenceId === createOccurrenceId('golden-f-b3-e1'),
       );
-    expect(laterEvents).not.toHaveLength(0);
-    expect(laterEvents.every((event) => event.execution === 'normal')).toBe(true);
+    expect(laterEvents).toHaveLength(0);
+    expect(evaluation.issue).toMatchObject({ kind: 'invalid', owner: laterPhase });
     expect(
       biome.findings.some(
         (finding) =>
@@ -181,7 +181,7 @@ describe('Fig Leaf state contract', () => {
     expect(qCandidates.every((candidate) => candidate.supported)).toBe(true);
   });
 
-  it('allows only the first selected O phase in one Ship envelope to suppress execution', () => {
+  it('stops at the second selected O phase and resumes the legal Ship when repaired', () => {
     const occurrenceId = oOccurrenceIds.combat04;
     const intro = createEncounterPhaseAddress(
       oBiome,
@@ -214,12 +214,34 @@ describe('Fig Leaf state contract', () => {
       );
     const introEvents = events.filter((event) => event.phaseKey === 'Intro');
     const combat1Events = events.filter((event) => event.phaseKey === 'Combat1');
-    expect(introEvents).not.toHaveLength(0);
-    expect(combat1Events).not.toHaveLength(0);
-    expect(introEvents.every((event) => event.execution === 'skippedByFigLeaf')).toBe(true);
-    expect(introEvents.every((event) => event.figLeafSkipOwner === true)).toBe(true);
-    expect(combat1Events.every((event) => event.execution === 'normal')).toBe(true);
-    expect(combat1Events.every((event) => event.figLeafSkipOwner !== true)).toBe(true);
+    expect(introEvents).toHaveLength(0);
+    expect(combat1Events).toHaveLength(0);
+    expect(evaluation.issue).toMatchObject({ kind: 'invalid', owner: combat1 });
+    const repaired = simulateProject(
+      catalog,
+      applyProjectCommand(project, catalog, {
+        kind: 'ReplaceFigLeafSkip',
+        phase: combat1,
+        value: false,
+      }),
+    );
+    const repairedO = repaired.route.biomes.find((biome) => biome.biomeKey === 'O');
+    if (repairedO === undefined || !('history' in repairedO))
+      throw new Error('repaired O history missing');
+    expect(
+      repairedO.history.events
+        .filter(isEncounterLifecycleEvent)
+        .filter(
+          (event) =>
+            event.origin.kind === 'occurrence' && event.origin.occurrenceId === occurrenceId,
+        )
+        .map((event) => [event.phaseKey, event.execution]),
+    ).toEqual([
+      ['Intro', 'skippedByFigLeaf'],
+      ['Intro', 'skippedByFigLeaf'],
+      ['Combat1', 'normal'],
+      ['Combat1', 'normal'],
+    ]);
     expect(
       o.findings.some(
         (finding) =>
@@ -229,7 +251,7 @@ describe('Fig Leaf state contract', () => {
     ).toBe(true);
   });
 
-  it('keeps a selected Opening N phase visible while executing it normally', () => {
+  it('keeps an invalid Opening N skip authored without publishing normal execution', () => {
     const phase = createEncounterPhaseAddress(
       nBiome,
       { kind: 'occurrence', occurrenceId: createOccurrenceId('surface-n-opening') },
@@ -250,8 +272,8 @@ describe('Fig Leaf state contract', () => {
           event.origin.kind === 'occurrence' &&
           event.origin.occurrenceId === createOccurrenceId('surface-n-opening'),
       );
-    expect(openingEvents).not.toHaveLength(0);
-    expect(openingEvents.every((event) => event.execution === 'normal')).toBe(true);
+    expect(openingEvents).toHaveLength(0);
+    expect(evaluation.issue).toMatchObject({ kind: 'invalid', owner: phase });
     expect(
       n.findings.some(
         (finding) =>
@@ -299,7 +321,7 @@ describe('Fig Leaf state contract', () => {
     ).toBe(false);
   });
 
-  it('executes an authored Fig Leaf selection normally when no Fig Leaf is equipped', () => {
+  it('stops at an authored Fig Leaf selection when no Fig Leaf is equipped', () => {
     const phase = createEncounterPhaseAddress(
       { kind: 'biome', routeKey: 'Underworld', biomeKey: 'F' },
       { kind: 'occurrence', occurrenceId: createOccurrenceId('golden-f-b2-e1') },
@@ -321,8 +343,8 @@ describe('Fig Leaf state contract', () => {
           event.origin.kind === 'occurrence' &&
           event.origin.occurrenceId === createOccurrenceId('golden-f-b2-e1'),
       );
-    expect(events).not.toHaveLength(0);
-    expect(events.every((event) => event.execution === 'normal')).toBe(true);
+    expect(events).toHaveLength(0);
+    expect(evaluation.issue).toMatchObject({ kind: 'invalid', owner: phase });
     expect(
       f.findings.some(
         (finding) =>
@@ -333,7 +355,7 @@ describe('Fig Leaf state contract', () => {
     expect(f.rewards.branches[0]?.keepsakes.figLeaf).toBeUndefined();
   });
 
-  it('executes a fourth selected phase normally after three legal biome skips exhaust total uses', () => {
+  it('stops at a fourth selected phase after three legal biome skips exhaust total uses', () => {
     const selections = [
       createEncounterPhaseAddress(
         nBiome,
@@ -373,8 +395,8 @@ describe('Fig Leaf state contract', () => {
         (event) =>
           event.origin.kind === 'occurrence' && event.origin.occurrenceId === qOccurrenceIds.foyer,
       );
-    expect(qEvents).not.toHaveLength(0);
-    expect(qEvents.every((event) => event.execution === 'normal')).toBe(true);
+    expect(qEvents).toHaveLength(0);
+    expect(evaluation.issue).toMatchObject({ kind: 'invalid', owner: selections[3] });
     expect(
       q.findings.some(
         (finding) =>

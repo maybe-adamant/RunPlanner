@@ -2,6 +2,9 @@ import { describe, expect, it } from 'vitest';
 
 import { catalog } from '@run-planner/hades2-catalog';
 import {
+  applyProjectCommand,
+  createIncomingRewardAddress,
+  createRouteAddress,
   createBiomeAddress,
   createOccurrenceAddress,
   createRoomFeatureAddress,
@@ -36,6 +39,10 @@ import {
   fGenerationStartId,
 } from './support/f-generation-project';
 import { initializeTestRewardBranches } from '../support/arcana-fear';
+import {
+  createCompleteFGProject,
+  goldenFOccurrenceId,
+} from '@run-planner/test-fixtures/underworld';
 
 const none = (): ResourcePlacements => ({
   Pickaxe: null,
@@ -89,6 +96,43 @@ function directResourcePolicy(
 }
 
 describe('selected resource success legality', () => {
+  it('keeps a dormant target resource repairable without claiming a room exit', () => {
+    const base = createCompleteFGProject();
+    const occurrenceId = goldenFOccurrenceId(3, 2);
+    const project = applyProjectCommand(base, catalog, {
+      kind: 'ReplaceResourcePlacement',
+      route: createRouteAddress('Underworld'),
+      family: 'Pickaxe',
+      value: { biomeKey: 'F', occurrenceId },
+    });
+    const evaluation = simulateProject(catalog, project);
+    expect(evaluation.issue).toMatchObject({
+      kind: 'invalid',
+      owner: createRoomFeatureAddress(createOccurrenceAddress(fGenerationBiome, occurrenceId), {
+        kind: 'resource',
+        family: 'Pickaxe',
+      }),
+      reasons: [expect.objectContaining({ code: 'resourcePlacementUnavailable' })],
+    });
+    expect(evaluation.summary.eligibleForExecutionPlan).toBe(false);
+    const f = evaluation.route.biomes[0];
+    if (f === undefined || !('history' in f)) throw new Error('dormant resource has no prefix');
+    expect(
+      f.history.events.some(
+        (event) =>
+          event.kind === 'roomExited' &&
+          event.origin.kind === 'occurrence' &&
+          event.origin.occurrenceId === occurrenceId,
+      ),
+    ).toBe(false);
+    const repaired = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceResourcePlacement',
+      route: createRouteAddress('Underworld'),
+      family: 'Pickaxe',
+      value: null,
+    });
+    expect(simulateProject(catalog, repaired).status).toBe('valid');
+  });
   it('derives same-family lookback suppression while keeping the outside point native', () => {
     const entered = [
       enteredAt('F', 'f0', 'F_Combat01'),
@@ -517,12 +561,26 @@ describe('selected resource success legality', () => {
       },
     };
     const evaluated = simulateProject(catalog, invalidProject);
+    const earlierOfferMissing = applyProjectCommand(invalidProject, catalog, {
+      kind: 'ReplaceIncomingReward',
+      reward: createIncomingRewardAddress(fGenerationBiome, host.occurrenceId),
+      value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'ZeusUpgrade' } },
+    });
+    expect(simulateProject(catalog, earlierOfferMissing).issue).toMatchObject({
+      kind: 'incomplete',
+      owner: { kind: 'traitOffer' },
+      reasons: [expect.objectContaining({ code: 'traitOfferMissing' })],
+    });
+    expect(evaluated.issue).toMatchObject({
+      kind: 'invalid',
+      owner: createRoomFeatureAddress(host.origin, { kind: 'resource', family: 'Pickaxe' }),
+    });
     expect(evaluated.findings).toContainEqual(
       expect.objectContaining({
         code: 'resourcePlacementUnavailable',
         severity: 'error',
-        origin: createRoomFeatureAddress(host.origin, { kind: 'resource', family: 'Shovel' }),
-        evidence: expect.objectContaining({ family: 'Shovel' }),
+        origin: createRoomFeatureAddress(host.origin, { kind: 'resource', family: 'Pickaxe' }),
+        evidence: expect.objectContaining({ family: 'Pickaxe' }),
       }),
     );
     const f = evaluated.route?.biomes.find((candidate) => candidate.biomeKey === 'F');

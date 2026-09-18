@@ -42,7 +42,8 @@ import { evaluateEncounterCandidatesInternal } from '../encounters/candidates';
 import { structurallyActiveEncounterRooms } from '../encounters/structural';
 import type { EncounterCandidateBoundary } from '../encounters/candidates';
 import { materializeBiomePrefix } from '../materialization';
-import { ownerRegion, type FindingRegionEntry } from '../finding-regions';
+import { assessmentRepairOwner, ownerRegion, type FindingRegionEntry } from '../finding-regions';
+import { createAssessmentIssue } from '../assessment-issue';
 import {
   evaluateBiomeRewardsAssemblyInternal,
   type TraitChildSettlementCheckpoints,
@@ -58,7 +59,7 @@ import {
   encounterBlockChronology,
   encounterBlockFinding,
   firstUnsupportedFinding,
-  isProgressiveBlockingFinding,
+  findingsAtRegion,
   locateFinding,
   findingLocation,
   mergedFindings,
@@ -84,6 +85,7 @@ export interface ProgressiveBiomeContext {
   readonly loadout: RouteLoadout;
   /** Direct biome evaluators supply the explicit empty record; route simulation supplies its owned record. */
   readonly resourcePlacements: ResourcePlacements;
+  readonly resourceFindings?: readonly import('../model').SemanticFinding[];
   readonly seed?: ProgressiveSeed;
 }
 
@@ -274,6 +276,7 @@ function products(
     context.loadout,
     context.seed?.rewardBranches,
     context.resourcePlacements,
+    context.resourceFindings,
   );
   const roomGeneration = generation(
     catalog,
@@ -370,17 +373,17 @@ export function evaluateProgressiveBiomeAssemblyBeforeClamp(
     () => true,
     encounterLocated?.regionKey,
   );
-  const locatedBlock = encounterLocated ?? unsupported;
+  const locatedBlock =
+    unsupported !== undefined &&
+    (encounterLocated === undefined || compareLocatedFindings(unsupported, encounterLocated) <= 0)
+      ? unsupported
+      : encounterLocated;
   return Object.freeze({
     evaluation: Object.freeze({
       materializedPrefix,
       ...evaluated.evaluation,
       findings: mergedFindings(evaluated.evaluation),
-      ...(evaluated.encounterBlock !== undefined
-        ? { blockedAt: evaluated.encounterBlock.blockedAt }
-        : unsupported === undefined
-          ? {}
-          : { blockedAt: unsupported.finding.origin }),
+      ...(locatedBlock === undefined ? {} : { blockedAt: locatedBlock.finding.origin }),
       ...(locatedBlock === undefined
         ? {}
         : {
@@ -389,6 +392,18 @@ export function evaluateProgressiveBiomeAssemblyBeforeClamp(
               : ('invalid' as const),
             blockedRegionKey: locatedBlock.regionKey,
             blockedLocation: findingLocation(locatedBlock),
+            issue: createAssessmentIssue(
+              locatedBlock.repairOwner ?? assessmentRepairOwner(locatedBlock.finding.origin),
+              locatedBlock.regionKey,
+              [
+                locatedBlock.finding,
+                ...findingsAtRegion(
+                  materializedPrefix,
+                  evaluated.findingRegions,
+                  locatedBlock.regionKey,
+                ),
+              ],
+            ),
           }),
     }),
     candidateArtifacts: evaluated.candidateArtifacts,
@@ -478,6 +493,18 @@ export function evaluateProgressiveBiomeAssembly(
               : ('invalid' as const),
             blockedRegionKey: encounterLocated.regionKey,
             blockedLocation: findingLocation(encounterLocated),
+            issue: createAssessmentIssue(
+              assessmentRepairOwner(encounterLocated.finding.origin),
+              encounterLocated.regionKey,
+              [
+                encounterLocated.finding,
+                ...findingsAtRegion(
+                  authoredPrefix,
+                  evaluated.findingRegions,
+                  encounterLocated.regionKey,
+                ),
+              ],
+            ),
           }),
     }),
     candidateArtifacts: createBiomeCandidateArtifacts(
@@ -527,18 +554,8 @@ export function evaluateProgressiveBiomeAssemblyFromSelectedProducts(
   }) as MaterializedBiomePrefix & {
     readonly entryRoom: NonNullable<MaterializedBiomePrefix['entryRoom']>;
   };
-  const unsupported = firstUnsupportedFinding(
-    authoredPrefix,
-    selectedProducts.findingRegions,
-    isProgressiveBlockingFinding,
-  );
+  const unsupported = firstUnsupportedFinding(authoredPrefix, selectedProducts.findingRegions);
   if (unsupported === undefined) {
-    // Fig Leaf's retained-invalid authored selections do not clamp the
-    // execution prefix: the selected phase executes normally and remains
-    // repairable at its exact owner. Reuse the complete products so
-    // history/topology/lifecycle stay visible while rewards publish the error.
-    // Re-composing here would lose the already-attested Fig Leaf frontier and
-    // could incorrectly turn a legal first selection into an ordinary phase.
     return Object.freeze({
       evaluation: Object.freeze({
         materializedPrefix: authoredPrefix,

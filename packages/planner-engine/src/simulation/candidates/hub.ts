@@ -30,7 +30,11 @@ import {
   evaluateProgressiveBiomeBeforeClamp,
 } from '../progressive/biome';
 import { ownsOccurrence } from '../progressive/finding-location';
-import { effectiveRouteResourcePlacements } from '../resources';
+import {
+  effectiveRouteResourcePlacements,
+  resourcePlacementFindings,
+  routeResourceAuthoring,
+} from '../resources';
 import {
   coverageUnavailable,
   unavailableForBiome,
@@ -177,10 +181,12 @@ function hubAlternativeContext(
     throw new CandidateEvaluationContractError(`project has no configured ${routeKey} route`);
   }
   const previous = previousCompleteValidBiome(evaluation, routeKey, biomeKey);
+  const resourceAuthoring = routeResourceAuthoring(catalog, route);
   return Object.freeze({
     enteredBiomeCount: completeBiomeCount(evaluation, routeKey, biomeKey),
     loadout: route.loadout,
-    resourcePlacements: effectiveRouteResourcePlacements(catalog, route),
+    resourcePlacements: effectiveRouteResourcePlacements(resourceAuthoring),
+    resourceFindings: resourcePlacementFindings(routeKey, resourceAuthoring),
     ...(previous === undefined
       ? {}
       : {

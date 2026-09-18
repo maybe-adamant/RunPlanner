@@ -1,5 +1,13 @@
 import type { Catalog, ResourceFamily } from '../catalog-schema';
-import { createBiomeAddress, semanticAddressKey } from '../authored-project/addresses';
+import {
+  createBiomeAddress,
+  createOccurrenceAddress,
+  createRoomFeatureAddress,
+  semanticAddressKey,
+} from '../authored-project/addresses';
+import type { SemanticFinding } from './model';
+import { findingRegion, ownerRegion, type FindingRegionEntry } from './finding-regions';
+import type { HistoryEvent } from './history';
 import type { AuthoredRoutePlan, ResourcePlacement } from '../authored-project/model';
 import { composeBiomeHistoryPrefix } from './history/compose';
 import type { RoomHistoryOrigin } from './lifecycle/model';
@@ -42,15 +50,69 @@ export interface RouteResourceAuthoring {
   readonly legalTargetsByFamily: Readonly<Record<ResourceFamily, readonly ResourcePlacement[]>>;
 }
 
+/** Route assessment retains each invalid selection's exact resource-feature repair owner. */
+export function resourcePlacementFindings(
+  routeKey: string,
+  authoring: RouteResourceAuthoring,
+): readonly SemanticFinding[] {
+  return Object.freeze(
+    (['Pickaxe', 'Exorcism', 'Shovel', 'Fishing'] as const).flatMap((family) => {
+      const placement = authoring.placements[family];
+      const assessment = authoring.assessmentByFamily[family];
+      if (placement === null || assessment?.legal === true) return [];
+      return [
+        Object.freeze({
+          code: 'resourcePlacementUnavailable' as const,
+          severity: 'error' as const,
+          phase: 'roomGeneration' as const,
+          origin: createRoomFeatureAddress(
+            createOccurrenceAddress(
+              createBiomeAddress(routeKey, placement.biomeKey),
+              placement.occurrenceId,
+            ),
+            { kind: 'resource', family },
+          ),
+          evidence: Object.freeze({ family, reasons: assessment?.reasons ?? [] }),
+        }),
+      ];
+    }),
+  );
+}
+
+/** An unpicked host has a structural repair, not a fictitious resource-collection exit. */
+export function resourcePlacementFindingRegions(
+  event: Extract<HistoryEvent, { readonly kind: 'roomCreated' | 'roomExited' }>,
+  findings: readonly SemanticFinding[],
+): readonly FindingRegionEntry[] {
+  if (event.kind === 'roomCreated' && event.picked) return Object.freeze([]);
+  return Object.freeze(
+    findings
+      .filter(
+        (finding) =>
+          finding.origin.kind === 'roomFeature' &&
+          event.origin.kind === 'occurrence' &&
+          finding.origin.biomeKey === event.origin.biomeKey &&
+          finding.origin.occurrenceId === event.origin.occurrenceId,
+      )
+      .map((finding) =>
+        findingRegion(
+          finding,
+          ownerRegion(finding.origin),
+          event.kind === 'roomExited'
+            ? { kind: 'history', sequence: event.sequence, boundary: 'at' }
+            : undefined,
+        ),
+      ),
+  );
+}
+
 /**
  * Context-invalid retained selections remain visible to authoring but never
  * become physical successful points in any simulation or candidate replay.
  */
 export function effectiveRouteResourcePlacements(
-  catalog: Catalog,
-  route: AuthoredRoutePlan,
+  authoring: RouteResourceAuthoring,
 ): Readonly<Record<ResourceFamily, ResourcePlacement | null>> {
-  const authoring = routeResourceAuthoring(catalog, route);
   return Object.freeze(
     Object.fromEntries(
       (['Pickaxe', 'Exorcism', 'Shovel', 'Fishing'] as const).map((family) => [

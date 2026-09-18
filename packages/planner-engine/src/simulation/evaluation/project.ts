@@ -2,8 +2,6 @@ import type { Catalog } from '../../catalog-schema';
 import {
   createBiomeAddress,
   createKeepsakeEquipResultAddress,
-  createOccurrenceAddress,
-  createRoomFeatureAddress,
   createRouteStartKeepsakeSelectionAddress,
   semanticAddressKey,
   type SemanticAddress,
@@ -23,20 +21,21 @@ import {
 import { createKeepsakeState } from '../keepsakes/state';
 import { createArcanaFearState } from '../arcana-fear';
 import { createTraitHistoryState } from '../traits/history/fold';
-import type { BiomeHistoryPrefix } from '../history';
-import type { MaterializedBiomePrefix } from '../materialization';
 import type { SemanticFinding } from '../model';
+import { createAssessmentIssue, type AssessmentIssue } from '../assessment-issue';
+import { authoringRegion } from '../finding-regions';
 import { resolveAuthoringBoundary } from '../progressive/authoring-boundary';
 import {
   deriveResourceExecutionPolicy,
   effectiveRouteResourcePlacements,
   routeResourceAuthoring,
+  resourcePlacementFindings,
 } from '../resources';
 import {
   createExactProjectEvaluationAssembly,
   ProjectSimulationContractError,
 } from './project-evaluation-assembly';
-import { evaluateBiomeAssembly, materializedBiomePrefixCoveragePoint } from './biome-evaluation';
+import { evaluateBiomeAssembly } from './biome-evaluation';
 import {
   routeStatus,
   summarizeRoute,
@@ -65,51 +64,6 @@ function assertProjectMatchesCatalog(catalog: Catalog, project: ProjectDocument)
       );
     }
   }
-}
-
-function retainInvalidResourceEvaluation(
-  evaluation: ProjectBiomeEvaluation,
-  resourceFindings: readonly SemanticFinding[],
-): ProjectBiomeEvaluation {
-  const findings = Object.freeze([...evaluation.findings, ...resourceFindings]);
-  if (evaluation.authoring === 'incomplete' || evaluation.validity === 'invalid') {
-    return Object.freeze({ ...evaluation, validity: 'invalid' as const, findings });
-  }
-  const materializedPrefix: MaterializedBiomePrefix = Object.freeze({
-    kind: 'biomePrefix',
-    routeKey: evaluation.snapshot.routeKey,
-    biomeKey: evaluation.snapshot.biomeKey,
-    entryRoom: evaluation.snapshot.entryRoom,
-    decisions: evaluation.snapshot.decisions,
-    fixedRoomLinks: evaluation.snapshot.fixedRoomLinks,
-    biomeState: evaluation.snapshot.biomeState,
-    ...(evaluation.snapshot.echoKeepsakeReplayResults === undefined
-      ? {}
-      : { echoKeepsakeReplayResults: evaluation.snapshot.echoKeepsakeReplayResults }),
-  });
-  const history: BiomeHistoryPrefix = Object.freeze({
-    routeKey: evaluation.history.routeKey,
-    biomeKey: evaluation.history.biomeKey,
-    events: evaluation.history.events,
-    ledgers: evaluation.history.ledgers,
-    rooms: evaluation.history.rooms,
-    current: evaluation.history.biomeCompletion,
-  });
-  return Object.freeze({
-    biomeKey: evaluation.biomeKey,
-    origin: evaluation.origin,
-    authoring: 'complete',
-    validity: 'invalid',
-    coverage: Object.freeze({
-      kind: 'prefix',
-      through: materializedBiomePrefixCoveragePoint(materializedPrefix),
-    }),
-    materializedPrefix,
-    history,
-    roomGeneration: evaluation.roomGeneration,
-    rewards: evaluation.rewards,
-    findings,
-  });
 }
 
 interface RouteProjectEvaluationAssembly {
@@ -149,6 +103,7 @@ function evaluateRouteAssembly(
   let active: ActiveRouteBiome | null = null;
   let blockedSuffix: readonly string[] = Object.freeze([]);
   let routeStartBlock: 'incomplete' | 'invalid' | null = null;
+  let routeStartIssue: AssessmentIssue | undefined;
   let authoringHorizon: AuthoringHorizon = Object.freeze({ kind: 'open' });
   const routeStartKeepsakes = new Map<string, KeepsakeSelectionCandidateCapability>();
   const routeStartKeepsakeEquipResults = new Map<
@@ -156,28 +111,7 @@ function evaluateRouteAssembly(
     import('../keepsakes/candidate-artifacts').KeepsakeEquipResultCandidateCapability
   >();
   const resourceAuthoring = routeResourceAuthoring(catalog, route);
-  const resourceFindingsByBiome = new Map<string, SemanticFinding[]>();
-  for (const family of ['Pickaxe', 'Exorcism', 'Shovel', 'Fishing'] as const) {
-    const placement = resourceAuthoring.placements[family];
-    const assessment = resourceAuthoring.assessmentByFamily[family];
-    if (placement === null || assessment?.legal === true) continue;
-    const finding = Object.freeze({
-      code: 'resourcePlacementUnavailable' as const,
-      severity: 'error' as const,
-      phase: 'roomGeneration' as const,
-      origin: createRoomFeatureAddress(
-        createOccurrenceAddress(
-          createBiomeAddress(route.routeKey, placement.biomeKey),
-          placement.occurrenceId,
-        ),
-        { kind: 'resource', family },
-      ),
-      evidence: Object.freeze({ family, reasons: assessment?.reasons ?? [] }),
-    });
-    const atBiome = resourceFindingsByBiome.get(placement.biomeKey) ?? [];
-    atBiome.push(finding);
-    resourceFindingsByBiome.set(placement.biomeKey, atBiome);
-  }
+  const resourceFindings = resourcePlacementFindings(route.routeKey, resourceAuthoring);
   const routeStart = createRouteStartKeepsakeSelectionAddress(route.routeKey);
   routeStartKeepsakes.set(
     semanticAddressKey(routeStart),
@@ -256,6 +190,8 @@ function evaluateRouteAssembly(
         }),
       );
     }
+    if (routeStartBlock !== null)
+      routeStartIssue = createAssessmentIssue(result, authoringRegion(result), findings);
     routeStartKeepsakeEquipResults.set(
       semanticAddressKey(result),
       Object.freeze({
@@ -297,15 +233,12 @@ function evaluateRouteAssembly(
       enteredBiomeCount: index + 1,
       forcedChaosOccurrenceKeys: forcedChaos,
       loadout: route.loadout,
-      resourcePlacements: effectiveRouteResourcePlacements(catalog, route),
+      resourcePlacements: effectiveRouteResourcePlacements(resourceAuthoring),
+      resourceFindings,
       ...(seed === undefined ? {} : { seed }),
     });
     const assembled = evaluateBiomeAssembly(catalog, route.routeKey, plan, context);
-    const resourceFindings = resourceFindingsByBiome.get(plan.biomeKey) ?? [];
-    const evaluation =
-      resourceFindings.length === 0
-        ? assembled.evaluation
-        : retainInvalidResourceEvaluation(assembled.evaluation, resourceFindings);
+    const evaluation = assembled.evaluation;
     evaluations.push(evaluation);
     candidateArtifacts.push(assembled.candidateArtifacts);
     findings.push(...evaluation.findings);
@@ -344,13 +277,18 @@ function evaluateRouteAssembly(
     active,
     blockedSuffix,
   });
+  const status = routeStatus(route.biomes.length, frozenEvaluations, routeStartBlock);
+  const issue = status === 'empty' ? undefined : (routeStartIssue ?? evaluations.at(-1)?.issue);
+  if ((status === 'incomplete' || status === 'invalid') && issue === undefined)
+    throw new ProjectSimulationContractError('blocked route has no selected assessment issue');
   return Object.freeze({
     evaluation: Object.freeze({
       routeKey: route.routeKey,
-      status: routeStatus(route.biomes.length, frozenEvaluations, routeStartBlock),
+      status,
       configuredBiomeKeys: Object.freeze(route.biomes.map((biome) => biome.biomeKey)),
       biomes: frozenEvaluations,
       processing,
+      ...(issue === undefined ? {} : { issue }),
       findings: Object.freeze(findings),
       summary: summarizeRoute(route.biomes.length, frozenEvaluations, processing),
       resources,
@@ -378,6 +316,7 @@ export function simulateProjectAssembly(
     projectId: project.projectId,
     catalogVersion: project.catalogVersion,
     route,
+    ...(route.issue === undefined ? {} : { issue: route.issue }),
     findings: Object.freeze(route.findings),
     summary: route.summary,
     authoringHorizon: assembledRoute.authoringHorizon,

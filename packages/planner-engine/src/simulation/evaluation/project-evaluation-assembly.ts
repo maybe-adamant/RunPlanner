@@ -391,12 +391,14 @@ export function hermesShrineDeliveryPlacementForPurchaseReschedule(
 ): Extract<ProjectCommand, { readonly kind: 'PlaceHermesShrineDelivery' }> | undefined {
   requireExactProjectEvaluationAssembly(assembly);
   const entryKey = hermesShrineDeliveryEntryKey(source, generationKey);
-  const matches = assembly.evaluation.findings.filter(
-    (finding) =>
-      finding.code === 'hermesShrineDeliveryPlacementRequired' &&
-      finding.origin.kind === 'acquisitionEntry' &&
-      finding.origin.entryKey === entryKey,
-  );
+  const matches = assembly.evaluation.route.biomes
+    .flatMap((biome) => ('rewards' in biome ? biome.rewards.findings : []))
+    .filter(
+      (finding) =>
+        finding.code === 'hermesShrineDeliveryPlacementRequired' &&
+        finding.origin.kind === 'acquisitionEntry' &&
+        finding.origin.entryKey === entryKey,
+    );
   if (matches.length > 1) {
     throw new ProjectSimulationContractError(
       `Shrine delivery ${entryKey} has multiple simulator-owned placement hosts`,
