@@ -24,6 +24,7 @@ import type {
   RoomOccurrence,
   RouteWeaponAspectLoadout,
 } from '../../authored-project/model';
+import type { ResolvedRoutePosition } from '../../authored-project/route-context';
 import {
   additionalExitsForDecision,
   exitDecisionForSource,
@@ -93,9 +94,17 @@ function sourceAddress(source: ExitDecisionSource): ExitDecisionSourceAddress {
     : Object.freeze({ kind: 'hubDecision', decisionKey: source.decisionKey });
 }
 
-function requireLayout(catalog: Catalog, biome: BiomeAddress): BiomeLayout {
+function requireLayout(
+  catalog: Catalog,
+  biome: BiomeAddress,
+  position: ResolvedRoutePosition,
+): BiomeLayout {
   const route = catalog.routes.byKey[biome.routeKey];
-  if (route === undefined || !route.biomeKeys.includes(biome.biomeKey)) {
+  if (
+    route === undefined ||
+    position.biomeKey !== biome.biomeKey ||
+    !position.itineraryBiomeKeys.includes(biome.biomeKey)
+  ) {
     fail(`${biome.routeKey} does not place biome ${biome.biomeKey}`);
   }
   const layout = catalog.biomeLayouts.byKey[biome.biomeKey];
@@ -172,6 +181,7 @@ function handoffDecision(topology: BiomeTopology, descriptor: HubDecisionDescrip
 function materializeStart(
   catalog: Catalog,
   biome: BiomeAddress,
+  routePosition: ResolvedRoutePosition,
   layout: BiomeLayout,
   topology: BiomeTopology,
   occurrence: RoomOccurrence,
@@ -181,6 +191,7 @@ function materializeStart(
   return materializeAuthoredRoom({
     catalog,
     biome,
+    routePosition,
     room,
     occurrence,
     role: 'ordinary',
@@ -212,6 +223,7 @@ function prefix(
 function fixedRoomSuccessor(
   catalog: Catalog,
   biome: BiomeAddress,
+  routePosition: ResolvedRoutePosition,
   layout: BiomeLayout,
   topology: BiomeTopology,
   occurrences: ReadonlyMap<OccurrenceId, RoomOccurrence>,
@@ -227,6 +239,7 @@ function fixedRoomSuccessor(
   const target = materializeAuthoredRoom({
     catalog,
     biome,
+    routePosition,
     room,
     occurrence,
     role: 'ordinary',
@@ -243,6 +256,7 @@ function fixedRoomSuccessor(
 function fixedRoomChain(
   catalog: Catalog,
   biome: BiomeAddress,
+  routePosition: ResolvedRoutePosition,
   layout: BiomeLayout,
   topology: BiomeTopology,
   occurrences: ReadonlyMap<OccurrenceId, RoomOccurrence>,
@@ -257,6 +271,7 @@ function fixedRoomChain(
     const link = fixedRoomSuccessor(
       catalog,
       biome,
+      routePosition,
       layout,
       topology,
       occurrences,
@@ -374,6 +389,7 @@ function isCompleteBatch(
 function materializeContiguousBatchPrefix(
   catalog: Catalog,
   biome: BiomeAddress,
+  routePosition: ResolvedRoutePosition,
   layout: BiomeLayout,
   topology: BiomeTopology,
   occurrences: ReadonlyMap<OccurrenceId, RoomOccurrence>,
@@ -415,6 +431,7 @@ function materializeContiguousBatchPrefix(
   return materializeBatch(
     catalog,
     biome,
+    routePosition,
     layout,
     topology,
     occurrences,
@@ -435,18 +452,27 @@ function materializeContiguousBatchPrefix(
 export function materializeBiomePrefix(
   catalog: Catalog,
   biome: BiomeAddress,
+  routePosition: ResolvedRoutePosition,
   plan: AuthoredBiomePlan,
   loadout: BiomeMaterializationLoadout,
 ): MaterializedBiomePrefix | null {
   loadout = requireLoadout(loadout);
-  const layout = requireLayout(catalog, biome);
+  const layout = requireLayout(catalog, biome, routePosition);
   if (Object.values(plan.state).some((value) => value === null)) return null;
   const biomeState = canonicalBiomeState(layout.biomeKey, plan.state);
   const topology = plan.topology;
   if (topology === null) return prefix(biome, biomeState, undefined, []);
   const occurrences = occurrenceMap(topology);
   const startOccurrence = requireOccurrence(occurrences, topology.startOccurrenceId);
-  const entryRoom = materializeStart(catalog, biome, layout, topology, startOccurrence, loadout);
+  const entryRoom = materializeStart(
+    catalog,
+    biome,
+    routePosition,
+    layout,
+    topology,
+    startOccurrence,
+    loadout,
+  );
   const decisions: CanonicalDecision[] = [];
   const fixedRoomLinks: CanonicalFixedRoomLink[] = [];
   let current = entryRoom;
@@ -477,6 +503,7 @@ export function materializeBiomePrefix(
         const hub = materializeHubDecision(
           catalog,
           biome,
+          routePosition,
           layout.progression,
           authoredHub,
           topology.decisions.filter((candidate) => candidate.kind === 'localVisit'),
@@ -537,6 +564,7 @@ export function materializeBiomePrefix(
         const materialized = materializeBatch(
           catalog,
           biome,
+          routePosition,
           layout,
           topology,
           occurrences,
@@ -559,6 +587,7 @@ export function materializeBiomePrefix(
             ? fixedRoomChain(
                 catalog,
                 biome,
+                routePosition,
                 layout,
                 topology,
                 occurrences,
@@ -571,6 +600,7 @@ export function materializeBiomePrefix(
       const fixed = fixedRoomSuccessor(
         catalog,
         biome,
+        routePosition,
         layout,
         topology,
         occurrences,
@@ -605,6 +635,7 @@ export function materializeBiomePrefix(
       const partial = materializeContiguousBatchPrefix(
         catalog,
         biome,
+        routePosition,
         layout,
         topology,
         occurrences,
@@ -620,6 +651,7 @@ export function materializeBiomePrefix(
         materializeAdditionalContinuations(
           catalog,
           biome,
+          routePosition,
           layout,
           topology,
           occurrences,
@@ -645,6 +677,7 @@ export function materializeBiomePrefix(
     const materialized = materializeBatch(
       catalog,
       biome,
+      routePosition,
       layout,
       topology,
       occurrences,
@@ -676,6 +709,7 @@ export function materializeBiomePrefix(
 export function materializeBiome(
   catalog: Catalog,
   biome: BiomeAddress,
+  routePosition: ResolvedRoutePosition,
   completeness: CompleteBiomeCompletenessResult,
   loadout: BiomeMaterializationLoadout,
   echoKeepsakeReplayResults?: Pick<
@@ -685,12 +719,20 @@ export function materializeBiome(
 ): CanonicalBiome {
   loadout = requireLoadout(loadout);
   if (completeness.completion !== 'complete') fail('biome materialization requires completeness');
-  const layout = requireLayout(catalog, biome);
+  const layout = requireLayout(catalog, biome, routePosition);
   const topology = completeness.topology;
   const occurrences = occurrenceMap(topology);
   const biomeState = canonicalBiomeState(layout.biomeKey, completeness.biomeState);
   const startOccurrence = requireOccurrence(occurrences, topology.startOccurrenceId);
-  const entryRoom = materializeStart(catalog, biome, layout, topology, startOccurrence, loadout);
+  const entryRoom = materializeStart(
+    catalog,
+    biome,
+    routePosition,
+    layout,
+    topology,
+    startOccurrence,
+    loadout,
+  );
   const decisions: CanonicalDecision[] = [];
   const fixedRoomLinks: CanonicalFixedRoomLink[] = [];
   let currentRoom = entryRoom;
@@ -718,6 +760,7 @@ export function materializeBiome(
       const fixed = fixedRoomSuccessor(
         catalog,
         biome,
+        routePosition,
         layout,
         topology,
         occurrences,
@@ -737,6 +780,7 @@ export function materializeBiome(
         const hub = materializeHubDecision(
           catalog,
           biome,
+          routePosition,
           layout.progression,
           authoredHub,
           topology.decisions.filter((candidate) => candidate.kind === 'localVisit'),
@@ -748,6 +792,7 @@ export function materializeBiome(
         const materialized = materializeBatch(
           catalog,
           biome,
+          routePosition,
           layout,
           topology,
           occurrences,
@@ -765,6 +810,7 @@ export function materializeBiome(
             ...fixedRoomChain(
               catalog,
               biome,
+              routePosition,
               layout,
               topology,
               occurrences,
@@ -781,6 +827,7 @@ export function materializeBiome(
     const materialized = materializeBatch(
       catalog,
       biome,
+      routePosition,
       layout,
       topology,
       occurrences,

@@ -8,7 +8,10 @@ import {
 import { type Catalog, type CatalogSummary } from '@run-planner/engine/catalog-schema';
 
 import { projectFeedbackHierarchy } from '@planner/projections/evaluationProjection';
-import type { EditorNavigation } from '@planner/projections/editorNavigation';
+import {
+  projectRouteNavigation,
+  type EditorNavigation,
+} from '@planner/projections/editorNavigation';
 import {
   selectPresentProject,
   selectProjectEvaluation,
@@ -59,7 +62,7 @@ export function App({
   );
   const feedback = evaluation === undefined ? undefined : projectFeedbackHierarchy(evaluation);
   const activeRouteNavigation =
-    workspace === undefined ? undefined : editorNavigation.routes.byKey[workspace.route.routeKey];
+    project === undefined ? undefined : projectRouteNavigation(catalog, project.route);
   const activeRouteFeedback = feedback?.route;
   const activeWorkspaceRoute = workspace?.route;
   const showEntry = project === undefined || entryOpen;

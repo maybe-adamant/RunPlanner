@@ -2,7 +2,7 @@ import type { RawBiomeLayoutDeclaration } from './types';
 
 export const oBiomeLayout = {
   biomeKey: 'O',
-  initialCounters: { biomeDepthCache: 1, biomeEncounterDepth: 1 },
+  initialCounters: { biomeEncounterDepth: 1 },
   start: { kind: 'fixedAuthored', roomGameName: 'O_Intro' },
   progression: {
     kind: 'generated',

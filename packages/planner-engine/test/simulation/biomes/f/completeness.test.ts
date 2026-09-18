@@ -94,10 +94,10 @@ describe('F takeover completeness', () => {
     ).toMatchObject({ kind: 'frontier', owner: fDecision(fCombatId) });
   });
 
-  it('rejects evaluation outside the declared F route placement', () => {
+  it('rejects evaluation for an unknown route', () => {
     expect(() =>
-      evaluateBiomeCompleteness(catalog, createBiomeAddress('Surface', 'F'), fPlan(createFStart())),
-    ).toThrowError(new CompletenessContractError('Surface does not place biome F'));
+      evaluateBiomeCompleteness(catalog, createBiomeAddress('Unknown', 'F'), fPlan(createFStart())),
+    ).toThrowError(new CompletenessContractError('Unknown does not place biome F'));
   });
 
   it('reports an unstarted biome without inventing a start occurrence', () => {

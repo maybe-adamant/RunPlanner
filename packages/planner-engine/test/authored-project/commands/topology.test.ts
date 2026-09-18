@@ -1,3 +1,4 @@
+import { ordinaryPositionFor } from '../../support/route-position';
 import { describe, expect, it } from 'vitest';
 
 import { catalog } from '@run-planner/hades2-catalog';
@@ -1587,9 +1588,19 @@ describe('authored-project commands and topology', () => {
     if (plan === undefined) throw new Error('re-anchor F plan is missing');
     const route = reanchored.route;
     if (route === undefined) throw new Error('re-anchor F route is missing');
-    const prefix = materializeBiomePrefix(catalog, fBiome, plan, route.loadout);
+    const prefix = materializeBiomePrefix(
+      catalog,
+      fBiome,
+      ordinaryPositionFor(catalog, fBiome),
+      plan,
+      route.loadout,
+    );
     if (prefix?.entryRoom === undefined) throw new Error('re-anchor prefix did not materialize');
-    const historyPrefix = composeBiomeHistoryPrefix(catalog, prefix);
+    const historyPrefix = composeBiomeHistoryPrefix(
+      catalog,
+      prefix,
+      ordinaryPositionFor(catalog, prefix),
+    );
     expect(prefix.decisions).toHaveLength(2);
     expect(prefix.frontier).toMatchObject({
       kind: 'exitDecision',

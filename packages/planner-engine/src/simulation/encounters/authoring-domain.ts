@@ -1,3 +1,4 @@
+import type { ResolvedRoutePosition } from '../../authored-project/route-context';
 import type { Catalog, EncounterEnvelopeSlot, RoomDeclaration } from '../../catalog-schema';
 import type {
   AuthoredEncounterCustomization,
@@ -60,7 +61,10 @@ export type EncounterPhaseAuthoringOwner = EncounterPhaseAddress['owner'];
  */
 export interface EncounterPhaseAuthoringRoomOptions {
   readonly resolutionContext?: EncounterResolutionContext;
-  readonly configuredRivalsRank?: number;
+  readonly rivalsContext?: {
+    readonly routePosition: ResolvedRoutePosition;
+    readonly configuredRivalsRank: number;
+  };
   readonly shipEncounterCount?: 2 | 3;
   readonly fieldsCageRewardCount?: number;
   /** Include singleton phases so a consumer can project phase-local controls. */
@@ -131,13 +135,7 @@ export function encounterPhaseAuthoringDomainForRoom(
     if (slot === undefined || !templateSlotActive(room, slot, options)) continue;
     const selectedEncounterKey =
       binding.kind === 'fixed'
-        ? fixedEncounterDefinitionKey(
-            catalog,
-            binding,
-            options.configuredRivalsRank === undefined
-              ? undefined
-              : { biome, configuredRivalsRank: options.configuredRivalsRank },
-          )
+        ? fixedEncounterDefinitionKey(binding, options.rivalsContext)
         : encounters.encounterKeyByPhase[binding.slotKey];
     if (selectedEncounterKey === undefined) {
       throw new Error(`${room.gameName}.${binding.slotKey} has no authored encounter selection`);

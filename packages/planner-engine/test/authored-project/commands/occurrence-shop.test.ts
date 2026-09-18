@@ -1,3 +1,4 @@
+import { ordinaryPositionFor } from '../../support/route-position';
 import { describe, expect, it } from 'vitest';
 
 import { catalog } from '@run-planner/hades2-catalog';
@@ -208,7 +209,12 @@ describe('authored-project Shop occurrence commands', () => {
       traitOffersByAcquisitionRole: { hiddenSource: null },
     });
     expect(
-      activeRoomActionReferences(catalog, nBiome, occurrence()!).filter(
+      activeRoomActionReferences(
+        catalog,
+        nBiome,
+        occurrence()!,
+        ordinaryPositionFor(catalog, nBiome),
+      ).filter(
         (reference) =>
           (reference.kind === 'interactShopOffer' && reference.offerKey === 'Boon') ||
           (reference.kind === 'interactAcquisitionEntry' &&
@@ -342,9 +348,12 @@ describe('authored-project Shop occurrence commands', () => {
       child,
     );
     expect(
-      activeRoomActionReferences(catalog, nBiome, room(project)).filter(
-        (value) => roomActionKey(value) === roomActionKey(reference),
-      ),
+      activeRoomActionReferences(
+        catalog,
+        nBiome,
+        room(project),
+        ordinaryPositionFor(catalog, nBiome),
+      ).filter((value) => roomActionKey(value) === roomActionKey(reference)),
     ).toHaveLength(1);
     expect(decodeProjectDocument(JSON.parse(encodeProjectDocument(project)), catalog)).toEqual(
       project,

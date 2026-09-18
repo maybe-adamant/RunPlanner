@@ -1,4 +1,5 @@
 import type { Catalog } from '../../catalog-schema';
+import type { ResolvedRoutePosition } from '../../authored-project/route-context';
 import { createBiomeAddress, semanticAddressKey } from '../../authored-project/addresses';
 import type {
   CanonicalAdditionalContinuation,
@@ -510,14 +511,16 @@ function appendEnteredPreboss(
 
 function initialCounters(
   catalog: Catalog,
-  snapshot: Pick<CanonicalBiome, 'biomeKey' | 'biomeState'>,
+  snapshot: Pick<CanonicalBiome, 'routeKey' | 'biomeKey' | 'biomeState'>,
   seed: HistoryStateView | undefined,
+  routePosition: ResolvedRoutePosition,
 ) {
   const layout = catalog.biomeLayouts.byKey[snapshot.biomeKey];
   if (layout === undefined) fail(`catalog lost ${snapshot.biomeKey} layout`);
+  const biomeDepthCache = routePosition.routeKey !== 'Dream' && routePosition.isFirst ? 0 : 1;
   const progression = layout.progression;
   return Object.freeze({
-    biomeDepthCache: layout.initialCounters.biomeDepthCache,
+    biomeDepthCache,
     biomeEncounterDepth: layout.initialCounters.biomeEncounterDepth,
     routeEncounterDepth: seed?.ledgers.counters.routeEncounterDepth ?? 1,
     roomHistoryOrdinal: seed?.ledgers.counters.roomHistoryOrdinal ?? 0,
@@ -562,6 +565,7 @@ function appendCompletedDecision(
 function composeBiomeHistoryResult(
   catalog: Catalog,
   snapshot: CanonicalBiome,
+  routePosition: ResolvedRoutePosition,
   seed?: HistoryStateView,
   validateEncounterResolution = false,
   figLeafState?: FigLeafLifecycleState,
@@ -572,8 +576,9 @@ function composeBiomeHistoryResult(
   const options = {
     catalog,
     routeKey: snapshot.routeKey,
+    routePosition,
     biomeKey: snapshot.biomeKey,
-    initialCounters: initialCounters(catalog, snapshot, seed),
+    initialCounters: initialCounters(catalog, snapshot, seed, routePosition),
     ...(seed === undefined ? {} : { seed }),
     ...(figLeafState === undefined ? {} : { figLeafState }),
     pendingSpellDrop,
@@ -650,9 +655,10 @@ function composeBiomeHistoryResult(
 export function composeBiomeHistory(
   catalog: Catalog,
   snapshot: CanonicalBiome,
+  routePosition: ResolvedRoutePosition,
   seed?: HistoryStateView,
 ): CanonicalBiomeHistory {
-  const result = composeBiomeHistoryResult(catalog, snapshot, seed);
+  const result = composeBiomeHistoryResult(catalog, snapshot, routePosition, seed);
   if (result.kind !== 'complete') {
     throw new Error('ordinary biome composition unexpectedly encountered encounter validation');
   }
@@ -662,6 +668,7 @@ export function composeBiomeHistory(
 export function composeBiomeHistoryWithEncounterValidation(
   catalog: Catalog,
   snapshot: CanonicalBiome,
+  routePosition: ResolvedRoutePosition,
   seed?: HistoryStateView,
   figLeafState?: FigLeafLifecycleState,
   pendingSpellDrop = false,
@@ -670,6 +677,7 @@ export function composeBiomeHistoryWithEncounterValidation(
   return composeBiomeHistoryResult(
     catalog,
     snapshot,
+    routePosition,
     seed,
     true,
     figLeafState,
@@ -681,6 +689,7 @@ export function composeBiomeHistoryWithEncounterValidation(
 function composeBiomeHistoryPrefixResult(
   catalog: Catalog,
   snapshot: MaterializedBiomePrefix,
+  routePosition: ResolvedRoutePosition,
   seed?: HistoryStateView,
   validateEncounterResolution = false,
   figLeafState?: FigLeafLifecycleState,
@@ -691,8 +700,9 @@ function composeBiomeHistoryPrefixResult(
   if (entry === undefined) return null;
   const options = {
     routeKey: snapshot.routeKey,
+    routePosition,
     biomeKey: snapshot.biomeKey,
-    initialCounters: initialCounters(catalog, snapshot, seed),
+    initialCounters: initialCounters(catalog, snapshot, seed, routePosition),
     ...(seed === undefined ? {} : { seed }),
     ...(figLeafState === undefined ? {} : { figLeafState }),
     pendingSpellDrop,
@@ -819,9 +829,10 @@ function composeBiomeHistoryPrefixResult(
 export function composeBiomeHistoryPrefix(
   catalog: Catalog,
   snapshot: MaterializedBiomePrefix,
+  routePosition: ResolvedRoutePosition,
   seed?: HistoryStateView,
 ): BiomeHistoryPrefix | null {
-  const result = composeBiomeHistoryPrefixResult(catalog, snapshot, seed);
+  const result = composeBiomeHistoryPrefixResult(catalog, snapshot, routePosition, seed);
   if (result === null) return null;
   if (result.kind !== 'complete') {
     throw new Error('ordinary prefix composition unexpectedly encountered encounter validation');
@@ -832,6 +843,7 @@ export function composeBiomeHistoryPrefix(
 export function composeBiomeHistoryPrefixWithEncounterValidation(
   catalog: Catalog,
   snapshot: MaterializedBiomePrefix,
+  routePosition: ResolvedRoutePosition,
   seed?: HistoryStateView,
   figLeafState?: FigLeafLifecycleState,
   pendingSpellDrop = false,
@@ -840,6 +852,7 @@ export function composeBiomeHistoryPrefixWithEncounterValidation(
   return composeBiomeHistoryPrefixResult(
     catalog,
     snapshot,
+    routePosition,
     seed,
     true,
     figLeafState,

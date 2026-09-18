@@ -5,6 +5,7 @@ import { updateOccurrence } from './occurrence/mutation';
 import { roomActionKey } from '../room-actions/key';
 import { createBiomeAddress } from '../addresses';
 import { assembleRoomActionDomain } from '../room-actions/domain';
+import { resolveRoutePosition } from '../route-context';
 import { encounterBindingsBySlot } from '../room-state/encounter-envelope';
 import { normalizeAuthoredTranscendentEmbryoOutcome } from '../traits/state';
 import type {
@@ -46,6 +47,7 @@ export function applyKeepsakeCommand(
       catalog,
       biome: createBiomeAddress(command.outcome.routeKey, command.outcome.biomeKey),
       occurrence,
+      routePosition: resolveRoutePosition(catalog, document.route, command.outcome.biomeKey),
     }).activeReferences;
     if (
       command.outcome.action.kind !== 'roomAction' ||

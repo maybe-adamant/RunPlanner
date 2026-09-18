@@ -18,6 +18,7 @@ import {
   type AutosaveRecoveryAdapter,
   type AutosaveScheduler,
 } from '../persistence/autosaveRecovery';
+import { assertPublicProjectAdmission } from '../workspace/project-admission';
 import { createEditorNavigation } from '../projections/editorNavigation';
 import { createEditorSessionReconciliationCoordinator } from '../workspace/editorSessionReconciliation';
 import { createProjectOperations } from '../workspace/projectOperations';
@@ -90,6 +91,7 @@ export function createApplication(options: CreateApplicationOptions = {}) {
     options.allocateOccurrenceId ?? allocateOccurrenceId,
   );
   const prepareProjectWorkspace = (project: ProjectDocument): PreparedProjectWorkspace => {
+    assertPublicProjectAdmission(catalog, project);
     const assembly = assembleProjectEvaluation(project);
     const workspace = structuredWorkspace.project(assembly);
     if (editorNavigation.routes.byKey[workspace.route.routeKey] === undefined) {

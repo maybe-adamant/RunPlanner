@@ -41,6 +41,7 @@ import { decodeAcquisitionSites } from '../room-state/decoding/acquisition-site-
 import { decodeFountainRarityResult } from '../fountain-rarity-codec';
 import { decodeKeepsakeEquipResults } from '../keepsake-equip-codec';
 import { expectBoolean, expectString } from '../validation';
+import type { ResolvedRoutePosition } from '../route-context';
 
 function decodeKeepsakeRackState(
   value: unknown,
@@ -230,6 +231,7 @@ function assertHermesShrineDeliveryActionClosure(
     readonly occurrenceId: string;
     readonly gameName: string;
   },
+  routePosition: ResolvedRoutePosition,
   path: string,
 ): void {
   const rushed = new Set<import('../model').HermesShrineGenerationKey>(
@@ -239,8 +241,7 @@ function assertHermesShrineDeliveryActionClosure(
   );
   const actionCounts = new Map<import('../model').HermesShrineGenerationKey, number>();
   const finalPrebossHost =
-    catalog.rooms.byKey[source.gameName]?.kind === 'Preboss' &&
-    catalog.routes.byKey[source.routeKey]?.biomeKeys.at(-1) === source.biomeKey;
+    catalog.rooms.byKey[source.gameName]?.kind === 'Preboss' && routePosition.isLast;
   for (const reference of roomActions.order) {
     if (
       reference.kind !== 'interactAcquisitionEntry' ||
@@ -306,9 +307,10 @@ export function decodeRoomOccurrence(input: {
   readonly catalog: Catalog;
   readonly layout: BiomeLayout;
   readonly routeKey: string;
+  readonly routePosition: ResolvedRoutePosition;
 }): RoomOccurrence {
   const { raw: rawOccurrence, owner, additionalExits } = input.occurrence;
-  const { catalog, layout, routeKey } = input;
+  const { catalog, layout, routeKey, routePosition } = input;
   const room = catalog.rooms.byKey[rawOccurrence.gameName];
   if (room === undefined || room.mode.kind !== 'authored')
     failProjectDocument(`${rawOccurrence.path}.gameName`, `unknown room ${rawOccurrence.gameName}`);
@@ -745,6 +747,7 @@ export function decodeRoomOccurrence(input: {
       occurrenceId: rawOccurrence.occurrenceId,
       gameName: room.gameName,
     },
+    routePosition,
     `${rawOccurrence.path}.roomActions.order`,
   );
   const decodedOccurrence = Object.freeze({
@@ -766,7 +769,7 @@ export function decodeRoomOccurrence(input: {
   });
   if (
     fountainRarityResult !== undefined &&
-    !activeRoomActionReferences(catalog, biomeAddress, decodedOccurrence).some(
+    !activeRoomActionReferences(catalog, biomeAddress, decodedOccurrence, routePosition).some(
       (reference) => reference.kind === 'useFountain',
     )
   )

@@ -1,3 +1,4 @@
+import { ordinaryPositionFor } from '../../../support/route-position';
 import { catalog } from '@run-planner/hades2-catalog';
 import {
   applyProjectCommand,
@@ -79,7 +80,13 @@ function materializedORoom(
   if (route === undefined || plan === undefined) throw new Error('O fixture plan is missing');
   const completeness = evaluateBiomeCompleteness(catalog, oBiome, plan);
   if (completeness.completion !== 'complete') throw new Error('O fixture is incomplete');
-  const snapshot = materializeBiome(catalog, oBiome, completeness, route.loadout);
+  const snapshot = materializeBiome(
+    catalog,
+    oBiome,
+    ordinaryPositionFor(catalog, oBiome),
+    completeness,
+    route.loadout,
+  );
   const room = snapshot.decisions
     .filter((decision) => decision.kind === 'batch')
     .flatMap((decision) => decision.targets.map((target) => target.room))
@@ -284,6 +291,7 @@ describe('selected O validation', () => {
       );
     if (authoredOccurrence === undefined) throw new Error('authored Ship occurrence is missing');
     const domain = assembleRoomActionDomain({
+      routePosition: ordinaryPositionFor(catalog, oBiome),
       catalog,
       biome: oBiome,
       occurrence: authoredOccurrence,

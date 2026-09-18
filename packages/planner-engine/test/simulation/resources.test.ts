@@ -1,3 +1,4 @@
+import { ordinaryPositionFor } from '../support/route-position';
 import { describe, expect, it } from 'vitest';
 
 import { catalog } from '@run-planner/hades2-catalog';
@@ -436,8 +437,14 @@ describe('selected resource success legality', () => {
     const plan = route.biomes.find((candidate) => candidate.biomeKey === 'F')!;
     const completeness = evaluateBiomeCompleteness(catalog, fGenerationBiome, plan);
     if (completeness.completion !== 'complete') throw new Error('expected complete F fixture');
-    const snapshot = materializeBiome(catalog, fGenerationBiome, completeness, route.loadout);
-    const history = composeBiomeHistory(catalog, snapshot);
+    const snapshot = materializeBiome(
+      catalog,
+      fGenerationBiome,
+      ordinaryPositionFor(catalog, fGenerationBiome),
+      completeness,
+      route.loadout,
+    );
+    const history = composeBiomeHistory(catalog, snapshot, ordinaryPositionFor(catalog, snapshot));
     const host = snapshot.entryRoom;
     if (host === undefined) throw new Error('expected F entry room');
     const hostExitIndex = history.events.findIndex(
@@ -455,7 +462,7 @@ describe('selected resource success legality', () => {
       catalog,
       snapshot,
       history,
-      1,
+      ordinaryPositionFor(catalog, snapshot),
       route.loadout,
       initializeTestRewardBranches().map((branch) => ({ ...branch, traitHistory: before })),
     );
@@ -463,7 +470,7 @@ describe('selected resource success legality', () => {
       catalog,
       snapshot,
       history,
-      1,
+      ordinaryPositionFor(catalog, snapshot),
       route.loadout,
       initializeTestRewardBranches().map((branch) => ({ ...branch, traitHistory: before })),
       { ...none(), Pickaxe: at('F', host.occurrenceId) },
@@ -472,7 +479,7 @@ describe('selected resource success legality', () => {
       catalog,
       snapshot,
       throughHostExit,
-      1,
+      ordinaryPositionFor(catalog, snapshot),
       route.loadout,
       initializeTestRewardBranches().map((branch) => ({ ...branch, traitHistory: before })),
       { ...none(), Pickaxe: at('F', host.occurrenceId) },
@@ -549,7 +556,13 @@ describe('selected resource success legality', () => {
     const plan = route.biomes.find((candidate) => candidate.biomeKey === 'F')!;
     const completeness = evaluateBiomeCompleteness(catalog, fGenerationBiome, plan);
     if (completeness.completion !== 'complete') throw new Error('expected complete F fixture');
-    const snapshot = materializeBiome(catalog, fGenerationBiome, completeness, route.loadout);
+    const snapshot = materializeBiome(
+      catalog,
+      fGenerationBiome,
+      ordinaryPositionFor(catalog, fGenerationBiome),
+      completeness,
+      route.loadout,
+    );
     const host = snapshot.entryRoom;
     if (host === undefined) throw new Error('expected F entry room');
     const placement = at('F', host.occurrenceId);

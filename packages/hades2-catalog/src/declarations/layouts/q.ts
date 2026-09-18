@@ -2,7 +2,7 @@ import type { RawBiomeLayoutDeclaration } from './types';
 
 export const qBiomeLayout = {
   biomeKey: 'Q',
-  initialCounters: { biomeDepthCache: 1, biomeEncounterDepth: 1 },
+  initialCounters: { biomeEncounterDepth: 1 },
   start: { kind: 'fixedAuthored', roomGameName: 'Q_Intro' },
   progression: {
     kind: 'generated',

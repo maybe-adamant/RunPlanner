@@ -1,3 +1,4 @@
+import { ordinaryPositionFor } from '../../support/route-position';
 import { describe, expect, it } from 'vitest';
 import { catalog } from '@run-planner/hades2-catalog';
 import { oBiome, oOccurrenceIds } from '@run-planner/test-fixtures/surface';
@@ -77,9 +78,11 @@ describe('clocked pickup placement cleanup', () => {
       .find((candidate) => candidate.biomeKey === 'Q')!
       .topology!.occurrences.find((candidate) => candidate.occurrenceId === oldHost.occurrenceId)!;
     expect(host.acquisitionSites?.roomExit?.pickupEntries?.[reference.entryKey]).toBeUndefined();
-    expect(activeRoomActionReferences(catalog, biome, host).map(roomActionKey)).not.toContain(
-      roomActionKey(placed.reference),
-    );
+    expect(
+      activeRoomActionReferences(catalog, biome, host, ordinaryPositionFor(catalog, biome)).map(
+        roomActionKey,
+      ),
+    ).not.toContain(roomActionKey(placed.reference));
   });
 
   it('removes a placement and its payload without removing the due drop or other recurring placements', () => {
@@ -111,7 +114,9 @@ describe('clocked pickup placement cleanup', () => {
         (candidate) => candidate.occurrenceId === occurrence.occurrenceId,
       )!;
     expect(host.acquisitionSites?.roomExit?.pickupEntries?.[reference.entryKey]).toBeUndefined();
-    expect(activeRoomActionReferences(catalog, biome, host)).not.toContainEqual(reference);
+    expect(
+      activeRoomActionReferences(catalog, biome, host, ordinaryPositionFor(catalog, biome)),
+    ).not.toContainEqual(reference);
     const assembly = simulateProjectAssembly(catalog, removed);
     const site = createAcquisitionSiteAddress(
       createOccurrenceAddress(biome, occurrence.occurrenceId),
@@ -150,9 +155,11 @@ describe('clocked pickup placement cleanup', () => {
       expect(host.acquisitionSites?.roomExit?.pickupEntries?.[reference.entryKey]).toEqual(
         occurrence.acquisitionSites?.roomExit?.pickupEntries?.[reference.entryKey],
       );
-      expect(activeRoomActionReferences(catalog, biome, host).map(roomActionKey)).not.toContain(
-        roomActionKey(reference),
-      );
+      expect(
+        activeRoomActionReferences(catalog, biome, host, ordinaryPositionFor(catalog, biome)).map(
+          roomActionKey,
+        ),
+      ).not.toContain(roomActionKey(reference));
     }
   });
 });

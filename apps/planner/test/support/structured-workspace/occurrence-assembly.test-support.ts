@@ -174,6 +174,7 @@ export function assemble(
   });
   const assembly = assembleWorkspaceOccurrence({
     configuredRivalsRank: source.configuredRivalsRank,
+    routePosition: source.routePosition,
     biome: source.biome,
     catalog,
     encounterPhaseStatus: source.encounterPhaseStatus,

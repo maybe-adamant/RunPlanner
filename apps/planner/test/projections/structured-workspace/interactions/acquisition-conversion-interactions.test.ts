@@ -9,6 +9,7 @@ const {
   catalog,
   applyProjectCommand,
   activeRoomActionReferences,
+  resolveRoutePosition,
   createIncomingRewardAddress,
   createOccurrenceAddress,
   createShopOfferAddress,
@@ -203,7 +204,14 @@ describe('acquisition-conversion-interactions', () => {
       .find((biome) => biome.biomeKey === 'P')
       ?.topology?.occurrences.find((occurrence) => occurrence.occurrenceId === shopId);
     if (shop === undefined) throw new Error('paid shop source occurrence is missing');
-    expect(activeRoomActionReferences(catalog, pBiome, shop)).not.toContainEqual(
+    expect(
+      activeRoomActionReferences(
+        catalog,
+        pBiome,
+        shop,
+        resolveRoutePosition(catalog, project.route, 'P'),
+      ),
+    ).not.toContainEqual(
       expect.objectContaining({
         kind: 'interactAcquisitionEntry',
         entryKey: 'seaStarDuplicate',

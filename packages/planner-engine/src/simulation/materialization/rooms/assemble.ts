@@ -95,7 +95,7 @@ export function materializeAuthoredRoom(
       context.configuredRivalsRank === undefined
         ? undefined
         : {
-            biome: context.biome,
+            routePosition: context.routePosition,
             configuredRivalsRank: context.configuredRivalsRank,
           },
     );
@@ -310,6 +310,7 @@ export function materializeAuthoredRoom(
     catalog: context.catalog,
     biome: context.biome,
     occurrence: context.occurrence,
+    routePosition: context.routePosition,
     lifecycleProfileKey: base.lifecycleProfileKey,
     incomingRewardActive: base.incomingReward?.acquisitionEnabled !== false,
     activeEncounterSlotKeys: base.encounterPhases.map((phase) => phase.slotKey),

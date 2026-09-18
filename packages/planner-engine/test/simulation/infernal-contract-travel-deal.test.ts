@@ -1,3 +1,4 @@
+import { ordinaryPositionFor } from '../support/route-position';
 import { catalog } from '@run-planner/hades2-catalog';
 import {
   createBiomeAddress,
@@ -432,6 +433,14 @@ function settle(options: {
     }),
   });
   const canonical = materializeAuthoredRoom({
+    routePosition: ordinaryPositionFor(
+      catalog,
+      roomGameName === 'Q_PreBoss01'
+        ? createBiomeAddress('Surface', 'Q')
+        : roomGameName === 'I_PreBoss02'
+          ? createBiomeAddress('Underworld', 'I')
+          : biome,
+    ),
     catalog,
     biome:
       roomGameName === 'Q_PreBoss01'

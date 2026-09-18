@@ -1,3 +1,4 @@
+import { ordinaryPositionFor } from '../../support/route-position';
 import { describe, expect, it } from 'vitest';
 
 import { catalog } from '@run-planner/hades2-catalog';
@@ -165,7 +166,14 @@ describe('authored encounter occurrence commands', () => {
     const unresolved = occurrence(selected, 'F', goldenFOccurrenceId(5, 1));
     expect(unresolved.encounters.nemesisRandomEventByPhase?.Encounter).toBeNull();
     expect(unresolved.acquisitionSites?.['nemesisGenerated:Encounter']).toBeUndefined();
-    expect(activeRoomActionReferences(catalog, goldenFBiome, unresolved)).toContainEqual({
+    expect(
+      activeRoomActionReferences(
+        catalog,
+        goldenFBiome,
+        unresolved,
+        ordinaryPositionFor(catalog, goldenFBiome),
+      ),
+    ).toContainEqual({
       kind: 'interactEncounter',
       phaseKey: 'Encounter',
     });
@@ -225,7 +233,12 @@ describe('authored encounter occurrence commands', () => {
         ?.offer,
     ).toEqual({ rewardType: 'MaxHealthDrop' });
     expect(
-      activeRoomActionReferences(catalog, goldenFBiome, declinedOccurrence),
+      activeRoomActionReferences(
+        catalog,
+        goldenFBiome,
+        declinedOccurrence,
+        ordinaryPositionFor(catalog, goldenFBiome),
+      ),
     ).not.toContainEqual({
       kind: 'interactAcquisitionEntry',
       siteKey: 'nemesisGenerated:Encounter',
@@ -266,6 +279,7 @@ describe('authored encounter occurrence commands', () => {
         catalog,
         goldenFBiome,
         occurrence(away, 'F', goldenFOccurrenceId(5, 1)),
+        ordinaryPositionFor(catalog, goldenFBiome),
       ),
     ).not.toContainEqual({ kind: 'interactEncounter', phaseKey: 'Encounter' });
     const restored = applyProjectCommand(away, catalog, {
@@ -337,6 +351,7 @@ describe('authored encounter occurrence commands', () => {
         catalog,
         goldenFBiome,
         occurrence(changed, 'F', goldenFOccurrenceId(5, 1)),
+        ordinaryPositionFor(catalog, goldenFBiome),
       ),
     ).toContainEqual({
       kind: 'interactAcquisitionEntry',

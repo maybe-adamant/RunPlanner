@@ -1,5 +1,7 @@
 import {
   createBiomeAddress,
+  resolveRoutePosition,
+  type ResolvedRoutePosition,
   createEncounterPhaseAddress,
   createExitDecisionAddress,
   createHubDecisionAddress,
@@ -77,6 +79,7 @@ export interface WorkspaceEvaluatedBatchOverlay {
 
 export interface WorkspaceBiomeSource {
   readonly configuredRivalsRank: number;
+  readonly routePosition: ResolvedRoutePosition;
   readonly biome: BiomeAddress;
   readonly completeness: BiomeCompletenessResult;
   readonly entryRoom?: CanonicalAuthoredRoom;
@@ -657,6 +660,7 @@ function createWorkspaceBiomeSource(
   catalog: Catalog,
   routeKey: string,
   configuredRivalsRank: number,
+  routePosition: ResolvedRoutePosition,
   configuredBiomeKeys: readonly string[],
   plan: AuthoredBiomePlan,
   evaluation: ProjectBiomeEvaluation | undefined,
@@ -783,6 +787,7 @@ function createWorkspaceBiomeSource(
       : Object.freeze([]);
   return Object.freeze({
     configuredRivalsRank,
+    routePosition,
     biome,
     completeness,
     encounterPhaseStatus,
@@ -897,6 +902,7 @@ export function createWorkspaceProjectSourceIndex(
             catalog,
             route.routeKey,
             route.loadout.fearRanks.BossDifficultyShrineUpgrade ?? 0,
+            resolveRoutePosition(catalog, route, plan.biomeKey),
             route.biomes.map((candidate) => candidate.biomeKey),
             plan,
             routeEvaluation?.biomes.find((candidate) => candidate.biomeKey === plan.biomeKey),

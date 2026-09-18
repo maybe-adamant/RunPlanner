@@ -2,8 +2,8 @@
 
 ## Status and objective
 
-Proposed execution contract, awaiting approval and commit. Implementation has
-not started. Commit the approved plan before source changes.
+Approved execution contract, committed in `eb176b0a`. Gate A is implemented and
+independently reviewed; later gates have not started.
 
 - Planner base: `8439c9c8cad046788680dbf981688ab263d83989`.
 - Game-module base: `95c479b6c599863aeba7968f0593bb4f5871709b`.
@@ -16,7 +16,7 @@ and Surface. Resolve opening rewards/encounters, NPC effect variants and
 completion rooms from that context. Move the first room's identity/reward setup
 into Loadout without moving its acquisition out of the room timeline.
 
-Dream exists internally as a mode applied to an explicitly supplied itinerary.
+Dream exists internally as a route identity with an explicitly supplied itinerary.
 This work does not determine how that itinerary is chosen or whether its order
 is legal for a playable Dream run. No public Dream authoring or publication is
 enabled by this delivery.
@@ -42,11 +42,13 @@ fixed-order context and the named consumer contracts, not their ownership lanes.
 
 ### Route position
 
-The engine resolves mode plus a complete ordered itinerary into positions with
-biome identity, one-based ordinal, previous/next, first/last, and contextual
-start/completion facts. Catalog declarations own game mappings. Persisted route
-input owns the chosen sequence; derived positions are not separately persisted.
-Ordinary presets initialize their current fixed sequences.
+The engine resolves route identity plus a complete ordered itinerary into
+positions with biome identity, one-based ordinal, previous/next, first/last, and
+contextual start/completion facts. Catalog declarations own game mappings.
+Persisted route input owns the chosen sequence; derived positions are not
+separately persisted. Route identity also determines Dream-specific behavior;
+there is no separate persisted route-mode classification. Underworld and Surface
+presets initialize their current fixed sequences.
 
 The configured biome prefix remains distinct from that complete sequence.
 `ConfigureRoutePrefix` retains its current expansion/shrink behavior; shrinking
@@ -164,11 +166,11 @@ exercise production resolution; do not build a test-only second resolver.
 
 ### A — Route authority and existing chronological consumers
 
-Implement explicit mode/full itinerary and a narrow resolved position product.
+Implement explicit route identity/full itinerary and a narrow resolved position product.
 Migrate ordinary initialization, structural decoding, prefix commands, project
 evaluation/replay, encounter ordinal facts, Rivals, terminal delivery and
 Boss-effect checks. Keep existing ordinary execution outputs semantically
-unchanged. Separate public preset selection from internal mode support.
+unchanged. Separate public preset selection from internal Dream support.
 
 Starting points: `catalog-schema/index.ts::RouteDeclaration`, catalog
 `declarations/routes.ts`, `compiler/routes.ts`, authored `model.ts`, `defaults.ts`,
@@ -224,7 +226,7 @@ constraints, not the occurrence or incoming acquisition machinery.
 
 ### C — Contextual completion chains
 
-Add the three Dream Postboss declarations and mode/position completion mapping.
+Add the three Dream Postboss declarations and route-identity/position completion mapping.
 Replace physical-host equality assumptions with exact resolved identity checks
 in compiler, takeover, replacement, decoding, completeness and materialization.
 Ordinary chains use the same resolver with unchanged identities and features.
@@ -293,7 +295,7 @@ Finalize the single authored migration and execution contract bump described
 below. Regenerate only affected products, mirror them, finish independent
 cross-gate review and run the complete closure checks once fixes are stable.
 Audit for old order inference, UI-owned policy, duplicated resolution, retained
-stale authoring, schema drift and internal Dream mode leaking into public entry.
+stale authoring, schema drift and internal Dream projects leaking into public entry.
 
 Promote source facts to the smallest existing owning audits and update current
 design sections for route input/position, contextual room products and acquired
@@ -313,7 +315,7 @@ schema/protocol migrations and fixture churn. No push, release or deployment.
   task changes the base versions, reconcile that explicitly before implementation.
 - Preserve representative baseline saves as migration inputs before evolving
   their shape. Migrate baseline directly to final: initialize ordinary full
-  itinerary/mode; preserve IDs, prefix, loadout and timeline; translate old
+  itinerary; preserve IDs, prefix, loadout and timeline; translate old
   singleton payloads without inventing choices. Retain existing older migrations.
 - Do not write migrations between temporary gate shapes or production dual-read
   fallbacks. Saves produced by intermediate code are disposable, not supported
@@ -325,11 +327,30 @@ schema/protocol migrations and fixture churn. No push, release or deployment.
   the planner builder and `encodeExecutionPlan`, then repository Prettier JSON
   formatting with trailing newline. Mirror planner products byte-for-byte to
   the game module and verify with `cmp`. Inspect numstat and representative diffs.
+- Remove the temporary baseline-to-current test-input adaptation in
+  `test/fixtures/authored-project/checkpoints/loader.ts` once the final migration
+  and fixture alignment replace it. Preserve separate baseline migration inputs.
 - No wholesale fixture rebuild if semantics did not change; version-only fields
   use bounded mechanical edits. Ensure normal-route publication and module
   decoding/steering agree before declaring the phase closed.
 
 ## Review and verification
+
+Gate A delivery:
+
+- Explicit itinerary position owns ordinal, adjacency, terminal checks, Rivals,
+  history entry depth and current-project navigation. Removed preset-depth
+  declarations and the independent candidate ordinal helper.
+- Independent review approved after navigation and candidate-ordinal remediation.
+  The route-identity simplification also passed independent review and 96 focused
+  tests; public admission explicitly permits only Underworld and Surface.
+- Catalog/engine and affected workspace suites: 206 files, 2,436 tests passed.
+  App-shell/reconciliation: 58 tests passed. Run-impacting fixture contacts:
+  6 tests passed. Workspace and fixture typechecks, changed-file ESLint,
+  formatting and whitespace checks passed.
+- No JSON fixtures, schema/protocol versions or game-module code changed.
+  Existing baseline saves require the planned closure migration before reuse.
+  Dream public admission remains disabled; B/C still own contextual room profiles.
 
 Review this plan adversarially before implementation. Per gate, use the narrow
 owning catalog/engine/planner/UI/contract/product tests. Main session supplies

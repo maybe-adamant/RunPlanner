@@ -1,3 +1,4 @@
+import { resolveRoutePosition } from '../../authored-project/route-context';
 import type { Catalog } from '../../catalog-schema';
 import {
   createBatchRewardStoreAddress,
@@ -39,7 +40,6 @@ import {
   candidateAssessmentPrefix,
   candidateBiome,
   candidatePrefix,
-  completeBiomeCount,
   planFor,
   prefixAuthoredRooms,
   prefixBiome,
@@ -261,7 +261,7 @@ function evaluatePrefixRoomTarget(
     query.target,
     physicalExit,
     sourceHistory,
-    completeBiomeCount(evaluation, query.target.routeKey, query.target.biomeKey),
+    resolveRoutePosition(catalog, project.route, query.target.biomeKey).ordinal,
     frontier.targets.length === 0,
     biome.rewards.targetHistory,
   );

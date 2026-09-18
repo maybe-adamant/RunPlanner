@@ -1,3 +1,4 @@
+import type { ResolvedRoutePosition } from '../../authored-project/route-context';
 import type { Catalog } from '../../catalog-schema';
 import {
   createBiomeAddress,
@@ -7,6 +8,7 @@ import {
   type NemesisRandomEventAddress,
 } from '../../authored-project/addresses';
 import type { AuthoredBiomePlan, ProjectDocument } from '../../authored-project/model';
+import { resolveRoutePosition } from '../../authored-project/route-context';
 import { evaluateBiomeCompleteness, type IncompleteBiomeCompletenessResult } from '../completeness';
 import { createAssessmentIssue } from '../assessment-issue';
 import { evaluateBiomeRoomGenerationAssemblyInternal } from '../generation/biome';
@@ -178,7 +180,7 @@ function generation(
   snapshot:
     CanonicalBiome | (MaterializedBiomePrefix & { readonly entryRoom: CanonicalAuthoredRoom }),
   history: CanonicalBiomeHistory | BiomeHistoryPrefix,
-  enteredBiomeCount: number,
+  routePosition: ResolvedRoutePosition,
   rewards: BiomeRewardSimulation,
   rewardProducers: RewardProducerCandidateArtifacts,
   roomLifecycles: RoomLifecycleCandidateArtifacts,
@@ -191,7 +193,7 @@ function generation(
     catalog,
     snapshot,
     history,
-    enteredBiomeCount,
+    routePosition.ordinal,
     rewards.targetHistory,
     forcedChaosOccurrenceKeys,
   );
@@ -209,6 +211,7 @@ function generation(
     catalog,
     structurallyActiveEncounterRooms(snapshot),
     encounterPreparationViews(history),
+    routePosition,
     encounterBoundary,
     rewards.figLeafPhaseCandidates,
     gorgonStatus,
@@ -372,8 +375,9 @@ export function replayProjectBiomeFromEvaluatedPredecessor(
     );
   }
   const resourceAuthoring = routeResourceAuthoring(catalog, route);
+  const routePosition = resolveRoutePosition(catalog, route, plan.biomeKey);
   return evaluateBiome(catalog, route.routeKey, plan, {
-    enteredBiomeCount: biomeIndex + 1,
+    routePosition,
     loadout: route.loadout,
     resourcePlacements: effectiveRouteResourcePlacements(resourceAuthoring),
     resourceFindings: resourcePlacementFindings(route.routeKey, resourceAuthoring),
@@ -479,6 +483,7 @@ export function evaluateBiomeAssembly(
   const snapshot = materializeBiome(
     catalog,
     origin,
+    context.routePosition,
     completeness,
     context.loadout,
     plan.echoKeepsakeReplayResults,
@@ -518,6 +523,7 @@ export function evaluateBiomeAssembly(
   const composed = composeBiomeHistoryWithEncounterValidation(
     catalog,
     snapshot,
+    context.routePosition,
     seed,
     figLeafState,
     pendingSpellDrop,
@@ -586,7 +592,7 @@ export function evaluateBiomeAssembly(
     catalog,
     snapshot,
     history,
-    context.enteredBiomeCount,
+    context.routePosition,
     context.loadout,
     context.seed?.rewardBranches,
     context.resourcePlacements,
@@ -596,7 +602,7 @@ export function evaluateBiomeAssembly(
     catalog,
     snapshot,
     history,
-    context.enteredBiomeCount,
+    context.routePosition,
     rewards.simulation,
     rewards.producerArtifacts,
     rewards.lifecycleArtifacts,

@@ -1,3 +1,4 @@
+import { ordinaryPositionFor } from '../../../support/route-position';
 import { catalog } from '@run-planner/hades2-catalog';
 import {
   applyProjectCommand,
@@ -218,7 +219,13 @@ describe('canonical N Hub materialization', () => {
     const project = loadSurfaceNEntryFrontierResolvedProject();
     const plan = project.route.biomes.find((biome) => biome.biomeKey === 'N');
     if (plan === undefined) throw new Error('N terminal-envelope fixture lost its biome plan');
-    const prefix = materializeBiomePrefix(catalog, nBiome, plan, traitContext(project));
+    const prefix = materializeBiomePrefix(
+      catalog,
+      nBiome,
+      ordinaryPositionFor(catalog, nBiome),
+      plan,
+      traitContext(project),
+    );
     if (prefix === null) {
       throw new Error('N terminal envelope did not materialize its selected prefix');
     }
@@ -272,7 +279,13 @@ describe('canonical N Hub materialization', () => {
     });
     const plan = project.route.biomes.find((biome) => biome.biomeKey === 'N');
     if (plan === undefined) throw new Error('N Hub-source fixture lost its biome plan');
-    const prefix = materializeBiomePrefix(catalog, nBiome, plan, traitContext(project));
+    const prefix = materializeBiomePrefix(
+      catalog,
+      nBiome,
+      ordinaryPositionFor(catalog, nBiome),
+      plan,
+      traitContext(project),
+    );
     if (prefix === null) throw new Error('N Hub-source fixture did not materialize');
     const hub = prefix.decisions.find((decision) => decision.kind === 'hub');
     if (hub?.kind !== 'hub') throw new Error('N Hub-source fixture lost its Hub decision');

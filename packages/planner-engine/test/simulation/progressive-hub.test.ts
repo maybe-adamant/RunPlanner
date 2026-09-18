@@ -24,6 +24,7 @@ import {
   simulateProject,
 } from '@run-planner/engine/simulation';
 import { describe, expect, it } from 'vitest';
+import { ordinaryRoutePosition } from '../support/route-position';
 
 import { evaluateProgressiveBiome } from '../../src/simulation/progressive/biome';
 import { EMPTY_RESOURCE_PLACEMENTS } from '../../src/authored-project/defaults';
@@ -238,7 +239,7 @@ function progressiveN(project: ReturnType<typeof openHub>) {
   const plan = project.route.biomes.find((biome) => biome.biomeKey === 'N');
   if (plan === undefined) throw new Error('project lost authored N');
   const progressive = evaluateProgressiveBiome(catalog, nBiome, plan, {
-    enteredBiomeCount: 1,
+    routePosition: ordinaryRoutePosition(catalog, 'Surface', 'N'),
     resourcePlacements: EMPTY_RESOURCE_PLACEMENTS,
     loadout: defaultRouteLoadout,
   });

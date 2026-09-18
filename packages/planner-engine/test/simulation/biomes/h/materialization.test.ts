@@ -1,3 +1,4 @@
+import { ordinaryPositionFor } from '../../../support/route-position';
 import {
   applyProjectCommand,
   acquisitionSiteStorageKey,
@@ -325,7 +326,13 @@ function materialize(project: ProjectDocument) {
       `fixture is incomplete: ${completeness.findings.map((finding) => finding.code)}`,
     );
   }
-  return materializeBiome(catalog, biome, completeness, traitContext(project));
+  return materializeBiome(
+    catalog,
+    biome,
+    ordinaryPositionFor(catalog, biome),
+    completeness,
+    traitContext(project),
+  );
 }
 
 function olympianContactSeed(project: ProjectDocument, keepsakeKey: string) {
@@ -340,8 +347,8 @@ function evaluateWithOlympianContactSeed(project: ProjectDocument, keepsakeKey: 
   return evaluateBiomeRewards(
     catalog,
     snapshot,
-    composeBiomeHistory(catalog, snapshot),
-    3,
+    composeBiomeHistory(catalog, snapshot, ordinaryPositionFor(catalog, snapshot)),
+    ordinaryPositionFor(catalog, snapshot),
     traitContext(project),
     [olympianContactSeed(project, keepsakeKey)],
   );

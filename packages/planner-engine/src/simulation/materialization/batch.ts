@@ -34,6 +34,7 @@ import { legalTopologyOccurrenceRoom } from '../../authored-project/topology/roo
 import { batchTakesOverNormalDoors, fieldsBatchFacts, targetContinuation } from './decision-facts';
 import { materializeAuthoredRoom } from './rooms/assemble';
 import type { AuthoredRoomRole } from './rooms/templates';
+import type { ResolvedRoutePosition } from '../../authored-project/route-context';
 import type {
   CanonicalAdditionalContinuation,
   CanonicalAuthoredRoom,
@@ -281,6 +282,7 @@ function prebossRole(room: RoomDeclaration, targetIndex: number): AuthoredRoomRo
 function materializeTarget(
   catalog: Catalog,
   biome: BiomeAddress,
+  routePosition: ResolvedRoutePosition,
   layout: BiomeLayout,
   topology: BiomeTopology,
   occurrences: ReadonlyMap<OccurrenceId, RoomOccurrence>,
@@ -305,6 +307,7 @@ function materializeTarget(
     room: materializeAuthoredRoom({
       catalog,
       biome,
+      routePosition,
       room,
       occurrence,
       role: prebossRole(room, targetIndex),
@@ -320,6 +323,7 @@ function materializeTarget(
 export function materializeAdditionalContinuations(
   catalog: Catalog,
   biome: BiomeAddress,
+  routePosition: ResolvedRoutePosition,
   layout: BiomeLayout,
   topology: BiomeTopology,
   occurrences: ReadonlyMap<OccurrenceId, RoomOccurrence>,
@@ -362,6 +366,7 @@ export function materializeAdditionalContinuations(
         room: materializeAuthoredRoom({
           catalog,
           biome,
+          routePosition,
           room,
           occurrence,
           role: 'ordinary',
@@ -386,6 +391,7 @@ export interface MaterializedBatch {
 export function materializeBatch(
   catalog: Catalog,
   biome: BiomeAddress,
+  routePosition: ResolvedRoutePosition,
   layout: BiomeLayout,
   topology: BiomeTopology,
   occurrences: ReadonlyMap<OccurrenceId, RoomOccurrence>,
@@ -444,6 +450,7 @@ export function materializeBatch(
       return materializeTarget(
         catalog,
         biome,
+        routePosition,
         layout,
         topology,
         occurrences,
@@ -462,6 +469,7 @@ export function materializeBatch(
   const additional = materializeAdditionalContinuations(
     catalog,
     biome,
+    routePosition,
     layout,
     topology,
     occurrences,

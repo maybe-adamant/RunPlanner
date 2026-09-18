@@ -1,4 +1,5 @@
 import type { Catalog } from '../../../catalog-schema';
+import type { ResolvedRoutePosition } from '../../../authored-project/route-context';
 import type { PurgingPoolAssessment } from '../../commerce/purging-pool';
 import type { HermesShrineCandidateContext } from '../../commerce/hermes-shrine';
 import {
@@ -242,7 +243,7 @@ export function evaluateBiomeRewardChronology(
   catalog: Catalog,
   snapshot: BiomeRewardSnapshot,
   history: BiomeRewardHistory,
-  enteredBiomeCount: number,
+  routePosition: ResolvedRoutePosition,
   routeLoadout: RouteLoadout,
   initialBranches: readonly RewardBranch[] | undefined = undefined,
   resourcePlacements: ResourcePlacements = EMPTY_RESOURCE_PLACEMENTS,
@@ -251,12 +252,8 @@ export function evaluateBiomeRewardChronology(
   if (snapshot.biomeKey !== history.biomeKey || snapshot.routeKey !== history.routeKey) {
     throw new BiomeRewardSimulationContractError('reward inputs do not share one biome owner');
   }
-  const fullRunBiomeCount = catalog.routes.byKey[snapshot.routeKey]?.biomeKeys.length;
-  if (fullRunBiomeCount === undefined) {
-    throw new BiomeRewardSimulationContractError(
-      `${snapshot.routeKey} has no catalog route for Boss Judgment effects`,
-    );
-  }
+  const enteredBiomeCount = routePosition.ordinal;
+  const fullRunBiomeCount = routePosition.itineraryBiomeKeys.length;
   const prepared = prepareRewardEvaluationInputs(catalog, snapshot, history);
   const {
     layout,
@@ -824,9 +821,9 @@ export function evaluateBiomeRewardChronology(
       giftState.replayCount === 0 &&
       branches[0]?.keepsakes.currentKey !== giftState.capturedKeepsakeKey
     ) {
-      // Replay happens at the next biome boundary. I/Q immediately follow the
-      // H/P Postboss frontiers that own Moon Beam's Big Path override.
-      const precedingPostbossWasBigPath = snapshot.biomeKey === 'I' || snapshot.biomeKey === 'Q';
+      const precedingPostbossWasBigPath =
+        routePosition.previousPostbossRoomGameName === 'H_PostBoss01' ||
+        routePosition.previousPostbossRoomGameName === 'P_PostBoss01';
       branches = Object.freeze(
         branches.map((branch) =>
           recordReplay(
@@ -1267,7 +1264,7 @@ export function evaluateBiomeRewardChronology(
             event.sequence,
             'localRoomLifecycle',
           ),
-          enteredBiomeCount,
+          routePosition,
           Object.freeze({
             purgingPool:
               room?.kind === 'authored' &&

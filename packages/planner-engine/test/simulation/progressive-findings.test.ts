@@ -1,3 +1,4 @@
+import { ordinaryPositionFor } from '../support/route-position';
 import { describe, expect, it } from 'vitest';
 
 import {
@@ -133,13 +134,20 @@ describe('progressive finding ancestry and chronology', () => {
     if (plan === undefined) throw new Error('stale Hammer plan is missing');
     const currentRoute = project.route;
     if (currentRoute === undefined) throw new Error('stale Hammer route is missing');
-    // @ts-expect-error public materialization requires a route-owned loadout
-    expect(() => materializeBiomePrefix(catalog, goldenFBiome, plan, {})).toThrowError(
-      'public biome materialization requires a route weapon and aspect loadout',
-    );
+    expect(() =>
+      materializeBiomePrefix(
+        catalog,
+        goldenFBiome,
+        ordinaryPositionFor(catalog, goldenFBiome),
+        plan,
+        // @ts-expect-error public materialization requires a route-owned loadout
+        {},
+      ),
+    ).toThrowError('public biome materialization requires a route weapon and aspect loadout');
     const directSnapshot = materializeBiomePrefix(
       catalog,
       goldenFBiome,
+      ordinaryPositionFor(catalog, goldenFBiome),
       plan,
       currentRoute.loadout,
     );
@@ -147,13 +155,17 @@ describe('progressive finding ancestry and chronology', () => {
       throw new Error('stale Hammer direct prefix did not materialize');
     }
     const directSnapshotWithEntry = { ...directSnapshot, entryRoom: directSnapshot.entryRoom };
-    const directHistory = composeBiomeHistoryPrefix(catalog, directSnapshot);
+    const directHistory = composeBiomeHistoryPrefix(
+      catalog,
+      directSnapshot,
+      ordinaryPositionFor(catalog, directSnapshot),
+    );
     if (directHistory === null) throw new Error('stale Hammer direct history did not compose');
     const directRewards = evaluateBiomeRewards(
       catalog,
       directSnapshotWithEntry,
       directHistory,
-      1,
+      ordinaryPositionFor(catalog, directSnapshotWithEntry),
       currentRoute.loadout,
     );
     expect(directRewards.findings).toContainEqual(

@@ -12,6 +12,7 @@ import { evaluateBiome, simulateProject } from '@run-planner/engine/simulation';
 import type { RewardHistoryState, RewardKernelFacts } from '@run-planner/engine/reward-kernel';
 import type { HexLayoutKey } from '@run-planner/engine/catalog-schema';
 import { describe, expect, it } from 'vitest';
+import { ordinaryRoutePosition } from '../support/route-position';
 
 import { createTestArcanaFearState } from '../support/arcana-fear';
 import {
@@ -208,7 +209,7 @@ describe('finite Hex progress', () => {
       }),
     });
     const evaluated = evaluateBiome(catalog, 'Underworld', gPlan, {
-      enteredBiomeCount: 2,
+      routePosition: ordinaryRoutePosition(catalog, 'Underworld', 'G'),
       loadout: routePlan.loadout,
       resourcePlacements: EMPTY_RESOURCE_PLACEMENTS,
       seed: { history: f.history, rewardBranches: [seededBranch] },

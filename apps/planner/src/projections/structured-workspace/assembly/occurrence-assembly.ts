@@ -1,3 +1,4 @@
+import type { ResolvedRoutePosition } from '@run-planner/engine/authored-project';
 import {
   createJudgmentArcanaAddress,
   createFigurineArcanaAddress,
@@ -167,6 +168,7 @@ function offerRewardRewards(
 /** Exact authored/evaluated inputs for one room-local workspace product. */
 export interface WorkspaceOccurrenceAssemblyInput {
   readonly configuredRivalsRank: number;
+  readonly routePosition: ResolvedRoutePosition;
   /** Closed declaration-owned map domain for an Anomaly replacement in this biome. */
   readonly anomalyReplacementRoomGameNames?: readonly string[];
   readonly biome: BiomeAddress;
@@ -276,6 +278,7 @@ export function assembleWorkspaceOccurrence(
   const rewardLocal = assembleOccurrenceRewardLocal(
     {
       configuredRivalsRank: input.configuredRivalsRank,
+      routePosition: input.routePosition,
       biome: input.biome,
       catalog: input.catalog,
       encounterPhaseStatus: input.encounterPhaseStatus,

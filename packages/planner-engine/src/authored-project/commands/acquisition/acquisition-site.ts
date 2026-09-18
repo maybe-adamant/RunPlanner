@@ -36,6 +36,7 @@ import {
 } from '../../room-actions/defaults';
 import { roomActionKey } from '../../room-actions/state';
 import { roomLifecycleWindowOrdinal } from '../../room-actions/lifecycle-structure';
+import { resolveRoutePosition } from '../../route-context';
 
 function shrineDeliverySource(
   document: ProjectDocument,
@@ -235,7 +236,7 @@ export function applyAcquisitionSiteCommand(
     const hostDeclaration = catalog.rooms.byKey[host.gameName];
     const finalPrebossHost =
       hostDeclaration?.kind === 'Preboss' &&
-      catalog.routes.byKey[site.routeKey]?.biomeKeys.at(-1) === site.biomeKey;
+      resolveRoutePosition(catalog, document.route, site.biomeKey).isLast;
     if (command.encounterPhaseKey !== undefined && command.encounterPhaseKey.trim().length === 0)
       failCommand(command, 'has an empty due encounter phase');
     const sourceIsHost =

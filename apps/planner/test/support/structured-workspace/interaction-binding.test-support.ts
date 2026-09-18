@@ -2,6 +2,7 @@ import { catalog } from '@run-planner/hades2-catalog';
 import {
   applyProjectCommand,
   activeRoomActionReferences,
+  resolveRoutePosition,
   createAllTogetherSetAddress,
   createBiomeAddress,
   createBatchRewardStoreAddress,
@@ -449,6 +450,7 @@ export {
   catalog,
   applyProjectCommand,
   activeRoomActionReferences,
+  resolveRoutePosition,
   createAllTogetherSetAddress,
   createBiomeAddress,
   createBatchRewardStoreAddress,

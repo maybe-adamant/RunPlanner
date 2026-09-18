@@ -1,3 +1,4 @@
+import { resolveRoutePosition, type ResolvedRoutePosition } from '../route-context';
 import type { BiomeLayout, Catalog, RoomDeclaration } from '../../catalog-schema';
 import type { AcquisitionSiteAddress, SemanticAddress } from '../addresses';
 import {
@@ -300,6 +301,7 @@ export function failCommand(command: CommandContractSubject, detail: string): ne
 }
 
 export interface LocatedBiome {
+  readonly routePosition: ResolvedRoutePosition;
   readonly routeKey: string;
   readonly biomeIndex: number;
   readonly loadout: AuthoredRoutePlan['loadout'];
@@ -324,7 +326,14 @@ export function locateBiome(
   if (plan === undefined) failCommand(command, `missing biome ${address.biomeKey}`);
   const layout = catalog.biomeLayouts.byKey[address.biomeKey];
   if (layout === undefined) failCommand(command, `catalog has no layout for ${address.biomeKey}`);
-  return { routeKey: route.routeKey, biomeIndex, loadout: route.loadout, plan, layout };
+  return {
+    routeKey: route.routeKey,
+    routePosition: resolveRoutePosition(catalog, route, plan.biomeKey),
+    biomeIndex,
+    loadout: route.loadout,
+    plan,
+    layout,
+  };
 }
 
 export function requireTopology(

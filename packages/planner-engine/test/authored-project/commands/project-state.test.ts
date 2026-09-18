@@ -687,7 +687,7 @@ describe('authored-project project-state commands', () => {
   it.each([
     [-1, 'configuredBiomeCount must be a non-negative integer'],
     [1.5, 'configuredBiomeCount must be a non-negative integer'],
-    [5, 'configuredBiomeCount exceeds the 4-biome route'],
+    [5, 'configuredBiomeCount exceeds the 4-biome itinerary'],
   ])('rejects invalid route-prefix count %s', (configuredBiomeCount, detail) => {
     expect(() =>
       applyProjectCommand(fProject(), catalog, {

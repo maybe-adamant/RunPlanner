@@ -67,7 +67,7 @@ export type OccurrenceOutgoingStatus =
 export interface OccurrenceOutgoingStatusInput {
   readonly biome: BiomeAddress;
   readonly catalog: Catalog;
-  /** Exact authored route prefix; catalog adjacency must not reactivate a configured tail. */
+  /** Exact authored route prefix; full itinerary remains a separate context. */
   readonly configuredBiomeKeys: readonly string[];
   readonly completeness: BiomeCompletenessResult;
   readonly findings: readonly SemanticFinding[];

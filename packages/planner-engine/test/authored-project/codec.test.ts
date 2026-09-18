@@ -7,7 +7,7 @@ import {
   type RoomActionReference,
 } from '@run-planner/engine/authored-project';
 import { createCompleteFGProject } from '@run-planner/test-fixtures/underworld';
-import surfaceNResourcesRaw from '../../../../test/fixtures/authored-project/checkpoints/surface-n-resources.runplanner.json';
+import { surfaceCheckpointArtifacts } from '@run-planner/test-fixtures/checkpoints/surface';
 
 function encodedFStart(): Record<string, unknown> {
   return JSON.parse(encodeProjectDocument(createCompleteFGProject())) as Record<string, unknown>;
@@ -301,7 +301,7 @@ describe('project document codec', () => {
   });
 
   it('decodes the real Surface resource checkpoint at the current schema boundary', () => {
-    const migrated = surfaceNResourcesRaw;
+    const migrated = surfaceCheckpointArtifacts['surface-n-resources'].load();
     const surface = migrated.route;
     expect(surface?.resourcePlacements.Shovel).toEqual({
       biomeKey: 'N',

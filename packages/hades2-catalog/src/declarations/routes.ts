@@ -15,4 +15,11 @@ export const routes = [
     prebossRoomGameNames: ['N_PreBoss01', 'O_PreBoss01', 'P_PreBoss01', 'Q_PreBoss01'],
     postbossRoomGameNames: ['N_PostBoss01', 'O_PostBoss01', 'P_PostBoss01', null],
   },
+  {
+    key: 'Dream',
+    label: 'Dream',
+    biomeKeys: [],
+    prebossRoomGameNames: [],
+    postbossRoomGameNames: [],
+  },
 ] as const satisfies readonly RouteDeclaration[];

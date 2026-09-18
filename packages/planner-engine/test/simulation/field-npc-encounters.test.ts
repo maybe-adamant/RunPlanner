@@ -1,3 +1,4 @@
+import { ordinaryPositionFor } from '../support/route-position';
 import { catalog } from '@run-planner/hades2-catalog';
 import {
   applyProjectCommand,
@@ -537,6 +538,7 @@ function combatOneCandidates(
   const candidate = prepareRoomEncounterPhases(
     historyProbeCatalog(),
     room,
+    ordinaryPositionFor(historyProbeCatalog(), room.origin),
     preparation,
   ).candidates.find((phase) => phase.origin.phaseKey === 'Combat1');
   if (candidate === undefined) throw new Error('O Combat1 candidate support is missing');
@@ -2062,6 +2064,7 @@ describe('field NPC encounter requirements', () => {
     const valid = prepareRoomEncounterPhases(
       fixedTerminatorCatalog(room, false),
       fixedRoom,
+      ordinaryPositionFor(fixedTerminatorCatalog(room, false), fixedRoom.origin),
       preparation,
     );
     expect(valid.statuses.map(({ origin, status }) => [origin.phaseKey, status.kind])).toEqual([
@@ -2073,6 +2076,7 @@ describe('field NPC encounter requirements', () => {
     const failed = prepareRoomEncounterPhases(
       fixedTerminatorCatalog(room, true),
       fixedRoom,
+      ordinaryPositionFor(fixedTerminatorCatalog(room, true), fixedRoom.origin),
       preparation,
     );
     expect(failed.statuses.map(({ origin, status }) => [origin.phaseKey, status.kind])).toEqual([

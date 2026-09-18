@@ -7,6 +7,7 @@ import {
   type SemanticAddress,
 } from '../../authored-project/addresses';
 import type { AuthoredRoutePlan, ProjectDocument } from '../../authored-project/model';
+import { resolveRoutePosition } from '../../authored-project/route-context';
 import { forcedChaosOccurrenceKeysForRoute } from '../../authored-project/chaos-gate-reconciliation';
 import {
   createProjectCandidateArtifacts,
@@ -58,9 +59,9 @@ function assertProjectMatchesCatalog(catalog: Catalog, project: ProjectDocument)
     throw new ProjectSimulationContractError(`project route ${project.route.routeKey} is unknown`);
   }
   for (const [biomeIndex, plan] of project.route.biomes.entries()) {
-    if (plan.biomeKey !== declaration.biomeKeys[biomeIndex]) {
+    if (plan.biomeKey !== project.route.itineraryBiomeKeys[biomeIndex]) {
       throw new ProjectSimulationContractError(
-        `${project.route.routeKey} biome ${biomeIndex} is not the declared route prefix`,
+        `${project.route.routeKey} biome ${biomeIndex} is not the authored route prefix`,
       );
     }
   }
@@ -229,8 +230,9 @@ function evaluateRouteAssembly(
       previous?.authoring === 'complete' && previous.validity === 'valid'
         ? Object.freeze({ history: previous.history, rewardBranches: previous.rewards.branches })
         : undefined;
+    const routePosition = resolveRoutePosition(catalog, route, plan.biomeKey);
     const context = Object.freeze({
-      enteredBiomeCount: index + 1,
+      routePosition,
       forcedChaosOccurrenceKeys: forcedChaos,
       loadout: route.loadout,
       resourcePlacements: effectiveRouteResourcePlacements(resourceAuthoring),

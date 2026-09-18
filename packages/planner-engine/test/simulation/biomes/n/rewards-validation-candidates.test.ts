@@ -1,3 +1,4 @@
+import { ordinaryPositionFor } from '../../../support/route-position';
 import { catalog } from '@run-planner/hades2-catalog';
 import {
   applyProjectCommand,
@@ -914,6 +915,7 @@ describe('N Hub rewards, validation, and candidates', () => {
     const canonical = materializeHubDecision(
       catalog,
       nBiome,
+      ordinaryPositionFor(catalog, nBiome),
       descriptor,
       decision,
       topology.decisions.filter((candidate) => candidate.kind === 'localVisit'),

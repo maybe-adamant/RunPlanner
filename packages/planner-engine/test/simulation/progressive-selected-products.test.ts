@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { ordinaryRoutePosition } from '../support/route-position';
 
 import * as fixture from './support/progressive-biome-fixtures';
 import { requireTraits } from '@run-planner/test-fixtures/shared';
@@ -778,13 +779,13 @@ describe('progressive selected and blocked products', () => {
     }
     const seed = { history: previous.history, rewardBranches: previous.rewards.branches };
     const clamped = evaluateProgressiveBiomeAssembly(catalog, goldenGBiome, plan, {
-      enteredBiomeCount: 2,
+      routePosition: ordinaryRoutePosition(catalog, 'Underworld', 'G'),
       resourcePlacements: EMPTY_RESOURCE_PLACEMENTS,
       loadout: defaultRouteLoadout,
       seed,
     });
     const beforeClamp = evaluateProgressiveBiomeAssemblyBeforeClamp(catalog, goldenGBiome, plan, {
-      enteredBiomeCount: 2,
+      routePosition: ordinaryRoutePosition(catalog, 'Underworld', 'G'),
       resourcePlacements: EMPTY_RESOURCE_PLACEMENTS,
       loadout: defaultRouteLoadout,
       seed,
@@ -840,7 +841,7 @@ describe('progressive selected and blocked products', () => {
       rewardBranches: blockedPrevious.rewards.branches,
     };
     const blockedClamped = evaluateProgressiveBiomeAssembly(catalog, goldenGBiome, blockedPlan, {
-      enteredBiomeCount: 2,
+      routePosition: ordinaryRoutePosition(catalog, 'Underworld', 'G'),
       resourcePlacements: EMPTY_RESOURCE_PLACEMENTS,
       loadout: defaultRouteLoadout,
       seed: blockedSeed,
@@ -850,7 +851,7 @@ describe('progressive selected and blocked products', () => {
       goldenGBiome,
       blockedPlan,
       {
-        enteredBiomeCount: 2,
+        routePosition: ordinaryRoutePosition(catalog, 'Underworld', 'G'),
         resourcePlacements: EMPTY_RESOURCE_PLACEMENTS,
         loadout: defaultRouteLoadout,
         seed: blockedSeed,
@@ -1002,13 +1003,13 @@ describe('progressive selected and blocked products', () => {
     }
     const seed = { history: previous.history, rewardBranches: previous.rewards.branches };
     const clamped = evaluateProgressiveBiomeAssembly(catalog, oBiome, plan, {
-      enteredBiomeCount: 2,
+      routePosition: ordinaryRoutePosition(catalog, 'Surface', 'O'),
       resourcePlacements: EMPTY_RESOURCE_PLACEMENTS,
       loadout: defaultRouteLoadout,
       seed,
     });
     const beforeClamp = evaluateProgressiveBiomeAssemblyBeforeClamp(catalog, oBiome, plan, {
-      enteredBiomeCount: 2,
+      routePosition: ordinaryRoutePosition(catalog, 'Surface', 'O'),
       resourcePlacements: EMPTY_RESOURCE_PLACEMENTS,
       loadout: defaultRouteLoadout,
       seed,

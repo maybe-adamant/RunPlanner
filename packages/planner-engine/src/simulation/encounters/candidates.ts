@@ -1,3 +1,4 @@
+import type { ResolvedRoutePosition } from '../../authored-project/route-context';
 import {
   semanticAddressKey,
   type EncounterPhaseAddress,
@@ -128,6 +129,7 @@ export function evaluateEncounterCandidatesInternal(
   catalog: Catalog,
   rooms: readonly (CanonicalAuthoredRoom | CanonicalLocalVisitRoom)[],
   views: ReadonlyMap<string, HistoryStateView>,
+  routePosition: ResolvedRoutePosition,
   boundary?: EncounterCandidateBoundary,
   figLeafCandidates: readonly FigLeafPhaseCandidateSupport[] = [],
   gorgonStatus: GorgonLifecycleStatus | undefined = undefined,
@@ -149,7 +151,13 @@ export function evaluateEncounterCandidatesInternal(
     const preparationState = {
       rewardGeneration: targetRewardGenerationCheckpoint(historyRooms, room.origin),
     };
-    const preparedSource = prepareRoomEncounterPhases(catalog, room, context, preparationState);
+    const preparedSource = prepareRoomEncounterPhases(
+      catalog,
+      room,
+      routePosition,
+      context,
+      preparationState,
+    );
     const gorgonEffect = catalog.keepsakes.values.find(
       (keepsake) => keepsake.effect?.kind === 'gorgonAmulet',
     )?.effect;
@@ -212,6 +220,7 @@ export function evaluateEncounterCandidatesInternal(
             prepareRoomEncounterPhases(
               catalog,
               Object.freeze({ ...room, encounterPhases: phases }),
+              routePosition,
               context,
               preparationState,
             ),
@@ -305,8 +314,15 @@ export function evaluateEncounterCandidates(
   catalog: Catalog,
   rooms: readonly (CanonicalAuthoredRoom | CanonicalLocalVisitRoom)[],
   views: ReadonlyMap<string, HistoryStateView>,
+  routePosition: ResolvedRoutePosition,
   boundary?: EncounterCandidateBoundary,
 ): EncounterCandidateEvaluation {
-  const evaluation = evaluateEncounterCandidatesInternal(catalog, rooms, views, boundary);
+  const evaluation = evaluateEncounterCandidatesInternal(
+    catalog,
+    rooms,
+    views,
+    routePosition,
+    boundary,
+  );
   return Object.freeze({ artifacts: evaluation.artifacts, findings: evaluation.findings });
 }

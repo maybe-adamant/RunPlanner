@@ -1,3 +1,4 @@
+import { ordinaryPositionFor } from '../../support/route-position';
 import { catalog } from '@run-planner/hades2-catalog';
 import { semanticAddressKey, type ProjectDocument } from '@run-planner/engine/authored-project';
 import {
@@ -39,11 +40,18 @@ export function evaluate(project = createFGenerationProject()) {
   const snapshot = materializeBiome(
     catalog,
     fGenerationBiome,
+    ordinaryPositionFor(catalog, fGenerationBiome),
     complete(project),
     traitContext(project),
   );
-  const history = composeBiomeHistory(catalog, snapshot);
-  const rewards = evaluateBiomeRewards(catalog, snapshot, history, 1, traitContext(project));
+  const history = composeBiomeHistory(catalog, snapshot, ordinaryPositionFor(catalog, snapshot));
+  const rewards = evaluateBiomeRewards(
+    catalog,
+    snapshot,
+    history,
+    ordinaryPositionFor(catalog, snapshot),
+    traitContext(project),
+  );
   return {
     snapshot,
     history,

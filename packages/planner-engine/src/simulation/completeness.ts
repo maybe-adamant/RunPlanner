@@ -81,7 +81,7 @@ function requireLayout(catalog: Catalog, biome: BiomeAddress, biomeKey: string):
     );
   }
   const route = catalog.routes.byKey[biome.routeKey];
-  if (route === undefined || !route.biomeKeys.includes(biome.biomeKey)) {
+  if (route === undefined) {
     throw new CompletenessContractError(`${biome.routeKey} does not place biome ${biome.biomeKey}`);
   }
   const layout = catalog.biomeLayouts.byKey[biome.biomeKey];

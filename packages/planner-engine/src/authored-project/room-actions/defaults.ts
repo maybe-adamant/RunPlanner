@@ -1,5 +1,6 @@
 import type { Catalog } from '../../catalog-schema';
 import { createBiomeAddress, type BiomeAddress } from '../addresses';
+import { resolveRoutePosition } from '../route-context';
 import type {
   AuthoredBiomePlan,
   BiomeTopology,
@@ -240,6 +241,7 @@ function activeDomains(
     if (!biomeKeys.has(JSON.stringify([route.routeKey, plan.biomeKey]))) continue;
     if (plan.topology === null) continue;
     const biome = createBiomeAddress(route.routeKey, plan.biomeKey);
+    const routePosition = resolveRoutePosition(catalog, route, plan.biomeKey);
     const active = structurallyActiveOccurrenceIds(plan.topology);
     for (const occurrence of plan.topology.occurrences.filter((candidate) =>
       active.has(candidate.occurrenceId),
@@ -250,6 +252,7 @@ function activeDomains(
           catalog,
           biome,
           occurrence,
+          routePosition,
           ...roomActionDomainContext(catalog, plan, plan.topology, occurrence),
         }),
       );
@@ -420,6 +423,7 @@ export function roomActionDomainForOccurrence(
           catalog,
           biome,
           occurrence,
+          routePosition: resolveRoutePosition(catalog, document.route, biome.biomeKey),
           ...(plan?.topology === null || plan?.topology === undefined
             ? {}
             : roomActionDomainContext(catalog, plan, plan.topology, occurrence)),

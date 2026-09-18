@@ -1,3 +1,4 @@
+import { ordinaryPositionFor } from '../support/route-position';
 import { describe, expect, it } from 'vitest';
 
 import { catalog } from '@run-planner/hades2-catalog';
@@ -157,7 +158,35 @@ function evaluateNBossLifecycle(
       ),
     }),
     evaluated.history,
-    1,
+    ordinaryPositionFor(
+      catalog,
+      Object.freeze({
+        ...evaluated.snapshot,
+        fixedRoomLinks: Object.freeze(
+          evaluated.snapshot.fixedRoomLinks.map((link) =>
+            link.target.origin.occurrenceId === bossOccurrenceId
+              ? Object.freeze({
+                  ...link,
+                  target: Object.freeze({
+                    ...link.target,
+                    encounters: Object.freeze({
+                      ...link.target.encounters,
+                      judgmentArcanaKeysByPhase: Object.freeze({ Encounter: selected }),
+                      ...(figurineSelected.length === 0
+                        ? {}
+                        : {
+                            figurineArcanaKeysByPhase: Object.freeze({
+                              Encounter: figurineSelected,
+                            }),
+                          }),
+                    }),
+                  }),
+                })
+              : link,
+          ),
+        ),
+      }),
+    ),
     project.route!.loadout,
     [
       publicRewardBranch(
@@ -460,7 +489,13 @@ describe('Judgment fixed Boss lifecycle', () => {
         entryRoom: evaluated.materializedPrefix.entryRoom,
       }),
       evaluated.history,
-      1,
+      ordinaryPositionFor(
+        catalog,
+        Object.freeze({
+          ...evaluated.materializedPrefix,
+          entryRoom: evaluated.materializedPrefix.entryRoom,
+        }),
+      ),
       project.route!.loadout,
     );
     expect(directPrefixRewards.simulation.findings).toEqual(
@@ -524,7 +559,7 @@ describe('Judgment fixed Boss lifecycle', () => {
       catalog,
       evaluated.snapshot,
       evaluated.history,
-      4,
+      ordinaryPositionFor(catalog, evaluated.snapshot),
       project.route!.loadout,
       [Object.freeze({ ...priorBranch, keepsakes })],
     );

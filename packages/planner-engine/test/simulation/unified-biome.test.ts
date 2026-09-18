@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { ordinaryRoutePosition } from '../support/route-position';
 
 import { catalog } from '@run-planner/hades2-catalog';
 import {
@@ -633,7 +634,7 @@ describe('unified biome simulation', () => {
     const oPlan = oProject.route?.biomes.find((candidate) => candidate.biomeKey === 'O');
     if (oPlan === undefined) throw new Error('missing O plan');
     const o = evaluateBiome(catalog, 'Surface', oPlan, {
-      enteredBiomeCount: 2,
+      routePosition: ordinaryRoutePosition(catalog, 'Surface', 'O'),
       resourcePlacements: EMPTY_RESOURCE_PLACEMENTS,
       loadout: traitContext(oProject, 'Surface'),
     });
@@ -674,7 +675,7 @@ describe('unified biome simulation', () => {
     });
     expect(
       evaluateBiome(catalog, 'Surface', reversed, {
-        enteredBiomeCount: 4,
+        routePosition: ordinaryRoutePosition(catalog, 'Surface', 'Q'),
         resourcePlacements: EMPTY_RESOURCE_PLACEMENTS,
         loadout: traitContext(qProject, 'Surface'),
       }).authoring,
@@ -686,7 +687,7 @@ describe('unified biome simulation', () => {
     const plan = project.route?.biomes.find((candidate) => candidate.biomeKey === 'I');
     if (plan === undefined) throw new Error('missing I plan');
     const biome = evaluateBiome(catalog, 'Underworld', plan, {
-      enteredBiomeCount: 4,
+      routePosition: ordinaryRoutePosition(catalog, 'Underworld', 'I'),
       resourcePlacements: EMPTY_RESOURCE_PLACEMENTS,
       loadout: traitContext(project, 'Underworld'),
     });

@@ -1,3 +1,4 @@
+import { ordinaryPositionFor } from '../support/route-position';
 import { describe, expect, it } from 'vitest';
 
 import { catalog } from '@run-planner/hades2-catalog';
@@ -161,7 +162,7 @@ function replayBiome(
     catalog,
     biome.snapshot,
     biome.history,
-    biomeKey === 'F' ? 1 : 2,
+    ordinaryPositionFor(catalog, biome.snapshot),
     route.loadout,
     initialBranches,
   ).simulation;

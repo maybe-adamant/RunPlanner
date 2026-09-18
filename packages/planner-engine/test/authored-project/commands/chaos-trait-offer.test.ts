@@ -19,7 +19,7 @@ import {
 import { simulateProjectAssembly } from '@run-planner/engine/simulation';
 import { candidateArtifactsForProjectEvaluationAssembly } from '../../../src/simulation/evaluation/project-evaluation-assembly';
 
-import naturalChaosRaw from '../../../../../test/fixtures/authored-project/checkpoints/natural-chaos-unresolved-trial.runplanner.json';
+import { underworldCheckpointArtifacts } from '@run-planner/test-fixtures/checkpoints/underworld';
 import type { AuthoredChaosTraitOffer } from '../../../src/authored-project/traits/state';
 
 const chaosReward = createIncomingRewardAddress(
@@ -29,7 +29,7 @@ const chaosReward = createIncomingRewardAddress(
 const chaosTrait = createTraitOfferAddress(chaosReward, 'self');
 
 function unresolvedProject() {
-  return decodeProjectDocument(naturalChaosRaw, catalog);
+  return underworldCheckpointArtifacts['natural-chaos-unresolved-trial'].load();
 }
 
 /** The named checkpoint intentionally retains only the Chaos child unresolved.

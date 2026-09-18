@@ -1,3 +1,4 @@
+import { ordinaryPositionFor } from '../../support/route-position';
 import { describe, expect, it } from 'vitest';
 
 import {
@@ -301,9 +302,19 @@ describe('topology structural codec', () => {
       );
       const route = document.route;
       if (route === undefined) throw new Error(`missing ${routeKey} route`);
-      const prefix = materializeBiomePrefix(catalog, biome, plan, route.loadout);
+      const prefix = materializeBiomePrefix(
+        catalog,
+        biome,
+        ordinaryPositionFor(catalog, biome),
+        plan,
+        route.loadout,
+      );
       if (prefix === null) throw new Error(`missing ${biomeKey} terminal prefix`);
-      const history = composeBiomeHistoryPrefix(catalog, prefix);
+      const history = composeBiomeHistoryPrefix(
+        catalog,
+        prefix,
+        ordinaryPositionFor(catalog, prefix),
+      );
 
       expect(envelope).toMatchObject({
         normal: { kind: 'batch', targets: [] },

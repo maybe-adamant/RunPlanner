@@ -1,3 +1,4 @@
+import { ordinaryPositionFor } from '../../support/route-position';
 import { describe, expect, it } from 'vitest';
 
 import { catalog } from '@run-planner/hades2-catalog';
@@ -102,7 +103,13 @@ function entryRoom(document: ProjectDocument) {
   const route = document.route;
   const plan = route?.biomes[0];
   if (route === undefined || plan === undefined) throw new Error('missing F authored biome');
-  const room = materializeBiomePrefix(catalog, biome, plan, route.loadout)?.entryRoom;
+  const room = materializeBiomePrefix(
+    catalog,
+    biome,
+    ordinaryPositionFor(catalog, biome),
+    plan,
+    route.loadout,
+  )?.entryRoom;
   if (room === undefined) throw new Error('missing F materialized entry room');
   return room;
 }
@@ -165,6 +172,7 @@ describe('room-action commands', () => {
       site: { pointKey: 'nemesisGenerated:Encounter' },
     });
     const domain = assembleRoomActionDomain({
+      routePosition: ordinaryPositionFor(catalog, goldenFBiome),
       catalog,
       biome: goldenFBiome,
       occurrence: eventOccurrence,
@@ -252,7 +260,12 @@ describe('room-action commands', () => {
     if (reversedReprieve === undefined) throw new Error('moved Reprieve target is missing');
 
     for (const candidate of [reprieve, reversedReprieve]) {
-      const domain = assembleRoomActionDomain({ catalog, biome, occurrence: candidate });
+      const domain = assembleRoomActionDomain({
+        routePosition: ordinaryPositionFor(catalog, biome),
+        catalog,
+        biome,
+        occurrence: candidate,
+      });
       const roster = assembleRoomActionRoster({
         owner: createOccurrenceAddress(biome, candidate.occurrenceId),
         order: candidate.roomActions.order,
@@ -282,7 +295,14 @@ describe('room-action commands', () => {
       .route?.biomes.find((plan) => plan.biomeKey === 'H')
       ?.topology?.occurrences.find((candidate) => candidate.gameName === 'H_Bridge01');
     if (echo === undefined) throw new Error('H Echo bridge occurrence is missing');
-    expect(activeRoomActionReferences(catalog, goldenHBiome, echo)).not.toContainEqual(fountain);
+    expect(
+      activeRoomActionReferences(
+        catalog,
+        goldenHBiome,
+        echo,
+        ordinaryPositionFor(catalog, goldenHBiome),
+      ),
+    ).not.toContainEqual(fountain);
   });
 
   it('keeps a Well purchase after the required Artificer replacement clears outgoing generation', () => {
@@ -349,7 +369,12 @@ describe('room-action commands', () => {
       (candidate) => candidate.occurrenceId === hostId,
     );
     if (hostOccurrence === undefined) throw new Error('missing Well host');
-    const domain = assembleRoomActionDomain({ catalog, biome, occurrence: hostOccurrence });
+    const domain = assembleRoomActionDomain({
+      routePosition: ordinaryPositionFor(catalog, biome),
+      catalog,
+      biome,
+      occurrence: hostOccurrence,
+    });
     const roster = assembleRoomActionRoster({
       owner: host,
       order: hostOccurrence.roomActions.order,
@@ -760,6 +785,7 @@ describe('room-action commands', () => {
       order.findIndex((reference) => roomActionKey(reference) === roomActionKey(replacement)),
     );
     const domain = assembleRoomActionDomain({
+      routePosition: ordinaryPositionFor(catalog, goldenHBiome),
       catalog,
       biome: goldenHBiome,
       occurrence: fields(dormant),
@@ -784,6 +810,7 @@ describe('room-action commands', () => {
     });
     expect(
       assembleRoomActionDomain({
+        routePosition: ordinaryPositionFor(catalog, goldenHBiome),
         catalog,
         biome: goldenHBiome,
         occurrence: fields(deactivated),
@@ -1164,8 +1191,12 @@ describe('room-action commands', () => {
       { kind: 'purchaseStygianWellOffer', generationKey: 'travelDealRefill' },
     ]);
     expect(
-      assembleRoomActionDomain({ catalog, biome: goldenFBiome, occurrence: finalOccurrence })
-        .contributions,
+      assembleRoomActionDomain({
+        routePosition: ordinaryPositionFor(catalog, goldenFBiome),
+        catalog,
+        biome: goldenFBiome,
+        occurrence: finalOccurrence,
+      }).contributions,
     ).toContainEqual(
       expect.objectContaining({
         kind: 'action',

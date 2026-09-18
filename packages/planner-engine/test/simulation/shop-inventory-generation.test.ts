@@ -1,3 +1,4 @@
+import { ordinaryPositionFor } from '../support/route-position';
 import {
   catalog,
   describe,
@@ -26,6 +27,7 @@ describe('Shop trait acquisition processing', () => {
       Object.freeze({ kind: 'interactShopOffer' as const, offerKey: 'Minor' }),
     ]);
     const canonical = materializeAuthoredRoom({
+      routePosition: ordinaryPositionFor(catalog, biome),
       catalog,
       biome,
       room,

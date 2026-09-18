@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { ordinaryRoutePosition } from '../support/route-position';
 
 import { catalog } from '@run-planner/hades2-catalog';
 import {
@@ -465,7 +466,7 @@ describe('Cherished Heirloom active keepsake advance', () => {
       keepsakes: active.keepsakes,
     });
     const input = {
-      enteredBiomeCount: 2,
+      routePosition: ordinaryRoutePosition(catalog, 'Underworld', 'G'),
       resourcePlacements: EMPTY_RESOURCE_PLACEMENTS,
       loadout: route.loadout,
       seed: { history: previous.history, rewardBranches: [rewardBranch] },

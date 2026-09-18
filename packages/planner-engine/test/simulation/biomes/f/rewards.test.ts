@@ -1,3 +1,4 @@
+import { ordinaryPositionFor } from '../../../support/route-position';
 import {
   applyProjectCommand,
   artificerAcquisitionSite,
@@ -272,8 +273,14 @@ function evaluate(
   initialBranches?: Parameters<typeof evaluateBiomeRewards>[5],
 ) {
   if (authorTraits) project = authorLegalTraitOffers(project);
-  const snapshot = materializeBiome(catalog, biome, complete(project), traitContext(project));
-  const history = composeBiomeHistory(catalog, snapshot);
+  const snapshot = materializeBiome(
+    catalog,
+    biome,
+    ordinaryPositionFor(catalog, biome),
+    complete(project),
+    traitContext(project),
+  );
+  const history = composeBiomeHistory(catalog, snapshot, ordinaryPositionFor(catalog, snapshot));
   return {
     snapshot,
     history,
@@ -281,7 +288,7 @@ function evaluate(
       catalog,
       snapshot,
       history,
-      1,
+      ordinaryPositionFor(catalog, snapshot),
       traitContext(project),
       initialBranches,
     ),
@@ -1606,10 +1613,22 @@ describe('F reward-history simulation', () => {
       occurrence: createOccurrenceAddress(biome, createOccurrenceId('ratio-run-peer')),
       gameName: 'F_Combat06',
     });
-    const snapshot = materializeBiome(catalog, biome, complete(project), traitContext(project));
+    const snapshot = materializeBiome(
+      catalog,
+      biome,
+      ordinaryPositionFor(catalog, biome),
+      complete(project),
+      traitContext(project),
+    );
 
     expect(() =>
-      evaluateBiomeRewards(catalog, snapshot, baseline.history, 1, traitContext(project)),
+      evaluateBiomeRewards(
+        catalog,
+        snapshot,
+        baseline.history,
+        ordinaryPositionFor(catalog, snapshot),
+        traitContext(project),
+      ),
     ).toThrowError(/in the snapshot but .* in history/);
   });
 

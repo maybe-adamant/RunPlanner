@@ -1,4 +1,5 @@
 import type { Catalog } from '../../../catalog-schema';
+import type { ResolvedRoutePosition } from '../../../authored-project/route-context';
 import type { ResourcePlacements, RouteLoadout } from '../../../authored-project/model';
 import { EMPTY_RESOURCE_PLACEMENTS } from '../../../authored-project/defaults';
 import type { RewardBranch, BiomeRewardSimulation } from '../model';
@@ -19,7 +20,7 @@ export function evaluateBiomeRewardsAssemblyInternal(
   catalog: Catalog,
   snapshot: BiomeRewardSnapshot,
   history: BiomeRewardHistory,
-  enteredBiomeCount: number,
+  routePosition: ResolvedRoutePosition,
   routeLoadout: RouteLoadout,
   initialBranches: readonly RewardBranch[] | undefined = undefined,
   resourcePlacements: ResourcePlacements = EMPTY_RESOURCE_PLACEMENTS,
@@ -29,7 +30,7 @@ export function evaluateBiomeRewardsAssemblyInternal(
     catalog,
     snapshot,
     history,
-    enteredBiomeCount,
+    routePosition,
     routeLoadout,
     initialBranches,
     resourcePlacements,
@@ -41,7 +42,7 @@ export function evaluateBiomeRewards(
   catalog: Catalog,
   snapshot: BiomeRewardSnapshot,
   history: BiomeRewardHistory,
-  enteredBiomeCount: number,
+  routePosition: ResolvedRoutePosition,
   routeLoadout: RouteLoadout,
   initialBranches?: readonly RewardBranch[],
   resourcePlacements: ResourcePlacements = EMPTY_RESOURCE_PLACEMENTS,
@@ -50,7 +51,7 @@ export function evaluateBiomeRewards(
     catalog,
     snapshot,
     history,
-    enteredBiomeCount,
+    routePosition,
     routeLoadout,
     initialBranches,
     resourcePlacements,
@@ -61,7 +62,7 @@ export function evaluateBiomeRewardsAssembly(
   catalog: Catalog,
   snapshot: BiomeRewardSnapshot,
   history: BiomeRewardHistory,
-  enteredBiomeCount: number,
+  routePosition: ResolvedRoutePosition,
   routeLoadout: RouteLoadout,
   initialBranches?: readonly RewardBranch[],
   resourcePlacements: ResourcePlacements = EMPTY_RESOURCE_PLACEMENTS,
@@ -70,7 +71,7 @@ export function evaluateBiomeRewardsAssembly(
     catalog,
     snapshot,
     history,
-    enteredBiomeCount,
+    routePosition,
     routeLoadout,
     initialBranches,
     resourcePlacements,

@@ -1,3 +1,4 @@
+import type { ResolvedRoutePosition } from '@run-planner/engine/authored-project';
 import type {
   WorkspaceAcquisitionConversionControl,
   WorkspaceLevelResolutionControl,
@@ -124,6 +125,7 @@ export type WorkspaceDerivedAcquisitionEntry = {
 
 export interface WorkspaceOccurrenceRewardAssemblyInput {
   readonly configuredRivalsRank: number;
+  readonly routePosition: ResolvedRoutePosition;
   readonly biome: BiomeAddress;
   readonly catalog: Catalog;
   readonly encounterPhaseStatus: (
@@ -773,7 +775,14 @@ export function activeEncounterPhasesForOwner(
     room,
     owner,
     encounters,
-    { ...options, includeFixedPhases: true, configuredRivalsRank: input.configuredRivalsRank },
+    {
+      ...options,
+      includeFixedPhases: true,
+      rivalsContext: {
+        configuredRivalsRank: input.configuredRivalsRank,
+        routePosition: input.routePosition,
+      },
+    },
   )) {
     const address = domain.origin;
     const phaseStatus = input.encounterPhaseStatus(address);

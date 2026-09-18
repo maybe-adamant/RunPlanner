@@ -1,3 +1,4 @@
+import { ordinaryPositionFor } from '../support/route-position';
 import { describe, expect, it } from 'vitest';
 import { catalog } from '@run-planner/hades2-catalog';
 import {
@@ -188,6 +189,7 @@ describe('normal target generation support', () => {
     const snapshot = materializeBiome(
       catalog,
       fGenerationBiome,
+      ordinaryPositionFor(catalog, fGenerationBiome),
       complete(project),
       traitContext(project),
     );
@@ -213,6 +215,7 @@ describe('normal target generation support', () => {
     const snapshot = materializeBiome(
       catalog,
       fGenerationBiome,
+      ordinaryPositionFor(catalog, fGenerationBiome),
       complete(project),
       traitContext(project),
     );

@@ -1,6 +1,7 @@
 import { catalog } from '@run-planner/hades2-catalog';
 import {
   applyProjectCommand,
+  resolveRoutePosition,
   assembleRoomActionDomain,
   createAcquisitionEntryAddress,
   createAcquisitionRoleAddress,
@@ -91,7 +92,12 @@ describe('run-impacting trait checkpoint recipes', () => {
         .find((biome) => biome.biomeKey === 'N')
         ?.topology?.occurrences.find((candidate) => candidate.acquisitionSites !== undefined);
       if (occurrence === undefined) throw new Error('Generated-pickup occurrence is missing');
-      const domain = assembleRoomActionDomain({ catalog, biome: nBiome, occurrence });
+      const domain = assembleRoomActionDomain({
+        catalog,
+        biome: nBiome,
+        occurrence,
+        routePosition: resolveRoutePosition(catalog, project.route, 'N'),
+      });
       const producer = selectedPickupProducers(catalog, nBiome, occurrence).find((candidate) =>
         candidate.pickups.some((pickup) => pickup.key === entryKey),
       );
@@ -181,7 +187,12 @@ describe('run-impacting trait checkpoint recipes', () => {
     expect(occurrence().acquisitionSites?.[duplicateSite]?.pickupEntries).toHaveProperty(
       SEA_STAR_DUPLICATE_ENTRY_KEY,
     );
-    const domain = assembleRoomActionDomain({ catalog, biome: nBiome, occurrence: occurrence() });
+    const domain = assembleRoomActionDomain({
+      catalog,
+      biome: nBiome,
+      occurrence: occurrence(),
+      routePosition: resolveRoutePosition(catalog, project.route, 'N'),
+    });
     const sourceAction = domain.contributions.find(
       (entry) =>
         entry.kind === 'action' &&

@@ -340,7 +340,7 @@ describe('editor session navigation', () => {
     expect(replacement.semanticNavigationRevision).toBe(selected.semanticNavigationRevision);
   });
 
-  it('rejects session addresses outside the declared route structure', () => {
+  it('rejects session addresses with unknown catalog identities', () => {
     expect(() => reducer(undefined, routeSelected('Unknown'))).toThrow(
       'Editor navigation references unknown route Unknown',
     );
@@ -349,12 +349,12 @@ describe('editor session navigation', () => {
         undefined,
         routePanelSelected({
           routeKey: 'Underworld',
-          panel: { kind: 'biome', biomeKey: 'N' },
+          panel: { kind: 'biome', biomeKey: 'Unknown' },
         }),
       ),
-    ).toThrow('Editor navigation references biome N outside route Underworld');
+    ).toThrow('Editor navigation references unknown biome Unknown');
     expect(() =>
-      reducer(undefined, semanticOwnerNavigated(createBiomeAddress('Underworld', 'N'))),
-    ).toThrow('Editor navigation references biome N outside route Underworld');
+      reducer(undefined, semanticOwnerNavigated(createBiomeAddress('Underworld', 'Unknown'))),
+    ).toThrow('Editor navigation references unknown biome Unknown');
   });
 });

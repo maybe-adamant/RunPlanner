@@ -1,3 +1,4 @@
+import { resolveRoutePosition } from '../../authored-project/route-context';
 import type { Catalog } from '../../catalog-schema';
 import { semanticAddressKey, type ExitDecisionAddress } from '../../authored-project/addresses';
 import type { ProjectDocument } from '../../authored-project/model';
@@ -19,7 +20,6 @@ import {
   candidateAssessmentPrefix,
   candidateBiome,
   candidatePrefix,
-  completeBiomeCount,
   planFor,
   prefixAuthoredRooms,
 } from './evaluated-biome';
@@ -117,7 +117,7 @@ function evaluatePrefixHubTerminalTakeover(
       query.source,
       owner,
       history,
-      completeBiomeCount(evaluation, query.source.routeKey, query.source.biomeKey),
+      resolveRoutePosition(catalog, project.route, query.source.biomeKey).ordinal,
     ),
   });
 }

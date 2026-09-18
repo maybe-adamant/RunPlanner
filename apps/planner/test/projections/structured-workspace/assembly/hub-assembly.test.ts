@@ -64,6 +64,7 @@ function hubKit(source: WorkspaceBiomeSource) {
     }
     return assembleWorkspaceOccurrence({
       configuredRivalsRank: source.configuredRivalsRank,
+      routePosition: source.routePosition,
       biome: source.biome,
       catalog,
       encounterPhaseStatus: source.encounterPhaseStatus,
