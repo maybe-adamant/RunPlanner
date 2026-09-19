@@ -14,7 +14,7 @@
 }
 
 .project-entry-panel {
-  width: min(820px, 100%);
+  width: min(1000px, 100%);
   align-self: center;
   margin: clamp(52px, calc(10 * var(--app-vh)), 112px) auto 0;
   padding: clamp(24px, calc(4 * var(--app-vw)), 38px);
@@ -37,12 +37,6 @@
   letter-spacing: -0.03em;
 }
 
-.project-entry-heading > p:last-child {
-  margin: 9px 0 0;
-  color: #aaa7af;
-  line-height: 1.55;
-}
-
 .project-entry-panel > .project-profile-feedback {
   justify-content: flex-start;
   margin-top: 16px;
@@ -60,7 +54,7 @@
 
 .route-choice-grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr));
   gap: 14px;
 }
 
@@ -92,13 +86,6 @@
   color: #f0e9f3;
   font-family: Georgia, 'Times New Roman', serif;
   font-size: 1.35rem;
-}
-
-.route-choice-biomes {
-  margin-top: 8px;
-  color: #aaa7af;
-  font-size: 0.84rem;
-  line-height: 1.45;
 }
 
 .route-choice-action {
@@ -240,6 +227,15 @@
 
 .game-publication-dialog .panel-heading h2 {
   margin: 0;
+}
+
+.game-publication-dialog.dream-route-dialog {
+  width: 42rem;
+  max-width: 100%;
+}
+
+.dream-route-dialog > .contextual-picker {
+  margin-top: 0.75rem;
 }
 
 .game-publication-actions {
@@ -476,6 +472,18 @@
 
 .route-loadout-panel {
   padding-block: 1rem;
+}
+
+.route-order-summary {
+  margin: 0.75rem 0 0;
+  color: #d9d4dc;
+  font-size: 0.95rem;
+  line-height: 1.5;
+}
+
+.route-order-summary > strong {
+  color: #e4c58e;
+  font-weight: 600;
 }
 
 .route-loadout-controls > .contextual-picker > label,

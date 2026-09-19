@@ -1,8 +1,18 @@
 # Dream Dive authoring and execution
 
-Status: proposed delivery contract; no implementation started.
+Status: locked at `55062de8`; Gate A implemented and independently reviewed.
+Gate B and C remain pending. Dream publication is still disabled.
 Planner base: `625ba63e`. Inventory both repository heads and worktrees before
 execution. This plan does not authorize pushing or deployment.
+
+Gate A verification: 9 focused files / 75 tests, catalog suite 34 files / 276
+tests, application TypeScript check, changed-file Prettier and diff checks
+passed. Independent review found the full locked itinerary was not visible
+after creation; a read-only Loadout display and focused witness address it.
+After UI refinements, 8 focused files / 60 tests and changed-file formatting
+passed again, including unavailable-choice disclosure and picker regression
+coverage. The authored schema remains 86 from the prior run-start migration.
+Full phase closure and live-game checks remain Gate C obligations.
 
 ## Outcome and locked decisions
 

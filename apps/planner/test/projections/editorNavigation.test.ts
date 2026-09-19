@@ -7,7 +7,7 @@ import {
 } from '@planner/projections/editorNavigation';
 
 describe('route navigation', () => {
-  it('uses the full authored itinerary for current navigation and ordinary presets for New', () => {
+  it('uses the full authored itinerary for current navigation and includes Dream Dive creation', () => {
     const project = createProjectDocument(catalog, {
       projectId: 'mixed-navigation',
       routeKey: 'Dream',
@@ -17,9 +17,15 @@ describe('route navigation', () => {
     expect(
       projectRouteNavigation(catalog, project.route).biomePanels.map((panel) => panel.biomeKey),
     ).toEqual(['Q', 'F', 'N', 'H']);
-    expect(createEditorNavigation(catalog).routes.values.map((route) => route.routeKey)).toEqual([
-      'Underworld',
-      'Surface',
-    ]);
+    expect(createEditorNavigation(catalog).routes.values).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          routeKey: 'Dream',
+          label: 'Dream Dive',
+          itinerarySelectionRequired: true,
+          biomePanels: [],
+        }),
+      ]),
+    );
   });
 });

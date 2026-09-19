@@ -21,6 +21,13 @@ export type {
 } from './model';
 export { resolveRoutePosition, type ResolvedRoutePosition } from './route-context';
 export {
+  assessPublicDreamItinerary,
+  type DreamItineraryAssessment,
+  type DreamItineraryChoice,
+  type DreamItineraryIssue,
+  type DreamItineraryIssueKind,
+} from './dream-itinerary';
+export {
   SEA_STAR_DUPLICATE_ENTRY_KEY,
   seaStarDuplicateAcquisitionSite,
   seaStarDuplicateSiteKey,

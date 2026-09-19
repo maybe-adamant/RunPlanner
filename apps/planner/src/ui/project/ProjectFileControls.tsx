@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 
 import type { RouteEditorNavigation } from '@planner/projections/editorNavigation';
+import type { Catalog } from '@run-planner/engine/catalog-schema';
 
 import type {
   ProjectOperation,
@@ -13,8 +14,14 @@ import {
   type GamePlanDiscovery,
   type GamePlanSlotNumber,
 } from '@planner/persistence/gamePlanPublisher';
-import { selectProfileSession, selectProfileStatus, useAppSelector } from '@planner/state/store';
+import {
+  selectPresentProject,
+  selectProfileSession,
+  selectProfileStatus,
+  useAppSelector,
+} from '@planner/state/store';
 import { ActionIcon } from '../controls/ActionIcon';
+import { DreamItineraryDialog } from './DreamItineraryDialog';
 
 function GamePublicationDialog({
   discovery,
@@ -133,12 +140,14 @@ function GamePublicationDialog({
 }
 
 export function ProjectFileControls({
+  catalog,
   operations,
   routes,
   hasProject,
   entryOpen,
   onEntryOpenChange,
 }: {
+  readonly catalog: Catalog;
   readonly operations: ProjectOperations;
   readonly routes: readonly RouteEditorNavigation[];
   readonly hasProject: boolean;
@@ -147,12 +156,15 @@ export function ProjectFileControls({
 }) {
   const profileSession = useAppSelector(selectProfileSession);
   const profileStatus = useAppSelector(selectProfileStatus);
+  const project = useAppSelector(selectPresentProject);
+  const dreamPublicationUnavailable = project?.route.routeKey === 'Dream';
   const [result, setResult] = useState<ProjectOperationResult | null>(null);
   const [pendingOperation, setPendingOperation] = useState<ProjectOperation | null>(null);
   const [gameDiscovery, setGameDiscovery] = useState<GamePlanDiscovery | null>(null);
   const [selectedGameProfile, setSelectedGameProfile] = useState<string>('');
   const [selectedGameSlot, setSelectedGameSlot] = useState<GamePlanSlotNumber | ''>('');
   const [fileMenuOpen, setFileMenuOpen] = useState(false);
+  const [dreamItineraryOpen, setDreamItineraryOpen] = useState(false);
   const closeGamePublication = useCallback(() => {
     setGameDiscovery(null);
     setSelectedGameProfile('');
@@ -264,10 +276,6 @@ export function ProjectFileControls({
           <h2 id="project-entry-title">
             {hasProject ? 'Choose a new route' : 'Choose your route'}
           </h2>
-          <p>
-            Start with one complete run path. You can configure its rooms, rewards, and run state
-            after choosing.
-          </p>
         </header>
         {feedback}
         <fieldset className="route-chooser route-chooser-entry" aria-label="Choose route">
@@ -280,14 +288,15 @@ export function ProjectFileControls({
                 disabled={pendingOperation !== null}
                 key={route.routeKey}
                 onClick={() => {
+                  if (route.itinerarySelectionRequired) {
+                    setDreamItineraryOpen(true);
+                    return;
+                  }
                   void runProfileOperation('new', () => operations.createNew(route.routeKey));
                 }}
                 type="button"
               >
                 <span className="route-choice-name">{route.label}</span>
-                <span className="route-choice-biomes">
-                  {route.biomePanels.map((biome) => biome.label).join(' → ')}
-                </span>
                 <span className="route-choice-action">Create project</span>
               </button>
             ))}
@@ -336,6 +345,20 @@ export function ProjectFileControls({
             </button>
           )}
         </footer>
+        {dreamItineraryOpen && (
+          <DreamItineraryDialog
+            catalog={catalog}
+            onCancel={() => setDreamItineraryOpen(false)}
+            onCreate={(itineraryBiomeKeys) => {
+              void runProfileOperation('new', () =>
+                operations.createNew('Dream', itineraryBiomeKeys),
+              ).then((operationResult) => {
+                if (operationResult.status === 'success') setDreamItineraryOpen(false);
+              });
+            }}
+            pending={pendingOperation === 'new'}
+          />
+        )}
       </section>
     );
   }
@@ -418,7 +441,9 @@ export function ProjectFileControls({
                   <DropdownMenu.Separator className="project-file-menu-separator" />
                   <DropdownMenu.Item
                     className="project-file-menu-item"
-                    disabled={pendingOperation !== null || !hasProject}
+                    disabled={
+                      pendingOperation !== null || !hasProject || dreamPublicationUnavailable
+                    }
                     onSelect={() =>
                       queueFileMenuAction(() => {
                         void discoverAndPublishGamePlan();
@@ -426,7 +451,11 @@ export function ProjectFileControls({
                     }
                   >
                     <ActionIcon name="publish" />
-                    {pendingOperation === 'publishGame' ? 'Publishing…' : 'Publish to Game…'}
+                    {dreamPublicationUnavailable
+                      ? 'Dream Dive publication unavailable'
+                      : pendingOperation === 'publishGame'
+                        ? 'Publishing…'
+                        : 'Publish to Game…'}
                   </DropdownMenu.Item>
                 </>
               )}

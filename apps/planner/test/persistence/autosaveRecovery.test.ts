@@ -446,6 +446,25 @@ describe('autosave recovery lifecycle', () => {
     expect(selectExplicitProfileBaselineJson(application.store.getState())).toBeNull();
   });
 
+  it('restores a public Dream Dive autosave with its immutable itinerary identity', () => {
+    const dream = createProjectDocument(catalog, {
+      projectId: 'dream-autosave',
+      routeKey: 'Dream',
+      itineraryBiomeKeys: ['Q', 'F', 'N', 'H'],
+      configuredBiomeCount: 1,
+    });
+    const application = createApplication({
+      autosaveRecovery: createRecoveryFixture(encodeProjectDocument(dream)),
+      autosaveScheduler: createSchedulerFixture(),
+    });
+
+    expect(presentProject(application).route).toMatchObject({
+      routeKey: 'Dream',
+      itineraryBiomeKeys: ['Q', 'F', 'N', 'H'],
+      biomes: [{ biomeKey: 'Q' }],
+    });
+  });
+
   it('preserves corrupt recovery and suspends writes until explicit discard', async () => {
     const recovery = createRecoveryFixture('{not json');
     const scheduler = createSchedulerFixture();

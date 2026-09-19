@@ -1,20 +1,29 @@
 import { renderToStaticMarkup } from 'react-dom/server';
 import { Provider } from 'react-redux';
-import { createRouteAddress } from '@run-planner/engine/authored-project';
+import { createProjectDocument, createRouteAddress } from '@run-planner/engine/authored-project';
 import { describe, expect, it } from 'vitest';
 
 import { createApplication } from '@planner/composition/createApplication';
 import { projectFeedbackHierarchy } from '@planner/projections/evaluationProjection';
-import { authoredProjectCommandDispatched } from '@planner/state/projectWorkspaceSlice';
+import { projectRouteNavigation } from '@planner/projections/editorNavigation';
+import {
+  authoredProjectCommandDispatched,
+  authoredProjectReplaced,
+} from '@planner/state/projectWorkspaceSlice';
 import { RouteOverview } from '@planner/ui/shell/RouteOverview';
 import { createOpenTestApplication } from '@planner-test/fixtures/renderPlanner';
 
 function routeOverviewMarkup(application: ReturnType<typeof createApplication>): string {
   const state = application.store.getState();
-  const routeKey = 'Underworld';
-  const navigation = application.editorNavigation.routes.byKey[routeKey];
+  const project =
+    state.projectWorkspace.kind === 'openProject'
+      ? state.projectWorkspace.history.present
+      : undefined;
+  const navigation =
+    project === undefined ? undefined : projectRouteNavigation(application.catalog, project.route);
   const workspace = application.selectStructuredWorkspace(state)!;
   if (
+    project === undefined ||
     navigation === undefined ||
     workspace === undefined ||
     state.projectWorkspace.kind !== 'openProject'
@@ -31,7 +40,7 @@ function routeOverviewMarkup(application: ReturnType<typeof createApplication>):
         interactions={workspace.interactions}
         label={navigation.label}
         navigation={navigation}
-        project={state.projectWorkspace.history.present}
+        project={project}
         workspaceRoute={workspaceRoute}
       />
     </Provider>,
@@ -116,5 +125,30 @@ describe('RouteOverview', () => {
     expect(markup).toContain('>Starting reward</label>');
     expect(markup).not.toContain('aria-label="Starting room"');
     expect(markup).not.toContain('aria-label="Start room configuration"');
+  });
+
+  it('shows the full immutable Dream itinerary in Loadout, not only its configured prefix', () => {
+    const application = createApplication();
+    application.store.dispatch(
+      authoredProjectReplaced(
+        createProjectDocument(application.catalog, {
+          projectId: 'dream-overview',
+          routeKey: 'Dream',
+          itineraryBiomeKeys: ['Q', 'F', 'N', 'H'],
+          configuredBiomeCount: 1,
+        }),
+      ),
+    );
+
+    const markup = routeOverviewMarkup(application);
+    expect(markup).toContain('aria-label="Route order"');
+    expect(markup).toContain('Summit → Erebus → Ephyra → Fields');
+    expect(markup).toContain('Through Summit');
+  });
+
+  it('shows the ordinary route order in the same Loadout summary', () => {
+    const markup = routeOverviewMarkup(createOpenTestApplication('Underworld'));
+    expect(markup).toContain('<strong>Underworld</strong>');
+    expect(markup).toContain('Erebus → Oceanus → Fields → Tartarus');
   });
 });

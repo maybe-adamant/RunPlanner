@@ -14,7 +14,7 @@ import {
   goldenHStartId,
 } from '@run-planner/test-fixtures/underworld';
 import { surfaceCheckpointArtifacts } from '@run-planner/test-fixtures/checkpoints/surface';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import { createApplication } from '@planner/composition/createApplication';
 import { createInitialProject } from '@planner/composition/projectBootstrap';
@@ -32,6 +32,7 @@ import type { ProfileFileAdapter, ProfileFileReference } from '@planner/persiste
 import {
   authoredProjectCommandDispatched,
   authoredProjectReplaced,
+  authoredProjectUndoRequested,
 } from '@planner/state/projectWorkspaceSlice';
 import { newProjectCreated } from '@planner/state/profileSessionSlice';
 import {
@@ -158,25 +159,52 @@ function createPublicationAutosaveFixture(): {
 }
 
 describe('project profile operations', () => {
-  it('keeps internal Dream projects outside public new and load workflows', async () => {
+  it('creates and loads a legal Dream Dive while rejecting a non-public itinerary atomically', async () => {
     const profile = createProfileFixture();
     const application = createApplication({ profileFile: profile.adapter });
     await application.projectOperations.createNew('Underworld');
-    const project = selectPresentProject(application.store.getState());
-    await expect(application.projectOperations.createNew('Dream')).resolves.toMatchObject({
+    const beforeInvalidDream = selectPresentProject(application.store.getState());
+    await expect(
+      application.projectOperations.createNew('Dream', ['F', 'G', 'N', 'P']),
+    ).resolves.toMatchObject({
       status: 'failure',
     });
-    const internal = createProjectDocument(catalog, {
-      projectId: 'internal-dream',
+    expect(selectPresentProject(application.store.getState())).toBe(beforeInvalidDream);
+    await expect(
+      application.projectOperations.createNew('Dream', ['Q', 'F', 'N', 'H']),
+    ).resolves.toMatchObject({ status: 'success' });
+    const created = selectPresentProject(application.store.getState());
+    expect(created?.route).toMatchObject({
       routeKey: 'Dream',
-      itineraryBiomeKeys: ['H', 'N', 'F', 'Q'],
+      itineraryBiomeKeys: ['Q', 'F', 'N', 'H'],
     });
-    profile.setLoadJson(encodeProjectDocument(internal));
+    expect(created?.route.biomes.map((biome) => biome.biomeKey)).toEqual(['Q']);
+    application.store.dispatch(
+      authoredProjectCommandDispatched({
+        kind: 'ConfigureRoutePrefix',
+        route: createRouteAddress('Dream'),
+        configuredBiomeCount: 2,
+      }),
+    );
+    expect(selectPresentProject(application.store.getState())?.route.biomes).toHaveLength(2);
+    application.store.dispatch(authoredProjectUndoRequested());
+    expect(selectPresentProject(application.store.getState())?.route).toMatchObject({
+      itineraryBiomeKeys: ['Q', 'F', 'N', 'H'],
+      biomes: [{ biomeKey: 'Q' }],
+    });
+    const loadedDream = createProjectDocument(catalog, {
+      projectId: 'loaded-dream',
+      routeKey: 'Dream',
+      itineraryBiomeKeys: ['Q', 'F', 'N', 'H'],
+      configuredBiomeCount: 2,
+    });
+    profile.setLoadJson(encodeProjectDocument(loadedDream));
     await expect(application.projectOperations.loadProfile()).resolves.toMatchObject({
-      status: 'failure',
-      message: expect.stringContaining('only supports opening Underworld and Surface'),
+      status: 'success',
     });
-    expect(selectPresentProject(application.store.getState())).toBe(project);
+    expect(selectPresentProject(application.store.getState())?.route).toMatchObject({
+      itineraryBiomeKeys: ['Q', 'F', 'N', 'H'],
+    });
   });
 
   it('publishes a complete F prefix through the separate game capability', async () => {
@@ -245,6 +273,28 @@ describe('project profile operations', () => {
     });
     expect(profile.saveAsCount()).toBe(1);
     expect(profile.saves.at(-1)?.fileName).toBe(DEFAULT_PROFILE_FILE_NAME);
+  });
+
+  it('keeps Dream Dive publication unavailable until runtime support is delivered', async () => {
+    const publish = vi.fn();
+    const profile = createProfileFixture();
+    const application = createApplication({
+      gamePlanPublisher: {
+        discoverProfiles: () =>
+          Promise.resolve({ status: 'available', targets: [], message: 'Choose a profile.' }),
+        publish,
+      },
+      profileFile: profile.adapter,
+    });
+    await application.projectOperations.createNew('Dream', ['Q', 'F', 'N', 'H']);
+
+    await expect(application.projectOperations.publishGame('profile-a', 3)).resolves.toMatchObject({
+      status: 'failure',
+      message: expect.stringContaining(
+        'Dream Dive publication is unavailable until native runtime support',
+      ),
+    });
+    expect(publish).not.toHaveBeenCalled();
   });
 
   it('rejects an invalid publication before invoking the game writer', async () => {

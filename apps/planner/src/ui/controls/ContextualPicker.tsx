@@ -1,6 +1,6 @@
 import * as Popover from '@radix-ui/react-popover';
 import { Command } from 'cmdk';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState, type Ref } from 'react';
 import type { FindingTargetProps } from '@planner/ui/feedback/useFindingTarget';
 
 import type {
@@ -25,18 +25,21 @@ interface ContextualPickerProps<T> {
   readonly onSelect: (value: T) => void;
   readonly open?: boolean;
   readonly placeholder: string;
+  readonly side?: 'top' | 'bottom';
   readonly triggerLabel?: string;
 }
 
 function PickerSection<T>({
+  groupRef,
   onSelect,
   section,
 }: {
+  readonly groupRef?: Ref<HTMLDivElement>;
   readonly onSelect: (item: ContextualPickerItem<T>) => void;
   readonly section: ContextualPickerSection<T>;
 }) {
   return (
-    <Command.Group heading={section.label} value={section.key}>
+    <Command.Group heading={section.label} value={section.key} ref={groupRef}>
       {section.items.map((item) => {
         return (
           <Command.Item
@@ -88,10 +91,17 @@ function PickerContent<T>({
 }) {
   const [query, setQuery] = useState('');
   const [collapsibleOpen, setCollapsibleOpen] = useState(false);
+  const collapsibleGroup = useRef<HTMLDivElement>(null);
   const input = useRef<HTMLInputElement>(null);
   const previousLoading = useRef(loading);
   const collapsible = model.sections.find((section) => section.collapsible);
   const ordinarySections = model.sections.filter((section) => !section.collapsible);
+
+  useEffect(() => {
+    if (collapsibleOpen) {
+      collapsibleGroup.current?.scrollIntoView({ block: 'nearest' });
+    }
+  }, [collapsibleOpen]);
 
   useEffect(() => {
     const loadingFinished = previousLoading.current && !loading;
@@ -132,7 +142,7 @@ function PickerContent<T>({
               <PickerSection key={section.key} onSelect={select} section={section} />
             ))}
             {collapsibleOpen && collapsible !== undefined && (
-              <PickerSection onSelect={select} section={collapsible} />
+              <PickerSection groupRef={collapsibleGroup} onSelect={select} section={collapsible} />
             )}
           </Command.List>
           {collapsible !== undefined && (
@@ -173,6 +183,7 @@ export function ContextualPicker<T>({
   onSelect,
   open: controlledOpen,
   placeholder,
+  side = 'bottom',
   triggerLabel,
 }: ContextualPickerProps<T>) {
   const [internalOpen, setInternalOpen] = useState(false);
@@ -243,6 +254,7 @@ export function ContextualPicker<T>({
             align="start"
             className="contextual-picker-popover"
             collisionPadding={12}
+            side={side}
             sideOffset={6}
           >
             <PickerContent

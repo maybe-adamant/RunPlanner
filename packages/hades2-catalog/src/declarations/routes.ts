@@ -31,8 +31,21 @@ export const routes = [
   },
   {
     key: 'Dream',
-    label: 'Dream',
+    label: 'Dream Dive',
     biomeKeys: [],
+    dreamItinerary: {
+      biomeCount: 4,
+      initialBiomeKeys: ['G', 'H', 'I', 'O', 'P', 'Q'],
+      laterAdditionalBiomeKeys: ['F', 'N'],
+      naturalSuccessorByBiomeKey: {
+        F: 'G',
+        G: 'H',
+        H: 'I',
+        N: 'O',
+        O: 'P',
+        P: 'Q',
+      },
+    },
     completion: {
       prebossRoomGameNameByBiomeKey: {
         F: 'F_PreBoss01',
