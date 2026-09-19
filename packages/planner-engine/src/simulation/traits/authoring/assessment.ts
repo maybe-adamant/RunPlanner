@@ -11,6 +11,7 @@ import type {
 } from '../history/model';
 import {
   selectedTargetedAcquisitionTargetKeys,
+  latestModelTargetDomain,
   targetedAcquisitionTargetKeys,
   checkRequirement,
 } from '../level-effects';
@@ -461,6 +462,7 @@ export function assessSelectedTargetedAcquisition(
   catalog: Catalog,
   offer: AuthoredTraitOffer,
   history: TraitHistoryState,
+  context: Pick<TraitOfferContext, 'acquisitionOrdinal'> = {},
 ): TraitTargetedAcquisitionAssessment {
   if (offer.kind !== 'traits')
     return Object.freeze({ applies: false, legal: true, findings: Object.freeze([]) });
@@ -484,6 +486,59 @@ export function assessSelectedTargetedAcquisition(
       legal: false,
       sourceTraitKey: option.traitKey,
       findings: Object.freeze([finding]),
+    });
+  }
+  if (acquisition.kind === 'upgradeHammerToRank2') {
+    const ordinal = context.acquisitionOrdinal;
+    if (ordinal === undefined || !Number.isInteger(ordinal) || ordinal < 1 || ordinal > 4)
+      throw new Error('Latest Model requires an explicit acquisition ordinal');
+    const latestModel = latestModelTargetDomain(catalog, option.traitKey, history, ordinal);
+    const requiredCount = latestModel.requiredCount;
+    const selected = option.icarusHammerTargets;
+    if (
+      option.targetTraitKey !== undefined ||
+      selected === undefined ||
+      selected.length < requiredCount
+    ) {
+      const finding = Object.freeze({
+        code: 'targetedAcquisitionTargetMissing' as const,
+        traitKey: option.traitKey,
+      });
+      return Object.freeze({
+        applies: true,
+        legal: false,
+        sourceTraitKey: option.traitKey,
+        findings: Object.freeze([finding]),
+      });
+    }
+    if (
+      selected.length > requiredCount ||
+      new Set(selected).size !== selected.length ||
+      selected.some((key) => !latestModel.targetTraitKeys.includes(key))
+    ) {
+      const finding = Object.freeze({
+        code: 'targetedAcquisitionTargetUnavailable' as const,
+        traitKey: option.traitKey,
+      });
+      return Object.freeze({
+        applies: true,
+        legal: false,
+        sourceTraitKey: option.traitKey,
+        findings: Object.freeze([finding]),
+      });
+    }
+    return Object.freeze({
+      applies: true,
+      legal: true,
+      sourceTraitKey: option.traitKey,
+      findings: Object.freeze([]),
+      transition: Object.freeze({
+        kind: 'upgradeHammerToRank2' as const,
+        sourceTraitKey: option.traitKey,
+        targetTraitKeys: Object.freeze([...selected]),
+        oldHammerRank: 'RankI' as const,
+        newHammerRank: 'RankII' as const,
+      }),
     });
   }
   if (option.targetTraitKey === undefined) {
@@ -517,36 +572,27 @@ export function assessSelectedTargetedAcquisition(
   if (equippedTarget === undefined && !sourceIsTarget) {
     throw new Error(`targeted acquisition target ${option.targetTraitKey} is not equipped`);
   }
-  const transition: TraitTargetedAcquisitionTransition =
-    acquisition.kind === 'promoteGodTraitToHeroic'
-      ? (() => {
-          const oldRarity = equippedTarget?.rarity ?? selectedSource.rarity;
-          if (oldRarity === undefined) {
-            throw new Error(`targeted acquisition target ${option.targetTraitKey} has no rarity`);
-          }
-          const levelChange =
-            equippedTarget?.level === undefined
-              ? undefined
-              : Object.freeze({
-                  oldLevel: equippedTarget.level,
-                  newLevel: equippedTarget.level + bridalGlowAddedLevels(option.rarity),
-                });
-          return Object.freeze({
-            kind: 'promoteGodTraitToHeroic' as const,
-            sourceTraitKey: option.traitKey,
-            targetTraitKey: option.targetTraitKey,
-            oldRarity,
-            newRarity: 'Heroic' as const,
-            ...(levelChange === undefined ? {} : { levelChange }),
+  const transition: TraitTargetedAcquisitionTransition = (() => {
+    const oldRarity = equippedTarget?.rarity ?? selectedSource.rarity;
+    if (oldRarity === undefined) {
+      throw new Error(`targeted acquisition target ${option.targetTraitKey} has no rarity`);
+    }
+    const levelChange =
+      equippedTarget?.level === undefined
+        ? undefined
+        : Object.freeze({
+            oldLevel: equippedTarget.level,
+            newLevel: equippedTarget.level + bridalGlowAddedLevels(option.rarity),
           });
-        })()
-      : Object.freeze({
-          kind: 'upgradeHammerToRank2' as const,
-          sourceTraitKey: option.traitKey,
-          targetTraitKey: option.targetTraitKey,
-          oldHammerRank: 'RankI' as const,
-          newHammerRank: 'RankII' as const,
-        });
+    return Object.freeze({
+      kind: 'promoteGodTraitToHeroic' as const,
+      sourceTraitKey: option.traitKey,
+      targetTraitKey: option.targetTraitKey,
+      oldRarity,
+      newRarity: 'Heroic' as const,
+      ...(levelChange === undefined ? {} : { levelChange }),
+    });
+  })();
   return Object.freeze({
     applies: true,
     legal: true,

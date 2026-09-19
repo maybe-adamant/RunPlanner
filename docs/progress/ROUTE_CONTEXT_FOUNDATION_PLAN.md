@@ -5,13 +5,15 @@
 Approved execution contract, committed in `eb176b0a`. Gates A and B are implemented
 and independently reviewed. Gate B is committed as `815b9c96`.
 Gate C is committed as `47fb104e`; D1 is committed as `9e7d1c30`.
-D2 is implemented and independently reviewed; D3 is next. Closure has not started.
+D2 is committed as planner `2474c3b3` and game module `f169a5b`.
+D3 is implemented and independently reviewed. Gate E closure has not started.
 
 - Planner base: `8439c9c8cad046788680dbf981688ab263d83989`.
 - Gate B base: `34b9677429421d7b23fa27396f688eceb21f7c95`.
 - Gate C base: `815b9c96`.
 - Gate D1 base: `47fb104e`.
 - Gate D2 base: `9e7d1c30`.
+- Gate D3 base: planner `2474c3b3`, game module `f169a5b`.
 - Game-module base: `95c479b6c599863aeba7968f0593bb4f5871709b`.
 - Baseline authored schema: 84; execution protocol: 40.
 - Source/code inventory: `docs/investigations/DREAM_DIVE_SCOPE.md`, especially
@@ -458,6 +460,28 @@ Gate D2 delivery:
   typechecks, repository ESLint, changed-file formatting, whitespace checks and
   game-module Luacheck pass. Schema/protocol and JSON fixtures remain unchanged;
   migration and complete phase verification remain Gate E.
+
+Gate D3 delivery:
+
+- Latest Model owns an ordered one/two-Hammer payload, resolved against one
+  frozen eligible pool with declaration-owned ordinal counts. Assessment and
+  candidates share that domain; incomplete choices retain the existing
+  acquisition-target repair address. Bridal Glow retains its scalar contract.
+  Commands/codecs preserve order, and the staged editor supports replacement
+  of an existing complete choice. Publication carries the plural transition.
+- Native `UpgradeHammers` selection consumes the published sequence; nested
+  `AddRarityToTraits` selection is outside that steering scope. Missing/extra
+  outer draws produce diagnostics, with native mutation left intact.
+- Independent review passed after fixing the workspace child-binding filter.
+  Final targeted verification passed 217 tests across eight files; Lua protocol
+  and NPC selector verification passed 74 tests. Workspace/fixture typechecks,
+  ESLint, changed-file formatting, whitespace checks and Luacheck passed.
+  Coverage includes acquired rank changes, exhausted pools, partial/stale
+  targets, command/save round-trip and candidate contact, editor replacement,
+  publication and realistic nested native selectors. Full repository and
+  live-game verification were not run for this slice.
+- Schema/protocol versions and JSON fixtures remain unchanged. Gate E owns the
+  single baseline-to-final migration, wire fixture alignment and phase closure.
 
 Review this plan adversarially before implementation. Per gate, use the narrow
 owning catalog/engine/planner/UI/contract/product tests. Main session supplies

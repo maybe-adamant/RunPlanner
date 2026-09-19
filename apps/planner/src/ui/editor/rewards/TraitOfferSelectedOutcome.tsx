@@ -1,5 +1,5 @@
 import { optionIndex, type AuthoredTraitOfferTraits } from '@run-planner/engine/authored-project';
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 import type { ContextualPickerModel } from '@planner/projections/contextual/contextualPicker';
 import type {
@@ -9,6 +9,7 @@ import type {
   WorkspaceConcaveStoneDomain,
   WorkspaceHexTreeDomain,
   WorkspaceTraitAcquisitionTargetDomain,
+  WorkspaceLatestModelTargetsDomain,
   WorkspaceTraitCarrierChildInteraction,
   WorkspaceTraitOfferInteraction,
 } from '@planner/projections/structured-workspace';
@@ -105,6 +106,78 @@ function BoundTraitAcquisitionTargetOutcome({
   );
 }
 
+function LatestModelTargetsOutcome({
+  child,
+  findingTarget,
+  interaction,
+  onUpdate,
+  value,
+}: {
+  readonly child: Extract<
+    WorkspaceTraitCarrierChildInteraction,
+    { readonly child: { readonly kind: 'latestModelTargets' } }
+  >;
+  readonly interaction: WorkspaceTraitOfferInteraction;
+  readonly findingTarget: FindingTargetProps;
+  readonly onUpdate: (value: AuthoredTraitOfferTraits) => void;
+  readonly value: AuthoredTraitOfferTraits;
+}) {
+  const loadable = useMemo(() => child.forOffer(value), [child, value]);
+  const controller = useWorkspaceInteractionController<
+    WorkspaceLatestModelTargetsDomain | undefined
+  >();
+  const domain = controller.observe(loadable);
+  const current = value.options[optionIndex(child.child.optionKey)]?.icarusHammerTargets ?? [];
+  const [draft, setDraft] = useState<readonly string[]>([]);
+  const [open, setOpen] = useState(false);
+  useEffect(() => {
+    controller.activate(loadable);
+  }, [controller, loadable]);
+  if (domain.result === undefined) return null;
+  const requiredCount = domain.result.requiredCount;
+  const picker = {
+    ...domain.result.picker,
+    sections: domain.result.picker.sections.map((section) => ({
+      ...section,
+      items: section.items.filter((item) => !draft.includes(item.value)),
+    })),
+  };
+  return (
+    <>
+      {!domain.result.branchAgreement ? (
+        <p className="feedback-text">No target count is supported across every route branch.</p>
+      ) : null}
+      <ContextualPicker
+        findingTarget={findingTarget}
+        ariaLabel="Latest Model target"
+        id={semanticOwnerControlElementId(child.child.address)}
+        label={requiredCount === 1 ? 'Target' : 'Targets'}
+        choiceLabel={`Hammer ${draft.length + 1} of ${requiredCount}`}
+        closeOnSelect={false}
+        disabled={!domain.result.branchAgreement || requiredCount === 0}
+        model={picker}
+        open={open}
+        onOpenChange={(nextOpen) => {
+          setDraft([]);
+          setOpen(nextOpen);
+        }}
+        onSelect={(target: string) => {
+          const next = Object.freeze([...draft, target]);
+          setDraft(next);
+          if (next.length === requiredCount) {
+            onUpdate(child.update(value, next as [string] | [string, string]));
+            setOpen(false);
+          }
+        }}
+        placeholder="Choose a Rank I Hammer"
+        {...(current.length === 0
+          ? {}
+          : { triggerLabel: current.map(interaction.traitLabel).join(' · ') })}
+      />
+    </>
+  );
+}
+
 export function TraitOfferSelectedOutcome({
   interaction,
   value,
@@ -148,6 +221,14 @@ export function TraitOfferSelectedOutcome({
       child,
     ): child is Extract<typeof child, { readonly child: { readonly kind: 'circeResolution' } }> =>
       child.child.kind === 'circeResolution',
+  );
+  const latestModelChild = loadable.children.find(
+    (
+      child,
+    ): child is Extract<
+      typeof child,
+      { readonly child: { readonly kind: 'latestModelTargets' } }
+    > => child.child.kind === 'latestModelTargets',
   );
   const echoPomChild = loadable.children.find(
     (
@@ -228,6 +309,7 @@ export function TraitOfferSelectedOutcome({
   const feedback = interaction.feedbackFor(value);
   const hasOutcome =
     targetChildren.length > 0 ||
+    latestModelChild !== undefined ||
     circeChild !== undefined ||
     echoPomChild !== undefined ||
     echoLastRunChild !== undefined ||
@@ -262,6 +344,16 @@ export function TraitOfferSelectedOutcome({
             value={value}
           />
         ))}
+      {latestModelChild === undefined ? null : (
+        <LatestModelTargetsOutcome
+          key={semanticOwnerControlElementId(latestModelChild.child.address)}
+          child={latestModelChild}
+          findingTarget={findingTarget(latestModelChild.child.address)}
+          interaction={interaction}
+          onUpdate={onUpdate}
+          value={value}
+        />
+      )}
       {circeChild === undefined || circeDomain.result === undefined ? null : (
         <TraitOfferCirceResolution
           findingTarget={findingTarget(circeChild.child.address)}

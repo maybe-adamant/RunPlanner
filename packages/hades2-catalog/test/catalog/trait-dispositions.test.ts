@@ -128,6 +128,18 @@ describe('trait dispositions and requirements compiler owner', () => {
     expect(counts('ArcanaRarityTrait')).toEqual([2, 2, 3, 5]);
   });
 
+  it('declares Latest Model ordinal counts without changing Bridal Glow targeting', () => {
+    expect(catalog.traits.byKey.UpgradeHammerBoon?.targetedAcquisition).toEqual({
+      kind: 'upgradeHammerToRank2',
+      target: 'upgradableHammer',
+      targetCountByAcquisitionOrdinal: [1, 1, 1, 2],
+    });
+    expect(catalog.traits.byKey.BoonDecayBoon?.targetedAcquisition).toEqual({
+      kind: 'promoteGodTraitToHeroic',
+      target: 'superchargeableGodTrait',
+    });
+  });
+
   it('compiler-closes All Together to the exact immutable four-pair direct-grant matrix', () => {
     const expected = {
       kind: 'directTraitSets',

@@ -127,6 +127,7 @@ export type {
   WorkspaceTraitCarrierChildControl,
   WorkspaceTraitCarrierChildInteraction,
   WorkspaceTraitAcquisitionTargetDomain,
+  WorkspaceLatestModelTargetsDomain,
   WorkspaceCirceResolutionDomain,
   WorkspaceEchoPomTargetDomain,
   WorkspaceEchoLastRunBoonDomain,

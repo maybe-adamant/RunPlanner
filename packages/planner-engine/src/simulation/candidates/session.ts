@@ -123,6 +123,7 @@ import {
   evaluateTraitOfferCandidate,
   evaluateTraitOfferFocusedOptionCandidate,
   type EvaluatedTraitAcquisitionTargetDomain,
+  type EvaluatedLatestModelTargetsDomain,
   type EvaluatedTraitOfferCandidate,
   type EvaluatedTraitOfferFocusedOptionCandidate,
   type TraitAcquisitionTargetDomainEvaluation,
@@ -253,6 +254,7 @@ export type ProjectCandidateSessionEvaluation =
   | EvaluatedTraitOfferFocusedOptionCandidate
   | EvaluatedRansomAssessmentCandidate
   | EvaluatedTraitAcquisitionTargetDomain
+  | EvaluatedLatestModelTargetsDomain
   | EvaluatedCirceResolutionDomain
   | EvaluatedEchoPomTargetDomain
   | EvaluatedNaturalSelectionResultCandidate

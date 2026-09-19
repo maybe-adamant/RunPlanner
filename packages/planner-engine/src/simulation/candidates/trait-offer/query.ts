@@ -246,6 +246,16 @@ export interface EvaluatedTraitAcquisitionTargetDomain {
   };
 }
 
+export interface EvaluatedLatestModelTargetsDomain {
+  readonly kind: 'latestModelTargetsDomain';
+  readonly result: {
+    readonly sourceTraitKey: string;
+    readonly requiredCount: number;
+    readonly branchAgreement: boolean;
+    readonly candidates: readonly EvaluatedTraitAcquisitionTargetCandidate[];
+  };
+}
+
 export interface TraitOfferCandidateBranch {
   readonly assessments: readonly TraitAssessment[];
   readonly generation?: import('../../traits/authoring/initial-composition').InitialOfferSupport;
@@ -323,6 +333,7 @@ export type TraitAcquisitionTargetDomainEvaluation =
 
 export type TraitCarrierChildDomainEvaluation =
   | TraitAcquisitionTargetDomainEvaluation
+  | EvaluatedLatestModelTargetsDomain
   | AllTogetherSetDomainEvaluation
   | NaturalSelectionResultCandidateEvaluation
   | CirceResolutionDomainEvaluation
@@ -733,6 +744,58 @@ export function evaluateTraitCarrierChildDomain(
             : { retainedTargetTraitKey: targeted.targetTraitKey }),
         },
       );
+    }
+    case 'latestModelTargets': {
+      const targeted =
+        query.value.kind === 'traits'
+          ? query.value.options[optionIndex(query.child.optionKey)]
+          : undefined;
+      const domain = evaluateTraitAcquisitionTargetDomain(
+        catalog,
+        project,
+        evaluation,
+        candidateArtifacts,
+        {
+          kind: 'traitAcquisitionTargetDomain',
+          trait: query.trait,
+          value: query.value,
+          optionKey: query.child.optionKey,
+        },
+      );
+      if (domain.kind !== 'traitAcquisitionTargetDomain') return domain;
+      const branches = candidateArtifacts
+        ?.at(query.trait)
+        ?.targetedAcquisitionTargets(query.value, query.child.optionKey);
+      const requiredCount = branches?.[0]?.requiredCount;
+      if (requiredCount === undefined) return unavailableForTraitOffer(evaluation, query.trait);
+      const branchAgreement = branches!.every((branch) => branch.requiredCount === requiredCount);
+      const retained = targeted?.icarusHammerTargets ?? [];
+      const candidates = [...domain.result.candidates];
+      for (const traitKey of retained) {
+        if (candidates.some((candidate) => candidate.result.traitKey === traitKey)) continue;
+        candidates.push(
+          Object.freeze({
+            kind: 'traitAcquisitionTarget',
+            result: Object.freeze({
+              traitKey,
+              supported: false,
+              branchSupport: Object.freeze(branches!.map(() => false)),
+              findings: Object.freeze([
+                { code: 'targetedAcquisitionTargetUnavailable' as const, traitKey },
+              ]),
+            }),
+          }),
+        );
+      }
+      return Object.freeze({
+        kind: 'latestModelTargetsDomain' as const,
+        result: Object.freeze({
+          sourceTraitKey: targeted?.traitKey ?? query.child.traitKey,
+          requiredCount,
+          branchAgreement,
+          candidates: Object.freeze(candidates),
+        }),
+      });
     }
     case 'allTogetherSet':
       return evaluateAllTogetherSetDomain(catalog, project, evaluation, candidateArtifacts, {

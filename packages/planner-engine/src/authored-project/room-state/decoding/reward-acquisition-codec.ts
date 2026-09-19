@@ -251,12 +251,14 @@ function decodeTraitOffers(
       const hasAllTogetherResult = 'allTogetherResult' in option;
       const hasNaturalSelectionTargets = 'naturalSelectionTargets' in option;
       const hasPersephoneLevelBonus = 'persephoneLevelBonus' in option;
+      const hasIcarusHammerTargets = option.icarusHammerTargets !== undefined;
       expectExactKeys(
         option,
         [
           'traitKey',
           ...(option.rarity === undefined ? [] : ['rarity']),
           ...(option.targetTraitKey === undefined ? [] : ['targetTraitKey']),
+          ...(hasIcarusHammerTargets ? ['icarusHammerTargets'] : []),
           ...(option.circeResolution === undefined ? [] : ['circeResolution']),
           ...('echoPomTarget' in option ? ['echoPomTarget'] : []),
           ...('echoLastRunBoon' in option ? ['echoLastRunBoon'] : []),
@@ -308,6 +310,30 @@ function decodeTraitOffers(
         option.targetTraitKey === undefined
           ? undefined
           : expectString(option.targetTraitKey, `${rolePath}.options.${key}.targetTraitKey`);
+      const icarusHammerTargets = hasIcarusHammerTargets
+        ? (() => {
+            const keys = expectArray(
+              option.icarusHammerTargets,
+              `${rolePath}.options.${key}.icarusHammerTargets`,
+            ).map((entry, index) =>
+              expectNonBlankString(
+                entry,
+                `${rolePath}.options.${key}.icarusHammerTargets[${index}]`,
+              ),
+            );
+            if (keys.length < 1 || keys.length > 2 || new Set(keys).size !== keys.length)
+              failProjectDocument(
+                `${rolePath}.options.${key}.icarusHammerTargets`,
+                'requires one or two distinct trait keys',
+              );
+            if (keys.some((target) => catalog.traits.byKey[target] === undefined))
+              failProjectDocument(
+                `${rolePath}.options.${key}.icarusHammerTargets`,
+                'contains an unknown trait',
+              );
+            return Object.freeze(keys) as AuthoredTraitOption['icarusHammerTargets'];
+          })()
+        : undefined;
       if (targetTraitKey !== undefined) {
         if (trait.targetedAcquisition === undefined)
           failProjectDocument(
@@ -320,6 +346,23 @@ function decodeTraitOffers(
             `unknown trait ${targetTraitKey}`,
           );
       }
+      if (icarusHammerTargets !== undefined) {
+        if (
+          trait.targetedAcquisition?.kind !== 'upgradeHammerToRank2' ||
+          targetTraitKey !== undefined
+        )
+          failProjectDocument(
+            `${rolePath}.options.${key}.icarusHammerTargets`,
+            'is supported only by Latest Model without a scalar target',
+          );
+      } else if (
+        trait.targetedAcquisition?.kind === 'upgradeHammerToRank2' &&
+        targetTraitKey !== undefined
+      )
+        failProjectDocument(
+          `${rolePath}.options.${key}.targetTraitKey`,
+          'Latest Model requires Hammer targets, not a scalar target',
+        );
       let circeResolution: AuthoredTraitOption['circeResolution'];
       if (option.circeResolution !== undefined) {
         const resolution = expectRecord(
@@ -496,6 +539,7 @@ function decodeTraitOffers(
           traitKey,
           ...(rarity === undefined ? {} : { rarity }),
           ...(targetTraitKey === undefined ? {} : { targetTraitKey }),
+          ...(icarusHammerTargets === undefined ? {} : { icarusHammerTargets }),
           ...(circeResolution === undefined ? {} : { circeResolution }),
           ...(hasEchoPomTarget ? { echoPomTarget: echoPomTarget! } : {}),
           ...(echoLastRunBoon === undefined ? {} : { echoLastRunBoon }),

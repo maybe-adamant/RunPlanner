@@ -299,11 +299,13 @@ export type TraitTargetedAcquisitionTransition =
         readonly newLevel: number;
       };
     })
-  | (TraitTargetedAcquisitionTransitionBase & {
+  | {
       readonly kind: 'upgradeHammerToRank2';
+      readonly sourceTraitKey: string;
+      readonly targetTraitKeys: readonly string[];
       readonly oldHammerRank: 'RankI';
       readonly newHammerRank: 'RankII';
-    });
+    };
 
 export interface TraitTargetedAcquisitionAssessment {
   readonly applies: boolean;

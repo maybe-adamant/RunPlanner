@@ -548,7 +548,12 @@ function evaluateReachedTraitOfferWithAssessments(
   // A frozen source row still acquires its targeted effect at the current
   // frontier, after the primary selection has settled. Its resolver sees the
   // selected effective source (including Calling Card), not the base roll.
-  const targetedAcquisition = assessSelectedTargetedAcquisition(catalog, offer, before);
+  const targetedAcquisition = assessSelectedTargetedAcquisition(
+    catalog,
+    offer,
+    before,
+    effectiveContext,
+  );
   const resolvedAssessments = frozenAcquisition
     ? Object.freeze([])
     : Object.freeze(

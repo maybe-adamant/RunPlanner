@@ -2,6 +2,9 @@ import { ordinaryPositionFor } from '../support/route-position';
 import { catalog } from '@run-planner/hades2-catalog';
 import {
   applyProjectCommand,
+  decodeProjectDocument,
+  encodeProjectDocument,
+  discoverAuthoredTraitCarrierChildren,
   createAcquisitionSiteAddress,
   createBiomeAddress,
   createEncounterPhaseAddress,
@@ -1727,7 +1730,7 @@ describe('field NPC encounter requirements', () => {
         options: [
           {
             traitKey: 'UpgradeHammerBoon',
-            targetTraitKey: 'StaffDoubleAttackTrait',
+            icarusHammerTargets: ['StaffDoubleAttackTrait'],
           },
           { traitKey: 'OmegaExplodeBoon' },
           { traitKey: 'CastHazardBoon' },
@@ -1747,13 +1750,39 @@ describe('field NPC encounter requirements', () => {
       applies: true,
       legal: true,
       sourceTraitKey: 'UpgradeHammerBoon',
-      targetTraitKey: 'StaffDoubleAttackTrait',
       transition: {
         kind: 'upgradeHammerToRank2',
         sourceTraitKey: 'UpgradeHammerBoon',
-        targetTraitKey: 'StaffDoubleAttackTrait',
+        targetTraitKeys: ['StaffDoubleAttackTrait'],
         oldHammerRank: 'RankI',
         newHammerRank: 'RankII',
+      },
+    });
+    expect(decodeProjectDocument(JSON.parse(encodeProjectDocument(project)), catalog)).toEqual(
+      project,
+    );
+    if (trace === undefined) throw new Error('Latest Model trace missing');
+    const child = discoverAuthoredTraitCarrierChildren(catalog, traitAddress, trace.offer).find(
+      (entry) => entry.kind === 'latestModelTargets',
+    );
+    if (child === undefined) throw new Error('Latest Model repair child missing');
+    const domain = createPreparedProjectCandidateSession(
+      catalog,
+      simulateProjectAssembly(catalog, project),
+    ).evaluate({ kind: 'traitCarrierChildDomain', trait: traitAddress, value: trace.offer, child });
+    expect(domain).toMatchObject({
+      kind: 'latestModelTargetsDomain',
+      result: {
+        requiredCount: 1,
+        branchAgreement: true,
+        candidates: expect.arrayContaining([
+          expect.objectContaining({
+            result: expect.objectContaining({
+              traitKey: 'StaffDoubleAttackTrait',
+              supported: true,
+            }),
+          }),
+        ]),
       },
     });
     const history = evaluation.rewards.branches[0]?.traitHistory;

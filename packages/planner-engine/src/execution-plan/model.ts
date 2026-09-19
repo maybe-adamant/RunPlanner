@@ -324,7 +324,7 @@ export type ExecutionTraitOffer =
         /** Exact Arcana/Fear mutation selected by a Circe trait. */
         readonly circeResolution?: ExecutionCirceResolution;
         /** Exact Rank-I Hammer selected by Icarus's native Latest Model mutation. */
-        readonly icarusHammerTarget?: string;
+        readonly icarusHammerTargets?: readonly string[];
         /** Exact greatest-level target selected by Echo's native Pom effect. */
         readonly echoPomTarget?: string | null;
         /** Exact mixed-provider rows opened by Echo's native Boon replay. */

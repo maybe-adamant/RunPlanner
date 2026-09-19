@@ -545,26 +545,28 @@ export function foldTraitHistoryEvents(
       });
       const targeted = event.targetedAcquisitionTransition;
       if (targeted !== undefined) {
-        const target = equipped[targeted.targetTraitKey];
-        if (target !== undefined) {
-          switch (targeted.kind) {
-            case 'promoteGodTraitToHeroic':
-              bridalTargetTraitKeyBySource.set(targeted.sourceTraitKey, targeted.targetTraitKey);
-              applyRarityMutation(
-                catalog,
-                equipped,
-                bridalTargetTraitKeyBySource,
-                targeted.targetTraitKey,
-                targeted.newRarity,
-              );
-              break;
-            case 'upgradeHammerToRank2':
-              equipped[targeted.targetTraitKey] = Object.freeze({
-                ...target,
-                hammerRank: targeted.newHammerRank,
-              });
-              break;
-          }
+        switch (targeted.kind) {
+          case 'promoteGodTraitToHeroic':
+            if (equipped[targeted.targetTraitKey] === undefined) break;
+            bridalTargetTraitKeyBySource.set(targeted.sourceTraitKey, targeted.targetTraitKey);
+            applyRarityMutation(
+              catalog,
+              equipped,
+              bridalTargetTraitKeyBySource,
+              targeted.targetTraitKey,
+              targeted.newRarity,
+            );
+            break;
+          case 'upgradeHammerToRank2':
+            for (const targetTraitKey of targeted.targetTraitKeys) {
+              const target = equipped[targetTraitKey];
+              if (target !== undefined)
+                equipped[targetTraitKey] = Object.freeze({
+                  ...target,
+                  hammerRank: targeted.newHammerRank,
+                });
+            }
+            break;
         }
       }
       if (event.replacementTransition !== undefined && event.selectedEffectiveLevel === undefined) {

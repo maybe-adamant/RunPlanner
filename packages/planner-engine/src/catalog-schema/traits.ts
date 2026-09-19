@@ -154,6 +154,7 @@ export interface PromoteGodTraitToHeroicAcquisition {
 export interface UpgradeHammerToRank2Acquisition {
   readonly kind: 'upgradeHammerToRank2';
   readonly target: 'upgradableHammer';
+  readonly targetCountByAcquisitionOrdinal: readonly [number, number, number, number];
 }
 
 export type TargetedTraitAcquisition =

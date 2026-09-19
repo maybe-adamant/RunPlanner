@@ -132,19 +132,21 @@ describe('Latest Model Hammer Rank II target predicate', () => {
     const withTarget = Object.freeze({
       ...latestModelOffer,
       options: Object.freeze([
-        { ...latestModelOffer.options[0], targetTraitKey: 'StaffDoubleAttackTrait' },
+        { ...latestModelOffer.options[0], icarusHammerTargets: ['StaffDoubleAttackTrait'] },
         latestModelOffer.options[1],
         latestModelOffer.options[2],
       ]) as Extract<AuthoredTraitOffer, { kind: 'traits' }>['options'],
     });
-    const assessment = assessSelectedTargetedAcquisition(catalog, withTarget, before);
+    const assessment = assessSelectedTargetedAcquisition(catalog, withTarget, before, {
+      acquisitionOrdinal: 1,
+    });
     expect(assessment).toMatchObject({
       applies: true,
       legal: true,
       transition: {
         kind: 'upgradeHammerToRank2',
         sourceTraitKey: 'UpgradeHammerBoon',
-        targetTraitKey: 'StaffDoubleAttackTrait',
+        targetTraitKeys: ['StaffDoubleAttackTrait'],
         oldHammerRank: 'RankI',
         newHammerRank: 'RankII',
       },
@@ -176,6 +178,96 @@ describe('Latest Model Hammer Rank II target predicate', () => {
       code: 'targetedAcquisitionNoEligibleTarget',
       traitKey: 'UpgradeHammerBoon',
     });
+  });
+
+  it.each([1, 2, 3, 4])(
+    'settles the ordinal %s count against one frozen Hammer pool',
+    (ordinal) => {
+      const keys = ['StaffDoubleAttackTrait', 'StaffFastSpecialTrait'] as const;
+      const before = historyFrom(keys.map((traitKey) => ({ giverKey: 'WeaponUpgrade', traitKey })));
+      const targets = ordinal === 4 ? ([keys[1], keys[0]] as const) : ([keys[0]] as const);
+      const offer = {
+        ...latestModelOffer,
+        options: [
+          { ...latestModelOffer.options[0], icarusHammerTargets: targets },
+          latestModelOffer.options[1]!,
+          latestModelOffer.options[2]!,
+        ],
+      } as Extract<AuthoredTraitOffer, { kind: 'traits' }>;
+      const reached = evaluateReachedTraitOffer(
+        catalog,
+        owner,
+        'latestModel',
+        offer,
+        before,
+        { acquisitionOrdinal: ordinal },
+        before.events.length,
+      );
+      expect(reached.targetedAcquisition).toMatchObject({
+        legal: true,
+        transition: { targetTraitKeys: targets },
+      });
+      const recorded = recordReachedTraitOffer(catalog, reached, before.events.length + 1, 'test');
+      for (const key of keys)
+        expect(recorded.history.equippedTraits[key]?.hammerRank).toBe(
+          targets.some((target) => target === key) ? 'RankII' : 'RankI',
+        );
+      const singlePool = historyWith('WeaponUpgrade', keys[0]);
+      const one = {
+        ...offer,
+        options: [
+          { ...offer.options[0], icarusHammerTargets: [keys[0]] },
+          offer.options[1]!,
+          offer.options[2]!,
+        ],
+      } as typeof offer;
+      expect(
+        assessSelectedTargetedAcquisition(catalog, one, singlePool, { acquisitionOrdinal: ordinal })
+          .legal,
+      ).toBe(true);
+    },
+  );
+
+  it('distinguishes missing, excess, duplicate and stale Latest Model targets', () => {
+    const before = historyFrom([
+      { giverKey: 'WeaponUpgrade', traitKey: 'StaffDoubleAttackTrait' },
+      { giverKey: 'WeaponUpgrade', traitKey: 'StaffFastSpecialTrait' },
+    ]);
+    for (const [targets, ordinal, code] of [
+      [undefined, 4, 'targetedAcquisitionTargetMissing'],
+      [['StaffDoubleAttackTrait'], 4, 'targetedAcquisitionTargetMissing'],
+      [
+        ['StaffDoubleAttackTrait', 'StaffFastSpecialTrait'],
+        1,
+        'targetedAcquisitionTargetUnavailable',
+      ],
+      [
+        ['StaffDoubleAttackTrait', 'StaffDoubleAttackTrait'],
+        4,
+        'targetedAcquisitionTargetUnavailable',
+      ],
+      [
+        ['StaffDoubleAttackTrait', 'StaffDashAttackTrait'],
+        4,
+        'targetedAcquisitionTargetUnavailable',
+      ],
+    ] as const) {
+      const offer = {
+        ...latestModelOffer,
+        options: [
+          {
+            ...latestModelOffer.options[0],
+            ...(targets === undefined ? {} : { icarusHammerTargets: targets }),
+          },
+          latestModelOffer.options[1]!,
+          latestModelOffer.options[2]!,
+        ],
+      } as Extract<AuthoredTraitOffer, { kind: 'traits' }>;
+      expect(
+        assessSelectedTargetedAcquisition(catalog, offer, before, { acquisitionOrdinal: ordinal })
+          .findings,
+      ).toContainEqual(expect.objectContaining({ code }));
+    }
   });
 });
 
@@ -866,7 +958,9 @@ describe('targeted selected-trait child chronology', () => {
             : [
                 {
                   traitKey: selectedTraitKey,
-                  ...(targetTraitKey === undefined ? {} : { targetTraitKey }),
+                  ...(targetTraitKey === undefined
+                    ? {}
+                    : { icarusHammerTargets: [targetTraitKey] }),
                 },
                 { traitKey: 'OmegaExplodeBoon' },
                 { traitKey: 'CastHazardBoon' },
@@ -884,6 +978,8 @@ describe('targeted selected-trait child chronology', () => {
         'encounterCompleted',
         undefined,
         'source',
+        undefined,
+        { acquisitionOrdinal: 1 },
       );
       const expectedChild = createTraitAcquisitionTargetAddress(traitOwner, 'option1');
       expect(settlement.branch.traitHistory?.equippedTraits[selectedTraitKey]).toBeDefined();

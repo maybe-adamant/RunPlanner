@@ -360,6 +360,35 @@ export function selectedTargetedAcquisitionTargetKeys(
   }
 }
 
+/** Latest Model's frozen Rank-I pool and its acquisition-ordinal draw count. */
+export function latestModelTargetDomain(
+  catalog: Catalog,
+  sourceTraitKey: string,
+  history: TraitHistoryState,
+  acquisitionOrdinal: number,
+): { readonly targetTraitKeys: readonly string[]; readonly requiredCount: number } {
+  const acquisition = catalog.traits.byKey[sourceTraitKey]?.targetedAcquisition;
+  if (
+    acquisition?.kind !== 'upgradeHammerToRank2' ||
+    !Number.isInteger(acquisitionOrdinal) ||
+    acquisitionOrdinal < 1 ||
+    acquisitionOrdinal > 4
+  )
+    throw new Error('Latest Model requires an explicit acquisition ordinal');
+  const targetTraitKeys = selectedTargetedAcquisitionTargetKeys(
+    catalog,
+    { traitKey: sourceTraitKey },
+    history,
+  );
+  return Object.freeze({
+    targetTraitKeys,
+    requiredCount: Math.min(
+      acquisition.targetCountByAcquisitionOrdinal[acquisitionOrdinal - 1]!,
+      targetTraitKeys.length,
+    ),
+  });
+}
+
 import type { Catalog, TraitDeclaration, TraitRequirementExpression } from '../../catalog-schema';
 import type { LevelResolutionAddress } from '../../authored-project/addresses';
 import type { AuthoredLevelResolution } from '../../authored-project/traits/state';

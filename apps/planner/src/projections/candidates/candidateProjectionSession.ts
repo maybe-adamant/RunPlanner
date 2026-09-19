@@ -72,6 +72,7 @@ export function candidateOptionEvaluation(
 ): CandidateProjectionEvaluation {
   if (
     evaluation.kind === 'traitAcquisitionTargetDomain' ||
+    evaluation.kind === 'latestModelTargetsDomain' ||
     evaluation.kind === 'circeResolutionDomain' ||
     evaluation.kind === 'echoPomTargetDomain' ||
     evaluation.kind === 'naturalSelectionResult' ||

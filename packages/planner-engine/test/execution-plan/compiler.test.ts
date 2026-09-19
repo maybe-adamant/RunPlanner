@@ -1644,14 +1644,26 @@ describe('execution-plan compiler and codec', () => {
       kind: 'traits',
       giver: 'Icarus',
       options: [
-        { key: 'UpgradeHammerBoon', icarusHammerTarget: 'StaffDoubleAttackTrait' },
+        { key: 'UpgradeHammerBoon', icarusHammerTargets: ['StaffDoubleAttackTrait'] },
         { key: 'OmegaExplodeBoon' },
       ],
       selected: 'option1',
     };
     const decoded = decodeExecutionTraitOffer(offer, 'offer');
     if (decoded.kind !== 'traits') throw new Error('Icarus must decode as a trait offer');
-    expect(decoded.options[0]?.icarusHammerTarget).toBe('StaffDoubleAttackTrait');
+    expect(decoded.options[0]?.icarusHammerTargets).toEqual(['StaffDoubleAttackTrait']);
+    for (const targets of [
+      [],
+      ['StaffDoubleAttackTrait', 'StaffDoubleAttackTrait'],
+      ['A', 'B', 'C'],
+    ]) {
+      expect(() =>
+        decodeExecutionTraitOffer(
+          { ...offer, options: [{ key: 'UpgradeHammerBoon', icarusHammerTargets: targets }] },
+          'offer',
+        ),
+      ).toThrow(ExecutionPlanCodecError);
+    }
     expect(() => decodeExecutionTraitOffer({ ...offer, giver: 'Circe' }, 'offer')).toThrow(
       ExecutionPlanCodecError,
     );
