@@ -1,13 +1,13 @@
 # Run Planner icons
 
-These supplied assets contain size-specific artwork, not simple resizes:
-
-- 128px and larger: full composition with fourteen equations.
-- 48–96px: enlarged head with six equations.
-- 32px and smaller: enlarged head without equations.
-
-Preserve the supplied variants. Do not regenerate this set with `tauri icon`,
-which would flatten the variants into resizes of a single image.
+The planner artwork is Odysseus with a gold exclamation mark on the right and a
+transparent background. It uses the user's original-art composition with a mild
+RGB midtone lift; preserve its geometry and alpha rather than regenerating the
+portrait. The approved
+source image is `../app-icon.png`; the platform assets are generated from it with
+`tauri icon`. Generate the additional 16, 24, 48, 64, 256, and 512px PNG sizes with
+the CLI's `--png` option into a separate directory, then copy them into this set.
+Only desktop assets are retained; mobile output is not used.
 
 `tauri.conf.json` lists the desktop icons, including the additional Linux PNG
 sizes. The ICO contains the Windows size variants; the ICNS contains the macOS
@@ -18,6 +18,6 @@ Keep the 256px entry first in the ICO: Tauri uses its first entry as the Windows
 runtime window icon. Retain the smaller, size-specific entries for Windows shell
 icon selection.
 
-The browser favicon uses the supplied 16px and 32px PNGs directly through Vite.
-The game companion's root `icon.png` is a byte-for-byte copy of `256x256.png`;
-its deployment tools stage that root icon into the module's `src/` directory.
+The browser favicon uses the 16px and 32px PNGs directly through Vite.
+The game companion retains its separate Odysseus-and-equations artwork; do not
+replace its store icon when regenerating this desktop set.
