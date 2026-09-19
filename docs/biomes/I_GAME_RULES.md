@@ -39,12 +39,10 @@ complete shop inventory.
 `I_WorldShop` filters its option entries from the entered-biome history at
 entry: `enteredBiomes <= 2` admits first-half entries and `enteredBiomes >= 3`
 admits second-half entries. Phase-independent entries remain available, and
-the five groups and one-offer-per-group shape do not change. The current
-fixed-route evaluator supplies `biomeIndex + 1` as `enteredBiomeCount`, which
-is equivalent for I's supported fourth-biome route and preserves its existing
-second-half standard inventory. A future Dream Dive implementation must
-update that fact producer for reordered history; it must not add an I-local
-phase or alter the Shop declarations.
+the five groups and one-offer-per-group shape do not change. The evaluator
+supplies the resolved itinerary ordinal as `enteredBiomeCount`; ordinary I
+therefore retains its fourth-biome second-half inventory. Dream-specific item
+membership remains separate from this shared phase rule.
 
 The exact generated I Shop item also owns the boon-rarity context consumed by a
 trait offer: ordinary `RandomLoot` uses the provider base, while a generated

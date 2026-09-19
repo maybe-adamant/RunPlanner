@@ -78,12 +78,10 @@ and creates the ordinary `Q_Boss01` occurrence through its fixed link.
 entry: `enteredBiomes <= 2` admits first-half entries and `enteredBiomes >= 3`
 admits second-half entries. Phase-independent entries remain available. The
 first group still emits two distinct options without replacement after phase
-filtering, while the five-group and six-slot shape remains fixed. The current
-fixed-route evaluator supplies `biomeIndex + 1` as `enteredBiomeCount`, which
-is equivalent for Q's supported fourth-biome route and preserves its existing
-second-half standard inventory. A future Dream Dive implementation must
-update that fact producer for reordered history; it must not add a Q-local
-phase or alter the Shop declarations.
+filtering, while the five-group and six-slot shape remains fixed. The evaluator
+supplies the resolved itinerary ordinal as `enteredBiomeCount`; ordinary Q
+therefore retains its fourth-biome second-half inventory. Dream-specific item
+membership remains separate from this shared phase rule.
 
 Q miniboss declarations own the room-level sparse rarity override. Its Rare
 check is guaranteed, so a retained Common Q miniboss option is an invalid but

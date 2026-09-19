@@ -1,5 +1,17 @@
 # Project schema boundary
 
+Schema 85 records the full ordinary itinerary and the plural Circe and Icarus
+selection payloads.
+
+```bash
+npm run schema:migrate-84-to-85 -- path/to/schema-84-project.runplanner.json
+```
+
+The migration preserves the authored prefix, IDs, loadout, timeline, and
+selected outcomes. A null Circe Fear selection becomes a repairable empty
+plural selection; an existing Latest Model target becomes its one-item target
+list. The command writes a sibling file without overwriting the source.
+
 Schema 84 allows a Nemesis event family to be saved before its interaction's
 concrete boon or reward has been selected.
 
@@ -99,7 +111,7 @@ output. It has no route-selection, in-place, or target-version mode.
 
 The schema-72 splitter's pure transformation is exported from
 `schema/split-project-72-to-73.js` for checkpoint conversion. The source value
-is never mutated. The production decoder accepts schema 84 only; stale
+is never mutated. The production decoder accepts schema 85 only; stale
 documents are not migrated implicitly in the application.
 
 Migrate a schema-74 document with:

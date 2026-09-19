@@ -108,6 +108,14 @@ export function assembleExecutionProduct({
     ),
   );
   const fixedTargets = executionFixedTargetsByRoom(biomes);
+  const resolvedPostbossIdsByBiome = new Map(
+    biomes.flatMap((biome) => {
+      const postboss = biome.snapshot.fixedRoomLinks.find(
+        (link) => link.target.roomKind === 'PostBoss',
+      )?.target;
+      return postboss === undefined ? [] : [[biome.biomeKey, postboss.occurrenceId] as const];
+    }),
+  );
   const snapshots = new Map<string, RunStateSnapshot>();
   for (const biome of biomes) {
     for (const [key, value] of executionRoomSnapshots(biome)) snapshots.set(key, value);
@@ -170,7 +178,8 @@ export function assembleExecutionProduct({
     const index = keys.indexOf(room.origin.biomeKey);
     const nextBiomeKey = index >= 0 ? keys[index + 1] : undefined;
     const crossBiomeTarget =
-      nextBiomeKey !== undefined && room.gameName === `${room.origin.biomeKey}_PostBoss01`
+      nextBiomeKey !== undefined &&
+      room.occurrenceId === resolvedPostbossIdsByBiome.get(room.origin.biomeKey)
         ? entryByBiome.get(nextBiomeKey)
         : undefined;
     const crossBiomeSourceId =

@@ -1,15 +1,9 @@
 {
-  "schemaVersion": 85,
+  "schemaVersion": 84,
   "projectId": "golden-fg",
   "catalogVersion": "0.55.0-anvil-of-fates",
   "route": {
     "routeKey": "Underworld",
-    "itineraryBiomeKeys": [
-      "F",
-      "G",
-      "H",
-      "I"
-    ],
     "resourcePlacements": {
       "Pickaxe": null,
       "Exorcism": null,
@@ -351,10 +345,7 @@
                   "levelResolutionsByAcquisitionRole": {
                     "self": {
                       "kind": "choice",
-                      "offeredTraitKeys": [
-                        "ApolloWeaponBoon",
-                        "ZeusSpecialBoon"
-                      ],
+                      "offeredTraitKeys": ["ApolloWeaponBoon", "ZeusSpecialBoon"],
                       "selectedTraitKey": "ApolloWeaponBoon"
                     }
                   },
@@ -913,13 +904,8 @@
                       "rarificationActions": [],
                       "hexTree": {
                         "layoutKey": "Lung",
-                        "rareTalentKeys": [
-                          "LeapLaunchAoETalent",
-                          "LeapAoETalent"
-                        ],
-                        "epicTalentKeys": [
-                          "LeapShieldTalent"
-                        ]
+                        "rareTalentKeys": ["LeapLaunchAoETalent", "LeapAoETalent"],
+                        "epicTalentKeys": ["LeapShieldTalent"]
                       }
                     }
                   },
@@ -2957,13 +2943,8 @@
                         "rarificationActions": [],
                         "hexTree": {
                           "layoutKey": "Lung",
-                          "rareTalentKeys": [
-                            "LaserAoETalent",
-                            "LaserStartAoETalent"
-                          ],
-                          "epicTalentKeys": [
-                            "LaserTripleTalent"
-                          ]
+                          "rareTalentKeys": ["LaserAoETalent", "LaserStartAoETalent"],
+                          "epicTalentKeys": ["LaserTripleTalent"]
                         }
                       }
                     },
@@ -3175,11 +3156,7 @@
                     "levelResolutionsByAcquisitionRole": {
                       "self": {
                         "kind": "choice",
-                        "offeredTraitKeys": [
-                          "ApolloWeaponBoon",
-                          "ZeusSpecialBoon",
-                          "HeraCastBoon"
-                        ],
+                        "offeredTraitKeys": ["ApolloWeaponBoon", "ZeusSpecialBoon", "HeraCastBoon"],
                         "selectedTraitKey": "ApolloWeaponBoon"
                       }
                     },

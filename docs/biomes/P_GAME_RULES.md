@@ -130,8 +130,8 @@ ledger.
 When either definition executes normally, its exact Combat phase owns the
 corresponding three-choice trait offer and folds the selected trait at the NPC
 interaction. Athena uses selectable Common/Rare/Epic rarity. Icarus is
-player-rarityless, and Latest Model may target one exact eligible equipped
-Rank-I Hammer for the shared Rank-II transition.
+player-rarityless. Latest Model's ordered Rank-I Hammer targets use the shared
+acquisition-ordinal profile (one at P's ordinary position) and Rank-II transition.
 
 Encounter completion and encounter-end effects are distinct checkpoints. A
 normal P room advances encounter depth once and runs end effects only after the

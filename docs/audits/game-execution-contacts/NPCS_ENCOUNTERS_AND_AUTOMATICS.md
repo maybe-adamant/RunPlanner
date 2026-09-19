@@ -54,8 +54,10 @@ extraction. The executor selects their keys only. Ordered Arcana draws use
 native `AddRandomMetaUpgrades` admission/card selectors, preserving native
 activation and dependent eligibility rather than replaying it in Lua.
 
-Icarus Latest Model selects the old Hammer in `UpgradeHammers`, before its
-inner rarity call. Native code uses that same selected trait for later weapon
+Icarus Latest Model selects its ordered old Hammer targets in `UpgradeHammers`,
+before each inner rarity call. The selector scope pauses during
+`AddRarityToTraits` so an inner random draw cannot consume the next target.
+Native code uses that same selected trait for later weapon
 setup, so merely overriding the inner `ForceUpgrade` argument would be too
 late. Echo's Pom target similarly steers `EchoDoubleLevelBoon`'s native
 candidate selection; native calculates and applies the level increase.
