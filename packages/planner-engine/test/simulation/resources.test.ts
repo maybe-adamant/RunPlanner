@@ -148,7 +148,12 @@ describe('selected resource success legality', () => {
       itineraryBiomeKeys: ['F', 'G'],
       configuredBiomeCount: 1,
     });
-    project = applyProjectCommand(project, catalog, { kind: 'CreateStart', biome, occurrenceId });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'CreateStart',
+      biome,
+      occurrenceId,
+      gameName: 'F_Opening01',
+    });
     project = applyProjectCommand(project, catalog, {
       kind: 'ReplaceIncomingReward',
       reward: createIncomingRewardAddress(biome, occurrenceId),

@@ -11,6 +11,7 @@ import {
   createLocalVisitOrderAddress,
   createOccurrenceId,
   createProjectDocument,
+  decodeProjectDocument,
   createShopOfferAddress,
   createTargetAddress,
   createTraitOfferAddress,
@@ -41,12 +42,24 @@ export function nLocalOccurrenceIdsBySlot(
 }
 
 export function createCompleteNProject(): ProjectDocument {
+  const initialized = createProjectDocument(catalog, {
+    projectId: 'authored-complete-n',
+    routeKey: 'Surface',
+    configuredBiomeCount: 1,
+  });
   let document = applyProjectCommand(
-    createProjectDocument(catalog, {
-      projectId: 'authored-complete-n',
-      routeKey: 'Surface',
-      configuredBiomeCount: 1,
-    }),
+    decodeProjectDocument(
+      {
+        ...initialized,
+        route: {
+          ...initialized.route,
+          biomes: initialized.route.biomes.map((biome) =>
+            biome.biomeKey === 'N' ? { ...biome, topology: null } : biome,
+          ),
+        },
+      },
+      catalog,
+    ),
     catalog,
     {
       kind: 'CreateStart',

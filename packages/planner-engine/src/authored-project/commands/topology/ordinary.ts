@@ -47,12 +47,16 @@ import {
   sourceRoom,
   replaceDecision,
   appendDecision,
-  defaultOccurrence,
   resolvedStoreKey,
   appendOccurrence,
   expectedPrebossRole,
   updateTopology,
 } from './construction';
+import {
+  createDefaultStartTopology,
+  createStartTopology,
+  defaultOccurrence,
+} from '../../topology/construction';
 import { reconcileCompletionChain } from './takeover';
 import { replaceWithHubDecision } from './hub';
 import { resolveStartingRoomDeclaration } from '../../room-state/starting-room-profile';
@@ -78,7 +82,7 @@ export function createStart(
     failCommand(command, 'topology already has a start occurrence');
   const gameName =
     located.layout.start.kind === 'authoredChoice'
-      ? (command.gameName ?? located.layout.start.roomGameNames[0])
+      ? command.gameName
       : located.layout.start.roomGameName;
   if (located.layout.start.kind === 'authoredChoice') {
     if (gameName === undefined || !located.layout.start.roomGameNames.includes(gameName)) {
@@ -92,23 +96,9 @@ export function createStart(
     requireRoom(catalog, gameName, located.layout.biomeKey, command),
     located.routePosition,
   );
-  const occurrence = defaultOccurrence(
-    catalog,
-    room,
-    command.occurrenceId,
-    'ordinary',
-    true,
-    undefined,
-    located.loadout,
-  );
   return withBiome(document, located, {
     ...located.plan,
-    topology: Object.freeze({
-      startOccurrenceId: command.occurrenceId,
-      occurrences: Object.freeze([occurrence]),
-      decisions: Object.freeze([]),
-      fixedRoomLinks: Object.freeze([]),
-    }),
+    topology: createStartTopology(catalog, room, command.occurrenceId, located.loadout),
   });
 }
 
@@ -872,16 +862,25 @@ export function removeExitDecision(
 
 export function clearTopology(
   document: ProjectDocument,
+  catalog: Catalog,
   located: LocatedBiome,
   command: Extract<TopologyCommand, { readonly kind: 'ClearTopology' }>,
 ): ProjectDocument {
   const topology = located.plan.topology;
-  if (topology === null) return document;
-  const cleared = applyTopologyRemovalImpact(topology, describeClearTopologyImpact(topology));
-  if (cleared.occurrences.length !== 0 || cleared.decisions.length !== 0) {
-    failCommand(command, 'ClearTopology impact must remove every persisted topology member');
+  if (topology !== null) {
+    const cleared = applyTopologyRemovalImpact(topology, describeClearTopologyImpact(topology));
+    if (cleared.occurrences.length !== 0 || cleared.decisions.length !== 0) {
+      failCommand(command, 'ClearTopology impact must remove every persisted topology member');
+    }
   }
-  return withBiome(document, located, { ...located.plan, topology: null });
+  const replacement = createDefaultStartTopology(
+    catalog,
+    located.layout,
+    located.routePosition,
+    located.loadout,
+  );
+  if (topology === null && replacement === null) return document;
+  return withBiome(document, located, { ...located.plan, topology: replacement });
 }
 
 export function reconcileBatchExitCapacity(

@@ -12,7 +12,7 @@ import { type RouteFeedbackPresentation } from '@planner/projections/evaluationP
 import type { RouteEditorNavigation } from '@planner/projections/editorNavigation';
 import { authoredProjectCommandDispatched } from '@planner/state/projectWorkspaceSlice';
 import { useAppDispatch } from '@planner/state/store';
-import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
+import { BiomeEntryPicker } from '@planner/ui/editor/biome/BiomeEntryPicker';
 import { StartRoomIdentityEditor } from '@planner/ui/editor/biome/BiomeInspectorControls';
 import type {
   WorkspaceInteractionCatalog,
@@ -79,7 +79,6 @@ export function RouteOverview({
 }) {
   const findingTarget = useFindingTarget();
   const dispatch = useAppDispatch();
-  const executeIntent = useCommandIntent();
   const configuredBiomeCount = workspaceRoute.biomes.length;
   const configuredBiomeLabels = navigation.biomePanels
     .slice(0, configuredBiomeCount)
@@ -420,14 +419,7 @@ export function RouteOverview({
           <section aria-label="Starting room" className="route-start-room-controls">
             {firstBiome.entry === undefined ? (
               start === undefined ? null : (
-                <button
-                  {...findingTarget(start.owner)}
-                  className="primary-action"
-                  onClick={() => executeIntent(start.intent())}
-                  type="button"
-                >
-                  Start {firstBiome.label}
-                </button>
+                <BiomeEntryPicker interaction={start} />
               )
             ) : (
               <StartRoomIdentityEditor interactions={interactions} node={firstBiome.entry} />

@@ -3,8 +3,13 @@ import { describe, expect, it } from 'vitest';
 import { catalog } from '@run-planner/hades2-catalog';
 import {
   applyProjectCommand,
+  applyProjectHistoryCommand,
   createBiomeAddress,
   createOccurrenceAddress,
+  createOccurrenceId,
+  createProjectDocument,
+  createProjectHistory,
+  undoProjectHistory,
 } from '@run-planner/engine/authored-project';
 import { loadUnderworldFGProject } from '@run-planner/test-fixtures/underworld';
 
@@ -53,5 +58,27 @@ describe('route-owned selected resource placement command', () => {
       biomeKey: 'F',
       occurrenceId: occurrence.occurrenceId,
     });
+  });
+
+  it('retracts a fixed-entry placement when ClearTopology recreates that entry ID', () => {
+    const start = createProjectDocument(catalog, {
+      projectId: 'clear-fixed-entry-resource',
+      routeKey: 'Surface',
+      configuredBiomeCount: 1,
+    });
+    const target = { biomeKey: 'N', occurrenceId: createOccurrenceId('N:start') };
+    const selected = applyProjectCommand(start, catalog, {
+      kind: 'ReplaceResourcePlacement',
+      route: { kind: 'route', routeKey: 'Surface' },
+      family: 'Pickaxe',
+      value: target,
+    });
+    const history = applyProjectHistoryCommand(createProjectHistory(selected), catalog, {
+      kind: 'ClearTopology',
+      biome: createBiomeAddress('Surface', 'N'),
+    });
+    expect(history.present.route.resourcePlacements.Pickaxe).toBeNull();
+    expect(history.present.route.biomes[0]?.topology?.startOccurrenceId).toBe('N:start');
+    expect(undoProjectHistory(history).present).toEqual(selected);
   });
 });

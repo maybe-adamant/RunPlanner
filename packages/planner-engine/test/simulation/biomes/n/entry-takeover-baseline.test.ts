@@ -1,4 +1,5 @@
 import { catalog } from '@run-planner/hades2-catalog';
+import { withUnstartedBiome } from '../../../authored-project/support/configured-projects';
 import {
   applyProjectCommand,
   createExitDecisionAddress,
@@ -38,7 +39,7 @@ function blankNEntryProject() {
     routeKey: 'Surface',
     configuredBiomeCount: 1,
   });
-  project = applyProjectCommand(project, catalog, {
+  project = applyProjectCommand(withUnstartedBiome(project, 'N'), catalog, {
     kind: 'CreateStart',
     biome: nBiome,
     occurrenceId: nOccurrenceIds.opening,
@@ -87,7 +88,7 @@ describe('N B1 entry and terminal baseline', () => {
       routeKey: 'Surface',
       configuredBiomeCount: 1,
     });
-    project = applyProjectCommand(project, catalog, {
+    project = applyProjectCommand(withUnstartedBiome(project, 'N'), catalog, {
       kind: 'CreateStart',
       biome: nBiome,
       occurrenceId: nOccurrenceIds.opening,

@@ -310,7 +310,7 @@ describe('DecisionWorkbench', () => {
 
     cleanup();
     renderStaticDecisionWorkbench(project, 'Underworld', 'G', currentFrontier);
-    const start = screen.getByRole('button', { name: 'Start biome' });
+    const start = screen.getByRole('button', { name: 'Door 1 room' });
     expect(start.hasAttribute('inert')).toBe(true);
     expect(start.getAttribute('aria-disabled')).toBe('true');
     expect(start.dataset.authoringLocked).toBe('true');
@@ -545,20 +545,11 @@ describe('DecisionWorkbench', () => {
 
   it('keeps N outgoing cards visible but inert until the opening reward is authored', async () => {
     const view = renderDecisionWorkbench(emptyProject('Surface'), 'Surface', 'N', currentFrontier);
-    expect(screen.getByRole('heading', { name: 'Start biome' })).toBeTruthy();
-    expect(screen.queryByText('N_Opening01')).toBeNull();
-    expect(screen.queryByRole('button', { name: 'Room' })).toBeNull();
-    expect(screen.queryByText('Choose room to show reward')).toBeNull();
-
-    await view.user.click(screen.getByRole('button', { name: 'Start biome' }));
     const plan = view.application.store
       .getState()
       .projectWorkspace.history!.present.route?.biomes.find((biome) => biome.biomeKey === 'N');
     const openingId = plan?.topology?.startOccurrenceId;
     if (openingId === undefined) throw new Error('N Opening was not authored');
-    expect(view.application.store.getState().editorSession.focusedSemanticOwner).toEqual(
-      createOccurrenceAddress(nBiome, openingId),
-    );
     await waitFor(() => expect(screen.getByRole('button', { name: 'Door 1 room' })).toBeTruthy());
     expect(screen.queryByRole('button', { name: 'Add next decision' })).toBeNull();
     expect(screen.queryByRole('button', { name: 'Remove these doors' })).toBeNull();
@@ -609,17 +600,16 @@ describe('DecisionWorkbench', () => {
     );
   });
 
-  it('uses the same generic start action for an Intro biome', async () => {
+  it('initializes an Intro when its biome is configured', () => {
     const project = applyProjectCommand(loadSurfaceNOProject(), catalog, {
       kind: 'ConfigureRoutePrefix',
       route: { kind: 'route', routeKey: 'Surface' },
       configuredBiomeCount: 4,
     });
     const view = renderDecisionWorkbench(project, 'Surface', 'P', currentFrontier);
-    expect(screen.getByRole('heading', { name: 'Start biome' })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Starting room' })).toBeNull();
     expect(screen.queryByRole('button', { name: 'Room' })).toBeNull();
 
-    await view.user.click(screen.getByRole('button', { name: 'Start biome' }));
     const plan = view.application.store
       .getState()
       .projectWorkspace.history!.present.route?.biomes.find((biome) => biome.biomeKey === 'P');

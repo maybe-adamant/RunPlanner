@@ -517,10 +517,11 @@ describe('authored-project project-state commands', () => {
 
     expect(grown.route?.biomes.map((biome) => biome.biomeKey)).toEqual(['F', 'G', 'H', 'I']);
     expect(grown.route?.biomes[0]).toEqual(retainedF);
-    for (const biome of grown.route?.biomes.slice(1) ?? []) {
-      expect(biome.topology).toBeNull();
-      expect(biome.topology).toBeNull();
-    }
+    expect(grown.route?.biomes.slice(1).map((biome) => biome.topology?.startOccurrenceId)).toEqual([
+      'G:start',
+      'H:start',
+      'I:start',
+    ]);
     expect(grown.route?.biomes[3]).toMatchObject({
       biomeKey: 'I',
       state: { maxNonGoalRewards: null },

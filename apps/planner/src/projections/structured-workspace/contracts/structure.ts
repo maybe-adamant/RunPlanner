@@ -21,6 +21,7 @@ import type { RoomDeclaration } from '@run-planner/engine/catalog-schema';
 import type { ResolvedRewardOffer } from '@run-planner/engine/reward-kernel';
 import type { CanonicalBatch, ProjectEvaluationAssembly } from '@run-planner/engine/simulation';
 import type { TakeoverBatchCommand } from '@planner/workspace/takeoverBatchInteraction';
+import type { ContextualPickerModel } from '@planner/projections/contextual/contextualPicker';
 
 import type {
   WorkspaceCandidateInteraction,
@@ -539,7 +540,8 @@ type WorkspaceCreateStartIntent = WorkspaceCommandIntent<
 
 /** Generic topology creation; the resulting occurrence owns all room authoring. */
 export interface WorkspaceStartInteraction {
-  readonly intent: () => WorkspaceCreateStartIntent;
+  readonly picker: ContextualPickerModel<string>;
+  readonly intent: (gameName: string) => WorkspaceCreateStartIntent;
   readonly key: string;
   readonly owner: BiomeAddress;
 }

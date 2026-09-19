@@ -86,6 +86,7 @@ export type {
   WorkspaceHubVisitOrderInteraction,
   WorkspaceHubVisitOrderProposal,
   WorkspaceInteractionCatalog,
+  WorkspaceStartInteraction,
   WorkspaceAcquisitionConversionInteraction,
   WorkspaceHermesShrineOfferInteraction,
   WorkspacePurgingPoolSlotInteraction,

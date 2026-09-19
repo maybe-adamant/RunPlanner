@@ -29,6 +29,7 @@ import { RoomSelector } from './RoomSelector';
 import { RunStateLauncher } from './RunStateSheet';
 import { DoorRewardEditor } from './DoorRewardEditor';
 import { BiomeWorkspaceContractError } from './workspaceContract';
+import { BiomeEntryPicker } from './BiomeEntryPicker';
 
 type BatchNode = WorkspaceOrdinaryBatchNode | WorkspaceMixedBatchNode | WorkspaceTakeoverBatchNode;
 
@@ -695,26 +696,10 @@ function StartFrontier({
   readonly interaction: Extract<WorkspaceAuthoringFrontier, { readonly kind: 'start' }>;
   readonly interactions: WorkspaceInteractionCatalog;
 }) {
-  const findingTarget = useFindingTarget();
-  const executeIntent = useCommandIntent();
   const start = requireWorkspaceInteraction(interactions.starts, interaction.interactionKey);
   return (
     <section className="frontier-actions biome-start-frontier">
-      <div>
-        <p className="card-kicker">Next step</p>
-        <h3>Start biome</h3>
-        <p className="owner-markers">
-          Create the opening room, then configure its room and reward.
-        </p>
-      </div>
-      <button
-        {...findingTarget(start.owner)}
-        className="primary-action"
-        onClick={() => executeIntent(start.intent())}
-        type="button"
-      >
-        Start biome
-      </button>
+      <BiomeEntryPicker interaction={start} />
     </section>
   );
 }

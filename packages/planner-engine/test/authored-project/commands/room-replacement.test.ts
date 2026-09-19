@@ -511,14 +511,10 @@ describe('authored-project room replacement commands', () => {
   });
 
   it('keeps staged replacements inside the selected batch pool', () => {
-    let project = applyProjectCommand(surfaceProject(4), catalog, {
-      kind: 'CreateStart',
-      biome: qBiome,
-      occurrenceId: createOccurrenceId('q-intro'),
-    });
+    let project = surfaceProject(4);
     const introDecision = createExitDecisionAddress(qBiome, {
       kind: 'occurrence',
-      occurrenceId: createOccurrenceId('q-intro'),
+      occurrenceId: project.route.biomes[3]!.topology!.startOccurrenceId,
     });
     project = applyProjectCommand(project, catalog, {
       kind: 'CreateBatch',
@@ -563,14 +559,10 @@ describe('authored-project room replacement commands', () => {
   });
 
   it('reconciles an outgoing generated batch store from the replacement source without removing targets', () => {
-    let project = applyProjectCommand(surfaceProject(2), catalog, {
-      kind: 'CreateStart',
-      biome: oBiome,
-      occurrenceId: createOccurrenceId('o-intro'),
-    });
+    let project = surfaceProject(2);
     const introDecision = createExitDecisionAddress(oBiome, {
       kind: 'occurrence',
-      occurrenceId: createOccurrenceId('o-intro'),
+      occurrenceId: project.route.biomes[1]!.topology!.startOccurrenceId,
     });
     project = applyProjectCommand(project, catalog, {
       kind: 'CreateBatch',

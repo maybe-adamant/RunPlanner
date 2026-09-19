@@ -1,4 +1,5 @@
 import { catalog, createCatalog } from '@run-planner/hades2-catalog';
+import { withUnstartedBiome } from '../authored-project/support/configured-projects';
 import { declarations } from '@run-planner/hades2-catalog/test-support';
 import {
   applyProjectCommand,
@@ -84,18 +85,13 @@ function catalogWithImpossibleEncounters(keys: readonly string[]) {
 }
 
 function openHub(slotCount: number, resolvedBoardRewards = false) {
-  const opening = createOccurrenceId('progressive-n-opening');
   const preHub = createOccurrenceId('progressive-n-prehub');
   let project = createProjectDocument(catalog, {
     projectId: `progressive-n-${slotCount}`,
     routeKey: 'Surface',
     configuredBiomeCount: 1,
   });
-  project = applyProjectCommand(project, catalog, {
-    kind: 'CreateStart',
-    biome: nBiome,
-    occurrenceId: opening,
-  });
+  const opening = project.route.biomes[0]!.topology!.startOccurrenceId;
   project = applyProjectCommand(project, catalog, {
     kind: 'ReplaceIncomingReward',
     reward: createIncomingRewardAddress(nBiome, opening),
@@ -248,12 +244,15 @@ function progressiveN(project: ReturnType<typeof openHub>) {
 }
 
 describe('Hub progressive biome evaluation', () => {
-  it('retains an unopened Hub as incomplete rather than manufacturing a board', () => {
-    const project = createProjectDocument(catalog, {
-      projectId: 'progressive-n-empty',
-      routeKey: 'Surface',
-      configuredBiomeCount: 1,
-    });
+  it('retains an imported null entry as incomplete rather than manufacturing a Hub board', () => {
+    const project = withUnstartedBiome(
+      createProjectDocument(catalog, {
+        projectId: 'progressive-n-empty',
+        routeKey: 'Surface',
+        configuredBiomeCount: 1,
+      }),
+      'N',
+    );
     const biome = nEvaluation(project as ReturnType<typeof openHub>);
 
     expect(biome).toMatchObject({
@@ -770,7 +769,20 @@ describe('Hub progressive biome evaluation', () => {
         kind: 'coverageNotReached',
         requiredOwner: createHubSlotAddress(nBiome, 'hub', 'combat01'),
         requiredCheckpoint: 'afterTargetGeneration',
-        coverage: { kind: 'none', reason: 'notEvaluated' },
+        coverage: {
+          kind: 'prefix',
+          blockedAt: createIncomingRewardAddress(
+            nBiome,
+            empty.route.biomes[0]!.topology!.startOccurrenceId,
+          ),
+          through: {
+            checkpoint: 'beforeTargetGeneration',
+            owner: createOccurrenceAddress(
+              nBiome,
+              empty.route.biomes[0]!.topology!.startOccurrenceId,
+            ),
+          },
+        },
       },
     });
 

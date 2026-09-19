@@ -162,18 +162,14 @@ describe('contextual starting-room profiles', () => {
 
   it('reconciles and decodes Buried Treasure pickups from a Dream-first G reward', () => {
     const biome = createBiomeAddress('Dream', 'G');
-    const occurrenceId = createOccurrenceId('dream-g-pickups');
+    const occurrenceId = createOccurrenceId('G:start');
     const reward = createIncomingRewardAddress(biome, occurrenceId);
-    let project = applyProjectCommand(
-      createProjectDocument(catalog, {
-        projectId: 'dream-g-pickups',
-        routeKey: 'Dream',
-        itineraryBiomeKeys: ['G', 'F'],
-        configuredBiomeCount: 1,
-      }),
-      catalog,
-      { kind: 'CreateStart', biome, occurrenceId },
-    );
+    let project = createProjectDocument(catalog, {
+      projectId: 'dream-g-pickups',
+      routeKey: 'Dream',
+      itineraryBiomeKeys: ['G', 'F'],
+      configuredBiomeCount: 1,
+    });
     project = applyProjectCommand(project, catalog, {
       kind: 'ReplaceIncomingReward',
       reward,

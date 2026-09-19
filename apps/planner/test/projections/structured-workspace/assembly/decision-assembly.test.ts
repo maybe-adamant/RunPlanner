@@ -553,17 +553,12 @@ describe('structured workspace decision assembly', () => {
   });
 
   it('keeps the Fields outcome control available while a retained batch awaits its outcome', () => {
-    const start = createOccurrenceId('retained-fields-awaiting-start');
     let project = createProjectDocument(catalog, {
       routeKey: 'Underworld',
       configuredBiomeCount: 3,
       projectId: 'retained-fields-awaiting-outcome',
     });
-    project = applyProjectCommand(project, catalog, {
-      biome: goldenHBiome,
-      kind: 'CreateStart',
-      occurrenceId: start,
-    });
+    const start = project.route.biomes[2]!.topology!.startOccurrenceId;
     const owner = createExitDecisionAddress(goldenHBiome, {
       kind: 'occurrence',
       occurrenceId: start,

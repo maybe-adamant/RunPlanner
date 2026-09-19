@@ -13,6 +13,7 @@ import {
   createOccurrenceAddress,
   createOccurrenceId,
   createDefaultRouteLoadout,
+  decodeProjectDocument,
   createRewardWheelAddress,
   createRouteAddress,
   createTargetAddress,
@@ -88,6 +89,21 @@ import {
 
 function source(occurrenceId: OccurrenceId) {
   return { kind: 'occurrence' as const, occurrenceId };
+}
+
+function withUnstartedBiome(project: ProjectDocument, biomeKey: string): ProjectDocument {
+  return decodeProjectDocument(
+    {
+      ...project,
+      route: {
+        ...project.route,
+        biomes: project.route.biomes.map((biome) =>
+          biome.biomeKey === biomeKey ? { ...biome, topology: null } : biome,
+        ),
+      },
+    },
+    catalog,
+  );
 }
 
 function catalogWithImpossibleEncounter(encounterKey: string) {
@@ -197,6 +213,7 @@ function incompleteHFieldsProject() {
     route: createRouteAddress('Underworld'),
     configuredBiomeCount: 3,
   });
+  project = withUnstartedBiome(project, 'H');
   project = applyProjectCommand(project, catalog, {
     kind: 'CreateStart',
     biome: goldenHBiome,
@@ -219,6 +236,7 @@ function incompleteIFieldProject() {
     route: createRouteAddress('Underworld'),
     configuredBiomeCount: 4,
   });
+  project = withUnstartedBiome(project, 'I');
   project = applyProjectCommand(project, catalog, {
     kind: 'CreateStart',
     biome: goldenIBiome,
@@ -241,6 +259,7 @@ function partialGWithOnePhysicalTarget() {
     kind: 'ClearTopology',
     biome: goldenGBiome,
   });
+  project = withUnstartedBiome(project, 'G');
   project = applyProjectCommand(project, catalog, {
     kind: 'CreateStart',
     biome: goldenGBiome,
@@ -287,6 +306,7 @@ function partialGWithInvalidSecondPhysicalTarget() {
     kind: 'ClearTopology',
     biome: goldenGBiome,
   });
+  project = withUnstartedBiome(project, 'G');
   project = applyProjectCommand(project, catalog, {
     kind: 'CreateStart',
     biome: goldenGBiome,

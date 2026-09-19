@@ -41,17 +41,13 @@ function completeG(project = createCompleteFGProject()) {
 describe('G generation and takeover', () => {
   it('publishes and settles the Dream-first G opening reward through the ordinary candidate path', () => {
     const biome = createBiomeAddress('Dream', 'G');
-    const occurrenceId = createOccurrenceId('dream-g-opening');
-    let project = applyProjectCommand(
-      createProjectDocument(catalog, {
-        projectId: 'dream-g-opening',
-        routeKey: 'Dream',
-        itineraryBiomeKeys: ['G', 'F'],
-        configuredBiomeCount: 1,
-      }),
-      catalog,
-      { kind: 'CreateStart', biome, occurrenceId },
-    );
+    let project = createProjectDocument(catalog, {
+      projectId: 'dream-g-opening',
+      routeKey: 'Dream',
+      itineraryBiomeKeys: ['G', 'F'],
+      configuredBiomeCount: 1,
+    });
+    const occurrenceId = project.route.biomes[0]!.topology!.startOccurrenceId;
     const reward = createIncomingRewardAddress(biome, occurrenceId);
     const candidate = createPreparedProjectCandidateSession(
       catalog,

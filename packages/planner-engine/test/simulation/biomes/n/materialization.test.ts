@@ -1,4 +1,5 @@
 import { ordinaryPositionFor } from '../../../support/route-position';
+import { withUnstartedBiome } from '../../../authored-project/support/configured-projects';
 import { catalog } from '@run-planner/hades2-catalog';
 import {
   applyProjectCommand,
@@ -41,12 +42,15 @@ function traitContext(project: ReturnType<typeof loadSurfaceNProject>) {
 }
 
 describe('canonical N Hub materialization', () => {
-  it('keeps an unopened Hub structurally incomplete without inventing a board', () => {
-    const project = createProjectDocument(catalog, {
-      projectId: 'n-incomplete',
-      routeKey: 'Surface',
-      configuredBiomeCount: 1,
-    });
+  it('keeps an imported null entry structurally incomplete without inventing a Hub board', () => {
+    const project = withUnstartedBiome(
+      createProjectDocument(catalog, {
+        projectId: 'n-incomplete',
+        routeKey: 'Surface',
+        configuredBiomeCount: 1,
+      }),
+      'N',
+    );
     const biome = simulateProject(catalog, project).route?.biomes.find(
       (candidate) => candidate.biomeKey === 'N',
     );
@@ -68,7 +72,7 @@ describe('canonical N Hub materialization', () => {
       kind: 'occurrence',
       occurrenceId: nOccurrenceIds.opening,
     });
-    project = applyProjectCommand(project, catalog, {
+    project = applyProjectCommand(withUnstartedBiome(project, 'N'), catalog, {
       kind: 'CreateStart',
       biome: nBiome,
       occurrenceId: nOccurrenceIds.opening,

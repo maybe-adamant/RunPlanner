@@ -105,11 +105,21 @@ function projectFor(
   routeKey: 'Underworld' | 'Surface',
   configuredBiomeCount: number,
 ): ProjectDocument {
-  return createProjectDocument(catalog, {
+  const initialized = createProjectDocument(catalog, {
     projectId: `route-detour-${routeKey}-${configuredBiomeCount}`,
     routeKey,
     configuredBiomeCount,
   });
+  return decodeProjectDocument(
+    {
+      ...initialized,
+      route: {
+        ...initialized.route,
+        biomes: initialized.route.biomes.map((biome) => ({ ...biome, topology: null })),
+      },
+    },
+    catalog,
+  );
 }
 
 function createBatch(

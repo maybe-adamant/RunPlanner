@@ -174,6 +174,7 @@ describe('F takeover materialization', () => {
         kind: 'CreateStart',
         biome,
         occurrenceId: createOccurrenceId('dream-first-f-opening-start'),
+        gameName: 'F_Opening01',
       },
     );
     const plan = project.route.biomes[0];
@@ -212,7 +213,12 @@ describe('F takeover materialization', () => {
         configuredBiomeCount: 2,
       }),
       catalog,
-      { kind: 'CreateStart', biome, occurrenceId: createOccurrenceId('dream-later-f-start') },
+      {
+        kind: 'CreateStart',
+        biome,
+        occurrenceId: createOccurrenceId('dream-later-f-start'),
+        gameName: 'F_Opening01',
+      },
     );
     const plan = project.route.biomes.find((candidate) => candidate.biomeKey === 'F');
     if (plan === undefined) throw new Error('Dream fixture has no F plan');

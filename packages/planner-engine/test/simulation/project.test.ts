@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { withUnstartedBiome } from '../authored-project/support/configured-projects';
 
 import { catalog, createCatalog } from '@run-planner/hades2-catalog';
 import { declarations } from '@run-planner/hades2-catalog/test-support';
@@ -342,15 +343,15 @@ describe('project simulation composition', () => {
   });
 
   it('keeps valid prefixes usable when the next biome has no authored topology', () => {
-    const underworldProject = applyProjectCommand(createGoldenFGHIProject(), catalog, {
-      kind: 'ClearTopology',
-      biome: goldenIBiome,
-    });
-    const surfaceProject = applyProjectCommand(loadSurfaceNProject(), catalog, {
-      kind: 'ConfigureRoutePrefix',
-      route: createRouteAddress('Surface'),
-      configuredBiomeCount: 4,
-    });
+    const underworldProject = withUnstartedBiome(createGoldenFGHIProject(), 'I');
+    const surfaceProject = withUnstartedBiome(
+      applyProjectCommand(loadSurfaceNProject(), catalog, {
+        kind: 'ConfigureRoutePrefix',
+        route: createRouteAddress('Surface'),
+        configuredBiomeCount: 4,
+      }),
+      'O',
+    );
     const underworld = route(underworldProject, 'Underworld').route;
     const surface = route(surfaceProject, 'Surface').route;
 

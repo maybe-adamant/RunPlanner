@@ -89,19 +89,16 @@ export function authoredAnomalyProject(): {
   readonly project: ProjectDocument;
 } {
   const biome = createBiomeAddress('Underworld', 'G');
-  const start = createOccurrenceId('occurrence-workbench-g-intro');
   const target = createOccurrenceId('occurrence-workbench-g-anomaly');
-  const source = { kind: 'occurrence' as const, occurrenceId: start };
   let project = createProjectDocument(catalog, {
     projectId: 'occurrence-workbench-anomaly',
     routeKey: 'Underworld',
     configuredBiomeCount: 2,
   });
-  project = applyProjectCommand(project, catalog, {
-    kind: 'CreateStart',
-    biome,
-    occurrenceId: start,
-  });
+  const source = {
+    kind: 'occurrence' as const,
+    occurrenceId: project.route.biomes[1]!.topology!.startOccurrenceId,
+  };
   project = applyProjectCommand(project, catalog, {
     kind: 'CreateBatch',
     decision: createExitDecisionAddress(biome, source),

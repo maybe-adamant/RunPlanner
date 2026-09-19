@@ -61,6 +61,6 @@ export function applyTopologyCommand(
     case 'ReplaceLocalVisitOrder':
       return updateLocalVisit(document, catalog, located, command);
     case 'ClearTopology':
-      return clearTopology(document, located, command);
+      return clearTopology(document, catalog, located, command);
   }
 }

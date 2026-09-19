@@ -10,6 +10,7 @@ import {
   createIncomingRewardAddress,
   createOccurrenceId,
   createProjectDocument,
+  decodeProjectDocument,
   createShopOfferAddress,
   createTargetAddress,
   createTraitOfferAddress,
@@ -31,11 +32,27 @@ function source(occurrenceId: OccurrenceId) {
 }
 
 function projectFor(configuredBiomeCount: number): ProjectDocument {
-  return createProjectDocument(catalog, {
+  const initialized = createProjectDocument(catalog, {
     projectId: 'generation-detour',
     routeKey: 'Underworld',
     configuredBiomeCount,
   });
+  return withUnstartedBiome(initialized, 'G');
+}
+
+function withUnstartedBiome(project: ProjectDocument, biomeKey: string): ProjectDocument {
+  return decodeProjectDocument(
+    {
+      ...project,
+      route: {
+        ...project.route,
+        biomes: project.route.biomes.map((biome) =>
+          biome.biomeKey === biomeKey ? { ...biome, topology: null } : biome,
+        ),
+      },
+    },
+    catalog,
+  );
 }
 
 function createBatch(project: ProjectDocument, parent: OccurrenceId): ProjectDocument {
@@ -134,12 +151,15 @@ export function buildDreamAnomalyProject() {
   const combat02 = createOccurrenceId('dream-generation-anomaly-combat02');
   const combat01Peer = createOccurrenceId('dream-generation-anomaly-combat01-peer');
   const anomaly = createOccurrenceId('dream-generation-anomaly-target');
-  let project = createProjectDocument(catalog, {
-    projectId: 'dream-generation-anomaly',
-    routeKey: 'Dream',
-    itineraryBiomeKeys: ['G', 'F'],
-    configuredBiomeCount: 1,
-  });
+  let project = withUnstartedBiome(
+    createProjectDocument(catalog, {
+      projectId: 'dream-generation-anomaly',
+      routeKey: 'Dream',
+      itineraryBiomeKeys: ['G', 'F'],
+      configuredBiomeCount: 1,
+    }),
+    'G',
+  );
   project = applyProjectCommand(project, catalog, {
     kind: 'CreateStart',
     biome: dreamGBiome,

@@ -156,7 +156,6 @@ export function createReachableNaturalChaosProject(): ProjectDocument {
 }
 
 export function selectedNChaosFrontierProject(persistTerminalDecision = true): ProjectDocument {
-  const opening = createOccurrenceId('interaction-binding-n-chaos-opening');
   const preHub = createOccurrenceId('interaction-binding-n-chaos-prehub');
   const chaos = createOccurrenceId('interaction-binding-n-chaos-room');
   let project = createProjectDocument(catalog, {
@@ -164,11 +163,7 @@ export function selectedNChaosFrontierProject(persistTerminalDecision = true): P
     configuredBiomeCount: 1,
     projectId: 'interaction-binding-n-chaos-frontier',
   });
-  project = applyProjectCommand(project, catalog, {
-    kind: 'CreateStart',
-    biome: nBiome,
-    occurrenceId: opening,
-  });
+  const opening = project.route.biomes[0]!.topology!.startOccurrenceId;
   project = applyProjectCommand(project, catalog, {
     kind: 'ReplaceIncomingReward',
     reward: createIncomingRewardAddress(nBiome, opening),

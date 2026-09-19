@@ -111,12 +111,7 @@ function createIProject(projectId: string): ProjectDocument {
     routeKey: 'Underworld',
     configuredBiomeCount: 4,
   });
-  const started = applyProjectCommand(project, catalog, {
-    kind: 'CreateStart',
-    biome,
-    occurrenceId: occurrence(`${projectId}-intro`),
-  });
-  return applyProjectCommand(started, catalog, {
+  return applyProjectCommand(project, catalog, {
     kind: 'ReplaceBiomeField',
     field: createBiomeFieldAddress(biome, 'maxNonGoalRewards'),
     value: 3,

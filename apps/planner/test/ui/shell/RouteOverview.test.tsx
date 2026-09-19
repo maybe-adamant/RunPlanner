@@ -116,7 +116,7 @@ describe('RouteOverview', () => {
         route: createRouteAddress('Underworld'),
       }),
     );
-    expect(routeOverviewMarkup(application)).toContain('>Start Erebus</button>');
+    expect(routeOverviewMarkup(application)).toContain('aria-label="Starting room"');
 
     application.store.dispatch(
       authoredProjectCommandDispatched({

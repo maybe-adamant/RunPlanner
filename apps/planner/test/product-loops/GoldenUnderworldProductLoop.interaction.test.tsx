@@ -629,12 +629,13 @@ describe('underworld product loop', () => {
     );
     await view.user.click(screen.getByRole('button', { name: 'Oceanus' }));
     expect(screen.getByText('Finish and fix Erebus before Oceanus can be evaluated.')).toBeTruthy();
-    const start = screen.getByRole('button', { name: 'Start biome' });
+    await view.user.click(screen.getByRole('tab', { name: 'Room Doors' }));
+    const start = screen.getByRole('button', { name: 'Door 1 room' });
     expect(start.getAttribute('aria-disabled')).toBe('true');
     const before = currentProject(application);
     await view.user.click(start);
     const g = currentProject(application).route.biomes.find((biome) => biome.biomeKey === 'G');
-    expect(g?.topology).toBeNull();
+    expect(g?.topology?.occurrences).toHaveLength(1);
     expect(currentProject(application)).toBe(before);
   });
 

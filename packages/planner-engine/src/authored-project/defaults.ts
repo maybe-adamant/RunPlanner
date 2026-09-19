@@ -8,6 +8,8 @@ import {
 } from './model';
 import { ProjectDocumentContractError } from './validation';
 import { createDefaultRouteLoadout } from './loadout';
+import { resolveRoutePosition } from './route-context';
+import { createDefaultStartTopology } from './topology/construction';
 
 export interface CreateProjectDocumentOptions {
   readonly projectId: string;
@@ -78,7 +80,19 @@ export function createProjectDocument(
         return {
           biomeKey,
           state: createInitialBiomeState(layout),
-          topology: null,
+          topology: createDefaultStartTopology(
+            catalog,
+            layout,
+            resolveRoutePosition(
+              catalog,
+              {
+                routeKey: route.key,
+                itineraryBiomeKeys,
+              },
+              biomeKey,
+            ),
+            loadout,
+          ),
         };
       }),
     };

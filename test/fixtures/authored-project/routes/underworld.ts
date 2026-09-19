@@ -22,6 +22,7 @@ import {
   createShopOfferAddress,
   createTargetAddress,
   createTraitOfferAddress,
+  decodeProjectDocument,
   type BiomeAddress,
   type OccurrenceId,
   type ProjectDocument,
@@ -90,6 +91,21 @@ export function targetOccurrenceId(
 
 function source(occurrenceId: OccurrenceId) {
   return { kind: 'occurrence' as const, occurrenceId };
+}
+
+function withUnstartedBiome(project: ProjectDocument, biomeKey: string): ProjectDocument {
+  return decodeProjectDocument(
+    {
+      ...project,
+      route: {
+        ...project.route,
+        biomes: project.route.biomes.map((biome) =>
+          biome.biomeKey === biomeKey ? { ...biome, topology: null } : biome,
+        ),
+      },
+    },
+    catalog,
+  );
 }
 
 export function loadUnderworldFGProject(): ProjectDocument {
@@ -323,6 +339,7 @@ export function createCompleteFGIxionChaosProject(): ProjectDocument {
     route: createRouteAddress('Underworld'),
     configuredBiomeCount: 2,
   });
+  project = withUnstartedBiome(project, 'G');
   project = applyProjectCommand(project, catalog, {
     kind: 'CreateStart',
     biome: goldenGBiome,

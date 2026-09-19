@@ -98,14 +98,10 @@ describe('topology relational closure codec', () => {
   });
 
   it('derives staged selection from the selected spine rather than decision storage order', () => {
-    let document = applyProjectCommand(project('codec-staged-q', 'Surface', 4), catalog, {
-      kind: 'CreateStart',
-      biome: qBiome,
-      occurrenceId: createOccurrenceId('q-intro'),
-    });
+    let document = project('codec-staged-q', 'Surface', 4);
     document = createBatchTargets(document, {
       biome: qBiome,
-      sourceOccurrenceId: 'q-intro',
+      sourceOccurrenceId: 'Q:start',
       targets: [{ exitKey: 'exit1', occurrenceId: 'q-foyer', gameName: 'Q_Combat10' }],
     });
     document = createBatchTargets(document, {

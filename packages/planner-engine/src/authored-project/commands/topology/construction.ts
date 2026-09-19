@@ -7,16 +7,12 @@ import type {
   ExitDecisionSource,
   HubDecision,
   LocalVisitDecision,
-  OccurrenceId,
   ProjectDocument,
   RoomOccurrence,
 } from '../../model';
-import { type RoomOccurrenceRole } from '../../room-state/declaration';
-import { createDefaultRoomState } from '../../room-state/defaults';
-import { createDefaultRoomEncounterState } from '../../room-state/encounter-envelope';
+import type { RoomOccurrenceRole } from '../../room-state/declaration';
 import { isHostRouteDetourRoom } from '../../topology/query';
 import { sameExitDecisionSource } from '../../topology/source-identity';
-import { createDefaultRoomActionState } from '../../room-actions/state';
 import { failCommand, requireOccurrence, withBiome, type LocatedBiome } from '../contract';
 import type { TopologyCommand } from '../types';
 import { exitKeysForTopologySource } from '../topology-reconciliation';
@@ -85,64 +81,6 @@ export function appendDecision(
   return Object.freeze({
     ...topology,
     decisions: Object.freeze([...topology.decisions, decision]),
-  });
-}
-
-export function defaultOccurrence(
-  catalog: Catalog,
-  room: RoomDeclaration,
-  occurrenceId: OccurrenceId,
-  role: RoomOccurrenceRole,
-  entryActive: boolean,
-  resolvedStoreKey: string | undefined,
-  loadout: { readonly weaponKey: string; readonly aspectKey: string },
-  activeCageCount?: number,
-): RoomOccurrence {
-  const state = createDefaultRoomState(catalog, room, {
-    role,
-    entryActive,
-    ...(resolvedStoreKey === undefined ? {} : { resolvedStoreKey }),
-    loadout,
-    ...(activeCageCount === undefined ? {} : { activeCageCount }),
-  });
-  const encounters = createDefaultRoomEncounterState(
-    catalog,
-    room,
-    `occurrences.${occurrenceId}.encounters`,
-  );
-  return Object.freeze({
-    occurrenceId,
-    gameName: room.gameName,
-    state,
-    ...(state.kind === 'shop' && state.shop !== undefined
-      ? { acquisitionSites: Object.freeze({ roomExit: Object.freeze({}) }) }
-      : {}),
-    encounters,
-    roomActions: createDefaultRoomActionState(room),
-    additionalExits: Object.freeze([]),
-    ...(room.purgingPool === undefined
-      ? {}
-      : {
-          purgingPool: Object.freeze({
-            interacted: false,
-            traitKeyBySlot: Object.freeze({ left: null, middle: null, right: null }),
-          }),
-        }),
-    ...(room.surfaceShop?.forced === true
-      ? {
-          hermesShrine: Object.freeze({
-            offerBySlot: Object.freeze({ first: null, secondLeft: null, secondRight: null }),
-          }),
-        }
-      : {}),
-    ...(room.roomShop?.forced === true
-      ? {
-          stygianWell: Object.freeze({
-            interacted: false,
-            offerKeyBySlot: Object.freeze({ healing: null, secondLeft: null, secondRight: null }),
-          }),
-        }
-      : {}),
   });
 }
 

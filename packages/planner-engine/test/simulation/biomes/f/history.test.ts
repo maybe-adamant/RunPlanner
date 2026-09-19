@@ -78,6 +78,7 @@ describe('F takeover history', () => {
         kind: 'CreateStart',
         biome: dreamBiome,
         occurrenceId: createOccurrenceId('dream-f-opening-history-start'),
+        gameName: 'F_Opening01',
       },
     );
     const position = resolveRoutePosition(catalog, dream.route, 'F');

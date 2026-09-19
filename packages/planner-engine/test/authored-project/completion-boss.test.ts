@@ -303,12 +303,7 @@ describe('completion Boss variants', () => {
       itineraryBiomeKeys: ['I', 'F'],
       configuredBiomeCount: 1,
     });
-    const intro = createOccurrenceId('dream-i-intro');
-    project = applyProjectCommand(project, catalog, {
-      kind: 'CreateStart',
-      biome: dreamBiome,
-      occurrenceId: intro,
-    });
+    const intro = project.route.biomes[0]!.topology!.startOccurrenceId;
     const first = createExitDecisionAddress(dreamBiome, {
       kind: 'occurrence',
       occurrenceId: intro,
@@ -407,7 +402,7 @@ describe('completion Boss variants', () => {
         configuredBiomeCount: 1,
       }),
       catalog,
-      { kind: 'CreateStart', biome, occurrenceId: start },
+      { kind: 'CreateStart', biome, occurrenceId: start, gameName: 'F_Opening01' },
     );
     const opening = createExitDecisionAddress(biome, { kind: 'occurrence', occurrenceId: start });
     project = applyProjectCommand(project, catalog, { kind: 'CreateBatch', decision: opening });

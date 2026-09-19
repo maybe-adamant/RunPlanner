@@ -326,10 +326,19 @@ already-owned destination remain contract errors.
 ## Starts, Batches, Preboss, and Completion
 
 The catalog declares either an `authoredChoice` start or a declaration-fixed
-`fixedAuthored` start. `CreateStart` requires a selected game name for an
-authored choice; it derives the fixed declaration and rejects substitution. F
-has an authored Opening choice. G/H/I/O/P/Q have fixed Intros. N has fixed
-`N_Opening01`.
+`fixedAuthored` start. Exactly one declared entry is initialized atomically when
+its biome is configured; multiple choices remain unset until selected. This
+depends on declaration cardinality, not biome identity. Initialization creates
+only the entry occurrence, never downstream doors or Hub structure, and does
+not bypass assessment readiness. Existing configured prefixes remain untouched.
+
+`CreateStart` requires a selected game name for an authored choice; it derives
+the fixed declaration and rejects substitution. Decoding preserves imported
+null starts, which remain repairable by explicitly selecting their declared
+entry. `ClearTopology` removes the biome's topology and resource placements,
+then restores its sole default entry or leaves a multi-choice entry unset.
+These are atomic history edits. Automatically created entry IDs are stable and
+biome-scoped; imported occurrence IDs are not rewritten.
 
 Starting-room reward and encounter profiles are resolved for the route
 position before defaults, decoding or simulation consume them. The first
