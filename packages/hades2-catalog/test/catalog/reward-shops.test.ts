@@ -1,4 +1,6 @@
 import { CatalogContractError } from '@run-planner/hades2-catalog';
+import { catalog } from '../../src';
+import { validateRewardRouteRequirementReferences } from '../../src/compiler/rewards/requirements';
 import {
   createRewardKernelCatalog,
   replaceShopOption,
@@ -161,6 +163,10 @@ describe('reward compiler Shop normalizer', () => {
             'MetaCardPointsCommonDrop',
             'MetaCurrencyDrop',
             'GiftDrop',
+            'FireBoost',
+            'AirBoost',
+            'EarthBoost',
+            'WaterBoost',
           ],
         },
         {
@@ -235,7 +241,12 @@ describe('reward compiler Shop normalizer', () => {
         {
           key: 'MetaProgress',
           offerCount: 1,
-          options: ['WeaponPointsRareDrop', 'CardUpgradePointsDrop', 'CharonPointsDrop'],
+          options: [
+            'WeaponPointsRareDrop',
+            'CardUpgradePointsDrop',
+            'CharonPointsDrop',
+            'ElementalBoost',
+          ],
         },
       ],
       Q_WorldShop: [
@@ -286,7 +297,12 @@ describe('reward compiler Shop normalizer', () => {
         {
           key: 'MetaProgress',
           offerCount: 1,
-          options: ['WeaponPointsRareDrop', 'CardUpgradePointsDrop', 'CharonPointsDrop'],
+          options: [
+            'WeaponPointsRareDrop',
+            'CardUpgradePointsDrop',
+            'CharonPointsDrop',
+            'ElementalBoost',
+          ],
         },
       ],
     });
@@ -537,5 +553,17 @@ describe('reward compiler Shop normalizer', () => {
     ];
     for (const input of malformed)
       expect(() => createRewardKernelCatalog(input)).toThrow(CatalogContractError);
+  });
+
+  it('rejects a Shop route requirement that does not resolve to a declared route', () => {
+    const rewards = createRewardKernelCatalog(
+      replaceShopOption('WorldShop', 'GiftDrop', (option) => ({
+        ...option,
+        requirement: { kind: 'routeKeyEquals', routeKey: 'UnknownRoute' },
+      })),
+    );
+    expect(() => validateRewardRouteRequirementReferences(rewards, catalog.routes)).toThrow(
+      CatalogContractError,
+    );
   });
 });

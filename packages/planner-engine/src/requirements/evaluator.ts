@@ -22,6 +22,8 @@ export interface EncounterHistoryRequirementFacts {
 }
 
 export interface RequirementEvaluationContext {
+  /** Present when a declaration evaluates a route-owned predicate. */
+  readonly routeKey?: string;
   readonly counters: Readonly<Record<CounterAxis, number>>;
   readonly records: Readonly<Record<HistoryRecord, Readonly<Record<string, number>>>>;
   readonly currentRoomShopOptionNames: ReadonlySet<string>;
@@ -76,6 +78,13 @@ function requireEncounterHistory(
     throw new Error('Encounter-history requirement evaluated without encounter history facts');
   }
   return context.encounterHistory;
+}
+
+function requireRouteKey(context: RequirementEvaluationContext): string {
+  if (context.routeKey === undefined) {
+    throw new Error('Route-key requirement evaluated without route identity');
+  }
+  return context.routeKey;
 }
 
 export const requirementEvaluatorRegistry = Object.freeze({
@@ -166,6 +175,7 @@ export const requirementEvaluatorRegistry = Object.freeze({
     return clockwork.nonGoalRewardsAcquired < clockwork.maxNonGoalRewards - requirement.reserve;
   },
   flagEquals: (requirement, context) => context.flags[requirement.flag] === requirement.value,
+  routeKeyEquals: (requirement, context) => requireRouteKey(context) === requirement.routeKey,
 } satisfies RequirementEvaluatorRegistry);
 
 export function hasRequirementEvaluator(kind: string): kind is RequirementKind {
@@ -217,5 +227,7 @@ export function evaluateRequirement(
       return requirementEvaluatorRegistry.clockworkNonGoalCapacity(requirement, context);
     case 'flagEquals':
       return requirementEvaluatorRegistry.flagEquals(requirement, context);
+    case 'routeKeyEquals':
+      return requirementEvaluatorRegistry.routeKeyEquals(requirement, context);
   }
 }

@@ -191,6 +191,11 @@ export function normalizeRequirement(
         flag: requirement.flag,
         value: requirement.value,
       });
+    case 'routeKeyEquals':
+      return Object.freeze({
+        kind: 'routeKeyEquals',
+        routeKey: requireNonEmpty(requirement.routeKey, `${path}.routeKey`),
+      });
   }
 }
 
@@ -245,6 +250,7 @@ export function validateRequirementReferences(
     case 'minExits':
     case 'minRoomsSinceEvent':
     case 'recentEnvelopeSlotCount':
+    case 'routeKeyEquals':
       return;
   }
 }

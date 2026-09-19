@@ -25,6 +25,7 @@ import { validateRoomLayoutClosure } from './rooms/layout-closure';
 import { normalizeRooms } from './rooms/normalize';
 import { validateFixedAcquisitionTraitGrants } from './rewards/declarations';
 import { createRewardKernelCatalog } from './rewards/normalize';
+import { validateRewardRouteRequirementReferences } from './rewards/requirements';
 import { normalizeRoutes } from './routes';
 import {
   createTraitGiverByAcquisitionGameName,
@@ -86,6 +87,7 @@ export function createCatalog(input: RawCatalogInput): Catalog {
     exitTypes,
   );
   const routes = normalizeRoutes(input.routes, biomes, rooms);
+  validateRewardRouteRequirementReferences(rewards, routes);
   validateLifecycleBindings({
     rooms,
     profiles: roomLifecycleProfiles,

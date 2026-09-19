@@ -2,8 +2,8 @@
 
 ## Status and delivery boundary
 
-- Status: locked by user approval; Gate A complete and independently reviewed;
-  Gates B–E pending.
+- Status: locked by user approval; Gates A–B complete and independently reviewed;
+  Gate A committed as `29922aee`; Gate B awaiting commit; Gates C–E pending.
 - Base: planner `daca6903`; downstream game module `26c2feb`.
 - Input: `docs/investigations/DREAM_DIVE_SCOPE.md`, reassessed after route
   foundation closure. The completed foundation is not reopened.
@@ -49,7 +49,7 @@ a resource host through an internal execution-policy product.
 | ---------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
 | `RoomData.lua:AnomalyDoorRequirements` excludes Dream.                                                                                   | Extend G takeover availability, not Chaos or Zagreus topology.                                                                 |
 | `RunLogic.lua:656–744` excludes Dream from resource setup.                                                                               | No supported tool/fishing placements. Keep Meta Reward Stands' separate exclusion separate; do not invent a new stand feature. |
-| Ordinary Shop group 2 removes Ash/Psyche/Nectar and adds four individual elemental boosts (`StoreData.lua:260–268`).                     | Conditional option membership on the existing profile, including Travel Deal generation.                                       |
+| Ordinary Shop group 2 removes Ashes/Bones/Nectar and adds four individual elemental boosts (`StoreData.lua:260–268`).                    | Conditional option membership on the existing profile, including Travel Deal generation.                                       |
 | I/Q Shop group 5 replaces Nightmare/Moon Dust/Obol Points with ElementalBoost (`StoreData.lua:405–446,538–579`).                         | Mode requirement on shared options, composed with existing ordinal rules.                                                      |
 | Boosts already have acquisition-owned element contributions.                                                                             | Reuse settlement; individual boost = +1 matching element, ElementalBoost = +1 each.                                            |
 | Ixion, Plentiful Forage and Discovery declare Dream exclusions in `TraitData_Store.lua`, `TraitData_Demeter.lua`, `TraitData_Chaos.lua`. | Apply restrictions at their existing Well/trait eligibility contacts. Preserve independent conditions.                         |
@@ -154,6 +154,20 @@ Acceptance:
 
 Primary tests: catalog `reward-shops.test.ts`, engine reward-kernel behavior
 and Shop purchase chronology. Do not duplicate the full membership matrix in UI.
+
+Delivered: declaration-owned `routeKeyEquals` requirements with catalog route
+reference closure; reward facts carry the saved source route to initial Shop
+inventory and captured Travel Deal generation. Existing element settlement is
+unchanged. Run State's exhaustive requirement-copy renderer recognizes the new
+predicate without owning eligibility.
+
+Verification: five focused files / 95 tests passed. Independent review's
+refill-witness correction now uses the settled purchase branch and asserts its
+captured use record; both Dream contact tests passed again after remediation.
+The Dream witnesses use command-built authored state, materialization and
+production reward facts at the Shop contact, not a bypass of preboss eligibility
+in full-route simulation. All three workspace typechecks, changed-file lint,
+formatting and diff checks passed. No schema, protocol or fixture changes.
 
 ### C — Well and trait exclusions; Twist verification
 

@@ -60,6 +60,7 @@ describe('requirement evaluator registry', () => {
       'clockworkGoalsRemaining',
       'clockworkNonGoalCapacity',
       'flagEquals',
+      'routeKeyEquals',
     ]);
     expect(hasRequirementEvaluator('counterRange')).toBe(true);
     expect(hasRequirementEvaluator('externalSavePredicate')).toBe(false);
@@ -104,6 +105,17 @@ describe('requirement evaluator registry', () => {
         baseContext,
       ),
     ).toBe(true);
+  });
+
+  it('requires an exact route identity for route-owned predicates', () => {
+    const requirement = { kind: 'routeKeyEquals', routeKey: 'Dream' } as const;
+    expect(evaluateRequirement(requirement, { ...baseContext, routeKey: 'Dream' })).toBe(true);
+    expect(evaluateRequirement(requirement, { ...baseContext, routeKey: 'Underworld' })).toBe(
+      false,
+    );
+    expect(() => evaluateRequirement(requirement, baseContext)).toThrowError(
+      'Route-key requirement evaluated without route identity',
+    );
   });
 
   it('keeps store options, the chosen room reward, records, exits, and flags distinct', () => {

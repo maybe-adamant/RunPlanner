@@ -146,6 +146,7 @@ export function createRewardFacts({
     return fail('history has partial Clockwork facts');
   }
   const requirements: RequirementEvaluationContext = Object.freeze({
+    routeKey: sourceOrigin.routeKey,
     counters: Object.freeze({
       biomeDepthCache: view.ledgers.counters.biomeDepthCache,
       biomeEncounterDepth: view.ledgers.counters.biomeEncounterDepth,

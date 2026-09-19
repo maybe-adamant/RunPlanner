@@ -15,6 +15,7 @@ import {
   evaluateShopGenerationSupport,
   evaluateShopPurchaseGateAtSlot,
   factsWithHistory,
+  findShopIndexedGenerationWitnesses,
   findShopGenerationWitnesses,
   isOfferSupportedAtResolutionPoint,
   locallyValidRewardOffers,
@@ -35,6 +36,7 @@ function requirementContext(
   overrides: Partial<RequirementEvaluationContext> = {},
 ): RequirementEvaluationContext {
   return {
+    routeKey: 'Underworld',
     counters: {
       biomeDepthCache: 4,
       biomeEncounterDepth: 2,
@@ -79,8 +81,9 @@ function facts(
   };
 }
 
-function shopFacts(enteredBiomes: number): RewardKernelFacts {
+function shopFacts(enteredBiomes: number, routeKey = 'Underworld'): RewardKernelFacts {
   return facts([], {
+    routeKey,
     counters: { ...requirementContext().counters, enteredBiomes },
   });
 }
@@ -669,6 +672,66 @@ describe('offer and acquisition projections', () => {
 });
 
 describe('ordered shop transitions', () => {
+  function supportedShopGroupOptionKeys(
+    profileKey: 'WorldShop' | 'I_WorldShop' | 'Q_WorldShop',
+    groupKey: string,
+    enteredBiomes: number,
+    routeKey: string,
+  ): readonly string[] {
+    const profile = rewardKernelCatalog.shops.byKey[profileKey];
+    const group = profile?.groups.byKey[groupKey];
+    const slotIndex = profile?.slots.values.findIndex((slot) => slot.groupKey === groupKey) ?? -1;
+    if (profile === undefined || group === undefined || slotIndex < 0)
+      throw new Error(`missing ${profileKey}/${groupKey} Shop group`);
+    return group.options.values.flatMap((option) =>
+      findShopIndexedGenerationWitnesses(
+        rewardKernelCatalog,
+        profile,
+        slotIndex,
+        { rewardType: option.rewardType },
+        shopFacts(enteredBiomes, routeKey),
+      ).some((witness) => witness.optionKeys[slotIndex] === option.key)
+        ? [option.key]
+        : [],
+    );
+  }
+
+  it.each([1, 3])(
+    'applies Dream World Shop inventory independently of I/Q ordinal phase (entered biomes=%d)',
+    (enteredBiomes) => {
+      const ordinaryWorld = supportedShopGroupOptionKeys(
+        'WorldShop',
+        'MajorNonBoon',
+        enteredBiomes,
+        'Underworld',
+      );
+      const dreamWorld = supportedShopGroupOptionKeys(
+        'WorldShop',
+        'MajorNonBoon',
+        enteredBiomes,
+        'Dream',
+      );
+      expect(ordinaryWorld).toEqual(
+        expect.arrayContaining(['MetaCardPointsCommonDrop', 'MetaCurrencyDrop', 'GiftDrop']),
+      );
+      for (const optionKey of ['FireBoost', 'AirBoost', 'EarthBoost', 'WaterBoost'])
+        expect(ordinaryWorld).not.toContain(optionKey);
+      expect(dreamWorld).toEqual(
+        expect.arrayContaining(['FireBoost', 'AirBoost', 'EarthBoost', 'WaterBoost']),
+      );
+      for (const optionKey of ['MetaCardPointsCommonDrop', 'MetaCurrencyDrop', 'GiftDrop'])
+        expect(dreamWorld).not.toContain(optionKey);
+      for (const profileKey of ['I_WorldShop', 'Q_WorldShop'] as const) {
+        expect(
+          supportedShopGroupOptionKeys(profileKey, 'MetaProgress', enteredBiomes, 'Underworld'),
+        ).toEqual(['WeaponPointsRareDrop', 'CardUpgradePointsDrop', 'CharonPointsDrop']);
+        expect(
+          supportedShopGroupOptionKeys(profileKey, 'MetaProgress', enteredBiomes, 'Dream'),
+        ).toEqual(['ElementalBoost']);
+      }
+    },
+  );
+
   it('finds exact WorldShop generation witnesses and keeps distinct Hammer entries', () => {
     const profile = rewardKernelCatalog.shops.byKey.WorldShop!;
     const authored: readonly AuthoredShopOffer[] = [

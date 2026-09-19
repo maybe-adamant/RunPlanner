@@ -1,8 +1,9 @@
-import type { CatalogCollection } from '@run-planner/engine/catalog-schema';
+import type { CatalogCollection, RouteDeclaration } from '@run-planner/engine/catalog-schema';
 import type { RequirementExpression } from '@run-planner/engine/requirements';
 import type {
   RewardStoreDeclaration,
   RewardTypeDeclaration,
+  RewardKernelCatalog,
 } from '@run-planner/engine/reward-kernel';
 
 import { createCollection, requireNonEmpty } from '../common';
@@ -53,6 +54,7 @@ function validateRequirementRewardReferences(
     case 'minExits':
     case 'minRoomsSinceEvent':
     case 'recentEnvelopeSlotCount':
+    case 'routeKeyEquals':
       return;
   }
 }
@@ -130,3 +132,62 @@ export function normalizeStores(
 }
 
 export { normalizeAndValidateRequirement };
+
+function validateRouteRequirementReferences(
+  requirement: RequirementExpression,
+  routes: CatalogCollection<RouteDeclaration>,
+  path: string,
+): void {
+  switch (requirement.kind) {
+    case 'all':
+    case 'any':
+      requirement.requirements.forEach((child, index) =>
+        validateRouteRequirementReferences(child, routes, `${path}.requirements[${index}]`),
+      );
+      return;
+    case 'not':
+      validateRouteRequirementReferences(requirement.requirement, routes, `${path}.requirement`);
+      return;
+    case 'routeKeyEquals':
+      if (routes.byKey[requirement.routeKey] === undefined)
+        fail(`${path}.routeKey`, `unknown route ${requirement.routeKey}`);
+      return;
+    default:
+      return;
+  }
+}
+
+/** Completes route identity references after route normalization breaks the reward/route cycle. */
+export function validateRewardRouteRequirementReferences(
+  rewards: RewardKernelCatalog,
+  routes: CatalogCollection<RouteDeclaration>,
+): void {
+  rewards.stores.values.forEach((store) =>
+    store.entries.forEach((entry, index) => {
+      if (entry.requirement !== undefined)
+        validateRouteRequirementReferences(
+          entry.requirement,
+          routes,
+          `stores.${store.key}.entries[${index}].requirement`,
+        );
+    }),
+  );
+  rewards.shops.values.forEach((shop) =>
+    shop.groups.values.forEach((group) =>
+      group.options.values.forEach((option) => {
+        if (option.requirement !== undefined)
+          validateRouteRequirementReferences(
+            option.requirement,
+            routes,
+            `shops.${shop.key}.groups.${group.key}.options.${option.key}.requirement`,
+          );
+        if (option.purchaseRequirement !== undefined)
+          validateRouteRequirementReferences(
+            option.purchaseRequirement,
+            routes,
+            `shops.${shop.key}.groups.${group.key}.options.${option.key}.purchaseRequirement`,
+          );
+      }),
+    ),
+  );
+}

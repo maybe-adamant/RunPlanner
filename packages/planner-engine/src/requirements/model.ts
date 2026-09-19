@@ -119,4 +119,9 @@ export type RequirementExpression =
       readonly kind: 'flagEquals';
       readonly flag: CurrentRunFlag;
       readonly value: boolean;
+    }
+  | {
+      /** Exact saved route identity at the current evaluation frontier. */
+      readonly kind: 'routeKeyEquals';
+      readonly routeKey: string;
     };
