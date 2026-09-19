@@ -118,6 +118,7 @@ export const icarusTraits = [
     targetedAcquisition: {
       kind: 'upgradeHammerToRank2',
       target: 'upgradableHammer',
+      targetCountByAcquisitionOrdinal: [1, 1, 1, 2],
     },
   },
 ] as const satisfies readonly RawTraitDeclaration[];

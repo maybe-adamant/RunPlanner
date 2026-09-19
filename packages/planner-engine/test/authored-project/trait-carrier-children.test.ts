@@ -83,10 +83,7 @@ describe('trait carrier children', () => {
     expect(updated.options[0]).toBe(value.options[0]);
     expect(updated.options[1]?.targetTraitKey).toBe('HeraWeaponBoon');
   });
-  it.each([
-    ['Hera', 'BoonDecayBoon', 'HeraWeaponBoon'],
-    ['Icarus', 'UpgradeHammerBoon', 'StaffDoubleAttackTrait'],
-  ])(
+  it.each([['Hera', 'BoonDecayBoon', 'HeraWeaponBoon']])(
     'retains and repairs the owned target for %s without changing sibling or offer data',
     (giverKey, traitKey, targetTraitKey) => {
       const value: AuthoredTraitOfferTraits = {
@@ -135,6 +132,36 @@ describe('trait carrier children', () => {
       ).toThrow('current selected trait');
     },
   );
+
+  it('retains Latest Model ordered partial targets at the existing repair address', () => {
+    const value: AuthoredTraitOfferTraits = {
+      kind: 'traits',
+      giverKey: 'Icarus',
+      selectedOptionKey: 'option1',
+      options: [
+        { traitKey: 'UpgradeHammerBoon', icarusHammerTargets: ['StaffFastSpecialTrait'] },
+        { traitKey: 'CastHazardBoon' },
+      ],
+    };
+    const child = discoverAuthoredTraitCarrierChildren(catalog, address, value)[0];
+    if (child?.kind !== 'latestModelTargets') throw new Error('Latest Model child missing');
+    expect(child.address.kind).toBe('traitAcquisitionTarget');
+    expect(child.targets).toEqual(['StaffFastSpecialTrait']);
+    const targets = ['StaffFastSpecialTrait', 'StaffDoubleAttackTrait'] as [string, string];
+    const changed = updateAuthoredTraitCarrierChild(value, {
+      kind: 'latestModelTargets',
+      child,
+      icarusHammerTargets: targets,
+    });
+    expect(changed.options[0]?.icarusHammerTargets).toEqual(targets);
+    expect(changed.options[1]).toBe(value.options[1]);
+    expect(Object.isFrozen(changed.options[0]?.icarusHammerTargets)).toBe(true);
+    targets.reverse();
+    expect(changed.options[0]?.icarusHammerTargets).toEqual([
+      'StaffFastSpecialTrait',
+      'StaffDoubleAttackTrait',
+    ]);
+  });
 
   it('discovers All Together per-set children and preserves legal null as authored data', () => {
     const unresolved = offer('AllElementalBoon');

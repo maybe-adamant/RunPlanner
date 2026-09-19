@@ -45,6 +45,14 @@ export type AuthoredTraitCarrierChild =
       readonly authoredComplete: boolean;
     }
   | {
+      readonly kind: 'latestModelTargets';
+      readonly address: TraitAcquisitionTargetAddress;
+      readonly optionKey: TraitOptionKey;
+      readonly traitKey: string;
+      readonly targets?: readonly [string] | readonly [string, string];
+      readonly authoredComplete: boolean;
+    }
+  | {
       readonly kind: 'allTogetherSet';
       readonly address: AllTogetherSetAddress;
       readonly optionKey: TraitOptionKey;
@@ -124,6 +132,12 @@ export type AuthoredTraitCarrierPayload =
       readonly authoredComplete: boolean;
     }
   | {
+      readonly kind: 'latestModelTargets';
+      readonly traitKey: string;
+      readonly targets?: readonly [string] | readonly [string, string];
+      readonly authoredComplete: boolean;
+    }
+  | {
       readonly kind: 'allTogetherSet';
       readonly traitKey: string;
       readonly setKey: import('../../catalog-schema').DirectTraitSetKey;
@@ -146,6 +160,17 @@ export function discoverAuthoredTraitCarrierPayloads(
 ): readonly AuthoredTraitCarrierPayload[] {
   const declaration = catalog.traits.byKey[traitKey];
   if (declaration === undefined) return Object.freeze([]);
+  if (declaration.targetedAcquisition?.kind === 'upgradeHammerToRank2')
+    return Object.freeze([
+      Object.freeze({
+        kind: 'latestModelTargets' as const,
+        traitKey,
+        ...(outcome.icarusHammerTargets === undefined
+          ? {}
+          : { targets: outcome.icarusHammerTargets }),
+        authoredComplete: outcome.icarusHammerTargets !== undefined,
+      }),
+    ]);
   if (declaration.targetedAcquisition !== undefined)
     return Object.freeze([
       Object.freeze({
@@ -305,6 +330,14 @@ export function discoverAuthoredTraitCarrierChildren(
             optionKey: childOptionKey,
           }),
         );
+      else if (payload.kind === 'latestModelTargets')
+        children.push(
+          Object.freeze({
+            ...payload,
+            address: createTraitAcquisitionTargetAddress(address, childOptionKey),
+            optionKey: childOptionKey,
+          }),
+        );
       else if (payload.kind === 'allTogetherSet')
         children.push(
           Object.freeze({
@@ -440,6 +473,11 @@ export type AuthoredTraitCarrierChildUpdate =
       readonly targetTraitKey: string;
     }
   | {
+      readonly kind: 'latestModelTargets';
+      readonly child: Extract<AuthoredTraitCarrierChild, { readonly kind: 'latestModelTargets' }>;
+      readonly icarusHammerTargets: readonly [string] | readonly [string, string];
+    }
+  | {
       readonly kind: 'allTogetherSet';
       readonly child: Extract<AuthoredTraitCarrierChild, { readonly kind: 'allTogetherSet' }>;
       readonly allTogetherResult: AuthoredAllTogetherResult;
@@ -490,19 +528,26 @@ export function updateAuthoredTraitCarrierChild(
   }
   const option = requireOwnedOption(offer, update.child);
   const updated =
-    update.kind === 'traitAcquisitionTarget'
-      ? Object.freeze({ ...option, targetTraitKey: update.targetTraitKey })
-      : update.kind === 'allTogetherSet'
-        ? Object.freeze({ ...option, allTogetherResult: update.allTogetherResult })
-        : update.kind === 'naturalSelectionResult'
-          ? Object.freeze({ ...option, naturalSelectionTargets: update.targets })
-          : update.kind === 'circeResolution'
-            ? Object.freeze({ ...option, circeResolution: update.value })
-            : update.kind === 'echoPomTarget'
-              ? Object.freeze({ ...option, echoPomTarget: update.value })
-              : update.kind === 'echoLastRunBoon'
-                ? Object.freeze({ ...option, echoLastRunBoon: update.value })
-                : option;
+    update.kind === 'latestModelTargets'
+      ? Object.freeze({
+          ...option,
+          icarusHammerTargets: Object.freeze([
+            ...update.icarusHammerTargets,
+          ]) as typeof update.icarusHammerTargets,
+        })
+      : update.kind === 'traitAcquisitionTarget'
+        ? Object.freeze({ ...option, targetTraitKey: update.targetTraitKey })
+        : update.kind === 'allTogetherSet'
+          ? Object.freeze({ ...option, allTogetherResult: update.allTogetherResult })
+          : update.kind === 'naturalSelectionResult'
+            ? Object.freeze({ ...option, naturalSelectionTargets: update.targets })
+            : update.kind === 'circeResolution'
+              ? Object.freeze({ ...option, circeResolution: update.value })
+              : update.kind === 'echoPomTarget'
+                ? Object.freeze({ ...option, echoPomTarget: update.value })
+                : update.kind === 'echoLastRunBoon'
+                  ? Object.freeze({ ...option, echoLastRunBoon: update.value })
+                  : option;
   const options = [...offer.options];
   options[optionIndex(update.child.optionKey)] = updated;
   return Object.freeze({

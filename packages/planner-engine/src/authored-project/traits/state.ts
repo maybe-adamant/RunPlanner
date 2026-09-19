@@ -8,6 +8,8 @@ import type { LevelResolutionEffectSource } from '../../reward-kernel/level-effe
 export interface AuthoredTraitCarrierOutcome {
   /** Exact random equipped-trait outcome for a targeted acquisition. */
   readonly targetTraitKey?: string;
+  /** Latest Model's distinct frozen Rank-I Hammer targets. */
+  readonly icarusHammerTargets?: readonly [string] | readonly [string, string];
   /** All Together's complete one-result-per-source-set outcome when authored. */
   readonly allTogetherResult?: AuthoredAllTogetherResult;
   /** Natural Selection's complete ordered successful-increment outcome. */

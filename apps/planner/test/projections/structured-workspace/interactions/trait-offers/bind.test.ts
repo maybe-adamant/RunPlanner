@@ -1131,6 +1131,57 @@ describe('trait-offers/bind', () => {
     expect(dormant.children).toEqual([]);
   });
 
+  it('binds Latest Model plural targets at the existing acquisition repair address', () => {
+    const project = createGoldenFGHIProject();
+    const baseSession = createCandidateSessionFactory(catalog).bind(
+      simulateProjectAssembly(catalog, project),
+    );
+    const traitCarrierChildDomain = vi.fn(() => ({
+      kind: 'latestModelTargetsDomain' as const,
+      result: {
+        sourceTraitKey: 'UpgradeHammerBoon',
+        requiredCount: 2,
+        branchAgreement: true,
+        candidates: ['StaffDoubleAttackTrait', 'StaffFastSpecialTrait'].map((traitKey) => ({
+          kind: 'traitAcquisitionTarget' as const,
+          result: { traitKey, supported: true, branchSupport: [true], findings: [] },
+        })),
+      },
+    }));
+    const { interactions } = bind(project, 'Underworld', 'F', undefined, {
+      ...baseSession,
+      traitCarrierChildDomain,
+    } as unknown as CandidateProjectionSession);
+    const interaction = [...interactions.traitOffers.values()].find(
+      (candidate) => candidate.giver.providerKind !== 'hammer',
+    )!;
+    const draft: AuthoredTraitOfferTraits = {
+      kind: 'traits',
+      giverKey: 'Icarus',
+      selectedOptionKey: 'option1',
+      options: [
+        { traitKey: 'UpgradeHammerBoon' },
+        { traitKey: 'OmegaExplodeBoon' },
+        { traitKey: 'CastHazardBoon' },
+      ],
+    };
+    const child = interaction
+      .optionDomain(draft, 'option1')
+      .children.find((entry) => entry.child.kind === 'latestModelTargets');
+    if (child?.child.kind !== 'latestModelTargets')
+      throw new Error('Latest Model repair child missing');
+    expect(child.child.address.kind).toBe('traitAcquisitionTarget');
+    const latest = child as Extract<typeof child, { child: { kind: 'latestModelTargets' } }>;
+    expect(latest.forOffer(draft).load()).toMatchObject({
+      requiredCount: 2,
+      branchAgreement: true,
+    });
+    expect(
+      latest.update(draft, ['StaffFastSpecialTrait', 'StaffDoubleAttackTrait']).options[0]
+        ?.icarusHammerTargets,
+    ).toEqual(['StaffFastSpecialTrait', 'StaffDoubleAttackTrait']);
+  });
+
   it('bounds the largest declared Hammer domain to one focused query batch', async () => {
     const events: CandidateEvaluationEvent[] = [];
     const project = createGoldenFGHIProject();

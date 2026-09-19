@@ -980,7 +980,7 @@ describe('engine-owned F/G execution semantic product', () => {
         kind: 'traits',
         giverKey: 'Icarus',
         options: [
-          { traitKey: 'UpgradeHammerBoon', targetTraitKey: 'StaffDoubleAttackTrait' },
+          { traitKey: 'UpgradeHammerBoon', icarusHammerTargets: ['StaffDoubleAttackTrait'] },
           { traitKey: 'OmegaExplodeBoon' },
           { traitKey: 'CastHazardBoon' },
         ],
@@ -1051,9 +1051,9 @@ describe('engine-owned F/G execution semantic product', () => {
     const executionOffer = transaction.resolution.offer;
     expect(executionOffer.options[0]).toMatchObject({
       key: 'UpgradeHammerBoon',
-      icarusHammerTarget: 'StaffDoubleAttackTrait',
+      icarusHammerTargets: ['StaffDoubleAttackTrait'],
     });
-    expect(executionOffer.options[1]).not.toHaveProperty('icarusHammerTarget');
+    expect(executionOffer.options[1]).not.toHaveProperty('icarusHammerTargets');
     expect(() => decodeExecutionTraitOffer(executionOffer, 'Icarus offer')).not.toThrow();
   });
 

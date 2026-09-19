@@ -148,11 +148,11 @@ export function executionTimelineTransactions(
           targetedAcquisitionTransitions,
           `trait targeted acquisition ${semanticAddressKey(selected.address)}`,
         );
-    const icarusHammerTarget =
+    const icarusHammerTargets =
       selected.offer.giverKey === 'Icarus' &&
       selectedOption?.traitKey === 'UpgradeHammerBoon' &&
       targetedAcquisition?.kind === 'upgradeHammerToRank2'
-        ? targetedAcquisition.targetTraitKey
+        ? targetedAcquisition.targetTraitKeys
         : undefined;
     const targetTraitKey =
       targetedAcquisition?.kind === 'promoteGodTraitToHeroic'
@@ -272,9 +272,9 @@ export function executionTimelineTransactions(
             ...(circeResolution === undefined || index !== selectedOptionIndex
               ? {}
               : { circeResolution }),
-            ...(icarusHammerTarget === undefined || index !== selectedOptionIndex
+            ...(icarusHammerTargets === undefined || index !== selectedOptionIndex
               ? {}
-              : { icarusHammerTarget }),
+              : { icarusHammerTargets }),
             ...(echoPomTarget === undefined || index !== selectedOptionIndex
               ? {}
               : { echoPomTarget }),

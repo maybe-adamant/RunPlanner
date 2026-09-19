@@ -262,6 +262,7 @@ export function normalizeTraits(
       const acquisition = requireObject(trait.targetedAcquisition, acquisitionPath) as unknown as {
         readonly kind?: unknown;
         readonly target?: unknown;
+        readonly targetCountByAcquisitionOrdinal?: unknown;
       };
       const kind = closedValue(
         acquisition.kind,
@@ -286,7 +287,29 @@ export function normalizeTraits(
           target: target as 'superchargeableGodTrait',
         });
       } else {
-        targetedAcquisition = Object.freeze({ kind, target: target as 'upgradableHammer' });
+        const counts = requireArray(
+          acquisition.targetCountByAcquisitionOrdinal,
+          `${acquisitionPath}.targetCountByAcquisitionOrdinal`,
+        );
+        if (
+          Object.keys(acquisition).length !== 3 ||
+          counts.length !== 4 ||
+          counts.some((count) => !Number.isInteger(count as number) || (count as number) <= 0)
+        )
+          fail(
+            acquisitionPath,
+            'upgradeHammerToRank2 requires four positive ordinal target counts',
+          );
+        targetedAcquisition = Object.freeze({
+          kind,
+          target: target as 'upgradableHammer',
+          targetCountByAcquisitionOrdinal: Object.freeze([...counts]) as [
+            number,
+            number,
+            number,
+            number,
+          ],
+        });
       }
     }
     // Requirement operands are checked against the complete trait collection after it exists.
@@ -407,6 +430,15 @@ export function normalizeTraits(
       fail(
         `${path}.selectedDisposition`,
         'Circe ordinal resolutions are reserved for Circe rewards',
+      );
+    if (
+      trait.key === 'UpgradeHammerBoon' &&
+      (targetedAcquisition?.kind !== 'upgradeHammerToRank2' ||
+        targetedAcquisition.targetCountByAcquisitionOrdinal.join(',') !== '1,1,1,2')
+    )
+      fail(
+        `${path}.targetedAcquisition`,
+        'Latest Model must declare ordinal target counts 1,1,1,2',
       );
     if (trait.key === 'SupplyDropBoon') {
       if (

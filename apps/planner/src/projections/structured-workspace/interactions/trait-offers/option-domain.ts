@@ -66,6 +66,7 @@ export function bindTraitOfferOptionDomain(input: {
         .filter(
           (child) =>
             (child.kind === 'traitAcquisitionTarget' ||
+              child.kind === 'latestModelTargets' ||
               child.kind === 'allTogetherSet' ||
               child.kind === 'naturalSelectionResult') &&
             (child.optionKey === optionKey ||
@@ -276,6 +277,52 @@ export function bindTraitOfferOptionDomain(input: {
                     kind: 'traitAcquisitionTarget',
                     child,
                     targetTraitKey,
+                  }),
+              });
+            case 'latestModelTargets':
+              return Object.freeze({
+                child,
+                forOffer: (offer: AuthoredTraitOfferTraits) =>
+                  Object.freeze({
+                    load: () => {
+                      const evaluated = candidates.traitCarrierChildDomain(
+                        control.address,
+                        offer,
+                        child,
+                      );
+                      if (evaluated.kind !== 'latestModelTargetsDomain') return undefined;
+                      return Object.freeze({
+                        requiredCount: evaluated.result.requiredCount,
+                        branchAgreement: evaluated.result.branchAgreement,
+                        picker: projectDirectTraitOutcomePicker(
+                          evaluated.result.candidates.map((candidate) =>
+                            Object.freeze({
+                              value: candidate.result.traitKey,
+                              support: candidate.result.supported
+                                ? ('possible' as const)
+                                : ('impossible' as const),
+                              branchSupport: candidate.result.branchSupport,
+                              selected:
+                                offer.options[
+                                  optionIndex(child.optionKey)
+                                ]?.icarusHammerTargets?.includes(candidate.result.traitKey) ??
+                                false,
+                            }),
+                          ),
+                          (traitKey) => catalog.traits.byKey[traitKey]?.label ?? traitKey,
+                          (traitKey) => traitKey,
+                        ),
+                      });
+                    },
+                  }),
+                update: (
+                  offer: AuthoredTraitOfferTraits,
+                  targets: readonly [string] | readonly [string, string],
+                ) =>
+                  updateAuthoredTraitCarrierChild(offer, {
+                    kind: 'latestModelTargets',
+                    child,
+                    icarusHammerTargets: targets,
                   }),
               });
             case 'allTogetherSet':

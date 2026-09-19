@@ -69,6 +69,7 @@ export function decodeEncounterTraitOffer(
     const option = expectRecord(rawOptions[index], `${path}.options.${optionKey}`);
     const hasRarity = option.rarity !== undefined;
     const hasTarget = option.targetTraitKey !== undefined;
+    const hasIcarusHammerTargets = option.icarusHammerTargets !== undefined;
     const hasCirceResolution = option.circeResolution !== undefined;
     const hasEchoPomTarget = 'echoPomTarget' in option;
     const hasEchoLastRunBoon = 'echoLastRunBoon' in option;
@@ -81,6 +82,7 @@ export function decodeEncounterTraitOffer(
         'traitKey',
         ...(hasRarity ? ['rarity'] : []),
         ...(hasTarget ? ['targetTraitKey'] : []),
+        ...(hasIcarusHammerTargets ? ['icarusHammerTargets'] : []),
         ...(hasCirceResolution ? ['circeResolution'] : []),
         ...(hasEchoPomTarget ? ['echoPomTarget'] : []),
         ...(hasEchoLastRunBoon ? ['echoLastRunBoon'] : []),
@@ -128,6 +130,30 @@ export function decodeEncounterTraitOffer(
       );
     const targetTraitKey = hasTarget
       ? expectString(option.targetTraitKey, `${path}.options.${optionKey}.targetTraitKey`)
+      : undefined;
+    const icarusHammerTargets = hasIcarusHammerTargets
+      ? (() => {
+          const keys = expectArray(
+            option.icarusHammerTargets,
+            `${path}.options.${optionKey}.icarusHammerTargets`,
+          ).map((entry, index) =>
+            expectNonBlankString(
+              entry,
+              `${path}.options.${optionKey}.icarusHammerTargets[${index}]`,
+            ),
+          );
+          if (keys.length < 1 || keys.length > 2 || new Set(keys).size !== keys.length)
+            failProjectDocument(
+              `${path}.options.${optionKey}.icarusHammerTargets`,
+              'requires one or two distinct trait keys',
+            );
+          if (keys.some((key) => catalog.traits.byKey[key] === undefined))
+            failProjectDocument(
+              `${path}.options.${optionKey}.icarusHammerTargets`,
+              'contains an unknown trait',
+            );
+          return Object.freeze(keys) as AuthoredTraitOption['icarusHammerTargets'];
+        })()
       : undefined;
     let circeResolution: AuthoredCirceResolution | undefined;
     if (hasCirceResolution) {
@@ -222,6 +248,23 @@ export function decodeEncounterTraitOffer(
           `unknown trait ${targetTraitKey}`,
         );
     }
+    if (icarusHammerTargets !== undefined) {
+      if (
+        trait.targetedAcquisition?.kind !== 'upgradeHammerToRank2' ||
+        targetTraitKey !== undefined
+      )
+        failProjectDocument(
+          `${path}.options.${optionKey}.icarusHammerTargets`,
+          'is supported only by Latest Model without a scalar target',
+        );
+    } else if (
+      trait.targetedAcquisition?.kind === 'upgradeHammerToRank2' &&
+      targetTraitKey !== undefined
+    )
+      failProjectDocument(
+        `${path}.options.${optionKey}.targetTraitKey`,
+        'Latest Model requires Hammer targets, not a scalar target',
+      );
     let echoPomTarget: string | null | undefined;
     if (hasEchoPomTarget) {
       if (option.echoPomTarget !== null && typeof option.echoPomTarget !== 'string')
@@ -312,6 +355,7 @@ export function decodeEncounterTraitOffer(
         ? {
             traitKey,
             ...(targetTraitKey === undefined ? {} : { targetTraitKey }),
+            ...(icarusHammerTargets === undefined ? {} : { icarusHammerTargets }),
             ...(circeResolution === undefined ? {} : { circeResolution }),
             ...(hasEchoPomTarget ? { echoPomTarget: echoPomTarget! } : {}),
             ...(echoLastRunBoon === undefined ? {} : { echoLastRunBoon }),
@@ -323,6 +367,7 @@ export function decodeEncounterTraitOffer(
             traitKey,
             rarity: rarity as NonNullable<AuthoredTraitOption['rarity']>,
             ...(targetTraitKey === undefined ? {} : { targetTraitKey }),
+            ...(icarusHammerTargets === undefined ? {} : { icarusHammerTargets }),
             ...(circeResolution === undefined ? {} : { circeResolution }),
             ...(hasEchoPomTarget ? { echoPomTarget: echoPomTarget! } : {}),
             ...(echoLastRunBoon === undefined ? {} : { echoLastRunBoon }),

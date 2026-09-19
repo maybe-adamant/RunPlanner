@@ -27,6 +27,7 @@ import {
   traitOfferStartingOutcome,
   assessSelectedTargetedAcquisition,
   selectedTargetedAcquisitionTargetKeys,
+  latestModelTargetDomain,
   type TraitOfferBranchAssessment,
   type TraitOfferCandidateContext,
   evaluateReachedLevelResolution,
@@ -129,6 +130,7 @@ export interface TraitOfferCandidateCapability {
   ) => readonly {
     readonly sourceSupported: boolean;
     readonly targetTraitKeys: readonly string[];
+    readonly requiredCount?: number;
   }[];
   /** Exact selected-Circe pre-effect domains; no consumer receives Arcana/Fear state. */
   readonly circeResolution: (
@@ -525,6 +527,7 @@ export function createTraitOfferCandidateArtifacts(
                   catalog,
                   value,
                   context.before,
+                  context.context,
                 ),
               });
             }),
@@ -664,13 +667,26 @@ export function createTraitOfferCandidateArtifacts(
                   context.arcanaFear,
                 ),
               )[optionIndex(optionKey)];
+              const latest =
+                catalog.traits.byKey[option.traitKey]?.targetedAcquisition?.kind ===
+                'upgradeHammerToRank2'
+                  ? latestModelTargetDomain(
+                      catalog,
+                      option.traitKey,
+                      secondary?.before ?? context.before,
+                      context.context.acquisitionOrdinal!,
+                    )
+                  : undefined;
               return Object.freeze({
                 sourceSupported: secondary !== undefined || (sourceAssessment?.legal ?? false),
-                targetTraitKeys: selectedTargetedAcquisitionTargetKeys(
-                  catalog,
-                  option,
-                  secondary?.before ?? context.before,
-                ),
+                targetTraitKeys:
+                  latest?.targetTraitKeys ??
+                  selectedTargetedAcquisitionTargetKeys(
+                    catalog,
+                    option,
+                    secondary?.before ?? context.before,
+                  ),
+                ...(latest === undefined ? {} : { requiredCount: latest.requiredCount }),
               });
             }),
           ),

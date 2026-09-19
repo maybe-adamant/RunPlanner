@@ -246,7 +246,7 @@ export function traitOffer(value: unknown, label: string): ExecutionTraitOffer {
         'targetTraitKey',
         'concaveStoneResult',
         'circeResolution',
-        'icarusHammerTarget',
+        'icarusHammerTargets',
         'echoPomTarget',
         'echoLastRunBoon',
         'replacement',
@@ -333,13 +333,21 @@ export function traitOffer(value: unknown, label: string): ExecutionTraitOffer {
               `${label}.options[${index}].circeResolution`,
             ),
           }),
-      ...(option.icarusHammerTarget === undefined
+      ...(option.icarusHammerTargets === undefined
         ? {}
         : {
-            icarusHammerTarget: stringValue(
-              option.icarusHammerTarget,
-              `${label}.options[${index}].icarusHammerTarget`,
-            ),
+            icarusHammerTargets: (() => {
+              const targets = stringArray(
+                option.icarusHammerTargets,
+                `${label}.options[${index}].icarusHammerTargets`,
+                2,
+              );
+              if (targets.length === 0 || new Set(targets).size !== targets.length)
+                fail(
+                  `${label}.options[${index}].icarusHammerTargets must be nonempty and distinct`,
+                );
+              return Object.freeze(targets);
+            })(),
           }),
       ...(option.echoPomTarget === undefined
         ? {}
@@ -521,11 +529,11 @@ export function traitOffer(value: unknown, label: string): ExecutionTraitOffer {
     }
   }
   for (const [index, option] of options.entries()) {
-    if (option.icarusHammerTarget !== undefined) {
+    if (option.icarusHammerTargets !== undefined) {
       if (record.giver !== 'Icarus' || option.key !== 'UpgradeHammerBoon')
-        fail(`${label}.options[${index}].icarusHammerTarget requires Icarus Latest Model`);
+        fail(`${label}.options[${index}].icarusHammerTargets requires Icarus Latest Model`);
       if (availableOptionKeys[index] !== selected)
-        fail(`${label}.options[${index}].icarusHammerTarget must belong to the selected option`);
+        fail(`${label}.options[${index}].icarusHammerTargets must belong to the selected option`);
     }
   }
   for (const [index, option] of options.entries()) {

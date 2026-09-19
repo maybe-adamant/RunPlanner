@@ -188,7 +188,26 @@ export interface WorkspaceNaturalSelectionDomain {
   readonly picker: ContextualPickerModel<string>;
 }
 
+export interface WorkspaceLatestModelTargetsDomain {
+  readonly requiredCount: number;
+  readonly branchAgreement: boolean;
+  readonly picker: ContextualPickerModel<string>;
+}
+
 export type WorkspaceTraitCarrierChildInteraction =
+  | {
+      readonly child: Extract<
+        WorkspaceTraitCarrierChildControl,
+        { readonly kind: 'latestModelTargets' }
+      >;
+      readonly forOffer: (offer: AuthoredTraitOfferTraits) => {
+        readonly load: () => WorkspaceLatestModelTargetsDomain | undefined;
+      };
+      readonly update: (
+        offer: AuthoredTraitOfferTraits,
+        targets: readonly [string] | readonly [string, string],
+      ) => AuthoredTraitOfferTraits;
+    }
   | {
       readonly child: Extract<
         WorkspaceTraitCarrierChildControl,

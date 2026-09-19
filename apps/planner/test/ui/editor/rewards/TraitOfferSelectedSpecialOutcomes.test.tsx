@@ -29,6 +29,7 @@ import { semanticOwnerNavigated } from '@planner/state/editorSessionSlice';
 import type { WorkspaceInteractionCatalog } from '@planner/projections/structured-workspace';
 import { TraitOfferDialog, TraitOfferEditor } from '@planner/ui/editor/rewards/TraitOfferEditor';
 import { TraitOfferCirceResolution } from '@planner/ui/editor/rewards/TraitOfferCirceResolution';
+import { TraitOfferSelectedOutcome } from '@planner/ui/editor/rewards/TraitOfferSelectedOutcome';
 import { semanticOwnerControlElementId } from '@planner/ui/feedback/semanticOwner';
 import {
   createGoldenFGHIProject,
@@ -39,6 +40,86 @@ import {
 afterEach(cleanup);
 
 describe('selected outcomes', () => {
+  it('stages two Latest Model targets and can replace a completed selection', async () => {
+    const user = userEvent.setup();
+    const application = createApplication();
+    application.store.dispatch(authoredProjectReplaced(createGoldenFGHIProject()));
+    const workspace = application.selectStructuredWorkspace(application.store.getState())!;
+    const base = [...workspace.interactions.traitOffers.values()].find(
+      (candidate) => candidate.giver.providerKind !== 'hammer',
+    )!;
+    const value: AuthoredTraitOfferTraits = {
+      kind: 'traits',
+      giverKey: 'Icarus',
+      selectedOptionKey: 'option1',
+      options: [
+        { traitKey: 'UpgradeHammerBoon' },
+        { traitKey: 'OmegaExplodeBoon' },
+        { traitKey: 'CastHazardBoon' },
+      ],
+    };
+    const first = 'StaffDoubleAttackTrait';
+    const second = 'StaffFastSpecialTrait';
+    const child = base
+      .optionDomain(value, 'option1')
+      .children.find((entry) => entry.child.kind === 'latestModelTargets');
+    if (child?.child.kind !== 'latestModelTargets') throw new Error('Latest Model child missing');
+    const domain = {
+      requiredCount: 2,
+      branchAgreement: true,
+      picker: pickerModel(
+        [first, second].map((key) => ({
+          value: key,
+          label: application.catalog.traits.byKey[key]!.label,
+        })),
+      ),
+    };
+    const interaction = {
+      ...base,
+      optionDomain: (
+        offer: AuthoredTraitOfferTraits,
+        key: Parameters<typeof base.optionDomain>[1],
+      ) => ({
+        ...base.optionDomain(offer, key),
+        children: [{ ...child, forOffer: () => ({ load: () => domain }) }],
+      }),
+    } as typeof base;
+    const onUpdate = vi.fn();
+    const view = (offer: AuthoredTraitOfferTraits) => (
+      <Provider store={application.store}>
+        <TraitOfferSelectedOutcome
+          interaction={interaction}
+          value={offer}
+          onUpdate={onUpdate}
+          onOpenEchoLastRunBoon={() => undefined}
+        />
+      </Provider>
+    );
+    const { rerender } = render(view(value));
+    await user.click(await screen.findByLabelText('Latest Model target'));
+    await user.click(
+      screen.getByRole('option', { name: application.catalog.traits.byKey[first]!.label }),
+    );
+    expect(onUpdate).not.toHaveBeenCalled();
+    expect(
+      screen.queryByRole('option', { name: application.catalog.traits.byKey[first]!.label }),
+    ).toBeNull();
+    await user.click(
+      screen.getByRole('option', { name: application.catalog.traits.byKey[second]!.label }),
+    );
+    const saved = onUpdate.mock.calls.at(-1)![0] as AuthoredTraitOfferTraits;
+    expect(saved.options[0]?.icarusHammerTargets).toEqual([first, second]);
+    rerender(view(saved));
+    await user.click(await screen.findByLabelText('Latest Model target'));
+    await user.click(
+      screen.getByRole('option', { name: application.catalog.traits.byKey[second]!.label }),
+    );
+    await user.click(
+      screen.getByRole('option', { name: application.catalog.traits.byKey[first]!.label }),
+    );
+    expect(onUpdate.mock.calls.at(-1)![0].options[0].icarusHammerTargets).toEqual([second, first]);
+  });
+
   it('resets an incomplete Circe Arcana draft when the resolution effect changes', async () => {
     const user = userEvent.setup();
     const onSelect = vi.fn();

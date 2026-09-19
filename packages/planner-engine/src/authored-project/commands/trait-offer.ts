@@ -179,6 +179,22 @@ function validateOffer(
       if (catalog.traits.byKey[option.targetTraitKey] === undefined)
         failCommand(command, `unknown target trait ${option.targetTraitKey}`);
     }
+    if (option.icarusHammerTargets !== undefined) {
+      if (
+        trait.targetedAcquisition?.kind !== 'upgradeHammerToRank2' ||
+        option.targetTraitKey !== undefined ||
+        option.icarusHammerTargets.length < 1 ||
+        option.icarusHammerTargets.length > 2 ||
+        new Set(option.icarusHammerTargets).size !== option.icarusHammerTargets.length ||
+        option.icarusHammerTargets.some((key) => catalog.traits.byKey[key] === undefined)
+      )
+        failCommand(command, `${option.traitKey} requires distinct Latest Model Hammer targets`);
+    } else if (
+      trait.targetedAcquisition?.kind === 'upgradeHammerToRank2' &&
+      option.targetTraitKey !== undefined
+    ) {
+      failCommand(command, 'Latest Model requires Hammer targets, not a scalar target');
+    }
     if (option.circeResolution !== undefined) {
       const expected =
         trait.selectedDisposition.kind === 'circe' ? trait.selectedDisposition.effect : undefined;
@@ -296,6 +312,13 @@ function validateOffer(
         if (resolution === undefined)
           return Object.freeze({
             ...option,
+            ...(option.icarusHammerTargets === undefined
+              ? {}
+              : {
+                  icarusHammerTargets: Object.freeze([
+                    ...option.icarusHammerTargets,
+                  ]) as typeof option.icarusHammerTargets,
+                }),
             ...(echoLastRunBoon === undefined ? {} : { echoLastRunBoon }),
             ...(allTogetherResult === undefined ? {} : { allTogetherResult }),
           });
