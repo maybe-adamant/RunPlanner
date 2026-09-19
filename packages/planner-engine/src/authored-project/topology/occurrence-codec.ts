@@ -436,6 +436,7 @@ export function decodeRoomOccurrence(input: {
         biomeAddress,
         occurrenceWithPreliminarySites,
         contextualRoom,
+        routePosition.ordinal,
       );
       const ownedGeneratedSiteKeys = new Set(
         preliminaryPickupProducers
@@ -482,6 +483,7 @@ export function decodeRoomOccurrence(input: {
     biomeAddress,
     occurrenceWithPreliminarySites,
     contextualRoom,
+    routePosition.ordinal,
   );
   const acquisitionSites = rawOccurrence.hasAcquisitionSites
     ? decodeAcquisitionSites(

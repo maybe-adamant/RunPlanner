@@ -4,12 +4,13 @@
 
 Approved execution contract, committed in `eb176b0a`. Gates A and B are implemented
 and independently reviewed. Gate B is committed as `815b9c96`.
-Gate C is implemented and independently reviewed, pending commit; later gates
-have not started.
+Gate C is committed as `47fb104e`. Gate D1 is implemented and independently
+reviewed, pending commit; D2/D3 and closure have not started.
 
 - Planner base: `8439c9c8cad046788680dbf981688ab263d83989`.
 - Gate B base: `34b9677429421d7b23fa27396f688eceb21f7c95`.
 - Gate C base: `815b9c96`.
+- Gate D1 base: `47fb104e`.
 - Game-module base: `95c479b6c599863aeba7968f0593bb4f5871709b`.
 - Baseline authored schema: 84; execution protocol: 40.
 - Source/code inventory: `docs/investigations/DREAM_DIVE_SCOPE.md`, especially
@@ -407,6 +408,26 @@ Gate C delivery:
 - Final acceptance additions cover Q nonterminal, F/G terminal, and Dream
   completion reselection preserving compatible Preboss state followed by
   removal of the completion chain. Both affected suites passed all 31 tests.
+
+Gate D1 delivery:
+
+- Declaration-owned acquisition ordinals govern Narcissus pickup cardinality,
+  Ingenious Strike/Flourish levels and Supply Chain interval. Extra physical
+  pickups have explicit minimum ordinals and retain existing entry identities.
+  Only the acquired Supply Chain interval is retained in trait history; later
+  biomes do not retune it. Structural commands and simulation share resolution.
+- Independent review passed after correcting the public settlement context
+  type. Final command-backed Dream fourth-ordinal Narcissus coverage exercises
+  generation, extra-entry editing, source retraction and strict save decoding.
+  Supply Chain coverage proves the acquired three-encounter maturity, while
+  existing full Surface lifecycle witnesses retain ordinary behavior into Q.
+- Focused catalog/engine suite: 105 tests across six files passed. Full catalog:
+  270 tests passed. Application/execution compiler contacts: 90 tests passed.
+  The earlier engine sweep exposed five direct-test missing-context failures;
+  all were corrected and their focused suite passed (the sweep aggregate was
+  not captured). Workspace/fixture typechecks, repository ESLint, changed-file
+  formatting and whitespace checks passed. Schema/protocol and JSON fixtures
+  remain unchanged; D2/D3 own the remaining NPC payload changes.
 
 Review this plan adversarially before implementation. Per gate, use the narrow
 owning catalog/engine/planner/UI/contract/product tests. Main session supplies

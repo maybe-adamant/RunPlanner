@@ -19,7 +19,12 @@ export const narcissusTraits = [
     selectedDisposition: {
       kind: 'producePickups',
       producerLifecycleKey: 'NarcissusPickup',
-      pickups: [{ key: 'pom', rewardType: 'StoreRewardRandomStack' }],
+      pickups: [
+        { key: 'pom', rewardType: 'StoreRewardRandomStack' },
+        { key: 'pom2', rewardType: 'StoreRewardRandomStack', minimumAcquisitionOrdinal: 3 },
+        { key: 'pom3', rewardType: 'StoreRewardRandomStack', minimumAcquisitionOrdinal: 4 },
+        { key: 'pom4', rewardType: 'StoreRewardRandomStack', minimumAcquisitionOrdinal: 4 },
+      ],
     },
   },
   {
@@ -58,6 +63,9 @@ export const narcissusTraits = [
       pickups: [
         { key: 'psyche', rewardType: 'MemPointsCommonDrop' },
         { key: 'maxMana', rewardType: 'MaxManaDrop' },
+        { key: 'maxMana2', rewardType: 'MaxManaDrop', minimumAcquisitionOrdinal: 3 },
+        { key: 'maxMana3', rewardType: 'MaxManaDrop', minimumAcquisitionOrdinal: 4 },
+        { key: 'maxMana4', rewardType: 'MaxManaDrop', minimumAcquisitionOrdinal: 4 },
       ],
     },
   },
@@ -73,6 +81,9 @@ export const narcissusTraits = [
       pickups: [
         { key: 'bones', rewardType: 'MetaCurrencyDrop' },
         { key: 'maxHealth', rewardType: 'MaxHealthDrop' },
+        { key: 'maxHealth2', rewardType: 'MaxHealthDrop', minimumAcquisitionOrdinal: 3 },
+        { key: 'maxHealth3', rewardType: 'MaxHealthDrop', minimumAcquisitionOrdinal: 4 },
+        { key: 'maxHealth4', rewardType: 'MaxHealthDrop', minimumAcquisitionOrdinal: 4 },
       ],
     },
   },
@@ -96,6 +107,8 @@ export const narcissusTraits = [
       pickups: [
         { key: 'elementalBoost1', rewardType: 'ElementalBoost' },
         { key: 'elementalBoost2', rewardType: 'ElementalBoost' },
+        { key: 'elementalBoost3', rewardType: 'ElementalBoost', minimumAcquisitionOrdinal: 3 },
+        { key: 'elementalBoost4', rewardType: 'ElementalBoost', minimumAcquisitionOrdinal: 4 },
       ],
     },
   },
@@ -108,7 +121,11 @@ export const narcissusTraits = [
     selectedDisposition: {
       kind: 'producePickups',
       producerLifecycleKey: 'NarcissusPickup',
-      pickups: [{ key: 'lastStand', rewardType: 'LastStandDrop' }],
+      pickups: [
+        { key: 'lastStand', rewardType: 'LastStandDrop' },
+        { key: 'lastStand2', rewardType: 'LastStandDrop', minimumAcquisitionOrdinal: 3 },
+        { key: 'lastStand3', rewardType: 'LastStandDrop', minimumAcquisitionOrdinal: 4 },
+      ],
     },
   },
   {

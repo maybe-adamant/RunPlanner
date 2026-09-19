@@ -121,6 +121,7 @@ function traitContextForOffer(
   }
   return Object.freeze({
     ...context.loadout,
+    acquisitionOrdinal: context.routePosition.ordinal,
     blockGiftBoons: context.room.blockGiftBoons,
     ...(context.room.boonRarityOverride === undefined
       ? {}

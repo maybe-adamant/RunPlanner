@@ -196,7 +196,7 @@ describe('contextual starting-room profiles', () => {
     const occurrence = project.route.biomes[0]?.topology?.occurrences[0];
     if (occurrence === undefined) throw new Error('missing G start');
     const declaration = resolveStartingRoomDeclaration(room('G_Intro'), dreamPosition('G', true));
-    const producer = selectedPickupProducers(catalog, biome, occurrence, declaration).find(
+    const producer = selectedPickupProducers(catalog, biome, occurrence, declaration, 1).find(
       (candidate) => candidate.traitKey === 'RoomRewardBonusBoon',
     );
     if (producer === undefined) throw new Error('missing Buried Treasure producer');

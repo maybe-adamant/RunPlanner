@@ -379,7 +379,8 @@ export function normalizeTraits(
     if (
       icarusSlot !== undefined &&
       (selectedDisposition.kind !== 'upgradeOccupiedBoonSlot' ||
-        selectedDisposition.slot !== icarusSlot)
+        selectedDisposition.slot !== icarusSlot ||
+        selectedDisposition.levelCountByAcquisitionOrdinal.join(',') !== '3,3,3,5')
     )
       fail(
         `${path}.selectedDisposition`,
@@ -395,7 +396,7 @@ export function normalizeTraits(
         selectedDisposition.kind !== 'producePickups' ||
         selectedDisposition.producerLifecycleKey !== 'GeneratedTraitPickup' ||
         selectedDisposition.clock?.kind !== 'qualifyingEncounterEndEffects' ||
-        selectedDisposition.clock.interval !== 7 ||
+        selectedDisposition.clock.intervalByAcquisitionOrdinal.join(',') !== '7,7,7,3' ||
         selectedDisposition.pickups.length !== 2 ||
         selectedDisposition.pickups.some(
           (pickup, index) =>
@@ -404,7 +405,7 @@ export function normalizeTraits(
       )
         fail(
           `${path}.selectedDisposition`,
-          'must declare the repeating seven-encounter two-Pom Supply Chain producer',
+          'must declare the repeating two-Pom Supply Chain producer with 7/7/7/3 intervals',
         );
     } else if (
       selectedDisposition.kind === 'producePickups' &&

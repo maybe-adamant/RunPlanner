@@ -1,4 +1,8 @@
-import type { Catalog, TraitRarity } from '../../catalog-schema';
+import {
+  resolveTraitAcquisitionOrdinalEffect,
+  type Catalog,
+  type TraitRarity,
+} from '../../catalog-schema';
 import type {
   EchoLastRunBoonAddress,
   SemanticAddress,
@@ -733,6 +737,18 @@ export function recordReachedTraitOffer(
   // A selected pickup-producing trait is an ordinary equipped trait; its
   // generated pickups are a later acquisition-site effect.
   const selectedDisposition = catalog.traits.byKey[selectedTraitKey]?.selectedDisposition;
+  const requiresAcquisitionOrdinal =
+    selectedDisposition?.kind === 'upgradeOccupiedBoonSlot' ||
+    (selectedDisposition?.kind === 'producePickups' && selectedDisposition.clock !== undefined);
+  const acquisitionOrdinal = evaluation.context.acquisitionOrdinal;
+  if (requiresAcquisitionOrdinal && acquisitionOrdinal === undefined)
+    throw new Error(`${selectedTraitKey} requires an explicit acquisition ordinal`);
+  const ordinalEffect =
+    requiresAcquisitionOrdinal &&
+    selectedDisposition !== undefined &&
+    acquisitionOrdinal !== undefined
+      ? resolveTraitAcquisitionOrdinalEffect(selectedDisposition, acquisitionOrdinal)
+      : undefined;
   if (
     selectedDisposition?.kind !== 'equip' &&
     selectedDisposition?.kind !== 'upgradeOccupiedBoonSlot' &&
@@ -780,6 +796,9 @@ export function recordReachedTraitOffer(
       ? {}
       : { targetedAcquisitionTransition: evaluation.targetedAcquisition.transition }),
     ...(selectedLevel === undefined ? {} : { selectedEffectiveLevel: selectedLevel }),
+    ...(ordinalEffect?.clockInterval === undefined
+      ? {}
+      : { pickupProducerInterval: ordinalEffect.clockInterval }),
   }) as TraitOfferEvent | import('./history/model').ConcaveStoneSecondaryEvent;
   const transition = evaluation.targetedAcquisition.transition;
   const mutation: TraitLevelMutationEvent | undefined =
@@ -811,7 +830,7 @@ export function recordReachedTraitOffer(
         sourceTraitKey: selectedTraitKey,
         targetTraitKey: target.traitKey,
         oldLevel: target.level,
-        newLevel: target.level + selectedDisposition.levelCount,
+        newLevel: target.level + ordinalEffect!.levelCount!,
       }),
     );
   }

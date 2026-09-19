@@ -494,6 +494,7 @@ function baseContribution(
         declaration,
         reference.siteKey,
         reference.entryKey,
+        routePosition.ordinal,
       );
       const required =
         hermesDelivery !== undefined ||
@@ -755,6 +756,7 @@ export function assembleRoomActionDomain(options: {
               declaration,
               action.reference.siteKey,
               action.reference.entryKey,
+              options.routePosition.ordinal,
             )
           : undefined;
       if (parsed === undefined && seaStar === undefined && producer === undefined) return [action];

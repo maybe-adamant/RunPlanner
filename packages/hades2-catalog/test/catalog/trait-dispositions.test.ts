@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { catalog, createCatalog } from '../../src';
 import { declarations } from '../../src/declarations';
+import { resolveTraitAcquisitionOrdinalEffect } from '@run-planner/engine/catalog-schema';
 import type { RawTraitDeclaration } from '../../src/declarations/traits/types';
 import type {
   KeepsakeDeclaration,
@@ -92,16 +93,16 @@ describe('trait dispositions and requirements compiler owner', () => {
     expect(catalog.traits.byKey.FocusAttackDamageTrait?.selectedDisposition).toEqual({
       kind: 'upgradeOccupiedBoonSlot',
       slot: 'Melee',
-      levelCount: 3,
+      levelCountByAcquisitionOrdinal: [3, 3, 3, 5],
     });
     expect(catalog.traits.byKey.FocusSpecialDamageTrait?.selectedDisposition).toEqual({
       kind: 'upgradeOccupiedBoonSlot',
       slot: 'Secondary',
-      levelCount: 3,
+      levelCountByAcquisitionOrdinal: [3, 3, 3, 5],
     });
   });
 
-  it('declares Supply Chain as a repeating seven-encounter two-Pom producer', () => {
+  it('declares Supply Chain as a repeating two-Pom producer with acquired ordinal intervals', () => {
     expect(catalog.traits.byKey.SupplyDropBoon?.selectedDisposition).toEqual({
       kind: 'producePickups',
       producerLifecycleKey: 'GeneratedTraitPickup',
@@ -109,7 +110,7 @@ describe('trait dispositions and requirements compiler owner', () => {
         { key: 'pom1', rewardType: 'StoreRewardRandomStack' },
         { key: 'pom2', rewardType: 'StoreRewardRandomStack' },
       ],
-      clock: { kind: 'qualifyingEncounterEndEffects', interval: 7 },
+      clock: { kind: 'qualifyingEncounterEndEffects', intervalByAcquisitionOrdinal: [7, 7, 7, 3] },
     });
   });
 
@@ -239,47 +240,72 @@ describe('trait dispositions and requirements compiler owner', () => {
     expect(table).toEqual({
       A: expect.objectContaining({
         kind: 'producePickups',
-        pickups: [{ key: 'pom', rewardType: 'StoreRewardRandomStack' }],
+        pickups: expect.arrayContaining([{ key: 'pom', rewardType: 'StoreRewardRandomStack' }]),
       }),
       B: expect.objectContaining({
         kind: 'producePickups',
-        pickups: [{ key: 'ashes', rewardType: 'MetaCardPointsCommonDrop' }],
+        pickups: expect.arrayContaining([{ key: 'ashes', rewardType: 'MetaCardPointsCommonDrop' }]),
       }),
       C: expect.objectContaining({
         kind: 'producePickups',
-        pickups: [{ key: 'currency', rewardType: 'Currency' }],
+        pickups: expect.arrayContaining([{ key: 'currency', rewardType: 'Currency' }]),
       }),
       D: expect.objectContaining({
         kind: 'producePickups',
-        pickups: [
+        pickups: expect.arrayContaining([
           { key: 'psyche', rewardType: 'MemPointsCommonDrop' },
           { key: 'maxMana', rewardType: 'MaxManaDrop' },
-        ],
+        ]),
       }),
       E: expect.objectContaining({
         kind: 'producePickups',
-        pickups: [
+        pickups: expect.arrayContaining([
           { key: 'bones', rewardType: 'MetaCurrencyDrop' },
           { key: 'maxHealth', rewardType: 'MaxHealthDrop' },
-        ],
+        ]),
       }),
       F: { kind: 'equip' },
       G: expect.objectContaining({
         kind: 'producePickups',
-        pickups: [
+        pickups: expect.arrayContaining([
           { key: 'elementalBoost1', rewardType: 'ElementalBoost' },
           { key: 'elementalBoost2', rewardType: 'ElementalBoost' },
-        ],
+        ]),
       }),
       H: expect.objectContaining({
         kind: 'producePickups',
-        pickups: [{ key: 'lastStand', rewardType: 'LastStandDrop' }],
+        pickups: expect.arrayContaining([{ key: 'lastStand', rewardType: 'LastStandDrop' }]),
       }),
       I: expect.objectContaining({
         kind: 'producePickups',
-        pickups: [{ key: 'mysteryBoon', rewardType: 'BlindBoxLoot' }],
+        pickups: expect.arrayContaining([{ key: 'mysteryBoon', rewardType: 'BlindBoxLoot' }]),
       }),
     });
+    const keysAt = (traitKey: string, ordinal: number) => {
+      const disposition = catalog.traits.byKey[traitKey]?.selectedDisposition;
+      if (disposition?.kind !== 'producePickups') throw new Error(`missing ${traitKey} pickups`);
+      return resolveTraitAcquisitionOrdinalEffect(disposition, ordinal).pickups.map(
+        (pickup) => pickup.key,
+      );
+    };
+    expect(keysAt('NarcissusA', 1)).toEqual(['pom']);
+    expect(keysAt('NarcissusA', 4)).toEqual(['pom', 'pom2', 'pom3', 'pom4']);
+    const count = (traitKey: string, prefix: string) =>
+      ([1, 2, 3, 4] as const).map(
+        (ordinal) => keysAt(traitKey, ordinal).filter((key) => key.startsWith(prefix)).length,
+      );
+    expect(count('NarcissusA', 'pom')).toEqual([1, 1, 2, 4]);
+    expect(count('NarcissusD', 'maxMana')).toEqual([1, 1, 2, 4]);
+    expect(count('NarcissusE', 'maxHealth')).toEqual([1, 1, 2, 4]);
+    expect(count('NarcissusG', 'elementalBoost')).toEqual([2, 2, 3, 4]);
+    expect(count('NarcissusH', 'lastStand')).toEqual([1, 1, 2, 3]);
+    expect(count('NarcissusI', 'mysteryBoon')).toEqual([1, 1, 1, 1]);
+    expect(keysAt('NarcissusG', 3)).toEqual([
+      'elementalBoost1',
+      'elementalBoost2',
+      'elementalBoost3',
+    ]);
+    expect(keysAt('NarcissusH', 4)).toEqual(['lastStand', 'lastStand2', 'lastStand3']);
   });
 
   it('declares Quick Buck and Buried Treasure as exact generated-pickup traits', () => {

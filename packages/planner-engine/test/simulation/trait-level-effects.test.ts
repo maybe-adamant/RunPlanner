@@ -11,6 +11,7 @@ import {
 } from '@run-planner/engine/authored-project';
 import {
   assessTraitOption,
+  advancePickupProducerProgress,
   attachTraitHistory,
   assessSelectedTargetedAcquisition,
   evaluateReachedTraitOffer,
@@ -154,7 +155,7 @@ describe('Latest Model Hammer Rank II target predicate', () => {
       'icarus-latest-model',
       withTarget,
       before,
-      Object.freeze({}),
+      Object.freeze({ acquisitionOrdinal: 1 }),
       before.events.length,
     );
     const recorded = recordReachedTraitOffer(catalog, reached, before.events.length + 1, 'test');
@@ -203,42 +204,47 @@ describe('Icarus occupied-slot level upgrades', () => {
   }
 
   it.each([
-    ['FocusAttackDamageTrait', 'ApolloWeaponBoon', 'Melee'],
-    ['FocusSpecialDamageTrait', 'ApolloSpecialBoon', 'Secondary'],
-  ] as const)('adds three levels to the eligible trait occupying %s', (source, target, slot) => {
-    const before = atLevel('Apollo', target, 'Common', 2);
-    expect(before.equippedSlots[slot]?.traitKey).toBe(target);
-    const offer: AuthoredTraitOffer = Object.freeze({
-      kind: 'traits',
-      giverKey: 'Icarus',
-      options: Object.freeze([
-        { traitKey: source },
-        { traitKey: 'OmegaExplodeBoon' },
-        { traitKey: 'CastHazardBoon' },
-      ]) as Extract<AuthoredTraitOffer, { kind: 'traits' }>['options'],
-      selectedOptionKey: 'option1',
-    });
-    const reached = evaluateReachedTraitOffer(
-      catalog,
-      owner,
-      'icarus-slot-upgrade',
-      offer,
-      before,
-      Object.freeze({}),
-      before.events.length,
-    );
-    expect(reached.assessments[0]).toMatchObject({ legal: true, findings: [] });
-    const recorded = recordReachedTraitOffer(catalog, reached, before.events.length + 1, 'test');
-    expect(recorded.history.equippedTraits[target]).toMatchObject({ level: 5 });
-    expect(recorded.history.equippedTraits[source]).toMatchObject({ giverKey: 'Icarus' });
-    expect(recorded.history.events.at(-1)).toMatchObject({
-      kind: 'levelMutation',
-      sourceTraitKey: source,
-      targetTraitKey: target,
-      oldLevel: 2,
-      newLevel: 5,
-    });
-  });
+    ['FocusAttackDamageTrait', 'ApolloWeaponBoon', 'Melee', 1, 3],
+    ['FocusSpecialDamageTrait', 'ApolloSpecialBoon', 'Secondary', 1, 3],
+    ['FocusAttackDamageTrait', 'ApolloWeaponBoon', 'Melee', 4, 5],
+    ['FocusSpecialDamageTrait', 'ApolloSpecialBoon', 'Secondary', 4, 5],
+  ] as const)(
+    'adds %s ordinal %s levels to the eligible trait occupying %s',
+    (source, target, slot, ordinal, addedLevels) => {
+      const before = atLevel('Apollo', target, 'Common', 2);
+      expect(before.equippedSlots[slot]?.traitKey).toBe(target);
+      const offer: AuthoredTraitOffer = Object.freeze({
+        kind: 'traits',
+        giverKey: 'Icarus',
+        options: Object.freeze([
+          { traitKey: source },
+          { traitKey: 'OmegaExplodeBoon' },
+          { traitKey: 'CastHazardBoon' },
+        ]) as Extract<AuthoredTraitOffer, { kind: 'traits' }>['options'],
+        selectedOptionKey: 'option1',
+      });
+      const reached = evaluateReachedTraitOffer(
+        catalog,
+        owner,
+        'icarus-slot-upgrade',
+        offer,
+        before,
+        Object.freeze({ acquisitionOrdinal: ordinal }),
+        before.events.length,
+      );
+      expect(reached.assessments[0]).toMatchObject({ legal: true, findings: [] });
+      const recorded = recordReachedTraitOffer(catalog, reached, before.events.length + 1, 'test');
+      expect(recorded.history.equippedTraits[target]).toMatchObject({ level: 2 + addedLevels });
+      expect(recorded.history.equippedTraits[source]).toMatchObject({ giverKey: 'Icarus' });
+      expect(recorded.history.events.at(-1)).toMatchObject({
+        kind: 'levelMutation',
+        sourceTraitKey: source,
+        targetTraitKey: target,
+        oldLevel: 2,
+        newLevel: 2 + addedLevels,
+      });
+    },
+  );
 
   it('withholds Ingenious Strike when the occupied Hephaestus Attack is cooldown-capped', () => {
     const capped = atLevel('Hephaestus', 'HephaestusWeaponBoon', 'Common', 10);
@@ -288,6 +294,8 @@ describe('Supply Chain lifecycle', () => {
       'encounterCompleted',
       undefined,
       'selection',
+      undefined,
+      { acquisitionOrdinal: 4 },
     );
     const second = settleEncounterTraitOffer(
       catalog,
@@ -298,6 +306,8 @@ describe('Supply Chain lifecycle', () => {
       'encounterCompleted',
       undefined,
       'selection',
+      undefined,
+      { acquisitionOrdinal: 1 },
     );
     const expected = semanticAddressKey(createTraitOfferAddress(traitOrigin, 'selection'));
     expect(first.branch.traitHistory?.equippedTraits.SupplyDropBoon?.acquisitionIdentity).toBe(
@@ -306,6 +316,19 @@ describe('Supply Chain lifecycle', () => {
     expect(second.branch.traitHistory?.equippedTraits.SupplyDropBoon?.acquisitionIdentity).toBe(
       expected,
     );
+    expect(first.branch.traitHistory?.equippedTraits.SupplyDropBoon?.pickupProducerInterval).toBe(
+      3,
+    );
+    expect(second.branch.traitHistory?.equippedTraits.SupplyDropBoon?.pickupProducerInterval).toBe(
+      7,
+    );
+    let retained = first.branch.traitHistory!;
+    for (let sequence = 12; sequence <= 14; sequence += 1) {
+      const advanced = advancePickupProducerProgress(catalog, retained, traitOrigin, sequence);
+      expect(advanced.maturities).toHaveLength(sequence === 14 ? 1 : 0);
+      retained = advanced.history;
+    }
+    expect(retained.equippedTraits.SupplyDropBoon?.pickupProducerProgress).toBe(0);
   });
 
   it('publishes a matured Supply Chain pickup from the final Steady Growth branch', () => {
@@ -325,6 +348,8 @@ describe('Supply Chain lifecycle', () => {
       'encounterCompleted',
       undefined,
       'selection',
+      undefined,
+      { acquisitionOrdinal: 1 },
     );
     const supplySettlement = settleEncounterTraitOffer(
       catalog,
@@ -335,6 +360,8 @@ describe('Supply Chain lifecycle', () => {
       'encounterCompleted',
       undefined,
       'selection',
+      undefined,
+      { acquisitionOrdinal: 1 },
     );
     const steadySettlement = settleEncounterTraitOffer(
       catalog,
@@ -345,6 +372,8 @@ describe('Supply Chain lifecycle', () => {
       'encounterCompleted',
       undefined,
       'selection',
+      undefined,
+      { acquisitionOrdinal: 1 },
     );
     const bridalSettlement = settleEncounterTraitOffer(
       catalog,
@@ -559,6 +588,8 @@ describe('Supply Chain lifecycle', () => {
       'encounterCompleted',
       undefined,
       'selection',
+      undefined,
+      { acquisitionOrdinal: 1 },
     );
     const supplyHistory = supplySettlement.branch.traitHistory!;
     expect(supplyHistory.equippedTraits.SupplyDropBoon?.acquisitionIdentity).toBeDefined();

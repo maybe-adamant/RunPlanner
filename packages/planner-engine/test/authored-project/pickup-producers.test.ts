@@ -61,6 +61,7 @@ describe('authored pickup producers', () => {
         biome,
         occurrence,
         catalog.rooms.byKey[occurrence.gameName]!,
+        1,
       ),
     ).toEqual([]);
 
@@ -69,6 +70,7 @@ describe('authored pickup producers', () => {
       biome,
       occurrence,
       catalog.rooms.byKey[occurrence.gameName]!,
+      1,
     );
     expect(reconciled.acquisitionSites).toBeUndefined();
     expect(reconciled.roomActions.order).toEqual([]);
@@ -88,6 +90,7 @@ describe('authored pickup producers', () => {
       nBiome,
       occurrence,
       catalog.rooms.byKey[occurrence.gameName]!,
+      1,
     ).find((candidate) => candidate.traitKey === 'MoneyMultiplierBoon');
     if (producer === undefined) throw new Error('Quick Buck producer is missing');
     expect(producer.sourceNormal).toBe(true);
@@ -100,6 +103,7 @@ describe('authored pickup producers', () => {
       nBiome,
       occurrence,
       catalog.rooms.byKey[occurrence.gameName]!,
+      1,
     );
     expect(reconciled.acquisitionSites?.[producer.siteKey]?.pickupEntries).toMatchObject({
       quickBuckGold: { offer: { rewardType: 'RoomMoneyDrop' } },

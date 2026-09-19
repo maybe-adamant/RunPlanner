@@ -220,8 +220,9 @@ export function activeRoomActionReferences(
     echoLastRewardPickupEntryKeys(catalog, occurrence.encounters),
   );
   const activePickupEntries = new Set(
-    activeSelectedPickupProducers(catalog, biome, occurrence, room).flatMap((producer) =>
-      producer.pickups.map((pickup) => JSON.stringify([producer.siteKey, pickup.key])),
+    activeSelectedPickupProducers(catalog, biome, occurrence, room, routePosition.ordinal).flatMap(
+      (producer) =>
+        producer.pickups.map((pickup) => JSON.stringify([producer.siteKey, pickup.key])),
     ),
   );
   for (const [siteKey, site] of Object.entries(occurrence.acquisitionSites ?? {})) {

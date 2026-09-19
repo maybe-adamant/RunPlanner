@@ -109,6 +109,7 @@ export function materializeAuthoredRoom(
     context.biome,
     context.occurrence,
     context.room,
+    context.routePosition.ordinal,
   );
   const activePickupEntries = new Set(
     pickupProducers.flatMap((producer) =>

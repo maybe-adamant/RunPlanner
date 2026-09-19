@@ -95,6 +95,7 @@ function pickupEntrySource(
     resolveStartingRoomDeclaration(catalog.rooms.byKey[occurrence.gameName]!, routePosition),
     owner.site.pointKey,
     owner.entryKey,
+    routePosition.ordinal,
   );
   if (producer === undefined) failCommand(command, 'pickup entry has no unique selected producer');
   return Object.freeze({

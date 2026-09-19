@@ -76,6 +76,7 @@ export function normalizeSelectedDisposition(
     readonly slot?: unknown;
     readonly slots?: unknown;
     readonly levelCount?: unknown;
+    readonly levelCountByAcquisitionOrdinal?: unknown;
     readonly removeGiverKey?: unknown;
     readonly buffGiverKey?: unknown;
     readonly levelsPerRemovedIdentity?: unknown;
@@ -83,15 +84,28 @@ export function normalizeSelectedDisposition(
   };
   const kind = closedValue(value.kind, SELECTED_DISPOSITIONS, `${path}.kind`);
   if (kind === 'upgradeOccupiedBoonSlot') {
-    if (Object.keys(value).length !== 3 || value.levelCount !== 3)
+    const levels = requireArray(
+      value.levelCountByAcquisitionOrdinal,
+      `${path}.levelCountByAcquisitionOrdinal`,
+    );
+    if (
+      Object.keys(value).length !== 3 ||
+      levels.length !== 4 ||
+      levels.some((level) => !Number.isInteger(level as number) || (level as number) <= 0)
+    )
       fail(
         path,
-        'upgradeOccupiedBoonSlot requires only kind, an Attack/Special slot, and levelCount 3',
+        'upgradeOccupiedBoonSlot requires an Attack/Special slot and four positive ordinal levels',
       );
     return Object.freeze({
       kind,
       slot: closedValue(value.slot, ['Melee', 'Secondary'] as const, `${path}.slot`),
-      levelCount: 3,
+      levelCountByAcquisitionOrdinal: Object.freeze([...levels]) as [
+        number,
+        number,
+        number,
+        number,
+      ],
     });
   }
   if (kind === 'naturalSelection') {
@@ -281,14 +295,18 @@ export function normalizeSelectedDisposition(
       readonly key?: unknown;
       readonly rewardType?: unknown;
       readonly excludeStorySource?: unknown;
+      readonly minimumAcquisitionOrdinal?: unknown;
     };
     if (
-      Object.keys(entry).length !== (entry.excludeStorySource === undefined ? 2 : 3) ||
+      Object.keys(entry).length !==
+        2 +
+          (entry.excludeStorySource === undefined ? 0 : 1) +
+          (entry.minimumAcquisitionOrdinal === undefined ? 0 : 1) ||
       (entry.excludeStorySource !== undefined && entry.excludeStorySource !== true)
     )
       fail(
         `${path}.pickups[${index}]`,
-        'must contain key, rewardType, and an optional true excludeStorySource',
+        'must contain key, rewardType, and optional minimum ordinal/excludeStorySource',
       );
     if (typeof entry.key !== 'string' || typeof entry.rewardType !== 'string')
       fail(`${path}.pickups[${index}]`, 'key and rewardType must be strings');
@@ -296,6 +314,15 @@ export function normalizeSelectedDisposition(
       key: requireNonEmpty(entry.key, `${path}.pickups[${index}].key`),
       rewardType: requireNonEmpty(entry.rewardType, `${path}.pickups[${index}].rewardType`),
       ...(entry.excludeStorySource === true ? { excludeStorySource: true as const } : {}),
+      ...(entry.minimumAcquisitionOrdinal === undefined
+        ? {}
+        : (() => {
+            if (![2, 3, 4].includes(entry.minimumAcquisitionOrdinal as number))
+              fail(`${path}.pickups[${index}].minimumAcquisitionOrdinal`, 'must be 2, 3, or 4');
+            return {
+              minimumAcquisitionOrdinal: entry.minimumAcquisitionOrdinal as 2 | 3 | 4,
+            };
+          })()),
     });
   });
   const clock =
@@ -304,17 +331,32 @@ export function normalizeSelectedDisposition(
       : (() => {
           const rawClock = requireObject(value.clock, `${path}.clock`) as {
             readonly kind?: unknown;
-            readonly interval?: unknown;
+            readonly intervalByAcquisitionOrdinal?: unknown;
           };
-          if (Object.keys(rawClock).length !== 2)
-            fail(`${path}.clock`, 'must contain only kind and interval');
+          const intervals = requireArray(
+            rawClock.intervalByAcquisitionOrdinal,
+            `${path}.clock.intervalByAcquisitionOrdinal`,
+          );
+          if (
+            Object.keys(rawClock).length !== 2 ||
+            intervals.length !== 4 ||
+            intervals.some(
+              (interval) => !Number.isInteger(interval as number) || (interval as number) <= 0,
+            )
+          )
+            fail(`${path}.clock`, 'must contain kind and four positive ordinal intervals');
           return Object.freeze({
             kind: closedValue(
               rawClock.kind,
               ['qualifyingEncounterEndEffects'] as const,
               `${path}.clock.kind`,
             ),
-            interval: requirePositiveInteger(rawClock.interval as number, `${path}.clock.interval`),
+            intervalByAcquisitionOrdinal: Object.freeze([...intervals]) as [
+              number,
+              number,
+              number,
+              number,
+            ],
           });
         })();
   if (
