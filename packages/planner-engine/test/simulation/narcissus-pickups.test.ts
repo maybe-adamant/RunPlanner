@@ -893,6 +893,7 @@ describe('Narcissus pickup producer', () => {
       catalog,
       goldenGBiome,
       narcissusOccurrence(project),
+      catalog.rooms.byKey[narcissusOccurrence(project).gameName]!,
     ).find((candidate) => candidate.traitKey === 'RoomRewardBonusBoon');
     expect(producer?.pickups.map((pickup) => pickup.key)).toEqual([
       'smallGold',

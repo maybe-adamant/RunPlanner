@@ -1,6 +1,10 @@
 import { renderToStaticMarkup } from 'react-dom/server';
 import { Provider } from 'react-redux';
-import { createRouteAddress } from '@run-planner/engine/authored-project';
+import {
+  createBiomeAddress,
+  createOccurrenceId,
+  createRouteAddress,
+} from '@run-planner/engine/authored-project';
 import { describe, expect, it } from 'vitest';
 
 import { createApplication } from '@planner/composition/createApplication';
@@ -85,5 +89,30 @@ describe('RouteOverview', () => {
       }),
     );
     expect(routeOverviewMarkup(application)).not.toContain('Hex talent layout');
+  });
+
+  it('owns F start creation and its room and reward controls in Route settings', () => {
+    const application = createOpenTestApplication('Underworld');
+    application.store.dispatch(
+      authoredProjectCommandDispatched({
+        kind: 'ConfigureRoutePrefix',
+        configuredBiomeCount: 1,
+        route: createRouteAddress('Underworld'),
+      }),
+    );
+    expect(routeOverviewMarkup(application)).toContain('>Start Erebus</button>');
+
+    application.store.dispatch(
+      authoredProjectCommandDispatched({
+        kind: 'CreateStart',
+        biome: createBiomeAddress('Underworld', 'F'),
+        occurrenceId: createOccurrenceId('overview-f-start'),
+        gameName: 'F_Opening01',
+      }),
+    );
+    const markup = routeOverviewMarkup(application);
+    expect(markup).toContain('aria-label="Start room configuration"');
+    expect(markup).toContain('>Room</label>');
+    expect(markup).toContain('>Reward</label>');
   });
 });

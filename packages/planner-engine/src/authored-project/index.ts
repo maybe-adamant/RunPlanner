@@ -29,6 +29,7 @@ export {
 } from './acquisition/sea-star';
 export { activeRoomActionReferences } from './room-actions/state';
 export { directEncounterDefinitionKeyForSlot } from './room-state/encounter-envelope';
+export { resolveStartingRoomDeclaration } from './room-state/starting-room-profile';
 export {
   authoredAcquisitionSources,
   authoredAcquisitionSourceAt,

@@ -2,6 +2,32 @@ import type { RawRoomDeclaration } from '../types';
 import { nResourcePointSupport } from '../../resources';
 import { chaosExit } from './shared';
 
+const openingReward = {
+  kind: 'countedChoice' as const,
+  storeKeys: ['RunProgress'],
+  eligibleRewardTypes: [],
+  ineligibleRewardTypes: ['Devotion', 'RoomMoneyDrop', 'MaxHealthDrop', 'MaxManaDrop'],
+  producerLifecycleKey: 'RoomReward',
+};
+
+const nStartingRoomProfiles = {
+  routeFirst: {
+    templateKey: 'FixedOpening' as const,
+    incomingReward: openingReward,
+    lifecycleProfileKey: 'OpeningRewardRoom',
+    enteredRewardStoreHistory: { kind: 'none' as const },
+    forcedRewardStoreKey: 'RunProgress',
+    dreamEncounterDefinitionKey: 'OpeningEmpty',
+  },
+  routeLater: {
+    templateKey: 'FixedIntro' as const,
+    incomingReward: { kind: 'none' as const },
+    lifecycleProfileKey: 'RewardlessCombatRoom',
+    enteredRewardStoreHistory: { kind: 'none' as const },
+    dreamEncounterDefinitionKey: 'OpeningEmpty',
+  },
+};
+
 export const nFixedRouteRooms = [
   {
     gameName: 'N_Opening01',
@@ -22,6 +48,7 @@ export const nFixedRouteRooms = [
       ineligibleRewardTypes: ['Devotion', 'RoomMoneyDrop', 'MaxHealthDrop', 'MaxManaDrop'],
       producerLifecycleKey: 'RoomReward',
     },
+    startingRoomProfiles: nStartingRoomProfiles,
     forcedRewardStoreKey: 'RunProgress',
     enteredRewardStoreHistory: { kind: 'none' },
     encounterEnvelopeKey: 'SingleEncounter',

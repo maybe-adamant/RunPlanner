@@ -74,6 +74,7 @@ export type {
   RawPrebossBatchPolicy,
   RawRoomDeclaration,
   RawRoomOfferRewardBinding,
+  RawStartingRoomProfile,
   RawZagreusContractAdditionalExitDeclaration,
 } from './rooms/types';
 export type {

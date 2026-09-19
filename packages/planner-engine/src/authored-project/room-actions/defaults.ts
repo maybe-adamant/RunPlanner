@@ -1,6 +1,7 @@
 import type { Catalog } from '../../catalog-schema';
 import { createBiomeAddress, type BiomeAddress } from '../addresses';
 import { resolveRoutePosition } from '../route-context';
+import { resolveStartingRoomDeclaration } from '../room-state/starting-room-profile';
 import type {
   AuthoredBiomePlan,
   BiomeTopology,
@@ -253,7 +254,7 @@ function activeDomains(
           biome,
           occurrence,
           routePosition,
-          ...roomActionDomainContext(catalog, plan, plan.topology, occurrence),
+          ...roomActionDomainContext(catalog, routePosition, plan, plan.topology, occurrence),
         }),
       );
     }
@@ -281,11 +282,16 @@ function changedBiomeKeys(before: ProjectDocument, proposed: ProjectDocument): R
 
 function roomActionDomainContext(
   catalog: Catalog,
+  routePosition: import('../route-context').ResolvedRoutePosition,
   plan: AuthoredBiomePlan,
   topology: BiomeTopology,
   occurrence: RoomOccurrence,
 ): { readonly lifecycleProfileKey: string; readonly activeEncounterSlotKeys?: readonly string[] } {
-  const declaration = catalog.rooms.byKey[occurrence.gameName];
+  const rawDeclaration = catalog.rooms.byKey[occurrence.gameName];
+  const declaration =
+    rawDeclaration === undefined
+      ? undefined
+      : resolveStartingRoomDeclaration(rawDeclaration, routePosition);
   const layout = catalog.biomeLayouts.byKey[plan.biomeKey];
   if (declaration === undefined || layout === undefined) {
     throw new Error(`missing Room Action declaration context for ${occurrence.gameName}`);
@@ -426,7 +432,13 @@ export function roomActionDomainForOccurrence(
           routePosition: resolveRoutePosition(catalog, document.route, biome.biomeKey),
           ...(plan?.topology === null || plan?.topology === undefined
             ? {}
-            : roomActionDomainContext(catalog, plan, plan.topology, occurrence)),
+            : roomActionDomainContext(
+                catalog,
+                resolveRoutePosition(catalog, document.route, biome.biomeKey),
+                plan,
+                plan.topology,
+                occurrence,
+              )),
         }),
       });
 }

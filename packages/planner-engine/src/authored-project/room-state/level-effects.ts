@@ -1,12 +1,13 @@
-import type { Catalog } from '../../catalog-schema';
+import type { Catalog, RoomDeclaration } from '../../catalog-schema';
 import type { LevelResolutionEffectSource } from '../../reward-kernel/level-effects';
 import type { RoomOccurrence } from '../model';
 
 export function incomingLevelEffectSource(
   catalog: Catalog,
   occurrence: RoomOccurrence,
+  roomOverride?: RoomDeclaration,
 ): LevelResolutionEffectSource | undefined {
-  const room = catalog.rooms.byKey[occurrence.gameName];
+  const room = roomOverride ?? catalog.rooms.byKey[occurrence.gameName];
   if (room === undefined) return undefined;
   const binding =
     occurrence.state.kind === 'anomaly'

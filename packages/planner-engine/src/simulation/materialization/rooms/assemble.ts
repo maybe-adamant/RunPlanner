@@ -27,6 +27,7 @@ import {
   type AuthoredRoomMaterializationContext,
   type MaterializedRoomLeaf,
 } from './templates';
+import { resolveStartingRoomDeclaration } from '../../../authored-project/room-state/starting-room-profile';
 
 type StygianWellEffect = NonNullable<ShopOptionEntry['stygianWell']>['effect'];
 
@@ -63,8 +64,10 @@ function requireLifecycleSelection(
 }
 
 export function materializeAuthoredRoom(
-  context: AuthoredRoomMaterializationContext,
+  input: AuthoredRoomMaterializationContext,
 ): CanonicalAuthoredRoom {
+  const contextualRoom = resolveStartingRoomDeclaration(input.room, input.routePosition);
+  const context = Object.freeze({ ...input, room: contextualRoom });
   if (context.room.mode.kind === 'derived')
     fail(`${context.room.gameName} is not an occurrence room`);
   const anomalyReplacement =
@@ -105,6 +108,7 @@ export function materializeAuthoredRoom(
     context.catalog,
     context.biome,
     context.occurrence,
+    context.room,
   );
   const activePickupEntries = new Set(
     pickupProducers.flatMap((producer) =>
@@ -195,6 +199,7 @@ export function materializeAuthoredRoom(
     origin: createOccurrenceAddress(context.biome, context.occurrence.occurrenceId),
     occurrenceId: context.occurrence.occurrenceId,
     gameName: context.room.gameName,
+    incomingRewardBinding: context.room.incomingReward,
     roomKind: context.room.kind,
     ...(anomalyReplacement === undefined ? {} : { anomalyReplacement }),
     encounters: context.occurrence.encounters,

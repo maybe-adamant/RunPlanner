@@ -2,10 +2,12 @@
 
 ## Status and objective
 
-Approved execution contract, committed in `eb176b0a`. Gate A is implemented and
-independently reviewed; later gates have not started.
+Approved execution contract, committed in `eb176b0a`. Gates A and B are implemented
+and independently reviewed. Gate B is verified for commit from
+`34b9677429421d7b23fa27396f688eceb21f7c95`; Gate C is next.
 
 - Planner base: `8439c9c8cad046788680dbf981688ab263d83989`.
+- Gate B base: `34b9677429421d7b23fa27396f688eceb21f7c95`.
 - Game-module base: `95c479b6c599863aeba7968f0593bb4f5871709b`.
 - Baseline authored schema: 84; execution protocol: 40.
 - Source/code inventory: `docs/investigations/DREAM_DIVE_SCOPE.md`, especially
@@ -73,6 +75,12 @@ configured-prefix coverage are still separate products, not synonyms for route
 position. Resolve source-sensitive effects from the actual predecessor's facts.
 
 ### Starting rooms
+
+Every starting room declares `routeFirst` and `routeLater` reward profiles,
+resolved for ordinary and Dream routes alike. Route identity does not gate
+reward resolution. The optional `dreamEncounterDefinitionKey` on a position
+profile overrides only its encounter in Dream; ordinary encounter bindings
+remain intact.
 
 | Context                    | Reward profile          | Encounter profile                        |
 | -------------------------- | ----------------------- | ---------------------------------------- |
@@ -351,6 +359,32 @@ Gate A delivery:
 - No JSON fixtures, schema/protocol versions or game-module code changed.
   Existing baseline saves require the planned closure migration before reuse.
   Dream public admission remains disabled; B/C still own contextual room profiles.
+
+Gate B delivery:
+
+- Declaration-backed starting-room profiles feed authored defaults, commands,
+  strict decoding, encounter preparation, action/pickup discovery, materialization
+  and reward generation. First-room identity/reward controls now live in Loadout;
+  acquisition children remain on the room Timeline.
+- Independent review passed after contextual replacement/encounter/pickup fixes.
+  Real command/codec witnesses cover Dream-later F variant replacement and
+  Dream-first G Buried Treasure pickup reconciliation. App interaction witnesses
+  cover Room/Reward edits and Undo, outer versus nested finding destinations,
+  and incomplete-loadout control/label locks at the relocated editor.
+- Catalog/engine sweep: 2,267 passed, one stale Dream history assertion corrected;
+  its five-test suite passed on rerun. Reviewer catalog suite: 269 passed;
+  contextual starting-profile suite: five passed. Planner sweep: 1,016 passed,
+  two test failures corrected (route shape and async dialog readiness); affected
+  suites passed all 66 tests on rerun. The preceding focused shell/workspace sweep
+  also exposed one old opening-destination assertion; its six-test suite passed
+  after consuming the projected destination.
+- Workspace/fixture typechecks, repository ESLint, changed-file Prettier and
+  whitespace checks passed. No JSON fixtures, schema/protocol versions or game
+  module code changed. Full phase verification and migration remain Gate E.
+- Position-profile amendment: every start declares `routeFirst`/`routeLater`
+  for all routes, with only encounter overrides Dream-specific. Independent
+  review passed; catalog/biome/starting-profile/Loadout regressions passed
+  481 tests across 53 files.
 
 Review this plan adversarially before implementation. Per gate, use the narrow
 owning catalog/engine/planner/UI/contract/product tests. Main session supplies

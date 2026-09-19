@@ -7,6 +7,7 @@ import {
   createHubDecisionAddress,
   createHubOpenSetAddress,
   createRouteAddress,
+  semanticAddressKey,
 } from '@run-planner/engine/authored-project';
 import { describe, expect, it } from 'vitest';
 
@@ -119,16 +120,26 @@ describe('App', () => {
 
     application.store.dispatch(settingsSelected());
     const historyBeforeNavigation = application.store.getState().projectWorkspace.history!;
+    const destination = application
+      .selectStructuredWorkspace(application.store.getState())!
+      .focusByOwner.get(semanticAddressKey(finding.origin))!;
     application.store.dispatch(
-      findingSelected({ key: semanticFindingKey(finding), origin: finding.origin }),
+      findingSelected({
+        key: semanticFindingKey(finding),
+        origin: finding.origin,
+        ...(destination.presentationPanel === undefined
+          ? {}
+          : {
+              presentationPanel: { kind: destination.presentationPanel },
+            }),
+      }),
     );
 
     const markup = appMarkup(application);
     expect(finding.code).toBe('biomeTopologyMissing');
     expect(application.store.getState().editorSession.activeSection).toBe('route');
     expect(application.store.getState().editorSession.activePanel).toEqual({
-      kind: 'biome',
-      biomeKey: 'F',
+      kind: 'overview',
     });
     expect(application.store.getState().projectWorkspace.history!).toBe(historyBeforeNavigation);
     expect(markup).toContain('Create the opening room');

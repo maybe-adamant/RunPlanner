@@ -44,6 +44,7 @@ import {
   encounterSetForBinding,
   selectedEncounterAuthoringProfileKey,
 } from '../room-state/encounter-envelope';
+import { resolveStartingRoomDeclaration } from '../room-state/starting-room-profile';
 import { activeRoomActionReferences, roomActionKey } from './state';
 import {
   parseClockedTraitGeneratedPickupEntryKey,
@@ -490,6 +491,7 @@ function baseContribution(
         catalog,
         biome,
         occurrence,
+        declaration,
         reference.siteKey,
         reference.entryKey,
       );
@@ -628,8 +630,9 @@ export function assembleRoomActionDomain(options: {
   readonly incomingRewardActive?: boolean;
   readonly shopInventoryActive?: boolean;
 }): RoomActionDomain {
-  const declaration = options.catalog.rooms.byKey[options.occurrence.gameName];
-  if (declaration === undefined) throw new Error(`unknown room ${options.occurrence.gameName}`);
+  const rawDeclaration = options.catalog.rooms.byKey[options.occurrence.gameName];
+  if (rawDeclaration === undefined) throw new Error(`unknown room ${options.occurrence.gameName}`);
+  const declaration = resolveStartingRoomDeclaration(rawDeclaration, options.routePosition);
   const lifecycleProfileKey =
     options.lifecycleProfileKey ?? authoredRoomLifecycleProfileKey(declaration, options.occurrence);
   const lifecycleStructure = assembleRoomLifecycleStructure({
@@ -749,6 +752,7 @@ export function assembleRoomActionDomain(options: {
               options.catalog,
               options.biome,
               options.occurrence,
+              declaration,
               action.reference.siteKey,
               action.reference.entryKey,
             )

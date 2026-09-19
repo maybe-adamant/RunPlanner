@@ -441,7 +441,6 @@ export function StartRoomIdentityEditor({
       <div className="start-room-entry-reward">
         <RewardSurfaceEditor
           ariaLabel={`${node.room.label} starting rewards`}
-          focusOwner={node.room.address}
           idPrefix={`start-${node.room.occurrenceId}-entry-reward`}
           interactions={interactions}
           rewards={node.room.offerRewardRewards}

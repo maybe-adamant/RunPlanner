@@ -11,6 +11,8 @@ import { type RouteFeedbackPresentation } from '@planner/projections/evaluationP
 import type { RouteEditorNavigation } from '@planner/projections/editorNavigation';
 import { authoredProjectCommandDispatched } from '@planner/state/projectWorkspaceSlice';
 import { useAppDispatch } from '@planner/state/store';
+import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
+import { StartRoomIdentityEditor } from '@planner/ui/editor/biome/BiomeInspectorControls';
 import type {
   WorkspaceInteractionCatalog,
   WorkspaceRoute,
@@ -71,6 +73,7 @@ export function RouteOverview({
 }) {
   const findingTarget = useFindingTarget();
   const dispatch = useAppDispatch();
+  const executeIntent = useCommandIntent();
   const configuredBiomeCount = workspaceRoute.biomes.length;
   const configuredBiomeLabels = navigation.biomePanels
     .slice(0, configuredBiomeCount)
@@ -86,6 +89,11 @@ export function RouteOverview({
     project.route.routeKey === workspaceRoute.routeKey ? project.route : undefined;
   if (authoredRoute === undefined)
     throw new Error(`Missing authored route ${workspaceRoute.routeKey}`);
+  const firstBiome = workspaceRoute.biomes[0];
+  const start =
+    firstBiome === undefined
+      ? undefined
+      : interactions.starts.get(workspaceInteractionKey(firstBiome.owner));
   const weapon = catalog.weapons.byKey[authoredRoute.loadout.weaponKey];
   if (weapon === undefined) throw new Error(`Missing weapon ${authoredRoute.loadout.weaponKey}`);
   const derivedLoadout = deriveRouteLoadout(catalog, authoredRoute.loadout);
@@ -174,6 +182,24 @@ export function RouteOverview({
         </select>
       </label>
       <p className="panel-description">{routeDescription}</p>
+      {firstBiome === undefined ? null : (
+        <section aria-label="Starting room" className="route-start-room-controls">
+          {firstBiome.entry === undefined ? (
+            start === undefined ? null : (
+              <button
+                {...findingTarget(start.owner)}
+                className="primary-action"
+                onClick={() => executeIntent(start.intent())}
+                type="button"
+              >
+                Start {firstBiome.label}
+              </button>
+            )
+          ) : (
+            <StartRoomIdentityEditor interactions={interactions} node={firstBiome.entry} />
+          )}
+        </section>
+      )}
       <div className="route-loadout-controls">
         <div className="route-keepsake-controls">
           <KeepsakeSelectionPicker

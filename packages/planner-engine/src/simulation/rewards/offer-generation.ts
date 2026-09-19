@@ -63,15 +63,14 @@ function sourceConflictingPeers(
 export function countedBinding(
   declaration: RoomDeclaration,
   incoming: CanonicalResolvedIncomingReward,
+  incomingBinding: import('../../reward-kernel/bindings').RewardProducerBinding = declaration.incomingReward,
 ): CountedRewardBinding | undefined {
   if (incoming.producerKind === 'freeReward') {
     const policy = declaration.prebossBatchPolicy;
     const remaining = policy?.kind === 'takeOverNormalDoors' ? policy.remainingOffers : undefined;
     return remaining?.kind === 'counted' ? remaining.reward : undefined;
   }
-  return declaration.incomingReward.kind === 'countedChoice'
-    ? declaration.incomingReward
-    : undefined;
+  return incomingBinding.kind === 'countedChoice' ? incomingBinding : undefined;
 }
 
 export interface OfferProcessingContext {

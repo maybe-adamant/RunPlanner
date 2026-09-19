@@ -72,6 +72,26 @@ export const standardRoomLifecycleProfiles = [
     ],
   },
   {
+    key: 'OpeningRewardNoEncounterRoom',
+    encounterEnvelopeKeys: ['EmptyEncounter'],
+    producer: { kind: 'required', lifecycleProfileKeys: ['RoomReward'] },
+    operations: [
+      { kind: 'prepareRoom', effects: ['recordPreparation', 'recordEncounter'] },
+      { kind: 'enterRoom', effects: ['recordAppearance'] },
+      {
+        kind: 'advanceProducer',
+        point: 'roomRewardPickup',
+        effects: ['recordProducerPoint'],
+      },
+      { kind: 'generateOutgoingBatch', effects: ['recordOutgoingGeneration'] },
+      {
+        kind: 'commitRoom',
+        effects: ['recordCommit', 'advanceRoomCounters', 'recordEnteredRewardStore'],
+      },
+      { kind: 'exitRoom', effects: ['recordExit'] },
+    ],
+  },
+  {
     key: 'RewardlessCombatRoom',
     encounterEnvelopeKeys: ['SingleEncounter'],
     producer: { kind: 'none' },

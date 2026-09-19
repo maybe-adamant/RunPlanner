@@ -18,6 +18,7 @@ import { seaStarDuplicateSourceIsActive } from '../acquisition/sea-star';
 import { rewardSourceResolvesAtAcquisition } from '../acquisition/reward-state';
 import { authoredShopOffer } from '../shop';
 import type { ResolvedRoutePosition } from '../route-context';
+import { resolveStartingRoomDeclaration } from '../room-state/starting-room-profile';
 export { roomActionKey } from './key';
 import { roomActionKey } from './key';
 
@@ -51,8 +52,9 @@ export function activeRoomActionReferences(
     readonly shopInventoryActive?: boolean;
   },
 ): readonly RoomActionReference[] {
-  const room = catalog.rooms.byKey[occurrence.gameName];
-  if (room === undefined) return Object.freeze([]);
+  const rawRoom = catalog.rooms.byKey[occurrence.gameName];
+  if (rawRoom === undefined) return Object.freeze([]);
+  const room = resolveStartingRoomDeclaration(rawRoom, routePosition);
   const declarationActions = createDefaultRoomActionState(room).order;
   const references: RoomActionReference[] = declarationActions.filter(
     (reference) => reference.kind !== 'useFountain',
@@ -218,7 +220,7 @@ export function activeRoomActionReferences(
     echoLastRewardPickupEntryKeys(catalog, occurrence.encounters),
   );
   const activePickupEntries = new Set(
-    activeSelectedPickupProducers(catalog, biome, occurrence).flatMap((producer) =>
+    activeSelectedPickupProducers(catalog, biome, occurrence, room).flatMap((producer) =>
       producer.pickups.map((pickup) => JSON.stringify([producer.siteKey, pickup.key])),
     ),
   );

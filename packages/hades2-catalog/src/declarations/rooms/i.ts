@@ -18,6 +18,20 @@ const wellHost = (challengeSwitchAnchorCount: number) => ({
   roomShop: { profileKey: 'RoomShop' as const, spawnChance: 0.08 },
 });
 
+const iRouteFirstStartingRoom = {
+  templateKey: 'FixedOpening' as const,
+  incomingReward: {
+    kind: 'countedChoice' as const,
+    storeKeys: ['RunProgress'],
+    eligibleRewardTypes: [],
+    ineligibleRewardTypes: ['Devotion', 'RoomMoneyDrop', 'MaxHealthDrop', 'MaxManaDrop'],
+    producerLifecycleKey: 'RoomReward',
+  },
+  lifecycleProfileKey: 'OpeningRewardNoEncounterRoom',
+  enteredRewardStoreHistory: { kind: 'resolvedOffer' as const },
+  forcedRewardStoreKey: 'RunProgress',
+};
+
 export const iRooms = [
   {
     gameName: 'I_Intro',
@@ -30,6 +44,15 @@ export const iRooms = [
     structuralTags: [],
     exits: [{ index: 1, type: 'TartarusExitDoor' }],
     incomingReward: { kind: 'none' },
+    startingRoomProfiles: {
+      routeFirst: iRouteFirstStartingRoom,
+      routeLater: {
+        templateKey: 'FixedIntro',
+        incomingReward: { kind: 'none' },
+        lifecycleProfileKey: 'RewardlessRoom',
+        enteredRewardStoreHistory: { kind: 'none' },
+      },
+    },
     enteredRewardStoreHistory: { kind: 'none' },
     encounterEnvelopeKey: 'EmptyEncounter',
     unmodeledEncounterKeys: ['Empty'],

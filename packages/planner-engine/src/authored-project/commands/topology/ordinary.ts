@@ -55,6 +55,7 @@ import {
 } from './construction';
 import { reconcileCompletionChain } from './takeover';
 import { replaceWithHubDecision } from './hub';
+import { resolveStartingRoomDeclaration } from '../../room-state/starting-room-profile';
 
 function orderTargetsByPhysicalExit(
   targets: readonly ExitTargetReference[],
@@ -87,7 +88,10 @@ export function createStart(
     failCommand(command, 'fixed authored starts derive their declaration-owned gameName');
   }
   if (gameName === undefined) failCommand(command, 'missing declared authored start');
-  const room = requireRoom(catalog, gameName, located.layout.biomeKey, command);
+  const room = resolveStartingRoomDeclaration(
+    requireRoom(catalog, gameName, located.layout.biomeKey, command),
+    located.routePosition,
+  );
   const occurrence = defaultOccurrence(
     catalog,
     room,

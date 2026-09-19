@@ -4,16 +4,20 @@ import { catalog } from '@run-planner/hades2-catalog';
 import {
   applyProjectCommand,
   createBatchRewardStoreAddress,
+  createBiomeAddress,
   createExitDecisionAddress,
   createExitSelectionAddress,
   createIncomingRewardAddress,
   createOccurrenceId,
   createOccurrenceAddress,
+  createProjectDocument,
+  resolveRoutePosition,
   createTargetAddress,
   semanticAddressKey,
 } from '@run-planner/engine/authored-project';
 import {
   createPreparedProjectCandidateSession,
+  materializeBiomePrefix,
   simulateProjectAssembly,
   evaluateTakeoverPrebossBatchCandidate,
   simulateProject,
@@ -35,6 +39,44 @@ function completeG(project = createCompleteFGProject()) {
 }
 
 describe('G generation and takeover', () => {
+  it('publishes and settles the Dream-first G opening reward through the ordinary candidate path', () => {
+    const biome = createBiomeAddress('Dream', 'G');
+    const occurrenceId = createOccurrenceId('dream-g-opening');
+    let project = applyProjectCommand(
+      createProjectDocument(catalog, {
+        projectId: 'dream-g-opening',
+        routeKey: 'Dream',
+        itineraryBiomeKeys: ['G', 'F'],
+        configuredBiomeCount: 1,
+      }),
+      catalog,
+      { kind: 'CreateStart', biome, occurrenceId },
+    );
+    const reward = createIncomingRewardAddress(biome, occurrenceId);
+    const candidate = createPreparedProjectCandidateSession(
+      catalog,
+      simulateProjectAssembly(catalog, project),
+    ).evaluate({
+      kind: 'incomingReward',
+      reward,
+      value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'ApolloUpgrade' } },
+    });
+    expect(candidate).toMatchObject({ kind: 'incomingReward', result: { supported: true } });
+
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceIncomingReward',
+      reward,
+      value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'ApolloUpgrade' } },
+    });
+    const plan = project.route.biomes[0];
+    if (plan === undefined) throw new Error('Dream fixture has no G plan');
+    const position = resolveRoutePosition(catalog, project.route, 'G');
+    const snapshot = materializeBiomePrefix(catalog, biome, position, plan, project.route.loadout);
+    if (snapshot === null || snapshot.entryRoom === undefined)
+      throw new Error('Dream G opening did not materialize');
+    expect(snapshot.entryRoom).toMatchObject({ enteredRewardStoreKey: 'RunProgress' });
+  });
+
   it('carries F Postboss through G Intro and a selected G Preboss free reward', () => {
     let project = createCompleteFGProject({ prebossSource: 'G_Combat14' });
     const source = { kind: 'occurrence' as const, occurrenceId: goldenGOccurrenceId(7, 1) };

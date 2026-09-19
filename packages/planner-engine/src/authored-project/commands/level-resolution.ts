@@ -81,7 +81,14 @@ export function applyLevelResolutionCommand(
         : failCommand(command, 'acquisition entry is not occurrence-owned')
       : owner.occurrenceId;
   const occurrence = requireOccurrence(located.plan, occurrenceId, command);
-  const locatedReward = locateReward(catalog, occurrence, occurrence.state, owner, command);
+  const locatedReward = locateReward(
+    catalog,
+    located.routePosition,
+    occurrence,
+    occurrence.state,
+    owner,
+    command,
+  );
   if (locatedReward === undefined)
     failCommand(command, `no reward at role ${command.levelResolution.acquisitionRole}`);
   const effect = levelResolutionEffectFor(

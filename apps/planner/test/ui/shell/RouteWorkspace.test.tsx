@@ -3,6 +3,7 @@ import { Provider } from 'react-redux';
 import {
   createBiomeAddress,
   createHubDecisionAddress,
+  createOccurrenceAddress,
   createOccurrenceId,
   createRouteAddress,
 } from '@run-planner/engine/authored-project';
@@ -134,6 +135,27 @@ describe('RouteWorkspace', () => {
     expect(markup).not.toContain('<p class="eyebrow">Details</p>');
     expect(markup).toContain('Continue route');
     expect(markup).toContain('data-editor-layout="biome"');
+    expect(markup).not.toContain('aria-label="Start room configuration"');
+  });
+
+  it('retains later P start identity in its biome workbench', () => {
+    const application = createOpenTestApplication('Surface');
+    application.store.dispatch(authoredProjectReplaced(loadSurfaceNOPQProject()));
+    application.store.dispatch(
+      routePanelSelected({ routeKey: 'Surface', panel: { kind: 'biome', biomeKey: 'P' } }),
+    );
+    application.store.dispatch(
+      semanticOwnerFocused(
+        createOccurrenceAddress(
+          createBiomeAddress('Surface', 'P'),
+          createOccurrenceId('surface-p-intro'),
+        ),
+      ),
+    );
+
+    expect(routeWorkspaceMarkup(application, 'Surface')).toContain(
+      'aria-label="Start room configuration"',
+    );
   });
 
   it('renders N’s Hub through the same workspace shell and preserves its board owners', () => {

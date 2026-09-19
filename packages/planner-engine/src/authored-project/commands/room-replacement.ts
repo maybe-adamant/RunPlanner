@@ -32,6 +32,7 @@ import {
 } from '../topology/query';
 import { fieldsDefaultActiveCageCount } from '../fields';
 import { resolveRoutePosition } from '../route-context';
+import { resolveStartingRoomDeclaration } from '../room-state/starting-room-profile';
 
 import {
   failCommand,
@@ -373,7 +374,11 @@ export function applyRoomReplacementCommand(
   const current = requireTopology(located.plan, command);
   const occurrence = requireOccurrence(located.plan, command.occurrence.occurrenceId, command);
   if (occurrence.gameName === command.gameName) return document;
-  const replacementRoom = requireRoom(catalog, command.gameName, located.layout.biomeKey, command);
+  const routePosition = resolveRoutePosition(catalog, document.route, located.plan.biomeKey);
+  const replacementRoom = resolveStartingRoomDeclaration(
+    requireRoom(catalog, command.gameName, located.layout.biomeKey, command),
+    routePosition,
+  );
   if (
     replacementRoom.kind === 'Preboss' &&
     catalog.routes.byKey[located.routeKey]?.prebossRoomGameNames?.[located.biomeIndex] !==
@@ -456,7 +461,10 @@ export function applyRoomReplacementCommand(
   );
   const replacementState = reconcileReplacementRoomState(
     catalog,
-    requireRoom(catalog, occurrence.gameName, located.layout.biomeKey, command),
+    resolveStartingRoomDeclaration(
+      requireRoom(catalog, occurrence.gameName, located.layout.biomeKey, command),
+      routePosition,
+    ),
     occurrence.state,
     replacementRoom,
     replacementDefault,
@@ -475,7 +483,10 @@ export function applyRoomReplacementCommand(
       : {}),
     encounters: reconcileRoomEncounterState(
       catalog,
-      requireRoom(catalog, occurrence.gameName, located.layout.biomeKey, command),
+      resolveStartingRoomDeclaration(
+        requireRoom(catalog, occurrence.gameName, located.layout.biomeKey, command),
+        routePosition,
+      ),
       occurrence.encounters,
       replacementRoom,
       createDefaultRoomEncounterState(

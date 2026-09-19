@@ -1,4 +1,4 @@
-import type { Catalog } from '../../catalog-schema';
+import type { RoomDeclaration } from '../../catalog-schema';
 import type { EnteredRewardStoreHistoryPolicy } from '../../reward-kernel/bindings';
 import type { RoomLifecycleExecutionInput } from '../lifecycle';
 import type { ResolvedEncounterPhase } from '../encounters/model';
@@ -47,14 +47,10 @@ function enteredStoreKey(
 }
 
 export function createRoomLifecycleInput(
-  catalog: Catalog,
   room: CanonicalLifecycleRoom,
   encounterPhases: readonly ResolvedEncounterPhase[],
+  declaration: RoomDeclaration,
 ): RoomLifecycleExecutionInput {
-  const declaration = catalog.rooms.byKey[room.gameName];
-  if (declaration === undefined) {
-    throw new HistoryLifecycleInputContractError(`unknown canonical room ${room.gameName}`);
-  }
   const storeKey = enteredStoreKey(declaration.enteredRewardStoreHistory, room);
   const incomingReward = 'incomingReward' in room ? room.incomingReward : undefined;
   const requiredObjects = 'requiredObjects' in room ? room.requiredObjects : undefined;

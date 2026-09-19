@@ -30,6 +30,7 @@ import type {
 import type { ResolvedEncounterPhase } from '../encounters/model';
 import { assessFigLeafSkip } from '../encounters/fig-leaf';
 import { targetRewardGenerationCheckpoint } from '../encounters/generation-preparation';
+import { resolveStartingRoomDeclaration } from '../../authored-project/room-state/starting-room-profile';
 
 export interface FigLeafLifecycleState {
   readonly remainingUses: number;
@@ -317,8 +318,9 @@ export function appendRoomLifecycle(
           },
         )
       : undefined;
-  const declaration = catalog.rooms.byKey[room.gameName];
-  if (declaration === undefined) fail(`unknown canonical room ${room.gameName}`);
+  const rawDeclaration = catalog.rooms.byKey[room.gameName];
+  if (rawDeclaration === undefined) fail(`unknown canonical room ${room.gameName}`);
+  const declaration = resolveStartingRoomDeclaration(rawDeclaration, writer.routePosition);
   const encounterPhases =
     encounterPreparation?.validPrefix ??
     resolveMaterializedEncounterPhases(
@@ -333,7 +335,7 @@ export function appendRoomLifecycle(
   if (encounterPreparation !== undefined && !encounterPreparation.valid) {
     const prefix = executeEncounterRecordPrefix(
       catalog,
-      createRoomLifecycleInput(catalog, room, effectiveEncounterPhases),
+      createRoomLifecycleInput(room, effectiveEncounterPhases, declaration),
     );
     for (const event of prefix.events) appendLifecycleEvent(writer, event, fail);
     throw new EncounterLifecycleBlocked(
@@ -344,7 +346,7 @@ export function appendRoomLifecycle(
   }
   const fragment = executeRoomLifecycle(
     catalog,
-    createRoomLifecycleInput(catalog, room, effectiveEncounterPhases),
+    createRoomLifecycleInput(room, effectiveEncounterPhases, declaration),
   );
   options.prepare?.(fragment.events);
   let projectedOutgoing = false;

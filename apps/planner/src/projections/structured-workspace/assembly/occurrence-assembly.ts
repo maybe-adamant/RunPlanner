@@ -1,4 +1,7 @@
-import type { ResolvedRoutePosition } from '@run-planner/engine/authored-project';
+import {
+  resolveStartingRoomDeclaration,
+  type ResolvedRoutePosition,
+} from '@run-planner/engine/authored-project';
 import {
   createJudgmentArcanaAddress,
   createFigurineArcanaAddress,
@@ -270,7 +273,10 @@ export function assembleWorkspaceOccurrence(
   input: WorkspaceOccurrenceAssemblyInput,
 ): WorkspaceOccurrenceAssembly {
   const { occurrence } = input;
-  const room = requireRoom(input.catalog, occurrence.gameName);
+  const room = resolveStartingRoomDeclaration(
+    requireRoom(input.catalog, occurrence.gameName),
+    input.routePosition,
+  );
   const address = createOccurrenceAddress(input.biome, occurrence.occurrenceId);
   const entered = input.evaluatedRoom?.entered ?? false;
   const roomControls =

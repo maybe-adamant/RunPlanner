@@ -225,6 +225,26 @@ describe('editor session navigation', () => {
     expect(selectedRoute.activePanel).toEqual({ kind: 'overview' });
   });
 
+  it('lets a projected starting-room finding select Loadout without changing ordinary navigation', () => {
+    const opening = createOccurrenceAddress(
+      createBiomeAddress('Underworld', 'F'),
+      createOccurrenceId('start-panel'),
+    );
+    const finding = reducer(
+      undefined,
+      findingSelected({
+        key: 'opening-reward',
+        origin: opening,
+        focusAddress: opening,
+        presentationPanel: { kind: 'overview' },
+      }),
+    );
+    const navigated = reducer(finding, semanticOwnerNavigated(opening));
+
+    expect(finding.activePanel).toEqual({ kind: 'overview' });
+    expect(navigated.activePanel).toEqual({ kind: 'biome', biomeKey: 'F' });
+  });
+
   it('issues a new navigation request when the same finding is selected again', () => {
     const selection = {
       key: 'finding-key',

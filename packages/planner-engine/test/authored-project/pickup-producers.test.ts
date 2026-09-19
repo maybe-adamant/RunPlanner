@@ -55,9 +55,21 @@ describe('authored pickup producers', () => {
 
   it('removes an unselected generated producer site and its action', () => {
     const occurrence = occurrenceWithStaleProducerSite();
-    expect(selectedPickupProducers(catalog, biome, occurrence)).toEqual([]);
+    expect(
+      selectedPickupProducers(
+        catalog,
+        biome,
+        occurrence,
+        catalog.rooms.byKey[occurrence.gameName]!,
+      ),
+    ).toEqual([]);
 
-    const reconciled = reconcileSelectedPickupProducerState(catalog, biome, occurrence);
+    const reconciled = reconcileSelectedPickupProducerState(
+      catalog,
+      biome,
+      occurrence,
+      catalog.rooms.byKey[occurrence.gameName]!,
+    );
     expect(reconciled.acquisitionSites).toBeUndefined();
     expect(reconciled.roomActions.order).toEqual([]);
   });
@@ -71,16 +83,24 @@ describe('authored pickup producers', () => {
       );
     if (occurrence === undefined) throw new Error('Quick Buck source occurrence is missing');
 
-    const producer = selectedPickupProducers(catalog, nBiome, occurrence).find(
-      (candidate) => candidate.traitKey === 'MoneyMultiplierBoon',
-    );
+    const producer = selectedPickupProducers(
+      catalog,
+      nBiome,
+      occurrence,
+      catalog.rooms.byKey[occurrence.gameName]!,
+    ).find((candidate) => candidate.traitKey === 'MoneyMultiplierBoon');
     if (producer === undefined) throw new Error('Quick Buck producer is missing');
     expect(producer.sourceNormal).toBe(true);
     expect(producer.pickups).toEqual([
       { key: 'quickBuckGold', rewardType: 'RoomMoneyDrop', required: false },
     ]);
 
-    const reconciled = reconcileSelectedPickupProducerState(catalog, nBiome, occurrence);
+    const reconciled = reconcileSelectedPickupProducerState(
+      catalog,
+      nBiome,
+      occurrence,
+      catalog.rooms.byKey[occurrence.gameName]!,
+    );
     expect(reconciled.acquisitionSites?.[producer.siteKey]?.pickupEntries).toMatchObject({
       quickBuckGold: { offer: { rewardType: 'RoomMoneyDrop' } },
     });
@@ -164,6 +184,7 @@ describe('authored pickup producers', () => {
     const previous = {
       route: {
         routeKey: 'Surface',
+        itineraryBiomeKeys: ['N', 'O', 'P', 'Q'],
         biomes: [{ biomeKey: 'O', topology: { occurrences: [source, host] } }],
       },
     } as unknown as ProjectDocument;

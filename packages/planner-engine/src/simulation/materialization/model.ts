@@ -166,6 +166,8 @@ export interface CanonicalAuthoredRoom {
   readonly origin: OccurrenceAddress;
   readonly occurrenceId: OccurrenceId;
   readonly gameName: string;
+  /** Context-resolved incoming producer binding retained for reward generation. */
+  readonly incomingRewardBinding: import('../../reward-kernel/bindings').RewardProducerBinding;
   /** Declaration-owned room classification retained for downstream products. */
   readonly roomKind: RoomKind;
   /**

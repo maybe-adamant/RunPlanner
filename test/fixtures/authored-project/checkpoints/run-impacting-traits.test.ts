@@ -79,7 +79,12 @@ describe('run-impacting trait checkpoint recipes', () => {
         .find((biome) => biome.biomeKey === 'N')
         ?.topology?.occurrences.find((candidate) => candidate.acquisitionSites !== undefined);
       if (occurrence === undefined) throw new Error('Generated-pickup source owner is missing');
-      return selectedPickupProducers(catalog, nBiome, occurrence)[0]?.placement;
+      return selectedPickupProducers(
+        catalog,
+        nBiome,
+        occurrence,
+        catalog.rooms.byKey[occurrence.gameName]!,
+      )[0]?.placement;
     };
     expect(producerPlacement(createSurfaceNQuickBuckCheckpoint())).toBe('afterSource');
     expect(producerPlacement(createSurfaceNBuriedTreasureCheckpoint())).toBe('afterSource');
@@ -98,9 +103,12 @@ describe('run-impacting trait checkpoint recipes', () => {
         occurrence,
         routePosition: resolveRoutePosition(catalog, project.route, 'N'),
       });
-      const producer = selectedPickupProducers(catalog, nBiome, occurrence).find((candidate) =>
-        candidate.pickups.some((pickup) => pickup.key === entryKey),
-      );
+      const producer = selectedPickupProducers(
+        catalog,
+        nBiome,
+        occurrence,
+        catalog.rooms.byKey[occurrence.gameName]!,
+      ).find((candidate) => candidate.pickups.some((pickup) => pickup.key === entryKey));
       if (producer === undefined) throw new Error('Generated-pickup producer is missing');
       const child = domain.contributions.find(
         (contribution) =>

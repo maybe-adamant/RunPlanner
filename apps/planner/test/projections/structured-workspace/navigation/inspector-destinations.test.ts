@@ -422,7 +422,12 @@ describe('workspace inspector destinations', () => {
     const reward = createIncomingRewardAddress(goldenFBiome, createOccurrenceId('golden-f-start'));
     expect(destination(workspace, reward)).toMatchObject({
       focusAddress: reward,
+      presentationPanel: 'overview',
       roomTab: 'overview',
+    });
+    expect(destination(workspace, opening.room.address)).toMatchObject({
+      focusAddress: opening.room.address,
+      presentationPanel: 'overview',
     });
     const trait = opening.room.rewardControls.flatMap((control) => control.traitOffers ?? [])[0];
     if (trait === undefined) throw new Error('opening trait missing');
@@ -430,6 +435,7 @@ describe('workspace inspector destinations', () => {
       focusAddress: { kind: 'roomAction' },
       roomTab: 'actions',
     });
+    expect(destination(workspace, trait.address).presentationPanel).toBeUndefined();
   });
 
   it('routes a purchased Well mystery repair to its Timeline action', () => {

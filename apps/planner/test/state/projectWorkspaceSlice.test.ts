@@ -157,6 +157,7 @@ describe('project workspace application state', () => {
     expect(project.projectId).toBe('run-plan');
     expect(project.route).toEqual({
       routeKey: 'Underworld',
+      itineraryBiomeKeys: ['F', 'G', 'H', 'I'],
       loadout: createDefaultRouteLoadout(catalog),
       resourcePlacements: {
         Exorcism: null,

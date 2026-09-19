@@ -57,6 +57,8 @@ export interface WorkspaceInspectorDestination {
    */
   readonly nodeKey: string;
   readonly ownerAddress: SemanticAddress;
+  /** Finding-only presentation override for controls intentionally hosted in Route Loadout. */
+  readonly presentationPanel?: 'overview';
   /** Present when this owner belongs to a specific room-workbench tab. */
   readonly roomTab?: WorkspaceRoomTab;
   /** Present when this owner belongs to a specific Hub-workbench tab. */

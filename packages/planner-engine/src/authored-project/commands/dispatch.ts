@@ -20,6 +20,8 @@ import { applyKeepsakeCommand } from './keepsake';
 import { applyResourcePlacementCommand } from './resources';
 import type { ProjectCommand } from './types';
 import { createBiomeAddress } from '../addresses';
+import { resolveRoutePosition } from '../route-context';
+import { resolveStartingRoomDeclaration } from '../room-state/starting-room-profile';
 import { applyRoomActionCommand } from './room-actions';
 import { reconcileNewRequiredRoomActions } from '../room-actions/defaults';
 import {
@@ -48,13 +50,21 @@ function reconcileGeneratedPickupProducerState(
       (candidate) => candidate.biomeKey === plan.biomeKey,
     );
     const biome = createBiomeAddress(route.routeKey, plan.biomeKey);
+    const routePosition = resolveRoutePosition(catalog, route, plan.biomeKey);
     let occurrencesChanged = false;
     const occurrences = plan.topology.occurrences.map((occurrence) => {
       const previousOccurrence = previousPlan?.topology?.occurrences.find(
         (candidate) => candidate.occurrenceId === occurrence.occurrenceId,
       );
       if (previousOccurrence === occurrence) return occurrence;
-      const reconciled = reconcileSelectedPickupProducerState(catalog, biome, occurrence);
+      const rawRoom = catalog.rooms.byKey[occurrence.gameName];
+      if (rawRoom === undefined) return occurrence;
+      const reconciled = reconcileSelectedPickupProducerState(
+        catalog,
+        biome,
+        occurrence,
+        resolveStartingRoomDeclaration(rawRoom, routePosition),
+      );
       if (reconciled !== occurrence) occurrencesChanged = true;
       return reconciled;
     });

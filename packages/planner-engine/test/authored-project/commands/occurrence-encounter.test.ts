@@ -642,7 +642,14 @@ describe('authored encounter occurrence commands', () => {
       producerPoint: 'reward',
       acquisitionRole: 'source',
     });
-    expect(activeSelectedPickupProducers(aliasCatalog, goldenFBiome, selected)).toContainEqual(
+    expect(
+      activeSelectedPickupProducers(
+        aliasCatalog,
+        goldenFBiome,
+        selected,
+        aliasCatalog.rooms.byKey[selected.gameName]!,
+      ),
+    ).toContainEqual(
       expect.objectContaining({
         producerLifecycleKey: 'NemesisEventPickup',
         siteKey: 'nemesisGenerated:Encounter',
