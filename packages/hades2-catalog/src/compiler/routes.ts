@@ -8,6 +8,67 @@ import type {
 import { createCollection, requireNonEmpty } from './common';
 import { fail } from './errors';
 
+function normalizeDreamItinerary(
+  route: RouteDeclaration,
+  routePath: string,
+  biomes: CatalogCollection<BiomeDeclaration>,
+): RouteDeclaration['dreamItinerary'] {
+  if (route.key !== 'Dream') {
+    if (route.dreamItinerary !== undefined) fail(`${routePath}.dreamItinerary`, 'is Dream-only');
+    return undefined;
+  }
+  const declaration = route.dreamItinerary;
+  if (declaration === undefined) fail(`${routePath}.dreamItinerary`, 'is required for Dream');
+  if (!Number.isInteger(declaration.biomeCount) || declaration.biomeCount <= 0) {
+    fail(`${routePath}.dreamItinerary.biomeCount`, 'must be a positive integer');
+  }
+  const normalizePool = (keys: readonly string[], path: string) => {
+    if (keys.length === 0) fail(path, 'must not be empty');
+    const seen = new Set<string>();
+    return Object.freeze(
+      keys.map((key, index) => {
+        const keyPath = `${path}[${index}]`;
+        requireNonEmpty(key, keyPath);
+        if (biomes.byKey[key] === undefined) fail(keyPath, `unknown biome ${key}`);
+        if (seen.has(key)) fail(keyPath, `duplicates biome ${key}`);
+        seen.add(key);
+        return key;
+      }),
+    );
+  };
+  const initialBiomeKeys = normalizePool(
+    declaration.initialBiomeKeys,
+    `${routePath}.dreamItinerary.initialBiomeKeys`,
+  );
+  const laterAdditionalBiomeKeys = normalizePool(
+    declaration.laterAdditionalBiomeKeys,
+    `${routePath}.dreamItinerary.laterAdditionalBiomeKeys`,
+  );
+  for (const key of laterAdditionalBiomeKeys) {
+    if (initialBiomeKeys.includes(key)) {
+      fail(
+        `${routePath}.dreamItinerary.laterAdditionalBiomeKeys`,
+        `duplicates initial biome ${key}`,
+      );
+    }
+  }
+  const allowed = new Set([...initialBiomeKeys, ...laterAdditionalBiomeKeys]);
+  const successors = Object.entries(declaration.naturalSuccessorByBiomeKey).map(
+    ([biomeKey, successor]) => {
+      const path = `${routePath}.dreamItinerary.naturalSuccessorByBiomeKey.${biomeKey}`;
+      if (!allowed.has(biomeKey)) fail(path, `unknown itinerary biome ${biomeKey}`);
+      if (!allowed.has(successor)) fail(path, `unknown successor biome ${successor}`);
+      return [biomeKey, successor] as const;
+    },
+  );
+  return Object.freeze({
+    biomeCount: declaration.biomeCount,
+    initialBiomeKeys,
+    laterAdditionalBiomeKeys,
+    naturalSuccessorByBiomeKey: Object.freeze(Object.fromEntries(successors)),
+  });
+}
+
 export function normalizeRoutes(
   rawRoutes: readonly RouteDeclaration[],
   biomes: CatalogCollection<BiomeDeclaration>,
@@ -31,6 +92,7 @@ export function normalizeRoutes(
       seenBiomes.add(biomeKey);
       return biomeKey;
     });
+    const dreamItinerary = normalizeDreamItinerary(route, routePath, biomes);
 
     const prebossEntries = Object.entries(route.completion.prebossRoomGameNameByBiomeKey);
     if (prebossEntries.length === 0) {
@@ -107,6 +169,7 @@ export function normalizeRoutes(
         prebossRoomGameNameByBiomeKey: Object.freeze(prebossRoomGameNameByBiomeKey),
         postbossRoomGameNamesByOrdinal: Object.freeze(normalizedPostbossRoomGameNamesByOrdinal),
       }),
+      ...(dreamItinerary === undefined ? {} : { dreamItinerary }),
     });
   });
 

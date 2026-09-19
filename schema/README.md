@@ -1,5 +1,16 @@
 # Project schema boundary
 
+Schema 86 gives the starting reward to the route Loadout while its acquisition
+settings remain on the first room occurrence.
+
+```bash
+npm run schema:migrate-85-to-86 -- path/to/schema-85-project.runplanner.json
+```
+
+The migration moves the first entry's reward offer into `loadout.startingReward`
+and retains its acquisition settings in `startingRewardAcquisition` on that
+occurrence. It writes a sibling file without overwriting the source.
+
 Schema 85 records the full ordinary itinerary and the plural Circe and Icarus
 selection payloads.
 
@@ -111,7 +122,7 @@ output. It has no route-selection, in-place, or target-version mode.
 
 The schema-72 splitter's pure transformation is exported from
 `schema/split-project-72-to-73.js` for checkpoint conversion. The source value
-is never mutated. The production decoder accepts schema 85 only; stale
+is never mutated. The production decoder accepts schema 86 only; stale
 documents are not migrated implicitly in the application.
 
 Migrate a schema-74 document with:

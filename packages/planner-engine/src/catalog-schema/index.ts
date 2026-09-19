@@ -74,6 +74,15 @@ export interface BiomeDeclaration {
   readonly label: string;
 }
 
+/** Native Dream-route choice facts. The engine applies the public itinerary policy. */
+export interface DreamItineraryDeclaration {
+  readonly biomeCount: number;
+  readonly initialBiomeKeys: readonly string[];
+  readonly laterAdditionalBiomeKeys: readonly string[];
+  /** A later choice cannot be this immediate native successor. */
+  readonly naturalSuccessorByBiomeKey: Readonly<Record<string, string>>;
+}
+
 export interface RouteDeclaration {
   readonly key: string;
   readonly label: string;
@@ -85,6 +94,8 @@ export interface RouteDeclaration {
     /** Exact Postboss room for each route ordinal; the terminal position is null. */
     readonly postbossRoomGameNamesByOrdinal: readonly (string | null)[];
   };
+  /** Present only for the native Dream route, whose itinerary is authored at project creation. */
+  readonly dreamItinerary?: DreamItineraryDeclaration;
 }
 
 /** The one declaration-owned reward domain offered before a route chooses an entry room. */

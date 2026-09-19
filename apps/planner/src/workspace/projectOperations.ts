@@ -1,4 +1,5 @@
 import {
+  assessPublicDreamItinerary,
   encodeProjectDocument,
   parseProjectDocument,
   type ProjectDocument,
@@ -44,7 +45,10 @@ export type ProjectOperationResult = {
 };
 
 export interface ProjectOperations {
-  createNew(routeKey: string): Promise<ProjectOperationResult>;
+  createNew(
+    routeKey: string,
+    itineraryBiomeKeys?: readonly string[],
+  ): Promise<ProjectOperationResult>;
   discardAutosaveRecovery(): ProjectOperationResult;
   exportAutosaveRecovery(): Promise<ProjectOperationResult>;
   readonly gamePlanAvailable: boolean;
@@ -113,12 +117,27 @@ export function createProjectOperations(
   return Object.freeze({
     gamePlanAvailable: options.gamePlanPublisher !== undefined,
     saveAsAvailable: options.profileFile.supportsSaveAs === true,
-    async createNew(routeKey: string): Promise<ProjectOperationResult> {
+    async createNew(
+      routeKey: string,
+      itineraryBiomeKeys?: readonly string[],
+    ): Promise<ProjectOperationResult> {
       try {
         const route = options.catalog.routes.byKey[routeKey];
-        if (route === undefined || (route.key !== 'Underworld' && route.key !== 'Surface'))
+        if (
+          route === undefined ||
+          (route.key !== 'Underworld' && route.key !== 'Surface' && route.key !== 'Dream')
+        )
           throw new Error(`Route ${routeKey} is not available for new projects`);
-        const project = createInitialProject(options.catalog, routeKey);
+        if (route.key === 'Dream') {
+          const assessment = assessPublicDreamItinerary(options.catalog, itineraryBiomeKeys ?? []);
+          if (!assessment.legal) {
+            throw new Error('Dream Dive requires four biomes in a valid route order');
+          }
+        } else if (itineraryBiomeKeys !== undefined) {
+          throw new Error(`${route.label} uses a fixed route order`);
+        }
+        const project = createInitialProject(options.catalog, routeKey, itineraryBiomeKeys);
+        assertPublicProjectAdmission(options.catalog, project);
         await options.profileFile.clearActive();
         activeProfileFile = null;
         options.store.dispatch(newProjectCreated(project));
@@ -188,6 +207,11 @@ export function createProjectOperations(
         }
         const workspace = options.store.getState().projectWorkspace;
         if (workspace.kind !== 'openProject') throw new Error('No project is open');
+        if (workspace.history.present.route.routeKey === 'Dream') {
+          throw new Error(
+            'Dream Dive publication is unavailable until native runtime support is delivered',
+          );
+        }
         const product = assembleExecutionProduct({ assembly: workspace.assembly });
         const plan = compileExecutionPlan({ product });
         const publication = await options.gamePlanPublisher.publish(

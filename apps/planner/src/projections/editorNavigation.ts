@@ -10,6 +10,7 @@ export interface RouteEditorNavigation {
   readonly routeKey: string;
   readonly label: string;
   readonly biomePanels: readonly BiomeEditorNavigationItem[];
+  readonly itinerarySelectionRequired: boolean;
 }
 
 export interface EditorNavigation {
@@ -26,6 +27,7 @@ export function projectRouteNavigation(
   return Object.freeze({
     routeKey: route.routeKey,
     label: declaration.label,
+    itinerarySelectionRequired: declaration.dreamItinerary !== undefined,
     biomePanels: Object.freeze(
       route.itineraryBiomeKeys.map((biomeKey) => {
         const biome = catalog.biomes.byKey[biomeKey];
@@ -38,7 +40,9 @@ export function projectRouteNavigation(
 
 export function createEditorNavigation(catalog: Catalog): EditorNavigation {
   const routes = catalog.routes.values
-    .filter((route) => route.key === 'Underworld' || route.key === 'Surface')
+    .filter(
+      (route) => route.key === 'Underworld' || route.key === 'Surface' || route.key === 'Dream',
+    )
     .map((route) =>
       projectRouteNavigation(catalog, {
         routeKey: route.key,

@@ -158,6 +158,10 @@ export function RouteOverview({
           <span className="neutral-status">{routeExtent}</span>
         </div>
       </header>
+      <p className="route-order-summary" aria-label="Route order">
+        <strong>{navigation.label}</strong> ·{' '}
+        {navigation.biomePanels.map((biome) => biome.label).join(' → ')}
+      </p>
       <div className="route-loadout-panel">
         <div className="route-loadout-controls">
           <RouteWeaponPicker

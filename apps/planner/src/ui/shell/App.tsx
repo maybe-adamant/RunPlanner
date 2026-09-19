@@ -91,6 +91,7 @@ export function App({
           </div>
           <div className="app-header-actions" data-entry={showEntry || undefined}>
             <ProjectFileControls
+              catalog={catalog}
               hasProject={project !== undefined}
               entryOpen={showEntry}
               onEntryOpenChange={setEntryOpen}
