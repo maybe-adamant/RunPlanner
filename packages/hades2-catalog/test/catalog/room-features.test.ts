@@ -41,6 +41,43 @@ describe('room feature declarations', () => {
     ]);
   });
 
+  it('normalizes native timed-pickup deferral for every Dream boss variant', () => {
+    const dreamOnlyBosses = [
+      'F_Boss01',
+      'F_Boss02',
+      'G_Boss01',
+      'G_Boss02',
+      'H_Boss01',
+      'H_Boss02',
+      'I_Boss01',
+      'N_Boss01',
+      'N_Boss02',
+      'O_Boss01',
+      'O_Boss02',
+      'P_Boss01',
+      'Q_Boss01',
+      'Q_Boss02',
+    ];
+    expect(
+      catalog.rooms.values
+        .filter((room) => room.skipTimedDropResourcesInDream)
+        .map((room) => room.gameName)
+        .sort(),
+    ).toEqual(dreamOnlyBosses);
+    for (const gameName of dreamOnlyBosses) {
+      expect(catalog.rooms.byKey[gameName]?.skipTimedDropResourcesInDream).toBe(true);
+      expect(catalog.rooms.byKey[gameName]?.skipTimedDropResources).toBe(false);
+    }
+    expect(catalog.rooms.byKey.C_Boss01).toMatchObject({
+      skipTimedDropResources: true,
+      skipTimedDropResourcesInDream: false,
+    });
+    expect(catalog.rooms.byKey.F_Combat01).toMatchObject({
+      skipTimedDropResources: false,
+      skipTimedDropResourcesInDream: false,
+    });
+  });
+
   it('declares every Reprieve and route Postboss fountain as a physical room feature', () => {
     expect(
       catalog.rooms.values

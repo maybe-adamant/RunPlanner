@@ -22,6 +22,13 @@ describe('room common normalization', () => {
     expect(() => createCatalog(raw)).toThrow(CatalogContractError);
   });
 
+  it('rejects a non-boolean Dream timed-pickup deferral declaration', () => {
+    const raw = input();
+    const room = requireRoom(raw, 'F_Boss01');
+    (room as { skipTimedDropResourcesInDream: unknown }).skipTimedDropResourcesInDream = 'true';
+    expect(() => createCatalog(raw)).toThrow(CatalogContractError);
+  });
+
   it('derives ordinary offer surfaces from each room incoming declaration', () => {
     const compiled = createCatalog(declarations);
     expect(compiled.rooms.byKey.F_Combat01?.offerRewardBinding).toEqual({

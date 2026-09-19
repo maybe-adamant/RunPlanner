@@ -1015,6 +1015,7 @@ export const pRooms = [
     label: 'Prometheus',
     roomSetKey: 'P',
     advancesExperimentalHammerUses: true,
+    skipTimedDropResourcesInDream: true,
     kind: 'Boss',
     effectNeutralRequiredReward: true,
     mode: { kind: 'authored', templateKey: 'Boss' },

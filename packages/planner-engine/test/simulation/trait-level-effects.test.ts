@@ -1,6 +1,7 @@
 import { catalog } from '@run-planner/hades2-catalog';
 import {
   createIncomingRewardAddress,
+  createBiomeAddress,
   createEncounterPhaseAddress,
   createOccurrenceAddress,
   createTraitAcquisitionTargetAddress,
@@ -16,15 +17,22 @@ import {
   assessSelectedTargetedAcquisition,
   evaluateReachedTraitOffer,
   foldTraitHistoryEvents,
+  isPomEligibleTrait,
+  isPomUpgradeTarget,
   recordReachedTraitOffer,
   targetedAcquisitionTargetKeys,
   type TraitOfferEvent,
+  executeRoomLifecycle,
 } from '@run-planner/engine/simulation';
 import { describe, expect, it } from 'vitest';
 
 import { goldenFBiome, goldenFStartId } from '@run-planner/test-fixtures/underworld';
 
 import { initializeTestRewardBranches } from '../support/arcana-fear';
+import {
+  initializeRewardBranches,
+  publicRewardBranch,
+} from '../../src/simulation/rewards/branch-lifecycle';
 import { settleEncounterTraitOffer } from '../../src/simulation/rewards/trait-settlement/coordinator';
 import { applyEncounterEndEffectsTransition } from '../../src/simulation/rewards/biome/lifecycle-transitions/encounter-end-effects';
 import type { CanonicalAuthoredRoom } from '../../src/simulation/materialization';
@@ -421,6 +429,245 @@ describe('Supply Chain lifecycle', () => {
       retained = advanced.history;
     }
     expect(retained.equippedTraits.SupplyDropBoon?.pickupProducerProgress).toBe(0);
+  });
+
+  it('holds a due Supply Chain Pom at a Dream boss, carries it across the handoff, and releases two usable optional Poms', () => {
+    const dreamBiome = createBiomeAddress('Dream', 'F');
+    const dreamOccurrence = createOccurrenceAddress(dreamBiome, goldenFStartId);
+    const traitOrigin = createEncounterPhaseAddress(
+      dreamBiome,
+      { kind: 'occurrence', occurrenceId: goldenFStartId },
+      'Encounter',
+    );
+    const base = initializeTestRewardBranches()[0]!;
+    const pommable = settleEncounterTraitOffer(
+      catalog,
+      base,
+      traitOrigin,
+      selectedTraitOffer('Apollo', 'ApolloWeaponBoon'),
+      1,
+      'encounterCompleted',
+      undefined,
+      'selection',
+      undefined,
+      { acquisitionOrdinal: 1 },
+    );
+    const supply = settleEncounterTraitOffer(
+      catalog,
+      pommable.branch,
+      traitOrigin,
+      selectedTraitOffer('Icarus', 'SupplyDropBoon'),
+      2,
+      'encounterCompleted',
+      undefined,
+      'selection',
+      undefined,
+      { acquisitionOrdinal: 1 },
+    );
+    let history = supply.branch.traitHistory!;
+    for (let sequence = 3; sequence <= 7; sequence += 1) {
+      history = advancePickupProducerProgress(catalog, history, dreamOccurrence, sequence).history;
+    }
+    const beforeThresholdBranch = Object.freeze({
+      ...supply.branch,
+      history: attachTraitHistory(supply.branch.history, history),
+      traitHistory: history,
+    });
+    expect(
+      beforeThresholdBranch.traitHistory.equippedTraits.SupplyDropBoon?.pickupProducerProgress,
+    ).toBe(5);
+
+    const boss = {
+      kind: 'authored',
+      origin: dreamOccurrence,
+      occurrenceId: dreamOccurrence.occurrenceId,
+      gameName: 'F_Boss01',
+      encounters: {},
+      encounterPhases: [{ slotKey: 'Encounter' }],
+    } as unknown as CanonicalAuthoredRoom;
+    const beforeThreshold = applyEncounterEndEffectsTransition(
+      catalog,
+      Object.freeze({
+        kind: 'encounterEndEffectsApplied',
+        origin: dreamOccurrence,
+        phaseKey: 'Encounter',
+        execution: 'normal',
+        figLeafSkipOwner: false,
+        operationIndex: 8,
+        sequence: 8,
+      }),
+      boss,
+      [beforeThresholdBranch],
+    );
+    expect(beforeThreshold.derivedAcquisitionEntryFrontiers).toEqual([]);
+    expect(
+      beforeThreshold.branches[0]?.traitHistory?.equippedTraits.SupplyDropBoon
+        ?.pickupProducerProgress,
+    ).toBe(6);
+
+    const deferred = applyEncounterEndEffectsTransition(
+      catalog,
+      Object.freeze({
+        kind: 'encounterEndEffectsApplied',
+        origin: dreamOccurrence,
+        phaseKey: 'Encounter',
+        execution: 'normal',
+        figLeafSkipOwner: false,
+        operationIndex: 9,
+        sequence: 9,
+      }),
+      boss,
+      beforeThreshold.branches,
+    );
+    expect(deferred.derivedAcquisitionEntryFrontiers).toEqual([]);
+    expect(
+      deferred.branches[0]?.traitHistory?.equippedTraits.SupplyDropBoon?.pickupProducerProgress,
+    ).toBe(6);
+
+    const postboss = catalog.rooms.byKey.Dream_PostBoss01;
+    const empty = catalog.encounterDefinitions.byKey.Empty;
+    if (postboss === undefined || empty === undefined)
+      throw new Error('missing Dream Postboss fixture');
+    const postbossLifecycle = executeRoomLifecycle(catalog, {
+      origin: dreamOccurrence,
+      lifecycleProfileKey: 'PostBossRoom',
+      encounterEnvelopeKey: postboss.encounterEnvelopeKey,
+      encounterPhases: [
+        {
+          slotKey: 'Encounter',
+          envelopeKey: postboss.encounterEnvelopeKey,
+          encounterKey: empty.key,
+          label: empty.label,
+          kind: empty.kind,
+          countsEncounterDepth: empty.countsEncounterDepth,
+          advancesHermesShrineDeliveryUses: empty.advancesHermesShrineDeliveryUses,
+          canEncounterSkip: empty.canEncounterSkip,
+          blocksFigLeaf: empty.blocksFigLeaf,
+          blocksGorgon: empty.blocksGorgon,
+          hostsGorgon: empty.hostsGorgon,
+          skipEndEncounterEffects: empty.skipEndEncounterEffects,
+          figLeafSkip: false,
+        },
+      ],
+      counterEffects: postboss.counters,
+    });
+    expect(postbossLifecycle.events.map((event) => event.kind)).not.toContain(
+      'encounterEndEffectsApplied',
+    );
+
+    const afterBoss = initializeRewardBranches([publicRewardBranch(deferred.branches[0]!)]);
+    expect(afterBoss[0]?.traitHistory?.equippedTraits.SupplyDropBoon?.pickupProducerProgress).toBe(
+      6,
+    );
+
+    const nextOccurrence = createOccurrenceAddress(
+      createBiomeAddress('Dream', 'G'),
+      goldenFStartId,
+    );
+    const released = applyEncounterEndEffectsTransition(
+      catalog,
+      Object.freeze({
+        kind: 'encounterEndEffectsApplied',
+        origin: nextOccurrence,
+        phaseKey: 'Encounter',
+        execution: 'normal',
+        figLeafSkipOwner: false,
+        operationIndex: 1,
+        sequence: 10,
+      }),
+      {
+        kind: 'authored',
+        origin: nextOccurrence,
+        occurrenceId: nextOccurrence.occurrenceId,
+        gameName: 'G_Combat01',
+        encounters: {},
+        encounterPhases: [
+          {
+            slotKey: 'Encounter',
+            envelopeKey: 'SingleEncounter',
+            authoredChoiceKey: 'GeneratedG',
+            figLeafSkip: false,
+          },
+        ],
+      } as unknown as CanonicalAuthoredRoom,
+      afterBoss,
+    );
+    expect(released.derivedAcquisitionEntryFrontiers).toEqual([
+      expect.objectContaining({
+        kind: 'clockedTraitPickup',
+        participation: 'optional',
+        fixedReward: expect.objectContaining({
+          offer: { rewardType: 'StoreRewardRandomStack' },
+        }),
+      }),
+      expect.objectContaining({
+        kind: 'clockedTraitPickup',
+        participation: 'optional',
+        fixedReward: expect.objectContaining({
+          offer: { rewardType: 'StoreRewardRandomStack' },
+        }),
+      }),
+    ]);
+    expect(isPomEligibleTrait(catalog, 'ApolloWeaponBoon')).toBe(true);
+    expect(
+      isPomUpgradeTarget(
+        catalog,
+        released.branches[0]?.traitHistory?.equippedTraits.ApolloWeaponBoon,
+      ),
+    ).toBe(true);
+    expect(
+      released.branches[0]?.traitHistory?.equippedTraits.SupplyDropBoon?.pickupProducerProgress,
+    ).toBe(0);
+
+    const ordinary = applyEncounterEndEffectsTransition(
+      catalog,
+      Object.freeze({
+        kind: 'encounterEndEffectsApplied',
+        origin: createOccurrenceAddress(goldenFBiome, goldenFStartId),
+        phaseKey: 'Encounter',
+        execution: 'normal',
+        figLeafSkipOwner: false,
+        operationIndex: 9,
+        sequence: 9,
+      }),
+      {
+        ...boss,
+        origin: createOccurrenceAddress(goldenFBiome, goldenFStartId),
+        occurrenceId: goldenFStartId,
+      },
+      beforeThreshold.branches,
+    );
+    expect(ordinary.derivedAcquisitionEntryFrontiers).toHaveLength(2);
+  });
+
+  it('retains the acquired three-encounter interval when maturity is deferred', () => {
+    const traitOrigin = createEncounterPhaseAddress(
+      goldenFBiome,
+      { kind: 'occurrence', occurrenceId: goldenFStartId },
+      'Encounter',
+    );
+    const supply = settleEncounterTraitOffer(
+      catalog,
+      initializeTestRewardBranches()[0]!,
+      traitOrigin,
+      selectedTraitOffer('Icarus', 'SupplyDropBoon'),
+      1,
+      'encounterCompleted',
+      undefined,
+      'selection',
+      undefined,
+      { acquisitionOrdinal: 4 },
+    );
+    let history = supply.branch.traitHistory!;
+    history = advancePickupProducerProgress(catalog, history, traitOrigin, 2).history;
+    history = advancePickupProducerProgress(catalog, history, traitOrigin, 3).history;
+    const deferred = advancePickupProducerProgress(catalog, history, traitOrigin, 4, true);
+    expect(deferred.maturities).toEqual([]);
+    expect(deferred.history.equippedTraits.SupplyDropBoon?.pickupProducerInterval).toBe(3);
+    expect(deferred.history.equippedTraits.SupplyDropBoon?.pickupProducerProgress).toBe(2);
+    const released = advancePickupProducerProgress(catalog, deferred.history, traitOrigin, 5);
+    expect(released.maturities).toHaveLength(1);
+    expect(released.history.equippedTraits.SupplyDropBoon?.pickupProducerProgress).toBe(0);
   });
 
   it('publishes a matured Supply Chain pickup from the final Steady Growth branch', () => {

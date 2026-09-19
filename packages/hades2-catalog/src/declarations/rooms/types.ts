@@ -154,6 +154,8 @@ export interface RawRoomDeclaration {
   readonly skipRoomsPerUpgrade?: boolean;
   /** Source `SkipTimedDropResources`, used by declaration-clocked timed pickups. */
   readonly skipTimedDropResources?: boolean;
+  /** Source `SkipTimedDropResourceInDream`, used by declaration-clocked timed pickups. */
+  readonly skipTimedDropResourcesInDream?: boolean;
   readonly encounterSlotBindings: readonly RawEncounterSlotBinding[];
   readonly counters: RoomCounterEffects;
   readonly caps: RoomCaps;

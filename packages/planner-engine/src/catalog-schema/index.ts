@@ -821,6 +821,8 @@ export interface RoomDeclaration {
   readonly skipRoomsPerUpgrade: boolean;
   /** Source `SkipTimedDropResources`; defers a due timed pickup until the next valid room. */
   readonly skipTimedDropResources: boolean;
+  /** Source `SkipTimedDropResourceInDream`; defers a due timed pickup only on Dream. */
+  readonly skipTimedDropResourcesInDream: boolean;
   readonly encounterSlotBindings: readonly EncounterSlotBinding[];
   readonly counters: RoomCounterEffects;
   readonly caps: RoomCaps;

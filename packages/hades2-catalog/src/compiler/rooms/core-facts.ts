@@ -36,6 +36,7 @@ export type RoomIdentityFacts = Pick<
   | 'advancesHermesShrineDeliveryUses'
   | 'skipRoomsPerUpgrade'
   | 'skipTimedDropResources'
+  | 'skipTimedDropResourcesInDream'
 >;
 
 export type RoomCoreFacts = Pick<RoomDeclaration, 'lifecycleProfileKey' | 'structuralTags'>;
@@ -183,6 +184,12 @@ export function normalizeRoomIdentity(room: RawRoomDeclaration, path: string): R
   ) {
     fail(`${path}.skipTimedDropResources`, 'must be a boolean when declared');
   }
+  if (
+    room.skipTimedDropResourcesInDream !== undefined &&
+    typeof room.skipTimedDropResourcesInDream !== 'boolean'
+  ) {
+    fail(`${path}.skipTimedDropResourcesInDream`, 'must be a boolean when declared');
+  }
   return Object.freeze({
     gameName,
     label,
@@ -196,6 +203,7 @@ export function normalizeRoomIdentity(room: RawRoomDeclaration, path: string): R
     advancesHermesShrineDeliveryUses: room.advancesHermesShrineDeliveryUses ?? true,
     skipRoomsPerUpgrade: room.skipRoomsPerUpgrade ?? false,
     skipTimedDropResources: room.skipTimedDropResources ?? false,
+    skipTimedDropResourcesInDream: room.skipTimedDropResourcesInDream ?? false,
   });
 }
 

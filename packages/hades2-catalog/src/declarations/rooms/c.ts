@@ -13,6 +13,7 @@ export const cRooms = [
     label: 'Zagreus',
     roomSetKey: 'C',
     advancesExperimentalHammerUses: true,
+    skipTimedDropResources: true,
     kind: 'Boss',
     effectNeutralRequiredReward: true,
     mode: { kind: 'authored', templateKey: 'ContractBoss' },

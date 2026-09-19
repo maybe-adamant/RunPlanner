@@ -130,6 +130,7 @@ export function normalizeRoom(
     advancesHermesShrineDeliveryUses: identity.advancesHermesShrineDeliveryUses,
     skipRoomsPerUpgrade: identity.skipRoomsPerUpgrade,
     skipTimedDropResources: identity.skipTimedDropResources,
+    skipTimedDropResourcesInDream: identity.skipTimedDropResourcesInDream,
     encounterSlotBindings: encounter.encounterSlotBindings,
     ...(rewardStores.forcedRewardStoreKey === undefined
       ? {}

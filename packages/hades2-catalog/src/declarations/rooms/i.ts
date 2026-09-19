@@ -1038,6 +1038,7 @@ export const iRooms = [
     label: 'Chronos',
     roomSetKey: 'I',
     advancesExperimentalHammerUses: true,
+    skipTimedDropResourcesInDream: true,
     kind: 'Boss',
     effectNeutralRequiredReward: true,
     mode: { kind: 'authored', templateKey: 'Boss' },
