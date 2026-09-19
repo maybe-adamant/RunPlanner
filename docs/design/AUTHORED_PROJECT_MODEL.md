@@ -114,9 +114,12 @@ not a second chronology. UI state owns no domain topology.
 
 One document persists one route identity, its complete `itineraryBiomeKeys`,
 and a contiguous configured prefix of that itinerary. Underworld and Surface
-use their catalog presets. Internal Dream documents carry a supplied itinerary;
-public Dream creation, loading and execution publication remain disabled until
-the remaining Dream rules are supported. Expansion creates biome plans with `topology: null`;
+use their catalog presets. Dream creation selects four distinct biomes once in
+a transient draft. Engine-owned public admission enforces the catalog start
+pool and directional successor exclusions for creation, import and restoration.
+Structural decoding remains separate from public admission so internal model
+fixtures can represent bounded non-public itineraries. Expansion initializes
+each biome from its declaration-owned start;
 shrinking explicitly removes the discarded plans and their state.
 `ConfigureRoutePrefix` is the only normal scope-edit command and undo restores
 the prior snapshot. Selecting another catalog route creates or opens another
@@ -125,6 +128,7 @@ document; it does not switch a hidden sibling route inside the current one.
 ```text
 Underworld: [] -> [F] -> [F, G] -> [F, G, H] -> [F, G, H, I]
 Surface:    [] -> [N] -> [N, O] -> [N, O, P] -> [N, O, P, Q]
+Dream:      configured prefixes of the immutable four-biome order chosen at creation
 ```
 
 Configured scope is not a claim that a biome is complete or simulation-valid,

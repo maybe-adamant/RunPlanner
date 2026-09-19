@@ -5,6 +5,22 @@ profiles whose meaning depends on itinerary position rather than physical
 biome identity, and route-mode content restrictions. Sources are the installed
 Hades II scripts; source inspection does not constitute live Dream Dive verification.
 
+## Biome order
+
+`DreamRunLogic.lua:SelectNextDreamBiome` begins with G/H/I/O/P/Q and adds F/N
+after the first choice. Selection removes the chosen biome from the pool.
+Later choices exclude the current biome's natural successor declared in
+`RoomSets.lua:NextRoomSets` (F→G→H→I and N→O→P→Q); the exclusion is directional.
+`GameData.FullRunBiomeCount` is four. First-ever forced H and previous-run
+starting-biome avoidance are save-progression predicates outside the matured
+planner model; explicit published choices override them.
+
+The catalog declares the start pool and successor relation. Engine public
+admission validates complete four-biome projects and incremental draft choices;
+publication validates the configured prefix. Native selection is steered at
+pool removal, retaining `DreamBiomePool`, `LastDreamStartingBiome` and
+`NextRoomSet` bookkeeping rather than replacing the final result afterward.
+
 ## Starts and completion
 
 `DreamRunLogic.lua:EnterNextDreamBiome` uses `ChooseStartingRoom`.
@@ -35,8 +51,11 @@ fourth Postboss. I also has a Dream-specific Preboss identity.
 `RewardLogic.lua:ChooseRoomReward` selects `DreamPointsDrop` for
 `CanSpawnDreamReward`; `CheckDreamBiomeCompletion` waits for its use record.
 The matured-state planner excludes the `Dream_Intro` prologue. Dream Points
-replace boss material drops, not a new modeled points economy. Runtime Dream
-startup and completion remain outside currently supported publication.
+replace boss material drops, not a new modeled points economy. Native startup
+creates the prologue explicitly (`RunLogic.lua`, `DeathLoopData.lua`).
+`EnterNextDreamBiome` calls `ChooseStartingRoom` before `LeaveRoom`, so later
+entry preparation precedes departure of the active Postboss. Native completion
+retains Dream Points use and the fourth-biome ending.
 
 `ShrineLogic.lua:IsBossDifficultyShrineUpgradeActive` uses ordinal for Rivals.
 Dream additionally requires prior enhanced-boss progression, treated as met
@@ -115,8 +134,8 @@ and [Shrine audit](../room-features/ROOM_FEATURES_GAME_DATA_AUDIT.md#purchase-de
 
 ## Coverage boundary
 
-Internal route resolution supports supplied Dream itineraries and these
-profiles, mode-sensitive content availability and boss timed-drop deferral.
-It does not establish public Dream itinerary legality or native startup and
-transition steering. Public Dream authoring, loading and execution publication
-remain disabled pending those contracts and runtime support.
+Public fixed-order Dream authoring and publication consume these declarations,
+ordinal profiles, content restrictions and timed-drop rules. Compiler-built
+mixed-route and native-hook witnesses cover first/later entries, Postboss cursor
+recovery and configured-prefix pass-through. Full-run live verification remains
+separate from source evidence and automated coverage.

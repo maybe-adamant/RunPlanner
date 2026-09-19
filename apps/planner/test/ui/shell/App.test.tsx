@@ -76,7 +76,7 @@ describe('App', () => {
 
     expect(markup).toContain('Run Planner');
     expect(markup).toContain('Choose your route');
-    expect(markup).toContain('Erebus → Oceanus → Fields → Tartarus');
+    expect(markup).toContain('Dream Dive');
     expect(markup).toContain('Underworld');
     expect(markup).toContain('Surface');
     expect(markup).not.toContain('Settings');
