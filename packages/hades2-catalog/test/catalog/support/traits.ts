@@ -930,7 +930,8 @@ export const expectedOfferRequirements: Readonly<Record<string, string>> = {
     '[{"kind":"all","requirements":[{"kind":"anyEquippedTrait","traitKeys":["AresWeaponBoon","AresSpecialBoon","AresCastBoon","AresSprintBoon","AresManaBoon"]},{"kind":"anyEquippedTrait","traitKeys":["PoseidonWeaponBoon","PoseidonSpecialBoon"]}]}]',
   FireballRendBoon:
     '[{"kind":"all","requirements":[{"kind":"anyEquippedTrait","traitKeys":["AresWeaponBoon","AresSpecialBoon","AresCastBoon","AresSprintBoon","AresManaBoon"]},{"kind":"anyEquippedTrait","traitKeys":["FireballManaSpecialBoon","CastProjectileBoon"]}]}]',
-  PlantHealthBoon: '[{"kind":"offerContext","context":"blockGiftBoons","required":false}]',
+  PlantHealthBoon:
+    '[{"kind":"routeKeyNot","routeKey":"Dream"},{"kind":"offerContext","context":"blockGiftBoons","required":false}]',
   BoonGrowthBoon: '[{"kind":"rarifiableTrait"}]',
   SlowExAttackBoon:
     '[{"kind":"anyEquippedTrait","traitKeys":["AphroditeWeaponBoon","ApolloWeaponBoon","DemeterWeaponBoon","HephaestusWeaponBoon","HeraWeaponBoon","HestiaWeaponBoon","PoseidonWeaponBoon","ZeusWeaponBoon","AresWeaponBoon"]}]',

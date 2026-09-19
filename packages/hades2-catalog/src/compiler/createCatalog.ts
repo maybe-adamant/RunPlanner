@@ -32,6 +32,7 @@ import {
   validateRewardAcquisitionRoleTraitGivers,
 } from './traits/givers';
 import { createTraitCatalog } from './traits/normalize';
+import { validateTraitRouteReferences } from './traits/catalog-assembly';
 
 export { CatalogContractError } from './errors';
 
@@ -88,6 +89,7 @@ export function createCatalog(input: RawCatalogInput): Catalog {
   );
   const routes = normalizeRoutes(input.routes, biomes, rooms);
   validateRewardRouteRequirementReferences(rewards, routes);
+  validateTraitRouteReferences(traitCatalog, routes);
   validateLifecycleBindings({
     rooms,
     profiles: roomLifecycleProfiles,

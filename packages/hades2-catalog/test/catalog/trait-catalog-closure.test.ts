@@ -20,6 +20,26 @@ const traits = {
 };
 
 describe('trait catalog closure', () => {
+  it('rejects unknown route references in trait eligibility', () => {
+    expect(() =>
+      createCatalog({
+        ...declarations,
+        traitCatalog: {
+          ...declarations.traitCatalog,
+          traits: declarations.traitCatalog.traits.map((trait) =>
+            trait.key === 'PlantHealthBoon'
+              ? {
+                  ...trait,
+                  eligibilityRequirements: [
+                    { kind: 'routeKeyNot' as const, routeKey: 'MissingRoute' },
+                  ],
+                }
+              : trait,
+          ),
+        },
+      }),
+    ).toThrow('unknown route MissingRoute');
+  });
   it('preserves the compiler boundary failure order across independent malformed inputs', () => {
     const mutate = (patch: Record<string, unknown>) =>
       createCatalog({

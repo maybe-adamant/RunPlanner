@@ -367,7 +367,7 @@ export function applyKeepsakeRackUsedTransition(
               rack.equipResults!.transcendentEmbryo!,
               branch.traitHistory ?? createTraitHistoryState(),
               rarity,
-              routeLoadout,
+              { ...routeLoadout, routeKey: event.origin.routeKey },
             ).legal,
         )
       )

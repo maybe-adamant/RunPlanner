@@ -225,6 +225,32 @@ function historyWithInactiveProper() {
 }
 
 describe('Chaos paired-trait history', () => {
+  it.each(['Underworld', 'Surface', 'Dream'])(
+    'keeps Discovery selected and candidate eligibility aligned for %s',
+    (routeKey) => {
+      const address = createTraitOfferAddress(
+        createIncomingRewardAddress(
+          createBiomeAddress(routeKey, 'G'),
+          createOccurrenceId('discovery-route'),
+        ),
+        'self',
+      );
+      const capability = createTraitOfferCandidateArtifacts(
+        catalog,
+        new Map([
+          [semanticAddressKey(address), [{ before: createTraitHistoryState(), context: {} }]],
+        ]),
+      ).at(address)!;
+      const offer = chaos('ChaosCommonCurse', 'ChaosHarvestBlessing');
+      expect(
+        evaluateReachedTraitOffer(catalog, address, 'self', offer, createTraitHistoryState(), {}, 0)
+          .composition.legal,
+      ).toBe(routeKey !== 'Dream');
+      expect(
+        capability.chaosOfferDomain()[0]?.availableBlessingKeys.includes('ChaosHarvestBlessing'),
+      ).toBe(routeKey !== 'Dream');
+    },
+  );
   it('rechecks active Proper when Ordinary expires after its final affected settled screen', () => {
     const activeProper = historyWithActiveProper();
     expect(activeProper.properUpbringingActive).toBe(true);

@@ -124,6 +124,14 @@ function normalizeShopOption(
                   return Object.freeze(values);
                 })(),
               }),
+          ...(raw.stygianWell.excludedRouteKeys === undefined
+            ? {}
+            : {
+                excludedRouteKeys: freezeUniqueStrings(
+                  raw.stygianWell.excludedRouteKeys,
+                  `${path}.stygianWell.excludedRouteKeys`,
+                ),
+              }),
           ...(raw.stygianWell.nestedResultItemKeys === undefined
             ? {}
             : {

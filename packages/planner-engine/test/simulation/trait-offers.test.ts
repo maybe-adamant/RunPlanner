@@ -612,6 +612,27 @@ describe('rarity offer settlement contacts', () => {
 });
 
 describe('trait legality and derived facts', () => {
+  it.each(['Underworld', 'Surface', 'Dream'])(
+    'assesses Forage against %s at the shared eligibility contact',
+    (routeKey) => {
+      const history = createTraitHistoryState();
+      expect(assessTraitOption(catalog, 'PlantHealthBoon', history, { routeKey }).legal).toBe(
+        routeKey !== 'Dream',
+      );
+      expect(
+        traitCandidates(catalog, 'Demeter', history, { routeKey }).find(
+          (candidate) => candidate.traitKey === 'PlantHealthBoon',
+        )?.available,
+      ).toBe(routeKey !== 'Dream');
+      expect(
+        assessTraitOption(catalog, 'PlantHealthBoon', history, { routeKey, blockGiftBoons: true })
+          .legal,
+      ).toBe(false);
+      expect(assessTraitOption(catalog, 'DemeterWeaponBoon', history, { routeKey }).legal).toBe(
+        true,
+      );
+    },
+  );
   const derivedHistory = historyFrom([
     { giverKey: 'Demeter', traitKey: 'DemeterManaBoon', rarity: 'Common' },
     { giverKey: 'Hera', traitKey: 'HeraWeaponBoon', rarity: 'Rare' },

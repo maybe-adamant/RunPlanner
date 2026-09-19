@@ -310,14 +310,21 @@ export const chaosBlessings = [
       Heroic: [21, 28, 1, true],
     }),
   ]),
-  blessing('ChaosHarvestBlessing', 'Discovery', [
-    rarityOperand('doubleChance', 'Double-resource chance', {
-      Common: [0.56, 0.7, 0.01],
-      Rare: [0.64, 0.8, 0.01],
-      Epic: [0.72, 0.9, 0.01],
-      Heroic: [0.8, 1, 0.01],
-    }),
-  ]),
+  blessing(
+    'ChaosHarvestBlessing',
+    'Discovery',
+    [
+      rarityOperand('doubleChance', 'Double-resource chance', {
+        Common: [0.56, 0.7, 0.01],
+        Rare: [0.64, 0.8, 0.01],
+        Epic: [0.72, 0.9, 0.01],
+        Heroic: [0.8, 1, 0.01],
+      }),
+    ],
+    undefined,
+    undefined,
+    [{ kind: 'routeKeyNot', routeKey: 'Dream' }],
+  ),
   blessing(
     'ChaosOmegaDamageBlessing',
     'Chant',

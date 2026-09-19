@@ -171,6 +171,10 @@ export function transcendentEmbryoBlessingKeys(
               return true;
             case 'routeKey':
               return context.routeKey === requirement.routeKey;
+            case 'routeKeyNot':
+              if (context.routeKey === undefined)
+                throw new Error('Chaos blessing route eligibility requires route identity');
+              return context.routeKey !== requirement.routeKey;
           }
         });
       })

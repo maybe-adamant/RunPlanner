@@ -833,7 +833,9 @@ describe('Echo Gate A direct choices', () => {
 
 describe('Echo Gate B Boon Boon Boon', () => {
   it('publishes the source-resolved domain, exact equipped rarities, and Common floor', () => {
-    const outcomes = echoLastRunBoonOutcomes(catalog, createTraitHistoryState(), {});
+    const outcomes = echoLastRunBoonOutcomes(catalog, createTraitHistoryState(), {
+      routeKey: 'Underworld',
+    });
     expect([...new Set(outcomes.map((outcome) => outcome.option.giverKey))]).toEqual([
       'Aphrodite',
       'Apollo',
@@ -867,7 +869,7 @@ describe('Echo Gate B Boon Boon Boon', () => {
       ...createTraitHistoryState(),
       properUpbringingActive: true as const,
     });
-    const floored = echoLastRunBoonOutcomes(catalog, floorHistory, {}).find(
+    const floored = echoLastRunBoonOutcomes(catalog, floorHistory, { routeKey: 'Underworld' }).find(
       (outcome) =>
         outcome.option.giverKey === 'Aphrodite' &&
         outcome.option.traitKey === 'AphroditeWeaponBoon' &&
@@ -941,6 +943,7 @@ describe('Echo Gate B Boon Boon Boon', () => {
     });
     expect(
       assessTraitOption(catalog, 'EchoLastRunBoon', onlyAthena, {
+        routeKey: 'Underworld',
         resolvedProviderKey: 'Echo',
       }).legal,
     ).toBe(true);
@@ -1274,7 +1277,7 @@ describe('Echo Gate B Boon Boon Boon', () => {
         rarity: option.rarity,
         traitKey: option.traitKey,
       });
-      const outcome = echoLastRunBoonOutcomes(catalog, history, {}).find(
+      const outcome = echoLastRunBoonOutcomes(catalog, history, { routeKey: 'Underworld' }).find(
         (candidate) =>
           candidate.option.giverKey === option.giverKey &&
           candidate.option.traitKey === option.traitKey &&
@@ -1304,7 +1307,9 @@ describe('Echo Gate B Boon Boon Boon', () => {
   );
 
   it('retains only current-run BBB replay exclusions after bypassing ordinary prerequisites', () => {
-    const empty = echoLastRunBoonOutcomes(catalog, createTraitHistoryState(), {});
+    const empty = echoLastRunBoonOutcomes(catalog, createTraitHistoryState(), {
+      routeKey: 'Underworld',
+    });
     expect(
       empty.find(
         (outcome) =>
@@ -1320,7 +1325,7 @@ describe('Echo Gate B Boon Boon Boon', () => {
     const equipped = echoLastRunBoonOutcomes(
       catalog,
       historyFromTraits([{ giverKey: 'Aphrodite', traitKey: 'WeakPotencyBoon', rarity: 'Common' }]),
-      {},
+      { routeKey: 'Underworld' },
     ).find((outcome) => outcome.option.traitKey === 'WeakPotencyBoon');
     expect(equipped).toMatchObject({
       assessment: {
@@ -1332,7 +1337,7 @@ describe('Echo Gate B Boon Boon Boon', () => {
     const occupied = echoLastRunBoonOutcomes(
       catalog,
       historyFromTraits([{ giverKey: 'Zeus', traitKey: 'ZeusWeaponBoon', rarity: 'Common' }]),
-      {},
+      { routeKey: 'Underworld' },
     ).find(
       (outcome) =>
         outcome.option.giverKey === 'Aphrodite' &&
@@ -1352,7 +1357,7 @@ describe('Echo Gate B Boon Boon Boon', () => {
         ...createTraitHistoryState(),
         bannedTraitKeys: Object.freeze(['WeakPotencyBoon']),
       }),
-      {},
+      { routeKey: 'Underworld' },
     ).find((outcome) => outcome.option.traitKey === 'WeakPotencyBoon');
     expect(banned).toMatchObject({
       assessment: {
@@ -1368,9 +1373,10 @@ describe('Echo Gate B Boon Boon Boon', () => {
       history: ReturnType<typeof createTraitHistoryState>,
       context: Parameters<typeof echoLastRunBoonOutcomes>[2],
     ) => {
-      const value = echoLastRunBoonOutcomes(catalog, history, context).find(
-        (candidate) => candidate.option.traitKey === traitKey,
-      );
+      const value = echoLastRunBoonOutcomes(catalog, history, {
+        routeKey: 'Underworld',
+        ...context,
+      }).find((candidate) => candidate.option.traitKey === traitKey);
       expect(value).toBeDefined();
       return value!;
     };
@@ -1382,9 +1388,10 @@ describe('Echo Gate B Boon Boon Boon', () => {
       legal: false,
       findings: expect.arrayContaining([expect.objectContaining({ code: 'offerContext' })]),
     });
-    expect(outcome('PlantHealthBoon', empty, { blockGiftBoons: true }).assessment.legal).toBe(
-      false,
-    );
+    expect(
+      outcome('PlantHealthBoon', empty, { routeKey: 'Underworld', blockGiftBoons: true }).assessment
+        .legal,
+    ).toBe(false);
     expect(outcome('OlympianSpellCountBoon', empty, {}).assessment.legal).toBe(false);
     expect(
       outcome('OlympianSpellCountBoon', empty, { settledSpellDrop: true }).assessment.legal,
@@ -1567,7 +1574,7 @@ describe('Echo Gate B Boon Boon Boon', () => {
     const history = historyFromTraits([
       { giverKey: 'Hephaestus', traitKey: 'HephaestusWeaponBoon', rarity: 'Heroic' },
     ]);
-    const outcome = echoLastRunBoonOutcomes(catalog, history, {}).find(
+    const outcome = echoLastRunBoonOutcomes(catalog, history, { routeKey: 'Underworld' }).find(
       (candidate) =>
         candidate.option.giverKey === 'Hera' &&
         candidate.option.traitKey === 'BoonDecayBoon' &&
@@ -1826,7 +1833,9 @@ describe('Echo Gate B Boon Boon Boon', () => {
     const occupied = historyFromTraits([
       { giverKey: 'Apollo', traitKey: 'ApolloWeaponBoon', rarity: 'Common' },
     ]);
-    const aphroditeWeapon = echoLastRunBoonOutcomes(catalog, occupied, {}).find(
+    const aphroditeWeapon = echoLastRunBoonOutcomes(catalog, occupied, {
+      routeKey: 'Underworld',
+    }).find(
       (outcome) =>
         outcome.option.giverKey === 'Aphrodite' &&
         outcome.option.traitKey === 'AphroditeWeaponBoon' &&
@@ -1848,8 +1857,10 @@ describe('Echo Gate B Boon Boon Boon', () => {
       bannedTraitKeys: Object.freeze(allTraitKeys),
     });
     expect(
-      assessTraitOption(catalog, 'EchoLastRunBoon', exhausted, { resolvedProviderKey: 'Echo' })
-        .findings,
+      assessTraitOption(catalog, 'EchoLastRunBoon', exhausted, {
+        routeKey: 'Underworld',
+        resolvedProviderKey: 'Echo',
+      }).findings,
     ).toContainEqual(
       expect.objectContaining({ code: 'offerContext', detail: 'echoLastRunBoonEmpty' }),
     );

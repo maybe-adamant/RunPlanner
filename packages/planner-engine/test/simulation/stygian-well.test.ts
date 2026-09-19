@@ -48,6 +48,50 @@ const empty = () => ({
 });
 
 describe('Stygian Well consequential purchase state', () => {
+  it.each(['Underworld', 'Surface', 'Dream'])(
+    'uses %s availability for initial Ixion and Travel refill',
+    (routeKey) => {
+      const well = {
+        interacted: true,
+        offerKeyBySlot: {
+          healing: 'ArmorBoostStore',
+          secondLeft: 'TemporaryForcedSecretDoorTrait',
+          secondRight: 'LimitedSwapTraitDrop',
+        },
+      } as const;
+      const initial = assessStygianWell(catalog, routeKey, catalog.rooms.byKey.F_PostBoss01, well);
+      expect(
+        initial.candidateItemKeysBySlot.secondLeft.includes('TemporaryForcedSecretDoorTrait'),
+      ).toBe(routeKey !== 'Dream');
+      expect(initial.issues.some((issue) => issue.kind === 'wrongGroup')).toBe(
+        routeKey === 'Dream',
+      );
+      const refill = assessStygianWellPurchase(
+        catalog,
+        routeKey,
+        {
+          ...well,
+          offerKeyBySlot: { ...well.offerKeyBySlot, secondLeft: 'TemporaryBoonRarityTrait' },
+          travelDealRefillKey: 'TemporaryForcedSecretDoorTrait',
+        },
+        'initial:secondLeft',
+        empty(),
+        {
+          ...createTraitHistoryState(),
+          equippedTraits: { RestockBoon: {} as never },
+        },
+        'initial:secondLeft',
+      );
+      expect(
+        refill.travelDealRefill?.candidateItemKeys.includes('TemporaryForcedSecretDoorTrait'),
+      ).toBe(routeKey !== 'Dream');
+      expect(refill.issues.some((issue) => issue.kind === 'refillWrongGroup')).toBe(
+        routeKey === 'Dream',
+      );
+      expect(twistResultItemKeys(catalog)).not.toContain('TemporaryForcedSecretDoorTrait');
+      expect(twistResultItemKeys(catalog)).toContain('MetaCurrencyRange');
+    },
+  );
   it('keeps the forced F Postboss refill and consequences identical at a configured route tail', () => {
     const owner = createOccurrenceAddress(
       goldenFBiome,
@@ -723,6 +767,7 @@ describe('Stygian Well consequential purchase state', () => {
     } as const;
     const assessment = assessStygianWellPurchase(
       catalog,
+      'Underworld',
       well,
       'initial:secondLeft',
       empty(),
@@ -739,6 +784,7 @@ describe('Stygian Well consequential purchase state', () => {
 
     const activeDiscount = assessStygianWellPurchase(
       catalog,
+      'Underworld',
       well,
       'initial:secondLeft',
       { ...empty(), discountUses: [3] },
@@ -908,6 +954,7 @@ describe('Stygian Well consequential purchase state', () => {
     } as const;
     const missing = assessStygianWellPurchase(
       catalog,
+      'Underworld',
       base,
       'initial:healing',
       empty(),
@@ -920,6 +967,7 @@ describe('Stygian Well consequential purchase state', () => {
     expect(missing.travelDealRefill?.candidateItemKeys).toContain('ArmorBoostStore');
     const withoutTravel = assessStygianWellPurchase(
       catalog,
+      'Underworld',
       base,
       'initial:healing',
       empty(),
@@ -935,6 +983,7 @@ describe('Stygian Well consequential purchase state', () => {
   it('keeps initial inventory repair separate from dormant purchase-owned children', () => {
     const assessment = assessStygianWell(
       catalog,
+      'Underworld',
       catalog.rooms.byKey.F_Combat01,
       {
         interacted: true,
@@ -970,7 +1019,13 @@ describe('Stygian Well consequential purchase state', () => {
       travelDealRefillKey: 'RandomStoreItem',
       twistResultKeyBySlot: { travelDealRefill: 'HealDropRange' },
     } as const;
-    const dormant = assessStygianWell(catalog, catalog.rooms.byKey.F_Combat01, well, empty());
+    const dormant = assessStygianWell(
+      catalog,
+      'Underworld',
+      catalog.rooms.byKey.F_Combat01,
+      well,
+      empty(),
+    );
     expect(dormant.issues).toEqual([]);
     expect(dormant.complete).toBe(true);
   });

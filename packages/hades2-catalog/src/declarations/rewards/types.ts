@@ -120,6 +120,7 @@ export interface RawShopOptionEntryDeclaration {
       | 'twist'
       | 'lastStand';
     readonly offerRequirements?: readonly ('inactive' | 'emptyAttackOrSpecial')[];
+    readonly excludedRouteKeys?: readonly string[];
     readonly nestedResultItemKeys?: readonly string[];
     readonly extendedDirectPurchaseItemKeys?: readonly string[];
   };

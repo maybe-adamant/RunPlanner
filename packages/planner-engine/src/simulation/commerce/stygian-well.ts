@@ -121,6 +121,7 @@ export function assessStygianWellPlacement(
 
 function wellCandidateItemKeys(
   catalog: Catalog,
+  routeKey: string,
   state: Pick<StygianWellRunState, 'discountUses' | 'emptySlotUses'> | undefined,
   traitHistory: import('../traits').TraitHistoryState | undefined,
   slot: import('../../authored-project/model').StygianWellSlotKey,
@@ -137,6 +138,7 @@ function wellCandidateItemKeys(
         : (profile?.groups.byKey.Other?.options.values ?? [])),
     ]
       .filter((option) => {
+        if (option.stygianWell?.excludedRouteKeys?.includes(routeKey)) return false;
         const requirements = option.stygianWell?.offerRequirements ?? [];
         if (requirements.includes('inactive')) {
           if (option.stygianWell?.effect === 'discount' && (state?.discountUses.length ?? 0) > 0)
@@ -153,6 +155,7 @@ function wellCandidateItemKeys(
 /** Inventory-level assessment intentionally contains no price or pickup policy. */
 export function assessStygianWell(
   catalog: Catalog,
+  routeKey: string,
   room: RoomDeclaration | undefined,
   well: StygianWellState,
   state?: Pick<StygianWellRunState, 'discountUses' | 'emptySlotUses'>,
@@ -162,9 +165,9 @@ export function assessStygianWell(
   const declaration = room?.roomShop;
   const placement = assessStygianWellPlacement(room, priorEnteredWellFlags);
   const domains = Object.freeze({
-    healing: wellCandidateItemKeys(catalog, state, traitHistory, 'healing'),
-    secondLeft: wellCandidateItemKeys(catalog, state, traitHistory, 'secondLeft'),
-    secondRight: wellCandidateItemKeys(catalog, state, traitHistory, 'secondRight'),
+    healing: wellCandidateItemKeys(catalog, routeKey, state, traitHistory, 'healing'),
+    secondLeft: wellCandidateItemKeys(catalog, routeKey, state, traitHistory, 'secondLeft'),
+    secondRight: wellCandidateItemKeys(catalog, routeKey, state, traitHistory, 'secondRight'),
   });
   if (!well.interacted)
     return Object.freeze({
@@ -202,6 +205,7 @@ export function assessStygianWell(
 /** Assesses one reached Well purchase against its exact pre-effect branch state. */
 export function assessStygianWellPurchase(
   catalog: Catalog,
+  routeKey: string,
   well: StygianWellState,
   generationKey: import('../../authored-project/model').StygianWellGenerationKey,
   state: Pick<StygianWellRunState, 'discountUses' | 'emptySlotUses'>,
@@ -230,7 +234,7 @@ export function assessStygianWellPurchase(
           const selected = Object.values(well.offerKeyBySlot).filter(
             (key): key is string => key !== null,
           );
-          const sourceDomain = wellCandidateItemKeys(catalog, state, traitHistory, slot);
+          const sourceDomain = wellCandidateItemKeys(catalog, routeKey, state, traitHistory, slot);
           const candidateItemKeys = Object.freeze(
             sourceDomain.filter((key) => !selected.includes(key)),
           );

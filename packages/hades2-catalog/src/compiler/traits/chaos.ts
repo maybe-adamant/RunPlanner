@@ -202,6 +202,15 @@ function normalizeChaosOfferRequirements(
           fail(entryPath, 'requires exactly Underworld routeKey');
         return Object.freeze({ kind: 'routeKey' as const, routeKey: 'Underworld' as const });
       }
+      if (kind === 'routeKeyNot') {
+        if (
+          Object.keys(value).length !== 2 ||
+          typeof value.routeKey !== 'string' ||
+          value.routeKey.length === 0
+        )
+          fail(entryPath, 'requires exactly a non-empty routeKey');
+        return Object.freeze({ kind: 'routeKeyNot' as const, routeKey: value.routeKey });
+      }
       fail(entryPath, 'has an unknown Chaos offer requirement kind');
     }),
   );

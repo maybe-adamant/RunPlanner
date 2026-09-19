@@ -248,6 +248,12 @@ export function checkRequirement(
       return (context.manualArcanaGraspCost ?? 0) >= requirement.minimum
         ? undefined
         : { code: 'missingPrerequisite', detail: 'manualArcanaGraspCost' };
+    case 'routeKeyNot':
+      if (context.routeKey === undefined)
+        throw new Error('route eligibility requirement evaluated without route identity');
+      return context.routeKey !== requirement.routeKey
+        ? undefined
+        : { code: 'missingPrerequisite', detail: `routeKeyNot:${requirement.routeKey}` };
   }
 }
 

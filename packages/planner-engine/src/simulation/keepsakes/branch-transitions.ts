@@ -232,7 +232,12 @@ export function applyTranscendentEmbryoEquipResult(
   if (effect?.kind !== 'transcendentEmbryo') return branch;
   const rarity = effect.blessingRarityByRank[equippedRank];
   const before = branch.traitHistory ?? createTraitHistoryState();
-  if (!assessTranscendentEmbryoBlessing(catalog, result, before, rarity, context).legal)
+  if (
+    !assessTranscendentEmbryoBlessing(catalog, result, before, rarity, {
+      ...context,
+      ...('routeKey' in owner ? { routeKey: owner.routeKey } : {}),
+    }).legal
+  )
     return branch;
   const acquisitionIdentity = `${semanticAddressKey(owner)}:${sequence}`;
   const history = foldTraitHistoryEvents(catalog, [

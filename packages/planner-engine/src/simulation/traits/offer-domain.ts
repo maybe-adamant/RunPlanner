@@ -11,6 +11,8 @@ import { resolveTraitOfferOptionLevel } from './offer-levels';
 export type { TraitFindingCode } from '../model';
 
 export interface TraitOfferContext {
+  /** Exact semantic-owner route; required when a declaration exercises route eligibility. */
+  readonly routeKey?: string;
   /** Exact route position at this acquisition frontier when a selected NPC effect is ordinal-scaled. */
   readonly acquisitionOrdinal?: number;
   readonly weaponKey?: string;

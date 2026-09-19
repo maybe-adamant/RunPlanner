@@ -2,8 +2,8 @@
 
 ## Status and delivery boundary
 
-- Status: locked by user approval; Gates A–B complete and independently reviewed;
-  Gate A committed as `29922aee`; Gate B awaiting commit; Gates C–E pending.
+- Status: locked by user approval; Gates A–C complete and independently reviewed;
+  A/B committed as `29922aee` and `b2345df4`; Gate D in progress; Gate E pending.
 - Base: planner `daca6903`; downstream game module `26c2feb`.
 - Input: `docs/investigations/DREAM_DIVE_SCOPE.md`, reassessed after route
   foundation closure. The completed foundation is not reopened.
@@ -195,6 +195,15 @@ Acceptance:
 
 Primary tests: Well/refill, trait eligibility/candidates and catalog normalization.
 
+Delivered: declaration-owned Well and trait route exclusions, with exact route
+context at acquisition/candidate/Embryo contacts and catalog reference closure.
+Twist retains its existing all-route whitelist. Independent review passed.
+Focused C tests passed; broad engine verification passed 2,037 tests initially,
+with six stale Shop tests repaired by supplying their fixture's route identity;
+both affected files then passed all 32 tests. Workspace typechecks and changed-file
+lint passed. The catalog Forage expectation was updated; room snapshot hashes
+predating C will be refreshed once with Gate D's room declaration changes.
+
 ### D — Dream boss Supply Chain deferral
 
 Starting points: catalog boss room declarations and `compiler/rooms/core-facts.ts`;
@@ -209,12 +218,16 @@ using this native DropResources mechanism; no bespoke trait-name clock is needed
 Acceptance:
 
 - Native boss variants carry the appropriate declaration, including inherited
-  variants; Zagreus retains unconditional deferral.
+  variants; add Zagreus's currently missing unconditional deferral declaration
+  from `RoomDataC.lua:55`, using the existing `skipTimedDropResources` field.
 - Before threshold, a Dream boss advances progress normally. At threshold it
   holds at acquired interval−1, emits no pickup, then matures once at the next
   qualifying unrestricted encounter. Deferred progress persists across Postboss
   and biome transition without rescaling the acquired interval.
 - Cover both acquisition intervals (seven and three) at the transition owner.
+  The interval-three variant is acquired at ordinal four, so its deferral test
+  must not invent a fifth biome or terminal Postboss. Cross-biome continuation
+  uses the interval-seven variant; interval-three is a bounded clock contact.
 - One lifecycle witness runs acquisition → due Dream boss → deferred state →
   next qualifying encounter → generated pickups with usable placement/targets.
 - Ordinary boss maturity and unrelated automatic effects remain unchanged.
