@@ -50,7 +50,7 @@ describe('resolved execution encounters', () => {
     });
     project = authorLegalTraitOffers(project);
     const assembly = simulateProjectAssembly(catalog, project);
-    const plan = compileExecutionPlan({ product: assembleExecutionProduct({ assembly }) });
+    const plan = compileExecutionPlan({ product: assembleExecutionProduct({ assembly, catalog }) });
     const room = plan.occurrences.find((value) => value.id === fixture.occurrenceId);
     expect(room?.overview.encounterPhases).toEqual([
       expect.objectContaining({ slotKey: 'Intro', figLeafSkip: true }),
@@ -74,7 +74,10 @@ describe('resolved execution encounters', () => {
         rank,
       });
       const plan = compileExecutionPlan({
-        product: assembleExecutionProduct({ assembly: simulateProjectAssembly(catalog, project) }),
+        product: assembleExecutionProduct({
+          assembly: simulateProjectAssembly(catalog, project),
+          catalog,
+        }),
       });
       expect(
         plan.occurrences.find((occurrence) => occurrence.gameName === gameName)?.overview
@@ -139,7 +142,10 @@ describe('resolved execution encounters', () => {
       value: { kind: 'single', choiceKey: 'charybdis' },
     });
     const plan = compileExecutionPlan({
-      product: assembleExecutionProduct({ assembly: simulateProjectAssembly(catalog, project) }),
+      product: assembleExecutionProduct({
+        assembly: simulateProjectAssembly(catalog, project),
+        catalog,
+      }),
     });
     const phase = plan.occurrences
       .find((occurrence) => occurrence.id === boss.occurrenceId)
@@ -254,7 +260,10 @@ describe('resolved execution encounters', () => {
       });
     }
     const plan = compileExecutionPlan({
-      product: assembleExecutionProduct({ assembly: simulateProjectAssembly(catalog, project) }),
+      product: assembleExecutionProduct({
+        assembly: simulateProjectAssembly(catalog, project),
+        catalog,
+      }),
     });
     expect(
       plan.occurrences
@@ -277,6 +286,7 @@ describe('resolved execution encounters', () => {
     const plan = compileExecutionPlan({
       product: assembleExecutionProduct({
         assembly: simulateProjectAssembly(catalog, createGoldenFGHIProject()),
+        catalog,
       }),
     });
     expect(
@@ -307,7 +317,10 @@ describe('resolved execution encounters', () => {
       value: { kind: 'orderedPrefix', choiceKeys: ['harpy', 'swab'] },
     });
     const plan = compileExecutionPlan({
-      product: assembleExecutionProduct({ assembly: simulateProjectAssembly(catalog, project) }),
+      product: assembleExecutionProduct({
+        assembly: simulateProjectAssembly(catalog, project),
+        catalog,
+      }),
     });
     const phase = plan.occurrences
       .find((occurrence) => occurrence.id === boss.occurrenceId)
@@ -386,7 +399,9 @@ describe('resolved execution encounters', () => {
         phaseKind: 'combat',
         phaseKey: 'Encounter',
       });
-      const plan = compileExecutionPlan({ product: assembleExecutionProduct({ assembly }) });
+      const plan = compileExecutionPlan({
+        product: assembleExecutionProduct({ assembly, catalog }),
+      });
       const occurrence = plan.occurrences.find((value) => value.id === occurrenceId);
       expect(occurrence?.overview.encounterPhases).toEqual([
         { slotKey: 'Encounter', encounterKey: `DevotionTest${biomeKey}`, kind: 'combat' },
@@ -403,7 +418,7 @@ describe('resolved execution encounters', () => {
 
   it('publishes the concrete I goal definition already recorded by simulation', () => {
     const assembly = simulateProjectAssembly(catalog, createGoldenFGHIProject());
-    const plan = compileExecutionPlan({ product: assembleExecutionProduct({ assembly }) });
+    const plan = compileExecutionPlan({ product: assembleExecutionProduct({ assembly, catalog }) });
     expect(
       plan.occurrences.find((value) => value.id === 'golden-i-combat01')?.overview.encounterPhases,
     ).toEqual([{ slotKey: 'Encounter', encounterKey: 'GeneratedI_GoalReward', kind: 'combat' }]);

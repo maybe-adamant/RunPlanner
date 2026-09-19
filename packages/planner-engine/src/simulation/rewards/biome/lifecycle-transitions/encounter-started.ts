@@ -1,4 +1,6 @@
 import type { Catalog } from '../../../../catalog-schema';
+import type { ResolvedRoutePosition } from '../../../../authored-project/route-context';
+import { resolveEntryDeclaration } from '../../../../authored-project/room-state/entry-resolution';
 import {
   createBiomeAddress,
   createEncounterPhaseAddress,
@@ -31,6 +33,7 @@ export interface EncounterStartedTransition {
 /** Applies only the Fig Leaf half of encounter start. Gorgon stays with E4 settlement. */
 export function applyEncounterStartedTransition(
   catalog: Catalog,
+  routePosition: ResolvedRoutePosition,
   snapshot: { readonly entryRoom?: { readonly origin: SemanticAddress } },
   event: Extract<HistoryEvent, { readonly kind: 'encounterStarted' }>,
   room: CanonicalAuthoredRoom | undefined,
@@ -46,7 +49,11 @@ export function applyEncounterStartedTransition(
     const phase = room.encounterPhases.find((candidate) => candidate.slotKey === event.phaseKey);
     if (phase !== undefined) {
       const definition = catalog.encounterDefinitions.byKey[event.encounterKey]!;
-      const declaration = catalog.rooms.byKey[room.gameName];
+      const rawDeclaration = catalog.rooms.byKey[room.gameName];
+      const declaration =
+        rawDeclaration === undefined
+          ? undefined
+          : resolveEntryDeclaration(rawDeclaration, routePosition);
       const resolvedEnvelope =
         declaration === undefined
           ? []

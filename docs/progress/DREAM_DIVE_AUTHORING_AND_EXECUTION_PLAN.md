@@ -1,7 +1,7 @@
 # Dream Dive authoring and execution
 
-Status: locked at `55062de8`; Gate A implemented and independently reviewed.
-Gate B and C remain pending. Dream publication is still disabled.
+Status: locked at `55062de8`; Gates A and B implemented and independently reviewed.
+Dream publication is enabled. Gate C full closure and runtime handoff remain pending.
 Planner base: `625ba63e`. Inventory both repository heads and worktrees before
 execution. This plan does not authorize pushing or deployment.
 
@@ -13,6 +13,29 @@ After UI refinements, 8 focused files / 60 tests and changed-file formatting
 passed again, including unavailable-choice disclosure and picker regression
 coverage. The authored schema remains 86 from the prior run-start migration.
 Full phase closure and live-game checks remain Gate C obligations.
+
+Gate B delivers execution protocol 42 (authored schema remains 86), native-mode
+admission, prologue transparency, scoped native biome selection, and first/later
+entry realization. A command-authored Q→F→N configured prefix of Q→F→N→H is the
+shared golden: later empty F/N entries, native N entry/Hub topology, and all
+three Dream Postboss recovery boundaries. Existing fixture products changed
+only protocol/fingerprint; all execution fixtures are byte-identical downstream.
+
+The mixed witness exposed foundation gaps included in this gate: encounter-start
+resolution now consumes the existing route-position entry declaration; N's
+PreHub/Hub declaration requirements preserve ordinary cache depths 1/2 and Dream
+2/3, with route-aware generation evidence. Independent review found and resolved
+native mode admission and later-entry preparation errors, then reviewed these
+foundation corrections. Its final fixture-provenance finding was corrected by
+retaining the normally initialized first room instead of reseeding topology.
+Final inspection also narrowed resource-row completion to catalog-declared
+route exclusions; unexpected missing resource policies still fail assembly.
+
+Gate B verification: 52 focused catalog/engine/application files / 545 tests;
+5 final compiler/application/UI files / 133 tests; contextual/candidate follow-up
+checks; workspace and fixture TypeScript; downstream 553 tests and production
+Lua lint passed. No deployment or live-game validation is claimed. The complete
+repository gate, performance check and durable-document closure remain Gate C.
 
 ## Outcome and locked decisions
 

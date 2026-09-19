@@ -1223,6 +1223,7 @@ export function evaluateBiomeRewardChronology(
         }
         const figLeafTransition = applyEncounterStartedTransition(
           catalog,
+          routePosition,
           snapshot,
           event,
           room?.kind === 'authored' ? room : undefined,

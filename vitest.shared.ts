@@ -48,6 +48,12 @@ export const sharedVitestConfig = defineConfig({
         ),
       },
       {
+        find: '@run-planner/test-fixtures/dream',
+        replacement: fileURLToPath(
+          new URL('./test/fixtures/authored-project/routes/dream.ts', import.meta.url),
+        ),
+      },
+      {
         find: '@run-planner/test-config/progress-reporter',
         replacement: fileURLToPath(new URL('./vitest.progress-reporter.ts', import.meta.url)),
       },

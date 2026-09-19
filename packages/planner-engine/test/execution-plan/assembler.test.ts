@@ -103,7 +103,7 @@ function withFigLeaf(project: ReturnType<typeof createCompleteFGProject>) {
 }
 
 function productFor(project: ReturnType<typeof createCompleteFGProject>) {
-  return assembleExecutionProduct({ assembly: simulateProjectAssembly(catalog, project) });
+  return assembleExecutionProduct({ assembly: simulateProjectAssembly(catalog, project), catalog });
 }
 
 function artificerCreatedBoonProject() {
@@ -390,6 +390,7 @@ describe('engine-owned F/G execution semantic product', () => {
     });
     const product = assembleExecutionProduct({
       assembly: simulateProjectAssembly(catalog, authorLegalTraitOffers(project)),
+      catalog,
     });
     const preHub = product.occurrences.find((entry) => entry.id === 'surface-n-prehub');
     expect(preHub?.overview.hub?.room.gameName).toBe('N_Hub');
@@ -828,7 +829,7 @@ describe('engine-owned F/G execution semantic product', () => {
   it('publishes an authored optional acquisition without making it an obligation', () => {
     const project = narcissusMysteryBoonProject();
     const assembly = simulateProjectAssembly(catalog, project);
-    const product = assembleExecutionProduct({ assembly });
+    const product = assembleExecutionProduct({ assembly, catalog });
     const mystery = product.occurrences
       .flatMap((occurrence) =>
         occurrence.timeline.transactions.map((transaction) => ({ occurrence, transaction })),
@@ -2092,7 +2093,7 @@ describe('engine-owned F/G execution semantic product', () => {
       throw new Error(
         `Boss outcome fixture is invalid: ${JSON.stringify(assembly.evaluation.findings)}`,
       );
-    const product = assembleExecutionProduct({ assembly });
+    const product = assembleExecutionProduct({ assembly, catalog });
     const boss = product.occurrences.find((occurrence) => occurrence.gameName === 'F_Boss01');
     const judgment = boss?.timeline.transactions.find(
       (transaction) => transaction.kind === 'automatic' && transaction.effect === 'judgment',

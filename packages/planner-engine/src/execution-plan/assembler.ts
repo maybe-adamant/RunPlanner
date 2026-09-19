@@ -22,6 +22,7 @@ import { validateExecutionProduct } from './assembly/validation';
 import { executionTimelineTransactions } from './assembly/timeline-transactions';
 import { executionStartingLoadout } from './assembly/loadout';
 import { semanticAddressKey } from '../authored-project/addresses';
+import { assessPublicDreamItinerary } from '../authored-project/dream-itinerary';
 import {
   EMPTY_PLANNER_TIMELINE_FACTS,
   mergePlannerTimelineFacts,
@@ -30,6 +31,7 @@ import { deriveRoomExitConformanceDeltas } from '../simulation/rewards/run-state
 
 export function assembleExecutionProduct({
   assembly,
+  catalog,
 }: import('./model').ExecutionAssemblerInput): ExecutionSemanticProduct {
   assertExactProjectEvaluationAssembly(assembly);
   const { evaluation } = assembly;
@@ -37,10 +39,10 @@ export function assembleExecutionProduct({
     throw new CompilerError('unsupportedExtent', 'execution catalog version is unsupported');
   }
   const routeKey = evaluation.route.routeKey;
-  if (routeKey !== 'Underworld' && routeKey !== 'Surface')
+  if (routeKey !== 'Underworld' && routeKey !== 'Surface' && routeKey !== 'Dream')
     throw new CompilerError(
       'unsupportedRoute',
-      'execution supports only Underworld or Surface routes',
+      'execution supports only Underworld, Surface, or Dream routes',
     );
   const keys = evaluation.route.configuredBiomeKeys;
   const invalidUnderworldPrefix =
@@ -65,13 +67,19 @@ export function assembleExecutionProduct({
       keys[2] === 'P' &&
       keys[3] === 'Q'
     );
+  const invalidDreamPrefix =
+    routeKey === 'Dream' &&
+    (keys.length < 1 ||
+      keys.length > 4 ||
+      assessPublicDreamItinerary(catalog, keys).issues.length > 0);
   if (
     (routeKey === 'Underworld' && invalidUnderworldPrefix) ||
-    (routeKey === 'Surface' && invalidSurfacePrefix)
+    (routeKey === 'Surface' && invalidSurfacePrefix) ||
+    invalidDreamPrefix
   ) {
     throw new CompilerError(
       'unsupportedExtent',
-      'execution supports only configured Underworld or Surface prefixes',
+      'execution supports only configured Underworld, Surface, or public Dream prefixes',
     );
   }
   const biomes = completeExecutionBiomes(assembly);
@@ -215,7 +223,36 @@ export function assembleExecutionProduct({
   // room's rewards can mutate the loadout-derived ledgers.
   const openingSnapshot = biomes[0]!.rewards.runStateSnapshots[0];
   const startingLoadout = executionStartingLoadout(assembly, openingSnapshot);
-  const resources = evaluation.route.resources;
+  // Route-excluded resource rooms have no candidates. Their wire rows remain
+  // cursor-aligned and passive; any other missing policy is a contract failure.
+  const resourceByOccurrenceId = new Map(
+    evaluation.route.resources.occurrences.map((entry) => [entry.occurrenceId, entry] as const),
+  );
+  const resources = Object.freeze({
+    occurrences: Object.freeze(
+      selectedOccurrenceIds.map((occurrenceId) => {
+        const policy = resourceByOccurrenceId.get(occurrenceId);
+        if (policy !== undefined) return policy;
+        const room = roomById.get(occurrenceId);
+        const declaration = room && catalog.rooms.byKey[room.gameName];
+        if (!declaration?.resourcePointSupport.excludedRouteKeys?.includes(routeKey)) {
+          throw new CompilerError(
+            'executionCoverageMissing',
+            `${occurrenceId} has no resource policy`,
+          );
+        }
+        return Object.freeze({
+          occurrenceId,
+          pointDispositions: Object.freeze({
+            Pickaxe: 'native' as const,
+            Exorcism: 'native' as const,
+            Shovel: 'native' as const,
+            Fishing: 'native' as const,
+          }),
+        });
+      }),
+    ),
+  });
   const product = Object.freeze({
     catalogVersion: evaluation.catalogVersion,
     projectId: evaluation.projectId,

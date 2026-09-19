@@ -34,7 +34,7 @@ describe('biome layout declaration normalization', () => {
         entry: { bounds: { maxBatches: 1, maxTargets: 1 }, rewardStorePolicy: { kind: 'none' } },
         terminal: {
           roomGameName: 'N_Hub',
-          eligibility: { kind: 'counterRange', axis: 'biomeDepthCache', range: { min: 2, max: 2 } },
+          eligibility: { kind: 'any' },
         },
       },
     });
@@ -74,7 +74,7 @@ describe('biome layout declaration normalization', () => {
     ).terminal.eligibility = {
       kind: 'counterRange',
       axis: 'biomeDepthCache',
-      range: { min: 2, max: 3 },
+      range: { min: 3, max: 2 },
     };
     expect(() => createCatalog(incorrectTerminal)).toThrow(CatalogContractError);
 

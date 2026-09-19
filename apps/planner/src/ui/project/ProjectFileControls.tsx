@@ -14,12 +14,7 @@ import {
   type GamePlanDiscovery,
   type GamePlanSlotNumber,
 } from '@planner/persistence/gamePlanPublisher';
-import {
-  selectPresentProject,
-  selectProfileSession,
-  selectProfileStatus,
-  useAppSelector,
-} from '@planner/state/store';
+import { selectProfileSession, selectProfileStatus, useAppSelector } from '@planner/state/store';
 import { ActionIcon } from '../controls/ActionIcon';
 import { DreamItineraryDialog } from './DreamItineraryDialog';
 
@@ -156,8 +151,6 @@ export function ProjectFileControls({
 }) {
   const profileSession = useAppSelector(selectProfileSession);
   const profileStatus = useAppSelector(selectProfileStatus);
-  const project = useAppSelector(selectPresentProject);
-  const dreamPublicationUnavailable = project?.route.routeKey === 'Dream';
   const [result, setResult] = useState<ProjectOperationResult | null>(null);
   const [pendingOperation, setPendingOperation] = useState<ProjectOperation | null>(null);
   const [gameDiscovery, setGameDiscovery] = useState<GamePlanDiscovery | null>(null);
@@ -441,9 +434,7 @@ export function ProjectFileControls({
                   <DropdownMenu.Separator className="project-file-menu-separator" />
                   <DropdownMenu.Item
                     className="project-file-menu-item"
-                    disabled={
-                      pendingOperation !== null || !hasProject || dreamPublicationUnavailable
-                    }
+                    disabled={pendingOperation !== null || !hasProject}
                     onSelect={() =>
                       queueFileMenuAction(() => {
                         void discoverAndPublishGamePlan();
@@ -451,11 +442,7 @@ export function ProjectFileControls({
                     }
                   >
                     <ActionIcon name="publish" />
-                    {dreamPublicationUnavailable
-                      ? 'Dream Dive publication unavailable'
-                      : pendingOperation === 'publishGame'
-                        ? 'Publishing…'
-                        : 'Publish to Game…'}
+                    {pendingOperation === 'publishGame' ? 'Publishing…' : 'Publish to Game…'}
                   </DropdownMenu.Item>
                 </>
               )}

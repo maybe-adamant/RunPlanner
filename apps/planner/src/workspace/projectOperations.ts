@@ -207,12 +207,10 @@ export function createProjectOperations(
         }
         const workspace = options.store.getState().projectWorkspace;
         if (workspace.kind !== 'openProject') throw new Error('No project is open');
-        if (workspace.history.present.route.routeKey === 'Dream') {
-          throw new Error(
-            'Dream Dive publication is unavailable until native runtime support is delivered',
-          );
-        }
-        const product = assembleExecutionProduct({ assembly: workspace.assembly });
+        const product = assembleExecutionProduct({
+          assembly: workspace.assembly,
+          catalog: options.catalog,
+        });
         const plan = compileExecutionPlan({ product });
         const publication = await options.gamePlanPublisher.publish(
           targetId,

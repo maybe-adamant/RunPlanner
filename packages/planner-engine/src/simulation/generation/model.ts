@@ -21,6 +21,11 @@ export type RoomGenerationExclusionReason =
 
 export type RequirementEvaluationEvidence =
   | {
+      readonly kind: 'routeKeyEquals';
+      readonly satisfied: boolean;
+      readonly expected: string;
+    }
+  | {
       readonly kind: 'all' | 'any';
       readonly satisfied: boolean;
       readonly children: readonly RequirementEvaluationEvidence[];

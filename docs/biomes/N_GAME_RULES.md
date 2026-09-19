@@ -31,6 +31,11 @@ depth 1. Leaving PreHub produces the history step `Opening, PreHub` and depth 2.
 Entering `N_Hub` then creates the persistent Ephyra board used by the visit
 loop.
 
+Dream entry begins with biome-depth cache 1 instead of the ordinary opening's
+0 (`EnterNextDreamBiome`, `ChooseStartingRoom`, `GetBiomeDepth`). The linked
+rooms remain identical: leaving Opening reaches depth 2 and leaving PreHub
+reaches depth 3. These cache offsets do not add an encounter or a room.
+
 Natural Chaos is supported as one declared additional exit from `N_Opening01`.
 The host policy admits `Chaos_03` or `Chaos_06` (default `Chaos_03`); selected
 Chaos reaches the declaration-owned fresh depth-two `N_Hub` takeover while
@@ -72,6 +77,8 @@ slots, visits, side rooms, restores, and reward lookup.
 
 This normalization intentionally replaces the literal linked-room mechanism
 with planner-observable depth, candidate, source, and lifecycle facts.
+The entry and terminal eligibility declarations use ordinary depths 1/2 and
+Dream depths 2/3 respectively; generation evaluates the resolved route identity.
 Executable fixtures preserve Opening, PreHub, Hub entry, board generation,
 visits, rewards, history, completion, and removal/undo behavior.
 
