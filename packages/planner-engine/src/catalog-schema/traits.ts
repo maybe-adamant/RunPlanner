@@ -41,7 +41,8 @@ export type ChaosOfferRequirement =
   | { readonly kind: 'elementMinimum'; readonly element: TraitElement; readonly minimum: number }
   | { readonly kind: 'notKeepsake'; readonly keepsakeKey: string }
   | { readonly kind: 'notAspect'; readonly aspectKey: string }
-  | { readonly kind: 'routeKey'; readonly routeKey: 'Underworld' };
+  | { readonly kind: 'routeKey'; readonly routeKey: 'Underworld' }
+  | { readonly kind: 'routeKeyNot'; readonly routeKey: string };
 
 export interface ChaosCurseDeclaration {
   readonly key: string;
@@ -394,6 +395,10 @@ export type TraitRequirementExpression =
   | {
       readonly kind: 'manualArcanaGraspCost';
       readonly minimum: number;
+    }
+  | {
+      readonly kind: 'routeKeyNot';
+      readonly routeKey: string;
     };
 
 export interface WeaponDeclaration {

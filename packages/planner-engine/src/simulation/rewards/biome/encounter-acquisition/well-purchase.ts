@@ -263,6 +263,7 @@ export function applyWellPurchaseTransition(inputs: {
     Object.freeze({
       purchase: assessStygianWellPurchase(
         catalog,
+        authoredRoom?.origin.routeKey ?? event.origin.routeKey,
         well,
         event.generationKey,
         branch.stygianWell,

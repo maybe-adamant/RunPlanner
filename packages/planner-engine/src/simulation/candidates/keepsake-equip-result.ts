@@ -108,7 +108,7 @@ export function evaluateKeepsakeEquipResultCandidate(
               candidateValue,
               frontier.before,
               frontier.transcendentEmbryoRarity ?? 'Epic',
-              frontier.loadout,
+              { ...frontier.loadout, routeKey: query.result.routeKey },
             ),
           );
           return Object.freeze({
@@ -142,7 +142,7 @@ export function evaluateKeepsakeEquipResultCandidate(
                 value as NonNullable<AuthoredKeepsakeEquipResults['transcendentEmbryo']>,
                 frontier.before,
                 frontier.transcendentEmbryoRarity ?? 'Epic',
-                frontier.loadout,
+                { ...frontier.loadout, routeKey: query.result.routeKey },
               ).legal,
           )
         : undefined;

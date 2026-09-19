@@ -43,6 +43,7 @@ type RawTraitRequirement = {
   readonly rarity: unknown;
   readonly context: unknown;
   readonly required: unknown;
+  readonly routeKey: unknown;
 };
 
 function closedValue<const Values extends readonly string[]>(
@@ -475,6 +476,14 @@ export function normalizeRequirement(
       return Object.freeze({
         kind: 'manualArcanaGraspCost',
         minimum: requirePositiveInteger(requirement.minimum, `${path}.minimum`),
+      });
+    case 'routeKeyNot':
+      return Object.freeze({
+        kind: 'routeKeyNot',
+        routeKey:
+          typeof requirement.routeKey === 'string'
+            ? requireNonEmpty(requirement.routeKey, `${path}.routeKey`)
+            : fail(`${path}.routeKey`, 'must be a non-empty string'),
       });
     default:
       fail(`${path}.kind`, `unknown requirement kind ${String(requirement.kind)}`);

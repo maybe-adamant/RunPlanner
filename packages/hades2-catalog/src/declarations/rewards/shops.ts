@@ -289,7 +289,9 @@ export const shops = [
           wellOption('TemporaryDiscountTrait', 'Ferry Voucher', 'RoomMoneyDrop', 'discount', {
             stygianWell: { offerRequirements: ['inactive'] },
           }),
-          wellOption('TemporaryForcedSecretDoorTrait', 'Spark of Ixion', 'RoomMoneyDrop', 'spark'),
+          wellOption('TemporaryForcedSecretDoorTrait', 'Spark of Ixion', 'RoomMoneyDrop', 'spark', {
+            stygianWell: { excludedRouteKeys: ['Dream'] },
+          }),
           wellOption(
             'TemporaryEmptySlotDamageTrait',
             'Danaid Dagger',

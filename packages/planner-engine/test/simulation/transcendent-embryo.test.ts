@@ -21,6 +21,7 @@ import {
 import {
   advanceTranscendentEmbryoProgress,
   assessTranscendentEmbryoTransformation,
+  assessTranscendentEmbryoBlessing,
   transcendentEmbryoBlessingKeys,
   transcendentEmbryoBlessingValues,
   type ReachedTranscendentEmbryoThreshold,
@@ -102,6 +103,25 @@ function embryoMarker(
 }
 
 describe('Transcendent Embryo declaration and direct Chaos fold', () => {
+  it.each(['Underworld', 'Surface', 'Dream'])(
+    'uses %s route for Discovery selection and alternatives',
+    (routeKey) => {
+      const history = createTraitHistoryState();
+      const context = { routeKey };
+      const options = transcendentEmbryoBlessingKeys(catalog, history, 'Epic', context);
+      expect(options.includes('ChaosHarvestBlessing')).toBe(routeKey !== 'Dream');
+      expect(options).toContain('ChaosElementalBlessing');
+      expect(
+        assessTranscendentEmbryoBlessing(
+          catalog,
+          embryoOutcome('ChaosHarvestBlessing'),
+          history,
+          'Epic',
+          context,
+        ).legal,
+      ).toBe(routeKey !== 'Dream');
+    },
+  );
   it('uses the actual encounter-end transition to block then resolve the eighth replacement', () => {
     const encounterOwner = createOccurrenceAddress(
       createBiomeAddress('Underworld', 'F'),

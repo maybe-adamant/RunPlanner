@@ -177,7 +177,7 @@ function evaluateRouteAssembly(
               routeStartEffect.blessingRarityByRank[
                 catalog.keepsakes.byKey[route.loadout.startingKeepsakeKey]?.rank ?? 'Epic'
               ],
-              route.loadout,
+              { ...route.loadout, routeKey: route.routeKey },
             ).legal)
     ) {
       routeStartBlock = 'invalid';

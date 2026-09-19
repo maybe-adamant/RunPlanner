@@ -165,6 +165,7 @@ function applyTraitOfferForAcquisitionInternal(
   const before = branch.traitHistory ?? createTraitHistoryState();
   const sourceTraitContext = Object.freeze({
     ...(reward.traitContext ?? {}),
+    ...('routeKey' in reward.origin ? { routeKey: reward.origin.routeKey } : {}),
     settledSpellDrop: (branch.history.useRecord.SpellDrop ?? 0) > 0,
     ...(reward.producerLifecycleKey === 'EchoLastReward' || role === 'echoLastRunSelection'
       ? { stackBoostsSuppressed: true as const }
@@ -983,6 +984,10 @@ export function settleEncounterTraitOffer(
     loadout,
     freshRarityOverride,
   );
+  const routedTraitContext = Object.freeze({
+    ...traitContext,
+    ...('routeKey' in origin ? { routeKey: origin.routeKey } : {}),
+  });
   if (offer === null) {
     const settlement = applyTraitOfferForAcquisition(
       catalog,
@@ -990,7 +995,7 @@ export function settleEncounterTraitOffer(
       {
         origin,
         traitOffersByAcquisitionRole: Object.freeze({ [acquisitionRole]: null }),
-        traitContext,
+        traitContext: routedTraitContext,
       },
       acquisitionRole,
       lifecyclePoint,
@@ -1010,7 +1015,7 @@ export function settleEncounterTraitOffer(
         {
           origin,
           traitOffersByAcquisitionRole: Object.freeze({ [acquisitionRole]: offer }),
-          traitContext,
+          traitContext: routedTraitContext,
         },
         acquisitionRole,
         lifecyclePoint,
@@ -1032,7 +1037,7 @@ export function settleEncounterTraitOffer(
     const source = {
       origin,
       traitOffersByAcquisitionRole: Object.freeze({ [acquisitionRole]: offer }),
-      traitContext,
+      traitContext: routedTraitContext,
     } as const;
     // Record the exact pre-effect frontier before validating Circe's authored
     // child. Circe's ordinary offer findings stay provisional until that child
@@ -1116,7 +1121,7 @@ export function settleEncounterTraitOffer(
       const childAssessment = assessEchoBoonChild(
         catalog,
         preChoiceTraitHistory,
-        traitContext,
+        routedTraitContext,
         child,
       );
       if (childAssessment.kind === 'rejected')

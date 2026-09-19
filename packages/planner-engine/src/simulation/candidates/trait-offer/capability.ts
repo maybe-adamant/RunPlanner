@@ -322,7 +322,10 @@ export function createTraitOfferCandidateArtifacts(
   const privateContexts = new Map(contexts);
   return Object.freeze({
     at: (address: TraitOfferAddress | NaturalSelectionResultAddress) => {
-      const branchContexts = privateContexts.get(semanticAddressKey(address));
+      const branchContexts = privateContexts.get(semanticAddressKey(address))?.map((branch) => ({
+        ...branch,
+        context: Object.freeze({ ...branch.context, routeKey: address.routeKey }),
+      }));
       if (branchContexts === undefined) return undefined;
       const concaveStoneSecondaryContext = (
         value: AuthoredTraitOffer,
@@ -950,6 +953,8 @@ export function createTraitOfferCandidateArtifacts(
                       return context.context.aspectKey === requirement.aspectKey;
                     case 'routeKey':
                       return address.routeKey !== requirement.routeKey;
+                    case 'routeKeyNot':
+                      return address.routeKey === requirement.routeKey;
                   }
                 });
               const availableCurses = catalog.chaos.curses.values.filter(

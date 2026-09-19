@@ -120,6 +120,7 @@ function traitContextForOffer(
     fail(`${context.room.gameName} reward materialization requires a route loadout`);
   }
   return Object.freeze({
+    routeKey: context.biome.routeKey,
     ...context.loadout,
     acquisitionOrdinal: context.routePosition.ordinal,
     blockGiftBoons: context.room.blockGiftBoons,

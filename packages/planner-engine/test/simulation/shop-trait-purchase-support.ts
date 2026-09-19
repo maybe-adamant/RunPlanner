@@ -155,6 +155,7 @@ export const settleShop = (
 export function baseFacts(): RewardKernelFacts {
   return {
     requirements: {
+      routeKey: biome.routeKey,
       counters: {
         biomeDepthCache: 4,
         biomeEncounterDepth: 2,

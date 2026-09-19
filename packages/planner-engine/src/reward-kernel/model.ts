@@ -170,6 +170,7 @@ export interface ShopOptionEntry {
       | 'lastStand';
     readonly offerRequirements?: readonly ('inactive' | 'emptyAttackOrSpecial')[];
     readonly nestedResultItemKeys?: readonly string[];
+    readonly excludedRouteKeys?: readonly string[];
     readonly extendedDirectPurchaseItemKeys?: readonly string[];
   };
 }

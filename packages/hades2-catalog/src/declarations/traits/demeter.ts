@@ -104,6 +104,7 @@ export const demeterTraits = [
     equippedRarities: ['Common', 'Rare', 'Epic', 'Heroic'],
     linkedBoonRequirements: [],
     eligibilityRequirements: [
+      { kind: 'routeKeyNot', routeKey: 'Dream' },
       {
         kind: 'offerContext',
         context: 'blockGiftBoons',

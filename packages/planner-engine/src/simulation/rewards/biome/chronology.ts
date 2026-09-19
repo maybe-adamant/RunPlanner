@@ -881,7 +881,7 @@ export function evaluateBiomeRewardChronology(
               authored,
               branch.traitHistory ?? createTraitHistoryState(),
               effect.blessingRarityByRank.Common,
-              routeLoadout,
+              { ...routeLoadout, routeKey: echoEmbryoResult.routeKey },
             ).legal,
         )
       ) {

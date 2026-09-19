@@ -464,6 +464,8 @@ function evaluateReachedTraitOfferWithAssessments(
                 return context.aspectKey === requirement.aspectKey;
               case 'routeKey':
                 return !('routeKey' in address) || address.routeKey !== requirement.routeKey;
+              case 'routeKeyNot':
+                return !('routeKey' in address) || address.routeKey === requirement.routeKey;
             }
           };
           // Every authored curse is part of the generated Chaos screen. A

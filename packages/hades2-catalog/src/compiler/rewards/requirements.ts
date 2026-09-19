@@ -175,6 +175,13 @@ export function validateRewardRouteRequirementReferences(
   rewards.shops.values.forEach((shop) =>
     shop.groups.values.forEach((group) =>
       group.options.values.forEach((option) => {
+        option.stygianWell?.excludedRouteKeys?.forEach((routeKey, index) => {
+          if (routes.byKey[routeKey] === undefined)
+            fail(
+              `shops.${shop.key}.groups.${group.key}.options.${option.key}.stygianWell.excludedRouteKeys[${index}]`,
+              `unknown route ${routeKey}`,
+            );
+        });
         if (option.requirement !== undefined)
           validateRouteRequirementReferences(
             option.requirement,

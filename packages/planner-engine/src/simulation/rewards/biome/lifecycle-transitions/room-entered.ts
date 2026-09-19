@@ -387,6 +387,7 @@ export function applyRoomEnteredTransition(
                   placement: assessStygianWellPlacement(declaration, priorEnteredWellFlags),
                   inventory: assessStygianWell(
                     catalog,
+                    room.origin.routeKey,
                     declaration,
                     room.stygianWell,
                     branch.stygianWell,

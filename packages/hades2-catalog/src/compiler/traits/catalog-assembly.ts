@@ -4,9 +4,44 @@ import type {
   TraitDeclaration,
   TraitGiverDeclaration,
   WeaponDeclaration,
+  TraitCatalog,
+  TraitRequirementExpression,
+  RouteDeclaration,
 } from '@run-planner/engine/catalog-schema';
 
 import { fail } from '../errors';
+
+export function validateTraitRouteReferences(
+  catalog: TraitCatalog,
+  routes: CatalogCollection<RouteDeclaration>,
+): void {
+  const requireRoute = (key: string, path: string) => {
+    if (routes.byKey[key] === undefined) fail(path, `unknown route ${key}`);
+  };
+  const check = (requirement: TraitRequirementExpression, path: string): void => {
+    if (requirement.kind === 'all')
+      requirement.requirements.forEach((child, index) =>
+        check(child, `${path}.requirements[${index}]`),
+      );
+    else if (requirement.kind === 'routeKeyNot')
+      requireRoute(requirement.routeKey, `${path}.routeKey`);
+  };
+  for (const trait of catalog.traits.values) {
+    for (const field of ['eligibilityRequirements', 'linkedBoonRequirements'] as const)
+      trait[field].forEach((requirement, index) =>
+        check(requirement, `traits.${trait.key}.${field}[${index}]`),
+      );
+  }
+  for (const group of ['curses', 'blessings'] as const)
+    for (const entry of catalog.chaos[group].values)
+      entry.offerRequirements?.forEach((requirement, index) => {
+        if (requirement.kind === 'routeKey' || requirement.kind === 'routeKeyNot')
+          requireRoute(
+            requirement.routeKey,
+            `chaos.${group}.${entry.key}.offerRequirements[${index}].routeKey`,
+          );
+      });
+}
 
 export function validateDirectTraitSets(
   traits: CatalogCollection<TraitDeclaration>,
