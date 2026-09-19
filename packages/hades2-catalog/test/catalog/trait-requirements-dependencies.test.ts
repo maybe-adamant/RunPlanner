@@ -162,6 +162,7 @@ describe('trait requirements and dependencies', () => {
     expect(traits?.traits.byKey.UpgradeHammerBoon?.targetedAcquisition).toEqual({
       kind: 'upgradeHammerToRank2',
       target: 'upgradableHammer',
+      targetCountByAcquisitionOrdinal: [1, 1, 1, 2],
     });
 
     const allElemental = traits?.traits.byKey.AllElementalBoon;

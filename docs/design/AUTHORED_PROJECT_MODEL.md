@@ -112,8 +112,11 @@ not a second chronology. UI state owns no domain topology.
 
 ## Route Scope
 
-One document persists one selected route and its contiguous configured biome
-prefix in catalog order. Expansion creates biome plans with `topology: null`;
+One document persists one route identity, its complete `itineraryBiomeKeys`,
+and a contiguous configured prefix of that itinerary. Underworld and Surface
+use their catalog presets. Internal Dream documents carry a supplied itinerary;
+public Dream creation, loading and execution publication remain disabled until
+the remaining Dream rules are supported. Expansion creates biome plans with `topology: null`;
 shrinking explicitly removes the discarded plans and their state.
 `ConfigureRoutePrefix` is the only normal scope-edit command and undo restores
 the prior snapshot. Selecting another catalog route creates or opens another
@@ -124,7 +127,12 @@ Underworld: [] -> [F] -> [F, G] -> [F, G, H] -> [F, G, H, I]
 Surface:    [] -> [N] -> [N, O] -> [N, O, P] -> [N, O, P, Q]
 ```
 
-Configured scope is not a claim that a biome is complete or simulation-valid.
+Configured scope is not a claim that a biome is complete or simulation-valid,
+and its last configured biome is not necessarily the route's terminal biome.
+`resolveRoutePosition` resolves ordinal, neighbors, first/last status and exact
+completion identities from the full itinerary. Chronological consumers share
+that product rather than infer placement from a biome name. Itinerary order is
+not editable inside an existing project.
 
 ### Route Loadout
 
@@ -144,9 +152,10 @@ Automatic cards and run-local Arcana grants are not part of this starting limit.
 Other ordinary Vow gameplay effects remain outside these commands.
 
 Circe's selected effect-backed offer detail is authored beneath its exact trait
-option. `activateArcana` stores zero or one canonical card key, `promoteArcana`
-stores a canonical distinct card set, and `disableFear` stores one Vow key.
-The valid exhausted-domain empty result belongs to `activateArcana`. The codec
+option. `activateArcana` and `promoteArcana` store canonical distinct card sets;
+`disableFear` stores distinct `vowKeys`. Required counts are resolved at
+acquisition from ordinal and the eligible pool. Empty or partial choices remain
+repairable; an exhausted activation pool admits an empty result. The codec
 checks shape, catalog membership, option disposition, and canonical declaration
 order, but does not evaluate current run eligibility. Dormant resolution detail
 remains persisted when a user switches away from its owning option, so a later
@@ -159,13 +168,13 @@ not a synthetic reward or topology edge.
 
 ### Keepsake Authorship
 
-The route loadout owns one exact starting keepsake. F/G/H/N/O/P fixed Postboss
-room declarations expose physical racks; an occurrence owns a sparse
+The route loadout owns one exact starting keepsake. Resolved Postboss room
+declarations expose physical racks; an occurrence owns a sparse
 `keepsakeRack` leaf with one catalog keepsake key only when the player authors
 a replacement. Absence means no interaction and carries the current keepsake.
 The occurrence and its local controls are active for every supported
-nonterminal route position; I and Q own no rack because their terminal
-positions have no Postboss occurrence.
+nonterminal route position. The ordinary terminal I and Q positions have no
+Postboss occurrence; physical biome identity alone does not determine finality.
 
 Every structural Postboss state defaults to a `useFountain` action. Adding a
 replacement atomically adds the required `interactKeepsakeRack` action. Changing
@@ -321,6 +330,14 @@ The catalog declares either an `authoredChoice` start or a declaration-fixed
 authored choice; it derives the fixed declaration and rejects substitution. F
 has an authored Opening choice. G/H/I/O/P/Q have fixed Intros. N has fixed
 `N_Opening01`.
+
+Starting-room reward and encounter profiles are resolved for the route
+position before defaults, decoding or simulation consume them. The first
+room's identity and reward controls are presented in Loadout, but its
+occurrence, acquisition payloads and Timeline remain room-owned. Later entries
+use their resolved rewardless profile. Completion likewise resolves the exact
+allowed Preboss/Boss/Postboss chain; a cross-family completion map does not
+authorize unrelated foreign rooms.
 
 Generated batches retain their layout's progression, reward-store, and
 batch-state contracts. Q's candidate pools are checked on the selected spine,
@@ -881,7 +898,7 @@ Navigation and focus are not commands and do not enter authored history.
 
 ## Persistence and Validation
 
-The portable document has exact keys, canonical catalog route order, and
+The portable document has exact keys, a validated full itinerary and its configured prefix, and
 stable indented JSON with a trailing newline:
 
 ```ts

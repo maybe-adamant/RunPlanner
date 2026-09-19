@@ -112,7 +112,13 @@ A layout declares:
 Room-local exits, rewards, caps and eligibility do not move into layout merely
 because several rooms share them. The containing route determines the next
 biome. Completion resets are explicit ordered effects, not implicit simulator
-behavior.
+behavior. Route declarations map completion rooms by biome and ordinal; the
+engine applies those mappings to the authored full itinerary, independently of
+its configured prefix. A physical room family is not its route position.
+
+Starting rooms declare `routeFirst` and `routeLater` profiles. Their resolved
+reward binding and optional Dream encounter override feed all downstream
+consumers; editor visibility is not an alternate room declaration.
 
 N's fixed Hub mapping, open-set rules and visit order are separate from ordinary
 room pools. Side-slot availability rank describes physical generation pressure;
@@ -271,6 +277,11 @@ replacement and explicit promotion supply their own transitions.
 [The rarity audit](../audits/traits/BOON_RARITY_LEDGER_GAME_DATA_AUDIT.md) and
 [trait-pool audit](../audits/traits/TRAIT_OFFER_POOLS_AND_DEPENDENCIES.md)
 own source matrices.
+
+Supported NPC effects declare acquisition-ordinal values, not an authored
+rarity proxy. The engine resolves immediate counts at acquisition and retains
+ongoing producer values on the acquired instance. Later biome movement cannot
+retune Supply Chain. Combat-only numeric NPC effects remain native.
 
 Targeted acquisitions and selected dispositions form closed unions.
 Examples include Bridal Glow's god-trait promotion, Latest Model's Hammer

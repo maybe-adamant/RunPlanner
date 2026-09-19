@@ -27,6 +27,7 @@ import { describe, expect, it } from 'vitest';
 
 import { requireTraits } from '@run-planner/test-fixtures/shared';
 import {
+  createCompleteFGProject,
   createGoldenFGHIProject,
   goldenFBiome,
   goldenFOccurrenceId,
@@ -699,6 +700,28 @@ describe('structured workspace source index', () => {
     });
     expect(source.outgoingStatus(nOccurrenceId('preboss'))).toMatchObject({
       kind: 'fixedRoom',
+    });
+  });
+
+  it('uses the full route itinerary for a complete partial-prefix Postboss continuation', () => {
+    const complete = createCompleteFGProject();
+    const project = {
+      ...complete,
+      route: {
+        ...complete.route,
+        biomes: complete.route.biomes.slice(0, 1),
+      },
+    };
+    const source = biomeSource(sourceIndexForExactProject(project), 'Underworld', 'F');
+    const postboss = source.plan.topology?.occurrences.find(
+      (occurrence) => occurrence.gameName === 'F_PostBoss01',
+    );
+    if (postboss === undefined) throw new Error('complete F prefix is missing its Postboss');
+
+    expect(source.outgoingStatus(postboss.occurrenceId)).toEqual({
+      kind: 'fixedRoom',
+      owner: createOccurrenceAddress(goldenFBiome, postboss.occurrenceId),
+      target: { kind: 'nextBiomeIntro', biomeKey: 'G' },
     });
   });
 

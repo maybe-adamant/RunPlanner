@@ -866,7 +866,7 @@ alternatives. A rushed Shrine purchase, including a Travel Deal replacement,
 derives one required same-room pickup at the post-outgoing action rank. A delayed
 purchase is scheduled at source cleanup without consuming a delay use and
 derives a later required pickup at the reached encounter-end host. At the
-catalog route's final Preboss, entry expires every still-pending delivery into a
+full itinerary's resolved final Preboss, entry expires every still-pending delivery into a
 required phase-less post-outgoing pickup; it does not decrement the ordinary
 encounter clock or acquire a reward. A Hub side-room source is ordinary for
 scheduling, but cannot advance an older pending delivery; later qualifying main
@@ -1078,7 +1078,10 @@ not biome-local and therefore receive no reset event.
 ## History Views and Composition
 
 Composition begins with one addressed `biomeStarted` event whose payload owns
-the biome's exact layout-declared initial counter state. For F that state is
+the biome's resolved initial counter state. Route position determines its entry
+depth baseline: an ordinary first biome starts at zero; later entries and
+Dream entries start at one. Layout declarations retain biome-local counter
+facts; carried route counters come from actual predecessor history. For ordinary F that state is
 `biomeDepthCache = 0`, `biomeEncounterDepth = 1`, route encounter depth `1`,
 and room-history ordinal `0`. The opening's later commit applies its declared
 `biomeDepthCache = 1` delta. These are separate events so generation contacts

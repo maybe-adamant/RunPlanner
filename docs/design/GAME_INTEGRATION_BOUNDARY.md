@@ -417,6 +417,9 @@ Wrong continuation is detected by the next room-entry identity check; the
 executor deliberately has no separate selected-transition conformance
 checkpoint.
 
-Dream Dive route ordering, Postboss selection, and phase differences remain
-deferred pending their own source audit and authored-route product. Automatic
-diagnostic import remains deferred.
+The planner's internal route-position, contextual start/completion and
+acquisition-ordinal NPC products support a supplied Dream itinerary. Public
+Dream creation/import/restore and execution publication remain disabled:
+Dream inventory restrictions, legal itinerary authoring, special lifecycle
+behavior and runtime admission still require delivery. Automatic diagnostic
+import remains deferred.

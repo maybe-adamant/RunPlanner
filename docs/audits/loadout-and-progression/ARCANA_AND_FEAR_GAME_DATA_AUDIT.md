@@ -164,8 +164,10 @@ Three selection details affect the native draw:
 ### Red Citrine Divination
 
 `RandomArcanaTrait` calls `AddRandomMetaUpgrades` with a base count of one.
-Circe's menu uses internal Common scaling, so Red Citrine activates exactly one
-inactive card; this is not player-facing boon rarity. Under a fully progressed
+Circe's ordinary menu uses internal Common scaling. Dream menu scaling gives
+activation counts 1/1/2/3 by acquisition ordinal, capped by the inactive pool;
+the planner uses that ordinal profile for both route kinds. This is not
+player-facing boon rarity. Under a fully progressed
 rank-III baseline, the newly installed Arcana trait begins at Epic.
 
 ### Judgment
@@ -183,7 +185,7 @@ three and its permanent Arcana rank scales that effect as follows:
 `TriggerPostBossEvents` calls the same `AddRandomMetaUpgrades` operation after
 a boss when the derived `PostBossCards` value is positive and
 `CurrentRun.EnteredBiomes < GameData.FullRunBiomeCount`. The planner derives
-that full-run count from the catalog route structure rather than the currently
+that full-run count from the complete authored itinerary rather than the currently
 configured authored prefix. Each trigger draws
 from the then-inactive set, so previously activated temporary cards cannot be
 drawn again.
@@ -277,7 +279,9 @@ it does not add a save-profile input.
 Black Night Banishment (`RemoveShrineTrait`) is offered only when at least one
 configured Vow has rank greater than zero and is not marked ineligible for
 Circe removal. Its normal-run internal Common scaling chooses exactly one such
-Vow; the Circe trait itself is player-rarityless.
+Vow; Dream scaling gives 1/1/2/3 by acquisition ordinal, capped by eligible
+Vows. The planner uses those ordinal counts without changing the trait's
+player-rarityless identity.
 
 The effect does not change `GameState.ShrineUpgrades` or the selected rank. It
 sets `CurrentRun.ShrineUpgradesDisabled[vowKey] = true`. Runtime Shrine queries
@@ -336,14 +340,14 @@ The two domains otherwise remain separate until Circe:
 
 ## Planner Disposition
 
-Schema 21 established the Arcana/Fear and Circe subset: rank-III card
+The modeled Arcana/Fear and Circe subset includes rank-III card
 baselines, ordinary automatic activation, manual Arcana and ranked Fear
 loadouts, configured versus effective Fear, temporary Arcana activation,
 Lapis promotion, Black Night suppression, Judgment's exact post-Boss draws,
-and Circe's nine player-rarityless choices. Schema 22 adds the two supported
-reward-facing Vow effects without introducing a generic Fear interpreter:
-Denial records exact displayed unselected Olympian/Hermes traits in the folded
-route history, and Forfeit records one ordinary-room acquisition veto per
+and Circe's nine player-rarityless choices. Supported reward-facing Vow effects
+do not introduce a generic Fear interpreter. Denial records exact displayed
+unselected Olympian/Hermes traits in the folded
+route history, and Forfeit records one eligible generated-boon replacement per
 biome. Black Night stops future effects but does not erase prior bans or
 restore an already vetoed acquisition.
 
@@ -356,7 +360,7 @@ configured capacity without applying that limit to automatic or run-local
 Arcana grants. Fated mode, permanent card advancement, and every other ordinary
 Vow gameplay effect remain deliberately out of scope.
 
-Schema 41 adds the Artificer's supported reward-facing effect without changing
+Artificer's supported reward-facing effect does not change
 the pre-run loadout model. The catalog owns Common/Rare/Epic/Heroic capacity
 one/two/three/four. Canonical run-local Arcana state records exact successful source
 interactions rather than a mutable remaining counter; remaining uses are
@@ -372,11 +376,9 @@ from the trait identity. The activation domain consumes only the
 declaration-owned `RequiredCardNames` eligibility fact. The numeric Eternity
 chance remains source evidence, not planner state. Judgment and Figurine accept
 The Fates when a named companion is already active or is in the same selected
-set; their execution projection orders a same-set companion first because the
+set; Circe shares this policy and their execution projection orders a same-set companion first because the
 native operation resolves cards sequentially. The Run Planner game module constrains only
 the corresponding native random selector inside Circe's acquire-function scope,
 including Eternity's native positive `RandomChance` branch when it is the exact
 published target. Native code owns the Arcana/Fear mutation and existing
 room-exit conformance owns its proof.
-This closes the dormant Circe consequence contact without enabling O route
-navigation.

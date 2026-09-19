@@ -31,6 +31,7 @@ reader-facing taxonomy, not a package or runtime boundary.
 
 ### Rooms and routes
 
+- [Route-position profiles](rooms-and-routes/ROUTE_POSITION_GAME_DATA_AUDIT.md) — Contextual starts/completions and acquisition-ordinal NPC effects.
 - [Encounter selection and composition](rooms-and-routes/ENCOUNTER_SELECTION_AND_COMPOSITION_FINDINGS.md) — Encounter envelopes, selectable compositions, and their room-level constraints.
 - [Enemy formation and Fear Vows](rooms-and-routes/ENEMY_FORMATION_AND_FEAR_VOW_GAME_DATA_AUDIT.md) — Generated Combat and Devotion waves, enemy types and counts, and the intervention order for Hordes, Menace, Fangs, Return, and adjacent Vows.
 - [Combat-room encounter composition matrix](rooms-and-routes/COMBAT_ENCOUNTER_COMPOSITION_MATRIX.md) — Supported Combat-room encounters and O Devotion, including field NPCs, exact enemy pools, wave/type limits, and explicit customization exclusions.

@@ -20,6 +20,7 @@ import type {
   LocalVisitDecision,
   OccurrenceId,
 } from '../authored-project/model';
+import type { ResolvedRoutePosition } from '../authored-project/route-context';
 import {
   additionalExitsForDecision,
   exitDecisionForSource,
@@ -67,8 +68,8 @@ export type OccurrenceOutgoingStatus =
 export interface OccurrenceOutgoingStatusInput {
   readonly biome: BiomeAddress;
   readonly catalog: Catalog;
-  /** Exact authored route prefix; full itinerary remains a separate context. */
-  readonly configuredBiomeKeys: readonly string[];
+  /** Exact route-owned position, including the full itinerary successor. */
+  readonly routePosition: ResolvedRoutePosition;
   readonly completeness: BiomeCompletenessResult;
   readonly findings: readonly SemanticFinding[];
   readonly occurrenceId: OccurrenceId;
@@ -119,6 +120,15 @@ function selectedSpineOccurrenceIds(topology: BiomeTopology): ReadonlySet<Occurr
           selected.kind === 'normal' ? selected.target.occurrenceId : selected.exit.occurrenceId,
         );
       }
+    }
+  }
+  let addedFixedCompletion = true;
+  while (addedFixedCompletion) {
+    addedFixedCompletion = false;
+    for (const link of topology.fixedRoomLinks) {
+      if (!entered.has(link.sourceOccurrenceId) || entered.has(link.targetOccurrenceId)) continue;
+      entered.add(link.targetOccurrenceId);
+      addedFixedCompletion = true;
     }
   }
   return entered;
@@ -222,8 +232,7 @@ export function evaluateOccurrenceOutgoingStatus(
   const entered = selectedSpineOccurrenceIds(topology).has(occurrenceId);
   const room = catalog.rooms.byKey[occurrence.gameName];
   if (entered && (room?.kind === 'Boss' || room?.kind === 'PostBoss')) {
-    const biomeIndex = input.configuredBiomeKeys.indexOf(biome.biomeKey);
-    const nextBiomeKey = biomeIndex >= 0 ? input.configuredBiomeKeys[biomeIndex + 1] : undefined;
+    const nextBiomeKey = input.routePosition.nextBiomeKey;
     return Object.freeze({
       kind: 'fixedRoom' as const,
       owner: occurrenceOwner,

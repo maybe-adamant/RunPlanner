@@ -8,6 +8,7 @@ import {
   createOccurrenceAddress,
   createOccurrenceId,
   createTargetAddress,
+  resolveRoutePosition,
   semanticAddressKey,
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
@@ -59,7 +60,7 @@ describe('F takeover completeness', () => {
         findings: startCompleteness.findings,
         occurrenceId: startPlan.topology!.startOccurrenceId,
         plan: startPlan,
-        configuredBiomeKeys: ['F'],
+        routePosition: resolveRoutePosition(catalog, startProject.route, 'F'),
       }),
     ).toMatchObject({
       kind: 'frontier',
@@ -78,7 +79,7 @@ describe('F takeover completeness', () => {
         findings: authoredCompleteness.findings,
         occurrenceId: authoredPlan.topology!.startOccurrenceId,
         plan: authoredPlan,
-        configuredBiomeKeys: ['F'],
+        routePosition: resolveRoutePosition(catalog, authoredProject.route, 'F'),
       }),
     ).toMatchObject({ kind: 'authoredDecision', owner: fDecision() });
     expect(
@@ -89,7 +90,7 @@ describe('F takeover completeness', () => {
         findings: authoredCompleteness.findings,
         occurrenceId: fCombatId,
         plan: authoredPlan,
-        configuredBiomeKeys: ['F'],
+        routePosition: resolveRoutePosition(catalog, authoredProject.route, 'F'),
       }),
     ).toMatchObject({ kind: 'frontier', owner: fDecision(fCombatId) });
   });

@@ -106,6 +106,7 @@ import { migrateProjectDocument as migrateProject80To81 } from '../../../../sche
 import { migrateProjectDocument as migrateProject81To82 } from '../../../../schema/migrate-project-81-to-82.js';
 import { migrateProjectDocument as migrateProject82To83 } from '../../../../schema/migrate-project-82-to-83.js';
 import { migrateProjectDocument as migrateProject83To84 } from '../../../../schema/migrate-project-83-to-84.js';
+import { migrateProjectDocument as migrateProject84To85 } from '../../../../schema/migrate-project-84-to-85.js';
 
 function fOnlyProject(project = createCompleteFGProject()) {
   return Object.freeze({
@@ -2106,9 +2107,11 @@ describe('execution-plan compiler and codec', () => {
       }
     }
 
-    const migrated = migrateProject83To84(
-      migrateProject82To83(
-        migrateProject81To82(migrateProject80To81(migrateProject79To80(legacy))),
+    const migrated = migrateProject84To85(
+      migrateProject83To84(
+        migrateProject82To83(
+          migrateProject81To82(migrateProject80To81(migrateProject79To80(legacy))),
+        ),
       ),
     );
     const loaded = parseProjectDocument(JSON.stringify(migrated), catalog);

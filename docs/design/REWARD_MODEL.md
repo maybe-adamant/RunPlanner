@@ -1241,7 +1241,10 @@ does not activate fallback. Stone's residual sees state after the primary
 acquisition. Bridal remembers its recipient so any later source-rarity
 increase credits only the positive change in its level grant; removing Bridal
 does not undo prior benefits. Latest Model instead upgrades a source-capable
-permanent Hammer to Rank II. These contracts do not create a generic effect
+permanent Hammer to Rank II using an ordered, distinct target list whose
+required size is capped by the acquisition-ordinal count and eligible pool.
+Its candidate and settlement consumers share that frozen target domain.
+These contracts do not create a generic effect
 interpreter or a second acquisition ledger.
 
 A retained trait may also carry a derived in-run rarity block. Personal Loan's

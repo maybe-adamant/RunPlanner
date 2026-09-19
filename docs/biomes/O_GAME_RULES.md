@@ -201,9 +201,9 @@ When `IcarusCombatO` is selected and entered, its exact phase owns Icarus's
 three-choice player-rarityless trait offer. Source chronology makes the later
 Icarus interaction and the selected wheel-reward interaction parallel required
 objects after that combat; either may resolve first, and both must clear before
-the next ShipCombat phase. Latest Model may target one exact eligible equipped
-Rank-I Hammer and upgrade it to Rank II through the shared targeted-acquisition
-lifecycle.
+the next ShipCombat phase. Latest Model's ordered Rank-I Hammer targets use the
+shared acquisition-ordinal profile (one at O's ordinary position) and Rank-II
+targeted-acquisition lifecycle.
 
 The visible End Encounter boundary marks combat completion and makes the
 Icarus/wheel interactions available. Unlike ordinary combat, the native
