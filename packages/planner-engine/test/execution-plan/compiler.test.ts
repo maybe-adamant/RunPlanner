@@ -89,12 +89,17 @@ import surfaceNOPFixture from './fixtures/surface-nop.execution.json';
 import surfaceNOPQFixture from './fixtures/surface-nopq.execution.json';
 import surfaceQShopCorrelationFixture from './fixtures/surface-q-shop-correlation.execution.json';
 import surfaceScheduledLifecycleFixture from './fixtures/surface-scheduled-lifecycle.execution.json';
+import dreamMixedPrefixFixture from './fixtures/dream-mixed-prefix.execution.json';
 import { bossAutomaticOutcomeProject } from './support/automatic-fixture';
 import {
   surfaceScheduledLifecycleProject,
   surfaceScheduledLifecycleWithQSupplyChainSlicesProject,
 } from './support/scheduled-lifecycle-fixture';
 import { typhonCustomizationProject } from './support/typhon-customization-fixture';
+import {
+  dreamMixedPrefixProject,
+  dreamMixedHandoffProject,
+} from '@run-planner/test-fixtures/dream';
 import { executionTimelineTransactions } from '../../src/execution-plan/assembly/timeline-transactions';
 import { orderedExecutionRooms } from '../../src/execution-plan/assembly/route';
 import {
@@ -119,9 +124,9 @@ function fOnlyProject(project = createCompleteFGProject()) {
   });
 }
 
-function planFor(project: ReturnType<typeof createCompleteFGProject>) {
+function planFor(project: ProjectDocument) {
   const assembly = simulateProjectAssembly(catalog, project);
-  const product = assembleExecutionProduct({ assembly });
+  const product = assembleExecutionProduct({ assembly, catalog });
   return { product, plan: compileExecutionPlan({ product }) };
 }
 
@@ -1797,6 +1802,7 @@ describe('execution-plan compiler and codec', () => {
     ['surface-no', loadSurfaceNOProject(), surfaceNOFixture],
     ['surface-nop', loadSurfaceNOPProject(), surfaceNOPFixture],
     ['surface-nopq', typhonCustomizationProject(), surfaceNOPQFixture],
+    ['dream-mixed-prefix', dreamMixedHandoffProject(), dreamMixedPrefixFixture],
     [
       'surface-scheduled-lifecycle',
       surfaceScheduledLifecycleProject(),
@@ -1806,6 +1812,17 @@ describe('execution-plan compiler and codec', () => {
     const { plan } = planFor(project);
     if (fixture !== undefined) expect(decodeExecutionPlan(fixture)).toEqual(plan);
     expect(decodeExecutionPlan(JSON.parse(encodeExecutionPlan(plan)))).toEqual(plan);
+  });
+
+  it('compiles a command-authored Dream Q/F/N/H itinerary as a configured Q prefix', () => {
+    const project = dreamMixedPrefixProject();
+    const assembly = simulateProjectAssembly(catalog, project);
+    expect(assembly.evaluation.status, JSON.stringify(assembly.evaluation.findings)).toBe('valid');
+    const { plan } = planFor(project);
+    expect(plan).toMatchObject({
+      routeKey: 'Dream',
+      extent: { kind: 'configuredPrefix', biomeKeys: ['Q'], terminalBiomeKey: 'Q' },
+    });
   });
 
   it('copies Zagreus Contract presence from the destination Overview into batch and fixed Doors', () => {

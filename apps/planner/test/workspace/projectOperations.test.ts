@@ -14,7 +14,8 @@ import {
   goldenHStartId,
 } from '@run-planner/test-fixtures/underworld';
 import { surfaceCheckpointArtifacts } from '@run-planner/test-fixtures/checkpoints/surface';
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
+import { dreamMixedPrefixProject } from '@run-planner/test-fixtures/dream';
 
 import { createApplication } from '@planner/composition/createApplication';
 import { createInitialProject } from '@planner/composition/projectBootstrap';
@@ -275,26 +276,33 @@ describe('project profile operations', () => {
     expect(profile.saves.at(-1)?.fileName).toBe(DEFAULT_PROFILE_FILE_NAME);
   });
 
-  it('keeps Dream Dive publication unavailable until runtime support is delivered', async () => {
-    const publish = vi.fn();
+  it('publishes a valid Dream prefix through the game capability', async () => {
+    const published: { targetId: string; slotNumber: number; json: string }[] = [];
     const profile = createProfileFixture();
     const application = createApplication({
       gamePlanPublisher: {
         discoverProfiles: () =>
           Promise.resolve({ status: 'available', targets: [], message: 'Choose a profile.' }),
-        publish,
+        publish: (targetId, slotNumber, json) => {
+          published.push({ targetId, slotNumber, json });
+          return Promise.resolve({ status: 'published', message: 'published Dream prefix' });
+        },
       },
       profileFile: profile.adapter,
     });
-    await application.projectOperations.createNew('Dream', ['Q', 'F', 'N', 'H']);
+    application.store.dispatch(authoredProjectReplaced(dreamMixedPrefixProject()));
 
-    await expect(application.projectOperations.publishGame('profile-a', 3)).resolves.toMatchObject({
-      status: 'failure',
-      message: expect.stringContaining(
-        'Dream Dive publication is unavailable until native runtime support',
-      ),
+    await expect(application.projectOperations.publishGame('profile-a', 3)).resolves.toEqual({
+      operation: 'publishGame',
+      status: 'success',
+      message: 'Published to game profile profile-a, Slot 3.',
     });
-    expect(publish).not.toHaveBeenCalled();
+    expect(published).toHaveLength(1);
+    expect(JSON.parse(published[0]!.json)).toMatchObject({
+      routeKey: 'Dream',
+      extent: { biomeKeys: ['Q'] },
+      selectedOccurrenceIds: expect.arrayContaining(['dream-q-preboss:postboss']),
+    });
   });
 
   it('rejects an invalid publication before invoking the game writer', async () => {

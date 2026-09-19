@@ -1,4 +1,5 @@
 import type { ProjectEvaluationAssembly } from '../simulation/evaluation/evaluation-products';
+import type { Catalog } from '../catalog-schema';
 import type { ResourceExecutionPolicy, ResourcePointDisposition } from '../simulation/resources';
 import type { TraitElement, TraitRarity } from '../catalog-schema';
 import type {
@@ -8,7 +9,7 @@ import type {
 
 /** The single room-session execution artifact supported by the app compiler. */
 export const EXECUTION_PLAN_FORMAT = 'run-planner-execution' as const;
-export const EXECUTION_PROTOCOL_VERSION = 41 as const;
+export const EXECUTION_PROTOCOL_VERSION = 42 as const;
 export const EXECUTION_CATALOG_VERSION = '0.55.0-anvil-of-fates' as const;
 export type ExecutionBiomeKey = 'F' | 'G' | 'H' | 'I' | 'N' | 'O' | 'P' | 'Q';
 
@@ -808,7 +809,7 @@ export interface ExecutionOccurrence {
   };
 }
 
-export type ExecutionRouteKey = 'Underworld' | 'Surface';
+export type ExecutionRouteKey = 'Underworld' | 'Surface' | 'Dream';
 
 export type ExecutionConfiguredExtent =
   | {
@@ -850,6 +851,12 @@ export type ExecutionConfiguredExtent =
       readonly kind: 'configuredPrefix';
       readonly biomeKeys: readonly ['N', 'O', 'P', 'Q'];
       readonly terminalBiomeKey: 'Q';
+    }
+  | {
+      /** Ordered public Dream itinerary prefix; native selection becomes passive after it ends. */
+      readonly kind: 'configuredPrefix';
+      readonly biomeKeys: readonly ExecutionBiomeKey[];
+      readonly terminalBiomeKey: ExecutionBiomeKey;
     };
 
 export interface ExecutionPlan {
@@ -884,6 +891,8 @@ export interface ExecutionSemanticProduct {
 
 export interface ExecutionAssemblerInput {
   readonly assembly: ProjectEvaluationAssembly;
+  /** Catalog-backed admission remains the owner of Dream itinerary legality. */
+  readonly catalog: Catalog;
 }
 
 export interface ExecutionCompilerInput {

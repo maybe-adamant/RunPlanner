@@ -60,9 +60,23 @@ export const nFixedRouteRooms = [
     counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
     eligibility: {
-      kind: 'counterRange',
-      axis: 'biomeDepthCache',
-      range: { min: 1, max: 1 },
+      kind: 'any',
+      requirements: [
+        {
+          kind: 'all',
+          requirements: [
+            { kind: 'not', requirement: { kind: 'routeKeyEquals', routeKey: 'Dream' } },
+            { kind: 'counterRange', axis: 'biomeDepthCache', range: { min: 1, max: 1 } },
+          ],
+        },
+        {
+          kind: 'all',
+          requirements: [
+            { kind: 'routeKeyEquals', routeKey: 'Dream' },
+            { kind: 'counterRange', axis: 'biomeDepthCache', range: { min: 2, max: 2 } },
+          ],
+        },
+      ],
     },
   },
 ] satisfies readonly RawRoomDeclaration[];

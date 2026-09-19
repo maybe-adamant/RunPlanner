@@ -44,7 +44,7 @@ function replace(project: ProjectDocument, value: AuthoredGeneratedEncounterCust
 function publish(project: ProjectDocument) {
   const assembly = simulateProjectAssembly(catalog, project);
   expect(assembly.evaluation.status, JSON.stringify(assembly.evaluation.findings)).toBe('valid');
-  return compileExecutionPlan({ product: assembleExecutionProduct({ assembly }) });
+  return compileExecutionPlan({ product: assembleExecutionProduct({ assembly, catalog }) });
 }
 function customization(project: ProjectDocument) {
   return publish(project).occurrences.find((room) => room.id === phase.owner.occurrenceId)?.overview

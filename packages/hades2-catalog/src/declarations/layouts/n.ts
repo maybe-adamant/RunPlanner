@@ -21,9 +21,23 @@ export const nBiomeLayout = {
     terminal: {
       roomGameName: 'N_Hub',
       eligibility: {
-        kind: 'counterRange',
-        axis: 'biomeDepthCache',
-        range: { min: 2, max: 2 },
+        kind: 'any',
+        requirements: [
+          {
+            kind: 'all',
+            requirements: [
+              { kind: 'not', requirement: { kind: 'routeKeyEquals', routeKey: 'Dream' } },
+              { kind: 'counterRange', axis: 'biomeDepthCache', range: { min: 2, max: 2 } },
+            ],
+          },
+          {
+            kind: 'all',
+            requirements: [
+              { kind: 'routeKeyEquals', routeKey: 'Dream' },
+              { kind: 'counterRange', axis: 'biomeDepthCache', range: { min: 3, max: 3 } },
+            ],
+          },
+        ],
       },
       force: 'required',
     },

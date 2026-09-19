@@ -124,7 +124,7 @@ it('edits Contract inventory, resolves its acquired Mystery in Timeline, and pub
   });
   const uncollected = projectStructuredWorkspaceFixture(project);
   expect(uncollected.evaluation.route.biomes.flatMap((biome) => biome.findings)).toEqual([]);
-  const uncollectedProduct = assembleExecutionProduct({ assembly: uncollected.assembly });
+  const uncollectedProduct = assembleExecutionProduct({ assembly: uncollected.assembly, catalog });
   expect(
     uncollectedProduct.occurrences.find((room) => room.id === preboss)?.overview.shop
       ?.infernalContract,
@@ -151,7 +151,7 @@ it('edits Contract inventory, resolves its acquired Mystery in Timeline, and pub
   project = authorLegalTraitOffers(project);
   const acquired = projectStructuredWorkspaceFixture(project);
   expect(acquired.evaluation.route.biomes.flatMap((biome) => biome.findings)).toEqual([]);
-  const product = assembleExecutionProduct({ assembly: acquired.assembly });
+  const product = assembleExecutionProduct({ assembly: acquired.assembly, catalog });
   const room = product.occurrences.find((room) => room.id === preboss)!;
   expect(room.overview.shop?.infernalContract?.sourceOwner).toBe(semanticAddressKey(entry));
   expect(room.timeline.transactions).toContainEqual(
@@ -222,7 +222,7 @@ it.each([
       expect(event.targetTraitKey).toBe(selectedTraitKey);
       expect(event.newLevel - event.oldLevel).toBe(levelCount);
     }
-    const product = assembleExecutionProduct({ assembly: acquired.assembly });
+    const product = assembleExecutionProduct({ assembly: acquired.assembly, catalog });
     const room = product.occurrences.find((room) => room.id === preboss)!;
     expect(room.timeline.transactions).toContainEqual(
       expect.objectContaining({
@@ -256,7 +256,10 @@ it.each([
     });
     const uncollected = projectStructuredWorkspaceFixture(project);
     expect(uncollected.evaluation.route.findings).toEqual([]);
-    const uncollectedProduct = assembleExecutionProduct({ assembly: uncollected.assembly });
+    const uncollectedProduct = assembleExecutionProduct({
+      assembly: uncollected.assembly,
+      catalog,
+    });
     const baseline = uncollectedProduct.occurrences.find((room) => room.id === preboss)?.diagnostics
       ?.beforeRoomExit?.hexProgress;
     expect(baseline).toMatchObject({ bankedPathPoints: 0, investedPathPoints: 0, closed: false });
@@ -273,7 +276,7 @@ it.each([
     expect(biome.rewards.branches.map((branch) => branch.hexProgress)).toEqual([
       expect.objectContaining({ bankedPathPoints: 0, investedPathPoints: points }),
     ]);
-    const product = assembleExecutionProduct({ assembly: acquired.assembly });
+    const product = assembleExecutionProduct({ assembly: acquired.assembly, catalog });
     const room = product.occurrences.find((room) => room.id === preboss)!;
     expect(room.diagnostics?.beforeRoomExit?.hexProgress).toEqual({
       ...baseline,
@@ -297,6 +300,8 @@ it.each([
     });
     const removed = projectStructuredWorkspaceFixture(project);
     expect(removed.evaluation.route.findings).toEqual([]);
-    expect(assembleExecutionProduct({ assembly: removed.assembly })).toEqual(uncollectedProduct);
+    expect(assembleExecutionProduct({ assembly: removed.assembly, catalog })).toEqual(
+      uncollectedProduct,
+    );
   },
 );

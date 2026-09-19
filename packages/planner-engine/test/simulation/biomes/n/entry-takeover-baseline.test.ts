@@ -309,10 +309,7 @@ describe('N B1 entry and terminal baseline', () => {
         hubKey: 'hub',
         gameName: 'N_Hub',
         eligibility: {
-          kind: 'counterRange',
-          axis: 'biomeDepthCache',
-          actual: 2,
-          expected: { min: 2, max: 2 },
+          kind: 'any',
           satisfied: true,
         },
         force: 'required',

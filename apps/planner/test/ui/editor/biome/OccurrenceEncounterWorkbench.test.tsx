@@ -236,7 +236,7 @@ describe('OccurrenceEncounterWorkbench', () => {
     const workspace = view.application.store.getState().projectWorkspace;
     if (workspace.kind !== 'openProject') throw new Error('Typhon workspace is not open');
     const plan = compileExecutionPlan({
-      product: assembleExecutionProduct({ assembly: workspace.assembly }),
+      product: assembleExecutionProduct({ assembly: workspace.assembly, catalog }),
     });
     expect(
       plan.occurrences

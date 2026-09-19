@@ -124,6 +124,7 @@ describe('Hermes Shrine delivery placement', () => {
     project = applyProjectCommand(project, catalog, placement);
     const product = assembleExecutionProduct({
       assembly: simulateProjectAssembly(catalog, project),
+      catalog,
     });
     const boss = product.occurrences.find((room) => room.id === 'surface-o-preboss:boss');
     expect(boss?.timeline.transactions).toContainEqual(
@@ -179,7 +180,7 @@ describe('Hermes Shrine delivery placement', () => {
     project = applyProjectCommand(project, catalog, placement);
     const settled = simulateProjectAssembly(catalog, project);
     expect(settled.evaluation.status).toBe('valid');
-    const product = assembleExecutionProduct({ assembly: settled });
+    const product = assembleExecutionProduct({ assembly: settled, catalog });
     expect(
       product.occurrences.find((room) => room.id === qOccurrenceIds.preboss)?.timeline.transactions,
     ).toContainEqual(

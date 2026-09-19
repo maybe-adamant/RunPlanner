@@ -9,13 +9,13 @@ import type {
   RoomDeclaration,
   StartDescriptor,
 } from '@run-planner/engine/catalog-schema';
-import type { RequirementExpression } from '@run-planner/engine/requirements';
 import type { RewardStoreDeclaration } from '@run-planner/engine/reward-kernel';
 
 import type { RawBiomeLayoutDeclaration } from '../../declarations/index';
 import { freezeUniqueStrings, requireNonEmpty, requirePositiveInteger } from '../common';
 import { normalizeAuthoredFields } from '../descriptors';
 import { fail } from '../errors';
+import { normalizeRequirement } from '../requirements';
 import {
   normalizeNormalDecisionProgressionCommon,
   normalizeRewardStorePolicy,
@@ -55,33 +55,6 @@ function normalizeCompletedHubExit(
   });
 }
 
-function isExactBiomeDepthRequirement(
-  requirement: RequirementExpression | undefined,
-  depth: number,
-): boolean {
-  return (
-    requirement?.kind === 'counterRange' &&
-    requirement.axis === 'biomeDepthCache' &&
-    requirement.range.min === depth &&
-    requirement.range.max === depth
-  );
-}
-
-function normalizeExactBiomeDepthRequirement(
-  requirement: RequirementExpression,
-  depth: number,
-  path: string,
-): RequirementExpression {
-  if (!isExactBiomeDepthRequirement(requirement, depth)) {
-    fail(path, `must be biomeDepthCache exactly ${depth}`);
-  }
-  return Object.freeze({
-    kind: 'counterRange' as const,
-    axis: 'biomeDepthCache' as const,
-    range: Object.freeze({ min: depth, max: depth }),
-  });
-}
-
 function normalizeHubEntryProgressionPolicy(
   rawPolicy: GeneratedProgressionPolicy,
   biomeKey: string,
@@ -114,9 +87,6 @@ function normalizeHubEntryProgressionPolicy(
   );
   if (room.mode.kind !== 'authored' || room.kind !== 'PreHub') {
     fail(`${path}.stages[0].roomGameNames[0]`, `${room.gameName} must be an authored PreHub`);
-  }
-  if (!isExactBiomeDepthRequirement(room.eligibility, 1)) {
-    fail(`${path}.stages[0].roomGameNames[0]`, `${room.gameName} must be eligible at depth 1`);
   }
   return Object.freeze({
     kind: 'staged',
@@ -182,7 +152,7 @@ function normalizeHubTerminal(
   }
   return Object.freeze({
     roomGameName: room.gameName,
-    eligibility: normalizeExactBiomeDepthRequirement(raw.eligibility, 2, `${path}.eligibility`),
+    eligibility: normalizeRequirement(raw.eligibility, `${path}.eligibility`),
     force: 'required',
   });
 }

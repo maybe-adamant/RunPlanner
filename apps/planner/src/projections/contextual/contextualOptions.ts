@@ -71,6 +71,8 @@ function counterLabel(axis: CounterAxis): string {
 
 function requirementMessage(evidence: RequirementEvaluationEvidence): string {
   switch (evidence.kind) {
+    case 'routeKeyEquals':
+      return `This room condition requires the ${evidence.expected} route.`;
     case 'all':
     case 'any': {
       const failed = evidence.children.find((child) => !child.satisfied);

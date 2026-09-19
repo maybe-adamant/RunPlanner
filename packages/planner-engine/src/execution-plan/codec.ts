@@ -72,48 +72,34 @@ export function decodeExecutionPlan(value: unknown): ExecutionPlan {
     fail('execution plan.protocolVersion is unsupported');
   if (record.catalogVersion !== EXECUTION_CATALOG_VERSION)
     fail('execution plan.catalogVersion is unsupported');
-  if (record.routeKey !== 'Underworld' && record.routeKey !== 'Surface')
+  if (
+    record.routeKey !== 'Underworld' &&
+    record.routeKey !== 'Surface' &&
+    record.routeKey !== 'Dream'
+  )
     fail('execution plan.routeKey is unsupported');
   const extent = object(record.extent, 'execution plan.extent');
   exact(extent, ['kind', 'biomeKeys', 'terminalBiomeKey'], [], 'execution plan.extent');
   if (extent.kind !== 'configuredPrefix') fail('execution plan.extent.kind is unsupported');
   const biomeKeys = stringArray(extent.biomeKeys, 'execution plan.extent.biomeKeys', 4);
+  const dreamBiomes = new Set(['F', 'G', 'H', 'I', 'N', 'O', 'P', 'Q']);
+  const boundedDreamExtent =
+    biomeKeys.length >= 1 &&
+    biomeKeys.length <= 4 &&
+    biomeKeys.every((key, index) => dreamBiomes.has(key) && biomeKeys.indexOf(key) === index);
+  const equalBiomePrefix = (expected: readonly string[]) =>
+    biomeKeys.length === expected.length &&
+    expected.every((key, index) => biomeKeys[index] === key);
+  const validUnderworldPrefix = [['F'], ['F', 'G'], ['F', 'G', 'H'], ['F', 'G', 'H', 'I']].some(
+    equalBiomePrefix,
+  );
+  const validSurfacePrefix = [['N'], ['N', 'O'], ['N', 'O', 'P'], ['N', 'O', 'P', 'Q']].some(
+    equalBiomePrefix,
+  );
   if (
-    !(biomeKeys.length === 1 && biomeKeys[0] === 'F') &&
-    !(biomeKeys.length === 2 && biomeKeys[0] === 'F' && biomeKeys[1] === 'G') &&
-    !(
-      biomeKeys.length === 3 &&
-      biomeKeys[0] === 'F' &&
-      biomeKeys[1] === 'G' &&
-      biomeKeys[2] === 'H'
-    ) &&
-    !(
-      biomeKeys.length === 4 &&
-      biomeKeys[0] === 'F' &&
-      biomeKeys[1] === 'G' &&
-      biomeKeys[2] === 'H' &&
-      biomeKeys[3] === 'I'
-    ) &&
-    !(biomeKeys.length === 1 && biomeKeys[0] === 'N') &&
-    !(biomeKeys.length === 2 && biomeKeys[0] === 'N' && biomeKeys[1] === 'O') &&
-    !(
-      biomeKeys.length === 3 &&
-      biomeKeys[0] === 'N' &&
-      biomeKeys[1] === 'O' &&
-      biomeKeys[2] === 'P'
-    ) &&
-    !(
-      biomeKeys.length === 4 &&
-      biomeKeys[0] === 'N' &&
-      biomeKeys[1] === 'O' &&
-      biomeKeys[2] === 'P' &&
-      biomeKeys[3] === 'Q'
-    )
-  )
-    fail('execution plan.extent.biomeKeys is unsupported');
-  if (
-    (record.routeKey === 'Underworld' && biomeKeys[0] !== 'F') ||
-    (record.routeKey === 'Surface' && biomeKeys[0] !== 'N')
+    (record.routeKey === 'Underworld' && !validUnderworldPrefix) ||
+    (record.routeKey === 'Surface' && !validSurfacePrefix) ||
+    (record.routeKey === 'Dream' && !boundedDreamExtent)
   )
     fail('execution plan.routeKey disagrees with extent');
   if (extent.terminalBiomeKey !== biomeKeys[biomeKeys.length - 1])

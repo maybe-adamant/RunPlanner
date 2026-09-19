@@ -167,6 +167,7 @@ function assertGenerationRequirement(requirement: RequirementExpression): void {
     case 'clockworkGoalsRemaining':
     case 'clockworkNonGoalCapacity':
     case 'minExits':
+    case 'routeKeyEquals':
       return;
     default:
       throw new BiomeRoomGenerationContractError(
@@ -233,6 +234,7 @@ function projectRoomGenerationRequirementContext(
     throw new BiomeRoomGenerationContractError('history has partial Clockwork facts');
   }
   const context = Object.freeze({
+    routeKey: source.origin.routeKey,
     counters: Object.freeze({
       biomeDepthCache: view.ledgers.counters.biomeDepthCache,
       biomeEncounterDepth: view.ledgers.counters.biomeEncounterDepth,
@@ -356,6 +358,8 @@ function requirementEvidence(
 ): RequirementEvaluationEvidence {
   const satisfied = evaluateRequirement(requirement, context);
   switch (requirement.kind) {
+    case 'routeKeyEquals':
+      return Object.freeze({ kind: requirement.kind, satisfied, expected: requirement.routeKey });
     case 'all':
     case 'any':
       return Object.freeze({
