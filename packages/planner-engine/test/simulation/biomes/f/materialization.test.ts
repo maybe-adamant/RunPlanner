@@ -161,21 +161,32 @@ describe('F takeover materialization', () => {
   });
 
   it('uses Dream-first F opening reward with its declared empty encounter', () => {
-    const project = createCompleteFTakeoverProject();
-    const completeness = evaluateBiomeCompleteness(catalog, fBiome, fPlan(project));
-    if (completeness.completion !== 'complete') throw new Error('F fixture is incomplete');
-    const position = resolveRoutePosition(
+    const biome = createBiomeAddress('Dream', 'F');
+    const project = applyProjectCommand(
+      createProjectDocument(catalog, {
+        projectId: 'dream-first-f-opening',
+        routeKey: 'Dream',
+        itineraryBiomeKeys: ['F', 'G'],
+        configuredBiomeCount: 1,
+      }),
       catalog,
-      { routeKey: 'Dream', itineraryBiomeKeys: ['F'] },
-      'F',
+      {
+        kind: 'CreateStart',
+        biome,
+        occurrenceId: createOccurrenceId('dream-first-f-opening-start'),
+      },
     );
-    const opening = materializeBiome(
+    const plan = project.route.biomes[0];
+    if (plan === undefined) throw new Error('Dream F opening plan is missing');
+    const position = resolveRoutePosition(catalog, project.route, 'F');
+    const opening = materializeBiomePrefix(
       catalog,
-      fBiome,
+      biome,
       position,
-      completeness,
+      plan,
       traitContext(project),
-    ).entryRoom;
+    )?.entryRoom;
+    if (opening === undefined) throw new Error('Dream F opening did not materialize');
 
     expect(opening).toMatchObject({
       lifecycleProfileKey: 'OpeningRewardRoom',

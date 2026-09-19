@@ -130,7 +130,9 @@ export function normalizeRoomExitFacts(
 ): RoomExitFacts {
   if (
     room.exits.length === 0 &&
-    !(identity.mode.kind === 'derived' && identity.mode.classification === 'hub')
+    !(identity.mode.kind === 'derived' && identity.mode.classification === 'hub') &&
+    // Dream_PostBoss01/02/03 use UnlockWithoutDoors before native itinerary continuation.
+    !(identity.roomSetKey === 'Dream' && identity.kind === 'PostBoss')
   ) {
     fail(`${path}.exits`, 'must not be empty');
   }

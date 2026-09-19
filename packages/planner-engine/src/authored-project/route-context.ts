@@ -11,14 +11,11 @@ export interface ResolvedRoutePosition {
   readonly nextBiomeKey?: string;
   readonly isFirst: boolean;
   readonly isLast: boolean;
-  /** Deferred completion is not a terminal resolution. */
-  readonly completion:
-    | {
-        readonly kind: 'resolved';
-        readonly prebossRoomGameName: string;
-        readonly postbossRoomGameName: string | null;
-      }
-    | { readonly kind: 'deferred' };
+  /** Exact fixed completion identities resolved from this route position. */
+  readonly completion: {
+    readonly prebossRoomGameName: string;
+    readonly postbossRoomGameName: string | null;
+  };
   /** Exact previous completion identity when the declaration resolves one. */
   readonly previousPostbossRoomGameName?: string;
 }
@@ -39,10 +36,20 @@ export function resolveRoutePosition(
   }
   const declaration = catalog.routes.byKey[route.routeKey];
   if (declaration === undefined) throw new Error(`unknown route ${route.routeKey}`);
-  const presetPosition = route.routeKey !== 'Dream' ? declaration.biomeKeys.indexOf(biomeKey) : -1;
+  const presetPosition = declaration.biomeKeys.indexOf(biomeKey);
   if (route.routeKey !== 'Dream' && presetPosition !== ordinalIndex) {
     throw new Error(`${route.routeKey} preset itinerary disagrees at ${biomeKey}`);
   }
+  const prebossRoomGameName = declaration.completion.prebossRoomGameNameByBiomeKey[biomeKey];
+  const declaredPostbossRoomGameName =
+    declaration.completion.postbossRoomGameNamesByOrdinal[ordinalIndex];
+  if (prebossRoomGameName === undefined || declaredPostbossRoomGameName === undefined) {
+    throw new Error(
+      `${route.routeKey} has no completion mapping for ${biomeKey} at ${ordinalIndex + 1}`,
+    );
+  }
+  const postbossRoomGameName =
+    ordinalIndex === route.itineraryBiomeKeys.length - 1 ? null : declaredPostbossRoomGameName;
   return Object.freeze({
     routeKey: route.routeKey,
     itineraryBiomeKeys: route.itineraryBiomeKeys,
@@ -56,16 +63,13 @@ export function resolveRoutePosition(
       : { nextBiomeKey: route.itineraryBiomeKeys[ordinalIndex + 1] }),
     isFirst: ordinalIndex === 0,
     isLast: ordinalIndex === route.itineraryBiomeKeys.length - 1,
-    completion:
-      presetPosition < 0
-        ? Object.freeze({ kind: 'deferred' as const })
-        : Object.freeze({
-            kind: 'resolved' as const,
-            prebossRoomGameName: declaration.prebossRoomGameNames[presetPosition]!,
-            postbossRoomGameName: declaration.postbossRoomGameNames[presetPosition]!,
-          }),
-    ...(presetPosition <= 0 || declaration.postbossRoomGameNames[presetPosition - 1] === null
+    completion: Object.freeze({ prebossRoomGameName, postbossRoomGameName }),
+    ...(ordinalIndex <= 0 ||
+    declaration.completion.postbossRoomGameNamesByOrdinal[ordinalIndex - 1] === null
       ? {}
-      : { previousPostbossRoomGameName: declaration.postbossRoomGameNames[presetPosition - 1]! }),
+      : {
+          previousPostbossRoomGameName:
+            declaration.completion.postbossRoomGameNamesByOrdinal[ordinalIndex - 1]!,
+        }),
   });
 }

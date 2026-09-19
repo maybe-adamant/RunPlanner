@@ -75,10 +75,13 @@ export interface RouteDeclaration {
   readonly key: string;
   readonly label: string;
   readonly biomeKeys: readonly string[];
-  /** Exact Postboss room for each route position; terminal positions are null. */
-  readonly postbossRoomGameNames: readonly (string | null)[];
-  /** The sole route-selected Preboss map for each route position. */
-  readonly prebossRoomGameNames: readonly string[];
+  /** Route-owned fixed completion identities, resolved by biome and itinerary ordinal. */
+  readonly completion: {
+    /** The sole route-selected Preboss map for each supported biome identity. */
+    readonly prebossRoomGameNameByBiomeKey: Readonly<Record<string, string>>;
+    /** Exact Postboss room for each route ordinal; the terminal position is null. */
+    readonly postbossRoomGameNamesByOrdinal: readonly (string | null)[];
+  };
 }
 
 export type ArcanaActivationRule =

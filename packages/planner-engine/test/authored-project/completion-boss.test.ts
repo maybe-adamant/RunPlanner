@@ -5,16 +5,21 @@ import { catalog } from '@run-planner/hades2-catalog';
 import {
   applyProjectCommand,
   applyProjectHistoryCommand,
+  createBatchRewardStoreAddress,
   createBiomeAddress,
   createEncounterPhaseAddress,
   createExitDecisionAddress,
+  createExitSelectionAddress,
   createOccurrenceId,
+  createOccurrenceAddress,
+  createPostbossKeepsakeSelectionAddress,
   createProjectDocument,
   createTargetAddress,
   createProjectHistory,
   decodeProjectDocument,
   encodeProjectDocument,
   resolveCompletionBoss,
+  resolveRoutePosition,
   undoProjectHistory,
   redoProjectHistory,
 } from '@run-planner/engine/authored-project';
@@ -31,6 +36,29 @@ import {
 } from '@run-planner/engine/simulation';
 
 describe('completion Boss variants', () => {
+  it('does not materialize a host-family Postboss when route context resolves a Dream identity', () => {
+    const ordinary = loadUnderworldFGProject();
+    const plan = ordinary.route.biomes.find((biome) => biome.biomeKey === 'F')!;
+    const dream = createProjectDocument(catalog, {
+      projectId: 'foreign-postboss-materialization',
+      routeKey: 'Dream',
+      itineraryBiomeKeys: ['F', 'G'],
+    });
+    const biome = createBiomeAddress('Dream', 'F');
+    const completeness = evaluateBiomeCompleteness(catalog, biome, plan);
+    if (completeness.completion !== 'complete') throw new Error('complete F fixture is required');
+
+    expect(() =>
+      materializeBiome(
+        catalog,
+        biome,
+        resolveRoutePosition(catalog, dream.route, 'F'),
+        completeness,
+        ordinary.route.loadout,
+      ),
+    ).toThrow(/route-position Postboss F_PostBoss01/);
+  });
+
   it.each([
     ['Underworld', 'I', 'I_Boss01', 'BossChronos', 4, createGoldenFGHIProject],
     ['Surface', 'P', 'P_Boss01', 'BossPrometheus', 3, loadSurfaceNOPQProject],
@@ -262,63 +290,195 @@ describe('completion Boss variants', () => {
         biome.topology?.occurrences.filter((room) => room.gameName === 'I_PreBoss01'),
       ),
     ).toEqual([[], []]);
-    expect(catalog.routes.byKey.Underworld?.prebossRoomGameNames.at(3)).toBe('I_PreBoss02');
+    expect(catalog.routes.byKey.Underworld?.completion.prebossRoomGameNameByBiomeKey.I).toBe(
+      'I_PreBoss02',
+    );
   });
 
-  it('uses the future Dream route mapping as the sole I Preboss candidate identity', () => {
-    const dreamCatalog = {
-      ...catalog,
-      routes: {
-        ...catalog.routes,
-        byKey: {
-          ...catalog.routes.byKey,
-          Underworld: {
-            ...catalog.routes.byKey.Underworld!,
-            prebossRoomGameNames: ['F_PreBoss01', 'G_PreBoss01', 'H_PreBoss01', 'I_PreBoss01'],
-          },
-        },
-      },
-    };
-    const biome = createBiomeAddress('Underworld', 'I');
-    let project = createProjectDocument(dreamCatalog, {
+  it('uses the Dream route mapping as the sole I Preboss candidate identity', () => {
+    const dreamBiome = createBiomeAddress('Dream', 'I');
+    let project = createProjectDocument(catalog, {
       projectId: 'dream-i-preboss',
-      routeKey: 'Underworld',
-      configuredBiomeCount: 4,
+      routeKey: 'Dream',
+      itineraryBiomeKeys: ['I', 'F'],
+      configuredBiomeCount: 1,
     });
     const intro = createOccurrenceId('dream-i-intro');
-    project = applyProjectCommand(project, dreamCatalog, {
+    project = applyProjectCommand(project, catalog, {
       kind: 'CreateStart',
-      biome,
+      biome: dreamBiome,
       occurrenceId: intro,
     });
-    const first = createExitDecisionAddress(biome, { kind: 'occurrence', occurrenceId: intro });
-    project = applyProjectCommand(project, dreamCatalog, { kind: 'CreateBatch', decision: first });
+    const first = createExitDecisionAddress(dreamBiome, {
+      kind: 'occurrence',
+      occurrenceId: intro,
+    });
+    project = applyProjectCommand(project, catalog, { kind: 'CreateBatch', decision: first });
     const combat = createOccurrenceId('dream-i-combat');
-    project = applyProjectCommand(project, dreamCatalog, {
+    project = applyProjectCommand(project, catalog, {
       kind: 'CreateTarget',
-      target: createTargetAddress(biome, first.source, 'exit1'),
+      target: createTargetAddress(dreamBiome, first.source, 'exit1'),
       occurrenceId: combat,
       gameName: 'I_Combat01',
     });
-    const final = createExitDecisionAddress(biome, { kind: 'occurrence', occurrenceId: combat });
-    project = applyProjectCommand(project, dreamCatalog, { kind: 'CreateBatch', decision: final });
-    project = applyProjectCommand(project, dreamCatalog, {
+    const final = createExitDecisionAddress(dreamBiome, {
+      kind: 'occurrence',
+      occurrenceId: combat,
+    });
+    project = applyProjectCommand(project, catalog, { kind: 'CreateBatch', decision: final });
+    project = applyProjectCommand(project, catalog, {
       kind: 'CreateTarget',
-      target: createTargetAddress(biome, final.source, 'exit1'),
+      target: createTargetAddress(dreamBiome, final.source, 'exit1'),
       occurrenceId: createOccurrenceId('dream-i-preboss'),
       gameName: 'I_PreBoss01',
     });
-    expect(project.route!.biomes[3]!.topology!.occurrences.map((room) => room.gameName)).toContain(
+    expect(project.route!.biomes[0]!.topology!.occurrences.map((room) => room.gameName)).toContain(
       'I_PreBoss01',
     );
+    const postboss = project.route!.biomes[0]!.topology!.occurrences.find(
+      (room) => room.gameName === 'Dream_PostBoss01',
+    );
+    if (postboss === undefined)
+      throw new Error('selected Dream I Preboss must own Dream Postboss 01');
+    expect(postboss).toMatchObject({
+      state: { kind: 'none' },
+      roomActions: { order: [{ kind: 'useFountain' }] },
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplacePostbossKeepsake',
+      selection: createPostbossKeepsakeSelectionAddress(
+        createOccurrenceAddress(dreamBiome, postboss.occurrenceId),
+      ),
+      keepsakeKey: 'HadesAndPersephoneKeepsake',
+    });
+    expect(
+      project.route!.biomes[0]!.topology!.occurrences.find(
+        (room) => room.occurrenceId === postboss.occurrenceId,
+      ),
+    ).toMatchObject({
+      keepsakeRack: { keepsakeKey: 'HadesAndPersephoneKeepsake' },
+      roomActions: { order: [{ kind: 'useFountain' }, { kind: 'interactKeepsakeRack' }] },
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'SetStygianWellInteraction',
+      occurrence: createOccurrenceAddress(dreamBiome, postboss.occurrenceId),
+      interacted: true,
+    });
+    expect(
+      project.route!.biomes[0]!.topology!.occurrences.find(
+        (room) => room.occurrenceId === postboss.occurrenceId,
+      )?.stygianWell,
+    ).toMatchObject({ interacted: true });
+    expect(decodeProjectDocument(JSON.parse(encodeProjectDocument(project)), catalog)).toEqual(
+      project,
+    );
+    const wrongOrdinal = JSON.parse(encodeProjectDocument(project)) as {
+      route: { biomes: Array<{ topology: { occurrences: Array<{ gameName: string }> } }> };
+    };
+    const wrongPostboss = wrongOrdinal.route.biomes[0]!.topology.occurrences.find(
+      (room) => room.gameName === 'Dream_PostBoss01',
+    );
+    if (wrongPostboss === undefined) throw new Error('missing Dream Postboss codec target');
+    wrongPostboss.gameName = 'Dream_PostBoss02';
+    expect(() => decodeProjectDocument(wrongOrdinal, catalog)).toThrow(
+      /must target this route position PostBoss/,
+    );
     expect(() =>
-      applyProjectCommand(project, dreamCatalog, {
+      applyProjectCommand(project, catalog, {
         kind: 'CreateTarget',
-        target: createTargetAddress(biome, final.source, 'exit2'),
+        target: createTargetAddress(dreamBiome, final.source, 'exit2'),
         occurrenceId: createOccurrenceId('wrong-i-preboss'),
         gameName: 'I_PreBoss02',
       }),
     ).toThrow(/not this route position's declared Preboss/);
+  });
+
+  it('removes and reselects Dream completion chains while retaining compatible Preboss state', () => {
+    const biome = createBiomeAddress('Dream', 'F');
+    const start = createOccurrenceId('dream-completion-reselect-start');
+    const combat = createOccurrenceId('dream-completion-reselect-combat');
+    const shopPreboss = createOccurrenceId('dream-completion-reselect-shop');
+    const freePreboss = createOccurrenceId('dream-completion-reselect-free');
+    let project = applyProjectCommand(
+      createProjectDocument(catalog, {
+        projectId: 'dream-completion-reselect',
+        routeKey: 'Dream',
+        itineraryBiomeKeys: ['F', 'G'],
+        configuredBiomeCount: 1,
+      }),
+      catalog,
+      { kind: 'CreateStart', biome, occurrenceId: start },
+    );
+    const opening = createExitDecisionAddress(biome, { kind: 'occurrence', occurrenceId: start });
+    project = applyProjectCommand(project, catalog, { kind: 'CreateBatch', decision: opening });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceBatchRewardStore',
+      rewardStore: createBatchRewardStoreAddress(biome, opening.source),
+      storeKey: 'MetaProgress',
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'CreateTarget',
+      target: createTargetAddress(biome, opening.source, 'exit1'),
+      occurrenceId: combat,
+      gameName: 'F_Combat02',
+    });
+    const completion = createExitDecisionAddress(biome, {
+      kind: 'occurrence',
+      occurrenceId: combat,
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'CreateTakeoverBatch',
+      decision: completion,
+      gameName: 'F_PreBoss01',
+      targetOccurrenceIds: { exit1: shopPreboss, exit2: freePreboss },
+    });
+    const selection = createExitSelectionAddress(biome, completion.source);
+    project = applyProjectCommand(project, catalog, {
+      kind: 'SetExitSelection',
+      selection,
+      value: { kind: 'normal', exitKey: 'exit1' },
+    });
+    const selectedShop = project.route.biomes[0]!.topology!.occurrences.find(
+      (occurrence) => occurrence.occurrenceId === shopPreboss,
+    );
+    if (selectedShop === undefined) throw new Error('selected Dream Preboss is missing');
+    const compatibleEncounters = selectedShop.encounters;
+    expect(project.route.biomes[0]!.topology!.occurrences).toContainEqual(
+      expect.objectContaining({ gameName: 'Dream_PostBoss01' }),
+    );
+
+    project = applyProjectCommand(project, catalog, {
+      kind: 'SetExitSelection',
+      selection,
+      value: { kind: 'normal', exitKey: 'exit2' },
+    });
+    expect(project.route.biomes[0]!.topology!.occurrences).not.toContainEqual(
+      expect.objectContaining({ occurrenceId: `${shopPreboss}:postboss` }),
+    );
+    project = applyProjectCommand(project, catalog, {
+      kind: 'SetExitSelection',
+      selection,
+      value: { kind: 'normal', exitKey: 'exit1' },
+    });
+    expect(
+      project.route.biomes[0]!.topology!.occurrences.find(
+        (occurrence) => occurrence.occurrenceId === shopPreboss,
+      ),
+    ).toMatchObject({ state: { kind: 'shop' }, encounters: compatibleEncounters });
+    expect(project.route.biomes[0]!.topology!.occurrences).toContainEqual(
+      expect.objectContaining({
+        occurrenceId: `${shopPreboss}:postboss`,
+        gameName: 'Dream_PostBoss01',
+      }),
+    );
+
+    project = applyProjectCommand(project, catalog, {
+      kind: 'RemoveExitDecision',
+      decision: completion,
+    });
+    expect(project.route.biomes[0]!.topology!.occurrences).not.toContainEqual(
+      expect.objectContaining({ gameName: 'Dream_PostBoss01' }),
+    );
   });
 
   it('strictly rejects a route-wrong Preboss and a foreign completion Boss in persisted topology', () => {

@@ -106,18 +106,20 @@ function completionChainForSelection(
   ) {
     return topology;
   }
-  const route = catalog.routes.byKey[located.routeKey];
-  if (route === undefined) failCommand(command, 'unknown route for selected biome');
   const bossRoom = resolveCompletionBoss(
     catalog,
     located.routePosition,
     located.loadout.fearRanks.BossDifficultyShrineUpgrade ?? 0,
   );
-  const postbossGameName = route.postbossRoomGameNames[located.biomeIndex];
+  const postbossGameName = located.routePosition.completion.postbossRoomGameName;
   const postbossRoom =
-    postbossGameName === null || postbossGameName === undefined
-      ? undefined
-      : requireRoom(catalog, postbossGameName, located.layout.biomeKey, command);
+    postbossGameName === null ? undefined : catalog.rooms.byKey[postbossGameName];
+  if (postbossGameName !== null && postbossRoom === undefined) {
+    failCommand(command, `unknown PostBoss room ${postbossGameName}`);
+  }
+  if (postbossRoom !== undefined && postbossRoom.kind !== 'PostBoss') {
+    failCommand(command, `${postbossGameName} is not a PostBoss room`);
+  }
   const postbossOccurrenceId = fixedCompletionOccurrenceId(prebossOccurrenceId, 'postboss');
   const chainIds = new Set<OccurrenceId>([
     bossOccurrenceId,
@@ -262,10 +264,7 @@ export function replaceTakeoverBatch(
   const room = requireRoom(catalog, command.gameName, located.layout.biomeKey, command);
   if (room.prebossBatchPolicy?.kind !== 'takeOverNormalDoors')
     failCommand(command, `${room.gameName} is not a takeover Preboss declaration`);
-  if (
-    catalog.routes.byKey[located.routeKey]?.prebossRoomGameNames[located.biomeIndex] !==
-    room.gameName
-  )
+  if (located.routePosition.completion.prebossRoomGameName !== room.gameName)
     failCommand(command, `${room.gameName} is not this route position's declared Preboss`);
   const exitKeys = exitKeysForSource(catalog, located, command.decision.source, command);
   const supplied = Object.keys(command.targetOccurrenceIds);

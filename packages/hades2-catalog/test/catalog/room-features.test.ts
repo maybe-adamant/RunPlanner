@@ -48,6 +48,9 @@ describe('room feature declarations', () => {
         .map((room) => room.gameName)
         .sort(),
     ).toEqual([
+      'Dream_PostBoss01',
+      'Dream_PostBoss02',
+      'Dream_PostBoss03',
       'F_PostBoss01',
       'F_Reprieve01',
       'G_PostBoss01',

@@ -117,6 +117,9 @@ describe('Stygian Well room facts', () => {
     const gCounts = [1, 2, 2, 1, 1, 2, 2, 2, 2, 1, 1, 1, 1, 2, 1, 1, 1];
     const iCounts = [3, 2, 2, 2, 2, 2, 2, 2, 2, 1, 2, 1, 1, 2, 2, 1, 1, 2, 1, 1, 2, 3, 1, 1];
     const expected = [
+      ...['Dream_PostBoss01', 'Dream_PostBoss02', 'Dream_PostBoss03'].map(
+        (gameName) => [gameName, 1, 1, true] as const,
+      ),
       ...range('F_Combat', 1, 22).map(
         (gameName, index) => [gameName, fCounts[index], 0.25, false] as const,
       ),
@@ -143,6 +146,18 @@ describe('Stygian Well room facts', () => {
           ] as const,
       );
     expect(actual).toEqual(expected);
+    for (const gameName of ['Dream_PostBoss01', 'Dream_PostBoss02', 'Dream_PostBoss03']) {
+      expect(catalog.rooms.byKey[gameName]).toMatchObject({
+        roomSetKey: 'Dream',
+        kind: 'PostBoss',
+        hasKeepsakeRack: true,
+        hasRequiredFountain: true,
+        roomShop: { profileKey: 'RoomShop', spawnChance: 1, forced: true },
+        exits: [],
+      });
+      expect(catalog.rooms.byKey[gameName]?.purgingPool).toBeUndefined();
+      expect(catalog.rooms.byKey[gameName]).not.toHaveProperty('hermesShrine');
+    }
     for (const gameName of ['G_Combat04', 'G_Combat05', 'G_Combat06', 'I_Story01', 'I_Reprieve01'])
       expect(catalog.rooms.byKey[gameName]?.roomShop, gameName).toBeUndefined();
   });

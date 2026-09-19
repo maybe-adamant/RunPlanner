@@ -1,6 +1,6 @@
 import type { Catalog } from '../../catalog-schema';
 import type { AuthoredKeepsakeEquipResults, ProjectDocument } from '../model';
-import { failCommand, locateBiome, requireOccurrence, requireRoom } from './contract';
+import { failCommand, locateBiome, requireOccurrence } from './contract';
 import { updateOccurrence } from './occurrence/mutation';
 import { roomActionKey } from '../room-actions/key';
 import { createBiomeAddress } from '../addresses';
@@ -320,7 +320,14 @@ export function applyKeepsakeCommand(
   if (command.selection.owner.biomeKey !== located.plan.biomeKey)
     failCommand(command, 'selection does not own this Postboss biome');
   const occurrence = requireOccurrence(located.plan, command.selection.owner.occurrenceId, command);
-  const room = requireRoom(catalog, occurrence.gameName, located.layout.biomeKey, command);
+  const room = catalog.rooms.byKey[occurrence.gameName];
+  if (
+    room === undefined ||
+    (room.roomSetKey !== located.layout.biomeKey &&
+      room.gameName !== located.routePosition.completion.postbossRoomGameName)
+  ) {
+    failCommand(command, `${occurrence.gameName} is not this biome's Postboss room`);
+  }
   if (!room.hasKeepsakeRack) failCommand(command, 'biome has no ordinary Postboss rack');
   if (command.kind === 'RemovePostbossKeepsake') {
     if (occurrence.keepsakeRack === undefined) return document;

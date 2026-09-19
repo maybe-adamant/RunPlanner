@@ -78,7 +78,6 @@ function decodeBiomePlan(
           plan.topology,
           catalog,
           layout,
-          route.routeKey,
           resolveRoutePosition(catalog, route, expectedBiomeKey),
           `${path}.topology`,
         );

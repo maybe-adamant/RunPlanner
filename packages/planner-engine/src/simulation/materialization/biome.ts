@@ -236,6 +236,9 @@ function fixedRoomSuccessor(
   if (link === undefined) return undefined;
   const occurrence = requireOccurrence(occurrences, link.targetOccurrenceId);
   const room = requireRoom(catalog, layout, topology, occurrence);
+  if (room.kind === 'PostBoss' && room.gameName !== routePosition.completion.postbossRoomGameName) {
+    fail(`trusted topology lost route-position Postboss ${occurrence.gameName}`);
+  }
   const target = materializeAuthoredRoom({
     catalog,
     biome,

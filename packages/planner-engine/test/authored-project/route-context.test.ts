@@ -71,11 +71,11 @@ describe('authored route context', () => {
       isFirst: true,
       isLast: false,
       nextBiomeKey: 'G',
-      completion: { kind: 'resolved', prebossRoomGameName: 'F_PreBoss01' },
+      completion: { prebossRoomGameName: 'F_PreBoss01', postbossRoomGameName: 'F_PostBoss01' },
     });
   });
 
-  it('structurally decodes a supplied Dream itinerary without treating it as terminal mapping', () => {
+  it('resolves supplied Dream completion by biome identity and itinerary ordinal', () => {
     const project = createProjectDocument(catalog, {
       projectId: 'dream-context',
       routeKey: 'Dream',
@@ -92,9 +92,35 @@ describe('authored route context', () => {
       ordinal: 2,
       previousBiomeKey: 'N',
       nextBiomeKey: 'O',
+      previousPostbossRoomGameName: 'Dream_PostBoss01',
       isFirst: false,
       isLast: false,
-      completion: { kind: 'deferred' },
+      completion: { prebossRoomGameName: 'F_PreBoss01', postbossRoomGameName: 'Dream_PostBoss02' },
     });
   });
+
+  it.each([
+    [['F', 'G', 'H', 'I'], 'F', 'F_PreBoss01', 'Dream_PostBoss01'],
+    [['F', 'G', 'H', 'I'], 'G', 'G_PreBoss01', 'Dream_PostBoss02'],
+    [['F', 'G', 'H', 'I'], 'H', 'H_PreBoss01', 'Dream_PostBoss03'],
+    [['F', 'G', 'H', 'I'], 'I', 'I_PreBoss01', null],
+    [['I', 'Q'], 'I', 'I_PreBoss01', 'Dream_PostBoss01'],
+    [['I', 'Q'], 'Q', 'Q_PreBoss01', null],
+    [['F', 'Q', 'G'], 'Q', 'Q_PreBoss01', 'Dream_PostBoss02'],
+    [['Q', 'F'], 'F', 'F_PreBoss01', null],
+    [['F', 'G'], 'G', 'G_PreBoss01', null],
+  ] as const)(
+    'resolves Dream %s / %s completion without inferring a biome family',
+    (itineraryBiomeKeys, biomeKey, prebossRoomGameName, postbossRoomGameName) => {
+      const project = createProjectDocument(catalog, {
+        projectId: `dream-completion-${biomeKey}`,
+        routeKey: 'Dream',
+        itineraryBiomeKeys,
+      });
+      expect(resolveRoutePosition(catalog, project.route, biomeKey).completion).toEqual({
+        prebossRoomGameName,
+        postbossRoomGameName,
+      });
+    },
+  );
 });

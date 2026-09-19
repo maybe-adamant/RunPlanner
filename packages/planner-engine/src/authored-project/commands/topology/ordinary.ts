@@ -273,8 +273,7 @@ export function createTarget(
   const room = requireRoom(catalog, command.gameName, located.layout.biomeKey, command);
   if (
     room.kind === 'Preboss' &&
-    catalog.routes.byKey[located.routeKey]?.prebossRoomGameNames?.[located.biomeIndex] !==
-      room.gameName
+    located.routePosition.completion.prebossRoomGameName !== room.gameName
   ) {
     failCommand(command, `${room.gameName} is not this route position's declared Preboss`);
   }

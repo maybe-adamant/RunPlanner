@@ -1,4 +1,5 @@
 import type { BiomeLayout, Catalog, RoomDeclaration } from '../../../catalog-schema';
+import type { ResolvedRoutePosition } from '../../route-context';
 import type {
   AnomalyReplacementProvenance,
   AuthoredAdditionalExit,
@@ -575,7 +576,7 @@ export function decodeTopologyStructure(
   value: unknown,
   catalog: Catalog,
   layout: BiomeLayout,
-  routeKey: string,
+  routePosition: ResolvedRoutePosition,
   path: string,
 ): DecodedTopologyStructure {
   const topology = expectRecord(value, path);
@@ -684,9 +685,7 @@ export function decodeTopologyStructure(
     const validBossLink = sourceRoom.kind === 'Boss' && targetRoom.kind === 'PostBoss';
     if (!validPrebossLink && !validBossLink)
       failProjectDocument(linkPath, 'must link Preboss to Boss or Boss to PostBoss');
-    const route = catalog.routes.byKey[routeKey];
-    const biomeIndex = route?.biomeKeys.indexOf(layout.biomeKey) ?? -1;
-    if (validPrebossLink && route?.prebossRoomGameNames?.[biomeIndex] !== sourceRoom.gameName) {
+    if (validPrebossLink && routePosition.completion.prebossRoomGameName !== sourceRoom.gameName) {
       failProjectDocument(linkPath, 'must originate from this route position Preboss');
     }
     if (
@@ -696,8 +695,8 @@ export function decodeTopologyStructure(
     )
       failProjectDocument(linkPath, 'must target this biome completion Boss');
     if (validBossLink) {
-      const expected = biomeIndex < 0 ? undefined : route?.postbossRoomGameNames[biomeIndex];
-      if (expected === undefined || targetRoom.gameName !== expected)
+      const expected = routePosition.completion.postbossRoomGameName;
+      if (expected === null || targetRoom.gameName !== expected)
         failProjectDocument(linkPath, 'must target this route position PostBoss');
     }
     return Object.freeze({ sourceOccurrenceId, targetOccurrenceId });
@@ -856,15 +855,7 @@ export function decodeTopologyStructure(
     const preboss = selectedPrebosses[0];
     if (preboss === undefined) return [] as const;
     const bossOccurrenceId = fixedCompletionOccurrenceId(preboss.occurrenceId, 'boss');
-    const route = catalog.routes.byKey[routeKey];
-    const biomeIndex = route?.biomeKeys.indexOf(layout.biomeKey) ?? -1;
-    const postbossGameName = biomeIndex < 0 ? undefined : route?.postbossRoomGameNames[biomeIndex];
-    if (postbossGameName === undefined) {
-      failProjectDocument(
-        `${path}.fixedRoomLinks`,
-        'cannot resolve the route-position Postboss declaration',
-      );
-    }
+    const postbossGameName = routePosition.completion.postbossRoomGameName;
     const links: FixedRoomLink[] = [
       Object.freeze({
         sourceOccurrenceId: preboss.occurrenceId,

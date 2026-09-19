@@ -5,21 +5,51 @@ export const routes = [
     key: 'Underworld',
     label: 'Underworld',
     biomeKeys: ['F', 'G', 'H', 'I'],
-    prebossRoomGameNames: ['F_PreBoss01', 'G_PreBoss01', 'H_PreBoss01', 'I_PreBoss02'],
-    postbossRoomGameNames: ['F_PostBoss01', 'G_PostBoss01', 'H_PostBoss01', null],
+    completion: {
+      prebossRoomGameNameByBiomeKey: {
+        F: 'F_PreBoss01',
+        G: 'G_PreBoss01',
+        H: 'H_PreBoss01',
+        I: 'I_PreBoss02',
+      },
+      postbossRoomGameNamesByOrdinal: ['F_PostBoss01', 'G_PostBoss01', 'H_PostBoss01', null],
+    },
   },
   {
     key: 'Surface',
     label: 'Surface',
     biomeKeys: ['N', 'O', 'P', 'Q'],
-    prebossRoomGameNames: ['N_PreBoss01', 'O_PreBoss01', 'P_PreBoss01', 'Q_PreBoss01'],
-    postbossRoomGameNames: ['N_PostBoss01', 'O_PostBoss01', 'P_PostBoss01', null],
+    completion: {
+      prebossRoomGameNameByBiomeKey: {
+        N: 'N_PreBoss01',
+        O: 'O_PreBoss01',
+        P: 'P_PreBoss01',
+        Q: 'Q_PreBoss01',
+      },
+      postbossRoomGameNamesByOrdinal: ['N_PostBoss01', 'O_PostBoss01', 'P_PostBoss01', null],
+    },
   },
   {
     key: 'Dream',
     label: 'Dream',
     biomeKeys: [],
-    prebossRoomGameNames: [],
-    postbossRoomGameNames: [],
+    completion: {
+      prebossRoomGameNameByBiomeKey: {
+        F: 'F_PreBoss01',
+        G: 'G_PreBoss01',
+        H: 'H_PreBoss01',
+        I: 'I_PreBoss01',
+        N: 'N_PreBoss01',
+        O: 'O_PreBoss01',
+        P: 'P_PreBoss01',
+        Q: 'Q_PreBoss01',
+      },
+      postbossRoomGameNamesByOrdinal: [
+        'Dream_PostBoss01',
+        'Dream_PostBoss02',
+        'Dream_PostBoss03',
+        null,
+      ],
+    },
   },
 ] as const satisfies readonly RouteDeclaration[];
