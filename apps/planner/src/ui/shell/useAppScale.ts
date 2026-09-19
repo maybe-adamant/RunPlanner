@@ -5,7 +5,7 @@ const minimumScale = 50;
 const maximumScale = 200;
 const scaleStep = 10;
 
-export function useAppScale(preference?: AppScalePreference): void {
+export function useAppScale(preference?: AppScalePreference): number {
   const [percent, setPercent] = useState(() => {
     const saved = preference?.read();
     return saved !== undefined &&
@@ -69,4 +69,6 @@ export function useAppScale(preference?: AppScalePreference): void {
       globalThis.removeEventListener('wheel', wheel, { capture: true });
     };
   }, []);
+
+  return percent;
 }

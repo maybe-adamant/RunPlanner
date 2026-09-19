@@ -74,7 +74,7 @@ describe('OccurrenceRoomFeatures', () => {
     const cleared = screen.getByRole('checkbox', { name: 'Cleared' });
     expect((cleared as HTMLInputElement).checked).toBe(true);
     expect(screen.queryByLabelText('Reward')).toBeNull();
-    expect(screen.getByRole('heading', { level: 3, name: /^Entering / })).toBeTruthy();
+    expect(screen.getByRole('heading', { level: 3 })).toBeTruthy();
     expect(screen.getByRole('region', { name: 'Incoming reward' })).toBeTruthy();
     expect(screen.queryByLabelText('Room')).toBeNull();
     expect(screen.queryByRole('button', { name: 'Restore Combat 01' })).toBeNull();

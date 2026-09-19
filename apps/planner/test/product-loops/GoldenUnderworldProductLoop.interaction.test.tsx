@@ -624,7 +624,7 @@ describe('underworld product loop', () => {
 
     await view.user.click(
       within(screen.getByRole('radiogroup', { name: 'Biomes to configure' })).getByRole('radio', {
-        name: '2',
+        name: 'Oceanus',
       }),
     );
     application.store.dispatch(
@@ -678,7 +678,7 @@ describe('underworld product loop', () => {
     await view.user.click(screen.getByRole('button', { name: 'Loadout' }));
     await view.user.click(
       within(screen.getByRole('radiogroup', { name: 'Biomes to configure' })).getByRole('radio', {
-        name: '1',
+        name: 'Erebus',
       }),
     );
     expect(currentProject(application).route.biomes).toHaveLength(1);
@@ -717,14 +717,14 @@ describe('underworld product loop', () => {
     );
     if (takeover === null) throw new Error('G takeover rail node is missing');
     await view.user.click(takeover);
-    expect(screen.getByRole('heading', { level: 3, name: 'Entering Preboss' })).toBeTruthy();
+    expect(screen.getByRole('heading', { level: 3, name: 'Preboss' })).toBeTruthy();
 
     await view.user.click(screen.getByRole('button', { name: 'Tartarus' }));
     const iStructure = screen.getByRole('region', { name: 'Tartarus route structure' });
     const mixed = iStructure.querySelector<HTMLButtonElement>('[data-kind="mixedBatch"] button');
     if (mixed === null) throw new Error('I mixed batch rail node is missing');
     await view.user.click(mixed);
-    expect(screen.getByRole('heading', { level: 3, name: /^Entering Preboss/ })).toBeTruthy();
+    expect(screen.getByRole('heading', { level: 3, name: /^Preboss/ })).toBeTruthy();
 
     act(() => application.store.dispatch(authoredProjectReplaced(loadSurfaceNOPQProject())));
     await view.user.click(screen.getByRole('button', { name: 'Ephyra' }));
@@ -737,7 +737,7 @@ describe('underworld product loop', () => {
     expect(
       within(screen.getByRole('complementary', { name: 'Details' })).getByRole('heading', {
         level: 3,
-        name: /^Entering Pre-Hub/,
+        name: /^Pre-Hub/,
       }),
     ).toBeTruthy();
 

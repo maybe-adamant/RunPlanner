@@ -51,14 +51,6 @@ const fearVowGridOrder = Object.freeze([
   'BossDifficultyShrineUpgrade',
 ] as const);
 
-function presentBiomeList(labels: readonly string[]): string {
-  if (labels.length === 0) return '';
-  if (labels.length === 1) return labels[0]!;
-  const last = labels[labels.length - 1]!;
-  if (labels.length === 2) return `${labels[0]} and ${last}`;
-  return `${labels.slice(0, -1).join(', ')}, and ${last}`;
-}
-
 export function RouteOverview({
   catalog,
   label,
@@ -85,10 +77,6 @@ export function RouteOverview({
   const lastConfiguredBiome = configuredBiomeLabels[configuredBiomeLabels.length - 1];
   const routeExtent =
     lastConfiguredBiome === undefined ? 'No biomes' : `Through ${lastConfiguredBiome}`;
-  const routeDescription =
-    configuredBiomeLabels.length === 0
-      ? 'No biomes configured.'
-      : `Configuring ${presentBiomeList(configuredBiomeLabels)}.`;
   const authoredRoute =
     project.route.routeKey === workspaceRoute.routeKey ? project.route : undefined;
   if (authoredRoute === undefined)
@@ -151,17 +139,38 @@ export function RouteOverview({
       tabIndex={-1}
     >
       <header className="panel-heading">
-        <h2 className="eyebrow route-loadout-heading">Route Loadout</h2>
+        <h2 className="eyebrow route-loadout-heading">{navigation.label} Loadout</h2>
         <div className="panel-heading-actions">
           <StatusBadge status={feedback.status} />
           <FindingCount count={feedback.findingCount} label={`${label} findings`} />
           <span className="neutral-status">{routeExtent}</span>
         </div>
       </header>
-      <p className="route-order-summary" aria-label="Route order">
-        <strong>{navigation.label}</strong> ·{' '}
-        {navigation.biomePanels.map((biome) => biome.label).join(' → ')}
-      </p>
+      <div className="route-scope field-control field-control-inline">
+        <span>Plan up to</span>
+        <div className="route-prefix-options" role="radiogroup" aria-label="Biomes to configure">
+          {navigation.biomePanels.map((biome, index) => (
+            <label key={biome.biomeKey} title={`Through ${biome.label}`}>
+              <input
+                type="radio"
+                name={`${workspaceRoute.routeKey}-configured-prefix`}
+                value={index + 1}
+                checked={configuredBiomeCount === index + 1}
+                onChange={() =>
+                  dispatch(
+                    authoredProjectCommandDispatched({
+                      kind: 'ConfigureRoutePrefix',
+                      route: createRouteAddress(workspaceRoute.routeKey),
+                      configuredBiomeCount: index + 1,
+                    }),
+                  )
+                }
+              />
+              {biome.label}
+            </label>
+          ))}
+        </div>
+      </div>
       <div className="route-loadout-panel">
         <div className="route-loadout-controls">
           <RouteWeaponPicker
@@ -387,38 +396,6 @@ export function RouteOverview({
           interactions={interactions}
           label="Starting reward"
         />
-        <div className="field-control field-control-inline">
-          <span id={`${workspaceRoute.routeKey}-configured-prefix`}>Biomes to configure</span>
-          <div className="route-prefix-summary">
-            <div
-              className="route-prefix-options"
-              role="radiogroup"
-              aria-labelledby={`${workspaceRoute.routeKey}-configured-prefix`}
-            >
-              {navigation.biomePanels.map((biome, index) => (
-                <label key={biome.biomeKey}>
-                  <input
-                    type="radio"
-                    name={`${workspaceRoute.routeKey}-configured-prefix`}
-                    value={index + 1}
-                    checked={configuredBiomeCount === index + 1}
-                    onChange={() =>
-                      dispatch(
-                        authoredProjectCommandDispatched({
-                          kind: 'ConfigureRoutePrefix',
-                          route: createRouteAddress(workspaceRoute.routeKey),
-                          configuredBiomeCount: index + 1,
-                        }),
-                      )
-                    }
-                  />
-                  {index + 1}
-                </label>
-              ))}
-            </div>
-            <p className="route-prefix-description">{routeDescription}</p>
-          </div>
-        </div>
       </div>
     </section>
   );

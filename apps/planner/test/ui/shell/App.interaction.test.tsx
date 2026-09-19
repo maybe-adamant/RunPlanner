@@ -695,7 +695,7 @@ describe('planner history interaction', () => {
 
     expect(publications).toHaveLength(1);
     expect(publications[0]).toMatchObject({ targetId: 'profile-b', slotNumber: 3 });
-    expect(screen.getByText('Published to game profile profile-b, Slot 3.')).toBeTruthy();
+    expect(screen.getByText('Published to game')).toBeTruthy();
   });
 
   it('preselects the only compatible profile without selecting a publication slot', async () => {
@@ -748,7 +748,7 @@ describe('planner history interaction', () => {
 
     await user.click(
       within(screen.getByRole('radiogroup', { name: 'Biomes to configure' })).getByRole('radio', {
-        name: '1',
+        name: 'Erebus',
       }),
     );
 
@@ -774,7 +774,7 @@ describe('planner history interaction', () => {
     const { application, user } = renderPlannerForInteraction();
     await user.click(
       within(screen.getByRole('radiogroup', { name: 'Biomes to configure' })).getByRole('radio', {
-        name: '1',
+        name: 'Erebus',
       }),
     );
 
@@ -833,7 +833,7 @@ describe('planner history interaction', () => {
     const { application, user } = renderPlannerForInteraction();
     await user.click(
       within(screen.getByRole('radiogroup', { name: 'Biomes to configure' })).getByRole('radio', {
-        name: '1',
+        name: 'Erebus',
       }),
     );
     await user.click(screen.getByRole('button', { name: 'Starting reward' }));
@@ -864,7 +864,7 @@ describe('planner history interaction', () => {
     const { application, user } = renderPlannerForInteraction();
     await user.click(
       within(screen.getByRole('radiogroup', { name: 'Biomes to configure' })).getByRole('radio', {
-        name: '1',
+        name: 'Erebus',
       }),
     );
 
@@ -905,7 +905,7 @@ describe('planner history interaction', () => {
     });
     await user.click(
       within(screen.getByRole('radiogroup', { name: 'Biomes to configure' })).getByRole('radio', {
-        name: '1',
+        name: 'Erebus',
       }),
     );
 
@@ -947,7 +947,7 @@ describe('planner history interaction', () => {
     );
     await user.click(
       within(screen.getByRole('radiogroup', { name: 'Biomes to configure' })).getByRole('radio', {
-        name: '4',
+        name: 'Tartarus',
       }),
     );
 
@@ -1114,7 +1114,7 @@ describe('planner history interaction', () => {
     expect(screen.queryByRole('dialog')).toBeNull();
     expect(application.store.getState().editorSession.focusedSemanticOwner).toEqual(trait.address);
     expect(
-      screen.getByRole('heading', { level: 3, name: `Entering ${visit.node.room.label}` }),
+      screen.getByRole('heading', { level: 3, name: `${visit.node.room.label}` }),
     ).toBeTruthy();
     expect(screen.getByRole('tab', { name: 'Room Timeline' }).getAttribute('aria-selected')).toBe(
       'true',
@@ -2107,7 +2107,7 @@ describe('planner history interaction', () => {
 
     await user.click(
       within(screen.getByRole('radiogroup', { name: 'Biomes to configure' })).getByRole('radio', {
-        name: '4',
+        name: 'Tartarus',
       }),
     );
     const oceanus = screen.getByRole('button', { name: 'Oceanus' });
@@ -2282,7 +2282,7 @@ describe('route loadout interaction', () => {
     const { application, user } = renderPlannerForInteraction();
     await user.click(
       within(screen.getByRole('radiogroup', { name: 'Biomes to configure' })).getByRole('radio', {
-        name: '1',
+        name: 'Erebus',
       }),
     );
     const startingKeepsake = screen.getByRole('button', { name: 'Starting keepsake' });
@@ -2343,7 +2343,7 @@ describe('route loadout interaction', () => {
     const { application, user } = renderPlannerForInteraction();
     await user.click(
       within(screen.getByRole('radiogroup', { name: 'Biomes to configure' })).getByRole('radio', {
-        name: '1',
+        name: 'Erebus',
       }),
     );
     const startingKeepsake = screen.getByRole('button', { name: 'Starting keepsake' });
@@ -2606,7 +2606,7 @@ describe('project profile interaction', () => {
     );
 
     await user.click(within(menu).getByRole('menuitem', { name: 'Save As…' }));
-    expect(await screen.findByText('Saved as a new file.')).toBeTruthy();
+    expect(await screen.findByText('Saved as new file')).toBeTruthy();
     expect(savedAs).toHaveLength(1);
 
     await user.click(trigger);
@@ -2621,8 +2621,8 @@ describe('project profile interaction', () => {
     );
 
     finishLoad?.();
-    expect(await screen.findByText('Load Profile cancelled.')).toBeTruthy();
-    expect(trigger).toHaveProperty('disabled', false);
+    await waitFor(() => expect(trigger).toHaveProperty('disabled', false));
+    expect(screen.queryByText('Load Profile cancelled.')).toBeNull();
   });
 
   it('saves, replaces, and reloads the project through the visible profile controls', async () => {
@@ -2657,7 +2657,7 @@ describe('project profile interaction', () => {
     expect(
       screen.getByRole('button', { name: 'Load' }).classList.contains('secondary-action'),
     ).toBe(true);
-    expect(screen.queryByText('Unsaved')).toBeNull();
+    expect(screen.queryByText('Not saved')).toBeNull();
     await user.click(
       within(screen.getByRole('group', { name: 'Choose route' })).getByRole('button', {
         name: 'Underworld',
@@ -2669,10 +2669,10 @@ describe('project profile interaction', () => {
     expect(within(fileMenu).getByRole('menuitem', { name: 'Save' })).toBeTruthy();
     expect(within(fileMenu).getByRole('menuitem', { name: 'Load…' })).toBeTruthy();
     await user.keyboard('{Escape}');
-    expect(screen.getByText('Unsaved')).toBeTruthy();
+    expect(screen.getByText('Not saved')).toBeTruthy();
     await user.click(
       within(screen.getByRole('radiogroup', { name: 'Biomes to configure' })).getByRole('radio', {
-        name: '1',
+        name: 'Erebus',
       }),
     );
     application.store.dispatch(
@@ -2693,8 +2693,8 @@ describe('project profile interaction', () => {
     const savedEvaluation = application.store.getState().projectWorkspace.assembly!.evaluation;
     await user.click(screen.getByRole('button', { name: 'File' }));
     await user.click(screen.getByRole('menuitem', { name: 'Save' }));
-    expect(await screen.findByText('Saved the profile.')).toBeTruthy();
-    expect(screen.getByText('Clean')).toBeTruthy();
+    expect(await screen.findByText('File saved')).toBeTruthy();
+    expect(screen.getByText('Saved')).toBeTruthy();
     expect(profileFileName).toBe('run-plan.runplanner.json');
 
     act(() => {
@@ -2707,7 +2707,7 @@ describe('project profile interaction', () => {
         }),
       );
     });
-    expect(screen.getByText('Dirty')).toBeTruthy();
+    expect(screen.getByText('Unsaved changes')).toBeTruthy();
     expect(profileJson).not.toBeNull();
 
     const workspaceBeforeNew = application.store.getState().projectWorkspace;
@@ -2717,7 +2717,7 @@ describe('project profile interaction', () => {
     expect(screen.queryByRole('navigation', { name: 'Planner sections' })).toBeNull();
     await user.click(screen.getByRole('button', { name: 'Cancel' }));
     expect(application.store.getState().projectWorkspace).toBe(workspaceBeforeNew);
-    expect(screen.getByText('Dirty')).toBeTruthy();
+    expect(screen.getByText('Unsaved changes')).toBeTruthy();
 
     await user.click(screen.getByRole('button', { name: 'File' }));
     await user.click(screen.getByRole('menuitem', { name: 'New' }));
@@ -2727,12 +2727,12 @@ describe('project profile interaction', () => {
       }),
     );
     expect(configuredBiomeCount(application)).toBe(1);
-    expect(screen.getByText('Created a new project.')).toBeTruthy();
-    expect(screen.getByText('Unsaved')).toBeTruthy();
+    expect(screen.getByText('Project created')).toBeTruthy();
+    expect(screen.getByText('Not saved')).toBeTruthy();
 
     await user.click(screen.getByRole('button', { name: 'File' }));
     await user.click(screen.getByRole('menuitem', { name: 'Load…' }));
-    expect(await screen.findByText('Loaded the profile.')).toBeTruthy();
+    expect(await screen.findByText('File loaded')).toBeTruthy();
     expect(configuredBiomeCount(application)).toBe(1);
     expect(
       application.store.getState().projectWorkspace.history!.present.route?.loadout,
@@ -2745,7 +2745,7 @@ describe('project profile interaction', () => {
     expect(application.store.getState().projectWorkspace.assembly!.evaluation).toEqual(
       savedEvaluation,
     );
-    expect(screen.getByText('Clean')).toBeTruthy();
+    expect(screen.getByText('Saved')).toBeTruthy();
   });
 
   it('presents a restored startup project as recovered', () => {
@@ -2793,24 +2793,27 @@ describe('project profile interaction', () => {
     });
     const { user } = renderPlannerForInteraction({ application, startWithProject: false });
 
-    expect(screen.getByRole('alert').textContent).toBe(
-      'Autosave recovery failed: $: must be valid JSON',
-    );
-    expect(screen.queryByText('Unsaved')).toBeNull();
+    expect(screen.getByRole('alert').textContent).toContain('Couldn’t recover autosave');
+    await user.click(screen.getByRole('button', { name: 'Couldn’t recover autosave Details' }));
+    expect(
+      screen.getByRole('textbox', { name: 'Couldn’t recover autosave details' }),
+    ).toHaveProperty('value', 'Autosave recovery failed: $: must be valid JSON');
+    await user.click(screen.getByRole('button', { name: 'Close' }));
+    expect(screen.queryByText('Not saved')).toBeNull();
     await user.click(screen.getByRole('button', { name: 'Export Autosave' }));
     expect(exported).toEqual([
       { fileName: 'run-planner-autosave.runplanner.json', json: '{not json' },
     ]);
     expect(recoveryJson).toBe('{not json');
-    expect(screen.getByText('Exported the autosave copy.')).toBeTruthy();
+    expect(screen.getByText('Autosave exported')).toBeTruthy();
     const discard = screen.getByRole('button', { name: 'Discard' });
     expect(discard.classList.contains('danger-action')).toBe(true);
     await user.click(discard);
 
     expect(recoveryJson).toBeNull();
-    expect(screen.queryByText('Autosave recovery failed: $: must be valid JSON')).toBeNull();
+    expect(screen.queryByRole('alert')).toBeNull();
     expect(screen.queryByRole('button', { name: 'Discard' })).toBeNull();
-    expect(screen.getByText('Discarded the unreadable autosave.')).toBeTruthy();
+    expect(screen.getByText('Autosave discarded')).toBeTruthy();
   });
 
   it('presents a load failure and retains the current workspace', async () => {
@@ -2826,7 +2829,10 @@ describe('project profile interaction', () => {
 
     await user.click(screen.getByRole('button', { name: 'Load' }));
 
-    expect((await screen.findByRole('alert')).textContent).toBe(
+    expect((await screen.findByRole('alert')).textContent).toContain('Couldn’t load file');
+    await user.click(screen.getByRole('button', { name: 'Couldn’t load file Details' }));
+    expect(screen.getByRole('textbox', { name: 'Couldn’t load file details' })).toHaveProperty(
+      'value',
       'Load Profile failed: $: must be valid JSON',
     );
     expect(application.store.getState().projectWorkspace).toBe(workspace);
@@ -2850,7 +2856,7 @@ describe('project profile interaction', () => {
     expect(screen.getByRole('group', { name: 'Choose route' })).toBeTruthy();
     await user.click(screen.getByRole('button', { name: 'Load' }));
 
-    expect(await screen.findByText('Loaded the profile.')).toBeTruthy();
+    expect(await screen.findByText('File loaded')).toBeTruthy();
     expect(screen.queryByRole('group', { name: 'Choose route' })).toBeNull();
     expect(document.querySelector('.app-route-identity')?.textContent).toBe('Surface');
   });
@@ -2866,7 +2872,10 @@ describe('project profile interaction', () => {
 
     await user.click(screen.getByRole('button', { name: 'Load' }));
 
-    expect(await screen.findByText('Load Profile cancelled.')).toBeTruthy();
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: 'Load' })).toHaveProperty('disabled', false),
+    );
+    expect(screen.queryByText('Load Profile cancelled.')).toBeNull();
     expect(screen.getByRole('group', { name: 'Choose route' })).toBeTruthy();
   });
 });

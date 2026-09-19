@@ -794,13 +794,11 @@ describe('BiomeWorkspace', () => {
     await view.user.click(railButtonForMarker(view.container, opening.marker.focusKey));
     const inspector = screen.getByRole('complementary', { name: 'Details' });
     expect(inspector.querySelector('.biome-occurrence-workbench > header h3')?.textContent).toBe(
-      'Entering Opening',
+      'Opening',
     );
 
     await view.user.click(railButtonForMarker(view.container, preHubDecision.marker.focusKey));
-    expect(
-      within(inspector).getByRole('heading', { level: 3, name: 'Entering Pre-Hub' }),
-    ).toBeTruthy();
+    expect(within(inspector).getByRole('heading', { level: 3, name: 'Pre-Hub' })).toBeTruthy();
     expect(
       within(inspector).getByRole('region', { name: 'Incoming reward' }).textContent,
     ).toContain('Boon · Ares');
@@ -826,7 +824,7 @@ describe('BiomeWorkspace', () => {
       createOccurrenceAddress(nBiome, nOccurrenceId('combat02')),
     );
 
-    expect(screen.getByRole('heading', { level: 3, name: 'Entering Combat 02' })).toBeTruthy();
+    expect(screen.getByRole('heading', { level: 3, name: 'Combat 02' })).toBeTruthy();
     expect(screen.getByRole('region', { name: 'Incoming reward' }).textContent).toContain(
       'Big Max Magick',
     );
@@ -882,7 +880,7 @@ describe('BiomeWorkspace', () => {
     expect(
       screen.getByRole('heading', {
         level: 3,
-        name: `Entering ${sideVisit.node.room.label}`,
+        name: `${sideVisit.node.room.label}`,
       }),
     ).toBeTruthy();
     expect(screen.getByRole('tab', { name: 'Room Overview' }).getAttribute('aria-selected')).toBe(
@@ -898,9 +896,7 @@ describe('BiomeWorkspace', () => {
 
     const inspector = screen.getByRole('complementary', { name: 'Details' });
     const historyBefore = view.application.store.getState().projectWorkspace.history!.past.length;
-    expect(
-      within(inspector).getByRole('heading', { level: 3, name: 'Entering Combat 02' }),
-    ).toBeTruthy();
+    expect(within(inspector).getByRole('heading', { level: 3, name: 'Combat 02' })).toBeTruthy();
     expect(
       within(inspector).getByRole('region', { name: 'Incoming reward' }).textContent,
     ).toContain('Big Max Magick');
@@ -1403,7 +1399,7 @@ describe('BiomeWorkspace', () => {
     expect(
       within(firstNodeInspector).getByRole('heading', {
         level: 3,
-        name: `Entering ${first.room.label}`,
+        name: `${first.room.label}`,
       }),
     ).toBeTruthy();
     expect(within(firstNodeInspector).queryByRole('region', { name: 'Keepsake Rack' })).toBeNull();
@@ -1733,7 +1729,7 @@ describe('BiomeWorkspace', () => {
     );
     const beforeInspector = screen.getByRole('complementary', { name: 'Details' });
     expect(
-      within(beforeInspector).getByRole('heading', { level: 3, name: 'Entering Entrance' }),
+      within(beforeInspector).getByRole('heading', { level: 3, name: 'Entrance' }),
     ).toBeTruthy();
 
     act(() =>

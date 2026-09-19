@@ -1,9 +1,16 @@
 export type ActionIconName =
-  'discard' | 'info' | 'load' | 'new' | 'publish' | 'redo' | 'save' | 'saveAs' | 'undo';
+  'discard' | 'info' | 'load' | 'new' | 'publish' | 'redo' | 'save' | 'saveAs' | 'undo' | 'zoom';
 
 export function ActionIcon({ name }: { readonly name: ActionIconName }) {
   const content = (() => {
     switch (name) {
+      case 'zoom':
+        return (
+          <>
+            <circle cx="6.5" cy="6.5" r="4" />
+            <path d="m9.5 9.5 4 4" />
+          </>
+        );
       case 'new':
         return (
           <>

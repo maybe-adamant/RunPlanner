@@ -62,11 +62,11 @@ describe('RouteOverview', () => {
   it('presents the configured route extent and included biomes', () => {
     const application = createOpenTestApplication('Underworld');
 
-    for (const [configuredBiomeCount, extent, description] of [
-      [1, 'Through Erebus', 'Configuring Erebus.'],
-      [2, 'Through Oceanus', 'Configuring Erebus and Oceanus.'],
-      [3, 'Through Fields', 'Configuring Erebus, Oceanus, and Fields.'],
-      [4, 'Through Tartarus', 'Configuring Erebus, Oceanus, Fields, and Tartarus.'],
+    for (const [configuredBiomeCount, extent] of [
+      [1, 'Through Erebus'],
+      [2, 'Through Oceanus'],
+      [3, 'Through Fields'],
+      [4, 'Through Tartarus'],
     ] as const) {
       application.store.dispatch(
         authoredProjectCommandDispatched({
@@ -77,11 +77,11 @@ describe('RouteOverview', () => {
       );
       const markup = routeOverviewMarkup(application);
       expect(markup).toContain(extent);
-      expect(markup).toContain(description);
+      expect(markup).toContain('Plan up to');
       expect(markup).toContain('Biomes to configure');
       expect(markup).toContain(`checked="" value="${configuredBiomeCount}"`);
-      expect(markup.indexOf('aria-label="Edit Arcana"')).toBeLessThan(
-        markup.indexOf('Biomes to configure'),
+      expect(markup.indexOf('Biomes to configure')).toBeLessThan(
+        markup.indexOf('aria-label="Edit Arcana"'),
       );
     }
 
@@ -141,14 +141,24 @@ describe('RouteOverview', () => {
     );
 
     const markup = routeOverviewMarkup(application);
-    expect(markup).toContain('aria-label="Route order"');
-    expect(markup).toContain('Summit → Erebus → Ephyra → Fields');
+    expect(markup).toContain('Dream Dive Loadout');
+    expect([...markup.matchAll(/title="Through ([^"]+)"/g)].map((match) => match[1])).toEqual([
+      'Summit',
+      'Erebus',
+      'Ephyra',
+      'Fields',
+    ]);
     expect(markup).toContain('Through Summit');
   });
 
   it('shows the ordinary route order in the same Loadout summary', () => {
     const markup = routeOverviewMarkup(createOpenTestApplication('Underworld'));
-    expect(markup).toContain('<strong>Underworld</strong>');
-    expect(markup).toContain('Erebus → Oceanus → Fields → Tartarus');
+    expect(markup).toContain('Underworld Loadout');
+    expect([...markup.matchAll(/title="Through ([^"]+)"/g)].map((match) => match[1])).toEqual([
+      'Erebus',
+      'Oceanus',
+      'Fields',
+      'Tartarus',
+    ]);
   });
 });
