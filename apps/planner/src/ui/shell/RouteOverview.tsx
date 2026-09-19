@@ -377,6 +377,12 @@ export function RouteOverview({
         ) : null}
       </div>
       <div className="route-configuration">
+        <RewardControlEditor
+          control={workspaceRoute.startingReward}
+          idPrefix={`${workspaceRoute.routeKey}-starting-reward`}
+          interactions={interactions}
+          label="Starting reward"
+        />
         <div className="field-control field-control-inline">
           <span id={`${workspaceRoute.routeKey}-configured-prefix`}>Biomes to configure</span>
           <div className="route-prefix-summary">
@@ -409,12 +415,6 @@ export function RouteOverview({
             <p className="route-prefix-description">{routeDescription}</p>
           </div>
         </div>
-        <RewardControlEditor
-          control={workspaceRoute.startingReward}
-          idPrefix={`${workspaceRoute.routeKey}-starting-reward`}
-          interactions={interactions}
-          label="Starting reward"
-        />
       </div>
     </section>
   );
