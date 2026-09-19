@@ -823,6 +823,12 @@
   min-height: 340px;
 }
 
+.hub-board > .hub-map-overview .room-map-scroll {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
 .hub-board {
   margin-top: 16px;
   border: 1px solid #3a3b45;

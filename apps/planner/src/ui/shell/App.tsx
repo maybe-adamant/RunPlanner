@@ -49,7 +49,7 @@ export function App({
   projectOperations,
   selectStructuredWorkspace,
 }: AppProps) {
-  useAppScale(appScalePreference);
+  const scalePercent = useAppScale(appScalePreference);
   const project = useAppSelector(selectPresentProject);
   const [entryOpen, setEntryOpen] = useState(project === undefined);
   const evaluation = useAppSelector(selectProjectEvaluation);
@@ -91,6 +91,12 @@ export function App({
           </div>
           <div className="app-header-actions" data-entry={showEntry || undefined}>
             <ProjectFileControls
+              beforeFileMenu={
+                <output aria-label="App scale" className="app-scale-value" title="App scale">
+                  <ActionIcon name="zoom" />
+                  {scalePercent}%
+                </output>
+              }
               catalog={catalog}
               hasProject={project !== undefined}
               entryOpen={showEntry}

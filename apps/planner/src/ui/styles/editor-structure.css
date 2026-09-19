@@ -184,7 +184,6 @@
 .room-card > label,
 .field-control > span,
 .loadout-dialog-launcher > label,
-.route-prefix-description,
 .contextual-picker > label {
   color: #aaa7af;
   font-size: 0.78rem;
@@ -274,6 +273,31 @@ select {
   box-shadow: 0 18px 48px rgb(0 0 0 / 45%);
 }
 
+[data-radix-popper-content-wrapper] > .contextual-picker-popover {
+  /* Fit on either side of a centered trigger without feeding placement's
+     available height back into the dimensions used to choose that side.
+     Reserve the 12px collision padding and 6px trigger gap in screen pixels. */
+  --contextual-picker-frame-height: calc(
+    (100 * var(--app-vh) - var(--radix-popover-trigger-height) / var(--app-scale, 1)) / 2 - 18px /
+      var(--app-scale, 1)
+  );
+  max-height: var(--contextual-picker-frame-height);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.contextual-picker-popover[data-multi-stage] {
+  /* Reserve the frame before loading or advancing stages so content changes
+     cannot change the placement decision. Only viewport constraints resize it. */
+  height: min(460px, var(--contextual-picker-frame-height));
+}
+
+.contextual-picker-popover[data-multi-stage] > [cmdk-root],
+.contextual-picker-popover[data-multi-stage] [cmdk-list] {
+  flex-grow: 1;
+}
+
 .contextual-picker-step-label,
 .contextual-picker-loading {
   margin: 0;
@@ -294,8 +318,20 @@ select {
 }
 
 .contextual-picker-popover [cmdk-root] {
-  display: grid;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
   gap: 5px;
+}
+
+.contextual-picker-popover > *,
+.contextual-picker-popover [cmdk-root] > * {
+  flex-shrink: 0;
+}
+
+.contextual-picker-popover > [cmdk-root],
+.contextual-picker-popover [cmdk-list] {
+  flex-shrink: 1;
 }
 
 .contextual-picker-popover [cmdk-input] {
@@ -315,6 +351,8 @@ select {
 }
 
 .contextual-picker-popover [cmdk-list] {
+  position: relative;
+  min-height: 0;
   max-height: min(380px, calc(55 * var(--app-vh)));
   overflow-y: auto;
   overscroll-behavior: contain;
@@ -448,6 +486,11 @@ select {
   border-left: 3px solid #9c7fbd;
   border-radius: 9px;
   background: linear-gradient(90deg, rgb(126 101 154 / 18%), rgb(151 104 39 / 7%));
+}
+
+.room-card-heading .action-compact {
+  min-height: 26px;
+  padding-block: 2px;
 }
 
 .room-card-heading > h3 {

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 
 import type { RouteEditorNavigation } from '@planner/projections/editorNavigation';
@@ -17,6 +17,7 @@ import {
 import { selectProfileSession, selectProfileStatus, useAppSelector } from '@planner/state/store';
 import { ActionIcon } from '../controls/ActionIcon';
 import { DreamItineraryDialog } from './DreamItineraryDialog';
+import { ProjectFileFeedback } from './ProjectFileFeedback';
 
 function GamePublicationDialog({
   discovery,
@@ -140,6 +141,7 @@ export function ProjectFileControls({
   routes,
   hasProject,
   entryOpen,
+  beforeFileMenu,
   onEntryOpenChange,
 }: {
   readonly catalog: Catalog;
@@ -147,6 +149,7 @@ export function ProjectFileControls({
   readonly routes: readonly RouteEditorNavigation[];
   readonly hasProject: boolean;
   readonly entryOpen: boolean;
+  readonly beforeFileMenu?: ReactNode;
   readonly onEntryOpenChange: (open: boolean) => void;
 }) {
   const profileSession = useAppSelector(selectProfileSession);
@@ -158,6 +161,11 @@ export function ProjectFileControls({
   const [selectedGameSlot, setSelectedGameSlot] = useState<GamePlanSlotNumber | ''>('');
   const [fileMenuOpen, setFileMenuOpen] = useState(false);
   const [dreamItineraryOpen, setDreamItineraryOpen] = useState(false);
+  useEffect(() => {
+    if (result?.status !== 'success') return;
+    const timer = window.setTimeout(() => setResult(null), 5000);
+    return () => window.clearTimeout(timer);
+  }, [result]);
   const closeGamePublication = useCallback(() => {
     setGameDiscovery(null);
     setSelectedGameProfile('');
@@ -168,6 +176,7 @@ export function ProjectFileControls({
     run: () => Promise<ProjectOperationResult>,
   ): Promise<ProjectOperationResult> => {
     setPendingOperation(operation);
+    setResult(null);
     try {
       const operationResult = await run();
       setResult(operationResult);
@@ -185,6 +194,7 @@ export function ProjectFileControls({
 
   const discoverAndPublishGamePlan = async () => {
     setPendingOperation('publishGame');
+    setResult(null);
     try {
       const discovery = await operations.discoverGameProfiles();
       setGameDiscovery(discovery);
@@ -219,42 +229,11 @@ export function ProjectFileControls({
   };
 
   const feedback = (
-    <div className="project-profile-feedback">
-      {hasProject && (
-        <span
-          aria-label={`Profile status: ${profileStatus}`}
-          className="profile-status"
-          data-profile-status={profileStatus.toLowerCase()}
-          role="status"
-        >
-          {profileStatus}
-        </span>
-      )}
-      {profileSession.recoveryError !== null && (
-        <p className="project-operation-result" data-status="failure" role="alert">
-          {profileSession.recoveryError}
-        </p>
-      )}
-      {profileSession.autosaveError !== null && (
-        <p className="project-operation-result" data-status="failure" role="alert">
-          {profileSession.autosaveError}
-        </p>
-      )}
-      {profileSession.profileFileError !== null && (
-        <p className="project-operation-result" data-status="failure" role="alert">
-          {profileSession.profileFileError}
-        </p>
-      )}
-      {result !== null && (
-        <p
-          className="project-operation-result"
-          data-status={result.status}
-          role={result.status === 'failure' ? 'alert' : 'status'}
-        >
-          {result.message}
-        </p>
-      )}
-    </div>
+    <ProjectFileFeedback
+      status={hasProject ? profileStatus : undefined}
+      session={profileSession}
+      result={result}
+    />
   );
 
   if (entryOpen || !hasProject) {
@@ -364,6 +343,7 @@ export function ProjectFileControls({
     >
       {feedback}
       <div className="project-file-actions">
+        {beforeFileMenu}
         <DropdownMenu.Root onOpenChange={setFileMenuOpen} open={fileMenuOpen}>
           <DropdownMenu.Trigger asChild>
             <button

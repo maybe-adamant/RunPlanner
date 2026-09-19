@@ -252,17 +252,19 @@
   min-width: 0;
   align-items: center;
   justify-content: flex-end;
-  flex-wrap: wrap;
   gap: 6px;
 }
 
 .project-profile-feedback .project-operation-result {
   min-width: 0;
-  overflow-wrap: anywhere;
-  text-align: right;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .profile-status {
+  flex-shrink: 0;
+  white-space: nowrap;
   padding: 3px 8px;
   border: 1px solid #3b3c45;
   border-radius: 999px;
@@ -294,6 +296,77 @@
 
 .project-operation-result[data-status='failure'] {
   color: #e7a1a1;
+}
+
+.project-file-failure {
+  min-width: 0;
+}
+
+.project-file-failure-trigger {
+  display: flex;
+  max-width: 100%;
+  align-items: center;
+  gap: 8px;
+  padding: 3px 6px;
+  border: 0;
+  border-left: 2px solid #b97777;
+  color: #e7a1a1;
+  background: transparent;
+  font-size: 0.82rem;
+  cursor: pointer;
+}
+
+.project-file-failure-trigger > :first-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.project-file-failure-trigger > :last-child {
+  flex-shrink: 0;
+  text-decoration: underline;
+}
+
+.project-file-error-details {
+  z-index: 100;
+  width: min(520px, calc(100 * var(--app-vw) - 24px));
+  padding: 14px;
+  border: 1px solid #755050;
+  border-radius: 10px;
+  background: #202128;
+  box-shadow: 0 16px 44px rgb(0 0 0 / 38%);
+}
+
+.project-file-error-details > header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.project-file-error-details h2 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.project-file-error-details > label {
+  display: grid;
+  gap: 6px;
+  margin-top: 10px;
+  color: #e7a1a1;
+  font-size: 0.82rem;
+}
+
+.project-file-error-details textarea {
+  width: 100%;
+  padding: 8px;
+  border: 1px solid #41424c;
+  border-radius: 6px;
+  color: #ede8df;
+  background: #17181e;
+  font: inherit;
+  resize: vertical;
 }
 
 .project-findings {
@@ -463,27 +536,18 @@
 .route-loadout-controls > .contextual-picker,
 .route-loadout-controls > .loadout-dialog-launcher,
 .route-keepsake-controls > .contextual-picker,
-.route-configuration > .reward-value-editor,
-.route-configuration > .field-control {
+.route-configuration > .reward-value-editor {
   width: 100%;
   max-width: 32rem;
   min-width: 0;
 }
 
 .route-loadout-panel {
-  padding-block: 1rem;
+  padding-block: 1rem 0.75rem;
 }
 
-.route-order-summary {
-  margin: 0.75rem 0 0;
-  color: #d9d4dc;
-  font-size: 0.95rem;
-  line-height: 1.5;
-}
-
-.route-order-summary > strong {
-  color: #e4c58e;
-  font-weight: 600;
+.route-scope {
+  margin-top: 0.75rem;
 }
 
 .route-loadout-controls > .contextual-picker > label,
@@ -494,36 +558,23 @@
 }
 
 @container app-viewport (min-width: 701px) {
+  .route-scope.field-control-inline,
   .route-loadout-controls > .contextual-picker,
   .route-loadout-controls > .loadout-dialog-launcher,
   .route-keepsake-controls > .contextual-picker,
-  .route-configuration > .reward-value-editor > .contextual-picker,
-  .route-configuration > .field-control {
+  .route-configuration > .reward-value-editor > .contextual-picker {
     grid-template-columns: 10rem minmax(0, 1fr);
   }
-}
-
-.route-configuration > .field-control {
-  max-width: none;
-}
-
-.route-prefix-summary {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 0.5rem 1.25rem;
-  min-width: 0;
-}
-
-.route-prefix-description {
-  margin: 0;
 }
 
 .route-prefix-options {
   display: flex;
   align-items: center;
-  flex-shrink: 0;
-  gap: 1.25rem;
+  flex-wrap: wrap;
+  gap: 0.5rem 1.25rem;
+  min-width: 0;
+  color: #d9d4dc;
+  font-size: 0.85rem;
 }
 
 .route-prefix-options > label {
@@ -531,6 +582,13 @@
   align-items: center;
   gap: 0.4rem;
   cursor: pointer;
+  white-space: nowrap;
+}
+
+@container app-viewport (max-width: 700px) {
+  .route-scope.field-control-inline {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 
 .route-prefix-options input {

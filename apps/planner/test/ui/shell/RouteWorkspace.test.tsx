@@ -72,7 +72,7 @@ describe('RouteWorkspace', () => {
     expect(markup).not.toContain('>Wells</button>');
     expect(markup).not.toContain('class="panel-navigation-separator"');
     expect(markup).toContain('data-editor-layout="overview"');
-    expect(markup).toContain('Route Loadout');
+    expect(markup).toContain('Underworld Loadout');
   });
 
   it('orders configured biomes before the non-empty route indexes', () => {
@@ -139,7 +139,7 @@ describe('RouteWorkspace', () => {
     const markup = routeWorkspaceMarkup(application, 'Underworld');
     expect(markup).not.toContain('<p class="eyebrow">Route structure</p>');
     expect(markup).toContain('<strong>Opening</strong>');
-    expect(markup).toContain('aria-label="Entering Opening 01"');
+    expect(markup).toContain('aria-label="Opening 01"');
     expect(markup).not.toContain('<p class="eyebrow">Details</p>');
     expect(markup).toContain('Continue route');
     expect(markup).toContain('data-editor-layout="biome"');

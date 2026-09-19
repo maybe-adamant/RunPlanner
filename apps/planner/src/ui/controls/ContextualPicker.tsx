@@ -92,14 +92,15 @@ function PickerContent<T>({
   const [query, setQuery] = useState('');
   const [collapsibleOpen, setCollapsibleOpen] = useState(false);
   const collapsibleGroup = useRef<HTMLDivElement>(null);
+  const list = useRef<HTMLDivElement>(null);
   const input = useRef<HTMLInputElement>(null);
   const previousLoading = useRef(loading);
   const collapsible = model.sections.find((section) => section.collapsible);
   const ordinarySections = model.sections.filter((section) => !section.collapsible);
 
   useEffect(() => {
-    if (collapsibleOpen) {
-      collapsibleGroup.current?.scrollIntoView({ block: 'nearest' });
+    if (collapsibleOpen && list.current !== null && collapsibleGroup.current !== null) {
+      list.current.scrollTop = collapsibleGroup.current.offsetTop;
     }
   }, [collapsibleOpen]);
 
@@ -107,7 +108,7 @@ function PickerContent<T>({
     const loadingFinished = previousLoading.current && !loading;
     previousLoading.current = loading;
     if ((!loading && stepLabel !== undefined) || loadingFinished) {
-      input.current?.focus();
+      input.current?.focus({ preventScroll: true });
     }
   }, [loading, stepLabel]);
 
@@ -134,7 +135,7 @@ function PickerContent<T>({
             ref={input}
             value={query}
           />
-          <Command.List>
+          <Command.List ref={list}>
             {(query !== '' || collapsible === undefined) && (
               <Command.Empty>No matching choices.</Command.Empty>
             )}
@@ -253,6 +254,7 @@ export function ContextualPicker<T>({
           <Popover.Content
             align="start"
             className="contextual-picker-popover"
+            data-multi-stage={!closeOnSelect || undefined}
             collisionPadding={12}
             side={side}
             sideOffset={6}

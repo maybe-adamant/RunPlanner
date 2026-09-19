@@ -79,7 +79,9 @@ it('enforces the scale limits without falling through to native zoom', () => {
 it('changes scale without publishing project history or reevaluating the plan', () => {
   const view = renderPlannerForInteraction();
   const before = view.application.store.getState().projectWorkspace;
+  expect(screen.getByLabelText('App scale').textContent).toBe('100%');
   fireEvent.keyDown(window, { key: '-', ctrlKey: true });
   expect(scale()).toBe('0.9');
+  expect(screen.getByLabelText('App scale').textContent).toBe('90%');
   expect(view.application.store.getState().projectWorkspace).toBe(before);
 });

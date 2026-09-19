@@ -140,7 +140,7 @@ export function OccurrenceWorkbench({
       {label}
     </button>
   );
-  const heading = `Entering ${room.label}`;
+  const heading = room.label;
   const tabRunState = room.runStateByTab[activeTab];
   const renderDirectRoomWorkbench = (
     view: 'overview' | 'actions',

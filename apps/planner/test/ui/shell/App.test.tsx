@@ -196,10 +196,10 @@ describe('App', () => {
     application.store.dispatch(
       routePanelSelected({ routeKey: 'Underworld', panel: { kind: 'overview' } }),
     );
-    expect(appMarkup(application)).toContain('Route Loadout');
+    expect(appMarkup(application)).toContain('Underworld Loadout');
 
     application.store.dispatch(routeSelected('Underworld'));
-    expect(appMarkup(application)).toContain('Route Loadout');
+    expect(appMarkup(application)).toContain('Underworld Loadout');
     expect(application.store.getState().projectWorkspace.history!.past).toEqual([]);
   });
 });

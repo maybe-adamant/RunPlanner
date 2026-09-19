@@ -182,6 +182,27 @@ describe('ContextualPicker', () => {
     expect(trigger.getAttribute('aria-expanded')).toBe('false');
   });
 
+  it('reveals unavailable choices by scrolling the choices list', async () => {
+    const user = userEvent.setup();
+    const offset = vi.spyOn(HTMLElement.prototype, 'offsetTop', 'get').mockReturnValue(240);
+    try {
+      render(
+        <ContextualPicker
+          id="scroll-picker"
+          label="Room"
+          model={model}
+          onSelect={() => undefined}
+          placeholder="Select a room"
+        />,
+      );
+      await user.click(screen.getByLabelText('Room'));
+      await user.click(screen.getByRole('button', { name: 'Unavailable (1)' }));
+      expect(screen.getByRole('listbox').scrollTop).toBe(240);
+    } finally {
+      offset.mockRestore();
+    }
+  });
+
   it('keeps unassessed choices selectable through search and keyboard', async () => {
     const user = userEvent.setup();
     const onSelect = vi.fn();
@@ -334,7 +355,10 @@ describe('ContextualPicker', () => {
     const view = render(picker(true));
 
     expect(screen.getByRole('status').textContent).toContain('Evaluating room choices');
+    const focus = vi.spyOn(HTMLInputElement.prototype, 'focus');
     view.rerender(picker(false));
+    expect(focus).toHaveBeenCalledWith({ preventScroll: true });
+    focus.mockRestore();
     const search = screen.getByRole('combobox', { name: 'Room choices' });
     await waitFor(() => expect(document.activeElement).toBe(search));
     await user.type(search, 'Story 01');

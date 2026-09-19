@@ -929,7 +929,7 @@ describe('OccurrenceEncounterWorkbench', () => {
       occurrenceById(nOccurrenceId('combat02')),
     );
     const historyLength = view.application.store.getState().projectWorkspace.history!.past.length;
-    expect(screen.getByRole('heading', { level: 3, name: 'Entering Combat 02' })).toBeTruthy();
+    expect(screen.getByRole('heading', { level: 3, name: 'Combat 02' })).toBeTruthy();
     expect(screen.getByRole('region', { name: 'Incoming reward' }).textContent).toContain(
       'Big Max Magick',
     );
@@ -949,7 +949,7 @@ describe('OccurrenceEncounterWorkbench', () => {
       occurrenceById(nOccurrenceId('story')),
     );
 
-    expect(screen.getByRole('heading', { level: 3, name: 'Entering Medea' })).toBeTruthy();
+    expect(screen.getByRole('heading', { level: 3, name: 'Medea' })).toBeTruthy();
     expect(screen.getByRole('region', { name: 'Incoming reward' }).textContent).toContain('Story');
     expect(screen.queryByLabelText('Hub reward')).toBeNull();
     expect(screen.queryByRole('button', { name: 'Edit Hub reward' })).toBeNull();
@@ -1828,7 +1828,7 @@ describe('OccurrenceEncounterWorkbench', () => {
     expect(screen.getAllByRole('button', { name: /^Offer [123] Item$/ })).toHaveLength(3);
     expect(screen.queryByRole('checkbox', { name: /Interact.*Shop/i })).toBeNull();
     expect(screen.queryByText('Participation')).toBeNull();
-    expect(screen.getByRole('heading', { name: 'Entering Preboss' })).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'Preboss' })).toBeTruthy();
     cleanup();
 
     const goldenView = renderOccurrenceWorkbench(

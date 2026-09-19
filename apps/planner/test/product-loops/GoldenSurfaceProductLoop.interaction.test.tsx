@@ -215,7 +215,7 @@ describe('surface product loop', () => {
 
     await view.user.click(screen.getByRole('button', { name: 'File' }));
     await view.user.click(screen.getByRole('menuitem', { name: 'Save' }));
-    await screen.findByText('Saved the profile.');
+    await screen.findByText('File saved');
     expect(persistence.readStoredJson()).toBe(encodeProjectDocument(authored));
     expect(selectProfileStatus(application.store.getState())).toBe('Clean');
 
@@ -230,7 +230,7 @@ describe('surface product loop', () => {
     expect(currentEvaluation(application).status).toBe('incomplete');
     await view.user.click(screen.getByRole('button', { name: 'File' }));
     await view.user.click(screen.getByRole('menuitem', { name: 'Load…' }));
-    await screen.findByText('Loaded the profile.');
+    await screen.findByText('File loaded');
     expect(currentProject(application)).toEqual(authored);
 
     application.dispose();

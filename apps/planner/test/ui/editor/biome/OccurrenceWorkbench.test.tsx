@@ -116,7 +116,7 @@ describe('OccurrenceWorkbench', () => {
     expect(
       screen.getByRole('heading', {
         level: 3,
-        name: new RegExp(`^Entering ${node.room.label}`),
+        name: new RegExp(`^${node.room.label}`),
       }),
     ).toBeTruthy();
     expect(document.querySelector('.room-card-heading .room-kind')).toBeNull();
