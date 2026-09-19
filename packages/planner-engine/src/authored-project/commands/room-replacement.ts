@@ -381,8 +381,7 @@ export function applyRoomReplacementCommand(
   );
   if (
     replacementRoom.kind === 'Preboss' &&
-    catalog.routes.byKey[located.routeKey]?.prebossRoomGameNames?.[located.biomeIndex] !==
-      replacementRoom.gameName
+    located.routePosition.completion.prebossRoomGameName !== replacementRoom.gameName
   ) {
     failCommand(
       command,

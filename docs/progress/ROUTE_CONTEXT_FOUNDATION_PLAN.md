@@ -3,11 +3,13 @@
 ## Status and objective
 
 Approved execution contract, committed in `eb176b0a`. Gates A and B are implemented
-and independently reviewed. Gate B is verified for commit from
-`34b9677429421d7b23fa27396f688eceb21f7c95`; Gate C is next.
+and independently reviewed. Gate B is committed as `815b9c96`.
+Gate C is implemented and independently reviewed, pending commit; later gates
+have not started.
 
 - Planner base: `8439c9c8cad046788680dbf981688ab263d83989`.
 - Gate B base: `34b9677429421d7b23fa27396f688eceb21f7c95`.
+- Gate C base: `815b9c96`.
 - Game-module base: `95c479b6c599863aeba7968f0593bb4f5871709b`.
 - Baseline authored schema: 84; execution protocol: 40.
 - Source/code inventory: `docs/investigations/DREAM_DIVE_SCOPE.md`, especially
@@ -304,6 +306,9 @@ below. Regenerate only affected products, mirror them, finish independent
 cross-gate review and run the complete closure checks once fixes are stable.
 Audit for old order inference, UI-owned policy, duplicated resolution, retained
 stale authoring, schema drift and internal Dream projects leaking into public entry.
+Replace the physical `${biomeKey}_PostBoss01` transition recognition in
+`execution-plan/assembler.ts` with resolved completion identity during wire
+alignment; Dream publication remains disabled before that integration.
 
 Promote source facts to the smallest existing owning audits and update current
 design sections for route input/position, contextual room products and acquired
@@ -385,6 +390,23 @@ Gate B delivery:
   for all routes, with only encounter overrides Dream-specific. Independent
   review passed; catalog/biome/starting-profile/Loadout regressions passed
   481 tests across 53 files.
+
+Gate C delivery:
+
+- Route declarations own biome-specific Preboss identities and ordinal Postboss
+  identities. Commands, decoding, candidate policy and materialization consume
+  that product; the deferred completion shape and old parallel arrays are gone.
+  Dream Postboss declarations expose their native fountain, rack and forced Well.
+- Independent review passed after exact Dream Preboss-map coverage and exact
+  materialized Postboss-identity checks. Dream public admission remains disabled.
+- Catalog/engine sweep: 2,276 tests passed, three stale expectations corrected;
+  their 19-test rerun passed. Focused Gate C suite: 173 tests passed across 15
+  files. Application state contact: 18 tests passed. Workspace/fixture
+  typechecks, repository ESLint, changed-file Prettier and whitespace checks
+  passed. No schema/protocol versions, JSON fixtures or game-module code changed.
+- Final acceptance additions cover Q nonterminal, F/G terminal, and Dream
+  completion reselection preserving compatible Preboss state followed by
+  removal of the completion chain. Both affected suites passed all 31 tests.
 
 Review this plan adversarially before implementation. Per gate, use the narrow
 owning catalog/engine/planner/UI/contract/product tests. Main session supplies

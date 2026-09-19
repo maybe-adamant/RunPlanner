@@ -617,7 +617,8 @@ function normalCandidatePool(
         room.roomSetKey === layout.biomeKey &&
         room.mode.kind === 'authored' &&
         room.prebossBatchPolicy?.kind !== 'takeOverNormalDoors' &&
-        (room.kind !== 'Preboss' || route.prebossRoomGameNames.includes(room.gameName)) &&
+        (room.kind !== 'Preboss' ||
+          room.gameName === route.completion.prebossRoomGameNameByBiomeKey[layout.biomeKey]) &&
         !startNames.has(room.gameName),
     ),
   );
@@ -873,7 +874,7 @@ function takeoverCandidatePool(
       (room) =>
         room.roomSetKey === biomeKey &&
         room.prebossBatchPolicy?.kind === 'takeOverNormalDoors' &&
-        route.prebossRoomGameNames.includes(room.gameName),
+        room.gameName === route.completion.prebossRoomGameNameByBiomeKey[biomeKey],
     ),
   );
 }

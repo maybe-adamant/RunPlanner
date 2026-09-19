@@ -40,8 +40,10 @@ describe('editor session navigation', () => {
       key: 'Alternate',
       label: 'Alternate Route',
       biomeKeys: ['F'],
-      prebossRoomGameNames: ['F_PreBoss01'],
-      postbossRoomGameNames: [null],
+      completion: {
+        prebossRoomGameNameByBiomeKey: { F: 'F_PreBoss01' },
+        postbossRoomGameNamesByOrdinal: [null],
+      },
     };
     const alternateCatalog: Catalog = {
       ...catalog,

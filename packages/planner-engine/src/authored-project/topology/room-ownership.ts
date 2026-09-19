@@ -101,10 +101,25 @@ function isChaosAdditionalTarget(
   });
 }
 
+function isFixedCompletionPostbossTarget(
+  catalog: Catalog,
+  topology: BiomeTopology,
+  occurrence: RoomOccurrence,
+  room: RoomDeclaration,
+): boolean {
+  if (room.kind !== 'PostBoss') return false;
+  return topology.fixedRoomLinks.some((link) => {
+    if (link.targetOccurrenceId !== occurrence.occurrenceId) return false;
+    const source = occurrenceFor(topology, link.sourceOccurrenceId);
+    return source !== undefined && catalog.rooms.byKey[source.gameName]?.kind === 'Boss';
+  });
+}
+
 /**
  * Resolves a declaration for one already-decoded authored occurrence in its
  * host topology. A matching room set is the ordinary case. The only
- * cross-room-set cases are the three closed route-detour ownership forms; this is deliberately
+ * cross-room-set cases are closed route-detour forms plus an already-linked completion Postboss;
+ * this is deliberately
  * not a general relaxation of room-set identity.
  */
 export function legalTopologyOccurrenceRoom(
@@ -120,5 +135,6 @@ export function legalTopologyOccurrenceRoom(
   if (room.roomSetKey === layout.biomeKey) return room;
   if (isAnomalyReplacementOccurrence(layout, topology, occurrence, room)) return room;
   if (isContractAdditionalTarget(catalog, layout, topology, occurrence, room)) return room;
-  return isChaosAdditionalTarget(catalog, layout, topology, occurrence, room) ? room : undefined;
+  if (isChaosAdditionalTarget(catalog, layout, topology, occurrence, room)) return room;
+  return isFixedCompletionPostbossTarget(catalog, topology, occurrence, room) ? room : undefined;
 }

@@ -422,7 +422,7 @@ describe('authored-project project-state commands', () => {
 
   it('keeps Boss declaration on the biome and Postboss selection on the route', () => {
     expect(catalog.biomeLayouts.byKey.F?.completion.bossRoomGameName).toBe('F_Boss01');
-    expect(catalog.routes.byKey.Underworld?.postbossRoomGameNames).toEqual([
+    expect(catalog.routes.byKey.Underworld?.completion.postbossRoomGameNamesByOrdinal).toEqual([
       'F_PostBoss01',
       'G_PostBoss01',
       'H_PostBoss01',

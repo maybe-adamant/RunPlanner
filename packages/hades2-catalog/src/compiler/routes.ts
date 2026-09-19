@@ -32,54 +32,81 @@ export function normalizeRoutes(
       return biomeKey;
     });
 
-    if (route.prebossRoomGameNames.length !== biomeKeys.length) {
+    const prebossEntries = Object.entries(route.completion.prebossRoomGameNameByBiomeKey);
+    if (prebossEntries.length === 0) {
+      fail(`${routePath}.completion.prebossRoomGameNameByBiomeKey`, 'must not be empty');
+    }
+    const expectedPrebossBiomeKeys =
+      route.key === 'Dream' ? new Set(biomes.values.map((biome) => biome.key)) : new Set(biomeKeys);
+    if (
+      prebossEntries.length !== expectedPrebossBiomeKeys.size ||
+      prebossEntries.some(([biomeKey]) => !expectedPrebossBiomeKeys.has(biomeKey))
+    ) {
       fail(
-        `${routePath}.prebossRoomGameNames`,
+        `${routePath}.completion.prebossRoomGameNameByBiomeKey`,
         'must contain exactly one entry for every route biome',
       );
     }
-    const prebossRoomGameNames = route.prebossRoomGameNames.map((roomGameName, index) => {
-      const path = `${routePath}.prebossRoomGameNames[${index}]`;
-      requireNonEmpty(roomGameName, path);
-      const room = rooms.byKey[roomGameName];
-      if (room === undefined) fail(path, `unknown Preboss room ${roomGameName}`);
-      if (room.kind !== 'Preboss' || room.roomSetKey !== biomeKeys[index]) {
-        fail(path, `${roomGameName} must be the Preboss for route biome ${biomeKeys[index]}`);
-      }
-      return room.gameName;
-    });
+    const prebossRoomGameNameByBiomeKey = Object.fromEntries(
+      prebossEntries.map(([biomeKey, roomGameName]) => {
+        const path = `${routePath}.completion.prebossRoomGameNameByBiomeKey.${biomeKey}`;
+        requireNonEmpty(biomeKey, path);
+        if (biomes.byKey[biomeKey] === undefined) fail(path, `unknown biome ${biomeKey}`);
+        requireNonEmpty(roomGameName, path);
+        const room = rooms.byKey[roomGameName];
+        if (room === undefined) fail(path, `unknown Preboss room ${roomGameName}`);
+        if (room.kind !== 'Preboss' || room.roomSetKey !== biomeKey) {
+          fail(path, `${roomGameName} must be the Preboss for route biome ${biomeKey}`);
+        }
+        return [biomeKey, room.gameName];
+      }),
+    );
 
-    if (route.postbossRoomGameNames.length !== biomeKeys.length) {
+    const postbossRoomGameNamesByOrdinal = route.completion.postbossRoomGameNamesByOrdinal;
+    const expectedPostbossCount = route.key === 'Dream' ? 4 : biomeKeys.length;
+    if (postbossRoomGameNamesByOrdinal.length !== expectedPostbossCount) {
       fail(
-        `${routePath}.postbossRoomGameNames`,
-        'must contain exactly one entry for every route biome',
+        `${routePath}.completion.postbossRoomGameNamesByOrdinal`,
+        'must contain exactly one entry for every supported route ordinal',
       );
     }
-    const postbossRoomGameNames = route.postbossRoomGameNames.map((roomGameName, index) => {
-      const path = `${routePath}.postbossRoomGameNames[${index}]`;
-      if (index === biomeKeys.length - 1 && roomGameName !== null) {
-        fail(path, 'the terminal route position must be null');
-      }
-      if (roomGameName === null) {
-        if (index !== biomeKeys.length - 1)
-          fail(path, 'only the terminal route position may be null');
-        return null;
-      }
-      requireNonEmpty(roomGameName, path);
-      const room = rooms.byKey[roomGameName];
-      if (room === undefined) fail(path, `unknown PostBoss room ${roomGameName}`);
-      if (room.kind !== 'PostBoss' || room.roomSetKey !== biomeKeys[index]) {
-        fail(path, `${roomGameName} must be the PostBoss for route biome ${biomeKeys[index]}`);
-      }
-      return room.gameName;
-    });
+    const normalizedPostbossRoomGameNamesByOrdinal = postbossRoomGameNamesByOrdinal.map(
+      (roomGameName, index) => {
+        const path = `${routePath}.completion.postbossRoomGameNamesByOrdinal[${index}]`;
+        if (index === expectedPostbossCount - 1 && roomGameName !== null) {
+          fail(path, 'the terminal route position must be null');
+        }
+        if (roomGameName === null) {
+          if (index !== expectedPostbossCount - 1)
+            fail(path, 'only the terminal route position may be null');
+          return null;
+        }
+        requireNonEmpty(roomGameName, path);
+        const room = rooms.byKey[roomGameName];
+        if (room === undefined) fail(path, `unknown PostBoss room ${roomGameName}`);
+        if (
+          room.kind !== 'PostBoss' ||
+          (route.key === 'Dream'
+            ? room.roomSetKey !== 'Dream'
+            : room.roomSetKey !== biomeKeys[index])
+        ) {
+          fail(
+            path,
+            `${roomGameName} must be the PostBoss for route ${route.key === 'Dream' ? 'Dream' : `biome ${biomeKeys[index]}`}`,
+          );
+        }
+        return room.gameName;
+      },
+    );
 
     return Object.freeze({
       key: route.key,
       label: route.label,
       biomeKeys: Object.freeze(biomeKeys),
-      prebossRoomGameNames: Object.freeze(prebossRoomGameNames),
-      postbossRoomGameNames: Object.freeze(postbossRoomGameNames),
+      completion: Object.freeze({
+        prebossRoomGameNameByBiomeKey: Object.freeze(prebossRoomGameNameByBiomeKey),
+        postbossRoomGameNamesByOrdinal: Object.freeze(normalizedPostbossRoomGameNamesByOrdinal),
+      }),
     });
   });
 

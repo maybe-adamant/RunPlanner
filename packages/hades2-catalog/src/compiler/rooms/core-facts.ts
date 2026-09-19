@@ -101,6 +101,7 @@ const supportedRoomSetKeys = new Set([
   'O',
   'P',
   'Q',
+  'Dream',
   'Anomaly',
   'C',
   'Chaos',

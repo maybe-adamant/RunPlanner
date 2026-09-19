@@ -2,11 +2,20 @@ import { ordinaryPositionFor } from '../../../support/route-position';
 import { describe, expect, it } from 'vitest';
 
 import { catalog } from '@run-planner/hades2-catalog';
-import { resolveRoutePosition, type ProjectDocument } from '@run-planner/engine/authored-project';
+import {
+  applyProjectCommand,
+  createBiomeAddress,
+  createOccurrenceId,
+  createProjectDocument,
+  resolveRoutePosition,
+  type ProjectDocument,
+} from '@run-planner/engine/authored-project';
 import {
   composeBiomeHistory,
+  composeBiomeHistoryPrefix,
   evaluateBiomeCompleteness,
   materializeBiome,
+  materializeBiomePrefix,
 } from '@run-planner/engine/simulation';
 
 import { createCompleteFTakeoverProject, fBiome } from '../../support/f-takeover-project';
@@ -56,22 +65,35 @@ describe('F takeover history', () => {
       composeBiomeHistory(catalog, snapshot, ordinary).rooms[0]!.preparation.ledgers.counters
         .biomeDepthCache,
     ).toBe(0);
-    const position = resolveRoutePosition(
+    const dreamBiome = createBiomeAddress('Dream', 'F');
+    const dream = applyProjectCommand(
+      createProjectDocument(catalog, {
+        projectId: 'dream-f-opening-history',
+        routeKey: 'Dream',
+        itineraryBiomeKeys: ['F', 'N'],
+        configuredBiomeCount: 1,
+      }),
       catalog,
-      { routeKey: 'Dream', itineraryBiomeKeys: ['F', 'N'] },
-      'F',
+      {
+        kind: 'CreateStart',
+        biome: dreamBiome,
+        occurrenceId: createOccurrenceId('dream-f-opening-history-start'),
+      },
     );
-    const dreamSnapshot = materializeBiome(
+    const position = resolveRoutePosition(catalog, dream.route, 'F');
+    const dreamPlan = dream.route.biomes[0];
+    if (dreamPlan === undefined) throw new Error('Dream F opening plan is missing');
+    const dreamSnapshot = materializeBiomePrefix(
       catalog,
-      fBiome,
+      dreamBiome,
       position,
-      completeness,
-      traitContext(project),
+      dreamPlan,
+      traitContext(dream),
     );
-    expect(
-      composeBiomeHistory(catalog, dreamSnapshot, position).rooms[0]!.preparation.ledgers.counters
-        .biomeDepthCache,
-    ).toBe(1);
+    if (dreamSnapshot === null) throw new Error('Dream F opening did not materialize');
+    const dreamHistory = composeBiomeHistoryPrefix(catalog, dreamSnapshot, position);
+    if (dreamHistory === null) throw new Error('Dream F opening did not compose');
+    expect(dreamHistory.current.ledgers.counters.biomeDepthCache).toBe(1);
   });
 
   it('creates every physical target at its source outgoing checkpoint', () => {

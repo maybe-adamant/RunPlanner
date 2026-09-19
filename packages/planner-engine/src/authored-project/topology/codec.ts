@@ -8,16 +8,21 @@ export function decodeBiomeTopology(
   value: unknown,
   catalog: Catalog,
   layout: BiomeLayout,
-  routeKey: string,
   routePosition: ResolvedRoutePosition,
   path: string,
 ): BiomeTopology {
-  const structure = decodeTopologyStructure(value, catalog, layout, routeKey, path);
+  const structure = decodeTopologyStructure(value, catalog, layout, routePosition, path);
   return Object.freeze({
     startOccurrenceId: structure.startOccurrenceId,
     occurrences: Object.freeze(
       structure.occurrences.map((occurrence) =>
-        decodeRoomOccurrence({ occurrence, catalog, layout, routeKey, routePosition }),
+        decodeRoomOccurrence({
+          occurrence,
+          catalog,
+          layout,
+          routeKey: routePosition.routeKey,
+          routePosition,
+        }),
       ),
     ),
     decisions: structure.decisions,

@@ -6,6 +6,7 @@ import { roomLifecycleProfiles } from './lifecycles';
 import { anomalyRooms } from './rooms/anomaly';
 import { cRooms } from './rooms/c';
 import { chaosRooms } from './rooms/chaos';
+import { dreamRooms } from './rooms/dream';
 import { fRooms } from './rooms/f';
 import { gRooms } from './rooms/g';
 import { hRooms } from './rooms/h';
@@ -26,6 +27,7 @@ const rooms: readonly RawRoomDeclaration[] = [
   ...anomalyRooms,
   ...cRooms,
   ...chaosRooms,
+  ...dreamRooms,
   ...fRooms,
   ...gRooms,
   ...pRooms,

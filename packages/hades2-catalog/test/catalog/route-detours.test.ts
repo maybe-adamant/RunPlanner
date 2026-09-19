@@ -506,13 +506,38 @@ describe('route detour catalog declarations', () => {
     const routeIndex = raw.routes.findIndex((route) => route.key === 'Underworld');
     if (routeIndex < 0) throw new Error('missing Underworld route');
     (
-      raw.routes[routeIndex] as unknown as { postbossRoomGameNames: string[] }
-    ).postbossRoomGameNames = ['F_PostBoss01', 'G_PostBoss01', 'H_PostBoss01', 'F_PostBoss01'];
+      raw.routes[routeIndex] as unknown as {
+        completion: { postbossRoomGameNamesByOrdinal: string[] };
+      }
+    ).completion.postbossRoomGameNamesByOrdinal = [
+      'F_PostBoss01',
+      'G_PostBoss01',
+      'H_PostBoss01',
+      'F_PostBoss01',
+    ];
 
     expect(() => createCatalog(raw)).toThrow(
       new CatalogContractError(
-        `routes[${routeIndex}].postbossRoomGameNames[3]`,
+        `routes[${routeIndex}].completion.postbossRoomGameNamesByOrdinal[3]`,
         'the terminal route position must be null',
+      ),
+    );
+  });
+
+  it('requires Dream completion Preboss identities for every supported biome', () => {
+    const raw = input();
+    const routeIndex = raw.routes.findIndex((route) => route.key === 'Dream');
+    if (routeIndex < 0) throw new Error('missing Dream route');
+    delete (
+      raw.routes[routeIndex] as unknown as {
+        completion: { prebossRoomGameNameByBiomeKey: Record<string, string> };
+      }
+    ).completion.prebossRoomGameNameByBiomeKey.I;
+
+    expect(() => createCatalog(raw)).toThrow(
+      new CatalogContractError(
+        `routes[${routeIndex}].completion.prebossRoomGameNameByBiomeKey`,
+        'must contain exactly one entry for every route biome',
       ),
     );
   });
