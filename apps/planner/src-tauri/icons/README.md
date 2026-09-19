@@ -14,6 +14,10 @@ sizes. The ICO contains the Windows size variants; the ICNS contains the macOS
 artwork. The Square/Store PNGs are reserved for Windows Store packaging.
 Portable builds remain unbundled.
 
+Keep the 256px entry first in the ICO: Tauri uses its first entry as the Windows
+runtime window icon. Retain the smaller, size-specific entries for Windows shell
+icon selection.
+
 The browser favicon uses the supplied 16px and 32px PNGs directly through Vite.
 The game companion's root `icon.png` is a byte-for-byte copy of `256x256.png`;
 its deployment tools stage that root icon into the module's `src/` directory.
