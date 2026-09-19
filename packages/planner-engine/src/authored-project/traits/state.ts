@@ -203,6 +203,8 @@ export interface EquippedTrait {
   readonly steadyGrowthProgress?: number;
   /** Derived retained credit for a declaration-clocked generated-pickup producer. */
   readonly pickupProducerProgress?: number;
+  /** Exact acquisition-time interval retained for an ordinal-scaled pickup producer. */
+  readonly pickupProducerInterval?: number;
 }
 
 /** Exact authored outcome for one declaration-owned Pom acquisition role. */

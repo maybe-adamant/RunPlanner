@@ -648,6 +648,7 @@ describe('authored encounter occurrence commands', () => {
         goldenFBiome,
         selected,
         aliasCatalog.rooms.byKey[selected.gameName]!,
+        1,
       ),
     ).toContainEqual(
       expect.objectContaining({

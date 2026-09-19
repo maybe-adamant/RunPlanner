@@ -246,6 +246,7 @@ export function applyEncounterSettlementTransition(inputs: {
       !inputs.gorgonPhaseBlocked;
     const gorgonTraitContext = Object.freeze({
       ...inputs.routeLoadout,
+      acquisitionOrdinal: inputs.enteredBiomeCount,
       ...(declaration.boonRarityOverride === undefined
         ? {}
         : { boonRarityRoomOverride: declaration.boonRarityOverride }),
@@ -942,6 +943,7 @@ export function applyEncounterSettlementTransition(inputs: {
     );
     const loadout = Object.freeze({
       ...inputs.routeLoadout,
+      acquisitionOrdinal: inputs.enteredBiomeCount,
       ...(declaration.boonRarityOverride === undefined
         ? {}
         : { boonRarityRoomOverride: declaration.boonRarityOverride }),

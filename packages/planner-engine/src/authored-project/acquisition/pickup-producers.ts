@@ -1,4 +1,8 @@
-import type { Catalog, RoomDeclaration } from '../../catalog-schema';
+import {
+  resolveTraitAcquisitionOrdinalEffect,
+  type Catalog,
+  type RoomDeclaration,
+} from '../../catalog-schema';
 import type {
   ProjectDocument,
   RoomActionReference,
@@ -307,6 +311,7 @@ function producerForTraitOffer(
   offer: AuthoredTraitOffer | null | undefined,
   sourceNormal: boolean,
   sourceIsStory: boolean,
+  acquisitionOrdinal: number,
   echoEntryKey?: string,
 ): readonly SelectedPickupProducer[] {
   if (offer?.kind !== 'traits') return Object.freeze([]);
@@ -315,8 +320,9 @@ function producerForTraitOffer(
   const traitKey = selected.traitKey;
   const disposition = catalog.traits.byKey[traitKey]?.selectedDisposition;
   if (disposition?.kind === 'producePickups' && disposition.clock === undefined) {
+    const ordinalEffect = resolveTraitAcquisitionOrdinalEffect(disposition, acquisitionOrdinal);
     const lifecycle = catalog.rewards.producerLifecycles.byKey[disposition.producerLifecycleKey];
-    const placement = disposition.pickups.every((pickup) =>
+    const placement = ordinalEffect.pickups.every((pickup) =>
       lifecycle?.rewardTypes.byKey[pickup.rewardType]?.acquisitionLifecycle.some(
         (binding) => binding.role === 'self' && binding.lifecyclePoint === 'roomExit',
       ),
@@ -333,7 +339,7 @@ function producerForTraitOffer(
         sourceNormal,
         siteKey: traitGeneratedPickupSiteKey(source, offer.selectedOptionKey),
         pickups: Object.freeze(
-          disposition.pickups
+          ordinalEffect.pickups
             .filter((pickup) => !pickup.excludeStorySource || !sourceIsStory)
             .map((pickup) => Object.freeze({ ...pickup, required: false as const })),
         ),
@@ -558,6 +564,7 @@ export function selectedPickupProducers(
   biome: BiomeAddress,
   occurrence: RoomOccurrence,
   declaration: RoomDeclaration,
+  acquisitionOrdinal: number,
 ): readonly SelectedPickupProducer[] {
   return Object.freeze([
     ...traitPickupOffers(catalog, biome, occurrence, declaration).flatMap(
@@ -577,6 +584,7 @@ export function selectedPickupProducers(
           offer,
           sourceNormal,
           sourceIsStory,
+          acquisitionOrdinal,
           echoKey,
         );
       },
@@ -660,9 +668,10 @@ export function activeSelectedPickupProducers(
   biome: BiomeAddress,
   occurrence: RoomOccurrence,
   declaration: RoomDeclaration,
+  acquisitionOrdinal: number,
 ): readonly SelectedPickupProducer[] {
   return Object.freeze(
-    selectedPickupProducers(catalog, biome, occurrence, declaration).filter(
+    selectedPickupProducers(catalog, biome, occurrence, declaration, acquisitionOrdinal).filter(
       (producer) => producer.sourceNormal,
     ),
   );
@@ -676,8 +685,9 @@ export function selectedPickupProducerForEntry(
   declaration: RoomDeclaration,
   siteKey: string,
   entryKey: string,
+  acquisitionOrdinal: number,
 ): SelectedPickupProducer | undefined {
-  return selectedPickupProducers(catalog, biome, occurrence, declaration).find(
+  return selectedPickupProducers(catalog, biome, occurrence, declaration, acquisitionOrdinal).find(
     (producer) =>
       producer.siteKey === siteKey && producer.pickups.some((pickup) => pickup.key === entryKey),
   );
@@ -693,8 +703,15 @@ export function reconcileSelectedPickupProducerState(
   biome: BiomeAddress,
   occurrence: RoomOccurrence,
   declaration: RoomDeclaration,
+  acquisitionOrdinal: number,
 ): RoomOccurrence {
-  const producers = selectedPickupProducers(catalog, biome, occurrence, declaration);
+  const producers = selectedPickupProducers(
+    catalog,
+    biome,
+    occurrence,
+    declaration,
+    acquisitionOrdinal,
+  );
   const echoKeys = new Set(echoLastRewardPickupEntryKeys(catalog, occurrence.encounters));
   const selectedSiteKeys = new Set(producers.map((producer) => producer.siteKey));
   const structuralEntries = new Set(

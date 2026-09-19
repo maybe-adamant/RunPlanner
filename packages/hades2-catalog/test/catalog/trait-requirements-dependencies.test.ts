@@ -152,12 +152,12 @@ describe('trait requirements and dependencies', () => {
     expect(traits?.traits.byKey.FocusAttackDamageTrait?.selectedDisposition).toEqual({
       kind: 'upgradeOccupiedBoonSlot',
       slot: 'Melee',
-      levelCount: 3,
+      levelCountByAcquisitionOrdinal: [3, 3, 3, 5],
     });
     expect(traits?.traits.byKey.FocusSpecialDamageTrait?.selectedDisposition).toEqual({
       kind: 'upgradeOccupiedBoonSlot',
       slot: 'Secondary',
-      levelCount: 3,
+      levelCountByAcquisitionOrdinal: [3, 3, 3, 5],
     });
     expect(traits?.traits.byKey.UpgradeHammerBoon?.targetedAcquisition).toEqual({
       kind: 'upgradeHammerToRank2',

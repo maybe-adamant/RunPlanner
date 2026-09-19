@@ -43,6 +43,8 @@ export type {
   ProperUpbringingEffect,
   TargetedTraitAcquisition,
   TraitSelectedDisposition,
+  TraitAcquisitionOrdinalValues,
+  ResolvedTraitAcquisitionOrdinalEffect,
   DirectTraitSetDeclaration,
   DirectTraitSetKey,
   TraitPickupDeclaration,
@@ -53,6 +55,7 @@ export type {
   HexTalentCandidateDeclaration,
   WeaponDeclaration,
 } from './traits';
+export { resolveTraitAcquisitionOrdinalEffect } from './traits';
 import type {
   AspectDeclaration,
   TraitDeclaration,

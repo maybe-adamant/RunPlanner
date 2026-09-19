@@ -533,6 +533,9 @@ export function foldTraitHistoryEvents(
         ...(event.acquisitionIdentity === undefined
           ? {}
           : { acquisitionIdentity: event.acquisitionIdentity }),
+        ...(event.pickupProducerInterval === undefined
+          ? {}
+          : { pickupProducerInterval: event.pickupProducerInterval }),
         ...(event.echoRepeatedKeepsakeKey === undefined
           ? {}
           : {

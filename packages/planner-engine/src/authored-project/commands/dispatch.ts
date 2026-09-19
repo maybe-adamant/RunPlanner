@@ -64,6 +64,7 @@ function reconcileGeneratedPickupProducerState(
         biome,
         occurrence,
         resolveStartingRoomDeclaration(rawRoom, routePosition),
+        routePosition.ordinal,
       );
       if (reconciled !== occurrence) occurrencesChanged = true;
       return reconciled;

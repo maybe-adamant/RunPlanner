@@ -35,7 +35,7 @@ export const icarusTraits = [
     selectedDisposition: {
       kind: 'upgradeOccupiedBoonSlot',
       slot: 'Melee',
-      levelCount: 3,
+      levelCountByAcquisitionOrdinal: [3, 3, 3, 5],
     },
   },
   {
@@ -62,7 +62,7 @@ export const icarusTraits = [
     selectedDisposition: {
       kind: 'upgradeOccupiedBoonSlot',
       slot: 'Secondary',
-      levelCount: 3,
+      levelCountByAcquisitionOrdinal: [3, 3, 3, 5],
     },
   },
   {
@@ -106,7 +106,7 @@ export const icarusTraits = [
         { key: 'pom1', rewardType: 'StoreRewardRandomStack' },
         { key: 'pom2', rewardType: 'StoreRewardRandomStack' },
       ],
-      clock: { kind: 'qualifyingEncounterEndEffects', interval: 7 },
+      clock: { kind: 'qualifyingEncounterEndEffects', intervalByAcquisitionOrdinal: [7, 7, 7, 3] },
     },
   },
   {

@@ -182,6 +182,7 @@ export function selectedNarcissusPickupSite(
     goldenGBiome,
     occurrence,
     catalog.rooms.byKey[occurrence.gameName]!,
+    3,
   ).find((candidate) => candidate.traitKey?.startsWith('Narcissus') === true);
   if (producer === undefined) throw new Error('selected Narcissus pickup producer is missing');
   return producer.siteKey;

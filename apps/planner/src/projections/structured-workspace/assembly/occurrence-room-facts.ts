@@ -125,6 +125,7 @@ export function assembleOccurrenceRewardLocal(
             input.biome,
             input.occurrence,
             room,
+            input.routePosition.ordinal,
           );
           const activePickups = pickupProducers.flatMap((producer) =>
             producer.pickups.map((pickup) =>

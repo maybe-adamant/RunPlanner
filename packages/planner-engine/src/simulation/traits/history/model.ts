@@ -31,6 +31,8 @@ export interface TraitOfferEvent {
   readonly targetedAcquisitionTransition?: TraitTargetedAcquisitionTransition;
   /** Derived selected-row level from the frozen offer frontier. */
   readonly selectedEffectiveLevel?: number;
+  /** Exact acquired interval for a declaration-clocked ordinal effect. */
+  readonly pickupProducerInterval?: number;
 }
 
 /** A frozen Concave Stone pickup, distinct from the original generated offer. */
@@ -50,6 +52,7 @@ export interface ConcaveStoneSecondaryEvent {
   readonly targetedAcquisitionTransition?: TraitTargetedAcquisitionTransition;
   /** Derived selected-row level from the frozen offer frontier. */
   readonly selectedEffectiveLevel?: number;
+  readonly pickupProducerInterval?: number;
 }
 
 /** A closed derived mutation of an already-equipped Pom-eligible trait. */

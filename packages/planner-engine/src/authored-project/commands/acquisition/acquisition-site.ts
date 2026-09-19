@@ -414,6 +414,7 @@ export function applyAcquisitionSiteCommand(
         catalog.rooms.byKey[occurrence.gameName]!,
         located.routePosition,
       ),
+      located.routePosition.ordinal,
     ).find(
       (candidate) =>
         candidate.siteKey === site.pointKey &&
@@ -529,6 +530,7 @@ export function applyAcquisitionSiteCommand(
         catalog.rooms.byKey[occurrence.gameName]!,
         located.routePosition,
       ),
+      located.routePosition.ordinal,
     ).find(
       (candidate) =>
         candidate.siteKey === 'roomExit' &&

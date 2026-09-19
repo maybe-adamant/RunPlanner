@@ -7,15 +7,20 @@ import {
   acquisitionSiteStorageKey,
   artificerAcquisitionSite,
   artificerReplacementEntryKey,
+  createBatchRewardStoreAddress,
   createAcquisitionSiteAddress,
   createAcquisitionEntryAddress,
   createEncounterPhaseAddress,
   createExitDecisionAddress,
   createLevelResolutionAddress,
   createAcquisitionRoleAddress,
+  createBiomeAddress,
+  createOccurrenceId,
+  createProjectDocument,
   createRouteStartKeepsakeSelectionAddress,
   createOccurrenceAddress,
   createRoomActionAddress,
+  createTargetAddress,
   createTraitOfferAddress,
   createProjectHistory,
   createRouteAddress,
@@ -149,6 +154,93 @@ function pickupSite(project: ProjectDocument) {
 }
 
 describe('Narcissus pickup producer', () => {
+  it('command-reconciles fourth-ordinal Narcissus entries and retracts them with their source', () => {
+    const biome = createBiomeAddress('Dream', 'G');
+    const startId = createOccurrenceId('dream-ordinal-narcissus-start');
+    const storyId = createOccurrenceId('dream-ordinal-narcissus-story');
+    let project = createProjectDocument(catalog, {
+      projectId: 'dream-ordinal-narcissus',
+      routeKey: 'Dream',
+      itineraryBiomeKeys: ['F', 'H', 'I', 'G'],
+      configuredBiomeCount: 4,
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'CreateStart',
+      biome,
+      occurrenceId: startId,
+    });
+    const decision = createExitDecisionAddress(biome, {
+      kind: 'occurrence',
+      occurrenceId: startId,
+    });
+    project = applyProjectCommand(project, catalog, { kind: 'CreateBatch', decision });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceBatchRewardStore',
+      rewardStore: createBatchRewardStoreAddress(biome, decision.source),
+      storeKey: 'MetaProgress',
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'CreateTarget',
+      target: createTargetAddress(biome, decision.source, 'exit1'),
+      occurrenceId: storyId,
+      gameName: 'G_Story01',
+    });
+    const trait = createTraitOfferAddress(
+      createEncounterPhaseAddress(
+        biome,
+        { kind: 'occurrence', occurrenceId: storyId },
+        'Encounter',
+      ),
+      'selection',
+    );
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceTraitOffer',
+      trait,
+      value: {
+        kind: 'traits',
+        giverKey: 'Narcissus',
+        options: [
+          { traitKey: 'NarcissusA' },
+          { traitKey: 'NarcissusB' },
+          { traitKey: 'NarcissusC' },
+        ],
+        selectedOptionKey: 'option1',
+      },
+    });
+    const selectedOccurrence = narcissusOccurrence(project);
+    const site = Object.entries(selectedOccurrence.acquisitionSites ?? {}).find(([, value]) =>
+      Object.hasOwn(value.pickupEntries ?? {}, 'pom'),
+    )?.[0];
+    expect(site).toBeDefined();
+    expect(selectedOccurrence.acquisitionSites?.[site!]?.pickupEntries).toMatchObject({
+      pom: { offer: { rewardType: 'StoreRewardRandomStack' } },
+      pom2: { offer: { rewardType: 'StoreRewardRandomStack' } },
+      pom3: { offer: { rewardType: 'StoreRewardRandomStack' } },
+      pom4: { offer: { rewardType: 'StoreRewardRandomStack' } },
+    });
+    const pom2 = createAcquisitionEntryAddress(
+      createAcquisitionSiteAddress(createOccurrenceAddress(biome, storyId), site!),
+      'pom2',
+    );
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceAcquisitionEntryOffer',
+      entry: pom2,
+      value: { rewardType: 'StoreRewardRandomStack' },
+    });
+    expect(narcissusOccurrence(project).acquisitionSites?.[site!]?.pickupEntries?.pom2).toEqual(
+      expect.objectContaining({ offer: { rewardType: 'StoreRewardRandomStack' } }),
+    );
+    const removed = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceTraitSelection',
+      trait,
+      selectedOptionKey: 'option2',
+    });
+    expect(narcissusOccurrence(removed).acquisitionSites?.[site!]).toBeUndefined();
+    expect(decodeProjectDocument(JSON.parse(encodeProjectDocument(removed)), catalog)).toEqual(
+      removed,
+    );
+  });
+
   it('converts and later picks up an ordered Narcissus Artificer replacement', () => {
     let project = selectNarcissus(createGoldenFGHIProject(), [
       'NarcissusB',
@@ -894,6 +986,7 @@ describe('Narcissus pickup producer', () => {
       goldenGBiome,
       narcissusOccurrence(project),
       catalog.rooms.byKey[narcissusOccurrence(project).gameName]!,
+      3,
     ).find((candidate) => candidate.traitKey === 'RoomRewardBonusBoon');
     expect(producer?.pickups.map((pickup) => pickup.key)).toEqual([
       'smallGold',

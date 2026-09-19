@@ -179,7 +179,7 @@ export type TraitSelectedDisposition =
       /** Icarus equips the source, then increases the eligible trait occupying this slot. */
       readonly kind: 'upgradeOccupiedBoonSlot';
       readonly slot: 'Melee' | 'Secondary';
-      readonly levelCount: 3;
+      readonly levelCountByAcquisitionOrdinal: TraitAcquisitionOrdinalValues;
     }
   | {
       readonly kind: 'naturalSelection';
@@ -244,7 +244,7 @@ export type TraitSelectedDisposition =
       /** Repeating producers defer these pickups to each qualifying encounter-end threshold. */
       readonly clock?: {
         readonly kind: 'qualifyingEncounterEndEffects';
-        readonly interval: number;
+        readonly intervalByAcquisitionOrdinal: TraitAcquisitionOrdinalValues;
       };
     }
   | { readonly kind: 'seaStar' }
@@ -253,8 +253,51 @@ export type TraitSelectedDisposition =
 export interface TraitPickupDeclaration {
   readonly key: string;
   readonly rewardType: string;
+  /** This physical pickup appears only at and after the declared acquisition position. */
+  readonly minimumAcquisitionOrdinal?: 2 | 3 | 4;
   /** Buried Treasure's Bones drop does not exist when the source is a Story reward. */
   readonly excludeStorySource?: true;
+}
+
+/** The only acquisition-ordinal matrix supported for the audited NPC effects. */
+export type TraitAcquisitionOrdinalValues = readonly [number, number, number, number];
+
+/** Complete selected-disposition facts resolved once at an exact acquisition ordinal. */
+export interface ResolvedTraitAcquisitionOrdinalEffect {
+  readonly pickups: readonly TraitPickupDeclaration[];
+  readonly levelCount?: number;
+  readonly clockInterval?: number;
+}
+
+function ordinalValue(values: TraitAcquisitionOrdinalValues, ordinal: number): number {
+  if (!Number.isInteger(ordinal) || ordinal < 1 || ordinal > values.length)
+    throw new Error(`unsupported acquisition ordinal ${ordinal}`);
+  return values[ordinal - 1]!;
+}
+
+/** Resolves only the declaration-backed NPC values which vary by acquisition position. */
+export function resolveTraitAcquisitionOrdinalEffect(
+  disposition: TraitSelectedDisposition,
+  ordinal: number,
+): ResolvedTraitAcquisitionOrdinalEffect {
+  if (disposition.kind === 'upgradeOccupiedBoonSlot')
+    return Object.freeze({
+      pickups: Object.freeze([]),
+      levelCount: ordinalValue(disposition.levelCountByAcquisitionOrdinal, ordinal),
+    });
+  if (disposition.kind !== 'producePickups') return Object.freeze({ pickups: Object.freeze([]) });
+  if (!Number.isInteger(ordinal) || ordinal < 1 || ordinal > 4)
+    throw new Error(`unsupported acquisition ordinal ${ordinal}`);
+  const pickups = disposition.pickups.filter(
+    (pickup) =>
+      pickup.minimumAcquisitionOrdinal === undefined || ordinal >= pickup.minimumAcquisitionOrdinal,
+  );
+  return Object.freeze({
+    pickups: Object.freeze(pickups),
+    ...(disposition.clock === undefined
+      ? {}
+      : { clockInterval: ordinalValue(disposition.clock.intervalByAcquisitionOrdinal, ordinal) }),
+  });
 }
 
 export type HexLayoutKey = 'Lung' | 'Pyramid' | 'Maze' | 'Nacelle';

@@ -463,6 +463,7 @@ export function applyTraitOfferCommand(
         catalog.rooms.byKey[occurrence.gameName]!,
         located.routePosition,
       ),
+      located.routePosition.ordinal,
     );
     return updateOccurrenceTopology(document, located, replaceOccurrence(topology, reconciled));
   }
@@ -553,6 +554,7 @@ export function applyTraitOfferCommand(
           catalog.rooms.byKey[occurrence.gameName]!,
           located.routePosition,
         ),
+        located.routePosition.ordinal,
       ),
     ),
   );

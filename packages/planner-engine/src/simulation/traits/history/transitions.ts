@@ -366,7 +366,9 @@ export function advancePickupProducerProgress(
       trait.acquisitionIdentity === undefined
     )
       continue;
-    const requiredInterval = disposition.clock.interval;
+    const requiredInterval = trait.pickupProducerInterval;
+    if (requiredInterval === undefined)
+      throw new Error(`${trait.traitKey} is missing its acquired pickup-producer interval`);
     const oldProgress = trait.pickupProducerProgress ?? 0;
     const reachedThreshold = oldProgress + 1 >= requiredInterval;
     const matured = reachedThreshold && !deferMaturity;

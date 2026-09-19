@@ -905,6 +905,7 @@ function encounterTraitContext(
         | 'boonRarityItemOverride'
         | 'gorgonResolvedRarity'
         | 'suppressTemporaryBoonRarity'
+        | 'acquisitionOrdinal'
       >
     | undefined,
   freshRarityOverride: import('../../../catalog-schema').TraitRarity | undefined,
@@ -960,6 +961,7 @@ export function settleEncounterTraitOffer(
     | 'boonRarityItemOverride'
     | 'gorgonResolvedRarity'
     | 'suppressTemporaryBoonRarity'
+    | 'acquisitionOrdinal'
   >,
   directTraitSetBranchHistories?: readonly TraitHistoryState[],
   unresolvedProviderKey?: string,
