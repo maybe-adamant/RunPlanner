@@ -9,8 +9,10 @@ import {
   createAcquisitionSiteAddress,
   createAcquisitionRoleAddress,
   createBiomeAddress,
+  createExitDecisionAddress,
   createOccurrenceAddress,
   createOccurrenceId,
+  createProjectDocument,
   createRoomActionAddress,
   createRouteStartKeepsakeSelectionAddress,
   createTargetAddress,
@@ -19,6 +21,7 @@ import {
   roomActionKey,
   semanticAddressKey,
   createDefaultAuthoredHexTree,
+  resolveRoutePosition,
 } from '@run-planner/engine/authored-project';
 import {
   createPreparedProjectCandidateSession,
@@ -47,8 +50,11 @@ import {
 import { createHermesShrineCandidateArtifacts } from '../../src/simulation/commerce/hermes-shrine';
 import { prefixAuthoredRooms } from '../../src/simulation/candidates/evaluated-biome';
 import { composeBiomeHistoryPrefix } from '../../src/simulation/history';
+import { foldBiomeHistoryPrefixEvents } from '../../src/simulation/history/fold';
 import { materializeBiomePrefix } from '../../src/simulation/materialization';
+import { materializeAuthoredRoom } from '../../src/simulation/materialization/rooms/assemble';
 import { evaluateBiomeRewards } from '../../src/simulation/rewards/biome';
+import { applyRoomEnteredTransition } from '../../src/simulation/rewards/biome/lifecycle-transitions/room-entered';
 import { attachTraitHistory, foldTraitHistoryEvents } from '../../src/simulation/traits';
 import { installHexTree, settlePathScreen } from '../../src/simulation/hex-progress';
 import { settleOwnedAcquisitionSite } from '../../src/simulation/rewards/acquisition/site-settlement';
@@ -486,6 +492,197 @@ describe('Hermes Shrine entry inventory gate', () => {
 });
 
 describe('Hermes Shrine delayed deliveries', () => {
+  function dreamPrebossEntry(itineraryBiomeKeys: readonly string[], biomeKey: 'I' | 'Q') {
+    const biome = createBiomeAddress('Dream', biomeKey);
+    const startId = createOccurrenceId(`dream-hermes-${biomeKey.toLowerCase()}-start`);
+    const prebossId = createOccurrenceId(`dream-hermes-${biomeKey.toLowerCase()}-preboss`);
+    let project = createProjectDocument(catalog, {
+      projectId: `dream-hermes-${itineraryBiomeKeys.join('-').toLowerCase()}`,
+      routeKey: 'Dream',
+      itineraryBiomeKeys,
+      configuredBiomeCount: itineraryBiomeKeys.length,
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'CreateStart',
+      biome,
+      occurrenceId: startId,
+    });
+    const start = { kind: 'occurrence' as const, occurrenceId: startId };
+    project = applyProjectCommand(project, catalog, {
+      kind: 'CreateBatch',
+      decision: createExitDecisionAddress(biome, start),
+    });
+    if (biomeKey === 'I') {
+      project = applyProjectCommand(project, catalog, {
+        kind: 'CreateTarget',
+        target: createTargetAddress(biome, start, 'exit1'),
+        occurrenceId: prebossId,
+        gameName: 'I_PreBoss01',
+      });
+    } else {
+      const combatId = createOccurrenceId('dream-hermes-q-combat');
+      project = applyProjectCommand(project, catalog, {
+        kind: 'CreateTarget',
+        target: createTargetAddress(biome, start, 'exit1'),
+        occurrenceId: combatId,
+        gameName: 'Q_Combat10',
+      });
+      project = applyProjectCommand(project, catalog, {
+        kind: 'CreateTakeoverBatch',
+        decision: createExitDecisionAddress(biome, {
+          kind: 'occurrence',
+          occurrenceId: combatId,
+        }),
+        gameName: 'Q_PreBoss01',
+        targetOccurrenceIds: { exit1: prebossId },
+      });
+    }
+    const plan = project.route?.biomes.find((candidate) => candidate.biomeKey === biomeKey);
+    const occurrence = plan?.topology?.occurrences.find(
+      (candidate) => candidate.occurrenceId === prebossId,
+    );
+    if (
+      project.route === undefined ||
+      plan === undefined ||
+      plan.topology === null ||
+      occurrence === undefined
+    )
+      throw new Error('Dream Preboss contact lost its authored occurrence');
+    const routePosition = resolveRoutePosition(catalog, project.route, biomeKey);
+    const declaration = catalog.rooms.byKey[occurrence.gameName];
+    if (declaration === undefined) throw new Error('Dream Preboss declaration is missing');
+    const room = materializeAuthoredRoom({
+      catalog,
+      biome,
+      routePosition,
+      room: declaration,
+      occurrence,
+      role: 'prebossShop',
+      entered: true,
+      lifecycleProfileKey: 'PrebossShopRoom',
+      loadout: project.route.loadout,
+    });
+    // This is a room-entry transition witness, not a complete-route fixture.
+    // Fold the exact Dream occurrence's entry contact rather than borrowing
+    // history from a different route or requiring unrelated opening authorship.
+    const entryEvent = {
+      kind: 'roomEntered' as const,
+      origin: room.origin,
+      sequence: 4,
+      operationIndex: 2,
+    };
+    const history = foldBiomeHistoryPrefixEvents([
+      {
+        kind: 'biomeStarted',
+        origin: biome,
+        sequence: 1,
+        counters: {
+          biomeDepthCache: 0,
+          biomeEncounterDepth: 0,
+          routeEncounterDepth: 0,
+          roomHistoryOrdinal: 0,
+        },
+      },
+      {
+        kind: 'roomCreated',
+        origin: room.origin,
+        sequence: 2,
+        gameName: room.gameName,
+        encounterEnvelopeKey: room.encounterEnvelopeKey,
+        source: 'layoutCompletion',
+        picked: true,
+      },
+      { kind: 'roomPrepared', origin: room.origin, sequence: 3, operationIndex: 0 },
+      entryEvent,
+    ]);
+    const view = history.rooms[0];
+    if (view?.entry === undefined) throw new Error('Dream Preboss entry history is missing');
+    return {
+      room,
+      routePosition,
+      view,
+      entryEvent,
+      source: createOccurrenceAddress(biome, startId),
+    };
+  }
+
+  it.each([
+    ['final non-Q I', ['I'] as const, 'I', true],
+    ['final Q', ['Q'] as const, 'Q', true],
+    ['nonfinal Q', ['Q', 'I'] as const, 'Q', false],
+  ] as const)(
+    '%s publishes a terminal Shrine delivery placement only when the Dream Preboss is final',
+    (_label, itinerary, biomeKey, expectedDelivery) => {
+      const { room, routePosition, view, source, entryEvent } = dreamPrebossEntry(
+        itinerary,
+        biomeKey,
+      );
+      const entryKey = hermesShrineDeliveryEntryKey(source, 'initial:first');
+      const branches = initializeTestRewardBranches().map((branch) =>
+        Object.freeze({
+          ...branch,
+          pendingHermesShrineDeliveries: Object.freeze({
+            [entryKey]: Object.freeze({
+              sourceKey: entryKey,
+              sourceOrigin: source,
+              generationKey: 'initial:first' as const,
+              rewardType: 'HealBigDrop',
+              remainingUses: 8,
+            }),
+          }),
+        }),
+      );
+      const transition = applyRoomEnteredTransition(
+        catalog,
+        entryEvent,
+        room,
+        view,
+        new Set(),
+        new Set(),
+        branches,
+        Object.freeze({
+          kind: 'history' as const,
+          sequence: entryEvent.sequence,
+          boundary: 'at' as const,
+        }),
+        routePosition,
+        { purgingPool: true, hermesShrine: true, stygianWell: true },
+      );
+      const delivery = transition.derivedAcquisitionEntryFrontiers.find(
+        (frontier) => frontier.kind === 'hermesShrineDelivery',
+      );
+      expect(delivery === undefined).toBe(!expectedDelivery);
+      if (!expectedDelivery || delivery === undefined) {
+        expect(transition.hermesShrineDeliveryPlacementRequired).toBe(false);
+        expect(transition.findings).not.toContainEqual(
+          expect.objectContaining({
+            finding: expect.objectContaining({ code: 'hermesShrineDeliveryPlacementRequired' }),
+          }),
+        );
+        expect(transition.branches[0]?.pendingHermesShrineDeliveries[entryKey]).toMatchObject({
+          remainingUses: 8,
+        });
+        expect(transition.branches[0]?.pendingHermesShrineDeliveries[entryKey]).not.toHaveProperty(
+          'dueAt',
+        );
+        return;
+      }
+      expect(transition.hermesShrineDeliveryPlacementRequired).toBe(true);
+      expect(delivery).toMatchObject({
+        address: {
+          site: { owner: room.origin },
+          entryKey,
+        },
+        fixedReward: { offer: { rewardType: 'HealBigDrop' } },
+      });
+      expect(transition.branches[0]?.pendingHermesShrineDeliveries[entryKey]).toMatchObject({
+        remainingUses: 0,
+        dueAt: room.origin,
+        dueSequence: entryEvent.sequence,
+      });
+    },
+  );
+
   it('clamps an unresolved fixed Boss delivery after Preboss and before Postboss', () => {
     const evaluation = simulateProjectAssembly(
       catalog,

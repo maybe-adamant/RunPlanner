@@ -1,0 +1,46 @@
+{
+  "schemaVersion": 84,
+  "projectId": "route-foundation-migration",
+  "catalogVersion": "0.55.0-anvil-of-fates",
+  "route": {
+    "routeKey": "Underworld",
+    "resourcePlacements": {
+      "Pickaxe": null,
+      "Exorcism": null,
+      "Shovel": null,
+      "Fishing": null
+    },
+    "loadout": {
+      "weaponKey": "WeaponStaffSwing",
+      "aspectKey": "BaseStaffAspect",
+      "manualArcanaKeys": [],
+      "fearRanks": {
+        "HealingReductionShrineUpgrade": 0,
+        "ShopPricesShrineUpgrade": 0,
+        "EnemyHealthShrineUpgrade": 0,
+        "EnemyDamageShrineUpgrade": 0,
+        "EnemySpeedShrineUpgrade": 0,
+        "EnemyShieldShrineUpgrade": 0,
+        "EnemyCountShrineUpgrade": 0,
+        "EnemyRespawnShrineUpgrade": 0,
+        "NextBiomeEnemyShrineUpgrade": 0,
+        "BiomeSpeedShrineUpgrade": 0,
+        "MinibossCountShrineUpgrade": 0,
+        "BossDifficultyShrineUpgrade": 0,
+        "BoonSkipShrineUpgrade": 0,
+        "BoonManaReserveShrineUpgrade": 0,
+        "BanUnpickedBoonsShrineUpgrade": 0,
+        "LimitGraspShrineUpgrade": 0,
+        "EnemyEliteShrineUpgrade": 0
+      },
+      "startingKeepsakeKey": "ManaOverTimeRefundKeepsake"
+    },
+    "biomes": [
+      {
+        "biomeKey": "F",
+        "state": {},
+        "topology": null
+      }
+    ]
+  }
+}

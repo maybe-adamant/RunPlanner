@@ -333,6 +333,7 @@ chance and `AnomalyDoorRequirements` pass.
 
 The source-room requirements include:
 
+- a non-Dream route;
 - one Anomaly at most in the current run;
 - a current G route at `BiomeDepthCache >= 3`;
 - source-room exclusions for `G_Shop01`, `G_Story01`, `G_PreBoss01`, and

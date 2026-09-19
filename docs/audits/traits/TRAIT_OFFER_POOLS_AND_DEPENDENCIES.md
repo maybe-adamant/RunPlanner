@@ -270,8 +270,8 @@ benefit-choice entries set their internal scaling tier to Common. The
 individual `TraitData_Icarus.lua` declarations retain wider
 Common/Rare/Epic/Heroic scaling levels, but the player sees no boon rarity and
 the traits do not participate in ordinary boon-rarity mutation. The planner
-therefore authors Icarus without rarity; the Dream-run scaling rewrite remains
-outside the supported route baseline.
+therefore authors Icarus without rarity and resolves its numeric effects from
+the acquisition ordinal; see the [route-position profiles](../rooms-and-routes/ROUTE_POSITION_GAME_DATA_AUDIT.md#npc-acquisition-profiles).
 
 | Trait                      | Player-facing label | Positive offer fact                 | Element / classification           |
 | -------------------------- | ------------------- | ----------------------------------- | ---------------------------------- |
@@ -293,7 +293,7 @@ ordinary Pom predicate. This retains the exact Hephaestus exception: the
 matching Attack or Special trait is no longer eligible once its extracted
 `UnmodifiedCooldown` is not greater than 2, represented by the declaration-owned
 maximum eligible levels. The planner therefore derives the slot target and
-adds three levels without authoring a second random target.
+adds the ordinal-resolved levels without authoring a second random target.
 
 Supply Chain declares `CurrentRoom = 0` and `RoomsPerUpgrade.Amount = 7` in a
 normal run. Each seventh qualifying `CheckChamberTraits` checkpoint resets the
@@ -310,9 +310,9 @@ qualifying encounter-end checkpoint. The planner retains those source-owned
 facts at the shared encounter-end-effects seam and exposes the two Pom Slices
 through the ordinary generated-pickup and direct-level acquisition machinery;
 it does not add a modeled healing mutation or an Icarus-specific Pom path.
-Dream Dive can rewrite Icarus scaling, including the Heroic `3/7`
-multiplier on these declaration values, but Dream Dive rarity/scaling remains
-explicitly deferred.
+Dream's fourth-ordinal interval is three encounters; earlier ordinals retain
+seven. The interval is captured at acquisition. Conditional boss deferral is
+covered by the [scheduled-effects audit](../rooms-and-routes/SCHEDULED_AND_AUTOMATIC_TIMELINE_OUTCOMES_AUDIT.md).
 
 Both Coating traits can later be consumed by combat, and other Icarus combat
 effects remain outside the planner's trait-acquisition scope; selecting each

@@ -311,9 +311,12 @@ otherwise nonqualifying encounters do not. Expiration spawns a required
 pickup, which is mandatory when delivered. A rushed purchase removes pending
 state and spawns the exact required pickup when the Shrine screen closes.
 Multiple purchases remain independent. Forced final-Preboss completion
-delivers all pending Shrine items when `EnteredBiomes == 4`: Dream routes use
-`AutocompleteSurfaceShopDelivery`; the normal fixed route uses the Hermes
-event at `Q_PreBoss01`.
+delivers all pending Shrine items when `EnteredBiomes == 4`: Dream non-Q
+Preboss rooms use `ShopRoomEvents` with `AutocompleteSurfaceShopDelivery`
+(`EncounterSets.lua:415–430`). Q uses `SpawnHermesInPerson` on either route
+(`RoomDataQ.lua:1275–1300`, `EventPresentation.lua:3526–3563`). A non-final Q
+does not flush early. The planner uses resolved itinerary terminality, not
+the room's biome name, for the shared required delivery-pickup product.
 
 Travel Deal applies its first-purchase treatment. Only the first rushed
 purchase refills its vacated slot with a fresh SurfaceShop option, excluding
