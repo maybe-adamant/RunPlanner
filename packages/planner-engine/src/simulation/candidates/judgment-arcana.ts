@@ -1,10 +1,10 @@
 import type { Catalog } from '../../catalog-schema';
 import type { JudgmentArcanaAddress } from '../../authored-project/addresses';
 import type { ProjectDocument } from '../../authored-project/model';
-import { type JudgmentArcanaCandidateArtifacts } from '../arcana-fear';
+import { type JudgmentArcanaCandidateArtifacts, type CurrentArcanaCard } from '../arcana-fear';
 import type { ProjectEvaluation } from '../evaluation/evaluation-products';
 import type { SemanticFinding } from '../model';
-import { unsatisfiedRandomArcanaRequirementKeys } from '../arcana-fear';
+import { unsatisfiedRandomArcanaRequirementKeys, TEMPORARY_ARCANA_RARITY } from '../arcana-fear';
 import { unavailableForBiome, type CandidateContextUnavailable } from './availability';
 
 export interface JudgmentArcanaCandidateQuery {
@@ -15,6 +15,8 @@ export interface JudgmentArcanaCandidateQuery {
 export interface EvaluatedJudgmentArcanaCandidate {
   readonly kind: 'judgmentArcana';
   readonly result: {
+    readonly rarity: typeof TEMPORARY_ARCANA_RARITY;
+    readonly activeArcana: readonly CurrentArcanaCard[];
     readonly requiredCount: number;
     readonly inactiveArcanaKeys: readonly string[];
     readonly selectedPossible: boolean;
@@ -77,6 +79,8 @@ export function evaluateJudgmentArcanaCandidate(
   return Object.freeze({
     kind: 'judgmentArcana',
     result: Object.freeze({
+      rarity: TEMPORARY_ARCANA_RARITY,
+      activeArcana: capability.activeArcana,
       requiredCount: capability.requiredCount,
       inactiveArcanaKeys: capability.inactiveArcanaKeys,
       selectedPossible: findings.length === 0,

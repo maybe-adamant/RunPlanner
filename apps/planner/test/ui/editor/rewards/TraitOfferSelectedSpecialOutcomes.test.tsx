@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { cleanup, render, screen, waitFor } from '@testing-library/react';
+import { cleanup, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { Provider } from 'react-redux';
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -25,7 +25,7 @@ import {
   authoredProjectUndoRequested,
   authoredProjectReplaced,
 } from '@planner/state/projectWorkspaceSlice';
-import { semanticOwnerNavigated } from '@planner/state/editorSessionSlice';
+import { semanticOwnerNavigated, traitOfferDialogOpened } from '@planner/state/editorSessionSlice';
 import type { WorkspaceInteractionCatalog } from '@planner/projections/structured-workspace';
 import { TraitOfferDialog, TraitOfferEditor } from '@planner/ui/editor/rewards/TraitOfferEditor';
 import { TraitOfferCirceResolution } from '@planner/ui/editor/rewards/TraitOfferCirceResolution';
@@ -130,6 +130,11 @@ describe('selected outcomes', () => {
     const vowPicker = pickerModel([Object.freeze({ label: 'Vow of Rivals', value: 'VowRivals' })]);
     const option = Object.freeze({ traitKey: 'RandomArcanaTrait' });
     const activation = Object.freeze({
+      resultRarity: 'Epic' as const,
+      arcanaCards: [
+        { key: 'ArcanaSorceress', label: 'The Sorceress', rarity: null },
+        { key: 'ArcanaTitan', label: 'The Titan', rarity: null },
+      ],
       arcanaPicker,
       arcanaPickerFor: () => arcanaPicker,
       branchAgreement: true,
@@ -150,6 +155,7 @@ describe('selected outcomes', () => {
     );
     await user.click(screen.getByLabelText('Red Citrine Arcana'));
     await user.click(screen.getByText('The Sorceress'));
+    await user.click(screen.getByRole('button', { name: 'Close Red Citrine Arcana' }));
     rerender(
       <TraitOfferCirceResolution
         controlId="circe-effect-switch"
@@ -160,6 +166,9 @@ describe('selected outcomes', () => {
     );
     await user.click(screen.getByLabelText('Black Night Vow'));
     await user.click(screen.getByText('Vow of Rivals'));
+    expect(onSelect).not.toHaveBeenCalled();
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+    expect(screen.queryByRole('dialog', { name: 'Black Night Vow' })).toBeNull();
     expect(onSelect).toHaveBeenLastCalledWith({ kind: 'disableFear', vowKeys: ['VowRivals'] });
   });
 
@@ -1014,6 +1023,16 @@ describe('selected outcomes', () => {
         optionKey: 'option1' as const,
       });
       const domain = Object.freeze({
+        resultRarity:
+          effect === 'disableFear'
+            ? null
+            : effect === 'promoteArcana'
+              ? ('Heroic' as const)
+              : ('Epic' as const),
+        arcanaCards: [
+          { key: 'ArcanaSorceress', label: 'The Sorceress', rarity: null },
+          { key: 'ArcanaTitan', label: 'The Titan', rarity: null },
+        ],
         arcanaPicker: pickerModel([
           Object.freeze({ label: 'The Sorceress', value: 'ArcanaSorceress' }),
           Object.freeze({ label: 'The Titan', value: 'ArcanaTitan' }),
@@ -1105,8 +1124,39 @@ describe('selected outcomes', () => {
         await user.click(screen.getByLabelText('Promoted Arcana'));
         await user.click(await screen.findByText('The Sorceress'));
         await user.click(await screen.findByText('The Titan'));
-        await user.click(screen.getByRole('button', { name: 'Apply Lapis outcome' }));
       }
+      await user.click(screen.getByRole('button', { name: 'Save' }));
+      expect(screen.queryByRole('dialog')).toBeNull();
+      await user.click(
+        screen.getByRole('button', {
+          name: effect === 'promoteArcana' ? 'Promoted Arcana' : label,
+        }),
+      );
+      const effectDialog = screen.getByRole('dialog');
+      expect(within(effectDialog).queryByRole('button', { name: 'Cancel' })).toBeNull();
+      const savedSelectionCount = within(effectDialog).getAllByRole('button', {
+        pressed: true,
+      }).length;
+      await user.click(within(effectDialog).getByRole('button', { name: 'Reset' }));
+      expect(within(effectDialog).queryAllByRole('button', { pressed: true })).toHaveLength(0);
+      expect(
+        (within(effectDialog).getByRole('button', { name: 'Save' }) as HTMLButtonElement).disabled,
+      ).toBe(true);
+      await user.click(within(effectDialog).getByRole('button', { name: /^Close / }));
+      expect(document.activeElement).toBe(
+        screen.getByRole('button', {
+          name: effect === 'promoteArcana' ? 'Promoted Arcana' : label,
+        }),
+      );
+      await user.click(
+        screen.getByRole('button', {
+          name: effect === 'promoteArcana' ? 'Promoted Arcana' : label,
+        }),
+      );
+      expect(
+        within(screen.getByRole('dialog')).getAllByRole('button', { pressed: true }),
+      ).toHaveLength(savedSelectionCount);
+      await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: /^Close / }));
       expect(screen.getByRole('button', { name: 'Save trait offer' })).toHaveProperty(
         'disabled',
         false,
@@ -1125,6 +1175,23 @@ describe('selected outcomes', () => {
         );
       }
       expect(choiceLabel).toBeTruthy();
+      cleanup();
+      application.store.dispatch(traitOfferDialogOpened(interaction.owner));
+      render(
+        <Provider store={application.store}>
+          <TraitOfferDialog interactions={interactions} target={interaction.owner} />
+        </Provider>,
+      );
+      const launcher = screen.getByRole('button', {
+        name: effect === 'promoteArcana' ? 'Promoted Arcana' : label,
+      });
+      await user.click(launcher);
+      expect(screen.getAllByRole('dialog')).toHaveLength(2);
+      const sessionBeforeEscape = application.store.getState().editorSession;
+      await user.keyboard('{Escape}');
+      expect(screen.getAllByRole('dialog')).toHaveLength(1);
+      expect(application.store.getState().editorSession).toBe(sessionBeforeEscape);
+      expect(document.activeElement).toBe(launcher);
       application.dispose();
     },
   );
@@ -1219,6 +1286,16 @@ describe('selected outcomes', () => {
             );
       const domain = Object.freeze({
         arcanaPicker: arcanaEntries,
+        resultRarity:
+          effect === 'disableFear'
+            ? null
+            : effect === 'promoteArcana'
+              ? ('Heroic' as const)
+              : ('Epic' as const),
+        arcanaCards: [
+          { key: 'ArcanaSorceress', label: 'The Sorceress', rarity: null },
+          { key: 'ArcanaTitan', label: 'The Titan', rarity: null },
+        ],
         arcanaPickerFor: () => arcanaEntries,
         branchAgreement,
         effect,
@@ -1281,27 +1358,25 @@ describe('selected outcomes', () => {
       );
 
       if (effect === 'promoteArcana') {
-        expect(screen.getByText(retainedText)).toBeTruthy();
-        expect(
-          (screen.getByRole('button', { name: 'Apply Lapis outcome' }) as HTMLButtonElement)
-            .disabled,
-        ).toBe(true);
+        expect(screen.getAllByText(retainedText).length).toBeGreaterThan(0);
+        await userEvent.setup().click(screen.getByRole('button', { name: 'Promoted Arcana' }));
+        expect((screen.getByRole('button', { name: 'Save' }) as HTMLButtonElement).disabled).toBe(
+          true,
+        );
       } else if (effect !== 'activateArcana') {
         const retained = screen.getByLabelText(controlLabel);
         expect(retained.textContent).toContain(retainedText);
         expect(retained.getAttribute('aria-invalid')).toBe('true');
       }
       if (effect === 'activateArcana') {
-        expect(
-          (
-            screen.getByRole('button', {
-              name: 'Record no Arcana activation',
-            }) as HTMLButtonElement
-          ).disabled,
-        ).toBe(false);
-        await userEvent
-          .setup()
-          .click(screen.getByRole('button', { name: 'Record no Arcana activation' }));
+        const user = userEvent.setup();
+        await user.click(screen.getByRole('button', { name: 'Red Citrine Arcana' }));
+        const popup = screen.getByRole('dialog', { name: 'Red Citrine Arcana' });
+        for (const selected of within(popup).getAllByRole('button', { pressed: true })) {
+          await user.click(selected);
+        }
+        await user.click(within(popup).getByRole('button', { name: 'Save' }));
+        expect(screen.queryByRole('dialog', { name: 'Red Citrine Arcana' })).toBeNull();
         expect(screen.queryByText(retainedText)).toBeNull();
       }
       if (!outerAvailable) {

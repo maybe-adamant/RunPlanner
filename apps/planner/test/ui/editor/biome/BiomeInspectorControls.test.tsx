@@ -571,7 +571,7 @@ describe('Biome inspector controls', () => {
     expect(document.activeElement).toBe(
       document.getElementById(semanticOwnerControlElementId(owner)),
     );
-    expect(inspector.querySelector('.room-judgment-popup')).toBeNull();
+    expect(within(inspector).queryByRole('dialog', { name: 'Judgment editor' })).toBeNull();
     expect(within(inspector).getByText('Start encounter')).toBeTruthy();
     expect(within(inspector).getByText('Boss defeated')).toBeTruthy();
     expect(within(inspector).getByText('End encounter')).toBeTruthy();
@@ -591,16 +591,17 @@ describe('Biome inspector controls', () => {
     act(() => judgmentLauncher.click());
     const optionList = inspector.querySelector('.room-judgment-options');
     if (optionList === null) throw new Error('Judgment options list is missing');
-    expect(optionList.querySelectorAll(':scope > label')).toHaveLength(
+    expect(optionList.querySelectorAll(':scope > button:not(:disabled)')).toHaveLength(
       boss.room.judgment.inactiveArcanaKeys.length,
     );
     for (let index = 0; index < boss.room.judgment.requiredCount; index += 1) {
       const next = within(inspector)
-        .getAllByRole<HTMLInputElement>('checkbox')
-        .find((checkbox) => !checkbox.checked);
+        .getAllByRole<HTMLButtonElement>('button', { pressed: false })
+        .find((button) => !button.disabled);
       if (next === undefined) throw new Error('Judgment picker has too few inactive cards');
       act(() => next.click());
     }
+    act(() => within(inspector).getByRole('button', { name: 'Save' }).click());
     expect(
       view.application.store
         .getState()
@@ -658,8 +659,8 @@ describe('Biome inspector controls', () => {
     const judgmentPopup = within(inspector).getByRole('dialog', { name: 'Judgment editor' });
     for (let index = 0; index < 5; index += 1) {
       const next = within(judgmentPopup)
-        .getAllByRole<HTMLInputElement>('checkbox')
-        .find((checkbox) => !checkbox.checked);
+        .getAllByRole<HTMLButtonElement>('button', { pressed: false })
+        .find((button) => !button.disabled);
       if (next === undefined) throw new Error('Judgment picker has too few inactive cards');
       act(() => next.click());
     }
@@ -667,7 +668,19 @@ describe('Biome inspector controls', () => {
       name: 'Close Judgment editor',
     });
     expect(closeJudgment.classList.contains('quiet-action')).toBe(true);
-    act(() => closeJudgment.click());
+    act(() => within(judgmentPopup).getByRole('button', { name: 'Save' }).click());
+    expect(within(inspector).queryByRole('dialog', { name: 'Judgment editor' })).toBeNull();
+    act(() =>
+      within(inspector)
+        .getByRole('button', { name: /Judgment — choose 5 inactive Arcana cards/ })
+        .click(),
+    );
+    const reopenedJudgment = within(inspector).getByRole('dialog', { name: 'Judgment editor' });
+    act(() => within(reopenedJudgment).getByRole('button', { name: 'Reset' }).click());
+    expect(within(reopenedJudgment).queryAllByRole('button', { pressed: true })).toHaveLength(0);
+    act(() =>
+      within(reopenedJudgment).getByRole('button', { name: 'Close Judgment editor' }).click(),
+    );
     const updatedWorkspace = workspaceProjection(view.application);
     expect(
       updatedWorkspace.interactions.figurineArcana.has(semanticAddressKey(figurineOwner)),
@@ -683,8 +696,8 @@ describe('Biome inspector controls', () => {
     });
     for (let index = 0; index < 2; index += 1) {
       const next = within(figurinePopup)
-        .getAllByRole<HTMLInputElement>('checkbox')
-        .find((checkbox) => !checkbox.checked);
+        .getAllByRole<HTMLButtonElement>('button', { pressed: false })
+        .find((button) => !button.disabled);
       if (next === undefined) throw new Error('Figurine picker has too few inactive cards');
       act(() => next.click());
     }
@@ -696,10 +709,12 @@ describe('Biome inspector controls', () => {
         ?.topology?.occurrences.find(
           (occurrence) => occurrence.occurrenceId === createOccurrenceId('surface-n-preboss:boss'),
         )?.encounters;
+    expect(authored()?.figurineArcanaKeysByPhase?.Encounter ?? []).toHaveLength(0);
+    act(() => within(figurinePopup).getByRole('button', { name: 'Save' }).click());
+    expect(within(inspector).queryByRole('dialog', { name: 'Crystal Figurine editor' })).toBeNull();
     expect(authored()?.judgmentArcanaKeysByPhase?.Encounter).toHaveLength(5);
     expect(authored()?.figurineArcanaKeysByPhase?.Encounter).toHaveLength(2);
 
-    act(() => view.application.store.dispatch(authoredProjectUndoRequested()));
     act(() => view.application.store.dispatch(authoredProjectUndoRequested()));
     expect(authored()?.judgmentArcanaKeysByPhase?.Encounter).toHaveLength(5);
     expect(authored()?.figurineArcanaKeysByPhase?.Encounter ?? []).toHaveLength(0);

@@ -18,7 +18,7 @@ import type {
   AuthoredTraitOfferTraits,
 } from '../../../authored-project/traits/state';
 import { optionIndex, type TraitOptionKey } from '../../../authored-project/traits/state';
-import { circeResolutionDomain } from '../../arcana-fear';
+import { circeResolutionDomain, type CirceResolutionDomain } from '../../arcana-fear';
 import {
   assessTraitOffer,
   assessTraitOfferBeforeRarification,
@@ -136,14 +136,7 @@ export interface TraitOfferCandidateCapability {
   readonly circeResolution: (
     value: AuthoredTraitOffer,
     optionKey: TraitOptionKey,
-  ) => readonly {
-    readonly effect: 'activateArcana' | 'promoteArcana' | 'disableFear';
-    readonly requiredCount: number;
-    readonly arcanaKeys: readonly string[];
-    readonly vowKeys: readonly string[];
-    readonly outerAvailable: boolean;
-    readonly activeArcanaKeys: readonly string[];
-  }[];
+  ) => readonly CirceResolutionDomain[];
   /** Exact selected Echo-Pom greatest-level domains for surviving branches. */
   readonly echoPomTargets: (
     value: AuthoredTraitOffer,
@@ -695,14 +688,7 @@ export function createTraitOfferCandidateArtifacts(
           ),
         circeResolution: (value: AuthoredTraitOffer, optionKey: TraitOptionKey) =>
           Object.freeze(
-            branchContexts.flatMap<{
-              readonly effect: 'activateArcana' | 'promoteArcana' | 'disableFear';
-              readonly requiredCount: number;
-              readonly arcanaKeys: readonly string[];
-              readonly vowKeys: readonly string[];
-              readonly outerAvailable: boolean;
-              readonly activeArcanaKeys: readonly string[];
-            }>((context) => {
+            branchContexts.flatMap<CirceResolutionDomain>((context) => {
               if (value.kind !== 'traits') return [];
               const option = value.options[optionIndex(optionKey)];
               const effect =

@@ -135,6 +135,19 @@ export function bindTraitOfferOptionDomain(input: {
                       catalog.arcanaCards.byKey[key]?.label ?? key;
                     const vowLabel = (key: string) => catalog.fearVows.byKey[key]?.label ?? key;
                     return Object.freeze({
+                      arcanaCards: catalog.arcanaCards.values.map((card) => {
+                        const rarities = new Set(
+                          result.activeArcanaByBranch.map(
+                            (active) =>
+                              active.find((entry) => entry.key === card.key)?.rarity ?? null,
+                          ),
+                        );
+                        return Object.freeze({
+                          key: card.key,
+                          label: card.label,
+                          rarity: rarities.size === 1 ? [...rarities][0]! : 'mixed',
+                        });
+                      }),
                       arcanaPicker: projectDirectTraitOutcomePicker(
                         result.arcanaCandidates,
                         arcanaLabel,
@@ -168,6 +181,7 @@ export function bindTraitOfferOptionDomain(input: {
                         );
                       },
                       branchAgreement: result.branchAgreement,
+                      resultRarity: result.resultRarity,
                       effect: result.effect,
                       outerAvailable: result.outerAvailable,
                       requiredCount: result.requiredCount,

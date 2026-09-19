@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import {
   assessStartingArcanaGrasp,
   createRouteAddress,
@@ -25,6 +26,11 @@ import {
 import { HexTreeEditor } from '@planner/ui/editor/rewards/HexTreeEditor';
 import { FindingCount, StatusBadge } from '../feedback/EvaluationFeedback';
 import { useFindingTarget } from '../feedback/useFindingTarget';
+import { RouteWeaponPicker } from './RouteWeaponPicker';
+import { ArcanaCard } from '@planner/ui/controls/arcana-fear/ArcanaCard';
+import { FearCard } from '@planner/ui/controls/arcana-fear/FearCard';
+
+import { ArcanaFearDialog } from '@planner/ui/controls/arcana-fear/ArcanaFearDialog';
 
 const fearVowGridOrder = Object.freeze([
   'EnemyDamageShrineUpgrade',
@@ -104,6 +110,11 @@ export function RouteOverview({
   });
   const manualArcanaKeys = authoredRoute.loadout.manualArcanaKeys;
   const fearRanks = authoredRoute.loadout.fearRanks;
+  const activeFearCount = fearVows.filter((vow) => fearRanks[vow.key]! > 0).length;
+  const maximumFear = fearVows.reduce(
+    (total, vow) => total + vow.incrementalFear.reduce((sum, fear) => sum + fear, 0),
+    0,
+  );
   const startingKeepsake = createRouteStartKeepsakeSelectionAddress(workspaceRoute.routeKey);
   const keepsake = interactions.keepsakeSelections.get(workspaceInteractionKey(startingKeepsake));
   if (keepsake === undefined)
@@ -139,6 +150,7 @@ export function RouteOverview({
         { readonly owner: { readonly resultKind: 'transcendentEmbryo' } }
       >
     | undefined;
+  const [dialog, setDialog] = useState<'Arcana' | 'Fear'>();
   return (
     <section
       className="route-overview"
@@ -146,263 +158,283 @@ export function RouteOverview({
       tabIndex={-1}
     >
       <header className="panel-heading">
-        <div>
-          <p className="eyebrow">Route settings</p>
-          <h2>{label}</h2>
-        </div>
+        <h2 className="eyebrow route-loadout-heading">Route Loadout</h2>
         <div className="panel-heading-actions">
           <StatusBadge status={feedback.status} />
           <FindingCount count={feedback.findingCount} label={`${label} findings`} />
           <span className="neutral-status">{routeExtent}</span>
         </div>
       </header>
-      <label className="field-control" htmlFor={`${workspaceRoute.routeKey}-configured-prefix`}>
-        <span>Configure route up to</span>
-        <select
-          disabled={navigation.biomePanels.length === 0 && configuredBiomeCount === 0}
-          id={`${workspaceRoute.routeKey}-configured-prefix`}
-          onChange={(event) => {
-            const nextConfiguredBiomeCount = Number(event.target.value);
-            dispatch(
-              authoredProjectCommandDispatched({
-                kind: 'ConfigureRoutePrefix',
-                route: createRouteAddress(workspaceRoute.routeKey),
-                configuredBiomeCount: nextConfiguredBiomeCount,
-              }),
-            );
-          }}
-          value={configuredBiomeCount}
-        >
-          <option value={0}>No biomes</option>
-          {navigation.biomePanels.map((biome, index) => (
-            <option key={biome.biomeKey} value={index + 1}>
-              {biome.label}
-            </option>
-          ))}
-        </select>
-      </label>
-      <p className="panel-description">{routeDescription}</p>
-      {firstBiome === undefined ? null : (
-        <section aria-label="Starting room" className="route-start-room-controls">
-          {firstBiome.entry === undefined ? (
-            start === undefined ? null : (
-              <button
-                {...findingTarget(start.owner)}
-                className="primary-action"
-                onClick={() => executeIntent(start.intent())}
-                type="button"
-              >
-                Start {firstBiome.label}
-              </button>
-            )
-          ) : (
-            <StartRoomIdentityEditor interactions={interactions} node={firstBiome.entry} />
-          )}
-        </section>
-      )}
-      <div className="route-loadout-controls">
-        <div className="route-keepsake-controls">
-          <KeepsakeSelectionPicker
-            id={`${workspaceRoute.routeKey}-starting-keepsake`}
-            interaction={keepsake}
-            label="Starting keepsake"
+      <div className="route-loadout-panel">
+        <div className="route-loadout-controls">
+          <RouteWeaponPicker
+            catalog={catalog}
+            id={`${workspaceRoute.routeKey}-weapon-aspect`}
+            weaponKey={weapon.key}
+            aspectKey={authoredRoute.loadout.aspectKey}
+            onSelect={(weaponKey, aspectKey) =>
+              dispatch(
+                authoredProjectCommandDispatched({
+                  kind: 'ReplaceRouteLoadout',
+                  route: createRouteAddress(workspaceRoute.routeKey),
+                  weaponKey,
+                  aspectKey,
+                }),
+              )
+            }
           />
-          {pom === undefined ? null : (
-            <KeepsakeEquipResultPicker
-              id={`${workspaceRoute.routeKey}-jeweled-pom`}
-              interaction={pom}
-            />
-          )}
-          {experimentalHammer === undefined ? null : (
-            <KeepsakeEquipResultPicker
-              id={`${workspaceRoute.routeKey}-experimental-hammer`}
-              interaction={experimentalHammer}
-            />
-          )}
-          {transcendentEmbryo === undefined ? null : (
-            <KeepsakeEquipResultPicker
-              id={`${workspaceRoute.routeKey}-transcendent-embryo`}
-              interaction={transcendentEmbryo}
-            />
-          )}
-        </div>
-        <div className="route-weapon-controls">
-          <label className="field-control" htmlFor={`${workspaceRoute.routeKey}-weapon`}>
-            <span>Weapon</span>
-            <select
-              id={`${workspaceRoute.routeKey}-weapon`}
-              onChange={(event) => {
-                const next = catalog.weapons.byKey[event.target.value];
-                if (next === undefined) return;
-                dispatch(
-                  authoredProjectCommandDispatched({
-                    kind: 'ReplaceRouteLoadout',
-                    route: createRouteAddress(workspaceRoute.routeKey),
-                    weaponKey: next.key,
-                    aspectKey: next.defaultAspectKey,
-                  }),
-                );
-              }}
-              value={weapon.key}
+          <div className="field-control field-control-inline loadout-dialog-launcher">
+            <label htmlFor={`${workspaceRoute.routeKey}-arcana`}>Starting Arcana</label>
+            <button
+              id={`${workspaceRoute.routeKey}-arcana`}
+              className="contextual-picker-trigger"
+              type="button"
+              aria-label="Edit Arcana"
+              aria-haspopup="dialog"
+              onClick={() => setDialog('Arcana')}
             >
-              {catalog.weapons.values.map((candidate) => (
-                <option key={candidate.key} value={candidate.key}>
-                  {candidate.label}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="field-control" htmlFor={`${workspaceRoute.routeKey}-aspect`}>
-            <span>Aspect</span>
-            <select
-              id={`${workspaceRoute.routeKey}-aspect`}
-              onChange={(event) =>
-                dispatch(
-                  authoredProjectCommandDispatched({
-                    kind: 'ReplaceRouteLoadout',
-                    route: createRouteAddress(workspaceRoute.routeKey),
-                    weaponKey: weapon.key,
-                    aspectKey: event.target.value,
-                  }),
-                )
-              }
-              value={authoredRoute.loadout.aspectKey}
+              Arcana · {derivedLoadout.activeArcanaKeys.length} active ·{' '}
+              {derivedLoadout.startingArcanaGrasp.cost}/
+              {derivedLoadout.startingArcanaGrasp.capacity} Grasp
+            </button>
+          </div>
+          <div className="field-control field-control-inline loadout-dialog-launcher">
+            <label htmlFor={`${workspaceRoute.routeKey}-fear`}>Starting Fear</label>
+            <button
+              id={`${workspaceRoute.routeKey}-fear`}
+              className="contextual-picker-trigger"
+              type="button"
+              aria-label="Edit Fear"
+              aria-haspopup="dialog"
+              onClick={() => setDialog('Fear')}
             >
-              {weapon.aspectKeys.map((aspectKey) => {
-                const aspect = catalog.aspects.byKey[aspectKey];
-                if (aspect === undefined) return null;
-                return (
-                  <option key={aspect.key} value={aspect.key}>
-                    {aspect.label}
-                  </option>
-                );
-              })}
-            </select>
-          </label>
+              Fear · {activeFearCount} active · {derivedLoadout.fearTotal}/{maximumFear} Fear
+            </button>
+          </div>
+          <div className="route-keepsake-controls">
+            <KeepsakeSelectionPicker
+              id={`${workspaceRoute.routeKey}-starting-keepsake`}
+              interaction={keepsake}
+              label="Starting keepsake"
+            />
+            {pom === undefined ? null : (
+              <KeepsakeEquipResultPicker
+                id={`${workspaceRoute.routeKey}-jeweled-pom`}
+                interaction={pom}
+              />
+            )}
+            {experimentalHammer === undefined ? null : (
+              <KeepsakeEquipResultPicker
+                id={`${workspaceRoute.routeKey}-experimental-hammer`}
+                interaction={experimentalHammer}
+              />
+            )}
+            {transcendentEmbryo === undefined ? null : (
+              <KeepsakeEquipResultPicker
+                id={`${workspaceRoute.routeKey}-transcendent-embryo`}
+                interaction={transcendentEmbryo}
+              />
+            )}
+          </div>
         </div>
-      </div>
-      {workspaceRoute.aspectHexTree === undefined ? null : (
-        <HexTreeEditor
-          address={workspaceRoute.aspectHexTree.address}
-          domain={workspaceRoute.aspectHexTree.domain}
-          onChange={(value) =>
-            dispatch(
-              authoredProjectCommandDispatched(
-                workspaceRoute.aspectHexTree!.intentFor(value).command,
-              ),
-            )
-          }
-          transitionFor={workspaceRoute.aspectHexTree.transitionFor}
-        />
-      )}
-      <details
-        aria-label={`Arcana, ${derivedLoadout.activeArcanaKeys.length} active`}
-        className="route-loadout-section"
-      >
-        <summary>
-          Arcana{' '}
-          <span>
-            {derivedLoadout.activeArcanaKeys.length} active ·{' '}
-            {derivedLoadout.startingArcanaGrasp.cost} /{' '}
-            {derivedLoadout.startingArcanaGrasp.capacity} Grasp
-          </span>
-        </summary>
-        <div className="arcana-board">
-          {arcanaCards.map((card) => {
-            const automatic = card.activation.kind === 'automatic';
-            const selected = automatic
-              ? derivedLoadout.automaticArcanaKeys.includes(card.key)
-              : manualArcanaKeys.includes(card.key);
-            const proposedManualArcanaKeys = selected
-              ? manualArcanaKeys.filter((key) => key !== card.key)
-              : [...manualArcanaKeys, card.key];
-            const proposal = automatic
-              ? undefined
-              : assessStartingArcanaGrasp(catalog, proposedManualArcanaKeys, fearRanks);
-            const exceedsGrasp = !selected && proposal?.legal === false;
-            return (
-              <label
-                key={card.key}
-                className="arcana-card-control"
-                data-automatic={automatic}
-                title={
-                  exceedsGrasp
-                    ? `${proposal.cost} Grasp exceeds the starting capacity of ${proposal.capacity}`
-                    : undefined
-                }
-              >
-                <span>
-                  {card.label}
-                  {automatic ? ' (automatic)' : ''}
-                </span>
-                <input
-                  checked={selected}
-                  disabled={automatic || exceedsGrasp}
-                  onChange={() =>
+        {workspaceRoute.aspectHexTree === undefined ? null : (
+          <HexTreeEditor
+            address={workspaceRoute.aspectHexTree.address}
+            domain={workspaceRoute.aspectHexTree.domain}
+            onChange={(value) =>
+              dispatch(
+                authoredProjectCommandDispatched(
+                  workspaceRoute.aspectHexTree!.intentFor(value).command,
+                ),
+              )
+            }
+            transitionFor={workspaceRoute.aspectHexTree.transitionFor}
+          />
+        )}
+        {dialog === 'Arcana' ? (
+          <ArcanaFearDialog title="Arcana" kind="arcana" onClose={() => setDialog(undefined)}>
+            <section
+              role="group"
+              aria-label={`Arcana, ${derivedLoadout.activeArcanaKeys.length} active`}
+              className="route-loadout-section"
+            >
+              <div className="arcana-summary-line">
+                <p className="route-loadout-summary">
+                  Arcana{' '}
+                  <span>
+                    {derivedLoadout.activeArcanaKeys.length} active ·{' '}
+                    {derivedLoadout.startingArcanaGrasp.cost} /{' '}
+                    {derivedLoadout.startingArcanaGrasp.capacity} Grasp
+                  </span>
+                </p>
+                <p className="arcana-legend">Grayscale: inactive · Color: active</p>
+              </div>
+              <div className="arcana-board">
+                {arcanaCards.map((card) => {
+                  const automatic = card.activation.kind === 'automatic';
+                  const selected = automatic
+                    ? derivedLoadout.automaticArcanaKeys.includes(card.key)
+                    : manualArcanaKeys.includes(card.key);
+                  const proposedManualArcanaKeys = selected
+                    ? manualArcanaKeys.filter((key) => key !== card.key)
+                    : [...manualArcanaKeys, card.key];
+                  const proposal = automatic
+                    ? undefined
+                    : assessStartingArcanaGrasp(catalog, proposedManualArcanaKeys, fearRanks);
+                  const exceedsGrasp = !selected && proposal?.legal === false;
+                  return (
+                    <ArcanaCard
+                      key={card.key}
+                      cardKey={card.key}
+                      rarity={
+                        workspaceRoute.startingArcana.find((active) => active.key === card.key)
+                          ?.rarity
+                      }
+                      label={`${card.label}${automatic ? ' (automatic)' : ''}`}
+                      data-automatic={automatic}
+                      aria-pressed={selected}
+                      disabled={automatic || exceedsGrasp}
+                      type="button"
+                      onClick={() =>
+                        dispatch(
+                          authoredProjectCommandDispatched({
+                            kind: 'ReplaceManualArcanaSelection',
+                            route: createRouteAddress(workspaceRoute.routeKey),
+                            arcanaKeys: proposedManualArcanaKeys,
+                          }),
+                        )
+                      }
+                      title={
+                        exceedsGrasp
+                          ? `${proposal.cost} Grasp exceeds the starting capacity of ${proposal.capacity}`
+                          : automatic
+                            ? 'Activates automatically when its conditions are met.'
+                            : undefined
+                      }
+                    />
+                  );
+                })}
+              </div>
+            </section>
+          </ArcanaFearDialog>
+        ) : null}
+        {dialog === 'Fear' ? (
+          <ArcanaFearDialog title="Fear" kind="fear" onClose={() => setDialog(undefined)}>
+            <section
+              role="group"
+              aria-label={`Fear, ${derivedLoadout.fearTotal} total`}
+              className="route-loadout-section"
+            >
+              <p className="route-loadout-summary">
+                Fear <span>{derivedLoadout.fearTotal} total</span>
+              </p>
+              <p className="panel-description">Click to cycle ranks · Right-click to reset</p>
+              <div className="fear-rank-list">
+                {fearVows.map((vow) => {
+                  const rank = fearRanks[vow.key] ?? 0;
+                  const maximum = vow.incrementalFear.length;
+                  const nextRank = rank >= maximum ? 0 : rank + 1;
+                  const canSetRank = (value: number) =>
+                    assessStartingArcanaGrasp(catalog, manualArcanaKeys, {
+                      ...fearRanks,
+                      [vow.key]: value,
+                    }).legal;
+                  const canAdvance = canSetRank(nextRank);
+                  const setRank = (value: number) => {
+                    if (value === rank || !canSetRank(value)) return;
                     dispatch(
                       authoredProjectCommandDispatched({
-                        kind: 'ReplaceManualArcanaSelection',
+                        kind: 'ReplaceFearVowRank',
                         route: createRouteAddress(workspaceRoute.routeKey),
-                        arcanaKeys: proposedManualArcanaKeys,
+                        vowKey: vow.key,
+                        rank: value,
                       }),
-                    )
-                  }
-                  type="checkbox"
-                />
-              </label>
-            );
-          })}
-        </div>
-      </details>
-      <details
-        aria-label={`Fear, ${derivedLoadout.fearTotal} total`}
-        className="route-loadout-section"
-      >
-        <summary>
-          Fear <span>{derivedLoadout.fearTotal} total</span>
-        </summary>
-        <div className="fear-rank-list">
-          {fearVows.map((vow) => (
-            <label
-              key={vow.key}
-              className="field-control fear-rank-control"
-              data-fear-vow-key={vow.key}
-              data-rival={vow.key === 'BossDifficultyShrineUpgrade' || undefined}
+                    );
+                  };
+                  return (
+                    <FearCard
+                      key={vow.key}
+                      vowKey={vow.key}
+                      label={vow.label}
+                      rank={rank}
+                      maximum={maximum}
+                      type="button"
+                      className="fear-rank-control"
+                      aria-label={`${vow.label}, rank ${rank} of ${maximum}`}
+                      aria-disabled={!canAdvance}
+                      data-active={rank > 0 || undefined}
+                      title={
+                        canAdvance
+                          ? undefined
+                          : 'This rank would exceed your available Arcana Grasp. Lower Arcana Grasp first.'
+                      }
+                      data-fear-vow-key={vow.key}
+                      data-rival={vow.key === 'BossDifficultyShrineUpgrade' || undefined}
+                      onClick={() => setRank(nextRank)}
+                      onContextMenu={(event) => {
+                        event.preventDefault();
+                        setRank(0);
+                      }}
+                    />
+                  );
+                })}
+              </div>
+            </section>
+          </ArcanaFearDialog>
+        ) : null}
+      </div>
+      <div className="route-configuration">
+        <div className="field-control field-control-inline">
+          <span id={`${workspaceRoute.routeKey}-configured-prefix`}>Biomes to configure</span>
+          <div className="route-prefix-summary">
+            <div
+              className="route-prefix-options"
+              role="radiogroup"
+              aria-labelledby={`${workspaceRoute.routeKey}-configured-prefix`}
             >
-              <span>{vow.label}</span>
-              <select
-                aria-label={`${vow.label} rank`}
-                value={fearRanks[vow.key]}
-                onChange={(event) =>
-                  dispatch(
-                    authoredProjectCommandDispatched({
-                      kind: 'ReplaceFearVowRank',
-                      route: createRouteAddress(workspaceRoute.routeKey),
-                      vowKey: vow.key,
-                      rank: Number(event.target.value),
-                    }),
-                  )
-                }
-              >
-                {Array.from({ length: vow.incrementalFear.length + 1 }, (_, rank) => (
-                  <option
-                    key={rank}
-                    value={rank}
-                    disabled={
-                      !assessStartingArcanaGrasp(catalog, manualArcanaKeys, {
-                        ...fearRanks,
-                        [vow.key]: rank,
-                      }).legal
+              {navigation.biomePanels.map((biome, index) => (
+                <label key={biome.biomeKey}>
+                  <input
+                    type="radio"
+                    name={`${workspaceRoute.routeKey}-configured-prefix`}
+                    value={index + 1}
+                    checked={configuredBiomeCount === index + 1}
+                    onChange={() =>
+                      dispatch(
+                        authoredProjectCommandDispatched({
+                          kind: 'ConfigureRoutePrefix',
+                          route: createRouteAddress(workspaceRoute.routeKey),
+                          configuredBiomeCount: index + 1,
+                        }),
+                      )
                     }
-                  >
-                    {rank}
-                  </option>
-                ))}
-              </select>
-            </label>
-          ))}
+                  />
+                  {index + 1}
+                </label>
+              ))}
+            </div>
+            <p className="route-prefix-description">{routeDescription}</p>
+          </div>
         </div>
-      </details>
+        {firstBiome === undefined ? null : (
+          <section aria-label="Starting room" className="route-start-room-controls">
+            {firstBiome.entry === undefined ? (
+              start === undefined ? null : (
+                <button
+                  {...findingTarget(start.owner)}
+                  className="primary-action"
+                  onClick={() => executeIntent(start.intent())}
+                  type="button"
+                >
+                  Start {firstBiome.label}
+                </button>
+              )
+            ) : (
+              <StartRoomIdentityEditor interactions={interactions} node={firstBiome.entry} />
+            )}
+          </section>
+        )}
+      </div>
     </section>
   );
 }

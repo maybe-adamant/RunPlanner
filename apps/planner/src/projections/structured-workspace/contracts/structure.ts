@@ -483,6 +483,7 @@ export interface WorkspaceRouteRailBiome {
 }
 
 export interface WorkspaceRoute {
+  readonly startingArcana: readonly { readonly key: string; readonly rarity: string }[];
   readonly aspectHexTree?: WorkspaceAspectHexTreeControl;
   readonly biomes: readonly WorkspaceBiome[];
   readonly label: string;

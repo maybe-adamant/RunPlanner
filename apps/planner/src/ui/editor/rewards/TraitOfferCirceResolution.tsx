@@ -3,107 +3,11 @@ import type {
   AuthoredTraitOfferTraits,
 } from '@run-planner/engine/authored-project';
 import { useState } from 'react';
-
-import type { ContextualPickerModel } from '@planner/projections/contextual/contextualPicker';
 import type { WorkspaceCirceResolutionDomain } from '@planner/projections/structured-workspace';
-import { ContextualPicker } from '@planner/ui/controls/ContextualPicker';
+import { ArcanaCard } from '@planner/ui/controls/arcana-fear/ArcanaCard';
+import { FearCard } from '@planner/ui/controls/arcana-fear/FearCard';
+import { ArcanaFearDialog } from '@planner/ui/controls/arcana-fear/ArcanaFearDialog';
 import type { FindingTargetProps } from '@planner/ui/feedback/useFindingTarget';
-
-function pickerValueLabel<T>(model: ContextualPickerModel<T>, value: T): string | undefined {
-  return model.sections
-    .flatMap((section) => section.items)
-    .find((item) => Object.is(item.value, value))?.label;
-}
-
-function CirceMultiSelection({
-  applyLabel,
-  ariaLabel,
-  choiceLabel,
-  controlId,
-  current,
-  disabled,
-  emptyLabel,
-  findingTarget,
-  label,
-  picker,
-  pickerFor,
-  requiredCount,
-  onApply,
-}: {
-  readonly applyLabel: string;
-  readonly ariaLabel: string;
-  readonly choiceLabel: string;
-  readonly controlId: string;
-  readonly current: readonly string[];
-  readonly disabled: boolean;
-  readonly emptyLabel: string;
-  readonly findingTarget?: FindingTargetProps;
-  readonly label: string;
-  readonly picker: ContextualPickerModel<string>;
-  readonly pickerFor: (selectedKeys: readonly string[]) => ContextualPickerModel<string>;
-  readonly requiredCount: number;
-  readonly onApply: (keys: readonly string[]) => void;
-}) {
-  const [draft, setDraft] = useState<readonly string[]>(current);
-  const [open, setOpen] = useState(false);
-  const complete = draft.length === requiredCount;
-  return (
-    <fieldset className="trait-circe-resolution">
-      <legend>{`${label} (${requiredCount})`}</legend>
-      <p className="trait-outcome-draft">
-        {draft.length === 0
-          ? emptyLabel
-          : draft.map((key) => pickerValueLabel(picker, key) ?? key).join(' · ')}
-      </p>
-      {requiredCount > 0 || current.length > 0 ? (
-        <ContextualPicker
-          {...(findingTarget === undefined ? {} : { findingTarget })}
-          cancelLabel="Cancel"
-          choiceLabel={`${choiceLabel} ${draft.length + 1} of ${requiredCount}`}
-          closeOnSelect={false}
-          id={controlId}
-          label={ariaLabel}
-          model={pickerFor(draft)}
-          onOpenChange={(nextOpen) => {
-            setOpen(nextOpen);
-            if (nextOpen && complete) setDraft(Object.freeze([]));
-            if (!nextOpen && !complete) setDraft(current);
-          }}
-          onSelect={(key) => {
-            const next = Object.freeze([...draft, key]);
-            setDraft(next);
-            if (next.length === requiredCount) {
-              setOpen(false);
-              if (requiredCount === 1) onApply(next);
-            }
-          }}
-          open={open}
-          placeholder={`Choose distinct ${choiceLabel}`}
-        />
-      ) : null}
-      <div className="trait-outcome-actions">
-        <button
-          className="quiet-action action-compact"
-          disabled={!complete || disabled}
-          onClick={() => onApply(draft)}
-          type="button"
-        >
-          {applyLabel}
-        </button>
-        <button
-          className="quiet-action action-compact"
-          onClick={() => {
-            setOpen(false);
-            setDraft(current);
-          }}
-          type="button"
-        >
-          Cancel
-        </button>
-      </div>
-    </fieldset>
-  );
-}
 
 export function TraitOfferCirceResolution({
   controlId,
@@ -114,88 +18,150 @@ export function TraitOfferCirceResolution({
 }: {
   readonly controlId: string;
   readonly findingTarget?: FindingTargetProps;
-  readonly domain: WorkspaceCirceResolutionDomain;
+  readonly domain: WorkspaceCirceResolutionDomain | undefined;
   readonly option: AuthoredTraitOfferTraits['options'][number];
   readonly onSelect: (resolution: AuthoredCirceResolution) => void;
 }) {
+  const [draft, setDraft] = useState<{
+    title: string;
+    kind: 'arcana' | 'fear';
+    keys: readonly string[];
+  } | null>(null);
   const current = option.circeResolution;
-  const unavailableMessage = !domain.outerAvailable
-    ? 'This Circe trait has no available outcome here.'
-    : !domain.branchAgreement
-      ? 'No outcome is supported across every route branch.'
-      : undefined;
-  const disabled = !domain.outerAvailable || !domain.branchAgreement;
-  if (domain.effect === 'disableFear') {
-    return (
-      <>
-        {unavailableMessage === undefined ? null : (
-          <p className="feedback-text">{unavailableMessage}</p>
-        )}
-        <CirceMultiSelection
-          applyLabel="Apply Black Night outcome"
-          ariaLabel="Black Night Vow"
-          choiceLabel="Vow"
-          controlId={controlId}
-          current={current?.kind === 'disableFear' ? current.vowKeys : Object.freeze([])}
-          disabled={disabled}
-          emptyLabel="No Vows chosen."
-          {...(findingTarget === undefined ? {} : { findingTarget })}
-          label="Vows to suppress"
-          onApply={(vowKeys) => onSelect(Object.freeze({ kind: 'disableFear', vowKeys }))}
-          picker={domain.vowPicker}
-          pickerFor={domain.vowPickerFor}
-          requiredCount={domain.requiredCount}
-          key={domain.effect}
-        />
-      </>
-    );
-  }
-  const selected =
-    current?.kind === domain.effect ? current.arcanaKeys : (Object.freeze([]) as readonly string[]);
-  if (domain.effect === 'activateArcana' && domain.requiredCount === 0) {
-    return (
-      <>
-        {unavailableMessage === undefined ? null : (
-          <p className="feedback-text">{unavailableMessage}</p>
-        )}
-        {!disabled ? (
-          <button
-            className="quiet-action action-compact"
-            onClick={() =>
-              onSelect(Object.freeze({ kind: 'activateArcana', arcanaKeys: Object.freeze([]) }))
-            }
-            type="button"
-          >
-            Record no Arcana activation
-          </button>
-        ) : null}
-      </>
-    );
-  }
-  const activation = domain.effect === 'activateArcana';
+  const currentKeys =
+    current === undefined
+      ? []
+      : current.kind === 'disableFear'
+        ? current.vowKeys
+        : current.arcanaKeys;
+  const fear = domain?.effect === 'disableFear';
+  const title = fear
+    ? 'Black Night Vow'
+    : domain?.effect === 'activateArcana'
+      ? 'Red Citrine Arcana'
+      : 'Promoted Arcana';
+  const picker = fear ? domain?.vowPicker : domain?.arcanaPicker;
+  const labelFor = (key: string) =>
+    picker?.sections.flatMap((section) => section.items).find((item) => item.value === key)
+      ?.label ?? key;
+  const unavailableMessage =
+    domain === undefined
+      ? undefined
+      : !domain.outerAvailable
+        ? 'This Circe trait has no available outcome here.'
+        : !domain.branchAgreement
+          ? 'No outcome is supported across every route branch.'
+          : undefined;
+  const disabled = domain === undefined || unavailableMessage !== undefined;
+  const complete = draft?.keys.length === domain?.requiredCount;
+  const candidates =
+    domain === undefined || draft === null
+      ? []
+      : (fear
+          ? domain.vowPickerFor(draft.keys)
+          : domain.arcanaPickerFor(draft.keys)
+        ).sections.flatMap((section) => section.items);
+  const choices = fear
+    ? (picker?.sections.flatMap((section) => section.items) ?? [])
+    : (domain?.arcanaCards.map((card) => ({ value: card.key, label: card.label })) ?? []);
   return (
     <>
-      {unavailableMessage === undefined ? null : (
-        <p className="feedback-text">{unavailableMessage}</p>
+      <fieldset className="trait-circe-resolution" hidden={domain === undefined}>
+        <legend>
+          {fear
+            ? 'Vows to suppress'
+            : domain?.effect === 'activateArcana'
+              ? 'Red Citrine Arcana'
+              : 'Lapis Arcana'}{' '}
+          ({domain?.requiredCount})
+        </legend>
+        {unavailableMessage === undefined ? null : (
+          <p className="feedback-text">{unavailableMessage}</p>
+        )}
+        <button
+          {...findingTarget}
+          id={controlId}
+          className="contextual-picker-trigger"
+          type="button"
+          aria-label={title}
+          aria-invalid={picker?.selected?.disabled || undefined}
+          aria-haspopup="dialog"
+          onClick={() => setDraft({ title, kind: fear ? 'fear' : 'arcana', keys: currentKeys })}
+        >
+          {currentKeys.length === 0 ? title : currentKeys.map(labelFor).join(' · ')}
+        </button>
+      </fieldset>
+      {draft === null ? null : (
+        <ArcanaFearDialog
+          title={draft.title}
+          kind={draft.kind}
+          onClose={() => setDraft(null)}
+          onReset={() => setDraft({ ...draft, keys: [] })}
+          saveDisabled={disabled || !complete}
+          onSave={() => {
+            if (domain === undefined) return;
+            onSelect(
+              domain.effect === 'disableFear'
+                ? { kind: 'disableFear', vowKeys: draft.keys }
+                : { kind: domain.effect, arcanaKeys: draft.keys },
+            );
+          }}
+        >
+          {domain === undefined ? (
+            <p>Loading choices…</p>
+          ) : (
+            <>
+              <p className="route-loadout-summary">
+                Choose {domain.requiredCount} {fear ? 'Vows to suppress' : 'Arcana cards in order'}.{' '}
+                {draft.keys.length} selected.
+              </p>
+              <div
+                role="group"
+                aria-label={`${draft.title} cards`}
+                className={fear ? 'fear-rank-list' : 'arcana-board'}
+              >
+                {choices.map((choice) => {
+                  const selected = draft.keys.includes(choice.value);
+                  const candidate = candidates.find((item) => item.value === choice.value);
+                  const props = {
+                    'aria-pressed': selected,
+                    disabled:
+                      disabled ||
+                      (!selected && (complete || candidate === undefined || candidate.disabled)),
+                    title: candidate?.explanation,
+                    onClick: () =>
+                      setDraft({
+                        ...draft,
+                        keys: selected
+                          ? draft.keys.filter((key) => key !== choice.value)
+                          : [...draft.keys, choice.value],
+                      }),
+                  };
+                  return fear ? (
+                    <FearCard
+                      key={choice.value}
+                      {...props}
+                      vowKey={choice.value}
+                      label={choice.label}
+                      aria-label={choice.label}
+                    />
+                  ) : (
+                    <ArcanaCard
+                      key={choice.value}
+                      {...props}
+                      cardKey={choice.value}
+                      label={choice.label}
+                      rarity={domain.arcanaCards.find((card) => card.key === choice.value)?.rarity}
+                      resultRarity={domain.resultRarity}
+                      selectionOrder={selected ? draft.keys.indexOf(choice.value) + 1 : undefined}
+                    />
+                  );
+                })}
+              </div>
+            </>
+          )}
+        </ArcanaFearDialog>
       )}
-      <CirceMultiSelection
-        applyLabel={activation ? 'Apply Red Citrine outcome' : 'Apply Lapis outcome'}
-        ariaLabel={activation ? 'Red Citrine Arcana' : 'Promoted Arcana'}
-        choiceLabel="Arcana"
-        controlId={controlId}
-        current={selected}
-        disabled={disabled}
-        emptyLabel="No Arcana chosen."
-        {...(findingTarget === undefined ? {} : { findingTarget })}
-        label={activation ? 'Red Citrine Arcana' : 'Lapis Arcana'}
-        onApply={(arcanaKeys) =>
-          onSelect(Object.freeze({ kind: domain.effect, arcanaKeys }) as AuthoredCirceResolution)
-        }
-        picker={domain.arcanaPicker}
-        pickerFor={domain.arcanaPickerFor}
-        requiredCount={domain.requiredCount}
-        key={domain.effect}
-      />
     </>
   );
 }

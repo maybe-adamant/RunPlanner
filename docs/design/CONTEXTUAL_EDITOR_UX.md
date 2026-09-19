@@ -647,7 +647,14 @@ global rarity ledger.
 
 Selected child controls follow the live draft immediately. Targeted traits use
 the shared target picker; Natural Selection uses one ordered compound result;
-Circe uses the engine-provided Arcana or Vow domain. Ransom effects have a
+Circe uses the engine-provided Arcana or Vow domain. Loadout, Circe, Judgment,
+and Figurine share artwork cards and accessible dialogs, not selection policy.
+Loadout changes apply immediately. Effect dialogs keep a local selection until
+Save, which applies it and closes; Close discards only unsaved changes.
+Arcana borders and overlaid Roman numerals encode rank (Common green, Rare blue, Epic purple, Heroic red);
+checkmarks or numbered pick badges encode selection. Current ranks come from
+the exact engine context; selected effect targets explicitly preview the grant
+rank through hover and accessibility text, and branch-varying ranks are not collapsed to one color. Ransom effects have a
 read-only preview, not invented authored targets. A missing or stale selected
 child remains repairable and prevents saving the incomplete outcome.
 

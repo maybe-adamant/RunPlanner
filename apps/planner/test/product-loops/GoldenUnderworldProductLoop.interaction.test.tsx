@@ -622,7 +622,11 @@ describe('underworld product loop', () => {
     await application.projectOperations.createNew('Underworld');
     const view = renderPlannerForInteraction({ application });
 
-    await view.user.selectOptions(screen.getByLabelText('Configure route up to'), '2');
+    await view.user.click(
+      within(screen.getByRole('radiogroup', { name: 'Biomes to configure' })).getByRole('radio', {
+        name: '2',
+      }),
+    );
     await view.user.click(screen.getByRole('button', { name: 'Oceanus' }));
     expect(screen.getByText('Finish and fix Erebus before Oceanus can be evaluated.')).toBeTruthy();
     const start = screen.getByRole('button', { name: 'Start biome' });
@@ -639,7 +643,7 @@ describe('underworld product loop', () => {
     await application.projectOperations.createNew('Underworld');
     application.store.dispatch(
       authoredProjectCommandDispatched({
-        configuredBiomeCount: 1,
+        configuredBiomeCount: 2,
         kind: 'ConfigureRoutePrefix',
         route: { kind: 'route', routeKey: 'Underworld' },
       }),
@@ -656,9 +660,13 @@ describe('underworld product loop', () => {
     const view = renderPlannerForInteraction({ application });
     const confirmation = vi.spyOn(globalThis, 'confirm');
 
-    await view.user.click(screen.getByRole('button', { name: 'Route' }));
-    await view.user.selectOptions(screen.getByLabelText('Configure route up to'), '0');
-    expect(currentEvaluation(application).status).toBe('empty');
+    await view.user.click(screen.getByRole('button', { name: 'Loadout' }));
+    await view.user.click(
+      within(screen.getByRole('radiogroup', { name: 'Biomes to configure' })).getByRole('radio', {
+        name: '1',
+      }),
+    );
+    expect(currentProject(application).route.biomes).toHaveLength(1);
     expect(confirmation).not.toHaveBeenCalled();
 
     await view.user.click(screen.getByRole('button', { name: 'Undo' }));

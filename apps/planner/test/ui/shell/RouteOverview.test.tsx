@@ -43,6 +43,17 @@ function routeOverviewMarkup(application: ReturnType<typeof createApplication>):
 }
 
 describe('RouteOverview', () => {
+  it('keeps a loaded zero-biome project unchanged while offering only positive counts', () => {
+    const application = createOpenTestApplication('Underworld');
+    const before = application.store.getState().projectWorkspace.history!.present;
+    const markup = routeOverviewMarkup(application);
+    expect(markup).toContain('Biomes to configure');
+    expect(markup).not.toContain('type="radio" name="Underworld-configured-prefix" checked=""');
+    expect(markup).not.toContain('value="0"');
+    expect(before.route.biomes).toHaveLength(0);
+    expect(application.store.getState().projectWorkspace.history!.present).toBe(before);
+  });
+
   it('presents the configured route extent and included biomes', () => {
     const application = createOpenTestApplication('Underworld');
 
@@ -62,6 +73,11 @@ describe('RouteOverview', () => {
       const markup = routeOverviewMarkup(application);
       expect(markup).toContain(extent);
       expect(markup).toContain(description);
+      expect(markup).toContain('Biomes to configure');
+      expect(markup).toContain(`checked="" value="${configuredBiomeCount}"`);
+      expect(markup.indexOf('aria-label="Edit Arcana"')).toBeLessThan(
+        markup.indexOf('Biomes to configure'),
+      );
     }
 
     expect(routeOverviewMarkup(application)).not.toContain('contiguous route prefix');
@@ -91,7 +107,7 @@ describe('RouteOverview', () => {
     expect(routeOverviewMarkup(application)).not.toContain('Hex talent layout');
   });
 
-  it('owns F start creation and its room and reward controls in Route settings', () => {
+  it('owns F start creation and its room and reward controls in Route Loadout', () => {
     const application = createOpenTestApplication('Underworld');
     application.store.dispatch(
       authoredProjectCommandDispatched({

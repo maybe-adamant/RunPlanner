@@ -1,5 +1,9 @@
 import type { Catalog } from '../../../catalog-schema';
-import { unsatisfiedRandomArcanaRequirementKeys } from '../../arcana-fear';
+import {
+  unsatisfiedRandomArcanaRequirementKeys,
+  TEMPORARY_ARCANA_RARITY,
+  PROMOTED_ARCANA_RARITY,
+} from '../../arcana-fear';
 import { optionIndex } from '../../../authored-project/traits/state';
 import type { ProjectDocument } from '../../../authored-project/model';
 import type { TraitOfferCandidateArtifacts, TraitOfferCandidateCapability } from './capability';
@@ -75,6 +79,13 @@ export function evaluateCirceResolutionDomain(
     kind: 'circeResolutionDomain',
     result: Object.freeze({
       effect: first.effect,
+      activeArcanaByBranch: Object.freeze(values.map((value) => value.activeArcana)),
+      resultRarity:
+        first.effect === 'disableFear'
+          ? null
+          : first.effect === 'promoteArcana'
+            ? PROMOTED_ARCANA_RARITY
+            : TEMPORARY_ARCANA_RARITY,
       requiredCount: branchAgreement ? first.requiredCount : 0,
       branchAgreement,
       arcanaCandidates: outcomeCandidates(

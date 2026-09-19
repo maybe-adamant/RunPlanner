@@ -292,6 +292,12 @@ export type WorkspaceRansomAssessment =
     };
 
 export interface WorkspaceCirceResolutionDomain {
+  readonly arcanaCards: readonly {
+    readonly key: string;
+    readonly label: string;
+    readonly rarity: string | null;
+  }[];
+  readonly resultRarity: 'Epic' | 'Heroic' | null;
   readonly arcanaPicker: ContextualPickerModel<string>;
   readonly arcanaPickerFor: (selectedKeys: readonly string[]) => ContextualPickerModel<string>;
   readonly branchAgreement: boolean;

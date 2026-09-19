@@ -527,6 +527,13 @@ describe('project profile operations', () => {
     const profile = createProfileFixture();
     const application = createApplication({ profileFile: profile.adapter });
     configureF(application);
+    application.store.dispatch(
+      authoredProjectCommandDispatched({
+        kind: 'ConfigureRoutePrefix',
+        route: createRouteAddress('Underworld'),
+        configuredBiomeCount: 2,
+      }),
+    );
     const savedProject = presentProject(application);
     const savedEvaluation = presentEvaluation(application);
     const savedJson = encodeProjectDocument(savedProject);
@@ -554,7 +561,8 @@ describe('project profile operations', () => {
     expect(selectProfileSession(application.store.getState()).fileName).toBeNull();
     expect(presentHistory(application).past).toEqual([]);
     expect(presentHistory(application).future).toEqual([]);
-    expect(presentEvaluation(application).status).toBe('empty');
+    expect(presentProject(application).route.biomes.map((biome) => biome.biomeKey)).toEqual(['F']);
+    expect(presentEvaluation(application).status).toBe('incomplete');
     profile.setLoadJson(savedJson, 'erebus-route.runplanner.json');
 
     await expect(application.projectOperations.loadProfile()).resolves.toEqual({

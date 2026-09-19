@@ -4,7 +4,7 @@ import type { Catalog } from '../../catalog-schema';
 import { type FigurineArcanaCandidateArtifacts } from '../keepsakes/candidate-artifacts';
 import type { ProjectEvaluation } from '../evaluation/evaluation-products';
 import type { SemanticFinding } from '../model';
-import { unsatisfiedRandomArcanaRequirementKeys } from '../arcana-fear';
+import { unsatisfiedRandomArcanaRequirementKeys, type CurrentArcanaCard } from '../arcana-fear';
 import { unavailableForBiome, type CandidateContextUnavailable } from './availability';
 
 export interface FigurineArcanaCandidateQuery {
@@ -15,6 +15,7 @@ export interface FigurineArcanaCandidateQuery {
 export interface EvaluatedFigurineArcanaCandidate {
   readonly kind: 'figurineArcana';
   readonly result: {
+    readonly activeArcana: readonly CurrentArcanaCard[];
     readonly requiredCount: number;
     readonly inactiveArcanaKeys: readonly string[];
     readonly rarity: import('../../catalog-schema').TraitRarity;
@@ -79,6 +80,7 @@ export function evaluateFigurineArcanaCandidate(
   return Object.freeze({
     kind: 'figurineArcana',
     result: Object.freeze({
+      activeArcana: capability.activeArcana,
       requiredCount: capability.requiredCount,
       inactiveArcanaKeys: capability.inactiveArcanaKeys,
       rarity: capability.rarity,

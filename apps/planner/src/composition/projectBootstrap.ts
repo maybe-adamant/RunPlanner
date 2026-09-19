@@ -5,5 +5,6 @@ export function createInitialProject(catalog: Catalog, routeKey: string): Projec
   return createProjectDocument(catalog, {
     projectId: 'run-plan',
     routeKey,
+    configuredBiomeCount: 1,
   });
 }

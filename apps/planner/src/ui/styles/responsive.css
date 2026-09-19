@@ -134,13 +134,8 @@
     scrollbar-gutter: auto;
   }
 
-  .route-weapon-controls,
   .fear-rank-list {
     grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .route-keepsake-controls {
-    grid-template-columns: minmax(0, 1fr);
   }
 
   .fear-rank-control[data-rival='true'] {

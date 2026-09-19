@@ -25,6 +25,8 @@ import type { CanonicalAuthoredRoom, CanonicalHubRoom } from '../../../materiali
 import { advanceStygianWellBossUses } from '../../../commerce/stygian-well';
 import {
   activateTemporaryArcana,
+  currentArcanaCards,
+  type CurrentArcanaCard,
   judgmentRequiredCount,
   orderRandomArcanaSelection,
   randomArcanaDrawKeys,
@@ -87,12 +89,14 @@ export interface EncounterSettlementTransition {
   readonly judgmentCandidate?: {
     readonly key: string;
     readonly activeArcanaKeys: readonly string[];
+    readonly activeArcana: readonly CurrentArcanaCard[];
     readonly inactiveArcanaKeys: readonly string[];
     readonly requiredCount: number;
   };
   readonly figurineCandidate?: {
     readonly key: string;
     readonly activeArcanaKeys: readonly string[];
+    readonly activeArcana: readonly CurrentArcanaCard[];
     readonly inactiveArcanaKeys: readonly string[];
     readonly requiredCount: number;
     readonly rarity: import('../../../../catalog-schema').InRunTraitRarity;
@@ -380,6 +384,7 @@ export function applyEncounterSettlementTransition(inputs: {
             key: semanticAddressKey(owner),
             requiredCount,
             activeArcanaKeys: Object.freeze(first.arcana.active.map((card) => card.key)),
+            activeArcana: currentArcanaCards(first),
             inactiveArcanaKeys: randomArcanaDrawKeys(
               catalog,
               first,
@@ -484,6 +489,7 @@ export function applyEncounterSettlementTransition(inputs: {
         ? Object.freeze({
             key: semanticAddressKey(figurineOwner),
             activeArcanaKeys: Object.freeze(figurineFrontier.arcana.active.map((card) => card.key)),
+            activeArcana: currentArcanaCards(figurineFrontier),
             inactiveArcanaKeys: figurineInactive,
             requiredCount: figurineRequiredCount,
             rarity: figurineSource.rarity,

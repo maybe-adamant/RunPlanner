@@ -389,7 +389,13 @@ describe('autosave recovery lifecycle', () => {
     );
     expect(scheduler.delays).toEqual([]);
 
-    configureF(application);
+    application.store.dispatch(
+      authoredProjectCommandDispatched({
+        kind: 'ConfigureRoutePrefix',
+        route: createRouteAddress('Underworld'),
+        configuredBiomeCount: 2,
+      }),
+    );
     expect(scheduler.delays).toEqual([25]);
     setFearRank(application, 1);
     expect(scheduler.delays).toEqual([25, 25]);

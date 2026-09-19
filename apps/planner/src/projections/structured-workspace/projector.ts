@@ -14,6 +14,7 @@ import {
 import type { Catalog } from '@run-planner/engine/catalog-schema';
 import {
   authoringReadinessAt,
+  createArcanaFearState,
   assertProjectEvaluationAssembly,
   encounterPhaseSequenceStatusForProjectEvaluationAssembly,
   encounterPhaseFigLeafSupportForProjectEvaluationAssembly,
@@ -597,6 +598,11 @@ export function createStructuredWorkspaceProjection(
         ),
       ]);
       const route = Object.freeze({
+        startingArcana: Object.freeze(
+          createArcanaFearState(catalog, project.route.loadout).arcana.active.map(
+            ({ key, rarity }) => Object.freeze({ key, rarity }),
+          ),
+        ),
         ...(aspectHexTree === undefined ? {} : { aspectHexTree }),
         biomes: Object.freeze(biomes),
         label: catalog.routes.byKey[routeSource.routeKey]?.label ?? routeSource.routeKey,
