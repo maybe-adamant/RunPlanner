@@ -230,8 +230,12 @@ Catalog flags, not biome-name branches, control advancement:
 - `ignoreEncounterUses` suppresses encounter-use clocks;
 - `skipRoomsPerUpgrade` suppresses Steady Growth, Embryo, and trait pickup
   producer clocks;
-- `skipTimedDropResources` holds a due Supply Chain drop at the threshold until
-  a valid later encounter; and
+- `skipTimedDropResources` holds a due Supply Chain drop at interval−1 in Chaos
+  and Zagreus rooms; `skipTimedDropResourcesInDream` does the same in declared
+  boss rooms only on Dream routes. Before the threshold, progress still advances.
+  Native `TraitLogic.lua:CheckChamberTraits` applies this to `DropResources`,
+  not to other automatic effects. The acquired interval survives biome handoff;
+  the next qualifying unrestricted encounter emits the two optional Poms; and
 - `advancesHermesShrineDeliveryUses` is required on both the room and concrete
   encounter phase before a delayed delivery advances.
 

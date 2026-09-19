@@ -537,10 +537,9 @@ without-replacement support are semantic.
 | `I_WorldShop` |           5 |      5 | Entered I preboss                                           | Exact second-half support |
 | `Q_WorldShop` |           5 |      6 | Entered Q preboss; first group produces two distinct offers | Exact second-half support |
 
-The current three-union `WorldShop` representation is only a Phase 1
-prototype. The final catalog needs ordered groups, `offerCount`, per-option
-requirements, per-option payload rules, and a complete authored slot for every
-offer emitted by the group. Two offers from one group are distinct authored
+The catalog represents ordered groups, `offerCount`, per-option requirements
+and payload rules, with a complete authored slot for every offer emitted by
+the group. Two offers from one group are distinct authored
 slots and cannot select the same option entry.
 
 ### Ordinary WorldShop groups
@@ -557,9 +556,9 @@ author the same resolved-offer identity.
 ### I and Q second-half groups
 
 Normal route order guarantees that I and Q preboss shops use their second-half
-branches. First-half options remain game evidence but are declaration-time
-impossible for these route positions. The complete phase-sensitive matrices
-and their future reordered-biome disposition are owned by the focused
+branches. Internal reordered itineraries resolve the appropriate first/second
+half from the acquisition ordinal. The complete phase-sensitive matrices
+are owned by the focused
 [`../rooms-and-routes/I_Q_WORLD_SHOP_PHASE_GAME_DATA_AUDIT.md`](../rooms-and-routes/I_Q_WORLD_SHOP_PHASE_GAME_DATA_AUDIT.md).
 
 `I_WorldShop` emits one offer from each group:

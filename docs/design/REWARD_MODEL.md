@@ -756,12 +756,11 @@ remain available. Requirements are conjoined at the option entry, so existing
 Hammer, Hermes, Spell, Talent, Last Stand, and other guards remain
 authoritative. Group and slot cardinality do not change; Q's first group still
 selects two distinct option keys without replacement after phase filtering.
-The current fixed-route evaluator supplies `biomeIndex + 1` as
-`enteredBiomeCount`, which is equivalent for the supported fixed-order routes.
-Dream Dive support must change that fact producer to provide
-the actual reordered reached count through the existing engine input, not
-change Shop declarations. The exact generated option identity is also the
-source witness consumed by the offer-local boon-rarity ledger.
+The evaluator supplies the resolved itinerary ordinal as `enteredBiomeCount`
+and the saved route identity for mode-conditioned option membership. The same
+facts govern initial inventory and the captured Travel Deal generation contact;
+neither is inferred from the physical biome. The exact generated option identity
+is also the source witness consumed by the offer-local boon-rarity ledger.
 
 Qualifying Shops have a conditional initial `infernalContractReward` slot,
 generated from `ZagPedestalOptions` without changing the host profile's indexed

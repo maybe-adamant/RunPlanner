@@ -87,15 +87,17 @@ test('initializes the ordinary full itinerary and translates only legacy singlet
   assert.deepEqual(source, original);
 });
 
-test('preserves ordinary Surface prefixes and representative schema-84 checkpoint inputs', async () => {
+test('preserves ordinary prefixes and the minimal legacy route document', async () => {
   const source = document('Surface');
   source.route.biomes.push({ biomeKey: 'O', topology: null });
   assert.deepEqual(migrateProjectDocument(source).route.itineraryBiomeKeys, ['N', 'O', 'P', 'Q']);
-  for (const name of [
-    'underworld-fghi-schema84.runplanner.json',
-    'surface-nopq-schema84.runplanner.json',
-  ]) {
-    const baseline = JSON.parse(await readFile(join(fixtureDirectory, name), 'utf8'));
+  const legacy = JSON.parse(
+    await readFile(join(fixtureDirectory, 'route-foundation.runplanner.json'), 'utf8'),
+  );
+  for (const routeKey of ['Underworld', 'Surface']) {
+    const baseline = structuredClone(legacy);
+    baseline.route.routeKey = routeKey;
+    baseline.route.biomes[0].biomeKey = routeKey === 'Underworld' ? 'F' : 'N';
     const migrated = migrateProjectDocument(baseline);
     assert.equal(migrated.schemaVersion, 85);
     assert.deepEqual(

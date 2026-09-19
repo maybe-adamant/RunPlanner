@@ -2,8 +2,8 @@
 
 This audit owns source-backed starting-room, completion-room and NPC effect
 profiles whose meaning depends on itinerary position rather than physical
-biome identity. Sources are the installed Hades II scripts; source inspection
-does not constitute live Dream Dive verification.
+biome identity, and route-mode content restrictions. Sources are the installed
+Hades II scripts; source inspection does not constitute live Dream Dive verification.
 
 ## Starts and completion
 
@@ -79,10 +79,42 @@ rarity changes. The planner retains distinct source-capable Rank I targets;
 the broader native rank-agnostic pool adds no reachable supported case because
 Latest Model is the only permanent Rank II producer and is once per run.
 
+## Route-mode content restrictions
+
+These restrictions use the saved route identity independently of acquisition
+ordinal. Selected assessment and alternative candidates consume the same
+declared restriction; retained invalid choices remain repairable.
+
+| Contact                     | Dream rule                                                                               | Native source                     |
+| --------------------------- | ---------------------------------------------------------------------------------------- | --------------------------------- |
+| Ordinary World Shop group 2 | Replace Ashes, Bones and Nectar membership with the four individual element boosts.      | `StoreData.lua:260–268`           |
+| I/Q World Shop group 5      | Replace Nightmare, Moon Dust and Obol Points membership with ElementalBoost.             | `StoreData.lua:405–446,538–579`   |
+| Spark of Ixion              | Unavailable in initial Well inventory and Travel Deal refill.                            | `TraitData_Store.lua:301–313`     |
+| Plentiful Forage            | Unavailable; its independent BlockGiftBoons restriction also applies.                    | `TraitData_Demeter.lua:1812–1832` |
+| Discovery                   | Unavailable in Chaos offers and Embryo blessing selection.                               | `TraitData_Chaos.lua:634–646`     |
+| Tool/fishing resources      | Native setup is disabled; no supported placement, element grant or forced resource host. | `RunLogic.lua:656–744`            |
+| Oceanus Anomaly             | Unavailable through the existing takeover contact.                                       | `RoomData.lua:607–615`            |
+
+Shop rules compose with first/second-half ordinal requirements and apply to
+initial inventory and Travel Deal generation. They are not global bans on
+metaprogression rewards in doors, optional rewards, Wells or Shrines.
+Element boosts reuse ordinary acquisition settlement. Meta Reward Stands have
+their own native Dream exclusion (`RoomData.lua:552–565`) and are not resource
+tool placements. Natural Chaos retains its existing local restrictions.
+
+Fateful Twist's native `RandomStoreItem.UseFunctionArgs` whitelist
+(`ConsumableData.lua:1505–1528`) already omits Ixion on every route; it still
+permits its declared resource consumables. No Dream-specific Twist rule is
+needed. Hades' Dream conditions change presentation rather than eligibility.
+
+Timed-drop deferral and terminal delivery are owned by the
+[scheduled-effects audit](SCHEDULED_AND_AUTOMATIC_TIMELINE_OUTCOMES_AUDIT.md)
+and [Shrine audit](../room-features/ROOM_FEATURES_GAME_DATA_AUDIT.md#purchase-delivery-and-travel-deal-facts).
+
 ## Coverage boundary
 
 Internal route resolution supports supplied Dream itineraries and these
-profiles. It does not establish Dream itinerary legality, mode-sensitive
-inventory, resource restrictions or special timed-drop behavior. Public
-Dream authoring, loading and execution publication remain disabled until those
-contracts and runtime support are delivered.
+profiles, mode-sensitive content availability and boss timed-drop deferral.
+It does not establish public Dream itinerary legality or native startup and
+transition steering. Public Dream authoring, loading and execution publication
+remain disabled pending those contracts and runtime support.
