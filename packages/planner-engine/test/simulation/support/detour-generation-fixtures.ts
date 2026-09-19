@@ -24,6 +24,7 @@ import {
 
 export const detourFBiome = createBiomeAddress('Underworld', 'F');
 export const detourGBiome = createBiomeAddress('Underworld', 'G');
+export const dreamGBiome = createBiomeAddress('Dream', 'G');
 
 function source(occurrenceId: OccurrenceId) {
   return { kind: 'occurrence' as const, occurrenceId };
@@ -124,6 +125,102 @@ export function buildBelowDepthAnomalyProject() {
   project = reward(project, second, 'MaxManaDrop');
   project = anomaly(project, first, 'exit1');
   return { project, earlyTarget: createTargetAddress(detourGBiome, source(first), 'exit1') };
+}
+
+/** Complete enough Dream G prefix to exercise an otherwise eligible Anomaly source. */
+export function buildDreamAnomalyProject() {
+  const intro = createOccurrenceId('dream-generation-anomaly-intro');
+  const combat01 = createOccurrenceId('dream-generation-anomaly-combat01');
+  const combat02 = createOccurrenceId('dream-generation-anomaly-combat02');
+  const combat01Peer = createOccurrenceId('dream-generation-anomaly-combat01-peer');
+  const anomaly = createOccurrenceId('dream-generation-anomaly-target');
+  let project = createProjectDocument(catalog, {
+    projectId: 'dream-generation-anomaly',
+    routeKey: 'Dream',
+    itineraryBiomeKeys: ['G', 'F'],
+    configuredBiomeCount: 1,
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'CreateStart',
+    biome: dreamGBiome,
+    occurrenceId: intro,
+  });
+  const introReward = createIncomingRewardAddress(dreamGBiome, intro);
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceIncomingReward',
+    reward: introReward,
+    value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'ApolloUpgrade' } },
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceTraitOffer',
+    trait: createTraitOfferAddress(introReward, 'source'),
+    value: {
+      kind: 'traits',
+      giverKey: 'Apollo',
+      options: [
+        { traitKey: 'ApolloWeaponBoon', rarity: 'Common' },
+        { traitKey: 'ApolloSpecialBoon', rarity: 'Common' },
+        { traitKey: 'ApolloCastBoon', rarity: 'Common' },
+      ],
+      selectedOptionKey: 'option1',
+    },
+  });
+  const batch = (parent: OccurrenceId) =>
+    applyProjectCommand(project, catalog, {
+      kind: 'CreateBatch',
+      decision: createExitDecisionAddress(dreamGBiome, source(parent)),
+    });
+  const store = (parent: OccurrenceId) =>
+    applyProjectCommand(project, catalog, {
+      kind: 'ReplaceBatchRewardStore',
+      rewardStore: createBatchRewardStoreAddress(dreamGBiome, source(parent)),
+      storeKey: 'RunProgress',
+    });
+  const target = (
+    parent: OccurrenceId,
+    occurrenceId: OccurrenceId,
+    gameName: string,
+    exitKey = 'exit1',
+  ) =>
+    applyProjectCommand(project, catalog, {
+      kind: 'CreateTarget',
+      target: createTargetAddress(dreamGBiome, source(parent), exitKey),
+      occurrenceId,
+      gameName,
+    });
+  const reward = (occurrenceId: OccurrenceId, rewardType: 'MaxHealthDrop' | 'MaxManaDrop') =>
+    applyProjectCommand(project, catalog, {
+      kind: 'ReplaceIncomingReward',
+      reward: createIncomingRewardAddress(dreamGBiome, occurrenceId),
+      value: { rewardType },
+    });
+  project = batch(intro);
+  project = store(intro);
+  project = target(intro, combat01, 'G_Combat01');
+  project = reward(combat01, 'MaxHealthDrop');
+  project = batch(combat01);
+  project = store(combat01);
+  project = target(combat01, combat02, 'G_Combat02');
+  project = target(combat01, combat01Peer, 'G_Combat04', 'exit2');
+  project = reward(combat02, 'MaxManaDrop');
+  project = reward(combat01Peer, 'MaxHealthDrop');
+  project = applyProjectCommand(project, catalog, {
+    kind: 'SetExitSelection',
+    selection: createExitSelectionAddress(dreamGBiome, source(combat01)),
+    value: { kind: 'normal', exitKey: 'exit1' },
+  });
+  project = batch(combat02);
+  project = store(combat02);
+  project = target(combat02, anomaly, 'G_Combat03');
+  project = reward(anomaly, 'MaxHealthDrop');
+  project = applyProjectCommand(project, catalog, {
+    kind: 'SwitchTargetToAnomaly',
+    target: createTargetAddress(dreamGBiome, source(combat02), 'exit1'),
+  });
+  return {
+    project,
+    target: createTargetAddress(dreamGBiome, source(combat02), 'exit1'),
+  };
 }
 
 export function buildAnomalyCapProject(firstAnomalySelected: boolean) {

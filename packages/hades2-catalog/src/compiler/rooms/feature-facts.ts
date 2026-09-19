@@ -2,6 +2,7 @@ import type { RoomDeclaration } from '@run-planner/engine/catalog-schema';
 import type { RewardKernelCatalog } from '@run-planner/engine/reward-kernel';
 
 import type { RawRoomDeclaration } from '../../declarations/index';
+import { freezeUniqueStrings } from '../common';
 import { fail } from '../errors';
 import { type RoomIdentityFacts } from './core-facts';
 import { type RoomRewardFacts } from './reward-facts';
@@ -220,7 +221,13 @@ export function normalizeRoomResourcePointSupport(
     fail(`${path}.resourcePointSupport`, 'must declare source-backed resource support');
   const families = ['Pickaxe', 'Exorcism', 'Shovel', 'Fishing'] as const;
   const known = new Set(families);
-  const supportKeys = new Set(['families', 'capacity', 'ignoresBiomeLimit', 'rules']);
+  const supportKeys = new Set([
+    'families',
+    'capacity',
+    'excludedRouteKeys',
+    'ignoresBiomeLimit',
+    'rules',
+  ]);
   if (Object.keys(support).some((key) => !supportKeys.has(key)))
     fail(`${path}.resourcePointSupport`, 'contains unknown field');
   if (support.families.some((family) => !known.has(family)))
@@ -301,5 +308,13 @@ export function normalizeRoomResourcePointSupport(
     capacity: support.capacity,
     rules: Object.freeze(rules),
     ...(support.ignoresBiomeLimit === true ? { ignoresBiomeLimit: true } : {}),
+    ...(support.excludedRouteKeys === undefined
+      ? {}
+      : {
+          excludedRouteKeys: freezeUniqueStrings(
+            support.excludedRouteKeys,
+            `${path}.resourcePointSupport.excludedRouteKeys`,
+          ),
+        }),
   });
 }

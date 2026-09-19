@@ -7,7 +7,9 @@ import {
   createIncomingRewardAddress,
   createRouteAddress,
   createBiomeAddress,
+  createOccurrenceId,
   createOccurrenceAddress,
+  createProjectDocument,
   createRoomFeatureAddress,
   type ResourcePlacement,
   type ResourcePlacements,
@@ -28,6 +30,7 @@ import {
   type RouteResourceAuthoring,
   type TraitHistoryEvent,
 } from '@run-planner/engine/simulation';
+import { effectiveRouteResourcePlacements } from '../../src/simulation/resources';
 import {
   loadSurfaceNProject,
   loadSurfaceNResourcesProject,
@@ -75,6 +78,7 @@ function directResourcePolicy(
       entry.origin.kind === 'occurrence',
   );
   const authoring: RouteResourceAuthoring = {
+    routeKey: 'Underworld',
     entered,
     placements,
     assessmentByFamily: Object.fromEntries(
@@ -133,6 +137,44 @@ describe('selected resource success legality', () => {
       value: null,
     });
     expect(simulateProject(catalog, repaired).status).toBe('valid');
+  });
+
+  it('excludes Dream resources from selected assessment, candidate targets, and execution policy', () => {
+    const biome = createBiomeAddress('Dream', 'F');
+    const occurrenceId = createOccurrenceId('dream-resource');
+    let project = createProjectDocument(catalog, {
+      projectId: 'dream-resource',
+      routeKey: 'Dream',
+      itineraryBiomeKeys: ['F', 'G'],
+      configuredBiomeCount: 1,
+    });
+    project = applyProjectCommand(project, catalog, { kind: 'CreateStart', biome, occurrenceId });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceIncomingReward',
+      reward: createIncomingRewardAddress(biome, occurrenceId),
+      value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'ApolloUpgrade' } },
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceResourcePlacement',
+      route: createRouteAddress('Dream'),
+      family: 'Pickaxe',
+      value: { biomeKey: 'F', occurrenceId },
+    });
+    const authoring = routeResourceAuthoring(catalog, project.route);
+
+    expect(authoring.assessmentByFamily.Pickaxe).toEqual({
+      legal: false,
+      reasons: ['route excluded'],
+    });
+    expect(authoring.legalTargetsByFamily.Pickaxe).toEqual([]);
+    expect(effectiveRouteResourcePlacements(authoring).Pickaxe).toBeNull();
+    expect(
+      deriveResourceExecutionPolicy(
+        catalog,
+        [{ history: { rooms: authoring.entered.map(({ origin }) => ({ origin })) } }],
+        authoring,
+      ).occurrences,
+    ).toEqual([]);
   });
   it('derives same-family lookback suppression while keeping the outside point native', () => {
     const entered = [
@@ -197,7 +239,7 @@ describe('selected resource success legality', () => {
         .Exorcism,
     ).toBe('force');
     expect(
-      assessResourcePlacement(catalog, 'Pickaxe', at('F', 'pickaxe'), entered, {
+      assessResourcePlacement(catalog, 'Underworld', 'Pickaxe', at('F', 'pickaxe'), entered, {
         ...none(),
         Exorcism: at('N', 'target'),
       }).reasons,
@@ -229,7 +271,7 @@ describe('selected resource success legality', () => {
 
     const sameRoom = [enteredAt('F', 'ordinary', 'F_Combat01')];
     expect(
-      assessResourcePlacement(catalog, 'Shovel', at('F', 'ordinary'), sameRoom, {
+      assessResourcePlacement(catalog, 'Underworld', 'Shovel', at('F', 'ordinary'), sameRoom, {
         ...none(),
         Pickaxe: at('F', 'ordinary'),
       }),
@@ -237,6 +279,7 @@ describe('selected resource success legality', () => {
     expect(
       assessResourcePlacement(
         catalog,
+        'Underworld',
         'Fishing',
         at('F', 'chaos'),
         [enteredAt('F', 'chaos', 'Chaos_01')],
@@ -350,10 +393,17 @@ describe('selected resource success legality', () => {
     expect('occurrenceId' in authoring.entered[hubIndex]!).toBe(false);
     expect([openingIndex, hubIndex, sideRoomIndex]).toEqual([0, 2, 4]);
     expect(
-      assessResourcePlacement(catalog, 'Exorcism', at('N', sideRoom), authoring.entered, {
-        ...none(),
-        Pickaxe: at('N', nOccurrenceIds.opening),
-      }).legal,
+      assessResourcePlacement(
+        catalog,
+        'Surface',
+        'Exorcism',
+        at('N', sideRoom),
+        authoring.entered,
+        {
+          ...none(),
+          Pickaxe: at('N', nOccurrenceIds.opening),
+        },
+      ).legal,
     ).toBe(true);
 
     const enteredOccurrenceIds = new Set(
@@ -375,10 +425,11 @@ describe('selected resource success legality', () => {
     ];
     const selected = { ...none(), Fishing: at('N', 'n0') };
     expect(
-      assessResourcePlacement(catalog, 'Pickaxe', at('N', 'n3'), entered, selected).reasons,
+      assessResourcePlacement(catalog, 'Surface', 'Pickaxe', at('N', 'n3'), entered, selected)
+        .reasons,
     ).toContain('cross-family lookback');
     expect(
-      assessResourcePlacement(catalog, 'Pickaxe', at('N', 'n3'), entered, {
+      assessResourcePlacement(catalog, 'Surface', 'Pickaxe', at('N', 'n3'), entered, {
         ...none(),
         Fishing: at('N', 'n0'),
       }).legal,
@@ -392,13 +443,13 @@ describe('selected resource success legality', () => {
       enteredAt('F', 'f1', 'F_Combat04'),
     ];
     expect(
-      assessResourcePlacement(catalog, 'Shovel', at('F', 'c0'), entered, {
+      assessResourcePlacement(catalog, 'Underworld', 'Shovel', at('F', 'c0'), entered, {
         ...none(),
         Pickaxe: at('F', 'f0'),
       }).legal,
     ).toBe(true);
     expect(
-      assessResourcePlacement(catalog, 'Shovel', at('F', 'f1'), entered, {
+      assessResourcePlacement(catalog, 'Underworld', 'Shovel', at('F', 'f1'), entered, {
         ...none(),
         Pickaxe: at('F', 'c0'),
       }).legal,

@@ -72,6 +72,7 @@ function support(
   return Object.freeze({
     families: Object.freeze([...families]),
     capacity: profile === 'chaos' ? 'allTools' : 'simpleComplex',
+    excludedRouteKeys: ['Dream'],
     rules,
     ...(options.ignoresBiomeLimit ? { ignoresBiomeLimit: true } : {}),
   });

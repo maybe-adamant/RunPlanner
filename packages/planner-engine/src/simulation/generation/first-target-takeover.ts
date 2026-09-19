@@ -621,6 +621,9 @@ function anomalyTakeoverCandidateSupport(
   if (priorEnteredReplacementCount > descriptor.source.maxEnteredReplacementsThisRoute) {
     failedConditions.push('enteredReplacementCap');
   }
+  if (descriptor.source.excludedRouteKeys?.includes(source.origin.routeKey) === true) {
+    failedConditions.push('sourceRouteExcluded');
+  }
   return Object.freeze({
     origin: targetOrigin,
     selectedPossible: failedConditions.length === 0,

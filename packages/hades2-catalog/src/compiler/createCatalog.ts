@@ -99,7 +99,7 @@ export function createCatalog(input: RawCatalogInput): Catalog {
     rewards.stores,
     exitTypes,
   );
-  validateRoomLayoutClosure(rooms, biomeLayouts, exitCompatibilityPolicies);
+  validateRoomLayoutClosure(rooms, biomeLayouts, exitCompatibilityPolicies, routes);
   validateRewardAcquisitionRoleTraitGivers(rewards, traitCatalog.givers);
   const traitGiverByAcquisitionGameName = createTraitGiverByAcquisitionGameName(
     input.traitCatalog.traitAcquisitionProviders,

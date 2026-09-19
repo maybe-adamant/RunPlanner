@@ -5,6 +5,7 @@ import {
   applyProjectCommand,
   createBatchRewardStoreAddress,
   createTargetAddress,
+  resolveRoutePosition,
   semanticAddressKey,
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
@@ -29,8 +30,10 @@ import {
   buildAnomalyCapProject,
   buildArtemisSourceAnomalyProject,
   buildBelowDepthAnomalyProject,
+  buildDreamAnomalyProject,
   buildShopSourceAnomalyProject,
   detourGBiome,
+  dreamGBiome,
 } from './support/detour-generation-fixtures';
 
 function prefix(project: ProjectDocument) {
@@ -52,6 +55,24 @@ function prefix(project: ProjectDocument) {
     ordinaryPositionFor(catalog, snapshot),
   );
   if (history === null) throw new Error('G detour history is absent');
+  return { snapshot: { ...snapshot, entryRoom: snapshot.entryRoom }, history };
+}
+
+function dreamPrefix(project: ProjectDocument) {
+  const plan = project.route.biomes.find((biome) => biome.biomeKey === dreamGBiome.biomeKey);
+  if (plan === undefined) throw new Error('Dream G detour fixture is missing');
+  const routePosition = resolveRoutePosition(catalog, project.route, dreamGBiome.biomeKey);
+  const snapshot = materializeBiomePrefix(
+    catalog,
+    dreamGBiome,
+    routePosition,
+    plan,
+    project.route.loadout,
+  );
+  if (snapshot === null || snapshot.entryRoom === undefined)
+    throw new Error('Dream G detour prefix is absent');
+  const history = composeBiomeHistoryPrefix(catalog, snapshot, routePosition);
+  if (history === null) throw new Error('Dream G detour history is absent');
   return { snapshot: { ...snapshot, entryRoom: snapshot.entryRoom }, history };
 }
 
@@ -264,6 +285,52 @@ describe('first-target and takeover generation support', () => {
         origin: earlyTarget,
         selectedPossible: false,
         failedConditions: expect.arrayContaining(['minimumBiomeDepthCache']),
+      }),
+    );
+  });
+
+  it('withholds an otherwise eligible G Anomaly on Dream and retains its repair finding', () => {
+    const ordinary = buildAnomalyCapProject(false);
+    const ordinaryPrefix = prefix(ordinary.project);
+    const ordinaryGeneration = evaluateBiomeRoomGeneration(
+      catalog,
+      ordinaryPrefix.snapshot,
+      ordinaryPrefix.history,
+      2,
+    );
+    const ordinarySupport = ordinaryGeneration.ordinaryBatches
+      .flatMap((batch) => batch.targets.map((target) => target.anomaly))
+      .find(
+        (support) =>
+          support !== undefined &&
+          semanticAddressKey(support.origin) === semanticAddressKey(ordinary.laterTarget),
+      );
+    expect(ordinarySupport).toMatchObject({ selectedPossible: true, failedConditions: [] });
+
+    const { project, target } = buildDreamAnomalyProject();
+    const { snapshot, history } = dreamPrefix(project);
+    const generation = evaluateBiomeRoomGeneration(catalog, snapshot, history, 1);
+    const dreamSupport = generation.ordinaryBatches
+      .flatMap((batch) => batch.targets.map((candidate) => candidate.anomaly))
+      .find(
+        (support) =>
+          support !== undefined &&
+          semanticAddressKey(support.origin) === semanticAddressKey(target),
+      );
+    expect(dreamSupport).toMatchObject({
+      selectedPossible: false,
+      failedConditions: ['sourceRouteExcluded'],
+    });
+    expect(dreamSupport?.sourceBiomeDepthCache).toBeGreaterThanOrEqual(3);
+    expect(generation.findings).toContainEqual(
+      expect.objectContaining({
+        code: 'targetRoomUnavailable',
+        origin: target,
+        evidence: expect.objectContaining({
+          anomalyReplacement: expect.objectContaining({
+            failedConditions: ['sourceRouteExcluded'],
+          }),
+        }),
       }),
     );
   });

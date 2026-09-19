@@ -434,6 +434,14 @@ function normalizeAnomalyReplacement(
       excludedRoomGameNames,
       excludedSourceEncounterGameNames,
       maxEnteredReplacementsThisRoute,
+      ...(raw.source.excludedRouteKeys === undefined
+        ? {}
+        : {
+            excludedRouteKeys: freezeUniqueStrings(
+              raw.source.excludedRouteKeys,
+              `${path}.source.excludedRouteKeys`,
+            ),
+          }),
     }),
     replaceableTargetRoomGameNames,
     replacementRoomGameNames,

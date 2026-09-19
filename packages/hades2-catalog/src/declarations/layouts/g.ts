@@ -22,6 +22,7 @@ export const gBiomeLayout = {
         excludedRoomGameNames: ['G_Shop01', 'G_Story01', 'G_PreBoss01', 'C_Boss01'],
         excludedSourceEncounterGameNames: ['ArtemisCombatG', 'NemesisRandomEvent'],
         maxEnteredReplacementsThisRoute: 0,
+        excludedRouteKeys: ['Dream'],
       },
       replaceableTargetRoomGameNames: [
         'G_Combat01',
