@@ -411,15 +411,27 @@ checks, not permission to reproduce planner eligibility policy. Exact source
 binding and published prerequisite readiness are execution coordination, not
 eligibility inference.
 
+## Dream navigation
+
+Dream execution publishes the ordered configured prefix, not an independently
+editable runtime itinerary. Startup and Postboss recovery require the native
+run mode to match the plan. The native `Dream_Intro` prologue is outside the
+occurrence cursor; the first biome receives the published starting reward and
+later entries use their resolved rewardless declarations.
+
+The existing cursor supplies the next biome during native selection, including
+selection before Postboss departure. Scoped pool removal preserves native
+bookkeeping; `ChooseStartingRoom` prepares the published entry without replacing
+the active predecessor session. After the configured prefix, selection becomes
+native. Dream Points, difficulty, transitions and final completion remain game
+owned. The [hook map](../audits/game-execution-contacts/FEATURE_HOOK_MAP.md#dream-route-navigation)
+owns the exact contacts and scope lifetimes.
+
 ## Deferred scope
 
 Wrong continuation is detected by the next room-entry identity check; the
 executor deliberately has no separate selected-transition conformance
 checkpoint.
 
-The planner's internal route-position, contextual start/completion and
-acquisition-ordinal NPC products support a supplied Dream itinerary. Public
-Dream creation/import/restore and execution publication remain disabled:
-Dream inventory restrictions, legal itinerary authoring, special lifecycle
-behavior and runtime admission still require delivery. Automatic diagnostic
-import remains deferred.
+Automatic diagnostic import remains deferred. Automated protocol and hook
+coverage does not substitute for live-game verification of a complete Dream run.
