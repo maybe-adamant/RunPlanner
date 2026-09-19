@@ -138,6 +138,31 @@ export function decodeRoomState(
       requireOrdinaryRole(role, room, path);
       return decodeEphyraCombatState(state, catalog, room, path);
     case 'FixedOpening':
+      requireOrdinaryRole(role, room, path);
+      if (room.incomingReward.kind === 'none') {
+        expectedKind(state.kind, 'none', path);
+        expectExactKeys(state, ['kind'], path);
+        return Object.freeze({ kind: 'none' });
+      }
+      expectedKind(state.kind, 'counted', path);
+      expectExactKeys(state, ['kind', 'reward'], path);
+      {
+        const reward = decodeNullableRewardState(state.reward, catalog, `${path}.reward`, {
+          kind: 'producerLifecycle',
+          key: requireCountedBinding(room, path).producerLifecycleKey,
+        });
+        if (reward === null) return Object.freeze({ kind: 'counted', reward: null });
+        const offer = decodeCountedOffer(
+          reward.offer,
+          catalog,
+          requireCountedBinding(room, path),
+          `${path}.reward.offer`,
+        );
+        return Object.freeze({
+          kind: 'counted' as const,
+          reward: Object.freeze({ ...reward, offer }),
+        });
+      }
     case 'FixedPreHub':
     case 'ClockworkCombat':
     case 'EphyraSideRoom':

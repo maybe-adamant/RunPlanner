@@ -59,7 +59,7 @@ import {
 } from '../../topology/construction';
 import { reconcileCompletionChain } from './takeover';
 import { replaceWithHubDecision } from './hub';
-import { resolveStartingRoomDeclaration } from '../../room-state/starting-room-profile';
+import { resolveEntryDeclaration } from '../../room-state/entry-resolution';
 
 function orderTargetsByPhysicalExit(
   targets: readonly ExitTargetReference[],
@@ -92,13 +92,19 @@ export function createStart(
     failCommand(command, 'fixed authored starts derive their declaration-owned gameName');
   }
   if (gameName === undefined) failCommand(command, 'missing declared authored start');
-  const room = resolveStartingRoomDeclaration(
+  const room = resolveEntryDeclaration(
     requireRoom(catalog, gameName, located.layout.biomeKey, command),
     located.routePosition,
   );
   return withBiome(document, located, {
     ...located.plan,
-    topology: createStartTopology(catalog, room, command.occurrenceId, located.loadout),
+    topology: createStartTopology(
+      catalog,
+      room,
+      command.occurrenceId,
+      located.loadout,
+      located.routePosition,
+    ),
   });
 }
 

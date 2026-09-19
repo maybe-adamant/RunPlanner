@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 85,
+  "schemaVersion": 86,
   "projectId": "surface-1",
   "catalogVersion": "0.55.0-anvil-of-fates",
   "route": {
@@ -19,6 +19,13 @@
     "loadout": {
       "weaponKey": "WeaponStaffSwing",
       "aspectKey": "BaseStaffAspect",
+      "startingReward": {
+        "rewardType": "Boon",
+        "payload": {
+          "kind": "BoonSource",
+          "source": "ApolloUpgrade"
+        }
+      },
       "manualArcanaKeys": [],
       "fearRanks": {
         "HealingReductionShrineUpgrade": 0,
@@ -52,41 +59,34 @@
               "occurrenceId": "surface-n-opening",
               "gameName": "N_Opening01",
               "state": {
-                "kind": "counted",
-                "reward": {
-                  "offer": {
-                    "rewardType": "Boon",
-                    "payload": {
-                      "kind": "BoonSource",
-                      "source": "ApolloUpgrade"
-                    }
-                  },
-                  "traitOffersByAcquisitionRole": {
-                    "source": {
-                      "kind": "traits",
-                      "giverKey": "Apollo",
-                      "options": [
-                        {
-                          "traitKey": "ApolloWeaponBoon",
-                          "rarity": "Common"
-                        },
-                        {
-                          "traitKey": "ApolloSpecialBoon",
-                          "rarity": "Common"
-                        },
-                        {
-                          "traitKey": "ApolloCastBoon",
-                          "rarity": "Common"
-                        }
-                      ],
-                      "selectedOptionKey": "option1",
-                      "rarificationActions": []
-                    }
-                  },
-                  "dispositionByAcquisitionRole": {
-                    "source": {
-                      "kind": "normal"
-                    }
+                "kind": "none"
+              },
+              "startingRewardAcquisition": {
+                "traitOffersByAcquisitionRole": {
+                  "source": {
+                    "kind": "traits",
+                    "giverKey": "Apollo",
+                    "options": [
+                      {
+                        "traitKey": "ApolloWeaponBoon",
+                        "rarity": "Common"
+                      },
+                      {
+                        "traitKey": "ApolloSpecialBoon",
+                        "rarity": "Common"
+                      },
+                      {
+                        "traitKey": "ApolloCastBoon",
+                        "rarity": "Common"
+                      }
+                    ],
+                    "selectedOptionKey": "option1",
+                    "rarificationActions": []
+                  }
+                },
+                "dispositionByAcquisitionRole": {
+                  "source": {
+                    "kind": "normal"
                   }
                 }
               },

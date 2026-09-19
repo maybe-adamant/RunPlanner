@@ -2,6 +2,7 @@ import type { Catalog } from '../../catalog-schema';
 import {
   createBiomeAddress,
   createKeepsakeEquipResultAddress,
+  createStartingRewardAddress,
   createRouteStartKeepsakeSelectionAddress,
   semanticAddressKey,
   type SemanticAddress,
@@ -21,6 +22,7 @@ import {
 } from '../keepsakes/trait-effects';
 import { createKeepsakeState } from '../keepsakes/state';
 import { createArcanaFearState } from '../arcana-fear';
+import { createStartingRewardCandidateCapability } from '../candidates/reward-producer';
 import { createTraitHistoryState } from '../traits/history/fold';
 import type { SemanticFinding } from '../model';
 import { createAssessmentIssue, type AssessmentIssue } from '../assessment-issue';
@@ -75,6 +77,10 @@ interface RouteProjectEvaluationAssembly {
     string,
     import('../keepsakes/candidate-artifacts').KeepsakeEquipResultCandidateCapability
   >;
+  readonly routeStartRewards: ReadonlyMap<
+    string,
+    import('../candidates/reward-producer').StartingRewardCandidateCapability
+  >;
   readonly authoringHorizon: AuthoringHorizon;
 }
 
@@ -111,8 +117,13 @@ function evaluateRouteAssembly(
     string,
     import('../keepsakes/candidate-artifacts').KeepsakeEquipResultCandidateCapability
   >();
+  const routeStartRewards = new Map<
+    string,
+    import('../candidates/reward-producer').StartingRewardCandidateCapability
+  >();
   const resourceAuthoring = routeResourceAuthoring(catalog, route);
   const resourceFindings = resourcePlacementFindings(route.routeKey, resourceAuthoring);
+  const startingReward = createStartingRewardAddress(route.routeKey);
   const routeStart = createRouteStartKeepsakeSelectionAddress(route.routeKey);
   routeStartKeepsakes.set(
     semanticAddressKey(routeStart),
@@ -141,11 +152,13 @@ function evaluateRouteAssembly(
     );
     const authoredResult = route.loadout.keepsakeEquipResults?.[routeStartEffect.kind];
     if (authoredResult === undefined) {
-      routeStartBlock = 'incomplete';
-      authoringHorizon = Object.freeze({
-        kind: 'incomplete',
-        blockedAfter: result,
-      });
+      if (routeStartBlock === null) {
+        routeStartBlock = 'incomplete';
+        authoringHorizon = Object.freeze({
+          kind: 'incomplete',
+          blockedAfter: result,
+        });
+      }
       findings.push(
         Object.freeze({
           code: 'keepsakeEquipResultMissing',
@@ -180,7 +193,7 @@ function evaluateRouteAssembly(
               { ...route.loadout, routeKey: route.routeKey },
             ).legal)
     ) {
-      routeStartBlock = 'invalid';
+      if (routeStartBlock === null) routeStartBlock = 'invalid';
       findings.push(
         Object.freeze({
           code: 'keepsakeEquipResultUnavailable',
@@ -191,7 +204,7 @@ function evaluateRouteAssembly(
         }),
       );
     }
-    if (routeStartBlock !== null)
+    if (routeStartBlock !== null && routeStartIssue === undefined)
       routeStartIssue = createAssessmentIssue(result, authoringRegion(result), findings);
     routeStartKeepsakeEquipResults.set(
       semanticAddressKey(result),
@@ -214,6 +227,37 @@ function evaluateRouteAssembly(
         ]),
       }),
     );
+  }
+  if (routeStartBlock === null) {
+    routeStartRewards.set(
+      semanticAddressKey(startingReward),
+      createStartingRewardCandidateCapability(
+        catalog,
+        route.routeKey,
+        startingReward,
+        route.loadout,
+      ),
+    );
+  }
+  if (route.biomes.length > 0 && route.loadout.startingReward === null) {
+    findings.push(
+      Object.freeze({
+        code: 'rewardMissing',
+        severity: 'error',
+        phase: 'rewardGeneration',
+        origin: startingReward,
+        evidence: Object.freeze({ source: 'runStart' }),
+      }),
+    );
+    if (routeStartBlock === null) {
+      routeStartBlock = 'incomplete';
+      authoringHorizon = Object.freeze({ kind: 'incomplete', blockedAfter: startingReward });
+      routeStartIssue = createAssessmentIssue(
+        startingReward,
+        authoringRegion(startingReward),
+        findings,
+      );
+    }
   }
   if (routeStartBlock !== null) {
     blockedSuffix = Object.freeze(route.biomes.map((biome) => biome.biomeKey));
@@ -298,6 +342,7 @@ function evaluateRouteAssembly(
     candidateArtifacts: Object.freeze(candidateArtifacts),
     routeStartKeepsakes,
     routeStartKeepsakeEquipResults,
+    routeStartRewards,
     authoringHorizon,
   });
 }
@@ -330,6 +375,7 @@ export function simulateProjectAssembly(
       assembledRoute.candidateArtifacts,
       assembledRoute.routeStartKeepsakes,
       assembledRoute.routeStartKeepsakeEquipResults,
+      assembledRoute.routeStartRewards,
     ),
   );
 }

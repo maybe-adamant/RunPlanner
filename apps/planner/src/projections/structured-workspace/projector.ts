@@ -6,6 +6,7 @@ import type {
 import {
   createKeepsakeEquipResultAddress,
   createRouteStartKeepsakeSelectionAddress,
+  createStartingRewardAddress,
   createDefaultAuthoredHexTree,
   transitionAuthoredHexTreeLayout,
   semanticAddressKey,
@@ -346,6 +347,7 @@ export function createStructuredWorkspaceProjection(
       if (authoredRoute === undefined)
         throw new Error(`Missing authored route ${routeSource.routeKey}`);
       const routeStartKeepsake = createRouteStartKeepsakeSelectionAddress(routeSource.routeKey);
+      const routeStartingReward = createStartingRewardAddress(routeSource.routeKey);
       keepsakeSelectionControls.set(
         semanticAddressKey(routeStartKeepsake),
         Object.freeze({
@@ -536,7 +538,9 @@ export function createStructuredWorkspaceProjection(
         findingCount: routeSource.evaluation?.issue === undefined ? 0 : 1,
         focusKey: semanticAddressKey(routeAddress),
       });
-      const routeDestination = (ownerAddress: typeof routeAddress | typeof routeStartKeepsake) =>
+      const routeDestination = (
+        ownerAddress: typeof routeAddress | typeof routeStartKeepsake | typeof routeStartingReward,
+      ) =>
         Object.freeze<WorkspaceInspectorDestination>({
           focusAddress: routeAddress,
           focusKey: routeMarker.focusKey,
@@ -550,6 +554,30 @@ export function createStructuredWorkspaceProjection(
         createKeepsakeEquipResultAddress(routeStartKeepsake, 'experimentalHammer'),
         createKeepsakeEquipResultAddress(routeStartKeepsake, 'transcendentEmbryo'),
       ] as const;
+      const runStartBinding = catalog.runStartReward.incomingReward;
+      if (runStartBinding.kind !== 'countedChoice') {
+        throw new Error('Run-start reward must use a counted choice binding.');
+      }
+      const startingReward = Object.freeze<WorkspaceRewardControl>({
+        kind: 'explicitReward' as const,
+        marker: Object.freeze({
+          address: routeStartingReward,
+          assessment: routeMarker.assessment,
+          findingCount:
+            routeSource.evaluation?.issue !== undefined &&
+            semanticAddressKey(routeSource.evaluation.issue.owner) ===
+              semanticAddressKey(routeStartingReward)
+              ? 1
+              : 0,
+          focusKey: semanticAddressKey(routeStartingReward),
+        }),
+        offer: authoredRoute.loadout.startingReward,
+        offerEditVisibility: 'visible' as const,
+        owner: Object.freeze({ kind: 'startingReward' as const, address: routeStartingReward }),
+        retainedSourceMismatch: false,
+        rewardTypes: runStartBinding.allowedRewardTypes,
+      });
+      appendUniqueRewardControls(rewardControls, [startingReward]);
       const activeAspect = catalog.aspects.byKey[authoredRoute.loadout.aspectKey];
       const aspectHex = catalog.hexes.byKey['SpellMoonBeamTrait'];
       const aspectHexTree =
@@ -582,6 +610,13 @@ export function createStructuredWorkspaceProjection(
           : undefined;
       appendUniqueFocusDestinations(focusByOwner, [
         [routeMarker.focusKey, routeDestination(routeAddress)],
+        [
+          semanticAddressKey(routeStartingReward),
+          Object.freeze<WorkspaceInspectorDestination>({
+            ...routeDestination(routeStartingReward),
+            presentationPanel: 'overview' as const,
+          }),
+        ],
         [semanticAddressKey(routeStartKeepsake), routeDestination(routeStartKeepsake)],
         ...routeStartResults.flatMap((routeStartResult) =>
           keepsakeEquipResultControls.has(semanticAddressKey(routeStartResult))
@@ -598,6 +633,7 @@ export function createStructuredWorkspaceProjection(
         ),
       ]);
       const route = Object.freeze({
+        startingReward,
         startingArcana: Object.freeze(
           createArcanaFearState(catalog, project.route.loadout).arcana.active.map(
             ({ key, rarity }) => Object.freeze({ key, rarity }),
@@ -675,26 +711,6 @@ export function createStructuredWorkspaceProjection(
         takeoverInteractionRequirements,
         topologyRemovalInteractionRequirements,
       });
-      const firstBiome = route.biomes[0];
-      if (firstBiome !== undefined) {
-        const loadoutDestination = (owner: SemanticAddress): void => {
-          const key = semanticAddressKey(owner);
-          const existing = focusByOwner.get(key);
-          if (existing === undefined) return;
-          focusByOwner.set(
-            key,
-            Object.freeze({ ...existing, presentationPanel: 'overview' as const }),
-          );
-        };
-        if (firstBiome.entry === undefined) {
-          loadoutDestination(firstBiome.owner);
-        } else {
-          loadoutDestination(firstBiome.entry.room.address);
-          for (const reward of firstBiome.entry.room.offerRewardRewards) {
-            loadoutDestination(reward.marker.address);
-          }
-        }
-      }
       registerWorkspaceFindingDestinations(evaluation.findings, focusByOwner, route);
       const projectAddress = { kind: 'project' as const };
       const result = Object.freeze({

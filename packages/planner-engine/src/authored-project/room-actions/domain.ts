@@ -35,7 +35,7 @@ import {
 } from '../acquisition/sea-star';
 import { TRAVEL_DEAL_REFILL_ENTRY_KEY } from '../shop';
 import { rewardSourceResolvesAtAcquisition } from '../acquisition/reward-state';
-import type { RoomActionReference, RoomOccurrence } from '../model';
+import type { AuthoredRewardState, RoomActionReference, RoomOccurrence } from '../model';
 import {
   encounterEnvelopeSlots,
   encounterAuthoringProfileForKey,
@@ -44,7 +44,9 @@ import {
   encounterSetForBinding,
   selectedEncounterAuthoringProfileKey,
 } from '../room-state/encounter-envelope';
-import { resolveStartingRoomDeclaration } from '../room-state/starting-room-profile';
+import { resolveEntryDeclaration } from '../room-state/entry-resolution';
+import type { RewardProducerBinding } from '../../reward-kernel/bindings';
+import type { ResolvedRewardOffer } from '../../reward-kernel/model';
 import { activeRoomActionReferences, roomActionKey } from './state';
 import {
   parseClockedTraitGeneratedPickupEntryKey,
@@ -247,6 +249,7 @@ function baseContribution(
   lifecycleProfileKey: string,
   occurrence: RoomOccurrence,
   reference: RoomActionReference,
+  routeStartIncoming?: AuthoredRewardState,
 ): RoomActionContribution {
   switch (reference.kind) {
     case 'collectRequiredReward':
@@ -495,6 +498,7 @@ function baseContribution(
         reference.siteKey,
         reference.entryKey,
         routePosition.ordinal,
+        routeStartIncoming,
       );
       const required =
         hermesDelivery !== undefined ||
@@ -629,11 +633,15 @@ export function assembleRoomActionDomain(options: {
   readonly activeRewardWheelKeys?: readonly string[];
   /** Evaluated producer disposition from canonical materialization. */
   readonly incomingRewardActive?: boolean;
+  readonly incomingRewardOffer?: ResolvedRewardOffer | null;
+  readonly incomingRewardBinding?: RewardProducerBinding;
+  /** `undefined` means occurrence ownership; `null` is an unset route-start reward. */
+  readonly incomingRewardState?: AuthoredRewardState | null;
   readonly shopInventoryActive?: boolean;
 }): RoomActionDomain {
   const rawDeclaration = options.catalog.rooms.byKey[options.occurrence.gameName];
   if (rawDeclaration === undefined) throw new Error(`unknown room ${options.occurrence.gameName}`);
-  const declaration = resolveStartingRoomDeclaration(rawDeclaration, options.routePosition);
+  const declaration = resolveEntryDeclaration(rawDeclaration, options.routePosition);
   const lifecycleProfileKey =
     options.lifecycleProfileKey ?? authoredRoomLifecycleProfileKey(declaration, options.occurrence);
   const lifecycleStructure = assembleRoomLifecycleStructure({
@@ -684,6 +692,15 @@ export function assembleRoomActionDomain(options: {
             };
           })()
         : { incomingRewardActive: options.incomingRewardActive }),
+      ...(options.incomingRewardOffer === undefined
+        ? {}
+        : { incomingRewardOffer: options.incomingRewardOffer }),
+      ...(options.incomingRewardBinding === undefined
+        ? {}
+        : { incomingRewardBinding: options.incomingRewardBinding }),
+      ...(options.incomingRewardState === undefined
+        ? {}
+        : { incomingRewardState: options.incomingRewardState }),
       ...(options.shopInventoryActive === undefined
         ? {}
         : { shopInventoryActive: options.shopInventoryActive }),
@@ -698,13 +715,15 @@ export function assembleRoomActionDomain(options: {
       lifecycleProfileKey,
       options.occurrence,
       reference,
+      options.incomingRewardState ?? undefined,
     ),
   );
   const sourceRewards = new Map(
-    authoredAcquisitionSources(options.biome, options.occurrence).map((source) => [
-      semanticAddressKey(source.acquisition.owner),
-      source.reward,
-    ]),
+    authoredAcquisitionSources(
+      options.biome,
+      options.occurrence,
+      options.incomingRewardState ?? undefined,
+    ).map((source) => [semanticAddressKey(source.acquisition.owner), source.reward]),
   );
   const orderedActionKeys = new Set(options.occurrence.roomActions.order.map(roomActionKey));
   // Generated pickup actions inherit the exact lifecycle window of their
@@ -728,7 +747,11 @@ export function assembleRoomActionDomain(options: {
     // Shrine pickup is owned by its virtual acquisition entry but executes in
     // its delivery action, so generated Artificer/Sea Star children inherit
     // that contribution rather than search for a nonexistent source row.
-    for (const source of authoredAcquisitionSources(options.biome, options.occurrence)) {
+    for (const source of authoredAcquisitionSources(
+      options.biome,
+      options.occurrence,
+      options.incomingRewardState ?? undefined,
+    )) {
       if (source.action === undefined) continue;
       const contribution = sourceActionsByReference.get(roomActionKey(source.action));
       if (contribution === undefined) continue;
@@ -757,6 +780,7 @@ export function assembleRoomActionDomain(options: {
               action.reference.siteKey,
               action.reference.entryKey,
               options.routePosition.ordinal,
+              options.incomingRewardState ?? undefined,
             )
           : undefined;
       if (parsed === undefined && seaStar === undefined && producer === undefined) return [action];

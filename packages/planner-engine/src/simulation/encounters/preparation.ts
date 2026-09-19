@@ -1,5 +1,5 @@
 import type { ResolvedRoutePosition } from '../../authored-project/route-context';
-import { resolveStartingRoomDeclaration } from '../../authored-project/room-state/starting-room-profile';
+import { resolveEntryDeclaration } from '../../authored-project/room-state/entry-resolution';
 import type { Catalog, EncounterEnvelopeSlot, RoomDeclaration } from '../../catalog-schema';
 import {
   createBiomeAddress,
@@ -286,7 +286,7 @@ export function prepareRoomEncounterPhases(
   if (rawDeclaration === undefined) {
     throw new Error(`encounter preparation lost declaration ${room.gameName}`);
   }
-  const declaration = resolveStartingRoomDeclaration(rawDeclaration, routePosition);
+  const declaration = resolveEntryDeclaration(rawDeclaration, routePosition);
   const bindings = encounterBindingsBySlot(catalog, declaration, declaration.gameName);
   const pendingSpellDrop = runState.pendingSpellDrop === true;
   const allSpellInvested = runState.allSpellInvested === true;

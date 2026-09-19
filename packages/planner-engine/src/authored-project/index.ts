@@ -29,7 +29,12 @@ export {
 } from './acquisition/sea-star';
 export { activeRoomActionReferences } from './room-actions/state';
 export { directEncounterDefinitionKeyForSlot } from './room-state/encounter-envelope';
-export { resolveStartingRoomDeclaration } from './room-state/starting-room-profile';
+export {
+  resolveEntryDeclaration,
+  resolveEntryRoom,
+  type ResolvedEntryRoom,
+} from './room-state/entry-resolution';
+export { routeStartIncomingReward } from './room-state/starting-reward';
 export {
   authoredAcquisitionSources,
   authoredAcquisitionSourceAt,
@@ -111,6 +116,7 @@ export {
   createRewardWheelOfferAddress,
   createProjectAddress,
   createRouteAddress,
+  createStartingRewardAddress,
   createShopOfferAddress,
   createTraitOfferAddress,
   createCirceResolutionAddress,
@@ -171,6 +177,7 @@ export {
   type RewardWheelOfferAddress,
   type ProjectAddress,
   type RouteAddress,
+  type StartingRewardAddress,
   type SemanticAddress,
   type ShopOfferAddress,
   type TraitOfferAddress,

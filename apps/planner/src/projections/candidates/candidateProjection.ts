@@ -40,6 +40,7 @@ import {
   type RewardWheelAddress,
   type RewardWheelOfferAddress,
   type ShopOfferAddress,
+  type StartingRewardAddress,
   type SideRoomGeneration,
   type TraitOfferAddress,
   type LevelResolutionAddress,
@@ -75,6 +76,7 @@ import {
 import { createTraitCandidateAdapters } from './candidateTraitAdapters';
 
 export type RewardCandidateOwner =
+  | { readonly kind: 'startingReward'; readonly address: StartingRewardAddress }
   | { readonly kind: 'incomingReward'; readonly address: IncomingRewardAddress }
   | { readonly kind: 'localReward'; readonly address: LocalRewardAddress }
   | { readonly kind: 'rewardWheelOffer'; readonly address: RewardWheelOfferAddress }
@@ -83,7 +85,7 @@ export type RewardCandidateOwner =
 
 export type CountedRewardCandidateOwner = Exclude<
   RewardCandidateOwner,
-  { readonly kind: 'shopOffer' | 'acquisitionEntry' }
+  { readonly kind: 'shopOffer' | 'acquisitionEntry' | 'startingReward' }
 >;
 
 /**
@@ -398,6 +400,7 @@ function candidateSelectedPossible(evaluation: CandidateProjectionEvaluation): b
     case 'roomTarget':
       return evaluation.result.pressure.selectedPossible;
     case 'incomingReward':
+    case 'startingReward':
     case 'localReward':
     case 'rewardWheelOffer':
     case 'shopOffer':

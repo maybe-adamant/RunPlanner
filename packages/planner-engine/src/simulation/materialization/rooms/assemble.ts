@@ -18,16 +18,18 @@ import {
 } from '../../encounters/resolve';
 import { encounterResolutionContext } from '../../encounters/resolve';
 import { directEncounterDefinitionKeyForSlot } from '../../../authored-project/room-state/encounter-envelope';
+import { composeStartingReward } from '../../../authored-project/room-state/starting-reward';
 import { extendedWellItemKeys } from '../../commerce/stygian-well';
 import { assembleRoomActionRoster, assembleRoomLifecycleTimeline } from '../../room-actions';
 import type { CanonicalAuthoredRoom } from '../model';
 import {
   authoredMaterializer,
+  materializeRouteStartEntry,
   resolvedStoreKey,
   type AuthoredRoomMaterializationContext,
   type MaterializedRoomLeaf,
 } from './templates';
-import { resolveStartingRoomDeclaration } from '../../../authored-project/room-state/starting-room-profile';
+import { resolveEntryRoom } from '../../../authored-project/room-state/entry-resolution';
 
 type StygianWellEffect = NonNullable<ShopOptionEntry['stygianWell']>['effect'];
 
@@ -66,7 +68,13 @@ function requireLifecycleSelection(
 export function materializeAuthoredRoom(
   input: AuthoredRoomMaterializationContext,
 ): CanonicalAuthoredRoom {
-  const contextualRoom = resolveStartingRoomDeclaration(input.room, input.routePosition);
+  const resolvedEntry = resolveEntryRoom(
+    input.catalog,
+    input.room,
+    input.routePosition,
+    input.entry === true,
+  );
+  const contextualRoom = resolvedEntry.declaration;
   const context = Object.freeze({ ...input, room: contextualRoom });
   if (context.room.mode.kind === 'derived')
     fail(`${context.room.gameName} is not an occurrence room`);
@@ -82,10 +90,21 @@ export function materializeAuthoredRoom(
                   `Anomaly replacement ${context.occurrence.occurrenceId} lacks its authored Anomaly state`,
                 ),
         });
-  const leaf: MaterializedRoomLeaf = authoredMaterializer(
-    context.room.mode.templateKey,
-    context.room.gameName,
-  )(context);
+  const leaf: MaterializedRoomLeaf =
+    context.entry === true
+      ? materializeRouteStartEntry(context, resolvedEntry)
+      : authoredMaterializer(context.room.mode.templateKey, context.room.gameName)(context);
+  let routeStartIncoming:
+    import('../../../authored-project/model').AuthoredRewardState | null | undefined;
+  if (context.entry === true && context.routePosition.isFirst) {
+    if (context.loadout === undefined || !('startingReward' in context.loadout))
+      fail(`${context.room.gameName} entry requires a complete route loadout`);
+    routeStartIncoming =
+      composeStartingReward(
+        context.loadout.startingReward,
+        context.occurrence.startingRewardAcquisition,
+      ) ?? undefined;
+  }
   const selectedEncounterPhases =
     leaf.encounterPhases ??
     materializeEncounterPhases(
@@ -110,6 +129,7 @@ export function materializeAuthoredRoom(
     context.occurrence,
     context.room,
     context.routePosition.ordinal,
+    routeStartIncoming ?? undefined,
   );
   const activePickupEntries = new Set(
     pickupProducers.flatMap((producer) =>
@@ -129,6 +149,7 @@ export function materializeAuthoredRoom(
           context.biome,
           context.occurrence,
           siteKey,
+          routeStartIncoming ?? undefined,
         ))) ||
     activePickupEntries.has(`${siteKey}\u0000${key}`);
   // Anomaly and the Nemesis event are both evaluated acquisition dispositions:
@@ -152,11 +173,12 @@ export function materializeAuthoredRoom(
       ? leaf.incomingReward
       : Object.freeze({ ...leaf.incomingReward, acquisitionEnabled: false });
   const enteredRewardStoreKey =
-    context.room.enteredRewardStoreHistory.kind === 'resolvedOffer'
+    resolvedEntry.enteredRewardStoreKey ??
+    (context.room.enteredRewardStoreHistory.kind === 'resolvedOffer'
       ? resolvedStoreKey(context.room, context.batchStoreKey)
       : context.room.enteredRewardStoreHistory.kind === 'fixed'
         ? context.room.enteredRewardStoreHistory.storeKey
-        : undefined;
+        : undefined);
   const stygianWellOfferEffects =
     context.occurrence.stygianWell === undefined
       ? undefined
@@ -200,7 +222,7 @@ export function materializeAuthoredRoom(
     origin: createOccurrenceAddress(context.biome, context.occurrence.occurrenceId),
     occurrenceId: context.occurrence.occurrenceId,
     gameName: context.room.gameName,
-    incomingRewardBinding: context.room.incomingReward,
+    incomingRewardBinding: resolvedEntry.incomingRewardBinding,
     roomKind: context.room.kind,
     ...(anomalyReplacement === undefined ? {} : { anomalyReplacement }),
     encounters: context.occurrence.encounters,
@@ -212,6 +234,7 @@ export function materializeAuthoredRoom(
     lifecycleProfileKey: leaf.lifecycleProfileKey,
     counterEffects: context.room.counters,
     entered: context.entered,
+    entry: context.entry === true,
     effectNeutralRequiredReward: context.room.effectNeutralRequiredReward,
     ...(enteredRewardStoreKey === undefined ? {} : { enteredRewardStoreKey }),
     roomActions: context.occurrence.roomActions,
@@ -319,6 +342,12 @@ export function materializeAuthoredRoom(
     routePosition: context.routePosition,
     lifecycleProfileKey: base.lifecycleProfileKey,
     incomingRewardActive: base.incomingReward?.acquisitionEnabled !== false,
+    ...(context.entry === true
+      ? {
+          incomingRewardBinding: resolvedEntry.incomingRewardBinding,
+          ...(routeStartIncoming === undefined ? {} : { incomingRewardState: routeStartIncoming }),
+        }
+      : {}),
     activeEncounterSlotKeys: base.encounterPhases.map((phase) => phase.slotKey),
     shopInventoryActive: base.entryState?.kind === 'shop',
     ...(base.rewardWheels === undefined

@@ -1,7 +1,12 @@
-import { semanticAddressKey, type OccurrenceId } from '@run-planner/engine/authored-project';
+import {
+  createIncomingRewardAddress,
+  semanticAddressKey,
+  type OccurrenceId,
+} from '@run-planner/engine/authored-project';
 import type { Catalog } from '@run-planner/engine/catalog-schema';
 
-import { StructuredWorkspaceProjectionContractError, type WorkspaceRoomSummary } from '../contract';
+import { StructuredWorkspaceProjectionContractError } from '../contract';
+import type { WorkspaceRewardControl } from '../contracts/rewards';
 import { bindWorkspaceInspectorDestinations } from '../navigation/inspector-destinations';
 import { defaultInspectorDestination } from '../navigation/inspector-defaults';
 import { workspaceDecisionOwnedMarkers } from '../navigation/marker-ownership';
@@ -158,13 +163,11 @@ function mainRailRewardForDoor(
     : Object.freeze({ label: reward.summary, offer: reward.offer });
 }
 
-/** The authored biome entry has no predecessor door, so its own opening reward is explicit here. */
+/** An entry previews its composed acquisition source, not an editable door reward. */
 function entryRailReward(
   catalog: Catalog,
-  room: WorkspaceRoomSummary,
+  reward: WorkspaceRewardControl | undefined,
 ): WorkspaceRailReward | undefined {
-  const rewards = room.offerRewardRewards;
-  const reward = rewards.length === 1 ? rewards[0] : undefined;
   return reward?.offer === null || reward?.offer === undefined
     ? undefined
     : Object.freeze({ label: summarizeRewardOffer(catalog, reward.offer), offer: reward.offer });
@@ -444,7 +447,14 @@ export function presentWorkspaceBiome(
       node.kind !== 'occurrenceWorkbench'
         ? undefined
         : node.key === entry?.key
-          ? entryRailReward(catalog, node.room)
+          ? entryRailReward(
+              catalog,
+              semantic.rewardControls.get(
+                semanticAddressKey(
+                  createIncomingRewardAddress(semantic.biome, node.room.occurrenceId),
+                ),
+              ),
+            )
           : semantic.progressionKind === 'hub'
             ? mainRailRewardForDoor(node.incomingDoor)
             : undefined;

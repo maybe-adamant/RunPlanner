@@ -1,5 +1,7 @@
-import type { RoomActionReference, RoomActionState } from '../model';
+import type { AuthoredRewardState, RoomActionReference, RoomActionState } from '../model';
 import type { Catalog, RoomDeclaration } from '../../catalog-schema';
+import type { RewardProducerBinding } from '../../reward-kernel/bindings';
+import type { ResolvedRewardOffer } from '../../reward-kernel/model';
 import type { RoomOccurrence } from '../model';
 import {
   encounterEnvelopeSlots,
@@ -18,7 +20,7 @@ import { seaStarDuplicateSourceIsActive } from '../acquisition/sea-star';
 import { rewardSourceResolvesAtAcquisition } from '../acquisition/reward-state';
 import { authoredShopOffer } from '../shop';
 import type { ResolvedRoutePosition } from '../route-context';
-import { resolveStartingRoomDeclaration } from '../room-state/starting-room-profile';
+import { resolveEntryDeclaration } from '../room-state/entry-resolution';
 export { roomActionKey } from './key';
 import { roomActionKey } from './key';
 
@@ -49,12 +51,16 @@ export function activeRoomActionReferences(
     readonly activeEncounterSlotKeys?: readonly string[];
     readonly activeRewardWheelKeys?: readonly string[];
     readonly incomingRewardActive?: boolean;
+    readonly incomingRewardOffer?: ResolvedRewardOffer | null;
+    readonly incomingRewardBinding?: RewardProducerBinding;
+    /** `undefined` means occurrence ownership; `null` is an unset route-start reward. */
+    readonly incomingRewardState?: AuthoredRewardState | null;
     readonly shopInventoryActive?: boolean;
   },
 ): readonly RoomActionReference[] {
   const rawRoom = catalog.rooms.byKey[occurrence.gameName];
   if (rawRoom === undefined) return Object.freeze([]);
-  const room = resolveStartingRoomDeclaration(rawRoom, routePosition);
+  const room = resolveEntryDeclaration(rawRoom, routePosition);
   const declarationActions = createDefaultRoomActionState(room).order;
   const references: RoomActionReference[] = declarationActions.filter(
     (reference) => reference.kind !== 'useFountain',
@@ -98,7 +104,7 @@ export function activeRoomActionReferences(
         );
     }
   }
-  const reward =
+  const stateReward =
     occurrence.state.kind === 'counted' ||
     occurrence.state.kind === 'fixed' ||
     occurrence.state.kind === 'anomaly' ||
@@ -106,18 +112,23 @@ export function activeRoomActionReferences(
     occurrence.state.kind === 'freeReward'
       ? occurrence.state.reward
       : undefined;
+  const reward =
+    scope?.incomingRewardState !== undefined
+      ? scope.incomingRewardState
+      : (scope?.incomingRewardOffer ?? stateReward);
   if (
     reward !== undefined &&
     reward !== null &&
     (scope?.incomingRewardActive === undefined || scope.incomingRewardActive)
   ) {
-    const lifecycleKey =
-      room.incomingReward.kind === 'none' ? undefined : room.incomingReward.producerLifecycleKey;
+    const binding = scope?.incomingRewardBinding ?? room.incomingReward;
+    const lifecycleKey = binding.kind === 'none' ? undefined : binding.producerLifecycleKey;
+    const offer = 'offer' in reward ? reward.offer : reward;
     const lifecycle =
       lifecycleKey === undefined
         ? undefined
         : catalog.rewards.producerLifecycles.byKey[lifecycleKey]?.rewardTypes.byKey[
-            reward.offer.rewardType
+            offer.rewardType
           ];
     for (const binding of lifecycle?.acquisitionLifecycle ?? []) {
       references.push(
@@ -211,18 +222,23 @@ export function activeRoomActionReferences(
     }
   }
   const sourceDispositions = new Map(
-    authoredAcquisitionSources(biome, occurrence).map((source) => [
-      semanticAddressKey(source.acquisition.owner),
-      source.reward,
-    ]),
+    authoredAcquisitionSources(biome, occurrence, scope?.incomingRewardState ?? undefined).map(
+      (source) => [semanticAddressKey(source.acquisition.owner), source.reward],
+    ),
   );
   const structuralEchoEntries = new Set(
     echoLastRewardPickupEntryKeys(catalog, occurrence.encounters),
   );
   const activePickupEntries = new Set(
-    activeSelectedPickupProducers(catalog, biome, occurrence, room, routePosition.ordinal).flatMap(
-      (producer) =>
-        producer.pickups.map((pickup) => JSON.stringify([producer.siteKey, pickup.key])),
+    activeSelectedPickupProducers(
+      catalog,
+      biome,
+      occurrence,
+      room,
+      routePosition.ordinal,
+      scope?.incomingRewardState ?? undefined,
+    ).flatMap((producer) =>
+      producer.pickups.map((pickup) => JSON.stringify([producer.siteKey, pickup.key])),
     ),
   );
   for (const [siteKey, site] of Object.entries(occurrence.acquisitionSites ?? {})) {
@@ -257,7 +273,13 @@ export function activeRoomActionReferences(
         continue;
       if (
         siteKey.startsWith('seaStarDuplicate:') &&
-        !seaStarDuplicateSourceIsActive(catalog, biome, occurrence, siteKey)
+        !seaStarDuplicateSourceIsActive(
+          catalog,
+          biome,
+          occurrence,
+          siteKey,
+          scope?.incomingRewardState ?? undefined,
+        )
       )
         continue;
       const artificer = parseArtificerReplacementEntryKey(entryKey);

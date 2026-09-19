@@ -1,6 +1,6 @@
 # Run-start reward ownership
 
-Status: proposed execution contract; implementation not started.
+Status: Gates A and B implemented and independently reviewed; Gate C pending.
 Base: `92697cdd`.
 
 ## Objective
@@ -27,6 +27,8 @@ exercise the same contract across all biome starts.
   Preserve its effects through the shared entry resolution described below.
 - Run start will own one reward-domain declaration and one persisted reward
   choice. Entry declarations themselves have no intrinsic incoming reward.
+  They retain only their source-backed entered-store participation policy: N
+  records none; F and the other first intros record the resolved run-start offer.
 - Only the route's first entry realizes that choice. Later entries remain
   rewardless. Full itinerary position, not biome name or configured-prefix end,
   determines first entry.
@@ -43,9 +45,11 @@ exercise the same contract across all biome starts.
 Declare the starting reward binding once in the run-start catalog neighborhood,
 using existing reward binding/store contracts. It owns the RunProgress store
 selection and domain filters. Entry rooms declare no intrinsic incoming reward
-or entered reward store. Remove `StartingRoomProfile`, `StartingRoomProfiles`,
-their raw counterparts, normalization and all per-room first/later profiles.
-Normalize the run-start declaration once.
+or store identity, while retaining their narrow source-backed entered-store
+participation policy (`resolvedOffer` for F and other first intros; `none` for
+N). Remove `StartingRoomProfile`, `StartingRoomProfiles`, their raw
+counterparts, normalization and all per-room first/later profiles. Normalize
+the run-start declaration once.
 
 Retain only genuine contextual encounter differences as narrow encounter-owned
 declarations, resolved using route mode and position:
@@ -72,7 +76,7 @@ together; no old/new parallel resolution paths.
 | ----------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
 | `incomingReward`              | Single run-start declaration, bound only to the first entry                                                                      |
 | `forcedRewardStoreKey`        | Run-start reward declaration                                                                                                     |
-| `enteredRewardStoreHistory`   | Resolved starting reward binding; none for later entries                                                                         |
+| `enteredRewardStoreHistory`   | Entry declaration's participation policy, resolved from the run-start binding only at the first entry; none for later entries    |
 | `templateKey`                 | Entry materialization composes the route offer with occurrence acquisition payload; no first/later persisted reward-state switch |
 | `lifecycleProfileKey`         | Central selection from resolved encounter envelope and route-first reward binding                                                |
 | `dreamEncounterDefinitionKey` | Narrow contextual encounter declarations above                                                                                   |
@@ -256,3 +260,25 @@ closure. Leave unrelated pending plans and manual game-test obligations alone.
 Gate executors receive bounded ownership packets. Use one writer at a time and
 reuse it for remediation. Independent review must challenge the shared binding
 and first-room export equivalence, not merely count passing synthetic tests.
+
+## Delivery evidence
+
+The execution contract was committed as `e43bf14f`. Implementation remains
+uncommitted for inspection. Gate A review findings were remediated and independently
+verified; the independent Gate B review reported no additional findings. The final
+rail preview uses the composed acquisition source without restoring an editable
+room-owned reward.
+
+Focused verification passed:
+
+- Execution compiler: 71 tests, including all 11 unchanged byte-stable wire products.
+- Starting-reward command/candidate/ownership witnesses: 7 tests.
+- Contextual entry resolution: 7 tests.
+- Migration aggregate: 39 tests; authored checkpoint integrity: 22 tests.
+- Repository typechecks and changed-file lint/formatting.
+- App contract and focused Loadout/identity UI: 48 tests, plus the positive
+  reward-before-room and Undo workflow.
+- Final BiomeWorkspace and structured workspace contract run: 68 tests.
+
+Gate C still owns the complete repository check, durable document updates and
+retirement of this plan. No execution fixtures or game-module files were changed.

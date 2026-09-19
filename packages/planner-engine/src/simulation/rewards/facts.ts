@@ -1,5 +1,9 @@
 import type { Catalog, RoomDeclaration } from '../../catalog-schema';
-import { semanticAddressKey } from '../../authored-project/addresses';
+import {
+  semanticAddressKey,
+  type StartingRewardAddress,
+  type SemanticAddress,
+} from '../../authored-project/addresses';
 import type { RequirementEvaluationContext } from '../../requirements/evaluator';
 import {
   factsWithHistory,
@@ -76,7 +80,7 @@ function staticRewardViewFacts(catalog: Catalog, view: HistoryStateView): Static
 export function createdPeerGameNames(
   catalog: Catalog,
   view: HistoryStateView,
-  parentOrigin: CanonicalLifecycleRoom['origin'],
+  parentOrigin: SemanticAddress,
   source: RoomCreationSource,
 ): readonly string[] {
   const facts = staticRewardViewFacts(catalog, view);
@@ -106,9 +110,10 @@ export function createdPeerGameNames(
 
 interface RewardFactsOptions {
   readonly catalog: Catalog;
-  readonly sourceOrigin: CanonicalLifecycleRoom['origin'];
+  readonly sourceOrigin: CanonicalLifecycleRoom['origin'] | StartingRewardAddress;
   readonly currentRoom: CanonicalLifecycleRoom | undefined;
-  readonly sourceDeclaration: RoomDeclaration;
+  /** Undefined only for the route-start reward, which has no room identity. */
+  readonly sourceDeclaration?: RoomDeclaration;
   readonly view: HistoryStateView;
   readonly history: RewardHistoryState;
   readonly enteredBiomeCount: number;
@@ -167,14 +172,21 @@ export function createRewardFacts({
       currentRoom !== undefined && 'incomingReward' in currentRoom
         ? currentRoom.incomingReward?.offer.rewardType
         : undefined,
-    currentRoomStructuralTags: sourceDeclaration.structuralTags,
+    currentRoomStructuralTags: sourceDeclaration?.structuralTags ?? Object.freeze([]),
     rewardLookups,
     runDepthCache: view.ledgers.counters.roomHistoryOrdinal + 1,
     lastEventRunDepthCaches: Object.freeze(
       history.lastDevotionDepth === undefined ? {} : { Devotion: history.lastDevotionDepth },
     ),
     recentEncounterEnvelopeSlots: staticFacts.recentEncounterEnvelopeSlots,
-    offeredExitCount: projectOfferedExitCount(view, sourceOrigin, sourceDeclaration.exits.length),
+    offeredExitCount:
+      sourceDeclaration === undefined
+        ? 0
+        : projectOfferedExitCount(
+            view,
+            sourceOrigin as CanonicalLifecycleRoom['origin'],
+            sourceDeclaration.exits.length,
+          ),
     currentBatchRoomGameNames,
     clockwork: hasClockwork
       ? {
@@ -230,4 +242,52 @@ export function createBiomeRewardFacts(
       throw new BiomeRewardSimulationContractError(detail);
     },
   });
+}
+
+/**
+ * Exact reward facts at route start, before an entry-room identity exists.
+ * This is deliberately a no-room context: it carries the real initialized
+ * branch history and loadout effects without fabricating a room declaration.
+ */
+export function createRouteStartRewardFacts(
+  catalog: Catalog,
+  route: StartingRewardAddress,
+  history: RewardHistoryState,
+  branch?: RewardBranchState,
+): RewardKernelFacts {
+  const requirements: RequirementEvaluationContext = Object.freeze({
+    routeKey: route.routeKey,
+    counters: Object.freeze({
+      biomeDepthCache: 0,
+      biomeEncounterDepth: 0,
+      encounterDepth: 0,
+      enteredBiomes: 0,
+      upgradableTraitCount: history.traitFacts.upgradableTraitCount,
+    }),
+    records: Object.freeze({
+      biomeUseRecord: history.biomeUseRecord,
+      lootTypeHistory: history.lootTypeHistory,
+      roomsEntered: Object.freeze({}),
+      useRecord: history.useRecord,
+    }),
+    currentRoomShopOptionNames: new Set<string>(),
+    currentRoomRewardType: undefined,
+    currentRoomStructuralTags: Object.freeze([]),
+    rewardLookups: Object.freeze({}),
+    runDepthCache: 1,
+    lastEventRunDepthCaches: Object.freeze(
+      history.lastDevotionDepth === undefined ? {} : { Devotion: history.lastDevotionDepth },
+    ),
+    recentEncounterEnvelopeSlots: Object.freeze([]),
+    offeredExitCount: 0,
+    currentBatchRoomGameNames: Object.freeze([]),
+    clockwork: undefined,
+    flags: Object.freeze({
+      allSpellInvested: branch?.hexProgress.talentDropsClosed === true,
+      pendingSpellDrop: Object.values(branch?.pendingHermesShrineDeliveries ?? {}).some(
+        (delivery) => delivery.rewardType === 'SpellDrop',
+      ),
+    }),
+  });
+  return factsWithHistory(Object.freeze({ requirements }), history, new Set<string>());
 }

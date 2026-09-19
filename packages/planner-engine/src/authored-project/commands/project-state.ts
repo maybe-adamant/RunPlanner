@@ -10,6 +10,8 @@ import { createDefaultRoomState } from '../room-state/defaults';
 import { createDefaultRoomEncounterState } from '../room-state/encounter-envelope';
 import { reconcileReplacementRoomState } from '../room-state/replacement';
 import { reconcileRoomEncounterState } from '../room-state/encounter-reconciliation';
+import { createUnresolvedAcquisitionRewardState } from '../traits/state';
+import { startingRewardAcquisitionFrom } from '../room-state/starting-reward';
 import type { ProjectDocument } from '../model';
 
 import { failCommand, locateBiome, withBiome } from './contract';
@@ -19,6 +21,7 @@ function routeForCommand(
   document: ProjectDocument,
   command: Extract<
     ProjectStateCommand,
+    | { readonly kind: 'ReplaceStartingReward' }
     | { readonly kind: 'ReplaceRouteLoadout' }
     | { readonly kind: 'ReplaceAspectHexTree' }
     | { readonly kind: 'ReplaceManualArcanaSelection' }
@@ -29,7 +32,9 @@ function routeForCommand(
   const routeKey =
     command.kind === 'ReplaceStartingKeepsake'
       ? command.selection.routeKey
-      : command.route.routeKey;
+      : command.kind === 'ReplaceStartingReward'
+        ? command.reward.routeKey
+        : command.route.routeKey;
   if (document.route.routeKey !== routeKey)
     failCommand(command, `project is missing route ${routeKey}`);
   return { route: document.route };
@@ -173,6 +178,75 @@ export function applyProjectStateCommand(
   command: ProjectStateCommand,
 ): ProjectDocument {
   switch (command.kind) {
+    case 'ReplaceStartingReward': {
+      const { route } = routeForCommand(document, command);
+      const binding = catalog.runStartReward.incomingReward;
+      if (
+        command.value !== null &&
+        !binding.allowedRewardTypes.includes(command.value.rewardType)
+      ) {
+        failCommand(command, 'reward is not allowed by the run-start binding');
+      }
+      if (JSON.stringify(route.loadout.startingReward) === JSON.stringify(command.value))
+        return document;
+      const firstPlan = route.biomes[0];
+      const topology = firstPlan?.topology;
+      const start = topology?.occurrences.find(
+        (occurrence) => occurrence.occurrenceId === topology.startOccurrenceId,
+      );
+      const acquisition =
+        command.value === null
+          ? undefined
+          : (() => {
+              const reward = createUnresolvedAcquisitionRewardState(catalog, command.value, {
+                kind: 'producerLifecycle',
+                key: binding.producerLifecycleKey,
+              });
+              return startingRewardAcquisitionFrom(reward);
+            })();
+      const biomes: ProjectDocument['route']['biomes'] =
+        topology === undefined ||
+        topology === null ||
+        start === undefined ||
+        firstPlan === undefined
+          ? route.biomes
+          : route.biomes.map((plan, index) =>
+              index !== 0
+                ? plan
+                : Object.freeze({
+                    ...plan,
+                    topology: Object.freeze({
+                      startOccurrenceId: topology.startOccurrenceId,
+                      decisions: topology.decisions,
+                      fixedRoomLinks: topology.fixedRoomLinks,
+                      occurrences: Object.freeze(
+                        topology.occurrences.map((occurrence) =>
+                          occurrence.occurrenceId !== start.occurrenceId
+                            ? occurrence
+                            : (() => {
+                                const withoutAcquisition = { ...occurrence };
+                                delete withoutAcquisition.startingRewardAcquisition;
+                                return Object.freeze({
+                                  ...withoutAcquisition,
+                                  ...(acquisition === undefined
+                                    ? {}
+                                    : { startingRewardAcquisition: acquisition }),
+                                });
+                              })(),
+                        ),
+                      ),
+                    }),
+                  }),
+            );
+      return Object.freeze({
+        ...document,
+        route: Object.freeze({
+          ...route,
+          loadout: Object.freeze({ ...route.loadout, startingReward: command.value }),
+          biomes: Object.freeze(biomes),
+        }),
+      });
+    }
     case 'ConfigureRoutePrefix':
       return configureRoutePrefix(document, catalog, command);
     case 'ReplaceRouteLoadout': {

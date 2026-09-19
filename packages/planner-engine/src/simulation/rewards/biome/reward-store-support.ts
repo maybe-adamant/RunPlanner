@@ -17,6 +17,7 @@ function enteredStoreKey(
   room: CanonicalAuthoredRoom,
   declaration: RoomDeclaration,
 ): string | undefined {
+  if (room.enteredRewardStoreKey !== undefined) return room.enteredRewardStoreKey;
   switch (declaration.enteredRewardStoreHistory.kind) {
     case 'none':
       return undefined;

@@ -1,10 +1,6 @@
 import { renderToStaticMarkup } from 'react-dom/server';
 import { Provider } from 'react-redux';
-import {
-  createBiomeAddress,
-  createOccurrenceId,
-  createRouteAddress,
-} from '@run-planner/engine/authored-project';
+import { createRouteAddress } from '@run-planner/engine/authored-project';
 import { describe, expect, it } from 'vitest';
 
 import { createApplication } from '@planner/composition/createApplication';
@@ -107,7 +103,7 @@ describe('RouteOverview', () => {
     expect(routeOverviewMarkup(application)).not.toContain('Hex talent layout');
   });
 
-  it('owns F start creation and its room and reward controls in Route Loadout', () => {
+  it('owns only the independent starting reward in Route Loadout', () => {
     const application = createOpenTestApplication('Underworld');
     application.store.dispatch(
       authoredProjectCommandDispatched({
@@ -116,19 +112,9 @@ describe('RouteOverview', () => {
         route: createRouteAddress('Underworld'),
       }),
     );
-    expect(routeOverviewMarkup(application)).toContain('aria-label="Starting room"');
-
-    application.store.dispatch(
-      authoredProjectCommandDispatched({
-        kind: 'CreateStart',
-        biome: createBiomeAddress('Underworld', 'F'),
-        occurrenceId: createOccurrenceId('overview-f-start'),
-        gameName: 'F_Opening01',
-      }),
-    );
     const markup = routeOverviewMarkup(application);
-    expect(markup).toContain('aria-label="Start room configuration"');
-    expect(markup).toContain('>Room</label>');
-    expect(markup).toContain('>Reward</label>');
+    expect(markup).toContain('>Starting reward</label>');
+    expect(markup).not.toContain('aria-label="Starting room"');
+    expect(markup).not.toContain('aria-label="Start room configuration"');
   });
 });

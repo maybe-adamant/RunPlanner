@@ -25,6 +25,8 @@ import { validateRoomLayoutClosure } from './rooms/layout-closure';
 import { normalizeRooms } from './rooms/normalize';
 import { validateFixedAcquisitionTraitGrants } from './rewards/declarations';
 import { createRewardKernelCatalog } from './rewards/normalize';
+import { normalizeRewardBinding } from './rewards/bindings';
+import { fail } from './errors';
 import { validateRewardRouteRequirementReferences } from './rewards/requirements';
 import { normalizeRoutes } from './routes';
 import {
@@ -41,6 +43,16 @@ export function createCatalog(input: RawCatalogInput): Catalog {
 
   const biomes = normalizeBiomes(input.biomes);
   const rewards = createRewardKernelCatalog(input.rewardKernel);
+  const normalizedRunStartReward = normalizeRewardBinding(
+    input.runStartReward,
+    rewards,
+    'runStartReward',
+  );
+  if (normalizedRunStartReward.kind !== 'countedChoice')
+    fail('runStartReward', 'must declare a counted choice producer');
+  if (normalizedRunStartReward.storeKeys.length !== 1)
+    fail('runStartReward.storeKeys', 'must declare exactly one reward store');
+  const runStartReward = Object.freeze({ incomingReward: normalizedRunStartReward });
   const traitCatalog = createTraitCatalog(input.traitCatalog);
   validateFixedAcquisitionTraitGrants(rewards.acquisitions, traitCatalog.traits);
   const arcanaCards = normalizeArcanaCards(input.arcanaCards, traitCatalog.traits);
@@ -114,6 +126,7 @@ export function createCatalog(input: RawCatalogInput): Catalog {
     version: input.version,
     biomes,
     routes,
+    runStartReward,
     arcanaCards,
     fearVows,
     keepsakes,

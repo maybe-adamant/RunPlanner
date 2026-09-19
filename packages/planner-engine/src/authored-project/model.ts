@@ -7,7 +7,7 @@ import type {
   AuthoredTraitOffer,
 } from './traits/state';
 
-export const PROJECT_DOCUMENT_SCHEMA_VERSION = 85 as const;
+export const PROJECT_DOCUMENT_SCHEMA_VERSION = 86 as const;
 export type ResourceFamily = import('../catalog-schema').ResourceFamily;
 /** Route ownership supplies the route key; the selected host is exact and durable. */
 export interface ResourcePlacement {
@@ -50,6 +50,8 @@ export interface AuthoredRewardState {
   readonly dispositionByAcquisitionRole: Readonly<Record<string, AcquisitionDisposition>>;
 }
 
+export type AuthoredStartingRewardAcquisition = Omit<AuthoredRewardState, 'offer'>;
+
 /** The narrow loadout surface consumed by room/reward materialization. */
 export interface RouteWeaponAspectLoadout {
   readonly weaponKey: string;
@@ -58,6 +60,8 @@ export interface RouteWeaponAspectLoadout {
 
 /** Complete persisted route configuration. */
 export interface RouteLoadout extends RouteWeaponAspectLoadout {
+  /** Route-owned offer selected before an entry room exists. */
+  readonly startingReward: ResolvedRewardOffer | null;
   readonly manualArcanaKeys: readonly string[];
   readonly fearRanks: Readonly<Record<string, number>>;
   /** Mandatory ordinary rack selection established before the route begins. */
@@ -374,6 +378,8 @@ export interface RoomOccurrence {
    */
   readonly anomalyReplacement?: AnomalyReplacementProvenance;
   readonly state: AuthoredRoomState;
+  /** Present only on the first itinerary entry's active topology start. */
+  readonly startingRewardAcquisition?: AuthoredStartingRewardAcquisition;
   /** Sparse because ordinary mandatory singleton points need no authored state. */
   readonly acquisitionSites?: Readonly<Record<string, AuthoredAcquisitionSiteState>>;
   readonly encounters: RoomEncounterState;

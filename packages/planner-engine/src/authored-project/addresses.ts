@@ -13,6 +13,12 @@ export interface RouteAddress {
   readonly kind: 'route';
   readonly routeKey: string;
 }
+/** The route-owned offer selected before an entry occurrence exists. */
+export interface StartingRewardAddress {
+  readonly kind: 'startingReward';
+  readonly routeKey: string;
+  readonly biomeKey: 'routeStart';
+}
 export interface BiomeAddress extends BiomeOwnedAddress {
   readonly kind: 'biome';
 }
@@ -359,6 +365,7 @@ export interface LevelResolutionAddress extends BiomeOwnedAddress {
 export type SemanticAddress =
   | ProjectAddress
   | RouteAddress
+  | StartingRewardAddress
   | BiomeAddress
   | BiomeFieldAddress
   | OccurrenceAddress
@@ -453,6 +460,13 @@ export function createProjectAddress(): ProjectAddress {
 }
 export function createRouteAddress(routeKey: string): RouteAddress {
   return Object.freeze({ kind: 'route', routeKey: nonBlank(routeKey, 'routeKey') });
+}
+export function createStartingRewardAddress(routeKey: string): StartingRewardAddress {
+  return Object.freeze({
+    kind: 'startingReward',
+    routeKey: nonBlank(routeKey, 'routeKey'),
+    biomeKey: 'routeStart',
+  });
 }
 export function createBiomeAddress(routeKey: string, biomeKey: string): BiomeAddress {
   return Object.freeze({
@@ -1051,6 +1065,8 @@ export function semanticAddressKey(address: SemanticAddress): string {
     case 'project':
       return JSON.stringify([address.kind]);
     case 'route':
+      return JSON.stringify([address.kind, address.routeKey]);
+    case 'startingReward':
       return JSON.stringify([address.kind, address.routeKey]);
     case 'biome':
       return JSON.stringify(base);

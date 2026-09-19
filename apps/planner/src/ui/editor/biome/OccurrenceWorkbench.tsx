@@ -19,6 +19,8 @@ import { DirectRoomWorkbench, IncomingRewardOverview } from './OccurrenceDirectR
 import { FieldsLayoutWorkbench } from './locals/FieldsWorkbench';
 
 interface OccurrenceWorkbenchProps {
+  /** Entry identity is an Overview-only biome authoring control. */
+  readonly entryIdentity?: ReactNode;
   readonly incomingDoor?: WorkspaceDoorContract;
   readonly interactions: WorkspaceInteractionCatalog;
   readonly localVisit?: WorkspaceLocalVisitDecision;
@@ -42,6 +44,7 @@ interface OccurrenceWorkbenchProps {
 /** A room-local editor that consumes the structured workspace only. */
 export function OccurrenceWorkbench({
   doors,
+  entryIdentity,
   incomingDoor,
   initialTab,
   findingNavigationRevision,
@@ -209,6 +212,7 @@ export function OccurrenceWorkbench({
       >
         {activeTab === 'overview' ? (
           <div className="room-overview-workbench">
+            {entryIdentity}
             <IncomingRewardOverview incomingDoor={incomingDoor} />
             <AnomalyClearedControl room={room} />
             {renderDirectRoomWorkbench('overview')}

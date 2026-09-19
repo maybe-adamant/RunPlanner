@@ -73,6 +73,7 @@ function sourceAction(
 export function authoredAcquisitionSources(
   biome: BiomeAddress,
   occurrence: RoomOccurrence,
+  routeStartIncoming?: AuthoredRewardState,
 ): readonly AuthoredAcquisitionSource[] {
   const result: AuthoredAcquisitionSource[] = [];
   const add = (
@@ -129,6 +130,8 @@ export function authoredAcquisitionSources(
     case 'none':
       break;
   }
+  if (routeStartIncoming !== undefined)
+    add(createIncomingRewardAddress(biome, occurrence.occurrenceId), routeStartIncoming);
   const occurrenceAddress = createOccurrenceAddress(biome, occurrence.occurrenceId);
   for (const [siteKey, site] of Object.entries(occurrence.acquisitionSites ?? {})) {
     const address = acquisitionSiteFromStorageKey(occurrenceAddress, siteKey);
@@ -143,9 +146,10 @@ export function authoredAcquisitionSourceAt(
   biome: BiomeAddress,
   occurrence: RoomOccurrence,
   acquisition: AcquisitionRoleAddress,
+  routeStartIncoming?: AuthoredRewardState,
 ): AuthoredAcquisitionSource | undefined {
   const key = semanticAddressKey(acquisition);
-  return authoredAcquisitionSources(biome, occurrence).find(
+  return authoredAcquisitionSources(biome, occurrence, routeStartIncoming).find(
     (source) => semanticAddressKey(source.acquisition) === key,
   );
 }

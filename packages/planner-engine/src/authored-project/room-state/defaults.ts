@@ -224,6 +224,14 @@ export function createDefaultRoomState(
       requireOrdinaryRole(role, room, path);
       return defaultEphyraCombatState(catalog, room, context.resolvedStoreKey, path);
     case 'FixedOpening':
+      requireOrdinaryRole(role, room, path);
+      if (room.incomingReward.kind === 'none') return Object.freeze({ kind: 'none' });
+      requireCountedStore(
+        requireCountedBinding(room, path),
+        defaultCountedStoreKey(room, context.resolvedStoreKey),
+        path,
+      );
+      return Object.freeze({ kind: 'counted', reward: null });
     case 'FixedPreHub':
     case 'ClockworkCombat':
     case 'EphyraSideRoom':

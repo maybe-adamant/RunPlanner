@@ -21,6 +21,7 @@ import type {
   RewardWheelAddress,
   RewardWheelOfferAddress,
   ShopOfferAddress,
+  StartingRewardAddress,
   TargetAddress,
 } from '../../authored-project/addresses';
 import type {
@@ -46,11 +47,13 @@ type StygianWellEffect = NonNullable<ShopOptionEntry['stygianWell']>['effect'];
 
 export type BiomeMaterializationLoadout = Pick<
   RouteLoadout,
-  'weaponKey' | 'aspectKey' | 'fearRanks'
+  'weaponKey' | 'aspectKey' | 'fearRanks' | 'startingReward'
 >;
 
 export interface CanonicalResolvedIncomingReward {
   readonly origin: IncomingRewardAddress | LocalRewardAddress;
+  /** Offer ownership can remain route-start while its acquisition remains room-local. */
+  readonly offerOrigin?: StartingRewardAddress;
   readonly kind: 'resolved';
   readonly producerKind: 'countedChoice' | 'fixed' | 'freeReward' | 'shop';
   /** Concrete source provenance is required by acquisition effects such as Time Piece. */
@@ -199,6 +202,8 @@ export interface CanonicalAuthoredRoom {
   readonly lifecycleProfileKey: string;
   readonly counterEffects: RoomCounterEffects;
   readonly entered: boolean;
+  /** True only for the route topology's active entry occurrence. */
+  readonly entry: boolean;
   /** Declaration-owned required pickup that does not mutate simulated state. */
   readonly effectNeutralRequiredReward: boolean;
   /** Declaration-fixed completion rooms inherit selected Preboss reward-store provenance. */

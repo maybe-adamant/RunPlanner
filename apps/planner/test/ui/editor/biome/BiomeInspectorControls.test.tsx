@@ -18,6 +18,7 @@ import {
   createOccurrenceId,
   createProjectDocument,
   createRouteAddress,
+  createStartingRewardAddress,
   createRouteStartKeepsakeSelectionAddress,
   createTargetAddress,
   semanticAddressKey,
@@ -178,7 +179,7 @@ function withoutWorkspaceEntry({ entry, ...biome }: WorkspaceBiome): Omit<Worksp
 }
 
 describe('Biome inspector controls', () => {
-  it('locks the F opening identity and reward behind an incomplete route-start result', async () => {
+  it('locks the F opening identity behind an incomplete route-start result', async () => {
     const occurrenceId = createOccurrenceId('locked-start-identity');
     let project = applyProjectCommand(emptyProject('Underworld', 1), catalog, {
       biome: goldenFBiome,
@@ -194,12 +195,10 @@ describe('Biome inspector controls', () => {
     const view = renderWorkspace(project, 'Underworld', 'F');
     const identity = screen.getByRole('region', { name: 'Start room configuration' });
     const room = within(identity).getByRole('button', { name: 'Room' });
-    const reward = within(identity).getByRole('button', { name: 'Reward' });
-    if (!(room instanceof HTMLButtonElement) || !(reward instanceof HTMLButtonElement)) {
-      throw new Error('opening identity controls are not buttons');
-    }
+    if (!(room instanceof HTMLButtonElement))
+      throw new Error('opening identity control is not a button');
     expect(room.disabled).toBe(true);
-    expect(reward.disabled).toBe(true);
+    expect(within(identity).queryByRole('button', { name: 'Reward' })).toBeNull();
 
     const historyBefore = view.application.store.getState().projectWorkspace.history;
     await view.user.click(room);
@@ -208,20 +207,19 @@ describe('Biome inspector controls', () => {
     );
     if (roomLabel === null) throw new Error('opening room label is missing');
     await view.user.click(roomLabel);
-    const rewardLabel = identity.querySelector<HTMLLabelElement>(
-      `label[for="${reward.getAttribute('id') ?? ''}"]`,
-    );
-    if (rewardLabel === null) throw new Error('opening reward label is missing');
-    await view.user.click(rewardLabel);
-
     expect(screen.queryByRole('listbox')).toBeNull();
     expect(view.application.store.getState().projectWorkspace.history).toBe(historyBefore);
   });
 
-  it('edits authored start identity beside the read-only room workbench and undoes exactly', async () => {
+  it('edits entry identity in Overview only and undoes exactly', async () => {
     const occurrenceId = createOccurrenceId('start-identity-surface');
     const occurrence = createOccurrenceAddress(goldenFBiome, occurrenceId);
-    const started = applyProjectCommand(emptyProject('Underworld', 1), catalog, {
+    let started = applyProjectCommand(emptyProject('Underworld', 1), catalog, {
+      kind: 'ReplaceStartingReward',
+      reward: createStartingRewardAddress('Underworld'),
+      value: { rewardType: 'WeaponUpgrade' },
+    });
+    started = applyProjectCommand(started, catalog, {
       biome: goldenFBiome,
       gameName: 'F_Opening01',
       kind: 'CreateStart',
@@ -232,10 +230,21 @@ describe('Biome inspector controls', () => {
     const identity = screen.getByRole('region', { name: 'Start room configuration' });
     const workbench = document.querySelector('.biome-occurrence-workbench');
     if (!(workbench instanceof HTMLElement)) throw new Error('start workbench is missing');
-    expect(within(workbench).queryByLabelText('Room')).toBeNull();
+    expect(
+      within(screen.getByRole('tabpanel', { name: 'Room Overview' })).getByRole('region', {
+        name: 'Start room configuration',
+      }),
+    ).toBe(identity);
+    await view.user.click(within(workbench).getByRole('tab', { name: 'Room Timeline' }));
+    expect(screen.queryByRole('region', { name: 'Start room configuration' })).toBeNull();
+    await view.user.click(within(workbench).getByRole('tab', { name: 'Room Overview' }));
     const historyBefore = view.application.store.getState().projectWorkspace.history!.past.length;
 
-    await view.user.click(within(identity).getByRole('button', { name: 'Room' }));
+    await view.user.click(
+      within(screen.getByRole('region', { name: 'Start room configuration' })).getByRole('button', {
+        name: 'Room',
+      }),
+    );
     const replacement = within(await screen.findByRole('listbox'))
       .getAllByRole('option')
       .find(
@@ -263,9 +272,14 @@ describe('Biome inspector controls', () => {
     expect(authoredStart()).toBe('F_Opening01');
   });
 
-  it('selects and replaces an F entry reward beside identity with one undo per edit', async () => {
+  it('keeps the F entry identity surface free of a duplicate reward selector', async () => {
     const occurrenceId = createOccurrenceId('start-entry-reward');
-    const started = applyProjectCommand(emptyProject('Underworld', 1), catalog, {
+    let started = applyProjectCommand(emptyProject('Underworld', 1), catalog, {
+      kind: 'ReplaceStartingReward',
+      reward: createStartingRewardAddress('Underworld'),
+      value: { rewardType: 'WeaponUpgrade' },
+    });
+    started = applyProjectCommand(started, catalog, {
       biome: goldenFBiome,
       gameName: 'F_Opening01',
       kind: 'CreateStart',
@@ -273,61 +287,20 @@ describe('Biome inspector controls', () => {
     });
     const view = renderWorkspace(started, 'Underworld', 'F');
     const identity = screen.getByRole('region', { name: 'Start room configuration' });
-    const historyBefore = view.application.store.getState().projectWorkspace.history!.past.length;
-
-    await view.user.click(within(identity).getByLabelText('Reward'));
-    const listbox = await screen.findByRole('listbox');
-    await view.user.click(within(listbox).getByText('Hammer'));
-
-    expect(view.application.store.getState().projectWorkspace.history!.past).toHaveLength(
-      historyBefore + 1,
-    );
+    expect(within(identity).queryByLabelText('Reward')).toBeNull();
     expect(
-      view.application.store.getState().projectWorkspace.history!.present.route?.biomes[0]?.topology
-        ?.occurrences[0]?.state,
-    ).toMatchObject({
-      kind: 'counted',
-      reward: { offer: { rewardType: 'WeaponUpgrade' } },
-    });
-    await view.user.click(within(identity).getByLabelText('Reward'));
-    await view.user.click(within(await screen.findByRole('listbox')).getByText('Boon'));
-    await view.user.click(within(await screen.findByRole('listbox')).getByText('Zeus'));
-    expect(view.application.store.getState().projectWorkspace.history!.past).toHaveLength(
-      historyBefore + 2,
-    );
-    expect(
-      view.application.store.getState().projectWorkspace.history!.present.route?.biomes[0]?.topology
-        ?.occurrences[0]?.state,
-    ).toMatchObject({
-      kind: 'counted',
-      reward: {
-        offer: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'ZeusUpgrade' } },
-        traitOffersByAcquisitionRole: { source: null },
-      },
-    });
-    act(() => view.application.store.dispatch(authoredProjectUndoRequested()));
-    expect(
-      view.application.store.getState().projectWorkspace.history!.present.route?.biomes[0]?.topology
-        ?.occurrences[0]?.state,
-    ).toMatchObject({ kind: 'counted', reward: { offer: { rewardType: 'WeaponUpgrade' } } });
-    act(() => view.application.store.dispatch(authoredProjectUndoRequested()));
-    expect(
-      view.application.store.getState().projectWorkspace.history!.present.route?.biomes[0]?.topology
-        ?.occurrences[0]?.state,
-    ).toMatchObject({ kind: 'counted', reward: null });
+      view.application.store.getState().projectWorkspace.history!.present.route?.loadout
+        .startingReward,
+    ).toEqual({ rewardType: 'WeaponUpgrade' });
   });
 
-  it('shows the fixed N entry reward without a start identity picker', async () => {
+  it('keeps the singleton N entry automatic without an identity selector', async () => {
     const view = renderWorkspace(loadSurfaceNOPQProject(), 'Surface', 'N');
     await view.user.click(screen.getByRole('button', { name: /^Opening/ }));
-    const entryReward = screen.getByRole('region', { name: 'Start room configuration' });
-    expect(within(entryReward).getByLabelText('Reward')).toBeTruthy();
-    expect(within(entryReward).queryByText('Opening')).toBeTruthy();
-    expect(within(entryReward).queryByRole('heading', { name: 'Entry reward' })).toBeNull();
-    expect(within(entryReward).queryByRole('button', { name: /Edit Trait/ })).toBeNull();
+    expect(screen.queryByRole('region', { name: 'Start room configuration' })).toBeNull();
   });
 
-  it('locks the fixed N opening reward behind an incomplete route-start result', async () => {
+  it('keeps the singleton N entry free of opening controls', async () => {
     const project = applyProjectCommand(loadSurfaceNOPQProject(), catalog, {
       keepsakeKey: 'RandomBlessingKeepsake',
       kind: 'ReplaceStartingKeepsake',
@@ -335,21 +308,10 @@ describe('Biome inspector controls', () => {
     });
     const view = renderWorkspace(project, 'Surface', 'N');
     await view.user.click(screen.getByRole('button', { name: /^Opening/ }));
-    const identity = screen.getByRole('region', { name: 'Start room configuration' });
-    expect(within(identity).queryByRole('button', { name: 'Room' })).toBeNull();
-    const reward = within(identity).getByRole('button', { name: 'Reward' });
-    if (!(reward instanceof HTMLButtonElement)) throw new Error('N opening reward is not a button');
-    expect(reward.disabled).toBe(true);
-
-    const label = identity.querySelector<HTMLLabelElement>(
-      `label[for="${reward.getAttribute('id') ?? ''}"]`,
-    );
-    if (label === null) throw new Error('N opening reward label is missing');
-    await view.user.click(label);
-    expect(screen.queryByRole('listbox')).toBeNull();
+    expect(screen.queryByRole('region', { name: 'Start room configuration' })).toBeNull();
   });
 
-  it('keeps fixed intro entries free of room and reward picker leaks', () => {
+  it('keeps fixed intro entries free of room and reward controls', () => {
     const project = applyProjectCommand(loadSurfaceNOPQProject(), catalog, {
       keepsakeKey: 'RandomBlessingKeepsake',
       kind: 'ReplaceStartingKeepsake',
@@ -361,14 +323,7 @@ describe('Biome inspector controls', () => {
         semanticOwnerFocused(createOccurrenceAddress(pBiome, pOccurrenceIds.intro)),
       ),
     );
-    const identity = screen.getByRole('region', { name: 'Start room configuration' });
-
-    expect(within(identity).getByText('Entrance')).toBeTruthy();
-    expect(within(identity).queryByRole('button', { name: 'Room' })).toBeNull();
-    expect(within(identity).queryByRole('button', { name: 'Reward' })).toBeNull();
-    const rewardRow = within(identity).getByText('No reward').closest('.door-fixed-reward');
-    expect(rewardRow).toBeTruthy();
-    expect(within(rewardRow as HTMLElement).getByText('Reward')).toBeTruthy();
+    expect(screen.queryByRole('region', { name: 'Start room configuration' })).toBeNull();
   });
 
   it('binds a room-local selected resource removal to one semantic edit and undo', async () => {

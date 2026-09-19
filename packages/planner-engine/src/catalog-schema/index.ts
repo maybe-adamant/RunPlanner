@@ -87,6 +87,11 @@ export interface RouteDeclaration {
   };
 }
 
+/** The one declaration-owned reward domain offered before a route chooses an entry room. */
+export interface RunStartRewardDeclaration {
+  readonly incomingReward: CountedRewardBinding;
+}
+
 export type ArcanaActivationRule =
   | { readonly kind: 'adjacentActive' }
   | { readonly kind: 'manualCostsOneThroughFive' }
@@ -735,21 +740,11 @@ export type RoomOfferRewardBinding =
   | { readonly kind: 'incomingReward' }
   | { readonly kind: 'localRewardGroup'; readonly groupKey: string };
 
-/** Declaration-owned starting-room facts for one route position. */
-export interface StartingRoomProfile {
-  readonly templateKey: 'FixedIntro' | 'FixedOpening';
-  readonly incomingReward: RewardProducerBinding;
-  readonly lifecycleProfileKey: string;
-  readonly enteredRewardStoreHistory: EnteredRewardStoreHistoryPolicy;
-  readonly forcedRewardStoreKey?: string;
-  /** Dream may replace the ordinary single-slot opening encounter at this position. */
-  readonly dreamEncounterDefinitionKey?: string;
-}
-
-/** Contextual starting-room facts; route position selects one without persisting it. */
-export interface StartingRoomProfiles {
-  readonly routeFirst: StartingRoomProfile;
-  readonly routeLater: StartingRoomProfile;
+/** A narrow declaration-owned encounter replacement for a contextual route entry. */
+export interface EntryContextualEncounterRule {
+  readonly routeKey: 'Dream';
+  readonly position: 'every' | 'first';
+  readonly encounterDefinitionKey: string;
 }
 
 export type PrebossBatchPolicy =
@@ -772,8 +767,8 @@ export interface RoomDeclaration {
   readonly exits: readonly RoomExit[];
   readonly additionalExits: readonly AdditionalExitDeclaration[];
   readonly incomingReward: RewardProducerBinding;
-  /** Position-based starting-room profiles, declared beside the physical room. */
-  readonly startingRoomProfiles?: StartingRoomProfiles;
+  /** Entry-only contextual encounter differences; reward ownership remains route-start owned. */
+  readonly entryContextualEncounterRules?: readonly EntryContextualEncounterRule[];
   /** A real required pickup whose payload is intentionally outside simulated state. */
   readonly effectNeutralRequiredReward: boolean;
   /** Declaration-owned binding for the reward surface exposed by this room. */
@@ -1125,6 +1120,7 @@ export interface Catalog {
   readonly version: string;
   readonly biomes: CatalogCollection<BiomeDeclaration>;
   readonly routes: CatalogCollection<RouteDeclaration>;
+  readonly runStartReward: RunStartRewardDeclaration;
   readonly arcanaCards: CatalogCollection<ArcanaCardDeclaration>;
   readonly fearVows: CatalogCollection<FearVowDeclaration>;
   readonly keepsakes: CatalogCollection<KeepsakeDeclaration>;

@@ -70,6 +70,7 @@ describe('F takeover materialization', () => {
         weaponKey: 'Staff',
         aspectKey: 'BaseStaffAspect',
         fearRanks: {},
+        startingReward: null,
       }),
     ).toThrowError(
       new BiomeMaterializationContractError('biome materialization requires completeness'),

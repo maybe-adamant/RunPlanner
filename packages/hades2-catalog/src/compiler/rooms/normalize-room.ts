@@ -30,7 +30,7 @@ import {
   normalizeRoomRewardFacts,
   normalizeRoomRewardStoreFacts,
 } from './reward-facts';
-import { normalizeStartingRoomProfiles } from './starting-room-facts';
+import { normalizeEntryContextualEncounterRules } from './starting-room-facts';
 
 /** Produces one fully normalized immutable room declaration from its raw declaration. */
 export function normalizeRoom(
@@ -66,9 +66,8 @@ export function normalizeRoom(
   );
   const fields = normalizeRoomFieldsFacts(room, identity, reward.localChildren, rewards, path);
   const features = normalizeRoomFeatureFacts(room, path);
-  const startingRoomProfiles = normalizeStartingRoomProfiles(
+  const entryContextualEncounterRules = normalizeEntryContextualEncounterRules(
     room,
-    rewards,
     encounterEnvelopes,
     encounterDefinitions,
     path,
@@ -99,7 +98,7 @@ export function normalizeRoom(
     exits: exits.exits,
     additionalExits: exits.additionalExits,
     incomingReward: reward.incomingReward,
-    ...startingRoomProfiles,
+    ...entryContextualEncounterRules,
     effectNeutralRequiredReward: room.effectNeutralRequiredReward ?? false,
     offerRewardBinding: reward.offerRewardBinding,
     blockGiftBoons: identity.blockGiftBoons,

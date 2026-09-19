@@ -30,7 +30,7 @@ import type {
 import type { ResolvedEncounterPhase } from '../encounters/model';
 import { assessFigLeafSkip } from '../encounters/fig-leaf';
 import { targetRewardGenerationCheckpoint } from '../encounters/generation-preparation';
-import { resolveStartingRoomDeclaration } from '../../authored-project/room-state/starting-room-profile';
+import { resolveEntryRoom } from '../../authored-project/room-state/entry-resolution';
 
 export interface FigLeafLifecycleState {
   readonly remainingUses: number;
@@ -320,7 +320,12 @@ export function appendRoomLifecycle(
       : undefined;
   const rawDeclaration = catalog.rooms.byKey[room.gameName];
   if (rawDeclaration === undefined) fail(`unknown canonical room ${room.gameName}`);
-  const declaration = resolveStartingRoomDeclaration(rawDeclaration, writer.routePosition);
+  const declaration = resolveEntryRoom(
+    catalog,
+    rawDeclaration,
+    writer.routePosition,
+    room.kind === 'authored' && room.entry,
+  ).declaration;
   const encounterPhases =
     encounterPreparation?.validPrefix ??
     resolveMaterializedEncounterPhases(

@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 85,
+  "schemaVersion": 86,
   "projectId": "run-plan",
   "catalogVersion": "0.55.0-anvil-of-fates",
   "route": {
@@ -31,6 +31,13 @@
     "loadout": {
       "weaponKey": "WeaponStaffSwing",
       "aspectKey": "BaseStaffAspect",
+      "startingReward": {
+        "rewardType": "Boon",
+        "payload": {
+          "kind": "BoonSource",
+          "source": "AphroditeUpgrade"
+        }
+      },
       "manualArcanaKeys": [
         "ChanneledCast",
         "LowManaDamageBonus",
@@ -81,22 +88,15 @@
               "occurrenceId": "256b5530-90c0-4d46-8591-e1a3ba51a32c",
               "gameName": "N_Opening01",
               "state": {
-                "kind": "counted",
-                "reward": {
-                  "offer": {
-                    "rewardType": "Boon",
-                    "payload": {
-                      "kind": "BoonSource",
-                      "source": "AphroditeUpgrade"
-                    }
-                  },
-                  "traitOffersByAcquisitionRole": {
-                    "source": null
-                  },
-                  "dispositionByAcquisitionRole": {
-                    "source": {
-                      "kind": "normal"
-                    }
+                "kind": "none"
+              },
+              "startingRewardAcquisition": {
+                "traitOffersByAcquisitionRole": {
+                  "source": null
+                },
+                "dispositionByAcquisitionRole": {
+                  "source": {
+                    "kind": "normal"
                   }
                 }
               },

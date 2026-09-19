@@ -88,7 +88,11 @@ export function decodePayload(
   return Object.freeze({ kind: 'DevotionPair', chosenSource, spurnedSource });
 }
 
-function decodeOffer(value: unknown, catalog: Catalog, path: string): ResolvedRewardOffer {
+export function decodeResolvedRewardOffer(
+  value: unknown,
+  catalog: Catalog,
+  path: string,
+): ResolvedRewardOffer {
   const offer = expectRecord(value, path);
   expectExactKeys(offer, ['rewardType', 'payload'], path);
   const rewardTypeName = expectString(offer.rewardType, `${path}.rewardType`);
@@ -670,7 +674,7 @@ export function decodeCountedOffer(
   binding: CountedRewardBinding,
   path: string,
 ): ResolvedRewardOffer {
-  const offer = decodeOffer(value, catalog, path);
+  const offer = decodeResolvedRewardOffer(value, catalog, path);
   if (!binding.allowedRewardTypes.includes(offer.rewardType)) {
     failProjectDocument(`${path}.rewardType`, `${offer.rewardType} is filtered from this room`);
   }
@@ -696,7 +700,7 @@ export function decodeRewardState(
     )
       failProjectDocument(path, `unexpected key ${key}`);
   }
-  const offer = decodeOffer(raw.offer, catalog, `${path}.offer`);
+  const offer = decodeResolvedRewardOffer(raw.offer, catalog, `${path}.offer`);
   const requiredLevels = createUnresolvedLevelResolutions(catalog, offer, source);
   if (requiredLevels === undefined && raw.levelResolutionsByAcquisitionRole !== undefined)
     failProjectDocument(

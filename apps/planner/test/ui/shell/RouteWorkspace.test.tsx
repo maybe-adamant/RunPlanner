@@ -6,6 +6,7 @@ import {
   createOccurrenceAddress,
   createOccurrenceId,
   createRouteAddress,
+  createStartingRewardAddress,
 } from '@run-planner/engine/authored-project';
 import { describe, expect, it } from 'vitest';
 
@@ -121,6 +122,13 @@ describe('RouteWorkspace', () => {
     );
     application.store.dispatch(
       authoredProjectCommandDispatched({
+        kind: 'ReplaceStartingReward',
+        reward: createStartingRewardAddress('Underworld'),
+        value: { rewardType: 'WeaponUpgrade' },
+      }),
+    );
+    application.store.dispatch(
+      authoredProjectCommandDispatched({
         biome: createBiomeAddress('Underworld', 'F'),
         gameName: 'F_Opening01',
         kind: 'CreateStart',
@@ -135,10 +143,10 @@ describe('RouteWorkspace', () => {
     expect(markup).not.toContain('<p class="eyebrow">Details</p>');
     expect(markup).toContain('Continue route');
     expect(markup).toContain('data-editor-layout="biome"');
-    expect(markup).not.toContain('aria-label="Start room configuration"');
+    expect(markup).toContain('aria-label="Start room configuration"');
   });
 
-  it('retains later P start identity in its biome workbench', () => {
+  it('keeps the singleton later P entry automatic in its biome workbench', () => {
     const application = createOpenTestApplication('Surface');
     application.store.dispatch(authoredProjectReplaced(loadSurfaceNOPQProject()));
     application.store.dispatch(
@@ -153,7 +161,7 @@ describe('RouteWorkspace', () => {
       ),
     );
 
-    expect(routeWorkspaceMarkup(application, 'Surface')).toContain(
+    expect(routeWorkspaceMarkup(application, 'Surface')).not.toContain(
       'aria-label="Start room configuration"',
     );
   });

@@ -8,6 +8,7 @@ import {
   seaStarDuplicateAcquisitionSite,
 } from '../../acquisition/sea-star';
 import { authoredAcquisitionSourceAt } from '../../acquisition/acquisition-sources';
+import { routeStartIncomingReward } from '../../room-state/starting-reward';
 import { resolveAcquisitionRole } from '../../../reward-kernel/history';
 import { failCommand, requireOccurrence, requireTopology, type LocatedBiome } from '../contract';
 import { replaceOccurrence, updateOccurrenceTopology } from '../occurrence/mutation';
@@ -36,6 +37,7 @@ export function applySeaStarResultCommand(
     createBiomeAddress(command.acquisition.routeKey, command.acquisition.biomeKey),
     occurrence,
     command.acquisition,
+    routeStartIncomingReward(document, located.routePosition, occurrence) ?? undefined,
   );
   if (source === undefined) failCommand(command, 'has no authored concrete acquisition');
   const reward = source.reward;

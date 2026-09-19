@@ -15,13 +15,10 @@ import type { RequirementExpression } from '@run-planner/engine/requirements';
 import type { RawEncounterSlotBinding } from '../encounters/types';
 import type { RawCountedRewardBinding, RawRewardProducerBinding } from '../rewards/types';
 
-export interface RawStartingRoomProfile {
-  readonly templateKey: 'FixedIntro' | 'FixedOpening';
-  readonly incomingReward: RawRewardProducerBinding;
-  readonly lifecycleProfileKey: string;
-  readonly enteredRewardStoreHistory: EnteredRewardStoreHistoryPolicy;
-  readonly forcedRewardStoreKey?: string;
-  readonly dreamEncounterDefinitionKey?: string;
+export interface RawEntryContextualEncounterRule {
+  readonly routeKey: 'Dream';
+  readonly position: 'every' | 'first';
+  readonly encounterDefinitionKey: string;
 }
 
 /** Raw declaration override for a room-owned non-incoming reward group. */
@@ -106,10 +103,7 @@ export interface RawRoomDeclaration {
   readonly exits: readonly RawRoomExitDeclaration[];
   readonly additionalExits?: readonly RawAdditionalExitDeclaration[];
   readonly incomingReward: RawRewardProducerBinding;
-  readonly startingRoomProfiles?: {
-    readonly routeFirst: RawStartingRoomProfile;
-    readonly routeLater: RawStartingRoomProfile;
-  };
+  readonly entryContextualEncounterRules?: readonly RawEntryContextualEncounterRule[];
   /** A real required pickup whose payload is intentionally outside simulated state. */
   readonly effectNeutralRequiredReward?: boolean;
   /** Optional override for a bounded local reward group exposed by this room. */

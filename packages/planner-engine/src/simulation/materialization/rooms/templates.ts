@@ -4,6 +4,7 @@ import {
   createRewardWheelAddress,
   createRewardWheelOfferAddress,
   createShopOfferAddress,
+  createStartingRewardAddress,
   type BiomeAddress,
 } from '../../../authored-project/addresses';
 import type {
@@ -25,10 +26,13 @@ import type {
   CanonicalResolvedIncomingReward,
   CanonicalRewardWheel,
   CanonicalShopEntryState,
+  BiomeMaterializationLoadout,
 } from '../model';
 import type { TraitOfferContext } from '../../traits/offer-domain';
 import type { ResolvedRewardOffer } from '../../../reward-kernel/model';
 import type { ResolvedRoutePosition } from '../../../authored-project/route-context';
+import { composeStartingReward } from '../../../authored-project/room-state/starting-reward';
+import type { ResolvedEntryRoom } from '../../../authored-project/room-state/entry-resolution';
 
 function fail(detail: string): never {
   throw new Error(detail);
@@ -71,8 +75,9 @@ export interface AuthoredRoomMaterializationContext {
   readonly activeCageCount?: number;
   readonly clockworkReward?: 'goal' | 'nonGoal';
   readonly lifecycleProfileKey?: string;
-  readonly loadout?: RouteWeaponAspectLoadout;
+  readonly loadout?: RouteWeaponAspectLoadout | BiomeMaterializationLoadout;
   readonly configuredRivalsRank?: number;
+  readonly entry?: boolean;
 }
 
 export interface MaterializedRoomLeaf {
@@ -136,10 +141,12 @@ function materializedIncomingReward(
   producerKind: CanonicalResolvedIncomingReward['producerKind'],
   producerLifecycleKey: string,
   reward: AuthoredRewardState | null,
+  offerOrigin?: import('../../../authored-project/addresses').StartingRewardAddress,
 ): Pick<MaterializedRoomLeaf, 'incomingReward' | 'unresolvedIncomingReward'> {
   const storeKey = resolvedStoreKey(context.room, context.batchStoreKey);
   const base = Object.freeze({
     origin: createIncomingRewardAddress(context.biome, context.occurrence.occurrenceId),
+    ...(offerOrigin === undefined ? {} : { offerOrigin }),
     producerKind,
     instanceProvenance: producerKind === 'shop' ? 'paid' : 'free',
     producerLifecycleKey,
@@ -156,6 +163,39 @@ function materializedIncomingReward(
       dispositionByAcquisitionRole: reward.dispositionByAcquisitionRole,
       traitContext: traitContextForOffer(context, reward.offer),
     }),
+  });
+}
+
+export function materializeRouteStartEntry(
+  context: AuthoredRoomMaterializationContext,
+  resolvedEntry: ResolvedEntryRoom,
+): MaterializedRoomLeaf {
+  if (context.loadout === undefined || !('startingReward' in context.loadout))
+    fail(`${context.room.gameName} entry requires a complete route loadout`);
+  const loadout = context.loadout;
+  const binding = resolvedEntry.incomingRewardBinding;
+  if (context.routePosition.isFirst && binding.kind !== 'countedChoice')
+    fail('run-start reward must be a counted choice');
+  const reward = context.routePosition.isFirst
+    ? composeStartingReward(loadout.startingReward, context.occurrence.startingRewardAcquisition)
+    : null;
+  return Object.freeze({
+    lifecycleProfileKey:
+      resolvedEntry.lifecycleProfileKey ?? fail(`${context.room.gameName} entry has no lifecycle`),
+    ...(context.routePosition.isFirst && binding.kind === 'countedChoice'
+      ? materializedIncomingReward(
+          Object.freeze({
+            ...context,
+            ...(resolvedEntry.incomingRewardStoreKey === undefined
+              ? {}
+              : { batchStoreKey: resolvedEntry.incomingRewardStoreKey }),
+          }),
+          'countedChoice',
+          binding.producerLifecycleKey,
+          reward,
+          createStartingRewardAddress(context.biome.routeKey),
+        )
+      : {}),
   });
 }
 

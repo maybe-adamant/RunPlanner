@@ -75,6 +75,11 @@ import type { WorkspaceRewardControl } from '../contracts/rewards';
 import type { WorkspaceMarkerDestinationEmitter } from '../navigation/marker-builder';
 import type { WorkspaceMarker } from '../contracts/navigation';
 
+type OccurrenceRewardCandidateOwner = Exclude<
+  RewardCandidateOwner,
+  { readonly kind: 'startingReward' }
+>;
+
 /**
  * The occurrence assembler consumes only the lifecycle facts needed to project
  * this occurrence. Expected-owner enumeration remains intentionally elsewhere.
@@ -151,6 +156,8 @@ export interface WorkspaceOccurrenceRewardAssemblyInput {
   ) => readonly WorkspaceDerivedAcquisitionEntry[];
   readonly markerDestinations: WorkspaceMarkerDestinationEmitter;
   readonly occurrence: RoomOccurrence;
+  /** The route offer composed with this entry's occurrence-owned acquisition payload. */
+  readonly startingReward?: AuthoredRewardState | null;
 }
 
 export function workspaceAcquisitionRoleLabel(acquisitionRole: string): string {
@@ -189,7 +196,7 @@ function traitOfferStatus(
 
 function traitOfferControls(
   input: WorkspaceOccurrenceRewardAssemblyInput,
-  owner: RewardCandidateOwner,
+  owner: OccurrenceRewardCandidateOwner,
   reward: AuthoredRewardState,
 ): readonly WorkspaceTraitOfferControl[] {
   if (!input.facts.detailsActive) return Object.freeze([]);
@@ -249,7 +256,7 @@ function traitOfferControls(
 
 function levelResolutionControls(
   input: WorkspaceOccurrenceRewardAssemblyInput,
-  owner: RewardCandidateOwner,
+  owner: OccurrenceRewardCandidateOwner,
   reward: AuthoredRewardState,
 ): readonly WorkspaceLevelResolutionControl[] {
   if (reward.levelResolutionsByAcquisitionRole === undefined) return Object.freeze([]);
@@ -299,7 +306,7 @@ function levelResolutionControls(
 
 function conversionControls(
   input: WorkspaceOccurrenceRewardAssemblyInput,
-  owner: RewardCandidateOwner,
+  owner: OccurrenceRewardCandidateOwner,
   reward: AuthoredRewardState,
 ): readonly WorkspaceAcquisitionConversionControl[] {
   if (!input.facts.detailsActive) return Object.freeze([]);
@@ -331,7 +338,7 @@ function conversionControls(
 
 function realizedAcquisitionForReward(
   input: WorkspaceOccurrenceRewardAssemblyInput,
-  owner: RewardCandidateOwner,
+  owner: OccurrenceRewardCandidateOwner,
   offer: ResolvedRewardOffer | null,
   authoredReward: AuthoredRewardState | null,
 ): WorkspaceRewardControl['realizedAcquisition'] {
@@ -359,7 +366,7 @@ function realizedAcquisitionForReward(
 
 export function rewardControl(
   input: WorkspaceOccurrenceRewardAssemblyInput,
-  owner: RewardCandidateOwner,
+  owner: OccurrenceRewardCandidateOwner,
   binding: CountedRewardBinding | undefined,
   offer: ResolvedRewardOffer | null,
   authoredReward: AuthoredRewardState | null,
@@ -497,6 +504,27 @@ export function controlsForOccurrence(
   const { occurrence } = input;
   const controls: WorkspaceRewardControl[] = [];
   const incoming = createIncomingRewardAddress(input.biome, occurrence.occurrenceId);
+  if (input.startingReward !== undefined) {
+    const binding = input.catalog.runStartReward.incomingReward;
+    if (binding.kind !== 'countedChoice') {
+      throw new StructuredWorkspaceProjectionContractError(
+        'run-start reward must expose a counted reward binding',
+      );
+    }
+    controls.push(
+      rewardControl(
+        input,
+        { kind: 'incomingReward', address: incoming },
+        undefined,
+        input.startingReward?.offer ?? null,
+        input.startingReward,
+        binding.allowedRewardTypes,
+        false,
+        undefined,
+        true,
+      ),
+    );
+  }
   const addIncoming = (
     state: Extract<
       RoomOccurrence['state'],

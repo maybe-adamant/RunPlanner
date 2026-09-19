@@ -3,18 +3,25 @@ import {
   type IncomingRewardAddress,
   type AcquisitionEntryAddress,
   type LocalRewardAddress,
+  type StartingRewardAddress,
   type RewardWheelOfferAddress,
   type ShopOfferAddress,
 } from '../../authored-project/addresses';
 import type { ProjectDocument } from '../../authored-project/model';
+import type { RouteLoadout } from '../../authored-project/model';
 import type { ResolvedRewardOffer, ShopOptionSelection } from '../../reward-kernel';
 import type { ProjectEvaluation } from '../evaluation/evaluation-products';
-import type {
-  RewardProducerCandidateArtifacts,
-  RewardProducerCandidateCapability,
-  RewardProducerCandidateResult,
-  RewardProducerOwnerAddress,
+import {
+  createRewardProducerCandidateResult,
+  type RewardProducerCandidateArtifacts,
+  type RewardProducerCandidateCapability,
+  type RewardProducerCandidateResult,
+  type RewardProducerOwnerAddress,
 } from '../rewards/producer-frontiers';
+import { initializeRewardBranches } from '../rewards/branch-lifecycle';
+import { createArcanaFearState } from '../arcana-fear';
+import { createRouteStartRewardFacts } from '../rewards/facts';
+import { processRewardOffer } from '../rewards/offer-generation';
 import {
   coverageUnavailable,
   producerUnavailable,
@@ -27,6 +34,13 @@ import { wheelState } from './ship-owner';
 export interface IncomingRewardCandidateQuery {
   readonly kind: 'incomingReward';
   readonly reward: IncomingRewardAddress;
+  readonly value: ResolvedRewardOffer;
+}
+
+/** A route-owned offer candidate that is valid before any entry room is selected. */
+export interface StartingRewardCandidateQuery {
+  readonly kind: 'startingReward';
+  readonly reward: StartingRewardAddress;
   readonly value: ResolvedRewardOffer;
 }
 
@@ -61,6 +75,7 @@ export interface AcquisitionEntryOfferCandidateQuery {
 }
 
 export type RewardProducerCandidateQuery =
+  | StartingRewardCandidateQuery
   | IncomingRewardCandidateQuery
   | LocalRewardCandidateQuery
   | RewardWheelOfferCandidateQuery
@@ -71,6 +86,60 @@ export type RewardProducerCandidateQuery =
 export interface EvaluatedIncomingRewardCandidate {
   readonly kind: 'incomingReward';
   readonly result: RewardProducerCandidateResult;
+}
+
+export interface EvaluatedStartingRewardCandidate {
+  readonly kind: 'startingReward';
+  readonly result: RewardProducerCandidateResult;
+}
+
+/** A route-assembly-captured offer frontier; queries never recreate its seed. */
+export interface StartingRewardCandidateCapability {
+  readonly evaluateOffer: (offer: ResolvedRewardOffer) => RewardProducerCandidateResult;
+}
+
+export function createStartingRewardCandidateCapability(
+  catalog: Catalog,
+  routeKey: string,
+  reward: StartingRewardAddress,
+  loadout: RouteLoadout,
+): StartingRewardCandidateCapability {
+  const binding = catalog.runStartReward.incomingReward;
+  const branches = initializeRewardBranches(
+    undefined,
+    createArcanaFearState(catalog, loadout),
+    catalog,
+    loadout.startingKeepsakeKey,
+    loadout.keepsakeEquipResults,
+    routeKey,
+    loadout,
+  );
+  return Object.freeze({
+    evaluateOffer: (offer: ResolvedRewardOffer) => {
+      const findings = new Map();
+      const evaluated = processRewardOffer(
+        branches,
+        {
+          catalog,
+          reward: Object.freeze({
+            origin: reward,
+            offer,
+            producerLifecycleKey: binding.producerLifecycleKey,
+            ...(binding.storeKeys[0] === undefined
+              ? {}
+              : { resolvedStoreKey: binding.storeKeys[0] }),
+          }),
+          binding,
+          historySequence: 0,
+          peers: Object.freeze([]),
+          facts: (history, _shopNames, branch) =>
+            createRouteStartRewardFacts(catalog, reward, history, branch),
+        },
+        findings,
+      );
+      return createRewardProducerCandidateResult(findings, evaluated);
+    },
+  });
 }
 
 export interface EvaluatedLocalRewardCandidate {
@@ -94,6 +163,7 @@ export interface EvaluatedAcquisitionEntryOfferCandidate {
 
 export type RewardProducerCandidateEvaluation =
   | CandidateContextUnavailable
+  | EvaluatedStartingRewardCandidate
   | EvaluatedIncomingRewardCandidate
   | EvaluatedLocalRewardCandidate
   | EvaluatedRewardWheelOfferCandidate
@@ -117,6 +187,9 @@ function selectedRewardProducerSource(
 }
 
 function ownerFor(query: RewardProducerCandidateQuery): RewardProducerOwnerAddress {
+  if (query.kind === 'startingReward') {
+    throw new Error('route-start reward has no room-owned producer address');
+  }
   return query.kind === 'incomingReward' || query.kind === 'localReward'
     ? query.reward
     : query.kind === 'acquisitionEntryOffer'
@@ -135,8 +208,19 @@ export function evaluateRewardProducerCandidate(
   project: ProjectDocument,
   evaluation: ProjectEvaluation,
   selectedArtifacts: RewardProducerCandidateArtifacts | undefined,
+  startingRewardCapability: StartingRewardCandidateCapability | undefined,
   query: RewardProducerCandidateQuery,
 ): RewardProducerCandidateEvaluation {
+  if (query.kind === 'startingReward') {
+    if (project.route.routeKey !== query.reward.routeKey) {
+      throw new Error(`unknown route ${query.reward.routeKey} for starting reward candidate`);
+    }
+    if (startingRewardCapability === undefined) return producerUnavailable(query.reward);
+    return Object.freeze({
+      kind: 'startingReward',
+      result: startingRewardCapability.evaluateOffer(query.value),
+    });
+  }
   if (query.kind === 'rewardWheelOffer') {
     wheelState(catalog, project, query.offer);
   }

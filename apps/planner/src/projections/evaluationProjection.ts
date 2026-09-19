@@ -739,6 +739,7 @@ export function findingDestinationLabel(catalog: Catalog, origin: SemanticAddres
     }
     return route.label;
   }
+  if (origin.kind === 'startingReward') return 'Starting reward';
   if (origin.kind === 'keepsakeSelection' && origin.owner === 'routeStart')
     return 'Starting keepsake';
   if (origin.kind === 'keepsakeEquipResult')

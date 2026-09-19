@@ -42,6 +42,13 @@ export const declarations = {
   version: '0.55.0-anvil-of-fates',
   biomes,
   routes,
+  runStartReward: {
+    kind: 'countedChoice',
+    storeKeys: ['RunProgress'],
+    eligibleRewardTypes: [],
+    ineligibleRewardTypes: ['Devotion', 'RoomMoneyDrop', 'MaxHealthDrop', 'MaxManaDrop'],
+    producerLifecycleKey: 'RoomReward',
+  },
   arcanaCards,
   fearVows,
   keepsakes,
@@ -76,7 +83,7 @@ export type {
   RawPrebossBatchPolicy,
   RawRoomDeclaration,
   RawRoomOfferRewardBinding,
-  RawStartingRoomProfile,
+  RawEntryContextualEncounterRule,
   RawZagreusContractAdditionalExitDeclaration,
 } from './rooms/types';
 export type {

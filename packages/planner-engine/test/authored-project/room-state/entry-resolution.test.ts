@@ -8,11 +8,14 @@ import {
   createOccurrenceAddress,
   createOccurrenceId,
   createProjectDocument,
+  createStartingRewardAddress,
   createTraitOfferAddress,
   decodeProjectDocument,
   encodeProjectDocument,
   resolveRoutePosition,
-  resolveStartingRoomDeclaration,
+  resolveEntryDeclaration,
+  resolveEntryRoom,
+  routeStartIncomingReward,
 } from '@run-planner/engine/authored-project';
 import { selectedPickupProducers } from '../../../src/authored-project/acquisition/pickup-producers';
 
@@ -34,10 +37,10 @@ function dreamPosition(biomeKey: string, isFirst: boolean) {
   );
 }
 
-describe('contextual starting-room profiles', () => {
-  it('resolves ordinary F through the first-position profile without replacing its combat', () => {
+describe('contextual entry resolution', () => {
+  it('retains ordinary F encounter declarations outside their declared contextual rule', () => {
     const declaration = room('F_Opening01');
-    const resolved = resolveStartingRoomDeclaration(
+    const resolved = resolveEntryDeclaration(
       declaration,
       resolveRoutePosition(
         catalog,
@@ -60,11 +63,11 @@ describe('contextual starting-room profiles', () => {
     'resolves every %s starting reward by route position',
     (routeKey) => {
       const route = catalog.routes.byKey[routeKey]!;
-      for (const [index, biomeKey] of route.biomeKeys.entries()) {
+      for (const biomeKey of route.biomeKeys) {
         const gameName =
           biomeKey === 'F' ? 'F_Opening01' : biomeKey === 'N' ? 'N_Opening01' : `${biomeKey}_Intro`;
         const declaration = room(gameName);
-        const resolved = resolveStartingRoomDeclaration(
+        const resolved = resolveEntryDeclaration(
           declaration,
           resolveRoutePosition(
             catalog,
@@ -75,59 +78,59 @@ describe('contextual starting-room profiles', () => {
             biomeKey,
           ),
         );
-        expect(resolved.incomingReward.kind).toBe(index === 0 ? 'countedChoice' : 'none');
+        expect(resolved.incomingReward.kind).toBe('none');
         expect(resolved.encounterSlotBindings).toEqual(declaration.encounterSlotBindings);
-        expect(resolved.incomingReward).toBe(
-          index === 0
-            ? declaration.startingRoomProfiles!.routeFirst!.incomingReward
-            : declaration.startingRoomProfiles!.routeLater!.incomingReward,
-        );
+        expect(catalog.runStartReward.incomingReward.kind).toBe('countedChoice');
       }
     },
   );
 
-  it('applies Dream first and later F/N profiles while keeping N PreHub separate', () => {
-    expect(
-      resolveStartingRoomDeclaration(room('F_Opening01'), dreamPosition('F', true)),
-    ).toMatchObject({
+  it('applies the declarative Dream F/N encounter rule without restoring room profiles', () => {
+    expect(resolveEntryDeclaration(room('F_Opening01'), dreamPosition('F', true))).toMatchObject({
       mode: { templateKey: 'FixedOpening' },
-      incomingReward: { kind: 'countedChoice' },
-      encounterSlotBindings: [{ encounterDefinitionKey: 'OpeningEmpty' }],
-    });
-    expect(
-      resolveStartingRoomDeclaration(room('F_Opening01'), dreamPosition('F', false)),
-    ).toMatchObject({
-      mode: { templateKey: 'FixedIntro' },
       incomingReward: { kind: 'none' },
       encounterSlotBindings: [{ encounterDefinitionKey: 'OpeningEmpty' }],
     });
-    expect(
-      resolveStartingRoomDeclaration(room('N_Opening01'), dreamPosition('N', true)),
-    ).toMatchObject({
-      incomingReward: { kind: 'countedChoice' },
+    expect(resolveEntryDeclaration(room('F_Opening01'), dreamPosition('F', false))).toMatchObject({
+      mode: { templateKey: 'FixedOpening' },
+      incomingReward: { kind: 'none' },
+      encounterSlotBindings: [{ encounterDefinitionKey: 'OpeningEmpty' }],
+    });
+    expect(resolveEntryDeclaration(room('N_Opening01'), dreamPosition('N', true))).toMatchObject({
+      incomingReward: { kind: 'none' },
       enteredRewardStoreHistory: { kind: 'none' },
       encounterSlotBindings: [{ encounterDefinitionKey: 'OpeningEmpty' }],
     });
-    expect(resolveStartingRoomDeclaration(room('N_PreHub01'), dreamPosition('N', true))).toBe(
+    expect(resolveEntryDeclaration(room('N_PreHub01'), dreamPosition('N', true))).toBe(
       room('N_PreHub01'),
     );
   });
 
-  it('uses reward-bearing empty Dream intros and P’s declared opening encounter', () => {
-    expect(resolveStartingRoomDeclaration(room('G_Intro'), dreamPosition('G', true))).toMatchObject(
-      {
-        lifecycleProfileKey: 'OpeningRewardNoEncounterRoom',
-        incomingReward: { kind: 'countedChoice' },
-        enteredRewardStoreHistory: { kind: 'resolvedOffer' },
-      },
-    );
-    expect(resolveStartingRoomDeclaration(room('P_Intro'), dreamPosition('P', true))).toMatchObject(
-      {
-        mode: { templateKey: 'FixedOpening' },
-        encounterSlotBindings: [{ encounterDefinitionKey: 'PIntroDreamRunEmpty' }],
-        enteredRewardStoreHistory: { kind: 'resolvedOffer' },
-      },
-    );
+  it('binds opening lifecycle/store authority only at a route-first entry', () => {
+    expect(resolveEntryDeclaration(room('G_Intro'), dreamPosition('G', true))).toMatchObject({
+      incomingReward: { kind: 'none' },
+      enteredRewardStoreHistory: { kind: 'resolvedOffer' },
+    });
+    expect(
+      resolveEntryRoom(catalog, room('G_Intro'), dreamPosition('G', true), true),
+    ).toMatchObject({
+      lifecycleProfileKey: 'OpeningRewardNoEncounterRoom',
+      incomingRewardBinding: { kind: 'countedChoice' },
+      incomingRewardStoreKey: 'RunProgress',
+      enteredRewardStoreKey: 'RunProgress',
+    });
+    expect(resolveEntryDeclaration(room('P_Intro'), dreamPosition('P', true))).toMatchObject({
+      encounterSlotBindings: [{ encounterDefinitionKey: 'PIntroDreamRunEmpty' }],
+      enteredRewardStoreHistory: { kind: 'resolvedOffer' },
+    });
+    expect(
+      resolveEntryRoom(catalog, room('N_Opening01'), dreamPosition('N', true), true),
+    ).not.toHaveProperty('enteredRewardStoreKey');
+    expect(
+      resolveEntryRoom(catalog, room('G_Intro'), dreamPosition('G', false), true),
+    ).toMatchObject({
+      declaration: { enteredRewardStoreHistory: { kind: 'none' } },
+    });
   });
 
   it('preserves the rewardless Dream-later profile when replacing F opening variants', () => {
@@ -171,8 +174,8 @@ describe('contextual starting-room profiles', () => {
       configuredBiomeCount: 1,
     });
     project = applyProjectCommand(project, catalog, {
-      kind: 'ReplaceIncomingReward',
-      reward,
+      kind: 'ReplaceStartingReward',
+      reward: createStartingRewardAddress('Dream'),
       value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'PoseidonUpgrade' } },
     });
     project = applyProjectCommand(project, catalog, {
@@ -191,10 +194,15 @@ describe('contextual starting-room profiles', () => {
     });
     const occurrence = project.route.biomes[0]?.topology?.occurrences[0];
     if (occurrence === undefined) throw new Error('missing G start');
-    const declaration = resolveStartingRoomDeclaration(room('G_Intro'), dreamPosition('G', true));
-    const producer = selectedPickupProducers(catalog, biome, occurrence, declaration, 1).find(
-      (candidate) => candidate.traitKey === 'RoomRewardBonusBoon',
-    );
+    const declaration = resolveEntryDeclaration(room('G_Intro'), dreamPosition('G', true));
+    const producer = selectedPickupProducers(
+      catalog,
+      biome,
+      occurrence,
+      declaration,
+      1,
+      routeStartIncomingReward(project, dreamPosition('G', true), occurrence) ?? undefined,
+    ).find((candidate) => candidate.traitKey === 'RoomRewardBonusBoon');
     if (producer === undefined) throw new Error('missing Buried Treasure producer');
     expect(producer.sourceAction).toMatchObject({
       kind: 'interactIncomingReward',

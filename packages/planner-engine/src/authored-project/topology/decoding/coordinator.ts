@@ -591,6 +591,7 @@ export function decodeTopologyStructure(
     const occurrencePath = `${path}.occurrences[${index}]`;
     const occurrence = expectRecord(rawValue, occurrencePath);
     const hasAnomalyReplacement = Object.hasOwn(occurrence, 'anomalyReplacement');
+    const hasStartingRewardAcquisition = Object.hasOwn(occurrence, 'startingRewardAcquisition');
     const hasAcquisitionSites = Object.hasOwn(occurrence, 'acquisitionSites');
     const hasHermesShrine = Object.hasOwn(occurrence, 'hermesShrine');
     const hasStygianWell = Object.hasOwn(occurrence, 'stygianWell');
@@ -604,6 +605,7 @@ export function decodeTopologyStructure(
         'occurrenceId',
         'gameName',
         'state',
+        ...(hasStartingRewardAcquisition ? ['startingRewardAcquisition'] : []),
         'encounters',
         'roomActions',
         'additionalExits',
@@ -629,6 +631,10 @@ export function decodeTopologyStructure(
         anomalyReplacement: occurrence.anomalyReplacement,
         hasAnomalyReplacement,
         state: occurrence.state,
+        ...(hasStartingRewardAcquisition
+          ? { startingRewardAcquisition: occurrence.startingRewardAcquisition }
+          : {}),
+        hasStartingRewardAcquisition,
         encounters: occurrence.encounters,
         roomActions: occurrence.roomActions,
         additionalExits: occurrence.additionalExits,

@@ -20,6 +20,7 @@ import {
 } from './validation';
 import { reconcileChaosTopology } from './chaos-gate-reconciliation';
 import { resolveRoutePosition } from './route-context';
+import { decodeResolvedRewardOffer } from './room-state/decoding/reward-acquisition-codec';
 
 function decodeHexTree(
   value: unknown,
@@ -57,6 +58,7 @@ function decodeBiomePlan(
   route: Pick<AuthoredRoutePlan, 'routeKey' | 'itineraryBiomeKeys'>,
   expectedBiomeKey: string,
   catalog: Catalog,
+  startingReward: import('../reward-kernel/model').ResolvedRewardOffer | null,
 ): AuthoredBiomePlan {
   const plan = expectRecord(value, path);
 
@@ -79,6 +81,7 @@ function decodeBiomePlan(
           catalog,
           layout,
           resolveRoutePosition(catalog, route, expectedBiomeKey),
+          startingReward,
           `${path}.topology`,
         );
   return Object.freeze({
@@ -157,6 +160,7 @@ function decodeRoutePlan(
     [
       'weaponKey',
       'aspectKey',
+      'startingReward',
       'manualArcanaKeys',
       'fearRanks',
       'startingKeepsakeKey',
@@ -167,6 +171,20 @@ function decodeRoutePlan(
   );
   const weaponKey = expectString(loadout.weaponKey, `${path}.loadout.weaponKey`);
   const aspectKey = expectString(loadout.aspectKey, `${path}.loadout.aspectKey`);
+  const startingReward =
+    loadout.startingReward === null
+      ? null
+      : decodeResolvedRewardOffer(
+          loadout.startingReward,
+          catalog,
+          `${path}.loadout.startingReward`,
+        );
+  if (
+    startingReward !== null &&
+    !catalog.runStartReward.incomingReward.allowedRewardTypes.includes(startingReward.rewardType)
+  ) {
+    fail(`${path}.loadout.startingReward.rewardType`, 'is not allowed by the run-start binding');
+  }
   const startingKeepsakeKey = expectString(
     loadout.startingKeepsakeKey,
     `${path}.loadout.startingKeepsakeKey`,
@@ -256,6 +274,7 @@ function decodeRoutePlan(
       routeContext,
       expectedBiomeKey,
       catalog,
+      startingReward,
     );
   });
   const resourcePlacements = Object.freeze(
@@ -297,6 +316,7 @@ function decodeRoutePlan(
     loadout: Object.freeze({
       weaponKey,
       aspectKey,
+      startingReward,
       manualArcanaKeys: Object.freeze(canonicalManualArcanaKeys),
       fearRanks: Object.freeze(fearRanks),
       startingKeepsakeKey,

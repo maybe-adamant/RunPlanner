@@ -208,6 +208,7 @@ export function generateIncomingReward(
 
   if (context.unresolvedIncoming !== undefined) {
     const unresolved = context.unresolvedIncoming;
+    const offerOrigin = unresolved.offerOrigin ?? unresolved.origin;
     const candidateFor = (offer: ResolvedRewardOffer): CanonicalResolvedIncomingReward => {
       const state = createUnresolvedAcquisitionRewardState(catalog, offer, {
         kind: 'producerLifecycle',
@@ -254,7 +255,7 @@ export function generateIncomingReward(
         }),
       );
     }
-    const ownerKey = semanticAddressKey(unresolved.origin);
+    const ownerKey = semanticAddressKey(offerOrigin);
     frontiers.push(
       Object.freeze({
         generationPolicy: 'sequential',
@@ -262,7 +263,7 @@ export function generateIncomingReward(
         reachableBranchCount: inputs.branches.length,
         acquisitionHorizon:
           acquisitionView === undefined ? 'generationOnly' : 'ownEnteredLifecycle',
-        owners: Object.freeze([unresolved.origin]),
+        owners: Object.freeze([offerOrigin]),
         ...(unresolved.resolvedStoreKey === undefined
           ? {}
           : { resolvedStoreKey: unresolved.resolvedStoreKey }),
@@ -280,7 +281,7 @@ export function generateIncomingReward(
           );
           const candidateContext: OfferProcessingContext = Object.freeze({
             catalog,
-            reward: candidate,
+            reward: Object.freeze({ ...candidate, origin: offerOrigin }),
             ...(candidateBinding === undefined ? {} : { binding: candidateBinding }),
             historySequence: event.sequence,
             ...(offerChronology === undefined ? {} : { findingChronology: offerChronology }),
@@ -310,8 +311,8 @@ export function generateIncomingReward(
     );
     addRewardFinding(
       findings,
-      rewardFinding('rewardMissing', unresolved.origin, {}),
-      ownerRegion(unresolved.origin),
+      rewardFinding('rewardMissing', offerOrigin, {}),
+      ownerRegion(offerOrigin),
       offerChronology ?? historyFindingChronology(event.sequence),
     );
     return createGenerationEmissions(Object.freeze([]), inputs.peers, findings, frontiers);
@@ -327,9 +328,10 @@ export function generateIncomingReward(
       inputs.pendingHubBoard,
     );
   const binding = countedBinding(context.declaration, incoming, context.incomingBinding);
+  const offerOrigin = incoming.offerOrigin ?? incoming.origin;
   const offerContext: OfferProcessingContext = Object.freeze({
     catalog,
-    reward: incoming,
+    reward: Object.freeze({ ...incoming, origin: offerOrigin }),
     ...(binding === undefined ? {} : { binding }),
     historySequence: event.sequence,
     ...(offerChronology === undefined ? {} : { findingChronology: offerChronology }),
@@ -358,14 +360,14 @@ export function generateIncomingReward(
       }),
     );
   }
-  const ownerKey = semanticAddressKey(incoming.origin);
+  const ownerKey = semanticAddressKey(offerOrigin);
   frontiers.push(
     Object.freeze({
       generationPolicy: 'sequential',
       generationHistorySequence: event.sequence,
       reachableBranchCount: inputs.branches.length,
       acquisitionHorizon: acquisitionView === undefined ? 'generationOnly' : 'ownEnteredLifecycle',
-      owners: Object.freeze([incoming.origin]),
+      owners: Object.freeze([offerOrigin]),
       ...(binding === undefined || incoming.resolvedStoreKey === undefined
         ? {}
         : { resolvedStoreKey: incoming.resolvedStoreKey }),
@@ -376,7 +378,10 @@ export function generateIncomingReward(
           );
         const candidate = incomingCandidateForOffer(catalog, incoming, offer);
         const candidateFindings = new Map<string, FindingRegionEntry>();
-        const candidateContext = Object.freeze({ ...offerContext, reward: candidate });
+        const candidateContext = Object.freeze({
+          ...offerContext,
+          reward: Object.freeze({ ...candidate, origin: offerOrigin }),
+        });
         const candidateBranches = processRewardOffer(
           inputs.branches,
           candidateContext,

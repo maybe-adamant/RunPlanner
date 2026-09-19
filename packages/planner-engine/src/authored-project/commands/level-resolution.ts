@@ -4,6 +4,10 @@ import type { AuthoredLevelResolution } from '../traits/state';
 import { levelResolutionEffectFor } from '../../reward-kernel/level-effects';
 import { failCommand, requireOccurrence, requireTopology, type LocatedBiome } from './contract';
 import { locateReward, updateRewardState } from './acquisition/reward-source';
+import {
+  isRouteStartIncomingReward,
+  startingRewardAcquisitionFrom,
+} from '../room-state/starting-reward';
 import type { LevelResolutionCommand } from './types';
 import { replaceOccurrence, updateOccurrenceTopology } from './occurrence/mutation';
 import {
@@ -82,6 +86,7 @@ export function applyLevelResolutionCommand(
       : owner.occurrenceId;
   const occurrence = requireOccurrence(located.plan, occurrenceId, command);
   const locatedReward = locateReward(
+    document,
     catalog,
     located.routePosition,
     occurrence,
@@ -136,12 +141,26 @@ export function applyLevelResolutionCommand(
       ),
     );
   }
-  const state = updateRewardState(catalog, occurrence, occurrence.state, owner, command, (reward) =>
-    updateLevelResolutionReward(reward, command.levelResolution.acquisitionRole, value),
+  const nextReward = updateLevelResolutionReward(
+    locatedReward.reward,
+    command.levelResolution.acquisitionRole,
+    value,
   );
-  return updateOccurrenceTopology(
-    document,
-    located,
-    replaceOccurrence(topology, Object.freeze({ ...occurrence, state })),
-  );
+  const nextOccurrence = isRouteStartIncomingReward(document, located.routePosition, occurrence)
+    ? Object.freeze({
+        ...occurrence,
+        startingRewardAcquisition: startingRewardAcquisitionFrom(nextReward),
+      })
+    : Object.freeze({
+        ...occurrence,
+        state: updateRewardState(
+          catalog,
+          occurrence,
+          occurrence.state,
+          owner,
+          command,
+          () => nextReward,
+        ),
+      });
+  return updateOccurrenceTopology(document, located, replaceOccurrence(topology, nextOccurrence));
 }

@@ -19,6 +19,7 @@ type RewardPayloadCommand = Extract<
   {
     readonly kind:
       | 'ReplaceIncomingReward'
+      | 'ReplaceStartingReward'
       | 'ReplaceLocalReward'
       | 'ReplaceRewardWheelOffer'
       | 'ReplaceAcquisitionEntryOffer';
@@ -32,6 +33,8 @@ function rewardCommandFor(
   value: Parameters<WorkspaceRewardInteraction['intentFor']>[0],
 ): RewardPayloadCommand {
   switch (owner.kind) {
+    case 'startingReward':
+      return Object.freeze({ kind: 'ReplaceStartingReward', reward: owner.address, value });
     case 'incomingReward':
       return Object.freeze({ kind: 'ReplaceIncomingReward', reward: owner.address, value });
     case 'localReward':

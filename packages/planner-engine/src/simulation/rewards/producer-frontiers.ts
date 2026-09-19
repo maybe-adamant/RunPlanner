@@ -5,6 +5,7 @@ import {
   type LocalRewardAddress,
   type RewardWheelOfferAddress,
   type ShopOfferAddress,
+  type StartingRewardAddress,
 } from '../../authored-project/addresses';
 import type { ResolvedRewardOffer } from '../../reward-kernel';
 import type { ShopOptionSelection } from '../../reward-kernel';
@@ -34,7 +35,8 @@ export type RewardProducerOwnerAddress =
   | LocalRewardAddress
   | RewardWheelOfferAddress
   | ShopOfferAddress
-  | AcquisitionEntryAddress;
+  | AcquisitionEntryAddress
+  | StartingRewardAddress;
 
 export interface RewardProducerCandidateCapability {
   /** Reached generation contact, when backed by a captured producer frontier. */
