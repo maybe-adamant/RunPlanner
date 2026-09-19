@@ -2,11 +2,12 @@
 
 ## Status and delivery boundary
 
-- Status: proposed execution contract; implementation not started.
+- Status: locked by user approval; Gate A complete and independently reviewed;
+  Gates B–E pending.
 - Base: planner `daca6903`; downstream game module `26c2feb`.
 - Input: `docs/investigations/DREAM_DIVE_SCOPE.md`, reassessed after route
   foundation closure. The completed foundation is not reopened.
-- Commit this plan before implementation after review and user approval.
+- Plan and reassessment committed as `c57e1667` before implementation.
 
 ## Objective
 
@@ -117,6 +118,18 @@ Acceptance:
 
 Primary tests: catalog normalization, engine resource and G takeover suites;
 one application interaction witness at the existing consuming boundary.
+
+Delivered: narrow `excludedRouteKeys` declarations and catalog reference closure;
+existing engine assessment owns both candidate and selected restrictions.
+Existing application projections already retain unavailable resource removal,
+so no production React change was needed. No generic requirement context was
+added for these route-only checks.
+
+Verification: six focused files / 60 tests and catalog/engine/application
+typechecks passed. Independent review's Anomaly-witness gap was corrected with
+an otherwise-eligible internal Dream G project, unmodified catalog and ordinary
+control; targeted reviewer verification passed 9/9. Formatting and diff checks
+passed. Gate A delivered in its dedicated implementation commit.
 
 ### B — World Shop mode-sensitive inventory
 

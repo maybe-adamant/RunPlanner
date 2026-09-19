@@ -695,6 +695,8 @@ export interface ResourcePointSupport {
   readonly families: readonly ResourceFamily[];
   readonly capacity: 'simpleComplex' | 'allTools';
   readonly ignoresBiomeLimit?: boolean;
+  /** Route identities excluded from native point setup for this support profile. */
+  readonly excludedRouteKeys?: readonly string[];
   readonly rules: Readonly<
     Record<
       ResourceFamily,
@@ -990,6 +992,8 @@ export interface OceanusAnomalyReplacementDescriptor {
     readonly excludedRoomGameNames: readonly string[];
     readonly excludedSourceEncounterGameNames: readonly string[];
     readonly maxEnteredReplacementsThisRoute: number;
+    /** Route identities excluded from this source-side replacement. */
+    readonly excludedRouteKeys?: readonly string[];
   };
   readonly replaceableTargetRoomGameNames: readonly string[];
   readonly replacementRoomGameNames: readonly string[];

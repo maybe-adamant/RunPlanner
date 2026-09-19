@@ -14,6 +14,7 @@ import {
   createOccurrenceAddress,
   createOccurrenceId,
   createProjectDocument,
+  createRouteAddress,
   createSteadyGrowthOutcomeAddress,
   createTargetAddress,
   createTraitOfferAddress,
@@ -359,6 +360,61 @@ describe('structured workspace biome semantic assembly', () => {
       )
       .find((candidate) => candidate.room.occurrenceId === target.room.occurrenceId);
     expect(retainedTarget?.room.anomaly).toBeDefined();
+  });
+
+  it('projects an internal Dream resource selection as unavailable while retaining its removal control', () => {
+    const biome = createBiomeAddress('Dream', 'F');
+    const occurrenceId = createOccurrenceId('dream-resource-opening');
+    let project = createProjectDocument(catalog, {
+      projectId: 'dream-resource-projection',
+      routeKey: 'Dream',
+      itineraryBiomeKeys: ['F', 'G'],
+      configuredBiomeCount: 1,
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'CreateStart',
+      biome,
+      occurrenceId,
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceResourcePlacement',
+      route: createRouteAddress('Dream'),
+      family: 'Pickaxe',
+      value: { biomeKey: 'F', occurrenceId },
+    });
+
+    const semantic = assembleWorkspaceBiomeSemantics(catalog, biomeSource(project, 'Dream', 'F'));
+    const room = semantic.nodes.find(
+      (
+        node,
+      ): node is Extract<
+        (typeof semantic.nodes)[number],
+        { readonly kind: 'occurrenceWorkbench' }
+      > => node.kind === 'occurrenceWorkbench' && node.room.occurrenceId === occurrenceId,
+    );
+    if (room === undefined) throw new Error('Dream resource opening is missing');
+
+    expect(room.room.resources).toContainEqual(
+      expect.objectContaining({ family: 'Pickaxe', action: 'remove', legal: false }),
+    );
+    const cleared = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceResourcePlacement',
+      route: createRouteAddress('Dream'),
+      family: 'Pickaxe',
+      value: null,
+    });
+    const repaired = assembleWorkspaceBiomeSemantics(catalog, biomeSource(cleared, 'Dream', 'F'));
+    const repairedRoom = repaired.nodes.find(
+      (
+        node,
+      ): node is Extract<
+        (typeof repaired.nodes)[number],
+        { readonly kind: 'occurrenceWorkbench' }
+      > => node.kind === 'occurrenceWorkbench' && node.room.occurrenceId === occurrenceId,
+    );
+    expect(repairedRoom?.room.resources).toContainEqual(
+      expect.objectContaining({ family: 'Pickaxe', action: 'add', legal: false }),
+    );
   });
 
   it('composes N in authored Opening → PreHub → Hub → Preboss order without duplicate occurrences', () => {

@@ -2,6 +2,7 @@ import type {
   BiomeLayout,
   CatalogCollection,
   ExitCompatibilityPolicy,
+  RouteDeclaration,
   RoomDeclaration,
 } from '@run-planner/engine/catalog-schema';
 import type { RequirementExpression } from '@run-planner/engine/requirements';
@@ -184,13 +185,48 @@ function validateRewardLookupOwnership(
   });
 }
 
+function validateExcludedRouteKeys(
+  routeKeys: readonly string[] | undefined,
+  routes: CatalogCollection<RouteDeclaration>,
+  path: string,
+): void {
+  routeKeys?.forEach((routeKey, index) => {
+    if (routes.byKey[routeKey] === undefined)
+      fail(`${path}[${index}]`, `unknown route ${routeKey}`);
+  });
+}
+
+function validateRouteAvailabilityOwnership(
+  rooms: CatalogCollection<RoomDeclaration>,
+  layouts: CatalogCollection<BiomeLayout>,
+  routes: CatalogCollection<RouteDeclaration>,
+): void {
+  rooms.values.forEach((room, index) =>
+    validateExcludedRouteKeys(
+      room.resourcePointSupport.excludedRouteKeys,
+      routes,
+      `rooms[${index}].resourcePointSupport.excludedRouteKeys`,
+    ),
+  );
+  layouts.values.forEach((layout, index) => {
+    if (layout.progression.kind !== 'generated') return;
+    validateExcludedRouteKeys(
+      layout.progression.anomalyReplacement?.source.excludedRouteKeys,
+      routes,
+      `biomeLayouts[${index}].progression.anomalyReplacement.source.excludedRouteKeys`,
+    );
+  });
+}
+
 /** Closes room-layout relationships that require both immutable collections. */
 export function validateRoomLayoutClosure(
   rooms: CatalogCollection<RoomDeclaration>,
   layouts: CatalogCollection<BiomeLayout>,
   exitPolicies: CatalogCollection<ExitCompatibilityPolicy>,
+  routes: CatalogCollection<RouteDeclaration>,
 ): void {
   validatePrebossBatchPolicies(layouts, rooms, exitPolicies);
   validateDerivedRoomOwnership(rooms, layouts);
   validateRewardLookupOwnership(rooms, layouts);
+  validateRouteAvailabilityOwnership(rooms, layouts, routes);
 }

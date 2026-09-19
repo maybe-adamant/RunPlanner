@@ -172,6 +172,7 @@ export interface AnomalyTakeoverCandidateSupport {
     | 'sourceRoomExcluded'
     | 'sourceEncounterExcluded'
     | 'enteredReplacementCap'
+    | 'sourceRouteExcluded'
   )[];
 }
 

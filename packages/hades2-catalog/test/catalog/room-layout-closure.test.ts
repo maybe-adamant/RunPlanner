@@ -116,6 +116,7 @@ describe('room-layout compiler closure', () => {
         roomsWithOrphan,
         catalog.biomeLayouts,
         catalog.exitCompatibilityPolicies,
+        catalog.routes,
       ),
     ).toThrow(
       new CatalogContractError(
@@ -147,6 +148,7 @@ describe('room-layout compiler closure', () => {
         catalog.rooms,
         layoutsWithDuplicateOwner,
         catalog.exitCompatibilityPolicies,
+        catalog.routes,
       ),
     ).toThrow(
       new CatalogContractError(

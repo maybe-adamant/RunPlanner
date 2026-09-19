@@ -43,6 +43,8 @@ export interface ResourceExecutionPolicy {
 }
 
 export interface RouteResourceAuthoring {
+  /** Exact saved route identity used for declaration-owned point availability. */
+  readonly routeKey: string;
   readonly entered: readonly ResourceEnteredRoom[];
   readonly placements: Readonly<Record<ResourceFamily, ResourcePlacement | null>>;
   readonly assessmentByFamily: Readonly<
@@ -173,8 +175,14 @@ export function routeResourceAuthoring(
         ).every(
           ([selectedFamily, selectedPlacement]) =>
             selectedPlacement === null ||
-            assessResourcePlacement(catalog, selectedFamily, selectedPlacement, entered, proposal)
-              .legal,
+            assessResourcePlacement(
+              catalog,
+              route.routeKey,
+              selectedFamily,
+              selectedPlacement,
+              entered,
+              proposal,
+            ).legal,
         );
         return globallyLegal ? [placement] : [];
       });
@@ -188,11 +196,19 @@ export function routeResourceAuthoring(
         family,
         placement === null
           ? undefined
-          : assessResourcePlacement(catalog, family, placement, entered, route.resourcePlacements),
+          : assessResourcePlacement(
+              catalog,
+              route.routeKey,
+              family,
+              placement,
+              entered,
+              route.resourcePlacements,
+            ),
       ] as const;
     }),
   ) as RouteResourceAuthoring['assessmentByFamily'];
   return Object.freeze({
+    routeKey: route.routeKey,
     entered: Object.freeze(entered),
     placements: route.resourcePlacements,
     assessmentByFamily: Object.freeze(assessmentByFamily),
@@ -203,6 +219,7 @@ export function routeResourceAuthoring(
 /** The caller supplies the actual entered order; topology storage order is never used as chronology. */
 export function assessResourcePlacement(
   catalog: Catalog,
+  routeKey: string,
   family: ResourceFamily,
   placement: ResourcePlacement,
   entered: readonly ResourceEnteredRoom[],
@@ -225,6 +242,8 @@ export function assessResourcePlacement(
       legal: false,
       reasons: Object.freeze(['host resource rules unavailable']),
     });
+  if (room.resourcePointSupport.excludedRouteKeys?.includes(routeKey) === true)
+    reasons.push('route excluded');
   const targetCandidate: ResourceCandidate = {
     biomeKey: placement.biomeKey,
     occurrenceId: placement.occurrenceId,
@@ -349,7 +368,8 @@ export function deriveResourceExecutionPolicy(
     if (entry.origin.kind !== 'occurrence' || !enteredOccurrenceIds.has(entry.origin.occurrenceId))
       return [];
     const room = catalog.rooms.byKey[entry.gameName];
-    return room === undefined
+    return room === undefined ||
+      room.resourcePointSupport.excludedRouteKeys?.includes(authoring.routeKey)
       ? []
       : [{ biomeKey: entry.biomeKey, occurrenceId: entry.origin.occurrenceId, index, room }];
   });
