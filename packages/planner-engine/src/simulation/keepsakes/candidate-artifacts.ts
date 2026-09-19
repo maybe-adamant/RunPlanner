@@ -6,7 +6,7 @@ import {
   type KeepsakeSelectionAddress,
   type TranscendentEmbryoOutcomeAddress,
 } from '../../authored-project/addresses';
-import type { ArcanaFearState } from '../arcana-fear';
+import type { ArcanaFearState, CurrentArcanaCard } from '../arcana-fear';
 import { type FatedStatus, type KeepsakeState } from './state';
 import {
   assessTranscendentEmbryoTransformation,
@@ -92,6 +92,7 @@ export function createEmptyFountainRarityCandidateArtifacts(): FountainRarityCan
 }
 
 export interface FigurineArcanaCandidateCapability {
+  readonly activeArcana: readonly CurrentArcanaCard[];
   readonly activeArcanaKeys: readonly string[];
   readonly inactiveArcanaKeys: readonly string[];
   readonly requiredCount: number;

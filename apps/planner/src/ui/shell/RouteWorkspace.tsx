@@ -188,7 +188,7 @@ export function RouteWorkspace({
             }
             type="button"
           >
-            Route
+            Loadout
           </button>
           {workspaceRoute.rail.map((biomeProjection) => {
             const biomeFeedback = feedback.biomes.get(biomeProjection.biomeKey);

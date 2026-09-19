@@ -13,6 +13,16 @@ export interface ActiveArcanaState {
   readonly origin: ArcanaActivationOrigin;
   readonly rarity: InRunTraitRarity;
 }
+export interface CurrentArcanaCard {
+  readonly key: string;
+  readonly rarity: InRunTraitRarity;
+}
+
+export function currentArcanaCards(state: ArcanaFearState): readonly CurrentArcanaCard[] {
+  return Object.freeze(
+    state.arcana.active.map(({ key, rarity }) => Object.freeze({ key, rarity })),
+  );
+}
 export interface ArcanaState {
   readonly active: readonly ActiveArcanaState[];
   /** Exact successful source interactions; remaining capacity is always derived. */
@@ -116,8 +126,12 @@ export function consumeArtificerUse(
 
 export type CirceResolutionEffect = 'activateArcana' | 'promoteArcana' | 'disableFear';
 
+export const TEMPORARY_ARCANA_RARITY = 'Epic' as const;
+export const PROMOTED_ARCANA_RARITY = 'Heroic' as const;
+
 /** Complete declaration-independent target product for one selected Circe effect. */
 export interface CirceResolutionDomain {
+  readonly activeArcana: readonly CurrentArcanaCard[];
   readonly effect: CirceResolutionEffect;
   readonly requiredCount: number;
   readonly arcanaKeys: readonly string[];
@@ -233,6 +247,7 @@ export function circeResolutionDomain(
       vowKeys: Object.freeze([]),
       outerAvailable: true,
       activeArcanaKeys: Object.freeze(state.arcana.active.map((card) => card.key)),
+      activeArcana: currentArcanaCards(state),
     });
   }
   if (effect === 'promoteArcana') {
@@ -244,6 +259,7 @@ export function circeResolutionDomain(
       vowKeys: Object.freeze([]),
       outerAvailable: manualArcanaGraspCost(catalog, state) > 0,
       activeArcanaKeys: Object.freeze(state.arcana.active.map((card) => card.key)),
+      activeArcana: currentArcanaCards(state),
     });
   }
   const vowKeys = circeRemovableFearVowKeys(catalog, state);
@@ -254,6 +270,7 @@ export function circeResolutionDomain(
     vowKeys,
     outerAvailable: vowKeys.length > 0,
     activeArcanaKeys: Object.freeze(state.arcana.active.map((card) => card.key)),
+    activeArcana: currentArcanaCards(state),
   });
 }
 
@@ -402,7 +419,7 @@ export function activateTemporaryArcana(
   state: ArcanaFearState,
   arcanaKeys: readonly string[],
   evidence: ArcanaFearEvidence,
-  rarity: InRunTraitRarity = 'Epic',
+  rarity: InRunTraitRarity = TEMPORARY_ARCANA_RARITY,
 ): ArcanaTransitionAssessment {
   if (!canAppendEvidence(state, evidence)) return rejected(state, 'staleChronology');
   if (arcanaKeys.length === 0) return rejected(state, 'emptyTargetSet');
@@ -473,7 +490,7 @@ export function promoteArcana(
         active: Object.freeze(
           state.arcana.active.map((candidate) =>
             canonicalKeys.includes(candidate.key)
-              ? Object.freeze({ ...candidate, rarity: 'Heroic' as const })
+              ? Object.freeze({ ...candidate, rarity: PROMOTED_ARCANA_RARITY })
               : candidate,
           ),
         ),
@@ -556,6 +573,7 @@ export function suppressFearVows(
 
 /** Atomic exact-set support captured immediately before Judgment at one Boss effect. */
 export interface JudgmentArcanaCandidateCapability {
+  readonly activeArcana: readonly CurrentArcanaCard[];
   readonly activeArcanaKeys: readonly string[];
   readonly inactiveArcanaKeys: readonly string[];
   readonly requiredCount: number;

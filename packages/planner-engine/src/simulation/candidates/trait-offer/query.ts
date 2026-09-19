@@ -1,4 +1,5 @@
 import type { Catalog } from '../../../catalog-schema';
+import type { CurrentArcanaCard } from '../../arcana-fear';
 import {
   semanticAddressKey,
   type NaturalSelectionResultAddress,
@@ -108,6 +109,8 @@ export interface EvaluatedCirceResolutionDomain {
   readonly kind: 'circeResolutionDomain';
   readonly result: {
     readonly effect: 'activateArcana' | 'promoteArcana' | 'disableFear';
+    readonly resultRarity: 'Epic' | 'Heroic' | null;
+    readonly activeArcanaByBranch: readonly (readonly CurrentArcanaCard[])[];
     readonly requiredCount: number;
     readonly branchAgreement: boolean;
     readonly arcanaCandidates: readonly EvaluatedDirectTraitOutcomeCandidate<string>[];

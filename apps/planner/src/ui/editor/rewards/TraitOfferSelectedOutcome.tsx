@@ -354,8 +354,9 @@ export function TraitOfferSelectedOutcome({
           value={value}
         />
       )}
-      {circeChild === undefined || circeDomain.result === undefined ? null : (
+      {circeChild === undefined ? null : (
         <TraitOfferCirceResolution
+          key={semanticOwnerControlElementId(circeChild.child.address)}
           findingTarget={findingTarget(circeChild.child.address)}
           controlId={semanticOwnerControlElementId(circeChild.child.address)}
           domain={circeDomain.result}

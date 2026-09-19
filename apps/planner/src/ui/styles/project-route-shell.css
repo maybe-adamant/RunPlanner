@@ -453,81 +453,131 @@
 .route-loadout-controls {
   display: grid;
   gap: 0.75rem;
-  margin-top: 1rem;
+}
+
+.route-overview .route-loadout-heading {
+  margin: 0 0 5px;
+  font-family: inherit;
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+}
+
+.route-loadout-controls > .contextual-picker,
+.route-loadout-controls > .loadout-dialog-launcher,
+.route-keepsake-controls > .contextual-picker,
+.route-configuration > .field-control {
+  width: 100%;
+  max-width: 32rem;
+  min-width: 0;
+}
+
+.route-loadout-panel {
+  padding-block: 1rem;
+}
+
+.route-loadout-controls > .contextual-picker > label,
+.route-loadout-controls > .loadout-dialog-launcher > label,
+.route-keepsake-controls > .contextual-picker > label {
+  white-space: nowrap;
+}
+
+@container app-viewport (min-width: 701px) {
+  .route-loadout-controls > .contextual-picker,
+  .route-loadout-controls > .loadout-dialog-launcher,
+  .route-keepsake-controls > .contextual-picker,
+  .route-configuration > .field-control {
+    grid-template-columns: 10rem minmax(0, 1fr);
+  }
+}
+
+.route-configuration > .field-control {
+  max-width: none;
+}
+
+.route-prefix-summary {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem 1.25rem;
+  min-width: 0;
+}
+
+.route-prefix-description {
+  margin: 0;
+}
+
+.route-prefix-options {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  gap: 1.25rem;
+}
+
+.route-prefix-options > label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  cursor: pointer;
+}
+
+.route-prefix-options input {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  accent-color: #e2b971;
 }
 
 .route-keepsake-controls {
-  display: grid;
-  align-items: start;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
   gap: 0.75rem;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 20rem), 1fr));
+  min-width: 0;
 }
 
-.route-weapon-controls {
-  display: grid;
-  gap: 0.75rem;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+.route-keepsake-controls > .contextual-picker {
+  flex: 0 1 32rem;
 }
 
-.route-keepsake-controls > :only-child {
-  grid-column: 1 / -1;
+.route-keepsake-controls > .keepsake-equip-result-control {
+  flex: 0 1 28rem;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.route-keepsake-controls > .keepsake-equip-result-control > .contextual-picker {
+  flex: 1 1 auto;
+}
+
+.route-keepsake-controls > .transcendent-embryo-outcome-row {
+  flex: 1 1 48rem;
+}
+
+.route-keepsake-controls > .transcendent-embryo-outcome-row > .contextual-picker {
+  flex: 0 1 16rem;
+}
+
+.route-keepsake-controls
+  > .transcendent-embryo-outcome-row
+  > .field-control:not(.contextual-picker) {
+  flex: 1 1 14rem;
+  min-width: min(100%, 14rem);
 }
 
 .route-loadout-section {
-  border: 1px solid var(--border);
-  border-radius: 0.5rem;
-  margin-top: 0.75rem;
-  padding: 0.7rem;
+  min-width: 0;
 }
 
-.route-loadout-section > summary {
+.route-loadout-summary {
+  margin: 0;
   color: #ede8df;
-  cursor: pointer;
   font-weight: 700;
 }
 
-.route-loadout-section > summary span {
+.route-loadout-summary span {
   color: var(--muted);
   font-size: 0.78rem;
   font-weight: 500;
   margin-left: 0.35rem;
-}
-
-.arcana-board {
-  display: grid;
-  gap: 0.45rem;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
-  margin-top: 0.7rem;
-}
-
-.arcana-card-control {
-  align-content: space-between;
-  background: rgb(255 255 255 / 3%);
-  border: 1px solid var(--border);
-  border-radius: 0.4rem;
-  display: grid;
-  font-size: 0.76rem;
-  gap: 0.4rem;
-  min-height: 4.25rem;
-  padding: 0.5rem;
-}
-
-.arcana-card-control[data-automatic='true'] {
-  background: rgb(174 152 202 / 9%);
-  color: var(--muted);
-}
-
-.arcana-card-control input {
-  justify-self: end;
-}
-
-.fear-rank-list {
-  display: grid;
-  gap: 0.55rem;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  margin-top: 0.7rem;
-}
-
-.fear-rank-control[data-rival='true'] {
-  grid-column: 2 / span 2;
 }

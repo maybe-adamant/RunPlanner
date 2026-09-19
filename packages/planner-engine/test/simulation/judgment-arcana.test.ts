@@ -26,6 +26,8 @@ import { createDefaultRouteLoadout } from '../../src/authored-project/loadout';
 import { initializeTestRewardBranches } from '../support/arcana-fear';
 import { evaluateBiomeRewardsAssemblyInternal } from '../../src/simulation/rewards/biome';
 import { publicRewardBranch } from '../../src/simulation/rewards/branch-lifecycle';
+import { evaluateJudgmentArcanaCandidate } from '../../src/simulation/candidates/judgment-arcana';
+import { evaluateFigurineArcanaCandidate } from '../../src/simulation/candidates/figurine-arcana';
 import {
   attachTraitHistory,
   createTraitHistoryState,
@@ -248,6 +250,77 @@ describe('Judgment fixed Boss ownership', () => {
 });
 
 describe('Judgment fixed Boss lifecycle', () => {
+  it('carries current Common and Heroic cards through exact Boss candidate handoffs', () => {
+    const common = activateTemporaryArcana(
+      catalog,
+      createArcanaFearState(catalog, createDefaultRouteLoadout(catalog)),
+      ['CardDraw'],
+      { owner: n, sequence: 1 },
+      'Common',
+    );
+    if (!common.legal) throw new Error('Common Judgment seed must be legal');
+    const heroic = activateTemporaryArcana(
+      catalog,
+      common.state,
+      ['ChanneledCast'],
+      { owner: n, sequence: 2 },
+      'Heroic',
+    );
+    if (!heroic.legal) throw new Error('Heroic Arcana seed must be legal');
+    const judgmentKeys = inactive(
+      heroic.state.arcana.active.map((card) => card.key),
+      3,
+    );
+    const result = evaluateNBossLifecycle(
+      heroic.state,
+      judgmentKeys,
+      undefined,
+      [],
+      createKeepsakeState(catalog, 'BossMetaUpgradeKeepsake', heroic.state),
+    );
+    const project = loadSurfaceNOProject();
+    const evaluation = simulateProject(catalog, project);
+    const judgmentCandidate = evaluateJudgmentArcanaCandidate(
+      catalog,
+      project,
+      evaluation,
+      result.judgmentArcanaArtifacts,
+      { kind: 'judgmentArcana', judgment: judgmentOwner(), arcanaKeys: judgmentKeys },
+    );
+    const figurineCandidate = evaluateFigurineArcanaCandidate(
+      catalog,
+      project,
+      evaluation,
+      result.figurineArcanaArtifacts,
+      {
+        kind: 'figurineArcana',
+        figurine: createFigurineArcanaAddress(
+          createOccurrenceAddress(n, judgmentOwner().occurrenceId),
+          'Encounter',
+        ),
+        arcanaKeys: [],
+      },
+    );
+    const current = [
+      { key: 'CardDraw', rarity: 'Common' },
+      { key: 'ChanneledCast', rarity: 'Heroic' },
+    ];
+    expect(judgmentCandidate).toMatchObject({
+      kind: 'judgmentArcana',
+      result: { rarity: 'Epic', activeArcana: expect.arrayContaining(current) },
+    });
+    expect(figurineCandidate).toMatchObject({
+      kind: 'figurineArcana',
+      result: {
+        rarity: 'Epic',
+        activeArcana: expect.arrayContaining([
+          ...current,
+          ...judgmentKeys.map((key) => ({ key, rarity: 'Epic' })),
+        ]),
+      },
+    });
+  });
+
   it('requires a Fates companion across Circe, Judgment, and Figurine random draws', () => {
     const judgmentState = createArcanaFearState(catalog, {
       ...createDefaultRouteLoadout(catalog),
@@ -533,7 +606,12 @@ describe('Judgment fixed Boss lifecycle', () => {
     });
     expect(candidate).toMatchObject({
       kind: 'judgmentArcana',
-      result: { requiredCount: 5, selectedPossible: true },
+      result: {
+        requiredCount: 5,
+        selectedPossible: true,
+        rarity: 'Epic',
+        activeArcana: expect.arrayContaining([{ key: 'CardDraw', rarity: 'Epic' }]),
+      },
     });
   });
 

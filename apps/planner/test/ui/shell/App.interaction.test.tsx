@@ -523,7 +523,7 @@ describe('planner history interaction', () => {
     );
     expect(screen.queryByRole('dialog')).toBeNull();
 
-    for (const label of ['Route', 'Traits']) {
+    for (const label of ['Loadout', 'Traits']) {
       await user.click(screen.getByRole('button', { name: label }));
       expect(repair().parentElement?.className).toBe('editor-panel');
       expect(repair().textContent).toBe(copy);
@@ -638,7 +638,7 @@ describe('planner history interaction', () => {
     expect(within(about).getByText('Reset scale', { selector: 'dt' })).toBeTruthy();
     expect(within(about).getAllByText('Ctrl/Cmd', { selector: 'kbd' })).toHaveLength(4);
     expect(within(about).queryByText('Rooms')).toBeNull();
-    expect(screen.getByRole('button', { name: 'Route' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Loadout' })).toBeTruthy();
   });
 
   it('requires an explicit game profile and plan slot before publishing', async () => {
@@ -745,7 +745,11 @@ describe('planner history interaction', () => {
     expect(undo).toHaveProperty('disabled', true);
     expect(redo).toHaveProperty('disabled', true);
 
-    await user.selectOptions(screen.getByLabelText('Configure route up to'), '1');
+    await user.click(
+      within(screen.getByRole('radiogroup', { name: 'Biomes to configure' })).getByRole('radio', {
+        name: '1',
+      }),
+    );
 
     expect(configuredBiomeCount(application)).toBe(1);
     expect(application.store.getState().projectWorkspace.history!.past).toHaveLength(1);
@@ -767,7 +771,11 @@ describe('planner history interaction', () => {
 
   it('creates and edits the F start in Loadout with ordinary Undo and timeline repair', async () => {
     const { application, user } = renderPlannerForInteraction();
-    await user.selectOptions(screen.getByLabelText('Configure route up to'), '1');
+    await user.click(
+      within(screen.getByRole('radiogroup', { name: 'Biomes to configure' })).getByRole('radio', {
+        name: '1',
+      }),
+    );
 
     await user.click(screen.getByRole('button', { name: 'Start Erebus' }));
 
@@ -828,7 +836,11 @@ describe('planner history interaction', () => {
 
   it('keeps relocated opening controls locked behind incomplete loadout results', async () => {
     const { application, user } = renderPlannerForInteraction();
-    await user.selectOptions(screen.getByLabelText('Configure route up to'), '1');
+    await user.click(
+      within(screen.getByRole('radiogroup', { name: 'Biomes to configure' })).getByRole('radio', {
+        name: '1',
+      }),
+    );
     await user.click(screen.getByRole('button', { name: 'Start Erebus' }));
     act(() =>
       application.store.dispatch(
@@ -853,7 +865,11 @@ describe('planner history interaction', () => {
 
   it('supports Ctrl/Cmd+Z, Ctrl/Cmd+Shift+Z, and Ctrl+Y', async () => {
     const { application, user } = renderPlannerForInteraction();
-    await user.selectOptions(screen.getByLabelText('Configure route up to'), '1');
+    await user.click(
+      within(screen.getByRole('radiogroup', { name: 'Biomes to configure' })).getByRole('radio', {
+        name: '1',
+      }),
+    );
 
     expect(fireEvent.keyDown(window, { ctrlKey: true, key: 'z' })).toBe(false);
     expect(configuredBiomeCount(application)).toBe(0);
@@ -890,7 +906,11 @@ describe('planner history interaction', () => {
         </>
       ),
     });
-    await user.selectOptions(screen.getByLabelText('Configure route up to'), '1');
+    await user.click(
+      within(screen.getByRole('radiogroup', { name: 'Biomes to configure' })).getByRole('radio', {
+        name: '1',
+      }),
+    );
 
     const input = screen.getByRole('textbox', { name: 'Text draft' });
     expect(fireEvent.keyDown(input, { ctrlKey: true, key: 'z' })).toBe(true);
@@ -925,8 +945,14 @@ describe('planner history interaction', () => {
       'Underworld',
     );
     expect(document.querySelector('.app-route-identity')?.textContent).toBe('Underworld');
-    expect(screen.getByRole('button', { name: 'Route' }).getAttribute('aria-current')).toBe('page');
-    await user.selectOptions(screen.getByLabelText('Configure route up to'), '4');
+    expect(screen.getByRole('button', { name: 'Loadout' }).getAttribute('aria-current')).toBe(
+      'page',
+    );
+    await user.click(
+      within(screen.getByRole('radiogroup', { name: 'Biomes to configure' })).getByRole('radio', {
+        name: '4',
+      }),
+    );
 
     const oceanus = screen.getByRole('button', { name: 'Oceanus' });
     oceanus.focus();
@@ -946,7 +972,7 @@ describe('planner history interaction', () => {
     });
     expect(tartarus.getAttribute('aria-current')).toBe('page');
 
-    const route = screen.getByRole('button', { name: 'Route' });
+    const route = screen.getByRole('button', { name: 'Loadout' });
     route.focus();
     await user.keyboard(' ');
     expect(application.store.getState().editorSession.activePanel).toEqual({
@@ -2082,7 +2108,11 @@ describe('planner history interaction', () => {
   it('keeps blocked biome pages visible and editable within the selected route', async () => {
     const { user } = renderPlannerForInteraction();
 
-    await user.selectOptions(screen.getByLabelText('Configure route up to'), '4');
+    await user.click(
+      within(screen.getByRole('radiogroup', { name: 'Biomes to configure' })).getByRole('radio', {
+        name: '4',
+      }),
+    );
     const oceanus = screen.getByRole('button', { name: 'Oceanus' });
     expect(within(oceanus).getByTitle('Blocked')).toBeTruthy();
     expect(
@@ -2106,18 +2136,75 @@ describe('planner history interaction', () => {
 });
 
 describe('route loadout interaction', () => {
+  it('selects weapon then aspect atomically, with cancellable staging and ordinary Undo', async () => {
+    const { application, user } = renderPlannerForInteraction();
+    const before = application.store.getState().projectWorkspace.history!;
+    const suit = application.catalog.weapons.byKey['WeaponSuit']!;
+    const selene = application.catalog.aspects.byKey['SuitHexAspect']!;
+    await user.click(screen.getByRole('button', { name: 'Starting weapon' }));
+    await user.click(within(screen.getByRole('listbox')).getByText(suit.label));
+    expect(application.store.getState().projectWorkspace.history).toBe(before);
+    const options = within(screen.getByRole('listbox')).getAllByRole('option');
+    expect(options).toHaveLength(suit.aspectKeys.length);
+    for (const key of suit.aspectKeys) {
+      expect(
+        within(screen.getByRole('listbox')).getByText(
+          application.catalog.aspects.byKey[key]!.label,
+        ),
+      ).toBeTruthy();
+    }
+    await user.keyboard('{Escape}');
+    expect(application.store.getState().projectWorkspace.history).toBe(before);
+    await user.click(screen.getByRole('button', { name: 'Starting weapon' }));
+    await user.click(within(screen.getByRole('listbox')).getByText(suit.label));
+    await user.click(within(screen.getByRole('listbox')).getByText(selene.label));
+    expect(screen.queryByRole('listbox')).toBeNull();
+    const after = application.store.getState().projectWorkspace.history!;
+    expect(after.past).toHaveLength(before.past.length + 1);
+    expect(after.present.route.loadout).toMatchObject({
+      weaponKey: suit.key,
+      aspectKey: selene.key,
+    });
+    expect(screen.getByRole('button', { name: 'Starting weapon' }).textContent).toContain(
+      selene.label,
+    );
+    expect(screen.getByText('Hex talent layout')).toBeTruthy();
+    await user.click(screen.getByRole('button', { name: 'Undo' }));
+    expect(application.store.getState().projectWorkspace.history!.present).toEqual(before.present);
+  });
+
+  it('opens and closes loadout dialogs without changing authorship, returning focus to their launchers', async () => {
+    const { application, user } = renderPlannerForInteraction();
+    const history = application.store.getState().projectWorkspace.history;
+    for (const title of ['Arcana', 'Fear']) {
+      const launcher = screen.getByRole('button', { name: `Edit ${title}` });
+      await user.click(launcher);
+      expect(screen.getByRole('dialog', { name: title })).toBeTruthy();
+      expect(document.activeElement).toBe(screen.getByRole('button', { name: `Close ${title}` }));
+      await user.keyboard('{Escape}');
+      expect(screen.queryByRole('dialog')).toBeNull();
+      expect(document.activeElement).toBe(launcher);
+      await user.click(launcher);
+      await user.click(screen.getByRole('button', { name: `Close ${title}` }));
+      expect(document.activeElement).toBe(launcher);
+    }
+    expect(screen.getByRole('button', { name: 'Starting weapon' })).toBeTruthy();
+    expect(screen.getByRole('radiogroup', { name: 'Biomes to configure' })).toBeTruthy();
+    expect(application.store.getState().projectWorkspace.history).toBe(history);
+  });
+
   it('presents starting Grasp capacity and disables Arcana or Void choices that exceed it', async () => {
     const { user } = renderPlannerForInteraction();
     const startingKeepsake = screen.getByRole('button', { name: 'Starting keepsake' });
-    const weapon = screen.getByRole('combobox', { name: 'Weapon' });
-    const aspect = screen.getByRole('combobox', { name: 'Aspect' });
+    const weapon = screen.getByRole('button', { name: 'Starting weapon' });
     expect(startingKeepsake.closest('.route-keepsake-controls')).toBeTruthy();
-    expect(weapon.closest('.route-weapon-controls')).toBe(aspect.closest('.route-weapon-controls'));
     expect(weapon.closest('.route-keepsake-controls')).toBeNull();
+    await user.click(screen.getByRole('button', { name: 'Edit Arcana' }));
     const arcana = screen.getByRole('group', { name: 'Arcana, 0 active' });
-    const arcanaSummary = arcana.querySelector('summary');
-    if (arcanaSummary === null) throw new Error('Arcana summary is missing');
-    await user.click(arcanaSummary);
+    const artwork = Array.from(arcana.querySelectorAll('img'));
+    expect(artwork).toHaveLength(catalog.arcanaCards.values.length);
+    expect(new Set(artwork.map((image) => image.getAttribute('src'))).size).toBe(25);
+    expect(artwork.every((image) => image.getAttribute('src')?.endsWith('.webp'))).toBe(true);
     for (const label of [
       'The Unseen',
       'Origination',
@@ -2127,19 +2214,15 @@ describe('route loadout interaction', () => {
       'The Champions',
       'The Huntress',
     ]) {
-      await user.click(screen.getByRole('checkbox', { name: label }));
+      await user.click(screen.getByRole('button', { name: label }));
     }
 
     expect(arcana.textContent).toContain('30 / 30 Grasp');
-    expect(screen.getByRole('checkbox', { name: 'The Sorceress' })).toHaveProperty(
-      'disabled',
-      true,
-    );
+    expect(screen.getByRole('button', { name: 'The Sorceress' })).toHaveProperty('disabled', true);
 
+    await user.click(screen.getByRole('button', { name: 'Close Arcana' }));
+    await user.click(screen.getByRole('button', { name: 'Edit Fear' }));
     const fear = screen.getByRole('group', { name: 'Fear, 0 total' });
-    const fearSummary = fear.querySelector('summary');
-    if (fearSummary === null) throw new Error('Fear summary is missing');
-    await user.click(fearSummary);
     expect(
       Array.from(fear.querySelectorAll<HTMLElement>('.fear-rank-control')).map(
         (control) => control.dataset.fearVowKey,
@@ -2168,9 +2251,10 @@ describe('route loadout interaction', () => {
         .querySelector('[data-fear-vow-key="BossDifficultyShrineUpgrade"]')
         ?.getAttribute('data-rival'),
     ).toBe('true');
-    const voidRank = screen.getByRole('combobox', { name: 'Vow of Void rank' });
-    expect(within(voidRank).getByRole('option', { name: '0' })).toHaveProperty('disabled', false);
-    expect(within(voidRank).getByRole('option', { name: '1' })).toHaveProperty('disabled', true);
+    const voidRank = screen.getByRole('button', { name: 'Vow of Void, rank 0 of 4' });
+    expect(voidRank.getAttribute('aria-disabled')).toBe('true');
+    await user.click(voidRank);
+    expect(screen.getByRole('button', { name: 'Vow of Void, rank 0 of 4' })).toBeTruthy();
   });
 
   it('authors one of the complete starting-keepsake inventory through route settings', async () => {
@@ -2195,7 +2279,11 @@ describe('route loadout interaction', () => {
 
   it('authors the Jeweled Pom result at route start', async () => {
     const { application, user } = renderPlannerForInteraction();
-    await user.selectOptions(screen.getByLabelText('Configure route up to'), '1');
+    await user.click(
+      within(screen.getByRole('radiogroup', { name: 'Biomes to configure' })).getByRole('radio', {
+        name: '1',
+      }),
+    );
     const startingKeepsake = screen.getByRole('button', { name: 'Starting keepsake' });
     await user.click(startingKeepsake);
     await user.click(within(screen.getByRole('listbox')).getByText('Jeweled Pom'));
@@ -2211,7 +2299,7 @@ describe('route loadout interaction', () => {
       summary: { evaluatedBiomeCount: 0, blockedBiomeCount: 1, eligibleForExecutionPlan: false },
     });
 
-    const result = await screen.findByRole('button', { name: 'Jeweled Pom result' });
+    await screen.findByRole('button', { name: 'Jeweled Pom result' });
     const missingFinding = application.store
       .getState()
       .projectWorkspace.assembly!.evaluation.findings.find(
@@ -2232,7 +2320,7 @@ describe('route loadout interaction', () => {
       key: issue.regionKey,
       origin: issue.owner,
     });
-    await user.click(result);
+    await user.click(screen.getByRole('button', { name: 'Jeweled Pom result' }));
     const resultList = screen.getByRole('listbox');
     await waitFor(() => expect(within(resultList).getByText('Last Gasp')).toBeTruthy());
     await user.click(within(resultList).getByText('Last Gasp'));
@@ -2252,7 +2340,11 @@ describe('route loadout interaction', () => {
 
   it('repairs the route-start Experimental Hammer result through its projected control', async () => {
     const { application, user } = renderPlannerForInteraction();
-    await user.selectOptions(screen.getByLabelText('Configure route up to'), '1');
+    await user.click(
+      within(screen.getByRole('radiogroup', { name: 'Biomes to configure' })).getByRole('radio', {
+        name: '1',
+      }),
+    );
     const startingKeepsake = screen.getByRole('button', { name: 'Starting keepsake' });
     await user.click(startingKeepsake);
     await user.click(within(screen.getByRole('listbox')).getByText('Experimental Hammer'));
@@ -2382,21 +2474,25 @@ describe('route loadout interaction', () => {
   it('authors Arcana and Fear through bounded controls with undo and redo', async () => {
     const { application, user } = renderPlannerForInteraction();
 
-    const arcana = screen.getByRole('group', { name: 'Arcana, 0 active' });
-    const arcanaSummary = arcana.querySelector('summary');
-    if (arcanaSummary === null) throw new Error('Arcana summary is missing');
-    await user.click(arcanaSummary);
-    expect(screen.getByRole('checkbox', { name: 'The Moon (automatic)' })).toHaveProperty(
+    await user.click(screen.getByRole('button', { name: 'Edit Arcana' }));
+    expect(screen.getByRole('button', { name: 'The Moon (automatic)' })).toHaveProperty(
       'disabled',
       true,
     );
-    await user.click(screen.getByRole('checkbox', { name: /The Sorceress/ }));
+    await user.click(screen.getByRole('button', { name: /The Sorceress/ }));
+    expect(screen.getByRole('button', { name: 'The Sorceress' }).getAttribute('aria-pressed')).toBe(
+      'true',
+    );
+    const queen = screen.getByRole('button', { name: 'The Queen (automatic)' });
+    expect(queen).toHaveProperty('disabled', true);
+    expect(queen.getAttribute('aria-pressed')).toBe('true');
 
     expect(
       application.store.getState().projectWorkspace.history!.present.route?.loadout
         .manualArcanaKeys,
     ).toEqual(['ChanneledCast']);
     expect(screen.getByRole('group', { name: 'Arcana, 3 active' })).toBeTruthy();
+    await user.click(screen.getByRole('button', { name: 'Close Arcana' }));
 
     await user.click(screen.getByRole('button', { name: 'Undo' }));
     expect(
@@ -2409,17 +2505,35 @@ describe('route loadout interaction', () => {
         .manualArcanaKeys,
     ).toEqual(['ChanneledCast']);
 
-    const fear = screen.getByRole('group', { name: 'Fear, 0 total' });
-    const fearSummary = fear.querySelector('summary');
-    if (fearSummary === null) throw new Error('Fear summary is missing');
-    await user.click(fearSummary);
-    await user.selectOptions(screen.getByLabelText('Vow of Pain rank'), '3');
+    await user.click(screen.getByRole('button', { name: 'Edit Fear' }));
+    const pain = screen.getByRole('button', { name: 'Vow of Pain, rank 0 of 3' });
+    await user.click(pain);
+    await user.click(pain);
+    await user.click(pain);
+    expect(screen.getByRole('button', { name: 'Vow of Pain, rank 3 of 3' })).toBeTruthy();
+    await user.click(pain);
+    expect(screen.getByRole('button', { name: 'Vow of Pain, rank 0 of 3' })).toBeTruthy();
+    pain.focus();
+    await user.keyboard('[Space]');
+    expect(screen.getByRole('button', { name: 'Vow of Pain, rank 1 of 3' })).toBeTruthy();
+    await user.pointer({ target: pain, keys: '[MouseRight]' });
+    expect(screen.getByRole('button', { name: 'Vow of Pain, rank 0 of 3' })).toBeTruthy();
+    await user.click(pain);
+    await user.click(pain);
+    await user.click(pain);
 
     expect(
       application.store.getState().projectWorkspace.history!.present.route?.loadout.fearRanks
         .EnemyDamageShrineUpgrade,
     ).toBe(3);
     expect(screen.getByRole('group', { name: 'Fear, 5 total' })).toBeTruthy();
+    await user.click(screen.getByRole('button', { name: 'Close Fear' }));
+    expect(screen.getByRole('button', { name: 'Edit Fear' }).textContent).toBe(
+      'Fear · 1 active · 5/67 Fear',
+    );
+    expect(screen.getByRole('button', { name: 'Edit Arcana' }).textContent).toBe(
+      'Arcana · 3 active · 1/30 Grasp',
+    );
   });
 });
 
@@ -2555,7 +2669,11 @@ describe('project profile interaction', () => {
     expect(within(fileMenu).getByRole('menuitem', { name: 'Load…' })).toBeTruthy();
     await user.keyboard('{Escape}');
     expect(screen.getByText('Unsaved')).toBeTruthy();
-    await user.selectOptions(screen.getByLabelText('Configure route up to'), '1');
+    await user.click(
+      within(screen.getByRole('radiogroup', { name: 'Biomes to configure' })).getByRole('radio', {
+        name: '1',
+      }),
+    );
     application.store.dispatch(
       authoredProjectCommandDispatched({
         kind: 'ReplaceManualArcanaSelection',
@@ -2607,7 +2725,7 @@ describe('project profile interaction', () => {
         name: 'Underworld',
       }),
     );
-    expect(configuredBiomeCount(application)).toBe(0);
+    expect(configuredBiomeCount(application)).toBe(1);
     expect(screen.getByText('Created a new project.')).toBeTruthy();
     expect(screen.getByText('Unsaved')).toBeTruthy();
 

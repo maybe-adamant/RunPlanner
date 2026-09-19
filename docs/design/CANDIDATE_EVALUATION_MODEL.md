@@ -115,10 +115,11 @@ The application may avoid requesting an unassessed control, but the engine
 remains the contact boundary and must independently enforce coverage.
 
 Arcana/Fear candidates never receive the raw mutable ledger. A Boss-completion
-capability exposes only its ordered inactive Arcana domain and required count.
-A selected Circe option exposes only the domain its declaration needs: inactive
+capability exposes its ordered inactive Arcana domain, required count, grant
+rarity, and current active card rarities. A selected Circe option exposes the domain its declaration needs: inactive
 cards for Red, active non-Heroic cards plus the clamped cardinality for Lapis,
-or effectively active removable Vows for Black Night. Candidate grouping may
+or effectively active removable Vows for Black Night. Its current active card
+rarities remain branch-correlated, separate from its resulting rarity. Candidate grouping may
 merge branch products only when those exact domains agree; otherwise it
 withholds a false unified domain. The exact resolution/completion owner retains
 its repair domain at the first blocking point, while later state remains

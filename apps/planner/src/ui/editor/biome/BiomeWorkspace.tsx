@@ -525,13 +525,13 @@ export function BiomeWorkspace({
         {subject === undefined ? (
           <p className="fixed-room-state">
             {hideStartFrontier === true
-              ? 'Configure the starting room in Route settings.'
+              ? 'Configure the starting room in Loadout.'
               : 'Choose the first room to start this biome.'}
           </p>
         ) : subject.kind === 'frontier' && sourceOccurrence === undefined ? (
           biome.frontier?.kind === 'start' || biome.frontier?.kind === 'exitDecision' ? (
             hideStartFrontier === true && biome.frontier.kind === 'start' ? (
-              <p className="fixed-room-state">Configure the starting room in Route settings.</p>
+              <p className="fixed-room-state">Configure the starting room in Loadout.</p>
             ) : (
               <AuthoringFrontier frontier={biome.frontier} interactions={interactions} />
             )

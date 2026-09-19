@@ -4,7 +4,7 @@ import type { ReactNode } from 'react';
 import { Provider } from 'react-redux';
 
 import { createApplication, type PlannerApplication } from '@planner/composition/createApplication';
-import { createInitialProject } from '@planner/composition/projectBootstrap';
+import { createProjectDocument } from '@run-planner/engine/authored-project';
 import { newProjectCreated } from '@planner/state/profileSessionSlice';
 import { App } from '@planner/ui/shell/App';
 
@@ -15,11 +15,17 @@ interface RenderPlannerOptions {
   readonly startWithProject?: boolean;
 }
 
-/** Creates the explicit open-project state used by editor interaction tests. */
+/** Creates a loadout-only fixture; user-facing new projects start with one biome. */
 export function createOpenTestApplication(routeKey = 'Underworld'): PlannerApplication {
   const application = createApplication();
   application.store.dispatch(
-    newProjectCreated(createInitialProject(application.catalog, routeKey)),
+    newProjectCreated(
+      createProjectDocument(application.catalog, {
+        projectId: 'run-plan',
+        routeKey,
+        configuredBiomeCount: 0,
+      }),
+    ),
   );
   return application;
 }

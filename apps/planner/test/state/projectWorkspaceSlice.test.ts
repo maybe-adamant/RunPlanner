@@ -26,7 +26,6 @@ import {
 import { simulateProjectAssembly } from '@run-planner/engine/simulation';
 import { describe, expect, it, vi } from 'vitest';
 
-import { createInitialProject } from '@planner/composition/projectBootstrap';
 import { semanticOwnerFocused } from '@planner/state/editorSessionSlice';
 import {
   authoredProjectCommandDispatched,
@@ -62,7 +61,11 @@ function createStore() {
   const assembleProjectEvaluation = vi.fn((project: ProjectDocument) =>
     simulateProjectAssembly(catalog, project),
   );
-  const project = createInitialProject(catalog, 'Underworld');
+  const project = createProjectDocument(catalog, {
+    projectId: 'run-plan',
+    routeKey: 'Underworld',
+    configuredBiomeCount: 0,
+  });
   const store = createPlannerStore({
     assembleProjectEvaluation,
     catalog,
@@ -179,7 +182,11 @@ describe('project workspace application state', () => {
   });
 
   it('rejects an otherwise valid assembly for a different authored identity', () => {
-    const initialProject = createInitialProject(catalog, 'Underworld');
+    const initialProject = createProjectDocument(catalog, {
+      projectId: 'run-plan',
+      routeKey: 'Underworld',
+      configuredBiomeCount: 0,
+    });
     const foreignProject = createEmptyProjectDocument(catalog, {
       projectId: 'foreign-assembly',
       routeKey: 'Surface',

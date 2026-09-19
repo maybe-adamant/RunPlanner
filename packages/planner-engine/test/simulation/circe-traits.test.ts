@@ -493,11 +493,25 @@ describe('Circe selected trait acquisition', () => {
       { traitKey: 'CirceShrinkTrait' },
       { traitKey: 'CirceEnlargeTrait' },
     ]);
-    const initial = createArcanaFearState(catalog, createDefaultRouteLoadout(catalog));
-    const changed = activateTemporaryArcana(catalog, initial, ['ChanneledCast'], {
-      owner: circeOwner,
-      sequence: 1,
-    });
+    const heroic = activateTemporaryArcana(
+      catalog,
+      createArcanaFearState(catalog, createDefaultRouteLoadout(catalog)),
+      ['HealthRegen'],
+      { owner: circeOwner, sequence: 1 },
+      'Heroic',
+    );
+    if (!heroic.legal) throw new Error('Heroic Circe frontier fixture must be legal');
+    const initial = heroic.state;
+    const changed = activateTemporaryArcana(
+      catalog,
+      initial,
+      ['ChanneledCast'],
+      {
+        owner: circeOwner,
+        sequence: 2,
+      },
+      'Common',
+    );
     if (!changed.legal) throw new Error('divergent Circe frontier fixture must be legal');
     const history = createTraitHistoryState();
     const context = Object.freeze({ resolvedProviderKey: 'Circe', acquisitionOrdinal: 1 });
@@ -542,6 +556,19 @@ describe('Circe selected trait acquisition', () => {
     );
     expect(evaluated.kind).toBe('circeResolutionDomain');
     if (evaluated.kind !== 'circeResolutionDomain') throw new Error('missing Circe domain');
+    expect(evaluated.result.resultRarity).toBe('Epic');
+    expect(evaluated.result.activeArcanaByBranch).toEqual([
+      initial.arcana.active.map(({ key, rarity }) => ({ key, rarity })),
+      changed.state.arcana.active.map(({ key, rarity }) => ({ key, rarity })),
+    ]);
+    expect(evaluated.result.activeArcanaByBranch[0]).toContainEqual({
+      key: 'HealthRegen',
+      rarity: 'Heroic',
+    });
+    expect(evaluated.result.activeArcanaByBranch[1]).toContainEqual({
+      key: 'ChanneledCast',
+      rarity: 'Common',
+    });
     expect(
       evaluated.result.arcanaCandidates.find((candidate) => candidate.value === 'ChanneledCast'),
     ).toMatchObject({

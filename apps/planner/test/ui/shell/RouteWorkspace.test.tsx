@@ -71,7 +71,7 @@ describe('RouteWorkspace', () => {
     expect(markup).not.toContain('>Wells</button>');
     expect(markup).not.toContain('class="panel-navigation-separator"');
     expect(markup).toContain('data-editor-layout="overview"');
-    expect(markup).toContain('Route settings');
+    expect(markup).toContain('Route Loadout');
   });
 
   it('orders configured biomes before the non-empty route indexes', () => {
@@ -80,7 +80,7 @@ describe('RouteWorkspace', () => {
 
     const markup = routeWorkspaceMarkup(application, 'Surface');
     const navigationMarkup = markup.slice(markup.indexOf('<nav'), markup.indexOf('</nav>'));
-    const routePosition = navigationMarkup.indexOf('>Route</button>');
+    const routePosition = navigationMarkup.indexOf('>Loadout</button>');
     const biomePositions = ['Ephyra', 'Thessaly', 'Olympus', 'Summit'].map((label) =>
       navigationMarkup.indexOf(`>${label}</span>`),
     );

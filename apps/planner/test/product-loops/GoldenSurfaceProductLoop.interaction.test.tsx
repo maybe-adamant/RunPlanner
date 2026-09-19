@@ -227,7 +227,7 @@ describe('surface product loop', () => {
         name: 'Surface',
       }),
     );
-    expect(currentEvaluation(application).status).toBe('empty');
+    expect(currentEvaluation(application).status).toBe('incomplete');
     await view.user.click(screen.getByRole('button', { name: 'File' }));
     await view.user.click(screen.getByRole('menuitem', { name: 'Load…' }));
     await screen.findByText('Loaded the profile.');

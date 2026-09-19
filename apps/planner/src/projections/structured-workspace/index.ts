@@ -158,3 +158,7 @@ export type {
   RankedPrefixMoveResult,
 } from './presentation/hub-ranking';
 export { createStructuredWorkspaceProjection } from './projector';
+export type {
+  WorkspaceJudgmentArcanaInteraction,
+  WorkspaceFigurineArcanaInteraction,
+} from './contracts/timeline';

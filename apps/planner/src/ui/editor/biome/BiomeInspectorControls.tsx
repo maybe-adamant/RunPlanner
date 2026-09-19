@@ -1,3 +1,4 @@
+import { ArcanaActivationEditor } from './ArcanaActivationEditor';
 /* The inspector-node adapter deliberately exports these projected render products. */
 /* eslint-disable react-refresh/only-export-components */
 import { useState, type ReactNode } from 'react';
@@ -110,7 +111,6 @@ function JudgmentArcanaControl({
   readonly judgment: NonNullable<WorkspaceRoomSummary['judgment']>;
 }) {
   const findingTarget = useFindingTarget();
-  const dispatch = useAppDispatch();
   const [open, setOpen] = useState(false);
   const control = interactions.judgmentArcana.get(workspaceInteractionKey(judgment.address));
   if (control === undefined) return null;
@@ -128,50 +128,12 @@ function JudgmentArcanaControl({
         Judgment — choose {judgment.requiredCount} inactive Arcana cards
       </button>
       {open ? (
-        <div aria-label="Judgment editor" className="room-judgment-popup" role="dialog">
-          <div className="room-judgment-popup-header">
-            <h4>Judgment — choose {judgment.requiredCount} inactive Arcana cards</h4>
-            <button
-              aria-label="Close Judgment editor"
-              className="quiet-action"
-              onClick={() => setOpen(false)}
-              type="button"
-            >
-              Close
-            </button>
-          </div>
-          <div className="room-judgment-options">
-            {control.choices
-              .filter(
-                (choice) =>
-                  judgment.inactiveArcanaKeys.includes(choice.value) ||
-                  control.value.includes(choice.value),
-              )
-              .map((choice) => {
-                const checked = control.value.includes(choice.value);
-                return (
-                  <label key={choice.value}>
-                    <input
-                      checked={checked}
-                      onChange={() =>
-                        dispatch(
-                          authoredProjectCommandDispatched(
-                            control.intentFor(
-                              checked
-                                ? control.value.filter((key) => key !== choice.value)
-                                : [...control.value, choice.value],
-                            ).command,
-                          ),
-                        )
-                      }
-                      type="checkbox"
-                    />
-                    {choice.label}
-                  </label>
-                );
-              })}
-          </div>
-        </div>
+        <ArcanaActivationEditor
+          control={control}
+          title="Judgment editor"
+          requiredCount={judgment.requiredCount}
+          onClose={() => setOpen(false)}
+        />
       ) : null}
     </li>
   );
@@ -185,7 +147,6 @@ function FigurineArcanaControl({
   readonly figurine: NonNullable<WorkspaceRoomSummary['figurine']>;
 }) {
   const findingTarget = useFindingTarget();
-  const dispatch = useAppDispatch();
   const [open, setOpen] = useState(false);
   const control = interactions.figurineArcana.get(workspaceInteractionKey(figurine.address));
   if (control === undefined) return null;
@@ -203,53 +164,12 @@ function FigurineArcanaControl({
         Crystal Figurine — choose {figurine.requiredCount} inactive Arcana cards ({figurine.rarity})
       </button>
       {open ? (
-        <div aria-label="Crystal Figurine editor" className="room-figurine-popup" role="dialog">
-          <div className="room-judgment-popup-header">
-            <h4>
-              Crystal Figurine — choose {figurine.requiredCount} inactive Arcana cards (
-              {figurine.rarity})
-            </h4>
-            <button
-              aria-label="Close Crystal Figurine editor"
-              className="quiet-action"
-              onClick={() => setOpen(false)}
-              type="button"
-            >
-              Close
-            </button>
-          </div>
-          <div className="room-judgment-options">
-            {control.choices
-              .filter(
-                (choice) =>
-                  figurine.inactiveArcanaKeys.includes(choice.value) ||
-                  control.value.includes(choice.value),
-              )
-              .map((choice) => {
-                const checked = control.value.includes(choice.value);
-                return (
-                  <label key={choice.value}>
-                    <input
-                      checked={checked}
-                      onChange={() =>
-                        dispatch(
-                          authoredProjectCommandDispatched(
-                            control.intentFor(
-                              checked
-                                ? control.value.filter((key) => key !== choice.value)
-                                : [...control.value, choice.value],
-                            ).command,
-                          ),
-                        )
-                      }
-                      type="checkbox"
-                    />
-                    {choice.label}
-                  </label>
-                );
-              })}
-          </div>
-        </div>
+        <ArcanaActivationEditor
+          title="Crystal Figurine editor"
+          control={control}
+          requiredCount={figurine.requiredCount}
+          onClose={() => setOpen(false)}
+        />
       ) : null}
     </li>
   );

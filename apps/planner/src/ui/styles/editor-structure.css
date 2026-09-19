@@ -183,6 +183,8 @@
 .start-room-form > label,
 .room-card > label,
 .field-control > span,
+.loadout-dialog-launcher > label,
+.route-prefix-description,
 .contextual-picker > label {
   color: #aaa7af;
   font-size: 0.78rem;
