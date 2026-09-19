@@ -185,11 +185,12 @@ function validateOffer(
       if (expected === undefined || option.circeResolution.kind !== expected)
         failCommand(command, `${option.traitKey} has an incompatible Circe resolution`);
       if (option.circeResolution.kind === 'disableFear') {
+        const keys = option.circeResolution.vowKeys;
         if (
-          option.circeResolution.vowKey !== null &&
-          catalog.fearVows.byKey[option.circeResolution.vowKey] === undefined
+          new Set(keys).size !== keys.length ||
+          keys.some((key) => catalog.fearVows.byKey[key] === undefined)
         )
-          failCommand(command, `unknown Circe Vow ${option.circeResolution.vowKey}`);
+          failCommand(command, `${option.traitKey} requires distinct known Vow keys`);
       } else {
         const keys = option.circeResolution.arcanaKeys;
         if (
@@ -301,7 +302,14 @@ function validateOffer(
         if (resolution.kind === 'disableFear')
           return Object.freeze({
             ...option,
-            circeResolution: Object.freeze({ kind: resolution.kind, vowKey: resolution.vowKey }),
+            circeResolution: Object.freeze({
+              kind: resolution.kind,
+              vowKeys: Object.freeze(
+                catalog.fearVows.values
+                  .filter((vow) => resolution.vowKeys.includes(vow.key))
+                  .map((vow) => vow.key),
+              ),
+            }),
           });
         return Object.freeze({
           ...option,

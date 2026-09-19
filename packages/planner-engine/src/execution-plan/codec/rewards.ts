@@ -197,7 +197,7 @@ export function traitOffer(value: unknown, label: string): ExecutionTraitOffer {
       const arcanaKeys = stringArray(
         result.arcanaKeys,
         `${resultLabel}.arcanaKeys`,
-        result.kind === 'activateArcana' ? 1 : 2,
+        result.kind === 'activateArcana' ? 3 : 5,
       );
       if (new Set(arcanaKeys).size !== arcanaKeys.length)
         fail(`${resultLabel}.arcanaKeys must be distinct`);
@@ -207,10 +207,13 @@ export function traitOffer(value: unknown, label: string): ExecutionTraitOffer {
       });
     }
     if (result.kind === 'disableFear') {
-      exact(result, ['kind', 'vowKey'], [], resultLabel);
+      exact(result, ['kind', 'vowKeys'], [], resultLabel);
+      const vowKeys = stringArray(result.vowKeys, `${resultLabel}.vowKeys`, 3);
+      if (vowKeys.length === 0) fail(`${resultLabel}.vowKeys must not be empty`);
+      if (new Set(vowKeys).size !== vowKeys.length) fail(`${resultLabel}.vowKeys must be distinct`);
       return Object.freeze({
         kind: 'disableFear' as const,
-        vowKey: stringValue(result.vowKey, `${resultLabel}.vowKey`),
+        vowKeys: Object.freeze(vowKeys),
       });
     }
     fail(`${resultLabel}.kind is unsupported`);

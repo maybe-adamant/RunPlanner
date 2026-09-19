@@ -266,7 +266,7 @@ export interface ExecutionAllTogetherResult {
 export type ExecutionCirceResolution =
   | { readonly kind: 'activateArcana'; readonly arcanaKeys: readonly string[] }
   | { readonly kind: 'promoteArcana'; readonly arcanaKeys: readonly string[] }
-  | { readonly kind: 'disableFear'; readonly vowKey: string };
+  | { readonly kind: 'disableFear'; readonly vowKeys: readonly string[] };
 
 /** Concave Stone's one native post-selection roll and optional residual row. */
 export type ExecutionConcaveStoneResult =

@@ -1,4 +1,5 @@
 import type { Catalog } from '../../../catalog-schema';
+import { unsatisfiedRandomArcanaRequirementKeys } from '../../arcana-fear';
 import { optionIndex } from '../../../authored-project/traits/state';
 import type { ProjectDocument } from '../../../authored-project/model';
 import type { TraitOfferCandidateArtifacts, TraitOfferCandidateCapability } from './capability';
@@ -42,17 +43,34 @@ export function evaluateCirceResolutionDomain(
     option?.circeResolution?.kind === 'promoteArcana'
       ? option.circeResolution.arcanaKeys
       : Object.freeze([]);
-  const selectedVowKey =
-    option?.circeResolution?.kind === 'disableFear' ? option.circeResolution.vowKey : null;
+  const selectedVowKeys =
+    option?.circeResolution?.kind === 'disableFear'
+      ? option.circeResolution.vowKeys
+      : Object.freeze([]);
+  const arcanaDomains = values.map((value) =>
+    value.effect !== 'activateArcana'
+      ? value.arcanaKeys
+      : Object.freeze(
+          value.arcanaKeys.filter(
+            (key) =>
+              unsatisfiedRandomArcanaRequirementKeys(catalog, value.activeArcanaKeys, [
+                ...selectedArcanaKeys,
+                key,
+              ]).length === 0,
+          ),
+        ),
+  );
   const arcanaKeys = catalog.arcanaCards.values
     .map((card) => card.key)
     .filter(
       (key) =>
-        values.some((value) => value.arcanaKeys.includes(key)) || selectedArcanaKeys.includes(key),
+        selectedArcanaKeys.includes(key) || arcanaDomains.some((domain) => domain.includes(key)),
     );
   const vowKeys = catalog.fearVows.values
     .map((vow) => vow.key)
-    .filter((key) => values.some((value) => value.vowKeys.includes(key)) || selectedVowKey === key);
+    .filter(
+      (key) => values.some((value) => value.vowKeys.includes(key)) || selectedVowKeys.includes(key),
+    );
   return Object.freeze({
     kind: 'circeResolutionDomain',
     result: Object.freeze({
@@ -61,7 +79,7 @@ export function evaluateCirceResolutionDomain(
       branchAgreement,
       arcanaCandidates: outcomeCandidates(
         arcanaKeys,
-        values.map((value) => value.arcanaKeys),
+        arcanaDomains,
         (key) => selectedArcanaKeys.includes(key),
         branchAgreement,
         first.requiredCount,
@@ -69,9 +87,9 @@ export function evaluateCirceResolutionDomain(
       vowCandidates: outcomeCandidates(
         vowKeys,
         values.map((value) => value.vowKeys),
-        (key) => selectedVowKey === key,
+        (key) => selectedVowKeys.includes(key),
         branchAgreement,
-        1,
+        first.requiredCount,
       ),
       outerAvailable: values.every((value) => value.outerAvailable),
     }),

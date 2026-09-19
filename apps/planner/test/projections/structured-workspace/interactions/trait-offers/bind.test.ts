@@ -423,7 +423,7 @@ describe('trait-offers/bind', () => {
           traitKey: 'RemoveShrineTrait',
           circeResolution: Object.freeze({
             kind: 'disableFear' as const,
-            vowKey: 'EnemyDamageShrineUpgrade',
+            vowKeys: Object.freeze(['EnemyDamageShrineUpgrade']),
           }),
         }),
       ]) as AuthoredTraitOfferTraits['options'],

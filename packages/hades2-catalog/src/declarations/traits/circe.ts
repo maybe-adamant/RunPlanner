@@ -32,7 +32,11 @@ export const circeTraits = [
     label: 'Lapis Lazuli Insight',
     linkedBoonRequirements: [],
     eligibilityRequirements: [{ kind: 'manualArcanaGraspCost', minimum: 1 }],
-    selectedDisposition: { kind: 'circe', effect: 'promoteArcana' },
+    selectedDisposition: {
+      kind: 'circe',
+      effect: 'promoteArcana',
+      selectionCountByAcquisitionOrdinal: [2, 2, 3, 5],
+    },
   },
   {
     ...raritylessNpcTrait,
@@ -56,7 +60,11 @@ export const circeTraits = [
     eligibilityRequirements: [
       { kind: 'offerContext', context: 'circeRemovableFearVow', required: true },
     ],
-    selectedDisposition: { kind: 'circe', effect: 'disableFear' },
+    selectedDisposition: {
+      kind: 'circe',
+      effect: 'disableFear',
+      selectionCountByAcquisitionOrdinal: [1, 1, 2, 3],
+    },
   },
   {
     ...raritylessNpcTrait,
@@ -64,7 +72,11 @@ export const circeTraits = [
     label: 'Red Citrine Divination',
     linkedBoonRequirements: [],
     eligibilityRequirements: [],
-    selectedDisposition: { kind: 'circe', effect: 'activateArcana' },
+    selectedDisposition: {
+      kind: 'circe',
+      effect: 'activateArcana',
+      selectionCountByAcquisitionOrdinal: [1, 1, 2, 3],
+    },
   },
   {
     ...raritylessNpcTrait,

@@ -28,6 +28,7 @@ import {
 import { semanticOwnerNavigated } from '@planner/state/editorSessionSlice';
 import type { WorkspaceInteractionCatalog } from '@planner/projections/structured-workspace';
 import { TraitOfferDialog, TraitOfferEditor } from '@planner/ui/editor/rewards/TraitOfferEditor';
+import { TraitOfferCirceResolution } from '@planner/ui/editor/rewards/TraitOfferCirceResolution';
 import { semanticOwnerControlElementId } from '@planner/ui/feedback/semanticOwner';
 import {
   createGoldenFGHIProject,
@@ -38,6 +39,49 @@ import {
 afterEach(cleanup);
 
 describe('selected outcomes', () => {
+  it('resets an incomplete Circe Arcana draft when the resolution effect changes', async () => {
+    const user = userEvent.setup();
+    const onSelect = vi.fn();
+    const arcanaPicker = pickerModel([
+      Object.freeze({ label: 'The Sorceress', value: 'ArcanaSorceress' }),
+      Object.freeze({ label: 'The Titan', value: 'ArcanaTitan' }),
+    ]);
+    const vowPicker = pickerModel([Object.freeze({ label: 'Vow of Rivals', value: 'VowRivals' })]);
+    const option = Object.freeze({ traitKey: 'RandomArcanaTrait' });
+    const activation = Object.freeze({
+      arcanaPicker,
+      arcanaPickerFor: () => arcanaPicker,
+      branchAgreement: true,
+      effect: 'activateArcana' as const,
+      outerAvailable: true,
+      requiredCount: 2,
+      vowPicker,
+      vowPickerFor: () => vowPicker,
+    });
+    const fear = Object.freeze({ ...activation, effect: 'disableFear' as const, requiredCount: 1 });
+    const { rerender } = render(
+      <TraitOfferCirceResolution
+        controlId="circe-effect-switch"
+        domain={activation}
+        onSelect={onSelect}
+        option={option}
+      />,
+    );
+    await user.click(screen.getByLabelText('Red Citrine Arcana'));
+    await user.click(screen.getByText('The Sorceress'));
+    rerender(
+      <TraitOfferCirceResolution
+        controlId="circe-effect-switch"
+        domain={fear}
+        onSelect={onSelect}
+        option={option}
+      />,
+    );
+    await user.click(screen.getByLabelText('Black Night Vow'));
+    await user.click(screen.getByText('Vow of Rivals'));
+    expect(onSelect).toHaveBeenLastCalledWith({ kind: 'disableFear', vowKeys: ['VowRivals'] });
+  });
+
   it('starts All Together unresolved and applies one complete four-role draft', async () => {
     const application = createApplication();
     application.store.dispatch(authoredProjectReplaced(createGoldenFGHIProject()));
@@ -905,6 +949,8 @@ describe('selected outcomes', () => {
         outerAvailable: true,
         requiredCount: effect === 'promoteArcana' ? 2 : 1,
         vowPicker: pickerModel([Object.freeze({ label: 'Vow of Rivals', value: 'VowRivals' })]),
+        vowPickerFor: () =>
+          pickerModel([Object.freeze({ label: 'Vow of Rivals', value: 'VowRivals' })]),
       });
       const circeChild = Object.freeze({
         ...control,
@@ -989,7 +1035,7 @@ describe('selected outcomes', () => {
       const resolution = saved.options[0]?.circeResolution;
       expect(resolution).toBeDefined();
       if (effect === 'disableFear') {
-        expect(resolution).toEqual({ kind: 'disableFear', vowKey: 'VowRivals' });
+        expect(resolution).toEqual({ kind: 'disableFear', vowKeys: ['VowRivals'] });
       } else {
         expect(resolution).toEqual(
           effect === 'activateArcana'
@@ -1006,7 +1052,7 @@ describe('selected outcomes', () => {
     [
       'Black Night with no removable Vow',
       'disableFear',
-      Object.freeze({ kind: 'disableFear' as const, vowKey: 'VowRivals' }),
+      Object.freeze({ kind: 'disableFear' as const, vowKeys: Object.freeze(['VowRivals']) }),
       false,
       true,
       0,
@@ -1098,6 +1144,7 @@ describe('selected outcomes', () => {
         outerAvailable,
         requiredCount,
         vowPicker: unavailablePickerModel('Vow of Rivals', 'VowRivals'),
+        vowPickerFor: () => unavailablePickerModel('Vow of Rivals', 'VowRivals'),
       });
       const circeChild = Object.freeze({
         ...control,
@@ -1158,7 +1205,7 @@ describe('selected outcomes', () => {
           (screen.getByRole('button', { name: 'Apply Lapis outcome' }) as HTMLButtonElement)
             .disabled,
         ).toBe(true);
-      } else {
+      } else if (effect !== 'activateArcana') {
         const retained = screen.getByLabelText(controlLabel);
         expect(retained.textContent).toContain(retainedText);
         expect(retained.getAttribute('aria-invalid')).toBe('true');
@@ -1171,6 +1218,10 @@ describe('selected outcomes', () => {
             }) as HTMLButtonElement
           ).disabled,
         ).toBe(false);
+        await userEvent
+          .setup()
+          .click(screen.getByRole('button', { name: 'Record no Arcana activation' }));
+        expect(screen.queryByText(retainedText)).toBeNull();
       }
       if (!outerAvailable) {
         expect(screen.getByText('This Circe trait has no available outcome here.')).toBeTruthy();

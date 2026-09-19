@@ -18,6 +18,7 @@ import type {
   TraitOfferCandidateContext,
 } from '../../traits';
 import { echoLastRunBoonOutcomes } from '../../traits';
+import { orderRandomArcanaSelection } from '../../arcana-fear';
 
 export interface SelectedTraitOfferProducts {
   readonly selectedTraitOffers: readonly SelectedTraitOfferAssessment[];
@@ -126,6 +127,25 @@ export function selectedTraitOfferProducts(
                   trace.levelResolutions.map((resolution) => resolution.effectiveLevel),
                 ),
                 baseRarities: trace.baseRarities,
+                ...(() => {
+                  if (
+                    trace.offer.kind !== 'traits' ||
+                    catalog === undefined ||
+                    trace.arcanaFear === undefined
+                  )
+                    return {};
+                  const selected =
+                    trace.offer.options[Number(trace.offer.selectedOptionKey.slice(-1)) - 1];
+                  const resolution = selected?.circeResolution;
+                  if (resolution?.kind !== 'activateArcana') return {};
+                  return {
+                    orderedCirceActivationKeys: orderRandomArcanaSelection(
+                      catalog,
+                      trace.arcanaFear.arcana.active.map((card) => card.key),
+                      resolution.arcanaKeys,
+                    ),
+                  };
+                })(),
                 ...(() => {
                   if (trace.offer.kind !== 'traits') return {};
                   const selected =

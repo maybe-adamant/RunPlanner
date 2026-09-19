@@ -351,6 +351,8 @@ export function traitOfferGenerationLegal(
 /** Execution input retained only after one authored offer is selected. */
 export interface SelectedTraitOfferBranchAssessment extends TraitOfferBranchAssessment {
   readonly baseRarities: readonly (TraitRarity | undefined)[];
+  /** Native-order random Arcana draw, resolved from the exact pre-offer state. */
+  readonly orderedCirceActivationKeys?: readonly string[];
   /** Echo's exact nested menu after chronology-owned rarity floors are applied. */
   readonly effectiveEchoLastRunBoon?: {
     readonly options: readonly (import('../../authored-project/traits/state').AuthoredEchoLastRunBoonOption & {

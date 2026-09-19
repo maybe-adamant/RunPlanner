@@ -16,7 +16,7 @@ import {
   createPreparedProjectCandidateSession,
   promoteArcana,
   simulateProjectAssembly,
-  suppressFearVow,
+  suppressFearVows,
 } from '@run-planner/engine/simulation';
 import { describe, expect, it } from 'vitest';
 
@@ -39,6 +39,7 @@ const circeOwner = createTraitOfferAddress(
   ),
   'selection',
 );
+const firstCirceContext = Object.freeze({ acquisitionOrdinal: 1 });
 
 function circeOffer(
   selectedOptionKey: Extract<AuthoredTraitOffer, { kind: 'traits' }>['selectedOptionKey'],
@@ -115,7 +116,7 @@ describe('Circe selected trait acquisition', () => {
       undefined,
       'selection',
       undefined,
-      loadout,
+      Object.freeze({ ...loadout, ...firstCirceContext }),
       undefined,
       'Circe',
     );
@@ -212,6 +213,10 @@ describe('Circe selected trait acquisition', () => {
       lapis,
       2,
       'encounterCompleted',
+      undefined,
+      'selection',
+      undefined,
+      firstCirceContext,
     );
     const active = applied.branch.arcanaFear.arcana.active;
     expect(active.find((card) => card.key === 'CastCount')).toMatchObject({ rarity: 'Heroic' });
@@ -245,6 +250,10 @@ describe('Circe selected trait acquisition', () => {
       ]),
       1,
       'encounterCompleted',
+      undefined,
+      'selection',
+      undefined,
+      firstCirceContext,
     );
     expect(red.branch.arcanaFear).toBe(exhausted);
   });
@@ -253,7 +262,7 @@ describe('Circe selected trait acquisition', () => {
     const black = circeOffer('option1', [
       {
         traitKey: 'RemoveShrineTrait',
-        circeResolution: { kind: 'disableFear', vowKey: 'EnemyDamageShrineUpgrade' },
+        circeResolution: { kind: 'disableFear', vowKeys: ['EnemyDamageShrineUpgrade'] },
       },
       { traitKey: 'CirceShrinkTrait' },
       { traitKey: 'CirceEnlargeTrait' },
@@ -278,7 +287,7 @@ describe('Circe selected trait acquisition', () => {
         EnemyDamageShrineUpgrade: 1,
       },
     });
-    const disabled = suppressFearVow(catalog, configured, 'EnemyDamageShrineUpgrade', {
+    const disabled = suppressFearVows(catalog, configured, ['EnemyDamageShrineUpgrade'], {
       owner: circeOwner,
       sequence: 1,
     });
@@ -290,6 +299,10 @@ describe('Circe selected trait acquisition', () => {
       black,
       2,
       'encounterCompleted',
+      undefined,
+      'selection',
+      undefined,
+      firstCirceContext,
     );
     expect(repeated.branch.arcanaFear).toBe(disabled.state);
     expect(repeated.findingEntries.some((entry) => entry.finding.code === 'offerContext')).toBe(
@@ -329,7 +342,7 @@ describe('Circe selected trait acquisition', () => {
     expect(domain).toMatchObject({ kind: 'circeResolutionDomain', result: { requiredCount: 1 } });
   });
 
-  it('retains an invalid authored Circe child after the outer acquisition without applying it', () => {
+  it('rejects an unsupported Fates selection and settles a valid companion pair at its exact ordinal', () => {
     const branch = initializeTestRewardBranches()[0]!;
     const settlement = settleEncounterTraitOffer(
       catalog,
@@ -340,7 +353,7 @@ describe('Circe selected trait acquisition', () => {
           traitKey: 'RandomArcanaTrait',
           circeResolution: {
             kind: 'activateArcana',
-            arcanaKeys: ['RetainedUnavailableArcana'],
+            arcanaKeys: ['TradeOff'],
           },
         },
         { traitKey: 'CirceShrinkTrait' },
@@ -348,6 +361,10 @@ describe('Circe selected trait acquisition', () => {
       ]),
       1,
       'encounterCompleted',
+      undefined,
+      'selection',
+      undefined,
+      firstCirceContext,
     );
     const child = createCirceResolutionAddress(circeOwner, 'option1');
     expect(settlement.branch.traitHistory?.equippedTraits.RandomArcanaTrait).toMatchObject({
@@ -359,6 +376,61 @@ describe('Circe selected trait acquisition', () => {
     expect(settlement.findingEntries.map((entry) => entry.finding)).toContainEqual(
       expect.objectContaining({ code: 'circeResolutionTargetUnavailable', origin: child }),
     );
+
+    const paired = settleEncounterTraitOffer(
+      catalog,
+      initializeTestRewardBranches()[0]!,
+      circeOwner.owner,
+      circeOffer('option1', [
+        {
+          traitKey: 'RandomArcanaTrait',
+          circeResolution: { kind: 'activateArcana', arcanaKeys: ['TradeOff', 'DoorReroll'] },
+        },
+        { traitKey: 'CirceShrinkTrait' },
+        { traitKey: 'CirceEnlargeTrait' },
+      ]),
+      2,
+      'encounterCompleted',
+      undefined,
+      'selection',
+      undefined,
+      Object.freeze({ acquisitionOrdinal: 3 }),
+    );
+    expect(paired.branch.arcanaFear.arcana.active).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ key: 'DoorReroll', origin: 'temporary' }),
+        expect.objectContaining({ key: 'TradeOff', origin: 'temporary' }),
+      ]),
+    );
+    expect(paired.branch.arcanaFear.events.at(-1)).toMatchObject({
+      kind: 'temporaryArcanaActivated',
+      arcanaKeys: ['DoorReroll', 'TradeOff'],
+    });
+    const pairedOffer = circeOffer('option1', [
+      {
+        traitKey: 'RandomArcanaTrait',
+        circeResolution: { kind: 'activateArcana', arcanaKeys: ['TradeOff', 'DoorReroll'] },
+      },
+      { traitKey: 'CirceShrinkTrait' },
+      { traitKey: 'CirceEnlargeTrait' },
+    ]);
+    const preEffect = initializeTestRewardBranches()[0]!;
+    const trace = evaluateReachedTraitOffer(
+      catalog,
+      circeOwner.owner,
+      'selection',
+      pairedOffer,
+      createTraitHistoryState(),
+      Object.freeze({ resolvedProviderKey: 'Circe', acquisitionOrdinal: 3 }),
+      0,
+      preEffect.arcanaFear,
+    );
+    const published = selectedTraitOfferProducts(
+      [Object.freeze({ ...preEffect, traitEvaluations: Object.freeze([trace]) })],
+      Object.freeze([]),
+      catalog,
+    ).selectedTraitOffers[0]?.branches[0]?.orderedCirceActivationKeys;
+    expect(published).toEqual(['DoorReroll', 'TradeOff']);
   });
 
   it('canonicalizes and deep-freezes Circe Arcana sets, retains dormant detail, and rejects an unknown encoded Vow', () => {
@@ -408,11 +480,11 @@ describe('Circe selected trait acquisition', () => {
     ).kind = 'disableFear';
     (
       (options.options as Record<string, unknown>[])[0]!.circeResolution as Record<string, unknown>
-    ).vowKey = 'UnknownVow';
+    ).vowKeys = ['UnknownVow'];
     delete (
       (options.options as Record<string, unknown>[])[0]!.circeResolution as Record<string, unknown>
     ).arcanaKeys;
-    expect(() => decodeProjectDocument(encoded, catalog)).toThrow('unknown Vow');
+    expect(() => decodeProjectDocument(encoded, catalog)).toThrow('distinct known Vow');
   });
 
   it('retains divergent Arcana frontiers through trace grouping for atomic-domain rejection', () => {
@@ -428,7 +500,7 @@ describe('Circe selected trait acquisition', () => {
     });
     if (!changed.legal) throw new Error('divergent Circe frontier fixture must be legal');
     const history = createTraitHistoryState();
-    const context = Object.freeze({ resolvedProviderKey: 'Circe' });
+    const context = Object.freeze({ resolvedProviderKey: 'Circe', acquisitionOrdinal: 1 });
     const branches = [initial, changed.state].map((arcanaFear) => {
       const branch = initializeTestRewardBranches(arcanaFear)[0]!;
       return Object.freeze({

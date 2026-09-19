@@ -1604,7 +1604,14 @@ describe('execution-plan compiler and codec', () => {
               ...offer.options[0],
               circeResolution: {
                 kind: 'promoteArcana',
-                arcanaKeys: ['CastCount', 'CardDraw', 'ChanneledCast'],
+                arcanaKeys: [
+                  'CastCount',
+                  'CardDraw',
+                  'ChanneledCast',
+                  'DoorReroll',
+                  'TradeOff',
+                  'ManaOverTime',
+                ],
               },
             },
           ],

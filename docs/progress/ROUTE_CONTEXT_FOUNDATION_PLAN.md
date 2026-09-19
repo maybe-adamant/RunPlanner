@@ -4,13 +4,14 @@
 
 Approved execution contract, committed in `eb176b0a`. Gates A and B are implemented
 and independently reviewed. Gate B is committed as `815b9c96`.
-Gate C is committed as `47fb104e`. Gate D1 is implemented and independently
-reviewed, pending commit; D2/D3 and closure have not started.
+Gate C is committed as `47fb104e`; D1 is committed as `9e7d1c30`.
+D2 is implemented and independently reviewed; D3 is next. Closure has not started.
 
 - Planner base: `8439c9c8cad046788680dbf981688ab263d83989`.
 - Gate B base: `34b9677429421d7b23fa27396f688eceb21f7c95`.
 - Gate C base: `815b9c96`.
 - Gate D1 base: `47fb104e`.
+- Gate D2 base: `9e7d1c30`.
 - Game-module base: `95c479b6c599863aeba7968f0593bb4f5871709b`.
 - Baseline authored schema: 84; execution protocol: 40.
 - Source/code inventory: `docs/investigations/DREAM_DIVE_SCOPE.md`, especially
@@ -274,6 +275,14 @@ Deliver in bounded coherent subcommits:
    candidates, transitions, UI and publication; apply native target selection
    and exhaustion semantics without broadening other targeted traits.
 
+Latest Model draws distinct targets from one frozen eligible pool, up to its
+ordinal count. Preserve the existing Rank-I domain: Latest Model is the sole
+supported source of permanent Rank II and cannot be reacquired, so native's
+broader rank-agnostic predicate has no additional reachable pre-acquisition
+targets. The game adapter must distinguish outer `UpgradeHammers` draws from
+the nested singleton selection inside `AddRarityToTraits`; only outer draws
+advance the published target sequence.
+
 Starting points: catalog NPC declarations, `catalog-schema/traits.ts`, trait
 compiler constraints; `acquisition/pickup-producers.ts`, `traits/state.ts`,
 `simulation/arcana-fear.ts`, trait-settlement encounter-child/coordinator,
@@ -428,6 +437,27 @@ Gate D1 delivery:
   not captured). Workspace/fixture typechecks, repository ESLint, changed-file
   formatting and whitespace checks passed. Schema/protocol and JSON fixtures
   remain unchanged; D2/D3 own the remaining NPC payload changes.
+
+Gate D2 delivery:
+
+- Circe domains resolve ordinal selection counts. Fear outcomes carry distinct
+  Vow sets and suppress them atomically; Arcana candidates stage joint
+  prerequisites and selected settlement validates the complete set. Publication
+  carries the captured native-valid activation order, including companion-before-
+  Fates ordering. Shared Circe controls preserve effect isolation and repair of
+  exhausted outcomes. Downstream steering consumes the plural results through
+  the existing native loops.
+- Independent review passed after full-set validation, activation ordering and
+  editor repair fixes. Reviewer focused verification passed 186 tests across
+  eight files; executor focused verification passed 145 tests across seven files.
+  Lua protocol and NPC selector suites passed 47 and 25 tests respectively.
+  These are bounded declaration, settlement, publication and editor witnesses,
+  not completed Dream gameplay acceptance.
+- Final fixture typechecking found two stale D1 helper calls, now supplied with
+  resolved route ordinal; their six contact tests pass. Workspace and fixture
+  typechecks, repository ESLint, changed-file formatting, whitespace checks and
+  game-module Luacheck pass. Schema/protocol and JSON fixtures remain unchanged;
+  migration and complete phase verification remain Gate E.
 
 Review this plan adversarially before implementation. Per gate, use the narrow
 owning catalog/engine/planner/UI/contract/product tests. Main session supplies
