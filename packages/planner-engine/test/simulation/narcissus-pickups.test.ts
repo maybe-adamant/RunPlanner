@@ -156,7 +156,6 @@ function pickupSite(project: ProjectDocument) {
 describe('Narcissus pickup producer', () => {
   it('command-reconciles fourth-ordinal Narcissus entries and retracts them with their source', () => {
     const biome = createBiomeAddress('Dream', 'G');
-    const startId = createOccurrenceId('dream-ordinal-narcissus-start');
     const storyId = createOccurrenceId('dream-ordinal-narcissus-story');
     let project = createProjectDocument(catalog, {
       projectId: 'dream-ordinal-narcissus',
@@ -164,11 +163,7 @@ describe('Narcissus pickup producer', () => {
       itineraryBiomeKeys: ['F', 'H', 'I', 'G'],
       configuredBiomeCount: 4,
     });
-    project = applyProjectCommand(project, catalog, {
-      kind: 'CreateStart',
-      biome,
-      occurrenceId: startId,
-    });
+    const startId = project.route.biomes[3]!.topology!.startOccurrenceId;
     const decision = createExitDecisionAddress(biome, {
       kind: 'occurrence',
       occurrenceId: startId,

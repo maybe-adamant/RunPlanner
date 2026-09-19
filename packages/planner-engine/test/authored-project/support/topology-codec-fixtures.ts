@@ -64,6 +64,27 @@ export function project(
   });
 }
 
+function unstartedProject(
+  projectId: string,
+  routeKey: 'Underworld' | 'Surface',
+  configuredBiomeCount: number,
+  biomeKey: string,
+): ProjectDocument {
+  const initialized = project(projectId, routeKey, configuredBiomeCount);
+  return decodeProjectDocument(
+    {
+      ...initialized,
+      route: {
+        ...initialized.route,
+        biomes: initialized.route.biomes.map((biome) =>
+          biome.biomeKey === biomeKey ? { ...biome, topology: null } : biome,
+        ),
+      },
+    },
+    catalog,
+  );
+}
+
 export function encodedProject(document: ProjectDocument): EncodedProject {
   return JSON.parse(encodeProjectDocument(document)) as EncodedProject;
 }
@@ -125,11 +146,15 @@ export function iAtOrdinaryBatchLimit(): {
   readonly terminalSourceId: ReturnType<typeof createOccurrenceId>;
 } {
   const startId = createOccurrenceId('codec-i-bound-start');
-  let document = applyProjectCommand(project('codec-i-bound', 'Underworld', 4), catalog, {
-    kind: 'CreateStart',
-    biome: iBiome,
-    occurrenceId: startId,
-  });
+  let document = applyProjectCommand(
+    unstartedProject('codec-i-bound', 'Underworld', 4, 'I'),
+    catalog,
+    {
+      kind: 'CreateStart',
+      biome: iBiome,
+      occurrenceId: startId,
+    },
+  );
   let sourceId = startId;
   for (let index = 1; index <= 13; index += 1) {
     const decision = createExitDecisionAddress(iBiome, {
@@ -341,11 +366,15 @@ export function selectedFTakeoverProject(): ProjectDocument {
 }
 
 export function completeHProject(): ProjectDocument {
-  let document = applyProjectCommand(project('codec-complete-h', 'Underworld', 3), catalog, {
-    kind: 'CreateStart',
-    biome: hBiome,
-    occurrenceId: createOccurrenceId('complete-h-start'),
-  });
+  let document = applyProjectCommand(
+    unstartedProject('codec-complete-h', 'Underworld', 3, 'H'),
+    catalog,
+    {
+      kind: 'CreateStart',
+      biome: hBiome,
+      occurrenceId: createOccurrenceId('complete-h-start'),
+    },
+  );
   for (const [sourceOccurrenceId, targets] of [
     ['complete-h-start', [['exit1', 'complete-h-02', 'H_Combat02']]],
     [
@@ -396,11 +425,15 @@ export function completeHProject(): ProjectDocument {
 }
 
 export function completeOProject(): ProjectDocument {
-  let document = applyProjectCommand(project('codec-complete-o', 'Surface', 2), catalog, {
-    kind: 'CreateStart',
-    biome: oBiome,
-    occurrenceId: createOccurrenceId('complete-o-start'),
-  });
+  let document = applyProjectCommand(
+    unstartedProject('codec-complete-o', 'Surface', 2, 'O'),
+    catalog,
+    {
+      kind: 'CreateStart',
+      biome: oBiome,
+      occurrenceId: createOccurrenceId('complete-o-start'),
+    },
+  );
   for (const [index, gameName] of [
     'O_Combat01',
     'O_Combat02',
@@ -434,11 +467,15 @@ export function completeOProject(): ProjectDocument {
 }
 
 export function completeQProject(): ProjectDocument {
-  let document = applyProjectCommand(project('codec-complete-q', 'Surface', 4), catalog, {
-    kind: 'CreateStart',
-    biome: qBiome,
-    occurrenceId: createOccurrenceId('complete-q-start'),
-  });
+  let document = applyProjectCommand(
+    unstartedProject('codec-complete-q', 'Surface', 4, 'Q'),
+    catalog,
+    {
+      kind: 'CreateStart',
+      biome: qBiome,
+      occurrenceId: createOccurrenceId('complete-q-start'),
+    },
+  );
   for (const [sourceOccurrenceId, occurrenceId, gameName] of [
     ['complete-q-start', 'complete-q-foyer', 'Q_Combat10'],
     ['complete-q-foyer', 'complete-q-first-fork', 'Q_Combat03'],
@@ -465,11 +502,15 @@ export function completeQProject(): ProjectDocument {
 }
 
 export function rewardWheelProject(): ProjectDocument {
-  let document = applyProjectCommand(project('codec-wheel-o', 'Surface', 2), catalog, {
-    kind: 'CreateStart',
-    biome: oBiome,
-    occurrenceId: createOccurrenceId('o-wheel-intro'),
-  });
+  let document = applyProjectCommand(
+    unstartedProject('codec-wheel-o', 'Surface', 2, 'O'),
+    catalog,
+    {
+      kind: 'CreateStart',
+      biome: oBiome,
+      occurrenceId: createOccurrenceId('o-wheel-intro'),
+    },
+  );
   document = createBatchTargets(document, {
     biome: oBiome,
     sourceOccurrenceId: 'o-wheel-intro',

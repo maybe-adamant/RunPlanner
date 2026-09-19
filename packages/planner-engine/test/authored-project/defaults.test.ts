@@ -3,31 +3,26 @@ import { describe, expect, it } from 'vitest';
 import { catalog } from '@run-planner/hades2-catalog';
 import {
   applyProjectCommand,
+  applyProjectHistoryCommand,
   createBiomeAddress,
+  createIncomingRewardAddress,
   createOccurrenceId,
   createProjectDocument,
+  createProjectHistory,
+  decodeProjectDocument,
+  ProjectCommandContractError,
+  undoProjectHistory,
 } from '@run-planner/engine/authored-project';
+import type { BiomeLayout, Catalog } from '@run-planner/engine/catalog-schema';
 
-const configuredBiomeCases = [
-  ['Underworld', 1, 'F'],
-  ['Underworld', 2, 'G'],
-  ['Underworld', 3, 'H'],
-  ['Underworld', 4, 'I'],
-  ['Surface', 1, 'N'],
-  ['Surface', 2, 'O'],
-  ['Surface', 3, 'P'],
-  ['Surface', 4, 'Q'],
-] as const;
-
-const startCases = [
-  ['Underworld', 1, 'F', 'F_Opening01'],
-  ['Underworld', 2, 'G', undefined],
-  ['Underworld', 3, 'H', undefined],
-  ['Underworld', 4, 'I', undefined],
-  ['Surface', 1, 'N', undefined],
-  ['Surface', 2, 'O', undefined],
-  ['Surface', 3, 'P', undefined],
-  ['Surface', 4, 'Q', undefined],
+const fixedEntryCases = [
+  ['Underworld', 2, 'G', 'G_Intro'],
+  ['Underworld', 3, 'H', 'H_Intro'],
+  ['Underworld', 4, 'I', 'I_Intro'],
+  ['Surface', 1, 'N', 'N_Opening01'],
+  ['Surface', 2, 'O', 'O_Intro'],
+  ['Surface', 3, 'P', 'P_Intro'],
+  ['Surface', 4, 'Q', 'Q_Intro'],
 ] as const;
 
 function projectFor(routeKey: string, count: number) {
@@ -48,56 +43,167 @@ function routeBiome(
   return biome;
 }
 
-describe('project defaults', () => {
-  it.each(configuredBiomeCases)(
-    '%s prefix %i initializes %s as an incomplete authored biome',
-    (routeKey, count, biomeKey) => {
-      const plan = routeBiome(projectFor(routeKey, count), routeKey, biomeKey);
-      expect(plan.topology).toBeNull();
+function catalogWithFStart(start: BiomeLayout['start']): Catalog {
+  const layout = { ...catalog.biomeLayouts.byKey.F!, start };
+  return {
+    ...catalog,
+    biomeLayouts: {
+      values: catalog.biomeLayouts.values.map((candidate) =>
+        candidate.biomeKey === 'F' ? layout : candidate,
+      ),
+      byKey: { ...catalog.biomeLayouts.byKey, F: layout },
     },
-  );
+  };
+}
 
-  it.each(startCases)(
-    '%s prefix %i creates the declaration-owned %s start occurrence',
-    (routeKey, count, biomeKey, gameName) => {
-      const biome = createBiomeAddress(routeKey, biomeKey);
-      const occurrenceId = createOccurrenceId(`start-${biomeKey}`);
-      const start = catalog.biomeLayouts.byKey[biomeKey]?.start;
-      const expectedGameName =
-        gameName ?? (start?.kind === 'fixedAuthored' ? start.roomGameName : undefined);
-      const project = applyProjectCommand(projectFor(routeKey, count), catalog, {
+describe('project defaults', () => {
+  it('keeps multi-choice F unstarted until one declared entry is selected explicitly', () => {
+    const biome = createBiomeAddress('Underworld', 'F');
+    const project = projectFor('Underworld', 1);
+    expect(routeBiome(project, 'Underworld', 'F').topology).toBeNull();
+    expect(() =>
+      applyProjectCommand(project, catalog, {
         kind: 'CreateStart',
         biome,
-        occurrenceId,
-        ...(gameName === undefined ? {} : { gameName }),
+        occurrenceId: createOccurrenceId('f-selected-start'),
+      }),
+    ).toThrow(ProjectCommandContractError);
+
+    const selected = applyProjectCommand(project, catalog, {
+      kind: 'CreateStart',
+      biome,
+      occurrenceId: createOccurrenceId('f-selected-start'),
+      gameName: 'F_Opening02',
+    });
+    expect(routeBiome(selected, 'Underworld', 'F').topology).toMatchObject({
+      startOccurrenceId: 'f-selected-start',
+      occurrences: [{ occurrenceId: 'f-selected-start', gameName: 'F_Opening02' }],
+      decisions: [],
+    });
+  });
+
+  it.each(fixedEntryCases)(
+    '%s prefix %i initializes the declared %s entry',
+    (routeKey, count, biomeKey, gameName) => {
+      const plan = routeBiome(projectFor(routeKey, count), routeKey, biomeKey);
+      expect(plan.topology).toMatchObject({
+        startOccurrenceId: `${biomeKey}:start`,
+        occurrences: [{ occurrenceId: `${biomeKey}:start`, gameName }],
+        decisions: [],
+        fixedRoomLinks: [],
       });
-      expect(routeBiome(project, routeKey, biomeKey).topology?.occurrences).toContainEqual(
-        expect.objectContaining({ occurrenceId, gameName: expectedGameName }),
-      );
     },
   );
 
+  it('initializes a singleton authored choice through creation, prefix growth, and clear', () => {
+    const singletonCatalog = catalogWithFStart({
+      kind: 'authoredChoice',
+      roomGameNames: ['F_Opening03'],
+    });
+    const created = createProjectDocument(singletonCatalog, {
+      projectId: 'singleton-created',
+      routeKey: 'Underworld',
+      configuredBiomeCount: 1,
+    });
+    expect(routeBiome(created, 'Underworld', 'F').topology).toMatchObject({
+      startOccurrenceId: 'F:start',
+      occurrences: [{ gameName: 'F_Opening03' }],
+    });
+
+    const empty = createProjectDocument(singletonCatalog, {
+      projectId: 'singleton-prefix',
+      routeKey: 'Underworld',
+    });
+    const grown = applyProjectCommand(empty, singletonCatalog, {
+      kind: 'ConfigureRoutePrefix',
+      route: { kind: 'route', routeKey: 'Underworld' },
+      configuredBiomeCount: 1,
+    });
+    expect(routeBiome(grown, 'Underworld', 'F').topology?.startOccurrenceId).toBe('F:start');
+
+    const authored = applyProjectCommand(created, singletonCatalog, {
+      kind: 'ReplaceIncomingReward',
+      reward: createIncomingRewardAddress(
+        createBiomeAddress('Underworld', 'F'),
+        createOccurrenceId('F:start'),
+      ),
+      value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'ApolloUpgrade' } },
+    });
+    const cleared = applyProjectHistoryCommand(createProjectHistory(authored), singletonCatalog, {
+      kind: 'ClearTopology',
+      biome: createBiomeAddress('Underworld', 'F'),
+    });
+    expect(cleared.past).toEqual([authored]);
+    expect(routeBiome(cleared.present, 'Underworld', 'F').topology?.startOccurrenceId).toBe(
+      'F:start',
+    );
+    expect(undoProjectHistory(cleared).present).toEqual(authored);
+  });
+
+  it('preserves an imported null fixed entry until explicit repair', () => {
+    const initialized = projectFor('Surface', 1);
+    const imported = decodeProjectDocument(
+      {
+        ...initialized,
+        route: {
+          ...initialized.route,
+          biomes: initialized.route.biomes.map((biome) =>
+            biome.biomeKey === 'N' ? { ...biome, topology: null } : biome,
+          ),
+        },
+      },
+      catalog,
+    );
+    expect(routeBiome(imported, 'Surface', 'N').topology).toBeNull();
+    const repaired = applyProjectCommand(imported, catalog, {
+      kind: 'CreateStart',
+      biome: createBiomeAddress('Surface', 'N'),
+      occurrenceId: createOccurrenceId('imported-n-entry'),
+    });
+    expect(routeBiome(repaired, 'Surface', 'N').topology).toMatchObject({
+      startOccurrenceId: 'imported-n-entry',
+      occurrences: [{ occurrenceId: 'imported-n-entry', gameName: 'N_Opening01' }],
+    });
+  });
+
   it('creates a Dream-first G start with its opening reward state', () => {
-    const biome = createBiomeAddress('Dream', 'G');
-    const occurrenceId = createOccurrenceId('dream-g-start');
     const project = createProjectDocument(catalog, {
       projectId: 'dream-g-start',
       routeKey: 'Dream',
       itineraryBiomeKeys: ['G', 'F'],
       configuredBiomeCount: 1,
     });
-    const next = applyProjectCommand(project, catalog, {
-      kind: 'CreateStart',
-      biome,
-      occurrenceId,
-    });
-    const occurrence = routeBiome(next, 'Dream', 'G').topology?.occurrences.find(
-      (candidate) => candidate.occurrenceId === occurrenceId,
+    const occurrence = routeBiome(project, 'Dream', 'G').topology?.occurrences.find(
+      (candidate) => candidate.occurrenceId === 'G:start',
     );
 
     expect(occurrence).toMatchObject({
       gameName: 'G_Intro',
       state: { kind: 'counted', reward: null },
+    });
+  });
+
+  it('uses the later F profile after explicit entry selection in a supplied Dream itinerary', () => {
+    const biome = createBiomeAddress('Dream', 'F');
+    const project = createProjectDocument(catalog, {
+      projectId: 'dream-later-f-start',
+      routeKey: 'Dream',
+      itineraryBiomeKeys: ['G', 'F'],
+      configuredBiomeCount: 2,
+    });
+    expect(routeBiome(project, 'Dream', 'G').topology?.occurrences[0]).toMatchObject({
+      occurrenceId: 'G:start',
+      state: { kind: 'counted', reward: null },
+    });
+    const selected = applyProjectCommand(project, catalog, {
+      kind: 'CreateStart',
+      biome,
+      occurrenceId: createOccurrenceId('dream-later-f-start'),
+      gameName: 'F_Opening01',
+    });
+    expect(routeBiome(selected, 'Dream', 'F').topology?.occurrences[0]).toMatchObject({
+      occurrenceId: 'dream-later-f-start',
+      state: { kind: 'none' },
     });
   });
 });

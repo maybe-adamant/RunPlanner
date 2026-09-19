@@ -109,6 +109,28 @@ function reconcileResourcePlacementTopology(document: ProjectDocument): ProjectD
   });
 }
 
+/** ClearTopology retracts every route-owned placement in its reset biome, even
+ * when a replacement declared entry reuses the same deterministic occurrence ID. */
+function retractResourcePlacementsForClearedBiome(
+  document: ProjectDocument,
+  biomeKey: string,
+): ProjectDocument {
+  const route = document.route;
+  const next = { ...route.resourcePlacements };
+  let routeChanged = false;
+  for (const [family, placement] of Object.entries(route.resourcePlacements)) {
+    if (placement?.biomeKey === biomeKey) {
+      next[family as keyof typeof next] = null;
+      routeChanged = true;
+    }
+  }
+  if (!routeChanged) return document;
+  return Object.freeze({
+    ...document,
+    route: Object.freeze({ ...route, resourcePlacements: Object.freeze(next) }),
+  });
+}
+
 function applyUnchecked(
   document: ProjectDocument,
   catalog: Catalog,
@@ -320,7 +342,11 @@ export function applyProjectCommand(
     // First close normal source actions, then derive source-owned pickup sites,
     // then schedule the newly active generated actions. This is one ordered
     // command-local composition rather than an ambient fixed-point pass.
-    const withTopologyImpact = reconcileResourcePlacementTopology(proposal);
+    const withClearTopologyPlacements =
+      command.kind === 'ClearTopology'
+        ? retractResourcePlacementsForClearedBiome(proposal, command.biome.biomeKey)
+        : proposal;
+    const withTopologyImpact = reconcileResourcePlacementTopology(withClearTopologyPlacements);
     const withoutRemovedShrineDeliveries = retractMissingHermesShrineDeliveryActions(
       document,
       withTopologyImpact,

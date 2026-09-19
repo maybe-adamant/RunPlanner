@@ -21,13 +21,8 @@ import {
 } from '../../topology/query';
 import { failCommand, requireRoom, requireTopology, type LocatedBiome } from '../contract';
 import type { TopologyCommand } from '../types';
-import {
-  replaceDecision,
-  appendDecision,
-  defaultOccurrence,
-  appendOccurrence,
-  updateTopology,
-} from './construction';
+import { replaceDecision, appendDecision, appendOccurrence, updateTopology } from './construction';
+import { defaultOccurrence } from '../../topology/construction';
 
 /**
  * A completed Hub owns one fixed width-one Preboss handoff. Reducing the

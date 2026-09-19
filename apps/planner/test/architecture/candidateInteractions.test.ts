@@ -134,7 +134,7 @@ describe('workspace candidate interaction families', () => {
     if (start === undefined) throw new Error('F start interaction is missing');
 
     expect(events.filter((event) => event.kind === 'queryBatch')).toEqual([]);
-    expect(start.intent().command).not.toHaveProperty('gameName');
+    expect(start.intent('F_Opening02').command).toHaveProperty('gameName', 'F_Opening02');
     expect(events).toEqual([]);
   });
 

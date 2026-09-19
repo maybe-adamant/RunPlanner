@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { withUnstartedBiome } from '../authored-project/support/configured-projects';
 import { ordinaryRoutePosition } from '../support/route-position';
 
 import * as fixture from './support/progressive-biome-fixtures';
@@ -447,10 +448,7 @@ describe('progressive prefix and frontier products', () => {
   });
 
   it('keeps a missing I topology unevaluated without blocking its already valid F-through-H prefix', () => {
-    const project = applyProjectCommand(createGoldenFGHIProject(), catalog, {
-      kind: 'ClearTopology',
-      biome: goldenIBiome,
-    });
+    const project = withUnstartedBiome(createGoldenFGHIProject(), 'I');
     const evaluatedRoute = route(project, 'Underworld');
     const i = evaluatedRoute.biomes.find((candidate) => candidate.biomeKey === 'I');
     if (i === undefined) throw new Error('fixture lost I');

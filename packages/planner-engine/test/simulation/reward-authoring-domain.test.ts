@@ -251,7 +251,6 @@ function sourceOfferPointProject(testCatalog: Catalog): {
   readonly binding: CountedRewardBinding;
   readonly targetId: ReturnType<typeof createOccurrenceId>;
 } {
-  const introId = createOccurrenceId('source-offer-o-intro');
   const shipId = createOccurrenceId('source-offer-o-ship');
   const targetId = createOccurrenceId('source-offer-o-target');
   let project = createProjectDocument(testCatalog, {
@@ -259,11 +258,7 @@ function sourceOfferPointProject(testCatalog: Catalog): {
     routeKey: 'Surface',
     configuredBiomeCount: 2,
   });
-  project = applyProjectCommand(project, testCatalog, {
-    kind: 'CreateStart',
-    biome: oBiome,
-    occurrenceId: introId,
-  });
+  const introId = project.route.biomes[1]!.topology!.startOccurrenceId;
   const introSource = { kind: 'occurrence' as const, occurrenceId: introId };
   project = applyProjectCommand(project, testCatalog, {
     kind: 'CreateBatch',
@@ -507,7 +502,6 @@ describe('counted reward authoring domains', () => {
 
   it('applies a later forced target to every shared-store target in physical order', () => {
     const gBiome = createBiomeAddress('Underworld', 'G');
-    const startId = createOccurrenceId('forced-shared-start');
     const sourceId = createOccurrenceId('forced-shared-source');
     const ordinaryId = createOccurrenceId('forced-shared-ordinary');
     const forcedMetaId = createOccurrenceId('forced-shared-meta');
@@ -517,11 +511,7 @@ describe('counted reward authoring domains', () => {
       routeKey: 'Underworld',
       configuredBiomeCount: 2,
     });
-    project = applyProjectCommand(project, catalog, {
-      kind: 'CreateStart',
-      biome: gBiome,
-      occurrenceId: startId,
-    });
+    const startId = project.route.biomes[1]!.topology!.startOccurrenceId;
     const startSource = { kind: 'occurrence' as const, occurrenceId: startId };
     project = applyProjectCommand(project, catalog, {
       kind: 'CreateBatch',

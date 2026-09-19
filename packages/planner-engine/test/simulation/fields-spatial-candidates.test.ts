@@ -47,7 +47,12 @@ function evaluate(
 
 describe('Fields spatial candidates', () => {
   it('defines cage and optional rewards before requiring their room placement', () => {
-    const introId = createOccurrenceId('fields-layout-intro');
+    let project = applyProjectCommand(createCompleteFGProject(), catalog, {
+      kind: 'ConfigureRoutePrefix',
+      route: createRouteAddress('Underworld'),
+      configuredBiomeCount: 3,
+    });
+    const introId = project.route.biomes[2]!.topology!.startOccurrenceId;
     const combatId = createOccurrenceId('fields-layout-combat13');
     const decision = createExitDecisionAddress(goldenHBiome, {
       kind: 'occurrence',
@@ -55,16 +60,6 @@ describe('Fields spatial candidates', () => {
     });
     const target = createTargetAddress(goldenHBiome, decision.source, 'exit1');
     const combat = createOccurrenceAddress(goldenHBiome, combatId);
-    let project = applyProjectCommand(createCompleteFGProject(), catalog, {
-      kind: 'ConfigureRoutePrefix',
-      route: createRouteAddress('Underworld'),
-      configuredBiomeCount: 3,
-    });
-    project = applyProjectCommand(project, catalog, {
-      kind: 'CreateStart',
-      biome: goldenHBiome,
-      occurrenceId: introId,
-    });
     project = applyProjectCommand(project, catalog, { kind: 'CreateBatch', decision });
     project = applyProjectCommand(project, catalog, {
       kind: 'ReplaceFieldsCageOutcome',

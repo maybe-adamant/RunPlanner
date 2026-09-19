@@ -160,19 +160,14 @@ describe('candidate projection', () => {
       routeKey: 'Underworld',
       configuredBiomeCount: 2,
     });
-    const withGStart = applyProjectCommand(project, catalog, {
-      kind: 'CreateStart',
-      biome: createBiomeAddress('Underworld', 'G'),
-      occurrenceId: createOccurrenceId('unreached-g-source'),
-    });
     const session = createCandidateSessionFactory(catalog).bind(
-      simulateProjectAssembly(catalog, withGStart),
+      simulateProjectAssembly(catalog, project),
     );
     const target = createTargetAddress(
       createBiomeAddress('Underworld', 'G'),
       {
         kind: 'occurrence',
-        occurrenceId: createOccurrenceId('unreached-g-source'),
+        occurrenceId: project.route.biomes[1]!.topology!.startOccurrenceId,
       },
       'exit1',
     );

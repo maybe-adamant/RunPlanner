@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { decodeProjectDocument } from '@run-planner/engine/authored-project';
 
 import * as support from '@planner-test/support/structured-workspace/interaction-binding.test-support';
 
@@ -71,12 +72,22 @@ describe('structured workspace interaction binding', () => {
     });
   });
 
-  it('binds a fixed start to one generic command and after-focus intent', () => {
-    const project = createProjectDocument(catalog, {
+  it('repairs an imported null fixed start with its sole declared choice', () => {
+    const created = createProjectDocument(catalog, {
       routeKey: 'Surface',
       configuredBiomeCount: 1,
       projectId: 'fixed-start-binding',
     });
+    const project = decodeProjectDocument(
+      {
+        ...created,
+        route: {
+          ...created.route,
+          biomes: created.route.biomes.map((biome) => ({ ...biome, topology: null })),
+        },
+      },
+      catalog,
+    );
     const occurrenceId = createOccurrenceId('bound-fixed-start');
     let allocations = 0;
     const interaction = bind(project, 'Surface', 'N', () => {
@@ -86,7 +97,7 @@ describe('structured workspace interaction binding', () => {
     if (interaction === undefined) throw new Error('N start interaction is missing');
 
     expect(allocations).toBe(0);
-    expect(interaction.intent()).toEqual({
+    expect(interaction.intent('N_Opening01')).toEqual({
       command: { biome: nBiome, kind: 'CreateStart', occurrenceId },
       focus: {
         owner: createOccurrenceAddress(nBiome, occurrenceId),
@@ -112,11 +123,12 @@ describe('structured workspace interaction binding', () => {
     if (interaction === undefined) throw new Error('F start interaction is missing');
 
     expect(allocations).toBe(0);
-    expect(interaction.intent()).toEqual({
+    expect(interaction.intent('F_Opening02')).toEqual({
       command: {
         biome,
         kind: 'CreateStart',
         occurrenceId,
+        gameName: 'F_Opening02',
       },
       focus: {
         owner: createOccurrenceAddress(biome, occurrenceId),
@@ -321,20 +333,14 @@ describe('structured workspace interaction binding', () => {
   });
 
   it('blocks a locally unresolved Fields Door 1 even when its ordinary room stays eligible', () => {
-    const occurrenceId = createOccurrenceId('binding-h-fields-start');
-    const owner = createExitDecisionAddress(goldenHBiome, {
-      kind: 'occurrence',
-      occurrenceId,
-    });
     let project = applyProjectCommand(createCompleteFGProject(), catalog, {
       configuredBiomeCount: 3,
       kind: 'ConfigureRoutePrefix',
       route: createRouteAddress('Underworld'),
     });
-    project = applyProjectCommand(project, catalog, {
-      biome: goldenHBiome,
-      kind: 'CreateStart',
-      occurrenceId,
+    const owner = createExitDecisionAddress(goldenHBiome, {
+      kind: 'occurrence',
+      occurrenceId: project.route.biomes[2]!.topology!.startOccurrenceId,
     });
     project = applyProjectCommand(project, catalog, { decision: owner, kind: 'CreateBatch' });
     const target = createTargetAddress(goldenHBiome, owner.source, 'exit1');

@@ -54,7 +54,6 @@ function authorApolloOpening(
 }
 
 function dreamIShopContact(metaOption: 'ElementalBoost' | 'CardUpgradePointsDrop') {
-  const intro = createOccurrenceId('dream-shop-i-intro');
   const shop = createOccurrenceId('dream-shop-i-preboss');
   let project = createProjectDocument(catalog, {
     projectId: 'dream-i-shop-contact',
@@ -62,11 +61,7 @@ function dreamIShopContact(metaOption: 'ElementalBoost' | 'CardUpgradePointsDrop
     itineraryBiomeKeys: ['I', 'Q'],
     configuredBiomeCount: 1,
   });
-  project = applyProjectCommand(project, catalog, {
-    kind: 'CreateStart',
-    biome: dreamI,
-    occurrenceId: intro,
-  });
+  const intro = project.route.biomes[0]!.topology!.startOccurrenceId;
   project = authorApolloOpening(project, dreamI, intro);
   project = applyProjectCommand(project, catalog, {
     kind: 'ReplaceBiomeField',

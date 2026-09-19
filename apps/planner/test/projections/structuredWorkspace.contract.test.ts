@@ -118,11 +118,7 @@ function createStructuralFrontierProject(biomeKey: 'G' | 'H' | 'P'): ProjectDocu
     configuredBiomeCount: routeKey === 'Surface' ? 3 : biomeKey === 'G' ? 2 : 3,
     projectId: `structural-frontier-${biomeKey.toLowerCase()}`,
   });
-  return applyProjectCommand(project, catalog, {
-    biome: createBiomeAddress(routeKey, biomeKey),
-    kind: 'CreateStart',
-    occurrenceId: createOccurrenceId(`structural-${biomeKey.toLowerCase()}-start`),
-  });
+  return project;
 }
 
 const overlaySources = vi.hoisted(

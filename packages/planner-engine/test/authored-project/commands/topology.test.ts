@@ -426,17 +426,14 @@ describe('authored-project commands and topology', () => {
     });
   });
 
-  it('creates an authored-choice start from its first declared room when no room is supplied', () => {
-    const project = applyProjectCommand(fProject(), catalog, {
-      kind: 'CreateStart',
-      biome: fBiome,
-      occurrenceId: createOccurrenceId('default-f-opening'),
-    });
-
-    expect(fTopology(project)).toMatchObject({
-      startOccurrenceId: 'default-f-opening',
-      occurrences: [{ occurrenceId: 'default-f-opening', gameName: 'F_Opening01' }],
-    });
+  it('requires an explicit selection for a multi-choice authored start', () => {
+    expect(() =>
+      applyProjectCommand(fProject(), catalog, {
+        kind: 'CreateStart',
+        biome: fBiome,
+        occurrenceId: createOccurrenceId('default-f-opening'),
+      }),
+    ).toThrow(ProjectCommandContractError);
   });
 
   it('owns Fields cage outcomes with topology batches and preserves unchanged identity', () => {
@@ -1318,13 +1315,17 @@ describe('authored-project commands and topology', () => {
     }
   });
 
-  it('clears every persisted N topology member through the shared clear impact', () => {
+  it('clears every persisted N topology member and restores its declared entry', () => {
     const project = applyProjectCommand(createCompleteNProject(), catalog, {
       kind: 'ClearTopology',
       biome: nBiome,
     });
 
-    expect(project.route.biomes.find((biome) => biome.biomeKey === 'N')?.topology).toBeNull();
+    expect(project.route.biomes.find((biome) => biome.biomeKey === 'N')?.topology).toMatchObject({
+      startOccurrenceId: 'N:start',
+      occurrences: [{ occurrenceId: 'N:start', gameName: 'N_Opening01' }],
+      decisions: [],
+    });
   });
 
   it('addresses selection by semantic decision source and rejects absent target choices', () => {

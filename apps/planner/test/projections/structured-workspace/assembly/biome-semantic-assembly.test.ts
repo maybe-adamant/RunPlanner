@@ -375,6 +375,7 @@ describe('structured workspace biome semantic assembly', () => {
       kind: 'CreateStart',
       biome,
       occurrenceId,
+      gameName: 'F_Opening01',
     });
     project = applyProjectCommand(project, catalog, {
       kind: 'ReplaceResourcePlacement',
@@ -519,16 +520,17 @@ describe('structured workspace biome semantic assembly', () => {
     expect(assembly.preliminaryFocusDestinations.has(assembly.marker.focusKey)).toBe(true);
   });
 
-  it('keeps the empty N start frontier without publishing an unauthored Hub board', () => {
+  it('keeps the automatic N entry without publishing an unauthored Hub board', () => {
     const assembly = assembleWorkspaceBiomeSemantics(catalog, biomeSource(emptyNProject()));
     const hub = assembly.structuralNodes.find((node) => node.kind === 'hubDecision');
 
-    expect(assembly.frontier).toMatchObject({ kind: 'start', owner: nBiome });
+    expect(assembly.frontier).toMatchObject({ kind: 'exitDecision' });
+    expect(assembly.entry?.room.gameName).toBe('N_Opening01');
     expect(hub).toBeUndefined();
     expect(assembly.hubInteractionRequirements.size).toBe(0);
-    expect(assembly.roomControls.size).toBe(0);
-    expect(assembly.rewardControls.size).toBe(0);
-    expect(assembly.startInteractionRequirements.size).toBe(1);
+    expect(assembly.roomControls.size).toBe(1);
+    expect(assembly.rewardControls.size).toBe(1);
+    expect(assembly.startInteractionRequirements.size).toBe(0);
   });
 
   it('projects declaration-owned biome fields at semantic assembly ownership', () => {
@@ -565,7 +567,11 @@ describe('structured workspace biome semantic assembly', () => {
       frontier: { kind: 'start', owner: goldenFBiome },
       status: 'incomplete',
     });
-    expect(g).toMatchObject({ frontier: { kind: 'start' }, status: 'blocked' });
+    expect(g).toMatchObject({
+      frontier: { kind: 'exitDecision' },
+      entry: { room: { gameName: 'G_Intro' } },
+      status: 'blocked',
+    });
 
     const partial = applyProjectCommand(initial, catalog, {
       biome: goldenFBiome,

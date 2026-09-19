@@ -205,7 +205,10 @@ describe('structured workspace biome presentation', () => {
     const emptyPresentation = present(empty, 'Surface', 'N');
 
     expect(emptyPresentation.assembly.progressionKind).toBe('hub');
-    expect(railShape(emptyPresentation.presentation.biome)).toEqual(['frontier:start']);
+    expect(railShape(emptyPresentation.presentation.biome)).toEqual([
+      'room:N_Opening01',
+      'frontier:exitDecision',
+    ]);
     expect(emptyPresentation.presentation.biome.defaultInspectorDestination).toMatchObject({
       kind: 'frontier',
       frontierFocusKey: emptyPresentation.presentation.biome.frontier?.marker.focusKey,

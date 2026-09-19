@@ -494,7 +494,6 @@ describe('Hermes Shrine entry inventory gate', () => {
 describe('Hermes Shrine delayed deliveries', () => {
   function dreamPrebossEntry(itineraryBiomeKeys: readonly string[], biomeKey: 'I' | 'Q') {
     const biome = createBiomeAddress('Dream', biomeKey);
-    const startId = createOccurrenceId(`dream-hermes-${biomeKey.toLowerCase()}-start`);
     const prebossId = createOccurrenceId(`dream-hermes-${biomeKey.toLowerCase()}-preboss`);
     let project = createProjectDocument(catalog, {
       projectId: `dream-hermes-${itineraryBiomeKeys.join('-').toLowerCase()}`,
@@ -502,11 +501,8 @@ describe('Hermes Shrine delayed deliveries', () => {
       itineraryBiomeKeys,
       configuredBiomeCount: itineraryBiomeKeys.length,
     });
-    project = applyProjectCommand(project, catalog, {
-      kind: 'CreateStart',
-      biome,
-      occurrenceId: startId,
-    });
+    const startId = project.route.biomes.find((plan) => plan.biomeKey === biomeKey)!.topology!
+      .startOccurrenceId;
     const start = { kind: 'occurrence' as const, occurrenceId: startId };
     project = applyProjectCommand(project, catalog, {
       kind: 'CreateBatch',

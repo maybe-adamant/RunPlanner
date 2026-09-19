@@ -69,16 +69,12 @@ function validN(project = loadSurfaceNProject()) {
 
 describe('N Hub rewards, validation, and candidates', () => {
   it('owns takeover candidates only at the completed Hub decision', () => {
-    const openingId = nOccurrenceId('candidate-opening-domain');
-    const openingOnly = applyProjectCommand(
-      createProjectDocument(catalog, {
-        projectId: 'candidate-n-opening-domain',
-        routeKey: 'Surface',
-        configuredBiomeCount: 1,
-      }),
-      catalog,
-      { kind: 'CreateStart', biome: nBiome, occurrenceId: openingId },
-    );
+    const openingOnly = createProjectDocument(catalog, {
+      projectId: 'candidate-n-opening-domain',
+      routeKey: 'Surface',
+      configuredBiomeCount: 1,
+    });
+    const openingId = openingOnly.route.biomes[0]!.topology!.startOccurrenceId;
     const openingSession = createPreparedProjectCandidateSession(
       catalog,
       simulateProjectAssembly(catalog, openingOnly),

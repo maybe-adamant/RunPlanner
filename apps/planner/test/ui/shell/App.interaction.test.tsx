@@ -777,7 +777,18 @@ describe('planner history interaction', () => {
       }),
     );
 
-    await user.click(screen.getByRole('button', { name: 'Start Erebus' }));
+    const beforeEntry = application.store.getState().projectWorkspace.history!;
+    await user.click(screen.getByRole('button', { name: 'Starting room' }));
+    await user.click(within(screen.getByRole('listbox')).getAllByRole('option')[0]!);
+    expect(application.store.getState().projectWorkspace.history!.past).toHaveLength(
+      beforeEntry.past.length + 1,
+    );
+    await user.click(screen.getByRole('button', { name: 'Undo' }));
+    expect(application.store.getState().projectWorkspace.history!.present).toBe(
+      beforeEntry.present,
+    );
+    expect(screen.getByRole('button', { name: 'Starting room' })).toBeTruthy();
+    await user.click(screen.getByRole('button', { name: 'Redo' }));
 
     expect(application.store.getState().editorSession.activePanel).toEqual({ kind: 'overview' });
     expect(screen.getByLabelText('Start room configuration')).toBeTruthy();
@@ -841,7 +852,8 @@ describe('planner history interaction', () => {
         name: '1',
       }),
     );
-    await user.click(screen.getByRole('button', { name: 'Start Erebus' }));
+    await user.click(screen.getByRole('button', { name: 'Starting room' }));
+    await user.click(within(screen.getByRole('listbox')).getAllByRole('option')[0]!);
     act(() =>
       application.store.dispatch(
         authoredProjectCommandDispatched({
@@ -2106,7 +2118,7 @@ describe('planner history interaction', () => {
   });
 
   it('keeps blocked biome pages visible and editable within the selected route', async () => {
-    const { user } = renderPlannerForInteraction();
+    const { application, user } = renderPlannerForInteraction();
 
     await user.click(
       within(screen.getByRole('radiogroup', { name: 'Biomes to configure' })).getByRole('radio', {
@@ -2127,7 +2139,11 @@ describe('planner history interaction', () => {
     );
     expect(blockedBanner.getAttribute('role')).toBeNull();
     expect(blockedBanner.closest('.editor-panel')?.getAttribute('aria-live')).toBe('polite');
-    expect(screen.getByRole('button', { name: 'Start biome' })).toHaveProperty('disabled', false);
+    expect(screen.queryByRole('button', { name: 'Start biome' })).toBeNull();
+    expect(
+      application.store.getState().projectWorkspace.history!.present.route.biomes[1]?.topology
+        ?.occurrences[0]?.gameName,
+    ).toBe('G_Intro');
 
     // A project owns one route, so sibling-route pages are no longer
     // available to switch into from this workspace.

@@ -2,6 +2,7 @@ import { catalog } from '@run-planner/hades2-catalog';
 import {
   createBiomeAddress,
   createProjectDocument,
+  decodeProjectDocument,
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
 
@@ -13,6 +14,22 @@ export const nBiome = createBiomeAddress('Surface', 'N');
 export const oBiome = createBiomeAddress('Surface', 'O');
 export const qBiome = createBiomeAddress('Surface', 'Q');
 
+/** Command fixtures that author a custom entry begin from a valid imported null topology. */
+export function withUnstartedBiome(project: ProjectDocument, biomeKey: string): ProjectDocument {
+  return decodeProjectDocument(
+    {
+      ...project,
+      route: {
+        ...project.route,
+        biomes: project.route.biomes.map((biome) =>
+          biome.biomeKey === biomeKey ? { ...biome, topology: null } : biome,
+        ),
+      },
+    },
+    catalog,
+  );
+}
+
 export function fProject(): ProjectDocument {
   return createProjectDocument(catalog, {
     projectId: 'commands-f',
@@ -22,35 +39,47 @@ export function fProject(): ProjectDocument {
 }
 
 export function gProject(): ProjectDocument {
-  return createProjectDocument(catalog, {
-    projectId: 'commands-g',
-    routeKey: 'Underworld',
-    configuredBiomeCount: 2,
-  });
+  return withUnstartedBiome(
+    createProjectDocument(catalog, {
+      projectId: 'commands-g',
+      routeKey: 'Underworld',
+      configuredBiomeCount: 2,
+    }),
+    'G',
+  );
 }
 
 export function hProject(): ProjectDocument {
-  return createProjectDocument(catalog, {
-    projectId: 'commands-h',
-    routeKey: 'Underworld',
-    configuredBiomeCount: 3,
-  });
+  return withUnstartedBiome(
+    createProjectDocument(catalog, {
+      projectId: 'commands-h',
+      routeKey: 'Underworld',
+      configuredBiomeCount: 3,
+    }),
+    'H',
+  );
 }
 
 export function iProject(): ProjectDocument {
-  return createProjectDocument(catalog, {
-    projectId: 'commands-i',
-    routeKey: 'Underworld',
-    configuredBiomeCount: 4,
-  });
+  return withUnstartedBiome(
+    createProjectDocument(catalog, {
+      projectId: 'commands-i',
+      routeKey: 'Underworld',
+      configuredBiomeCount: 4,
+    }),
+    'I',
+  );
 }
 
 export function nProject(): ProjectDocument {
-  return createProjectDocument(catalog, {
-    projectId: 'commands-n',
-    routeKey: 'Surface',
-    configuredBiomeCount: 1,
-  });
+  return withUnstartedBiome(
+    createProjectDocument(catalog, {
+      projectId: 'commands-n',
+      routeKey: 'Surface',
+      configuredBiomeCount: 1,
+    }),
+    'N',
+  );
 }
 
 export function surfaceProject(configuredBiomeCount: number): ProjectDocument {

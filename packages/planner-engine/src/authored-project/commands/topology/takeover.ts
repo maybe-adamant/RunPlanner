@@ -30,11 +30,11 @@ import {
   exitKeysForSource,
   sourceRoom,
   appendDecision,
-  defaultOccurrence,
   resolvedStoreKey,
   expectedPrebossRole,
   updateTopology,
 } from './construction';
+import { defaultOccurrence } from '../../topology/construction';
 
 /**
  * A target may only own a subsequent decision while it remains on the selected

@@ -369,17 +369,12 @@ function completeIProject() {
     configuredBiomeCount: 4,
   });
   project = applyProjectCommand(project, catalog, {
-    kind: 'CreateStart',
-    biome,
-    occurrenceId: createOccurrenceId('i-intro'),
-  });
-  project = applyProjectCommand(project, catalog, {
     kind: 'ReplaceBiomeField',
     field: createBiomeFieldAddress(biome, 'maxNonGoalRewards'),
     value: 5,
   });
   for (const [source, targets, selectedExitKey] of [
-    ['i-intro', [['exit1', 'i-combat01', 'I_Combat01']]],
+    [project.route.biomes[3]!.topology!.startOccurrenceId, [['exit1', 'i-combat01', 'I_Combat01']]],
     [
       'i-combat01',
       [

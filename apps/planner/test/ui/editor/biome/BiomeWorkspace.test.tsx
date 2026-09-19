@@ -16,6 +16,7 @@ import {
   createOccurrenceAddress,
   createOccurrenceId,
   createProjectDocument,
+  decodeProjectDocument,
   createTargetAddress,
   semanticAddressKey,
   type ProjectDocument,
@@ -575,13 +576,12 @@ describe('BiomeWorkspace', () => {
     expect(screen.queryByRole('region', { name: /State before/ })).toBeNull();
   });
 
-  it('keeps the fixed N start room in the rail next step', () => {
+  it('shows the automatic N entry in the rail without a start step', () => {
     renderWorkspace(emptyProject('Surface', 1), 'Surface', 'N');
 
     const structure = screen.getByRole('region', { name: 'Ephyra route structure' });
-    const start = within(structure).getByRole('button', { name: /Start biome/ });
-    expect(start.textContent).toContain('Next step');
-    expect(start.textContent).not.toContain('Choose the first room');
+    expect(within(structure).queryByRole('button', { name: /Start biome/ })).toBeNull();
+    expect(within(structure).getByRole('button', { name: /Opening/ })).toBeTruthy();
   });
 
   it('creates F generically and leaves room and reward authoring on the Opening occurrence', async () => {
@@ -590,7 +590,8 @@ describe('BiomeWorkspace', () => {
     expect(screen.queryByRole('button', { name: 'Room' })).toBeNull();
     expect(screen.queryByText('Choose room to show reward')).toBeNull();
     const inspector = screen.getByRole('complementary', { name: 'Details' });
-    await view.user.click(within(inspector).getByRole('button', { name: 'Start biome' }));
+    await view.user.click(within(inspector).getByRole('button', { name: 'Starting room' }));
+    await view.user.click(within(screen.getByRole('listbox')).getAllByRole('option')[0]!);
 
     const identity = await screen.findByRole('region', { name: 'Start room configuration' });
     expect(within(identity).getByRole('button', { name: 'Room' })).toBeTruthy();
@@ -602,6 +603,44 @@ describe('BiomeWorkspace', () => {
 
     await view.user.click(within(identity).getByRole('button', { name: 'Room' }));
     expect(within(await screen.findByRole('listbox')).getAllByRole('option')).toHaveLength(3);
+  });
+
+  it('repairs an imported fixed null entry through the declared room picker', async () => {
+    const created = emptyProject('Surface', 1);
+    const project = decodeProjectDocument(
+      {
+        ...created,
+        route: {
+          ...created.route,
+          biomes: created.route.biomes.map((biome) => ({ ...biome, topology: null })),
+        },
+      },
+      catalog,
+    );
+    const view = renderWorkspace(project, 'Surface', 'N');
+    await view.user.click(screen.getByRole('button', { name: 'Starting room' }));
+    const options = within(screen.getByRole('listbox')).getAllByRole('option');
+    expect(options).toHaveLength(1);
+    await view.user.click(options[0]!);
+    expect(
+      view.application.store.getState().projectWorkspace.history!.present.route.biomes[0]?.topology
+        ?.occurrences,
+    ).toHaveLength(1);
+    expect(screen.getByRole('region', { name: 'Start room configuration' })).toBeTruthy();
+  });
+
+  it('keeps a later Dream entry choice in its biome inspector behind prior readiness', () => {
+    const project = createProjectDocument(catalog, {
+      projectId: 'later-dream-entry-ui',
+      routeKey: 'Dream',
+      itineraryBiomeKeys: ['G', 'F'],
+      configuredBiomeCount: 2,
+    });
+    renderWorkspace(project, 'Dream', 'F');
+    const inspector = screen.getByRole('complementary', { name: 'Details' });
+    const picker = within(inspector).getByRole('button', { name: 'Starting room' });
+    expect(picker).toHaveProperty('disabled', true);
+    expect(picker.dataset.authoringLocked).toBe('true');
   });
 
   it('uses concise Hub headings without a redundant Details header', async () => {
@@ -1160,28 +1199,15 @@ describe('BiomeWorkspace', () => {
     const emptyView = renderWorkspace(emptyProjectDocument, 'Surface', 'N');
     const emptyRail = railMarkerKeys(emptyView.container);
     const emptyWorkspace = workspaceBiome(emptyView.application, 'Surface', 'N');
-    if (emptyWorkspace.frontier?.kind !== 'start') {
-      throw new Error('empty N start frontier is missing');
+    if (emptyWorkspace.frontier?.kind !== 'exitDecision') {
+      throw new Error('N entry exit frontier is missing');
     }
-    expect(emptyRail).toEqual([emptyWorkspace.frontier?.marker.focusKey]);
-    expect(screen.queryByRole('region', { name: 'Biome completion' })).toBeNull();
-    cleanup();
-
-    const openingProject = applyProjectCommand(emptyProjectDocument, catalog, {
-      kind: 'CreateStart',
-      biome: nBiome,
-      occurrenceId: nOccurrenceIds.opening,
-    });
-    const openingView = renderWorkspace(openingProject, 'Surface', 'N');
-    const openingRail = railMarkerKeys(openingView.container);
-    const openingWorkspace = workspaceBiome(openingView.application, 'Surface', 'N');
-    if (openingWorkspace.frontier?.kind !== 'exitDecision') {
-      throw new Error('Opening-only N exit frontier is missing');
-    }
-    expect(openingRail).toEqual([
-      semanticAddressKey(createOccurrenceAddress(nBiome, nOccurrenceIds.opening)),
-      openingWorkspace.frontier?.marker.focusKey,
+    const openingId = emptyProjectDocument.route.biomes[0]!.topology!.startOccurrenceId;
+    expect(emptyRail).toEqual([
+      semanticAddressKey(createOccurrenceAddress(nBiome, openingId)),
+      emptyWorkspace.frontier.marker.focusKey,
     ]);
+    expect(screen.queryByRole('region', { name: 'Biome completion' })).toBeNull();
   });
 
   it('replaces the terminal PreHub decision with Hub and restores it through undo and redo', async () => {

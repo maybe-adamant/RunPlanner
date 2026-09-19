@@ -31,7 +31,6 @@ import {
   fStartId,
 } from './support/f-takeover-project';
 const gBiome = createBiomeAddress('Underworld', 'G');
-const gStartId = createOccurrenceId('candidate-g-start');
 
 function withGTarget(project: ProjectDocument) {
   let next = applyProjectCommand(project, catalog, {
@@ -39,11 +38,7 @@ function withGTarget(project: ProjectDocument) {
     route: createRouteAddress('Underworld'),
     configuredBiomeCount: 2,
   });
-  next = applyProjectCommand(next, catalog, {
-    kind: 'CreateStart',
-    biome: gBiome,
-    occurrenceId: gStartId,
-  });
+  const gStartId = next.route.biomes[1]!.topology!.startOccurrenceId;
   const source = { kind: 'occurrence' as const, occurrenceId: gStartId };
   next = applyProjectCommand(next, catalog, {
     kind: 'CreateBatch',
@@ -177,12 +172,13 @@ describe('candidate session', () => {
   });
 
   it('distinguishes an incomplete and invalid upstream biome from local coverage', () => {
+    const incomplete = withGTarget(createUnresolvedFOpeningBatch(createFStart()));
+    const gStartId = incomplete.route.biomes[1]!.topology!.startOccurrenceId;
     const query = {
       kind: 'roomTarget' as const,
       target: createTargetAddress(gBiome, { kind: 'occurrence', occurrenceId: gStartId }, 'exit1'),
       gameName: 'G_Combat02',
     };
-    const incomplete = withGTarget(createUnresolvedFOpeningBatch(createFStart()));
     const invalid = withGTarget(
       applyProjectCommand(createCompleteFTakeoverProject(), catalog, {
         kind: 'ReplaceBatchRewardStore',

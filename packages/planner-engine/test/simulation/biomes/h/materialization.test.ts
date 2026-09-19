@@ -243,7 +243,6 @@ function completeProject(
     'min',
   ],
 ): ProjectDocument {
-  const start = createOccurrenceId('h-materialized-start');
   const combat02 = createOccurrenceId('h-materialized-combat02');
   const combat09 = createOccurrenceId('h-materialized-combat09');
   const combat03 = createOccurrenceId('h-materialized-combat03');
@@ -257,11 +256,7 @@ function completeProject(
     routeKey: 'Underworld',
     configuredBiomeCount: 3,
   });
-  project = applyProjectCommand(project, catalog, {
-    kind: 'CreateStart',
-    biome,
-    occurrenceId: start,
-  });
+  const start = project.route.biomes[2]!.topology!.startOccurrenceId;
   project = appendBatch(
     project,
     start,
