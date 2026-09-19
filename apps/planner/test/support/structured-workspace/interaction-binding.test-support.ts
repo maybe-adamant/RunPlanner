@@ -24,6 +24,7 @@ import {
   createRoomActionAddress,
   roomActionKey,
   createRouteAddress,
+  createStartingRewardAddress,
   createRewardWheelOfferAddress,
   createRewardWheelAddress,
   createShopOfferAddress,
@@ -119,8 +120,8 @@ export function createReachableNaturalChaosProject(): ProjectDocument {
   const source = { kind: 'occurrence' as const, occurrenceId: openingId };
   const targetId = createOccurrenceId('interaction-chaos-target');
   project = applyProjectCommand(project, catalog, {
-    kind: 'ReplaceIncomingReward',
-    reward: createIncomingRewardAddress(goldenFBiome, openingId),
+    kind: 'ReplaceStartingReward',
+    reward: createStartingRewardAddress('Underworld'),
     value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'ApolloUpgrade' } },
   });
   project = applyProjectCommand(project, catalog, {
@@ -165,8 +166,8 @@ export function selectedNChaosFrontierProject(persistTerminalDecision = true): P
   });
   const opening = project.route.biomes[0]!.topology!.startOccurrenceId;
   project = applyProjectCommand(project, catalog, {
-    kind: 'ReplaceIncomingReward',
-    reward: createIncomingRewardAddress(nBiome, opening),
+    kind: 'ReplaceStartingReward',
+    reward: createStartingRewardAddress('Surface'),
     value: {
       rewardType: 'Boon',
       payload: { kind: 'BoonSource', source: 'ApolloUpgrade' },
@@ -230,8 +231,8 @@ export function enteredShopProject(): {
     gameName: 'F_Opening01',
   });
   project = applyProjectCommand(project, catalog, {
-    kind: 'ReplaceIncomingReward',
-    reward: createIncomingRewardAddress(biome, start),
+    kind: 'ReplaceStartingReward',
+    reward: createStartingRewardAddress('Underworld'),
     value: {
       rewardType: 'Boon',
       payload: { kind: 'BoonSource', source: 'ApolloUpgrade' },

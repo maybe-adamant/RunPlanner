@@ -5,6 +5,7 @@ import {
   createExitDecisionAddress,
   createOccurrenceId,
   createProjectDocument,
+  createStartingRewardAddress,
   createIncomingRewardAddress,
   createTargetAddress,
   createTraitOfferAddress,
@@ -332,9 +333,10 @@ describe('workspace candidate interaction families', () => {
         occurrenceId: goldenFStartId,
       },
     );
-    const reward = createIncomingRewardAddress(goldenFBiome, goldenFStartId);
+    const reward = createStartingRewardAddress('Underworld');
+    const incoming = createIncomingRewardAddress(goldenFBiome, goldenFStartId);
     const authoredReward = applyProjectCommand(started, catalog, {
-      kind: 'ReplaceIncomingReward',
+      kind: 'ReplaceStartingReward',
       reward,
       value: {
         rewardType: 'Boon',
@@ -343,7 +345,7 @@ describe('workspace candidate interaction families', () => {
     });
     const authoredTrait = applyProjectCommand(authoredReward, catalog, {
       kind: 'ReplaceTraitOffer',
-      trait: createTraitOfferAddress(reward, 'source'),
+      trait: createTraitOfferAddress(incoming, 'source'),
       value: {
         kind: 'traits',
         giverKey: 'Apollo',

@@ -11,6 +11,7 @@ import {
   createOccurrenceId,
   createOccurrenceAddress,
   createProjectDocument,
+  createStartingRewardAddress,
   resolveRoutePosition,
   createTargetAddress,
   semanticAddressKey,
@@ -47,20 +48,19 @@ describe('G generation and takeover', () => {
       itineraryBiomeKeys: ['G', 'F'],
       configuredBiomeCount: 1,
     });
-    const occurrenceId = project.route.biomes[0]!.topology!.startOccurrenceId;
-    const reward = createIncomingRewardAddress(biome, occurrenceId);
+    const reward = createStartingRewardAddress('Dream');
     const candidate = createPreparedProjectCandidateSession(
       catalog,
       simulateProjectAssembly(catalog, project),
     ).evaluate({
-      kind: 'incomingReward',
+      kind: 'startingReward',
       reward,
       value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'ApolloUpgrade' } },
     });
-    expect(candidate).toMatchObject({ kind: 'incomingReward', result: { supported: true } });
+    expect(candidate).toMatchObject({ kind: 'startingReward', result: { supported: true } });
 
     project = applyProjectCommand(project, catalog, {
-      kind: 'ReplaceIncomingReward',
+      kind: 'ReplaceStartingReward',
       reward,
       value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'ApolloUpgrade' } },
     });

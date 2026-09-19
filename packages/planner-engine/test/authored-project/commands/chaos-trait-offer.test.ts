@@ -9,6 +9,7 @@ import {
   createIncomingRewardAddress,
   createOccurrenceId,
   createProjectHistory,
+  createStartingRewardAddress,
   createTraitOfferAddress,
   createTargetAddress,
   decodeProjectDocument,
@@ -39,8 +40,8 @@ function reachableUnresolvedProject() {
   const openingId = createOccurrenceId('fixture-chaos-opening');
   const biome = createBiomeAddress('Underworld', 'F');
   let project = applyProjectCommand(unresolvedProject(), catalog, {
-    kind: 'ReplaceIncomingReward',
-    reward: createIncomingRewardAddress(biome, openingId),
+    kind: 'ReplaceStartingReward',
+    reward: createStartingRewardAddress('Underworld'),
     value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'ApolloUpgrade' } },
   });
   project = applyProjectCommand(project, catalog, {

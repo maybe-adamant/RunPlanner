@@ -8,6 +8,7 @@ import {
   createIncomingRewardAddress,
   createOccurrenceId,
   createProjectDocument,
+  createStartingRewardAddress,
   createShopOfferAddress,
   createTargetAddress,
   createTraitOfferAddress,
@@ -134,8 +135,8 @@ export function createFGenerationProject(
     gameName: 'F_Opening01',
   });
   project = applyProjectCommand(project, catalog, {
-    kind: 'ReplaceIncomingReward',
-    reward: createIncomingRewardAddress(fGenerationBiome, fGenerationStartId),
+    kind: 'ReplaceStartingReward',
+    reward: createStartingRewardAddress('Underworld'),
     value: {
       rewardType: 'Boon',
       payload: { kind: 'BoonSource', source: 'ApolloUpgrade' },

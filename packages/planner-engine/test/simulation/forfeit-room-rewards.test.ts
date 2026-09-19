@@ -12,6 +12,7 @@ import {
   createRoomRunStateCheckpointAddress,
   createRoomActionAddress,
   createRouteAddress,
+  createStartingRewardAddress,
   createTraitOfferAddress,
   roomActionKey,
   semanticAddressKey,
@@ -87,8 +88,8 @@ function simulated(rewardType: 'Boon' | 'HermesUpgrade') {
     rank: 1,
   });
   project = applyProjectCommand(project, catalog, {
-    kind: 'ReplaceIncomingReward',
-    reward: createIncomingRewardAddress(biome, goldenFStartId),
+    kind: 'ReplaceStartingReward',
+    reward: createStartingRewardAddress('Underworld'),
     value:
       rewardType === 'Boon'
         ? { rewardType, payload: { kind: 'BoonSource', source: 'ApolloUpgrade' } }
@@ -416,8 +417,8 @@ describe('Vow of Forfeit Red Onion substitution', () => {
       rank: 1,
     });
     project = applyProjectCommand(project, catalog, {
-      kind: 'ReplaceIncomingReward',
-      reward: owner,
+      kind: 'ReplaceStartingReward',
+      reward: createStartingRewardAddress('Underworld'),
       value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'ApolloUpgrade' } },
     });
     project = applyProjectCommand(project, catalog, {
@@ -485,8 +486,8 @@ describe('Vow of Forfeit Red Onion substitution', () => {
       rank: 1,
     });
     project = applyProjectCommand(project, catalog, {
-      kind: 'ReplaceIncomingReward',
-      reward: owner,
+      kind: 'ReplaceStartingReward',
+      reward: createStartingRewardAddress('Underworld'),
       value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'ApolloUpgrade' } },
     });
     const session = createPreparedProjectCandidateSession(

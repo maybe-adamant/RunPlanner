@@ -19,6 +19,7 @@ import {
   type NemesisRandomEventAddress,
   createRouteStartKeepsakeSelectionAddress,
   createRouteAddress,
+  createStartingRewardAddress,
   createShopOfferAddress,
   createTargetAddress,
   createTraitOfferAddress,
@@ -690,8 +691,8 @@ function createFConversionLoadoutProject(): ProjectDocument {
     });
   }
   return applyProjectCommand(project, catalog, {
-    kind: 'ReplaceIncomingReward',
-    reward: createIncomingRewardAddress(goldenFBiome, goldenFStartId),
+    kind: 'ReplaceStartingReward',
+    reward: createStartingRewardAddress('Underworld'),
     value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'ApolloUpgrade' } },
   });
 }

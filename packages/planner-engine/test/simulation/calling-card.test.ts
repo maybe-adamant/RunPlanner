@@ -4,6 +4,7 @@ import {
   createBiomeAddress,
   createIncomingRewardAddress,
   createRouteStartKeepsakeSelectionAddress,
+  createStartingRewardAddress,
   createTraitOfferAddress,
   semanticAddressKey,
   type AuthoredTraitOfferTraits,
@@ -35,8 +36,8 @@ function projectWithCallingCard(actions: readonly ('option1' | 'option2' | 'opti
     keepsakeKey: 'RarifyKeepsake',
   });
   project = applyProjectCommand(project, catalog, {
-    kind: 'ReplaceIncomingReward',
-    reward,
+    kind: 'ReplaceStartingReward',
+    reward: createStartingRewardAddress('Underworld'),
     value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'ApolloUpgrade' } },
   });
   return applyProjectCommand(project, catalog, {
@@ -149,8 +150,8 @@ describe('Calling Card offer settlement', () => {
   it('keeps an invalid composed offer unchanged and attributes its row action exactly', () => {
     let project = projectWithCallingCard(['option2']);
     project = applyProjectCommand(project, catalog, {
-      kind: 'ReplaceIncomingReward',
-      reward,
+      kind: 'ReplaceStartingReward',
+      reward: createStartingRewardAddress('Underworld'),
       value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'HeraUpgrade' } },
     });
     project = applyProjectCommand(project, catalog, {
@@ -438,8 +439,8 @@ describe('Calling Card offer settlement', () => {
       keepsakeKey: 'ForceApolloBoonKeepsake',
     });
     project = applyProjectCommand(project, catalog, {
-      kind: 'ReplaceIncomingReward',
-      reward,
+      kind: 'ReplaceStartingReward',
+      reward: createStartingRewardAddress('Underworld'),
       value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'ZeusUpgrade' } },
     });
 
@@ -447,7 +448,7 @@ describe('Calling Card offer settlement', () => {
     expect(result.findings).toContainEqual(
       expect.objectContaining({
         code: 'rewardSourceUnavailable',
-        origin: reward,
+        origin: createStartingRewardAddress('Underworld'),
         evidence: expect.objectContaining({ source: 'ZeusUpgrade' }),
       }),
     );

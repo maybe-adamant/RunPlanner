@@ -9,6 +9,7 @@ import {
   createIncomingRewardAddress,
   createOccurrenceAddress,
   createProjectDocument,
+  createStartingRewardAddress,
   encodeProjectDocument,
   roomActionKey,
   semanticAddressKey,
@@ -43,7 +44,7 @@ function traitContext(project: ReturnType<typeof loadSurfaceNProject>) {
 
 describe('canonical N Hub materialization', () => {
   it('keeps an imported null entry structurally incomplete without inventing a Hub board', () => {
-    const project = withUnstartedBiome(
+    let project = withUnstartedBiome(
       createProjectDocument(catalog, {
         projectId: 'n-incomplete',
         routeKey: 'Surface',
@@ -51,6 +52,11 @@ describe('canonical N Hub materialization', () => {
       }),
       'N',
     );
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceStartingReward',
+      reward: createStartingRewardAddress('Surface'),
+      value: { rewardType: 'StackUpgrade' },
+    });
     const biome = simulateProject(catalog, project).route?.biomes.find(
       (candidate) => candidate.biomeKey === 'N',
     );
@@ -79,8 +85,8 @@ describe('canonical N Hub materialization', () => {
     });
     const reward = createIncomingRewardAddress(nBiome, nOccurrenceIds.opening);
     project = applyProjectCommand(project, catalog, {
-      kind: 'ReplaceIncomingReward',
-      reward,
+      kind: 'ReplaceStartingReward',
+      reward: createStartingRewardAddress('Surface'),
       value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'ApolloUpgrade' } },
     });
     project = applyProjectCommand(project, catalog, {

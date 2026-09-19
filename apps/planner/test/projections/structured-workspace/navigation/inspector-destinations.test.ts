@@ -19,6 +19,7 @@ import {
   createRoomActionAddress,
   createShopOfferAddress,
   createProjectDocument,
+  createStartingRewardAddress,
   createTargetAddress,
   createTraitOfferAddress,
   echoLastRewardPickupEntryKey,
@@ -416,19 +417,20 @@ describe('workspace inspector destinations', () => {
     });
   });
 
-  it('keeps opening reward definitions on Overview while their trait outcomes stay on Timeline', () => {
+  it('keeps the route-start reward in Loadout while opening traits stay on Timeline', () => {
     const workspace = project(createCompleteFGProject());
     const opening = occurrenceWorkbenchFor(biome(workspace, 'F'), 'golden-f-start');
-    const reward = createIncomingRewardAddress(goldenFBiome, createOccurrenceId('golden-f-start'));
+    const reward = createStartingRewardAddress('Underworld');
     expect(destination(workspace, reward)).toMatchObject({
       focusAddress: reward,
+      focusKey: semanticAddressKey(reward),
       presentationPanel: 'overview',
-      roomTab: 'overview',
     });
     expect(destination(workspace, opening.room.address)).toMatchObject({
       focusAddress: opening.room.address,
-      presentationPanel: 'overview',
+      inspectorSubject: { kind: 'node', nodeKey: opening.key },
     });
+    expect(destination(workspace, opening.room.address).presentationPanel).toBeUndefined();
     const trait = opening.room.rewardControls.flatMap((control) => control.traitOffers ?? [])[0];
     if (trait === undefined) throw new Error('opening trait missing');
     expect(destination(workspace, trait.address)).toMatchObject({

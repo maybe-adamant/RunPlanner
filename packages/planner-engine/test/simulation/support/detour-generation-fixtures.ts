@@ -10,6 +10,7 @@ import {
   createIncomingRewardAddress,
   createOccurrenceId,
   createProjectDocument,
+  createStartingRewardAddress,
   decodeProjectDocument,
   createShopOfferAddress,
   createTargetAddress,
@@ -167,8 +168,8 @@ export function buildDreamAnomalyProject() {
   });
   const introReward = createIncomingRewardAddress(dreamGBiome, intro);
   project = applyProjectCommand(project, catalog, {
-    kind: 'ReplaceIncomingReward',
-    reward: introReward,
+    kind: 'ReplaceStartingReward',
+    reward: createStartingRewardAddress('Dream'),
     value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'ApolloUpgrade' } },
   });
   project = applyProjectCommand(project, catalog, {
@@ -367,8 +368,8 @@ export function createSelectedContractContinuationProject() {
     gameName: 'F_Opening01',
   });
   project = applyProjectCommand(project, catalog, {
-    kind: 'ReplaceIncomingReward',
-    reward: createIncomingRewardAddress(detourFBiome, opening),
+    kind: 'ReplaceStartingReward',
+    reward: createStartingRewardAddress('Underworld'),
     value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'ApolloUpgrade' } },
   });
   project = applyProjectCommand(project, catalog, {

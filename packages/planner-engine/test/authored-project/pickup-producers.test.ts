@@ -19,6 +19,7 @@ import {
   retractInactiveClockedTraitPickupActions,
   selectedPickupProducers,
 } from '../../src/authored-project/acquisition/pickup-producers';
+import { composeStartingReward } from '../../src/authored-project/room-state/starting-reward';
 
 const biome = createBiomeAddress('Surface', 'N');
 
@@ -84,6 +85,11 @@ describe('authored pickup producers', () => {
         (candidate) => candidate.occurrenceId === nOccurrenceIds.opening,
       );
     if (occurrence === undefined) throw new Error('Quick Buck source occurrence is missing');
+    const routeStartIncoming = composeStartingReward(
+      project.route.loadout.startingReward,
+      occurrence.startingRewardAcquisition,
+    );
+    if (routeStartIncoming === null) throw new Error('Quick Buck source reward is missing');
 
     const producer = selectedPickupProducers(
       catalog,
@@ -91,6 +97,7 @@ describe('authored pickup producers', () => {
       occurrence,
       catalog.rooms.byKey[occurrence.gameName]!,
       1,
+      routeStartIncoming,
     ).find((candidate) => candidate.traitKey === 'MoneyMultiplierBoon');
     if (producer === undefined) throw new Error('Quick Buck producer is missing');
     expect(producer.sourceNormal).toBe(true);
@@ -104,6 +111,7 @@ describe('authored pickup producers', () => {
       occurrence,
       catalog.rooms.byKey[occurrence.gameName]!,
       1,
+      routeStartIncoming,
     );
     expect(reconciled.acquisitionSites?.[producer.siteKey]?.pickupEntries).toMatchObject({
       quickBuckGold: { offer: { rewardType: 'RoomMoneyDrop' } },

@@ -12,6 +12,7 @@ import {
   createIncomingRewardAddress,
   createOccurrenceId,
   createProjectDocument,
+  createStartingRewardAddress,
   createRoomActionAddress,
   createShopOfferAddress,
   createRouteStartKeepsakeSelectionAddress,
@@ -283,8 +284,8 @@ export function dormantShopProject(): {
     gameName: 'F_Opening01',
   });
   project = applyProjectCommand(project, catalog, {
-    kind: 'ReplaceIncomingReward',
-    reward: createIncomingRewardAddress(goldenFBiome, start),
+    kind: 'ReplaceStartingReward',
+    reward: createStartingRewardAddress('Underworld'),
     value: {
       rewardType: 'Boon',
       payload: { kind: 'BoonSource', source: 'ApolloUpgrade' },

@@ -116,9 +116,12 @@ behavior. Route declarations map completion rooms by biome and ordinal; the
 engine applies those mappings to the authored full itinerary, independently of
 its configured prefix. A physical room family is not its route position.
 
-Starting rooms declare `routeFirst` and `routeLater` profiles. Their resolved
-reward binding and optional Dream encounter override feed all downstream
-consumers; editor visibility is not an alternate room declaration.
+The catalog declares one counted run-start reward binding; entry rooms have no
+intrinsic incoming reward. Narrow contextual encounter rules express genuine
+route-mode and first-position differences without replacing the whole room
+declaration. The engine resolves these facts with itinerary position into one
+entry product: reward binding, lifecycle and declaration-owned entered-store
+participation. Editor visibility is not an alternate room declaration.
 
 N's fixed Hub mapping, open-set rules and visit order are separate from ordinary
 room pools. Side-slot availability rank describes physical generation pressure;

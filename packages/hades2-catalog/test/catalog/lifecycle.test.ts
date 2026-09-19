@@ -49,8 +49,8 @@ describe('room lifecycle catalog', () => {
       kind: 'required',
       lifecycleProfileKeys: ['RoomReward'],
     });
-    expect(catalog.rooms.byKey.F_Opening01?.lifecycleProfileKey).toBe('OpeningRewardRoom');
-    expect(catalog.rooms.byKey.N_Opening01?.lifecycleProfileKey).toBe('OpeningRewardRoom');
+    expect(catalog.rooms.byKey.F_Opening01?.lifecycleProfileKey).toBeUndefined();
+    expect(catalog.rooms.byKey.N_Opening01?.lifecycleProfileKey).toBeUndefined();
     expect(catalog.roomLifecycleProfiles.byKey.ClockworkGoalRoom?.producer).toEqual({
       kind: 'none',
     });

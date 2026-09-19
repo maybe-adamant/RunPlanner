@@ -13,6 +13,7 @@ import {
   createOccurrenceId,
   createProjectDocument,
   createRouteAddress,
+  createStartingRewardAddress,
   createTargetAddress,
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
@@ -87,7 +88,12 @@ describe('project simulation composition', () => {
       routeKey: 'Underworld',
       configuredBiomeCount: 2,
     });
-    const { result, route: underworld } = route(project, 'Underworld');
+    const resolvedProject = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceStartingReward',
+      reward: createStartingRewardAddress('Underworld'),
+      value: { rewardType: 'WeaponUpgrade' },
+    });
+    const { result, route: underworld } = route(resolvedProject, 'Underworld');
 
     expect(result.status).toBe('incomplete');
     expect(underworld).toMatchObject({

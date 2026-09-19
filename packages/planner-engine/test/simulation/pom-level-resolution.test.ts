@@ -9,6 +9,7 @@ import {
   createExitSelectionAddress,
   createIncomingRewardAddress,
   createLevelResolutionAddress,
+  createStartingRewardAddress,
   createOccurrenceAddress,
   createOccurrenceId,
   createRewardWheelOfferAddress,
@@ -661,8 +662,8 @@ describe('Pom level resolutions', () => {
       createOccurrenceId('midshop-pom-start'),
     );
     project = applyProjectCommand(project, catalog, {
-      kind: 'ReplaceIncomingReward',
-      reward: openingReward,
+      kind: 'ReplaceStartingReward',
+      reward: createStartingRewardAddress('Underworld'),
       value: {
         rewardType: 'Boon',
         payload: { kind: 'BoonSource', source: 'HestiaUpgrade' },

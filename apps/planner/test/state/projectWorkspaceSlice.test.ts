@@ -17,6 +17,7 @@ import {
   createOccurrenceId,
   createProjectDocument,
   createRouteAddress,
+  createStartingRewardAddress,
   createShopOfferAddress,
   createTraitOfferAddress,
   hermesShrineDeliveryEntryKey,
@@ -215,6 +216,14 @@ describe('project workspace application state', () => {
       }),
     );
     const configured = presentProject(store);
+    store.dispatch(
+      authoredProjectCommandDispatched({
+        kind: 'ReplaceStartingReward',
+        reward: createStartingRewardAddress('Underworld'),
+        value: { rewardType: 'WeaponUpgrade' },
+      }),
+    );
+    const rootResolved = presentProject(store);
     const command = {
       kind: 'CreateStart',
       biome: createBiomeAddress('Underworld', 'F'),
@@ -227,32 +236,32 @@ describe('project workspace application state', () => {
     const editedHistory = projectHistory(store);
     const editedPlan = editedHistory.present.route.biomes[0];
     if (editedPlan === undefined) throw new Error('expected edited F plan');
-    expect(editedHistory.past).toEqual([original, configured]);
+    expect(editedHistory.past).toEqual([original, configured, rootResolved]);
     expect(editedPlan.topology?.startOccurrenceId).toBe('f-start');
     expect(editedHistory.future).toEqual([]);
-    expect(assembleProjectEvaluation).toHaveBeenCalledTimes(3);
-    expect(assembleProjectEvaluation.mock.calls[2]?.[0]).toBe(editedHistory.present);
+    expect(assembleProjectEvaluation).toHaveBeenCalledTimes(4);
+    expect(assembleProjectEvaluation.mock.calls[3]?.[0]).toBe(editedHistory.present);
     expect(selectProjectEvaluation(editedState)).toBe(
-      assembleProjectEvaluation.mock.results[2]?.value.evaluation,
+      assembleProjectEvaluation.mock.results[3]?.value.evaluation,
     );
 
     store.dispatch(authoredProjectUndoRequested());
     const undoneState = store.getState();
-    expect(presentProject(undoneState)).toBe(configured);
+    expect(presentProject(undoneState)).toBe(rootResolved);
     expect(projectHistory(store).future).toEqual([editedHistory.present]);
-    expect(assembleProjectEvaluation).toHaveBeenCalledTimes(4);
-    expect(assembleProjectEvaluation.mock.calls[3]?.[0]).toBe(configured);
+    expect(assembleProjectEvaluation).toHaveBeenCalledTimes(5);
+    expect(assembleProjectEvaluation.mock.calls[4]?.[0]).toBe(rootResolved);
     expect(selectProjectEvaluation(undoneState)).toBe(
-      assembleProjectEvaluation.mock.results[3]?.value.evaluation,
+      assembleProjectEvaluation.mock.results[4]?.value.evaluation,
     );
 
     store.dispatch(authoredProjectRedoRequested());
     const redoneState = store.getState();
     expect(presentProject(redoneState)).toBe(editedHistory.present);
-    expect(assembleProjectEvaluation).toHaveBeenCalledTimes(5);
-    expect(assembleProjectEvaluation.mock.calls[4]?.[0]).toBe(editedHistory.present);
+    expect(assembleProjectEvaluation).toHaveBeenCalledTimes(6);
+    expect(assembleProjectEvaluation.mock.calls[5]?.[0]).toBe(editedHistory.present);
     expect(selectProjectEvaluation(redoneState)).toBe(
-      assembleProjectEvaluation.mock.results[4]?.value.evaluation,
+      assembleProjectEvaluation.mock.results[5]?.value.evaluation,
     );
   });
 
@@ -265,6 +274,13 @@ describe('project workspace application state', () => {
         kind: 'ConfigureRoutePrefix',
         route: createRouteAddress('Underworld'),
         configuredBiomeCount: 1,
+      }),
+    );
+    store.dispatch(
+      authoredProjectCommandDispatched({
+        kind: 'ReplaceStartingReward',
+        reward: createStartingRewardAddress('Underworld'),
+        value: { rewardType: 'WeaponUpgrade' },
       }),
     );
     store.dispatch(
@@ -308,7 +324,11 @@ describe('project workspace application state', () => {
     'rejects resource %s when either exact host is after missing input',
     (operation) => {
       const { store, assembleProjectEvaluation } = createStore();
-      const original = createCompleteFGProject();
+      const original = applyProjectCommand(createCompleteFGProject(), catalog, {
+        kind: 'ReplaceStartingReward',
+        reward: createStartingRewardAddress('Underworld'),
+        value: null,
+      });
       const suffix = { biomeKey: 'F', occurrenceId: goldenFOccurrenceId(1, 1) };
       const project: ProjectDocument = {
         ...original,
@@ -318,21 +338,6 @@ describe('project workspace application state', () => {
             ...original.route.resourcePlacements,
             Pickaxe: operation === 'add' ? null : suffix,
           },
-          biomes: original.route.biomes.map((biome) =>
-            biome.biomeKey !== 'F' || biome.topology === null
-              ? biome
-              : {
-                  ...biome,
-                  topology: {
-                    ...biome.topology,
-                    occurrences: biome.topology.occurrences.map((room) =>
-                      room.occurrenceId !== goldenFStartId || room.state.kind !== 'counted'
-                        ? room
-                        : { ...room, state: { ...room.state, reward: null } },
-                    ),
-                  },
-                },
-          ),
         },
       };
       store.dispatch(authoredProjectReplaced(project));

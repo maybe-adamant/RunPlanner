@@ -4,8 +4,8 @@ import { describe, expect, it } from 'vitest';
 import { catalog } from '@run-planner/hades2-catalog';
 import {
   applyProjectCommand,
-  createIncomingRewardAddress,
   createRouteAddress,
+  createStartingRewardAddress,
   createBiomeAddress,
   createOccurrenceId,
   createOccurrenceAddress,
@@ -155,8 +155,8 @@ describe('selected resource success legality', () => {
       gameName: 'F_Opening01',
     });
     project = applyProjectCommand(project, catalog, {
-      kind: 'ReplaceIncomingReward',
-      reward: createIncomingRewardAddress(biome, occurrenceId),
+      kind: 'ReplaceStartingReward',
+      reward: createStartingRewardAddress('Dream'),
       value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'ApolloUpgrade' } },
     });
     project = applyProjectCommand(project, catalog, {
@@ -631,8 +631,8 @@ describe('selected resource success legality', () => {
     };
     const evaluated = simulateProject(catalog, invalidProject);
     const earlierOfferMissing = applyProjectCommand(invalidProject, catalog, {
-      kind: 'ReplaceIncomingReward',
-      reward: createIncomingRewardAddress(fGenerationBiome, host.occurrenceId),
+      kind: 'ReplaceStartingReward',
+      reward: createStartingRewardAddress('Underworld'),
       value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'ZeusUpgrade' } },
     });
     expect(simulateProject(catalog, earlierOfferMissing).issue).toMatchObject({

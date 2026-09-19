@@ -884,6 +884,14 @@ producer-owned source, declaration-owned acquisition roles, participation, and
 chronological address. The reward kernel remains the sole authority that turns
 those roles into loot/use history, trait acquisition, and level effects.
 
+Run start separates these owners explicitly: Loadout stores the starting offer,
+and the first entry occurrence stores its acquisition payload. The catalog's
+single run-start binding supplies the offer domain without requiring a room
+variant. Selecting that offer does not acquire it in Loadout. Entry realization
+composes the two authored products at the existing room lifecycle contact;
+offer findings address the route source, while acquisition findings retain the
+room-owned address. Later entry occurrences do not bind the starting offer.
+
 Fixed-linked Postboss settlement uses the ordinary occurrence-owned ranked Room
 Action product. Every declared Postboss fountain contributes required
 `useFountain`; `interactKeepsakeRack` is also required when a replacement is

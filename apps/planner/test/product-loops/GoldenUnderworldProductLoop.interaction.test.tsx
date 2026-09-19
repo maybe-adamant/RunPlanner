@@ -18,6 +18,7 @@ import {
   createOccurrenceId,
   createProjectDocument,
   createRouteStartKeepsakeSelectionAddress,
+  createStartingRewardAddress,
   createTargetAddress,
   createTraitOfferAddress,
   echoLastRewardPickupEntryKey,
@@ -41,7 +42,6 @@ import {
   goldenFBiome,
   goldenGBiome,
   goldenGOccurrenceId,
-  goldenFStartId,
 } from '@run-planner/test-fixtures/underworld';
 import { loadSurfaceNOPQProject } from '@run-planner/test-fixtures/surface';
 import { renderPlannerForInteraction } from '../fixtures/renderPlanner';
@@ -75,8 +75,8 @@ describe('underworld product loop', () => {
       keepsakeKey: 'SpellTalentKeepsake',
     });
     project = applyProjectCommand(project, application.catalog, {
-      kind: 'ReplaceIncomingReward',
-      reward: createIncomingRewardAddress(goldenFBiome, goldenFStartId),
+      kind: 'ReplaceStartingReward',
+      reward: createStartingRewardAddress('Underworld'),
       value: { rewardType: 'SpellDrop' },
     });
     application.store.dispatch(authoredProjectReplaced(authorLegalTraitOffers(project)));
@@ -106,14 +106,14 @@ describe('underworld product loop', () => {
 
   it('projects the reached forced Zeus Boon and its still-active ordinary source in Run State', async () => {
     const application = createApplication();
-    const openingReward = createIncomingRewardAddress(goldenFBiome, goldenFStartId);
+    const openingReward = createStartingRewardAddress('Underworld');
     let project = applyProjectCommand(createGoldenFGHIProject(), application.catalog, {
       kind: 'ReplaceStartingKeepsake',
       selection: createRouteStartKeepsakeSelectionAddress('Underworld'),
       keepsakeKey: 'ForceZeusBoonKeepsake',
     });
     project = applyProjectCommand(project, application.catalog, {
-      kind: 'ReplaceIncomingReward',
+      kind: 'ReplaceStartingReward',
       reward: openingReward,
       value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'ZeusUpgrade' } },
     });
@@ -156,22 +156,22 @@ describe('underworld product loop', () => {
     );
     application.store.dispatch(
       authoredProjectCommandDispatched({
-        kind: 'CreateStart',
-        biome,
-        occurrenceId,
-        gameName: 'F_Opening01',
-      }),
-    );
-    const beforeReward = currentProject(application);
-    const historyBefore = currentWorkspace(application).history.past.length;
-    application.store.dispatch(
-      authoredProjectCommandDispatched({
-        kind: 'ReplaceIncomingReward',
-        reward: createIncomingRewardAddress(biome, occurrenceId),
+        kind: 'ReplaceStartingReward',
+        reward: createStartingRewardAddress('Underworld'),
         value: {
           rewardType: 'Boon',
           payload: { kind: 'BoonSource', source: 'ApolloUpgrade' },
         },
+      }),
+    );
+    const historyBefore = currentWorkspace(application).history.past.length;
+    const beforeEntry = currentProject(application);
+    application.store.dispatch(
+      authoredProjectCommandDispatched({
+        kind: 'CreateStart',
+        biome,
+        occurrenceId,
+        gameName: 'F_Opening01',
       }),
     );
     const authoredOccurrence = () =>
@@ -210,7 +210,7 @@ describe('underworld product loop', () => {
     expect(currentEvaluation(application)).toBe(evaluationBefore);
 
     await view.user.click(screen.getByRole('button', { name: 'Undo' }));
-    expect(currentProject(application)).toBe(beforeReward);
+    expect(currentProject(application)).toBe(beforeEntry);
   });
 
   it('renders F through I through one shared biome workspace surface', async () => {
@@ -453,8 +453,8 @@ describe('underworld product loop', () => {
       gameName: 'F_Opening01',
     });
     project = applyProjectCommand(project, application.catalog, {
-      kind: 'ReplaceIncomingReward',
-      reward: createIncomingRewardAddress(goldenFBiome, opening),
+      kind: 'ReplaceStartingReward',
+      reward: createStartingRewardAddress('Underworld'),
       value: {
         rewardType: 'Boon',
         payload: { kind: 'BoonSource', source: 'ApolloUpgrade' },
@@ -627,6 +627,13 @@ describe('underworld product loop', () => {
         name: '2',
       }),
     );
+    application.store.dispatch(
+      authoredProjectCommandDispatched({
+        kind: 'ReplaceStartingReward',
+        reward: createStartingRewardAddress('Underworld'),
+        value: { rewardType: 'WeaponUpgrade' },
+      }),
+    );
     await view.user.click(screen.getByRole('button', { name: 'Oceanus' }));
     expect(screen.getByText('Finish and fix Erebus before Oceanus can be evaluated.')).toBeTruthy();
     await view.user.click(screen.getByRole('tab', { name: 'Room Doors' }));
@@ -647,6 +654,13 @@ describe('underworld product loop', () => {
         configuredBiomeCount: 2,
         kind: 'ConfigureRoutePrefix',
         route: { kind: 'route', routeKey: 'Underworld' },
+      }),
+    );
+    application.store.dispatch(
+      authoredProjectCommandDispatched({
+        kind: 'ReplaceStartingReward',
+        reward: createStartingRewardAddress('Underworld'),
+        value: { rewardType: 'WeaponUpgrade' },
       }),
     );
     application.store.dispatch(

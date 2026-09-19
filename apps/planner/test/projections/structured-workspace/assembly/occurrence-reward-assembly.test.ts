@@ -39,6 +39,7 @@ import {
   pOccurrenceId,
   simulateProjectAssembly,
 } from '@planner-test/support/structured-workspace/occurrence-assembly.test-support';
+import { createStartingRewardAddress } from '@run-planner/engine/authored-project';
 
 describe('structured workspace reward assembly', () => {
   it('keeps skipped P Icarus selectable while hiding his dormant interaction and restoring its editor', () => {
@@ -401,8 +402,8 @@ describe('structured workspace reward assembly', () => {
       rank: 1,
     });
     project = applyProjectCommand(project, catalog, {
-      kind: 'ReplaceIncomingReward',
-      reward: createIncomingRewardAddress(goldenFBiome, goldenFStartId),
+      kind: 'ReplaceStartingReward',
+      reward: createStartingRewardAddress('Underworld'),
       value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'ApolloUpgrade' } },
     });
     const assembledForfeit = assemble(project, 'Underworld', 'F', goldenFStartId);
@@ -424,8 +425,8 @@ describe('structured workspace reward assembly', () => {
     const occurrenceId = goldenFOccurrenceId(1, 1);
     const fixture = createFConversionFrontierProject('GiftDrop');
     let project = applyProjectCommand(fixture.project, catalog, {
-      kind: 'ReplaceIncomingReward',
-      reward: createIncomingRewardAddress(goldenFBiome, goldenFStartId),
+      kind: 'ReplaceStartingReward',
+      reward: createStartingRewardAddress('Underworld'),
       value: { rewardType: 'WeaponUpgrade' },
     });
     project = applyProjectCommand(project, catalog, {

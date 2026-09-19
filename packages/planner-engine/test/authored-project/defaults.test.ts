@@ -5,10 +5,10 @@ import {
   applyProjectCommand,
   applyProjectHistoryCommand,
   createBiomeAddress,
-  createIncomingRewardAddress,
   createOccurrenceId,
   createProjectDocument,
   createProjectHistory,
+  createStartingRewardAddress,
   decodeProjectDocument,
   ProjectCommandContractError,
   undoProjectHistory,
@@ -122,11 +122,8 @@ describe('project defaults', () => {
     expect(routeBiome(grown, 'Underworld', 'F').topology?.startOccurrenceId).toBe('F:start');
 
     const authored = applyProjectCommand(created, singletonCatalog, {
-      kind: 'ReplaceIncomingReward',
-      reward: createIncomingRewardAddress(
-        createBiomeAddress('Underworld', 'F'),
-        createOccurrenceId('F:start'),
-      ),
+      kind: 'ReplaceStartingReward',
+      reward: createStartingRewardAddress('Underworld'),
       value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'ApolloUpgrade' } },
     });
     const cleared = applyProjectHistoryCommand(createProjectHistory(authored), singletonCatalog, {
@@ -179,11 +176,12 @@ describe('project defaults', () => {
 
     expect(occurrence).toMatchObject({
       gameName: 'G_Intro',
-      state: { kind: 'counted', reward: null },
+      state: { kind: 'none' },
     });
+    expect(project.route.loadout.startingReward).toBeNull();
   });
 
-  it('uses the later F profile after explicit entry selection in a supplied Dream itinerary', () => {
+  it('uses the later F entry after explicit selection in a supplied Dream itinerary', () => {
     const biome = createBiomeAddress('Dream', 'F');
     const project = createProjectDocument(catalog, {
       projectId: 'dream-later-f-start',
@@ -193,8 +191,9 @@ describe('project defaults', () => {
     });
     expect(routeBiome(project, 'Dream', 'G').topology?.occurrences[0]).toMatchObject({
       occurrenceId: 'G:start',
-      state: { kind: 'counted', reward: null },
+      state: { kind: 'none' },
     });
+    expect(project.route.loadout.startingReward).toBeNull();
     const selected = applyProjectCommand(project, catalog, {
       kind: 'CreateStart',
       biome,

@@ -8,6 +8,7 @@ import * as support from '@planner-test/support/structured-workspace/interaction
 import { candidateSupport } from '@planner/projections/candidates/candidateProjection';
 import { createGoldenFGHProject } from '@run-planner/test-fixtures/underworld';
 import { optionIndex } from '@run-planner/engine/authored-project';
+import { createStartingRewardAddress } from '@run-planner/engine/authored-project';
 import type {
   AuthoredTraitOffer,
   AuthoredTraitOfferTraits,
@@ -512,8 +513,8 @@ describe('trait-offers/bind', () => {
       rarificationActions: Object.freeze([]),
     });
     let project = applyProjectCommand(createCompleteFGProject(), catalog, {
-      kind: 'ReplaceIncomingReward',
-      reward,
+      kind: 'ReplaceStartingReward',
+      reward: createStartingRewardAddress('Underworld'),
       value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'HeraUpgrade' } },
     });
     project = applyProjectCommand(project, catalog, {
@@ -662,8 +663,8 @@ describe('trait-offers/bind', () => {
     const reward = createIncomingRewardAddress(goldenFBiome, goldenFStartId);
     const trait = createTraitOfferAddress(reward, 'source');
     let project = applyProjectCommand(createGoldenFGHIProject(), catalog, {
-      kind: 'ReplaceIncomingReward',
-      reward,
+      kind: 'ReplaceStartingReward',
+      reward: createStartingRewardAddress('Underworld'),
       value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'DemeterUpgrade' } },
     });
     const value: AuthoredTraitOfferTraits = Object.freeze({
@@ -746,8 +747,8 @@ describe('trait-offers/bind', () => {
     const reward = createIncomingRewardAddress(goldenFBiome, goldenFStartId);
     const trait = createTraitOfferAddress(reward, 'source');
     const project = applyProjectCommand(createGoldenFGHIProject(), catalog, {
-      kind: 'ReplaceIncomingReward',
-      reward,
+      kind: 'ReplaceStartingReward',
+      reward: createStartingRewardAddress('Underworld'),
       value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'DemeterUpgrade' } },
     });
     const interaction = bind(project, 'Underworld', 'F').interactions.traitOffers.get(

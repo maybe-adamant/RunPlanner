@@ -19,6 +19,7 @@ import {
   createLocalRewardAddress,
   createPostbossKeepsakeSelectionAddress,
   createRouteStartKeepsakeSelectionAddress,
+  createStartingRewardAddress,
   createShopOfferAddress,
   createTargetAddress,
   createOccurrenceId,
@@ -395,16 +396,16 @@ describe('chronological authoring horizon', () => {
       occurrenceId: fStartId,
       gameName: 'F_Opening01',
     });
-    const reward = createIncomingRewardAddress(fBiome, fStartId);
+    const reward = createStartingRewardAddress('Underworld');
     const assembly = simulateProjectAssembly(catalog, project);
 
     expect(assembly.evaluation.authoringHorizon).toEqual({
       kind: 'incomplete',
-      blockedAfter: createOccurrenceAddress(fBiome, fStartId),
+      blockedAfter: reward,
     });
     expect(authoringReadinessAt(assembly, createRouteAddress('Underworld'))).toBe('editable');
     expect(authoringReadinessAt(assembly, createOccurrenceAddress(fBiome, fStartId))).toBe(
-      'editable',
+      'locked',
     );
     expect(authoringReadinessAt(assembly, reward)).toBe('editable');
     expect(authoringReadinessAt(assembly, fDecision())).toBe('locked');

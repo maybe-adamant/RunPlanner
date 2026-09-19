@@ -18,10 +18,12 @@ Dream P entry. Later P uses its ordinary intro encounter. `OpeningEmpty` in
 `EncounterData.lua` is AlwaysForce and Dream-eligible, giving F/N combatless
 Dream entries. N's separate PreHub is unchanged.
 
-The planner resolves `routeFirst`/`routeLater` starting profiles for every
-route, with an explicit Dream encounter override where needed. Ordinary F/N
-openings retain their reward and encounter semantics. A normally rewardless
-Intro is not intrinsically rewardless at every route position.
+The planner represents this with rewardless entry declarations and one
+route-owned run-start reward binding, realized only at the first itinerary
+entry. Narrow contextual encounter rules select Dream `OpeningEmpty` for F/N
+at every ordinal and `PIntroDreamRunEmpty` only for first-position P. Ordinary
+F/N openings retain their reward and encounter semantics without duplicated
+first/later room profiles.
 
 `RoomDataDream.lua` declares `Dream_PostBoss01/02/03`: a Well, fountain and
 keepsake rack, without purging or natural Chaos. These rooms have neither

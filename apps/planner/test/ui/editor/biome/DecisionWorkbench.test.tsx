@@ -12,6 +12,7 @@ import {
   createOccurrenceAddress,
   createOccurrenceId,
   createProjectDocument,
+  createStartingRewardAddress,
   createTargetAddress,
   decodeProjectDocument,
   encodeProjectDocument,
@@ -384,8 +385,8 @@ describe('DecisionWorkbench', () => {
       gameName: 'F_Opening01',
     });
     project = applyProjectCommand(project, catalog, {
-      kind: 'ReplaceIncomingReward',
-      reward: createIncomingRewardAddress(goldenFBiome, occurrenceId),
+      kind: 'ReplaceStartingReward',
+      reward: createStartingRewardAddress('Underworld'),
       value: {
         rewardType: 'Boon',
         payload: { kind: 'BoonSource', source: 'ApolloUpgrade' },
@@ -564,8 +565,8 @@ describe('DecisionWorkbench', () => {
     act(() =>
       view.application.store.dispatch(
         authoredProjectCommandDispatched({
-          kind: 'ReplaceIncomingReward',
-          reward: createIncomingRewardAddress(nBiome, openingId),
+          kind: 'ReplaceStartingReward',
+          reward: createStartingRewardAddress('Surface'),
           value: {
             rewardType: 'Boon',
             payload: { kind: 'BoonSource', source: 'ApolloUpgrade' },
