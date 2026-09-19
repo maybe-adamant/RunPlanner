@@ -109,7 +109,7 @@ describe('App', () => {
     );
 
     expect(findingsMarkup(appMarkup(application))).toContain('Choose a reward');
-    expect(findingsMarkup(appMarkup(application))).toContain('Starting reward');
+    expect(findingsMarkup(appMarkup(application))).toContain('Loadout');
     expect(findingsMarkup(appMarkup(application))).not.toContain('Ephyra');
   });
 

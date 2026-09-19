@@ -7,7 +7,10 @@ import {
   presentAssessmentIssue,
   type StatusPresentation,
 } from '@planner/projections/evaluationProjection';
-import type { WorkspaceInspectorDestination } from '@planner/projections/structured-workspace';
+import type {
+  WorkspaceInspectorDestination,
+  WorkspaceRoute,
+} from '@planner/projections/structured-workspace';
 import { findingSelected } from '@planner/state/editorSessionSlice';
 import { useAppDispatch, useAppSelector } from '@planner/state/store';
 
@@ -59,10 +62,12 @@ export function ProjectFindings({
   catalog,
   issue,
   focusByOwner,
+  route,
 }: {
   readonly catalog: Catalog;
   readonly issue: AssessmentIssue | undefined;
   readonly focusByOwner: ReadonlyMap<string, WorkspaceInspectorDestination>;
+  readonly route?: WorkspaceRoute;
 }) {
   const dispatch = useAppDispatch();
   const selectedFinding = useAppSelector((state) => state.editorSession.selectedFinding);
@@ -103,7 +108,12 @@ export function ProjectFindings({
         <span className="assessment-issue-summary">
           <span className="finding-title">{copy.title}</span>
           <span className="finding-destination">
-            {findingDestinationLabel(catalog, destination?.focusAddress ?? issue.owner)}
+            {findingDestinationLabel(
+              catalog,
+              destination?.focusAddress ?? issue.owner,
+              destination,
+              route,
+            )}
           </span>
         </span>
         {copy.description !== undefined && (
