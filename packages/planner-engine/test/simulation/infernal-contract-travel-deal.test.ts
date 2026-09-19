@@ -161,9 +161,10 @@ function authoredDerivedReward(
   return authoredShopReward(offer, profileKey);
 }
 
-function baseFacts(enteredBiomes = 4): RewardKernelFacts {
+function baseFacts(enteredBiomes = 4, routeKey = 'Underworld'): RewardKernelFacts {
   return {
     requirements: {
+      routeKey,
       counters: {
         biomeDepthCache: 4,
         biomeEncounterDepth: 2,
@@ -458,7 +459,12 @@ function settle(options: {
   const facts = (
     history: RewardBranchState['history'],
     currentRoomShopOptionNames: ReadonlySet<string> = new Set(),
-  ) => factsWithHistory(baseFacts(options.enteredBiomes), history, currentRoomShopOptionNames);
+  ) =>
+    factsWithHistory(
+      baseFacts(options.enteredBiomes, roomGameName === 'Q_PreBoss01' ? 'Surface' : 'Underworld'),
+      history,
+      currentRoomShopOptionNames,
+    );
   const sourceBranches =
     options.divergentTravel === true
       ? Object.freeze([

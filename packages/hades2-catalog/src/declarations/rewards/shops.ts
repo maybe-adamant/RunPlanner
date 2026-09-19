@@ -39,6 +39,31 @@ function phaseOption(
   });
 }
 
+const dreamRoute: RequirementExpression = { kind: 'routeKeyEquals', routeKey: 'Dream' };
+
+function routeOption(
+  routeRequirement: RequirementExpression,
+  declaration: RawShopOptionEntryDeclaration,
+): RawShopOptionEntryDeclaration {
+  return option({
+    ...declaration,
+    requirement:
+      declaration.requirement === undefined
+        ? routeRequirement
+        : { kind: 'all', requirements: [routeRequirement, declaration.requirement] },
+  });
+}
+
+function dreamOption(declaration: RawShopOptionEntryDeclaration): RawShopOptionEntryDeclaration {
+  return routeOption(dreamRoute, declaration);
+}
+
+function ordinaryRouteOption(
+  declaration: RawShopOptionEntryDeclaration,
+): RawShopOptionEntryDeclaration {
+  return routeOption({ kind: 'not', requirement: dreamRoute }, declaration);
+}
+
 const worldGroups = [
   {
     key: 'Boon',
@@ -93,18 +118,22 @@ const worldGroups = [
         key: 'ArmorBoost',
         rewardType: 'ArmorBoost',
       }),
-      option({
+      ordinaryRouteOption({
         key: 'MetaCardPointsCommonDrop',
         rewardType: 'MetaCardPointsCommonDrop',
       }),
-      option({
+      ordinaryRouteOption({
         key: 'MetaCurrencyDrop',
         rewardType: 'MetaCurrencyDrop',
       }),
-      option({
+      ordinaryRouteOption({
         key: 'GiftDrop',
         rewardType: 'GiftDrop',
       }),
+      dreamOption({ key: 'FireBoost', rewardType: 'FireBoost' }),
+      dreamOption({ key: 'AirBoost', rewardType: 'AirBoost' }),
+      dreamOption({ key: 'EarthBoost', rewardType: 'EarthBoost' }),
+      dreamOption({ key: 'WaterBoost', rewardType: 'WaterBoost' }),
     ],
   },
   {
@@ -140,18 +169,19 @@ const worldGroups = [
 ] as const;
 
 const lateResourceOptions = [
-  option({
+  ordinaryRouteOption({
     key: 'WeaponPointsRareDrop',
     rewardType: 'WeaponPointsRareDrop',
   }),
-  option({
+  ordinaryRouteOption({
     key: 'CardUpgradePointsDrop',
     rewardType: 'CardUpgradePointsDrop',
   }),
-  option({
+  ordinaryRouteOption({
     key: 'CharonPointsDrop',
     rewardType: 'CharonPointsDrop',
   }),
+  dreamOption({ key: 'ElementalBoost', rewardType: 'ElementalBoost' }),
 ];
 
 const extendedWellItemKeys = [
