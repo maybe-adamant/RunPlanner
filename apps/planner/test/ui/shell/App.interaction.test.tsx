@@ -16,6 +16,7 @@ import {
   createOccurrenceId,
   createProjectDocument,
   createRouteAddress,
+  createRouteStartKeepsakeSelectionAddress,
   createTargetAddress,
   createTraitOfferAddress,
   createTraitAcquisitionTargetAddress,
@@ -669,7 +670,7 @@ describe('planner history interaction', () => {
 
     await user.click(screen.getByRole('button', { name: 'File' }));
     await user.click(screen.getByRole('menuitem', { name: 'Publish to Game…' }));
-    const publicationDialog = screen.getByRole('dialog', { name: 'Publish to game' });
+    const publicationDialog = await screen.findByRole('dialog', { name: 'Publish to game' });
     expect(publications).toHaveLength(0);
     expect(document.querySelector('.project-file-actions')?.contains(publicationDialog)).toBe(
       false,
@@ -762,6 +763,92 @@ describe('planner history interaction', () => {
     expect(configuredBiomeCount(application)).toBe(1);
     expect(undo).toHaveProperty('disabled', false);
     expect(redo).toHaveProperty('disabled', true);
+  });
+
+  it('creates and edits the F start in Loadout with ordinary Undo and timeline repair', async () => {
+    const { application, user } = renderPlannerForInteraction();
+    await user.selectOptions(screen.getByLabelText('Configure route up to'), '1');
+
+    await user.click(screen.getByRole('button', { name: 'Start Erebus' }));
+
+    expect(application.store.getState().editorSession.activePanel).toEqual({ kind: 'overview' });
+    expect(screen.getByLabelText('Start room configuration')).toBeTruthy();
+    expect(screen.getByText('Room')).toBeTruthy();
+    expect(screen.getByText('Reward')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Undo' })).not.toHaveProperty('disabled', true);
+    const initial = application.store.getState().projectWorkspace.history!.present;
+    const identity = () => screen.getByRole('region', { name: 'Start room configuration' });
+    await user.click(within(identity()).getByRole('button', { name: 'Room' }));
+    const alternative = within(await screen.findByRole('listbox'))
+      .getAllByRole('option')
+      .find(
+        (option) =>
+          option.getAttribute('aria-disabled') !== 'true' &&
+          option.getAttribute('data-selected-value') !== 'true',
+      );
+    if (alternative === undefined) throw new Error('missing alternative opening');
+    await user.click(alternative);
+    expect(application.store.getState().editorSession.activePanel).toEqual({ kind: 'overview' });
+    expect(application.store.getState().projectWorkspace.history!.present).not.toEqual(initial);
+    await user.click(screen.getByRole('button', { name: 'Undo' }));
+    expect(application.store.getState().projectWorkspace.history!.present).toEqual(initial);
+
+    const repair = () => screen.getByRole('region', { name: 'Next repair' });
+    await user.click(within(repair()).getByRole('button'));
+    expect(application.store.getState().editorSession.activePanel).toEqual({ kind: 'overview' });
+    expect(within(identity()).getByLabelText('Reward').getAttribute('data-selected-finding')).toBe(
+      'true',
+    );
+
+    await user.click(within(identity()).getByLabelText('Reward'));
+    await user.click(within(await screen.findByRole('listbox')).getByText('Hammer'));
+    expect(application.store.getState().editorSession.activePanel).toEqual({ kind: 'overview' });
+    expect(
+      application.store.getState().projectWorkspace.history!.present.route.biomes[0]?.topology
+        ?.occurrences[0]?.state,
+    ).toMatchObject({
+      kind: 'counted',
+      reward: { offer: { rewardType: 'WeaponUpgrade' } },
+    });
+    await user.click(within(repair()).getByRole('button'));
+    expect(application.store.getState().editorSession.activePanel).toEqual({
+      kind: 'biome',
+      biomeKey: 'F',
+    });
+    expect(application.store.getState().editorSession.traitDialogTarget).toBeNull();
+    expect(screen.queryByRole('region', { name: 'Start room configuration' })).toBeNull();
+    const timeline = screen.getByRole('tabpanel', { name: 'Room Timeline' });
+    expect(
+      within(timeline).getByRole('button', { name: 'Choose Trait; trait is not selected' }),
+    ).toBeTruthy();
+    expect(timeline.querySelector('[data-selected-finding="true"]')).not.toBeNull();
+    await user.click(screen.getByRole('button', { name: 'Undo' }));
+    expect(application.store.getState().projectWorkspace.history!.present).toEqual(initial);
+  });
+
+  it('keeps relocated opening controls locked behind incomplete loadout results', async () => {
+    const { application, user } = renderPlannerForInteraction();
+    await user.selectOptions(screen.getByLabelText('Configure route up to'), '1');
+    await user.click(screen.getByRole('button', { name: 'Start Erebus' }));
+    act(() =>
+      application.store.dispatch(
+        authoredProjectCommandDispatched({
+          kind: 'ReplaceStartingKeepsake',
+          keepsakeKey: 'HadesAndPersephoneKeepsake',
+          selection: createRouteStartKeepsakeSelectionAddress('Underworld'),
+        }),
+      ),
+    );
+    const identity = screen.getByRole('region', { name: 'Start room configuration' });
+    const before = application.store.getState().projectWorkspace.history;
+    for (const name of ['Room', 'Reward']) {
+      const control = within(identity).getByRole('button', { name });
+      expect(control).toHaveProperty('disabled', true);
+      await user.click(control);
+      await user.click(within(identity).getByText(name, { selector: 'label' }));
+    }
+    expect(screen.queryByRole('listbox')).toBeNull();
+    expect(application.store.getState().projectWorkspace.history).toBe(before);
   });
 
   it('supports Ctrl/Cmd+Z, Ctrl/Cmd+Shift+Z, and Ctrl+Y', async () => {

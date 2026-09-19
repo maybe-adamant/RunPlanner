@@ -27,6 +27,7 @@ describe('room lifecycle catalog', () => {
     expect(catalog.roomLifecycleProfiles.values.map((profile) => profile.key)).toEqual([
       'StandardRewardRoom',
       'OpeningRewardRoom',
+      'OpeningRewardNoEncounterRoom',
       'RewardlessCombatRoom',
       'PCombatRoom',
       'EphyraMainRoom',

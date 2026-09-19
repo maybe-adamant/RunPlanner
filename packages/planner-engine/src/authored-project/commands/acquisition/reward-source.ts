@@ -19,6 +19,7 @@ import { parseArtificerReplacementEntryKey } from '../../acquisition/artificer';
 import { parseHermesShrineDeliveryEntryKey } from '../../hermes-shrine-delivery';
 import { requireShipCombatWheels } from '../../room-state/declaration';
 import { incomingLevelEffectSource } from '../../room-state/level-effects';
+import { resolveStartingRoomDeclaration } from '../../room-state/starting-room-profile';
 import type { LevelResolutionEffectSource } from '../../../reward-kernel/level-effects';
 import { failCommand } from '../contract';
 import type { TraitOfferCommand, LevelResolutionCommand } from '../types';
@@ -41,6 +42,7 @@ function requireAuthoredReward(
 
 function pickupEntrySource(
   catalog: Catalog,
+  routePosition: import('../../route-context').ResolvedRoutePosition,
   occurrence: RoomOccurrence,
   owner: AcquisitionEntryAddress,
   command: RewardCommand,
@@ -90,6 +92,7 @@ function pickupEntrySource(
     catalog,
     createBiomeAddress(owner.routeKey, owner.biomeKey),
     occurrence,
+    resolveStartingRoomDeclaration(catalog.rooms.byKey[occurrence.gameName]!, routePosition),
     owner.site.pointKey,
     owner.entryKey,
   );
@@ -105,6 +108,7 @@ function pickupEntrySource(
 
 export function locateReward(
   catalog: Catalog,
+  routePosition: import('../../route-context').ResolvedRoutePosition,
   occurrence: RoomOccurrence,
   state: RoomOccurrence['state'],
   owner: TraitOfferOwnerAddress,
@@ -112,13 +116,17 @@ export function locateReward(
 ): LocatedReward | undefined {
   switch (owner.kind) {
     case 'acquisitionEntry':
-      return pickupEntrySource(catalog, occurrence, owner, command);
+      return pickupEntrySource(catalog, routePosition, occurrence, owner, command);
     case 'incomingReward':
       switch (state.kind) {
         case 'counted':
         case 'fixed':
         case 'ephyraCombat': {
-          const room = catalog.rooms.byKey[occurrence.gameName];
+          const rawRoom = catalog.rooms.byKey[occurrence.gameName];
+          const room =
+            rawRoom === undefined
+              ? undefined
+              : resolveStartingRoomDeclaration(rawRoom, routePosition);
           const binding = room?.incomingReward;
           if (binding === undefined || binding.kind === 'none')
             failCommand(command, `${occurrence.gameName} has no incoming reward binding`);

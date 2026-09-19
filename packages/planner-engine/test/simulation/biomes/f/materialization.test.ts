@@ -2,11 +2,20 @@ import { ordinaryPositionFor } from '../../../support/route-position';
 import { describe, expect, it } from 'vitest';
 
 import { catalog } from '@run-planner/hades2-catalog';
-import { roomActionKey, type ProjectDocument } from '@run-planner/engine/authored-project';
+import {
+  applyProjectCommand,
+  createBiomeAddress,
+  createOccurrenceId,
+  createProjectDocument,
+  resolveRoutePosition,
+  roomActionKey,
+  type ProjectDocument,
+} from '@run-planner/engine/authored-project';
 import {
   BiomeMaterializationContractError,
   evaluateBiomeCompleteness,
   materializeBiome,
+  materializeBiomePrefix,
   targetContinuation,
 } from '@run-planner/engine/simulation';
 
@@ -149,6 +158,74 @@ describe('F takeover materialization', () => {
     expect(pickup).toBeGreaterThanOrEqual(0);
     expect(pickup).toBeLessThan(start);
     expect(start).toBeLessThan(end);
+  });
+
+  it('uses Dream-first F opening reward with its declared empty encounter', () => {
+    const project = createCompleteFTakeoverProject();
+    const completeness = evaluateBiomeCompleteness(catalog, fBiome, fPlan(project));
+    if (completeness.completion !== 'complete') throw new Error('F fixture is incomplete');
+    const position = resolveRoutePosition(
+      catalog,
+      { routeKey: 'Dream', itineraryBiomeKeys: ['F'] },
+      'F',
+    );
+    const opening = materializeBiome(
+      catalog,
+      fBiome,
+      position,
+      completeness,
+      traitContext(project),
+    ).entryRoom;
+
+    expect(opening).toMatchObject({
+      lifecycleProfileKey: 'OpeningRewardRoom',
+      incomingRewardBinding: { kind: 'countedChoice', storeKeys: ['RunProgress'] },
+    });
+    expect(opening.encounterPhases).toMatchObject([
+      { authoredChoiceKey: 'OpeningEmpty', slotKey: 'Encounter' },
+    ]);
+    expect(opening.roomLifecycleTimeline.structure.points.map((point) => point.kind)).toEqual([
+      'roomEntered',
+      'outgoingGeneration',
+      'cleanup',
+    ]);
+  });
+
+  it('uses Dream-later F rewardless intro with its declared empty encounter', () => {
+    const biome = createBiomeAddress('Dream', 'F');
+    const project = applyProjectCommand(
+      createProjectDocument(catalog, {
+        projectId: 'dream-later-f',
+        routeKey: 'Dream',
+        itineraryBiomeKeys: ['N', 'F'],
+        configuredBiomeCount: 2,
+      }),
+      catalog,
+      { kind: 'CreateStart', biome, occurrenceId: createOccurrenceId('dream-later-f-start') },
+    );
+    const plan = project.route.biomes.find((candidate) => candidate.biomeKey === 'F');
+    if (plan === undefined) throw new Error('Dream fixture has no F plan');
+    const position = resolveRoutePosition(
+      catalog,
+      { routeKey: 'Dream', itineraryBiomeKeys: ['N', 'F'] },
+      'F',
+    );
+    const opening = materializeBiomePrefix(
+      catalog,
+      biome,
+      position,
+      plan,
+      traitContext(project),
+    )?.entryRoom;
+    if (opening === undefined) throw new Error('Dream fixture did not materialize F opening');
+
+    expect(opening).toMatchObject({
+      lifecycleProfileKey: 'RewardlessCombatRoom',
+      incomingRewardBinding: { kind: 'none' },
+    });
+    expect(opening.encounterPhases).toMatchObject([
+      { authoredChoiceKey: 'OpeningEmpty', slotKey: 'Encounter' },
+    ]);
   });
 
   it('derives Shop/free roles and completion entry from the selected physical exit', () => {

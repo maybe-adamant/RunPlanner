@@ -29,6 +29,7 @@ import {
   retainedHermesShrineDeliveryReward,
 } from '../../hermes-shrine-delivery';
 import { createBiomeAddress } from '../../addresses';
+import { resolveStartingRoomDeclaration } from '../../room-state/starting-room-profile';
 import { rewardSourceResolvesAtAcquisition } from '../../acquisition/reward-state';
 import {
   roomActionDomainForOccurrence,
@@ -409,6 +410,10 @@ export function applyAcquisitionSiteCommand(
       catalog,
       { kind: 'biome', routeKey: site.routeKey, biomeKey: site.biomeKey },
       occurrence,
+      resolveStartingRoomDeclaration(
+        catalog.rooms.byKey[occurrence.gameName]!,
+        located.routePosition,
+      ),
     ).find(
       (candidate) =>
         candidate.siteKey === site.pointKey &&
@@ -520,6 +525,10 @@ export function applyAcquisitionSiteCommand(
       catalog,
       { kind: 'biome', routeKey: site.routeKey, biomeKey: site.biomeKey },
       occurrence,
+      resolveStartingRoomDeclaration(
+        catalog.rooms.byKey[occurrence.gameName]!,
+        located.routePosition,
+      ),
     ).find(
       (candidate) =>
         candidate.siteKey === 'roomExit' &&

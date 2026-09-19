@@ -23,6 +23,21 @@ const chaosExit = {
   },
 };
 
+const pRouteFirstStartingRoom = {
+  templateKey: 'FixedOpening' as const,
+  incomingReward: {
+    kind: 'countedChoice' as const,
+    storeKeys: ['RunProgress'],
+    eligibleRewardTypes: [],
+    ineligibleRewardTypes: ['Devotion', 'RoomMoneyDrop', 'MaxHealthDrop', 'MaxManaDrop'],
+    producerLifecycleKey: 'RoomReward',
+  },
+  lifecycleProfileKey: 'OpeningRewardRoom',
+  enteredRewardStoreHistory: { kind: 'resolvedOffer' as const },
+  forcedRewardStoreKey: 'RunProgress',
+  dreamEncounterDefinitionKey: 'PIntroDreamRunEmpty',
+};
+
 export const pRooms = [
   {
     gameName: 'P_Intro',
@@ -39,6 +54,15 @@ export const pRooms = [
       { index: 2, type: 'OlympusOutdoorExitDoor' },
     ],
     incomingReward: { kind: 'none' },
+    startingRoomProfiles: {
+      routeFirst: pRouteFirstStartingRoom,
+      routeLater: {
+        templateKey: 'FixedIntro',
+        incomingReward: { kind: 'none' },
+        lifecycleProfileKey: 'RewardlessCombatRoom',
+        enteredRewardStoreHistory: { kind: 'none' },
+      },
+    },
     enteredRewardStoreHistory: { kind: 'none' },
     encounterEnvelopeKey: 'SingleEncounter',
     encounterSlotBindings: [

@@ -1,4 +1,4 @@
-import type { Catalog } from '../../catalog-schema';
+import type { Catalog, RoomDeclaration } from '../../catalog-schema';
 import type {
   ProjectDocument,
   RoomActionReference,
@@ -27,6 +27,8 @@ import {
 import { acquisitionSiteFromStorageKey } from './artificer';
 import { roomActionKey } from '../room-actions/key';
 import { directEncounterDefinitionKeyForSlot } from '../room-state/encounter-envelope';
+import { resolveRoutePosition } from '../route-context';
+import { resolveStartingRoomDeclaration } from '../room-state/starting-room-profile';
 import {
   createSelectedPickupEntries,
   materializeGorgonAthenaOffer,
@@ -61,8 +63,16 @@ function selectedClockedPickupSourceKeys(
   const route = document.route;
   for (const plan of route.biomes) {
     const biome = createBiomeAddress(route.routeKey, plan.biomeKey);
+    const routePosition = resolveRoutePosition(catalog, route, plan.biomeKey);
     for (const occurrence of plan.topology?.occurrences ?? []) {
-      for (const source of traitPickupOffers(catalog, biome, occurrence)) {
+      const rawRoom = catalog.rooms.byKey[occurrence.gameName];
+      if (rawRoom === undefined) continue;
+      for (const source of traitPickupOffers(
+        catalog,
+        biome,
+        occurrence,
+        resolveStartingRoomDeclaration(rawRoom, routePosition),
+      )) {
         if (
           source.source.owner.kind === 'encounterPhase' &&
           (!source.sourceNormal || !source.selectedEncounterSource)
@@ -354,6 +364,7 @@ function traitPickupOffers(
   catalog: Catalog,
   biome: BiomeAddress,
   occurrence: RoomOccurrence,
+  declaration: RoomDeclaration,
 ): readonly {
   readonly source: TraitOfferAddress;
   readonly sourceAction: RoomActionReference;
@@ -375,7 +386,7 @@ function traitPickupOffers(
     offer: AuthoredTraitOffer | null;
   }[] = [];
   const actionKeys = new Set(occurrence.roomActions.order.map(roomActionKey));
-  const room = catalog.rooms.byKey[occurrence.gameName];
+  const room = declaration;
   const sourceIsStory = room?.mode.kind === 'authored' && room.mode.templateKey === 'Story';
   const addReward = (
     owner: TraitOfferOwnerAddress,
@@ -387,7 +398,7 @@ function traitPickupOffers(
       const sourceAction = (() => {
         switch (owner.kind) {
           case 'incomingReward': {
-            const incoming = catalog.rooms.byKey[occurrence.gameName]?.incomingReward;
+            const incoming = room?.incomingReward;
             const lifecycleKey =
               incoming === undefined || incoming.kind === 'none'
                 ? undefined
@@ -546,9 +557,10 @@ export function selectedPickupProducers(
   catalog: Catalog,
   biome: BiomeAddress,
   occurrence: RoomOccurrence,
+  declaration: RoomDeclaration,
 ): readonly SelectedPickupProducer[] {
   return Object.freeze([
-    ...traitPickupOffers(catalog, biome, occurrence).flatMap(
+    ...traitPickupOffers(catalog, biome, occurrence, declaration).flatMap(
       ({ source, sourceAction, sourceNormal, sourceIsStory, offer }) => {
         const echoKey =
           source.owner.kind === 'encounterPhase'
@@ -569,7 +581,7 @@ export function selectedPickupProducers(
         );
       },
     ),
-    ...nemesisPickupProducers(catalog, biome, occurrence),
+    ...nemesisPickupProducers(catalog, biome, occurrence, declaration),
   ]);
 }
 
@@ -577,6 +589,7 @@ function nemesisPickupProducers(
   catalog: Catalog,
   biome: BiomeAddress,
   occurrence: RoomOccurrence,
+  declaration: RoomDeclaration,
 ): readonly SelectedPickupProducer[] {
   const actions = new Set(occurrence.roomActions.order.map(roomActionKey));
   return Object.entries(occurrence.encounters.nemesisRandomEventByPhase ?? {}).flatMap(
@@ -613,7 +626,7 @@ function nemesisPickupProducers(
           sourceAction: Object.freeze({ kind: 'interactEncounter' as const, phaseKey }),
           sourceNormal:
             (() => {
-              const room = catalog.rooms.byKey[occurrence.gameName];
+              const room = declaration;
               return (
                 room !== undefined &&
                 directEncounterDefinitionKeyForSlot(
@@ -646,9 +659,12 @@ export function activeSelectedPickupProducers(
   catalog: Catalog,
   biome: BiomeAddress,
   occurrence: RoomOccurrence,
+  declaration: RoomDeclaration,
 ): readonly SelectedPickupProducer[] {
   return Object.freeze(
-    selectedPickupProducers(catalog, biome, occurrence).filter((producer) => producer.sourceNormal),
+    selectedPickupProducers(catalog, biome, occurrence, declaration).filter(
+      (producer) => producer.sourceNormal,
+    ),
   );
 }
 
@@ -657,10 +673,11 @@ export function selectedPickupProducerForEntry(
   catalog: Catalog,
   biome: BiomeAddress,
   occurrence: RoomOccurrence,
+  declaration: RoomDeclaration,
   siteKey: string,
   entryKey: string,
 ): SelectedPickupProducer | undefined {
-  return selectedPickupProducers(catalog, biome, occurrence).find(
+  return selectedPickupProducers(catalog, biome, occurrence, declaration).find(
     (producer) =>
       producer.siteKey === siteKey && producer.pickups.some((pickup) => pickup.key === entryKey),
   );
@@ -675,8 +692,9 @@ export function reconcileSelectedPickupProducerState(
   catalog: Catalog,
   biome: BiomeAddress,
   occurrence: RoomOccurrence,
+  declaration: RoomDeclaration,
 ): RoomOccurrence {
-  const producers = selectedPickupProducers(catalog, biome, occurrence);
+  const producers = selectedPickupProducers(catalog, biome, occurrence, declaration);
   const echoKeys = new Set(echoLastRewardPickupEntryKeys(catalog, occurrence.encounters));
   const selectedSiteKeys = new Set(producers.map((producer) => producer.siteKey));
   const structuralEntries = new Set(

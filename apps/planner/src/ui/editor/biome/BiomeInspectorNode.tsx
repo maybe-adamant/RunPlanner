@@ -35,6 +35,7 @@ interface BiomeInspectorNodeProps {
   readonly roomTab?: WorkspaceRoomTab;
   readonly findingNavigationRevision?: number;
   readonly sourceOccurrence?: Extract<WorkspaceNode, { readonly kind: 'occurrenceWorkbench' }>;
+  readonly showStartRoomIdentity?: boolean;
 }
 
 function OccurrenceOutgoing({
@@ -80,6 +81,7 @@ function OccurrenceInspector({
   outgoingDecision,
   findingNavigationRevision,
   roomTab,
+  showStartRoomIdentity,
 }: Pick<
   BiomeInspectorNodeProps,
   | 'interactions'
@@ -88,6 +90,7 @@ function OccurrenceInspector({
   | 'outgoingDecision'
   | 'findingNavigationRevision'
   | 'roomTab'
+  | 'showStartRoomIdentity'
 > & {
   readonly defaultToDoors?: boolean;
   readonly node: Extract<WorkspaceNode, { readonly kind: 'occurrenceWorkbench' }>;
@@ -102,7 +105,9 @@ function OccurrenceInspector({
         );
   return (
     <>
-      <StartRoomIdentityEditor interactions={interactions} node={node} />
+      {showStartRoomIdentity === true ? (
+        <StartRoomIdentityEditor interactions={interactions} node={node} />
+      ) : null}
       <OccurrenceWorkbench
         {...(node.incomingDoor === undefined ? {} : { incomingDoor: node.incomingDoor })}
         interactions={interactions}

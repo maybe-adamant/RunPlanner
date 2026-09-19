@@ -76,4 +76,28 @@ describe('project defaults', () => {
       );
     },
   );
+
+  it('creates a Dream-first G start with its opening reward state', () => {
+    const biome = createBiomeAddress('Dream', 'G');
+    const occurrenceId = createOccurrenceId('dream-g-start');
+    const project = createProjectDocument(catalog, {
+      projectId: 'dream-g-start',
+      routeKey: 'Dream',
+      itineraryBiomeKeys: ['G', 'F'],
+      configuredBiomeCount: 1,
+    });
+    const next = applyProjectCommand(project, catalog, {
+      kind: 'CreateStart',
+      biome,
+      occurrenceId,
+    });
+    const occurrence = routeBiome(next, 'Dream', 'G').topology?.occurrences.find(
+      (candidate) => candidate.occurrenceId === occurrenceId,
+    );
+
+    expect(occurrence).toMatchObject({
+      gameName: 'G_Intro',
+      state: { kind: 'counted', reward: null },
+    });
+  });
 });

@@ -1,0 +1,216 @@
+import { describe, expect, it } from 'vitest';
+
+import { catalog } from '@run-planner/hades2-catalog';
+import {
+  applyProjectCommand,
+  createBiomeAddress,
+  createIncomingRewardAddress,
+  createOccurrenceAddress,
+  createOccurrenceId,
+  createProjectDocument,
+  createTraitOfferAddress,
+  decodeProjectDocument,
+  encodeProjectDocument,
+  resolveRoutePosition,
+  resolveStartingRoomDeclaration,
+} from '@run-planner/engine/authored-project';
+import { selectedPickupProducers } from '../../../src/authored-project/acquisition/pickup-producers';
+
+function room(gameName: string) {
+  const declaration = catalog.rooms.byKey[gameName];
+  if (declaration === undefined) throw new Error(`missing ${gameName}`);
+  return declaration;
+}
+
+function dreamPosition(biomeKey: string, isFirst: boolean) {
+  const otherBiome = biomeKey === 'F' ? 'G' : 'F';
+  return resolveRoutePosition(
+    catalog,
+    {
+      routeKey: 'Dream',
+      itineraryBiomeKeys: isFirst ? [biomeKey, otherBiome] : [otherBiome, biomeKey],
+    },
+    biomeKey,
+  );
+}
+
+describe('contextual starting-room profiles', () => {
+  it('resolves ordinary F through the first-position profile without replacing its combat', () => {
+    const declaration = room('F_Opening01');
+    const resolved = resolveStartingRoomDeclaration(
+      declaration,
+      resolveRoutePosition(
+        catalog,
+        {
+          routeKey: 'Underworld',
+          itineraryBiomeKeys: ['F', 'G', 'H', 'I'],
+        },
+        'F',
+      ),
+    );
+
+    expect(resolved).toEqual(declaration);
+    expect(resolved.encounterSlotBindings[0]).toMatchObject({
+      kind: 'fixed',
+      encounterDefinitionKey: 'OpeningGeneratedF',
+    });
+  });
+
+  it.each(['Underworld', 'Surface'])(
+    'resolves every %s starting reward by route position',
+    (routeKey) => {
+      const route = catalog.routes.byKey[routeKey]!;
+      for (const [index, biomeKey] of route.biomeKeys.entries()) {
+        const gameName =
+          biomeKey === 'F' ? 'F_Opening01' : biomeKey === 'N' ? 'N_Opening01' : `${biomeKey}_Intro`;
+        const declaration = room(gameName);
+        const resolved = resolveStartingRoomDeclaration(
+          declaration,
+          resolveRoutePosition(
+            catalog,
+            {
+              routeKey,
+              itineraryBiomeKeys: route.biomeKeys,
+            },
+            biomeKey,
+          ),
+        );
+        expect(resolved.incomingReward.kind).toBe(index === 0 ? 'countedChoice' : 'none');
+        expect(resolved.encounterSlotBindings).toEqual(declaration.encounterSlotBindings);
+        expect(resolved.incomingReward).toBe(
+          index === 0
+            ? declaration.startingRoomProfiles!.routeFirst!.incomingReward
+            : declaration.startingRoomProfiles!.routeLater!.incomingReward,
+        );
+      }
+    },
+  );
+
+  it('applies Dream first and later F/N profiles while keeping N PreHub separate', () => {
+    expect(
+      resolveStartingRoomDeclaration(room('F_Opening01'), dreamPosition('F', true)),
+    ).toMatchObject({
+      mode: { templateKey: 'FixedOpening' },
+      incomingReward: { kind: 'countedChoice' },
+      encounterSlotBindings: [{ encounterDefinitionKey: 'OpeningEmpty' }],
+    });
+    expect(
+      resolveStartingRoomDeclaration(room('F_Opening01'), dreamPosition('F', false)),
+    ).toMatchObject({
+      mode: { templateKey: 'FixedIntro' },
+      incomingReward: { kind: 'none' },
+      encounterSlotBindings: [{ encounterDefinitionKey: 'OpeningEmpty' }],
+    });
+    expect(
+      resolveStartingRoomDeclaration(room('N_Opening01'), dreamPosition('N', true)),
+    ).toMatchObject({
+      incomingReward: { kind: 'countedChoice' },
+      enteredRewardStoreHistory: { kind: 'none' },
+      encounterSlotBindings: [{ encounterDefinitionKey: 'OpeningEmpty' }],
+    });
+    expect(resolveStartingRoomDeclaration(room('N_PreHub01'), dreamPosition('N', true))).toBe(
+      room('N_PreHub01'),
+    );
+  });
+
+  it('uses reward-bearing empty Dream intros and P’s declared opening encounter', () => {
+    expect(resolveStartingRoomDeclaration(room('G_Intro'), dreamPosition('G', true))).toMatchObject(
+      {
+        lifecycleProfileKey: 'OpeningRewardNoEncounterRoom',
+        incomingReward: { kind: 'countedChoice' },
+        enteredRewardStoreHistory: { kind: 'resolvedOffer' },
+      },
+    );
+    expect(resolveStartingRoomDeclaration(room('P_Intro'), dreamPosition('P', true))).toMatchObject(
+      {
+        mode: { templateKey: 'FixedOpening' },
+        encounterSlotBindings: [{ encounterDefinitionKey: 'PIntroDreamRunEmpty' }],
+        enteredRewardStoreHistory: { kind: 'resolvedOffer' },
+      },
+    );
+  });
+
+  it('preserves the rewardless Dream-later profile when replacing F opening variants', () => {
+    const biome = createBiomeAddress('Dream', 'F');
+    const occurrenceId = createOccurrenceId('dream-later-f');
+    let project = applyProjectCommand(
+      createProjectDocument(catalog, {
+        projectId: 'dream-later-f',
+        routeKey: 'Dream',
+        itineraryBiomeKeys: ['G', 'F'],
+        configuredBiomeCount: 2,
+      }),
+      catalog,
+      { kind: 'CreateStart', biome, occurrenceId, gameName: 'F_Opening01' },
+    );
+    for (const gameName of ['F_Opening02', 'F_Opening03', 'F_Opening01']) {
+      project = applyProjectCommand(project, catalog, {
+        kind: 'ReplaceOccurrenceRoom',
+        occurrence: createOccurrenceAddress(biome, occurrenceId),
+        gameName,
+      });
+      expect(project.route.biomes[1]?.topology?.occurrences[0]).toMatchObject({
+        occurrenceId,
+        gameName,
+        state: { kind: 'none' },
+      });
+      expect(decodeProjectDocument(JSON.parse(encodeProjectDocument(project)), catalog)).toEqual(
+        project,
+      );
+    }
+  });
+
+  it('reconciles and decodes Buried Treasure pickups from a Dream-first G reward', () => {
+    const biome = createBiomeAddress('Dream', 'G');
+    const occurrenceId = createOccurrenceId('dream-g-pickups');
+    const reward = createIncomingRewardAddress(biome, occurrenceId);
+    let project = applyProjectCommand(
+      createProjectDocument(catalog, {
+        projectId: 'dream-g-pickups',
+        routeKey: 'Dream',
+        itineraryBiomeKeys: ['G', 'F'],
+        configuredBiomeCount: 1,
+      }),
+      catalog,
+      { kind: 'CreateStart', biome, occurrenceId },
+    );
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceIncomingReward',
+      reward,
+      value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'PoseidonUpgrade' } },
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceTraitOffer',
+      trait: createTraitOfferAddress(reward, 'source'),
+      value: {
+        kind: 'traits',
+        giverKey: 'Poseidon',
+        options: [
+          { traitKey: 'RoomRewardBonusBoon', rarity: 'Common' },
+          { traitKey: 'PoseidonWeaponBoon', rarity: 'Common' },
+          { traitKey: 'PoseidonSpecialBoon', rarity: 'Common' },
+        ],
+        selectedOptionKey: 'option1',
+      },
+    });
+    const occurrence = project.route.biomes[0]?.topology?.occurrences[0];
+    if (occurrence === undefined) throw new Error('missing G start');
+    const declaration = resolveStartingRoomDeclaration(room('G_Intro'), dreamPosition('G', true));
+    const producer = selectedPickupProducers(catalog, biome, occurrence, declaration).find(
+      (candidate) => candidate.traitKey === 'RoomRewardBonusBoon',
+    );
+    if (producer === undefined) throw new Error('missing Buried Treasure producer');
+    expect(producer.sourceAction).toMatchObject({
+      kind: 'interactIncomingReward',
+      producerPoint: 'roomRewardPickup',
+      acquisitionRole: 'source',
+    });
+    expect(occurrence.roomActions.order).toContainEqual(producer.sourceAction);
+    expect(occurrence.acquisitionSites?.[producer.siteKey]?.pickupEntries).toHaveProperty(
+      'smallGold',
+    );
+    expect(decodeProjectDocument(JSON.parse(encodeProjectDocument(project)), catalog)).toEqual(
+      project,
+    );
+  });
+});

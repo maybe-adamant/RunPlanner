@@ -18,6 +18,7 @@ import { reconcileSelectedPickupProducerState } from '../acquisition/pickup-prod
 import { createBiomeAddress, type TraitOfferAddress } from '../addresses';
 import type { ProjectDocument, RoomOccurrence, AuthoredRewardState } from '../model';
 import { directEncounterDefinitionKeyForSlot } from '../room-state/encounter-envelope';
+import { resolveStartingRoomDeclaration } from '../room-state/starting-room-profile';
 import { failCommand, requireOccurrence, requireTopology, type LocatedBiome } from './contract';
 import { sameOccurrenceValue } from './occurrence/leaf-value';
 import { replaceOccurrence, updateOccurrenceTopology } from './occurrence/mutation';
@@ -458,10 +459,21 @@ export function applyTraitOfferCommand(
       catalog,
       createBiomeAddress(trait.routeKey, trait.biomeKey),
       Object.freeze({ ...occurrence, encounters: nextEncounters }),
+      resolveStartingRoomDeclaration(
+        catalog.rooms.byKey[occurrence.gameName]!,
+        located.routePosition,
+      ),
     );
     return updateOccurrenceTopology(document, located, replaceOccurrence(topology, reconciled));
   }
-  const reward = locateReward(catalog, occurrence, occurrence.state, owner, command);
+  const reward = locateReward(
+    catalog,
+    located.routePosition,
+    occurrence,
+    occurrence.state,
+    owner,
+    command,
+  );
   if (command.kind === 'ResetEncounterTraitOffer')
     failCommand(command, 'only encounter-owned trait offers can be reset');
   if (reward === undefined) failCommand(command, `no trait offer at role ${trait.acquisitionRole}`);
@@ -537,6 +549,10 @@ export function applyTraitOfferCommand(
         catalog,
         createBiomeAddress(trait.routeKey, trait.biomeKey),
         nextOccurrence,
+        resolveStartingRoomDeclaration(
+          catalog.rooms.byKey[occurrence.gameName]!,
+          located.routePosition,
+        ),
       ),
     ),
   );

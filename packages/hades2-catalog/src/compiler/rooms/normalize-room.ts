@@ -30,6 +30,7 @@ import {
   normalizeRoomRewardFacts,
   normalizeRoomRewardStoreFacts,
 } from './reward-facts';
+import { normalizeStartingRoomProfiles } from './starting-room-facts';
 
 /** Produces one fully normalized immutable room declaration from its raw declaration. */
 export function normalizeRoom(
@@ -65,6 +66,13 @@ export function normalizeRoom(
   );
   const fields = normalizeRoomFieldsFacts(room, identity, reward.localChildren, rewards, path);
   const features = normalizeRoomFeatureFacts(room, path);
+  const startingRoomProfiles = normalizeStartingRoomProfiles(
+    room,
+    rewards,
+    encounterEnvelopes,
+    encounterDefinitions,
+    path,
+  );
 
   // Preserve the original final declaration checks after local feature products.
   const core = normalizeRoomCoreFacts(room, path);
@@ -91,6 +99,7 @@ export function normalizeRoom(
     exits: exits.exits,
     additionalExits: exits.additionalExits,
     incomingReward: reward.incomingReward,
+    ...startingRoomProfiles,
     effectNeutralRequiredReward: room.effectNeutralRequiredReward ?? false,
     offerRewardBinding: reward.offerRewardBinding,
     blockGiftBoons: identity.blockGiftBoons,

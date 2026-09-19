@@ -380,6 +380,12 @@ export function RouteWorkspace({
               interactions={interactions}
               repairBanner={repairBanner}
               runStateLaunchers={workspace.runStateLaunchers}
+              hideStartFrontier={
+                workspaceRoute.biomes[0]?.biomeKey === activeBiomeProjection.biomeKey
+              }
+              showStartRoomIdentity={
+                workspaceRoute.biomes[0]?.biomeKey !== activeBiomeProjection.biomeKey
+              }
             />
           )}
         </div>

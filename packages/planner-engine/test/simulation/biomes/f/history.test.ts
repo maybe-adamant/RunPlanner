@@ -40,7 +40,7 @@ function history(project = createCompleteFTakeoverProject()) {
 }
 
 describe('F takeover history', () => {
-  it('uses native route-entry depth for an ordinary opening and supplied Dream positions', () => {
+  it('uses native route-entry depth for ordinary and Dream-first openings', () => {
     const project = createCompleteFTakeoverProject();
     const completeness = evaluateBiomeCompleteness(catalog, fBiome, fPlan(project));
     if (completeness.completion !== 'complete') throw new Error('F fixture is incomplete');
@@ -56,20 +56,22 @@ describe('F takeover history', () => {
       composeBiomeHistory(catalog, snapshot, ordinary).rooms[0]!.preparation.ledgers.counters
         .biomeDepthCache,
     ).toBe(0);
-    for (const itineraryBiomeKeys of [
-      ['F', 'N'],
-      ['N', 'F'],
-    ]) {
-      const position = resolveRoutePosition(
-        catalog,
-        { routeKey: 'Dream', itineraryBiomeKeys },
-        'F',
-      );
-      expect(
-        composeBiomeHistory(catalog, snapshot, position).rooms[0]!.preparation.ledgers.counters
-          .biomeDepthCache,
-      ).toBe(1);
-    }
+    const position = resolveRoutePosition(
+      catalog,
+      { routeKey: 'Dream', itineraryBiomeKeys: ['F', 'N'] },
+      'F',
+    );
+    const dreamSnapshot = materializeBiome(
+      catalog,
+      fBiome,
+      position,
+      completeness,
+      traitContext(project),
+    );
+    expect(
+      composeBiomeHistory(catalog, dreamSnapshot, position).rooms[0]!.preparation.ledgers.counters
+        .biomeDepthCache,
+    ).toBe(1);
   });
 
   it('creates every physical target at its source outgoing checkpoint', () => {

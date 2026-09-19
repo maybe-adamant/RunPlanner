@@ -42,6 +42,7 @@ import { decodeFountainRarityResult } from '../fountain-rarity-codec';
 import { decodeKeepsakeEquipResults } from '../keepsake-equip-codec';
 import { expectBoolean, expectString } from '../validation';
 import type { ResolvedRoutePosition } from '../route-context';
+import { resolveStartingRoomDeclaration } from '../room-state/starting-room-profile';
 
 function decodeKeepsakeRackState(
   value: unknown,
@@ -316,17 +317,18 @@ export function decodeRoomOccurrence(input: {
     failProjectDocument(`${rawOccurrence.path}.gameName`, `unknown room ${rawOccurrence.gameName}`);
   if (owner.gameName !== rawOccurrence.gameName)
     failProjectDocument(`${rawOccurrence.path}.gameName`, `owner requires ${owner.gameName}`);
+  const contextualRoom = resolveStartingRoomDeclaration(room, routePosition);
   const state = decodeRoomState(
     rawOccurrence.state,
     catalog,
-    room,
+    contextualRoom,
     owner,
     `${rawOccurrence.path}.state`,
   );
   const encounters = decodeRoomEncounterState(
     rawOccurrence.encounters,
     catalog,
-    room,
+    contextualRoom,
     `${rawOccurrence.path}.encounters`,
   );
   const hermesShrine = rawOccurrence.hasHermesShrine
@@ -354,7 +356,7 @@ export function decodeRoomOccurrence(input: {
     ? decodePurgingPoolState(
         rawOccurrence.purgingPool,
         catalog,
-        room,
+        contextualRoom,
         `${rawOccurrence.path}.purgingPool`,
       )
     : undefined;
@@ -433,6 +435,7 @@ export function decodeRoomOccurrence(input: {
         catalog,
         biomeAddress,
         occurrenceWithPreliminarySites,
+        contextualRoom,
       );
       const ownedGeneratedSiteKeys = new Set(
         preliminaryPickupProducers
@@ -478,6 +481,7 @@ export function decodeRoomOccurrence(input: {
     catalog,
     biomeAddress,
     occurrenceWithPreliminarySites,
+    contextualRoom,
   );
   const acquisitionSites = rawOccurrence.hasAcquisitionSites
     ? decodeAcquisitionSites(

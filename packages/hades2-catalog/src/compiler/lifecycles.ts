@@ -414,27 +414,39 @@ export function validateLifecycleBindings(input: {
   readonly traits: CatalogCollection<TraitDeclaration>;
   readonly rewards: RewardKernelCatalog;
 }): void {
-  for (const room of input.rooms.values) {
-    if (room.lifecycleProfileKey === undefined) continue;
-    const profile = input.profiles.byKey[room.lifecycleProfileKey];
-    if (profile === undefined)
-      fail(`rooms.${room.gameName}.lifecycleProfileKey`, 'unknown room lifecycle profile');
+  const validateRoomBinding = (
+    room: RoomDeclaration,
+    lifecycleProfileKey: string | undefined,
+    incomingReward: RoomDeclaration['incomingReward'],
+    path: string,
+  ): void => {
+    if (lifecycleProfileKey === undefined) return;
+    const profile = input.profiles.byKey[lifecycleProfileKey];
+    if (profile === undefined) fail(path, 'unknown room lifecycle profile');
     if (!profile.encounterEnvelopeKeys.includes(room.encounterEnvelopeKey))
-      fail(
-        `rooms.${room.gameName}.lifecycleProfileKey`,
-        'does not support the room encounter envelope',
-      );
+      fail(path, 'does not support the room encounter envelope');
     if (profile.producer.kind === 'none') {
-      if (room.incomingReward.kind !== 'none')
-        fail(`rooms.${room.gameName}.lifecycleProfileKey`, 'requires no incoming reward producer');
-    } else {
-      if (room.incomingReward.kind === 'none')
-        fail(`rooms.${room.gameName}.lifecycleProfileKey`, 'requires an incoming reward producer');
-      if (!profile.producer.lifecycleProfileKeys.includes(room.incomingReward.producerLifecycleKey))
-        fail(
-          `rooms.${room.gameName}.lifecycleProfileKey`,
-          'does not admit the incoming producer lifecycle',
-        );
+      if (incomingReward.kind !== 'none') fail(path, 'requires no incoming reward producer');
+      return;
+    }
+    if (incomingReward.kind === 'none') fail(path, 'requires an incoming reward producer');
+    if (!profile.producer.lifecycleProfileKeys.includes(incomingReward.producerLifecycleKey))
+      fail(path, 'does not admit the incoming producer lifecycle');
+  };
+  for (const room of input.rooms.values) {
+    validateRoomBinding(
+      room,
+      room.lifecycleProfileKey,
+      room.incomingReward,
+      `rooms.${room.gameName}.lifecycleProfileKey`,
+    );
+    for (const [profileKind, profile] of Object.entries(room.startingRoomProfiles ?? {})) {
+      validateRoomBinding(
+        room,
+        profile.lifecycleProfileKey,
+        profile.incomingReward,
+        `rooms.${room.gameName}.startingRoomProfiles.${profileKind}.lifecycleProfileKey`,
+      );
     }
   }
   for (const trait of input.traits.values) {

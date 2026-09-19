@@ -53,6 +53,7 @@ function incomingCandidateForOffer(
 
 interface IncomingOfferCandidateContext {
   readonly context: OfferProcessingContext;
+  readonly declaration: RoomCreatedRewardContext['declaration'];
   readonly room: RoomCreatedRewardContext['room'];
   readonly incoming: CanonicalResolvedIncomingReward;
   readonly acquisitionView?: HistoryStateView;
@@ -124,7 +125,7 @@ function completeIncomingOfferCandidate(
             catalog,
             candidateRoom,
             candidateRoom,
-            entry.context.catalog.rooms.byKey[candidateRoom.gameName]!,
+            entry.declaration,
             entry.acquisitionView!,
             history,
             enteredBiomeCount,
@@ -272,7 +273,11 @@ export function generateIncomingReward(
             );
           const candidate = candidateFor(offer);
           const candidateFindings = new Map<string, FindingRegionEntry>();
-          const candidateBinding = countedBinding(context.declaration, candidate);
+          const candidateBinding = countedBinding(
+            context.declaration,
+            candidate,
+            context.incomingBinding,
+          );
           const candidateContext: OfferProcessingContext = Object.freeze({
             catalog,
             reward: candidate,
@@ -290,6 +295,7 @@ export function generateIncomingReward(
             inputs.authoredSeaStarDuplicateSiteKeys,
             Object.freeze({
               context: candidateContext,
+              declaration: context.declaration,
               room: context.room,
               incoming: candidate,
               ...(acquisitionView === undefined ? {} : { acquisitionView }),
@@ -320,7 +326,7 @@ export function generateIncomingReward(
       frontiers,
       inputs.pendingHubBoard,
     );
-  const binding = countedBinding(context.declaration, incoming);
+  const binding = countedBinding(context.declaration, incoming, context.incomingBinding);
   const offerContext: OfferProcessingContext = Object.freeze({
     catalog,
     reward: incoming,
@@ -383,6 +389,7 @@ export function generateIncomingReward(
           inputs.authoredSeaStarDuplicateSiteKeys,
           Object.freeze({
             context: candidateContext,
+            declaration: context.declaration,
             room: context.room,
             incoming: candidate,
             ...(acquisitionView === undefined ? {} : { acquisitionView }),

@@ -88,6 +88,9 @@ export function ProjectFindings({
               focusAddress: destination?.focusAddress ?? issue.owner,
               key: issue.regionKey,
               origin: issue.owner,
+              ...(destination?.presentationPanel === undefined
+                ? {}
+                : { presentationPanel: { kind: destination.presentationPanel } as const }),
               // Banner selection reaches an existing visible launcher. Dialogs
               // remain explicit local editing actions, including for trait offers.
               traitDialogTarget: null,

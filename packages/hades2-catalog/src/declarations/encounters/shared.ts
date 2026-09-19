@@ -83,6 +83,13 @@ export const sharedEncounterEnvelopes = [
 
 export const sharedEncounterDefinitions = [
   { key: 'Empty', label: 'Empty', kind: 'nonCombat', countsEncounterDepth: false },
+  { key: 'OpeningEmpty', label: 'Opening empty', kind: 'nonCombat', countsEncounterDepth: false },
+  {
+    key: 'PIntroDreamRunEmpty',
+    label: 'Dream entrance',
+    kind: 'nonCombat',
+    countsEncounterDepth: false,
+  },
   {
     key: 'HealthRestore',
     label: 'Health Restore',

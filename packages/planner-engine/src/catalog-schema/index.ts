@@ -727,6 +727,23 @@ export type RoomOfferRewardBinding =
   | { readonly kind: 'incomingReward' }
   | { readonly kind: 'localRewardGroup'; readonly groupKey: string };
 
+/** Declaration-owned starting-room facts for one route position. */
+export interface StartingRoomProfile {
+  readonly templateKey: 'FixedIntro' | 'FixedOpening';
+  readonly incomingReward: RewardProducerBinding;
+  readonly lifecycleProfileKey: string;
+  readonly enteredRewardStoreHistory: EnteredRewardStoreHistoryPolicy;
+  readonly forcedRewardStoreKey?: string;
+  /** Dream may replace the ordinary single-slot opening encounter at this position. */
+  readonly dreamEncounterDefinitionKey?: string;
+}
+
+/** Contextual starting-room facts; route position selects one without persisting it. */
+export interface StartingRoomProfiles {
+  readonly routeFirst: StartingRoomProfile;
+  readonly routeLater: StartingRoomProfile;
+}
+
 export type PrebossBatchPolicy =
   | {
       readonly kind: 'takeOverNormalDoors';
@@ -747,6 +764,8 @@ export interface RoomDeclaration {
   readonly exits: readonly RoomExit[];
   readonly additionalExits: readonly AdditionalExitDeclaration[];
   readonly incomingReward: RewardProducerBinding;
+  /** Position-based starting-room profiles, declared beside the physical room. */
+  readonly startingRoomProfiles?: StartingRoomProfiles;
   /** A real required pickup whose payload is intentionally outside simulated state. */
   readonly effectNeutralRequiredReward: boolean;
   /** Declaration-owned binding for the reward surface exposed by this room. */

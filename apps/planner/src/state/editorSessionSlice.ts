@@ -16,6 +16,8 @@ export interface FindingSelection {
   readonly key: string;
   /** Stable finding owner that remains authoritative for workspace navigation. */
   readonly origin: SemanticAddress;
+  /** A projected finding may select Loadout while retaining its structural semantic owner. */
+  readonly presentationPanel?: Extract<RoutePanel, { readonly kind: 'overview' }>;
   /** Projection-resolved containing dialog for a fine-grained finding. */
   readonly traitDialogTarget?: TraitOfferAddress | null;
   /** Projection-resolved containing Pom dialog for a fine-grained finding. */
@@ -172,7 +174,7 @@ const editorSessionSlice = createSlice({
         return;
       }
       state.activeSection = 'route';
-      state.activePanel = panelForOrigin(action.payload.origin);
+      state.activePanel = action.payload.presentationPanel ?? panelForOrigin(action.payload.origin);
     },
     editorSessionReconciled(state, action: PayloadAction<EditorSessionReconciliation>) {
       if (action.payload.clearFocusedSemanticOwner) {

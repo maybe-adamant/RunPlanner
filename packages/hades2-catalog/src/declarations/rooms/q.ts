@@ -10,6 +10,20 @@ const surfaceShopHost = (spawnChance: number, forced = false, challengeSwitchAnc
   },
 });
 
+const qRouteFirstStartingRoom = {
+  templateKey: 'FixedOpening' as const,
+  incomingReward: {
+    kind: 'countedChoice' as const,
+    storeKeys: ['RunProgress'],
+    eligibleRewardTypes: [],
+    ineligibleRewardTypes: ['Devotion', 'RoomMoneyDrop', 'MaxHealthDrop', 'MaxManaDrop'],
+    producerLifecycleKey: 'RoomReward',
+  },
+  lifecycleProfileKey: 'OpeningRewardNoEncounterRoom',
+  enteredRewardStoreHistory: { kind: 'resolvedOffer' as const },
+  forcedRewardStoreKey: 'RunProgress',
+};
+
 export const qRooms = [
   {
     gameName: 'Q_Intro',
@@ -22,6 +36,15 @@ export const qRooms = [
     structuralTags: ['Outdoor'],
     exits: [{ index: 1, type: 'FortressMainDoor' }],
     incomingReward: { kind: 'none' },
+    startingRoomProfiles: {
+      routeFirst: qRouteFirstStartingRoom,
+      routeLater: {
+        templateKey: 'FixedIntro',
+        incomingReward: { kind: 'none' },
+        lifecycleProfileKey: 'RewardlessRoom',
+        enteredRewardStoreHistory: { kind: 'none' },
+      },
+    },
     enteredRewardStoreHistory: { kind: 'none' },
     encounterEnvelopeKey: 'EmptyEncounter',
     unmodeledEncounterKeys: ['Empty'],

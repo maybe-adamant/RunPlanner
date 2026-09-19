@@ -669,6 +669,26 @@ export function createStructuredWorkspaceProjection(
         takeoverInteractionRequirements,
         topologyRemovalInteractionRequirements,
       });
+      const firstBiome = route.biomes[0];
+      if (firstBiome !== undefined) {
+        const loadoutDestination = (owner: SemanticAddress): void => {
+          const key = semanticAddressKey(owner);
+          const existing = focusByOwner.get(key);
+          if (existing === undefined) return;
+          focusByOwner.set(
+            key,
+            Object.freeze({ ...existing, presentationPanel: 'overview' as const }),
+          );
+        };
+        if (firstBiome.entry === undefined) {
+          loadoutDestination(firstBiome.owner);
+        } else {
+          loadoutDestination(firstBiome.entry.room.address);
+          for (const reward of firstBiome.entry.room.offerRewardRewards) {
+            loadoutDestination(reward.marker.address);
+          }
+        }
+      }
       registerWorkspaceFindingDestinations(evaluation.findings, focusByOwner, route);
       const projectAddress = { kind: 'project' as const };
       const result = Object.freeze({

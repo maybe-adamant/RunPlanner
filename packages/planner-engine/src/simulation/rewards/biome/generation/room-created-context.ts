@@ -20,6 +20,7 @@ export interface RoomCreatedRewardContext {
   readonly room: CanonicalAuthoredRoom;
   readonly declaration: RoomDeclaration;
   readonly sourceDeclaration: RoomDeclaration;
+  readonly incomingBinding: CanonicalAuthoredRoom['incomingRewardBinding'];
   readonly incoming: CanonicalAuthoredRoom['incomingReward'];
   readonly unresolvedIncoming: CanonicalAuthoredRoom['unresolvedIncomingReward'];
   /** Concrete local rewards before the first unresolved local slot. */
@@ -170,7 +171,8 @@ export function prepareRoomCreatedRewardContext(
     }
     const expectedStore = inputs.expectedStores.get(semanticAddressKey(event.targetOrigin));
     const resolvedStores = [
-      ...(incoming === undefined || countedBinding(declaration, incoming) === undefined
+      ...(incoming === undefined ||
+      countedBinding(declaration, incoming, room.incomingRewardBinding) === undefined
         ? []
         : [incoming.resolvedStoreKey]),
       ...localRewards.map((reward) => reward.resolvedStoreKey),
@@ -263,6 +265,7 @@ export function prepareRoomCreatedRewardContext(
     context: Object.freeze({
       room,
       declaration,
+      incomingBinding: room.incomingRewardBinding,
       sourceDeclaration,
       incoming,
       unresolvedIncoming,

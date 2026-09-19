@@ -31,6 +31,9 @@ interface BiomeWorkspaceProps {
   readonly interactions: WorkspaceInteractionCatalog;
   readonly repairBanner?: ReactNode;
   readonly runStateLaunchers: StructuredWorkspaceProjection['runStateLaunchers'];
+  /** The route overview owns initial topology creation for the first configured biome. */
+  readonly hideStartFrontier?: boolean;
+  readonly showStartRoomIdentity?: boolean;
 }
 
 type InspectorSubject =
@@ -378,6 +381,8 @@ export function BiomeWorkspace({
   interactions,
   repairBanner,
   runStateLaunchers,
+  hideStartFrontier,
+  showStartRoomIdentity,
 }: BiomeWorkspaceProps) {
   const runStateTarget = useAppSelector((state) => state.editorSession.runStateTarget);
   const focusedOwner = useAppSelector((state) => state.editorSession.focusedSemanticOwner);
@@ -518,10 +523,18 @@ export function BiomeWorkspace({
         {biome.entry === undefined ? null : <BiomeFieldControls fields={biome.fields} />}
         <EchoKeepsakeReplayControl biome={biome} interactions={interactions} />
         {subject === undefined ? (
-          <p className="fixed-room-state">Choose the first room to start this biome.</p>
+          <p className="fixed-room-state">
+            {hideStartFrontier === true
+              ? 'Configure the starting room in Route settings.'
+              : 'Choose the first room to start this biome.'}
+          </p>
         ) : subject.kind === 'frontier' && sourceOccurrence === undefined ? (
           biome.frontier?.kind === 'start' || biome.frontier?.kind === 'exitDecision' ? (
-            <AuthoringFrontier frontier={biome.frontier} interactions={interactions} />
+            hideStartFrontier === true && biome.frontier.kind === 'start' ? (
+              <p className="fixed-room-state">Configure the starting room in Route settings.</p>
+            ) : (
+              <AuthoringFrontier frontier={biome.frontier} interactions={interactions} />
+            )
           ) : null
         ) : (
           <BiomeInspectorNode
@@ -529,6 +542,7 @@ export function BiomeWorkspace({
             interactions={interactions}
             label={inspectorTitle}
             node={subject.kind === 'node' ? subject.node : sourceOccurrence!}
+            {...(showStartRoomIdentity !== false ? { showStartRoomIdentity: true } : {})}
             {...(selectedStage === undefined ? {} : { outgoing: selectedStage.outgoing })}
             {...(outgoingDecision === undefined ? {} : { outgoingDecision })}
             {...(sourceOccurrence === undefined ? {} : { sourceOccurrence })}
