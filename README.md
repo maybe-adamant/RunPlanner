@@ -124,3 +124,9 @@ npm run desktop:build:windows
 
 The executable is written to
 `apps/planner/src-tauri/target/x86_64-pc-windows-gnu/release/run-planner.exe`.
+
+The manually dispatched **Windows portable** workflow builds, launch-tests,
+and packages the release. Run `npm run check` locally on the commit being
+released before dispatching it; packaging does not repeat that repository gate.
+The separate **Desktop host** workflow checks Windows Rust compilation on
+pull requests and pushes to `main`.
