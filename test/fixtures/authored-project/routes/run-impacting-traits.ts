@@ -2,6 +2,7 @@ import { catalog } from '@run-planner/hades2-catalog';
 import {
   applyProjectCommand,
   createIncomingRewardAddress,
+  createStartingRewardAddress,
   createTraitOfferAddress,
   type AuthoredTraitOfferTraits,
   type ProjectDocument,
@@ -17,11 +18,18 @@ function replaceBoon(
   offer: AuthoredTraitOfferTraits,
 ): ProjectDocument {
   const reward = createIncomingRewardAddress(nBiome, occurrenceId);
-  const withReward = applyProjectCommand(project, catalog, {
-    kind: 'ReplaceIncomingReward',
-    reward,
-    value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source } },
-  });
+  const value = { rewardType: 'Boon' as const, payload: { kind: 'BoonSource' as const, source } };
+  const withReward = applyProjectCommand(
+    project,
+    catalog,
+    occurrenceId === nOccurrenceIds.opening
+      ? {
+          kind: 'ReplaceStartingReward',
+          reward: createStartingRewardAddress('Surface'),
+          value,
+        }
+      : { kind: 'ReplaceIncomingReward', reward, value },
+  );
   return applyProjectCommand(withReward, catalog, {
     kind: 'ReplaceTraitOffer',
     trait: createTraitOfferAddress(reward, 'source'),
@@ -36,11 +44,17 @@ function replaceDirectTrait(
   offer: AuthoredTraitOfferTraits,
 ): ProjectDocument {
   const reward = createIncomingRewardAddress(nBiome, occurrenceId);
-  const withReward = applyProjectCommand(project, catalog, {
-    kind: 'ReplaceIncomingReward',
-    reward,
-    value: { rewardType },
-  });
+  const withReward = applyProjectCommand(
+    project,
+    catalog,
+    occurrenceId === nOccurrenceIds.opening
+      ? {
+          kind: 'ReplaceStartingReward',
+          reward: createStartingRewardAddress('Surface'),
+          value: { rewardType },
+        }
+      : { kind: 'ReplaceIncomingReward', reward, value: { rewardType } },
+  );
   return applyProjectCommand(withReward, catalog, {
     kind: 'ReplaceTraitOffer',
     trait: createTraitOfferAddress(reward, 'self'),

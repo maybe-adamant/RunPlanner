@@ -104,10 +104,11 @@ export function seaStarDuplicateSourceIsActive(
   biome: import('../addresses').BiomeAddress,
   occurrence: RoomOccurrence,
   siteKey: string,
+  routeStartIncoming?: AuthoredRewardState,
 ): boolean {
   const parsed = parseSeaStarDuplicateSiteKey(siteKey);
   if (parsed === undefined) return false;
-  const matched = authoredAcquisitionSources(biome, occurrence).find(
+  const matched = authoredAcquisitionSources(biome, occurrence, routeStartIncoming).find(
     (candidate) =>
       semanticAddressKey(candidate.acquisition.owner) === parsed.sourceKey &&
       candidate.acquisition.acquisitionRole === parsed.acquisitionRole,

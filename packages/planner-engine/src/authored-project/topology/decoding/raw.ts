@@ -14,6 +14,8 @@ export interface RawOccurrence {
   readonly anomalyReplacement: unknown;
   readonly hasAnomalyReplacement: boolean;
   readonly state: unknown;
+  readonly startingRewardAcquisition?: unknown;
+  readonly hasStartingRewardAcquisition?: boolean;
   readonly encounters: unknown;
   readonly roomActions: unknown;
   readonly additionalExits: unknown;

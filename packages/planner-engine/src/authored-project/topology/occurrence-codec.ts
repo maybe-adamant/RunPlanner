@@ -42,7 +42,13 @@ import { decodeFountainRarityResult } from '../fountain-rarity-codec';
 import { decodeKeepsakeEquipResults } from '../keepsake-equip-codec';
 import { expectBoolean, expectString } from '../validation';
 import type { ResolvedRoutePosition } from '../route-context';
-import { resolveStartingRoomDeclaration } from '../room-state/starting-room-profile';
+import { resolveEntryDeclaration } from '../room-state/entry-resolution';
+import { decodeRewardState } from '../room-state/decoding/reward-acquisition-codec';
+import type { ResolvedRewardOffer } from '../../reward-kernel/model';
+import {
+  composeStartingReward,
+  startingRewardAcquisitionFrom,
+} from '../room-state/starting-reward';
 
 function decodeKeepsakeRackState(
   value: unknown,
@@ -309,6 +315,8 @@ export function decodeRoomOccurrence(input: {
   readonly layout: BiomeLayout;
   readonly routeKey: string;
   readonly routePosition: ResolvedRoutePosition;
+  readonly startingReward: ResolvedRewardOffer | null;
+  readonly isTopologyStart: boolean;
 }): RoomOccurrence {
   const { raw: rawOccurrence, owner, additionalExits } = input.occurrence;
   const { catalog, layout, routeKey, routePosition } = input;
@@ -317,7 +325,7 @@ export function decodeRoomOccurrence(input: {
     failProjectDocument(`${rawOccurrence.path}.gameName`, `unknown room ${rawOccurrence.gameName}`);
   if (owner.gameName !== rawOccurrence.gameName)
     failProjectDocument(`${rawOccurrence.path}.gameName`, `owner requires ${owner.gameName}`);
-  const contextualRoom = resolveStartingRoomDeclaration(room, routePosition);
+  const contextualRoom = resolveEntryDeclaration(room, routePosition);
   const state = decodeRoomState(
     rawOccurrence.state,
     catalog,
@@ -325,6 +333,57 @@ export function decodeRoomOccurrence(input: {
     owner,
     `${rawOccurrence.path}.state`,
   );
+  const startingRewardAcquisition = rawOccurrence.hasStartingRewardAcquisition
+    ? (() => {
+        if (!routePosition.isFirst || !input.isTopologyStart) {
+          failProjectDocument(
+            `${rawOccurrence.path}.startingRewardAcquisition`,
+            'is owned only by the first itinerary entry start',
+          );
+        }
+        if (input.startingReward === null) {
+          failProjectDocument(
+            `${rawOccurrence.path}.startingRewardAcquisition`,
+            'requires a route starting reward offer',
+          );
+        }
+        const rawAcquisition = expectRecord(
+          rawOccurrence.startingRewardAcquisition,
+          `${rawOccurrence.path}.startingRewardAcquisition`,
+        );
+        const hasTraitOffers = Object.hasOwn(rawAcquisition, 'traitOffersByAcquisitionRole');
+        const hasLevelResolutions = Object.hasOwn(
+          rawAcquisition,
+          'levelResolutionsByAcquisitionRole',
+        );
+        expectExactKeys(
+          rawAcquisition,
+          [
+            ...(hasTraitOffers ? ['traitOffersByAcquisitionRole'] : []),
+            ...(hasLevelResolutions ? ['levelResolutionsByAcquisitionRole'] : []),
+            'dispositionByAcquisitionRole',
+          ],
+          `${rawOccurrence.path}.startingRewardAcquisition`,
+        );
+        const reward = decodeRewardState(
+          Object.freeze({
+            ...rawAcquisition,
+            offer: input.startingReward,
+          }),
+          catalog,
+          `${rawOccurrence.path}.startingRewardAcquisition`,
+          (() => {
+            const binding = catalog.runStartReward.incomingReward;
+            return { kind: 'producerLifecycle' as const, key: binding.producerLifecycleKey };
+          })(),
+        );
+        return startingRewardAcquisitionFrom(reward);
+      })()
+    : undefined;
+  const routeStartIncoming =
+    routePosition.isFirst && input.isTopologyStart
+      ? composeStartingReward(input.startingReward, startingRewardAcquisition)
+      : undefined;
   const encounters = decodeRoomEncounterState(
     rawOccurrence.encounters,
     catalog,
@@ -408,6 +467,7 @@ export function decodeRoomOccurrence(input: {
       ? {}
       : { anomalyReplacement: owner.anomalyReplacement }),
     state,
+    ...(startingRewardAcquisition === undefined ? {} : { startingRewardAcquisition }),
     encounters,
     ...(hermesShrine === undefined ? {} : { hermesShrine }),
     ...(stygianWell === undefined ? {} : { stygianWell }),
@@ -437,6 +497,7 @@ export function decodeRoomOccurrence(input: {
         occurrenceWithPreliminarySites,
         contextualRoom,
         routePosition.ordinal,
+        routeStartIncoming ?? undefined,
       );
       const ownedGeneratedSiteKeys = new Set(
         preliminaryPickupProducers
@@ -484,6 +545,7 @@ export function decodeRoomOccurrence(input: {
     occurrenceWithPreliminarySites,
     contextualRoom,
     routePosition.ordinal,
+    routeStartIncoming ?? undefined,
   );
   const acquisitionSites = rawOccurrence.hasAcquisitionSites
     ? decodeAcquisitionSites(
@@ -763,6 +825,7 @@ export function decodeRoomOccurrence(input: {
       ? {}
       : { anomalyReplacement: owner.anomalyReplacement }),
     state,
+    ...(startingRewardAcquisition === undefined ? {} : { startingRewardAcquisition }),
     encounters,
     roomActions,
     ...(hermesShrine === undefined ? {} : { hermesShrine }),
@@ -786,7 +849,11 @@ export function decodeRoomOccurrence(input: {
   for (const [siteKey, site] of Object.entries(acquisitionSites ?? {})) {
     const seaStar = parseSeaStarDuplicateSiteKey(siteKey);
     if (seaStar === undefined) continue;
-    const source = authoredAcquisitionSources(biomeAddress, decodedOccurrence).find(
+    const source = authoredAcquisitionSources(
+      biomeAddress,
+      decodedOccurrence,
+      routeStartIncoming ?? undefined,
+    ).find(
       (source) =>
         semanticAddressKey(source.acquisition.owner) === seaStar.sourceKey &&
         source.acquisition.acquisitionRole === seaStar.acquisitionRole,

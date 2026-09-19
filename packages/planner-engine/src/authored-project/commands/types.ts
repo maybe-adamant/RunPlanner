@@ -25,6 +25,7 @@ import type {
   RewardWheelOfferAddress,
   RoomActionSemanticAddress,
   RouteAddress,
+  StartingRewardAddress,
   ShopOfferAddress,
   TraitOfferAddress,
   AcquisitionRoleAddress,
@@ -50,6 +51,11 @@ import type {
 } from '../traits/state';
 
 export type ProjectStateCommand =
+  | {
+      readonly kind: 'ReplaceStartingReward';
+      readonly reward: StartingRewardAddress;
+      readonly value: ResolvedRewardOffer | null;
+    }
   | {
       readonly kind: 'ReplaceStartingKeepsake';
       readonly selection: Extract<KeepsakeSelectionAddress, { readonly owner: 'routeStart' }>;

@@ -1,5 +1,5 @@
 import type { Catalog } from '../../../catalog-schema';
-import type { AuthoredRewardState, RoomOccurrence } from '../../model';
+import type { AuthoredRewardState, ProjectDocument, RoomOccurrence } from '../../model';
 import {
   createBiomeAddress,
   type AcquisitionEntryAddress,
@@ -19,7 +19,8 @@ import { parseArtificerReplacementEntryKey } from '../../acquisition/artificer';
 import { parseHermesShrineDeliveryEntryKey } from '../../hermes-shrine-delivery';
 import { requireShipCombatWheels } from '../../room-state/declaration';
 import { incomingLevelEffectSource } from '../../room-state/level-effects';
-import { resolveStartingRoomDeclaration } from '../../room-state/starting-room-profile';
+import { resolveEntryDeclaration } from '../../room-state/entry-resolution';
+import { routeStartIncomingReward } from '../../room-state/starting-reward';
 import type { LevelResolutionEffectSource } from '../../../reward-kernel/level-effects';
 import { failCommand } from '../contract';
 import type { TraitOfferCommand, LevelResolutionCommand } from '../types';
@@ -42,6 +43,7 @@ function requireAuthoredReward(
 
 function pickupEntrySource(
   catalog: Catalog,
+  document: ProjectDocument,
   routePosition: import('../../route-context').ResolvedRoutePosition,
   occurrence: RoomOccurrence,
   owner: AcquisitionEntryAddress,
@@ -92,10 +94,11 @@ function pickupEntrySource(
     catalog,
     createBiomeAddress(owner.routeKey, owner.biomeKey),
     occurrence,
-    resolveStartingRoomDeclaration(catalog.rooms.byKey[occurrence.gameName]!, routePosition),
+    resolveEntryDeclaration(catalog.rooms.byKey[occurrence.gameName]!, routePosition),
     owner.site.pointKey,
     owner.entryKey,
     routePosition.ordinal,
+    routeStartIncomingReward(document, routePosition, occurrence) ?? undefined,
   );
   if (producer === undefined) failCommand(command, 'pickup entry has no unique selected producer');
   return Object.freeze({
@@ -108,6 +111,7 @@ function pickupEntrySource(
 }
 
 export function locateReward(
+  document: ProjectDocument,
   catalog: Catalog,
   routePosition: import('../../route-context').ResolvedRoutePosition,
   occurrence: RoomOccurrence,
@@ -117,17 +121,29 @@ export function locateReward(
 ): LocatedReward | undefined {
   switch (owner.kind) {
     case 'acquisitionEntry':
-      return pickupEntrySource(catalog, routePosition, occurrence, owner, command);
+      return pickupEntrySource(catalog, document, routePosition, occurrence, owner, command);
     case 'incomingReward':
+      {
+        const starting = routeStartIncomingReward(document, routePosition, occurrence);
+        if (starting !== undefined) {
+          if (starting === null)
+            failCommand(command, 'cannot edit acquisition outcome before reward authorship');
+          return Object.freeze({
+            reward: starting,
+            levelEffectSource: {
+              kind: 'producerLifecycle' as const,
+              key: catalog.runStartReward.incomingReward.producerLifecycleKey,
+            },
+          });
+        }
+      }
       switch (state.kind) {
         case 'counted':
         case 'fixed':
         case 'ephyraCombat': {
           const rawRoom = catalog.rooms.byKey[occurrence.gameName];
           const room =
-            rawRoom === undefined
-              ? undefined
-              : resolveStartingRoomDeclaration(rawRoom, routePosition);
+            rawRoom === undefined ? undefined : resolveEntryDeclaration(rawRoom, routePosition);
           const binding = room?.incomingReward;
           if (binding === undefined || binding.kind === 'none')
             failCommand(command, `${occurrence.gameName} has no incoming reward binding`);

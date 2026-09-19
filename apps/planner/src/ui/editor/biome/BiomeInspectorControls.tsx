@@ -21,7 +21,6 @@ import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
 import { useWorkspaceInteraction } from '@planner/ui/controls/useWorkspaceInteraction';
 import type { ContextualPickerModel } from '@planner/projections/contextual/contextualPicker';
 import { RoomSelector } from './RoomSelector';
-import { RewardSurfaceEditor } from './DoorRewardEditor';
 import { TimelineActionDeleteButton } from './TimelineActionDeleteButton';
 import { BiomeWorkspaceContractError } from './workspaceContract';
 import { KeepsakeEquipResultPicker, KeepsakeSelectionPicker } from '../KeepsakePickers';
@@ -328,45 +327,30 @@ export function StartRoomIdentityEditor({
           interactions.rooms,
           workspaceInteractionKey(startPicker.address),
         );
-  if (interaction !== undefined && interaction.kind !== 'startRoom')
+  if (startPicker === undefined || interaction === undefined) return null;
+  if (interaction.kind !== 'startRoom')
     throw new BiomeWorkspaceContractError(`${interaction.key} is not a start-room interaction.`);
   return (
     <section aria-label="Start room configuration" className="start-room-identity">
       <div className="owner-markers">
-        <h3>Room and reward</h3>
+        <h3>Starting room</h3>
       </div>
-      {startPicker === undefined || interaction === undefined ? (
-        <div className="field-control field-control-inline start-room-fixed">
-          <span>Room</span>
-          <span className="fixed-room-state">{node.room.label}</span>
-        </div>
-      ) : (
-        <RoomSelector
-          findingTarget={findingTarget(interaction.owner, `start-${node.room.occurrenceId}-room`)}
-          idPrefix={`start-${node.room.occurrenceId}`}
-          interaction={interaction}
-          label="Room"
-          onSelect={(gameName) => {
-            dispatch(
-              authoredProjectCommandDispatched({
-                kind: 'ReplaceOccurrenceRoom',
-                occurrence: node.room.address,
-                gameName,
-              }),
-            );
-            dispatch(semanticOwnerFocused(node.room.address));
-          }}
-        />
-      )}
-      <div className="start-room-entry-reward">
-        <RewardSurfaceEditor
-          ariaLabel={`${node.room.label} starting rewards`}
-          idPrefix={`start-${node.room.occurrenceId}-entry-reward`}
-          interactions={interactions}
-          rewards={node.room.offerRewardRewards}
-          visibility="visible"
-        />
-      </div>
+      <RoomSelector
+        findingTarget={findingTarget(interaction.owner, `start-${node.room.occurrenceId}-room`)}
+        idPrefix={`start-${node.room.occurrenceId}`}
+        interaction={interaction}
+        label="Room"
+        onSelect={(gameName) => {
+          dispatch(
+            authoredProjectCommandDispatched({
+              kind: 'ReplaceOccurrenceRoom',
+              occurrence: node.room.address,
+              gameName,
+            }),
+          );
+          dispatch(semanticOwnerFocused(node.room.address));
+        }}
+      />
     </section>
   );
 }

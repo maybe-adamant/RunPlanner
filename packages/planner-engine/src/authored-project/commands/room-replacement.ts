@@ -32,7 +32,8 @@ import {
 } from '../topology/query';
 import { fieldsDefaultActiveCageCount } from '../fields';
 import { resolveRoutePosition } from '../route-context';
-import { resolveStartingRoomDeclaration } from '../room-state/starting-room-profile';
+import { resolveEntryDeclaration } from '../room-state/entry-resolution';
+import { composeStartingReward } from '../room-state/starting-reward';
 
 import {
   failCommand,
@@ -110,13 +111,14 @@ function reconcileReplacementAcquisitionSites(
   located: LocatedBiome,
   previous: RoomOccurrence,
   replacement: RoomOccurrence,
+  routeStartIncoming?: import('../model').AuthoredRewardState,
 ): Readonly<Record<string, AuthoredAcquisitionSiteState>> | undefined {
   const biome = createBiomeAddress(located.routeKey, located.layout.biomeKey);
   const owner = createOccurrenceAddress(biome, replacement.occurrenceId);
   const sites: Record<string, AuthoredAcquisitionSiteState> = {
     ...(replacement.acquisitionSites ?? {}),
   };
-  for (const source of authoredAcquisitionSources(biome, replacement)) {
+  for (const source of authoredAcquisitionSources(biome, replacement, routeStartIncoming)) {
     const sourceOwner = source.acquisition.owner;
     const role = source.acquisition.acquisitionRole;
     if (source.reward.dispositionByAcquisitionRole[role]?.kind !== 'artificer') continue;
@@ -143,19 +145,38 @@ function reconcileReplacementRoomLocalState(
   previous: RoomOccurrence,
   replacement: RoomOccurrence,
 ): RoomOccurrence {
-  const acquisitionSites = reconcileReplacementAcquisitionSites(located, previous, replacement);
+  const biome = createBiomeAddress(located.routeKey, located.layout.biomeKey);
+  const routePosition = resolveRoutePosition(catalog, route, located.layout.biomeKey);
+  const firstPlan = route.biomes[0];
+  const startingReward =
+    routePosition.isFirst &&
+    firstPlan?.biomeKey === located.layout.biomeKey &&
+    firstPlan.topology?.startOccurrenceId === replacement.occurrenceId
+      ? composeStartingReward(route.loadout.startingReward, replacement.startingRewardAcquisition)
+      : undefined;
+  const acquisitionSites = reconcileReplacementAcquisitionSites(
+    located,
+    previous,
+    replacement,
+    startingReward ?? undefined,
+  );
   const withSites = Object.freeze({
     ...replacement,
     ...(acquisitionSites === undefined ? {} : { acquisitionSites }),
     roomActions: previous.roomActions,
   });
-  const biome = createBiomeAddress(located.routeKey, located.layout.biomeKey);
   const activeKeys = new Set(
     activeRoomActionReferences(
       catalog,
       biome,
       withSites,
-      resolveRoutePosition(catalog, route, located.layout.biomeKey),
+      routePosition,
+      startingReward === undefined
+        ? undefined
+        : {
+            incomingRewardBinding: catalog.runStartReward.incomingReward,
+            incomingRewardState: startingReward,
+          },
     ).map(roomActionKey),
   );
   const retained = previous.roomActions.order.filter((reference) =>
@@ -375,7 +396,7 @@ export function applyRoomReplacementCommand(
   const occurrence = requireOccurrence(located.plan, command.occurrence.occurrenceId, command);
   if (occurrence.gameName === command.gameName) return document;
   const routePosition = resolveRoutePosition(catalog, document.route, located.plan.biomeKey);
-  const replacementRoom = resolveStartingRoomDeclaration(
+  const replacementRoom = resolveEntryDeclaration(
     requireRoom(catalog, command.gameName, located.layout.biomeKey, command),
     routePosition,
   );
@@ -460,7 +481,7 @@ export function applyRoomReplacementCommand(
   );
   const replacementState = reconcileReplacementRoomState(
     catalog,
-    resolveStartingRoomDeclaration(
+    resolveEntryDeclaration(
       requireRoom(catalog, occurrence.gameName, located.layout.biomeKey, command),
       routePosition,
     ),
@@ -477,12 +498,17 @@ export function applyRoomReplacementCommand(
       ? { fountainRarityResult: occurrence.fountainRarityResult }
       : {}),
     state: replacementState,
+    ...(current.startOccurrenceId === occurrence.occurrenceId && routePosition.isFirst
+      ? occurrence.startingRewardAcquisition === undefined
+        ? {}
+        : { startingRewardAcquisition: occurrence.startingRewardAcquisition }
+      : {}),
     ...(replacementState.kind === 'shop' && replacementState.shop !== undefined
       ? { acquisitionSites: Object.freeze({ roomExit: Object.freeze({}) }) }
       : {}),
     encounters: reconcileRoomEncounterState(
       catalog,
-      resolveStartingRoomDeclaration(
+      resolveEntryDeclaration(
         requireRoom(catalog, occurrence.gameName, located.layout.biomeKey, command),
         routePosition,
       ),

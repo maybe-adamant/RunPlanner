@@ -85,6 +85,7 @@ function requireLoadout(context: BiomeMaterializationLoadout): BiomeMaterializat
     weaponKey: context.weaponKey,
     aspectKey: context.aspectKey,
     fearRanks: context.fearRanks,
+    startingReward: context.startingReward,
   });
 }
 
@@ -185,7 +186,7 @@ function materializeStart(
   layout: BiomeLayout,
   topology: BiomeTopology,
   occurrence: RoomOccurrence,
-  loadout?: RouteWeaponAspectLoadout,
+  loadout: BiomeMaterializationLoadout,
 ): CanonicalAuthoredRoom {
   const room = requireRoom(catalog, layout, topology, occurrence);
   return materializeAuthoredRoom({
@@ -196,6 +197,7 @@ function materializeStart(
     occurrence,
     role: 'ordinary',
     entered: true,
+    entry: true,
     ...(loadout === undefined ? {} : { loadout }),
   });
 }

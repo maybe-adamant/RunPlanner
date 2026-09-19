@@ -524,6 +524,9 @@ export function assembleWorkspaceBiomeSemantics(
       derivedAcquisitionEntries: source.derivedAcquisitionEntries,
       markerDestinations,
       occurrence: request.occurrence,
+      ...(request.isEntry === true && source.startingReward !== undefined
+        ? { startingReward: source.startingReward }
+        : {}),
       runState: source.runState,
       resourceAuthoring: source.resourceAuthoring,
       ...(request.isEntry === true ? { isEntry: true } : {}),

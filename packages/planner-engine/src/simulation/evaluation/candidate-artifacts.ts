@@ -1,4 +1,9 @@
-import { semanticAddressKey, type BiomeAddress } from '../../authored-project/addresses';
+import {
+  semanticAddressKey,
+  type BiomeAddress,
+  type StartingRewardAddress,
+} from '../../authored-project/addresses';
+import type { StartingRewardCandidateCapability } from '../candidates/reward-producer';
 import {
   createEmptyRoomLifecycleCandidateArtifacts,
   type RoomLifecycleCandidateArtifacts,
@@ -94,6 +99,9 @@ export interface ProjectCandidateArtifacts {
   readonly biomeAt: (biome: BiomeAddress) => BiomeCandidateArtifacts | undefined;
   readonly keepsakeSelections: KeepsakeSelectionCandidateArtifacts;
   readonly keepsakeEquipResults: KeepsakeEquipResultCandidateArtifacts;
+  readonly startingRewardAt: (
+    reward: StartingRewardAddress,
+  ) => StartingRewardCandidateCapability | undefined;
 }
 
 export class CandidateArtifactContractError extends Error {
@@ -178,6 +186,7 @@ export function createProjectCandidateArtifacts(
     string,
     KeepsakeEquipResultCandidateCapability
   > = new Map(),
+  routeStartRewards: ReadonlyMap<string, StartingRewardCandidateCapability> = new Map(),
 ): ProjectCandidateArtifacts {
   const privateBiomes = new Map<string, BiomeCandidateArtifacts>();
   const keepsakeSelections = new Map(routeStartKeepsakes);
@@ -209,5 +218,7 @@ export function createProjectCandidateArtifacts(
     biomeAt: (biome: BiomeAddress) => privateBiomes.get(semanticAddressKey(biome)),
     keepsakeSelections: createKeepsakeSelectionCandidateArtifacts(keepsakeSelections),
     keepsakeEquipResults: createKeepsakeEquipResultCandidateArtifacts(keepsakeEquipResults),
+    startingRewardAt: (reward: StartingRewardAddress) =>
+      routeStartRewards.get(semanticAddressKey(reward)),
   });
 }

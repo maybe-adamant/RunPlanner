@@ -31,10 +31,12 @@ export type {
 } from './hub';
 export type {
   EvaluatedIncomingRewardCandidate,
+  EvaluatedStartingRewardCandidate,
   EvaluatedLocalRewardCandidate,
   EvaluatedRewardWheelOfferCandidate,
   EvaluatedShopOfferCandidate,
   IncomingRewardCandidateQuery,
+  StartingRewardCandidateQuery,
   LocalRewardCandidateQuery,
   RewardWheelOfferCandidateQuery,
   ShopOfferCandidateQuery,

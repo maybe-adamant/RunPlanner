@@ -14,20 +14,6 @@ const chaosExit = {
   canSpawn: true,
 };
 
-const gRouteFirstStartingRoom = {
-  templateKey: 'FixedOpening' as const,
-  incomingReward: {
-    kind: 'countedChoice' as const,
-    storeKeys: ['RunProgress'],
-    eligibleRewardTypes: [],
-    ineligibleRewardTypes: ['Devotion', 'RoomMoneyDrop', 'MaxHealthDrop', 'MaxManaDrop'],
-    producerLifecycleKey: 'RoomReward',
-  },
-  lifecycleProfileKey: 'OpeningRewardNoEncounterRoom',
-  enteredRewardStoreHistory: { kind: 'resolvedOffer' as const },
-  forcedRewardStoreKey: 'RunProgress',
-};
-
 export const gRooms = [
   {
     gameName: 'G_Intro',
@@ -42,16 +28,7 @@ export const gRooms = [
     structuralTags: [],
     exits: [{ index: 1, type: 'OceanusExitDoor' }],
     incomingReward: { kind: 'none' },
-    startingRoomProfiles: {
-      routeFirst: gRouteFirstStartingRoom,
-      routeLater: {
-        templateKey: 'FixedIntro',
-        incomingReward: { kind: 'none' },
-        lifecycleProfileKey: 'RewardlessRoom',
-        enteredRewardStoreHistory: { kind: 'none' },
-      },
-    },
-    enteredRewardStoreHistory: { kind: 'none' },
+    enteredRewardStoreHistory: { kind: 'resolvedOffer' },
     encounterEnvelopeKey: 'EmptyEncounter',
     unmodeledEncounterKeys: ['Empty'],
     encounterSlotBindings: [],

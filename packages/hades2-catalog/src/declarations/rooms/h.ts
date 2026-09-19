@@ -26,20 +26,6 @@ const wellHost = (challengeSwitchAnchorCount: number) => ({
   roomShop: { profileKey: 'RoomShop' as const, spawnChance: 0.35 },
 });
 
-const hRouteFirstStartingRoom = {
-  templateKey: 'FixedOpening' as const,
-  incomingReward: {
-    kind: 'countedChoice' as const,
-    storeKeys: ['RunProgress'],
-    eligibleRewardTypes: [],
-    ineligibleRewardTypes: ['Devotion', 'RoomMoneyDrop', 'MaxHealthDrop', 'MaxManaDrop'],
-    producerLifecycleKey: 'RoomReward',
-  },
-  lifecycleProfileKey: 'OpeningRewardNoEncounterRoom',
-  enteredRewardStoreHistory: { kind: 'resolvedOffer' as const },
-  forcedRewardStoreKey: 'RunProgress',
-};
-
 const fieldsOptionalRewardCapacities = {
   H_Combat01: 4,
   H_Combat02: 3,
@@ -89,16 +75,7 @@ export const hRooms = [
     structuralTags: [],
     exits: [{ index: 1, type: 'FieldsExitDoor' }],
     incomingReward: { kind: 'none' },
-    startingRoomProfiles: {
-      routeFirst: hRouteFirstStartingRoom,
-      routeLater: {
-        templateKey: 'FixedIntro',
-        incomingReward: { kind: 'none' },
-        lifecycleProfileKey: 'RewardlessRoom',
-        enteredRewardStoreHistory: { kind: 'none' },
-      },
-    },
-    enteredRewardStoreHistory: { kind: 'none' },
+    enteredRewardStoreHistory: { kind: 'resolvedOffer' },
     encounterEnvelopeKey: 'EmptyEncounter',
     unmodeledEncounterKeys: ['Empty'],
     encounterSlotBindings: [],

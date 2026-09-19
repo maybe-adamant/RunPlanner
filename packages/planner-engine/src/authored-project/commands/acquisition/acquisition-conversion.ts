@@ -25,6 +25,10 @@ import {
   defaultHermesShrineDeliveryReward,
   parseHermesShrineDeliveryEntryKey,
 } from '../../hermes-shrine-delivery';
+import {
+  routeStartIncomingReward,
+  startingRewardAcquisitionFrom,
+} from '../../room-state/starting-reward';
 
 function retainArtificerReplacementEntry(
   occurrence: RoomOccurrence,
@@ -174,6 +178,28 @@ export function applyAcquisitionDispositionCommand(
       return updateOccurrenceTopology(document, located, replaced);
     }
     case 'incomingReward':
+      {
+        const starting = routeStartIncomingReward(document, located.routePosition, occurrence);
+        if (starting !== undefined) {
+          if (starting === null)
+            failCommand(command, 'cannot edit acquisition disposition before reward authorship');
+          const replacedOccurrence = retainArtificerReplacementEntry(
+            Object.freeze({
+              ...occurrence,
+              startingRewardAcquisition: startingRewardAcquisitionFrom(replace(starting)),
+            }),
+            located,
+            owner,
+            role,
+            command.value.kind === 'artificer',
+          );
+          return updateOccurrenceTopology(
+            document,
+            located,
+            replaceOccurrence(topology, replacedOccurrence),
+          );
+        }
+      }
       switch (occurrence.state.kind) {
         case 'counted':
         case 'fixed':

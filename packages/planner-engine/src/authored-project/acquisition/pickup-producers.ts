@@ -4,11 +4,13 @@ import {
   type RoomDeclaration,
 } from '../../catalog-schema';
 import type {
+  AuthoredRewardState,
   ProjectDocument,
   RoomActionReference,
   RoomEncounterState,
   RoomOccurrence,
 } from '../model';
+import type { RewardProducerBinding } from '../../reward-kernel/bindings';
 import { TRAVEL_DEAL_REFILL_ENTRY_KEY } from '../shop';
 import {
   createAcquisitionEntryAddress,
@@ -32,7 +34,7 @@ import { acquisitionSiteFromStorageKey } from './artificer';
 import { roomActionKey } from '../room-actions/key';
 import { directEncounterDefinitionKeyForSlot } from '../room-state/encounter-envelope';
 import { resolveRoutePosition } from '../route-context';
-import { resolveStartingRoomDeclaration } from '../room-state/starting-room-profile';
+import { resolveEntryDeclaration } from '../room-state/entry-resolution';
 import {
   createSelectedPickupEntries,
   materializeGorgonAthenaOffer,
@@ -75,7 +77,7 @@ function selectedClockedPickupSourceKeys(
         catalog,
         biome,
         occurrence,
-        resolveStartingRoomDeclaration(rawRoom, routePosition),
+        resolveEntryDeclaration(rawRoom, routePosition),
       )) {
         if (
           source.source.owner.kind === 'encounterPhase' &&
@@ -371,6 +373,7 @@ function traitPickupOffers(
   biome: BiomeAddress,
   occurrence: RoomOccurrence,
   declaration: RoomDeclaration,
+  routeStartIncoming?: AuthoredRewardState,
 ): readonly {
   readonly source: TraitOfferAddress;
   readonly sourceAction: RoomActionReference;
@@ -397,6 +400,7 @@ function traitPickupOffers(
   const addReward = (
     owner: TraitOfferOwnerAddress,
     reward: import('../model').AuthoredRewardState | null | undefined,
+    incomingBinding?: RewardProducerBinding,
   ) => {
     if (reward === undefined || reward === null) return;
     for (const [role, offer] of Object.entries(reward.traitOffersByAcquisitionRole)) {
@@ -404,7 +408,7 @@ function traitPickupOffers(
       const sourceAction = (() => {
         switch (owner.kind) {
           case 'incomingReward': {
-            const incoming = room?.incomingReward;
+            const incoming = incomingBinding ?? room?.incomingReward;
             const lifecycleKey =
               incoming === undefined || incoming.kind === 'none'
                 ? undefined
@@ -503,6 +507,12 @@ function traitPickupOffers(
     case 'none':
       break;
   }
+  if (routeStartIncoming !== undefined)
+    addReward(
+      createIncomingRewardAddress(biome, occurrence.occurrenceId),
+      routeStartIncoming,
+      catalog.runStartReward.incomingReward,
+    );
   const occurrenceAddress = createOccurrenceAddress(biome, occurrence.occurrenceId);
   for (const [siteKey, site] of Object.entries(occurrence.acquisitionSites ?? {})) {
     const address = acquisitionSiteFromStorageKey(occurrenceAddress, siteKey);
@@ -565,9 +575,10 @@ export function selectedPickupProducers(
   occurrence: RoomOccurrence,
   declaration: RoomDeclaration,
   acquisitionOrdinal: number,
+  routeStartIncoming?: AuthoredRewardState,
 ): readonly SelectedPickupProducer[] {
   return Object.freeze([
-    ...traitPickupOffers(catalog, biome, occurrence, declaration).flatMap(
+    ...traitPickupOffers(catalog, biome, occurrence, declaration, routeStartIncoming).flatMap(
       ({ source, sourceAction, sourceNormal, sourceIsStory, offer }) => {
         const echoKey =
           source.owner.kind === 'encounterPhase'
@@ -669,11 +680,17 @@ export function activeSelectedPickupProducers(
   occurrence: RoomOccurrence,
   declaration: RoomDeclaration,
   acquisitionOrdinal: number,
+  routeStartIncoming?: AuthoredRewardState,
 ): readonly SelectedPickupProducer[] {
   return Object.freeze(
-    selectedPickupProducers(catalog, biome, occurrence, declaration, acquisitionOrdinal).filter(
-      (producer) => producer.sourceNormal,
-    ),
+    selectedPickupProducers(
+      catalog,
+      biome,
+      occurrence,
+      declaration,
+      acquisitionOrdinal,
+      routeStartIncoming,
+    ).filter((producer) => producer.sourceNormal),
   );
 }
 
@@ -686,8 +703,16 @@ export function selectedPickupProducerForEntry(
   siteKey: string,
   entryKey: string,
   acquisitionOrdinal: number,
+  routeStartIncoming?: AuthoredRewardState,
 ): SelectedPickupProducer | undefined {
-  return selectedPickupProducers(catalog, biome, occurrence, declaration, acquisitionOrdinal).find(
+  return selectedPickupProducers(
+    catalog,
+    biome,
+    occurrence,
+    declaration,
+    acquisitionOrdinal,
+    routeStartIncoming,
+  ).find(
     (producer) =>
       producer.siteKey === siteKey && producer.pickups.some((pickup) => pickup.key === entryKey),
   );
@@ -704,6 +729,7 @@ export function reconcileSelectedPickupProducerState(
   occurrence: RoomOccurrence,
   declaration: RoomDeclaration,
   acquisitionOrdinal: number,
+  routeStartIncoming?: AuthoredRewardState,
 ): RoomOccurrence {
   const producers = selectedPickupProducers(
     catalog,
@@ -711,6 +737,7 @@ export function reconcileSelectedPickupProducerState(
     occurrence,
     declaration,
     acquisitionOrdinal,
+    routeStartIncoming,
   );
   const echoKeys = new Set(echoLastRewardPickupEntryKeys(catalog, occurrence.encounters));
   const selectedSiteKeys = new Set(producers.map((producer) => producer.siteKey));

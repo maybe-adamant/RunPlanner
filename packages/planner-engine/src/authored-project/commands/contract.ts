@@ -50,6 +50,8 @@ function commandContractAddress(
     case 'ReplaceManualArcanaSelection':
     case 'ReplaceFearVowRank':
       return command.route;
+    case 'ReplaceStartingReward':
+      return command.reward;
     case 'ReplaceResourcePlacement':
       return command.route;
     case 'ReplaceStartingKeepsake':

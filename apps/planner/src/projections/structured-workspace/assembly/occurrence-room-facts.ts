@@ -18,7 +18,7 @@ import {
   createFieldsSpatialAddress,
   createRoomFeatureAddress,
   directEncounterDefinitionKeyForSlot,
-  resolveStartingRoomDeclaration,
+  resolveEntryDeclaration,
   type FieldsSpatialTarget,
 } from '@run-planner/engine/authored-project';
 import type { RoomDeclaration } from '@run-planner/engine/catalog-schema';
@@ -81,7 +81,7 @@ export function assembleOccurrenceRewardLocal(
   input: WorkspaceOccurrenceRoomInput,
   rawRoom: RoomDeclaration,
 ): WorkspaceOccurrenceRewardLocalAssembly {
-  const room = resolveStartingRoomDeclaration(rawRoom, input.routePosition);
+  const room = resolveEntryDeclaration(rawRoom, input.routePosition);
   const address = createOccurrenceAddress(input.biome, input.occurrence.occurrenceId);
   const baseRewardControls = controlsForOccurrence(input, room);
   const hasRetainedNemesisEvent = Object.keys(input.occurrence.encounters.encounterKeyByPhase).some(
@@ -126,6 +126,7 @@ export function assembleOccurrenceRewardLocal(
             input.occurrence,
             room,
             input.routePosition.ordinal,
+            input.startingReward ?? undefined,
           );
           const activePickups = pickupProducers.flatMap((producer) =>
             producer.pickups.map((pickup) =>

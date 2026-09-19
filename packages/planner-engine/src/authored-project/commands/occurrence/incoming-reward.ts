@@ -8,7 +8,7 @@ import { legalTopologyOccurrenceRoom } from '../../topology/room-ownership';
 import type { IncomingRewardCommand } from '../types';
 import { createUnresolvedAcquisitionRewardState } from '../../traits/state';
 import { incomingLevelEffectSource } from '../../room-state/level-effects';
-import { resolveStartingRoomDeclaration } from '../../room-state/starting-room-profile';
+import { resolveEntryDeclaration } from '../../room-state/entry-resolution';
 
 export function applyIncomingRewardCommand(
   document: ProjectDocument,
@@ -27,7 +27,7 @@ export function applyIncomingRewardCommand(
   if (room === undefined) {
     failCommand(command, `${occurrence.gameName} is not a legal topology room occurrence`);
   }
-  const contextualRoom = resolveStartingRoomDeclaration(room, located.routePosition);
+  const contextualRoom = resolveEntryDeclaration(room, located.routePosition);
   const levelEffectSource = incomingLevelEffectSource(catalog, occurrence, contextualRoom);
   if (levelEffectSource === undefined)
     failCommand(command, `${contextualRoom.gameName} has no reward binding`);

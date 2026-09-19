@@ -65,6 +65,7 @@ export function createDefaultRouteLoadout(catalog: Catalog): RouteLoadout {
   return Object.freeze({
     weaponKey: weapon.key,
     aspectKey: weapon.defaultAspectKey,
+    startingReward: null,
     manualArcanaKeys: Object.freeze([]),
     fearRanks: Object.freeze(
       Object.fromEntries(catalog.fearVows.values.map((vow) => [vow.key, 0])),

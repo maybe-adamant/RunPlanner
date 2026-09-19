@@ -89,6 +89,7 @@ type WorkspaceRewardCommandIntent = WorkspaceCommandIntent<
     {
       readonly kind:
         | 'ReplaceIncomingReward'
+        | 'ReplaceStartingReward'
         | 'ReplaceLocalReward'
         | 'ReplaceRewardWheelOffer'
         | 'ReplaceShopOfferOption'

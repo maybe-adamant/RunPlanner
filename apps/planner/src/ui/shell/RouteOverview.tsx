@@ -12,8 +12,6 @@ import { type RouteFeedbackPresentation } from '@planner/projections/evaluationP
 import type { RouteEditorNavigation } from '@planner/projections/editorNavigation';
 import { authoredProjectCommandDispatched } from '@planner/state/projectWorkspaceSlice';
 import { useAppDispatch } from '@planner/state/store';
-import { BiomeEntryPicker } from '@planner/ui/editor/biome/BiomeEntryPicker';
-import { StartRoomIdentityEditor } from '@planner/ui/editor/biome/BiomeInspectorControls';
 import type {
   WorkspaceInteractionCatalog,
   WorkspaceRoute,
@@ -24,6 +22,7 @@ import {
   KeepsakeSelectionPicker,
 } from '@planner/ui/editor/KeepsakePickers';
 import { HexTreeEditor } from '@planner/ui/editor/rewards/HexTreeEditor';
+import { RewardControlEditor } from '@planner/ui/editor/rewards/RewardControlEditor';
 import { FindingCount, StatusBadge } from '../feedback/EvaluationFeedback';
 import { useFindingTarget } from '../feedback/useFindingTarget';
 import { RouteWeaponPicker } from './RouteWeaponPicker';
@@ -94,11 +93,6 @@ export function RouteOverview({
     project.route.routeKey === workspaceRoute.routeKey ? project.route : undefined;
   if (authoredRoute === undefined)
     throw new Error(`Missing authored route ${workspaceRoute.routeKey}`);
-  const firstBiome = workspaceRoute.biomes[0];
-  const start =
-    firstBiome === undefined
-      ? undefined
-      : interactions.starts.get(workspaceInteractionKey(firstBiome.owner));
   const weapon = catalog.weapons.byKey[authoredRoute.loadout.weaponKey];
   if (weapon === undefined) throw new Error(`Missing weapon ${authoredRoute.loadout.weaponKey}`);
   const derivedLoadout = deriveRouteLoadout(catalog, authoredRoute.loadout);
@@ -415,17 +409,12 @@ export function RouteOverview({
             <p className="route-prefix-description">{routeDescription}</p>
           </div>
         </div>
-        {firstBiome === undefined ? null : (
-          <section aria-label="Starting room" className="route-start-room-controls">
-            {firstBiome.entry === undefined ? (
-              start === undefined ? null : (
-                <BiomeEntryPicker interaction={start} />
-              )
-            ) : (
-              <StartRoomIdentityEditor interactions={interactions} node={firstBiome.entry} />
-            )}
-          </section>
-        )}
+        <RewardControlEditor
+          control={workspaceRoute.startingReward}
+          idPrefix={`${workspaceRoute.routeKey}-starting-reward`}
+          interactions={interactions}
+          label="Starting reward"
+        />
       </div>
     </section>
   );

@@ -1,7 +1,8 @@
 import type { Catalog } from '../../catalog-schema';
 import { createBiomeAddress, type BiomeAddress } from '../addresses';
 import { resolveRoutePosition } from '../route-context';
-import { resolveStartingRoomDeclaration } from '../room-state/starting-room-profile';
+import { resolveEntryRoom } from '../room-state/entry-resolution';
+import { composeStartingReward } from '../room-state/starting-reward';
 import type {
   AuthoredBiomePlan,
   BiomeTopology,
@@ -254,7 +255,14 @@ function activeDomains(
           biome,
           occurrence,
           routePosition,
-          ...roomActionDomainContext(catalog, routePosition, plan, plan.topology, occurrence),
+          ...roomActionDomainContext(
+            catalog,
+            routePosition,
+            plan,
+            plan.topology,
+            occurrence,
+            route.loadout,
+          ),
         }),
       );
     }
@@ -286,12 +294,20 @@ function roomActionDomainContext(
   plan: AuthoredBiomePlan,
   topology: BiomeTopology,
   occurrence: RoomOccurrence,
-): { readonly lifecycleProfileKey: string; readonly activeEncounterSlotKeys?: readonly string[] } {
+  loadout: ProjectDocument['route']['loadout'],
+): {
+  readonly lifecycleProfileKey: string;
+  readonly incomingRewardBinding?: import('../../reward-kernel/bindings').RewardProducerBinding;
+  readonly incomingRewardState?: import('../model').AuthoredRewardState | null;
+  readonly activeEncounterSlotKeys?: readonly string[];
+} {
   const rawDeclaration = catalog.rooms.byKey[occurrence.gameName];
-  const declaration =
+  const entry = topology.startOccurrenceId === occurrence.occurrenceId;
+  const resolved =
     rawDeclaration === undefined
       ? undefined
-      : resolveStartingRoomDeclaration(rawDeclaration, routePosition);
+      : resolveEntryRoom(catalog, rawDeclaration, routePosition, entry);
+  const declaration = resolved?.declaration;
   const layout = catalog.biomeLayouts.byKey[plan.biomeKey];
   if (declaration === undefined || layout === undefined) {
     throw new Error(`missing Room Action declaration context for ${occurrence.gameName}`);
@@ -304,16 +320,28 @@ function roomActionDomainContext(
       ),
   );
   const role = isLocalVisit ? 'ephyraSide' : 'ordinary';
-  const lifecycleProfileKey = authoredRoomLifecycleProfileKey(declaration, occurrence, role);
+  const lifecycleProfileKey =
+    resolved?.lifecycleProfileKey ?? authoredRoomLifecycleProfileKey(declaration, occurrence, role);
+  const startingReward =
+    entry && routePosition.isFirst
+      ? composeStartingReward(loadout.startingReward, occurrence.startingRewardAcquisition)
+      : undefined;
+  const entryRewardContext =
+    startingReward === undefined
+      ? {}
+      : {
+          incomingRewardBinding: resolved!.incomingRewardBinding,
+          incomingRewardState: startingReward,
+        };
   if (declaration.mode.kind !== 'authored' || declaration.mode.templateKey !== 'FieldsCombat') {
-    return frozen({ lifecycleProfileKey });
+    return frozen({ lifecycleProfileKey, ...entryRewardContext });
   }
   const decision = topology.decisions.find(
     (candidate) =>
       candidate.kind === 'exit' &&
       candidate.normal.targets.some((target) => target.occurrenceId === occurrence.occurrenceId),
   );
-  if (decision?.kind !== 'exit') return frozen({ lifecycleProfileKey });
+  if (decision?.kind !== 'exit') return frozen({ lifecycleProfileKey, ...entryRewardContext });
   const activeCageCount = fieldsDefaultActiveCageCount({
     catalog,
     layout,
@@ -322,12 +350,13 @@ function roomActionDomainContext(
     room: declaration,
     replacingOccurrenceId: occurrence.occurrenceId,
   });
-  if (activeCageCount === undefined) return frozen({ lifecycleProfileKey });
+  if (activeCageCount === undefined) return frozen({ lifecycleProfileKey, ...entryRewardContext });
   const slots = encounterEnvelopeSlots(catalog, declaration, occurrence.gameName);
   const passive = slots.filter((phase) => phase.rewardAttachment?.kind !== 'localReward');
   const cages = slots.filter((phase) => phase.rewardAttachment?.kind === 'localReward');
   return frozen({
     lifecycleProfileKey,
+    ...entryRewardContext,
     activeEncounterSlotKeys: frozen([
       ...passive.map((phase) => phase.key),
       ...cages.slice(0, activeCageCount).map((phase) => phase.key),
@@ -438,6 +467,7 @@ export function roomActionDomainForOccurrence(
                 plan,
                 plan.topology,
                 occurrence,
+                document.route.loadout,
               )),
         }),
       });

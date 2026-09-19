@@ -514,6 +514,17 @@ function locateStructuralOwner(
       : chronology?.kind === 'hubBoard' || chronology?.kind === 'hubVisit'
         ? chronology.history
         : undefined;
+  if (address.kind === 'startingReward' && address.routeKey === prefix.routeKey) {
+    return Object.freeze({
+      decisionIndex: -1,
+      ...(historyChronology === undefined
+        ? {}
+        : {
+            historySequence: historyChronology.sequence,
+            historyBoundary: historyChronology.boundary,
+          }),
+    });
+  }
   const fixedRoomIndex = (prefix.fixedRoomLinks ?? []).findIndex((link) => {
     const occurrenceId = link.target.occurrenceId;
     if (ownsOccurrence(address, occurrenceId)) return true;

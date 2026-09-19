@@ -134,7 +134,10 @@ function validateMode(room: RawRoomDeclaration, path: string): RoomMode {
   if (room.kind !== expectedKind)
     fail(`${path}.kind`, `${templateKey} requires room kind ${expectedKind}`);
   const expectedRewardKind = roomTemplateRewardKinds[templateKey];
-  if (room.incomingReward.kind !== expectedRewardKind) {
+  if (
+    room.incomingReward.kind !== expectedRewardKind &&
+    !(templateKey === 'FixedOpening' && room.incomingReward.kind === 'none')
+  ) {
     fail(
       `${path}.incomingReward.kind`,
       `${templateKey} requires reward producer ${expectedRewardKind}`,

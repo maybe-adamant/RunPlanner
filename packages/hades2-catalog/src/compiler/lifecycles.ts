@@ -440,14 +440,6 @@ export function validateLifecycleBindings(input: {
       room.incomingReward,
       `rooms.${room.gameName}.lifecycleProfileKey`,
     );
-    for (const [profileKind, profile] of Object.entries(room.startingRoomProfiles ?? {})) {
-      validateRoomBinding(
-        room,
-        profile.lifecycleProfileKey,
-        profile.incomingReward,
-        `rooms.${room.gameName}.startingRoomProfiles.${profileKind}.lifecycleProfileKey`,
-      );
-    }
   }
   for (const trait of input.traits.values) {
     const disposition = trait.selectedDisposition;

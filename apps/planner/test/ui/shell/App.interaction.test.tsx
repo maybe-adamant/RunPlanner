@@ -769,7 +769,7 @@ describe('planner history interaction', () => {
     expect(redo).toHaveProperty('disabled', true);
   });
 
-  it('creates and edits the F start in Loadout with ordinary Undo and timeline repair', async () => {
+  it('owns starting reward selection in Loadout before F identity authoring, with Undo', async () => {
     const { application, user } = renderPlannerForInteraction();
     await user.click(
       within(screen.getByRole('radiogroup', { name: 'Biomes to configure' })).getByRole('radio', {
@@ -777,25 +777,37 @@ describe('planner history interaction', () => {
       }),
     );
 
-    const beforeEntry = application.store.getState().projectWorkspace.history!;
-    await user.click(screen.getByRole('button', { name: 'Starting room' }));
-    await user.click(within(screen.getByRole('listbox')).getAllByRole('option')[0]!);
-    expect(application.store.getState().projectWorkspace.history!.past).toHaveLength(
-      beforeEntry.past.length + 1,
-    );
-    await user.click(screen.getByRole('button', { name: 'Undo' }));
-    expect(application.store.getState().projectWorkspace.history!.present).toBe(
-      beforeEntry.present,
-    );
-    expect(screen.getByRole('button', { name: 'Starting room' })).toBeTruthy();
-    await user.click(screen.getByRole('button', { name: 'Redo' }));
+    const startingReward = () => screen.getByRole('button', { name: 'Starting reward' });
+    await user.click(startingReward());
+    await user.click(within(await screen.findByRole('listbox')).getByText('Hammer'));
+    expect(
+      application.store.getState().projectWorkspace.history!.present.route.loadout.startingReward,
+    ).toMatchObject({ rewardType: 'WeaponUpgrade' });
 
-    expect(application.store.getState().editorSession.activePanel).toEqual({ kind: 'overview' });
-    expect(screen.getByLabelText('Start room configuration')).toBeTruthy();
-    expect(screen.getByText('Room')).toBeTruthy();
-    expect(screen.getByText('Reward')).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'Undo' })).not.toHaveProperty('disabled', true);
-    const initial = application.store.getState().projectWorkspace.history!.present;
+    await user.click(startingReward());
+    const boon = within(await screen.findByRole('listbox')).getByRole('option', { name: 'Boon' });
+    expect(boon.getAttribute('aria-disabled')).toBe('false');
+    await user.click(boon);
+    const boonSource = within(await screen.findByRole('listbox'))
+      .getAllByRole('option')
+      .find((option) => option.getAttribute('aria-disabled') !== 'true');
+    if (boonSource === undefined) throw new Error('starting Boon has no selectable source');
+    await user.click(boonSource);
+    expect(
+      application.store.getState().projectWorkspace.history!.present.route.loadout.startingReward,
+    ).toMatchObject({ rewardType: 'Boon' });
+    await user.click(screen.getByRole('button', { name: 'Undo' }));
+    expect(
+      application.store.getState().projectWorkspace.history!.present.route.loadout.startingReward,
+    ).toMatchObject({ rewardType: 'WeaponUpgrade' });
+
+    await user.click(screen.getByRole('button', { name: 'Erebus' }));
+    expect(application.store.getState().editorSession.activePanel).toEqual({
+      kind: 'biome',
+      biomeKey: 'F',
+    });
+    await user.click(screen.getByRole('button', { name: 'Starting room' }));
+    await user.click(within(await screen.findByRole('listbox')).getAllByRole('option')[0]!);
     const identity = () => screen.getByRole('region', { name: 'Start room configuration' });
     await user.click(within(identity()).getByRole('button', { name: 'Room' }));
     const alternative = within(await screen.findByRole('listbox'))
@@ -807,42 +819,13 @@ describe('planner history interaction', () => {
       );
     if (alternative === undefined) throw new Error('missing alternative opening');
     await user.click(alternative);
-    expect(application.store.getState().editorSession.activePanel).toEqual({ kind: 'overview' });
-    expect(application.store.getState().projectWorkspace.history!.present).not.toEqual(initial);
-    await user.click(screen.getByRole('button', { name: 'Undo' }));
-    expect(application.store.getState().projectWorkspace.history!.present).toEqual(initial);
-
-    const repair = () => screen.getByRole('region', { name: 'Next repair' });
-    await user.click(within(repair()).getByRole('button'));
-    expect(application.store.getState().editorSession.activePanel).toEqual({ kind: 'overview' });
-    expect(within(identity()).getByLabelText('Reward').getAttribute('data-selected-finding')).toBe(
-      'true',
-    );
-
-    await user.click(within(identity()).getByLabelText('Reward'));
-    await user.click(within(await screen.findByRole('listbox')).getByText('Hammer'));
-    expect(application.store.getState().editorSession.activePanel).toEqual({ kind: 'overview' });
-    expect(
-      application.store.getState().projectWorkspace.history!.present.route.biomes[0]?.topology
-        ?.occurrences[0]?.state,
-    ).toMatchObject({
-      kind: 'counted',
-      reward: { offer: { rewardType: 'WeaponUpgrade' } },
-    });
-    await user.click(within(repair()).getByRole('button'));
+    const replacement = application.store.getState().projectWorkspace.history!.present;
     expect(application.store.getState().editorSession.activePanel).toEqual({
       kind: 'biome',
       biomeKey: 'F',
     });
-    expect(application.store.getState().editorSession.traitDialogTarget).toBeNull();
-    expect(screen.queryByRole('region', { name: 'Start room configuration' })).toBeNull();
-    const timeline = screen.getByRole('tabpanel', { name: 'Room Timeline' });
-    expect(
-      within(timeline).getByRole('button', { name: 'Choose Trait; trait is not selected' }),
-    ).toBeTruthy();
-    expect(timeline.querySelector('[data-selected-finding="true"]')).not.toBeNull();
     await user.click(screen.getByRole('button', { name: 'Undo' }));
-    expect(application.store.getState().projectWorkspace.history!.present).toEqual(initial);
+    expect(application.store.getState().projectWorkspace.history!.present).not.toEqual(replacement);
   });
 
   it('keeps relocated opening controls locked behind incomplete loadout results', async () => {

@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 85,
+  "schemaVersion": 86,
   "projectId": "natural-chaos-unresolved-trial-upgrade",
   "catalogVersion": "0.55.0-anvil-of-fates",
   "route": {
@@ -19,6 +19,7 @@
     "loadout": {
       "weaponKey": "WeaponStaffSwing",
       "aspectKey": "BaseStaffAspect",
+      "startingReward": null,
       "manualArcanaKeys": [],
       "fearRanks": {
         "HealingReductionShrineUpgrade": 0,
@@ -52,8 +53,7 @@
               "occurrenceId": "fixture-chaos-opening",
               "gameName": "F_Opening01",
               "state": {
-                "kind": "counted",
-                "reward": null
+                "kind": "none"
               },
               "encounters": {
                 "encounterKeyByPhase": {},

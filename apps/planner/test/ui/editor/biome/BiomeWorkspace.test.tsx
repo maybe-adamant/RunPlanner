@@ -16,6 +16,7 @@ import {
   createOccurrenceAddress,
   createOccurrenceId,
   createProjectDocument,
+  createStartingRewardAddress,
   decodeProjectDocument,
   createTargetAddress,
   semanticAddressKey,
@@ -132,6 +133,11 @@ function fTwoDoorBatchProject(): {
   const source = { kind: 'occurrence' as const, occurrenceId: start };
   let project = emptyProject('Underworld', 1);
   project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceStartingReward',
+    reward: createStartingRewardAddress('Underworld'),
+    value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'ApolloUpgrade' } },
+  });
+  project = applyProjectCommand(project, catalog, {
     kind: 'CreateStart',
     biome,
     occurrenceId: start,
@@ -157,14 +163,11 @@ function fTwoDoorBatchProject(): {
     rewardStore: createBatchRewardStoreAddress(biome, owner.source),
     storeKey: 'RunProgress',
   });
-  for (const occurrenceId of [start, combat]) {
+  for (const occurrenceId of [combat]) {
     project = applyProjectCommand(project, catalog, {
       kind: 'ReplaceIncomingReward',
       reward: createIncomingRewardAddress(biome, occurrenceId),
-      value:
-        occurrenceId === start
-          ? { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'ApolloUpgrade' } }
-          : { rewardType: 'MaxHealthDrop' },
+      value: { rewardType: 'MaxHealthDrop' },
     });
   }
   return { owner, project: authorLegalTraitOffers(project), start };
@@ -584,8 +587,13 @@ describe('BiomeWorkspace', () => {
     expect(within(structure).getByRole('button', { name: /Opening/ })).toBeTruthy();
   });
 
-  it('creates F generically and leaves room and reward authoring on the Opening occurrence', async () => {
-    const view = renderWorkspace(emptyProject('Underworld', 1), 'Underworld', 'F');
+  it('creates F generically and leaves room identity authoring in the Opening Overview', async () => {
+    const project = applyProjectCommand(emptyProject('Underworld', 1), catalog, {
+      kind: 'ReplaceStartingReward',
+      reward: createStartingRewardAddress('Underworld'),
+      value: { rewardType: 'WeaponUpgrade' },
+    });
+    const view = renderWorkspace(project, 'Underworld', 'F');
 
     expect(screen.queryByRole('button', { name: 'Room' })).toBeNull();
     expect(screen.queryByText('Choose room to show reward')).toBeNull();
@@ -595,7 +603,7 @@ describe('BiomeWorkspace', () => {
 
     const identity = await screen.findByRole('region', { name: 'Start room configuration' });
     expect(within(identity).getByRole('button', { name: 'Room' })).toBeTruthy();
-    expect(within(identity).getByLabelText('Reward')).toBeTruthy();
+    expect(within(identity).queryByLabelText('Reward')).toBeNull();
     const plan = view.application.store
       .getState()
       .projectWorkspace.history!.present.route?.biomes.find((biome) => biome.biomeKey === 'F');
@@ -607,7 +615,7 @@ describe('BiomeWorkspace', () => {
 
   it('repairs an imported fixed null entry through the declared room picker', async () => {
     const created = emptyProject('Surface', 1);
-    const project = decodeProjectDocument(
+    let project = decodeProjectDocument(
       {
         ...created,
         route: {
@@ -617,6 +625,11 @@ describe('BiomeWorkspace', () => {
       },
       catalog,
     );
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceStartingReward',
+      reward: createStartingRewardAddress('Surface'),
+      value: { rewardType: 'WeaponUpgrade' },
+    });
     const view = renderWorkspace(project, 'Surface', 'N');
     await view.user.click(screen.getByRole('button', { name: 'Starting room' }));
     const options = within(screen.getByRole('listbox')).getAllByRole('option');
@@ -626,7 +639,7 @@ describe('BiomeWorkspace', () => {
       view.application.store.getState().projectWorkspace.history!.present.route.biomes[0]?.topology
         ?.occurrences,
     ).toHaveLength(1);
-    expect(screen.getByRole('region', { name: 'Start room configuration' })).toBeTruthy();
+    expect(screen.queryByRole('region', { name: 'Start room configuration' })).toBeNull();
   });
 
   it('keeps a later Dream entry choice in its biome inspector behind prior readiness', () => {

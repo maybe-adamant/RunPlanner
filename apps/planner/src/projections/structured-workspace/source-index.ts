@@ -8,6 +8,7 @@ import {
   createLocalVisitDecisionAddress,
   createLocalVisitOrderAddress,
   createOccurrenceAddress,
+  routeStartIncomingReward,
   ixionGeneratedChaosOccurrenceKeys,
   additionalExitsForDecision,
   declaredPhysicalExits as resolveDeclaredPhysicalExits,
@@ -26,6 +27,7 @@ import {
   type OccurrenceAddress,
   type ProjectDocument,
   type RoomOccurrence,
+  type AuthoredRewardState,
   type SemanticAddress,
   type LevelResolutionAddress,
   type AcquisitionSiteAddress,
@@ -80,6 +82,8 @@ export interface WorkspaceEvaluatedBatchOverlay {
 export interface WorkspaceBiomeSource {
   readonly configuredRivalsRank: number;
   readonly routePosition: ResolvedRoutePosition;
+  /** The route-owned start offer composed with this entry's occurrence-owned acquisition payload. */
+  readonly startingReward?: AuthoredRewardState | null;
   readonly biome: BiomeAddress;
   readonly completeness: BiomeCompletenessResult;
   readonly entryRoom?: CanonicalAuthoredRoom;
@@ -658,6 +662,7 @@ function authoredExitDecisionsInTopologyOrder(
 
 function createWorkspaceBiomeSource(
   catalog: Catalog,
+  project: ProjectDocument,
   routeKey: string,
   configuredRivalsRank: number,
   routePosition: ResolvedRoutePosition,
@@ -700,6 +705,15 @@ function createWorkspaceBiomeSource(
     }
     occurrencesById.set(occurrence.occurrenceId, occurrence);
   }
+  const startingReward =
+    topology === null
+      ? undefined
+      : (() => {
+          const start = occurrencesById.get(topology.startOccurrenceId);
+          return start === undefined
+            ? undefined
+            : routeStartIncomingReward(project, routePosition, start);
+        })();
   if (topology !== null) {
     for (const decision of topology.decisions) {
       if (decision.kind === 'exit') {
@@ -787,6 +801,7 @@ function createWorkspaceBiomeSource(
   return Object.freeze({
     configuredRivalsRank,
     routePosition,
+    ...(startingReward === undefined ? {} : { startingReward }),
     biome,
     completeness,
     encounterPhaseStatus,
@@ -899,6 +914,7 @@ export function createWorkspaceProjectSourceIndex(
         route.biomes.map((plan) =>
           createWorkspaceBiomeSource(
             catalog,
+            project,
             route.routeKey,
             route.loadout.fearRanks.BossDifficultyShrineUpgrade ?? 0,
             resolveRoutePosition(catalog, route, plan.biomeKey),

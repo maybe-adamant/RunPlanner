@@ -107,6 +107,7 @@ import { migrateProjectDocument as migrateProject81To82 } from '../../../../sche
 import { migrateProjectDocument as migrateProject82To83 } from '../../../../schema/migrate-project-82-to-83.js';
 import { migrateProjectDocument as migrateProject83To84 } from '../../../../schema/migrate-project-83-to-84.js';
 import { migrateProjectDocument as migrateProject84To85 } from '../../../../schema/migrate-project-84-to-85.js';
+import { migrateProjectDocument as migrateProject85To86 } from '../../../../schema/migrate-project-85-to-86.js';
 
 function fOnlyProject(project = createCompleteFGProject()) {
   return Object.freeze({
@@ -2061,11 +2062,16 @@ describe('execution-plan compiler and codec', () => {
     const legacy = JSON.parse(encodeProjectDocument(project)) as {
       schemaVersion: number;
       route: {
+        loadout: { startingReward?: unknown };
         biomes: {
           biomeKey: string;
           topology: null | {
+            startOccurrenceId: string;
             occurrences: {
+              occurrenceId: string;
               acquisitionSites?: Record<string, { pickupEntries?: Record<string, unknown> }>;
+              startingRewardAcquisition?: unknown;
+              state: unknown;
               roomActions: {
                 order: { kind: string; siteKey?: string; entryKey?: string }[];
               };
@@ -2075,6 +2081,23 @@ describe('execution-plan compiler and codec', () => {
       };
     };
     legacy.schemaVersion = 79;
+    const firstTopology = legacy.route.biomes[0]?.topology;
+    const firstStart = firstTopology?.occurrences.find(
+      (occurrence) => occurrence.occurrenceId === firstTopology.startOccurrenceId,
+    );
+    const startingReward = legacy.route.loadout.startingReward;
+    if (firstStart !== undefined && startingReward !== undefined && startingReward !== null) {
+      firstStart.state = {
+        kind: 'counted',
+        reward: { offer: startingReward, ...(firstStart.startingRewardAcquisition ?? {}) },
+      };
+    }
+    delete legacy.route.loadout.startingReward;
+    for (const biome of legacy.route.biomes) {
+      for (const occurrence of biome.topology?.occurrences ?? []) {
+        delete occurrence.startingRewardAcquisition;
+      }
+    }
     for (const biome of legacy.route.biomes) {
       if (biome.biomeKey !== 'Q') continue;
       for (const occurrence of biome.topology?.occurrences ?? []) {
@@ -2114,7 +2137,7 @@ describe('execution-plan compiler and codec', () => {
         ),
       ),
     );
-    const loaded = parseProjectDocument(JSON.stringify(migrated), catalog);
+    const loaded = parseProjectDocument(JSON.stringify(migrateProject85To86(migrated)), catalog);
     expect(qSupplyChainSlices(loaded)).toEqual(before);
     expect(
       simulateProjectAssembly(catalog, loaded).evaluation.route.summary.eligibleForExecutionPlan,

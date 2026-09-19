@@ -50,6 +50,8 @@ function rewardQueries(
   offers: readonly ResolvedRewardOffer[],
 ): readonly ProjectCandidateQuery[] {
   switch (owner.kind) {
+    case 'startingReward':
+      return offers.map((value) => ({ kind: 'startingReward', reward: owner.address, value }));
     case 'incomingReward':
       return offers.map((value) => ({ kind: 'incomingReward', reward: owner.address, value }));
     case 'localReward':

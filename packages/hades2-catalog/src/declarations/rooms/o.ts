@@ -10,20 +10,6 @@ const surfaceShopHost = (spawnChance: number, forced = false, challengeSwitchAnc
   },
 });
 
-const oRouteFirstStartingRoom = {
-  templateKey: 'FixedOpening' as const,
-  incomingReward: {
-    kind: 'countedChoice' as const,
-    storeKeys: ['RunProgress'],
-    eligibleRewardTypes: [],
-    ineligibleRewardTypes: ['Devotion', 'RoomMoneyDrop', 'MaxHealthDrop', 'MaxManaDrop'],
-    producerLifecycleKey: 'RoomReward',
-  },
-  lifecycleProfileKey: 'OpeningRewardNoEncounterRoom',
-  enteredRewardStoreHistory: { kind: 'resolvedOffer' as const },
-  forcedRewardStoreKey: 'RunProgress',
-};
-
 export const oRooms = [
   {
     gameName: 'O_Intro',
@@ -36,16 +22,7 @@ export const oRooms = [
     structuralTags: [],
     exits: [{ index: 1, type: 'ShipsExitDoor' }],
     incomingReward: { kind: 'none' },
-    startingRoomProfiles: {
-      routeFirst: oRouteFirstStartingRoom,
-      routeLater: {
-        templateKey: 'FixedIntro',
-        incomingReward: { kind: 'none' },
-        lifecycleProfileKey: 'RewardlessRoom',
-        enteredRewardStoreHistory: { kind: 'none' },
-      },
-    },
-    enteredRewardStoreHistory: { kind: 'none' },
+    enteredRewardStoreHistory: { kind: 'resolvedOffer' },
     encounterEnvelopeKey: 'EmptyEncounter',
     unmodeledEncounterKeys: ['Empty'],
     encounterSlotBindings: [],

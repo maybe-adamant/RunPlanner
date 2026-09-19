@@ -21,7 +21,8 @@ import { applyResourcePlacementCommand } from './resources';
 import type { ProjectCommand } from './types';
 import { createBiomeAddress } from '../addresses';
 import { resolveRoutePosition } from '../route-context';
-import { resolveStartingRoomDeclaration } from '../room-state/starting-room-profile';
+import { resolveEntryDeclaration } from '../room-state/entry-resolution';
+import { routeStartIncomingReward } from '../room-state/starting-reward';
 import { applyRoomActionCommand } from './room-actions';
 import { reconcileNewRequiredRoomActions } from '../room-actions/defaults';
 import {
@@ -63,8 +64,9 @@ function reconcileGeneratedPickupProducerState(
         catalog,
         biome,
         occurrence,
-        resolveStartingRoomDeclaration(rawRoom, routePosition),
+        resolveEntryDeclaration(rawRoom, routePosition),
         routePosition.ordinal,
+        routeStartIncomingReward(document, routePosition, occurrence) ?? undefined,
       );
       if (reconciled !== occurrence) occurrencesChanged = true;
       return reconciled;
@@ -147,6 +149,7 @@ function applyUnchecked(
         command,
       );
     case 'ReplaceRouteLoadout':
+    case 'ReplaceStartingReward':
     case 'ReplaceAspectHexTree':
     case 'ReplaceManualArcanaSelection':
     case 'ReplaceFearVowRank':

@@ -10,10 +10,12 @@ import {
   createOccurrenceAddress,
   createRoomActionAddress,
   createIncomingRewardAddress,
+  createStartingRewardAddress,
   createTraitOfferAddress,
   encodeProjectDocument,
   SEA_STAR_DUPLICATE_ENTRY_KEY,
   roomActionKey,
+  routeStartIncomingReward,
   seaStarDuplicateSiteKey,
   selectedPickupProducers,
 } from '@run-planner/engine/authored-project';
@@ -79,12 +81,14 @@ describe('run-impacting trait checkpoint recipes', () => {
         .find((biome) => biome.biomeKey === 'N')
         ?.topology?.occurrences.find((candidate) => candidate.acquisitionSites !== undefined);
       if (occurrence === undefined) throw new Error('Generated-pickup source owner is missing');
+      const routePosition = resolveRoutePosition(catalog, project.route, 'N');
       return selectedPickupProducers(
         catalog,
         nBiome,
         occurrence,
         catalog.rooms.byKey[occurrence.gameName]!,
-        resolveRoutePosition(catalog, project.route, 'N').ordinal,
+        routePosition.ordinal,
+        routeStartIncomingReward(project, routePosition, occurrence) ?? undefined,
       )[0]?.placement;
     };
     expect(producerPlacement(createSurfaceNQuickBuckCheckpoint())).toBe('afterSource');
@@ -98,18 +102,27 @@ describe('run-impacting trait checkpoint recipes', () => {
         .find((biome) => biome.biomeKey === 'N')
         ?.topology?.occurrences.find((candidate) => candidate.acquisitionSites !== undefined);
       if (occurrence === undefined) throw new Error('Generated-pickup occurrence is missing');
+      const routePosition = resolveRoutePosition(catalog, project.route, 'N');
+      const routeStartIncoming = routeStartIncomingReward(project, routePosition, occurrence);
       const domain = assembleRoomActionDomain({
         catalog,
         biome: nBiome,
         occurrence,
-        routePosition: resolveRoutePosition(catalog, project.route, 'N'),
+        routePosition,
+        ...(routeStartIncoming === undefined || routeStartIncoming === null
+          ? {}
+          : {
+              incomingRewardBinding: catalog.runStartReward.incomingReward,
+              incomingRewardState: routeStartIncoming,
+            }),
       });
       const producer = selectedPickupProducers(
         catalog,
         nBiome,
         occurrence,
         catalog.rooms.byKey[occurrence.gameName]!,
-        resolveRoutePosition(catalog, project.route, 'N').ordinal,
+        routePosition.ordinal,
+        routeStartIncoming ?? undefined,
       ).find((candidate) => candidate.pickups.some((pickup) => pickup.key === entryKey));
       if (producer === undefined) throw new Error('Generated-pickup producer is missing');
       const child = domain.contributions.find(
@@ -134,8 +147,8 @@ describe('run-impacting trait checkpoint recipes', () => {
   it("keeps Sea Star's retained Buried Treasure resource in the source action window", () => {
     const opening = createIncomingRewardAddress(nBiome, nOccurrenceIds.opening);
     let project = applyProjectCommand(createSurfaceNBuriedTreasureCheckpoint(), catalog, {
-      kind: 'ReplaceIncomingReward',
-      reward: opening,
+      kind: 'ReplaceStartingReward',
+      reward: createStartingRewardAddress('Surface'),
       value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'PoseidonUpgrade' } },
     });
     project = applyProjectCommand(project, catalog, {

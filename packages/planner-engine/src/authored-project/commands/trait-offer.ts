@@ -18,7 +18,11 @@ import { reconcileSelectedPickupProducerState } from '../acquisition/pickup-prod
 import { createBiomeAddress, type TraitOfferAddress } from '../addresses';
 import type { ProjectDocument, RoomOccurrence, AuthoredRewardState } from '../model';
 import { directEncounterDefinitionKeyForSlot } from '../room-state/encounter-envelope';
-import { resolveStartingRoomDeclaration } from '../room-state/starting-room-profile';
+import { resolveEntryDeclaration } from '../room-state/entry-resolution';
+import {
+  isRouteStartIncomingReward,
+  startingRewardAcquisitionFrom,
+} from '../room-state/starting-reward';
 import { failCommand, requireOccurrence, requireTopology, type LocatedBiome } from './contract';
 import { sameOccurrenceValue } from './occurrence/leaf-value';
 import { replaceOccurrence, updateOccurrenceTopology } from './occurrence/mutation';
@@ -490,15 +494,13 @@ export function applyTraitOfferCommand(
       catalog,
       createBiomeAddress(trait.routeKey, trait.biomeKey),
       Object.freeze({ ...occurrence, encounters: nextEncounters }),
-      resolveStartingRoomDeclaration(
-        catalog.rooms.byKey[occurrence.gameName]!,
-        located.routePosition,
-      ),
+      resolveEntryDeclaration(catalog.rooms.byKey[occurrence.gameName]!, located.routePosition),
       located.routePosition.ordinal,
     );
     return updateOccurrenceTopology(document, located, replaceOccurrence(topology, reconciled));
   }
   const reward = locateReward(
+    document,
     catalog,
     located.routePosition,
     occurrence,
@@ -568,10 +570,23 @@ export function applyTraitOfferCommand(
       ),
     );
   }
-  const state = updateRewardState(catalog, occurrence, occurrence.state, owner, command, (reward) =>
-    updateReward(reward, trait.acquisitionRole, value),
-  );
-  const nextOccurrence = Object.freeze({ ...occurrence, state });
+  const nextReward = updateReward(reward.reward, trait.acquisitionRole, value);
+  const nextOccurrence = isRouteStartIncomingReward(document, located.routePosition, occurrence)
+    ? Object.freeze({
+        ...occurrence,
+        startingRewardAcquisition: startingRewardAcquisitionFrom(nextReward),
+      })
+    : Object.freeze({
+        ...occurrence,
+        state: updateRewardState(
+          catalog,
+          occurrence,
+          occurrence.state,
+          owner,
+          command,
+          () => nextReward,
+        ),
+      });
   return updateOccurrenceTopology(
     document,
     located,
@@ -581,11 +596,11 @@ export function applyTraitOfferCommand(
         catalog,
         createBiomeAddress(trait.routeKey, trait.biomeKey),
         nextOccurrence,
-        resolveStartingRoomDeclaration(
-          catalog.rooms.byKey[occurrence.gameName]!,
-          located.routePosition,
-        ),
+        resolveEntryDeclaration(catalog.rooms.byKey[occurrence.gameName]!, located.routePosition),
         located.routePosition.ordinal,
+        isRouteStartIncomingReward(document, located.routePosition, occurrence)
+          ? nextReward
+          : undefined,
       ),
     ),
   );

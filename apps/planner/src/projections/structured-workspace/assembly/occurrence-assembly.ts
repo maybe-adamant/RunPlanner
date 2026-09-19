@@ -1,5 +1,5 @@
 import {
-  resolveStartingRoomDeclaration,
+  resolveEntryDeclaration,
   type ResolvedRoutePosition,
 } from '@run-planner/engine/authored-project';
 import {
@@ -236,6 +236,8 @@ export interface WorkspaceOccurrenceAssemblyInput {
       }
     | undefined;
   readonly resourceAuthoring?: import('@run-planner/engine/simulation').RouteResourceAuthoring;
+  readonly startingReward?:
+    import('@run-planner/engine/authored-project').AuthoredRewardState | null;
   /** Semantic entry ownership, independent of whether the entry room is selectable. */
   readonly isEntry?: boolean;
   readonly roomPicker?: WorkspaceRoomPickerControl;
@@ -273,7 +275,7 @@ export function assembleWorkspaceOccurrence(
   input: WorkspaceOccurrenceAssemblyInput,
 ): WorkspaceOccurrenceAssembly {
   const { occurrence } = input;
-  const room = resolveStartingRoomDeclaration(
+  const room = resolveEntryDeclaration(
     requireRoom(input.catalog, occurrence.gameName),
     input.routePosition,
   );
@@ -303,6 +305,7 @@ export function assembleWorkspaceOccurrence(
         : { derivedAcquisitionEntries: input.derivedAcquisitionEntries }),
       markerDestinations: input.markerDestinations,
       occurrence: input.occurrence,
+      ...(input.startingReward === undefined ? {} : { startingReward: input.startingReward }),
     },
     room,
   );

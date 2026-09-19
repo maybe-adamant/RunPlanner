@@ -26,6 +26,8 @@ function enteredStoreKey(
   if (room.kind === 'authored' && room.clockworkReward === 'goal') {
     return undefined;
   }
+  if (room.kind === 'authored' && room.enteredRewardStoreKey !== undefined)
+    return room.enteredRewardStoreKey;
   switch (policy.kind) {
     case 'fixed':
       return policy.storeKey;

@@ -13,7 +13,7 @@ import type { RawExitTypeDeclaration } from './exits-types';
 import type { RawKeepsakeDeclaration } from './keepsakes-types';
 import type { RawBiomeLayoutDeclaration } from './layouts/types';
 import type { RawRoomLifecycleProfileDeclaration } from './lifecycles/types';
-import type { RawRewardKernelInput } from './rewards/types';
+import type { RawRewardKernelInput, RawRewardProducerBinding } from './rewards/types';
 import type { RawRoomDeclaration } from './rooms/types';
 import type { RawTraitCatalogInput } from './traits/types';
 
@@ -21,6 +21,7 @@ export interface RawCatalogInput {
   readonly version: string;
   readonly biomes: readonly BiomeDeclaration[];
   readonly routes: readonly RouteDeclaration[];
+  readonly runStartReward: RawRewardProducerBinding;
   readonly arcanaCards: readonly RawArcanaCardDeclaration[];
   readonly fearVows: readonly RawFearVowDeclaration[];
   readonly keepsakes: readonly RawKeepsakeDeclaration[];

@@ -38,12 +38,14 @@ import {
 import {
   evaluateRewardProducerCandidate,
   type EvaluatedIncomingRewardCandidate,
+  type EvaluatedStartingRewardCandidate,
   type EvaluatedLocalRewardCandidate,
   type EvaluatedRewardWheelOfferCandidate,
   type EvaluatedShopOfferCandidate,
   type EvaluatedAcquisitionEntryOfferCandidate,
   type AcquisitionEntryOfferCandidateQuery,
   type IncomingRewardCandidateQuery,
+  type StartingRewardCandidateQuery,
   type LocalRewardCandidateQuery,
   type RewardWheelOfferCandidateQuery,
   type ShopOfferCandidateQuery,
@@ -176,6 +178,7 @@ export type ProjectCandidateQuery =
   | HubSlotCandidateQuery
   | HubVisitOrderCandidateQuery
   | IncomingRewardCandidateQuery
+  | StartingRewardCandidateQuery
   | LocalRewardCandidateQuery
   | RewardWheelOfferCandidateQuery
   | RewardWheelOfferCountCandidateQuery
@@ -223,6 +226,7 @@ export type ProjectCandidateEvaluation =
   | EvaluatedHubSlotCandidate
   | EvaluatedHubVisitOrderCandidate
   | EvaluatedIncomingRewardCandidate
+  | EvaluatedStartingRewardCandidate
   | EvaluatedLocalRewardCandidate
   | EvaluatedRewardWheelOfferCandidate
   | EvaluatedRewardWheelOfferCountCandidate
@@ -452,12 +456,19 @@ function evaluateCandidateQuery(
     case 'sideRoomEntryOrder':
       return evaluateSideRoomEntryOrderCandidate(catalog, project, evaluation, query);
     case 'incomingReward':
+    case 'startingReward':
       return evaluateRewardProducerCandidate(
         catalog,
         project,
         evaluation,
-        candidateArtifacts.biomeAt(createBiomeAddress(query.reward.routeKey, query.reward.biomeKey))
-          ?.rewardProducers,
+        query.kind === 'startingReward'
+          ? undefined
+          : candidateArtifacts.biomeAt(
+              createBiomeAddress(query.reward.routeKey, query.reward.biomeKey),
+            )?.rewardProducers,
+        query.kind === 'startingReward'
+          ? candidateArtifacts.startingRewardAt(query.reward)
+          : undefined,
         query,
       );
     case 'localReward':
@@ -467,6 +478,7 @@ function evaluateCandidateQuery(
         evaluation,
         candidateArtifacts.biomeAt(createBiomeAddress(query.reward.routeKey, query.reward.biomeKey))
           ?.rewardProducers,
+        undefined,
         query,
       );
     case 'rewardWheelOffer':
@@ -476,6 +488,7 @@ function evaluateCandidateQuery(
         evaluation,
         candidateArtifacts.biomeAt(createBiomeAddress(query.offer.routeKey, query.offer.biomeKey))
           ?.rewardProducers,
+        undefined,
         query,
       );
     case 'shopOffer':
@@ -486,6 +499,7 @@ function evaluateCandidateQuery(
         evaluation,
         candidateArtifacts.biomeAt(createBiomeAddress(query.offer.routeKey, query.offer.biomeKey))
           ?.rewardProducers,
+        undefined,
         query,
       );
     case 'acquisitionEntryOffer':
@@ -495,6 +509,7 @@ function evaluateCandidateQuery(
         evaluation,
         candidateArtifacts.biomeAt(createBiomeAddress(query.entry.routeKey, query.entry.biomeKey))
           ?.rewardProducers,
+        undefined,
         query,
       );
     case 'shipEncounterCount':

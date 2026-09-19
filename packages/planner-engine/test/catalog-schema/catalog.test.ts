@@ -34,6 +34,16 @@ describe('summarizeCatalog', () => {
         },
       },
       routes: { values: [route], byKey: { FixtureRoute: route } },
+      runStartReward: {
+        incomingReward: {
+          kind: 'countedChoice',
+          storeKeys: ['RunProgress'],
+          eligibleRewardTypes: [],
+          ineligibleRewardTypes: [],
+          allowedRewardTypes: ['Boon'],
+          producerLifecycleKey: 'RoomReward',
+        },
+      },
       arcanaCards: emptyCollection(),
       fearVows: emptyCollection(),
       keepsakes: emptyCollection(),

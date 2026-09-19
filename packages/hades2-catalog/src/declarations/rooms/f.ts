@@ -18,32 +18,6 @@ const wellHost = (challengeSwitchAnchorCount: number) => ({
   roomShop: { profileKey: 'RoomShop' as const, spawnChance: 0.25 },
 });
 
-const openingReward = {
-  kind: 'countedChoice' as const,
-  storeKeys: ['RunProgress'],
-  eligibleRewardTypes: [],
-  ineligibleRewardTypes: ['Devotion', 'RoomMoneyDrop', 'MaxHealthDrop', 'MaxManaDrop'],
-  producerLifecycleKey: 'RoomReward',
-};
-
-const fStartingRoomProfiles = {
-  routeFirst: {
-    templateKey: 'FixedOpening' as const,
-    incomingReward: openingReward,
-    lifecycleProfileKey: 'OpeningRewardRoom',
-    enteredRewardStoreHistory: { kind: 'resolvedOffer' as const },
-    forcedRewardStoreKey: 'RunProgress',
-    dreamEncounterDefinitionKey: 'OpeningEmpty',
-  },
-  routeLater: {
-    templateKey: 'FixedIntro' as const,
-    incomingReward: { kind: 'none' as const },
-    lifecycleProfileKey: 'RewardlessCombatRoom',
-    enteredRewardStoreHistory: { kind: 'none' as const },
-    dreamEncounterDefinitionKey: 'OpeningEmpty',
-  },
-};
-
 const fRoomDeclarations: readonly RawRoomDeclaration[] = [
   {
     gameName: 'F_Opening01',
@@ -54,20 +28,14 @@ const fRoomDeclarations: readonly RawRoomDeclaration[] = [
     advancesExperimentalHammerUses: true,
     kind: 'Opening',
     mode: { kind: 'authored', templateKey: 'FixedOpening' },
-    lifecycleProfileKey: 'OpeningRewardRoom',
     additionalExits: [chaosExit],
     structuralTags: [],
     exits: [{ index: 1, type: 'ErebusExitDoor' }],
-    incomingReward: {
-      kind: 'countedChoice',
-      storeKeys: ['RunProgress'],
-      eligibleRewardTypes: [],
-      ineligibleRewardTypes: ['Devotion', 'RoomMoneyDrop', 'MaxHealthDrop', 'MaxManaDrop'],
-      producerLifecycleKey: 'RoomReward',
-    },
-    startingRoomProfiles: fStartingRoomProfiles,
-    forcedRewardStoreKey: 'RunProgress',
+    incomingReward: { kind: 'none' },
     enteredRewardStoreHistory: { kind: 'resolvedOffer' },
+    entryContextualEncounterRules: [
+      { routeKey: 'Dream', position: 'every', encounterDefinitionKey: 'OpeningEmpty' },
+    ],
     encounterEnvelopeKey: 'SingleEncounter',
     encounterSlotBindings: [
       {
@@ -88,20 +56,14 @@ const fRoomDeclarations: readonly RawRoomDeclaration[] = [
     advancesExperimentalHammerUses: true,
     kind: 'Opening',
     mode: { kind: 'authored', templateKey: 'FixedOpening' },
-    lifecycleProfileKey: 'OpeningRewardRoom',
     additionalExits: [chaosExit],
     structuralTags: [],
     exits: [{ index: 1, type: 'ErebusExitDoor' }],
-    incomingReward: {
-      kind: 'countedChoice',
-      storeKeys: ['RunProgress'],
-      eligibleRewardTypes: [],
-      ineligibleRewardTypes: ['Devotion', 'RoomMoneyDrop', 'MaxHealthDrop', 'MaxManaDrop'],
-      producerLifecycleKey: 'RoomReward',
-    },
-    startingRoomProfiles: fStartingRoomProfiles,
-    forcedRewardStoreKey: 'RunProgress',
+    incomingReward: { kind: 'none' },
     enteredRewardStoreHistory: { kind: 'resolvedOffer' },
+    entryContextualEncounterRules: [
+      { routeKey: 'Dream', position: 'every', encounterDefinitionKey: 'OpeningEmpty' },
+    ],
     encounterEnvelopeKey: 'SingleEncounter',
     encounterSlotBindings: [
       {
@@ -122,20 +84,14 @@ const fRoomDeclarations: readonly RawRoomDeclaration[] = [
     advancesExperimentalHammerUses: true,
     kind: 'Opening',
     mode: { kind: 'authored', templateKey: 'FixedOpening' },
-    lifecycleProfileKey: 'OpeningRewardRoom',
     additionalExits: [chaosExit],
     structuralTags: [],
     exits: [{ index: 1, type: 'ErebusExitDoor' }],
-    incomingReward: {
-      kind: 'countedChoice',
-      storeKeys: ['RunProgress'],
-      eligibleRewardTypes: [],
-      ineligibleRewardTypes: ['Devotion', 'RoomMoneyDrop', 'MaxHealthDrop', 'MaxManaDrop'],
-      producerLifecycleKey: 'RoomReward',
-    },
-    startingRoomProfiles: fStartingRoomProfiles,
-    forcedRewardStoreKey: 'RunProgress',
+    incomingReward: { kind: 'none' },
     enteredRewardStoreHistory: { kind: 'resolvedOffer' },
+    entryContextualEncounterRules: [
+      { routeKey: 'Dream', position: 'every', encounterDefinitionKey: 'OpeningEmpty' },
+    ],
     encounterEnvelopeKey: 'SingleEncounter',
     encounterSlotBindings: [
       {
