@@ -41,7 +41,10 @@ export type ArcanaFearEvent =
       readonly kind: 'arcanaPromoted';
       readonly arcanaKeys: readonly string[];
     } & ArcanaFearEvidence)
-  | ({ readonly kind: 'fearVowSuppressed'; readonly vowKey: string } & ArcanaFearEvidence);
+  | ({
+      readonly kind: 'fearVowsSuppressed';
+      readonly vowKeys: readonly string[];
+    } & ArcanaFearEvidence);
 export interface ArcanaFearEvidence {
   readonly owner: SemanticAddress;
   readonly sequence: number;
@@ -120,6 +123,8 @@ export interface CirceResolutionDomain {
   readonly arcanaKeys: readonly string[];
   readonly vowKeys: readonly string[];
   readonly outerAvailable: boolean;
+  /** Exact pre-effect active set used to stage native-valid random draws. */
+  readonly activeArcanaKeys: readonly string[];
 }
 
 /** The one ordered domain used by Arcana effects and their candidate capabilities. */
@@ -216,39 +221,39 @@ export function circeResolutionDomain(
   catalog: Catalog,
   state: ArcanaFearState,
   effect: CirceResolutionEffect,
+  selectionCount: number,
   fatedStatus?: 'Unknown' | 'Fated' | 'Unfated',
 ): CirceResolutionDomain {
   if (effect === 'activateArcana') {
-    const activeArcanaKeys = state.arcana.active.map((card) => card.key);
-    const arcanaKeys = randomArcanaDrawKeys(catalog, state, fatedStatus).filter(
-      (key) =>
-        unsatisfiedRandomArcanaRequirementKeys(catalog, activeArcanaKeys, [key]).length === 0,
-    );
+    const arcanaKeys = randomArcanaDrawKeys(catalog, state, fatedStatus);
     return Object.freeze({
       effect,
-      requiredCount: arcanaKeys.length === 0 ? 0 : 1,
+      requiredCount: Math.min(selectionCount, arcanaKeys.length),
       arcanaKeys,
       vowKeys: Object.freeze([]),
       outerAvailable: true,
+      activeArcanaKeys: Object.freeze(state.arcana.active.map((card) => card.key)),
     });
   }
   if (effect === 'promoteArcana') {
     const arcanaKeys = promotableArcanaKeys(state);
     return Object.freeze({
       effect,
-      requiredCount: Math.min(2, arcanaKeys.length),
+      requiredCount: Math.min(selectionCount, arcanaKeys.length),
       arcanaKeys,
       vowKeys: Object.freeze([]),
       outerAvailable: manualArcanaGraspCost(catalog, state) > 0,
+      activeArcanaKeys: Object.freeze(state.arcana.active.map((card) => card.key)),
     });
   }
   const vowKeys = circeRemovableFearVowKeys(catalog, state);
   return Object.freeze({
     effect,
-    requiredCount: 1,
+    requiredCount: Math.min(selectionCount, vowKeys.length),
     arcanaKeys: Object.freeze([]),
     vowKeys,
     outerAvailable: vowKeys.length > 0,
+    activeArcanaKeys: Object.freeze(state.arcana.active.map((card) => card.key)),
   });
 }
 
@@ -480,32 +485,45 @@ export function promoteArcana(
     }),
   });
 }
-export function suppressFearVow(
+export function suppressFearVows(
   catalog: Catalog,
   state: ArcanaFearState,
-  vowKey: string,
+  vowKeys: readonly string[],
   evidence: ArcanaFearEvidence,
 ): FearTransitionAssessment {
-  const vow = catalog.fearVows.byKey[vowKey];
+  const unique = new Set(vowKeys);
+  const invalidKey = vowKeys.find((vowKey) => {
+    const vow = catalog.fearVows.byKey[vowKey];
+    return (
+      vow === undefined ||
+      !vow.circeRemovable ||
+      state.fear.effectiveRanks[vowKey] === undefined ||
+      state.fear.effectiveRanks[vowKey] === 0 ||
+      state.fear.disabledVowKeys.includes(vowKey)
+    );
+  });
   if (
-    vow === undefined ||
-    !vow.circeRemovable ||
-    state.fear.effectiveRanks[vowKey] === undefined ||
-    state.fear.effectiveRanks[vowKey] === 0 ||
-    state.fear.disabledVowKeys.includes(vowKey) ||
+    vowKeys.length === 0 ||
+    unique.size !== vowKeys.length ||
+    invalidKey !== undefined ||
     !canAppendEvidence(state, evidence)
   )
     return rejected(
       state,
       !canAppendEvidence(state, evidence)
         ? 'staleChronology'
-        : vow === undefined
+        : invalidKey !== undefined && catalog.fearVows.byKey[invalidKey] === undefined
           ? 'unknownVow'
-          : !vow.circeRemovable
+          : invalidKey !== undefined && !catalog.fearVows.byKey[invalidKey]?.circeRemovable
             ? 'vowNotCirceRemovable'
             : 'vowNotEffectivelyActive',
     );
-  const disabledVowKeys = [...state.fear.disabledVowKeys, vowKey].sort(
+  const canonicalVowKeys = [...vowKeys].sort(
+    (left, right) =>
+      catalog.fearVows.values.findIndex((vow) => vow.key === left) -
+      catalog.fearVows.values.findIndex((vow) => vow.key === right),
+  );
+  const disabledVowKeys = [...state.fear.disabledVowKeys, ...canonicalVowKeys].sort(
     (left, right) =>
       catalog.fearVows.values.findIndex((vow) => vow.key === left) -
       catalog.fearVows.values.findIndex((vow) => vow.key === right),
@@ -517,11 +535,20 @@ export function suppressFearVow(
       fear: Object.freeze({
         ...state.fear,
         disabledVowKeys: Object.freeze(disabledVowKeys),
-        effectiveRanks: Object.freeze({ ...state.fear.effectiveRanks, [vowKey]: 0 }),
+        effectiveRanks: Object.freeze(
+          Object.fromEntries([
+            ...Object.entries(state.fear.effectiveRanks),
+            ...canonicalVowKeys.map((vowKey) => [vowKey, 0]),
+          ]),
+        ),
       }),
       events: Object.freeze([
         ...state.events,
-        Object.freeze({ kind: 'fearVowSuppressed' as const, vowKey, ...evidence }),
+        Object.freeze({
+          kind: 'fearVowsSuppressed' as const,
+          vowKeys: canonicalVowKeys,
+          ...evidence,
+        }),
       ]),
     }),
   });

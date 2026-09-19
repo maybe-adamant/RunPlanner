@@ -139,15 +139,33 @@ export function bindTraitOfferOptionDomain(input: {
                         arcanaLabel,
                         (key) => key,
                       ),
-                      arcanaPickerFor: (selectedKeys: readonly string[]) =>
-                        projectDirectTraitOutcomePicker(
+                      arcanaPickerFor: (selectedKeys: readonly string[]) => {
+                        const staged = updateAuthoredTraitCarrierChild(offer, {
+                          kind: 'circeResolution',
+                          child: circeControl,
+                          value: Object.freeze({
+                            kind: result.effect as 'activateArcana' | 'promoteArcana',
+                            arcanaKeys: Object.freeze(selectedKeys),
+                          }),
+                        });
+                        const stagedEvaluation = candidates.traitCarrierChildDomain(
+                          control.address,
+                          staged,
+                          circeControl,
+                        );
+                        const stagedCandidates =
+                          stagedEvaluation.kind === 'circeResolutionDomain'
+                            ? stagedEvaluation.result.arcanaCandidates
+                            : result.arcanaCandidates;
+                        return projectDirectTraitOutcomePicker(
                           withDirectTraitOutcomeSelection(
-                            withoutDirectTraitOutcomeValues(result.arcanaCandidates, selectedKeys),
+                            withoutDirectTraitOutcomeValues(stagedCandidates, selectedKeys),
                             Object.freeze([]),
                           ),
                           arcanaLabel,
                           (key) => key,
-                        ),
+                        );
+                      },
                       branchAgreement: result.branchAgreement,
                       effect: result.effect,
                       outerAvailable: result.outerAvailable,
@@ -157,6 +175,15 @@ export function bindTraitOfferOptionDomain(input: {
                         vowLabel,
                         (key) => key,
                       ),
+                      vowPickerFor: (selectedKeys: readonly string[]) =>
+                        projectDirectTraitOutcomePicker(
+                          withDirectTraitOutcomeSelection(
+                            withoutDirectTraitOutcomeValues(result.vowCandidates, selectedKeys),
+                            Object.freeze([]),
+                          ),
+                          vowLabel,
+                          (key) => key,
+                        ),
                     });
                   },
                 }),

@@ -4,7 +4,7 @@ import {
   artificerStatus,
   createArcanaFearState,
   promoteArcana,
-  suppressFearVow,
+  suppressFearVows,
   beginBiomeArcanaFearState,
   consumeRoomRewardForfeit,
 } from '@run-planner/engine/simulation';
@@ -169,7 +169,7 @@ describe('progressive Arcana and Fear state', () => {
     });
     expect(consumed.consumed).toBe(true);
     expect(forfeitStatus(consumed.state)).toBe('consumed');
-    const suppressed = suppressFearVow(catalog, consumed.state, 'BoonSkipShrineUpgrade', {
+    const suppressed = suppressFearVows(catalog, consumed.state, ['BoonSkipShrineUpgrade'], {
       owner,
       sequence: 2,
     });
@@ -219,7 +219,7 @@ describe('progressive Arcana and Fear state', () => {
     });
     expect(promoted.legal).toBe(true);
     if (!promoted.legal) throw new Error('promotion should be legal');
-    const suppressed = suppressFearVow(catalog, promoted.state, 'EnemyDamageShrineUpgrade', {
+    const suppressed = suppressFearVows(catalog, promoted.state, ['EnemyDamageShrineUpgrade'], {
       ...evidence,
       sequence: 3,
     });
@@ -240,7 +240,12 @@ describe('progressive Arcana and Fear state', () => {
         ...evidence,
       },
       { kind: 'arcanaPromoted', arcanaKeys: ['TradeOff'], ...evidence, sequence: 2 },
-      { kind: 'fearVowSuppressed', vowKey: 'EnemyDamageShrineUpgrade', ...evidence, sequence: 3 },
+      {
+        kind: 'fearVowsSuppressed',
+        vowKeys: ['EnemyDamageShrineUpgrade'],
+        ...evidence,
+        sequence: 3,
+      },
     ]);
   });
 
@@ -261,7 +266,9 @@ describe('progressive Arcana and Fear state', () => {
       reason: 'arcanaNotActive',
       state,
     });
-    expect(suppressFearVow(catalog, state, 'BossDifficultyShrineUpgrade', evidence)).toMatchObject({
+    expect(
+      suppressFearVows(catalog, state, ['BossDifficultyShrineUpgrade'], evidence),
+    ).toMatchObject({
       legal: false,
       reason: 'vowNotCirceRemovable',
       state,
@@ -304,29 +311,29 @@ describe('progressive Arcana and Fear state', () => {
       ...loadout,
       manualArcanaKeys: ['ChanneledCast'],
     });
-    expect(circeResolutionDomain(catalog, activationState, 'activateArcana')).toMatchObject({
+    expect(circeResolutionDomain(catalog, activationState, 'activateArcana', 1)).toMatchObject({
       requiredCount: 1,
       outerAvailable: true,
     });
-    expect(circeResolutionDomain(catalog, activationState, 'activateArcana').arcanaKeys).toContain(
-      'CastCount',
-    );
     expect(
-      circeResolutionDomain(catalog, activationState, 'activateArcana').arcanaKeys,
-    ).not.toContain('TradeOff');
+      circeResolutionDomain(catalog, activationState, 'activateArcana', 1).arcanaKeys,
+    ).toContain('CastCount');
+    expect(
+      circeResolutionDomain(catalog, activationState, 'activateArcana', 1).arcanaKeys,
+    ).toContain('TradeOff');
     const companionActive = createArcanaFearState(catalog, {
       ...loadout,
       manualArcanaKeys: ['DoorReroll'],
     });
-    expect(circeResolutionDomain(catalog, companionActive, 'activateArcana').arcanaKeys).toContain(
-      'TradeOff',
-    );
-    expect(circeResolutionDomain(catalog, state, 'promoteArcana')).toMatchObject({
+    expect(
+      circeResolutionDomain(catalog, companionActive, 'activateArcana', 1).arcanaKeys,
+    ).toContain('TradeOff');
+    expect(circeResolutionDomain(catalog, state, 'promoteArcana', 2)).toMatchObject({
       requiredCount: 2,
       outerAvailable: true,
       arcanaKeys: ['CastCount', 'SorceryRegenUpgrade', 'BonusRarity', 'CardDraw'],
     });
-    expect(circeResolutionDomain(catalog, state, 'disableFear')).toMatchObject({
+    expect(circeResolutionDomain(catalog, state, 'disableFear', 1)).toMatchObject({
       requiredCount: 1,
       vowKeys: ['EnemyDamageShrineUpgrade'],
       outerAvailable: true,

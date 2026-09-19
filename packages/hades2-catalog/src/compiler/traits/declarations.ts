@@ -391,6 +391,23 @@ export function normalizeTraits(
         `${path}.selectedDisposition`,
         'occupied-slot level upgrades are reserved for Ingenious Strike and Ingenious Flourish',
       );
+    const circeCounts =
+      trait.key === 'RandomArcanaTrait' || trait.key === 'RemoveShrineTrait'
+        ? '1,1,2,3'
+        : trait.key === 'ArcanaRarityTrait'
+          ? '2,2,3,5'
+          : undefined;
+    if (
+      circeCounts !== undefined &&
+      (selectedDisposition.kind !== 'circe' ||
+        selectedDisposition.selectionCountByAcquisitionOrdinal.join(',') !== circeCounts)
+    )
+      fail(`${path}.selectedDisposition`, `must declare Circe ordinal counts ${circeCounts}`);
+    if (circeCounts === undefined && selectedDisposition.kind === 'circe')
+      fail(
+        `${path}.selectedDisposition`,
+        'Circe ordinal resolutions are reserved for Circe rewards',
+      );
     if (trait.key === 'SupplyDropBoon') {
       if (
         selectedDisposition.kind !== 'producePickups' ||

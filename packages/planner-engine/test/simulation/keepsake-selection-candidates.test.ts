@@ -424,7 +424,7 @@ describe('keepsake selection candidates', () => {
       ),
     ).toBe('unfatedEnabling');
     expect(
-      circeResolutionDomain(catalog, arcanaFear, 'activateArcana', 'Fated').arcanaKeys,
+      circeResolutionDomain(catalog, arcanaFear, 'activateArcana', 1, 'Fated').arcanaKeys,
     ).not.toContain('ScreenReroll');
   });
 

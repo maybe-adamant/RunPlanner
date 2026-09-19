@@ -1,10 +1,16 @@
-import type { Catalog, TraitSelectedDisposition } from '../../../catalog-schema';
+import {
+  resolveTraitAcquisitionOrdinalEffect,
+  type Catalog,
+  type TraitSelectedDisposition,
+} from '../../../catalog-schema';
 import type { SemanticAddress } from '../../../authored-project/addresses';
 import {
   activateTemporaryArcana,
   circeResolutionDomain,
+  orderRandomArcanaSelection,
   promoteArcana,
-  suppressFearVow,
+  suppressFearVows,
+  unsatisfiedRandomArcanaRequirementKeys,
 } from '../../arcana-fear';
 import { refreshKeepsakeFatedStatus } from '../../keepsakes/state';
 import { attachTraitHistory, foldTraitHistoryEvents, type TraitHistoryState } from '../../traits';
@@ -116,11 +122,17 @@ export function assessCirceChild(
   branch: RewardBranchState,
   disposition: Extract<TraitSelectedDisposition, { readonly kind: 'circe' }>,
   resolution: import('../../../authored-project/traits/state').AuthoredCirceResolution | undefined,
+  acquisitionOrdinal: number,
 ): EncounterChildRejection | undefined {
+  const selectionCount = resolveTraitAcquisitionOrdinalEffect(
+    disposition,
+    acquisitionOrdinal,
+  ).circeSelectionCount!;
   const domain = circeResolutionDomain(
     catalog,
     branch.arcanaFear,
     disposition.effect,
+    selectionCount,
     branch.keepsakes.fatedStatus,
   );
   if (disposition.effect === 'activateArcana') {
@@ -131,7 +143,12 @@ export function assessCirceChild(
         code: 'circeResolutionWrongCardinality',
         detail: `${domain.requiredCount}:${resolution.arcanaKeys.length}`,
       });
-    return resolution.arcanaKeys.some((key) => !domain.arcanaKeys.includes(key))
+    return resolution.arcanaKeys.some((key) => !domain.arcanaKeys.includes(key)) ||
+      unsatisfiedRandomArcanaRequirementKeys(
+        catalog,
+        branch.arcanaFear.arcana.active.map((card) => card.key),
+        resolution.arcanaKeys,
+      ).length > 0
       ? Object.freeze({ code: 'circeResolutionTargetUnavailable' })
       : undefined;
   }
@@ -148,11 +165,15 @@ export function assessCirceChild(
       : undefined;
   }
   if (!domain.outerAvailable) return Object.freeze({ code: 'circeOptionUnavailable' });
-  if (resolution?.kind !== 'disableFear' || resolution.vowKey === null)
-    return Object.freeze({ code: 'circeResolutionMissing' });
-  return domain.vowKeys.includes(resolution.vowKey)
-    ? undefined
-    : Object.freeze({ code: 'circeResolutionTargetUnavailable' });
+  if (resolution?.kind !== 'disableFear') return Object.freeze({ code: 'circeResolutionMissing' });
+  if (resolution.vowKeys.length !== domain.requiredCount)
+    return Object.freeze({
+      code: 'circeResolutionWrongCardinality',
+      detail: `${domain.requiredCount}:${resolution.vowKeys.length}`,
+    });
+  return resolution.vowKeys.some((key) => !domain.vowKeys.includes(key))
+    ? Object.freeze({ code: 'circeResolutionTargetUnavailable' })
+    : undefined;
 }
 
 /** Applies a previously validated Circe child after its outer acquisition has reached the repair boundary. */
@@ -163,6 +184,7 @@ export function settleValidatedCirceChild(
   resolution: import('../../../authored-project/traits/state').AuthoredCirceResolution | undefined,
   owner: SemanticAddress,
   sequence: number,
+  acquisitionOrdinal: number,
 ): RewardBranchState {
   const evidence = { owner, sequence };
   if (disposition.effect === 'activateArcana') {
@@ -170,6 +192,7 @@ export function settleValidatedCirceChild(
       catalog,
       branch.arcanaFear,
       disposition.effect,
+      resolveTraitAcquisitionOrdinalEffect(disposition, acquisitionOrdinal).circeSelectionCount!,
       branch.keepsakes.fatedStatus,
     );
     if (
@@ -181,7 +204,11 @@ export function settleValidatedCirceChild(
     const outcome = activateTemporaryArcana(
       catalog,
       branch.arcanaFear,
-      resolution.arcanaKeys,
+      orderRandomArcanaSelection(
+        catalog,
+        branch.arcanaFear.arcana.active.map((card) => card.key),
+        resolution.arcanaKeys,
+      ),
       evidence,
     );
     return outcome.legal
@@ -197,6 +224,7 @@ export function settleValidatedCirceChild(
       catalog,
       branch.arcanaFear,
       disposition.effect,
+      resolveTraitAcquisitionOrdinalEffect(disposition, acquisitionOrdinal).circeSelectionCount!,
       branch.keepsakes.fatedStatus,
     );
     if (
@@ -213,8 +241,8 @@ export function settleValidatedCirceChild(
         })
       : branch;
   }
-  if (resolution?.kind !== 'disableFear' || resolution.vowKey === null) return branch;
-  const outcome = suppressFearVow(catalog, branch.arcanaFear, resolution.vowKey, evidence);
+  if (resolution?.kind !== 'disableFear') return branch;
+  const outcome = suppressFearVows(catalog, branch.arcanaFear, resolution.vowKeys, evidence);
   return outcome.legal ? Object.freeze({ ...branch, arcanaFear: outcome.state }) : branch;
 }
 

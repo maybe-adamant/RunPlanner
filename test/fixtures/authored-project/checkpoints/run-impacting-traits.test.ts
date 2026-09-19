@@ -84,6 +84,7 @@ describe('run-impacting trait checkpoint recipes', () => {
         nBiome,
         occurrence,
         catalog.rooms.byKey[occurrence.gameName]!,
+        resolveRoutePosition(catalog, project.route, 'N').ordinal,
       )[0]?.placement;
     };
     expect(producerPlacement(createSurfaceNQuickBuckCheckpoint())).toBe('afterSource');
@@ -108,6 +109,7 @@ describe('run-impacting trait checkpoint recipes', () => {
         nBiome,
         occurrence,
         catalog.rooms.byKey[occurrence.gameName]!,
+        resolveRoutePosition(catalog, project.route, 'N').ordinal,
       ).find((candidate) => candidate.pickups.some((pickup) => pickup.key === entryKey));
       if (producer === undefined) throw new Error('Generated-pickup producer is missing');
       const child = domain.contributions.find(

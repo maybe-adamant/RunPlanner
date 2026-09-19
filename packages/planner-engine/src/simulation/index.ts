@@ -50,7 +50,7 @@ export {
   createArcanaFearState,
   activateTemporaryArcana,
   promoteArcana,
-  suppressFearVow,
+  suppressFearVows,
   beginBiomeArcanaFearState,
   artificerStatus,
   consumeRoomRewardForfeit,

@@ -236,7 +236,11 @@ export type TraitSelectedDisposition =
       readonly discountByRarity: Readonly<Record<'Common' | 'Rare' | 'Epic' | 'Heroic', number>>;
     }
   | { readonly kind: 'advanceCurrentKeepsake'; readonly rankBonus: 1 }
-  | { readonly kind: 'circe'; readonly effect: 'activateArcana' | 'promoteArcana' | 'disableFear' }
+  | {
+      readonly kind: 'circe';
+      readonly effect: 'activateArcana' | 'promoteArcana' | 'disableFear';
+      readonly selectionCountByAcquisitionOrdinal: TraitAcquisitionOrdinalValues;
+    }
   | {
       readonly kind: 'producePickups';
       readonly producerLifecycleKey: string;
@@ -267,6 +271,7 @@ export interface ResolvedTraitAcquisitionOrdinalEffect {
   readonly pickups: readonly TraitPickupDeclaration[];
   readonly levelCount?: number;
   readonly clockInterval?: number;
+  readonly circeSelectionCount?: number;
 }
 
 function ordinalValue(values: TraitAcquisitionOrdinalValues, ordinal: number): number {
@@ -280,6 +285,11 @@ export function resolveTraitAcquisitionOrdinalEffect(
   disposition: TraitSelectedDisposition,
   ordinal: number,
 ): ResolvedTraitAcquisitionOrdinalEffect {
+  if (disposition.kind === 'circe')
+    return Object.freeze({
+      pickups: Object.freeze([]),
+      circeSelectionCount: ordinalValue(disposition.selectionCountByAcquisitionOrdinal, ordinal),
+    });
   if (disposition.kind === 'upgradeOccupiedBoonSlot')
     return Object.freeze({
       pickups: Object.freeze([]),

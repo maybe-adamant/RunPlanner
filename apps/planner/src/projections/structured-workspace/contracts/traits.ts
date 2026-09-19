@@ -280,6 +280,7 @@ export interface WorkspaceCirceResolutionDomain {
   readonly outerAvailable: boolean;
   readonly requiredCount: number;
   readonly vowPicker: ContextualPickerModel<string>;
+  readonly vowPickerFor: (selectedKeys: readonly string[]) => ContextualPickerModel<string>;
 }
 
 export interface WorkspaceCirceResolutionInteraction {

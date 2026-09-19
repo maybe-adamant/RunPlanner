@@ -15,6 +15,96 @@ function pickerValueLabel<T>(model: ContextualPickerModel<T>, value: T): string 
     .find((item) => Object.is(item.value, value))?.label;
 }
 
+function CirceMultiSelection({
+  applyLabel,
+  ariaLabel,
+  choiceLabel,
+  controlId,
+  current,
+  disabled,
+  emptyLabel,
+  findingTarget,
+  label,
+  picker,
+  pickerFor,
+  requiredCount,
+  onApply,
+}: {
+  readonly applyLabel: string;
+  readonly ariaLabel: string;
+  readonly choiceLabel: string;
+  readonly controlId: string;
+  readonly current: readonly string[];
+  readonly disabled: boolean;
+  readonly emptyLabel: string;
+  readonly findingTarget?: FindingTargetProps;
+  readonly label: string;
+  readonly picker: ContextualPickerModel<string>;
+  readonly pickerFor: (selectedKeys: readonly string[]) => ContextualPickerModel<string>;
+  readonly requiredCount: number;
+  readonly onApply: (keys: readonly string[]) => void;
+}) {
+  const [draft, setDraft] = useState<readonly string[]>(current);
+  const [open, setOpen] = useState(false);
+  const complete = draft.length === requiredCount;
+  return (
+    <fieldset className="trait-circe-resolution">
+      <legend>{`${label} (${requiredCount})`}</legend>
+      <p className="trait-outcome-draft">
+        {draft.length === 0
+          ? emptyLabel
+          : draft.map((key) => pickerValueLabel(picker, key) ?? key).join(' · ')}
+      </p>
+      {requiredCount > 0 || current.length > 0 ? (
+        <ContextualPicker
+          {...(findingTarget === undefined ? {} : { findingTarget })}
+          cancelLabel="Cancel"
+          choiceLabel={`${choiceLabel} ${draft.length + 1} of ${requiredCount}`}
+          closeOnSelect={false}
+          id={controlId}
+          label={ariaLabel}
+          model={pickerFor(draft)}
+          onOpenChange={(nextOpen) => {
+            setOpen(nextOpen);
+            if (nextOpen && complete) setDraft(Object.freeze([]));
+            if (!nextOpen && !complete) setDraft(current);
+          }}
+          onSelect={(key) => {
+            const next = Object.freeze([...draft, key]);
+            setDraft(next);
+            if (next.length === requiredCount) {
+              setOpen(false);
+              if (requiredCount === 1) onApply(next);
+            }
+          }}
+          open={open}
+          placeholder={`Choose distinct ${choiceLabel}`}
+        />
+      ) : null}
+      <div className="trait-outcome-actions">
+        <button
+          className="quiet-action action-compact"
+          disabled={!complete || disabled}
+          onClick={() => onApply(draft)}
+          type="button"
+        >
+          {applyLabel}
+        </button>
+        <button
+          className="quiet-action action-compact"
+          onClick={() => {
+            setOpen(false);
+            setDraft(current);
+          }}
+          type="button"
+        >
+          Cancel
+        </button>
+      </div>
+    </fieldset>
+  );
+}
+
 export function TraitOfferCirceResolution({
   controlId,
   findingTarget,
@@ -29,169 +119,83 @@ export function TraitOfferCirceResolution({
   readonly onSelect: (resolution: AuthoredCirceResolution) => void;
 }) {
   const current = option.circeResolution;
-  const [lapisDraft, setLapisDraft] = useState<readonly string[]>(
-    current?.kind === 'promoteArcana' ? current.arcanaKeys : Object.freeze([]),
-  );
-  const [lapisOpen, setLapisOpen] = useState(false);
   const unavailableMessage = !domain.outerAvailable
     ? 'This Circe trait has no available outcome here.'
     : !domain.branchAgreement
       ? 'No outcome is supported across every route branch.'
       : undefined;
+  const disabled = !domain.outerAvailable || !domain.branchAgreement;
   if (domain.effect === 'disableFear') {
     return (
       <>
         {unavailableMessage === undefined ? null : (
           <p className="feedback-text">{unavailableMessage}</p>
         )}
-        <ContextualPicker
-          {...(findingTarget === undefined ? {} : { findingTarget })}
+        <CirceMultiSelection
+          applyLabel="Apply Black Night outcome"
           ariaLabel="Black Night Vow"
-          id={controlId}
-          label="Vow to suppress"
-          model={domain.vowPicker}
-          onSelect={(vowKey) => onSelect(Object.freeze({ kind: 'disableFear', vowKey }))}
-          placeholder="Choose a Vow"
-          {...(current?.kind === 'disableFear' && current.vowKey !== null
-            ? { triggerLabel: pickerValueLabel(domain.vowPicker, current.vowKey) ?? current.vowKey }
-            : {})}
+          choiceLabel="Vow"
+          controlId={controlId}
+          current={current?.kind === 'disableFear' ? current.vowKeys : Object.freeze([])}
+          disabled={disabled}
+          emptyLabel="No Vows chosen."
+          {...(findingTarget === undefined ? {} : { findingTarget })}
+          label="Vows to suppress"
+          onApply={(vowKeys) => onSelect(Object.freeze({ kind: 'disableFear', vowKeys }))}
+          picker={domain.vowPicker}
+          pickerFor={domain.vowPickerFor}
+          requiredCount={domain.requiredCount}
+          key={domain.effect}
         />
       </>
     );
   }
   const selected =
     current?.kind === domain.effect ? current.arcanaKeys : (Object.freeze([]) as readonly string[]);
-  if (domain.effect === 'activateArcana') {
-    if (domain.requiredCount === 0) {
-      return (
-        <>
-          {unavailableMessage === undefined ? null : (
-            <p
-              {...(selected[0] === undefined && (!domain.outerAvailable || !domain.branchAgreement)
-                ? findingTarget
-                : {})}
-              tabIndex={-1}
-              className="feedback-text"
-            >
-              {unavailableMessage}
-            </p>
-          )}
-          {selected[0] === undefined ? null : (
-            <ContextualPicker
-              {...(findingTarget === undefined ? {} : { findingTarget })}
-              ariaLabel="Red Citrine Arcana"
-              id={controlId}
-              label="Authored Arcana"
-              model={domain.arcanaPicker}
-              onSelect={(arcanaKey) =>
-                onSelect(
-                  Object.freeze({
-                    kind: 'activateArcana',
-                    arcanaKeys: Object.freeze([arcanaKey]),
-                  }),
-                )
-              }
-              placeholder="No authored Arcana"
-              triggerLabel={pickerValueLabel(domain.arcanaPicker, selected[0]) ?? selected[0]}
-            />
-          )}
-          {!domain.outerAvailable || !domain.branchAgreement ? null : (
-            <button
-              {...(selected[0] === undefined ? findingTarget : {})}
-              className="quiet-action action-compact"
-              onClick={() =>
-                onSelect(Object.freeze({ kind: 'activateArcana', arcanaKeys: Object.freeze([]) }))
-              }
-              type="button"
-            >
-              Record no Arcana activation
-            </button>
-          )}
-        </>
-      );
-    }
+  if (domain.effect === 'activateArcana' && domain.requiredCount === 0) {
     return (
       <>
         {unavailableMessage === undefined ? null : (
           <p className="feedback-text">{unavailableMessage}</p>
         )}
-        <ContextualPicker
-          {...(findingTarget === undefined ? {} : { findingTarget })}
-          ariaLabel="Red Citrine Arcana"
-          id={controlId}
-          label="Arcana to activate"
-          model={domain.arcanaPicker}
-          onSelect={(arcanaKey) =>
-            onSelect(
-              Object.freeze({ kind: 'activateArcana', arcanaKeys: Object.freeze([arcanaKey]) }),
-            )
-          }
-          placeholder="Choose Arcana"
-          {...(selected[0] === undefined
-            ? {}
-            : { triggerLabel: pickerValueLabel(domain.arcanaPicker, selected[0]) ?? selected[0] })}
-        />
+        {!disabled ? (
+          <button
+            className="quiet-action action-compact"
+            onClick={() =>
+              onSelect(Object.freeze({ kind: 'activateArcana', arcanaKeys: Object.freeze([]) }))
+            }
+            type="button"
+          >
+            Record no Arcana activation
+          </button>
+        ) : null}
       </>
     );
   }
-  const lapisComplete = lapisDraft.length === domain.requiredCount;
+  const activation = domain.effect === 'activateArcana';
   return (
-    <fieldset className="trait-circe-resolution">
-      <legend>Lapis Arcana ({domain.requiredCount})</legend>
+    <>
       {unavailableMessage === undefined ? null : (
         <p className="feedback-text">{unavailableMessage}</p>
       )}
-      <p className="trait-outcome-draft">
-        {lapisDraft.length === 0
-          ? 'No Arcana chosen.'
-          : lapisDraft.map((key) => pickerValueLabel(domain.arcanaPicker, key) ?? key).join(' · ')}
-      </p>
-      <ContextualPicker
+      <CirceMultiSelection
+        applyLabel={activation ? 'Apply Red Citrine outcome' : 'Apply Lapis outcome'}
+        ariaLabel={activation ? 'Red Citrine Arcana' : 'Promoted Arcana'}
+        choiceLabel="Arcana"
+        controlId={controlId}
+        current={selected}
+        disabled={disabled}
+        emptyLabel="No Arcana chosen."
         {...(findingTarget === undefined ? {} : { findingTarget })}
-        cancelLabel="Cancel"
-        choiceLabel={`Arcana ${lapisDraft.length + 1} of ${domain.requiredCount}`}
-        closeOnSelect={false}
-        id={controlId}
-        label="Promoted Arcana"
-        model={domain.arcanaPickerFor(lapisDraft)}
-        onOpenChange={(open) => {
-          setLapisOpen(open);
-          if (open && lapisComplete) setLapisDraft(Object.freeze([]));
-          if (!open && !lapisComplete)
-            setLapisDraft(
-              current?.kind === 'promoteArcana' ? current.arcanaKeys : Object.freeze([]),
-            );
-        }}
-        onSelect={(arcanaKey) => {
-          const next = Object.freeze([...lapisDraft, arcanaKey]);
-          setLapisDraft(next);
-          if (next.length === domain.requiredCount) setLapisOpen(false);
-        }}
-        open={lapisOpen}
-        placeholder="Choose distinct Arcana"
+        label={activation ? 'Red Citrine Arcana' : 'Lapis Arcana'}
+        onApply={(arcanaKeys) =>
+          onSelect(Object.freeze({ kind: domain.effect, arcanaKeys }) as AuthoredCirceResolution)
+        }
+        picker={domain.arcanaPicker}
+        pickerFor={domain.arcanaPickerFor}
+        requiredCount={domain.requiredCount}
+        key={domain.effect}
       />
-      <div className="trait-outcome-actions">
-        <button
-          className="quiet-action action-compact"
-          disabled={!lapisComplete || !domain.outerAvailable || !domain.branchAgreement}
-          onClick={() => onSelect(Object.freeze({ kind: 'promoteArcana', arcanaKeys: lapisDraft }))}
-          type="button"
-        >
-          Apply Lapis outcome
-        </button>
-        <button
-          className="quiet-action action-compact"
-          onClick={() => {
-            setLapisOpen(false);
-            setLapisDraft(
-              current?.kind === 'promoteArcana' ? current.arcanaKeys : Object.freeze([]),
-            );
-          }}
-          type="button"
-        >
-          Cancel
-        </button>
-      </div>
-    </fieldset>
+    </>
   );
 }

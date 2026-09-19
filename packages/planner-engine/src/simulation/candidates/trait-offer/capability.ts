@@ -4,6 +4,7 @@ import {
   type TraitOfferAddress,
   type NaturalSelectionResultAddress,
 } from '../../../authored-project/addresses';
+import { resolveTraitAcquisitionOrdinalEffect } from '../../../catalog-schema';
 import type {
   BoonRarityRollOrder,
   BoonRarityValues,
@@ -139,6 +140,7 @@ export interface TraitOfferCandidateCapability {
     readonly arcanaKeys: readonly string[];
     readonly vowKeys: readonly string[];
     readonly outerAvailable: boolean;
+    readonly activeArcanaKeys: readonly string[];
   }[];
   /** Exact selected Echo-Pom greatest-level domains for surviving branches. */
   readonly echoPomTargets: (
@@ -680,6 +682,7 @@ export function createTraitOfferCandidateArtifacts(
               readonly arcanaKeys: readonly string[];
               readonly vowKeys: readonly string[];
               readonly outerAvailable: boolean;
+              readonly activeArcanaKeys: readonly string[];
             }>((context) => {
               if (value.kind !== 'traits') return [];
               const option = value.options[optionIndex(optionKey)];
@@ -688,11 +691,15 @@ export function createTraitOfferCandidateArtifacts(
                   ? undefined
                   : catalog.traits.byKey[option.traitKey]?.selectedDisposition;
               if (effect?.kind !== 'circe' || context.arcanaFear === undefined) return [];
+              const acquisitionOrdinal = context.context.acquisitionOrdinal;
+              if (acquisitionOrdinal === undefined) return [];
               return [
                 circeResolutionDomain(
                   catalog,
                   context.arcanaFear,
                   effect.effect,
+                  resolveTraitAcquisitionOrdinalEffect(effect, acquisitionOrdinal)
+                    .circeSelectionCount!,
                   context.keepsakes?.fatedStatus,
                 ),
               ];

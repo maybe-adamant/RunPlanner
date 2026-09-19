@@ -10,7 +10,7 @@ import {
   recordReachedTraitOffer,
   traitCandidates,
 } from '../../src/simulation/traits';
-import { suppressFearVow } from '../../src/simulation/arcana-fear';
+import { suppressFearVows } from '../../src/simulation/arcana-fear';
 
 const owner = { kind: 'project' } as const;
 
@@ -80,7 +80,7 @@ describe('Vow of Denial trait history', () => {
       1,
       'test',
     );
-    const suppressed = suppressFearVow(catalog, denialState(), 'BanUnpickedBoonsShrineUpgrade', {
+    const suppressed = suppressFearVows(catalog, denialState(), ['BanUnpickedBoonsShrineUpgrade'], {
       owner,
       sequence: 2,
     });

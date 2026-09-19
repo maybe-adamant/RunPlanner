@@ -915,7 +915,7 @@ function encounterTraitContext(
     ...(loadout ?? {}),
     resolvedProviderKey: providerKey,
     manualArcanaGraspCost: manualArcanaGraspCost(catalog, branch.arcanaFear),
-    circeRemovableFearVow: circeResolutionDomain(catalog, branch.arcanaFear, 'disableFear')
+    circeRemovableFearVow: circeResolutionDomain(catalog, branch.arcanaFear, 'disableFear', 1)
       .outerAvailable,
     echoLastRewardAvailable: recreation !== undefined,
     ...(recreation === undefined ? {} : { echoLastRewardRecreation: recreation }),
@@ -1074,7 +1074,18 @@ export function settleEncounterTraitOffer(
           for (const [key, entry] of provisionalFindings) localFindings.set(key, entry);
         return applied;
       }
-      const rejection = assessCirceChild(catalog, branch, disposition, resolution);
+      const acquisitionOrdinal = traitContext.acquisitionOrdinal;
+      if (acquisitionOrdinal === undefined)
+        throw new Error(
+          `${selected?.traitKey ?? 'Circe'} requires an explicit acquisition ordinal`,
+        );
+      const rejection = assessCirceChild(
+        catalog,
+        branch,
+        disposition,
+        resolution,
+        acquisitionOrdinal,
+      );
       if (rejection !== undefined) return rejectCirce(rejection.code, rejection.detail);
     }
     if (provisionalFindings !== localFindings)
@@ -1194,7 +1205,18 @@ export function settleEncounterTraitOffer(
       selected === undefined
     )
       return applied;
-    return settleValidatedCirceChild(catalog, applied, disposition, resolution, owner, sequence);
+    const acquisitionOrdinal = traitContext.acquisitionOrdinal;
+    if (acquisitionOrdinal === undefined)
+      throw new Error(`${selected.traitKey} requires an explicit acquisition ordinal`);
+    return settleValidatedCirceChild(
+      catalog,
+      applied,
+      disposition,
+      resolution,
+      owner,
+      sequence,
+      acquisitionOrdinal,
+    );
   })();
   return complete({
     branch: settledBranch,

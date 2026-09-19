@@ -86,7 +86,7 @@ export interface AuthoredEchoLastRunBoonOffer {
 export type AuthoredCirceResolution =
   | { readonly kind: 'activateArcana'; readonly arcanaKeys: readonly string[] }
   | { readonly kind: 'promoteArcana'; readonly arcanaKeys: readonly string[] }
-  | { readonly kind: 'disableFear'; readonly vowKey: string | null };
+  | { readonly kind: 'disableFear'; readonly vowKeys: readonly string[] };
 
 export type OneToThree<T> = readonly [T] | readonly [T, T] | readonly [T, T, T];
 export type OneToEight<T> =

@@ -114,6 +114,20 @@ describe('trait dispositions and requirements compiler owner', () => {
     });
   });
 
+  it('declares Circe selection counts for every acquisition ordinal', () => {
+    const counts = (traitKey: string) => {
+      const disposition = catalog.traits.byKey[traitKey]?.selectedDisposition;
+      if (disposition?.kind !== 'circe')
+        throw new Error(`missing Circe disposition for ${traitKey}`);
+      return ([1, 2, 3, 4] as const).map(
+        (ordinal) => resolveTraitAcquisitionOrdinalEffect(disposition, ordinal).circeSelectionCount,
+      );
+    };
+    expect(counts('RandomArcanaTrait')).toEqual([1, 1, 2, 3]);
+    expect(counts('RemoveShrineTrait')).toEqual([1, 1, 2, 3]);
+    expect(counts('ArcanaRarityTrait')).toEqual([2, 2, 3, 5]);
+  });
+
   it('compiler-closes All Together to the exact immutable four-pair direct-grant matrix', () => {
     const expected = {
       kind: 'directTraitSets',

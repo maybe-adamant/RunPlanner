@@ -100,11 +100,18 @@ export function executionTimelineTransactions(
     const selectedOptionIndex = Number(selected.offer.selectedOptionKey.slice(-1)) - 1;
     const selectedOption = selected.offer.options[selectedOptionIndex];
     const authoredCirceResolution = selectedOption?.circeResolution;
+    const orderedCirceActivationKeys =
+      authoredCirceResolution?.kind === 'activateArcana'
+        ? agreement(
+            selected.branches.map((branch) => branch.orderedCirceActivationKeys),
+            `Circe activation order ${semanticAddressKey(selected.address)}`,
+          )
+        : undefined;
     const circeResolution =
       authoredCirceResolution === undefined
         ? undefined
         : authoredCirceResolution.kind === 'disableFear'
-          ? authoredCirceResolution.vowKey === null
+          ? authoredCirceResolution.vowKeys.length === 0
             ? (() => {
                 throw new CompilerError(
                   'executionCoverageMissing',
@@ -113,11 +120,22 @@ export function executionTimelineTransactions(
               })()
             : Object.freeze({
                 kind: 'disableFear' as const,
-                vowKey: authoredCirceResolution.vowKey,
+                vowKeys: Object.freeze([...authoredCirceResolution.vowKeys]),
               })
           : Object.freeze({
               kind: authoredCirceResolution.kind,
-              arcanaKeys: Object.freeze([...authoredCirceResolution.arcanaKeys]),
+              arcanaKeys: Object.freeze([
+                ...(authoredCirceResolution.kind === 'activateArcana'
+                  ? orderedCirceActivationKeys === undefined
+                    ? (() => {
+                        throw new CompilerError(
+                          'executionCoverageMissing',
+                          `Circe activation order is missing for ${semanticAddressKey(selected.address)}`,
+                        );
+                      })()
+                    : orderedCirceActivationKeys
+                  : authoredCirceResolution.arcanaKeys),
+              ]),
             });
     const targetedAcquisitionTransitions = selected.branches.map(
       (branch) => branch.targetedAcquisition.transition,

@@ -142,20 +142,29 @@ export function decodeEncounterTraitOffer(
       if (kind === 'disableFear') {
         expectExactKeys(
           resolution,
-          ['kind', 'vowKey'],
+          ['kind', 'vowKeys'],
           `${path}.options.${optionKey}.circeResolution`,
         );
-        if (resolution.vowKey !== null && typeof resolution.vowKey !== 'string')
-          failProjectDocument(
-            `${path}.options.${optionKey}.circeResolution.vowKey`,
-            'must be a Vow key or null',
-          );
+        const keys = expectArray(
+          resolution.vowKeys,
+          `${path}.options.${optionKey}.circeResolution.vowKeys`,
+        ).map((entry, index) =>
+          expectString(entry, `${path}.options.${optionKey}.circeResolution.vowKeys[${index}]`),
+        );
         if (
-          typeof resolution.vowKey === 'string' &&
-          catalog.fearVows.byKey[resolution.vowKey] === undefined
+          new Set(keys).size !== keys.length ||
+          keys.some((key) => catalog.fearVows.byKey[key] === undefined)
         )
-          failProjectDocument(`${path}.options.${optionKey}.circeResolution.vowKey`, 'unknown Vow');
-        circeResolution = Object.freeze({ kind, vowKey: resolution.vowKey as string | null });
+          failProjectDocument(
+            `${path}.options.${optionKey}.circeResolution.vowKeys`,
+            'must contain distinct known Vow keys',
+          );
+        circeResolution = Object.freeze({
+          kind,
+          vowKeys: Object.freeze(
+            catalog.fearVows.values.filter((vow) => keys.includes(vow.key)).map((vow) => vow.key),
+          ),
+        });
       } else if (kind === 'activateArcana' || kind === 'promoteArcana') {
         expectExactKeys(
           resolution,

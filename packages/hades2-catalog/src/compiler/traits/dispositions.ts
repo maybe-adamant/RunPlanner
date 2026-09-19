@@ -77,6 +77,7 @@ export function normalizeSelectedDisposition(
     readonly slots?: unknown;
     readonly levelCount?: unknown;
     readonly levelCountByAcquisitionOrdinal?: unknown;
+    readonly selectionCountByAcquisitionOrdinal?: unknown;
     readonly removeGiverKey?: unknown;
     readonly buffGiverKey?: unknown;
     readonly levelsPerRemovedIdentity?: unknown;
@@ -224,7 +225,16 @@ export function normalizeSelectedDisposition(
     return Object.freeze({ kind, rankBonus: 1 });
   }
   if (kind === 'circe') {
-    if (Object.keys(value).length !== 2) fail(path, 'circe requires only kind and effect');
+    const counts = requireArray(
+      value.selectionCountByAcquisitionOrdinal,
+      `${path}.selectionCountByAcquisitionOrdinal`,
+    );
+    if (
+      Object.keys(value).length !== 3 ||
+      counts.length !== 4 ||
+      counts.some((count) => !Number.isInteger(count as number) || (count as number) <= 0)
+    )
+      fail(path, 'circe requires an effect and four positive ordinal selection counts');
     return Object.freeze({
       kind,
       effect: closedValue(
@@ -232,6 +242,12 @@ export function normalizeSelectedDisposition(
         ['activateArcana', 'promoteArcana', 'disableFear'] as const,
         `${path}.effect`,
       ),
+      selectionCountByAcquisitionOrdinal: Object.freeze([...counts]) as [
+        number,
+        number,
+        number,
+        number,
+      ],
     });
   }
   if (kind === 'echo') {
