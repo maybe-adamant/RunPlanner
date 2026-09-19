@@ -713,141 +713,51 @@ export function presentBiomeFeedbackContext(
     : `Finish and fix ${blocker.label} before ${biome.label} can be evaluated.`;
 }
 
-function numberedDestinationLabel(prefix: string, key: string): string {
-  const suffix = key.match(/(\d+)$/)?.[1];
-  return suffix === undefined ? prefix : `${prefix} ${Number(suffix)}`;
-}
-
-function localRewardDestinationLabel(groupKey: string, slotKey: string): string {
-  switch (groupKey) {
-    case 'cages':
-      return `${numberedDestinationLabel('Cage', slotKey)} reward`;
-    default:
-      return numberedDestinationLabel('Room reward', slotKey);
+export function findingDestinationLabel(
+  catalog: Catalog,
+  origin: SemanticAddress,
+  destination?: import('./structured-workspace').WorkspaceInspectorDestination,
+  route?: import('./structured-workspace').WorkspaceRoute,
+): string {
+  if (
+    destination?.presentationPanel === 'overview' ||
+    !('biomeKey' in origin) ||
+    origin.biomeKey === 'routeStart'
+  ) {
+    return origin.kind === 'project' ? 'Project' : 'Loadout';
   }
-}
-
-export function findingDestinationLabel(catalog: Catalog, origin: SemanticAddress): string {
-  if (origin.kind === 'nemesisRandomEvent') return 'Nemesis event';
-  if (origin.kind === 'project') {
-    return 'Project';
-  }
-  if (origin.kind === 'route') {
-    const route = catalog.routes.byKey[origin.routeKey];
-    if (route === undefined) {
-      throw new Error(`Finding references unknown route ${origin.routeKey}`);
-    }
-    return route.label;
-  }
-  if (origin.kind === 'startingReward') return 'Starting reward';
-  if (origin.kind === 'keepsakeSelection' && origin.owner === 'routeStart')
-    return 'Starting keepsake';
-  if (origin.kind === 'keepsakeEquipResult')
-    return origin.resultKind === 'jeweledPom'
-      ? 'Jeweled Pom result'
-      : origin.resultKind === 'experimentalHammer'
-        ? 'Experimental Hammer result'
-        : 'Transcendent Embryo result';
-  if (origin.kind === 'fountainRarityOutcome') return 'Aromatic Phial fountain target';
   const biome = catalog.biomes.byKey[origin.biomeKey];
   if (biome === undefined) {
     throw new Error(`Finding references unknown biome ${origin.biomeKey}`);
   }
-  const biomeLabel = biome.label;
-  switch (origin.kind) {
-    case 'biome':
-      return biomeLabel;
-    case 'biomeField':
-      return `${biomeLabel} · Biome setting`;
-    case 'exitDecision':
-      return `${biomeLabel} · Door choice`;
-    case 'exitSelection':
-      return `${biomeLabel} · Door selection`;
-    case 'batchRewardStore':
-      return `${biomeLabel} · Reward pool`;
-    case 'target': {
-      const physicalIndex = /^exit(\d+)$/.exec(origin.exitKey)?.[1];
-      return `${biomeLabel} · Door ${physicalIndex === undefined ? origin.exitKey : Number(physicalIndex)}`;
+  const workspaceBiome = route?.biomes.find((value) => value.biomeKey === origin.biomeKey);
+  const railKey = destination?.selectedRailKey;
+  const frontier = workspaceBiome?.frontier;
+  // An uncreated outgoing decision is edited from its existing predecessor,
+  // not from a numbered decision that has yet to be authored.
+  const predecessorNodeKey =
+    frontier?.kind === 'exitDecision' && frontier.marker.focusKey === railKey
+      ? frontier.predecessorNodeKey
+      : undefined;
+  if (railKey !== undefined) {
+    for (const entry of workspaceBiome?.rail ?? []) {
+      if (
+        entry.kind !== 'frontier' &&
+        (entry.marker.focusKey === railKey || entry.node.key === predecessorNodeKey)
+      ) {
+        return `${biome.label} · ${entry.kind === 'hubGroup' ? 'Hub' : entry.label}`;
+      }
+      if (entry.kind === 'hubGroup') {
+        for (const visit of entry.visits) {
+          if (visit.marker.focusKey === railKey || visit.node.key === predecessorNodeKey)
+            return `${biome.label} · ${visit.label}`;
+          const sideVisit = visit.sideVisits.find(
+            (side) => side.marker.focusKey === railKey || side.node.key === predecessorNodeKey,
+          );
+          if (sideVisit !== undefined) return `${biome.label} · ${sideVisit.label}`;
+        }
+      }
     }
-    case 'additionalExit':
-      return `${biomeLabel} · Special door`;
-    case 'incomingReward':
-      return `${biomeLabel} · Room reward`;
-    case 'localReward':
-      return `${biomeLabel} · ${localRewardDestinationLabel(origin.groupKey, origin.slotKey)}`;
-    case 'roomAction':
-      return `${biomeLabel} · Room action`;
-    case 'travelDealRefillRealization':
-      return `${biomeLabel} · Travel Deal refill`;
-    case 'roomRunStateCheckpoint':
-      return `${biomeLabel} · Run State`;
-    case 'localVisitDecision':
-      return `${biomeLabel} · Side rooms`;
-    case 'localVisitSlot':
-      return `${biomeLabel} · ${numberedDestinationLabel('Side room', origin.slotKey)}`;
-    case 'localVisitOrder':
-      return `${biomeLabel} · Side room order`;
-    case 'encounterPhase':
-      return `${biomeLabel} · Encounter`;
-    case 'gorgonPhase':
-      return `${biomeLabel} · Gorgon Athena`;
-    case 'rewardWheel':
-      return `${biomeLabel} · Reward wheel`;
-    case 'rewardWheelOffer':
-      return `${biomeLabel} · Reward wheel offer`;
-    case 'hubOpenSet':
-      return `${biomeLabel} · Open Hub rooms`;
-    case 'hubDecision':
-      return `${biomeLabel} · Hub`;
-    case 'hubRoom':
-      return `${biomeLabel} · Hub`;
-    case 'hubSlot':
-      return `${biomeLabel} · Hub room`;
-    case 'hubVisit':
-      return `${biomeLabel} · Visit ${origin.visitIndex}`;
-    case 'occurrence':
-      return `${biomeLabel} · Room`;
-    case 'fieldsSpatial':
-      return `${biomeLabel} · Fields layout`;
-    case 'roomFeature':
-      return `${biomeLabel} · Room feature`;
-    case 'shopOffer':
-      return `${biomeLabel} · Shop offer`;
-    case 'acquisitionSite':
-      return `${biomeLabel} · Room Timeline`;
-    case 'acquisitionEntry':
-      return `${biomeLabel} · Acquisition`;
-    case 'traitOffer':
-      return `${biomeLabel} · Trait offer`;
-    case 'traitAcquisitionTarget':
-      return `${biomeLabel} · Acquisition target`;
-    case 'naturalSelectionResult':
-      return `${biomeLabel} · Natural Selection result`;
-    case 'steadyGrowthOutcome':
-      return `${biomeLabel} · Steady Growth outcome`;
-    case 'transcendentEmbryoOutcome':
-      return `${biomeLabel} · Transcendent Embryo outcome`;
-    case 'acquisitionRole':
-      return `${biomeLabel} · Acquisition`;
-    case 'circeResolution':
-      return `${biomeLabel} · Circe outcome`;
-    case 'echoPomTarget':
-      return `${biomeLabel} · Pom Pom Pom target`;
-    case 'echoLastRunBoon':
-      return `${biomeLabel} · Boon Boon Boon outcomes`;
-    case 'echoLastReward':
-      return `${biomeLabel} · Reward Reward Reward replay`;
-    case 'allTogetherSet':
-      return `${biomeLabel} · All Together ${origin.setKey} set`;
-    case 'echoKeepsakeReplay':
-      return `${biomeLabel} · Gift Gift Gift replay`;
-    case 'levelResolution':
-      return `${biomeLabel} · Pom`;
-    case 'judgmentArcana':
-      return `${biomeLabel} · Boss Judgment`;
-    case 'figurineArcana':
-      return `${biomeLabel} · Boss Crystal Figurine`;
-    case 'keepsakeSelection':
-      return `${biomeLabel} · Postboss keepsake`;
   }
+  return biome.label;
 }

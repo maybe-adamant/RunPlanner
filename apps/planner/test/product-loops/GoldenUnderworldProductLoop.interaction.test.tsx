@@ -688,7 +688,7 @@ describe('underworld product loop', () => {
     expect(currentProject(application)).toBe(beforeShrink);
     await view.user.click(screen.getByRole('button', { name: 'Erebus' }));
     const structure = screen.getByRole('region', { name: 'Erebus route structure' });
-    expect(within(structure).getByRole('button', { name: /Opening/ })).toBeTruthy();
+    expect(within(structure).getByRole('button', { name: /^Opening/ })).toBeTruthy();
   });
 
   it('keeps pointer and keyboard workflows available across decisions, fixed stages, Hub, and completion landmarks', async () => {

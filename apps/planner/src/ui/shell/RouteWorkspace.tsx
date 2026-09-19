@@ -166,6 +166,7 @@ export function RouteWorkspace({
       catalog={catalog}
       issue={routeEvaluation.issue}
       focusByOwner={workspace.focusByOwner}
+      route={workspaceRoute}
     />
   );
 

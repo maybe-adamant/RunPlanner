@@ -137,9 +137,9 @@ describe('evaluation presentation', () => {
     expect(presentFinding(finding('keepsakeEquipResultUnavailable', transcendentEmbryo))).toEqual({
       title: 'Embryo blessing unavailable',
     });
-    expect(findingDestinationLabel(catalog, jeweledPom)).toBe('Jeweled Pom result');
-    expect(findingDestinationLabel(catalog, experimentalHammer)).toBe('Experimental Hammer result');
-    expect(findingDestinationLabel(catalog, transcendentEmbryo)).toBe('Transcendent Embryo result');
+    expect(findingDestinationLabel(catalog, jeweledPom)).toBe('Loadout');
+    expect(findingDestinationLabel(catalog, experimentalHammer)).toBe('Loadout');
+    expect(findingDestinationLabel(catalog, transcendentEmbryo)).toBe('Loadout');
   });
 
   it('presents the missing Echo Pom child with both legal settlement shapes', () => {
@@ -312,7 +312,7 @@ describe('evaluation presentation', () => {
 
     expect(findingDestinationLabel(catalog, createProjectAddress())).toBe('Project');
     expect(findingDestinationLabel(catalog, createBiomeFieldAddress(biome, 'field'))).toBe(
-      'Erebus · Biome setting',
+      'Erebus',
     );
     expect(
       findingDestinationLabel(
@@ -322,7 +322,7 @@ describe('evaluation presentation', () => {
           occurrenceId: createOccurrenceId('private-parent'),
         }),
       ),
-    ).toBe('Erebus · Door choice');
+    ).toBe('Erebus');
     expect(
       findingDestinationLabel(
         catalog,
@@ -331,32 +331,30 @@ describe('evaluation presentation', () => {
           occurrenceId: createOccurrenceId('private-parent'),
         }),
       ),
-    ).toBe('Erebus · Door selection');
-    expect(findingDestinationLabel(catalog, target)).toBe('Erebus · Door 2');
-    expect(findingDestinationLabel(catalog, room)).toBe('Erebus · Room');
+    ).toBe('Erebus');
+    expect(findingDestinationLabel(catalog, target)).toBe('Erebus');
+    expect(findingDestinationLabel(catalog, room)).toBe('Erebus');
     expect(
       findingDestinationLabel(catalog, createLocalRewardAddress(hBiome, hRoom, 'cages', 'cage2')),
-    ).toBe('Fields · Cage 2 reward');
+    ).toBe('Fields');
     expect(
       findingDestinationLabel(
         catalog,
         createLocalRewardAddress(nBiome, nRoom, 'futureRewards', 'reward4'),
       ),
-    ).toBe('Ephyra · Room reward 4');
+    ).toBe('Ephyra');
     expect(
       findingDestinationLabel(
         catalog,
         createLocalVisitSlotAddress(nBiome, nRoom, 'sideRooms', 'sideDoor2'),
       ),
-    ).toBe('Ephyra · Side room 2');
+    ).toBe('Ephyra');
     expect(
       findingDestinationLabel(catalog, createLocalVisitOrderAddress(nBiome, nRoom, 'sideRooms')),
-    ).toBe('Ephyra · Side room order');
+    ).toBe('Ephyra');
     expect(findingDestinationLabel(catalog, createHubDecisionAddress(nBiome, 'hub'))).toBe(
-      'Ephyra · Hub',
+      'Ephyra',
     );
-    expect(findingDestinationLabel(catalog, createHubRoomAddress(nBiome, 'hub'))).toBe(
-      'Ephyra · Hub',
-    );
+    expect(findingDestinationLabel(catalog, createHubRoomAddress(nBiome, 'hub'))).toBe('Ephyra');
   });
 });
