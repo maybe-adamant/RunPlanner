@@ -427,7 +427,9 @@ export function applyEncounterEndEffectsTransition(
           next,
           pickupOwner,
           event.sequence,
-          declaration?.skipTimedDropResources === true,
+          declaration?.skipTimedDropResources === true ||
+            (event.origin.routeKey === 'Dream' &&
+              declaration?.skipTimedDropResourcesInDream === true),
         );
   if (pickupAdvance !== undefined) {
     next = pickupAdvance.branches;

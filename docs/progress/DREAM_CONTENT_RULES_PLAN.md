@@ -2,8 +2,9 @@
 
 ## Status and delivery boundary
 
-- Status: locked by user approval; Gates A–C complete and independently reviewed;
-  A/B committed as `29922aee` and `b2345df4`; Gate D in progress; Gate E pending.
+- Status: locked by user approval; Gates A–D complete and independently reviewed;
+  A/B/C committed as `29922aee`, `b2345df4`, and `687dcd8f`; D ready to commit;
+  Gate E pending.
 - Base: planner `daca6903`; downstream game module `26c2feb`.
 - Input: `docs/investigations/DREAM_DIVE_SCOPE.md`, reassessed after route
   foundation closure. The completed foundation is not reopened.
@@ -234,6 +235,19 @@ Acceptance:
 
 Primary tests: room normalization, producer transition and representative
 cross-biome lifecycle workflow. No new scheduler, lifecycle checkpoint or executor hook.
+
+Delivered: native Dream-only room flags feed the existing pickup-producer
+deferral; Zagreus also declares its unconditional native deferral. The clock
+implementation is unchanged. The lifecycle witness covers before-threshold
+advancement, due hold, Postboss non-counting, biome handoff, ordinary boss
+maturity, both acquired intervals, and usable released Pom targets.
+
+Verification: independent review passed after adding the before-threshold
+witness. Four focused files / 42 tests passed; catalog and engine typechecks,
+changed-file lint, formatting and diff checks passed. Refreshed the eight room
+snapshot hashes for the accumulated declaration changes; the full catalog suite
+then passed 34 files / 276 tests. The adjoining biome-handoff and field-NPC
+acquisition suites passed another 25 tests. Full repository closure remains Gate E.
 
 ### E — Coverage and closure
 
