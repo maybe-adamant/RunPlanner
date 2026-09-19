@@ -108,7 +108,8 @@ describe('App', () => {
       }),
     );
 
-    expect(findingsMarkup(appMarkup(application))).toContain('Erebus');
+    expect(findingsMarkup(appMarkup(application))).toContain('Choose a reward');
+    expect(findingsMarkup(appMarkup(application))).toContain('Starting reward');
     expect(findingsMarkup(appMarkup(application))).not.toContain('Ephyra');
   });
 
@@ -122,29 +123,33 @@ describe('App', () => {
     const historyBeforeNavigation = application.store.getState().projectWorkspace.history!;
     const destination = application
       .selectStructuredWorkspace(application.store.getState())!
-      .focusByOwner.get(semanticAddressKey(finding.origin))!;
+      .focusByOwner.get(semanticAddressKey(finding.origin));
+    if (destination === undefined) throw new Error('starting reward destination is missing');
     application.store.dispatch(
       findingSelected({
         key: semanticFindingKey(finding),
         origin: finding.origin,
+        focusAddress: destination.focusAddress,
         ...(destination.presentationPanel === undefined
           ? {}
-          : {
-              presentationPanel: { kind: destination.presentationPanel },
-            }),
+          : { presentationPanel: { kind: destination.presentationPanel } }),
       }),
     );
 
     const markup = appMarkup(application);
-    expect(finding.code).toBe('biomeTopologyMissing');
+    expect(finding.code).toBe('rewardMissing');
     expect(application.store.getState().editorSession.activeSection).toBe('route');
     expect(application.store.getState().editorSession.activePanel).toEqual({
       kind: 'overview',
     });
     expect(application.store.getState().projectWorkspace.history!).toBe(historyBeforeNavigation);
-    expect(markup).toContain('Create the opening room');
+    expect(markup).toContain('Starting reward');
     expect(markup).toContain(semanticOwnerControlElementId(finding.origin));
-    expect(markup).not.toContain('biomeTopologyMissing');
+    const rewardControl = markup
+      .match(/<[^>]+>/g)
+      ?.find((tag) => tag.includes(`id="${semanticOwnerControlElementId(finding.origin)}"`));
+    expect(rewardControl).toContain('data-selected-finding="true"');
+    expect(markup).not.toContain('rewardMissing');
   });
 
   it('navigates a Hub open-set completeness finding to the exact board owner', () => {

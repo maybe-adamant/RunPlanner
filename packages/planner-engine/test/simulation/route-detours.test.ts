@@ -16,6 +16,7 @@ import {
   createOccurrenceId,
   createProjectDocument,
   createRouteAddress,
+  createStartingRewardAddress,
   createShopOfferAddress,
   createTargetAddress,
   createTraitOfferAddress,
@@ -234,6 +235,33 @@ function replaceApolloReward(
   return next;
 }
 
+function replaceStartingApolloReward(
+  project: ProjectDocument,
+  biome: BiomeAddress,
+  occurrenceId: OccurrenceId,
+): ProjectDocument {
+  let next = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceStartingReward',
+    reward: createStartingRewardAddress(biome.routeKey),
+    value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'ApolloUpgrade' } },
+  });
+  next = applyProjectCommand(next, catalog, {
+    kind: 'ReplaceTraitOffer',
+    trait: createTraitOfferAddress(createIncomingRewardAddress(biome, occurrenceId), 'source'),
+    value: {
+      kind: 'traits',
+      giverKey: 'Apollo',
+      options: [
+        { traitKey: 'ApolloWeaponBoon', rarity: 'Common' },
+        { traitKey: 'ApolloSpecialBoon', rarity: 'Common' },
+        { traitKey: 'ApolloCastBoon', rarity: 'Common' },
+      ],
+      selectedOptionKey: 'option1',
+    },
+  });
+  return next;
+}
+
 function authorWorldShop(
   project: ProjectDocument,
   biome: BiomeAddress,
@@ -367,7 +395,7 @@ function buildMidshopProject(options: {
     occurrenceId: opening,
     gameName: 'F_Opening01',
   });
-  project = replaceApolloReward(project, fBiome, opening);
+  project = replaceStartingApolloReward(project, fBiome, opening);
   project = appendSingleTargetBatch(project, fBiome, opening, shop, 'F_Shop01', 'MetaProgress');
   project = authorWorldShop(project, fBiome, shop);
   const additional = createAdditionalExitAddress(fBiome, shop, 'zagreusContract');
@@ -434,7 +462,7 @@ function buildNaturalChaosProject() {
     occurrenceId: opening,
     gameName: 'F_Opening01',
   });
-  project = replaceApolloReward(project, fBiome, opening);
+  project = replaceStartingApolloReward(project, fBiome, opening);
   const additional = createAdditionalExitAddress(fBiome, opening, 'chaos');
   project = applyProjectCommand(project, catalog, {
     kind: 'AddChaos',
@@ -583,7 +611,7 @@ describe('route-detour simulation', () => {
       biome: nBiome,
       occurrenceId: opening,
     });
-    project = replaceApolloReward(project, nBiome, opening);
+    project = replaceStartingApolloReward(project, nBiome, opening);
     const additional = createAdditionalExitAddress(nBiome, opening, 'chaos');
     project = applyProjectCommand(project, catalog, {
       kind: 'AddChaos',
@@ -632,7 +660,7 @@ describe('route-detour simulation', () => {
       biome: nBiome,
       occurrenceId: opening,
     });
-    project = replaceApolloReward(project, nBiome, opening);
+    project = replaceStartingApolloReward(project, nBiome, opening);
     const additional = createAdditionalExitAddress(nBiome, opening, 'chaos');
     project = applyProjectCommand(project, catalog, {
       kind: 'AddChaos',
@@ -669,7 +697,7 @@ describe('route-detour simulation', () => {
       occurrenceId: opening,
       gameName: 'F_Opening01',
     });
-    project = replaceApolloReward(project, fBiome, opening);
+    project = replaceStartingApolloReward(project, fBiome, opening);
     const firstAdditional = createAdditionalExitAddress(fBiome, opening, 'chaos');
     project = applyProjectCommand(project, catalog, {
       kind: 'AddChaos',

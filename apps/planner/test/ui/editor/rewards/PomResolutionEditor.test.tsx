@@ -44,8 +44,14 @@ describe('Pom resolution editor', () => {
     let authoredProject = project;
     let workspace = initialWorkspace;
     let control: WorkspaceLevelResolutionInteraction | undefined;
+    const openingReward = createIncomingRewardAddress(
+      goldenFBiome,
+      createOccurrenceId('golden-f-start'),
+    );
     for (const reward of initialWorkspace.interactions.rewards.values()) {
       if (control !== undefined) break;
+      if (reward.owner.kind === 'startingReward') continue;
+      if (semanticAddressKey(reward.owner) === semanticAddressKey(openingReward)) continue;
       const withPom = applyProjectCommand(
         project,
         application.catalog,

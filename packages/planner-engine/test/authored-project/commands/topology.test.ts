@@ -17,6 +17,7 @@ import {
   createOccurrenceId,
   createPostbossKeepsakeSelectionAddress,
   createProjectHistory,
+  createStartingRewardAddress,
   createTargetAddress,
   createTraitOfferAddress,
   decodeProjectDocument,
@@ -1381,8 +1382,8 @@ describe('authored-project commands and topology', () => {
       gameName: 'F_Opening01',
     });
     project = applyProjectCommand(project, catalog, {
-      kind: 'ReplaceIncomingReward',
-      reward: createIncomingRewardAddress(fBiome, openingId),
+      kind: 'ReplaceStartingReward',
+      reward: createStartingRewardAddress('Underworld'),
       value: {
         rewardType: 'Boon',
         payload: { kind: 'BoonSource', source: 'ApolloUpgrade' },

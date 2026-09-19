@@ -11,6 +11,7 @@ import {
   createLocalVisitOrderAddress,
   createOccurrenceId,
   createProjectDocument,
+  createStartingRewardAddress,
   decodeProjectDocument,
   createShopOfferAddress,
   createTargetAddress,
@@ -68,8 +69,8 @@ export function createCompleteNProject(): ProjectDocument {
     },
   );
   document = applyProjectCommand(document, catalog, {
-    kind: 'ReplaceIncomingReward',
-    reward: createIncomingRewardAddress(nBiome, createOccurrenceId('round-trip-n-opening')),
+    kind: 'ReplaceStartingReward',
+    reward: createStartingRewardAddress('Surface'),
     value: {
       rewardType: 'Boon',
       payload: { kind: 'BoonSource', source: 'AphroditeUpgrade' },

@@ -13,6 +13,7 @@ import {
   createOccurrenceId,
   createOccurrenceAddress,
   createRouteAddress,
+  createStartingRewardAddress,
   createRoomActionAddress,
   createProjectDocument,
   createShopOfferAddress,
@@ -115,9 +116,13 @@ function replaceIncoming(
 }
 
 function authorOpening(project: ProjectDocument, occurrenceId: OccurrenceId): ProjectDocument {
-  const rewarded = replaceIncoming(project, occurrenceId, {
-    rewardType: 'Boon',
-    payload: { kind: 'BoonSource', source: 'ApolloUpgrade' },
+  const rewarded = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceStartingReward',
+    reward: createStartingRewardAddress('Underworld'),
+    value: {
+      rewardType: 'Boon',
+      payload: { kind: 'BoonSource', source: 'ApolloUpgrade' },
+    },
   });
   return applyProjectCommand(rewarded, catalog, {
     kind: 'ReplaceTraitOffer',
@@ -474,7 +479,11 @@ function sameRoomAcquisitionProject(): ProjectDocument {
     occurrenceId: start,
     gameName: 'F_Opening01',
   });
-  project = replaceIncoming(project, start, { rewardType: 'WeaponUpgrade' });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceStartingReward',
+    reward: createStartingRewardAddress('Underworld'),
+    value: { rewardType: 'WeaponUpgrade' },
+  });
   project = addBatch(project, start, 'MetaProgress', [
     { id: meta, gameName: 'F_Combat02', offer: { rewardType: 'MetaCurrencyDrop' } },
   ]);
@@ -648,7 +657,11 @@ function invalidShopOfferProject(): ProjectDocument {
     occurrenceId: start,
     gameName: 'F_Opening01',
   });
-  project = replaceIncoming(project, start, { rewardType: 'WeaponUpgrade' });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceStartingReward',
+    reward: createStartingRewardAddress('Underworld'),
+    value: { rewardType: 'WeaponUpgrade' },
+  });
   project = addBatch(project, start, 'MetaProgress', [
     { id: first, gameName: 'F_Combat02', offer: { rewardType: 'MetaCurrencyDrop' } },
   ]);
@@ -905,7 +918,6 @@ function devotionProject(): ProjectDocument {
 
 describe('F reward-history simulation', () => {
   it('spends an Olympian provider at the entered ordinary post-combat Boon spawn', () => {
-    const start = createOccurrenceId('ratio-start');
     const enteredProject = ratioBoundaryProject();
     const entered = firstBranch(
       evaluate(enteredProject, true, [
@@ -919,7 +931,7 @@ describe('F reward-history simulation', () => {
     expect(entered.events).toContainEqual(
       expect.objectContaining({
         kind: 'rewardOffered',
-        origin: createIncomingRewardAddress(biome, start),
+        origin: createStartingRewardAddress('Underworld'),
       }),
     );
   });
@@ -949,7 +961,11 @@ describe('F reward-history simulation', () => {
 
   it('treats the opening reward as a biome entry without a current-room predecessor', () => {
     const start = createOccurrenceId('ratio-start');
-    let project = replaceIncoming(ratioBoundaryProject(), start, { rewardType: 'SpellDrop' });
+    let project = applyProjectCommand(ratioBoundaryProject(), catalog, {
+      kind: 'ReplaceStartingReward',
+      reward: createStartingRewardAddress('Underworld'),
+      value: { rewardType: 'SpellDrop' },
+    });
     project = applyProjectCommand(project, catalog, {
       kind: 'RemoveRoomAction',
       action: createRoomActionAddress(
@@ -968,7 +984,7 @@ describe('F reward-history simulation', () => {
     expect(firstBranch(result).events).toContainEqual(
       expect.objectContaining({
         kind: 'rewardOffered',
-        origin: createIncomingRewardAddress(biome, start),
+        origin: createStartingRewardAddress('Underworld'),
         offer: { rewardType: 'SpellDrop' },
       }),
     );

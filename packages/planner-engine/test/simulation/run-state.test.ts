@@ -10,6 +10,7 @@ import {
   createOccurrenceId,
   createRoomRunStateCheckpointAddress,
   createRouteAddress,
+  createStartingRewardAddress,
   semanticAddressKey,
 } from '@run-planner/engine/authored-project';
 import { describe, expect, it } from 'vitest';
@@ -753,8 +754,8 @@ describe('decision run-state snapshots', () => {
       value: { rewardType: 'RoomMoneyDrop' },
     });
     const upstreamEdit = applyProjectCommand(base, catalog, {
-      kind: 'ReplaceIncomingReward',
-      reward: createIncomingRewardAddress(biomeAddress, goldenFStartId),
+      kind: 'ReplaceStartingReward',
+      reward: createStartingRewardAddress('Underworld'),
       value: { rewardType: 'WeaponUpgrade' },
     });
     const firstF = (project: typeof base) => {

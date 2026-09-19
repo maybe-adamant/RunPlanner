@@ -11,7 +11,7 @@ import {
 import {
   applyProjectCommand,
   createAllTogetherSetAddress,
-  createIncomingRewardAddress,
+  createStartingRewardAddress,
   semanticAddressKey,
   createCirceResolutionAddress,
   createNaturalSelectionResultAddress,
@@ -31,11 +31,7 @@ import { TraitOfferDialog, TraitOfferEditor } from '@planner/ui/editor/rewards/T
 import { TraitOfferCirceResolution } from '@planner/ui/editor/rewards/TraitOfferCirceResolution';
 import { TraitOfferSelectedOutcome } from '@planner/ui/editor/rewards/TraitOfferSelectedOutcome';
 import { semanticOwnerControlElementId } from '@planner/ui/feedback/semanticOwner';
-import {
-  createGoldenFGHIProject,
-  goldenFBiome,
-  goldenFStartId,
-} from '@run-planner/test-fixtures/underworld';
+import { createGoldenFGHIProject } from '@run-planner/test-fixtures/underworld';
 
 afterEach(cleanup);
 
@@ -367,8 +363,8 @@ describe('selected outcomes', () => {
   it('walks and saves all eight Natural Selection positions, then focuses the exact child', async () => {
     const application = createApplication();
     const project = applyProjectCommand(createGoldenFGHIProject(), application.catalog, {
-      kind: 'ReplaceIncomingReward',
-      reward: createIncomingRewardAddress(goldenFBiome, goldenFStartId),
+      kind: 'ReplaceStartingReward',
+      reward: createStartingRewardAddress('Underworld'),
       value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'DemeterUpgrade' } },
     });
     application.store.dispatch(authoredProjectReplaced(project));

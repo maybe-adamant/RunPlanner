@@ -42,6 +42,7 @@ import {
   createExitSelectionAddress,
   createHubDecisionAddress,
   createRouteAddress,
+  createStartingRewardAddress,
   createFountainRarityOutcomeAddress,
   createKeepsakeEquipResultAddress,
   createLevelResolutionAddress,
@@ -176,8 +177,8 @@ function timePieceCreatedBoonProject() {
     keepsakeKey: 'GoldifyKeepsake',
   });
   project = applyProjectCommand(project, catalog, {
-    kind: 'ReplaceIncomingReward',
-    reward: source,
+    kind: 'ReplaceStartingReward',
+    reward: createStartingRewardAddress('Underworld'),
     value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'ApolloUpgrade' } },
   });
   project = applyProjectCommand(project, catalog, {
@@ -263,8 +264,8 @@ function onionObligationProject() {
     rank: 1,
   });
   project = applyProjectCommand(project, catalog, {
-    kind: 'ReplaceIncomingReward',
-    reward: createIncomingRewardAddress(goldenFBiome, goldenFStartId),
+    kind: 'ReplaceStartingReward',
+    reward: createStartingRewardAddress('Underworld'),
     value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'ApolloUpgrade' } },
   });
   return fOnlyProject(authorLegalTraitOffers(project));

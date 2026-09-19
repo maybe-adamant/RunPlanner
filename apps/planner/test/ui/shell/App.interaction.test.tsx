@@ -17,6 +17,7 @@ import {
   createProjectDocument,
   createRouteAddress,
   createRouteStartKeepsakeSelectionAddress,
+  createStartingRewardAddress,
   createTargetAddress,
   createTraitOfferAddress,
   createTraitAcquisitionTargetAddress,
@@ -144,8 +145,8 @@ function seaStarRewardFixture() {
     gameName: 'F_Opening01',
   });
   project = applyProjectCommand(project, catalog, {
-    kind: 'ReplaceIncomingReward',
-    reward: startReward,
+    kind: 'ReplaceStartingReward',
+    reward: createStartingRewardAddress('Underworld'),
     value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'PoseidonUpgrade' } },
   });
   project = authorLegalTraitOffers(project);
@@ -835,6 +836,9 @@ describe('planner history interaction', () => {
         name: '1',
       }),
     );
+    await user.click(screen.getByRole('button', { name: 'Starting reward' }));
+    await user.click(within(await screen.findByRole('listbox')).getByText('Hammer'));
+    await user.click(screen.getByRole('button', { name: 'Erebus' }));
     await user.click(screen.getByRole('button', { name: 'Starting room' }));
     await user.click(within(screen.getByRole('listbox')).getAllByRole('option')[0]!);
     act(() =>
@@ -848,12 +852,10 @@ describe('planner history interaction', () => {
     );
     const identity = screen.getByRole('region', { name: 'Start room configuration' });
     const before = application.store.getState().projectWorkspace.history;
-    for (const name of ['Room', 'Reward']) {
-      const control = within(identity).getByRole('button', { name });
-      expect(control).toHaveProperty('disabled', true);
-      await user.click(control);
-      await user.click(within(identity).getByText(name, { selector: 'label' }));
-    }
+    const roomControl = identity.querySelector<HTMLButtonElement>('button[id$="-room"]');
+    if (roomControl === null) throw new Error('start room control is missing');
+    expect(roomControl.disabled).toBe(true);
+    expect(within(identity).queryByText('Reward', { selector: 'label' })).toBeNull();
     expect(screen.queryByRole('listbox')).toBeNull();
     expect(application.store.getState().projectWorkspace.history).toBe(before);
   });
@@ -2118,7 +2120,7 @@ describe('planner history interaction', () => {
 
     await user.click(oceanus);
     const blockedBanner = screen.getByText(
-      'Finish and fix Erebus before Oceanus can be evaluated.',
+      'Finish the earlier biomes before this biome can be evaluated.',
     );
     expect(blockedBanner.getAttribute('role')).toBeNull();
     expect(blockedBanner.closest('.editor-panel')?.getAttribute('aria-live')).toBe('polite');
@@ -2332,7 +2334,7 @@ describe('route loadout interaction', () => {
     });
     expect(
       application.store.getState().projectWorkspace.assembly!.evaluation.route?.biomes,
-    ).toHaveLength(1);
+    ).toHaveLength(0);
 
     expect(screen.queryByRole('checkbox', { name: 'Death Defiance condition met' })).toBeNull();
   });
@@ -2384,7 +2386,7 @@ describe('route loadout interaction', () => {
     ).toEqual({ kind: 'selected', traitKey: authoredTraitKey });
     expect(
       application.store.getState().projectWorkspace.assembly!.evaluation.route?.biomes,
-    ).toHaveLength(1);
+    ).toHaveLength(0);
     expect(result.textContent).toContain('Wicked Thrasher');
 
     await user.click(screen.getByRole('button', { name: 'Undo' }));

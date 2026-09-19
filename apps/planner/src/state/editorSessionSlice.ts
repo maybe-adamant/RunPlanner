@@ -79,7 +79,8 @@ function routeKey(origin: SemanticAddress): string | null {
 }
 
 function biomeKey(origin: SemanticAddress): string | null {
-  if (origin.kind === 'project' || origin.kind === 'route') return null;
+  if (origin.kind === 'project' || origin.kind === 'route' || origin.kind === 'startingReward')
+    return null;
   if (origin.kind === 'keepsakeSelection' && origin.owner === 'routeStart') return null;
   if (
     origin.kind === 'keepsakeEquipResult' &&

@@ -157,6 +157,9 @@ export function assemble(
   const facts = createWorkspaceBiomeOccurrenceAssemblyFacts(source).occurrence(occurrenceId);
   if (facts === undefined) throw new Error(`${occurrenceId} facts are missing`);
   const fieldsFacts = fieldsFactsForOccurrence(source, occurrenceId);
+  const isEntry =
+    project.route.biomes.find((biome) => biome.biomeKey === biomeKey)?.topology
+      ?.startOccurrenceId === occurrenceId;
   const markers = createWorkspaceBiomeMarkerDestinationBuilder({
     assessmentFor: (address) =>
       source.evaluation === undefined
@@ -189,6 +192,9 @@ export function assemble(
     markerDestinations: markers.emitter,
     acquisitionConversionCandidate: source.acquisitionConversionCandidate,
     occurrence,
+    ...(isEntry && source.startingReward !== undefined
+      ? { startingReward: source.startingReward }
+      : {}),
     runState: source.runState,
   });
   return { assembly, markers, source };

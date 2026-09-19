@@ -143,6 +143,13 @@ ordinary automatic-activation rules, Vow maxima, and Fear increments. The
 authored model owns only the player's starting selections; derived automatic
 cards and the configured Fear total are not persisted independently.
 
+Loadout also owns the nullable starting reward offer. It can be selected before
+an entry-room variant exists and is retained when topology is cleared or no
+biomes are configured. The first entry occurrence owns only its acquisition
+payload and actions; composing these with the route offer does not persist a
+second copy of the offer. Recreating the entry initializes fresh acquisition
+payload, while replacing its variant preserves compatible authored outcomes.
+
 The closed route commands replace the complete manual Arcana selection or one
 Vow rank. They validate catalog membership, static rank bounds, and the coupled
 starting-Grasp capacity, preserve all topology and downstream authored state,
@@ -340,13 +347,16 @@ then restores its sole default entry or leaves a multi-choice entry unset.
 These are atomic history edits. Automatically created entry IDs are stable and
 biome-scoped; imported occurrence IDs are not rewritten.
 
-Starting-room reward and encounter profiles are resolved for the route
-position before defaults, decoding or simulation consume them. The first
-room's identity and reward controls are presented in Loadout, but its
-occurrence, acquisition payloads and Timeline remain room-owned. Later entries
-use their resolved rewardless profile. Completion likewise resolves the exact
-allowed Preboss/Boss/Postboss chain; a cross-family completion map does not
-authorize unrelated foreign rooms.
+Entry declarations are intrinsically rewardless. Shared entry resolution binds
+the route-owned reward only at the first itinerary entry, applies narrow
+contextual encounter rules, and selects the lifecycle and entered-store
+participation consumed by defaults, decoding and simulation. Later entries
+remain rewardless. Multi-choice entry identity belongs to biome Overview at
+every ordinal; the starting offer belongs to Loadout, and its acquisition
+dispositions and outcomes belong to the first room's Timeline.
+
+Completion likewise resolves the exact allowed Preboss/Boss/Postboss chain; a
+cross-family completion map does not authorize unrelated foreign rooms.
 
 Generated batches retain their layout's progression, reward-store, and
 batch-state contracts. Q's candidate pools are checked on the selected spine,

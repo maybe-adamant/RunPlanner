@@ -27,6 +27,7 @@ import {
   createProjectHistory,
   createPostbossKeepsakeSelectionAddress,
   createRouteAddress,
+  createStartingRewardAddress,
   createRoomActionAddress,
   createShopOfferAddress,
   createTargetAddress,
@@ -87,8 +88,8 @@ function unresolvedProject(): ProjectDocument {
 
 function project(): ProjectDocument {
   return applyProjectCommand(unresolvedProject(), catalog, {
-    kind: 'ReplaceIncomingReward',
-    reward: createIncomingRewardAddress(biome, occurrenceId),
+    kind: 'ReplaceStartingReward',
+    reward: createStartingRewardAddress('Underworld'),
     value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'ApolloUpgrade' } },
   });
 }
@@ -640,8 +641,8 @@ describe('room-action commands', () => {
   it('records each effective order edit as one semantic history entry', () => {
     const initial = createProjectHistory(unresolvedProject());
     const activated = applyProjectHistoryCommand(initial, catalog, {
-      kind: 'ReplaceIncomingReward',
-      reward: createIncomingRewardAddress(biome, occurrenceId),
+      kind: 'ReplaceStartingReward',
+      reward: createStartingRewardAddress('Underworld'),
       value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'ApolloUpgrade' } },
     });
 

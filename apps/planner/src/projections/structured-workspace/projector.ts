@@ -614,6 +614,8 @@ export function createStructuredWorkspaceProjection(
           semanticAddressKey(routeStartingReward),
           Object.freeze<WorkspaceInspectorDestination>({
             ...routeDestination(routeStartingReward),
+            focusAddress: routeStartingReward,
+            focusKey: semanticAddressKey(routeStartingReward),
             presentationPanel: 'overview' as const,
           }),
         ],

@@ -8,6 +8,7 @@ import {
   createIncomingRewardAddress,
   createOccurrenceId,
   createProjectDocument,
+  createStartingRewardAddress,
   createTargetAddress,
   type ExitDecision,
 } from '@run-planner/engine/authored-project';
@@ -160,14 +161,19 @@ describe('candidate projection', () => {
       routeKey: 'Underworld',
       configuredBiomeCount: 2,
     });
+    const resolvedProject = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceStartingReward',
+      reward: createStartingRewardAddress('Underworld'),
+      value: { rewardType: 'WeaponUpgrade' },
+    });
     const session = createCandidateSessionFactory(catalog).bind(
-      simulateProjectAssembly(catalog, project),
+      simulateProjectAssembly(catalog, resolvedProject),
     );
     const target = createTargetAddress(
       createBiomeAddress('Underworld', 'G'),
       {
         kind: 'occurrence',
-        occurrenceId: project.route.biomes[1]!.topology!.startOccurrenceId,
+        occurrenceId: resolvedProject.route.biomes[1]!.topology!.startOccurrenceId,
       },
       'exit1',
     );

@@ -214,7 +214,8 @@ describe('structured workspace biome presentation', () => {
       frontierFocusKey: emptyPresentation.presentation.biome.frontier?.marker.focusKey,
     });
 
-    const completePresentation = present(loadSurfaceNProject(), 'Surface', 'N');
+    const completeProject = loadSurfaceNProject();
+    const completePresentation = present(completeProject, 'Surface', 'N');
     const biome = completePresentation.presentation.biome;
     const hub = hubRailEntry(biome.rail);
 
@@ -275,16 +276,15 @@ describe('structured workspace biome presentation', () => {
     if (
       opening?.kind !== 'node' ||
       opening.node.kind !== 'occurrenceWorkbench' ||
-      opening.node.room.roomLocal.kind !== 'incomingReward' ||
-      opening.node.room.roomLocal.control.offer === null ||
+      completeProject.route.loadout.startingReward === null ||
       preHubDecisionNode === undefined ||
       preHubSelectedTarget?.reward === undefined
     ) {
       throw new Error('N Opening and selected PreHub primary rewards are missing');
     }
     expect(opening.mainReward).toEqual({
-      label: summarizeRewardOffer(catalog, opening.node.room.roomLocal.control.offer),
-      offer: opening.node.room.roomLocal.control.offer,
+      label: summarizeRewardOffer(catalog, completeProject.route.loadout.startingReward),
+      offer: completeProject.route.loadout.startingReward,
     });
     const preHub = preHubDecisionNode.targets.find(
       (target) => target.room.gameName === 'N_PreHub01',

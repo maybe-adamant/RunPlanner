@@ -13,6 +13,7 @@ import {
   createOccurrenceAddress,
   createOccurrenceId,
   createProjectDocument,
+  createStartingRewardAddress,
   createShopOfferAddress,
   createTargetAddress,
   createTraitOfferAddress,
@@ -169,8 +170,8 @@ function selectedNaturalChaosFrontier(): {
     gameName: 'F_Opening01',
   });
   project = applyProjectCommand(project, catalog, {
-    kind: 'ReplaceIncomingReward',
-    reward: createIncomingRewardAddress(goldenFBiome, openingOccurrenceId),
+    kind: 'ReplaceStartingReward',
+    reward: createStartingRewardAddress('Underworld'),
     value: {
       rewardType: 'Boon',
       payload: { kind: 'BoonSource', source: 'ApolloUpgrade' },
@@ -222,22 +223,19 @@ describe('F candidate support', () => {
       occurrenceId: fStartId,
       gameName: 'F_Opening01',
     });
-    const reward = createIncomingRewardAddress(fBiome, fStartId);
+    const reward = createStartingRewardAddress('Underworld');
     const assembly = simulateProjectAssembly(catalog, project);
-    const biome = assembly.evaluation.route?.biomes[0];
-
-    expect(biome).toMatchObject({
-      authoring: 'incomplete',
-      coverage: { kind: 'prefix', blockedAt: reward },
+    expect(assembly.evaluation).toMatchObject({
+      status: 'incomplete',
+      issue: { owner: reward },
       findings: expect.arrayContaining([
         expect.objectContaining({ code: 'rewardMissing', origin: reward }),
       ]),
     });
-    expect(biome).not.toHaveProperty('validity');
 
     expect(
       createPreparedProjectCandidateSession(catalog, assembly).evaluate({
-        kind: 'incomingReward',
+        kind: 'startingReward',
         reward,
         value: {
           rewardType: 'Boon',
@@ -245,7 +243,7 @@ describe('F candidate support', () => {
         },
       }),
     ).toMatchObject({
-      kind: 'incomingReward',
+      kind: 'startingReward',
       result: { supported: true, findings: [] },
     });
   });
@@ -271,9 +269,10 @@ describe('F candidate support', () => {
   it.each(['missing', 'complete'] as const)(
     'allows replacing an opening reward with a %s trait offer',
     (traitState) => {
-      const reward = createIncomingRewardAddress(fBiome, fStartId);
+      const reward = createStartingRewardAddress('Underworld');
+      const incoming = createIncomingRewardAddress(fBiome, fStartId);
       const unresolved = applyProjectCommand(createFStart(), catalog, {
-        kind: 'ReplaceIncomingReward',
+        kind: 'ReplaceStartingReward',
         reward,
         value: { rewardType: 'WeaponUpgrade' },
       });
@@ -285,30 +284,30 @@ describe('F candidate support', () => {
       };
       const results = session.evaluate(
         [boon, { rewardType: 'HermesUpgrade' }, { rewardType: 'SpellDrop' }].map((value) => ({
-          kind: 'incomingReward' as const,
+          kind: 'startingReward' as const,
           reward,
           value,
         })),
       );
       expect(results).toEqual([
-        { kind: 'incomingReward', result: { supported: true, findings: [] } },
-        { kind: 'incomingReward', result: { supported: true, findings: [] } },
-        { kind: 'incomingReward', result: { supported: true, findings: [] } },
+        { kind: 'startingReward', result: { supported: true, findings: [] } },
+        { kind: 'startingReward', result: { supported: true, findings: [] } },
+        { kind: 'startingReward', result: { supported: true, findings: [] } },
       ]);
       expect(
         session.evaluate({
-          kind: 'incomingReward',
+          kind: 'startingReward',
           reward,
           value: { rewardType: 'WeaponUpgrade' },
         }),
       ).toMatchObject({
-        kind: 'incomingReward',
-        result: { supported: traitState === 'complete' },
+        kind: 'startingReward',
+        result: { supported: true },
       });
       expect(
-        session.evaluate({ kind: 'incomingReward', reward, value: { rewardType: 'StackUpgrade' } }),
+        session.evaluate({ kind: 'startingReward', reward, value: { rewardType: 'StackUpgrade' } }),
       ).toMatchObject({
-        kind: 'incomingReward',
+        kind: 'startingReward',
         result: {
           supported: false,
           findings: [expect.objectContaining({ code: 'rewardBagEntryUnavailable' })],
@@ -316,11 +315,11 @@ describe('F candidate support', () => {
       });
 
       const replaced = applyProjectCommand(project, catalog, {
-        kind: 'ReplaceIncomingReward',
+        kind: 'ReplaceStartingReward',
         reward,
         value: boon,
       });
-      const trait = createTraitOfferAddress(reward, 'source');
+      const trait = createTraitOfferAddress(incoming, 'source');
       expect(simulateProject(catalog, replaced).findings).toContainEqual(
         expect.objectContaining({ code: 'traitOfferMissing', origin: trait }),
       );

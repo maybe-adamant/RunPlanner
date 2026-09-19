@@ -15,6 +15,7 @@ import {
   createOccurrenceId,
   createProjectDocument,
   createRouteAddress,
+  createStartingRewardAddress,
   createSteadyGrowthOutcomeAddress,
   createTargetAddress,
   createTraitOfferAddress,
@@ -555,10 +556,15 @@ describe('structured workspace biome semantic assembly', () => {
   });
 
   it('keeps incomplete and route-prefix-blocked biome products explicit', () => {
-    const initial = createProjectDocument(catalog, {
+    let initial = createProjectDocument(catalog, {
       routeKey: 'Underworld',
       configuredBiomeCount: 2,
       projectId: 'semantic-prefix-states',
+    });
+    initial = applyProjectCommand(initial, catalog, {
+      kind: 'ReplaceStartingReward',
+      reward: createStartingRewardAddress('Underworld'),
+      value: { rewardType: 'WeaponUpgrade' },
     });
     const f = assembleWorkspaceBiomeSemantics(catalog, biomeSource(initial, 'Underworld', 'F'));
     const g = assembleWorkspaceBiomeSemantics(catalog, biomeSource(initial, 'Underworld', 'G'));
@@ -609,8 +615,8 @@ describe('structured workspace biome semantic assembly', () => {
     });
     const openingReward = createIncomingRewardAddress(goldenFBiome, openingId);
     project = applyProjectCommand(project, catalog, {
-      kind: 'ReplaceIncomingReward',
-      reward: openingReward,
+      kind: 'ReplaceStartingReward',
+      reward: createStartingRewardAddress('Underworld'),
       value: {
         rewardType: 'Boon',
         payload: { kind: 'BoonSource', source: 'ApolloUpgrade' },

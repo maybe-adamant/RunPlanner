@@ -17,6 +17,7 @@ import {
   createTraitOfferAddress,
   createOccurrenceId,
   createProjectDocument,
+  createStartingRewardAddress,
   createTargetAddress,
   decodeProjectDocument,
   encodeProjectDocument,
@@ -238,8 +239,8 @@ function incompleteFPrefixProject() {
     gameName: 'F_Opening01',
   });
   project = applyProjectCommand(project, catalog, {
-    kind: 'ReplaceIncomingReward',
-    reward: createIncomingRewardAddress(biome, startId),
+    kind: 'ReplaceStartingReward',
+    reward: createStartingRewardAddress('Underworld'),
     value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'ApolloUpgrade' } },
   });
   project = applyProjectCommand(project, catalog, {

@@ -9,6 +9,7 @@ import {
   createIncomingRewardAddress,
   createOccurrenceAddress,
   createProjectDocument,
+  createStartingRewardAddress,
   createTargetAddress,
   createTraitOfferAddress,
   semanticAddressKey,
@@ -46,8 +47,8 @@ function blankNEntryProject() {
   });
   const reward = createIncomingRewardAddress(nBiome, nOccurrenceIds.opening);
   project = applyProjectCommand(project, catalog, {
-    kind: 'ReplaceIncomingReward',
-    reward,
+    kind: 'ReplaceStartingReward',
+    reward: createStartingRewardAddress('Surface'),
     value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'ApolloUpgrade' } },
   });
   project = applyProjectCommand(project, catalog, {
@@ -82,7 +83,7 @@ function nBiomeEvaluation(project: ProjectDocument) {
 }
 
 describe('N B1 entry and terminal baseline', () => {
-  it('keeps a fresh zero-target Hub open-set finding alongside an unresolved entry reward', () => {
+  it('keeps a fresh zero-target Hub open-set finding after the route start is resolved', () => {
     let project = createProjectDocument(catalog, {
       projectId: 'n-zero-target-hub-finding',
       routeKey: 'Surface',
@@ -92,6 +93,28 @@ describe('N B1 entry and terminal baseline', () => {
       kind: 'CreateStart',
       biome: nBiome,
       occurrenceId: nOccurrenceIds.opening,
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceStartingReward',
+      reward: createStartingRewardAddress('Surface'),
+      value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'ApolloUpgrade' } },
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceTraitOffer',
+      trait: createTraitOfferAddress(
+        createIncomingRewardAddress(nBiome, nOccurrenceIds.opening),
+        'source',
+      ),
+      value: {
+        kind: 'traits',
+        giverKey: 'Apollo',
+        options: [
+          { traitKey: 'ApolloWeaponBoon', rarity: 'Common' },
+          { traitKey: 'ApolloSpecialBoon', rarity: 'Common' },
+          { traitKey: 'ApolloCastBoon', rarity: 'Common' },
+        ],
+        selectedOptionKey: 'option1',
+      },
     });
     project = applyProjectCommand(project, catalog, {
       kind: 'CreateBatch',
@@ -127,10 +150,8 @@ describe('N B1 entry and terminal baseline', () => {
     const biome = nBiomeEvaluation(project);
     const openSet = createHubOpenSetAddress(nBiome, 'hub');
     expect(biome).toMatchObject({ authoring: 'incomplete' });
-    expect(biome).not.toHaveProperty('validity');
     expect(biome.findings).toEqual(
       expect.arrayContaining([
-        expect.objectContaining({ code: 'rewardMissing' }),
         expect.objectContaining({ code: 'hubOpenSetIncomplete', origin: openSet }),
       ]),
     );

@@ -15,7 +15,7 @@ import {
   createOccurrenceAddress,
   createOccurrenceId,
   createProjectDocument,
-  createDefaultRouteLoadout,
+  createStartingRewardAddress,
   createTargetAddress,
   createTraitOfferAddress,
 } from '@run-planner/engine/authored-project';
@@ -29,8 +29,6 @@ import { ordinaryRoutePosition } from '../support/route-position';
 
 import { evaluateProgressiveBiome } from '../../src/simulation/progressive/biome';
 import { EMPTY_RESOURCE_PLACEMENTS } from '../../src/authored-project/defaults';
-
-const defaultRouteLoadout = createDefaultRouteLoadout(catalog);
 
 import { authorLegalTraitOffers } from '@run-planner/test-fixtures/shared';
 import {
@@ -93,8 +91,8 @@ function openHub(slotCount: number, resolvedBoardRewards = false) {
   });
   const opening = project.route.biomes[0]!.topology!.startOccurrenceId;
   project = applyProjectCommand(project, catalog, {
-    kind: 'ReplaceIncomingReward',
-    reward: createIncomingRewardAddress(nBiome, opening),
+    kind: 'ReplaceStartingReward',
+    reward: createStartingRewardAddress('Surface'),
     value: {
       rewardType: 'Boon',
       payload: { kind: 'BoonSource', source: 'AphroditeUpgrade' },
@@ -237,7 +235,7 @@ function progressiveN(project: ReturnType<typeof openHub>) {
   const progressive = evaluateProgressiveBiome(catalog, nBiome, plan, {
     routePosition: ordinaryRoutePosition(catalog, 'Surface', 'N'),
     resourcePlacements: EMPTY_RESOURCE_PLACEMENTS,
-    loadout: defaultRouteLoadout,
+    loadout: project.route.loadout,
   });
   if (progressive === null) throw new Error('N did not produce a progressive prefix');
   return progressive;
@@ -245,7 +243,7 @@ function progressiveN(project: ReturnType<typeof openHub>) {
 
 describe('Hub progressive biome evaluation', () => {
   it('retains an imported null entry as incomplete rather than manufacturing a Hub board', () => {
-    const project = withUnstartedBiome(
+    let project = withUnstartedBiome(
       createProjectDocument(catalog, {
         projectId: 'progressive-n-empty',
         routeKey: 'Surface',
@@ -253,6 +251,15 @@ describe('Hub progressive biome evaluation', () => {
       }),
       'N',
     );
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceStartingReward',
+      reward: createStartingRewardAddress('Surface'),
+      value: {
+        rewardType: 'Boon',
+        payload: { kind: 'BoonSource', source: 'AphroditeUpgrade' },
+      },
+    });
+    project = authorLegalTraitOffers(project);
     const biome = nEvaluation(project as ReturnType<typeof openHub>);
 
     expect(biome).toMatchObject({
@@ -769,20 +776,7 @@ describe('Hub progressive biome evaluation', () => {
         kind: 'coverageNotReached',
         requiredOwner: createHubSlotAddress(nBiome, 'hub', 'combat01'),
         requiredCheckpoint: 'afterTargetGeneration',
-        coverage: {
-          kind: 'prefix',
-          blockedAt: createIncomingRewardAddress(
-            nBiome,
-            empty.route.biomes[0]!.topology!.startOccurrenceId,
-          ),
-          through: {
-            checkpoint: 'beforeTargetGeneration',
-            owner: createOccurrenceAddress(
-              nBiome,
-              empty.route.biomes[0]!.topology!.startOccurrenceId,
-            ),
-          },
-        },
+        coverage: { kind: 'none', reason: 'notEvaluated' },
       },
     });
 

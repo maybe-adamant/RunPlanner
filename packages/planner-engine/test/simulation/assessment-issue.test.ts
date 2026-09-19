@@ -7,6 +7,7 @@ import {
   createProjectDocument,
   createRouteAddress,
   createRouteStartKeepsakeSelectionAddress,
+  createStartingRewardAddress,
   createTraitOfferAddress,
 } from '@run-planner/engine/authored-project';
 import { authoringReadinessAt, simulateProjectAssembly } from '@run-planner/engine/simulation';
@@ -22,14 +23,17 @@ import { createCompleteFGProject } from '@run-planner/test-fixtures/underworld';
 
 const evaluate = (project: ReturnType<typeof createFProject>) =>
   simulateProjectAssembly(catalog, project);
-const openingReward = createIncomingRewardAddress(fBiome, fStartId);
-const openingTrait = createTraitOfferAddress(openingReward, 'source');
+const openingReward = createStartingRewardAddress('Underworld');
+const openingTrait = createTraitOfferAddress(
+  createIncomingRewardAddress(fBiome, fStartId),
+  'source',
+);
 
 describe('first assessment issue', () => {
   it('advances from the opening offer to its outgoing decision and then the batch pool', () => {
     const repaired = createFStart();
     const missing = applyProjectCommand(repaired, catalog, {
-      kind: 'ReplaceIncomingReward',
+      kind: 'ReplaceStartingReward',
       reward: openingReward,
       value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'ZeusUpgrade' } },
     });
@@ -95,7 +99,7 @@ describe('first assessment issue', () => {
     // A missing outgoing decision has not reached the exit effect yet.
     expect(evaluate(project).evaluation.issue?.owner).toEqual(fDecision());
     const missing = applyProjectCommand(project, catalog, {
-      kind: 'ReplaceIncomingReward',
+      kind: 'ReplaceStartingReward',
       reward: openingReward,
       value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'ZeusUpgrade' } },
     });

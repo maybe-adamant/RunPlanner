@@ -15,6 +15,7 @@ import {
   createOccurrenceAddress,
   createProjectDocument,
   createRouteAddress,
+  createStartingRewardAddress,
   createRouteStartKeepsakeSelectionAddress,
   createShopOfferAddress,
   createTraitOfferAddress,
@@ -464,8 +465,15 @@ describe('N Hub rewards, validation, and candidates', () => {
       [nOccurrenceIds.preHub, 'HeraUpgrade'],
     ] as const) {
       project = applyProjectCommand(project, catalog, {
-        kind: 'ReplaceIncomingReward',
-        reward: createIncomingRewardAddress(nBiome, occurrenceId),
+        ...(occurrenceId === nOccurrenceIds.opening
+          ? {
+              kind: 'ReplaceStartingReward' as const,
+              reward: createStartingRewardAddress('Surface'),
+            }
+          : {
+              kind: 'ReplaceIncomingReward' as const,
+              reward: createIncomingRewardAddress(nBiome, occurrenceId),
+            }),
         value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source } },
       });
     }

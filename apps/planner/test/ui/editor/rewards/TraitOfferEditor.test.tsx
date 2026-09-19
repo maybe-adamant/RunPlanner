@@ -13,6 +13,7 @@ import {
   createExitSelectionAddress,
   createEncounterPhaseAddress,
   createRouteStartKeepsakeSelectionAddress,
+  createStartingRewardAddress,
   createTraitOfferAddress,
   createTraitAcquisitionTargetAddress,
   decodeProjectDocument,
@@ -101,13 +102,13 @@ describe('trait offer editor entry and dialog', () => {
         keepsakeKey: 'UnpickedBoonKeepsake',
       });
       project = applyProjectCommand(project, application.catalog, {
-        kind: 'ReplaceIncomingReward',
-        reward,
+        kind: 'ReplaceStartingReward',
+        reward: createStartingRewardAddress('Underworld'),
         value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'ZeusUpgrade' } },
       });
       project = applyProjectCommand(project, application.catalog, {
-        kind: 'ReplaceIncomingReward',
-        reward,
+        kind: 'ReplaceStartingReward',
+        reward: createStartingRewardAddress('Underworld'),
         value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'ApolloUpgrade' } },
       });
       application.store.dispatch(authoredProjectReplaced(project));
@@ -509,8 +510,12 @@ describe('trait offer editor entry and dialog', () => {
       for (const [index, [giverKey, traits]] of prerequisites.entries()) {
         const reward = createIncomingRewardAddress(goldenFBiome, sites[index]!);
         project = applyProjectCommand(project, application.catalog, {
-          kind: 'ReplaceIncomingReward',
-          reward,
+          ...(index === 0
+            ? {
+                kind: 'ReplaceStartingReward' as const,
+                reward: createStartingRewardAddress('Underworld'),
+              }
+            : { kind: 'ReplaceIncomingReward' as const, reward }),
           value: {
             rewardType: 'Boon',
             payload: { kind: 'BoonSource', source: `${giverKey}Upgrade` },
@@ -1110,8 +1115,8 @@ describe('trait offer editor entry and dialog', () => {
       keepsakeKey: 'RarifyKeepsake',
     });
     project = applyProjectCommand(project, application.catalog, {
-      kind: 'ReplaceIncomingReward',
-      reward,
+      kind: 'ReplaceStartingReward',
+      reward: createStartingRewardAddress('Underworld'),
       value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'ApolloUpgrade' } },
     });
     application.store.dispatch(authoredProjectReplaced(project));
@@ -1164,8 +1169,8 @@ describe('trait offer editor entry and dialog', () => {
     const reward = createIncomingRewardAddress(goldenFBiome, goldenFStartId);
     const address = createTraitOfferAddress(reward, 'source');
     const project = applyProjectCommand(createGoldenFGHIProject(), application.catalog, {
-      kind: 'ReplaceIncomingReward',
-      reward,
+      kind: 'ReplaceStartingReward',
+      reward: createStartingRewardAddress('Underworld'),
       value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'ApolloUpgrade' } },
     });
     application.store.dispatch(authoredProjectReplaced(project));

@@ -1,8 +1,10 @@
 import { catalog } from '@run-planner/hades2-catalog';
 import type { Catalog } from '@run-planner/engine/catalog-schema';
 import {
+  applyProjectCommand,
   createOccurrenceId,
   createProjectDocument,
+  createStartingRewardAddress,
   semanticAddressKey,
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
@@ -299,11 +301,23 @@ describe('unified structured workspace projection facade', () => {
   });
 
   it('registers a coarse finding against only its owning biome shell', () => {
-    const authored = createProjectDocument(catalog, {
+    let authored = createProjectDocument(catalog, {
       routeKey: 'Surface',
       configuredBiomeCount: 1,
       projectId: 'facade-finding-routing',
     });
+    authored = applyProjectCommand(authored, catalog, {
+      kind: 'ReplaceStartingReward',
+      reward: createStartingRewardAddress('Surface'),
+      value: { rewardType: 'WeaponUpgrade' },
+    });
+    authored = {
+      ...authored,
+      route: {
+        ...authored.route,
+        biomes: authored.route.biomes.map((biome) => ({ ...biome, topology: null })),
+      },
+    };
     const assembly = simulateProjectAssembly(catalog, authored);
     const evaluation = assembly.evaluation;
     const finding = evaluation.findings[0];

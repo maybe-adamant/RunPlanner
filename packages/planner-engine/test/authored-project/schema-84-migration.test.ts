@@ -2,7 +2,8 @@ import { describe, expect, it } from 'vitest';
 
 import { catalog } from '@run-planner/hades2-catalog';
 import { decodeProjectDocument } from '../../src/authored-project';
-import { migrateProjectDocument } from '../../../../schema/migrate-project-84-to-85.js';
+import { migrateProjectDocument as migrate84To85 } from '../../../../schema/migrate-project-84-to-85.js';
+import { migrateProjectDocument as migrate85To86 } from '../../../../schema/migrate-project-85-to-86.js';
 import baseline from '../../../../schema/fixtures/route-foundation.runplanner.json';
 
 describe('schema 84 migration fixtures', () => {
@@ -20,10 +21,10 @@ describe('schema 84 migration fixtures', () => {
           biomes: [{ ...baseline.route.biomes[0]!, biomeKey: itinerary[0] }],
         },
       };
-      const migrated = migrateProjectDocument(source);
+      const migrated = migrate85To86(migrate84To85(source));
       const decoded = decodeProjectDocument(migrated, catalog);
 
-      expect(decoded.schemaVersion).toBe(85);
+      expect(decoded.schemaVersion).toBe(86);
       expect(decoded.route.itineraryBiomeKeys).toEqual(itinerary);
       expect(decoded.route.biomes).toHaveLength(baseline.route.biomes.length);
     },

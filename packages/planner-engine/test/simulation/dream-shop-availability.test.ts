@@ -9,6 +9,7 @@ import {
   createIncomingRewardAddress,
   createOccurrenceId,
   createProjectDocument,
+  createStartingRewardAddress,
   createShopOfferAddress,
   createTargetAddress,
   createTraitOfferAddress,
@@ -32,8 +33,8 @@ function authorApolloOpening(
 ) {
   const reward = createIncomingRewardAddress(biome, occurrenceId);
   let next = applyProjectCommand(project, catalog, {
-    kind: 'ReplaceIncomingReward',
-    reward,
+    kind: 'ReplaceStartingReward',
+    reward: createStartingRewardAddress('Dream'),
     value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'ApolloUpgrade' } },
   });
   next = applyProjectCommand(next, catalog, {
