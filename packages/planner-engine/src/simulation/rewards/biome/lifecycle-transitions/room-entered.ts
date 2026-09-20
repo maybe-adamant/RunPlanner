@@ -24,7 +24,7 @@ import {
   type HermesShrineCandidateContext,
 } from '../../../commerce/hermes-shrine';
 import { assessPurgingPool, type PurgingPoolAssessment } from '../../../commerce/purging-pool';
-import { createRewardFacts, createdPeerGameNames } from '../../facts';
+import { createBiomeRewardFacts } from '../../facts';
 import { appendRewardEvent, type RewardBranchState } from '../../branch-primitives';
 import { advanceRewardBranches } from '../../branch-lifecycle';
 import { rewardFinding } from '../../findings';
@@ -37,7 +37,7 @@ import { BiomeRewardSimulationContractError } from '../biome-contract';
 import type { LifecycleFinding } from './types';
 import { dueHermesShrineDeliveryFrontier } from './hermes-shrine-delivery';
 import type { DerivedAcquisitionEntryFrontier } from '../../acquisition/contracts';
-import { attestSharedRewardLookups, rewardLookupSets } from '../../../state/reward-lookups';
+import { attestSharedRewardLookups } from '../../../state/reward-lookups';
 
 export interface RoomEnteredTransition {
   readonly branches: readonly RewardBranchState[];
@@ -294,27 +294,14 @@ export function applyRoomEnteredTransition(
                   catalog,
                   declaration,
                   room.hermesShrine,
-                  createRewardFacts({
+                  createBiomeRewardFacts({
                     catalog,
-                    sourceOrigin: room.origin,
+                    state: branch.state,
+                    source: room,
                     currentRoom: room,
                     sourceDeclaration: declaration,
                     view: entry,
-                    history: branch.state.rewardHistory,
-                    enteredBiomeCount: routePosition.ordinal,
-                    rewardLookups: rewardLookupSets(branch.state.rewardLookups),
-                    currentBatchRoomGameNames: createdPeerGameNames(
-                      catalog,
-                      entry,
-                      room.origin,
-                      'generatedTarget',
-                    ),
-                    pendingSpellDrop: Object.values(
-                      branch.state.pendingHermesShrineDeliveries,
-                    ).some((delivery) => delivery.rewardType === 'SpellDrop'),
-                    fail: (detail) => {
-                      throw new BiomeRewardSimulationContractError(detail);
-                    },
+                    hubBoardLookups: 'consulted',
                   }).requirements,
                   priorEnteredShrineFlags,
                 ),
