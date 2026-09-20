@@ -78,7 +78,7 @@ function staticRewardViewFacts(catalog: Catalog, view: HistoryStateView): Static
   return facts;
 }
 
-export function createdPeerGameNames(
+function createdPeerGameNames(
   catalog: Catalog,
   view: HistoryStateView,
   parentOrigin: SemanticAddress,

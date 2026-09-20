@@ -63,6 +63,7 @@ import { materializeBiomePrefix } from '../../src/simulation/materialization';
 import { materializeAuthoredRoom } from '../../src/simulation/materialization/rooms/assemble';
 import { evaluateBiomeRewards } from '../../src/simulation/rewards/biome';
 import { applyRoomEnteredTransition } from '../../src/simulation/rewards/biome/lifecycle-transitions/room-entered';
+import { reachSimulationHistory } from '../../src/simulation/state/transitions';
 import { attachTraitHistory, foldTraitHistoryEvents } from '../../src/simulation/traits';
 import { installHexTree, settlePathScreen } from '../../src/simulation/hex-progress';
 import { settleOwnedAcquisitionSite } from '../../src/simulation/rewards/acquisition/site-settlement';
@@ -1663,5 +1664,125 @@ describe('Hermes Shrine delivery entry identity', () => {
     'hermesShrineDelivery:%5B%22%22%2C%22N%22%2C%22id%22%2C%22first%22%5D',
   ])('rejects malformed delivery key %s', (key) => {
     expect(parseHermesShrineDeliveryEntryKey(key)).toBeUndefined();
+  });
+});
+
+describe('Hermes Shrine entry inventory requirements', () => {
+  /**
+   * The Shrine inventory assessment lives inside the room-entry transition and
+   * only runs where that transition is the first to reach the host. This builds
+   * the exact authored contact — materialized host, folded entry view and the
+   * real entry event — rather than reproducing any assessment rule.
+   */
+  function authoredShrineHostEntry() {
+    const host = createOccurrenceAddress(oBiome, oOccurrenceIds.combat07);
+    let project = applyProjectCommand(loadSurfaceNOProject(), catalog, {
+      kind: 'SetHermesShrinePresence',
+      occurrence: host,
+      present: true,
+    });
+    for (const [slotKey, rewardType] of [
+      ['first', 'HealBigDrop'],
+      ['secondLeft', 'ShopHermesUpgrade'],
+      ['secondRight', 'TalentDrop'],
+    ] as const) {
+      project = applyProjectCommand(project, catalog, {
+        kind: 'ReplaceHermesShrineOffer',
+        occurrence: host,
+        slotKey,
+        value: { rewardType },
+      });
+    }
+    const route = project.route;
+    const plan = route?.biomes.find((candidate) => candidate.biomeKey === 'O');
+    if (route === undefined || plan === undefined || plan.topology === null)
+      throw new Error('fixture lost Surface O topology');
+    const routePosition = ordinaryPositionFor(catalog, oBiome);
+    const snapshot = materializeBiomePrefix(catalog, oBiome, routePosition, plan, route.loadout);
+    const history =
+      snapshot === null ? null : composeBiomeHistoryPrefix(catalog, snapshot, routePosition);
+    if (snapshot === null || history === null)
+      throw new Error('fixture lost the authored O Shrine prefix');
+    const room = prefixAuthoredRooms(snapshot).find(
+      (candidate) => candidate.origin.occurrenceId === oOccurrenceIds.combat07,
+    );
+    const hostKey = semanticAddressKey(host);
+    const view = history.rooms.find(
+      (candidate) => semanticAddressKey(candidate.origin) === hostKey,
+    );
+    const entryEvent = history.events.find(
+      (event) => event.kind === 'roomEntered' && semanticAddressKey(event.origin) === hostKey,
+    );
+    if (
+      room?.hermesShrine === undefined ||
+      view === undefined ||
+      entryEvent?.kind !== 'roomEntered'
+    )
+      throw new Error('fixture lost the authored O Shrine entry contact');
+    return { room, view, entryEvent, routePosition };
+  }
+
+  function enterAuthoredShrineHost(talentDropsClosed: boolean) {
+    const { room, view, entryEvent, routePosition } = authoredShrineHostEntry();
+    const branches = initializeTestRewardBranches().map((branch) =>
+      Object.freeze({
+        ...branch,
+        state: reachSimulationHistory(
+          Object.freeze({
+            ...branch.state,
+            rewardHistory: Object.freeze({
+              ...branch.state.rewardHistory,
+              useRecord: Object.freeze({
+                ...branch.state.rewardHistory.useRecord,
+                SpellDrop: 1,
+              }),
+            }),
+            hexProgress: Object.freeze({
+              ...branch.state.hexProgress,
+              ...(talentDropsClosed ? { talentDropsClosed: true as const } : {}),
+            }),
+          }),
+          routePosition,
+          view.entry,
+        ),
+      }),
+    );
+    return applyRoomEnteredTransition(
+      catalog,
+      entryEvent,
+      room,
+      view,
+      new Set(),
+      new Set(),
+      branches,
+      Object.freeze({
+        kind: 'history' as const,
+        sequence: entryEvent.sequence,
+        boundary: 'at' as const,
+      }),
+      routePosition,
+      { purgingPool: true, hermesShrine: false, stygianWell: true },
+    );
+  }
+
+  it('closes Talent Shrine inventory for a branch that invested every Talent', () => {
+    const open = enterAuthoredShrineHost(false);
+    const closed = enterAuthoredShrineHost(true);
+    const inventory = (transition: typeof open) =>
+      transition.hermesShrineAssessment?.assessments[0]?.inventory;
+    expect(inventory(open)?.candidateRewardTypesBySlot.secondRight).toContain('TalentDrop');
+    expect(inventory(closed)?.candidateRewardTypesBySlot.secondRight).not.toContain('TalentDrop');
+    expect(inventory(open)?.inventoryIssues).toEqual([]);
+    expect(inventory(closed)?.inventoryIssues).toEqual([
+      { kind: 'requirement', slotKey: 'secondRight' },
+    ]);
+    expect(inventory(open)?.complete).toBe(true);
+    expect(inventory(closed)?.complete).toBe(false);
+    expect(open.findings.map((entry) => entry.finding.code)).not.toContain(
+      'hermesShrineInventoryRequirement',
+    );
+    expect(closed.findings.map((entry) => entry.finding.code)).toContain(
+      'hermesShrineInventoryRequirement',
+    );
   });
 });
