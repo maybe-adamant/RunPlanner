@@ -357,7 +357,7 @@ function producerForTraitOffer(
       Object.freeze({
         traitKey,
         producerLifecycleKey: 'EchoLastReward',
-        placement: 'roomExit',
+        placement: 'afterSource',
         source,
         sourceAction,
         sourceNormal,

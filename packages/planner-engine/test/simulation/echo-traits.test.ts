@@ -2451,7 +2451,7 @@ describe('Echo Gate B Boon Boon Boon', () => {
 });
 
 describe('Echo Gate C Reward Reward Reward', () => {
-  it('creates one required unresolved room-exit pickup with an exact Echo-contact dependency', () => {
+  it('keeps the stored site but requires the recreation in the Echo contact window', () => {
     const project = applyProjectCommand(selectGoldenBridge(), catalog, {
       kind: 'ReplaceTraitOffer',
       trait: echoOwner,
@@ -2471,6 +2471,7 @@ describe('Echo Gate C Reward Reward Reward', () => {
     );
     expect(row).toMatchObject({
       participation: 'required',
+      window: { kind: 'standard', phase: 'afterCombat' },
       rank: expect.any(Number),
       dependencies: [
         {
@@ -2829,7 +2830,7 @@ describe('Echo Gate C Reward Reward Reward', () => {
     );
     expect(generatedRow).toMatchObject({
       participation: 'optional',
-      window: { kind: 'postOutgoing' },
+      window: { kind: 'standard', phase: 'afterCombat' },
       dependencies: [
         {
           kind: 'afterAction',
@@ -2929,9 +2930,8 @@ describe('Echo Gate C Reward Reward Reward', () => {
     });
     const decoded = decodeProjectDocument(JSON.parse(encodeProjectDocument(project)), catalog);
     expect(decoded).toEqual(project);
-    const h = simulateProjectAssembly(catalog, decoded).evaluation.route!.biomes.find(
-      (biome) => biome.biomeKey === 'H',
-    )!;
+    const assembly = simulateProjectAssembly(catalog, decoded);
+    const h = assembly.evaluation.route!.biomes.find((biome) => biome.biomeKey === 'H')!;
     if (!('rewards' in h)) throw new Error('H must be evaluated');
     expect(h.findings).not.toContainEqual(expect.objectContaining({ origin: replayEntry }));
     expect(h.rewards.branches.length).toBeGreaterThan(0);
@@ -2950,5 +2950,22 @@ describe('Echo Gate C Reward Reward Reward', () => {
         (branch) => branch.state.rewardHistory.lootTypeHistory.WeaponUpgrade === 3,
       ),
     ).toBe(true);
+    const outgoing = h.history.events.find(
+      (event) =>
+        event.kind === 'outgoingGenerationCheckpoint' &&
+        semanticAddressKey(event.origin) ===
+          semanticAddressKey(createOccurrenceAddress(goldenHBiome, bridgeId)),
+    );
+    expect(outgoing).toBeDefined();
+    for (const branch of h.rewards.branches) {
+      const acquisitions = branch.events.filter(
+        (event) =>
+          event.kind === 'concreteAcquisition' &&
+          event.settlement !== undefined &&
+          semanticAddressKey(event.settlement.entry) === semanticAddressKey(replayEntry),
+      );
+      expect(acquisitions).toHaveLength(1);
+      expect(acquisitions[0]!.historySequence).toBeLessThan(outgoing!.sequence);
+    }
   });
 });

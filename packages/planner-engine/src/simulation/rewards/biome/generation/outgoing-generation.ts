@@ -156,7 +156,15 @@ export function applyOutgoingGenerationTransition(
     if (source.entryState?.kind === 'shop') settleSite({ completeShopAfterOrder: false });
     else
       for (const siteKey of Object.keys(source.acquisitionSites))
-        settleSite({ onlyEntry: { siteKey, entryKey: '' } });
+        if (
+          source.roomActionRoster.rows.some(
+            (row) =>
+              row.reference.kind === 'interactAcquisitionEntry' &&
+              row.reference.siteKey === siteKey &&
+              row.window.kind === 'postOutgoing',
+          )
+        )
+          settleSite({ onlyEntry: { siteKey, entryKey: '' } });
   }
 
   const checkpointOwner = hubDecisionOwner ?? batch?.origin ?? frontierOwner;
