@@ -12,9 +12,14 @@ import {
 import { mergeEquivalentRewardBranches } from '../../src/simulation/rewards/branch-primitives';
 import { selectedTraitOfferProducts } from '../../src/simulation/rewards/biome/selected-trait-products';
 import { settleEncounterTraitOffer } from '../../src/simulation/rewards/trait-settlement/coordinator';
-import { evaluateReachedTraitOffer } from '../../src/simulation/traits';
+import { evaluateReachedTraitOffer, traitOfferContextIdentity } from '../../src/simulation/traits';
 import { createRewardBagState } from '../../src/reward-kernel';
 import { initializeTestRewardBranches } from '../support/arcana-fear';
+import {
+  arcanaFearWithActive,
+  traitFrontierState,
+  withSettledSpellDrop,
+} from '../support/simulation-state';
 
 const owner = createIncomingRewardAddress(
   { kind: 'biome', routeKey: 'Underworld', biomeKey: 'F' },
@@ -156,5 +161,27 @@ describe('trait offer context deduplication', () => {
     expect(firstContext.state.traitHistory.equippedTraits.HeraSpecialBoon).toBeUndefined();
     expect(secondContext.state.traitHistory.equippedTraits.ApolloWeaponBoon).toBeDefined();
     expect(secondContext.state.traitHistory.equippedTraits.HeraSpecialBoon).toBeUndefined();
+  });
+
+  it('keeps every deduplication identity input faithful under JSON serialization', () => {
+    // The identity is compared through JSON.stringify, which silently corrupts
+    // Sets, Maps and functions. A rich frontier exercising every identity
+    // substate must survive a serialization round trip unchanged, so an
+    // unfaithful member added to the identity fails here instead of silently
+    // merging or splitting candidate contexts.
+    const state = withSettledSpellDrop(
+      traitFrontierState(undefined, {
+        startingKeepsakeKey: 'LowHealthCritKeepsake',
+        arcanaFear: arcanaFearWithActive(['ChanceRerollArcana']),
+        stygianWell: { yarnUses: 1, hymnUses: 1 },
+      }),
+    );
+    const source = Object.freeze({
+      resolvedProviderKey: 'Apollo',
+      devotionNoDuo: true,
+      freshRarityOverride: 'Epic' as const,
+    });
+    const identity = traitOfferContextIdentity({ state, source });
+    expect(JSON.parse(JSON.stringify(identity))).toEqual(identity);
   });
 });

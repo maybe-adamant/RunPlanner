@@ -346,7 +346,9 @@ export function traitOfferContextIdentity(
     state.keepsakes,
     state.equipment,
     state.rewardHistory.useRecord.SpellDrop ?? 0,
-    state.rewardHistory.lastRewardRecreation,
+    // Normalized so every identity member survives a JSON round trip; an
+    // absent recreation and null serialize to the same key either way.
+    state.rewardHistory.lastRewardRecreation ?? null,
     state.stygianWell.yarnUses,
     state.stygianWell.hymnUses,
     state.reached.routePosition.routeKey,
