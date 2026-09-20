@@ -2,7 +2,7 @@
 
 ## Question and disposition
 
-At base `b14d637e`, should simulation carry one authoritative state,
+At base `9b335f9f`, should simulation carry one authoritative state,
 rather than threading player and run facts through
 separate eligibility contexts and diagnostic products?
 
@@ -41,6 +41,7 @@ Paths below are relative to `packages/planner-engine/src/`.
 | Hex tree and banked/invested points                     | `simulation/hex-progress.ts`; branch `hexProgress`                                                         | Retain progression with exact installation and acquisition timing                                                        |
 | Yarn, Hymn, Spark, discounts and other Well durations   | `simulation/commerce/stygian-well.ts: StygianWellRunState`                                                 | Retain active acquired effects separately from inventory and purchase participation, within the same authoritative state |
 | Bags and reward priorities                              | `simulation/rewards/branch-primitives.ts`                                                                  | Remain run-generation state, including priorities produced by player effects                                             |
+| Persistent offered-reward lookups                       | Chronology `rewardLookup`, `ProgressiveSeed.rewardLookups`, generation checkpoints and acquisition inputs  | Move into exact state; preserve completed-board publication, unvisited offers and cross-biome persistence                |
 | Pending Shops and Shrine deliveries                     | Same branch contract                                                                                       | Remain pending run/acquisition work; buying a delivery does not yet equip its outcome                                    |
 | Reward-use history, Echo last reward, room counters     | Reward history and lifecycle owners                                                                        | Eligibility reads the exact snapshot rather than separately threaded copies                                              |
 | Selected findings, candidate artifacts and offer traces | Settlement products                                                                                        | Remain evaluation products, not authoritative simulation state                                                           |
@@ -139,6 +140,54 @@ simulation snapshots, not become their owner or an input to simulation.
 
 ## Recommended shape
 
+### Code-inspection constraints
+
+The working migration boundary is broader than `RewardBranchState` alone:
+
+- `initializeRewardBranches` and `publicRewardBranch` separately enumerate live
+  fields. Successor construction currently defaults omitted Well effects,
+  deliveries and trait history. Replace this with complete state handoff and
+  declared resets; preserve first-run keepsake/Hex/aspect initialization order.
+- `ProgressiveSeed.history` remains legitimate canonical lifecycle history.
+  Consolidating its independently carried reward lookup does not justify
+  deleting the seed or replacing that history fold.
+- `captureRunState` combines branches, a history view, ordinal and a facts
+  closure. `recordTargetSlotHistory` emits parallel histories, pending-Spell
+  flags, Hex closure and lookup fields. Capture correlated state atomically
+  during the ownership migration, not in a later inspector cleanup.
+- `targetRewardHistories` checks agreement on the specific inputs generation
+  consumes. Retain that check over state-derived facts; neither arbitrary
+  first-branch selection nor equality of entire states is equivalent.
+- `RewardEvent` is not a diagnostics-only trace: `reachedOfferForOrigin` reads
+  it for generated provider identity, acquisition settlement reads Forfeit
+  replacements, and `equivalentBranchStateKey` includes Forfeit records and the
+  processed-history cursor. Preserve this ledger and its semantic consumers.
+- `deriveTravelRefill` captures post-purchase `generationFacts` and callbacks;
+  pending Gold retains earlier source history. Those source-time witnesses
+  cannot be replaced by whichever state is current when settlement resumes.
+- Materialization's `traitContextForOffer` runs before live assessment. Keep
+  source descriptors there and join the reached state at assessment; do not
+  manufacture a complete state during room materialization.
+- `createRunState` caches derived products by state identities plus a facts
+  context token covering source/view/shop/peer inputs. This is legitimate
+  read-only memoization, not a competing state authority. Consolidation must
+  retain context-sensitive invalidation without deep-copying or serializing
+  whole states.
+
+One inspection caveat needs characterization, not a silent behavior fix:
+`captureRunState` describes lookups in its context-token comment but omits the
+lookup/branch arguments to `createBiomeRewardFacts`, whose defaults are empty.
+That proves a missing input, not an observed incorrect inspector result. Before
+changing any output, determine whether a current bag/requirement consumer can
+observe it. Isolate observable corrections from the behavior-preserving refactor.
+
+This makes the gate boundary concrete: A owns construction, transitions,
+publication, handoff and capture; B removes independent eligibility contexts;
+C simplifies only remaining read-only projection and cache assembly. None may
+leave missing state to be repaired by a later gate.
+
+### State and operation boundary
+
 Each possibility branch carries one authoritative simulation state:
 
 ```text
@@ -224,7 +273,7 @@ whole trait declaration into each instance or pre-resolve every effect forever.
 ## Scope, risks and verification needed for a plan
 
 This is a foundational engine refactor, not a small follow-up to Narcissus.
-At the base, textual references span 17 source files for `TraitOfferContext`,
+At the base, textual references span 14 source files for `TraitOfferContext`,
 48 for `RewardBranchState`, and 15 containing `attachTraitHistory(`. These counts
 are navigation indicators, not promised edit counts or evidence of defects.
 
