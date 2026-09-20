@@ -480,11 +480,11 @@ function evaluateReachedTraitOfferWithAssessments(
               case 'elementMinimum':
                 return before.elementCounts[requirement.element] < requirement.minimum;
               case 'notKeepsake':
-                // The materialized Chaos source has never carried a keepsake
-                // identity, so this declared restriction has never applied to a
-                // reached Chaos screen. Reading the reached keepsake here would
-                // newly invalidate authored pairs; the correction is held for a
-                // separately approved change.
+                // Deliberately unenforced: the declared White Antler exclusion
+                // has never applied to a reached Chaos screen, and enforcing it
+                // from the reached keepsake would newly invalidate authored
+                // pairs. See the planner disposition in
+                // docs/audits/traits/CHAOS_TRAIT_GAME_DATA_AUDIT.md.
                 return false;
               case 'notAspect':
                 return state.equipment.aspectKey === requirement.aspectKey;
