@@ -2,8 +2,8 @@
 
 ## Status and objective
 
-Approved and locked execution contract; Gate A is complete and independently
-reviewed. Gate B has not started.
+Approved and locked execution contract; Gates A and B are complete and
+independently reviewed. Gate C has not started.
 The pre-edit transition inventory was accepted at `b5c79329` before source edits.
 The separately approved inspector correction landed as `001f8020`; partial
 Gate A work was preserved and restored after that focused commit.
@@ -314,6 +314,48 @@ Existing low-level tests retain their owning policy matrices.
 Expected deletion: parallel player-fact fields, independent lookup arguments at
 migrated composition boundaries and redundant context assembly.
 Intended commit: `refactor(engine): assess eligibility from exact simulation state`.
+
+Gate B verification: workspace typecheck; 2,097 engine, 277 catalog, 76
+contract and 1,054 planner tests passed; generated execution fixtures are
+byte-identical to base and Underworld/Surface/Dream branch and
+candidate-context counts match the recorded baseline. Landed as `dc0d016e`.
+Independent review returned approve-with-minor-remediation; its findings and
+a separately reported parallel reward-lookup input on `createBiomeRewardFacts`
+were remediated and re-verified. Reward-lookup consultation is now an explicit
+required `hubBoardLookups` contact policy (4 consulting, 18 non-consulting
+sites, identical to the base partition) with the cohort agreement check
+retained as `attestSharedRewardLookups`. Scoped lint and formatting checks
+passed. The complete repository/performance gate remains scheduled for D.
+
+Gate B dispositions deferred to closure (D):
+
+- Chaos `notKeepsake` requirement: discovered dead at every reachable contact
+  at base — the materialized Chaos source never carried a keepsake identity,
+  and no Chaos offer settles on the encounter path that did. Enforcing it from
+  `state.keepsakes.currentKey` would newly invalidate authored Atrophic pairs
+  held with the declared keepsake, so both evaluation sites
+  (`traits/offers.ts`, `candidates/trait-offer/capability.ts`) deliberately
+  return "does not apply" with explanatory comments. At D, either promote the
+  bounded gap to the owning trait audit or approve the two-site correction
+  with a regression witness as its own change.
+- Accepted observable corrections shipped with B, to be recorded in the D
+  comparison rather than normalized away: the `pendingSpellDrop` and
+  `allSpellInvested` requirement flags now derive at every
+  `createBiomeRewardFacts` contact (previously silently false wherever the
+  deleted optional branch argument was omitted; consumed only by
+  `spellLegal`/`talentLegal` store-entry requirements), and the formerly
+  throwing `routeKeyNot`/ordinal contract-error paths at four generation
+  contacts (reward wheel, Fields optional, and both candidate-generation
+  paths) now evaluate from the reached state. No covered test, fixture or
+  baseline count observes a difference.
+- `authored-site-settlement`'s divergent-lookup agreement error now surfaces
+  at that site's first facts invocation rather than before the transition —
+  same error and cohort, a consequence of the accepted lazy derivation.
+- The deleted `acquisitionOrdinal` operation witness had no consumer needing
+  an earlier ordinal; reintroduce it only with a real consumer.
+- The Artificer replacement-options guard remains a preserved proxy ("the
+  source carries a materialized description"); declaring a proper rule is a
+  candidate follow-up outside this plan.
 
 ### C — Checkpoint projections and end-to-end verification
 
