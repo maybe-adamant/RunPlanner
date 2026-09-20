@@ -24,6 +24,13 @@ compatibility alias, active-pointer reader, or implicit migration. An empty or
 invalid selected slot therefore remains a bounded admission error, while
 publishing another slot does not disturb a frozen live session.
 
+Desktop discovery matches module identity and the installed
+`execution-compatibility.json` declaration against the application's execution
+format, protocol and catalog versions, not the module release number or authored
+save schema. Publication rechecks against the actual outgoing plan header before
+writing. Module tests keep this packaged declaration aligned with its decoder;
+missing or incompatible declarations require a module update.
+
 The compiler consumes the exact simulation assembly that the planner already
 validated. It does not rerun candidate policy or duplicate validation. The
 Executor strictly decodes this bounded artifact, translates its closed facts
