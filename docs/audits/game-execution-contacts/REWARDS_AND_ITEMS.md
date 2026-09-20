@@ -24,14 +24,26 @@ calling `FillInShopOptions` for Travel Deal. That construction contact begins
 the published refill before inserting its inventory; a rejected purchase never
 reaches it. Unowned or denied refills remain native and must not be confused
 with initial Overview inventory generation. Native price, rush, delivery, and
-replacement application remain native-owned.
+replacement application remain native-owned. Only verified installation can
+complete the refill; falling back to native inventory leaves it unfulfilled.
 
 World `StoreLogic.lua:RestockWorldItem` can wait for a menu to close before
 construction and can retry `FillInShopOptions`. Its exact invocation retains
 the replacement context through that wait and retry, begins at its first Fill,
-and completes once on native Restock return. Another coroutine's inventory
-generation cannot inherit it. Generation-only selectors remain bounded to
+and completes once on native Restock return if the final generation installed
+the published replacement. Another coroutine's inventory generation cannot
+inherit it. Generation-only selectors remain bounded to
 construction, not the waiting restock.
+
+`StoreLogic.lua:FillInShopOptions` generates local inventory before purchases
+or spawning. Copied narrowed `GroupsOf` use native nonweighted enumeration:
+native requirements still filter candidates, but undersupply returns surviving
+rows instead of exhausting the weighted loop. A narrowed Well healing singleton
+uses the equivalent native `HealingOffers.Options` branch. Verification failure
+is diagnostic and retries the untouched native arguments with provider forcing
+cleared. Retry may consume additional RNG and requirement diagnostics; it does
+not repeat purchases or spawning. Native exceptions propagate after scope
+cleanup rather than being converted into fallback inventories.
 
 ## Source index
 

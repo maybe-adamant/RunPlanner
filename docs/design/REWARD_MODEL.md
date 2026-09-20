@@ -621,10 +621,14 @@ therefore validate the complete sibling assignment as an unordered batch;
 engine reward iteration order and later player entry order do not change its
 support.
 
-The full initial hub offer board also derives `hubRewardLookup`. N's entered
-`WorldShop` preboss validates Hex and Hammer option support against that lookup,
-including reward types offered behind unvisited hub doors. This cross-room
-consumer is separate from counted-bag depletion and acquisition history.
+The completed initial hub offer board contributes all open offered reward types
+to the run-persistent `hubRewardLookup` at departure, including unvisited doors.
+Earlier checkpoints and the board's own generation cannot see that future
+contribution. Restores are idempotent, later biomes inherit it, and rebuilding
+the simulation reconstructs it from authored state. Inventory validation and
+candidates consume its exact generation-time snapshot, including Travel Deal.
+Inventory-entry declarations select its consumers; it is not a global reward
+ban. This lookup is separate from counted-bag depletion and acquisition history.
 `../biomes/N_GAME_RULES.md` owns the concrete bags, room filters, local-slot topology,
 and lifecycle order.
 
@@ -747,10 +751,13 @@ leaking into presentation. `I_WorldShop` has five one-offer groups.
 `Q_WorldShop` has six slots because its first of five groups emits two distinct
 offers.
 
-`WorldShop`, `I_WorldShop`, and `Q_WorldShop` are distinct profiles. N uses
-`WorldShop` but adds the declaration-owned `hubRewardLookup` requirements
-described above. `I_WorldShop` and `Q_WorldShop` consume the normalized
-entered-biome requirement at entry: counts through 2 admit first-half option
+`WorldShop`, `I_WorldShop`, and `Q_WorldShop` are distinct profiles. Their early
+Hammer entries consult `hubRewardLookup`; the late entries retain independent
+acquisition-count and ordinal requirements. Ordinary `WorldShop` and Hermes
+Shrine Spell entries consult the lookup, while I/Q Spell entries do not. These
+entry-owned rules apply wherever the profiles are used, not only in N preboss.
+`I_WorldShop` and `Q_WorldShop` consume the normalized entered-biome requirement
+at entry: counts through 2 admit first-half option
 entries, counts from 3 admit second-half entries, and phase-independent entries
 remain available. Requirements are conjoined at the option entry, so existing
 Hammer, Hermes, Spell, Talent, Last Stand, and other guards remain

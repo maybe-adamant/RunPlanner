@@ -542,6 +542,36 @@ and payload rules, with a complete authored slot for every offer emitted by
 the group. Two offers from one group are distinct authored
 slots and cannot select the same option entry.
 
+### Persistent hub-offer exclusions
+
+`RoomDataN.lua:1190` invokes `UpdateHubRewardLookup` on hub departure.
+`RoomLogic.lua:5625` unions all offered board reward types into
+`CurrentRun.HubRewardLookup`, regardless of visitation or acquisition. The
+lookup survives biome transitions; no in-run reset was found. New-run
+initialization replaces `CurrentRun`. Closed doors contribute no offered type.
+
+| Inventory entry                          | Excluded lookup type  | Source                                                    |
+| ---------------------------------------- | --------------------- | --------------------------------------------------------- |
+| `SurfaceShop` Spell (all Hermes shrines) | `SpellDrop`           | `StoreData.lua:143–173`                                   |
+| `WorldShop` Spell                        | `SpellDrop`           | `StoreData.lua:280–303`                                   |
+| `WorldShop` early Hammer                 | `WeaponUpgrade`       | `StoreData.lua:231–245`                                   |
+| `I_WorldShop` early Hammer               | `WeaponUpgrade`       | `StoreData.lua:371–382`                                   |
+| `Q_WorldShop` early Hammer               | `WeaponUpgrade`       | `StoreData.lua:506–517`                                   |
+| Late Hammer entries                      | None from this lookup | `StoreData.lua:247–257`; `RequirementsData.lua:1261–1296` |
+| I/Q Spell entries                        | None from this lookup | `StoreData.lua:349,473`                                   |
+
+The late Hammer path still requires a third-or-later entered biome and exactly
+one acquired Hammer. Reaching biome three alone does not restore Hammer
+eligibility. The lookup's native `WeaponUpgrade` identity differs from the
+shop wrapper `WeaponUpgradeDrop`. Generic Spell/Hammer reward requirements do
+not impose these source-specific exclusions on other reward producers.
+
+Planner disposition: exact entry-owned requirements, conjoined with existing
+rules for initial inventory and Travel Deal generation. The simulation publishes
+the completed board's contribution chronologically and carries it across route
+biomes, including reordered Dream routes. Invalid authored offers remain
+repairable; they are not replaced automatically.
+
 ### Ordinary WorldShop groups
 
 | Group | Offers | Supported options under the baseline                                              | Modeled current-run conditions                                                               |
