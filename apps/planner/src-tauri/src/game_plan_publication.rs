@@ -14,7 +14,6 @@ const CONFIG_DIRECTORY: &str = "config";
 const EXECUTOR_DIRECTORY: &str = "adamantRunPlanner-Run_Planner";
 const EXECUTOR_NAMESPACE: &str = "adamantRunPlanner";
 const EXECUTOR_NAME: &str = "Run_Planner";
-const EXECUTOR_VERSION: &str = "0.3.0";
 const MAX_PLAN_BYTES: usize = 1_048_576;
 const MAX_MANIFEST_BYTES: u64 = 16_384;
 
@@ -34,6 +33,14 @@ struct ExecutorManifest {
     version_number: String,
     #[serde(rename = "FullName")]
     full_name: String,
+}
+
+#[derive(Clone, Debug, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct ExecutionCompatibility {
+    format: String,
+    protocol_version: u32,
+    catalog_version: String,
 }
 
 #[derive(Clone, Debug, Serialize)]
@@ -63,6 +70,7 @@ pub(crate) struct GamePlanPublication {
 struct CompatibleProfile {
     id: String,
     root: PathBuf,
+    module_version: String,
 }
 
 fn profile_root(appdata: &Path) -> PathBuf {
@@ -118,7 +126,7 @@ fn manifest_path(profile: &Path) -> PathBuf {
         .join("manifest.json")
 }
 
-fn compatible_manifest(path: &Path) -> Option<ExecutorManifest> {
+fn read_metadata<T: serde::de::DeserializeOwned>(path: &Path) -> Option<T> {
     let metadata = fs::symlink_metadata(path).ok()?;
     if metadata.file_type().is_symlink()
         || !metadata.is_file()
@@ -126,15 +134,21 @@ fn compatible_manifest(path: &Path) -> Option<ExecutorManifest> {
     {
         return None;
     }
-    let manifest: ExecutorManifest = serde_json::from_str(&fs::read_to_string(path).ok()?).ok()?;
+    serde_json::from_str(&fs::read_to_string(path).ok()?).ok()
+}
+
+fn compatible_manifest(path: &Path) -> Option<ExecutorManifest> {
+    let manifest: ExecutorManifest = read_metadata(path)?;
     (manifest.namespace == EXECUTOR_NAMESPACE
         && manifest.name == EXECUTOR_NAME
-        && manifest.full_name == EXECUTOR_DIRECTORY
-        && manifest.version_number == EXECUTOR_VERSION)
+        && manifest.full_name == EXECUTOR_DIRECTORY)
         .then_some(manifest)
 }
 
-fn compatible_profiles(root: &Path) -> Result<Vec<CompatibleProfile>, String> {
+fn compatible_profiles(
+    root: &Path,
+    compatibility: &ExecutionCompatibility,
+) -> Result<Vec<CompatibleProfile>, String> {
     let root = fs::canonicalize(root).unwrap_or_else(|_| root.to_path_buf());
     let mut matches = Vec::new();
     for profile in direct_profiles(&root)? {
@@ -155,7 +169,13 @@ fn compatible_profiles(root: &Path) -> Result<Vec<CompatibleProfile>, String> {
         if existing_directory(&module_dir, &canonical_rom).is_err() {
             continue;
         }
-        if compatible_manifest(&module_dir.join("manifest.json")).is_none() {
+        let Some(manifest) = compatible_manifest(&module_dir.join("manifest.json")) else {
+            continue;
+        };
+        if read_metadata::<ExecutionCompatibility>(&module_dir.join("execution-compatibility.json"))
+            .as_ref()
+            != Some(compatibility)
+        {
             continue;
         }
         let Some(id) = canonical_profile.file_name().and_then(|name| name.to_str()) else {
@@ -164,12 +184,16 @@ fn compatible_profiles(root: &Path) -> Result<Vec<CompatibleProfile>, String> {
         matches.push(CompatibleProfile {
             id: id.to_owned(),
             root: canonical_profile,
+            module_version: manifest.version_number,
         });
     }
     Ok(matches)
 }
 
-fn discover_at(root: &Path) -> Result<GamePlanDiscovery, String> {
+fn discover_at(
+    root: &Path,
+    compatibility: &ExecutionCompatibility,
+) -> Result<GamePlanDiscovery, String> {
     if direct_profiles(root)?.is_empty() {
         return Ok(GamePlanDiscovery {
             status: "noProfiles".to_owned(),
@@ -177,13 +201,13 @@ fn discover_at(root: &Path) -> Result<GamePlanDiscovery, String> {
             message: "No r2modman Hades II profiles were found.".to_owned(),
         });
     }
-    let profiles = compatible_profiles(root)?;
+    let profiles = compatible_profiles(root, compatibility)?;
     if profiles.is_empty() {
         return Ok(GamePlanDiscovery {
             status: "incompatibleModule".to_owned(),
             targets: Vec::new(),
             message: format!(
-                "No profile has compatible {EXECUTOR_DIRECTORY} {EXECUTOR_VERSION} installed."
+                "No profile declares support for execution protocol {} and catalog {}. Update the Run Planner game module and application together.", compatibility.protocol_version, compatibility.catalog_version
             ),
         });
     }
@@ -194,7 +218,7 @@ fn discover_at(root: &Path) -> Result<GamePlanDiscovery, String> {
             .map(|profile| GamePlanTarget {
                 id: profile.id.clone(),
                 label: profile.id,
-                module_version: EXECUTOR_VERSION.to_owned(),
+                module_version: profile.module_version,
             })
             .collect(),
         message: "Choose a compatible r2modman Hades II profile for publication.".to_owned(),
@@ -263,15 +287,18 @@ fn bounded_atomic_write(
 }
 
 #[tauri::command]
-pub(crate) fn game_plan_discover_profiles() -> Result<GamePlanDiscovery, String> {
+pub(crate) fn game_plan_discover_profiles(
+    compatibility: ExecutionCompatibility,
+) -> Result<GamePlanDiscovery, String> {
     #[cfg(target_os = "windows")]
     {
         let appdata =
             env::var_os("APPDATA").ok_or_else(|| "Windows APPDATA is unavailable.".to_owned())?;
-        return discover_at(&profile_root(Path::new(&appdata)));
+        return discover_at(&profile_root(Path::new(&appdata)), &compatibility);
     }
     #[cfg(not(target_os = "windows"))]
     {
+        let _ = compatibility;
         Ok(GamePlanDiscovery {
             status: "unavailable".to_owned(),
             targets: Vec::new(),
@@ -303,15 +330,13 @@ pub(crate) fn game_plan_publish(
     {
         let appdata =
             env::var_os("APPDATA").ok_or_else(|| "Windows APPDATA is unavailable.".to_owned())?;
-        let profiles = compatible_profiles(&profile_root(Path::new(&appdata)))?;
-        let Some(profile) = profiles.into_iter().find(|profile| profile.id == target_id) else {
-            return Ok(GamePlanPublication {
-                status: "nativeWrite".to_owned(),
-                message: "The selected game profile is no longer compatible. Refresh profiles and try again.".to_owned(),
-            });
-        };
         return Ok(
-            match bounded_atomic_write(&profile, slot_number, plan_json.as_bytes()) {
+            match publish_at(
+                &profile_root(Path::new(&appdata)),
+                &target_id,
+                slot_number,
+                &plan_json,
+            ) {
                 Ok(()) => GamePlanPublication {
                     status: "published".to_owned(),
                     message: format!("Published to game profile {target_id}."),
@@ -332,6 +357,30 @@ pub(crate) fn game_plan_publish(
                 .to_owned(),
         })
     }
+}
+
+fn publish_at(
+    root: &Path,
+    target_id: &str,
+    slot_number: u8,
+    plan_json: &str,
+) -> Result<(), String> {
+    slot_file_name(slot_number)?;
+    if plan_json.len() > MAX_PLAN_BYTES {
+        return Err(format!(
+            "Game plan exceeds the {MAX_PLAN_BYTES}-byte limit."
+        ));
+    }
+    let compatibility: ExecutionCompatibility = serde_json::from_str(plan_json)
+        .map_err(|error| format!("Invalid execution plan header: {error}"))?;
+    let profiles = compatible_profiles(root, &compatibility)?;
+    let profile = profiles
+        .into_iter()
+        .find(|profile| profile.id == target_id)
+        .ok_or(
+            "The selected game profile is no longer compatible. Refresh profiles and try again.",
+        )?;
+    bounded_atomic_write(&profile, slot_number, plan_json.as_bytes())
 }
 
 #[cfg(test)]
@@ -366,14 +415,53 @@ mod tests {
         fs::write(
             manifest,
             format!(
-                r#"{{"namespace":"{EXECUTOR_NAMESPACE}","name":"{EXECUTOR_NAME}","version_number":"{EXECUTOR_VERSION}","FullName":"{EXECUTOR_DIRECTORY}"}}"#
+                r#"{{"namespace":"{EXECUTOR_NAMESPACE}","name":"{EXECUTOR_NAME}","version_number":"0.7.1","FullName":"{EXECUTOR_DIRECTORY}"}}"#
             ),
         )
         .expect("write manifest");
         CompatibleProfile {
             id: id.to_owned(),
             root: profile,
+            module_version: "0.7.1".to_owned(),
         }
+    }
+
+    fn compatibility() -> ExecutionCompatibility {
+        ExecutionCompatibility {
+            format: "run-planner-execution".to_owned(),
+            protocol_version: 42,
+            catalog_version: "test-catalog".to_owned(),
+        }
+    }
+
+    #[test]
+    fn discovery_matches_execution_support_not_release_version() {
+        let temporary = TemporaryDirectory::new();
+        let profile = install_profile(&temporary.0, "h2-dev");
+        let path = manifest_path(&profile.root).with_file_name("execution-compatibility.json");
+        assert!(discover_at(&temporary.0, &compatibility())
+            .unwrap()
+            .targets
+            .is_empty());
+        fs::write(&path, r#"{"format":"run-planner-execution","protocolVersion":42,"catalogVersion":"test-catalog"}"#).unwrap();
+        let discovery = discover_at(&temporary.0, &compatibility()).unwrap();
+        assert_eq!(discovery.targets.len(), 1);
+        assert_eq!(discovery.targets[0].module_version, "0.7.1");
+        for field in ["format", "protocol", "catalog"] {
+            let mut requested = compatibility();
+            match field {
+                "format" => requested.format = "authored-project".to_owned(),
+                "protocol" => requested.protocol_version += 1,
+                _ => requested.catalog_version = "another-catalog".to_owned(),
+            }
+            assert!(compatible_profiles(&temporary.0, &requested)
+                .unwrap()
+                .is_empty());
+        }
+        fs::write(&path, "{}").unwrap();
+        assert!(compatible_profiles(&temporary.0, &compatibility())
+            .unwrap()
+            .is_empty());
     }
 
     #[test]
@@ -407,6 +495,7 @@ mod tests {
         let profile = CompatibleProfile {
             id: "profile-a".to_owned(),
             root: PathBuf::from("path-that-does-not-exist"),
+            module_version: "0.7.1".to_owned(),
         };
 
         for slot_number in [0, 7, u8::MAX] {
@@ -455,20 +544,27 @@ mod tests {
     }
 
     #[test]
-    fn failed_replacement_preserves_previous_slot_bytes() {
+    fn publication_rechecks_support_and_preserves_slot_on_incompatibility() {
         let temporary = TemporaryDirectory::new();
         let profile = install_profile(&temporary.0, "profile-a");
-        let original = br#"{"format":"run-planner-execution","version":1}"#;
-        bounded_atomic_write(&profile, 5, original).expect("write original plan");
+        let original = r#"{"format":"run-planner-execution","protocolVersion":42,"catalogVersion":"test-catalog"}"#;
+        let support = manifest_path(&profile.root).with_file_name("execution-compatibility.json");
+        fs::write(&support, original).unwrap();
+        assert_eq!(
+            discover_at(&temporary.0, &compatibility())
+                .unwrap()
+                .targets
+                .len(),
+            1
+        );
+        publish_at(&temporary.0, "profile-a", 5, original).unwrap();
         let destination = safe_destination(&profile, 5).expect("destination");
-        let temporary_directory = destination.with_file_name(".failed-replacement.tmp");
-        fs::create_dir(&temporary_directory).expect("create failed replacement source");
-
-        assert!(replace_file(&temporary_directory, &destination).is_err());
+        fs::remove_file(support).unwrap();
+        assert!(publish_at(&temporary.0, "profile-a", 5, original).is_err());
+        assert!(publish_at(&temporary.0, "profile-a", 5, "{}").is_err());
         assert_eq!(
             fs::read(&destination).expect("read preserved plan"),
-            original
+            original.as_bytes()
         );
-        fs::remove_dir(&temporary_directory).expect("remove failed replacement source");
     }
 }

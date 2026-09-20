@@ -9,6 +9,8 @@ import {
   assembleExecutionProduct,
   compileExecutionPlan,
   encodeExecutionPlan,
+  EXECUTION_PLAN_FORMAT,
+  EXECUTION_PROTOCOL_VERSION,
 } from '@run-planner/engine/execution-plan';
 
 import type { AutosaveRecoveryAdapter } from '../persistence/autosaveRecovery';
@@ -188,7 +190,11 @@ export function createProjectOperations(
         });
       }
       try {
-        return await options.gamePlanPublisher.discoverProfiles();
+        return await options.gamePlanPublisher.discoverProfiles({
+          format: EXECUTION_PLAN_FORMAT,
+          protocolVersion: EXECUTION_PROTOCOL_VERSION,
+          catalogVersion: options.catalog.version,
+        });
       } catch (error) {
         return Object.freeze({
           status: 'unavailable',

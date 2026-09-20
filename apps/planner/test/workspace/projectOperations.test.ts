@@ -209,12 +209,15 @@ describe('project profile operations', () => {
   });
 
   it('publishes a complete F prefix through the separate game capability', async () => {
+    let requestedCompatibility: unknown;
     const published: { targetId: string; slotNumber: number; json: string }[] = [];
     const profile = createProfileFixture();
     const autosave = createPublicationAutosaveFixture();
     const gamePlanPublisher: GamePlanPublisher = {
-      discoverProfiles: () =>
-        Promise.resolve({ status: 'available', targets: [], message: 'Choose a profile.' }),
+      discoverProfiles: (compatibility) => {
+        requestedCompatibility = compatibility;
+        return Promise.resolve({ status: 'available', targets: [], message: 'Choose a profile.' });
+      },
       publish: (targetId, slotNumber, json) => {
         published.push({ targetId, slotNumber, json });
         return Promise.resolve({
@@ -247,6 +250,7 @@ describe('project profile operations', () => {
     const beforePendingAutosaves = autosave.scheduler.pendingCount;
     const beforeAutosaveWrites = profile.saves.length;
 
+    await application.projectOperations.discoverGameProfiles();
     await expect(application.projectOperations.publishGame('profile-a', 3)).resolves.toEqual({
       operation: 'publishGame',
       status: 'success',
@@ -255,6 +259,7 @@ describe('project profile operations', () => {
     expect(published).toHaveLength(1);
     const publication = published[0];
     if (publication === undefined) throw new Error('publication was not recorded');
+    expect(JSON.parse(publication.json)).toMatchObject(requestedCompatibility);
     expect(JSON.parse(publication.json)).toMatchObject({
       routeKey: 'Underworld',
       extent: { biomeKeys: ['F'] },
