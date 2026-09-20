@@ -654,6 +654,32 @@ function locateStructuralOwner(
       (decision.kind === 'hub' && activeHubFrontierOwnsAddress(prefix, address)),
   );
   if (decisionEntry === undefined) {
+    // A reached room can be complete before its outgoing decision exists.
+    // Locate that missing decision after the selected incoming batch, rather
+    // than requiring the very materialization that authoring must create.
+    if (
+      prefix.kind === 'biomePrefix' &&
+      prefix.frontier === undefined &&
+      (address.kind === 'exitDecision' ||
+        address.kind === 'exitSelection' ||
+        address.kind === 'batchRewardStore') &&
+      address.source.kind === 'occurrence'
+    ) {
+      const occurrenceId = address.source.occurrenceId;
+      const incoming = prefixDecisionEntries(prefix).find(
+        ({ decision }) =>
+          decision.kind === 'batch' &&
+          [...decision.targets, ...decision.additional].some(
+            (target) => target.picked && target.room.occurrenceId === occurrenceId,
+          ),
+      );
+      if (incoming !== undefined) {
+        return Object.freeze({ decisionIndex: incoming.decisionIndex + 1 });
+      }
+      if (prefix.entryRoom?.occurrenceId === occurrenceId) {
+        return Object.freeze({ decisionIndex: 0 });
+      }
+    }
     const frontier = prefix.kind === 'biomePrefix' ? prefix.frontier : undefined;
     if (address.kind === 'hubDecision' && frontier?.kind === 'exitDecision') {
       return Object.freeze({ decisionIndex: prefix.decisions.length, frontierBatch: true });
