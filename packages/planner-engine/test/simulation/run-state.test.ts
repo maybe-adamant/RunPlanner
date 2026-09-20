@@ -367,7 +367,7 @@ describe('decision run-state snapshots', () => {
     expect(cachedA?.bags).not.toEqual(cachedB?.bags);
   });
 
-  it('keeps derived Hex progress distinct when a shared cache sees the same history frontier', () => {
+  it('keeps Hex and delivery facts distinct at a shared cached history frontier', () => {
     const base = initializeTestRewardBranches()[0]!;
     const sharedCache = createRunStateDerivationCache();
     const owner = createRoomRunStateCheckpointAddress(
@@ -398,7 +398,7 @@ describe('decision run-state snapshots', () => {
       },
     };
     const token = Object.freeze({ owner, historyView });
-    const snapshot = (bankedPathPoints: number) =>
+    const snapshot = (bankedPathPoints: number, talentDropsClosed = false) =>
       createRunState({
         catalog,
         owner,
@@ -406,16 +406,88 @@ describe('decision run-state snapshots', () => {
         branches: [
           Object.freeze({
             ...base,
-            hexProgress: Object.freeze({ bankedPathPoints, investedPathPoints: 0 }),
+            hexProgress: Object.freeze({
+              bankedPathPoints,
+              investedPathPoints: 0,
+              ...(talentDropsClosed ? { talentDropsClosed: true as const } : {}),
+            }),
           }),
         ],
         enteredBiomeCount: 1,
-        rewardFacts: () => requirementFacts(0),
+        rewardFacts: (branch) => {
+          const facts = requirementFacts(0);
+          return {
+            ...facts,
+            requirements: {
+              ...facts.requirements,
+              records: { ...facts.requirements.records, useRecord: { SpellDrop: 1 } },
+              flags: {
+                ...facts.requirements.flags,
+                allSpellInvested: branch.hexProgress.talentDropsClosed === true,
+              },
+            },
+          };
+        },
         derivationCache: sharedCache,
         factsContextToken: token,
       });
     expect(snapshot(2)?.hexProgress).toEqual({ bankedPathPoints: 2, investedPathPoints: 0 });
     expect(snapshot(5)?.hexProgress).toEqual({ bankedPathPoints: 5, investedPathPoints: 0 });
+    const pathEligibility = (closed: boolean) =>
+      snapshot(5, closed)
+        ?.bags.flatMap((bag) => bag.entries)
+        .filter((entry) => entry.rewardType === 'MinorTalentDrop')
+        .map((entry) => entry.eligibility);
+    expect(pathEligibility(false)).toEqual(['eligible', 'eligible']);
+    expect(pathEligibility(true)).toEqual(['ineligible', 'ineligible']);
+    expect(pathEligibility(false)).toEqual(['eligible', 'eligible']);
+
+    const spellEligibility = (pending: boolean) =>
+      createRunState({
+        catalog,
+        owner,
+        historyView,
+        branches: [
+          {
+            ...base,
+            pendingHermesShrineDeliveries: pending
+              ? {
+                  spell: {
+                    sourceKey: 'spell',
+                    sourceOrigin: createOccurrenceAddress(oBiome, oOccurrenceIds.combat07),
+                    generationKey: 'initial:secondLeft',
+                    rewardType: 'SpellDrop',
+                    remainingUses: 8,
+                  },
+                }
+              : base.pendingHermesShrineDeliveries,
+          },
+        ],
+        enteredBiomeCount: 1,
+        rewardFacts: (branch) => {
+          const facts = requirementFacts(0);
+          return {
+            ...facts,
+            requirements: {
+              ...facts.requirements,
+              flags: {
+                ...facts.requirements.flags,
+                pendingSpellDrop: Object.values(branch.pendingHermesShrineDeliveries).some(
+                  (delivery) => delivery.rewardType === 'SpellDrop',
+                ),
+              },
+            },
+          };
+        },
+        derivationCache: sharedCache,
+        factsContextToken: token,
+      })
+        ?.bags.flatMap((bag) => bag.entries)
+        .filter((entry) => entry.rewardType === 'SpellDrop')
+        .map((entry) => entry.eligibility);
+    expect(spellEligibility(false)).toEqual(['eligible', 'eligible']);
+    expect(spellEligibility(true)).toEqual(['ineligible', 'ineligible']);
+    expect(spellEligibility(false)).toEqual(['eligible', 'eligible']);
   });
 
   it('publishes distinct ordinary room-entry and pre-exit checkpoints', () => {

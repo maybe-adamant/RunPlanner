@@ -1071,16 +1071,20 @@ export function evaluateBiomeRewardChronology(
         enteredBiomeCount,
         derivationCache: runStateDerivationCache,
         factsContextToken,
-        rewardFacts: (branchHistory) =>
+        rewardFacts: (branch) =>
           rewardFacts(
             catalog,
             source,
             source,
             declaration,
             view,
-            branchHistory,
+            branch.history,
             enteredBiomeCount,
             currentShopNames,
+            source.origin,
+            'generatedTarget',
+            rewardLookup.internal,
+            branch,
           ),
       });
     const snapshot = snapshotFor(checkpointBranches);
