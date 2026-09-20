@@ -20,6 +20,7 @@ import {
   type BiomeCandidateArtifacts,
 } from './candidate-artifacts';
 import { attestFigLeafBranchState, attestGorgonBranchState } from '../keepsakes/encounter-effects';
+import { initialFigLeafState } from '../keepsakes/state';
 import { attestPendingHermesSpellDrop } from '../commerce/hermes-shrine';
 import { attestTalentDropsClosed } from '../hex-progress';
 import { attestEffectiveShadowRank } from '../arcana-fear';
@@ -493,20 +494,13 @@ export function evaluateBiomeAssembly(
     plan.echoKeepsakeReplayResults,
   );
   const seed: HistoryStateView | undefined = context.seed?.history.afterTransition;
-  const startingKeepsake = catalog.keepsakes.byKey[context.loadout.startingKeepsakeKey];
-  const startingFigLeaf = startingKeepsake?.effect;
   let figLeafState: FigLeafLifecycleState | undefined;
   let pendingSpellDrop: boolean;
   let allSpellInvested: boolean;
   try {
     figLeafState =
       context.seed === undefined
-        ? startingFigLeaf?.kind === 'figLeaf' && startingKeepsake !== undefined
-          ? {
-              remainingUses: startingFigLeaf.biomeUsesByRank[startingKeepsake.rank],
-              activatedThisBiome: false,
-            }
-          : undefined
+        ? initialFigLeafState(catalog, context.loadout.startingKeepsakeKey)
         : (() => {
             const state = attestFigLeafBranchState(context.seed.rewardBranches);
             return state === undefined

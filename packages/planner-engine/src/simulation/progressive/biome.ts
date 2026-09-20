@@ -54,6 +54,7 @@ import type { BiomeRewardSimulation, RewardBranch } from '../rewards';
 import type { RewardProducerCandidateArtifacts } from '../rewards/producer-frontiers';
 import type { RoomLifecycleCandidateArtifacts } from '../rewards/lifecycle-artifacts';
 import { attestFigLeafBranchState, attestGorgonBranchState } from '../keepsakes/encounter-effects';
+import { initialFigLeafState } from '../keepsakes/state';
 import { attestPendingHermesSpellDrop } from '../commerce/hermes-shrine';
 import { attestTalentDropsClosed } from '../hex-progress';
 import { attestEffectiveShadowRank } from '../arcana-fear';
@@ -103,11 +104,7 @@ function figLeafLifecycleState(
       ? undefined
       : { remainingUses: state.remainingUses, activatedThisBiome: false };
   }
-  const keepsake = catalog.keepsakes.byKey[context.loadout.startingKeepsakeKey];
-  const effect = keepsake?.effect;
-  return effect?.kind === 'figLeaf' && keepsake !== undefined
-    ? { remainingUses: effect.biomeUsesByRank[keepsake.rank], activatedThisBiome: false }
-    : undefined;
+  return initialFigLeafState(catalog, context.loadout.startingKeepsakeKey);
 }
 
 function pendingHermesSpellDropLifecycleState(context: ProgressiveBiomeContext): boolean {

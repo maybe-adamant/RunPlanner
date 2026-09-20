@@ -333,6 +333,25 @@ export function deriveFatedStatus(
     ? 'Fated'
     : 'Unknown';
 }
+
+/**
+ * The Fig Leaf ledger an equipped identity starts a run with, and the only
+ * production owner of that rule. Biome lifecycle composition needs it before a
+ * branch state exists, so it is reachable without building a whole keepsake
+ * state. Unlike the Calling Card and Time Piece charges, these uses are not
+ * zeroed while Unfated, so the rule takes no Arcana input.
+ */
+export function initialFigLeafState(catalog: Catalog, key: string): KeepsakeState['figLeaf'] {
+  const keepsake = catalog.keepsakes.byKey[key];
+  const effect = keepsake?.effect;
+  return effect?.kind === 'figLeaf' && keepsake !== undefined
+    ? Object.freeze({
+        remainingUses: effect.biomeUsesByRank[keepsake.rank],
+        activatedThisBiome: false,
+      })
+    : undefined;
+}
+
 export function createKeepsakeState(
   catalog: Catalog,
   key: string,
@@ -341,6 +360,7 @@ export function createKeepsakeState(
 ): KeepsakeState {
   const keepsake = catalog.keepsakes.byKey[key];
   const effect = keepsake?.effect;
+  const figLeaf = initialFigLeafState(catalog, key);
   const fatedStatus = deriveFatedStatus(
     catalog,
     [key],
@@ -383,14 +403,7 @@ export function createKeepsakeState(
           }),
         }
       : {}),
-    ...(effect?.kind === 'figLeaf' && keepsake !== undefined
-      ? {
-          figLeaf: Object.freeze({
-            remainingUses: effect.biomeUsesByRank[keepsake.rank],
-            activatedThisBiome: false,
-          }),
-        }
-      : {}),
+    ...(figLeaf === undefined ? {} : { figLeaf }),
     ...(effect?.kind === 'gorgonAmulet' && keepsake !== undefined
       ? {
           gorgon: Object.freeze({
