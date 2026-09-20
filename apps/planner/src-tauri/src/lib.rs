@@ -7,6 +7,7 @@ pub fn run() {
     tauri::Builder::default()
         .invoke_handler(tauri::generate_handler![
             game_plan_publication::game_plan_discover_profiles,
+            game_plan_publication::game_plan_choose_profile,
             game_plan_publication::game_plan_publish,
             profile_file_session::profile_file_restore_active,
             profile_file_session::profile_file_activate,

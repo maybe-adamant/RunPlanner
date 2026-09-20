@@ -213,10 +213,15 @@ describe('project profile operations', () => {
 
   it('publishes a complete F prefix through the separate game capability', async () => {
     let requestedCompatibility: GamePlanCompatibility | undefined;
+    let chosenCompatibility: GamePlanCompatibility | undefined;
     const published: { targetId: string; slotNumber: number; json: string }[] = [];
     const profile = createProfileFixture();
     const autosave = createPublicationAutosaveFixture();
     const gamePlanPublisher: GamePlanPublisher = {
+      chooseProfile: (compatibility) => {
+        chosenCompatibility = compatibility;
+        return Promise.resolve(null);
+      },
       discoverProfiles: (compatibility) => {
         requestedCompatibility = compatibility;
         return Promise.resolve({ status: 'available', targets: [], message: 'Choose a profile.' });
@@ -254,6 +259,8 @@ describe('project profile operations', () => {
     const beforeAutosaveWrites = profile.saves.length;
 
     await application.projectOperations.discoverGameProfiles();
+    expect(await application.projectOperations.chooseGameProfile()).toBeNull();
+    expect(chosenCompatibility).toEqual(requestedCompatibility);
     await expect(application.projectOperations.publishGame('profile-a', 3)).resolves.toEqual({
       operation: 'publishGame',
       status: 'success',
@@ -290,6 +297,7 @@ describe('project profile operations', () => {
     const profile = createProfileFixture();
     const application = createApplication({
       gamePlanPublisher: {
+        chooseProfile: () => Promise.resolve(null),
         discoverProfiles: () =>
           Promise.resolve({ status: 'available', targets: [], message: 'Choose a profile.' }),
         publish: (targetId, slotNumber, json) => {
@@ -318,6 +326,7 @@ describe('project profile operations', () => {
     const published: { targetId: string; slotNumber: number; json: string }[] = [];
     const application = createApplication({
       gamePlanPublisher: {
+        chooseProfile: () => Promise.resolve(null),
         discoverProfiles: () =>
           Promise.resolve({ status: 'available', targets: [], message: 'Choose a profile.' }),
         publish: (targetId, slotNumber, json) => {

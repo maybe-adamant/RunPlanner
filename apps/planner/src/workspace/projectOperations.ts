@@ -20,6 +20,7 @@ import type {
   GamePlanDiscovery,
   GamePlanPublisher,
   GamePlanSlotNumber,
+  GamePlanTarget,
 } from '../persistence/gamePlanPublisher';
 import {
   newProjectCreated,
@@ -56,6 +57,7 @@ export interface ProjectOperations {
   readonly gamePlanAvailable: boolean;
   readonly saveAsAvailable: boolean;
   discoverGameProfiles(): Promise<GamePlanDiscovery>;
+  chooseGameProfile(): Promise<GamePlanTarget | null>;
   publishGame(targetId: string, slotNumber: GamePlanSlotNumber): Promise<ProjectOperationResult>;
   saveProfile(): Promise<ProjectOperationResult>;
   saveProfileAs(): Promise<ProjectOperationResult>;
@@ -180,6 +182,16 @@ export function createProjectOperations(
       } catch (error) {
         return failure('exportRecovery', error);
       }
+    },
+    async chooseGameProfile(): Promise<GamePlanTarget | null> {
+      if (options.gamePlanPublisher === undefined) {
+        throw new Error('Publish to Game is available only in the desktop application.');
+      }
+      return options.gamePlanPublisher.chooseProfile({
+        format: EXECUTION_PLAN_FORMAT,
+        protocolVersion: EXECUTION_PROTOCOL_VERSION,
+        catalogVersion: options.catalog.version,
+      });
     },
     async discoverGameProfiles(): Promise<GamePlanDiscovery> {
       if (options.gamePlanPublisher === undefined) {

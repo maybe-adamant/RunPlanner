@@ -2,6 +2,7 @@ use serde::{Deserialize, Serialize};
 use std::env;
 use std::fs;
 use std::path::{Path, PathBuf};
+use tauri::Manager;
 
 use crate::atomic_file;
 
@@ -16,6 +17,7 @@ const EXECUTOR_NAMESPACE: &str = "adamantRunPlanner";
 const EXECUTOR_NAME: &str = "Run_Planner";
 const MAX_PLAN_BYTES: usize = 1_048_576;
 const MAX_MANIFEST_BYTES: u64 = 16_384;
+const REMEMBERED_PROFILE_FILE: &str = "game-publication-profile.json";
 
 const PLAN_SLOT_FILES: [&str; 6] = [
     "slot-1.runplanner.json",
@@ -45,9 +47,10 @@ pub(crate) struct ExecutionCompatibility {
 
 #[derive(Clone, Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
-struct GamePlanTarget {
+pub(crate) struct GamePlanTarget {
     id: String,
     label: String,
+    location: String,
     module_version: String,
 }
 
@@ -156,38 +159,142 @@ fn compatible_profiles(
             Ok(path) => path,
             Err(_) => continue,
         };
-        let rom = canonical_profile.join(RETURN_OF_MODDING_DIRECTORY);
-        let canonical_rom = match existing_directory(&rom, &canonical_profile) {
-            Ok(path) => path,
-            Err(_) => continue,
-        };
-        let plugins = canonical_rom.join(PLUGINS_DIRECTORY);
-        if existing_directory(&plugins, &canonical_rom).is_err() {
-            continue;
+        if let Ok(profile) = validate_profile(&canonical_profile, compatibility) {
+            matches.push(profile);
         }
-        let module_dir = plugins.join(EXECUTOR_DIRECTORY);
-        if existing_directory(&module_dir, &canonical_rom).is_err() {
-            continue;
-        }
-        let Some(manifest) = compatible_manifest(&module_dir.join("manifest.json")) else {
-            continue;
-        };
-        if read_metadata::<ExecutionCompatibility>(&module_dir.join("execution-compatibility.json"))
-            .as_ref()
-            != Some(compatibility)
-        {
-            continue;
-        }
-        let Some(id) = canonical_profile.file_name().and_then(|name| name.to_str()) else {
-            continue;
-        };
-        matches.push(CompatibleProfile {
-            id: id.to_owned(),
-            root: canonical_profile,
-            module_version: manifest.version_number,
-        });
     }
     Ok(matches)
+}
+
+fn validate_profile(
+    path: &Path,
+    compatibility: &ExecutionCompatibility,
+) -> Result<CompatibleProfile, String> {
+    if !path.is_absolute() {
+        return Err("Choose an absolute profile folder or its ReturnOfModding folder.".to_owned());
+    }
+    let path = if path
+        .file_name()
+        .is_some_and(|name| name == RETURN_OF_MODDING_DIRECTORY)
+    {
+        path.parent()
+            .ok_or("ReturnOfModding must belong to a profile folder.")?
+    } else {
+        path
+    };
+    let root = fs::canonicalize(path)
+        .map_err(|_| "That folder is unavailable. Choose an existing profile folder.".to_owned())?;
+    existing_directory(path, &root).map_err(|_| {
+        "Choose a regular profile folder, not a file or folder shortcut.".to_owned()
+    })?;
+    let rom = existing_directory(&root.join(RETURN_OF_MODDING_DIRECTORY), &root).map_err(|_| {
+        "No ReturnOfModding folder found. Choose a named profile, not the profiles folder."
+            .to_owned()
+    })?;
+    let plugins = existing_directory(&rom.join(PLUGINS_DIRECTORY), &rom).map_err(|_| {
+        "No plugins folder found. Launch this profile once through your mod manager.".to_owned()
+    })?;
+    let module_dir = existing_directory(&plugins.join(EXECUTOR_DIRECTORY), &rom)
+        .map_err(|_| "Run Planner is not installed in this profile.".to_owned())?;
+    let manifest = compatible_manifest(&module_dir.join("manifest.json"))
+        .ok_or("Run Planner's installation is incomplete. Reinstall the game module.")?;
+    if read_metadata::<ExecutionCompatibility>(&module_dir.join("execution-compatibility.json"))
+        .as_ref()
+        != Some(compatibility)
+    {
+        return Err(
+            "Run Planner versions are incompatible. Update the app and game module together."
+                .to_owned(),
+        );
+    }
+    let id = root
+        .to_str()
+        .ok_or("Profile folder must have a UTF-8 path.")?
+        .to_owned();
+    Ok(CompatibleProfile {
+        id,
+        root,
+        module_version: manifest.version_number,
+    })
+}
+
+fn target(profile: CompatibleProfile) -> GamePlanTarget {
+    let label = profile
+        .root
+        .file_name()
+        .and_then(|name| name.to_str())
+        .unwrap_or(&profile.id);
+    GamePlanTarget {
+        label: label.to_owned(),
+        location: display_path(&profile.id),
+        id: profile.id,
+        module_version: profile.module_version,
+    }
+}
+
+fn display_path(path: &str) -> String {
+    if let Some(unc) = path.strip_prefix(r"\\?\UNC\") {
+        return format!(r"\\{unc}");
+    }
+    path.strip_prefix(r"\\?\").unwrap_or(path).to_owned()
+}
+
+fn remember_profile(config_dir: &Path, profile: &CompatibleProfile) -> Result<(), String> {
+    fs::create_dir_all(config_dir)
+        .map_err(|error| format!("Could not save profile location: {error}"))?;
+    let json = serde_json::to_vec(&profile.root).map_err(|error| error.to_string())?;
+    atomic_file::write(
+        &config_dir.join(REMEMBERED_PROFILE_FILE),
+        &json,
+        "game profile location",
+    )
+}
+
+fn include_remembered(
+    discovery: &mut GamePlanDiscovery,
+    config_dir: &Path,
+    compatibility: &ExecutionCompatibility,
+) {
+    let file = config_dir.join(REMEMBERED_PROFILE_FILE);
+    if !file.exists() {
+        return;
+    }
+    let result = read_metadata::<PathBuf>(&file)
+        .ok_or_else(|| "The remembered profile location could not be read.".to_owned())
+        .and_then(|path| validate_profile(&path, compatibility));
+    match result {
+        Ok(profile) => {
+            if !discovery
+                .targets
+                .iter()
+                .any(|candidate| candidate.id == profile.id)
+            {
+                discovery.targets.push(target(profile));
+            }
+            discovery.status = "available".to_owned();
+            discovery.message = "Choose a profile and slot.".to_owned();
+        }
+        Err(error) => {
+            discovery.message = format!(
+                "Remembered profile unavailable: {error} Choose its current folder to try again."
+            )
+        }
+    }
+}
+
+#[tauri::command]
+pub(crate) fn game_plan_choose_profile(
+    app: tauri::AppHandle,
+    path: String,
+    compatibility: ExecutionCompatibility,
+) -> Result<GamePlanTarget, String> {
+    let profile = validate_profile(Path::new(&path), &compatibility)?;
+    let config_dir = app
+        .path()
+        .app_config_dir()
+        .map_err(|error| error.to_string())?;
+    remember_profile(&config_dir, &profile)?;
+    Ok(target(profile))
 }
 
 fn discover_at(
@@ -206,21 +313,14 @@ fn discover_at(
         return Ok(GamePlanDiscovery {
             status: "incompatibleModule".to_owned(),
             targets: Vec::new(),
-            message: format!(
-                "No profile declares support for execution protocol {} and catalog {}. Update the Run Planner game module and application together.", compatibility.protocol_version, compatibility.catalog_version
-            ),
+            message:
+                "No compatible profiles found. Choose a profile or update its Run Planner module."
+                    .to_owned(),
         });
     }
     Ok(GamePlanDiscovery {
         status: "available".to_owned(),
-        targets: profiles
-            .into_iter()
-            .map(|profile| GamePlanTarget {
-                id: profile.id.clone(),
-                label: profile.id,
-                module_version: profile.module_version,
-            })
-            .collect(),
+        targets: profiles.into_iter().map(target).collect(),
         message: "Choose a compatible r2modman Hades II profile for publication.".to_owned(),
     })
 }
@@ -288,24 +388,31 @@ fn bounded_atomic_write(
 
 #[tauri::command]
 pub(crate) fn game_plan_discover_profiles(
+    app: tauri::AppHandle,
     compatibility: ExecutionCompatibility,
 ) -> Result<GamePlanDiscovery, String> {
-    #[cfg(target_os = "windows")]
-    {
-        let appdata =
-            env::var_os("APPDATA").ok_or_else(|| "Windows APPDATA is unavailable.".to_owned())?;
-        return discover_at(&profile_root(Path::new(&appdata)), &compatibility);
+    let mut discovery = GamePlanDiscovery {
+        status: "noProfiles".to_owned(),
+        targets: Vec::new(),
+        message: "No profiles detected. Choose your profile folder to publish.".to_owned(),
+    };
+    if cfg!(target_os = "windows") {
+        if let Some(appdata) = env::var_os("APPDATA") {
+            match discover_at(&profile_root(Path::new(&appdata)), &compatibility) {
+                Ok(found) => discovery = found,
+                Err(error) => {
+                    discovery.message =
+                        format!("Automatic detection failed: {error}. Choose your profile folder.")
+                }
+            }
+        }
     }
-    #[cfg(not(target_os = "windows"))]
-    {
-        let _ = compatibility;
-        Ok(GamePlanDiscovery {
-            status: "unavailable".to_owned(),
-            targets: Vec::new(),
-            message: "Publish to Game is available only in the Windows desktop application."
-                .to_owned(),
-        })
-    }
+    let config_dir = app
+        .path()
+        .app_config_dir()
+        .map_err(|error| error.to_string())?;
+    include_remembered(&mut discovery, &config_dir, &compatibility);
+    Ok(discovery)
 }
 
 #[tauri::command]
@@ -326,45 +433,19 @@ pub(crate) fn game_plan_publish(
             message: format!("Game plan exceeds the {MAX_PLAN_BYTES}-byte limit."),
         });
     }
-    #[cfg(target_os = "windows")]
-    {
-        let appdata =
-            env::var_os("APPDATA").ok_or_else(|| "Windows APPDATA is unavailable.".to_owned())?;
-        return Ok(
-            match publish_at(
-                &profile_root(Path::new(&appdata)),
-                &target_id,
-                slot_number,
-                &plan_json,
-            ) {
-                Ok(()) => GamePlanPublication {
-                    status: "published".to_owned(),
-                    message: format!("Published to game profile {target_id}."),
-                },
-                Err(message) => GamePlanPublication {
-                    status: "nativeWrite".to_owned(),
-                    message,
-                },
-            },
-        );
-    }
-    #[cfg(not(target_os = "windows"))]
-    {
-        let _ = (target_id, slot_number);
-        Ok(GamePlanPublication {
-            status: "unavailable".to_owned(),
-            message: "Publish to Game is available only in the Windows desktop application."
-                .to_owned(),
-        })
-    }
+    Ok(match publish_at(&target_id, slot_number, &plan_json) {
+        Ok(()) => GamePlanPublication {
+            status: "published".to_owned(),
+            message: format!("Published to game profile {target_id}."),
+        },
+        Err(message) => GamePlanPublication {
+            status: "nativeWrite".to_owned(),
+            message,
+        },
+    })
 }
 
-fn publish_at(
-    root: &Path,
-    target_id: &str,
-    slot_number: u8,
-    plan_json: &str,
-) -> Result<(), String> {
+fn publish_at(target_id: &str, slot_number: u8, plan_json: &str) -> Result<(), String> {
     slot_file_name(slot_number)?;
     if plan_json.len() > MAX_PLAN_BYTES {
         return Err(format!(
@@ -373,13 +454,7 @@ fn publish_at(
     }
     let compatibility: ExecutionCompatibility = serde_json::from_str(plan_json)
         .map_err(|error| format!("Invalid execution plan header: {error}"))?;
-    let profiles = compatible_profiles(root, &compatibility)?;
-    let profile = profiles
-        .into_iter()
-        .find(|profile| profile.id == target_id)
-        .ok_or(
-            "The selected game profile is no longer compatible. Refresh profiles and try again.",
-        )?;
+    let profile = validate_profile(Path::new(target_id), &compatibility)?;
     bounded_atomic_write(&profile, slot_number, plan_json.as_bytes())
 }
 
@@ -432,6 +507,106 @@ mod tests {
             protocol_version: 42,
             catalog_version: "test-catalog".to_owned(),
         }
+    }
+
+    fn install_supported_profile(root: &Path, id: &str) -> CompatibleProfile {
+        let profile = install_profile(root, id);
+        fs::write(manifest_path(&profile.root).with_file_name("execution-compatibility.json"),
+            r#"{"format":"run-planner-execution","protocolVersion":42,"catalogVersion":"test-catalog"}"#).unwrap();
+        validate_profile(&profile.root, &compatibility()).unwrap()
+    }
+
+    #[test]
+    fn manual_profile_normalizes_remembers_and_deduplicates_both_folder_forms() {
+        let temporary = TemporaryDirectory::new();
+        let root = temporary.0.join("nonstandard-location");
+        let profile = install_supported_profile(&root, "My Profile");
+        let rom = validate_profile(
+            &profile.root.join(RETURN_OF_MODDING_DIRECTORY),
+            &compatibility(),
+        )
+        .unwrap();
+        assert_eq!(profile.id, rom.id);
+        let config = temporary.0.join("application-config");
+        remember_profile(&config, &rom).unwrap();
+        let mut discovery = discover_at(&root, &compatibility()).unwrap();
+        include_remembered(&mut discovery, &config, &compatibility());
+        assert_eq!(discovery.targets.len(), 1);
+        assert_eq!(discovery.targets[0].id, profile.id);
+        assert_eq!(discovery.targets[0].label, "My Profile");
+        assert_eq!(discovery.targets[0].location, display_path(&profile.id));
+        let mut restored = discover_at(&temporary.0.join("empty"), &compatibility()).unwrap();
+        include_remembered(&mut restored, &config, &compatibility());
+        assert_eq!(restored.status, "available");
+        assert_eq!(restored.targets[0].id, profile.id);
+        let plan = r#"{"format":"run-planner-execution","protocolVersion":42,"catalogVersion":"test-catalog"}"#;
+        publish_at(&rom.id, 6, plan).unwrap();
+        assert_eq!(
+            fs::read_to_string(safe_destination(&profile, 6).unwrap()).unwrap(),
+            plan
+        );
+        fs::remove_file(
+            manifest_path(&profile.root).with_file_name("execution-compatibility.json"),
+        )
+        .unwrap();
+        let mut stale = discover_at(&temporary.0.join("empty"), &compatibility()).unwrap();
+        include_remembered(&mut stale, &config, &compatibility());
+        assert!(stale.targets.is_empty());
+        assert!(stale.message.contains("Remembered profile unavailable"));
+        assert!(publish_at(&rom.id, 6, plan).is_err());
+        assert_eq!(
+            fs::read_to_string(safe_destination(&profile, 6).unwrap()).unwrap(),
+            plan
+        );
+    }
+
+    #[test]
+    fn manual_profile_rejects_missing_module_incompatible_headers_and_relative_paths() {
+        let temporary = TemporaryDirectory::new();
+        assert!(validate_profile(Path::new("relative"), &compatibility()).is_err());
+        assert_eq!(
+            validate_profile(&temporary.0, &compatibility()).unwrap_err(),
+            "No ReturnOfModding folder found. Choose a named profile, not the profiles folder."
+        );
+        let profile = install_supported_profile(&temporary.0, "profile");
+        let mut expected = compatibility();
+        expected.protocol_version += 1;
+        assert!(validate_profile(&profile.root, &expected).is_err());
+        expected = compatibility();
+        expected.catalog_version = "other".to_owned();
+        assert!(validate_profile(&profile.root, &expected).is_err());
+        fs::remove_file(manifest_path(&profile.root)).unwrap();
+        assert!(validate_profile(&profile.root, &compatibility()).is_err());
+    }
+
+    #[test]
+    fn display_paths_hide_windows_internal_prefixes_without_changing_target_ids() {
+        assert_eq!(display_path(r"\\?\C:\profiles\test"), r"C:\profiles\test");
+        assert_eq!(
+            display_path(r"\\?\UNC\server\profiles\test"),
+            r"\\server\profiles\test"
+        );
+        assert_eq!(display_path("/profiles/test"), "/profiles/test");
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn manual_publication_rejects_symlink_escape_without_writing() {
+        use std::os::unix::fs::symlink;
+        let temporary = TemporaryDirectory::new();
+        let profile = install_supported_profile(&temporary.0, "profile");
+        let outside = temporary.0.join("outside");
+        fs::create_dir(&outside).unwrap();
+        symlink(
+            &outside,
+            profile
+                .root
+                .join(RETURN_OF_MODDING_DIRECTORY)
+                .join(CONFIG_DIRECTORY),
+        )
+        .unwrap();
+        assert!(safe_destination(&profile, 1).is_err());
+        assert_eq!(fs::read_dir(outside).unwrap().count(), 0);
     }
 
     #[test]
@@ -557,11 +732,11 @@ mod tests {
                 .len(),
             1
         );
-        publish_at(&temporary.0, "profile-a", 5, original).unwrap();
+        publish_at(profile.root.to_str().unwrap(), 5, original).unwrap();
         let destination = safe_destination(&profile, 5).expect("destination");
         fs::remove_file(support).unwrap();
-        assert!(publish_at(&temporary.0, "profile-a", 5, original).is_err());
-        assert!(publish_at(&temporary.0, "profile-a", 5, "{}").is_err());
+        assert!(publish_at(profile.root.to_str().unwrap(), 5, original).is_err());
+        assert!(publish_at(profile.root.to_str().unwrap(), 5, "{}").is_err());
         assert_eq!(
             fs::read(&destination).expect("read preserved plan"),
             original.as_bytes()
