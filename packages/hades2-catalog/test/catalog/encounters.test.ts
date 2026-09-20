@@ -303,6 +303,8 @@ describe('encounter envelope catalog', () => {
     }
 
     const explicitBlockers = [
+      'MiniBossTreant_Shrine',
+      'MiniBossFogEmitter_Shrine',
       'OpeningGeneratedF',
       'ArtemisCombatF',
       'ArachneCombatF',
@@ -458,6 +460,8 @@ describe('encounter envelope catalog', () => {
       blocksFigLeaf: true,
     });
     const positiveUnblockedMinibosses = [
+      'MiniBossTreant_Shrine',
+      'MiniBossFogEmitter_Shrine',
       'MiniBossTreant',
       'MiniBossFogEmitter',
       'MiniBossAssassin',

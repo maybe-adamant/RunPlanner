@@ -19,7 +19,10 @@ import { dreamMixedPrefixProject } from '@run-planner/test-fixtures/dream';
 
 import { createApplication } from '@planner/composition/createApplication';
 import { createInitialProject } from '@planner/composition/projectBootstrap';
-import type { GamePlanPublisher } from '@planner/persistence/gamePlanPublisher';
+import type {
+  GamePlanCompatibility,
+  GamePlanPublisher,
+} from '@planner/persistence/gamePlanPublisher';
 import type {
   AutosaveRecoveryAdapter,
   AutosaveScheduler,
@@ -209,7 +212,7 @@ describe('project profile operations', () => {
   });
 
   it('publishes a complete F prefix through the separate game capability', async () => {
-    let requestedCompatibility: unknown;
+    let requestedCompatibility: GamePlanCompatibility | undefined;
     const published: { targetId: string; slotNumber: number; json: string }[] = [];
     const profile = createProfileFixture();
     const autosave = createPublicationAutosaveFixture();
@@ -259,6 +262,7 @@ describe('project profile operations', () => {
     expect(published).toHaveLength(1);
     const publication = published[0];
     if (publication === undefined) throw new Error('publication was not recorded');
+    if (requestedCompatibility === undefined) throw new Error('discovery was not recorded');
     expect(JSON.parse(publication.json)).toMatchObject(requestedCompatibility);
     expect(JSON.parse(publication.json)).toMatchObject({
       routeKey: 'Underworld',

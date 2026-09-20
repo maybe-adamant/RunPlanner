@@ -21,6 +21,7 @@ import {
 import { attestFigLeafBranchState, attestGorgonBranchState } from '../keepsakes/encounter-effects';
 import { attestPendingHermesSpellDrop } from '../commerce/hermes-shrine';
 import { attestTalentDropsClosed } from '../hex-progress';
+import { attestEffectiveShadowRank } from '../arcana-fear';
 import { assessmentRepairOwner, authoringRegion } from '../finding-regions';
 import {
   composeBiomeHistoryWithEncounterValidation,
@@ -528,6 +529,7 @@ export function evaluateBiomeAssembly(
     figLeafState,
     pendingSpellDrop,
     allSpellInvested,
+    attestEffectiveShadowRank(context.loadout, context.seed?.rewardBranches),
   );
   if (composed.kind !== 'complete') {
     const progressive = evaluateProgressiveBiomeAssembly(catalog, origin, plan, context);

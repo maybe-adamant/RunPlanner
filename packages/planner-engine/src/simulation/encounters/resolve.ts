@@ -183,7 +183,8 @@ export function resolveMaterializedEncounterPhase(
   if (
     binding.kind === 'fixed' &&
     phase.authoredChoiceKey !== binding.encounterDefinitionKey &&
-    phase.authoredChoiceKey !== binding.rivalsEncounterDefinitionKey
+    phase.authoredChoiceKey !== binding.rivalsEncounterDefinitionKey &&
+    phase.authoredChoiceKey !== binding.shadowEncounterDefinitionKey
   ) {
     return fail(
       `${room.gameName}.${phase.slotKey} has invalid fixed identity ${phase.authoredChoiceKey}`,
