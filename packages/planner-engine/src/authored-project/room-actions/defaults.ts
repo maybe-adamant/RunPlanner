@@ -127,7 +127,11 @@ function score(
     const ordinal = phaseOrder.indexOf(reference.phaseKey);
     return 2000 + Math.max(0, ordinal) * 200;
   }
-  if (reference.kind === 'interactLocalReward' && reference.groupKey === 'cages') return 9000;
+  if (reference.kind === 'interactLocalReward' && reference.groupKey === 'cages') {
+    const ordinal = phaseOrder.indexOf(action.window.phaseKey ?? '');
+    if (ordinal < 0) throw new Error(`${domain.declaration.gameName} cage reward has no phase`);
+    return 2150 + ordinal * 200;
+  }
   return 8000;
 }
 
@@ -172,7 +176,7 @@ function sortedCohort(
   return frozen(result);
 }
 
-/** Add the exact required cohort at deterministic latest lifecycle positions. */
+/** Add the exact required cohort at deterministic lifecycle defaults, retaining authored order. */
 export function scheduleRequiredRoomActions(options: {
   readonly catalog: Catalog;
   readonly domain: RoomActionDomain;
