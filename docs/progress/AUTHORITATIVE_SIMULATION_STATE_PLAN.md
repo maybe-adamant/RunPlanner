@@ -2,8 +2,8 @@
 
 ## Status and objective
 
-Approved and locked execution contract; Gates A and B are complete and
-independently reviewed. Gate C has not started.
+Approved and locked execution contract; Gates A, B and C are complete and
+independently reviewed. Only Gate D closure remains.
 The pre-edit transition inventory was accepted at `b5c79329` before source edits.
 The separately approved inspector correction landed as `001f8020`; partial
 Gate A work was preserved and restored after that focused commit.
@@ -391,6 +391,25 @@ against base using test-only harnesses with stable IDs; never normalize away
 differences in ordering, branch correlation, findings or eligibility.
 Expected deletion: redundant projection-only input plumbing and fact assembly.
 Intended commit: `refactor(planner): project run state from simulation snapshots`.
+
+Gate C verification: landed as `7f2be4c7`. Workspace typecheck; 2,097 engine,
+1,054 planner, 76 contract tests and the browser product loops passed; scoped
+lint and formatting checks passed; fixtures byte-identical; baseline branch
+and candidate counts unchanged. A test-only stable-ID harness compared full
+derived products (snapshots, findings, availability, branch-correlated
+selected offers, target history) against the Gate B base across the
+Underworld, Surface and Dream route families and was byte-identical.
+Independent review returned approve-with-minor-remediation; the shared-reached
+guard and an `enteredBiomes` witness closed both findings.
+
+Gate C's extraction audit reported five remaining capture-side items for D
+disposition, all at the biome-seed/transition boundary where generation runs
+before this biome's branch states exist: the `carriedRewardLookups` read-only
+seed carry, the Fig Leaf lifecycle state's dual derivation (seed copy versus
+catalog/loadout reconstruction), the bare `afterTransition` history-view
+thread, per-biome `routePosition` re-derivation in `evaluation/project.ts`,
+and the twice-constructed route-start frontier around
+`KeepsakeSelectionCandidateCapability`.
 
 If Gate A's inspection exposes an existing omitted fact or stale-context output,
 characterize whether a current consumer can observe it. Do not quietly fix it
