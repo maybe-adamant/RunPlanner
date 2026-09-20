@@ -197,7 +197,7 @@ describe('Pom level resolutions', () => {
         levelResolutionsByAcquisitionRole: { self: { kind: 'random', targetTraitKey: null } },
       },
       1,
-      (history) => factsWithHistory(rewardFacts(), history, new Set()),
+      (state) => factsWithHistory(rewardFacts(), state.rewardHistory, new Set()),
       noTargetFindings,
     );
     expect(empty[0]?.state.rewardHistory.consumableRecord.GiftDrop).toBe(1);
@@ -224,7 +224,7 @@ describe('Pom level resolutions', () => {
         },
       },
       1,
-      (history) => factsWithHistory(rewardFacts(), history, new Set()),
+      (state) => factsWithHistory(rewardFacts(), state.rewardHistory, new Set()),
       new Map(),
     );
     expect(withTarget[0]?.state.rewardHistory.consumableRecord.GiftDrop).toBe(1);
@@ -744,7 +744,7 @@ describe('Pom level resolutions', () => {
         branches,
         source,
         1,
-        (history) => factsWithHistory(rewardFacts(), history, new Set()),
+        (state) => factsWithHistory(rewardFacts(), state.rewardHistory, new Set()),
         findings,
       );
     const retainedCount = (findings: Parameters<typeof settleTestRoomReward>[4]) =>

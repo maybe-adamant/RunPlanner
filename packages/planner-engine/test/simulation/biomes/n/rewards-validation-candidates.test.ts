@@ -978,7 +978,7 @@ describe('N Hub rewards, validation, and candidates', () => {
         source: incoming,
         historySequence: 1,
       },
-      (history) => factsWithHistory(baseFacts, history, new Set()),
+      (state) => factsWithHistory(baseFacts, state.rewardHistory, new Set()),
     ).branches;
     const branch = branches[0];
     const expectedOffer = Object.values(incoming.traitOffersByAcquisitionRole ?? {})[0];

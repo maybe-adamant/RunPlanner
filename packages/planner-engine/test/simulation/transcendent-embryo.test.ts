@@ -39,6 +39,7 @@ import { applyKeepsakeRackUsedTransition } from '../../src/simulation/rewards/bi
 import { createTraitOfferCandidateArtifacts } from '../../src/simulation/candidates/trait-offer/capability';
 import type { CanonicalAuthoredRoom } from '../../src/simulation/materialization';
 import { initializeTestRewardBranches } from '../support/arcana-fear';
+import { traitFrontierState } from '../support/simulation-state';
 
 const owner = createBiomeAddress('Underworld', 'F');
 
@@ -405,9 +406,13 @@ describe('Transcendent Embryo declaration and direct Chaos fold', () => {
       'Heroic',
       { routeKey: 'Underworld' },
     );
-    const favorFacts = boonRarityFactsForOffer(catalog, favor.state.traitHistory!, {
-      resolvedProviderKey: 'Zeus',
-    });
+    const favorFacts = boonRarityFactsForOffer(
+      catalog,
+      traitFrontierState(favor.state.traitHistory!),
+      {
+        resolvedProviderKey: 'Zeus',
+      },
+    );
     expect(favorFacts?.contributions).toContainEqual(
       expect.objectContaining({
         additive: expect.objectContaining({ Rare: 0.93 }),
@@ -584,7 +589,12 @@ describe('Transcendent Embryo declaration and direct Chaos fold', () => {
       new Map([
         [
           semanticAddressKey(laterChaos),
-          [Object.freeze({ before: replaced.state.traitHistory!, context: Object.freeze({}) })],
+          [
+            Object.freeze({
+              state: traitFrontierState(replaced.state.traitHistory!),
+              source: Object.freeze({}),
+            }),
+          ],
         ],
       ]),
     ).at(laterChaos);

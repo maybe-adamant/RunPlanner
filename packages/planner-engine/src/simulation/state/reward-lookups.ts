@@ -12,12 +12,29 @@ export function sharedRewardLookups(
   return first.rewardLookups;
 }
 
+/**
+ * Asserts that every branch a generation or inventory contact settles carries
+ * the same offered-reward history. Facts then read each branch's own lookup
+ * substate, so a divergent cohort must still fail here rather than silently
+ * evaluating one branch against another branch's board.
+ */
+export function attestSharedRewardLookups(states: readonly SimulationState[]): void {
+  sharedRewardLookups(states);
+}
+
+const setsByLookups = new WeakMap<object, Readonly<Record<string, ReadonlySet<string>>>>();
+
+/** Pure set projection of one immutable lookup substate, memoized by identity. */
 export function rewardLookupSets(
   lookups: SimulationState['rewardLookups'],
 ): Readonly<Record<string, ReadonlySet<string>>> {
-  return Object.freeze(
+  const existing = setsByLookups.get(lookups);
+  if (existing !== undefined) return existing;
+  const sets = Object.freeze(
     Object.fromEntries(Object.entries(lookups).map(([key, values]) => [key, new Set(values)])),
   );
+  setsByLookups.set(lookups, sets);
+  return sets;
 }
 
 export function addHubBoardRewardLookup(

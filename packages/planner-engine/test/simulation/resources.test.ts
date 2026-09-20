@@ -47,6 +47,7 @@ import {
   createCompleteFGProject,
   goldenFOccurrenceId,
 } from '@run-planner/test-fixtures/underworld';
+import { traitFrontierState } from '../support/simulation-state';
 
 const none = (): ResourcePlacements => ({
   Pickaxe: null,
@@ -585,7 +586,7 @@ describe('selected resource success legality', () => {
       }),
     );
     expect(after.properUpbringingActive).toBe(true);
-    const nextRoomFacts = boonRarityFactsForOffer(catalog, after, {
+    const nextRoomFacts = boonRarityFactsForOffer(catalog, traitFrontierState(after), {
       resolvedProviderKey: 'Apollo',
     });
     expect(nextRoomFacts).toBeDefined();
@@ -593,7 +594,7 @@ describe('selected resource success legality', () => {
       assessTraitOption(
         catalog,
         'ApolloManaBoon',
-        after,
+        traitFrontierState(after),
         {
           resolvedProviderKey: 'Apollo',
           boonRarityFacts: nextRoomFacts!,
@@ -605,7 +606,7 @@ describe('selected resource success legality', () => {
       assessTraitOption(
         catalog,
         'ApolloManaBoon',
-        after,
+        traitFrontierState(after),
         {
           resolvedProviderKey: 'Apollo',
           boonRarityFacts: nextRoomFacts!,

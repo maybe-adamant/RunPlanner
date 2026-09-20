@@ -14,7 +14,8 @@ import type { HistoryStateView, RoomCreationSource } from '../history';
 import { projectOfferedExitCount, projectRecentEncounterEnvelopeSlots } from '../history';
 import type { CanonicalLifecycleRoom } from '../history/lifecycleInput';
 import type { HermesShrineCandidateContext } from '../commerce/hermes-shrine';
-import type { RewardBranchState } from './branch-primitives';
+import type { SimulationState } from '../state/model';
+import { rewardLookupSets } from '../state/reward-lookups';
 import { BiomeRewardSimulationContractError } from './biome/biome-contract';
 
 /** Visible store names that participate in RequiredNotInStore at room entry. */
@@ -203,41 +204,58 @@ export function createRewardFacts({
   return factsWithHistory(Object.freeze({ requirements }), history, currentRoomShopOptionNames);
 }
 
-/** Exact reward-evaluation facts for one reached source and history view. */
-export function createBiomeRewardFacts(
-  catalog: Catalog,
-  source: CanonicalLifecycleRoom,
-  currentRoom: CanonicalLifecycleRoom | undefined,
-  sourceDeclaration: RoomDeclaration,
-  view: HistoryStateView,
-  history: RewardHistoryState,
-  enteredBiomeCount: number,
-  currentRoomShopOptionNames: ReadonlySet<string> = new Set(),
-  peerParentOrigin = source.origin,
-  peerCreationSource: RoomCreationSource = 'generatedTarget',
-  rewardLookups: Readonly<Record<string, ReadonlySet<string>>> = Object.freeze({}),
-  branch?: RewardBranchState,
-): RewardKernelFacts {
+export interface BiomeRewardFactsInput {
+  readonly catalog: Catalog;
+  /** The exact reached snapshot this contact evaluates against. */
+  readonly state: SimulationState;
+  readonly source: CanonicalLifecycleRoom;
+  readonly currentRoom: CanonicalLifecycleRoom | undefined;
+  readonly sourceDeclaration: RoomDeclaration;
+  readonly view: HistoryStateView;
+  readonly currentRoomShopOptionNames?: ReadonlySet<string>;
+  readonly peerParentOrigin?: SemanticAddress;
+  readonly peerCreationSource?: RoomCreationSource;
+  /**
+   * Whether this contact consults the persistent offered-reward lookups the
+   * reached state carries. Room generation, Shop and Shrine inventory read the
+   * completed hub board; ordinary acquisition settlement does not. This is the
+   * contact's policy, never a second copy of the board itself.
+   */
+  readonly hubBoardLookups: HubBoardLookupPolicy;
+}
+
+export type HubBoardLookupPolicy = 'consulted' | 'notConsulted';
+
+/**
+ * Exact reward-evaluation facts for one reached source and history view. This
+ * is the single pure adapter from the branch snapshot and its source/view/shop
+ * /peer contact to the reward kernel's narrow requirement inputs.
+ */
+export function createBiomeRewardFacts(input: BiomeRewardFactsInput): RewardKernelFacts {
+  const { catalog, state, source, view } = input;
   return createRewardFacts({
     catalog,
     sourceOrigin: source.origin,
-    currentRoom,
-    sourceDeclaration,
+    currentRoom: input.currentRoom,
+    sourceDeclaration: input.sourceDeclaration,
     view,
-    history,
-    enteredBiomeCount,
+    history: state.rewardHistory,
+    enteredBiomeCount: state.reached.routePosition.ordinal,
     currentBatchRoomGameNames: createdPeerGameNames(
       catalog,
       view,
-      peerParentOrigin,
-      peerCreationSource,
+      input.peerParentOrigin ?? source.origin,
+      input.peerCreationSource ?? 'generatedTarget',
     ),
-    currentRoomShopOptionNames,
-    rewardLookups,
-    pendingSpellDrop: Object.values(branch?.state.pendingHermesShrineDeliveries ?? {}).some(
+    currentRoomShopOptionNames: input.currentRoomShopOptionNames ?? new Set(),
+    rewardLookups:
+      input.hubBoardLookups === 'consulted'
+        ? rewardLookupSets(state.rewardLookups)
+        : Object.freeze({}),
+    pendingSpellDrop: Object.values(state.pendingHermesShrineDeliveries).some(
       (delivery) => delivery.rewardType === 'SpellDrop',
     ),
-    allSpellInvested: branch?.state.hexProgress.talentDropsClosed === true,
+    allSpellInvested: state.hexProgress.talentDropsClosed === true,
     fail: (detail) => {
       throw new BiomeRewardSimulationContractError(detail);
     },
@@ -252,9 +270,9 @@ export function createBiomeRewardFacts(
 export function createRouteStartRewardFacts(
   catalog: Catalog,
   route: StartingRewardAddress,
-  history: RewardHistoryState,
-  branch?: RewardBranchState,
+  state: SimulationState,
 ): RewardKernelFacts {
+  const history = state.rewardHistory;
   const requirements: RequirementEvaluationContext = Object.freeze({
     routeKey: route.routeKey,
     counters: Object.freeze({
@@ -283,8 +301,8 @@ export function createRouteStartRewardFacts(
     currentBatchRoomGameNames: Object.freeze([]),
     clockwork: undefined,
     flags: Object.freeze({
-      allSpellInvested: branch?.state.hexProgress.talentDropsClosed === true,
-      pendingSpellDrop: Object.values(branch?.state.pendingHermesShrineDeliveries ?? {}).some(
+      allSpellInvested: state.hexProgress.talentDropsClosed === true,
+      pendingSpellDrop: Object.values(state.pendingHermesShrineDeliveries).some(
         (delivery) => delivery.rewardType === 'SpellDrop',
       ),
     }),

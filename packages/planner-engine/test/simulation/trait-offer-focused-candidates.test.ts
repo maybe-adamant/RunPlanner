@@ -40,6 +40,7 @@ import {
   evaluateTraitOfferFocusedOptionCandidate,
   type TraitOfferFocusedOptionCandidateQuery,
 } from '../../src/simulation/candidates/trait-offer/query';
+import { traitFrontierState } from '../support/simulation-state';
 
 const project = createGoldenFGHIProject();
 const evaluation = simulateProject(catalog, project);
@@ -97,7 +98,7 @@ function focused(
 }
 
 function reachedContext(before = createTraitHistoryState()): TraitOfferCandidateContext {
-  return Object.freeze({ before, context: Object.freeze({}) });
+  return Object.freeze({ state: traitFrontierState(before), source: Object.freeze({}) });
 }
 
 describe('focused trait offer candidates', () => {
@@ -296,8 +297,8 @@ describe('focused trait offer candidates', () => {
     // This is the retained candidate context published for a missing child after
     // `withBoonRarityFacts` resolves Q_Miniboss02's reached room facts.
     const missingChildContext: TraitOfferCandidateContext = Object.freeze({
-      before: createTraitHistoryState(),
-      context: Object.freeze({
+      state: traitFrontierState(createTraitHistoryState()),
+      source: Object.freeze({
         resolvedProviderKey: 'Apollo',
         boonRarityFacts: {
           providerBase: catalog.boonRarityBases.olympian,
@@ -340,12 +341,12 @@ describe('focused trait offer candidates', () => {
       evaluation,
       artifacts([
         Object.freeze({
-          before: createTraitHistoryState(),
-          context: Object.freeze({ resolvedProviderKey: 'Apollo' }),
+          state: traitFrontierState(createTraitHistoryState()),
+          source: Object.freeze({ resolvedProviderKey: 'Apollo' }),
         }),
         Object.freeze({
-          before: createTraitHistoryState(),
-          context: Object.freeze({
+          state: traitFrontierState(createTraitHistoryState()),
+          source: Object.freeze({
             resolvedProviderKey: 'Apollo',
             boonRarityRoomOverride: qOverride,
             limitedSwapUses: 1,
@@ -659,11 +660,10 @@ describe('focused trait offer candidates', () => {
     const before = historyWith('WeaponUpgrade', 'LobAmmoMagnetismTrait', 'Common');
     const result = focused(value, 'option1', [
       Object.freeze({
-        before,
-        context: Object.freeze({
-          weaponKey: 'WeaponStaffSwing',
-          aspectKey: 'BaseStaffAspect',
+        state: traitFrontierState(before, {
+          loadout: { weaponKey: 'WeaponStaffSwing', aspectKey: 'BaseStaffAspect' },
         }),
+        source: Object.freeze({}),
       }),
     ]);
     if (result.kind !== 'traitOfferFocusedOption') {

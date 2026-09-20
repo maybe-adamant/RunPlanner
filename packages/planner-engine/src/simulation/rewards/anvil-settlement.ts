@@ -1,6 +1,8 @@
 import type { Catalog } from '../../catalog-schema';
 import type { AuthoredAnvilResult } from '../../authored-project/model';
-import type { TraitOfferContext } from '../traits/offer-domain';
+import type { ResolvedTraitOfferSource } from '../traits/offer-domain';
+import type { SimulationState } from '../state/model';
+import { replaceSimulationTraitHistory } from '../state/transitions';
 import { assessTraitOption } from '../traits/authoring/assessment';
 import type { EquippedTrait } from '../../authored-project/traits/state';
 
@@ -27,7 +29,7 @@ interface AnvilAcquisitionFrontier {
   readonly branchesBeforeRole: readonly RewardBranchState[];
   readonly source: {
     readonly offer: ResolvedRewardOffer;
-    readonly traitContext?: TraitOfferContext | undefined;
+    readonly traitContext?: ResolvedTraitOfferSource | undefined;
   };
 }
 
@@ -50,11 +52,13 @@ function anvilHammerCandidates(
 
 function legalAnvilAdditions(
   catalog: Catalog,
-  history: TraitHistoryState,
-  context: TraitOfferContext,
+  state: SimulationState,
+  source: ResolvedTraitOfferSource,
   temporaryHammerTraitKeys: ReadonlySet<string> = new Set(),
   removedTraitKey: string | null = null,
-  preExistingHammerTraitKeys: ReadonlySet<string> = new Set(hammerKeys(catalog, history)),
+  preExistingHammerTraitKeys: ReadonlySet<string> = new Set(
+    hammerKeys(catalog, state.traitHistory),
+  ),
 ): readonly string[] {
   const excluded = new Set([...preExistingHammerTraitKeys, ...temporaryHammerTraitKeys]);
   if (removedTraitKey !== null) excluded.add(removedTraitKey);
@@ -62,7 +66,7 @@ function legalAnvilAdditions(
   return Object.freeze(
     (weaponUpgrade?.traitKeys ?? [])
       .filter((traitKey) => !excluded.has(traitKey))
-      .filter((traitKey) => assessTraitOption(catalog, traitKey, history, context).legal),
+      .filter((traitKey) => assessTraitOption(catalog, traitKey, state, source).legal),
   );
 }
 
@@ -87,19 +91,20 @@ function historyAfterRemovingHammer(
 
 function anvilAdditionCandidates(
   catalog: Catalog,
-  history: TraitHistoryState,
-  context: TraitOfferContext,
+  state: SimulationState,
+  source: ResolvedTraitOfferSource,
   temporaryHammerTraitKeys: ReadonlySet<string> = new Set(),
   removedTraitKey: string | null = null,
   priorAddedTraitKeys: readonly string[] = [],
 ): readonly string[] {
+  const history = state.traitHistory;
   const preExistingHammerTraitKeys = new Set(hammerKeys(catalog, history));
   let preview = historyAfterRemovingHammer(history, removedTraitKey);
   for (const traitKey of priorAddedTraitKeys) {
     const eligible = legalAnvilAdditions(
       catalog,
-      preview,
-      context,
+      replaceSimulationTraitHistory(state, preview),
+      source,
       temporaryHammerTraitKeys,
       removedTraitKey,
       preExistingHammerTraitKeys,
@@ -109,8 +114,8 @@ function anvilAdditionCandidates(
   }
   return legalAnvilAdditions(
     catalog,
-    preview,
-    context,
+    replaceSimulationTraitHistory(state, preview),
+    source,
     temporaryHammerTraitKeys,
     removedTraitKey,
     preExistingHammerTraitKeys,
@@ -144,12 +149,16 @@ function historyAfterAddingHammer(
 
 export function assessAnvilResult(
   catalog: Catalog,
-  history: TraitHistoryState,
+  state: SimulationState,
   result: AuthoredAnvilResult | null | undefined,
-  context: TraitOfferContext,
+  source: ResolvedTraitOfferSource,
   temporaryHammerTraitKeys: ReadonlySet<string> = new Set(),
 ): AnvilResultAssessment {
-  const removableTraitKeys = anvilHammerCandidates(catalog, history, temporaryHammerTraitKeys);
+  const removableTraitKeys = anvilHammerCandidates(
+    catalog,
+    state.traitHistory,
+    temporaryHammerTraitKeys,
+  );
   const findings: string[] = [];
   if (result === undefined || result === null) findings.push('resultMissing');
   const removed = result?.removedTraitKey ?? null;
@@ -162,8 +171,8 @@ export function assessAnvilResult(
   }
   const firstAddedTraitKeys = anvilAdditionCandidates(
     catalog,
-    history,
-    context,
+    state,
+    source,
     temporaryHammerTraitKeys,
     removed,
     [],
@@ -178,8 +187,8 @@ export function assessAnvilResult(
   }
   const secondAddedTraitKeys = anvilAdditionCandidates(
     catalog,
-    history,
-    context,
+    state,
+    source,
     temporaryHammerTraitKeys,
     removed,
     first === undefined ? [] : [first],
@@ -210,8 +219,8 @@ export function createAnvilCandidateCapability(
     .flatMap((entry) =>
       entry.branchesBeforeRole.map((branch) =>
         Object.freeze({
-          history: branch.state.traitHistory,
-          context: entry.source.traitContext ?? Object.freeze({}),
+          state: branch.state,
+          source: entry.source.traitContext ?? Object.freeze({}),
           temporaryHammerTraitKeys: new Set(
             branch.state.keepsakes.experimentalHammers
               .filter((hammer) => hammer.active)
@@ -226,8 +235,8 @@ export function createAnvilCandidateCapability(
       (domains[0] ?? []).filter((traitKey) => domains.every((domain) => domain.includes(traitKey))),
     );
   const removableTraitKeys = intersect(
-    frontiers.map(({ history, temporaryHammerTraitKeys }) =>
-      anvilHammerCandidates(catalog, history, temporaryHammerTraitKeys),
+    frontiers.map(({ state, temporaryHammerTraitKeys }) =>
+      anvilHammerCandidates(catalog, state.traitHistory, temporaryHammerTraitKeys),
     ),
   );
   const addedTraitKeysFor = (
@@ -235,11 +244,11 @@ export function createAnvilCandidateCapability(
     priorAddedTraitKeys: readonly string[],
   ) =>
     intersect(
-      frontiers.map(({ history, context, temporaryHammerTraitKeys }) =>
+      frontiers.map(({ state, source, temporaryHammerTraitKeys }) =>
         anvilAdditionCandidates(
           catalog,
-          history,
-          context,
+          state,
+          source,
           temporaryHammerTraitKeys,
           removedTraitKey,
           priorAddedTraitKeys,

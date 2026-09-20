@@ -9,7 +9,6 @@ import {
   createTravelDealRefillRealizationAddress,
   semanticAddressKey,
 } from '../../../../authored-project/addresses';
-import type { RouteLoadout } from '../../../../authored-project/model';
 import {
   acquisitionSiteStorageKey,
   artificerAcquisitionSite,
@@ -48,11 +47,14 @@ import type { RewardBranchState } from '../../branch-primitives';
 import type { BiomeRewardSnapshot } from '../evaluation-contract';
 import { rewardFindingChronologyForRoom } from '../finding-chronology';
 import { createBiomeRewardFacts } from '../../facts';
+import { plainTraitOfferSource } from '../../../traits/offer-domain';
 import { addRewardFinding, mergeRewardFindingEmissions, rewardFinding } from '../../findings';
 import type { AuthoredSiteSettlementResult } from '../generation/authored-site-settlement';
 import { settleAuthoredAcquisitionSite } from '../generation/authored-site-settlement';
 import type { ReachedTraitChildCheckpoint } from '../../trait-settlement/coordinator';
 import type { RewardProducerOwnerAddress, RewardProducerFrontier } from '../../producer-frontiers';
+import type { SimulationState } from '../../../state/model';
+import { attestSharedRewardLookups } from '../../../state/reward-lookups';
 
 export interface HermesShrineRefillState {
   readonly firstRushedInitialGeneration: boolean;
@@ -84,9 +86,6 @@ export interface AcquisitionPointReachedInputs {
   readonly declaration: RoomDeclaration | undefined;
   readonly roomView: ProgressiveRoomHistoryViews | undefined;
   readonly sourceBranches: readonly RewardBranchState[];
-  readonly enteredBiomeCount: number;
-  readonly routeLoadout: RouteLoadout;
-  readonly rewardLookups: Readonly<Record<string, ReadonlySet<string>>>;
   readonly authoredSeaStarDuplicateSiteKeys: readonly string[];
   readonly purgingPoolAssessment:
     { readonly assessments: readonly PurgingPoolAssessment[] } | undefined;
@@ -128,7 +127,9 @@ export function applyAcquisitionPointReachedTransition(
   // These are lower-level settlement inputs. The transition boundary itself
   // exposes only frozen arrays, so chronology cannot share a mutable collector.
   const authoredSeaStarDuplicateSiteKeys = new Set(inputs.authoredSeaStarDuplicateSiteKeys);
-  const rewardLookups = inputs.rewardLookups;
+  // Facts read each settling branch's own lookup substate; the cohort must
+  // still agree on the offered-reward history this contact consults.
+  attestSharedRewardLookups(inputs.sourceBranches.map((branch) => branch.state));
   const chronology = rewardFindingChronologyForRoom(
     snapshot,
     room.origin,
@@ -183,23 +184,17 @@ export function applyAcquisitionPointReachedTransition(
   }
   const factsAt = (
     view: NonNullable<ProgressiveRoomHistoryViews['entry']>,
-    branchHistory: import('../../../../reward-kernel').RewardHistoryState,
-    branch?: RewardBranchState,
+    state: SimulationState,
   ) =>
-    createBiomeRewardFacts(
+    createBiomeRewardFacts({
       catalog,
-      room,
-      room,
-      declaration,
+      state,
+      source: room,
+      currentRoom: room,
+      sourceDeclaration: declaration,
       view,
-      branchHistory,
-      inputs.enteredBiomeCount,
-      undefined,
-      undefined,
-      undefined,
-      rewardLookups,
-      branch,
-    );
+      hubBoardLookups: 'consulted',
+    });
   const hermesDeliveryProducerFrontier = (input: {
     readonly address: import('../../../../authored-project/addresses').AcquisitionEntryAddress;
     readonly rewardType: string;
@@ -239,7 +234,7 @@ export function applyAcquisitionPointReachedTransition(
             producerLifecycleKey: 'HermesShrineDelivery',
             historySequence: event.sequence,
             atomicRegion: input.atomicRegion,
-            facts: (history, _names, branch) => factsAt(input.acquisitionView, history, branch),
+            facts: (state) => factsAt(input.acquisitionView, state),
             findingChronology: chronology,
             authoredSeaStarDuplicateSiteKeys,
             artificerReplacementFor(source, role) {
@@ -380,7 +375,7 @@ export function applyAcquisitionPointReachedTransition(
         deferArtificerReplacement: true,
         authoredSeaStarDuplicateSiteKeys,
       },
-      (history) => factsAt(acquisitionView, history),
+      (state) => factsAt(acquisitionView, state),
       undefined,
       chronology,
     );
@@ -436,10 +431,10 @@ export function applyAcquisitionPointReachedTransition(
         requiredEntryKeys: new Set(),
         producerLifecycleKey: capability.producerLifecycleKey,
         historySequence: event.sequence,
-        facts: (history, _names, branch) => factsAt(acquisitionView, history, branch),
+        facts: (state) => factsAt(acquisitionView, state),
         findingChronology: chronology,
         authoredSeaStarDuplicateSiteKeys,
-        traitContext: inputs.routeLoadout,
+        traitContext: plainTraitOfferSource,
       });
       mergeRewardFindingEmissions(findings, settled.findingEmissions);
       return transitionResult({
@@ -511,7 +506,7 @@ export function applyAcquisitionPointReachedTransition(
                 catalog,
                 room.hermesShrine!,
                 shrineDelivery.generationKey,
-                [factsAt(preRushView, branch.state.rewardHistory, branch).requirements],
+                [factsAt(preRushView, branch.state).requirements],
               );
               return assessment === undefined ? [] : [assessment];
             }),
@@ -574,7 +569,7 @@ export function applyAcquisitionPointReachedTransition(
         requiredEntryKeys: new Set([event.entryKey]),
         producerLifecycleKey: 'HermesShrineDelivery',
         historySequence: event.sequence,
-        facts: (history, _names, branch) => factsAt(acquisitionView, history, branch),
+        facts: (state) => factsAt(acquisitionView, state),
         findingChronology: chronology,
         authoredSeaStarDuplicateSiteKeys,
       });
@@ -698,8 +693,8 @@ export function applyAcquisitionPointReachedTransition(
         participation: row?.participation === 'required' ? 'mandatory' : 'optional',
         ...(row?.owner === undefined ? {} : { timelineOwner: row.owner }),
         historySequence: event.sequence,
-        facts: (history, _names, branch) => factsAt(acquisitionView, history, branch),
-        traitContext: inputs.routeLoadout,
+        facts: (state) => factsAt(acquisitionView, state),
+        traitContext: plainTraitOfferSource,
         findingChronology: chronology,
         authoredSeaStarDuplicateSiteKeys,
       });
@@ -748,9 +743,6 @@ export function applyAcquisitionPointReachedTransition(
     roomView,
     sourceBranches: inputs.sourceBranches,
     historySequence: event.sequence,
-    enteredBiomeCount: inputs.enteredBiomeCount,
-    routeLoadout: inputs.routeLoadout,
-    rewardLookups,
     authoredSeaStarDuplicateSiteKeys,
     ...(onlyEntry === undefined ? {} : { onlyEntry }),
     completeShopAfterOrder,

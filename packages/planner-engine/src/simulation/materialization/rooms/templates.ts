@@ -28,7 +28,7 @@ import type {
   CanonicalShopEntryState,
   BiomeMaterializationLoadout,
 } from '../model';
-import type { TraitOfferContext } from '../../traits/offer-domain';
+import type { TraitOfferSourceContext } from '../../traits/offer-domain';
 import type { ResolvedRewardOffer } from '../../../reward-kernel/model';
 import type { ResolvedRoutePosition } from '../../../authored-project/route-context';
 import { composeStartingReward } from '../../../authored-project/room-state/starting-reward';
@@ -113,10 +113,12 @@ export function resolvedStoreKey(
   return room.forcedRewardStoreKey ?? room.individualRewardStoreKey ?? batchStoreKey;
 }
 
+/** Source description only: the reached simulation state supplies player and
+ * run facts when Gate-B assessment joins this descriptor. */
 function traitContextForOffer(
   context: AuthoredRoomMaterializationContext,
   offer: ResolvedRewardOffer,
-): TraitOfferContext {
+): TraitOfferSourceContext {
   if (
     context.loadout === undefined ||
     context.loadout.weaponKey.length === 0 ||
@@ -125,9 +127,6 @@ function traitContextForOffer(
     fail(`${context.room.gameName} reward materialization requires a route loadout`);
   }
   return Object.freeze({
-    routeKey: context.biome.routeKey,
-    ...context.loadout,
-    acquisitionOrdinal: context.routePosition.ordinal,
     blockGiftBoons: context.room.blockGiftBoons,
     ...(context.room.boonRarityOverride === undefined
       ? {}
@@ -581,7 +580,6 @@ export function materializeShipCombatState(
               levelResolutionsByAcquisitionRole: reward.levelResolutionsByAcquisitionRole,
               dispositionByAcquisitionRole: reward.dispositionByAcquisitionRole,
               traitContext: Object.freeze({
-                ...loadout,
                 blockGiftBoons: room.blockGiftBoons,
                 ...(room.boonRarityOverride === undefined
                   ? {}

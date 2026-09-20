@@ -53,6 +53,7 @@ import {
   createTraitOfferCandidateArtifacts,
 } from '../../candidates/trait-offer/capability';
 import type { TraitOfferCandidateContext } from '../../traits';
+import { traitOfferContextIdentity } from '../../traits';
 import { foldTraitHistoryEvents } from '../../traits/history/fold';
 import type { ReachedSteadyGrowthThreshold } from '../../traits/history/transitions';
 import type { ReachedTranscendentEmbryoThreshold } from '../../keepsakes/trait-effects';
@@ -70,11 +71,7 @@ import {
 import { BiomeRewardSimulationContractError } from './biome-contract';
 import { selectedTraitOfferProducts } from './selected-trait-products';
 import { prepareRewardEvaluationInputs } from './prepared-inputs';
-import {
-  addHubBoardRewardLookup,
-  rewardLookupSets,
-  sharedRewardLookups,
-} from '../../state/reward-lookups';
+import { addHubBoardRewardLookup } from '../../state/reward-lookups';
 import { reachSimulationHistory, replaceSimulationTraitHistory } from '../../state/transitions';
 import { applyEncounterStartedTransition } from './lifecycle-transitions/encounter-started';
 import { applyEncounterEndEffectsTransition } from './lifecycle-transitions/encounter-end-effects';
@@ -318,12 +315,7 @@ export function evaluateBiomeRewardChronology(
   ): void {
     for (const contact of contacts ?? []) {
       const key = semanticAddressKey(contact.address);
-      const fingerprint = JSON.stringify([
-        contact.context.before,
-        contact.context.context,
-        contact.context.arcanaFear,
-        contact.context.keepsakes,
-      ]);
+      const fingerprint = JSON.stringify(traitOfferContextIdentity(contact.context));
       const fingerprints = reachedTraitOfferCandidateFingerprints.get(key) ?? new Set<string>();
       if (fingerprints.has(fingerprint)) continue;
       fingerprints.add(fingerprint);
@@ -863,10 +855,7 @@ export function evaluateBiomeRewardChronology(
           frontiers: Object.freeze(
             branches.map((branch) =>
               Object.freeze({
-                before: branch.state.traitHistory,
-                fatedStatus: branch.state.keepsakes.fatedStatus,
-                arcanaFear: branch.state.arcanaFear,
-                loadout: routeLoadout,
+                state: branch.state,
                 transcendentEmbryoRarity: effect.blessingRarityByRank.Common,
               }),
             ),
@@ -942,14 +931,7 @@ export function evaluateBiomeRewardChronology(
         semanticAddressKey(echoHammerResult),
         Object.freeze({
           frontiers: Object.freeze(
-            branches.map((branch) =>
-              Object.freeze({
-                before: branch.state.traitHistory,
-                fatedStatus: branch.state.keepsakes.fatedStatus,
-                arcanaFear: branch.state.arcanaFear,
-                loadout: routeLoadout,
-              }),
-            ),
+            branches.map((branch) => Object.freeze({ state: branch.state })),
           ),
         }),
       );
@@ -965,13 +947,7 @@ export function evaluateBiomeRewardChronology(
         );
       } else if (
         branches.some(
-          (branch) =>
-            !assessExperimentalHammerEquipResult(
-              catalog,
-              authored,
-              branch.state.traitHistory,
-              routeLoadout,
-            ).legal,
+          (branch) => !assessExperimentalHammerEquipResult(catalog, authored, branch.state).legal,
         )
       ) {
         addRewardFinding(
@@ -993,7 +969,6 @@ export function evaluateBiomeRewardChronology(
                 snapshot.echoKeepsakeReplayResults,
                 echoHammerResult,
                 biomeStartSequence,
-                routeLoadout,
                 'Common',
               ),
             ),
@@ -1091,20 +1066,18 @@ export function evaluateBiomeRewardChronology(
         derivationCache: runStateDerivationCache,
         factsContextToken,
         rewardFacts: (branch) =>
-          rewardFacts(
+          rewardFacts({
             catalog,
+            state: branch.state,
             source,
-            source,
-            declaration,
+            currentRoom: source,
+            sourceDeclaration: declaration,
             view,
-            branch.state.rewardHistory,
-            enteredBiomeCount,
-            currentShopNames,
-            source.origin,
-            'generatedTarget',
-            rewardLookupSets(branch.state.rewardLookups),
-            branch,
-          ),
+            currentRoomShopOptionNames: currentShopNames,
+            peerParentOrigin: source.origin,
+            peerCreationSource: 'generatedTarget',
+            hubBoardLookups: 'consulted',
+          }),
       });
     const snapshot = snapshotFor(checkpointBranches);
     if (snapshot !== undefined) runStateSnapshotsByOwner.set(ownerKey, snapshot);
@@ -1327,7 +1300,6 @@ export function evaluateBiomeRewardChronology(
             'localRoomLifecycle',
           ),
           routePosition,
-          rewardLookupSets(sharedRewardLookups(branches.map((branch) => branch.state))),
           Object.freeze({
             purgingPool:
               room?.kind === 'authored' &&
@@ -1454,7 +1426,6 @@ export function evaluateBiomeRewardChronology(
           peers,
           ...(pendingHubBoard === undefined ? {} : { pendingHubBoard }),
           lifecycle,
-          routeLoadout,
           enteredBiomeCount,
           authoredSeaStarDuplicateSiteKeys,
         });
@@ -1523,11 +1494,6 @@ export function evaluateBiomeRewardChronology(
           hubTakeover: hubTakeoverSources.has(ownerKey),
           hubRestoring: hubRestoringSources.has(ownerKey),
           branches,
-          enteredBiomeCount,
-          routeLoadout,
-          rewardLookups: rewardLookupSets(
-            sharedRewardLookups(branches.map((branch) => branch.state)),
-          ),
           authoredSeaStarDuplicateSiteKeys,
         });
         for (const settlement of transition.siteSettlements)
@@ -1569,11 +1535,7 @@ export function evaluateBiomeRewardChronology(
           views,
           lifecycle,
           branches,
-          enteredBiomeCount,
           routeLoadout,
-          rewardLookups: rewardLookupSets(
-            sharedRewardLookups(branches.map((branch) => branch.state)),
-          ),
           authoredSeaStarDuplicateSiteKeys,
           shipLifecycleCandidateAlreadyPublished: shipLifecycleContexts.has(roomKey),
         });
@@ -1595,7 +1557,6 @@ export function evaluateBiomeRewardChronology(
           views,
           branches,
           priorFindings: Object.freeze([...findings.values()]),
-          enteredBiomeCount,
           authoredSeaStarDuplicateSiteKeys,
         });
         for (const entry of settlement.findings)
@@ -1617,7 +1578,6 @@ export function evaluateBiomeRewardChronology(
           views,
           branches,
           priorFindings: Object.freeze([...findings.values()]),
-          enteredBiomeCount,
           authoredSeaStarDuplicateSiteKeys,
         });
         for (const entry of settlement.findings)
@@ -1654,7 +1614,6 @@ export function evaluateBiomeRewardChronology(
           room,
           view: views.get(semanticAddressKey(event.origin)),
           branches,
-          routeLoadout,
           enteredBiomeCount,
           fullRunBiomeCount,
           authoredSeaStarDuplicateSiteKeys,
@@ -1752,11 +1711,6 @@ export function evaluateBiomeRewardChronology(
           declaration: room === undefined ? undefined : catalog.rooms.byKey[room.gameName],
           roomView: views.get(semanticAddressKey(event.origin)),
           sourceBranches: branches,
-          enteredBiomeCount,
-          routeLoadout,
-          rewardLookups: rewardLookupSets(
-            sharedRewardLookups(branches.map((branch) => branch.state)),
-          ),
           authoredSeaStarDuplicateSiteKeys: Object.freeze([...authoredSeaStarDuplicateSiteKeys]),
           purgingPoolAssessment: undefined,
           hermesShrineRefillState: undefined,
@@ -1827,11 +1781,6 @@ export function evaluateBiomeRewardChronology(
           declaration: room === undefined ? undefined : catalog.rooms.byKey[room.gameName],
           roomView: views.get(semanticAddressKey(event.origin)),
           sourceBranches: branches,
-          enteredBiomeCount,
-          routeLoadout,
-          rewardLookups: rewardLookupSets(
-            sharedRewardLookups(branches.map((branch) => branch.state)),
-          ),
           authoredSeaStarDuplicateSiteKeys: Object.freeze([...authoredSeaStarDuplicateSiteKeys]),
           purgingPoolAssessment: purgingPoolAssessments.get(shrineKey),
           hermesShrineRefillState: refillState,

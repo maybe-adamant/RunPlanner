@@ -545,7 +545,7 @@ describe('Gorgon Amulet lifecycle', () => {
         'gorgonAthena',
         rarity,
       );
-      expect(evaluated.branch.traitEvaluations?.at(-1)?.context).not.toHaveProperty(
+      expect(evaluated.branch.traitEvaluations?.at(-1)?.source).not.toHaveProperty(
         'athenaTriggerConditionMet',
       );
       expect(

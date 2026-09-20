@@ -2,11 +2,7 @@ import type { Catalog, RoomDeclaration } from '../../../../catalog-schema';
 import { semanticAddressKey, type SemanticAddress } from '../../../../authored-project/addresses';
 import { createUnresolvedAcquisitionRewardState } from '../../../../authored-project/traits/state';
 import type { RouteLoadout } from '../../../../authored-project/model';
-import {
-  locallyValidRewardOffers,
-  type ResolvedRewardOffer,
-  type RewardHistoryState,
-} from '../../../../reward-kernel';
+import { locallyValidRewardOffers, type ResolvedRewardOffer } from '../../../../reward-kernel';
 import type { HistoryEvent, ProgressiveRoomHistoryViews } from '../../../history';
 import type {
   CanonicalAuthoredRoom,
@@ -30,6 +26,7 @@ import {
   shipWheelRoomRewardSource,
 } from './reward-wheel-lifecycle';
 import { createBiomeRewardFacts } from '../../facts';
+import type { SimulationState } from '../../../state/model';
 
 export interface RewardWheelOfferPointMaterializationInputs {
   readonly catalog: Catalog;
@@ -39,7 +36,6 @@ export interface RewardWheelOfferPointMaterializationInputs {
   readonly roomView: ProgressiveRoomHistoryViews;
   readonly lifecycle: RewardLifecycleReferences;
   readonly branches: readonly RewardBranchState[];
-  readonly enteredBiomeCount: number;
   readonly routeLoadout: RouteLoadout;
   readonly authoredSeaStarDuplicateSiteKeys: ReadonlySet<string>;
 }
@@ -63,7 +59,6 @@ export function applyRewardWheelOfferPointMaterialization(
     roomView,
     lifecycle,
     branches,
-    enteredBiomeCount,
     routeLoadout,
     authoredSeaStarDuplicateSiteKeys,
   } = inputs;
@@ -122,7 +117,6 @@ export function applyRewardWheelOfferPointMaterialization(
         : { levelResolutionsByAcquisitionRole: state.levelResolutionsByAcquisitionRole }),
       dispositionByAcquisitionRole: state.dispositionByAcquisitionRole,
       traitContext: Object.freeze({
-        ...routeLoadout,
         blockGiftBoons: declaration.blockGiftBoons,
         devotionNoDuo: offer.rewardType === 'Devotion',
       }),
@@ -138,25 +132,16 @@ export function applyRewardWheelOfferPointMaterialization(
     binding,
     historySequence: event.sequence,
     peers: Object.freeze([]),
-    facts: (
-      branchHistory: RewardHistoryState,
-      _shopNames: ReadonlySet<string> | undefined,
-      branch: RewardBranchState | undefined,
-    ) =>
-      createBiomeRewardFacts(
+    facts: (state: SimulationState) =>
+      createBiomeRewardFacts({
         catalog,
-        room,
-        room,
-        declaration,
+        state,
+        source: room,
+        currentRoom: room,
+        sourceDeclaration: declaration,
         view,
-        branchHistory,
-        enteredBiomeCount,
-        undefined,
-        undefined,
-        undefined,
-        undefined,
-        branch,
-      ),
+        hubBoardLookups: 'notConsulted',
+      }),
   });
   const contexts = wheel.offers.map(contextForWheel);
   const frontierBranches = branches;
@@ -274,16 +259,16 @@ export function applyRewardWheelOfferPointMaterialization(
             historySequence: acquisitionEvent.sequence,
             authoredSeaStarDuplicateSiteKeys,
           },
-          (branchHistory) =>
-            createBiomeRewardFacts(
+          (state) =>
+            createBiomeRewardFacts({
               catalog,
-              room,
-              room,
-              declaration,
-              acquisitionView,
-              branchHistory,
-              enteredBiomeCount,
-            ),
+              state,
+              source: room,
+              currentRoom: room,
+              sourceDeclaration: declaration,
+              view: acquisitionView,
+              hubBoardLookups: 'notConsulted',
+            }),
           ownerRegion(wheel.origin),
         );
         mergeRewardFindingEmissions(candidateFindings, settlement.findingEmissions);
@@ -326,7 +311,6 @@ export function applyRewardWheelOfferPointMaterialization(
           roomView,
           lifecycle,
           branchesBeforeFirstWheel: branches,
-          enteredBiomeCount,
           routeLoadout: Object.freeze({
             ...routeLoadout,
             ...(declaration.boonRarityOverride === undefined

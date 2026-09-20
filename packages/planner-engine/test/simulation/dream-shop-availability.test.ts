@@ -157,14 +157,14 @@ describe('Dream Shop availability', () => {
       project.route!.loadout,
       { routePosition: resolveRoutePosition(catalog, project.route, 'I'), historyView: view },
     );
-    const facts = (history: (typeof branches)[number]['state']['rewardHistory']) =>
+    const facts = (state: (typeof branches)[number]['state']) =>
       createRewardFacts({
         catalog,
         sourceOrigin: room.origin,
         currentRoom: room,
         sourceDeclaration: declaration,
         view,
-        history,
+        history: state.rewardHistory,
         enteredBiomeCount: 1,
         currentBatchRoomGameNames: [],
         rewardLookups: { hubRewardLookup: new Set() },
@@ -203,14 +203,14 @@ describe('Dream Shop availability', () => {
       project.route!.loadout,
       { routePosition: resolveRoutePosition(catalog, project.route, 'I'), historyView: view },
     );
-    const facts = (history: (typeof branches)[number]['state']['rewardHistory']) =>
+    const facts = (state: (typeof branches)[number]['state']) =>
       createRewardFacts({
         catalog,
         sourceOrigin: room.origin,
         currentRoom: room,
         sourceDeclaration: declaration,
         view,
-        history,
+        history: state.rewardHistory,
         enteredBiomeCount: 1,
         currentBatchRoomGameNames: [],
         rewardLookups: { hubRewardLookup: new Set() },

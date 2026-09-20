@@ -30,6 +30,7 @@ import {
 import { createTraitOfferCandidateArtifacts } from '../../src/simulation/candidates/trait-offer/capability';
 import { initializeTestRewardBranches } from '../support/arcana-fear';
 import { describe, expect, it } from 'vitest';
+import { traitFrontierState } from '../support/simulation-state';
 
 const biome = createBiomeAddress('Underworld', 'F');
 const origin = createIncomingRewardAddress(biome, createOccurrenceId('concave-stone-test'));
@@ -245,7 +246,14 @@ describe('Concave Stone trait settlement', () => {
       new Map([
         [
           semanticAddressKey(trait),
-          [{ before, context: {}, keepsakes: branchWithStone('Common', before).state.keepsakes }],
+          [
+            {
+              state: traitFrontierState(before, {
+                keepsakes: branchWithStone('Common', before).state.keepsakes,
+              }),
+              source: {},
+            },
+          ],
         ],
       ]),
     ).at(trait)!;
@@ -334,7 +342,14 @@ describe('Concave Stone trait settlement', () => {
       new Map([
         [
           semanticAddressKey(trait),
-          [{ before, context: {}, keepsakes: branchWithStone('Common', before).state.keepsakes }],
+          [
+            {
+              state: traitFrontierState(before, {
+                keepsakes: branchWithStone('Common', before).state.keepsakes,
+              }),
+              source: {},
+            },
+          ],
         ],
       ]),
     ).at(trait)!;
@@ -409,9 +424,10 @@ describe('Concave Stone trait settlement', () => {
           semanticAddressKey(trait),
           [
             {
-              before,
-              context: {},
-              keepsakes: branchWithStone('Common', before).state.keepsakes,
+              state: traitFrontierState(before, {
+                keepsakes: branchWithStone('Common', before).state.keepsakes,
+              }),
+              source: {},
             },
           ],
         ],
@@ -741,9 +757,8 @@ describe('Concave Stone candidate capability', () => {
           semanticAddressKey(trait),
           [
             {
-              before: createTraitHistoryState(),
-              context: Object.freeze({}),
-              keepsakes: state,
+              state: traitFrontierState(createTraitHistoryState(), { keepsakes: state }),
+              source: Object.freeze({}),
             },
           ],
         ],
@@ -772,7 +787,12 @@ describe('Concave Stone candidate capability', () => {
       new Map([
         [
           semanticAddressKey(trait),
-          [{ before: createTraitHistoryState(), context: {}, keepsakes: heroicState }],
+          [
+            {
+              state: traitFrontierState(createTraitHistoryState(), { keepsakes: heroicState }),
+              source: {},
+            },
+          ],
         ],
       ]),
     ).at(trait);
@@ -790,9 +810,10 @@ describe('Concave Stone candidate capability', () => {
           semanticAddressKey(trait),
           [
             {
-              before: createTraitHistoryState(),
-              context: {},
-              keepsakes: createKeepsakeState(catalog, 'SilverWheelKeepsake'),
+              state: traitFrontierState(createTraitHistoryState(), {
+                keepsakes: createKeepsakeState(catalog, 'SilverWheelKeepsake'),
+              }),
+              source: {},
             },
           ],
         ],

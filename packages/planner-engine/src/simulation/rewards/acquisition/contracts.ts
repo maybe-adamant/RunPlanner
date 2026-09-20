@@ -9,7 +9,6 @@ import type {
   ConcreteAcquisitionEvent,
   ProducerLifecyclePointKey,
   ResolvedRewardOffer,
-  RewardHistoryState,
   RewardKernelFacts,
 } from '../../../reward-kernel';
 import type { FindingRegionEntry } from '../../finding-regions';
@@ -21,6 +20,7 @@ import type {
   ReachedTraitOfferCandidateContact,
 } from '../trait-settlement/coordinator';
 import type { AcquisitionSource } from './source';
+import type { SimulationState } from '../../state/model';
 
 export type CanonicalRewardRoom = CanonicalAuthoredRoom | CanonicalLocalVisitRoom;
 
@@ -177,8 +177,8 @@ export interface AcquisitionRoleResolution extends AcquisitionSettlementRole {
   readonly historySequence: number;
 }
 
+/** Facts for one reached branch snapshot and the contact's visible Shop names. */
 export type RewardFactsFactory = (
-  history: RewardHistoryState,
+  state: SimulationState,
   currentRoomShopOptionNames?: ReadonlySet<string>,
-  branch?: RewardBranchState,
 ) => RewardKernelFacts;

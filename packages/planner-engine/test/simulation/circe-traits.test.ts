@@ -29,6 +29,7 @@ import { createArcanaFearState } from '../../src/simulation/arcana-fear';
 import { selectedTraitOfferProducts } from '../../src/simulation/rewards/biome/selected-trait-products';
 import { settleEncounterTraitOffer } from '../../src/simulation/rewards/trait-settlement/coordinator';
 import { createTraitHistoryState, evaluateReachedTraitOffer } from '../../src/simulation/traits';
+import { testRewardBranchesAtOrdinal, traitFrontierState } from '../support/simulation-state';
 
 const surface = createRouteAddress('Surface');
 const circeOwner = createTraitOfferAddress(
@@ -39,7 +40,6 @@ const circeOwner = createTraitOfferAddress(
   ),
   'selection',
 );
-const firstCirceContext = Object.freeze({ acquisitionOrdinal: 1 });
 
 function circeOffer(
   selectedOptionKey: Extract<AuthoredTraitOffer, { kind: 'traits' }>['selectedOptionKey'],
@@ -116,7 +116,7 @@ describe('Circe selected trait acquisition', () => {
       undefined,
       'selection',
       undefined,
-      Object.freeze({ ...loadout, ...firstCirceContext }),
+      {},
       undefined,
       'Circe',
     );
@@ -216,7 +216,7 @@ describe('Circe selected trait acquisition', () => {
       undefined,
       'selection',
       undefined,
-      firstCirceContext,
+      {},
     );
     const active = applied.branch.state.arcanaFear.arcana.active;
     expect(active.find((card) => card.key === 'CastCount')).toMatchObject({ rarity: 'Heroic' });
@@ -253,7 +253,7 @@ describe('Circe selected trait acquisition', () => {
       undefined,
       'selection',
       undefined,
-      firstCirceContext,
+      {},
     );
     expect(red.branch.state.arcanaFear).toBe(exhausted);
   });
@@ -304,7 +304,7 @@ describe('Circe selected trait acquisition', () => {
       undefined,
       'selection',
       undefined,
-      firstCirceContext,
+      {},
     );
     expect(repeated.branch.state.arcanaFear).toBe(disabled.state);
     expect(repeated.findingEntries.some((entry) => entry.finding.code === 'offerContext')).toBe(
@@ -366,7 +366,7 @@ describe('Circe selected trait acquisition', () => {
       undefined,
       'selection',
       undefined,
-      firstCirceContext,
+      {},
     );
     const child = createCirceResolutionAddress(circeOwner, 'option1');
     expect(settlement.branch.state.traitHistory?.equippedTraits.RandomArcanaTrait).toMatchObject({
@@ -381,7 +381,7 @@ describe('Circe selected trait acquisition', () => {
 
     const paired = settleEncounterTraitOffer(
       catalog,
-      initializeTestRewardBranches()[0]!,
+      testRewardBranchesAtOrdinal(3)[0]!,
       circeOwner.owner,
       circeOffer('option1', [
         {
@@ -396,7 +396,7 @@ describe('Circe selected trait acquisition', () => {
       undefined,
       'selection',
       undefined,
-      Object.freeze({ acquisitionOrdinal: 3 }),
+      {},
     );
     expect(paired.branch.state.arcanaFear.arcana.active).toEqual(
       expect.arrayContaining([
@@ -416,16 +416,15 @@ describe('Circe selected trait acquisition', () => {
       { traitKey: 'CirceShrinkTrait' },
       { traitKey: 'CirceEnlargeTrait' },
     ]);
-    const preEffect = initializeTestRewardBranches()[0]!;
+    const preEffect = testRewardBranchesAtOrdinal(3)[0]!;
     const trace = evaluateReachedTraitOffer(
       catalog,
       circeOwner.owner,
       'selection',
       pairedOffer,
-      createTraitHistoryState(),
-      Object.freeze({ resolvedProviderKey: 'Circe', acquisitionOrdinal: 3 }),
+      preEffect.state,
+      Object.freeze({ resolvedProviderKey: 'Circe' }),
       0,
-      preEffect.state.arcanaFear,
     );
     const published = selectedTraitOfferProducts(
       [Object.freeze({ ...preEffect, traitEvaluations: Object.freeze([trace]) })],
@@ -516,7 +515,7 @@ describe('Circe selected trait acquisition', () => {
     );
     if (!changed.legal) throw new Error('divergent Circe frontier fixture must be legal');
     const history = createTraitHistoryState();
-    const context = Object.freeze({ resolvedProviderKey: 'Circe', acquisitionOrdinal: 1 });
+    const context = Object.freeze({ resolvedProviderKey: 'Circe' });
     const branches = [initial, changed.state].map((arcanaFear) => {
       const branch = initializeTestRewardBranches(arcanaFear)[0]!;
       return Object.freeze({
@@ -527,10 +526,9 @@ describe('Circe selected trait acquisition', () => {
             circeOwner.owner,
             'selection',
             offer,
-            history,
+            traitFrontierState(history, { arcanaFear }),
             context,
             0,
-            arcanaFear,
           ),
         ]),
       });

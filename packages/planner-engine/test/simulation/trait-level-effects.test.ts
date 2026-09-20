@@ -37,6 +37,7 @@ import { settleEncounterTraitOffer } from '../../src/simulation/rewards/trait-se
 import { applyEncounterEndEffectsTransition } from '../../src/simulation/rewards/biome/lifecycle-transitions/encounter-end-effects';
 import type { CanonicalAuthoredRoom } from '../../src/simulation/materialization';
 import type { RewardBranchState } from '../../src/simulation/rewards/branch-primitives';
+import { testRewardBranchesAtOrdinal, traitFrontierState } from '../support/simulation-state';
 
 const owner = { kind: 'project' } as SemanticAddress;
 
@@ -145,9 +146,11 @@ describe('Latest Model Hammer Rank II target predicate', () => {
         latestModelOffer.options[2],
       ]) as Extract<AuthoredTraitOffer, { kind: 'traits' }>['options'],
     });
-    const assessment = assessSelectedTargetedAcquisition(catalog, withTarget, before, {
-      acquisitionOrdinal: 1,
-    });
+    const assessment = assessSelectedTargetedAcquisition(
+      catalog,
+      withTarget,
+      traitFrontierState(before, { acquisitionOrdinal: 1 }),
+    );
     expect(assessment).toMatchObject({
       applies: true,
       legal: true,
@@ -164,8 +167,8 @@ describe('Latest Model Hammer Rank II target predicate', () => {
       owner,
       'icarus-latest-model',
       withTarget,
-      before,
-      Object.freeze({ acquisitionOrdinal: 1 }),
+      traitFrontierState(before, { acquisitionOrdinal: 1 }),
+      {},
       before.events.length,
     );
     const recorded = recordReachedTraitOffer(catalog, reached, before.events.length + 1, 'test');
@@ -182,7 +185,9 @@ describe('Latest Model Hammer Rank II target predicate', () => {
 
   it('keeps Latest Model unavailable without an eligible Rank-I Hammer', () => {
     const history = historyWith('WeaponUpgrade', 'StaffDashAttackTrait');
-    expect(assessTraitOption(catalog, 'UpgradeHammerBoon', history).findings).toContainEqual({
+    expect(
+      assessTraitOption(catalog, 'UpgradeHammerBoon', traitFrontierState(history), {}).findings,
+    ).toContainEqual({
       code: 'targetedAcquisitionNoEligibleTarget',
       traitKey: 'UpgradeHammerBoon',
     });
@@ -207,8 +212,8 @@ describe('Latest Model Hammer Rank II target predicate', () => {
         owner,
         'latestModel',
         offer,
-        before,
-        { acquisitionOrdinal: ordinal },
+        traitFrontierState(before, { acquisitionOrdinal: ordinal }),
+        {},
         before.events.length,
       );
       expect(reached.targetedAcquisition).toMatchObject({
@@ -230,8 +235,11 @@ describe('Latest Model Hammer Rank II target predicate', () => {
         ],
       } as typeof offer;
       expect(
-        assessSelectedTargetedAcquisition(catalog, one, singlePool, { acquisitionOrdinal: ordinal })
-          .legal,
+        assessSelectedTargetedAcquisition(
+          catalog,
+          one,
+          traitFrontierState(singlePool, { acquisitionOrdinal: ordinal }),
+        ).legal,
       ).toBe(true);
     },
   );
@@ -272,8 +280,11 @@ describe('Latest Model Hammer Rank II target predicate', () => {
         ],
       } as Extract<AuthoredTraitOffer, { kind: 'traits' }>;
       expect(
-        assessSelectedTargetedAcquisition(catalog, offer, before, { acquisitionOrdinal: ordinal })
-          .findings,
+        assessSelectedTargetedAcquisition(
+          catalog,
+          offer,
+          traitFrontierState(before, { acquisitionOrdinal: ordinal }),
+        ).findings,
       ).toContainEqual(expect.objectContaining({ code }));
     }
   });
@@ -328,8 +339,8 @@ describe('Icarus occupied-slot level upgrades', () => {
         owner,
         'icarus-slot-upgrade',
         offer,
-        before,
-        Object.freeze({ acquisitionOrdinal: ordinal }),
+        traitFrontierState(before, { acquisitionOrdinal: ordinal }),
+        {},
         before.events.length,
       );
       expect(reached.assessments[0]).toMatchObject({ legal: true, findings: [] });
@@ -349,7 +360,9 @@ describe('Icarus occupied-slot level upgrades', () => {
   it('withholds Ingenious Strike when the occupied Hephaestus Attack is cooldown-capped', () => {
     const capped = atLevel('Hephaestus', 'HephaestusWeaponBoon', 'Common', 10);
     expect(capped.equippedSlots.Melee?.traitKey).toBe('HephaestusWeaponBoon');
-    expect(assessTraitOption(catalog, 'FocusAttackDamageTrait', capped)).toMatchObject({
+    expect(
+      assessTraitOption(catalog, 'FocusAttackDamageTrait', traitFrontierState(capped), {}),
+    ).toMatchObject({
       legal: false,
       findings: expect.arrayContaining([
         { code: 'missingPrerequisite', traitKey: 'FocusAttackDamageTrait', detail: 'Melee' },
@@ -365,7 +378,14 @@ describe('Icarus occupied-slot level upgrades', () => {
       ...nonCore,
       equippedSlots: Object.freeze({ Melee: occupant }),
     });
-    expect(assessTraitOption(catalog, 'FocusAttackDamageTrait', malformedSlotState)).toMatchObject({
+    expect(
+      assessTraitOption(
+        catalog,
+        'FocusAttackDamageTrait',
+        traitFrontierState(malformedSlotState),
+        {},
+      ),
+    ).toMatchObject({
       legal: false,
       findings: expect.arrayContaining([
         expect.objectContaining({
@@ -387,7 +407,7 @@ describe('Supply Chain lifecycle', () => {
     const offer = selectedTraitOffer('Icarus', 'SupplyDropBoon');
     const first = settleEncounterTraitOffer(
       catalog,
-      initializeTestRewardBranches()[0]!,
+      testRewardBranchesAtOrdinal(4)[0]!,
       traitOrigin,
       offer,
       11,
@@ -395,7 +415,7 @@ describe('Supply Chain lifecycle', () => {
       undefined,
       'selection',
       undefined,
-      { acquisitionOrdinal: 4 },
+      {},
     );
     const second = settleEncounterTraitOffer(
       catalog,
@@ -407,7 +427,7 @@ describe('Supply Chain lifecycle', () => {
       undefined,
       'selection',
       undefined,
-      { acquisitionOrdinal: 1 },
+      {},
     );
     const expected = semanticAddressKey(createTraitOfferAddress(traitOrigin, 'selection'));
     expect(
@@ -450,7 +470,7 @@ describe('Supply Chain lifecycle', () => {
       undefined,
       'selection',
       undefined,
-      { acquisitionOrdinal: 1 },
+      {},
     );
     const supply = settleEncounterTraitOffer(
       catalog,
@@ -462,7 +482,7 @@ describe('Supply Chain lifecycle', () => {
       undefined,
       'selection',
       undefined,
-      { acquisitionOrdinal: 1 },
+      {},
     );
     let history = supply.branch.state.traitHistory!;
     for (let sequence = 3; sequence <= 7; sequence += 1) {
@@ -654,7 +674,7 @@ describe('Supply Chain lifecycle', () => {
     );
     const supply = settleEncounterTraitOffer(
       catalog,
-      initializeTestRewardBranches()[0]!,
+      testRewardBranchesAtOrdinal(4)[0]!,
       traitOrigin,
       selectedTraitOffer('Icarus', 'SupplyDropBoon'),
       1,
@@ -662,7 +682,7 @@ describe('Supply Chain lifecycle', () => {
       undefined,
       'selection',
       undefined,
-      { acquisitionOrdinal: 4 },
+      {},
     );
     let history = supply.branch.state.traitHistory!;
     history = advancePickupProducerProgress(catalog, history, traitOrigin, 2).history;
@@ -694,7 +714,7 @@ describe('Supply Chain lifecycle', () => {
       undefined,
       'selection',
       undefined,
-      { acquisitionOrdinal: 1 },
+      {},
     );
     const supplySettlement = settleEncounterTraitOffer(
       catalog,
@@ -706,7 +726,7 @@ describe('Supply Chain lifecycle', () => {
       undefined,
       'selection',
       undefined,
-      { acquisitionOrdinal: 1 },
+      {},
     );
     const steadySettlement = settleEncounterTraitOffer(
       catalog,
@@ -718,7 +738,7 @@ describe('Supply Chain lifecycle', () => {
       undefined,
       'selection',
       undefined,
-      { acquisitionOrdinal: 1 },
+      {},
     );
     const bridalSettlement = settleEncounterTraitOffer(
       catalog,
@@ -940,7 +960,7 @@ describe('Supply Chain lifecycle', () => {
       undefined,
       'selection',
       undefined,
-      { acquisitionOrdinal: 1 },
+      {},
     );
     const supplyHistory = supplySettlement.branch.state.traitHistory!;
     expect(supplyHistory.equippedTraits.SupplyDropBoon?.acquisitionIdentity).toBeDefined();
@@ -1247,7 +1267,7 @@ describe('targeted selected-trait child chronology', () => {
         undefined,
         'source',
         undefined,
-        { acquisitionOrdinal: 1 },
+        {},
       );
       const expectedChild = createTraitAcquisitionTargetAddress(traitOwner, 'option1');
       expect(settlement.branch.state.traitHistory?.equippedTraits[selectedTraitKey]).toBeDefined();

@@ -243,7 +243,7 @@ export function generateArtificerReplacement(
         runProgress,
         prepared.bag,
         artificerReplacement.offer,
-        facts(prepared.branch.state.rewardHistory, undefined, prepared.branch),
+        facts(prepared.branch.state),
         { ineligibleRewardTypes: new Set(['Devotion', 'SpellDrop']) },
       );
     } catch (error) {
@@ -277,7 +277,7 @@ export function generateArtificerReplacement(
         catalog.rewards,
         prepared.branch.state.rewardHistory,
         artificerReplacement.offer,
-        facts(prepared.branch.state.rewardHistory, undefined, prepared.branch),
+        facts(prepared.branch.state),
       );
       const withBagAndUse = Object.freeze({
         ...prepared.branch,
@@ -285,7 +285,7 @@ export function generateArtificerReplacement(
           ...prepared.branch.state,
           bags: freezeRecord({ ...prepared.branch.state.bags, RunProgress: bag }),
           rewardHistory: generatedHistory,
-          arcanaFear: arcanaFear,
+          arcanaFear,
         }),
       });
       const generated = appendRewardEvent(

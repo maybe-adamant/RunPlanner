@@ -20,7 +20,6 @@ import {
 } from '../../../../authored-project/addresses';
 import { roomActionKey } from '../../../../authored-project/room-actions/key';
 import { materializeGorgonAthenaOffer } from '../../../../authored-project/traits/state';
-import type { RouteLoadout } from '../../../../authored-project/model';
 import type { HistoryEvent, ProgressiveRoomHistoryViews } from '../../../history';
 import type { CanonicalAuthoredRoom, CanonicalHubRoom } from '../../../materialization';
 import { advanceStygianWellBossUses } from '../../../commerce/stygian-well';
@@ -145,7 +144,6 @@ export function applyEncounterSettlementTransition(inputs: {
   readonly room: CanonicalAuthoredRoom | CanonicalHubRoom | undefined;
   readonly view: ProgressiveRoomHistoryViews | undefined;
   readonly branches: readonly RewardBranchState[];
-  readonly routeLoadout: RouteLoadout;
   readonly enteredBiomeCount: number;
   readonly fullRunBiomeCount: number;
   readonly authoredSeaStarDuplicateSiteKeys: ReadonlySet<string>;
@@ -252,8 +250,6 @@ export function applyEncounterSettlementTransition(inputs: {
       declaration.blocksGorgon !== true &&
       !inputs.gorgonPhaseBlocked;
     const gorgonTraitContext = Object.freeze({
-      ...inputs.routeLoadout,
-      acquisitionOrdinal: inputs.enteredBiomeCount,
       ...(declaration.boonRarityOverride === undefined
         ? {}
         : { boonRarityRoomOverride: declaration.boonRarityOverride }),
@@ -720,16 +716,16 @@ export function applyEncounterSettlementTransition(inputs: {
         historySequence: event.sequence,
         authoredSeaStarDuplicateSiteKeys: inputs.authoredSeaStarDuplicateSiteKeys,
       },
-      (history) =>
-        createBiomeRewardFacts(
+      (state) =>
+        createBiomeRewardFacts({
           catalog,
-          room,
-          room,
-          declaration,
-          view.preOutgoing ?? view.entry,
-          history,
-          inputs.enteredBiomeCount,
-        ),
+          state,
+          source: room,
+          currentRoom: room,
+          sourceDeclaration: declaration,
+          view: view.preOutgoing ?? view.entry,
+          hubBoardLookups: 'notConsulted',
+        }),
       undefined,
       chronology(snapshot, room, event),
     );
@@ -787,15 +783,15 @@ export function applyEncounterSettlementTransition(inputs: {
       );
       const assessments = Object.freeze(
         branches.map((branch) => {
-          const facts = createBiomeRewardFacts(
+          const facts = createBiomeRewardFacts({
             catalog,
-            room,
-            room,
-            declaration,
-            view.preOutgoing ?? view.entry,
-            branch.state.rewardHistory,
-            inputs.enteredBiomeCount,
-          );
+            state: branch.state,
+            source: room,
+            currentRoom: room,
+            sourceDeclaration: declaration,
+            view: view.preOutgoing ?? view.entry,
+            hubBoardLookups: 'notConsulted',
+          });
           const runProgressLegal = (rewardType: 'StackUpgrade' | 'WeaponUpgrade') => {
             const entries = catalog.rewards.stores.byKey.RunProgress?.entries.filter(
               (entry) => entry.rewardType === rewardType,
@@ -968,13 +964,11 @@ export function applyEncounterSettlementTransition(inputs: {
       { kind: 'occurrence', occurrenceId: room.occurrenceId },
       event.phaseKey,
     );
-    const loadout = Object.freeze({
-      ...inputs.routeLoadout,
-      acquisitionOrdinal: inputs.enteredBiomeCount,
-      ...(declaration.boonRarityOverride === undefined
+    const encounterSource = Object.freeze(
+      declaration.boonRarityOverride === undefined
         ? {}
-        : { boonRarityRoomOverride: declaration.boonRarityOverride }),
-    });
+        : { boonRarityRoomOverride: declaration.boonRarityOverride },
+    );
     const provider = catalog.encounterDefinitions.byKey[encounterKey]?.traitOfferProducer?.giverKey;
     const settled = branches.map((branch) =>
       settleEncounterTraitOffer(
@@ -987,7 +981,7 @@ export function applyEncounterSettlementTransition(inputs: {
         chronology(snapshot, room, event),
         'selection',
         undefined,
-        loadout,
+        encounterSource,
         authored === null ? undefined : branches.map((candidate) => candidate.state.traitHistory),
         provider,
       ),

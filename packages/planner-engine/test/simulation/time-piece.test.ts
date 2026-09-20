@@ -85,7 +85,7 @@ function settle(
         },
       },
     },
-    (history) => factsWithHistory(facts(), history, new Set()),
+    (state) => factsWithHistory(facts(), state.rewardHistory, new Set()),
   );
 }
 

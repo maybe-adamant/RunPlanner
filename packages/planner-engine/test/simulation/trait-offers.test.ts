@@ -36,7 +36,10 @@ import {
 } from '@run-planner/test-fixtures/underworld';
 import { loadSurfaceNOPQProject } from '@run-planner/test-fixtures/surface';
 
-import { initializeTestRewardBranches } from '../support/arcana-fear';
+import {
+  initializeTestRewardBranches,
+  initializeTestRewardBranchesForRoute,
+} from '../support/arcana-fear';
 import { createTraitOfferCandidateArtifacts } from '../../src/simulation/candidates/trait-offer/capability';
 import { settleOwnedAcquisitionSite } from '../../src/simulation/rewards/acquisition/site-settlement';
 import { mergeRewardFindingEmissions } from '../../src/simulation/rewards/findings';
@@ -50,6 +53,8 @@ import {
   simulateProject,
   simulateProjectAssembly,
 } from '../../src/simulation';
+import { traitFrontierState, withSettledSpellDrop } from '../support/simulation-state';
+import { createDefaultRouteLoadout } from '../../src/authored-project/loadout';
 
 const owner = { kind: 'project' } as SemanticAddress;
 
@@ -350,10 +355,12 @@ describe('Sacrificial Hymn replacement composition', () => {
     const history = historyFrom([
       { giverKey: 'Apollo', traitKey: 'ApolloWeaponBoon', rarity: 'Common' },
     ]);
-    const draft = traitOfferStartingOutcome(catalog, 'Hera', history, {
-      limitedSwapUses: 1,
-      replacementRollChance: 1,
-    });
+    const draft = traitOfferStartingOutcome(
+      catalog,
+      'Hera',
+      traitFrontierState(history, { stygianWell: { hymnUses: 1 } }),
+      { replacementRollChance: 1 },
+    );
     expect(draft).toBeDefined();
     if (draft?.kind !== 'traits') throw new Error('expected a Hera Hymn draft');
     expect(
@@ -362,7 +369,7 @@ describe('Sacrificial Hymn replacement composition', () => {
           assessTraitOption(
             catalog,
             option.traitKey,
-            history,
+            traitFrontierState(history),
             { resolvedProviderKey: 'Hera' },
             option.rarity,
           ).replacementTransition !== undefined,
@@ -374,17 +381,19 @@ describe('Sacrificial Hymn replacement composition', () => {
     const history = historyFrom([
       { giverKey: 'Apollo', traitKey: 'ApolloWeaponBoon', rarity: 'Common' },
     ]);
-    const draft = traitOfferStartingOutcome(catalog, 'Hera', history, {
-      limitedSwapUses: 1,
-      replacementRollChance: 1,
-    });
+    const draft = traitOfferStartingOutcome(
+      catalog,
+      'Hera',
+      traitFrontierState(history, { stygianWell: { hymnUses: 1 } }),
+      { replacementRollChance: 1 },
+    );
     if (draft?.kind !== 'traits') throw new Error('expected a Hera Hymn draft');
     const replacementIndex = draft.options.findIndex(
       (option) =>
         assessTraitOption(
           catalog,
           option.traitKey,
-          history,
+          traitFrontierState(history),
           { resolvedProviderKey: 'Hera' },
           option.rarity,
         ).replacementTransition !== undefined,
@@ -478,13 +487,13 @@ describe('Sacrificial Hymn replacement composition', () => {
       ],
       source,
       history.events.length + 1,
-      (rewardHistory) => factsWithHistory(baseFacts(), rewardHistory, new Set()),
+      (state) => factsWithHistory(baseFacts(), state.rewardHistory, new Set()),
       new Map(),
     )[0]!;
     expect(settled.state.stygianWell).toMatchObject({ yarnUses: 0, hymnUses: 0 });
-    expect(settled.traitEvaluations?.at(-1)?.context).toMatchObject({
-      temporaryBoonRarityUses: 1,
-      limitedSwapUses: 1,
+    expect(settled.traitEvaluations?.at(-1)?.state.stygianWell).toMatchObject({
+      yarnUses: 1,
+      hymnUses: 1,
     });
     expect(settled.state.traitHistory?.equippedTraits.HeraWeaponBoon).toMatchObject({
       level: 3,
@@ -532,15 +541,15 @@ describe('Sacrificial Hymn replacement composition', () => {
         },
         historySequence: history.events.length + 1,
       },
-      (rewardHistory) => factsWithHistory(baseFacts(), rewardHistory, new Set()),
+      (state) => factsWithHistory(baseFacts(), state.rewardHistory, new Set()),
     );
     const blocked = product.traitChildSettlements?.[0];
     expect(blocked?.branch.state.stygianWell).toMatchObject({ yarnUses: 1, hymnUses: 1 });
-    expect(blocked?.candidateContext?.context).toMatchObject({
-      temporaryBoonRarityUses: 1,
-      limitedSwapUses: 1,
-      resolvedProviderKey: 'Hera',
+    expect(blocked?.candidateContext?.state.stygianWell).toMatchObject({
+      yarnUses: 1,
+      hymnUses: 1,
     });
+    expect(blocked?.candidateContext?.source).toMatchObject({ resolvedProviderKey: 'Hera' });
   });
 });
 
@@ -553,7 +562,7 @@ describe('rarity offer settlement contacts', () => {
       throw new Error('missing audited Miniboss rarity overrides');
     const contextFor = (boonRarityRoomOverride: typeof fOverride) => ({
       resolvedProviderKey: 'Apollo',
-      boonRarityFacts: boonRarityFactsForOffer(catalog, history, {
+      boonRarityFacts: boonRarityFactsForOffer(catalog, traitFrontierState(history), {
         resolvedProviderKey: 'Apollo',
         boonRarityRoomOverride,
       })!,
@@ -569,12 +578,26 @@ describe('rarity offer settlement contacts', () => {
       ],
     } as const;
     expect(
-      evaluateReachedTraitOffer(catalog, owner, 'source', value, history, contextFor(fOverride), 1)
-        .generation?.legal,
+      evaluateReachedTraitOffer(
+        catalog,
+        owner,
+        'source',
+        value,
+        traitFrontierState(history),
+        contextFor(fOverride),
+        1,
+      ).generation?.legal,
     ).toBe(true);
     expect(
-      evaluateReachedTraitOffer(catalog, owner, 'source', value, history, contextFor(qOverride), 1)
-        .generation?.legal,
+      evaluateReachedTraitOffer(
+        catalog,
+        owner,
+        'source',
+        value,
+        traitFrontierState(history),
+        contextFor(qOverride),
+        1,
+      ).generation?.legal,
     ).toBe(false);
   });
 
@@ -608,10 +631,10 @@ describe('rarity offer settlement contacts', () => {
         },
       },
       1,
-      (history) => factsWithHistory(baseFacts(), history, new Set()),
+      (state) => factsWithHistory(baseFacts(), state.rewardHistory, new Set()),
       new Map(),
     )[0]!;
-    expect(settled.traitEvaluations?.[0]?.context.boonRarityFacts).toMatchObject({
+    expect(settled.traitEvaluations?.[0]?.source.boonRarityFacts).toMatchObject({
       providerBase: { Rare: 0.06, Epic: 0.03, Heroic: 0, Duo: 0, Legendary: 0.01 },
       rollOrder: ['Common', 'Rare', 'Epic', 'Duo', 'Legendary'],
       roomOverride: { Rare: 1, Epic: 0.7, Duo: 0.2, Legendary: 0.2 },
@@ -625,21 +648,28 @@ describe('trait legality and derived facts', () => {
     'assesses Forage against %s at the shared eligibility contact',
     (routeKey) => {
       const history = createTraitHistoryState();
-      expect(assessTraitOption(catalog, 'PlantHealthBoon', history, { routeKey }).legal).toBe(
-        routeKey !== 'Dream',
-      );
       expect(
-        traitCandidates(catalog, 'Demeter', history, { routeKey }).find(
+        assessTraitOption(catalog, 'PlantHealthBoon', traitFrontierState(history, { routeKey }), {})
+          .legal,
+      ).toBe(routeKey !== 'Dream');
+      expect(
+        traitCandidates(catalog, 'Demeter', traitFrontierState(history, { routeKey }), {}).find(
           (candidate) => candidate.traitKey === 'PlantHealthBoon',
         )?.available,
       ).toBe(routeKey !== 'Dream');
       expect(
-        assessTraitOption(catalog, 'PlantHealthBoon', history, { routeKey, blockGiftBoons: true })
-          .legal,
+        assessTraitOption(catalog, 'PlantHealthBoon', traitFrontierState(history, { routeKey }), {
+          blockGiftBoons: true,
+        }).legal,
       ).toBe(false);
-      expect(assessTraitOption(catalog, 'DemeterWeaponBoon', history, { routeKey }).legal).toBe(
-        true,
-      );
+      expect(
+        assessTraitOption(
+          catalog,
+          'DemeterWeaponBoon',
+          traitFrontierState(history, { routeKey }),
+          {},
+        ).legal,
+      ).toBe(true);
     },
   );
   const derivedHistory = historyFrom([
@@ -683,7 +713,6 @@ describe('trait legality and derived facts', () => {
       label: 'negative prerequisite',
       traitKey: 'LobAmmoMagnetismTrait',
       history: historyWith('WeaponUpgrade', 'LobPulseAmmoTrait'),
-      context: { weaponKey: 'WeaponLob', aspectKey: 'LobAmmoBoostAspect' },
       code: 'negativePrerequisite',
     },
     {
@@ -704,9 +733,9 @@ describe('trait legality and derived facts', () => {
       history: derivedHistory,
       code: 'occupiedBoonSlot',
     },
-  ])('reports the $label authority', ({ traitKey, history, context, code }) => {
+  ])('reports the $label authority', ({ traitKey, history, code }) => {
     expect(
-      assessTraitOption(catalog, traitKey, history, context).findings.map(
+      assessTraitOption(catalog, traitKey, traitFrontierState(history), {}).findings.map(
         (finding) => finding.code,
       ),
     ).toContain(code);
@@ -716,7 +745,8 @@ describe('trait legality and derived facts', () => {
     const finding = assessTraitOption(
       catalog,
       'SlowExAttackBoon',
-      createTraitHistoryState(),
+      traitFrontierState(createTraitHistoryState()),
+      {},
     ).findings.find((candidate) => candidate.code === 'missingPrerequisite');
     expect(finding).toEqual({
       code: 'missingPrerequisite',
@@ -740,15 +770,20 @@ describe('trait legality and derived facts', () => {
       assessTraitOption(
         catalog,
         'DoorHealToFullBoon',
-        historyWith('Aphrodite', 'HighHealthOffenseBoon', 'Rare'),
+        traitFrontierState(historyWith('Aphrodite', 'HighHealthOffenseBoon', 'Rare')),
+        {},
       ).legal,
     ).toBe(true);
-    expect(assessTraitOption(catalog, 'ElementalDamageBoon', derivedHistory).legal).toBe(true);
+    expect(
+      assessTraitOption(catalog, 'ElementalDamageBoon', traitFrontierState(derivedHistory), {})
+        .legal,
+    ).toBe(true);
     expect(
       assessTraitOption(
         catalog,
         'CommonGlobalDamageBoon',
-        historyWith('Hera', 'HeraWeaponBoon', 'Rare'),
+        traitFrontierState(historyWith('Hera', 'HeraWeaponBoon', 'Rare')),
+        {},
       ).legal,
     ).toBe(true);
   });
@@ -762,7 +797,7 @@ describe('trait legality and derived facts', () => {
     const history = createTraitHistoryState();
     for (const weapon of catalog.weapons.values) {
       for (const aspectKey of weapon.aspectKeys) {
-        const context = { weaponKey: weapon.key, aspectKey };
+        const loadout = { weaponKey: weapon.key, aspectKey };
         const expectedCompatible = new Set<string>(
           expectedHammerTraitsByWeapon[
             weapon.key as keyof typeof expectedHammerTraitsByWeapon
@@ -770,7 +805,12 @@ describe('trait legality and derived facts', () => {
             (expectedHammerRestrictedAspects[traitKey] ?? weapon.aspectKeys).includes(aspectKey),
           ),
         );
-        const candidates = traitCandidates(catalog, hammer.key, history, context);
+        const candidates = traitCandidates(
+          catalog,
+          hammer.key,
+          traitFrontierState(history, { loadout }),
+          {},
+        );
         expect(candidates).toHaveLength(92);
         expect(
           new Set(candidates.filter((candidate) => candidate.available).map((c) => c.traitKey)),
@@ -793,11 +833,14 @@ describe('trait legality and derived facts', () => {
   });
 
   it('retains exact acquired Hammer exclusions independently of aspect compatibility', () => {
+    const lobLoadout = { weaponKey: 'WeaponLob', aspectKey: 'LobAmmoBoostAspect' };
     const history = historyWith('WeaponUpgrade', 'LobAmmoMagnetismTrait');
-    const excluded = assessTraitOption(catalog, 'LobPulseAmmoTrait', history, {
-      weaponKey: 'WeaponLob',
-      aspectKey: 'LobAmmoBoostAspect',
-    });
+    const excluded = assessTraitOption(
+      catalog,
+      'LobPulseAmmoTrait',
+      traitFrontierState(history, { loadout: lobLoadout }),
+      {},
+    );
     expect(excluded).toEqual({
       legal: false,
       findings: [
@@ -812,11 +855,10 @@ describe('trait legality and derived facts', () => {
     const reverse = assessTraitOption(
       catalog,
       'LobAmmoMagnetismTrait',
-      historyWith('WeaponUpgrade', 'LobPulseAmmoTrait'),
-      {
-        weaponKey: 'WeaponLob',
-        aspectKey: 'LobAmmoBoostAspect',
-      },
+      traitFrontierState(historyWith('WeaponUpgrade', 'LobPulseAmmoTrait'), {
+        loadout: lobLoadout,
+      }),
+      {},
     );
     expect(reverse).toEqual({
       legal: false,
@@ -829,10 +871,12 @@ describe('trait legality and derived facts', () => {
       ],
     });
 
-    const compatible = assessTraitOption(catalog, 'LobAmmoTrait', history, {
-      weaponKey: 'WeaponLob',
-      aspectKey: 'LobAmmoBoostAspect',
-    });
+    const compatible = assessTraitOption(
+      catalog,
+      'LobAmmoTrait',
+      traitFrontierState(history, { loadout: lobLoadout }),
+      {},
+    );
     expect(compatible).toEqual({ legal: true, findings: [] });
   });
 
@@ -889,7 +933,10 @@ describe('trait legality and derived facts', () => {
 describe('reached trait offer chronology', () => {
   it('requires a settled Spell Drop, not Aspect-start Sky Fall, before enabling Task Force', () => {
     const emptyHistory = createTraitHistoryState();
-    expect(assessTraitOption(catalog, 'OlympianSpellCountBoon', emptyHistory).legal).toBe(false);
+    expect(
+      assessTraitOption(catalog, 'OlympianSpellCountBoon', traitFrontierState(emptyHistory), {})
+        .legal,
+    ).toBe(false);
 
     const ordinarySpellHistory = foldTraitHistoryEvents(catalog, [
       Object.freeze({
@@ -904,17 +951,25 @@ describe('reached trait offer chronology', () => {
       }),
     ]);
     expect(
-      assessTraitOption(catalog, 'OlympianSpellCountBoon', ordinarySpellHistory, {
-        settledSpellDrop: true,
-      }).legal,
+      assessTraitOption(
+        catalog,
+        'OlympianSpellCountBoon',
+        withSettledSpellDrop(traitFrontierState(ordinarySpellHistory)),
+        {},
+      ).legal,
     ).toBe(true);
 
     const aspectSpellHistory = recordAspectStartingTrait(catalog, emptyHistory, owner, {
       aspectKey: 'SuitHexAspect',
     });
-    expect(assessTraitOption(catalog, 'OlympianSpellCountBoon', aspectSpellHistory).legal).toBe(
-      false,
-    );
+    expect(
+      assessTraitOption(
+        catalog,
+        'OlympianSpellCountBoon',
+        traitFrontierState(aspectSpellHistory),
+        {},
+      ).legal,
+    ).toBe(false);
   });
   const offer = (giverKey: string, traitKeys: readonly [string, string, string]) =>
     Object.freeze({
@@ -932,7 +987,7 @@ describe('reached trait offer chronology', () => {
       owner,
       'chosenSource',
       offer('Apollo', ['ApolloWeaponBoon', 'ApolloSpecialBoon', 'ApolloRetaliateBoon']),
-      createTraitHistoryState(),
+      traitFrontierState(createTraitHistoryState()),
       {},
       0,
     );
@@ -944,7 +999,7 @@ describe('reached trait offer chronology', () => {
       owner,
       'chosenSource',
       offer('Apollo', ['ApolloWeaponBoon', 'ApolloSpecialBoon', 'ApolloCastBoon']),
-      first.before,
+      first.state,
       {},
       1,
     );
@@ -1060,7 +1115,7 @@ describe('reached trait offer chronology', () => {
       owner,
       'source',
       value,
-      occupiedBefore,
+      traitFrontierState(occupiedBefore),
       {},
       0,
     );
@@ -1069,7 +1124,7 @@ describe('reached trait offer chronology', () => {
       owner,
       'source',
       value,
-      createTraitHistoryState(),
+      traitFrontierState(createTraitHistoryState()),
       {},
       0,
     );
@@ -1079,11 +1134,8 @@ describe('reached trait offer chronology', () => {
         [
           semanticAddressKey(trait),
           Object.freeze([
-            Object.freeze({ before: legalBranchTrace.before, context: legalBranchTrace.context }),
-            Object.freeze({
-              before: invalidBranchTrace.before,
-              context: invalidBranchTrace.context,
-            }),
+            Object.freeze({ state: legalBranchTrace.state, source: legalBranchTrace.source }),
+            Object.freeze({ state: invalidBranchTrace.state, source: invalidBranchTrace.source }),
           ]),
         ],
       ]),
@@ -1144,16 +1196,19 @@ describe('reached trait offer chronology', () => {
   });
 
   it('keeps individually eligible non-core choices available while the whole offer needs repair', () => {
-    const candidate = traitCandidates(catalog, 'Apollo', createTraitHistoryState()).find(
-      (entry) => entry.traitKey === 'ApolloRetaliateBoon' && entry.rarity === 'Common',
-    );
+    const candidate = traitCandidates(
+      catalog,
+      'Apollo',
+      traitFrontierState(createTraitHistoryState()),
+      {},
+    ).find((entry) => entry.traitKey === 'ApolloRetaliateBoon' && entry.rarity === 'Common');
     expect(candidate?.available).toBe(true);
     expect(candidate?.assessment.findings).toEqual([]);
   });
 
   it('keeps Athena preferred candidates authorable without a Death Defiance input', () => {
     const history = createTraitHistoryState();
-    const candidate = traitCandidates(catalog, 'Athena', history).find(
+    const candidate = traitCandidates(catalog, 'Athena', traitFrontierState(history), {}).find(
       (entry) => entry.traitKey === 'DeathDefianceRefillBoon',
     );
     expect(candidate?.available).toBe(true);
@@ -1168,7 +1223,7 @@ describe('reached trait offer chronology', () => {
       ]) as Extract<AuthoredTraitOffer, { kind: 'traits' }>['options'],
       selectedOptionKey: 'option1' as const,
     });
-    expect(assessTraitOffer(catalog, retained, history)).toMatchObject([
+    expect(assessTraitOffer(catalog, retained, traitFrontierState(history), {})).toMatchObject([
       {
         legal: true,
       },
@@ -1194,8 +1249,8 @@ describe('reached trait offer chronology', () => {
       aspectKey: activeWeapon.defaultAspectKey,
     };
     const biome = createBiomeAddress('Underworld', 'F');
-    const facts = (history: Parameters<typeof factsWithHistory>[1]) =>
-      factsWithHistory(baseFacts(), history, new Set());
+    const facts = (state: { readonly rewardHistory: Parameters<typeof factsWithHistory>[1] }) =>
+      factsWithHistory(baseFacts(), state.rewardHistory, new Set());
     const findings = new Map();
     const hammer = { rewardType: 'WeaponUpgrade' as const };
     const hammerKeys = catalog.traitGivers.byKey.WeaponUpgrade?.traitKeys.filter((traitKey) => {
@@ -1225,14 +1280,22 @@ describe('reached trait offer chronology', () => {
     let branches = settleTestRoomReward(
       biome,
       createOccurrenceId('invalid-hammer-trace'),
-      initializeTestRewardBranches(),
+      initializeTestRewardBranchesForRoute(
+        undefined,
+        undefined,
+        catalog,
+        undefined,
+        undefined,
+        'Underworld',
+        { ...createDefaultRouteLoadout(catalog), ...activeLoadout },
+      ),
       {
         origin: createIncomingRewardAddress(biome, createOccurrenceId('invalid-hammer-trace')),
         offer: hammer,
         producerLifecycleKey: 'RoomReward',
         instanceProvenance: 'free',
         traitOffersByAcquisitionRole: hammerOffer,
-        traitContext: activeLoadout,
+        traitContext: {},
       },
       1,
       facts,
@@ -1264,7 +1327,7 @@ describe('reached trait offer chronology', () => {
         producerLifecycleKey: 'RoomReward',
         instanceProvenance: 'free',
         traitOffersByAcquisitionRole: boonOffer,
-        traitContext: activeLoadout,
+        traitContext: {},
       },
       2,
       facts,

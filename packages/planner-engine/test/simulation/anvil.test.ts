@@ -18,8 +18,10 @@ import { applyProducerRoleHistory } from '../../src/simulation/rewards/acquisiti
 import { mergeRewardFindingEmissions } from '../../src/simulation/rewards/findings';
 import { createAnvilCandidateCapability } from '../../src/simulation/rewards/anvil-settlement';
 import { attachTraitHistory, foldTraitHistoryEvents } from '../../src/simulation/traits';
+import { initializeTestRewardBranchesForRoute } from '../support/arcana-fear';
+import { createDefaultRouteLoadout } from '../../src/authored-project/loadout';
 
-const context = Object.freeze({
+const staffLoadout = Object.freeze({
   weaponKey: 'WeaponStaffSwing',
   aspectKey: 'BaseStaffAspect',
 });
@@ -51,7 +53,15 @@ function historyWithHammers(...traitKeys: readonly string[]) {
 }
 
 function branchWithHammerFrontier(traitKey: string, experimentalHammerTraitKey?: string) {
-  const branch = initializeTestRewardBranches(createTestArcanaFearState())[0]!;
+  const branch = initializeTestRewardBranchesForRoute(
+    undefined,
+    createTestArcanaFearState(),
+    catalog,
+    undefined,
+    undefined,
+    'Underworld',
+    { ...createDefaultRouteLoadout(catalog), ...staffLoadout },
+  )[0]!;
   const traitHistory = historyWithHammers(
     traitKey,
     ...(experimentalHammerTraitKey === undefined ? [] : [experimentalHammerTraitKey]),
@@ -92,7 +102,7 @@ function anvilCapabilityFor(branch: ReturnType<typeof branchWithHammerFrontier>)
       branchesBeforeRole: Object.freeze([branch]),
       source: Object.freeze({
         offer: Object.freeze({ rewardType: 'ChaosWeaponUpgrade' }),
-        traitContext: context,
+        traitContext: {},
       }),
     }),
   ]);
@@ -127,7 +137,7 @@ describe('Anvil of Fates acquisition settlement', () => {
         offer,
         producerLifecycleKey: 'Q_WorldShop',
         instanceProvenance: 'paid' as const,
-        traitContext: context,
+        traitContext: {},
         dispositionByAcquisitionRole: Object.freeze({ self: Object.freeze({ kind: 'normal' }) }),
         anvilResult: Object.freeze({
           kind: 'anvilOfFates' as const,
@@ -139,7 +149,7 @@ describe('Anvil of Fates acquisition settlement', () => {
         }),
       }),
       Object.freeze({ ...role, historySequence: 2 }),
-      (history) => factsWithHistory(baseFacts(), history, new Set()),
+      (state) => factsWithHistory(baseFacts(), state.rewardHistory, new Set()),
       undefined,
       undefined,
       Object.freeze({ site, entry }),
@@ -174,12 +184,12 @@ describe('Anvil of Fates acquisition settlement', () => {
         offer,
         producerLifecycleKey: 'Q_WorldShop',
         instanceProvenance: 'paid' as const,
-        traitContext: context,
+        traitContext: {},
         dispositionByAcquisitionRole: Object.freeze({ self: Object.freeze({ kind: 'normal' }) }),
         anvilResult: null,
       }),
       Object.freeze({ ...role, historySequence: 2 }),
-      (history) => factsWithHistory(baseFacts(), history, new Set()),
+      (state) => factsWithHistory(baseFacts(), state.rewardHistory, new Set()),
       undefined,
       undefined,
       Object.freeze({ site, entry }),

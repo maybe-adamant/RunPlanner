@@ -324,12 +324,9 @@ export function settleAcquisitionResolvedReward(
         supported:
           offer.rewardType === request.visibleOffer.rewardType &&
           branches.every((branch) =>
-            isOfferSupportedAtResolutionPoint(
-              catalog.rewards,
-              offer,
-              facts(branch.state.rewardHistory, undefined, branch),
-              { acquisitionRole: resolution.role },
-            ),
+            isOfferSupportedAtResolutionPoint(catalog.rewards, offer, facts(branch.state), {
+              acquisitionRole: resolution.role,
+            }),
           ),
       }),
   });
@@ -522,7 +519,7 @@ export function settleArtificerReplacementAcquisition(
               levelResolutionsByAcquisitionRole: replacement.levelResolutionsByAcquisitionRole,
             }),
         dispositionByAcquisitionRole: replacement.dispositionByAcquisitionRole,
-        traitContext: request.traitContext ?? Object.freeze({}),
+        ...(request.traitContext === undefined ? {} : { traitContext: request.traitContext }),
         ...(request.timelineOwner === undefined ? {} : { timelineOwner: request.timelineOwner }),
         ...(!sourceCanDuplicate ? { blocksSeaStarDuplication: true as const } : {}),
       }),
@@ -706,7 +703,7 @@ export function settlePickupAcquisitionSite(
             ...(reward.levelResolutionsByAcquisitionRole === undefined
               ? {}
               : { levelResolutionsByAcquisitionRole: reward.levelResolutionsByAcquisitionRole }),
-            traitContext: request.traitContext ?? Object.freeze({}),
+            ...(request.traitContext === undefined ? {} : { traitContext: request.traitContext }),
             ...(candidateTimelineOwner === undefined
               ? {}
               : { timelineOwner: candidateTimelineOwner }),
@@ -842,7 +839,7 @@ export function settlePickupAcquisitionSite(
           ...(reward.levelResolutionsByAcquisitionRole === undefined
             ? {}
             : { levelResolutionsByAcquisitionRole: reward.levelResolutionsByAcquisitionRole }),
-          traitContext: request.traitContext ?? Object.freeze({}),
+          ...(request.traitContext === undefined ? {} : { traitContext: request.traitContext }),
           ...(entryTimelineOwner === undefined ? {} : { timelineOwner: entryTimelineOwner }),
           dispositionByAcquisitionRole: reward.dispositionByAcquisitionRole,
           ...(request.seaStarDuplicateEntryKeys?.has(key) === true

@@ -1,9 +1,5 @@
 import type { FindingRegionEntry } from '../../../finding-regions';
-import type {
-  ResolvedRewardOffer,
-  RewardHistoryState,
-  RewardKernelFacts,
-} from '../../../../reward-kernel';
+import type { ResolvedRewardOffer, RewardKernelFacts } from '../../../../reward-kernel';
 import type {
   CanonicalAuthoredRoom,
   CanonicalResolvedIncomingReward,
@@ -22,6 +18,7 @@ import type { CanonicalLifecycleRoom } from '../../../history/lifecycleInput';
 import type { RunStateOwner } from '../../run-state';
 import type { TargetAddress } from '../../../../authored-project/addresses';
 import type { PlannerTimelineFacts } from '../../../timeline-facts';
+import type { SimulationState } from '../../../state/model';
 
 /** Complete non-branch emissions from one authored acquisition-site settlement. */
 export interface AuthoredSiteSettlementEmissions {
@@ -74,7 +71,7 @@ export interface UnresolvedHubBoardGenerationParticipant {
   readonly declaration: RoomDeclaration;
   readonly incoming: NonNullable<CanonicalAuthoredRoom['unresolvedIncomingReward']>;
   readonly historySequence: number;
-  readonly facts: (history: RewardHistoryState) => RewardKernelFacts;
+  readonly facts: (state: SimulationState) => RewardKernelFacts;
   readonly candidateFor: (offer: ResolvedRewardOffer) => CanonicalResolvedIncomingReward;
 }
 

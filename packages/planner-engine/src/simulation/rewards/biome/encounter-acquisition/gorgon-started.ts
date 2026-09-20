@@ -16,7 +16,7 @@ import {
 import { deriveBoonRarityLedger } from '../../../traits/rarity';
 import {
   boonRarityFactsForOffer,
-  offerGenerationAdjustedTraitGiverContext,
+  offerGenerationAdjustedGiverSource,
 } from '../../../traits/offers';
 
 import type { RewardBranchState } from '../../branch-primitives';
@@ -39,10 +39,9 @@ export function resolveGorgonCandidateRarity(inputs: {
   const sourceOverride = gorgonSourceRarityOverride(inputs.rarityLevel);
   const suppressTemporaryBoonRarity = inputs.rarityLevel > 1;
   const rarities = inputs.branches.map((branch) => {
-    const history = branch.state.traitHistory;
-    const context = offerGenerationAdjustedTraitGiverContext(
+    const context = offerGenerationAdjustedGiverSource(
       inputs.catalog,
-      history,
+      branch.state,
       inputs.providerKey,
       {
         resolvedProviderKey: inputs.providerKey,
@@ -50,19 +49,10 @@ export function resolveGorgonCandidateRarity(inputs: {
         ...(inputs.roomOverride === undefined
           ? {}
           : { boonRarityRoomOverride: inputs.roomOverride }),
-        ...(suppressTemporaryBoonRarity
-          ? { suppressTemporaryBoonRarity: true }
-          : branch.state.stygianWell.yarnUses === 0
-            ? {}
-            : { temporaryBoonRarityUses: branch.state.stygianWell.yarnUses }),
+        ...(suppressTemporaryBoonRarity ? { suppressTemporaryBoonRarity: true } : {}),
       },
     );
-    const facts = boonRarityFactsForOffer(
-      inputs.catalog,
-      history,
-      context,
-      branch.state.arcanaFear,
-    );
+    const facts = boonRarityFactsForOffer(inputs.catalog, branch.state, context);
     return (
       context.freshRarityOverride ??
       (facts === undefined

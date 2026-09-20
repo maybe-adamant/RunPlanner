@@ -36,8 +36,8 @@ import {
   echoPomGreatestLevelTraitKeys,
   echoLastRunBoonOutcomes,
   directTraitSetOutcomes,
-  offerGenerationAdjustedTraitOfferContext,
-  traitOfferGenerationContext,
+  offerGenerationAdjustedOfferSource,
+  resolveTraitOfferSource,
   isChaosGodScreenGiver,
   assessNaturalSelectionTargets,
   type NaturalSelectionTargetAssessment,
@@ -48,7 +48,9 @@ import {
   assessChaosPairRarity,
   chaosPairRarities,
 } from '../../traits';
-import type { EchoLastRunBoonOutcome, TraitOfferContext } from '../../traits/offer-domain';
+import type { EchoLastRunBoonOutcome, ResolvedTraitOfferSource } from '../../traits/offer-domain';
+import type { SimulationState } from '../../state/model';
+import { replaceSimulationTraitHistory } from '../../state/transitions';
 import { advanceCurrentKeepsake } from '../../keepsakes/state';
 import {
   concaveStoneProcSupport,
@@ -70,7 +72,8 @@ export interface ConcaveStoneCandidateBranch {
 }
 
 interface ConcaveStoneSecondaryCandidateContext {
-  readonly before: TraitHistoryState;
+  /** Exact post-primary snapshot the residual row is acquired against. */
+  readonly state: SimulationState;
   readonly option: AuthoredTraitOfferTraits['options'][number];
 }
 
@@ -88,17 +91,15 @@ export interface TraitOfferCandidateBranchAssessment extends TraitOfferBranchAss
   readonly offerGenerationState?: TraitOfferGenerationState;
 }
 
-function traitOfferCandidateContext(
+function traitOfferCandidateSource(
   catalog: Catalog,
-  history: TraitHistoryState,
-  context: TraitOfferContext,
+  context: TraitOfferCandidateContext,
   value: AuthoredTraitOffer,
-  arcanaFear?: import('../../arcana-fear').ArcanaFearState,
-): TraitOfferContext {
+): ResolvedTraitOfferSource {
   const giver = value.kind === 'chaos' ? undefined : catalog.traitGivers.byKey[value.giverKey];
   return giver?.providerKind === 'olympian' || giver?.providerKind === 'hermes'
-    ? traitOfferGenerationContext(catalog, history, value.giverKey, context, arcanaFear)
-    : offerGenerationAdjustedTraitOfferContext(catalog, history, value, context);
+    ? resolveTraitOfferSource(catalog, context.state, value.giverKey, context.source)
+    : offerGenerationAdjustedOfferSource(catalog, context.state, value, context.source);
 }
 
 /**
@@ -315,10 +316,7 @@ export function createTraitOfferCandidateArtifacts(
   const privateContexts = new Map(contexts);
   return Object.freeze({
     at: (address: TraitOfferAddress | NaturalSelectionResultAddress) => {
-      const branchContexts = privateContexts.get(semanticAddressKey(address))?.map((branch) => ({
-        ...branch,
-        context: Object.freeze({ ...branch.context, routeKey: address.routeKey }),
-      }));
+      const branchContexts = privateContexts.get(semanticAddressKey(address));
       if (branchContexts === undefined) return undefined;
       const concaveStoneSecondaryContext = (
         value: AuthoredTraitOffer,
@@ -338,40 +336,29 @@ export function createTraitOfferCandidateArtifacts(
         const base = assessTraitOfferBeforeRarification(
           catalog,
           primaryOffer,
-          context.before,
-          traitOfferCandidateContext(
-            catalog,
-            context.before,
-            context.context,
-            primaryOffer,
-            context.arcanaFear,
-          ),
+          context.state,
+          traitOfferCandidateSource(catalog, context, primaryOffer),
         );
-        const callingCard =
-          context.keepsakes === undefined
-            ? undefined
-            : evaluateCallingCardOffer(catalog, context.keepsakes, primaryOffer, base.legal);
-        const effectiveOffer = callingCard?.offer ?? primaryOffer;
+        const callingCard = evaluateCallingCardOffer(
+          catalog,
+          context.state.keepsakes,
+          primaryOffer,
+          base.legal,
+        );
+        const effectiveOffer = callingCard.offer;
         if (effectiveOffer.kind !== 'traits') return undefined;
         const traitAddress = address.kind === 'traitOffer' ? address : address.trait;
+        const rarifiedState = Object.freeze({ ...context.state, keepsakes: callingCard.state });
         const primary = evaluateReachedTraitOffer(
           catalog,
           traitAddress,
           traitAddress.acquisitionRole,
           effectiveOffer,
-          context.before,
-          traitOfferCandidateContext(
-            catalog,
-            context.before,
-            context.context,
-            effectiveOffer,
-            context.arcanaFear,
-          ),
+          rarifiedState,
+          traitOfferCandidateSource(catalog, context, effectiveOffer),
           0,
-          context.arcanaFear,
           false,
-          callingCard?.state ?? context.keepsakes,
-          callingCard === undefined ? undefined : primaryOffer,
+          primaryOffer,
         );
         const primarySupported =
           primary.generation?.legal !== false &&
@@ -379,7 +366,8 @@ export function createTraitOfferCandidateArtifacts(
           primary.targetedAcquisition.legal &&
           primary.assessments[optionIndex(effectiveOffer.selectedOptionKey)]?.legal === true;
         if (!primarySupported) return undefined;
-        const sequence = Math.max(0, ...context.before.events.map((event) => event.sequence)) + 1;
+        const sequence =
+          Math.max(0, ...context.state.traitHistory.events.map((event) => event.sequence)) + 1;
         const applied = recordReachedTraitOffer(catalog, primary, sequence, 'candidate');
         const selected = effectiveOffer.options[optionIndex(effectiveOffer.selectedOptionKey)];
         if (applied.event === undefined || selected === undefined) return undefined;
@@ -392,26 +380,18 @@ export function createTraitOfferCandidateArtifacts(
           selected,
           selectedDisposition,
           targetedAcquisition: primary.targetedAcquisition,
-          before: primary.before,
+          before: primary.state.traitHistory,
           candidateContext: Object.freeze({
-            before: primary.before,
-            context: traitOfferCandidateContext(
-              catalog,
-              context.before,
-              context.context,
-              effectiveOffer,
-              context.arcanaFear,
-            ),
-            ...(context.arcanaFear === undefined ? {} : { arcanaFear: context.arcanaFear }),
-            ...(context.keepsakes === undefined ? {} : { keepsakes: context.keepsakes }),
+            state: primary.state,
+            source: traitOfferCandidateSource(catalog, context, effectiveOffer),
           }),
-          directTraitSetBranchHistories: Object.freeze([context.before]),
+          directTraitSetBranchHistories: Object.freeze([context.state.traitHistory]),
           lifecyclePoint: 'candidate',
           sequence,
         });
         if (settledChildren.blockedChild !== undefined) return undefined;
         return Object.freeze({
-          before: settledChildren.traitHistory,
+          state: replaceSimulationTraitHistory(context.state, settledChildren.traitHistory),
           option: residual,
         });
       };
@@ -424,25 +404,14 @@ export function createTraitOfferCandidateArtifacts(
         evaluateOffer: (value: AuthoredTraitOffer) =>
           Object.freeze(
             branchContexts.map((context) => {
-              const resolvedContext = traitOfferCandidateContext(
-                catalog,
-                context.before,
-                context.context,
-                value,
-                context.arcanaFear,
-              );
+              const resolvedContext = traitOfferCandidateSource(catalog, context, value);
               const base = assessTraitOfferBeforeRarification(
                 catalog,
                 value,
-                context.before,
+                context.state,
                 resolvedContext,
               );
-              const rarityFacts = boonRarityFactsForOffer(
-                catalog,
-                context.before,
-                resolvedContext,
-                context.arcanaFear,
-              );
+              const rarityFacts = boonRarityFactsForOffer(catalog, context.state, resolvedContext);
               const rarity =
                 rarityFacts !== undefined
                   ? Object.freeze({
@@ -469,11 +438,8 @@ export function createTraitOfferCandidateArtifacts(
                       value.options.map((option, index) =>
                         resolveTraitOfferOptionLevel({
                           catalog,
-                          before: context.before,
-                          context: resolvedContext,
-                          ...(context.keepsakes === undefined
-                            ? {}
-                            : { keepsakes: context.keepsakes }),
+                          state: context.state,
+                          source: resolvedContext,
                           option,
                           ...(base.assessments[index] === undefined
                             ? {}
@@ -484,13 +450,7 @@ export function createTraitOfferCandidateArtifacts(
               const assessments =
                 value.kind === 'chaos'
                   ? Object.freeze([
-                      assessChaosPairRarity(
-                        catalog,
-                        context.before,
-                        value,
-                        resolvedContext,
-                        context.arcanaFear,
-                      ),
+                      assessChaosPairRarity(catalog, context.state, value, resolvedContext),
                     ])
                   : Object.freeze(
                       base.assessments.map((assessment, index) => {
@@ -522,8 +482,7 @@ export function createTraitOfferCandidateArtifacts(
                 targetedAcquisition: assessSelectedTargetedAcquisition(
                   catalog,
                   value,
-                  context.before,
-                  context.context,
+                  context.state,
                 ),
               });
             }),
@@ -531,29 +490,20 @@ export function createTraitOfferCandidateArtifacts(
         callingCard: (value: AuthoredTraitOffer) =>
           Object.freeze(
             branchContexts.map((context) => {
-              const keepsakes = context.keepsakes;
+              const keepsakes = context.state.keepsakes;
               const base = assessTraitOfferBeforeRarification(
                 catalog,
                 value,
-                context.before,
-                traitOfferCandidateContext(
-                  catalog,
-                  context.before,
-                  context.context,
-                  value,
-                  context.arcanaFear,
-                ),
+                context.state,
+                traitOfferCandidateSource(catalog, context, value),
               );
-              const result =
-                keepsakes === undefined
-                  ? undefined
-                  : evaluateCallingCardOffer(catalog, keepsakes, value, base.legal);
+              const result = evaluateCallingCardOffer(catalog, keepsakes, value, base.legal);
               return Object.freeze({
-                effectiveOffer: result?.offer ?? value,
-                remainingCharges: result?.state.callingCard?.remainingCharges,
-                invalidActions: result?.invalidActions ?? Object.freeze([]),
+                effectiveOffer: result.offer,
+                remainingCharges: result.state.callingCard?.remainingCharges,
+                invalidActions: result.invalidActions,
                 rarifiableOptionKeys:
-                  value.kind !== 'traits' || keepsakes === undefined
+                  value.kind !== 'traits'
                     ? Object.freeze([])
                     : Object.freeze(
                         (['option1', 'option2', 'option3'] as const).filter((key) => {
@@ -568,14 +518,8 @@ export function createTraitOfferCandidateArtifacts(
                           const attemptedBase = assessTraitOfferBeforeRarification(
                             catalog,
                             attempted,
-                            context.before,
-                            traitOfferCandidateContext(
-                              catalog,
-                              context.before,
-                              context.context,
-                              attempted,
-                              context.arcanaFear,
-                            ),
+                            context.state,
+                            traitOfferCandidateSource(catalog, context, attempted),
                           );
                           const attempt = evaluateCallingCardOffer(
                             catalog,
@@ -597,14 +541,8 @@ export function createTraitOfferCandidateArtifacts(
               const outcome = traitOfferStartingOutcome(
                 catalog,
                 giverKey,
-                context.before,
-                traitOfferGenerationContext(
-                  catalog,
-                  context.before,
-                  giverKey,
-                  context.context,
-                  context.arcanaFear,
-                ),
+                context.state,
+                resolveTraitOfferSource(catalog, context.state, giverKey, context.source),
               );
               return outcome;
             })
@@ -616,14 +554,8 @@ export function createTraitOfferCandidateArtifacts(
               appendTraitOfferDraft(
                 catalog,
                 value,
-                context.before,
-                traitOfferCandidateContext(
-                  catalog,
-                  context.before,
-                  context.context,
-                  value,
-                  context.arcanaFear,
-                ),
+                context.state,
+                traitOfferCandidateSource(catalog, context, value),
               ),
             )
             .find((draft): draft is NonNullable<typeof draft> => draft !== undefined);
@@ -654,14 +586,8 @@ export function createTraitOfferCandidateArtifacts(
               const sourceAssessment = assessTraitOffer(
                 catalog,
                 value,
-                context.before,
-                traitOfferCandidateContext(
-                  catalog,
-                  context.before,
-                  context.context,
-                  value,
-                  context.arcanaFear,
-                ),
+                context.state,
+                traitOfferCandidateSource(catalog, context, value),
               )[optionIndex(optionKey)];
               const latest =
                 catalog.traits.byKey[option.traitKey]?.targetedAcquisition?.kind ===
@@ -669,8 +595,8 @@ export function createTraitOfferCandidateArtifacts(
                   ? latestModelTargetDomain(
                       catalog,
                       option.traitKey,
-                      secondary?.before ?? context.before,
-                      context.context.acquisitionOrdinal!,
+                      secondary?.state.traitHistory ?? context.state.traitHistory,
+                      context.state.reached.routePosition.ordinal,
                     )
                   : undefined;
               return Object.freeze({
@@ -680,7 +606,7 @@ export function createTraitOfferCandidateArtifacts(
                   selectedTargetedAcquisitionTargetKeys(
                     catalog,
                     option,
-                    secondary?.before ?? context.before,
+                    secondary?.state.traitHistory ?? context.state.traitHistory,
                   ),
                 ...(latest === undefined ? {} : { requiredCount: latest.requiredCount }),
               });
@@ -695,17 +621,16 @@ export function createTraitOfferCandidateArtifacts(
                 option === undefined
                   ? undefined
                   : catalog.traits.byKey[option.traitKey]?.selectedDisposition;
-              if (effect?.kind !== 'circe' || context.arcanaFear === undefined) return [];
-              const acquisitionOrdinal = context.context.acquisitionOrdinal;
-              if (acquisitionOrdinal === undefined) return [];
+              if (effect?.kind !== 'circe') return [];
+              const acquisitionOrdinal = context.state.reached.routePosition.ordinal;
               return [
                 circeResolutionDomain(
                   catalog,
-                  context.arcanaFear,
+                  context.state.arcanaFear,
                   effect.effect,
                   resolveTraitAcquisitionOrdinalEffect(effect, acquisitionOrdinal)
                     .circeSelectionCount!,
-                  context.keepsakes?.fatedStatus,
+                  context.state.keepsakes.fatedStatus,
                 ),
               ];
             }),
@@ -718,7 +643,7 @@ export function createTraitOfferCandidateArtifacts(
               if (option === undefined) return [];
               const disposition = catalog.traits.byKey[option.traitKey]?.selectedDisposition;
               if (disposition?.kind !== 'echo' || disposition.effect !== 'doubleLevel') return [];
-              return [echoPomGreatestLevelTraitKeys(catalog, context.before)];
+              return [echoPomGreatestLevelTraitKeys(catalog, context.state.traitHistory)];
             }),
           ),
         echoLastRunBoon: (value: AuthoredTraitOffer, optionKey: TraitOptionKey) =>
@@ -729,7 +654,7 @@ export function createTraitOfferCandidateArtifacts(
               if (option === undefined) return [];
               const disposition = catalog.traits.byKey[option.traitKey]?.selectedDisposition;
               if (disposition?.kind !== 'echo' || disposition.effect !== 'lastRunBoon') return [];
-              return [echoLastRunBoonOutcomes(catalog, context.before, context.context)];
+              return [echoLastRunBoonOutcomes(catalog, context.state, context.source)];
             }),
           ),
         allTogetherSet: (
@@ -749,7 +674,7 @@ export function createTraitOfferCandidateArtifacts(
               return [
                 directTraitSetOutcomes(
                   catalog,
-                  secondary?.before ?? context.before,
+                  secondary?.state.traitHistory ?? context.state.traitHistory,
                   option.traitKey,
                   setKey,
                 ),
@@ -770,7 +695,7 @@ export function createTraitOfferCandidateArtifacts(
               return [
                 assessNaturalSelectionTargets(
                   catalog,
-                  secondary?.before ?? context.before,
+                  secondary?.state.traitHistory ?? context.state.traitHistory,
                   levelCount,
                   slots,
                   targets,
@@ -786,14 +711,8 @@ export function createTraitOfferCandidateArtifacts(
               const base = assessTraitOfferBeforeRarification(
                 catalog,
                 value,
-                context.before,
-                traitOfferCandidateContext(
-                  catalog,
-                  context.before,
-                  context.context,
-                  value,
-                  context.arcanaFear,
-                ),
+                context.state,
+                traitOfferCandidateSource(catalog, context, value),
               );
               const replacementOptionKeys =
                 value.kind === 'traits'
@@ -806,8 +725,7 @@ export function createTraitOfferCandidateArtifacts(
                 value,
                 replacementOptionKeys,
               );
-              let keepsakes = context.keepsakes;
-              if (keepsakes === undefined) return [];
+              let keepsakes = context.state.keepsakes;
               const callingCard = evaluateCallingCardOffer(catalog, keepsakes, value, base.legal);
               keepsakes = callingCard.state;
               const selected = value.options[optionIndex(value.selectedOptionKey)];
@@ -867,18 +785,9 @@ export function createTraitOfferCandidateArtifacts(
                   ? address.acquisitionRole
                   : address.trait.acquisitionRole,
                 value,
-                context.before,
-                traitOfferCandidateContext(
-                  catalog,
-                  context.before,
-                  context.context,
-                  value,
-                  context.arcanaFear,
-                ),
+                context.state,
+                traitOfferCandidateSource(catalog, context, value),
                 0,
-                context.arcanaFear,
-                false,
-                context.keepsakes,
               );
               const applied = recordReachedTraitOffer(catalog, evaluation, 0, 'candidate');
               return applied.ransomAssessment === undefined ? [] : [applied.ransomAssessment];
@@ -889,7 +798,7 @@ export function createTraitOfferCandidateArtifacts(
             ? Object.freeze([])
             : Object.freeze(
                 branchContexts.map((context) => {
-                  const rejected = context.before.activeChaosCurses.some(
+                  const rejected = context.state.traitHistory.activeChaosCurses.some(
                     (curse) => curse.semanticTag === 'Rejected',
                   );
                   return Object.freeze({
@@ -928,23 +837,29 @@ export function createTraitOfferCandidateArtifacts(
                 !(entry.offerRequirements ?? []).some((requirement) => {
                   switch (requirement.kind) {
                     case 'matureChaosBlessing':
-                      return context.before.maturedChaosBlessings.length === 0;
+                      return context.state.traitHistory.maturedChaosBlessings.length === 0;
                     case 'elementMinimum':
                       return (
-                        context.before.elementCounts[requirement.element] < requirement.minimum
+                        context.state.traitHistory.elementCounts[requirement.element] <
+                        requirement.minimum
                       );
                     case 'notKeepsake':
-                      return context.context.currentKeepsakeKey === requirement.keepsakeKey;
+                      // Matches the reached Chaos screen, which has never
+                      // consulted a keepsake identity. See the selected
+                      // assessment in `simulation/traits/offers.ts`.
+                      return false;
                     case 'notAspect':
-                      return context.context.aspectKey === requirement.aspectKey;
+                      return context.state.equipment.aspectKey === requirement.aspectKey;
                     case 'routeKey':
-                      return address.routeKey !== requirement.routeKey;
+                      return context.state.reached.routePosition.routeKey !== requirement.routeKey;
                     case 'routeKeyNot':
-                      return address.routeKey === requirement.routeKey;
+                      return context.state.reached.routePosition.routeKey === requirement.routeKey;
                   }
                 });
               const availableCurses = catalog.chaos.curses.values.filter(
-                (curse) => eligible(curse) && !context.before.bannedTraitKeys.includes(curse.key),
+                (curse) =>
+                  eligible(curse) &&
+                  !context.state.traitHistory.bannedTraitKeys.includes(curse.key),
               );
               const availableBlessings = catalog.chaos.blessings.values.filter(eligible);
               const optionKeys = ['option1', 'option2', 'option3'] as const;
@@ -991,9 +906,8 @@ export function createTraitOfferCandidateArtifacts(
                   : blessings[0];
               const rarities = chaosPairRarities(
                 catalog,
-                context.before,
-                context.context,
-                context.arcanaFear,
+                context.state,
+                context.source,
                 selectedCurse,
                 blessing,
               );

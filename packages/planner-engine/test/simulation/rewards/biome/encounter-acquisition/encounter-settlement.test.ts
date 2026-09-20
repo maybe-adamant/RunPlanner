@@ -76,7 +76,6 @@ describe('Personal Loan boss checkpoint', () => {
         room,
         view: undefined,
         branches: [branch],
-        routeLoadout: project.route.loadout,
         enteredBiomeCount,
         fullRunBiomeCount: catalog.routes.byKey.Surface!.biomeKeys.length,
         authoredSeaStarDuplicateSiteKeys: new Set(),

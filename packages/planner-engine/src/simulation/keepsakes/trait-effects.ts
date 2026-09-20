@@ -11,7 +11,9 @@ import {
 } from '../../authored-project/traits/state';
 import { hasEffectiveInRunUpgrade, isInRunRarityBlocked } from '../traits/history/upgrades';
 import type { TraitHistoryState } from '../traits/history/model';
+import { plainTraitOfferSource } from '../traits/offer-domain';
 import { assessTraitOption } from '../traits/authoring/assessment';
+import type { SimulationState } from '../state/model';
 import {
   figurineRarityForRank,
   keepsakeEffectByKind,
@@ -82,7 +84,7 @@ export function equipJeweledPom(
 export function assessJeweledPomEquipResult(
   catalog: Catalog,
   result: NonNullable<AuthoredKeepsakeEquipResults['jeweledPom']>,
-  before: TraitHistoryState,
+  state: SimulationState,
   fatedStatus: FatedStatus,
 ): { readonly legal: boolean; readonly findings: readonly string[] } {
   if (fatedStatus !== 'Fated')
@@ -99,7 +101,7 @@ export function assessJeweledPomEquipResult(
   const assessment = assessTraitOption(
     catalog,
     result.traitKey,
-    before,
+    state,
     { resolvedProviderKey: effect.giverKey },
     result.rarity,
   );
@@ -113,20 +115,19 @@ export function assessJeweledPomEquipResult(
 export function assessExperimentalHammerEquipResult(
   catalog: Catalog,
   result: NonNullable<AuthoredKeepsakeEquipResults['experimentalHammer']>,
-  before: TraitHistoryState,
-  loadout: { readonly weaponKey: string; readonly aspectKey: string },
+  state: SimulationState,
 ): { readonly legal: boolean; readonly findings: readonly string[] } {
   const domain = catalog.traits.values.filter(
     (trait) =>
       trait.hammerCompatibility !== undefined &&
-      assessTraitOption(catalog, trait.key, before, loadout).legal,
+      assessTraitOption(catalog, trait.key, state, plainTraitOfferSource).legal,
   );
   if (result.kind === 'exhausted')
     return Object.freeze({
       legal: domain.length === 0,
       findings: Object.freeze(domain.length === 0 ? [] : ['keepsakeEquipResultUnavailable']),
     });
-  const assessment = assessTraitOption(catalog, result.traitKey, before, loadout);
+  const assessment = assessTraitOption(catalog, result.traitKey, state, plainTraitOfferSource);
   const trait = catalog.traits.byKey[result.traitKey];
   return Object.freeze({
     legal: trait?.hammerCompatibility !== undefined && assessment.legal,

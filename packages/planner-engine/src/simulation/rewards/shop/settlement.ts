@@ -611,7 +611,7 @@ export function settleShopAcquisitionSite(
         slotIndex,
         execution.remainingSlotIndexes,
         execution.candidate.state.rewardHistory,
-        context.facts(execution.candidate.state.rewardHistory, new Set(), execution.candidate),
+        context.facts(execution.candidate.state, new Set()),
         requirements,
       );
       if (purchase === undefined) {

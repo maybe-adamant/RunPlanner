@@ -38,6 +38,7 @@ import {
   createPreparedProjectCandidateSession,
   simulateProjectAssembly,
 } from '@run-planner/engine/simulation';
+import { traitFrontierState } from '../support/simulation-state';
 
 const owner = { kind: 'project' } as const;
 
@@ -116,7 +117,10 @@ describe('run-impacting trait candidate contacts', () => {
         [
           semanticAddressKey(result),
           Object.freeze([
-            { before: historyWithCoreTrait('ApolloWeaponBoon'), context: Object.freeze({}) },
+            {
+              state: traitFrontierState(historyWithCoreTrait('ApolloWeaponBoon')),
+              source: Object.freeze({}),
+            },
           ]),
         ],
       ]),
@@ -461,8 +465,14 @@ describe('run-impacting trait candidate contacts', () => {
         [
           semanticAddressKey(createNaturalSelectionResultAddress(trait, 'option1')),
           Object.freeze([
-            { before: historyWithCoreTrait('ApolloWeaponBoon'), context: Object.freeze({}) },
-            { before: historyWithCoreTrait('HestiaWeaponBoon'), context: Object.freeze({}) },
+            {
+              state: traitFrontierState(historyWithCoreTrait('ApolloWeaponBoon')),
+              source: Object.freeze({}),
+            },
+            {
+              state: traitFrontierState(historyWithCoreTrait('HestiaWeaponBoon')),
+              source: Object.freeze({}),
+            },
           ]),
         ],
       ]),

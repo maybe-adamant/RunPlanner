@@ -106,6 +106,7 @@ import {
   createCompleteNProject,
   nLocalOccurrenceId as nRoundTripLocalOccurrenceId,
 } from '../authored-project/support/complete-n-project';
+import { traitFrontierState } from '../support/simulation-state';
 
 function phase(biome: BiomeAddress, occurrenceId: OccurrenceId, phaseKey = 'Encounter') {
   return createEncounterPhaseAddress(biome, { kind: 'occurrence', occurrenceId }, phaseKey);
@@ -800,7 +801,7 @@ describe('field NPC encounter requirements', () => {
     const project = loadSurfaceNStoryBoardProject();
     const history = createTraitHistoryState();
     expect(
-      traitCandidates(catalog, 'Medea', history).find(
+      traitCandidates(catalog, 'Medea', traitFrontierState(history), {}).find(
         (candidate) => candidate.traitKey === 'DeathDefianceRetaliateCurse',
       ),
     ).toMatchObject({ available: true });
@@ -851,7 +852,7 @@ describe('field NPC encounter requirements', () => {
   it('keeps Last Gasp authorable and acquires a rarityless Hades Story trait', () => {
     const history = createTraitHistoryState();
     expect(
-      traitCandidates(catalog, 'Hades', history).find(
+      traitCandidates(catalog, 'Hades', traitFrontierState(history), {}).find(
         (candidate) => candidate.traitKey === 'HadesDeathDefianceDamageBoon',
       ),
     ).toMatchObject({ available: true });
@@ -2013,7 +2014,7 @@ describe('field NPC encounter requirements', () => {
     let project = loadSurfaceNOPQProject();
 
     expect(
-      traitCandidates(catalog, 'Athena', createTraitHistoryState()).find(
+      traitCandidates(catalog, 'Athena', traitFrontierState(createTraitHistoryState()), {}).find(
         (candidate) => candidate.traitKey === 'OlympianSpellCountBoon',
       ),
     ).toMatchObject({ available: false });

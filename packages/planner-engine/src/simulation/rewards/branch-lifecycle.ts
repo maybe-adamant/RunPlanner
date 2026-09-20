@@ -6,21 +6,18 @@ import {
 } from '../../authored-project/addresses';
 import type { AuthoredKeepsakeEquipResults } from '../../authored-project/model';
 
-import {
-  beginBiomeRewardHistory,
-  beginCurrentRoomRewardHistory,
-  createRewardHistoryState,
-} from '../../reward-kernel';
+import { beginBiomeRewardHistory, beginCurrentRoomRewardHistory } from '../../reward-kernel';
 
 import type { ArcanaFearState } from '../arcana-fear';
 import { beginBiomeArcanaFearState } from '../arcana-fear';
-import { beginBiomeKeepsakeState, createKeepsakeState } from '../keepsakes/state';
+import { beginBiomeKeepsakeState } from '../keepsakes/state';
 import { applyTranscendentEmbryoEquipResult } from '../keepsakes/branch-transitions';
-import { createTraitHistoryState, recordAspectStartingTrait } from '../traits';
+import { recordAspectStartingTrait } from '../traits';
 import { mergeEquivalentRewardBranches, type RewardBranchState } from './branch-primitives';
 import type { RewardBranch } from './model';
 import { installHexTree, maybeAddGodSent } from '../hex-progress';
-import { createEmptyRewardLookups, type SimulationState } from '../state/model';
+import type { SimulationState } from '../state/model';
+import { createInitialSimulationState } from '../state/construction';
 import { replaceSimulationTraitHistory } from '../state/transitions';
 import type { ResolvedRoutePosition } from '../../authored-project/route-context';
 import type { HistoryStateView } from '../history';
@@ -91,31 +88,13 @@ export function initializeRewardBranches(
       startingKeepsakeKey === undefined
     )
       throw new Error('initial branch state is required');
-    const state: SimulationState = Object.freeze({
-      equipment: Object.freeze({
-        weaponKey: loadout.weaponKey,
-        aspectKey: loadout.aspectKey,
-      }),
-      reached: Object.freeze(reached),
-      bags: Object.freeze({}),
-      rewardPriorities: Object.freeze([]),
-      hexProgress: Object.freeze({ bankedPathPoints: 0, investedPathPoints: 0 }),
-      rewardHistory: createRewardHistoryState(),
-      traitHistory: createTraitHistoryState(),
-      arcanaFear: initialArcanaFear,
-      keepsakes: createKeepsakeState(catalog, startingKeepsakeKey, initialArcanaFear),
-      pendingShops: Object.freeze({}),
-      pendingHermesShrineDeliveries: Object.freeze({}),
-      stygianWell: Object.freeze({
-        sparkUses: 0,
-        yarnUses: 0,
-        hymnUses: 0,
-        discountUses: Object.freeze([]),
-        emptySlotUses: Object.freeze([]),
-        extendedUses: 0,
-      }),
-      rewardLookups: createEmptyRewardLookups(catalog),
-    });
+    const state: SimulationState = createInitialSimulationState(
+      catalog,
+      loadout,
+      startingKeepsakeKey,
+      initialArcanaFear,
+      reached,
+    );
     const branch = Object.freeze({
       state,
       events: Object.freeze([]),
@@ -172,7 +151,6 @@ export function initializeRewardBranches(
         'experimentalHammer',
       ),
       0,
-      loadout,
     );
     const traitHistory = recordAspectStartingTrait(
       catalog,

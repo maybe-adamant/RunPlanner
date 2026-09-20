@@ -143,7 +143,7 @@ function sourceOrdering(
         !isOfferSupportedAtResolutionPoint(
           context.catalog.rewards,
           context.reward.offer,
-          context.facts(branch.state.rewardHistory, undefined, branch),
+          context.facts(branch.state),
           'offer',
           { priorOffers: prior.map((entry) => entry.reward.offer) },
         )
@@ -214,7 +214,7 @@ export function processRewardOffer(
       continue;
     }
     const effectiveOffer = reward.offer;
-    const facts = context.facts(originalBranch.state.rewardHistory, undefined, originalBranch);
+    const facts = context.facts(originalBranch.state);
     const peers = { priorOffers: context.peers.map((peer) => peer.offer) };
     if (
       !isOfferSupportedAtResolutionPoint(catalog.rewards, effectiveOffer, facts, 'offer', peers)
@@ -433,7 +433,7 @@ function recordCanonicalOffer(
   branch: RewardBranchState,
   context: OfferProcessingContext,
 ): RewardBranchState {
-  const facts = context.facts(branch.state.rewardHistory, undefined, branch);
+  const facts = context.facts(branch.state);
   const history = applyOfferProjection(
     context.catalog.rewards,
     branch.state.rewardHistory,

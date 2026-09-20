@@ -1,8 +1,7 @@
 import type { Catalog } from '../../../../catalog-schema';
 import { semanticAddressKey, type SemanticAddress } from '../../../../authored-project/addresses';
-import type { RouteLoadout } from '../../../../authored-project/model';
 import { createUnresolvedAcquisitionRewardState } from '../../../../authored-project/traits/state';
-import type { ResolvedRewardOffer, RewardHistoryState } from '../../../../reward-kernel';
+import type { ResolvedRewardOffer } from '../../../../reward-kernel';
 import type { HistoryEvent, HistoryStateView, ProgressiveRoomHistoryViews } from '../../../history';
 import type { CanonicalResolvedIncomingReward } from '../../../materialization';
 import { preparedAcquisitionSiteOwner, type RewardLifecycleReferences } from '../prepared-inputs';
@@ -30,6 +29,7 @@ import {
 import { historyFindingChronology, rewardFindingChronologyForRoom } from '../finding-chronology';
 import type { RoomCreatedRewardContext } from './room-created-context';
 import { BiomeRewardSimulationContractError } from '../biome-contract';
+import type { SimulationState } from '../../../state/model';
 
 function incomingCandidateForOffer(
   catalog: Catalog,
@@ -120,16 +120,16 @@ function completeIncomingOfferCandidate(
         branches,
         candidateRoom,
         acquisitionEvent,
-        (history) =>
-          createBiomeRewardFacts(
+        (state) =>
+          createBiomeRewardFacts({
             catalog,
-            candidateRoom,
-            candidateRoom,
-            entry.declaration,
-            entry.acquisitionView!,
-            history,
-            enteredBiomeCount,
-          ),
+            state,
+            source: candidateRoom,
+            currentRoom: candidateRoom,
+            sourceDeclaration: entry.declaration,
+            view: entry.acquisitionView!,
+            hubBoardLookups: 'notConsulted',
+          }),
         (detail) => {
           throw new BiomeRewardSimulationContractError(detail);
         },
@@ -162,7 +162,6 @@ export function generateIncomingReward(
     readonly pendingHubBoard?: PendingHubBoardGeneration;
     readonly lifecycle: RewardLifecycleReferences;
     readonly roomViews: ProgressiveRoomHistoryViews | undefined;
-    readonly routeLoadout: RouteLoadout;
     readonly enteredBiomeCount: number;
     readonly authoredSeaStarDuplicateSiteKeys: ReadonlySet<string>;
   },
@@ -190,21 +189,20 @@ export function generateIncomingReward(
             'sideGeneration',
           )
         : undefined;
-  const facts = (history: RewardHistoryState, branch?: RewardBranchState) =>
-    createBiomeRewardFacts(
+  const facts = (state: SimulationState) =>
+    createBiomeRewardFacts({
       catalog,
-      context.source,
-      context.currentRoom,
-      context.sourceDeclaration,
-      context.generationView!,
-      history,
-      inputs.enteredBiomeCount,
-      context.currentShopNames,
-      context.source.kind === 'hub' ? context.source.origin : context.peerParentOrigin,
-      context.source.kind === 'hub' ? 'hubTarget' : context.peerCreationSource,
-      undefined,
-      branch,
-    );
+      state,
+      source: context.source,
+      currentRoom: context.currentRoom,
+      sourceDeclaration: context.sourceDeclaration,
+      view: context.generationView!,
+      currentRoomShopOptionNames: context.currentShopNames,
+      peerParentOrigin:
+        context.source.kind === 'hub' ? context.source.origin : context.peerParentOrigin,
+      peerCreationSource: context.source.kind === 'hub' ? 'hubTarget' : context.peerCreationSource,
+      hubBoardLookups: 'notConsulted',
+    });
 
   if (context.unresolvedIncoming !== undefined) {
     const unresolved = context.unresolvedIncoming;
@@ -224,7 +222,6 @@ export function generateIncomingReward(
           : { levelResolutionsByAcquisitionRole: state.levelResolutionsByAcquisitionRole }),
         dispositionByAcquisitionRole: state.dispositionByAcquisitionRole,
         traitContext: Object.freeze({
-          ...inputs.routeLoadout,
           blockGiftBoons: context.declaration.blockGiftBoons,
           devotionNoDuo: offer.rewardType === 'Devotion',
         }),
@@ -286,7 +283,7 @@ export function generateIncomingReward(
             historySequence: event.sequence,
             ...(offerChronology === undefined ? {} : { findingChronology: offerChronology }),
             peers: inputs.peers,
-            facts: (history: RewardHistoryState) => facts(history),
+            facts: (state: SimulationState) => facts(state),
           });
           const branches = processRewardOffer(inputs.branches, candidateContext, candidateFindings);
           return completeIncomingOfferCandidate(
@@ -336,11 +333,7 @@ export function generateIncomingReward(
     historySequence: event.sequence,
     ...(offerChronology === undefined ? {} : { findingChronology: offerChronology }),
     peers: inputs.peers,
-    facts: (
-      history: RewardHistoryState,
-      _shopNames: ReadonlySet<string> | undefined,
-      branch: RewardBranchState | undefined,
-    ) => facts(history, branch),
+    facts: (state: SimulationState) => facts(state),
   });
   if (event.source === 'hubTarget') {
     const pending =

@@ -1,3 +1,4 @@
+import type { SimulationState } from '../state/model';
 import {
   semanticAddressKey,
   type FigurineArcanaAddress,
@@ -6,15 +7,14 @@ import {
   type KeepsakeSelectionAddress,
   type TranscendentEmbryoOutcomeAddress,
 } from '../../authored-project/addresses';
-import type { ArcanaFearState, CurrentArcanaCard } from '../arcana-fear';
-import { type FatedStatus, type KeepsakeState } from './state';
+import type { CurrentArcanaCard } from '../arcana-fear';
+import { type KeepsakeState } from './state';
 import {
   assessTranscendentEmbryoTransformation,
   type PhialLifecycleStatus,
   type ReachedTranscendentEmbryoThreshold,
   type TranscendentEmbryoBlessingAssessment,
 } from './trait-effects';
-import type { TraitHistoryState } from '../traits';
 
 /** Exact rack frontier captured by the selected chronological reward walk. */
 export interface KeepsakeSelectionCandidateCapability {
@@ -40,11 +40,9 @@ export function createKeepsakeSelectionCandidateArtifacts(
 /** Exact pre-equip trait state retained for one closed keepsake result. */
 export interface KeepsakeEquipResultCandidateCapability {
   readonly frontiers: readonly {
-    readonly before: TraitHistoryState;
-    readonly arcanaFear?: ArcanaFearState;
-    readonly fatedStatus: FatedStatus;
+    /** Exact pre-equip snapshot this closed result is assessed against. */
+    readonly state: SimulationState;
     readonly transcendentEmbryoRarity?: import('../../catalog-schema').InRunTraitRarity;
-    readonly loadout?: { readonly weaponKey: string; readonly aspectKey: string };
   }[];
 }
 export interface KeepsakeEquipResultCandidateArtifacts {

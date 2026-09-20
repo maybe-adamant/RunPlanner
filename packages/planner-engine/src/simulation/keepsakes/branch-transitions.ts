@@ -23,6 +23,7 @@ import { jeweledPomEffectForKey } from './state';
 import { freezeRecord, type RewardBranchState } from '../rewards/branch-primitives';
 import { bankPathPoints, maybeAddGodSent } from '../hex-progress';
 import { replaceSimulationTraitHistory } from '../state/transitions';
+import { plainTraitOfferSource } from '../traits/offer-domain';
 
 /** The exact source-time FromLoot transition: queue first, then RunProgress presence refill. */
 export function applyOlympianRewardPressureEquip(
@@ -108,7 +109,8 @@ export function applyJeweledPomEquipResult(
   if (keepsake === undefined || effect === undefined || result === undefined) return branch;
   const before = branch.state.traitHistory;
   if (
-    !assessJeweledPomEquipResult(catalog, result, before, branch.state.keepsakes.fatedStatus).legal
+    !assessJeweledPomEquipResult(catalog, result, branch.state, branch.state.keepsakes.fatedStatus)
+      .legal
   )
     return branch;
   const offer: AuthoredTraitOffer = Object.freeze({
@@ -129,12 +131,10 @@ export function applyJeweledPomEquipResult(
     owner,
     'jeweledPomEquip',
     offer,
-    before,
+    branch.state,
     { resolvedProviderKey: effect.giverKey },
     branch.traitEvaluations?.length ?? 0,
-    branch.state.arcanaFear,
     true,
-    branch.state.keepsakes,
   );
   const acquisitionIdentity = `${semanticAddressKey(owner)}:${sequence}`;
   const applied = recordReachedTraitOffer(
@@ -168,7 +168,6 @@ export function applyExperimentalHammerEquipResult(
   results: AuthoredKeepsakeEquipResults | undefined,
   owner: SemanticAddress,
   sequence: number,
-  loadout: { readonly weaponKey: string; readonly aspectKey: string },
   equippedRank?: KeepsakeRank,
 ): RewardBranchState {
   const keepsake = catalog.keepsakes.byKey[equippedKeepsakeKey];
@@ -177,7 +176,7 @@ export function applyExperimentalHammerEquipResult(
   if (keepsake === undefined || effect?.kind !== 'experimentalHammer' || result === undefined)
     return branch;
   const before = branch.state.traitHistory;
-  if (!assessExperimentalHammerEquipResult(catalog, result, before, loadout).legal) return branch;
+  if (!assessExperimentalHammerEquipResult(catalog, result, branch.state).legal) return branch;
   if (result.kind === 'exhausted') return branch;
   const offer: AuthoredTraitOffer = Object.freeze({
     kind: 'traits',
@@ -194,12 +193,10 @@ export function applyExperimentalHammerEquipResult(
     owner,
     'experimentalHammerEquip',
     offer,
-    before,
-    loadout,
+    branch.state,
+    plainTraitOfferSource,
     branch.traitEvaluations?.length ?? 0,
-    branch.state.arcanaFear,
     true,
-    branch.state.keepsakes,
   );
   const acquisitionIdentity = `${semanticAddressKey(owner)}:${sequence}`;
   const applied = recordReachedTraitOffer(

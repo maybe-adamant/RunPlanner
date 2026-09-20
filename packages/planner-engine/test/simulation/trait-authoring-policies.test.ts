@@ -33,6 +33,7 @@ import { createTraitOfferCandidateArtifacts } from '../../src/simulation/candida
 import { createSteadyGrowthCandidateArtifacts } from '../../src/simulation/candidates/steady-growth';
 import { evaluateNaturalSelectionResultCandidate } from '../../src/simulation/candidates/trait-offer/query';
 import { selectedTargetedAcquisitionTargetKeys } from '../../src/simulation/traits/level-effects';
+import { traitFrontierState } from '../support/simulation-state';
 
 const owner = { kind: 'project' } as SemanticAddress;
 const naturalSelectionSlots = ['Melee', 'Secondary', 'Ranged', 'Rush', 'Mana'] as const;
@@ -100,14 +101,19 @@ function historyFrom(
 }
 
 function findingCode(traitKey: string, history: ReturnType<typeof createTraitHistoryState>) {
-  return assessTraitOption(catalog, traitKey, history).findings[0]?.code;
+  return assessTraitOption(catalog, traitKey, traitFrontierState(history), {}).findings[0]?.code;
 }
 
 describe('Boon Growth and Boon Decay target predicates', () => {
   it('does not materialize zero Persephone contributions in an automatic three-option draft', () => {
-    const draft = traitOfferStartingOutcome(catalog, 'Apollo', createTraitHistoryState(), {
-      aspectKey: 'LobImpulseAspect',
-    });
+    const draft = traitOfferStartingOutcome(
+      catalog,
+      'Apollo',
+      traitFrontierState(createTraitHistoryState(), {
+        loadout: { weaponKey: 'WeaponLob', aspectKey: 'LobImpulseAspect' },
+      }),
+      {},
+    );
     if (draft?.kind !== 'traits') throw new Error('missing Apollo starting draft');
 
     expect(draft.options).toHaveLength(3);
@@ -138,14 +144,26 @@ describe('Boon Growth and Boon Decay target predicates', () => {
     ]);
     expect(assessment.resultingHistory.equippedTraits.BoonDecayBoon).toBeUndefined();
     expect(assessment.resultingHistory.previouslyPickedTraitKeys).toContain('BoonDecayBoon');
-    expect(assessTraitOption(catalog, 'BoonDecayBoon', assessment.resultingHistory)).toMatchObject({
+    expect(
+      assessTraitOption(
+        catalog,
+        'BoonDecayBoon',
+        traitFrontierState(assessment.resultingHistory),
+        {},
+      ),
+    ).toMatchObject({
       legal: false,
       findings: expect.arrayContaining([
         expect.objectContaining({ code: 'previouslyPicked', traitKey: 'BoonDecayBoon' }),
       ]),
     });
     expect(
-      assessTraitOption(catalog, 'DamageShareRetaliateBoon', assessment.resultingHistory).findings,
+      assessTraitOption(
+        catalog,
+        'DamageShareRetaliateBoon',
+        traitFrontierState(assessment.resultingHistory),
+        {},
+      ).findings,
     ).not.toContainEqual(expect.objectContaining({ code: 'previouslyPicked' }));
   });
 
@@ -242,7 +260,9 @@ describe('Boon Growth and Boon Decay target predicates', () => {
       new Map([
         [
           semanticAddressKey(result),
-          Object.freeze([Object.freeze({ before, context: Object.freeze({}) })]),
+          Object.freeze([
+            Object.freeze({ state: traitFrontierState(before), source: Object.freeze({}) }),
+          ]),
         ],
       ]),
     );
@@ -271,15 +291,20 @@ describe('Boon Growth and Boon Decay target predicates', () => {
 
   it('requires one generic Pom-eligible trait for Narcissus A', () => {
     expect(
-      assessTraitOption(catalog, 'NarcissusA', createTraitHistoryState()).findings,
+      assessTraitOption(catalog, 'NarcissusA', traitFrontierState(createTraitHistoryState()), {})
+        .findings,
     ).toContainEqual({
       code: 'missingPrerequisite',
       traitKey: 'NarcissusA',
       detail: 'upgradableTrait',
     });
     expect(
-      assessTraitOption(catalog, 'NarcissusA', historyWith('Apollo', 'ApolloWeaponBoon', 'Common'))
-        .legal,
+      assessTraitOption(
+        catalog,
+        'NarcissusA',
+        traitFrontierState(historyWith('Apollo', 'ApolloWeaponBoon', 'Common')),
+        {},
+      ).legal,
     ).toBe(true);
   });
   it('starts only eligible core-god traits at level 1 and uses one eligibility authority', () => {
@@ -672,7 +697,9 @@ describe('Boon Growth and Boon Decay target predicates', () => {
       ]) as Extract<AuthoredTraitOffer, { kind: 'traits' }>['options'],
       selectedOptionKey: 'option1',
     });
-    expect(assessSelectedTargetedAcquisition(catalog, baseOffer, before)).toMatchObject({
+    expect(
+      assessSelectedTargetedAcquisition(catalog, baseOffer, traitFrontierState(before)),
+    ).toMatchObject({
       applies: true,
       legal: false,
       findings: [{ code: 'targetedAcquisitionTargetMissing', traitKey: 'BoonDecayBoon' }],
@@ -686,7 +713,11 @@ describe('Boon Growth and Boon Decay target predicates', () => {
         baseOffer.options[2],
       ]) as Extract<AuthoredTraitOffer, { kind: 'traits' }>['options'],
     });
-    const assessment = assessSelectedTargetedAcquisition(catalog, offer, before);
+    const assessment = assessSelectedTargetedAcquisition(
+      catalog,
+      offer,
+      traitFrontierState(before),
+    );
     expect(assessment).toMatchObject({
       applies: true,
       legal: true,
@@ -703,7 +734,7 @@ describe('Boon Growth and Boon Decay target predicates', () => {
       owner,
       'bridal-glow',
       offer,
-      before,
+      traitFrontierState(before),
       Object.freeze({}),
       before.events.length,
     );
@@ -731,7 +762,11 @@ describe('Boon Growth and Boon Decay target predicates', () => {
       ]) as Extract<AuthoredTraitOffer, { kind: 'traits' }>['options'],
       selectedOptionKey: 'option1',
     };
-    const assessment = assessSelectedTargetedAcquisition(catalog, offer, before);
+    const assessment = assessSelectedTargetedAcquisition(
+      catalog,
+      offer,
+      traitFrontierState(before),
+    );
     expect(assessment.transition).toMatchObject({
       levelChange: { oldLevel: 1, newLevel: 1 + added },
     });
@@ -741,7 +776,7 @@ describe('Boon Growth and Boon Decay target predicates', () => {
       owner,
       'bridal-glow',
       offer,
-      before,
+      traitFrontierState(before),
       {},
       before.events.length,
     );
@@ -783,12 +818,10 @@ describe('Boon Growth and Boon Decay target predicates', () => {
       owner,
       'calling-card-bridal',
       effectiveOffer,
-      before,
+      traitFrontierState(before),
       { resolvedProviderKey: 'Hera' },
       before.events.length,
-      undefined,
       false,
-      undefined,
       baseOffer,
     );
     const recorded = recordReachedTraitOffer(catalog, reached, before.events.length + 1, 'test');
@@ -812,7 +845,11 @@ describe('Boon Growth and Boon Decay target predicates', () => {
       ]) as Extract<AuthoredTraitOffer, { kind: 'traits' }>['options'],
       selectedOptionKey: 'option1',
     };
-    const assessment = assessSelectedTargetedAcquisition(catalog, offer, createTraitHistoryState());
+    const assessment = assessSelectedTargetedAcquisition(
+      catalog,
+      offer,
+      traitFrontierState(createTraitHistoryState()),
+    );
     expect(assessment).toMatchObject({
       legal: true,
       targetTraitKey: 'BoonDecayBoon',

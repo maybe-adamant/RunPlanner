@@ -55,7 +55,7 @@ export function deriveTravelRefill(input: {
   const slot = profile.slots.values[slotIndex];
   const group = slot === undefined ? undefined : profile.groups.byKey[slot.groupKey];
   if (slot === undefined || group === undefined) return undefined;
-  const generationFacts = facts(branch.state.rewardHistory, new Set(), branch);
+  const generationFacts = facts(branch.state, new Set());
   const candidateOffers = group.options.values.flatMap((option) =>
     locallyValidRewardOffers(catalog.rewards, option.rewardType),
   );

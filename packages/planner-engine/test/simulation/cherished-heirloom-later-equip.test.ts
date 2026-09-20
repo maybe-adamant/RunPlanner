@@ -241,7 +241,6 @@ describe('Cherished Heirloom later keepsake equips', () => {
       { experimentalHammer: { kind: 'selected', traitKey: 'StaffJumpSpecialTrait' } },
       createKeepsakeEquipResultAddress(postbossOwner(), 'experimentalHammer'),
       2,
-      loadout,
       hammer.rank,
     );
     expect(hammer.rank).toBe('Heroic');

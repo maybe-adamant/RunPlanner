@@ -22,7 +22,7 @@ import {
 import { createRewardProducerCandidateResult } from '../../producer-frontiers';
 import { createBiomeRewardFacts } from '../../facts';
 import { addRewardFinding, mergeRewardFindingEmissions, rewardFinding } from '../../findings';
-import type { ResolvedRewardOffer, RewardHistoryState } from '../../../../reward-kernel';
+import type { ResolvedRewardOffer } from '../../../../reward-kernel';
 import type { RewardBranchState } from '../../branch-primitives';
 import { processOfferGenerationCohort } from '../../offer-generation';
 import { settleOwnedAcquisitionSite } from '../../acquisition/site-settlement';
@@ -31,6 +31,7 @@ import { BiomeRewardSimulationContractError } from '../biome-contract';
 import type { ShipLifecycleCandidateContext } from '../../lifecycle-artifacts';
 import type { RewardLifecycleReferences } from '../prepared-inputs';
 import { rewardStoreHistorySupport } from '../reward-store-support';
+import type { SimulationState } from '../../../state/model';
 
 export interface WheelLifecycleView {
   readonly generation: HistoryStateView;
@@ -177,7 +178,6 @@ export interface ShipLifecycleCandidateInputs {
   readonly roomView: ProgressiveRoomHistoryViews;
   readonly lifecycle: RewardLifecycleReferences;
   readonly branchesBeforeFirstWheel: readonly RewardBranchState[];
-  readonly enteredBiomeCount: number;
   readonly routeLoadout: RouteLoadout;
 }
 
@@ -192,7 +192,6 @@ export function prepareShipLifecycleCandidateContext(
     roomView,
     lifecycle,
     branchesBeforeFirstWheel,
-    enteredBiomeCount,
     routeLoadout,
   } = inputs;
   const activeWheelKeys = Object.freeze(room.rewardWheels?.map((wheel) => wheel.wheelKey) ?? []);
@@ -251,25 +250,16 @@ export function prepareShipLifecycleCandidateContext(
           binding,
           historySequence: lifecycleView.generation.sequence + 1,
           peers: Object.freeze([]),
-          facts: (
-            branchHistory: RewardHistoryState,
-            _shopNames: ReadonlySet<string> | undefined,
-            branch: RewardBranchState | undefined,
-          ) =>
-            createBiomeRewardFacts(
+          facts: (state: SimulationState) =>
+            createBiomeRewardFacts({
               catalog,
-              candidateRoom,
-              candidateRoom,
-              declaration,
-              lifecycleView.generation,
-              branchHistory,
-              enteredBiomeCount,
-              undefined,
-              undefined,
-              undefined,
-              undefined,
-              branch,
-            ),
+              state,
+              source: candidateRoom,
+              currentRoom: candidateRoom,
+              sourceDeclaration: declaration,
+              view: lifecycleView.generation,
+              hubBoardLookups: 'notConsulted',
+            }),
         })),
         candidateFindings,
         { ordering: 'allOffers', atomicRegion: ownerRegion(wheel.origin) },
@@ -310,16 +300,16 @@ export function prepareShipLifecycleCandidateContext(
             source: shipWheelRoomRewardSource(wheel, picked),
             historySequence: lifecycleView.acquisitionSequence,
           },
-          (branchHistory) =>
-            createBiomeRewardFacts(
+          (state) =>
+            createBiomeRewardFacts({
               catalog,
-              candidateRoom,
-              candidateRoom,
-              declaration,
-              lifecycleView.acquisition,
-              branchHistory,
-              enteredBiomeCount,
-            ),
+              state,
+              source: candidateRoom,
+              currentRoom: candidateRoom,
+              sourceDeclaration: declaration,
+              view: lifecycleView.acquisition,
+              hubBoardLookups: 'notConsulted',
+            }),
           ownerRegion(wheel.origin),
         );
         mergeRewardFindingEmissions(candidateFindings, settlement.findingEmissions);

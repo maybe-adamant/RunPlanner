@@ -57,8 +57,12 @@ import {
 import { createCompleteNProject } from '../authored-project/support/complete-n-project';
 import { createDefaultRouteLoadout } from '../../src/authored-project/loadout';
 import { createArcanaFearState } from '../../src/simulation/arcana-fear';
-import { initializeTestRewardBranches } from '../support/arcana-fear';
 import { settleEncounterTraitOffer } from '../../src/simulation/rewards/trait-settlement/coordinator';
+import {
+  arcanaFearWithActive,
+  testRewardBranchesAtOrdinal,
+  traitFrontierState,
+} from '../support/simulation-state';
 
 function narcissusOccurrence(project: ProjectDocument) {
   const occurrence = project.route.biomes
@@ -163,21 +167,27 @@ function pickupSite(project: ProjectDocument) {
 describe('Narcissus pickup producer', () => {
   it('requires one of the three currently active reroll Arcana for Fates’ Trimmings', () => {
     const history = createTraitHistoryState();
-    for (const traitKey of [
-      'PanelRerollMetaUpgrade',
-      'RerollTradeOffMetaUpgrade',
-      'DoorRerollMetaUpgrade',
-    ]) {
+    for (const cardKey of ['ScreenReroll', 'TradeOff', 'DoorReroll']) {
       expect(
-        assessTraitOption(catalog, 'NarcissusF', history, {
-          activeArcanaTraitKeys: [traitKey],
-        }).legal,
+        assessTraitOption(
+          catalog,
+          'NarcissusF',
+          traitFrontierState(history, { arcanaFear: arcanaFearWithActive([cardKey]) }),
+          {},
+        ).legal,
       ).toBe(true);
     }
-    expect(assessTraitOption(catalog, 'NarcissusF', history).legal).toBe(false);
-    for (const activeArcanaTraitKeys of [[], ['MaxHealthMetaUpgrade']]) {
+    expect(assessTraitOption(catalog, 'NarcissusF', traitFrontierState(history), {}).legal).toBe(
+      false,
+    );
+    for (const activeCardKeys of [[], ['MaxHealth']]) {
       expect(
-        assessTraitOption(catalog, 'NarcissusF', history, { activeArcanaTraitKeys }).findings,
+        assessTraitOption(
+          catalog,
+          'NarcissusF',
+          traitFrontierState(history, { arcanaFear: arcanaFearWithActive(activeCardKeys) }),
+          {},
+        ).findings,
       ).toEqual([expect.objectContaining({ code: 'missingPrerequisite' })]);
     }
   });
@@ -199,7 +209,7 @@ describe('Narcissus pickup producer', () => {
       [initial, false],
       [activation.state, true],
     ] as const) {
-      const branch = initializeTestRewardBranches(state)[0]!;
+      const branch = testRewardBranchesAtOrdinal(2, 'Underworld', catalog, state)[0]!;
       const unresolved = settleEncounterTraitOffer(
         catalog,
         branch,
@@ -210,15 +220,15 @@ describe('Narcissus pickup producer', () => {
         undefined,
         'selection',
         undefined,
-        { acquisitionOrdinal: 2 },
+        {},
         undefined,
         'Narcissus',
       );
       const context = unresolved.blockedChild?.candidateContext;
       expect(context).toBeDefined();
-      expect(
-        assessTraitOption(catalog, 'NarcissusF', createTraitHistoryState(), context?.context).legal,
-      ).toBe(eligible);
+      expect(assessTraitOption(catalog, 'NarcissusF', context!.state, context!.source).legal).toBe(
+        eligible,
+      );
       const selected = settleEncounterTraitOffer(
         catalog,
         branch,
@@ -238,7 +248,7 @@ describe('Narcissus pickup producer', () => {
         undefined,
         'selection',
         undefined,
-        { acquisitionOrdinal: 2 },
+        {},
       );
       expect(
         selected.findingEntries.some((entry) => entry.finding.code === 'missingPrerequisite'),

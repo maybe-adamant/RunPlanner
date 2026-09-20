@@ -41,6 +41,7 @@ import { normalizeAuthoredChaosTraitOffer } from '../../src/authored-project/tra
 import { createTraitOfferCandidateArtifacts } from '../../src/simulation/candidates/trait-offer/capability';
 import { evaluateBiomeRewardsAssemblyInternal } from '../../src/simulation/rewards/biome';
 import { loadSurfaceNOPProject } from '@run-planner/test-fixtures/surface';
+import { traitFrontierState } from '../support/simulation-state';
 
 const owner = createBiomeAddress('Underworld', 'F');
 const rewardOwner = createIncomingRewardAddress(owner, createOccurrenceId('chaos-test-reward'));
@@ -162,11 +163,11 @@ function acquireLegalTrait(
   traitKey: string,
   rarity: AuthoredTraitOfferTraits['options'][number]['rarity'],
 ) {
-  const selected = traitCandidates(catalog, giverKey, before).find(
+  const selected = traitCandidates(catalog, giverKey, traitFrontierState(before), {}).find(
     (candidate) =>
       candidate.available && candidate.traitKey === traitKey && candidate.rarity === rarity,
   );
-  const alternatives = traitCandidates(catalog, giverKey, before).filter(
+  const alternatives = traitCandidates(catalog, giverKey, traitFrontierState(before), {}).filter(
     (candidate) => candidate.available && candidate.traitKey !== traitKey,
   );
   const first = alternatives[0];
@@ -189,7 +190,7 @@ function acquireLegalTrait(
       selectedOptionKey: 'option1' as const,
       rarificationActions: Object.freeze([]),
     }),
-    before,
+    traitFrontierState(before),
     {},
     sequence,
   );
@@ -231,9 +232,10 @@ describe('Chaos paired-trait history', () => {
   it.each(['Underworld', 'Surface', 'Dream'])(
     'keeps Discovery selected and candidate eligibility aligned for %s',
     (routeKey) => {
+      const biomeKey = routeKey === 'Surface' ? 'N' : 'G';
       const address = createTraitOfferAddress(
         createIncomingRewardAddress(
-          createBiomeAddress(routeKey, 'G'),
+          createBiomeAddress(routeKey, biomeKey),
           createOccurrenceId('discovery-route'),
         ),
         'self',
@@ -241,13 +243,23 @@ describe('Chaos paired-trait history', () => {
       const capability = createTraitOfferCandidateArtifacts(
         catalog,
         new Map([
-          [semanticAddressKey(address), [{ before: createTraitHistoryState(), context: {} }]],
+          [
+            semanticAddressKey(address),
+            [{ state: traitFrontierState(undefined, { routeKey, biomeKey }), source: {} }],
+          ],
         ]),
       ).at(address)!;
       const offer = chaos('ChaosCommonCurse', 'ChaosHarvestBlessing');
       expect(
-        evaluateReachedTraitOffer(catalog, address, 'self', offer, createTraitHistoryState(), {}, 0)
-          .composition.legal,
+        evaluateReachedTraitOffer(
+          catalog,
+          address,
+          'self',
+          offer,
+          traitFrontierState(createTraitHistoryState(), { routeKey, biomeKey }),
+          {},
+          0,
+        ).composition.legal,
       ).toBe(routeKey !== 'Dream');
       expect(
         capability.chaosOfferDomain()[0]?.availableBlessingKeys.includes('ChaosHarvestBlessing'),
@@ -347,7 +359,7 @@ describe('Chaos paired-trait history', () => {
         rewardOwner,
         'inactive-ordinary',
         chaos('ChaosCommonCurse', 'ChaosWeaponBlessing'),
-        inactiveProper,
+        traitFrontierState(inactiveProper),
         {},
         curseSequence,
       ),
@@ -372,7 +384,7 @@ describe('Chaos paired-trait history', () => {
             { traitKey: 'SlowProjectileBoon', rarity: 'Common' },
           ]) as AuthoredTraitOfferTraits['options'],
         }),
-        cursed,
+        traitFrontierState(cursed),
         {},
         traitSequence,
       ),
@@ -400,10 +412,11 @@ describe('Chaos paired-trait history', () => {
       rewardOwner,
       'self',
       offer,
-      createTraitHistoryState(),
+      traitFrontierState(createTraitHistoryState(), {
+        arcanaFear: createTestArcanaFearState({ BanUnpickedBoonsShrineUpgrade: 1 }),
+      }),
       {},
       1,
-      createTestArcanaFearState({ BanUnpickedBoonsShrineUpgrade: 1 }),
     );
     const settled = recordReachedTraitOffer(catalog, evaluation, 1, 'reward');
     expect(evaluation.composition.legal).toBe(true);
@@ -421,8 +434,15 @@ describe('Chaos paired-trait history', () => {
       ]) as AuthoredChaosTraitOffer['curseOptions'],
     });
     expect(
-      evaluateReachedTraitOffer(catalog, rewardOwner, 'self', later, settled.history, {}, 2)
-        .composition.legal,
+      evaluateReachedTraitOffer(
+        catalog,
+        rewardOwner,
+        'self',
+        later,
+        traitFrontierState(settled.history),
+        {},
+        2,
+      ).composition.legal,
     ).toBe(false);
   });
 
@@ -440,14 +460,15 @@ describe('Chaos paired-trait history', () => {
       rewardOwner,
       'self',
       offer,
-      createTraitHistoryState(),
+      traitFrontierState(createTraitHistoryState(), {
+        arcanaFear: createTestArcanaFearState({ BanUnpickedBoonsShrineUpgrade: 1 }),
+      }),
       {},
       1,
-      createTestArcanaFearState({ BanUnpickedBoonsShrineUpgrade: 1 }),
     );
     expect(evaluation.composition.legal).toBe(false);
     const settled = recordReachedTraitOffer(catalog, evaluation, 1, 'reward');
-    expect(settled.history).toBe(evaluation.before);
+    expect(settled.history).toBe(evaluation.state.traitHistory);
   });
 
   it('rejects an authored Chaos offer when a peer curse was already banned by Denial', () => {
@@ -476,7 +497,7 @@ describe('Chaos paired-trait history', () => {
       rewardOwner,
       'self',
       offer,
-      before,
+      traitFrontierState(before),
       {},
       2,
     );
@@ -541,7 +562,8 @@ describe('Chaos paired-trait history', () => {
     );
     expect(mature.maturedChaosBlessings).toHaveLength(2);
     expect(
-      boonRarityFactsForOffer(catalog, mature, { resolvedProviderKey: 'Zeus' })?.contributions,
+      boonRarityFactsForOffer(catalog, traitFrontierState(mature), { resolvedProviderKey: 'Zeus' })
+        ?.contributions,
     ).toHaveLength(2);
   });
 
@@ -585,14 +607,18 @@ describe('Chaos paired-trait history', () => {
         blessingValues: Object.freeze({ rareBonus: 0.54 }),
       }),
     );
-    const before = boonRarityFactsForOffer(catalog, pending, { resolvedProviderKey: 'Zeus' });
+    const before = boonRarityFactsForOffer(catalog, traitFrontierState(pending), {
+      resolvedProviderKey: 'Zeus',
+    });
     if (before === undefined) throw new Error('Zeus must own a rarity ledger');
     expect(boonRarityRollUnavailable(before, 'Common', ['Common', 'Rare', 'Epic'])).toBe(false);
     const mature = [2, 3, 4].reduce(
       (history, sequence) => advanceChaosClock(catalog, history, sequence, 'encounters'),
       pending,
     );
-    const after = boonRarityFactsForOffer(catalog, mature, { resolvedProviderKey: 'Zeus' });
+    const after = boonRarityFactsForOffer(catalog, traitFrontierState(mature), {
+      resolvedProviderKey: 'Zeus',
+    });
     if (after === undefined) throw new Error('Zeus must own a rarity ledger');
     expect(boonRarityRollUnavailable(after, 'Common', ['Common', 'Rare', 'Epic'])).toBe(false);
 
@@ -632,7 +658,7 @@ describe('Chaos paired-trait history', () => {
         clock: 'encounters' as const,
       }),
     ]);
-    const guaranteedFacts = boonRarityFactsForOffer(catalog, guaranteed, {
+    const guaranteedFacts = boonRarityFactsForOffer(catalog, traitFrontierState(guaranteed), {
       resolvedProviderKey: 'Zeus',
     });
     if (guaranteedFacts === undefined) throw new Error('Zeus must own a rarity ledger');
@@ -648,17 +674,25 @@ describe('Chaos paired-trait history', () => {
       rewardOwner,
       'self',
       defiance,
-      createTraitHistoryState(),
+      traitFrontierState(createTraitHistoryState()),
       {},
       0,
     );
     expect(evaluation.composition.findings).toEqual([{ code: 'chaosPairUnavailable' }]);
     expect(recordReachedTraitOffer(catalog, evaluation, 1, 'reward').history).toBe(
-      evaluation.before,
+      evaluation.state.traitHistory,
     );
     const mature = historyWithMaturedCreation();
     expect(
-      evaluateReachedTraitOffer(catalog, rewardOwner, 'self', defiance, mature, {}, 2).assessments,
+      evaluateReachedTraitOffer(
+        catalog,
+        rewardOwner,
+        'self',
+        defiance,
+        traitFrontierState(mature),
+        {},
+        2,
+      ).assessments,
     ).toEqual([{ legal: true, findings: [] }]);
     expect(
       evaluateReachedTraitOffer(
@@ -666,7 +700,7 @@ describe('Chaos paired-trait history', () => {
         rewardOwner,
         'self',
         chaos('ChaosMetaUpgradeCurse', 'ChaosElementalBlessing', 'Heroic'),
-        mature,
+        traitFrontierState(mature),
         {},
         2,
       ).assessments,
@@ -694,13 +728,14 @@ describe('Chaos paired-trait history', () => {
       rewardOwner,
       'self',
       common,
-      createTraitHistoryState(),
+      traitFrontierState(createTraitHistoryState(), { arcanaFear: rankIVExcellence }),
       {},
       1,
-      rankIVExcellence,
     );
     expect(selected.assessments.some((assessment) => !assessment.legal)).toBe(true);
-    expect(recordReachedTraitOffer(catalog, selected, 1, 'reward').history).toBe(selected.before);
+    expect(recordReachedTraitOffer(catalog, selected, 1, 'reward').history).toBe(
+      selected.state.traitHistory,
+    );
 
     const address = createTraitOfferAddress(rewardOwner, 'chaos-rarity');
     const capability = createTraitOfferCandidateArtifacts(
@@ -710,9 +745,8 @@ describe('Chaos paired-trait history', () => {
           semanticAddressKey(address),
           Object.freeze([
             Object.freeze({
-              before: createTraitHistoryState(),
-              context: Object.freeze({}),
-              arcanaFear: rankIVExcellence,
+              state: traitFrontierState(undefined, { arcanaFear: rankIVExcellence }),
+              source: Object.freeze({}),
             }),
           ]),
         ],
@@ -735,10 +769,9 @@ describe('Chaos paired-trait history', () => {
           rewardOwner,
           'self',
           rare,
-          createTraitHistoryState(),
+          traitFrontierState(createTraitHistoryState(), { arcanaFear: rankIVExcellence }),
           {},
           1,
-          rankIVExcellence,
         ),
         1,
         'reward',
@@ -773,7 +806,15 @@ describe('Chaos paired-trait history', () => {
     const common = chaos('ChaosNoMoneyCurse', 'ChaosElementalBlessing', 'Common');
     const bare = createTraitHistoryState();
     expect(
-      evaluateReachedTraitOffer(catalog, rewardOwner, 'self', common, bare, {}, 1).assessments,
+      evaluateReachedTraitOffer(
+        catalog,
+        rewardOwner,
+        'self',
+        common,
+        traitFrontierState(bare),
+        {},
+        1,
+      ).assessments,
     ).toEqual([{ legal: true, findings: [] }]);
     expect(
       evaluateReachedTraitOffer(
@@ -781,7 +822,7 @@ describe('Chaos paired-trait history', () => {
         rewardOwner,
         'self',
         common,
-        bare,
+        traitFrontierState(bare),
         { boonRarityRoomOverride: { Rare: 1 } },
         1,
       ).assessments,
@@ -813,8 +854,8 @@ describe('Chaos paired-trait history', () => {
         rewardOwner,
         'self',
         common,
-        proper,
-        { temporaryBoonRarityUses: 1 },
+        traitFrontierState(proper, { stygianWell: { yarnUses: 1 } }),
+        {},
         1,
       ).assessments,
     ).toEqual([{ legal: true, findings: [] }]);
@@ -841,10 +882,9 @@ describe('Chaos paired-trait history', () => {
         rewardOwner,
         'self',
         chaos('ChaosNoMoneyCurse', 'ChaosElementalBlessing', 'Common'),
-        historyWithActiveBarren(),
+        traitFrontierState(historyWithActiveBarren(), { arcanaFear: rankIVExcellence }),
         {},
         6,
-        rankIVExcellence,
       ).assessments,
     ).toEqual([{ legal: true, findings: [] }]);
   });
@@ -867,12 +907,12 @@ describe('Chaos paired-trait history', () => {
       owner,
       'self',
       nonCommon,
-      ordinaryHistory,
+      traitFrontierState(ordinaryHistory),
       {},
       0,
     );
     expect(invalidFresh.generation?.legal).toBe(false);
-    expect(invalidFresh.context.replacementRollChance).toBe(0);
+    expect(invalidFresh.source.replacementRollChance).toBe(0);
 
     const ordinaryWithOccupiedSlot = foldTraitHistoryEvents(catalog, [
       ...ordinaryHistory.events,
@@ -899,17 +939,24 @@ describe('Chaos paired-trait history', () => {
         { traitKey: 'ZeusCastBoon', rarity: 'Common' },
       ]) as AuthoredTraitOfferTraits['options'],
     });
-    const staleFacts = boonRarityFactsForOffer(catalog, createTraitHistoryState(), {
-      resolvedProviderKey: 'Zeus',
-    });
+    const staleFacts = boonRarityFactsForOffer(
+      catalog,
+      traitFrontierState(createTraitHistoryState()),
+      {
+        resolvedProviderKey: 'Zeus',
+      },
+    );
     if (staleFacts === undefined) throw new Error('Zeus must own a rarity ledger');
-    const staleContext = Object.freeze({ limitedSwapUses: 1, boonRarityFacts: staleFacts });
+    const staleContext = Object.freeze({ boonRarityFacts: staleFacts });
+    const hymnState = traitFrontierState(ordinaryWithOccupiedSlot, {
+      stygianWell: { hymnUses: 1 },
+    });
     const mixed = evaluateReachedTraitOffer(
       catalog,
       owner,
       'self',
       replacement,
-      ordinaryWithOccupiedSlot,
+      hymnState,
       staleContext,
       0,
     );
@@ -920,8 +967,8 @@ describe('Chaos paired-trait history', () => {
       requiredRarity: 'Rare',
     });
     expect(mixed.generation?.legal).toBe(true);
-    expect(mixed.context.replacementRollChance).toBe(1);
-    expect(mixed.context.boonRarityFacts).toBeUndefined();
+    expect(mixed.source.replacementRollChance).toBe(1);
+    expect(mixed.source.boonRarityFacts).toBeUndefined();
 
     const address = createTraitOfferAddress(rewardOwner, 'ordinary-replacement');
     const capability = createTraitOfferCandidateArtifacts(
@@ -929,12 +976,7 @@ describe('Chaos paired-trait history', () => {
       new Map([
         [
           semanticAddressKey(address),
-          Object.freeze([
-            Object.freeze({
-              before: ordinaryWithOccupiedSlot,
-              context: staleContext,
-            }),
-          ]),
+          Object.freeze([Object.freeze({ state: hymnState, source: staleContext })]),
         ],
       ]),
     ).at(address);
@@ -968,7 +1010,7 @@ describe('Chaos paired-trait history', () => {
       rewardOwner,
       'self',
       rejected,
-      rejectedHistory,
+      traitFrontierState(rejectedHistory),
       {},
       0,
     );
@@ -1040,10 +1082,10 @@ describe('Chaos paired-trait history', () => {
       }),
     );
     expect(first.branch.state.stygianWell.yarnUses).toBe(1);
-    expect(first.branch.traitEvaluations?.at(-1)?.context).toMatchObject({
+    expect(first.branch.traitEvaluations?.at(-1)?.source).toMatchObject({
       freshRarityOverride: 'Common',
     });
-    expect(first.branch.traitEvaluations?.at(-1)?.context.boonRarityFacts).toBeUndefined();
+    expect(first.branch.traitEvaluations?.at(-1)?.source.boonRarityFacts).toBeUndefined();
     expect(
       first.branch.traitEvaluations?.at(-1)?.assessments.every((assessment) => assessment.legal),
     ).toBe(true);
@@ -1099,8 +1141,8 @@ describe('Chaos paired-trait history', () => {
     expect(third.branch.state.stygianWell.yarnUses).toBe(0);
     const thirdEvaluation = third.branch.traitEvaluations?.at(-1);
     if (thirdEvaluation === undefined) throw new Error('Demeter screen did not settle');
-    expect(thirdEvaluation.context.freshRarityOverride).toBeUndefined();
-    expect(thirdEvaluation.context.boonRarityFacts?.contributions).toContainEqual({
+    expect(thirdEvaluation.source.freshRarityOverride).toBeUndefined();
+    expect(thirdEvaluation.source.boonRarityFacts?.contributions).toContainEqual({
       additive: { Rare: 1, Epic: 0.25, Duo: 0.1, Legendary: 0.1 },
     });
     expect(thirdEvaluation.assessments.every((assessment) => assessment.legal)).toBe(true);
@@ -1166,18 +1208,10 @@ describe('Chaos paired-trait history', () => {
     });
 
     const evaluations = [hymnThenOrdinary, ordinaryThenHymn].map((branch) =>
-      evaluateReachedTraitOffer(
-        catalog,
-        owner,
-        'self',
-        replacement,
-        branch.state.traitHistory!,
-        { limitedSwapUses: branch.state.stygianWell.hymnUses },
-        3,
-      ),
+      evaluateReachedTraitOffer(catalog, owner, 'self', replacement, branch.state, {}, 3),
     );
 
-    expect(evaluations.map((evaluation) => evaluation.context.replacementRollChance)).toEqual([
+    expect(evaluations.map((evaluation) => evaluation.source.replacementRollChance)).toEqual([
       1, 1,
     ]);
     expect(evaluations.every((evaluation) => evaluation.generation?.legal)).toBe(true);
@@ -1200,7 +1234,8 @@ describe('Chaos paired-trait history', () => {
       rarificationActions: Object.freeze([]),
     });
     expect(
-      evaluateReachedTraitOffer(catalog, owner, 'self', base, history, {}, 0).composition.findings,
+      evaluateReachedTraitOffer(catalog, owner, 'self', base, traitFrontierState(history), {}, 0)
+        .composition.findings,
     ).toContainEqual({ code: 'chaosRejectedBlockMissing' });
     expect(
       evaluateReachedTraitOffer(
@@ -1208,7 +1243,7 @@ describe('Chaos paired-trait history', () => {
         owner,
         'self',
         Object.freeze({ ...base, rejectedOptionKey: 'option2' }),
-        history,
+        traitFrontierState(history),
         {},
         0,
       ).composition.findings,
@@ -1223,7 +1258,7 @@ describe('Chaos paired-trait history', () => {
         owner,
         'self',
         Object.freeze({ ...base, rejectedOptionKey: 'option1' }),
-        expired,
+        traitFrontierState(expired),
         {},
         0,
       ).composition.findings,
@@ -1238,7 +1273,9 @@ describe('Chaos paired-trait history', () => {
       new Map([
         [
           semanticAddressKey(address),
-          Object.freeze([Object.freeze({ before: history, context: Object.freeze({}) })]),
+          Object.freeze([
+            Object.freeze({ state: traitFrontierState(history), source: Object.freeze({}) }),
+          ]),
         ],
       ]),
     ).at(address);
@@ -1269,8 +1306,15 @@ describe('Chaos paired-trait history', () => {
       ]) as AuthoredTraitOfferTraits['options'],
     });
     expect(
-      evaluateReachedTraitOffer(catalog, owner, 'self', artemisOffer, history, {}, 0).composition
-        .findings,
+      evaluateReachedTraitOffer(
+        catalog,
+        owner,
+        'self',
+        artemisOffer,
+        traitFrontierState(history),
+        {},
+        0,
+      ).composition.findings,
     ).toContainEqual({ code: 'chaosRejectedBlockMissing' });
     expect(capability?.chaosOfferRules(artemisOffer)).toEqual([
       {
@@ -1300,10 +1344,11 @@ describe('Chaos paired-trait history', () => {
       rewardOwner,
       'self',
       offer,
-      rejected,
+      traitFrontierState(rejected, {
+        arcanaFear: createTestArcanaFearState({ BanUnpickedBoonsShrineUpgrade: 1 }),
+      }),
       {},
       1,
-      createTestArcanaFearState({ BanUnpickedBoonsShrineUpgrade: 1 }),
     );
     expect(evaluation.composition.legal).toBe(true);
     expect(
@@ -1327,16 +1372,18 @@ describe('Chaos paired-trait history', () => {
     });
     const barren = historyWithActiveBarren();
     expect(
-      boonRarityFactsForOffer(catalog, barren, { resolvedProviderKey: 'Zeus' }, arcana)
-        ?.contributions,
+      boonRarityFactsForOffer(catalog, traitFrontierState(barren, { arcanaFear: arcana }), {
+        resolvedProviderKey: 'Zeus',
+      })?.contributions,
     ).toEqual([]);
     const mature = [6, 7, 8].reduce(
       (history, sequence) => advanceChaosClock(catalog, history, sequence, 'encounters'),
       barren,
     );
     expect(
-      boonRarityFactsForOffer(catalog, mature, { resolvedProviderKey: 'Zeus' }, arcana)
-        ?.contributions,
+      boonRarityFactsForOffer(catalog, traitFrontierState(mature, { arcanaFear: arcana }), {
+        resolvedProviderKey: 'Zeus',
+      })?.contributions,
     ).toHaveLength(1);
   });
 
@@ -1616,7 +1663,7 @@ describe('Chaos paired-trait history', () => {
       { curseKey: 'ChaosNoMoneyCurse', remaining: 3 },
     ]);
     expect(settled.branch.state.stygianWell.yarnUses).toBe(1);
-    expect(settled.branch.traitEvaluations?.at(-1)?.context.boonRarityFacts).toBeUndefined();
+    expect(settled.branch.traitEvaluations?.at(-1)?.source.boonRarityFacts).toBeUndefined();
   });
 
   it('advances an encounter-clocked curse once at the terminal P end-effects checkpoint for normal and Fig Leaf execution', () => {

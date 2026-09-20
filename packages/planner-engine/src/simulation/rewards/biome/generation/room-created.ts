@@ -1,6 +1,5 @@
 import type { Catalog } from '../../../../catalog-schema';
 import { semanticAddressKey } from '../../../../authored-project/addresses';
-import type { RouteLoadout } from '../../../../authored-project/model';
 import type { HistoryEvent, ProgressiveRoomHistoryViews } from '../../../history';
 import type { BiomeRewardSnapshot } from '../evaluation-contract';
 import type { RewardLifecycleReferences } from '../prepared-inputs';
@@ -35,7 +34,6 @@ export interface RoomCreatedTransitionInputs {
   readonly peers: readonly OfferProcessingPeer[];
   readonly pendingHubBoard?: PendingHubBoardGeneration;
   readonly lifecycle: RewardLifecycleReferences;
-  readonly routeLoadout: RouteLoadout;
   readonly enteredBiomeCount: number;
   readonly authoredSeaStarDuplicateSiteKeys: ReadonlySet<string>;
 }
@@ -59,7 +57,6 @@ export function applyRoomCreatedTransition(
     branches,
     peers,
     lifecycle,
-    routeLoadout,
     enteredBiomeCount,
     authoredSeaStarDuplicateSiteKeys,
   } = inputs;
@@ -98,7 +95,6 @@ export function applyRoomCreatedTransition(
     ...(inputs.pendingHubBoard === undefined ? {} : { pendingHubBoard: inputs.pendingHubBoard }),
     lifecycle,
     roomViews: exactRoomViews,
-    routeLoadout,
     enteredBiomeCount,
     authoredSeaStarDuplicateSiteKeys,
   });
@@ -108,7 +104,6 @@ export function applyRoomCreatedTransition(
     peers: incoming.peers,
     views: exactRoomViews,
     lifecycle,
-    routeLoadout,
     enteredBiomeCount,
     authoredSeaStarDuplicateSiteKeys,
   });
