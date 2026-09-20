@@ -31,6 +31,8 @@ export interface TraitOfferContext {
   /** The declaration-resolved provider for the addressed acquisition role. */
   readonly resolvedProviderKey?: string;
   readonly manualArcanaGraspCost?: number;
+  /** Traits supplied by currently active Arcana at the exact acquisition frontier. */
+  readonly activeArcanaTraitKeys?: readonly string[];
   /** Direct sources such as Echo may forbid the ordinary replacement path. */
   readonly ordinarySlotReplacement?: 'forbidden';
   /** Source loot flag equivalent to `IgnoreStackBoost`. */

@@ -852,6 +852,8 @@ export const expectedOfferRequirements: Readonly<Record<string, string>> = {
   CirceSorceryDamageBoon:
     '[{"kind":"anyEquippedTrait","traitKeys":["SpellLaserTrait","SpellLeapTrait","SpellSummonTrait","SpellMeteorTrait","SpellTransformTrait","SpellMoonBeamTrait","SpellPolymorphTrait"]}]',
   NarcissusA: '[{"kind":"upgradableTrait"}]',
+  NarcissusF:
+    '[{"kind":"anyActiveArcana","traitKeys":["PanelRerollMetaUpgrade","RerollTradeOffMetaUpgrade","DoorRerollMetaUpgrade"]}]',
   HadesCastProjectileBoon:
     '[{"kind":"notEquippedTrait","traitKeys":["CastProjectileBoon","CastAnywhereBoon","CastLobBoon","SelfCastBoon"]}]',
   CastLobBoon:
