@@ -74,7 +74,7 @@ import {
 import { transaction as decodeExecutionTransaction } from '../../src/execution-plan/codec/timeline';
 import { overview as decodeExecutionOverview } from '../../src/execution-plan/codec/overview';
 import { expandDiagnosticFrames } from '../../src/execution-plan/codec/diagnostics';
-import { fingerprint } from '../../src/execution-plan/codec/primitives';
+import { fingerprint } from '../../src/execution-plan/fingerprint';
 import type { ExecutionSemanticProduct } from '../../src/execution-plan/model';
 import fOpeningFixture from './fixtures/f-opening.execution.json';
 import fgFixture from './fixtures/fg.execution.json';

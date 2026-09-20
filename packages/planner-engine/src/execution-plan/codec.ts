@@ -10,7 +10,6 @@ import {
   array,
   exact,
   fail,
-  fingerprint,
   object,
   stringArray,
   stringValue,
@@ -22,6 +21,7 @@ import { occurrence } from './codec/occurrence';
 import { validateExecutionReferences } from './codec/references';
 import { startingLoadout } from './codec/loadout';
 import { resources } from './codec/resources';
+import { fingerprint } from './fingerprint';
 
 export { ExecutionPlanCodecError };
 

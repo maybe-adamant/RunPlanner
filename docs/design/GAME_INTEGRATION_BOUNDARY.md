@@ -78,6 +78,28 @@ resolves that destination's published incoming reward for both realization and
 exit proof; absence of an inline reward does not mean no reward. Native required
 Boss drops retain their explicit preservation policy.
 
+### Content fingerprint
+
+The compiler and execution decoders verify the expanded execution product with
+the same FNV-1a 32-bit checksum, rendered as eight lowercase hexadecimal digits.
+The fingerprint excludes itself; diagnostic transport deltas are expanded before
+hashing. It detects inconsistent contents, not malicious tampering.
+
+The canonical input is independent of JSON formatting and host locale:
+
+- Null is `z`; booleans are `t` and `f`.
+- A finite number is `n`, its 16 lowercase big-endian IEEE-754 binary64 hex
+  digits, then `;`. Negative zero is normalized to positive zero. Non-finite
+  values are rejected; fractional values are never rounded for hashing.
+- A string is `s`, its UTF-8 bytes as lowercase hex, then `;`. Strings must
+  contain Unicode scalar values; unpaired UTF-16 surrogates are rejected.
+- Arrays concatenate their value tokens between `[` and `]` in array order.
+- Objects concatenate key-string tokens and value tokens between `{` and `}`,
+  sorted by the keys' UTF-8 byte sequence. There are no extra separators.
+
+Canonicalization changes require an execution-protocol change and republishing;
+decoders do not try alternate fingerprints for older publications.
+
 ## Execution ownership
 
 ### Prefer the published answer
