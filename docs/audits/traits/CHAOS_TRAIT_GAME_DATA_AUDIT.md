@@ -45,14 +45,13 @@ Defiance and Barren each require an already-equipped mature Chaos blessing.
 Atrophic is excluded with White Antler, and Maimed/Flayed are excluded with
 Aspect of Supay. These are eligibility facts, not probability weights.
 
-Planner disposition for the White Antler exclusion: the catalog declares the
-`notKeepsake` requirement on `ChaosHealthCurse`, but both evaluation contacts
-deliberately treat it as never applying. The historical planner never enforced
-it — the materialized Chaos source carried no keepsake identity, and no Chaos
-offer settles on the path that did — so enforcing it from the current keepsake
-state would newly invalidate existing authored Atrophic pairs. This is a
-documented gap: correcting it is a deliberate, separately reviewed behavior
-change (two evaluation sites plus a regression witness), not a refactor.
+Planner disposition for the White Antler exclusion: the `notKeepsake`
+requirement on `ChaosHealthCurse` is enforced from the reached keepsake state
+at both evaluation contacts (selected assessment and the candidate curse
+domain). The historical planner had never enforced it — the pre-consolidation
+materialized Chaos source carried no keepsake identity — so authored Atrophic
+pairs held with White Antler that were previously accepted now surface
+`chaosPairUnavailable` and remain repairable.
 
 ## The offer is three paired alternatives
 

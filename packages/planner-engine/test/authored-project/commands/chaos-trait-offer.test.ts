@@ -9,6 +9,7 @@ import {
   createIncomingRewardAddress,
   createOccurrenceId,
   createProjectHistory,
+  createRouteStartKeepsakeSelectionAddress,
   createStartingRewardAddress,
   createTraitOfferAddress,
   createTargetAddress,
@@ -277,5 +278,21 @@ describe('Chaos TrialUpgrade authored child', () => {
         }),
       )[0]?.rarities,
     ).toEqual(['Legendary']);
+  });
+
+  it('excludes Atrophic from the curse domain while White Antler is held', () => {
+    const project = applyProjectCommand(reachableUnresolvedProject(), catalog, {
+      kind: 'ReplaceStartingKeepsake',
+      selection: createRouteStartKeepsakeSelectionAddress('Underworld'),
+      keepsakeKey: 'LowHealthCritKeepsake',
+    });
+    const assembly = simulateProjectAssembly(catalog, project);
+    const capability = candidateArtifactsForProjectEvaluationAssembly(assembly)
+      .biomeAt(createBiomeAddress('Underworld', 'F'))
+      ?.traitOffers.at(chaosTrait);
+    expect(capability).toBeDefined();
+    const domain = capability?.chaosOfferDomain()[0];
+    expect(domain?.curseOptions[0]?.curseKeys).toContain('ChaosNoMoneyCurse');
+    expect(domain?.curseOptions[0]?.curseKeys).not.toContain('ChaosHealthCurse');
   });
 });

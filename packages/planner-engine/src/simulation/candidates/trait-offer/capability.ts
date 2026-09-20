@@ -844,10 +844,7 @@ export function createTraitOfferCandidateArtifacts(
                         requirement.minimum
                       );
                     case 'notKeepsake':
-                      // Matches the reached Chaos screen, which has never
-                      // consulted a keepsake identity. See the selected
-                      // assessment in `simulation/traits/offers.ts`.
-                      return false;
+                      return context.state.keepsakes.currentKey === requirement.keepsakeKey;
                     case 'notAspect':
                       return context.state.equipment.aspectKey === requirement.aspectKey;
                     case 'routeKey':
