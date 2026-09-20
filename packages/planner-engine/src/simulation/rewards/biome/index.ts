@@ -25,6 +25,7 @@ export function evaluateBiomeRewardsAssemblyInternal(
   initialBranches: readonly RewardBranch[] | undefined = undefined,
   resourcePlacements: ResourcePlacements = EMPTY_RESOURCE_PLACEMENTS,
   resourceFindings: readonly SemanticFinding[] = [],
+  carriedRewardLookups: Readonly<Record<string, readonly string[]>> | undefined = undefined,
 ): BiomeRewardEvaluationAssembly {
   return evaluateBiomeRewardChronology(
     catalog,
@@ -35,6 +36,7 @@ export function evaluateBiomeRewardsAssemblyInternal(
     initialBranches,
     resourcePlacements,
     resourceFindings,
+    carriedRewardLookups,
   );
 }
 

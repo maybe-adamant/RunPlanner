@@ -469,7 +469,11 @@ describe('Cherished Heirloom active keepsake advance', () => {
       routePosition: ordinaryRoutePosition(catalog, 'Underworld', 'G'),
       resourcePlacements: EMPTY_RESOURCE_PLACEMENTS,
       loadout: route.loadout,
-      seed: { history: previous.history, rewardBranches: [rewardBranch] },
+      seed: {
+        history: previous.history,
+        rewardBranches: [rewardBranch],
+        rewardLookups: previous.rewards.rewardLookups,
+      },
     } as const;
     const first = evaluateProgressiveBiomeAssembly(catalog, goldenGBiome, plan, input);
     const recomposed = evaluateProgressiveBiomeAssembly(catalog, goldenGBiome, plan, input);

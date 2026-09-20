@@ -207,6 +207,8 @@ export interface TargetRewardHistoryCheckpoint {
   readonly origin: TargetAddress;
   readonly historySequence: number;
   readonly histories: readonly RewardHistoryState[];
+  /** Exact persistent Hub offer history reached when this target was generated. */
+  readonly rewardLookups: Readonly<Record<string, readonly string[]>>;
   /** Agreement-owned branch fact for later room generation requirements. */
   readonly pendingSpellDrops: readonly boolean[];
   /** Branch-owned closure truth must agree before a generated target can use it. */

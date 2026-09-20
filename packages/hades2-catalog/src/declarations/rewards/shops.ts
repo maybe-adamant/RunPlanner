@@ -2,6 +2,8 @@ import {
   chaosHammerLegal,
   hammerEarly,
   hammerLate,
+  hubSpellDropExcludes,
+  hubWeaponUpgradeExcludes,
   inRunFirstHalf,
   inRunSecondHalf,
   routeTalentLegal,
@@ -98,7 +100,7 @@ const worldGroups = [
         key: 'WeaponUpgradeDropEarly',
         rewardType: 'WeaponUpgradeDrop',
         purchaseInteraction: { kind: 'fixed', gameName: 'WeaponUpgrade' },
-        requirement: hammerEarly,
+        requirement: { kind: 'all', requirements: [hammerEarly, hubWeaponUpgradeExcludes] },
       }),
       option({
         key: 'WeaponUpgradeDropLate',
@@ -157,7 +159,7 @@ const worldGroups = [
       option({
         key: 'SpellDrop',
         rewardType: 'SpellDrop',
-        requirement: spellLegal,
+        requirement: { kind: 'all', requirements: [spellLegal, hubSpellDropExcludes] },
       }),
       option({
         key: 'TalentDrop',
@@ -346,7 +348,11 @@ export const shops = [
         key: 'Second',
         offerCount: 2,
         options: [
-          option({ key: 'SpellDrop', rewardType: 'SpellDrop', requirement: spellLegal }),
+          option({
+            key: 'SpellDrop',
+            rewardType: 'SpellDrop',
+            requirement: { kind: 'all', requirements: [spellLegal, hubSpellDropExcludes] },
+          }),
           option({
             key: 'ShopHermesUpgrade',
             rewardType: 'ShopHermesUpgrade',
@@ -476,7 +482,7 @@ export const shops = [
             key: 'WeaponUpgradeDrop',
             rewardType: 'WeaponUpgradeDrop',
             purchaseInteraction: { kind: 'fixed', gameName: 'WeaponUpgrade' },
-            requirement: hammerEarly,
+            requirement: { kind: 'all', requirements: [hammerEarly, hubWeaponUpgradeExcludes] },
           }),
           phaseOption(inRunFirstHalf, {
             key: 'RandomLoot',
@@ -651,7 +657,7 @@ export const shops = [
             key: 'WeaponUpgradeDrop',
             rewardType: 'WeaponUpgradeDrop',
             purchaseInteraction: { kind: 'fixed', gameName: 'WeaponUpgrade' },
-            requirement: hammerEarly,
+            requirement: { kind: 'all', requirements: [hammerEarly, hubWeaponUpgradeExcludes] },
           }),
           phaseOption(inRunFirstHalf, {
             key: 'RandomLoot',

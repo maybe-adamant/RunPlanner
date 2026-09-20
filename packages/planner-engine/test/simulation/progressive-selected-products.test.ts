@@ -777,7 +777,11 @@ describe('progressive selected and blocked products', () => {
     if (previous?.authoring !== 'complete' || previous.validity !== 'valid' || plan === undefined) {
       throw new Error('progressive artifact fixture has no valid F seed or G plan');
     }
-    const seed = { history: previous.history, rewardBranches: previous.rewards.branches };
+    const seed = {
+      history: previous.history,
+      rewardBranches: previous.rewards.branches,
+      rewardLookups: previous.rewards.rewardLookups,
+    };
     const clamped = evaluateProgressiveBiomeAssembly(catalog, goldenGBiome, plan, {
       routePosition: ordinaryRoutePosition(catalog, 'Underworld', 'G'),
       resourcePlacements: EMPTY_RESOURCE_PLACEMENTS,
@@ -839,6 +843,7 @@ describe('progressive selected and blocked products', () => {
     const blockedSeed = {
       history: blockedPrevious.history,
       rewardBranches: blockedPrevious.rewards.branches,
+      rewardLookups: blockedPrevious.rewards.rewardLookups,
     };
     const blockedClamped = evaluateProgressiveBiomeAssembly(catalog, goldenGBiome, blockedPlan, {
       routePosition: ordinaryRoutePosition(catalog, 'Underworld', 'G'),
@@ -1001,7 +1006,11 @@ describe('progressive selected and blocked products', () => {
     if (previous?.authoring !== 'complete' || previous.validity !== 'valid' || plan === undefined) {
       throw new Error('lifecycle artifact fixture has no valid N seed or O plan');
     }
-    const seed = { history: previous.history, rewardBranches: previous.rewards.branches };
+    const seed = {
+      history: previous.history,
+      rewardBranches: previous.rewards.branches,
+      rewardLookups: previous.rewards.rewardLookups,
+    };
     const clamped = evaluateProgressiveBiomeAssembly(catalog, oBiome, plan, {
       routePosition: ordinaryRoutePosition(catalog, 'Surface', 'O'),
       resourcePlacements: EMPTY_RESOURCE_PLACEMENTS,

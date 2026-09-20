@@ -21,6 +21,7 @@ import type {
   BiomeGenerationHistory,
   BiomeGenerationSnapshot,
   CanonicalGenerationSource,
+  TargetRewardRequirementFacts,
 } from './target-policy';
 
 interface AdditionalContinuationEntry {
@@ -41,6 +42,8 @@ export function assessChaosPlacement(
   parentHistory: ProgressiveRoomHistoryViews | undefined,
   targetGameName: string | undefined,
   enteredBiomeCount: number,
+  rewardFacts?: TargetRewardRequirementFacts,
+  initialRewardLookups: Readonly<Record<string, ReadonlySet<string>>> = Object.freeze({}),
 ): ChaosCandidateCapability | undefined {
   if (parentHistory?.entry === undefined) return undefined;
   const declaration = sourceDeclaration.additionalExits.find(
@@ -69,6 +72,10 @@ export function assessChaosPlacement(
         sourceDeclaration,
         parentHistory.entry,
         enteredBiomeCount,
+        rewardFacts?.history,
+        rewardFacts?.pendingSpellDrop,
+        rewardFacts?.allSpellInvested,
+        rewardFacts?.rewardLookups ?? initialRewardLookups,
       ),
     )
   ) {
@@ -164,6 +171,8 @@ export function evaluateAdditionalContinuationEntries(
   findingRegions: FindingRegionEntry[],
   enteredBiomeCount = 0,
   forcedChaosOccurrenceKeys: ReadonlySet<string> = new Set(),
+  rewardFactsBySource: ReadonlyMap<string, TargetRewardRequirementFacts> = new Map(),
+  initialRewardLookups: Readonly<Record<string, ReadonlySet<string>>> = Object.freeze({}),
 ): void {
   const layout = catalog.biomeLayouts.byKey[snapshot.biomeKey];
   if (layout === undefined) {
@@ -202,6 +211,8 @@ export function evaluateAdditionalContinuationEntries(
           parentHistory,
           continuation.room.gameName,
           enteredBiomeCount,
+          rewardFactsBySource.get(semanticAddressKey(parentOrigin)),
+          initialRewardLookups,
         );
         for (const condition of capability?.failedConditions ?? []) {
           if (!failedConditions.includes(condition)) failedConditions.push(condition);

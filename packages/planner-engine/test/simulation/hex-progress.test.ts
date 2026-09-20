@@ -212,7 +212,11 @@ describe('finite Hex progress', () => {
       routePosition: ordinaryRoutePosition(catalog, 'Underworld', 'G'),
       loadout: routePlan.loadout,
       resourcePlacements: EMPTY_RESOURCE_PLACEMENTS,
-      seed: { history: f.history, rewardBranches: [seededBranch] },
+      seed: {
+        history: f.history,
+        rewardBranches: [seededBranch],
+        rewardLookups: f.rewards.rewardLookups,
+      },
     });
     if (evaluated.authoring !== 'complete' || evaluated.validity !== 'valid') {
       throw new Error('closed-tree G seed did not reach complete reward generation');

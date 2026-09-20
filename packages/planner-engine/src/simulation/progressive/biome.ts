@@ -78,6 +78,8 @@ import type {
 export interface ProgressiveSeed {
   readonly history: CanonicalBiomeHistory;
   readonly rewardBranches: readonly RewardBranch[];
+  /** Run-persistent Hub offer inventory, captured at prior biome completion. */
+  readonly rewardLookups: Readonly<Record<string, readonly string[]>>;
 }
 
 export interface ProgressiveBiomeContext {
@@ -159,6 +161,7 @@ function generation(
   transcendentEmbryo: TranscendentEmbryoCandidateArtifacts,
   forcedChaosOccurrenceKeys?: ReadonlySet<string>,
   encounterBoundary?: EncounterCandidateBoundary,
+  carriedRewardLookups?: Readonly<Record<string, readonly string[]>>,
 ): ProgressiveGenerationAssembly {
   const ordinary = evaluateBiomeRoomGenerationAssemblyInternal(
     catalog,
@@ -167,6 +170,7 @@ function generation(
     routePosition.ordinal,
     rewards.targetHistory,
     forcedChaosOccurrenceKeys,
+    carriedRewardLookups,
   );
   // An encounter block can occur after the active Hub visit's side-generation
   // checkpoint. Validate that visit against the selected authored envelope so
@@ -283,6 +287,7 @@ function products(
     context.seed?.rewardBranches,
     context.resourcePlacements,
     context.resourceFindings,
+    context.seed?.rewardLookups,
   );
   const roomGeneration = generation(
     catalog,
@@ -311,6 +316,7 @@ function products(
     rewards.transcendentEmbryoArtifacts,
     context.forcedChaosOccurrenceKeys,
     encounterBoundary,
+    context.seed?.rewardLookups,
   );
   return Object.freeze({
     evaluation: Object.freeze({

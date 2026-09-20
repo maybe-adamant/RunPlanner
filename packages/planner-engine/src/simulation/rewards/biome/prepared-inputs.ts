@@ -236,31 +236,54 @@ function requireLayout(catalog: Catalog, snapshot: BiomeRewardSnapshot): BiomeLa
 
 function rewardLookup(
   catalog: Catalog,
-  snapshot: BiomeRewardSnapshot,
+  carriedLookups: Readonly<Record<string, readonly string[]>> | undefined,
 ): PreparedRewardEvaluationInputs['rewardLookup'] {
-  const descriptor = catalog.biomeLayouts.byKey[snapshot.biomeKey]?.progression;
-  const hub = snapshot.decisions.find(
-    (decision): decision is Extract<CanonicalDecision, { readonly kind: 'hub' }> =>
-      decision.kind === 'hub',
+  const entries = catalog.biomeLayouts.values.flatMap((layout) =>
+    layout.progression.kind === 'hub'
+      ? ([
+          [
+            layout.progression.rewardLookup.key,
+            carriedLookups?.[layout.progression.rewardLookup.key] ?? [],
+          ],
+        ] as const)
+      : [],
   );
-  if (descriptor?.kind !== 'hub' || hub === undefined)
-    return Object.freeze({ internal: Object.freeze({}), public: Object.freeze({}) });
-  if (hub.origin.hubKey !== descriptor.hubKey)
-    throw new BiomeRewardSimulationContractError(
-      `${snapshot.biomeKey} reward lookup has the wrong Hub decision`,
-    );
-  const types: string[] = [];
-  const unique = new Set<string>();
-  for (const target of hub.board.targets) {
-    const type = target.room.incomingReward?.offer.rewardType;
-    if (type !== undefined && !unique.has(type)) {
-      unique.add(type);
-      types.push(type);
-    }
-  }
   return Object.freeze({
-    internal: Object.freeze({ [descriptor.rewardLookup.key]: new ImmutableSetView(unique) }),
-    public: Object.freeze({ [descriptor.rewardLookup.key]: Object.freeze(types) }),
+    internal: Object.freeze(
+      Object.fromEntries(entries.map(([key, types]) => [key, new ImmutableSetView(types)])),
+    ),
+    public: Object.freeze(
+      Object.fromEntries(entries.map(([key, types]) => [key, Object.freeze([...types])])),
+    ),
+  });
+}
+
+/**
+ * A Hub board becomes visible only after its complete generation flush. The
+ * lookup product is immutable at each chronology contact and seeds later
+ * biomes through the existing completion boundary.
+ */
+export function addHubBoardRewardLookup(
+  lookup: PreparedRewardEvaluationInputs['rewardLookup'],
+  lookupKey: string,
+  rewardTypes: readonly string[],
+): PreparedRewardEvaluationInputs['rewardLookup'] {
+  const prior = lookup.public[lookupKey];
+  if (prior === undefined)
+    throw new BiomeRewardSimulationContractError(`unknown Hub reward lookup ${lookupKey}`);
+  const values = [...prior];
+  const seen = new Set(values);
+  for (const rewardType of rewardTypes)
+    if (!seen.has(rewardType)) {
+      seen.add(rewardType);
+      values.push(rewardType);
+    }
+  return Object.freeze({
+    internal: Object.freeze({
+      ...lookup.internal,
+      [lookupKey]: new ImmutableSetView(values),
+    }),
+    public: Object.freeze({ ...lookup.public, [lookupKey]: Object.freeze(values) }),
   });
 }
 
@@ -315,6 +338,7 @@ export function prepareRewardEvaluationInputs(
   catalog: Catalog,
   snapshot: BiomeRewardSnapshot,
   history: BiomeRewardHistory,
+  carriedRewardLookups: Readonly<Record<string, readonly string[]>> | undefined = undefined,
 ): PreparedRewardEvaluationInputs {
   const allDecisions = decisions(snapshot);
   const hubFrontier = activeHubVisit(snapshot);
@@ -341,7 +365,7 @@ export function prepareRewardEvaluationInputs(
   );
   return Object.freeze({
     layout: requireLayout(catalog, snapshot),
-    rewardLookup: rewardLookup(catalog, snapshot),
+    rewardLookup: rewardLookup(catalog, carriedRewardLookups),
     rooms: new ImmutableMapView(
       rooms.map((room) => [semanticAddressKey(room.origin), room] as const),
     ),

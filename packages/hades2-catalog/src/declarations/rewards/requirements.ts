@@ -34,6 +34,17 @@ export const hammerEarly: RequirementExpression = {
   ],
 };
 
+/**
+ * StoreData's early World-Shop hammer entries consult Ephyra's offered-reward
+ * lookup using the native WeaponUpgrade identity, rather than the planner's
+ * WeaponUpgradeDrop option spelling.
+ */
+export const hubWeaponUpgradeExcludes: RequirementExpression = {
+  kind: 'rewardLookupExcludes',
+  lookupKey: 'hubRewardLookup',
+  rewardType: 'WeaponUpgrade',
+};
+
 export const hammerLate: RequirementExpression = {
   kind: 'all',
   requirements: [
@@ -105,6 +116,13 @@ export const spellLegal: RequirementExpression = {
     { kind: 'recordCount', record: 'useRecord', keys: ['SpellDrop'], range: { max: 0 } },
     { kind: 'flagEquals', flag: 'pendingSpellDrop', value: false },
   ],
+};
+
+/** StoreData applies this lookup only to the named shrine/shop entries. */
+export const hubSpellDropExcludes: RequirementExpression = {
+  kind: 'rewardLookupExcludes',
+  lookupKey: 'hubRewardLookup',
+  rewardType: 'SpellDrop',
 };
 
 export const talentLegal: RequirementExpression = {

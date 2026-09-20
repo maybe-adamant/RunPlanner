@@ -367,7 +367,11 @@ describe('progressive prefix and frontier products', () => {
       routePosition: ordinaryRoutePosition(catalog, 'Underworld', 'H'),
       resourcePlacements: EMPTY_RESOURCE_PLACEMENTS,
       loadout: defaultRouteLoadout,
-      seed: { history: previous.history, rewardBranches: previous.rewards.branches },
+      seed: {
+        history: previous.history,
+        rewardBranches: previous.rewards.branches,
+        rewardLookups: previous.rewards.rewardLookups,
+      },
     } as const;
     const clamped = evaluateProgressiveBiomeAssembly(catalog, goldenHBiome, plan, options);
     const selected = evaluateProgressiveBiomeAssemblyBeforeClamp(

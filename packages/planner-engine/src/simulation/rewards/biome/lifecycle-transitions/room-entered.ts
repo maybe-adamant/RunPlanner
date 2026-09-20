@@ -72,6 +72,7 @@ export function applyRoomEnteredTransition(
   branches: readonly RewardBranchState[],
   findingChronology: FindingChronology,
   routePosition: ResolvedRoutePosition,
+  rewardLookups: Readonly<Record<string, ReadonlySet<string>>>,
   alreadyAssessed: {
     readonly purgingPool: boolean;
     readonly hermesShrine: boolean;
@@ -291,6 +292,7 @@ export function applyRoomEnteredTransition(
                     view: entry,
                     history: branch.history,
                     enteredBiomeCount: routePosition.ordinal,
+                    rewardLookups,
                     currentBatchRoomGameNames: createdPeerGameNames(
                       catalog,
                       entry,

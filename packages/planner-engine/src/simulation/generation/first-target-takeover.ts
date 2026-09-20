@@ -1,7 +1,6 @@
 import type { BiomeLayout, Catalog, RoomDeclaration } from '../../catalog-schema';
 import { directEncounterDefinitionKeyForSlot } from '../../authored-project/room-state/encounter-envelope';
 import type { RequirementEvaluationContext } from '../../requirements/evaluator';
-import type { RewardHistoryState } from '../../reward-kernel';
 import {
   createBiomeAddress,
   createTargetAddress,
@@ -221,6 +220,7 @@ function prepareTargetGameNameContext(
   before: HistoryStateView,
   enteredBiomeCount: number,
   rewardFacts: TargetRewardRequirementFacts | undefined,
+  initialRewardLookups: Readonly<Record<string, ReadonlySet<string>>> = Object.freeze({}),
 ): RoomTargetCandidateContext {
   const sourceDeclaration = catalog.rooms.byKey[source.gameName];
   if (sourceDeclaration === undefined) {
@@ -234,6 +234,8 @@ function prepareTargetGameNameContext(
     enteredBiomeCount,
     rewardFacts?.history,
     rewardFacts?.pendingSpellDrop,
+    rewardFacts?.allSpellInvested,
+    rewardFacts?.rewardLookups ?? initialRewardLookups,
   );
   const counts = roomGenerationCounts(before, source.origin);
   const candidates = pool.map((room) =>
@@ -360,8 +362,8 @@ function firstTargetGenerationSupport(
   exit: CanonicalPhysicalExit,
   before: HistoryStateView,
   enteredBiomeCount: number,
-  rewardHistory?: RewardHistoryState,
-  pendingSpellDrop = false,
+  rewardFacts?: TargetRewardRequirementFacts,
+  initialRewardLookups: Readonly<Record<string, ReadonlySet<string>>> = Object.freeze({}),
 ): FirstTargetGenerationSupport {
   const layout = catalog.biomeLayouts.byKey[biomeKey];
   if (layout === undefined || normalDecisionProgressionForLayout(layout) === undefined) {
@@ -379,8 +381,10 @@ function firstTargetGenerationSupport(
     sourceDeclaration,
     before,
     enteredBiomeCount,
-    rewardHistory,
-    pendingSpellDrop,
+    rewardFacts?.history,
+    rewardFacts?.pendingSpellDrop,
+    rewardFacts?.allSpellInvested,
+    rewardFacts?.rewardLookups ?? initialRewardLookups,
   );
   const counts = roomGenerationCounts(before, source.origin);
   const route = catalog.routes.byKey[source.origin.routeKey];
@@ -434,6 +438,7 @@ function firstTargetRoomCandidateContext(
   before: HistoryStateView,
   enteredBiomeCount: number,
   rewardFacts?: TargetRewardRequirementFacts,
+  initialRewardLookups: Readonly<Record<string, ReadonlySet<string>>> = Object.freeze({}),
 ): RoomTargetCandidateContext {
   const support = firstTargetGenerationSupport(
     catalog,
@@ -443,8 +448,8 @@ function firstTargetRoomCandidateContext(
     exit,
     before,
     enteredBiomeCount,
-    rewardFacts?.history,
-    rewardFacts?.pendingSpellDrop,
+    rewardFacts,
+    initialRewardLookups,
   );
   return targetCandidateContext(
     source,
@@ -476,6 +481,7 @@ export function roomTargetCandidateContextAtFrontier(
   enteredBiomeCount: number,
   includeTakeoverSupport = false,
   rewardHistoryCheckpoints?: readonly TargetRewardHistoryCheckpoint[],
+  initialRewardLookups: Readonly<Record<string, ReadonlySet<string>>> = Object.freeze({}),
 ): RoomTargetCandidateContext {
   const layout = catalog.biomeLayouts.byKey[biomeKey];
   if (layout === undefined || normalDecisionProgressionForLayout(layout) === undefined) {
@@ -495,6 +501,7 @@ export function roomTargetCandidateContextAtFrontier(
       before,
       enteredBiomeCount,
       rewardFacts,
+      initialRewardLookups,
     );
   }
   return prepareTargetGameNameContext(
@@ -511,6 +518,7 @@ export function roomTargetCandidateContextAtFrontier(
     before,
     enteredBiomeCount,
     rewardFacts,
+    initialRewardLookups,
   );
 }
 
@@ -702,6 +710,7 @@ export function evaluateTargetSlots(
   findingRegions: FindingRegionEntry[],
   enteredBiomeCount: number,
   rewardHistories: ReadonlyMap<string, TargetRewardRequirementFacts>,
+  initialRewardLookups: Readonly<Record<string, ReadonlySet<string>>>,
 ): readonly OrdinaryTargetGenerationAssessment[] {
   const sourceDeclaration = catalog.rooms.byKey[source.gameName];
   if (sourceDeclaration === undefined) {
@@ -728,6 +737,7 @@ export function evaluateTargetSlots(
       before,
       enteredBiomeCount,
       rewardFacts,
+      initialRewardLookups,
     );
     candidateContexts.set(targetKey, candidateContext);
     const rememberedGameName =
@@ -788,6 +798,7 @@ export function evaluateTargetSlots(
           before,
           enteredBiomeCount,
           rewardFacts,
+          initialRewardLookups,
         ),
       );
       return Object.freeze(assessments);
@@ -812,6 +823,7 @@ function evaluateTakeoverAgainstSource(
   gameName: string,
   enteredBiomeCount: number,
   ordinaryBatchIndex: number,
+  rewardFacts?: TargetRewardRequirementFacts,
 ): TakeoverPrebossBatchCandidateSupport {
   const exits = ownerNormalExits(ownerDeclaration);
   const requiredExitKeys = Object.freeze(exits.map((exit) => exit.exitKey));
@@ -849,6 +861,7 @@ function evaluateTakeoverAgainstSource(
     firstExit,
     ownerHistory,
     enteredBiomeCount,
+    rewardFacts,
   );
   const shape = support.takeoverCandidates.get(gameName);
   const pressure = Object.freeze(
@@ -915,6 +928,7 @@ export function evaluateTakeoverPrebossBatchCandidateAtFrontier(
   gameName: string,
   enteredBiomeCount: number,
   ordinaryBatchIndex: number,
+  rewardHistoryCheckpoints?: readonly TargetRewardHistoryCheckpoint[],
 ): TakeoverPrebossBatchCandidateSupport {
   const ownerDeclaration = catalog.rooms.byKey[owner.gameName];
   if (ownerDeclaration === undefined) {
@@ -922,6 +936,17 @@ export function evaluateTakeoverPrebossBatchCandidateAtFrontier(
       `${semanticAddressKey(source)} has no declared takeover source`,
     );
   }
+  const firstExit = ownerNormalExits(ownerDeclaration)[0];
+  if (firstExit === undefined) {
+    throw new BiomeRoomGenerationContractError(
+      `${semanticAddressKey(source)} has no first takeover target exit`,
+    );
+  }
+  const targetOrigin = createTargetAddress(
+    createBiomeAddress(source.routeKey, source.biomeKey),
+    source.source,
+    firstExit.exitKey,
+  );
   return evaluateTakeoverAgainstSource(
     catalog,
     source,
@@ -931,6 +956,7 @@ export function evaluateTakeoverPrebossBatchCandidateAtFrontier(
     gameName,
     enteredBiomeCount,
     ordinaryBatchIndex,
+    targetRewardHistories(rewardHistoryCheckpoints).get(semanticAddressKey(targetOrigin)),
   );
 }
 
@@ -1021,6 +1047,7 @@ export function evaluateTakeoverPrebossBatchCandidate(
   source: ExitDecisionAddress,
   gameName: string,
   enteredBiomeCount: number,
+  rewardHistoryCheckpoints?: readonly TargetRewardHistoryCheckpoint[],
 ): TakeoverPrebossBatchCandidateSupport {
   const batch = generationDecisions(snapshot).find(
     (decision): decision is CanonicalBatch =>
@@ -1059,6 +1086,12 @@ export function evaluateTakeoverPrebossBatchCandidate(
       `${semanticAddressKey(source)} has no source generation history`,
     );
   }
+  const target = batch.targets[0];
+  if (target === undefined) {
+    throw new BiomeRoomGenerationContractError(
+      `${semanticAddressKey(source)} takeover batch has no target checkpoint`,
+    );
+  }
   return evaluateTakeoverAgainstSource(
     catalog,
     source,
@@ -1068,5 +1101,6 @@ export function evaluateTakeoverPrebossBatchCandidate(
     gameName,
     enteredBiomeCount,
     ordinaryBatchIndexBeforeSource(catalog, snapshot, source),
+    targetRewardHistories(rewardHistoryCheckpoints).get(semanticAddressKey(target.origin)),
   );
 }

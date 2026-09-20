@@ -6,6 +6,7 @@ import type {
   RoomDeclaration,
 } from '@run-planner/engine/catalog-schema';
 import type { RequirementExpression } from '@run-planner/engine/requirements';
+import type { ShopProfileDeclaration } from '@run-planner/engine/reward-kernel';
 
 import { fail } from '../errors';
 
@@ -158,7 +159,13 @@ function visitRewardLookupRequirements(
 function validateRewardLookupOwnership(
   rooms: CatalogCollection<RoomDeclaration>,
   layouts: CatalogCollection<BiomeLayout>,
+  shops: CatalogCollection<ShopProfileDeclaration>,
 ): void {
+  const hubLookupKeys = new Set(
+    layouts.values.flatMap((layout) =>
+      layout.progression.kind === 'hub' ? [layout.progression.rewardLookup.key] : [],
+    ),
+  );
   rooms.values.forEach((room, roomIndex) => {
     if (
       room.incomingReward.kind !== 'shop' ||
@@ -183,6 +190,20 @@ function validateRewardLookupOwnership(
       });
     }
   });
+  shops.values.forEach((shop) =>
+    shop.groups.values.forEach((group) =>
+      group.options.values.forEach((option) => {
+        if (option.requirement === undefined) return;
+        visitRewardLookupRequirements(option.requirement, (lookupKey) => {
+          if (hubLookupKeys.has(lookupKey)) return;
+          fail(
+            `rewards.shops.${shop.key}.groups.${group.key}.options.${option.key}.requirement`,
+            `${lookupKey} is not produced by a Hub layout`,
+          );
+        });
+      }),
+    ),
+  );
 }
 
 function validateExcludedRouteKeys(
@@ -224,9 +245,10 @@ export function validateRoomLayoutClosure(
   layouts: CatalogCollection<BiomeLayout>,
   exitPolicies: CatalogCollection<ExitCompatibilityPolicy>,
   routes: CatalogCollection<RouteDeclaration>,
+  shops: CatalogCollection<ShopProfileDeclaration>,
 ): void {
   validatePrebossBatchPolicies(layouts, rooms, exitPolicies);
   validateDerivedRoomOwnership(rooms, layouts);
-  validateRewardLookupOwnership(rooms, layouts);
+  validateRewardLookupOwnership(rooms, layouts, shops);
   validateRouteAvailabilityOwnership(rooms, layouts, routes);
 }

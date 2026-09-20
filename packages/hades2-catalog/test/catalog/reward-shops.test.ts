@@ -8,8 +8,69 @@ import {
 } from './support/reward-kernel';
 import { describe, expect, it } from 'vitest';
 import type { RawRewardKernelInput } from '../../src/declarations/rewards';
+import type { RequirementExpression } from '@run-planner/engine/requirements';
+
+function excludesHubOffer(
+  requirement: RequirementExpression | undefined,
+  rewardType: string,
+): boolean {
+  if (requirement === undefined) return false;
+  if (requirement.kind === 'rewardLookupExcludes')
+    return requirement.lookupKey === 'hubRewardLookup' && requirement.rewardType === rewardType;
+  if (requirement.kind === 'all' || requirement.kind === 'any')
+    return requirement.requirements.some((child) => excludesHubOffer(child, rewardType));
+  return requirement.kind === 'not' && excludesHubOffer(requirement.requirement, rewardType);
+}
 
 describe('reward compiler Shop normalizer', () => {
+  it('keeps Ephyra offer exclusions on only the source-specific inventory entries', () => {
+    const option = (profileKey: string, groupKey: string, optionKey: string) =>
+      rewardKernelCatalog.shops.byKey[profileKey]?.groups.byKey[groupKey]?.options.byKey[optionKey];
+
+    expect(
+      excludesHubOffer(option('SurfaceShop', 'Second', 'SpellDrop')?.requirement, 'SpellDrop'),
+    ).toBe(true);
+    expect(
+      excludesHubOffer(option('WorldShop', 'Minor', 'SpellDrop')?.requirement, 'SpellDrop'),
+    ).toBe(true);
+    expect(
+      excludesHubOffer(
+        option('WorldShop', 'MajorNonBoon', 'WeaponUpgradeDropEarly')?.requirement,
+        'WeaponUpgrade',
+      ),
+    ).toBe(true);
+    expect(
+      excludesHubOffer(
+        option('I_WorldShop', 'MixedProgress', 'SpellDrop')?.requirement,
+        'SpellDrop',
+      ),
+    ).toBe(false);
+    expect(
+      excludesHubOffer(
+        option('Q_WorldShop', 'MixedProgress', 'SpellDrop')?.requirement,
+        'SpellDrop',
+      ),
+    ).toBe(false);
+    expect(
+      excludesHubOffer(
+        option('I_WorldShop', 'PremiumProgress', 'WeaponUpgradeDrop')?.requirement,
+        'WeaponUpgrade',
+      ),
+    ).toBe(true);
+    expect(
+      excludesHubOffer(
+        option('Q_WorldShop', 'PremiumProgress', 'WeaponUpgradeDrop')?.requirement,
+        'WeaponUpgrade',
+      ),
+    ).toBe(true);
+    expect(
+      excludesHubOffer(
+        option('WorldShop', 'MajorNonBoon', 'WeaponUpgradeDropLate')?.requirement,
+        'WeaponUpgrade',
+      ),
+    ).toBe(false);
+  });
+
   it('normalizes World, Surface, I, and Q shop pools with their declared slot groups', () => {
     expect(rewardKernelCatalog.shops.byKey.SurfaceShop?.slotCount).toBe(3);
     expect(rewardKernelCatalog.shops.byKey.WorldShop?.slotCount).toBe(3);
@@ -461,12 +522,22 @@ describe('reward compiler Shop normalizer', () => {
         {
           kind: 'all',
           requirements: [
-            { kind: 'notInCurrentRoomShopOptions', rewardType: 'WeaponUpgradeDrop' },
             {
-              kind: 'recordCount',
-              record: 'lootTypeHistory',
-              keys: ['WeaponUpgrade'],
-              range: { max: 0 },
+              kind: 'all',
+              requirements: [
+                { kind: 'notInCurrentRoomShopOptions', rewardType: 'WeaponUpgradeDrop' },
+                {
+                  kind: 'recordCount',
+                  record: 'lootTypeHistory',
+                  keys: ['WeaponUpgrade'],
+                  range: { max: 0 },
+                },
+              ],
+            },
+            {
+              kind: 'rewardLookupExcludes',
+              lookupKey: 'hubRewardLookup',
+              rewardType: 'WeaponUpgrade',
             },
           ],
         },

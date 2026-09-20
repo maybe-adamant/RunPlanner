@@ -10,12 +10,14 @@ import {
   createAcquisitionRoleAddress,
   createBiomeAddress,
   createExitDecisionAddress,
+  createIncomingRewardAddress,
   createOccurrenceAddress,
   createOccurrenceId,
   createProjectDocument,
   createRoomActionAddress,
   createRouteStartKeepsakeSelectionAddress,
   createTargetAddress,
+  createTraitOfferAddress,
   hermesShrineDeliveryEntryKey,
   parseHermesShrineDeliveryEntryKey,
   roomActionKey,
@@ -36,10 +38,14 @@ import {
   loadSurfaceNOProject,
   createSurfaceNOHermesShrineDeliveryCheckpoint,
   loadSurfaceNOPProject,
+  nBiome,
+  nOccurrenceId,
   oBiome,
   oOccurrenceIds,
   pBiome,
 } from '@run-planner/test-fixtures/surface';
+import { dreamMixedHandoffProject } from '@run-planner/test-fixtures/dream';
+import { authorLegalTraitOffers } from '@run-planner/test-fixtures/shared';
 import { loadSurfacePSteadyGrowthShrineFrontierCheckpoint } from '@run-planner/test-fixtures/checkpoints/surface';
 import {
   assessHermesShrineInventory,
@@ -128,7 +134,7 @@ function rewardFacts(history: RewardHistoryState): RewardKernelFacts {
       currentRoomShopOptionNames: new Set(),
       currentRoomRewardType: undefined,
       currentRoomStructuralTags: [],
-      rewardLookups: {},
+      rewardLookups: { hubRewardLookup: new Set<string>() },
       runDepthCache: 8,
       lastEventRunDepthCaches: {},
       recentEncounterEnvelopeSlots: [],
@@ -642,6 +648,7 @@ describe('Hermes Shrine delayed deliveries', () => {
           boundary: 'at' as const,
         }),
         routePosition,
+        Object.freeze({ hubRewardLookup: new Set<string>() }),
         { purgingPool: true, hermesShrine: true, stygianWell: true },
       );
       const delivery = transition.derivedAcquisitionEntryFrontiers.find(
@@ -838,6 +845,142 @@ describe('Hermes Shrine delayed deliveries', () => {
 });
 
 describe('Hermes Shrine Travel Deal generation', () => {
+  it('carries an unpurchased N offer into the later O Shrine candidate inventory', () => {
+    let project = applyProjectCommand(loadSurfaceNOProject(), catalog, {
+      kind: 'ReplaceIncomingReward',
+      reward: createIncomingRewardAddress(nBiome, nOccurrenceId('combat09')),
+      value: { rewardType: 'MaxHealthDropBig' },
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceIncomingReward',
+      reward: createIncomingRewardAddress(nBiome, nOccurrenceId('combat01')),
+      value: { rewardType: 'SpellDrop' },
+    });
+    const host = createOccurrenceAddress(oBiome, createOccurrenceId('surface-o-preboss:postboss'));
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceHermesShrineOffer',
+      occurrence: host,
+      slotKey: 'secondLeft',
+      value: { rewardType: 'SpellDrop' },
+    });
+
+    const assembly = simulateProjectAssembly(catalog, project);
+    const n = assembly.evaluation.route.biomes.find((biome) => biome.biomeKey === 'N');
+    if (n === undefined || !('rewards' in n)) throw new Error('fixture lost N rewards');
+    expect(n.validity).toBe('valid');
+    expect(n.rewards.branches.length).toBeGreaterThan(0);
+    expect(
+      n.rewards.branches.every((branch) => branch.history.useRecord.SpellDrop === undefined),
+    ).toBe(true);
+    const candidate = hermesShrineCandidateForProjectEvaluationAssembly(assembly, host);
+    if (candidate === undefined) throw new Error('fixture lost the later O Shrine candidate');
+    expect(candidate.candidateRewardTypesBySlot.secondLeft).toContain('MaxHealthDrop');
+    expect(candidate.candidateRewardTypesBySlot.secondLeft).not.toContain('SpellDrop');
+
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceTraitOffer',
+      trait: createTraitOfferAddress(
+        createIncomingRewardAddress(nBiome, nOccurrenceId('combat05')),
+        'self',
+      ),
+      value: {
+        kind: 'traits',
+        giverKey: 'Hermes',
+        options: [
+          { traitKey: 'RestockBoon', rarity: 'Common' },
+          { traitKey: 'HermesSpecialBoon', rarity: 'Common' },
+          { traitKey: 'HermesCastDiscountBoon', rarity: 'Common' },
+        ],
+        selectedOptionKey: 'option1',
+      },
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceHermesShrineOffer',
+      occurrence: host,
+      slotKey: 'secondLeft',
+      value: { rewardType: 'MaxHealthDrop' },
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'SetHermesShrinePurchase',
+      occurrence: host,
+      generationKey: 'initial:secondLeft',
+      purchase: { delay: 2, rushed: true },
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceHermesShrineTravelDealRefill',
+      occurrence: host,
+      value: { rewardType: 'SpellDrop' },
+    });
+    const invalidRefill = simulateProjectAssembly(catalog, project);
+    const o = invalidRefill.evaluation.route.biomes.find((biome) => biome.biomeKey === 'O');
+    expect(o?.findings).toContainEqual(
+      expect.objectContaining({ code: 'hermesShrineTravelDealRefillUnavailable' }),
+    );
+    const refillDomain = hermesShrineCandidateForProjectEvaluationAssembly(
+      invalidRefill,
+      host,
+    )?.travelDealRefill;
+    expect(refillDomain?.candidateRewardTypes).toContain('BlindBoxLoot');
+    expect(refillDomain?.candidateRewardTypes).not.toContain('SpellDrop');
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceHermesShrineTravelDealRefill',
+      occurrence: host,
+      value: { rewardType: 'BlindBoxLoot' },
+    });
+    expect(simulateProject(catalog, project).status).toBe('valid');
+  });
+
+  it('applies the carried Dream N board SpellDrop lookup to the Travel Deal refill domain', () => {
+    const dreamN = createBiomeAddress('Dream', 'N');
+    let project = dreamMixedHandoffProject();
+    const nPlan = project.route?.biomes.find((biome) => biome.biomeKey === 'N');
+    const nTopology = nPlan?.topology;
+    const spellSource = nTopology?.occurrences.find((room) => room.gameName === 'N_Combat09');
+    const unvisitedTarget = nTopology?.occurrences.find((room) => room.gameName === 'N_Combat03');
+    if (spellSource === undefined || unvisitedTarget === undefined)
+      throw new Error('Dream fixture lost its N board reward sources');
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceIncomingReward',
+      reward: createIncomingRewardAddress(dreamN, spellSource.occurrenceId),
+      value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'ZeusUpgrade' } },
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceIncomingReward',
+      reward: createIncomingRewardAddress(dreamN, unvisitedTarget.occurrenceId),
+      value: { rewardType: 'SpellDrop' },
+    });
+    project = authorLegalTraitOffers(project);
+
+    const assembly = simulateProjectAssembly(catalog, project);
+    const n = assembly.evaluation.route.biomes.find((biome) => biome.biomeKey === 'N');
+    if (n === undefined || !('rewards' in n)) throw new Error('Dream fixture lost N rewards');
+    expect(n.validity).toBe('valid');
+    expect(n.rewards.branches.length).toBeGreaterThan(0);
+    expect(
+      n.rewards.branches.every((branch) => branch.history.useRecord.SpellDrop === undefined),
+    ).toBe(true);
+    expect(n.rewards.rewardLookups.hubRewardLookup).toContain('SpellDrop');
+    const history = n.rewards.branches[0]?.history;
+    if (history === undefined) throw new Error('Dream fixture lost its N branch history');
+    const requirements = {
+      ...rewardFacts(history).requirements,
+      rewardLookups: Object.freeze(
+        Object.fromEntries(
+          Object.entries(n.rewards.rewardLookups).map(([key, values]) => [key, new Set(values)]),
+        ),
+      ),
+    };
+    const refill = assessHermesShrineTravelDealRefill(
+      catalog,
+      complete({ first: 'HealBigDrop', secondLeft: 'TalentDrop', secondRight: 'MaxManaDrop' }),
+      'initial:secondLeft',
+      [requirements],
+    );
+    expect(refill?.sourceGenerationKey).toBe('initial:secondLeft');
+    expect(refill?.candidateRewardTypes).toContain('MaxHealthDrop');
+    expect(refill?.candidateRewardTypes).not.toContain('SpellDrop');
+  });
+
   it('derives one same-group fourth generation and excludes all visible initial identities', () => {
     const shrine = complete({
       first: 'HealBigDrop',

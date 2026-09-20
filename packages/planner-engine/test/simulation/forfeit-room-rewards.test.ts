@@ -73,6 +73,7 @@ function replayEnteredFieldsForfeit(rank: 0 | 1) {
           arcanaFear: Object.freeze({ ...branch.arcanaFear, fear: arcanaFear.fear }),
         }),
       ),
+      rewardLookups: previous.rewards.rewardLookups,
     },
   });
   if (progressive === null) throw new Error('Fields fixture did not publish progressive assembly');

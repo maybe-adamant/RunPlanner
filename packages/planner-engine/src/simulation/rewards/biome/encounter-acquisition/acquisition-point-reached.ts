@@ -197,7 +197,7 @@ export function applyAcquisitionPointReachedTransition(
       undefined,
       undefined,
       undefined,
-      undefined,
+      rewardLookups,
       branch,
     );
   const hermesDeliveryProducerFrontier = (input: {
