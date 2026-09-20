@@ -56,9 +56,9 @@ export interface RawAspectDeclaration {
   readonly label: string;
   readonly weaponKey: string;
   readonly startingTrait?: { readonly traitKey: string; readonly giverKey: string };
-  readonly traitOfferLevelBonus?: {
-    readonly maximumBonus: number;
-    readonly upgradedMaximumBonus: number;
+  readonly traitOfferLevelRoll?: {
+    readonly maximumRoll: number;
+    readonly upgradedMaximumRoll: number;
     readonly upgradeTraitKey: string;
   };
 }

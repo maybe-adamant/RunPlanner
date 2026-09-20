@@ -41,7 +41,7 @@ describe('route trait projection', () => {
           branches: [],
           assessments: [],
           findings: [],
-          persephoneLevelBonusMaximums: [5, undefined, undefined],
+          persephoneRollMaximums: [6, undefined, undefined],
           effectiveLevels: [6, undefined, undefined],
         },
       },
@@ -49,10 +49,10 @@ describe('route trait projection', () => {
 
     expect(feedback.options[0]).toMatchObject({
       effectiveLevel: 6,
-      persephoneLevelBonusMaximum: 5,
+      persephoneRollMaximum: 6,
     });
     expect(feedback.options[1]).not.toHaveProperty('effectiveLevel');
-    expect(feedback.options[1]).not.toHaveProperty('persephoneLevelBonusMaximum');
+    expect(feedback.options[1]).not.toHaveProperty('persephoneRollMaximum');
   });
 
   it('deduplicates equivalent offer states while preserving distinct branch tables', () => {
@@ -84,7 +84,7 @@ describe('route trait projection', () => {
         assessments: Object.freeze([]),
         composition: Object.freeze({ applies: false, legal: true, findings: Object.freeze([]) }),
         offerGenerationState,
-        persephoneLevelBonusMaximums: Object.freeze([]),
+        persephoneRollMaximums: Object.freeze([]),
         effectiveLevels: Object.freeze([]),
       });
     const presentation = projectTraitOfferState({
@@ -105,7 +105,7 @@ describe('route trait projection', () => {
           ],
           assessments: [],
           findings: [],
-          persephoneLevelBonusMaximums: [],
+          persephoneRollMaximums: [],
           effectiveLevels: [],
         },
       },
@@ -236,7 +236,7 @@ describe('route trait projection', () => {
         result: {
           supported: false,
           branches: [],
-          persephoneLevelBonusMaximums: [],
+          persephoneRollMaximums: [],
           effectiveLevels: [],
           assessments: invalidTrace.branches.flatMap((branch) => branch.assessments),
           findings: [duplicateFinding, duplicateFinding, secondFinding],
@@ -354,7 +354,7 @@ describe('route trait projection', () => {
         result: {
           supported: false,
           branches: [],
-          persephoneLevelBonusMaximums: [],
+          persephoneRollMaximums: [],
           effectiveLevels: [],
           assessments: [],
           findings: [
@@ -391,7 +391,7 @@ describe('route trait projection', () => {
         result: {
           supported: false,
           branches: [],
-          persephoneLevelBonusMaximums: [],
+          persephoneRollMaximums: [],
           effectiveLevels: [],
           assessments: [],
           findings: [
@@ -424,7 +424,7 @@ describe('route trait projection', () => {
         result: {
           supported: false,
           branches: [],
-          persephoneLevelBonusMaximums: [],
+          persephoneRollMaximums: [],
           effectiveLevels: [],
           assessments: [],
           findings: [{ code: 'traitOfferSelectionUnavailable' }],
@@ -454,7 +454,7 @@ describe('route trait projection', () => {
           result: {
             supported: false,
             branches: [],
-            persephoneLevelBonusMaximums: [],
+            persephoneRollMaximums: [],
             effectiveLevels: [],
             assessments: [],
             findings: [
@@ -503,7 +503,7 @@ describe('route trait projection', () => {
           result: {
             supported: false,
             branches: [],
-            persephoneLevelBonusMaximums: [],
+            persephoneRollMaximums: [],
             effectiveLevels: [],
             assessments: [],
             findings: [

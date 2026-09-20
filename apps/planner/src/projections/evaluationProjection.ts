@@ -468,9 +468,9 @@ const findingCopy = {
   nemesisOutcomeUnavailable: {
     title: 'Nemesis event result unavailable',
   },
-  persephoneLevelBonusUnavailable: {
-    title: 'Persephone bonus unavailable',
-    description: 'Choose a value within the allowed range.',
+  persephoneRollUnavailable: {
+    title: 'Persephone roll unavailable',
+    description: 'Choose a roll within the allowed range.',
   },
   traitOfferGenerationUnavailable: {
     title: 'Trait choices cannot appear together',

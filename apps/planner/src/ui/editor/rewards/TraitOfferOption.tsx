@@ -21,14 +21,14 @@ export function TraitOfferOption<TraitValue>({
   legend,
   loading,
   onRarify,
-  onPersephoneLevelBonusChange,
+  onPersephoneRollChange,
   onRarityOpenChange,
   onSelectRarity,
   onSelectTrait,
   onSelectedChange,
   onTraitOpenChange,
-  persephoneLevelBonus,
-  persephoneLevelBonusMaximum,
+  persephoneRoll,
+  persephoneRollMaximum,
   rarityPicker,
   rarityAriaLabel,
   rarityValue,
@@ -37,7 +37,7 @@ export function TraitOfferOption<TraitValue>({
   selectedDisabled,
   selectedLabel,
   selectedName,
-  showPersephoneBonus = false,
+  showPersephoneRoll = false,
   spellSlot,
   traitAriaLabel,
   persephoneAriaLabel,
@@ -53,14 +53,14 @@ export function TraitOfferOption<TraitValue>({
   readonly legend: string;
   readonly loading: boolean;
   readonly onRarify?: () => void;
-  readonly onPersephoneLevelBonusChange?: (bonus: number) => void;
+  readonly onPersephoneRollChange?: (roll: number) => void;
   readonly onRarityOpenChange?: (open: boolean) => void;
   readonly onSelectRarity?: (rarity: TraitRarity) => void;
   readonly onSelectTrait: (value: TraitValue) => void;
   readonly onSelectedChange: () => void;
   readonly onTraitOpenChange?: (open: boolean) => void;
-  readonly persephoneLevelBonus?: number;
-  readonly persephoneLevelBonusMaximum?: number;
+  readonly persephoneRoll?: number;
+  readonly persephoneRollMaximum?: number;
   readonly rarityPicker?: ContextualPickerModel<TraitRarity>;
   readonly rarityAriaLabel?: string;
   readonly rarityValue?: TraitRarity;
@@ -69,7 +69,7 @@ export function TraitOfferOption<TraitValue>({
   readonly selectedDisabled: boolean;
   readonly selectedLabel: string;
   readonly selectedName: string;
-  readonly showPersephoneBonus?: boolean;
+  readonly showPersephoneRoll?: boolean;
   readonly spellSlot?: { readonly bonus: number; readonly moonglow: string };
   readonly traitAriaLabel: string;
   readonly persephoneAriaLabel?: string;
@@ -170,23 +170,25 @@ export function TraitOfferOption<TraitValue>({
           <dd>{effectiveLevel ?? <span aria-label="Not applicable">—</span>}</dd>
         </dl>
       )}
-      {!showPersephoneBonus ? null : (
-        <dl className="trait-option-effective-summary trait-option-persephone-bonus">
-          <dt>Persephone Bonus</dt>
+      {!showPersephoneRoll ? null : (
+        <dl className="trait-option-effective-summary trait-option-persephone-roll">
+          <dt>Persephone Roll</dt>
           <dd>
-            {persephoneLevelBonusMaximum === undefined ||
-            onPersephoneLevelBonusChange === undefined ? (
+            {persephoneRollMaximum === undefined || onPersephoneRollChange === undefined ? (
               <span aria-label="Not applicable">N/A</span>
             ) : (
               <select
-                aria-label={persephoneAriaLabel ?? `${legend} Persephone level bonus`}
-                id={`${controlId}-persephone-level-bonus`}
-                onChange={(event) => onPersephoneLevelBonusChange(Number(event.target.value))}
-                value={persephoneLevelBonus ?? 0}
+                aria-label={persephoneAriaLabel ?? `${legend} Persephone roll`}
+                id={`${controlId}-persephone-roll`}
+                onChange={(event) => onPersephoneRollChange(Number(event.target.value))}
+                value={persephoneRoll ?? 0}
               >
-                {Array.from({ length: persephoneLevelBonusMaximum + 1 }, (_, bonus) => (
-                  <option key={bonus} value={bonus}>
-                    +{bonus}
+                {[
+                  0,
+                  ...Array.from({ length: persephoneRollMaximum - 1 }, (_, index) => index + 2),
+                ].map((roll) => (
+                  <option key={roll} value={roll}>
+                    {roll}
                   </option>
                 ))}
               </select>

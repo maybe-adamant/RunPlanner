@@ -24,7 +24,7 @@ export function TraitOfferOrdinaryOption({
   rejected,
   effectiveRarity,
   effectiveLevel,
-  persephoneLevelBonusMaximum,
+  persephoneRollMaximum,
   spellOffer = false,
   rarifySupported,
   value,
@@ -37,7 +37,7 @@ export function TraitOfferOrdinaryOption({
   readonly rejected: boolean;
   readonly effectiveRarity?: TraitRarity;
   readonly effectiveLevel?: number;
-  readonly persephoneLevelBonusMaximum?: number;
+  readonly persephoneRollMaximum?: number;
   readonly spellOffer?: boolean;
   readonly rarifySupported: boolean;
   readonly value: AuthoredTraitOfferTraits;
@@ -84,9 +84,9 @@ export function TraitOfferOrdinaryOption({
         ? Object.freeze({ ...option, ...preferred })
         : Object.freeze({
             ...preferred,
-            ...(option.persephoneLevelBonus === undefined
+            ...(option.persephoneRoll === undefined
               ? {}
-              : { persephoneLevelBonus: option.persephoneLevelBonus }),
+              : { persephoneRoll: option.persephoneRoll }),
           });
     const nextValue = replaceTraitOfferOption(value, index, nextOption);
     onUpdate(withSelectedHexDefault(nextValue));
@@ -94,14 +94,14 @@ export function TraitOfferOrdinaryOption({
   const selectRarity = (rarity: TraitRarity): void => {
     onUpdate(replaceTraitOfferOption(value, index, { ...option, rarity }));
   };
-  const selectPersephoneBonus = (bonus: number): void => {
-    if (bonus === 0) {
-      const { persephoneLevelBonus, ...withoutBonus } = option;
-      void persephoneLevelBonus;
-      onUpdate(replaceTraitOfferOption(value, index, withoutBonus));
+  const selectPersephoneRoll = (roll: number): void => {
+    if (roll === 0) {
+      const { persephoneRoll, ...withoutRoll } = option;
+      void persephoneRoll;
+      onUpdate(replaceTraitOfferOption(value, index, withoutRoll));
       return;
     }
-    const nextOption = { ...option, persephoneLevelBonus: bonus };
+    const nextOption = { ...option, persephoneRoll: roll };
     onUpdate(replaceTraitOfferOption(value, index, nextOption));
   };
   return (
@@ -137,7 +137,7 @@ export function TraitOfferOrdinaryOption({
             ...(rarityPicker === undefined ? {} : { rarityPicker }),
             ...(option.rarity === undefined ? {} : { rarityValue: option.rarity }),
           })}
-      onPersephoneLevelBonusChange={selectPersephoneBonus}
+      onPersephoneRollChange={selectPersephoneRoll}
       onRarityOpenChange={(open) => {
         if (open) controller.activate(loadable);
       }}
@@ -148,12 +148,10 @@ export function TraitOfferOrdinaryOption({
       onTraitOpenChange={(open) => {
         if (open) controller.activate(loadable);
       }}
-      persephoneAriaLabel={`${optionKey} Persephone level bonus`}
-      showPersephoneBonus={interaction.showPersephoneBonus}
-      {...(option.persephoneLevelBonus === undefined
-        ? {}
-        : { persephoneLevelBonus: option.persephoneLevelBonus })}
-      {...(persephoneLevelBonusMaximum === undefined ? {} : { persephoneLevelBonusMaximum })}
+      persephoneAriaLabel={`${optionKey} Persephone roll`}
+      showPersephoneRoll={interaction.showPersephoneRoll}
+      {...(option.persephoneRoll === undefined ? {} : { persephoneRoll: option.persephoneRoll })}
+      {...(persephoneRollMaximum === undefined ? {} : { persephoneRollMaximum })}
       selected={value.selectedOptionKey === optionKey}
       selectedDisabled={rejected}
       selectedLabel={rejected ? 'Blocked by Rejected' : 'Selected'}

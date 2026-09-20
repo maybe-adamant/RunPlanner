@@ -1242,11 +1242,11 @@ describe('trait offer editor entry and dialog', () => {
                         ] as const),
                       }),
                     }),
-                    persephoneLevelBonusMaximums: Object.freeze([]),
+                    persephoneRollMaximums: Object.freeze([]),
                     effectiveLevels: Object.freeze([]),
                   }),
                 ]),
-                persephoneLevelBonusMaximums: Object.freeze([]),
+                persephoneRollMaximums: Object.freeze([]),
                 effectiveLevels: Object.freeze([]),
                 findings: Object.freeze([]),
                 supported: true,
@@ -1331,7 +1331,7 @@ describe('trait offer editor entry and dialog', () => {
                 ]),
                 effectiveLevels: Object.freeze([]),
                 findings: Object.freeze([]),
-                persephoneLevelBonusMaximums: Object.freeze([]),
+                persephoneRollMaximums: Object.freeze([]),
                 supported,
               }),
             }),
@@ -1388,7 +1388,7 @@ describe('trait offer editor entry and dialog', () => {
     const initialValue = Object.freeze({
       ...base.value,
       options: Object.freeze([
-        Object.freeze({ ...base.value.options[0], persephoneLevelBonus: 1 }),
+        Object.freeze({ ...base.value.options[0], persephoneRoll: 3 }),
         base.value.options[1],
         base.value.options[2],
       ]) as AuthoredTraitOfferTraits['options'],
@@ -1396,7 +1396,7 @@ describe('trait offer editor entry and dialog', () => {
     const updatedValue = Object.freeze({
       ...initialValue,
       options: Object.freeze([
-        Object.freeze({ ...initialValue.options[0], persephoneLevelBonus: 5 }),
+        Object.freeze({ ...initialValue.options[0], persephoneRoll: 5 }),
         initialValue.options[1],
         initialValue.options[2],
       ]) as AuthoredTraitOfferTraits['options'],
@@ -1405,7 +1405,7 @@ describe('trait offer editor entry and dialog', () => {
       Object.freeze({
         ...base,
         value,
-        showPersephoneBonus: true,
+        showPersephoneRoll: true,
         load: (draft: AuthoredTraitOffer = value) =>
           Object.freeze([
             Object.freeze({
@@ -1417,7 +1417,7 @@ describe('trait offer editor entry and dialog', () => {
                   branches: Object.freeze([]),
                   effectiveLevels: Object.freeze([6, 4, 2]),
                   findings: Object.freeze([]),
-                  persephoneLevelBonusMaximums: Object.freeze([5, undefined, undefined]),
+                  persephoneRollMaximums: Object.freeze([5, undefined, undefined]),
                   supported: true,
                 }),
               }),
@@ -1437,8 +1437,8 @@ describe('trait offer editor entry and dialog', () => {
       </Provider>,
     );
 
-    const bonus = screen.getByRole('combobox', { name: 'option1 Persephone level bonus' });
-    expect((bonus as HTMLSelectElement).value).toBe('1');
+    const bonus = screen.getByRole('combobox', { name: 'option1 Persephone roll' });
+    expect((bonus as HTMLSelectElement).value).toBe('3');
     await user.selectOptions(bonus, '2');
     expect((bonus as HTMLSelectElement).value).toBe('2');
 
@@ -1450,7 +1450,7 @@ describe('trait offer editor entry and dialog', () => {
     expect(
       (
         screen.getByRole('combobox', {
-          name: 'option1 Persephone level bonus',
+          name: 'option1 Persephone roll',
         }) as HTMLSelectElement
       ).value,
     ).toBe('5');
@@ -1535,7 +1535,7 @@ describe('trait offer editor entry and dialog', () => {
     const persistedValue = Object.freeze({
       ...base.value,
       options: Object.freeze([
-        Object.freeze({ ...base.value.options[0], persephoneLevelBonus: 1 }),
+        Object.freeze({ ...base.value.options[0], persephoneRoll: 3 }),
         base.value.options[1],
         base.value.options[2],
       ]) as AuthoredTraitOfferTraits['options'],
@@ -1551,7 +1551,7 @@ describe('trait offer editor entry and dialog', () => {
               branches: Object.freeze([]),
               effectiveLevels: Object.freeze([effectiveLevel, 4, 2]),
               findings: Object.freeze([]),
-              persephoneLevelBonusMaximums: Object.freeze([5, undefined, undefined]),
+              persephoneRollMaximums: Object.freeze([5, undefined, undefined]),
               supported: true,
             }),
           }),
@@ -1576,7 +1576,7 @@ describe('trait offer editor entry and dialog', () => {
               ...base,
               choices,
               load,
-              showPersephoneBonus: true,
+              showPersephoneRoll: true,
               value: persistedValue,
             }),
           ],
@@ -1591,7 +1591,7 @@ describe('trait offer editor entry and dialog', () => {
         />
       </Provider>,
     );
-    const bonus = screen.getByRole('combobox', { name: 'option1 Persephone level bonus' });
+    const bonus = screen.getByRole('combobox', { name: 'option1 Persephone roll' });
     await user.selectOptions(bonus, '2');
     expect((bonus as HTMLSelectElement).value).toBe('2');
 
@@ -1606,14 +1606,14 @@ describe('trait offer editor entry and dialog', () => {
     expect(
       (
         screen.getByRole('combobox', {
-          name: 'option1 Persephone level bonus',
+          name: 'option1 Persephone roll',
         }) as HTMLSelectElement
       ).value,
     ).toBe('2');
     await waitFor(() =>
       expect(refreshedLoad).toHaveBeenCalledWith(
         expect.objectContaining({
-          options: expect.arrayContaining([expect.objectContaining({ persephoneLevelBonus: 2 })]),
+          options: expect.arrayContaining([expect.objectContaining({ persephoneRoll: 2 })]),
         }),
       ),
     );

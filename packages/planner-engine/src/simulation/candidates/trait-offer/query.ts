@@ -265,7 +265,7 @@ export interface TraitOfferCandidateBranch {
   readonly composition: TraitOfferCompositionAssessment;
   readonly offerGenerationState?: TraitOfferGenerationState;
   readonly targetedAcquisition?: TraitTargetedAcquisitionAssessment;
-  readonly persephoneLevelBonusMaximums: readonly (number | undefined)[];
+  readonly persephoneRollMaximums: readonly (number | undefined)[];
   readonly effectiveLevels: readonly (number | undefined)[];
 }
 
@@ -294,7 +294,7 @@ export interface EvaluatedTraitOfferCandidate {
       readonly rejectedBlockNeedsRepair: boolean;
     }[];
     /** Published only when every surviving branch agrees for each option. */
-    readonly persephoneLevelBonusMaximums: readonly (number | undefined)[];
+    readonly persephoneRollMaximums: readonly (number | undefined)[];
     readonly effectiveLevels: readonly (number | undefined)[];
     readonly findings: readonly TraitOfferCandidateFinding[];
   };
@@ -407,7 +407,7 @@ function assessTraitOfferCandidate(
     readonly composition: TraitOfferCompositionAssessment;
     readonly offerGenerationState?: TraitOfferGenerationState;
     readonly targetedAcquisition: TraitTargetedAcquisitionAssessment;
-    readonly persephoneLevelBonusMaximums: readonly (number | undefined)[];
+    readonly persephoneRollMaximums: readonly (number | undefined)[];
     readonly effectiveLevels: readonly (number | undefined)[];
   }[],
   duplicateFindings: readonly TraitOfferCandidateFinding[],
@@ -426,7 +426,7 @@ function assessTraitOfferCandidate(
         ...(branch.targetedAcquisition.applies
           ? { targetedAcquisition: branch.targetedAcquisition }
           : {}),
-        persephoneLevelBonusMaximums: branch.persephoneLevelBonusMaximums,
+        persephoneRollMaximums: branch.persephoneRollMaximums,
         effectiveLevels: branch.effectiveLevels,
       }),
     ),
@@ -483,7 +483,7 @@ function evaluatedTraitOfferCandidate(
   }[] = Object.freeze([]),
 ): EvaluatedTraitOfferCandidate {
   const agreeingBranchValues = (
-    key: 'persephoneLevelBonusMaximums' | 'effectiveLevels',
+    key: 'persephoneRollMaximums' | 'effectiveLevels',
   ): readonly (number | undefined)[] => {
     const width = assessment.branches[0]?.[key].length ?? 0;
     return Object.freeze(
@@ -505,7 +505,7 @@ function evaluatedTraitOfferCandidate(
       callingCard: Object.freeze(callingCard),
       concaveStone: Object.freeze(concaveStone),
       chaosOfferRules: Object.freeze(chaosOfferRules),
-      persephoneLevelBonusMaximums: agreeingBranchValues('persephoneLevelBonusMaximums'),
+      persephoneRollMaximums: agreeingBranchValues('persephoneRollMaximums'),
       effectiveLevels: agreeingBranchValues('effectiveLevels'),
     }),
   });

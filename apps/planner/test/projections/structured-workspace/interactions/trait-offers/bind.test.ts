@@ -375,7 +375,7 @@ describe('trait-offers/bind', () => {
     const changed = Object.freeze({
       ...original,
       options: Object.freeze([
-        Object.freeze({ ...original.options[0], persephoneLevelBonus: 5 }),
+        Object.freeze({ ...original.options[0], persephoneRoll: 5 }),
         original.options[1],
         original.options[2],
       ]) as AuthoredTraitOfferTraits['options'],

@@ -16,7 +16,7 @@ import {
 } from './offer-catalog';
 import {
   validateAspectStartingTraits,
-  validateAspectTraitOfferLevelBonuses,
+  validateAspectTraitOfferLevelRolls,
   validateHammerCompatibilityClosure,
   validateProperUpbringingAndDeferred,
   validateTraitCatalogClosure,
@@ -47,7 +47,7 @@ export function createTraitCatalog(input: RawTraitCatalogInput): TraitCatalog {
   const boonRarityRollOrder = normalizeBoonRarityRollOrder(input.boonRarityRollOrder);
   const boonReplacementChance = normalizeBoonReplacementChance(input.boonReplacementChance);
   validateAspectStartingTraits({ aspects, traits, givers });
-  validateAspectTraitOfferLevelBonuses({ aspects, traits });
+  validateAspectTraitOfferLevelRolls({ aspects, traits });
   validateTraitCatalogClosure({ traits, givers });
   const echoLastRunBoon = normalizeEchoLastRunBoon(input.echoLastRunBoon, traits, givers);
   const offerContexts = normalizeContexts(input.offerContexts);

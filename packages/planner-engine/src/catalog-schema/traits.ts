@@ -417,10 +417,10 @@ export interface AspectDeclaration {
   readonly label: string;
   readonly weaponKey: string;
   readonly startingTrait?: { readonly traitKey: string; readonly giverKey: string };
-  /** Narrow reward-side contribution from an equipped aspect. */
-  readonly traitOfferLevelBonus?: {
-    readonly maximumBonus: number;
-    readonly upgradedMaximumBonus: number;
+  /** Native reward-side roll domain from an equipped aspect. */
+  readonly traitOfferLevelRoll?: {
+    readonly maximumRoll: number;
+    readonly upgradedMaximumRoll: number;
     readonly upgradeTraitKey: string;
   };
 }

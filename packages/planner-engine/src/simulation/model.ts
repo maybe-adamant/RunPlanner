@@ -132,7 +132,7 @@ export type TraitFindingCode =
   | 'chaosRejectedBlockMissing'
   | 'chaosRejectedBlockUnavailable'
   | 'chaosPairUnavailable'
-  | 'persephoneLevelBonusUnavailable';
+  | 'persephoneRollUnavailable';
 
 export type FindingCode =
   | CompletenessFindingCode

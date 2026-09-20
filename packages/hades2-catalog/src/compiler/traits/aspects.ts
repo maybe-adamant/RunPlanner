@@ -23,50 +23,47 @@ export function normalizeAspects(
       aspect.startingTrait === undefined
         ? undefined
         : normalizeAspectStartingTrait(aspect.startingTrait, `${path}.startingTrait`);
-    const traitOfferLevelBonus =
-      aspect.traitOfferLevelBonus === undefined
+    const traitOfferLevelRoll =
+      aspect.traitOfferLevelRoll === undefined
         ? undefined
-        : normalizeAspectTraitOfferLevelBonus(
-            aspect.traitOfferLevelBonus,
-            `${path}.traitOfferLevelBonus`,
+        : normalizeAspectTraitOfferLevelRoll(
+            aspect.traitOfferLevelRoll,
+            `${path}.traitOfferLevelRoll`,
           );
     return Object.freeze({
       key: requireNonEmpty(aspect.key, `${path}.key`),
       label: requireNonEmpty(aspect.label, `${path}.label`),
       weaponKey,
       ...(startingTrait === undefined ? {} : { startingTrait }),
-      ...(traitOfferLevelBonus === undefined ? {} : { traitOfferLevelBonus }),
+      ...(traitOfferLevelRoll === undefined ? {} : { traitOfferLevelRoll }),
     });
   });
   return createCollection(values, 'aspects', (aspect) => aspect.key);
 }
 
-function normalizeAspectTraitOfferLevelBonus(
+function normalizeAspectTraitOfferLevelRoll(
   raw: unknown,
   path: string,
-): NonNullable<AspectDeclaration['traitOfferLevelBonus']> {
+): NonNullable<AspectDeclaration['traitOfferLevelRoll']> {
   const value = requireObject(raw, path);
   const keys = Object.keys(value);
   if (
     keys.length !== 3 ||
-    !Object.hasOwn(value, 'maximumBonus') ||
-    !Object.hasOwn(value, 'upgradedMaximumBonus') ||
+    !Object.hasOwn(value, 'maximumRoll') ||
+    !Object.hasOwn(value, 'upgradedMaximumRoll') ||
     !Object.hasOwn(value, 'upgradeTraitKey')
   )
-    fail(path, 'must contain exactly maximumBonus, upgradedMaximumBonus, and upgradeTraitKey');
-  const maximumBonus = requireNonNegativeInteger(
-    value.maximumBonus as number,
-    `${path}.maximumBonus`,
+    fail(path, 'must contain exactly maximumRoll, upgradedMaximumRoll, and upgradeTraitKey');
+  const maximumRoll = requireNonNegativeInteger(value.maximumRoll as number, `${path}.maximumRoll`);
+  const upgradedMaximumRoll = requireNonNegativeInteger(
+    value.upgradedMaximumRoll as number,
+    `${path}.upgradedMaximumRoll`,
   );
-  const upgradedMaximumBonus = requireNonNegativeInteger(
-    value.upgradedMaximumBonus as number,
-    `${path}.upgradedMaximumBonus`,
-  );
-  if (upgradedMaximumBonus <= maximumBonus)
-    fail(`${path}.upgradedMaximumBonus`, 'must exceed maximumBonus');
+  if (upgradedMaximumRoll <= maximumRoll)
+    fail(`${path}.upgradedMaximumRoll`, 'must exceed maximumRoll');
   return Object.freeze({
-    maximumBonus,
-    upgradedMaximumBonus,
+    maximumRoll,
+    upgradedMaximumRoll,
     upgradeTraitKey: requireNonEmpty(value.upgradeTraitKey as string, `${path}.upgradeTraitKey`),
   });
 }

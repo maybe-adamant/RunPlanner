@@ -26,8 +26,8 @@ export interface AuthoredTraitOption extends AuthoredTraitCarrierOutcome {
   readonly echoPomTarget?: string | null;
   /** Echo's explicit previous-run approximation; dormant when this outer row is not selected. */
   readonly echoLastRunBoon?: AuthoredEchoLastRunBoonOffer;
-  /** Persephone's frozen additive contribution for this generated row. */
-  readonly persephoneLevelBonus?: number;
+  /** Persephone's frozen native roll for this generated row. */
+  readonly persephoneRoll?: number;
 }
 
 export interface AuthoredHexTreeConfiguration {

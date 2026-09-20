@@ -107,9 +107,9 @@ const aspects = [
     key: 'LobImpulseAspect',
     label: 'Aspect of Persephone',
     weaponKey: 'WeaponLob',
-    traitOfferLevelBonus: {
-      maximumBonus: 5,
-      upgradedMaximumBonus: 8,
+    traitOfferLevelRoll: {
+      maximumRoll: 6,
+      upgradedMaximumRoll: 9,
       upgradeTraitKey: 'WeaponUpgradeBoon',
     },
   },

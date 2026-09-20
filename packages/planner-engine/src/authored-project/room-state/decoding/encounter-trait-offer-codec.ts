@@ -75,7 +75,7 @@ export function decodeEncounterTraitOffer(
     const hasEchoLastRunBoon = 'echoLastRunBoon' in option;
     const hasAllTogetherResult = 'allTogetherResult' in option;
     const hasNaturalSelectionTargets = 'naturalSelectionTargets' in option;
-    const hasPersephoneLevelBonus = 'persephoneLevelBonus' in option;
+    const hasPersephoneRoll = 'persephoneRoll' in option;
     expectExactKeys(
       option,
       [
@@ -88,7 +88,7 @@ export function decodeEncounterTraitOffer(
         ...(hasEchoLastRunBoon ? ['echoLastRunBoon'] : []),
         ...(hasAllTogetherResult ? ['allTogetherResult'] : []),
         ...(hasNaturalSelectionTargets ? ['naturalSelectionTargets'] : []),
-        ...(hasPersephoneLevelBonus ? ['persephoneLevelBonus'] : []),
+        ...(hasPersephoneRoll ? ['persephoneRoll'] : []),
       ],
       `${path}.options.${optionKey}`,
     );
@@ -342,14 +342,14 @@ export function decodeEncounterTraitOffer(
           return Object.freeze(keys) as AuthoredTraitOption['naturalSelectionTargets'];
         })()
       : undefined;
-    const persephoneLevelBonus = hasPersephoneLevelBonus
+    const persephoneRoll = hasPersephoneRoll
       ? expectNonNegativeInteger(
-          option.persephoneLevelBonus,
-          `${path}.options.${optionKey}.persephoneLevelBonus`,
+          option.persephoneRoll,
+          `${path}.options.${optionKey}.persephoneRoll`,
         )
       : undefined;
-    if (persephoneLevelBonus !== undefined && persephoneLevelBonus > 8)
-      failProjectDocument(`${path}.options.${optionKey}.persephoneLevelBonus`, 'must not exceed 8');
+    if (persephoneRoll !== undefined && persephoneRoll > 9)
+      failProjectDocument(`${path}.options.${optionKey}.persephoneRoll`, 'must not exceed 9');
     const decodedOption: AuthoredTraitOption =
       rarity === undefined
         ? {
@@ -361,7 +361,7 @@ export function decodeEncounterTraitOffer(
             ...(echoLastRunBoon === undefined ? {} : { echoLastRunBoon }),
             ...(allTogetherResult === undefined ? {} : { allTogetherResult }),
             ...(naturalSelectionTargets === undefined ? {} : { naturalSelectionTargets }),
-            ...(persephoneLevelBonus === undefined ? {} : { persephoneLevelBonus }),
+            ...(persephoneRoll === undefined ? {} : { persephoneRoll }),
           }
         : {
             traitKey,
@@ -373,7 +373,7 @@ export function decodeEncounterTraitOffer(
             ...(echoLastRunBoon === undefined ? {} : { echoLastRunBoon }),
             ...(allTogetherResult === undefined ? {} : { allTogetherResult }),
             ...(naturalSelectionTargets === undefined ? {} : { naturalSelectionTargets }),
-            ...(persephoneLevelBonus === undefined ? {} : { persephoneLevelBonus }),
+            ...(persephoneRoll === undefined ? {} : { persephoneRoll }),
           };
     options.push(Object.freeze(decodedOption));
   }

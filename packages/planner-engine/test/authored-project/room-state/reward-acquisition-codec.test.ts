@@ -34,7 +34,7 @@ describe('reward acquisition decoder', () => {
       traitKey: 'ApolloWeaponBoon',
       rarity: 'Common',
     };
-    if (include) option.persephoneLevelBonus = bonus;
+    if (include) option.persephoneRoll = bonus;
     return {
       offer: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'ApolloUpgrade' } },
       dispositionByAcquisitionRole: { source: { kind: 'normal' } },
@@ -71,12 +71,12 @@ describe('reward acquisition decoder', () => {
         decoded.traitOffersByAcquisitionRole.source?.kind === 'traits'
           ? decoded.traitOffersByAcquisitionRole.source.options[0]
           : undefined;
-      if (!include) expect(option).not.toHaveProperty('persephoneLevelBonus');
-      else expect(option?.persephoneLevelBonus).toBe(bonus);
+      if (!include) expect(option).not.toHaveProperty('persephoneRoll');
+      else expect(option?.persephoneRoll).toBe(bonus);
     }
   });
 
-  it.each([-1, 1.5, 9, '5', null, true] as const)(
+  it.each([-1, 1.5, 10, '5', null, true] as const)(
     'rejects malformed Persephone contribution %s in reward acquisition state',
     (bonus) => {
       expect(() =>
@@ -84,7 +84,7 @@ describe('reward acquisition decoder', () => {
           kind: 'producerLifecycle',
           key: 'roomRewardPickup',
         }),
-      ).toThrow(/persephoneLevelBonus/);
+      ).toThrow(/persephoneRoll/);
     },
   );
 

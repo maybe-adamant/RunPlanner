@@ -246,9 +246,11 @@ equips, unlocks, or repairs them.
 
 Two aspect consequences are already modeled by the planner:
 
-- Aspect of Persephone contributes 0–5 offered levels, or 0–8 with Premium
-  Service. The executor consumes the final `effectiveLevel`; it must not
-  recompute the aspect rule.
+- Aspect of Persephone authors a native offered-level roll, composed with
+  Jeweled Pom by the planner's
+  [offer-level authority](../traits/PERSEPHONE_PREMIUM_EFFECTIVE_LEVEL_AUDIT.md).
+  The executor consumes the final `effectiveLevel`; it must not recompute the
+  aspect rule.
 - Aspect of Selene starts with Sky Fall and routes the first Spell reward to a
   Talent drop. The resolved room reward and spell state should be published;
   executor-side aspect policy would duplicate the planner.

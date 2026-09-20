@@ -26,7 +26,7 @@ export interface TraitOfferOptionFeedback {
   readonly traitKey: string;
   /** Engine-published row products; omitted when branches do not agree. */
   readonly effectiveLevel?: number;
-  readonly persephoneLevelBonusMaximum?: number;
+  readonly persephoneRollMaximum?: number;
   readonly replacement?: TraitReplacementPresentation;
 }
 
@@ -236,13 +236,13 @@ export function projectTraitOfferFeedback(
           option.traitKey,
         );
         const effectiveLevel = evaluation.result.effectiveLevels[index];
-        const persephoneLevelBonusMaximum = evaluation.result.persephoneLevelBonusMaximums[index];
+        const persephoneRollMaximum = evaluation.result.persephoneRollMaximums[index];
         return Object.freeze({
           legal: reasons.length === 0,
           reasons: Object.freeze([...reasons]),
           traitKey: option.traitKey,
           ...(effectiveLevel === undefined ? {} : { effectiveLevel }),
-          ...(persephoneLevelBonusMaximum === undefined ? {} : { persephoneLevelBonusMaximum }),
+          ...(persephoneRollMaximum === undefined ? {} : { persephoneRollMaximum }),
           ...(replacement === undefined
             ? {}
             : {

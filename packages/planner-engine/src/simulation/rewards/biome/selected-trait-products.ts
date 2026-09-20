@@ -113,10 +113,8 @@ export function selectedTraitOfferProducts(
                 ...(trace.generation === undefined ? {} : { generation: trace.generation }),
                 composition: trace.composition,
                 targetedAcquisition: trace.targetedAcquisition,
-                persephoneLevelBonusMaximums: Object.freeze(
-                  trace.levelResolutions.map(
-                    (resolution) => resolution.persephoneLevelBonusMaximum,
-                  ),
+                persephoneRollMaximums: Object.freeze(
+                  trace.levelResolutions.map((resolution) => resolution.persephoneRollMaximum),
                 ),
                 effectiveLevels: Object.freeze(
                   trace.levelResolutions.map((resolution) => resolution.effectiveLevel),
