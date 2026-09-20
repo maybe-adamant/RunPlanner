@@ -916,6 +916,9 @@ function encounterTraitContext(
     ...(loadout ?? {}),
     resolvedProviderKey: providerKey,
     manualArcanaGraspCost: manualArcanaGraspCost(catalog, branch.arcanaFear),
+    activeArcanaTraitKeys: Object.freeze(
+      branch.arcanaFear.arcana.active.map((card) => catalog.arcanaCards.byKey[card.key]!.traitKey),
+    ),
     circeRemovableFearVow: circeResolutionDomain(catalog, branch.arcanaFear, 'disableFear', 1)
       .outerAvailable,
     echoLastRewardAvailable: recreation !== undefined,

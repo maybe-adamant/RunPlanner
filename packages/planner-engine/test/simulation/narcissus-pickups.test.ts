@@ -34,6 +34,9 @@ import {
 } from '@run-planner/engine/authored-project';
 import { selectedPickupProducers } from '@run-planner/engine/authored-project';
 import {
+  activateTemporaryArcana,
+  assessTraitOption,
+  createTraitHistoryState,
   blockedOccurrenceRoomForProjectEvaluationAssembly,
   createPreparedProjectCandidateSession,
   levelResolutionCandidateForProjectEvaluationAssembly,
@@ -52,6 +55,10 @@ import {
   goldenGBiome,
 } from '@run-planner/test-fixtures/underworld';
 import { createCompleteNProject } from '../authored-project/support/complete-n-project';
+import { createDefaultRouteLoadout } from '../../src/authored-project/loadout';
+import { createArcanaFearState } from '../../src/simulation/arcana-fear';
+import { initializeTestRewardBranches } from '../support/arcana-fear';
+import { settleEncounterTraitOffer } from '../../src/simulation/rewards/trait-settlement/coordinator';
 
 function narcissusOccurrence(project: ProjectDocument) {
   const occurrence = project.route.biomes
@@ -154,6 +161,92 @@ function pickupSite(project: ProjectDocument) {
 }
 
 describe('Narcissus pickup producer', () => {
+  it('requires one of the three currently active reroll Arcana for Fates’ Trimmings', () => {
+    const history = createTraitHistoryState();
+    for (const traitKey of [
+      'PanelRerollMetaUpgrade',
+      'RerollTradeOffMetaUpgrade',
+      'DoorRerollMetaUpgrade',
+    ]) {
+      expect(
+        assessTraitOption(catalog, 'NarcissusF', history, {
+          activeArcanaTraitKeys: [traitKey],
+        }).legal,
+      ).toBe(true);
+    }
+    expect(assessTraitOption(catalog, 'NarcissusF', history).legal).toBe(false);
+    for (const activeArcanaTraitKeys of [[], ['MaxHealthMetaUpgrade']]) {
+      expect(
+        assessTraitOption(catalog, 'NarcissusF', history, { activeArcanaTraitKeys }).findings,
+      ).toEqual([expect.objectContaining({ code: 'missingPrerequisite' })]);
+    }
+  });
+
+  it('shares the reached Arcana state between Narcissus candidates and selected offer findings', () => {
+    const loadout = { ...createDefaultRouteLoadout(catalog), manualArcanaKeys: [] };
+    const initial = createArcanaFearState(catalog, loadout);
+    const owner = createEncounterPhaseAddress(
+      goldenGBiome,
+      { kind: 'occurrence', occurrenceId: createOccurrenceId('narcissus-arcana') },
+      'Encounter',
+    );
+    const activation = activateTemporaryArcana(catalog, initial, ['DoorReroll'], {
+      owner,
+      sequence: 1,
+    });
+    expect(activation.legal).toBe(true);
+    for (const [state, eligible] of [
+      [initial, false],
+      [activation.state, true],
+    ] as const) {
+      const branch = initializeTestRewardBranches(state)[0]!;
+      const unresolved = settleEncounterTraitOffer(
+        catalog,
+        branch,
+        owner,
+        null,
+        2,
+        'encounterCompleted',
+        undefined,
+        'selection',
+        undefined,
+        { acquisitionOrdinal: 2 },
+        undefined,
+        'Narcissus',
+      );
+      const context = unresolved.blockedChild?.candidateContext;
+      expect(context).toBeDefined();
+      expect(
+        assessTraitOption(catalog, 'NarcissusF', createTraitHistoryState(), context?.context).legal,
+      ).toBe(eligible);
+      const selected = settleEncounterTraitOffer(
+        catalog,
+        branch,
+        owner,
+        {
+          kind: 'traits',
+          giverKey: 'Narcissus',
+          options: [
+            { traitKey: 'NarcissusF' },
+            { traitKey: 'NarcissusB' },
+            { traitKey: 'NarcissusC' },
+          ],
+          selectedOptionKey: 'option1',
+        },
+        2,
+        'encounterCompleted',
+        undefined,
+        'selection',
+        undefined,
+        { acquisitionOrdinal: 2 },
+      );
+      expect(
+        selected.findingEntries.some((entry) => entry.finding.code === 'missingPrerequisite'),
+      ).toBe(!eligible);
+      if (eligible) expect(selected.branch.traitHistory?.equippedTraits.NarcissusF).toBeDefined();
+    }
+  });
+
   it('command-reconciles fourth-ordinal Narcissus entries and retracts them with their source', () => {
     const biome = createBiomeAddress('Dream', 'G');
     const storyId = createOccurrenceId('dream-ordinal-narcissus-story');
@@ -240,7 +333,7 @@ describe('Narcissus pickup producer', () => {
     let project = selectNarcissus(createGoldenFGHIProject(), [
       'NarcissusB',
       'NarcissusC',
-      'NarcissusF',
+      'NarcissusG',
     ]);
     const ashes = pickupEntry(project, 'ashes');
     project = authorTestArtificerReplacement(
@@ -306,7 +399,7 @@ describe('Narcissus pickup producer', () => {
       let normalProject = selectNarcissus(createGoldenFGHIProject(), [
         traitKey,
         'NarcissusC',
-        'NarcissusF',
+        'NarcissusG',
       ]);
       const entry = pickupEntry(normalProject, entryKey);
       const before = evaluatedG(normalProject).rewards.branches[0];
@@ -638,8 +731,8 @@ describe('Narcissus pickup producer', () => {
     ).toBe(true);
   });
 
-  it.each([['A'], ['B'], ['C'], ['D'], ['E'], ['F'], ['G'], ['H']] as const)(
-    'records Narcissus%s as an equipped trait, including empty F',
+  it.each([['A'], ['B'], ['C'], ['D'], ['E'], ['G'], ['H']] as const)(
+    'records Narcissus%s as an equipped trait',
     (suffix) => {
       const traitKey = `Narcissus${suffix}`;
       const options = ['NarcissusA', 'NarcissusB', 'NarcissusC', 'NarcissusD'].filter(

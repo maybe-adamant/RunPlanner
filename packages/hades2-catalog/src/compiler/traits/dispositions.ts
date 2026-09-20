@@ -422,6 +422,7 @@ export function normalizeRequirement(
     case 'settledSpellDrop':
       return Object.freeze({ kind: 'settledSpellDrop' as const });
     case 'anyEquippedTrait':
+    case 'anyActiveArcana':
     case 'notEquippedTrait': {
       if (!Array.isArray(requirement.traitKeys)) {
         fail(`${path}.traitKeys`, 'must be an array');

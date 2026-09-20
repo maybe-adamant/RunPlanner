@@ -92,7 +92,12 @@ export const narcissusTraits = [
     key: 'NarcissusF',
     label: "Fates' Trimmings",
     linkedBoonRequirements: [],
-    eligibilityRequirements: [],
+    eligibilityRequirements: [
+      {
+        kind: 'anyActiveArcana',
+        traitKeys: ['PanelRerollMetaUpgrade', 'RerollTradeOffMetaUpgrade', 'DoorRerollMetaUpgrade'],
+      },
+    ],
     selectedDisposition: { kind: 'equip' },
   },
   {

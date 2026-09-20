@@ -683,7 +683,7 @@ describe('OccurrenceEncounterWorkbench', () => {
           options: [
             { traitKey: 'NarcissusA' },
             { traitKey: 'NarcissusB' },
-            { traitKey: 'NarcissusF' },
+            { traitKey: 'NarcissusG' },
           ],
           selectedOptionKey,
         },

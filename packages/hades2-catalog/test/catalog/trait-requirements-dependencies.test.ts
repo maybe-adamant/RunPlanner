@@ -410,7 +410,7 @@ describe('trait requirements and dependencies', () => {
       },
       { empty: 0, linkedOnly: 0, eligibilityOnly: 0, mixed: 0 },
     );
-    expect(partition).toEqual({ empty: 316, linkedOnly: 41, eligibilityOnly: 28, mixed: 34 });
+    expect(partition).toEqual({ empty: 315, linkedOnly: 41, eligibilityOnly: 29, mixed: 34 });
     expect(traits.traits.byKey.SprintEchoBoon).toMatchObject({
       eligibilityRequirements: [
         { kind: 'offerContext', context: 'devotionNoDuo', required: false },

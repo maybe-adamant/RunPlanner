@@ -181,6 +181,13 @@ export function checkRequirement(
       return context.settledSpellDrop === true
         ? undefined
         : { code: 'missingPrerequisite', detail: 'settledSpellDrop' };
+    case 'anyActiveArcana':
+      return requirement.traitKeys.some((key) => context.activeArcanaTraitKeys?.includes(key))
+        ? undefined
+        : {
+            code: 'missingPrerequisite',
+            requirementTraitKeys: Object.freeze([...requirement.traitKeys]),
+          };
     case 'anyEquippedTrait':
       return requirement.traitKeys.some((key) => history.equippedTraits[key] !== undefined)
         ? undefined

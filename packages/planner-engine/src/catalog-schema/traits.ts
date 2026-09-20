@@ -393,6 +393,10 @@ export type TraitRequirementExpression =
       readonly required: boolean;
     }
   | {
+      readonly kind: 'anyActiveArcana';
+      readonly traitKeys: readonly string[];
+    }
+  | {
       readonly kind: 'manualArcanaGraspCost';
       readonly minimum: number;
     }
