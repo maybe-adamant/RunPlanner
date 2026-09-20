@@ -113,10 +113,6 @@ export interface RewardLifecycleReferences {
 
 export interface PreparedRewardEvaluationInputs {
   readonly layout: BiomeLayout;
-  readonly rewardLookup: {
-    readonly internal: Readonly<Record<string, ReadonlySet<string>>>;
-    readonly public: Readonly<Record<string, readonly string[]>>;
-  };
   readonly rooms: ReadonlyMap<string, CanonicalRewardSource>;
   readonly views: ReadonlyMap<string, ProgressiveRoomHistoryViews>;
   readonly targets: ReadonlyMap<string, CanonicalTarget>;
@@ -234,59 +230,6 @@ function requireLayout(catalog: Catalog, snapshot: BiomeRewardSnapshot): BiomeLa
   return layout;
 }
 
-function rewardLookup(
-  catalog: Catalog,
-  carriedLookups: Readonly<Record<string, readonly string[]>> | undefined,
-): PreparedRewardEvaluationInputs['rewardLookup'] {
-  const entries = catalog.biomeLayouts.values.flatMap((layout) =>
-    layout.progression.kind === 'hub'
-      ? ([
-          [
-            layout.progression.rewardLookup.key,
-            carriedLookups?.[layout.progression.rewardLookup.key] ?? [],
-          ],
-        ] as const)
-      : [],
-  );
-  return Object.freeze({
-    internal: Object.freeze(
-      Object.fromEntries(entries.map(([key, types]) => [key, new ImmutableSetView(types)])),
-    ),
-    public: Object.freeze(
-      Object.fromEntries(entries.map(([key, types]) => [key, Object.freeze([...types])])),
-    ),
-  });
-}
-
-/**
- * A Hub board becomes visible only after its complete generation flush. The
- * lookup product is immutable at each chronology contact and seeds later
- * biomes through the existing completion boundary.
- */
-export function addHubBoardRewardLookup(
-  lookup: PreparedRewardEvaluationInputs['rewardLookup'],
-  lookupKey: string,
-  rewardTypes: readonly string[],
-): PreparedRewardEvaluationInputs['rewardLookup'] {
-  const prior = lookup.public[lookupKey];
-  if (prior === undefined)
-    throw new BiomeRewardSimulationContractError(`unknown Hub reward lookup ${lookupKey}`);
-  const values = [...prior];
-  const seen = new Set(values);
-  for (const rewardType of rewardTypes)
-    if (!seen.has(rewardType)) {
-      seen.add(rewardType);
-      values.push(rewardType);
-    }
-  return Object.freeze({
-    internal: Object.freeze({
-      ...lookup.internal,
-      [lookupKey]: new ImmutableSetView(values),
-    }),
-    public: Object.freeze({ ...lookup.public, [lookupKey]: Object.freeze(values) }),
-  });
-}
-
 function lifecycleReferences(events: readonly HistoryEvent[]): RewardLifecycleReferences {
   const emptyOutgoingOwnerKeys = new Set<string>();
   const producer = new Map<
@@ -338,7 +281,6 @@ export function prepareRewardEvaluationInputs(
   catalog: Catalog,
   snapshot: BiomeRewardSnapshot,
   history: BiomeRewardHistory,
-  carriedRewardLookups: Readonly<Record<string, readonly string[]>> | undefined = undefined,
 ): PreparedRewardEvaluationInputs {
   const allDecisions = decisions(snapshot);
   const hubFrontier = activeHubVisit(snapshot);
@@ -365,7 +307,6 @@ export function prepareRewardEvaluationInputs(
   );
   return Object.freeze({
     layout: requireLayout(catalog, snapshot),
-    rewardLookup: rewardLookup(catalog, carriedRewardLookups),
     rooms: new ImmutableMapView(
       rooms.map((room) => [semanticAddressKey(room.origin), room] as const),
     ),

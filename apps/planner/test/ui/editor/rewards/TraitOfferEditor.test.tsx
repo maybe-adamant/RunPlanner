@@ -447,7 +447,7 @@ describe('trait offer editor entry and dialog', () => {
           if (key !== null)
             expect(
               evaluated.rewards.branches.every(
-                (branch) => branch.traitHistory?.equippedTraits[key] !== undefined,
+                (branch) => branch.state.traitHistory?.equippedTraits[key] !== undefined,
               ),
             ).toBe(true);
         }
@@ -455,7 +455,7 @@ describe('trait offer editor entry and dialog', () => {
         expect(payload?.naturalSelectionTargets).toHaveLength(8);
         expect(
           evaluated.rewards.branches.every(
-            (branch) => branch.traitHistory?.equippedTraits.GoodStuffBoon !== undefined,
+            (branch) => branch.state.traitHistory?.equippedTraits.GoodStuffBoon !== undefined,
           ),
         ).toBe(true);
       }
@@ -633,7 +633,7 @@ describe('trait offer editor entry and dialog', () => {
           if (key !== null)
             expect(
               evaluated.rewards.branches.every(
-                (branch) => branch.traitHistory?.equippedTraits[key] !== undefined,
+                (branch) => branch.state.traitHistory?.equippedTraits[key] !== undefined,
               ),
             ).toBe(true);
         }
@@ -641,7 +641,7 @@ describe('trait offer editor entry and dialog', () => {
         expect(payload.naturalSelectionTargets).toHaveLength(8);
         expect(
           evaluated.rewards.branches.every(
-            (branch) => branch.traitHistory?.equippedTraits.GoodStuffBoon !== undefined,
+            (branch) => branch.state.traitHistory?.equippedTraits.GoodStuffBoon !== undefined,
           ),
         ).toBe(true);
       }

@@ -8,8 +8,10 @@ import {
   installHexTree,
   settlePathScreen,
 } from '../../../src/simulation/hex-progress';
-import { initializeRewardBranches } from '../../../src/simulation/rewards/branch-lifecycle';
-import { createTestArcanaFearState } from '../../support/arcana-fear';
+import {
+  createTestArcanaFearState,
+  initializeTestRewardBranchesForRoute as initializeRewardBranches,
+} from '../../support/arcana-fear';
 
 type PathRewardType = 'MinorTalentDrop' | 'TalentBigDrop' | 'TalentDrop';
 

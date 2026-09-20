@@ -6,8 +6,6 @@ import type { AuthoredTraitOffer } from '../../authored-project/traits/state';
 
 import { createRewardBagState, insertExactPriorityIntoBag } from '../../reward-kernel';
 import {
-  attachTraitHistory,
-  createTraitHistoryState,
   evaluateReachedTraitOffer,
   foldTraitHistoryEvents,
   recordReachedTraitOffer,
@@ -24,6 +22,7 @@ import {
 import { jeweledPomEffectForKey } from './state';
 import { freezeRecord, type RewardBranchState } from '../rewards/branch-primitives';
 import { bankPathPoints, maybeAddGodSent } from '../hex-progress';
+import { replaceSimulationTraitHistory } from '../state/transitions';
 
 /** The exact source-time FromLoot transition: queue first, then RunProgress presence refill. */
 export function applyOlympianRewardPressureEquip(
@@ -49,18 +48,24 @@ export function applyExactRewardPriority(
   if (store === undefined)
     return Object.freeze({
       ...branch,
-      rewardPriorities: Object.freeze([...branch.rewardPriorities, priority]),
+      state: Object.freeze({
+        ...branch.state,
+        rewardPriorities: Object.freeze([...branch.state.rewardPriorities, priority]),
+      }),
     });
-  const existing = branch.bags.RunProgress;
+  const existing = branch.state.bags.RunProgress;
   const current = existing ?? createRewardBagState(store);
   const bag = insertExactPriorityIntoBag(store, current, priority);
   return Object.freeze({
     ...branch,
-    bags:
-      existing === undefined && bag === current
-        ? branch.bags
-        : freezeRecord({ ...branch.bags, RunProgress: bag }),
-    rewardPriorities: Object.freeze([...branch.rewardPriorities, priority]),
+    state: Object.freeze({
+      ...branch.state,
+      bags:
+        existing === undefined && bag === current
+          ? branch.state.bags
+          : freezeRecord({ ...branch.state.bags, RunProgress: bag }),
+      rewardPriorities: Object.freeze([...branch.state.rewardPriorities, priority]),
+    }),
   });
 }
 
@@ -75,7 +80,7 @@ export function applyMoonBeamEquip(
   const effect = catalog.keepsakes.byKey[keepsakeKey]?.effect;
   if (effect?.kind !== 'moonBeam' || rank === undefined) return branch;
   const priority =
-    (branch.history.useRecord.SpellDrop ?? 0) === 0
+    (branch.state.rewardHistory.useRecord.SpellDrop ?? 0) === 0
       ? effect.priorityRewardTypes[0]
       : preferBigTalent
         ? effect.priorityRewardTypes[2]
@@ -101,8 +106,10 @@ export function applyJeweledPomEquipResult(
   const keepsake = catalog.keepsakes.byKey[equippedKeepsakeKey];
   const effect = jeweledPomEffectForKey(catalog, equippedKeepsakeKey);
   if (keepsake === undefined || effect === undefined || result === undefined) return branch;
-  const before = branch.traitHistory ?? createTraitHistoryState();
-  if (!assessJeweledPomEquipResult(catalog, result, before, branch.keepsakes.fatedStatus).legal)
+  const before = branch.state.traitHistory;
+  if (
+    !assessJeweledPomEquipResult(catalog, result, before, branch.state.keepsakes.fatedStatus).legal
+  )
     return branch;
   const offer: AuthoredTraitOffer = Object.freeze({
     kind: 'traits',
@@ -125,9 +132,9 @@ export function applyJeweledPomEquipResult(
     before,
     { resolvedProviderKey: effect.giverKey },
     branch.traitEvaluations?.length ?? 0,
-    branch.arcanaFear,
+    branch.state.arcanaFear,
     true,
-    branch.keepsakes,
+    branch.state.keepsakes,
   );
   const acquisitionIdentity = `${semanticAddressKey(owner)}:${sequence}`;
   const applied = recordReachedTraitOffer(
@@ -140,14 +147,15 @@ export function applyJeweledPomEquipResult(
   if (applied.history === before) return branch;
   return Object.freeze({
     ...branch,
-    history: attachTraitHistory(branch.history, applied.history),
-    traitHistory: applied.history,
-    keepsakes: equipJeweledPom(
-      branch.keepsakes,
-      result.traitKey,
-      effect.subsequentEligibleTraitLevelsByRank[equippedRank ?? keepsake.rank],
-      acquisitionIdentity,
-    ),
+    state: Object.freeze({
+      ...replaceSimulationTraitHistory(branch.state, applied.history),
+      keepsakes: equipJeweledPom(
+        branch.state.keepsakes,
+        result.traitKey,
+        effect.subsequentEligibleTraitLevelsByRank[equippedRank ?? keepsake.rank],
+        acquisitionIdentity,
+      ),
+    }),
     traitEvaluations: Object.freeze([...(branch.traitEvaluations ?? []), evaluation]),
   });
 }
@@ -168,7 +176,7 @@ export function applyExperimentalHammerEquipResult(
   const result = results?.experimentalHammer;
   if (keepsake === undefined || effect?.kind !== 'experimentalHammer' || result === undefined)
     return branch;
-  const before = branch.traitHistory ?? createTraitHistoryState();
+  const before = branch.state.traitHistory;
   if (!assessExperimentalHammerEquipResult(catalog, result, before, loadout).legal) return branch;
   if (result.kind === 'exhausted') return branch;
   const offer: AuthoredTraitOffer = Object.freeze({
@@ -189,9 +197,9 @@ export function applyExperimentalHammerEquipResult(
     before,
     loadout,
     branch.traitEvaluations?.length ?? 0,
-    branch.arcanaFear,
+    branch.state.arcanaFear,
     true,
-    branch.keepsakes,
+    branch.state.keepsakes,
   );
   const acquisitionIdentity = `${semanticAddressKey(owner)}:${sequence}`;
   const applied = recordReachedTraitOffer(
@@ -204,14 +212,15 @@ export function applyExperimentalHammerEquipResult(
   if (applied.history === before) return branch;
   return Object.freeze({
     ...branch,
-    history: attachTraitHistory(branch.history, applied.history),
-    traitHistory: applied.history,
-    keepsakes: equipExperimentalHammer(
-      branch.keepsakes,
-      result.traitKey,
-      effect.qualifyingEncounterUsesByRank[equippedRank ?? keepsake.rank],
-      acquisitionIdentity,
-    ),
+    state: Object.freeze({
+      ...replaceSimulationTraitHistory(branch.state, applied.history),
+      keepsakes: equipExperimentalHammer(
+        branch.state.keepsakes,
+        result.traitKey,
+        effect.qualifyingEncounterUsesByRank[equippedRank ?? keepsake.rank],
+        acquisitionIdentity,
+      ),
+    }),
     traitEvaluations: Object.freeze([...(branch.traitEvaluations ?? []), evaluation]),
   });
 }
@@ -231,7 +240,7 @@ export function applyTranscendentEmbryoEquipResult(
   const effect = keepsake?.effect;
   if (effect?.kind !== 'transcendentEmbryo') return branch;
   const rarity = effect.blessingRarityByRank[equippedRank];
-  const before = branch.traitHistory ?? createTraitHistoryState();
+  const before = branch.state.traitHistory;
   if (
     !assessTranscendentEmbryoBlessing(catalog, result, before, rarity, {
       ...context,
@@ -256,14 +265,15 @@ export function applyTranscendentEmbryoEquipResult(
   ]);
   return Object.freeze({
     ...branch,
-    history: attachTraitHistory(branch.history, history),
-    traitHistory: history,
-    keepsakes: equipTranscendentEmbryo(
-      branch.keepsakes,
-      origin,
-      rarity,
-      result,
-      acquisitionIdentity,
-    ),
+    state: Object.freeze({
+      ...replaceSimulationTraitHistory(branch.state, history),
+      keepsakes: equipTranscendentEmbryo(
+        branch.state.keepsakes,
+        origin,
+        rarity,
+        result,
+        acquisitionIdentity,
+      ),
+    }),
   });
 }

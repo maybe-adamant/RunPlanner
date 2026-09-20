@@ -1,3 +1,4 @@
+import { replaceSimulationTraitHistory } from '../../../state/transitions';
 import type { Catalog } from '../../../../catalog-schema';
 import {
   createKeepsakeEquipResultAddress,
@@ -21,11 +22,7 @@ import {
   assessTranscendentEmbryoBlessing,
 } from '../../../keepsakes/trait-effects';
 import { applyTranscendentEmbryoEquipResult } from '../../../keepsakes/branch-transitions';
-import {
-  attachTraitHistory,
-  createTraitHistoryState,
-  foldTraitHistoryEvents,
-} from '../../../traits';
+import { createTraitHistoryState, foldTraitHistoryEvents } from '../../../traits';
 import { type KeepsakeEquipResultCandidateCapability } from '../../../keepsakes/candidate-artifacts';
 import { type KeepsakeSelectionCandidateCapability } from '../../../keepsakes/candidate-artifacts';
 import type { RewardBranchState } from '../../branch-primitives';
@@ -95,7 +92,7 @@ export function applyKeepsakeRackUsedTransition(
   const keepsakeSelectionCandidate = Object.freeze({
     key: semanticAddressKey(selection),
     candidate: Object.freeze({
-      state: branches[0]!.keepsakes,
+      state: branches[0]!.state.keepsakes,
       encounterBlockedKeepsakeKeys,
     }),
   });
@@ -108,7 +105,7 @@ export function applyKeepsakeRackUsedTransition(
     (branch) =>
       keepsakeSelectionUnavailableReason(
         catalog,
-        branch.keepsakes,
+        branch.state.keepsakes,
         keepsakeKey,
         encounterBlockedKeepsakeKeys,
       ) !== undefined,
@@ -126,7 +123,7 @@ export function applyKeepsakeRackUsedTransition(
     );
 
   let rackTransitions = branches.map((branch) => {
-    const before = branch.keepsakes;
+    const before = branch.state.keepsakes;
     const unavailable =
       keepsakeSelectionUnavailableReason(
         catalog,
@@ -135,7 +132,7 @@ export function applyKeepsakeRackUsedTransition(
         encounterBlockedKeepsakeKeys,
       ) !== undefined;
     const equippedRank = !unavailable
-      ? keepsakeRankForEquip(catalog, keepsakeKey, branch.traitHistory ?? createTraitHistoryState())
+      ? keepsakeRankForEquip(catalog, keepsakeKey, branch.state.traitHistory)
       : undefined;
     const after = unavailable
       ? before
@@ -143,13 +140,16 @@ export function applyKeepsakeRackUsedTransition(
           catalog,
           before,
           keepsakeKey,
-          branch.arcanaFear,
+          branch.state.arcanaFear,
           equippedRank,
           effectiveBiomeNumber,
         );
     const replacementSucceeded =
       before.currentKey !== after.currentKey && after.currentKey === keepsakeKey;
-    const transitionedBranch = Object.freeze({ ...branch, keepsakes: after });
+    const transitionedBranch = Object.freeze({
+      ...branch,
+      state: Object.freeze({ ...branch.state, keepsakes: after }),
+    });
     return Object.freeze({
       branch: replacementSucceeded
         ? applyMoonBeamEquip(
@@ -170,10 +170,10 @@ export function applyKeepsakeRackUsedTransition(
     (transition, index) =>
       transition.replacementSucceeded &&
       (replacementEquipsPhial ||
-        branches[index]?.keepsakes.phial?.status === 'pending' ||
+        branches[index]?.state.keepsakes.phial?.status === 'pending' ||
         (room.fountainRarityResult !== undefined &&
-          catalog.keepsakes.byKey[branches[index]?.keepsakes.currentKey ?? '']?.effect?.kind ===
-            'fountainRarity')),
+          catalog.keepsakes.byKey[branches[index]?.state.keepsakes.currentKey ?? '']?.effect
+            ?.kind === 'fountainRarity')),
   );
   const rackRow = room.roomActionRoster?.rows.find(
     (row) => !row.stale && row.rank !== null && row.reference.kind === 'interactKeepsakeRack',
@@ -196,9 +196,12 @@ export function applyKeepsakeRackUsedTransition(
   });
   rackTransitions = rackTransitions.map((transition) => {
     const branch = transition.branch;
-    if (branch.keepsakes.fatedStatus !== 'Unfated' || branch.keepsakes.jeweledPom?.active !== true)
+    if (
+      branch.state.keepsakes.fatedStatus !== 'Unfated' ||
+      branch.state.keepsakes.jeweledPom?.active !== true
+    )
       return transition;
-    const prior = branch.traitHistory ?? createTraitHistoryState();
+    const prior = branch.state.traitHistory;
     const traitHistory = foldTraitHistoryEvents(catalog, [
       ...prior.events,
       Object.freeze({
@@ -207,8 +210,8 @@ export function applyKeepsakeRackUsedTransition(
         acquisitionRole: 'jeweledPomCleanup',
         sequence: event.sequence,
         acquisitionPoint: 'keepsakeFatedInvalidation',
-        traitKey: branch.keepsakes.jeweledPom.grantedTraitKey,
-        acquisitionIdentity: branch.keepsakes.jeweledPom.acquisitionIdentity,
+        traitKey: branch.state.keepsakes.jeweledPom.grantedTraitKey,
+        acquisitionIdentity: branch.state.keepsakes.jeweledPom.acquisitionIdentity,
         match: 'acquisitionIdentity' as const,
       }),
     ]);
@@ -216,9 +219,13 @@ export function applyKeepsakeRackUsedTransition(
       ...transition,
       branch: Object.freeze({
         ...branch,
-        history: attachTraitHistory(branch.history, traitHistory),
-        traitHistory,
-        keepsakes: invalidateJeweledPom(branch.keepsakes),
+        state: replaceSimulationTraitHistory(
+          Object.freeze({
+            ...branch.state,
+            keepsakes: invalidateJeweledPom(branch.state.keepsakes),
+          }),
+          traitHistory,
+        ),
       }),
     });
   });
@@ -246,8 +253,8 @@ export function applyKeepsakeRackUsedTransition(
             !assessJeweledPomEquipResult(
               catalog,
               rack.equipResults!.jeweledPom!,
-              branch.traitHistory ?? createTraitHistoryState(),
-              branch.keepsakes.fatedStatus,
+              branch.state.traitHistory,
+              branch.state.keepsakes.fatedStatus,
             ).legal,
         )
       )
@@ -268,9 +275,11 @@ export function applyKeepsakeRackUsedTransition(
               frontiers: Object.freeze(
                 successfulReplacementBranches.map((branch) =>
                   Object.freeze({
-                    before: branch.traitHistory ?? createTraitHistoryState(),
-                    fatedStatus: branch.keepsakes.fatedStatus,
-                    ...(branch.arcanaFear === undefined ? {} : { arcanaFear: branch.arcanaFear }),
+                    before: branch.state.traitHistory,
+                    fatedStatus: branch.state.keepsakes.fatedStatus,
+                    ...(branch.state.arcanaFear === undefined
+                      ? {}
+                      : { arcanaFear: branch.state.arcanaFear }),
                   }),
                 ),
               ),
@@ -299,7 +308,7 @@ export function applyKeepsakeRackUsedTransition(
             !assessExperimentalHammerEquipResult(
               catalog,
               rack.equipResults!.experimentalHammer!,
-              branch.traitHistory ?? createTraitHistoryState(),
+              branch.state.traitHistory,
               routeLoadout,
             ).legal,
         )
@@ -321,9 +330,9 @@ export function applyKeepsakeRackUsedTransition(
               frontiers: Object.freeze(
                 successfulReplacementBranches.map((branch) =>
                   Object.freeze({
-                    before: branch.traitHistory ?? createTraitHistoryState(),
-                    fatedStatus: branch.keepsakes.fatedStatus,
-                    arcanaFear: branch.arcanaFear,
+                    before: branch.state.traitHistory,
+                    fatedStatus: branch.state.keepsakes.fatedStatus,
+                    arcanaFear: branch.state.arcanaFear,
                     loadout: routeLoadout,
                   }),
                 ),
@@ -341,7 +350,7 @@ export function applyKeepsakeRackUsedTransition(
               keepsakeRankForEquip(
                 catalog,
                 keepsakeKey,
-                successfulReplacementBranches[0]?.traitHistory ?? createTraitHistoryState(),
+                successfulReplacementBranches[0]?.state.traitHistory ?? createTraitHistoryState(),
               )
             ]
           : undefined;
@@ -365,7 +374,7 @@ export function applyKeepsakeRackUsedTransition(
             !assessTranscendentEmbryoBlessing(
               catalog,
               rack.equipResults!.transcendentEmbryo!,
-              branch.traitHistory ?? createTraitHistoryState(),
+              branch.state.traitHistory,
               rarity,
               { ...routeLoadout, routeKey: event.origin.routeKey },
             ).legal,
@@ -388,9 +397,9 @@ export function applyKeepsakeRackUsedTransition(
               frontiers: Object.freeze(
                 successfulReplacementBranches.map((branch) =>
                   Object.freeze({
-                    before: branch.traitHistory ?? createTraitHistoryState(),
-                    fatedStatus: branch.keepsakes.fatedStatus,
-                    arcanaFear: branch.arcanaFear,
+                    before: branch.state.traitHistory,
+                    fatedStatus: branch.state.keepsakes.fatedStatus,
+                    arcanaFear: branch.state.arcanaFear,
                     loadout: routeLoadout,
                     ...(rarity === undefined ? {} : { transcendentEmbryoRarity: rarity }),
                   }),

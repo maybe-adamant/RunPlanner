@@ -18,7 +18,7 @@ import {
   boonRarityFactsForOffer,
   offerGenerationAdjustedTraitGiverContext,
 } from '../../../traits/offers';
-import { createTraitHistoryState } from '../../../traits';
+
 import type { RewardBranchState } from '../../branch-primitives';
 import type { GorgonPhaseCandidateSupport } from '../../model';
 
@@ -39,7 +39,7 @@ export function resolveGorgonCandidateRarity(inputs: {
   const sourceOverride = gorgonSourceRarityOverride(inputs.rarityLevel);
   const suppressTemporaryBoonRarity = inputs.rarityLevel > 1;
   const rarities = inputs.branches.map((branch) => {
-    const history = branch.traitHistory ?? createTraitHistoryState();
+    const history = branch.state.traitHistory;
     const context = offerGenerationAdjustedTraitGiverContext(
       inputs.catalog,
       history,
@@ -52,12 +52,17 @@ export function resolveGorgonCandidateRarity(inputs: {
           : { boonRarityRoomOverride: inputs.roomOverride }),
         ...(suppressTemporaryBoonRarity
           ? { suppressTemporaryBoonRarity: true }
-          : branch.stygianWell.yarnUses === 0
+          : branch.state.stygianWell.yarnUses === 0
             ? {}
-            : { temporaryBoonRarityUses: branch.stygianWell.yarnUses }),
+            : { temporaryBoonRarityUses: branch.state.stygianWell.yarnUses }),
       },
     );
-    const facts = boonRarityFactsForOffer(inputs.catalog, history, context, branch.arcanaFear);
+    const facts = boonRarityFactsForOffer(
+      inputs.catalog,
+      history,
+      context,
+      branch.state.arcanaFear,
+    );
     return (
       context.freshRarityOverride ??
       (facts === undefined
@@ -143,7 +148,13 @@ export function applyGorgonStartedTransition(inputs: {
     return Object.freeze({
       branches: Object.freeze(
         inputs.branches.map((branch) =>
-          Object.freeze({ ...branch, keepsakes: expirePendingGorgon(branch.keepsakes) }),
+          Object.freeze({
+            ...branch,
+            state: Object.freeze({
+              ...branch.state,
+              keepsakes: expirePendingGorgon(branch.state.keepsakes),
+            }),
+          }),
         ),
       ),
       candidate,

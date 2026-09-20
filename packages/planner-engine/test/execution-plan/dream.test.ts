@@ -32,7 +32,7 @@ it('publishes a command-authored Dream route through the strict execution codec'
   expect(
     nBiomeEvaluation.rewards.targetHistory.find(
       (checkpoint) => semanticAddressKey(checkpoint.origin) === semanticAddressKey(nTarget),
-    )?.rewardLookups.hubRewardLookup,
+    )?.states[0]!.rewardLookups.hubRewardLookup,
   ).toEqual([]);
   expect(
     candidates.evaluate({

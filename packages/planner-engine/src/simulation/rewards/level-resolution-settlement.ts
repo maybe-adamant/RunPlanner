@@ -1,3 +1,4 @@
+import { replaceSimulationTraitHistory } from '../state/transitions';
 import type { Catalog } from '../../catalog-schema';
 import {
   createLevelResolutionAddress,
@@ -8,8 +9,6 @@ import { levelResolutionEffectFor } from '../../reward-kernel/level-effects';
 import type { CanonicalResolvedIncomingReward } from '../materialization';
 import { ownerRegion, type FindingChronology, type FindingRegionEntry } from '../finding-regions';
 import {
-  attachTraitHistory,
-  createTraitHistoryState,
   evaluateReachedLevelResolution,
   foldTraitHistoryEvents,
   recordReachedLevelResolution,
@@ -78,7 +77,7 @@ export function settleReachedLevelResolution(
     (effect.kind === 'visibleChoice'
       ? { kind: 'choice' as const, offeredTraitKeys: Object.freeze([]), selectedTraitKey: null }
       : { kind: 'random' as const, targetTraitKey: null });
-  const before = branch.traitHistory ?? createTraitHistoryState();
+  const before = branch.state.traitHistory;
   const generationBefore = reward.levelResolutionGenerationHistory ?? before;
   const evaluation = evaluateReachedLevelResolution(
     catalog,
@@ -151,12 +150,11 @@ export function settleReachedLevelResolution(
   return Object.freeze({
     branch: Object.freeze({
       ...branch,
-      history: attachTraitHistory(branch.history, appliedHistory),
-      traitHistory: appliedHistory,
       levelResolutionEvaluations: Object.freeze([
         ...(branch.levelResolutionEvaluations ?? []),
         evaluation,
       ]),
+      state: replaceSimulationTraitHistory(branch.state, appliedHistory),
     }),
     findingEntries: Object.freeze([...localFindings.values()]),
   });

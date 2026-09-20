@@ -262,7 +262,7 @@ describe('surface product loop', () => {
     }
     const branch = pEvaluation.rewards.branches[0];
     if (branch === undefined) throw new Error('complete Surface Shop fixture has no P branch');
-    const event = branch.traitHistory?.events.find(
+    const event = branch.state.traitHistory?.events.find(
       (candidate) => semanticAddressKey(candidate.owner) === semanticAddressKey(shopOffer),
     );
     expect(event).toMatchObject({
@@ -281,7 +281,9 @@ describe('surface product loop', () => {
                 : 2
           ];
     expect(
-      selected === undefined ? undefined : branch.traitHistory?.equippedTraits[selected.traitKey],
+      selected === undefined
+        ? undefined
+        : branch.state.traitHistory?.equippedTraits[selected.traitKey],
     ).toBeDefined();
 
     const workspace = application.selectStructuredWorkspace(application.store.getState());
@@ -579,7 +581,7 @@ describe('surface product loop', () => {
     const branches =
       route?.biomes.flatMap((biome) => ('rewards' in biome ? biome.rewards.branches : [])) ?? [];
     const event = branches
-      .flatMap((branch) => branch.traitHistory?.events ?? [])
+      .flatMap((branch) => branch.state.traitHistory?.events ?? [])
       .find(
         (candidate) =>
           semanticAddressKey(candidate.owner) === semanticAddressKey(target.address) &&
@@ -588,7 +590,7 @@ describe('surface product loop', () => {
     expect(event?.kind === 'traitOffer' ? event.replacementTransition : undefined).toEqual(
       transition,
     );
-    const history = branches[0]?.traitHistory;
+    const history = branches[0]?.state.traitHistory;
     expect(history?.equippedTraits[transition.replacedTraitKey]).toBeUndefined();
     expect(history?.equippedTraits[transition.newTraitKey]).toMatchObject({
       rarity: transition.requiredRarity,

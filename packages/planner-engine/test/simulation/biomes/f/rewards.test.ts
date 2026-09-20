@@ -54,7 +54,7 @@ import {
 } from '../../support/f-generation-project';
 import { createCompleteFTakeoverProject } from '../../support/f-takeover-project';
 import { createArcanaFearState } from '../../../../src/simulation/arcana-fear';
-import { initializeRewardBranches } from '../../../../src/simulation/rewards/branch-lifecycle';
+import { initializeTestRewardBranchesForRoute as initializeRewardBranches } from '../../../support/arcana-fear';
 
 const biome = createBiomeAddress('Underworld', 'F');
 
@@ -306,7 +306,10 @@ function olympianContactSeed(project: ProjectDocument, keepsakeKey: string) {
   if (seed === undefined) throw new Error('Olympian contact seed is missing');
   // These contact witnesses isolate loot materialization. Exact-priority generation is covered
   // by the reward-pressure suite; the live F chronology still owns the spawn decision here.
-  return Object.freeze({ ...seed, rewardPriorities: Object.freeze([]) });
+  return Object.freeze({
+    ...seed,
+    state: Object.freeze({ ...seed.state, rewardPriorities: Object.freeze([]) }),
+  });
 }
 
 function withDenial(project: ProjectDocument): ProjectDocument {
@@ -925,7 +928,7 @@ describe('F reward-history simulation', () => {
       ]).rewards,
     );
     expect(
-      entered.keepsakes.olympianSources.find((source) => source.providerKey === 'Apollo')
+      entered.state.keepsakes.olympianSources.find((source) => source.providerKey === 'Apollo')
         ?.remainingForceUses,
     ).toBe(0);
     expect(entered.events).toContainEqual(
@@ -941,7 +944,7 @@ describe('F reward-history simulation', () => {
     const devotion = firstBranch(evaluate(withDenial(devotionProject())).rewards);
 
     const bansFor = (branch: typeof room, giverKey: string, offeredKey?: string) => {
-      const event = branch.traitHistory?.events.find(
+      const event = branch.state.traitHistory?.events.find(
         (candidate): candidate is TraitOfferEvent =>
           candidate.kind === 'traitOffer' &&
           candidate.giverKey === giverKey &&
@@ -1092,12 +1095,12 @@ describe('F reward-history simulation', () => {
     expect(branch.events).not.toContainEqual(
       expect.objectContaining({ kind: 'concreteAcquisition', origin: unpickedOrigin }),
     );
-    expect(branch.history.consumableRecord.MaxHealthDrop).toBeUndefined();
+    expect(branch.state.rewardHistory.consumableRecord.MaxHealthDrop).toBeUndefined();
   });
 
   it('reaches the declared one-refill transition through F counted offers', () => {
     const result = evaluate(refillProject()).rewards;
-    const runBag = firstBranch(result).bags.RunProgress!;
+    const runBag = firstBranch(result).state.bags.RunProgress!;
     const boonIndexes = catalog.rewards.stores.byKey.RunProgress!.entries.flatMap((entry, index) =>
       entry.rewardType === 'Boon' ? [index] : [],
     );
@@ -1139,9 +1142,9 @@ describe('F reward-history simulation', () => {
       },
     });
     expect(boonAcquisition?.historySequence).toBeLessThan(stackOffer!.historySequence);
-    expect(branch.history.lootTypeHistory.StackUpgrade).toBe(1);
-    expect(branch.history.currentRoomUseRecord).toEqual({});
-    expect(branch.history.useRecord.StackUpgrade).toBe(1);
+    expect(branch.state.rewardHistory.lootTypeHistory.StackUpgrade).toBe(1);
+    expect(branch.state.rewardHistory.currentRoomUseRecord).toEqual({});
+    expect(branch.state.rewardHistory.useRecord.StackUpgrade).toBe(1);
   });
 
   it('keeps outgoing door sources pre-purchase in the fourth-shop/fifth-door trace', () => {
@@ -1166,7 +1169,7 @@ describe('F reward-history simulation', () => {
 
     expect(result.validity).toBe('valid');
     expect(fifthOfferEvent?.historySequence).toBeLessThan(purchaseEvent!.historySequence);
-    expect(branch.history.lootTypeHistory).toMatchObject({
+    expect(branch.state.rewardHistory.lootTypeHistory).toMatchObject({
       ApolloUpgrade: 1,
       PoseidonUpgrade: 1,
       HestiaUpgrade: 1,
@@ -1242,7 +1245,7 @@ describe('F reward-history simulation', () => {
     );
     expect(purchase).toBeDefined();
     expect(laterRoom?.historySequence).toBeGreaterThan(purchase!.historySequence);
-    expect(purchased.history.lootTypeHistory.AresUpgrade).toBe(1);
+    expect(purchased.state.rewardHistory.lootTypeHistory.AresUpgrade).toBe(1);
   });
 
   it('classifies counted-bag and source-support failures at their incoming reward owners', () => {
@@ -1548,7 +1551,7 @@ describe('F reward-history simulation', () => {
     });
     const result = evaluate(project).rewards;
     const branch = firstBranch(result);
-    expect(branch.keepsakes.timePiece?.remainingCharges).toBe(2);
+    expect(branch.state.keepsakes.timePiece?.remainingCharges).toBe(2);
     expect(branch.events.filter((event) => event.kind === 'conversionToGold')).toHaveLength(2);
     expect(
       branch.events.filter(

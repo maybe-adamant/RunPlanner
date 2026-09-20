@@ -89,9 +89,9 @@ export function assessGorgonCandidate(input: GorgonCandidateInput): {
   });
 }
 export function attestGorgonBranchState(
-  branches: readonly { readonly keepsakes: KeepsakeState }[],
+  branches: readonly { readonly state: { readonly keepsakes: KeepsakeState } }[],
 ): GorgonLifecycleStatus | undefined {
-  const states = branches.map((branch) => branch.keepsakes.gorgon);
+  const states = branches.map((branch) => branch.state.keepsakes.gorgon);
   const values = states.map((state) => state?.status);
   const first = values[0];
   const firstRarityLevel = states[0]?.status === 'pending' ? states[0].rarityLevel : undefined;
@@ -108,18 +108,18 @@ export function attestGorgonBranchState(
 }
 
 export function attestPendingGorgonRarityLevel(
-  branches: readonly { readonly keepsakes: KeepsakeState }[],
+  branches: readonly { readonly state: { readonly keepsakes: KeepsakeState } }[],
 ): GorgonRarityLevel | undefined {
   const status = attestGorgonBranchState(branches);
-  const first = branches[0]?.keepsakes.gorgon;
+  const first = branches[0]?.state.keepsakes.gorgon;
   return status === 'pending' && first?.status === 'pending' ? first.rarityLevel : undefined;
 }
 
 /** Attest the branch frontier before lifecycle composition can consume it. */
 export function attestFigLeafBranchState(
-  branches: readonly { readonly keepsakes: KeepsakeState }[],
+  branches: readonly { readonly state: { readonly keepsakes: KeepsakeState } }[],
 ): FigLeafStateValue | undefined {
-  const values = branches.map((branch) => branch.keepsakes.figLeaf);
+  const values = branches.map((branch) => branch.state.keepsakes.figLeaf);
   const first = values[0];
   if (first === undefined) {
     if (values.some((value) => value !== undefined)) {

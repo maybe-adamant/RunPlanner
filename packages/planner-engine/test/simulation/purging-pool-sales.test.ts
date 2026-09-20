@@ -104,7 +104,9 @@ describe('Purging Pool sales', () => {
       ),
     ).toBeUndefined();
 
-    const equipped = Object.keys(fRewards(initial).branches[0]?.traitHistory?.equippedTraits ?? {});
+    const equipped = Object.keys(
+      fRewards(initial).branches[0]?.state.traitHistory?.equippedTraits ?? {},
+    );
     if (equipped.length < 3) throw new Error('fixture has too few Pool candidates');
     const resolved = withPoolSlots(initial, [equipped[0]!, equipped[1]!, equipped[2]!]);
     const sold = sell(resolved, 'left');
@@ -134,21 +136,23 @@ describe('Purging Pool sales', () => {
     ).toBeUndefined();
     expect(
       fRewards(disabled).branches.every(
-        (branch) => branch.traitHistory?.equippedTraits[equipped[0]!] !== undefined,
+        (branch) => branch.state.traitHistory?.equippedTraits[equipped[0]!] !== undefined,
       ),
     ).toBe(true);
   });
 
   it('leaves zero sales neutral and removes only each selected displayed trait', () => {
     const initial = createGoldenFGHProject();
-    const equipped = Object.keys(fRewards(initial).branches[0]?.traitHistory?.equippedTraits ?? {});
+    const equipped = Object.keys(
+      fRewards(initial).branches[0]?.state.traitHistory?.equippedTraits ?? {},
+    );
     if (equipped.length < 3) throw new Error('fixture has too few Pool candidates');
     const [left, middle, right] = equipped;
     const resolved = withPoolSlots(initial, [left!, middle!, right!]);
 
-    expect(Object.keys(fRewards(resolved).branches[0]!.traitHistory!.equippedTraits)).toContain(
-      left,
-    );
+    expect(
+      Object.keys(fRewards(resolved).branches[0]!.state.traitHistory!.equippedTraits),
+    ).toContain(left);
 
     const partial = fRewards(sell(resolved, 'middle'));
     expect(partial.findings).not.toContainEqual(
@@ -156,24 +160,30 @@ describe('Purging Pool sales', () => {
     );
     expect(
       partial.branches.every(
-        (branch) => branch.traitHistory?.equippedTraits[middle!] === undefined,
+        (branch) => branch.state.traitHistory?.equippedTraits[middle!] === undefined,
       ),
     ).toBe(true);
     expect(
-      partial.branches.every((branch) => branch.traitHistory?.equippedTraits[left!] !== undefined),
+      partial.branches.every(
+        (branch) => branch.state.traitHistory?.equippedTraits[left!] !== undefined,
+      ),
     ).toBe(true);
     expect(
-      partial.branches.every((branch) => branch.traitHistory?.equippedTraits[right!] !== undefined),
+      partial.branches.every(
+        (branch) => branch.state.traitHistory?.equippedTraits[right!] !== undefined,
+      ),
     ).toBe(true);
 
     const all = fRewards(sell(sell(sell(resolved, 'left'), 'middle'), 'right'));
     for (const traitKey of [left!, middle!, right!]) {
       expect(
-        all.branches.every((branch) => branch.traitHistory?.equippedTraits[traitKey] === undefined),
+        all.branches.every(
+          (branch) => branch.state.traitHistory?.equippedTraits[traitKey] === undefined,
+        ),
       ).toBe(true);
       expect(
         all.branches.every((branch) =>
-          branch.traitHistory?.previouslyPickedTraitKeys.includes(traitKey),
+          branch.state.traitHistory?.previouslyPickedTraitKeys.includes(traitKey),
         ),
       ).toBe(true);
     }
@@ -223,7 +233,7 @@ describe('Purging Pool sales', () => {
       action: fountain,
       toIndex: 0,
     });
-    const credited = fRewards(initial).branches[0]?.traitHistory;
+    const credited = fRewards(initial).branches[0]?.state.traitHistory;
     expect(credited?.equippedTraits.BoonDecayBoon).toMatchObject({ rarity: 'Heroic' });
     expect(credited?.equippedTraits.ApolloWeaponBoon).toMatchObject({ rarity: 'Heroic', level: 6 });
     const creditedTarget = credited?.equippedTraits.ApolloWeaponBoon;
@@ -241,16 +251,18 @@ describe('Purging Pool sales', () => {
     expect(sold.branches.length).toBeGreaterThan(0);
     expect(
       sold.branches.every(
-        (branch) => branch.traitHistory?.equippedTraits.BoonDecayBoon === undefined,
+        (branch) => branch.state.traitHistory?.equippedTraits.BoonDecayBoon === undefined,
       ),
     ).toBe(true);
     for (const branch of sold.branches)
-      expect(branch.traitHistory?.equippedTraits.ApolloWeaponBoon).toEqual(creditedTarget);
+      expect(branch.state.traitHistory?.equippedTraits.ApolloWeaponBoon).toEqual(creditedTarget);
   });
 
   it('retains a stale sale and reports it without removing a different trait', () => {
     const initial = createGoldenFGHProject();
-    const equipped = Object.keys(fRewards(initial).branches[0]?.traitHistory?.equippedTraits ?? {});
+    const equipped = Object.keys(
+      fRewards(initial).branches[0]?.state.traitHistory?.equippedTraits ?? {},
+    );
     if (equipped.length < 2) throw new Error('fixture has too few Pool candidates');
     const [left, middle] = equipped;
     const resolved = withPoolSlots(initial, [left!, middle!]);
@@ -294,7 +306,7 @@ describe('Purging Pool sales', () => {
     );
     expect(
       evaluated.branches.every(
-        (branch) => branch.traitHistory?.equippedTraits[middle!] !== undefined,
+        (branch) => branch.state.traitHistory?.equippedTraits[middle!] !== undefined,
       ),
     ).toBe(true);
   });
@@ -303,7 +315,7 @@ describe('Purging Pool sales', () => {
     const withG = createCompleteFGProject();
     const tail = asConfiguredTailF(createCompleteFGProject());
     const poolTraitKeys = Object.keys(
-      fRewards(withG).branches[0]?.traitHistory?.equippedTraits ?? {},
+      fRewards(withG).branches[0]?.state.traitHistory?.equippedTraits ?? {},
     ).slice(0, 3);
     const traitKey = poolTraitKeys[0];
     if (traitKey === undefined || poolTraitKeys.length !== 3)
@@ -315,12 +327,12 @@ describe('Purging Pool sales', () => {
       );
       expect(
         sold.branches.every(
-          (branch) => branch.traitHistory?.equippedTraits[traitKey] === undefined,
+          (branch) => branch.state.traitHistory?.equippedTraits[traitKey] === undefined,
         ),
       ).toBe(true);
       expect(
         sold.branches.every((branch) =>
-          branch.traitHistory?.previouslyPickedTraitKeys.includes(traitKey),
+          branch.state.traitHistory?.previouslyPickedTraitKeys.includes(traitKey),
         ),
       ).toBe(true);
     }

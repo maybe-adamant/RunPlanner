@@ -212,16 +212,22 @@ describe('decision run-state snapshots', () => {
     });
     const beforeBranch = Object.freeze({
       ...base,
-      pendingHermesShrineDeliveries: Object.freeze({ 'delivery-source': delivery }),
+      state: Object.freeze({
+        ...base.state,
+        pendingHermesShrineDeliveries: Object.freeze({ 'delivery-source': delivery }),
+      }),
     });
     const afterBranch = Object.freeze({
       ...beforeBranch,
-      pendingHermesShrineDeliveries: Object.freeze({}),
-      keepsakes: Object.freeze({
-        ...beforeBranch.keepsakes,
-        timePiece: Object.freeze({ remainingCharges: 1 }),
+      state: Object.freeze({
+        ...beforeBranch.state,
+        pendingHermesShrineDeliveries: Object.freeze({}),
+        keepsakes: Object.freeze({
+          ...beforeBranch.state.keepsakes,
+          timePiece: Object.freeze({ remainingCharges: 1 }),
+        }),
+        stygianWell: Object.freeze({ ...beforeBranch.state.stygianWell, sparkUses: 1 }),
       }),
-      stygianWell: Object.freeze({ ...beforeBranch.stygianWell, sparkUses: 1 }),
     });
     const historyView = {
       sequence: 1,
@@ -294,7 +300,7 @@ describe('decision run-state snapshots', () => {
     const history = createRewardHistoryState();
     const branch = Object.freeze({
       ...initializeTestRewardBranches()[0]!,
-      history,
+      state: Object.freeze({ ...initializeTestRewardBranches()[0]!.state, rewardHistory: history }),
     });
     const sharedCache = createRunStateDerivationCache();
     const historyView = (sequence: number) => ({
@@ -406,10 +412,13 @@ describe('decision run-state snapshots', () => {
         branches: [
           Object.freeze({
             ...base,
-            hexProgress: Object.freeze({
-              bankedPathPoints,
-              investedPathPoints: 0,
-              ...(talentDropsClosed ? { talentDropsClosed: true as const } : {}),
+            state: Object.freeze({
+              ...base.state,
+              hexProgress: Object.freeze({
+                bankedPathPoints,
+                investedPathPoints: 0,
+                ...(talentDropsClosed ? { talentDropsClosed: true as const } : {}),
+              }),
             }),
           }),
         ],
@@ -423,7 +432,7 @@ describe('decision run-state snapshots', () => {
               records: { ...facts.requirements.records, useRecord: { SpellDrop: 1 } },
               flags: {
                 ...facts.requirements.flags,
-                allSpellInvested: branch.hexProgress.talentDropsClosed === true,
+                allSpellInvested: branch.state.hexProgress.talentDropsClosed === true,
               },
             },
           };
@@ -450,17 +459,20 @@ describe('decision run-state snapshots', () => {
         branches: [
           {
             ...base,
-            pendingHermesShrineDeliveries: pending
-              ? {
-                  spell: {
-                    sourceKey: 'spell',
-                    sourceOrigin: createOccurrenceAddress(oBiome, oOccurrenceIds.combat07),
-                    generationKey: 'initial:secondLeft',
-                    rewardType: 'SpellDrop',
-                    remainingUses: 8,
-                  },
-                }
-              : base.pendingHermesShrineDeliveries,
+            state: Object.freeze({
+              ...base.state,
+              pendingHermesShrineDeliveries: pending
+                ? {
+                    spell: {
+                      sourceKey: 'spell',
+                      sourceOrigin: createOccurrenceAddress(oBiome, oOccurrenceIds.combat07),
+                      generationKey: 'initial:secondLeft' as const,
+                      rewardType: 'SpellDrop',
+                      remainingUses: 8,
+                    },
+                  }
+                : base.state.pendingHermesShrineDeliveries,
+            }),
           },
         ],
         enteredBiomeCount: 1,
@@ -472,7 +484,7 @@ describe('decision run-state snapshots', () => {
               ...facts.requirements,
               flags: {
                 ...facts.requirements.flags,
-                pendingSpellDrop: Object.values(branch.pendingHermesShrineDeliveries).some(
+                pendingSpellDrop: Object.values(branch.state.pendingHermesShrineDeliveries).some(
                   (delivery) => delivery.rewardType === 'SpellDrop',
                 ),
               },
@@ -488,6 +500,32 @@ describe('decision run-state snapshots', () => {
     expect(spellEligibility(false)).toEqual(['eligible', 'eligible']);
     expect(spellEligibility(true)).toEqual(['ineligible', 'ineligible']);
     expect(spellEligibility(false)).toEqual(['eligible', 'eligible']);
+
+    const lookupCache = createRunStateDerivationCache();
+    const seenLookups: unknown[] = [];
+    const withReservation = {
+      ...base,
+      state: Object.freeze({
+        ...base.state,
+        rewardLookups: Object.freeze({ hubRewardLookup: Object.freeze(['SpellDrop']) }),
+      }),
+    };
+    for (const branch of [base, withReservation, base]) {
+      createRunState({
+        catalog,
+        owner,
+        historyView,
+        branches: [branch],
+        enteredBiomeCount: 1,
+        derivationCache: lookupCache,
+        factsContextToken: token,
+        rewardFacts: (current) => {
+          seenLookups.push(current.state.rewardLookups);
+          return requirementFacts(0);
+        },
+      });
+    }
+    expect(seenLookups).toEqual([base.state.rewardLookups, withReservation.state.rewardLookups]);
   });
 
   it('publishes distinct ordinary room-entry and pre-exit checkpoints', () => {
@@ -593,7 +631,7 @@ describe('decision run-state snapshots', () => {
         0,
       ),
     ).toBe(hubDeclaration.entries.length);
-    expect(biome.rewards.branches[0]?.bags.HubRewards).toBeUndefined();
+    expect(biome.rewards.branches[0]?.state.bags.HubRewards).toBeUndefined();
   });
 
   it('publishes every outer N decision while excluding Hub visits', () => {
@@ -1013,7 +1051,7 @@ describe('decision run-state snapshots', () => {
       g.validity !== 'valid'
     )
       throw new Error('expected valid FG route');
-    const expected = f.rewards.branches[0]?.arcanaFear;
+    const expected = f.rewards.branches[0]?.state.arcanaFear;
     const fSnapshot = f.rewards.runStateSnapshots[0];
     const gSnapshot = g.rewards.runStateSnapshots[0];
     expect(expected).toBeDefined();
@@ -1058,8 +1096,8 @@ describe('decision run-state snapshots', () => {
     const bag = aggregateDecisionRewardBag(
       store,
       [
-        { bags: { RunProgress: { remainingEntryCounts: firstTwoOnly(0, 1) } } },
-        { bags: { RunProgress: { remainingEntryCounts: firstTwoOnly(1, 0) } } },
+        { state: { bags: { RunProgress: { remainingEntryCounts: firstTwoOnly(0, 1) } } } },
+        { state: { bags: { RunProgress: { remainingEntryCounts: firstTwoOnly(1, 0) } } } },
       ],
       [requirementFacts(1), requirementFacts(0)],
     );
@@ -1126,7 +1164,7 @@ describe('decision run-state snapshots', () => {
     });
     const branch = Object.freeze({
       ...initializeTestRewardBranches()[0]!,
-      history,
+      state: Object.freeze({ ...initializeTestRewardBranches()[0]!.state, rewardHistory: history }),
     });
     const snapshot = createRunState({
       catalog,
@@ -1212,8 +1250,11 @@ describe('decision run-state snapshots', () => {
     );
     const branch = Object.freeze({
       ...initializeTestRewardBranches()[0]!,
-      history: attachTraitHistory(createRewardHistoryState(), traits),
-      traitHistory: traits,
+      state: Object.freeze({
+        ...initializeTestRewardBranches()[0]!.state,
+        rewardHistory: attachTraitHistory(createRewardHistoryState(), traits),
+        traitHistory: traits,
+      }),
     });
     const snapshot = createRunState({
       catalog,

@@ -884,7 +884,7 @@ describe('route-detour simulation', () => {
       ordinaryPositionFor(catalog, snapshot),
       traitContext(project, gBiome),
     );
-    expect(rewards.branches[0]?.traitHistory?.events).toContainEqual(
+    expect(rewards.branches[0]?.state.traitHistory?.events).toContainEqual(
       expect.objectContaining({
         giverKey: 'Hermes',
         bannedTraitKeys: ['HermesSpecialBoon', 'HermesCastDiscountBoon'],
@@ -1147,7 +1147,7 @@ describe('route-detour simulation', () => {
       });
       expect(
         rewards.branches.every(
-          (branch) => branch.traitHistory?.equippedTraits[traitKey] === undefined,
+          (branch) => branch.state.traitHistory?.equippedTraits[traitKey] === undefined,
         ),
       ).toBe(true);
     },
@@ -1192,7 +1192,7 @@ describe('route-detour simulation', () => {
     expect(
       rewards.branches.some(
         (branch) =>
-          branch.traitHistory?.equippedTraits.InfernalContractBoon?.traitKey ===
+          branch.state.traitHistory?.equippedTraits.InfernalContractBoon?.traitKey ===
           'InfernalContractBoon',
       ),
     ).toBe(true);

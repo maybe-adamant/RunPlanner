@@ -31,6 +31,7 @@ import type {
 } from '../materialization';
 import { assessHermesShrine, priorTwoSurfaceShopPresence } from '../commerce/hermes-shrine';
 import type { TargetRewardHistoryCheckpoint } from '../rewards';
+import { rewardLookupSets, sharedRewardLookups } from '../state/reward-lookups';
 import type {
   RequirementEvaluationEvidence,
   RoomGenerationExclusionEvidence,
@@ -730,26 +731,28 @@ function targetRewardHistories(
 ): ReadonlyMap<string, TargetRewardRequirementFacts> {
   const result = new Map<string, TargetRewardRequirementFacts>();
   for (const checkpoint of checkpoints ?? []) {
-    const first = checkpoint.histories[0];
+    const first = checkpoint.states[0];
     if (first === undefined) {
       continue;
     }
-    const firstPendingSpellDrop = checkpoint.pendingSpellDrops[0];
-    const firstAllSpellInvested = checkpoint.allSpellInvested[0];
+    const firstHistory = first.rewardHistory;
+    const firstPendingSpellDrop = Object.values(first.pendingHermesShrineDeliveries).some(
+      (delivery) => delivery.rewardType === 'SpellDrop',
+    );
+    const firstAllSpellInvested = first.hexProgress.talentDropsClosed === true;
     if (
-      firstPendingSpellDrop === undefined ||
-      firstAllSpellInvested === undefined ||
-      checkpoint.pendingSpellDrops.length !== checkpoint.histories.length ||
-      checkpoint.allSpellInvested.length !== checkpoint.histories.length ||
-      checkpoint.histories.some(
-        (history) =>
-          !sameRecord(history.useRecord, first.useRecord) ||
-          !sameRecord(history.biomeUseRecord, first.biomeUseRecord) ||
-          !sameRecord(history.lootTypeHistory, first.lootTypeHistory) ||
-          history.traitFacts.upgradableTraitCount !== first.traitFacts.upgradableTraitCount,
-      ) ||
-      checkpoint.pendingSpellDrops.some((pending) => pending !== firstPendingSpellDrop) ||
-      checkpoint.allSpellInvested.some((closed) => closed !== firstAllSpellInvested)
+      checkpoint.states.some(
+        (state) =>
+          !sameRecord(state.rewardHistory.useRecord, firstHistory.useRecord) ||
+          !sameRecord(state.rewardHistory.biomeUseRecord, firstHistory.biomeUseRecord) ||
+          !sameRecord(state.rewardHistory.lootTypeHistory, firstHistory.lootTypeHistory) ||
+          state.rewardHistory.traitFacts.upgradableTraitCount !==
+            firstHistory.traitFacts.upgradableTraitCount ||
+          Object.values(state.pendingHermesShrineDeliveries).some(
+            (delivery) => delivery.rewardType === 'SpellDrop',
+          ) !== firstPendingSpellDrop ||
+          (state.hexProgress.talentDropsClosed === true) !== firstAllSpellInvested,
+      )
     ) {
       throw new BiomeRoomGenerationContractError(
         `target ${semanticAddressKey(checkpoint.origin)} has divergent reward-history eligibility facts`,
@@ -758,17 +761,10 @@ function targetRewardHistories(
     result.set(
       semanticAddressKey(checkpoint.origin),
       Object.freeze({
-        history: first,
+        history: firstHistory,
         pendingSpellDrop: firstPendingSpellDrop,
         allSpellInvested: firstAllSpellInvested,
-        rewardLookups: Object.freeze(
-          Object.fromEntries(
-            Object.entries(checkpoint.rewardLookups).map(([key, rewardTypes]) => [
-              key,
-              new Set(rewardTypes),
-            ]),
-          ),
-        ),
+        rewardLookups: rewardLookupSets(sharedRewardLookups(checkpoint.states)),
       }),
     );
   }

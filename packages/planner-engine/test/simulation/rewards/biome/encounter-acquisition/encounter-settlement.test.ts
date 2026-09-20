@@ -63,8 +63,11 @@ describe('Personal Loan boss checkpoint', () => {
       const base = initializeTestRewardBranches()[0]!;
       const branch = {
         ...base,
-        traitHistory,
-        history: attachTraitHistory(base.history, traitHistory),
+        state: Object.freeze({
+          ...base.state,
+          traitHistory: traitHistory,
+          rewardHistory: attachTraitHistory(base.state.rewardHistory, traitHistory),
+        }),
       };
       const result = applyEncounterSettlementTransition({
         catalog,
@@ -82,7 +85,7 @@ describe('Personal Loan boss checkpoint', () => {
         gorgonPhaseBlocked: false,
         gorgonEvaluationBlocked: false,
       });
-      const history = result.branches[0]?.traitHistory;
+      const history = result.branches[0]?.state.traitHistory;
       expect(history?.equippedTraits.BankBoon).toMatchObject({
         traitKey: 'BankBoon',
         rarity: 'Common',

@@ -5,10 +5,8 @@ import { describe, expect, it } from 'vitest';
 
 import { createDefaultRouteLoadout } from '../../src/authored-project/loadout';
 import { createArcanaFearState } from '../../src/simulation/arcana-fear';
-import {
-  initializeRewardBranches,
-  publicRewardBranch,
-} from '../../src/simulation/rewards/branch-lifecycle';
+import { publicRewardBranch } from '../../src/simulation/rewards/branch-lifecycle';
+import { initializeTestRewardBranchesForRoute as initializeRewardBranches } from '../support/arcana-fear';
 
 function predecessorBranch() {
   const loadout = createDefaultRouteLoadout(catalog);
@@ -60,11 +58,17 @@ describe('reward frontier biome handoff', () => {
     const depleted = Object.freeze({ remainingEntryCounts: Object.freeze(remainingEntryCounts) });
 
     const next = initializeRewardBranches([
-      Object.freeze({ ...base, bags: Object.freeze({ RunProgress: full }) }),
-      Object.freeze({ ...base, bags: Object.freeze({ RunProgress: depleted }) }),
+      Object.freeze({
+        ...base,
+        state: Object.freeze({ ...base.state, bags: Object.freeze({ RunProgress: full }) }),
+      }),
+      Object.freeze({
+        ...base,
+        state: Object.freeze({ ...base.state, bags: Object.freeze({ RunProgress: depleted }) }),
+      }),
     ]);
 
     expect(next).toHaveLength(2);
-    expect(next.map((branch) => branch.bags.RunProgress)).toEqual([full, depleted]);
+    expect(next.map((branch) => branch.state.bags.RunProgress)).toEqual([full, depleted]);
   });
 });

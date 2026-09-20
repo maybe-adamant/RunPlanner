@@ -286,7 +286,7 @@ export function settleAuthoredAcquisitionSite(
       const replayEntry =
         replayEntryKey === undefined ? undefined : selectedSite.entries[replayEntryKey];
       const replaySources = echoReplay
-        ? sourceBranches.map((branch) => branch.history.lastRewardRecreation)
+        ? sourceBranches.map((branch) => branch.state.rewardHistory.lastRewardRecreation)
         : Object.freeze([]);
       const firstReplay = replaySources[0];
       const agreedReplay =

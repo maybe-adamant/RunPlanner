@@ -16,9 +16,9 @@ export interface HexProgressState {
 
 /** Lifecycle composition may only consume a closure fact after every surviving branch agrees. */
 export function attestTalentDropsClosed(
-  branches: readonly { readonly hexProgress: HexProgressState }[],
+  branches: readonly { readonly state: { readonly hexProgress: HexProgressState } }[],
 ): boolean {
-  const values = branches.map((branch) => branch.hexProgress.talentDropsClosed === true);
+  const values = branches.map((branch) => branch.state.hexProgress.talentDropsClosed === true);
   const first = values[0] ?? false;
   if (values.some((value) => value !== first)) {
     throw new Error('Hex Talent Drop closure frontier is divergent');
@@ -50,7 +50,7 @@ export function installHexTree(
   spellTraitKey: string,
   tree: AuthoredHexTreeConfiguration,
 ): RewardBranchState {
-  const current = branch.hexProgress;
+  const current = branch.state.hexProgress;
   if (current.tree !== undefined) return maybeAddGodSent(catalog, branch);
   const hex = catalog.hexes.byKey[spellTraitKey];
   const layout = hex?.layouts.byKey[tree.layoutKey];
@@ -64,27 +64,33 @@ export function installHexTree(
     godSentAdded: false,
     talentDropsClosed: false,
   });
-  return maybeAddGodSent(catalog, Object.freeze({ ...branch, hexProgress: installed }));
+  return maybeAddGodSent(
+    catalog,
+    Object.freeze({ ...branch, state: Object.freeze({ ...branch.state, hexProgress: installed }) }),
+  );
 }
 
 /** Re-evaluates one audited provider/keepsake contact without a second ledger. */
 export function maybeAddGodSent(catalog: Catalog, branch: RewardBranchState): RewardBranchState {
-  const progress = branch.hexProgress;
+  const progress = branch.state.hexProgress;
   if (progress.tree === undefined || progress.godSentAdded === true) return branch;
   const spellTraitKey = progress.spellTraitKey;
   const hex = spellTraitKey === undefined ? undefined : catalog.hexes.byKey[spellTraitKey];
   if (hex === undefined) return branch;
-  const traitHistory = branch.traitHistory;
+  const traitHistory = branch.state.traitHistory;
   const providerTraitHeld = Object.values(traitHistory?.equippedTraits ?? {}).some(
     (trait) => trait.giverKey === hex.godSent.providerKey,
   );
-  const providerKeepsakeHeld = branch.keepsakes.olympianSources.some(
+  const providerKeepsakeHeld = branch.state.keepsakes.olympianSources.some(
     (source) => source.providerKey === hex.godSent.providerKey,
   );
   if (!providerTraitHeld && !providerKeepsakeHeld) return branch;
   return Object.freeze({
     ...branch,
-    hexProgress: Object.freeze({ ...progress, godSentAdded: true }),
+    state: Object.freeze({
+      ...branch.state,
+      hexProgress: Object.freeze({ ...progress, godSentAdded: true }),
+    }),
   });
 }
 
@@ -93,9 +99,12 @@ export function bankPathPoints(branch: RewardBranchState, points: number): Rewar
   if (points === 0) return branch;
   return Object.freeze({
     ...branch,
-    hexProgress: Object.freeze({
-      ...branch.hexProgress,
-      bankedPathPoints: branch.hexProgress.bankedPathPoints + points,
+    state: Object.freeze({
+      ...branch.state,
+      hexProgress: Object.freeze({
+        ...branch.state.hexProgress,
+        bankedPathPoints: branch.state.hexProgress.bankedPathPoints + points,
+      }),
     }),
   });
 }
@@ -106,24 +115,27 @@ export function settlePathScreen(
   branch: RewardBranchState,
   points: 1 | 3 | 5,
 ): RewardBranchState {
-  const capacity = hexEffectiveCapacity(catalog, branch.hexProgress);
+  const capacity = hexEffectiveCapacity(catalog, branch.state.hexProgress);
   if (capacity === undefined) {
     throw new Error('Path screen settlement requires an installed Hex tree');
   }
   // The source adds grant - 1 to the raw bank before the implicit first
   // selection is attempted.  A full tree therefore retains the raw bonus.
-  const rawBank = branch.hexProgress.bankedPathPoints + points - 1;
-  const remaining = Math.max(0, capacity - branch.hexProgress.investedPathPoints);
+  const rawBank = branch.state.hexProgress.bankedPathPoints + points - 1;
+  const remaining = Math.max(0, capacity - branch.state.hexProgress.investedPathPoints);
   const selections = Math.min(remaining, rawBank + 1);
   const spentFromBank = Math.max(0, selections - 1);
-  const investedPathPoints = branch.hexProgress.investedPathPoints + selections;
+  const investedPathPoints = branch.state.hexProgress.investedPathPoints + selections;
   return Object.freeze({
     ...branch,
-    hexProgress: Object.freeze({
-      ...branch.hexProgress,
-      bankedPathPoints: rawBank - spentFromBank,
-      investedPathPoints,
-      ...(investedPathPoints >= capacity ? { talentDropsClosed: true } : {}),
+    state: Object.freeze({
+      ...branch.state,
+      hexProgress: Object.freeze({
+        ...branch.state.hexProgress,
+        bankedPathPoints: rawBank - spentFromBank,
+        investedPathPoints,
+        ...(investedPathPoints >= capacity ? { talentDropsClosed: true } : {}),
+      }),
     }),
   });
 }

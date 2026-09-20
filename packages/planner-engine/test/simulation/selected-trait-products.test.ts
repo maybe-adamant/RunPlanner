@@ -15,9 +15,11 @@ import {
   createTraitHistoryState,
   type ReachedLevelResolutionEvaluation,
 } from '../../src/simulation/traits';
-import { createTestArcanaFearState } from '../support/arcana-fear';
+import {
+  createTestArcanaFearState,
+  initializeTestRewardBranchesForRoute as initializeRewardBranches,
+} from '../support/arcana-fear';
 import { maybeAddGodSent } from '../../src/simulation/hex-progress';
-import { initializeRewardBranches } from '../../src/simulation/rewards/branch-lifecycle';
 import { settleEncounterTraitOffer } from '../../src/simulation/rewards/trait-settlement/coordinator';
 
 describe('selected trait products', () => {
@@ -38,8 +40,11 @@ describe('selected trait products', () => {
     });
     const branch = Object.freeze({
       ...initial,
-      history: attachTraitHistory(initial.history, history),
-      traitHistory: history,
+      state: Object.freeze({
+        ...initial.state,
+        rewardHistory: attachTraitHistory(initial.state.rewardHistory, history),
+        traitHistory: history,
+      }),
     });
     const offer = {
       kind: 'traits' as const,
@@ -95,7 +100,7 @@ describe('selected trait products', () => {
       rarificationActions: [] as const,
     };
     const spell = settleEncounterTraitOffer(catalog, initial, origin, offer, 1, 'pickup').branch;
-    expect(spell.hexProgress.godSentAdded).toBe(false);
+    expect(spell.state.hexProgress.godSentAdded).toBe(false);
     const laterKeepsake = initializeRewardBranches(
       undefined,
       createTestArcanaFearState(),
@@ -104,9 +109,15 @@ describe('selected trait products', () => {
     )[0]!;
     const late = maybeAddGodSent(catalog, {
       ...spell,
-      keepsakes: { ...spell.keepsakes, olympianSources: laterKeepsake.keepsakes.olympianSources },
+      state: Object.freeze({
+        ...spell.state,
+        keepsakes: {
+          ...spell.state.keepsakes,
+          olympianSources: laterKeepsake.state.keepsakes.olympianSources,
+        },
+      }),
     });
-    expect(late.hexProgress.godSentAdded).toBe(true);
+    expect(late.state.hexProgress.godSentAdded).toBe(true);
     expect(
       selectedTraitOfferProducts([late]).selectedTraitOffers[0]?.branches[0]?.settledHexTree,
     ).not.toHaveProperty('godSent');

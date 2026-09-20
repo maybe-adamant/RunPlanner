@@ -125,9 +125,9 @@ describe('offered-exit requirements', () => {
     const view = room?.targetGenerations[0]?.before;
     if (view === undefined) throw new Error('Outgoing reward checkpoint is missing');
     const target = fGenerationTargetAddress(fGenerationBaselineBatches, 7, 1);
-    const history = result.rewards.targetHistory.find(
-      (checkpoint) => semanticAddressKey(checkpoint.origin) === semanticAddressKey(target),
-    )?.histories[0];
+    const history = result.rewards.targetHistory
+      .find((checkpoint) => semanticAddressKey(checkpoint.origin) === semanticAddressKey(target))
+      ?.states.map((state) => state.rewardHistory)[0];
     if (history === undefined) throw new Error('Outgoing reward history is missing');
     const source = incomingBatch.targets[0]!.room;
     const facts = createBiomeRewardFacts(

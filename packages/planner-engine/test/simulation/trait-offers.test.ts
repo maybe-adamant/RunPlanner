@@ -409,11 +409,14 @@ describe('Sacrificial Hymn replacement composition', () => {
       catalog,
       Object.freeze({
         ...initial,
-        traitHistory: history,
-        stygianWell: Object.freeze({
-          ...initial.stygianWell,
-          yarnUses: 2,
-          hymnUses: 2,
+        state: Object.freeze({
+          ...initial.state,
+          traitHistory: history,
+          stygianWell: Object.freeze({
+            ...initial.state.stygianWell,
+            yarnUses: 2,
+            hymnUses: 2,
+          }),
         }),
       }),
       createIncomingRewardAddress(goldenFBiome, goldenFStartId),
@@ -421,14 +424,14 @@ describe('Sacrificial Hymn replacement composition', () => {
       history.events.length + 1,
       'encounterCompleted',
     );
-    expect(settlement.branch.stygianWell).toMatchObject({ yarnUses: 1, hymnUses: 1 });
-    const equipped = settlement.branch.traitHistory?.equippedTraits[replacement.traitKey];
+    expect(settlement.branch.state.stygianWell).toMatchObject({ yarnUses: 1, hymnUses: 1 });
+    const equipped = settlement.branch.state.traitHistory?.equippedTraits[replacement.traitKey];
     if (equipped === undefined)
       throw new Error(
         JSON.stringify({
           draft: eligibleDraft,
           findings: settlement.findingEntries,
-          events: settlement.branch.traitHistory?.events,
+          events: settlement.branch.state.traitHistory?.events,
         }),
       );
     expect(equipped).toMatchObject({ level: 3, rarity: 'Rare' });
@@ -466,8 +469,11 @@ describe('Sacrificial Hymn replacement composition', () => {
       [
         Object.freeze({
           ...initial,
-          traitHistory: history,
-          stygianWell: Object.freeze({ ...initial.stygianWell, yarnUses: 1, hymnUses: 1 }),
+          state: Object.freeze({
+            ...initial.state,
+            traitHistory: history,
+            stygianWell: Object.freeze({ ...initial.state.stygianWell, yarnUses: 1, hymnUses: 1 }),
+          }),
         }),
       ],
       source,
@@ -475,12 +481,12 @@ describe('Sacrificial Hymn replacement composition', () => {
       (rewardHistory) => factsWithHistory(baseFacts(), rewardHistory, new Set()),
       new Map(),
     )[0]!;
-    expect(settled.stygianWell).toMatchObject({ yarnUses: 0, hymnUses: 0 });
+    expect(settled.state.stygianWell).toMatchObject({ yarnUses: 0, hymnUses: 0 });
     expect(settled.traitEvaluations?.at(-1)?.context).toMatchObject({
       temporaryBoonRarityUses: 1,
       limitedSwapUses: 1,
     });
-    expect(settled.traitHistory?.equippedTraits.HeraWeaponBoon).toMatchObject({
+    expect(settled.state.traitHistory?.equippedTraits.HeraWeaponBoon).toMatchObject({
       level: 3,
       rarity: 'Rare',
     });
@@ -500,8 +506,11 @@ describe('Sacrificial Hymn replacement composition', () => {
       [
         Object.freeze({
           ...initial,
-          traitHistory: history,
-          stygianWell: Object.freeze({ ...initial.stygianWell, yarnUses: 1, hymnUses: 1 }),
+          state: Object.freeze({
+            ...initial.state,
+            traitHistory: history,
+            stygianWell: Object.freeze({ ...initial.state.stygianWell, yarnUses: 1, hymnUses: 1 }),
+          }),
         }),
       ],
       {
@@ -526,7 +535,7 @@ describe('Sacrificial Hymn replacement composition', () => {
       (rewardHistory) => factsWithHistory(baseFacts(), rewardHistory, new Set()),
     );
     const blocked = product.traitChildSettlements?.[0];
-    expect(blocked?.branch.stygianWell).toMatchObject({ yarnUses: 1, hymnUses: 1 });
+    expect(blocked?.branch.state.stygianWell).toMatchObject({ yarnUses: 1, hymnUses: 1 });
     expect(blocked?.candidateContext?.context).toMatchObject({
       temporaryBoonRarityUses: 1,
       limitedSwapUses: 1,
@@ -843,10 +852,10 @@ describe('trait legality and derived facts', () => {
         throw new Error(`${routeKey} final biome reward product is missing`);
       }
       const finalBranch = finalBiome.rewards.branches[0];
-      if (finalBranch === undefined || finalBranch.traitHistory === undefined) {
+      if (finalBranch === undefined || finalBranch.state.traitHistory === undefined) {
         throw new Error(`${routeKey} trait history is missing`);
       }
-      const events = finalBranch.traitHistory.events;
+      const events = finalBranch.state.traitHistory.events;
       expect(events.length).toBeGreaterThan(0);
       expect(
         events.some(
@@ -866,10 +875,10 @@ describe('trait legality and derived facts', () => {
         expect(events.some((event) => event.acquisitionRole === 'chosenSource')).toBe(true);
         expect(events.some((event) => event.acquisitionRole === 'spurnedSource')).toBe(true);
       }
-      expect(finalBranch.history.traitFacts.upgradableTraitCount).toBe(
-        finalBranch.traitHistory.upgradableTraitCount,
+      expect(finalBranch.state.rewardHistory.traitFacts.upgradableTraitCount).toBe(
+        finalBranch.state.traitHistory.upgradableTraitCount,
       );
-      expect('upgradableTraitCount' in finalBranch.history).toBe(false);
+      expect('upgradableTraitCount' in finalBranch.state.rewardHistory).toBe(false);
       expect(events.map((event) => event.sequence)).toEqual(
         [...events].map((event) => event.sequence).sort((left, right) => left - right),
       );
@@ -990,10 +999,10 @@ describe('reached trait offer chronology', () => {
     if (firstTrace === undefined) throw new Error('first-offer repair trace is missing');
     expect(firstTrace.branches[0]?.generation).toMatchObject({ applies: true, legal: false });
     expect(laterTrace).toBeUndefined();
-    expect(branch.traitHistory?.events).not.toContainEqual(
+    expect(branch.state.traitHistory?.events).not.toContainEqual(
       expect.objectContaining({ owner, acquisitionRole: 'source' }),
     );
-    expect(branch.traitHistory?.events).toHaveLength(0);
+    expect(branch.state.traitHistory?.events).toHaveLength(0);
     expect(
       createPreparedProjectCandidateSession(
         catalog,
@@ -1273,7 +1282,9 @@ describe('reached trait offer chronology', () => {
         }),
       }),
     );
-    expect(branch?.traitHistory?.events).toHaveLength(1);
-    expect(branch?.traitHistory?.equippedTraits[expectedOffer.options[0].traitKey]).toBeDefined();
+    expect(branch?.state.traitHistory?.events).toHaveLength(1);
+    expect(
+      branch?.state.traitHistory?.equippedTraits[expectedOffer.options[0].traitKey],
+    ).toBeDefined();
   });
 });

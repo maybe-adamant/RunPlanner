@@ -118,12 +118,12 @@ describe('application editor-session reconciliation', () => {
       expect(baseline.rewards.branches.length).toBeGreaterThan(0);
       expect(
         baseline.rewards.branches.every(
-          (branch) => branch.history.useRecord.SpellDrop === undefined,
+          (branch) => branch.state.rewardHistory.useRecord.SpellDrop === undefined,
         ),
       ).toBe(true);
       expect(
         baseline.rewards.branches.every((branch) =>
-          Object.values(branch.pendingHermesShrineDeliveries ?? {}).every(
+          Object.values(branch.state.pendingHermesShrineDeliveries ?? {}).every(
             (delivery) => delivery.rewardType !== 'SpellDrop',
           ),
         ),

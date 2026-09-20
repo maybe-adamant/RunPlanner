@@ -9,6 +9,8 @@ import {
 } from '../../authored-project/addresses';
 import type { ProjectDocument } from '../../authored-project/model';
 import type { RouteLoadout } from '../../authored-project/model';
+import type { ResolvedRoutePosition } from '../../authored-project/route-context';
+import { createRouteStartHistoryView } from '../history/fold';
 import type { ResolvedRewardOffer, ShopOptionSelection } from '../../reward-kernel';
 import type { ProjectEvaluation } from '../evaluation/evaluation-products';
 import {
@@ -103,6 +105,7 @@ export function createStartingRewardCandidateCapability(
   routeKey: string,
   reward: StartingRewardAddress,
   loadout: RouteLoadout,
+  routePosition: ResolvedRoutePosition,
 ): StartingRewardCandidateCapability {
   const binding = catalog.runStartReward.incomingReward;
   const branches = initializeRewardBranches(
@@ -113,6 +116,7 @@ export function createStartingRewardCandidateCapability(
     loadout.keepsakeEquipResults,
     routeKey,
     loadout,
+    { routePosition, historyView: createRouteStartHistoryView() },
   );
   return Object.freeze({
     evaluateOffer: (offer: ResolvedRewardOffer) => {

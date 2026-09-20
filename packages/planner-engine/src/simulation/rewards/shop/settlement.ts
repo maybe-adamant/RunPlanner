@@ -27,16 +27,12 @@ import {
 import { isAcquisitionAuthorshipMissingFinding } from '../../model';
 import { ownerRegion, type FindingRegionEntry } from '../../finding-regions';
 
-import { createTraitHistoryState } from '../../traits';
-
 import {
   freezeRecord,
   mergeEquivalentRewardBranches,
-  type PendingShopGoldMaterialization,
-  type PendingShopPaidOffer,
-  type PendingShopTravelRefill,
   type RewardBranchState,
 } from '../branch-primitives';
+import type { PendingShopGoldMaterialization, PendingShopPaidOffer } from '../../state/model';
 import { type ReachedTraitChildCheckpoint } from '../trait-settlement/coordinator';
 import {
   addRewardFinding,
@@ -62,6 +58,7 @@ import {
   deriveTravelRefill,
   eligibleShopGoldSourceOfferKeys,
   materializeShopGold,
+  type ShopTravelRefillProduct,
 } from './derived-rewards';
 
 /** Settles optional Shop offer entries at the exact post-outgoing roomExit site. */
@@ -133,7 +130,7 @@ export function settleShopAcquisitionSite(
       ]),
     );
   };
-  type TravelRefill = PendingShopTravelRefill;
+  type TravelRefill = ShopTravelRefillProduct;
   type PaidOffer = PendingShopPaidOffer;
   type ShopExecution = {
     candidate: RewardBranchState;
@@ -149,12 +146,16 @@ export function settleShopAcquisitionSite(
   type GoldMaterialization = PendingShopGoldMaterialization;
   const executions: ShopExecution[] = [];
   for (const branch of branches) {
-    const pending = branch.pendingShops[semanticAddressKey(room.origin)];
+    const pending = branch.state.pendingShops[semanticAddressKey(room.origin)];
     if (pending?.profileKey !== profile.key) {
       return fail(
-        `${room.gameName} lost its shop witness for ${JSON.stringify(order)}; pending=${JSON.stringify(Object.keys(branch.pendingShops))}`,
+        `${room.gameName} lost its shop witness for ${JSON.stringify(order)}; pending=${JSON.stringify(Object.keys(branch.state.pendingShops))}`,
       );
     }
+    const capability =
+      branch.pendingShopContinuations[semanticAddressKey(room.origin)]?.travelRefill;
+    if (pending.travelRefill !== undefined && capability === undefined)
+      return fail(`${room.gameName} lost its Travel Deal continuation`);
     executions.push({
       candidate: branch,
       witness: pending.witness,
@@ -162,21 +163,25 @@ export function settleShopAcquisitionSite(
         pending.remainingSlotIndexes ?? Object.freeze(entry.offers.map((_, index) => index)),
       travelActiveAtEntry:
         pending.travelActiveAtEntry ??
-        branch.traitHistory?.equippedTraits.RestockBoon !== undefined,
+        branch.state.traitHistory.equippedTraits.RestockBoon !== undefined,
       ...(() => {
         if (pending.goldActiveAtEntry !== undefined) {
           return { goldActiveAtEntry: pending.goldActiveAtEntry };
         }
-        const goldActiveAtEntry = Object.values(branch.traitHistory?.equippedTraits ?? {}).find(
-          (equipped) => {
-            const disposition = catalog.traits.byKey[equipped.traitKey]?.selectedDisposition;
-            return disposition?.kind === 'echo' && disposition.effect === 'doubleShop';
-          },
-        );
+        const goldActiveAtEntry = Object.values(
+          branch.state.traitHistory.equippedTraits ?? {},
+        ).find((equipped) => {
+          const disposition = catalog.traits.byKey[equipped.traitKey]?.selectedDisposition;
+          return disposition?.kind === 'echo' && disposition.effect === 'doubleShop';
+        });
         return goldActiveAtEntry === undefined ? {} : { goldActiveAtEntry };
       })(),
       firstNormalPurchaseSeen: pending.firstNormalPurchaseSeen ?? false,
-      ...(pending.travelRefill === undefined ? {} : { travelRefill: pending.travelRefill }),
+      ...(pending.travelRefill === undefined
+        ? {}
+        : {
+            travelRefill: { data: pending.travelRefill, capability: capability! },
+          }),
       ...(pending.goldMaterialization === undefined
         ? {}
         : { goldMaterialization: pending.goldMaterialization }),
@@ -346,15 +351,17 @@ export function settleShopAcquisitionSite(
           );
           continue;
         }
-        const slot = profile.slots.values[refill.slotIndex]!;
+        const slot = profile.slots.values[refill.data.slotIndex]!;
         const group = profile.groups.byKey[slot.groupKey]!;
         const exactOption =
           inventory.optionKey === null ? undefined : group.options.byKey[inventory.optionKey];
         if (
           exactOption === undefined ||
           exactOption.rewardType !== inventory.offer.rewardType ||
-          !refill.evaluateShopOption({ optionKey: exactOption.key, offer: inventory.offer })
-            .supported
+          !refill.capability.evaluateShopOption({
+            optionKey: exactOption.key,
+            offer: inventory.offer,
+          }).supported
         ) {
           entryPurchaseFailureRecorded = true;
           addRewardFinding(
@@ -535,7 +542,7 @@ export function settleShopAcquisitionSite(
           continue;
         }
         const source = materialization.sourceOffer;
-        const currentTraits = execution.candidate.traitHistory ?? createTraitHistoryState();
+        const currentTraits = execution.candidate.state.traitHistory;
         const sourceTargetDisappeared = materialization.sourcePomEligibleTraitKeys.some(
           (traitKey) => currentTraits.equippedTraits[traitKey] === undefined,
         );
@@ -603,8 +610,8 @@ export function settleShopAcquisitionSite(
         execution.witness,
         slotIndex,
         execution.remainingSlotIndexes,
-        execution.candidate.history,
-        context.facts(execution.candidate.history, new Set(), execution.candidate),
+        execution.candidate.state.rewardHistory,
+        context.facts(execution.candidate.state.rewardHistory, new Set(), execution.candidate),
         requirements,
       );
       if (purchase === undefined) {
@@ -638,7 +645,7 @@ export function settleShopAcquisitionSite(
                 boonRarityItemOverride: shopOption.boonRarityOverride,
               }),
             });
-      const prePurchaseTraits = execution.candidate.traitHistory;
+      const prePurchaseTraits = execution.candidate.state.traitHistory;
       const gold = materializeShopGold({
         catalog,
         branch: execution.candidate,
@@ -713,17 +720,17 @@ export function settleShopAcquisitionSite(
                 branchCohortSize,
                 sourceOfferKey: inventoryOffer.offerKey,
                 slotIndex,
-                rewardTypes: travelRefill.rewardTypes,
+                rewardTypes: travelRefill.data.rewardTypes,
                 branchesBeforeEntry,
-                evaluateOffer: travelRefill.evaluateOffer,
-                evaluateShopOption: travelRefill.evaluateShopOption,
+                evaluateOffer: travelRefill.capability.evaluateOffer,
+                evaluateShopOption: travelRefill.capability.evaluateShopOption,
               }),
             );
             const inventory = entry.travelDealRefill;
             if (
               inventory == null ||
               inventory.optionKey === null ||
-              !travelRefill.evaluateShopOption({
+              !travelRefill.capability.evaluateShopOption({
                 optionKey: inventory.optionKey,
                 offer: inventory.offer,
               }).supported
@@ -798,34 +805,45 @@ export function settleShopAcquisitionSite(
     const { candidate } = execution;
     const shopKey = semanticAddressKey(room.origin);
     if (context.completeAfterOrder === true || context.order === undefined) {
-      const { [shopKey]: completed, ...remainingShops } = candidate.pendingShops;
-      void completed;
-      next.push(Object.freeze({ ...candidate, pendingShops: freezeRecord(remainingShops) }));
+      next.push(closeShop(candidate, shopKey));
       continue;
     }
     next.push(
       Object.freeze({
         ...candidate,
-        pendingShops: freezeRecord({
-          ...candidate.pendingShops,
-          [shopKey]: Object.freeze({
-            profileKey: profile.key,
-            witness: execution.witness,
-            remainingSlotIndexes: execution.remainingSlotIndexes,
-            travelActiveAtEntry: execution.travelActiveAtEntry,
-            ...(execution.goldActiveAtEntry === undefined
+        pendingShopContinuations: freezeRecord({
+          ...candidate.pendingShopContinuations,
+          [shopKey]: Object.freeze(
+            execution.travelRefill === undefined
               ? {}
-              : { goldActiveAtEntry: execution.goldActiveAtEntry }),
-            firstNormalPurchaseSeen: execution.firstNormalPurchaseSeen,
-            ...(execution.travelRefill === undefined
-              ? {}
-              : { travelRefill: execution.travelRefill }),
-            ...(execution.goldMaterialization === undefined
-              ? {}
-              : { goldMaterialization: execution.goldMaterialization }),
-            ...(execution.contractOffer === undefined
-              ? {}
-              : { infernalContractOffer: execution.contractOffer }),
+              : {
+                  travelRefill: execution.travelRefill.capability,
+                },
+          ),
+        }),
+        state: Object.freeze({
+          ...candidate.state,
+          pendingShops: freezeRecord({
+            ...candidate.state.pendingShops,
+            [shopKey]: Object.freeze({
+              profileKey: profile.key,
+              witness: execution.witness,
+              remainingSlotIndexes: execution.remainingSlotIndexes,
+              travelActiveAtEntry: execution.travelActiveAtEntry,
+              ...(execution.goldActiveAtEntry === undefined
+                ? {}
+                : { goldActiveAtEntry: execution.goldActiveAtEntry }),
+              firstNormalPurchaseSeen: execution.firstNormalPurchaseSeen,
+              ...(execution.travelRefill === undefined
+                ? {}
+                : { travelRefill: execution.travelRefill.data }),
+              ...(execution.goldMaterialization === undefined
+                ? {}
+                : { goldMaterialization: execution.goldMaterialization }),
+              ...(execution.contractOffer === undefined
+                ? {}
+                : { infernalContractOffer: execution.contractOffer }),
+            }),
           }),
         }),
       }),
@@ -913,17 +931,23 @@ export function completePendingShopAcquisitionSite(
 ): readonly RewardBranchState[] {
   const shopKey = semanticAddressKey(owner);
   const pendingCount = branches.filter(
-    (branch) => branch.pendingShops[shopKey] !== undefined,
+    (branch) => branch.state.pendingShops[shopKey] !== undefined,
   ).length;
   if (pendingCount === 0) return branches;
   if (pendingCount !== branches.length) {
     return fail(`${semanticAddressKey(owner)} has a divergent pending Shop frontier`);
   }
-  return Object.freeze(
-    branches.map((branch) => {
-      const { [shopKey]: completed, ...remainingShops } = branch.pendingShops;
-      void completed;
-      return Object.freeze({ ...branch, pendingShops: freezeRecord(remainingShops) });
-    }),
-  );
+  return Object.freeze(branches.map((branch) => closeShop(branch, shopKey)));
+}
+
+function closeShop(branch: RewardBranchState, shopKey: string): RewardBranchState {
+  const { [shopKey]: completed, ...pendingShops } = branch.state.pendingShops;
+  const { [shopKey]: continuation, ...pendingShopContinuations } = branch.pendingShopContinuations;
+  void completed;
+  void continuation;
+  return Object.freeze({
+    ...branch,
+    state: Object.freeze({ ...branch.state, pendingShops: freezeRecord(pendingShops) }),
+    pendingShopContinuations: freezeRecord(pendingShopContinuations),
+  });
 }

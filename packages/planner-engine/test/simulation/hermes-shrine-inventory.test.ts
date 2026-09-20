@@ -1,5 +1,6 @@
 import { ordinaryPositionFor } from '../support/route-position';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
+import * as rewardChronology from '../../src/simulation/rewards/biome/chronology';
 
 import { catalog } from '@run-planner/hades2-catalog';
 import {
@@ -38,6 +39,7 @@ import {
   loadSurfaceNOProject,
   createSurfaceNOHermesShrineDeliveryCheckpoint,
   loadSurfaceNOPProject,
+  loadSurfaceNOPQProject,
   nBiome,
   nOccurrenceId,
   oBiome,
@@ -64,8 +66,11 @@ import { applyRoomEnteredTransition } from '../../src/simulation/rewards/biome/l
 import { attachTraitHistory, foldTraitHistoryEvents } from '../../src/simulation/traits';
 import { installHexTree, settlePathScreen } from '../../src/simulation/hex-progress';
 import { settleOwnedAcquisitionSite } from '../../src/simulation/rewards/acquisition/site-settlement';
-import { initializeRewardBranches } from '../../src/simulation/rewards/branch-lifecycle';
-import { createTestArcanaFearState, initializeTestRewardBranches } from '../support/arcana-fear';
+import {
+  createTestArcanaFearState,
+  initializeTestRewardBranches,
+  initializeTestRewardBranchesForRoute as initializeRewardBranches,
+} from '../support/arcana-fear';
 
 function branchesWithTravelDeal() {
   const traits = foldTraitHistoryEvents(catalog, [
@@ -103,14 +108,17 @@ function branchesWithTravelDeal() {
   return initializeTestRewardBranches().map((branch) =>
     Object.freeze({
       ...branch,
-      history: attachTraitHistory(
-        Object.freeze({
-          ...branch.history,
-          lootTypeHistory: Object.freeze({ AresUpgrade: 1, HephaestusUpgrade: 1 }),
-        }),
-        traits,
-      ),
-      traitHistory: traits,
+      state: Object.freeze({
+        ...branch.state,
+        rewardHistory: attachTraitHistory(
+          Object.freeze({
+            ...branch.state.rewardHistory,
+            lootTypeHistory: Object.freeze({ AresUpgrade: 1, HephaestusUpgrade: 1 }),
+          }),
+          traits,
+        ),
+        traitHistory: traits,
+      }),
     }),
   );
 }
@@ -176,11 +184,14 @@ function outgoingSeedBranches(rewardType: 'HermesUpgrade' | 'SpellDrop' | 'Talen
   return initializeTestRewardBranches().map((branch) =>
     Object.freeze({
       ...branch,
-      history: Object.freeze({
-        ...branch.history,
-        useRecord: Object.freeze({
-          ...branch.history.useRecord,
-          ...(rewardType === 'TalentDrop' ? { SpellDrop: 1 } : {}),
+      state: Object.freeze({
+        ...branch.state,
+        rewardHistory: Object.freeze({
+          ...branch.state.rewardHistory,
+          useRecord: Object.freeze({
+            ...branch.state.rewardHistory.useRecord,
+            ...(rewardType === 'TalentDrop' ? { SpellDrop: 1 } : {}),
+          }),
         }),
       }),
     }),
@@ -395,8 +406,8 @@ describe('Hermes Shrine entry inventory gate', () => {
       });
     }
     const withVisibleInventory = oResult(project);
-    expect(withVisibleInventory.rewards.branches.map((branch) => branch.bags)).toEqual(
-      baseline.rewards.branches.map((branch) => branch.bags),
+    expect(withVisibleInventory.rewards.branches.map((branch) => branch.state.bags)).toEqual(
+      baseline.rewards.branches.map((branch) => branch.state.bags),
     );
     const hostKey = semanticAddressKey(host);
     expect(
@@ -496,6 +507,46 @@ describe('Hermes Shrine entry inventory gate', () => {
     },
   );
 });
+
+// Observe the exact reward walk before progressive coverage bounds its public history.
+function observeDeliveryStop(
+  project: ReturnType<typeof loadSurfaceNOPQProject>,
+  kind: 'roomEntered' | 'encounterEndEffectsApplied',
+  owner: ReturnType<typeof createOccurrenceAddress>,
+) {
+  const observer = vi.spyOn(rewardChronology, 'evaluateBiomeRewardChronology');
+  try {
+    const evaluation = simulateProjectAssembly(catalog, project).evaluation;
+    let observed = 0;
+    observer.mock.calls.forEach(([, , history], index) => {
+      const result = observer.mock.results[index];
+      if (result?.type !== 'return') return;
+      const simulation = result.value.simulation;
+      if (
+        !simulation.findings.some(
+          (finding) =>
+            finding.code === 'hermesShrineDeliveryPlacementRequired' &&
+            finding.origin.kind === 'acquisitionEntry' &&
+            semanticAddressKey(finding.origin.site.owner) === semanticAddressKey(owner),
+        )
+      )
+        return;
+      const stop = history.events.find(
+        (event) =>
+          event.kind === kind && semanticAddressKey(event.origin) === semanticAddressKey(owner),
+      );
+      if (stop === undefined) return;
+      expect(simulation.branches.length).toBeGreaterThan(0);
+      for (const branch of simulation.branches)
+        expect(branch.state.reached.historyView).toBe(history.viewsBySequence[stop.sequence]);
+      observed += 1;
+    });
+    expect(observed).toBeGreaterThan(0);
+    return evaluation;
+  } finally {
+    observer.mockRestore();
+  }
+}
 
 describe('Hermes Shrine delayed deliveries', () => {
   function dreamPrebossEntry(itineraryBiomeKeys: readonly string[], biomeKey: 'I' | 'Q') {
@@ -623,13 +674,16 @@ describe('Hermes Shrine delayed deliveries', () => {
       const branches = initializeTestRewardBranches().map((branch) =>
         Object.freeze({
           ...branch,
-          pendingHermesShrineDeliveries: Object.freeze({
-            [entryKey]: Object.freeze({
-              sourceKey: entryKey,
-              sourceOrigin: source,
-              generationKey: 'initial:first' as const,
-              rewardType: 'HealBigDrop',
-              remainingUses: 8,
+          state: Object.freeze({
+            ...branch.state,
+            pendingHermesShrineDeliveries: Object.freeze({
+              [entryKey]: Object.freeze({
+                sourceKey: entryKey,
+                sourceOrigin: source,
+                generationKey: 'initial:first' as const,
+                rewardType: 'HealBigDrop',
+                remainingUses: 8,
+              }),
             }),
           }),
         }),
@@ -662,12 +716,14 @@ describe('Hermes Shrine delayed deliveries', () => {
             finding: expect.objectContaining({ code: 'hermesShrineDeliveryPlacementRequired' }),
           }),
         );
-        expect(transition.branches[0]?.pendingHermesShrineDeliveries[entryKey]).toMatchObject({
-          remainingUses: 8,
-        });
-        expect(transition.branches[0]?.pendingHermesShrineDeliveries[entryKey]).not.toHaveProperty(
-          'dueAt',
+        expect(transition.branches[0]?.state.pendingHermesShrineDeliveries[entryKey]).toMatchObject(
+          {
+            remainingUses: 8,
+          },
         );
+        expect(
+          transition.branches[0]?.state.pendingHermesShrineDeliveries[entryKey],
+        ).not.toHaveProperty('dueAt');
         return;
       }
       expect(transition.hermesShrineDeliveryPlacementRequired).toBe(true);
@@ -678,7 +734,7 @@ describe('Hermes Shrine delayed deliveries', () => {
         },
         fixedReward: { offer: { rewardType: 'HealBigDrop' } },
       });
-      expect(transition.branches[0]?.pendingHermesShrineDeliveries[entryKey]).toMatchObject({
+      expect(transition.branches[0]?.state.pendingHermesShrineDeliveries[entryKey]).toMatchObject({
         remainingUses: 0,
         dueAt: room.origin,
         dueSequence: entryEvent.sequence,
@@ -775,7 +831,8 @@ describe('Hermes Shrine delayed deliveries', () => {
       outcome: finding.origin,
       targetTraitKey: 'HeraCastBoon',
     });
-    const deliveryFinding = simulateProjectAssembly(catalog, project).evaluation.findings.find(
+    const awaitingDelivery = observeDeliveryStop(project, 'encounterEndEffectsApplied', host);
+    const deliveryFinding = awaitingDelivery.findings.find(
       (finding) =>
         finding.code === 'hermesShrineDeliveryPlacementRequired' &&
         finding.origin.kind === 'acquisitionEntry' &&
@@ -870,7 +927,9 @@ describe('Hermes Shrine Travel Deal generation', () => {
     expect(n.validity).toBe('valid');
     expect(n.rewards.branches.length).toBeGreaterThan(0);
     expect(
-      n.rewards.branches.every((branch) => branch.history.useRecord.SpellDrop === undefined),
+      n.rewards.branches.every(
+        (branch) => branch.state.rewardHistory.useRecord.SpellDrop === undefined,
+      ),
     ).toBe(true);
     const candidate = hermesShrineCandidateForProjectEvaluationAssembly(assembly, host);
     if (candidate === undefined) throw new Error('fixture lost the later O Shrine candidate');
@@ -957,16 +1016,21 @@ describe('Hermes Shrine Travel Deal generation', () => {
     expect(n.validity).toBe('valid');
     expect(n.rewards.branches.length).toBeGreaterThan(0);
     expect(
-      n.rewards.branches.every((branch) => branch.history.useRecord.SpellDrop === undefined),
+      n.rewards.branches.every(
+        (branch) => branch.state.rewardHistory.useRecord.SpellDrop === undefined,
+      ),
     ).toBe(true);
-    expect(n.rewards.rewardLookups.hubRewardLookup).toContain('SpellDrop');
-    const history = n.rewards.branches[0]?.history;
+    expect(n.rewards.branches[0]!.state.rewardLookups.hubRewardLookup).toContain('SpellDrop');
+    const history = n.rewards.branches[0]?.state.rewardHistory;
     if (history === undefined) throw new Error('Dream fixture lost its N branch history');
     const requirements = {
       ...rewardFacts(history).requirements,
       rewardLookups: Object.freeze(
         Object.fromEntries(
-          Object.entries(n.rewards.rewardLookups).map(([key, values]) => [key, new Set(values)]),
+          Object.entries(n.rewards.branches[0]!.state.rewardLookups).map(([key, values]) => [
+            key,
+            new Set(values),
+          ]),
         ),
       ),
     };
@@ -1268,7 +1332,10 @@ describe('Hermes Shrine Spell reservation lifecycle input', () => {
     );
     const unpurchased = evaluateShrineOutgoingPrefix(project, 'SpellDrop', oOccurrenceIds.combat01);
     expect(unpurchased.rewards.targetHistory).toContainEqual(
-      expect.objectContaining({ origin: target, pendingSpellDrops: [false] }),
+      expect.objectContaining({
+        origin: target,
+        states: [expect.objectContaining({ pendingHermesShrineDeliveries: {} })],
+      }),
     );
     expect(outgoingEligibility(unpurchased.runState, 'SpellDrop')).toBe('eligible');
 
@@ -1284,13 +1351,51 @@ describe('Hermes Shrine Spell reservation lifecycle input', () => {
       rewardType: 'SpellDrop',
     });
     expect(purchased.rewards.targetHistory).toContainEqual(
-      expect.objectContaining({ origin: target, pendingSpellDrops: [true] }),
+      expect.objectContaining({
+        origin: target,
+        states: [
+          expect.objectContaining({
+            pendingHermesShrineDeliveries: expect.objectContaining({
+              [sourceKey]: expect.objectContaining({ rewardType: 'SpellDrop' }),
+            }),
+          }),
+        ],
+      }),
     );
     expect(outgoingEligibility(purchased.runState, 'SpellDrop')).toBe('ineligible');
   });
 });
 
 describe('Hermes Shrine pickup settlement', () => {
+  it('publishes the exact Preboss entry state when terminal delivery placement stops the walk', () => {
+    let project = loadSurfaceNOPQProject();
+    const source = createOccurrenceAddress(
+      pBiome,
+      createOccurrenceId('surface-p-preboss-shop:postboss'),
+    );
+    project = applyProjectCommand(project, catalog, {
+      kind: 'SetHermesShrinePurchase',
+      occurrence: source,
+      generationKey: 'initial:first',
+      purchase: { delay: 8, rushed: false },
+    });
+    const evaluation = observeDeliveryStop(
+      project,
+      'roomEntered',
+      createOccurrenceAddress(
+        createBiomeAddress('Surface', 'Q'),
+        createOccurrenceId('surface-q-preboss'),
+      ),
+    );
+    const q = evaluation.route.biomes.find((biome) => biome.biomeKey === 'Q');
+    if (q === undefined || !('rewards' in q)) throw new Error('missing Q evaluation');
+    const finding = q.findings.find(
+      (finding) => finding.code === 'hermesShrineDeliveryPlacementRequired',
+    );
+    if (finding?.origin.kind !== 'acquisitionEntry')
+      throw new Error('missing terminal delivery placement');
+  });
+
   it('settles the canonical delayed delivery at its exact derived host and phase', () => {
     const assembly = simulateProjectAssembly(
       catalog,
@@ -1333,7 +1438,10 @@ describe('Hermes Shrine pickup settlement', () => {
       createDefaultAuthoredHexTree(catalog, 'SpellPolymorphTrait', 'Lung'),
     );
     for (let index = 0; index < 6; index += 1) closed = settlePathScreen(catalog, closed, 3);
-    expect(closed.hexProgress).toMatchObject({ investedPathPoints: 18, talentDropsClosed: true });
+    expect(closed.state.hexProgress).toMatchObject({
+      investedPathPoints: 18,
+      talentDropsClosed: true,
+    });
 
     const delivery = settleOwnedAcquisitionSite(
       catalog,
@@ -1352,7 +1460,7 @@ describe('Hermes Shrine pickup settlement', () => {
       },
       rewardFacts,
     );
-    expect(delivery.branches[0]?.hexProgress).toMatchObject({
+    expect(delivery.branches[0]?.state.hexProgress).toMatchObject({
       investedPathPoints: 18,
       bankedPathPoints: 2,
       talentDropsClosed: true,

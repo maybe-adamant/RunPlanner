@@ -58,23 +58,26 @@ function branchWithHammerFrontier(traitKey: string, experimentalHammerTraitKey?:
   );
   return Object.freeze({
     ...branch,
-    history: attachTraitHistory(branch.history, traitHistory),
-    traitHistory,
-    ...(experimentalHammerTraitKey === undefined
-      ? {}
-      : {
-          keepsakes: Object.freeze({
-            ...branch.keepsakes,
-            experimentalHammers: Object.freeze([
-              Object.freeze({
-                traitKey: experimentalHammerTraitKey,
-                remainingUses: 7,
-                acquisitionIdentity: 'keepsake:experimental-hammer',
-                active: true,
-              }),
-            ]),
+    state: Object.freeze({
+      ...branch.state,
+      rewardHistory: attachTraitHistory(branch.state.rewardHistory, traitHistory),
+      traitHistory,
+      ...(experimentalHammerTraitKey === undefined
+        ? {}
+        : {
+            keepsakes: Object.freeze({
+              ...branch.state.keepsakes,
+              experimentalHammers: Object.freeze([
+                Object.freeze({
+                  traitKey: experimentalHammerTraitKey,
+                  remainingUses: 7,
+                  acquisitionIdentity: 'keepsake:experimental-hammer',
+                  active: true,
+                }),
+              ]),
+            }),
           }),
-        }),
+    }),
   });
 }
 
@@ -108,8 +111,11 @@ describe('Anvil of Fates acquisition settlement', () => {
     const branches = initializeTestRewardBranches(createTestArcanaFearState()).map((branch) =>
       Object.freeze({
         ...branch,
-        history: attachTraitHistory(branch.history, beforeTraits),
-        traitHistory: beforeTraits,
+        state: Object.freeze({
+          ...branch.state,
+          rewardHistory: attachTraitHistory(branch.state.rewardHistory, beforeTraits),
+          traitHistory: beforeTraits,
+        }),
       }),
     );
     const findings = new Map();
@@ -142,11 +148,13 @@ describe('Anvil of Fates acquisition settlement', () => {
 
     expect(findings.size).toBe(0);
     expect(result.branches).toHaveLength(1);
-    expect(result.branches[0]?.traitHistory?.equippedTraits).toMatchObject({
+    expect(result.branches[0]?.state.traitHistory?.equippedTraits).toMatchObject({
       StaffLongAttackTrait: { hammerRank: 'RankI' },
       StaffJumpSpecialTrait: { hammerRank: 'RankI' },
     });
-    expect(result.branches[0]?.traitHistory?.equippedTraits.StaffDoubleAttackTrait).toBeUndefined();
+    expect(
+      result.branches[0]?.state.traitHistory?.equippedTraits.StaffDoubleAttackTrait,
+    ).toBeUndefined();
   });
 
   it('leaves the acquisition unresolved when the authored result is absent', () => {

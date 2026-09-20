@@ -188,9 +188,9 @@ describe('Nemesis random events', () => {
         expect(
           f.rewards.branches.every(
             (branch) =>
-              branch.traitHistory !== undefined &&
-              branch.traitHistory.equippedTraits[removedTraitKey] === undefined &&
-              branch.traitHistory.previouslyPickedTraitKeys.includes(removedTraitKey),
+              branch.state.traitHistory !== undefined &&
+              branch.state.traitHistory.equippedTraits[removedTraitKey] === undefined &&
+              branch.state.traitHistory.previouslyPickedTraitKeys.includes(removedTraitKey),
           ),
         ).toBe(true);
       }

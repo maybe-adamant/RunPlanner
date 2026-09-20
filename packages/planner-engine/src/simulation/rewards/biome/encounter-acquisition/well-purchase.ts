@@ -144,7 +144,7 @@ export function applyWellPurchaseTransition(inputs: {
   });
   const sourceOwner = sourceRow?.owner;
   const refillSupported = inputs.branches.every(
-    (branch) => branch.traitHistory?.equippedTraits.RestockBoon !== undefined,
+    (branch) => branch.state.traitHistory.equippedTraits.RestockBoon !== undefined,
   );
   const refillRealization = (() => {
     if (
@@ -266,8 +266,8 @@ export function applyWellPurchaseTransition(inputs: {
         authoredRoom?.origin.routeKey ?? event.origin.routeKey,
         well,
         event.generationKey,
-        branch.stygianWell,
-        branch.traitHistory,
+        branch.state.stygianWell,
+        branch.state.traitHistory,
         firstPurchaseGenerationKey,
       ),
     }),
@@ -300,7 +300,7 @@ export function applyWellPurchaseTransition(inputs: {
     branches: Object.freeze(
       inputs.branches.map((branch, index) => {
         const assessment = candidateContexts[index]?.purchase;
-        const direct = applyStygianWellPurchase(catalog, branch.stygianWell, itemKey, true);
+        const direct = applyStygianWellPurchase(catalog, branch.state.stygianWell, itemKey, true);
         const directOption = catalog.rewards.shops.byKey.RoomShop?.groups.values
           .flatMap((group) => group.options.values)
           .find((option) => option.key === itemKey);
@@ -310,7 +310,7 @@ export function applyWellPurchaseTransition(inputs: {
             : catalog.rewards.shops.byKey.RoomShop?.groups.values
                 .flatMap((group) => group.options.values)
                 .find((option) => option.key === twistResultKey);
-        let history = branch.history;
+        let history = branch.state.rewardHistory;
         if (directOption?.stygianWell?.effect === 'lastStand')
           history = applyConcreteAcquisition(catalog.rewards, history, {
             kind: 'consumable',
@@ -328,11 +328,14 @@ export function applyWellPurchaseTransition(inputs: {
           });
         return Object.freeze({
           ...branch,
-          history,
-          stygianWell:
-            !nestedResultIsValid || twistResultKey === undefined || twistResultKey === null
-              ? direct
-              : applyStygianWellPurchase(catalog, direct, twistResultKey, false),
+          state: Object.freeze({
+            ...branch.state,
+            rewardHistory: history,
+            stygianWell:
+              !nestedResultIsValid || twistResultKey === undefined || twistResultKey === null
+                ? direct
+                : applyStygianWellPurchase(catalog, direct, twistResultKey, false),
+          }),
         });
       }),
     ),

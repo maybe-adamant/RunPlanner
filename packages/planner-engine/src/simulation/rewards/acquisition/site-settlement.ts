@@ -327,7 +327,7 @@ export function settleAcquisitionResolvedReward(
             isOfferSupportedAtResolutionPoint(
               catalog.rewards,
               offer,
-              facts(branch.history, undefined, branch),
+              facts(branch.state.rewardHistory, undefined, branch),
               { acquisitionRole: resolution.role },
             ),
           ),

@@ -58,7 +58,7 @@ import {
   replaceTestRoomActionOrder,
 } from '@run-planner/test-fixtures/shared';
 import { createGoldenFGHProject, goldenHStartId } from '@run-planner/test-fixtures/underworld';
-import { initializeRewardBranches } from '../../../../src/simulation/rewards/branch-lifecycle';
+import { initializeTestRewardBranchesForRoute as initializeRewardBranches } from '../../../support/arcana-fear';
 
 const biome = createBiomeAddress('Underworld', 'H');
 
@@ -336,7 +336,10 @@ function olympianContactSeed(project: ProjectDocument, keepsakeKey: string) {
   const arcanaFear = createArcanaFearState(catalog, traitContext(project));
   const seed = initializeRewardBranches(undefined, arcanaFear, catalog, keepsakeKey)[0];
   if (seed === undefined) throw new Error('Olympian contact seed is missing');
-  return Object.freeze({ ...seed, rewardPriorities: Object.freeze([]) });
+  return Object.freeze({
+    ...seed,
+    state: Object.freeze({ ...seed.state, rewardPriorities: Object.freeze([]) }),
+  });
 }
 
 function evaluateWithOlympianContactSeed(project: ProjectDocument, keepsakeKey: string) {
@@ -768,7 +771,7 @@ describe('H Fields materialization', () => {
     expect(providerUses(beforeCageEntry)).toBe(1);
     expect(providerUses(cageEntry)).toBe(0);
     expect(
-      branch?.keepsakes.olympianSources.find((source) => source.providerKey === 'Zeus')
+      branch?.state.keepsakes.olympianSources.find((source) => source.providerKey === 'Zeus')
         ?.remainingForceUses,
     ).toBe(0);
     expect(branch?.events).toContainEqual(
@@ -1008,7 +1011,7 @@ describe('H Fields materialization', () => {
     const selectedBranch = selected.rewards.branches[0];
     if (selectedBranch === undefined) throw new Error('selected optional fixture has no branch');
     expect(
-      selectedBranch.bags.FieldsOptionalRewards?.remainingEntryCounts.reduce(
+      selectedBranch.state.bags.FieldsOptionalRewards?.remainingEntryCounts.reduce(
         (sum, count) => sum + count,
         0,
       ),
@@ -1049,8 +1052,8 @@ describe('H Fields materialization', () => {
       throw new Error('zero optional fixture must be valid');
     }
     const noneBranch = noneBiome.rewards.branches[0];
-    expect(noneBranch?.bags.FieldsOptionalRewards).toBeUndefined();
-    expect(noneBranch?.bags.RunProgress).toEqual(selectedBranch.bags.RunProgress);
+    expect(noneBranch?.state.bags.FieldsOptionalRewards).toBeUndefined();
+    expect(noneBranch?.state.bags.RunProgress).toEqual(selectedBranch.state.bags.RunProgress);
   });
 
   it('refills the real Fields optional cohort by appending one full set without discarding ineligible leftovers', () => {
@@ -1104,7 +1107,7 @@ describe('H Fields materialization', () => {
     if (branch === undefined || baselineBranch === undefined) {
       throw new Error('Fields optional refill fixtures have no reward branch');
     }
-    const remaining = branch.bags.FieldsOptionalRewards?.remainingEntryCounts;
+    const remaining = branch.state.bags.FieldsOptionalRewards?.remainingEntryCounts;
     if (remaining === undefined) throw new Error('Fields optional refill bag is missing');
 
     expect(
@@ -1126,7 +1129,7 @@ describe('H Fields materialization', () => {
       Array.from({ length: 18 }, () => 2),
     );
     expect(remaining.reduce((sum, count) => sum + count, 0)).toBe(36);
-    expect(branch.bags.RunProgress).toEqual(baselineBranch.bags.RunProgress);
+    expect(branch.state.bags.RunProgress).toEqual(baselineBranch.state.bags.RunProgress);
   });
 
   it.each([

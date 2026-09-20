@@ -21,7 +21,7 @@ export function settleSelectedHexTree(
     return branch;
   const settled = installHexTree(catalog, branch, selectedTraitKey, offer.hexTree);
   if (frozenAcquisition) return settled;
-  const progress = settled.hexProgress;
+  const progress = settled.state.hexProgress;
   const godSent =
     progress.godSentAdded === true ? catalog.hexes.byKey[selectedTraitKey]?.godSent : undefined;
   if (

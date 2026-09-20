@@ -442,12 +442,15 @@ export function divergentAllTogetherBranches(withEcho: boolean, lootSources: rea
   return [allTogetherHistory(false, withEcho), allTogetherHistory(true, withEcho)].map((traits) => {
     const rewardHistory = lootSources.reduce(
       (history, source) => recordLootTypeHistorySource(history, source),
-      initial.history,
+      initial.state.rewardHistory,
     );
     return Object.freeze({
       ...initial,
-      history: attachTraitHistory(rewardHistory, traits),
-      traitHistory: traits,
+      state: Object.freeze({
+        ...initial.state,
+        rewardHistory: attachTraitHistory(rewardHistory, traits),
+        traitHistory: traits,
+      }),
     });
   });
 }
@@ -716,11 +719,16 @@ export function echoGoldShop(
     ).map((branch) =>
       Object.freeze({
         ...branch,
-        history: attachTraitHistory(branch.history, traits),
-        traitHistory: traits,
-        ...(options.timePiece
-          ? { keepsakes: createKeepsakeState(catalog, 'GoldifyKeepsake', branch.arcanaFear) }
-          : {}),
+        state: Object.freeze({
+          ...branch.state,
+          rewardHistory: attachTraitHistory(branch.state.rewardHistory, traits),
+          traitHistory: traits,
+          ...(options.timePiece
+            ? {
+                keepsakes: createKeepsakeState(catalog, 'GoldifyKeepsake', branch.state.arcanaFear),
+              }
+            : {}),
+        }),
       }),
     );
   const facts = (

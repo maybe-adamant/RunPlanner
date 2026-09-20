@@ -28,10 +28,8 @@ import {
   applyExperimentalHammerEquipResult,
   applyJeweledPomEquipResult,
 } from '../../src/simulation/keepsakes/branch-transitions';
-import {
-  initializeRewardBranches,
-  publicRewardBranch,
-} from '../../src/simulation/rewards/branch-lifecycle';
+import { publicRewardBranch } from '../../src/simulation/rewards/branch-lifecycle';
+import { initializeTestRewardBranchesForRoute as initializeRewardBranches } from '../support/arcana-fear';
 import { settleEncounterTraitOffer } from '../../src/simulation/rewards/trait-settlement/coordinator';
 import { evaluateBiomeRewardsAssemblyInternal } from '../../src/simulation/rewards/biome';
 import { attachTraitHistory, foldTraitHistoryEvents } from '../../src/simulation/traits';
@@ -75,8 +73,11 @@ function cherishedBranchState(startingKeepsakeKey = 'ManaOverTimeRefundKeepsake'
   const prior = prerequisiteHistory();
   const seeded = {
     ...initialized,
-    history: attachTraitHistory(initialized.history, prior),
-    traitHistory: prior,
+    state: Object.freeze({
+      ...initialized.state,
+      rewardHistory: attachTraitHistory(initialized.state.rewardHistory, prior),
+      traitHistory: prior,
+    }),
   };
   const acquired = settleEncounterTraitOffer(
     catalog,
@@ -100,9 +101,15 @@ function cherishedBranchState(startingKeepsakeKey = 'ManaOverTimeRefundKeepsake'
     3,
     'encounterCompleted',
   );
-  if (acquired.branch.traitHistory?.equippedTraits.KeepsakeLevelBoon === undefined)
+  if (acquired.branch.state.traitHistory?.equippedTraits.KeepsakeLevelBoon === undefined)
     throw new Error('ordinary Cherished acquisition did not enter canonical trait history');
-  return { ...acquired.branch, traitHistory: acquired.branch.traitHistory };
+  return {
+    ...acquired.branch,
+    state: Object.freeze({
+      ...acquired.branch.state,
+      traitHistory: acquired.branch.state.traitHistory,
+    }),
+  };
 }
 
 function cherishedBranch(startingKeepsakeKey = 'ManaOverTimeRefundKeepsake'): RewardBranch {
@@ -127,15 +134,15 @@ function postbossOwner(biomeKey = 'F') {
 
 function directLaterEquip(keepsakeKey: string) {
   const branch = cherishedBranchState();
-  const rank = keepsakeRankForEquip(catalog, keepsakeKey, branch.traitHistory);
+  const rank = keepsakeRankForEquip(catalog, keepsakeKey, branch.state.traitHistory);
   return {
     branch,
     rank,
     keepsakes: applyKeepsakeReplacement(
       catalog,
-      branch.keepsakes,
+      branch.state.keepsakes,
       keepsakeKey,
-      branch.arcanaFear,
+      branch.state.arcanaFear,
       rank,
     ),
   };
@@ -171,12 +178,12 @@ function replayBiome(
 describe('Cherished Heirloom later keepsake equips', () => {
   it('records Cherished through the ordinary selected-offer acquisition fold', () => {
     const branch = cherishedBranchState();
-    expect(branch.traitHistory.equippedTraits.KeepsakeLevelBoon).toMatchObject({
+    expect(branch.state.traitHistory.equippedTraits.KeepsakeLevelBoon).toMatchObject({
       giverKey: 'Demeter',
       rarity: 'Duo',
       traitKey: 'KeepsakeLevelBoon',
     });
-    expect(branch.traitHistory.events).toContainEqual(
+    expect(branch.state.traitHistory.events).toContainEqual(
       expect.objectContaining({
         kind: 'traitOffer',
         acquisitionRole: 'selection',
@@ -213,7 +220,7 @@ describe('Cherished Heirloom later keepsake equips', () => {
     const pom = directLaterEquip('HadesAndPersephoneKeepsake');
     const pomApplied = applyJeweledPomEquipResult(
       catalog,
-      { ...pom.branch, keepsakes: pom.keepsakes },
+      { ...pom.branch, state: Object.freeze({ ...pom.branch.state, keepsakes: pom.keepsakes }) },
       'HadesAndPersephoneKeepsake',
       { jeweledPom: { traitKey: 'HadesLifestealBoon' } },
       createKeepsakeEquipResultAddress(postbossOwner(), 'jeweledPom'),
@@ -221,12 +228,15 @@ describe('Cherished Heirloom later keepsake equips', () => {
       pom.rank,
     );
     expect(pom.rank).toBe('Heroic');
-    expect(pomApplied.keepsakes.jeweledPom?.levels).toBe(4);
+    expect(pomApplied.state.keepsakes.jeweledPom?.levels).toBe(4);
 
     const hammer = directLaterEquip('TempHammerKeepsake');
     const hammerApplied = applyExperimentalHammerEquipResult(
       catalog,
-      { ...hammer.branch, keepsakes: hammer.keepsakes },
+      {
+        ...hammer.branch,
+        state: Object.freeze({ ...hammer.branch.state, keepsakes: hammer.keepsakes }),
+      },
       'TempHammerKeepsake',
       { experimentalHammer: { kind: 'selected', traitKey: 'StaffJumpSpecialTrait' } },
       createKeepsakeEquipResultAddress(postbossOwner(), 'experimentalHammer'),
@@ -235,7 +245,7 @@ describe('Cherished Heirloom later keepsake equips', () => {
       hammer.rank,
     );
     expect(hammer.rank).toBe('Heroic');
-    expect(hammerApplied.keepsakes.experimentalHammers.at(-1)?.remainingUses).toBe(30);
+    expect(hammerApplied.state.keepsakes.experimentalHammers.at(-1)?.remainingUses).toBe(30);
   });
 
   it('applies rank IV at the legal rack and carries it into the succeeding biome only once', () => {
@@ -247,7 +257,7 @@ describe('Cherished Heirloom later keepsake equips', () => {
     });
     const throughF = replayBiome(project, 'F', [cherishedBranch()]);
     const afterRack = throughF.branches[0];
-    expect(afterRack?.keepsakes).toMatchObject({
+    expect(afterRack?.state.keepsakes).toMatchObject({
       currentKey: 'SkipEncounterKeepsake',
       figLeaf: { remainingUses: 4, activatedThisBiome: false },
       history: [
@@ -256,7 +266,7 @@ describe('Cherished Heirloom later keepsake equips', () => {
       ],
     });
 
-    const succeedingBiome = beginBiomeKeepsakeState(afterRack!.keepsakes);
+    const succeedingBiome = beginBiomeKeepsakeState(afterRack!.state.keepsakes);
     expect(succeedingBiome.figLeaf).toEqual({
       remainingUses: 4,
       activatedThisBiome: false,
@@ -272,9 +282,9 @@ describe('Cherished Heirloom later keepsake equips', () => {
     });
     const throughF = replayBiome(project, 'F', [cherishedBranch()]);
     const afterRack = throughF.branches[0]!;
-    expect(afterRack.keepsakes.currentKey).toBe('SpellTalentKeepsake');
-    expect(afterRack.hexProgress).toEqual({ bankedPathPoints: 7, investedPathPoints: 0 });
-    expect(afterRack.rewardPriorities).toEqual(['SpellDrop']);
+    expect(afterRack.state.keepsakes.currentKey).toBe('SpellTalentKeepsake');
+    expect(afterRack.state.hexProgress).toEqual({ bankedPathPoints: 7, investedPathPoints: 0 });
+    expect(afterRack.state.rewardPriorities).toEqual(['SpellDrop']);
   });
 
   it('resolves real Postboss Gorgon, Pom, and Hammer paths through the rank forwarding seam', () => {
@@ -286,7 +296,7 @@ describe('Cherished Heirloom later keepsake equips', () => {
       keepsakeKey: 'AthenaEncounterKeepsake',
     });
     expect(
-      replayBiome(gorgonProject, 'F', [cherishedBranch()]).branches[0]?.keepsakes,
+      replayBiome(gorgonProject, 'F', [cherishedBranch()]).branches[0]?.state.keepsakes,
     ).toMatchObject({
       currentKey: 'AthenaEncounterKeepsake',
       gorgon: { status: 'pending', rarityLevel: 4 },
@@ -302,7 +312,9 @@ describe('Cherished Heirloom later keepsake equips', () => {
       result: createKeepsakeEquipResultAddress(rack, 'jeweledPom'),
       value: { traitKey: 'HadesLifestealBoon' },
     });
-    expect(replayBiome(pomProject, 'F', [cherishedBranch()]).branches[0]?.keepsakes).toMatchObject({
+    expect(
+      replayBiome(pomProject, 'F', [cherishedBranch()]).branches[0]?.state.keepsakes,
+    ).toMatchObject({
       currentKey: 'HadesAndPersephoneKeepsake',
       jeweledPom: { active: true, levels: 4, grantedTraitKey: 'HadesLifestealBoon' },
     });
@@ -319,7 +331,7 @@ describe('Cherished Heirloom later keepsake equips', () => {
     });
     const hammer = replayBiome(hammerProject, 'F', [
       cherishedBranch(),
-    ]).branches[0]?.keepsakes.experimentalHammers.at(-1);
+    ]).branches[0]?.state.keepsakes.experimentalHammers.at(-1);
     expect(catalog.keepsakes.byKey.TempHammerKeepsake?.effect).toMatchObject({
       kind: 'experimentalHammer',
       qualifyingEncounterUsesByRank: { Heroic: 30 },
@@ -338,12 +350,15 @@ describe('Cherished Heirloom later keepsake equips', () => {
     const unchangedState = createKeepsakeState(catalog, 'RarifyKeepsake', arcanaFear);
     const unchanged: RewardBranch = {
       ...cherishedBranch(),
-      keepsakes: {
-        ...unchangedState,
-        callingCard: { remainingCharges: 2 },
-      },
+      state: Object.freeze({
+        ...cherishedBranch().state,
+        keepsakes: {
+          ...unchangedState,
+          callingCard: { remainingCharges: 2 },
+        },
+      }),
     };
-    const afterRack = replayBiome(unchangedProject, 'F', [unchanged]).branches[0]?.keepsakes;
+    const afterRack = replayBiome(unchangedProject, 'F', [unchanged]).branches[0]?.state.keepsakes;
     expect(afterRack?.callingCard?.remainingCharges).toBe(2);
     expect(afterRack?.history.at(-1)).toEqual({
       key: 'RarifyKeepsake',
@@ -371,9 +386,12 @@ describe('Cherished Heirloom later keepsake equips', () => {
       selection: rack,
       keepsakeKey: 'GoldifyKeepsake',
     });
-    const seeded: RewardBranch = { ...cherishedBranch(), keepsakes: removed };
+    const seeded: RewardBranch = {
+      ...cherishedBranch(),
+      state: Object.freeze({ ...cherishedBranch().state, keepsakes: removed }),
+    };
     const evaluated = replayBiome(project, 'F', [seeded]);
-    expect(evaluated.branches[0]?.keepsakes).toMatchObject({
+    expect(evaluated.branches[0]?.state.keepsakes).toMatchObject({
       currentKey: 'BossPreDamageKeepsake',
       removedKeys: ['GoldifyKeepsake'],
       timePiece: { remainingCharges: 4 },
@@ -414,10 +432,12 @@ describe('Cherished Heirloom later keepsake equips', () => {
 
   it('attests both status and captured pending Gorgon source level across branches', () => {
     const heroic = directLaterEquip('AthenaEncounterKeepsake').keepsakes;
-    expect(attestGorgonBranchState([{ keepsakes: heroic }, { keepsakes: heroic }])).toBe('pending');
+    expect(
+      attestGorgonBranchState([{ state: { keepsakes: heroic } }, { state: { keepsakes: heroic } }]),
+    ).toBe('pending');
     const epic = createKeepsakeState(catalog, 'AthenaEncounterKeepsake', arcanaFear);
-    expect(() => attestGorgonBranchState([{ keepsakes: heroic }, { keepsakes: epic }])).toThrow(
-      'Gorgon branch frontier is divergent',
-    );
+    expect(() =>
+      attestGorgonBranchState([{ state: { keepsakes: heroic } }, { state: { keepsakes: epic } }]),
+    ).toThrow('Gorgon branch frontier is divergent');
   });
 });

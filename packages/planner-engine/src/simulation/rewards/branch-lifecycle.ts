@@ -16,10 +16,14 @@ import type { ArcanaFearState } from '../arcana-fear';
 import { beginBiomeArcanaFearState } from '../arcana-fear';
 import { beginBiomeKeepsakeState, createKeepsakeState } from '../keepsakes/state';
 import { applyTranscendentEmbryoEquipResult } from '../keepsakes/branch-transitions';
-import { attachTraitHistory, createTraitHistoryState, recordAspectStartingTrait } from '../traits';
+import { createTraitHistoryState, recordAspectStartingTrait } from '../traits';
 import { mergeEquivalentRewardBranches, type RewardBranchState } from './branch-primitives';
 import type { RewardBranch } from './model';
 import { installHexTree, maybeAddGodSent } from '../hex-progress';
+import { createEmptyRewardLookups, type SimulationState } from '../state/model';
+import { replaceSimulationTraitHistory } from '../state/transitions';
+import type { ResolvedRoutePosition } from '../../authored-project/route-context';
+import type { HistoryStateView } from '../history';
 import {
   applyExperimentalHammerEquipResult,
   applyJeweledPomEquipResult,
@@ -50,7 +54,13 @@ export function beginRewardRoom(
   return Object.freeze(
     branches.map((branch) =>
       advanceRewardBranch(
-        Object.freeze({ ...branch, history: beginCurrentRoomRewardHistory(branch.history) }),
+        Object.freeze({
+          ...branch,
+          state: Object.freeze({
+            ...branch.state,
+            rewardHistory: beginCurrentRoomRewardHistory(branch.state.rewardHistory),
+          }),
+        }),
         historySequence,
       ),
     ),
@@ -58,16 +68,20 @@ export function beginRewardRoom(
 }
 
 export function initializeRewardBranches(
-  initialBranches?: readonly RewardBranch[],
-  initialArcanaFear?: ArcanaFearState,
-  catalog?: Catalog,
-  startingKeepsakeKey?: string,
-  startingKeepsakeEquipResults?: AuthoredKeepsakeEquipResults,
-  routeKey?: string,
-  loadout?: {
+  initialBranches: readonly RewardBranch[] | undefined,
+  initialArcanaFear: ArcanaFearState | undefined,
+  catalog: Catalog,
+  startingKeepsakeKey: string,
+  startingKeepsakeEquipResults: AuthoredKeepsakeEquipResults | undefined,
+  routeKey: string,
+  loadout: {
     readonly weaponKey: string;
     readonly aspectKey: string;
     readonly aspectHexTree?: import('../../authored-project/traits/state').AuthoredHexTreeConfiguration;
+  },
+  reached: {
+    readonly routePosition: ResolvedRoutePosition;
+    readonly historyView: HistoryStateView;
   },
 ): readonly RewardBranchState[] {
   if (initialBranches === undefined) {
@@ -77,12 +91,19 @@ export function initializeRewardBranches(
       startingKeepsakeKey === undefined
     )
       throw new Error('initial branch state is required');
-    const branch = Object.freeze({
+    const state: SimulationState = Object.freeze({
+      equipment: Object.freeze({
+        weaponKey: loadout.weaponKey,
+        aspectKey: loadout.aspectKey,
+      }),
+      reached: Object.freeze(reached),
       bags: Object.freeze({}),
       rewardPriorities: Object.freeze([]),
       hexProgress: Object.freeze({ bankedPathPoints: 0, investedPathPoints: 0 }),
-      history: createRewardHistoryState(),
-      events: Object.freeze([]),
+      rewardHistory: createRewardHistoryState(),
+      traitHistory: createTraitHistoryState(),
+      arcanaFear: initialArcanaFear,
+      keepsakes: createKeepsakeState(catalog, startingKeepsakeKey, initialArcanaFear),
       pendingShops: Object.freeze({}),
       pendingHermesShrineDeliveries: Object.freeze({}),
       stygianWell: Object.freeze({
@@ -93,14 +114,17 @@ export function initializeRewardBranches(
         emptySlotUses: Object.freeze([]),
         extendedUses: 0,
       }),
+      rewardLookups: createEmptyRewardLookups(catalog),
+    });
+    const branch = Object.freeze({
+      state,
+      events: Object.freeze([]),
+      pendingShopContinuations: Object.freeze({}),
       processedThroughHistorySequence: 0,
-      traitHistory: createTraitHistoryState(),
       traitEvaluations: Object.freeze([]),
-      arcanaFear: initialArcanaFear,
-      keepsakes: createKeepsakeState(catalog, startingKeepsakeKey, initialArcanaFear),
     });
     const initialWithHex =
-      loadout?.aspectKey === 'SuitHexAspect' && loadout.aspectHexTree !== undefined
+      loadout.aspectKey === 'SuitHexAspect' && loadout.aspectHexTree !== undefined
         ? installHexTree(catalog, branch, 'SpellMoonBeamTrait', loadout.aspectHexTree)
         : branch;
     const pressured = applyMoonBeamEquip(
@@ -115,7 +139,7 @@ export function initializeRewardBranches(
       startingKeepsakeKey,
       startingKeepsakeEquipResults,
       createKeepsakeEquipResultAddress(
-        createRouteStartKeepsakeSelectionAddress(routeKey ?? 'route'),
+        createRouteStartKeepsakeSelectionAddress(routeKey),
         'jeweledPom',
       ),
       0,
@@ -129,7 +153,7 @@ export function initializeRewardBranches(
             startingKeepsakeKey,
             startingKeepsakeEquipResults.transcendentEmbryo,
             createKeepsakeEquipResultAddress(
-              createRouteStartKeepsakeSelectionAddress(routeKey ?? 'route'),
+              createRouteStartKeepsakeSelectionAddress(routeKey),
               'transcendentEmbryo',
             ),
             0,
@@ -144,26 +168,25 @@ export function initializeRewardBranches(
       startingKeepsakeKey,
       startingKeepsakeEquipResults,
       createKeepsakeEquipResultAddress(
-        createRouteStartKeepsakeSelectionAddress(routeKey ?? 'route'),
+        createRouteStartKeepsakeSelectionAddress(routeKey),
         'experimentalHammer',
       ),
       0,
-      loadout ?? { weaponKey: '', aspectKey: '' },
+      loadout,
     );
     const traitHistory = recordAspectStartingTrait(
       catalog,
-      initialized.traitHistory ?? createTraitHistoryState(),
-      createRouteStartKeepsakeSelectionAddress(routeKey ?? 'route'),
-      loadout ?? { aspectKey: '' },
+      initialized.state.traitHistory,
+      createRouteStartKeepsakeSelectionAddress(routeKey),
+      loadout,
     );
     const withGodSent = maybeAddGodSent(catalog, initialized);
     return Object.freeze([
-      traitHistory === withGodSent.traitHistory
+      traitHistory === withGodSent.state.traitHistory
         ? withGodSent
         : Object.freeze({
             ...withGodSent,
-            history: attachTraitHistory(withGodSent.history, traitHistory),
-            traitHistory,
+            state: replaceSimulationTraitHistory(withGodSent.state, traitHistory),
           }),
     ]);
   }
@@ -175,28 +198,18 @@ export function initializeRewardBranches(
   return mergeEquivalentRewardBranches(
     initialBranches.map((branch) =>
       Object.freeze({
-        bags: branch.bags,
-        rewardPriorities: branch.rewardPriorities,
-        hexProgress: branch.hexProgress,
-        history: beginBiomeRewardHistory(branch.history),
+        state: Object.freeze({
+          ...branch.state,
+          reached: Object.freeze(reached),
+          rewardHistory: beginBiomeRewardHistory(branch.state.rewardHistory),
+          pendingShops: Object.freeze({}),
+          arcanaFear: beginBiomeArcanaFearState(branch.state.arcanaFear),
+          keepsakes: beginBiomeKeepsakeState(branch.state.keepsakes),
+        }),
         events: Object.freeze([]),
-        pendingShops: Object.freeze({}),
-        pendingHermesShrineDeliveries: branch.pendingHermesShrineDeliveries ?? Object.freeze({}),
-        stygianWell:
-          branch.stygianWell ??
-          Object.freeze({
-            sparkUses: 0,
-            yarnUses: 0,
-            hymnUses: 0,
-            discountUses: Object.freeze([]),
-            emptySlotUses: Object.freeze([]),
-            extendedUses: 0,
-          }),
+        pendingShopContinuations: Object.freeze({}),
         processedThroughHistorySequence: 0,
-        traitHistory: branch.traitHistory ?? createTraitHistoryState(),
         traitEvaluations: Object.freeze([]),
-        arcanaFear: beginBiomeArcanaFearState(branch.arcanaFear),
-        keepsakes: beginBiomeKeepsakeState(branch.keepsakes),
       }),
     ),
   );
@@ -204,25 +217,8 @@ export function initializeRewardBranches(
 
 export function publicRewardBranch(branch: RewardBranchState): RewardBranch {
   return Object.freeze({
-    bags: branch.bags,
-    rewardPriorities: branch.rewardPriorities,
-    hexProgress: branch.hexProgress,
-    history: branch.history,
+    state: branch.state,
     events: branch.events,
     processedThroughHistorySequence: branch.processedThroughHistorySequence,
-    ...(branch.traitHistory === undefined ? {} : { traitHistory: branch.traitHistory }),
-    arcanaFear: branch.arcanaFear,
-    keepsakes: branch.keepsakes,
-    ...(Object.keys(branch.pendingHermesShrineDeliveries).length === 0
-      ? {}
-      : { pendingHermesShrineDeliveries: branch.pendingHermesShrineDeliveries }),
-    ...(branch.stygianWell.sparkUses === 0 &&
-    branch.stygianWell.yarnUses === 0 &&
-    branch.stygianWell.hymnUses === 0 &&
-    branch.stygianWell.extendedUses === 0 &&
-    branch.stygianWell.discountUses.length === 0 &&
-    branch.stygianWell.emptySlotUses.length === 0
-      ? {}
-      : { stygianWell: branch.stygianWell }),
   });
 }

@@ -1,3 +1,4 @@
+import { replaceSimulationTraitHistory } from '../../../state/transitions';
 import type { Catalog } from '../../../../catalog-schema';
 import {
   createFountainRarityOutcomeAddress,
@@ -6,11 +7,7 @@ import {
 import { ownerRegion } from '../../../finding-regions';
 import type { CanonicalAuthoredRoom } from '../../../materialization';
 import { assessPhialTraitTargets, consumePhial } from '../../../keepsakes/trait-effects';
-import {
-  attachTraitHistory,
-  createTraitHistoryState,
-  settleFountainRarityMutation,
-} from '../../../traits';
+import { settleFountainRarityMutation } from '../../../traits';
 import { advanceRewardBranches } from '../../branch-lifecycle';
 import type { RewardBranchState } from '../../branch-primitives';
 import { rewardFinding } from '../../findings';
@@ -41,12 +38,9 @@ export function applyFountainUsedTransition(
     dependencies: Object.freeze([]),
   });
   const frontiers = branches.map((branch) => {
-    const targets = assessPhialTraitTargets(
-      catalog,
-      branch.traitHistory ?? createTraitHistoryState(),
-    );
+    const targets = assessPhialTraitTargets(catalog, branch.state.traitHistory);
     return Object.freeze({
-      status: branch.keepsakes.phial?.status,
+      status: branch.state.keepsakes.phial?.status,
       consumptionTargetKeys: targets.consumptionTargetKeys,
       mutationTargetKeys: targets.mutationTargetKeys,
     });
@@ -120,15 +114,15 @@ export function applyFountainUsedTransition(
     });
   }
   const nextBranches = branches.map((branch) => {
-    const frontier = assessPhialTraitTargets(
-      catalog,
-      branch.traitHistory ?? createTraitHistoryState(),
-    );
-    if (branch.keepsakes.phial?.status !== 'pending') return branch;
+    const frontier = assessPhialTraitTargets(catalog, branch.state.traitHistory);
+    if (branch.state.keepsakes.phial?.status !== 'pending') return branch;
     if (frontier.consumptionTargetKeys.length === 0) return branch;
     if (frontier.mutationTargetKeys.length === 0)
-      return Object.freeze({ ...branch, keepsakes: consumePhial(branch.keepsakes) });
-    const before = branch.traitHistory ?? createTraitHistoryState();
+      return Object.freeze({
+        ...branch,
+        state: Object.freeze({ ...branch.state, keepsakes: consumePhial(branch.state.keepsakes) }),
+      });
+    const before = branch.state.traitHistory;
     const settled = settleFountainRarityMutation(
       catalog,
       before,
@@ -139,9 +133,10 @@ export function applyFountainUsedTransition(
     if (!settled.legal) return branch;
     return Object.freeze({
       ...branch,
-      history: attachTraitHistory(branch.history, settled.history),
-      traitHistory: settled.history,
-      keepsakes: consumePhial(branch.keepsakes),
+      state: replaceSimulationTraitHistory(
+        Object.freeze({ ...branch.state, keepsakes: consumePhial(branch.state.keepsakes) }),
+        settled.history,
+      ),
     });
   });
   return Object.freeze({

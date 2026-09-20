@@ -350,15 +350,18 @@ describe('Hermes Shrine delivery placement', () => {
     const branch = initializeTestRewardBranches()[0]!;
     const pending = Object.freeze({
       ...branch,
-      pendingHermesShrineDeliveries: Object.freeze({
-        [entryKey]: Object.freeze({
-          sourceKey: entryKey,
-          sourceOrigin: source,
-          generationKey: 'initial:first' as const,
-          rewardType: 'HealBigDrop',
-          remainingUses: 0,
-          dueAt: host,
-          dueSequence: 1,
+      state: Object.freeze({
+        ...branch.state,
+        pendingHermesShrineDeliveries: Object.freeze({
+          [entryKey]: Object.freeze({
+            sourceKey: entryKey,
+            sourceOrigin: source,
+            generationKey: 'initial:first' as const,
+            rewardType: 'HealBigDrop',
+            remainingUses: 0,
+            dueAt: host,
+            dueSequence: 1,
+          }),
         }),
       }),
     });
@@ -416,13 +419,16 @@ describe('Hermes Shrine delivery placement', () => {
     const branch = initializeTestRewardBranches()[0]!;
     const pending = Object.freeze({
       ...branch,
-      pendingHermesShrineDeliveries: Object.freeze({
-        [entryKey]: Object.freeze({
-          sourceKey: entryKey,
-          sourceOrigin: source,
-          generationKey: 'initial:first' as const,
-          rewardType: 'HealBigDrop',
-          remainingUses: 2,
+      state: Object.freeze({
+        ...branch.state,
+        pendingHermesShrineDeliveries: Object.freeze({
+          [entryKey]: Object.freeze({
+            sourceKey: entryKey,
+            sourceOrigin: source,
+            generationKey: 'initial:first' as const,
+            rewardType: 'HealBigDrop',
+            remainingUses: 2,
+          }),
         }),
       }),
     });
@@ -457,7 +463,7 @@ describe('Hermes Shrine delivery placement', () => {
       roomFor('N_Sub10', 'EphyraSideRoom'),
       [pending],
     );
-    expect(sideRoom.branches[0]?.pendingHermesShrineDeliveries[entryKey]).toMatchObject({
+    expect(sideRoom.branches[0]?.state.pendingHermesShrineDeliveries[entryKey]).toMatchObject({
       sourceOrigin: source,
       remainingUses: 2,
     });
@@ -469,7 +475,9 @@ describe('Hermes Shrine delivery placement', () => {
       roomFor('N_Combat01', 'EphyraCombat'),
       sideRoom.branches,
     );
-    expect(firstMainEncounter.branches[0]?.pendingHermesShrineDeliveries[entryKey]).toMatchObject({
+    expect(
+      firstMainEncounter.branches[0]?.state.pendingHermesShrineDeliveries[entryKey],
+    ).toMatchObject({
       sourceOrigin: source,
       remainingUses: 1,
     });
@@ -480,7 +488,9 @@ describe('Hermes Shrine delivery placement', () => {
       roomFor('N_Combat01', 'EphyraCombat'),
       firstMainEncounter.branches,
     );
-    expect(dueMainEncounter.branches[0]?.pendingHermesShrineDeliveries[entryKey]).toMatchObject({
+    expect(
+      dueMainEncounter.branches[0]?.state.pendingHermesShrineDeliveries[entryKey],
+    ).toMatchObject({
       sourceOrigin: source,
       remainingUses: 0,
       dueAt: host,
@@ -509,15 +519,18 @@ describe('Hermes Shrine delivery placement', () => {
     const branch = initializeTestRewardBranches()[0]!;
     const pending = Object.freeze({
       ...branch,
-      pendingHermesShrineDeliveries: Object.freeze({
-        [entryKey]: Object.freeze({
-          sourceKey: entryKey,
-          sourceOrigin: source,
-          generationKey: 'initial:first' as const,
-          rewardType: 'HealBigDrop',
-          remainingUses: 0,
-          dueAt: host,
-          dueSequence: 1,
+      state: Object.freeze({
+        ...branch.state,
+        pendingHermesShrineDeliveries: Object.freeze({
+          [entryKey]: Object.freeze({
+            sourceKey: entryKey,
+            sourceOrigin: source,
+            generationKey: 'initial:first' as const,
+            rewardType: 'HealBigDrop',
+            remainingUses: 0,
+            dueAt: host,
+            dueSequence: 1,
+          }),
         }),
       }),
     });

@@ -173,7 +173,7 @@ describe('N Hub rewards, validation, and candidates', () => {
       ),
     ).toBe(false);
     expect(
-      biome.rewards.branches[0]?.bags.HubRewards?.remainingEntryCounts.reduce(
+      biome.rewards.branches[0]?.state.bags.HubRewards?.remainingEntryCounts.reduce(
         (total, count) => total + count,
         0,
       ),
@@ -993,8 +993,10 @@ describe('N Hub rewards, validation, and candidates', () => {
     expect(branch.events).toContainEqual(
       expect.objectContaining({ kind: 'concreteAcquisition', origin: incoming.origin }),
     );
-    expect(branch.arcanaFear.fear.forfeitConsumed).toBe(false);
-    expect(branch.traitHistory?.equippedTraits[expectedOffer.options[0]!.traitKey]).toBeDefined();
+    expect(branch.state.arcanaFear.fear.forfeitConsumed).toBe(false);
+    expect(
+      branch.state.traitHistory?.equippedTraits[expectedOffer.options[0]!.traitKey],
+    ).toBeDefined();
     expect(findings).toHaveLength(0);
   });
 
@@ -1136,7 +1138,7 @@ describe('N Hub rewards, validation, and candidates', () => {
 
     expect(biome.validity).toBe('valid');
     expect(story.room).toMatchObject({ gameName: 'N_Story01', entered: true });
-    expect(biome.rewards.rewardLookups.hubRewardLookup).toContain('Story');
+    expect(biome.rewards.branches[0]!.state.rewardLookups.hubRewardLookup).toContain('Story');
     expect(
       branch.events.filter(
         (event) =>
@@ -1154,12 +1156,12 @@ describe('N Hub rewards, validation, and candidates', () => {
       ),
     ).toHaveLength(0);
     expect(
-      branch.bags.HubRewards?.remainingEntryCounts.reduce((total, count) => total + count, 0),
+      branch.state.bags.HubRewards?.remainingEntryCounts.reduce((total, count) => total + count, 0),
     ).toBe(3);
   });
 
   it('validates the Preboss inventory from all open target offers and applies its purchase owner', () => {
-    const lookup = completeN().biome.rewards.rewardLookups.hubRewardLookup;
+    const lookup = completeN().biome.rewards.branches[0]!.state.rewardLookups.hubRewardLookup;
     expect(lookup).toEqual([
       'MaxHealthDropBig',
       'MaxManaDropBig',
@@ -1608,13 +1610,15 @@ describe('N Hub rewards, validation, and candidates', () => {
         }),
       }),
     );
-    const baseline = validN().biome.rewards.branches[0]?.bags.HubRewards;
+    const baseline = validN().biome.rewards.branches[0]?.state.bags.HubRewards;
     const converted = completeN(project).biome;
     const branch = converted.rewards.branches[0];
     expect(converted.validity).toBe('valid');
     expect(branch?.events).toContainEqual(
       expect.objectContaining({ kind: 'artificerConversion', origin: owner }),
     );
-    expect(branch?.bags.HubRewards?.remainingEntryCounts).toEqual(baseline?.remainingEntryCounts);
+    expect(branch?.state.bags.HubRewards?.remainingEntryCounts).toEqual(
+      baseline?.remainingEntryCounts,
+    );
   });
 });

@@ -110,9 +110,12 @@ function fountainBranch(
   const base = initializeTestRewardBranches()[0]!;
   return Object.freeze({
     ...base,
-    history: attachTraitHistory(base.history, traitHistory),
-    traitHistory,
-    keepsakes,
+    state: Object.freeze({
+      ...base.state,
+      rewardHistory: attachTraitHistory(base.state.rewardHistory, traitHistory),
+      traitHistory: traitHistory,
+      keepsakes: keepsakes,
+    }),
   });
 }
 
@@ -187,7 +190,7 @@ describe('Aromatic Phial catalog and target domains', () => {
   it('initializes at route start, removes on ordinary replacement, and reinitializes at a rack equip', () => {
     const initial = createKeepsakeState(catalog, 'FountainRarityKeepsake');
     expect(initial.phial).toEqual({ status: 'pending' });
-    const arcanaFear = initializeTestRewardBranches()[0]!.arcanaFear;
+    const arcanaFear = initializeTestRewardBranches()[0]!.state.arcanaFear;
     const removed = applyKeepsakeReplacement(catalog, initial, 'GoldifyKeepsake', arcanaFear);
     expect(removed.phial).toBeUndefined();
     const reequipped = applyKeepsakeReplacement(
@@ -308,7 +311,7 @@ describe('Aromatic Phial fountain lifecycle', () => {
         candidate.origin.occurrenceId === reprieveId,
     );
     expect(event).toBeDefined();
-    expect(f.rewards.branches[0]?.keepsakes.phial).toEqual({ status: 'consumed' });
+    expect(f.rewards.branches[0]?.state.keepsakes.phial).toEqual({ status: 'consumed' });
   });
 
   it('emits the fixed-linked Postboss fountain lifecycle event after room creation', () => {
@@ -350,7 +353,7 @@ describe('Aromatic Phial fountain lifecycle', () => {
     );
     expect(created).toBeDefined();
     expect(created!.sequence).toBeLessThan(postbossEvents[0]!.sequence);
-    expect(f.rewards.branches[0]?.keepsakes.phial).toEqual({ status: 'consumed' });
+    expect(f.rewards.branches[0]?.state.keepsakes.phial).toEqual({ status: 'consumed' });
   });
 
   it('publishes and resolves a Phial target after a Postboss rack is moved before its fountain', () => {
@@ -407,7 +410,7 @@ describe('Aromatic Phial fountain lifecycle', () => {
         `expected valid Phial Postboss result: ${JSON.stringify(resolved?.findings)}`,
       );
     }
-    expect(resolved.rewards.branches[0]?.keepsakes.phial).toEqual({ status: 'consumed' });
+    expect(resolved.rewards.branches[0]?.state.keepsakes.phial).toEqual({ status: 'consumed' });
     expect(resolved.findings).not.toContainEqual(
       expect.objectContaining({ code: 'fountainRarityResultMissing' }),
     );
@@ -421,9 +424,9 @@ describe('Aromatic Phial fountain lifecycle', () => {
       [fountainBranch(equippedTrait('ApolloWeaponBoon', 'Apollo'))],
     );
     const branch = result.branches[0];
-    expect(branch?.keepsakes.phial).toEqual({ status: 'consumed' });
-    expect(branch?.traitHistory?.equippedTraits.ApolloWeaponBoon?.rarity).toBe('Heroic');
-    expect(branch?.traitHistory?.events.at(-1)).toMatchObject({
+    expect(branch?.state.keepsakes.phial).toEqual({ status: 'consumed' });
+    expect(branch?.state.traitHistory?.equippedTraits.ApolloWeaponBoon?.rarity).toBe('Heroic');
+    expect(branch?.state.traitHistory?.events.at(-1)).toMatchObject({
       kind: 'rarityMutation',
       acquisitionRole: 'fountainRarity',
       acquisitionPoint: 'fountainUsed',
@@ -442,8 +445,10 @@ describe('Aromatic Phial fountain lifecycle', () => {
       fountainRoom('BoonDecayBoon'),
       [fountainBranch(equippedTrait('ApolloWeaponBoon', 'Apollo'), history)],
     );
-    expect(result.branches[0]?.traitHistory?.equippedTraits.BoonDecayBoon?.rarity).toBe('Heroic');
-    expect(result.branches[0]?.traitHistory?.equippedTraits.ApolloWeaponBoon).toMatchObject({
+    expect(result.branches[0]?.state.traitHistory?.equippedTraits.BoonDecayBoon?.rarity).toBe(
+      'Heroic',
+    );
+    expect(result.branches[0]?.state.traitHistory?.equippedTraits.ApolloWeaponBoon).toMatchObject({
       rarity: 'Heroic',
       level: 5,
     });
@@ -457,9 +462,9 @@ describe('Aromatic Phial fountain lifecycle', () => {
       ),
     ]);
     const branch = result.branches[0];
-    expect(branch?.keepsakes.phial).toEqual({ status: 'consumed' });
-    expect(branch?.traitHistory?.equippedTraits.HephaestusWeaponBoon?.rarity).toBe('Common');
-    expect(branch?.traitHistory?.events).not.toContainEqual(
+    expect(branch?.state.keepsakes.phial).toEqual({ status: 'consumed' });
+    expect(branch?.state.traitHistory?.equippedTraits.HephaestusWeaponBoon?.rarity).toBe('Common');
+    expect(branch?.state.traitHistory?.events).not.toContainEqual(
       expect.objectContaining({ kind: 'rarityMutation' }),
     );
     expect(result.findings).toEqual([]);
@@ -469,7 +474,7 @@ describe('Aromatic Phial fountain lifecycle', () => {
     const empty = applyFountainUsedTransition(catalog, fountainEvent(), undefined, [
       fountainBranch(equippedTrait('ElementalDamageFloorBoon', 'Apollo')),
     ]);
-    expect(empty.branches[0]?.keepsakes.phial).toEqual({ status: 'pending' });
+    expect(empty.branches[0]?.state.keepsakes.phial).toEqual({ status: 'pending' });
     expect(empty.findings).toEqual([]);
 
     const consumed = consumePhial(createKeepsakeState(catalog, 'FountainRarityKeepsake'));
@@ -479,8 +484,10 @@ describe('Aromatic Phial fountain lifecycle', () => {
       fountainRoom('ApolloWeaponBoon'),
       [fountainBranch(equippedTrait('ApolloWeaponBoon', 'Apollo'), undefined, consumed)],
     );
-    expect(later.branches[0]?.keepsakes.phial).toEqual({ status: 'consumed' });
-    expect(later.branches[0]?.traitHistory?.equippedTraits.ApolloWeaponBoon?.rarity).toBe('Common');
+    expect(later.branches[0]?.state.keepsakes.phial).toEqual({ status: 'consumed' });
+    expect(later.branches[0]?.state.traitHistory?.equippedTraits.ApolloWeaponBoon?.rarity).toBe(
+      'Common',
+    );
   });
 
   it('blocks later chronology on a missing or unavailable required target', () => {

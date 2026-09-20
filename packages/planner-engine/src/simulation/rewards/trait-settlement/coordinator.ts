@@ -1,3 +1,4 @@
+import { replaceSimulationTraitHistory } from '../../state/transitions';
 import type { Catalog } from '../../../catalog-schema';
 import { evaluateCallingCardOffer } from '../../keepsakes/reward-effects';
 import {
@@ -20,11 +21,9 @@ import {
   type FindingRegionEntry,
 } from '../../finding-regions';
 import {
-  attachTraitHistory,
   advanceChaosClock,
   assessTraitOfferBeforeRarification,
   boonRarityFactsForOffer,
-  createTraitHistoryState,
   echoPomGreatestLevelTraitKeys,
   evaluateReachedEchoLastRunBoonOffer,
   evaluateReachedTraitOffer,
@@ -114,14 +113,13 @@ function consumeChaosGodScreen(
   offer: AuthoredTraitOffer | undefined,
 ): RewardBranchState {
   if (offer === undefined || !isChaosGodScreenGiver(catalog, offer.giverKey)) return branch;
-  const before = branch.traitHistory ?? createTraitHistoryState();
+  const before = branch.state.traitHistory;
   const traitHistory = advanceChaosClock(catalog, before, sequence, 'godBoonScreens');
   return traitHistory === before
     ? branch
     : Object.freeze({
         ...branch,
-        traitHistory,
-        history: attachTraitHistory(branch.history, traitHistory),
+        state: replaceSimulationTraitHistory(branch.state, traitHistory),
       });
 }
 
@@ -162,11 +160,11 @@ function applyTraitOfferForAcquisitionInternal(
     return Object.freeze({ branch });
   const authored = reward.traitOffersByAcquisitionRole?.[role];
   const authoredLevelResolution = reward.levelResolutionsByAcquisitionRole?.[role];
-  const before = branch.traitHistory ?? createTraitHistoryState();
+  const before = branch.state.traitHistory;
   const sourceTraitContext = Object.freeze({
     ...(reward.traitContext ?? {}),
     ...('routeKey' in reward.origin ? { routeKey: reward.origin.routeKey } : {}),
-    settledSpellDrop: (branch.history.useRecord.SpellDrop ?? 0) > 0,
+    settledSpellDrop: (branch.state.rewardHistory.useRecord.SpellDrop ?? 0) > 0,
     ...(reward.producerLifecycleKey === 'EchoLastReward' || role === 'echoLastRunSelection'
       ? { stackBoostsSuppressed: true as const }
       : {}),
@@ -215,8 +213,8 @@ function applyTraitOfferForAcquisitionInternal(
                           resolvedProviderKey: giver,
                         }),
                       ),
-                      arcanaFear: branch.arcanaFear,
-                      keepsakes: branch.keepsakes,
+                      arcanaFear: branch.state.arcanaFear,
+                      keepsakes: branch.state.keepsakes,
                     }),
                   }),
             }),
@@ -243,12 +241,20 @@ function applyTraitOfferForAcquisitionInternal(
   const callingCard =
     authored === undefined || acquisitionMode.kind !== 'ordinary'
       ? undefined
-      : evaluateCallingCardOffer(catalog, branch.keepsakes, authored, baseOffer?.legal ?? false);
+      : evaluateCallingCardOffer(
+          catalog,
+          branch.state.keepsakes,
+          authored,
+          baseOffer?.legal ?? false,
+        );
   const effectiveAuthored = callingCard?.offer ?? authored;
   const effectiveBranch =
-    callingCard === undefined || callingCard.state === branch.keepsakes
+    callingCard === undefined || callingCard.state === branch.state.keepsakes
       ? branch
-      : Object.freeze({ ...branch, keepsakes: callingCard.state });
+      : Object.freeze({
+          ...branch,
+          state: Object.freeze({ ...branch.state, keepsakes: callingCard.state }),
+        });
   const levelResolution = settleReachedLevelResolution({
     catalog,
     branch,
@@ -296,9 +302,9 @@ function applyTraitOfferForAcquisitionInternal(
           before,
           evaluationContext,
           branch.traitEvaluations?.length ?? 0,
-          branch.arcanaFear,
+          branch.state.arcanaFear,
           acquisitionMode.kind !== 'ordinary',
-          branch.keepsakes,
+          branch.state.keepsakes,
           callingCard === undefined ? undefined : authored,
           acquisitionMode.kind === 'frozenConcaveStoneSecondary',
           acquisitionMode.kind !== 'frozenConcaveStoneSecondary' ||
@@ -318,8 +324,8 @@ function applyTraitOfferForAcquisitionInternal(
             before,
             evaluationContext,
             branch.traitEvaluations?.length ?? 0,
-            branch.arcanaFear,
-            branch.keepsakes,
+            branch.state.arcanaFear,
+            branch.state.keepsakes,
           );
   const selectedForIdentity =
     effectiveAuthored.kind === 'traits'
@@ -376,7 +382,7 @@ function applyTraitOfferForAcquisitionInternal(
           evaluation.offer.kind === 'traits' &&
           evaluation.offer.concaveStoneResult === undefined &&
           catalog.traitGivers.byKey[evaluation.offer.giverKey]?.shopAwareGodTrait === true &&
-          concaveStoneProcSupport(catalog, effectiveBranch.keepsakes) !== undefined
+          concaveStoneProcSupport(catalog, effectiveBranch.state.keepsakes) !== undefined
             ? Object.freeze({
                 ...evaluation,
                 offer: Object.freeze({
@@ -484,17 +490,16 @@ function applyTraitOfferForAcquisitionInternal(
             context: Object.freeze({
               before,
               context: evaluationContext,
-              arcanaFear: branch.arcanaFear,
-              keepsakes: branch.keepsakes,
+              arcanaFear: branch.state.arcanaFear,
+              keepsakes: branch.state.keepsakes,
             }),
           });
     const branchAfterOffer =
       effectiveAuthored.kind === 'chaos' && applied.history !== before
         ? Object.freeze({
             ...effectiveBranch,
-            history: attachTraitHistory(effectiveBranch.history, applied.history),
-            traitHistory: applied.history,
             traitEvaluations,
+            state: replaceSimulationTraitHistory(effectiveBranch.state, applied.history),
           })
         : Object.freeze({ ...effectiveBranch, traitEvaluations });
     return Object.freeze({
@@ -525,8 +530,12 @@ function applyTraitOfferForAcquisitionInternal(
       : catalog.traits.byKey[selected.traitKey]?.selectedDisposition;
   const keepsakes =
     selectedDisposition?.kind === 'advanceCurrentKeepsake'
-      ? advanceCurrentKeepsake(catalog, effectiveBranch.keepsakes, selectedDisposition.rankBonus)
-      : effectiveBranch.keepsakes;
+      ? advanceCurrentKeepsake(
+          catalog,
+          effectiveBranch.state.keepsakes,
+          selectedDisposition.rankBonus,
+        )
+      : effectiveBranch.state.keepsakes;
   const childCandidateContext = Object.freeze({
     before: evaluation.before,
     context: withBoonRarityFacts(
@@ -534,8 +543,8 @@ function applyTraitOfferForAcquisitionInternal(
       branch,
       Object.freeze({ ...sourceTraitContext, resolvedProviderKey: evaluation.offer.giverKey }),
     ),
-    arcanaFear: branch.arcanaFear,
-    keepsakes: branch.keepsakes,
+    arcanaFear: branch.state.arcanaFear,
+    keepsakes: branch.state.keepsakes,
   });
   const selectedChildren = settleSelectedTraitChildren({
     catalog,
@@ -563,10 +572,15 @@ function applyTraitOfferForAcquisitionInternal(
   let blockedChildCandidateContext = selectedChildren.blockedChild?.candidateContext;
   let settledBeforeChaos: RewardBranchState = Object.freeze({
     ...effectiveBranch,
-    history: attachTraitHistory(branch.history, traitHistory),
-    traitHistory,
     traitEvaluations,
-    keepsakes,
+    state: replaceSimulationTraitHistory(
+      Object.freeze({
+        ...effectiveBranch.state,
+        rewardHistory: branch.state.rewardHistory,
+        keepsakes,
+      }),
+      traitHistory,
+    ),
   });
   settledBeforeChaos =
     effectiveAuthored.kind === 'traits'
@@ -584,7 +598,7 @@ function applyTraitOfferForAcquisitionInternal(
     catalog,
     settledBeforeChaos,
     selectedDisposition,
-    effectiveBranch.keepsakes.currentKey,
+    effectiveBranch.state.keepsakes.currentKey,
   );
   const settledBranch =
     acquisitionMode.kind === 'frozenConcaveStoneSecondary'
@@ -626,7 +640,10 @@ function applyTraitOfferForAcquisitionInternal(
         catalog,
         Object.freeze({
           ...settledBranch,
-          keepsakes: consumeConcaveStone(settledBranch.keepsakes),
+          state: Object.freeze({
+            ...settledBranch.state,
+            keepsakes: consumeConcaveStone(settledBranch.state.keepsakes),
+          }),
         }),
         {
           origin: reward.origin,
@@ -694,10 +711,12 @@ export function applyTraitOfferForAcquisition(
   };
   const traitContext = Object.freeze({
     ...(reward.traitContext ?? {}),
-    ...(branch.stygianWell.yarnUses === 0 || reward.traitContext?.suppressTemporaryBoonRarity
+    ...(branch.state.stygianWell.yarnUses === 0 || reward.traitContext?.suppressTemporaryBoonRarity
       ? {}
-      : { temporaryBoonRarityUses: branch.stygianWell.yarnUses }),
-    ...(branch.stygianWell.hymnUses === 0 ? {} : { limitedSwapUses: branch.stygianWell.hymnUses }),
+      : { temporaryBoonRarityUses: branch.state.stygianWell.yarnUses }),
+    ...(branch.state.stygianWell.hymnUses === 0
+      ? {}
+      : { limitedSwapUses: branch.state.stygianWell.hymnUses }),
   });
   const source = Object.freeze({ ...reward, traitContext });
   const settlement = applyTraitOfferForAcquisitionInternal(
@@ -719,7 +738,7 @@ export function applyTraitOfferForAcquisition(
   const priorMutation =
     owner === undefined
       ? undefined
-      : [...(branch.traitHistory ?? createTraitHistoryState()).events]
+      : [...branch.state.traitHistory.events]
           .reverse()
           .find(
             (event) => isTraitOfferMutationEvent(event) && sameTraitOccurrence(event.owner, owner),
@@ -742,9 +761,9 @@ export function applyTraitOfferForAcquisition(
     traitContext.temporaryBoonRarityUses !== undefined &&
     boonRarityFactsForOffer(
       catalog,
-      branch.traitHistory ?? createTraitHistoryState(),
+      branch.state.traitHistory,
       closedContext,
-      branch.arcanaFear,
+      branch.state.arcanaFear,
     ) !== undefined;
   const evaluation = settlement.branch.traitEvaluations?.[branch.traitEvaluations?.length ?? 0];
   const consumesHymn =
@@ -762,14 +781,17 @@ export function applyTraitOfferForAcquisition(
     ...(priorTraitMutations === undefined ? {} : { priorTraitMutations }),
     branch: Object.freeze({
       ...settlement.branch,
-      stygianWell: Object.freeze({
-        ...settlement.branch.stygianWell,
-        ...(consumesYarn
-          ? { yarnUses: Math.max(0, settlement.branch.stygianWell.yarnUses - 1) }
-          : {}),
-        ...(consumesHymn
-          ? { hymnUses: Math.max(0, settlement.branch.stygianWell.hymnUses - 1) }
-          : {}),
+      state: Object.freeze({
+        ...settlement.branch.state,
+        stygianWell: Object.freeze({
+          ...settlement.branch.state.stygianWell,
+          ...(consumesYarn
+            ? { yarnUses: Math.max(0, settlement.branch.state.stygianWell.yarnUses - 1) }
+            : {}),
+          ...(consumesHymn
+            ? { hymnUses: Math.max(0, settlement.branch.state.stygianWell.hymnUses - 1) }
+            : {}),
+        }),
       }),
     }),
   });
@@ -911,21 +933,23 @@ function encounterTraitContext(
     | undefined,
   freshRarityOverride: import('../../../catalog-schema').TraitRarity | undefined,
 ): TraitOfferContext {
-  const recreation = branch.history.lastRewardRecreation;
+  const recreation = branch.state.rewardHistory.lastRewardRecreation;
   return Object.freeze({
     ...(loadout ?? {}),
     resolvedProviderKey: providerKey,
-    manualArcanaGraspCost: manualArcanaGraspCost(catalog, branch.arcanaFear),
+    manualArcanaGraspCost: manualArcanaGraspCost(catalog, branch.state.arcanaFear),
     activeArcanaTraitKeys: Object.freeze(
-      branch.arcanaFear.arcana.active.map((card) => catalog.arcanaCards.byKey[card.key]!.traitKey),
+      branch.state.arcanaFear.arcana.active.map(
+        (card) => catalog.arcanaCards.byKey[card.key]!.traitKey,
+      ),
     ),
-    circeRemovableFearVow: circeResolutionDomain(catalog, branch.arcanaFear, 'disableFear', 1)
+    circeRemovableFearVow: circeResolutionDomain(catalog, branch.state.arcanaFear, 'disableFear', 1)
       .outerAvailable,
     echoLastRewardAvailable: recreation !== undefined,
     ...(recreation === undefined ? {} : { echoLastRewardRecreation: recreation }),
     ...(freshRarityOverride === undefined ? {} : { freshRarityOverride }),
-    currentKeepsakeKey: branch.keepsakes.currentKey,
-    settledSpellDrop: (branch.history.useRecord.SpellDrop ?? 0) > 0,
+    currentKeepsakeKey: branch.state.keepsakes.currentKey,
+    settledSpellDrop: (branch.state.rewardHistory.useRecord.SpellDrop ?? 0) > 0,
   });
 }
 
@@ -934,7 +958,7 @@ function withBoonRarityFacts(
   branch: RewardBranchState,
   context: TraitOfferContext,
 ): TraitOfferContext {
-  const history = branch.traitHistory ?? createTraitHistoryState();
+  const history = branch.state.traitHistory;
   return context.resolvedProviderKey === undefined
     ? context
     : traitOfferGenerationContext(
@@ -942,7 +966,7 @@ function withBoonRarityFacts(
         history,
         context.resolvedProviderKey,
         context,
-        branch.arcanaFear,
+        branch.state.arcanaFear,
       );
 }
 
@@ -1035,7 +1059,7 @@ export function settleEncounterTraitOffer(
         ? undefined
         : catalog.traits.byKey[selected.traitKey]?.selectedDisposition;
     const resolution = selected?.circeResolution;
-    const preChoiceTraitHistory = branch.traitHistory ?? createTraitHistoryState();
+    const preChoiceTraitHistory = branch.state.traitHistory;
     const owner = createTraitOfferAddress(origin as TraitOfferOwnerAddress, acquisitionRole);
     const source = {
       origin,
@@ -1077,7 +1101,7 @@ export function settleEncounterTraitOffer(
       return applied;
     };
     if (disposition?.kind === 'circe') {
-      if (applied.traitHistory === branch.traitHistory) {
+      if (applied.state.traitHistory === branch.state.traitHistory) {
         if (provisionalFindings !== localFindings)
           for (const [key, entry] of provisionalFindings) localFindings.set(key, entry);
         return applied;
@@ -1102,8 +1126,8 @@ export function settleEncounterTraitOffer(
       disposition?.kind === 'echo' &&
       disposition.effect === 'lastRunBoon' &&
       selected !== undefined &&
-      applied.traitHistory !== undefined &&
-      applied.traitHistory !== branch.traitHistory
+      applied.state.traitHistory !== undefined &&
+      applied.state.traitHistory !== branch.state.traitHistory
     ) {
       const address = createEchoLastRunBoonAddress(owner, offer.selectedOptionKey);
       const child = selected.echoLastRunBoon;
@@ -1132,11 +1156,11 @@ export function settleEncounterTraitOffer(
       const { offer: nestedOffer, outcome, lootHistorySource } = childAssessment;
       const rewardHistory =
         lootHistorySource === undefined
-          ? applied.history
-          : recordLootTypeHistorySource(applied.history, lootHistorySource);
+          ? applied.state.rewardHistory
+          : recordLootTypeHistorySource(applied.state.rewardHistory, lootHistorySource);
       const sourceApplied = Object.freeze({
         ...applied,
-        history: rewardHistory,
+        state: Object.freeze({ ...applied.state, rewardHistory: rewardHistory }),
       });
       const nestedSettlement = applyEchoLastRunBoonForAcquisition(
         catalog,
@@ -1155,7 +1179,7 @@ export function settleEncounterTraitOffer(
       mergeTraitSettlementFindings(localFindings, nestedSettlement.findingEntries);
       const nested = nestedSettlement.branch;
       blockedChild ??= nestedSettlement.blockedChild;
-      if (nested.traitHistory === applied.traitHistory)
+      if (nested.state.traitHistory === applied.state.traitHistory)
         return reject('echoLastRunBoonOptionUnavailable');
       return nested;
     }
@@ -1163,10 +1187,10 @@ export function settleEncounterTraitOffer(
       disposition?.kind === 'echo' &&
       disposition.effect === 'doubleLevel' &&
       selected !== undefined &&
-      applied.traitHistory !== undefined &&
-      applied.traitHistory !== branch.traitHistory
+      applied.state.traitHistory !== undefined &&
+      applied.state.traitHistory !== branch.state.traitHistory
     ) {
-      const appliedTraitHistory = applied.traitHistory;
+      const appliedTraitHistory = applied.state.traitHistory;
       const domain = echoPomGreatestLevelTraitKeys(catalog, preChoiceTraitHistory);
       const hasTarget = 'echoPomTarget' in selected;
       const target = selected.echoPomTarget;
@@ -1208,7 +1232,7 @@ export function settleEncounterTraitOffer(
       return settled ?? reject('echoPomTargetUnavailable', target);
     }
     if (
-      applied.traitHistory === branch.traitHistory ||
+      applied.state.traitHistory === branch.state.traitHistory ||
       disposition?.kind !== 'circe' ||
       selected === undefined
     )

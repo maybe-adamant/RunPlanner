@@ -37,10 +37,8 @@ import {
 import { evaluateBiomeRewardsAssemblyInternal } from '../../src/simulation/rewards/biome';
 import { evaluateKeepsakeEquipResultCandidate } from '../../src/simulation/candidates/keepsake-equip-result';
 import { applyExperimentalHammerEquipResult } from '../../src/simulation/keepsakes/branch-transitions';
-import {
-  initializeRewardBranches,
-  publicRewardBranch,
-} from '../../src/simulation/rewards/branch-lifecycle';
+import { publicRewardBranch } from '../../src/simulation/rewards/branch-lifecycle';
+import { initializeTestRewardBranchesForRoute as initializeRewardBranches } from '../support/arcana-fear';
 import { createArcanaFearState } from '../../src/simulation/arcana-fear';
 import { createKeepsakeState } from '../../src/simulation/keepsakes/state';
 
@@ -87,7 +85,13 @@ function equippedBranch(
   const seed = initializeRewardBranches(undefined, arcanaFear, catalog, 'TempHammerKeepsake')[0]!;
   const result = applyExperimentalHammerEquipResult(
     catalog,
-    { ...seed, keepsakes: createKeepsakeState(catalog, 'TempHammerKeepsake', arcanaFear) },
+    {
+      ...seed,
+      state: Object.freeze({
+        ...seed.state,
+        keepsakes: createKeepsakeState(catalog, 'TempHammerKeepsake', arcanaFear),
+      }),
+    },
     'TempHammerKeepsake',
     { experimentalHammer: { kind: 'selected', traitKey } },
     createKeepsakeEquipResultAddress(
@@ -99,10 +103,15 @@ function equippedBranch(
   );
   return publicRewardBranch({
     ...result,
-    keepsakes: {
-      ...result.keepsakes,
-      experimentalHammers: [{ ...result.keepsakes.experimentalHammers.at(-1)!, remainingUses }],
-    },
+    state: Object.freeze({
+      ...result.state,
+      keepsakes: {
+        ...result.state.keepsakes,
+        experimentalHammers: [
+          { ...result.state.keepsakes.experimentalHammers.at(-1)!, remainingUses },
+        ],
+      },
+    }),
   });
 }
 
@@ -248,7 +257,7 @@ describe('Experimental Hammer', () => {
     const resumedF = completedRoute?.biomes[0];
     if (resumedF === undefined || !('rewards' in resumedF))
       throw new Error('completed route-start Hammer did not resume F');
-    expect(resumedF.rewards.branches[0]?.traitHistory?.equippedTraits).toHaveProperty(
+    expect(resumedF.rewards.branches[0]?.state.traitHistory?.equippedTraits).toHaveProperty(
       'StaffOneWayAttackTrait',
     );
   });
@@ -256,23 +265,23 @@ describe('Experimental Hammer', () => {
   it('acquires one compatible Hammer directly without an invented rarity', () => {
     const project = createCompleteFGProject();
     const branch = equippedBranch(project, 20);
-    expect(branch.traitHistory?.equippedTraits.StaffLongAttackTrait).toMatchObject({
+    expect(branch.state.traitHistory?.equippedTraits.StaffLongAttackTrait).toMatchObject({
       traitKey: 'StaffLongAttackTrait',
       hammerRank: 'RankI',
     });
-    expect(branch.traitHistory?.equippedTraits.StaffLongAttackTrait?.rarity).toBeUndefined();
+    expect(branch.state.traitHistory?.equippedTraits.StaffLongAttackTrait?.rarity).toBeUndefined();
   });
 
   it('uses the production end-effects lifecycle hook to expire and remove the exact acquisition', () => {
     const project = createCompleteFGProject();
     const result = replayThroughRealLifecycle(project, 'F', 1);
     const branch = result.branches[0]!;
-    expect(branch.keepsakes.experimentalHammers.at(-1)).toMatchObject({
+    expect(branch.state.keepsakes.experimentalHammers.at(-1)).toMatchObject({
       active: false,
       remainingUses: 0,
     });
-    expect(branch.traitHistory?.equippedTraits.StaffLongAttackTrait).toBeUndefined();
-    expect(branch.traitHistory?.events).toContainEqual(
+    expect(branch.state.traitHistory?.equippedTraits.StaffLongAttackTrait).toBeUndefined();
+    expect(branch.state.traitHistory?.events).toContainEqual(
       expect.objectContaining({
         acquisitionRole: 'experimentalHammerExpiry',
         acquisitionPoint: 'encounterEndEffectsApplied',
@@ -284,12 +293,12 @@ describe('Experimental Hammer', () => {
     const project = createCompleteFGProject();
     const result = replayThroughRealLifecycle(project, 'F', 2);
     const branch = result.branches[0]!;
-    expect(branch.keepsakes.experimentalHammers.at(-1)).toMatchObject({
+    expect(branch.state.keepsakes.experimentalHammers.at(-1)).toMatchObject({
       active: false,
       remainingUses: 0,
     });
     expect(
-      branch.traitHistory?.events.filter(
+      branch.state.traitHistory?.events.filter(
         (event) => event.acquisitionRole === 'experimentalHammerExpiry',
       ),
     ).toHaveLength(1);
@@ -336,7 +345,8 @@ describe('Experimental Hammer', () => {
     expect(
       result.branches.every(
         (branch) =>
-          branch.keepsakes.experimentalHammers.at(-1)?.remainingUses === 20 - endEffects.length,
+          branch.state.keepsakes.experimentalHammers.at(-1)?.remainingUses ===
+          20 - endEffects.length,
       ),
     ).toBe(true);
     const combat02Phases = endEffects
@@ -369,7 +379,8 @@ describe('Experimental Hammer', () => {
     expect(
       result.branches.every(
         (branch) =>
-          branch.keepsakes.experimentalHammers.at(-1)?.remainingUses === 20 - endEffects.length,
+          branch.state.keepsakes.experimentalHammers.at(-1)?.remainingUses ===
+          20 - endEffects.length,
       ),
     ).toBe(true);
   });
@@ -391,11 +402,11 @@ describe('Experimental Hammer', () => {
       ),
     ).toBe(false);
     const branch = replayThroughRealLifecycle(project, 'F', bossIndex + 1).branches[0]!;
-    expect(branch.keepsakes.experimentalHammers.at(-1)).toMatchObject({
+    expect(branch.state.keepsakes.experimentalHammers.at(-1)).toMatchObject({
       active: false,
       remainingUses: 0,
     });
-    expect(branch.traitHistory?.events).toContainEqual(
+    expect(branch.state.traitHistory?.events).toContainEqual(
       expect.objectContaining({
         kind: 'traitRemoval',
         acquisitionRole: 'experimentalHammerExpiry',
@@ -411,12 +422,12 @@ describe('Experimental Hammer', () => {
     const project = withPostbossHammer(createGoldenFGHProject());
     const evaluated = evaluatedBiome(project, 'F');
     const branch = evaluated.rewards.branches[0]!;
-    expect(branch.keepsakes.experimentalHammers.at(-1)).toMatchObject({
+    expect(branch.state.keepsakes.experimentalHammers.at(-1)).toMatchObject({
       traitKey: 'StaffJumpSpecialTrait',
       active: true,
       remainingUses: 20,
     });
-    const equip = branch.traitHistory?.events.find(
+    const equip = branch.state.traitHistory?.events.find(
       (event) => event.acquisitionRole === 'experimentalHammerEquip',
     );
     const postbossCompletion = evaluated.history.events.find(
@@ -466,7 +477,8 @@ describe('Experimental Hammer', () => {
     expect(
       result.branches.every(
         (branch) =>
-          branch.keepsakes.experimentalHammers.at(-1)?.remainingUses === 20 - endEffects.length,
+          branch.state.keepsakes.experimentalHammers.at(-1)?.remainingUses ===
+          20 - endEffects.length,
       ),
     ).toBe(true);
   });
@@ -505,7 +517,9 @@ describe('Experimental Hammer', () => {
     if (n === undefined || !('rewards' in n) || o === undefined || !('rewards' in o)) {
       throw new Error('expected valid N/O reward lifecycle');
     }
-    expect(n.rewards.branches[0]?.keepsakes.experimentalHammers.at(-1)?.remainingUses).toBe(20);
+    expect(n.rewards.branches[0]?.state.keepsakes.experimentalHammers.at(-1)?.remainingUses).toBe(
+      20,
+    );
     const oEndEffects = o.history.events.filter(
       (event) => event.kind === 'encounterEndEffectsApplied',
     );
@@ -518,7 +532,7 @@ describe('Experimental Hammer', () => {
           event.execution === 'skippedByFigLeaf',
       ),
     ).toBe(true);
-    expect(o.rewards.branches[0]?.keepsakes.experimentalHammers.at(-1)?.remainingUses).toBe(
+    expect(o.rewards.branches[0]?.state.keepsakes.experimentalHammers.at(-1)?.remainingUses).toBe(
       20 - oEndEffects.length,
     );
   });
@@ -571,7 +585,7 @@ describe('Experimental Hammer', () => {
           event.origin.occurrenceId === 'surface-p-1-1-p_combat03',
       );
       expect(selected.map((event) => event.phaseKey)).toEqual(['Combat']);
-      expect(p.rewards.branches[0]?.keepsakes.experimentalHammers.at(-1)?.remainingUses).toBe(
+      expect(p.rewards.branches[0]?.state.keepsakes.experimentalHammers.at(-1)?.remainingUses).toBe(
         20 - endEffects.length,
       );
       if (label === 'figLeaf') expect(selected[0]).toMatchObject({ execution: 'skippedByFigLeaf' });
@@ -595,10 +609,13 @@ describe('Experimental Hammer', () => {
     )[0]!;
     const carried = {
       ...seed,
-      keepsakes: {
-        ...seed.keepsakes,
-        removedKeys: ['TempHammerKeepsake'],
-      },
+      state: Object.freeze({
+        ...seed.state,
+        keepsakes: {
+          ...seed.state.keepsakes,
+          removedKeys: ['TempHammerKeepsake'],
+        },
+      }),
     };
     const assembly = evaluateBiomeRewardsAssemblyInternal(
       catalog,
@@ -619,10 +636,10 @@ describe('Experimental Hammer', () => {
     expect(assembly.simulation.findings).toContainEqual(
       expect.objectContaining({ code: 'keepsakeUnavailable', origin: selection }),
     );
-    expect(branch.keepsakes).toMatchObject({ currentKey: 'ManaOverTimeRefundKeepsake' });
-    expect(branch.keepsakes.experimentalHammers.at(-1)).toBeUndefined();
+    expect(branch.state.keepsakes).toMatchObject({ currentKey: 'ManaOverTimeRefundKeepsake' });
+    expect(branch.state.keepsakes.experimentalHammers.at(-1)).toBeUndefined();
     expect(
-      branch.traitHistory?.events.some((event) => event.acquisitionRole === 'keepsakeEquip'),
+      branch.state.traitHistory?.events.some((event) => event.acquisitionRole === 'keepsakeEquip'),
     ).toBe(false);
   });
 
@@ -646,7 +663,10 @@ describe('Experimental Hammer', () => {
     const alreadyEquipped = equippedBranch(project, 20, authoredResult.traitKey);
     const carried = {
       ...alreadyEquipped,
-      keepsakes: createKeepsakeState(catalog, 'ManaOverTimeRefundKeepsake', arcanaFear),
+      state: Object.freeze({
+        ...alreadyEquipped.state,
+        keepsakes: createKeepsakeState(catalog, 'ManaOverTimeRefundKeepsake', arcanaFear),
+      }),
     };
     const evaluated = evaluatedBiome(project, 'F');
     const plan = route(project).biomes.find((biome) => biome.biomeKey === 'F');
@@ -729,7 +749,7 @@ describe('Experimental Hammer', () => {
         ordinaryPositionFor(catalog, biome.snapshot),
         project.route!.loadout,
         [seed],
-      ).simulation.branches[0]!.keepsakes.experimentalHammers.at(-1)?.remainingUses;
+      ).simulation.branches[0]!.state.keepsakes.experimentalHammers.at(-1)?.remainingUses;
     };
     expect(replay(base)).toBe(replay(withoutSide));
   });
@@ -753,19 +773,19 @@ describe('Experimental Hammer', () => {
       route(replacedProject).loadout,
       [equippedBranch(replacedProject, 20)],
     ).simulation.branches[0]!;
-    expect(unchanged.keepsakes.experimentalHammers.at(-1)).toMatchObject({
+    expect(unchanged.state.keepsakes.experimentalHammers.at(-1)).toMatchObject({
       active: true,
       acquisitionIdentity: expect.any(String),
     });
-    expect(replaced.keepsakes).toMatchObject({ currentKey: 'BossPreDamageKeepsake' });
-    expect(replaced.keepsakes.experimentalHammers.at(-1)).toEqual(
-      unchanged.keepsakes.experimentalHammers.at(-1),
+    expect(replaced.state.keepsakes).toMatchObject({ currentKey: 'BossPreDamageKeepsake' });
+    expect(replaced.state.keepsakes.experimentalHammers.at(-1)).toEqual(
+      unchanged.state.keepsakes.experimentalHammers.at(-1),
     );
   });
 
   it('permits the same ordinary Hammer again after its temporary acquisition expires', () => {
     const expired = replayThroughRealLifecycle(createCompleteFGProject(), 'F', 1).branches[0]!;
-    expect(expired.keepsakes.experimentalHammers.at(-1)).toMatchObject({
+    expect(expired.state.keepsakes.experimentalHammers.at(-1)).toMatchObject({
       active: false,
       remainingUses: 0,
     });
@@ -773,7 +793,7 @@ describe('Experimental Hammer', () => {
       assessTraitOption(
         catalog,
         'StaffLongAttackTrait',
-        expired.traitHistory!,
+        expired.state.traitHistory!,
         route(createCompleteFGProject()).loadout,
       ),
     ).toMatchObject({ legal: true });

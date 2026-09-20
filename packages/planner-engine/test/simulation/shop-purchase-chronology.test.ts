@@ -91,21 +91,24 @@ describe('Gold Gold Gold Shop pickups', () => {
       initialBranches: [
         Object.freeze({
           ...initial,
-          history: attachTraitHistory(initial.history, traits),
-          traitHistory: traits,
-          stygianWell: Object.freeze({ ...initial.stygianWell, yarnUses: 1, hymnUses: 1 }),
+          state: Object.freeze({
+            ...initial.state,
+            rewardHistory: attachTraitHistory(initial.state.rewardHistory, traits),
+            traitHistory: traits,
+            stygianWell: Object.freeze({ ...initial.state.stygianWell, yarnUses: 1, hymnUses: 1 }),
+          }),
         }),
       ],
       offerOverrides: { Boon: reward.offer },
       rewardOverrides: { Boon: reward },
     });
     const branch = result.settlement.branches[0];
-    expect(branch?.stygianWell).toMatchObject({ yarnUses: 0, hymnUses: 0 });
+    expect(branch?.state.stygianWell).toMatchObject({ yarnUses: 0, hymnUses: 0 });
     expect(branch?.traitEvaluations?.at(-1)?.context).toMatchObject({
       temporaryBoonRarityUses: 1,
       limitedSwapUses: 1,
     });
-    expect(branch?.traitHistory?.equippedTraits.HeraWeaponBoon).toMatchObject({
+    expect(branch?.state.traitHistory?.equippedTraits.HeraWeaponBoon).toMatchObject({
       level: 3,
       rarity: 'Rare',
     });
@@ -123,9 +126,9 @@ describe('Gold Gold Gold Shop pickups', () => {
     expect(result.settlement.branches).toHaveLength(2);
     expect(result.settlement.traitChildSettlements).toEqual([]);
     for (const branch of result.settlement.branches) {
-      expect(branch.traitHistory?.equippedTraits.AllElementalBoon?.rarity).toBe('Legendary');
+      expect(branch.state.traitHistory?.equippedTraits.AllElementalBoon?.rarity).toBe('Legendary');
       expect(
-        branch.traitHistory?.events.filter((event) => event.kind === 'directTraitGrant'),
+        branch.state.traitHistory?.events.filter((event) => event.kind === 'directTraitGrant'),
       ).toHaveLength(4);
     }
   });
@@ -142,9 +145,9 @@ describe('Gold Gold Gold Shop pickups', () => {
     expect(result.settlement.branches).toHaveLength(2);
     expect(result.settlement.traitChildSettlements).toEqual([]);
     for (const branch of result.settlement.branches) {
-      expect(branch.traitHistory?.equippedTraits.AllElementalBoon?.rarity).toBe('Legendary');
+      expect(branch.state.traitHistory?.equippedTraits.AllElementalBoon?.rarity).toBe('Legendary');
       expect(
-        branch.traitHistory?.events.filter((event) => event.kind === 'directTraitGrant'),
+        branch.state.traitHistory?.events.filter((event) => event.kind === 'directTraitGrant'),
       ).toHaveLength(4);
     }
   });
@@ -157,11 +160,14 @@ describe('Gold Gold Gold Shop pickups', () => {
       ...pomTargetHistory().events,
     ]);
     const initialBranches = initializeTestRewardBranches().map((branch) => {
-      const history = recordLootTypeHistorySource(branch.history, 'ZeusUpgrade');
+      const history = recordLootTypeHistorySource(branch.state.rewardHistory, 'ZeusUpgrade');
       return Object.freeze({
         ...branch,
-        history: attachTraitHistory(history, traits),
-        traitHistory: traits,
+        state: Object.freeze({
+          ...branch.state,
+          rewardHistory: attachTraitHistory(history, traits),
+          traitHistory: traits,
+        }),
       });
     });
     const result = echoGoldShop(['Minor', 'Boon', ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY], {
@@ -177,7 +183,7 @@ describe('Gold Gold Gold Shop pickups', () => {
     expect([...result.findings.values()].map((entry) => entry.finding.code)).toContain(
       'pomTargetUnavailable',
     );
-    expect(result.settlement.branches[0]?.traitHistory?.equippedTraits).toMatchObject({
+    expect(result.settlement.branches[0]?.state.traitHistory?.equippedTraits).toMatchObject({
       ApolloWeaponBoon: { level: 2 },
       ZeusSpecialBoon: { level: 1 },
     });
@@ -199,11 +205,11 @@ describe('Gold Gold Gold Shop pickups', () => {
     expect([...result.findings.values()].map((entry) => entry.finding.code)).not.toContain(
       'pomTargetUnavailable',
     );
-    expect(result.settlement.branches[0]?.traitHistory?.equippedTraits).toMatchObject({
+    expect(result.settlement.branches[0]?.state.traitHistory?.equippedTraits).toMatchObject({
       ZeusWeaponBoon: { level: 3 },
     });
     expect(
-      result.settlement.branches[0]?.traitHistory?.equippedTraits.ApolloWeaponBoon,
+      result.settlement.branches[0]?.state.traitHistory?.equippedTraits.ApolloWeaponBoon,
     ).toBeUndefined();
   });
 
@@ -215,10 +221,12 @@ describe('Gold Gold Gold Shop pickups', () => {
       duplicateSelectOption2: true,
     });
     const branch = result.settlement.branches[0];
-    expect(branch?.history.consumableRecord).toMatchObject({ SpellDrop: 1 });
-    expect(branch?.hexProgress.bankedPathPoints).toBe(1);
-    expect(branch?.traitHistory?.equippedTraits.EchoDoubleShop).toBeUndefined();
-    expect(branch?.traitHistory?.events.filter((event) => event.kind === 'traitRemoval')).toEqual([
+    expect(branch?.state.rewardHistory.consumableRecord).toMatchObject({ SpellDrop: 1 });
+    expect(branch?.state.hexProgress.bankedPathPoints).toBe(1);
+    expect(branch?.state.traitHistory?.equippedTraits.EchoDoubleShop).toBeUndefined();
+    expect(
+      branch?.state.traitHistory?.events.filter((event) => event.kind === 'traitRemoval'),
+    ).toEqual([
       expect.objectContaining({
         traitKey: 'EchoDoubleShop',
         acquisitionIdentity: 'echo-gold-use',
@@ -248,7 +256,9 @@ describe('Gold Gold Gold Shop pickups', () => {
     const empty = echoGoldShop([], {
       occurrenceId: createOccurrenceId('echo-gold-empty-world-shop'),
     });
-    expect(empty.settlement.branches[0]?.traitHistory?.equippedTraits.EchoDoubleShop).toBeDefined();
+    expect(
+      empty.settlement.branches[0]?.state.traitHistory?.equippedTraits.EchoDoubleShop,
+    ).toBeDefined();
     expect(empty.settlement.derivedEntryFrontiers).toMatchObject([
       { kind: 'echoDoubleShopPlaceholder' },
     ]);
@@ -264,7 +274,7 @@ describe('Gold Gold Gold Shop pickups', () => {
       rewardTypes: ['MaxManaDrop'],
     });
     expect(
-      missing.settlement.branches[0]?.traitHistory?.equippedTraits.EchoDoubleShop,
+      missing.settlement.branches[0]?.state.traitHistory?.equippedTraits.EchoDoubleShop,
     ).toBeUndefined();
 
     const settledLater = echoGoldShop(['Minor'], {
@@ -272,9 +282,11 @@ describe('Gold Gold Gold Shop pickups', () => {
       initialBranches: empty.settlement.branches,
       occurrenceId: createOccurrenceId('echo-gold-later-complete-world-shop'),
     });
-    expect(settledLater.settlement.branches[0]?.history.consumableRecord.MaxManaDrop).toBe(2);
     expect(
-      settledLater.settlement.branches[0]?.traitHistory?.equippedTraits.EchoDoubleShop,
+      settledLater.settlement.branches[0]?.state.rewardHistory.consumableRecord.MaxManaDrop,
+    ).toBe(2);
+    expect(
+      settledLater.settlement.branches[0]?.state.traitHistory?.equippedTraits.EchoDoubleShop,
     ).toBeUndefined();
   });
 
@@ -292,7 +304,7 @@ describe('Gold Gold Gold Shop pickups', () => {
     );
     expect(frontier).toMatchObject({ sourceOfferKey: 'Boon' });
     expect(
-      frontier?.branchesBeforeEntry[0]?.traitHistory?.equippedTraits.EchoDoubleShop,
+      frontier?.branchesBeforeEntry[0]?.state.traitHistory?.equippedTraits.EchoDoubleShop,
     ).toBeUndefined();
   });
 
@@ -301,7 +313,7 @@ describe('Gold Gold Gold Shop pickups', () => {
       includeDuplicate: true,
       duplicateSelectOption2: true,
     });
-    const equipped = fresh.settlement.branches[0]?.traitHistory?.equippedTraits ?? {};
+    const equipped = fresh.settlement.branches[0]?.state.traitHistory?.equippedTraits ?? {};
     const apolloTraits = Object.values(equipped).filter((trait) => trait.giverKey === 'Apollo');
     expect(apolloTraits).toHaveLength(2);
 
@@ -310,8 +322,10 @@ describe('Gold Gold Gold Shop pickups', () => {
       duplicateConversion: 'gold',
       timePiece: true,
     });
-    expect(converted.settlement.branches[0]?.history.consumableRecord.MaxManaDrop).toBe(1);
-    expect(converted.settlement.branches[0]?.keepsakes.timePiece?.remainingCharges).toBe(3);
+    expect(converted.settlement.branches[0]?.state.rewardHistory.consumableRecord.MaxManaDrop).toBe(
+      1,
+    );
+    expect(converted.settlement.branches[0]?.state.keepsakes.timePiece?.remainingCharges).toBe(3);
     expect(converted.settlement.branches[0]?.events).toContainEqual(
       expect.objectContaining({
         kind: 'conversionToGold',
@@ -321,7 +335,7 @@ describe('Gold Gold Gold Shop pickups', () => {
       }),
     );
     expect(
-      converted.settlement.branches[0]?.traitHistory?.equippedTraits.EchoDoubleShop,
+      converted.settlement.branches[0]?.state.traitHistory?.equippedTraits.EchoDoubleShop,
     ).toBeUndefined();
   });
 
@@ -366,7 +380,9 @@ describe('Gold Gold Gold Shop pickups', () => {
           ...extraOverrides,
         },
       });
-      expect(result.settlement.branches[0]?.history.consumableRecord.LastStandDrop).toBe(1);
+      expect(
+        result.settlement.branches[0]?.state.rewardHistory.consumableRecord.LastStandDrop,
+      ).toBe(1);
     },
   );
 
@@ -426,9 +442,9 @@ describe('Gold Gold Gold Shop pickups', () => {
     ).toMatchObject({ giverKey: 'Hestia', selectedOptionKey: 'option2' });
     const branch = result.settlement.branches[0];
     expect([...result.findings.values()]).toEqual([]);
-    expect(branch?.history.consumableRecord.BlindBoxLoot).toBe(2);
+    expect(branch?.state.rewardHistory.consumableRecord.BlindBoxLoot).toBe(2);
     expect(
-      branch?.traitHistory?.events
+      branch?.state.traitHistory?.events
         .filter(
           (event): event is TraitOfferEvent =>
             event.kind === 'traitOffer' && event.giverKey !== 'Echo',
@@ -453,7 +469,7 @@ describe('Gold Gold Gold Shop pickups', () => {
       sourceOfferKey: 'Boon',
       rewardTypes: ['BlindBoxLoot'],
     });
-    expect(branch?.traitHistory?.equippedTraits.EchoDoubleShop).toBeUndefined();
+    expect(branch?.state.traitHistory?.equippedTraits.EchoDoubleShop).toBeUndefined();
   });
 
   it('keeps provider force through a paid Mystery Boon but spends it when a paid Blind Box unwraps', () => {
@@ -461,7 +477,14 @@ describe('Gold Gold Gold Shop pickups', () => {
       initializeTestRewardBranches().map((branch) =>
         Object.freeze({
           ...branch,
-          keepsakes: createKeepsakeState(catalog, 'ForceApolloBoonKeepsake', branch.arcanaFear),
+          state: Object.freeze({
+            ...branch.state,
+            keepsakes: createKeepsakeState(
+              catalog,
+              'ForceApolloBoonKeepsake',
+              branch.state.arcanaFear,
+            ),
+          }),
         }),
       );
 
@@ -470,8 +493,9 @@ describe('Gold Gold Gold Shop pickups', () => {
       rewardOverrides: { Boon: shopBoonReward('ApolloUpgrade', 'ApolloWeaponBoon') },
     }).settlement.branches[0];
     expect(
-      paidMysteryBoon?.keepsakes.olympianSources.find((source) => source.providerKey === 'Apollo')
-        ?.remainingForceUses,
+      paidMysteryBoon?.state.keepsakes.olympianSources.find(
+        (source) => source.providerKey === 'Apollo',
+      )?.remainingForceUses,
     ).toBe(1);
 
     const paidBlindBox = echoGoldShop(['Boon'], {
@@ -485,8 +509,9 @@ describe('Gold Gold Gold Shop pickups', () => {
       },
     }).settlement.branches[0];
     expect(
-      paidBlindBox?.keepsakes.olympianSources.find((source) => source.providerKey === 'Apollo')
-        ?.remainingForceUses,
+      paidBlindBox?.state.keepsakes.olympianSources.find(
+        (source) => source.providerKey === 'Apollo',
+      )?.remainingForceUses,
     ).toBe(0);
   });
 
@@ -497,9 +522,9 @@ describe('Gold Gold Gold Shop pickups', () => {
       withPomTarget: true,
     });
     const branch = result.settlement.branches[0];
-    expect(branch?.history.consumableRecord.GiftDrop).toBe(2);
-    expect(branch?.traitHistory?.equippedTraits.ApolloWeaponBoon?.level).toBe(1);
-    expect(branch?.traitHistory?.events.some((event) => event.kind === 'levelMutation')).toBe(
+    expect(branch?.state.rewardHistory.consumableRecord.GiftDrop).toBe(2);
+    expect(branch?.state.traitHistory?.equippedTraits.ApolloWeaponBoon?.level).toBe(1);
+    expect(branch?.state.traitHistory?.events.some((event) => event.kind === 'levelMutation')).toBe(
       false,
     );
     expect(result.settlement.derivedEntryFrontiers?.[0]).toMatchObject({

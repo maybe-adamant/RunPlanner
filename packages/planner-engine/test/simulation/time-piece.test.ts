@@ -95,18 +95,21 @@ describe('Time Piece conversions', () => {
     const branches = seeded.map((branch) =>
       Object.freeze({
         ...branch,
-        history: applyConcreteAcquisition(catalog.rewards, branch.history, {
-          kind: 'resource',
-          gameName: 'GiftDrop',
+        state: Object.freeze({
+          ...branch.state,
+          rewardHistory: applyConcreteAcquisition(catalog.rewards, branch.state.rewardHistory, {
+            kind: 'resource',
+            gameName: 'GiftDrop',
+          }),
+          keepsakes: createKeepsakeState(catalog, 'GoldifyKeepsake', branch.state.arcanaFear),
         }),
-        keepsakes: createKeepsakeState(catalog, 'GoldifyKeepsake', branch.arcanaFear),
       }),
     );
     const result = settle('gold', branches);
     const branch = result.branches[0]!;
-    expect(branch.keepsakes.timePiece?.remainingCharges).toBe(3);
-    expect(branch.history.lootTypeHistory).toEqual({});
-    expect(branch.history.lastRewardRecreation?.offer.rewardType).toBe('GiftDrop');
+    expect(branch.state.keepsakes.timePiece?.remainingCharges).toBe(3);
+    expect(branch.state.rewardHistory.lootTypeHistory).toEqual({});
+    expect(branch.state.rewardHistory.lastRewardRecreation?.offer.rewardType).toBe('GiftDrop');
     expect(branch.events).toContainEqual(expect.objectContaining({ kind: 'conversionToGold' }));
     expect(result.roleFrontiers?.[0]?.address).toEqual(
       createAcquisitionRoleAddress(reward, 'source'),
@@ -117,37 +120,46 @@ describe('Time Piece conversions', () => {
     const seeded = initializeTestRewardBranches().map((branch) =>
       Object.freeze({
         ...branch,
-        keepsakes: createKeepsakeState(catalog, 'GoldifyKeepsake', branch.arcanaFear),
+        state: Object.freeze({
+          ...branch.state,
+          keepsakes: createKeepsakeState(catalog, 'GoldifyKeepsake', branch.state.arcanaFear),
+        }),
       }),
     );
     const result = settle('gold', seeded, 'free', { rewardType: 'SpellDrop' });
     expect(result.branches[0]?.events).toContainEqual(
       expect.objectContaining({ kind: 'conversionToGold' }),
     );
-    expect(result.branches[0]?.hexProgress).toEqual({ bankedPathPoints: 0, investedPathPoints: 0 });
-    expect(result.branches[0]?.history.useRecord.SpellDrop).toBeUndefined();
+    expect(result.branches[0]?.state.hexProgress).toEqual({
+      bankedPathPoints: 0,
+      investedPathPoints: 0,
+    });
+    expect(result.branches[0]?.state.rewardHistory.useRecord.SpellDrop).toBeUndefined();
   });
 
   it('converts a free Chaos TrialUpgrade before its trait acquisition resolves', () => {
     const branches = initializeTestRewardBranches().map((branch) =>
       Object.freeze({
         ...branch,
-        keepsakes: createKeepsakeState(catalog, 'GoldifyKeepsake', branch.arcanaFear),
+        state: Object.freeze({
+          ...branch.state,
+          keepsakes: createKeepsakeState(catalog, 'GoldifyKeepsake', branch.state.arcanaFear),
+        }),
       }),
     );
     const result = settle('gold', branches, 'free', { rewardType: 'TrialUpgrade' });
-    expect(result.branches[0]?.keepsakes.timePiece?.remainingCharges).toBe(3);
+    expect(result.branches[0]?.state.keepsakes.timePiece?.remainingCharges).toBe(3);
     expect(result.branches[0]?.events).toContainEqual(
       expect.objectContaining({ kind: 'conversionToGold' }),
     );
-    expect(result.branches[0]?.history.lootTypeHistory.TrialUpgrade).toBeUndefined();
+    expect(result.branches[0]?.state.rewardHistory.lootTypeHistory.TrialUpgrade).toBeUndefined();
   });
 
   it('keeps an invalid persisted conversion repairable without consuming a charge or suppressing the acquisition', () => {
     const result = settle('gold');
     const branch = result.branches[0]!;
-    expect(branch.keepsakes.timePiece).toBeUndefined();
-    expect(branch.history.lootTypeHistory).toMatchObject({ ApolloUpgrade: 1 });
+    expect(branch.state.keepsakes.timePiece).toBeUndefined();
+    expect(branch.state.rewardHistory.lootTypeHistory).toMatchObject({ ApolloUpgrade: 1 });
     expect([...result.branches]).toHaveLength(1);
   });
 
@@ -155,18 +167,23 @@ describe('Time Piece conversions', () => {
     const branches = initializeTestRewardBranches().map((branch) =>
       Object.freeze({
         ...branch,
-        keepsakes: createKeepsakeState(catalog, 'GoldifyKeepsake', branch.arcanaFear),
+        state: Object.freeze({
+          ...branch.state,
+          keepsakes: createKeepsakeState(catalog, 'GoldifyKeepsake', branch.state.arcanaFear),
+        }),
       }),
     );
     const free = settle('gold', branches, 'free');
-    expect(free.branches[0]?.keepsakes.timePiece?.remainingCharges).toBe(3);
+    expect(free.branches[0]?.state.keepsakes.timePiece?.remainingCharges).toBe(3);
     expect(free.branches[0]?.events).toContainEqual(
       expect.objectContaining({ kind: 'conversionToGold' }),
     );
 
     const paid = settle('gold', branches, 'paid');
-    expect(paid.branches[0]?.keepsakes.timePiece?.remainingCharges).toBe(4);
-    expect(paid.branches[0]?.history.lootTypeHistory).toMatchObject({ ApolloUpgrade: 1 });
+    expect(paid.branches[0]?.state.keepsakes.timePiece?.remainingCharges).toBe(4);
+    expect(paid.branches[0]?.state.rewardHistory.lootTypeHistory).toMatchObject({
+      ApolloUpgrade: 1,
+    });
     expect(paid.branches[0]?.events).not.toContainEqual(
       expect.objectContaining({ kind: 'conversionToGold' }),
     );
@@ -177,7 +194,10 @@ describe('Time Piece conversions', () => {
     const branch = initializeTestRewardBranches().map((candidate) =>
       Object.freeze({
         ...candidate,
-        keepsakes: createKeepsakeState(catalog, 'GoldifyKeepsake', candidate.arcanaFear),
+        state: Object.freeze({
+          ...candidate.state,
+          keepsakes: createKeepsakeState(catalog, 'GoldifyKeepsake', candidate.state.arcanaFear),
+        }),
       }),
     )[0]!;
     const source = {
@@ -208,20 +228,25 @@ describe('Time Piece conversions', () => {
         instanceProvenance: 'paid',
       },
     });
-    expect(branch.keepsakes.timePiece?.remainingCharges).toBe(4);
+    expect(branch.state.keepsakes.timePiece?.remainingCharges).toBe(4);
   });
 
   it('exhausts exactly four retained conversions in acquisition order', () => {
     let branches: readonly RewardBranchState[] = initializeTestRewardBranches().map((branch) =>
       Object.freeze({
         ...branch,
-        keepsakes: createKeepsakeState(catalog, 'GoldifyKeepsake', branch.arcanaFear),
+        state: Object.freeze({
+          ...branch.state,
+          keepsakes: createKeepsakeState(catalog, 'GoldifyKeepsake', branch.state.arcanaFear),
+        }),
       }),
     );
     for (let index = 0; index < 4; index += 1) branches = settle('gold', branches).branches;
-    expect(branches[0]?.keepsakes.timePiece?.remainingCharges).toBe(0);
+    expect(branches[0]?.state.keepsakes.timePiece?.remainingCharges).toBe(0);
     const fifth = settle('gold', branches);
-    expect(fifth.branches[0]?.history.lootTypeHistory).toMatchObject({ ApolloUpgrade: 1 });
+    expect(fifth.branches[0]?.state.rewardHistory.lootTypeHistory).toMatchObject({
+      ApolloUpgrade: 1,
+    });
   });
 
   it('retains unused charges through a neutral swap and closes them at the first Unfated transition', () => {

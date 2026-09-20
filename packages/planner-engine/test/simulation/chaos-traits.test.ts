@@ -120,8 +120,11 @@ function branchWithHistory(history: ReturnType<typeof createTraitHistoryState>) 
   const base = initializeTestRewardBranches()[0]!;
   return Object.freeze({
     ...base,
-    history: attachTraitHistory(base.history, history),
-    traitHistory: history,
+    state: Object.freeze({
+      ...base.state,
+      rewardHistory: attachTraitHistory(base.state.rewardHistory, history),
+      traitHistory: history,
+    }),
   });
 }
 
@@ -285,8 +288,8 @@ describe('Chaos paired-trait history', () => {
       undefined,
       'self',
     );
-    expect(first.branch.traitHistory?.equippedTraits.ZeusSpecialBoon?.rarity).toBe('Common');
-    expect(first.branch.traitHistory?.activeChaosCurses).toMatchObject([
+    expect(first.branch.state.traitHistory?.equippedTraits.ZeusSpecialBoon?.rarity).toBe('Common');
+    expect(first.branch.state.traitHistory?.activeChaosCurses).toMatchObject([
       { semanticTag: 'Ordinary', remaining: 1 },
     ]);
     const expired = settleEncounterTraitOffer(
@@ -309,12 +312,16 @@ describe('Chaos paired-trait history', () => {
       undefined,
       'self',
     );
-    expect(expired.branch.traitHistory?.activeChaosCurses).toEqual([]);
-    expect(expired.branch.traitHistory?.equippedTraits.ZeusSpecialBoon?.rarity).toBe('Rare');
-    expect(expired.branch.traitHistory?.equippedTraits.HermesCastDiscountBoon?.rarity).toBe('Rare');
-    expect(expired.branch.traitHistory?.equippedTraits.ElementalHealthBoon?.rarity).toBe('Common');
+    expect(expired.branch.state.traitHistory?.activeChaosCurses).toEqual([]);
+    expect(expired.branch.state.traitHistory?.equippedTraits.ZeusSpecialBoon?.rarity).toBe('Rare');
+    expect(expired.branch.state.traitHistory?.equippedTraits.HermesCastDiscountBoon?.rarity).toBe(
+      'Rare',
+    );
+    expect(expired.branch.state.traitHistory?.equippedTraits.ElementalHealthBoon?.rarity).toBe(
+      'Common',
+    );
     expect(
-      expired.branch.traitHistory?.events.find(
+      expired.branch.state.traitHistory?.events.find(
         (event) =>
           event.kind === 'traitOffer' &&
           event.giverKey === 'Hermes' &&
@@ -740,7 +747,10 @@ describe('Chaos paired-trait history', () => {
     const source = initializeTestRewardBranches()[0]!;
     const impossible = settleEncounterTraitOffer(
       catalog,
-      Object.freeze({ ...source, arcanaFear: rankIVExcellence }),
+      Object.freeze({
+        ...source,
+        state: Object.freeze({ ...source.state, arcanaFear: rankIVExcellence }),
+      }),
       rewardOwner,
       common,
       1,
@@ -756,7 +766,7 @@ describe('Chaos paired-trait history', () => {
         }),
       }),
     );
-    expect(impossible.branch.traitHistory?.events).toEqual([]);
+    expect(impossible.branch.state.traitHistory?.events).toEqual([]);
   });
 
   it('uses the Trial source override before item facts, while excluding Proper and Yarn', () => {
@@ -994,9 +1004,12 @@ describe('Chaos paired-trait history', () => {
     const source = initializeTestRewardBranches()[0]!;
     const withYarn = Object.freeze({
       ...source,
-      history: attachTraitHistory(source.history, proper),
-      traitHistory: proper,
-      stygianWell: Object.freeze({ ...source.stygianWell, yarnUses: 1 }),
+      state: Object.freeze({
+        ...source.state,
+        rewardHistory: attachTraitHistory(source.state.rewardHistory, proper),
+        traitHistory: proper,
+        stygianWell: Object.freeze({ ...source.state.stygianWell, yarnUses: 1 }),
+      }),
     });
     const zeus: AuthoredTraitOfferTraits = Object.freeze({
       kind: 'traits',
@@ -1026,7 +1039,7 @@ describe('Chaos paired-trait history', () => {
         finding: expect.objectContaining({ code: 'rarityRollUnavailable' }),
       }),
     );
-    expect(first.branch.stygianWell.yarnUses).toBe(1);
+    expect(first.branch.state.stygianWell.yarnUses).toBe(1);
     expect(first.branch.traitEvaluations?.at(-1)?.context).toMatchObject({
       freshRarityOverride: 'Common',
     });
@@ -1053,15 +1066,15 @@ describe('Chaos paired-trait history', () => {
       3,
       'reward',
     );
-    expect(second.branch.stygianWell.yarnUses).toBe(1);
-    expect(second.branch.traitHistory?.activeChaosCurses).toEqual([]);
+    expect(second.branch.state.stygianWell.yarnUses).toBe(1);
+    expect(second.branch.state.traitHistory?.activeChaosCurses).toEqual([]);
     const secondEvaluation = second.branch.traitEvaluations?.at(-1);
     if (secondEvaluation === undefined) throw new Error('Hermes screen did not settle');
     expect(secondEvaluation.assessments.every((assessment) => assessment.legal)).toBe(true);
     expect(secondEvaluation.composition.legal).toBe(true);
     expect(secondEvaluation.generation?.legal).toBe(true);
     expect(secondEvaluation.targetedAcquisition.legal).toBe(true);
-    expect(second.branch.traitHistory?.equippedTraits.HermesWeaponBoon).toMatchObject({
+    expect(second.branch.state.traitHistory?.equippedTraits.HermesWeaponBoon).toMatchObject({
       rarity: 'Common',
     });
 
@@ -1083,7 +1096,7 @@ describe('Chaos paired-trait history', () => {
       4,
       'reward',
     );
-    expect(third.branch.stygianWell.yarnUses).toBe(0);
+    expect(third.branch.state.stygianWell.yarnUses).toBe(0);
     const thirdEvaluation = third.branch.traitEvaluations?.at(-1);
     if (thirdEvaluation === undefined) throw new Error('Demeter screen did not settle');
     expect(thirdEvaluation.context.freshRarityOverride).toBeUndefined();
@@ -1094,7 +1107,7 @@ describe('Chaos paired-trait history', () => {
     expect(thirdEvaluation.composition.legal).toBe(true);
     expect(thirdEvaluation.generation?.legal).toBe(true);
     expect(thirdEvaluation.targetedAcquisition.legal).toBe(true);
-    expect(third.branch.traitHistory?.equippedTraits.DemeterWeaponBoon).toMatchObject({
+    expect(third.branch.state.traitHistory?.equippedTraits.DemeterWeaponBoon).toMatchObject({
       rarity: 'Rare',
     });
   });
@@ -1120,7 +1133,14 @@ describe('Chaos paired-trait history', () => {
     const purchaseHymn = (branch: Parameters<typeof settleEncounterTraitOffer>[1]) =>
       Object.freeze({
         ...branch,
-        stygianWell: applyStygianWellPurchase(catalog, branch.stygianWell, 'LimitedSwapTraitDrop'),
+        state: Object.freeze({
+          ...branch.state,
+          stygianWell: applyStygianWellPurchase(
+            catalog,
+            branch.state.stygianWell,
+            'LimitedSwapTraitDrop',
+          ),
+        }),
       });
     const acquireOrdinary = (branch: Parameters<typeof settleEncounterTraitOffer>[1]) =>
       settleEncounterTraitOffer(
@@ -1151,8 +1171,8 @@ describe('Chaos paired-trait history', () => {
         owner,
         'self',
         replacement,
-        branch.traitHistory!,
-        { limitedSwapUses: branch.stygianWell.hymnUses },
+        branch.state.traitHistory!,
+        { limitedSwapUses: branch.state.stygianWell.hymnUses },
         3,
       ),
     );
@@ -1162,7 +1182,7 @@ describe('Chaos paired-trait history', () => {
     ]);
     expect(evaluations.every((evaluation) => evaluation.generation?.legal)).toBe(true);
     expect(
-      [hymnThenOrdinary, ordinaryThenHymn].map((branch) => branch.stygianWell.hymnUses),
+      [hymnThenOrdinary, ordinaryThenHymn].map((branch) => branch.state.stygianWell.hymnUses),
     ).toEqual([1, 1]);
   });
 
@@ -1330,8 +1350,11 @@ describe('Chaos paired-trait history', () => {
     const base = initializeTestRewardBranches(arcanaFear)[0]!;
     const branch = Object.freeze({
       ...base,
-      history: attachTraitHistory(base.history, barrenHistory),
-      traitHistory: barrenHistory,
+      state: Object.freeze({
+        ...base.state,
+        rewardHistory: attachTraitHistory(base.state.rewardHistory, barrenHistory),
+        traitHistory: barrenHistory,
+      }),
     });
     const source = Object.freeze({
       origin: rewardOwner,
@@ -1344,8 +1367,8 @@ describe('Chaos paired-trait history', () => {
       supported: false,
       evidence: { artificerCapacity: 0, artificerRemaining: 0 },
     });
-    expect(branch.arcanaFear).toBe(arcanaFear);
-    expect(branch.traitHistory).toBe(barrenHistory);
+    expect(branch.state.arcanaFear).toBe(arcanaFear);
+    expect(branch.state.traitHistory).toBe(barrenHistory);
 
     const matureHistory = [6, 7, 8].reduce(
       (history, sequence) => advanceChaosClock(catalog, history, sequence, 'encounters'),
@@ -1353,14 +1376,17 @@ describe('Chaos paired-trait history', () => {
     );
     const restored = Object.freeze({
       ...base,
-      history: attachTraitHistory(base.history, matureHistory),
-      traitHistory: matureHistory,
+      state: Object.freeze({
+        ...base.state,
+        rewardHistory: attachTraitHistory(base.state.rewardHistory, matureHistory),
+        traitHistory: matureHistory,
+      }),
     });
     expect(assessArtificerConversion(catalog, restored, source, resolution)).toMatchObject({
       supported: true,
       evidence: { artificerCapacity: 3, artificerRemaining: 3 },
     });
-    expect(restored.arcanaFear).toBe(arcanaFear);
+    expect(restored.state.arcanaFear).toBe(arcanaFear);
   });
 
   it('consumes Ordinary and Rejected after each eligible Hermes screen, including valid fallback Gold', () => {
@@ -1396,9 +1422,9 @@ describe('Chaos paired-trait history', () => {
       3,
       'encounterCompleted',
     );
-    expect(settled.branch.traitHistory?.activeChaosCurses.map((curse) => curse.remaining)).toEqual([
-      1, 1,
-    ]);
+    expect(
+      settled.branch.state.traitHistory?.activeChaosCurses.map((curse) => curse.remaining),
+    ).toEqual([1, 1]);
 
     const exhausted = Object.freeze({
       ...active,
@@ -1412,9 +1438,9 @@ describe('Chaos paired-trait history', () => {
       3,
       'encounterCompleted',
     );
-    expect(fallback.branch.traitHistory?.activeChaosCurses.map((curse) => curse.remaining)).toEqual(
-      [1, 1],
-    );
+    expect(
+      fallback.branch.state.traitHistory?.activeChaosCurses.map((curse) => curse.remaining),
+    ).toEqual([1, 1]);
   });
 
   it('consumes Ordinary after each ranked NPC god screen', () => {
@@ -1427,7 +1453,7 @@ describe('Chaos paired-trait history', () => {
         2,
         'encounterCompleted',
       );
-      expect(settled.branch.traitHistory?.activeChaosCurses).toMatchObject([
+      expect(settled.branch.state.traitHistory?.activeChaosCurses).toMatchObject([
         { semanticTag: 'Ordinary', remaining: 1 },
       ]);
     }
@@ -1454,7 +1480,7 @@ describe('Chaos paired-trait history', () => {
       3,
       'encounterCompleted',
     );
-    expect(invalid.branch.traitHistory?.activeChaosCurses).toMatchObject([
+    expect(invalid.branch.state.traitHistory?.activeChaosCurses).toMatchObject([
       { semanticTag: 'Ordinary', remaining: 2 },
       { semanticTag: 'Rejected', remaining: 2 },
     ]);
@@ -1469,11 +1495,11 @@ describe('Chaos paired-trait history', () => {
       3,
       'encounterCompleted',
     );
-    expect(settled.branch.traitHistory?.activeChaosCurses).toMatchObject([
+    expect(settled.branch.state.traitHistory?.activeChaosCurses).toMatchObject([
       { semanticTag: 'Ordinary', remaining: 1 },
       { semanticTag: 'Rejected', remaining: 1 },
     ]);
-    expect(settled.branch.traitHistory?.equippedTraits.SupportingFireBoon).toBeDefined();
+    expect(settled.branch.state.traitHistory?.equippedTraits.SupportingFireBoon).toBeDefined();
   });
 
   it('rechecks active Proper after the final ranked NPC god screen expires Ordinary', () => {
@@ -1509,9 +1535,11 @@ describe('Chaos paired-trait history', () => {
       undefined,
       'gorgonAthena',
     );
-    expect(expired.branch.traitHistory?.activeChaosCurses).toEqual([]);
-    expect(expired.branch.traitHistory?.equippedTraits.SupportingFireBoon?.rarity).toBe('Rare');
-    expect(expired.branch.traitHistory?.equippedTraits.InvulnerabilityDashBoon?.rarity).toBe(
+    expect(expired.branch.state.traitHistory?.activeChaosCurses).toEqual([]);
+    expect(expired.branch.state.traitHistory?.equippedTraits.SupportingFireBoon?.rarity).toBe(
+      'Rare',
+    );
+    expect(expired.branch.state.traitHistory?.equippedTraits.InvulnerabilityDashBoon?.rarity).toBe(
       'Rare',
     );
   });
@@ -1556,11 +1584,11 @@ describe('Chaos paired-trait history', () => {
         2,
         'encounterCompleted',
       );
-      expect(settled.branch.traitHistory?.activeChaosCurses).toMatchObject([
+      expect(settled.branch.state.traitHistory?.activeChaosCurses).toMatchObject([
         { semanticTag: 'Ordinary', remaining: 2 },
       ]);
       expect(
-        settled.branch.traitHistory?.equippedTraits[selectedTraitKey],
+        settled.branch.state.traitHistory?.equippedTraits[selectedTraitKey],
         `${offer.giverKey} selected trait should settle`,
       ).toBeDefined();
     }
@@ -1572,7 +1600,10 @@ describe('Chaos paired-trait history', () => {
       catalog,
       Object.freeze({
         ...source,
-        stygianWell: Object.freeze({ ...source.stygianWell, yarnUses: 1 }),
+        state: Object.freeze({
+          ...source.state,
+          stygianWell: Object.freeze({ ...source.state.stygianWell, yarnUses: 1 }),
+        }),
       }),
       rewardOwner,
       chaos('ChaosNoMoneyCurse', 'ChaosElementalBlessing'),
@@ -1581,10 +1612,10 @@ describe('Chaos paired-trait history', () => {
       undefined,
       'self',
     );
-    expect(settled.branch.traitHistory?.activeChaosCurses).toMatchObject([
+    expect(settled.branch.state.traitHistory?.activeChaosCurses).toMatchObject([
       { curseKey: 'ChaosNoMoneyCurse', remaining: 3 },
     ]);
-    expect(settled.branch.stygianWell.yarnUses).toBe(1);
+    expect(settled.branch.state.stygianWell.yarnUses).toBe(1);
     expect(settled.branch.traitEvaluations?.at(-1)?.context.boonRarityFacts).toBeUndefined();
   });
 
@@ -1659,14 +1690,14 @@ describe('Chaos paired-trait history', () => {
         [branchWithHistory(oneUseRemaining)],
       ).simulation;
       const newEncounterClocks =
-        result.branches[0]?.traitHistory?.events.filter(
+        result.branches[0]?.state.traitHistory?.events.filter(
           (event) =>
             event.kind === 'chaosClock' && event.sequence > 3 && event.clock === 'encounters',
         ) ?? [];
       expect(newEncounterClocks).toEqual([
         expect.objectContaining({ sequence: terminal[0]?.sequence }),
       ]);
-      expect(result.branches[0]?.traitHistory?.activeChaosCurses).toHaveLength(0);
+      expect(result.branches[0]?.state.traitHistory?.activeChaosCurses).toHaveLength(0);
     }
   });
 });

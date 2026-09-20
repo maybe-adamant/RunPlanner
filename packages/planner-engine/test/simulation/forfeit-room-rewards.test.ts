@@ -70,10 +70,12 @@ function replayEnteredFieldsForfeit(rank: 0 | 1) {
       rewardBranches: previous.rewards.branches.map((branch) =>
         Object.freeze({
           ...branch,
-          arcanaFear: Object.freeze({ ...branch.arcanaFear, fear: arcanaFear.fear }),
+          state: Object.freeze({
+            ...branch.state,
+            arcanaFear: Object.freeze({ ...branch.state.arcanaFear, fear: arcanaFear.fear }),
+          }),
         }),
       ),
-      rewardLookups: previous.rewards.rewardLookups,
     },
   });
   if (progressive === null) throw new Error('Fields fixture did not publish progressive assembly');
@@ -130,7 +132,7 @@ describe('Vow of Forfeit Red Onion substitution', () => {
       const rewards = simulated(rewardType);
       const branch = rewards.branches[0];
       if (branch === undefined) throw new Error('expected reward branch');
-      expect(branch.arcanaFear.fear.forfeitConsumed).toBe(true);
+      expect(branch.state.arcanaFear.fear.forfeitConsumed).toBe(true);
       expect(branch.events).toContainEqual(
         expect.objectContaining({
           kind: 'rewardForfeited',
@@ -219,7 +221,7 @@ describe('Vow of Forfeit Red Onion substitution', () => {
       ),
     ).toBe(false);
     expect(
-      (branch.traitHistory?.events ?? []).some(
+      (branch.state.traitHistory?.events ?? []).some(
         (event) =>
           'owner' in event && semanticAddressKey(event.owner) === semanticAddressKey(fieldsCage1),
       ),
@@ -320,7 +322,7 @@ describe('Vow of Forfeit Red Onion substitution', () => {
     const branch = o.rewards.branches[0];
     if (branch === undefined) throw new Error('expected reward branch');
 
-    expect(branch.arcanaFear.fear.forfeitConsumed).toBe(true);
+    expect(branch.state.arcanaFear.fear.forfeitConsumed).toBe(true);
     expect(branch.events).toContainEqual(
       expect.objectContaining({
         kind: 'rewardForfeited',
@@ -452,7 +454,7 @@ describe('Vow of Forfeit Red Onion substitution', () => {
     );
     const rewards = rewardsFor(project);
     const branch = rewards.branches[0]!;
-    expect(branch.bags.RunProgress?.remainingEntryCounts).toBeDefined();
+    expect(branch.state.bags.RunProgress?.remainingEntryCounts).toBeDefined();
     expect(
       branch.events.some(
         (event) =>
@@ -470,7 +472,7 @@ describe('Vow of Forfeit Red Onion substitution', () => {
       expect.objectContaining({ origin: createTraitOfferAddress(owner, 'source') }),
     );
     expect(
-      (branch.traitHistory?.events ?? []).some(
+      (branch.state.traitHistory?.events ?? []).some(
         (event) =>
           'owner' in event && semanticAddressKey(event.owner) === semanticAddressKey(owner),
       ),

@@ -43,25 +43,32 @@ export function processShopInventory(
       catalog.rewards,
       profile,
       authored,
-      context.facts(branch.history, new Set(), branch),
+      context.facts(branch.state.rewardHistory, new Set(), branch),
       requirements,
     );
     supportResults.push(support);
     for (const witness of support.witnesses) {
       let candidate = branch;
       for (const offer of entry.offers) {
-        const offerFacts = context.facts(candidate.history, new Set(), candidate);
+        const offerFacts = context.facts(candidate.state.rewardHistory, new Set(), candidate);
         const history = applyOfferProjection(
           catalog.rewards,
-          candidate.history,
+          candidate.state.rewardHistory,
           offer.offer,
           offerFacts,
         );
-        candidate = appendRewardEvent(Object.freeze({ ...candidate, history }), historySequence, {
-          kind: 'rewardOffered',
-          origin: offer.offerOrigin,
-          offer: offer.offer,
-        });
+        candidate = appendRewardEvent(
+          Object.freeze({
+            ...candidate,
+            state: Object.freeze({ ...candidate.state, rewardHistory: history }),
+          }),
+          historySequence,
+          {
+            kind: 'rewardOffered',
+            origin: offer.offerOrigin,
+            offer: offer.offer,
+          },
+        );
       }
       candidate = appendRewardEvent(candidate, historySequence, {
         kind: 'shopInventorySupported',
@@ -75,11 +82,14 @@ export function processShopInventory(
       next.push(
         Object.freeze({
           ...candidate,
-          pendingShops: freezeRecord({
-            ...candidate.pendingShops,
-            [semanticAddressKey(room.origin)]: Object.freeze({
-              profileKey: profile.key,
-              witness,
+          state: Object.freeze({
+            ...candidate.state,
+            pendingShops: freezeRecord({
+              ...candidate.state.pendingShops,
+              [semanticAddressKey(room.origin)]: Object.freeze({
+                profileKey: profile.key,
+                witness,
+              }),
             }),
           }),
         }),
@@ -139,7 +149,7 @@ export function processShopInventory(
   )
     return fail(`${room.gameName} lost its single-slot Contract profile`);
   for (const branch of next) {
-    const active = branch.traitHistory?.equippedTraits.InfernalContractBoon !== undefined;
+    const active = branch.state.traitHistory.equippedTraits.InfernalContractBoon !== undefined;
     if (contractProfile === undefined || !active) {
       contractBranches.push(branch);
       continue;
@@ -160,7 +170,7 @@ export function processShopInventory(
       0,
       contractOffer.offer,
       context.facts(
-        branch.history,
+        branch.state.rewardHistory,
         new Set(entry.offers.map((offer) => offer.offer.rewardType)),
         branch,
       ),
@@ -177,27 +187,33 @@ export function processShopInventory(
     let candidate = appendRewardEvent(
       Object.freeze({
         ...branch,
-        history: applyOfferProjection(
-          catalog.rewards,
-          branch.history,
-          contractOffer.offer,
-          context.facts(
-            branch.history,
-            new Set(entry.offers.map((offer) => offer.offer.rewardType)),
-            branch,
+        state: Object.freeze({
+          ...branch.state,
+          rewardHistory: applyOfferProjection(
+            catalog.rewards,
+            branch.state.rewardHistory,
+            contractOffer.offer,
+            context.facts(
+              branch.state.rewardHistory,
+              new Set(entry.offers.map((offer) => offer.offer.rewardType)),
+              branch,
+            ),
           ),
-        ),
+        }),
       }),
       historySequence,
       { kind: 'rewardOffered', origin: owner, offer: contractOffer.offer },
     );
     candidate = Object.freeze({
       ...candidate,
-      pendingShops: freezeRecord({
-        ...candidate.pendingShops,
-        [semanticAddressKey(room.origin)]: Object.freeze({
-          ...candidate.pendingShops[semanticAddressKey(room.origin)]!,
-          infernalContractOffer: contractOffer,
+      state: Object.freeze({
+        ...candidate.state,
+        pendingShops: freezeRecord({
+          ...candidate.state.pendingShops,
+          [semanticAddressKey(room.origin)]: Object.freeze({
+            ...candidate.state.pendingShops[semanticAddressKey(room.origin)]!,
+            infernalContractOffer: contractOffer,
+          }),
         }),
       }),
     });

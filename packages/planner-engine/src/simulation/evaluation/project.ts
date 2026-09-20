@@ -236,6 +236,7 @@ function evaluateRouteAssembly(
         route.routeKey,
         startingReward,
         route.loadout,
+        resolveRoutePosition(catalog, route, route.itineraryBiomeKeys[0]!),
       ),
     );
   }
@@ -275,7 +276,6 @@ function evaluateRouteAssembly(
         ? Object.freeze({
             history: previous.history,
             rewardBranches: previous.rewards.branches,
-            rewardLookups: previous.rewards.rewardLookups,
           })
         : undefined;
     const routePosition = resolveRoutePosition(catalog, route, plan.biomeKey);

@@ -90,7 +90,7 @@ function keepsakesAfter(project: ReturnType<typeof createGoldenFGHProject>, biom
   );
   if (biome?.authoring !== 'complete' || biome.validity !== 'valid')
     throw new Error(`expected valid ${biomeKey} fixture`);
-  return biome.rewards.branches[0]?.keepsakes;
+  return biome.rewards.branches[0]?.state.keepsakes;
 }
 
 describe('keepsake selection candidates', () => {
@@ -126,15 +126,15 @@ describe('keepsake selection candidates', () => {
       throw new Error('expected the N rack and following O biome to be reached');
     }
     expect(n.rewards.branches).toHaveLength(1);
-    expect(n.rewards.branches[0]?.hexProgress).toMatchObject({
+    expect(n.rewards.branches[0]?.state.hexProgress).toMatchObject({
       spellTraitKey: 'SpellPolymorphTrait',
       godSentAdded: true,
     });
-    expect(o.rewards.branches[0]?.hexProgress).toMatchObject({
+    expect(o.rewards.branches[0]?.state.hexProgress).toMatchObject({
       spellTraitKey: 'SpellPolymorphTrait',
       godSentAdded: true,
     });
-    expect(n.rewards.branches[0]?.keepsakes.history).toContainEqual({
+    expect(n.rewards.branches[0]?.state.keepsakes.history).toContainEqual({
       key: 'ForceZeusBoonKeepsake',
       kind: 'replace',
       biomeNumber: 2,
@@ -296,7 +296,7 @@ describe('keepsake selection candidates', () => {
       expect.objectContaining({ code: 'keepsakeUnavailable', origin: gPostboss }),
     );
     if (g === undefined || !('rewards' in g)) throw new Error('expected reached G reward surface');
-    expect(g.rewards.branches[0]?.keepsakes).toMatchObject({
+    expect(g.rewards.branches[0]?.state.keepsakes).toMatchObject({
       currentKey: 'HadesAndPersephoneKeepsake',
       removedKeys: ['ManaOverTimeRefundKeepsake'],
       history: [
@@ -328,7 +328,7 @@ describe('keepsake selection candidates', () => {
       expect.objectContaining({ code: 'keepsakeUnavailable', origin: fPostboss }),
     );
     if (f === undefined || !('rewards' in f)) throw new Error('expected reached F reward surface');
-    expect(f.rewards.branches[0]?.keepsakes).toMatchObject({
+    expect(f.rewards.branches[0]?.state.keepsakes).toMatchObject({
       currentKey: 'ManaOverTimeRefundKeepsake',
       removedKeys: [],
       history: [{ key: 'ManaOverTimeRefundKeepsake', kind: 'start', biomeNumber: 1 }],
@@ -517,7 +517,7 @@ describe('keepsake selection candidates', () => {
     const resumedF = resumedStart?.biomes[0];
     if (resumedF === undefined || !('rewards' in resumedF))
       throw new Error('completed route-start Jeweled Pom did not resume F');
-    expect(resumedF.rewards.branches[0]?.traitHistory?.equippedTraits).toHaveProperty(
+    expect(resumedF.rewards.branches[0]?.state.traitHistory?.equippedTraits).toHaveProperty(
       'HadesLifestealBoon',
     );
     startProject = applyProjectCommand(
@@ -592,20 +592,20 @@ describe('keepsake selection candidates', () => {
       throw new Error('expected reached F/G rewards');
     const retained = f.rewards.branches[0];
     const unfated = g.rewards.branches[0];
-    expect(retained?.keepsakes.jeweledPom).toMatchObject({ active: true, levels: 3 });
-    expect(retained?.traitHistory?.equippedTraits.HadesLifestealBoon).toBeDefined();
-    const retainedBoost = Object.values(retained?.traitHistory?.equippedTraits ?? {}).find(
+    expect(retained?.state.keepsakes.jeweledPom).toMatchObject({ active: true, levels: 3 });
+    expect(retained?.state.traitHistory?.equippedTraits.HadesLifestealBoon).toBeDefined();
+    const retainedBoost = Object.values(retained?.state.traitHistory?.equippedTraits ?? {}).find(
       (trait) => trait.traitKey !== 'HadesLifestealBoon' && trait.level === 4,
     );
     expect(retainedBoost).toBeDefined();
 
-    expect(unfated?.keepsakes).toMatchObject({
+    expect(unfated?.state.keepsakes).toMatchObject({
       fatedStatus: 'Unfated',
       jeweledPom: { active: false, levels: 3 },
     });
-    expect(unfated?.traitHistory?.equippedTraits.HadesLifestealBoon).toBeUndefined();
+    expect(unfated?.state.traitHistory?.equippedTraits.HadesLifestealBoon).toBeUndefined();
     expect(
-      unfated?.traitHistory?.equippedTraits[retainedBoost?.traitKey ?? '']?.level,
+      unfated?.state.traitHistory?.equippedTraits[retainedBoost?.traitKey ?? '']?.level,
     ).toBeGreaterThanOrEqual(4);
   });
 });

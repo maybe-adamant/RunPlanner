@@ -110,21 +110,23 @@ function echoTraitOption(traitKey: string): AuthoredTraitOfferTraits['options'][
 
 function baseBranch(history = createTraitHistoryState()) {
   const base = initializeTestRewardBranches()[0]!;
-  const attached = attachTraitHistory(base.history, history);
+  const attached = attachTraitHistory(base.state.rewardHistory, history);
   return Object.freeze({
     ...base,
-    history: attached,
-    traitHistory: history,
+    state: Object.freeze({ ...base.state, rewardHistory: attached, traitHistory: history }),
   });
 }
 
 function baseBranchWithSources(sources: readonly string[], history = createTraitHistoryState()) {
   const base = initializeTestRewardBranches()[0]!;
-  const rewardHistory = sources.reduce(recordLootTypeHistorySource, base.history);
+  const rewardHistory = sources.reduce(recordLootTypeHistorySource, base.state.rewardHistory);
   return Object.freeze({
     ...base,
-    history: attachTraitHistory(rewardHistory, history),
-    traitHistory: history,
+    state: Object.freeze({
+      ...base.state,
+      rewardHistory: attachTraitHistory(rewardHistory, history),
+      traitHistory: history,
+    }),
   });
 }
 
@@ -296,7 +298,9 @@ function historyFromTraits(
   );
 }
 
-function ordinaryPoolFor(history: ReturnType<typeof baseBranch>['history']): readonly string[] {
+function ordinaryPoolFor(
+  history: ReturnType<typeof baseBranch>['state']['rewardHistory'],
+): readonly string[] {
   const rewardType = catalog.rewards.rewardTypes.byKey.Boon;
   if (rewardType === undefined) throw new Error('Boon reward type is missing');
   const facts = {
@@ -502,8 +506,12 @@ describe('Echo Gate A direct choices', () => {
       10,
       'encounterCompleted',
     );
-    expect(result.branch.traitHistory?.equippedTraits.EchoDoubleLevelBoon?.rarity).toBeUndefined();
-    expect(result.branch.traitHistory?.events.map((event) => event.kind)).toEqual(['traitOffer']);
+    expect(
+      result.branch.state.traitHistory?.equippedTraits.EchoDoubleLevelBoon?.rarity,
+    ).toBeUndefined();
+    expect(result.branch.state.traitHistory?.events.map((event) => event.kind)).toEqual([
+      'traitOffer',
+    ]);
     expect(result.findingEntries).toHaveLength(0);
   });
 
@@ -598,13 +606,13 @@ describe('Echo Gate A direct choices', () => {
       10,
       'encounterCompleted',
     );
-    expect(result.branch.traitHistory?.equippedTraits[traitKey]).toMatchObject({
+    expect(result.branch.state.traitHistory?.equippedTraits[traitKey]).toMatchObject({
       traitKey,
       giverKey: 'Echo',
     });
-    expect(result.branch.traitHistory?.equippedTraits[traitKey]?.rarity).toBeUndefined();
+    expect(result.branch.state.traitHistory?.equippedTraits[traitKey]?.rarity).toBeUndefined();
     if (traitKey === 'EchoDoubleShop') {
-      expect(result.branch.traitHistory?.equippedTraits[traitKey]?.acquisitionIdentity).toBe(
+      expect(result.branch.state.traitHistory?.equippedTraits[traitKey]?.acquisitionIdentity).toBe(
         `${semanticAddressKey(echoOwner)}:10`,
       );
     }
@@ -624,7 +632,7 @@ describe('Echo Gate A direct choices', () => {
       10,
       'encounterCompleted',
     );
-    expect(result.branch.traitHistory?.equippedTraits.EchoDeathDefianceRefill).toBeDefined();
+    expect(result.branch.state.traitHistory?.equippedTraits.EchoDeathDefianceRefill).toBeDefined();
     expect(result.findingEntries.map((entry) => entry.finding.code)).not.toContain('offerContext');
   });
 
@@ -661,11 +669,11 @@ describe('Echo Gate A direct choices', () => {
       10,
       'encounterCompleted',
     );
-    expect(result.branch.traitHistory?.equippedTraits.ZeusWeaponBoon?.level).toBe(6);
-    expect(result.branch.traitHistory?.equippedTraits.ApolloWeaponBoon?.level).toBe(3);
-    expect(result.branch.traitHistory?.equippedTraits.HestiaWeaponBoon?.level).toBe(2);
-    expect(result.branch.traitHistory?.equippedTraits.EchoDoubleLevelBoon).toBeDefined();
-    expect(result.branch.traitHistory?.events.slice(-2).map((event) => event.kind)).toEqual([
+    expect(result.branch.state.traitHistory?.equippedTraits.ZeusWeaponBoon?.level).toBe(6);
+    expect(result.branch.state.traitHistory?.equippedTraits.ApolloWeaponBoon?.level).toBe(3);
+    expect(result.branch.state.traitHistory?.equippedTraits.HestiaWeaponBoon?.level).toBe(2);
+    expect(result.branch.state.traitHistory?.equippedTraits.EchoDoubleLevelBoon).toBeDefined();
+    expect(result.branch.state.traitHistory?.events.slice(-2).map((event) => event.kind)).toEqual([
       'traitOffer',
       'levelMutation',
     ]);
@@ -693,8 +701,8 @@ describe('Echo Gate A direct choices', () => {
       10,
       'encounterCompleted',
     );
-    expect(result.branch.traitHistory?.equippedTraits.EchoDoubleLevelBoon).toBeDefined();
-    expect(result.branch.traitHistory?.equippedTraits.HestiaWeaponBoon?.level).toBe(2);
+    expect(result.branch.state.traitHistory?.equippedTraits.EchoDoubleLevelBoon).toBeDefined();
+    expect(result.branch.state.traitHistory?.equippedTraits.HestiaWeaponBoon?.level).toBe(2);
     expect(result.findingEntries.map((entry) => entry.finding.code)).toContain(code);
   });
 
@@ -792,14 +800,16 @@ describe('Echo Gate A direct choices', () => {
     const child = createEchoPomTargetAddress(echoOwner, 'option3');
     expect(h.coverage).toMatchObject({ kind: 'prefix', blockedAt: child });
     expect(h.rewards.branches).toHaveLength(1);
-    expect(h.rewards.branches[0]?.traitHistory?.equippedTraits).toMatchObject({
+    expect(h.rewards.branches[0]?.state.traitHistory?.equippedTraits).toMatchObject({
       ApolloWeaponBoon: { level: 2 },
       EchoDoubleLevelBoon: { traitKey: 'EchoDoubleLevelBoon' },
     });
     expect(
-      h.rewards.branches[0]?.traitHistory?.equippedTraits.EchoDoubleLevelBoon?.rarity,
+      h.rewards.branches[0]?.state.traitHistory?.equippedTraits.EchoDoubleLevelBoon?.rarity,
     ).toBeUndefined();
-    expect(h.rewards.branches[0]?.traitHistory?.equippedTraits.ZeusWeaponBoon).toBeUndefined();
+    expect(
+      h.rewards.branches[0]?.state.traitHistory?.equippedTraits.ZeusWeaponBoon,
+    ).toBeUndefined();
     expect(h.findings).toContainEqual(
       expect.objectContaining({ code: 'echoPomTargetUnavailable', origin: child }),
     );
@@ -956,8 +966,10 @@ describe('Echo Gate B Boon Boon Boon', () => {
       10,
       'encounterCompleted',
     );
-    expect(rejected.branch.traitHistory?.equippedTraits.EchoLastRunBoon).toBeDefined();
-    expect(rejected.branch.traitHistory?.equippedTraits.DeathDefianceRefillBoon).toMatchObject({
+    expect(rejected.branch.state.traitHistory?.equippedTraits.EchoLastRunBoon).toBeDefined();
+    expect(
+      rejected.branch.state.traitHistory?.equippedTraits.DeathDefianceRefillBoon,
+    ).toMatchObject({
       giverKey: 'Athena',
       rarity: 'Common',
     });
@@ -969,7 +981,9 @@ describe('Echo Gate B Boon Boon Boon', () => {
       10,
       'encounterCompleted',
     );
-    expect(accepted.branch.traitHistory?.equippedTraits.DeathDefianceRefillBoon).toMatchObject({
+    expect(
+      accepted.branch.state.traitHistory?.equippedTraits.DeathDefianceRefillBoon,
+    ).toMatchObject({
       giverKey: 'Athena',
       rarity: 'Common',
     });
@@ -1267,12 +1281,14 @@ describe('Echo Gate B Boon Boon Boon', () => {
         10,
         'encounterCompleted',
       );
-      expect(result.branch.traitHistory?.equippedTraits.EchoLastRunBoon).toMatchObject({
+      expect(result.branch.state.traitHistory?.equippedTraits.EchoLastRunBoon).toMatchObject({
         giverKey: 'Echo',
         traitKey: 'EchoLastRunBoon',
       });
-      expect(result.branch.traitHistory?.equippedTraits.EchoLastRunBoon?.rarity).toBeUndefined();
-      expect(result.branch.traitHistory?.equippedTraits[option.traitKey]).toMatchObject({
+      expect(
+        result.branch.state.traitHistory?.equippedTraits.EchoLastRunBoon?.rarity,
+      ).toBeUndefined();
+      expect(result.branch.state.traitHistory?.equippedTraits[option.traitKey]).toMatchObject({
         giverKey: option.giverKey,
         rarity: option.rarity,
         traitKey: option.traitKey,
@@ -1284,14 +1300,14 @@ describe('Echo Gate B Boon Boon Boon', () => {
           candidate.option.rarity === option.rarity,
       );
       expect(outcome).toBeDefined();
-      expect(result.branch.traitHistory?.equippedTraits[option.traitKey]?.level).toBe(
+      expect(result.branch.state.traitHistory?.equippedTraits[option.traitKey]?.level).toBe(
         outcome?.effectiveLevel,
       );
       if (_label === 'Heroic' || _label === 'Common') expect(outcome?.effectiveLevel).toBe(1);
       if (_label === 'Duo' || _label === 'Legendary')
         expect(outcome?.effectiveLevel).toBeUndefined();
       expect(
-        result.branch.traitHistory?.events
+        result.branch.state.traitHistory?.events
           .slice(-2)
           .map((event) =>
             event.kind === 'traitOffer'
@@ -1456,13 +1472,13 @@ describe('Echo Gate B Boon Boon Boon', () => {
       10,
       'encounterCompleted',
     );
-    expect(result.branch.traitHistory?.equippedTraits.EchoLastRunBoon).toBeDefined();
-    expect(result.branch.traitHistory?.equippedTraits.BoonDecayBoon).toBeUndefined();
-    expect(result.branch.traitHistory?.equippedTraits.HephaestusWeaponBoon).toMatchObject({
+    expect(result.branch.state.traitHistory?.equippedTraits.EchoLastRunBoon).toBeDefined();
+    expect(result.branch.state.traitHistory?.equippedTraits.BoonDecayBoon).toBeUndefined();
+    expect(result.branch.state.traitHistory?.equippedTraits.HephaestusWeaponBoon).toMatchObject({
       rarity: 'Common',
       level: 1,
     });
-    expect(result.branch.history.lootTypeHistory).toEqual({});
+    expect(result.branch.state.rewardHistory.lootTypeHistory).toEqual({});
     expect(result.findingEntries.map((entry) => entry.finding)).toContainEqual(
       expect.objectContaining({
         code: 'targetedAcquisitionTargetMissing',
@@ -1614,24 +1630,24 @@ describe('Echo Gate B Boon Boon Boon', () => {
       10,
       'encounterCompleted',
     );
-    expect(result.branch.traitHistory?.equippedTraits.BoonDecayBoon).toMatchObject({
+    expect(result.branch.state.traitHistory?.equippedTraits.BoonDecayBoon).toMatchObject({
       giverKey: 'Hera',
       rarity: 'Common',
     });
-    expect(result.branch.traitHistory?.events.at(-2)).toMatchObject({
+    expect(result.branch.state.traitHistory?.events.at(-2)).toMatchObject({
       kind: 'traitOffer',
       targetedAcquisitionTransition: {
         kind: 'promoteGodTraitToHeroic',
         targetTraitKey: 'HephaestusWeaponBoon',
       },
     });
-    expect(result.branch.traitHistory?.equippedTraits.HephaestusWeaponBoon).toMatchObject({
+    expect(result.branch.state.traitHistory?.equippedTraits.HephaestusWeaponBoon).toMatchObject({
       rarity: 'Heroic',
       level: 2,
     });
     const promoted = settleFountainRarityMutation(
       catalog,
-      result.branch.traitHistory!,
+      result.branch.state.traitHistory!,
       echoOwner.owner,
       11,
       'BoonDecayBoon',
@@ -1641,7 +1657,7 @@ describe('Echo Gate B Boon Boon Boon', () => {
       rarity: 'Heroic',
       level: 5,
     });
-    expect(result.branch.history.lootTypeHistory.HeraUpgrade).toBe(1);
+    expect(result.branch.state.rewardHistory.lootTypeHistory.HeraUpgrade).toBe(1);
   });
 
   it('reuses All Together direct grants for the selected Echo outcome', () => {
@@ -1675,9 +1691,9 @@ describe('Echo Gate B Boon Boon Boon', () => {
       10,
       'encounterCompleted',
     );
-    expect(result.branch.traitHistory?.equippedTraits.AllElementalBoon).toBeDefined();
+    expect(result.branch.state.traitHistory?.equippedTraits.AllElementalBoon).toBeDefined();
     for (const traitKey of Object.values(allTogetherResult))
-      expect(result.branch.traitHistory?.equippedTraits[traitKey]).toBeDefined();
+      expect(result.branch.state.traitHistory?.equippedTraits[traitKey]).toBeDefined();
   });
 
   it('retains a nested All Together child finding at its exact repair checkpoint', () => {
@@ -1742,8 +1758,8 @@ describe('Echo Gate B Boon Boon Boon', () => {
       10,
       'encounterCompleted',
     );
-    expect(result.branch.traitHistory?.equippedTraits.GoodStuffBoon).toBeDefined();
-    expect(result.branch.traitHistory?.equippedTraits[target]).toMatchObject({ level: 9 });
+    expect(result.branch.state.traitHistory?.equippedTraits.GoodStuffBoon).toBeDefined();
+    expect(result.branch.state.traitHistory?.equippedTraits[target]).toMatchObject({ level: 9 });
   });
 
   it('requires targeted detail only from the selected nested row', () => {
@@ -1765,9 +1781,9 @@ describe('Echo Gate B Boon Boon Boon', () => {
       10,
       'encounterCompleted',
     );
-    expect(result.branch.traitHistory?.equippedTraits.EchoLastRunBoon).toBeDefined();
-    expect(result.branch.traitHistory?.equippedTraits.ApolloCastBoon).toBeDefined();
-    expect(result.branch.traitHistory?.equippedTraits.BoonDecayBoon).toBeUndefined();
+    expect(result.branch.state.traitHistory?.equippedTraits.EchoLastRunBoon).toBeDefined();
+    expect(result.branch.state.traitHistory?.equippedTraits.ApolloCastBoon).toBeDefined();
+    expect(result.branch.state.traitHistory?.equippedTraits.BoonDecayBoon).toBeUndefined();
     expect(result.findingEntries.map((entry) => entry.finding)).not.toContainEqual(
       expect.objectContaining({ code: 'targetedAcquisitionTargetMissing' }),
     );
@@ -1779,10 +1795,13 @@ describe('Echo Gate B Boon Boon Boon', () => {
       { giverKey: 'Hera', traitKey: 'HeraCastBoon', rarity: 'Common' },
     ]);
     const initial = baseBranch(history);
-    const keepsakes = createKeepsakeState(catalog, 'GoldifyKeepsake', initial.arcanaFear);
+    const keepsakes = createKeepsakeState(catalog, 'GoldifyKeepsake', initial.state.arcanaFear);
     const result = settleEncounterTraitOffer(
       catalog,
-      Object.freeze({ ...initial, keepsakes }),
+      Object.freeze({
+        ...initial,
+        state: Object.freeze({ ...initial.state, keepsakes: keepsakes }),
+      }),
       echoOwner.owner,
       echoBoonOffer(
         echoBoonChild(
@@ -1792,13 +1811,13 @@ describe('Echo Gate B Boon Boon Boon', () => {
       10,
       'encounterCompleted',
     );
-    expect(result.branch.traitHistory?.equippedTraits.KeepsakeLevelBoon).toMatchObject({
+    expect(result.branch.state.traitHistory?.equippedTraits.KeepsakeLevelBoon).toMatchObject({
       giverKey: 'Demeter',
       rarity: 'Duo',
     });
     expect(keepsakes.timePiece?.remainingCharges).toBe(4);
-    expect(result.branch.keepsakes.timePiece?.remainingCharges).toBe(5);
-    expect(result.branch.history.lootTypeHistory.DemeterUpgrade).toBe(1);
+    expect(result.branch.state.keepsakes.timePiece?.remainingCharges).toBe(5);
+    expect(result.branch.state.rewardHistory.lootTypeHistory.DemeterUpgrade).toBe(1);
   });
 
   it('does not consume Calling Card or create Vow of Denial bans for the direct nested result', () => {
@@ -1809,7 +1828,10 @@ describe('Echo Gate B Boon Boon Boon', () => {
     });
     const initialized = initializeTestRewardBranches()[0]!;
     const keepsakes = createKeepsakeState(catalog, 'RarifyKeepsake', arcanaFear);
-    const branch = Object.freeze({ ...initialized, arcanaFear, keepsakes });
+    const branch = Object.freeze({
+      ...initialized,
+      state: Object.freeze({ ...initialized.state, arcanaFear: arcanaFear, keepsakes: keepsakes }),
+    });
     const result = settleEncounterTraitOffer(
       catalog,
       branch,
@@ -1824,9 +1846,9 @@ describe('Echo Gate B Boon Boon Boon', () => {
       10,
       'encounterCompleted',
     );
-    expect(result.branch.keepsakes.callingCard).toEqual(keepsakes.callingCard);
-    expect(result.branch.traitHistory?.bannedTraitKeys).toEqual([]);
-    expect(result.branch.traitHistory?.equippedTraits.AphroditeWeaponBoon).toBeDefined();
+    expect(result.branch.state.keepsakes.callingCard).toEqual(keepsakes.callingCard);
+    expect(result.branch.state.traitHistory?.bannedTraitKeys).toEqual([]);
+    expect(result.branch.state.traitHistory?.equippedTraits.AphroditeWeaponBoon).toBeDefined();
   });
 
   it('forbids ordinary slot replacement and makes an exhausted nested domain disable the outer row', () => {
@@ -1885,9 +1907,9 @@ describe('Echo Gate B Boon Boon Boon', () => {
       10,
       'encounterCompleted',
     );
-    expect(result.branch.traitHistory?.equippedTraits.EchoLastRunBoon).toBeDefined();
-    expect(result.branch.traitHistory?.equippedTraits.ZeusRetaliateBoon).toBeUndefined();
-    expect(result.branch.history.lootTypeHistory).toEqual({});
+    expect(result.branch.state.traitHistory?.equippedTraits.EchoLastRunBoon).toBeDefined();
+    expect(result.branch.state.traitHistory?.equippedTraits.ZeusRetaliateBoon).toBeUndefined();
+    expect(result.branch.state.rewardHistory.lootTypeHistory).toEqual({});
     expect(result.findingEntries.map((entry) => entry.finding)).toContainEqual(
       expect.objectContaining({
         code: 'echoLastRunBoonOptionUnavailable',
@@ -1917,7 +1939,7 @@ describe('Echo Gate B Boon Boon Boon', () => {
       'encounterCompleted',
     );
     expect(
-      withoutSpellDrop.branch.traitHistory?.equippedTraits.OlympianSpellCountBoon,
+      withoutSpellDrop.branch.state.traitHistory?.equippedTraits.OlympianSpellCountBoon,
     ).toBeUndefined();
     expect(withoutSpellDrop.findingEntries.map((entry) => entry.finding)).toContainEqual(
       expect.objectContaining({ code: 'echoLastRunBoonOptionUnavailable' }),
@@ -1926,9 +1948,12 @@ describe('Echo Gate B Boon Boon Boon', () => {
     const branch = baseBranch(startingHex);
     const withSettledSpellDrop = Object.freeze({
       ...branch,
-      history: Object.freeze({
-        ...branch.history,
-        useRecord: Object.freeze({ ...branch.history.useRecord, SpellDrop: 1 }),
+      state: Object.freeze({
+        ...branch.state,
+        rewardHistory: Object.freeze({
+          ...branch.state.rewardHistory,
+          useRecord: Object.freeze({ ...branch.state.rewardHistory.useRecord, SpellDrop: 1 }),
+        }),
       }),
     });
     const withSpellDrop = settleEncounterTraitOffer(
@@ -1940,7 +1965,9 @@ describe('Echo Gate B Boon Boon Boon', () => {
       'encounterCompleted',
     );
     expect(withSpellDrop.findingEntries).toHaveLength(0);
-    expect(withSpellDrop.branch.traitHistory?.equippedTraits.OlympianSpellCountBoon).toMatchObject({
+    expect(
+      withSpellDrop.branch.state.traitHistory?.equippedTraits.OlympianSpellCountBoon,
+    ).toMatchObject({
       giverKey: 'Athena',
       rarity: 'Common',
     });
@@ -1971,9 +1998,9 @@ describe('Echo Gate B Boon Boon Boon', () => {
       10,
       'encounterCompleted',
     );
-    expect(result.branch.traitHistory?.equippedTraits.EchoLastRunBoon).toBeDefined();
-    expect(result.branch.traitHistory?.equippedTraits.ZeusWeaponBoon).toBeUndefined();
-    expect(result.branch.history.lootTypeHistory).toEqual({});
+    expect(result.branch.state.traitHistory?.equippedTraits.EchoLastRunBoon).toBeDefined();
+    expect(result.branch.state.traitHistory?.equippedTraits.ZeusWeaponBoon).toBeUndefined();
+    expect(result.branch.state.rewardHistory.lootTypeHistory).toEqual({});
     expect(result.findingEntries.map((entry) => entry.finding)).toContainEqual(
       expect.objectContaining({
         code: 'echoLastRunBoonOptionUnavailable',
@@ -1994,9 +2021,9 @@ describe('Echo Gate B Boon Boon Boon', () => {
       10,
       'encounterCompleted',
     );
-    expect(result.branch.traitHistory?.equippedTraits.EchoLastRunBoon).toBeDefined();
-    expect(result.branch.traitHistory?.events).toHaveLength(1);
-    expect(result.branch.history.lootTypeHistory).toEqual({});
+    expect(result.branch.state.traitHistory?.equippedTraits.EchoLastRunBoon).toBeDefined();
+    expect(result.branch.state.traitHistory?.events).toHaveLength(1);
+    expect(result.branch.state.rewardHistory.lootTypeHistory).toEqual({});
     expect(result.findingEntries.map((entry) => entry.finding)).toContainEqual(
       expect.objectContaining({
         code: 'echoLastRunBoonMissing',
@@ -2021,14 +2048,14 @@ describe('Echo Gate B Boon Boon Boon', () => {
       10,
       'encounterCompleted',
     );
-    expect(expanded.branch.history.lootTypeHistory).toMatchObject({
+    expect(expanded.branch.state.rewardHistory.lootTypeHistory).toMatchObject({
       AphroditeUpgrade: 1,
       ApolloUpgrade: 1,
       AresUpgrade: 1,
       DemeterUpgrade: 1,
       ZeusUpgrade: 1,
     });
-    expect(ordinaryPoolFor(expanded.branch.history)).toEqual([
+    expect(ordinaryPoolFor(expanded.branch.state.rewardHistory)).toEqual([
       'AphroditeUpgrade',
       'ApolloUpgrade',
       'AresUpgrade',
@@ -2044,8 +2071,10 @@ describe('Echo Gate B Boon Boon Boon', () => {
       10,
       'encounterCompleted',
     );
-    expect(present.branch.history.lootTypeHistory).toEqual({ ZeusUpgrade: 2 });
-    expect(Object.keys(present.branch.history.lootTypeHistory)).toEqual(['ZeusUpgrade']);
+    expect(present.branch.state.rewardHistory.lootTypeHistory).toEqual({ ZeusUpgrade: 2 });
+    expect(Object.keys(present.branch.state.rewardHistory.lootTypeHistory)).toEqual([
+      'ZeusUpgrade',
+    ]);
   });
 
   it.each([
@@ -2068,8 +2097,10 @@ describe('Echo Gate B Boon Boon Boon', () => {
         10,
         'encounterCompleted',
       );
-      expect(result.branch.traitHistory?.equippedTraits.SprintEchoBoon).toMatchObject({ giverKey });
-      expect(result.branch.history.lootTypeHistory).toEqual({ [expectedSource]: 1 });
+      expect(result.branch.state.traitHistory?.equippedTraits.SprintEchoBoon).toMatchObject({
+        giverKey,
+      });
+      expect(result.branch.state.rewardHistory.lootTypeHistory).toEqual({ [expectedSource]: 1 });
     },
   );
 
@@ -2086,8 +2117,8 @@ describe('Echo Gate B Boon Boon Boon', () => {
       10,
       'encounterCompleted',
     );
-    expect(hermes.branch.history.lootTypeHistory).toEqual({ HermesUpgrade: 1 });
-    expect(ordinaryPoolFor(hermes.branch.history)).not.toContain('HermesUpgrade');
+    expect(hermes.branch.state.rewardHistory.lootTypeHistory).toEqual({ HermesUpgrade: 1 });
+    expect(ordinaryPoolFor(hermes.branch.state.rewardHistory)).not.toContain('HermesUpgrade');
 
     const artemis = settleEncounterTraitOffer(
       catalog,
@@ -2103,7 +2134,7 @@ describe('Echo Gate B Boon Boon Boon', () => {
       10,
       'encounterCompleted',
     );
-    expect(artemis.branch.history.lootTypeHistory).toEqual({});
+    expect(artemis.branch.state.rewardHistory.lootTypeHistory).toEqual({});
   });
 
   it('round-trips the strict child and rejects malformed cardinality, sources, rarities, and Duo duplicates', () => {
@@ -2264,9 +2295,9 @@ describe('Echo Gate B Boon Boon Boon', () => {
     expect(
       h.rewards.branches.every(
         (branch) =>
-          branch.history.lootTypeHistory.AphroditeUpgrade === 1 &&
-          branch.traitHistory?.equippedTraits.EchoLastRunBoon?.rarity === undefined &&
-          branch.traitHistory?.equippedTraits.HighHealthOffenseBoon?.rarity === 'Common',
+          branch.state.rewardHistory.lootTypeHistory.AphroditeUpgrade === 1 &&
+          branch.state.traitHistory?.equippedTraits.EchoLastRunBoon?.rarity === undefined &&
+          branch.state.traitHistory?.equippedTraits.HighHealthOffenseBoon?.rarity === 'Common',
       ),
     ).toBe(true);
     const snapshot = [...h.rewards.runStateSnapshots]
@@ -2315,7 +2346,7 @@ describe('Echo Gate B Boon Boon Boon', () => {
     expect(h.coverage).toMatchObject({ kind: 'prefix', blockedAt: echoOwner });
     expect(
       h.rewards.branches.every((branch) =>
-        Object.keys(branch.traitHistory?.equippedTraits ?? {}).every(
+        Object.keys(branch.state.traitHistory?.equippedTraits ?? {}).every(
           (traitKey) => !traitKey.startsWith('Echo'),
         ),
       ),
@@ -2361,7 +2392,7 @@ describe('Echo Gate B Boon Boon Boon', () => {
     expect(h.coverage).toMatchObject({ kind: 'prefix', blockedAt: echoOwner });
     expect(
       h.rewards.branches.every(
-        (branch) => branch.traitHistory?.equippedTraits.EchoRepeatKeepsakeBoon === undefined,
+        (branch) => branch.state.traitHistory?.equippedTraits.EchoRepeatKeepsakeBoon === undefined,
       ),
     ).toBe(true);
   });
@@ -2395,9 +2426,9 @@ describe('Echo Gate B Boon Boon Boon', () => {
     expect(
       h.rewards.branches.every(
         (branch) =>
-          branch.traitHistory?.equippedTraits.EchoLastRunBoon !== undefined &&
-          branch.traitHistory.equippedTraits.ApolloWeaponBoon?.rarity === 'Common' &&
-          branch.history.lootTypeHistory.ApolloUpgrade === 1,
+          branch.state.traitHistory?.equippedTraits.EchoLastRunBoon !== undefined &&
+          branch.state.traitHistory.equippedTraits.ApolloWeaponBoon?.rarity === 'Common' &&
+          branch.state.rewardHistory.lootTypeHistory.ApolloUpgrade === 1,
       ),
     ).toBe(true);
     expect(h.findings).toContainEqual(
@@ -2902,7 +2933,9 @@ describe('Echo Gate C Reward Reward Reward', () => {
       ),
     ).toBe(true);
     expect(
-      h.rewards.branches.every((branch) => branch.history.lootTypeHistory.WeaponUpgrade === 3),
+      h.rewards.branches.every(
+        (branch) => branch.state.rewardHistory.lootTypeHistory.WeaponUpgrade === 3,
+      ),
     ).toBe(true);
   });
 });
