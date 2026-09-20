@@ -17,7 +17,7 @@ import type {
   TraitHistoryState,
   TraitOfferCandidateContext,
 } from '../../traits';
-import { echoLastRunBoonOutcomes } from '../../traits';
+import { echoLastRunBoonOutcomes, traitOfferAssessmentIdentity } from '../../traits';
 import { orderRandomArcanaSelection } from '../../arcana-fear';
 
 export interface SelectedTraitOfferProducts {
@@ -85,14 +85,9 @@ export function selectedTraitOfferProducts(
           chronologicalIndex: trace.chronologicalIndex,
         });
       } else {
+        const traceIdentity = JSON.stringify(traitOfferAssessmentIdentity(trace));
         const duplicate = current.branches.some(
-          (candidate) =>
-            JSON.stringify([
-              candidate.before,
-              candidate.context,
-              candidate.offer,
-              candidate.arcanaFear,
-            ]) === JSON.stringify([trace.before, trace.context, trace.offer, trace.arcanaFear]),
+          (candidate) => JSON.stringify(traitOfferAssessmentIdentity(candidate)) === traceIdentity,
         );
         if (!duplicate) current.branches.push(trace);
         current.chronologicalIndex = Math.min(current.chronologicalIndex, trace.chronologicalIndex);
@@ -128,12 +123,7 @@ export function selectedTraitOfferProducts(
                 ),
                 baseRarities: trace.baseRarities,
                 ...(() => {
-                  if (
-                    trace.offer.kind !== 'traits' ||
-                    catalog === undefined ||
-                    trace.arcanaFear === undefined
-                  )
-                    return {};
+                  if (trace.offer.kind !== 'traits' || catalog === undefined) return {};
                   const selected =
                     trace.offer.options[Number(trace.offer.selectedOptionKey.slice(-1)) - 1];
                   const resolution = selected?.circeResolution;
@@ -141,7 +131,7 @@ export function selectedTraitOfferProducts(
                   return {
                     orderedCirceActivationKeys: orderRandomArcanaSelection(
                       catalog,
-                      trace.arcanaFear.arcana.active.map((card) => card.key),
+                      trace.state.arcanaFear.arcana.active.map((card) => card.key),
                       resolution.arcanaKeys,
                     ),
                   };
@@ -157,7 +147,7 @@ export function selectedTraitOfferProducts(
                     catalog === undefined
                   )
                     return {};
-                  const outcomes = echoLastRunBoonOutcomes(catalog, trace.before, trace.context);
+                  const outcomes = echoLastRunBoonOutcomes(catalog, trace.state, trace.source);
                   const resolveOption = (
                     option: AuthoredEchoLastRunBoonOffer['options'][number],
                   ) => {
@@ -212,14 +202,7 @@ export function selectedTraitOfferProducts(
     candidateContexts.set(
       semanticAddressKey(address),
       Object.freeze(
-        entry.branches.map((trace) =>
-          Object.freeze({
-            before: trace.before,
-            context: trace.context,
-            ...(trace.arcanaFear === undefined ? {} : { arcanaFear: trace.arcanaFear }),
-            ...(trace.keepsakes === undefined ? {} : { keepsakes: trace.keepsakes }),
-          }),
-        ),
+        entry.branches.map((trace) => Object.freeze({ state: trace.state, source: trace.source })),
       ),
     );
   }

@@ -16,6 +16,7 @@ import type { AuthoredTraitOffer } from '@run-planner/engine/authored-project';
 import { describe, expect, it } from 'vitest';
 import { initializeTestRewardBranches } from '../support/arcana-fear';
 import { settleEncounterTraitOffer } from '../../src/simulation/rewards/trait-settlement/coordinator';
+import { traitFrontierState } from '../support/simulation-state';
 
 const owner = { kind: 'project' } as const;
 
@@ -156,9 +157,12 @@ describe('derived Olympian trait replacement', () => {
       ]) as Extract<AuthoredTraitOffer, { kind: 'traits' }>['options'],
     );
     expect(
-      assessTraitOffer(testCatalog, value, before, { limitedSwapUses: 1 }).map(
-        (assessment) => assessment.replacementTransition?.levelBonus,
-      ),
+      assessTraitOffer(
+        testCatalog,
+        value,
+        traitFrontierState(before, { catalog: testCatalog, stygianWell: { hymnUses: 1 } }),
+        {},
+      ).map((assessment) => assessment.replacementTransition?.levelBonus),
     ).toEqual([2, 2, 2]);
     for (const options of [value.options, [...value.options].reverse()]) {
       const initial = initializeTestRewardBranches()[0]!;
@@ -198,7 +202,7 @@ describe('derived Olympian trait replacement', () => {
       owner,
       'source',
       Object.freeze({ kind: 'fallbackGold', giverKey: 'Apollo' }),
-      before,
+      traitFrontierState(before),
       {},
       4,
     );
@@ -247,7 +251,7 @@ describe('derived Olympian trait replacement', () => {
   it('retains a mandatory targeted ordinary trait in an unselected sparse row', () => {
     const testCatalog = narrowHeraDraftCatalog();
     const before = historyFor(testCatalog, [['Hephaestus', 'HephaestusWeaponBoon', 'Common']]);
-    const draft = traitOfferStartingOutcome(testCatalog, 'Hera', before);
+    const draft = traitOfferStartingOutcome(testCatalog, 'Hera', traitFrontierState(before), {});
     if (draft?.kind !== 'traits') throw new Error('expected a Hera trait draft');
     expect(draft?.options.map((option) => option.traitKey)).toEqual(
       expect.arrayContaining(['BoonDecayBoon', 'BoonGrowthBoon']),
@@ -256,8 +260,15 @@ describe('derived Olympian trait replacement', () => {
       'BoonDecayBoon',
     );
     expect(
-      evaluateReachedTraitOffer(testCatalog, owner, 'source', draft, before, {}, 1).generation
-        ?.legal,
+      evaluateReachedTraitOffer(
+        testCatalog,
+        owner,
+        'source',
+        draft,
+        traitFrontierState(before),
+        {},
+        1,
+      ).generation?.legal,
     ).toBe(true);
   });
 
@@ -270,7 +281,7 @@ describe('derived Olympian trait replacement', () => {
     const assessment = assessTraitOption(
       catalog,
       'ApolloWeaponBoon',
-      before,
+      traitFrontierState(before),
       { resolvedProviderKey: 'Apollo' },
       requiredRarity,
     );
@@ -287,7 +298,13 @@ describe('derived Olympian trait replacement', () => {
   it('preserves exact replacement promotion under a fresh-rarity override', () => {
     const before = history([['Zeus', 'ZeusWeaponBoon', 'Common']]);
     const context = { resolvedProviderKey: 'Apollo', freshRarityOverride: 'Common' as const };
-    const replacement = assessTraitOption(catalog, 'ApolloWeaponBoon', before, context, 'Rare');
+    const replacement = assessTraitOption(
+      catalog,
+      'ApolloWeaponBoon',
+      traitFrontierState(before),
+      context,
+      'Rare',
+    );
     expect(replacement.legal).toBe(true);
     expect(replacement.replacementTransition?.requiredRarity).toBe('Rare');
 
@@ -297,18 +314,28 @@ describe('derived Olympian trait replacement', () => {
       { traitKey: 'ApolloCastBoon', rarity: 'Common' },
     ]);
     expect(
-      evaluateReachedTraitOffer(catalog, owner, 'source', mixed, before, context, 1).generation
-        ?.legal,
+      evaluateReachedTraitOffer(
+        catalog,
+        owner,
+        'source',
+        mixed,
+        traitFrontierState(before),
+        context,
+        1,
+      ).generation?.legal,
     ).toBe(false);
   });
 
   it('preserves promoted rarity when fresh Epic is guaranteed', () => {
     const before = history([['Zeus', 'ZeusWeaponBoon', 'Common']]);
-    const facts = boonRarityFactsForOffer(catalog, before, {
-      resolvedProviderKey: 'Apollo',
-      boonRarityRoomOverride: catalog.rooms.byKey.Q_MiniBoss02!.boonRarityOverride!,
-      temporaryBoonRarityUses: 1,
-    })!;
+    const facts = boonRarityFactsForOffer(
+      catalog,
+      traitFrontierState(before, { stygianWell: { yarnUses: 1 } }),
+      {
+        resolvedProviderKey: 'Apollo',
+        boonRarityRoomOverride: catalog.rooms.byKey.Q_MiniBoss02!.boonRarityOverride!,
+      },
+    )!;
     const context = {
       resolvedProviderKey: 'Apollo',
       boonRarityFacts: {
@@ -319,7 +346,13 @@ describe('derived Olympian trait replacement', () => {
         ],
       },
     };
-    const replacement = assessTraitOption(catalog, 'ApolloWeaponBoon', before, context, 'Rare');
+    const replacement = assessTraitOption(
+      catalog,
+      'ApolloWeaponBoon',
+      traitFrontierState(before),
+      context,
+      'Rare',
+    );
     expect(replacement).toMatchObject({
       legal: true,
       findings: [],
@@ -330,14 +363,15 @@ describe('derived Olympian trait replacement', () => {
       },
     });
 
-    const candidates = traitCandidates(catalog, 'Apollo', before, context);
+    const candidates = traitCandidates(catalog, 'Apollo', traitFrontierState(before), context);
     expect(
       candidates.filter(
         (candidate) => candidate.traitKey === 'ApolloWeaponBoon' && candidate.available,
       ),
     ).toEqual([expect.objectContaining({ rarity: 'Rare', assessment: replacement })]);
     expect(
-      assessTraitOption(catalog, 'ApolloWeaponBoon', before, context, 'Epic').findings,
+      assessTraitOption(catalog, 'ApolloWeaponBoon', traitFrontierState(before), context, 'Epic')
+        .findings,
     ).toContainEqual({
       code: 'replacementRarityMismatch',
       traitKey: 'ApolloWeaponBoon',
@@ -349,8 +383,15 @@ describe('derived Olympian trait replacement', () => {
       { traitKey: 'ApolloCastBoon', rarity: 'Epic' },
     ]);
     expect(
-      evaluateReachedTraitOffer(catalog, owner, 'source', invalid, before, context, 1).generation
-        ?.legal,
+      evaluateReachedTraitOffer(
+        catalog,
+        owner,
+        'source',
+        invalid,
+        traitFrontierState(before),
+        context,
+        1,
+      ).generation?.legal,
     ).toBe(false);
 
     const evaluation = evaluateReachedTraitOffer(
@@ -362,7 +403,7 @@ describe('derived Olympian trait replacement', () => {
         { traitKey: 'ApolloSpecialBoon', rarity: 'Epic' },
         { traitKey: 'ApolloCastBoon', rarity: 'Epic' },
       ]),
-      before,
+      traitFrontierState(before),
       context,
       1,
     );
@@ -376,7 +417,7 @@ describe('derived Olympian trait replacement', () => {
     const heroic = assessTraitOption(
       catalog,
       'ApolloWeaponBoon',
-      history([['Zeus', 'ZeusWeaponBoon', 'Heroic']]),
+      traitFrontierState(history([['Zeus', 'ZeusWeaponBoon', 'Heroic']])),
       { resolvedProviderKey: 'Apollo' },
       'Heroic',
     );
@@ -385,7 +426,7 @@ describe('derived Olympian trait replacement', () => {
     const wrong = assessTraitOption(
       catalog,
       'ApolloWeaponBoon',
-      history([['Zeus', 'ZeusWeaponBoon', 'Common']]),
+      traitFrontierState(history([['Zeus', 'ZeusWeaponBoon', 'Common']])),
       { resolvedProviderKey: 'Apollo' },
       'Epic',
     );
@@ -410,7 +451,7 @@ describe('derived Olympian trait replacement', () => {
           { traitKey: 'ApolloCastBoon', rarity: 'Common' },
         ]) as Extract<AuthoredTraitOffer, { kind: 'traits' }>['options'],
       ),
-      history([['Zeus', 'ZeusWeaponBoon', 'Common']]),
+      traitFrontierState(history([['Zeus', 'ZeusWeaponBoon', 'Common']])),
       {},
       1,
     );
@@ -443,7 +484,15 @@ describe('derived Olympian trait replacement', () => {
         { traitKey: 'ApolloCastBoon', rarity: 'Common' },
       ]) as Extract<AuthoredTraitOffer, { kind: 'traits' }>['options'],
     );
-    const evaluation = evaluateReachedTraitOffer(catalog, owner, 'source', value, before, {}, 1);
+    const evaluation = evaluateReachedTraitOffer(
+      catalog,
+      owner,
+      'source',
+      value,
+      traitFrontierState(before),
+      {},
+      1,
+    );
     const applied = recordReachedTraitOffer(catalog, evaluation, 2, 'test');
     expect(applied.event?.replacementTransition?.replacedTraitKey).toBe('ZeusWeaponBoon');
     expect(applied.history.equippedTraits.ZeusWeaponBoon).toBeUndefined();
@@ -466,7 +515,7 @@ describe('derived Olympian trait replacement', () => {
           { traitKey: 'ApolloCastBoon', rarity: 'Common' },
         ]) as Extract<AuthoredTraitOffer, { kind: 'traits' }>['options'],
       ),
-      before,
+      traitFrontierState(before),
       {},
       1,
     );
@@ -486,7 +535,7 @@ describe('derived Olympian trait replacement', () => {
           { traitKey: 'ZeusCastBoon', rarity: 'Common' },
         ]) as Extract<AuthoredTraitOffer, { kind: 'traits' }>['options'],
       ),
-      after,
+      traitFrontierState(after),
       {},
       2,
     );
@@ -522,7 +571,7 @@ describe('derived Olympian trait replacement', () => {
       owner,
       'source',
       value,
-      before,
+      traitFrontierState(before),
       {},
       1,
     ).generation;
@@ -551,7 +600,7 @@ describe('derived Olympian trait replacement', () => {
       owner,
       'source',
       value,
-      before,
+      traitFrontierState(before),
       {},
       1,
     ).generation;
@@ -576,7 +625,7 @@ describe('derived Olympian trait replacement', () => {
         ]) as Extract<AuthoredTraitOffer, { kind: 'traits' }>['options'],
         selectedOptionKey: 'option2' as const,
       }),
-      before,
+      traitFrontierState(before),
       {},
       1,
     );
@@ -590,7 +639,7 @@ describe('derived Olympian trait replacement', () => {
     const assessment = assessTraitOption(
       catalog,
       'ApolloWeaponBoon',
-      history([['Zeus', 'ZeusWeaponBoon', 'Common']]),
+      traitFrontierState(history([['Zeus', 'ZeusWeaponBoon', 'Common']])),
       { resolvedProviderKey: 'Apollo', devotionNoDuo: true },
       'Duo',
     );
@@ -615,7 +664,7 @@ describe('derived Olympian trait replacement', () => {
           { traitKey: 'ApolloSpecialBoon', rarity: 'Common' },
         ]) as Extract<AuthoredTraitOffer, { kind: 'traits' }>['options'],
       ),
-      before,
+      traitFrontierState(before),
       {},
       1,
     );
@@ -645,7 +694,7 @@ describe('derived Olympian trait replacement', () => {
       owner,
       'source',
       value,
-      before,
+      traitFrontierState(before),
       {},
       1,
     ).generation;
@@ -653,7 +702,12 @@ describe('derived Olympian trait replacement', () => {
   });
 
   it('does not expose Heroic as a fresh candidate', () => {
-    const candidates = traitCandidates(catalog, 'Apollo', createTraitHistoryState());
+    const candidates = traitCandidates(
+      catalog,
+      'Apollo',
+      traitFrontierState(createTraitHistoryState()),
+      {},
+    );
     expect(candidates.some((candidate) => candidate.rarity === 'Heroic')).toBe(false);
   });
 

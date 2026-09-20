@@ -28,6 +28,7 @@ import {
 import { initializeTestRewardBranches } from '../support/arcana-fear';
 import { installHexTree } from '../../src/simulation/hex-progress';
 import type { RewardBranchState } from '../../src/simulation/rewards/branch-primitives';
+import { traitFrontierState } from '../support/simulation-state';
 
 const owner = createTraitOfferAddress(
   createEncounterPhaseAddress(
@@ -240,7 +241,7 @@ describe('All Together direct trait settlement', () => {
         },
         historySequence: 20,
       },
-      (rewardHistory) => factsWithHistory(rewardFacts(), rewardHistory, new Set()),
+      (state) => factsWithHistory(rewardFacts(), state.rewardHistory, new Set()),
     );
     mergeRewardFindingEmissions(findings, settled.findingEmissions);
     expect(settled.branches).toHaveLength(1);
@@ -275,7 +276,7 @@ describe('All Together direct trait settlement', () => {
         },
         historySequence: 20,
       },
-      (rewardHistory) => factsWithHistory(rewardFacts(), rewardHistory, new Set()),
+      (state) => factsWithHistory(rewardFacts(), state.rewardHistory, new Set()),
     );
     expect(nonmatching.branches[0]?.state.hexProgress.godSentAdded).toBe(false);
   });
@@ -306,7 +307,7 @@ describe('All Together direct trait settlement', () => {
         },
         historySequence: 20,
       },
-      (rewardHistory) => factsWithHistory(rewardFacts(), rewardHistory, new Set()),
+      (state) => factsWithHistory(rewardFacts(), state.rewardHistory, new Set()),
     );
     mergeRewardFindingEmissions(findings, settled.findingEmissions);
     const checkpoint = settled.traitChildSettlements?.[0];
@@ -466,8 +467,8 @@ describe('All Together direct trait settlement', () => {
           semanticAddressKey(owner),
           [
             Object.freeze({
-              before: first,
-              context: Object.freeze({ resolvedProviderKey: 'Hera' }),
+              state: traitFrontierState(first),
+              source: Object.freeze({ resolvedProviderKey: 'Hera' }),
             }),
           ],
         ],
@@ -484,12 +485,12 @@ describe('All Together direct trait settlement', () => {
           semanticAddressKey(owner),
           [
             Object.freeze({
-              before: first,
-              context: Object.freeze({ resolvedProviderKey: 'Hera' }),
+              state: traitFrontierState(first),
+              source: Object.freeze({ resolvedProviderKey: 'Hera' }),
             }),
             Object.freeze({
-              before: forced,
-              context: Object.freeze({ resolvedProviderKey: 'Hera' }),
+              state: traitFrontierState(forced),
+              source: Object.freeze({ resolvedProviderKey: 'Hera' }),
             }),
           ],
         ],

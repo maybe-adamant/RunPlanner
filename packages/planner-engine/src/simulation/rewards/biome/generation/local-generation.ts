@@ -1,8 +1,7 @@
 import type { Catalog } from '../../../../catalog-schema';
 import { semanticAddressKey, type SemanticAddress } from '../../../../authored-project/addresses';
-import type { RouteLoadout } from '../../../../authored-project/model';
 import { createUnresolvedAcquisitionRewardState } from '../../../../authored-project/traits/state';
-import type { ResolvedRewardOffer, RewardHistoryState } from '../../../../reward-kernel';
+import type { ResolvedRewardOffer } from '../../../../reward-kernel';
 import type { HistoryEvent, ProgressiveRoomHistoryViews } from '../../../history';
 import { ownerRegion, type FindingRegionEntry } from '../../../finding-regions';
 import type { CanonicalLocalReward } from '../../../materialization';
@@ -22,6 +21,7 @@ import { createGenerationEmissions, type GenerationEmissions } from './emissions
 import { historyFindingChronology, rewardFindingChronologyForRoom } from '../finding-chronology';
 import type { RoomCreatedRewardContext } from './room-created-context';
 import { BiomeRewardSimulationContractError } from '../biome-contract';
+import type { SimulationState } from '../../../state/model';
 
 function localCandidateForOffer(
   catalog: Catalog,
@@ -77,7 +77,6 @@ export function generateLocalRewards(
     readonly peers: readonly OfferProcessingPeer[];
     readonly views: ProgressiveRoomHistoryViews | undefined;
     readonly lifecycle: RewardLifecycleReferences;
-    readonly routeLoadout: RouteLoadout;
     readonly enteredBiomeCount: number;
     readonly authoredSeaStarDuplicateSiteKeys: ReadonlySet<string>;
   },
@@ -112,25 +111,17 @@ export function generateLocalRewards(
       historySequence: event.sequence,
       ...(chronology === undefined ? {} : { findingChronology: chronology }),
       peers,
-      facts: (
-        history: RewardHistoryState,
-        _shop: ReadonlySet<string> | undefined,
-        branch: RewardBranchState | undefined,
-      ) =>
-        createBiomeRewardFacts(
+      facts: (state: SimulationState) =>
+        createBiomeRewardFacts({
           catalog,
-          context.source,
-          context.currentRoom,
-          context.sourceDeclaration,
-          context.generationView!,
-          history,
-          inputs.enteredBiomeCount,
-          context.currentShopNames,
-          undefined,
-          undefined,
-          undefined,
-          branch,
-        ),
+          state,
+          source: context.source,
+          currentRoom: context.currentRoom,
+          sourceDeclaration: context.sourceDeclaration,
+          view: context.generationView!,
+          currentRoomShopOptionNames: context.currentShopNames,
+          hubBoardLookups: 'notConsulted',
+        }),
     });
     producerFrontiers.push(
       Object.freeze({
@@ -175,16 +166,16 @@ export function generateLocalRewards(
                 historySequence: acquisition.event.sequence,
                 authoredSeaStarDuplicateSiteKeys: inputs.authoredSeaStarDuplicateSiteKeys,
               },
-              (history) =>
-                createBiomeRewardFacts(
+              (state) =>
+                createBiomeRewardFacts({
                   catalog,
-                  context.room,
-                  context.room,
-                  context.declaration,
-                  acquisition.view!,
-                  history,
-                  inputs.enteredBiomeCount,
-                ),
+                  state,
+                  source: context.room,
+                  currentRoom: context.room,
+                  sourceDeclaration: context.declaration,
+                  view: acquisition.view!,
+                  hubBoardLookups: 'notConsulted',
+                }),
               ownerRegion(localReward.origin),
               rewardFindingChronologyForRoom(
                 snapshot,
@@ -245,7 +236,6 @@ export function generateLocalRewards(
               : { levelResolutionsByAcquisitionRole: state.levelResolutionsByAcquisitionRole }),
             dispositionByAcquisitionRole: state.dispositionByAcquisitionRole,
             traitContext: Object.freeze({
-              ...inputs.routeLoadout,
               blockGiftBoons: context.declaration.blockGiftBoons,
               devotionNoDuo: offer.rewardType === 'Devotion',
             }),
@@ -259,25 +249,17 @@ export function generateLocalRewards(
               binding: localRewardBinding(context.declaration, candidate),
               historySequence: event.sequence,
               peers,
-              facts: (
-                history: RewardHistoryState,
-                _shop: ReadonlySet<string> | undefined,
-                branch: RewardBranchState | undefined,
-              ) =>
-                createBiomeRewardFacts(
+              facts: (state: SimulationState) =>
+                createBiomeRewardFacts({
                   catalog,
-                  context.source,
-                  context.currentRoom,
-                  context.sourceDeclaration,
-                  context.generationView!,
-                  history,
-                  inputs.enteredBiomeCount,
-                  context.currentShopNames,
-                  undefined,
-                  undefined,
-                  undefined,
-                  branch,
-                ),
+                  state,
+                  source: context.source,
+                  currentRoom: context.currentRoom,
+                  sourceDeclaration: context.sourceDeclaration,
+                  view: context.generationView!,
+                  currentRoomShopOptionNames: context.currentShopNames,
+                  hubBoardLookups: 'notConsulted',
+                }),
             }),
             candidateFindings,
           );
@@ -300,16 +282,16 @@ export function generateLocalRewards(
                 historySequence: acquisition.event.sequence,
                 authoredSeaStarDuplicateSiteKeys: inputs.authoredSeaStarDuplicateSiteKeys,
               },
-              (history) =>
-                createBiomeRewardFacts(
+              (state) =>
+                createBiomeRewardFacts({
                   catalog,
-                  context.room,
-                  context.room,
-                  context.declaration,
-                  acquisition.view!,
-                  history,
-                  inputs.enteredBiomeCount,
-                ),
+                  state,
+                  source: context.room,
+                  currentRoom: context.room,
+                  sourceDeclaration: context.declaration,
+                  view: acquisition.view!,
+                  hubBoardLookups: 'notConsulted',
+                }),
               ownerRegion(candidate.origin),
             );
             mergeRewardFindingEmissions(candidateFindings, settlement.findingEmissions);

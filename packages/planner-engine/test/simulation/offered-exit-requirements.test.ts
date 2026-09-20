@@ -125,20 +125,20 @@ describe('offered-exit requirements', () => {
     const view = room?.targetGenerations[0]?.before;
     if (view === undefined) throw new Error('Outgoing reward checkpoint is missing');
     const target = fGenerationTargetAddress(fGenerationBaselineBatches, 7, 1);
-    const history = result.rewards.targetHistory
-      .find((checkpoint) => semanticAddressKey(checkpoint.origin) === semanticAddressKey(target))
-      ?.states.map((state) => state.rewardHistory)[0];
-    if (history === undefined) throw new Error('Outgoing reward history is missing');
+    const state = result.rewards.targetHistory.find(
+      (checkpoint) => semanticAddressKey(checkpoint.origin) === semanticAddressKey(target),
+    )?.states[0];
+    if (state === undefined) throw new Error('Outgoing reward state is missing');
     const source = incomingBatch.targets[0]!.room;
-    const facts = createBiomeRewardFacts(
+    const facts = createBiomeRewardFacts({
       catalog,
+      state,
       source,
-      source,
-      catalog.rooms.byKey[source.gameName]!,
+      currentRoom: source,
+      sourceDeclaration: catalog.rooms.byKey[source.gameName]!,
       view,
-      history,
-      1,
-    );
+      hubBoardLookups: 'notConsulted',
+    });
     expect(facts.requirements.offeredExitCount).toBe(2);
     const requirement = catalog.rewards.stores.byKey.RunProgress?.entries.find(
       (entry) => entry.rewardType === 'Devotion',

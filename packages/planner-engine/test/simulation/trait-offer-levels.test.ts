@@ -22,6 +22,13 @@ import { createTraitOfferCandidateArtifacts } from '../../src/simulation/candida
 import { applyTraitOfferForAcquisition } from '../../src/simulation/rewards/trait-settlement/coordinator';
 import { initializeTestRewardBranches } from '../support/arcana-fear';
 import type { TraitOfferCandidateContext } from '../../src/simulation/traits';
+import { traitFrontierState } from '../support/simulation-state';
+
+/** The Persephone aspect this suite assesses every offer level against. */
+const persephoneLoadout = Object.freeze({
+  weaponKey: 'WeaponLob',
+  aspectKey: 'LobImpulseAspect',
+});
 
 const owner = createIncomingRewardAddress(
   createBiomeAddress('Underworld', 'F'),
@@ -61,6 +68,7 @@ function pomBranch(levels = 3, traitHistory = createTraitHistoryState()) {
     ...branch,
     state: Object.freeze({
       ...branch.state,
+      equipment: persephoneLoadout,
       rewardHistory: attachTraitHistory(branch.state.rewardHistory, traitHistory),
       traitHistory: traitHistory,
       keepsakes: Object.freeze({
@@ -173,12 +181,13 @@ function hymnReplacementOffer(): AuthoredTraitOfferTraits {
 
 function context(withSuppression = false): TraitOfferCandidateContext {
   return Object.freeze({
-    before: createTraitHistoryState(),
-    context: Object.freeze({
-      aspectKey: 'LobImpulseAspect',
+    state: traitFrontierState(createTraitHistoryState(), {
+      loadout: persephoneLoadout,
+      keepsakes: pomBranch().state.keepsakes,
+    }),
+    source: Object.freeze({
       ...(withSuppression ? { stackBoostsSuppressed: true as const } : {}),
     }),
-    keepsakes: pomBranch().state.keepsakes,
   });
 }
 
@@ -191,8 +200,8 @@ describe('Persephone effective offer levels', () => {
           semanticAddressKey(address),
           Object.freeze([
             Object.freeze({
-              before: createTraitHistoryState(),
-              context: Object.freeze({ aspectKey: 'LobImpulseAspect' }),
+              state: traitFrontierState(createTraitHistoryState(), { loadout: persephoneLoadout }),
+              source: Object.freeze({}),
             }),
           ]),
         ],
@@ -214,9 +223,11 @@ describe('Persephone effective offer levels', () => {
       (bonus) =>
         resolveTraitOfferOptionLevel({
           catalog,
-          before: createTraitHistoryState(),
-          context: context().context,
-          keepsakes: pomBranch().state.keepsakes,
+          state: traitFrontierState(createTraitHistoryState(), {
+            loadout: persephoneLoadout,
+            keepsakes: pomBranch().state.keepsakes,
+          }),
+          source: context().source,
           option: offer(bonus).options[0]!,
         }).effectiveLevel,
     );
@@ -227,8 +238,8 @@ describe('Persephone effective offer levels', () => {
     const option = offer(8).options[0]!;
     const standard = resolveTraitOfferOptionLevel({
       catalog,
-      before: createTraitHistoryState(),
-      context: context().context,
+      state: traitFrontierState(createTraitHistoryState(), { loadout: persephoneLoadout }),
+      source: context().source,
       option,
     });
     const premium = foldTraitHistoryEvents(catalog, [
@@ -247,9 +258,11 @@ describe('Persephone effective offer levels', () => {
     ]);
     const upgraded = resolveTraitOfferOptionLevel({
       catalog,
-      before: premium,
-      context: context().context,
-      keepsakes: pomBranch().state.keepsakes,
+      state: traitFrontierState(premium, {
+        loadout: persephoneLoadout,
+        keepsakes: pomBranch().state.keepsakes,
+      }),
+      source: context().source,
       option,
     });
     expect(standard).toMatchObject({ persephoneLevelBonusMaximum: 5 });
@@ -262,9 +275,11 @@ describe('Persephone effective offer levels', () => {
   it('suppresses both fresh contributions on Echo nested rows', () => {
     const result = resolveTraitOfferOptionLevel({
       catalog,
-      before: createTraitHistoryState(),
-      context: context(true).context,
-      keepsakes: pomBranch().state.keepsakes,
+      state: traitFrontierState(createTraitHistoryState(), {
+        loadout: persephoneLoadout,
+        keepsakes: pomBranch().state.keepsakes,
+      }),
+      source: context(true).source,
       option: offer(5).options[0]!,
     });
     expect(result).toEqual({ effectiveLevel: 1, findings: [] });
@@ -279,7 +294,7 @@ describe('Persephone effective offer levels', () => {
         traitOffersByAcquisitionRole: Object.freeze({
           echoLastRunSelection: offer(5),
         }),
-        traitContext: Object.freeze({ aspectKey: 'LobImpulseAspect' }),
+        traitContext: Object.freeze({}),
       },
       'echoLastRunSelection',
       'traitAcquired',
@@ -297,7 +312,7 @@ describe('Persephone effective offer levels', () => {
         producerLifecycleKey: 'EchoLastReward',
         producerKind: 'freeReward',
         traitOffersByAcquisitionRole: Object.freeze({ self: offer(5) }),
-        traitContext: Object.freeze({ aspectKey: 'LobImpulseAspect' }),
+        traitContext: Object.freeze({}),
       },
       'self',
       'traitAcquired',
@@ -315,7 +330,7 @@ describe('Persephone effective offer levels', () => {
         producerLifecycleKey: 'ordinaryShop',
         producerKind: 'shop',
         traitOffersByAcquisitionRole: Object.freeze({ self: offer(5) }),
-        traitContext: Object.freeze({ aspectKey: 'LobImpulseAspect' }),
+        traitContext: Object.freeze({}),
       },
       'self',
       'traitAcquired',
@@ -341,7 +356,7 @@ describe('Persephone effective offer levels', () => {
       {
         origin: owner,
         traitOffersByAcquisitionRole: Object.freeze({ self: offer(5) }),
-        traitContext: Object.freeze({ aspectKey: 'LobImpulseAspect' }),
+        traitContext: Object.freeze({}),
       },
       'self',
       'traitAcquired',
@@ -382,7 +397,7 @@ describe('Persephone effective offer levels', () => {
       {
         origin: owner,
         traitOffersByAcquisitionRole: Object.freeze({ self: value }),
-        traitContext: Object.freeze({ aspectKey: 'LobImpulseAspect' }),
+        traitContext: Object.freeze({}),
       },
       'self',
       'traitAcquired',
@@ -416,9 +431,7 @@ describe('Persephone effective offer levels', () => {
       {
         origin: owner,
         traitOffersByAcquisitionRole: Object.freeze({ self: hephaestusPremiumOffer() }),
-        traitContext: Object.freeze({
-          aspectKey: 'LobImpulseAspect',
-        }),
+        traitContext: Object.freeze({}),
       },
       'self',
       'traitAcquired',
@@ -438,8 +451,8 @@ describe('Persephone effective offer levels', () => {
       owner,
       'self',
       value,
-      before,
-      { aspectKey: 'LobImpulseAspect', limitedSwapUses: 1 },
+      traitFrontierState(before, { loadout: persephoneLoadout, stygianWell: { hymnUses: 1 } }),
+      {},
       1,
     );
     expect(evaluation.assessments[0]).toMatchObject({
@@ -465,7 +478,7 @@ describe('Persephone effective offer levels', () => {
       {
         origin: owner,
         traitOffersByAcquisitionRole: Object.freeze({ self: value }),
-        traitContext: Object.freeze({ aspectKey: 'LobImpulseAspect' }),
+        traitContext: Object.freeze({}),
       },
       'self',
       'traitAcquired',

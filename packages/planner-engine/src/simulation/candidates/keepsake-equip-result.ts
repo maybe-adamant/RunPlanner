@@ -106,9 +106,12 @@ export function evaluateKeepsakeEquipResultCandidate(
             assessTranscendentEmbryoBlessing(
               catalog,
               candidateValue,
-              frontier.before,
+              frontier.state.traitHistory,
               frontier.transcendentEmbryoRarity ?? 'Epic',
-              { ...frontier.loadout, routeKey: query.result.routeKey },
+              {
+                aspectKey: frontier.state.equipment.aspectKey,
+                routeKey: frontier.state.reached.routePosition.routeKey,
+              },
             ),
           );
           return Object.freeze({
@@ -140,9 +143,12 @@ export function evaluateKeepsakeEquipResultCandidate(
               assessTranscendentEmbryoBlessing(
                 catalog,
                 value as NonNullable<AuthoredKeepsakeEquipResults['transcendentEmbryo']>,
-                frontier.before,
+                frontier.state.traitHistory,
                 frontier.transcendentEmbryoRarity ?? 'Epic',
-                { ...frontier.loadout, routeKey: query.result.routeKey },
+                {
+                  aspectKey: frontier.state.equipment.aspectKey,
+                  routeKey: frontier.state.reached.routePosition.routeKey,
+                },
               ).legal,
           )
         : undefined;
@@ -171,14 +177,13 @@ export function evaluateKeepsakeEquipResultCandidate(
           ? assessJeweledPomEquipResult(
               catalog,
               candidateValue as NonNullable<AuthoredKeepsakeEquipResults['jeweledPom']>,
-              frontier.before,
-              frontier.fatedStatus,
+              frontier.state,
+              frontier.state.keepsakes.fatedStatus,
             )
           : assessExperimentalHammerEquipResult(
               catalog,
               candidateValue as NonNullable<AuthoredKeepsakeEquipResults['experimentalHammer']>,
-              frontier.before,
-              frontier.loadout ?? { weaponKey: '', aspectKey: '' },
+              frontier.state,
             ),
       );
       return Object.freeze({
@@ -201,12 +206,8 @@ export function evaluateKeepsakeEquipResultCandidate(
             value: Object.freeze({ kind: 'exhausted' as const }),
             selectedPossible: capability.frontiers.every(
               (frontier) =>
-                assessExperimentalHammerEquipResult(
-                  catalog,
-                  { kind: 'exhausted' },
-                  frontier.before,
-                  frontier.loadout ?? { weaponKey: '', aspectKey: '' },
-                ).legal,
+                assessExperimentalHammerEquipResult(catalog, { kind: 'exhausted' }, frontier.state)
+                  .legal,
             ),
             findings: Object.freeze(
               capability.frontiers.every(
@@ -214,8 +215,7 @@ export function evaluateKeepsakeEquipResultCandidate(
                   assessExperimentalHammerEquipResult(
                     catalog,
                     { kind: 'exhausted' },
-                    frontier.before,
-                    frontier.loadout ?? { weaponKey: '', aspectKey: '' },
+                    frontier.state,
                   ).legal,
               )
                 ? []

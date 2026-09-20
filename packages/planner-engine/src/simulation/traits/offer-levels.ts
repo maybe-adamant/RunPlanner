@@ -1,9 +1,12 @@
 import type { Catalog } from '../../catalog-schema';
 import type { AuthoredTraitOption } from '../../authored-project/traits/state';
-import type { KeepsakeState } from '../keepsakes/state';
+import type { SimulationState } from '../state/model';
 import { isLevelBearingTrait } from './history/upgrades';
-import type { TraitHistoryState } from './history/model';
-import type { TraitAssessment, TraitAssessmentFinding, TraitOfferContext } from './offer-domain';
+import type {
+  TraitAssessment,
+  TraitAssessmentFinding,
+  TraitOfferSourceContext,
+} from './offer-domain';
 
 export interface TraitOfferOptionLevelResolution {
   /** The active authored Persephone contribution domain, when applicable. */
@@ -15,10 +18,9 @@ export interface TraitOfferOptionLevelResolution {
 
 export interface TraitOfferOptionLevelResolutionInput {
   readonly catalog: Catalog;
-  /** Exact pre-offer history: selected effects on this screen are not included. */
-  readonly before: TraitHistoryState;
-  readonly context: TraitOfferContext;
-  readonly keepsakes?: KeepsakeState;
+  /** Exact pre-offer snapshot: selected effects on this screen are not included. */
+  readonly state: SimulationState;
+  readonly source: TraitOfferSourceContext;
   readonly option: AuthoredTraitOption;
   readonly assessment?: TraitAssessment;
 }
@@ -32,7 +34,9 @@ export interface TraitOfferOptionLevelResolutionInput {
 export function resolveTraitOfferOptionLevel(
   input: TraitOfferOptionLevelResolutionInput,
 ): TraitOfferOptionLevelResolution {
-  const { catalog, before, context, keepsakes, option, assessment } = input;
+  const { catalog, state, source, option, assessment } = input;
+  const before = state.traitHistory;
+  const keepsakes = state.keepsakes;
   const replacement = assessment?.replacementTransition;
   if (replacement !== undefined) {
     const replaced = before.equippedTraits[replacement.replacedTraitKey];
@@ -47,17 +51,14 @@ export function resolveTraitOfferOptionLevel(
   if (!isLevelBearingTrait(catalog, option.traitKey))
     return Object.freeze({ findings: Object.freeze([]) });
 
-  const aspectEffect =
-    context.aspectKey === undefined
-      ? undefined
-      : catalog.aspects.byKey[context.aspectKey]?.traitOfferLevelBonus;
+  const aspectEffect = catalog.aspects.byKey[state.equipment.aspectKey]?.traitOfferLevelBonus;
   const pomLevels =
-    context.stackBoostsSuppressed === true
+    source.stackBoostsSuppressed === true
       ? 0
-      : keepsakes?.jeweledPom?.active === true
+      : keepsakes.jeweledPom?.active === true
         ? keepsakes.jeweledPom.levels
         : 0;
-  if (aspectEffect !== undefined && context.stackBoostsSuppressed !== true) {
+  if (aspectEffect !== undefined && source.stackBoostsSuppressed !== true) {
     const maximum = before.previouslyPickedTraitKeys.includes(aspectEffect.upgradeTraitKey)
       ? aspectEffect.upgradedMaximumBonus
       : aspectEffect.maximumBonus;

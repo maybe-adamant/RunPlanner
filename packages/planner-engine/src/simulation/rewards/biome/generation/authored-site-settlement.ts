@@ -5,7 +5,6 @@ import {
   semanticAddressKey,
   type SemanticAddress,
 } from '../../../../authored-project/addresses';
-import type { RouteLoadout } from '../../../../authored-project/model';
 import { roomActionKey } from '../../../../authored-project/room-actions/key';
 import {
   acquisitionSiteStorageKey,
@@ -21,7 +20,7 @@ import {
   createUnresolvedAcquisitionRewardState,
   createUnresolvedPickupRewardState,
 } from '../../../../authored-project/traits/state';
-import type { ResolvedRewardOffer, RewardHistoryState } from '../../../../reward-kernel';
+import type { ResolvedRewardOffer } from '../../../../reward-kernel';
 import type { ProgressiveRoomHistoryViews } from '../../../history';
 import type { CanonicalAuthoredRoom } from '../../../materialization';
 import { ownerRegion, type FindingRegionEntry } from '../../../finding-regions';
@@ -32,6 +31,7 @@ import { addRewardFinding, mergeRewardFindingEmissions, rewardFinding } from '..
 import type { RewardBranchState } from '../../branch-primitives';
 import type { RewardProducerFrontier } from '../../producer-frontiers';
 import { createBiomeRewardFacts } from '../../facts';
+import { plainTraitOfferSource } from '../../../traits/offer-domain';
 import { BiomeRewardSimulationContractError } from '../biome-contract';
 import { canonicalArtificerSource } from '../reward-sources';
 import { rewardFindingChronologyForRoom } from '../finding-chronology';
@@ -39,6 +39,8 @@ import {
   createAuthoredSiteSettlementEmissions,
   type AuthoredSiteSettlementEmissions,
 } from './emissions';
+import type { SimulationState } from '../../../state/model';
+import { attestSharedRewardLookups } from '../../../state/reward-lookups';
 
 export interface AuthoredSiteSettlementResult {
   readonly branches: readonly RewardBranchState[];
@@ -54,9 +56,6 @@ export interface AuthoredSiteSettlementInputs {
   readonly roomView: ProgressiveRoomHistoryViews;
   readonly sourceBranches: readonly RewardBranchState[];
   readonly historySequence: number;
-  readonly enteredBiomeCount: number;
-  readonly routeLoadout: RouteLoadout;
-  readonly rewardLookups: Readonly<Record<string, ReadonlySet<string>>>;
   readonly authoredSeaStarDuplicateSiteKeys: ReadonlySet<string>;
   readonly onlyEntry?: { readonly siteKey: string; readonly entryKey: string };
   readonly completeShopAfterOrder?: boolean;
@@ -78,15 +77,22 @@ export function settleAuthoredAcquisitionSite(
     roomView,
     sourceBranches,
     historySequence,
-    enteredBiomeCount,
-    routeLoadout,
-    rewardLookups,
     authoredSeaStarDuplicateSiteKeys,
     onlyEntry,
     completeShopAfterOrder = true,
     activationOnly = false,
   } = inputs;
   const targetFindings = new Map<string, FindingRegionEntry>();
+  // Generation consults the completed hub board through each branch's own
+  // reached snapshot; the settling cohort must still agree on that board.
+  // Attested only at the one facts contact that consults it, so a site whose
+  // cohort has already been emptied never reaches the agreement check.
+  let cohortAttested = false;
+  const attestRewardLookupCohort = (): void => {
+    if (cohortAttested) return;
+    attestSharedRewardLookups(sourceBranches.map((branch) => branch.state));
+    cohortAttested = true;
+  };
   const acquisitionRoleFrontiers: import('../../acquisition/contracts').AcquisitionRoleFrontier[] =
     [];
   const derivedEntryFrontiers: import('../../acquisition/contracts').DerivedAcquisitionEntryFrontier[] =
@@ -218,16 +224,16 @@ export function settleAuthoredAcquisitionSite(
         }
       }
       if (supportedBranches.length === 0) return sourceBranches;
-      const pickupFacts = (branchHistory: RewardHistoryState) =>
-        createBiomeRewardFacts(
+      const pickupFacts = (state: SimulationState) =>
+        createBiomeRewardFacts({
           catalog,
-          room,
-          room,
-          declaration,
-          roomView.outgoingGeneration ?? roomView.preOutgoing ?? roomView.entry,
-          branchHistory,
-          enteredBiomeCount,
-        );
+          state,
+          source: room,
+          currentRoom: room,
+          sourceDeclaration: declaration,
+          view: roomView.outgoingGeneration ?? roomView.preOutgoing ?? roomView.entry,
+          hubBoardLookups: 'notConsulted',
+        });
       const settled = settlePickupAcquisitionSite(catalog, supportedBranches, {
         siteOwner: room.origin,
         site: selectedSite.address,
@@ -260,7 +266,7 @@ export function settleAuthoredAcquisitionSite(
           'localRoomLifecycle',
         ),
         facts: pickupFacts,
-        traitContext: routeLoadout,
+        traitContext: plainTraitOfferSource,
       });
       mergeRewardFindingEmissions(targetFindings, settled.findingEmissions);
       acquisitionRoleFrontiers.push(...(settled.roleFrontiers ?? []));
@@ -303,16 +309,16 @@ export function settleAuthoredAcquisitionSite(
           (replayEntry !== undefined &&
             replayEntry !== null &&
             JSON.stringify(replayEntry.offer) !== JSON.stringify(agreedReplay.offer)));
-      const pickupFacts = (branchHistory: RewardHistoryState) =>
-        createBiomeRewardFacts(
+      const pickupFacts = (state: SimulationState) =>
+        createBiomeRewardFacts({
           catalog,
-          room,
-          room,
-          declaration,
-          roomView.outgoingGeneration ?? roomView.preOutgoing ?? roomView.entry,
-          branchHistory,
-          enteredBiomeCount,
-        );
+          state,
+          source: room,
+          currentRoom: room,
+          sourceDeclaration: declaration,
+          view: roomView.outgoingGeneration ?? roomView.preOutgoing ?? roomView.entry,
+          hubBoardLookups: 'notConsulted',
+        });
       const findingChronology = rewardFindingChronologyForRoom(
         snapshot,
         room.origin,
@@ -399,7 +405,7 @@ export function settleAuthoredAcquisitionSite(
         historySequence,
         findingChronology,
         facts: pickupFacts,
-        traitContext: routeLoadout,
+        traitContext: plainTraitOfferSource,
         publishUnpickedChildFrontiers: activationOnly,
         artificerReplacementFor(source, role) {
           const site = artificerAcquisitionSite(room.origin, source);
@@ -477,7 +483,7 @@ export function settleAuthoredAcquisitionSite(
                   findingChronology,
                   publishUnpickedChildFrontiers: false,
                   facts: pickupFacts,
-                  traitContext: routeLoadout,
+                  traitContext: plainTraitOfferSource,
                   artificerReplacementFor(source, role) {
                     const site = artificerAcquisitionSite(room.origin, source);
                     return (
@@ -528,21 +534,19 @@ export function settleAuthoredAcquisitionSite(
         historySequence,
         'localRoomLifecycle',
       ),
-      facts: (branchHistory, shopNames = new Set(), branch) =>
-        createBiomeRewardFacts(
+      facts: (state, shopNames = new Set()) => {
+        attestRewardLookupCohort();
+        return createBiomeRewardFacts({
           catalog,
-          settlementRoom,
-          settlementRoom,
-          declaration,
-          roomView.outgoingGeneration ?? roomView.preOutgoing ?? roomView.entry,
-          branchHistory,
-          enteredBiomeCount,
-          shopNames,
-          undefined,
-          undefined,
-          rewardLookups,
-          branch,
-        ),
+          state,
+          source: settlementRoom,
+          currentRoom: settlementRoom,
+          sourceDeclaration: declaration,
+          view: roomView.outgoingGeneration ?? roomView.preOutgoing ?? roomView.entry,
+          currentRoomShopOptionNames: shopNames,
+          hubBoardLookups: 'consulted',
+        });
+      },
       fail: contractFail,
     });
     mergeRewardFindingEmissions(targetFindings, settled.findingEmissions);

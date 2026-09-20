@@ -15,7 +15,6 @@ import type {
   CanonicalResolvedIncomingReward,
 } from '../../../materialization';
 import { ownerRegion, type FindingRegionEntry } from '../../../finding-regions';
-import type { RewardHistoryState } from '../../../../reward-kernel';
 import { createBiomeRewardFacts } from '../../facts';
 import { rewardFindingChronologyForRoom } from '../finding-chronology';
 import { addRewardFinding, mergeRewardFindingEmissions, rewardFinding } from '../../findings';
@@ -24,6 +23,8 @@ import { BiomeRewardSimulationContractError } from '../biome-contract';
 import type { RewardBranchState } from '../../branch-primitives';
 import type { RewardProducerFrontier } from '../../producer-frontiers';
 import { processShopInventory } from '../../shop/inventory';
+import type { SimulationState } from '../../../state/model';
+import { attestSharedRewardLookups } from '../../../state/reward-lookups';
 
 export interface ShopOfferPointMaterializationInputs {
   readonly catalog: Catalog;
@@ -33,9 +34,6 @@ export interface ShopOfferPointMaterializationInputs {
   readonly declaration: RoomDeclaration;
   readonly roomView: ProgressiveRoomHistoryViews;
   readonly branches: readonly RewardBranchState[];
-  readonly enteredBiomeCount: number;
-  /** Reward lookup facts prepared for this exact reward-evaluation pass. */
-  readonly rewardLookups: Readonly<Record<string, ReadonlySet<string>>>;
 }
 
 export interface ShopOfferPointMaterialization {
@@ -52,21 +50,14 @@ export interface ShopOfferPointMaterialization {
 export function applyShopOfferPointMaterialization(
   inputs: ShopOfferPointMaterializationInputs,
 ): ShopOfferPointMaterialization {
-  const {
-    catalog,
-    snapshot,
-    event,
-    room,
-    declaration,
-    roomView,
-    branches,
-    enteredBiomeCount,
-    rewardLookups,
-  } = inputs;
+  const { catalog, snapshot, event, room, declaration, roomView, branches } = inputs;
   if (event.offerPoint !== 'shopInventory')
     throw new BiomeRewardSimulationContractError('Shop offer transition received a non-Shop point');
 
   const findings = new Map<string, FindingRegionEntry>();
+  // Shop inventory consults the completed hub board through each branch's own
+  // reached snapshot; the entering cohort must still agree on that board.
+  attestSharedRewardLookups(branches.map((branch) => branch.state));
   const frontierBranches = branches;
   const shopEntry = room.entryState?.kind === 'shop' ? room.entryState : undefined;
   const contractOwner =
@@ -92,25 +83,17 @@ export function applyShopOfferPointMaterialization(
     event.sequence,
     'localRoomLifecycle',
   );
-  const facts = (
-    branchHistory: RewardHistoryState,
-    shopNames: ReadonlySet<string> = new Set(),
-    branch?: RewardBranchState,
-  ) =>
-    createBiomeRewardFacts(
+  const facts = (state: SimulationState, shopNames: ReadonlySet<string> = new Set()) =>
+    createBiomeRewardFacts({
       catalog,
-      room,
-      room,
-      declaration,
-      roomView.preparation,
-      branchHistory,
-      enteredBiomeCount,
-      shopNames,
-      undefined,
-      undefined,
-      rewardLookups,
-      branch,
-    );
+      state,
+      source: room,
+      currentRoom: room,
+      sourceDeclaration: declaration,
+      view: roomView.preparation,
+      currentRoomShopOptionNames: shopNames,
+      hubBoardLookups: 'consulted',
+    });
 
   const producerFrontiers: RewardProducerFrontier[] = [];
   if (owners.length > 0) {
@@ -185,9 +168,8 @@ export function applyShopOfferPointMaterialization(
             context.profile,
             fixedOffers,
             facts(
-              branch.state.rewardHistory,
+              branch.state,
               new Set(isContract ? shopEntry!.offers.map((offer) => offer.offer.rewardType) : []),
-              branch,
             ),
             context.requirements,
           ).length > 0 &&

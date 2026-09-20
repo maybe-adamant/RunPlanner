@@ -702,7 +702,6 @@ describe('Hermes Shrine delayed deliveries', () => {
           boundary: 'at' as const,
         }),
         routePosition,
-        Object.freeze({ hubRewardLookup: new Set<string>() }),
         { purgingPool: true, hermesShrine: true, stygianWell: true },
       );
       const delivery = transition.derivedAcquisitionEntryFrontiers.find(
@@ -1458,7 +1457,7 @@ describe('Hermes Shrine pickup settlement', () => {
           instanceProvenance: 'free',
         },
       },
-      rewardFacts,
+      (state) => rewardFacts(state.rewardHistory),
     );
     expect(delivery.branches[0]?.state.hexProgress).toMatchObject({
       investedPathPoints: 18,

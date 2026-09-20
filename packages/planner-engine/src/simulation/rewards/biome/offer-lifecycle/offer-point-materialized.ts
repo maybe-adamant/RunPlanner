@@ -22,9 +22,7 @@ export interface OfferPointMaterializedTransitionInputs {
   readonly views: ReadonlyMap<string, ProgressiveRoomHistoryViews>;
   readonly lifecycle: RewardLifecycleReferences;
   readonly branches: readonly RewardBranchState[];
-  readonly enteredBiomeCount: number;
   readonly routeLoadout: RouteLoadout;
-  readonly rewardLookups: Readonly<Record<string, ReadonlySet<string>>>;
   readonly authoredSeaStarDuplicateSiteKeys: ReadonlySet<string>;
   readonly shipLifecycleCandidateAlreadyPublished: boolean;
 }
@@ -60,8 +58,6 @@ export function applyOfferPointMaterializedTransition(
       declaration,
       roomView,
       branches: inputs.branches,
-      enteredBiomeCount: inputs.enteredBiomeCount,
-      rewardLookups: inputs.rewardLookups,
     });
 
   if (inputs.event.offerPoint === 'fieldsOptionalRewards')
@@ -74,8 +70,6 @@ export function applyOfferPointMaterializedTransition(
       roomView,
       branches: inputs.branches,
       lifecycle: inputs.lifecycle,
-      enteredBiomeCount: inputs.enteredBiomeCount,
-      routeLoadout: inputs.routeLoadout,
       authoredSeaStarDuplicateSiteKeys: inputs.authoredSeaStarDuplicateSiteKeys,
     });
 
@@ -87,7 +81,6 @@ export function applyOfferPointMaterializedTransition(
     roomView,
     lifecycle: inputs.lifecycle,
     branches: inputs.branches,
-    enteredBiomeCount: inputs.enteredBiomeCount,
     routeLoadout: inputs.routeLoadout,
     authoredSeaStarDuplicateSiteKeys: inputs.authoredSeaStarDuplicateSiteKeys,
   });

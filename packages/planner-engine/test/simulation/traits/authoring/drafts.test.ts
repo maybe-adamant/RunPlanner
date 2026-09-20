@@ -11,6 +11,7 @@ import {
 } from '../../../../src/simulation/traits/authoring/drafts';
 import { createTraitHistoryState } from '../../../../src/simulation/traits/history/fold';
 import { evaluateReachedTraitOffer } from '../../../../src/simulation/traits/offers';
+import { traitFrontierState } from '../../../support/simulation-state';
 
 const before = createTraitHistoryState();
 const owner = { kind: 'project' } as const;
@@ -32,19 +33,25 @@ describe('ordinary trait draft structure', () => {
     expect(short.options).toEqual(full.options.slice(0, 2));
     expect(short.selectedOptionKey).toBe('option2');
     expect(
-      evaluateReachedTraitOffer(catalog, owner, 'source', short, before, {}, 1).generation?.legal,
+      evaluateReachedTraitOffer(catalog, owner, 'source', short, traitFrontierState(before), {}, 1)
+        .generation?.legal,
     ).toBe(false);
-    expect(appendTraitOfferDraft(catalog, short, before)?.options).toHaveLength(3);
-    expect(appendTraitOfferDraft(catalog, full, before)).toBeUndefined();
+    expect(
+      appendTraitOfferDraft(catalog, short, traitFrontierState(before), {})?.options,
+    ).toHaveLength(3);
+    expect(appendTraitOfferDraft(catalog, full, traitFrontierState(before), {})).toBeUndefined();
     const one = removeTraitOfferDraft(catalog, short);
     if (one?.kind !== 'traits') throw new Error('expected one row');
     const gold = removeTraitOfferDraft(catalog, { ...one, rarificationActions: ['option1'] });
     expect(gold).toEqual({ kind: 'fallbackGold', giverKey: 'Apollo' });
     if (gold === undefined) throw new Error('expected Gold');
     expect(
-      evaluateReachedTraitOffer(catalog, owner, 'source', gold, before, {}, 1).generation?.legal,
+      evaluateReachedTraitOffer(catalog, owner, 'source', gold, traitFrontierState(before), {}, 1)
+        .generation?.legal,
     ).toBe(false);
-    expect(appendTraitOfferDraft(catalog, gold, before)?.options).toHaveLength(1);
+    expect(
+      appendTraitOfferDraft(catalog, gold, traitFrontierState(before), {})?.options,
+    ).toHaveLength(1);
   });
 
   it('returns a valid empty terminal for exhausted initial authoring and Start over', () => {
@@ -57,15 +64,26 @@ describe('ordinary trait draft structure', () => {
         values: catalog.traitGivers.values.map((entry) => (entry.key === 'Hermes' ? giver : entry)),
       },
     };
-    const outcome = traitOfferStartingOutcome(exhausted, 'Hermes', before);
+    const outcome = traitOfferStartingOutcome(exhausted, 'Hermes', traitFrontierState(before), {});
     expect(outcome).toEqual({ kind: 'fallbackGold', giverKey: 'Hermes' });
     if (outcome === undefined) throw new Error('expected empty terminal');
     expect(
-      evaluateReachedTraitOffer(exhausted, owner, 'source', outcome, before, {}, 1).generation
-        ?.legal,
+      evaluateReachedTraitOffer(
+        exhausted,
+        owner,
+        'source',
+        outcome,
+        traitFrontierState(before),
+        {},
+        1,
+      ).generation?.legal,
     ).toBe(true);
-    expect(appendTraitOfferDraft(exhausted, outcome, before)).toBeUndefined();
-    expect(traitOfferStartingOutcome(exhausted, 'Hermes', before)).toEqual(outcome);
+    expect(
+      appendTraitOfferDraft(exhausted, outcome, traitFrontierState(before), {}),
+    ).toBeUndefined();
+    expect(traitOfferStartingOutcome(exhausted, 'Hermes', traitFrontierState(before), {})).toEqual(
+      outcome,
+    );
   });
 
   it('retains surviving rows and repair references but clears an invalidated Stone residual', () => {
@@ -108,10 +126,10 @@ describe('ordinary trait draft structure', () => {
         values: catalog.traitGivers.values.map((entry) => (entry.key === 'Hermes' ? giver : entry)),
       },
     };
-    const value = traitOfferStartingOutcome(oneChoice, 'Hermes', before);
+    const value = traitOfferStartingOutcome(oneChoice, 'Hermes', traitFrontierState(before), {});
     if (value?.kind !== 'traits') throw new Error('expected the remaining Hermes trait');
     expect(value.options).toHaveLength(1);
-    expect(appendTraitOfferDraft(oneChoice, value, before)).toBeUndefined();
+    expect(appendTraitOfferDraft(oneChoice, value, traitFrontierState(before), {})).toBeUndefined();
   });
 
   it.each(['WeaponUpgrade', 'SpellDrop', 'Athena', 'Icarus', 'Echo', 'Chaos'])(
@@ -119,7 +137,7 @@ describe('ordinary trait draft structure', () => {
     (giverKey) => {
       const value = { ...full, giverKey };
       expect(removeTraitOfferDraft(catalog, value)).toBeUndefined();
-      expect(appendTraitOfferDraft(catalog, value, before)).toBeUndefined();
+      expect(appendTraitOfferDraft(catalog, value, traitFrontierState(before), {})).toBeUndefined();
     },
   );
 });

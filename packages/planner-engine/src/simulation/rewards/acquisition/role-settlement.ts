@@ -90,10 +90,10 @@ export function applyProducerRoleHistory(
       ),
     ].filter((rewardType) => rewardType !== 'Devotion' && rewardType !== 'SpellDrop'),
   );
-  const weaponKey = incoming.traitContext?.weaponKey;
-  const aspectKey = incoming.traitContext?.aspectKey;
+  // Only a materialized source screen publishes replacement options; a request
+  // without its own source description retains the unresolved candidate alone.
   const artificerReplacementOptions =
-    weaponKey === undefined || aspectKey === undefined
+    incoming.traitContext === undefined
       ? undefined
       : Object.freeze(
           artificerReplacementRewardTypes.flatMap((rewardType) =>
@@ -129,7 +129,7 @@ export function applyProducerRoleHistory(
       seaStarDuplicateSiteKey(createAcquisitionRoleAddress(incoming.origin, resolution.role)),
     ) === true;
   for (const branch of branches) {
-    const branchFacts = facts(branch.state.rewardHistory, undefined, branch);
+    const branchFacts = facts(branch.state);
     if (
       !offerAlreadyGenerated &&
       !isOfferSupportedAtResolutionPoint(catalog.rewards, incoming.offer, branchFacts, {
@@ -387,7 +387,7 @@ export function applyProducerRoleHistory(
         );
         const assessment = assessAnvilResult(
           catalog,
-          materializedBranch.state.traitHistory,
+          materializedBranch.state,
           authoredAnvilResult,
           incoming.traitContext ?? Object.freeze({}),
           temporaryHammerTraitKeys,
@@ -445,7 +445,7 @@ export function applyProducerRoleHistory(
     const pathPointGrant: 1 | 3 | 5 | undefined =
       catalog.rewards.acquisitions.byKey[acquisition.acquisition.gameName]?.pathPointGrant ??
       (acquisition.acquisition.gameName === 'SpellDrop' &&
-      isAspectSpellDropDormant(catalog, incoming.traitContext?.aspectKey)
+      isAspectSpellDropDormant(catalog, materializedBranch.state.equipment.aspectKey)
         ? (3 as const)
         : undefined);
     if (pathPointGrant !== undefined)
@@ -599,7 +599,7 @@ export function applyProducerRoleHistory(
                         catalog.rewards.stores.byKey.RunProgress!,
                         prepared.bag,
                         offer,
-                        facts(prepared.branch.state.rewardHistory, undefined, prepared.branch),
+                        facts(prepared.branch.state),
                         { ineligibleRewardTypes: new Set(['Devotion', 'SpellDrop']) },
                       ).length > 0
                     );

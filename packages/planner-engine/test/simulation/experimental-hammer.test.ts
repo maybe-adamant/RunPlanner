@@ -99,7 +99,6 @@ function equippedBranch(
       'experimentalHammer',
     ),
     0,
-    loadout,
   );
   return publicRewardBranch({
     ...result,
@@ -332,7 +331,6 @@ describe('Experimental Hammer', () => {
         'experimentalHammer',
       ),
       0,
-      route(project).loadout,
     );
     const result = evaluateBiomeRewardsAssemblyInternal(
       catalog,
@@ -789,14 +787,9 @@ describe('Experimental Hammer', () => {
       active: false,
       remainingUses: 0,
     });
-    expect(
-      assessTraitOption(
-        catalog,
-        'StaffLongAttackTrait',
-        expired.state.traitHistory!,
-        route(createCompleteFGProject()).loadout,
-      ),
-    ).toMatchObject({ legal: true });
+    expect(assessTraitOption(catalog, 'StaffLongAttackTrait', expired.state, {})).toMatchObject({
+      legal: true,
+    });
   });
 
   it('publishes missing and incompatible persisted route-start results as repairable findings', () => {

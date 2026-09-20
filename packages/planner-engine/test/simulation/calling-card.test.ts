@@ -24,6 +24,7 @@ import { createArcanaFearState } from '../../src/simulation/arcana-fear';
 import { createKeepsakeState } from '../../src/simulation/keepsakes/state';
 import { evaluateCallingCardOffer } from '../../src/simulation/keepsakes/reward-effects';
 import { simulateProject } from '../../src/simulation';
+import { traitFrontierState } from '../support/simulation-state';
 
 const biome = createBiomeAddress('Underworld', 'F');
 const reward = createIncomingRewardAddress(biome, goldenFStartId);
@@ -71,9 +72,10 @@ function callingCardCandidate(before = createTraitHistoryState()) {
         semanticAddressKey(trait),
         Object.freeze([
           Object.freeze({
-            before,
-            context: Object.freeze({ resolvedProviderKey: 'Apollo' }),
-            keepsakes: createKeepsakeState(catalog, 'RarifyKeepsake'),
+            state: traitFrontierState(before, {
+              keepsakes: createKeepsakeState(catalog, 'RarifyKeepsake'),
+            }),
+            source: Object.freeze({ resolvedProviderKey: 'Apollo' }),
           }),
         ]),
       ],

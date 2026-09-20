@@ -34,6 +34,7 @@ import { settleOwnedAcquisitionSite } from '../../src/simulation/rewards/acquisi
 import { mergeRewardFindingEmissions } from '../../src/simulation/rewards/findings';
 import { settleNonFinalBossRarityBlocks } from '../../src/simulation/traits/history/transitions';
 import { selectedTargetedAcquisitionTargetKeys } from '../../src/simulation/traits/level-effects';
+import { traitFrontierState } from '../support/simulation-state';
 
 const owner = { kind: 'project' } as SemanticAddress;
 
@@ -149,7 +150,12 @@ function historyFrom(
 
 describe('Selene Spell equipment chronology', () => {
   it('publishes the exact eight rarityless normal-spell candidates', () => {
-    const candidates = traitCandidates(catalog, 'SpellDrop', createTraitHistoryState());
+    const candidates = traitCandidates(
+      catalog,
+      'SpellDrop',
+      traitFrontierState(createTraitHistoryState()),
+      {},
+    );
     expect(candidates).toHaveLength(8);
     expect(candidates.map((candidate) => candidate.traitKey)).not.toContain('SpellMoonBeamTrait');
     expect(candidates.every((candidate) => candidate.rarity === undefined)).toBe(true);
@@ -157,8 +163,12 @@ describe('Selene Spell equipment chronology', () => {
 
   it('unlocks Artemis and Circe spell prerequisites only after a settled spell', () => {
     const empty = createTraitHistoryState();
-    expect(assessTraitOption(catalog, 'SorceryCritBoon', empty).legal).toBe(false);
-    expect(assessTraitOption(catalog, 'CirceSorceryDamageBoon', empty).legal).toBe(false);
+    expect(assessTraitOption(catalog, 'SorceryCritBoon', traitFrontierState(empty), {}).legal).toBe(
+      false,
+    );
+    expect(
+      assessTraitOption(catalog, 'CirceSorceryDamageBoon', traitFrontierState(empty), {}).legal,
+    ).toBe(false);
     const spell = foldTraitHistoryEvents(catalog, [
       {
         kind: 'traitOffer' as const,
@@ -171,8 +181,12 @@ describe('Selene Spell equipment chronology', () => {
         selectedOptionKey: 'option1' as const,
       },
     ]);
-    expect(assessTraitOption(catalog, 'SorceryCritBoon', spell).legal).toBe(true);
-    expect(assessTraitOption(catalog, 'CirceSorceryDamageBoon', spell).legal).toBe(true);
+    expect(assessTraitOption(catalog, 'SorceryCritBoon', traitFrontierState(spell), {}).legal).toBe(
+      true,
+    );
+    expect(
+      assessTraitOption(catalog, 'CirceSorceryDamageBoon', traitFrontierState(spell), {}).legal,
+    ).toBe(true);
   });
 
   it('installs one selected normal spell only at acquisition and fails closed on a second spell event', () => {
@@ -256,9 +270,9 @@ describe('Selene Spell equipment chronology', () => {
         'Underworld',
         loadout,
       ),
-      { ...source, traitContext: { weaponKey: 'WeaponSuit', aspectKey: 'SuitHexAspect' } },
+      { ...source, traitContext: {} },
       1,
-      (_history) => factsWithHistory(baseFacts(), _history, new Set()),
+      (state) => factsWithHistory(baseFacts(), state.rewardHistory, new Set()),
       new Map(),
     )[0]!;
 
@@ -287,10 +301,10 @@ describe('Proper Upbringing rarity lifecycle', () => {
     traitKey: string,
     rarity: TraitOfferEvent['options'][number]['rarity'],
   ): TraitHistoryState {
-    const candidates = traitCandidates(catalog, giverKey, before).filter(
+    const candidates = traitCandidates(catalog, giverKey, traitFrontierState(before), {}).filter(
       (candidate) => candidate.available && candidate.traitKey !== traitKey,
     );
-    const selected = traitCandidates(catalog, giverKey, before).find(
+    const selected = traitCandidates(catalog, giverKey, traitFrontierState(before), {}).find(
       (candidate) =>
         candidate.available && candidate.traitKey === traitKey && candidate.rarity === rarity,
     );
@@ -330,7 +344,7 @@ describe('Proper Upbringing rarity lifecycle', () => {
         options,
         selectedOptionKey: 'option1',
       },
-      before,
+      traitFrontierState(before),
       {},
       before.events.length + 1,
     );
@@ -552,7 +566,7 @@ describe('Proper Upbringing rarity lifecycle', () => {
       owner,
       'same-boundary-bridal',
       offer,
-      proper,
+      traitFrontierState(proper),
       {},
       proper.events.length,
     );
@@ -734,7 +748,13 @@ describe('Proper Upbringing rarity lifecycle', () => {
       { giverKey: 'Hera', traitKey: 'HeraManaBoon', rarity: 'Common' as const },
     ]);
     expect(
-      assessTraitOption(catalog, 'ElementalRarityUpgradeBoon', oneEach, {}, 'Common').legal,
+      assessTraitOption(
+        catalog,
+        'ElementalRarityUpgradeBoon',
+        traitFrontierState(oneEach),
+        {},
+        'Common',
+      ).legal,
     ).toBe(true);
     expect(oneEach.properUpbringingActive).toBeUndefined();
     expect(activeHistory().properUpbringingActive).toBe(true);
@@ -820,36 +840,66 @@ describe('Proper Upbringing rarity lifecycle', () => {
     const history = activeHistory();
     const apolloContext = {
       resolvedProviderKey: 'Apollo',
-      boonRarityFacts: boonRarityFactsForOffer(catalog, history, {
+      boonRarityFacts: boonRarityFactsForOffer(catalog, traitFrontierState(history), {
         resolvedProviderKey: 'Apollo',
       })!,
     };
     expect(
-      assessTraitOption(catalog, 'ApolloManaBoon', history, apolloContext, 'Common').findings,
+      assessTraitOption(
+        catalog,
+        'ApolloManaBoon',
+        traitFrontierState(history),
+        apolloContext,
+        'Common',
+      ).findings,
     ).not.toContainEqual(expect.objectContaining({ code: 'rarityRollUnavailable' }));
     expect(
-      assessTraitOption(catalog, 'ApolloManaBoon', history, apolloContext, 'Rare').findings,
+      assessTraitOption(
+        catalog,
+        'ApolloManaBoon',
+        traitFrontierState(history),
+        apolloContext,
+        'Rare',
+      ).findings,
     ).not.toContainEqual(expect.objectContaining({ code: 'rarityRollUnavailable' }));
     expect(
-      assessTraitOption(catalog, 'ApolloManaBoon', history, apolloContext, 'Epic').findings,
+      assessTraitOption(
+        catalog,
+        'ApolloManaBoon',
+        traitFrontierState(history),
+        apolloContext,
+        'Epic',
+      ).findings,
     ).not.toContainEqual(expect.objectContaining({ code: 'rarityRollUnavailable' }));
     const hermesContext = {
       resolvedProviderKey: 'Hermes',
-      boonRarityFacts: boonRarityFactsForOffer(catalog, history, {
+      boonRarityFacts: boonRarityFactsForOffer(catalog, traitFrontierState(history), {
         resolvedProviderKey: 'Hermes',
       })!,
     };
     expect(
-      assessTraitOption(catalog, 'HermesCastDiscountBoon', history, hermesContext, 'Common')
+      assessTraitOption(
+        catalog,
+        'HermesCastDiscountBoon',
+        traitFrontierState(history),
+        hermesContext,
+        'Common',
+      ).findings,
+    ).not.toContainEqual(expect.objectContaining({ code: 'rarityRollUnavailable' }));
+    expect(
+      assessTraitOption(catalog, 'ElementalDamageBoon', traitFrontierState(history), {}, 'Common')
         .findings,
     ).not.toContainEqual(expect.objectContaining({ code: 'rarityRollUnavailable' }));
     expect(
-      assessTraitOption(catalog, 'ElementalDamageBoon', history, {}, 'Common').findings,
+      assessTraitOption(catalog, 'AllElementalBoon', traitFrontierState(history), {}, 'Legendary')
+        .findings,
     ).not.toContainEqual(expect.objectContaining({ code: 'rarityRollUnavailable' }));
-    expect(
-      assessTraitOption(catalog, 'AllElementalBoon', history, {}, 'Legendary').findings,
-    ).not.toContainEqual(expect.objectContaining({ code: 'rarityRollUnavailable' }));
-    const valid = traitOfferStartingOutcome(catalog, 'Apollo', history, apolloContext);
+    const valid = traitOfferStartingOutcome(
+      catalog,
+      'Apollo',
+      traitFrontierState(history),
+      apolloContext,
+    );
     if (valid?.kind !== 'traits') throw new Error('expected a valid Apollo screen');
     const allCommon = Object.freeze({
       ...valid,
@@ -863,21 +913,30 @@ describe('Proper Upbringing rarity lifecycle', () => {
         owner,
         'proper-screen',
         allCommon,
-        history,
+        traitFrontierState(history),
         apolloContext,
         1,
       ).generation,
     ).toMatchObject({ legal: false, findings: [{ code: 'traitOfferGenerationUnavailable' }] });
     expect(
-      evaluateReachedTraitOffer(catalog, owner, 'proper-screen', valid, history, apolloContext, 1)
-        .generation,
+      evaluateReachedTraitOffer(
+        catalog,
+        owner,
+        'proper-screen',
+        valid,
+        traitFrontierState(history),
+        apolloContext,
+        1,
+      ).generation,
     ).toMatchObject({ legal: true });
   });
 
   it('uses source-aware rarity ledgers for shop-aware NPC trait offers', () => {
     const history = activeHistory();
     const factsFor = (giverKey: string) =>
-      boonRarityFactsForOffer(catalog, history, { resolvedProviderKey: giverKey });
+      boonRarityFactsForOffer(catalog, traitFrontierState(history), {
+        resolvedProviderKey: giverKey,
+      });
 
     expect(factsFor('Artemis')).toMatchObject({
       providerBase: catalog.boonRarityBases.olympian,
@@ -906,19 +965,31 @@ describe('Proper Upbringing rarity lifecycle', () => {
     const history = twoEachHistory();
     const context = {
       resolvedProviderKey: 'Hera',
-      boonRarityFacts: boonRarityFactsForOffer(catalog, history, {
+      boonRarityFacts: boonRarityFactsForOffer(catalog, traitFrontierState(history), {
         resolvedProviderKey: 'Hera',
         boonRarityRoomOverride: { Rare: 1, Epic: 0.7, Duo: 0.2, Legendary: 0.2 },
       })!,
     };
     expect(history.properUpbringingActive).toBeUndefined();
     expect(
-      assessTraitOption(catalog, 'ElementalRarityUpgradeBoon', history, context, 'Common').findings,
+      assessTraitOption(
+        catalog,
+        'ElementalRarityUpgradeBoon',
+        traitFrontierState(history),
+        context,
+        'Common',
+      ).findings,
     ).not.toContainEqual(expect.objectContaining({ code: 'rarityRollUnavailable' }));
     expect(
-      assessTraitOption(catalog, 'ElementalRarityUpgradeBoon', history, context, 'Rare').findings,
+      assessTraitOption(
+        catalog,
+        'ElementalRarityUpgradeBoon',
+        traitFrontierState(history),
+        context,
+        'Rare',
+      ).findings,
     ).not.toContainEqual(expect.objectContaining({ code: 'rarityRollUnavailable' }));
-    const valid = traitOfferStartingOutcome(catalog, 'Hera', history, context);
+    const valid = traitOfferStartingOutcome(catalog, 'Hera', traitFrontierState(history), context);
     if (valid?.kind !== 'traits') throw new Error('expected a valid Q-style Hera screen');
     const allCommon = Object.freeze({
       ...valid,
@@ -927,8 +998,15 @@ describe('Proper Upbringing rarity lifecycle', () => {
       ) as unknown as typeof valid.options,
     });
     expect(
-      evaluateReachedTraitOffer(catalog, owner, 'q-screen', allCommon, history, context, 1)
-        .generation,
+      evaluateReachedTraitOffer(
+        catalog,
+        owner,
+        'q-screen',
+        allCommon,
+        traitFrontierState(history),
+        context,
+        1,
+      ).generation,
     ).toMatchObject({ legal: false, findings: [{ code: 'traitOfferGenerationUnavailable' }] });
   });
 
@@ -940,9 +1018,8 @@ describe('Proper Upbringing rarity lifecycle', () => {
     });
     const rankIII = boonRarityFactsForOffer(
       catalog,
-      createTraitHistoryState(),
+      traitFrontierState(createTraitHistoryState(), { arcanaFear: active }),
       { resolvedProviderKey: 'Apollo' },
-      active,
     );
     expect(rankIII?.contributions).toContainEqual({
       additive: { Rare: 0.5 },
@@ -955,9 +1032,8 @@ describe('Proper Upbringing rarity lifecycle', () => {
     if (!promoted.legal) throw new Error('Lapis promotion must be legal');
     const rankIV = boonRarityFactsForOffer(
       catalog,
-      createTraitHistoryState(),
+      traitFrontierState(createTraitHistoryState(), { arcanaFear: promoted.state }),
       { resolvedProviderKey: 'Apollo' },
-      promoted.state,
     );
     expect(rankIV?.contributions).toContainEqual({
       additive: { Rare: 0.6 },
@@ -983,21 +1059,20 @@ describe('Proper Upbringing rarity lifecycle', () => {
 
   it('removes only the future floor on deactivation and promotes a Common on reactivation', () => {
     const activated = activeHistory();
+    const hymnState = traitFrontierState(activated, { stygianWell: { hymnUses: 1 } });
     const replacementContext = {
-      limitedSwapUses: 1,
       replacementRollChance: 1,
       resolvedProviderKey: 'Hera',
-      boonRarityFacts: boonRarityFactsForOffer(catalog, activated, {
+      boonRarityFacts: boonRarityFactsForOffer(catalog, hymnState, {
         resolvedProviderKey: 'Hera',
-        limitedSwapUses: 1,
         replacementRollChance: 1,
       })!,
     };
-    const draft = traitOfferStartingOutcome(catalog, 'Hera', activated, replacementContext);
+    const draft = traitOfferStartingOutcome(catalog, 'Hera', hymnState, replacementContext);
     if (draft?.kind !== 'traits') throw new Error('expected a source-valid Hera replacement draft');
     const replacementIndex = draft.options.findIndex(
       (option) =>
-        assessTraitOption(catalog, option.traitKey, activated, replacementContext, option.rarity)
+        assessTraitOption(catalog, option.traitKey, hymnState, replacementContext, option.rarity)
           .replacementTransition?.replacedTraitKey === 'ApolloWeaponBoon',
     );
     if (replacementIndex < 0) throw new Error('expected a Hera Melee replacement row');
@@ -1007,7 +1082,7 @@ describe('Proper Upbringing rarity lifecycle', () => {
       owner,
       'proper-deactivation',
       { ...draft, selectedOptionKey },
-      activated,
+      hymnState,
       replacementContext,
       activated.events.length + 1,
     );
@@ -1047,7 +1122,7 @@ describe('Proper Upbringing rarity lifecycle', () => {
     const replacement = assessTraitOption(
       catalog,
       'HeraWeaponBoon',
-      history,
+      traitFrontierState(history),
       { resolvedProviderKey: 'Hera' },
       'Epic',
     );
@@ -1058,10 +1133,10 @@ describe('Proper Upbringing rarity lifecycle', () => {
     const common = assessTraitOption(
       catalog,
       'HeraSpecialBoon',
-      history,
+      traitFrontierState(history),
       {
         resolvedProviderKey: 'Hera',
-        boonRarityFacts: boonRarityFactsForOffer(catalog, history, {
+        boonRarityFacts: boonRarityFactsForOffer(catalog, traitFrontierState(history), {
           resolvedProviderKey: 'Hera',
         })!,
       },
@@ -1093,7 +1168,7 @@ describe('Proper Upbringing rarity lifecycle', () => {
         ],
         selectedOptionKey: 'option1',
       },
-      initial,
+      traitFrontierState(initial),
       {},
       9,
     );

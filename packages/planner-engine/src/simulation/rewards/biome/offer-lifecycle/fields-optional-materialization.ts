@@ -1,12 +1,7 @@
 import type { Catalog, RoomDeclaration } from '../../../../catalog-schema';
 import { semanticAddressKey, type SemanticAddress } from '../../../../authored-project/addresses';
-import type { RouteLoadout } from '../../../../authored-project/model';
 import { createUnresolvedAcquisitionRewardState } from '../../../../authored-project/traits/state';
-import {
-  locallyValidRewardOffers,
-  type ResolvedRewardOffer,
-  type RewardHistoryState,
-} from '../../../../reward-kernel';
+import { locallyValidRewardOffers, type ResolvedRewardOffer } from '../../../../reward-kernel';
 import type { HistoryEvent, ProgressiveRoomHistoryViews } from '../../../history';
 import type {
   CanonicalAuthoredRoom,
@@ -25,6 +20,7 @@ import type { RewardLifecycleReferences } from '../prepared-inputs';
 import { processRewardOffer } from '../../offer-generation';
 import type { RewardProducerFrontier } from '../../producer-frontiers';
 import { localRewardBinding } from '../room-reward-bindings';
+import type { SimulationState } from '../../../state/model';
 
 export interface FieldsOptionalOfferPointMaterialization {
   readonly branches: readonly RewardBranchState[];
@@ -41,8 +37,6 @@ export interface FieldsOptionalOfferPointMaterializationInputs {
   readonly roomView: ProgressiveRoomHistoryViews;
   readonly branches: readonly RewardBranchState[];
   readonly lifecycle: RewardLifecycleReferences;
-  readonly enteredBiomeCount: number;
-  readonly routeLoadout: RouteLoadout;
   readonly authoredSeaStarDuplicateSiteKeys: ReadonlySet<string>;
 }
 
@@ -53,17 +47,7 @@ export interface FieldsOptionalOfferPointMaterializationInputs {
 export function materializeFieldsOptionalOfferPoint(
   inputs: FieldsOptionalOfferPointMaterializationInputs,
 ): FieldsOptionalOfferPointMaterialization {
-  const {
-    catalog,
-    snapshot,
-    event,
-    room,
-    declaration,
-    roomView,
-    lifecycle,
-    enteredBiomeCount,
-    routeLoadout,
-  } = inputs;
+  const { catalog, snapshot, event, room, declaration, roomView, lifecycle } = inputs;
   if (event.offerPoint !== 'fieldsOptionalRewards')
     throw new BiomeRewardSimulationContractError('expected Fields optional materialization');
   const view = roomView.offerPoints?.find(
@@ -108,7 +92,6 @@ export function materializeFieldsOptionalOfferPoint(
         : { levelResolutionsByAcquisitionRole: state.levelResolutionsByAcquisitionRole }),
       dispositionByAcquisitionRole: state.dispositionByAcquisitionRole,
       traitContext: Object.freeze({
-        ...routeLoadout,
         blockGiftBoons: declaration.blockGiftBoons,
         devotionNoDuo: offer.rewardType === 'Devotion',
       }),
@@ -120,25 +103,16 @@ export function materializeFieldsOptionalOfferPoint(
     binding: localRewardBinding(declaration, reward),
     historySequence: event.sequence,
     peers: Object.freeze([]),
-    facts: (
-      branchHistory: RewardHistoryState,
-      _shopNames: ReadonlySet<string> | undefined,
-      branch: RewardBranchState | undefined,
-    ) =>
-      createBiomeRewardFacts(
+    facts: (state: SimulationState) =>
+      createBiomeRewardFacts({
         catalog,
-        room,
-        room,
-        declaration,
+        state,
+        source: room,
+        currentRoom: room,
+        sourceDeclaration: declaration,
         view,
-        branchHistory,
-        enteredBiomeCount,
-        undefined,
-        undefined,
-        undefined,
-        undefined,
-        branch,
-      ),
+        hubBoardLookups: 'notConsulted',
+      }),
   });
   const evaluateOptionalCohort = (owner: SemanticAddress, offer: ResolvedRewardOffer) => {
     const ownerKey = semanticAddressKey(owner);
@@ -226,16 +200,16 @@ export function materializeFieldsOptionalOfferPoint(
           historySequence: acquisitionEvent.sequence,
           authoredSeaStarDuplicateSiteKeys: inputs.authoredSeaStarDuplicateSiteKeys,
         },
-        (branchHistory) =>
-          createBiomeRewardFacts(
+        (state) =>
+          createBiomeRewardFacts({
             catalog,
-            room,
-            room,
-            declaration,
-            acquisitionView,
-            branchHistory,
-            enteredBiomeCount,
-          ),
+            state,
+            source: room,
+            currentRoom: room,
+            sourceDeclaration: declaration,
+            view: acquisitionView,
+            hubBoardLookups: 'notConsulted',
+          }),
         ownerRegion(selectedReward.origin),
         rewardFindingChronologyForRoom(
           snapshot,

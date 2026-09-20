@@ -10,7 +10,7 @@ import {
   foldTraitHistoryEvents,
   recordReachedTraitOffer,
   type TraitHistoryState,
-  type TraitOfferContext,
+  type ResolvedTraitOfferSource,
   type TraitOfferEvent,
 } from '@run-planner/engine/simulation';
 import { describe, expect, it } from 'vitest';
@@ -20,6 +20,7 @@ import {
 } from '../../../../src/simulation/traits/authoring/initial-composition';
 import { traitOfferGenerationInput } from '../../../../src/simulation/traits/authoring/assessment';
 import { createTestArcanaFearState } from '../../../support/arcana-fear';
+import { traitFrontierState } from '../../../support/simulation-state';
 
 function history(entries: readonly [string, string, string][]): TraitHistoryState {
   return foldTraitHistoryEvents(
@@ -47,11 +48,17 @@ const fresh = createTraitHistoryState();
 function supports(
   value: AuthoredTraitOffer,
   before = fresh,
-  context: TraitOfferContext = {},
+  context: ResolvedTraitOfferSource = {},
   testCatalog = catalog,
+  frontier: Parameters<typeof traitFrontierState>[1] = {},
 ): boolean {
   return assessInitialOfferSupport({
-    ...traitOfferGenerationInput(testCatalog, value.giverKey, before, context),
+    ...traitOfferGenerationInput(
+      testCatalog,
+      value.giverKey,
+      traitFrontierState(before, { catalog: testCatalog, ...frontier }),
+      context,
+    ),
     offer: value,
   }).legal;
 }
@@ -115,7 +122,7 @@ describe('native initial offer construction', () => {
         owner,
         'source',
         value,
-        before,
+        traitFrontierState(before),
         {},
         sequence,
       );
@@ -137,10 +144,9 @@ describe('native initial offer construction', () => {
       owner,
       'source',
       trial,
-      before,
+      traitFrontierState(before, { arcanaFear: createTestArcanaFearState() }),
       { devotionNoDuo: true },
       13,
-      createTestArcanaFearState(),
     );
     expect(reached.generation?.legal).toBe(true);
     const acquired = recordReachedTraitOffer(catalog, reached, 13, 'roomRewardPickup');
@@ -152,10 +158,9 @@ describe('native initial offer construction', () => {
         owner,
         'source',
         short,
-        before,
+        traitFrontierState(before, { arcanaFear: createTestArcanaFearState() }),
         { devotionNoDuo: true },
         13,
-        createTestArcanaFearState(),
       ).generation?.legal,
     ).toBe(false);
     // This compares the final frontier's effective guard, not an alternate
@@ -167,10 +172,9 @@ describe('native initial offer construction', () => {
         owner,
         'source',
         trial,
-        before,
+        traitFrontierState(before, { arcanaFear: denial }),
         { devotionNoDuo: true },
         13,
-        denial,
       ).generation?.legal,
     ).toBe(false);
     expect(
@@ -179,10 +183,9 @@ describe('native initial offer construction', () => {
         owner,
         'source',
         short,
-        before,
+        traitFrontierState(before, { arcanaFear: denial }),
         { devotionNoDuo: true },
         13,
-        denial,
       ).generation?.legal,
     ).toBe(true);
 
@@ -198,7 +201,7 @@ describe('native initial offer construction', () => {
     };
     const withHera = recordReachedTraitOffer(
       catalog,
-      evaluateReachedTraitOffer(catalog, owner, 'source', hera, before, {}, 13),
+      evaluateReachedTraitOffer(catalog, owner, 'source', hera, traitFrontierState(before), {}, 13),
       13,
       'roomRewardPickup',
     );
@@ -208,7 +211,7 @@ describe('native initial offer construction', () => {
       assessTraitOption(
         catalog,
         'RaiseDeadBoon',
-        withHera.history,
+        traitFrontierState(withHera.history),
         { resolvedProviderKey: 'Apollo' },
         'Duo',
       ).legal,
@@ -217,7 +220,7 @@ describe('native initial offer construction', () => {
       assessTraitOption(
         catalog,
         'RaiseDeadBoon',
-        withHera.history,
+        traitFrontierState(withHera.history),
         { resolvedProviderKey: 'Apollo', devotionNoDuo: true },
         'Duo',
       ).legal,
@@ -284,7 +287,9 @@ describe('native initial offer construction', () => {
           { traitKey: 'DoubleStrikeChanceBoon', rarity: 'Common' },
         ]),
         before,
-        { limitedSwapUses: 1 },
+        {},
+        catalog,
+        { stygianWell: { hymnUses: 1 } },
       ),
     ).toBe(true);
   });
@@ -315,7 +320,7 @@ describe('native initial offer construction', () => {
       ['Apollo', 'DoubleStrikeChanceBoon', 'Common'],
     ]);
     const testCatalog = apolloPool(['DoubleExManaBoon']);
-    const context: TraitOfferContext = {
+    const context: ResolvedTraitOfferSource = {
       boonRarityFacts: {
         providerBase: { Rare: 0, Epic: 0, Heroic: 0, Duo: 0, Legendary: 0 },
         rollOrder: catalog.boonRarityRollOrder,
@@ -347,7 +352,7 @@ describe('native initial offer construction', () => {
       { traitKey: 'ApolloSecondStageCastBoon', rarity: 'Duo' },
       { traitKey: 'DoubleExManaBoon', rarity: 'Legendary' },
     ]);
-    const context: TraitOfferContext = {
+    const context: ResolvedTraitOfferSource = {
       boonRarityFacts: {
         providerBase: { Rare: 0, Epic: 0, Heroic: 0, Duo: 0.12, Legendary: 0.1 },
         rollOrder: catalog.boonRarityRollOrder,
@@ -369,7 +374,7 @@ describe('native initial offer construction', () => {
     ).toBe(true);
     expect(
       initialOfferStartingOptions(
-        traitOfferGenerationInput(testCatalog, 'Apollo', before, {
+        traitOfferGenerationInput(testCatalog, 'Apollo', traitFrontierState(before), {
           boonRarityFacts: {
             ...context.boonRarityFacts!,
             providerBase: {
@@ -400,7 +405,7 @@ describe('native initial offer construction', () => {
       { traitKey: 'BlindChanceBoon', rarity: 'Epic' },
       { traitKey: 'PoseidonSplashSprintBoon', rarity: 'Duo' },
     ]);
-    const context: TraitOfferContext = {
+    const context: ResolvedTraitOfferSource = {
       boonRarityFacts: {
         providerBase: catalog.boonRarityBases.olympian,
         rollOrder: catalog.boonRarityRollOrder,
@@ -420,7 +425,7 @@ describe('native initial offer construction', () => {
         context,
       ),
     ).toBe(true);
-    const input = traitOfferGenerationInput(catalog, 'Apollo', before, context);
+    const input = traitOfferGenerationInput(catalog, 'Apollo', traitFrontierState(before), context);
     const declaration = catalog.traits.byKey.BlindChanceBoon!;
     const noPriorityCatalog = {
       ...catalog,

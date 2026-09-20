@@ -31,6 +31,7 @@ import { publicRewardBranch } from '../../src/simulation/rewards/branch-lifecycl
 import { initializeTestRewardBranchesForRoute as initializeRewardBranches } from '../support/arcana-fear';
 import { appendRewardEvent } from '../../src/simulation/rewards/branch-primitives';
 import { settleOwnedAcquisitionSite } from '../../src/simulation/rewards/acquisition/site-settlement';
+import type { RewardBranchState } from '../../src/simulation/rewards/branch-primitives';
 
 const origin = createBiomeAddress('Underworld', 'F');
 
@@ -114,7 +115,7 @@ describe('Olympian reward pressure', () => {
       },
       historySequence: 1,
       peers: [],
-      facts: (history: RewardHistoryState) => factsFor(history),
+      facts: (state: RewardBranchState['state']) => factsFor(state.rewardHistory),
     });
 
     const generated = processRewardOffer(
@@ -169,7 +170,7 @@ describe('Olympian reward pressure', () => {
       },
       historySequence: 1,
       peers: [],
-      facts: (history: RewardHistoryState) => factsFor(history),
+      facts: (state: RewardBranchState['state']) => factsFor(state.rewardHistory),
     });
     const boon = context({
       rewardType: 'Boon',
@@ -254,7 +255,7 @@ describe('Olympian reward pressure', () => {
       },
       historySequence: 1,
       peers: [],
-      facts: (history: RewardHistoryState) => factsFor(history),
+      facts: (state: RewardBranchState['state']) => factsFor(state.rewardHistory),
     });
     expect(
       processRewardOffer([branch], context('ApolloUpgrade', 'ZeusUpgrade'), new Map()),
@@ -295,7 +296,7 @@ describe('Olympian reward pressure', () => {
         },
         historySequence: 1,
         peers: [],
-        facts: (history: RewardHistoryState) => factsFor(history),
+        facts: (state: RewardBranchState['state']) => factsFor(state.rewardHistory),
       },
       findings,
     );
@@ -387,7 +388,7 @@ describe('Olympian reward pressure', () => {
           },
         },
       },
-      (history) => factsFor(history),
+      (state) => factsFor(state.rewardHistory),
     );
 
     expect(
@@ -441,7 +442,7 @@ describe('Olympian reward pressure', () => {
           },
         },
       },
-      (history) => factsFor(history),
+      (state) => factsFor(state.rewardHistory),
     );
 
     expect(

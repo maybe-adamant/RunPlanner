@@ -1,7 +1,9 @@
 import type { Catalog, TraitRarity } from '../../../catalog-schema';
 import type { AuthoredTraitOffer } from '../../../authored-project/traits/state';
 import type { TraitHistoryState } from '../history/model';
-import type { TraitOfferContext } from '../offer-domain';
+import type { ResolvedTraitOfferSource } from '../offer-domain';
+import { limitedSwapUses } from '../offer-domain';
+import type { SimulationState } from '../../state/model';
 import { deriveBoonRarityValues } from '../rarity';
 
 export interface InitialOfferOption {
@@ -12,8 +14,8 @@ export interface InitialOfferOption {
 export interface InitialOfferInput {
   readonly catalog: Catalog;
   readonly giverKey: string;
-  readonly history: TraitHistoryState;
-  readonly context: TraitOfferContext;
+  readonly state: SimulationState;
+  readonly source: ResolvedTraitOfferSource;
   /** Declaration requirements before ownership and occupied-slot exclusions. */
   readonly declarationEligible: (traitKey: string) => boolean;
   readonly replacementFor: (traitKey: string) => InitialOfferOption | undefined;
@@ -69,11 +71,19 @@ function coreSeeds(
 }
 
 function preparePools(input: InitialOfferInput): InitialOfferPools | undefined {
-  const { catalog, giverKey, history, context, declarationEligible, replacementFor } = input;
+  const {
+    catalog,
+    giverKey,
+    state,
+    source: offerSource,
+    declarationEligible,
+    replacementFor,
+  } = input;
+  const history = state.traitHistory;
   const giver = catalog.traitGivers.byKey[giverKey];
   if (giver?.providerKind !== 'olympian' && giver?.providerKind !== 'hermes') return undefined;
-  const source = giver.traitKeys.filter(declarationEligible);
-  const fresh = source.filter((key) => {
+  const eligible = giver.traitKeys.filter(declarationEligible);
+  const fresh = eligible.filter((key) => {
     const slot = catalog.traits.byKey[key]!.equipmentSlot;
     return (
       history.equippedTraits[key] === undefined &&
@@ -81,7 +91,7 @@ function preparePools(input: InitialOfferInput): InitialOfferPools | undefined {
     );
   });
   const membership = new Map(
-    source.map((key) => {
+    eligible.map((key) => {
       const domain = catalog.traits.byKey[key]!.rarityDomain;
       return [
         key,
@@ -90,8 +100,8 @@ function preparePools(input: InitialOfferInput): InitialOfferPools | undefined {
     }),
   );
   const priority = giver.priorityTraitKeys.filter(declarationEligible);
-  const forceCommon = context.freshRarityOverride === 'Common';
-  const facts = context.boonRarityFacts ?? {
+  const forceCommon = offerSource.freshRarityOverride === 'Common';
+  const facts = offerSource.boonRarityFacts ?? {
     providerBase: catalog.boonRarityBases[giver.providerKind],
     rollOrder: giver.boonRarityRollOrder ?? catalog.boonRarityRollOrder,
     contributions: [],
@@ -101,7 +111,7 @@ function preparePools(input: InitialOfferInput): InitialOfferPools | undefined {
   const chances: Partial<Record<TraitRarity, number>> = forceCommon
     ? {}
     : { ...deriveBoonRarityValues(facts) };
-  if (context.devotionNoDuo === true) chances.Duo = 0;
+  if (offerSource.devotionNoDuo === true) chances.Duo = 0;
   return {
     rarityOrder: facts.rollOrder,
     chances,
@@ -113,13 +123,13 @@ function preparePools(input: InitialOfferInput): InitialOfferPools | undefined {
       return replacement === undefined ? [] : [replacement];
     }),
     replacementChance:
-      (context.limitedSwapUses ?? 0) > 0
+      limitedSwapUses(state) > 0
         ? 1
         : forceCommon
           ? 0
-          : (context.replacementRollChance ?? catalog.boonReplacementChance),
+          : (offerSource.replacementRollChance ?? catalog.boonReplacementChance),
     linked: fresh.filter((traitKey) => catalog.traits.byKey[traitKey]!.optionalLinkedPriority),
-    finalRescue: context.finalRarityRescueDisabled !== true,
+    finalRescue: offerSource.finalRarityRescueDisabled !== true,
   };
 }
 

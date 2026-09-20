@@ -460,12 +460,12 @@ function settle(options: {
     loadout,
   });
   const facts = (
-    history: RewardBranchState['state']['rewardHistory'],
+    state: RewardBranchState['state'],
     currentRoomShopOptionNames: ReadonlySet<string> = new Set(),
   ) =>
     factsWithHistory(
       baseFacts(options.enteredBiomes, roomGameName === 'Q_PreBoss01' ? 'Surface' : 'Underworld'),
-      history,
+      state.rewardHistory,
       currentRoomShopOptionNames,
     );
   const sourceBranches =
@@ -607,8 +607,8 @@ describe('Infernal Contract and Travel Deal chronology', () => {
     const travelGenerationFacts = firstPending.travelRefill.generationFacts;
     expect(firstPending.travelRefill).toMatchObject({ sourceOfferKey: 'Minor', slotIndex: 2 });
 
-    const facts = (history: RewardBranchState['state']['rewardHistory']) =>
-      factsWithHistory(baseFacts(), history, new Set());
+    const facts = (state: RewardBranchState['state']) =>
+      factsWithHistory(baseFacts(), state.rewardHistory, new Set());
     const interleaved = settleShopAcquisitionSite(first.settlement.branches, {
       catalog,
       room: first.canonical,
@@ -1033,7 +1033,7 @@ describe('Infernal Contract and Travel Deal chronology', () => {
       expect(
         settled.settlement.branches[0]?.traitEvaluations
           ?.filter((evaluation) => evaluation.acquisitionRole === 'source')
-          .map((evaluation) => evaluation.context.boonRarityFacts?.itemOverride),
+          .map((evaluation) => evaluation.source.boonRarityFacts?.itemOverride),
       ).toEqual([
         profile.groups.byKey.MixedProgress!.options.byKey[travelOptionKey]?.boonRarityOverride,
       ]);

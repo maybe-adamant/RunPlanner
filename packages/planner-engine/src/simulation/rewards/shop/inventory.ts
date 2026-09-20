@@ -43,14 +43,14 @@ export function processShopInventory(
       catalog.rewards,
       profile,
       authored,
-      context.facts(branch.state.rewardHistory, new Set(), branch),
+      context.facts(branch.state, new Set()),
       requirements,
     );
     supportResults.push(support);
     for (const witness of support.witnesses) {
       let candidate = branch;
       for (const offer of entry.offers) {
-        const offerFacts = context.facts(candidate.state.rewardHistory, new Set(), candidate);
+        const offerFacts = context.facts(candidate.state, new Set());
         const history = applyOfferProjection(
           catalog.rewards,
           candidate.state.rewardHistory,
@@ -169,11 +169,7 @@ export function processShopInventory(
       contractProfile,
       0,
       contractOffer.offer,
-      context.facts(
-        branch.state.rewardHistory,
-        new Set(entry.offers.map((offer) => offer.offer.rewardType)),
-        branch,
-      ),
+      context.facts(branch.state, new Set(entry.offers.map((offer) => offer.offer.rewardType))),
     );
     if (support.length === 0) {
       addRewardFinding(
@@ -194,9 +190,8 @@ export function processShopInventory(
             branch.state.rewardHistory,
             contractOffer.offer,
             context.facts(
-              branch.state.rewardHistory,
+              branch.state,
               new Set(entry.offers.map((offer) => offer.offer.rewardType)),
-              branch,
             ),
           ),
         }),

@@ -37,7 +37,7 @@ import type {
   AuthoredLevelResolution,
   AuthoredTraitOffer,
 } from '../../authored-project/traits/state';
-import type { TraitOfferContext } from '../traits/offer-domain';
+import type { TraitOfferSourceContext } from '../traits/offer-domain';
 import type { ResolvedRewardOffer } from '../../reward-kernel/model';
 import type { ShopOptionEntry } from '../../reward-kernel/model';
 import type { MaterializedEncounterPhase } from '../encounters/model';
@@ -64,7 +64,7 @@ export interface CanonicalResolvedIncomingReward {
   readonly levelResolutionsByAcquisitionRole?:
     Readonly<Record<string, AuthoredLevelResolution>> | undefined;
   readonly dispositionByAcquisitionRole?: import('../../authored-project/model').AuthoredRewardState['dispositionByAcquisitionRole'];
-  readonly traitContext?: TraitOfferContext;
+  readonly traitContext?: TraitOfferSourceContext;
   readonly resolvedStoreKey?: string;
   /**
    * An Anomaly always creates and consumes its retained offer. Its authored
@@ -84,7 +84,7 @@ export interface CanonicalShopOffer {
     Readonly<Record<string, AuthoredLevelResolution>> | undefined;
   readonly dispositionByAcquisitionRole?: import('../../authored-project/model').AuthoredRewardState['dispositionByAcquisitionRole'];
   readonly anvilResult?: import('../../authored-project/model').AuthoredAnvilResult | null;
-  readonly traitContext?: TraitOfferContext;
+  readonly traitContext?: TraitOfferSourceContext;
 }
 
 export interface CanonicalShopEntryState {
@@ -112,7 +112,7 @@ export interface CanonicalLocalReward {
   readonly levelResolutionsByAcquisitionRole?:
     Readonly<Record<string, AuthoredLevelResolution>> | undefined;
   readonly dispositionByAcquisitionRole?: import('../../authored-project/model').AuthoredRewardState['dispositionByAcquisitionRole'];
-  readonly traitContext?: TraitOfferContext;
+  readonly traitContext?: TraitOfferSourceContext;
   readonly resolvedStoreKey: string;
 }
 
@@ -127,7 +127,7 @@ export interface CanonicalFieldsOptionalReward {
   readonly levelResolutionsByAcquisitionRole?:
     Readonly<Record<string, AuthoredLevelResolution>> | undefined;
   readonly dispositionByAcquisitionRole?: import('../../authored-project/model').AuthoredRewardState['dispositionByAcquisitionRole'];
-  readonly traitContext?: TraitOfferContext;
+  readonly traitContext?: TraitOfferSourceContext;
   readonly resolvedStoreKey: 'FieldsOptionalRewards';
 }
 
@@ -145,7 +145,7 @@ export interface CanonicalRewardWheelOffer {
   readonly levelResolutionsByAcquisitionRole?:
     Readonly<Record<string, AuthoredLevelResolution>> | undefined;
   readonly dispositionByAcquisitionRole?: import('../../authored-project/model').AuthoredRewardState['dispositionByAcquisitionRole'];
-  readonly traitContext?: TraitOfferContext;
+  readonly traitContext?: TraitOfferSourceContext;
   readonly picked: boolean;
 }
 

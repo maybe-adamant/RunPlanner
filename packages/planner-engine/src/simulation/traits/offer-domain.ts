@@ -1,60 +1,67 @@
 import type { Catalog, TraitRarity } from '../../catalog-schema';
 import type { AuthoredTraitOffer, TraitOptionKey } from '../../authored-project/traits/state';
-import type { RewardHistoryState } from '../../reward-kernel/model';
+import type { SimulationState } from '../state/model';
 import type { BoonRarityFacts } from './rarity';
 import type { TraitFindingCode } from '../model';
-import type { TraitHistoryState, TraitReplacementTransition } from './history/model';
+import type { TraitReplacementTransition } from './history/model';
 import { optionIndex, traitOfferSupportsExhaustion } from '../../authored-project/traits/state';
 import { checkRequirement, targetedAcquisitionTargetKeys } from './level-effects';
 import { resolveTraitOfferOptionLevel } from './offer-levels';
 
 export type { TraitFindingCode } from '../model';
 
-export interface TraitOfferContext {
-  /** Exact semantic-owner route; required when a declaration exercises route eligibility. */
-  readonly routeKey?: string;
-  /** Exact route position at this acquisition frontier when a selected NPC effect is ordinal-scaled. */
-  readonly acquisitionOrdinal?: number;
-  readonly weaponKey?: string;
-  readonly aspectKey?: string;
+/**
+ * The source and operation rules for one addressed trait contact. Player and
+ * run facts are not repeated here: every eligibility contact receives the exact
+ * reached `SimulationState` alongside this description.
+ */
+export interface TraitOfferSourceContext {
   readonly devotionNoDuo?: boolean;
   readonly blockGiftBoons?: boolean;
-  /** Canonical reward-history fact consumed only by Echo Reward availability. */
-  readonly echoLastRewardAvailable?: boolean;
-  readonly echoLastRewardRecreation?: NonNullable<RewardHistoryState['lastRewardRecreation']>;
   /** Source-resolved appearance rarity that may exceed the ordinary fresh-offer domain. */
   readonly freshRarityOverride?: TraitRarity;
   /** Gorgon's reached ledger realization, retained separately from a fixed source result. */
   readonly gorgonResolvedRarity?: TraitRarity;
-  /** Exact pre-acquisition Fear frontier for catalog-owned Circe availability. */
-  readonly circeRemovableFearVow?: boolean;
   /** The declaration-resolved provider for the addressed acquisition role. */
   readonly resolvedProviderKey?: string;
-  readonly manualArcanaGraspCost?: number;
-  /** Traits supplied by currently active Arcana at the exact acquisition frontier. */
-  readonly activeArcanaTraitKeys?: readonly string[];
   /** Direct sources such as Echo may forbid the ordinary replacement path. */
   readonly ordinarySlotReplacement?: 'forbidden';
   /** Source loot flag equivalent to `IgnoreStackBoost`. */
   readonly stackBoostsSuppressed?: boolean;
-  /** Exact chronological keepsake held at this acquisition frontier. */
-  readonly currentKeepsakeKey?: string;
-  /** Canonical reward history fact: at least one Spell Drop has settled. */
-  readonly settledSpellDrop?: boolean;
-  /** Derived, offer-local numeric rarity facts for fresh Olympian/Hermes rolls. */
-  readonly boonRarityFacts?: BoonRarityFacts;
   readonly boonRarityRoomOverride?: import('../../catalog-schema').BoonRarityOverride;
   readonly boonRarityItemOverride?: import('../../catalog-schema').BoonRarityOverride;
-  /** One-use Yarn contributions carried by the real Well purchase branch. */
-  readonly temporaryBoonRarityUses?: number;
   /** Source-local `IgnoreTempRarityBonus`; permanent contributions remain active. */
   readonly suppressTemporaryBoonRarity?: boolean;
-  /** One-use forced replacement state carried by Sacrificial Hymn. */
-  readonly limitedSwapUses?: number;
+}
+
+/**
+ * One source screen after its rarity and replacement policy have been resolved
+ * against the same reached state. These are prepared results, never a parallel
+ * transport for player facts the state already owns.
+ */
+export interface ResolvedTraitOfferSource extends TraitOfferSourceContext {
+  /** Derived, offer-local numeric rarity facts for fresh Olympian/Hermes rolls. */
+  readonly boonRarityFacts?: BoonRarityFacts;
   /** Effective ordinary replacement roll after source overrides. */
   readonly replacementRollChance?: number;
   /** Effective Denial suppresses only the native final rarity rescue stage. */
   readonly finalRarityRescueDisabled?: boolean;
+}
+
+/** A reached source that declares no trait-offer policy of its own. */
+export const plainTraitOfferSource: TraitOfferSourceContext = Object.freeze({});
+
+/** One-use Yarn contributions carried by the real Well purchase branch. */
+export function temporaryBoonRarityUses(
+  state: SimulationState,
+  source: TraitOfferSourceContext,
+): number {
+  return source.suppressTemporaryBoonRarity === true ? 0 : state.stygianWell.yarnUses;
+}
+
+/** One-use forced replacement state carried by Sacrificial Hymn. */
+export function limitedSwapUses(state: SimulationState): number {
+  return state.stygianWell.hymnUses;
 }
 
 export interface EchoLastRunBoonOutcome {
@@ -69,9 +76,10 @@ export interface EchoLastRunBoonOutcome {
 function assessEchoLastRunBoonOption(
   catalog: Catalog,
   traitKey: string,
-  history: TraitHistoryState,
-  context: TraitOfferContext,
+  state: SimulationState,
+  source: TraitOfferSourceContext,
 ): TraitAssessment {
+  const history = state.traitHistory;
   const trait = catalog.traits.byKey[traitKey];
   if (trait === undefined)
     return Object.freeze({
@@ -98,7 +106,7 @@ function assessEchoLastRunBoonOption(
   )
     findings.push({ code: 'targetedAcquisitionNoEligibleTarget', traitKey });
   for (const requirement of trait.eligibilityRequirements) {
-    const failure = checkRequirement(catalog, requirement, trait, history, context);
+    const failure = checkRequirement(catalog, requirement, trait, state, source);
     if (failure !== undefined) findings.push({ ...failure, traitKey });
   }
   return Object.freeze({ legal: findings.length === 0, findings: Object.freeze(findings) });
@@ -107,9 +115,10 @@ function assessEchoLastRunBoonOption(
 /** Exact source-resolved Echo-last-run union at one pre-Echo trait frontier. */
 export function echoLastRunBoonOutcomes(
   catalog: Catalog,
-  history: TraitHistoryState,
-  context: TraitOfferContext,
+  state: SimulationState,
+  source: TraitOfferSourceContext,
 ): readonly EchoLastRunBoonOutcome[] {
+  const history = state.traitHistory;
   return Object.freeze(
     catalog.echoLastRunBoon.variants.values.flatMap((variant) => {
       const trait = catalog.traits.byKey[variant.traitKey];
@@ -121,8 +130,8 @@ export function echoLastRunBoonOutcomes(
             : rarity;
         const { effectiveLevel } = resolveTraitOfferOptionLevel({
           catalog,
-          before: history,
-          context: { stackBoostsSuppressed: true },
+          state,
+          source: { stackBoostsSuppressed: true },
           option: { traitKey: variant.traitKey, rarity },
         });
         return Object.freeze({
@@ -134,7 +143,7 @@ export function echoLastRunBoonOutcomes(
           effectiveRarity,
           ...(effectiveLevel === undefined ? {} : { effectiveLevel }),
           targetTraitKeys: targetedAcquisitionTargetKeys(catalog, variant.traitKey, history),
-          assessment: assessEchoLastRunBoonOption(catalog, variant.traitKey, history, context),
+          assessment: assessEchoLastRunBoonOption(catalog, variant.traitKey, state, source),
         });
       });
     }),

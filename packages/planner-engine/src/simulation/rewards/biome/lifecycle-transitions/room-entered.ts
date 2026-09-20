@@ -37,6 +37,7 @@ import { BiomeRewardSimulationContractError } from '../biome-contract';
 import type { LifecycleFinding } from './types';
 import { dueHermesShrineDeliveryFrontier } from './hermes-shrine-delivery';
 import type { DerivedAcquisitionEntryFrontier } from '../../acquisition/contracts';
+import { attestSharedRewardLookups, rewardLookupSets } from '../../../state/reward-lookups';
 
 export interface RoomEnteredTransition {
   readonly branches: readonly RewardBranchState[];
@@ -72,7 +73,6 @@ export function applyRoomEnteredTransition(
   branches: readonly RewardBranchState[],
   findingChronology: FindingChronology,
   routePosition: ResolvedRoutePosition,
-  rewardLookups: Readonly<Record<string, ReadonlySet<string>>>,
   alreadyAssessed: {
     readonly purgingPool: boolean;
     readonly hermesShrine: boolean;
@@ -81,6 +81,9 @@ export function applyRoomEnteredTransition(
 ): RoomEnteredTransition {
   let next = advanceRewardBranches(branches, event.sequence);
   const findings: LifecycleFinding[] = [];
+  // Shrine inventory consults the completed hub board through each branch's own
+  // reached snapshot; the entering cohort must still agree on that board.
+  attestSharedRewardLookups(branches.map((candidate) => candidate.state));
   if (room?.lifecycleProfileKey === 'FieldsCombatRoom') {
     for (const localReward of room.localRewards ?? []) {
       next = Object.freeze(
@@ -299,7 +302,7 @@ export function applyRoomEnteredTransition(
                     view: entry,
                     history: branch.state.rewardHistory,
                     enteredBiomeCount: routePosition.ordinal,
-                    rewardLookups,
+                    rewardLookups: rewardLookupSets(branch.state.rewardLookups),
                     currentBatchRoomGameNames: createdPeerGameNames(
                       catalog,
                       entry,

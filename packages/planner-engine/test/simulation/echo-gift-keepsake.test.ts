@@ -64,6 +64,7 @@ import {
 import { initializeTestRewardBranches } from '../support/arcana-fear';
 import { installHexTree } from '../../src/simulation/hex-progress';
 import { resolveRoutePosition } from '../../src/authored-project/route-context';
+import { traitFrontierState } from '../support/simulation-state';
 
 const giftTraitKey = 'EchoRepeatKeepsakeBoon';
 const giftIdentity = 'echo-gift-1';
@@ -281,9 +282,14 @@ describe('Echo Gift Gift Gift', () => {
     ]);
     const history = createTraitHistoryState();
     for (const keepsake of catalog.keepsakes.values) {
-      const assessment = assessTraitOption(catalog, giftTraitKey, history, {
-        currentKeepsakeKey: keepsake.key,
-      });
+      const assessment = assessTraitOption(
+        catalog,
+        giftTraitKey,
+        traitFrontierState(history, {
+          keepsakes: createKeepsakeState(catalog, keepsake.key),
+        }),
+        {},
+      );
       expect(
         assessment.findings.some(
           (finding) => finding.code === 'offerContext' && finding.detail === 'echoKeepsakeExcluded',
@@ -532,7 +538,11 @@ describe('Echo Gift Gift Gift', () => {
     const { value } = route();
     const history = saturatedGiftHammerHistory();
     expect(
-      assessExperimentalHammerEquipResult(catalog, { kind: 'exhausted' }, history, value.loadout),
+      assessExperimentalHammerEquipResult(
+        catalog,
+        { kind: 'exhausted' },
+        traitFrontierState(history, { loadout: value.loadout }),
+      ),
     ).toMatchObject({ legal: true });
     const branch = branchWithGift('TempHammerKeepsake', 'ManaOverTimeRefundKeepsake', { history });
     expect(branch.state.keepsakes.currentKey).toBe('ManaOverTimeRefundKeepsake');
@@ -647,12 +657,7 @@ describe('Echo Gift Gift Gift', () => {
     const history = createTraitHistoryState();
     const context = {
       frontiers: Object.freeze([
-        {
-          before: history,
-          fatedStatus: 'Unknown' as const,
-          arcanaFear: createArcanaFearState(catalog, value.loadout),
-          loadout: value.loadout,
-        },
+        { state: traitFrontierState(history, { loadout: value.loadout }) },
       ]),
     };
     const result = evaluateKeepsakeEquipResultCandidate(
@@ -678,12 +683,7 @@ describe('Echo Gift Gift Gift', () => {
       {
         at: () => ({
           frontiers: Object.freeze([
-            {
-              before: saturated,
-              fatedStatus: 'Unknown' as const,
-              arcanaFear: createArcanaFearState(catalog, value.loadout),
-              loadout: value.loadout,
-            },
+            { state: traitFrontierState(saturated, { loadout: value.loadout }) },
           ]),
         }),
         entries: () => Object.freeze([]),
@@ -848,7 +848,7 @@ describe('Echo Gift Gift Gift', () => {
             assessTraitOption(
               catalog,
               traitKey,
-              before,
+              traitFrontierState(before),
               {
                 ...loadout,
                 resolvedProviderKey: giver.key,

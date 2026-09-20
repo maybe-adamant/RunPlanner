@@ -169,20 +169,23 @@ export function checkRequirement(
   catalog: Catalog,
   requirement: TraitRequirementExpression,
   trait: TraitDeclaration,
-  history: TraitHistoryState,
-  context: TraitOfferContext,
+  state: SimulationState,
+  source: TraitOfferSourceContext,
 ): Omit<TraitAssessmentFinding, 'traitKey'> | undefined {
+  const history = state.traitHistory;
   switch (requirement.kind) {
     case 'all':
       return requirement.requirements
-        .map((child) => checkRequirement(catalog, child, trait, history, context))
+        .map((child) => checkRequirement(catalog, child, trait, state, source))
         .find(Boolean);
     case 'settledSpellDrop':
-      return context.settledSpellDrop === true
+      return (state.rewardHistory.useRecord.SpellDrop ?? 0) > 0
         ? undefined
         : { code: 'missingPrerequisite', detail: 'settledSpellDrop' };
     case 'anyActiveArcana':
-      return requirement.traitKeys.some((key) => context.activeArcanaTraitKeys?.includes(key))
+      return state.arcanaFear.arcana.active.some((card) =>
+        requirement.traitKeys.includes(catalog.arcanaCards.byKey[card.key]?.traitKey ?? ''),
+      )
         ? undefined
         : {
             code: 'missingPrerequisite',
@@ -242,23 +245,21 @@ export function checkRequirement(
       // pure assessments retain the ordinary, unblocked behavior.
       if (
         (requirement.context === 'devotionNoDuo'
-          ? (context.devotionNoDuo ?? false)
+          ? (source.devotionNoDuo ?? false)
           : requirement.context === 'blockGiftBoons'
-            ? (context.blockGiftBoons ?? false)
+            ? (source.blockGiftBoons ?? false)
             : requirement.context === 'circeRemovableFearVow'
-              ? (context.circeRemovableFearVow ?? false)
+              ? circeResolutionDomain(catalog, state.arcanaFear, 'disableFear', 1).outerAvailable
               : false) === requirement.required
       )
         return undefined;
       return { code: 'offerContext', detail: requirement.context };
     case 'manualArcanaGraspCost':
-      return (context.manualArcanaGraspCost ?? 0) >= requirement.minimum
+      return manualArcanaGraspCost(catalog, state.arcanaFear) >= requirement.minimum
         ? undefined
         : { code: 'missingPrerequisite', detail: 'manualArcanaGraspCost' };
     case 'routeKeyNot':
-      if (context.routeKey === undefined)
-        throw new Error('route eligibility requirement evaluated without route identity');
-      return context.routeKey !== requirement.routeKey
+      return state.reached.routePosition.routeKey !== requirement.routeKey
         ? undefined
         : { code: 'missingPrerequisite', detail: `routeKeyNot:${requirement.routeKey}` };
   }
@@ -414,4 +415,6 @@ import {
 } from './history/upgrades';
 import { foldTraitHistoryEvents } from './history/fold';
 import type { TraitHistoryState, TraitLevelMutationEvent } from './history/model';
-import type { TraitAssessmentFinding, TraitOfferContext } from './offer-domain';
+import type { TraitAssessmentFinding, TraitOfferSourceContext } from './offer-domain';
+import type { SimulationState } from '../state/model';
+import { circeResolutionDomain, manualArcanaGraspCost } from '../arcana-fear';

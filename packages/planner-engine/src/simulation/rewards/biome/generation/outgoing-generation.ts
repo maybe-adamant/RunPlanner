@@ -1,6 +1,5 @@
 import type { BiomeLayout, Catalog, RoomDeclaration } from '../../../../catalog-schema';
 import { semanticAddressKey } from '../../../../authored-project/addresses';
-import type { RouteLoadout } from '../../../../authored-project/model';
 import type { HistoryEvent, ProgressiveRoomHistoryViews } from '../../../history';
 import type {
   CanonicalAuthoredRoom,
@@ -60,9 +59,6 @@ export interface OutgoingGenerationInputs {
   readonly hubTakeover: boolean;
   readonly hubRestoring: boolean;
   readonly branches: readonly RewardBranchState[];
-  readonly enteredBiomeCount: number;
-  readonly routeLoadout: RouteLoadout;
-  readonly rewardLookups: Readonly<Record<string, ReadonlySet<string>>>;
   readonly authoredSeaStarDuplicateSiteKeys: ReadonlySet<string>;
 }
 
@@ -110,9 +106,6 @@ export function applyOutgoingGenerationTransition(
     emptyOutgoing,
     hubTakeover,
     hubRestoring,
-    enteredBiomeCount,
-    routeLoadout,
-    rewardLookups,
     authoredSeaStarDuplicateSiteKeys,
   } = inputs;
   let branches = inputs.branches;
@@ -150,9 +143,6 @@ export function applyOutgoingGenerationTransition(
         roomView: sourceViews,
         sourceBranches: branches,
         historySequence: event.sequence,
-        enteredBiomeCount,
-        routeLoadout,
-        rewardLookups,
         authoredSeaStarDuplicateSiteKeys,
         ...(options.onlyEntry === undefined ? {} : { onlyEntry: options.onlyEntry }),
         ...(options.completeShopAfterOrder === undefined

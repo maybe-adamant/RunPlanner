@@ -22,7 +22,8 @@ import {
   type AuthoredTraitOfferTraits,
 } from '../../../authored-project/traits/state';
 import { echoLastRunBoonOutcomes } from '../../traits';
-import type { EchoLastRunBoonOutcome, TraitOfferContext } from '../../traits/offer-domain';
+import type { EchoLastRunBoonOutcome, TraitOfferSourceContext } from '../../traits/offer-domain';
+import type { SimulationState } from '../../state/model';
 
 type EchoBoonChildAssessment =
   | { readonly kind: 'rejected'; readonly rejection: EncounterChildRejection }
@@ -36,8 +37,8 @@ type EchoBoonChildAssessment =
 /** Validates Echo's authored rows against the pre-choice history and prepares the selected acquisition. */
 export function assessEchoBoonChild(
   catalog: Catalog,
-  history: TraitHistoryState,
-  context: TraitOfferContext,
+  state: SimulationState,
+  source: TraitOfferSourceContext,
   child: AuthoredEchoLastRunBoonOffer | undefined,
 ): EchoBoonChildAssessment {
   const reject = (
@@ -52,7 +53,7 @@ export function assessEchoBoonChild(
   const selectedChildIndex = optionIndex(child.selectedOptionKey);
   const selectedChild = child.options[selectedChildIndex];
   if (selectedChild === undefined) return reject('echoLastRunBoonMissing');
-  const outcomes = echoLastRunBoonOutcomes(catalog, history, context);
+  const outcomes = echoLastRunBoonOutcomes(catalog, state, source);
   let outcome: EchoLastRunBoonOutcome | undefined;
   for (const [index, childOption] of child.options.entries()) {
     const rowOutcome = outcomes.find(

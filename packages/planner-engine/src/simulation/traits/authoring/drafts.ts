@@ -6,24 +6,26 @@ import type {
 } from '../../../authored-project/traits/state';
 import { optionIndex, TRAIT_OPTION_KEYS } from '../../../authored-project/traits/state';
 import { createDefaultAuthoredHexTree } from '../../../authored-project/traits/hex-tree';
-import type { TraitHistoryState } from '../history/model';
 import { targetedAcquisitionTargetKeys } from '../level-effects';
 import { assessTraitOffer, traitCandidates, traitOfferGenerationInput } from './assessment';
 import { initialOfferStartingOptions } from './initial-composition';
 import {
   assessTraitOfferComposition,
+  type ResolvedTraitOfferSource,
   type TraitCandidateAssessment,
-  type TraitOfferContext,
 } from '../offer-domain';
+import type { SimulationState } from '../../state/model';
+import type { TraitHistoryState } from '../history/model';
 
 function ordinaryStartingOutcome(
   catalog: Catalog,
   giverKey: string,
-  history: TraitHistoryState,
-  context: TraitOfferContext,
+  state: SimulationState,
+  source: ResolvedTraitOfferSource,
 ): AuthoredTraitOffer | undefined {
+  const history = state.traitHistory;
   const options = initialOfferStartingOptions(
-    traitOfferGenerationInput(catalog, giverKey, history, context),
+    traitOfferGenerationInput(catalog, giverKey, state, source),
   );
   if (options === undefined) return undefined;
   if (options.length === 0) return Object.freeze({ kind: 'fallbackGold' as const, giverKey });
@@ -49,12 +51,13 @@ function ordinaryStartingOutcome(
 function fixedTraitOfferStartingDraft(
   catalog: Catalog,
   giverKey: string,
-  history: TraitHistoryState,
-  context: TraitOfferContext = {},
+  state: SimulationState,
+  source: ResolvedTraitOfferSource,
 ): AuthoredTraitOfferTraits | undefined {
+  const history = state.traitHistory;
   const giver = catalog.traitGivers.byKey[giverKey];
   if (giver === undefined) return undefined;
-  const allCandidates = traitCandidates(catalog, giverKey, history, context).filter(
+  const allCandidates = traitCandidates(catalog, giverKey, state, source).filter(
     (candidate) => candidate.available,
   );
   const variants = automaticDraftCandidates(allCandidates);
@@ -73,9 +76,7 @@ function fixedTraitOfferStartingDraft(
   // offer checks at this boundary, once, rather than evaluating every variant.
   const accepted =
     assessTraitOfferComposition(catalog, completeDraft).legal &&
-    assessTraitOffer(catalog, completeDraft, history, context).every(
-      (assessment) => assessment.legal,
-    );
+    assessTraitOffer(catalog, completeDraft, state, source).every((assessment) => assessment.legal);
   if (accepted) return completeDraft;
   return undefined;
 }
@@ -84,13 +85,13 @@ function fixedTraitOfferStartingDraft(
 export function traitOfferStartingOutcome(
   catalog: Catalog,
   giverKey: string,
-  history: TraitHistoryState,
-  context: TraitOfferContext = {},
+  state: SimulationState,
+  source: ResolvedTraitOfferSource,
 ): AuthoredTraitOffer | undefined {
   const giver = catalog.traitGivers.byKey[giverKey];
   if (giver?.providerKind === 'olympian' || giver?.providerKind === 'hermes')
-    return ordinaryStartingOutcome(catalog, giverKey, history, context);
-  const traits = fixedTraitOfferStartingDraft(catalog, giverKey, history, context);
+    return ordinaryStartingOutcome(catalog, giverKey, state, source);
+  const traits = fixedTraitOfferStartingDraft(catalog, giverKey, state, source);
   if (traits !== undefined) return traits;
   return undefined;
 }
@@ -99,15 +100,15 @@ export function traitOfferStartingOutcome(
 function appendTraitOfferOption(
   catalog: Catalog,
   draft: AuthoredTraitOfferTraits,
-  history: TraitHistoryState,
-  context: TraitOfferContext = {},
+  state: SimulationState,
+  source: ResolvedTraitOfferSource,
 ): AuthoredTraitOfferTraits | undefined {
   if (draft.options.length >= 3) return undefined;
   const giver = catalog.traitGivers.byKey[draft.giverKey];
   if (giver === undefined) return undefined;
   const offered = new Set(draft.options.map((option) => option.traitKey));
   const candidate = automaticDraftCandidates(
-    traitCandidates(catalog, draft.giverKey, history, context).filter(
+    traitCandidates(catalog, draft.giverKey, state, source).filter(
       (entry) => entry.available && !offered.has(entry.traitKey),
     ),
   )[0];
@@ -127,14 +128,14 @@ function appendTraitOfferOption(
 export function appendTraitOfferDraft(
   catalog: Catalog,
   value: AuthoredTraitOffer,
-  history: TraitHistoryState,
-  context: TraitOfferContext = {},
+  state: SimulationState,
+  source: ResolvedTraitOfferSource,
 ): AuthoredTraitOfferTraits | undefined {
   const giver = catalog.traitGivers.byKey[value.giverKey];
   if (giver?.providerKind !== 'olympian' && giver?.providerKind !== 'hermes') return undefined;
-  if (value.kind === 'traits') return appendTraitOfferOption(catalog, value, history, context);
+  if (value.kind === 'traits') return appendTraitOfferOption(catalog, value, state, source);
   const candidate = automaticDraftCandidates(
-    traitCandidates(catalog, value.giverKey, history, context).filter((entry) => entry.available),
+    traitCandidates(catalog, value.giverKey, state, source).filter((entry) => entry.available),
   )[0];
   return candidate === undefined ? undefined : traitDraft(value.giverKey, [candidate]);
 }

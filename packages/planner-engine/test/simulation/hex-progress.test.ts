@@ -87,7 +87,9 @@ describe('finite Hex progress', () => {
       'SpellPolymorphTrait',
       createDefaultAuthoredHexTree(catalog, 'SpellPolymorphTrait', layoutKey),
     );
-  const facts = (history: RewardHistoryState): RewardKernelFacts => ({
+  const facts = (state: { readonly rewardHistory: RewardHistoryState }): RewardKernelFacts =>
+    factsForHistory(state.rewardHistory);
+  const factsForHistory = (history: RewardHistoryState): RewardKernelFacts => ({
     requirements: {
       counters: {
         biomeDepthCache: 4,
@@ -576,7 +578,7 @@ describe('finite Hex progress', () => {
           offer: { rewardType: 'SpellDrop' },
           producerLifecycleKey: 'RoomReward',
           instanceProvenance: 'free',
-          traitContext: { aspectKey: 'SuitHexAspect' },
+          traitContext: {},
         },
       },
       facts,

@@ -136,8 +136,7 @@ export function createStartingRewardCandidateCapability(
           binding,
           historySequence: 0,
           peers: Object.freeze([]),
-          facts: (history, _shopNames, branch) =>
-            createRouteStartRewardFacts(catalog, reward, history, branch),
+          facts: (state) => createRouteStartRewardFacts(catalog, reward, state),
         },
         findings,
       );

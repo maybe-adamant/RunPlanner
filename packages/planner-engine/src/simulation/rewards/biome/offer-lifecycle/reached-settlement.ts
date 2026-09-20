@@ -9,7 +9,6 @@ import { rewardFindingChronologyForRoom } from '../finding-chronology';
 import { createBiomeRewardFacts } from '../../facts';
 import { mergeRewardFindingEmissions } from '../../findings';
 import type { RewardBranchState } from '../../branch-primitives';
-import type { RewardHistoryState } from '../../../../reward-kernel';
 import {
   settleOwnedAcquisitionSite,
   settleProducerAcquisitionSite,
@@ -20,6 +19,7 @@ import { preparedAcquisitionSiteOwner } from '../prepared-inputs';
 import type { ReachedTraitChildCheckpoint } from '../../trait-settlement/coordinator';
 import { BiomeRewardSimulationContractError } from '../biome-contract';
 import { shipWheelRoomRewardSource } from './reward-wheel-lifecycle';
+import type { SimulationState } from '../../../state/model';
 
 export interface ReachedOfferSettlement {
   readonly branches: readonly RewardBranchState[];
@@ -41,7 +41,6 @@ export interface ReachedOfferSettlementInputs {
   readonly branches: readonly RewardBranchState[];
   /** Existing chronology findings whose reached evaluations may be extended. */
   readonly priorFindings: readonly FindingRegionEntry[];
-  readonly enteredBiomeCount: number;
   readonly authoredSeaStarDuplicateSiteKeys: ReadonlySet<string>;
 }
 
@@ -52,7 +51,7 @@ export interface ReachedOfferSettlementInputs {
 export function applyReachedOfferSettlement(
   inputs: ReachedOfferSettlementInputs,
 ): ReachedOfferSettlement {
-  const { catalog, snapshot, event, rooms, views, branches, enteredBiomeCount } = inputs;
+  const { catalog, snapshot, event, rooms, views, branches } = inputs;
   const priorFindings = new Map(
     inputs.priorFindings.map((entry) => [findingIdentityKey(entry.finding), entry] as const),
   );
@@ -105,16 +104,16 @@ export function applyReachedOfferSettlement(
         deferArtificerReplacement: true,
         authoredSeaStarDuplicateSiteKeys: inputs.authoredSeaStarDuplicateSiteKeys,
       },
-      (branchHistory) =>
-        createBiomeRewardFacts(
+      (state) =>
+        createBiomeRewardFacts({
           catalog,
-          room,
-          room,
-          declaration,
+          state,
+          source: room,
+          currentRoom: room,
+          sourceDeclaration: declaration,
           view,
-          branchHistory,
-          enteredBiomeCount,
-        ),
+          hubBoardLookups: 'notConsulted',
+        }),
       ownerRegion(wheel.origin),
     );
     mergeRewardFindingEmissions(findings, settlement.findingEmissions);
@@ -129,16 +128,16 @@ export function applyReachedOfferSettlement(
 
   if (room.kind === 'hub')
     throw new BiomeRewardSimulationContractError('Hub room cannot advance a reward producer');
-  const producerFacts = (branchHistory: RewardHistoryState) =>
-    createBiomeRewardFacts(
+  const producerFacts = (state: SimulationState) =>
+    createBiomeRewardFacts({
       catalog,
-      room,
-      room,
-      declaration,
-      roomView.preOutgoing ?? roomView.entry,
-      branchHistory,
-      enteredBiomeCount,
-    );
+      state,
+      source: room,
+      currentRoom: room,
+      sourceDeclaration: declaration,
+      view: roomView.preOutgoing ?? roomView.entry,
+      hubBoardLookups: 'notConsulted',
+    });
   const timelineOwner =
     room.incomingReward === undefined
       ? undefined

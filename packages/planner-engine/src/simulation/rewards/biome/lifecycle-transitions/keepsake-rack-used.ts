@@ -253,7 +253,7 @@ export function applyKeepsakeRackUsedTransition(
             !assessJeweledPomEquipResult(
               catalog,
               rack.equipResults!.jeweledPom!,
-              branch.state.traitHistory,
+              branch.state,
               branch.state.keepsakes.fatedStatus,
             ).legal,
         )
@@ -274,13 +274,7 @@ export function applyKeepsakeRackUsedTransition(
             candidate: Object.freeze({
               frontiers: Object.freeze(
                 successfulReplacementBranches.map((branch) =>
-                  Object.freeze({
-                    before: branch.state.traitHistory,
-                    fatedStatus: branch.state.keepsakes.fatedStatus,
-                    ...(branch.state.arcanaFear === undefined
-                      ? {}
-                      : { arcanaFear: branch.state.arcanaFear }),
-                  }),
+                  Object.freeze({ state: branch.state }),
                 ),
               ),
             }),
@@ -308,8 +302,7 @@ export function applyKeepsakeRackUsedTransition(
             !assessExperimentalHammerEquipResult(
               catalog,
               rack.equipResults!.experimentalHammer!,
-              branch.state.traitHistory,
-              routeLoadout,
+              branch.state,
             ).legal,
         )
       )
@@ -329,12 +322,7 @@ export function applyKeepsakeRackUsedTransition(
             candidate: Object.freeze({
               frontiers: Object.freeze(
                 successfulReplacementBranches.map((branch) =>
-                  Object.freeze({
-                    before: branch.state.traitHistory,
-                    fatedStatus: branch.state.keepsakes.fatedStatus,
-                    arcanaFear: branch.state.arcanaFear,
-                    loadout: routeLoadout,
-                  }),
+                  Object.freeze({ state: branch.state }),
                 ),
               ),
             }),
@@ -397,10 +385,7 @@ export function applyKeepsakeRackUsedTransition(
               frontiers: Object.freeze(
                 successfulReplacementBranches.map((branch) =>
                   Object.freeze({
-                    before: branch.state.traitHistory,
-                    fatedStatus: branch.state.keepsakes.fatedStatus,
-                    arcanaFear: branch.state.arcanaFear,
-                    loadout: routeLoadout,
+                    state: branch.state,
                     ...(rarity === undefined ? {} : { transcendentEmbryoRarity: rarity }),
                   }),
                 ),
@@ -458,7 +443,6 @@ export function applyKeepsakeRackUsedTransition(
               rack.equipResults,
               createKeepsakeEquipResultAddress(selection, 'experimentalHammer'),
               event.sequence,
-              routeLoadout,
               transition.equippedRank,
             ),
           }),

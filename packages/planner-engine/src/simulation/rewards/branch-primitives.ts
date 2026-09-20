@@ -7,7 +7,11 @@ import {
 } from '../../reward-kernel';
 import type { FindingEvidence } from '../model';
 import type { RewardEvent } from './model';
-import { type ReachedLevelResolutionEvaluation, type ReachedTraitOfferEvaluation } from '../traits';
+import {
+  traitOfferAssessmentIdentity,
+  type ReachedLevelResolutionEvaluation,
+  type ReachedTraitOfferEvaluation,
+} from '../traits';
 import type { SimulationState } from '../state/model';
 
 export interface PendingShopTravelRefillCapability {
@@ -144,10 +148,7 @@ function mergeTraitEvaluations(
       semanticAddressKey(value.address),
       value.acquisitionRole,
       value.chronologicalIndex,
-      value.before,
-      value.context,
-      value.offer,
-      value.arcanaFear,
+      ...traitOfferAssessmentIdentity(value),
     ]);
     unique.set(key, value);
   }

@@ -732,7 +732,7 @@ export function echoGoldShop(
       }),
     );
   const facts = (
-    history: ReturnType<typeof createRewardHistoryState>,
+    state: { readonly rewardHistory: ReturnType<typeof createRewardHistoryState> },
     currentRoomShopOptionNames: ReadonlySet<string> = new Set(),
   ) =>
     factsWithHistory(
@@ -748,7 +748,7 @@ export function echoGoldShop(
             },
           }
         : baseFacts(),
-      history,
+      state.rewardHistory,
       currentRoomShopOptionNames,
     );
   const inventoryFindings = new Map();

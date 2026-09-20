@@ -68,6 +68,7 @@ import {
 } from '../../src/simulation/traits';
 import { initializeTestRewardBranches } from '../support/arcana-fear';
 import { createKeepsakeState } from '../../src/simulation/keepsakes/state';
+import { traitFrontierState, withSettledSpellDrop } from '../support/simulation-state';
 
 type JsonRecord = Record<string, unknown>;
 
@@ -397,8 +398,8 @@ describe('Echo Gate A direct choices', () => {
           semanticAddressKey(echoOwner),
           [
             Object.freeze({
-              before: createTraitHistoryState(),
-              context: Object.freeze({ resolvedProviderKey: 'Echo' }),
+              state: traitFrontierState(createTraitHistoryState()),
+              source: Object.freeze({ resolvedProviderKey: 'Echo' }),
             }),
           ],
         ],
@@ -435,8 +436,8 @@ describe('Echo Gate A direct choices', () => {
           semanticAddressKey(echoOwner),
           [
             Object.freeze({
-              before: createTraitHistoryState(),
-              context: Object.freeze({ resolvedProviderKey: 'Echo' }),
+              state: traitFrontierState(createTraitHistoryState()),
+              source: Object.freeze({ resolvedProviderKey: 'Echo' }),
             }),
           ],
         ],
@@ -470,8 +471,8 @@ describe('Echo Gate A direct choices', () => {
           semanticAddressKey(echoOwner),
           [
             Object.freeze({
-              before: createTraitHistoryState(),
-              context: Object.freeze({ resolvedProviderKey: 'Echo' }),
+              state: traitFrontierState(createTraitHistoryState()),
+              source: Object.freeze({ resolvedProviderKey: 'Echo' }),
             }),
           ],
         ],
@@ -561,10 +562,9 @@ describe('Echo Gate A direct choices', () => {
       echoOwner,
       'directSelection',
       offer,
-      history,
+      traitFrontierState(history),
       Object.freeze({ resolvedProviderKey: 'Aphrodite' }),
       0,
-      undefined,
       true,
     );
 
@@ -650,8 +650,8 @@ describe('Echo Gate A direct choices', () => {
           semanticAddressKey(echoOwner),
           [
             Object.freeze({
-              before: history,
-              context: Object.freeze({ resolvedProviderKey: 'Echo' }),
+              state: traitFrontierState(history),
+              source: Object.freeze({ resolvedProviderKey: 'Echo' }),
             }),
           ],
         ],
@@ -843,9 +843,11 @@ describe('Echo Gate A direct choices', () => {
 
 describe('Echo Gate B Boon Boon Boon', () => {
   it('publishes the source-resolved domain, exact equipped rarities, and Common floor', () => {
-    const outcomes = echoLastRunBoonOutcomes(catalog, createTraitHistoryState(), {
-      routeKey: 'Underworld',
-    });
+    const outcomes = echoLastRunBoonOutcomes(
+      catalog,
+      traitFrontierState(createTraitHistoryState()),
+      {},
+    );
     expect([...new Set(outcomes.map((outcome) => outcome.option.giverKey))]).toEqual([
       'Aphrodite',
       'Apollo',
@@ -879,7 +881,7 @@ describe('Echo Gate B Boon Boon Boon', () => {
       ...createTraitHistoryState(),
       properUpbringingActive: true as const,
     });
-    const floored = echoLastRunBoonOutcomes(catalog, floorHistory, { routeKey: 'Underworld' }).find(
+    const floored = echoLastRunBoonOutcomes(catalog, traitFrontierState(floorHistory), {}).find(
       (outcome) =>
         outcome.option.giverKey === 'Aphrodite' &&
         outcome.option.traitKey === 'AphroditeWeaponBoon' &&
@@ -902,8 +904,8 @@ describe('Echo Gate B Boon Boon Boon', () => {
           semanticAddressKey(echoOwner),
           [
             Object.freeze({
-              before: history,
-              context: Object.freeze({ resolvedProviderKey: 'Echo' }),
+              state: traitFrontierState(history),
+              source: Object.freeze({ resolvedProviderKey: 'Echo' }),
             }),
           ],
         ],
@@ -928,8 +930,8 @@ describe('Echo Gate B Boon Boon Boon', () => {
           semanticAddressKey(echoOwner),
           [
             Object.freeze({
-              before: history,
-              context: Object.freeze({ resolvedProviderKey: 'Echo', settledSpellDrop: true }),
+              state: withSettledSpellDrop(traitFrontierState(history)),
+              source: Object.freeze({ resolvedProviderKey: 'Echo' }),
             }),
           ],
         ],
@@ -952,8 +954,7 @@ describe('Echo Gate B Boon Boon Boon', () => {
       ]),
     });
     expect(
-      assessTraitOption(catalog, 'EchoLastRunBoon', onlyAthena, {
-        routeKey: 'Underworld',
+      assessTraitOption(catalog, 'EchoLastRunBoon', traitFrontierState(onlyAthena), {
         resolvedProviderKey: 'Echo',
       }).legal,
     ).toBe(true);
@@ -1005,8 +1006,8 @@ describe('Echo Gate B Boon Boon Boon', () => {
           semanticAddressKey(echoOwner),
           [
             Object.freeze({
-              before: history,
-              context: Object.freeze({ resolvedProviderKey: 'Echo' }),
+              state: traitFrontierState(history),
+              source: Object.freeze({ resolvedProviderKey: 'Echo' }),
             }),
           ],
         ],
@@ -1124,18 +1125,20 @@ describe('Echo Gate B Boon Boon Boon', () => {
           semanticAddressKey(echoOwner),
           [
             Object.freeze({
-              before: createTraitHistoryState(),
-              context: Object.freeze({ resolvedProviderKey: 'Echo' }),
+              state: traitFrontierState(createTraitHistoryState()),
+              source: Object.freeze({ resolvedProviderKey: 'Echo' }),
             }),
             Object.freeze({
-              before: historyFromTraits([
-                {
-                  giverKey: 'Aphrodite',
-                  traitKey: 'AphroditeWeaponBoon',
-                  rarity: 'Common',
-                },
-              ]),
-              context: Object.freeze({ resolvedProviderKey: 'Echo' }),
+              state: traitFrontierState(
+                historyFromTraits([
+                  {
+                    giverKey: 'Aphrodite',
+                    traitKey: 'AphroditeWeaponBoon',
+                    rarity: 'Common',
+                  },
+                ]),
+              ),
+              source: Object.freeze({ resolvedProviderKey: 'Echo' }),
             }),
           ],
         ],
@@ -1191,12 +1194,12 @@ describe('Echo Gate B Boon Boon Boon', () => {
           semanticAddressKey(echoOwner),
           [
             Object.freeze({
-              before: ordinary,
-              context: Object.freeze({ resolvedProviderKey: 'Echo' }),
+              state: traitFrontierState(ordinary),
+              source: Object.freeze({ resolvedProviderKey: 'Echo' }),
             }),
             Object.freeze({
-              before: floored,
-              context: Object.freeze({ resolvedProviderKey: 'Echo' }),
+              state: traitFrontierState(floored),
+              source: Object.freeze({ resolvedProviderKey: 'Echo' }),
             }),
           ],
         ],
@@ -1293,7 +1296,7 @@ describe('Echo Gate B Boon Boon Boon', () => {
         rarity: option.rarity,
         traitKey: option.traitKey,
       });
-      const outcome = echoLastRunBoonOutcomes(catalog, history, { routeKey: 'Underworld' }).find(
+      const outcome = echoLastRunBoonOutcomes(catalog, traitFrontierState(history), {}).find(
         (candidate) =>
           candidate.option.giverKey === option.giverKey &&
           candidate.option.traitKey === option.traitKey &&
@@ -1323,9 +1326,11 @@ describe('Echo Gate B Boon Boon Boon', () => {
   );
 
   it('retains only current-run BBB replay exclusions after bypassing ordinary prerequisites', () => {
-    const empty = echoLastRunBoonOutcomes(catalog, createTraitHistoryState(), {
-      routeKey: 'Underworld',
-    });
+    const empty = echoLastRunBoonOutcomes(
+      catalog,
+      traitFrontierState(createTraitHistoryState()),
+      {},
+    );
     expect(
       empty.find(
         (outcome) =>
@@ -1340,8 +1345,12 @@ describe('Echo Gate B Boon Boon Boon', () => {
 
     const equipped = echoLastRunBoonOutcomes(
       catalog,
-      historyFromTraits([{ giverKey: 'Aphrodite', traitKey: 'WeakPotencyBoon', rarity: 'Common' }]),
-      { routeKey: 'Underworld' },
+      traitFrontierState(
+        historyFromTraits([
+          { giverKey: 'Aphrodite', traitKey: 'WeakPotencyBoon', rarity: 'Common' },
+        ]),
+      ),
+      {},
     ).find((outcome) => outcome.option.traitKey === 'WeakPotencyBoon');
     expect(equipped).toMatchObject({
       assessment: {
@@ -1352,8 +1361,10 @@ describe('Echo Gate B Boon Boon Boon', () => {
 
     const occupied = echoLastRunBoonOutcomes(
       catalog,
-      historyFromTraits([{ giverKey: 'Zeus', traitKey: 'ZeusWeaponBoon', rarity: 'Common' }]),
-      { routeKey: 'Underworld' },
+      traitFrontierState(
+        historyFromTraits([{ giverKey: 'Zeus', traitKey: 'ZeusWeaponBoon', rarity: 'Common' }]),
+      ),
+      {},
     ).find(
       (outcome) =>
         outcome.option.giverKey === 'Aphrodite' &&
@@ -1369,11 +1380,13 @@ describe('Echo Gate B Boon Boon Boon', () => {
 
     const banned = echoLastRunBoonOutcomes(
       catalog,
-      Object.freeze({
-        ...createTraitHistoryState(),
-        bannedTraitKeys: Object.freeze(['WeakPotencyBoon']),
-      }),
-      { routeKey: 'Underworld' },
+      traitFrontierState(
+        Object.freeze({
+          ...createTraitHistoryState(),
+          bannedTraitKeys: Object.freeze(['WeakPotencyBoon']),
+        }),
+      ),
+      {},
     ).find((outcome) => outcome.option.traitKey === 'WeakPotencyBoon');
     expect(banned).toMatchObject({
       assessment: {
@@ -1387,12 +1400,17 @@ describe('Echo Gate B Boon Boon Boon', () => {
     const outcome = (
       traitKey: string,
       history: ReturnType<typeof createTraitHistoryState>,
-      context: Parameters<typeof echoLastRunBoonOutcomes>[2],
+      context: Parameters<typeof echoLastRunBoonOutcomes>[2] & {
+        readonly settledSpellDrop?: boolean;
+      },
     ) => {
-      const value = echoLastRunBoonOutcomes(catalog, history, {
-        routeKey: 'Underworld',
-        ...context,
-      }).find((candidate) => candidate.option.traitKey === traitKey);
+      const { settledSpellDrop, ...source } = context;
+      const state = traitFrontierState(history);
+      const value = echoLastRunBoonOutcomes(
+        catalog,
+        settledSpellDrop === true ? withSettledSpellDrop(state) : state,
+        source,
+      ).find((candidate) => candidate.option.traitKey === traitKey);
       expect(value).toBeDefined();
       return value!;
     };
@@ -1404,10 +1422,9 @@ describe('Echo Gate B Boon Boon Boon', () => {
       legal: false,
       findings: expect.arrayContaining([expect.objectContaining({ code: 'offerContext' })]),
     });
-    expect(
-      outcome('PlantHealthBoon', empty, { routeKey: 'Underworld', blockGiftBoons: true }).assessment
-        .legal,
-    ).toBe(false);
+    expect(outcome('PlantHealthBoon', empty, { blockGiftBoons: true }).assessment.legal).toBe(
+      false,
+    );
     expect(outcome('OlympianSpellCountBoon', empty, {}).assessment.legal).toBe(false);
     expect(
       outcome('OlympianSpellCountBoon', empty, { settledSpellDrop: true }).assessment.legal,
@@ -1440,8 +1457,8 @@ describe('Echo Gate B Boon Boon Boon', () => {
           semanticAddressKey(echoOwner),
           [
             Object.freeze({
-              before: history,
-              context: Object.freeze({ resolvedProviderKey: 'Echo' }),
+              state: traitFrontierState(history),
+              source: Object.freeze({ resolvedProviderKey: 'Echo' }),
             }),
           ],
         ],
@@ -1501,8 +1518,8 @@ describe('Echo Gate B Boon Boon Boon', () => {
           semanticAddressKey(echoOwner),
           [
             Object.freeze({
-              before: history,
-              context: Object.freeze({ resolvedProviderKey: 'Echo' }),
+              state: traitFrontierState(history),
+              source: Object.freeze({ resolvedProviderKey: 'Echo' }),
             }),
           ],
         ],
@@ -1547,8 +1564,8 @@ describe('Echo Gate B Boon Boon Boon', () => {
           semanticAddressKey(echoOwner),
           [
             Object.freeze({
-              before: naturalHistory,
-              context: Object.freeze({ resolvedProviderKey: 'Echo' }),
+              state: traitFrontierState(naturalHistory),
+              source: Object.freeze({ resolvedProviderKey: 'Echo' }),
             }),
           ],
         ],
@@ -1590,7 +1607,7 @@ describe('Echo Gate B Boon Boon Boon', () => {
     const history = historyFromTraits([
       { giverKey: 'Hephaestus', traitKey: 'HephaestusWeaponBoon', rarity: 'Heroic' },
     ]);
-    const outcome = echoLastRunBoonOutcomes(catalog, history, { routeKey: 'Underworld' }).find(
+    const outcome = echoLastRunBoonOutcomes(catalog, traitFrontierState(history), {}).find(
       (candidate) =>
         candidate.option.giverKey === 'Hera' &&
         candidate.option.traitKey === 'BoonDecayBoon' &&
@@ -1855,9 +1872,7 @@ describe('Echo Gate B Boon Boon Boon', () => {
     const occupied = historyFromTraits([
       { giverKey: 'Apollo', traitKey: 'ApolloWeaponBoon', rarity: 'Common' },
     ]);
-    const aphroditeWeapon = echoLastRunBoonOutcomes(catalog, occupied, {
-      routeKey: 'Underworld',
-    }).find(
+    const aphroditeWeapon = echoLastRunBoonOutcomes(catalog, traitFrontierState(occupied), {}).find(
       (outcome) =>
         outcome.option.giverKey === 'Aphrodite' &&
         outcome.option.traitKey === 'AphroditeWeaponBoon' &&
@@ -1879,8 +1894,7 @@ describe('Echo Gate B Boon Boon Boon', () => {
       bannedTraitKeys: Object.freeze(allTraitKeys),
     });
     expect(
-      assessTraitOption(catalog, 'EchoLastRunBoon', exhausted, {
-        routeKey: 'Underworld',
+      assessTraitOption(catalog, 'EchoLastRunBoon', traitFrontierState(exhausted), {
         resolvedProviderKey: 'Echo',
       }).findings,
     ).toContainEqual(
@@ -1973,10 +1987,9 @@ describe('Echo Gate B Boon Boon Boon', () => {
     });
     const selected = selectedTraitOfferProducts([withSpellDrop.branch], [], catalog);
     expect(
-      selected.candidateContexts.get(semanticAddressKey(echoOwner))?.[0]?.context,
-    ).toMatchObject({
-      settledSpellDrop: true,
-    });
+      selected.candidateContexts.get(semanticAddressKey(echoOwner))?.[0]?.state.rewardHistory
+        .useRecord.SpellDrop,
+    ).toBeGreaterThan(0);
   });
 
   it('retains a valid selection with an invalid unselected row before any nested mutation', () => {

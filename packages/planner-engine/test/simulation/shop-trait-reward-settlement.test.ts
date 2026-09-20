@@ -38,6 +38,8 @@ import {
 } from './shop-trait-purchase-support';
 import type { TraitOfferEvent } from './shop-trait-purchase-support';
 import { ownerRegion } from '../../src/simulation/finding-regions';
+import { initializeTestRewardBranchesForRoute } from '../support/arcana-fear';
+import { createDefaultRouteLoadout } from '../../src/authored-project/loadout';
 
 describe('Shop trait acquisition processing', () => {
   it('returns unsupported inventory findings for the caller to merge at its chronology seam', () => {
@@ -88,7 +90,7 @@ describe('Shop trait acquisition processing', () => {
       room: canonical,
       declaration: room,
       historySequence: 1,
-      facts: (history) => factsWithHistory(baseFacts(), history, new Set()),
+      facts: (state) => factsWithHistory(baseFacts(), state.rewardHistory, new Set()),
       fail: (detail) => {
         throw new Error(detail);
       },
@@ -161,7 +163,9 @@ describe('Shop trait acquisition processing', () => {
       lifecycleProfileKey: 'WorldShopRoom',
       loadout,
     });
-    const facts = (history: ReturnType<typeof createRewardHistoryState>) =>
+    const facts = (state: {
+      readonly rewardHistory: ReturnType<typeof createRewardHistoryState>;
+    }) =>
       factsWithHistory(
         {
           ...baseFacts(),
@@ -170,7 +174,7 @@ describe('Shop trait acquisition processing', () => {
             counters: { ...baseFacts().requirements.counters, upgradableTraitCount: 1 },
           },
         },
-        history,
+        state.rewardHistory,
         new Set(),
       );
     const traitHistory = pomTargetHistory();
@@ -380,7 +384,9 @@ describe('Shop trait acquisition processing', () => {
       lifecycleProfileKey: 'WorldShopRoom',
       loadout,
     });
-    const facts = (history: ReturnType<typeof createRewardHistoryState>) =>
+    const facts = (state: {
+      readonly rewardHistory: ReturnType<typeof createRewardHistoryState>;
+    }) =>
       factsWithHistory(
         {
           ...baseFacts(),
@@ -389,7 +395,7 @@ describe('Shop trait acquisition processing', () => {
             counters: { ...baseFacts().requirements.counters, upgradableTraitCount: 1 },
           },
         },
-        history,
+        state.rewardHistory,
         new Set(),
       );
     const seeded = initializeTestRewardBranches().map((branch) => {
@@ -520,7 +526,9 @@ describe('Shop trait acquisition processing', () => {
         lifecycleProfileKey: 'WorldShopRoom',
         loadout,
       });
-      const facts = (history: ReturnType<typeof createRewardHistoryState>) =>
+      const facts = (state: {
+        readonly rewardHistory: ReturnType<typeof createRewardHistoryState>;
+      }) =>
         factsWithHistory(
           {
             ...baseFacts(),
@@ -529,7 +537,7 @@ describe('Shop trait acquisition processing', () => {
               counters: { ...baseFacts().requirements.counters, upgradableTraitCount: 1 },
             },
           },
-          history,
+          state.rewardHistory,
           new Set(),
         );
       const seeded = initializeTestRewardBranches(
@@ -720,12 +728,21 @@ describe('Shop trait acquisition processing', () => {
     });
     const major = canonical.entryState?.offers.find((offer) => offer.offerKey === 'MajorNonBoon');
     if (major === undefined) throw new Error('missing materialized Hammer offer');
-    expect(major.traitContext).toMatchObject(newLoadout);
 
-    const facts = (history: ReturnType<typeof createRewardHistoryState>) =>
-      factsWithHistory(baseFacts(), history, new Set());
+    const facts = (state: {
+      readonly rewardHistory: ReturnType<typeof createRewardHistoryState>;
+    }) => factsWithHistory(baseFacts(), state.rewardHistory, new Set());
     const inventoryFindings = new Map();
-    const inventory = processShopInventory(initializeTestRewardBranches(), {
+    const reachedLoadout = initializeTestRewardBranchesForRoute(
+      undefined,
+      undefined,
+      catalog,
+      undefined,
+      undefined,
+      'Underworld',
+      { ...createDefaultRouteLoadout(catalog), ...newLoadout },
+    );
+    const inventory = processShopInventory(reachedLoadout, {
       catalog,
       room: canonical,
       declaration: room,

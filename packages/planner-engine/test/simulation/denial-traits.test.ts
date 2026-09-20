@@ -11,6 +11,7 @@ import {
   traitCandidates,
 } from '../../src/simulation/traits';
 import { suppressFearVows } from '../../src/simulation/arcana-fear';
+import { traitFrontierState } from '../support/simulation-state';
 
 const owner = { kind: 'project' } as const;
 
@@ -65,10 +66,9 @@ function reached(
       >['options'],
       selectedOptionKey,
     },
-    before,
+    traitFrontierState(before, { arcanaFear: denialState() }),
     {},
     1,
-    denialState(),
   );
 }
 
@@ -99,10 +99,9 @@ describe('Vow of Denial trait history', () => {
         ],
         selectedOptionKey: 'option1',
       },
-      first.history,
+      traitFrontierState(first.history, { arcanaFear: suppressed.state }),
       {},
       2,
-      suppressed.state,
     );
     expect(recordReachedTraitOffer(catalog, second, 2, 'test')).toMatchObject({
       history: expect.objectContaining({
@@ -127,10 +126,9 @@ describe('Vow of Denial trait history', () => {
         ],
         selectedOptionKey: 'option3',
       },
-      createTraitHistoryState(),
+      traitFrontierState(createTraitHistoryState(), { arcanaFear: denialState() }),
       { devotionNoDuo: true },
       1,
-      denialState(),
     );
     expect(recordReachedTraitOffer(catalog, invalid, 1, 'test').event).toBeUndefined();
     const npc = evaluateReachedTraitOffer(
@@ -147,10 +145,9 @@ describe('Vow of Denial trait history', () => {
         ],
         selectedOptionKey: 'option1',
       },
-      createTraitHistoryState(),
+      traitFrontierState(createTraitHistoryState(), { arcanaFear: denialState() }),
       {},
       1,
-      denialState(),
     );
     expect(recordReachedTraitOffer(catalog, npc, 1, 'test').event?.bannedTraitKeys).toBeUndefined();
   });
@@ -170,7 +167,7 @@ describe('Vow of Denial trait history', () => {
         ],
         selectedOptionKey: 'option1',
       },
-      createTraitHistoryState(),
+      traitFrontierState(createTraitHistoryState(), { arcanaFear: denialState() }),
       {
         boonRarityFacts: {
           providerBase: { Rare: 0.1, Epic: 0.05, Heroic: 0, Duo: 0.12, Legendary: 0.1 },
@@ -180,7 +177,6 @@ describe('Vow of Denial trait history', () => {
         },
       },
       1,
-      denialState(),
     );
     expect(rarityInvalid.generation?.findings).toContainEqual({
       code: 'traitOfferGenerationUnavailable',
@@ -220,10 +216,9 @@ describe('Vow of Denial trait history', () => {
         ],
         selectedOptionKey: 'option1',
       },
-      createTraitHistoryState(),
+      traitFrontierState(createTraitHistoryState(), { arcanaFear: denialState() }),
       {},
       1,
-      denialState(),
     );
     expect(recordReachedTraitOffer(catalog, evaluation, 1, 'test').event?.bannedTraitKeys).toEqual([
       'HermesSpecialBoon',
@@ -255,10 +250,9 @@ describe('Vow of Denial trait history', () => {
       owner,
       'test',
       { kind: 'fallbackGold', giverKey: 'Apollo' },
-      createTraitHistoryState(),
+      traitFrontierState(createTraitHistoryState(), { arcanaFear: denialState() }),
       {},
       1,
-      denialState(),
     );
     const applied = recordReachedTraitOffer(testCatalog, evaluation, 1, 'test');
     expect(evaluation.composition.legal).toBe(true);
@@ -270,7 +264,12 @@ describe('Vow of Denial trait history', () => {
     const testCatalog = narrowedApolloCatalog(keys);
     const applied = recordReachedTraitOffer(testCatalog, reached(testCatalog, keys), 1, 'test');
     expect(applied.history.bannedTraitKeys).toEqual(['ApolloSpecialBoon', 'ApolloCastBoon']);
-    const laterCandidates = traitCandidates(testCatalog, 'Apollo', applied.history);
+    const laterCandidates = traitCandidates(
+      testCatalog,
+      'Apollo',
+      traitFrontierState(applied.history),
+      {},
+    );
     expect(laterCandidates.filter((candidate) => candidate.available)).toEqual([]);
     expect(
       laterCandidates.filter((candidate) => candidate.traitKey === 'ApolloSpecialBoon'),
@@ -283,10 +282,9 @@ describe('Vow of Denial trait history', () => {
       owner,
       'test',
       { kind: 'fallbackGold', giverKey: 'Apollo' },
-      applied.history,
+      traitFrontierState(applied.history, { arcanaFear: denialState() }),
       {},
       2,
-      denialState(),
     );
     expect(exhausted.composition.legal).toBe(true);
     expect(exhausted.generation?.legal).toBe(true);
@@ -316,7 +314,7 @@ describe('Vow of Denial trait history', () => {
         ],
         selectedOptionKey: 'option1',
       },
-      createTraitHistoryState(),
+      traitFrontierState(createTraitHistoryState()),
       {},
       1,
     );
@@ -332,7 +330,12 @@ describe('Vow of Denial trait history', () => {
       2,
       'test',
     );
-    const candidates = traitCandidates(testCatalog, 'Apollo', denial.history);
+    const candidates = traitCandidates(
+      testCatalog,
+      'Apollo',
+      traitFrontierState(denial.history),
+      {},
+    );
     expect(denial.history.bannedTraitKeys).toEqual(['ApolloWeaponBoon', 'ApolloSpecialBoon']);
     expect(candidates.filter((candidate) => candidate.available)).toEqual([
       expect.objectContaining({ traitKey: 'ApolloSprintBoon', rarity: 'Rare', available: true }),

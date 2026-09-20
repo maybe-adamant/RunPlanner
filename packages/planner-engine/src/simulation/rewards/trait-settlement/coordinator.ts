@@ -30,18 +30,22 @@ import {
   isChaosGodScreenGiver,
   isAspectSpellDropDormant,
   recordReachedTraitOffer,
-  traitOfferGenerationContext,
+  resolveTraitOfferSource,
   traitOfferGenerationLegal,
   type TraitHistoryState,
 } from '../../traits';
-import type { EchoLastRunBoonOutcome, TraitOfferContext } from '../../traits/offer-domain';
+import type {
+  EchoLastRunBoonOutcome,
+  ResolvedTraitOfferSource,
+  TraitOfferSourceContext,
+} from '../../traits/offer-domain';
+import { temporaryBoonRarityUses, limitedSwapUses } from '../../traits/offer-domain';
 import {
   optionIndex,
   traitGiverForAcquisitionRole,
   type AuthoredTraitOffer,
   type AuthoredTraitOfferTraits,
 } from '../../../authored-project/traits/state';
-import { circeResolutionDomain, manualArcanaGraspCost } from '../../arcana-fear';
 import { advanceCurrentKeepsake } from '../../keepsakes/state';
 import { consumeConcaveStone, concaveStoneProcSupport } from '../../keepsakes/trait-effects';
 import type { RewardBranchState } from '../branch-primitives';
@@ -154,17 +158,15 @@ function applyTraitOfferForAcquisitionInternal(
   // stays absent and must neither block nor change trait history.
   if (
     reward.offer?.rewardType === 'SpellDrop' &&
-    isAspectSpellDropDormant(catalog, reward.traitContext?.aspectKey) &&
+    isAspectSpellDropDormant(catalog, branch.state.equipment.aspectKey) &&
     role === 'self'
   )
     return Object.freeze({ branch });
   const authored = reward.traitOffersByAcquisitionRole?.[role];
   const authoredLevelResolution = reward.levelResolutionsByAcquisitionRole?.[role];
   const before = branch.state.traitHistory;
-  const sourceTraitContext = Object.freeze({
+  const sourceTraitContext: TraitOfferSourceContext = Object.freeze({
     ...(reward.traitContext ?? {}),
-    ...('routeKey' in reward.origin ? { routeKey: reward.origin.routeKey } : {}),
-    settledSpellDrop: (branch.state.rewardHistory.useRecord.SpellDrop ?? 0) > 0,
     ...(reward.producerLifecycleKey === 'EchoLastReward' || role === 'echoLastRunSelection'
       ? { stackBoostsSuppressed: true as const }
       : {}),
@@ -201,8 +203,8 @@ function applyTraitOfferForAcquisitionInternal(
                 ? {}
                 : {
                     candidateContext: Object.freeze({
-                      before,
-                      context: withBoonRarityFacts(
+                      state: branch.state,
+                      source: withBoonRarityFacts(
                         catalog,
                         branch,
                         Object.freeze({
@@ -213,8 +215,6 @@ function applyTraitOfferForAcquisitionInternal(
                           resolvedProviderKey: giver,
                         }),
                       ),
-                      arcanaFear: branch.state.arcanaFear,
-                      keepsakes: branch.state.keepsakes,
                     }),
                   }),
             }),
@@ -237,7 +237,7 @@ function applyTraitOfferForAcquisitionInternal(
   const baseOffer =
     authored === undefined || authoredContext === undefined || acquisitionMode.kind !== 'ordinary'
       ? undefined
-      : assessTraitOfferBeforeRarification(catalog, authored, before, authoredContext);
+      : assessTraitOfferBeforeRarification(catalog, authored, branch.state, authoredContext);
   const callingCard =
     authored === undefined || acquisitionMode.kind !== 'ordinary'
       ? undefined
@@ -299,12 +299,10 @@ function applyTraitOfferForAcquisitionInternal(
           reward.origin,
           role,
           effectiveAuthored,
-          before,
+          branch.state,
           evaluationContext,
           branch.traitEvaluations?.length ?? 0,
-          branch.state.arcanaFear,
           acquisitionMode.kind !== 'ordinary',
-          branch.state.keepsakes,
           callingCard === undefined ? undefined : authored,
           acquisitionMode.kind === 'frozenConcaveStoneSecondary',
           acquisitionMode.kind !== 'frozenConcaveStoneSecondary' ||
@@ -321,11 +319,9 @@ function applyTraitOfferForAcquisitionInternal(
             echoLastRunBoon.address,
             effectiveAuthored,
             echoLastRunBoon.outcome,
-            before,
+            branch.state,
             evaluationContext,
             branch.traitEvaluations?.length ?? 0,
-            branch.state.arcanaFear,
-            branch.state.keepsakes,
           );
   const selectedForIdentity =
     effectiveAuthored.kind === 'traits'
@@ -365,7 +361,7 @@ function applyTraitOfferForAcquisitionInternal(
     acquisitionIdentity,
     selectedForIdentityDisposition?.kind === 'echo' &&
       selectedForIdentityDisposition.effect === 'repeatKeepsake'
-      ? sourceTraitContext.currentKeepsakeKey
+      ? branch.state.keepsakes.currentKey
       : undefined,
     acquisitionMode.kind === 'frozenConcaveStoneSecondary' ? 'concaveStoneSecondary' : 'traitOffer',
   );
@@ -488,10 +484,8 @@ function applyTraitOfferForAcquisitionInternal(
         : Object.freeze({
             address: createTraitOfferAddress(candidateOwner, role),
             context: Object.freeze({
-              before,
-              context: evaluationContext,
-              arcanaFear: branch.state.arcanaFear,
-              keepsakes: branch.state.keepsakes,
+              state: branch.state,
+              source: evaluationContext,
             }),
           });
     const branchAfterOffer =
@@ -537,14 +531,12 @@ function applyTraitOfferForAcquisitionInternal(
         )
       : effectiveBranch.state.keepsakes;
   const childCandidateContext = Object.freeze({
-    before: evaluation.before,
-    context: withBoonRarityFacts(
+    state: evaluation.state,
+    source: withBoonRarityFacts(
       catalog,
       branch,
       Object.freeze({ ...sourceTraitContext, resolvedProviderKey: evaluation.offer.giverKey }),
     ),
-    arcanaFear: branch.state.arcanaFear,
-    keepsakes: branch.state.keepsakes,
   });
   const selectedChildren = settleSelectedTraitChildren({
     catalog,
@@ -557,7 +549,7 @@ function applyTraitOfferForAcquisitionInternal(
     selected,
     selectedDisposition,
     targetedAcquisition: evaluation.targetedAcquisition,
-    before: evaluation.before,
+    before: evaluation.state.traitHistory,
     candidateContext: childCandidateContext,
     directTraitSetBranchHistories: options.directTraitSetBranchHistories ?? [before],
     lifecyclePoint,
@@ -620,12 +612,7 @@ function applyTraitOfferForAcquisitionInternal(
       effectiveAuthored,
       evaluation,
       selected?.traitKey,
-      Object.freeze({
-        before: evaluation.before,
-        context: evaluation.context,
-        ...(evaluation.arcanaFear === undefined ? {} : { arcanaFear: evaluation.arcanaFear }),
-        ...(evaluation.keepsakes === undefined ? {} : { keepsakes: evaluation.keepsakes }),
-      }),
+      Object.freeze({ state: evaluation.state, source: evaluation.source }),
       lifecyclePoint,
       sequence,
       findingChronology,
@@ -709,20 +696,11 @@ export function applyTraitOfferForAcquisition(
     const findingEntries = Object.freeze([...localFindings.values()]);
     return Object.freeze({ ...settlement, findingEntries });
   };
-  const traitContext = Object.freeze({
-    ...(reward.traitContext ?? {}),
-    ...(branch.state.stygianWell.yarnUses === 0 || reward.traitContext?.suppressTemporaryBoonRarity
-      ? {}
-      : { temporaryBoonRarityUses: branch.state.stygianWell.yarnUses }),
-    ...(branch.state.stygianWell.hymnUses === 0
-      ? {}
-      : { limitedSwapUses: branch.state.stygianWell.hymnUses }),
-  });
-  const source = Object.freeze({ ...reward, traitContext });
+  const traitContext: TraitOfferSourceContext = Object.freeze({ ...(reward.traitContext ?? {}) });
   const settlement = applyTraitOfferForAcquisitionInternal(
     catalog,
     branch,
-    source,
+    reward,
     role,
     lifecyclePoint,
     sequence,
@@ -758,16 +736,11 @@ export function applyTraitOfferForAcquisition(
     Object.freeze({ ...traitContext, resolvedProviderKey: authored.giverKey }),
   );
   const consumesYarn =
-    traitContext.temporaryBoonRarityUses !== undefined &&
-    boonRarityFactsForOffer(
-      catalog,
-      branch.state.traitHistory,
-      closedContext,
-      branch.state.arcanaFear,
-    ) !== undefined;
+    temporaryBoonRarityUses(branch.state, traitContext) > 0 &&
+    boonRarityFactsForOffer(catalog, branch.state, closedContext) !== undefined;
   const evaluation = settlement.branch.traitEvaluations?.[branch.traitEvaluations?.length ?? 0];
   const consumesHymn =
-    (traitContext.limitedSwapUses ?? 0) > 0 &&
+    limitedSwapUses(branch.state) > 0 &&
     evaluation !== undefined &&
     traitOfferGenerationLegal(evaluation) &&
     evaluation.assessments.some((assessment) => assessment.replacementTransition !== undefined);
@@ -803,7 +776,7 @@ function applyEchoLastRunBoonForAcquisition(
   address: EchoLastRunBoonAddress,
   offer: AuthoredTraitOfferTraits,
   outcome: EchoLastRunBoonOutcome,
-  context: TraitOfferContext,
+  context: TraitOfferSourceContext,
   lifecyclePoint: string,
   sequence: number,
   findingChronology?: FindingChronology,
@@ -915,59 +888,14 @@ export interface EncounterTraitOfferSettlement {
   readonly candidateContact?: ReachedTraitOfferCandidateContact;
 }
 
-function encounterTraitContext(
-  catalog: Catalog,
-  branch: RewardBranchState,
-  providerKey: string,
-  loadout:
-    | Pick<
-        TraitOfferContext,
-        | 'weaponKey'
-        | 'aspectKey'
-        | 'boonRarityRoomOverride'
-        | 'boonRarityItemOverride'
-        | 'gorgonResolvedRarity'
-        | 'suppressTemporaryBoonRarity'
-        | 'acquisitionOrdinal'
-      >
-    | undefined,
-  freshRarityOverride: import('../../../catalog-schema').TraitRarity | undefined,
-): TraitOfferContext {
-  const recreation = branch.state.rewardHistory.lastRewardRecreation;
-  return Object.freeze({
-    ...(loadout ?? {}),
-    resolvedProviderKey: providerKey,
-    manualArcanaGraspCost: manualArcanaGraspCost(catalog, branch.state.arcanaFear),
-    activeArcanaTraitKeys: Object.freeze(
-      branch.state.arcanaFear.arcana.active.map(
-        (card) => catalog.arcanaCards.byKey[card.key]!.traitKey,
-      ),
-    ),
-    circeRemovableFearVow: circeResolutionDomain(catalog, branch.state.arcanaFear, 'disableFear', 1)
-      .outerAvailable,
-    echoLastRewardAvailable: recreation !== undefined,
-    ...(recreation === undefined ? {} : { echoLastRewardRecreation: recreation }),
-    ...(freshRarityOverride === undefined ? {} : { freshRarityOverride }),
-    currentKeepsakeKey: branch.state.keepsakes.currentKey,
-    settledSpellDrop: (branch.state.rewardHistory.useRecord.SpellDrop ?? 0) > 0,
-  });
-}
-
 function withBoonRarityFacts(
   catalog: Catalog,
   branch: RewardBranchState,
-  context: TraitOfferContext,
-): TraitOfferContext {
-  const history = branch.state.traitHistory;
-  return context.resolvedProviderKey === undefined
-    ? context
-    : traitOfferGenerationContext(
-        catalog,
-        history,
-        context.resolvedProviderKey,
-        context,
-        branch.state.arcanaFear,
-      );
+  source: ResolvedTraitOfferSource,
+): ResolvedTraitOfferSource {
+  return source.resolvedProviderKey === undefined
+    ? source
+    : resolveTraitOfferSource(catalog, branch.state, source.resolvedProviderKey, source);
 }
 
 /** Settles one encounter-local trait offer and returns its exact child checkpoint when blocked. */
@@ -981,16 +909,7 @@ export function settleEncounterTraitOffer(
   findingChronology?: FindingChronology,
   acquisitionRole = 'selection',
   freshRarityOverride?: import('../../../catalog-schema').TraitRarity,
-  loadout?: Pick<
-    TraitOfferContext,
-    | 'weaponKey'
-    | 'aspectKey'
-    | 'boonRarityRoomOverride'
-    | 'boonRarityItemOverride'
-    | 'gorgonResolvedRarity'
-    | 'suppressTemporaryBoonRarity'
-    | 'acquisitionOrdinal'
-  >,
+  encounterSource?: TraitOfferSourceContext,
   directTraitSetBranchHistories?: readonly TraitHistoryState[],
   unresolvedProviderKey?: string,
 ): EncounterTraitOfferSettlement {
@@ -1004,16 +923,10 @@ export function settleEncounterTraitOffer(
   const providerKey = offer?.giverKey ?? unresolvedProviderKey;
   if (providerKey === undefined)
     throw new Error('encounter trait offer settlement requires its known provider');
-  const traitContext = encounterTraitContext(
-    catalog,
-    branch,
-    providerKey,
-    loadout,
-    freshRarityOverride,
-  );
-  const routedTraitContext = Object.freeze({
-    ...traitContext,
-    ...('routeKey' in origin ? { routeKey: origin.routeKey } : {}),
+  const routedTraitContext: TraitOfferSourceContext = Object.freeze({
+    ...(encounterSource ?? {}),
+    resolvedProviderKey: providerKey,
+    ...(freshRarityOverride === undefined ? {} : { freshRarityOverride }),
   });
   if (offer === null) {
     const settlement = applyTraitOfferForAcquisition(
@@ -1106,11 +1019,7 @@ export function settleEncounterTraitOffer(
           for (const [key, entry] of provisionalFindings) localFindings.set(key, entry);
         return applied;
       }
-      const acquisitionOrdinal = traitContext.acquisitionOrdinal;
-      if (acquisitionOrdinal === undefined)
-        throw new Error(
-          `${selected?.traitKey ?? 'Circe'} requires an explicit acquisition ordinal`,
-        );
+      const acquisitionOrdinal = branch.state.reached.routePosition.ordinal;
       const rejection = assessCirceChild(
         catalog,
         branch,
@@ -1147,7 +1056,7 @@ export function settleEncounterTraitOffer(
       };
       const childAssessment = assessEchoBoonChild(
         catalog,
-        preChoiceTraitHistory,
+        replaceSimulationTraitHistory(branch.state, preChoiceTraitHistory),
         routedTraitContext,
         child,
       );
@@ -1237,9 +1146,7 @@ export function settleEncounterTraitOffer(
       selected === undefined
     )
       return applied;
-    const acquisitionOrdinal = traitContext.acquisitionOrdinal;
-    if (acquisitionOrdinal === undefined)
-      throw new Error(`${selected.traitKey} requires an explicit acquisition ordinal`);
+    const acquisitionOrdinal = branch.state.reached.routePosition.ordinal;
     return settleValidatedCirceChild(
       catalog,
       applied,

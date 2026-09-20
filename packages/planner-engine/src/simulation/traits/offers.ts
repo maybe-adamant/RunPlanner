@@ -12,16 +12,20 @@ import type {
   AuthoredTraitOffer,
   AuthoredTraitOfferTraits,
 } from '../../authored-project/traits/state';
-import type { ArcanaFearState } from '../arcana-fear';
-import type { KeepsakeState } from '../keepsakes/state';
+import type { SimulationState } from '../state/model';
 import type {
   EchoLastRunBoonOutcome,
+  ResolvedTraitOfferSource,
   TraitAssessment,
   TraitOfferCompositionAssessment,
   TraitOfferCompositionFinding,
-  TraitOfferContext,
+  TraitOfferSourceContext,
 } from './offer-domain';
-import { assessTraitOfferComposition } from './offer-domain';
+import {
+  assessTraitOfferComposition,
+  limitedSwapUses,
+  temporaryBoonRarityUses,
+} from './offer-domain';
 import { deriveBoonRarityLedger, type BoonRarityFacts } from './rarity';
 import { optionIndex } from '../../authored-project/traits/state';
 import { assessRansom } from './history/transitions';
@@ -65,27 +69,27 @@ export function isChaosGodScreenGiver(catalog: Catalog, giverKey: string): boole
 /** Resolves offer-generation overrides at one source-screen frontier.
  * Authored rows stay untouched: stale non-Common fresh rows are assessed as
  * invalid, while exact promoted replacement rows remain legal. */
-export function offerGenerationAdjustedTraitGiverContext(
+export function offerGenerationAdjustedGiverSource(
   catalog: Catalog,
-  history: TraitHistoryState,
+  state: SimulationState,
   giverKey: string,
-  context: TraitOfferContext,
-): TraitOfferContext {
+  source: ResolvedTraitOfferSource,
+): ResolvedTraitOfferSource {
   const giver = catalog.traitGivers.byKey[giverKey];
   const provider = boonRarityProviderForGiver(giver);
-  if (provider === undefined) return context;
-  const ordinary = hasActiveChaosSemanticTag(history, 'Ordinary');
+  if (provider === undefined) return source;
+  const ordinary = hasActiveChaosSemanticTag(state.traitHistory, 'Ordinary');
   const replacementRollChance =
-    (context.limitedSwapUses ?? 0) > 0
+    limitedSwapUses(state) > 0
       ? 1
       : ordinary
         ? 0
-        : (context.replacementRollChance ?? catalog.boonReplacementChance);
+        : (source.replacementRollChance ?? catalog.boonReplacementChance);
   // Native ForceCommon bypasses GetRarityChances entirely. Any facts captured
   // before this source decision therefore describe a different screen and must
   // not cross the forced-rarity frontier.
   const adjusted = {
-    ...context,
+    ...source,
     replacementRollChance,
     ...(ordinary ? { freshRarityOverride: 'Common' as const } : {}),
   };
@@ -93,68 +97,67 @@ export function offerGenerationAdjustedTraitGiverContext(
   return Object.freeze(adjusted);
 }
 
-export function offerGenerationAdjustedTraitOfferContext(
+export function offerGenerationAdjustedOfferSource(
   catalog: Catalog,
-  history: TraitHistoryState,
+  state: SimulationState,
   offer: AuthoredTraitOffer,
-  context: TraitOfferContext,
-): TraitOfferContext {
+  source: ResolvedTraitOfferSource,
+): ResolvedTraitOfferSource {
   return offer.kind === 'traits'
-    ? offerGenerationAdjustedTraitGiverContext(catalog, history, offer.giverKey, context)
-    : context;
+    ? offerGenerationAdjustedGiverSource(catalog, state, offer.giverKey, source)
+    : source;
+}
+
+/** Drops a previously prepared rescue flag so this resolution derives its own. */
+function withoutFinalRescue(source: ResolvedTraitOfferSource): TraitOfferSourceContext {
+  const { finalRarityRescueDisabled: _finalRarityRescueDisabled, ...rest } = source;
+  void _finalRarityRescueDisabled;
+  return rest;
 }
 
 /** One complete source-generation context for selected, candidate and draft
  * construction.  Denial only removes final rescue; it never reconstructs
  * history bans or duplicates rarity arithmetic at consumers. */
-export function traitOfferGenerationContext(
+export function resolveTraitOfferSource(
   catalog: Catalog,
-  history: TraitHistoryState,
+  state: SimulationState,
   giverKey: string,
-  context: TraitOfferContext,
-  arcanaFear?: ArcanaFearState,
-): TraitOfferContext {
-  const { finalRarityRescueDisabled: capturedFinalRescueDisabled, ...unflagged } = context;
-  const adjusted = offerGenerationAdjustedTraitGiverContext(catalog, history, giverKey, {
-    ...unflagged,
+  source: ResolvedTraitOfferSource,
+): ResolvedTraitOfferSource {
+  const adjusted = offerGenerationAdjustedGiverSource(catalog, state, giverKey, {
+    ...withoutFinalRescue(source),
     resolvedProviderKey: giverKey,
   });
-  const facts = boonRarityFactsForOffer(catalog, history, adjusted, arcanaFear);
+  const facts = boonRarityFactsForOffer(catalog, state, adjusted);
   const denial = catalog.fearVows.byKey.BanUnpickedBoonsShrineUpgrade;
-  const finalRarityRescueDisabled = (arcanaFear?.fear.effectiveRanks[denial?.key ?? ''] ?? 0) > 0;
+  const finalRarityRescueDisabled =
+    (state.arcanaFear.fear.effectiveRanks[denial?.key ?? ''] ?? 0) > 0;
   return Object.freeze({
     ...adjusted,
     ...(facts === undefined ? {} : { boonRarityFacts: facts }),
-    ...(arcanaFear === undefined
-      ? capturedFinalRescueDisabled === true
-        ? { finalRarityRescueDisabled: true }
-        : {}
-      : finalRarityRescueDisabled
-        ? { finalRarityRescueDisabled: true }
-        : {}),
+    ...(finalRarityRescueDisabled ? { finalRarityRescueDisabled: true } : {}),
   });
 }
 
 /** Shared Arcana and matured-Favor contributions; callers add only their source-legal modifiers. */
 function arcanaAndFavorBoonRarityContributions(
   catalog: Catalog,
-  history: TraitHistoryState,
-  arcanaFear?: ArcanaFearState,
+  state: SimulationState,
 ): readonly import('../../catalog-schema').BoonRarityContribution[] {
+  const history = state.traitHistory;
   const barrenActive = hasActiveChaosSemanticTag(history, 'Barren');
-  const arcana =
-    arcanaFear?.arcana.active.flatMap((active) => {
-      const table = catalog.arcanaCards.byKey[active.key]?.boonRarityContributions;
-      // Barren suppresses every currently declared rarity contribution, not a
-      // hand-maintained card-name list. The Arcana state itself is untouched,
-      // so the independently-derived ledger restores it on maturation.
-      if (barrenActive && table !== undefined) return [];
-      if (table === undefined) return [];
-      const rarity = active.rarity;
-      return rarity === 'Common' || rarity === 'Rare' || rarity === 'Epic' || rarity === 'Heroic'
-        ? [table[rarity]]
-        : [];
-    }) ?? [];
+  const arcana = state.arcanaFear.arcana.active.flatMap((active) => {
+    const table = catalog.arcanaCards.byKey[active.key]?.boonRarityContributions;
+    // Barren suppresses every currently declared rarity contribution, not a
+    // hand-maintained card-name list. The Arcana state itself is untouched,
+    // so the independently-derived ledger restores it on maturation.
+    if (barrenActive && table !== undefined) return [];
+    if (table === undefined) return [];
+    const rarity = active.rarity;
+    return rarity === 'Common' || rarity === 'Rare' || rarity === 'Epic' || rarity === 'Heroic'
+      ? [table[rarity]]
+      : [];
+  });
   const favor = history.maturedChaosBlessings.flatMap((blessing) => {
     if (catalog.chaos.blessings.byKey[blessing.blessingKey]?.semanticTag !== 'Favor') return [];
     const rare = blessing.blessingValues.rareBonus;
@@ -171,34 +174,32 @@ function arcanaAndFavorBoonRarityContributions(
 
 function chaosPairRarityFacts(
   catalog: Catalog,
-  history: TraitHistoryState,
-  context: TraitOfferContext,
-  arcanaFear?: ArcanaFearState,
+  state: SimulationState,
+  source: TraitOfferSourceContext,
 ): BoonRarityFacts {
   return Object.freeze({
     providerBase: catalog.boonRarityBases.olympian,
     rollOrder: catalog.chaos.rarity.rollOrder,
-    ...(context.boonRarityRoomOverride === undefined
+    ...(source.boonRarityRoomOverride === undefined
       ? {}
-      : { roomOverride: context.boonRarityRoomOverride }),
+      : { roomOverride: source.boonRarityRoomOverride }),
     itemOverride: catalog.chaos.rarity.itemOverride,
-    contributions: arcanaAndFavorBoonRarityContributions(catalog, history, arcanaFear),
+    contributions: arcanaAndFavorBoonRarityContributions(catalog, state),
   });
 }
 
 /** Exact selected Chaos-pair rarity domain. Fixed outcomes bypass the source roll. */
 export function chaosPairRarities(
   catalog: Catalog,
-  history: TraitHistoryState,
-  context: TraitOfferContext,
-  arcanaFear: ArcanaFearState | undefined,
+  state: SimulationState,
+  source: TraitOfferSourceContext,
   curse: import('../../catalog-schema').ChaosCurseDeclaration | undefined,
   blessing: import('../../catalog-schema').ChaosBlessingDeclaration | undefined,
 ): readonly TraitRarity[] {
   if (blessing?.fixedRarity === 'Legendary') return Object.freeze(['Legendary']);
   if (curse?.semanticTag === 'Barren') return Object.freeze(['Heroic']);
   if (curse === undefined || blessing === undefined) return Object.freeze([]);
-  return deriveBoonRarityLedger(chaosPairRarityFacts(catalog, history, context, arcanaFear), [
+  return deriveBoonRarityLedger(chaosPairRarityFacts(catalog, state, source), [
     'Common',
     'Rare',
     'Epic',
@@ -208,19 +209,16 @@ export function chaosPairRarities(
 /** Validates the selected blessing against the same exact Chaos source domain candidates expose. */
 export function assessChaosPairRarity(
   catalog: Catalog,
-  history: TraitHistoryState,
+  state: SimulationState,
   offer: Extract<AuthoredTraitOffer, { readonly kind: 'chaos' }>,
-  context: TraitOfferContext,
-  arcanaFear?: ArcanaFearState,
+  source: TraitOfferSourceContext,
 ): TraitAssessment {
   const curse =
     catalog.chaos.curses.byKey[
       offer.curseOptions[optionIndex(offer.selectedOptionKey)]?.curseKey ?? ''
     ];
   const blessing = catalog.chaos.blessings.byKey[offer.blessingKey];
-  const legal = chaosPairRarities(catalog, history, context, arcanaFear, curse, blessing).includes(
-    offer.rarity,
-  );
+  const legal = chaosPairRarities(catalog, state, source, curse, blessing).includes(offer.rarity);
   return Object.freeze({
     legal,
     findings: legal
@@ -238,19 +236,19 @@ export function assessChaosPairRarity(
 /** One branch-aware adapter from existing offer facts to the numeric ledger input. */
 export function boonRarityFactsForOffer(
   catalog: Catalog,
-  history: TraitHistoryState,
-  context: TraitOfferContext,
-  arcanaFear?: ArcanaFearState,
+  state: SimulationState,
+  source: ResolvedTraitOfferSource,
 ): BoonRarityFacts | undefined {
-  if (context.freshRarityOverride !== undefined) return undefined;
-  if (context.boonRarityFacts !== undefined) return context.boonRarityFacts;
+  if (source.freshRarityOverride !== undefined) return undefined;
+  if (source.boonRarityFacts !== undefined) return source.boonRarityFacts;
   const giver =
-    context.resolvedProviderKey === undefined
+    source.resolvedProviderKey === undefined
       ? undefined
-      : catalog.traitGivers.byKey[context.resolvedProviderKey];
+      : catalog.traitGivers.byKey[source.resolvedProviderKey];
   const provider = boonRarityProviderForGiver(giver);
   if (giver === undefined || provider === undefined) return undefined;
-  const arcanaAndFavor = arcanaAndFavorBoonRarityContributions(catalog, history, arcanaFear);
+  const history = state.traitHistory;
+  const arcanaAndFavor = arcanaAndFavorBoonRarityContributions(catalog, state);
   const traits =
     history.properUpbringingActive !== true
       ? []
@@ -262,23 +260,19 @@ export function boonRarityFactsForOffer(
   return Object.freeze({
     providerBase: catalog.boonRarityBases[provider],
     rollOrder: giver.boonRarityRollOrder ?? catalog.boonRarityRollOrder,
-    ...(context.boonRarityRoomOverride === undefined
+    ...(source.boonRarityRoomOverride === undefined
       ? {}
-      : { roomOverride: context.boonRarityRoomOverride }),
-    ...(context.boonRarityItemOverride === undefined
+      : { roomOverride: source.boonRarityRoomOverride }),
+    ...(source.boonRarityItemOverride === undefined
       ? {}
-      : { itemOverride: context.boonRarityItemOverride }),
+      : { itemOverride: source.boonRarityItemOverride }),
     contributions: Object.freeze([
       ...arcanaAndFavor,
       ...traits,
-      ...Array.from(
-        {
-          length: context.suppressTemporaryBoonRarity ? 0 : (context.temporaryBoonRarityUses ?? 0),
-        },
-        () =>
-          Object.freeze({
-            additive: Object.freeze({ Rare: 1, Epic: 0.25, Duo: 0.1, Legendary: 0.1 }),
-          }),
+      ...Array.from({ length: temporaryBoonRarityUses(state, source) }, () =>
+        Object.freeze({
+          additive: Object.freeze({ Rare: 1, Epic: 0.25, Duo: 0.1, Legendary: 0.1 }),
+        }),
       ),
     ]),
   });
@@ -295,15 +289,12 @@ export function hasActiveChaosSemanticTag(
 export interface ReachedTraitOfferEvaluation {
   readonly address: SemanticAddress;
   readonly acquisitionRole: string;
-  readonly before: TraitHistoryState;
+  /** Exact pre-offer simulation snapshot this evaluation was assessed against. */
+  readonly state: SimulationState;
   readonly offer: AuthoredTraitOffer;
   /** Row rarities before Calling Card/provider-keepsake rarification. */
   readonly baseRarities: readonly (TraitRarity | undefined)[];
-  readonly context: TraitOfferContext;
-  /** Exact pre-acquisition frontier retained only for Circe candidate capability. */
-  readonly arcanaFear?: ArcanaFearState;
-  /** Exact pre-offer keepsake frontier retained for Calling Card replay. */
-  readonly keepsakes?: KeepsakeState;
+  readonly source: ResolvedTraitOfferSource;
   readonly assessments: readonly TraitAssessment[];
   /** Frozen option-level outcomes used by candidate projection and settlement. */
   readonly levelResolutions: readonly TraitOfferOptionLevelResolution[];
@@ -336,6 +327,38 @@ export interface TraitOfferBranchAssessment {
   readonly persephoneLevelBonusMaximums: readonly (number | undefined)[];
   readonly effectiveLevels: readonly (number | undefined)[];
   readonly settledHexTree?: ReachedTraitOfferEvaluation['settledHexTree'];
+}
+
+/**
+ * The exact semantic inputs one trait-offer contact consumes. Deduplication
+ * compares these rather than serializing the whole snapshot: unrelated
+ * chronology, bags and pending acquisition work must not multiply equivalent
+ * contexts, and callable capabilities are never faithfully comparable.
+ */
+export function traitOfferContextIdentity(
+  context: Pick<TraitOfferCandidateContext, 'state' | 'source'>,
+): readonly unknown[] {
+  const state = context.state;
+  return Object.freeze([
+    context.source,
+    state.traitHistory,
+    state.arcanaFear,
+    state.keepsakes,
+    state.equipment,
+    state.rewardHistory.useRecord.SpellDrop ?? 0,
+    state.rewardHistory.lastRewardRecreation,
+    state.stygianWell.yarnUses,
+    state.stygianWell.hymnUses,
+    state.reached.routePosition.routeKey,
+    state.reached.routePosition.ordinal,
+  ]);
+}
+
+/** The same inputs for one reached selected-offer assessment. */
+export function traitOfferAssessmentIdentity(
+  evaluation: Pick<ReachedTraitOfferEvaluation, 'state' | 'source' | 'offer'>,
+): readonly unknown[] {
+  return Object.freeze([evaluation.offer, ...traitOfferContextIdentity(evaluation)]);
 }
 
 export function traitOfferGenerationLegal(
@@ -379,10 +402,9 @@ export interface SelectedTraitOfferAssessment {
 
 /** Inputs retained by the opaque exact-address candidate capability. */
 export interface TraitOfferCandidateContext {
-  readonly before: TraitHistoryState;
-  readonly context: TraitOfferContext;
-  readonly arcanaFear?: ArcanaFearState;
-  readonly keepsakes?: KeepsakeState;
+  /** One exact pre-effect snapshot; candidates never borrow facts from another branch. */
+  readonly state: SimulationState;
+  readonly source: ResolvedTraitOfferSource;
 }
 
 export interface TraitContextUnavailable {
@@ -397,18 +419,17 @@ function evaluateReachedTraitOfferWithAssessments(
   address: SemanticAddress,
   acquisitionRole: string,
   offer: AuthoredTraitOffer,
-  before: TraitHistoryState,
-  context: TraitOfferContext,
+  state: SimulationState,
+  context: ResolvedTraitOfferSource,
   chronologicalIndex: number,
-  arcanaFear?: ArcanaFearState,
   directAcquisition = false,
-  keepsakes?: KeepsakeState,
   /** Calling Card changes a rolled row after base-offer legality is established. */
   rarificationBaseOffer?: AuthoredTraitOffer,
   assessments?: readonly TraitAssessment[],
   frozenAcquisition = false,
   frozenLevelResolutions?: readonly TraitOfferOptionLevelResolution[],
 ): ReachedTraitOfferEvaluation {
+  const before = state.traitHistory;
   const baseRarities = Object.freeze(
     (rarificationBaseOffer?.kind === 'traits'
       ? rarificationBaseOffer
@@ -422,9 +443,9 @@ function evaluateReachedTraitOfferWithAssessments(
     const giver = catalog.traitGivers.byKey[offer.giverKey];
     return giver?.providerKind === 'olympian' || giver?.providerKind === 'hermes';
   })();
-  const effectiveContext = ordinaryGiver
-    ? traitOfferGenerationContext(catalog, before, offer.giverKey, context, arcanaFear)
-    : offerGenerationAdjustedTraitOfferContext(catalog, before, offer, context);
+  const effectiveSource = ordinaryGiver
+    ? resolveTraitOfferSource(catalog, state, offer.giverKey, context)
+    : offerGenerationAdjustedOfferSource(catalog, state, offer, context);
   // Exact one-result sources (for example, a keepsake equip) are direct
   // acquisitions, not a sparse ordinary offer. They retain the normal
   // trait-level assessment and history event path without inheriting the
@@ -440,7 +461,7 @@ function evaluateReachedTraitOfferWithAssessments(
     directAcquisition || frozenAcquisition || !ordinary
       ? undefined
       : assessInitialOfferSupport({
-          ...traitOfferGenerationInput(catalog, legalityOffer.giverKey, before, effectiveContext),
+          ...traitOfferGenerationInput(catalog, legalityOffer.giverKey, state, effectiveSource),
           offer: legalityOffer,
         });
   const baseComposition = directAcquisition
@@ -459,13 +480,18 @@ function evaluateReachedTraitOfferWithAssessments(
               case 'elementMinimum':
                 return before.elementCounts[requirement.element] < requirement.minimum;
               case 'notKeepsake':
-                return context.currentKeepsakeKey === requirement.keepsakeKey;
+                // The materialized Chaos source has never carried a keepsake
+                // identity, so this declared restriction has never applied to a
+                // reached Chaos screen. Reading the reached keepsake here would
+                // newly invalidate authored pairs; the correction is held for a
+                // separately approved change.
+                return false;
               case 'notAspect':
-                return context.aspectKey === requirement.aspectKey;
+                return state.equipment.aspectKey === requirement.aspectKey;
               case 'routeKey':
-                return !('routeKey' in address) || address.routeKey !== requirement.routeKey;
+                return state.reached.routePosition.routeKey !== requirement.routeKey;
               case 'routeKeyNot':
-                return !('routeKey' in address) || address.routeKey === requirement.routeKey;
+                return state.reached.routePosition.routeKey === requirement.routeKey;
             }
           };
           // Every authored curse is part of the generated Chaos screen. A
@@ -527,10 +553,8 @@ function evaluateReachedTraitOfferWithAssessments(
     ? Object.freeze([])
     : (assessments ??
       (legalityOffer.kind === 'chaos'
-        ? Object.freeze([
-            assessChaosPairRarity(catalog, before, legalityOffer, effectiveContext, arcanaFear),
-          ])
-        : assessTraitOffer(catalog, legalityOffer, before, effectiveContext)));
+        ? Object.freeze([assessChaosPairRarity(catalog, state, legalityOffer, effectiveSource)])
+        : assessTraitOffer(catalog, legalityOffer, state, effectiveSource)));
   const levelResolutions =
     frozenLevelResolutions ??
     (offer.kind !== 'traits'
@@ -539,9 +563,8 @@ function evaluateReachedTraitOfferWithAssessments(
           offer.options.map((option, index) =>
             resolveTraitOfferOptionLevel({
               catalog,
-              before,
-              context: effectiveContext,
-              ...(keepsakes === undefined ? {} : { keepsakes }),
+              state,
+              source: effectiveSource,
               option,
               ...(rawAssessments[index] === undefined ? {} : { assessment: rawAssessments[index] }),
             }),
@@ -550,12 +573,7 @@ function evaluateReachedTraitOfferWithAssessments(
   // A frozen source row still acquires its targeted effect at the current
   // frontier, after the primary selection has settled. Its resolver sees the
   // selected effective source (including Calling Card), not the base roll.
-  const targetedAcquisition = assessSelectedTargetedAcquisition(
-    catalog,
-    offer,
-    before,
-    effectiveContext,
-  );
+  const targetedAcquisition = assessSelectedTargetedAcquisition(catalog, offer, state);
   const resolvedAssessments = frozenAcquisition
     ? Object.freeze([])
     : Object.freeze(
@@ -573,12 +591,10 @@ function evaluateReachedTraitOfferWithAssessments(
   return Object.freeze({
     address,
     acquisitionRole,
-    before,
+    state,
     offer,
     baseRarities,
-    context: effectiveContext,
-    ...(arcanaFear === undefined ? {} : { arcanaFear }),
-    ...(keepsakes === undefined ? {} : { keepsakes }),
+    source: effectiveSource,
     assessments: resolvedAssessments,
     levelResolutions,
     ...(generation === undefined ? {} : { generation }),
@@ -594,12 +610,10 @@ export function evaluateReachedTraitOffer(
   address: SemanticAddress,
   acquisitionRole: string,
   offer: AuthoredTraitOffer,
-  before: TraitHistoryState,
-  context: TraitOfferContext,
+  state: SimulationState,
+  source: ResolvedTraitOfferSource,
   chronologicalIndex: number,
-  arcanaFear?: ArcanaFearState,
   directAcquisition = false,
-  keepsakes?: KeepsakeState,
   /** Calling Card changes a rolled row after base-offer legality is established. */
   rarificationBaseOffer?: AuthoredTraitOffer,
   frozenAcquisition = false,
@@ -610,12 +624,10 @@ export function evaluateReachedTraitOffer(
     address,
     acquisitionRole,
     offer,
-    before,
-    context,
+    state,
+    source,
     chronologicalIndex,
-    arcanaFear,
     directAcquisition,
-    keepsakes,
     rarificationBaseOffer,
     undefined,
     frozenAcquisition,
@@ -629,11 +641,9 @@ export function evaluateReachedEchoLastRunBoonOffer(
   address: EchoLastRunBoonAddress,
   offer: AuthoredTraitOfferTraits,
   outcome: EchoLastRunBoonOutcome,
-  before: TraitHistoryState,
-  context: TraitOfferContext,
+  state: SimulationState,
+  source: ResolvedTraitOfferSource,
   chronologicalIndex: number,
-  arcanaFear?: ArcanaFearState,
-  keepsakes?: KeepsakeState,
 ): ReachedTraitOfferEvaluation {
   const option = offer.options[0];
   if (
@@ -650,12 +660,10 @@ export function evaluateReachedEchoLastRunBoonOffer(
     address,
     'echoLastRunSelection',
     offer,
-    before,
-    context,
+    state,
+    source,
     chronologicalIndex,
-    arcanaFear,
     true,
-    keepsakes,
     undefined,
     Object.freeze([outcome.assessment]),
   );
@@ -668,7 +676,7 @@ function denialBannedTraitKeys(
   if (evaluation.offer.kind !== 'traits') return undefined;
   const offer = evaluation.offer;
   const denial = catalog.fearVows.byKey.BanUnpickedBoonsShrineUpgrade;
-  const effective = evaluation.arcanaFear?.fear.effectiveRanks[denial?.key ?? ''] ?? 0;
+  const effective = evaluation.state.arcanaFear.fear.effectiveRanks[denial?.key ?? ''] ?? 0;
   const giver = catalog.traitGivers.byKey[evaluation.offer.giverKey];
   if (
     denial?.effect?.kind !== 'banUnselectedTraits' ||
@@ -690,7 +698,7 @@ function denialBannedChaosCurseKeys(
 ): readonly string[] | undefined {
   if (evaluation.offer.kind !== 'chaos') return undefined;
   const denial = catalog.fearVows.byKey.BanUnpickedBoonsShrineUpgrade;
-  const effective = evaluation.arcanaFear?.fear.effectiveRanks[denial?.key ?? ''] ?? 0;
+  const effective = evaluation.state.arcanaFear.fear.effectiveRanks[denial?.key ?? ''] ?? 0;
   if (denial?.effect?.kind !== 'banUnselectedTraits' || effective <= 0) return undefined;
   const selected =
     evaluation.offer.curseOptions[optionIndex(evaluation.offer.selectedOptionKey)]?.curseKey;
@@ -719,7 +727,7 @@ export function recordReachedTraitOffer(
 } {
   if (evaluation.offer.kind === 'chaos') {
     if (!traitOfferGenerationLegal(evaluation))
-      return Object.freeze({ history: evaluation.before });
+      return Object.freeze({ history: evaluation.state.traitHistory });
     const identity = acquisitionIdentity ?? `chaos:${sequence}`;
     const bannedCurseKeys = denialBannedChaosCurseKeys(catalog, evaluation);
     const event: ChaosPairEvent = Object.freeze({
@@ -733,14 +741,16 @@ export function recordReachedTraitOffer(
       ...(bannedCurseKeys === undefined ? {} : { bannedCurseKeys }),
     });
     return Object.freeze({
-      history: foldTraitHistoryEvents(catalog, [...evaluation.before.events, event]),
+      history: foldTraitHistoryEvents(catalog, [...evaluation.state.traitHistory.events, event]),
     });
   }
   const valid = traitOfferGenerationLegal(evaluation);
-  if (!valid) return Object.freeze({ history: evaluation.before });
-  if (evaluation.offer.kind !== 'traits') return Object.freeze({ history: evaluation.before });
+  if (!valid) return Object.freeze({ history: evaluation.state.traitHistory });
+  if (evaluation.offer.kind !== 'traits')
+    return Object.freeze({ history: evaluation.state.traitHistory });
   const selectedOption = evaluation.offer.options[optionIndex(evaluation.offer.selectedOptionKey)];
-  if (selectedOption === undefined) return Object.freeze({ history: evaluation.before });
+  if (selectedOption === undefined)
+    return Object.freeze({ history: evaluation.state.traitHistory });
   const selectedTraitKey = selectedOption.traitKey;
   // Every reached offer is assessed and retained in the evaluation trace.
   // A selected pickup-producing trait is an ordinary equipped trait; its
@@ -749,13 +759,9 @@ export function recordReachedTraitOffer(
   const requiresAcquisitionOrdinal =
     selectedDisposition?.kind === 'upgradeOccupiedBoonSlot' ||
     (selectedDisposition?.kind === 'producePickups' && selectedDisposition.clock !== undefined);
-  const acquisitionOrdinal = evaluation.context.acquisitionOrdinal;
-  if (requiresAcquisitionOrdinal && acquisitionOrdinal === undefined)
-    throw new Error(`${selectedTraitKey} requires an explicit acquisition ordinal`);
+  const acquisitionOrdinal = evaluation.state.reached.routePosition.ordinal;
   const ordinalEffect =
-    requiresAcquisitionOrdinal &&
-    selectedDisposition !== undefined &&
-    acquisitionOrdinal !== undefined
+    requiresAcquisitionOrdinal && selectedDisposition !== undefined
       ? resolveTraitAcquisitionOrdinalEffect(selectedDisposition, acquisitionOrdinal)
       : undefined;
   if (
@@ -772,7 +778,7 @@ export function recordReachedTraitOffer(
     selectedDisposition?.kind !== 'producePickups' &&
     selectedDisposition?.kind !== 'seaStar'
   ) {
-    return Object.freeze({ history: evaluation.before });
+    return Object.freeze({ history: evaluation.state.traitHistory });
   }
   const selectedAssessment =
     evaluation.assessments[optionIndex(evaluation.offer.selectedOptionKey)];
@@ -826,9 +832,9 @@ export function recordReachedTraitOffer(
       : undefined;
   const immediate: TraitHistoryEvent[] = [event, ...(mutation === undefined ? [] : [mutation])];
   if (selectedDisposition?.kind === 'upgradeOccupiedBoonSlot') {
-    const target = evaluation.before.equippedSlots[selectedDisposition.slot];
+    const target = evaluation.state.traitHistory.equippedSlots[selectedDisposition.slot];
     if (!isPomUpgradeTarget(catalog, target))
-      return Object.freeze({ history: evaluation.before, event });
+      return Object.freeze({ history: evaluation.state.traitHistory, event });
     immediate.push(
       Object.freeze({
         kind: 'levelMutation',
@@ -847,13 +853,13 @@ export function recordReachedTraitOffer(
     const targets = selectedOption.naturalSelectionTargets;
     const assessment = assessNaturalSelectionTargets(
       catalog,
-      evaluation.before,
+      evaluation.state.traitHistory,
       selectedDisposition.levelCount,
       selectedDisposition.slots,
       targets,
     );
     if (!assessment.legal || !assessment.complete)
-      return Object.freeze({ history: evaluation.before, event });
+      return Object.freeze({ history: evaluation.state.traitHistory, event });
     for (const { targetTraitKey, oldLevel, newLevel } of assessment.steps) {
       immediate.push(
         Object.freeze({
@@ -875,7 +881,7 @@ export function recordReachedTraitOffer(
       ? undefined
       : assessRansom(
           catalog,
-          foldTraitHistoryEvents(catalog, [...evaluation.before.events, ...immediate]),
+          foldTraitHistoryEvents(catalog, [...evaluation.state.traitHistory.events, ...immediate]),
           selectedTraitKey,
           evaluation.address,
           evaluation.acquisitionRole,
@@ -885,7 +891,10 @@ export function recordReachedTraitOffer(
   if (ransomAssessment !== undefined) {
     immediate.push(...ransomAssessment.events);
   }
-  const history = foldTraitHistoryEvents(catalog, [...evaluation.before.events, ...immediate]);
+  const history = foldTraitHistoryEvents(catalog, [
+    ...evaluation.state.traitHistory.events,
+    ...immediate,
+  ]);
   return Object.freeze({
     history,
     event,

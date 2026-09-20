@@ -104,9 +104,9 @@ describe('Gold Gold Gold Shop pickups', () => {
     });
     const branch = result.settlement.branches[0];
     expect(branch?.state.stygianWell).toMatchObject({ yarnUses: 0, hymnUses: 0 });
-    expect(branch?.traitEvaluations?.at(-1)?.context).toMatchObject({
-      temporaryBoonRarityUses: 1,
-      limitedSwapUses: 1,
+    expect(branch?.traitEvaluations?.at(-1)?.state.stygianWell).toMatchObject({
+      yarnUses: 1,
+      hymnUses: 1,
     });
     expect(branch?.state.traitHistory?.equippedTraits.HeraWeaponBoon).toMatchObject({
       level: 3,
@@ -349,7 +349,7 @@ describe('Gold Gold Gold Shop pickups', () => {
     expect(
       result.settlement.branches[0]?.traitEvaluations
         ?.filter((evaluation) => evaluation.acquisitionRole === 'source')
-        .map((evaluation) => evaluation.context.boonRarityFacts?.itemOverride),
+        .map((evaluation) => evaluation.source.boonRarityFacts?.itemOverride),
     ).toEqual([
       { Rare: 0.9, Epic: 0.25, Legendary: 0.1 },
       { Rare: 0.9, Epic: 0.25, Legendary: 0.1 },

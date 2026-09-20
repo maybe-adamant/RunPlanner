@@ -157,10 +157,10 @@ function settleOrdinaryBoon(
           }),
         }),
         dispositionByAcquisitionRole: reward.dispositionByAcquisitionRole,
-        traitContext: artificerLoadout,
+        traitContext: {},
       },
     },
-    (history) => factsWithHistory(facts(), history, new Set()),
+    (state) => factsWithHistory(facts(), state.rewardHistory, new Set()),
   );
   mergeRewardFindingEmissions(findings, settled.findingEmissions);
   return Object.freeze({ settled, findings, origin });
@@ -254,11 +254,11 @@ function convert(
         dispositionByAcquisitionRole: authored.dispositionByAcquisitionRole,
         artificerReplacementByAcquisitionRole: Object.freeze({ self: replacementReward }),
         artificerReplacementSiteByAcquisitionRole: Object.freeze({ self: replacementSite }),
-        traitContext: artificerLoadout,
+        traitContext: {},
       },
       deferArtificerReplacement: true,
     },
-    (history) => factsWithHistory(facts(enteredBiomes), history, new Set()),
+    (state) => factsWithHistory(facts(enteredBiomes), state.rewardHistory, new Set()),
   );
   mergeRewardFindingEmissions(findings, generated.findingEmissions);
   const product = deferArtificerReplacement
@@ -273,8 +273,8 @@ function convert(
         acquisitionRole: 'self',
         participation: 'mandatory',
         historySequence: index + 1,
-        facts: (history) => factsWithHistory(facts(enteredBiomes), history, new Set()),
-        traitContext: artificerLoadout,
+        facts: (state) => factsWithHistory(facts(enteredBiomes), state.rewardHistory, new Set()),
+        traitContext: {},
       });
   if (!deferArtificerReplacement) mergeRewardFindingEmissions(findings, product.findingEmissions);
   return {
@@ -320,7 +320,7 @@ describe('The Artificer', () => {
               }
             : {}),
         },
-        (history) => factsWithHistory(facts(), history, new Set()),
+        (state) => factsWithHistory(facts(), state.rewardHistory, new Set()),
       );
     expect(
       settle(false).branches[0]?.events.find((event) => event.kind === 'concreteAcquisition'),
@@ -445,7 +445,7 @@ describe('The Artificer', () => {
       requiredEntryKeys: new Set(),
       seaStarDuplicateEntryKeys: new Set(['seaStarDuplicate']),
       historySequence: 1,
-      facts: (history) => factsWithHistory(facts(), history, new Set()),
+      facts: (state) => factsWithHistory(facts(), state.rewardHistory, new Set()),
     });
     expect(product.entries[0]?.participation).toBe('optional');
     expect(product.branches[0]?.state.rewardHistory.consumableRecord.GiftDrop).toBe(1);
@@ -489,7 +489,7 @@ describe('The Artificer', () => {
         requiredEntryKeys: new Set(),
         seaStarDuplicateEntryKeys: new Set(['seaStarDuplicate']),
         historySequence: 1,
-        facts: (history) => factsWithHistory(facts(), history, new Set()),
+        facts: (state) => factsWithHistory(facts(), state.rewardHistory, new Set()),
       },
     );
     expect(product.entries[0]?.participation).toBe('optional');
@@ -517,7 +517,7 @@ describe('The Artificer', () => {
       requiredEntryKeys: new Set(),
       seaStarDuplicateEntryKeys: new Set(['seaStarDuplicate']),
       historySequence: 1,
-      facts: (history) => factsWithHistory(facts(), history, new Set()),
+      facts: (state) => factsWithHistory(facts(), state.rewardHistory, new Set()),
     });
     const frontier = product.roleFrontiers?.[0];
     if (frontier === undefined) throw new Error('missing retained Bones role frontier');
@@ -887,7 +887,10 @@ describe('The Artificer', () => {
         }),
       }),
     );
-    const devotionFacts = (history: Parameters<typeof factsWithHistory>[1]) => {
+    const devotionFacts = (state: {
+      readonly rewardHistory: Parameters<typeof factsWithHistory>[1];
+    }) => {
+      const history = state.rewardHistory;
       const base = facts();
       return factsWithHistory(
         Object.freeze({
@@ -935,7 +938,7 @@ describe('The Artificer', () => {
             },
           },
           dispositionByAcquisitionRole: reward.dispositionByAcquisitionRole,
-          traitContext: artificerLoadout,
+          traitContext: {},
         },
       },
       devotionFacts,
@@ -1076,7 +1079,7 @@ describe('The Artificer', () => {
       acquisitionRole: 'self',
       participation: 'mandatory',
       historySequence: 2,
-      facts: (history) => factsWithHistory(facts(), history, new Set()),
+      facts: (state) => factsWithHistory(facts(), state.rewardHistory, new Set()),
     });
     mergeRewardFindingEmissions(conversion.findings, acquired.findingEmissions);
     expect(acquired.branches[0]?.state.rewardHistory.consumableRecord.MaxHealthDrop).toBe(1);
