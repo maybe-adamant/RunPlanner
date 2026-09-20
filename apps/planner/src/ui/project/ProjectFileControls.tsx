@@ -28,6 +28,8 @@ function GamePublicationDialog({
   onProfileChange,
   onPublish,
   onSlotChange,
+  onChooseProfile,
+  error,
 }: {
   readonly discovery: GamePlanDiscovery;
   readonly pending: boolean;
@@ -37,6 +39,8 @@ function GamePublicationDialog({
   readonly onProfileChange: (profileId: string) => void;
   readonly onPublish: () => void;
   readonly onSlotChange: (slot: GamePlanSlotNumber | '') => void;
+  readonly onChooseProfile: () => void;
+  readonly error: string | null;
 }) {
   const dialogRef = useRef<HTMLDialogElement>(null);
 
@@ -79,6 +83,16 @@ function GamePublicationDialog({
             <h2 id="game-publication-dialog-title">Publish to game</h2>
           </div>
         </header>
+        <p className="game-publication-hint">
+          Choose your named mod-manager profile (for example, h2-dev), or its ReturnOfModding
+          folder—not the parent profiles folder.
+        </p>
+        <p className="game-publication-message" role={error === null ? 'status' : 'alert'}>
+          {error ?? discovery.message}
+        </p>
+        <button className="quiet-action" disabled={pending} onClick={onChooseProfile} type="button">
+          Choose Profile Folder…
+        </button>
         <fieldset className="game-publication-selection">
           <legend className="visually-hidden">Publication target</legend>
           <label htmlFor="game-profile-target">Profile</label>
@@ -90,11 +104,16 @@ function GamePublicationDialog({
           >
             <option value="">Choose profile…</option>
             {discovery.targets.map((target) => (
-              <option key={target.id} value={target.id}>
+              <option key={target.id} value={target.id} title={target.location}>
                 {target.label}
               </option>
             ))}
           </select>
+          {discovery.targets.find((target) => target.id === selectedProfile)?.location && (
+            <p className="game-publication-location">
+              {discovery.targets.find((target) => target.id === selectedProfile)!.location}
+            </p>
+          )}
           <label htmlFor="game-plan-slot">Slot</label>
           <select
             id="game-plan-slot"
@@ -127,7 +146,7 @@ function GamePublicationDialog({
             onClick={onPublish}
             type="button"
           >
-            {pending ? 'Publishing…' : 'Publish'}
+            {pending ? 'Please wait…' : 'Publish'}
           </button>
         </footer>
       </section>
@@ -159,6 +178,8 @@ export function ProjectFileControls({
   const [gameDiscovery, setGameDiscovery] = useState<GamePlanDiscovery | null>(null);
   const [selectedGameProfile, setSelectedGameProfile] = useState<string>('');
   const [selectedGameSlot, setSelectedGameSlot] = useState<GamePlanSlotNumber | ''>('');
+  const [gamePublicationError, setGamePublicationError] = useState<string | null>(null);
+  const [choosingGameProfile, setChoosingGameProfile] = useState(false);
   const [fileMenuOpen, setFileMenuOpen] = useState(false);
   const [dreamItineraryOpen, setDreamItineraryOpen] = useState(false);
   useEffect(() => {
@@ -198,28 +219,43 @@ export function ProjectFileControls({
     try {
       const discovery = await operations.discoverGameProfiles();
       setGameDiscovery(discovery);
-      if (discovery.status === 'available' && discovery.targets.length > 0) {
-        setSelectedGameProfile(discovery.targets.length === 1 ? discovery.targets[0]!.id : '');
-        setSelectedGameSlot('');
-      } else {
-        setResult({
-          operation: 'publishGame',
-          status: discovery.status === 'available' ? 'cancelled' : 'failure',
-          message: discovery.message,
-        });
-      }
+      setGamePublicationError(null);
+      setSelectedGameProfile(discovery.targets.length === 1 ? discovery.targets[0]!.id : '');
+      setSelectedGameSlot('');
     } finally {
       setPendingOperation(null);
     }
   };
 
+  const chooseGameProfile = async () => {
+    setChoosingGameProfile(true);
+    setGamePublicationError(null);
+    try {
+      const target = await operations.chooseGameProfile();
+      if (target === null) return;
+      setGameDiscovery((current) => ({
+        status: 'available',
+        targets: [...(current?.targets ?? []).filter((entry) => entry.id !== target.id), target],
+        message: 'Choose a profile and slot.',
+      }));
+      setSelectedGameProfile(target.id);
+    } catch (error) {
+      setGamePublicationError(error instanceof Error ? error.message : String(error));
+    } finally {
+      setChoosingGameProfile(false);
+    }
+  };
+
   const publishSelectedGamePlan = async () => {
     if (selectedGameProfile.length === 0 || selectedGameSlot === '') return;
+    setGamePublicationError(null);
     const publication = await runProfileOperation('publishGame', () =>
       operations.publishGame(selectedGameProfile, selectedGameSlot),
     );
     if (publication.status === 'success') {
       closeGamePublication();
+    } else if (publication.status === 'failure') {
+      setGamePublicationError(publication.message);
     }
   };
 
@@ -456,14 +492,16 @@ export function ProjectFileControls({
           </>
         )}
       </div>
-      {gameDiscovery?.status === 'available' && gameDiscovery.targets.length > 0 && (
+      {gameDiscovery !== null && (
         <GamePublicationDialog
           discovery={gameDiscovery}
           onCancel={closeGamePublication}
           onProfileChange={setSelectedGameProfile}
           onPublish={() => void publishSelectedGamePlan()}
           onSlotChange={setSelectedGameSlot}
-          pending={pendingOperation === 'publishGame'}
+          onChooseProfile={() => void chooseGameProfile()}
+          error={gamePublicationError}
+          pending={pendingOperation === 'publishGame' || choosingGameProfile}
           selectedProfile={selectedGameProfile}
           selectedSlot={selectedGameSlot}
         />

@@ -193,6 +193,25 @@
   min-width: 0;
 }
 
+.game-publication-hint,
+.game-publication-message,
+.game-publication-location {
+  margin: 8px 0;
+  color: #aaa7af;
+  font-size: 0.8rem;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+.game-publication-message[role='alert'] {
+  color: #f0a3a3;
+}
+
+.game-publication-location {
+  grid-column: 1 / -1;
+  margin: 0;
+}
+
 .game-publication-dialog-backdrop {
   display: flex;
   width: 100%;

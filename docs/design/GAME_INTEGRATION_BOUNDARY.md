@@ -31,6 +31,15 @@ save schema. Publication rechecks against the actual outgoing plan header before
 writing. Module tests keep this packaged declaration aligned with its decoder;
 missing or incompatible declarations require a module update.
 
+Manual folder selection complements automatic discovery. The desktop accepts
+a profile folder or its `ReturnOfModding` folder, normalizes it to the profile,
+and remembers the last valid selection in application configuration. Both paths
+use the same module identity and compatibility validation and six-slot atomic
+writer. Remembered locations are revalidated during discovery; every publication
+revalidates against its outgoing header. Manual selection is independent of the
+host's automatic discovery layout, not an override of compatibility or path
+containment checks.
+
 The compiler consumes the exact simulation assembly that the planner already
 validated. It does not rerun candidate policy or duplicate validation. The
 Executor strictly decodes this bounded artifact, translates its closed facts
