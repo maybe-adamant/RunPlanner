@@ -25,6 +25,8 @@ import {
   echoLastRewardPickupEntryKey,
   encodeProjectDocument,
   roomActionKey,
+  roomActionDomainForOccurrence,
+  scheduleRequiredRoomActions,
   semanticAddressKey,
   type ExitDecision,
   type RoomActionReference,
@@ -795,7 +797,7 @@ describe('H Fields materialization', () => {
     expect(providerUses(forfeitedCageEntry)).toBe(1);
   });
 
-  it('defaults a command-created Fields room with required pickups before doors-open Cleanup', () => {
+  it('defaults each cage pickup after its encounter and before the next cage', () => {
     const occurrenceId = createOccurrenceId('h-materialized-combat02');
     const project = completeProject();
     const authored = plan(project).topology?.occurrences.find(
@@ -803,8 +805,8 @@ describe('H Fields materialization', () => {
     );
     expect(authored?.roomActions.order).toEqual([
       { kind: 'completeFieldsCage', phaseKey: 'Cage01' },
-      { kind: 'completeFieldsCage', phaseKey: 'Cage02' },
       { kind: 'interactLocalReward', groupKey: 'cages', slotKey: 'cage1' },
+      { kind: 'completeFieldsCage', phaseKey: 'Cage02' },
       { kind: 'interactLocalReward', groupKey: 'cages', slotKey: 'cage2' },
     ]);
     expect(
@@ -836,6 +838,15 @@ describe('H Fields materialization', () => {
     );
     expect(cleanup).toBeGreaterThan(finalCageEnd);
     expect(firstPickup).toBeLessThan(cleanup);
+    const firstCageEnd = entries.findIndex(
+      (entry) => entry.kind === 'boundary' && entry.boundary.key === 'encounterEnd:Cage01',
+    );
+    const nextCageStart = entries.findIndex(
+      (entry) => entry.kind === 'boundary' && entry.boundary.key === 'encounterStart:Cage02',
+    );
+    expect(firstCageEnd).toBeGreaterThanOrEqual(0);
+    expect(firstPickup).toBeGreaterThan(firstCageEnd);
+    expect(firstPickup).toBeLessThan(nextCageStart);
     expect(room.roomActionRoster.issues).toEqual([]);
   });
 
@@ -859,8 +870,8 @@ describe('H Fields materialization', () => {
       { kind: 'interactGorgon', phaseKey: 'Passive' },
       { kind: 'completeFieldsCage', phaseKey: 'Cage01' },
       { kind: 'interactGorgon', phaseKey: 'Cage01' },
-      { kind: 'completeFieldsCage', phaseKey: 'Cage02' },
       { kind: 'interactLocalReward', groupKey: 'cages', slotKey: 'cage1' },
+      { kind: 'completeFieldsCage', phaseKey: 'Cage02' },
       { kind: 'interactLocalReward', groupKey: 'cages', slotKey: 'cage2' },
     ]);
 
@@ -912,15 +923,49 @@ describe('H Fields materialization', () => {
     ).toEqual([
       retained[0],
       retained[1],
-      { kind: 'completeFieldsCage', phaseKey: 'Cage03' },
       retained[2],
       retained[3],
+      { kind: 'completeFieldsCage', phaseKey: 'Cage03' },
       { kind: 'interactLocalReward', groupKey: 'cages', slotKey: 'cage3' },
     ]);
     expect(
       occurrences?.find((occurrence) => occurrence.occurrenceId === unselectedId)?.roomActions
         .order,
     ).toEqual([]);
+  });
+
+  it('defaults missing cage pickups against the retained cage permutation without moving existing pickups', () => {
+    const occurrenceId = createOccurrenceId('h-materialized-combat02');
+    const pickup1 = { kind: 'interactLocalReward', groupKey: 'cages', slotKey: 'cage1' } as const;
+    const pickup2 = { kind: 'interactLocalReward', groupKey: 'cages', slotKey: 'cage2' } as const;
+    const order = [
+      { kind: 'completeFieldsCage', phaseKey: 'Cage02' } as const,
+      { kind: 'completeFieldsCage', phaseKey: 'Cage01' } as const,
+      pickup1,
+    ];
+    const project = replaceTestRoomActionOrder(completeProject(), catalog, biome, occurrenceId, [
+      ...order,
+      pickup2,
+    ]);
+    const context = roomActionDomainForOccurrence(project, catalog, biome, occurrenceId);
+    if (context === undefined) throw new Error('Fields action domain missing');
+    const requiredKeys = new Set([roomActionKey(pickup1), roomActionKey(pickup2)]);
+    const scheduled = scheduleRequiredRoomActions({
+      catalog,
+      domain: context.domain,
+      order,
+      requiredKeys,
+    });
+    expect(scheduled).toEqual([order[0], pickup2, order[1], pickup1]);
+    const authored = [...order, pickup2];
+    expect(
+      scheduleRequiredRoomActions({
+        catalog,
+        domain: context.domain,
+        order: authored,
+        requiredKeys,
+      }),
+    ).toBe(authored);
   });
 
   it('materializes only the selected optional prefix while retaining complete authored slots', () => {

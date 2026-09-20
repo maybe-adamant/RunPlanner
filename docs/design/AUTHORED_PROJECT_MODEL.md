@@ -562,8 +562,10 @@ ordinary Shop inventory commands, not this derived-pickup family.
 The engine classifies every structurally active Room Action as required or
 optional from the same action domain consumed by simulation. The semantic
 command that newly activates a required reference inserts it in the
-occurrence's order at the latest lifecycle-compatible position, preserving the
-relative sequence of retained rows; one command and one history entry therefore
+occurrence's order at its engine-owned default position, preserving the
+relative sequence of retained rows. Fields cage pickups default after their
+matching encounter and required NPC interaction, before the next cage;
+other actions retain their lifecycle defaults. One command and one history entry therefore
 contain both the requested edit and its mandatory membership delta. Optional
 actions remain membership-controlled by their existing owner. An active
 required row may be moved within its legal range but cannot be generically
