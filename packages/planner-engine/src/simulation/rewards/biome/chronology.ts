@@ -1047,28 +1047,24 @@ export function evaluateBiomeRewardChronology(
       hermesShrineAssessments.get(semanticAddressKey(source.origin))?.assessments,
     );
     // One token represents this exact rewardFacts closure: current/source room,
-    // declaration, immutable view, entered-biome count, shop names and peer
-    // context. Branch-varying facts have separate cache identities. This token
-    // cannot alias a later checkpoint even when it retains the same history.
+    // declaration, immutable view, shop names and peer context. Branch-varying
+    // facts have separate cache identities, and the reached route position
+    // travels inside each snapshot. This token cannot alias a later checkpoint
+    // even when it retains the same history.
     const factsContextToken = Object.freeze({});
     const snapshotFor = (checkpointBranches: readonly RewardBranchState[]) =>
       createRunState({
         catalog,
         owner,
-        historyView: view,
-        branches: checkpointBranches.map((branch) =>
-          Object.freeze({
-            ...branch,
-            state: reachSimulationHistory(branch.state, routePosition, view),
-          }),
+        states: checkpointBranches.map((branch) =>
+          reachSimulationHistory(branch.state, routePosition, view),
         ),
-        enteredBiomeCount,
         derivationCache: runStateDerivationCache,
         factsContextToken,
-        rewardFacts: (branch) =>
+        rewardFacts: (state) =>
           rewardFacts({
             catalog,
-            state: branch.state,
+            state,
             source,
             currentRoom: source,
             sourceDeclaration: declaration,
