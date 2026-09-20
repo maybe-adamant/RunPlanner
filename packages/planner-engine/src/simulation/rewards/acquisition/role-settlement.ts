@@ -1,3 +1,4 @@
+import { replaceSimulationTraitHistory } from '../../state/transitions';
 import {
   createAcquisitionEntryAddress,
   createAcquisitionRoleAddress,
@@ -29,8 +30,6 @@ import {
   consumeTimePieceCharge,
 } from '../../keepsakes/reward-effects';
 import {
-  attachTraitHistory,
-  createTraitHistoryState,
   foldTraitHistoryEvents,
   isAspectSpellDropDormant,
   recordFixedAcquisitionTraitGrant,
@@ -130,7 +129,7 @@ export function applyProducerRoleHistory(
       seaStarDuplicateSiteKey(createAcquisitionRoleAddress(incoming.origin, resolution.role)),
     ) === true;
   for (const branch of branches) {
-    const branchFacts = facts(branch.history, undefined, branch);
+    const branchFacts = facts(branch.state.rewardHistory, undefined, branch);
     if (
       !offerAlreadyGenerated &&
       !isOfferSupportedAtResolutionPoint(catalog.rewards, incoming.offer, branchFacts, {
@@ -161,15 +160,15 @@ export function applyProducerRoleHistory(
       fixedForfeit !== undefined
         ? Object.freeze({
             consumed: true as const,
-            state: branch.arcanaFear,
+            state: branch.state.arcanaFear,
             replacementRewardType: fixedForfeit.replacementRewardType,
           })
         : incoming.roomRewardForfeitEligible === true && qualifyingRewardType !== undefined
-          ? consumeRoomRewardForfeit(catalog, branch.arcanaFear, qualifyingRewardType, {
+          ? consumeRoomRewardForfeit(catalog, branch.state.arcanaFear, qualifyingRewardType, {
               owner: incoming.origin,
               sequence: resolution.historySequence,
             })
-          : Object.freeze({ consumed: false as const, state: branch.arcanaFear });
+          : Object.freeze({ consumed: false as const, state: branch.state.arcanaFear });
     const realizedAcquisition = forfeit.consumed
       ? Object.freeze({
           ...acquisition,
@@ -183,7 +182,10 @@ export function applyProducerRoleHistory(
     const forfeitBranch =
       forfeit.consumed && fixedForfeit === undefined && qualifyingRewardType !== undefined
         ? appendRewardEvent(
-            Object.freeze({ ...branch, arcanaFear: forfeit.state }),
+            Object.freeze({
+              ...branch,
+              state: Object.freeze({ ...branch.state, arcanaFear: forfeit.state }),
+            }),
             resolution.historySequence,
             Object.freeze({
               kind: 'rewardForfeited' as const,
@@ -224,11 +226,14 @@ export function applyProducerRoleHistory(
         ? attestedBranch
         : Object.freeze({
             ...attestedBranch,
-            keepsakes: consumeOlympianProviderMaterialized(
-              attestedBranch.keepsakes,
-              materializedProvider,
-              'free',
-            ),
+            state: Object.freeze({
+              ...attestedBranch.state,
+              keepsakes: consumeOlympianProviderMaterialized(
+                attestedBranch.state.keepsakes,
+                materializedProvider,
+                'free',
+              ),
+            }),
           });
     // Time Piece is assessed at the exact concrete role, after offer/bag
     // evidence exists but before any acquisition, trait, Pom, level, or
@@ -250,7 +255,10 @@ export function applyProducerRoleHistory(
         appendRewardEvent(
           Object.freeze({
             ...materializedBranch,
-            keepsakes: consumeTimePieceCharge(materializedBranch.keepsakes),
+            state: Object.freeze({
+              ...materializedBranch.state,
+              keepsakes: consumeTimePieceCharge(materializedBranch.state.keepsakes),
+            }),
           }),
           resolution.historySequence,
           {
@@ -281,12 +289,15 @@ export function applyProducerRoleHistory(
     if (forfeit.consumed) {
       const history = applyConcreteAcquisition(
         catalog.rewards,
-        materializedBranch.history,
+        materializedBranch.state.rewardHistory,
         realizedAcquisition.acquisition,
       );
       next.push(
         appendRewardEvent(
-          Object.freeze({ ...materializedBranch, history }),
+          Object.freeze({
+            ...materializedBranch,
+            state: Object.freeze({ ...materializedBranch.state, rewardHistory: history }),
+          }),
           resolution.historySequence,
           {
             kind: 'concreteAcquisition',
@@ -370,13 +381,13 @@ export function applyProducerRoleHistory(
       }
       if (pickupEffect.kind === 'anvilOfFates') {
         const temporaryHammerTraitKeys = new Set(
-          materializedBranch.keepsakes.experimentalHammers
+          materializedBranch.state.keepsakes.experimentalHammers
             .filter((hammer) => hammer.active)
             .map((hammer) => hammer.traitKey),
         );
         const assessment = assessAnvilResult(
           catalog,
-          materializedBranch.traitHistory ?? createTraitHistoryState(),
+          materializedBranch.state.traitHistory,
           authoredAnvilResult,
           incoming.traitContext ?? Object.freeze({}),
           temporaryHammerTraitKeys,
@@ -399,12 +410,12 @@ export function applyProducerRoleHistory(
         }
       }
     }
-    let history = applyConcreteAcquisition(
+    const history = applyConcreteAcquisition(
       catalog.rewards,
-      branch.history,
+      branch.state.rewardHistory,
       acquisition.acquisition,
     );
-    let acquisitionTraitHistory = materializedBranch.traitHistory ?? createTraitHistoryState();
+    let acquisitionTraitHistory = materializedBranch.state.traitHistory;
     if (pickupEffect?.kind === 'anvilOfFates' && authoredAnvilResult?.kind === 'anvilOfFates') {
       acquisitionTraitHistory = foldTraitHistoryEvents(
         catalog,
@@ -419,7 +430,6 @@ export function applyProducerRoleHistory(
           ),
         ]),
       );
-      history = attachTraitHistory(history, acquisitionTraitHistory);
     }
     const fixedTraitKey =
       catalog.rewards.acquisitions.byKey[acquisition.acquisition.gameName]?.grantedTraitKey;
@@ -427,8 +437,10 @@ export function applyProducerRoleHistory(
       catalog.rewards.acquisitions.byKey[acquisition.acquisition.gameName]?.elementContributions;
     let acquisitionBranch: RewardBranchState = Object.freeze({
       ...materializedBranch,
-      history,
-      traitHistory: acquisitionTraitHistory,
+      state: replaceSimulationTraitHistory(
+        Object.freeze({ ...materializedBranch.state, rewardHistory: history }),
+        acquisitionTraitHistory,
+      ),
     });
     const pathPointGrant: 1 | 3 | 5 | undefined =
       catalog.rewards.acquisitions.byKey[acquisition.acquisition.gameName]?.pathPointGrant ??
@@ -447,11 +459,9 @@ export function applyProducerRoleHistory(
         resolution.lifecyclePoint,
         fixedTraitKey,
       );
-      history = attachTraitHistory(history, acquisitionTraitHistory);
       acquisitionBranch = Object.freeze({
         ...acquisitionBranch,
-        history,
-        traitHistory: acquisitionTraitHistory,
+        state: replaceSimulationTraitHistory(acquisitionBranch.state, acquisitionTraitHistory),
       });
     }
     if (contributions !== undefined) {
@@ -469,14 +479,12 @@ export function applyProducerRoleHistory(
           }),
         ]),
       );
-      history = attachTraitHistory(history, acquisitionTraitHistory);
       acquisitionBranch = Object.freeze({
         ...acquisitionBranch,
-        history,
-        traitHistory: acquisitionTraitHistory,
+        state: replaceSimulationTraitHistory(acquisitionBranch.state, acquisitionTraitHistory),
       });
     }
-    const traitEventCountBeforeSettlement = acquisitionBranch.traitHistory?.events.length ?? 0;
+    const traitEventCountBeforeSettlement = acquisitionBranch.state.traitHistory.events.length ?? 0;
     const traitSettlement = applyTraitOfferForAcquisition(
       catalog,
       acquisitionBranch,
@@ -487,7 +495,7 @@ export function applyProducerRoleHistory(
       findingChronology,
       {
         directTraitSetBranchHistories: (directTraitAgreementBranches ?? branches).map(
-          (candidate) => candidate.traitHistory ?? createTraitHistoryState(),
+          (candidate) => candidate.state.traitHistory,
         ),
       },
     );
@@ -501,7 +509,7 @@ export function applyProducerRoleHistory(
       );
     const installedSpellEvent =
       acquisition.acquisition.gameName === 'SpellDrop' && pathPointGrant === undefined
-        ? traitSettlement.branch.traitHistory?.events
+        ? traitSettlement.branch.state.traitHistory.events
             .slice(traitEventCountBeforeSettlement)
             .findLast(
               (event) =>
@@ -591,7 +599,7 @@ export function applyProducerRoleHistory(
                         catalog.rewards.stores.byKey.RunProgress!,
                         prepared.bag,
                         offer,
-                        facts(prepared.branch.history, undefined, prepared.branch),
+                        facts(prepared.branch.state.rewardHistory, undefined, prepared.branch),
                         { ineligibleRewardTypes: new Set(['Devotion', 'SpellDrop']) },
                       ).length > 0
                     );

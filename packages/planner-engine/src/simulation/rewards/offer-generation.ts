@@ -143,7 +143,7 @@ function sourceOrdering(
         !isOfferSupportedAtResolutionPoint(
           context.catalog.rewards,
           context.reward.offer,
-          context.facts(branch.history, undefined, branch),
+          context.facts(branch.state.rewardHistory, undefined, branch),
           'offer',
           { priorOffers: prior.map((entry) => entry.reward.offer) },
         )
@@ -214,7 +214,7 @@ export function processRewardOffer(
       continue;
     }
     const effectiveOffer = reward.offer;
-    const facts = context.facts(originalBranch.history, undefined, originalBranch);
+    const facts = context.facts(originalBranch.state.rewardHistory, undefined, originalBranch);
     const peers = { priorOffers: context.peers.map((peer) => peer.offer) };
     if (
       !isOfferSupportedAtResolutionPoint(catalog.rewards, effectiveOffer, facts, 'offer', peers)
@@ -235,17 +235,24 @@ export function processRewardOffer(
     if (context.binding === undefined) {
       const history = applyOfferProjection(
         catalog.rewards,
-        originalBranch.history,
+        originalBranch.state.rewardHistory,
         effectiveOffer,
         facts,
       );
       next.push(
-        appendRewardEvent(Object.freeze({ ...originalBranch, history }), historySequence, {
-          kind: 'rewardOffered',
-          origin: reward.origin,
-          offer: effectiveOffer,
-          ...(reward.resolvedStoreKey === undefined ? {} : { storeKey: reward.resolvedStoreKey }),
-        }),
+        appendRewardEvent(
+          Object.freeze({
+            ...originalBranch,
+            state: Object.freeze({ ...originalBranch.state, rewardHistory: history }),
+          }),
+          historySequence,
+          {
+            kind: 'rewardOffered',
+            origin: reward.origin,
+            offer: effectiveOffer,
+            ...(reward.resolvedStoreKey === undefined ? {} : { storeKey: reward.resolvedStoreKey }),
+          },
+        ),
       );
       continue;
     }
@@ -273,7 +280,7 @@ export function processRewardOffer(
     const requiredPriority = oldestSupportedRewardPriority(
       store,
       prepared.bag,
-      originalBranch.rewardPriorities,
+      originalBranch.state.rewardPriorities,
       facts,
       bagOptions,
     );
@@ -312,7 +319,7 @@ export function processRewardOffer(
     for (const bag of transitions) {
       const history = applyOfferProjection(
         catalog.rewards,
-        prepared.branch.history,
+        prepared.branch.state.rewardHistory,
         effectiveOffer,
         facts,
       );
@@ -320,18 +327,22 @@ export function processRewardOffer(
         appendRewardEvent(
           Object.freeze({
             ...prepared.branch,
-            bags: freezeRecord({ ...prepared.branch.bags, [storeKey]: bag }),
-            rewardPriorities:
-              requiredPriority === undefined
-                ? prepared.branch.rewardPriorities
-                : Object.freeze(
-                    prepared.branch.rewardPriorities.filter(
-                      (priority, index) =>
-                        priority !== requiredPriority ||
-                        index !== prepared.branch.rewardPriorities.indexOf(requiredPriority),
+            state: Object.freeze({
+              ...prepared.branch.state,
+              bags: freezeRecord({ ...prepared.branch.state.bags, [storeKey]: bag }),
+              rewardPriorities:
+                requiredPriority === undefined
+                  ? prepared.branch.state.rewardPriorities
+                  : Object.freeze(
+                      prepared.branch.state.rewardPriorities.filter(
+                        (priority, index) =>
+                          priority !== requiredPriority ||
+                          index !==
+                            prepared.branch.state.rewardPriorities.indexOf(requiredPriority),
+                      ),
                     ),
-                  ),
-            history,
+              rewardHistory: history,
+            }),
           }),
           historySequence,
           { kind: 'rewardOffered', origin: reward.origin, offer: effectiveOffer, storeKey },
@@ -377,7 +388,7 @@ function requiredOlympianProviderForOffer(
   offer: ResolvedRewardOffer,
   peers: readonly OfferProcessingPeer[],
 ): string | undefined {
-  if (!branch.keepsakes.olympianSources.some((source) => source.remainingForceUses === 1))
+  if (!branch.state.keepsakes.olympianSources.some((source) => source.remainingForceUses === 1))
     return undefined;
   const providerForLootSource = (source: string): string | undefined =>
     catalog.traitGiverByAcquisitionGameName[source];
@@ -390,16 +401,16 @@ function requiredOlympianProviderForOffer(
           })()
         : [],
     );
-    const provider = olympianProviderForOffer(branch.keepsakes, siblingProviders);
+    const provider = olympianProviderForOffer(branch.state.keepsakes, siblingProviders);
     return provider;
   }
   if (offer.rewardType !== 'Devotion' || offer.payload?.kind !== 'DevotionPair') return undefined;
   const interactedProviders = new Set(
     Object.entries(catalog.traitGiverByAcquisitionGameName).flatMap(([source, giverKey]) =>
-      branch.history.lootTypeHistory[source] !== undefined ? [giverKey] : [],
+      branch.state.rewardHistory.lootTypeHistory[source] !== undefined ? [giverKey] : [],
     ),
   );
-  const provider = olympianProviderForOffer(branch.keepsakes, [], true, interactedProviders);
+  const provider = olympianProviderForOffer(branch.state.keepsakes, [], true, interactedProviders);
   return provider;
 }
 
@@ -422,21 +433,25 @@ function recordCanonicalOffer(
   branch: RewardBranchState,
   context: OfferProcessingContext,
 ): RewardBranchState {
-  const facts = context.facts(branch.history, undefined, branch);
+  const facts = context.facts(branch.state.rewardHistory, undefined, branch);
   const history = applyOfferProjection(
     context.catalog.rewards,
-    branch.history,
+    branch.state.rewardHistory,
     context.reward.offer,
     facts,
   );
-  return appendRewardEvent(Object.freeze({ ...branch, history }), context.historySequence, {
-    kind: 'rewardOffered',
-    origin: context.reward.origin,
-    offer: context.reward.offer,
-    ...(context.reward.resolvedStoreKey === undefined
-      ? {}
-      : { storeKey: context.reward.resolvedStoreKey }),
-  });
+  return appendRewardEvent(
+    Object.freeze({ ...branch, state: Object.freeze({ ...branch.state, rewardHistory: history }) }),
+    context.historySequence,
+    {
+      kind: 'rewardOffered',
+      origin: context.reward.origin,
+      offer: context.reward.offer,
+      ...(context.reward.resolvedStoreKey === undefined
+        ? {}
+        : { storeKey: context.reward.resolvedStoreKey }),
+    },
+  );
 }
 
 export function processOfferGenerationCohort(
@@ -504,14 +519,12 @@ export function processOfferGenerationCohort(
       }
       for (const candidate of candidates) {
         let canonical: RewardBranchState = Object.freeze({
-          // Offer-order permutations may only contribute the candidate bag
-          // state. The rest of the branch has already progressed through the
-          // same history, traits, keepsakes, and evaluations; carrying the
-          // whole candidate would replay that permutation-local evolution a
-          // second time when canonical offers are recorded below.
           ...branch,
-          bags: candidate.bags,
-          rewardPriorities: candidate.rewardPriorities,
+          state: Object.freeze({
+            ...branch.state,
+            bags: candidate.state.bags,
+            rewardPriorities: candidate.state.rewardPriorities,
+          }),
         });
         for (const context of contexts) {
           canonical = recordCanonicalOffer(canonical, context);
@@ -607,7 +620,7 @@ export function consumeOlympianProviderForReachedOffer(
 ): RewardBranchState {
   if (
     provenance === 'paid' ||
-    !branch.keepsakes.olympianSources.some((source) => source.remainingForceUses === 1)
+    !branch.state.keepsakes.olympianSources.some((source) => source.remainingForceUses === 1)
   )
     return branch;
   const offer = reachedOfferForOrigin(branch, origin);
@@ -625,7 +638,14 @@ export function consumeOlympianProviderForReachedOffer(
     (current, provider) =>
       Object.freeze({
         ...current,
-        keepsakes: consumeOlympianProviderMaterialized(current.keepsakes, provider, provenance),
+        state: Object.freeze({
+          ...current.state,
+          keepsakes: consumeOlympianProviderMaterialized(
+            current.state.keepsakes,
+            provider,
+            provenance,
+          ),
+        }),
       }),
     branch,
   );

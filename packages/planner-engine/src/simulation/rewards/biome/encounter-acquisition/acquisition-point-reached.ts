@@ -1,3 +1,4 @@
+import { replaceSimulationTraitHistory } from '../../../state/transitions';
 import type { Catalog, RoomDeclaration } from '../../../../catalog-schema';
 import type { PlannerTimelineFacts } from '../../../timeline-facts';
 import {
@@ -32,11 +33,7 @@ import {
   assessHermesShrineTravelDealRefill,
   type HermesShrineTravelDealRefillAssessment,
 } from '../../../commerce/hermes-shrine';
-import {
-  attachTraitHistory,
-  createTraitHistoryState,
-  foldTraitHistoryEvents,
-} from '../../../traits';
+import { foldTraitHistoryEvents } from '../../../traits';
 import { ownerRegion, type FindingRegionEntry } from '../../../finding-regions';
 import { canonicalArtificerSource } from '../reward-sources';
 import {
@@ -172,9 +169,12 @@ export function applyAcquisitionPointReachedTransition(
       branches: inputs.sourceBranches.map((branch) =>
         Object.freeze({
           ...branch,
-          pendingHermesShrineDeliveries: Object.freeze({
-            ...branch.pendingHermesShrineDeliveries,
-            ...scheduled,
+          state: Object.freeze({
+            ...branch.state,
+            pendingHermesShrineDeliveries: Object.freeze({
+              ...branch.state.pendingHermesShrineDeliveries,
+              ...scheduled,
+            }),
           }),
         }),
       ),
@@ -297,9 +297,7 @@ export function applyAcquisitionPointReachedTransition(
       traitKey !== null &&
       traitKey !== undefined &&
       inputs.sourceBranches.every((branch) => {
-        const equipped = (branch.traitHistory ?? createTraitHistoryState()).equippedTraits[
-          traitKey
-        ];
+        const equipped = branch.state.traitHistory.equippedTraits[traitKey];
         return equipped !== undefined && isPurgingPoolEligibleTrait(catalog, equipped);
       });
     if (!available) {
@@ -319,7 +317,7 @@ export function applyAcquisitionPointReachedTransition(
     }
     return transitionResult({
       branches: inputs.sourceBranches.map((branch) => {
-        const before = branch.traitHistory ?? createTraitHistoryState();
+        const before = branch.state.traitHistory;
         const traitHistory = foldTraitHistoryEvents(catalog, [
           ...before.events,
           Object.freeze({
@@ -334,8 +332,7 @@ export function applyAcquisitionPointReachedTransition(
         ]);
         return Object.freeze({
           ...branch,
-          history: attachTraitHistory(branch.history, traitHistory),
-          traitHistory,
+          state: replaceSimulationTraitHistory(branch.state, traitHistory),
         });
       }),
       findings,
@@ -465,7 +462,7 @@ export function applyAcquisitionPointReachedTransition(
       };
       const sourceKey = hermesShrineDeliveryEntryKey(sourceOrigin, shrineDelivery.generationKey);
       const due = inputs.sourceBranches.map(
-        (branch) => branch.pendingHermesShrineDeliveries[sourceKey],
+        (branch) => branch.state.pendingHermesShrineDeliveries[sourceKey],
       );
       const firstDue = due[0];
       const agreedDue =
@@ -500,7 +497,7 @@ export function applyAcquisitionPointReachedTransition(
       ) {
         const preRushView = roomView.preOutgoing ?? roomView.entry;
         const qualifies = inputs.sourceBranches.every(
-          (branch) => branch.traitHistory?.equippedTraits.RestockBoon !== undefined,
+          (branch) => branch.state.traitHistory.equippedTraits.RestockBoon !== undefined,
         );
         refillState = Object.freeze({
           firstRushedInitialGeneration: true,
@@ -514,7 +511,7 @@ export function applyAcquisitionPointReachedTransition(
                 catalog,
                 room.hermesShrine!,
                 shrineDelivery.generationKey,
-                [factsAt(preRushView, branch.history, branch).requirements],
+                [factsAt(preRushView, branch.state.rewardHistory, branch).requirements],
               );
               return assessment === undefined ? [] : [assessment];
             }),
@@ -593,7 +590,7 @@ export function applyAcquisitionPointReachedTransition(
             semanticAddressKey(candidate.settlement.entry) === settledEntryKey,
         );
         if (!settledThisEntry) return branch;
-        const { [sourceKey]: delivered, ...remaining } = branch.pendingHermesShrineDeliveries;
+        const { [sourceKey]: delivered, ...remaining } = branch.state.pendingHermesShrineDeliveries;
         void delivered;
         const nextPending = { ...remaining };
         if (
@@ -620,7 +617,10 @@ export function applyAcquisitionPointReachedTransition(
         }
         return Object.freeze({
           ...branch,
-          pendingHermesShrineDeliveries: Object.freeze(nextPending),
+          state: Object.freeze({
+            ...branch.state,
+            pendingHermesShrineDeliveries: Object.freeze(nextPending),
+          }),
         });
       });
       return transitionResult({

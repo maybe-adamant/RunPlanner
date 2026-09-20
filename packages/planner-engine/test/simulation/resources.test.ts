@@ -520,7 +520,10 @@ describe('selected resource success legality', () => {
       history,
       ordinaryPositionFor(catalog, snapshot),
       route.loadout,
-      initializeTestRewardBranches().map((branch) => ({ ...branch, traitHistory: before })),
+      initializeTestRewardBranches().map((branch) => ({
+        ...branch,
+        state: Object.freeze({ ...branch.state, traitHistory: before }),
+      })),
     );
     const withResource = evaluateBiomeRewards(
       catalog,
@@ -528,7 +531,10 @@ describe('selected resource success legality', () => {
       history,
       ordinaryPositionFor(catalog, snapshot),
       route.loadout,
-      initializeTestRewardBranches().map((branch) => ({ ...branch, traitHistory: before })),
+      initializeTestRewardBranches().map((branch) => ({
+        ...branch,
+        state: Object.freeze({ ...branch.state, traitHistory: before }),
+      })),
       { ...none(), Pickaxe: at('F', host.occurrenceId) },
     );
     const throughHostWithResource = evaluateBiomeRewards(
@@ -537,7 +543,10 @@ describe('selected resource success legality', () => {
       throughHostExit,
       ordinaryPositionFor(catalog, snapshot),
       route.loadout,
-      initializeTestRewardBranches().map((branch) => ({ ...branch, traitHistory: before })),
+      initializeTestRewardBranches().map((branch) => ({
+        ...branch,
+        state: Object.freeze({ ...branch.state, traitHistory: before }),
+      })),
       { ...none(), Pickaxe: at('F', host.occurrenceId) },
     );
     // The host's already-resolved offer is identical. The added exit effect
@@ -564,7 +573,7 @@ describe('selected resource success legality', () => {
 
     // The real selected placement emits at the room-exit boundary. That makes
     // the fourth matching element visible only to the following room's offer.
-    const after = throughHostWithResource.branches[0]?.traitHistory;
+    const after = throughHostWithResource.branches[0]?.state.traitHistory;
     if (after === undefined) throw new Error('selected resource did not publish trait history');
     expect(after.events).toContainEqual(
       expect.objectContaining({
@@ -661,7 +670,7 @@ describe('selected resource success legality', () => {
     expect(evaluated.summary.eligibleForExecutionPlan).toBe(false);
     expect(
       f?.rewards.branches
-        .flatMap((branch) => branch.traitHistory?.events ?? [])
+        .flatMap((branch) => branch.state.traitHistory?.events ?? [])
         .filter(
           (event) =>
             event.kind === 'elementContribution' && event.acquisitionRole === 'resource:Shovel',

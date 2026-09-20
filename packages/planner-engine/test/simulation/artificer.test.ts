@@ -27,7 +27,7 @@ import {
   createArcanaFearState,
   promoteArcana,
 } from '../../src/simulation/arcana-fear';
-import { initializeRewardBranches } from '../../src/simulation/rewards/branch-lifecycle';
+import { initializeTestRewardBranchesForRoute as initializeRewardBranches } from '../support/arcana-fear';
 import {
   assessArtificerConversion,
   assessSeaStarDuplication,
@@ -189,20 +189,23 @@ function withSeaStarAndTimePiece(
     branches.map((branch) =>
       Object.freeze({
         ...branch,
-        keepsakes: Object.freeze({
-          ...branch.keepsakes,
-          fatedStatus: 'Fated' as const,
-          timePiece: Object.freeze({ remainingCharges: 1 }),
-        }),
-        traitHistory: Object.freeze({
-          ...createTraitHistoryState(),
-          equippedTraits: Object.freeze({
-            DoubleRewardBoon: Object.freeze({
-              traitKey: 'DoubleRewardBoon',
-              giverKey: 'Poseidon',
-              providerKind: 'olympian' as const,
-              rarity: 'Common' as const,
-              sourceRole: 'selection' as const,
+        state: Object.freeze({
+          ...branch.state,
+          keepsakes: Object.freeze({
+            ...branch.state.keepsakes,
+            fatedStatus: 'Fated' as const,
+            timePiece: Object.freeze({ remainingCharges: 1 }),
+          }),
+          traitHistory: Object.freeze({
+            ...createTraitHistoryState(),
+            equippedTraits: Object.freeze({
+              DoubleRewardBoon: Object.freeze({
+                traitKey: 'DoubleRewardBoon',
+                giverKey: 'Poseidon',
+                providerKind: 'olympian' as const,
+                rarity: 'Common' as const,
+                sourceRole: 'selection' as const,
+              }),
             }),
           }),
         }),
@@ -335,15 +338,18 @@ describe('The Artificer', () => {
     const [base] = initialBranches();
     const branch = Object.freeze({
       ...base!,
-      traitHistory: Object.freeze({
-        ...createTraitHistoryState(),
-        equippedTraits: Object.freeze({
-          DoubleRewardBoon: Object.freeze({
-            traitKey: 'DoubleRewardBoon',
-            giverKey: 'Poseidon',
-            providerKind: 'olympian' as const,
-            rarity: 'Common' as const,
-            sourceRole: 'selection',
+      state: Object.freeze({
+        ...base!.state,
+        traitHistory: Object.freeze({
+          ...createTraitHistoryState(),
+          equippedTraits: Object.freeze({
+            DoubleRewardBoon: Object.freeze({
+              traitKey: 'DoubleRewardBoon',
+              giverKey: 'Poseidon',
+              providerKind: 'olympian' as const,
+              rarity: 'Common' as const,
+              sourceRole: 'selection',
+            }),
           }),
         }),
       }),
@@ -442,7 +448,7 @@ describe('The Artificer', () => {
       facts: (history) => factsWithHistory(facts(), history, new Set()),
     });
     expect(product.entries[0]?.participation).toBe('optional');
-    expect(product.branches[0]?.history.consumableRecord.GiftDrop).toBe(1);
+    expect(product.branches[0]?.state.rewardHistory.consumableRecord.GiftDrop).toBe(1);
     expect(product.roleFrontiers?.[0]?.source.blocksSeaStarDuplication).toBe(true);
     expect(product.branches[0]?.events).toContainEqual(
       expect.objectContaining({
@@ -487,7 +493,7 @@ describe('The Artificer', () => {
       },
     );
     expect(product.entries[0]?.participation).toBe('optional');
-    expect(product.branches[0]?.hexProgress).toMatchObject({
+    expect(product.branches[0]?.state.hexProgress).toMatchObject({
       bankedPathPoints: 0,
       investedPathPoints: 3,
     });
@@ -525,10 +531,13 @@ describe('The Artificer', () => {
     ).toMatchObject({ supported: false, evidence: { blocksArtificerConversion: true } });
     const timePieceBranch = Object.freeze({
       ...frontier.branchesBeforeRole[0]!,
-      keepsakes: Object.freeze({
-        ...frontier.branchesBeforeRole[0]!.keepsakes,
-        fatedStatus: 'Fated' as const,
-        timePiece: Object.freeze({ remainingCharges: 1 }),
+      state: Object.freeze({
+        ...frontier.branchesBeforeRole[0]!.state,
+        keepsakes: Object.freeze({
+          ...frontier.branchesBeforeRole[0]!.state.keepsakes,
+          fatedStatus: 'Fated' as const,
+          timePiece: Object.freeze({ remainingCharges: 1 }),
+        }),
       }),
     });
     expect(
@@ -581,7 +590,7 @@ describe('The Artificer', () => {
     'owns exact Epic capacity three and preserves %i spent uses when Lazuli adds one capacity',
     (spent) => {
       let branches = initialBranches();
-      expect(artificerStatus(catalog, branches[0]!.arcanaFear)).toEqual({
+      expect(artificerStatus(catalog, branches[0]!.state.arcanaFear)).toEqual({
         rarity: 'Epic',
         capacity: 3,
         spent: 0,
@@ -593,13 +602,13 @@ describe('The Artificer', () => {
         .entries()) {
         branches = convert(branches, index, rewardType).product.branches;
       }
-      expect(artificerStatus(catalog, branches[0]!.arcanaFear)).toMatchObject({
+      expect(artificerStatus(catalog, branches[0]!.state.arcanaFear)).toMatchObject({
         capacity: 3,
         spent,
         remaining: 3 - spent,
       });
 
-      const promoted = promoteArcana(catalog, branches[0]!.arcanaFear, ['MetaToRunUpgrade'], {
+      const promoted = promoteArcana(catalog, branches[0]!.state.arcanaFear, ['MetaToRunUpgrade'], {
         owner: createOccurrenceAddress(biome, createOccurrenceId('lazuli')),
         sequence: 100,
       });
@@ -624,19 +633,19 @@ describe('The Artificer', () => {
       branches = conversion.product.branches;
     }
     const branch = branches[0]!;
-    expect(artificerStatus(catalog, branch.arcanaFear)).toMatchObject({
+    expect(artificerStatus(catalog, branch.state.arcanaFear)).toMatchObject({
       capacity: 3,
       spent: 3,
       remaining: 0,
     });
-    expect(branch.history.consumableRecord.GiftDrop).toBeUndefined();
-    expect(branch.history.consumableRecord).toMatchObject({
+    expect(branch.state.rewardHistory.consumableRecord.GiftDrop).toBeUndefined();
+    expect(branch.state.rewardHistory.consumableRecord).toMatchObject({
       MaxHealthDrop: 1,
       MaxManaDrop: 1,
       RoomMoneyDrop: 1,
     });
     expect(branch.events.filter((event) => event.kind === 'artificerConversion')).toHaveLength(3);
-    expect(branch.bags.RunProgress).toBeDefined();
+    expect(branch.state.bags.RunProgress).toBeDefined();
 
     const exhausted = convert(branches, 4, 'MaxHealthDrop');
     expect([...exhausted.findings.values()]).toEqual(
@@ -646,7 +655,7 @@ describe('The Artificer', () => {
         }),
       ]),
     );
-    expect(exhausted.product.branches[0]?.history.consumableRecord.GiftDrop).toBe(1);
+    expect(exhausted.product.branches[0]?.state.rewardHistory.consumableRecord.GiftDrop).toBe(1);
   });
 
   it('does not restore an exhausted uncollected RunProgress entry for a sibling conversion', () => {
@@ -666,20 +675,29 @@ describe('The Artificer', () => {
     const seeded = initialBranches().map((branch) =>
       Object.freeze({
         ...branch,
-        bags: Object.freeze({
-          ...branch.bags,
-          RunProgress: Object.freeze({ remainingEntryCounts: Object.freeze(remainingEntryCounts) }),
+        state: Object.freeze({
+          ...branch.state,
+          bags: Object.freeze({
+            ...branch.state.bags,
+            RunProgress: Object.freeze({
+              remainingEntryCounts: Object.freeze(remainingEntryCounts),
+            }),
+          }),
         }),
       }),
     );
 
     const first = convert(seeded, 0, 'MaxHealthDrop', true);
     expect(first.findings.size).toBe(0);
-    expect(first.product.branches[0]?.bags.RunProgress?.remainingEntryCounts[maxHealthIndex]).toBe(
-      0,
-    );
-    expect(first.product.branches[0]?.bags.RunProgress?.remainingEntryCounts[maxManaIndex]).toBe(1);
-    expect(first.product.branches[0]?.history.consumableRecord.MaxHealthDrop).toBeUndefined();
+    expect(
+      first.product.branches[0]?.state.bags.RunProgress?.remainingEntryCounts[maxHealthIndex],
+    ).toBe(0);
+    expect(
+      first.product.branches[0]?.state.bags.RunProgress?.remainingEntryCounts[maxManaIndex],
+    ).toBe(1);
+    expect(
+      first.product.branches[0]?.state.rewardHistory.consumableRecord.MaxHealthDrop,
+    ).toBeUndefined();
 
     const second = convert(first.product.branches, 1, 'MaxHealthDrop', true);
     expect([...second.findings.values()]).toEqual(
@@ -691,9 +709,12 @@ describe('The Artificer', () => {
     );
     const branch = second.product.branches[0];
     if (branch === undefined) throw new Error('Artificer sibling branch is missing');
-    expect(artificerStatus(catalog, branch.arcanaFear)).toMatchObject({ spent: 1, remaining: 2 });
-    expect(branch.bags.RunProgress?.remainingEntryCounts[maxHealthIndex]).toBe(0);
-    expect(branch.bags.RunProgress?.remainingEntryCounts[maxManaIndex]).toBe(1);
+    expect(artificerStatus(catalog, branch.state.arcanaFear)).toMatchObject({
+      spent: 1,
+      remaining: 2,
+    });
+    expect(branch.state.bags.RunProgress?.remainingEntryCounts[maxHealthIndex]).toBe(0);
+    expect(branch.state.bags.RunProgress?.remainingEntryCounts[maxManaIndex]).toBe(1);
     expect(branch.events.filter((event) => event.kind === 'artificerConversion')).toHaveLength(1);
     expect(
       branch.events.filter(
@@ -725,9 +746,14 @@ describe('The Artificer', () => {
     const seeded = initialBranches().map((branch) =>
       Object.freeze({
         ...branch,
-        bags: Object.freeze({
-          ...branch.bags,
-          RunProgress: Object.freeze({ remainingEntryCounts: Object.freeze(remainingEntryCounts) }),
+        state: Object.freeze({
+          ...branch.state,
+          bags: Object.freeze({
+            ...branch.state.bags,
+            RunProgress: Object.freeze({
+              remainingEntryCounts: Object.freeze(remainingEntryCounts),
+            }),
+          }),
         }),
       }),
     );
@@ -737,8 +763,11 @@ describe('The Artificer', () => {
     expect(second.findings.size).toBe(0);
     const branch = second.product.branches[0];
     if (branch === undefined) throw new Error('Artificer duplicate-copy branch is missing');
-    expect(branch.bags.RunProgress?.remainingEntryCounts[maxHealthIndex]).toBe(0);
-    expect(artificerStatus(catalog, branch.arcanaFear)).toMatchObject({ spent: 2, remaining: 1 });
+    expect(branch.state.bags.RunProgress?.remainingEntryCounts[maxHealthIndex]).toBe(0);
+    expect(artificerStatus(catalog, branch.state.arcanaFear)).toMatchObject({
+      spent: 2,
+      remaining: 1,
+    });
     expect(branch.events.filter((event) => event.kind === 'artificerConversion')).toHaveLength(2);
     expect(
       branch.events.filter(
@@ -755,10 +784,10 @@ describe('The Artificer', () => {
       const branch = conversion.product.branches[0];
       if (branch === undefined) throw new Error('Artificer Forfeit branch is missing');
 
-      expect(artificerStatus(catalog, branch.arcanaFear)).toMatchObject({ spent: 1 });
-      expect(branch.arcanaFear.fear.forfeitConsumed).toBe(true);
-      expect(branch.history.consumableRecord.Boon).toBeUndefined();
-      expect(branch.history.consumableRecord.RoomRewardConsolationPrize).toBe(1);
+      expect(artificerStatus(catalog, branch.state.arcanaFear)).toMatchObject({ spent: 1 });
+      expect(branch.state.arcanaFear.fear.forfeitConsumed).toBe(true);
+      expect(branch.state.rewardHistory.consumableRecord.Boon).toBeUndefined();
+      expect(branch.state.rewardHistory.consumableRecord.RoomRewardConsolationPrize).toBe(1);
       expect(branch.events).toContainEqual(
         expect.objectContaining({
           kind: 'rewardOffered',
@@ -849,9 +878,12 @@ describe('The Artificer', () => {
     const seeded = initialBranches(true).map((branch) =>
       Object.freeze({
         ...branch,
-        history: Object.freeze({
-          ...branch.history,
-          lootTypeHistory: Object.freeze({ ApolloUpgrade: 1, ZeusUpgrade: 1 }),
+        state: Object.freeze({
+          ...branch.state,
+          rewardHistory: Object.freeze({
+            ...branch.state.rewardHistory,
+            lootTypeHistory: Object.freeze({ ApolloUpgrade: 1, ZeusUpgrade: 1 }),
+          }),
         }),
       }),
     );
@@ -911,7 +943,7 @@ describe('The Artificer', () => {
     mergeRewardFindingEmissions(findings, settled.findingEmissions);
     const branch = settled.branches[0];
     if (branch === undefined) throw new Error('Devotion Forfeit branch is missing');
-    expect(branch.arcanaFear.fear.forfeitConsumed).toBe(false);
+    expect(branch.state.arcanaFear.fear.forfeitConsumed).toBe(false);
     expect(branch.events.filter((event) => event.kind === 'rewardForfeited')).toEqual([]);
     expect(
       branch.events.filter(
@@ -931,7 +963,7 @@ describe('The Artificer', () => {
     expect(
       ordinaryFirstBranch.events.filter((event) => event.kind === 'rewardForfeited'),
     ).toHaveLength(1);
-    expect(ordinaryFirstBranch.arcanaFear.fear.forfeitConsumed).toBe(true);
+    expect(ordinaryFirstBranch.state.arcanaFear.fear.forfeitConsumed).toBe(true);
 
     const artificerFirst = convert(initialBranches(true), 0, 'Boon');
     expect(artificerFirst.findings.size).toBe(0);
@@ -945,8 +977,10 @@ describe('The Artificer', () => {
     expect(
       artificerFirstBranch.events.filter((event) => event.kind === 'rewardForfeited'),
     ).toHaveLength(1);
-    expect(artificerFirstBranch.arcanaFear.fear.forfeitConsumed).toBe(true);
-    expect(artificerFirstBranch.history.consumableRecord.RoomRewardConsolationPrize).toBe(1);
+    expect(artificerFirstBranch.state.arcanaFear.fear.forfeitConsumed).toBe(true);
+    expect(
+      artificerFirstBranch.state.rewardHistory.consumableRecord.RoomRewardConsolationPrize,
+    ).toBe(1);
   });
 
   it('appends one full RunProgress set without discarding excluded leftovers', () => {
@@ -960,9 +994,12 @@ describe('The Artificer', () => {
     const seeded = initialBranches().map((branch) =>
       Object.freeze({
         ...branch,
-        bags: Object.freeze({
-          ...branch.bags,
-          RunProgress: Object.freeze({ remainingEntryCounts: before }),
+        state: Object.freeze({
+          ...branch.state,
+          bags: Object.freeze({
+            ...branch.state.bags,
+            RunProgress: Object.freeze({ remainingEntryCounts: before }),
+          }),
         }),
       }),
     );
@@ -977,10 +1014,10 @@ describe('The Artificer', () => {
     if (selectedIndex < 0) throw new Error('base Room Money entry is missing');
     const expected = before.map((count, index) => count + 1 - (index === selectedIndex ? 1 : 0));
 
-    expect(branch.bags.RunProgress?.remainingEntryCounts).toEqual(expected);
+    expect(branch.state.bags.RunProgress?.remainingEntryCounts).toEqual(expected);
     for (const excluded of ['Devotion', 'SpellDrop'] as const) {
       const index = store.entries.findIndex((entry) => entry.rewardType === excluded);
-      expect(branch.bags.RunProgress?.remainingEntryCounts[index]).toBe(before[index]! + 1);
+      expect(branch.state.bags.RunProgress?.remainingEntryCounts[index]).toBe(before[index]! + 1);
       expect(branch.events).not.toContainEqual(
         expect.objectContaining({ kind: 'rewardOffered', offer: { rewardType: excluded } }),
       );
@@ -988,20 +1025,23 @@ describe('The Artificer', () => {
     expect(branch.events).toContainEqual(
       expect.objectContaining({ kind: 'rewardOffered', offer: { rewardType: 'RoomMoneyDrop' } }),
     );
-    expect(branch.history.consumableRecord.RoomMoneyDrop).toBe(1);
+    expect(branch.state.rewardHistory.consumableRecord.RoomMoneyDrop).toBe(1);
   });
 
   it('rejects a Hammer replacement after an earlier Hammer entered acquisition history', () => {
     const seeded = initialBranches().map((branch) =>
       Object.freeze({
         ...branch,
-        history: applyConcreteAcquisition(catalog.rewards, branch.history, {
-          kind: 'loot',
-          gameName: 'WeaponUpgrade',
+        state: Object.freeze({
+          ...branch.state,
+          rewardHistory: applyConcreteAcquisition(catalog.rewards, branch.state.rewardHistory, {
+            kind: 'loot',
+            gameName: 'WeaponUpgrade',
+          }),
         }),
       }),
     );
-    expect(seeded[0]?.history.lootTypeHistory.WeaponUpgrade).toBe(1);
+    expect(seeded[0]?.state.rewardHistory.lootTypeHistory.WeaponUpgrade).toBe(1);
 
     const denied = convert(seeded, 1, 'WeaponUpgrade', false, 1);
     expect([...denied.findings.values()]).toContainEqual(
@@ -1009,7 +1049,7 @@ describe('The Artificer', () => {
         finding: expect.objectContaining({ code: 'artificerReplacementUnavailable' }),
       }),
     );
-    expect(denied.product.branches[0]?.history.lootTypeHistory.WeaponUpgrade).toBe(1);
+    expect(denied.product.branches[0]?.state.rewardHistory.lootTypeHistory.WeaponUpgrade).toBe(1);
     expect(
       denied.product.branches[0]?.events.filter(
         (event) =>
@@ -1022,9 +1062,9 @@ describe('The Artificer', () => {
   it('separates generation from a later dependent pickup checkpoint', () => {
     const conversion = convert(initialBranches(), 0, 'MaxHealthDrop', true);
     const generated = conversion.product.branches[0]!;
-    expect(generated.history.consumableRecord.GiftDrop).toBeUndefined();
-    expect(generated.history.consumableRecord.MaxHealthDrop).toBeUndefined();
-    expect(artificerStatus(catalog, generated.arcanaFear)?.spent).toBe(1);
+    expect(generated.state.rewardHistory.consumableRecord.GiftDrop).toBeUndefined();
+    expect(generated.state.rewardHistory.consumableRecord.MaxHealthDrop).toBeUndefined();
+    expect(artificerStatus(catalog, generated.state.arcanaFear)?.spent).toBe(1);
 
     const acquired = settleArtificerReplacementAcquisition(catalog, conversion.product.branches, {
       siteOwner: conversion.replacementSite.owner,
@@ -1039,7 +1079,7 @@ describe('The Artificer', () => {
       facts: (history) => factsWithHistory(facts(), history, new Set()),
     });
     mergeRewardFindingEmissions(conversion.findings, acquired.findingEmissions);
-    expect(acquired.branches[0]?.history.consumableRecord.MaxHealthDrop).toBe(1);
+    expect(acquired.branches[0]?.state.rewardHistory.consumableRecord.MaxHealthDrop).toBe(1);
     expect(acquired.entries[0]?.address).toEqual(
       createAcquisitionEntryAddress(
         conversion.replacementSite,

@@ -33,7 +33,7 @@ import {
   foldTraitHistoryEvents,
 } from '../../src/simulation/traits';
 import type { RewardBranchState } from '../../src/simulation/rewards/branch-primitives';
-import { initializeRewardBranches } from '../../src/simulation/rewards/branch-lifecycle';
+import { initializeTestRewardBranchesForRoute as initializeRewardBranches } from '../support/arcana-fear';
 import { applyEncounterEndEffectsTransition } from '../../src/simulation/rewards/biome/lifecycle-transitions/encounter-end-effects';
 import { applyKeepsakeRackUsedTransition } from '../../src/simulation/rewards/biome/lifecycle-transitions/keepsake-rack-used';
 import { createTraitOfferCandidateArtifacts } from '../../src/simulation/candidates/trait-offer/capability';
@@ -50,9 +50,12 @@ function branchWithHistory(
   if (branch === undefined) throw new Error('missing test reward branch');
   return Object.freeze({
     ...branch,
-    history: attachTraitHistory(branch.history, history),
-    traitHistory: history,
-    keepsakes,
+    state: Object.freeze({
+      ...branch.state,
+      rewardHistory: attachTraitHistory(branch.state.rewardHistory, history),
+      traitHistory: history,
+      keepsakes: keepsakes,
+    }),
   });
 }
 
@@ -165,14 +168,14 @@ describe('Transcendent Embryo declaration and direct Chaos fold', () => {
       });
 
     let branches: readonly RewardBranchState[] = [initial];
-    expect(branches[0]?.keepsakes.transcendentEmbryo?.progress).toBe(0);
+    expect(branches[0]?.state.keepsakes.transcendentEmbryo?.progress).toBe(0);
     for (let sequence = 1; sequence < 8; sequence += 1) {
       const transition = applyEncounterEndEffectsTransition(catalog, end(sequence), room, branches);
       expect(transition.transcendentEmbryoThresholds).toHaveLength(0);
-      expect(transition.branches[0]?.keepsakes.transcendentEmbryo?.progress).toBe(sequence);
+      expect(transition.branches[0]?.state.keepsakes.transcendentEmbryo?.progress).toBe(sequence);
       branches = transition.branches;
     }
-    expect(branches[0]?.keepsakes.transcendentEmbryo?.progress).toBe(7);
+    expect(branches[0]?.state.keepsakes.transcendentEmbryo?.progress).toBe(7);
 
     const suppressed = applyEncounterEndEffectsTransition(
       catalog,
@@ -181,7 +184,7 @@ describe('Transcendent Embryo declaration and direct Chaos fold', () => {
       branches,
     );
     expect(suppressed.transcendentEmbryoThresholds).toHaveLength(0);
-    expect(suppressed.branches[0]?.keepsakes.transcendentEmbryo?.progress).toBe(7);
+    expect(suppressed.branches[0]?.state.keepsakes.transcendentEmbryo?.progress).toBe(7);
 
     const missing = applyEncounterEndEffectsTransition(
       catalog,
@@ -199,11 +202,11 @@ describe('Transcendent Embryo declaration and direct Chaos fold', () => {
 
     const resolved = applyEncounterEndEffectsTransition(catalog, end(9), room, suppressed.branches);
     expect(resolved.findings).toHaveLength(0);
-    expect(resolved.branches[0]?.keepsakes.transcendentEmbryo).toMatchObject({
+    expect(resolved.branches[0]?.state.keepsakes.transcendentEmbryo).toMatchObject({
       progress: 0,
       markedBlessingKey: 'ChaosWeaponBlessing',
     });
-    expect(resolved.branches[0]?.traitHistory?.maturedChaosBlessings).toMatchObject([
+    expect(resolved.branches[0]?.state.traitHistory?.maturedChaosBlessings).toMatchObject([
       { blessingKey: 'ChaosWeaponBlessing' },
     ]);
   });
@@ -227,19 +230,22 @@ describe('Transcendent Embryo declaration and direct Chaos fold', () => {
       'Epic',
       { routeKey: 'Underworld' },
     );
-    let keepsakes = equipped.keepsakes;
+    let keepsakes = equipped.state.keepsakes;
     for (let index = 0; index < 7; index += 1)
       keepsakes = advanceTranscendentEmbryoProgress(keepsakes).state;
     const branch = Object.freeze({
       ...equipped,
-      keepsakes,
-      pendingHermesShrineDeliveries: Object.freeze({
-        delivery: Object.freeze({
-          sourceKey: 'delivery',
-          sourceOrigin: encounterOwner,
-          generationKey: 'initial:first' as const,
-          rewardType: 'Boon',
-          remainingUses: 1,
+      state: Object.freeze({
+        ...equipped.state,
+        keepsakes: keepsakes,
+        pendingHermesShrineDeliveries: Object.freeze({
+          delivery: Object.freeze({
+            sourceKey: 'delivery',
+            sourceOrigin: encounterOwner,
+            generationKey: 'initial:first' as const,
+            rewardType: 'Boon',
+            remainingUses: 1,
+          }),
         }),
       }),
     });
@@ -280,13 +286,13 @@ describe('Transcendent Embryo declaration and direct Chaos fold', () => {
       (frontier) => frontier.kind === 'hermesShrineDelivery',
     );
     expect(delivery).toBeDefined();
-    expect(delivery?.branchesBeforeEntry[0]?.keepsakes.transcendentEmbryo).toMatchObject({
+    expect(delivery?.branchesBeforeEntry[0]?.state.keepsakes.transcendentEmbryo).toMatchObject({
       progress: 0,
       markedBlessingKey: 'ChaosWeaponBlessing',
     });
-    expect(delivery?.branchesBeforeEntry[0]?.traitHistory?.maturedChaosBlessings).toContainEqual(
-      expect.objectContaining({ blessingKey: 'ChaosWeaponBlessing' }),
-    );
+    expect(
+      delivery?.branchesBeforeEntry[0]?.state.traitHistory?.maturedChaosBlessings,
+    ).toContainEqual(expect.objectContaining({ blessingKey: 'ChaosWeaponBlessing' }));
   });
 
   it('retains the existing route-start Jeweled Pom acquisition', () => {
@@ -303,12 +309,12 @@ describe('Transcendent Embryo declaration and direct Chaos fold', () => {
       'Underworld',
       loadout,
     )[0];
-    expect(branch?.keepsakes.jeweledPom).toMatchObject({
+    expect(branch?.state.keepsakes.jeweledPom).toMatchObject({
       active: true,
       grantedTraitKey: 'HadesLifestealBoon',
       levels: 3,
     });
-    expect(branch?.traitHistory?.equippedTraits.HadesLifestealBoon).toBeDefined();
+    expect(branch?.state.traitHistory?.equippedTraits.HadesLifestealBoon).toBeDefined();
   });
 
   it('declares the four-rank profile and allows same-key reselection after marked removal', () => {
@@ -351,11 +357,11 @@ describe('Transcendent Embryo declaration and direct Chaos fold', () => {
       'Epic',
       { routeKey: 'Underworld', aspectKey: '' },
     );
-    expect(result.traitHistory?.maturedChaosBlessings).toHaveLength(1);
-    expect(result.traitHistory?.maturedChaosBlessings[0]?.blessingKey).toBe(
+    expect(result.state.traitHistory?.maturedChaosBlessings).toHaveLength(1);
+    expect(result.state.traitHistory?.maturedChaosBlessings[0]?.blessingKey).toBe(
       'ChaosElementalBlessing',
     );
-    expect(result.keepsakes.transcendentEmbryo).toMatchObject({
+    expect(result.state.keepsakes.transcendentEmbryo).toMatchObject({
       origin: 'ordinary',
       rarity: 'Epic',
       progress: 0,
@@ -378,7 +384,7 @@ describe('Transcendent Embryo declaration and direct Chaos fold', () => {
       'Heroic',
       { routeKey: 'Underworld' },
     );
-    expect(creation.traitHistory?.elementCounts).toMatchObject({
+    expect(creation.state.traitHistory?.elementCounts).toMatchObject({
       Earth: 4,
       Air: 4,
       Fire: 4,
@@ -399,7 +405,7 @@ describe('Transcendent Embryo declaration and direct Chaos fold', () => {
       'Heroic',
       { routeKey: 'Underworld' },
     );
-    const favorFacts = boonRarityFactsForOffer(catalog, favor.traitHistory!, {
+    const favorFacts = boonRarityFactsForOffer(catalog, favor.state.traitHistory!, {
       resolvedProviderKey: 'Zeus',
     });
     expect(favorFacts?.contributions).toContainEqual(
@@ -422,7 +428,7 @@ describe('Transcendent Embryo declaration and direct Chaos fold', () => {
       'Heroic',
       { routeKey: 'Underworld' },
     );
-    expect(neutral.traitHistory?.maturedChaosBlessings).toContainEqual(
+    expect(neutral.state.traitHistory?.maturedChaosBlessings).toContainEqual(
       expect.objectContaining({
         blessingKey: 'ChaosWeaponBlessing',
         rarity: 'Heroic',
@@ -463,7 +469,7 @@ describe('Transcendent Embryo declaration and direct Chaos fold', () => {
       { routeKey: 'Underworld' },
     );
     const progressed = advanceTranscendentEmbryoProgress(
-      advanceTranscendentEmbryoProgress(equipped.keepsakes).state,
+      advanceTranscendentEmbryoProgress(equipped.state.keepsakes).state,
     ).state;
     const heirloom = advanceCurrentKeepsake(catalog, progressed, 1);
     expect(heirloom.transcendentEmbryo).toMatchObject({
@@ -475,10 +481,10 @@ describe('Transcendent Embryo declaration and direct Chaos fold', () => {
       catalog,
       heirloom,
       'GoldifyKeepsake',
-      equipped.arcanaFear,
+      equipped.state.arcanaFear,
     );
     expect(unequipped.transcendentEmbryo).toBeUndefined();
-    expect(equipped.traitHistory?.maturedChaosBlessings).toMatchObject([
+    expect(equipped.state.traitHistory?.maturedChaosBlessings).toMatchObject([
       { blessingKey: 'ChaosElementalBlessing' },
     ]);
   });
@@ -528,12 +534,14 @@ describe('Transcendent Embryo declaration and direct Chaos fold', () => {
     );
     const replaced = transition.branches[0];
     if (replaced === undefined) throw new Error('rack replacement did not produce a branch');
-    expect(replaced.keepsakes.currentKey).toBe('GoldifyKeepsake');
-    expect(replaced.keepsakes.transcendentEmbryo).toBeUndefined();
-    expect(replaced.traitHistory?.maturedChaosBlessings).toEqual(
-      equipped.traitHistory?.maturedChaosBlessings,
+    expect(replaced.state.keepsakes.currentKey).toBe('GoldifyKeepsake');
+    expect(replaced.state.keepsakes.transcendentEmbryo).toBeUndefined();
+    expect(replaced.state.traitHistory?.maturedChaosBlessings).toEqual(
+      equipped.state.traitHistory?.maturedChaosBlessings,
     );
-    expect(replaced.traitHistory?.elementCounts).toEqual(equipped.traitHistory?.elementCounts);
+    expect(replaced.state.traitHistory?.elementCounts).toEqual(
+      equipped.state.traitHistory?.elementCounts,
+    );
 
     let laterBranches = transition.branches;
     for (let sequence = 3; sequence <= 10; sequence += 1) {
@@ -557,9 +565,9 @@ describe('Transcendent Embryo declaration and direct Chaos fold', () => {
       );
       expect(later.findings).toHaveLength(0);
       expect(later.transcendentEmbryoThresholds).toHaveLength(0);
-      expect(later.branches[0]?.keepsakes.transcendentEmbryo).toBeUndefined();
-      expect(later.branches[0]?.traitHistory?.maturedChaosBlessings).toEqual(
-        equipped.traitHistory?.maturedChaosBlessings,
+      expect(later.branches[0]?.state.keepsakes.transcendentEmbryo).toBeUndefined();
+      expect(later.branches[0]?.state.traitHistory?.maturedChaosBlessings).toEqual(
+        equipped.state.traitHistory?.maturedChaosBlessings,
       );
       laterBranches = later.branches;
     }
@@ -576,7 +584,7 @@ describe('Transcendent Embryo declaration and direct Chaos fold', () => {
       new Map([
         [
           semanticAddressKey(laterChaos),
-          [Object.freeze({ before: replaced.traitHistory!, context: Object.freeze({}) })],
+          [Object.freeze({ before: replaced.state.traitHistory!, context: Object.freeze({}) })],
         ],
       ]),
     ).at(laterChaos);
@@ -644,15 +652,15 @@ describe('Transcendent Embryo declaration and direct Chaos fold', () => {
     );
     const replaced = transition.branches[0];
     if (replaced === undefined) throw new Error('rack replacement did not produce a branch');
-    expect(replaced.keepsakes.currentKey).toBe('RarifyKeepsake');
-    expect(replaced.keepsakes.transcendentEmbryo).toMatchObject({
+    expect(replaced.state.keepsakes.currentKey).toBe('RarifyKeepsake');
+    expect(replaced.state.keepsakes.transcendentEmbryo).toMatchObject({
       origin: 'echo',
       markedBlessingAcquisitionIdentity: 'embryo:echo',
     });
-    expect(replaced.traitHistory?.maturedChaosBlessings).toMatchObject([
+    expect(replaced.state.traitHistory?.maturedChaosBlessings).toMatchObject([
       { acquisitionIdentity: 'embryo:echo', blessingKey: 'ChaosElementalBlessing' },
     ]);
-    expect(replaced.traitHistory?.events).not.toContainEqual(
+    expect(replaced.state.traitHistory?.events).not.toContainEqual(
       expect.objectContaining({ kind: 'directChaosBlessingRemoval' }),
     );
   });

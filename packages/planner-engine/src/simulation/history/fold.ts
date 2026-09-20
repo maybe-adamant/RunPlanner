@@ -96,8 +96,40 @@ function frozenLedgers(ledgers: MutableLedgers): HistoryLedgers {
   });
 }
 
-function stateView(sequence: number, ledgers: MutableLedgers): HistoryStateView {
-  return Object.freeze({ sequence, ledgers: frozenLedgers(ledgers) });
+/** The actual route-start contact, before any biome or room lifecycle event. */
+export function createRouteStartHistoryView(): HistoryStateView {
+  return Object.freeze({
+    sequence: 0,
+    ledgers: frozenLedgers({
+      roomCreations: [],
+      roomAppearances: [],
+      encounterRecords: [],
+      encounterStarts: [],
+      encounterCompletions: [],
+      enteredRewardStores: [],
+      requiredObjectSpawns: [],
+      requiredObjectCompletions: [],
+      roomRestores: [],
+      counters: {
+        biomeDepthCache: 0,
+        biomeEncounterDepth: 0,
+        routeEncounterDepth: 0,
+        roomHistoryOrdinal: 0,
+      },
+    }),
+  });
+}
+
+function stateView(
+  sequence: number,
+  ledgers: MutableLedgers,
+  viewsBySequence: Map<number, HistoryStateView>,
+): HistoryStateView {
+  const existing = viewsBySequence.get(sequence);
+  if (existing !== undefined) return existing;
+  const view = Object.freeze({ sequence, ledgers: frozenLedgers(ledgers) });
+  viewsBySequence.set(sequence, view);
+  return view;
 }
 
 function roomName(
@@ -282,6 +314,8 @@ function foldHistoryEventStream(
   const resetAxes: BiomeTransitionCounterAxis[] = [];
   const fieldsBatchOrigins = new Set<string>();
   const clockworkBatchOrigins = new Set<string>();
+  const viewsBySequence = new Map<number, HistoryStateView>();
+  let biomeStart: HistoryStateView | undefined;
 
   for (const [index, event] of immutableEvents.entries()) {
     const expectedSequence = (seed?.sequence ?? 0) + index + 1;
@@ -311,12 +345,13 @@ function foldHistoryEventStream(
         }
         biomeStarted = true;
         biomeStartOrigin = event.origin;
+        biomeStart = stateView(event.sequence, ledgers, viewsBySequence);
         break;
       case 'roomCreated': {
         if (!biomeStarted) {
           throw new HistoryFoldContractError('room creation precedes biome start');
         }
-        const before = stateView(event.sequence - 1, ledgers);
+        const before = stateView(event.sequence - 1, ledgers, viewsBySequence);
         const key = semanticAddressKey(event.origin);
         if (namesByOrigin.has(key)) {
           throw new HistoryFoldContractError(`room ${key} was created more than once`);
@@ -399,7 +434,7 @@ function foldHistoryEventStream(
             `target ${semanticAddressKey(event.origin)} lost its generation parent`,
           );
         }
-        const after = stateView(event.sequence, ledgers);
+        const after = stateView(event.sequence, ledgers, viewsBySequence);
         parentViews.targetGenerations.push(
           Object.freeze({
             targetOrigin: event.origin,
@@ -426,7 +461,7 @@ function foldHistoryEventStream(
             `room ${semanticAddressKey(event.origin)} cannot complete empty generation`,
           );
         }
-        views.outgoingGeneration = stateView(event.sequence, ledgers);
+        views.outgoingGeneration = stateView(event.sequence, ledgers, viewsBySequence);
         break;
       }
       case 'roomPrepared': {
@@ -436,7 +471,7 @@ function foldHistoryEventStream(
         }
         const views: MutableRoomViews = {
           origin: event.origin,
-          preparation: stateView(event.sequence, ledgers),
+          preparation: stateView(event.sequence, ledgers, viewsBySequence),
           offerPoints: [],
           acquisitionPoints: [],
           encounterStarts: [],
@@ -455,7 +490,11 @@ function foldHistoryEventStream(
           roomShopPresent: event.roomShopPresent === true,
         });
         ledgers.roomAppearances.push(entry);
-        requireRoomViews(viewsByOrigin, event).entry = stateView(event.sequence, ledgers);
+        requireRoomViews(viewsByOrigin, event).entry = stateView(
+          event.sequence,
+          ledgers,
+          viewsBySequence,
+        );
         break;
       }
       case 'requiredObjectSpawned': {
@@ -528,7 +567,7 @@ function foldHistoryEventStream(
         views.encounterStarts.push(
           Object.freeze({
             phaseKey: event.phaseKey,
-            before: stateView(event.sequence - 1, ledgers),
+            before: stateView(event.sequence - 1, ledgers, viewsBySequence),
           }),
         );
         activeEncounters.set(key, entry);
@@ -675,7 +714,11 @@ function foldHistoryEventStream(
         break;
       }
       case 'outgoingGenerationCheckpoint':
-        requireRoomViews(viewsByOrigin, event).preOutgoing = stateView(event.sequence - 1, ledgers);
+        requireRoomViews(viewsByOrigin, event).preOutgoing = stateView(
+          event.sequence - 1,
+          ledgers,
+          viewsBySequence,
+        );
         break;
       case 'roomCountersAdvanced':
         ledgers.counters.biomeDepthCache += event.biomeDepthCacheDelta;
@@ -693,8 +736,8 @@ function foldHistoryEventStream(
       }
       case 'roomExited': {
         const views = requireRoomViews(viewsByOrigin, event);
-        views.postCommit = stateView(event.sequence - 1, ledgers);
-        views.exit = stateView(event.sequence, ledgers);
+        views.postCommit = stateView(event.sequence - 1, ledgers, viewsBySequence);
+        views.exit = stateView(event.sequence, ledgers, viewsBySequence);
         break;
       }
       case 'roomRestored': {
@@ -729,7 +772,7 @@ function foldHistoryEventStream(
         ) {
           throw new HistoryFoldContractError('history has an invalid biome completion event');
         }
-        biomeCompletion = stateView(event.sequence, ledgers);
+        biomeCompletion = stateView(event.sequence, ledgers, viewsBySequence);
         biomeCompletionOrigin = event.origin;
         break;
       case 'biomeCounterReset': {
@@ -760,8 +803,8 @@ function foldHistoryEventStream(
         views.offerPoints.push(
           Object.freeze({
             offerPoint: event.offerPoint,
-            before: stateView(event.sequence - 1, ledgers),
-            after: stateView(event.sequence, ledgers),
+            before: stateView(event.sequence - 1, ledgers, viewsBySequence),
+            after: stateView(event.sequence, ledgers, viewsBySequence),
           }),
         );
         break;
@@ -779,8 +822,7 @@ function foldHistoryEventStream(
         }
         views.offerPoints[index] = Object.freeze({
           ...offerPoint,
-          acquisitionBefore: stateView(event.sequence - 1, ledgers),
-          acquisitionAfter: stateView(event.sequence, ledgers),
+          acquisitionBefore: stateView(event.sequence - 1, ledgers, viewsBySequence),
         });
         if (event.enteredRewardStoreKey !== undefined) {
           ledgers.enteredRewardStores.push(
@@ -791,11 +833,11 @@ function foldHistoryEventStream(
               storeKey: event.enteredRewardStoreKey,
             }),
           );
-          views.offerPoints[index] = Object.freeze({
-            ...views.offerPoints[index],
-            acquisitionAfter: stateView(event.sequence, ledgers),
-          });
         }
+        views.offerPoints[index] = Object.freeze({
+          ...views.offerPoints[index],
+          acquisitionAfter: stateView(event.sequence, ledgers, viewsBySequence),
+        });
         break;
       }
       case 'acquisitionPointReached': {
@@ -806,8 +848,8 @@ function foldHistoryEventStream(
         views.acquisitionPoints.push(
           Object.freeze({
             point: event.point,
-            before: stateView(event.sequence - 1, ledgers),
-            after: stateView(event.sequence, ledgers),
+            before: stateView(event.sequence - 1, ledgers, viewsBySequence),
+            after: stateView(event.sequence, ledgers, viewsBySequence),
           }),
         );
         break;
@@ -819,6 +861,7 @@ function foldHistoryEventStream(
       case 'roomCommitted':
         break;
     }
+    stateView(event.sequence, ledgers, viewsBySequence);
   }
 
   if (!biomeStarted) {
@@ -876,7 +919,9 @@ function foldHistoryEventStream(
       rooms: Object.freeze(
         orderedViews.filter((views) => views.entry !== undefined).map(freezeProgressiveRoomViews),
       ),
-      current: stateView(lastSequence, ledgers),
+      viewsBySequence: Object.freeze(Object.fromEntries(viewsBySequence)),
+      biomeStart: biomeStart!,
+      current: stateView(lastSequence, ledgers, viewsBySequence),
     });
   }
   if (biomeCompletion === undefined || biomeCompletionOrigin === undefined) {
@@ -892,7 +937,9 @@ function foldHistoryEventStream(
     ledgers: frozenLedgers(ledgers),
     rooms: Object.freeze(orderedViews.map(freezeRoomViews)),
     biomeCompletion,
-    afterTransition: stateView(immutableEvents.at(-1)!.sequence, ledgers),
+    viewsBySequence: Object.freeze(Object.fromEntries(viewsBySequence)),
+    biomeStart: biomeStart!,
+    afterTransition: stateView(immutableEvents.at(-1)!.sequence, ledgers, viewsBySequence),
   });
 }
 

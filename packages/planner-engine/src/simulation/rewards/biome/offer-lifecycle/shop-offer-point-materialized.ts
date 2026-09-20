@@ -72,7 +72,7 @@ export function applyShopOfferPointMaterialization(
   const contractOwner =
     declaration.infernalContractReward === undefined ||
     !frontierBranches.some(
-      (branch) => branch.traitHistory?.equippedTraits.InfernalContractBoon !== undefined,
+      (branch) => branch.state.traitHistory.equippedTraits.InfernalContractBoon !== undefined,
     )
       ? undefined
       : createShopOfferAddress(
@@ -185,13 +185,14 @@ export function applyShopOfferPointMaterialization(
             context.profile,
             fixedOffers,
             facts(
-              branch.history,
+              branch.state.rewardHistory,
               new Set(isContract ? shopEntry!.offers.map((offer) => offer.offer.rewardType) : []),
               branch,
             ),
             context.requirements,
           ).length > 0 &&
-          (!isContract || branch.traitHistory?.equippedTraits.InfernalContractBoon !== undefined),
+          (!isContract ||
+            branch.state.traitHistory.equippedTraits.InfernalContractBoon !== undefined),
       );
     };
     producerFrontiers.push(

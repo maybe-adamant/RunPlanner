@@ -1,5 +1,6 @@
 import type { ResolvedRoutePosition } from '../../authored-project/route-context';
 import type { Catalog } from '../../catalog-schema';
+import { sharedRewardLookups } from '../state/reward-lookups';
 import {
   createBiomeAddress,
   createRoomRunStateCheckpointAddress,
@@ -390,7 +391,6 @@ export function replayProjectBiomeFromEvaluatedPredecessor(
           seed: Object.freeze({
             history: previous.history,
             rewardBranches: previous.rewards.branches,
-            rewardLookups: previous.rewards.rewardLookups,
           }),
         }),
   });
@@ -602,7 +602,6 @@ export function evaluateBiomeAssembly(
     context.seed?.rewardBranches,
     context.resourcePlacements,
     context.resourceFindings,
-    context.seed?.rewardLookups,
   );
   const roomGeneration = generation(
     catalog,
@@ -616,7 +615,9 @@ export function evaluateBiomeAssembly(
     rewards.levelResolutionArtifacts,
     context.forcedChaosOccurrenceKeys,
     undefined,
-    context.seed?.rewardLookups,
+    context.seed === undefined
+      ? undefined
+      : sharedRewardLookups(context.seed.rewardBranches.map((branch) => branch.state)),
   );
   const nemesisByOwner = new Map(
     rewards.simulation.nemesisRandomEventCandidates.map((candidate) => [
@@ -715,6 +716,8 @@ export function evaluateBiomeAssembly(
         ledgers: history.ledgers,
         rooms: history.rooms,
         current: history.afterTransition,
+        biomeStart: history.biomeStart,
+        viewsBySequence: history.viewsBySequence,
       }),
       roomGeneration: roomGeneration.validation,
       findingRegions: selectedFindingRegions,

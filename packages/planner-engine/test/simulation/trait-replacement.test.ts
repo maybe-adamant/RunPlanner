@@ -166,8 +166,11 @@ describe('derived Olympian trait replacement', () => {
         testCatalog,
         {
           ...initial,
-          traitHistory: before,
-          stygianWell: { ...initial.stygianWell, hymnUses: 2 },
+          state: Object.freeze({
+            ...initial.state,
+            traitHistory: before,
+            stygianWell: { ...initial.state.stygianWell, hymnUses: 2 },
+          }),
         },
         owner,
         {
@@ -178,12 +181,12 @@ describe('derived Olympian trait replacement', () => {
         4,
         'encounterCompleted',
       );
-      expect(settlement.branch.stygianWell.hymnUses).toBe(1);
-      expect(settlement.branch.traitHistory?.equippedTraits.ApolloSpecialBoon).toMatchObject({
+      expect(settlement.branch.state.stygianWell.hymnUses).toBe(1);
+      expect(settlement.branch.state.traitHistory?.equippedTraits.ApolloSpecialBoon).toMatchObject({
         rarity: 'Epic',
         level: 3,
       });
-      expect(settlement.branch.traitHistory?.equippedTraits.ZeusSpecialBoon).toBeUndefined();
+      expect(settlement.branch.state.traitHistory?.equippedTraits.ZeusSpecialBoon).toBeUndefined();
     }
   });
 
@@ -223,8 +226,11 @@ describe('derived Olympian trait replacement', () => {
       catalog,
       {
         ...initial,
-        traitHistory: before,
-        stygianWell: { ...initial.stygianWell, hymnUses: 1 },
+        state: Object.freeze({
+          ...initial.state,
+          traitHistory: before,
+          stygianWell: { ...initial.state.stygianWell, hymnUses: 1 },
+        }),
       },
       owner,
       value,
@@ -234,8 +240,8 @@ describe('derived Olympian trait replacement', () => {
     const evaluation = settled.branch.traitEvaluations?.at(-1);
     expect(evaluation?.assessments[0]?.replacementTransition).toBeDefined();
     expect(evaluation?.generation?.legal).toBe(false);
-    expect(settled.branch.traitHistory?.events).toEqual(before.events);
-    expect(settled.branch.stygianWell.hymnUses).toBe(1);
+    expect(settled.branch.state.traitHistory?.events).toEqual(before.events);
+    expect(settled.branch.state.stygianWell.hymnUses).toBe(1);
   });
 
   it('retains a mandatory targeted ordinary trait in an unselected sparse row', () => {

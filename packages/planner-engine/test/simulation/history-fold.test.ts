@@ -115,6 +115,47 @@ function canonicalEvents(): readonly HistoryEvent[] {
 }
 
 describe('history fold encounter checkpoint closure', () => {
+  it('publishes the post-store acquisition view once at its exact sequence', () => {
+    const events = numbered([
+      {
+        kind: 'biomeStarted',
+        origin: biome,
+        counters: {
+          biomeDepthCache: 0,
+          biomeEncounterDepth: 0,
+          routeEncounterDepth: 0,
+          roomHistoryOrdinal: 0,
+        },
+      },
+      {
+        kind: 'roomCreated',
+        origin,
+        gameName: 'F_Combat02',
+        encounterEnvelopeKey: 'SingleEncounter',
+        source: 'biomeEntry',
+        picked: true,
+      },
+      { kind: 'roomPrepared', origin, operationIndex: 1 },
+      { kind: 'roomEntered', origin, operationIndex: 2 },
+      { kind: 'offerPointMaterialized', origin, operationIndex: 3, offerPoint: 'wheel1' },
+      {
+        kind: 'offerPointAcquired',
+        origin,
+        operationIndex: 4,
+        offerPoint: 'wheel1',
+        enteredRewardStoreKey: 'RunProgress',
+      },
+    ]);
+    const history = foldBiomeHistoryPrefixEvents(events);
+    const offer = history.rooms[0]?.offerPoints?.[0];
+    const acquired = events.at(-1)!;
+    expect(offer?.acquisitionAfter).toBe(history.viewsBySequence[acquired.sequence]);
+    expect(offer?.acquisitionAfter?.ledgers.enteredRewardStores).toEqual([
+      expect.objectContaining({ storeKey: 'RunProgress', sequence: acquired.sequence }),
+    ]);
+    expect(offer?.acquisitionBefore?.ledgers.enteredRewardStores).toEqual([]);
+  });
+
   it('folds a fully ordered record, start, depth, and completion sequence', () => {
     const history = foldHistoryEvents(canonicalEvents());
 

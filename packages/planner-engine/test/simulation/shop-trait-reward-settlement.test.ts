@@ -177,8 +177,11 @@ describe('Shop trait acquisition processing', () => {
     const seeded = initializeTestRewardBranches().map((branch) =>
       Object.freeze({
         ...branch,
-        history: attachTraitHistory(branch.history, traitHistory),
-        traitHistory,
+        state: Object.freeze({
+          ...branch.state,
+          rewardHistory: attachTraitHistory(branch.state.rewardHistory, traitHistory),
+          traitHistory: traitHistory,
+        }),
       }),
     );
     const inventory = processShopInventory(seeded, {
@@ -207,7 +210,7 @@ describe('Shop trait acquisition processing', () => {
     );
     expect(inventory).not.toHaveLength(0);
     expect(unpurchased).not.toHaveLength(0);
-    expect(unpurchased[0]?.traitHistory?.equippedTraits.ApolloWeaponBoon?.level).toBe(1);
+    expect(unpurchased[0]?.state.traitHistory?.equippedTraits.ApolloWeaponBoon?.level).toBe(1);
 
     const purchasedCanonical = materializeAuthoredRoom({
       routePosition: ordinaryPositionFor(catalog, biome),
@@ -253,7 +256,7 @@ describe('Shop trait acquisition processing', () => {
       },
       new Map(),
     );
-    expect(purchased[0]?.traitHistory?.equippedTraits.ApolloWeaponBoon?.level).toBe(2);
+    expect(purchased[0]?.state.traitHistory?.equippedTraits.ApolloWeaponBoon?.level).toBe(2);
 
     const giftCanonical = materializeAuthoredRoom({
       routePosition: ordinaryPositionFor(catalog, biome),
@@ -313,10 +316,10 @@ describe('Shop trait acquisition processing', () => {
       },
       new Map(),
     );
-    expect(giftPurchased[0]?.history.consumableRecord.GiftDrop).toBe(1);
-    expect(giftPurchased[0]?.traitHistory?.equippedTraits.ApolloWeaponBoon?.level).toBe(1);
+    expect(giftPurchased[0]?.state.rewardHistory.consumableRecord.GiftDrop).toBe(1);
+    expect(giftPurchased[0]?.state.traitHistory?.equippedTraits.ApolloWeaponBoon?.level).toBe(1);
     expect(
-      giftPurchased[0]?.traitHistory?.events.some((event) => event.kind === 'levelMutation'),
+      giftPurchased[0]?.state.traitHistory?.events.some((event) => event.kind === 'levelMutation'),
     ).toBe(false);
 
     const dormant = createDefaultRoomState(catalog, room, {
@@ -393,8 +396,11 @@ describe('Shop trait acquisition processing', () => {
       const traitHistory = pomTargetHistory();
       return Object.freeze({
         ...branch,
-        history: attachTraitHistory(branch.history, traitHistory),
-        traitHistory,
+        state: Object.freeze({
+          ...branch.state,
+          rewardHistory: attachTraitHistory(branch.state.rewardHistory, traitHistory),
+          traitHistory: traitHistory,
+        }),
       });
     });
     const inventory = processShopInventory(seeded, {
@@ -433,7 +439,7 @@ describe('Shop trait acquisition processing', () => {
       reached: true,
       findings: ['missingTarget'],
     });
-    expect(branch?.traitHistory?.events.some((event) => event.kind === 'levelMutation')).toBe(
+    expect(branch?.state.traitHistory?.events.some((event) => event.kind === 'levelMutation')).toBe(
       false,
     );
     if (evaluation === undefined) throw new Error('missing retained Pom assessment');
@@ -532,8 +538,11 @@ describe('Shop trait acquisition processing', () => {
         const traitHistory = pomTargetHistory();
         return Object.freeze({
           ...branch,
-          history: attachTraitHistory(branch.history, traitHistory),
-          traitHistory,
+          state: Object.freeze({
+            ...branch.state,
+            rewardHistory: attachTraitHistory(branch.state.rewardHistory, traitHistory),
+            traitHistory: traitHistory,
+          }),
         });
       });
       const inventory = processShopInventory(seeded, {
@@ -560,10 +569,10 @@ describe('Shop trait acquisition processing', () => {
         },
         new Map(),
       );
-      const result = purchased[0]?.traitHistory;
+      const result = purchased[0]?.state.traitHistory;
       expect(result?.equippedTraits[expectedTraitKey]).toMatchObject({ level: expectedLevel });
       expect(result?.equippedTraits.ApolloWeaponBoon).toBeUndefined();
-      expect(purchased[0]?.arcanaFear.fear.forfeitConsumed).toBe(false);
+      expect(purchased[0]?.state.arcanaFear.fear.forfeitConsumed).toBe(false);
     },
   );
 
@@ -586,7 +595,7 @@ describe('Shop trait acquisition processing', () => {
 
     const branch = pEvaluation.rewards.branches[0];
     if (branch === undefined) throw new Error('complete Surface fixture has no P reward branch');
-    const event = branch.traitHistory?.events.find(
+    const event = branch.state.traitHistory?.events.find(
       (candidate) => semanticAddressKey(candidate.owner) === semanticAddressKey(shopOffer),
     );
     if (event?.kind !== 'traitOffer')
@@ -601,7 +610,7 @@ describe('Shop trait acquisition processing', () => {
         event.selectedOptionKey === 'option1' ? 0 : event.selectedOptionKey === 'option2' ? 1 : 2
       ];
     if (selected === undefined) throw new Error('purchased Shop Hammer selection is missing');
-    expect(branch.traitHistory?.equippedTraits[selected.traitKey]).toMatchObject({
+    expect(branch.state.traitHistory?.equippedTraits[selected.traitKey]).toMatchObject({
       traitKey: selected.traitKey,
       sourceRole: 'weaponUpgrade',
     });
@@ -752,11 +761,13 @@ describe('Shop trait acquisition processing', () => {
         origin: expect.objectContaining({ owner: major.offerOrigin }),
       }),
     );
-    expect(purchasedBranch?.traitHistory?.events).toHaveLength(0);
+    expect(purchasedBranch?.state.traitHistory?.events).toHaveLength(0);
     const weaponUpgradeOffer = major.traitOffersByAcquisitionRole?.weaponUpgrade;
     if (weaponUpgradeOffer?.kind !== 'traits') throw new Error('weapon upgrade must offer traits');
     expect(
-      purchasedBranch?.traitHistory?.equippedTraits[weaponUpgradeOffer.options[0]?.traitKey ?? ''],
+      purchasedBranch?.state.traitHistory?.equippedTraits[
+        weaponUpgradeOffer.options[0]?.traitKey ?? ''
+      ],
     ).toBeUndefined();
   });
 });

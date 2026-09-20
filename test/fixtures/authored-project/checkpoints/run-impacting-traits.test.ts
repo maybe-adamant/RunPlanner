@@ -259,7 +259,7 @@ describe('run-impacting trait checkpoint recipes', () => {
     expect(assembly.evaluation.findings).toEqual([]);
     const histories = assembly.evaluation.route.biomes.flatMap((biome) =>
       'rewards' in biome
-        ? biome.rewards.branches.flatMap((branch) => branch.traitHistory ?? [])
+        ? biome.rewards.branches.flatMap((branch) => branch.state.traitHistory ?? [])
         : [],
     );
     expect(
@@ -287,7 +287,7 @@ describe('run-impacting trait checkpoint recipes', () => {
     );
     const histories = assembly.evaluation.route.biomes.flatMap((biome) =>
       'rewards' in biome
-        ? biome.rewards.branches.flatMap((branch) => branch.traitHistory ?? [])
+        ? biome.rewards.branches.flatMap((branch) => branch.state.traitHistory ?? [])
         : [],
     );
     expect(histories).toHaveLength(1);

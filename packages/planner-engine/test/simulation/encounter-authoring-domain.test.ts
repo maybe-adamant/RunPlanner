@@ -60,8 +60,8 @@ describe('encounter choice identity context', () => {
     expect(suppressed.state.fear.configuredRanks.MinibossCountShrineUpgrade).toBe(1);
     expect(() =>
       attestEffectiveShadowRank(loadout, [
-        { arcanaFear: active },
-        { arcanaFear: suppressed.state },
+        { state: { arcanaFear: active } },
+        { state: { arcanaFear: suppressed.state } },
       ]),
     ).toThrow(/divergent/);
     expect(() => attestEffectiveShadowRank(loadout, [])).toThrow(/empty/);
@@ -79,8 +79,8 @@ describe('encounter choice identity context', () => {
         throw new Error('Missing miniboss preparation');
       for (const state of [active, suppressed.state]) {
         const rank = attestEffectiveShadowRank(loadout, [
-          { arcanaFear: state },
-          { arcanaFear: state },
+          { state: { arcanaFear: state } },
+          { state: { arcanaFear: state } },
         ]);
         const prepared = prepareRoomEncounterPhases(
           catalog,

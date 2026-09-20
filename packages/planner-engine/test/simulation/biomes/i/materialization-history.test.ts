@@ -302,6 +302,8 @@ function carriedHHistory(): CanonicalBiomeHistory {
     rooms: Object.freeze([]),
     biomeCompletion: state,
     afterTransition: state,
+    biomeStart: state,
+    viewsBySequence: Object.freeze({ 100: state }),
   });
 }
 

@@ -14,7 +14,10 @@ import type { HexLayoutKey } from '@run-planner/engine/catalog-schema';
 import { describe, expect, it } from 'vitest';
 import { ordinaryRoutePosition } from '../support/route-position';
 
-import { createTestArcanaFearState } from '../support/arcana-fear';
+import {
+  createTestArcanaFearState,
+  initializeTestRewardBranchesForRoute as initializeRewardBranches,
+} from '../support/arcana-fear';
 import {
   aspectSkyFallClosureCheckpoint,
   normalOption3LungClosureCheckpoint,
@@ -36,45 +39,42 @@ import {
   type TraitHistoryEvent,
 } from '../../src/simulation/traits';
 import { applyMoonBeamEquip } from '../../src/simulation/keepsakes/branch-transitions';
-import {
-  initializeRewardBranches,
-  publicRewardBranch,
-} from '../../src/simulation/rewards/branch-lifecycle';
+import { publicRewardBranch } from '../../src/simulation/rewards/branch-lifecycle';
 import { createGoldenFGHProject } from '@run-planner/test-fixtures/underworld';
 
 describe('finite Hex progress', () => {
   it('keeps the normal selected-option-3 Lung checkpoint within its finite capacity', () => {
     const checkpoint = normalOption3LungClosureCheckpoint();
-    expect(checkpoint.afterOption3Bank.hexProgress).toMatchObject({
+    expect(checkpoint.afterOption3Bank.state.hexProgress).toMatchObject({
       spellTraitKey: 'SpellTimeSlowTrait',
       tree: { layoutKey: 'Lung' },
       bankedPathPoints: 2,
       investedPathPoints: 0,
     });
-    expect(checkpoint.closed.hexProgress).toMatchObject({
+    expect(checkpoint.closed.state.hexProgress).toMatchObject({
       spellTraitKey: 'SpellTimeSlowTrait',
       bankedPathPoints: 0,
       investedPathPoints: 16,
       talentDropsClosed: true,
     });
-    expect(checkpoint.closed.hexProgress.investedPathPoints).toBeLessThanOrEqual(16);
+    expect(checkpoint.closed.state.hexProgress.investedPathPoints).toBeLessThanOrEqual(16);
   });
 
   it('keeps the Aspect Sky Fall checkpoint concrete, closed, and capacity-clamped', () => {
     const checkpoint = aspectSkyFallClosureCheckpoint();
-    expect(checkpoint.afterSpellDrop.hexProgress).toMatchObject({
+    expect(checkpoint.afterSpellDrop.state.hexProgress).toMatchObject({
       spellTraitKey: 'SpellMoonBeamTrait',
       tree: { layoutKey: 'Lung' },
       bankedPathPoints: 0,
       investedPathPoints: 3,
     });
-    expect(checkpoint.closed.hexProgress).toMatchObject({
+    expect(checkpoint.closed.state.hexProgress).toMatchObject({
       spellTraitKey: 'SpellMoonBeamTrait',
       bankedPathPoints: 0,
       investedPathPoints: 16,
       talentDropsClosed: true,
     });
-    expect(checkpoint.closed.hexProgress.investedPathPoints).toBeLessThanOrEqual(16);
+    expect(checkpoint.closed.state.hexProgress.investedPathPoints).toBeLessThanOrEqual(16);
   });
 
   const withTree = (
@@ -125,9 +125,9 @@ describe('finite Hex progress', () => {
     )[0]!;
     const banked = bankPathPoints(withTree(initial), 2);
     const settled = settlePathScreen(catalog, banked, 3);
-    expect(settled.hexProgress).toMatchObject({ bankedPathPoints: 0, investedPathPoints: 5 });
-    expect(publicRewardBranch(settled).hexProgress).toEqual({
-      ...settled.hexProgress,
+    expect(settled.state.hexProgress).toMatchObject({ bankedPathPoints: 0, investedPathPoints: 5 });
+    expect(publicRewardBranch(settled).state.hexProgress).toEqual({
+      ...settled.state.hexProgress,
     });
   });
 
@@ -158,8 +158,8 @@ describe('finite Hex progress', () => {
     );
     let branch = initial;
     for (let index = 0; index < 8; index += 1) branch = settlePathScreen(catalog, branch, 3);
-    expect(branch.hexProgress.investedPathPoints).toBe(capacity);
-    expect(branch.hexProgress.talentDropsClosed).toBe(true);
+    expect(branch.state.hexProgress.investedPathPoints).toBe(capacity);
+    expect(branch.state.hexProgress.talentDropsClosed).toBe(true);
   });
 
   it('retains raw bonus bank when a closed tree receives a normal Path screen', () => {
@@ -173,13 +173,16 @@ describe('finite Hex progress', () => {
     );
     const full = Object.freeze({
       ...initial,
-      hexProgress: Object.freeze({
-        ...initial.hexProgress,
-        investedPathPoints: 16,
-        talentDropsClosed: true,
+      state: Object.freeze({
+        ...initial.state,
+        hexProgress: Object.freeze({
+          ...initial.state.hexProgress,
+          investedPathPoints: 16,
+          talentDropsClosed: true,
+        }),
       }),
     });
-    expect(settlePathScreen(catalog, full, 3).hexProgress).toMatchObject({
+    expect(settlePathScreen(catalog, full, 3).state.hexProgress).toMatchObject({
       investedPathPoints: 16,
       bankedPathPoints: 2,
       talentDropsClosed: true,
@@ -203,9 +206,12 @@ describe('finite Hex progress', () => {
     }
     const seededBranch = Object.freeze({
       ...f.rewards.branches[0]!,
-      hexProgress: Object.freeze({
-        ...f.rewards.branches[0]!.hexProgress,
-        talentDropsClosed: true,
+      state: Object.freeze({
+        ...f.rewards.branches[0]!.state,
+        hexProgress: Object.freeze({
+          ...f.rewards.branches[0]!.state.hexProgress,
+          talentDropsClosed: true,
+        }),
       }),
     });
     const evaluated = evaluateBiome(catalog, 'Underworld', gPlan, {
@@ -215,7 +221,6 @@ describe('finite Hex progress', () => {
       seed: {
         history: f.history,
         rewardBranches: [seededBranch],
-        rewardLookups: f.rewards.rewardLookups,
       },
     });
     if (evaluated.authoring !== 'complete' || evaluated.validity !== 'valid') {
@@ -224,7 +229,9 @@ describe('finite Hex progress', () => {
     expect(evaluated.rewards.targetHistory).not.toHaveLength(0);
     expect(
       evaluated.rewards.targetHistory.every((checkpoint) =>
-        checkpoint.allSpellInvested.every(Boolean),
+        checkpoint.states
+          .map((state) => state.hexProgress.talentDropsClosed === true)
+          .every(Boolean),
       ),
     ).toBe(true);
   });
@@ -237,19 +244,28 @@ describe('finite Hex progress', () => {
       'ForceZeusBoonKeepsake',
     )[0]!;
     const installed = withTree(initial);
-    expect(installed.hexProgress.godSentAdded).toBe(true);
+    expect(installed.state.hexProgress.godSentAdded).toBe(true);
     const closed = Object.freeze({
       ...installed,
-      hexProgress: Object.freeze({
-        ...installed.hexProgress,
-        investedPathPoints: 18,
-        talentDropsClosed: true,
+      state: Object.freeze({
+        ...installed.state,
+        hexProgress: Object.freeze({
+          ...installed.state.hexProgress,
+          investedPathPoints: 18,
+          talentDropsClosed: true,
+        }),
+        keepsakes: Object.freeze({
+          ...installed.state.keepsakes,
+          olympianSources: Object.freeze([]),
+        }),
       }),
-      keepsakes: Object.freeze({ ...installed.keepsakes, olympianSources: Object.freeze([]) }),
     });
     const reevaluated = maybeAddGodSent(catalog, closed);
-    expect(reevaluated.hexProgress).toMatchObject({ godSentAdded: true, talentDropsClosed: true });
-    expect(hexEffectiveCapacity(catalog, reevaluated.hexProgress)).toBe(18);
+    expect(reevaluated.state.hexProgress).toMatchObject({
+      godSentAdded: true,
+      talentDropsClosed: true,
+    });
+    expect(hexEffectiveCapacity(catalog, reevaluated.state.hexProgress)).toBe(18);
   });
 
   it('does not add God Sent before a linked source exists, then adds two capacity after closure without reopening', () => {
@@ -260,13 +276,16 @@ describe('finite Hex progress', () => {
       'ManaOverTimeRefundKeepsake',
     )[0]!;
     const installed = withTree(ordinary);
-    expect(installed.hexProgress.godSentAdded).toBe(false);
+    expect(installed.state.hexProgress.godSentAdded).toBe(false);
     const closed = Object.freeze({
       ...installed,
-      hexProgress: Object.freeze({
-        ...installed.hexProgress,
-        investedPathPoints: 16,
-        talentDropsClosed: true,
+      state: Object.freeze({
+        ...installed.state,
+        hexProgress: Object.freeze({
+          ...installed.state.hexProgress,
+          investedPathPoints: 16,
+          talentDropsClosed: true,
+        }),
       }),
     });
     const forceZeus = initializeRewardBranches(
@@ -279,14 +298,17 @@ describe('finite Hex progress', () => {
       catalog,
       Object.freeze({
         ...closed,
-        keepsakes: Object.freeze({
-          ...closed.keepsakes,
-          olympianSources: forceZeus.keepsakes.olympianSources,
+        state: Object.freeze({
+          ...closed.state,
+          keepsakes: Object.freeze({
+            ...closed.state.keepsakes,
+            olympianSources: forceZeus.state.keepsakes.olympianSources,
+          }),
         }),
       }),
     );
-    expect(late.hexProgress).toMatchObject({ godSentAdded: true, talentDropsClosed: true });
-    expect(hexEffectiveCapacity(catalog, late.hexProgress)).toBe(18);
+    expect(late.state.hexProgress).toMatchObject({ godSentAdded: true, talentDropsClosed: true });
+    expect(hexEffectiveCapacity(catalog, late.state.hexProgress)).toBe(18);
   });
 
   it('adds God Sent only for the currently held linked provider, then retains its insertion after removal', () => {
@@ -322,14 +344,17 @@ describe('finite Hex progress', () => {
     const withHistory = (traitHistory: typeof heldHistory) =>
       Object.freeze({
         ...initial,
-        history: attachTraitHistory(initial.history, traitHistory),
-        traitHistory,
+        state: Object.freeze({
+          ...initial.state,
+          rewardHistory: attachTraitHistory(initial.state.rewardHistory, traitHistory),
+          traitHistory: traitHistory,
+        }),
       });
 
-    expect(withTree(withHistory(removedHistory)).hexProgress.godSentAdded).toBe(false);
+    expect(withTree(withHistory(removedHistory)).state.hexProgress.godSentAdded).toBe(false);
 
     const inserted = withTree(withHistory(heldHistory));
-    expect(inserted.hexProgress.godSentAdded).toBe(true);
+    expect(inserted.state.hexProgress.godSentAdded).toBe(true);
 
     const afterRemoval = maybeAddGodSent(catalog, withHistory(removedHistory));
     expect(
@@ -337,12 +362,15 @@ describe('finite Hex progress', () => {
         catalog,
         Object.freeze({
           ...inserted,
-          history: attachTraitHistory(inserted.history, removedHistory),
-          traitHistory: removedHistory,
+          state: Object.freeze({
+            ...inserted.state,
+            rewardHistory: attachTraitHistory(inserted.state.rewardHistory, removedHistory),
+            traitHistory: removedHistory,
+          }),
         }),
-      ).hexProgress.godSentAdded,
+      ).state.hexProgress.godSentAdded,
     ).toBe(true);
-    expect(afterRemoval.hexProgress.godSentAdded).toBeUndefined();
+    expect(afterRemoval.state.hexProgress.godSentAdded).toBeUndefined();
   });
 
   it('applies Moon Beam points and exact priority at each ordinary source frontier', () => {
@@ -352,19 +380,25 @@ describe('finite Hex progress', () => {
       catalog,
       'SpellTalentKeepsake',
     )[0]!;
-    expect(initial.hexProgress).toEqual({ bankedPathPoints: 5, investedPathPoints: 0 });
-    expect(initial.rewardPriorities).toEqual(['SpellDrop']);
+    expect(initial.state.hexProgress).toEqual({ bankedPathPoints: 5, investedPathPoints: 0 });
+    expect(initial.state.rewardPriorities).toEqual(['SpellDrop']);
 
     const afterSpell = Object.freeze({
       ...initial,
-      history: Object.freeze({ ...initial.history, useRecord: Object.freeze({ SpellDrop: 1 }) }),
+      state: Object.freeze({
+        ...initial.state,
+        rewardHistory: Object.freeze({
+          ...initial.state.rewardHistory,
+          useRecord: Object.freeze({ SpellDrop: 1 }),
+        }),
+      }),
     });
     const ordinary = applyMoonBeamEquip(catalog, afterSpell, 'SpellTalentKeepsake', 'Heroic');
-    expect(ordinary.hexProgress.bankedPathPoints).toBe(12);
-    expect(ordinary.rewardPriorities).toEqual(['SpellDrop', 'TalentDrop']);
+    expect(ordinary.state.hexProgress.bankedPathPoints).toBe(12);
+    expect(ordinary.state.rewardPriorities).toEqual(['SpellDrop', 'TalentDrop']);
 
     const postboss = applyMoonBeamEquip(catalog, afterSpell, 'SpellTalentKeepsake', 'Epic', true);
-    expect(postboss.rewardPriorities).toEqual(['SpellDrop', 'TalentBigDrop']);
+    expect(postboss.state.rewardPriorities).toEqual(['SpellDrop', 'TalentBigDrop']);
   });
 
   it.each([
@@ -405,7 +439,7 @@ describe('finite Hex progress', () => {
       },
       facts,
     );
-    expect(settlement.branches[0]?.hexProgress).toMatchObject({
+    expect(settlement.branches[0]?.state.hexProgress).toMatchObject({
       bankedPathPoints: 0,
       investedPathPoints: grant + 2,
     });
@@ -460,9 +494,9 @@ describe('finite Hex progress', () => {
         },
         facts,
       ).branches[0]!;
-    expect(settleSpell('option1').hexProgress.bankedPathPoints).toBe(0);
-    expect(settleSpell('option2').hexProgress.bankedPathPoints).toBe(1);
-    expect(settleSpell('option3').hexProgress.bankedPathPoints).toBe(2);
+    expect(settleSpell('option1').state.hexProgress.bankedPathPoints).toBe(0);
+    expect(settleSpell('option2').state.hexProgress.bankedPathPoints).toBe(1);
+    expect(settleSpell('option3').state.hexProgress.bankedPathPoints).toBe(2);
     // The bonus is owned by the selected row, not by a spell identity.
     expect(
       settleSpell(
@@ -472,7 +506,7 @@ describe('finite Hex progress', () => {
           { traitKey: 'SpellPolymorphTrait' },
           { traitKey: 'SpellMeteorTrait' },
         ] as const),
-      ).hexProgress.bankedPathPoints,
+      ).state.hexProgress.bankedPathPoints,
     ).toBe(0);
     expect(
       settleSpell(
@@ -482,7 +516,7 @@ describe('finite Hex progress', () => {
           { traitKey: 'SpellPolymorphTrait' },
           { traitKey: 'SpellMeteorTrait' },
         ] as const),
-      ).hexProgress.bankedPathPoints,
+      ).state.hexProgress.bankedPathPoints,
     ).toBe(2);
 
     const missingChild = settleOwnedAcquisitionSite(
@@ -522,8 +556,8 @@ describe('finite Hex progress', () => {
       'Underworld',
       loadout,
     )[0]!;
-    expect(initial.hexProgress).toMatchObject({ bankedPathPoints: 0, investedPathPoints: 0 });
-    expect(initial.traitHistory?.equippedSlots.Spell?.traitKey).toBe('SpellMoonBeamTrait');
+    expect(initial.state.hexProgress).toMatchObject({ bankedPathPoints: 0, investedPathPoints: 0 });
+    expect(initial.state.traitHistory?.equippedSlots.Spell?.traitKey).toBe('SpellMoonBeamTrait');
     const occurrence = createOccurrenceAddress(
       createBiomeAddress('Underworld', 'Q'),
       createOccurrenceId('hex-aspect-spell'),
@@ -547,9 +581,11 @@ describe('finite Hex progress', () => {
       },
       facts,
     ).branches[0]!;
-    expect(settled.history.useRecord.SpellDrop).toBe(1);
-    expect(settled.hexProgress).toMatchObject({ bankedPathPoints: 0, investedPathPoints: 3 });
-    expect(settled.traitHistory?.events.some((event) => event.kind === 'traitOffer')).toBe(false);
+    expect(settled.state.rewardHistory.useRecord.SpellDrop).toBe(1);
+    expect(settled.state.hexProgress).toMatchObject({ bankedPathPoints: 0, investedPathPoints: 3 });
+    expect(settled.state.traitHistory?.events.some((event) => event.kind === 'traitOffer')).toBe(
+      false,
+    );
 
     const laterBig = settleOwnedAcquisitionSite(
       catalog,
@@ -568,6 +604,9 @@ describe('finite Hex progress', () => {
       },
       facts,
     ).branches[0]!;
-    expect(laterBig.hexProgress).toMatchObject({ bankedPathPoints: 0, investedPathPoints: 8 });
+    expect(laterBig.state.hexProgress).toMatchObject({
+      bankedPathPoints: 0,
+      investedPathPoints: 8,
+    });
   });
 });

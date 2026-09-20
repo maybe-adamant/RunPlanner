@@ -20,7 +20,7 @@ import {
   type KeepsakeState,
 } from '../../src/simulation/keepsakes/state';
 import { attestGorgonBranchState } from '../../src/simulation/keepsakes/encounter-effects';
-import { initializeRewardBranches } from '../../src/simulation/rewards/branch-lifecycle';
+import { initializeTestRewardBranchesForRoute as initializeRewardBranches } from '../support/arcana-fear';
 import { settleEncounterTraitOffer } from '../../src/simulation/rewards/trait-settlement/coordinator';
 import { type RewardBranchState } from '../../src/simulation/rewards/branch-primitives';
 import { evaluateProgressiveBiomeAssembly } from '../../src/simulation/progressive/biome';
@@ -77,9 +77,12 @@ function branchWithKeepsakes(
   const traitHistory = foldTraitHistoryEvents(catalog, [...prerequisiteEvents(), ...extraEvents]);
   return Object.freeze({
     ...initialized,
-    history: attachTraitHistory(initialized.history, traitHistory),
-    traitHistory,
-    keepsakes,
+    state: Object.freeze({
+      ...initialized.state,
+      rewardHistory: attachTraitHistory(initialized.state.rewardHistory, traitHistory),
+      traitHistory: traitHistory,
+      keepsakes: keepsakes,
+    }),
   });
 }
 
@@ -114,7 +117,7 @@ function acquireCherished(
     branch,
     owner,
     cherishedOffer(giverKey),
-    (branch.traitHistory?.events.length ?? 0) + 1,
+    (branch.state.traitHistory?.events.length ?? 0) + 1,
     'encounterCompleted',
   ).branch;
 }
@@ -127,8 +130,8 @@ describe('Cherished Heirloom active keepsake advance', () => {
   ] as const)('advances only a %s current Gorgon appearance', (_label, before, after) => {
     const initial = createKeepsakeState(catalog, 'AthenaEncounterKeepsake', arcanaFear);
     const acquired = acquireCherished(branchWithKeepsakes({ ...initial, gorgon: before }));
-    expect(acquired.keepsakes.gorgon).toEqual(after);
-    expect(acquired.keepsakes.fatedStatus).toBe(initial.fatedStatus);
+    expect(acquired.state.keepsakes.gorgon).toEqual(after);
+    expect(acquired.state.keepsakes.fatedStatus).toBe(initial.fatedStatus);
   });
 
   it.each([
@@ -143,7 +146,7 @@ describe('Cherished Heirloom active keepsake advance', () => {
         ...initial,
         figLeaf: { remainingUses, activatedThisBiome },
       };
-      expect(acquireCherished(branchWithKeepsakes(keepsakes)).keepsakes.figLeaf).toEqual(
+      expect(acquireCherished(branchWithKeepsakes(keepsakes)).state.keepsakes.figLeaf).toEqual(
         keepsakes.figLeaf,
       );
     },
@@ -176,11 +179,11 @@ describe('Cherished Heirloom active keepsake advance', () => {
         acquisitionIdentity,
       };
       const acquired = acquireCherished(branchWithKeepsakes(keepsakes, [hammerEvent]));
-      expect(acquired.keepsakes.experimentalHammers.at(-1)).toEqual(
+      expect(acquired.state.keepsakes.experimentalHammers.at(-1)).toEqual(
         keepsakes.experimentalHammers.at(-1),
       );
       expect(
-        acquired.traitHistory?.events.filter(
+        acquired.state.traitHistory?.events.filter(
           (event) => event.kind === 'traitOffer' && event.giverKey === 'WeaponUpgrade',
         ),
       ).toEqual([hammerEvent]);
@@ -212,12 +215,12 @@ describe('Cherished Heirloom active keepsake advance', () => {
     };
     const before = branchWithKeepsakes(keepsakes, [hadesEvent]);
     const acquired = acquireCherished(before);
-    expect(acquired.keepsakes.jeweledPom).toEqual({ ...keepsakes.jeweledPom, levels: 4 });
-    expect(acquired.traitHistory?.equippedTraits.HadesLifestealBoon).toEqual(
-      before.traitHistory?.equippedTraits.HadesLifestealBoon,
+    expect(acquired.state.keepsakes.jeweledPom).toEqual({ ...keepsakes.jeweledPom, levels: 4 });
+    expect(acquired.state.traitHistory?.equippedTraits.HadesLifestealBoon).toEqual(
+      before.state.traitHistory?.equippedTraits.HadesLifestealBoon,
     );
     expect(
-      acquired.traitHistory?.events.filter(
+      acquired.state.traitHistory?.events.filter(
         (event) => event.kind === 'traitOffer' && event.giverKey === 'Hades',
       ),
     ).toEqual([hadesEvent]);
@@ -237,12 +240,12 @@ describe('Cherished Heirloom active keepsake advance', () => {
         selectedOptionKey: 'option1',
         rarificationActions: [],
       },
-      (acquired.traitHistory?.events.length ?? 0) + 1,
+      (acquired.state.traitHistory?.events.length ?? 0) + 1,
       'laterEncounterCompleted',
     );
-    expect(nextOffer.branch.traitHistory?.equippedTraits.DemeterSpecialBoon?.level).toBe(5);
+    expect(nextOffer.branch.state.traitHistory?.equippedTraits.DemeterSpecialBoon?.level).toBe(5);
     expect(
-      nextOffer.branch.traitHistory?.events.filter(
+      nextOffer.branch.state.traitHistory?.events.filter(
         (event) => event.kind === 'traitOffer' && event.giverKey === 'Hades',
       ),
     ).toEqual([hadesEvent]);
@@ -250,12 +253,12 @@ describe('Cherished Heirloom active keepsake advance', () => {
 
   it('adds only Moon Beam Epic-to-Heroic Path delta through the real Cherished acquisition fold', () => {
     const before = currentBranch('SpellTalentKeepsake');
-    expect(before.hexProgress).toEqual({ bankedPathPoints: 5, investedPathPoints: 0 });
-    expect(before.rewardPriorities).toEqual(['SpellDrop']);
+    expect(before.state.hexProgress).toEqual({ bankedPathPoints: 5, investedPathPoints: 0 });
+    expect(before.state.rewardPriorities).toEqual(['SpellDrop']);
 
     const acquired = acquireCherished(before);
-    expect(acquired.hexProgress).toEqual({ bankedPathPoints: 7, investedPathPoints: 0 });
-    expect(acquired.rewardPriorities).toEqual(['SpellDrop']);
+    expect(acquired.state.hexProgress).toEqual({ bankedPathPoints: 7, investedPathPoints: 0 });
+    expect(acquired.state.rewardPriorities).toEqual(['SpellDrop']);
   });
 
   it.each([
@@ -266,7 +269,7 @@ describe('Cherished Heirloom active keepsake advance', () => {
     (_label, before, expectedRarity) => {
       const initial = createKeepsakeState(catalog, 'BossMetaUpgradeKeepsake', arcanaFear);
       const acquired = acquireCherished(branchWithKeepsakes({ ...initial, figurine: before }));
-      expect(acquired.keepsakes.figurine).toEqual({ ...before, rarity: expectedRarity });
+      expect(acquired.state.keepsakes.figurine).toEqual({ ...before, rarity: expectedRarity });
     },
   );
 
@@ -278,10 +281,10 @@ describe('Cherished Heirloom active keepsake advance', () => {
     const effect = catalog.keepsakes.byKey.RarifyKeepsake?.effect;
     expect(effect?.kind).toBe('callingCard');
     if (effect?.kind !== 'callingCard') return;
-    expect(acquired.keepsakes.callingCard?.remainingCharges).toBe(
+    expect(acquired.state.keepsakes.callingCard?.remainingCharges).toBe(
       remaining + effect.rarificationChargesByRank.Heroic - effect.rarificationChargesByRank.Epic,
     );
-    expect(acquired.keepsakes.fatedStatus).toBe(initial.fatedStatus);
+    expect(acquired.state.keepsakes.fatedStatus).toBe(initial.fatedStatus);
   });
 
   it('applies the Calling Card spend before adding the Cherished declaration delta', () => {
@@ -308,7 +311,7 @@ describe('Cherished Heirloom active keepsake advance', () => {
         { traitKey: 'DemeterSprintBoon', rarity: 'Common' },
       ],
     });
-    expect(acquired.branch.keepsakes.callingCard?.remainingCharges).toBe(
+    expect(acquired.branch.state.keepsakes.callingCard?.remainingCharges).toBe(
       3 - 1 + effect.rarificationChargesByRank.Heroic - effect.rarificationChargesByRank.Epic,
     );
   });
@@ -321,25 +324,29 @@ describe('Cherished Heirloom active keepsake advance', () => {
     const effect = catalog.keepsakes.byKey.GoldifyKeepsake?.effect;
     expect(effect?.kind).toBe('timePiece');
     if (effect?.kind !== 'timePiece') return;
-    expect(acquired.keepsakes.timePiece?.remainingCharges).toBe(
+    expect(acquired.state.keepsakes.timePiece?.remainingCharges).toBe(
       remaining + effect.conversionChargesByRank.Heroic - effect.conversionChargesByRank.Epic,
     );
   });
 
   it('keeps a neutral current identity inert while retaining later rank-IV equip behavior', () => {
     const acquired = acquireCherished(currentBranch('BossPreDamageKeepsake'));
-    expect(acquired.keepsakes).toMatchObject({
+    expect(acquired.state.keepsakes).toMatchObject({
       currentKey: 'BossPreDamageKeepsake',
       history: [{ key: 'BossPreDamageKeepsake', kind: 'start', biomeNumber: 1 }],
       removedKeys: [],
     });
-    expect(acquired.traitHistory?.equippedTraits.KeepsakeLevelBoon).toBeDefined();
-    const rank = keepsakeRankForEquip(catalog, 'SkipEncounterKeepsake', acquired.traitHistory!);
+    expect(acquired.state.traitHistory?.equippedTraits.KeepsakeLevelBoon).toBeDefined();
+    const rank = keepsakeRankForEquip(
+      catalog,
+      'SkipEncounterKeepsake',
+      acquired.state.traitHistory!,
+    );
     const replaced = applyKeepsakeReplacement(
       catalog,
-      acquired.keepsakes,
+      acquired.state.keepsakes,
       'SkipEncounterKeepsake',
-      acquired.arcanaFear,
+      acquired.state.arcanaFear,
       rank,
     );
     expect(rank).toBe('Heroic');
@@ -377,7 +384,7 @@ describe('Cherished Heirloom active keepsake advance', () => {
       timePiece: Object.freeze({ remainingCharges: 3 }),
     });
     const acquired = acquireCherished(branchWithKeepsakes(keepsakes));
-    expect(acquired.keepsakes).toEqual(keepsakes);
+    expect(acquired.state.keepsakes).toEqual(keepsakes);
   });
 
   it.each([
@@ -395,7 +402,7 @@ describe('Cherished Heirloom active keepsake advance', () => {
         Object.fromEntries(Object.entries(initial).filter(([key]) => key !== ledgerKey)),
       ) as unknown as KeepsakeState;
       const acquired = acquireCherished(branchWithKeepsakes(withoutLedger));
-      expect(acquired.keepsakes).not.toHaveProperty(ledgerKey);
+      expect(acquired.state.keepsakes).not.toHaveProperty(ledgerKey);
     },
   );
 
@@ -404,10 +411,16 @@ describe('Cherished Heirloom active keepsake advance', () => {
     const demeter = acquireCherished(initial, 'Demeter');
     const hera = acquireCherished(initial, 'Hera');
     expect(
-      attestGorgonBranchState([{ keepsakes: demeter.keepsakes }, { keepsakes: hera.keepsakes }]),
+      attestGorgonBranchState([
+        { state: { keepsakes: demeter.state.keepsakes } },
+        { state: { keepsakes: hera.state.keepsakes } },
+      ]),
     ).toBe('pending');
     expect(() =>
-      attestGorgonBranchState([{ keepsakes: demeter.keepsakes }, { keepsakes: initial.keepsakes }]),
+      attestGorgonBranchState([
+        { state: { keepsakes: demeter.state.keepsakes } },
+        { state: { keepsakes: initial.state.keepsakes } },
+      ]),
     ).toThrow('Gorgon branch frontier is divergent');
   });
 
@@ -421,17 +434,19 @@ describe('Cherished Heirloom active keepsake advance', () => {
       const first = acquireCherished(initial, giverKey);
       const recomposed = acquireCherished(initial, giverKey);
       const repeated = acquireCherished(first, giverKey);
-      expect(first.keepsakes.callingCard?.remainingCharges).toBe(4);
-      expect(recomposed.keepsakes.callingCard?.remainingCharges).toBe(4);
-      expect(repeated.keepsakes.callingCard?.remainingCharges).toBe(4);
+      expect(first.state.keepsakes.callingCard?.remainingCharges).toBe(4);
+      expect(recomposed.state.keepsakes.callingCard?.remainingCharges).toBe(4);
+      expect(repeated.state.keepsakes.callingCard?.remainingCharges).toBe(4);
       expect(
-        repeated.traitHistory?.events.filter(
+        repeated.state.traitHistory?.events.filter(
           (event) =>
             event.kind === 'traitOffer' &&
             event.options.some((option) => option.traitKey === 'KeepsakeLevelBoon'),
         ),
       ).toHaveLength(1);
-      expect(beginBiomeKeepsakeState(repeated.keepsakes).callingCard?.remainingCharges).toBe(4);
+      expect(beginBiomeKeepsakeState(repeated.state.keepsakes).callingCard?.remainingCharges).toBe(
+        4,
+      );
     },
   );
 
@@ -457,13 +472,16 @@ describe('Cherished Heirloom active keepsake advance', () => {
       }),
     );
     const base = previous.rewards.branches[0];
-    if (base === undefined || active.traitHistory === undefined)
+    if (base === undefined || active.state.traitHistory === undefined)
       throw new Error('missing progressive reward branch');
     const rewardBranch = Object.freeze({
       ...base,
-      history: attachTraitHistory(base.history, active.traitHistory),
-      traitHistory: active.traitHistory,
-      keepsakes: active.keepsakes,
+      state: Object.freeze({
+        ...base.state,
+        rewardHistory: attachTraitHistory(base.state.rewardHistory, active.state.traitHistory),
+        traitHistory: active.state.traitHistory,
+        keepsakes: active.state.keepsakes,
+      }),
     });
     const input = {
       routePosition: ordinaryRoutePosition(catalog, 'Underworld', 'G'),
@@ -472,7 +490,6 @@ describe('Cherished Heirloom active keepsake advance', () => {
       seed: {
         history: previous.history,
         rewardBranches: [rewardBranch],
-        rewardLookups: previous.rewards.rewardLookups,
       },
     } as const;
     const first = evaluateProgressiveBiomeAssembly(catalog, goldenGBiome, plan, input);
@@ -481,12 +498,12 @@ describe('Cherished Heirloom active keepsake advance', () => {
     expect(recomposed).not.toBeNull();
     expect(
       first?.evaluation.rewards.branches.every(
-        (branch) => branch.keepsakes.callingCard?.remainingCharges === 4,
+        (branch) => branch.state.keepsakes.callingCard?.remainingCharges === 4,
       ),
     ).toBe(true);
     expect(
       recomposed?.evaluation.rewards.branches.every(
-        (branch) => branch.keepsakes.callingCard?.remainingCharges === 4,
+        (branch) => branch.state.keepsakes.callingCard?.remainingCharges === 4,
       ),
     ).toBe(true);
     expect(
@@ -505,14 +522,17 @@ describe('Cherished Heirloom active keepsake advance', () => {
     )[0]!;
     const before = {
       ...initialized,
-      keepsakes: {
-        ...initialized.keepsakes,
-        timePiece: { remainingCharges: 2 },
-      },
+      state: Object.freeze({
+        ...initialized.state,
+        keepsakes: {
+          ...initialized.state.keepsakes,
+          timePiece: { remainingCharges: 2 },
+        },
+      }),
     };
     const rejected = acquireCherished(before);
-    expect(rejected.keepsakes).toEqual(before.keepsakes);
-    expect(rejected.traitHistory?.equippedTraits.KeepsakeLevelBoon).toBeUndefined();
+    expect(rejected.state.keepsakes).toEqual(before.state.keepsakes);
+    expect(rejected.state.traitHistory?.equippedTraits.KeepsakeLevelBoon).toBeUndefined();
   });
 
   it('does not advance when Cherished is displayed but an ordinary alternative is selected', () => {
@@ -530,11 +550,11 @@ describe('Cherished Heirloom active keepsake advance', () => {
       'encounterCompleted',
     );
     expect(
-      selectedAlternative.branch.traitHistory?.equippedTraits.DemeterSpecialBoon,
+      selectedAlternative.branch.state.traitHistory?.equippedTraits.DemeterSpecialBoon,
     ).toBeDefined();
     expect(
-      selectedAlternative.branch.traitHistory?.equippedTraits.KeepsakeLevelBoon,
+      selectedAlternative.branch.state.traitHistory?.equippedTraits.KeepsakeLevelBoon,
     ).toBeUndefined();
-    expect(selectedAlternative.branch.keepsakes).toEqual(initial.keepsakes);
+    expect(selectedAlternative.branch.state.keepsakes).toEqual(initial.state.keepsakes);
   });
 });

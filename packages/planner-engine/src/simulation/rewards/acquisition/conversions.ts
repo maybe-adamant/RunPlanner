@@ -18,7 +18,7 @@ import {
   type FindingChronology,
   type FindingRegionEntry,
 } from '../../finding-regions';
-import { createTraitHistoryState } from '../../traits';
+
 import {
   appendRewardEvent,
   freezeRecord,
@@ -43,7 +43,7 @@ export function hasArtificerUse(
   owner: SemanticAddress,
   acquisitionRole: string,
 ): boolean {
-  return branch.arcanaFear.arcana.artificerUses.some(
+  return branch.state.arcanaFear.arcana.artificerUses.some(
     (use) =>
       semanticAddressKey(use.owner) === semanticAddressKey(owner) &&
       use.acquisitionRole === acquisitionRole,
@@ -67,9 +67,7 @@ export function assessSeaStarDuplication(
       resolution.lifecyclePoint,
     );
   const acquisition = catalog.rewards.acquisitions.byKey[resolved.acquisition.gameName];
-  const seaStarActive =
-    (branch.traitHistory ?? createTraitHistoryState()).equippedTraits.DoubleRewardBoon !==
-    undefined;
+  const seaStarActive = branch.state.traitHistory.equippedTraits.DoubleRewardBoon !== undefined;
   const evidence = Object.freeze({
     ...offerEvidence(source.offer),
     role: resolution.role,
@@ -116,7 +114,7 @@ export function assessTimePieceConversion(
   const goldConversionEligible =
     catalog.rewards.acquisitions.byKey[acquisition.acquisition.gameName]?.goldConversionEligible ===
     true;
-  const remainingCharges = branch.keepsakes.timePiece?.remainingCharges ?? 0;
+  const remainingCharges = branch.state.keepsakes.timePiece?.remainingCharges ?? 0;
   const evidence = Object.freeze({
     ...offerEvidence(source.offer),
     role,
@@ -124,7 +122,7 @@ export function assessTimePieceConversion(
     goldConversionEligible,
     blocksGoldConversion,
     instanceProvenance: source.instanceProvenance,
-    fatedStatus: branch.keepsakes.fatedStatus,
+    fatedStatus: branch.state.keepsakes.fatedStatus,
     remainingCharges,
   });
   return Object.freeze({
@@ -132,7 +130,7 @@ export function assessTimePieceConversion(
       goldConversionEligible &&
       !blocksGoldConversion &&
       source.instanceProvenance === 'free' &&
-      branch.keepsakes.fatedStatus === 'Fated' &&
+      branch.state.keepsakes.fatedStatus === 'Fated' &&
       remainingCharges > 0,
     evidence,
   });
@@ -153,12 +151,9 @@ export function assessArtificerConversion(
   const artificerConversionEligible =
     catalog.rewards.acquisitions.byKey[acquisition.acquisition.gameName]
       ?.artificerConversionEligible === true;
-  const status = hasActiveChaosSemanticTag(
-    branch.traitHistory ?? createTraitHistoryState(),
-    'Barren',
-  )
+  const status = hasActiveChaosSemanticTag(branch.state.traitHistory, 'Barren')
     ? undefined
-    : artificerStatus(catalog, branch.arcanaFear);
+    : artificerStatus(catalog, branch.state.arcanaFear);
   const evidence = Object.freeze({
     ...offerEvidence(source.offer),
     role: resolution.role,
@@ -248,7 +243,7 @@ export function generateArtificerReplacement(
         runProgress,
         prepared.bag,
         artificerReplacement.offer,
-        facts(prepared.branch.history, undefined, prepared.branch),
+        facts(prepared.branch.state.rewardHistory, undefined, prepared.branch),
         { ineligibleRewardTypes: new Set(['Devotion', 'SpellDrop']) },
       );
     } catch (error) {
@@ -256,7 +251,7 @@ export function generateArtificerReplacement(
         throw error;
     }
     for (const bag of bags) {
-      const arcanaFear = consumeArtificerUse(catalog, branch.arcanaFear, {
+      const arcanaFear = consumeArtificerUse(catalog, branch.state.arcanaFear, {
         owner: incoming.origin,
         acquisitionRole: resolution.role,
         sequence: resolution.historySequence,
@@ -280,15 +275,18 @@ export function generateArtificerReplacement(
       }
       const generatedHistory = applyOfferProjection(
         catalog.rewards,
-        prepared.branch.history,
+        prepared.branch.state.rewardHistory,
         artificerReplacement.offer,
-        facts(prepared.branch.history, undefined, prepared.branch),
+        facts(prepared.branch.state.rewardHistory, undefined, prepared.branch),
       );
       const withBagAndUse = Object.freeze({
         ...prepared.branch,
-        bags: freezeRecord({ ...prepared.branch.bags, RunProgress: bag }),
-        history: generatedHistory,
-        arcanaFear,
+        state: Object.freeze({
+          ...prepared.branch.state,
+          bags: freezeRecord({ ...prepared.branch.state.bags, RunProgress: bag }),
+          rewardHistory: generatedHistory,
+          arcanaFear: arcanaFear,
+        }),
       });
       const generated = appendRewardEvent(
         appendRewardEvent(withBagAndUse, resolution.historySequence, {

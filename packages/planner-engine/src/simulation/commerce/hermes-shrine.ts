@@ -37,13 +37,15 @@ export interface DerivedHermesShrineDelivery {
  */
 export function attestPendingHermesSpellDrop(
   branches: readonly {
-    readonly pendingHermesShrineDeliveries?: Readonly<
-      Record<string, { readonly rewardType: string }>
-    >;
+    readonly state: {
+      readonly pendingHermesShrineDeliveries?: Readonly<
+        Record<string, { readonly rewardType: string }>
+      >;
+    };
   }[],
 ): boolean {
   const values = branches.map((branch) =>
-    Object.values(branch.pendingHermesShrineDeliveries ?? {}).some(
+    Object.values(branch.state.pendingHermesShrineDeliveries ?? {}).some(
       (delivery) => delivery.rewardType === 'SpellDrop',
     ),
   );

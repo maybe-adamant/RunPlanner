@@ -19,7 +19,7 @@ import { simulateProject } from '@run-planner/engine/simulation';
 import { createArcanaFearState } from '../../src/simulation/arcana-fear';
 import { materializeAuthoredRoom } from '../../src/simulation/materialization/rooms/assemble';
 import { createRewardFacts } from '../../src/simulation/rewards/facts';
-import { initializeRewardBranches } from '../../src/simulation/rewards/branch-lifecycle';
+import { initializeTestRewardBranchesForRoute as initializeRewardBranches } from '../support/arcana-fear';
 import { processShopInventory } from '../../src/simulation/rewards/shop/inventory';
 import { deriveTravelRefill } from '../../src/simulation/rewards/shop/derived-rewards';
 import { settleShopAcquisitionSite } from '../../src/simulation/rewards/shop/settlement';
@@ -155,8 +155,9 @@ describe('Dream Shop availability', () => {
       undefined,
       'Dream',
       project.route!.loadout,
+      { routePosition: resolveRoutePosition(catalog, project.route, 'I'), historyView: view },
     );
-    const facts = (history: (typeof branches)[number]['history']) =>
+    const facts = (history: (typeof branches)[number]['state']['rewardHistory']) =>
       createRewardFacts({
         catalog,
         sourceOrigin: room.origin,
@@ -200,8 +201,9 @@ describe('Dream Shop availability', () => {
       undefined,
       'Dream',
       project.route!.loadout,
+      { routePosition: resolveRoutePosition(catalog, project.route, 'I'), historyView: view },
     );
-    const facts = (history: (typeof branches)[number]['history']) =>
+    const facts = (history: (typeof branches)[number]['state']['rewardHistory']) =>
       createRewardFacts({
         catalog,
         sourceOrigin: room.origin,
@@ -239,7 +241,7 @@ describe('Dream Shop availability', () => {
     });
     expect(inventory.findingEmissions).toEqual([]);
     expect(settlement.findingEmissions).toEqual([]);
-    expect(settlement.branches[0]?.traitHistory?.elementCounts).toMatchObject({
+    expect(settlement.branches[0]?.state.traitHistory?.elementCounts).toMatchObject({
       Earth: 1,
       Air: 1,
       Fire: 1,
@@ -265,17 +267,17 @@ describe('Dream Shop availability', () => {
       facts,
     });
     if (refill === undefined) throw new Error('Dream I Travel refill was not generated');
-    expect(refill.generationFacts.requirements.routeKey).toBe('Dream');
-    expect(refill.generationFacts.requirements.records.useRecord.ElementalBoost).toBe(1);
-    expect(refill.rewardTypes).toEqual(['ElementalBoost']);
+    expect(refill.data.generationFacts.requirements.routeKey).toBe('Dream');
+    expect(refill.data.generationFacts.requirements.records.useRecord.ElementalBoost).toBe(1);
+    expect(refill.data.rewardTypes).toEqual(['ElementalBoost']);
     expect(
-      refill.evaluateShopOption({
+      refill.capability.evaluateShopOption({
         optionKey: 'ElementalBoost',
         offer: { rewardType: 'ElementalBoost' },
       }),
     ).toMatchObject({ supported: true });
     expect(
-      refill.evaluateShopOption({
+      refill.capability.evaluateShopOption({
         optionKey: 'CardUpgradePointsDrop',
         offer: { rewardType: 'CardUpgradePointsDrop' },
       }),

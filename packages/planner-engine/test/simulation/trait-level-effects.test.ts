@@ -28,11 +28,11 @@ import { describe, expect, it } from 'vitest';
 
 import { goldenFBiome, goldenFStartId } from '@run-planner/test-fixtures/underworld';
 
-import { initializeTestRewardBranches } from '../support/arcana-fear';
 import {
-  initializeRewardBranches,
-  publicRewardBranch,
-} from '../../src/simulation/rewards/branch-lifecycle';
+  initializeTestRewardBranches,
+  initializeTestRewardBranchesForRoute as initializeRewardBranches,
+} from '../support/arcana-fear';
+import { publicRewardBranch } from '../../src/simulation/rewards/branch-lifecycle';
 import { settleEncounterTraitOffer } from '../../src/simulation/rewards/trait-settlement/coordinator';
 import { applyEncounterEndEffectsTransition } from '../../src/simulation/rewards/biome/lifecycle-transitions/encounter-end-effects';
 import type { CanonicalAuthoredRoom } from '../../src/simulation/materialization';
@@ -410,19 +410,19 @@ describe('Supply Chain lifecycle', () => {
       { acquisitionOrdinal: 1 },
     );
     const expected = semanticAddressKey(createTraitOfferAddress(traitOrigin, 'selection'));
-    expect(first.branch.traitHistory?.equippedTraits.SupplyDropBoon?.acquisitionIdentity).toBe(
-      expected,
-    );
-    expect(second.branch.traitHistory?.equippedTraits.SupplyDropBoon?.acquisitionIdentity).toBe(
-      expected,
-    );
-    expect(first.branch.traitHistory?.equippedTraits.SupplyDropBoon?.pickupProducerInterval).toBe(
-      3,
-    );
-    expect(second.branch.traitHistory?.equippedTraits.SupplyDropBoon?.pickupProducerInterval).toBe(
-      7,
-    );
-    let retained = first.branch.traitHistory!;
+    expect(
+      first.branch.state.traitHistory?.equippedTraits.SupplyDropBoon?.acquisitionIdentity,
+    ).toBe(expected);
+    expect(
+      second.branch.state.traitHistory?.equippedTraits.SupplyDropBoon?.acquisitionIdentity,
+    ).toBe(expected);
+    expect(
+      first.branch.state.traitHistory?.equippedTraits.SupplyDropBoon?.pickupProducerInterval,
+    ).toBe(3);
+    expect(
+      second.branch.state.traitHistory?.equippedTraits.SupplyDropBoon?.pickupProducerInterval,
+    ).toBe(7);
+    let retained = first.branch.state.traitHistory!;
     for (let sequence = 12; sequence <= 14; sequence += 1) {
       const advanced = advancePickupProducerProgress(catalog, retained, traitOrigin, sequence);
       expect(advanced.maturities).toHaveLength(sequence === 14 ? 1 : 0);
@@ -464,17 +464,21 @@ describe('Supply Chain lifecycle', () => {
       undefined,
       { acquisitionOrdinal: 1 },
     );
-    let history = supply.branch.traitHistory!;
+    let history = supply.branch.state.traitHistory!;
     for (let sequence = 3; sequence <= 7; sequence += 1) {
       history = advancePickupProducerProgress(catalog, history, dreamOccurrence, sequence).history;
     }
     const beforeThresholdBranch = Object.freeze({
       ...supply.branch,
-      history: attachTraitHistory(supply.branch.history, history),
-      traitHistory: history,
+      state: Object.freeze({
+        ...supply.branch.state,
+        rewardHistory: attachTraitHistory(supply.branch.state.rewardHistory, history),
+        traitHistory: history,
+      }),
     });
     expect(
-      beforeThresholdBranch.traitHistory.equippedTraits.SupplyDropBoon?.pickupProducerProgress,
+      beforeThresholdBranch.state.traitHistory.equippedTraits.SupplyDropBoon
+        ?.pickupProducerProgress,
     ).toBe(5);
 
     const boss = {
@@ -501,7 +505,7 @@ describe('Supply Chain lifecycle', () => {
     );
     expect(beforeThreshold.derivedAcquisitionEntryFrontiers).toEqual([]);
     expect(
-      beforeThreshold.branches[0]?.traitHistory?.equippedTraits.SupplyDropBoon
+      beforeThreshold.branches[0]?.state.traitHistory?.equippedTraits.SupplyDropBoon
         ?.pickupProducerProgress,
     ).toBe(6);
 
@@ -521,7 +525,8 @@ describe('Supply Chain lifecycle', () => {
     );
     expect(deferred.derivedAcquisitionEntryFrontiers).toEqual([]);
     expect(
-      deferred.branches[0]?.traitHistory?.equippedTraits.SupplyDropBoon?.pickupProducerProgress,
+      deferred.branches[0]?.state.traitHistory?.equippedTraits.SupplyDropBoon
+        ?.pickupProducerProgress,
     ).toBe(6);
 
     const postboss = catalog.rooms.byKey.Dream_PostBoss01;
@@ -556,9 +561,9 @@ describe('Supply Chain lifecycle', () => {
     );
 
     const afterBoss = initializeRewardBranches([publicRewardBranch(deferred.branches[0]!)]);
-    expect(afterBoss[0]?.traitHistory?.equippedTraits.SupplyDropBoon?.pickupProducerProgress).toBe(
-      6,
-    );
+    expect(
+      afterBoss[0]?.state.traitHistory?.equippedTraits.SupplyDropBoon?.pickupProducerProgress,
+    ).toBe(6);
 
     const nextOccurrence = createOccurrenceAddress(
       createBiomeAddress('Dream', 'G'),
@@ -612,11 +617,12 @@ describe('Supply Chain lifecycle', () => {
     expect(
       isPomUpgradeTarget(
         catalog,
-        released.branches[0]?.traitHistory?.equippedTraits.ApolloWeaponBoon,
+        released.branches[0]?.state.traitHistory?.equippedTraits.ApolloWeaponBoon,
       ),
     ).toBe(true);
     expect(
-      released.branches[0]?.traitHistory?.equippedTraits.SupplyDropBoon?.pickupProducerProgress,
+      released.branches[0]?.state.traitHistory?.equippedTraits.SupplyDropBoon
+        ?.pickupProducerProgress,
     ).toBe(0);
 
     const ordinary = applyEncounterEndEffectsTransition(
@@ -658,7 +664,7 @@ describe('Supply Chain lifecycle', () => {
       undefined,
       { acquisitionOrdinal: 4 },
     );
-    let history = supply.branch.traitHistory!;
+    let history = supply.branch.state.traitHistory!;
     history = advancePickupProducerProgress(catalog, history, traitOrigin, 2).history;
     history = advancePickupProducerProgress(catalog, history, traitOrigin, 3).history;
     const deferred = advancePickupProducerProgress(catalog, history, traitOrigin, 4, true);
@@ -733,7 +739,7 @@ describe('Supply Chain lifecycle', () => {
       undefined,
       'selection',
     );
-    const before = bridalSettlement.branch.traitHistory!;
+    const before = bridalSettlement.branch.state.traitHistory!;
     const supply = before.equippedTraits.SupplyDropBoon!;
     const steady = before.equippedTraits.BoonGrowthBoon!;
     expect(before.equippedTraits.ApolloWeaponBoon).toBeDefined();
@@ -767,15 +773,18 @@ describe('Supply Chain lifecycle', () => {
     ]);
     const branch = Object.freeze({
       ...bridalSettlement.branch,
-      traitHistory: progressed,
-      history: attachTraitHistory(bridalSettlement.branch.history, progressed),
-      pendingHermesShrineDeliveries: Object.freeze({
-        delivery: Object.freeze({
-          sourceKey: 'delivery',
-          sourceOrigin: occurrence,
-          generationKey: 'initial:first' as const,
-          rewardType: 'Boon',
-          remainingUses: 1,
+      state: Object.freeze({
+        ...bridalSettlement.branch.state,
+        traitHistory: progressed,
+        rewardHistory: attachTraitHistory(bridalSettlement.branch.state.rewardHistory, progressed),
+        pendingHermesShrineDeliveries: Object.freeze({
+          delivery: Object.freeze({
+            sourceKey: 'delivery',
+            sourceOrigin: occurrence,
+            generationKey: 'initial:first' as const,
+            rewardType: 'Boon',
+            remainingUses: 1,
+          }),
         }),
       }),
     });
@@ -813,7 +822,7 @@ describe('Supply Chain lifecycle', () => {
     );
     expect(pickup).toBeDefined();
     expect(
-      pickup?.branchesBeforeEntry[0]?.traitHistory?.equippedTraits.ApolloWeaponBoon,
+      pickup?.branchesBeforeEntry[0]?.state.traitHistory?.equippedTraits.ApolloWeaponBoon,
     ).toMatchObject({
       rarity: 'Heroic',
       level: 3,
@@ -822,7 +831,7 @@ describe('Supply Chain lifecycle', () => {
       (frontier) => frontier.kind === 'hermesShrineDelivery',
     );
     expect(
-      delivery?.branchesBeforeEntry[0]?.traitHistory?.equippedTraits.ApolloWeaponBoon,
+      delivery?.branchesBeforeEntry[0]?.state.traitHistory?.equippedTraits.ApolloWeaponBoon,
     ).toMatchObject({
       rarity: 'Heroic',
       level: 3,
@@ -835,13 +844,16 @@ describe('Supply Chain lifecycle', () => {
     if (base === undefined) throw new Error('missing test reward branch');
     const branch = Object.freeze({
       ...base,
-      pendingHermesShrineDeliveries: Object.freeze({
-        delivery: Object.freeze({
-          sourceKey: 'delivery',
-          sourceOrigin: occurrence,
-          generationKey: 'initial:first' as const,
-          rewardType: 'Boon',
-          remainingUses: 1,
+      state: Object.freeze({
+        ...base.state,
+        pendingHermesShrineDeliveries: Object.freeze({
+          delivery: Object.freeze({
+            sourceKey: 'delivery',
+            sourceOrigin: occurrence,
+            generationKey: 'initial:first' as const,
+            rewardType: 'Boon',
+            remainingUses: 1,
+          }),
         }),
       }),
     });
@@ -870,7 +882,7 @@ describe('Supply Chain lifecycle', () => {
       sequence: 1,
     });
     const advanced = applyEncounterEndEffectsTransition(catalog, figLeafEnd, room, [branch]);
-    expect(advanced.branches[0]?.pendingHermesShrineDeliveries.delivery).toMatchObject({
+    expect(advanced.branches[0]?.state.pendingHermesShrineDeliveries.delivery).toMatchObject({
       remainingUses: 0,
       dueAt: occurrence,
       dueSequence: 1,
@@ -896,7 +908,7 @@ describe('Supply Chain lifecycle', () => {
       } as unknown as CanonicalAuthoredRoom,
       [branch],
     );
-    expect(suppressed.branches[0]?.pendingHermesShrineDeliveries.delivery).toMatchObject({
+    expect(suppressed.branches[0]?.state.pendingHermesShrineDeliveries.delivery).toMatchObject({
       remainingUses: 1,
     });
     expect(suppressed.derivedAcquisitionEntryFrontiers).toEqual([]);
@@ -930,13 +942,16 @@ describe('Supply Chain lifecycle', () => {
       undefined,
       { acquisitionOrdinal: 1 },
     );
-    const supplyHistory = supplySettlement.branch.traitHistory!;
+    const supplyHistory = supplySettlement.branch.state.traitHistory!;
     expect(supplyHistory.equippedTraits.SupplyDropBoon?.acquisitionIdentity).toBeDefined();
     let branches: readonly RewardBranchState[] = [
       Object.freeze({
         ...base,
-        traitHistory: supplyHistory,
-        history: attachTraitHistory(base.history, supplyHistory),
+        state: Object.freeze({
+          ...base.state,
+          traitHistory: supplyHistory,
+          rewardHistory: attachTraitHistory(base.state.rewardHistory, supplyHistory),
+        }),
       }),
     ];
     const oRoom = {
@@ -986,7 +1001,8 @@ describe('Supply Chain lifecycle', () => {
       oBranches = transition.branches;
       expect(transition.derivedAcquisitionEntryFrontiers).toEqual([]);
       oProgress.push(
-        oBranches[0]?.traitHistory?.equippedTraits.SupplyDropBoon?.pickupProducerProgress ?? 0,
+        oBranches[0]?.state.traitHistory?.equippedTraits.SupplyDropBoon?.pickupProducerProgress ??
+          0,
       );
     }
     expect(oProgress).toEqual([1, 2, 3]);
@@ -1020,7 +1036,8 @@ describe('Supply Chain lifecycle', () => {
     expect(catalog.rooms.byKey.N_Sub01?.skipRoomsPerUpgrade).toBe(true);
     expect(skipped.derivedAcquisitionEntryFrontiers).toEqual([]);
     expect(
-      skipped.branches[0]?.traitHistory?.equippedTraits.SupplyDropBoon?.pickupProducerProgress,
+      skipped.branches[0]?.state.traitHistory?.equippedTraits.SupplyDropBoon
+        ?.pickupProducerProgress,
     ).toBeUndefined();
 
     const room = {
@@ -1087,9 +1104,9 @@ describe('Supply Chain lifecycle', () => {
           ]),
         );
       }
-      expect(branches[0]?.traitHistory?.equippedTraits.SupplyDropBoon?.pickupProducerProgress).toBe(
-        sequence % 7,
-      );
+      expect(
+        branches[0]?.state.traitHistory?.equippedTraits.SupplyDropBoon?.pickupProducerProgress,
+      ).toBe(sequence % 7);
     }
     expect(maturedAt).toEqual([7, 14]);
     expect(maturedEntryKeys[1]).toEqual(maturedEntryKeys[0]);
@@ -1110,9 +1127,9 @@ describe('Supply Chain lifecycle', () => {
         branches,
       ).branches;
     }
-    expect(branches[0]?.traitHistory?.equippedTraits.SupplyDropBoon?.pickupProducerProgress).toBe(
-      6,
-    );
+    expect(
+      branches[0]?.state.traitHistory?.equippedTraits.SupplyDropBoon?.pickupProducerProgress,
+    ).toBe(6);
 
     const chaosRoom = {
       ...room,
@@ -1135,7 +1152,8 @@ describe('Supply Chain lifecycle', () => {
     expect(catalog.rooms.byKey.Chaos_01?.skipTimedDropResources).toBe(true);
     expect(deferred.derivedAcquisitionEntryFrontiers).toEqual([]);
     expect(
-      deferred.branches[0]?.traitHistory?.equippedTraits.SupplyDropBoon?.pickupProducerProgress,
+      deferred.branches[0]?.state.traitHistory?.equippedTraits.SupplyDropBoon
+        ?.pickupProducerProgress,
     ).toBe(6);
 
     const maturedAfterChaos = applyEncounterEndEffectsTransition(
@@ -1154,7 +1172,7 @@ describe('Supply Chain lifecycle', () => {
     );
     expect(maturedAfterChaos.derivedAcquisitionEntryFrontiers).toHaveLength(2);
     expect(
-      maturedAfterChaos.branches[0]?.traitHistory?.equippedTraits.SupplyDropBoon
+      maturedAfterChaos.branches[0]?.state.traitHistory?.equippedTraits.SupplyDropBoon
         ?.pickupProducerProgress,
     ).toBe(0);
   });
@@ -1218,7 +1236,10 @@ describe('targeted selected-trait child chronology', () => {
       const initial = initializeTestRewardBranches()[0]!;
       const settlement = settleEncounterTraitOffer(
         catalog,
-        Object.freeze({ ...initial, traitHistory: before }),
+        Object.freeze({
+          ...initial,
+          state: Object.freeze({ ...initial.state, traitHistory: before }),
+        }),
         traitOwner.owner,
         offer,
         before.events.length + 1,
@@ -1229,26 +1250,28 @@ describe('targeted selected-trait child chronology', () => {
         { acquisitionOrdinal: 1 },
       );
       const expectedChild = createTraitAcquisitionTargetAddress(traitOwner, 'option1');
-      expect(settlement.branch.traitHistory?.equippedTraits[selectedTraitKey]).toBeDefined();
+      expect(settlement.branch.state.traitHistory?.equippedTraits[selectedTraitKey]).toBeDefined();
       expect(settlement.blockedChild?.address).toEqual(expectedChild);
       expect(settlement.blockedChild?.branch).toBe(settlement.branch);
       expect(settlement.findingEntries.map((entry) => entry.finding)).toContainEqual(
         expect.objectContaining({ code: findingCode, origin: expectedChild }),
       );
-      expect(settlement.branch.traitHistory?.events.at(-1)).not.toHaveProperty(
+      expect(settlement.branch.state.traitHistory?.events.at(-1)).not.toHaveProperty(
         'targetedAcquisitionTransition',
       );
       if (selectedTraitKey === 'BoonDecayBoon') {
-        expect(settlement.branch.traitHistory?.equippedTraits.DemeterWeaponBoon).toMatchObject({
+        expect(
+          settlement.branch.state.traitHistory?.equippedTraits.DemeterWeaponBoon,
+        ).toMatchObject({
           rarity: 'Common',
           level: 1,
         });
       } else {
-        expect(settlement.branch.traitHistory?.equippedTraits.StaffDoubleAttackTrait).toMatchObject(
-          {
-            hammerRank: 'RankI',
-          },
-        );
+        expect(
+          settlement.branch.state.traitHistory?.equippedTraits.StaffDoubleAttackTrait,
+        ).toMatchObject({
+          hammerRank: 'RankI',
+        });
       }
     },
   );

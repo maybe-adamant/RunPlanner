@@ -10,7 +10,7 @@ import {
 import type { HistoryEvent, ProgressiveRoomHistoryViews } from '../../../history';
 import type { CanonicalAuthoredRoom } from '../../../materialization';
 import { ownerRegion, type FindingChronology } from '../../../finding-regions';
-import { createTraitHistoryState } from '../../../traits';
+
 import {
   assessStygianWell,
   assessStygianWellPlacement,
@@ -92,14 +92,17 @@ export function applyRoomEnteredTransition(
               : undefined;
           const forfeit =
             qualifyingRewardType === undefined
-              ? Object.freeze({ consumed: false as const, state: branch.arcanaFear })
-              : consumeRoomRewardForfeit(catalog, branch.arcanaFear, qualifyingRewardType, {
+              ? Object.freeze({ consumed: false as const, state: branch.state.arcanaFear })
+              : consumeRoomRewardForfeit(catalog, branch.state.arcanaFear, qualifyingRewardType, {
                   owner: localReward.origin,
                   sequence: event.sequence,
                 });
           const materialized = forfeit.consumed
             ? appendRewardEvent(
-                Object.freeze({ ...branch, arcanaFear: forfeit.state }),
+                Object.freeze({
+                  ...branch,
+                  state: Object.freeze({ ...branch.state, arcanaFear: forfeit.state }),
+                }),
                 event.sequence,
                 Object.freeze({
                   kind: 'rewardForfeited' as const,
@@ -129,7 +132,7 @@ export function applyRoomEnteredTransition(
     const capable = chaosDeclaration !== undefined;
     const chaosGate = chaosGateSourceOccurrenceIds.has(room.occurrenceId);
     const ixionGeneratedChaos = ixionGeneratedChaosSourceOccurrenceIds.has(room.occurrenceId);
-    const ixionPending = next.some((branch) => branch.stygianWell.sparkUses > 0);
+    const ixionPending = next.some((branch) => branch.state.stygianWell.sparkUses > 0);
     const forcedChaos = capable && ixionPending && chaosGate;
     if (capable && ixionPending && !chaosGate)
       findings.push(
@@ -168,13 +171,16 @@ export function applyRoomEnteredTransition(
         next.map((branch) =>
           Object.freeze({
             ...branch,
-            stygianWell:
-              branch.stygianWell.sparkUses === 0
-                ? branch.stygianWell
-                : Object.freeze({
-                    ...branch.stygianWell,
-                    sparkUses: branch.stygianWell.sparkUses - 1,
-                  }),
+            state: Object.freeze({
+              ...branch.state,
+              stygianWell:
+                branch.state.stygianWell.sparkUses === 0
+                  ? branch.state.stygianWell
+                  : Object.freeze({
+                      ...branch.state.stygianWell,
+                      sparkUses: branch.state.stygianWell.sparkUses - 1,
+                    }),
+            }),
           }),
         ),
       );
@@ -187,21 +193,26 @@ export function applyRoomEnteredTransition(
       next.map((branch) =>
         Object.freeze({
           ...branch,
-          pendingHermesShrineDeliveries: Object.freeze(
-            Object.fromEntries(
-              Object.entries(branch.pendingHermesShrineDeliveries).map(([key, delivery]) => [
-                key,
-                delivery.dueAt === undefined
-                  ? Object.freeze({
-                      ...delivery,
-                      remainingUses: 0,
-                      dueAt: room.origin,
-                      dueSequence: event.sequence,
-                    })
-                  : delivery,
-              ]),
+          state: Object.freeze({
+            ...branch.state,
+            pendingHermesShrineDeliveries: Object.freeze(
+              Object.fromEntries(
+                Object.entries(branch.state.pendingHermesShrineDeliveries).map(
+                  ([key, delivery]) => [
+                    key,
+                    delivery.dueAt === undefined
+                      ? Object.freeze({
+                          ...delivery,
+                          remainingUses: 0,
+                          dueAt: room.origin,
+                          dueSequence: event.sequence,
+                        })
+                      : delivery,
+                  ],
+                ),
+              ),
             ),
-          ),
+          }),
         }),
       ),
     );
@@ -233,11 +244,7 @@ export function applyRoomEnteredTransition(
   if (room !== undefined && room.purgingPool?.interacted === true && !alreadyAssessed.purgingPool) {
     const assessments = Object.freeze(
       next.map((branch) =>
-        assessPurgingPool(
-          catalog,
-          room.purgingPool!,
-          (branch.traitHistory ?? createTraitHistoryState()).equippedTraits,
-        ),
+        assessPurgingPool(catalog, room.purgingPool!, branch.state.traitHistory.equippedTraits),
       ),
     );
     purgingPoolAssessment = Object.freeze({ origin: room.origin, assessments });
@@ -290,7 +297,7 @@ export function applyRoomEnteredTransition(
                     currentRoom: room,
                     sourceDeclaration: declaration,
                     view: entry,
-                    history: branch.history,
+                    history: branch.state.rewardHistory,
                     enteredBiomeCount: routePosition.ordinal,
                     rewardLookups,
                     currentBatchRoomGameNames: createdPeerGameNames(
@@ -299,9 +306,9 @@ export function applyRoomEnteredTransition(
                       room.origin,
                       'generatedTarget',
                     ),
-                    pendingSpellDrop: Object.values(branch.pendingHermesShrineDeliveries).some(
-                      (delivery) => delivery.rewardType === 'SpellDrop',
-                    ),
+                    pendingSpellDrop: Object.values(
+                      branch.state.pendingHermesShrineDeliveries,
+                    ).some((delivery) => delivery.rewardType === 'SpellDrop'),
                     fail: (detail) => {
                       throw new BiomeRewardSimulationContractError(detail);
                     },
@@ -392,8 +399,8 @@ export function applyRoomEnteredTransition(
                     room.origin.routeKey,
                     declaration,
                     room.stygianWell,
-                    branch.stygianWell,
-                    branch.traitHistory,
+                    branch.state.stygianWell,
+                    branch.state.traitHistory,
                     priorEnteredWellFlags,
                   ),
                 }),

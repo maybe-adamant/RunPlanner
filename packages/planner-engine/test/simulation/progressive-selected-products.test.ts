@@ -309,7 +309,7 @@ describe('progressive selected and blocked products', () => {
     expect(artifacts?.roomTargets.at(laterTarget)).toBeUndefined();
     expect(
       blocked.rewards.branches
-        .flatMap((branch) => branch.traitHistory?.events ?? [])
+        .flatMap((branch) => branch.state.traitHistory?.events ?? [])
         .some((event) => event.kind === 'traitOffer' && event.giverKey === 'Chaos'),
     ).toBe(false);
   });
@@ -435,7 +435,7 @@ describe('progressive selected and blocked products', () => {
     });
     expect(artifacts?.roomTargets.at(laterBatch.targets[0].origin)).toBeUndefined();
     const traitEvents = blocked.rewards.branches
-      .flatMap((branch) => branch.traitHistory?.events ?? [])
+      .flatMap((branch) => branch.state.traitHistory?.events ?? [])
       .filter(
         (event) =>
           event.kind === 'traitOffer' &&
@@ -449,7 +449,7 @@ describe('progressive selected and blocked products', () => {
     expect(traitEvent.targetedAcquisitionTransition).toBeUndefined();
     expect(
       blocked.rewards.branches
-        .flatMap((branch) => branch.traitHistory?.events ?? [])
+        .flatMap((branch) => branch.state.traitHistory?.events ?? [])
         .some(
           (event) => event.kind === 'levelMutation' && event.sourceTraitKey === 'BoonDecayBoon',
         ),
@@ -521,7 +521,7 @@ describe('progressive selected and blocked products', () => {
     expect(artifacts?.roomTargets.at(laterBatch.targets[0].origin)).toBeUndefined();
     expect(
       blocked.rewards.branches
-        .flatMap((branch) => branch.traitHistory?.events ?? [])
+        .flatMap((branch) => branch.state.traitHistory?.events ?? [])
         .some(
           (event) =>
             event.kind === 'levelMutation' &&
@@ -780,7 +780,6 @@ describe('progressive selected and blocked products', () => {
     const seed = {
       history: previous.history,
       rewardBranches: previous.rewards.branches,
-      rewardLookups: previous.rewards.rewardLookups,
     };
     const clamped = evaluateProgressiveBiomeAssembly(catalog, goldenGBiome, plan, {
       routePosition: ordinaryRoutePosition(catalog, 'Underworld', 'G'),
@@ -843,7 +842,6 @@ describe('progressive selected and blocked products', () => {
     const blockedSeed = {
       history: blockedPrevious.history,
       rewardBranches: blockedPrevious.rewards.branches,
-      rewardLookups: blockedPrevious.rewards.rewardLookups,
     };
     const blockedClamped = evaluateProgressiveBiomeAssembly(catalog, goldenGBiome, blockedPlan, {
       routePosition: ordinaryRoutePosition(catalog, 'Underworld', 'G'),
@@ -1009,7 +1007,6 @@ describe('progressive selected and blocked products', () => {
     const seed = {
       history: previous.history,
       rewardBranches: previous.rewards.branches,
-      rewardLookups: previous.rewards.rewardLookups,
     };
     const clamped = evaluateProgressiveBiomeAssembly(catalog, oBiome, plan, {
       routePosition: ordinaryRoutePosition(catalog, 'Surface', 'O'),

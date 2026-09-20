@@ -3,7 +3,7 @@ import type { AuthoredAnvilResult } from '../../authored-project/model';
 import type { TraitOfferContext } from '../traits/offer-domain';
 import { assessTraitOption } from '../traits/authoring/assessment';
 import type { EquippedTrait } from '../../authored-project/traits/state';
-import { createTraitHistoryState } from '../traits/history/fold';
+
 import type { TraitHistoryEvent, TraitHistoryState } from '../traits/history/model';
 import type { AcquisitionRoleAddress } from '../../authored-project/addresses';
 import type { RewardBranchState } from './branch-primitives';
@@ -210,10 +210,10 @@ export function createAnvilCandidateCapability(
     .flatMap((entry) =>
       entry.branchesBeforeRole.map((branch) =>
         Object.freeze({
-          history: branch.traitHistory ?? createTraitHistoryState(),
+          history: branch.state.traitHistory,
           context: entry.source.traitContext ?? Object.freeze({}),
           temporaryHammerTraitKeys: new Set(
-            branch.keepsakes.experimentalHammers
+            branch.state.keepsakes.experimentalHammers
               .filter((hammer) => hammer.active)
               .map((hammer) => hammer.traitKey),
           ),

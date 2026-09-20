@@ -2,9 +2,14 @@
 
 ## Status and objective
 
-Approved and locked execution contract; implementation has not started.
-Behavior and performance base: `9b335f9f`, including the completed persistent
-hub-offer correction. Independent pre-lock review corrections are incorporated.
+Approved and locked execution contract; Gate A is complete and independently
+reviewed. Gate B has not started.
+The pre-edit transition inventory was accepted at `b5c79329` before source edits.
+The separately approved inspector correction landed as `001f8020`; partial
+Gate A work was preserved and restored after that focused commit.
+Behavior and performance base: `001f8020`, including the completed persistent
+hub-offer and inspector-input corrections. Independent pre-lock review
+corrections are incorporated.
 
 Consolidate the live state already used by simulation into one authoritative,
 immutable, branch-local `SimulationState`. Eligibility uses the exact snapshot
@@ -255,6 +260,17 @@ Expected deletion: old top-level state carriers, separate lookup ownership and
 the independent `ProgressiveSeed.rewardLookups` field, and repeated trait-fact writes.
 Intended commit: `refactor(engine): consolidate authoritative simulation state`.
 
+Gate A verification: workspace typecheck, 2,094 engine tests, 42 affected
+application tests and 22 authored-fixture integrity tests passed. The engine
+suite includes execution-plan coverage; no generated JSON changed. Underworld,
+Surface and Dream branch/candidate counts match the recorded baseline. Focused
+history, immutable-state, divergent-lookup and delivery partial-stop witnesses
+pass. The final branch-local lookup cache correction also passed all 23 Run State
+tests. Scoped lint, formatting and diff checks passed. Independent review found
+no actionable findings and independently passed 60 focused tests across the
+state baseline, Run State and Infernal Contract/Travel Deal suites. The complete
+repository/performance gate remains scheduled for D.
+
 ### B — Eligibility and candidate snapshots
 
 Starting contacts: `traits/offer-domain.ts`, `offers.ts`, `level-effects.ts`,
@@ -344,7 +360,7 @@ not preserve a missing-fact fallback as permanent compatibility machinery.
 
 - Main session reviews the complete base-to-head diff for semantic changes,
   parallel carriers, dependency direction, unbounded growth and stale comments.
-- Run one full `RUN_PLANNER_PERFORMANCE_BASE_REF=9b335f9f npm run check`
+- Run one full `RUN_PLANNER_PERFORMANCE_BASE_REF=001f8020 npm run check`
   after narrow tests/review remediation. Pin the performance base to the start
   of this refactor so successive gate commits cannot hide cumulative cost.
   Gate A–C results and closure results belong in commit

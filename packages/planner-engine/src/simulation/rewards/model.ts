@@ -1,4 +1,3 @@
-import type { RewardBagState, RewardHistoryState } from '../../reward-kernel/model';
 import type {
   AcquisitionEntryAddress,
   AcquisitionSiteAddress,
@@ -10,14 +9,8 @@ import type {
 } from '../../authored-project/addresses';
 import type { ConcreteAcquisitionEvent, ResolvedRewardOffer } from '../../reward-kernel/model';
 import type { SemanticFinding } from '../model';
-import type {
-  SelectedLevelResolutionAssessment,
-  SelectedTraitOfferAssessment,
-  TraitHistoryState,
-} from '../traits';
+import type { SelectedLevelResolutionAssessment, SelectedTraitOfferAssessment } from '../traits';
 import type { RunStateAvailability, RunStateSnapshot } from './run-state';
-import type { ArcanaFearState } from '../arcana-fear';
-import type { KeepsakeState } from '../keepsakes/state';
 import type { EncounterPhaseAddress } from '../../authored-project/addresses';
 import type { TraitRarity } from '../../catalog-schema';
 import type { NemesisRandomEventAddress } from '../../authored-project/addresses';
@@ -186,33 +179,16 @@ export interface RewardStoreSupportEntry extends RewardStoreCandidateSupport {
 }
 
 export interface RewardBranch {
-  readonly bags: Readonly<Record<string, RewardBagState>>;
-  /** Ordered global priorities that intentionally survive biome boundaries. */
-  readonly rewardPriorities: readonly string[];
-  readonly hexProgress: import('../hex-progress').HexProgressState;
-  readonly history: RewardHistoryState;
+  readonly state: import('../state/model').SimulationState;
   readonly events: readonly RewardEvent[];
   readonly processedThroughHistorySequence: number;
-  readonly traitHistory?: TraitHistoryState;
-  readonly arcanaFear: ArcanaFearState;
-  readonly keepsakes: KeepsakeState;
-  /** Engine-derived delayed Shrine state carried between biome evaluations. */
-  readonly pendingHermesShrineDeliveries?: Readonly<
-    Record<string, import('./branch-primitives').PendingHermesShrineDelivery>
-  >;
-  readonly stygianWell?: import('../commerce/stygian-well').StygianWellRunState;
 }
 
 export interface TargetRewardHistoryCheckpoint {
   readonly origin: TargetAddress;
   readonly historySequence: number;
-  readonly histories: readonly RewardHistoryState[];
-  /** Exact persistent Hub offer history reached when this target was generated. */
-  readonly rewardLookups: Readonly<Record<string, readonly string[]>>;
-  /** Agreement-owned branch fact for later room generation requirements. */
-  readonly pendingSpellDrops: readonly boolean[];
-  /** Branch-owned closure truth must agree before a generated target can use it. */
-  readonly allSpellInvested: readonly boolean[];
+  /** Exact full branch snapshots at this generation contact. */
+  readonly states: readonly import('../state/model').SimulationState[];
 }
 
 interface RewardSimulationBase {
@@ -244,7 +220,6 @@ export interface BiomeRewardSimulation extends RewardSimulationBase {
   readonly bossArcanaOutcomes: readonly BossArcanaOutcome[];
   readonly storeSupport: readonly RewardStoreSupportEntry[];
   readonly targetHistory: readonly TargetRewardHistoryCheckpoint[];
-  readonly rewardLookups: Readonly<Record<string, readonly string[]>>;
   readonly runStateSnapshots: readonly RunStateSnapshot[];
   readonly runStateAvailability: readonly RunStateAvailability[];
   /** Exact room-entry Pool generation assessments, before any sale action. */

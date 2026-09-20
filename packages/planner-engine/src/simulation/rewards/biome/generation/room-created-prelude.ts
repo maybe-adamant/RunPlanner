@@ -66,7 +66,7 @@ export function prepareRoomCreatedPrelude(
           return Object.freeze({
             key: semanticAddressKey(selection),
             candidate: Object.freeze({
-              state: branch.keepsakes,
+              state: branch.state.keepsakes,
               encounterBlockedKeepsakeKeys: Object.freeze([
                 ...new Set(
                   historyAtRack?.ledgers.encounterRecords.flatMap(

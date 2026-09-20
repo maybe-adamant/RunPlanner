@@ -29,7 +29,7 @@ import {
 import { describe, expect, it } from 'vitest';
 import { createDefaultRouteLoadout } from '../../src/authored-project/loadout';
 import { createArcanaFearState } from '../../src/simulation/arcana-fear';
-import { initializeRewardBranches } from '../../src/simulation/rewards/branch-lifecycle';
+import { initializeTestRewardBranchesForRoute as initializeRewardBranches } from '../support/arcana-fear';
 import { settleOwnedAcquisitionSite } from '../../src/simulation/rewards/acquisition/site-settlement';
 import { mergeRewardFindingEmissions } from '../../src/simulation/rewards/findings';
 import { settleNonFinalBossRarityBlocks } from '../../src/simulation/traits/history/transitions';
@@ -216,7 +216,7 @@ describe('Selene Spell equipment chronology', () => {
       'Underworld',
       loadout,
     );
-    const history = branches[0]?.traitHistory;
+    const history = branches[0]?.state.traitHistory;
     expect(history?.events).toContainEqual(
       expect.objectContaining({
         kind: 'directTraitGrant',
@@ -262,10 +262,10 @@ describe('Selene Spell equipment chronology', () => {
       new Map(),
     )[0]!;
 
-    expect(settled.history.useRecord.SpellDrop).toBe(1);
-    expect(settled.traitHistory?.equippedSlots.Spell?.traitKey).toBe('SpellMoonBeamTrait');
+    expect(settled.state.rewardHistory.useRecord.SpellDrop).toBe(1);
+    expect(settled.state.traitHistory?.equippedSlots.Spell?.traitKey).toBe('SpellMoonBeamTrait');
     expect(settled.traitEvaluations).toEqual([]);
-    expect(settled.hexProgress).toMatchObject({ bankedPathPoints: 0, investedPathPoints: 3 });
+    expect(settled.state.hexProgress).toMatchObject({ bankedPathPoints: 0, investedPathPoints: 3 });
   });
 });
 

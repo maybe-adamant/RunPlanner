@@ -34,7 +34,7 @@ export function dueHermesShrineDeliveryFrontier(
   let placementRequired = false;
   const site = createAcquisitionSiteAddress(deliveryHost, 'hermesShrineDelivery');
   for (const branch of branches) {
-    for (const delivery of Object.values(branch.pendingHermesShrineDeliveries)) {
+    for (const delivery of Object.values(branch.state.pendingHermesShrineDeliveries)) {
       if (
         delivery.dueAt === undefined ||
         semanticAddressKey(delivery.dueAt) !== semanticAddressKey(deliveryHost)

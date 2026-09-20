@@ -213,7 +213,7 @@ it.each([
     const biome = acquired.evaluation.route.biomes.find((candidate) => candidate.biomeKey === 'G');
     if (biome === undefined || !('rewards' in biome)) throw new Error('G was not evaluated');
     for (const result of biome.rewards.branches) {
-      const event = result.traitHistory?.events.find(
+      const event = result.state.traitHistory?.events.find(
         (event) =>
           event.kind === 'levelMutation' &&
           semanticAddressKey(event.owner) === semanticAddressKey(resolution),
@@ -273,7 +273,7 @@ it.each([
     expect(acquired.evaluation.route.findings).toEqual([]);
     const biome = acquired.evaluation.route.biomes.find((candidate) => candidate.biomeKey === 'G');
     if (biome === undefined || !('rewards' in biome)) throw new Error('G was not evaluated');
-    expect(biome.rewards.branches.map((branch) => branch.hexProgress)).toEqual([
+    expect(biome.rewards.branches.map((branch) => branch.state.hexProgress)).toEqual([
       expect.objectContaining({ bankedPathPoints: 0, investedPathPoints: points }),
     ]);
     const product = assembleExecutionProduct({ assembly: acquired.assembly, catalog });

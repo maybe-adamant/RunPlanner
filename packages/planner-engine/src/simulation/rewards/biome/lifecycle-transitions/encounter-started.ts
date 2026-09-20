@@ -133,7 +133,13 @@ export function applyEncounterStartedTransition(
     attestFigLeafBranchState(next);
     next = Object.freeze(
       next.map((branch) =>
-        Object.freeze({ ...branch, keepsakes: consumeFigLeafUse(branch.keepsakes) }),
+        Object.freeze({
+          ...branch,
+          state: Object.freeze({
+            ...branch.state,
+            keepsakes: consumeFigLeafUse(branch.state.keepsakes),
+          }),
+        }),
       ),
     );
   }

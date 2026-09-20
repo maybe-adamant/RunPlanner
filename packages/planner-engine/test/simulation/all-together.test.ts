@@ -83,8 +83,11 @@ function branch(history: TraitHistoryState) {
   const initial = initializeTestRewardBranches()[0]!;
   return Object.freeze({
     ...initial,
-    history: attachTraitHistory(initial.history, history),
-    traitHistory: history,
+    state: Object.freeze({
+      ...initial.state,
+      rewardHistory: attachTraitHistory(initial.state.rewardHistory, history),
+      traitHistory: history,
+    }),
   });
 }
 
@@ -176,29 +179,33 @@ describe('All Together direct trait settlement', () => {
     expect(history.elementCounts.Earth).toBe(1);
     const { settled, findings } = settle(history);
     expect(findings).toHaveLength(0);
-    expect(settled.traitHistory?.equippedTraits.AllElementalBoon).toMatchObject({
+    expect(settled.state.traitHistory?.equippedTraits.AllElementalBoon).toMatchObject({
       rarity: 'Legendary',
       giverKey: 'Hera',
     });
     for (const traitKey of Object.values(firstResult)) {
-      expect(settled.traitHistory?.equippedTraits[traitKey!]).toMatchObject({
+      expect(settled.state.traitHistory?.equippedTraits[traitKey!]).toMatchObject({
         traitKey,
         sourceRole: 'directTraitGrant',
       });
-      expect(settled.traitHistory?.equippedTraits[traitKey!]?.rarity).toBeUndefined();
+      expect(settled.state.traitHistory?.equippedTraits[traitKey!]?.rarity).toBeUndefined();
     }
-    expect(settled.traitHistory?.bannedTraitKeys).toContain('ElementalDamageBoon');
-    expect(settled.traitHistory?.events.map((event) => [event.kind, event.sequence])).toEqual([
-      ['traitOffer', 1],
-      ['traitOffer', 2],
-      ['traitOffer', 3],
-      ['traitOffer', 20],
-      ['directTraitGrant', 20],
-      ['directTraitGrant', 20],
-      ['directTraitGrant', 20],
-      ['directTraitGrant', 20],
-    ]);
-    expect(settled.history.lootTypeHistory).toEqual(branch(history).history.lootTypeHistory);
+    expect(settled.state.traitHistory?.bannedTraitKeys).toContain('ElementalDamageBoon');
+    expect(settled.state.traitHistory?.events.map((event) => [event.kind, event.sequence])).toEqual(
+      [
+        ['traitOffer', 1],
+        ['traitOffer', 2],
+        ['traitOffer', 3],
+        ['traitOffer', 20],
+        ['directTraitGrant', 20],
+        ['directTraitGrant', 20],
+        ['directTraitGrant', 20],
+        ['directTraitGrant', 20],
+      ],
+    );
+    expect(settled.state.rewardHistory.lootTypeHistory).toEqual(
+      branch(history).state.rewardHistory.lootTypeHistory,
+    );
   });
 
   it('settles the same atomic map through the ordinary free reward acquisition path', () => {
@@ -239,11 +246,11 @@ describe('All Together direct trait settlement', () => {
     expect(settled.branches).toHaveLength(1);
     expect(findings.size).toBe(0);
     expect(
-      settled.branches[0]?.traitHistory?.events
+      settled.branches[0]?.state.traitHistory?.events
         .filter((event) => event.kind === 'directTraitGrant')
         .map((event) => event.traitKey),
     ).toEqual(Object.values(firstResult));
-    expect(settled.branches[0]?.hexProgress.godSentAdded).toBe(true);
+    expect(settled.branches[0]?.state.hexProgress.godSentAdded).toBe(true);
 
     const nonmatching = settleOwnedAcquisitionSite(
       catalog,
@@ -270,7 +277,7 @@ describe('All Together direct trait settlement', () => {
       },
       (rewardHistory) => factsWithHistory(rewardFacts(), rewardHistory, new Set()),
     );
-    expect(nonmatching.branches[0]?.hexProgress.godSentAdded).toBe(false);
+    expect(nonmatching.branches[0]?.state.hexProgress.godSentAdded).toBe(false);
   });
 
   it('publishes the exact post-outer checkpoint when an ordinary reward child blocks', () => {
@@ -304,11 +311,13 @@ describe('All Together direct trait settlement', () => {
     mergeRewardFindingEmissions(findings, settled.findingEmissions);
     const checkpoint = settled.traitChildSettlements?.[0];
     expect(checkpoint?.address).toMatchObject({ kind: 'allTogetherSet', setKey: 'earth' });
-    expect(checkpoint?.branch.traitHistory?.equippedTraits.AllElementalBoon?.rarity).toBe(
+    expect(checkpoint?.branch.state.traitHistory?.equippedTraits.AllElementalBoon?.rarity).toBe(
       'Legendary',
     );
     expect(
-      checkpoint?.branch.traitHistory?.events.filter((event) => event.kind === 'directTraitGrant'),
+      checkpoint?.branch.state.traitHistory?.events.filter(
+        (event) => event.kind === 'directTraitGrant',
+      ),
     ).toEqual([]);
     expect(checkpoint?.branch.events.at(-1)?.kind).toBe('concreteAcquisition');
   });
@@ -326,7 +335,7 @@ describe('All Together direct trait settlement', () => {
       air: 'ElementalDodgeBoon',
       water: 'ElementalDamageCapBoon',
     }) satisfies AuthoredAllTogetherResult;
-    const forced = settle(onePerSet, alternatives).settled.traitHistory!;
+    const forced = settle(onePerSet, alternatives).settled.state.traitHistory!;
     expect(
       forced.events
         .filter((event) => event.kind === 'directTraitGrant')
@@ -346,7 +355,7 @@ describe('All Together direct trait settlement', () => {
     const exhausted = settle(
       allEight,
       Object.freeze({ earth: null, fire: null, air: null, water: null }),
-    ).settled.traitHistory!;
+    ).settled.state.traitHistory!;
     expect(exhausted.equippedTraits.AllElementalBoon?.rarity).toBe('Legendary');
     expect(exhausted.events.filter((event) => event.kind === 'directTraitGrant')).toEqual([]);
     const nightBloom = settle(
@@ -359,7 +368,7 @@ describe('All Together direct trait settlement', () => {
         createDefaultAuthoredHexTree(catalog, 'SpellSummonTrait'),
       ),
     ).settled;
-    expect(nightBloom.hexProgress.godSentAdded).toBe(true);
+    expect(nightBloom.state.hexProgress.godSentAdded).toBe(true);
   });
 
   it.each([
@@ -378,9 +387,9 @@ describe('All Together direct trait settlement', () => {
         'encounterCompleted',
       );
       const settled = settlementResult.branch;
-      expect(settled.traitHistory?.equippedTraits.AllElementalBoon?.rarity).toBe('Legendary');
+      expect(settled.state.traitHistory?.equippedTraits.AllElementalBoon?.rarity).toBe('Legendary');
       expect(
-        settled.traitHistory?.events.filter((event) => event.kind === 'directTraitGrant'),
+        settled.state.traitHistory?.events.filter((event) => event.kind === 'directTraitGrant'),
       ).toEqual([]);
       expect(settlementResult.findingEntries.map((entry) => entry.finding.code)).toContain(code);
       if (result === undefined) {
@@ -413,7 +422,7 @@ describe('All Together direct trait settlement', () => {
       result.findingEntries.filter((entry) => entry.finding.origin.kind === 'allTogetherSet'),
     ).toEqual([]);
     expect(
-      settled.traitHistory?.events.filter((event) => event.kind === 'directTraitGrant'),
+      settled.state.traitHistory?.events.filter((event) => event.kind === 'directTraitGrant'),
     ).toEqual([]);
   });
 
@@ -433,9 +442,11 @@ describe('All Together direct trait settlement', () => {
       undefined,
       [first, second],
     );
-    expect(result.branch.traitHistory?.equippedTraits.AllElementalBoon?.rarity).toBe('Legendary');
+    expect(result.branch.state.traitHistory?.equippedTraits.AllElementalBoon?.rarity).toBe(
+      'Legendary',
+    );
     expect(
-      result.branch.traitHistory?.events.filter((event) => event.kind === 'directTraitGrant'),
+      result.branch.state.traitHistory?.events.filter((event) => event.kind === 'directTraitGrant'),
     ).toEqual([]);
     expect(result.blockedChild?.address).toMatchObject({ kind: 'allTogetherSet', setKey: 'earth' });
     expect(result.blockedChild?.candidateContext).toBeDefined();

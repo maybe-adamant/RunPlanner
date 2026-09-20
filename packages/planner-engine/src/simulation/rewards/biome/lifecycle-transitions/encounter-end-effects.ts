@@ -1,3 +1,4 @@
+import { replaceSimulationTraitHistory } from '../../../state/transitions';
 import type { Catalog } from '../../../../catalog-schema';
 import {
   encounterResolutionContext,
@@ -17,11 +18,9 @@ import type { HistoryEvent } from '../../../history';
 import type { CanonicalAuthoredRoom } from '../../../materialization';
 import { ownerRegion } from '../../../finding-regions';
 import {
-  attachTraitHistory,
   advanceChaosClock,
   advancePickupProducerProgress,
   advanceSteadyGrowthProgress,
-  createTraitHistoryState,
   foldTraitHistoryEvents,
   settleSteadyGrowthThreshold,
   type ReachedSteadyGrowthThreshold,
@@ -81,11 +80,14 @@ function advanceExperimentalHammerForEndEffects(
 ): readonly RewardBranchState[] {
   return Object.freeze(
     branches.map((branch) => {
-      const advanced = advanceExperimentalHammers(branch.keepsakes);
-      if (advanced.state === branch.keepsakes) return branch;
+      const advanced = advanceExperimentalHammers(branch.state.keepsakes);
+      if (advanced.state === branch.state.keepsakes) return branch;
       if (advanced.expired.length === 0)
-        return Object.freeze({ ...branch, keepsakes: advanced.state });
-      const prior = branch.traitHistory ?? createTraitHistoryState();
+        return Object.freeze({
+          ...branch,
+          state: Object.freeze({ ...branch.state, keepsakes: advanced.state }),
+        });
+      const prior = branch.state.traitHistory;
       const traitHistory = foldTraitHistoryEvents(catalog, [
         ...prior.events,
         ...advanced.expired.map((expired) =>
@@ -103,9 +105,10 @@ function advanceExperimentalHammerForEndEffects(
       ]);
       return Object.freeze({
         ...branch,
-        history: attachTraitHistory(branch.history, traitHistory),
-        traitHistory,
-        keepsakes: advanced.state,
+        state: replaceSimulationTraitHistory(
+          Object.freeze({ ...branch.state, keepsakes: advanced.state }),
+          traitHistory,
+        ),
       });
     }),
   );
@@ -118,14 +121,13 @@ function advanceChaosClockAt(
 ): readonly RewardBranchState[] {
   return Object.freeze(
     branches.map((branch) => {
-      const before = branch.traitHistory ?? createTraitHistoryState();
+      const before = branch.state.traitHistory;
       const traitHistory = advanceChaosClock(catalog, before, sequence, 'encounters');
       return traitHistory === before
         ? branch
         : Object.freeze({
             ...branch,
-            traitHistory,
-            history: attachTraitHistory(branch.history, traitHistory),
+            state: replaceSimulationTraitHistory(branch.state, traitHistory),
           });
     }),
   );
@@ -144,15 +146,14 @@ function advancePickupProducersAt(
   const next: RewardBranchState[] = [];
   const maturities: ReachedPickupProducerMaturity[] = [];
   for (const branch of branches) {
-    const before = branch.traitHistory ?? createTraitHistoryState();
+    const before = branch.state.traitHistory;
     const advanced = advancePickupProducerProgress(catalog, before, owner, sequence, deferMaturity);
     const updated =
       advanced.history === before
         ? branch
         : Object.freeze({
             ...branch,
-            traitHistory: advanced.history,
-            history: attachTraitHistory(branch.history, advanced.history),
+            state: replaceSimulationTraitHistory(branch.state, advanced.history),
           });
     next.push(updated);
     for (const maturity of advanced.maturities) maturities.push(maturity);
@@ -192,7 +193,7 @@ function advanceSteadyGrowthAt(
     readonly threshold: ReachedSteadyGrowthThreshold;
   }[] = [];
   for (const branch of branches) {
-    const before = branch.traitHistory ?? createTraitHistoryState();
+    const before = branch.state.traitHistory;
     const advanced = advanceSteadyGrowthProgress(catalog, before, owner, sequence);
     let traitHistory = advanced.history;
     let blockedAtThreshold = false;
@@ -213,8 +214,7 @@ function advanceSteadyGrowthAt(
             address,
             branch: Object.freeze({
               ...branch,
-              traitHistory,
-              history: attachTraitHistory(branch.history, traitHistory),
+              state: replaceSimulationTraitHistory(branch.state, traitHistory),
             }),
             threshold,
             targetTraitKey,
@@ -231,8 +231,7 @@ function advanceSteadyGrowthAt(
           ? branch
           : Object.freeze({
               ...branch,
-              traitHistory,
-              history: attachTraitHistory(branch.history, traitHistory),
+              state: replaceSimulationTraitHistory(branch.state, traitHistory),
             }),
       );
   }
@@ -259,7 +258,7 @@ function branchReachedPickupMaturity(
   sequence: number,
 ): boolean {
   return (
-    branch.traitHistory?.events.some(
+    branch.state.traitHistory.events.some(
       (historyEvent) =>
         historyEvent.kind === 'pickupProducerProgress' &&
         historyEvent.sequence === sequence &&
@@ -305,17 +304,22 @@ function advanceTranscendentEmbryoAt(
   }[] = [];
   const address = createTranscendentEmbryoOutcomeAddress(owner, phaseKey);
   for (const branch of branches) {
-    const source = branch.keepsakes.transcendentEmbryo;
+    const source = branch.state.keepsakes.transcendentEmbryo;
     if (source === undefined) {
       next.push(branch);
       continue;
     }
-    const progressed = advanceTranscendentEmbryoProgress(branch.keepsakes);
+    const progressed = advanceTranscendentEmbryoProgress(branch.state.keepsakes);
     if (!progressed.reached) {
-      next.push(Object.freeze({ ...branch, keepsakes: progressed.state }));
+      next.push(
+        Object.freeze({
+          ...branch,
+          state: Object.freeze({ ...branch.state, keepsakes: progressed.state }),
+        }),
+      );
       continue;
     }
-    const before = branch.traitHistory ?? createTraitHistoryState();
+    const before = branch.state.traitHistory;
     const threshold = Object.freeze({
       source,
       before,
@@ -336,7 +340,10 @@ function advanceTranscendentEmbryoAt(
       blocked.push(
         Object.freeze({
           address,
-          branch: Object.freeze({ ...branch, keepsakes: progressed.state }),
+          branch: Object.freeze({
+            ...branch,
+            state: Object.freeze({ ...branch.state, keepsakes: progressed.state }),
+          }),
           threshold,
           targetOutcome,
         }),
@@ -344,7 +351,12 @@ function advanceTranscendentEmbryoAt(
       continue;
     }
     if (assessment.blessingKey === null) {
-      next.push(Object.freeze({ ...branch, keepsakes: progressed.state }));
+      next.push(
+        Object.freeze({
+          ...branch,
+          state: Object.freeze({ ...branch.state, keepsakes: progressed.state }),
+        }),
+      );
       continue;
     }
     const acquisitionIdentity = `${semanticAddressKey(address)}:${sequence}`;
@@ -373,13 +385,17 @@ function advanceTranscendentEmbryoAt(
     next.push(
       Object.freeze({
         ...branch,
-        keepsakes: replaceTranscendentEmbryoBlessing(
-          progressed.state,
-          assessment.value!,
-          acquisitionIdentity,
+        state: replaceSimulationTraitHistory(
+          Object.freeze({
+            ...branch.state,
+            keepsakes: replaceTranscendentEmbryoBlessing(
+              progressed.state,
+              assessment.value!,
+              acquisitionIdentity,
+            ),
+          }),
+          traitHistory,
         ),
-        history: attachTraitHistory(branch.history, traitHistory),
-        traitHistory,
       }),
     );
   }
@@ -411,10 +427,13 @@ export function applyEncounterEndEffectsTransition(
     next.map((branch) =>
       Object.freeze({
         ...branch,
-        stygianWell:
-          declaration?.ignoreEncounterUses === true
-            ? branch.stygianWell
-            : advanceStygianWellEncounterUses(branch.stygianWell),
+        state: Object.freeze({
+          ...branch.state,
+          stygianWell:
+            declaration?.ignoreEncounterUses === true
+              ? branch.state.stygianWell
+              : advanceStygianWellEncounterUses(branch.state.stygianWell),
+        }),
       }),
     ),
   );
@@ -454,7 +473,7 @@ export function applyEncounterEndEffectsTransition(
     const deliveryHost = event.origin;
     next = Object.freeze(
       next.map((branch) => {
-        const pending = branch.pendingHermesShrineDeliveries;
+        const pending = branch.state.pendingHermesShrineDeliveries;
         const deliveries = Object.fromEntries(
           Object.entries(pending).map(([key, delivery]) => {
             if (delivery.dueAt !== undefined) return [key, delivery] as const;
@@ -471,7 +490,10 @@ export function applyEncounterEndEffectsTransition(
         );
         return Object.freeze({
           ...branch,
-          pendingHermesShrineDeliveries: Object.freeze(deliveries),
+          state: Object.freeze({
+            ...branch.state,
+            pendingHermesShrineDeliveries: Object.freeze(deliveries),
+          }),
         });
       }),
     );

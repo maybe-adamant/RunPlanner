@@ -48,7 +48,7 @@ import {
   assessGorgonEligibility,
   attestGorgonBranchState,
 } from '../../src/simulation/keepsakes/encounter-effects';
-import { initializeRewardBranches } from '../../src/simulation/rewards/branch-lifecycle';
+import { initializeTestRewardBranchesForRoute as initializeRewardBranches } from '../support/arcana-fear';
 import { resolveGorgonCandidateRarity } from '../../src/simulation/rewards/biome/encounter-acquisition/gorgon-started';
 import { settleEncounterTraitOffer } from '../../src/simulation/rewards/trait-settlement/coordinator';
 
@@ -173,12 +173,15 @@ describe('Gorgon Amulet lifecycle', () => {
       plan === undefined
     )
       throw new Error('missing valid F-to-G Gorgon fixture');
-    const traitHistory = seed.traitHistory ?? cherishedPrerequisiteHistory();
+    const traitHistory = seed.state.traitHistory ?? cherishedPrerequisiteHistory();
     const initialBranches = previous.rewards.branches.map((branch) => ({
       ...branch,
-      history: attachTraitHistory(branch.history, traitHistory),
-      traitHistory,
-      keepsakes: seed.keepsakes,
+      state: Object.freeze({
+        ...branch.state,
+        rewardHistory: attachTraitHistory(branch.state.rewardHistory, traitHistory),
+        traitHistory: traitHistory,
+        keepsakes: seed.state.keepsakes,
+      }),
     }));
     const progressive = evaluateProgressiveBiomeAssembly(catalog, goldenGBiome, plan, {
       routePosition: ordinaryRoutePosition(catalog, 'Underworld', 'G'),
@@ -187,7 +190,6 @@ describe('Gorgon Amulet lifecycle', () => {
       seed: {
         history: previous.history,
         rewardBranches: initialBranches,
-        rewardLookups: previous.rewards.rewardLookups,
       },
     });
     if (progressive === null) throw new Error('G fixture did not publish a progressive assembly');
@@ -222,7 +224,10 @@ describe('Gorgon Amulet lifecycle', () => {
           branches: [
             {
               ...branch,
-              stygianWell: { ...branch.stygianWell, yarnUses },
+              state: Object.freeze({
+                ...branch.state,
+                stygianWell: { ...branch.state.stygianWell, yarnUses },
+              }),
             },
           ],
           providerKey: 'Athena',
@@ -256,7 +261,12 @@ describe('Gorgon Amulet lifecycle', () => {
     expect(
       resolveGorgonCandidateRarity({
         catalog,
-        branches: [Object.freeze({ ...branch, traitHistory: ordinary })],
+        branches: [
+          Object.freeze({
+            ...branch,
+            state: Object.freeze({ ...branch.state, traitHistory: ordinary }),
+          }),
+        ],
         providerKey: 'Athena',
         rarityLevel: 3,
         roomOverride: undefined,
@@ -266,7 +276,7 @@ describe('Gorgon Amulet lifecycle', () => {
 
   it('lets room precedence replace the Gorgon source while permanent rarity still raises rank I', () => {
     const branch = initializeTestRewardBranches()[0]!;
-    const history = branch.traitHistory ?? createTraitHistoryState();
+    const history = branch.state.traitHistory ?? createTraitHistoryState();
     const properHistory = {
       ...history,
       equippedTraits: {
@@ -285,7 +295,9 @@ describe('Gorgon Amulet lifecycle', () => {
     expect(
       resolveGorgonCandidateRarity({
         catalog,
-        branches: [{ ...branch, traitHistory: properHistory }],
+        branches: [
+          { ...branch, state: Object.freeze({ ...branch.state, traitHistory: properHistory }) },
+        ],
         providerKey: 'Athena',
         rarityLevel: 1,
         roomOverride: undefined,
@@ -309,7 +321,13 @@ describe('Gorgon Amulet lifecycle', () => {
       'Combat',
     );
     const source = initializeTestRewardBranches()[0]!;
-    const withYarn = { ...source, stygianWell: { ...source.stygianWell, yarnUses: 1 } };
+    const withYarn = {
+      ...source,
+      state: Object.freeze({
+        ...source.state,
+        stygianWell: { ...source.state.stygianWell, yarnUses: 1 },
+      }),
+    };
     for (const [rarityLevel, rarity, expectedYarnUses] of [
       [1, 'Rare', 0],
       [2, 'Rare', 1],
@@ -332,7 +350,7 @@ describe('Gorgon Amulet lifecycle', () => {
           ...(rarityLevel > 1 ? { suppressTemporaryBoonRarity: true } : {}),
         },
       );
-      expect(settled.branch.stygianWell.yarnUses).toBe(expectedYarnUses);
+      expect(settled.branch.state.stygianWell.yarnUses).toBe(expectedYarnUses);
     }
   });
 
@@ -385,12 +403,18 @@ describe('Gorgon Amulet lifecycle', () => {
 
   it('carries one lifecycle state across equivalent reward branches and rejects divergence', () => {
     const pending = createKeepsakeState(catalog, 'AthenaEncounterKeepsake', fear);
-    expect(attestGorgonBranchState([{ keepsakes: pending }, { keepsakes: pending }])).toBe(
-      'pending',
-    );
+    expect(
+      attestGorgonBranchState([
+        { state: { keepsakes: pending } },
+        { state: { keepsakes: pending } },
+      ]),
+    ).toBe('pending');
     const consumed = consumeGorgonAppearance(pending);
     expect(() =>
-      attestGorgonBranchState([{ keepsakes: pending }, { keepsakes: consumed }]),
+      attestGorgonBranchState([
+        { state: { keepsakes: pending } },
+        { state: { keepsakes: consumed } },
+      ]),
     ).toThrow('Gorgon branch frontier is divergent');
   });
 
@@ -413,7 +437,7 @@ describe('Gorgon Amulet lifecycle', () => {
     const g = evaluation.route.biomes.find((biome) => biome.biomeKey === 'G');
     expect(g).toBeDefined();
     if (g === undefined || !('rewards' in g)) return;
-    expect(g.rewards.branches[0]?.keepsakes.gorgon).toBeDefined();
+    expect(g.rewards.branches[0]?.state.keepsakes.gorgon).toBeDefined();
   });
 
   it('exposes the fixed depth/provider contract and distinct blocker facts', () => {
@@ -524,9 +548,9 @@ describe('Gorgon Amulet lifecycle', () => {
       expect(evaluated.branch.traitEvaluations?.at(-1)?.context).not.toHaveProperty(
         'athenaTriggerConditionMet',
       );
-      expect(evaluated.branch.traitHistory?.equippedTraits.InvulnerabilityDashBoon?.rarity).toBe(
-        rarity,
-      );
+      expect(
+        evaluated.branch.state.traitHistory?.equippedTraits.InvulnerabilityDashBoon?.rarity,
+      ).toBe(rarity);
     },
   );
 
@@ -603,8 +627,11 @@ describe('Gorgon Amulet lifecycle', () => {
     const before = cherishedPrerequisiteHistory();
     const seeded = {
       ...initialized,
-      history: attachTraitHistory(initialized.history, before),
-      traitHistory: before,
+      state: Object.freeze({
+        ...initialized.state,
+        rewardHistory: attachTraitHistory(initialized.state.rewardHistory, before),
+        traitHistory: before,
+      }),
     };
     const acquired = priorCherished
       ? settleEncounterTraitOffer(
@@ -626,7 +653,7 @@ describe('Gorgon Amulet lifecycle', () => {
       const draft = unresolved.traitOfferArtifacts.at(trait)?.traitOfferStartingOutcome('Athena');
       expect(
         unresolved.simulation.branches.every(
-          (branch) => branch.keepsakes.gorgon?.status === 'pending',
+          (branch) => branch.state.keepsakes.gorgon?.status === 'pending',
         ),
       ).toBe(true);
       expect(
@@ -645,17 +672,18 @@ describe('Gorgon Amulet lifecycle', () => {
     project = orderGoldenGorgonAfterIncoming(project);
     const result = evaluateGWithGorgonSeed(project, acquired).simulation;
     expect(result.branches, JSON.stringify(result.findings)).not.toHaveLength(0);
-    expect(result.branches.every((branch) => branch.keepsakes.gorgon?.status === 'consumed')).toBe(
-      true,
-    );
+    expect(
+      result.branches.every((branch) => branch.state.keepsakes.gorgon?.status === 'consumed'),
+    ).toBe(true);
     expect(
       result.branches.every(
-        (branch) => branch.traitHistory?.equippedTraits.InvulnerabilityDashBoon?.rarity === rarity,
+        (branch) =>
+          branch.state.traitHistory?.equippedTraits.InvulnerabilityDashBoon?.rarity === rarity,
       ),
     ).toBe(true);
     expect(
       result.branches.every(
-        (branch) => branch.traitHistory?.equippedTraits.KeepsakeLevelBoon !== undefined,
+        (branch) => branch.state.traitHistory?.equippedTraits.KeepsakeLevelBoon !== undefined,
       ),
     ).toBe(true);
   });
@@ -852,7 +880,7 @@ describe('Gorgon Amulet lifecycle', () => {
     expect(g).toBeDefined();
     if (g === undefined || !('rewards' in g)) return;
     expect(
-      g.rewards.branches.every((branch) => branch.keepsakes.gorgon?.status === 'pending'),
+      g.rewards.branches.every((branch) => branch.state.keepsakes.gorgon?.status === 'pending'),
     ).toBe(true);
     expect(g.findings).toContainEqual(
       expect.objectContaining({
@@ -912,7 +940,9 @@ describe('Gorgon Amulet lifecycle', () => {
     expect(missingG).toBeDefined();
     if (missingG === undefined || !('rewards' in missingG)) return;
     expect(
-      missingG.rewards.branches.every((branch) => branch.keepsakes.gorgon?.status === 'pending'),
+      missingG.rewards.branches.every(
+        (branch) => branch.state.keepsakes.gorgon?.status === 'pending',
+      ),
     ).toBe(true);
     expect(
       missingG.findings.some((finding) => finding.code === 'rewardAcquisitionUnavailable'),
@@ -940,7 +970,7 @@ describe('Gorgon Amulet lifecycle', () => {
     const p = assembly.evaluation.route.biomes.find((biome) => biome.biomeKey === 'P');
     expect(p).toBeDefined();
     if (p === undefined || !('rewards' in p)) return;
-    expect(p.rewards.branches[0]?.keepsakes.gorgon?.status).toBe('consumed');
+    expect(p.rewards.branches[0]?.state.keepsakes.gorgon?.status).toBe('consumed');
     expect(
       encounterPhaseCandidateSupportForProjectEvaluationAssembly(assembly, phase)
         ?.candidateEncounterKeys,
@@ -1088,7 +1118,7 @@ describe('Gorgon Amulet lifecycle', () => {
       ),
     ).toHaveLength(1);
     expect(
-      p.rewards.branches.every((branch) => branch.keepsakes.gorgon?.status === 'pending'),
+      p.rewards.branches.every((branch) => branch.state.keepsakes.gorgon?.status === 'pending'),
     ).toBe(true);
 
     const draft = createPreparedProjectCandidateSession(
@@ -1128,7 +1158,7 @@ describe('Gorgon Amulet lifecycle', () => {
     const p = naturalFirstAssembly.evaluation.route.biomes.find((biome) => biome.biomeKey === 'P');
     expect(p).toBeDefined();
     if (p === undefined || !('rewards' in p)) return;
-    expect(p.rewards.branches[0]?.keepsakes.gorgon?.status).toBe('expired');
+    expect(p.rewards.branches[0]?.state.keepsakes.gorgon?.status).toBe('expired');
     expect(
       encounterPhaseCandidateSupportForProjectEvaluationAssembly(naturalFirstAssembly, phase),
     ).toMatchObject({ selectedEncounterKey: 'AthenaCombatP', selectedPossible: true });
@@ -1171,10 +1201,13 @@ describe('Gorgon Amulet lifecycle', () => {
     const rewardBranches = previous.rewards.branches.map((branch) =>
       Object.freeze({
         ...branch,
-        keepsakes: Object.freeze({
-          ...branch.keepsakes,
-          gorgon: { status: 'pending' as const, rarityLevel: 3 as const },
-          figLeaf: { remainingUses: 3, activatedThisBiome: false },
+        state: Object.freeze({
+          ...branch.state,
+          keepsakes: Object.freeze({
+            ...branch.state.keepsakes,
+            gorgon: { status: 'pending' as const, rarityLevel: 3 as const },
+            figLeaf: { remainingUses: 3, activatedThisBiome: false },
+          }),
         }),
       }),
     );
@@ -1185,11 +1218,10 @@ describe('Gorgon Amulet lifecycle', () => {
       seed: {
         history: previous.history,
         rewardBranches,
-        rewardLookups: previous.rewards.rewardLookups,
       },
     });
     expect(progressive).not.toBeNull();
     const rewards = progressive?.evaluation.rewards;
-    expect(rewards?.branches[0]?.keepsakes.gorgon?.status).toBe('pending');
+    expect(rewards?.branches[0]?.state.keepsakes.gorgon?.status).toBe('pending');
   });
 });

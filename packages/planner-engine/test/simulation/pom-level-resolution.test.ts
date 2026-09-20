@@ -200,15 +200,18 @@ describe('Pom level resolutions', () => {
       (history) => factsWithHistory(rewardFacts(), history, new Set()),
       noTargetFindings,
     );
-    expect(empty[0]?.history.consumableRecord.GiftDrop).toBe(1);
-    expect(empty[0]?.traitHistory?.events).toEqual([]);
+    expect(empty[0]?.state.rewardHistory.consumableRecord.GiftDrop).toBe(1);
+    expect(empty[0]?.state.traitHistory?.events).toEqual([]);
     expect([...noTargetFindings.values()]).toEqual([]);
 
     const withTarget = settleTestRoomReward(
       [
         Object.freeze({
           ...initializeTestRewardBranches()[0]!,
-          traitHistory: equippedHistory(),
+          state: Object.freeze({
+            ...initializeTestRewardBranches()[0]!.state,
+            traitHistory: equippedHistory(),
+          }),
         }),
       ],
       {
@@ -224,8 +227,8 @@ describe('Pom level resolutions', () => {
       (history) => factsWithHistory(rewardFacts(), history, new Set()),
       new Map(),
     );
-    expect(withTarget[0]?.history.consumableRecord.GiftDrop).toBe(1);
-    expect(withTarget[0]?.traitHistory?.equippedTraits.ApolloWeaponBoon?.level).toBe(2);
+    expect(withTarget[0]?.state.rewardHistory.consumableRecord.GiftDrop).toBe(1);
+    expect(withTarget[0]?.state.traitHistory?.equippedTraits.ApolloWeaponBoon?.level).toBe(2);
   });
 
   it('requires exact visible cardinality, membership, and eligible equipped targets', () => {
@@ -627,13 +630,17 @@ describe('Pom level resolutions', () => {
       );
     expect(capabilityState(frontierAssembly)).toEqual(capabilityState(continuedAssembly));
     expect(
-      rewardProduct(frontierAssembly).branches.map((branch) => branch.history.lootTypeHistory),
+      rewardProduct(frontierAssembly).branches.map(
+        (branch) => branch.state.rewardHistory.lootTypeHistory,
+      ),
     ).toEqual(
-      rewardProduct(continuedAssembly).branches.map((branch) => branch.history.lootTypeHistory),
+      rewardProduct(continuedAssembly).branches.map(
+        (branch) => branch.state.rewardHistory.lootTypeHistory,
+      ),
     );
-    expect(rewardProduct(frontierAssembly).branches.map((branch) => branch.traitHistory)).toEqual(
-      rewardProduct(continuedAssembly).branches.map((branch) => branch.traitHistory),
-    );
+    expect(
+      rewardProduct(frontierAssembly).branches.map((branch) => branch.state.traitHistory),
+    ).toEqual(rewardProduct(continuedAssembly).branches.map((branch) => branch.state.traitHistory));
   });
 
   it('retains exact Pom assessments and capabilities for downstream findings after an upstream edit', () => {
@@ -713,8 +720,11 @@ describe('Pom level resolutions', () => {
       Object.freeze([
         Object.freeze({
           ...base,
-          history: attachTraitHistory(base.history, history),
-          traitHistory: history,
+          state: Object.freeze({
+            ...base.state,
+            rewardHistory: attachTraitHistory(base.state.rewardHistory, history),
+            traitHistory: history,
+          }),
         }),
       ]);
     const source = {

@@ -245,7 +245,6 @@ describe('P core loop', () => {
             seed: {
               history: previous.history,
               rewardBranches: previous.rewards.branches,
-              rewardLookups: previous.rewards.rewardLookups,
             },
           })
         : null;

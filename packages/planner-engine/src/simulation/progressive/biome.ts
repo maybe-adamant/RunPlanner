@@ -1,4 +1,5 @@
 import type { Catalog } from '../../catalog-schema';
+import { sharedRewardLookups } from '../state/reward-lookups';
 import { isRequiredMissingInputFinding } from '../model';
 import {
   createBiomeAddress,
@@ -79,7 +80,6 @@ export interface ProgressiveSeed {
   readonly history: CanonicalBiomeHistory;
   readonly rewardBranches: readonly RewardBranch[];
   /** Run-persistent Hub offer inventory, captured at prior biome completion. */
-  readonly rewardLookups: Readonly<Record<string, readonly string[]>>;
 }
 
 export interface ProgressiveBiomeContext {
@@ -287,7 +287,6 @@ function products(
     context.seed?.rewardBranches,
     context.resourcePlacements,
     context.resourceFindings,
-    context.seed?.rewardLookups,
   );
   const roomGeneration = generation(
     catalog,
@@ -316,7 +315,9 @@ function products(
     rewards.transcendentEmbryoArtifacts,
     context.forcedChaosOccurrenceKeys,
     encounterBoundary,
-    context.seed?.rewardLookups,
+    context.seed === undefined
+      ? undefined
+      : sharedRewardLookups(context.seed.rewardBranches.map((branch) => branch.state)),
   );
   return Object.freeze({
     evaluation: Object.freeze({

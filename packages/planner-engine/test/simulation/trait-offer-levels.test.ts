@@ -59,16 +59,19 @@ function pomBranch(levels = 3, traitHistory = createTraitHistoryState()) {
   if (branch === undefined) throw new Error('missing test reward branch');
   return Object.freeze({
     ...branch,
-    history: attachTraitHistory(branch.history, traitHistory),
-    traitHistory,
-    keepsakes: Object.freeze({
-      ...branch.keepsakes,
-      fatedStatus: 'Fated' as const,
-      jeweledPom: Object.freeze({
-        grantedTraitKey: 'HadesLifestealBoon',
-        active: true,
-        levels,
-        acquisitionIdentity: 'test:pom',
+    state: Object.freeze({
+      ...branch.state,
+      rewardHistory: attachTraitHistory(branch.state.rewardHistory, traitHistory),
+      traitHistory: traitHistory,
+      keepsakes: Object.freeze({
+        ...branch.state.keepsakes,
+        fatedStatus: 'Fated' as const,
+        jeweledPom: Object.freeze({
+          grantedTraitKey: 'HadesLifestealBoon',
+          active: true,
+          levels,
+          acquisitionIdentity: 'test:pom',
+        }),
       }),
     }),
   });
@@ -175,7 +178,7 @@ function context(withSuppression = false): TraitOfferCandidateContext {
       aspectKey: 'LobImpulseAspect',
       ...(withSuppression ? { stackBoostsSuppressed: true as const } : {}),
     }),
-    keepsakes: pomBranch().keepsakes,
+    keepsakes: pomBranch().state.keepsakes,
   });
 }
 
@@ -213,7 +216,7 @@ describe('Persephone effective offer levels', () => {
           catalog,
           before: createTraitHistoryState(),
           context: context().context,
-          keepsakes: pomBranch().keepsakes,
+          keepsakes: pomBranch().state.keepsakes,
           option: offer(bonus).options[0]!,
         }).effectiveLevel,
     );
@@ -246,7 +249,7 @@ describe('Persephone effective offer levels', () => {
       catalog,
       before: premium,
       context: context().context,
-      keepsakes: pomBranch().keepsakes,
+      keepsakes: pomBranch().state.keepsakes,
       option,
     });
     expect(standard).toMatchObject({ persephoneLevelBonusMaximum: 5 });
@@ -261,7 +264,7 @@ describe('Persephone effective offer levels', () => {
       catalog,
       before: createTraitHistoryState(),
       context: context(true).context,
-      keepsakes: pomBranch().keepsakes,
+      keepsakes: pomBranch().state.keepsakes,
       option: offer(5).options[0]!,
     });
     expect(result).toEqual({ effectiveLevel: 1, findings: [] });
@@ -282,7 +285,7 @@ describe('Persephone effective offer levels', () => {
       'traitAcquired',
       1,
     );
-    expect(settled.branch.traitHistory?.equippedTraits.ApolloWeaponBoon?.level).toBe(1);
+    expect(settled.branch.state.traitHistory?.equippedTraits.ApolloWeaponBoon?.level).toBe(1);
   });
 
   it('suppresses both boosts through the Echo last-reward producer lifecycle', () => {
@@ -300,7 +303,7 @@ describe('Persephone effective offer levels', () => {
       'traitAcquired',
       1,
     );
-    expect(settled.branch.traitHistory?.equippedTraits.ApolloWeaponBoon?.level).toBe(1);
+    expect(settled.branch.state.traitHistory?.equippedTraits.ApolloWeaponBoon?.level).toBe(1);
   });
 
   it('keeps an ordinary core-god Shop purchase eligible for both fresh boosts', () => {
@@ -318,7 +321,7 @@ describe('Persephone effective offer levels', () => {
       'traitAcquired',
       1,
     );
-    expect(settled.branch.traitHistory?.equippedTraits.ApolloWeaponBoon?.level).toBe(9);
+    expect(settled.branch.state.traitHistory?.equippedTraits.ApolloWeaponBoon?.level).toBe(9);
   });
 
   it('publishes the candidate effective level that selected settlement installs', () => {
@@ -344,10 +347,10 @@ describe('Persephone effective offer levels', () => {
       'traitAcquired',
       1,
     );
-    expect(settled.branch.traitHistory?.equippedTraits.ApolloWeaponBoon?.level).toBe(
+    expect(settled.branch.state.traitHistory?.equippedTraits.ApolloWeaponBoon?.level).toBe(
       candidate.effectiveLevels[0],
     );
-    const event = settled.branch.traitHistory?.events.find(
+    const event = settled.branch.state.traitHistory?.events.find(
       (entry): entry is TraitOfferEvent => entry.kind === 'traitOffer',
     );
     expect(event?.selectedEffectiveLevel).toBe(candidate.effectiveLevels[0]);
@@ -357,12 +360,15 @@ describe('Persephone effective offer levels', () => {
     const source = pomBranch();
     const branch = Object.freeze({
       ...source,
-      keepsakes: Object.freeze({
-        ...source.keepsakes,
-        stone: Object.freeze({
-          origin: 'ordinary' as const,
-          status: 'pending' as const,
-          rank: 'Common' as const,
+      state: Object.freeze({
+        ...source.state,
+        keepsakes: Object.freeze({
+          ...source.state.keepsakes,
+          stone: Object.freeze({
+            origin: 'ordinary' as const,
+            status: 'pending' as const,
+            rank: 'Common' as const,
+          }),
         }),
       }),
     });
@@ -382,9 +388,9 @@ describe('Persephone effective offer levels', () => {
       'traitAcquired',
       1,
     );
-    expect(settled.branch.traitHistory?.equippedTraits.ApolloWeaponBoon?.level).toBe(9);
-    expect(settled.branch.traitHistory?.equippedTraits.ApolloSpecialBoon?.level).toBe(9);
-    expect(settled.branch.keepsakes.stone?.status).toBe('consumed');
+    expect(settled.branch.state.traitHistory?.equippedTraits.ApolloWeaponBoon?.level).toBe(9);
+    expect(settled.branch.state.traitHistory?.equippedTraits.ApolloSpecialBoon?.level).toBe(9);
+    expect(settled.branch.state.keepsakes.stone?.status).toBe('consumed');
   });
 
   it('freezes a Concave Stone residual before the same-screen Premium Service selection', () => {
@@ -392,12 +398,15 @@ describe('Persephone effective offer levels', () => {
     const source = pomBranch(3, history);
     const branch = Object.freeze({
       ...source,
-      keepsakes: Object.freeze({
-        ...source.keepsakes,
-        stone: Object.freeze({
-          origin: 'ordinary' as const,
-          status: 'pending' as const,
-          rank: 'Common' as const,
+      state: Object.freeze({
+        ...source.state,
+        keepsakes: Object.freeze({
+          ...source.state.keepsakes,
+          stone: Object.freeze({
+            origin: 'ordinary' as const,
+            status: 'pending' as const,
+            rank: 'Common' as const,
+          }),
         }),
       }),
     });
@@ -416,9 +425,9 @@ describe('Persephone effective offer levels', () => {
       4,
     );
     expect(settled.blockedChild).toBeUndefined();
-    expect(settled.branch.traitHistory?.equippedTraits.WeaponUpgradeBoon).toBeDefined();
-    expect(settled.branch.traitHistory?.equippedTraits.HephaestusSpecialBoon?.level).toBe(9);
-    expect(settled.branch.keepsakes.stone?.status).toBe('consumed');
+    expect(settled.branch.state.traitHistory?.equippedTraits.WeaponUpgradeBoon).toBeDefined();
+    expect(settled.branch.state.traitHistory?.equippedTraits.HephaestusSpecialBoon?.level).toBe(9);
+    expect(settled.branch.state.keepsakes.stone?.status).toBe('consumed');
   });
 
   it('settles a Hymn replacement at old level plus two without fresh contributions', () => {
@@ -445,7 +454,10 @@ describe('Persephone effective offer levels', () => {
     const source = pomBranch(3, before);
     const branch = Object.freeze({
       ...source,
-      stygianWell: Object.freeze({ ...source.stygianWell, hymnUses: 1 }),
+      state: Object.freeze({
+        ...source.state,
+        stygianWell: Object.freeze({ ...source.state.stygianWell, hymnUses: 1 }),
+      }),
     });
     const settled = applyTraitOfferForAcquisition(
       catalog,
@@ -459,10 +471,10 @@ describe('Persephone effective offer levels', () => {
       'traitAcquired',
       1,
     );
-    expect(settled.branch.traitHistory?.equippedTraits.HeraWeaponBoon).toMatchObject({
+    expect(settled.branch.state.traitHistory?.equippedTraits.HeraWeaponBoon).toMatchObject({
       level: 6,
     });
-    expect(settled.branch.traitHistory?.equippedTraits.HeraWeaponBoon?.level).not.toBe(9);
-    expect(settled.branch.stygianWell.hymnUses).toBe(0);
+    expect(settled.branch.state.traitHistory?.equippedTraits.HeraWeaponBoon?.level).not.toBe(9);
+    expect(settled.branch.state.stygianWell.hymnUses).toBe(0);
   });
 });

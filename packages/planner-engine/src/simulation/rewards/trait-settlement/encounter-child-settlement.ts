@@ -1,3 +1,4 @@
+import { replaceSimulationTraitHistory } from '../../state/transitions';
 import {
   resolveTraitAcquisitionOrdinalEffect,
   type Catalog,
@@ -13,7 +14,7 @@ import {
   unsatisfiedRandomArcanaRequirementKeys,
 } from '../../arcana-fear';
 import { refreshKeepsakeFatedStatus } from '../../keepsakes/state';
-import { attachTraitHistory, foldTraitHistoryEvents, type TraitHistoryState } from '../../traits';
+import { foldTraitHistoryEvents, type TraitHistoryState } from '../../traits';
 import type { RewardBranchState } from '../branch-primitives';
 import {
   optionIndex,
@@ -130,10 +131,10 @@ export function assessCirceChild(
   ).circeSelectionCount!;
   const domain = circeResolutionDomain(
     catalog,
-    branch.arcanaFear,
+    branch.state.arcanaFear,
     disposition.effect,
     selectionCount,
-    branch.keepsakes.fatedStatus,
+    branch.state.keepsakes.fatedStatus,
   );
   if (disposition.effect === 'activateArcana') {
     if (resolution?.kind !== 'activateArcana')
@@ -146,7 +147,7 @@ export function assessCirceChild(
     return resolution.arcanaKeys.some((key) => !domain.arcanaKeys.includes(key)) ||
       unsatisfiedRandomArcanaRequirementKeys(
         catalog,
-        branch.arcanaFear.arcana.active.map((card) => card.key),
+        branch.state.arcanaFear.arcana.active.map((card) => card.key),
         resolution.arcanaKeys,
       ).length > 0
       ? Object.freeze({ code: 'circeResolutionTargetUnavailable' })
@@ -190,10 +191,10 @@ export function settleValidatedCirceChild(
   if (disposition.effect === 'activateArcana') {
     const domain = circeResolutionDomain(
       catalog,
-      branch.arcanaFear,
+      branch.state.arcanaFear,
       disposition.effect,
       resolveTraitAcquisitionOrdinalEffect(disposition, acquisitionOrdinal).circeSelectionCount!,
-      branch.keepsakes.fatedStatus,
+      branch.state.keepsakes.fatedStatus,
     );
     if (
       resolution?.kind !== 'activateArcana' ||
@@ -203,10 +204,10 @@ export function settleValidatedCirceChild(
       return branch;
     const outcome = activateTemporaryArcana(
       catalog,
-      branch.arcanaFear,
+      branch.state.arcanaFear,
       orderRandomArcanaSelection(
         catalog,
-        branch.arcanaFear.arcana.active.map((card) => card.key),
+        branch.state.arcanaFear.arcana.active.map((card) => card.key),
         resolution.arcanaKeys,
       ),
       evidence,
@@ -214,36 +215,52 @@ export function settleValidatedCirceChild(
     return outcome.legal
       ? Object.freeze({
           ...branch,
-          arcanaFear: outcome.state,
-          keepsakes: refreshKeepsakeFatedStatus(catalog, branch.keepsakes, outcome.state),
+          state: Object.freeze({
+            ...branch.state,
+            arcanaFear: outcome.state,
+            keepsakes: refreshKeepsakeFatedStatus(catalog, branch.state.keepsakes, outcome.state),
+          }),
         })
       : branch;
   }
   if (disposition.effect === 'promoteArcana') {
     const domain = circeResolutionDomain(
       catalog,
-      branch.arcanaFear,
+      branch.state.arcanaFear,
       disposition.effect,
       resolveTraitAcquisitionOrdinalEffect(disposition, acquisitionOrdinal).circeSelectionCount!,
-      branch.keepsakes.fatedStatus,
+      branch.state.keepsakes.fatedStatus,
     );
     if (
       resolution?.kind !== 'promoteArcana' ||
       resolution.arcanaKeys.length !== domain.requiredCount
     )
       return branch;
-    const outcome = promoteArcana(catalog, branch.arcanaFear, resolution.arcanaKeys, evidence);
+    const outcome = promoteArcana(
+      catalog,
+      branch.state.arcanaFear,
+      resolution.arcanaKeys,
+      evidence,
+    );
     return outcome.legal
       ? Object.freeze({
           ...branch,
-          arcanaFear: outcome.state,
-          keepsakes: refreshKeepsakeFatedStatus(catalog, branch.keepsakes, outcome.state),
+          state: Object.freeze({
+            ...branch.state,
+            arcanaFear: outcome.state,
+            keepsakes: refreshKeepsakeFatedStatus(catalog, branch.state.keepsakes, outcome.state),
+          }),
         })
       : branch;
   }
   if (resolution?.kind !== 'disableFear') return branch;
-  const outcome = suppressFearVows(catalog, branch.arcanaFear, resolution.vowKeys, evidence);
-  return outcome.legal ? Object.freeze({ ...branch, arcanaFear: outcome.state }) : branch;
+  const outcome = suppressFearVows(catalog, branch.state.arcanaFear, resolution.vowKeys, evidence);
+  return outcome.legal
+    ? Object.freeze({
+        ...branch,
+        state: Object.freeze({ ...branch.state, arcanaFear: outcome.state }),
+      })
+    : branch;
 }
 
 /** Echo's Pom child is evaluated against the exact pre-choice target history. */
@@ -277,7 +294,6 @@ export function settleEchoPomChild(
   ]);
   return Object.freeze({
     ...branch,
-    history: attachTraitHistory(branch.history, traitHistory),
-    traitHistory,
+    state: replaceSimulationTraitHistory(branch.state, traitHistory),
   });
 }

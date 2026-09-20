@@ -370,7 +370,6 @@ describe('progressive prefix and frontier products', () => {
       seed: {
         history: previous.history,
         rewardBranches: previous.rewards.branches,
-        rewardLookups: previous.rewards.rewardLookups,
       },
     } as const;
     const clamped = evaluateProgressiveBiomeAssembly(catalog, goldenHBiome, plan, options);

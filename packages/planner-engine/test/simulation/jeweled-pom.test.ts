@@ -36,7 +36,14 @@ describe('Jeweled Pom', () => {
     const seeded = initializeTestRewardBranches()[0]!;
     const branch = Object.freeze({
       ...seeded,
-      keepsakes: createKeepsakeState(catalog, 'HadesAndPersephoneKeepsake', seeded.arcanaFear),
+      state: Object.freeze({
+        ...seeded.state,
+        keepsakes: createKeepsakeState(
+          catalog,
+          'HadesAndPersephoneKeepsake',
+          seeded.state.arcanaFear,
+        ),
+      }),
     });
     const result = createKeepsakeEquipResultAddress(
       createRouteStartKeepsakeSelectionAddress('Underworld'),
@@ -52,10 +59,10 @@ describe('Jeweled Pom', () => {
       result,
       1,
     );
-    expect(equipped.traitHistory?.equippedTraits.HadesLifestealBoon).toMatchObject({
+    expect(equipped.state.traitHistory?.equippedTraits.HadesLifestealBoon).toMatchObject({
       sourceRole: 'jeweledPomEquip',
     });
-    expect(equipped.traitHistory?.equippedTraits.HadesLifestealBoon?.rarity).toBeUndefined();
+    expect(equipped.state.traitHistory?.equippedTraits.HadesLifestealBoon?.rarity).toBeUndefined();
     expect(equipped.traitEvaluations?.at(-1)?.composition).toMatchObject({
       applies: false,
       legal: true,
@@ -74,7 +81,7 @@ describe('Jeweled Pom', () => {
       2,
       'encounterCompleted',
     );
-    expect(boosted.branch.traitHistory?.equippedTraits.ApolloWeaponBoon?.level).toBe(4);
+    expect(boosted.branch.state.traitHistory?.equippedTraits.ApolloWeaponBoon?.level).toBe(4);
 
     const sparseOrdinary = settleEncounterTraitOffer(
       catalog,
@@ -90,14 +97,23 @@ describe('Jeweled Pom', () => {
       'encounterCompleted',
     );
     expect(sparseOrdinary.branch.traitEvaluations?.at(-1)?.generation?.legal).toBe(false);
-    expect(sparseOrdinary.branch.traitHistory?.equippedTraits.ApolloWeaponBoon).toBeUndefined();
+    expect(
+      sparseOrdinary.branch.state.traitHistory?.equippedTraits.ApolloWeaponBoon,
+    ).toBeUndefined();
   });
 
   it('retains its effect across neutral replacement and removes only its exact grant when Unfated', () => {
     const seeded = initializeTestRewardBranches()[0]!;
     const branch = Object.freeze({
       ...seeded,
-      keepsakes: createKeepsakeState(catalog, 'HadesAndPersephoneKeepsake', seeded.arcanaFear),
+      state: Object.freeze({
+        ...seeded.state,
+        keepsakes: createKeepsakeState(
+          catalog,
+          'HadesAndPersephoneKeepsake',
+          seeded.state.arcanaFear,
+        ),
+      }),
     });
     const result = createKeepsakeEquipResultAddress(
       createRouteStartKeepsakeSelectionAddress('Underworld'),
@@ -113,9 +129,9 @@ describe('Jeweled Pom', () => {
     );
     const neutral = applyKeepsakeReplacement(
       catalog,
-      equipped.keepsakes,
+      equipped.state.keepsakes,
       'BossPreDamageKeepsake',
-      equipped.arcanaFear,
+      equipped.state.arcanaFear,
     );
     expect(neutral.jeweledPom).toMatchObject({ active: true, levels: 3 });
     const encounter = createEncounterPhaseAddress(
@@ -125,27 +141,30 @@ describe('Jeweled Pom', () => {
     );
     const boosted = settleEncounterTraitOffer(
       catalog,
-      Object.freeze({ ...equipped, keepsakes: neutral }),
+      Object.freeze({
+        ...equipped,
+        state: Object.freeze({ ...equipped.state, keepsakes: neutral }),
+      }),
       encounter,
       authoredOffer('Apollo'),
       2,
       'encounterCompleted',
     );
-    expect(boosted.branch.traitHistory?.equippedTraits.ApolloWeaponBoon?.level).toBe(4);
+    expect(boosted.branch.state.traitHistory?.equippedTraits.ApolloWeaponBoon?.level).toBe(4);
     const opposing = applyKeepsakeReplacement(
       catalog,
       neutral,
       'ForceZeusBoonKeepsake',
-      equipped.arcanaFear,
+      equipped.state.arcanaFear,
     );
     expect(opposing.fatedStatus).toBe('Unfated');
     expect(invalidateJeweledPom(opposing).jeweledPom?.active).toBe(false);
 
-    const acquisitionIdentity = equipped.keepsakes.jeweledPom?.acquisitionIdentity;
-    if (acquisitionIdentity === undefined || boosted.branch.traitHistory === undefined)
+    const acquisitionIdentity = equipped.state.keepsakes.jeweledPom?.acquisitionIdentity;
+    if (acquisitionIdentity === undefined || boosted.branch.state.traitHistory === undefined)
       throw new Error('expected exact Jeweled Pom acquisition identity');
     const cleaned = foldTraitHistoryEvents(catalog, [
-      ...boosted.branch.traitHistory.events,
+      ...boosted.branch.state.traitHistory.events,
       Object.freeze({
         kind: 'traitRemoval' as const,
         owner: result,

@@ -176,7 +176,7 @@ describe('Circe selected trait acquisition', () => {
       ),
     ).toBe(true);
     const branch = biome.rewards.branches[0]!;
-    expect(branch.arcanaFear.arcana.active).toEqual(
+    expect(branch.state.arcanaFear.arcana.active).toEqual(
       expect.arrayContaining([
         expect.objectContaining({ key: 'ChanneledCast', origin: 'temporary', rarity: 'Epic' }),
       ]),
@@ -218,7 +218,7 @@ describe('Circe selected trait acquisition', () => {
       undefined,
       firstCirceContext,
     );
-    const active = applied.branch.arcanaFear.arcana.active;
+    const active = applied.branch.state.arcanaFear.arcana.active;
     expect(active.find((card) => card.key === 'CastCount')).toMatchObject({ rarity: 'Heroic' });
     expect(active.find((card) => card.key === 'ChanneledCast')).toMatchObject({
       origin: 'temporary',
@@ -255,7 +255,7 @@ describe('Circe selected trait acquisition', () => {
       undefined,
       firstCirceContext,
     );
-    expect(red.branch.arcanaFear).toBe(exhausted);
+    expect(red.branch.state.arcanaFear).toBe(exhausted);
   });
 
   it('gates Black Night from effective configured removable Vows, including Rivals and already-disabled state', () => {
@@ -276,9 +276,11 @@ describe('Circe selected trait acquisition', () => {
       expect.arrayContaining([expect.objectContaining({ code: 'offerContext' })]),
     );
     const removable = oEvaluation(withCirce(black, [], { EnemyDamageShrineUpgrade: 1 }));
-    expect(removable.biome.rewards.branches[0]!.arcanaFear.fear.effectiveRanks).toMatchObject({
-      EnemyDamageShrineUpgrade: 0,
-    });
+    expect(removable.biome.rewards.branches[0]!.state.arcanaFear.fear.effectiveRanks).toMatchObject(
+      {
+        EnemyDamageShrineUpgrade: 0,
+      },
+    );
 
     const configured = createArcanaFearState(catalog, {
       ...createDefaultRouteLoadout(catalog),
@@ -304,7 +306,7 @@ describe('Circe selected trait acquisition', () => {
       undefined,
       firstCirceContext,
     );
-    expect(repeated.branch.arcanaFear).toBe(disabled.state);
+    expect(repeated.branch.state.arcanaFear).toBe(disabled.state);
     expect(repeated.findingEntries.some((entry) => entry.finding.code === 'offerContext')).toBe(
       true,
     );
@@ -325,9 +327,9 @@ describe('Circe selected trait acquisition', () => {
     expect(
       biome.findings.find((finding) => finding.code === 'circeResolutionMissing')?.origin,
     ).toEqual(createCirceResolutionAddress(circeOwner, 'option1'));
-    expect(biome.rewards.branches[0]?.traitHistory?.equippedTraits.RandomArcanaTrait).toMatchObject(
-      { giverKey: 'Circe', providerKind: 'npc' },
-    );
+    expect(
+      biome.rewards.branches[0]?.state.traitHistory?.equippedTraits.RandomArcanaTrait,
+    ).toMatchObject({ giverKey: 'Circe', providerKind: 'npc' });
     expect(biome.coverage).toMatchObject({ kind: 'prefix' });
     const domain = createPreparedProjectCandidateSession(catalog, assembly).evaluate({
       kind: 'circeResolutionDomain',
@@ -367,11 +369,11 @@ describe('Circe selected trait acquisition', () => {
       firstCirceContext,
     );
     const child = createCirceResolutionAddress(circeOwner, 'option1');
-    expect(settlement.branch.traitHistory?.equippedTraits.RandomArcanaTrait).toMatchObject({
+    expect(settlement.branch.state.traitHistory?.equippedTraits.RandomArcanaTrait).toMatchObject({
       giverKey: 'Circe',
       providerKind: 'npc',
     });
-    expect(settlement.branch.arcanaFear).toBe(branch.arcanaFear);
+    expect(settlement.branch.state.arcanaFear).toBe(branch.state.arcanaFear);
     expect(settlement.blockedChild).toEqual({ address: child, branch: settlement.branch });
     expect(settlement.findingEntries.map((entry) => entry.finding)).toContainEqual(
       expect.objectContaining({ code: 'circeResolutionTargetUnavailable', origin: child }),
@@ -396,13 +398,13 @@ describe('Circe selected trait acquisition', () => {
       undefined,
       Object.freeze({ acquisitionOrdinal: 3 }),
     );
-    expect(paired.branch.arcanaFear.arcana.active).toEqual(
+    expect(paired.branch.state.arcanaFear.arcana.active).toEqual(
       expect.arrayContaining([
         expect.objectContaining({ key: 'DoorReroll', origin: 'temporary' }),
         expect.objectContaining({ key: 'TradeOff', origin: 'temporary' }),
       ]),
     );
-    expect(paired.branch.arcanaFear.events.at(-1)).toMatchObject({
+    expect(paired.branch.state.arcanaFear.events.at(-1)).toMatchObject({
       kind: 'temporaryArcanaActivated',
       arcanaKeys: ['DoorReroll', 'TradeOff'],
     });
@@ -423,7 +425,7 @@ describe('Circe selected trait acquisition', () => {
       createTraitHistoryState(),
       Object.freeze({ resolvedProviderKey: 'Circe', acquisitionOrdinal: 3 }),
       0,
-      preEffect.arcanaFear,
+      preEffect.state.arcanaFear,
     );
     const published = selectedTraitOfferProducts(
       [Object.freeze({ ...preEffect, traitEvaluations: Object.freeze([trace]) })],

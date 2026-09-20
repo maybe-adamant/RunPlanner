@@ -234,10 +234,10 @@ export function createBiomeRewardFacts(
     ),
     currentRoomShopOptionNames,
     rewardLookups,
-    pendingSpellDrop: Object.values(branch?.pendingHermesShrineDeliveries ?? {}).some(
+    pendingSpellDrop: Object.values(branch?.state.pendingHermesShrineDeliveries ?? {}).some(
       (delivery) => delivery.rewardType === 'SpellDrop',
     ),
-    allSpellInvested: branch?.hexProgress.talentDropsClosed === true,
+    allSpellInvested: branch?.state.hexProgress.talentDropsClosed === true,
     fail: (detail) => {
       throw new BiomeRewardSimulationContractError(detail);
     },
@@ -283,8 +283,8 @@ export function createRouteStartRewardFacts(
     currentBatchRoomGameNames: Object.freeze([]),
     clockwork: undefined,
     flags: Object.freeze({
-      allSpellInvested: branch?.hexProgress.talentDropsClosed === true,
-      pendingSpellDrop: Object.values(branch?.pendingHermesShrineDeliveries ?? {}).some(
+      allSpellInvested: branch?.state.hexProgress.talentDropsClosed === true,
+      pendingSpellDrop: Object.values(branch?.state.pendingHermesShrineDeliveries ?? {}).some(
         (delivery) => delivery.rewardType === 'SpellDrop',
       ),
     }),

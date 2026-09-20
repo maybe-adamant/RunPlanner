@@ -193,7 +193,6 @@ function hubAlternativeContext(
           seed: Object.freeze({
             history: previous.history,
             rewardBranches: previous.rewards.branches,
-            rewardLookups: previous.rewards.rewardLookups,
           }),
         }),
   });

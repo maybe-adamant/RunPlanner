@@ -1,3 +1,4 @@
+import { replaceSimulationTraitHistory } from '../../state/transitions';
 import type { Catalog } from '../../../catalog-schema';
 import {
   createAcquisitionEntryAddress,
@@ -18,24 +19,24 @@ import {
   type ShopProfileDeclaration,
 } from '../../../reward-kernel';
 import { ownerRegion, type FindingChronology } from '../../finding-regions';
-import {
-  attachTraitHistory,
-  createTraitHistoryState,
-  foldTraitHistoryEvents,
-  isPomUpgradeTarget,
-} from '../../traits';
+import { foldTraitHistoryEvents, isPomUpgradeTarget } from '../../traits';
 import type {
   PendingShopGoldMaterialization,
   PendingShopPaidOffer,
-  PendingShopTravelRefill,
-  RewardBranchState,
-} from '../branch-primitives';
+  PendingShopTravelRefillState,
+} from '../../state/model';
+import type { RewardBranchState, PendingShopTravelRefillCapability } from '../branch-primitives';
 import { applyProducerRoleHistory } from '../acquisition/role-settlement';
 import type {
   AcquisitionRoleFrontier,
   DerivedAcquisitionEntryFrontier,
   RewardFactsFactory,
 } from '../acquisition/contracts';
+
+export interface ShopTravelRefillProduct {
+  readonly data: PendingShopTravelRefillState;
+  readonly capability: PendingShopTravelRefillCapability;
+}
 
 export function deriveTravelRefill(input: {
   readonly catalog: Catalog;
@@ -48,13 +49,13 @@ export function deriveTravelRefill(input: {
     Record<string, import('../../../requirements').RequirementExpression>
   >;
   readonly facts: RewardFactsFactory;
-}): PendingShopTravelRefill | undefined {
+}): ShopTravelRefillProduct | undefined {
   const { catalog, profile, branch, sourceOffer, slotIndex, excludedNames, requirements, facts } =
     input;
   const slot = profile.slots.values[slotIndex];
   const group = slot === undefined ? undefined : profile.groups.byKey[slot.groupKey];
   if (slot === undefined || group === undefined) return undefined;
-  const generationFacts = facts(branch.history, new Set(), branch);
+  const generationFacts = facts(branch.state.rewardHistory, new Set(), branch);
   const candidateOffers = group.options.values.flatMap((option) =>
     locallyValidRewardOffers(catalog.rewards, option.rewardType),
   );
@@ -93,23 +94,27 @@ export function deriveTravelRefill(input: {
         : { excludedPurchaseInteractionNames: effectiveExcludedNames },
     );
   return Object.freeze({
-    sourceOfferKey: sourceOffer.offerKey,
-    slotIndex,
-    rewardTypes: Object.freeze([...new Set(domain.map((offer) => offer.rewardType))]),
-    excludedNames: effectiveExcludedNames,
-    generationFacts,
-    evaluateOffer: (offer: ResolvedRewardOffer) =>
-      Object.freeze({
-        findings: Object.freeze([]),
-        supported: witnessesFor(offer).length > 0,
-      }),
-    evaluateShopOption: (selection: import('../../../reward-kernel').ShopOptionSelection) =>
-      Object.freeze({
-        findings: Object.freeze([]),
-        supported: witnessesFor(selection.offer).some(
-          (witness) => witness.optionKeys[slotIndex] === selection.optionKey,
-        ),
-      }),
+    data: Object.freeze({
+      sourceOfferKey: sourceOffer.offerKey,
+      slotIndex,
+      rewardTypes: Object.freeze([...new Set(domain.map((offer) => offer.rewardType))]),
+      excludedNames: effectiveExcludedNames,
+      generationFacts,
+    }),
+    capability: Object.freeze({
+      evaluateOffer: (offer: ResolvedRewardOffer) =>
+        Object.freeze({
+          findings: Object.freeze([]),
+          supported: witnessesFor(offer).length > 0,
+        }),
+      evaluateShopOption: (selection: import('../../../reward-kernel').ShopOptionSelection) =>
+        Object.freeze({
+          findings: Object.freeze([]),
+          supported: witnessesFor(selection.offer).some(
+            (witness) => witness.optionKeys[slotIndex] === selection.optionKey,
+          ),
+        }),
+    }),
   });
 }
 
@@ -200,7 +205,7 @@ export function materializeShopGold(input: {
     return Object.freeze({ branch, derivedEntryFrontiers: Object.freeze([]) });
 
   const address = createAcquisitionEntryAddress(site, ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY);
-  const sourceTraitHistory = branch.traitHistory ?? createTraitHistoryState();
+  const sourceTraitHistory = branch.state.traitHistory;
   const traitHistory = foldTraitHistoryEvents(catalog, [
     ...sourceTraitHistory.events,
     Object.freeze({
@@ -216,8 +221,7 @@ export function materializeShopGold(input: {
   ]);
   const updatedBranch = Object.freeze({
     ...branch,
-    history: attachTraitHistory(branch.history, traitHistory),
-    traitHistory,
+    state: replaceSimulationTraitHistory(branch.state, traitHistory),
   });
   const materialization = Object.freeze({
     sourceOfferKey: sourceOffer.offerKey,

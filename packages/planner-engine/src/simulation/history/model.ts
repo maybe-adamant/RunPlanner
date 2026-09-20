@@ -286,6 +286,10 @@ export interface CanonicalBiomeHistory {
   readonly biomeKey: string;
   readonly events: readonly HistoryEvent[];
   readonly ledgers: HistoryLedgers;
+  /** Exact immutable lifecycle views indexed by completed history sequence. */
+  readonly viewsBySequence: Readonly<Record<number, HistoryStateView>>;
+  /** State immediately after the biome-start event, before any room operation. */
+  readonly biomeStart: HistoryStateView;
   readonly rooms: readonly RoomHistoryViews[];
   readonly biomeCompletion: HistoryStateView;
   readonly afterTransition: HistoryStateView;
@@ -296,6 +300,10 @@ export interface BiomeHistoryPrefix {
   readonly biomeKey: string;
   readonly events: readonly HistoryEvent[];
   readonly ledgers: HistoryLedgers;
+  /** Exact immutable lifecycle views indexed by completed history sequence. */
+  readonly viewsBySequence: Readonly<Record<number, HistoryStateView>>;
+  /** State immediately after the biome-start event, before any room operation. */
+  readonly biomeStart: HistoryStateView;
   readonly rooms: readonly ProgressiveRoomHistoryViews[];
   readonly current: HistoryStateView;
 }

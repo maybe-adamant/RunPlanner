@@ -1,14 +1,10 @@
+import { replaceSimulationTraitHistory } from '../../../state/transitions';
 import type { Catalog } from '../../../../catalog-schema';
 import type { ResourcePlacements } from '../../../../authored-project/model';
 import { createRoomRunStateCheckpointAddress } from '../../../../authored-project/addresses';
 import type { HistoryEvent, ProgressiveRoomHistoryViews } from '../../../history';
 import type { CanonicalAuthoredRoom } from '../../../materialization';
-import {
-  attachTraitHistory,
-  advanceChaosClock,
-  createTraitHistoryState,
-  foldTraitHistoryEvents,
-} from '../../../traits';
+import { advanceChaosClock, foldTraitHistoryEvents } from '../../../traits';
 import { completePendingShopAcquisitionSite } from '../../shop/settlement';
 import type { RewardBranchState } from '../../branch-primitives';
 import { advanceRewardBranches } from '../../branch-lifecycle';
@@ -70,7 +66,7 @@ export function applyRoomExitedTransition(
     if (placements.length > 0)
       next = Object.freeze(
         next.map((branch) => {
-          const priorTraits = branch.traitHistory ?? createTraitHistoryState();
+          const priorTraits = branch.state.traitHistory;
           const events = placements.map(([family]) => {
             const source = catalog.rooms.byKey[room.gameName]?.resourcePointSupport.rules[family];
             if (source === undefined)
@@ -89,22 +85,20 @@ export function applyRoomExitedTransition(
           const traitHistory = foldTraitHistoryEvents(catalog, [...priorTraits.events, ...events]);
           return Object.freeze({
             ...branch,
-            traitHistory,
-            history: attachTraitHistory(branch.history, traitHistory),
+            state: replaceSimulationTraitHistory(branch.state, traitHistory),
           });
         }),
       );
   }
   next = Object.freeze(
     next.map((branch) => {
-      const before = branch.traitHistory ?? createTraitHistoryState();
+      const before = branch.state.traitHistory;
       const traitHistory = advanceChaosClock(catalog, before, event.sequence, 'locations');
       return traitHistory === before
         ? branch
         : Object.freeze({
             ...branch,
-            traitHistory,
-            history: attachTraitHistory(branch.history, traitHistory),
+            state: replaceSimulationTraitHistory(branch.state, traitHistory),
           });
     }),
   );

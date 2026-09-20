@@ -47,7 +47,7 @@ export function prepareConcaveStoneSecondary(
   sequence: number,
   findingChronology?: FindingChronology,
 ): ConcaveStoneSecondarySettlement {
-  const support = concaveStoneProcSupport(catalog, branch.keepsakes);
+  const support = concaveStoneProcSupport(catalog, branch.state.keepsakes);
   const result = authored.concaveStoneResult;
   const traitAddress = owner === undefined ? undefined : createTraitOfferAddress(owner, role);
   const findings: TraitChildFindingEntry[] = [];

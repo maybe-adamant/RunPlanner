@@ -110,15 +110,15 @@ export interface RunStateSnapshot {
   readonly godPool: DecisionGodPoolState;
   readonly traits: DecisionTraitState;
   readonly counters: DecisionCounterState;
-  readonly arcanaFear: RewardBranchState['arcanaFear'];
+  readonly arcanaFear: RewardBranchState['state']['arcanaFear'];
   /** Branch-derived identity chronology; effects are introduced by later gates. */
-  readonly keepsakes: RewardBranchState['keepsakes'];
-  readonly rewardPriorities: RewardBranchState['rewardPriorities'];
+  readonly keepsakes: RewardBranchState['state']['keepsakes'];
+  readonly rewardPriorities: RewardBranchState['state']['rewardPriorities'];
   /** Cross-room Shrine orders, including their exact maturity clocks and due hosts. */
-  readonly pendingHermesShrineDeliveries: RewardBranchState['pendingHermesShrineDeliveries'];
+  readonly pendingHermesShrineDeliveries: RewardBranchState['state']['pendingHermesShrineDeliveries'];
   /** Consequential Well effects retained after the purchase room closes. */
-  readonly stygianWell: RewardBranchState['stygianWell'];
-  readonly hexProgress: RewardBranchState['hexProgress'];
+  readonly stygianWell: RewardBranchState['state']['stygianWell'];
+  readonly hexProgress: RewardBranchState['state']['hexProgress'];
   /** Game-facing Hex identity, resolved while the normalized catalog is available. */
   readonly hexObserver: {
     readonly spellTraitKey?: string;
@@ -138,7 +138,7 @@ export interface RunStateSnapshot {
 }
 
 export function forfeitStatus(
-  state: RewardBranchState['arcanaFear'],
+  state: RewardBranchState['state']['arcanaFear'],
 ): 'inactive' | 'available' | 'consumed' {
   if (state.fear.forfeitConsumed) return 'consumed';
   return (state.fear.effectiveRanks.BoonSkipShrineUpgrade ?? 0) > 0 ? 'available' : 'inactive';
@@ -171,7 +171,7 @@ interface RunStateDerivationCache {
   readonly objectIds: WeakMap<object, number>;
   readonly traitsByHistory: WeakMap<TraitHistoryState, DecisionTraitState>;
   readonly bagsByBranchState: Map<string, readonly DecisionRewardBagState[]>;
-  readonly bagCountsByState: WeakMap<RewardBranchState['bags'], string>;
+  readonly bagCountsByState: WeakMap<RewardBranchState['state']['bags'], string>;
   readonly factsByContextHistory: Map<string, RewardKernelFacts>;
   readonly godPoolByContextHistory: Map<string, DecisionGodPoolState>;
   readonly bagEligibilityByContextHistory: Map<
@@ -186,12 +186,12 @@ interface RunStateDerivationCache {
     {
       readonly godPool: DecisionGodPoolState;
       readonly traits: DecisionTraitState;
-      readonly arcanaFear: RewardBranchState['arcanaFear'];
-      readonly keepsakes: RewardBranchState['keepsakes'];
-      readonly rewardPriorities: RewardBranchState['rewardPriorities'];
-      readonly pendingHermesShrineDeliveries: RewardBranchState['pendingHermesShrineDeliveries'];
-      readonly stygianWell: RewardBranchState['stygianWell'];
-      readonly hexProgress: RewardBranchState['hexProgress'];
+      readonly arcanaFear: RewardBranchState['state']['arcanaFear'];
+      readonly keepsakes: RewardBranchState['state']['keepsakes'];
+      readonly rewardPriorities: RewardBranchState['state']['rewardPriorities'];
+      readonly pendingHermesShrineDeliveries: RewardBranchState['state']['pendingHermesShrineDeliveries'];
+      readonly stygianWell: RewardBranchState['state']['stygianWell'];
+      readonly hexProgress: RewardBranchState['state']['hexProgress'];
       readonly forfeitStatus: 'inactive' | 'available' | 'consumed';
     }
   >;
@@ -249,7 +249,10 @@ function rewardBagEligibilitySignature(
   });
 }
 
-function rewardBagCountSignature(catalog: Catalog, bags: RewardBranchState['bags']): string {
+function rewardBagCountSignature(
+  catalog: Catalog,
+  bags: RewardBranchState['state']['bags'],
+): string {
   return catalog.rewards.stores.values
     .map((store) => (bags[store.key]?.remainingEntryCounts ?? store.entries.map(() => 1)).join(','))
     .join('|');
@@ -257,7 +260,7 @@ function rewardBagCountSignature(catalog: Catalog, bags: RewardBranchState['bags
 
 export function aggregateDecisionRewardBag(
   store: RewardStoreDeclaration,
-  branches: readonly Pick<RewardBranchState, 'bags'>[],
+  branches: readonly { readonly state: Pick<RewardBranchState['state'], 'bags'> }[],
   factsByBranch: readonly RewardKernelFacts[],
   eligibilityByBranch?: readonly (readonly boolean[])[],
 ): DecisionRewardBagState {
@@ -280,7 +283,7 @@ export function aggregateDecisionRewardBag(
     if (branch === undefined || facts === undefined) {
       throw new Error(`run-state store ${store.key} has no branch facts`);
     }
-    const counts = branch.bags[store.key]?.remainingEntryCounts ?? store.entries.map(() => 1);
+    const counts = branch.state.bags[store.key]?.remainingEntryCounts ?? store.entries.map(() => 1);
     const groups = new Map<string, BranchGroup>();
     let storeTotal = 0;
     for (const [entryIndex, descriptor] of entryDescriptors.entries()) {
@@ -359,7 +362,7 @@ export function aggregateDecisionRewardBag(
     if (facts === undefined) {
       throw new Error(`run-state store ${store.key} has no facts for branch ${branchIndex}`);
     }
-    const bag = branch.bags[store.key];
+    const bag = branch.state.bags[store.key];
     const counts = bag?.remainingEntryCounts ?? store.entries.map(() => 1);
     for (const [entryIndex, descriptor] of entryDescriptors.entries()) {
       const { entry } = descriptor;
@@ -600,9 +603,10 @@ export function createRunState(context: RunStateContext): RunStateSnapshot | und
       ? undefined
       : [
           objectId(derivationCache, context.factsContextToken!),
-          objectId(derivationCache, branch.history),
-          objectId(derivationCache, branch.pendingHermesShrineDeliveries),
-          objectId(derivationCache, branch.hexProgress),
+          objectId(derivationCache, branch.state.rewardHistory),
+          objectId(derivationCache, branch.state.pendingHermesShrineDeliveries),
+          objectId(derivationCache, branch.state.hexProgress),
+          objectId(derivationCache, branch.state.rewardLookups),
         ].join(':'),
   );
   const factsByBranch = context.branches.map((branch, branchIndex) => {
@@ -630,13 +634,15 @@ export function createRunState(context: RunStateContext): RunStateSnapshot | und
         ? undefined
         : [
             contextHistoryKey,
-            branch.traitHistory === undefined ? 0 : objectId(cache, branch.traitHistory),
-            objectId(cache, branch.arcanaFear),
-            objectId(cache, branch.keepsakes),
-            objectId(cache, branch.rewardPriorities),
-            objectId(cache, branch.pendingHermesShrineDeliveries),
-            objectId(cache, branch.stygianWell),
-            objectId(cache, branch.hexProgress),
+            branch.state.traitHistory === undefined
+              ? 0
+              : objectId(cache, branch.state.traitHistory),
+            objectId(cache, branch.state.arcanaFear),
+            objectId(cache, branch.state.keepsakes),
+            objectId(cache, branch.state.rewardPriorities),
+            objectId(cache, branch.state.pendingHermesShrineDeliveries),
+            objectId(cache, branch.state.stygianWell),
+            objectId(cache, branch.state.hexProgress),
           ].join(':');
     let derived =
       identityKey === undefined ? undefined : cache?.branchStateByIdentity.get(identityKey);
@@ -650,23 +656,23 @@ export function createRunState(context: RunStateContext): RunStateSnapshot | und
         cache?.godPoolByContextHistory.set(contextHistoryKey, godPool);
       }
       const cachedTraits =
-        branch.traitHistory === undefined
+        branch.state.traitHistory === undefined
           ? undefined
-          : cache?.traitsByHistory.get(branch.traitHistory);
-      const traits = cachedTraits ?? traitState(context.catalog, branch.traitHistory);
-      if (branch.traitHistory !== undefined && cachedTraits === undefined) {
-        cache?.traitsByHistory.set(branch.traitHistory, traits);
+          : cache?.traitsByHistory.get(branch.state.traitHistory);
+      const traits = cachedTraits ?? traitState(context.catalog, branch.state.traitHistory);
+      if (branch.state.traitHistory !== undefined && cachedTraits === undefined) {
+        cache?.traitsByHistory.set(branch.state.traitHistory, traits);
       }
-      const forfeit = forfeitStatus(branch.arcanaFear);
+      const forfeit = forfeitStatus(branch.state.arcanaFear);
       derived = Object.freeze({
         godPool,
         traits,
-        arcanaFear: branch.arcanaFear,
-        keepsakes: branch.keepsakes,
-        rewardPriorities: branch.rewardPriorities,
-        pendingHermesShrineDeliveries: branch.pendingHermesShrineDeliveries,
-        stygianWell: branch.stygianWell,
-        hexProgress: branch.hexProgress,
+        arcanaFear: branch.state.arcanaFear,
+        keepsakes: branch.state.keepsakes,
+        rewardPriorities: branch.state.rewardPriorities,
+        pendingHermesShrineDeliveries: branch.state.pendingHermesShrineDeliveries,
+        stygianWell: branch.state.stygianWell,
+        hexProgress: branch.state.hexProgress,
         forfeitStatus: forfeit,
       });
       if (identityKey !== undefined) {
@@ -675,7 +681,7 @@ export function createRunState(context: RunStateContext): RunStateSnapshot | und
     }
     const counters = historyCounters(
       context.historyView,
-      branch.history,
+      branch.state.rewardHistory,
       context.enteredBiomeCount,
     );
     return Object.freeze({
@@ -708,10 +714,10 @@ export function createRunState(context: RunStateContext): RunStateSnapshot | und
     return signature;
   });
   const bagCountsByBranch = context.branches.map((branch) => {
-    const cached = derivationCache?.bagCountsByState.get(branch.bags);
+    const cached = derivationCache?.bagCountsByState.get(branch.state.bags);
     if (cached !== undefined) return cached;
-    const signature = rewardBagCountSignature(context.catalog, branch.bags);
-    derivationCache?.bagCountsByState.set(branch.bags, signature);
+    const signature = rewardBagCountSignature(context.catalog, branch.state.bags);
+    derivationCache?.bagCountsByState.set(branch.state.bags, signature);
     return signature;
   });
   const bagCacheKey =

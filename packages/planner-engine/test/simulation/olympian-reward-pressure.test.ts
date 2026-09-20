@@ -27,10 +27,8 @@ import {
   processRewardOffer,
 } from '../../src/simulation/rewards/offer-generation';
 import { applyOlympianRewardPressureEquip } from '../../src/simulation/keepsakes/branch-transitions';
-import {
-  initializeRewardBranches,
-  publicRewardBranch,
-} from '../../src/simulation/rewards/branch-lifecycle';
+import { publicRewardBranch } from '../../src/simulation/rewards/branch-lifecycle';
+import { initializeTestRewardBranchesForRoute as initializeRewardBranches } from '../support/arcana-fear';
 import { appendRewardEvent } from '../../src/simulation/rewards/branch-primitives';
 import { settleOwnedAcquisitionSite } from '../../src/simulation/rewards/acquisition/site-settlement';
 
@@ -76,11 +74,11 @@ describe('Olympian reward pressure', () => {
       'ForceZeusBoonKeepsake',
     )[0]!;
 
-    expect(currentBiome.rewardPriorities).toEqual(['Boon']);
-    expect(currentBiome.bags.RunProgress).toBeUndefined();
+    expect(currentBiome.state.rewardPriorities).toEqual(['Boon']);
+    expect(currentBiome.state.bags.RunProgress).toBeUndefined();
 
     const nextBiome = initializeRewardBranches([publicRewardBranch(currentBiome)])[0]!;
-    expect(nextBiome.rewardPriorities).toEqual(['Boon']);
+    expect(nextBiome.state.rewardPriorities).toEqual(['Boon']);
   });
 
   it('consumes priority at counted generation while leaving force for materialization', () => {
@@ -127,15 +125,15 @@ describe('Olympian reward pressure', () => {
       }),
       new Map(),
     )[0]!;
-    expect(generated.rewardPriorities).toEqual([]);
-    expect(generated.keepsakes.olympianSources[0]?.remainingForceUses).toBe(1);
+    expect(generated.state.rewardPriorities).toEqual([]);
+    expect(generated.state.keepsakes.olympianSources[0]?.remainingForceUses).toBe(1);
 
     const unsupported = processRewardOffer(
       [initial],
       countedContext('MetaProgress', { rewardType: 'GiftDrop' }),
       new Map(),
     )[0]!;
-    expect(unsupported.rewardPriorities).toEqual(['Boon']);
+    expect(unsupported.state.rewardPriorities).toEqual(['Boon']);
   });
 
   it("keeps an unordered cohort's consumed priority out of a later counted offer", () => {
@@ -183,7 +181,7 @@ describe('Olympian reward pressure', () => {
       ordering: 'allOffers',
     });
     expect(cohort).toHaveLength(1);
-    expect(cohort[0]?.rewardPriorities).toEqual([]);
+    expect(cohort[0]?.state.rewardPriorities).toEqual([]);
 
     const later = processRewardOffer(
       [cohort[0]!],
@@ -226,10 +224,13 @@ describe('Olympian reward pressure', () => {
     )[0]!;
     const branch = Object.freeze({
       ...initial,
-      rewardPriorities: Object.freeze([]),
-      history: Object.freeze({
-        ...initial.history,
-        lootTypeHistory: Object.freeze({ ZeusUpgrade: 1, ApolloUpgrade: 1, HeraUpgrade: 1 }),
+      state: Object.freeze({
+        ...initial.state,
+        rewardPriorities: Object.freeze([]),
+        rewardHistory: Object.freeze({
+          ...initial.state.rewardHistory,
+          lootTypeHistory: Object.freeze({ ZeusUpgrade: 1, ApolloUpgrade: 1, HeraUpgrade: 1 }),
+        }),
       }),
     });
     const context = (chosenSource: string, spurnedSource: string) => ({
@@ -301,7 +302,7 @@ describe('Olympian reward pressure', () => {
 
     expect(reached).toHaveLength(1);
     expect([...findings.values()]).toEqual([]);
-    expect(reached[0]?.keepsakes.olympianSources[0]?.remainingForceUses).toBe(1);
+    expect(reached[0]?.state.keepsakes.olympianSources[0]?.remainingForceUses).toBe(1);
   });
 
   it('spends only matching free Boon and Devotion loot from the reached generated-event ledger', () => {
@@ -317,11 +318,11 @@ describe('Olympian reward pressure', () => {
       offer: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'ZeusUpgrade' } },
     });
     expect(
-      consumeOlympianProviderForReachedOffer(catalog, boon, origin, 'paid').keepsakes
+      consumeOlympianProviderForReachedOffer(catalog, boon, origin, 'paid').state.keepsakes
         .olympianSources[0]?.remainingForceUses,
     ).toBe(1);
     expect(
-      consumeOlympianProviderForReachedOffer(catalog, boon, origin, 'free').keepsakes
+      consumeOlympianProviderForReachedOffer(catalog, boon, origin, 'free').state.keepsakes
         .olympianSources[0]?.remainingForceUses,
     ).toBe(0);
 
@@ -338,7 +339,7 @@ describe('Olympian reward pressure', () => {
       },
     });
     expect(
-      consumeOlympianProviderForReachedOffer(catalog, devotion, origin, 'free').keepsakes
+      consumeOlympianProviderForReachedOffer(catalog, devotion, origin, 'free').state.keepsakes
         .olympianSources[0]?.remainingForceUses,
     ).toBe(0);
   });
@@ -390,7 +391,7 @@ describe('Olympian reward pressure', () => {
     );
 
     expect(
-      settlement.branches[0]?.keepsakes.olympianSources.find(
+      settlement.branches[0]?.state.keepsakes.olympianSources.find(
         (source) => source.providerKey === 'Hestia',
       )?.remainingForceUses,
     ).toBe(0);
@@ -444,7 +445,7 @@ describe('Olympian reward pressure', () => {
     );
 
     expect(
-      settlement.branches[0]?.keepsakes.olympianSources.find(
+      settlement.branches[0]?.state.keepsakes.olympianSources.find(
         (source) => source.providerKey === 'Apollo',
       )?.remainingForceUses,
     ).toBe(0);
@@ -510,35 +511,41 @@ describe('Olympian reward pressure', () => {
       catalog,
       Object.freeze({
         ...initial,
-        keepsakes: applyEchoOlympianRewardPressureReplay(
-          catalog,
-          initial.keepsakes,
-          'ForceAresBoonKeepsake',
-        ),
+        state: Object.freeze({
+          ...initial.state,
+          keepsakes: applyEchoOlympianRewardPressureReplay(
+            catalog,
+            initial.state.keepsakes,
+            'ForceAresBoonKeepsake',
+          ),
+        }),
       }),
       'ForceAresBoonKeepsake',
     );
-    expect(withGift.rewardPriorities).toEqual(['Boon', 'Boon']);
+    expect(withGift.state.rewardPriorities).toEqual(['Boon', 'Boon']);
 
     const swapped = Object.freeze({
       ...withGift,
-      keepsakes: applyKeepsakeReplacement(
-        catalog,
-        withGift.keepsakes,
-        'ManaOverTimeRefundKeepsake',
-        withGift.arcanaFear,
-      ),
+      state: Object.freeze({
+        ...withGift.state,
+        keepsakes: applyKeepsakeReplacement(
+          catalog,
+          withGift.state.keepsakes,
+          'ManaOverTimeRefundKeepsake',
+          withGift.state.arcanaFear,
+        ),
+      }),
     });
-    expect(swapped.rewardPriorities).toEqual(['Boon', 'Boon']);
-    expect(swapped.keepsakes.olympianSources).toEqual([
+    expect(swapped.state.rewardPriorities).toEqual(['Boon', 'Boon']);
+    expect(swapped.state.keepsakes.olympianSources).toEqual([
       expect.objectContaining({ providerKey: 'Ares', origin: 'echo' }),
     ]);
 
     const later = applyKeepsakeReplacement(
       catalog,
-      swapped.keepsakes,
+      swapped.state.keepsakes,
       'ForceApolloBoonKeepsake',
-      swapped.arcanaFear,
+      swapped.state.arcanaFear,
       'Heroic',
     );
     expect(later.olympianSources).toContainEqual(

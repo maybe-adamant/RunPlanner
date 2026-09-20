@@ -12,12 +12,12 @@ import { createBiomeAddress } from '@run-planner/engine/authored-project';
 import { describe, expect, it } from 'vitest';
 
 import { createDefaultRouteLoadout } from '../../src/authored-project/loadout';
-import { initializeTestRewardBranches } from '../support/arcana-fear';
-import { circeResolutionDomain, judgmentRequiredCount } from '../../src/simulation/arcana-fear';
 import {
-  initializeRewardBranches,
-  publicRewardBranch,
-} from '../../src/simulation/rewards/branch-lifecycle';
+  initializeTestRewardBranches,
+  initializeTestRewardBranchesForRoute as initializeRewardBranches,
+} from '../support/arcana-fear';
+import { circeResolutionDomain, judgmentRequiredCount } from '../../src/simulation/arcana-fear';
+import { publicRewardBranch } from '../../src/simulation/rewards/branch-lifecycle';
 import { mergeEquivalentRewardBranches } from '../../src/simulation/rewards/branch-primitives';
 import { forfeitStatus } from '../../src/simulation/rewards/run-state';
 
@@ -180,13 +180,16 @@ describe('progressive Arcana and Fear state', () => {
 
     const branch = Object.freeze({
       ...initializeTestRewardBranches(consumed.state)[0]!,
-      arcanaFear: consumed.state,
+      state: Object.freeze({
+        ...initializeTestRewardBranches(consumed.state)[0]!.state,
+        arcanaFear: consumed.state,
+      }),
     });
     const nextBiome = initializeRewardBranches([publicRewardBranch(branch)])[0]!;
-    expect(nextBiome.arcanaFear.fear.forfeitConsumed).toBe(false);
-    expect(forfeitStatus(nextBiome.arcanaFear)).toBe('available');
+    expect(nextBiome.state.arcanaFear.fear.forfeitConsumed).toBe(false);
+    expect(forfeitStatus(nextBiome.state.arcanaFear)).toBe('available');
     expect(
-      consumeRoomRewardForfeit(catalog, nextBiome.arcanaFear, 'HermesUpgrade', {
+      consumeRoomRewardForfeit(catalog, nextBiome.state.arcanaFear, 'HermesUpgrade', {
         owner: createBiomeAddress('Underworld', 'G'),
         sequence: 3,
       }),
@@ -295,7 +298,10 @@ describe('progressive Arcana and Fear state', () => {
     const base = initializeTestRewardBranches(state)[0]!;
     const distinct = Object.freeze({
       ...base,
-      arcanaFear: activateTemporaryArcana(catalog, state, ['ChanneledCast'], evidence).state,
+      state: Object.freeze({
+        ...base.state,
+        arcanaFear: activateTemporaryArcana(catalog, state, ['ChanneledCast'], evidence).state,
+      }),
     });
     expect(mergeEquivalentRewardBranches([base, distinct])).toHaveLength(2);
   });

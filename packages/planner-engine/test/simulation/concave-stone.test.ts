@@ -63,11 +63,14 @@ function branchWithStone(
   const source = createKeepsakeState(catalog, 'UnpickedBoonKeepsake');
   return Object.freeze({
     ...branch,
-    history: attachTraitHistory(branch.history, traitHistory),
-    traitHistory,
-    keepsakes: Object.freeze({
-      ...source,
-      stone: Object.freeze({ ...source.stone!, rank }),
+    state: Object.freeze({
+      ...branch.state,
+      rewardHistory: attachTraitHistory(branch.state.rewardHistory, traitHistory),
+      traitHistory: traitHistory,
+      keepsakes: Object.freeze({
+        ...source,
+        stone: Object.freeze({ ...source.stone!, rank }),
+      }),
     }),
   });
 }
@@ -101,7 +104,7 @@ function settleWithKeepsakes(
   if (branch === undefined) throw new Error('missing test reward branch');
   return applyTraitOfferForAcquisition(
     catalog,
-    Object.freeze({ ...branch, keepsakes }),
+    Object.freeze({ ...branch, state: Object.freeze({ ...branch.state, keepsakes: keepsakes }) }),
     {
       origin,
       traitOffersByAcquisitionRole: Object.freeze({ self: value }),
@@ -242,7 +245,7 @@ describe('Concave Stone trait settlement', () => {
       new Map([
         [
           semanticAddressKey(trait),
-          [{ before, context: {}, keepsakes: branchWithStone('Common', before).keepsakes }],
+          [{ before, context: {}, keepsakes: branchWithStone('Common', before).state.keepsakes }],
         ],
       ]),
     ).at(trait)!;
@@ -269,15 +272,17 @@ describe('Concave Stone trait settlement', () => {
     );
     const settled = settle(value, 'Common', {}, before);
     expect(settled.findingEntries).toEqual([]);
-    expect(settled.branch.traitHistory?.equippedTraits.HeraWeaponBoon).toMatchObject({
+    expect(settled.branch.state.traitHistory?.equippedTraits.HeraWeaponBoon).toMatchObject({
       rarity: 'Heroic',
       level: 1,
     });
-    expect(settled.branch.traitHistory?.equippedTraits.BoonDecayBoon).toMatchObject({
+    expect(settled.branch.state.traitHistory?.equippedTraits.BoonDecayBoon).toMatchObject({
       rarity: 'Heroic',
     });
-    expect(settled.branch.traitHistory?.equippedTraits.BoonDecayBoon).not.toHaveProperty('level');
-    const secondary = settled.branch.traitHistory?.events.at(-1);
+    expect(settled.branch.state.traitHistory?.equippedTraits.BoonDecayBoon).not.toHaveProperty(
+      'level',
+    );
+    const secondary = settled.branch.state.traitHistory?.events.at(-1);
     if (secondary?.kind !== 'concaveStoneSecondary')
       throw new Error('expected the frozen Bridal Glow acquisition');
     expect(secondary).toMatchObject({
@@ -329,7 +334,7 @@ describe('Concave Stone trait settlement', () => {
       new Map([
         [
           semanticAddressKey(trait),
-          [{ before, context: {}, keepsakes: branchWithStone('Common', before).keepsakes }],
+          [{ before, context: {}, keepsakes: branchWithStone('Common', before).state.keepsakes }],
         ],
       ]),
     ).at(trait)!;
@@ -358,12 +363,12 @@ describe('Concave Stone trait settlement', () => {
     );
     expect(repaired.findingEntries).toEqual([]);
     expect(repaired.blockedChild).toBeUndefined();
-    expect(repaired.branch.traitHistory?.equippedTraits.HeraWeaponBoon).toMatchObject({
+    expect(repaired.branch.state.traitHistory?.equippedTraits.HeraWeaponBoon).toMatchObject({
       rarity: 'Heroic',
       level: 2,
     });
     for (const key of Object.values(result))
-      expect(repaired.branch.traitHistory?.equippedTraits[key]).toBeDefined();
+      expect(repaired.branch.state.traitHistory?.equippedTraits[key]).toBeDefined();
   });
   it('repairs a Stone Natural Selection prefix using post-primary targets and settles exactly its increments', () => {
     const before = foldTraitHistoryEvents(
@@ -406,7 +411,7 @@ describe('Concave Stone trait settlement', () => {
             {
               before,
               context: {},
-              keepsakes: branchWithStone('Common', before).keepsakes,
+              keepsakes: branchWithStone('Common', before).state.keepsakes,
             },
           ],
         ],
@@ -449,7 +454,7 @@ describe('Concave Stone trait settlement', () => {
     expect(repaired.blockedChild).toBeUndefined();
     expect(repaired.findingEntries).toEqual([]);
     for (const key of new Set(targets)) {
-      expect(repaired.branch.traitHistory?.equippedTraits[key]?.level).toBe(
+      expect(repaired.branch.state.traitHistory?.equippedTraits[key]?.level).toBe(
         1 + targets.filter((target) => target === key).length,
       );
     }
@@ -459,8 +464,8 @@ describe('Concave Stone trait settlement', () => {
       {},
       before,
     );
-    expect(dormant.branch.traitHistory?.equippedTraits.GoodStuffBoon).toBeUndefined();
-    expect(dormant.branch.traitHistory?.equippedTraits.DemeterCastBoon?.level).toBe(1);
+    expect(dormant.branch.state.traitHistory?.equippedTraits.GoodStuffBoon).toBeUndefined();
+    expect(dormant.branch.state.traitHistory?.equippedTraits.DemeterCastBoon?.level).toBe(1);
     expect(repairedValue.options[1]?.naturalSelectionTargets).toEqual(targets);
   });
   it('settles a residual target after the primary boon and reports its original option owner', () => {
@@ -509,22 +514,26 @@ describe('Concave Stone trait settlement', () => {
     );
     expect(repaired.blockedChild).toBeUndefined();
     expect(repaired.findingEntries).toEqual([]);
-    expect(repaired.branch.traitHistory?.equippedTraits.HeraSpecialBoon?.rarity).toBe('Heroic');
+    expect(repaired.branch.state.traitHistory?.equippedTraits.HeraSpecialBoon?.rarity).toBe(
+      'Heroic',
+    );
   });
   it('keeps an existing later offer valid when an earlier Stone proc is removed', () => {
     const later = offer();
     const priorProc = settle(offer({ kind: 'proc', optionKey: 'option2' }));
-    expect(settleWithKeepsakes(later, priorProc.branch.keepsakes).blockedChild).toBeUndefined();
+    expect(
+      settleWithKeepsakes(later, priorProc.branch.state.keepsakes).blockedChild,
+    ).toBeUndefined();
     const priorNoProc = settle(offer());
-    const afterEdit = settleWithKeepsakes(later, priorNoProc.branch.keepsakes);
+    const afterEdit = settleWithKeepsakes(later, priorNoProc.branch.state.keepsakes);
     expect(afterEdit.blockedChild).toBeUndefined();
     expect(afterEdit.findingEntries).toEqual([]);
-    expect(afterEdit.branch.keepsakes.stone?.status).toBe('pending');
+    expect(afterEdit.branch.state.keepsakes.stone?.status).toBe('pending');
     expect(later.concaveStoneResult).toBeUndefined();
     const published = selectedTraitOfferProducts([afterEdit.branch]).selectedTraitOffers[0]?.offer;
     expect(published).toMatchObject({ concaveStoneResult: { kind: 'noProc' } });
     expect(
-      settleWithKeepsakes(offer({ kind: 'noProc' }), priorProc.branch.keepsakes).blockedChild,
+      settleWithKeepsakes(offer({ kind: 'noProc' }), priorProc.branch.state.keepsakes).blockedChild,
     ).toBeUndefined();
   });
 
@@ -537,30 +546,30 @@ describe('Concave Stone trait settlement', () => {
     (rank: 'Common' | 'Rare' | 'Epic', support: number) => {
       const result = settle(offer({ kind: 'noProc' }), rank);
       expect(result.blockedChild).toBeUndefined();
-      expect(result.branch.keepsakes.stone).toMatchObject({ status: 'pending', rank });
-      expect(concaveStoneProcSupport(catalog, result.branch.keepsakes)).toBe(support);
-      expect(result.branch.traitHistory?.equippedTraits.ApolloWeaponBoon).toBeDefined();
+      expect(result.branch.state.keepsakes.stone).toMatchObject({ status: 'pending', rank });
+      expect(concaveStoneProcSupport(catalog, result.branch.state.keepsakes)).toBe(support);
+      expect(result.branch.state.traitHistory?.equippedTraits.ApolloWeaponBoon).toBeDefined();
       expect(
-        result.branch.traitHistory?.events.filter((event) => event.kind === 'traitOffer'),
+        result.branch.state.traitHistory?.events.filter((event) => event.kind === 'traitOffer'),
       ).toHaveLength(1);
       const implicit = settle(offer(), rank);
       expect(implicit.blockedChild).toBeUndefined();
-      expect(implicit.branch.keepsakes).toEqual(result.branch.keepsakes);
+      expect(implicit.branch.state.keepsakes).toEqual(result.branch.state.keepsakes);
     },
   );
 
   it('consumes Stone before acquiring a selected frozen residual row without recomposing an offer', () => {
     const result = settle(offer({ kind: 'proc', optionKey: 'option2' }));
     expect(result.blockedChild).toBeUndefined();
-    expect(result.branch.keepsakes.stone).toMatchObject({ status: 'consumed' });
-    expect(result.branch.traitHistory?.equippedTraits.ApolloWeaponBoon).toBeDefined();
-    expect(result.branch.traitHistory?.equippedTraits.ApolloSpecialBoon).toBeDefined();
-    const traitEvents = result.branch.traitHistory?.events.filter(
+    expect(result.branch.state.keepsakes.stone).toMatchObject({ status: 'consumed' });
+    expect(result.branch.state.traitHistory?.equippedTraits.ApolloWeaponBoon).toBeDefined();
+    expect(result.branch.state.traitHistory?.equippedTraits.ApolloSpecialBoon).toBeDefined();
+    const traitEvents = result.branch.state.traitHistory?.events.filter(
       (event): event is TraitOfferEvent => event.kind === 'traitOffer',
     );
     expect(traitEvents).toHaveLength(1);
     expect(traitEvents?.[0]?.acquisitionRole).toBe('self');
-    const secondaryEvents = result.branch.traitHistory?.events.filter(
+    const secondaryEvents = result.branch.state.traitHistory?.events.filter(
       (event) => event.kind === 'concaveStoneSecondary',
     );
     expect(secondaryEvents).toHaveLength(1);
@@ -587,10 +596,10 @@ describe('Concave Stone trait settlement', () => {
         }),
       }),
     );
-    expect(result.branch.keepsakes.callingCard?.remainingCharges).toBe(0);
-    expect(result.branch.traitHistory?.equippedTraits.ApolloSpecialBoon?.rarity).toBe('Rare');
+    expect(result.branch.state.keepsakes.callingCard?.remainingCharges).toBe(0);
+    expect(result.branch.state.traitHistory?.equippedTraits.ApolloSpecialBoon?.rarity).toBe('Rare');
     expect(
-      result.branch.traitHistory?.events.filter((event) => event.kind === 'traitOffer'),
+      result.branch.state.traitHistory?.events.filter((event) => event.kind === 'traitOffer'),
     ).toHaveLength(1);
   });
 
@@ -601,23 +610,23 @@ describe('Concave Stone trait settlement', () => {
       'UnpickedBoonKeepsake',
     );
     const noProc = settleWithKeepsakes(offer({ kind: 'noProc' }), replayed);
-    expect(noProc.branch.keepsakes.stone).toEqual({
+    expect(noProc.branch.state.keepsakes.stone).toEqual({
       origin: 'echo',
       status: 'pending',
       rank: 'Common',
     });
     const proc = settleWithKeepsakes(
       offer({ kind: 'proc', optionKey: 'option2' }),
-      noProc.branch.keepsakes,
+      noProc.branch.state.keepsakes,
     );
-    expect(proc.branch.keepsakes.stone).toEqual({
+    expect(proc.branch.state.keepsakes.stone).toEqual({
       origin: 'echo',
       status: 'consumed',
       rank: 'Common',
     });
     expect(
-      applyEchoConcaveStoneReplay(catalog, proc.branch.keepsakes, 'UnpickedBoonKeepsake'),
-    ).toBe(proc.branch.keepsakes);
+      applyEchoConcaveStoneReplay(catalog, proc.branch.state.keepsakes, 'UnpickedBoonKeepsake'),
+    ).toBe(proc.branch.state.keepsakes);
   });
 
   it('acquires the frozen row without replaying active Chaos composition', () => {
@@ -628,7 +637,7 @@ describe('Concave Stone trait settlement', () => {
       rejectedChaosHistory(),
     );
     expect(result.blockedChild).toBeUndefined();
-    expect(result.branch.traitHistory?.equippedTraits.ApolloSpecialBoon).toBeDefined();
+    expect(result.branch.state.traitHistory?.equippedTraits.ApolloSpecialBoon).toBeDefined();
     expect(result.branch.traitEvaluations).toHaveLength(1);
   });
 
@@ -636,7 +645,10 @@ describe('Concave Stone trait settlement', () => {
     expect(settle(offer(), 'Heroic').blockedChild?.address).toEqual(trait);
     const noProc = settle(offer({ kind: 'noProc' }), 'Heroic');
     expect(noProc.blockedChild?.address).toEqual(trait);
-    expect(noProc.branch.keepsakes.stone).toMatchObject({ status: 'pending', rank: 'Heroic' });
+    expect(noProc.branch.state.keepsakes.stone).toMatchObject({
+      status: 'pending',
+      rank: 'Heroic',
+    });
 
     const replacementHistory = foldTraitHistoryEvents(catalog, [
       {
@@ -668,8 +680,8 @@ describe('Concave Stone trait settlement', () => {
       replacementHistory,
     );
     expect(replacement.blockedChild?.address).toEqual(trait);
-    expect(replacement.branch.keepsakes.stone).toMatchObject({ status: 'pending' });
-    expect(replacement.branch.traitHistory?.equippedTraits.ApolloSpecialBoon).toBeUndefined();
+    expect(replacement.branch.state.keepsakes.stone).toMatchObject({ status: 'pending' });
+    expect(replacement.branch.state.traitHistory?.equippedTraits.ApolloSpecialBoon).toBeUndefined();
   });
 
   it('checks Stone after primary Cherished reconstruction, forcing an Epic source to proc', () => {
@@ -684,14 +696,16 @@ describe('Concave Stone trait settlement', () => {
     });
     const proc = settle(cherishedFirst, 'Epic', {}, cherishedPrerequisiteHistory());
     expect(proc.blockedChild).toBeUndefined();
-    expect(proc.branch.keepsakes.stone).toMatchObject({ status: 'consumed', rank: 'Heroic' });
+    expect(proc.branch.state.keepsakes.stone).toMatchObject({ status: 'consumed', rank: 'Heroic' });
     expect(
-      proc.branch.traitHistory?.events.filter(
+      proc.branch.state.traitHistory?.events.filter(
         (event) => event.kind === 'traitOffer' && event.acquisitionRole === 'self',
       ),
     ).toHaveLength(1);
     expect(
-      proc.branch.traitHistory?.events.filter((event) => event.kind === 'concaveStoneSecondary'),
+      proc.branch.state.traitHistory?.events.filter(
+        (event) => event.kind === 'concaveStoneSecondary',
+      ),
     ).toHaveLength(1);
   });
 
@@ -707,10 +721,12 @@ describe('Concave Stone trait settlement', () => {
     });
     const proc = settle(cherishedSecond, 'Epic', {}, cherishedPrerequisiteHistory());
     expect(proc.blockedChild).toBeUndefined();
-    expect(proc.branch.keepsakes.stone).toMatchObject({ status: 'consumed', rank: 'Epic' });
-    expect(proc.branch.traitHistory?.equippedTraits.KeepsakeLevelBoon).toBeDefined();
+    expect(proc.branch.state.keepsakes.stone).toMatchObject({ status: 'consumed', rank: 'Epic' });
+    expect(proc.branch.state.traitHistory?.equippedTraits.KeepsakeLevelBoon).toBeDefined();
     expect(
-      proc.branch.traitHistory?.events.filter((event) => event.kind === 'concaveStoneSecondary'),
+      proc.branch.state.traitHistory?.events.filter(
+        (event) => event.kind === 'concaveStoneSecondary',
+      ),
     ).toHaveLength(1);
   });
 });

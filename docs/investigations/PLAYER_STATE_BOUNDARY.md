@@ -18,8 +18,8 @@ dictionary, or mutable singleton. Retain the acquired-instance model, effect
 transitions, chronology and game rules. The gain must be removal of fragmented
 ownership and repeated fact assembly, not another wrapper around parallel data.
 
-This is a bounded source probe, not a locked implementation plan. No production
-code or game rules were changed. The governing contracts are
+This investigation now records the accepted pre-edit inventory for the separate
+locked implementation plan. The governing contracts are
 `docs/design/SIMULATION_AND_VALIDATION.md` (chronology, settlement handoffs and
 branch equivalence), `CANDIDATE_EVALUATION_MODEL.md` (exact trait candidate
 boundary), and `REWARD_MODEL.md` (equipped state and acquired effects).
@@ -140,6 +140,37 @@ simulation snapshots, not become their owner or an input to simulation.
 
 ## Recommended shape
 
+### Accepted Gate A transition inventory
+
+Inventory accepted against `b5c79329`, before implementation. Paths below are
+relative to `packages/planner-engine/src/simulation/`.
+
+| Contact / producer                                       | New owner and consumers                                                                                                                                                                   | Timing and displaced transport                                                                                                                                                                                                                 | Primary verification                                                       |
+| -------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------- |
+| `rewards/branch-lifecycle.ts` initialization/publication | Complete `state/` construction and successor transition; internal/public branches carry the same immutable state                                                                          | Preserve initial Hex, keepsake, Pom, Embryo, Hammer and aspect-effect order. Successor resets only declared biome history, Arcana/Fear and keepsake state. Remove independently enumerated live-field publication and optional empty fallbacks | Initialization, biome handoff, retained-effect and execution-fixture tests |
+| `rewards/branch-primitives.ts` branch product            | State owns equipment, traits, Arcana/Fear, keepsakes, Hex, bags/priorities, reward history, Well effects, deliveries, pending Shop data, offered lookup and reached route/history context | Envelope retains events, processed cursor, candidate/selected evaluations, Sea Star source witness and Shop continuation functions. No duplicate live fields                                                                                   | Divergent/equivalent branches and retained old snapshots                   |
+| Shop `deriveTravelRefill`, resume and close              | Shop returns pending data in state and explicit callable continuation in the branch envelope together                                                                                     | Preserve post-purchase generation facts and Gold's earlier source history. Clear data and continuation at existing room-close contact; neither exports functions in public state nor invents cross-biome pending Shops                         | Interleaved Travel Deal and Gold settlement; publication boundary          |
+| `flushPendingHubBoard` / `ProgressiveSeed`               | State lookup transition and direct state handoff; retain canonical lifecycle-history seed                                                                                                 | Publish the full open board at existing flush, never during its own generation; preserve unvisited offers and idempotent restore. Remove separate mutable lookup and `ProgressiveSeed.rewardLookups`                                           | Existing hub inventory/candidate and carried-lookup witnesses              |
+| `captureRunState` / `recordTargetSlotHistory`            | Capture correlated state with explicit source-time operation context; immediate inspector and target-generation readers adapt together                                                    | Retain current capture contacts, including trait-child branches. Replace parallel history/Spell/Hex/lookup arrays; preserve agreement checks only over consumed generation facts                                                               | Snapshot contacts, target-generation agreement, real-plan output           |
+| Branch/candidate equivalence                             | Existing explicit semantic keys over state and retained witnesses                                                                                                                         | Keep Forfeit event/cursor distinctions; exclude callable capabilities and unrelated retained history views. Gate B owns removal of remaining offer-context copies                                                                              | Equivalent/divergent witnesses and baseline candidate counts               |
+
+The history fold currently retains selected checkpoint views, not a universal
+current view. Gate A extends that existing fold's explicit product with exact
+post-event views and a biome-start view. Per-fold same-sequence reuse lets existing
+checkpoint products share those immutable snapshots. Chronology only selects the
+already-folded view: no refolding, final-state lookahead or guessed empty context.
+Verify contact identity and allocation cost; this is not another history authority.
+
+The pre-edit observer in `test/simulation/state-baseline.test.ts` passed against
+the existing fixture builders. Counts are regression evidence, not production
+instrumentation or policy reconstructed by tests:
+
+| Fixture    | Biomes     | Branches   | Snapshot counts | Selected offers | Candidate owners / contexts |
+| ---------- | ---------- | ---------- | --------------- | --------------- | --------------------------- |
+| Underworld | F, G, H, I | 1, 1, 1, 1 | 39, 30, 21, 22  | 4, 4, 5, 0      | 13 / 13                     |
+| Surface    | N, O, P, Q | 1, 1, 1, 1 | 33, 31, 33, 25  | 7, 3, 3, 2      | 15 / 15                     |
+| Dream      | Q, F, N    | 1, 1, 1    | 27, 39, 25      | 3, 3, 4         | 10 / 10                     |
+
 ### Code-inspection constraints
 
 The working migration boundary is broader than `RewardBranchState` alone:
@@ -174,12 +205,33 @@ The working migration boundary is broader than `RewardBranchState` alone:
   retain context-sensitive invalidation without deep-copying or serializing
   whole states.
 
-One inspection caveat needs characterization, not a silent behavior fix:
+Inspector caveat, now characterized against the pre-refactor `b5c79329`:
 `captureRunState` describes lookups in its context-token comment but omits the
 lookup/branch arguments to `createBiomeRewardFacts`, whose defaults are empty.
-That proves a missing input, not an observed incorrect inspector result. Before
-changing any output, determine whether a current bag/requirement consumer can
-observe it. Isolate observable corrections from the behavior-preserving refactor.
+The standard Surface fixture's 122 captures did not change when supplied the
+live pending-Spell/Hex flags. However, the existing delayed Spell reservation
+witness in `hermes-shrine-inventory.test.ts` does expose a difference: purchase
+the O Combat07 Shrine Spell with delay 8 and inspect the Combat01 outgoing
+prefix, using that test's explicit seed. Its bag preview currently reports
+Spell Drop eligible; supplying the pending reservation marks it ineligible.
+The generation checkpoint already carries the reservation correctly. This is
+an inspector-input defect, not evidence that generation lost the purchase.
+
+The probe ran in a detached baseline worktree, without production changes;
+it compared the existing projection against the same projection with live
+flags supplied. Hub lookup exclusions themselves are shop/shrine-entry rules,
+not current bag-entry rules. The Hex closure flag has the same omitted-input
+path and applicable bag requirements, but no separate reachable full-tree
+witness has been established in this probe.
+
+The user approved a separate correction, committed as `001f8020`. Inspector
+facts now receive the exact branch and current lookup; facts-cache identity
+includes delivery and Hex state. The delayed Spell witness asserts the corrected
+preview, and the shared-cache witness covers both reservation and Hex closure
+changes without changing reward-history identity. Independent review's missing
+delivery cache witness was addressed. Engine typecheck, 60 focused tests,
+22 fixture checks and 161 execution-plan tests passed, with no fixture changes.
+Gate A resumes against that corrected behavior/performance base.
 
 This makes the gate boundary concrete: A owns construction, transitions,
 publication, handoff and capture; B removes independent eligibility contexts;
