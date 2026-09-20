@@ -53,7 +53,7 @@ function requirementContext(
     currentRoomShopOptionNames: new Set(),
     currentRoomRewardType: undefined,
     currentRoomStructuralTags: [],
-    rewardLookups: {},
+    rewardLookups: { hubRewardLookup: new Set() },
     runDepthCache: 8,
     lastEventRunDepthCaches: {},
     recentEncounterEnvelopeSlots: [],

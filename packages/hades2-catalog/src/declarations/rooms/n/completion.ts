@@ -18,18 +18,6 @@ export const nCompletionRooms = [
       rewardType: 'Shop',
       shopProfileKey: 'WorldShop',
       producerLifecycleKey: 'RoomReward',
-      additionalOptionRequirements: {
-        WeaponUpgradeDropEarly: {
-          kind: 'rewardLookupExcludes',
-          lookupKey: 'hubRewardLookup',
-          rewardType: 'WeaponUpgrade',
-        },
-        SpellDrop: {
-          kind: 'rewardLookupExcludes',
-          lookupKey: 'hubRewardLookup',
-          rewardType: 'SpellDrop',
-        },
-      },
     },
     infernalContractReward: {
       entryKey: 'infernalContractReward',

@@ -4,7 +4,11 @@ import {
   simulateProjectAssembly,
   createPreparedProjectCandidateSession,
 } from '../../src/simulation';
-import { createBiomeAddress, createTargetAddress } from '../../src/authored-project';
+import {
+  createBiomeAddress,
+  createTargetAddress,
+  semanticAddressKey,
+} from '../../src/authored-project';
 import {
   assembleExecutionProduct,
   compileExecutionPlan,
@@ -20,10 +24,20 @@ it('publishes a command-authored Dream route through the strict execution codec'
   const n = createBiomeAddress('Dream', 'N');
   const nStart = assembly.project.route.biomes.find((biome) => biome.biomeKey === 'N')!.topology!
     .startOccurrenceId;
+  const nTarget = createTargetAddress(n, { kind: 'occurrence', occurrenceId: nStart }, 'prehub');
+  const nBiomeEvaluation = assembly.evaluation.route.biomes.find((biome) => biome.biomeKey === 'N');
+  if (nBiomeEvaluation === undefined || !('rewards' in nBiomeEvaluation)) {
+    throw new Error('Dream N did not reach reward evaluation');
+  }
+  expect(
+    nBiomeEvaluation.rewards.targetHistory.find(
+      (checkpoint) => semanticAddressKey(checkpoint.origin) === semanticAddressKey(nTarget),
+    )?.rewardLookups.hubRewardLookup,
+  ).toEqual([]);
   expect(
     candidates.evaluate({
       kind: 'roomTarget',
-      target: createTargetAddress(n, { kind: 'occurrence', occurrenceId: nStart }, 'prehub'),
+      target: nTarget,
       gameName: 'N_PreHub01',
     }),
   ).toMatchObject({ result: { pressure: { biomeDepthCache: 2, selectedPossible: true } } });

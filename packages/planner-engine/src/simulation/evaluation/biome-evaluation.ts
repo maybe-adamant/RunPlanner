@@ -189,6 +189,7 @@ function generation(
   levelResolutions: LevelResolutionCandidateArtifacts,
   forcedChaosOccurrenceKeys?: ReadonlySet<string>,
   encounterBoundary?: EncounterCandidateBoundary,
+  carriedRewardLookups?: Readonly<Record<string, readonly string[]>>,
 ): BiomeGenerationAssembly {
   const ordinary = evaluateBiomeRoomGenerationAssemblyInternal(
     catalog,
@@ -197,6 +198,7 @@ function generation(
     routePosition.ordinal,
     rewards.targetHistory,
     forcedChaosOccurrenceKeys,
+    carriedRewardLookups,
   );
   const hub = evaluateHubDecisionGenerationInternal(catalog, snapshot, history);
   const gorgonStatus = (() => {
@@ -388,6 +390,7 @@ export function replayProjectBiomeFromEvaluatedPredecessor(
           seed: Object.freeze({
             history: previous.history,
             rewardBranches: previous.rewards.branches,
+            rewardLookups: previous.rewards.rewardLookups,
           }),
         }),
   });
@@ -599,6 +602,7 @@ export function evaluateBiomeAssembly(
     context.seed?.rewardBranches,
     context.resourcePlacements,
     context.resourceFindings,
+    context.seed?.rewardLookups,
   );
   const roomGeneration = generation(
     catalog,
@@ -611,6 +615,8 @@ export function evaluateBiomeAssembly(
     rewards.traitOfferArtifacts,
     rewards.levelResolutionArtifacts,
     context.forcedChaosOccurrenceKeys,
+    undefined,
+    context.seed?.rewardLookups,
   );
   const nemesisByOwner = new Map(
     rewards.simulation.nemesisRandomEventCandidates.map((candidate) => [

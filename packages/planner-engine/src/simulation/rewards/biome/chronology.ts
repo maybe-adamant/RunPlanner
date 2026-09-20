@@ -73,7 +73,7 @@ import {
 } from '../lifecycle-artifacts';
 import { BiomeRewardSimulationContractError } from './biome-contract';
 import { selectedTraitOfferProducts } from './selected-trait-products';
-import { prepareRewardEvaluationInputs } from './prepared-inputs';
+import { addHubBoardRewardLookup, prepareRewardEvaluationInputs } from './prepared-inputs';
 import { applyEncounterStartedTransition } from './lifecycle-transitions/encounter-started';
 import { applyEncounterEndEffectsTransition } from './lifecycle-transitions/encounter-end-effects';
 import { applyKeepsakeRackUsedTransition } from './lifecycle-transitions/keepsake-rack-used';
@@ -248,16 +248,17 @@ export function evaluateBiomeRewardChronology(
   initialBranches: readonly RewardBranch[] | undefined = undefined,
   resourcePlacements: ResourcePlacements = EMPTY_RESOURCE_PLACEMENTS,
   resourceFindings: readonly import('../../model').SemanticFinding[] = [],
+  carriedRewardLookups: Readonly<Record<string, readonly string[]>> | undefined = undefined,
 ): BiomeRewardEvaluationAssembly {
   if (snapshot.biomeKey !== history.biomeKey || snapshot.routeKey !== history.routeKey) {
     throw new BiomeRewardSimulationContractError('reward inputs do not share one biome owner');
   }
   const enteredBiomeCount = routePosition.ordinal;
   const fullRunBiomeCount = routePosition.itineraryBiomeKeys.length;
-  const prepared = prepareRewardEvaluationInputs(catalog, snapshot, history);
+  const prepared = prepareRewardEvaluationInputs(catalog, snapshot, history, carriedRewardLookups);
   const {
     layout,
-    rewardLookup,
+    rewardLookup: initialRewardLookup,
     rooms,
     views,
     targets,
@@ -265,6 +266,7 @@ export function evaluateBiomeRewardChronology(
     hubTargetByOrigin,
     lifecycle,
   } = prepared;
+  let rewardLookup = initialRewardLookup;
   const authoredSeaStarDuplicateSiteKeys = new Set(
     [...rooms.values()].flatMap((room) =>
       room.kind === 'authored'
@@ -1113,6 +1115,7 @@ export function evaluateBiomeRewardChronology(
         origin,
         historySequence,
         histories: Object.freeze(checkpointBranches.map((branch) => branch.history)),
+        rewardLookups: rewardLookup.public,
         pendingSpellDrops: Object.freeze(
           checkpointBranches.map((branch) =>
             Object.values(branch.pendingHermesShrineDeliveries).some(
@@ -1187,6 +1190,18 @@ export function evaluateBiomeRewardChronology(
   function flushPendingHubBoard(): void {
     const flushed = flushHubBoard(catalog, pendingHubBoard);
     if (flushed === undefined) return;
+    if (
+      layout.progression.kind === 'hub' &&
+      pendingHubBoard !== undefined &&
+      flushed.peers.length === pendingHubBoard.participants.length &&
+      flushed.branches.length > 0
+    ) {
+      rewardLookup = addHubBoardRewardLookup(
+        rewardLookup,
+        layout.progression.rewardLookup.key,
+        flushed.peers.map((peer) => peer.offer.rewardType),
+      );
+    }
     branches = flushed.branches;
     peers = flushed.peers;
     for (const entry of flushed.findings)
@@ -1266,6 +1281,7 @@ export function evaluateBiomeRewardChronology(
             'localRoomLifecycle',
           ),
           routePosition,
+          rewardLookup.internal,
           Object.freeze({
             purgingPool:
               room?.kind === 'authored' &&

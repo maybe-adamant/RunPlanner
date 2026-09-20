@@ -184,7 +184,11 @@ describe('Gorgon Amulet lifecycle', () => {
       routePosition: ordinaryRoutePosition(catalog, 'Underworld', 'G'),
       resourcePlacements: EMPTY_RESOURCE_PLACEMENTS,
       loadout: route.loadout,
-      seed: { history: previous.history, rewardBranches: initialBranches },
+      seed: {
+        history: previous.history,
+        rewardBranches: initialBranches,
+        rewardLookups: previous.rewards.rewardLookups,
+      },
     });
     if (progressive === null) throw new Error('G fixture did not publish a progressive assembly');
     return Object.freeze({
@@ -1178,7 +1182,11 @@ describe('Gorgon Amulet lifecycle', () => {
       routePosition: ordinaryRoutePosition(catalog, 'Surface', 'P'),
       resourcePlacements: EMPTY_RESOURCE_PLACEMENTS,
       loadout: createDefaultRouteLoadout(catalog),
-      seed: { history: previous.history, rewardBranches },
+      seed: {
+        history: previous.history,
+        rewardBranches,
+        rewardLookups: previous.rewards.rewardLookups,
+      },
     });
     expect(progressive).not.toBeNull();
     const rewards = progressive?.evaluation.rewards;

@@ -272,7 +272,11 @@ function evaluateRouteAssembly(
     }
     const seed =
       previous?.authoring === 'complete' && previous.validity === 'valid'
-        ? Object.freeze({ history: previous.history, rewardBranches: previous.rewards.branches })
+        ? Object.freeze({
+            history: previous.history,
+            rewardBranches: previous.rewards.branches,
+            rewardLookups: previous.rewards.rewardLookups,
+          })
         : undefined;
     const routePosition = resolveRoutePosition(catalog, route, plan.biomeKey);
     const context = Object.freeze({

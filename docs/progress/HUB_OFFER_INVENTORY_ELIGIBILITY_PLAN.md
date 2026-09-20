@@ -2,8 +2,44 @@
 
 ## Status and objective
 
-Proposed execution contract; implementation has not started.
+Approved and locked execution contract. Gates A and B are complete for automated
+acceptance; Gate C has not started. Manual runtime acceptance remains pending.
+Plan committed at `b2ed470d`; independent pre-implementation review passed.
 Planner base: `29268b21`. Game-module base: `ae7c8e8`.
+
+Gate A verification: 277 catalog tests, all 2,090 engine tests, seven application
+repair/Undo tests, and 17 dependent Surface application/product tests passed.
+All-package/fixture typecheck, changed-file ESLint, formatting and diff checks
+passed. No schema/protocol bump or generated JSON fixture changes.
+
+Independent implementation review found a refill-coverage gap, not a proven
+production defect. Remediation added a real N-to-O acquisition/rush/refill/repair
+witness, which exposed and corrected a missing acquisition-time lookup handoff.
+The witness proves selected invalid refill rejection, candidate parity and a
+fully valid repaired project. Dream tests separately cover pre-N chronology
+and the carried lookup's refill domain, without duplicating the complete route
+workflow for every mode. Main-session review accepted that division of coverage.
+The standalone test fixture's old unvisited hub hammer was replaced with a
+legal boon so its later shop-hammer witness no longer relies on the corrected
+eligibility gap. Full repository closure and runtime testing remain later gates.
+
+Gate B verification: all 567 Lua tests, 35 focused inventory/refill tests,
+`luacheck src/` and diff checks passed. An opt-in probe loading the local native
+`FillInShopOptions` body passed both tests: weighted undersupply reproduces the
+malformed result, nonweighted narrowing preserves eligible survivors, and the
+adapter falls back through native generation without leaking forced providers.
+The Well empty-Options check uses a standalone RNG stub; engine RNG behavior
+and shrine/refill runtime acceptance remain for in-game testing.
+
+Independent review found no production defect; its native-evidence gap was
+resolved by that source-loading probe and accepted on bounded re-review. A
+fresh reviewer spawn hit the agent thread limit, so the independent Gate A
+reviewer handled Gate B with a focused packet. Failed inventory installation
+is diagnostic and cannot complete a Travel Deal refill; native exceptions
+still propagate after scope cleanup. Retry consumes native RNG and requirement
+diagnostics, but generation does not itself purchase or spawn items. No schema,
+protocol or generated execution fixture changes, deployment or commits were
+made during Gate B.
 
 Make store inventory eligibility respect the game's persistent Ephyra offered
 reward lookup, and prevent narrowed executor inventory groups from causing a

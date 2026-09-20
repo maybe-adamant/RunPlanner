@@ -367,6 +367,11 @@ export function authorSurfaceWorldShop(
 export function createRepresentativeNOPQShopTraitProject(): ProjectDocument {
   let project = loadSurfaceNOPQProject();
   project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceIncomingReward',
+    reward: createIncomingRewardAddress(nBiome, nOccurrenceId('combat03')),
+    value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'ZeusUpgrade' } },
+  });
+  project = applyProjectCommand(project, catalog, {
     kind: 'ReplaceShopOffer',
     offer: createShopOfferAddress(pBiome, pOccurrenceIds.prebossShop, 'MajorNonBoon'),
     value: { rewardType: 'WeaponUpgradeDrop' },

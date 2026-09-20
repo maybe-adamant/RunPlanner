@@ -216,8 +216,14 @@ function projectRoomGenerationRequirementContext(
   rewardHistory?: RewardHistoryState,
   pendingSpellDrop = false,
   allSpellInvested = false,
+  rewardLookups?: Readonly<Record<string, ReadonlySet<string>>>,
 ): RequirementEvaluationContext {
   const roomsEntered = countByGameName(view.ledgers.roomAppearances);
+  if (rewardHistory !== undefined && rewardLookups === undefined) {
+    throw new BiomeRoomGenerationContractError(
+      'reward-history generation context has no Hub offer lookup checkpoint',
+    );
+  }
   // Shrine inventory is a pre-outgoing room fact, but it deliberately never
   // enters structural Shop settlement or consumes a reward bag.
   const shopOptions = new Set<string>();
@@ -256,7 +262,7 @@ function projectRoomGenerationRequirementContext(
     currentRoomShopOptionNames: shopOptions,
     currentRoomRewardType: source.incomingReward?.offer.rewardType,
     currentRoomStructuralTags: sourceDeclaration.structuralTags,
-    rewardLookups: Object.freeze({}),
+    rewardLookups: rewardLookups ?? Object.freeze({}),
     runDepthCache: view.ledgers.counters.roomHistoryOrdinal + 1,
     lastEventRunDepthCaches: Object.freeze({}),
     recentEncounterEnvelopeSlots: projectRecentEncounterEnvelopeSlots(view),
@@ -716,6 +722,7 @@ interface TargetRewardRequirementFacts {
   readonly history: RewardHistoryState;
   readonly pendingSpellDrop: boolean;
   readonly allSpellInvested: boolean;
+  readonly rewardLookups: Readonly<Record<string, ReadonlySet<string>>>;
 }
 
 function targetRewardHistories(
@@ -754,6 +761,14 @@ function targetRewardHistories(
         history: first,
         pendingSpellDrop: firstPendingSpellDrop,
         allSpellInvested: firstAllSpellInvested,
+        rewardLookups: Object.freeze(
+          Object.fromEntries(
+            Object.entries(checkpoint.rewardLookups).map(([key, rewardTypes]) => [
+              key,
+              new Set(rewardTypes),
+            ]),
+          ),
+        ),
       }),
     );
   }

@@ -9,10 +9,11 @@ import {
   createIncomingRewardAddress,
   createOccurrenceAddress,
   createOccurrenceId,
+  createRoomFeatureAddress,
   createRoomRunStateCheckpointAddress,
   semanticAddressKey,
 } from '@run-planner/engine/authored-project';
-import type { SemanticFinding } from '@run-planner/engine/simulation';
+import { simulateProjectAssembly, type SemanticFinding } from '@run-planner/engine/simulation';
 import { describe, expect, it } from 'vitest';
 
 import { semanticFindingKey } from '@planner/projections/evaluationProjection';
@@ -25,6 +26,7 @@ import {
 } from '@planner/state/projectWorkspaceSlice';
 import {
   loadSurfaceNProject,
+  loadSurfaceNOProject,
   loadSurfaceNOPQProject,
   loadSurfaceNTenOpenInvalidProject,
   nBiome,
@@ -86,6 +88,88 @@ function currentWorkspace(application: ReturnType<typeof createApplication>) {
 }
 
 describe('application editor-session reconciliation', () => {
+  it('repairs and rebuilds an unpurchased N postboss Shrine Spell offer through Undo', () => {
+    const application = createApplication();
+    try {
+      const occurrence = createOccurrenceAddress(
+        nBiome,
+        createOccurrenceId('surface-n-preboss:postboss'),
+      );
+      const spellOffer = createRoomFeatureAddress(occurrence, {
+        kind: 'hermesShrineOffer',
+        generationKey: 'initial:secondLeft',
+      });
+      let source = applyProjectCommand(loadSurfaceNOProject(), catalog, {
+        kind: 'ReplaceIncomingReward',
+        reward: createIncomingRewardAddress(nBiome, nOccurrenceId('combat09')),
+        value: { rewardType: 'MaxHealthDropBig' },
+      });
+      source = applyProjectCommand(source, catalog, {
+        kind: 'ReplaceIncomingReward',
+        reward: createIncomingRewardAddress(nBiome, nOccurrenceId('combat01')),
+        value: { rewardType: 'SpellDrop' },
+      });
+      const baseline = simulateProjectAssembly(catalog, source).evaluation.route.biomes.find(
+        (biome) => biome.biomeKey === 'N',
+      );
+      if (baseline === undefined || !('rewards' in baseline)) {
+        throw new Error('unvisited N Spell offer did not reach reward evaluation');
+      }
+      expect(baseline.rewards.branches.length).toBeGreaterThan(0);
+      expect(
+        baseline.rewards.branches.every(
+          (branch) => branch.history.useRecord.SpellDrop === undefined,
+        ),
+      ).toBe(true);
+      expect(
+        baseline.rewards.branches.every((branch) =>
+          Object.values(branch.pendingHermesShrineDeliveries ?? {}).every(
+            (delivery) => delivery.rewardType !== 'SpellDrop',
+          ),
+        ),
+      ).toBe(true);
+
+      const withSpell = applyProjectCommand(source, catalog, {
+        kind: 'ReplaceHermesShrineOffer',
+        occurrence,
+        slotKey: 'secondLeft',
+        value: { rewardType: 'SpellDrop' },
+      });
+      application.store.dispatch(authoredProjectReplaced(withSpell));
+      expect(
+        currentWorkspace(application).findingsByRepairTarget.get(semanticAddressKey(spellOffer)) ??
+          [],
+      ).toContainEqual(
+        expect.objectContaining({ code: 'hermesShrineInventoryRequirement', origin: spellOffer }),
+      );
+
+      application.store.dispatch(
+        authoredProjectCommandDispatched({
+          kind: 'ReplaceHermesShrineOffer',
+          occurrence,
+          slotKey: 'secondLeft',
+          value: { rewardType: 'MaxHealthDrop' },
+        }),
+      );
+      expect(
+        currentWorkspace(application).findingsByRepairTarget.get(semanticAddressKey(spellOffer)) ??
+          [],
+      ).not.toContainEqual(
+        expect.objectContaining({ code: 'hermesShrineInventoryRequirement', origin: spellOffer }),
+      );
+
+      application.store.dispatch(authoredProjectUndoRequested());
+      expect(
+        currentWorkspace(application).findingsByRepairTarget.get(semanticAddressKey(spellOffer)) ??
+          [],
+      ).toContainEqual(
+        expect.objectContaining({ code: 'hermesShrineInventoryRequirement', origin: spellOffer }),
+      );
+    } finally {
+      application.dispose();
+    }
+  });
+
   it('publishes an N PreHub-to-Chaos selection with its completed Hub reanchored and undoable', () => {
     const application = createApplication();
     try {

@@ -12,7 +12,11 @@ import {
   targetGenerationViews,
   targetRewardHistories,
 } from './target-policy';
-import type { BiomeGenerationHistory, BiomeGenerationSnapshot } from './target-policy';
+import type {
+  BiomeGenerationHistory,
+  BiomeGenerationSnapshot,
+  TargetRewardRequirementFacts,
+} from './target-policy';
 import {
   assessChaosPlacement,
   assessZagreusContractPlacement,
@@ -54,6 +58,21 @@ interface BiomeRoomGenerationAssembly {
   readonly findingRegions: readonly FindingRegionEntry[];
 }
 
+function initialHubRewardLookups(
+  catalog: Catalog,
+  carriedRewardLookups: Readonly<Record<string, readonly string[]>> | undefined,
+): Readonly<Record<string, ReadonlySet<string>>> {
+  return Object.freeze(
+    Object.fromEntries(
+      catalog.biomeLayouts.values.flatMap((layout) => {
+        if (layout.progression.kind !== 'hub') return [];
+        const lookupKey = layout.progression.rewardLookup.key;
+        return [[lookupKey, new Set(carriedRewardLookups?.[lookupKey] ?? [])] as const];
+      }),
+    ),
+  );
+}
+
 export function evaluateBiomeRoomGenerationAssemblyInternal(
   catalog: Catalog,
   snapshot: BiomeGenerationSnapshot,
@@ -61,6 +80,7 @@ export function evaluateBiomeRoomGenerationAssemblyInternal(
   enteredBiomeCount: number,
   rewardHistoryCheckpoints?: readonly TargetRewardHistoryCheckpoint[],
   forcedChaosOccurrenceKeys: ReadonlySet<string> = new Set(),
+  carriedRewardLookups?: Readonly<Record<string, readonly string[]>>,
 ): BiomeRoomGenerationAssembly {
   if (snapshot.biomeKey !== history.biomeKey || snapshot.routeKey !== history.routeKey) {
     throw new BiomeRoomGenerationContractError(
@@ -70,6 +90,17 @@ export function evaluateBiomeRoomGenerationAssemblyInternal(
   const rooms = generationRooms(snapshot);
   const views = targetGenerationViews(history);
   const rewardHistories = targetRewardHistories(rewardHistoryCheckpoints);
+  const initialRewardLookups = initialHubRewardLookups(catalog, carriedRewardLookups);
+  const rewardFactsBySource = new Map<string, TargetRewardRequirementFacts>();
+  for (const decision of generationDecisions(snapshot)) {
+    if (decision.kind !== 'batch') continue;
+    for (const target of decision.targets) {
+      const facts = rewardHistories.get(semanticAddressKey(target.origin));
+      if (facts !== undefined) {
+        rewardFactsBySource.set(semanticAddressKey(target.room.origin), facts);
+      }
+    }
+  }
   const candidateContexts = new Map<string, RoomTargetCandidateContext>();
   const ordinaryBatches: OrdinaryBatchGenerationAssessment[] = [];
   const findings: SemanticFinding[] = [];
@@ -116,6 +147,8 @@ export function evaluateBiomeRoomGenerationAssemblyInternal(
             parentHistory,
             undefined,
             enteredBiomeCount,
+            rewardFactsBySource.get(semanticAddressKey(source.origin)),
+            initialRewardLookups,
           );
       if (capability !== undefined) {
         chaosCapabilities.set(semanticAddressKey(source.origin), capability);
@@ -168,6 +201,7 @@ export function evaluateBiomeRoomGenerationAssemblyInternal(
         batch.origin,
         gameName,
         enteredBiomeCount,
+        rewardHistoryCheckpoints,
       );
       support.findings.forEach((value) => addFinding(value, batch.origin));
       if (!support.selectedPossible) {
@@ -250,6 +284,7 @@ export function evaluateBiomeRoomGenerationAssemblyInternal(
       findingRegions,
       enteredBiomeCount,
       rewardHistories,
+      initialRewardLookups,
     );
     ordinaryBatches.push(
       Object.freeze({
@@ -270,6 +305,8 @@ export function evaluateBiomeRoomGenerationAssemblyInternal(
     findingRegions,
     enteredBiomeCount,
     forcedChaosOccurrenceKeys,
+    rewardFactsBySource,
+    initialRewardLookups,
   );
 
   const publishedFindingRegions = Object.freeze(

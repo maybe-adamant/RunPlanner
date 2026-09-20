@@ -166,6 +166,7 @@ describe('Dream Shop availability', () => {
         history,
         enteredBiomeCount: 1,
         currentBatchRoomGameNames: [],
+        rewardLookups: { hubRewardLookup: new Set() },
         fail: (detail) => {
           throw new Error(detail);
         },
@@ -210,6 +211,7 @@ describe('Dream Shop availability', () => {
         history,
         enteredBiomeCount: 1,
         currentBatchRoomGameNames: [],
+        rewardLookups: { hubRewardLookup: new Set() },
         fail: (detail) => {
           throw new Error(detail);
         },

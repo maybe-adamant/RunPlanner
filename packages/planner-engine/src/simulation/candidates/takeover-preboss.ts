@@ -111,6 +111,7 @@ function evaluatePrefixTakeover(
       query.gameName,
       resolveRoutePosition(catalog, project.route, query.source.biomeKey).ordinal,
       ordinaryBatchCount(catalog, prefix.decisions),
+      biome.rewards.targetHistory,
     ),
   });
 }
@@ -195,6 +196,7 @@ export function evaluateTakeoverPrebossBatch(
       query.source,
       query.gameName,
       resolveRoutePosition(catalog, project.route, query.source.biomeKey).ordinal,
+      candidate.rewards.targetHistory,
     ),
   });
 }
