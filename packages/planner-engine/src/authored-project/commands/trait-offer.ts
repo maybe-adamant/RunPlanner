@@ -156,15 +156,12 @@ function validateOffer(
         `option${index + 1} ${option.traitKey} is not in giver ${value.giverKey}`,
       );
     if (
-      option.persephoneLevelBonus !== undefined &&
-      (!Number.isInteger(option.persephoneLevelBonus) ||
-        option.persephoneLevelBonus < 0 ||
-        option.persephoneLevelBonus > 8)
+      option.persephoneRoll !== undefined &&
+      (!Number.isInteger(option.persephoneRoll) ||
+        option.persephoneRoll < 0 ||
+        option.persephoneRoll > 9)
     )
-      failCommand(
-        command,
-        `${option.traitKey} Persephone level bonus must be an integer from 0 to 8`,
-      );
+      failCommand(command, `${option.traitKey} Persephone roll must be an integer from 0 to 9`);
     if (trait.rarityDomain.kind === 'none') {
       if (option.rarity !== undefined)
         failCommand(command, `rarityless option ${option.traitKey} has no rarity`);

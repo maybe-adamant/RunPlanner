@@ -473,8 +473,8 @@ export function createTraitOfferCandidateArtifacts(
                 ...(base.generation === undefined ? {} : { generation: base.generation }),
                 composition: base.composition,
                 ...(offerGenerationState === undefined ? {} : { offerGenerationState }),
-                persephoneLevelBonusMaximums: Object.freeze(
-                  levelResolutions.map((resolution) => resolution?.persephoneLevelBonusMaximum),
+                persephoneRollMaximums: Object.freeze(
+                  levelResolutions.map((resolution) => resolution?.persephoneRollMaximum),
                 ),
                 effectiveLevels: Object.freeze(
                   levelResolutions.map((resolution) => resolution?.effectiveLevel),

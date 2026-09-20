@@ -36,7 +36,7 @@ const owner = createIncomingRewardAddress(
 );
 const address = createTraitOfferAddress(owner, 'self');
 
-function offer(bonus?: number): AuthoredTraitOfferTraits {
+function offer(roll?: number): AuthoredTraitOfferTraits {
   return Object.freeze({
     kind: 'traits',
     giverKey: 'Apollo',
@@ -44,17 +44,17 @@ function offer(bonus?: number): AuthoredTraitOfferTraits {
       Object.freeze({
         traitKey: 'ApolloWeaponBoon',
         rarity: 'Common' as const,
-        ...(bonus === undefined ? {} : { persephoneLevelBonus: bonus }),
+        ...(roll === undefined ? {} : { persephoneRoll: roll }),
       }),
       Object.freeze({
         traitKey: 'ApolloSpecialBoon',
         rarity: 'Common' as const,
-        ...(bonus === undefined ? {} : { persephoneLevelBonus: bonus }),
+        ...(roll === undefined ? {} : { persephoneRoll: roll }),
       }),
       Object.freeze({
         traitKey: 'ApolloCastBoon',
         rarity: 'Common' as const,
-        ...(bonus === undefined ? {} : { persephoneLevelBonus: bonus }),
+        ...(roll === undefined ? {} : { persephoneRoll: roll }),
       }),
     ]) as AuthoredTraitOfferTraits['options'],
     selectedOptionKey: 'option1',
@@ -94,12 +94,12 @@ function hephaestusPremiumOffer(): AuthoredTraitOfferTraits {
       Object.freeze({
         traitKey: 'HephaestusSpecialBoon',
         rarity: 'Common' as const,
-        persephoneLevelBonus: 5,
+        persephoneRoll: 5,
       }),
       Object.freeze({
         traitKey: 'HephaestusCastBoon',
         rarity: 'Common' as const,
-        persephoneLevelBonus: 5,
+        persephoneRoll: 5,
       }),
     ]) as AuthoredTraitOfferTraits['options'],
     selectedOptionKey: 'option1',
@@ -167,12 +167,12 @@ function hymnReplacementOffer(): AuthoredTraitOfferTraits {
       Object.freeze({
         traitKey: 'HeraSpecialBoon',
         rarity: 'Common' as const,
-        persephoneLevelBonus: 5,
+        persephoneRoll: 5,
       }),
       Object.freeze({
         traitKey: 'HeraCastBoon',
         rarity: 'Common' as const,
-        persephoneLevelBonus: 5,
+        persephoneRoll: 5,
       }),
     ]) as AuthoredTraitOfferTraits['options'],
     selectedOptionKey: 'option1',
@@ -192,7 +192,7 @@ function context(withSuppression = false): TraitOfferCandidateContext {
 }
 
 describe('Persephone effective offer levels', () => {
-  it('defaults an omitted active contribution to zero while publishing its range', () => {
+  it('defaults an omitted native roll to zero while publishing its range', () => {
     const artifacts = createTraitOfferCandidateArtifacts(
       catalog,
       new Map([
@@ -211,31 +211,50 @@ describe('Persephone effective offer levels', () => {
     if (candidate === undefined) throw new Error('missing candidate branch');
 
     expect(candidate).toMatchObject({
-      persephoneLevelBonusMaximums: [5, 5, 5],
+      persephoneRollMaximums: [6, 6, 6],
       effectiveLevels: [1, 1, 1],
     });
     expect(candidate.assessments.every((assessment) => assessment.legal)).toBe(true);
     expect(candidate.assessments.flatMap((assessment) => assessment.findings)).toEqual([]);
   });
 
-  it('resolves the standard 0..5 contribution and additive Jeweled Pom levels', () => {
-    const values = [0, 1, 2, 3, 4, 5].map(
-      (bonus) =>
+  it.each([
+    ['normal without Pom', undefined, [0, 2, 3, 4, 5, 6], [1, 2, 3, 4, 5, 6]],
+    ['normal with Pom 3', 3, [0, 2, 3, 4, 5, 6], [4, 6, 7, 8, 9, 10]],
+    ['normal with Pom 4', 4, [0, 2, 3, 4, 5, 6], [5, 7, 8, 9, 10, 11]],
+  ] as const)('resolves %s native rolls', (_label, pomLevels, rolls, expected) => {
+    const values = rolls.map(
+      (roll) =>
         resolveTraitOfferOptionLevel({
           catalog,
           state: traitFrontierState(createTraitHistoryState(), {
             loadout: persephoneLoadout,
-            keepsakes: pomBranch().state.keepsakes,
+            ...(pomLevels === undefined ? {} : { keepsakes: pomBranch(pomLevels).state.keepsakes }),
           }),
           source: context().source,
-          option: offer(bonus).options[0]!,
+          option: offer(roll).options[0]!,
         }).effectiveLevel,
     );
-    expect(values).toEqual([4, 5, 6, 7, 8, 9]);
+    expect(values).toEqual(expected);
+  });
+
+  it('treats an active zero-level Pom as no Pom', () => {
+    const state = traitFrontierState(createTraitHistoryState(), {
+      loadout: persephoneLoadout,
+      keepsakes: pomBranch(0).state.keepsakes,
+    });
+    expect(
+      resolveTraitOfferOptionLevel({
+        catalog,
+        state,
+        source: context().source,
+        option: offer(5).options[0]!,
+      }),
+    ).toMatchObject({ effectiveLevel: 5 });
   });
 
   it('expands only after a chronologically prior Premium Service selection', () => {
-    const option = offer(8).options[0]!;
+    const option = offer(9).options[0]!;
     const standard = resolveTraitOfferOptionLevel({
       catalog,
       state: traitFrontierState(createTraitHistoryState(), { loadout: persephoneLoadout }),
@@ -265,14 +284,71 @@ describe('Persephone effective offer levels', () => {
       source: context().source,
       option,
     });
-    expect(standard).toMatchObject({ persephoneLevelBonusMaximum: 5 });
+    expect(standard).toMatchObject({ persephoneRollMaximum: 6 });
     expect(standard.findings).toContainEqual(
-      expect.objectContaining({ code: 'persephoneLevelBonusUnavailable' }),
+      expect.objectContaining({ code: 'persephoneRollUnavailable' }),
     );
-    expect(upgraded).toMatchObject({ persephoneLevelBonusMaximum: 8, effectiveLevel: 12 });
+    expect(upgraded).toMatchObject({ persephoneRollMaximum: 9, effectiveLevel: 13 });
   });
 
-  it('suppresses both fresh contributions on Echo nested rows', () => {
+  it('retains raw roll 1 as a representable but invalid authored value', () => {
+    const result = resolveTraitOfferOptionLevel({
+      catalog,
+      state: traitFrontierState(createTraitHistoryState(), { loadout: persephoneLoadout }),
+      source: context().source,
+      option: offer(1).options[0]!,
+    });
+    expect(result).toMatchObject({ persephoneRollMaximum: 6 });
+    expect(result.findings).toContainEqual(
+      expect.objectContaining({ code: 'persephoneRollUnavailable' }),
+    );
+  });
+
+  it.each([
+    ['normal', false, undefined, [0, 2, 6], [1, 2, 6]],
+    ['normal', false, 3, [0, 2, 6], [4, 6, 10]],
+    ['normal', false, 4, [0, 2, 6], [5, 7, 11]],
+    ['Premium', true, undefined, [0, 2, 9], [1, 2, 9]],
+    ['Premium', true, 3, [0, 2, 9], [4, 6, 13]],
+    ['Premium', true, 4, [0, 2, 9], [5, 7, 14]],
+  ] as const)(
+    'uses the native %s roll domain with Pom %s',
+    (_label, premiumActive, pomLevels, rolls, expected) => {
+      const premium = premiumActive
+        ? foldTraitHistoryEvents(catalog, [
+            Object.freeze({
+              kind: 'traitOffer' as const,
+              owner,
+              acquisitionRole: 'premium-matrix',
+              sequence: 1,
+              giverKey: 'Hephaestus',
+              options: Object.freeze([
+                { traitKey: 'WeaponUpgradeBoon', rarity: 'Legendary' as const },
+              ]) as TraitOfferEvent['options'],
+              selectedOptionKey: 'option1' as const,
+              acquisitionPoint: 'test',
+            }),
+          ])
+        : createTraitHistoryState();
+      const state = traitFrontierState(premium, {
+        loadout: persephoneLoadout,
+        ...(pomLevels === undefined ? {} : { keepsakes: pomBranch(pomLevels).state.keepsakes }),
+      });
+      expect(
+        rolls.map(
+          (roll) =>
+            resolveTraitOfferOptionLevel({
+              catalog,
+              state,
+              source: context().source,
+              option: offer(roll).options[0]!,
+            }).effectiveLevel,
+        ),
+      ).toEqual(expected);
+    },
+  );
+
+  it('suppresses both fresh native boosts on Echo nested rows', () => {
     const result = resolveTraitOfferOptionLevel({
       catalog,
       state: traitFrontierState(createTraitHistoryState(), {

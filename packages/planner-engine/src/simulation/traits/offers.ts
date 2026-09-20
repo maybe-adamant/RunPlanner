@@ -324,7 +324,7 @@ export interface TraitOfferBranchAssessment {
   readonly generation?: InitialOfferSupport;
   readonly composition: TraitOfferCompositionAssessment;
   readonly targetedAcquisition: TraitTargetedAcquisitionAssessment;
-  readonly persephoneLevelBonusMaximums: readonly (number | undefined)[];
+  readonly persephoneRollMaximums: readonly (number | undefined)[];
   readonly effectiveLevels: readonly (number | undefined)[];
   readonly settledHexTree?: ReachedTraitOfferEvaluation['settledHexTree'];
 }

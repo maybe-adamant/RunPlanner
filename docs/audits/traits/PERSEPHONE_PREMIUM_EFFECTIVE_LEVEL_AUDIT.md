@@ -2,15 +2,12 @@
 
 ## Status and scope
 
-Implemented in the schema-64, catalog `0.47.0-persephone-effective-levels`
-Planner contract.
-
 This is the durable source audit for the reward-side level effects of Aspect of
 Persephone (`LobImpulseAspect`) and Premium Service (`WeaponUpgradeBoon`), plus
 the existing Jeweled Pom and Sacrificial Hymn contacts needed to state one
 truthful final level for every authored trait option.
 
-The evidence was checked on 2026-08-26 against the installed game-data
+The evidence was checked on 2026-09-20 against the installed game-data
 reference under `../../1GameData/Scripts/`. Primary contacts are:
 
 - `TraitData_Aspect.lua:1920-2051` (`LobImpulseAspect`);
@@ -102,19 +99,17 @@ stack encoding by adding `FatedBoonLevelBonus + 1`. This creates a gapped joint
 distribution. For example, Epic Jeweled Pom and Legendary Persephone yield
 displayed levels `{4, 6, 7, 8, 9, 10}` rather than a continuous range.
 
-The Planner deliberately normalizes that implementation artifact. It models
-Persephone as an additive random contribution of zero through five levels, or
-zero through eight after Premium Service, and then adds the active Jeweled Pom
-contribution normally. The normalized final formula for a qualifying fresh
-row is:
+The Planner retains the native roll rather than treating it as an additive
+level bonus. For a qualifying fresh row:
 
 ```text
-effective level = 1 + Jeweled Pom contribution + Persephone contribution
+without an active positive Jeweled Pom bonus: effective level = max(1, roll)
+with an active positive Jeweled Pom bonus: effective level = roll + Pom bonus + 1
 ```
 
-This retains every independently meaningful authored decision while avoiding
-a special joint effect table. The Planner models possible authored outcomes,
-not source probability weights.
+Thus Epic Jeweled Pom permits a maximum of 10 before Premium Service and 13
+after it; level 5 is not a possible fresh result of either combination.
+The Planner models possible authored outcomes, not source probability weights.
 
 ### Replacement precedence and Sacrificial Hymn
 
@@ -137,11 +132,11 @@ addition.
 
 ## Planner disposition
 
-The Planner has an optional Persephone random additive contribution on the
-exact authored option row. The legal contribution is `0..5` before Premium
-Service and `0..8` after a prior Premium Service acquisition. Only nonzero
+The Planner has an optional native Persephone roll on the exact authored option
+row. The legal values are `0, 2, 3, 4, 5, 6` before Premium Service and
+`0, 2, 3, 4, 5, 6, 7, 8, 9` after a prior acquisition. Only nonzero
 outcomes need persistence: an omitted active value semantically resolves as
-the ordinary `+0` result, so authors do not have to author zero on every
+the ordinary zero roll, so authors do not have to author zero on every
 eligible row. Explicit zero remains a valid round-tripping representation.
 
 The field is active only for a fresh, stackable core-god option on a supported
@@ -152,16 +147,13 @@ detail remains repairable rather than being destructively erased.
 The final effective level is derived, never persisted. The engine combines the
 pre-offer trait history, replacement transition, retained Jeweled Pom state,
 route aspect, prior Premium Service acquisition, and the authored Persephone
-contribution. The application may display the result only when all surviving
+roll. The application may display the result only when all surviving
 simulation branches agree.
 
 No general aspect-rank ledger, random-effect registry, weighted probability
 simulator, or React-owned level formula is implied.
 
-The shipped implementation keeps the contribution optional in authored JSON:
-an omitted active value is the ordinary `+0` result and does not produce a
-finding. The engine emits `persephoneLevelBonusUnavailable` only for an
-explicit value outside the active range, and the application presents that
-finding at the exact option owner for repair. Effective levels remain derived
-products; Premium Service expands only later offer screens because each screen
-freezes its levels when generated.
+An explicit roll outside the active domain produces a finding at the exact
+option owner for repair. Effective levels remain derived products; Premium
+Service expands only later offer screens because each screen freezes its
+levels when generated.

@@ -16,6 +16,7 @@ import {
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
 import type { Catalog } from '@run-planner/engine/catalog-schema';
+import { migrateProjectDocument as migrate86To87 } from '../../../../schema/migrate-project-86-to-87.js';
 import { authorLegalTraitOffers } from '@run-planner/test-fixtures/shared';
 import {
   createCompleteFGProject,
@@ -647,23 +648,36 @@ describe('schema-54 occurrence-owned encounter persistence', () => {
     for (const bonus of [undefined, 0, 5, 8] as const) {
       const document = encoded(arachneStoryProject());
       const option = (arachneStoryOffer(document).options as JsonRecord[])[0]!;
-      if (bonus === undefined) delete option.persephoneLevelBonus;
-      else option.persephoneLevelBonus = bonus;
+      if (bonus === undefined) delete option.persephoneRoll;
+      else option.persephoneRoll = bonus;
 
       const decoded = decodeProjectDocument(document, catalog);
       const roundTrippedOption = (arachneStoryOffer(encoded(decoded)).options as JsonRecord[])[0]!;
-      if (bonus === undefined) expect('persephoneLevelBonus' in roundTrippedOption).toBe(false);
-      else expect(roundTrippedOption.persephoneLevelBonus).toBe(bonus);
+      if (bonus === undefined) expect('persephoneRoll' in roundTrippedOption).toBe(false);
+      else expect(roundTrippedOption.persephoneRoll).toBe(bonus);
     }
   });
 
-  it.each([-1, 1.5, 9, '5', null, true] as const)(
+  it('migrates an actual encoded Persephone option from bonus 5 to raw roll 6', () => {
+    const document = encoded(arachneStoryProject());
+    document.schemaVersion = 86;
+    const option = (arachneStoryOffer(document).options as JsonRecord[])[0]!;
+    option.persephoneLevelBonus = 5;
+
+    const migrated = migrate86To87(document);
+    const migratedOption = (arachneStoryOffer(migrated as JsonRecord).options as JsonRecord[])[0]!;
+    expect(migratedOption).not.toHaveProperty('persephoneLevelBonus');
+    expect(migratedOption.persephoneRoll).toBe(6);
+    expect(decodeProjectDocument(migrated, catalog)).toBeDefined();
+  });
+
+  it.each([-1, 1.5, 10, '5', null, true] as const)(
     'rejects malformed Persephone offer contribution %s at the encounter boundary',
     (bonus) => {
       const document = encoded(arachneStoryProject());
       const option = (arachneStoryOffer(document).options as JsonRecord[])[0]!;
-      option.persephoneLevelBonus = bonus;
-      expect(() => decodeProjectDocument(document, catalog)).toThrow(/persephoneLevelBonus/);
+      option.persephoneRoll = bonus;
+      expect(() => decodeProjectDocument(document, catalog)).toThrow(/persephoneRoll/);
     },
   );
 

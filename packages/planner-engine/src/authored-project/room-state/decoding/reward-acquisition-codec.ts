@@ -254,7 +254,7 @@ function decodeTraitOffers(
       const option = expectRecord(optionsRaw[index], `${rolePath}.options.${key}`);
       const hasAllTogetherResult = 'allTogetherResult' in option;
       const hasNaturalSelectionTargets = 'naturalSelectionTargets' in option;
-      const hasPersephoneLevelBonus = 'persephoneLevelBonus' in option;
+      const hasPersephoneRoll = 'persephoneRoll' in option;
       const hasIcarusHammerTargets = option.icarusHammerTargets !== undefined;
       expectExactKeys(
         option,
@@ -268,7 +268,7 @@ function decodeTraitOffers(
           ...('echoLastRunBoon' in option ? ['echoLastRunBoon'] : []),
           ...('allTogetherResult' in option ? ['allTogetherResult'] : []),
           ...(hasNaturalSelectionTargets ? ['naturalSelectionTargets'] : []),
-          ...(hasPersephoneLevelBonus ? ['persephoneLevelBonus'] : []),
+          ...(hasPersephoneRoll ? ['persephoneRoll'] : []),
         ],
         `${rolePath}.options.${key}`,
       );
@@ -530,14 +530,14 @@ function decodeTraitOffers(
             return Object.freeze(targets) as AuthoredTraitOption['naturalSelectionTargets'];
           })()
         : undefined;
-      const persephoneLevelBonus = hasPersephoneLevelBonus
+      const persephoneRoll = hasPersephoneRoll
         ? expectNonNegativeInteger(
-            option.persephoneLevelBonus,
-            `${rolePath}.options.${key}.persephoneLevelBonus`,
+            option.persephoneRoll,
+            `${rolePath}.options.${key}.persephoneRoll`,
           )
         : undefined;
-      if (persephoneLevelBonus !== undefined && persephoneLevelBonus > 8)
-        failProjectDocument(`${rolePath}.options.${key}.persephoneLevelBonus`, 'must not exceed 8');
+      if (persephoneRoll !== undefined && persephoneRoll > 9)
+        failProjectDocument(`${rolePath}.options.${key}.persephoneRoll`, 'must not exceed 9');
       options.push(
         Object.freeze({
           traitKey,
@@ -549,7 +549,7 @@ function decodeTraitOffers(
           ...(echoLastRunBoon === undefined ? {} : { echoLastRunBoon }),
           ...(allTogetherResult === undefined ? {} : { allTogetherResult }),
           ...(naturalSelectionTargets === undefined ? {} : { naturalSelectionTargets }),
-          ...(persephoneLevelBonus === undefined ? {} : { persephoneLevelBonus }),
+          ...(persephoneRoll === undefined ? {} : { persephoneRoll }),
         }),
       );
     }

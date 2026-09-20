@@ -1,5 +1,14 @@
 # Project schema boundary
 
+Schema 87 replaces Persephone's additive approximation with its native roll:
+`0` or `2`–`6`, extending through `9` after Premium Service. The offline
+migration maps a positive former contribution to `persephoneRoll + 1` and
+retains explicit zero or omission.
+
+```bash
+npm run schema:migrate-86-to-87 -- path/to/schema-86-project.runplanner.json
+```
+
 Schema 86 gives the starting reward to the route Loadout while its acquisition
 settings remain on the first room occurrence.
 
@@ -122,7 +131,7 @@ output. It has no route-selection, in-place, or target-version mode.
 
 The schema-72 splitter's pure transformation is exported from
 `schema/split-project-72-to-73.js` for checkpoint conversion. The source value
-is never mutated. The production decoder accepts schema 86 only; stale
+is never mutated. The production decoder accepts schema 87 only; stale
 documents are not migrated implicitly in the application.
 
 Migrate a schema-74 document with:

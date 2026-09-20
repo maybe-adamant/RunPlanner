@@ -5,9 +5,9 @@ import { declarations } from '../../src/declarations';
 
 describe('trait offer-catalog compiler owner', () => {
   it('declares Persephone offer-level bounds and the Premium Service upgrade link', () => {
-    expect(catalog.aspects.byKey.LobImpulseAspect?.traitOfferLevelBonus).toEqual({
-      maximumBonus: 5,
-      upgradedMaximumBonus: 8,
+    expect(catalog.aspects.byKey.LobImpulseAspect?.traitOfferLevelRoll).toEqual({
+      maximumRoll: 6,
+      upgradedMaximumRoll: 9,
       upgradeTraitKey: 'WeaponUpgradeBoon',
     });
   });
@@ -15,21 +15,21 @@ describe('trait offer-catalog compiler owner', () => {
   it.each([
     [
       'negative maximum',
-      { maximumBonus: -1, upgradedMaximumBonus: 8, upgradeTraitKey: 'WeaponUpgradeBoon' },
+      { maximumRoll: -1, upgradedMaximumRoll: 9, upgradeTraitKey: 'WeaponUpgradeBoon' },
     ],
     [
       'widened maximum',
-      { maximumBonus: 5, upgradedMaximumBonus: 9, upgradeTraitKey: 'WeaponUpgradeBoon' },
+      { maximumRoll: 6, upgradedMaximumRoll: 8, upgradeTraitKey: 'WeaponUpgradeBoon' },
     ],
     [
       'missing upgrade trait',
-      { maximumBonus: 5, upgradedMaximumBonus: 8, upgradeTraitKey: 'MissingTrait' },
+      { maximumRoll: 6, upgradedMaximumRoll: 9, upgradeTraitKey: 'MissingTrait' },
     ],
     [
       'extra field',
       {
-        maximumBonus: 5,
-        upgradedMaximumBonus: 8,
+        maximumRoll: 6,
+        upgradedMaximumRoll: 9,
         upgradeTraitKey: 'WeaponUpgradeBoon',
         extra: true,
       },
@@ -40,7 +40,7 @@ describe('trait offer-catalog compiler owner', () => {
       traitCatalog: {
         ...declarations.traitCatalog,
         aspects: declarations.traitCatalog.aspects.map((aspect) =>
-          aspect.key === 'LobImpulseAspect' ? { ...aspect, traitOfferLevelBonus: effect } : aspect,
+          aspect.key === 'LobImpulseAspect' ? { ...aspect, traitOfferLevelRoll: effect } : aspect,
         ),
       },
     };

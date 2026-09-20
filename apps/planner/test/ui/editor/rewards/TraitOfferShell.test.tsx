@@ -61,7 +61,7 @@ describe('ordinary offer shell', () => {
                 branches: [],
                 assessments: [],
                 effectiveLevels: [],
-                persephoneLevelBonusMaximums: [],
+                persephoneRollMaximums: [],
                 findings: value === gold ? [] : [{ code: 'traitOfferGenerationUnavailable' }],
               },
             },
@@ -402,7 +402,7 @@ describe('ordinary offer shell', () => {
               result: Object.freeze({
                 assessments: Object.freeze([]),
                 branches: Object.freeze([]),
-                persephoneLevelBonusMaximums: Object.freeze([]),
+                persephoneRollMaximums: Object.freeze([]),
                 effectiveLevels: Object.freeze([]),
                 findings: Object.freeze(
                   value.kind === 'traits' && value.options[0]?.targetTraitKey === undefined
@@ -588,7 +588,7 @@ describe('ordinary offer shell', () => {
               result: Object.freeze({
                 assessments: Object.freeze([]),
                 branches: Object.freeze([]),
-                persephoneLevelBonusMaximums: Object.freeze([]),
+                persephoneRollMaximums: Object.freeze([]),
                 effectiveLevels: Object.freeze([]),
                 findings: Object.freeze([]),
                 supported: true,
@@ -658,7 +658,7 @@ describe('ordinary offer shell', () => {
               result: Object.freeze({
                 assessments: Object.freeze([]),
                 branches: Object.freeze([]),
-                persephoneLevelBonusMaximums: Object.freeze([]),
+                persephoneRollMaximums: Object.freeze([]),
                 effectiveLevels: Object.freeze([]),
                 findings: Object.freeze([]),
                 supported: draft.kind !== 'fallbackGold',
@@ -789,7 +789,7 @@ describe('ordinary offer shell', () => {
               result: Object.freeze({
                 assessments: Object.freeze([]),
                 branches: Object.freeze([]),
-                persephoneLevelBonusMaximums: Object.freeze([]),
+                persephoneRollMaximums: Object.freeze([]),
                 effectiveLevels: Object.freeze([]),
                 findings: Object.freeze([]),
                 supported: true,
@@ -878,9 +878,9 @@ describe('ordinary offer shell', () => {
         </Provider>,
       );
 
-      expect(screen.queryAllByText('Persephone Bonus')).toHaveLength(persephoneEquipped ? 3 : 0);
+      expect(screen.queryAllByText('Persephone Roll')).toHaveLength(persephoneEquipped ? 3 : 0);
       expect(screen.queryAllByText('N/A')).toHaveLength(persephoneEquipped ? 3 : 0);
-      expect(screen.queryByRole('combobox', { name: /Persephone level bonus/ })).toBeNull();
+      expect(screen.queryByRole('combobox', { name: /Persephone roll/ })).toBeNull();
       application.dispose();
     },
   );
@@ -898,7 +898,7 @@ describe('ordinary offer shell', () => {
     const value = base.value;
     const interaction = Object.freeze({
       ...base,
-      showPersephoneBonus: true,
+      showPersephoneRoll: true,
       load: (draft: AuthoredTraitOffer = value) =>
         Object.freeze([
           Object.freeze({
@@ -917,7 +917,7 @@ describe('ordinary offer shell', () => {
                 ]),
                 effectiveLevels: Object.freeze([6, undefined, 2]),
                 findings: Object.freeze([]),
-                persephoneLevelBonusMaximums: Object.freeze([5, undefined, undefined]),
+                persephoneRollMaximums: Object.freeze([5, undefined, undefined]),
                 supported: true,
               }),
             }),
@@ -948,14 +948,14 @@ describe('ordinary offer shell', () => {
     const summaries = screen.getAllByLabelText('Effective trait values');
     expect(summaries).toHaveLength(3);
     expect(summaries[1]?.querySelectorAll('dd')[1]?.textContent).toBe('—');
-    expect(screen.getAllByText('Persephone Bonus')).toHaveLength(3);
+    expect(screen.getAllByText('Persephone Roll')).toHaveLength(3);
     expect(screen.getAllByText('N/A')).toHaveLength(2);
-    expect(screen.getAllByRole('combobox', { name: /Persephone level bonus/ })).toHaveLength(1);
-    const bonus = screen.getByRole('combobox', { name: 'option1 Persephone level bonus' });
+    expect(screen.getAllByRole('combobox', { name: /Persephone roll/ })).toHaveLength(1);
+    const bonus = screen.getByRole('combobox', { name: 'option1 Persephone roll' });
     expect((bonus as HTMLSelectElement).value).toBe('0');
     await user.click(screen.getByRole('button', { name: 'Save trait offer' }));
     const defaultCommit = onCommit.mock.calls[0]?.[0] as AuthoredTraitOfferTraits | undefined;
-    expect(defaultCommit?.options[0]).not.toHaveProperty('persephoneLevelBonus');
+    expect(defaultCommit?.options[0]).not.toHaveProperty('persephoneRoll');
     await user.selectOptions(bonus, '5');
     await user.click(screen.getByRole('button', { name: 'Save trait offer' }));
 
@@ -963,7 +963,7 @@ describe('ordinary offer shell', () => {
       expect.objectContaining({
         options: [
           expect.objectContaining({
-            persephoneLevelBonus: 5,
+            persephoneRoll: 5,
           }),
           value.options[1],
           value.options[2],
@@ -974,7 +974,7 @@ describe('ordinary offer shell', () => {
     await user.click(screen.getByRole('button', { name: 'Save trait offer' }));
 
     const zeroCommit = onCommit.mock.calls.at(-1)?.[0] as AuthoredTraitOfferTraits | undefined;
-    expect(zeroCommit?.options[0]).not.toHaveProperty('persephoneLevelBonus');
+    expect(zeroCommit?.options[0]).not.toHaveProperty('persephoneRoll');
     expect(zeroCommit?.options[0]).toEqual(value.options[0]);
     expect(zeroCommit?.options.slice(1)).toEqual(value.options.slice(1));
     application.dispose();
@@ -993,7 +993,7 @@ describe('ordinary offer shell', () => {
     const value = Object.freeze({
       ...base.value,
       options: Object.freeze([
-        Object.freeze({ ...base.value.options[0], persephoneLevelBonus: 5 }),
+        Object.freeze({ ...base.value.options[0], persephoneRoll: 5 }),
         base.value.options[1],
         base.value.options[2],
       ]) as AuthoredTraitOfferTraits['options'],
@@ -1006,7 +1006,7 @@ describe('ordinary offer shell', () => {
     const interaction = Object.freeze({
       ...base,
       value,
-      showPersephoneBonus: true,
+      showPersephoneRoll: true,
       load: (draft: AuthoredTraitOffer = value) =>
         Object.freeze([
           Object.freeze({
@@ -1018,7 +1018,7 @@ describe('ordinary offer shell', () => {
                 branches: Object.freeze([]),
                 effectiveLevels: Object.freeze([6, 4, 2]),
                 findings: Object.freeze([]),
-                persephoneLevelBonusMaximums: Object.freeze([5, undefined, undefined]),
+                persephoneRollMaximums: Object.freeze([5, undefined, undefined]),
                 supported: true,
               }),
             }),
@@ -1091,7 +1091,7 @@ describe('ordinary offer shell', () => {
     expect(
       (
         screen.getByRole('combobox', {
-          name: 'option1 Persephone level bonus',
+          name: 'option1 Persephone roll',
         }) as HTMLSelectElement
       ).value,
     ).toBe('5');
@@ -1100,7 +1100,7 @@ describe('ordinary offer shell', () => {
     expect(
       (
         screen.getByRole('combobox', {
-          name: 'option1 Persephone level bonus',
+          name: 'option1 Persephone roll',
         }) as HTMLSelectElement
       ).value,
     ).toBe('5');

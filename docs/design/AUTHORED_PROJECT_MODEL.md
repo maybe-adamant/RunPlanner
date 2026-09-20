@@ -710,9 +710,9 @@ A guaranteed proc with eligible residual rows still requires a selection. An
 explicit proc with no available Stone remains invalid. Simulation publishes the
 resolved no-proc disposition for an available Stone without rewriting the save.
 
-Each trait option may retain one optional `persephoneLevelBonus`. When the
+Each trait option may retain one optional `persephoneRoll`. When the
 active Aspect of Persephone row omits it, the authored result resolves as
-`+0`; omission is not a missing-authorship finding. Only explicit malformed or
+zero; omission is not a missing-authorship finding. Only explicit malformed or
 out-of-range values receive the focused repair finding. The value is an
 option-owned frozen outcome and remains intact through sibling edits, Calling
 Card rerarity, and Concave Stone residual selection.

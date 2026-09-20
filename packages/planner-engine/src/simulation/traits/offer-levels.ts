@@ -9,8 +9,8 @@ import type {
 } from './offer-domain';
 
 export interface TraitOfferOptionLevelResolution {
-  /** The active authored Persephone contribution domain, when applicable. */
-  readonly persephoneLevelBonusMaximum?: number;
+  /** The active authored Persephone native-roll domain, when applicable. */
+  readonly persephoneRollMaximum?: number;
   /** Final installed level for a level-bearing option, when one exists. */
   readonly effectiveLevel?: number;
   readonly findings: readonly TraitAssessmentFinding[];
@@ -51,7 +51,7 @@ export function resolveTraitOfferOptionLevel(
   if (!isLevelBearingTrait(catalog, option.traitKey))
     return Object.freeze({ findings: Object.freeze([]) });
 
-  const aspectEffect = catalog.aspects.byKey[state.equipment.aspectKey]?.traitOfferLevelBonus;
+  const aspectEffect = catalog.aspects.byKey[state.equipment.aspectKey]?.traitOfferLevelRoll;
   const pomLevels =
     source.stackBoostsSuppressed === true
       ? 0
@@ -60,24 +60,24 @@ export function resolveTraitOfferOptionLevel(
         : 0;
   if (aspectEffect !== undefined && source.stackBoostsSuppressed !== true) {
     const maximum = before.previouslyPickedTraitKeys.includes(aspectEffect.upgradeTraitKey)
-      ? aspectEffect.upgradedMaximumBonus
-      : aspectEffect.maximumBonus;
-    const bonus = option.persephoneLevelBonus ?? 0;
-    if (!Number.isInteger(bonus) || bonus < 0 || bonus > maximum) {
+      ? aspectEffect.upgradedMaximumRoll
+      : aspectEffect.maximumRoll;
+    const roll = option.persephoneRoll ?? 0;
+    if (!Number.isInteger(roll) || roll < 0 || roll > maximum || roll === 1) {
       return Object.freeze({
-        persephoneLevelBonusMaximum: maximum,
+        persephoneRollMaximum: maximum,
         findings: Object.freeze([
           {
-            code: 'persephoneLevelBonusUnavailable' as const,
+            code: 'persephoneRollUnavailable' as const,
             traitKey: option.traitKey,
-            detail: `received ${String(bonus)}, expected 0 to ${maximum}`,
+            detail: `received ${String(roll)}, expected 0 or 2 to ${maximum}`,
           },
         ]),
       });
     }
     return Object.freeze({
-      persephoneLevelBonusMaximum: maximum,
-      effectiveLevel: 1 + pomLevels + bonus,
+      persephoneRollMaximum: maximum,
+      effectiveLevel: pomLevels > 0 ? roll + pomLevels + 1 : Math.max(1, roll),
       findings: Object.freeze([]),
     });
   }

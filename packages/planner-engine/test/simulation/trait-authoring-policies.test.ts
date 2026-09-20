@@ -117,7 +117,7 @@ describe('Boon Growth and Boon Decay target predicates', () => {
     if (draft?.kind !== 'traits') throw new Error('missing Apollo starting draft');
 
     expect(draft.options).toHaveLength(3);
-    expect(draft.options.every((option) => !('persephoneLevelBonus' in option))).toBe(true);
+    expect(draft.options.every((option) => !('persephoneRoll' in option))).toBe(true);
   });
 
   it('keeps one-time pickup history after King’s Ransom removes Bridal Glow', () => {

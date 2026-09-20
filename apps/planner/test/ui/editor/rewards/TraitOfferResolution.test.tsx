@@ -740,7 +740,7 @@ describe('resolution outcomes', () => {
               result: Object.freeze({
                 assessments: Object.freeze([]),
                 branches: Object.freeze([]),
-                persephoneLevelBonusMaximums: Object.freeze([]),
+                persephoneRollMaximums: Object.freeze([]),
                 effectiveLevels: Object.freeze([]),
                 findings: Object.freeze([]),
                 supported: true,

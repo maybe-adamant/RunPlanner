@@ -19,7 +19,7 @@ import { bindTraitOfferOptionDomain } from './option-domain';
 export function bindTraitOfferInteractions(input: {
   readonly catalog: Catalog;
   readonly candidates: CandidateProjectionSession;
-  readonly showPersephoneBonus: boolean;
+  readonly showPersephoneRoll: boolean;
   readonly traitControls: ReadonlyMap<string, WorkspaceTraitOfferControl>;
   readonly traitDomain: import('@planner/projections/structured-workspace/contract').StructuredWorkspaceContextualServices['traitDomain'];
 }): ReadonlyMap<string, WorkspaceTraitOfferInteraction> {
@@ -95,7 +95,7 @@ export function bindTraitOfferInteractions(input: {
         },
         load,
         owner: control.address,
-        showPersephoneBonus: input.showPersephoneBonus,
+        showPersephoneRoll: input.showPersephoneRoll,
         rarityEditable: control.rarityEditable !== false,
         rarityEditableFor: (traitKey: string) => {
           const declaration = catalog.traits.byKey[traitKey];
