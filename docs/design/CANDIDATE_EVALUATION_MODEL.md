@@ -574,15 +574,23 @@ same reached reward walk:
   `SelectedTraitOfferAssessment` values at exact `TraitOfferAddress` owners,
   with branch-correlated option, generation and selected-effect assessments.
 - `BiomeCandidateArtifacts.traitOffers.at(address)` returns opaque operations
-  over the captured pre-offer history and source context: complete assessment,
+  over the captured pre-offer `SimulationState` and source context: complete assessment,
   starting outcome, structural append/removal and selected child queries.
 
 The capability captures each branch before selected settlement or equivalent
-post-state merging. Neither the histories nor generation domains escape to
+post-state merging. Selected assessment and alternatives read the same state-based
+predicates; source context carries offer policy rather than copies of equipment,
+Arcana/Fear or keepsake facts. Neither the snapshots nor generation domains escape to
 React. A query supplies a complete proposed outcome, and optionally the exact
 focused option or child selector. Data-only selected findings cannot assess a
 replacement. Provider membership and authored rarity shape remain structural
 command/codec responsibilities.
+
+Context deduplication compares the explicit semantic inputs consumed by trait
+assessment, not the entire state. Unrelated bag or chronology differences must
+not multiply equivalent contacts, and relevant differences must not collapse.
+The JSON-compared identity must remain serialization-faithful; Sets, Maps and
+functions cannot be added to it without an explicit faithful representation.
 
 Publication stops at the first blocking region. The blocking offer retains
 its complete finding group and exact repair capability; later unreached offers

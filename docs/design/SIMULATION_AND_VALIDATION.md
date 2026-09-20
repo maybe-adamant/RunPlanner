@@ -35,6 +35,8 @@ Use semantic neighborhoods rather than the first caller that needs a result:
   Shop and trait-settlement neighborhoods;
 - `simulation/traits/` owns trait history, predicates, offers, levels and
   rarity;
+- `simulation/state/` owns authoritative state composition and reached-state
+  transitions; feature authorities still own their substate policies;
 - `simulation/evaluation/` composes project/biome results and exact artifacts;
 - `simulation/progressive/` locates blocking regions and authoring readiness;
 - `simulation/candidates/` consumes exact captured capabilities.
@@ -224,6 +226,28 @@ candidate support and workspace consumers.
 
 ## Chronology and History
 
+`SimulationState` is the immutable, branch-local authority for live equipment,
+trait history, Arcana/Fear, keepsakes, Hex progression, Well effects, reward
+bags/history/priorities, persistent offered-reward lookups and pending Shop or
+Shrine work. It also carries the reached route position and history view.
+Transitions return a new state while retaining unchanged substates; replacing
+trait history also updates the reward kernel's derived trait facts atomically.
+Catalog declarations remain separate from acquired instances and their clocks.
+
+Eligibility consumes the exact reached state plus explicit operation context:
+source policy, generation view, store contents or peer-generation contact.
+Callers must not assemble parallel copies of live player facts or silently
+default a missing state. Pure adapters derive narrow kernel requirements from
+that state. Whether a contact consults a fact is distinct from the fact itself;
+for example, inventory consults persistent Hub offers while ordinary acquisition
+settlement does not.
+
+Earlier source witnesses remain explicit when they differ from current state,
+such as Travel Deal's post-purchase generation facts and Echo Gold's source
+trait history. Branch evaluation products and executable candidate/continuation
+capabilities remain outside `SimulationState`. The state is neither a service
+container nor an inspector summary used to authorize transitions.
+
 The lifecycle authority determines operation order. History folding owns
 sequence validation, paired-event closure, counters, room/ledger views and
 the immutable result. Reward chronology owns possibility branches, findings,
@@ -393,9 +417,17 @@ can prevent the user from adding the very action needed to repair the room.
 
 ## Run-State Snapshots
 
-Run State is a read-only projection of the same covered history and reward
-branches, not a second simulation. It publishes exact semantic owner,
-history sequence, checkpoint, counters, bags and ledgers.
+Run State is a read-only projection of captured `SimulationState` snapshots,
+not a second simulation. All branches at a checkpoint share its exact reached
+history view and route position; sequence and counters derive from those
+snapshots rather than separately supplied values. It publishes semantic owner,
+checkpoint, counters, bags and ledgers without exposing the internal state.
+
+Projection caches account for both the source/view/store/peer contact and the
+state inputs consumed by the derivation. Shared reward-history identity alone
+does not establish equivalent eligibility: pending deliveries, Hex progression
+and persistent reward lookups can differ. Immutable substate identities permit
+reuse without serializing the whole state or recomputing every projection.
 
 Ordinary occurrences expose entry and pre-exit snapshots. Ship phases expose
 pre-encounter snapshots and the occurrence exposes pre-exit. N also retains
