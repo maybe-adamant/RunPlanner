@@ -45,11 +45,26 @@ import {
   createRunStateDerivationCache,
 } from '../../src/simulation/rewards/run-state';
 import { deriveRoomExitConformanceDeltas } from '../../src/simulation/rewards/run-state-conformance';
+import type { SimulationState } from '../../src/simulation/state/model';
+import { reachSimulationHistory } from '../../src/simulation/state/transitions';
 import {
   attachTraitHistory,
   foldTraitHistoryEvents,
   type TraitOfferEvent,
 } from '../../src/simulation/traits';
+
+/** Every direct adapter below projects the first Underworld biome. */
+const runStatePosition = ordinaryRoutePosition(catalog, 'Underworld', 'F');
+
+/** The exact reached snapshots a checkpoint projection receives, in branch order. */
+function reachedTestStates(
+  branches: readonly { readonly state: SimulationState }[],
+  historyView: SimulationState['reached']['historyView'],
+): readonly SimulationState[] {
+  return branches.map((branch) =>
+    reachSimulationHistory(branch.state, runStatePosition, historyView),
+  );
+}
 
 function decisionSnapshots(snapshots: readonly RunStateSnapshot[]): readonly RunStateSnapshot[] {
   return snapshots.filter((snapshot) => snapshot.owner.kind !== 'roomRunStateCheckpoint');
@@ -256,9 +271,7 @@ describe('decision run-state snapshots', () => {
       createRunState({
         catalog,
         owner: createRoomRunStateCheckpointAddress(occurrence, { kind: checkpoint }),
-        historyView,
-        branches: [branch],
-        enteredBiomeCount: 1,
+        states: reachedTestStates([branch], historyView),
         rewardFacts: () => requirementFacts(0),
       })!;
     const enteredBase = snapshot('roomEntered', beforeBranch);
@@ -346,9 +359,7 @@ describe('decision run-state snapshots', () => {
       createRunState({
         catalog,
         owner,
-        historyView: view,
-        branches: [branch],
-        enteredBiomeCount: 1,
+        states: reachedTestStates([branch], view),
         rewardFacts: () => facts,
         ...(cached
           ? {
@@ -408,22 +419,23 @@ describe('decision run-state snapshots', () => {
       createRunState({
         catalog,
         owner,
-        historyView,
-        branches: [
-          Object.freeze({
-            ...base,
-            state: Object.freeze({
-              ...base.state,
-              hexProgress: Object.freeze({
-                bankedPathPoints,
-                investedPathPoints: 0,
-                ...(talentDropsClosed ? { talentDropsClosed: true as const } : {}),
+        states: reachedTestStates(
+          [
+            Object.freeze({
+              ...base,
+              state: Object.freeze({
+                ...base.state,
+                hexProgress: Object.freeze({
+                  bankedPathPoints,
+                  investedPathPoints: 0,
+                  ...(talentDropsClosed ? { talentDropsClosed: true as const } : {}),
+                }),
               }),
             }),
-          }),
-        ],
-        enteredBiomeCount: 1,
-        rewardFacts: (branch) => {
+          ],
+          historyView,
+        ),
+        rewardFacts: (state) => {
           const facts = requirementFacts(0);
           return {
             ...facts,
@@ -432,7 +444,7 @@ describe('decision run-state snapshots', () => {
               records: { ...facts.requirements.records, useRecord: { SpellDrop: 1 } },
               flags: {
                 ...facts.requirements.flags,
-                allSpellInvested: branch.state.hexProgress.talentDropsClosed === true,
+                allSpellInvested: state.hexProgress.talentDropsClosed === true,
               },
             },
           };
@@ -455,28 +467,29 @@ describe('decision run-state snapshots', () => {
       createRunState({
         catalog,
         owner,
-        historyView,
-        branches: [
-          {
-            ...base,
-            state: Object.freeze({
-              ...base.state,
-              pendingHermesShrineDeliveries: pending
-                ? {
-                    spell: {
-                      sourceKey: 'spell',
-                      sourceOrigin: createOccurrenceAddress(oBiome, oOccurrenceIds.combat07),
-                      generationKey: 'initial:secondLeft' as const,
-                      rewardType: 'SpellDrop',
-                      remainingUses: 8,
-                    },
-                  }
-                : base.state.pendingHermesShrineDeliveries,
-            }),
-          },
-        ],
-        enteredBiomeCount: 1,
-        rewardFacts: (branch) => {
+        states: reachedTestStates(
+          [
+            {
+              ...base,
+              state: Object.freeze({
+                ...base.state,
+                pendingHermesShrineDeliveries: pending
+                  ? {
+                      spell: {
+                        sourceKey: 'spell',
+                        sourceOrigin: createOccurrenceAddress(oBiome, oOccurrenceIds.combat07),
+                        generationKey: 'initial:secondLeft' as const,
+                        rewardType: 'SpellDrop',
+                        remainingUses: 8,
+                      },
+                    }
+                  : base.state.pendingHermesShrineDeliveries,
+              }),
+            },
+          ],
+          historyView,
+        ),
+        rewardFacts: (state) => {
           const facts = requirementFacts(0);
           return {
             ...facts,
@@ -484,7 +497,7 @@ describe('decision run-state snapshots', () => {
               ...facts.requirements,
               flags: {
                 ...facts.requirements.flags,
-                pendingSpellDrop: Object.values(branch.state.pendingHermesShrineDeliveries).some(
+                pendingSpellDrop: Object.values(state.pendingHermesShrineDeliveries).some(
                   (delivery) => delivery.rewardType === 'SpellDrop',
                 ),
               },
@@ -514,13 +527,11 @@ describe('decision run-state snapshots', () => {
       createRunState({
         catalog,
         owner,
-        historyView,
-        branches: [branch],
-        enteredBiomeCount: 1,
+        states: reachedTestStates([branch], historyView),
         derivationCache: lookupCache,
         factsContextToken: token,
         rewardFacts: (current) => {
-          seenLookups.push(current.state.rewardLookups);
+          seenLookups.push(current.rewardLookups);
           return requirementFacts(0);
         },
       });
@@ -660,6 +671,7 @@ describe('decision run-state snapshots', () => {
     if (prebossCreation?.kind !== 'roomCreated') throw new Error('missing Preboss generation');
     expect(beforePreboss.historySequence).toBe(prebossCreation.sequence - 1);
     expect(beforePreboss.counters).toMatchObject({
+      enteredBiomes: 1,
       numSubRoomsSpawned: 6,
       soulPylonsSpawned: 6,
       soulPylonsCompleted: 6,
@@ -1096,8 +1108,8 @@ describe('decision run-state snapshots', () => {
     const bag = aggregateDecisionRewardBag(
       store,
       [
-        { state: { bags: { RunProgress: { remainingEntryCounts: firstTwoOnly(0, 1) } } } },
-        { state: { bags: { RunProgress: { remainingEntryCounts: firstTwoOnly(1, 0) } } } },
+        { bags: { RunProgress: { remainingEntryCounts: firstTwoOnly(0, 1) } } },
+        { bags: { RunProgress: { remainingEntryCounts: firstTwoOnly(1, 0) } } },
       ],
       [requirementFacts(1), requirementFacts(0)],
     );
@@ -1172,7 +1184,7 @@ describe('decision run-state snapshots', () => {
         kind: 'occurrence',
         occurrenceId: goldenFStartId,
       }),
-      historyView: {
+      states: reachedTestStates([branch], {
         sequence: 0,
         ledgers: {
           roomCreations: [],
@@ -1191,9 +1203,7 @@ describe('decision run-state snapshots', () => {
             roomHistoryOrdinal: 0,
           },
         },
-      },
-      branches: [branch],
-      enteredBiomeCount: 1,
+      }),
       rewardFacts: () => {
         const facts = requirementFacts(0);
         return {
@@ -1259,7 +1269,7 @@ describe('decision run-state snapshots', () => {
     const snapshot = createRunState({
       catalog,
       owner,
-      historyView: {
+      states: reachedTestStates([branch], {
         sequence: traits.events.length,
         ledgers: {
           roomCreations: [],
@@ -1278,9 +1288,7 @@ describe('decision run-state snapshots', () => {
             roomHistoryOrdinal: 0,
           },
         },
-      },
-      branches: [branch],
-      enteredBiomeCount: 1,
+      }),
       rewardFacts: () => requirementFacts(0),
     });
     expect(snapshot?.traits.elementCounts).toEqual({
