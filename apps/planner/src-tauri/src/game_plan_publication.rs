@@ -233,10 +233,34 @@ fn target(profile: CompatibleProfile) -> GamePlanTarget {
 }
 
 fn display_path(path: &str) -> String {
+    display_path_with_user_profile(path, std::env::var("USERPROFILE").ok().as_deref())
+}
+
+fn readable_path(path: &str) -> String {
     if let Some(unc) = path.strip_prefix(r"\\?\UNC\") {
         return format!(r"\\{unc}");
     }
     path.strip_prefix(r"\\?\").unwrap_or(path).to_owned()
+}
+
+fn display_path_with_user_profile(path: &str, user_profile: Option<&str>) -> String {
+    let path = readable_path(path);
+    if let Some(user_profile) = user_profile {
+        let home = readable_path(user_profile).replace('/', "\\");
+        let home = home.trim_end_matches('\\');
+        let normalized = path.replace('/', "\\");
+        if !home.is_empty()
+            && normalized
+                .get(..home.len())
+                .is_some_and(|prefix| prefix.eq_ignore_ascii_case(home))
+        {
+            let suffix = &path[home.len()..];
+            if suffix.is_empty() || suffix.starts_with(['\\', '/']) {
+                return format!("%USERPROFILE%{suffix}");
+            }
+        }
+    }
+    path
 }
 
 fn remember_profile(config_dir: &Path, profile: &CompatibleProfile) -> Result<(), String> {
@@ -587,6 +611,29 @@ mod tests {
             r"\\server\profiles\test"
         );
         assert_eq!(display_path("/profiles/test"), "/profiles/test");
+    }
+
+    #[test]
+    fn display_paths_hide_only_the_matching_user_profile_directory() {
+        let home = Some(r"C:\Users\Private Name\");
+        assert_eq!(
+            display_path_with_user_profile(
+                r"\\?\c:\users\Private Name\AppData\profiles\test",
+                home
+            ),
+            r"%USERPROFILE%\AppData\profiles\test"
+        );
+        assert_eq!(
+            display_path_with_user_profile(r"C:\Users\Private Name", home),
+            "%USERPROFILE%"
+        );
+        for path in [r"C:\Users\Private Name Other\profiles", r"D:\profiles\test"] {
+            assert_eq!(display_path_with_user_profile(path, home), path);
+        }
+        assert_eq!(
+            display_path_with_user_profile(r"C:\Users\Private Name\profiles", None),
+            r"C:\Users\Private Name\profiles"
+        );
     }
 
     #[cfg(unix)]
