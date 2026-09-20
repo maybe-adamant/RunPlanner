@@ -1270,6 +1270,7 @@ describe('Hermes Shrine Spell reservation lifecycle input', () => {
     expect(unpurchased.rewards.targetHistory).toContainEqual(
       expect.objectContaining({ origin: target, pendingSpellDrops: [false] }),
     );
+    expect(outgoingEligibility(unpurchased.runState, 'SpellDrop')).toBe('eligible');
 
     project = applyProjectCommand(project, catalog, {
       kind: 'SetHermesShrinePurchase',
@@ -1285,6 +1286,7 @@ describe('Hermes Shrine Spell reservation lifecycle input', () => {
     expect(purchased.rewards.targetHistory).toContainEqual(
       expect.objectContaining({ origin: target, pendingSpellDrops: [true] }),
     );
+    expect(outgoingEligibility(purchased.runState, 'SpellDrop')).toBe('ineligible');
   });
 });
 

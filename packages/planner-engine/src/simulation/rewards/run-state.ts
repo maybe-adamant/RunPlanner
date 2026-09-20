@@ -161,7 +161,7 @@ interface RunStateContext {
   readonly historyView: HistoryStateView;
   readonly branches: readonly RewardBranchState[];
   readonly enteredBiomeCount: number;
-  readonly rewardFacts: (history: RewardHistoryState) => RewardKernelFacts;
+  readonly rewardFacts: (branch: RewardBranchState) => RewardKernelFacts;
   readonly derivationCache?: RunStateDerivationCache;
   /** Exact source/view/shop/peer closure used by rewardFacts. Required with a shared cache. */
   readonly factsContextToken?: object;
@@ -598,7 +598,12 @@ export function createRunState(context: RunStateContext): RunStateSnapshot | und
   const contextHistoryKeys = context.branches.map((branch) =>
     derivationCache === undefined
       ? undefined
-      : `${objectId(derivationCache, context.factsContextToken!)}:${objectId(derivationCache, branch.history)}`,
+      : [
+          objectId(derivationCache, context.factsContextToken!),
+          objectId(derivationCache, branch.history),
+          objectId(derivationCache, branch.pendingHermesShrineDeliveries),
+          objectId(derivationCache, branch.hexProgress),
+        ].join(':'),
   );
   const factsByBranch = context.branches.map((branch, branchIndex) => {
     const contextHistoryKey = contextHistoryKeys[branchIndex];
@@ -607,7 +612,7 @@ export function createRunState(context: RunStateContext): RunStateSnapshot | und
         ? undefined
         : derivationCache?.factsByContextHistory.get(contextHistoryKey);
     if (cached !== undefined) return cached;
-    const facts = context.rewardFacts(branch.history);
+    const facts = context.rewardFacts(branch);
     if (contextHistoryKey !== undefined) {
       derivationCache?.factsByContextHistory.set(contextHistoryKey, facts);
     }
