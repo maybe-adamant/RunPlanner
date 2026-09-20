@@ -103,12 +103,3 @@ export function stableJson(value: unknown): string {
     .map(([key, entry]) => `${JSON.stringify(key)}:${stableJson(entry)}`)
     .join(',')}}`;
 }
-
-export function fingerprint(value: unknown): string {
-  let hash = 2166136261;
-  for (const character of stableJson(value)) {
-    hash ^= character.codePointAt(0) ?? 0;
-    hash = Math.imul(hash, 16777619) >>> 0;
-  }
-  return hash.toString(16).padStart(8, '0');
-}
