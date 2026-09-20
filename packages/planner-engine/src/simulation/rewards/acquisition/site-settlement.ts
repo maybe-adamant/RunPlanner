@@ -98,7 +98,11 @@ export function settleProducerAcquisitionSite(
     return fail(`${room.gameName} producer event does not match its offer`);
   }
   const incomingSource = Object.freeze({
-    ...withStoredArtificerReplacements(room, incoming),
+    // A room's materialized incoming reward is the screen the player acts on.
+    ...withStoredArtificerReplacements(
+      room,
+      Object.freeze({ ...incoming, presentsMaterializedScreen: true }),
+    ),
     ...(timelineOwner === undefined ? {} : { timelineOwner }),
     ...(incoming.producerLifecycleKey === 'RoomReward'
       ? { roomRewardForfeitEligible: true as const }
@@ -246,6 +250,8 @@ export function settleOwnedAcquisitionSite(
         participation: 'mandatory',
         historySequence: binding.historySequence,
         facts,
+        // The replacement settles on the same screen its source presented.
+        presentsMaterializedScreen: source.presentsMaterializedScreen,
         ...(source.traitContext === undefined ? {} : { traitContext: source.traitContext }),
         ...(atomicRegion === undefined ? {} : { atomicRegion }),
         ...(findingChronology === undefined ? {} : { findingChronology }),
@@ -292,6 +298,8 @@ export function settleAcquisitionResolvedReward(
     readonly producerKind?: CanonicalResolvedIncomingReward['producerKind'];
     readonly instanceProvenance: 'free' | 'paid';
     readonly blocksSeaStarDuplication?: true;
+    /** Whether this settlement presents a materialized reward screen (see {@link AcquisitionSource}). */
+    readonly presentsMaterializedScreen: boolean;
     readonly traitContext?: CanonicalResolvedIncomingReward['traitContext'];
     readonly timelineOwner?: SemanticAddress;
     readonly historySequence: number;
@@ -393,6 +401,7 @@ export function settleAcquisitionResolvedReward(
               levelResolutionsByAcquisitionRole: request.reward.levelResolutionsByAcquisitionRole,
             }),
         dispositionByAcquisitionRole: request.reward.dispositionByAcquisitionRole,
+        presentsMaterializedScreen: request.presentsMaterializedScreen,
         ...(request.traitContext === undefined ? {} : { traitContext: request.traitContext }),
       }),
       ...(request.timelineOwner === undefined ? {} : { timelineOwner: request.timelineOwner }),
@@ -431,6 +440,8 @@ export function settleArtificerReplacementAcquisition(
     readonly participation: 'mandatory' | 'optional';
     readonly historySequence: number;
     readonly facts: RewardFactsFactory;
+    /** Whether this settlement presents a materialized reward screen (see {@link AcquisitionSource}). */
+    readonly presentsMaterializedScreen: boolean;
     readonly traitContext?: CanonicalResolvedIncomingReward['traitContext'];
     readonly atomicRegion?: string;
     readonly findingChronology?: FindingChronology;
@@ -519,6 +530,7 @@ export function settleArtificerReplacementAcquisition(
               levelResolutionsByAcquisitionRole: replacement.levelResolutionsByAcquisitionRole,
             }),
         dispositionByAcquisitionRole: replacement.dispositionByAcquisitionRole,
+        presentsMaterializedScreen: request.presentsMaterializedScreen,
         ...(request.traitContext === undefined ? {} : { traitContext: request.traitContext }),
         ...(request.timelineOwner === undefined ? {} : { timelineOwner: request.timelineOwner }),
         ...(!sourceCanDuplicate ? { blocksSeaStarDuplication: true as const } : {}),
@@ -574,6 +586,8 @@ export function settlePickupAcquisitionSite(
     readonly requiredEntryKeys?: ReadonlySet<string>;
     readonly historySequence: number;
     readonly facts: RewardFactsFactory;
+    /** Whether this settlement presents a materialized reward screen (see {@link AcquisitionSource}). */
+    readonly presentsMaterializedScreen: boolean;
     readonly traitContext?: CanonicalResolvedIncomingReward['traitContext'];
     /**
      * Atomic chronology owner when a materialized pickup is reached through a
@@ -703,6 +717,7 @@ export function settlePickupAcquisitionSite(
             ...(reward.levelResolutionsByAcquisitionRole === undefined
               ? {}
               : { levelResolutionsByAcquisitionRole: reward.levelResolutionsByAcquisitionRole }),
+            presentsMaterializedScreen: request.presentsMaterializedScreen,
             ...(request.traitContext === undefined ? {} : { traitContext: request.traitContext }),
             ...(candidateTimelineOwner === undefined
               ? {}
@@ -796,6 +811,7 @@ export function settlePickupAcquisitionSite(
         participation: 'mandatory',
         historySequence: request.historySequence,
         facts: request.facts,
+        presentsMaterializedScreen: request.presentsMaterializedScreen,
         ...(request.traitContext === undefined ? {} : { traitContext: request.traitContext }),
         ...(request.atomicRegion === undefined ? {} : { atomicRegion: request.atomicRegion }),
         ...(request.findingChronology === undefined
@@ -839,6 +855,7 @@ export function settlePickupAcquisitionSite(
           ...(reward.levelResolutionsByAcquisitionRole === undefined
             ? {}
             : { levelResolutionsByAcquisitionRole: reward.levelResolutionsByAcquisitionRole }),
+          presentsMaterializedScreen: request.presentsMaterializedScreen,
           ...(request.traitContext === undefined ? {} : { traitContext: request.traitContext }),
           ...(entryTimelineOwner === undefined ? {} : { timelineOwner: entryTimelineOwner }),
           dispositionByAcquisitionRole: reward.dispositionByAcquisitionRole,

@@ -19,6 +19,14 @@ export interface AcquisitionSource {
   readonly producerKind?: CanonicalResolvedIncomingReward['producerKind'];
   /** Instance fact supplied by the producer, never inferred from an owner label. */
   readonly instanceProvenance: 'free' | 'paid';
+  /**
+   * Whether this source presents a materialized reward screen the player can
+   * act on. The Artificer publishes its replacement-reward domain only from
+   * such a screen; a settlement request without one retains the unresolved
+   * candidate alone. Every source declares this rule explicitly — it is never
+   * inferred from whether some other optional description happens to be set.
+   */
+  readonly presentsMaterializedScreen: boolean;
   /** Set only by sources that enter the game's SpawnRoomReward Forfeit lane. */
   readonly roomRewardForfeitEligible?: true;
   readonly traitOffersByAcquisitionRole?: CanonicalResolvedIncomingReward['traitOffersByAcquisitionRole'];

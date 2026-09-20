@@ -459,6 +459,7 @@ describe('Sacrificial Hymn replacement composition', () => {
       },
       producerLifecycleKey: 'RoomReward' as const,
       instanceProvenance: 'free' as const,
+      presentsMaterializedScreen: false,
       traitOffersByAcquisitionRole: Object.freeze({
         source: Object.freeze({
           kind: 'traits' as const,
@@ -537,6 +538,7 @@ describe('Sacrificial Hymn replacement composition', () => {
           },
           producerLifecycleKey: 'RoomReward',
           instanceProvenance: 'free',
+          presentsMaterializedScreen: false,
           traitOffersByAcquisitionRole: Object.freeze({ source: null }),
         },
         historySequence: history.events.length + 1,
@@ -615,6 +617,7 @@ describe('rarity offer settlement contacts', () => {
         offer: { rewardType: 'HermesUpgrade' },
         producerLifecycleKey: 'RoomReward',
         instanceProvenance: 'free',
+        presentsMaterializedScreen: true,
         traitContext: { boonRarityRoomOverride: room.boonRarityOverride },
         traitOffersByAcquisitionRole: {
           self: {
@@ -1294,6 +1297,7 @@ describe('reached trait offer chronology', () => {
         offer: hammer,
         producerLifecycleKey: 'RoomReward',
         instanceProvenance: 'free',
+        presentsMaterializedScreen: true,
         traitOffersByAcquisitionRole: hammerOffer,
         traitContext: {},
       },
@@ -1326,6 +1330,7 @@ describe('reached trait offer chronology', () => {
         offer: boon,
         producerLifecycleKey: 'RoomReward',
         instanceProvenance: 'free',
+        presentsMaterializedScreen: true,
         traitOffersByAcquisitionRole: boonOffer,
         traitContext: {},
       },

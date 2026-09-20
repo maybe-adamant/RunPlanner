@@ -1456,6 +1456,7 @@ describe('Hermes Shrine pickup settlement', () => {
           offer: { rewardType: 'TalentDrop' },
           producerLifecycleKey: 'HermesShrineDelivery',
           instanceProvenance: 'free',
+          presentsMaterializedScreen: false,
         },
       },
       (state) => rewardFacts(state.rewardHistory),

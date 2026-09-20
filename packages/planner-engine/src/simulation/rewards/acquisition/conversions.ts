@@ -332,6 +332,8 @@ export function generateArtificerReplacement(
                     artificerReplacement.levelResolutionsByAcquisitionRole,
                 }),
             dispositionByAcquisitionRole: artificerReplacement.dispositionByAcquisitionRole,
+            // A generated replacement stands on the screen its source presented.
+            presentsMaterializedScreen: incoming.presentsMaterializedScreen,
             traitContext: incoming.traitContext,
             ...(incoming.timelineOwner === undefined
               ? {}

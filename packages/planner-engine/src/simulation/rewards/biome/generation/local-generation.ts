@@ -162,7 +162,11 @@ export function generateLocalRewards(
                     ? acquisition.event.point
                     : candidate.encounterPhaseKey,
                 entryKey: candidate.slotKey,
-                source: Object.freeze({ ...candidate, instanceProvenance: 'free' }),
+                source: Object.freeze({
+                  ...candidate,
+                  instanceProvenance: 'free',
+                  presentsMaterializedScreen: true,
+                }),
                 historySequence: acquisition.event.sequence,
                 authoredSeaStarDuplicateSiteKeys: inputs.authoredSeaStarDuplicateSiteKeys,
               },
@@ -278,7 +282,11 @@ export function generateLocalRewards(
                     ? acquisition.event.point
                     : candidate.encounterPhaseKey,
                 entryKey: candidate.slotKey,
-                source: Object.freeze({ ...candidate, instanceProvenance: 'free' }),
+                source: Object.freeze({
+                  ...candidate,
+                  instanceProvenance: 'free',
+                  presentsMaterializedScreen: true,
+                }),
                 historySequence: acquisition.event.sequence,
                 authoredSeaStarDuplicateSiteKeys: inputs.authoredSeaStarDuplicateSiteKeys,
               },

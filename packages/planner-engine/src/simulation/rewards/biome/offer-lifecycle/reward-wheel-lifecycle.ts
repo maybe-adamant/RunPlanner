@@ -56,6 +56,8 @@ export function shipWheelRoomRewardSource(
     resolvedStoreKey: wheel.storeKey,
     instanceProvenance: 'free',
     roomRewardForfeitEligible: true,
+    // A picked wheel offer is the materialized screen the player acted on.
+    presentsMaterializedScreen: true,
   });
 }
 

@@ -975,7 +975,7 @@ describe('N Hub rewards, validation, and candidates', () => {
         siteOwner: local!.origin,
         pointKey: 'roomRewardPickup',
         entryKey: 'self',
-        source: incoming,
+        source: { ...incoming, presentsMaterializedScreen: true },
         historySequence: 1,
       },
       (state) => factsWithHistory(baseFacts, state.rewardHistory, new Set()),

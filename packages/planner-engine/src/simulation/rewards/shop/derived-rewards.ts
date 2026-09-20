@@ -248,6 +248,8 @@ export function materializeShopGold(input: {
       producerLifecycleKey: profile.key,
       producerKind: 'shop' as const,
       instanceProvenance: 'free' as const,
+      // A placed derived pickup stands on the Shop screen that produced it.
+      presentsMaterializedScreen: true,
       traitOffersByAcquisitionRole: fixedReward.traitOffersByAcquisitionRole,
       ...(fixedReward.levelResolutionsByAcquisitionRole === undefined
         ? {}

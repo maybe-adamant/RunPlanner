@@ -47,7 +47,6 @@ import type { RewardBranchState } from '../../branch-primitives';
 import type { BiomeRewardSnapshot } from '../evaluation-contract';
 import { rewardFindingChronologyForRoom } from '../finding-chronology';
 import { createBiomeRewardFacts } from '../../facts';
-import { plainTraitOfferSource } from '../../../traits/offer-domain';
 import { addRewardFinding, mergeRewardFindingEmissions, rewardFinding } from '../../findings';
 import type { AuthoredSiteSettlementResult } from '../generation/authored-site-settlement';
 import { settleAuthoredAcquisitionSite } from '../generation/authored-site-settlement';
@@ -230,6 +229,8 @@ export function applyAcquisitionPointReachedTransition(
               ),
             }),
             order: Object.freeze([input.address.entryKey]),
+            // A frontier probe has no materialized screen of its own.
+            presentsMaterializedScreen: false,
             requiredEntryKeys: new Set([input.address.entryKey]),
             producerLifecycleKey: 'HermesShrineDelivery',
             historySequence: event.sequence,
@@ -368,7 +369,11 @@ export function applyAcquisitionPointReachedTransition(
         entryKey: localReward.slotKey,
         source: withStoredArtificerReplacements(
           room,
-          Object.freeze({ ...localReward, instanceProvenance: 'free' }),
+          Object.freeze({
+            ...localReward,
+            instanceProvenance: 'free',
+            presentsMaterializedScreen: true,
+          }),
         ),
         ...(localActionOwner === undefined ? {} : { timelineOwner: localActionOwner }),
         historySequence: event.sequence,
@@ -434,7 +439,7 @@ export function applyAcquisitionPointReachedTransition(
         facts: (state) => factsAt(acquisitionView, state),
         findingChronology: chronology,
         authoredSeaStarDuplicateSiteKeys,
-        traitContext: plainTraitOfferSource,
+        presentsMaterializedScreen: true,
       });
       mergeRewardFindingEmissions(findings, settled.findingEmissions);
       return transitionResult({
@@ -572,6 +577,7 @@ export function applyAcquisitionPointReachedTransition(
         facts: (state) => factsAt(acquisitionView, state),
         findingChronology: chronology,
         authoredSeaStarDuplicateSiteKeys,
+        presentsMaterializedScreen: false,
       });
       mergeRewardFindingEmissions(findings, settled.findingEmissions);
       const settledEntryKey = semanticAddressKey(entry);
@@ -694,7 +700,7 @@ export function applyAcquisitionPointReachedTransition(
         ...(row?.owner === undefined ? {} : { timelineOwner: row.owner }),
         historySequence: event.sequence,
         facts: (state) => factsAt(acquisitionView, state),
-        traitContext: plainTraitOfferSource,
+        presentsMaterializedScreen: true,
         findingChronology: chronology,
         authoredSeaStarDuplicateSiteKeys,
       });

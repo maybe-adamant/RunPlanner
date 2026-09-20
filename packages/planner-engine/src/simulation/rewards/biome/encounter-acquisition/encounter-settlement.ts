@@ -710,7 +710,11 @@ export function applyEncounterSettlementTransition(inputs: {
         entryKey: rewards[0].slotKey,
         source: withStoredArtificerReplacements(
           room,
-          Object.freeze({ ...rewards[0], instanceProvenance: 'free' }),
+          Object.freeze({
+            ...rewards[0],
+            instanceProvenance: 'free',
+            presentsMaterializedScreen: true,
+          }),
         ),
         ...(timelineOwner === undefined ? {} : { timelineOwner }),
         historySequence: event.sequence,

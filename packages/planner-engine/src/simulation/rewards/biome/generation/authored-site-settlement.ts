@@ -31,7 +31,6 @@ import { addRewardFinding, mergeRewardFindingEmissions, rewardFinding } from '..
 import type { RewardBranchState } from '../../branch-primitives';
 import type { RewardProducerFrontier } from '../../producer-frontiers';
 import { createBiomeRewardFacts } from '../../facts';
-import { plainTraitOfferSource } from '../../../traits/offer-domain';
 import { BiomeRewardSimulationContractError } from '../biome-contract';
 import { canonicalArtificerSource } from '../reward-sources';
 import { rewardFindingChronologyForRoom } from '../finding-chronology';
@@ -266,7 +265,7 @@ export function settleAuthoredAcquisitionSite(
           'localRoomLifecycle',
         ),
         facts: pickupFacts,
-        traitContext: plainTraitOfferSource,
+        presentsMaterializedScreen: true,
       });
       mergeRewardFindingEmissions(targetFindings, settled.findingEmissions);
       acquisitionRoleFrontiers.push(...(settled.roleFrontiers ?? []));
@@ -405,7 +404,7 @@ export function settleAuthoredAcquisitionSite(
         historySequence,
         findingChronology,
         facts: pickupFacts,
-        traitContext: plainTraitOfferSource,
+        presentsMaterializedScreen: true,
         publishUnpickedChildFrontiers: activationOnly,
         artificerReplacementFor(source, role) {
           const site = artificerAcquisitionSite(room.origin, source);
@@ -483,7 +482,7 @@ export function settleAuthoredAcquisitionSite(
                   findingChronology,
                   publishUnpickedChildFrontiers: false,
                   facts: pickupFacts,
-                  traitContext: plainTraitOfferSource,
+                  presentsMaterializedScreen: true,
                   artificerReplacementFor(source, role) {
                     const site = artificerAcquisitionSite(room.origin, source);
                     return (
@@ -602,6 +601,8 @@ export function settleAuthoredAcquisitionSite(
                     offer: source.reward.offer,
                     producerLifecycleKey: 'Shop',
                     instanceProvenance: 'paid' as const,
+                    // Eligibility probe only; it publishes no replacement screen.
+                    presentsMaterializedScreen: false,
                     dispositionByAcquisitionRole: source.reward.dispositionByAcquisitionRole,
                   }),
                   { role: seaStarDuplicate.acquisitionRole, lifecyclePoint: 'purchase' },

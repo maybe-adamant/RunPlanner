@@ -139,6 +139,7 @@ function settleOrdinaryBoon(
         offer,
         producerLifecycleKey: 'RoomReward',
         instanceProvenance: 'free',
+        presentsMaterializedScreen: true,
         roomRewardForfeitEligible: true,
         traitOffersByAcquisitionRole: Object.freeze({
           source: Object.freeze({
@@ -251,6 +252,7 @@ function convert(
         offer: authored.offer,
         producerLifecycleKey: 'RoomReward',
         instanceProvenance: 'free',
+        presentsMaterializedScreen: true,
         dispositionByAcquisitionRole: authored.dispositionByAcquisitionRole,
         artificerReplacementByAcquisitionRole: Object.freeze({ self: replacementReward }),
         artificerReplacementSiteByAcquisitionRole: Object.freeze({ self: replacementSite }),
@@ -274,6 +276,7 @@ function convert(
         participation: 'mandatory',
         historySequence: index + 1,
         facts: (state) => factsWithHistory(facts(enteredBiomes), state.rewardHistory, new Set()),
+        presentsMaterializedScreen: true,
         traitContext: {},
       });
   if (!deferArtificerReplacement) mergeRewardFindingEmissions(findings, product.findingEmissions);
@@ -298,6 +301,7 @@ describe('The Artificer', () => {
       offer: Object.freeze({ rewardType: 'GiftDrop' }),
       producerLifecycleKey: 'RoomReward',
       instanceProvenance: 'free' as const,
+      presentsMaterializedScreen: false,
       dispositionByAcquisitionRole: Object.freeze({
         self: Object.freeze({ kind: 'normal' as const }),
       }),
@@ -365,6 +369,7 @@ describe('The Artificer', () => {
         offer: Object.freeze({ rewardType }),
         producerLifecycleKey: 'RoomReward',
         instanceProvenance,
+        presentsMaterializedScreen: false,
         dispositionByAcquisitionRole: Object.freeze({
           [role]: Object.freeze({ kind: disposition }),
         }),
@@ -434,6 +439,7 @@ describe('The Artificer', () => {
       site,
       entries: Object.freeze({ seaStarDuplicate: retained }),
       order: Object.freeze(['seaStarDuplicate']),
+      presentsMaterializedScreen: false,
       producerLifecycleKey: 'RoomReward',
       producerByEntryKey: Object.freeze({
         seaStarDuplicate: Object.freeze({
@@ -485,6 +491,7 @@ describe('The Artificer', () => {
         site,
         entries: Object.freeze({ seaStarDuplicate: retained }),
         order: Object.freeze(['seaStarDuplicate']),
+        presentsMaterializedScreen: false,
         producerLifecycleKey: 'RoomReward',
         requiredEntryKeys: new Set(),
         seaStarDuplicateEntryKeys: new Set(['seaStarDuplicate']),
@@ -513,6 +520,7 @@ describe('The Artificer', () => {
       site,
       entries: Object.freeze({ seaStarDuplicate: retained }),
       order: Object.freeze(['seaStarDuplicate']),
+      presentsMaterializedScreen: false,
       producerLifecycleKey: 'GeneratedTraitPickup',
       requiredEntryKeys: new Set(),
       seaStarDuplicateEntryKeys: new Set(['seaStarDuplicate']),
@@ -561,6 +569,7 @@ describe('The Artificer', () => {
         offer: Object.freeze({ rewardType }),
         producerLifecycleKey: 'RoomReward',
         instanceProvenance,
+        presentsMaterializedScreen: false,
       });
 
     expect(
@@ -914,6 +923,7 @@ describe('The Artificer', () => {
           offer,
           producerLifecycleKey: 'RoomReward',
           instanceProvenance: 'free',
+          presentsMaterializedScreen: true,
           roomRewardForfeitEligible: true,
           traitOffersByAcquisitionRole: {
             chosenSource: {
@@ -1080,6 +1090,7 @@ describe('The Artificer', () => {
       participation: 'mandatory',
       historySequence: 2,
       facts: (state) => factsWithHistory(facts(), state.rewardHistory, new Set()),
+      presentsMaterializedScreen: false,
     });
     mergeRewardFindingEmissions(conversion.findings, acquired.findingEmissions);
     expect(acquired.branches[0]?.state.rewardHistory.consumableRecord.MaxHealthDrop).toBe(1);
@@ -1103,6 +1114,53 @@ describe('The Artificer', () => {
           },
         }),
       }),
+    );
+  });
+
+  it('publishes replacement options only from a source that presents a screen', () => {
+    const occurrenceId = createOccurrenceId('artificer-screen-rule');
+    const origin = createIncomingRewardAddress(biome, occurrenceId);
+    const siteOwner = createOccurrenceAddress(biome, occurrenceId);
+    const offer = Object.freeze({ rewardType: 'GiftDrop' as const });
+    const settleWithScreen = (presentsMaterializedScreen: boolean) =>
+      settleOwnedAcquisitionSite(
+        catalog,
+        initialBranches(),
+        {
+          siteOwner,
+          pointKey: 'roomRewardPickup',
+          entryKey: 'self',
+          historySequence: 1,
+          source: {
+            origin,
+            offer,
+            producerLifecycleKey: 'RoomReward',
+            instanceProvenance: 'free',
+            presentsMaterializedScreen,
+            dispositionByAcquisitionRole: Object.freeze({
+              self: Object.freeze({ kind: 'normal' as const }),
+            }),
+          },
+        },
+        (state) => factsWithHistory(facts(), state.rewardHistory, new Set()),
+      ).roleFrontiers?.[0];
+
+    const screen = settleWithScreen(true);
+    const noScreen = settleWithScreen(false);
+    expect(screen?.artificerReplacementOptions?.map((option) => option.offer.rewardType)).toEqual(
+      expect.arrayContaining(['MaxHealthDrop']),
+    );
+    expect(screen?.artificerReplacementOptions).not.toContainEqual(
+      expect.objectContaining({ offer: expect.objectContaining({ rewardType: 'Devotion' }) }),
+    );
+    expect(noScreen?.artificerReplacementOptions).toBeUndefined();
+    // The rule is the only difference: both settlements publish the same
+    // replacement frontier address and the same conversion candidate domain.
+    expect(semanticAddressKey(noScreen!.artificerReplacementAddress)).toBe(
+      semanticAddressKey(screen!.artificerReplacementAddress),
+    );
+    expect(noScreen?.artificerReplacementCandidate?.rewardTypes).toEqual(
+      screen?.artificerReplacementCandidate?.rewardTypes,
     );
   });
 });

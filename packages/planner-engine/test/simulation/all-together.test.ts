@@ -237,6 +237,7 @@ describe('All Together direct trait settlement', () => {
           },
           producerLifecycleKey: 'RoomReward',
           instanceProvenance: 'free',
+          presentsMaterializedScreen: false,
           traitOffersByAcquisitionRole: { source: offer() },
         },
         historySequence: 20,
@@ -272,6 +273,7 @@ describe('All Together direct trait settlement', () => {
           offer: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'HeraUpgrade' } },
           producerLifecycleKey: 'RoomReward',
           instanceProvenance: 'free',
+          presentsMaterializedScreen: false,
           traitOffersByAcquisitionRole: { source: offer() },
         },
         historySequence: 20,
@@ -301,6 +303,7 @@ describe('All Together direct trait settlement', () => {
           },
           producerLifecycleKey: 'RoomReward',
           instanceProvenance: 'free',
+          presentsMaterializedScreen: false,
           traitOffersByAcquisitionRole: {
             source: offer(Object.freeze({ ...firstResult, earth: null })),
           },
