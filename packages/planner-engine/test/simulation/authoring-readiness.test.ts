@@ -3,6 +3,8 @@ import { describe, expect, it } from 'vitest';
 import { catalog } from '@run-planner/hades2-catalog';
 import {
   applyProjectCommand,
+  createAdditionalExitAddress,
+  createExitSelectionAddress,
   createExitDecisionAddress,
   createKeepsakeEquipResultAddress,
   createHubDecisionAddress,
@@ -65,6 +67,86 @@ import {
 } from './support/f-takeover-project';
 
 describe('chronological authoring horizon', () => {
+  it('keeps reached rooms editable when a selected additional room has no outgoing decision', () => {
+    const contractId = createOccurrenceId('readiness-contract');
+    const shopId = goldenGOccurrenceId(5, 1);
+    const base = applyProjectCommand(createCompleteFGProject(), catalog, {
+      kind: 'AddZagreusContract',
+      additional: createAdditionalExitAddress(goldenGBiome, shopId, 'zagreusContract'),
+      occurrenceId: contractId,
+    });
+    const decision = createExitDecisionAddress(goldenGBiome, {
+      kind: 'occurrence',
+      occurrenceId: contractId,
+    });
+    const selected = applyProjectCommand(base, catalog, {
+      kind: 'SetExitSelection',
+      selection: createExitSelectionAddress(goldenGBiome, {
+        kind: 'occurrence',
+        occurrenceId: shopId,
+      }),
+      value: { kind: 'additional', additionalExitKey: 'zagreusContract' },
+    });
+    const project = applyProjectCommand(selected, catalog, {
+      kind: 'RemoveExitDecision',
+      decision,
+    });
+    const assembly = simulateProjectAssembly(catalog, project);
+    expect(assembly.evaluation.issue?.owner).toEqual(decision);
+    expect(authoringReadinessAt(assembly, decision)).toBe('editable');
+    expect(authoringReadinessAt(assembly, createOccurrenceAddress(goldenGBiome, contractId))).toBe(
+      'editable',
+    );
+    expect(
+      authoringReadinessAt(
+        assembly,
+        createOccurrenceAddress(goldenGBiome, goldenGOccurrenceId(5, 1)),
+      ),
+    ).toBe('editable');
+    expect(
+      authoringReadinessAt(
+        assembly,
+        createOccurrenceAddress(goldenFBiome, goldenFOccurrenceId(1, 1)),
+      ),
+    ).toBe('editable');
+    const prebossId = createOccurrenceId('readiness-contract-preboss');
+    const continued = applyProjectCommand(project, catalog, {
+      kind: 'CreateTakeoverBatch',
+      decision,
+      gameName: 'G_PreBoss01',
+      targetOccurrenceIds: { exit1: prebossId },
+    });
+    expect(
+      continued.route.biomes
+        .find((biome) => biome.biomeKey === 'G')!
+        .topology!.occurrences.some((room) => room.occurrenceId === prebossId),
+    ).toBe(true);
+  });
+
+  it('locates absent outgoing decisions after ordinary rooms without locking the reached prefix', () => {
+    const roomId = goldenGOccurrenceId(5, 1);
+    const decision = createExitDecisionAddress(goldenGBiome, {
+      kind: 'occurrence',
+      occurrenceId: roomId,
+    });
+    const project = applyProjectCommand(createCompleteFGProject(), catalog, {
+      kind: 'RemoveExitDecision',
+      decision,
+    });
+    const assembly = simulateProjectAssembly(catalog, project);
+    expect(assembly.evaluation.issue?.owner).toEqual(decision);
+    expect(authoringReadinessAt(assembly, decision)).toBe('editable');
+    expect(authoringReadinessAt(assembly, createOccurrenceAddress(goldenGBiome, roomId))).toBe(
+      'editable',
+    );
+    expect(
+      authoringReadinessAt(
+        assembly,
+        createOccurrenceAddress(goldenGBiome, goldenGOccurrenceId(1, 1)),
+      ),
+    ).toBe('editable');
+  });
+
   it('keeps route-start loadout repairable while locking the first occurrence', () => {
     const selection = createRouteStartKeepsakeSelectionAddress('Underworld');
     const project = applyProjectCommand(createCompleteFGProject(), catalog, {
