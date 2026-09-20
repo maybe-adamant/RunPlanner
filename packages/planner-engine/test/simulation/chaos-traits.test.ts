@@ -707,6 +707,36 @@ describe('Chaos paired-trait history', () => {
     ).toEqual([{ legal: true, findings: [] }]);
   });
 
+  it('excludes Atrophic while White Antler is held but retains the authored pair for repair', () => {
+    const atrophic = chaos('ChaosHealthCurse', 'ChaosWeaponBlessing');
+    const blocked = evaluateReachedTraitOffer(
+      catalog,
+      rewardOwner,
+      'self',
+      atrophic,
+      traitFrontierState(createTraitHistoryState(), {
+        startingKeepsakeKey: 'LowHealthCritKeepsake',
+      }),
+      {},
+      0,
+    );
+    expect(blocked.composition.findings).toEqual([{ code: 'chaosPairUnavailable' }]);
+    expect(recordReachedTraitOffer(catalog, blocked, 1, 'reward').history).toBe(
+      blocked.state.traitHistory,
+    );
+    expect(
+      evaluateReachedTraitOffer(
+        catalog,
+        rewardOwner,
+        'self',
+        atrophic,
+        traitFrontierState(createTraitHistoryState()),
+        {},
+        0,
+      ).composition.findings,
+    ).toEqual([]);
+  });
+
   it('rejects Common Chaos pairs and exposes the same repair rarities when rank-IV Excellence guarantees Rare', () => {
     const arcana = createTestArcanaFearState();
     const rankIVExcellence = Object.freeze({

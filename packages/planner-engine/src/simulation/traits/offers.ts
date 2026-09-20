@@ -480,12 +480,7 @@ function evaluateReachedTraitOfferWithAssessments(
               case 'elementMinimum':
                 return before.elementCounts[requirement.element] < requirement.minimum;
               case 'notKeepsake':
-                // Deliberately unenforced: the declared White Antler exclusion
-                // has never applied to a reached Chaos screen, and enforcing it
-                // from the reached keepsake would newly invalidate authored
-                // pairs. See the planner disposition in
-                // docs/audits/traits/CHAOS_TRAIT_GAME_DATA_AUDIT.md.
-                return false;
+                return state.keepsakes.currentKey === requirement.keepsakeKey;
               case 'notAspect':
                 return state.equipment.aspectKey === requirement.aspectKey;
               case 'routeKey':
