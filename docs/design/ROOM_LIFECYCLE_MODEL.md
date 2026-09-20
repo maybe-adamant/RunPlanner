@@ -302,7 +302,9 @@ second room model.
 
 ### Lifecycle Run State checkpoints
 
-Room-local Run State is a derived diagnostic at exact lifecycle checkpoints.
+Room-local Run State projects the authoritative state captured at exact lifecycle
+checkpoints; the [simulation authority](SIMULATION_AND_VALIDATION.md#run-state-snapshots)
+owns its projection and cache contract.
 An ordinary occurrence publishes `roomEntered` and `beforeRoomExit`; a
 ShipCombat occurrence instead publishes one `beforeEncounterStart` checkpoint
 for each active phase plus `beforeRoomExit`. Entry consumes the existing entry
