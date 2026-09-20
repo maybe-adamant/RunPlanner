@@ -6,6 +6,8 @@ import {
   createEncounterPhaseAddress,
   createIncomingRewardAddress,
   createOccurrenceId,
+  createOccurrenceAddress,
+  createExitDecisionAddress,
   createRouteStartKeepsakeSelectionAddress,
 } from '../../src/authored-project';
 import {
@@ -27,6 +29,92 @@ import {
 import { authorLegalTraitOffers } from '@run-planner/test-fixtures/shared';
 
 describe('resolved execution encounters', () => {
+  it.each([
+    ['F_MiniBoss01', 'MiniBossTreant'],
+    ['F_MiniBoss02', 'MiniBossFogEmitter'],
+  ])(
+    'derives fixed %s Shadow identity off/on/off without authored selection or occurrence changes',
+    (gameName, key) => {
+      let project = createGoldenFGHIProject();
+      const picked = project.route.biomes
+        .find((biome) => biome.biomeKey === 'F')!
+        .topology!.occurrences.find((value) => value.gameName === 'F_MiniBoss01')!;
+      if (gameName !== picked.gameName) {
+        const alternate = project.route.biomes
+          .find((biome) => biome.biomeKey === 'F')!
+          .topology!.occurrences.find((value) => value.gameName === gameName)!;
+        project = applyProjectCommand(project, catalog, {
+          kind: 'ReplaceOccurrenceRoom',
+          occurrence: createOccurrenceAddress(
+            createBiomeAddress('Underworld', 'F'),
+            alternate.occurrenceId,
+          ),
+          gameName: picked.gameName,
+        });
+        project = applyProjectCommand(project, catalog, {
+          kind: 'ReplaceOccurrenceRoom',
+          occurrence: createOccurrenceAddress(
+            createBiomeAddress('Underworld', 'F'),
+            picked.occurrenceId,
+          ),
+          gameName,
+        });
+      }
+      const original = project.route.biomes.find((biome) => biome.biomeKey === 'F')!.topology!
+        .occurrences;
+      for (const rank of [0, 1, 0]) {
+        project = applyProjectCommand(project, catalog, {
+          kind: 'ReplaceFearVowRank',
+          route: { kind: 'route', routeKey: 'Underworld' },
+          vowKey: 'MinibossCountShrineUpgrade',
+          rank,
+        });
+        const occurrences = project.route.biomes.find((biome) => biome.biomeKey === 'F')!.topology!
+          .occurrences;
+        const plan = compileExecutionPlan({
+          product: assembleExecutionProduct({
+            assembly: simulateProjectAssembly(catalog, project),
+            catalog,
+          }),
+        });
+        {
+          const occurrence = occurrences.find(
+            (value) => value.occurrenceId === picked.occurrenceId,
+          )!;
+          expect(occurrence.occurrenceId).toBe(
+            original.find((value) => value.occurrenceId === picked.occurrenceId)!.occurrenceId,
+          );
+          expect(occurrence.encounters.encounterKeyByPhase).toEqual({});
+          expect(
+            plan.occurrences.find((value) => value.id === occurrence.occurrenceId)?.overview
+              .encounterPhases,
+          ).toEqual([
+            {
+              slotKey: 'Encounter',
+              encounterKey: rank > 0 ? `${key}_Shrine` : key,
+              kind: 'miniboss',
+            },
+          ]);
+        }
+        if (rank === 1) {
+          const incomplete = applyProjectCommand(project, catalog, {
+            kind: 'RemoveExitDecision',
+            decision: createExitDecisionAddress(createBiomeAddress('Underworld', 'F'), {
+              kind: 'occurrence',
+              occurrenceId: picked.occurrenceId,
+            }),
+          });
+          const prefix = simulateProjectAssembly(catalog, incomplete).evaluation.route.biomes[0];
+          expect(prefix?.authoring).toBe('incomplete');
+          if (prefix?.authoring !== 'incomplete' || !('history' in prefix))
+            throw new Error('Missing progressive history');
+          expect(prefix.history?.events).toContainEqual(
+            expect.objectContaining({ kind: 'encounterRecorded', encounterKey: `${key}_Shrine` }),
+          );
+        }
+      }
+    },
+  );
   it('publishes skipped P Icarus as an encounter without an NPC acquisition transaction', () => {
     const fixture = reachedPOutdoorIcarusFixture();
     let project = applyProjectCommand(fixture.project, catalog, {

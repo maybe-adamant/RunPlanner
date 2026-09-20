@@ -274,6 +274,24 @@ enhanced encounter to have been seen or completed previously. The planner's
 fully progressed baseline treats that persistent-history requirement as met;
 it does not add a save-profile input.
 
+### Vow of Shadow miniboss encounters
+
+`MinibossCountShrineUpgradeActive` requires both a configured Shadow rank and
+no run-local suppression (`RequirementsData.lua`, named requirement of that
+name). Unlike Rivals, Shadow can be removed by Black Night Banishment.
+
+| Native mechanism                                    | Encounters                                                                                                                          | Source                                                                                     |
+| --------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
+| Separate encounter identity                         | `MiniBossTreant` / `MiniBossTreant_Shrine`, `MiniBossFogEmitter` / `MiniBossFogEmitter_Shrine`                                      | `EncounterData.lua`; `RoomDataF.lua` legal encounter lists                                 |
+| Conditional manual spawns within the same encounter | Assassin, Water Unit, Jellyfish, Vampire, Lamia, Satyr Crossbow, Boar, Captain, Rat Catcher, Gold Elemental, Dragon, Brute, Stalker | `EncounterData_MiniBoss.lua`; `RoomLogic.lua:CalcTotalSpawns` and `RequiredMiniBossShrine` |
+| Conditional activation of preplaced units           | Crawler, Charybdis                                                                                                                  | `PresentationBiomeG.lua`, `PresentationBiomeO.lua` entrance scripts                        |
+| Conditional encounter event                         | Talos                                                                                                                               | `EncounterData_MiniBoss.lua:MiniBossTalos`                                                 |
+
+The planner must publish the effective encounter identity for the two Erebus
+variants. The executor consumes that identity; native spawn conditions and
+entrance events remain responsible for the other enhancements. This is not an
+authorable composition override or an instruction to recreate Shadow enemies.
+
 ## Run-Local Fear Suppression
 
 Black Night Banishment (`RemoveShrineTrait`) is offered only when at least one

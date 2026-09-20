@@ -123,8 +123,9 @@ therefore expose at most one free preboss reward.
 
 - 22 ordinary combat declarations use the `StandardCombat` room template and
   a shared single-slot Encounter Envelope with declaration-bound sets;
-- three miniboss declarations use `Miniboss` with direct fixed encounter
-  definitions;
+- three miniboss declarations use `Miniboss` with fixed encounter bindings;
+  Treant and Fog Emitter resolve their ordinary or `_Shrine` identity from
+  effective Vow of Shadow state, including prior run-local suppression;
 - one Story room produces fixed `Story`;
 - one Reprieve uses `Fountain`;
 - one Midshop uses `Shop` and `WorldShop`;

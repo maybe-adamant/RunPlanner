@@ -170,6 +170,7 @@ function requirementContext(
  * supplies this narrow attested fact when a delayed Shrine Spell is live.
  */
 export interface EncounterPreparationRunState {
+  readonly effectiveShadowRank?: number;
   readonly pendingSpellDrop?: boolean;
   readonly allSpellInvested?: boolean;
   readonly rewardGeneration?: HistoryStateView | undefined;
@@ -345,10 +346,20 @@ export function prepareRoomEncounterPhases(
     );
     const resolution = encounterResolutionContext(room, declaration);
     if (binding.kind === 'fixed') {
+      const preparedPhase =
+        binding.shadowEncounterDefinitionKey === undefined
+          ? phase
+          : {
+              ...phase,
+              authoredChoiceKey:
+                (runState.effectiveShadowRank ?? 0) > 0
+                  ? binding.shadowEncounterDefinitionKey
+                  : binding.encounterDefinitionKey,
+            };
       let resolvedPhase = resolveMaterializedEncounterPhase(
         catalog,
         declaration,
-        phase,
+        preparedPhase,
         resolution,
       );
       if (resolvedPhase === undefined) {

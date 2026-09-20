@@ -766,6 +766,10 @@ Rival alternative on the same physical map. It resolves from configured Rivals
 and route position, using the same rule as completion-map selection, without
 persisting an encounter choice. Materialization carries the resolved fixed
 identity; authored-first controls use that same resolver even before evaluation.
+Fixed Shadow miniboss variants instead resolve during encounter preparation
+from effective Fear, since prior Black Night Banishment can suppress Shadow.
+Their materialized base identity retains the same lifecycle and authoring
+domain; the recorded prepared identity is published to the executor.
 The resolver maps identity independently of eligibility; an unavailable
 selected NPC receives a finding rather than being replaced by Combat. The room lifecycle authority owns the
 resolved product and its exact chronological assessment.

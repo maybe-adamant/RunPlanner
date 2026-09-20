@@ -52,6 +52,12 @@ function normalizeEncounterSlotBindings(
         );
       }
       const rivalsEncounterDefinitionKey = raw.rivalsEncounterDefinitionKey;
+      const shadowEncounterDefinitionKey = raw.shadowEncounterDefinitionKey;
+      if (
+        shadowEncounterDefinitionKey !== undefined &&
+        definitions.byKey[shadowEncounterDefinitionKey] === undefined
+      )
+        fail(`${bindingPath}.shadowEncounterDefinitionKey`, 'unknown encounter definition');
       if (
         rivalsEncounterDefinitionKey !== undefined &&
         definitions.byKey[rivalsEncounterDefinitionKey] === undefined
@@ -62,6 +68,7 @@ function normalizeEncounterSlotBindings(
         kind: 'fixed',
         encounterDefinitionKey,
         ...(rivalsEncounterDefinitionKey === undefined ? {} : { rivalsEncounterDefinitionKey }),
+        ...(shadowEncounterDefinitionKey === undefined ? {} : { shadowEncounterDefinitionKey }),
       });
     }
     fail(`${bindingPath}.kind`, `unknown encounter slot binding ${String(receivedKind)}`);

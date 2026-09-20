@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { catalog } from '@run-planner/hades2-catalog';
 
 const normalizedBiomeSnapshotHashes = [
-  ['F', '47d4adb54c704391'],
+  ['F', '269dc92e4ca97d93'],
   ['G', '75d801ba73e7778d'],
   ['H', '3765c8d523f56953'],
   ['I', '6f7ab6d296852659'],
@@ -29,6 +29,12 @@ function normalizedBiomeSnapshot(biomeKey: string) {
           !encounterDefinitionKeys.includes(binding.rivalsEncounterDefinitionKey)
         ) {
           encounterDefinitionKeys.push(binding.rivalsEncounterDefinitionKey);
+        }
+        if (
+          binding.shadowEncounterDefinitionKey !== undefined &&
+          !encounterDefinitionKeys.includes(binding.shadowEncounterDefinitionKey)
+        ) {
+          encounterDefinitionKeys.push(binding.shadowEncounterDefinitionKey);
         }
         continue;
       }

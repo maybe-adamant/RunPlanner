@@ -181,4 +181,5 @@ export type RawEncounterSlotBinding =
       readonly kind: 'fixed';
       readonly encounterDefinitionKey: string;
       readonly rivalsEncounterDefinitionKey?: string;
+      readonly shadowEncounterDefinitionKey?: string;
     };

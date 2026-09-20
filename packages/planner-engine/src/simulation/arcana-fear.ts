@@ -8,6 +8,22 @@ import {
 } from '../authored-project/addresses';
 
 export type ArcanaActivationOrigin = 'manual' | 'automatic' | 'temporary';
+
+/** F encounter preparation consumes the agreed effective Vow, including prior suppression. */
+export function attestEffectiveShadowRank(
+  loadout: RouteLoadout,
+  branches?: readonly { readonly arcanaFear: ArcanaFearState }[],
+): number {
+  if (branches === undefined) return loadout.fearRanks.MinibossCountShrineUpgrade ?? 0;
+  if (branches.length === 0) throw new Error('Shadow preparation frontier is empty');
+  const ranks = branches.map(
+    (branch) => branch.arcanaFear.fear.effectiveRanks.MinibossCountShrineUpgrade ?? 0,
+  );
+  const rank = ranks[0]!;
+  if (ranks.some((value) => value !== rank))
+    throw new Error('Shadow preparation frontier is divergent');
+  return rank;
+}
 export interface ActiveArcanaState {
   readonly key: string;
   readonly origin: ArcanaActivationOrigin;

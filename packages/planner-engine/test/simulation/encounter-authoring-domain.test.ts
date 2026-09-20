@@ -19,6 +19,12 @@ import {
 } from '@run-planner/engine/simulation';
 import { prepareRoomEncounterPhases } from '../../src/simulation/encounters/preparation';
 import {
+  attestEffectiveShadowRank,
+  createArcanaFearState,
+  suppressFearVows,
+} from '../../src/simulation/arcana-fear';
+import { createDefaultRouteLoadout } from '../../src/authored-project/loadout';
+import {
   encounterResolutionContext,
   materializeEncounterPhases,
   resolveEncounterAuthoringProfile,
@@ -36,6 +42,59 @@ import { loadSurfaceNOPQProject, oBiome, oOccurrenceIds } from '@run-planner/tes
 import { authorLegalTraitOffers } from '@run-planner/test-fixtures/shared';
 
 describe('encounter choice identity context', () => {
+  it('prepares Erebus fixed identities from effective Shadow after prior Black Night suppression', () => {
+    const project = createGoldenFGHIProject();
+    const biome = simulateProjectAssembly(catalog, project).evaluation.route.biomes[0];
+    if (biome?.authoring !== 'complete' || biome.validity !== 'valid')
+      throw new Error('F fixture invalid');
+    const loadout = {
+      ...createDefaultRouteLoadout(catalog),
+      fearRanks: { ...createDefaultRouteLoadout(catalog).fearRanks, MinibossCountShrineUpgrade: 1 },
+    };
+    const active = createArcanaFearState(catalog, loadout);
+    const suppressed = suppressFearVows(catalog, active, ['MinibossCountShrineUpgrade'], {
+      owner: createBiomeAddress('Underworld', 'F'),
+      sequence: 1,
+    });
+    if (!suppressed.legal) throw new Error('Shadow suppression is unavailable');
+    expect(suppressed.state.fear.configuredRanks.MinibossCountShrineUpgrade).toBe(1);
+    expect(() =>
+      attestEffectiveShadowRank(loadout, [
+        { arcanaFear: active },
+        { arcanaFear: suppressed.state },
+      ]),
+    ).toThrow(/divergent/);
+    expect(() => attestEffectiveShadowRank(loadout, [])).toThrow(/empty/);
+    for (const [gameName, encounterKey] of [['F_MiniBoss01', 'MiniBossTreant']]) {
+      const room = biome.snapshot.decisions
+        .flatMap((decision) =>
+          decision.kind === 'batch' ? decision.targets.map((target) => target.room) : [],
+        )
+        .find((value) => value.gameName === gameName);
+      const preparation = biome.history.rooms.find(
+        (value) =>
+          value.origin.kind === 'occurrence' && value.origin.occurrenceId === room?.occurrenceId,
+      )?.preparation;
+      if (room === undefined || preparation === undefined)
+        throw new Error('Missing miniboss preparation');
+      for (const state of [active, suppressed.state]) {
+        const rank = attestEffectiveShadowRank(loadout, [
+          { arcanaFear: state },
+          { arcanaFear: state },
+        ]);
+        const prepared = prepareRoomEncounterPhases(
+          catalog,
+          room,
+          ordinaryPositionFor(catalog, room.origin),
+          preparation,
+          { effectiveShadowRank: rank },
+        );
+        expect(prepared.validPrefix[0]?.encounterKey).toBe(
+          rank > 0 ? `${encounterKey}_Shrine` : encounterKey,
+        );
+      }
+    }
+  });
   it('distinguishes known reward, explicit no reward, and unavailable authorship', () => {
     const fCombat = catalog.encounterSets.byKey.FEncountersDefault!.authoringProfiles.find(
       (profile) => profile.key === 'GeneratedF',

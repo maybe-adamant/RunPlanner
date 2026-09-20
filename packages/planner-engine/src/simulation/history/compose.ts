@@ -571,6 +571,7 @@ function composeBiomeHistoryResult(
   figLeafState?: FigLeafLifecycleState,
   pendingSpellDrop = false,
   allSpellInvested = false,
+  effectiveShadowRank = 0,
 ): EncounterValidatedBiomeHistory {
   let completionPredecessor: CanonicalAuthoredRoom | undefined;
   const options = {
@@ -583,6 +584,7 @@ function composeBiomeHistoryResult(
     ...(figLeafState === undefined ? {} : { figLeafState }),
     pendingSpellDrop,
     allSpellInvested,
+    effectiveShadowRank,
     fixedRoomLinks: snapshot.fixedRoomLinks,
     transitionEffects:
       catalog.biomeLayouts.byKey[snapshot.biomeKey]?.completion.transitionEffects ?? [],
@@ -673,6 +675,7 @@ export function composeBiomeHistoryWithEncounterValidation(
   figLeafState?: FigLeafLifecycleState,
   pendingSpellDrop = false,
   allSpellInvested = false,
+  effectiveShadowRank = 0,
 ): EncounterValidatedBiomeHistory {
   return composeBiomeHistoryResult(
     catalog,
@@ -683,6 +686,7 @@ export function composeBiomeHistoryWithEncounterValidation(
     figLeafState,
     pendingSpellDrop,
     allSpellInvested,
+    effectiveShadowRank,
   );
 }
 
@@ -695,6 +699,7 @@ function composeBiomeHistoryPrefixResult(
   figLeafState?: FigLeafLifecycleState,
   pendingSpellDrop = false,
   allSpellInvested = false,
+  effectiveShadowRank = 0,
 ): EncounterValidatedPrefixHistory | null {
   const entry = snapshot.entryRoom;
   if (entry === undefined) return null;
@@ -707,6 +712,7 @@ function composeBiomeHistoryPrefixResult(
     ...(figLeafState === undefined ? {} : { figLeafState }),
     pendingSpellDrop,
     allSpellInvested,
+    effectiveShadowRank,
     compose(writer: HistorySegmentWriter): void {
       appendStandaloneRoomCreated(writer, entry, 'biomeEntry');
       let current: CanonicalLifecycleRoom = entry;
@@ -848,6 +854,7 @@ export function composeBiomeHistoryPrefixWithEncounterValidation(
   figLeafState?: FigLeafLifecycleState,
   pendingSpellDrop = false,
   allSpellInvested = false,
+  effectiveShadowRank = 0,
 ): EncounterValidatedPrefixHistory | null {
   return composeBiomeHistoryPrefixResult(
     catalog,
@@ -858,5 +865,6 @@ export function composeBiomeHistoryPrefixWithEncounterValidation(
     figLeafState,
     pendingSpellDrop,
     allSpellInvested,
+    effectiveShadowRank,
   );
 }

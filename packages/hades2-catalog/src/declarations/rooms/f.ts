@@ -896,7 +896,12 @@ const fRoomDeclarations: readonly RawRoomDeclaration[] = [
     enteredRewardStoreHistory: { kind: 'resolvedOffer' },
     encounterEnvelopeKey: 'SingleEncounter',
     encounterSlotBindings: [
-      { slotKey: 'Encounter', kind: 'fixed', encounterDefinitionKey: 'MiniBossTreant' },
+      {
+        slotKey: 'Encounter',
+        kind: 'fixed',
+        encounterDefinitionKey: 'MiniBossTreant',
+        shadowEncounterDefinitionKey: 'MiniBossTreant_Shrine',
+      },
     ],
     counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1, maxCreationsThisRun: 1 },
@@ -938,7 +943,12 @@ const fRoomDeclarations: readonly RawRoomDeclaration[] = [
     enteredRewardStoreHistory: { kind: 'resolvedOffer' },
     encounterEnvelopeKey: 'SingleEncounter',
     encounterSlotBindings: [
-      { slotKey: 'Encounter', kind: 'fixed', encounterDefinitionKey: 'MiniBossFogEmitter' },
+      {
+        slotKey: 'Encounter',
+        kind: 'fixed',
+        encounterDefinitionKey: 'MiniBossFogEmitter',
+        shadowEncounterDefinitionKey: 'MiniBossFogEmitter_Shrine',
+      },
     ],
     counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1, maxCreationsThisRun: 1 },

@@ -309,6 +309,22 @@ export const fEncounterDefinitions = [
     canEncounterSkip: true,
   },
   {
+    key: 'MiniBossTreant_Shrine',
+    label: 'Treant',
+    kind: 'miniboss',
+    countsEncounterDepth: true,
+    blocksGorgon: true,
+    canEncounterSkip: true,
+  },
+  {
+    key: 'MiniBossFogEmitter_Shrine',
+    label: 'Fog emitter',
+    kind: 'miniboss',
+    countsEncounterDepth: true,
+    blocksGorgon: true,
+    canEncounterSkip: true,
+  },
+  {
     key: 'BossHecate01',
     label: 'Hecate',
     kind: 'boss',

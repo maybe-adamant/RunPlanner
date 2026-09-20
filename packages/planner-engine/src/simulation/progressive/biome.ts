@@ -55,6 +55,7 @@ import type { RoomLifecycleCandidateArtifacts } from '../rewards/lifecycle-artif
 import { attestFigLeafBranchState, attestGorgonBranchState } from '../keepsakes/encounter-effects';
 import { attestPendingHermesSpellDrop } from '../commerce/hermes-shrine';
 import { attestTalentDropsClosed } from '../hex-progress';
+import { attestEffectiveShadowRank } from '../arcana-fear';
 import {
   compareLocatedFindings,
   encounterBlockChronology,
@@ -251,6 +252,7 @@ function products(
     lifecycleFigLeafState,
     lifecyclePendingSpellDrop,
     lifecycleAllSpellInvested,
+    attestEffectiveShadowRank(context.loadout, context.seed?.rewardBranches),
   );
   if (composed === null) {
     throw new Error(`${prefix.biomeKey} materialized prefix has no composable history`);
