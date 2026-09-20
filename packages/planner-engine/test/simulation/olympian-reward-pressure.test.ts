@@ -374,6 +374,7 @@ describe('Olympian reward pressure', () => {
           },
           producerLifecycleKey: 'NarcissusPickup',
           instanceProvenance: 'free',
+          presentsMaterializedScreen: false,
           traitOffersByAcquisitionRole: {
             hiddenSource: {
               kind: 'traits',
@@ -428,6 +429,7 @@ describe('Olympian reward pressure', () => {
           },
           producerLifecycleKey: 'RoomReward',
           instanceProvenance: 'free',
+          presentsMaterializedScreen: false,
           traitOffersByAcquisitionRole: {
             source: {
               kind: 'traits',

@@ -196,6 +196,7 @@ export function materializeFieldsOptionalOfferPoint(
               candidateState(unresolvedBySlot.get(selectedReward.slotKey)!, offer)),
             offer,
             instanceProvenance: 'free',
+            presentsMaterializedScreen: true,
           }),
           historySequence: acquisitionEvent.sequence,
           authoredSeaStarDuplicateSiteKeys: inputs.authoredSeaStarDuplicateSiteKeys,

@@ -80,6 +80,7 @@ function settle(
         offer,
         producerLifecycleKey: 'RoomReward',
         instanceProvenance,
+        presentsMaterializedScreen: false,
         dispositionByAcquisitionRole: {
           [acquisitionRole]: value === 'gold' ? { kind: 'timePiece' } : { kind: 'normal' },
         },
@@ -208,6 +209,7 @@ describe('Time Piece conversions', () => {
       },
       producerLifecycleKey: 'WorldShop',
       instanceProvenance: 'paid' as const,
+      presentsMaterializedScreen: false,
     };
 
     expect(assessTimePieceConversion(catalog, branch, source, 'box', 'purchase')).toMatchObject({

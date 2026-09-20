@@ -91,20 +91,19 @@ export function applyProducerRoleHistory(
     ].filter((rewardType) => rewardType !== 'Devotion' && rewardType !== 'SpellDrop'),
   );
   // Only a materialized source screen publishes replacement options; a request
-  // without its own source description retains the unresolved candidate alone.
-  const artificerReplacementOptions =
-    incoming.traitContext === undefined
-      ? undefined
-      : Object.freeze(
-          artificerReplacementRewardTypes.flatMap((rewardType) =>
-            locallyValidRewardOffers(catalog.rewards, rewardType).map((offer) =>
-              createUnresolvedAcquisitionRewardState(catalog, offer, {
-                kind: 'producerLifecycle',
-                key: 'RoomReward',
-              }),
-            ),
+  // without one retains the unresolved candidate alone.
+  const artificerReplacementOptions = !incoming.presentsMaterializedScreen
+    ? undefined
+    : Object.freeze(
+        artificerReplacementRewardTypes.flatMap((rewardType) =>
+          locallyValidRewardOffers(catalog.rewards, rewardType).map((offer) =>
+            createUnresolvedAcquisitionRewardState(catalog, offer, {
+              kind: 'producerLifecycle',
+              key: 'RoomReward',
+            }),
           ),
-        );
+        ),
+      );
   const exactArtificerSite = incoming.artificerReplacementSiteByAcquisitionRole?.[resolution.role];
   const artificerReplacementAddress = createAcquisitionEntryAddress(
     exactArtificerSite ?? settlement.site,

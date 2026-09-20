@@ -200,6 +200,7 @@ describe('O canonical materialization and lifecycle', () => {
           },
           producerLifecycleKey: wheel.producerLifecycleKey,
           instanceProvenance: 'free',
+          presentsMaterializedScreen: true,
         },
         historySequence: 1,
       },

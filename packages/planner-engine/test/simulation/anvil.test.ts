@@ -137,6 +137,7 @@ describe('Anvil of Fates acquisition settlement', () => {
         offer,
         producerLifecycleKey: 'Q_WorldShop',
         instanceProvenance: 'paid' as const,
+        presentsMaterializedScreen: true,
         traitContext: {},
         dispositionByAcquisitionRole: Object.freeze({ self: Object.freeze({ kind: 'normal' }) }),
         anvilResult: Object.freeze({
@@ -184,6 +185,7 @@ describe('Anvil of Fates acquisition settlement', () => {
         offer,
         producerLifecycleKey: 'Q_WorldShop',
         instanceProvenance: 'paid' as const,
+        presentsMaterializedScreen: true,
         traitContext: {},
         dispositionByAcquisitionRole: Object.freeze({ self: Object.freeze({ kind: 'normal' }) }),
         anvilResult: null,

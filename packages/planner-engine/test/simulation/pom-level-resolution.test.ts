@@ -194,6 +194,7 @@ describe('Pom level resolutions', () => {
         offer: { rewardType: 'GiftDrop' },
         producerLifecycleKey: 'RoomReward',
         instanceProvenance: 'free',
+        presentsMaterializedScreen: false,
         levelResolutionsByAcquisitionRole: { self: { kind: 'random', targetTraitKey: null } },
       },
       1,
@@ -219,6 +220,7 @@ describe('Pom level resolutions', () => {
         offer: { rewardType: 'GiftDrop' },
         producerLifecycleKey: 'RoomReward',
         instanceProvenance: 'free',
+        presentsMaterializedScreen: false,
         levelResolutionsByAcquisitionRole: {
           self: { kind: 'random', targetTraitKey: 'ApolloWeaponBoon' },
         },
@@ -732,6 +734,7 @@ describe('Pom level resolutions', () => {
       offer: { rewardType: 'StackUpgrade' as const },
       producerLifecycleKey: 'RoomReward',
       instanceProvenance: 'free' as const,
+      presentsMaterializedScreen: false,
       levelResolutionsByAcquisitionRole: {
         self: { kind: 'choice' as const, offeredTraitKeys: [], selectedTraitKey: null },
       },

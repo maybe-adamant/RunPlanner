@@ -270,7 +270,7 @@ describe('Selene Spell equipment chronology', () => {
         'Underworld',
         loadout,
       ),
-      { ...source, traitContext: {} },
+      { ...source, presentsMaterializedScreen: true, traitContext: {} },
       1,
       (state) => factsWithHistory(baseFacts(), state.rewardHistory, new Set()),
       new Map(),

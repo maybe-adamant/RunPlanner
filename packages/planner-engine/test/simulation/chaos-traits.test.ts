@@ -1438,6 +1438,7 @@ describe('Chaos paired-trait history', () => {
       offer: Object.freeze({ rewardType: 'GiftDrop' }),
       producerLifecycleKey: 'RoomReward',
       instanceProvenance: 'free' as const,
+      presentsMaterializedScreen: false,
     });
     const resolution = { role: 'self', lifecyclePoint: 'roomRewardPickup' as const };
     expect(assessArtificerConversion(catalog, branch, source, resolution)).toMatchObject({

@@ -222,6 +222,8 @@ export function settleShopAcquisitionSite(
         producerKind: 'shop',
         instanceProvenance,
         blocksSeaStarDuplication: true as const,
+        // A Shop offer materialized into the room is its purchase screen.
+        presentsMaterializedScreen: true,
         ...(offer.traitOffersByAcquisitionRole === undefined
           ? {}
           : { traitOffersByAcquisitionRole: offer.traitOffersByAcquisitionRole }),
@@ -261,6 +263,7 @@ export function settleShopAcquisitionSite(
             producerKind: 'shop',
             instanceProvenance,
             blocksSeaStarDuplication: true,
+            presentsMaterializedScreen: true,
             ...(offer.traitContext === undefined ? {} : { traitContext: offer.traitContext }),
             branchCohortSize,
           },
@@ -470,6 +473,7 @@ export function settleShopAcquisitionSite(
               producerKind: 'shop',
               instanceProvenance: 'free',
               blocksSeaStarDuplication: true,
+              presentsMaterializedScreen: true,
               roleBindings: materialization.roleBindings,
               ...(materialization.sourceOffer.traitContext === undefined
                 ? {}
@@ -562,6 +566,8 @@ export function settleShopAcquisitionSite(
                 producerLifecycleKey: profile.key,
                 producerKind: 'shop',
                 instanceProvenance: 'free',
+                // The duplicate stands on the same materialized purchase screen.
+                presentsMaterializedScreen: true,
                 traitOffersByAcquisitionRole: child.traitOffersByAcquisitionRole,
                 ...(child.levelResolutionsByAcquisitionRole === undefined
                   ? {}

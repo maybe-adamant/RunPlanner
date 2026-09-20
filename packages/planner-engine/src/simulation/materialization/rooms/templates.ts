@@ -113,8 +113,16 @@ export function resolvedStoreKey(
   return room.forcedRewardStoreKey ?? room.individualRewardStoreKey ?? batchStoreKey;
 }
 
-/** Source description only: the reached simulation state supplies player and
- * run facts when Gate-B assessment joins this descriptor. */
+/**
+ * Source description only: the reached simulation state supplies player and
+ * run facts when assessment joins this descriptor.
+ *
+ * The loadout check is a deliberate reachability precondition, not a read: a
+ * materialized reward may only exist where the route declares a weapon and
+ * aspect, and an incomplete project must fail here rather than publish a
+ * reward screen built on an unauthored loadout. It stays after the loadout
+ * stopped feeding the returned description.
+ */
 function traitContextForOffer(
   context: AuthoredRoomMaterializationContext,
   offer: ResolvedRewardOffer,
