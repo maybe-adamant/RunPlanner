@@ -19,6 +19,11 @@ import { App } from './ui/shell/App';
 import { ApplicationFaultBoundary } from './ui/shell/ApplicationFaultBoundary';
 import { createBrowserAppScalePreference } from './persistence/appScalePreference';
 import type { BuildIdentity } from './composition/buildIdentity';
+import {
+  createBrowserReleaseSkipPreference,
+  createReleaseUpdateController,
+  createTauriReleaseUpdateHost,
+} from './persistence/releaseUpdates';
 
 declare const __RUN_PLANNER_BUILD_IDENTITY__: BuildIdentity;
 
@@ -29,6 +34,14 @@ const appScalePreference = createBrowserAppScalePreference(() => globalThis.loca
 const autosaveRecovery = createBrowserAutosaveRecoveryAdapter({
   storage: () => globalThis.localStorage,
 });
+const releaseUpdates =
+  tauriHost && __RUN_PLANNER_BUILD_IDENTITY__.version !== 'Development'
+    ? createReleaseUpdateController({
+        buildIdentity: __RUN_PLANNER_BUILD_IDENTITY__,
+        host: createTauriReleaseUpdateHost(),
+        skipPreference: createBrowserReleaseSkipPreference(() => globalThis.localStorage),
+      })
+    : undefined;
 const profileFile = tauriHost
   ? createTauriProfileFileAdapter({
       activate: (path) => tauriInvoke('profile_file_activate', { path }),
@@ -108,8 +121,11 @@ createRoot(rootElement, devBrowserErrorReporter?.rootOptions).render(
           editorNavigation={application.editorNavigation}
           projectOperations={application.projectOperations}
           selectStructuredWorkspace={application.selectStructuredWorkspace}
+          {...(releaseUpdates === undefined ? {} : { releaseUpdates })}
         />
       </Provider>
     </ApplicationFaultBoundary>
   </StrictMode>,
 );
+
+releaseUpdates?.checkAutomatically();

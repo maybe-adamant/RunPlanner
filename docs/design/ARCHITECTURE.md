@@ -206,6 +206,20 @@ stay behind application adapters; desktop integration does not move simulator
 rules into the host. Native file-drop interception remains disabled to retain
 ordinary HTML interaction behavior.
 
+Build identity is application metadata, separate from schema and catalog
+identity. Official CI builds supply one validated release version to Tauri and
+the frontend, together with the source commit. Local builds identify themselves
+as Development. About is available without an open project.
+
+Release discovery is an optional host capability, not a startup dependency.
+Official desktop builds check once asynchronously; application policy compares
+stable versions and requires the matching portable archive and checksum before
+offering a download. Native transport restricts requests and opened URLs to the
+official release source. React presents notifications and manual checks;
+neither checks nor downloads replace the executable or modify the project.
+The publishing workflow uploads assets to a draft before publication and does
+not replace assets on a published release.
+
 TypeScript checks static contracts; runtime codecs protect external contacts.
 Vitest transformation alone is not a type proof. Correctness and performance
 are separate verification products: shared watchdogs detect likely hangs,

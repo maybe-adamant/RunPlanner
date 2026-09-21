@@ -10,5 +10,10 @@ Project profiles saved as .runplanner.json files are portable and can be moved
 between machines. Autosave recovery is machine-local WebView data and does not
 travel with this folder.
 
+About shows the app version and build. Official releases check for updates at
+startup, or you can use Check for updates in About. Download opens the new
+portable archive in your browser; updates are not installed automatically.
+Save your work and close Run Planner before replacing the executable.
+
 This preview is not code signed, so Windows may show an unrecognized-app
 warning for a freshly downloaded release.

@@ -9,12 +9,25 @@ React rendering are separate concerns.
 
 ## Authored Document Boundary
 
-The current schema is the sole persisted authored-project contract. The
-production codec rejects every other schema and every mismatched catalog
-version rather than manufacturing current topology or leaf state from stale
-data. Supported offline migration commands are documented beside their scripts
-in [`schema/README.md`](../../schema/README.md); migration history is not part
-of this design authority.
+The current schema is the sole engine-authored-project contract. Its codec
+rejects other schemas and mismatched catalog versions rather than manufacturing
+current topology or leaf state from stale data. The application's shared loader
+handles explicit Open, remembered-file startup and autosave recovery before
+invoking the same strict engine parser, including its existing reconciliation.
+
+Automatic migration support starts at schema 86. The loader inspects the source
+schema/catalog identity, applies only registered ordered transitions, and
+strictly parses the final document. Each transition declares its source and
+target identities; an old catalog identity is not blindly replaced with the
+current one. Unsupported older or future documents remain untouched. The
+transition list is empty while the current schema equals the support floor.
+
+Registering the first real migration also requires the application to preserve
+original disk and recovery bytes before overwrite, expose an upgraded-in-memory
+notice, and retain pending-save provenance across restart and retry. A pure
+transform alone is not a complete user-facing migration. These responsibilities
+do not belong in the current-schema decoder or simulation. Existing offline
+tools remain documented in [`schema/README.md`](../../schema/README.md).
 
 ### Schema change approval
 
