@@ -19,6 +19,7 @@ import {
 } from '@run-planner/test-fixtures/underworld';
 import {
   authorLegalTraitOffers,
+  replaceTestRoomActionOrder,
   replaceTestShopOfferActions,
 } from '@run-planner/test-fixtures/shared';
 import { loadUnderworldFGHICheckpoint } from '@run-planner/test-fixtures/checkpoints/underworld';
@@ -39,6 +40,7 @@ import {
   createAcquisitionSiteAddress,
   createAcquisitionRoleAddress,
   createEncounterPhaseAddress,
+  createGorgonPhaseAddress,
   createExitSelectionAddress,
   createHubDecisionAddress,
   createRouteAddress,
@@ -379,6 +381,99 @@ function postbossKeepsakeOrderProject(
 }
 
 describe('engine-owned F/G execution semantic product', () => {
+  it('exports the additive Gorgon offer and rejects missing settled coverage', () => {
+    const occurrenceId = goldenGOccurrenceId(1, 1);
+    const phase = createEncounterPhaseAddress(
+      goldenGBiome,
+      { kind: 'occurrence', occurrenceId },
+      'Encounter',
+    );
+    let project = applyProjectCommand(createCompleteFGProject(), catalog, {
+      kind: 'ReplaceStartingKeepsake',
+      selection: createRouteStartKeepsakeSelectionAddress('Underworld'),
+      keepsakeKey: 'AthenaEncounterKeepsake',
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceGorgonDeathDefianceCondition',
+      phase,
+      value: true,
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceGorgonAthenaOffer',
+      trait: createTraitOfferAddress(createGorgonPhaseAddress(phase), 'gorgonAthena'),
+      value: {
+        traitKeys: [
+          'InvulnerabilityDashBoon',
+          'RetaliateInvulnerabilityBoon',
+          'FocusLastStandBoon',
+        ],
+        selectedOptionKey: 'option1',
+      },
+    });
+    project = replaceTestRoomActionOrder(project, catalog, goldenGBiome, occurrenceId, [
+      {
+        kind: 'interactIncomingReward',
+        producerPoint: 'roomRewardPickup',
+        acquisitionRole: 'source',
+      },
+      { kind: 'interactGorgon', phaseKey: 'Encounter' },
+    ]);
+    const assembly = simulateProjectAssembly(catalog, project);
+    const product = assembleExecutionProduct({ assembly, catalog });
+    const owner = semanticAddressKey(createGorgonPhaseAddress(phase));
+    const transaction = product.occurrences
+      .flatMap((room) => room.timeline.transactions)
+      .find((candidate) => candidate.owner === owner);
+    expect(transaction).toMatchObject({
+      kind: 'encounterInteraction',
+      resolution: {
+        kind: 'traitOffer',
+        offer: {
+          giver: 'Athena',
+          selected: 'option1',
+          options: [
+            { key: 'InvulnerabilityDashBoon', rarity: 'Epic' },
+            { key: 'RetaliateInvulnerabilityBoon', rarity: 'Epic' },
+            { key: 'FocusLastStandBoon', rarity: 'Epic' },
+          ],
+        },
+      },
+    });
+    expect(() => encodeExecutionPlan(compileExecutionPlan({ product }))).not.toThrow();
+    const biome = assembly.evaluation.route.biomes.find(
+      (candidate): candidate is CompleteValidBiomeProjectEvaluation =>
+        candidate.biomeKey === 'G' &&
+        candidate.authoring === 'complete' &&
+        candidate.validity === 'valid',
+    );
+    if (biome === undefined) throw new Error('missing complete G');
+    const room = orderedExecutionRooms([biome]).find(
+      (candidate) => candidate.occurrenceId === occurrenceId,
+    );
+    if (room === undefined) throw new Error('missing Gorgon room');
+    const address = semanticAddressKey(
+      createTraitOfferAddress(createGorgonPhaseAddress(phase), 'gorgonAthena'),
+    );
+    expect(() =>
+      executionTimelineTransactions(
+        room,
+        {
+          ...biome,
+          rewards: {
+            ...biome.rewards,
+            selectedTraitOffers: biome.rewards.selectedTraitOffers.filter(
+              (offer) => semanticAddressKey(offer.address) !== address,
+            ),
+          },
+        },
+        mergePlannerTimelineFacts(
+          room.roomActionRoster.timelineFacts ?? EMPTY_PLANNER_TIMELINE_FACTS,
+          biome.rewards.timelineFacts,
+        ),
+      ),
+    ).toThrow('missing Gorgon trait offer');
+  });
+
   it('publishes the complete N Hub board and generated unvisited local slots without restores', () => {
     const source = loadSurfaceNOProject();
     const project = Object.freeze({

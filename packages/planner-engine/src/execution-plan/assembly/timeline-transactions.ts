@@ -2,6 +2,7 @@ import {
   createBiomeAddress,
   createEchoKeepsakeReplayAddress,
   createEncounterPhaseAddress,
+  createGorgonPhaseAddress,
   createLevelResolutionAddress,
   createTraitOfferAddress,
   semanticAddressKey,
@@ -549,13 +550,16 @@ export function executionTimelineTransactions(
         { kind: 'occurrence', occurrenceId: room.occurrenceId },
         phaseKey,
       );
-      // Encounter-owned screens (Narcissus, Artemis and Gorgon) are authored
-      // on the phase's selection role. `self` belongs to an acquisition role;
-      // consulting it here silently omitted an otherwise complete NPC screen.
-      // Some story interactions have no entry in the encounter-key map even
-      // though their timeline phase owns a fully resolved selection screen.
-      // The selection address itself is the authoritative join key.
-      const selectedOffer = traitOffer(phase, 'selection');
+      // Gorgon owns an additive offer, separate from the encounter's selection.
+      const isGorgon = timeline.action.reference.kind === 'interactGorgon';
+      const selectedOffer = isGorgon
+        ? traitOffer(createGorgonPhaseAddress(phase), 'gorgonAthena')
+        : traitOffer(phase, 'selection');
+      if (isGorgon && selectedOffer === undefined)
+        throw new CompilerError(
+          'executionCoverageMissing',
+          `missing Gorgon trait offer ${semanticAddressKey(createGorgonPhaseAddress(phase))}`,
+        );
       const nemesis = room.encounters.nemesisRandomEventByPhase?.[phaseKey];
       if (encounterKey === 'NemesisRandomEvent' && nemesis === null)
         throw new CompilerError(
