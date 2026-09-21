@@ -185,9 +185,30 @@ function selectedContinuationDoor(node: BatchWithContinuations): WorkspaceDoorCo
   return selectedDoors.length === 1 ? selectedDoors[0] : undefined;
 }
 
+/** Reward identity resolved on every offer this door presents; visibility is irrelevant. */
+function doorRewardsResolved(door: WorkspaceDoorContract): boolean {
+  return door.offerRewardSurface.rewards.every((reward) => reward.offer !== null);
+}
+
+/** The game opens exits only when every door is complete, so a continuation is
+ * advertised only from a batch whose doors all carry a room and a resolved
+ * reward identity. A lone authored door with missing siblings stays a plain
+ * selection until the batch is finished. */
+function batchDoorsReady(node: BatchWithContinuations): boolean {
+  return (
+    node.missingTargets.length === 0 &&
+    node.targets.every(
+      (target) => target.physicalState === 'available' && doorRewardsResolved(target.door),
+    ) &&
+    (node.chaos === undefined || doorRewardsResolved(node.chaos.door)) &&
+    (node.zagreusContract === undefined || doorRewardsResolved(node.zagreusContract.door))
+  );
+}
+
 function selectedContinuationNavigation(
   node: BatchWithContinuations,
 ): WorkspaceSelectedContinuationNavigation | undefined {
+  if (!batchDoorsReady(node)) return undefined;
   const door = selectedContinuationDoor(node);
   return door === undefined ? undefined : Object.freeze({ door, marker: door.room.marker });
 }

@@ -693,27 +693,47 @@ describe('DecisionWorkbench', () => {
     );
     if (authoredOffer === null) throw new Error('F authored room offer is missing');
     expect(within(authoredOffer).queryByRole('button', { name: /^Open .+ room$/ })).toBeNull();
-    const openRoom = screen.getByRole('button', { name: 'Open next room' });
-    const authoredDecision = workspaceBiome(view.application, 'Underworld', 'F').nodes.find(
+    // The sibling door is still missing, so no continuation is advertised yet.
+    expect(screen.queryByRole('button', { name: 'Open next room' })).toBeNull();
+
+    act(() => view.application.store.dispatch(authoredProjectUndoRequested()));
+    await waitFor(() =>
+      expect(screen.getByRole('article', { name: 'Door 1 unspecified room offer' })).toBeTruthy(),
+    );
+    expect(screen.queryByLabelText('Door 2 room')).toBeNull();
+
+    cleanup();
+    const complete = authorLegalTraitOffers(createGoldenFGHIProject());
+    const completeView = renderDecisionWorkbench(
+      complete,
+      'Underworld',
+      'F',
+      subjectForOwner(owner),
+    );
+    const completeDecision = workspaceBiome(completeView.application, 'Underworld', 'F').nodes.find(
       (node) =>
         node.kind === 'ordinaryBatch' &&
         semanticAddressKey(node.owner) === semanticAddressKey(owner),
     );
-    if (authoredDecision?.kind !== 'ordinaryBatch')
-      throw new Error('F authored decision is missing');
-    const authoredTarget = authoredDecision.targets[0];
-    if (authoredTarget === undefined) throw new Error('F authored target is missing');
-    const selectionBeforeOpen = authoredDecision.selection;
+    if (completeDecision?.kind !== 'ordinaryBatch')
+      throw new Error('F complete decision is missing');
+    const selectedTarget = completeDecision.targets.find((target) => target.selected);
+    if (selectedTarget === undefined) throw new Error('F complete decision has no selected door');
+    const selectionBeforeOpen = completeDecision.selection;
     const historyBeforeOpen =
-      view.application.store.getState().projectWorkspace.history!.past.length;
-    await view.user.click(openRoom);
-    expect(view.application.store.getState().projectWorkspace.history!.past).toHaveLength(
+      completeView.application.store.getState().projectWorkspace.history!.past.length;
+    await completeView.user.click(screen.getByRole('button', { name: 'Open next room' }));
+    expect(completeView.application.store.getState().projectWorkspace.history!.past).toHaveLength(
       historyBeforeOpen,
     );
-    expect(view.application.store.getState().editorSession.focusedSemanticOwner).toEqual(
-      authoredTarget.room.address,
+    expect(completeView.application.store.getState().editorSession.focusedSemanticOwner).toEqual(
+      selectedTarget.room.address,
     );
-    const decisionAfterOpen = workspaceBiome(view.application, 'Underworld', 'F').nodes.find(
+    const decisionAfterOpen = workspaceBiome(
+      completeView.application,
+      'Underworld',
+      'F',
+    ).nodes.find(
       (node) =>
         node.kind === 'ordinaryBatch' &&
         semanticAddressKey(node.owner) === semanticAddressKey(owner),
@@ -721,12 +741,6 @@ describe('DecisionWorkbench', () => {
     expect(
       decisionAfterOpen?.kind === 'ordinaryBatch' ? decisionAfterOpen.selection : undefined,
     ).toEqual(selectionBeforeOpen);
-
-    act(() => view.application.store.dispatch(authoredProjectUndoRequested()));
-    await waitFor(() =>
-      expect(screen.getByRole('article', { name: 'Door 1 unspecified room offer' })).toBeTruthy(),
-    );
-    expect(screen.queryByLabelText('Door 2 room')).toBeNull();
   });
 
   it('shows P physical door types before and after choosing a room with its exit summary', async () => {
