@@ -11,9 +11,79 @@ import {
   createProjectHistory,
   undoProjectHistory,
 } from '@run-planner/engine/authored-project';
-import { loadUnderworldFGProject } from '@run-planner/test-fixtures/underworld';
+import {
+  createCompleteFGIxionChaosProject,
+  loadUnderworldFGProject,
+} from '@run-planner/test-fixtures/underworld';
 
 describe('route-owned selected resource placement command', () => {
+  it.each(['clearIxionOffer', 'disableWell', 'unpurchaseIxion'] as const)(
+    'retracts resources deleted by indirect Ixion topology cleanup: %s',
+    (edit) => {
+      let project = createCompleteFGIxionChaosProject();
+      const f = project.route.biomes.find((biome) => biome.biomeKey === 'F')!;
+      const g = project.route.biomes.find((biome) => biome.biomeKey === 'G')!;
+      const gate = g
+        .topology!.occurrences.flatMap((room) => room.additionalExits)
+        .find((exit) => exit.kind === 'chaos' && exit.origin?.kind === 'ixionGenerated')!;
+      if (gate.kind !== 'chaos' || gate.origin === undefined)
+        throw new Error('missing generated gate');
+      const continuation = g.topology!.occurrences.find((room) => room.gameName === 'G_Shop01')!;
+      const surviving = { biomeKey: 'F', occurrenceId: f.topology!.startOccurrenceId };
+      for (const [family, value] of [
+        ['Fishing', { biomeKey: 'G', occurrenceId: gate.occurrenceId }],
+        ['Exorcism', { biomeKey: 'G', occurrenceId: continuation.occurrenceId }],
+        ['Pickaxe', surviving],
+      ] as const) {
+        project = applyProjectCommand(project, catalog, {
+          kind: 'ReplaceResourcePlacement',
+          route: { kind: 'route', routeKey: 'Underworld' },
+          family,
+          value,
+        });
+      }
+      const occurrence = createOccurrenceAddress(
+        createBiomeAddress('Underworld', gate.origin.sourceBiomeKey),
+        gate.origin.sourceOccurrenceId,
+      );
+      const command =
+        edit === 'clearIxionOffer'
+          ? {
+              kind: 'ReplaceStygianWellOffer' as const,
+              occurrence,
+              slotKey: 'secondLeft' as const,
+              itemKey: null,
+            }
+          : edit === 'disableWell'
+            ? { kind: 'SetStygianWellInteraction' as const, occurrence, interacted: false }
+            : {
+                kind: 'SetStygianWellPurchase' as const,
+                occurrence,
+                generationKey: gate.origin.generationKey,
+                purchased: false,
+              };
+      const history = applyProjectHistoryCommand(createProjectHistory(project), catalog, command);
+      expect(history.present.route.resourcePlacements).toMatchObject({
+        Fishing: null,
+        Exorcism: null,
+        Pickaxe: surviving,
+      });
+      const topology = history.present.route.biomes.find(
+        (biome) => biome.biomeKey === 'G',
+      )!.topology!;
+      expect(
+        topology.occurrences.some((room) => room.occurrenceId === topology.startOccurrenceId),
+      ).toBe(true);
+      expect(topology.occurrences.some((room) => room.occurrenceId === gate.occurrenceId)).toBe(
+        false,
+      );
+      expect(
+        topology.occurrences.some((room) => room.occurrenceId === continuation.occurrenceId),
+      ).toBe(false);
+      expect(undoProjectHistory(history).present).toEqual(project);
+    },
+  );
+
   it('replaces one family atomically and removes only a structurally deleted exact target', () => {
     const start = loadUnderworldFGProject();
     const route = start.route!;

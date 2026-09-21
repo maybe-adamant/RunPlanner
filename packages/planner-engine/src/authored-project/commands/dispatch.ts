@@ -349,10 +349,9 @@ export function applyProjectCommand(
       command.kind === 'ClearTopology'
         ? retractResourcePlacementsForClearedBiome(proposal, command.biome.biomeKey)
         : proposal;
-    const withTopologyImpact = reconcileResourcePlacementTopology(withClearTopologyPlacements);
     const withoutRemovedShrineDeliveries = retractMissingHermesShrineDeliveryActions(
       document,
-      withTopologyImpact,
+      withClearTopologyPlacements,
     );
     const withSourceActions = reconcileNewRequiredRoomActions(
       document,
@@ -375,7 +374,9 @@ export function applyProjectCommand(
       catalog,
     );
     const reconciled = reconcileChaosTopology(withRequiredActions, catalog);
-    return decodeProjectDocument(reconciled, catalog);
+    // Generated detours can delete occurrences after the direct command.
+    // Close route-owned references against that final topology.
+    return decodeProjectDocument(reconcileResourcePlacementTopology(reconciled), catalog);
   } catch (error) {
     if (error instanceof ProjectCommandContractError) throw error;
     if (error instanceof ProjectDocumentContractError) {
