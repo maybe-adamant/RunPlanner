@@ -1,6 +1,6 @@
 Run Planner — Windows portable preview
 
-Run RunPlanner.exe directly. No installation is required.
+Run the included RunPlanner-<version>.exe directly. No installation is required.
 
 Requirements:
 - 64-bit Windows 10 or Windows 11

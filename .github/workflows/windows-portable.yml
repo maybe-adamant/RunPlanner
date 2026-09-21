@@ -156,7 +156,7 @@ jobs:
           $checksum = "$archive.sha256"
 
           New-Item -ItemType Directory -Path $staging | Out-Null
-          Copy-Item "apps/planner/src-tauri/target/release/run-planner.exe" (Join-Path $staging "RunPlanner.exe")
+          Copy-Item "apps/planner/src-tauri/target/release/run-planner.exe" (Join-Path $staging "RunPlanner-$env:RELEASE_VERSION.exe")
           Copy-Item "apps/planner/src-tauri/PORTABLE_README.txt" (Join-Path $staging "README.txt")
           Compress-Archive -Path "$staging/*" -DestinationPath $archive
 

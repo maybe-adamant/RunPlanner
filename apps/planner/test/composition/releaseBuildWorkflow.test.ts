@@ -61,4 +61,15 @@ describe('Windows portable release build metadata', () => {
       workflow.indexOf('gh release edit "${RELEASE_TAG}" --draft=false --latest', publish),
     ).toBeGreaterThan(workflow.indexOf('Draft release ${RELEASE_TAG} is missing', publish));
   });
+
+  it('packages the executable with the release version in its filename', () => {
+    const workflow = readFileSync(
+      join(repositoryRoot, '.github/workflows/windows-portable.yml'),
+      'utf8',
+    );
+    expect(workflow).toContain(
+      'Copy-Item "apps/planner/src-tauri/target/release/run-planner.exe" (Join-Path $staging "RunPlanner-$env:RELEASE_VERSION.exe")',
+    );
+    expect(workflow).not.toContain('(Join-Path $staging "RunPlanner.exe")');
+  });
 });
