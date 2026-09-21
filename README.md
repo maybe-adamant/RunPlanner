@@ -126,7 +126,20 @@ The executable is written to
 `apps/planner/src-tauri/target/x86_64-pc-windows-gnu/release/run-planner.exe`.
 
 The manually dispatched **Windows portable** workflow builds, launch-tests,
-and packages the release. Run `npm run check` locally on the commit being
+and packages the release. It embeds the release version and source commit shown
+in About, uploads the archive and checksum to a draft, then publishes it. Each
+published version identifies one build; choose a new version for a new build.
+Run `npm run check` locally on the commit being
 released before dispatching it; packaging does not repeat that repository gate.
 The separate **Desktop host** workflow checks Windows Rust compilation on
 pull requests and pushes to `main`.
+
+Official desktop releases check for updates without delaying startup. Use About
+to check manually or identify your installed version. Download opens the new
+portable archive in your browser; the app does not install it automatically.
+Development builds do not check for releases automatically.
+
+The app's compatible-loading baseline is schema 86. Current files open without
+conversion; future approved schema changes must supply explicit migrations and
+original-file preservation. Older files still need the relevant offline tool
+from [`schema/README.md`](schema/README.md).

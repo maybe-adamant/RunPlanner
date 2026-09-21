@@ -36,6 +36,7 @@ jobs:
         id: release
         shell: pwsh
         env:
+          GH_TOKEN: ${{ github.token }}
           RELEASE_VERSION: ${{ inputs.version }}
         run: |
           if ($env:RELEASE_VERSION -notmatch '^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$') {
@@ -57,6 +58,33 @@ jobs:
             $tagSha = ($resolvedLine -split '\s+')[0]
             if ($tagSha -ne $env:GITHUB_SHA) {
               throw "Release tag $tag already points to $tagSha instead of $env:GITHUB_SHA."
+            }
+          }
+
+          function Compare-StableVersion([string] $left, [string] $right) {
+            $leftParts = $left.Split('.')
+            $rightParts = $right.Split('.')
+            for ($index = 0; $index -lt 3; $index++) {
+              if ($leftParts[$index].Length -ne $rightParts[$index].Length) {
+                return $leftParts[$index].Length.CompareTo($rightParts[$index].Length)
+              }
+              $componentComparison = [string]::CompareOrdinal($leftParts[$index], $rightParts[$index])
+              if ($componentComparison -ne 0) {
+                return $componentComparison
+              }
+            }
+            return 0
+          }
+
+          $publishedTags = @(gh api --paginate "repos/$env:GITHUB_REPOSITORY/releases?per_page=100" --jq '.[] | select(.draft == false and .prerelease == false) | .tag_name')
+          if ($LASTEXITCODE -ne 0) {
+            throw 'Unable to inspect published stable releases.'
+          }
+          foreach ($publishedTag in $publishedTags) {
+            if ($publishedTag -match '^v((0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*))$') {
+              if ((Compare-StableVersion $version $Matches[1]) -le 0) {
+                throw "Release version $version must be newer than published stable release $publishedTag."
+              }
             }
           }
 
@@ -182,19 +210,93 @@ jobs:
               -f sha="${RELEASE_SHA}" >/dev/null
           fi
 
-      - name: Publish GitHub release
+      - name: Create or resume draft release
         env:
           GH_REPO: ${{ github.repository }}
           GH_TOKEN: ${{ github.token }}
           RELEASE_TAG: ${{ needs.build.outputs.release_tag }}
         run: |
-          if ! gh release view "${RELEASE_TAG}" >/dev/null 2>&1; then
+          if gh release view "${RELEASE_TAG}" >/dev/null 2>&1; then
+            if [ "$(gh release view "${RELEASE_TAG}" --json isDraft --jq .isDraft)" != "true" ]; then
+              echo "Release ${RELEASE_TAG} is already published and cannot be replaced." >&2
+              exit 1
+            fi
+          else
             gh release create "${RELEASE_TAG}" \
+              --draft \
               --verify-tag \
               --generate-notes \
               --title "Run Planner ${RELEASE_TAG}"
           fi
+
+      - name: Upload portable assets to draft
+        env:
+          GH_REPO: ${{ github.repository }}
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_ARTIFACT: ${{ needs.build.outputs.artifact_name }}
+          RELEASE_TAG: ${{ needs.build.outputs.release_tag }}
+        run: |
+          if [ "$(gh release view "${RELEASE_TAG}" --json isDraft --jq .isDraft)" != "true" ]; then
+            echo "Release ${RELEASE_TAG} is already published and cannot be replaced." >&2
+            exit 1
+          fi
           gh release upload "${RELEASE_TAG}" \
-            "release/${{ needs.build.outputs.artifact_name }}.zip" \
-            "release/${{ needs.build.outputs.artifact_name }}.zip.sha256" \
+            "release/${RELEASE_ARTIFACT}.zip" \
+            "release/${RELEASE_ARTIFACT}.zip.sha256" \
             --clobber
+
+      - name: Publish complete draft release
+        env:
+          GH_REPO: ${{ github.repository }}
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_ARTIFACT: ${{ needs.build.outputs.artifact_name }}
+          RELEASE_TAG: ${{ needs.build.outputs.release_tag }}
+          RELEASE_VERSION: ${{ needs.build.outputs.release_version }}
+        run: |
+          require_newer_than_published() {
+            local published_tags published_tag published_version comparison index
+            local -a release_parts published_parts
+            published_tags="$(gh api --paginate "repos/${GITHUB_REPOSITORY}/releases?per_page=100" --jq '.[] | select(.draft == false and .prerelease == false) | .tag_name')" || return 1
+            while IFS= read -r published_tag; do
+              if [[ ! "${published_tag}" =~ ^v((0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$) ]]; then
+                continue
+              fi
+              published_version="${BASH_REMATCH[1]}"
+              IFS='.' read -r -a release_parts <<< "${RELEASE_VERSION}"
+              IFS='.' read -r -a published_parts <<< "${published_version}"
+              comparison=0
+              for index in 0 1 2; do
+                if (( ${#release_parts[index]} > ${#published_parts[index]} )); then
+                  comparison=1
+                  break
+                elif (( ${#release_parts[index]} < ${#published_parts[index]} )); then
+                  comparison=-1
+                  break
+                elif [[ "${release_parts[index]}" > "${published_parts[index]}" ]]; then
+                  comparison=1
+                  break
+                elif [[ "${release_parts[index]}" < "${published_parts[index]}" ]]; then
+                  comparison=-1
+                  break
+                fi
+              done
+              if (( comparison <= 0 )); then
+                echo "Release version ${RELEASE_VERSION} must be newer than published stable release ${published_tag}." >&2
+                return 1
+              fi
+            done <<< "${published_tags}"
+          }
+
+          require_newer_than_published
+          if [ "$(gh release view "${RELEASE_TAG}" --json isDraft --jq .isDraft)" != "true" ]; then
+            echo "Release ${RELEASE_TAG} is already published and cannot be replaced." >&2
+            exit 1
+          fi
+          mapfile -t uploaded_assets < <(gh release view "${RELEASE_TAG}" --json assets --jq '.assets[].name')
+          for asset in "${RELEASE_ARTIFACT}.zip" "${RELEASE_ARTIFACT}.zip.sha256"; do
+            if ! printf '%s\n' "${uploaded_assets[@]}" | grep -Fqx "${asset}"; then
+              echo "Draft release ${RELEASE_TAG} is missing ${asset}." >&2
+              exit 1
+            fi
+          done
+          gh release edit "${RELEASE_TAG}" --draft=false --latest

@@ -28,4 +28,37 @@ describe('Windows portable release build metadata', () => {
     expect(workflow).toContain('--config "$env:TAURI_RELEASE_CONFIG"');
     expect(tauriConfig).toContain('"version": "../package.json"');
   });
+
+  it('keeps an incomplete release private until its portable assets are present', () => {
+    const workflow = readFileSync(
+      join(repositoryRoot, '.github/workflows/windows-portable.yml'),
+      'utf8',
+    );
+
+    expect(workflow).toContain(
+      'gh api --paginate "repos/$env:GITHUB_REPOSITORY/releases?per_page=100"',
+    );
+    expect(workflow).toContain('--draft');
+    expect(workflow).toContain(
+      'Release ${RELEASE_TAG} is already published and cannot be replaced.',
+    );
+    expect(workflow).toContain('"release/${RELEASE_ARTIFACT}.zip.sha256"');
+    expect(workflow).toContain('gh release edit "${RELEASE_TAG}" --draft=false --latest');
+
+    const preparation = workflow.indexOf('- name: Prepare release metadata');
+    const draft = workflow.indexOf('- name: Create or resume draft release');
+    const upload = workflow.indexOf('- name: Upload portable assets to draft');
+    const publish = workflow.indexOf('- name: Publish complete draft release');
+    expect(workflow.indexOf('GH_TOKEN: ${{ github.token }}', preparation)).toBeGreaterThan(
+      preparation,
+    );
+    expect(workflow.indexOf('Compare-StableVersion', preparation)).toBeGreaterThan(preparation);
+    expect(draft).toBeGreaterThan(preparation);
+    expect(upload).toBeGreaterThan(draft);
+    expect(publish).toBeGreaterThan(upload);
+    expect(workflow.indexOf('require_newer_than_published', publish)).toBeGreaterThan(publish);
+    expect(
+      workflow.indexOf('gh release edit "${RELEASE_TAG}" --draft=false --latest', publish),
+    ).toBeGreaterThan(workflow.indexOf('Draft release ${RELEASE_TAG} is missing', publish));
+  });
 });

@@ -76,6 +76,52 @@
   margin-top: 14px;
 }
 
+.about-updates {
+  padding-top: 14px;
+  border-top: 1px solid #363741;
+  margin-top: 14px;
+}
+
+.about-updates h2 {
+  margin: 0 0 10px;
+  color: #c9c4cc;
+  font-size: 0.8rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.about-updates div {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.about-updates p {
+  margin: 0;
+  color: #aaa7b3;
+  font-size: 0.8rem;
+}
+
+.release-update-notice {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 0 0 12px;
+  padding: 9px 11px;
+  border: 1px solid rgb(104 186 137 / 42%);
+  border-radius: 8px;
+  color: #c9e8d1;
+  background: rgb(60 130 84 / 12%);
+  font-size: 0.84rem;
+}
+
+.release-update-actions {
+  display: flex;
+  flex: 0 0 auto;
+  gap: 6px;
+}
+
 .about-shortcuts h2 {
   margin: 0 0 10px;
   color: #c9c4cc;

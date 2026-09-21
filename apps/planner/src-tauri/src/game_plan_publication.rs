@@ -520,7 +520,7 @@ mod tests {
         .expect("write manifest");
         CompatibleProfile {
             id: id.to_owned(),
-            root: profile,
+            root: fs::canonicalize(profile).expect("canonical profile root"),
             module_version: "0.7.1".to_owned(),
         }
     }

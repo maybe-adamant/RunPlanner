@@ -287,8 +287,11 @@ write failure leaves the previous association and baseline unchanged.
 
 ### Atomic replacement
 
-Loading prepares the whole document before publication: strict decode,
-evaluation and immediate workspace projection must all succeed. Only then
+Loading prepares the whole document before publication: the shared application
+loader's compatibility check and strict engine parsing, evaluation, and
+immediate workspace projection must all succeed. The
+[authored-document boundary](AUTHORED_PROJECT_MODEL.md#authored-document-boundary)
+owns migration support and original-preservation requirements. Only then
 replace the project/history, establish the clean baseline, activate the file
 and queue autosave. Failure leaves the current project, history, evaluation,
 file target and recovery value untouched.

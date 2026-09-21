@@ -22,6 +22,7 @@ import type { ProjectOperations } from '@planner/workspace/projectOperations';
 import type { StructuredWorkspaceProjection } from '@planner/projections/structured-workspace';
 import type { AppScalePreference } from '@planner/persistence/appScalePreference';
 import type { BuildIdentity } from '@planner/composition/buildIdentity';
+import type { ReleaseUpdateController } from '@planner/persistence/releaseUpdates';
 import { PomResolutionDialog } from '../editor/rewards/PomResolutionEditor';
 import { TraitOfferDialog } from '../editor/rewards/TraitOfferEditor';
 import { ProjectFileControls } from '../project/ProjectFileControls';
@@ -30,6 +31,7 @@ import { ActionIcon } from '../controls/ActionIcon';
 import { RouteWorkspace } from './RouteWorkspace';
 import { FindingTargetScope } from '../feedback/useFindingTarget';
 import { useAppScale } from './useAppScale';
+import { ReleaseUpdateCheck, ReleaseUpdateNotice } from './ReleaseUpdates';
 
 interface AppProps {
   readonly appScalePreference?: AppScalePreference;
@@ -38,6 +40,7 @@ interface AppProps {
   readonly catalogSummary: CatalogSummary;
   readonly editorNavigation: EditorNavigation;
   readonly projectOperations: ProjectOperations;
+  readonly releaseUpdates?: ReleaseUpdateController;
   readonly selectStructuredWorkspace: (
     state: RootState,
   ) => StructuredWorkspaceProjection | undefined;
@@ -50,6 +53,7 @@ export function App({
   catalogSummary,
   editorNavigation,
   projectOperations,
+  releaseUpdates,
   selectStructuredWorkspace,
 }: AppProps) {
   const scalePercent = useAppScale(appScalePreference);
@@ -148,6 +152,9 @@ export function App({
                         <dd>{catalogSummary.version}</dd>
                       </div>
                     </dl>
+                    {releaseUpdates === undefined ? null : (
+                      <ReleaseUpdateCheck controller={releaseUpdates} />
+                    )}
                     <section className="about-shortcuts" aria-labelledby="about-shortcuts-title">
                       <h2 id="about-shortcuts-title">Keyboard shortcuts</h2>
                       <dl>
@@ -188,6 +195,8 @@ export function App({
             </div>
           </div>
         </header>
+
+        {releaseUpdates === undefined ? null : <ReleaseUpdateNotice controller={releaseUpdates} />}
 
         {project !== undefined &&
           !showEntry &&
