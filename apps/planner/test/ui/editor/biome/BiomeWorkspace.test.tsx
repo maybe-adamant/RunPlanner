@@ -1201,6 +1201,45 @@ describe('BiomeWorkspace', () => {
       name: 'Outgoing doors',
     });
     expect(within(outgoing).getByText('Continue to Polyphemus.')).toBeTruthy();
+
+    // A mid-route Postboss continues to the next biome's display name, never
+    // its internal key.
+    const postboss = workspaceBiome(view.application, 'Surface', 'N').nodes.find(
+      (node) => node.kind === 'occurrenceWorkbench' && node.room.kind === 'PostBoss',
+    );
+    if (postboss?.kind !== 'occurrenceWorkbench') throw new Error('N Postboss node is missing');
+    act(() => view.application.store.dispatch(semanticOwnerFocused(postboss.room.address)));
+    await view.user.click(
+      within(screen.getByRole('complementary', { name: 'Details' })).getByRole('tab', {
+        name: 'Room Doors',
+      }),
+    );
+    outgoing = within(screen.getByRole('complementary', { name: 'Details' })).getByRole('region', {
+      name: 'Outgoing doors',
+    });
+    expect(within(outgoing).getByText('Continue to Thessaly.')).toBeTruthy();
+  });
+
+  it('celebrates the completed run beyond the final biome boss chain', async () => {
+    const view = renderWorkspace(loadSurfaceNOPQProject(), 'Surface', 'Q');
+    const terminal = workspaceBiome(view.application, 'Surface', 'Q').nodes.find(
+      (node) =>
+        node.kind === 'occurrenceWorkbench' &&
+        (node.room.kind === 'PostBoss' || node.room.kind === 'Boss'),
+    );
+    if (terminal?.kind !== 'occurrenceWorkbench') throw new Error('Q boss chain node is missing');
+    act(() => view.application.store.dispatch(semanticOwnerFocused(terminal.room.address)));
+    await view.user.click(
+      within(screen.getByRole('complementary', { name: 'Details' })).getByRole('tab', {
+        name: 'Room Doors',
+      }),
+    );
+    const outgoing = within(screen.getByRole('complementary', { name: 'Details' })).getByRole(
+      'region',
+      { name: 'Outgoing doors' },
+    );
+    expect(within(outgoing).getByText('The run is complete — congratulations.')).toBeTruthy();
+    expect(within(outgoing).queryByText(/route boundary/)).toBeNull();
   });
 
   it('renders N’s entry frontiers without an unauthored Hub rail stop', () => {

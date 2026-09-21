@@ -779,9 +779,11 @@ export function assembleWorkspaceBiomeSemantics(
                 : `Continue to ${requireWorkspaceRoom(catalog, target.gameName).label}.`;
             }
             case 'nextBiomeIntro':
-              return `Continue to ${targetStatus.biomeKey}.`;
+              return `Continue to ${
+                catalog.biomes.byKey[targetStatus.biomeKey]?.label ?? targetStatus.biomeKey
+              }.`;
             case 'routeBoundary':
-              return 'Continue to route boundary.';
+              return 'The run is complete — congratulations.';
           }
         })();
         occurrenceOutgoing.set(
