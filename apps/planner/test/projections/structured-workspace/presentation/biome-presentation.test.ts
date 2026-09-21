@@ -2,15 +2,18 @@ import { catalog } from '@run-planner/hades2-catalog';
 import {
   applyProjectCommand,
   createAdditionalExitAddress,
+  createBatchRewardStoreAddress,
   createBiomeAddress,
   createEchoKeepsakeReplayAddress,
   createHubDecisionAddress,
   createExitDecisionAddress,
   createExitSelectionAddress,
+  createIncomingRewardAddress,
   createKeepsakeEquipResultAddress,
   createOccurrenceAddress,
   createOccurrenceId,
   createProjectDocument,
+  createTargetAddress,
   semanticAddressKey,
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
@@ -20,7 +23,7 @@ import {
 } from '@run-planner/engine/simulation';
 import { beforeAll, describe, expect, it } from 'vitest';
 
-import { createGoldenFGHIProject } from '@run-planner/test-fixtures/underworld';
+import { createGoldenFGHIProject, goldenFBiome } from '@run-planner/test-fixtures/underworld';
 import {
   createSurfaceNUnresolvedBossHermesDeliveryCheckpoint,
   loadSurfaceNProject,
@@ -410,10 +413,14 @@ describe('structured workspace biome presentation', () => {
     );
     if (decision === undefined) throw new Error('N Opening decision rail entry is missing');
 
-    expect(decision.focusMarker.address).toEqual(
-      createOccurrenceAddress(nBiome, chaosOccurrenceId),
-    );
-    expect(decision.selectedTarget?.roomLabel).toMatch(/^Chaos/);
+    // The selected Chaos detour's normal siblings are unauthored, so the batch
+    // advertises no continuation: the rail stop stays on the decision itself.
+    expect(decision.focusMarker.address).toEqual(owner);
+    expect(decision.selectedTarget).toBeUndefined();
+    expect(
+      (decision.node.kind === 'ordinaryBatch' || decision.node.kind === 'mixedBatch') &&
+        decision.node.chaos?.selected,
+    ).toBe(true);
     expect(
       biome.rail.filter(
         (entry) =>
@@ -698,5 +705,130 @@ describe('structured workspace biome presentation', () => {
       kind: 'ReplaceHubVisitOrder',
     });
     expect(labels(truncated)).toEqual(['Visit 1 · Combat 05']);
+  });
+
+  it('advertises the continuation only when every door is ready and one is selected', () => {
+    const startId = createOccurrenceId('presentation-continuation-start');
+    const combatId = createOccurrenceId('presentation-continuation-combat');
+    const startOwner = createExitDecisionAddress(goldenFBiome, {
+      kind: 'occurrence',
+      occurrenceId: startId,
+    });
+    const combatOwner = createExitDecisionAddress(goldenFBiome, {
+      kind: 'occurrence',
+      occurrenceId: combatId,
+    });
+    let project = createProjectDocument(catalog, {
+      routeKey: 'Underworld',
+      configuredBiomeCount: 1,
+      projectId: 'presentation-continuation',
+    });
+    project = applyProjectCommand(project, catalog, {
+      biome: goldenFBiome,
+      gameName: 'F_Opening01',
+      kind: 'CreateStart',
+      occurrenceId: startId,
+    });
+    project = applyProjectCommand(project, catalog, { decision: startOwner, kind: 'CreateBatch' });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceBatchRewardStore',
+      rewardStore: createBatchRewardStoreAddress(goldenFBiome, startOwner.source),
+      storeKey: 'RunProgress',
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'CreateTarget',
+      target: createTargetAddress(goldenFBiome, startOwner.source, 'exit1'),
+      occurrenceId: combatId,
+      gameName: 'F_Combat02',
+    });
+
+    const batchAt = (candidate: ProjectDocument, owner: typeof startOwner) => {
+      const node = present(candidate, 'Underworld', 'F').presentation.biome.nodes.find(
+        (entry) =>
+          (entry.kind === 'ordinaryBatch' ||
+            entry.kind === 'mixedBatch' ||
+            entry.kind === 'takeoverBatch') &&
+          semanticAddressKey(entry.owner) === semanticAddressKey(owner),
+      );
+      if (
+        node === undefined ||
+        (node.kind !== 'ordinaryBatch' &&
+          node.kind !== 'mixedBatch' &&
+          node.kind !== 'takeoverBatch')
+      )
+        throw new Error('the continuation batch is missing');
+      return node;
+    };
+
+    // A complete single-door batch stays unadvertised while its one reward
+    // identity is unresolved.
+    const unresolvedReward = batchAt(project, startOwner);
+    expect(unresolvedReward.missingTargets).toEqual([]);
+    expect(unresolvedReward.targets.map((target) => target.selected)).toEqual([true]);
+    expect(unresolvedReward.selectedContinuation).toBeUndefined();
+
+    // Resolving it advertises the derived single door without any click.
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceIncomingReward',
+      reward: createIncomingRewardAddress(goldenFBiome, combatId),
+      value: { rewardType: 'MaxHealthDrop' },
+    });
+    const derived = batchAt(project, startOwner);
+    expect(derived.selectedContinuation?.marker).toBe(derived.targets[0]?.door.room.marker);
+
+    // A lone authored door on the two-exit host is derived-selected, but its
+    // sibling slot is still missing: no continuation.
+    project = applyProjectCommand(project, catalog, { decision: combatOwner, kind: 'CreateBatch' });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceBatchRewardStore',
+      rewardStore: createBatchRewardStoreAddress(goldenFBiome, combatOwner.source),
+      storeKey: 'RunProgress',
+    });
+    const firstDoorId = createOccurrenceId('presentation-continuation-first-door');
+    project = applyProjectCommand(project, catalog, {
+      kind: 'CreateTarget',
+      target: createTargetAddress(goldenFBiome, combatOwner.source, 'exit1'),
+      occurrenceId: firstDoorId,
+      gameName: 'F_Combat01',
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceIncomingReward',
+      reward: createIncomingRewardAddress(goldenFBiome, firstDoorId),
+      value: { rewardType: 'MaxHealthDrop' },
+    });
+    const loneDoor = batchAt(project, combatOwner);
+    expect(loneDoor.targets.map((target) => target.selected)).toEqual([true]);
+    expect(loneDoor.missingTargets.length).toBeGreaterThan(0);
+    expect(loneDoor.selectedContinuation).toBeUndefined();
+
+    // Authoring the sibling with a resolved reward completes the batch; the
+    // continuation then follows the actual selection.
+    const secondDoorId = createOccurrenceId('presentation-continuation-second-door');
+    const secondExitKey = loneDoor.missingTargets[0]!.exitKey;
+    project = applyProjectCommand(project, catalog, {
+      kind: 'CreateTarget',
+      target: createTargetAddress(goldenFBiome, combatOwner.source, secondExitKey),
+      occurrenceId: secondDoorId,
+      gameName: 'F_Combat03',
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceIncomingReward',
+      reward: createIncomingRewardAddress(goldenFBiome, secondDoorId),
+      value: { rewardType: 'MaxHealthDrop' },
+    });
+    const complete = batchAt(project, combatOwner);
+    expect(complete.missingTargets).toEqual([]);
+    if (!complete.targets.some((target) => target.selected)) {
+      expect(complete.selectedContinuation).toBeUndefined();
+      project = applyProjectCommand(project, catalog, {
+        kind: 'SetExitSelection',
+        selection: createExitSelectionAddress(goldenFBiome, combatOwner.source),
+        value: { kind: 'normal', exitKey: 'exit1' },
+      });
+    }
+    const selected = batchAt(project, combatOwner);
+    expect(selected.selectedContinuation?.marker).toBe(
+      selected.targets.find((target) => target.selected)?.door.room.marker,
+    );
   });
 });
