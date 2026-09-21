@@ -1115,7 +1115,7 @@ describe('project profile operations', () => {
     expect(priorTargetWrites).toBe(1);
   });
 
-  it('rejects schema-8 and stale-catalog profiles without replacing the current workspace', async () => {
+  it('rejects unsupported old/future schemas and stale-catalog profiles without replacing the current workspace', async () => {
     const profile = createProfileFixture();
     const application = createApplication({ profileFile: profile.adapter });
     configureF(application);
@@ -1126,6 +1126,7 @@ describe('project profile operations', () => {
 
     for (const json of [
       JSON.stringify({ ...current, schemaVersion: 8 }),
+      JSON.stringify({ ...current, schemaVersion: 87 }),
       JSON.stringify({ ...current, catalogVersion: 'stale-catalog-version' }),
     ]) {
       profile.setLoadJson(json);

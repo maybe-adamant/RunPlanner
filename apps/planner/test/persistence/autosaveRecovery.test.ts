@@ -323,7 +323,7 @@ describe('desktop active-profile startup', () => {
 });
 
 describe('autosave recovery lifecycle', () => {
-  it('blocks and preserves schema-21 and stale-catalog autosaves without migrating either payload', () => {
+  it('blocks and preserves unsupported/future schema and stale-catalog autosaves without migrating either payload', () => {
     const fallback = createProjectDocument(catalog, {
       projectId: 'fallback',
       routeKey: 'Underworld',
@@ -336,8 +336,11 @@ describe('autosave recovery lifecycle', () => {
     const stale = createRecoveryFixture(
       JSON.stringify({ ...current, catalogVersion: 'stale-catalog-version' }),
     );
+    const future = createRecoveryFixture(
+      JSON.stringify({ ...current, schemaVersion: 87, catalogVersion: catalog.version }),
+    );
 
-    for (const recovery of [legacy, stale]) {
+    for (const recovery of [legacy, stale, future]) {
       const startup = restoreStartupProject(catalog, recovery, (project) => project);
       expect(startup.preparedProject).toBeUndefined();
       expect(startup.profileSession.recoveryStatus).toBe('blocked');
