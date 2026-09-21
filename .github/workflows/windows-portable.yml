@@ -39,11 +39,20 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           RELEASE_VERSION: ${{ inputs.version }}
         run: |
-          if ($env:RELEASE_VERSION -notmatch '^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$') {
-            throw "Release version must be a stable SemVer value such as 0.1.0."
+          node scripts/assert-release-version.mjs $env:RELEASE_VERSION
+          if ($LASTEXITCODE -ne 0) {
+            throw 'The release version was rejected against the published stable releases.'
           }
           if ($env:GITHUB_SHA -notmatch '^[0-9a-f]{40}$') {
             throw 'GitHub must supply a full lowercase commit hash for an official release.'
+          }
+
+          $comparison = gh api "repos/$env:GITHUB_REPOSITORY/compare/main...$env:GITHUB_SHA" --jq .status
+          if ($LASTEXITCODE -ne 0) {
+            throw 'Unable to compare the release commit against main.'
+          }
+          if ($comparison -notin @('identical', 'behind')) {
+            throw "Official releases must be dispatched from a commit on main (comparison: $comparison)."
           }
 
           $version = $env:RELEASE_VERSION
@@ -58,33 +67,6 @@ jobs:
             $tagSha = ($resolvedLine -split '\s+')[0]
             if ($tagSha -ne $env:GITHUB_SHA) {
               throw "Release tag $tag already points to $tagSha instead of $env:GITHUB_SHA."
-            }
-          }
-
-          function Compare-StableVersion([string] $left, [string] $right) {
-            $leftParts = $left.Split('.')
-            $rightParts = $right.Split('.')
-            for ($index = 0; $index -lt 3; $index++) {
-              if ($leftParts[$index].Length -ne $rightParts[$index].Length) {
-                return $leftParts[$index].Length.CompareTo($rightParts[$index].Length)
-              }
-              $componentComparison = [string]::CompareOrdinal($leftParts[$index], $rightParts[$index])
-              if ($componentComparison -ne 0) {
-                return $componentComparison
-              }
-            }
-            return 0
-          }
-
-          $publishedTags = @(gh api --paginate "repos/$env:GITHUB_REPOSITORY/releases?per_page=100" --jq '.[] | select(.draft == false and .prerelease == false) | .tag_name')
-          if ($LASTEXITCODE -ne 0) {
-            throw 'Unable to inspect published stable releases.'
-          }
-          foreach ($publishedTag in $publishedTags) {
-            if ($publishedTag -match '^v((0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*))$') {
-              if ((Compare-StableVersion $version $Matches[1]) -le 0) {
-                throw "Release version $version must be newer than published stable release $publishedTag."
-              }
             }
           }
 
@@ -186,6 +168,11 @@ jobs:
       contents: write
 
     steps:
+      - name: Check out repository
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          fetch-depth: 1
+
       - name: Download portable artifact
         uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7
         with:
@@ -253,41 +240,7 @@ jobs:
           RELEASE_TAG: ${{ needs.build.outputs.release_tag }}
           RELEASE_VERSION: ${{ needs.build.outputs.release_version }}
         run: |
-          require_newer_than_published() {
-            local published_tags published_tag published_version comparison index
-            local -a release_parts published_parts
-            published_tags="$(gh api --paginate "repos/${GITHUB_REPOSITORY}/releases?per_page=100" --jq '.[] | select(.draft == false and .prerelease == false) | .tag_name')" || return 1
-            while IFS= read -r published_tag; do
-              if [[ ! "${published_tag}" =~ ^v((0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$) ]]; then
-                continue
-              fi
-              published_version="${BASH_REMATCH[1]}"
-              IFS='.' read -r -a release_parts <<< "${RELEASE_VERSION}"
-              IFS='.' read -r -a published_parts <<< "${published_version}"
-              comparison=0
-              for index in 0 1 2; do
-                if (( ${#release_parts[index]} > ${#published_parts[index]} )); then
-                  comparison=1
-                  break
-                elif (( ${#release_parts[index]} < ${#published_parts[index]} )); then
-                  comparison=-1
-                  break
-                elif [[ "${release_parts[index]}" > "${published_parts[index]}" ]]; then
-                  comparison=1
-                  break
-                elif [[ "${release_parts[index]}" < "${published_parts[index]}" ]]; then
-                  comparison=-1
-                  break
-                fi
-              done
-              if (( comparison <= 0 )); then
-                echo "Release version ${RELEASE_VERSION} must be newer than published stable release ${published_tag}." >&2
-                return 1
-              fi
-            done <<< "${published_tags}"
-          }
-
-          require_newer_than_published
+          node scripts/assert-release-version.mjs "${RELEASE_VERSION}"
           if [ "$(gh release view "${RELEASE_TAG}" --json isDraft --jq .isDraft)" != "true" ]; then
             echo "Release ${RELEASE_TAG} is already published and cannot be replaced." >&2
             exit 1
