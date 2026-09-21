@@ -41,6 +41,9 @@ jobs:
           if ($env:RELEASE_VERSION -notmatch '^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$') {
             throw "Release version must be a stable SemVer value such as 0.1.0."
           }
+          if ($env:GITHUB_SHA -notmatch '^[0-9a-f]{40}$') {
+            throw 'GitHub must supply a full lowercase commit hash for an official release.'
+          }
 
           $version = $env:RELEASE_VERSION
           $tag = "v$version"
@@ -90,6 +93,9 @@ jobs:
       - name: Build portable desktop executable
         shell: pwsh
         env:
+          RUN_PLANNER_BUILD_COMMIT: ${{ steps.release.outputs.release_sha }}
+          RUN_PLANNER_OFFICIAL_RELEASE: 'true'
+          RUN_PLANNER_RELEASE_VERSION: ${{ steps.release.outputs.release_version }}
           TAURI_RELEASE_CONFIG: ${{ steps.release.outputs.tauri_config }}
         run: |
           npm exec --workspace @run-planner/planner -- tauri build --no-bundle --config "$env:TAURI_RELEASE_CONFIG" -- --locked

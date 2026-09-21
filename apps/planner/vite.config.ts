@@ -1,7 +1,9 @@
 import react from '@vitejs/plugin-react';
+import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { defineConfig, type Plugin } from 'vite';
 
+import { createBuildIdentity } from './src/composition/buildIdentity';
 import {
   DEV_BROWSER_ERROR_EVENT,
   type DevBrowserErrorPayload,
@@ -52,7 +54,31 @@ function isBrowserErrorPayload(candidate: unknown): candidate is DevBrowserError
   );
 }
 
+function sourceCommit(): string | undefined {
+  try {
+    return execFileSync('git', ['rev-parse', 'HEAD'], {
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'ignore'],
+    }).trim();
+  } catch {
+    return undefined;
+  }
+}
+
+const officialRelease = process.env.RUN_PLANNER_OFFICIAL_RELEASE;
+const buildIdentity = createBuildIdentity({
+  commit:
+    officialRelease === 'true'
+      ? process.env.RUN_PLANNER_BUILD_COMMIT
+      : (process.env.RUN_PLANNER_BUILD_COMMIT ?? sourceCommit()),
+  officialRelease,
+  releaseVersion: process.env.RUN_PLANNER_RELEASE_VERSION,
+});
+
 export default defineConfig({
+  define: {
+    __RUN_PLANNER_BUILD_IDENTITY__: JSON.stringify(buildIdentity),
+  },
   plugins: [react(), browserErrorRelay()],
   resolve: {
     alias: {

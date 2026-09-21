@@ -83,6 +83,17 @@ import {
 
 afterEach(cleanup);
 
+async function expectAboutBuildIdentity(startWithProject: boolean): Promise<void> {
+  const view = renderPlannerForInteraction({ startWithProject });
+
+  await view.user.click(screen.getByRole('button', { name: 'About' }));
+
+  const about = await screen.findByLabelText('About Run Planner');
+  const summary = about.querySelector('.about-product-summary');
+  expect(summary).not.toBeNull();
+  expect(summary!.textContent).toMatch(/^VersionDevelopmentBuildLocal buildSchema86Catalog/);
+}
+
 function profileReference(fileName: string): ProfileFileReference {
   return { activate: () => Promise.resolve(), fileName, write: () => Promise.resolve() };
 }
@@ -479,6 +490,14 @@ function allTogetherFindingFixture() {
   const occurrence = createOccurrenceAddress(goldenGBiome, goldenGOccurrenceId(7, 1));
   return { application, occurrence, project, set, target };
 }
+
+describe('About build identity', () => {
+  it('shows Version and Build before Schema and Catalog before and after a project is open', async () => {
+    await expectAboutBuildIdentity(false);
+    cleanup();
+    await expectAboutBuildIdentity(true);
+  });
+});
 
 describe('planner history interaction', () => {
   it('places the same route repair in the biome rail or above non-biome content', async () => {

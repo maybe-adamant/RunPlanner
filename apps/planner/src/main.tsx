@@ -18,6 +18,9 @@ import './ui/styles.css';
 import { App } from './ui/shell/App';
 import { ApplicationFaultBoundary } from './ui/shell/ApplicationFaultBoundary';
 import { createBrowserAppScalePreference } from './persistence/appScalePreference';
+import type { BuildIdentity } from './composition/buildIdentity';
+
+declare const __RUN_PLANNER_BUILD_IDENTITY__: BuildIdentity;
 
 const devBrowserErrorReporter = installDevBrowserErrorReporter();
 const rootElement = document.getElementById('root');
@@ -73,6 +76,7 @@ const application = createApplication({
     clearTimeout: (handle) => globalThis.window.clearTimeout(handle),
     setTimeout: (task, delayMs) => globalThis.window.setTimeout(task, delayMs),
   }),
+  buildIdentity: __RUN_PLANNER_BUILD_IDENTITY__,
   profileFile,
   profileFileRestore: await profileFile.restoreActive(),
   ...(tauriHost ? { gamePlanPublisher: createTauriGamePlanPublisher() } : {}),
@@ -98,6 +102,7 @@ createRoot(rootElement, devBrowserErrorReporter?.rootOptions).render(
       <Provider store={application.store}>
         <App
           appScalePreference={appScalePreference}
+          buildIdentity={application.buildIdentity}
           catalog={application.catalog}
           catalogSummary={application.catalogSummary}
           editorNavigation={application.editorNavigation}
