@@ -16,6 +16,34 @@ data. Supported offline migration commands are documented beside their scripts
 in [`schema/README.md`](../../schema/README.md); migration history is not part
 of this design authority.
 
+### Schema change approval
+
+The open-beta compatibility default is to preserve existing user saves. An
+authored-project schema bump requires explicit approval from the project owner
+before implementation. Approval to fix a bug, refactor code, or deliver a
+feature does not itself authorize a bump or a required user migration.
+
+First determine whether the existing persisted representation can safely carry
+the intended choice. Internal naming, editor presentation, and corrected
+derived calculations do not by themselves justify changing that representation.
+An explicit engine-owned conversion between a stable stored encoding and a
+clearer authoring value is acceptable; do not silently reinterpret existing
+values or put domain conversion rules in React.
+
+If preserving the representation is unsafe or requires disproportionate
+complexity, propose the incompatible change before making it. State what
+cannot be represented, which existing saves are affected, the compatible
+alternative and its cost, and the migration and release implications. A
+migration script or passing fixture refresh is not sufficient justification.
+Changing a catalog-version requirement to reject existing saves is subject to
+the same approval requirement, not a substitute for a schema bump.
+
+Once approved, retain strict decoding and provide a deliberate migration; this
+policy does not authorize permissive parsing, speculative legacy support, or
+silently discarding unsupported choices. Distinguish shipped formats from
+unreleased work when deciding the migration boundary, and do not recycle an
+already-shipped schema version for incompatible semantics.
+
 One document contains one selected route. Every supported main room, fixed
 Boss/Postboss room, and generated N side room is an occurrence in the same
 topology. Each occurrence owns one `roomActions.order`; sparse acquisition

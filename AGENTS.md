@@ -194,6 +194,10 @@ understanding of the live diff.
 
 ## Modeling Rules
 
+- Authored schema bumps or other changes that require users to migrate existing
+  saves require explicit project-owner approval before implementation. Follow
+  [Schema change approval](docs/design/AUTHORED_PROJECT_MODEL.md#schema-change-approval);
+  ordinary feature/fix authorization is not approval to break save compatibility.
 - Use game-domain language in catalog, authored state, history, and findings.
 - Keep UI rows, tabs, expansion state, canvas positions, and selector text out
   of persisted domain state.
