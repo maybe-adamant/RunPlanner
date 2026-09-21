@@ -234,6 +234,7 @@ function selectCandidate(
       case 'rewardWheelOffer':
       case 'shopOffer':
       case 'acquisitionEntryOffer':
+      case 'startingReward':
         return candidate.evaluation.result.supported;
       case 'unavailable':
         return false;

@@ -84,6 +84,48 @@ describe('relational reward domain projection', () => {
     },
   );
 
+  it('keeps the starting reward pickable when a god keepsake forces one legal source', () => {
+    const selected = {
+      rewardType: 'Boon',
+      payload: { kind: 'BoonSource' as const, source: 'ApolloUpgrade' },
+    };
+    const forced = {
+      rewardType: 'Boon',
+      payload: { kind: 'BoonSource' as const, source: 'ZeusUpgrade' },
+    };
+    const prepared = prepareRewardDomain(catalog, ['Boon'], selected);
+    const projected = projectRewardDomain(
+      prepared,
+      rewardDomainOffers(prepared).map((offer) => ({
+        value: offer,
+        evaluation: {
+          kind: 'startingReward' as const,
+          result: {
+            supported: JSON.stringify(offer) === JSON.stringify(forced),
+            findings: [],
+          },
+        },
+      })),
+    );
+
+    expect(projected.types[0]).toMatchObject({
+      supportingOffer: forced,
+      evaluation: { kind: 'startingReward', result: { supported: true } },
+    });
+    expect(projected.payload.kind).toBe('oneOf');
+    if (projected.payload.kind !== 'oneOf') {
+      throw new Error('the forced Boon did not produce a God source domain');
+    }
+    expect(projected.payload.sources.find((option) => option.key === 'ZeusUpgrade')).toMatchObject({
+      offerEvaluation: { kind: 'startingReward', result: { supported: true } },
+    });
+    expect(
+      projected.payload.sources.find((option) => option.key === 'ApolloUpgrade'),
+    ).toMatchObject({
+      offerEvaluation: { kind: 'startingReward', result: { supported: false } },
+    });
+  });
+
   it('retains an out-of-store selected type without collapsing its payload repair domain', () => {
     const selected = {
       rewardType: 'Boon',
