@@ -521,6 +521,8 @@ export {
   type TraitCandidateAssessment,
 } from './traits';
 export {
+  persephoneLevelRolls,
+  type PersephoneLevelRoll,
   resolveTraitOfferOptionLevel,
   type TraitOfferOptionLevelResolution,
   type TraitOfferOptionLevelResolutionInput,

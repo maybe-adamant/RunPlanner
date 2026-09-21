@@ -6,6 +6,7 @@ import type { TraitRarity } from '@run-planner/engine/catalog-schema';
 import { useMemo } from 'react';
 
 import type { TraitOptionDomainProjection } from '@planner/projections/rewards/traitDomainProjection';
+import type { TraitOfferOptionFeedback } from '@planner/projections/rewards/traitProjection';
 import type { ContextualPickerModel } from '@planner/projections/contextual/contextualPicker';
 import type { WorkspaceTraitOfferInteraction } from '@planner/projections/structured-workspace';
 import { useWorkspaceInteractionController } from '@planner/ui/controls/useWorkspaceInteraction';
@@ -24,7 +25,7 @@ export function TraitOfferOrdinaryOption({
   rejected,
   effectiveRarity,
   effectiveLevel,
-  persephoneLevelBonusMaximum,
+  persephoneLevelRolls,
   spellOffer = false,
   rarifySupported,
   value,
@@ -37,7 +38,7 @@ export function TraitOfferOrdinaryOption({
   readonly rejected: boolean;
   readonly effectiveRarity?: TraitRarity;
   readonly effectiveLevel?: number;
-  readonly persephoneLevelBonusMaximum?: number;
+  readonly persephoneLevelRolls?: TraitOfferOptionFeedback['persephoneLevelRolls'];
   readonly spellOffer?: boolean;
   readonly rarifySupported: boolean;
   readonly value: AuthoredTraitOfferTraits;
@@ -148,12 +149,12 @@ export function TraitOfferOrdinaryOption({
       onTraitOpenChange={(open) => {
         if (open) controller.activate(loadable);
       }}
-      persephoneAriaLabel={`${optionKey} Persephone level bonus`}
+      persephoneAriaLabel={`${optionKey} Persephone roll`}
       showPersephoneBonus={interaction.showPersephoneBonus}
       {...(option.persephoneLevelBonus === undefined
         ? {}
         : { persephoneLevelBonus: option.persephoneLevelBonus })}
-      {...(persephoneLevelBonusMaximum === undefined ? {} : { persephoneLevelBonusMaximum })}
+      {...(persephoneLevelRolls === undefined ? {} : { persephoneLevelRolls })}
       selected={value.selectedOptionKey === optionKey}
       selectedDisabled={rejected}
       selectedLabel={rejected ? 'Blocked by Rejected' : 'Selected'}

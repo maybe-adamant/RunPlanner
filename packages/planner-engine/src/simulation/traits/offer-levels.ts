@@ -8,6 +8,25 @@ import type {
   TraitOfferSourceContext,
 } from './offer-domain';
 
+export interface PersephoneLevelRoll {
+  /** Stable authored encoding: zero is native zero; positive values encode roll minus one. */
+  readonly levelBonus: number;
+  readonly roll: number;
+}
+
+function persephoneRollFromLevelBonus(levelBonus: number): number {
+  return levelBonus === 0 ? 0 : levelBonus + 1;
+}
+
+/** Native outcomes paired with the existing authored encoding, not probability weights. */
+export function persephoneLevelRolls(maximumBonus: number): readonly PersephoneLevelRoll[] {
+  return Object.freeze(
+    Array.from({ length: maximumBonus + 1 }, (_, levelBonus) =>
+      Object.freeze({ levelBonus, roll: persephoneRollFromLevelBonus(levelBonus) }),
+    ),
+  );
+}
+
 export interface TraitOfferOptionLevelResolution {
   /** The active authored Persephone contribution domain, when applicable. */
   readonly persephoneLevelBonusMaximum?: number;
@@ -75,9 +94,10 @@ export function resolveTraitOfferOptionLevel(
         ]),
       });
     }
+    const roll = persephoneRollFromLevelBonus(bonus);
     return Object.freeze({
       persephoneLevelBonusMaximum: maximum,
-      effectiveLevel: 1 + pomLevels + bonus,
+      effectiveLevel: pomLevels > 0 ? roll + pomLevels + 1 : Math.max(1, roll),
       findings: Object.freeze([]),
     });
   }

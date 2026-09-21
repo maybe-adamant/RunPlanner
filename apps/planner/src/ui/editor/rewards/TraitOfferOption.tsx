@@ -1,4 +1,5 @@
 import type { TraitRarity } from '@run-planner/engine/catalog-schema';
+import type { TraitOfferOptionFeedback } from '@planner/projections/rewards/traitProjection';
 
 import type {
   ContextualPickerItem,
@@ -28,7 +29,7 @@ export function TraitOfferOption<TraitValue>({
   onSelectedChange,
   onTraitOpenChange,
   persephoneLevelBonus,
-  persephoneLevelBonusMaximum,
+  persephoneLevelRolls,
   rarityPicker,
   rarityAriaLabel,
   rarityValue,
@@ -60,7 +61,7 @@ export function TraitOfferOption<TraitValue>({
   readonly onSelectedChange: () => void;
   readonly onTraitOpenChange?: (open: boolean) => void;
   readonly persephoneLevelBonus?: number;
-  readonly persephoneLevelBonusMaximum?: number;
+  readonly persephoneLevelRolls?: TraitOfferOptionFeedback['persephoneLevelRolls'];
   readonly rarityPicker?: ContextualPickerModel<TraitRarity>;
   readonly rarityAriaLabel?: string;
   readonly rarityValue?: TraitRarity;
@@ -172,21 +173,20 @@ export function TraitOfferOption<TraitValue>({
       )}
       {!showPersephoneBonus ? null : (
         <dl className="trait-option-effective-summary trait-option-persephone-bonus">
-          <dt>Persephone Bonus</dt>
+          <dt>Persephone Roll</dt>
           <dd>
-            {persephoneLevelBonusMaximum === undefined ||
-            onPersephoneLevelBonusChange === undefined ? (
+            {persephoneLevelRolls === undefined || onPersephoneLevelBonusChange === undefined ? (
               <span aria-label="Not applicable">N/A</span>
             ) : (
               <select
-                aria-label={persephoneAriaLabel ?? `${legend} Persephone level bonus`}
+                aria-label={persephoneAriaLabel ?? `${legend} Persephone roll`}
                 id={`${controlId}-persephone-level-bonus`}
                 onChange={(event) => onPersephoneLevelBonusChange(Number(event.target.value))}
                 value={persephoneLevelBonus ?? 0}
               >
-                {Array.from({ length: persephoneLevelBonusMaximum + 1 }, (_, bonus) => (
-                  <option key={bonus} value={bonus}>
-                    +{bonus}
+                {persephoneLevelRolls.map(({ levelBonus, roll }) => (
+                  <option key={levelBonus} value={levelBonus}>
+                    {roll}
                   </option>
                 ))}
               </select>

@@ -1437,9 +1437,9 @@ describe('trait offer editor entry and dialog', () => {
       </Provider>,
     );
 
-    const bonus = screen.getByRole('combobox', { name: 'option1 Persephone level bonus' });
+    const bonus = screen.getByRole('combobox', { name: 'option1 Persephone roll' });
     expect((bonus as HTMLSelectElement).value).toBe('1');
-    await user.selectOptions(bonus, '2');
+    await user.selectOptions(bonus, within(bonus).getByRole('option', { name: '3' }));
     expect((bonus as HTMLSelectElement).value).toBe('2');
 
     view.rerender(
@@ -1450,7 +1450,7 @@ describe('trait offer editor entry and dialog', () => {
     expect(
       (
         screen.getByRole('combobox', {
-          name: 'option1 Persephone level bonus',
+          name: 'option1 Persephone roll',
         }) as HTMLSelectElement
       ).value,
     ).toBe('5');
@@ -1591,8 +1591,8 @@ describe('trait offer editor entry and dialog', () => {
         />
       </Provider>,
     );
-    const bonus = screen.getByRole('combobox', { name: 'option1 Persephone level bonus' });
-    await user.selectOptions(bonus, '2');
+    const bonus = screen.getByRole('combobox', { name: 'option1 Persephone roll' });
+    await user.selectOptions(bonus, within(bonus).getByRole('option', { name: '3' }));
     expect((bonus as HTMLSelectElement).value).toBe('2');
 
     view.rerender(
@@ -1606,7 +1606,7 @@ describe('trait offer editor entry and dialog', () => {
     expect(
       (
         screen.getByRole('combobox', {
-          name: 'option1 Persephone level bonus',
+          name: 'option1 Persephone roll',
         }) as HTMLSelectElement
       ).value,
     ).toBe('2');
