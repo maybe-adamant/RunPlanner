@@ -2,9 +2,6 @@
 
 ## Status and scope
 
-Implemented in the schema-64, catalog `0.47.0-persephone-effective-levels`
-Planner contract.
-
 This is the durable source audit for the reward-side level effects of Aspect of
 Persephone (`LobImpulseAspect`) and Premium Service (`WeaponUpgradeBoon`), plus
 the existing Jeweled Pom and Sacrificial Hymn contacts needed to state one
@@ -102,19 +99,18 @@ stack encoding by adding `FatedBoonLevelBonus + 1`. This creates a gapped joint
 distribution. For example, Epic Jeweled Pom and Legendary Persephone yield
 displayed levels `{4, 6, 7, 8, 9, 10}` rather than a continuous range.
 
-The Planner deliberately normalizes that implementation artifact. It models
-Persephone as an additive random contribution of zero through five levels, or
-zero through eight after Premium Service, and then adds the active Jeweled Pom
-contribution normally. The normalized final formula for a qualifying fresh
-row is:
+The Planner follows that native composition. For a qualifying fresh row:
 
 ```text
-effective level = 1 + Jeweled Pom contribution + Persephone contribution
+native roll = stored bonus == 0 ? 0 : stored bonus + 1
+effective level = positive active Jeweled Pom contribution
+  ? native roll + Jeweled Pom contribution + 1
+  : max(1, native roll)
 ```
 
-This retains every independently meaningful authored decision while avoiding
-a special joint effect table. The Planner models possible authored outcomes,
-not source probability weights.
+With Premium Service and Epic Jeweled Pom the supported levels are
+`{4, 6, 7, 8, 9, 10, 11, 12, 13}`. The Planner models possible authored outcomes,
+not source probability weights; no special joint effect table is needed.
 
 ### Replacement precedence and Sacrificial Hymn
 
@@ -137,12 +133,14 @@ addition.
 
 ## Planner disposition
 
-The Planner has an optional Persephone random additive contribution on the
-exact authored option row. The legal contribution is `0..5` before Premium
-Service and `0..8` after a prior Premium Service acquisition. Only nonzero
-outcomes need persistence: an omitted active value semantically resolves as
-the ordinary `+0` result, so authors do not have to author zero on every
-eligible row. Explicit zero remains a valid round-tripping representation.
+The Planner retains its optional `persephoneLevelBonus` encoding on the exact
+authored option row: `0..5` before Premium Service and `0..8` after a prior
+Premium Service acquisition. Zero encodes native roll zero; a positive value
+encodes native roll minus one. This keeps existing saves readable without
+changing their selected Persephone outcome. The editor displays the native
+domains `0, 2..6` and `0, 2..9`, using the engine's paired native/stored values.
+An omitted active value resolves as native zero, so authors do not have to
+author zero on every eligible row. Explicit zero round-trips unchanged.
 
 The field is active only for a fresh, stackable core-god option on a supported
 loot screen while Aspect of Persephone is equipped. It remains frozen with the
@@ -152,16 +150,14 @@ detail remains repairable rather than being destructively erased.
 The final effective level is derived, never persisted. The engine combines the
 pre-offer trait history, replacement transition, retained Jeweled Pom state,
 route aspect, prior Premium Service acquisition, and the authored Persephone
-contribution. The application may display the result only when all surviving
+outcome. The application may display the result only when all surviving
 simulation branches agree.
 
 No general aspect-rank ledger, random-effect registry, weighted probability
 simulator, or React-owned level formula is implied.
 
-The shipped implementation keeps the contribution optional in authored JSON:
-an omitted active value is the ordinary `+0` result and does not produce a
-finding. The engine emits `persephoneLevelBonusUnavailable` only for an
-explicit value outside the active range, and the application presents that
-finding at the exact option owner for repair. Effective levels remain derived
-products; Premium Service expands only later offer screens because each screen
-freezes its levels when generated.
+The engine emits `persephoneLevelBonusUnavailable` for an explicit encoded
+value outside the active range; the application presents that finding at the
+exact option owner for repair. Effective levels remain derived products;
+Premium Service expands only later offer screens because each screen freezes
+its levels when generated.

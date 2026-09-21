@@ -56,6 +56,7 @@ export interface RawAspectDeclaration {
   readonly label: string;
   readonly weaponKey: string;
   readonly startingTrait?: { readonly traitKey: string; readonly giverKey: string };
+  /** Persephone's authored outcome bounds (native positive roll minus one). */
   readonly traitOfferLevelBonus?: {
     readonly maximumBonus: number;
     readonly upgradedMaximumBonus: number;

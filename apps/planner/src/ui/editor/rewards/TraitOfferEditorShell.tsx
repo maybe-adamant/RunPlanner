@@ -248,7 +248,7 @@ export function TraitOfferEditorShell({
               const optionFeedback = feedback.options[index];
               const rowEffectiveRarity = effectiveRarity(optionKey);
               const rowEffectiveLevel = optionFeedback?.effectiveLevel;
-              const rowPersephoneLevelBonusMaximum = optionFeedback?.persephoneLevelBonusMaximum;
+              const rowPersephoneLevelRolls = optionFeedback?.persephoneLevelRolls;
               return (
                 <div data-has-findings={(optionFeedback?.reasons.length ?? 0) > 0} key={optionKey}>
                   <TraitOfferOrdinaryOption
@@ -263,9 +263,9 @@ export function TraitOfferEditorShell({
                     onUpdate={updateValue}
                     optionKey={optionKey}
                     rejected={value.rejectedOptionKey === optionKey}
-                    {...(rowPersephoneLevelBonusMaximum === undefined
+                    {...(rowPersephoneLevelRolls === undefined
                       ? {}
-                      : { persephoneLevelBonusMaximum: rowPersephoneLevelBonusMaximum })}
+                      : { persephoneLevelRolls: rowPersephoneLevelRolls })}
                     rarifySupported={rarifySupported(optionKey)}
                     spellOffer={spellOffer}
                     value={value}

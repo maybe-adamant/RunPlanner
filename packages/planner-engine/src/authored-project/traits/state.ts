@@ -26,7 +26,7 @@ export interface AuthoredTraitOption extends AuthoredTraitCarrierOutcome {
   readonly echoPomTarget?: string | null;
   /** Echo's explicit previous-run approximation; dormant when this outer row is not selected. */
   readonly echoLastRunBoon?: AuthoredEchoLastRunBoonOffer;
-  /** Persephone's frozen additive contribution for this generated row. */
+  /** Frozen Persephone outcome encoding: omitted/0 is roll 0; positive values are roll minus 1. */
   readonly persephoneLevelBonus?: number;
 }
 

@@ -643,14 +643,16 @@ describe('schema-54 occurrence-owned encounter persistence', () => {
     expect(decoded).toEqual(project);
   });
 
-  it('round-trips absent and explicit Persephone offer contributions at the encounter boundary', () => {
-    for (const bonus of [undefined, 0, 5, 8] as const) {
+  it('preserves schema-86 Persephone encodings, including omission and positive one', () => {
+    for (const bonus of [undefined, 0, 1, 5, 8] as const) {
       const document = encoded(arachneStoryProject());
+      expect(document.schemaVersion).toBe(86);
       const option = (arachneStoryOffer(document).options as JsonRecord[])[0]!;
       if (bonus === undefined) delete option.persephoneLevelBonus;
       else option.persephoneLevelBonus = bonus;
 
       const decoded = decodeProjectDocument(document, catalog);
+      expect(encoded(decoded)).toEqual(document);
       const roundTrippedOption = (arachneStoryOffer(encoded(decoded)).options as JsonRecord[])[0]!;
       if (bonus === undefined) expect('persephoneLevelBonus' in roundTrippedOption).toBe(false);
       else expect(roundTrippedOption.persephoneLevelBonus).toBe(bonus);

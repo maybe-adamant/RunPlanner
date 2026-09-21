@@ -348,7 +348,7 @@ function findingExplanation(catalog: Catalog, finding: SemanticFinding): Candida
     case 'allTogetherResultUnavailable':
       return { kind: 'trait', message: 'Repair the direct trait outcomes for All Together.' };
     case 'persephoneLevelBonusUnavailable':
-      return { kind: 'trait', message: 'Choose a Persephone contribution in the active range.' };
+      return { kind: 'trait', message: 'Choose an available Persephone roll.' };
     case 'targetRoomUnavailable':
       return {
         kind: 'room',

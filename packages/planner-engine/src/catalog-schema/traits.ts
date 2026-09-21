@@ -417,7 +417,7 @@ export interface AspectDeclaration {
   readonly label: string;
   readonly weaponKey: string;
   readonly startingTrait?: { readonly traitKey: string; readonly giverKey: string };
-  /** Narrow reward-side contribution from an equipped aspect. */
+  /** Bounds in the stable authored Persephone encoding, not native roll values. */
   readonly traitOfferLevelBonus?: {
     readonly maximumBonus: number;
     readonly upgradedMaximumBonus: number;

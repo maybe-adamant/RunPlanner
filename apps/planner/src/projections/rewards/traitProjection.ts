@@ -5,11 +5,13 @@ import {
   type TraitOfferAddress,
 } from '@run-planner/engine/authored-project';
 import type { Catalog } from '@run-planner/engine/catalog-schema';
+import { persephoneLevelRolls } from '@run-planner/engine/simulation';
 import type {
   CandidateContextUnavailable,
   ProjectEvaluation,
   SelectedTraitOfferAssessment,
   TraitReplacementTransition,
+  PersephoneLevelRoll,
 } from '@run-planner/engine/simulation';
 
 import type {
@@ -26,7 +28,7 @@ export interface TraitOfferOptionFeedback {
   readonly traitKey: string;
   /** Engine-published row products; omitted when branches do not agree. */
   readonly effectiveLevel?: number;
-  readonly persephoneLevelBonusMaximum?: number;
+  readonly persephoneLevelRolls?: readonly PersephoneLevelRoll[];
   readonly replacement?: TraitReplacementPresentation;
 }
 
@@ -242,7 +244,9 @@ export function projectTraitOfferFeedback(
           reasons: Object.freeze([...reasons]),
           traitKey: option.traitKey,
           ...(effectiveLevel === undefined ? {} : { effectiveLevel }),
-          ...(persephoneLevelBonusMaximum === undefined ? {} : { persephoneLevelBonusMaximum }),
+          ...(persephoneLevelBonusMaximum === undefined
+            ? {}
+            : { persephoneLevelRolls: persephoneLevelRolls(persephoneLevelBonusMaximum) }),
           ...(replacement === undefined
             ? {}
             : {

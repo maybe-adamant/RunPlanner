@@ -878,14 +878,14 @@ describe('ordinary offer shell', () => {
         </Provider>,
       );
 
-      expect(screen.queryAllByText('Persephone Bonus')).toHaveLength(persephoneEquipped ? 3 : 0);
+      expect(screen.queryAllByText('Persephone Roll')).toHaveLength(persephoneEquipped ? 3 : 0);
       expect(screen.queryAllByText('N/A')).toHaveLength(persephoneEquipped ? 3 : 0);
-      expect(screen.queryByRole('combobox', { name: /Persephone level bonus/ })).toBeNull();
+      expect(screen.queryByRole('combobox', { name: /Persephone roll/ })).toBeNull();
       application.dispose();
     },
   );
 
-  it('authors a bounded Persephone contribution and preserves the complete offer', async () => {
+  it('displays native Persephone rolls while preserving the encoded complete offer', async () => {
     const application = createApplication();
     application.store.dispatch(authoredProjectReplaced(createGoldenFGHIProject()));
     const workspace = application.selectStructuredWorkspace(application.store.getState())!;
@@ -948,15 +948,20 @@ describe('ordinary offer shell', () => {
     const summaries = screen.getAllByLabelText('Effective trait values');
     expect(summaries).toHaveLength(3);
     expect(summaries[1]?.querySelectorAll('dd')[1]?.textContent).toBe('—');
-    expect(screen.getAllByText('Persephone Bonus')).toHaveLength(3);
+    expect(screen.getAllByText('Persephone Roll')).toHaveLength(3);
     expect(screen.getAllByText('N/A')).toHaveLength(2);
-    expect(screen.getAllByRole('combobox', { name: /Persephone level bonus/ })).toHaveLength(1);
-    const bonus = screen.getByRole('combobox', { name: 'option1 Persephone level bonus' });
+    expect(screen.getAllByRole('combobox', { name: /Persephone roll/ })).toHaveLength(1);
+    const bonus = screen.getByRole('combobox', { name: 'option1 Persephone roll' });
+    expect(
+      within(bonus)
+        .getAllByRole('option')
+        .map((option) => option.textContent),
+    ).toEqual(['0', '2', '3', '4', '5', '6']);
     expect((bonus as HTMLSelectElement).value).toBe('0');
     await user.click(screen.getByRole('button', { name: 'Save trait offer' }));
     const defaultCommit = onCommit.mock.calls[0]?.[0] as AuthoredTraitOfferTraits | undefined;
     expect(defaultCommit?.options[0]).not.toHaveProperty('persephoneLevelBonus');
-    await user.selectOptions(bonus, '5');
+    await user.selectOptions(bonus, within(bonus).getByRole('option', { name: '6' }));
     await user.click(screen.getByRole('button', { name: 'Save trait offer' }));
 
     expect(onCommit).toHaveBeenCalledWith(
@@ -1091,7 +1096,7 @@ describe('ordinary offer shell', () => {
     expect(
       (
         screen.getByRole('combobox', {
-          name: 'option1 Persephone level bonus',
+          name: 'option1 Persephone roll',
         }) as HTMLSelectElement
       ).value,
     ).toBe('5');
@@ -1100,7 +1105,7 @@ describe('ordinary offer shell', () => {
     expect(
       (
         screen.getByRole('combobox', {
-          name: 'option1 Persephone level bonus',
+          name: 'option1 Persephone roll',
         }) as HTMLSelectElement
       ).value,
     ).toBe('5');

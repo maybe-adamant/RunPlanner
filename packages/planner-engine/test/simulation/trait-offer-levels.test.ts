@@ -14,6 +14,7 @@ import {
   createTraitHistoryState,
   evaluateReachedTraitOffer,
   foldTraitHistoryEvents,
+  persephoneLevelRolls,
   resolveTraitOfferOptionLevel,
   type TraitOfferEvent,
 } from '@run-planner/engine/simulation';
@@ -192,6 +193,47 @@ function context(withSuppression = false): TraitOfferCandidateContext {
 }
 
 describe('Persephone effective offer levels', () => {
+  it.each([
+    { premium: false, pom: 0, expected: [1, 2, 3, 4, 5, 6] },
+    { premium: false, pom: 4, expected: [5, 7, 8, 9, 10, 11] },
+    { premium: true, pom: 0, expected: [1, 2, 3, 4, 5, 6, 7, 8, 9] },
+    { premium: true, pom: 3, expected: [4, 6, 7, 8, 9, 10, 11, 12, 13] },
+    { premium: true, pom: 4, expected: [5, 7, 8, 9, 10, 11, 12, 13, 14] },
+  ])(
+    'resolves encoded outcomes with Premium=$premium and Pom=$pom',
+    ({ premium, pom, expected }) => {
+      const history = premium
+        ? foldTraitHistoryEvents(catalog, [
+            {
+              kind: 'traitOffer',
+              owner,
+              acquisitionRole: 'premium',
+              sequence: 0,
+              giverKey: 'Hephaestus',
+              options: [{ traitKey: 'WeaponUpgradeBoon', rarity: 'Legendary' }],
+              selectedOptionKey: 'option1',
+              acquisitionPoint: 'test',
+            },
+          ])
+        : createTraitHistoryState();
+      const choices = persephoneLevelRolls(premium ? 8 : 5);
+      expect(choices.map(({ roll }) => roll)).toEqual(
+        premium ? [0, 2, 3, 4, 5, 6, 7, 8, 9] : [0, 2, 3, 4, 5, 6],
+      );
+      expect(
+        choices.map(
+          ({ levelBonus }) =>
+            resolveTraitOfferOptionLevel({
+              catalog,
+              state: pomBranch(pom, history).state,
+              source: {},
+              option: offer(levelBonus).options[0]!,
+            }).effectiveLevel,
+        ),
+      ).toEqual(expected);
+    },
+  );
+
   it('defaults an omitted active contribution to zero while publishing its range', () => {
     const artifacts = createTraitOfferCandidateArtifacts(
       catalog,
@@ -218,7 +260,7 @@ describe('Persephone effective offer levels', () => {
     expect(candidate.assessments.flatMap((assessment) => assessment.findings)).toEqual([]);
   });
 
-  it('resolves the standard 0..5 contribution and additive Jeweled Pom levels', () => {
+  it('maps the stable standard encoding to native rolls and gapped Jeweled Pom levels', () => {
     const values = [0, 1, 2, 3, 4, 5].map(
       (bonus) =>
         resolveTraitOfferOptionLevel({
@@ -231,7 +273,15 @@ describe('Persephone effective offer levels', () => {
           option: offer(bonus).options[0]!,
         }).effectiveLevel,
     );
-    expect(values).toEqual([4, 5, 6, 7, 8, 9]);
+    expect(values).toEqual([4, 6, 7, 8, 9, 10]);
+    expect(persephoneLevelRolls(5)).toEqual([
+      { levelBonus: 0, roll: 0 },
+      { levelBonus: 1, roll: 2 },
+      { levelBonus: 2, roll: 3 },
+      { levelBonus: 3, roll: 4 },
+      { levelBonus: 4, roll: 5 },
+      { levelBonus: 5, roll: 6 },
+    ]);
   });
 
   it('expands only after a chronologically prior Premium Service selection', () => {
@@ -269,7 +319,7 @@ describe('Persephone effective offer levels', () => {
     expect(standard.findings).toContainEqual(
       expect.objectContaining({ code: 'persephoneLevelBonusUnavailable' }),
     );
-    expect(upgraded).toMatchObject({ persephoneLevelBonusMaximum: 8, effectiveLevel: 12 });
+    expect(upgraded).toMatchObject({ persephoneLevelBonusMaximum: 8, effectiveLevel: 13 });
   });
 
   it('suppresses both fresh contributions on Echo nested rows', () => {
@@ -336,7 +386,7 @@ describe('Persephone effective offer levels', () => {
       'traitAcquired',
       1,
     );
-    expect(settled.branch.state.traitHistory?.equippedTraits.ApolloWeaponBoon?.level).toBe(9);
+    expect(settled.branch.state.traitHistory?.equippedTraits.ApolloWeaponBoon?.level).toBe(10);
   });
 
   it('publishes the candidate effective level that selected settlement installs', () => {
@@ -348,7 +398,7 @@ describe('Persephone effective offer levels', () => {
     );
     const candidate = artifacts.at(address)?.evaluateOffer(offer(5))[0];
     if (candidate === undefined) throw new Error('missing candidate branch');
-    expect(candidate.effectiveLevels).toEqual([9, 9, 9]);
+    expect(candidate.effectiveLevels).toEqual([10, 10, 10]);
 
     const settled = applyTraitOfferForAcquisition(
       catalog,
@@ -403,8 +453,8 @@ describe('Persephone effective offer levels', () => {
       'traitAcquired',
       1,
     );
-    expect(settled.branch.state.traitHistory?.equippedTraits.ApolloWeaponBoon?.level).toBe(9);
-    expect(settled.branch.state.traitHistory?.equippedTraits.ApolloSpecialBoon?.level).toBe(9);
+    expect(settled.branch.state.traitHistory?.equippedTraits.ApolloWeaponBoon?.level).toBe(10);
+    expect(settled.branch.state.traitHistory?.equippedTraits.ApolloSpecialBoon?.level).toBe(10);
     expect(settled.branch.state.keepsakes.stone?.status).toBe('consumed');
   });
 
@@ -439,7 +489,7 @@ describe('Persephone effective offer levels', () => {
     );
     expect(settled.blockedChild).toBeUndefined();
     expect(settled.branch.state.traitHistory?.equippedTraits.WeaponUpgradeBoon).toBeDefined();
-    expect(settled.branch.state.traitHistory?.equippedTraits.HephaestusSpecialBoon?.level).toBe(9);
+    expect(settled.branch.state.traitHistory?.equippedTraits.HephaestusSpecialBoon?.level).toBe(10);
     expect(settled.branch.state.keepsakes.stone?.status).toBe('consumed');
   });
 
@@ -487,7 +537,7 @@ describe('Persephone effective offer levels', () => {
     expect(settled.branch.state.traitHistory?.equippedTraits.HeraWeaponBoon).toMatchObject({
       level: 6,
     });
-    expect(settled.branch.state.traitHistory?.equippedTraits.HeraWeaponBoon?.level).not.toBe(9);
+    expect(settled.branch.state.traitHistory?.equippedTraits.HeraWeaponBoon?.level).not.toBe(10);
     expect(settled.branch.state.stygianWell.hymnUses).toBe(0);
   });
 });

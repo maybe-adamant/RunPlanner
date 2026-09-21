@@ -49,10 +49,17 @@ describe('route trait projection', () => {
 
     expect(feedback.options[0]).toMatchObject({
       effectiveLevel: 6,
-      persephoneLevelBonusMaximum: 5,
+      persephoneLevelRolls: [
+        { levelBonus: 0, roll: 0 },
+        { levelBonus: 1, roll: 2 },
+        { levelBonus: 2, roll: 3 },
+        { levelBonus: 3, roll: 4 },
+        { levelBonus: 4, roll: 5 },
+        { levelBonus: 5, roll: 6 },
+      ],
     });
     expect(feedback.options[1]).not.toHaveProperty('effectiveLevel');
-    expect(feedback.options[1]).not.toHaveProperty('persephoneLevelBonusMaximum');
+    expect(feedback.options[1]).not.toHaveProperty('persephoneLevelRolls');
   });
 
   it('deduplicates equivalent offer states while preserving distinct branch tables', () => {
