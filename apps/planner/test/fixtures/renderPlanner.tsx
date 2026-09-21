@@ -41,6 +41,7 @@ export function renderPlannerForInteraction(options: RenderPlannerOptions = {}) 
       <App
         catalog={application.catalog}
         catalogSummary={application.catalogSummary}
+        buildIdentity={application.buildIdentity}
         editorNavigation={application.editorNavigation}
         projectOperations={application.projectOperations}
         selectStructuredWorkspace={application.selectStructuredWorkspace}

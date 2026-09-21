@@ -32,12 +32,14 @@ import type { GamePlanPublisher } from '../persistence/gamePlanPublisher';
 import { createPlannerStore } from '../state/store';
 import type { PreparedProjectWorkspace } from '../state/projectWorkspaceSlice';
 import { profileFileErrorReported } from '../state/profileSessionSlice';
+import { createDevelopmentBuildIdentity, type BuildIdentity } from './buildIdentity';
 
 export interface CreateApplicationOptions {
   readonly allocateOccurrenceId?: OccurrenceIdFactory;
   readonly autosaveDelayMs?: number;
   readonly autosaveRecovery?: AutosaveRecoveryAdapter;
   readonly autosaveScheduler?: AutosaveScheduler;
+  readonly buildIdentity?: BuildIdentity;
   readonly profileFile?: ProfileFileAdapter;
   readonly profileFileRestore?: ProfileFileRestoreResult;
   readonly gamePlanPublisher?: GamePlanPublisher;
@@ -156,6 +158,7 @@ export function createApplication(options: CreateApplicationOptions = {}) {
       : undefined;
 
   return {
+    buildIdentity: options.buildIdentity ?? createDevelopmentBuildIdentity(),
     catalog,
     catalogSummary: summarizeCatalog(catalog),
     editorNavigation,

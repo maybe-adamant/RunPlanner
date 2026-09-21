@@ -21,6 +21,7 @@ import {
 import type { ProjectOperations } from '@planner/workspace/projectOperations';
 import type { StructuredWorkspaceProjection } from '@planner/projections/structured-workspace';
 import type { AppScalePreference } from '@planner/persistence/appScalePreference';
+import type { BuildIdentity } from '@planner/composition/buildIdentity';
 import { PomResolutionDialog } from '../editor/rewards/PomResolutionEditor';
 import { TraitOfferDialog } from '../editor/rewards/TraitOfferEditor';
 import { ProjectFileControls } from '../project/ProjectFileControls';
@@ -32,6 +33,7 @@ import { useAppScale } from './useAppScale';
 
 interface AppProps {
   readonly appScalePreference?: AppScalePreference;
+  readonly buildIdentity: BuildIdentity;
   readonly catalog: Catalog;
   readonly catalogSummary: CatalogSummary;
   readonly editorNavigation: EditorNavigation;
@@ -43,6 +45,7 @@ interface AppProps {
 
 export function App({
   appScalePreference,
+  buildIdentity,
   catalog,
   catalogSummary,
   editorNavigation,
@@ -104,78 +107,85 @@ export function App({
               operations={projectOperations}
               routes={editorNavigation.routes.values}
             />
-            {!showEntry && (
-              <>
-                <ProjectHistoryControls hasProject />
-                <div className="header-about-controls">
-                  <Popover.Root>
-                    <Popover.Trigger asChild>
-                      <button className="quiet-action action-compact" type="button">
-                        <ActionIcon name="info" />
-                        About
-                      </button>
-                    </Popover.Trigger>
-                    <Popover.Portal>
-                      <Popover.Content
-                        align="end"
-                        aria-label="About Run Planner"
-                        className="about-popover"
-                        collisionPadding={12}
-                        sideOffset={8}
-                      >
-                        <dl className="about-product-summary">
-                          <div>
-                            <dt>Schema</dt>
-                            <dd>{PROJECT_DOCUMENT_SCHEMA_VERSION}</dd>
-                          </div>
-                          <div>
-                            <dt>Catalog</dt>
-                            <dd>{catalogSummary.version}</dd>
-                          </div>
-                        </dl>
-                        <section
-                          className="about-shortcuts"
-                          aria-labelledby="about-shortcuts-title"
+            {!showEntry && <ProjectHistoryControls hasProject />}
+            <div className="header-about-controls">
+              <Popover.Root>
+                <Popover.Trigger asChild>
+                  <button className="quiet-action action-compact" type="button">
+                    <ActionIcon name="info" />
+                    About
+                  </button>
+                </Popover.Trigger>
+                <Popover.Portal>
+                  <Popover.Content
+                    align="end"
+                    aria-label="About Run Planner"
+                    className="about-popover"
+                    collisionPadding={12}
+                    sideOffset={8}
+                  >
+                    <dl className="about-product-summary">
+                      <div>
+                        <dt>Version</dt>
+                        <dd>{buildIdentity.version}</dd>
+                      </div>
+                      <div>
+                        <dt>Build</dt>
+                        <dd
+                          {...(buildIdentity.commit === undefined
+                            ? {}
+                            : { title: buildIdentity.commit })}
                         >
-                          <h2 id="about-shortcuts-title">Keyboard shortcuts</h2>
-                          <dl>
-                            <div>
-                              <dt>App scale</dt>
-                              <dd>
-                                <kbd>Ctrl/Cmd</kbd> + <kbd>+</kbd> / <kbd>−</kbd>
-                                <span className="shortcut-alternative">or</span>
-                                <kbd>Ctrl</kbd> + mouse wheel
-                              </dd>
-                            </div>
-                            <div>
-                              <dt>Reset scale</dt>
-                              <dd>
-                                <kbd>Ctrl/Cmd</kbd> + <kbd>0</kbd>
-                              </dd>
-                            </div>
-                            <div>
-                              <dt>Undo</dt>
-                              <dd>
-                                <kbd>Ctrl/Cmd</kbd> + <kbd>Z</kbd>
-                              </dd>
-                            </div>
-                            <div>
-                              <dt>Redo</dt>
-                              <dd>
-                                <kbd>Ctrl/Cmd</kbd> + <kbd>Shift</kbd> + <kbd>Z</kbd>
-                                <span className="shortcut-alternative">or</span>
-                                <kbd>Ctrl</kbd> + <kbd>Y</kbd>
-                              </dd>
-                            </div>
-                          </dl>
-                        </section>
-                        <Popover.Arrow className="about-popover-arrow" />
-                      </Popover.Content>
-                    </Popover.Portal>
-                  </Popover.Root>
-                </div>
-              </>
-            )}
+                          {buildIdentity.build}
+                        </dd>
+                      </div>
+                      <div>
+                        <dt>Schema</dt>
+                        <dd>{PROJECT_DOCUMENT_SCHEMA_VERSION}</dd>
+                      </div>
+                      <div>
+                        <dt>Catalog</dt>
+                        <dd>{catalogSummary.version}</dd>
+                      </div>
+                    </dl>
+                    <section className="about-shortcuts" aria-labelledby="about-shortcuts-title">
+                      <h2 id="about-shortcuts-title">Keyboard shortcuts</h2>
+                      <dl>
+                        <div>
+                          <dt>App scale</dt>
+                          <dd>
+                            <kbd>Ctrl/Cmd</kbd> + <kbd>+</kbd> / <kbd>−</kbd>
+                            <span className="shortcut-alternative">or</span>
+                            <kbd>Ctrl</kbd> + mouse wheel
+                          </dd>
+                        </div>
+                        <div>
+                          <dt>Reset scale</dt>
+                          <dd>
+                            <kbd>Ctrl/Cmd</kbd> + <kbd>0</kbd>
+                          </dd>
+                        </div>
+                        <div>
+                          <dt>Undo</dt>
+                          <dd>
+                            <kbd>Ctrl/Cmd</kbd> + <kbd>Z</kbd>
+                          </dd>
+                        </div>
+                        <div>
+                          <dt>Redo</dt>
+                          <dd>
+                            <kbd>Ctrl/Cmd</kbd> + <kbd>Shift</kbd> + <kbd>Z</kbd>
+                            <span className="shortcut-alternative">or</span>
+                            <kbd>Ctrl</kbd> + <kbd>Y</kbd>
+                          </dd>
+                        </div>
+                      </dl>
+                    </section>
+                    <Popover.Arrow className="about-popover-arrow" />
+                  </Popover.Content>
+                </Popover.Portal>
+              </Popover.Root>
+            </div>
           </div>
         </header>
 

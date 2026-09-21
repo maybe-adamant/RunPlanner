@@ -39,6 +39,7 @@ function appMarkup(application: ReturnType<typeof createApplication>): string {
       <App
         catalog={application.catalog}
         catalogSummary={application.catalogSummary}
+        buildIdentity={application.buildIdentity}
         editorNavigation={application.editorNavigation}
         projectOperations={application.projectOperations}
         selectStructuredWorkspace={application.selectStructuredWorkspace}
@@ -79,6 +80,7 @@ describe('App', () => {
     expect(markup).toContain('Dream Dive');
     expect(markup).toContain('Underworld');
     expect(markup).toContain('Surface');
+    expect(markup).toContain('About</button>');
     expect(markup).not.toContain('Settings');
     expect(markup).not.toContain('Hades II Run Director');
     expect(markup).not.toContain('Project editor');
