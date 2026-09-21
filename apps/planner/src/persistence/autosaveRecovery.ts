@@ -1,10 +1,7 @@
-import {
-  encodeProjectDocument,
-  parseProjectDocument,
-  type ProjectDocument,
-} from '@run-planner/engine/authored-project';
+import { encodeProjectDocument, type ProjectDocument } from '@run-planner/engine/authored-project';
 import { type Catalog } from '@run-planner/engine/catalog-schema';
 import type { ProfileFileReference, ProfileFileRestoreResult } from './profileFile';
+import { loadProjectDocument } from './projectDocumentLoader';
 
 import {
   autosaveWriteFailed,
@@ -42,7 +39,7 @@ export function restoreStartupProject<TPrepared>(
   profileRestore: ProfileFileRestoreResult = Object.freeze({ status: 'none' }),
 ): StartupProjectState<TPrepared> {
   const prepareJson = (json: string) => {
-    const project = parseProjectDocument(json, catalog);
+    const { project } = loadProjectDocument(json, catalog);
     return Object.freeze({
       canonicalJson: encodeProjectDocument(project),
       preparedProject: prepareProject(project),

@@ -1,7 +1,6 @@
 import {
   assessPublicDreamItinerary,
   encodeProjectDocument,
-  parseProjectDocument,
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
 import { type Catalog } from '@run-planner/engine/catalog-schema';
@@ -14,6 +13,7 @@ import {
 } from '@run-planner/engine/execution-plan';
 
 import type { AutosaveRecoveryAdapter } from '../persistence/autosaveRecovery';
+import { loadProjectDocument } from '../persistence/projectDocumentLoader';
 import { createInitialProject } from '../composition/projectBootstrap';
 import type { ProfileFileAdapter, ProfileFileReference } from '../persistence/profileFile';
 import type {
@@ -303,7 +303,7 @@ export function createProjectOperations(
         if (loaded === null) {
           return result('loadProfile', 'cancelled', 'Load Profile cancelled.');
         }
-        const project = parseProjectDocument(loaded.json, options.catalog);
+        const { project } = loadProjectDocument(loaded.json, options.catalog);
         assertPublicProjectAdmission(options.catalog, project);
         const baselineJson = encodeProjectDocument(project);
         const fileName = loadedProfileFileName(loaded.file.fileName);
