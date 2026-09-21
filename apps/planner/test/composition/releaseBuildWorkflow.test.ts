@@ -35,8 +35,10 @@ describe('Windows portable release build metadata', () => {
       'utf8',
     );
 
+    expect(workflow).toContain('node scripts/assert-release-version.mjs $env:RELEASE_VERSION');
+    expect(workflow).toContain('node scripts/assert-release-version.mjs "${RELEASE_VERSION}"');
     expect(workflow).toContain(
-      'gh api --paginate "repos/$env:GITHUB_REPOSITORY/releases?per_page=100"',
+      'gh api "repos/$env:GITHUB_REPOSITORY/compare/main...$env:GITHUB_SHA" --jq .status',
     );
     expect(workflow).toContain('--draft');
     expect(workflow).toContain(
@@ -52,11 +54,13 @@ describe('Windows portable release build metadata', () => {
     expect(workflow.indexOf('GH_TOKEN: ${{ github.token }}', preparation)).toBeGreaterThan(
       preparation,
     );
-    expect(workflow.indexOf('Compare-StableVersion', preparation)).toBeGreaterThan(preparation);
+    expect(workflow.indexOf('assert-release-version.mjs', preparation)).toBeGreaterThan(
+      preparation,
+    );
     expect(draft).toBeGreaterThan(preparation);
     expect(upload).toBeGreaterThan(draft);
     expect(publish).toBeGreaterThan(upload);
-    expect(workflow.indexOf('require_newer_than_published', publish)).toBeGreaterThan(publish);
+    expect(workflow.indexOf('assert-release-version.mjs', publish)).toBeGreaterThan(publish);
     expect(
       workflow.indexOf('gh release edit "${RELEASE_TAG}" --draft=false --latest', publish),
     ).toBeGreaterThan(workflow.indexOf('Draft release ${RELEASE_TAG} is missing', publish));
