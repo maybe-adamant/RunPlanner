@@ -128,38 +128,71 @@ function fountainBehind(
 }
 
 describe('O door-store pair relation', () => {
-  it('shows no store row where the target owns no door store', () => {
+  it('reports the ship-decided value on every ship-source door, whatever the target', () => {
     const workspace = project(loadSurfaceNOProject());
-    // Ship combat and the Preboss shop both carry a door the store never
-    // reaches: neither declares a counted incoming reward.
-    const noStoreTargets = {
+    // The value is the batch's: the wheel decided it before any door existed,
+    // so it is reported even where the room behind the door discards it.
+    const shipSourceTargets = {
       'surface-o-combat04': 'O_Combat07',
       'surface-o-combat02': 'O_PreBoss01',
+      'surface-o-combat01': 'O_Devotion01',
     } as const;
-    for (const [source, targetGameName] of Object.entries(noStoreTargets)) {
+    for (const [source, targetGameName] of Object.entries(shipSourceTargets)) {
       const node = batchNode(workspace, source);
       // Pin the target so a re-authored fixture cannot turn this vacuous.
       expect(node.targets.map((target) => target.room.gameName)).toEqual([targetGameName]);
-      expect(node.inheritedRewardStore).toBeUndefined();
+      expect(node.inheritedRewardStore?.storeKey).toBeDefined();
+      // Read-only throughout: the wheel owns the choice, not the door.
       expect(node.rewardStore).toBeUndefined();
       expect(storeSelector(workspace, source)).toBeUndefined();
     }
-    // The Story target is the same relation from an authored-store source.
-    const story = batchNode(workspace, 'surface-o-devotion');
-    expect(story.inheritedRewardStore).toBeUndefined();
-    expect(story.targets.map((target) => target.room.gameName)).toEqual(['O_Story01']);
   });
 
-  it('leaves a declaration-forced target to its existing presentation', () => {
+  it('reports what becomes of the pool at each door', () => {
     const workspace = project(loadSurfaceNOProject());
-    const node = batchNode(workspace, 'surface-o-combat01');
-    expect(node.targets.map((target) => target.room.gameName)).toEqual(['O_Devotion01']);
-    // A forced store belongs to the target room, not to the decision: the
-    // ship's wheel cannot move it, so no inherited row and no selector appear.
+    const outcomeAt = (source: string) => batchNode(workspace, source).effectiveRewardStore;
+
+    // A ship combat declares no incoming reward at all, so no store survives.
+    expect(outcomeAt('surface-o-combat04')).toEqual({ label: 'Discarded by this room' });
+
+    // Devotion forces RunProgress. This ship rolled RunProgress too, so the
+    // forced store changes nothing and the line says so rather than "flipped".
+    expect(batchNode(workspace, 'surface-o-combat01').inheritedRewardStore?.storeKey).toBe(
+      'RunProgress',
+    );
     expect(catalog.rooms.byKey.O_Devotion01?.forcedRewardStoreKey).toBe('RunProgress');
-    expect(node.inheritedRewardStore).toBeUndefined();
-    expect(node.rewardStore).toBeUndefined();
-    expect(storeSelector(workspace, 'surface-o-combat01')).toBeUndefined();
+    expect(outcomeAt('surface-o-combat01')).toEqual({
+      label: 'Major Reward',
+      storeKey: 'RunProgress',
+    });
+
+    // Story carries the pool through to a declaration-fixed reward type.
+    expect(storeSelector(workspace, 'surface-o-devotion')?.selected).toBe('MetaProgress');
+    expect(outcomeAt('surface-o-devotion')).toEqual({
+      label: 'Minor Reward',
+      storeKey: 'MetaProgress',
+    });
+
+    // A shop fixes only its visible reward: the door still stamps the carried
+    // store on its entry, so the pool reaches the run ledger.
+    expect(catalog.rooms.byKey.O_PreBoss01?.enteredRewardStoreHistory.kind).toBe('resolvedOffer');
+    expect(outcomeAt('surface-o-combat02')).toEqual({ label: 'Counted by this room' });
+  });
+
+  it('reports the forced store when a target overrides the carried value', () => {
+    // The same Devotion door with the ship rolled the other way: the forced
+    // store now genuinely replaces what the decision carried.
+    const flipped = applyProjectCommand(loadSurfaceNOProject(), catalog, {
+      kind: 'ReplaceRewardWheelStore',
+      wheel: createRewardWheelAddress(oBiome, occurrence('surface-o-combat01'), 'wheel1'),
+      storeKey: 'MetaProgress',
+    });
+    const workspace = project(flipped);
+    const node = batchNode(workspace, 'surface-o-combat01');
+    expect(node.inheritedRewardStore?.storeKey).toBe('MetaProgress');
+    // The forced store replaces what the decision carried: one row, the same
+    // product a forced room already produced on an evaluated batch.
+    expect(node.effectiveRewardStore).toEqual({ label: 'Major Reward', storeKey: 'RunProgress' });
   });
 
   it('reports the ship-decided store on a Fountain and links to the deciding wheel', () => {
@@ -191,6 +224,9 @@ describe('O door-store pair relation', () => {
     // It stays read-only: no selector is published where the wheel decides.
     expect(node.rewardStore).toBeUndefined();
     expect(storeSelector(workspace, 'surface-o-combat07')).toBeUndefined();
+
+    // The Fountain is the room that actually draws from the pool.
+    expect(node.effectiveRewardStore).toEqual({ label: 'Banked by this room' });
   });
 
   it('follows the third wheel when the ship runs three encounters', () => {
@@ -215,6 +251,8 @@ describe('O door-store pair relation', () => {
     // store: a selector rather than a read-only row.
     expect(node.inheritedRewardStore).toBeUndefined();
     expect(node.rewardStore).toBeDefined();
+    // The authored value and the outcome row coexist on the same door.
+    expect(node.effectiveRewardStore).toEqual({ label: 'Banked by this room' });
     expect(storeSelector(workspace, 'surface-o-devotion')?.selected).toBe('RunProgress');
   });
 });

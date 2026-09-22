@@ -6,6 +6,7 @@ describe('workspaceRewardStoreLabel', () => {
   it('presents the ordinary stores in player-facing language', () => {
     expect(workspaceRewardStoreLabel('RunProgress')).toBe('Major Reward');
     expect(workspaceRewardStoreLabel('MetaProgress')).toBe('Minor Reward');
+    expect(workspaceRewardStoreLabel('TartarusRewards')).toBe('Tartarus Reward');
   });
 
   it('preserves declaration keys without a presentation label', () => {

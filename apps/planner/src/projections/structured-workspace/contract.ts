@@ -502,18 +502,34 @@ export type WorkspaceRoomWorkbenchPresentation =
     };
 
 /**
- * The authored store on this room's boss door. Present only on a Preboss whose
- * boss door genuinely rolls; it is addressed by an ordinary
- * `BatchRewardStoreAddress` and bound into the ordinary batch reward-store
- * interaction catalog, so its presentation is the batch selector unchanged.
+ * This room's boss-door pool, selected by the target boss's own declaration —
+ * no biome or room-name test participates. A boss that resolves its entered
+ * store from the chosen offer needs one authored, so it gets the editor; a
+ * pinned boss reports its fixed pool; a boss excluded from the store count
+ * reports that the pool is ignored. Absent entirely on a room with no boss door.
+ *
+ * The editor is addressed by an ordinary `BatchRewardStoreAddress` and bound
+ * into the ordinary batch reward-store interaction catalog, so its presentation
+ * is the batch selector unchanged. The read-only variants carry no address,
+ * interaction or marker: they raise no findings and nothing navigates to them.
  */
-export interface WorkspaceBossDoorRewardStoreControl {
-  readonly address: BatchRewardStoreAddress;
-  readonly label: string;
-  readonly marker: WorkspaceMarker;
-  readonly selected?: string;
-  readonly storeChoices: readonly WorkspaceInteractionChoice<string>[];
-}
+export type WorkspaceBossDoorRewardStoreControl =
+  | {
+      readonly kind: 'editor';
+      readonly address: BatchRewardStoreAddress;
+      readonly label: string;
+      readonly marker: WorkspaceMarker;
+      readonly selected?: string;
+      readonly storeChoices: readonly WorkspaceInteractionChoice<string>[];
+    }
+  | {
+      readonly kind: 'fixed';
+      readonly summary: string;
+    }
+  | {
+      readonly kind: 'ignored';
+      readonly summary: string;
+    };
 
 export interface WorkspaceRoomSummary {
   readonly address: OccurrenceAddress;

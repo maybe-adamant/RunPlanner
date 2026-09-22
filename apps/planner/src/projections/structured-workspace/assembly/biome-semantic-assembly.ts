@@ -1,6 +1,6 @@
 import {
+  bossDoorLinkForSource,
   bossDoorRewardStoreKeysForLayout,
-  bossDoorRewardStoreLinkForSource,
   createBatchRewardStoreAddress,
   createBiomeFieldAddress,
   createExitDecisionAddress,
@@ -77,6 +77,7 @@ import {
 } from '../navigation/marker-builder';
 import {
   assembleWorkspaceOccurrence,
+  type WorkspaceBossDoorRewardStoreInput,
   type WorkspaceOccurrenceAssembly,
   type WorkspaceOccurrenceAssembler,
   type WorkspaceOccurrenceAssemblyRequest,
@@ -491,35 +492,43 @@ export function assembleWorkspaceBiomeSemantics(
     }
   }
   /**
-   * The Preboss-owned boss-door store control. Both the declaration predicate
-   * and the policy bound are engine-owned and shared with the completeness
-   * finding and the authoring command, so this projection never decides which
-   * doors are in scope — it only publishes the control the engine admits.
+   * The boss-door pool a room owns, selected by the target boss's own
+   * declaration: `resolvedOffer` needs a store authored, `fixed` already has
+   * one, and `none` keeps the door out of the store count entirely. Both the
+   * door lookup and the policy bound are engine-owned and shared with the
+   * completeness finding and the authoring command, so this projection never
+   * decides which doors are in scope.
    */
   const bossDoorRewardStoreControl = (
     occurrenceId: OccurrenceId,
-  ):
-    | {
-        readonly address: import('@run-planner/engine/authored-project').BatchRewardStoreAddress;
-        readonly selected?: string;
-        readonly storeChoices: readonly { readonly label: string; readonly value: string }[];
-      }
-    | undefined => {
+  ): WorkspaceBossDoorRewardStoreInput | undefined => {
     if (plan.topology === null) return undefined;
-    const door = bossDoorRewardStoreLinkForSource(catalog, plan.topology, occurrenceId);
+    const door = bossDoorLinkForSource(catalog, plan.topology, occurrenceId);
     if (door === undefined) return undefined;
-    const storeKeys = bossDoorRewardStoreKeysForLayout(layout);
-    if (storeKeys.length === 0) return undefined;
-    return Object.freeze({
-      address: createBatchRewardStoreAddress(
-        biome,
-        Object.freeze({ kind: 'occurrence' as const, occurrenceId }),
-      ),
-      ...(door.link.rewardStoreKey === undefined ? {} : { selected: door.link.rewardStoreKey }),
-      storeChoices: Object.freeze(
-        storeKeys.map((value) => Object.freeze({ label: workspaceRewardStoreLabel(value), value })),
-      ),
-    });
+    const history = door.bossRoom.enteredRewardStoreHistory;
+    switch (history.kind) {
+      case 'none':
+        return Object.freeze({ kind: 'ignored' as const });
+      case 'fixed':
+        return Object.freeze({ kind: 'fixed' as const, storeKey: history.storeKey });
+      case 'resolvedOffer': {
+        const storeKeys = bossDoorRewardStoreKeysForLayout(layout);
+        if (storeKeys.length === 0) return undefined;
+        return Object.freeze({
+          kind: 'editor' as const,
+          address: createBatchRewardStoreAddress(
+            biome,
+            Object.freeze({ kind: 'occurrence' as const, occurrenceId }),
+          ),
+          ...(door.link.rewardStoreKey === undefined ? {} : { selected: door.link.rewardStoreKey }),
+          storeChoices: Object.freeze(
+            storeKeys.map((value) =>
+              Object.freeze({ label: workspaceRewardStoreLabel(value), value }),
+            ),
+          ),
+        });
+      }
+    }
   };
   const occurrenceAssemblies = new Map<string, CachedOccurrenceAssembly>();
   const assembleOccurrence: WorkspaceOccurrenceAssembler = (request) => {
@@ -569,7 +578,7 @@ export function assembleWorkspaceBiomeSemantics(
       ...(request.isEntry === true ? { isEntry: true } : {}),
       ...(request.roomPicker === undefined ? {} : { roomPicker: request.roomPicker }),
     });
-    if (bossDoorRewardStore !== undefined) {
+    if (bossDoorRewardStore?.kind === 'editor') {
       appendUniqueBatchInteractionRequirements(batchInteractionRequirements, [
         Object.freeze({
           kind: 'bossDoorStoreControls' as const,

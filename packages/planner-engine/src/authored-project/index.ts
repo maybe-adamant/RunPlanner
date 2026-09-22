@@ -292,6 +292,7 @@ export {
   bossDoorRewardStoreKeysForLayout,
   bossDoorRewardStorePolicyForLayout,
   bossDoorRewardStoreLinkForSource,
+  bossDoorLinkForSource,
   type BossDoorRewardStoreLink,
   additionalExitsForDecision,
   ordinaryTargetAuthoringEligibility,

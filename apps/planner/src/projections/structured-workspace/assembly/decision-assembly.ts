@@ -250,7 +250,12 @@ function fieldsContextForAuthoredBatch(
   });
 }
 
-function effectiveRewardStoreForBatch(
+/**
+ * The evaluated half: a forced room in the batch substituted its own store for
+ * the authored one. This is the original product and stays the authority where
+ * it applies, so the declaration-driven half never restates it.
+ */
+function evaluatedEffectiveRewardStore(
   decision: AuthoredBatchDecision,
   evaluated: WorkspaceEvaluatedBatchOverlay | undefined,
 ): WorkspaceEffectiveRewardStore | undefined {
@@ -278,11 +283,9 @@ function effectiveRewardStoreForBatch(
  * store of its own: its ShipCombat source's last active reward wheel already
  * fixed the pool, so the row reports that resolution and links to the wheel.
  *
- * It appears only where the store actually reaches the door: a target whose
- * declaration neither forces nor individually owns a store, and whose incoming
- * reward is a counted choice drawn from a pool. A forced target keeps its own
- * declared store, and a target with no counted incoming reward has no pool at
- * all — neither inherits anything to report.
+ * The value is the batch's, not the target's: it is what this decision carries,
+ * whatever the room behind the door then does with it. The per-door disposition
+ * line reports that separately.
  */
 function inheritedRewardStoreForBatch(
   input: WorkspaceDecisionAssemblyBaseInput,
@@ -298,14 +301,7 @@ function inheritedRewardStoreForBatch(
   if (resolution === undefined || decision.source.kind !== 'occurrence') return undefined;
   // Single-door only: with siblings in the batch, a forced sibling rewrites the
   // shared store for every non-forced door, so the seed alone would misreport.
-  const target = targets.length === 1 ? targets[0] : undefined;
-  if (target === undefined) return undefined;
-  const room = requireWorkspaceRoom(input.catalog, target.room.gameName);
-  const inherits =
-    room.incomingReward.kind === 'countedChoice' &&
-    room.forcedRewardStoreKey === undefined &&
-    room.individualRewardStoreKey === undefined;
-  if (!inherits) return undefined;
+  if (targets.length !== 1) return undefined;
   return Object.freeze({
     explanation:
       'The ship combat before this door already rolled its reward pool, and this door keeps it.',
@@ -321,8 +317,99 @@ function inheritedRewardStoreForBatch(
   });
 }
 
-function rewardStoreLabelForBatch(input: WorkspaceDecisionAssemblyBaseInput): string {
-  return input.source.biome.biomeKey === 'O' ? 'Next store roll' : 'Reward Pool';
+/** The pool value this batch carries to its door, before the room acts on it. */
+function batchRewardStoreValue(
+  input: WorkspaceDecisionAssemblyBaseInput,
+  decision: AuthoredBatchDecision,
+): string | undefined {
+  const rewardStore = decision.normal.rewardStore;
+  switch (rewardStore.kind) {
+    case 'none':
+      return undefined;
+    case 'authoredBaseStore':
+      return rewardStore.baseRewardStoreKey ?? undefined;
+    case 'sourceOfferPoint': {
+      const topology = input.source.plan.topology;
+      return topology === null
+        ? undefined
+        : sourceOfferPointStoreResolution(topology, decision.source)?.storeKey;
+    }
+  }
+}
+
+/**
+ * What the room behind this door does with the pool the decision carries.
+ *
+ * The backbone is the count model, not reward presentation: a room's
+ * `enteredRewardStoreHistory` says whether the carried store reaches the run
+ * ledger. A room excluded from the count discards it; a room that resolves its
+ * entry from the chosen offer consumes it, whether as the pool its own reward
+ * is drawn from or as nothing more than a count entry; a room carrying its own
+ * store replaces the carried one before the entry is made. The declarations are
+ * therefore read in the order the store resolution itself applies them — forced,
+ * then individual, then the carried value stands — and the incoming reward only
+ * distinguishes the ways a consuming room spends it.
+ *
+ * Scoped to a source that declares exactly one normal exit, so the batch has one
+ * door by construction. With siblings, a forced door rewrites the shared store
+ * for the doors after it and a single per-batch line could not be truthful.
+ */
+function declaredEffectiveRewardStore(
+  input: WorkspaceDecisionAssemblyBaseInput,
+  decision: AuthoredBatchDecision,
+  targets: readonly WorkspacePhysicalTarget[],
+  physical: readonly DeclaredPhysicalExit[],
+): WorkspaceEffectiveRewardStore | undefined {
+  if (decision.normal.rewardStore.kind === 'none') return undefined;
+  if (physical.filter((exit) => exit.kind === 'normal').length !== 1) return undefined;
+  const target = targets.length === 1 ? targets[0] : undefined;
+  if (target === undefined) return undefined;
+  const carried = batchRewardStoreValue(input, decision);
+  if (carried === undefined) return undefined;
+  const room = requireWorkspaceRoom(input.catalog, target.room.gameName);
+  const store = (storeKey: string): WorkspaceEffectiveRewardStore =>
+    Object.freeze({ label: workspaceRewardStoreLabel(storeKey), storeKey });
+  // The count model decides discarded: a room whose entered-store history is
+  // `none` never puts the carried pool in the run ledger, whatever reward it
+  // hands out. (An incoming-reward test would misread rooms that count with no
+  // ordinary offer, such as bosses, and ledger-excluded rooms that still offer
+  // rewards, such as the N hub.)
+  if (room.enteredRewardStoreHistory.kind === 'none') {
+    return Object.freeze({ label: 'Discarded by this room' });
+  }
+  if (room.forcedRewardStoreKey !== undefined) return store(room.forcedRewardStoreKey);
+  if (room.individualRewardStoreKey !== undefined) return store(room.individualRewardStoreKey);
+  switch (room.incomingReward.kind) {
+    case 'countedChoice':
+      return Object.freeze({ label: 'Banked by this room' });
+    case 'fixed':
+      return store(carried);
+    case 'shop':
+      // The door still stamps the carried store on the room's entry, and the
+      // shop's own forced reward supplies the chosen type, so the room counts.
+      // Only the visible reward is fixed to the shop; the pool reaches the
+      // ledger all the same.
+      return Object.freeze({ label: 'Counted by this room' });
+  }
+}
+
+/**
+ * One presentation for "what becomes of the pool at this door". The evaluated
+ * substitution is the original product and wins where it applies; otherwise the
+ * target's own declarations answer, so a door never carries two rows saying the
+ * same thing in different words.
+ */
+function effectiveRewardStoreForBatch(
+  input: WorkspaceDecisionAssemblyBaseInput,
+  decision: AuthoredBatchDecision,
+  evaluated: WorkspaceEvaluatedBatchOverlay | undefined,
+  targets: readonly WorkspacePhysicalTarget[],
+  physical: readonly DeclaredPhysicalExit[],
+): WorkspaceEffectiveRewardStore | undefined {
+  return (
+    evaluatedEffectiveRewardStore(decision, evaluated) ??
+    declaredEffectiveRewardStore(input, decision, targets, physical)
+  );
 }
 
 function missingTargetPrerequisite(
@@ -915,7 +1002,13 @@ function assembleBatchDecision(
   const hasEditableAuthoredRewardStore =
     decision.normal.rewardStore.kind === 'authoredBaseStore' &&
     (kind !== 'takeoverBatch' || decision.normal.rewardStore.baseRewardStoreKey !== null);
-  const effectiveRewardStore = effectiveRewardStoreForBatch(decision, evaluated);
+  const effectiveRewardStore = effectiveRewardStoreForBatch(
+    input,
+    decision,
+    evaluated,
+    targets,
+    physical,
+  );
   const inheritedRewardStore = inheritedRewardStoreForBatch(input, decision, targets);
   const zagreusAdditional = authoredAdditional.find(
     (additional) => additional.kind === 'zagreusContract',
@@ -1064,7 +1157,9 @@ function assembleBatchDecision(
           rewardStore: input.markerDestinations.marker(
             createBatchRewardStoreAddress(source.biome, decision.source),
           ),
-          rewardStoreLabel: rewardStoreLabelForBatch(input),
+          // One term for the pool everywhere it is named, including the
+          // disposition lines that say what becomes of it.
+          rewardStoreLabel: 'Reward Pool',
         }
       : {}),
     selection: input.markerDestinations.marker(

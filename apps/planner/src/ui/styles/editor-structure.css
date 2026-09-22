@@ -719,6 +719,13 @@ select {
   display: none;
 }
 
+/* A boss door states its pool as one line beside its destination. */
+.boss-door-store-declared {
+  margin: 0;
+  color: #aaa7af;
+  font-size: 0.88rem;
+}
+
 .effective-reward-store,
 .inherited-reward-store {
   padding: 8px 10px;
