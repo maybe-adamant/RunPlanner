@@ -160,11 +160,30 @@ retained solely as entered-store provenance:
 
 Entered-store provenance is materially distinct from bag consumption. A fixed
 Story or Shop that has both `ChosenRewardType` and `RewardStoreName` contributes
-to `CalcRoomRewardStores`, so the resulting ratio and O adjustment speed may
-force a later outgoing store. A discarded ShipCombat target store records
-nothing. The planner therefore retains the declaration-owned producer and
-history semantics rather than treating every outgoing store as a generated
-reward bag.
+to `CalcRoomRewardStores` — it counts on the store it carried in, without ever
+drawing from that bag. A discarded ShipCombat target store records nothing. The
+planner therefore retains the declaration-owned producer and history semantics
+rather than treating every outgoing store as a generated reward bag.
+
+The pair relation reads in one direction. Inside a ship, the wheels decide:
+each active wheel stamps its own store onto its own encounter, and a
+three-phase ship therefore banks two counts while the ship room itself, being
+`NoReward`, banks none at the room level. Outside the ship, the door decision
+matters only where the room it opens actually banks a store — a Story, Midshop
+or Preboss Shop counts on the carried store, a Reprieve counts on the store it
+consumes, and a ShipCombat target counts nothing at all, so a store resolved
+into a ship is a store that never reaches the ledger. The count that results is
+run-wide, spanning every biome the route has entered rather than resetting at
+O's border. On the Surface route that history is unusually thin: O's only
+predecessor is the N hub, and the whole hub is excluded from the count, so O's
+opening batch reads an empty ledger. The ratio is `nil` there, which makes
+`chance = T = 0.30` exactly, and both stores are supported — O opens maximally
+open rather than pre-committed. Every later O door reads O's own accumulating
+entries, so it is O's earlier choices, not an inherited history, that narrow
+its later ones. (Underworld biomes never precede O; only a Dream itinerary can
+place one ahead of it.) `O_PreBoss01`'s outgoing boss link is a
+genuine roll natively and therefore carries its own authored store decision,
+like G's, P's and Q's.
 
 ### Candidate families and declaration-driven completion
 

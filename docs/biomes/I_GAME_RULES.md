@@ -113,7 +113,15 @@ modeled.
 
 I ordinary batches have no authored Run/Meta store. Supported targets resolve
 their declaration-owned `TartarusRewards` provenance before their counted
-offer is validated. Combat, Reprieve, miniboss, Story, and Preboss declarations
+offer is validated. A biome-local store is still a counted store: every entered
+I room carrying `TartarusRewards` adds one entry to the run-wide ratio's
+denominator and none to its MetaProgress numerator, so I pulls `C` down exactly
+as a RunProgress room would. I's own `0.25` target is dead for door stores: no
+I door rolls, because `BaseI` declares `ForcedRewardStore = "TartarusRewards"`
+(`RoomDataI.lua:305`) and every I room inherits it, the boss included. The
+target is consumed only through that denominator — and since I closes the
+Underworld route, only a Dream itinerary can place a rolling biome after it.
+Combat, Reprieve, miniboss, Story, and Preboss declarations
 then apply their concrete filters and producers. `I_Story01` is an ordinary
 room occurrence only on a qualifying later physical door; it cannot occupy the
 one-door Intro batch. Reprieve and miniboss declarations retain their own

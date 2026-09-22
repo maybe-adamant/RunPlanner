@@ -1,22 +1,20 @@
 import {
-  createBiomeAddress,
   semanticAddressKey,
   type IncomingRewardAddress,
   type LocalRewardAddress,
   type RewardWheelOfferAddress,
 } from '../../authored-project/addresses';
+import { sourceOfferPointStoreResolution } from '../../authored-project/batchState';
 import type {
   AuthoredBiomePlan,
   ExitDecision,
   ProjectDocument,
   RoomOccurrence,
-  RouteLoadout,
 } from '../../authored-project/model';
 import { legalTopologyOccurrenceRoom } from '../../authored-project/topology/room-ownership';
 import type { Catalog, RoomDeclaration } from '../../catalog-schema';
 import type { CountedRewardBinding } from '../../reward-kernel';
 import { finalSharedBatchStoreKey, orderedTargets } from '../materialization/batch';
-import { materializeShipCombatState } from '../materialization/rooms/templates';
 import type { RewardProducerCandidateCapability } from './producer-frontiers';
 
 export type CountedRewardOwnerAddress =
@@ -72,12 +70,19 @@ function declarationFor(
   return declaration;
 }
 
-function sourceOfferPointStoreKey(
-  catalog: Catalog,
+/**
+ * The store a batch decision carries into its targets. The `sourceOfferPoint`
+ * arm delegates to `sourceOfferPointStoreResolution`, the sole owner of the
+ * "last active wheel of the ShipCombat source" derivation, so this domain never
+ * repeats that wheel selection. (It previously re-derived it through
+ * `materializeShipCombatState().rewardWheels.at(-1)`, which reads the same
+ * authored `wheels[wheel1|wheel2].storeKey` behind a full room
+ * materialization.)
+ */
+function batchDecisionStoreKey(
   plan: AuthoredBiomePlan,
   decision: ExitDecision,
   owner: IncomingRewardAddress,
-  loadout: RouteLoadout,
 ): string | undefined {
   if (decision.normal.kind !== 'batch') return undefined;
   switch (decision.normal.rewardStore.kind) {
@@ -89,25 +94,22 @@ function sourceOfferPointStoreKey(
       if (decision.source.kind !== 'occurrence') {
         fail(`reward producer ${semanticAddressKey(owner)} has no authored offer-point source`);
       }
-      const sourceOccurrenceId = decision.source.occurrenceId;
-      const source = plan.topology?.occurrences.find(
-        (candidate) => candidate.occurrenceId === sourceOccurrenceId,
-      );
-      if (source === undefined) {
+      const topology = plan.topology;
+      if (topology === null) {
         fail(`reward producer ${semanticAddressKey(owner)} lost its offer-point source`);
       }
-      const declaration = declarationFor(catalog, plan, source, owner);
-      const wheel = materializeShipCombatState(
-        catalog,
-        createBiomeAddress(owner.routeKey, owner.biomeKey),
-        declaration,
-        source,
-        loadout,
-      ).rewardWheels.at(-1);
-      if (wheel === undefined) {
+      // Resolution reads the authored ship state directly, so this site no
+      // longer validates the source's structure. That is deliberate: the
+      // encounter-count/wheel-key agreement and the unique-pick invariant are
+      // enforced where the ship room materializes
+      // (`materializeShipCombatState`), which every reachable route reaches
+      // anyway. A malformed source fails there, not here; here it resolves to
+      // undefined and reports the missing offer point.
+      const resolution = sourceOfferPointStoreResolution(topology, decision.source);
+      if (resolution === undefined) {
         fail(`reward producer ${semanticAddressKey(owner)} has no active source offer point`);
       }
-      return wheel.storeKey;
+      return resolution.storeKey;
     }
   }
 }
@@ -118,7 +120,6 @@ function incomingStoreKey(
   occurrence: RoomOccurrence,
   declaration: RoomDeclaration,
   owner: IncomingRewardAddress,
-  loadout: RouteLoadout,
 ): string | undefined {
   const topology = plan.topology;
   const creatingDecision = topology?.decisions.find(
@@ -137,7 +138,7 @@ function incomingStoreKey(
     catalog,
     occurrences,
     orderedTargets(creatingDecision.normal.targets),
-    sourceOfferPointStoreKey(catalog, plan, creatingDecision, owner, loadout),
+    batchDecisionStoreKey(plan, creatingDecision, owner),
   );
   return declaration.forcedRewardStoreKey ?? declaration.individualRewardStoreKey ?? sharedStore;
 }
@@ -168,14 +169,11 @@ function authoredStoreKey(
   owner: CountedRewardOwnerAddress,
 ): string | undefined {
   const plan = planFor(project, owner);
-  const route = project.route.routeKey === owner.routeKey ? project.route : undefined;
-  if (route === undefined)
-    fail(`reward producer ${semanticAddressKey(owner)} has no authored route`);
   const occurrence = occurrenceFor(plan, owner);
   const declaration = declarationFor(catalog, plan, occurrence, owner);
   switch (owner.kind) {
     case 'incomingReward':
-      return incomingStoreKey(catalog, plan, occurrence, declaration, owner, route.loadout);
+      return incomingStoreKey(catalog, plan, occurrence, declaration, owner);
     case 'localReward':
       return localStoreKey(declaration, owner);
     case 'rewardWheelOffer': {

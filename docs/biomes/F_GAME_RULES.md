@@ -152,6 +152,13 @@ speed `10` under the neutral progressed-save baseline. It uses the shared
 support-only formula from `../design/REWARD_MODEL.md` within the generated-door lifecycle
 defined by `../design/GAME_GENERATION_RULES.md`.
 
+The ratio itself is run-wide, not biome-local: the entered-store count spans
+the whole run. F's own arithmetic is unaffected only because F opens the
+Underworld route, so its ledger starts empty; every store F resolves then stays
+in the count for G, H and I. It reaches no Surface biome — the two routes are
+disjoint and a project carries one — except in a Dream itinerary, which is the
+only way F's entries can precede N, O, P or Q.
+
 After F's forced RunProgress opening, `currentMetaRatio = 0` and:
 
 ```text

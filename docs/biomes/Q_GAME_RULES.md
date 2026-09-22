@@ -61,7 +61,15 @@ follows the common normal-exit contract rather than a separate staged topology.
 
 Q ordinary batches own no Run/Meta base store. Rewardless combat preserves its
 declared no-reward shape; miniboss declarations own their forced
-`TyphonBossRewards` offer. A selected Miniboss Room Occurrence contributes its
+`TyphonBossRewards` offer. That biome-local store still counts: each entered Q
+miniboss adds one non-MetaProgress entry to the run-wide ratio's denominator.
+
+Q's one rolled door is the boss door. Native applies the ordinary chance there
+against Q's `0.15` target, so `Q_PreBoss01`'s outgoing boss link carries an
+authored RunProgress-or-MetaProgress store decision, bounded by run-wide
+support like any other batch store — on the Surface route that support reads
+O's and P's entries plus Q's own, N being count-excluded. It is the only
+Run/Meta store authored anywhere in Q. A selected Miniboss Room Occurrence contributes its
 entered history before the next stage, while an unselected fork peer remains a
 real offered occurrence. These differences are declaration-owned and are not
 collapsed into a generic combat-reward UI state.
