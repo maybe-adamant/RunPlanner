@@ -16,6 +16,8 @@ import { fixedCompletionOccurrenceId } from '../../fixed-room-links';
 import { requireCountedBinding, type RoomOccurrenceRole } from '../../room-state/declaration';
 import {
   automaticHostContinuationExitForDetourRoom,
+  bossDeclarationTakesAuthoredRewardStore,
+  bossDoorRewardStoreKeysForLayout,
   hubDecisionHandoffReadiness,
   hubTerminalTakeoverForSource,
   isExactTerminalTakeoverEnvelope,
@@ -712,18 +714,35 @@ export function decodeTopologyStructure(
         failProjectDocument(linkPath, 'must target this route position PostBoss');
     }
     // Only the Preboss -> Boss door can roll for a store; a Boss -> PostBoss
-    // link never does, so the key is rejected there. Which keys a rolling door
-    // may name is NOT bounded here, unlike the sibling baseRewardStoreKey,
-    // which decode does bound (decoding/decisions.ts:142-148). That bound is
-    // deferred to Gate A2, where the boss door's authority is settled — Q's
-    // layout declares rewardStorePolicy `none`, so there is no per-layout key
-    // set to validate against yet. Until then the decoder accepts any string
-    // and the command surface is the only bound.
+    // link never does, so the key is rejected there. A rolling door's key is
+    // bounded here too, against the same authority the command surface uses,
+    // so a hand-edited document cannot carry a store the UI would refuse —
+    // the discipline the sibling baseRewardStoreKey already follows at
+    // decoding/decisions.ts:142-148.
     const rewardStoreKey =
       link.rewardStoreKey === undefined
         ? undefined
         : validPrebossLink
-          ? expectString(link.rewardStoreKey, `${linkPath}.rewardStoreKey`)
+          ? (() => {
+              const storeKey = expectString(link.rewardStoreKey, `${linkPath}.rewardStoreKey`);
+              // The command refuses a door whose boss does not resolve its
+              // entered store from the chosen offer; the decoder applies the
+              // same target-declaration predicate, or a hand-edited document
+              // could carry a key nothing is able to clear.
+              if (!bossDeclarationTakesAuthoredRewardStore(targetRoom)) {
+                failProjectDocument(
+                  `${linkPath}.rewardStoreKey`,
+                  'is only authored on a door whose Boss resolves its entered store',
+                );
+              }
+              if (!bossDoorRewardStoreKeysForLayout(layout).includes(storeKey)) {
+                failProjectDocument(
+                  `${linkPath}.rewardStoreKey`,
+                  `unknown boss-door reward store ${storeKey}`,
+                );
+              }
+              return storeKey;
+            })()
           : failProjectDocument(
               `${linkPath}.rewardStoreKey`,
               'is only authored on a Preboss to Boss link',

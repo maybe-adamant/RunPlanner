@@ -424,6 +424,10 @@ const findingCopy = {
     title: 'Place Echo Gold pickup',
     description: 'Place it on the timeline before choosing its outcome.',
   },
+  roomActionPlacementRequired: {
+    title: 'Place required action',
+    description: 'This required action has not been placed.',
+  },
   hermesShrineTravelDealRefillMissing: {
     title: 'Choose Travel Deal offer',
   },

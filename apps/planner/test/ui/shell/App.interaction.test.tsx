@@ -428,7 +428,9 @@ function allTogetherFindingFixture() {
   const plans = [
     [goldenFBiome, goldenFOccurrenceId(2, 1), 'HeraCastBoon'],
     [goldenFBiome, goldenFOccurrenceId(6, 1), 'OmegaHeraProjectileBoon'],
-    [goldenGBiome, goldenGOccurrenceId(1, 1), 'DamageSharePotencyBoon'],
+    // G's opening batch is a Meta batch run-wide, so the Hera chain
+    // starts at the biome's first Run-bag door.
+    [goldenGBiome, goldenGOccurrenceId(4, 1), 'DamageSharePotencyBoon'],
     [goldenGBiome, goldenGOccurrenceId(6, 1), 'HeraSprintBoon'],
     [goldenGBiome, goldenGOccurrenceId(7, 1), 'AllElementalBoon'],
   ] as const;

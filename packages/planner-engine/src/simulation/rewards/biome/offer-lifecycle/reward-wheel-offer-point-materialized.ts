@@ -83,7 +83,7 @@ export function applyRewardWheelOfferPointMaterialization(
       `${room.origin.biomeKey} has no biome layout for reward-wheel store support`,
     );
   }
-  const storeSupport = rewardStoreHistorySupport(layout, room.origin.biomeKey, view);
+  const storeSupport = rewardStoreHistorySupport(layout, view);
   if (!storeSupport.supportStoreKeys.includes(wheel.storeKey)) {
     addRewardFinding(
       findings,

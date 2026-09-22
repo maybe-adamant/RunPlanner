@@ -207,7 +207,7 @@ export type WorkspaceOccurrenceInteractionRequirement =
  * publishes without making takeover, removal, or frontier policy part of
  * this transition.
  */
-export interface WorkspaceBatchInteractionRequirement {
+export interface WorkspaceBatchControlsInteractionRequirement {
   readonly exitSelection?: {
     readonly owner: ExitSelectionAddress;
     readonly selectedExitKey?: string;
@@ -237,6 +237,28 @@ export interface WorkspaceBatchInteractionRequirement {
     readonly mapChoices: readonly WorkspaceInteractionChoice<string>[];
   };
 }
+
+/**
+ * The store control owned by one Preboss's boss door. A Preboss owns no exit
+ * decision, so this cannot ride on `batchControls` — but its `rewardStore` is
+ * the same sub-object, addressed by the same `BatchRewardStoreAddress`, and it
+ * binds into the same `batchRewardStores` catalog. Every downstream consumer
+ * therefore sees an ordinary batch reward-store interaction and needs no
+ * boss-door awareness. The only difference is the write: a boss link is always
+ * authored, so there is no uncommitted `InitializeExitDecision` fallback.
+ */
+export interface WorkspaceBossDoorStoreInteractionRequirement {
+  readonly kind: 'bossDoorStoreControls';
+  readonly owner: OccurrenceAddress;
+  readonly rewardStore: {
+    readonly owner: BatchRewardStoreAddress;
+    readonly selected?: string;
+    readonly storeChoices: readonly WorkspaceInteractionChoice<string>[];
+  };
+}
+
+export type WorkspaceBatchInteractionRequirement =
+  WorkspaceBatchControlsInteractionRequirement | WorkspaceBossDoorStoreInteractionRequirement;
 
 /**
  * Production requirements for the persistent controls owned by one authored

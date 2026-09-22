@@ -382,17 +382,34 @@ function buildSurfaceScheduledLifecycleProject(clearLocalVisits = false): Projec
     createIncomingRewardAddress(qBiome, qOccurrenceIds.firstMiniboss1),
     'source',
   );
-  const qDraft = createPreparedProjectCandidateSession(
-    catalog,
-    simulateProjectAssembly(catalog, project),
-  ).traitOfferStartingOutcome(qOfferAddress, 'Ares');
-  if (qDraft === undefined) throw new Error('scheduled lifecycle fixture lacks Q Ares context');
+  const beforeQ = simulateProjectAssembly(catalog, project);
+  const qDraft = createPreparedProjectCandidateSession(catalog, beforeQ).traitOfferStartingOutcome(
+    qOfferAddress,
+    'Ares',
+  );
+  if (qDraft === undefined)
+    throw new Error(
+      `scheduled lifecycle fixture lacks Q Ares context: ${JSON.stringify(
+        beforeQ.evaluation.findings.map((finding) => ({
+          code: finding.code,
+          origin: finding.origin,
+          evidence: finding.evidence,
+        })),
+      )}`,
+    );
   project = applyProjectCommand(project, catalog, {
     kind: 'ReplaceTraitOffer',
     trait: qOfferAddress,
     value: qDraft,
   });
-  project = settleReachedAutomaticOutcomes(authorLegalTraitOffers(project));
+  // The run-scoped reward-store ledger can invalidate a later offer that the
+  // first authoring pass could not yet see, so the fixture settles to a fixed
+  // point rather than assuming one pass closes the route.
+  for (let pass = 0; pass < 8; pass += 1) {
+    const settled = settleReachedAutomaticOutcomes(authorLegalTraitOffers(project));
+    if (settled === project) break;
+    project = settled;
+  }
   const finalAssembly = simulateProjectAssembly(catalog, project);
   if (!finalAssembly.evaluation.route.summary.eligibleForExecutionPlan)
     throw new Error(

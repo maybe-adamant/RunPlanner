@@ -1204,6 +1204,14 @@ describe('route-detour simulation', () => {
             semanticAddressKey(createOccurrenceAddress(fBiome, contract)),
       ),
     ).toBe(true);
+    // The entered Contract room counts once, at its spawn-time RunProgress
+    // default, and the run-wide ratio is the only scope that can observe it
+    // beside its host biome's own entries.
+    expect(
+      history.ledgers.enteredRewardStores
+        .filter((entry) => entry.gameName === 'C_Boss01')
+        .map((entry) => entry.storeKey),
+    ).toEqual(['RunProgress']);
   });
 
   it('keeps a later unpicked contract authored but invalidates it from the earlier entered route contract', () => {

@@ -50,7 +50,8 @@ describe('progressive clamp products', () => {
       bindTestCandidateSession(catalog, fixture.project).evaluate({
         kind: 'incomingReward',
         reward: createIncomingRewardAddress(goldenGBiome, fixture.firstTarget),
-        value: { rewardType: 'MetaCurrencyBigDrop' },
+        // The run-scoped ledger keeps both G batches on the Meta bag.
+        value: { rewardType: 'MetaCardPointsCommonBigDrop' },
       }),
     ).toMatchObject({ kind: 'incomingReward', result: { supported: true } });
     expect(
@@ -60,7 +61,7 @@ describe('progressive clamp products', () => {
           goldenGBiome,
           createOccurrenceId('progressive-invalid-g-combat10'),
         ),
-        value: { rewardType: 'MetaCurrencyBigDrop' },
+        value: { rewardType: 'MetaCardPointsCommonBigDrop' },
       }),
     ).toMatchObject({ kind: 'unavailable' });
     expect(

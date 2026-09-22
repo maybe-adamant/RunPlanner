@@ -18,9 +18,13 @@ const baseline = {
   Underworld: {
     branches: [1, 1, 1, 1],
     snapshots: [39, 30, 21, 22],
-    offers: [4, 4, 5, 0],
-    owners: 13,
-    contexts: 13,
+    // G's opening batch is saturated to MetaProgress under the run-wide ledger,
+    // so its first reward is a Meta-bag drop and the route carries one trait
+    // offer — and one candidate owner and context — fewer than a per-biome
+    // window would allow.
+    offers: [4, 3, 5, 0],
+    owners: 12,
+    contexts: 12,
   },
   Surface: {
     branches: [1, 1, 1, 1],
@@ -31,8 +35,13 @@ const baseline = {
   },
   Dream: {
     branches: [1, 1, 1],
-    snapshots: [27, 39, 25],
-    offers: [3, 3, 4],
+    // F carries nine batches: a tenth would be saturated to RunProgress and its
+    // draws would empty the Run bag F_PreBoss01's forced reward needs, so the
+    // prefix stops one room — and its three run-state snapshots — short.
+    snapshots: [27, 36, 25],
+    // The Dream F prefix carries a Boon batch in the Meta bag and the N prehub
+    // holds a Hammer rather than a Pom, so one trait offer sits in N, not F.
+    offers: [3, 2, 5],
     owners: 10,
     contexts: 10,
   },

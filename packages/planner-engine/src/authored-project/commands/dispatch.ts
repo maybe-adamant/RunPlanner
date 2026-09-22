@@ -185,6 +185,7 @@ function applyUnchecked(
     case 'SetExitSelection':
     case 'RemoveExitDecision':
     case 'ReplaceBatchRewardStore':
+    case 'ReplaceBossDoorRewardStore':
     case 'ReplaceFieldsCageOutcome':
     case 'ClearTopology':
       return applyTopologyCommand(

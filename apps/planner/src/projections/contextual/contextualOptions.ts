@@ -261,6 +261,8 @@ function findingExplanation(catalog: Catalog, finding: SemanticFinding): Candida
         kind: 'acquisition',
         message: 'Place this required Gold Gold Gold pickup on the Timeline.',
       };
+    case 'roomActionPlacementRequired':
+      return { kind: 'generic', message: 'Place this required action on the Timeline.' };
     case 'hermesShrineInventoryMissing':
     case 'hermesShrineInventoryWrongGroup':
     case 'hermesShrineInventoryDuplicate':

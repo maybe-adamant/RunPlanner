@@ -15,6 +15,7 @@ export type CompletenessFindingCode =
   | 'hubVisitOrderIncomplete'
   | 'pickedShopStateMissing'
   | 'pickedTargetMissing'
+  | 'roomActionPlacementRequired'
   | 'targetMissing';
 
 export type RoomGenerationFindingCode =
@@ -197,6 +198,7 @@ export function isRequiredMissingInputFinding(
     case 'hubVisitOrderIncomplete':
     case 'pickedShopStateMissing':
     case 'pickedTargetMissing':
+    case 'roomActionPlacementRequired':
     case 'targetMissing':
     case 'fieldsSpatialPointMissing':
     case 'chaosRejectedBlockMissing':

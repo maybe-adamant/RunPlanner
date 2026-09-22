@@ -10,7 +10,9 @@ const normalizedBiomeSnapshotHashes = [
   ['N', '5247a63abbdab7ed'],
   ['O', '26294166894c83ef'],
   ['P', '157617a916c4dee2'],
-  ['Q', 'cd9e862851b97f71'],
+  // Q_Boss01/02 declare resolvedOffer and Q's completion descriptor
+  // carries the boss-door store policy.
+  ['Q', 'edaebcb95b461c83'],
 ] as const;
 
 function normalizedBiomeSnapshot(biomeKey: string) {

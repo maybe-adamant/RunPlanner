@@ -3,6 +3,7 @@ import type {
   Catalog,
   HubDecisionDescriptor,
   NormalDecisionProgressionDescriptor,
+  RewardStorePolicy,
   RoomDeclaration,
   RoomExit,
 } from '../../catalog-schema';
@@ -11,6 +12,7 @@ import { createInitialExitDecision } from '../batchState';
 import type {
   AuthoredAdditionalExit,
   BiomeTopology,
+  FixedRoomLink,
   ExitDecision,
   ExitDecisionSource,
   ExitTargetReference,
@@ -90,6 +92,72 @@ export function normalDecisionProgressionForLayout(
     : layout.progression.kind === 'hub'
       ? layout.progression.entry
       : undefined;
+}
+
+/**
+ * The single authority for what an authored boss-door store may name. The boss
+ * door is an ordinary door, so it shares the biome's ordinary policy unless the
+ * completion descriptor overrides it — which only Q does, because its ordinary
+ * doors carry no store while its boss door still rolls. The command surface and
+ * the decoder both read this, so a hand-edited document and the UI are bounded
+ * by exactly the same set.
+ */
+export function bossDoorRewardStorePolicyForLayout(
+  layout: BiomeLayout,
+): RewardStorePolicy | undefined {
+  const declared = layout.completion.bossRewardStorePolicy;
+  if (declared !== undefined) return declared;
+  return normalDecisionProgressionForLayout(layout)?.rewardStorePolicy;
+}
+
+/** The keys an authored boss-door store may name, empty when the door never rolls. */
+export function bossDoorRewardStoreKeysForLayout(layout: BiomeLayout): readonly string[] {
+  const policy = bossDoorRewardStorePolicyForLayout(layout);
+  return policy?.kind === 'authoredBaseStore' ? policy.storeKeys : Object.freeze([]);
+}
+
+/**
+ * The declaration half of `bossDoorRewardStoreLinkForSource`, exposed so the
+ * decoder can apply the same target test before a topology exists to query.
+ */
+export function bossDeclarationTakesAuthoredRewardStore(bossRoom: RoomDeclaration): boolean {
+  return bossRoom.enteredRewardStoreHistory.kind === 'resolvedOffer';
+}
+
+/** One qualifying Preboss -> Boss door and the boss declaration that qualifies it. */
+export interface BossDoorRewardStoreLink {
+  readonly bossRoom: RoomDeclaration;
+  readonly link: FixedRoomLink;
+}
+
+/**
+ * The single predicate for "this fixed door takes an authored reward store".
+ * The boss door is an ordinary door in native, and the target boss declaration
+ * alone decides: a boss that resolves its entered store from the chosen offer
+ * needs one authored, while a pinned boss declares `fixed` and a storeless boss
+ * declares `none`. No biome, room-name or occurrence-kind test participates.
+ *
+ * The completeness pass, the workspace owner binding and the authoring command
+ * all read this one function so the finding, the control and the write can
+ * never disagree about which doors are in scope.
+ */
+export function bossDoorRewardStoreLinkForSource(
+  catalog: Catalog,
+  topology: Pick<BiomeTopology, 'fixedRoomLinks' | 'occurrences'>,
+  sourceOccurrenceId: OccurrenceId,
+): BossDoorRewardStoreLink | undefined {
+  const link = topology.fixedRoomLinks.find(
+    (candidate) => candidate.sourceOccurrenceId === sourceOccurrenceId,
+  );
+  if (link === undefined) return undefined;
+  const boss = topology.occurrences.find(
+    (occurrence) => occurrence.occurrenceId === link.targetOccurrenceId,
+  );
+  const bossRoom = boss === undefined ? undefined : catalog.rooms.byKey[boss.gameName];
+  if (bossRoom === undefined || !bossDeclarationTakesAuthoredRewardStore(bossRoom)) {
+    return undefined;
+  }
+  return Object.freeze({ bossRoom, link });
 }
 
 function physicalExit(

@@ -24,6 +24,7 @@ import type {
 } from '../authored-project/model';
 import {
   additionalExitsForDecision,
+  bossDoorRewardStoreLinkForSource,
   declaredPhysicalExitsForSourceRoom,
   exitDecisionForSource,
   hubDecisionHandoffReadiness,
@@ -181,6 +182,43 @@ function findPickedShopState(
       }),
     );
   }
+}
+
+/**
+ * The Preboss -> Boss door is an ordinary door in native: it takes a store by
+ * the same rule every other door uses, and where the biome genuinely rolls at
+ * it the author owns the outcome. A boss that resolves its entered store from
+ * the offer therefore requires an authored store on its fixed link, exactly as
+ * an ordinary batch decision requires one — so it reuses that finding and its
+ * address, and presents through the same surface. A pinned boss declares
+ * `fixed` and a boss with no store declares `none`; neither reaches here. The
+ * predicate is the target boss's declaration alone: no biome or room-name test,
+ * and it is `bossDoorRewardStoreLinkForSource`, shared verbatim with the
+ * workspace owner binding and the authoring command so the three cannot drift.
+ *
+ * The Preboss owns no exit decision of its own — the selected spine terminates
+ * there and the boss door is a fixed link — so addressing this decision by the
+ * Preboss occurrence cannot collide with an ordinary batch store address.
+ */
+function findBossDoorRewardStore(
+  catalog: Catalog,
+  biome: BiomeAddress,
+  topology: BiomeTopology,
+  prebossOccurrenceId: OccurrenceId,
+): { readonly finding: SemanticFinding; readonly requiredInput: SemanticAddress } | undefined {
+  const door = bossDoorRewardStoreLinkForSource(catalog, topology, prebossOccurrenceId);
+  if (door === undefined || door.link.rewardStoreKey !== undefined) return undefined;
+  const { bossRoom } = door;
+  const requiredInput = createBatchRewardStoreAddress(
+    biome,
+    Object.freeze({ kind: 'occurrence', occurrenceId: prebossOccurrenceId }),
+  );
+  return Object.freeze({
+    finding: finding('batchRewardStoreMissing', requiredInput, {
+      parentGameName: bossRoom.gameName,
+    }),
+    requiredInput,
+  });
 }
 
 function evaluateHubDecisionCompleteness(
@@ -351,6 +389,10 @@ export function evaluateBiomeCompleteness(
         throw new CompletenessContractError(`trusted Hub exit lost ${selected.occurrenceId}`);
       }
       findPickedShopState(findings, biome, preboss);
+      const hubBossDoor = findBossDoorRewardStore(catalog, biome, topology, preboss.occurrenceId);
+      if (hubBossDoor !== undefined) {
+        return incomplete([...findings, hubBossDoor.finding], hubBossDoor.requiredInput);
+      }
       return findings.length === 0
         ? Object.freeze({
             completion: 'complete',
@@ -421,6 +463,15 @@ export function evaluateBiomeCompleteness(
     }
     if (findings.length !== 0) return incomplete(findings);
     if (selectedRoom.kind === 'Preboss') {
+      const bossDoor = findBossDoorRewardStore(
+        catalog,
+        biome,
+        topology,
+        selectedOccurrence.occurrenceId,
+      );
+      if (bossDoor !== undefined) {
+        return incomplete([...findings, bossDoor.finding], bossDoor.requiredInput);
+      }
       return findings.length === 0
         ? Object.freeze({
             completion: 'complete',

@@ -8,8 +8,10 @@ import {
   createBatchRewardStoreAddress,
   createExitDecisionAddress,
   createExitSelectionAddress,
-  createLocalRewardAddress,
+  createRoomActionAddress,
   createTraitAcquisitionTargetAddress,
+  decodeProjectDocument,
+  roomActionKey,
 } from '@run-planner/engine/authored-project';
 import { authoringReadinessAt } from '@run-planner/engine/simulation';
 import { loadSurfacePSteadyGrowthShrineFrontierCheckpoint } from '@run-planner/test-fixtures/checkpoints/surface';
@@ -66,6 +68,74 @@ const {
 } = fixture;
 
 describe('progressive selected and blocked products', () => {
+  it('publishes a repair leaf for a lifecycle block the assessment prefix never reaches', () => {
+    // A saved project can drop a required room action: the lifecycle then blocks
+    // at that anchor, and the assessment prefix stops in an earlier room with no
+    // reason of its own. The biome is invalid either way, so the block publishes
+    // its own finding at the exact leaf rather than leaving the route assessment
+    // with an invalid biome it cannot explain or repair.
+    const occurrenceId = createOccurrenceId('golden-h-combat02');
+    const authored = applyProjectCommand(createGoldenFGHIProject(), catalog, {
+      kind: 'ReplaceFieldsCageOutcome',
+      decision: createExitDecisionAddress(goldenHBiome, {
+        kind: 'occurrence',
+        occurrenceId: createOccurrenceId('golden-h-intro'),
+      }),
+      cageOutcome: 'max',
+    });
+    const anchor = { kind: 'completeFieldsCage' as const, phaseKey: 'Cage03' };
+    const malformed = decodeProjectDocument(
+      {
+        ...authored,
+        route: {
+          ...authored.route,
+          biomes: authored.route.biomes.map((biome) =>
+            biome.biomeKey !== 'H' || biome.topology === null
+              ? biome
+              : {
+                  ...biome,
+                  topology: {
+                    ...biome.topology,
+                    occurrences: biome.topology.occurrences.map((occurrence) =>
+                      occurrence.occurrenceId !== occurrenceId
+                        ? occurrence
+                        : {
+                            ...occurrence,
+                            roomActions: {
+                              order: occurrence.roomActions.order.filter(
+                                (reference) =>
+                                  reference.kind !== 'completeFieldsCage' ||
+                                  reference.phaseKey !== 'Cage03',
+                              ),
+                            },
+                          },
+                    ),
+                  },
+                },
+          ),
+        },
+      },
+      catalog,
+    );
+    const address = createRoomActionAddress(goldenHBiome, occurrenceId, roomActionKey(anchor));
+
+    const evaluation = simulateProjectAssembly(catalog, malformed).evaluation;
+    const h = evaluation.route.biomes.find((biome) => biome.biomeKey === 'H');
+    if (h === undefined || !('coverage' in h)) throw new Error('H lost its evaluation');
+
+    expect(h.validity).toBe('invalid');
+    expect(h.coverage).toMatchObject({ kind: 'prefix', blockedAt: address });
+    expect(h.findings).toContainEqual(
+      expect.objectContaining({ code: 'roomActionPlacementRequired', origin: address }),
+    );
+    // The invariant `evaluateRouteAssembly` enforces: an invalid route always
+    // selects an issue, and that issue names the same repair leaf.
+    expect(evaluation.route.issue).toMatchObject({ owner: address });
+    expect(evaluation.findings).toContainEqual(
+      expect.objectContaining({ code: 'roomActionPlacementRequired', origin: address }),
+    );
+  });
+
   it('retains reached Well and Shrine placement capabilities before biome completion', () => {
     const incompleteF = createFGenerationProject(undefined, { includeTakeover: false });
     const fAssembly = simulateProjectAssembly(catalog, incompleteF);
@@ -327,7 +397,9 @@ describe('progressive selected and blocked products', () => {
         {
           traitKey: 'BoonDecayBoon',
           rarity: 'Common' as const,
-          targetTraitKey: 'ApolloWeaponBoon',
+          // The run-wide history equips no Apollo weapon Boon, so the Pom
+          // targets the Hestia mana trait.
+          targetTraitKey: 'HestiaManaBoon',
         },
         { traitKey: 'DamageShareRetaliateBoon', rarity: 'Common' as const },
         { traitKey: 'HeraManaBoon', rarity: 'Rare' as const },
@@ -348,11 +420,20 @@ describe('progressive selected and blocked products', () => {
       trait,
       value: completeOffer,
     });
-    const complete = simulateProject(catalog, completeProject).route?.biomes.find(
+    const completeEvaluation = simulateProject(catalog, completeProject);
+    const complete = completeEvaluation.route?.biomes.find(
       (candidate) => candidate.biomeKey === 'H',
     );
     if (complete?.authoring !== 'complete' || complete.validity !== 'valid') {
-      throw new Error('targeted trait fixture did not produce a complete-valid baseline');
+      throw new Error(
+        `targeted trait fixture did not produce a complete-valid baseline: ${JSON.stringify(
+          completeEvaluation.findings.map((finding) => ({
+            code: finding.code,
+            origin: finding.origin,
+            evidence: finding.evidence,
+          })),
+        )}`,
+      );
     }
     const blockedOffer = {
       ...completeOffer,
@@ -426,7 +507,7 @@ describe('progressive selected and blocked products', () => {
         candidates: expect.arrayContaining([
           expect.objectContaining({
             result: expect.objectContaining({
-              traitKey: 'ApolloWeaponBoon',
+              traitKey: 'HestiaManaBoon',
               supported: true,
             }),
           }),
@@ -456,21 +537,26 @@ describe('progressive selected and blocked products', () => {
     ).toBe(false);
   });
 
-  it('retains the complete H batch and level repair capability when a Pom target is unresolved', () => {
+  // The run-wide Run bag carries one Pom of Power and F's b4 door takes it, so
+  // the H Fields cage holds a money drop and H reaches no level resolution at
+  // all. F's batch carries the same complete-batch and level-repair product.
+  it('retains the complete F batch and level repair capability when a Pom target is unresolved', () => {
     const completeProject = authorLegalTraitOffers(createGoldenFGHIProject());
     const complete = simulateProject(catalog, completeProject).route?.biomes.find(
-      (candidate) => candidate.biomeKey === 'H',
+      (candidate) => candidate.biomeKey === 'F',
     );
     if (complete?.authoring !== 'complete' || complete.validity !== 'valid') {
       throw new Error('Pom fixture did not produce a complete-valid baseline');
     }
-    const reward = createLocalRewardAddress(
-      goldenHBiome,
-      createOccurrenceId('golden-h-combat05'),
-      'cages',
-      'cage1',
-    );
+    const pomOccurrenceId = goldenFOccurrenceId(4, 1);
+    const reward = createIncomingRewardAddress(goldenFBiome, pomOccurrenceId);
     const level = createLevelResolutionAddress(reward, 'self');
+    const authoredLevel = candidateArtifactsForProjectEvaluationAssembly(
+      simulateProjectAssembly(catalog, completeProject),
+    )
+      .biomeAt(goldenFBiome)
+      ?.levelResolutions.at(level);
+    if (authoredLevel === undefined) throw new Error('F Pom level resolution is missing');
     const blockedProject = applyProjectCommand(completeProject, catalog, {
       kind: 'ReplaceLevelResolution',
       levelResolution: level,
@@ -482,7 +568,7 @@ describe('progressive selected and blocked products', () => {
     });
     const blockedAssembly = simulateProjectAssembly(catalog, blockedProject);
     const blocked = blockedAssembly.evaluation.route?.biomes.find(
-      (candidate) => candidate.biomeKey === 'H',
+      (candidate) => candidate.biomeKey === 'F',
     );
     if (
       blocked?.authoring !== 'complete' ||
@@ -494,7 +580,7 @@ describe('progressive selected and blocked products', () => {
     const containingBatch = complete.snapshot.decisions.find(
       (decision) =>
         decision.kind === 'batch' &&
-        decision.targets.some((target) => target.room.occurrenceId === 'golden-h-combat05'),
+        decision.targets.some((target) => target.room.occurrenceId === pomOccurrenceId),
     );
     if (containingBatch?.kind !== 'batch') throw new Error('Pom containing batch is missing');
     const baselineAssessment = complete.roomGeneration.ordinary.ordinaryBatches.find(
@@ -507,13 +593,13 @@ describe('progressive selected and blocked products', () => {
       (decision) =>
         decision.kind === 'batch' &&
         decision.origin.source.kind === 'occurrence' &&
-        decision.origin.source.occurrenceId === 'golden-h-combat05',
+        decision.origin.source.occurrenceId === pomOccurrenceId,
     );
     if (laterBatch?.kind !== 'batch' || laterBatch.targets[0] === undefined) {
       throw new Error('Pom later target is missing');
     }
     const artifacts =
-      candidateArtifactsForProjectEvaluationAssembly(blockedAssembly).biomeAt(goldenHBiome);
+      candidateArtifactsForProjectEvaluationAssembly(blockedAssembly).biomeAt(goldenFBiome);
 
     expect(blocked.coverage.blockedAt).toEqual(level);
     expect(retainedAssessment).toEqual(baselineAssessment);

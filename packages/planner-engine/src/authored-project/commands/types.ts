@@ -234,6 +234,11 @@ export type TopologyCommand =
       readonly storeKey: string;
     }
   | {
+      readonly kind: 'ReplaceBossDoorRewardStore';
+      readonly rewardStore: BatchRewardStoreAddress;
+      readonly storeKey: string;
+    }
+  | {
       readonly kind: 'ReplaceFieldsCageOutcome';
       readonly decision: ExitDecisionAddress;
       readonly cageOutcome: 'min' | 'max';

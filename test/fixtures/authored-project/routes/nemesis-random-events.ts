@@ -6,6 +6,7 @@ import {
   createAcquisitionSiteAddress,
   createEncounterPhaseAddress,
   createFieldsSpatialAddress,
+  createLocalRewardAddress,
   createNemesisRandomEventAddress,
   createOccurrenceAddress,
   createOccurrenceId,
@@ -139,10 +140,16 @@ export function createNemesisFieldsCheckpoint(): ProjectDocument {
     spatial: createFieldsSpatialAddress(occurrence, { kind: 'nemesis' }),
     pointId: 623602,
   });
-  // The complete F/G/H checkpoint intentionally retains an earlier unresolved
-  // frontier, so H is not reached by simulation yet. Reuse the exact F reached
-  // event candidate domain for this declaration-owned free-item pool.
+  // Reuse the exact F reached event candidate domain for this
+  // declaration-owned free-item pool.
   const rewardType = reachedFreeItemRewardType();
+  // The third optional slot the count opens. Under the run-scoped controller H
+  // is reached, so the slot is an ordinary reward the route must author.
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceLocalReward',
+    reward: createLocalRewardAddress(goldenHBiome, occurrenceId, 'optionalRewards', 'optional3'),
+    value: Object.freeze({ rewardType: 'RoomMoneyTinyDrop' }),
+  });
   project = replaceNemesisRandomEventInteraction(
     project,
     createNemesisRandomEventAddress(passive),

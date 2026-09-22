@@ -1,6 +1,6 @@
 # Run-Scoped Reward-Store Ratio and the O Pair Relation
 
-Status: approved and locked; Gate A1 landed, Gate A1b foundation landing.
+Status: approved and locked; Gates A1, A1b and A2 landed. Gate B next.
 Base: `0c6655c7`.
 
 ## Objective
@@ -173,7 +173,9 @@ Rulings settled for the activation, binding on A2:
   where Q's bound comes from (native rolls RunProgress/MetaProgress there)
   before any bound is enforced. Until then a hand-edited document can carry an
   arbitrary key; A2 closes this alongside the sibling `baseRewardStoreKey`
-  precedent (`decisions.ts:142-148`).
+  precedent (`decisions.ts:142-148`). (Closed in A2: the bound authority is
+  `completion.bossRewardStorePolicy ?? progression.rewardStorePolicy`, shared
+  by the decoder and the command — see Gate A2.)
 - Takeover reconstruction (`takeover.ts:162`) rebuilds the Preboss -> Boss
   link without the store; once the command can write one, takeover must
   preserve an authored `rewardStoreKey` rather than silently discarding it.
@@ -184,22 +186,39 @@ Only after A1 and the A1b foundation land: one atomic slice.
 
 Boss-store activation (moved from A1b, per its rulings above): the
 `batchRewardStoreMissing` completeness finding at qualifying Preboss
-terminals; `Q_Boss01` flips to `resolvedOffer`; the authoring command
-mirroring `replaceBatchRewardStore` with support bounded by the layout's
-`rewardStorePolicy.storeKeys`; the Preboss workspace owner binding and the
-selector presentation. The boss count entries switch from Preboss inheritance
-to the authored value. Witnesses: the authored choice bounds under store
+terminals; `Q_Boss01` and `Q_Boss02` flip to `resolvedOffer` (the Rivals boss
+is the same door — G and O already declare both); the authoring command
+mirroring `replaceBatchRewardStore`. The store bound is
+`completion.bossRewardStorePolicy ?? progression.rewardStorePolicy`: Q's
+batch policy stays `none` per guardrail 4, so Q declares an
+`authoredBaseStore` policy (`RunProgress`/`MetaProgress`, target 0.15,
+`RoomDataQ.lua:44`) on its completion descriptor, while G/O/P inherit their
+progression policies with no duplicated numbers. The decoder bounds
+`rewardStoreKey` from the same authority (the A1b deferral is closed).
+Takeover reconstruction preserves an authored boss store. The Preboss
+workspace owner binding lands on the occurrence workbench node, reusing the
+ordinary batch store control contract verbatim, and must land before the
+fixture re-authoring (its routing errors resurface as fixtures repair). The
+boss count entries switch from Preboss inheritance to the authored value. Witnesses: the authored choice bounds under store
 support; a pre-change schema-86 document through `loadProjectDocument` decodes
 unresolved, surfaces `batchRewardStoreMissing`, and repairs through the
 command; the count follows the authored value for each of G/O/P/Q.
 
 Controller scope: remove the per-biome filter (no scope parameter), re-run
 the fixture-migration measurement against the corrected census, and re-author
-the golden fixture builders sequentially under the run-scoped controller —
-each batch store and each boss store chosen legal given the entries before
-it, in one pass. Re-pin `baseRewardStoreUnavailable` and candidate-domain
-expectations traced to the corrected scope; repair the two fixture builders
-that throw; state-baseline counts explained if moved; fixture JSON
+the golden fixtures sequentially under the run-scoped controller — each batch
+store and each boss store chosen legal given the entries before it, in one
+pass. Two rulings from the Phase 2 measurement: the golden fixtures are
+byte-attested checkpoint documents, not builder output, so they are repaired
+the way user saves are — a script loads each checkpoint, applies the repair
+commands, re-encodes and overwrites, keeping the attestation and an
+auditable command list per checkpoint. And a genuine store re-pin may
+re-author the rewards behind that door (a saturated store excludes rewards
+outside its bag): the first such case is G's opening batch, saturated to
+MetaProgress by F's now-counted entries, whose hardcoded Boon becomes a
+Meta-bag drop — the fixture previously encoded a game-impossible run. Re-pin `baseRewardStoreUnavailable` and candidate-domain
+expectations traced to the corrected scope; convert the six test files that hard-throw on incomplete
+fixtures to asserting guards; state-baseline counts explained if moved; fixture JSON
 regenerated only where a semantic product genuinely moved, reported first.
 Add the Dream reorder witness (guardrail 7).
 

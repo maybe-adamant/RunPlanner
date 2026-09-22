@@ -5,6 +5,7 @@ import type {
   RoomDeclaration,
 } from '../../catalog-schema';
 import {
+  createBatchRewardStoreAddress,
   createExitDecisionAddress,
   createExitSelectionAddress,
   createHubDecisionAddress,
@@ -262,7 +263,25 @@ function fixedRoomSuccessor(
     loadout,
     configuredRivalsRank: loadout.fearRanks.BossDifficultyShrineUpgrade ?? 0,
   });
-  return Object.freeze({ kind: 'fixedRoomLink', source, target });
+  return Object.freeze({
+    kind: 'fixedRoomLink',
+    source,
+    target,
+    // Carried so the reward chronology can assess the authored roll against
+    // support; the address is the Preboss's own batch-store address, the same
+    // one the completeness pass and the authoring command use.
+    ...(link.rewardStoreKey === undefined
+      ? {}
+      : {
+          bossDoorRewardStore: Object.freeze({
+            origin: createBatchRewardStoreAddress(biome, {
+              kind: 'occurrence',
+              occurrenceId: source.occurrenceId,
+            }),
+            storeKey: link.rewardStoreKey,
+          }),
+        }),
+  });
 }
 
 function fixedRoomChain(

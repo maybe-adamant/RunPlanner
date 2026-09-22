@@ -502,10 +502,13 @@ describe('Nemesis random events', () => {
     });
 
     // The real route acquires Hestia from Cage03, then Apollo from Cage02.
-    for (const [toIndex, hasHestia, hasApollo] of [
-      [0, false, false],
-      [2, true, false],
-      [4, true, true],
+    // This Fields room's first cage is a money drop rather than a Pom, so the
+    // observable inventory delta across the cages is the Hera trait the first
+    // cage's own choice consumes.
+    for (const [toIndex, hasHera, hasHestiaMana] of [
+      [0, true, true],
+      [2, false, true],
+      [4, false, true],
     ] as const) {
       project = applyProjectCommand(project, catalog, {
         kind: 'MoveRoomAction',
@@ -520,8 +523,8 @@ describe('Nemesis random events', () => {
       if (support === undefined) throw new Error('missing interaction-time Nemesis candidates');
       expect(support.branches.length).toBeGreaterThan(0);
       for (const branch of support.branches) {
-        expect(branch.traitTradeTraitKeys.includes('BurnExplodeBoon')).toBe(hasHestia);
-        expect(branch.traitTradeTraitKeys.includes('ApolloRetaliateBoon')).toBe(hasApollo);
+        expect(branch.traitTradeTraitKeys.includes('HeraCastBoon')).toBe(hasHera);
+        expect(branch.traitTradeTraitKeys.includes('HestiaManaBoon')).toBe(hasHestiaMana);
       }
       expect(assembly.evaluation.findings).toContainEqual(
         expect.objectContaining({ code: 'nemesisOutcomeMissing', origin: action }),

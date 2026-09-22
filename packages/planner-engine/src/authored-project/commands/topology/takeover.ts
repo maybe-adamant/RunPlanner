@@ -16,6 +16,8 @@ import type { RoomOccurrenceRole } from '../../room-state/declaration';
 import { resolveCompletionBoss } from '../../completion-boss';
 import {
   additionalExitsForDecision,
+  bossDeclarationTakesAuthoredRewardStore,
+  bossDoorRewardStoreKeysForLayout,
   exitDecisionForSource,
   hubDecisionHandoffReadiness,
   normalDecisionProgressionForLayout,
@@ -91,6 +93,7 @@ function completionChainForSelection(
   topology: BiomeTopology,
   prebossOccurrenceId: OccurrenceId,
   command: TopologyCommand,
+  preservedBossStoreKey?: string,
 ): BiomeTopology {
   const preboss = topology.occurrences.find(
     (occurrence) => occurrence.occurrenceId === prebossOccurrenceId,
@@ -99,6 +102,14 @@ function completionChainForSelection(
   const prebossRoom = requireRoom(catalog, preboss.gameName, located.layout.biomeKey, command);
   if (prebossRoom.kind !== 'Preboss') return topology;
   const bossOccurrenceId = fixedCompletionOccurrenceId(prebossOccurrenceId, 'boss');
+  // An authored boss-door store survives reconstruction. The key bound is per
+  // layout, not per boss room, so a store chosen before the chain was rebuilt
+  // stays legal and must not be silently discarded — but whether the door takes
+  // a store at all is the NEW boss declaration's call, so the preserved key is
+  // re-checked against it below before it is written back.
+  const preservedStoreKey =
+    topology.fixedRoomLinks.find((link) => link.sourceOccurrenceId === prebossOccurrenceId)
+      ?.rewardStoreKey ?? preservedBossStoreKey;
   if (
     topology.fixedRoomLinks.some(
       (link) =>
@@ -159,7 +170,15 @@ function completionChainForSelection(
           undefined,
           located.loadout,
         );
-  const fixedRoomLinks: FixedRoomLink[] = [fixedRoomLink(prebossOccurrenceId, bossOccurrenceId)];
+  // A Rivals swap can replace the boss with one that pins or forgoes its
+  // entered store; such a door takes no authored key, so the preserved one is
+  // dropped rather than carried onto a boss the command would refuse.
+  const authoredBossStoreKey = bossDeclarationTakesAuthoredRewardStore(bossRoom)
+    ? preservedStoreKey
+    : undefined;
+  const fixedRoomLinks: FixedRoomLink[] = [
+    fixedRoomLink(prebossOccurrenceId, bossOccurrenceId, authoredBossStoreKey),
+  ];
   if (postboss !== undefined)
     fixedRoomLinks.push(fixedRoomLink(bossOccurrenceId, postbossOccurrenceId));
   return Object.freeze({
@@ -171,6 +190,56 @@ function completionChainForSelection(
     ]),
     fixedRoomLinks: Object.freeze([...withoutOldChain.fixedRoomLinks, ...fixedRoomLinks]),
   });
+}
+
+/**
+ * Writes the authored store on the Preboss -> Boss door. The boss door is an
+ * ordinary door in native, so this mirrors `replaceBatchRewardStore`: it is
+ * addressed by the same `BatchRewardStoreAddress` the completeness finding
+ * raises, and it refuses any key the door's policy does not offer. The bound
+ * comes from `bossDoorRewardStoreKeysForLayout`, the single authority the
+ * decoder shares, so the UI and a hand-edited document agree.
+ */
+export function replaceBossDoorRewardStore(
+  document: ProjectDocument,
+  catalog: Catalog,
+  located: LocatedBiome,
+  command: Extract<TopologyCommand, { readonly kind: 'ReplaceBossDoorRewardStore' }>,
+): ProjectDocument {
+  const topology = requireTopology(located.plan, command);
+  const source = command.rewardStore.source;
+  if (source.kind !== 'occurrence') {
+    failCommand(command, 'boss-door reward store is addressed by its Preboss occurrence');
+  }
+  const link = topology.fixedRoomLinks.find(
+    (candidate) => candidate.sourceOccurrenceId === source.occurrenceId,
+  );
+  if (link === undefined) failCommand(command, 'no fixed boss link for this Preboss');
+  const boss = topology.occurrences.find(
+    (occurrence) => occurrence.occurrenceId === link.targetOccurrenceId,
+  );
+  const bossRoom = boss === undefined ? undefined : catalog.rooms.byKey[boss.gameName];
+  if (bossRoom === undefined || !bossDeclarationTakesAuthoredRewardStore(bossRoom)) {
+    failCommand(command, 'this boss door does not take an authored reward store');
+  }
+  if (!bossDoorRewardStoreKeysForLayout(located.layout).includes(command.storeKey)) {
+    failCommand(command, `${command.storeKey} is not available from this boss-door policy`);
+  }
+  if (link.rewardStoreKey === command.storeKey) return document;
+  return updateTopology(
+    document,
+    located,
+    Object.freeze({
+      ...topology,
+      fixedRoomLinks: Object.freeze(
+        topology.fixedRoomLinks.map((candidate) =>
+          candidate === link
+            ? fixedRoomLink(link.sourceOccurrenceId, link.targetOccurrenceId, command.storeKey)
+            : candidate,
+        ),
+      ),
+    }),
+  );
 }
 
 function removeCompletionChainForSelection(
@@ -298,6 +367,16 @@ export function replaceTakeoverBatch(
     return document;
   }
   const oldTargets = existing?.normal.kind === 'batch' ? existing.normal.targets : [];
+  // The batch is torn down and rebuilt, so the authored boss-door store is read
+  // before the old completion chain is removed and handed back to the rebuild.
+  // A Preboss that survives the replacement keeps the store the user chose.
+  const bossStoreKeyByPreboss = new Map(
+    topology.fixedRoomLinks.flatMap((link) =>
+      link.rewardStoreKey === undefined
+        ? []
+        : [[link.sourceOccurrenceId, link.rewardStoreKey] as const],
+    ),
+  );
   const occurrencesById = new Map(
     topology.occurrences.map((occurrence) => [occurrence.occurrenceId, occurrence]),
   );
@@ -421,6 +500,7 @@ export function replaceTakeoverBatch(
           withDecision,
           selectedRoom.occurrenceId,
           command,
+          bossStoreKeyByPreboss.get(selectedRoom.occurrenceId),
         )
       : withDecision,
   );

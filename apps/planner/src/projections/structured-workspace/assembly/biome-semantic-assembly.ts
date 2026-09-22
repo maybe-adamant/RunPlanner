@@ -1,4 +1,7 @@
 import {
+  bossDoorRewardStoreKeysForLayout,
+  bossDoorRewardStoreLinkForSource,
+  createBatchRewardStoreAddress,
   createBiomeFieldAddress,
   createExitDecisionAddress,
   createInitialExitDecision,
@@ -53,6 +56,7 @@ import {
   type WorkspaceDecisionAssembly,
 } from './decision-assembly';
 import { assembleWorkspaceHub } from './hub-assembly';
+import { workspaceRewardStoreLabel } from './reward-labels';
 import {
   appendUniqueBatchInteractionRequirements,
   appendUniqueHubInteractionRequirements,
@@ -486,6 +490,37 @@ export function assembleWorkspaceBiomeSemantics(
       );
     }
   }
+  /**
+   * The Preboss-owned boss-door store control. Both the declaration predicate
+   * and the policy bound are engine-owned and shared with the completeness
+   * finding and the authoring command, so this projection never decides which
+   * doors are in scope — it only publishes the control the engine admits.
+   */
+  const bossDoorRewardStoreControl = (
+    occurrenceId: OccurrenceId,
+  ):
+    | {
+        readonly address: import('@run-planner/engine/authored-project').BatchRewardStoreAddress;
+        readonly selected?: string;
+        readonly storeChoices: readonly { readonly label: string; readonly value: string }[];
+      }
+    | undefined => {
+    if (plan.topology === null) return undefined;
+    const door = bossDoorRewardStoreLinkForSource(catalog, plan.topology, occurrenceId);
+    if (door === undefined) return undefined;
+    const storeKeys = bossDoorRewardStoreKeysForLayout(layout);
+    if (storeKeys.length === 0) return undefined;
+    return Object.freeze({
+      address: createBatchRewardStoreAddress(
+        biome,
+        Object.freeze({ kind: 'occurrence' as const, occurrenceId }),
+      ),
+      ...(door.link.rewardStoreKey === undefined ? {} : { selected: door.link.rewardStoreKey }),
+      storeChoices: Object.freeze(
+        storeKeys.map((value) => Object.freeze({ label: workspaceRewardStoreLabel(value), value })),
+      ),
+    });
+  };
   const occurrenceAssemblies = new Map<string, CachedOccurrenceAssembly>();
   const assembleOccurrence: WorkspaceOccurrenceAssembler = (request) => {
     const cached = occurrenceAssemblies.get(request.occurrence.occurrenceId);
@@ -495,9 +530,11 @@ export function assembleWorkspaceBiomeSemantics(
     }
     const evaluatedRoom =
       request.evaluatedRoom ?? source.blockedOccurrenceRoom(request.occurrence.occurrenceId);
+    const bossDoorRewardStore = bossDoorRewardStoreControl(request.occurrence.occurrenceId);
     const assembly = assembleWorkspaceOccurrence({
       configuredRivalsRank: source.configuredRivalsRank,
       routePosition: source.routePosition,
+      ...(bossDoorRewardStore === undefined ? {} : { bossDoorRewardStore }),
       ...(anomalyReplacementRoomGameNames === undefined ? {} : { anomalyReplacementRoomGameNames }),
       biome,
       catalog,
@@ -532,6 +569,21 @@ export function assembleWorkspaceBiomeSemantics(
       ...(request.isEntry === true ? { isEntry: true } : {}),
       ...(request.roomPicker === undefined ? {} : { roomPicker: request.roomPicker }),
     });
+    if (bossDoorRewardStore !== undefined) {
+      appendUniqueBatchInteractionRequirements(batchInteractionRequirements, [
+        Object.freeze({
+          kind: 'bossDoorStoreControls' as const,
+          owner: createOccurrenceAddress(biome, request.occurrence.occurrenceId),
+          rewardStore: Object.freeze({
+            owner: bossDoorRewardStore.address,
+            ...(bossDoorRewardStore.selected === undefined
+              ? {}
+              : { selected: bossDoorRewardStore.selected }),
+            storeChoices: bossDoorRewardStore.storeChoices,
+          }),
+        }),
+      ]);
+    }
     occurrenceAssemblies.set(request.occurrence.occurrenceId, Object.freeze({ assembly, request }));
     return assembly;
   };

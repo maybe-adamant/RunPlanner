@@ -81,6 +81,7 @@ export type {
 } from './contracts/timeline';
 import {
   semanticAddressKey,
+  type BatchRewardStoreAddress,
   type ExitDecisionAddress,
   type FigurineArcanaAddress,
   type JudgmentArcanaAddress,
@@ -500,8 +501,23 @@ export type WorkspaceRoomWorkbenchPresentation =
       readonly shop: Extract<WorkspaceRoomLocal, { readonly kind: 'shop' }>;
     };
 
+/**
+ * The authored store on this room's boss door. Present only on a Preboss whose
+ * boss door genuinely rolls; it is addressed by an ordinary
+ * `BatchRewardStoreAddress` and bound into the ordinary batch reward-store
+ * interaction catalog, so its presentation is the batch selector unchanged.
+ */
+export interface WorkspaceBossDoorRewardStoreControl {
+  readonly address: BatchRewardStoreAddress;
+  readonly label: string;
+  readonly marker: WorkspaceMarker;
+  readonly selected?: string;
+  readonly storeChoices: readonly WorkspaceInteractionChoice<string>[];
+}
+
 export interface WorkspaceRoomSummary {
   readonly address: OccurrenceAddress;
+  readonly bossDoorRewardStore?: WorkspaceBossDoorRewardStoreControl;
   /** Authored detail activation is deliberately separate from evaluated entry. */
   readonly detailsActive: boolean;
   /** Complete reward surface exposed by this room's selected-offer binding. */

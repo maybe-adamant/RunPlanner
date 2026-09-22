@@ -756,7 +756,9 @@ describe('DecisionWorkbench', () => {
     project = applyProjectCommand(project, catalog, {
       kind: 'ReplaceBatchRewardStore',
       rewardStore: createBatchRewardStoreAddress(pBiome, owner.source),
-      storeKey: 'MetaProgress',
+      // The run-wide ledger is saturated low entering P, so this rebuilt batch
+      // takes the store its support actually offers.
+      storeKey: 'RunProgress',
     });
     const view = renderDecisionWorkbench(project, 'Surface', 'P', subjectForOwner(owner));
     expect(screen.getByText('Door 1 · Indoor')).toBeTruthy();
@@ -1230,11 +1232,13 @@ describe('DecisionWorkbench', () => {
     if (door === undefined) throw new Error('Selected G Door 3 is missing');
 
     await view.user.click(within(door).getByRole('button', { name: 'Reward' }));
-    const maxHealth = within(await screen.findByRole('listbox'))
-      .getByText('Max Health')
+    // This door sits behind a Meta batch run-wide, so the family that
+    // stays selectable beside the unresolved Hermes pick is a Meta-bag drop.
+    const nectar = within(await screen.findByRole('listbox'))
+      .getByText('Nectar')
       .closest('[role="option"]');
-    if (maxHealth === null) throw new Error('Max Health reward option is missing');
-    expect(maxHealth.getAttribute('aria-disabled')).not.toBe('true');
+    if (nectar === null) throw new Error('Nectar reward option is missing');
+    expect(nectar.getAttribute('aria-disabled')).not.toBe('true');
   });
 
   it('keeps the complete Fields roll domain visible when history forces Maximum', async () => {

@@ -529,10 +529,14 @@ export interface StructuredWorkspaceProjectionService {
 }
 
 export interface WorkspaceBatchRewardStoreInteraction extends WorkspaceCandidateInteraction<string> {
-  readonly intentFor: (
-    storeKey: string,
-  ) => WorkspaceCommandIntent<
-    Extract<ProjectCommand, { readonly kind: 'ReplaceBatchRewardStore' | 'InitializeExitDecision' }>
+  readonly intentFor: (storeKey: string) => WorkspaceCommandIntent<
+    Extract<
+      ProjectCommand,
+      {
+        readonly kind:
+          'ReplaceBatchRewardStore' | 'ReplaceBossDoorRewardStore' | 'InitializeExitDecision';
+      }
+    >
   >;
 }
 

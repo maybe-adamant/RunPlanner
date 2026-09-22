@@ -2343,7 +2343,8 @@
           "fixedRoomLinks": [
             {
               "sourceOccurrenceId": "surface-o-preboss",
-              "targetOccurrenceId": "surface-o-preboss:boss"
+              "targetOccurrenceId": "surface-o-preboss:boss",
+              "rewardStoreKey": "RunProgress"
             },
             {
               "sourceOccurrenceId": "surface-o-preboss:boss",

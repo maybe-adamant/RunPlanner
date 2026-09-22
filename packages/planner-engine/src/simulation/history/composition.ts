@@ -19,7 +19,11 @@ import type { CanonicalFixedRoomLink } from '../materialization';
 import { foldHistoryEvents } from './fold';
 import { foldBiomeHistoryPrefixEvents } from './fold';
 import { projectRoomPreparationCheckpoint } from './facts';
-import { createRoomLifecycleInput, type CanonicalLifecycleRoom } from './lifecycleInput';
+import {
+  createRoomLifecycleInput,
+  lacksEnteredStoreProvenance,
+  type CanonicalLifecycleRoom,
+} from './lifecycleInput';
 import type {
   CanonicalBiomeHistory,
   HistoryCounters,
@@ -538,6 +542,19 @@ export function appendFixedRoomLinks(
   for (const link of fixedRoomLinks) {
     if (link.source.occurrenceId !== source.origin.occurrenceId) {
       fail('fixed completion link does not follow its predecessor');
+    }
+    // An unresolved boss door terminates the composed prefix at the Preboss,
+    // exactly where the completeness verdict terminates. Folding on would hit
+    // the provenance invariant, which every consumer that composes a prefix
+    // without first consulting completeness — resource authoring, notably —
+    // would surface as a hard error instead of the repairable
+    // `batchRewardStoreMissing` finding the boss-door contract promises.
+    const targetDeclaration = catalog.rooms.byKey[link.target.gameName];
+    if (
+      targetDeclaration !== undefined &&
+      lacksEnteredStoreProvenance(link.target, targetDeclaration)
+    ) {
+      return;
     }
     appendStandaloneRoomCreated(writer, link.target, 'layoutCompletion');
     appendRoomLifecycle(writer, catalog, link.target, fail);

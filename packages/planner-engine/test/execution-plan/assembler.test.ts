@@ -410,11 +410,13 @@ describe('engine-owned F/G execution semantic product', () => {
         selectedOptionKey: 'option1',
       },
     });
+    // G's opening batch is a Meta batch run-wide, so this room's reward is a
+    // self-acquired drop rather than a Boon.
     project = replaceTestRoomActionOrder(project, catalog, goldenGBiome, occurrenceId, [
       {
         kind: 'interactIncomingReward',
         producerPoint: 'roomRewardPickup',
-        acquisitionRole: 'source',
+        acquisitionRole: 'self',
       },
       { kind: 'interactGorgon', phaseKey: 'Encounter' },
     ]);

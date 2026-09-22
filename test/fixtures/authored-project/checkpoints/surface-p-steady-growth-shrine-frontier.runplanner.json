@@ -2359,7 +2359,8 @@
           "fixedRoomLinks": [
             {
               "sourceOccurrenceId": "85c1be67-d8b3-45d9-9ba1-679718f781c3",
-              "targetOccurrenceId": "85c1be67-d8b3-45d9-9ba1-679718f781c3:boss"
+              "targetOccurrenceId": "85c1be67-d8b3-45d9-9ba1-679718f781c3:boss",
+              "rewardStoreKey": "RunProgress"
             },
             {
               "sourceOccurrenceId": "85c1be67-d8b3-45d9-9ba1-679718f781c3:boss",
@@ -2401,7 +2402,7 @@
                 "kind": "counted",
                 "reward": {
                   "offer": {
-                    "rewardType": "MetaCurrencyBigDrop"
+                    "rewardType": "MaxManaDrop"
                   },
                   "traitOffersByAcquisitionRole": {},
                   "dispositionByAcquisitionRole": {
@@ -2450,7 +2451,7 @@
                 "kind": "counted",
                 "reward": {
                   "offer": {
-                    "rewardType": "MetaCardPointsCommonBigDrop"
+                    "rewardType": "RoomMoneyDrop"
                   },
                   "traitOffersByAcquisitionRole": {},
                   "dispositionByAcquisitionRole": {
@@ -2691,7 +2692,7 @@
                 "kind": "batch",
                 "rewardStore": {
                   "kind": "authoredBaseStore",
-                  "baseRewardStoreKey": "MetaProgress"
+                  "baseRewardStoreKey": "RunProgress"
                 },
                 "batchState": null,
                 "targets": [

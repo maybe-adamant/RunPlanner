@@ -462,6 +462,15 @@ export interface CanonicalFixedRoomLink {
   readonly kind: 'fixedRoomLink';
   readonly source: CanonicalAuthoredRoom;
   readonly target: CanonicalAuthoredRoom;
+  /**
+   * The authored boss-door store carried through materialization so the reward
+   * chronology can assess it against support, exactly as an ordinary batch's
+   * authored store is assessed. Absent where no store was authored on the link.
+   */
+  readonly bossDoorRewardStore?: {
+    readonly origin: import('../../authored-project/addresses').BatchRewardStoreAddress;
+    readonly storeKey: string;
+  };
 }
 
 export type CanonicalBiomeState = Readonly<Record<string, boolean | number | string>>;
