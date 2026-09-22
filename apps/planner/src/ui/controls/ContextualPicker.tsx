@@ -28,7 +28,7 @@ interface ContextualPickerProps<T> {
   readonly side?: 'top' | 'bottom';
   readonly triggerLabel?: string;
   /** When to render the selected explanation under the trigger. */
-  readonly selectedExplanation?: 'always' | 'impossible-only';
+  readonly selectedExplanation?: 'always' | 'never';
 }
 
 function PickerSection<T>({
@@ -199,8 +199,7 @@ export function ContextualPicker<T>({
   const open = controlledOpen ?? internalOpen;
   const selected = model.selected;
   const showSelectedExplanation =
-    selected?.explanation !== undefined &&
-    (selectedExplanation === 'always' || selected.state === 'impossible');
+    selected?.explanation !== undefined && selectedExplanation === 'always';
   const selectedExplanationId = showSelectedExplanation ? `${id}-selected-explanation` : undefined;
   const choicesLabel = choiceLabel ?? label;
   const authoringLocked = findingTarget?.['data-authoring-locked'] === true;
