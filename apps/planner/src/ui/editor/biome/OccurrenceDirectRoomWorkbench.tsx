@@ -18,6 +18,7 @@ import { FieldsWorkbench } from './locals/FieldsWorkbench';
 import { LocalVisitWorkbench } from './locals/LocalVisitWorkbench';
 import { RewardWheelWorkbench } from './locals/RewardWheelWorkbench';
 import { ShopWorkbench } from './commerce/ShopWorkbench';
+import { CandidatePicker } from './CandidatePicker';
 import { CandidateSelect } from './CandidateSelect';
 import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
 import { authoredProjectCommandDispatched } from '@planner/state/projectWorkspaceSlice';
@@ -68,7 +69,7 @@ export function ShipCombatPhaseCountWorkbench({
 
 /**
  * The authored variant. Its interaction is an ordinary batch reward-store
- * interaction — same catalog map, same candidate model, same select — so this
+ * interaction — same catalog map, same candidate model, same picker — so this
  * renders exactly like the batch control and carries no boss-door logic.
  */
 function BossDoorRewardStoreEditor({
@@ -86,7 +87,7 @@ function BossDoorRewardStoreEditor({
     workspaceInteractionKey(store.address),
   );
   return (
-    <CandidateSelect
+    <CandidatePicker
       id={`${idPrefix}-boss-door-reward-store`}
       interaction={interaction}
       label={store.label}

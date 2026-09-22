@@ -83,9 +83,17 @@ export interface EvaluatedRewardWheelOfferCountCandidate {
 
 export interface EvaluatedRewardWheelStoreCandidate {
   readonly kind: 'rewardWheelStore';
+  /**
+   * The wheel rolls its pool at spawn, so its support carries the same
+   * controller ledger a batch store reports: the rooms counted so far at this
+   * wheel's generation boundary and the selection value they produced.
+   */
   readonly result: RewardWheelLifecycleCandidateSupport & {
     readonly storeKey: string;
     readonly supportedStoreKeys: readonly string[];
+    readonly enteredStoreCount: number;
+    readonly enteredMetaStoreCount: number;
+    readonly metaSelectionValue: number;
   };
 }
 
@@ -358,11 +366,15 @@ export function evaluateRewardWheelLifecycleCandidate(
       ? context.evaluateStateThroughWheelPick(replacementState, query.wheel.wheelKey)
       : context.evaluateState(replacementState);
   const findings = lifecycleFindings(result.findings, query.wheel);
+  const storeSupport =
+    query.kind === 'rewardWheelStore'
+      ? context.rewardStoreSupportAtGeneration(query.wheel.wheelKey)
+      : undefined;
   const selectedPossible =
     query.kind === 'rewardWheelOfferCount'
       ? true
       : query.kind === 'rewardWheelStore'
-        ? context.supportedStoreKeysAtGeneration(query.wheel.wheelKey).includes(query.storeKey)
+        ? (storeSupport?.supportStoreKeys.includes(query.storeKey) ?? false)
         : result.supported && findings.length === 0;
   switch (query.kind) {
     case 'rewardWheelOfferCount':
@@ -376,16 +388,25 @@ export function evaluateRewardWheelLifecycleCandidate(
           findings,
         }),
       });
-    case 'rewardWheelStore':
+    case 'rewardWheelStore': {
+      if (storeSupport === undefined) {
+        throw new CandidateEvaluationContractError(
+          'a reward-wheel store query lost its controller support',
+        );
+      }
       return Object.freeze({
         kind: 'rewardWheelStore',
         result: Object.freeze({
           storeKey: query.storeKey,
-          supportedStoreKeys: context.supportedStoreKeysAtGeneration(query.wheel.wheelKey),
+          supportedStoreKeys: storeSupport.supportStoreKeys,
+          enteredStoreCount: storeSupport.enteredStoreCount,
+          enteredMetaStoreCount: storeSupport.enteredMetaStoreCount,
+          metaSelectionValue: storeSupport.metaSelectionValue,
           selectedPossible,
           findings,
         }),
       });
+    }
     case 'rewardWheelPicked':
       return Object.freeze({
         kind: 'rewardWheelPicked',

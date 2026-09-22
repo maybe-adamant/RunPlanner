@@ -23,6 +23,14 @@ export interface FieldsCageOutcomeCandidateSupport {
   readonly cageOutcome: 'min' | 'max';
   readonly supportOutcomes: readonly ('min' | 'max')[];
   readonly selectedPossible: boolean;
+  /**
+   * The counters the outcome support was read from. They are carried on every
+   * verdict, not only a rejection, so a forced outcome states the same ceiling
+   * and depth that decided it.
+   */
+  readonly biomeDepthCache: number;
+  readonly fieldsMaxDoorsRolled: number;
+  readonly maxDoorCageCeiling: number;
   readonly findings: readonly SemanticFinding[];
 }
 
@@ -118,6 +126,9 @@ export function evaluateFieldsCageOutcomeCandidate(
       cageOutcome: query.cageOutcome,
       supportOutcomes: support.supportOutcomes,
       selectedPossible,
+      biomeDepthCache: support.biomeDepthCache,
+      fieldsMaxDoorsRolled: support.fieldsMaxDoorsRolled,
+      maxDoorCageCeiling: support.maxDoorCageCeiling,
       findings,
     }),
   });

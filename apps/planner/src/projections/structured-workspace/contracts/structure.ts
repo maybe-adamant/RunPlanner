@@ -26,6 +26,7 @@ import type { ContextualPickerModel } from '@planner/projections/contextual/cont
 import type {
   WorkspaceCandidateInteraction,
   WorkspaceCommandIntent,
+  WorkspacePickerCandidateInteraction,
   WorkspaceInteractionCatalog,
   WorkspaceInteractionChoice,
   WorkspaceProjectionSource,
@@ -551,7 +552,7 @@ export interface StructuredWorkspaceProjectionService {
   project(assembly: ProjectEvaluationAssembly): StructuredWorkspaceProjection;
 }
 
-export interface WorkspaceBatchRewardStoreInteraction extends WorkspaceCandidateInteraction<string> {
+export interface WorkspaceBatchRewardStoreInteraction extends WorkspacePickerCandidateInteraction<string> {
   readonly intentFor: (storeKey: string) => WorkspaceCommandIntent<
     Extract<
       ProjectCommand,

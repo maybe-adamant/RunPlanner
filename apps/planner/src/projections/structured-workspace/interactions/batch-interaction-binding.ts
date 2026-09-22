@@ -1,7 +1,14 @@
 import { semanticAddressKey } from '@run-planner/engine/authored-project';
 import type { CandidateProjectionSession } from '@planner/projections/candidates/candidateProjection';
+import {
+  projectFieldsCageOutcomePicker,
+  projectRewardStorePicker,
+} from '@planner/projections/choicePickerProjection';
 
-import { StructuredWorkspaceProjectionContractError } from '../contract';
+import {
+  StructuredWorkspaceProjectionContractError,
+  type StructuredWorkspaceContextualServices,
+} from '../contract';
 import type {
   WorkspaceBatchRewardStoreInteraction,
   WorkspaceExitSelectionInteraction,
@@ -11,6 +18,7 @@ import type {
   WorkspaceZagreusContractInteraction,
   WorkspaceChaosExitInteraction,
 } from '../contracts/features';
+import type { ContextualPickerModel } from '@planner/projections/contextual/contextualPicker';
 import type { WorkspaceBatchInteractionRequirement } from './interaction-requirements';
 import { candidateInteraction } from './interaction-binding-primitives';
 
@@ -22,8 +30,21 @@ export interface WorkspaceBatchInteractionCatalog {
   readonly chaosExits: ReadonlyMap<string, WorkspaceChaosExitInteraction>;
 }
 
+/**
+ * One lazily projected picker model per bound control. The candidate domain is
+ * still contacted only on the first activation, and the projected model is then
+ * retained for the lifetime of this interaction object.
+ */
+function lazyPicker<T>(project: () => ContextualPickerModel<T>): {
+  readonly load: () => ContextualPickerModel<T>;
+} {
+  let model: ContextualPickerModel<T> | undefined;
+  return Object.freeze({ load: () => (model ??= project()) });
+}
+
 export function bindBatchInteractions(
   candidates: CandidateProjectionSession,
+  contextualPicker: StructuredWorkspaceContextualServices['contextualPicker'],
   requirements: Iterable<WorkspaceBatchInteractionRequirement>,
 ): WorkspaceBatchInteractionCatalog {
   const batchRewardStores = new Map<string, WorkspaceBatchRewardStoreInteraction>();
@@ -51,6 +72,14 @@ export function bindBatchInteractions(
         key,
         Object.freeze({
           ...candidate,
+          picker: lazyPicker(() =>
+            projectRewardStorePicker(
+              contextualPicker,
+              rewardStore.storeChoices,
+              rewardStore.selected,
+              candidate.load(),
+            ),
+          ),
           // A boss link is always authored, so there is no uncommitted
           // decision to initialize: the only write is the replacement.
           intentFor: (storeKey: string) =>
@@ -105,6 +134,14 @@ export function bindBatchInteractions(
         key,
         Object.freeze({
           ...candidate,
+          picker: lazyPicker(() =>
+            projectRewardStorePicker(
+              contextualPicker,
+              rewardStore.storeChoices,
+              rewardStore.selected,
+              candidate.load(),
+            ),
+          ),
           intentFor: (storeKey: string) =>
             Object.freeze({
               command:
@@ -143,6 +180,14 @@ export function bindBatchInteractions(
         key,
         Object.freeze({
           ...candidate,
+          picker: lazyPicker(() =>
+            projectFieldsCageOutcomePicker(
+              contextualPicker,
+              fieldsCageOutcome.outcomeChoices,
+              fieldsCageOutcome.selected,
+              candidate.load(),
+            ),
+          ),
           intentFor: (cageOutcome: 'min' | 'max') =>
             Object.freeze({
               command:

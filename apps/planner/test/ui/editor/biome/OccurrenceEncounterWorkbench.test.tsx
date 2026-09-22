@@ -1441,9 +1441,8 @@ describe('OccurrenceEncounterWorkbench', () => {
     expect(within(combatOne).getByText('Interact Combat 2 wheel')).toBeTruthy();
     const restoredWheel = within(combatOne).getByLabelText('Combat 2 reward');
     expect(
-      (within(restoredWheel).getByRole('combobox', { name: 'Reward pool' }) as HTMLSelectElement)
-        .value,
-    ).toBe('RunProgress');
+      within(restoredWheel).getByRole('button', { name: 'Reward pool' }).textContent,
+    ).toContain('Major Reward');
     expect(
       (within(restoredWheel).getByRole('combobox', { name: 'Offers' }) as HTMLSelectElement).value,
     ).toBe('2');
@@ -1760,11 +1759,21 @@ describe('OccurrenceEncounterWorkbench', () => {
 
     openRoomTab('Intro Timeline');
     const wheel = screen.getByLabelText('Combat 1 reward');
-    const pool = within(wheel).getByRole('combobox', { name: 'Reward pool' }) as HTMLSelectElement;
+    const pool = within(wheel).getByRole('button', { name: 'Reward pool' });
     await view.user.click(pool);
-    await waitFor(() => expect(pool.options[0]?.dataset.candidateSupport).toBe('impossible'));
-    await view.user.selectOptions(pool, 'MetaProgress');
-    await waitFor(() => expect(pool.value).toBe('MetaProgress'));
+    await view.user.click(await screen.findByRole('button', { name: 'Unavailable (1)' }));
+    const excluded = within(screen.getByRole('listbox')).getByText('Major Reward');
+    const excludedItem = excluded.closest('[cmdk-item]');
+    expect(excludedItem?.getAttribute('data-candidate-state')).toBe('impossible');
+    // The wheel reads the same run-wide controller ledger a batch store does,
+    // at its own spawn boundary.
+    expect(
+      within(excludedItem as HTMLElement).getByText(
+        '0 of 1 entered rooms counted Minor Reward; the controller forces Minor Reward here.',
+      ),
+    ).toBeTruthy();
+    await view.user.click(within(screen.getByRole('listbox')).getByText('Minor Reward'));
+    await waitFor(() => expect(pool.textContent).toContain('Minor Reward'));
     expect(
       shipWheel(view.application.store.getState().projectWorkspace.history!.present, 'wheel1')
         .storeKey,

@@ -127,6 +127,16 @@ function fountainBehind(
   });
 }
 
+/** The same rebuilt decision, stopped before any room is picked. */
+function emptyBatchAt(sourceOccurrenceId: string): ProjectDocument {
+  const decision = decisionAddress(sourceOccurrenceId);
+  const document = applyProjectCommand(loadSurfaceNOProject(), catalog, {
+    kind: 'RemoveExitDecision',
+    decision,
+  });
+  return applyProjectCommand(document, catalog, { kind: 'CreateBatch', decision });
+}
+
 describe('O door-store pair relation', () => {
   it('reports the ship-decided value on every ship-source door, whatever the target', () => {
     const workspace = project(loadSurfaceNOProject());
@@ -238,6 +248,26 @@ describe('O door-store pair relation', () => {
       createRewardWheelAddress(oBiome, occurrence('surface-o-combat07'), 'wheel2'),
     );
     expect(inherited.storeKey).toBe('RunProgress');
+  });
+
+  it('states the batch pool before any room is picked, on both kinds of source', () => {
+    // The batch rule comes before the room: the ship-decided value and the
+    // ordinary selector are both settled with no target authored at all.
+    const shipWorkspace = project(emptyBatchAt('surface-o-combat07'));
+    const shipNode = batchNode(shipWorkspace, 'surface-o-combat07');
+    expect(shipNode.targets).toEqual([]);
+    expect(shipNode.inheritedRewardStore?.storeKey).toBe('MetaProgress');
+    expect(shipNode.rewardStore).toBeUndefined();
+    // Only the outcome row waits for a room: it is about the target.
+    expect(shipNode.effectiveRewardStore).toBeUndefined();
+
+    const ordinaryWorkspace = project(emptyBatchAt('surface-o-devotion'));
+    const ordinaryNode = batchNode(ordinaryWorkspace, 'surface-o-devotion');
+    expect(ordinaryNode.targets).toEqual([]);
+    expect(ordinaryNode.rewardStore).toBeDefined();
+    expect(storeSelector(ordinaryWorkspace, 'surface-o-devotion')).toBeDefined();
+    expect(ordinaryNode.inheritedRewardStore).toBeUndefined();
+    expect(ordinaryNode.effectiveRewardStore).toBeUndefined();
   });
 
   it('keeps the ordinary selector on a Fountain behind a non-ship source', () => {

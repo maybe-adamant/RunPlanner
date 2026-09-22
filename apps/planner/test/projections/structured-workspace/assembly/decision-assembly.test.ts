@@ -973,6 +973,10 @@ describe('structured workspace decision assembly', () => {
       source: beforeSetup,
     });
     if (before.kind !== 'batch') throw new Error('F setup decision is not a batch');
+    // The batch rule is authored before the room: the pool control is published
+    // with no target yet, which is exactly what the doors wait on.
+    expect(before.batch.targets).toEqual([]);
+    expect(before.batch.rewardStore).toBeDefined();
     expect(before.batch.missingTargets[0]?.authoring).toEqual({
       kind: 'awaitingBatchRewardStore',
     });

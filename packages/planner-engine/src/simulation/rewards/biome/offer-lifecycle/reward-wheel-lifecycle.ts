@@ -30,7 +30,7 @@ import type { AcquisitionSource } from '../../acquisition/source';
 import { BiomeRewardSimulationContractError } from '../biome-contract';
 import type { ShipLifecycleCandidateContext } from '../../lifecycle-artifacts';
 import type { RewardLifecycleReferences } from '../prepared-inputs';
-import { rewardStoreHistorySupport } from '../reward-store-support';
+import { rewardStoreHistorySupport, type RewardStoreHistorySupport } from '../reward-store-support';
 import type { SimulationState } from '../../../state/model';
 
 export interface WheelLifecycleView {
@@ -197,7 +197,7 @@ export function prepareShipLifecycleCandidateContext(
     routeLoadout,
   } = inputs;
   const activeWheelKeys = Object.freeze(room.rewardWheels?.map((wheel) => wheel.wheelKey) ?? []);
-  const supportedStoreKeysAtGeneration = (wheelKey: string): readonly string[] => {
+  const rewardStoreSupportAtGeneration = (wheelKey: string): RewardStoreHistorySupport => {
     const wheel = room.rewardWheels?.find((candidate) => candidate.wheelKey === wheelKey);
     const layout = catalog.biomeLayouts.byKey[room.origin.biomeKey];
     if (wheel === undefined)
@@ -208,10 +208,13 @@ export function prepareShipLifecycleCandidateContext(
       throw new BiomeRewardSimulationContractError(
         `${room.origin.biomeKey} has no biome layout for reward-wheel store support`,
       );
+    // The wheel rolls its pool as it spawns, so the controller reads the ledger
+    // at this wheel's own generation boundary. One derivation serves both the
+    // supported set and the ledger numbers that explain it.
     return rewardStoreHistorySupport(
       layout,
       wheelLifecycleViews(catalog, lifecycle, room, roomView, wheel).generation,
-    ).supportStoreKeys;
+    );
   };
   const evaluateState = (state: ShipCombatState, stopAfterPickedWheelGeneration?: string) => {
     const ship = materializeShipCombatState(
@@ -322,7 +325,7 @@ export function prepareShipLifecycleCandidateContext(
   return Object.freeze({
     origin: room.origin,
     activeWheelKeys,
-    supportedStoreKeysAtGeneration,
+    rewardStoreSupportAtGeneration,
     evaluateState: (state: ShipCombatState) => evaluateState(state),
     evaluateStateThroughWheelPick: (state: ShipCombatState, wheelKey: string) =>
       evaluateState(state, wheelKey),

@@ -179,6 +179,25 @@ describe('boss-door reward store workspace binding', () => {
     }
   });
 
+  it('publishes the saturated boss-door verdict as picker copy', () => {
+    const workspace = project(loadSurfaceNOPQProject());
+    const owner = createBatchRewardStoreAddress(createBiomeAddress('Surface', 'P'), {
+      kind: 'occurrence',
+      occurrenceId: createOccurrenceId('surface-p-preboss-shop'),
+    });
+    const interaction = workspace.interactions.batchRewardStores.get(semanticAddressKey(owner));
+    if (interaction === undefined) throw new Error('missing P boss-door interaction');
+    const items = interaction.picker.load().sections.flatMap((section) => section.items);
+    const byLabel = new Map(items.map((item) => [item.label, item]));
+    expect(byLabel.get('Major Reward')).toMatchObject({
+      state: 'impossible',
+      disabled: true,
+      explanation:
+        '2 of 17 entered rooms counted Minor Reward; the controller forces Minor Reward here.',
+    });
+    expect(byLabel.get('Minor Reward')).toMatchObject({ state: 'forced', selected: true });
+  });
+
   it('refuses a store the boss-door policy does not offer', () => {
     const document = unresolvedBossDoorProject();
     const before = project(document);

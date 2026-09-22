@@ -27,12 +27,13 @@ import type { WorkspaceShopOfferDescriptor, WorkspaceShopSupplementalDescriptor 
 import type {
   WorkspaceCandidateInteraction,
   WorkspaceCommandIntent,
+  WorkspacePickerCandidateInteraction,
   WorkspaceInteractionChoice,
   WorkspaceRoomSummary,
   WorkspaceShipStructurePhase,
 } from '../contract';
 
-export interface WorkspaceFieldsCageOutcomeInteraction extends WorkspaceCandidateInteraction<
+export interface WorkspaceFieldsCageOutcomeInteraction extends WorkspacePickerCandidateInteraction<
   'min' | 'max'
 > {
   readonly intentFor: (

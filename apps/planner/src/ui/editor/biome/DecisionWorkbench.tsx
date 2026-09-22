@@ -23,7 +23,7 @@ import { useAppDispatch } from '@planner/state/store';
 import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
 import { useFindingTarget } from '@planner/ui/feedback/useFindingTarget';
 import { RoomMapLauncher } from '@planner/ui/room-maps/RoomMapDialog';
-import { CandidateSelect } from './CandidateSelect';
+import { CandidatePicker } from './CandidatePicker';
 import { AnomalyRoomControl, RevertAnomalyAction } from './room-features/AnomalyControls';
 import { ChaosMapWorkbench } from './room-features/AdditionalExitControls';
 import { RoomSelector } from './RoomSelector';
@@ -562,7 +562,7 @@ function BatchSettings({
     <>
       <div className="batch-controls">
         {store === undefined ? null : (
-          <CandidateSelect
+          <CandidatePicker
             id={`${node.key}-reward-store`}
             interaction={store}
             label={node.rewardStoreLabel ?? 'Reward Pool'}
@@ -583,7 +583,7 @@ function BatchSettings({
       {fields === undefined && node.fields === undefined ? null : (
         <div className="fields-batch-editor">
           {fields === undefined ? null : (
-            <CandidateSelect
+            <CandidatePicker
               id={`${node.key}-fields-roll`}
               interaction={fields}
               label="Fields door roll"
