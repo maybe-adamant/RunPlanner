@@ -301,14 +301,28 @@ are verdict-equivalent — the count and its store are the same either way.
 Spawn-built rooms are always `fixed`, since no door resolution runs for them:
 this covers the Chaos rooms and `C_Boss01`.
 
-### Open question
+### Biome-intro rewards never count mid-run
 
 Biome-intro rooms natively carry `ForcedRewardStore` `RunProgress` gated by
-`RewardGameStateRequirements` (for example `RoomDataG.lua:1321` and following).
-The planner rewrites every non-first biome start to a history of `none`
-(`entry-resolution.ts`). Whether that native gate can ever pass mid-run was not
-re-derived; if it can, those rooms would each add one RunProgress count to the
-run-wide denominator at every biome transition.
+`RewardGameStateRequirements`. The planner rewrites every non-first biome
+start to a history of `none` (`entry-resolution.ts`); this is exact, on two
+independent native guards:
+
+- The gate is enforced on every reward path: `ChooseRoomReward` returns `nil`
+  whenever the room's `RewardGameStateRequirements` fails
+  (`RewardLogic.lua:67`), so no `ChosenRewardType` exists and the room cannot
+  count. All six gated intros — `G_Intro`, `H_Intro`, `I_Intro`, `O_Intro`,
+  `P_Intro`, `Q_Intro` — declare the identical gate, `IsDreamRun` and
+  `EnteredBiomes == 0`, so it passes only for the first biome of a Dream run
+  (where the planner's route-first room owns the run-start `RunProgress`
+  reward — the same fact).
+- Every later Dream biome start is created with `SkipChooseReward = true`
+  (`DreamRunLogic.lua:110`), and that branch sets neither `RewardStoreName`
+  nor `ChosenRewardType` (`RunLogic.lua:618-622`). This also covers
+  `F_Opening01`, which declares no gate at all: F appears mid-run only in a
+  later Dream leg, where the skip guards it; on a normal Underworld run its
+  opening is the run's first room and counts as the run-start reward. N is
+  count-excluded whole-hub regardless.
 
 ## Counted Store Inventory
 
