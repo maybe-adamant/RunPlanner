@@ -27,6 +27,8 @@ interface ContextualPickerProps<T> {
   readonly placeholder: string;
   readonly side?: 'top' | 'bottom';
   readonly triggerLabel?: string;
+  /** When to render the selected explanation under the trigger. */
+  readonly selectedExplanation?: 'always' | 'impossible-only';
 }
 
 function PickerSection<T>({
@@ -186,6 +188,7 @@ export function ContextualPicker<T>({
   placeholder,
   side = 'bottom',
   triggerLabel,
+  selectedExplanation = 'always',
 }: ContextualPickerProps<T>) {
   const [internalOpen, setInternalOpen] = useState(false);
   const [portalContainer, setPortalContainer] = useState<HTMLElement | null>(null);
@@ -195,8 +198,10 @@ export function ContextualPicker<T>({
   }, []);
   const open = controlledOpen ?? internalOpen;
   const selected = model.selected;
-  const selectedExplanationId =
-    selected?.explanation === undefined ? undefined : `${id}-selected-explanation`;
+  const showSelectedExplanation =
+    selected?.explanation !== undefined &&
+    (selectedExplanation === 'always' || selected.state === 'impossible');
+  const selectedExplanationId = showSelectedExplanation ? `${id}-selected-explanation` : undefined;
   const choicesLabel = choiceLabel ?? label;
   const authoringLocked = findingTarget?.['data-authoring-locked'] === true;
   const interactionDisabled = disabled || authoringLocked;
@@ -272,7 +277,7 @@ export function ContextualPicker<T>({
           </Popover.Content>
         </Popover.Portal>
       </Popover.Root>
-      {selected?.explanation !== undefined && (
+      {showSelectedExplanation && (
         <p
           className="contextual-picker-selected-explanation"
           data-candidate-state={selected.state}
