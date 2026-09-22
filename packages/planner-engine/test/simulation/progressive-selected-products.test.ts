@@ -1074,7 +1074,7 @@ describe('progressive selected and blocked products', () => {
     expect(normalLifecycle).not.toBe(prefixLifecycle);
     expect(Object.keys(normalLifecycle ?? {})).toEqual([
       'activeWheelKeys',
-      'supportedStoreKeysAtGeneration',
+      'rewardStoreSupportAtGeneration',
       'evaluateState',
       'evaluateStateThroughWheelPick',
     ]);

@@ -252,6 +252,16 @@ export interface WorkspaceCandidateInteraction<T> {
   readonly selected?: T;
 }
 
+/**
+ * A scalar setting whose support rests on route-wide math. Beside the raw
+ * candidate domain it publishes the contextual-picker model, so its control
+ * can state per-option support and the evidence behind it. The picker loads
+ * separately and just as lazily as the domain it projects.
+ */
+export interface WorkspacePickerCandidateInteraction<T> extends WorkspaceCandidateInteraction<T> {
+  readonly picker: { readonly load: () => ContextualPickerModel<T> };
+}
+
 /** One exact route-start or Postboss rack selection, with engine-backed option support. */
 
 interface WorkspaceRoomInteractionBase {
@@ -350,7 +360,7 @@ export interface WorkspaceInteractionCatalog {
   readonly keepsakeEquipResults: ReadonlyMap<string, WorkspaceKeepsakeEquipResultInteraction>;
   readonly rewardWheelOfferCounts: ReadonlyMap<string, WorkspaceCandidateInteraction<number>>;
   readonly rewardWheelPicks: ReadonlyMap<string, WorkspaceCandidateInteraction<number>>;
-  readonly rewardWheelStores: ReadonlyMap<string, WorkspaceCandidateInteraction<string>>;
+  readonly rewardWheelStores: ReadonlyMap<string, WorkspacePickerCandidateInteraction<string>>;
   readonly rooms: ReadonlyMap<string, WorkspaceRoomInteraction>;
   /** O-specific authored structure: whether the optional third Ship phase is active. */
   readonly shipCombatPhaseCounts: ReadonlyMap<string, WorkspaceCandidateInteraction<2 | 3>>;

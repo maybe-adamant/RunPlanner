@@ -1,6 +1,7 @@
 import { semanticAddressKey, type OccurrenceAddress } from '../../authored-project/addresses';
 import type { ShipCombatState } from '../../authored-project/model';
 import type { SemanticFinding } from '../model';
+import type { RewardStoreHistorySupport } from './biome/reward-store-support';
 
 export interface RoomLifecycleCandidateResult {
   readonly findings: readonly SemanticFinding[];
@@ -10,8 +11,11 @@ export interface RoomLifecycleCandidateResult {
 export interface ShipLifecycleCandidateContext {
   readonly origin: OccurrenceAddress;
   readonly activeWheelKeys: readonly string[];
-  /** Run/Meta support at each wheel's pre-offer history boundary. */
-  readonly supportedStoreKeysAtGeneration: (wheelKey: string) => readonly string[];
+  /**
+   * Run/Meta support at each wheel's pre-offer history boundary, with the
+   * ledger counts the controller read to reach it.
+   */
+  readonly rewardStoreSupportAtGeneration: (wheelKey: string) => RewardStoreHistorySupport;
   readonly evaluateState: (state: ShipCombatState) => RoomLifecycleCandidateResult;
   readonly evaluateStateThroughWheelPick: (
     state: ShipCombatState,
@@ -21,7 +25,7 @@ export interface ShipLifecycleCandidateContext {
 
 export interface ShipLifecycleCandidateCapability {
   readonly activeWheelKeys: readonly string[];
-  readonly supportedStoreKeysAtGeneration: (wheelKey: string) => readonly string[];
+  readonly rewardStoreSupportAtGeneration: (wheelKey: string) => RewardStoreHistorySupport;
   readonly evaluateState: (state: ShipCombatState) => RoomLifecycleCandidateResult;
   readonly evaluateStateThroughWheelPick: (
     state: ShipCombatState,
@@ -48,7 +52,7 @@ export function createRoomLifecycleCandidateArtifacts(
       key,
       Object.freeze({
         activeWheelKeys: context.activeWheelKeys,
-        supportedStoreKeysAtGeneration: context.supportedStoreKeysAtGeneration,
+        rewardStoreSupportAtGeneration: context.rewardStoreSupportAtGeneration,
         evaluateState: context.evaluateState,
         evaluateStateThroughWheelPick: context.evaluateStateThroughWheelPick,
       }),

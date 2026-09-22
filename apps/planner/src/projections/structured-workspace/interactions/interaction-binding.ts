@@ -145,6 +145,7 @@ export function bindWorkspaceInteractions(
   );
   const batch: WorkspaceBatchInteractionCatalog = bindBatchInteractions(
     candidates,
+    services.contextualPicker,
     batchInteractionRequirements.values(),
   );
   const hub: WorkspaceHubInteractionCatalog = bindHubInteractions(

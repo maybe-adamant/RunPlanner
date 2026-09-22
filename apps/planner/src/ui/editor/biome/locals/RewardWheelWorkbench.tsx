@@ -11,6 +11,7 @@ import { useFindingTarget } from '@planner/ui/feedback/useFindingTarget';
 import { candidateMayBeAuthored } from '@planner/ui/feedback/candidatePresentation';
 import { useWorkspaceInteraction } from '@planner/ui/controls/useWorkspaceInteraction';
 import { RewardControlEditor } from '@planner/ui/editor/rewards/RewardControlEditor';
+import { CandidatePicker } from '../CandidatePicker';
 import { CandidateSelect } from '../CandidateSelect';
 
 export function RewardWheelWorkbench({
@@ -63,11 +64,12 @@ export function RewardWheelWorkbench({
         <h5>{wheel.label}</h5>
       </div>
       <div className="reward-wheel-settings">
-        <CandidateSelect
+        <CandidatePicker
           bindFindingTarget={false}
           id={`${idPrefix}-store`}
           interaction={store}
           label="Reward pool"
+          placeholder="Select pool"
           onReplace={(storeKey) =>
             dispatch(
               authoredProjectCommandDispatched({

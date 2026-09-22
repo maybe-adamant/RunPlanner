@@ -486,7 +486,8 @@ describe('underworld product loop', () => {
       ),
     );
 
-    await view.user.selectOptions(screen.getByLabelText(/Reward Pool/), 'MetaProgress');
+    await view.user.click(screen.getByLabelText(/Reward Pool/));
+    await view.user.click(within(await screen.findByRole('listbox')).getByText('Minor Reward'));
     await view.user.click(screen.getByRole('button', { name: 'Door 1 room' }));
     const normalRoom = within(screen.getByRole('listbox'))
       .getAllByRole('option')
@@ -582,21 +583,15 @@ describe('underworld product loop', () => {
       ),
     ).toBe(false);
     await view.user.click(screen.getByRole('tab', { name: 'Room Doors' }));
-    const rewardPool = screen.getByRole('combobox', { name: /Reward Pool/ });
+    const rewardPool = screen.getByRole('button', { name: /Reward Pool/ });
     await view.user.click(rewardPool);
-    let nextPool: HTMLOptionElement | undefined;
-    await waitFor(() => {
-      nextPool = within(rewardPool)
-        .getAllByRole('option')
-        .find(
-          (option): option is HTMLOptionElement =>
-            option instanceof HTMLOptionElement &&
-            ['forced', 'possible'].includes(option.dataset.candidateSupport ?? ''),
-        );
-      expect(nextPool).toBeDefined();
-    });
+    const nextPool = within(await screen.findByRole('listbox'))
+      .getAllByRole('option')
+      .find((option) =>
+        ['forced', 'possible'].includes(option.getAttribute('data-candidate-state') ?? ''),
+      );
     if (nextPool === undefined) throw new Error('Chaos frontier has no selectable reward pool');
-    await view.user.selectOptions(rewardPool, nextPool.value);
+    await view.user.click(nextPool);
     expect(
       topology()?.decisions.some(
         (decision) =>

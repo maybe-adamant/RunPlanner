@@ -1196,12 +1196,17 @@ describe('DecisionWorkbench', () => {
       subjectForOwner(owner),
     );
     await view.user.click(screen.getByLabelText('Reward Pool'));
-    const options = Array.from((screen.getByLabelText('Reward Pool') as HTMLSelectElement).options);
-    expect(options.find((option) => option.value === 'MetaProgress')?.disabled).toBe(false);
-    expect(options.find((option) => option.value === 'RunProgress')).toMatchObject({
-      disabled: true,
-      textContent: 'Major Reward — unavailable',
-    });
+    const available = within(screen.getByRole('listbox')).getByText('Minor Reward');
+    expect(available.closest('[cmdk-item]')?.getAttribute('aria-disabled')).not.toBe('true');
+
+    await view.user.click(screen.getByRole('button', { name: 'Unavailable (1)' }));
+    const excluded = within(screen.getByRole('listbox')).getByText('Major Reward');
+    const item = excluded.closest('[cmdk-item]');
+    expect(item?.getAttribute('aria-disabled')).toBe('true');
+    expect(item?.getAttribute('data-candidate-state')).toBe('impossible');
+    expect(
+      within(item as HTMLElement).getByText(/the controller forces Minor Reward here/),
+    ).toBeTruthy();
   });
 
   it('keeps other reward families selectable when the picked door has an unresolved trait', async () => {
@@ -1246,19 +1251,68 @@ describe('DecisionWorkbench', () => {
       kind: 'occurrence',
       occurrenceId: createOccurrenceId('golden-h-miniboss01'),
     });
-    renderDecisionWorkbench(createGoldenFGHIProject(), 'Underworld', 'H', subjectForOwner(owner));
+    const view = renderDecisionWorkbench(
+      createGoldenFGHIProject(),
+      'Underworld',
+      'H',
+      subjectForOwner(owner),
+    );
 
-    const selector = screen.getByLabelText('Fields door roll') as HTMLSelectElement;
-    fireEvent.pointerDown(selector);
-    await waitFor(() => {
-      const choices = Array.from(selector.options).filter((option) => option.value !== '');
-      expect(choices.map((option) => option.value)).toEqual(['min', 'max']);
-      expect(choices[0]).toMatchObject({
-        disabled: true,
-        textContent: 'Minimum — unavailable',
-      });
-      expect(choices[1]?.disabled).toBe(false);
+    await view.user.click(screen.getByLabelText('Fields door roll'));
+    const required = within(screen.getByRole('listbox')).getByText('Maximum');
+    const requiredItem = required.closest('[cmdk-item]');
+    expect(requiredItem?.getAttribute('data-candidate-state')).toBe('forced');
+    // The forced outcome states the counters that forced it, not a bare verdict.
+    expect(
+      within(requiredItem as HTMLElement).getByText(
+        /^Biome depth is \d+; this door must roll Maximum there\.$/,
+      ),
+    ).toBeTruthy();
+
+    await view.user.click(screen.getByRole('button', { name: 'Unavailable (1)' }));
+    const excluded = within(screen.getByRole('listbox')).getByText('Minimum');
+    const item = excluded.closest('[cmdk-item]');
+    expect(item?.getAttribute('aria-disabled')).toBe('true');
+    expect(item?.getAttribute('data-candidate-state')).toBe('impossible');
+    expect(within(item as HTMLElement).getByText(/must roll Maximum there/)).toBeTruthy();
+  });
+
+  it('explains an exhausted Fields Maximum with the ceiling it reached', async () => {
+    const owner = createExitDecisionAddress(goldenHBiome, {
+      kind: 'occurrence',
+      occurrenceId: createOccurrenceId('golden-h-miniboss01'),
     });
+    // Rolling Maximum earlier in H uses the biome's last cage door, so this
+    // door can no longer roll one.
+    const project = applyProjectCommand(createGoldenFGHIProject(), catalog, {
+      kind: 'ReplaceFieldsCageOutcome',
+      decision: createExitDecisionAddress(goldenHBiome, {
+        kind: 'occurrence',
+        occurrenceId: createOccurrenceId('golden-h-combat02'),
+      }),
+      cageOutcome: 'max',
+    });
+    const view = renderDecisionWorkbench(project, 'Underworld', 'H', subjectForOwner(owner));
+
+    const trigger = screen.getByLabelText('Fields door roll');
+    await view.user.click(trigger);
+    const maximum = within(screen.getByRole('listbox')).getByText('Maximum');
+    const item = maximum.closest('[cmdk-item]');
+    expect(item?.getAttribute('data-candidate-state')).toBe('impossible');
+    expect(
+      within(item as HTMLElement).getByText(
+        '2 of 2 Maximum outcomes are already rolled; this door must roll Minimum.',
+      ),
+    ).toBeTruthy();
+    const forced = within(screen.getByRole('listbox')).getByText('Minimum').closest('[cmdk-item]');
+    expect(forced?.getAttribute('aria-disabled')).not.toBe('true');
+    expect(forced?.getAttribute('data-candidate-state')).toBe('forced');
+    // The same ceiling sentence explains the outcome that must happen.
+    expect(
+      within(forced as HTMLElement).getByText(
+        '2 of 2 Maximum outcomes are already rolled; this door must roll Minimum.',
+      ),
+    ).toBeTruthy();
   });
 
   it('keeps the prior Fields maximum concrete while a later trait editor is unresolved', () => {
@@ -1293,6 +1347,41 @@ describe('DecisionWorkbench', () => {
     expect(within(effectivePool).getByText('Effective reward pool')).toBeTruthy();
     expect(within(effectivePool).getByText('Major Reward')).toBeTruthy();
     expect(effectivePool.querySelector('p')).toBeNull();
+  });
+
+  it('states the batch pool before a room is picked on both kinds of O source', () => {
+    const rebuild = (occurrenceId: (typeof oOccurrenceIds)[keyof typeof oOccurrenceIds]) => {
+      const decision = createExitDecisionAddress(oBiome, { kind: 'occurrence', occurrenceId });
+      const removed = applyProjectCommand(loadSurfaceNOPQProject(), catalog, {
+        kind: 'RemoveExitDecision',
+        decision,
+      });
+      return {
+        decision,
+        project: applyProjectCommand(removed, catalog, { kind: 'CreateBatch', decision }),
+      };
+    };
+
+    // A ship-decided door reports its inherited pool with no room behind it.
+    const ship = rebuild(oOccurrenceIds.combat01);
+    renderStaticDecisionWorkbench(ship.project, 'Surface', 'O', subjectForOwner(ship.decision));
+    // The door is still waiting for its room; the pool already reads.
+    expect(screen.getByRole('button', { name: 'Door 1 room' }).textContent).toMatch(/Select/);
+    const inherited = screen.getByRole('status');
+    expect(within(inherited).getByText('Reward pool from ship')).toBeTruthy();
+    expect(within(inherited).getByText('Major Reward')).toBeTruthy();
+    cleanup();
+
+    // An ordinary door publishes its pool picker just as early.
+    const ordinary = rebuild(oOccurrenceIds.devotion);
+    renderStaticDecisionWorkbench(
+      ordinary.project,
+      'Surface',
+      'O',
+      subjectForOwner(ordinary.decision),
+    );
+    expect(screen.getByRole('button', { name: 'Door 1 room' }).textContent).toMatch(/Select/);
+    expect(screen.getByLabelText('Reward Pool')).toBeTruthy();
   });
 
   it('labels O outgoing store controls only on non-Ship decisions', () => {

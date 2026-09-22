@@ -25,6 +25,7 @@ import {
   encounterCandidateExplanation,
   projectEncounterPicker,
 } from '@planner/projections/encounterPickerProjection';
+import { projectRewardWheelStorePicker } from '@planner/projections/choicePickerProjection';
 import type { OccurrenceIdFactory } from '@planner/workspace/occurrenceIds';
 
 import {
@@ -32,7 +33,10 @@ import {
   workspaceInteractionKey,
   type StructuredWorkspaceContextualServices,
 } from '../contract';
-import type { WorkspaceCandidateInteraction } from '../contract';
+import type {
+  WorkspaceCandidateInteraction,
+  WorkspacePickerCandidateInteraction,
+} from '../contract';
 import type {
   WorkspaceEncounterInteraction,
   WorkspaceEncounterCustomizationInteraction,
@@ -90,7 +94,7 @@ export interface WorkspaceOccurrenceLocalInteractionCatalog {
   >;
   readonly rewardWheelOfferCounts: ReadonlyMap<string, WorkspaceCandidateInteraction<number>>;
   readonly rewardWheelPicks: ReadonlyMap<string, WorkspaceCandidateInteraction<number>>;
-  readonly rewardWheelStores: ReadonlyMap<string, WorkspaceCandidateInteraction<string>>;
+  readonly rewardWheelStores: ReadonlyMap<string, WorkspacePickerCandidateInteraction<string>>;
   readonly shipCombatPhaseCounts: ReadonlyMap<string, WorkspaceCandidateInteraction<2 | 3>>;
   readonly roomActions: ReadonlyMap<string, WorkspaceRoomActionInteraction>;
   readonly shopPurchaseParticipations: ReadonlyMap<
@@ -233,7 +237,7 @@ export function bindOccurrenceLocalInteractions(
   >();
   const rewardWheelOfferCounts = new Map<string, WorkspaceCandidateInteraction<number>>();
   const rewardWheelPicks = new Map<string, WorkspaceCandidateInteraction<number>>();
-  const rewardWheelStores = new Map<string, WorkspaceCandidateInteraction<string>>();
+  const rewardWheelStores = new Map<string, WorkspacePickerCandidateInteraction<string>>();
   const shipCombatPhaseCounts = new Map<string, WorkspaceCandidateInteraction<2 | 3>>();
   const roomActions = new Map<string, WorkspaceRoomActionInteraction>();
   const shopPurchaseParticipations = new Map<
@@ -1173,12 +1177,28 @@ export function bindOccurrenceLocalInteractions(
             'reward-wheel offer-count',
           );
           const storeValues = Object.freeze(wheel.storeChoices.map((choice) => choice.value));
+          const storeCandidates = candidateInteraction(
+            wheel.address,
+            wheel.storeChoices,
+            wheel.storeKey,
+            () => candidates.rewardWheelStores(wheel.address, storeValues),
+          );
+          let storePicker: ContextualPickerModel<string> | undefined;
           set(
             rewardWheelStores,
             key,
-            candidateInteraction(wheel.address, wheel.storeChoices, wheel.storeKey, () =>
-              candidates.rewardWheelStores(wheel.address, storeValues),
-            ),
+            Object.freeze({
+              ...storeCandidates,
+              picker: Object.freeze({
+                load: () =>
+                  (storePicker ??= projectRewardWheelStorePicker(
+                    contextualPicker,
+                    wheel.storeChoices,
+                    wheel.storeKey,
+                    storeCandidates.load(),
+                  )),
+              }),
+            }),
             'reward-wheel store',
           );
           const pickValues = Object.freeze(wheel.pickChoices.map((choice) => choice.value));

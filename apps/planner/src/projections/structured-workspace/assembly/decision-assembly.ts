@@ -299,9 +299,12 @@ function inheritedRewardStoreForBatch(
   // The resolution already rejects a non-occurrence source; the check here only
   // narrows the type for the wheel address below.
   if (resolution === undefined || decision.source.kind !== 'occurrence') return undefined;
-  // Single-door only: with siblings in the batch, a forced sibling rewrites the
-  // shared store for every non-forced door, so the seed alone would misreport.
-  if (targets.length !== 1) return undefined;
+  // At most one authored door: with siblings in the batch, a forced sibling
+  // rewrites the shared store for every non-forced door, so the seed alone
+  // would misreport. A batch with no authored door yet has no sibling to
+  // misreport against, and the value is the source's, so it reports at once:
+  // the batch rule is settled before any room is picked.
+  if (targets.length > 1) return undefined;
   return Object.freeze({
     explanation:
       'The ship combat before this door already rolled its reward pool, and this door keeps it.',
