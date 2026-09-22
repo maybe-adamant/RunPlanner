@@ -125,11 +125,27 @@ export interface WorkspaceEffectiveRewardStore {
   readonly storeKey: string;
 }
 
+/**
+ * A door whose store was already decided by its ShipCombat source's last
+ * active reward wheel. Read-only: the wheel owns the choice, so this row
+ * reports the resolved pool and links to the control that decides it.
+ */
+export interface WorkspaceInheritedRewardStore {
+  /** Short presentation copy for why this door carries no pool selector. */
+  readonly explanation: string;
+  readonly label: string;
+  readonly storeKey: string;
+  /** Navigation to the owning wheel; the ship occurrence owns this marker. */
+  readonly wheel: WorkspaceMarker;
+}
+
 interface WorkspaceBatchNodeBase {
   readonly batchState: CanonicalBatch['batchState'] | AuthoredBatchState;
   /** Present only when a forced room changes an evaluated authored base store. */
   readonly effectiveRewardStore?: WorkspaceEffectiveRewardStore;
   readonly fields?: WorkspaceFieldsBatchContext;
+  /** Present only where a ship-decided store reaches a target that takes it. */
+  readonly inheritedRewardStore?: WorkspaceInheritedRewardStore;
   /** An authored additional exit is a sibling of normal targets, never a target row. */
   readonly chaos?: WorkspaceChaosExitControl;
   readonly zagreusContract?: WorkspaceZagreusContractControl;

@@ -5,7 +5,9 @@ import {
   createExitSelectionAddress,
   createHubDecisionAddress,
   createOccurrenceAddress,
+  createRewardWheelAddress,
   createTargetAddress,
+  sourceOfferPointStoreResolution,
   ordinaryTargetAuthoringEligibility,
   uncommittedOrdinaryTargetAuthoringEligibility,
   normalDecisionProgressionForLayout,
@@ -61,6 +63,7 @@ import type {
   WorkspaceBatchRepairIntent,
   WorkspaceEffectiveRewardStore,
   WorkspaceFieldsBatchContext,
+  WorkspaceInheritedRewardStore,
   WorkspaceMissingPhysicalTarget,
   WorkspaceMissingTargetAuthoring,
   WorkspaceOccurrenceWorkbenchNode,
@@ -267,6 +270,54 @@ function effectiveRewardStoreForBatch(
   return Object.freeze({
     label: workspaceRewardStoreLabel(resolvedStoreKey),
     storeKey: resolvedStoreKey,
+  });
+}
+
+/**
+ * The ship-decided store row. A `sourceOfferPoint` batch carries no authored
+ * store of its own: its ShipCombat source's last active reward wheel already
+ * fixed the pool, so the row reports that resolution and links to the wheel.
+ *
+ * It appears only where the store actually reaches the door: a target whose
+ * declaration neither forces nor individually owns a store, and whose incoming
+ * reward is a counted choice drawn from a pool. A forced target keeps its own
+ * declared store, and a target with no counted incoming reward has no pool at
+ * all — neither inherits anything to report.
+ */
+function inheritedRewardStoreForBatch(
+  input: WorkspaceDecisionAssemblyBaseInput,
+  decision: AuthoredBatchDecision,
+  targets: readonly WorkspacePhysicalTarget[],
+): WorkspaceInheritedRewardStore | undefined {
+  if (decision.normal.rewardStore.kind !== 'sourceOfferPoint') return undefined;
+  const topology = input.source.plan.topology;
+  if (topology === null) return undefined;
+  const resolution = sourceOfferPointStoreResolution(topology, decision.source);
+  // The resolution already rejects a non-occurrence source; the check here only
+  // narrows the type for the wheel address below.
+  if (resolution === undefined || decision.source.kind !== 'occurrence') return undefined;
+  // Single-door only: with siblings in the batch, a forced sibling rewrites the
+  // shared store for every non-forced door, so the seed alone would misreport.
+  const target = targets.length === 1 ? targets[0] : undefined;
+  if (target === undefined) return undefined;
+  const room = requireWorkspaceRoom(input.catalog, target.room.gameName);
+  const inherits =
+    room.incomingReward.kind === 'countedChoice' &&
+    room.forcedRewardStoreKey === undefined &&
+    room.individualRewardStoreKey === undefined;
+  if (!inherits) return undefined;
+  return Object.freeze({
+    explanation:
+      'The ship combat before this door already rolled its reward pool, and this door keeps it.',
+    label: workspaceRewardStoreLabel(resolution.storeKey),
+    storeKey: resolution.storeKey,
+    wheel: input.markerDestinations.marker(
+      createRewardWheelAddress(
+        input.source.biome,
+        decision.source.occurrenceId,
+        resolution.wheelKey,
+      ),
+    ),
   });
 }
 
@@ -865,6 +916,7 @@ function assembleBatchDecision(
     decision.normal.rewardStore.kind === 'authoredBaseStore' &&
     (kind !== 'takeoverBatch' || decision.normal.rewardStore.baseRewardStoreKey !== null);
   const effectiveRewardStore = effectiveRewardStoreForBatch(decision, evaluated);
+  const inheritedRewardStore = inheritedRewardStoreForBatch(input, decision, targets);
   const zagreusAdditional = authoredAdditional.find(
     (additional) => additional.kind === 'zagreusContract',
   );
@@ -974,6 +1026,7 @@ function assembleBatchDecision(
     ...(effectiveRewardStore === undefined ? {} : { effectiveRewardStore }),
     ...(fieldsCageOutcome === undefined ? {} : { fieldsCageOutcome }),
     ...(fields === undefined ? {} : { fields }),
+    ...(inheritedRewardStore === undefined ? {} : { inheritedRewardStore }),
     ...(zagreusContract === undefined
       ? {}
       : {

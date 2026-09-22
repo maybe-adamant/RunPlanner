@@ -392,6 +392,8 @@ export {
   createInitialBatchRewardStore,
   createInitialBatchState,
   createInitialExitDecision,
+  sourceOfferPointStoreResolution,
+  type SourceOfferPointStoreResolution,
 } from './batchState';
 export {
   assessStartingArcanaGrasp,

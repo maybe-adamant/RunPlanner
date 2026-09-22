@@ -719,14 +719,16 @@ select {
   display: none;
 }
 
-.effective-reward-store {
+.effective-reward-store,
+.inherited-reward-store {
   padding: 8px 10px;
   border: 1px solid #554866;
   border-radius: 8px;
   background: rgb(126 101 154 / 9%);
 }
 
-.effective-reward-store > span {
+.effective-reward-store > span,
+.inherited-reward-store > span {
   display: block;
   color: #aaa5af;
   font-size: 0.72rem;
@@ -734,11 +736,18 @@ select {
   text-transform: uppercase;
 }
 
-.effective-reward-store > strong {
+.effective-reward-store > strong,
+.inherited-reward-store > strong {
   display: block;
   margin-top: 4px;
   color: #eee7dc;
   font-weight: 600;
+}
+
+.inherited-reward-store > p {
+  margin: 4px 0 2px;
+  color: #aaa5af;
+  font-size: 0.78rem;
 }
 
 .decision-heading h3,

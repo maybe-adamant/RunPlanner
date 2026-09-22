@@ -33,6 +33,7 @@ export type {
   WorkspaceHubDecisionNode,
   WorkspaceHubSlot,
   WorkspaceHubVisit,
+  WorkspaceInheritedRewardStore,
   WorkspaceMissingPhysicalTarget,
   WorkspaceMixedBatchNode,
   WorkspaceNode,

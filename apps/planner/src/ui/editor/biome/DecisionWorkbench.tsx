@@ -4,6 +4,7 @@ import {
   workspaceInteractionKey,
   type WorkspaceAuthoringFrontier,
   type WorkspaceBatchRepairIntent,
+  type WorkspaceInheritedRewardStore,
   type WorkspaceInteractionCatalog,
   type WorkspaceMarker,
   type WorkspaceMissingPhysicalTarget,
@@ -505,6 +506,36 @@ function SelectedContinuationAction({ node }: { readonly node: BatchNode }) {
   );
 }
 
+/**
+ * The ship-decided pool. Read-only by construction: the wheel that rolled it
+ * owns the choice, so this row only reports it and navigates to that wheel.
+ */
+function InheritedRewardStoreRow({
+  inherited,
+  nodeKey,
+}: {
+  readonly inherited: WorkspaceInheritedRewardStore;
+  readonly nodeKey: string;
+}) {
+  const dispatch = useAppDispatch();
+  return (
+    <div className="inherited-reward-store" role="status">
+      <span>Reward pool from ship</span>
+      <strong>{inherited.label}</strong>
+      <p>{inherited.explanation}</p>
+      <button
+        className="semantic-focus-link"
+        data-workspace-node={inherited.wheel.focusKey}
+        id={`${nodeKey}-inherited-reward-store-wheel`}
+        onClick={() => dispatch(semanticOwnerFocused(inherited.wheel.address))}
+        type="button"
+      >
+        Open the deciding wheel
+      </button>
+    </div>
+  );
+}
+
 function BatchSettings({
   interactions,
   node,
@@ -538,6 +569,9 @@ function BatchSettings({
             onReplace={(storeKey) => executeIntent(store.intentFor(storeKey))}
             placeholder="Select pool"
           />
+        )}
+        {node.inheritedRewardStore === undefined ? null : (
+          <InheritedRewardStoreRow inherited={node.inheritedRewardStore} nodeKey={node.key} />
         )}
         {node.effectiveRewardStore === undefined ? null : (
           <div className="effective-reward-store" role="status">
