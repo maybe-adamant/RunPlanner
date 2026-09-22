@@ -599,7 +599,8 @@ export const qRooms = [
       ],
     },
     prebossBatchPolicy: { kind: 'takeOverNormalDoors', remainingOffers: { kind: 'none' } },
-    enteredRewardStoreHistory: { kind: 'none' },
+    // Native Q_PreBoss01 ForcedRewardStore = "RunProgress" (RoomDataQ.lua:1129).
+    enteredRewardStoreHistory: { kind: 'fixed', storeKey: 'RunProgress' },
     encounterEnvelopeKey: 'SingleEncounter',
     encounterSlotBindings: [
       { slotKey: 'Encounter', kind: 'fixed', encounterDefinitionKey: 'TyphonShop' },

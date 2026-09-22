@@ -49,7 +49,7 @@ export const iRooms = [
     structuralTags: [],
     exits: [{ index: 1, type: 'TartarusExitDoor' }],
     incomingReward: { kind: 'fixed', rewardType: 'Story', producerLifecycleKey: 'RoomReward' },
-    enteredRewardStoreHistory: { kind: 'none' },
+    enteredRewardStoreHistory: { kind: 'fixed', storeKey: 'TartarusRewards' },
     encounterEnvelopeKey: 'SingleEncounter',
     encounterSlotBindings: [
       { slotKey: 'Encounter', kind: 'fixed', encounterDefinitionKey: 'Story_Hades_01' },
@@ -961,7 +961,7 @@ export const iRooms = [
       ],
     },
     prebossBatchPolicy: { kind: 'retainNormalPeers' },
-    enteredRewardStoreHistory: { kind: 'none' },
+    enteredRewardStoreHistory: { kind: 'fixed', storeKey: 'TartarusRewards' },
     encounterEnvelopeKey: 'SingleEncounter',
     encounterSlotBindings: [
       { slotKey: 'Encounter', kind: 'fixed', encounterDefinitionKey: 'Empty' },
@@ -999,7 +999,7 @@ export const iRooms = [
       ],
     },
     prebossBatchPolicy: { kind: 'retainNormalPeers' },
-    enteredRewardStoreHistory: { kind: 'none' },
+    enteredRewardStoreHistory: { kind: 'fixed', storeKey: 'TartarusRewards' },
     encounterEnvelopeKey: 'SingleEncounter',
     encounterSlotBindings: [
       { slotKey: 'Encounter', kind: 'fixed', encounterDefinitionKey: 'Empty' },
@@ -1022,7 +1022,8 @@ export const iRooms = [
     structuralTags: [],
     exits: [{ index: 1, type: 'TartarusExitDoor' }],
     incomingReward: { kind: 'none' },
-    enteredRewardStoreHistory: { kind: 'none' },
+    // Native TartarusRewards store: ForcedRewardStore on BaseI (RoomDataI.lua).
+    enteredRewardStoreHistory: { kind: 'fixed', storeKey: 'TartarusRewards' },
     encounterEnvelopeKey: 'SingleEncounter',
     encounterSlotBindings: [
       {

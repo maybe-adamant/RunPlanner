@@ -1,4 +1,5 @@
 import type { BiomeLayout, RoomDeclaration } from '../../../catalog-schema';
+import type { EnteredRewardStoreHistoryPolicy } from '../../../reward-kernel/bindings';
 import type { BatchRewardStoreAddress } from '../../../authored-project/addresses';
 import type { CanonicalAuthoredRoom, CanonicalBatch } from '../../materialization';
 import type { HistoryStateView } from '../../history';
@@ -13,16 +14,23 @@ export interface RewardStoreHistorySupport {
   readonly supportStoreKeys: readonly string[];
 }
 
-function enteredStoreKey(
-  room: CanonicalAuthoredRoom,
-  declaration: RoomDeclaration,
+/**
+ * The declaration-owned answer to "which store does entering this room count
+ * with". A materialized room may carry an exact resolved key, which the route
+ * start supplies for its loadout-owned starting reward; otherwise the room's
+ * declared policy decides. This is the single owner: the lifecycle input reads
+ * it through its own wrapper rather than repeating the switch.
+ */
+export function declaredEnteredStoreKey(
+  room: Pick<CanonicalAuthoredRoom, 'enteredRewardStoreKey' | 'incomingReward'>,
+  policy: EnteredRewardStoreHistoryPolicy,
 ): string | undefined {
   if (room.enteredRewardStoreKey !== undefined) return room.enteredRewardStoreKey;
-  switch (declaration.enteredRewardStoreHistory.kind) {
+  switch (policy.kind) {
     case 'none':
       return undefined;
     case 'fixed':
-      return declaration.enteredRewardStoreHistory.storeKey;
+      return policy.storeKey;
     case 'resolvedOffer':
       return room.incomingReward?.resolvedStoreKey;
   }
@@ -37,7 +45,7 @@ export function rewardStoreCandidateSupport(
   view: HistoryStateView,
   historySequence: number,
 ): RewardStoreCandidateSupport {
-  const currentStore = enteredStoreKey(source, sourceDeclaration);
+  const currentStore = declaredEnteredStoreKey(source, sourceDeclaration.enteredRewardStoreHistory);
   const support = rewardStoreHistorySupport(layout, source.origin.biomeKey, view, currentStore);
   return Object.freeze({
     origin,
