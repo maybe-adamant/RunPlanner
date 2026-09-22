@@ -572,6 +572,46 @@ the completed board's contribution chronologically and carries it across route
 biomes, including reordered Dream routes. Invalid authored offers remain
 repairable; they are not replaced automatically.
 
+### Transition-offered rewards and the ordinary WorldShop Spell entry
+
+Separate from the run-persistent hub lookup, the game keeps a per-map offered
+reward set. `RoomLogic.lua:4013–4026` rebuilds `MapState.OfferedRewards` when a
+room's exits unlock, from every door in `MapState.OfferedExitDoors` — the
+chosen reward type and the cage reward identities of each offered room, with
+selection playing no part. `RoomLogic.lua:4391–4394` runs shop generation for
+the next room immediately after `CurrentRun.CurrentRoom` changes and before the
+next map loads, so the previous map's set is the set that generation reads, and
+`MapStateInit` (`RoomLogic.lua:295–310`) then wipes it. Exactly one inventory
+entry in the game data consults it: the ordinary `WorldShop` Spell entry
+requires `MapState.OfferedRewards.SpellDrop` absent (`StoreData.lua:290`).
+`SurfaceShop` Spell and the `I_WorldShop`/`Q_WorldShop`
+`SpellDropRequirements` entries carry no such clause. Dynamic restock
+(`StoreLogic.lua:417`) re-runs entry filtering while the player is in the room,
+after that room's own exits rebuilt the set, so a shop's own outgoing Spell
+Drop can constrain a restock but never that shop's initial inventory.
+
+Two bounded gaps in the planner's published set, both currently inert:
+
+- Additional-exit doors. Native registers the Chaos gate
+  (`RoomLogic.lua:4886`) and the Zagreus contract door (`EventLogic.lua:1893`)
+  through `AssignRoomToExitDoor` before the rebuild, so their rooms' reward
+  identities enter the native set. The planner's publish reads the generated
+  batch only; additional continuations are created at parent entry and are not
+  included. No such room carries `SpellDrop`, so no current output differs.
+- Hub-origin generations and fixed room links. Hub board and local-visit
+  generations and the persistent-hub handoff publish nothing (the hub board
+  owns the run-persistent lookup with its own lifetime), and declaration-fixed
+  links reach their target without an offered door batch. The only hub-progression
+  WorldShop is reached by the single-target handoff, whose Ephyra board offers
+  are already excluded through the persistent hub lookup.
+
+Planner disposition: a transient `offeredRewardTypes` substate on the branch
+state, published once when the arriving batch's last target completes
+generation, cleared at room entry, and consumed only through the
+entry-declared `offeredRewardExcludes` requirement on the ordinary `WorldShop`
+Spell entry. Inventory validation, candidates and Travel Deal generation read
+the same facts at their own contacts.
+
 ### Ordinary WorldShop groups
 
 | Group | Offers | Supported options under the baseline                                              | Modeled current-run conditions                                                               |

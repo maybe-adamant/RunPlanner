@@ -228,8 +228,9 @@ candidate support and workspace consumers.
 
 `SimulationState` is the immutable, branch-local authority for live equipment,
 trait history, Arcana/Fear, keepsakes, Hex progression, Well effects, reward
-bags/history/priorities, persistent offered-reward lookups and pending Shop or
-Shrine work. It also carries the reached route position and history view.
+bags/history/priorities, persistent offered-reward lookups, the transient
+per-map transition-offered reward types and pending Shop or Shrine work. It
+also carries the reached route position and history view.
 Transitions return a new state while retaining unchanged substates; replacing
 trait history also updates the reward kernel's derived trait facts atomically.
 Catalog declarations remain separate from acquired instances and their clocks.

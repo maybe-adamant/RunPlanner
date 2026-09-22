@@ -632,6 +632,15 @@ ban. This lookup is separate from counted-bag depletion and acquisition history.
 `../biomes/N_GAME_RULES.md` owns the concrete bags, room filters, local-slot topology,
 and lifecycle order.
 
+The transient per-map offered set is its short-lived neighbor. The transition
+into a room offers reward types on every door of its batch, chosen or not,
+including Fields cage identities; the branch state publishes that set when the
+batch's last target completes generation and clears it at room entry, before
+the entered room generates anything of its own. Entry declarations again select
+the consumers — currently only the ordinary World Shop Spell entry — and a
+shop's own outgoing offers may constrain a later restock but never that shop's
+initial inventory, which the World Shop lifecycle orders before entry.
+
 ## Authored and Materialized Counted Offers
 
 A counted room leaf authors one complete resolved offer:
