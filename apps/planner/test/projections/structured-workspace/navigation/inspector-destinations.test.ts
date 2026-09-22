@@ -361,6 +361,59 @@ function staleTravelDealShopProject(): {
 }
 
 describe('workspace inspector destinations', () => {
+  it('routes a missing cage reward to its exact door picker and decision rail', () => {
+    const original = createGoldenFGHProject();
+    const fields = original.route.biomes
+      .find((entry) => entry.biomeKey === 'H')
+      ?.topology?.occurrences.find((room) => room.state.kind === 'fieldsCombat');
+    if (fields === undefined) throw new Error('Fields fixture missing');
+    const document: ProjectDocument = {
+      ...original,
+      route: {
+        ...original.route,
+        biomes: original.route.biomes.map((entry) =>
+          entry.biomeKey !== 'H' || entry.topology === null
+            ? entry
+            : {
+                ...entry,
+                topology: {
+                  ...entry.topology,
+                  occurrences: entry.topology.occurrences.map((room) =>
+                    room.occurrenceId !== fields.occurrenceId || room.state.kind !== 'fieldsCombat'
+                      ? room
+                      : {
+                          ...room,
+                          state: { ...room.state, cages: { ...room.state.cages, cage1: null } },
+                        },
+                  ),
+                },
+              },
+        ),
+      },
+    };
+    const assembled = assembly(document);
+    const finding = assembled.evaluation.findings.find(
+      (finding) =>
+        finding.code === 'rewardMissing' &&
+        finding.origin.kind === 'localReward' &&
+        finding.origin.occurrenceId === fields.occurrenceId &&
+        finding.origin.slotKey === 'cage1',
+    );
+    if (finding === undefined) throw new Error('Missing cage finding was not reached');
+    const workspace = structuredWorkspace.project(assembled);
+    const focus = destination(workspace, finding.origin);
+    const decision = biome(workspace, 'H').nodes.find((node) => node.key === focus.nodeKey);
+    if (decision === undefined) throw new Error('Missing cage decision');
+    expect(focus).toMatchObject({
+      ownerAddress: finding.origin,
+      focusAddress: finding.origin,
+      focusKey: semanticAddressKey(finding.origin),
+      roomTab: 'doors',
+      selectedRailKey: decision.marker.focusKey,
+      inspectorSubject: { kind: 'node', nodeKey: decision.key },
+    });
+  });
+
   it('keeps missing Fields reward definitions on Overview even when pickup rows exist', () => {
     const original = createGoldenFGHProject();
     const fields = original.route.biomes
@@ -1292,6 +1345,11 @@ describe('workspace inspector destinations', () => {
     for (const owner of fieldsRoom.roomLocal.cages.map((cage) => cage.control.marker.address)) {
       expect(destination(underworld, owner)).toMatchObject({
         inspectorSubject: { kind: 'node', nodeKey: fieldsDecision.key },
+        ownerAddress: owner,
+        focusAddress: owner,
+        focusKey: semanticAddressKey(owner),
+        roomTab: 'doors',
+        selectedRailKey: fieldsDecision.marker.focusKey,
       });
     }
 

@@ -163,7 +163,9 @@ function redirectDecisionFocus(
   node: WorkspaceDecisionBatchNode,
 ): void {
   if (node.source.kind === 'hubDecision') return;
-  markerDestinations.redirect(workspaceDecisionOwnedMarkers(node), node.key);
+  const markers = workspaceDecisionOwnedMarkers(node);
+  markerDestinations.redirect(markers, node.key);
+  markerDestinations.setRoomTab(markers, 'doors');
 }
 
 function batchRepairIntentForUnavailableTargets(
