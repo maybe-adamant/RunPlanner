@@ -150,18 +150,22 @@ export function DirectRoomWorkbench({
       {children}
     </RoomEncounterStructureWorkbench>
   );
+  // A Preboss room carries the boss-door store decision whatever its workbench
+  // kind: shop Prebosses (G/O/P) and standard ones (Q) both own it.
+  const renderBossDoorRewardStore = (): ReactNode =>
+    room.bossDoorRewardStore === undefined ? null : (
+      <BossDoorRewardStoreWorkbench
+        idPrefix={idPrefix}
+        interactions={interactions}
+        store={room.bossDoorRewardStore}
+      />
+    );
   switch (workbench.kind) {
     case 'standard':
       if (view === 'overview') {
         return (
           <>
-            {room.bossDoorRewardStore === undefined ? null : (
-              <BossDoorRewardStoreWorkbench
-                idPrefix={idPrefix}
-                interactions={interactions}
-                store={room.bossDoorRewardStore}
-              />
-            )}
+            {renderBossDoorRewardStore()}
             {renderFeatures()}
             {renderSideRooms()}
             {renderEncounterStructure()}
@@ -222,6 +226,7 @@ export function DirectRoomWorkbench({
       if (view === 'overview') {
         return (
           <>
+            {renderBossDoorRewardStore()}
             <ShopWorkbench
               {...(workbench.roomActions === undefined ? {} : { actions: workbench.roomActions })}
               interactions={interactions}

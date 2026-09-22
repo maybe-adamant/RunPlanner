@@ -440,6 +440,20 @@ describe('OccurrenceWorkbench', () => {
     expect(doors.closest('.room-workbench-tab-row')).not.toBeNull();
   });
 
+  it('renders the boss-door reward pool editor on a shop Preboss overview', () => {
+    renderStaticOccurrenceWorkbench(
+      immutableRepresentativeNOPQProject,
+      'Surface',
+      'O',
+      occurrenceById(oOccurrenceIds.preboss),
+    );
+    // O_PreBoss01 is a shop room; its overview still owns the boss door's
+    // authored store, exactly like a standard Preboss.
+    const editor = screen.getByRole('region', { name: 'Boss door' });
+    const select = within(editor).getByRole('combobox');
+    expect((select as HTMLSelectElement).value).not.toBe('');
+  });
+
   it('supports roving keyboard activation across the room workbench tabs', () => {
     renderStaticOccurrenceWorkbench(
       createGoldenFGHIProject(),
