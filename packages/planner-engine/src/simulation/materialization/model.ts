@@ -463,13 +463,14 @@ export interface CanonicalFixedRoomLink {
   readonly source: CanonicalAuthoredRoom;
   readonly target: CanonicalAuthoredRoom;
   /**
-   * The authored boss-door store carried through materialization so the reward
-   * chronology can assess it against support, exactly as an ordinary batch's
-   * authored store is assessed. Absent where no store was authored on the link.
+   * The boss-door store decision carried through materialization so the reward
+   * chronology reaches it at the source room's exit boundary, exactly as an
+   * ordinary batch's store is reached. Present on every door that takes an
+   * authored store; `storeKey` is absent while that store is unauthored.
    */
   readonly bossDoorRewardStore?: {
     readonly origin: import('../../authored-project/addresses').BatchRewardStoreAddress;
-    readonly storeKey: string;
+    readonly storeKey?: string;
   };
 }
 

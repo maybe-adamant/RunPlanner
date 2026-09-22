@@ -179,6 +179,37 @@ describe('boss-door reward store workspace binding', () => {
     }
   });
 
+  it('keeps real support on a door whose authored store stopped the chain', () => {
+    // An unsupported store is not entered, so the boss and postboss fall out of
+    // the assessed prefix. The door's own selector is the only repair, so it
+    // must still read the controller rather than degrade to unreachable.
+    const owner = createBatchRewardStoreAddress(createBiomeAddress('Surface', 'P'), {
+      kind: 'occurrence',
+      occurrenceId: createOccurrenceId('surface-p-preboss-shop'),
+    });
+    const forbidden = applyProjectCommand(loadSurfaceNOPQProject(), catalog, {
+      kind: 'ReplaceBossDoorRewardStore',
+      rewardStore: owner,
+      storeKey: 'RunProgress',
+    });
+    const workspace = project(forbidden);
+    const key = semanticAddressKey(owner);
+
+    expect(workspace.focusByOwner.get(key)?.inspectorSubject?.kind).toBe('node');
+    const interaction = workspace.interactions.batchRewardStores.get(key);
+    if (interaction === undefined) throw new Error('the blocked P door lost its interaction');
+    expect(interaction.selected).toBe('RunProgress');
+    const byValue = new Map(interaction.load().map((option) => [option.value, option.evaluation]));
+    for (const [value, possible] of [
+      ['MetaProgress', true],
+      ['RunProgress', false],
+    ] as const) {
+      const evaluation = byValue.get(value);
+      if (evaluation?.kind !== 'batchRewardStore') throw new Error(`${value} lost its support`);
+      expect(evaluation.result.selectedPossible).toBe(possible);
+    }
+  });
+
   it('publishes the saturated boss-door verdict as picker copy', () => {
     const workspace = project(loadSurfaceNOPQProject());
     const owner = createBatchRewardStoreAddress(createBiomeAddress('Surface', 'P'), {

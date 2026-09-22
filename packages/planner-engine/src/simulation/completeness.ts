@@ -214,11 +214,17 @@ function findBossDoorRewardStore(
     Object.freeze({ kind: 'occurrence', occurrenceId: prebossOccurrenceId }),
   );
   return Object.freeze({
-    finding: finding('batchRewardStoreMissing', requiredInput, {
-      parentGameName: bossRoom.gameName,
-    }),
+    finding: bossDoorRewardStoreMissingFinding(requiredInput, bossRoom.gameName),
     requiredInput,
   });
+}
+
+/** The reward chronology raises this same input at the door's own boundary. */
+export function bossDoorRewardStoreMissingFinding(
+  origin: SemanticAddress,
+  parentGameName: string,
+): SemanticFinding {
+  return finding('batchRewardStoreMissing', origin, { parentGameName });
 }
 
 function evaluateHubDecisionCompleteness(

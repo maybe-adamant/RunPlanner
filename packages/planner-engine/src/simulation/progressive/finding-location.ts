@@ -558,6 +558,35 @@ function locateStructuralOwner(
           }),
     });
   }
+  // A fixed door's reward store is decided as its source room is left, so it
+  // belongs to that room's decision and sits at the door it gates: the source
+  // room stays reached while the boss and everything after it do not.
+  const fixedDoorStore = address.kind === 'batchRewardStore' ? address : undefined;
+  const fixedDoorSource =
+    fixedDoorStore?.source.kind === 'occurrence' ? fixedDoorStore.source : undefined;
+  const fixedDoorIndex =
+    fixedDoorStore === undefined ||
+    fixedDoorSource === undefined ||
+    fixedDoorStore.routeKey !== prefix.routeKey ||
+    fixedDoorStore.biomeKey !== prefix.biomeKey
+      ? -1
+      : (prefix.fixedRoomLinks ?? []).findIndex(
+          (link) =>
+            link.source.occurrenceId === fixedDoorSource.occurrenceId &&
+            link.bossDoorRewardStore !== undefined,
+        );
+  if (fixedDoorIndex >= 0) {
+    return Object.freeze({
+      decisionIndex: prefix.decisions.length - 1,
+      fixedRoomIndex: fixedDoorIndex,
+      ...(historyChronology === undefined
+        ? {}
+        : {
+            historySequence: historyChronology.sequence,
+            historyBoundary: historyChronology.boundary,
+          }),
+    });
+  }
   // Fixed Boss/Postboss occurrences are real ordered lifecycle owners but are
   // not ordinary topology decisions. Preserve their exact position so prefix
   // clamping can retain prior rooms without admitting later fixed rooms.

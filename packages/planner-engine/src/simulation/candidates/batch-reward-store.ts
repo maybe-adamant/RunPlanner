@@ -157,8 +157,10 @@ function bossDoorRewardStoreSupport(
   const layout = catalog.biomeLayouts.byKey[plan.biomeKey];
   if (layout === undefined) return undefined;
   if (bossDoorRewardStorePolicyForLayout(layout)?.kind !== 'authoredBaseStore') return undefined;
+  // A complete biome blocked at this very door is a prefix too: its boss is not
+  // assessed, so the door's support is read from the retained source room alone.
   const biome = candidatePrefix(
-    prefixBiome(evaluation, query.rewardStore.routeKey, query.rewardStore.biomeKey),
+    candidateBiome(evaluation, query.rewardStore.routeKey, query.rewardStore.biomeKey),
   );
   const prefix = candidateAssessmentPrefix(biome);
   if (biome === undefined || prefix === undefined) return undefined;
