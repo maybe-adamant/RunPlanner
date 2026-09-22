@@ -118,6 +118,7 @@ function commandContractAddress(
     case 'SetExitSelection':
       return command.selection;
     case 'ReplaceBatchRewardStore':
+    case 'ReplaceBossDoorRewardStore':
       return command.rewardStore;
     case 'ReplaceFieldsCageOutcome':
       return command.decision;

@@ -32,6 +32,40 @@ export function bindBatchInteractions(
   const zagreusContracts = new Map<string, WorkspaceZagreusContractInteraction>();
   const chaosExits = new Map<string, WorkspaceChaosExitInteraction>();
   for (const requirement of requirements) {
+    if (requirement.kind === 'bossDoorStoreControls') {
+      const { rewardStore } = requirement;
+      const key = semanticAddressKey(rewardStore.owner);
+      if (batchRewardStores.has(key)) {
+        throw new StructuredWorkspaceProjectionContractError(
+          `${key} has multiple bound batch reward-store interactions`,
+        );
+      }
+      const storeKeys = Object.freeze(rewardStore.storeChoices.map((choice) => choice.value));
+      const candidate = candidateInteraction(
+        rewardStore.owner,
+        rewardStore.storeChoices,
+        rewardStore.selected,
+        () => candidates.batchRewardStores(rewardStore.owner, storeKeys),
+      );
+      batchRewardStores.set(
+        key,
+        Object.freeze({
+          ...candidate,
+          // A boss link is always authored, so there is no uncommitted
+          // decision to initialize: the only write is the replacement.
+          intentFor: (storeKey: string) =>
+            Object.freeze({
+              command: Object.freeze({
+                kind: 'ReplaceBossDoorRewardStore' as const,
+                rewardStore: rewardStore.owner,
+                storeKey,
+              }),
+              focus: Object.freeze({ owner: requirement.owner, timing: 'before' as const }),
+            }),
+        }),
+      );
+      continue;
+    }
     if (requirement.exitSelection !== undefined) {
       const { exitSelection } = requirement;
       const key = semanticAddressKey(exitSelection.owner);

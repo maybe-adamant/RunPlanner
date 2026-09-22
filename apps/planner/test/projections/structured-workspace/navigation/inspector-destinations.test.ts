@@ -273,7 +273,9 @@ function staleTravelDealShopProject(): {
   readonly document: ProjectDocument;
   readonly entry: ReturnType<typeof createAcquisitionEntryAddress>;
 } {
-  const sourceOccurrenceId = createOccurrenceId('golden-g-b1-e1');
+  // G's opening batch is a Meta batch run-wide, so the Hermes reward this
+  // fixture needs lives at the route's first Run-bag door.
+  const sourceOccurrenceId = createOccurrenceId('golden-g-b4-e1');
   const incoming = createIncomingRewardAddress(goldenGBiome, sourceOccurrenceId);
   const shopId = createOccurrenceId('golden-g-preboss-shop');
   const site = createAcquisitionSiteAddress(

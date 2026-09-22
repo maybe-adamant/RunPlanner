@@ -170,6 +170,18 @@ export function dreamMixedPrefixProject(): ProjectDocument {
     gameName: 'Q_PreBoss01',
     targetOccurrenceIds: { exit1: createOccurrenceId('dream-q-preboss') },
   });
+  // Q's boss door is an authored store decision bounded by Q's own completion
+  // policy. At the Preboss's exit the run-wide ledger stands at 4 entered /
+  // 0 meta, so the selection value is 0.15 + 10 * (0.15 - 0) = 1.65 and
+  // MetaProgress is the only supported key.
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceBossDoorRewardStore',
+    rewardStore: createBatchRewardStoreAddress(qBiome, {
+      kind: 'occurrence',
+      occurrenceId: createOccurrenceId('dream-q-preboss'),
+    }),
+    storeKey: 'MetaProgress',
+  });
   for (const [offerKey, optionKey, offer] of [
     ['MixedProgress1', 'MaxHealthDrop', { rewardType: 'MaxHealthDrop' }],
     ['MixedProgress2', 'MaxManaDrop', { rewardType: 'MaxManaDrop' }],
@@ -217,9 +229,17 @@ export function dreamMixedPrefixProject(): ProjectDocument {
   return project;
 }
 
-/** Replay existing route topology choices through Dream commands, never copy
- * ordinary occurrence payloads or simulation history into the Dream route. */
-export function dreamMixedHandoffProject(): ProjectDocument {
+/**
+ * Replay existing route topology choices through Dream commands, never copy
+ * ordinary occurrence payloads or simulation history into the Dream route.
+ *
+ * `fBatchOrder` permutes the F prefix's authored batches — the same rooms
+ * carrying the same stores and rewards, visited in a different order, as a Dream
+ * Dive reorders an itinerary. A permutation must keep the store at each chain
+ * position unchanged: the run-scoped controller saturates at these boundaries,
+ * so the store sequence is forced and only a same-store permutation is legal.
+ */
+export function dreamMixedHandoffProject(fBatchOrder?: readonly number[]): ProjectDocument {
   let project = applyProjectCommand(dreamMixedPrefixProject(), catalog, {
     kind: 'ConfigureRoutePrefix',
     route: createRouteAddress('Dream'),
@@ -237,13 +257,16 @@ export function dreamMixedHandoffProject(): ProjectDocument {
     rewardType: 'Boon',
     payload: { kind: 'BoonSource', source: `${god}Upgrade` },
   });
-  const batches: readonly [string, readonly [string, ResolvedRewardOffer][]][] = [
+  const authoredBatches: readonly [string, readonly [string, ResolvedRewardOffer][]][] = [
     ['MetaProgress', [['F_Combat02', { rewardType: 'MetaCurrencyBigDrop' }]]],
+    // The run-wide ledger is saturated high entering this batch (6 entered /
+    // 1 meta, selection 1.80), so it is a Meta batch and carries Meta-bag drops
+    // rather than a Boon.
     [
-      'RunProgress',
+      'MetaProgress',
       [
-        ['F_Combat03', boon('Zeus')],
-        ['F_Combat03', { rewardType: 'MaxHealthDrop' }],
+        ['F_Combat03', { rewardType: 'GiftDrop' }],
+        ['F_Combat03', { rewardType: 'MetaCurrencyBigDrop' }],
       ],
     ],
     [
@@ -260,8 +283,10 @@ export function dreamMixedHandoffProject(): ProjectDocument {
         ['F_Combat08', { rewardType: 'RoomMoneyDrop' }],
       ],
     ],
+    // Saturated high again (9 entered / 2 meta, selection 1.24). The Miniboss
+    // rooms force their own store, so both Boons stand behind a Meta batch.
     [
-      'RunProgress',
+      'MetaProgress',
       [
         ['F_MiniBoss01', boon('Hera')],
         ['F_MiniBoss02', boon('Apollo')],
@@ -282,6 +307,13 @@ export function dreamMixedHandoffProject(): ProjectDocument {
         ['F_Combat12', { rewardType: 'SpellDrop' }],
       ],
     ],
+    // The prefix ends here. One more batch would be saturated to RunProgress
+    // (14 entered / 5 meta, selection -0.106), and its two offer draws would
+    // empty the Run bag that F_PreBoss01's forced-RunProgress reward must still
+    // pay from — both of that Preboss's declaration-owned peers draw, so the
+    // selected exit does not relieve it. No one-exit room that would draw once
+    // is eligible at this depth (eligibility offers F_Combat05/13/14/15/16/17/
+    // 18/20, all two-exit).
     [
       'MetaProgress',
       [
@@ -289,14 +321,15 @@ export function dreamMixedHandoffProject(): ProjectDocument {
         ['F_Combat14', { rewardType: 'GiftDrop' }],
       ],
     ],
-    [
-      'MetaProgress',
-      [
-        ['F_Combat15', { rewardType: 'MetaCurrencyBigDrop' }],
-        ['F_Combat15', { rewardType: 'MetaCardPointsCommonBigDrop' }],
-      ],
-    ],
   ];
+  const batches =
+    fBatchOrder === undefined
+      ? authoredBatches
+      : fBatchOrder.map((position) => {
+          const batch = authoredBatches[position];
+          if (batch === undefined) throw new Error(`no Dream F batch at position ${position}`);
+          return batch;
+        });
   for (const [index, [storeKey, targets]] of batches.entries()) {
     project = applyProjectCommand(project, catalog, {
       kind: 'CreateBatch',
@@ -369,7 +402,8 @@ export function dreamMixedHandoffProject(): ProjectDocument {
   project = applyProjectCommand(project, catalog, {
     kind: 'ReplaceIncomingReward',
     reward: createIncomingRewardAddress(n, prehubId),
-    value: { rewardType: 'StackUpgrade' },
+    // The run-wide Run bag has already spent its Pom across the Dream F prefix.
+    value: { rewardType: 'WeaponUpgrade' },
   });
   project = applyProjectCommand(project, catalog, {
     kind: 'CreateBatch',

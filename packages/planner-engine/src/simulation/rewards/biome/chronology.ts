@@ -135,6 +135,7 @@ import type {
   ReachedTraitOfferCandidateContact,
 } from '../trait-settlement/coordinator';
 import { rewardFinding } from '../findings';
+import { assessAuthoredBossDoorRewardStore } from './reward-store-support';
 import {
   EMPTY_PLANNER_TIMELINE_FACTS,
   type PlannerTimelineDependency,
@@ -1930,6 +1931,41 @@ export function evaluateBiomeRewardChronology(
       const current = 'current' in history ? history.current : history.afterTransition;
       captureRunState(snapshot.frontier.origin, source, current);
     }
+  }
+
+  // An authored boss-door store is not an outgoing batch — a Preboss owns no
+  // exit decision — so it never reaches the outgoing-generation assessment.
+  // It is assessed here against the same controller, at the Preboss's exit
+  // boundary, so an unsupported authored key raises `baseRewardStoreUnavailable`
+  // exactly like an ordinary batch and the selector reads real support.
+  for (const link of snapshot.fixedRoomLinks ?? []) {
+    const door = link.bossDoorRewardStore;
+    if (door === undefined) continue;
+    const sourceViews = views.get(semanticAddressKey(link.source.origin));
+    const view = sourceViews?.exit ?? sourceViews?.postCommit;
+    if (view === undefined) continue;
+    const support = assessAuthoredBossDoorRewardStore(
+      layout,
+      door.origin,
+      door.storeKey,
+      view,
+      view.sequence + 1,
+    );
+    storeSupportEntries.push(support);
+    if (!support.selectedPossible)
+      addRewardFinding(
+        findings,
+        rewardFinding('baseRewardStoreUnavailable', support.origin, {
+          authoredStoreKey: support.authoredStoreKey,
+          enteredStoreCount: support.enteredStoreCount,
+          enteredMetaStoreCount: support.enteredMetaStoreCount,
+          currentMetaRatio: support.currentMetaRatio,
+          metaSelectionValue: support.metaSelectionValue,
+          supportStoreKeys: support.supportStoreKeys,
+        }),
+        ownerRegion(support.origin),
+        { kind: 'history', sequence: view.sequence, boundary: 'at' },
+      );
   }
 
   recordBlankFrontierTargetHistory();

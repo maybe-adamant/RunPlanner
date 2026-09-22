@@ -546,6 +546,16 @@ describe('selected O validation', () => {
       gameName: 'O_PreBoss01',
       targetOccurrenceIds: { exit1: oOccurrenceIds.preboss },
     });
+    // The removed terminal decision took its completion chain with it, so the
+    // rebuilt Preboss owns a fresh boss-door store decision.
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceBossDoorRewardStore',
+      rewardStore: createBatchRewardStoreAddress(oBiome, {
+        kind: 'occurrence',
+        occurrenceId: oOccurrenceIds.preboss,
+      }),
+      storeKey: 'RunProgress',
+    });
     project = authorSurfaceWorldShop(project, oBiome, oOccurrenceIds.preboss);
     const postboss = createOccurrenceAddress(
       oBiome,

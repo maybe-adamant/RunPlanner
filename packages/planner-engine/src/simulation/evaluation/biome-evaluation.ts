@@ -7,11 +7,13 @@ import {
   semanticAddressKey,
   type BiomeAddress,
   type NemesisRandomEventAddress,
+  type SemanticAddress,
 } from '../../authored-project/addresses';
 import type { AuthoredBiomePlan, ProjectDocument } from '../../authored-project/model';
 import { resolveRoutePosition } from '../../authored-project/route-context';
 import { evaluateBiomeCompleteness, type IncompleteBiomeCompletenessResult } from '../completeness';
 import { createAssessmentIssue } from '../assessment-issue';
+import type { SemanticFinding } from '../model';
 import { evaluateBiomeRoomGenerationAssemblyInternal } from '../generation/biome';
 import { evaluateHubDecisionGenerationInternal } from '../generation/hub';
 import {
@@ -77,6 +79,21 @@ import { ProjectSimulationContractError } from './project-evaluation-assembly';
 interface BiomeProjectEvaluationAssembly {
   readonly evaluation: ProjectBiomeEvaluation;
   readonly candidateArtifacts: BiomeCandidateArtifacts;
+}
+
+/**
+ * A lifecycle block's own reason, addressed at the exact leaf the block names.
+ * A room-action block is an unplaced required action; every other block already
+ * names the authored owner that has to change.
+ */
+function lifecycleBlockFinding(blockedAt: SemanticAddress): SemanticFinding {
+  return Object.freeze({
+    code: 'roomActionPlacementRequired' as const,
+    severity: 'error' as const,
+    phase: 'completeness' as const,
+    origin: blockedAt,
+    evidence: Object.freeze({}),
+  });
 }
 
 function completenessIssue(completeness: IncompleteBiomeCompletenessResult) {
@@ -550,6 +567,24 @@ export function evaluateBiomeAssembly(
       progressive.evaluation.rewards.runStateSnapshots,
       structurallyEligibleRunStateOwners(progressive.evaluation.materializedPrefix),
     );
+    // The lifecycle block is itself the invalidity. When the progressive prefix
+    // stops before the blocked room it publishes no reason of its own, and an
+    // invalid biome with no finding has no repairable frontier for the route
+    // assessment to select. The block always owns an exact semantic repair
+    // leaf -- the branch above refuses to continue without one -- so that leaf
+    // carries the finding rather than the invalidity going unexplained.
+    const blockFindings =
+      progressive.evaluation.issue === undefined
+        ? Object.freeze([lifecycleBlockFinding(blockedAt)])
+        : Object.freeze([]);
+    const findings = Object.freeze([...blockFindings, ...progressive.evaluation.findings]);
+    const issue =
+      progressive.evaluation.issue ??
+      createAssessmentIssue(
+        assessmentRepairOwner(blockedAt),
+        authoringRegion(blockedAt),
+        blockFindings,
+      );
     return Object.freeze({
       evaluation: Object.freeze({
         biomeKey: plan.biomeKey,
@@ -578,10 +613,8 @@ export function evaluateBiomeAssembly(
         history: progressive.evaluation.history,
         roomGeneration: progressive.evaluation.roomGeneration,
         rewards: reconciledRewards,
-        findings: progressive.evaluation.findings,
-        ...(progressive.evaluation.issue === undefined
-          ? {}
-          : { issue: progressive.evaluation.issue }),
+        findings,
+        issue,
       }),
       candidateArtifacts: progressive.candidateArtifacts,
     });

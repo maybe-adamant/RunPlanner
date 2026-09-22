@@ -44,6 +44,30 @@ function enteredStoreKey(
   return storeKey;
 }
 
+/**
+ * Whether folding this room would hit the provenance invariant above. A boss
+ * whose entered store resolves from the chosen offer has no provenance until
+ * its door's store is authored, and until then it must not be folded at all —
+ * the completeness pass owns that state and raises `batchRewardStoreMissing`
+ * at the Preboss instead.
+ *
+ * This exists so composition can terminate its prefix at exactly the room the
+ * completeness verdict stops at, without softening the invariant: any room the
+ * fold does reach still fails hard if its provenance is missing. Q is the case
+ * that forces it — its ordinary doors carry no store, so the boss door is the
+ * only possible provenance, where G/O/P still inherit one from their Preboss.
+ */
+export function lacksEnteredStoreProvenance(
+  room: CanonicalLifecycleRoom,
+  declaration: RoomDeclaration,
+): boolean {
+  const policy = declaration.enteredRewardStoreHistory;
+  if (policy.kind !== 'resolvedOffer') return false;
+  if (room.kind !== 'authored') return false;
+  if (room.clockworkReward === 'goal') return false;
+  return declaredEnteredStoreKey(room, policy) === undefined;
+}
+
 export function createRoomLifecycleInput(
   room: CanonicalLifecycleRoom,
   encounterPhases: readonly ResolvedEncounterPhase[],

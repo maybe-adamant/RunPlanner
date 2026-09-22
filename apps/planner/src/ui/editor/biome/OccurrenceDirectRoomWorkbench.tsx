@@ -8,6 +8,7 @@ import type {
   WorkspaceRoomActions,
   WorkspaceRoomLifecycleBoundary,
   WorkspaceRoomSummary,
+  WorkspaceBossDoorRewardStoreControl,
 } from '@planner/projections/structured-workspace';
 import { RoomActionsWorkbench } from './OccurrenceRoomActions';
 import { RoomFeaturesWorkbench } from './room-features/RoomFeaturesWorkbench';
@@ -18,6 +19,7 @@ import { LocalVisitWorkbench } from './locals/LocalVisitWorkbench';
 import { RewardWheelWorkbench } from './locals/RewardWheelWorkbench';
 import { ShopWorkbench } from './commerce/ShopWorkbench';
 import { CandidateSelect } from './CandidateSelect';
+import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
 import { authoredProjectCommandDispatched } from '@planner/state/projectWorkspaceSlice';
 import { useAppDispatch } from '@planner/state/store';
 import {
@@ -59,6 +61,39 @@ export function ShipCombatPhaseCountWorkbench({
             }),
           )
         }
+      />
+    </section>
+  );
+}
+
+/**
+ * The authored store on a Preboss's boss door. The interaction is an ordinary
+ * batch reward-store interaction — same catalog map, same candidate model, same
+ * select — so this renders exactly like the batch control and carries no
+ * boss-door logic of its own.
+ */
+export function BossDoorRewardStoreWorkbench({
+  idPrefix,
+  interactions,
+  store,
+}: {
+  readonly idPrefix: string;
+  readonly interactions: WorkspaceInteractionCatalog;
+  readonly store: WorkspaceBossDoorRewardStoreControl;
+}) {
+  const executeIntent = useCommandIntent();
+  const interaction = requireWorkspaceInteraction(
+    interactions.batchRewardStores,
+    workspaceInteractionKey(store.address),
+  );
+  return (
+    <section aria-label="Boss door" className="boss-door-store-editor">
+      <CandidateSelect
+        id={`${idPrefix}-boss-door-reward-store`}
+        interaction={interaction}
+        label={store.label}
+        onReplace={(storeKey) => executeIntent(interaction.intentFor(storeKey))}
+        placeholder="Select pool"
       />
     </section>
   );
@@ -120,6 +155,13 @@ export function DirectRoomWorkbench({
       if (view === 'overview') {
         return (
           <>
+            {room.bossDoorRewardStore === undefined ? null : (
+              <BossDoorRewardStoreWorkbench
+                idPrefix={idPrefix}
+                interactions={interactions}
+                store={room.bossDoorRewardStore}
+              />
+            )}
             {renderFeatures()}
             {renderSideRooms()}
             {renderEncounterStructure()}

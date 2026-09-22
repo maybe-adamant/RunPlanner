@@ -42,6 +42,7 @@ import { summarizeRewardOffer } from '@planner/projections/rewards/rewardPicker'
 import { requireWorkspaceRoom as requireRoom } from './catalog-room';
 import {
   StructuredWorkspaceProjectionContractError,
+  type WorkspaceInteractionChoice,
   type WorkspaceRoomPickerControl,
   type WorkspaceRoomSummary,
 } from '../contract';
@@ -175,6 +176,16 @@ export interface WorkspaceOccurrenceAssemblyInput {
   /** Closed declaration-owned map domain for an Anomaly replacement in this biome. */
   readonly anomalyReplacementRoomGameNames?: readonly string[];
   readonly biome: BiomeAddress;
+  /**
+   * Present only for a Preboss whose boss door genuinely rolls a store. The
+   * caller owns the declaration predicate and the policy bound; this assembly
+   * only publishes the control and registers its marker on this room.
+   */
+  readonly bossDoorRewardStore?: {
+    readonly address: import('@run-planner/engine/authored-project').BatchRewardStoreAddress;
+    readonly selected?: string;
+    readonly storeChoices: readonly WorkspaceInteractionChoice<string>[];
+  };
   readonly catalog: Catalog;
   readonly encounterPhaseStatus: (
     phase: EncounterPhaseAddress,
@@ -462,8 +473,21 @@ export function assembleWorkspaceOccurrence(
     ...(zagreusSpawn === undefined ? [] : [zagreusSpawn.marker]),
     ...(chaosSpawn === undefined ? [] : [chaosSpawn.marker]),
   ]);
+  const bossDoorRewardStore =
+    input.bossDoorRewardStore === undefined
+      ? undefined
+      : Object.freeze({
+          address: input.bossDoorRewardStore.address,
+          label: 'Boss door pool',
+          marker: input.markerDestinations.marker(input.bossDoorRewardStore.address),
+          ...(input.bossDoorRewardStore.selected === undefined
+            ? {}
+            : { selected: input.bossDoorRewardStore.selected }),
+          storeChoices: input.bossDoorRewardStore.storeChoices,
+        });
   const roomSummary: WorkspaceRoomSummary = Object.freeze({
     address,
+    ...(bossDoorRewardStore === undefined ? {} : { bossDoorRewardStore }),
     detailsActive: input.facts.detailsActive,
     offerRewardRewards: offerRewardRewardsForRoom,
     ...(judgment === undefined ? {} : { judgment }),
@@ -609,6 +633,7 @@ export function assembleWorkspaceOccurrence(
       ...(input.isEntry === true && roomLocal.kind === 'incomingReward'
         ? [roomLocal.control.marker]
         : []),
+      ...(bossDoorRewardStore === undefined ? [] : [bossDoorRewardStore.marker]),
     ],
     'overview',
   );

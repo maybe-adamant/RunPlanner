@@ -186,8 +186,13 @@ describe('authored-project checkpoint integrity', () => {
       expect(completion).toEqual([
         expect.objectContaining({ occurrenceId: `${prebossId}:boss`, gameName: bossName }),
       ]);
+      // The Preboss -> Boss link carries the authored boss-door store.
       expect(biome?.topology?.fixedRoomLinks).toEqual([
-        { sourceOccurrenceId: prebossId, targetOccurrenceId: `${prebossId}:boss` },
+        {
+          sourceOccurrenceId: prebossId,
+          targetOccurrenceId: `${prebossId}:boss`,
+          ...(biomeKey === 'Q' ? { rewardStoreKey: 'RunProgress' } : {}),
+        },
       ]);
       expect(
         biome?.topology?.occurrences.some((occurrence) =>

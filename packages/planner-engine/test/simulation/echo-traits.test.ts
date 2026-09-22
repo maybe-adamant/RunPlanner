@@ -800,8 +800,10 @@ describe('Echo Gate A direct choices', () => {
     const child = createEchoPomTargetAddress(echoOwner, 'option3');
     expect(h.coverage).toMatchObject({ kind: 'prefix', blockedAt: child });
     expect(h.rewards.branches).toHaveLength(1);
+    // The run-wide Run bag carries one Pom and F's earlier door takes
+    // it, so the level-2 trait here is F's own Hestia pick, not an H cage's.
     expect(h.rewards.branches[0]?.state.traitHistory?.equippedTraits).toMatchObject({
-      ApolloWeaponBoon: { level: 2 },
+      HestiaWeaponBoon: { level: 2 },
       EchoDoubleLevelBoon: { traitKey: 'EchoDoubleLevelBoon' },
     });
     expect(
@@ -2436,11 +2438,13 @@ describe('Echo Gate B Boon Boon Boon', () => {
     const child = createEchoLastRunBoonAddress(echoOwner, 'option1');
     expect(h.coverage).toMatchObject({ kind: 'prefix', blockedAt: child });
     expect(h.rewards.branches).toHaveLength(1);
+    // The Apollo door fires once, and the run's single Pom upgrades F's Hestia
+    // pick, so no Apollo weapon Boon stays equipped.
     expect(
       h.rewards.branches.every(
         (branch) =>
           branch.state.traitHistory?.equippedTraits.EchoLastRunBoon !== undefined &&
-          branch.state.traitHistory.equippedTraits.ApolloWeaponBoon?.rarity === 'Common' &&
+          branch.state.traitHistory.equippedTraits.HestiaWeaponBoon?.rarity === 'Rare' &&
           branch.state.rewardHistory.lootTypeHistory.ApolloUpgrade === 1,
       ),
     ).toBe(true);

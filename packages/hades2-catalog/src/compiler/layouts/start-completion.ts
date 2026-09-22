@@ -104,5 +104,8 @@ export function normalizeLayoutCompletion(
     bossRoomGameName: bossRoom.gameName,
     ...(rivalsBossRoom === undefined ? {} : { rivalsBossRoomGameName: rivalsBossRoom.gameName }),
     transitionEffects: Object.freeze(transitionEffects),
+    ...(rawCompletion.bossRewardStorePolicy === undefined
+      ? {}
+      : { bossRewardStorePolicy: rawCompletion.bossRewardStorePolicy }),
   });
 }

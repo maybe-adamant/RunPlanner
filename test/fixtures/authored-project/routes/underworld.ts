@@ -348,7 +348,9 @@ export function createCompleteFGIxionChaosProject(): ProjectDocument {
   });
 
   const batches = [
-    { sourceId: goldenGStartId, targets: ['G_Combat01'], store: 'RunProgress' as const },
+    // The run-wide ledger is saturated high entering G (12 entered /
+    // 3 meta, selection 1.35), so the opening batch is a Meta batch.
+    { sourceId: goldenGStartId, targets: ['G_Combat01'], store: 'MetaProgress' as const },
     {
       sourceId: goldenGOccurrenceId(1, 1),
       targets: ['G_Combat02', 'G_Combat18'],
@@ -362,7 +364,8 @@ export function createCompleteFGIxionChaosProject(): ProjectDocument {
     {
       sourceId: goldenGOccurrenceId(3, 1),
       targets: ['G_Combat06', 'G_Combat07'],
-      store: 'RunProgress' as const,
+      // Still saturated high at this point (15 entered / 4 meta, selection 1.18).
+      store: 'MetaProgress' as const,
     },
     {
       sourceId: goldenGOccurrenceId(4, 1),
@@ -403,25 +406,23 @@ export function createCompleteFGIxionChaosProject(): ProjectDocument {
         occurrenceId,
         gameName,
       });
+      // The opening batch's hardcoded Boon is gone with the run-scoped ratio:
+      // a Meta bag carries no Boon, so every Meta batch draws Meta entries and
+      // the fourth batch takes the two the earlier ones left.
       const value =
-        batchIndex === 1
-          ? {
-              rewardType: 'Boon' as const,
-              payload: { kind: 'BoonSource' as const, source: 'HeraUpgrade' as const },
-            }
-          : batch.store === 'MetaProgress'
+        batch.store === 'MetaProgress'
+          ? batchIndex === 4
             ? targetOffset === 0
+              ? { rewardType: 'MetaCardPointsCommonBigDrop' as const }
+              : { rewardType: 'GiftDrop' as const }
+            : targetOffset === 0
               ? { rewardType: 'MetaCurrencyBigDrop' as const }
               : { rewardType: 'MetaCardPointsCommonBigDrop' as const }
-            : batchIndex === 4
-              ? targetOffset === 0
-                ? { rewardType: 'SpellDrop' as const }
-                : { rewardType: 'StackUpgrade' as const }
-              : targetOffset === 0
-                ? { rewardType: 'MaxManaDrop' as const }
-                : targetOffset === 1
-                  ? { rewardType: 'RoomMoneyDrop' as const }
-                  : { rewardType: 'MaxHealthDrop' as const };
+          : targetOffset === 0
+            ? { rewardType: 'MaxManaDrop' as const }
+            : targetOffset === 1
+              ? { rewardType: 'RoomMoneyDrop' as const }
+              : { rewardType: 'MaxHealthDrop' as const };
       if (gameName.startsWith('G_MiniBoss')) {
         const source = gameName === 'G_MiniBoss01' ? 'HestiaUpgrade' : 'ZeusUpgrade';
         project = applyProjectCommand(project, catalog, {
@@ -472,6 +473,15 @@ export function createCompleteFGIxionChaosProject(): ProjectDocument {
     kind: 'SetExitSelection',
     selection: createExitSelectionAddress(goldenGBiome, finalSource),
     value: { kind: 'normal', exitKey: 'exit1' },
+  });
+  // The rebuilt Preboss owns the authored boss-door store decision.
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceBossDoorRewardStore',
+    rewardStore: createBatchRewardStoreAddress(goldenGBiome, {
+      kind: 'occurrence',
+      occurrenceId: createOccurrenceId('ixion-chaos-g-preboss-shop'),
+    }),
+    storeKey: 'RunProgress',
   });
 
   for (const shop of [

@@ -6,8 +6,13 @@ import {
   type BatchRewardStoreAddress,
 } from '../../authored-project/addresses';
 import type { ProjectDocument } from '../../authored-project/model';
-import { exitDecisionForSource } from '../../authored-project/topology/query';
+import {
+  bossDoorRewardStoreLinkForSource,
+  bossDoorRewardStorePolicyForLayout,
+  exitDecisionForSource,
+} from '../../authored-project/topology/query';
 import { rewardStoreCandidateSupport, type RewardStoreCandidateSupport } from '../rewards';
+import { bossDoorRewardStoreHistorySupport } from '../rewards/biome/reward-store-support';
 import type { ProjectEvaluation } from '../evaluation/evaluation-products';
 import {
   unavailableForBiome,
@@ -130,12 +135,76 @@ function prefixBatchRewardStoreSupport(
   });
 }
 
+/**
+ * A boss door is addressed by its Preboss occurrence, not by an exit decision,
+ * so the ordinary frontier match above never resolves it. Its support is the
+ * same controller read at the Preboss's own pre-outgoing boundary, bounded by
+ * the boss-door policy — the selector must show real support, including the
+ * saturated case, exactly like an ordinary batch.
+ */
+function bossDoorRewardStoreSupport(
+  catalog: Catalog,
+  project: ProjectDocument,
+  evaluation: ProjectEvaluation,
+  query: BatchRewardStoreCandidateQuery,
+): BatchRewardStoreCandidateSupport | undefined {
+  const source = query.rewardStore.source;
+  if (source.kind !== 'occurrence') return undefined;
+  const plan = planFor(project, query.rewardStore.routeKey, query.rewardStore.biomeKey);
+  if (plan.topology === null) return undefined;
+  const door = bossDoorRewardStoreLinkForSource(catalog, plan.topology, source.occurrenceId);
+  if (door === undefined) return undefined;
+  const layout = catalog.biomeLayouts.byKey[plan.biomeKey];
+  if (layout === undefined) return undefined;
+  if (bossDoorRewardStorePolicyForLayout(layout)?.kind !== 'authoredBaseStore') return undefined;
+  const biome = candidatePrefix(
+    prefixBiome(evaluation, query.rewardStore.routeKey, query.rewardStore.biomeKey),
+  );
+  const prefix = candidateAssessmentPrefix(biome);
+  if (biome === undefined || prefix === undefined) return undefined;
+  const preboss = prefixAuthoredRooms(prefix).find(
+    (room) => room.origin.kind === 'occurrence' && room.origin.occurrenceId === source.occurrenceId,
+  );
+  // The roll happens as the Preboss is left, so the boundary is its exit view.
+  // A Preboss owns no outgoing batch decision, so it has no `preOutgoing`
+  // boundary the way an ordinary door source does. Its own entered store is
+  // already folded into that view, so it is not appended again.
+  const prebossHistory =
+    preboss === undefined
+      ? undefined
+      : (() => {
+          const room = biome.history.rooms.find(
+            (candidate) =>
+              semanticAddressKey(candidate.origin) === semanticAddressKey(preboss.origin),
+          );
+          // Exactly the boundaries the assessment reads; a `preOutgoing`
+          // fallback would exclude the Preboss's own entry and make the
+          // candidate disagree with the published support by one.
+          return room?.exit ?? room?.postCommit;
+        })();
+  if (preboss === undefined || prebossHistory === undefined) {
+    return undefined;
+  }
+  const support = bossDoorRewardStoreHistorySupport(layout, prebossHistory);
+  return Object.freeze({
+    origin: query.rewardStore,
+    historySequence: prebossHistory.sequence + 1,
+    ...support,
+    selectedStoreKey: query.storeKey,
+    selectedPossible: support.supportStoreKeys.includes(query.storeKey),
+  });
+}
+
 export function evaluateBatchRewardStoreCandidate(
   catalog: Catalog,
   project: ProjectDocument,
   evaluation: ProjectEvaluation,
   query: BatchRewardStoreCandidateQuery,
 ): BatchRewardStoreCandidateEvaluation {
+  const bossDoor = bossDoorRewardStoreSupport(catalog, project, evaluation, query);
+  if (bossDoor !== undefined) {
+    return Object.freeze({ kind: 'batchRewardStore', result: bossDoor });
+  }
   const biome = candidateBiome(evaluation, query.rewardStore.routeKey, query.rewardStore.biomeKey);
   if (biome === undefined) {
     const prefixSupport = prefixBatchRewardStoreSupport(catalog, project, evaluation, query);

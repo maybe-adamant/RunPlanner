@@ -2373,14 +2373,13 @@
             "room": { "id": "golden-g-b1-e1", "biomeKey": "G", "gameName": "G_Combat01" },
             "zagreusContractPresent": false,
             "reward": {
-              "rewardType": "Boon",
+              "rewardType": "MetaCurrencyBigDrop",
               "producerLifecycleKey": "RoomReward",
-              "resolvedStoreKey": "RunProgress",
-              "source": "HestiaUpgrade"
+              "resolvedStoreKey": "MetaProgress"
             }
           }
         ],
-        "resolvedSharedRewardStoreKey": "RunProgress"
+        "resolvedSharedRewardStoreKey": "MetaProgress"
       },
       "roomExitConformance": { "facts": [{ "kind": "elementCounts" }] },
       "diagnostics": {
@@ -2409,8 +2408,8 @@
               "roomHistoryOrdinal": 15
             },
             "bags": [
-              { "storeKey": "RunProgress", "remaining": { "kind": "exact", "count": 20 } },
-              { "storeKey": "MetaProgress", "remaining": { "kind": "exact", "count": 8 } },
+              { "storeKey": "RunProgress", "remaining": { "kind": "exact", "count": 3 } },
+              { "storeKey": "MetaProgress", "remaining": { "kind": "exact", "count": 7 } },
               { "storeKey": "HubRewards", "remaining": { "kind": "exact", "count": 10 } },
               { "storeKey": "SubRoomRewards", "remaining": { "kind": "exact", "count": 23 } },
               { "storeKey": "SubRoomRewardsHard", "remaining": { "kind": "exact", "count": 8 } },
@@ -2434,10 +2433,9 @@
       "kind": "SingleEncounter",
       "overview": {
         "incomingReward": {
-          "rewardType": "Boon",
+          "rewardType": "MetaCurrencyBigDrop",
           "producerLifecycleKey": "RoomReward",
-          "resolvedStoreKey": "RunProgress",
-          "source": "HestiaUpgrade"
+          "resolvedStoreKey": "MetaProgress"
         },
         "encounterPhases": [
           { "slotKey": "Encounter", "encounterKey": "GeneratedG", "kind": "combat" }
@@ -2448,35 +2446,24 @@
         "transactions": [
           {
             "kind": "acquisition",
-            "owner": "[\"acquisitionRole\",\"Underworld\",\"G\",\"[\\\"incomingReward\\\",\\\"Underworld\\\",\\\"G\\\",\\\"golden-g-b1-e1\\\"]\",\"source\"]",
+            "owner": "[\"acquisitionRole\",\"Underworld\",\"G\",\"[\\\"incomingReward\\\",\\\"Underworld\\\",\\\"G\\\",\\\"golden-g-b1-e1\\\"]\",\"self\"]",
             "sourceOwner": "[\"incomingReward\",\"Underworld\",\"G\",\"golden-g-b1-e1\"]",
             "reward": {
-              "rewardType": "Boon",
+              "rewardType": "MetaCurrencyBigDrop",
               "producerLifecycleKey": "RoomReward",
-              "resolvedStoreKey": "RunProgress",
-              "source": "HestiaUpgrade"
+              "resolvedStoreKey": "MetaProgress"
             },
             "producerLifecycleKey": "RoomReward",
             "roles": [
               {
-                "role": "source",
+                "role": "self",
                 "disposition": "normal",
                 "lifecyclePoint": "roomRewardPickup",
-                "kind": "loot",
-                "gameName": "HestiaUpgrade",
+                "kind": "resource",
+                "gameName": "MetaCurrencyBigDrop",
                 "settlement": {
                   "site": "[\"acquisitionSite\",\"Underworld\",\"G\",\"[\\\"occurrence\\\",\\\"Underworld\\\",\\\"G\\\",\\\"golden-g-b1-e1\\\"]\",\"roomRewardPickup\"]",
-                  "entry": "[\"acquisitionEntry\",\"Underworld\",\"G\",\"[\\\"acquisitionSite\\\",\\\"Underworld\\\",\\\"G\\\",\\\"[\\\\\\\"occurrence\\\\\\\",\\\\\\\"Underworld\\\\\\\",\\\\\\\"G\\\\\\\",\\\\\\\"golden-g-b1-e1\\\\\\\"]\\\",\\\"roomRewardPickup\\\"]\",\"source\"]"
-                },
-                "traitOffer": {
-                  "kind": "traits",
-                  "giver": "Hestia",
-                  "options": [
-                    { "key": "HestiaSprintBoon", "rarity": "Common", "effectiveLevel": 1 },
-                    { "key": "HestiaManaBoon", "rarity": "Common", "effectiveLevel": 1 },
-                    { "key": "CastProjectileBoon", "rarity": "Common", "effectiveLevel": 1 }
-                  ],
-                  "selected": "option1"
+                  "entry": "[\"acquisitionEntry\",\"Underworld\",\"G\",\"[\\\"acquisitionSite\\\",\\\"Underworld\\\",\\\"G\\\",\\\"[\\\\\\\"occurrence\\\\\\\",\\\\\\\"Underworld\\\\\\\",\\\\\\\"G\\\\\\\",\\\\\\\"golden-g-b1-e1\\\\\\\"]\\\",\\\"roomRewardPickup\\\"]\",\"self\"]"
                 }
               }
             ],
@@ -2515,9 +2502,7 @@
         ],
         "resolvedSharedRewardStoreKey": "MetaProgress"
       },
-      "roomExitConformance": {
-        "facts": [{ "kind": "elementCounts" }, { "kind": "traitInventory" }]
-      },
+      "roomExitConformance": { "facts": [{ "kind": "elementCounts" }] },
       "diagnostics": {
         "roomEntered": {
           "frame": 30,
@@ -2537,8 +2522,8 @@
               "roomHistoryOrdinal": 16
             },
             "bags": [
-              { "storeKey": "RunProgress", "remaining": { "kind": "exact", "count": 20 } },
-              { "storeKey": "MetaProgress", "remaining": { "kind": "exact", "count": 6 } },
+              { "storeKey": "RunProgress", "remaining": { "kind": "exact", "count": 3 } },
+              { "storeKey": "MetaProgress", "remaining": { "kind": "exact", "count": 5 } },
               { "storeKey": "HubRewards", "remaining": { "kind": "exact", "count": 10 } },
               { "storeKey": "SubRoomRewards", "remaining": { "kind": "exact", "count": 23 } },
               { "storeKey": "SubRoomRewardsHard", "remaining": { "kind": "exact", "count": 8 } },
@@ -2549,43 +2534,7 @@
               { "storeKey": "TartarusRewards", "remaining": { "kind": "exact", "count": 9 } },
               { "storeKey": "TyphonBossRewards", "remaining": { "kind": "exact", "count": 6 } },
               { "storeKey": "Secrets", "remaining": { "kind": "exact", "count": 1 } }
-            ],
-            "godPool": {
-              "acquiredSourceKeys": [
-                "ApolloUpgrade",
-                "HeraUpgrade",
-                "HestiaUpgrade",
-                "ZeusUpgrade"
-              ],
-              "effectiveSourceKeys": [
-                "ApolloUpgrade",
-                "HeraUpgrade",
-                "HestiaUpgrade",
-                "ZeusUpgrade"
-              ],
-              "capNarrowed": true
-            },
-            "traits": {
-              "equipped": [
-                { "traitKey": "ApolloWeaponBoon", "rarity": "Common", "level": 2 },
-                { "traitKey": "ZeusSpecialBoon", "rarity": "Common", "level": 1 },
-                { "traitKey": "HeraCastBoon", "rarity": "Common", "level": 1 },
-                { "traitKey": "StaffDoubleAttackTrait", "hammerRank": "RankI" },
-                { "traitKey": "HestiaSprintBoon", "rarity": "Common", "level": 1 }
-              ],
-              "slots": [
-                { "slot": "Melee", "traitKey": "ApolloWeaponBoon" },
-                { "slot": "Secondary", "traitKey": "ZeusSpecialBoon" },
-                { "slot": "Ranged", "traitKey": "HeraCastBoon" },
-                { "slot": "Rush", "traitKey": "HestiaSprintBoon" },
-                { "slot": "Mana" },
-                { "slot": "Spell" }
-              ],
-              "elements": { "Aether": 0, "Earth": 0, "Air": 3, "Fire": 1, "Water": 0 },
-              "godRarityCounts": { "Common": 4 },
-              "upgradableCount": 4,
-              "bannedTraitKeys": []
-            }
+            ]
           }
         }
       }
@@ -2650,7 +2599,7 @@
             "reward": {
               "rewardType": "Story",
               "producerLifecycleKey": "RoomReward",
-              "resolvedStoreKey": "RunProgress"
+              "resolvedStoreKey": "MetaProgress"
             }
           },
           {
@@ -2659,9 +2608,9 @@
             "room": { "id": "golden-g-b3-e2", "biomeKey": "G", "gameName": "G_Combat03" },
             "zagreusContractPresent": false,
             "reward": {
-              "rewardType": "MaxManaDrop",
+              "rewardType": "MetaCardPointsCommonBigDrop",
               "producerLifecycleKey": "RoomReward",
-              "resolvedStoreKey": "RunProgress"
+              "resolvedStoreKey": "MetaProgress"
             }
           },
           {
@@ -2670,13 +2619,13 @@
             "room": { "id": "golden-g-b3-e3", "biomeKey": "G", "gameName": "G_Combat03" },
             "zagreusContractPresent": false,
             "reward": {
-              "rewardType": "RoomMoneyDrop",
+              "rewardType": "MetaCurrencyBigDrop",
               "producerLifecycleKey": "RoomReward",
-              "resolvedStoreKey": "RunProgress"
+              "resolvedStoreKey": "MetaProgress"
             }
           }
         ],
-        "resolvedSharedRewardStoreKey": "RunProgress"
+        "resolvedSharedRewardStoreKey": "MetaProgress"
       },
       "roomExitConformance": { "facts": [{ "kind": "elementCounts" }] },
       "diagnostics": {
@@ -2698,8 +2647,8 @@
               "roomHistoryOrdinal": 17
             },
             "bags": [
-              { "storeKey": "RunProgress", "remaining": { "kind": "exact", "count": 18 } },
-              { "storeKey": "MetaProgress", "remaining": { "kind": "exact", "count": 6 } },
+              { "storeKey": "RunProgress", "remaining": { "kind": "exact", "count": 3 } },
+              { "storeKey": "MetaProgress", "remaining": { "kind": "exact", "count": 16 } },
               { "storeKey": "HubRewards", "remaining": { "kind": "exact", "count": 10 } },
               { "storeKey": "SubRoomRewards", "remaining": { "kind": "exact", "count": 23 } },
               { "storeKey": "SubRoomRewardsHard", "remaining": { "kind": "exact", "count": 8 } },
@@ -2748,7 +2697,7 @@
         "incomingReward": {
           "rewardType": "Story",
           "producerLifecycleKey": "RoomReward",
-          "resolvedStoreKey": "RunProgress"
+          "resolvedStoreKey": "MetaProgress"
         },
         "encounterPhases": [
           { "slotKey": "Encounter", "encounterKey": "Story_Narcissus_01", "kind": "story" }
@@ -2795,13 +2744,13 @@
             "room": { "id": "golden-g-b4-e1", "biomeKey": "G", "gameName": "G_Combat10" },
             "zagreusContractPresent": false,
             "reward": {
-              "rewardType": "MetaCardPointsCommonBigDrop",
+              "rewardType": "MaxManaDrop",
               "producerLifecycleKey": "RoomReward",
-              "resolvedStoreKey": "MetaProgress"
+              "resolvedStoreKey": "RunProgress"
             }
           }
         ],
-        "resolvedSharedRewardStoreKey": "MetaProgress"
+        "resolvedSharedRewardStoreKey": "RunProgress"
       },
       "roomExitConformance": {
         "facts": [{ "kind": "elementCounts" }, { "kind": "traitInventory" }]
@@ -2825,8 +2774,8 @@
               "roomHistoryOrdinal": 18
             },
             "bags": [
-              { "storeKey": "RunProgress", "remaining": { "kind": "exact", "count": 18 } },
-              { "storeKey": "MetaProgress", "remaining": { "kind": "exact", "count": 5 } },
+              { "storeKey": "RunProgress", "remaining": { "kind": "exact", "count": 20 } },
+              { "storeKey": "MetaProgress", "remaining": { "kind": "exact", "count": 16 } },
               { "storeKey": "HubRewards", "remaining": { "kind": "exact", "count": 10 } },
               { "storeKey": "SubRoomRewards", "remaining": { "kind": "exact", "count": 23 } },
               { "storeKey": "SubRoomRewardsHard", "remaining": { "kind": "exact", "count": 8 } },
@@ -2844,20 +2793,19 @@
                 { "traitKey": "ZeusSpecialBoon", "rarity": "Common", "level": 1 },
                 { "traitKey": "HeraCastBoon", "rarity": "Common", "level": 1 },
                 { "traitKey": "StaffDoubleAttackTrait", "hammerRank": "RankI" },
-                { "traitKey": "HestiaSprintBoon", "rarity": "Common", "level": 1 },
                 { "traitKey": "NarcissusA" }
               ],
               "slots": [
                 { "slot": "Melee", "traitKey": "ApolloWeaponBoon" },
                 { "slot": "Secondary", "traitKey": "ZeusSpecialBoon" },
                 { "slot": "Ranged", "traitKey": "HeraCastBoon" },
-                { "slot": "Rush", "traitKey": "HestiaSprintBoon" },
+                { "slot": "Rush" },
                 { "slot": "Mana" },
                 { "slot": "Spell" }
               ],
-              "elements": { "Aether": 0, "Earth": 0, "Air": 3, "Fire": 1, "Water": 0 },
-              "godRarityCounts": { "Common": 4 },
-              "upgradableCount": 4,
+              "elements": { "Aether": 0, "Earth": 0, "Air": 3, "Fire": 0, "Water": 0 },
+              "godRarityCounts": { "Common": 3 },
+              "upgradableCount": 3,
               "bannedTraitKeys": []
             }
           }
@@ -2872,9 +2820,9 @@
       "kind": "SingleEncounter",
       "overview": {
         "incomingReward": {
-          "rewardType": "MaxManaDrop",
+          "rewardType": "MetaCardPointsCommonBigDrop",
           "producerLifecycleKey": "RoomReward",
-          "resolvedStoreKey": "RunProgress"
+          "resolvedStoreKey": "MetaProgress"
         },
         "encounterPhases": [
           { "slotKey": "Encounter", "encounterKey": "GeneratedG", "kind": "combat" }
@@ -2895,9 +2843,9 @@
       "kind": "SingleEncounter",
       "overview": {
         "incomingReward": {
-          "rewardType": "RoomMoneyDrop",
+          "rewardType": "MetaCurrencyBigDrop",
           "producerLifecycleKey": "RoomReward",
-          "resolvedStoreKey": "RunProgress"
+          "resolvedStoreKey": "MetaProgress"
         },
         "encounterPhases": [
           { "slotKey": "Encounter", "encounterKey": "GeneratedG", "kind": "combat" }
@@ -2918,9 +2866,9 @@
       "kind": "SingleEncounter",
       "overview": {
         "incomingReward": {
-          "rewardType": "MetaCardPointsCommonBigDrop",
+          "rewardType": "MaxManaDrop",
           "producerLifecycleKey": "RoomReward",
-          "resolvedStoreKey": "MetaProgress"
+          "resolvedStoreKey": "RunProgress"
         },
         "encounterPhases": [
           { "slotKey": "Encounter", "encounterKey": "GeneratedG", "kind": "combat" }
@@ -2934,9 +2882,9 @@
             "owner": "[\"acquisitionRole\",\"Underworld\",\"G\",\"[\\\"incomingReward\\\",\\\"Underworld\\\",\\\"G\\\",\\\"golden-g-b4-e1\\\"]\",\"self\"]",
             "sourceOwner": "[\"incomingReward\",\"Underworld\",\"G\",\"golden-g-b4-e1\"]",
             "reward": {
-              "rewardType": "MetaCardPointsCommonBigDrop",
+              "rewardType": "MaxManaDrop",
               "producerLifecycleKey": "RoomReward",
-              "resolvedStoreKey": "MetaProgress"
+              "resolvedStoreKey": "RunProgress"
             },
             "producerLifecycleKey": "RoomReward",
             "roles": [
@@ -2944,8 +2892,8 @@
                 "role": "self",
                 "disposition": "normal",
                 "lifecyclePoint": "roomRewardPickup",
-                "kind": "resource",
-                "gameName": "MetaCardPointsCommonBigDrop",
+                "kind": "consumable",
+                "gameName": "MaxManaDrop",
                 "settlement": {
                   "site": "[\"acquisitionSite\",\"Underworld\",\"G\",\"[\\\"occurrence\\\",\\\"Underworld\\\",\\\"G\\\",\\\"golden-g-b4-e1\\\"]\",\"roomRewardPickup\"]",
                   "entry": "[\"acquisitionEntry\",\"Underworld\",\"G\",\"[\\\"acquisitionSite\\\",\\\"Underworld\\\",\\\"G\\\",\\\"[\\\\\\\"occurrence\\\\\\\",\\\\\\\"Underworld\\\\\\\",\\\\\\\"G\\\\\\\",\\\\\\\"golden-g-b4-e1\\\\\\\"]\\\",\\\"roomRewardPickup\\\"]\",\"self\"]"
@@ -3007,8 +2955,8 @@
               "roomHistoryOrdinal": 19
             },
             "bags": [
-              { "storeKey": "RunProgress", "remaining": { "kind": "exact", "count": 17 } },
-              { "storeKey": "MetaProgress", "remaining": { "kind": "exact", "count": 5 } },
+              { "storeKey": "RunProgress", "remaining": { "kind": "exact", "count": 19 } },
+              { "storeKey": "MetaProgress", "remaining": { "kind": "exact", "count": 16 } },
               { "storeKey": "HubRewards", "remaining": { "kind": "exact", "count": 10 } },
               { "storeKey": "SubRoomRewards", "remaining": { "kind": "exact", "count": 23 } },
               { "storeKey": "SubRoomRewardsHard", "remaining": { "kind": "exact", "count": 8 } },
@@ -3110,8 +3058,8 @@
               "roomHistoryOrdinal": 20
             },
             "bags": [
-              { "storeKey": "RunProgress", "remaining": { "kind": "exact", "count": 15 } },
-              { "storeKey": "MetaProgress", "remaining": { "kind": "exact", "count": 5 } },
+              { "storeKey": "RunProgress", "remaining": { "kind": "exact", "count": 17 } },
+              { "storeKey": "MetaProgress", "remaining": { "kind": "exact", "count": 16 } },
               { "storeKey": "HubRewards", "remaining": { "kind": "exact", "count": 10 } },
               { "storeKey": "SubRoomRewards", "remaining": { "kind": "exact", "count": 23 } },
               { "storeKey": "SubRoomRewardsHard", "remaining": { "kind": "exact", "count": 8 } },
@@ -3262,8 +3210,8 @@
               "roomHistoryOrdinal": 21
             },
             "bags": [
-              { "storeKey": "RunProgress", "remaining": { "kind": "exact", "count": 13 } },
-              { "storeKey": "MetaProgress", "remaining": { "kind": "exact", "count": 5 } },
+              { "storeKey": "RunProgress", "remaining": { "kind": "exact", "count": 15 } },
+              { "storeKey": "MetaProgress", "remaining": { "kind": "exact", "count": 16 } },
               { "storeKey": "HubRewards", "remaining": { "kind": "exact", "count": 10 } },
               { "storeKey": "SubRoomRewards", "remaining": { "kind": "exact", "count": 23 } },
               { "storeKey": "SubRoomRewardsHard", "remaining": { "kind": "exact", "count": 8 } },
@@ -3275,13 +3223,27 @@
               { "storeKey": "TyphonBossRewards", "remaining": { "kind": "exact", "count": 6 } },
               { "storeKey": "Secrets", "remaining": { "kind": "exact", "count": 1 } }
             ],
+            "godPool": {
+              "acquiredSourceKeys": [
+                "ApolloUpgrade",
+                "HeraUpgrade",
+                "HestiaUpgrade",
+                "ZeusUpgrade"
+              ],
+              "effectiveSourceKeys": [
+                "ApolloUpgrade",
+                "HeraUpgrade",
+                "HestiaUpgrade",
+                "ZeusUpgrade"
+              ],
+              "capNarrowed": true
+            },
             "traits": {
               "equipped": [
                 { "traitKey": "ApolloWeaponBoon", "rarity": "Common", "level": 2 },
                 { "traitKey": "ZeusSpecialBoon", "rarity": "Common", "level": 1 },
                 { "traitKey": "HeraCastBoon", "rarity": "Common", "level": 1 },
                 { "traitKey": "StaffDoubleAttackTrait", "hammerRank": "RankI" },
-                { "traitKey": "HestiaSprintBoon", "rarity": "Common", "level": 1 },
                 { "traitKey": "NarcissusA" },
                 { "traitKey": "HestiaManaBoon", "rarity": "Common", "level": 1 }
               ],
@@ -3289,13 +3251,13 @@
                 { "slot": "Melee", "traitKey": "ApolloWeaponBoon" },
                 { "slot": "Secondary", "traitKey": "ZeusSpecialBoon" },
                 { "slot": "Ranged", "traitKey": "HeraCastBoon" },
-                { "slot": "Rush", "traitKey": "HestiaSprintBoon" },
+                { "slot": "Rush" },
                 { "slot": "Mana", "traitKey": "HestiaManaBoon" },
                 { "slot": "Spell" }
               ],
-              "elements": { "Aether": 0, "Earth": 0, "Air": 3, "Fire": 2, "Water": 0 },
-              "godRarityCounts": { "Common": 5 },
-              "upgradableCount": 5,
+              "elements": { "Aether": 0, "Earth": 0, "Air": 3, "Fire": 1, "Water": 0 },
+              "godRarityCounts": { "Common": 4 },
+              "upgradableCount": 4,
               "bannedTraitKeys": []
             }
           }
@@ -3372,9 +3334,20 @@
                   "kind": "traits",
                   "giver": "Hestia",
                   "options": [
-                    { "key": "CastProjectileBoon", "rarity": "Common", "effectiveLevel": 1 },
-                    { "key": "FireballManaSpecialBoon", "rarity": "Common", "effectiveLevel": 1 },
-                    { "key": "BurnExplodeBoon", "rarity": "Common", "effectiveLevel": 1 }
+                    {
+                      "key": "HestiaWeaponBoon",
+                      "rarity": "Rare",
+                      "effectiveLevel": 2,
+                      "replacement": {
+                        "slot": "Melee",
+                        "replacedTraitKey": "ApolloWeaponBoon",
+                        "oldRarity": "Common",
+                        "newTraitKey": "HestiaWeaponBoon",
+                        "requiredRarity": "Rare"
+                      }
+                    },
+                    { "key": "HestiaSprintBoon", "rarity": "Common", "effectiveLevel": 1 },
+                    { "key": "CastProjectileBoon", "rarity": "Common", "effectiveLevel": 1 }
                   ],
                   "selected": "option1"
                 }
@@ -3437,8 +3410,8 @@
               "roomHistoryOrdinal": 22
             },
             "bags": [
-              { "storeKey": "RunProgress", "remaining": { "kind": "exact", "count": 12 } },
-              { "storeKey": "MetaProgress", "remaining": { "kind": "exact", "count": 5 } },
+              { "storeKey": "RunProgress", "remaining": { "kind": "exact", "count": 14 } },
+              { "storeKey": "MetaProgress", "remaining": { "kind": "exact", "count": 16 } },
               { "storeKey": "HubRewards", "remaining": { "kind": "exact", "count": 10 } },
               { "storeKey": "SubRoomRewards", "remaining": { "kind": "exact", "count": 23 } },
               { "storeKey": "SubRoomRewardsHard", "remaining": { "kind": "exact", "count": 8 } },
@@ -3452,26 +3425,24 @@
             ],
             "traits": {
               "equipped": [
-                { "traitKey": "ApolloWeaponBoon", "rarity": "Common", "level": 2 },
                 { "traitKey": "ZeusSpecialBoon", "rarity": "Common", "level": 1 },
                 { "traitKey": "HeraCastBoon", "rarity": "Common", "level": 1 },
                 { "traitKey": "StaffDoubleAttackTrait", "hammerRank": "RankI" },
-                { "traitKey": "HestiaSprintBoon", "rarity": "Common", "level": 1 },
                 { "traitKey": "NarcissusA" },
                 { "traitKey": "HestiaManaBoon", "rarity": "Common", "level": 1 },
-                { "traitKey": "CastProjectileBoon", "rarity": "Common", "level": 1 }
+                { "traitKey": "HestiaWeaponBoon", "rarity": "Rare", "level": 2 }
               ],
               "slots": [
-                { "slot": "Melee", "traitKey": "ApolloWeaponBoon" },
+                { "slot": "Melee", "traitKey": "HestiaWeaponBoon" },
                 { "slot": "Secondary", "traitKey": "ZeusSpecialBoon" },
                 { "slot": "Ranged", "traitKey": "HeraCastBoon" },
-                { "slot": "Rush", "traitKey": "HestiaSprintBoon" },
+                { "slot": "Rush" },
                 { "slot": "Mana", "traitKey": "HestiaManaBoon" },
                 { "slot": "Spell" }
               ],
-              "elements": { "Aether": 0, "Earth": 0, "Air": 3, "Fire": 3, "Water": 0 },
-              "godRarityCounts": { "Common": 6 },
-              "upgradableCount": 6,
+              "elements": { "Aether": 0, "Earth": 0, "Air": 2, "Fire": 2, "Water": 0 },
+              "godRarityCounts": { "Common": 3, "Rare": 1 },
+              "upgradableCount": 4,
               "bannedTraitKeys": []
             }
           }
@@ -3741,5 +3712,5 @@
       }
     }
   ],
-  "planFingerprint": "f633e0c6"
+  "planFingerprint": "f9e85637"
 }

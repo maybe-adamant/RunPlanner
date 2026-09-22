@@ -270,12 +270,14 @@ function partialGWithOnePhysicalTarget() {
     goldenGBiome,
     gStart,
     [{ occurrenceId: first, gameName: 'G_Combat01' }],
-    'RunProgress',
+    // F's now-counted entries saturate the run-wide ratio high, so G's opening
+    // batch can only be MetaProgress and its reward comes from the Meta bag.
+    'MetaProgress',
   );
   project = applyProjectCommand(project, catalog, {
     kind: 'ReplaceIncomingReward',
     reward: createIncomingRewardAddress(goldenGBiome, first),
-    value: { rewardType: 'MaxManaDrop' },
+    value: { rewardType: 'MetaCurrencyBigDrop' },
   });
   project = authorLegalTraitOffers(project);
   project = appendBatch(
@@ -288,7 +290,7 @@ function partialGWithOnePhysicalTarget() {
   project = applyProjectCommand(project, catalog, {
     kind: 'ReplaceIncomingReward',
     reward: createIncomingRewardAddress(goldenGBiome, second),
-    value: { rewardType: 'MetaCurrencyBigDrop' },
+    value: { rewardType: 'MetaCardPointsCommonBigDrop' },
   });
   return {
     project,
@@ -317,12 +319,14 @@ function partialGWithInvalidSecondPhysicalTarget() {
     goldenGBiome,
     gStart,
     [{ occurrenceId: first, gameName: 'G_Combat01' }],
-    'RunProgress',
+    // F's now-counted entries saturate the run-wide ratio high, so G's opening
+    // batch can only be MetaProgress and its reward comes from the Meta bag.
+    'MetaProgress',
   );
   project = applyProjectCommand(project, catalog, {
     kind: 'ReplaceIncomingReward',
     reward: createIncomingRewardAddress(goldenGBiome, first),
-    value: { rewardType: 'MaxManaDrop' },
+    value: { rewardType: 'MetaCurrencyBigDrop' },
   });
   project = authorLegalTraitOffers(project);
   project = appendBatch(
@@ -343,7 +347,7 @@ function partialGWithInvalidSecondPhysicalTarget() {
   project = applyProjectCommand(project, catalog, {
     kind: 'ReplaceIncomingReward',
     reward: createIncomingRewardAddress(goldenGBiome, second),
-    value: { rewardType: 'MetaCurrencyBigDrop' },
+    value: { rewardType: 'MetaCardPointsCommonBigDrop' },
   });
   return { project: authorLegalTraitOffers(project), source: first, firstTarget: second };
 }

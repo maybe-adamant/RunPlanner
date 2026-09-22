@@ -1,6 +1,7 @@
-import type { BiomeLayout, RoomDeclaration } from '../../../catalog-schema';
+import type { BiomeLayout, RewardStorePolicy, RoomDeclaration } from '../../../catalog-schema';
 import type { EnteredRewardStoreHistoryPolicy } from '../../../reward-kernel/bindings';
 import type { BatchRewardStoreAddress } from '../../../authored-project/addresses';
+import { bossDoorRewardStorePolicyForLayout } from '../../../authored-project/topology/query';
 import type { CanonicalAuthoredRoom, CanonicalBatch } from '../../materialization';
 import type { HistoryStateView } from '../../history';
 import type { RewardStoreCandidateSupport, RewardStoreSupportEntry } from '../model';
@@ -46,7 +47,7 @@ export function rewardStoreCandidateSupport(
   historySequence: number,
 ): RewardStoreCandidateSupport {
   const currentStore = declaredEnteredStoreKey(source, sourceDeclaration.enteredRewardStoreHistory);
-  const support = rewardStoreHistorySupport(layout, source.origin.biomeKey, view, currentStore);
+  const support = rewardStoreHistorySupport(layout, view, currentStore);
   return Object.freeze({
     origin,
     historySequence,
@@ -61,7 +62,6 @@ export function rewardStoreCandidateSupport(
  */
 export function rewardStoreHistorySupport(
   layout: BiomeLayout,
-  biomeKey: string,
   view: HistoryStateView,
   currentStoreKey?: string,
 ): RewardStoreHistorySupport {
@@ -76,9 +76,38 @@ export function rewardStoreHistorySupport(
       'generated progression lost its authored base-store contract',
     );
   }
-  const priorStores = view.ledgers.enteredRewardStores
-    .filter((entry) => entry.origin.biomeKey === biomeKey)
-    .map((entry) => entry.storeKey);
+  return rewardStorePolicySupport(policy, view, currentStoreKey);
+}
+
+/**
+ * The same controller at a boss door. The door is an ordinary door, so the
+ * math is identical and only the policy differs: Q's ordinary doors carry no
+ * store while its boss door still rolls, so the bound comes from the completion
+ * descriptor. Sharing `rewardStorePolicySupport` keeps the selector's support
+ * and the ordinary batch's support one implementation.
+ */
+export function bossDoorRewardStoreHistorySupport(
+  layout: BiomeLayout,
+  view: HistoryStateView,
+  currentStoreKey?: string,
+): RewardStoreHistorySupport {
+  const policy = bossDoorRewardStorePolicyForLayout(layout);
+  if (policy?.kind !== 'authoredBaseStore') {
+    throw new BiomeRewardSimulationContractError('this boss door has no authored-store policy');
+  }
+  return rewardStorePolicySupport(policy, view, currentStoreKey);
+}
+
+function rewardStorePolicySupport(
+  policy: Extract<RewardStorePolicy, { readonly kind: 'authoredBaseStore' }>,
+  view: HistoryStateView,
+  currentStoreKey?: string,
+): RewardStoreHistorySupport {
+  // Run-scoped, not per-biome: native CalcMetaProgressRatio (RewardLogic.lua:
+  // 469-489) walks the whole run.RoomHistory plus CurrentRoom, so every counted
+  // room entered so far in the run feeds the ratio regardless of which biome
+  // recorded it. The controller has no per-biome window to reset.
+  const priorStores = view.ledgers.enteredRewardStores.map((entry) => entry.storeKey);
   const stores = currentStoreKey === undefined ? priorStores : [...priorStores, currentStoreKey];
   const metaCount = stores.filter((storeKey) => storeKey === 'MetaProgress').length;
   const ratio = stores.length === 0 ? null : metaCount / stores.length;
@@ -100,6 +129,32 @@ export function rewardStoreHistorySupport(
     currentMetaRatio: ratio,
     metaSelectionValue,
     supportStoreKeys,
+  });
+}
+
+/**
+ * The boss-door twin of `assessAuthoredBatchRewardStore`. The roll happens as
+ * the Preboss is left, so the boundary is the Preboss's exit view; its own
+ * entered store is already folded into that view, so no `currentStoreKey` is
+ * appended (appending would count the Preboss twice). Publishing this entry is
+ * what lets `baseRewardStoreUnavailable` fire on a boss door exactly as it does
+ * on an ordinary batch, and what lets the selector resolve real support on a
+ * complete biome.
+ */
+export function assessAuthoredBossDoorRewardStore(
+  layout: BiomeLayout,
+  origin: BatchRewardStoreAddress,
+  authoredStoreKey: string,
+  view: HistoryStateView,
+  historySequence: number,
+): RewardStoreSupportEntry {
+  const support = bossDoorRewardStoreHistorySupport(layout, view);
+  return Object.freeze({
+    origin,
+    historySequence,
+    ...support,
+    authoredStoreKey,
+    selectedPossible: support.supportStoreKeys.includes(authoredStoreKey),
   });
 }
 

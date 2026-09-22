@@ -25,6 +25,17 @@ function fTopology(document: Record<string, unknown>): Record<string, unknown> {
   return topology as Record<string, unknown>;
 }
 
+/** The G plan's topology — the qualifying boss door, since G_Boss01 resolves its store. */
+function gTopology(document: Record<string, unknown>): Record<string, unknown> {
+  const route = document.route as Record<string, unknown>;
+  const biome = (route.biomes as Array<Record<string, unknown>> | undefined)?.[1];
+  const topology = biome?.topology;
+  if (topology === null || topology === undefined || typeof topology !== 'object') {
+    throw new Error('missing encoded G topology');
+  }
+  return topology as Record<string, unknown>;
+}
+
 function firstOccurrence(document: Record<string, unknown>): Record<string, unknown> {
   const occurrence = (fTopology(document).occurrences as Array<Record<string, unknown>>)[0];
   if (occurrence === undefined) throw new Error('missing encoded F occurrence');
@@ -324,10 +335,24 @@ describe('project document codec', () => {
       'fixedRoomLinks[0].rewardStoreKey: must be a string',
     );
 
-    // The constructed link survives the wire: encode -> decode -> encode keeps
-    // the authored key, and the decoded model exposes it on the same link.
+    // The decoder applies the command's own target predicate, so a door whose
+    // Boss does not resolve its entered store takes no key at all. F_Boss01 is
+    // exactly that boss (native flags it out of the count), and a hand-edited
+    // document carrying a key there would be unclearable.
+    const onExcludedBoss = encodedFStart();
+    const excludedLinks = fTopology(onExcludedBoss).fixedRoomLinks as Array<
+      Record<string, unknown>
+    >;
+    excludedLinks[0]!.rewardStoreKey = 'RunProgress';
+    expect(() => decodeProjectDocument(onExcludedBoss, catalog)).toThrow(
+      'is only authored on a door whose Boss resolves its entered store',
+    );
+
+    // The constructed link survives the wire on a qualifying door — G's Boss
+    // declares `resolvedOffer`: encode -> decode -> encode keeps the authored
+    // key, and the decoded model exposes it on the same link.
     const authored = encodedFStart();
-    const authoredLinks = fTopology(authored).fixedRoomLinks as Array<Record<string, unknown>>;
+    const authoredLinks = gTopology(authored).fixedRoomLinks as Array<Record<string, unknown>>;
     const constructed = fixedRoomLink(
       authoredLinks[0]!.sourceOccurrenceId as OccurrenceId,
       authoredLinks[0]!.targetOccurrenceId as OccurrenceId,
@@ -335,14 +360,14 @@ describe('project document codec', () => {
     );
     authoredLinks[0] = { ...constructed };
     const decoded = decodeProjectDocument(authored, catalog);
-    expect(decoded.route?.biomes[0]?.topology?.fixedRoomLinks[0]).toEqual({
+    expect(decoded.route?.biomes[1]?.topology?.fixedRoomLinks[0]).toEqual({
       sourceOccurrenceId: authoredLinks[0].sourceOccurrenceId,
       targetOccurrenceId: authoredLinks[0].targetOccurrenceId,
       rewardStoreKey: 'RunProgress',
     });
     const reencoded = JSON.parse(encodeProjectDocument(decoded)) as Record<string, unknown>;
     expect(
-      (fTopology(reencoded).fixedRoomLinks as Array<Record<string, unknown>>)[0]?.rewardStoreKey,
+      (gTopology(reencoded).fixedRoomLinks as Array<Record<string, unknown>>)[0]?.rewardStoreKey,
     ).toBe('RunProgress');
   });
 

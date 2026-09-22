@@ -113,6 +113,7 @@ export type {
   WorkspaceFountainRarityInteraction,
   WorkspaceRoomPickerControl,
   WorkspaceRoomInteraction,
+  WorkspaceBossDoorRewardStoreControl,
   WorkspaceRoomSummary,
   WorkspaceTakeoverBatchInteraction,
   WorkspaceTakeoverRepairInteraction,

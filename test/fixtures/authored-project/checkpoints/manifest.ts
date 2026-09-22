@@ -318,7 +318,9 @@ export const checkpointSpellDropIntents = Object.freeze([
   ['surface-n-natural-selection-frontier', 'surface-n-combat09', 'SpellLaserTrait'],
   ['surface-n-queens-ransom', 'surface-n-combat09', 'SpellLaserTrait'],
   ['surface-n-steady-growth-frontier', 'surface-n-combat09', 'SpellLaserTrait'],
-  ['surface-n-quick-buck', 'surface-n-combat09', 'SpellLaserTrait'],
+  // The run-scoped ratio leaves combat05's HermesUpgrade unsupported, so the
+  // Spell sits there and combat09 takes the Boon the Hub bag still carries.
+  ['surface-n-quick-buck', 'surface-n-combat05', 'SpellPolymorphTrait'],
   ['surface-n-buried-treasure', 'surface-n-combat09', 'SpellLaserTrait'],
   ['surface-n-resources', 'surface-n-combat09', 'SpellLaserTrait'],
   ['surface-n-shrine-side-room-delivery', 'surface-n-combat09', 'SpellLaserTrait'],

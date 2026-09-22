@@ -210,7 +210,6 @@ export function prepareShipLifecycleCandidateContext(
       );
     return rewardStoreHistorySupport(
       layout,
-      room.origin.biomeKey,
       wheelLifecycleViews(catalog, lifecycle, room, roomView, wheel).generation,
     ).supportStoreKeys;
   };

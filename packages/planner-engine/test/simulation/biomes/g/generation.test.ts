@@ -97,6 +97,16 @@ describe('G generation and takeover', () => {
       ),
       value: { rewardType: 'StackUpgrade' },
     });
+    // Selecting exit2 moves the Preboss, so its boss door is a new authored
+    // decision the route owns — the run-wide ledger supports RunProgress there.
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceBossDoorRewardStore',
+      rewardStore: createBatchRewardStoreAddress(goldenGBiome, {
+        kind: 'occurrence',
+        occurrenceId: createOccurrenceId('golden-g-preboss-free-2'),
+      }),
+      storeKey: 'RunProgress',
+    });
     const result = simulateProject(catalog, authorLegalTraitOffers(project));
     const g = result.route?.biomes.find((biome) => biome.biomeKey === 'G');
 
@@ -222,18 +232,20 @@ describe('G generation and takeover', () => {
       simulateProjectAssembly(catalog, project),
     );
 
+    // The run-scoped ratio pins this batch to MetaProgress, so the replaceable
+    // domain is the Meta bag's remaining entries, not the Run bag's.
     expect(
       session.evaluate({
         kind: 'incomingReward',
         reward,
-        value: { rewardType: 'MaxHealthDrop' },
+        value: { rewardType: 'MetaCurrencyBigDrop' },
       }),
     ).toMatchObject({ kind: 'incomingReward', result: { supported: true, findings: [] } });
     expect(
       session.evaluate({
         kind: 'incomingReward',
         reward,
-        value: { rewardType: 'RoomMoneyDrop' },
+        value: { rewardType: 'GiftDrop' },
       }),
     ).toMatchObject({ kind: 'incomingReward', result: { supported: true, findings: [] } });
   });
@@ -436,12 +448,12 @@ describe('G generation and takeover', () => {
       {
         kind: 'batchRewardStore',
         rewardStore: createBatchRewardStoreAddress(goldenGBiome, source),
-        storeKey: 'RunProgress',
+        storeKey: 'MetaProgress',
       },
       {
         kind: 'incomingReward',
         reward: createIncomingRewardAddress(goldenGBiome, goldenGOccurrenceId(1, 1)),
-        value: { rewardType: 'MaxHealthDrop' },
+        value: { rewardType: 'MetaCardPointsCommonBigDrop' },
       },
     ]);
 
@@ -449,9 +461,11 @@ describe('G generation and takeover', () => {
       kind: 'roomTarget',
       result: { pressure: { selectedGameName: 'G_Combat02', selectedPossible: true } },
     });
+    // F's now-counted entries leave the run-wide ledger at 12 entered / 3 meta
+    // (selection 1.35), so MetaProgress is the only supported opening store.
     expect(store).toMatchObject({
       kind: 'batchRewardStore',
-      result: { selectedStoreKey: 'RunProgress', selectedPossible: true },
+      result: { selectedStoreKey: 'MetaProgress', selectedPossible: true },
     });
     expect(reward).toMatchObject({ kind: 'incomingReward', result: { supported: true } });
   });

@@ -403,39 +403,36 @@
                 "kind": "ephyraCombat",
                 "reward": {
                   "offer": {
-                    "rewardType": "SpellDrop"
+                    "rewardType": "Boon",
+                    "payload": {
+                      "kind": "BoonSource",
+                      "source": "HestiaUpgrade"
+                    }
                   },
                   "traitOffersByAcquisitionRole": {
-                    "self": {
+                    "source": {
                       "kind": "traits",
-                      "giverKey": "SpellDrop",
+                      "giverKey": "Hestia",
                       "options": [
                         {
-                          "traitKey": "SpellLaserTrait"
+                          "traitKey": "HestiaSpecialBoon",
+                          "rarity": "Rare"
                         },
                         {
-                          "traitKey": "SpellSummonTrait"
+                          "traitKey": "HestiaWeaponBoon",
+                          "rarity": "Common"
                         },
                         {
-                          "traitKey": "SpellTimeSlowTrait"
+                          "traitKey": "CastProjectileBoon",
+                          "rarity": "Common"
                         }
                       ],
                       "selectedOptionKey": "option1",
-                      "rarificationActions": [],
-                      "hexTree": {
-                        "layoutKey": "Lung",
-                        "rareTalentKeys": [
-                          "LaserAoETalent",
-                          "LaserStartAoETalent"
-                        ],
-                        "epicTalentKeys": [
-                          "LaserTripleTalent"
-                        ]
-                      }
+                      "rarificationActions": []
                     }
                   },
                   "dispositionByAcquisitionRole": {
-                    "self": {
+                    "source": {
                       "kind": "normal"
                     }
                   }
@@ -460,6 +457,11 @@
                     "kind": "interactIncomingReward",
                     "producerPoint": "roomRewardPickup",
                     "acquisitionRole": "self"
+                  },
+                  {
+                    "kind": "interactIncomingReward",
+                    "producerPoint": "roomRewardPickup",
+                    "acquisitionRole": "source"
                   }
                 ]
               },
@@ -543,28 +545,35 @@
                 "kind": "ephyraCombat",
                 "reward": {
                   "offer": {
-                    "rewardType": "HermesUpgrade"
+                    "rewardType": "SpellDrop"
                   },
                   "traitOffersByAcquisitionRole": {
                     "self": {
                       "kind": "traits",
-                      "giverKey": "Hermes",
+                      "giverKey": "SpellDrop",
                       "options": [
                         {
-                          "traitKey": "HermesWeaponBoon",
-                          "rarity": "Common"
+                          "traitKey": "SpellPolymorphTrait"
                         },
                         {
-                          "traitKey": "HermesSpecialBoon",
-                          "rarity": "Common"
+                          "traitKey": "SpellMeteorTrait"
                         },
                         {
-                          "traitKey": "HermesCastDiscountBoon",
-                          "rarity": "Common"
+                          "traitKey": "SpellTransformTrait"
                         }
                       ],
                       "selectedOptionKey": "option1",
-                      "rarificationActions": []
+                      "rarificationActions": [],
+                      "hexTree": {
+                        "layoutKey": "Lung",
+                        "rareTalentKeys": [
+                          "PolymorphBossDamageTalent",
+                          "PolymorphDeathExplodeTalent"
+                        ],
+                        "epicTalentKeys": [
+                          "PolymorphSandwichTalent"
+                        ]
+                      }
                     }
                   },
                   "dispositionByAcquisitionRole": {

@@ -1517,36 +1517,11 @@
                 "kind": "counted",
                 "reward": {
                   "offer": {
-                    "rewardType": "Boon",
-                    "payload": {
-                      "kind": "BoonSource",
-                      "source": "HestiaUpgrade"
-                    }
+                    "rewardType": "MetaCurrencyBigDrop"
                   },
-                  "traitOffersByAcquisitionRole": {
-                    "source": {
-                      "kind": "traits",
-                      "giverKey": "Hestia",
-                      "options": [
-                        {
-                          "traitKey": "HestiaSprintBoon",
-                          "rarity": "Common"
-                        },
-                        {
-                          "traitKey": "HestiaManaBoon",
-                          "rarity": "Common"
-                        },
-                        {
-                          "traitKey": "CastProjectileBoon",
-                          "rarity": "Common"
-                        }
-                      ],
-                      "selectedOptionKey": "option1",
-                      "rarificationActions": []
-                    }
-                  },
+                  "traitOffersByAcquisitionRole": {},
                   "dispositionByAcquisitionRole": {
-                    "source": {
+                    "self": {
                       "kind": "normal"
                     }
                   }
@@ -1571,6 +1546,11 @@
                     "kind": "interactIncomingReward",
                     "producerPoint": "roomRewardPickup",
                     "acquisitionRole": "source"
+                  },
+                  {
+                    "kind": "interactIncomingReward",
+                    "producerPoint": "roomRewardPickup",
+                    "acquisitionRole": "self"
                   }
                 ]
               },
@@ -1739,7 +1719,7 @@
                 "kind": "counted",
                 "reward": {
                   "offer": {
-                    "rewardType": "MaxManaDrop"
+                    "rewardType": "MetaCardPointsCommonBigDrop"
                   },
                   "traitOffersByAcquisitionRole": {},
                   "dispositionByAcquisitionRole": {
@@ -1780,7 +1760,7 @@
                 "kind": "counted",
                 "reward": {
                   "offer": {
-                    "rewardType": "RoomMoneyDrop"
+                    "rewardType": "MetaCurrencyBigDrop"
                   },
                   "traitOffersByAcquisitionRole": {},
                   "dispositionByAcquisitionRole": {
@@ -1821,7 +1801,7 @@
                 "kind": "counted",
                 "reward": {
                   "offer": {
-                    "rewardType": "MetaCardPointsCommonBigDrop"
+                    "rewardType": "MaxManaDrop"
                   },
                   "traitOffersByAcquisitionRole": {},
                   "dispositionByAcquisitionRole": {
@@ -2097,15 +2077,15 @@
                       "giverKey": "Hestia",
                       "options": [
                         {
+                          "traitKey": "HestiaWeaponBoon",
+                          "rarity": "Rare"
+                        },
+                        {
+                          "traitKey": "HestiaSprintBoon",
+                          "rarity": "Common"
+                        },
+                        {
                           "traitKey": "CastProjectileBoon",
-                          "rarity": "Common"
-                        },
-                        {
-                          "traitKey": "FireballManaSpecialBoon",
-                          "rarity": "Common"
-                        },
-                        {
-                          "traitKey": "BurnExplodeBoon",
                           "rarity": "Common"
                         }
                       ],
@@ -2379,7 +2359,7 @@
                 "kind": "batch",
                 "rewardStore": {
                   "kind": "authoredBaseStore",
-                  "baseRewardStoreKey": "RunProgress"
+                  "baseRewardStoreKey": "MetaProgress"
                 },
                 "batchState": null,
                 "targets": [
@@ -2432,7 +2412,7 @@
                 "kind": "batch",
                 "rewardStore": {
                   "kind": "authoredBaseStore",
-                  "baseRewardStoreKey": "RunProgress"
+                  "baseRewardStoreKey": "MetaProgress"
                 },
                 "batchState": null,
                 "targets": [
@@ -2465,7 +2445,7 @@
                 "kind": "batch",
                 "rewardStore": {
                   "kind": "authoredBaseStore",
-                  "baseRewardStoreKey": "MetaProgress"
+                  "baseRewardStoreKey": "RunProgress"
                 },
                 "batchState": null,
                 "targets": [
@@ -2599,7 +2579,8 @@
           "fixedRoomLinks": [
             {
               "sourceOccurrenceId": "golden-g-preboss-shop",
-              "targetOccurrenceId": "golden-g-preboss-shop:boss"
+              "targetOccurrenceId": "golden-g-preboss-shop:boss",
+              "rewardStoreKey": "RunProgress"
             },
             {
               "sourceOccurrenceId": "golden-g-preboss-shop:boss",
@@ -3113,15 +3094,15 @@
                       "giverKey": "Hestia",
                       "options": [
                         {
-                          "traitKey": "FireballManaSpecialBoon",
+                          "traitKey": "HestiaSpecialBoon",
+                          "rarity": "Rare"
+                        },
+                        {
+                          "traitKey": "HestiaSprintBoon",
                           "rarity": "Common"
                         },
                         {
-                          "traitKey": "BurnExplodeBoon",
-                          "rarity": "Common"
-                        },
-                        {
-                          "traitKey": "AloneDamageBoon",
+                          "traitKey": "OmegaZeroBurnBoon",
                           "rarity": "Common"
                         }
                       ],
@@ -3197,20 +3178,9 @@
                 "cages": {
                   "cage1": {
                     "offer": {
-                      "rewardType": "StackUpgrade"
+                      "rewardType": "RoomMoneyDrop"
                     },
                     "traitOffersByAcquisitionRole": {},
-                    "levelResolutionsByAcquisitionRole": {
-                      "self": {
-                        "kind": "choice",
-                        "offeredTraitKeys": [
-                          "ApolloWeaponBoon",
-                          "ZeusSpecialBoon",
-                          "HeraCastBoon"
-                        ],
-                        "selectedTraitKey": "ApolloWeaponBoon"
-                      }
-                    },
                     "dispositionByAcquisitionRole": {
                       "self": {
                         "kind": "normal"
@@ -3231,19 +3201,19 @@
                         "giverKey": "Apollo",
                         "options": [
                           {
+                            "traitKey": "ApolloWeaponBoon",
+                            "rarity": "Epic"
+                          },
+                          {
+                            "traitKey": "ApolloSprintBoon",
+                            "rarity": "Common"
+                          },
+                          {
                             "traitKey": "ApolloRetaliateBoon",
-                            "rarity": "Common"
-                          },
-                          {
-                            "traitKey": "PerfectDamageBonusBoon",
-                            "rarity": "Common"
-                          },
-                          {
-                            "traitKey": "BlindChanceBoon",
                             "rarity": "Common"
                           }
                         ],
-                        "selectedOptionKey": "option1",
+                        "selectedOptionKey": "option3",
                         "rarificationActions": []
                       }
                     },
@@ -3267,15 +3237,15 @@
                         "giverKey": "Hestia",
                         "options": [
                           {
-                            "traitKey": "BurnExplodeBoon",
+                            "traitKey": "HestiaCastBoon",
+                            "rarity": "Rare"
+                          },
+                          {
+                            "traitKey": "HestiaSprintBoon",
                             "rarity": "Common"
                           },
                           {
-                            "traitKey": "AloneDamageBoon",
-                            "rarity": "Common"
-                          },
-                          {
-                            "traitKey": "ElementalBaseDamageBoon",
+                            "traitKey": "OmegaZeroBurnBoon",
                             "rarity": "Common"
                           }
                         ],
@@ -3413,7 +3383,7 @@
                   },
                   "cage2": {
                     "offer": {
-                      "rewardType": "RoomMoneyDrop"
+                      "rewardType": "MaxHealthDrop"
                     },
                     "traitOffersByAcquisitionRole": {},
                     "dispositionByAcquisitionRole": {
@@ -3424,9 +3394,16 @@
                   },
                   "cage3": {
                     "offer": {
-                      "rewardType": "MaxHealthDrop"
+                      "rewardType": "StackUpgrade"
                     },
                     "traitOffersByAcquisitionRole": {},
+                    "levelResolutionsByAcquisitionRole": {
+                      "self": {
+                        "kind": "choice",
+                        "offeredTraitKeys": [],
+                        "selectedTraitKey": null
+                      }
+                    },
                     "dispositionByAcquisitionRole": {
                       "self": {
                         "kind": "normal"

@@ -1056,6 +1056,16 @@ export interface CompletionDescriptor {
   /** Distinct physical Rivals map, when the biome declares one. */
   readonly rivalsBossRoomGameName?: string;
   readonly transitionEffects: readonly BiomeTransitionCounterReset[];
+  /**
+   * Authority for the Preboss -> Boss door's store, when it differs from the
+   * biome's ordinary door policy. The boss door is an ordinary door in native
+   * and normally shares the progression's policy, so this is declared only
+   * where the two genuinely diverge: Q rolls at its boss door under a 0.15
+   * target while its ordinary doors carry no store at all. Resolution is
+   * `bossRewardStorePolicy ?? progression.rewardStorePolicy`, which leaves
+   * every other biome's boss door on the policy it already had.
+   */
+  readonly bossRewardStorePolicy?: RewardStorePolicy;
 }
 
 export interface HubSlotDescriptor {

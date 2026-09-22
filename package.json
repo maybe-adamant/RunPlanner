@@ -46,6 +46,7 @@
     "test:changed": "vitest run --changed --passWithNoTests && npm run test:performance:changed",
     "test:fixtures:check": "vitest run --config vitest.fixtures.config.ts",
     "fixtures:execution": "node scripts/regenerate-execution-fixtures.mjs",
+    "fixtures:checkpoints": "node scripts/repair-reward-store-checkpoints.mjs",
     "test:schema:split": "node --test schema/split-project-72-to-73.test.js",
     "test:schema:migrate": "node --test schema/migrate-project-73-to-74.test.js schema/migrate-project-74-to-75.test.js schema/migrate-project-75-to-76.test.js schema/migrate-project-76-to-77.test.js schema/migrate-project-77-to-78.test.js schema/migrate-project-78-to-79.test.js schema/migrate-project-79-to-80.test.js schema/migrate-project-80-to-81.test.js schema/migrate-project-81-to-82.test.js schema/migrate-project-82-to-83.test.js schema/migrate-project-83-to-84.test.js schema/migrate-project-84-to-85.test.js schema/migrate-project-85-to-86.test.js",
     "test:catalog": "vitest run packages/hades2-catalog/test",

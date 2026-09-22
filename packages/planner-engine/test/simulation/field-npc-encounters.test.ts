@@ -878,8 +878,10 @@ describe('field NPC encounter requirements', () => {
       giverKey: 'Hades',
       options: [
         { traitKey: 'HadesLifestealBoon' },
+        // The run-wide history shifts the generated Hades Story pool by one
+        // entry.
+        { traitKey: 'HadesCastProjectileBoon' },
         { traitKey: 'HadesPreDamageBoon' },
-        { traitKey: 'HadesChronosDebuffBoon' },
       ],
     });
     const editedOffer = {

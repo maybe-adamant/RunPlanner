@@ -9,6 +9,7 @@ import {
 } from '@run-planner/engine/authored-project';
 
 import { loadSurfaceNCheckpoint } from '../checkpoints/surface';
+import { applyRewardStoreRepair, rewardStoreRepairPlans } from '../checkpoints/reward-store-repair';
 import { nBiome, nOccurrenceId, nOccurrenceIds } from './surface';
 
 function replaceBoon(
@@ -259,16 +260,25 @@ export function createSurfaceNSteadyGrowthFrontier(): ProjectDocument {
 }
 
 export function createSurfaceNQuickBuckCheckpoint(): ProjectDocument {
-  return replaceDirectTrait(loadSurfaceNCheckpoint(), nOccurrenceIds.opening, 'HermesUpgrade', {
-    kind: 'traits',
-    giverKey: 'Hermes',
-    options: [
-      { traitKey: 'MoneyMultiplierBoon', rarity: 'Common' },
-      { traitKey: 'HermesWeaponBoon', rarity: 'Common' },
-      { traitKey: 'HermesSpecialBoon', rarity: 'Common' },
-    ],
-    selectedOptionKey: 'option1',
-  });
+  const quickBuck = replaceDirectTrait(
+    loadSurfaceNCheckpoint(),
+    nOccurrenceIds.opening,
+    'HermesUpgrade',
+    {
+      kind: 'traits',
+      giverKey: 'Hermes',
+      options: [
+        { traitKey: 'MoneyMultiplierBoon', rarity: 'Common' },
+        { traitKey: 'HermesWeaponBoon', rarity: 'Common' },
+        { traitKey: 'HermesSpecialBoon', rarity: 'Common' },
+      ],
+      selectedOptionKey: 'option1',
+    },
+  );
+  // The opening Hermes pick leaves combat05's own HermesUpgrade unsupported in
+  // the run-wide Hub bag, so the route carries the same repair its saved
+  // checkpoint does — the one owner for that command list.
+  return applyRewardStoreRepair(quickBuck, rewardStoreRepairPlans['surface-n-quick-buck'] ?? []);
 }
 
 export function createSurfaceNBuriedTreasureCheckpoint(): ProjectDocument {

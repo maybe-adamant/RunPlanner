@@ -84,16 +84,18 @@ describe('resolution-interactions', () => {
     const pomDomain = pom?.forOffer(pomOffer).load();
     expect(pomDomain?.emptyNoOpAllowed).toBe(false);
     expect(pomDomain?.picker.sections.flatMap((section) => section.items)).toEqual(
+      // F's run-wide history equips the Hestia weapon Boon, so that is the
+      // forced Pom target.
       expect.arrayContaining([
-        expect.objectContaining({ label: 'Nova Strike', value: 'ApolloWeaponBoon' }),
-        expect.objectContaining({ value: 'ZeusWeaponBoon', disabled: true, selected: true }),
+        expect.objectContaining({ label: 'Flame Strike', value: 'HestiaWeaponBoon' }),
+        expect.objectContaining({ value: 'ZeusWeaponBoon', state: 'impossible' }),
       ]),
     );
     expect(pom?.child.marker.findingCount).toBe(0);
     expect(bound.assembly.preliminaryFocusDestinations.has(semanticAddressKey(child))).toBe(true);
-    expect(pom?.update(pomOffer, 'ApolloWeaponBoon').options[2]).toMatchObject({
+    expect(pom?.update(pomOffer, 'HestiaWeaponBoon').options[2]).toMatchObject({
       traitKey: 'EchoDoubleLevelBoon',
-      echoPomTarget: 'ApolloWeaponBoon',
+      echoPomTarget: 'HestiaWeaponBoon',
     });
   });
 

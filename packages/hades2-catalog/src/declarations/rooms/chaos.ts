@@ -33,7 +33,14 @@ export const chaosRooms = chaosMaps.map(
         rewardType: 'TrialUpgrade',
         producerLifecycleKey: 'RoomReward',
       },
-      enteredRewardStoreHistory: { kind: 'none' },
+      // Every Chaos gate room is pinned to the Secrets store:
+      // RoomDataChaos.lua:160 sets ForcedRewardStore = "Secrets" on BaseChaos,
+      // and that store holds exactly one entry (LootData.lua:807-812). Entering
+      // one is therefore a counted room whose store is Secrets, not none — it
+      // feeds the run-scoped ratio as a non-MetaProgress entry. Secrets is also
+      // listed in RewardStoreData.InvalidOverrides (LootData.lua:802-805), so it
+      // never leaks onto a sibling door through the per-door override path.
+      enteredRewardStoreHistory: { kind: 'fixed', storeKey: 'Secrets' },
       encounterEnvelopeKey: 'SingleEncounter',
       encounterSlotBindings: [
         { slotKey: 'Encounter', kind: 'fixed', encounterDefinitionKey: 'Empty_Chaos' },

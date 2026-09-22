@@ -14,7 +14,7 @@ import {
   clearTopology,
   reconcileBatchExitCapacity,
 } from './ordinary';
-import { replaceTakeoverBatch } from './takeover';
+import { replaceBossDoorRewardStore, replaceTakeoverBatch } from './takeover';
 import { replaceWithHubDecision, removeHubDecision, updateHub } from './hub';
 import { updateLocalVisit } from './local-visits';
 
@@ -42,6 +42,8 @@ export function applyTopologyCommand(
       return reconcileBatchExitCapacity(document, catalog, located, command);
     case 'ReplaceBatchRewardStore':
       return replaceBatchRewardStore(document, catalog, located, command);
+    case 'ReplaceBossDoorRewardStore':
+      return replaceBossDoorRewardStore(document, catalog, located, command);
     case 'ReplaceFieldsCageOutcome':
       return replaceFieldsCageOutcome(document, catalog, located, command);
     case 'SetExitSelection':

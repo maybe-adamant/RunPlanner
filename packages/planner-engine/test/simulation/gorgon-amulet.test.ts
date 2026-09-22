@@ -103,12 +103,16 @@ function assembled(project: import('../../src/authored-project').ProjectDocument
 
 function orderGoldenGorgonAfterIncoming(
   project: import('../../src/authored-project').ProjectDocument,
+  occurrenceId: ReturnType<typeof goldenGOccurrenceId>,
+  acquisitionRole: 'self' | 'source',
 ) {
-  return replaceTestRoomActionOrder(project, catalog, goldenGBiome, goldenGOccurrenceId(1, 1), [
+  // G's opening batch is a Meta batch run-wide, so this room's reward is a
+  // self-acquired Meta drop rather than a Boon.
+  return replaceTestRoomActionOrder(project, catalog, goldenGBiome, occurrenceId, [
     {
       kind: 'interactIncomingReward',
       producerPoint: 'roomRewardPickup',
-      acquisitionRole: 'source',
+      acquisitionRole,
     },
     { kind: 'interactGorgon', phaseKey: 'Encounter' },
   ]);
@@ -558,9 +562,16 @@ describe('Gorgon Amulet lifecycle', () => {
     ['prior Cherished', true, 'Heroic'],
     ['same-encounter Cherished reward', false, 'Epic'],
   ] as const)('preserves the real Gorgon snapshot for %s', (_label, priorCherished, rarity) => {
+    // The same-encounter variant needs a Boon behind the Gorgon room. G's
+    // opening batch is saturated to MetaProgress run-wide and a Meta bag
+    // carries no Boon, so that variant runs on the route's last Run-bag Boon
+    // room instead; the prior-Cherished variant keeps the opening room.
+    const gorgonOccurrenceId = priorCherished
+      ? goldenGOccurrenceId(1, 1)
+      : goldenGOccurrenceId(4, 1);
     const phase = createEncounterPhaseAddress(
       goldenGBiome,
-      { kind: 'occurrence', occurrenceId: goldenGOccurrenceId(1, 1) },
+      { kind: 'occurrence', occurrenceId: gorgonOccurrenceId },
       'Encounter',
     );
     let project = applyProjectCommand(createCompleteFGProject(), catalog, {
@@ -569,7 +580,7 @@ describe('Gorgon Amulet lifecycle', () => {
       value: true,
     });
     if (!priorCherished) {
-      const incoming = createIncomingRewardAddress(goldenGBiome, goldenGOccurrenceId(1, 1));
+      const incoming = createIncomingRewardAddress(goldenGBiome, gorgonOccurrenceId);
       project = applyProjectCommand(project, catalog, {
         kind: 'ReplaceIncomingReward',
         reward: incoming,
@@ -583,10 +594,19 @@ describe('Gorgon Amulet lifecycle', () => {
         trait: createTraitOfferAddress(incoming, 'source'),
         value: cherishedOffer(),
       });
-      for (const [occurrenceId, options] of [
-        [goldenGOccurrenceId(6, 1), ['DemeterSpecialBoon', 'DemeterCastBoon', 'DemeterSprintBoon']],
-        [goldenGOccurrenceId(7, 1), ['DemeterManaBoon', 'CastNovaBoon', 'PlantHealthBoon']],
-      ] as const) {
+      // Demeter may appear once in this window, so the route's own later
+      // Hestia door moves to Zeus rather than colliding with the Gorgon room.
+      project = authorLegalTraitOffers(
+        applyProjectCommand(project, catalog, {
+          kind: 'ReplaceIncomingReward',
+          reward: createIncomingRewardAddress(goldenGBiome, goldenGOccurrenceId(7, 1)),
+          value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'ZeusUpgrade' } },
+        }),
+      );
+      for (const [occurrenceId, options] of [] as readonly (readonly [
+        ReturnType<typeof goldenGOccurrenceId>,
+        readonly [string, string, string],
+      ])[]) {
         project = applyProjectCommand(project, catalog, {
           kind: 'ReplaceIncomingReward',
           reward: createIncomingRewardAddress(goldenGBiome, occurrenceId),
@@ -669,11 +689,16 @@ describe('Gorgon Amulet lifecycle', () => {
       expect(draft.options.every((option) => option.rarity === 'Heroic')).toBe(true);
     }
     project = authorGorgon(project, phase);
-    project = orderGoldenGorgonAfterIncoming(project);
+    project = orderGoldenGorgonAfterIncoming(
+      project,
+      gorgonOccurrenceId,
+      priorCherished ? 'self' : 'source',
+    );
     const result = evaluateGWithGorgonSeed(project, acquired).simulation;
     expect(result.branches, JSON.stringify(result.findings)).not.toHaveLength(0);
     expect(
       result.branches.every((branch) => branch.state.keepsakes.gorgon?.status === 'consumed'),
+      JSON.stringify(result.findings.map((f) => ({ c: f.code, o: f.origin, e: f.evidence }))),
     ).toBe(true);
     expect(
       result.branches.every(
@@ -824,7 +849,7 @@ describe('Gorgon Amulet lifecycle', () => {
       value: true,
     });
     project = authorGorgon(project, phase);
-    project = orderGoldenGorgonAfterIncoming(project);
+    project = orderGoldenGorgonAfterIncoming(project, goldenGOccurrenceId(1, 1), 'self');
     const contextInvalid = Object.freeze({
       ...project.route,
       biomes: Object.freeze(

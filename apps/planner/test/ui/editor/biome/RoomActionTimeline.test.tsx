@@ -539,6 +539,9 @@ describe('OccurrenceRoomActions', () => {
     expect(gorgon).toMatchObject({ executable: true, issues: [], stale: false });
   });
 
+  // This three-cage route is repairable-invalid under the run-scoped ledger,
+  // and the missing anchor is exactly the repair leaf it publishes, so the
+  // product under test stays observable on it.
   it('keeps a missing active Fields cage anchor in Timeline repairs', () => {
     const occurrenceId = createOccurrenceId('golden-h-combat02');
     const authored = threeCageFieldsProject();

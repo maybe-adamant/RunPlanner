@@ -627,7 +627,13 @@ export const qRooms = [
     structuralTags: [],
     exits: [{ index: 1, type: 'TyphonExitDoor' }],
     incomingReward: { kind: 'none' },
-    enteredRewardStoreHistory: { kind: 'none' },
+    // Q's boss door is an ordinary door in native — the boss room declares no
+    // IndividualRewardStore and no ForcedRewardStore, so ChooseNextRewardStore
+    // rolls it under Q's 0.15 target exactly as G, O and P roll theirs. The
+    // store is authored on the Preboss -> Boss fixed link and resolves through
+    // the offer, which is why this is `resolvedOffer` rather than a pin. Q's
+    // ordinary doors still carry no store; the layout batch policy is untouched.
+    enteredRewardStoreHistory: { kind: 'resolvedOffer' },
     encounterEnvelopeKey: 'SingleEncounter',
     encounterSlotBindings: [
       { slotKey: 'Encounter', kind: 'fixed', encounterDefinitionKey: 'BossTyphonHead01' },
@@ -648,7 +654,13 @@ export const qRooms = [
     structuralTags: [],
     exits: [{ index: 1, type: 'TyphonExitDoor' }],
     incomingReward: { kind: 'none' },
-    enteredRewardStoreHistory: { kind: 'none' },
+    // Q's boss door is an ordinary door in native — the boss room declares no
+    // IndividualRewardStore and no ForcedRewardStore, so ChooseNextRewardStore
+    // rolls it under Q's 0.15 target exactly as G, O and P roll theirs. The
+    // store is authored on the Preboss -> Boss fixed link and resolves through
+    // the offer, which is why this is `resolvedOffer` rather than a pin. Q's
+    // ordinary doors still carry no store; the layout batch policy is untouched.
+    enteredRewardStoreHistory: { kind: 'resolvedOffer' },
     encounterEnvelopeKey: 'SingleEncounter',
     encounterSlotBindings: [
       { slotKey: 'Encounter', kind: 'fixed', encounterDefinitionKey: 'BossTyphonHead02' },

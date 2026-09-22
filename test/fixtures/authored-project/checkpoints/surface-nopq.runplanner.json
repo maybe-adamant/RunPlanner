@@ -2275,7 +2275,8 @@
           "fixedRoomLinks": [
             {
               "sourceOccurrenceId": "surface-o-preboss",
-              "targetOccurrenceId": "surface-o-preboss:boss"
+              "targetOccurrenceId": "surface-o-preboss:boss",
+              "rewardStoreKey": "RunProgress"
             },
             {
               "sourceOccurrenceId": "surface-o-preboss:boss",
@@ -2403,7 +2404,7 @@
                 "kind": "counted",
                 "reward": {
                   "offer": {
-                    "rewardType": "MetaCurrencyBigDrop"
+                    "rewardType": "MaxManaDrop"
                   },
                   "traitOffersByAcquisitionRole": {},
                   "dispositionByAcquisitionRole": {
@@ -2446,7 +2447,7 @@
                 "kind": "counted",
                 "reward": {
                   "offer": {
-                    "rewardType": "MetaCardPointsCommonBigDrop"
+                    "rewardType": "RoomMoneyDrop"
                   },
                   "traitOffersByAcquisitionRole": {},
                   "dispositionByAcquisitionRole": {
@@ -2489,9 +2490,20 @@
                 "kind": "counted",
                 "reward": {
                   "offer": {
-                    "rewardType": "RoomMoneyDrop"
+                    "rewardType": "StackUpgrade"
                   },
                   "traitOffersByAcquisitionRole": {},
+                  "levelResolutionsByAcquisitionRole": {
+                    "self": {
+                      "kind": "choice",
+                      "offeredTraitKeys": [
+                        "ApolloWeaponBoon",
+                        "AresSpecialBoon",
+                        "HephaestusCastBoon"
+                      ],
+                      "selectedTraitKey": "ApolloWeaponBoon"
+                    }
+                  },
                   "dispositionByAcquisitionRole": {
                     "self": {
                       "kind": "normal"
@@ -2532,15 +2544,10 @@
                 "kind": "counted",
                 "reward": {
                   "offer": {
-                    "rewardType": "StackUpgrade"
+                    "rewardType": "WeaponUpgrade"
                   },
-                  "traitOffersByAcquisitionRole": {},
-                  "levelResolutionsByAcquisitionRole": {
-                    "self": {
-                      "kind": "choice",
-                      "offeredTraitKeys": [],
-                      "selectedTraitKey": null
-                    }
+                  "traitOffersByAcquisitionRole": {
+                    "self": null
                   },
                   "dispositionByAcquisitionRole": {
                     "self": {
@@ -3281,7 +3288,7 @@
                 "kind": "batch",
                 "rewardStore": {
                   "kind": "authoredBaseStore",
-                  "baseRewardStoreKey": "MetaProgress"
+                  "baseRewardStoreKey": "RunProgress"
                 },
                 "batchState": null,
                 "targets": [
@@ -3507,7 +3514,8 @@
           "fixedRoomLinks": [
             {
               "sourceOccurrenceId": "surface-p-preboss-shop",
-              "targetOccurrenceId": "surface-p-preboss-shop:boss"
+              "targetOccurrenceId": "surface-p-preboss-shop:boss",
+              "rewardStoreKey": "MetaProgress"
             },
             {
               "sourceOccurrenceId": "surface-p-preboss-shop:boss",
@@ -4137,7 +4145,8 @@
           "fixedRoomLinks": [
             {
               "sourceOccurrenceId": "surface-q-preboss",
-              "targetOccurrenceId": "surface-q-preboss:boss"
+              "targetOccurrenceId": "surface-q-preboss:boss",
+              "rewardStoreKey": "RunProgress"
             }
           ]
         }
