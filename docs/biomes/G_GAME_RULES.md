@@ -194,10 +194,28 @@ G targets a MetaProgress entered-room ratio of `0.35` and uses adjustment speed
 formula from `../design/REWARD_MODEL.md` within the generated-door lifecycle defined by
 `../design/GAME_GENERATION_RULES.md`.
 
+The ratio is run-wide, not biome-local. G's opening batch reads a count that
+already contains every store F resolved — F precedes G on the Underworld route
+— so G's `0.35` is the target that count is being pulled toward, never a
+G-local window.
+
+Inheriting a nonempty count does not mean inheriting a forced store. The free
+window is `0.1` wide, which is comparable to the step one counted entry makes
+in `C`, not small against it, so forced and open doors alternate rather than
+one dominating. G's opening is a concrete example: in an illustrative F of ten
+counted entries with no forced overrides firing, `C = 0.300` is reachable and
+gives `chance = 11(0.35) - 10(0.300) = 0.85`, an open door where both stores
+are authorable — and an enumeration across F shapes and override mixes found
+no shape whose every reachable ratio forces G's opening. Forced doors are
+common in G; they are not the rule.
+
 Every authored generated batch begins with an unresolved RunProgress-or-
 MetaProgress outcome. Candidate support is evaluated from the prepared
 pre-generation history, and only an explicit user selection makes the batch
-complete.
+complete. The boss door is one of those batches: `G_PreBoss01`'s outgoing boss
+link carries its own authored store decision, using the ordinary selector and
+the same run-wide support bounds, because native genuinely rolls the chance at
+that door.
 
 `G_Combat04`, `G_Combat05`, `G_Combat07`, and `G_Combat08` exclude Devotion but
 still permit both RunProgress and MetaProgress. Other ordinary G combats use the
@@ -246,9 +264,11 @@ The boss and postboss are concrete ordinary Room Declarations created in the
 selected topology by fixed links. They are never generated candidates or
 authored room choices. Their declarations own their encounters, counters,
 modeled reward surfaces, and reward-store history effects. `G_Boss01` records a
-contribution from the store resolved for the preboss's outgoing boss offer even
-though its automatic drops are outside the reward model; `G_PostBoss01` records
-no store contribution.
+contribution from the store authored on the preboss's outgoing boss link — the
+door's own decision, not an inheritance of the preboss's batch store — even
+though its automatic drops are outside the reward model. Unlike F's bosses,
+`G_Boss01` carries no `IgnoreForRewardStoreCount` flag, so it counts.
+`G_PostBoss01` records no store contribution.
 
 ## Progressed-Save Boundary
 
@@ -283,8 +303,8 @@ topology, lifecycle/history folding, room-generation legality, reward legality,
 finding composition, and validated F-to-G route continuation are live. The fixed
 rewardless intro uses the shared rewardless lifecycle; canonical history emits
 no locked-door encounter. The fixed-link boss/postboss rooms are materialized,
-and `G_Boss01` records the RunProgress store resolved for its outgoing boss
-offer without inventing a boss reward.
+and `G_Boss01` records the store authored on its incoming boss link without
+inventing a boss reward.
 
 G editor and candidate presentation are live through the shared
 `WorkspaceBiome` projection and `BiomeWorkspace`. The complete Underworld route

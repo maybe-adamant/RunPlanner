@@ -74,6 +74,24 @@ expose their active cage group as the selected door's offer-reward surface;
 the Preboss declaration supplies its own required resolved stores. Optional
 Fields rewards, including optional MetaProgress, remain entered-room controls
 and do not become part of that outgoing cage surface.
+
+H's absence of an authored store choice is not an absence of consequence. No H
+door is rolled at all: `BaseH` declares `IndividualRewardStore = "RunProgress"`
+alongside its `TargetMetaRewardsRatio` of `0.0`
+(`RoomDataH.lua:331-332`), and every H room inherits both, the boss included.
+An individual store beats both a forced override and any authored batch value,
+so H's `0.0` target is dead for door stores. It lives only through the
+denominator H fills: every entered Fields room banks a RunProgress entry into
+the run-wide count, a pure non-MetaProgress mass.
+
+That mass is real but route-confined. H's successors on its own route are I,
+whose count it inflates but whose doors never roll, and — under a Dream
+itinerary only — a rolling biome mixed in after it. It never
+reaches O or P: `Underworld` is `[F, G, H, I]` and `Surface` is `[N, O, P, Q]`,
+two disjoint routes of which a project carries one, so on an ordinary Surface
+run no H room has been entered at all. A Dream itinerary is the one context
+that can mix biomes across routes, and therefore the one context in which H's
+RunProgress mass suppresses `C` for a Surface biome.
 Changing a source to a narrower room preserves structurally represented
 overflow targets until the explicit `ReconcileBatchExitCapacity` command
 removes unavailable exits and their downstream subtrees.

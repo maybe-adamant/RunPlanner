@@ -138,6 +138,178 @@ different-requirement pair retains its exact latent branches. Diagnostic bag
 projection likewise exposes effective aggregate counts rather than presenting
 certified exact-entry identity as multiple run histories.
 
+## Generated Base-Store Ratio Controller
+
+The `Generated base-store ratio` row above is `Simplified` only in its refusal
+to reproduce probability. Its support geometry, its count, and its exclusions
+are exact, and this section records the evidence.
+
+### The chance formula
+
+`ChooseNextRewardStore` (`RoomLogic.lua:3846–3868`) computes
+
+```text
+chance = T + AdjustSpeed * (T - C) = 11T - 10C
+```
+
+`T` is resolved by a three-way fallback at `RoomLogic.lua:3852`:
+`run.TargetMetaRewardsRatio`, else `run.CurrentRoom.TargetMetaRewardsRatio`
+(the biome base block, which is where every biome target below is declared),
+else `run.Hero.TargetMetaRewardsRatio`. `C` is `CalcMetaProgressRatio`, and
+`AdjustSpeed` is `Hero.TargetMetaRewardsAdjustSpeed = 10` (`HeroData.lua:72`),
+unmodified anywhere in the data. `RandomChance` applies no clamp, so the chance
+saturates: `chance >= 1` is always MetaProgress and `chance <= 0` is
+effectively always RunProgress.
+
+One consequence follows from the coefficients alone. The free window — the band
+of `C` where both stores are possible — is always exactly `0.1` wide, for every
+biome and every target, because `0 < 11T - 10C < 1` solves to
+`C ∈ ((11T - 1)/10, 1.1T)`.
+
+How often a door actually lands in that window is a separate, route-dependent
+question, and the enumeration of reachable states does not support calling
+saturation the norm. The window's width is comparable to the step one counted
+entry makes in `C`, not small against it, so forced and open doors alternate:
+in an illustrative F, roughly half the doors are open, and an enumeration
+across F shapes and override mixes found none whose every reachable ratio
+forces G's opening (`C = 0.300`, reachable in some shapes, gives
+`chance = 0.85`). Forced doors
+are common enough that every consumer must treat them as ordinary, but calling
+saturation the common case overstates what the reachable states show.
+
+| Biome | Target `T` | Source                                                                                                                                            |
+| ----- | ---------: | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| F     |      0.315 | biome base block                                                                                                                                  |
+| G     |       0.35 | biome base block                                                                                                                                  |
+| H     |        0.0 | biome base block; never consulted, see the pin below                                                                                              |
+| I     |       0.25 | biome base block                                                                                                                                  |
+| O     |       0.30 | biome base block                                                                                                                                  |
+| P     |       0.20 | biome base block                                                                                                                                  |
+| Q     |       0.15 | biome base block (`RoomDataQ.lua:44`)                                                                                                             |
+| N     |       0.45 | no base block; falls through to the Hero default. Never consulted: the hub is count-excluded and its progression declares no generated base store |
+
+### The counted ratio
+
+`CalcMetaProgressRatio` (`RewardLogic.lua:469–489`) walks the whole run
+history plus the current room. The scope is the run, not the biome: every
+entered room the run has passed through feeds the same `C`. "Run" is the
+operative bound — a project carries one route, and `Underworld` (`[F, G, H,
+I]`) and `Surface` (`[N, O, P, Q]`) are disjoint, so on an ordinary run the
+history reaching a door is that route's earlier biomes only. A Dream itinerary
+is the sole context that mixes biomes across routes into one count.
+
+`CalcRoomRewardStores` (`RewardLogic.lua:491–511`) defines the granularity. A
+room whose encounters carry stores contributes one count per such encounter;
+otherwise it contributes one count per room that has both a `ChosenRewardType`
+and a `RewardStoreName`. The ratio is `MetaProgress / Total`, so every
+non-`MetaProgress` store — `RunProgress`, `TartarusRewards`,
+`TyphonBossRewards` and `Secrets` — counts only in the denominator. N's hub
+bags (`PreHubRewards`, `HubRewards`, `SubRoomRewards`, `SubRoomRewardsHard`) never reach either
+side of the ratio: the whole hub is count-excluded by the flags below. A biome
+whose stores are entirely biome-local therefore still moves the controller for
+every later biome on its route, by diluting `C` toward zero.
+
+The function returns `nil` before anything is counted, which makes
+`chance = T` exactly at the run's first resolved door.
+
+### Count exclusions and their inconsistency
+
+`IgnoreForRewardStoreCount` appears at exactly four sites in the room data:
+
+| Site                                    | Coverage                                        |
+| --------------------------------------- | ----------------------------------------------- |
+| `RoomDataF.lua:2093` (`F_Boss01`)       | the F boss room                                 |
+| `RoomDataF.lua:2347` (`F_Boss02`)       | the F alternate boss room                       |
+| `RoomDataN.lua:10` (`BaseN`)            | the N hub, covering the N bosses by inheritance |
+| `RoomDataN.lua:3796` (`BaseN_SubRooms`) | the N side rooms                                |
+
+G and every later boss room are structurally identical to the F bosses —
+`ForcedReward` completion rooms reached by a fixed link — and carry no flag, so
+they count. This is a game-data inconsistency, not a rule. The planner mirrors
+it exactly and never rationalizes it into a "bosses do not count" principle;
+any declaration that departs from these four sites is a defect.
+
+### Boss doors
+
+There is one uniform native rule at every door, boss doors included
+(`RoomLogic.lua:3951–3956`): the target's `IndividualRewardStore`, else a
+forced override for that door, else the batch roll — with the individual store
+winning over the forced one.
+
+| Boss door  | Resolution                                                                    |
+| ---------- | ----------------------------------------------------------------------------- |
+| G, O, P, Q | genuinely roll the ordinary batch chance                                      |
+| H          | pinned by `BaseH.IndividualRewardStore = "RunProgress"` (`RoomDataH.lua:332`) |
+| I          | pinned by `BaseI.ForcedRewardStore = "TartarusRewards"` (`RoomDataI.lua:305`) |
+| F, N       | count-excluded by the flags above                                             |
+
+Both pins sit on the biome base block, not on the boss declaration, so every
+room in H and every room in I inherits one — the boss is pinned because every
+H or I door is. Two facts follow. H and I therefore never roll for any door at
+all, so their ratio targets (`0.0` and `0.25`) are dead for door stores — they are consumed only
+through the denominator those biomes' entered rooms contribute. And a boss door
+never depletes a store bag: `ForcedReward` short-circuits at
+`RewardLogic.lua:86–88`, ahead of both the store read at `:141` and the
+`RemoveIndexAndCollapse` depletion at `:178`. The store assignment counts
+toward `C`; the reward itself is forced and draws nothing.
+
+### Per-encounter counting at ship wheels
+
+Multi-wheel O ship rooms are the live case for the per-encounter branch of
+`CalcRoomRewardStores`. Each wheel's store is stamped when the wheel spawns
+(`RoomLogic.lua:1427–1431`) and copied onto the encounter
+(`RoomLogic.lua:1465`), so a three-phase ship contributes two counts, not one.
+The ship room itself is `NoReward`, so its room-level store never counts; the
+room's whole contribution is its encounters'.
+
+### The rolling cursor
+
+`run.NextRewardStoreName` is a cursor, not a record. It is overwritten at every
+room start (`RoomLogic.lua:1179`) and again at every wheel spawn
+(`RoomLogic.lua:1427`), and consumed by door assignment
+(`RoomLogic.lua:3880`). A roll that no door consumes is overwritten before
+anything can observe it, so unconsumed rolls have no observable consequence and
+the planner models none.
+
+### Spawn-fixed stores
+
+Two rooms receive their store at spawn rather than through door resolution, and
+therefore count with a store no door decided:
+
+- `C_Boss01`. The Zagreus contract room is created and bound to its door
+  directly (`EventLogic.lua:1888–1893`: `RoomData.C_Boss01`, then `CreateRoom`
+  with no second argument, then `AssignRoomToExitDoor`). Because `CreateRoom`
+  receives no store, `RunLogic.lua:604–620` supplies one:
+  the room's `ForcedRewardStore` if it declares one, else `RunProgress`.
+  `RoomDataC` declares none, so `C_Boss01` is `RunProgress` by spawn-time
+  default — not by inheritance from its host biome's door.
+- The Chaos secret rooms. The secret room is likewise created by `CreateRoom`
+  with no store and assigned to the secret door (`RoomLogic.lua:4885`), and
+  `RoomDataChaos.lua:160` declares `ForcedRewardStore` `Secrets`. That store has
+  one `TrialUpgrade` entry (`LootData.lua:807–812`) and is listed in
+  `RewardStoreData.InvalidOverrides` (`LootData.lua:802–805`), so no
+  door may ever roll it — it is reachable only as a declaration-forced store.
+
+### Census encoding convention
+
+This is a planner convention, recorded here because the game-data verdict
+depends on it. A room's `enteredRewardStoreHistory` kind is load-bearing for
+bosses: `resolvedOffer` means the boss door takes an authored store (G, O, P,
+Q), `fixed` means the store is pinned (H, I). For non-boss pinned rooms both
+`resolvedOffer` plus a pin and `fixed:<key>` appear in the catalog, and the two
+are verdict-equivalent — the count and its store are the same either way.
+Spawn-built rooms are always `fixed`, since no door resolution runs for them:
+this covers the Chaos rooms and `C_Boss01`.
+
+### Open question
+
+Biome-intro rooms natively carry `ForcedRewardStore` `RunProgress` gated by
+`RewardGameStateRequirements` (for example `RoomDataG.lua:1321` and following).
+The planner rewrites every non-first biome start to a history of `none`
+(`entry-resolution.ts`). Whether that native gate can ever pass mid-run was not
+re-derived; if it can, those rooms would each add one RunProgress count to the
+run-wide denominator at every biome transition.
+
 ## Counted Store Inventory
 
 | Store                   | Projected entries | Live use                                                                  | Disposition and notes                                                                                              |

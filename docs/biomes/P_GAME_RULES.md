@@ -84,6 +84,17 @@ their own individual store. A P Preboss free offer is always resolved through
 its forced RunProgress binding, even when the source entered through a
 MetaProgress batch; the first Preboss occurrence is the entry-time WorldShop.
 
+Every one of those choices is bounded by the run-wide entered-store ratio, not
+a P-local one. On the Surface route the history P inherits is O's alone: N
+precedes O but is excluded from the count entirely, so P's `0.20` target is
+read against O's entries plus P's own. A store O resolved therefore constrains
+a P door, while nothing from the Underworld route can — the two routes are
+disjoint, and only a Dream itinerary can put an Underworld biome ahead of P.
+`P_PreBoss01`'s outgoing boss link is itself such a choice —
+native rolls the ordinary chance at the P boss door, so the link carries an
+authored store decision on the same selector and the same bounds as an ordinary
+batch.
+
 The supported baseline includes the progressed-save Olympus map
 set, physical indoor/outdoor doors, reward producers, force pressure, and the
 fixed boss/postboss completion transition. Persistent NPC composition,
