@@ -49,14 +49,8 @@
       }
     }
   },
-  "startingKeepsake": {
-    "keepsakeKey": "ManaOverTimeRefundKeepsake"
-  },
-  "extent": {
-    "kind": "configuredPrefix",
-    "biomeKeys": ["F", "G", "H"],
-    "terminalBiomeKey": "H"
-  },
+  "startingKeepsake": { "keepsakeKey": "ManaOverTimeRefundKeepsake" },
+  "extent": { "kind": "configuredPrefix", "biomeKeys": ["F", "G", "H"], "terminalBiomeKey": "H" },
   "selectedOccurrenceIds": [
     "golden-f-start",
     "golden-f-b1-e1",
@@ -408,11 +402,7 @@
           "source": "ApolloUpgrade"
         },
         "encounterPhases": [
-          {
-            "slotKey": "Encounter",
-            "encounterKey": "OpeningGeneratedF",
-            "kind": "combat"
-          }
+          { "slotKey": "Encounter", "encounterKey": "OpeningGeneratedF", "kind": "combat" }
         ],
         "requiredObjects": []
       },
@@ -444,30 +434,15 @@
                   "kind": "traits",
                   "giver": "Apollo",
                   "options": [
-                    {
-                      "key": "ApolloWeaponBoon",
-                      "rarity": "Common",
-                      "effectiveLevel": 1
-                    },
-                    {
-                      "key": "ApolloSpecialBoon",
-                      "rarity": "Common",
-                      "effectiveLevel": 1
-                    },
-                    {
-                      "key": "ApolloCastBoon",
-                      "rarity": "Common",
-                      "effectiveLevel": 1
-                    }
+                    { "key": "ApolloWeaponBoon", "rarity": "Common", "effectiveLevel": 1 },
+                    { "key": "ApolloSpecialBoon", "rarity": "Common", "effectiveLevel": 1 },
+                    { "key": "ApolloCastBoon", "rarity": "Common", "effectiveLevel": 1 }
                   ],
                   "selected": "option1"
                 }
               }
             ],
-            "window": {
-              "kind": "standard",
-              "phase": "beforeCombat"
-            }
+            "window": { "kind": "standard", "phase": "beforeCombat" }
           }
         ],
         "dependencies": [],
@@ -480,11 +455,7 @@
           {
             "exitKey": "exit1",
             "index": 1,
-            "room": {
-              "id": "golden-f-b1-e1",
-              "biomeKey": "F",
-              "gameName": "F_Combat02"
-            },
+            "room": { "id": "golden-f-b1-e1", "biomeKey": "F", "gameName": "F_Combat02" },
             "zagreusContractPresent": false,
             "reward": {
               "rewardType": "MetaCurrencyDrop",
@@ -496,14 +467,7 @@
         "resolvedSharedRewardStoreKey": "MetaProgress"
       },
       "roomExitConformance": {
-        "facts": [
-          {
-            "kind": "elementCounts"
-          },
-          {
-            "kind": "traitInventory"
-          }
-        ]
+        "facts": [{ "kind": "elementCounts" }, { "kind": "traitInventory" }]
       },
       "diagnostics": {
         "roomEntered": {
@@ -518,62 +482,18 @@
               "roomHistoryOrdinal": 0
             },
             "bags": [
-              {
-                "storeKey": "RunProgress",
-                "remaining": {
-                  "kind": "exact",
-                  "count": 17
-                }
-              },
-              {
-                "storeKey": "MetaProgress",
-                "remaining": {
-                  "kind": "exact",
-                  "count": 13
-                }
-              },
-              {
-                "storeKey": "HubRewards",
-                "remaining": {
-                  "kind": "exact",
-                  "count": 10
-                }
-              },
-              {
-                "storeKey": "SubRoomRewards",
-                "remaining": {
-                  "kind": "exact",
-                  "count": 23
-                }
-              },
-              {
-                "storeKey": "SubRoomRewardsHard",
-                "remaining": {
-                  "kind": "exact",
-                  "count": 8
-                }
-              },
+              { "storeKey": "RunProgress", "remaining": { "kind": "exact", "count": 17 } },
+              { "storeKey": "MetaProgress", "remaining": { "kind": "exact", "count": 13 } },
+              { "storeKey": "HubRewards", "remaining": { "kind": "exact", "count": 10 } },
+              { "storeKey": "SubRoomRewards", "remaining": { "kind": "exact", "count": 23 } },
+              { "storeKey": "SubRoomRewardsHard", "remaining": { "kind": "exact", "count": 8 } },
               {
                 "storeKey": "FieldsOptionalRewards",
-                "remaining": {
-                  "kind": "exact",
-                  "count": 19
-                }
+                "remaining": { "kind": "exact", "count": 19 }
               },
-              {
-                "storeKey": "TartarusRewards",
-                "remaining": {
-                  "kind": "exact",
-                  "count": 9
-                }
-              },
-              {
-                "storeKey": "TyphonBossRewards",
-                "remaining": {
-                  "kind": "exact",
-                  "count": 6
-                }
-              }
+              { "storeKey": "TartarusRewards", "remaining": { "kind": "exact", "count": 9 } },
+              { "storeKey": "TyphonBossRewards", "remaining": { "kind": "exact", "count": 6 } },
+              { "storeKey": "Secrets", "remaining": { "kind": "exact", "count": 1 } }
             ],
             "godPool": {
               "acquiredSourceKeys": [],
@@ -593,39 +513,19 @@
             "traits": {
               "equipped": [],
               "slots": [
-                {
-                  "slot": "Melee"
-                },
-                {
-                  "slot": "Secondary"
-                },
-                {
-                  "slot": "Ranged"
-                },
-                {
-                  "slot": "Rush"
-                },
-                {
-                  "slot": "Mana"
-                },
-                {
-                  "slot": "Spell"
-                }
+                { "slot": "Melee" },
+                { "slot": "Secondary" },
+                { "slot": "Ranged" },
+                { "slot": "Rush" },
+                { "slot": "Mana" },
+                { "slot": "Spell" }
               ],
-              "elements": {
-                "Aether": 0,
-                "Earth": 0,
-                "Air": 0,
-                "Fire": 0,
-                "Water": 0
-              },
+              "elements": { "Aether": 0, "Earth": 0, "Air": 0, "Fire": 0, "Water": 0 },
               "godRarityCounts": {},
               "upgradableCount": 0,
               "bannedTraitKeys": []
             },
-            "arcana": {
-              "active": []
-            },
+            "arcana": { "active": [] },
             "vows": {
               "configuredRanks": {
                 "HealingReductionShrineUpgrade": 0,
@@ -668,10 +568,7 @@
               "disabledKeys": []
             },
             "forfeit": "inactive",
-            "chaos": {
-              "active": [],
-              "matured": []
-            },
+            "chaos": { "active": [], "matured": [] },
             "keepsakes": {
               "currentKey": "ManaOverTimeRefundKeepsake",
               "usedKeys": ["ManaOverTimeRefundKeepsake"],
@@ -726,62 +623,18 @@
               "roomHistoryOrdinal": 1
             },
             "bags": [
-              {
-                "storeKey": "RunProgress",
-                "remaining": {
-                  "kind": "exact",
-                  "count": 17
-                }
-              },
-              {
-                "storeKey": "MetaProgress",
-                "remaining": {
-                  "kind": "exact",
-                  "count": 12
-                }
-              },
-              {
-                "storeKey": "HubRewards",
-                "remaining": {
-                  "kind": "exact",
-                  "count": 10
-                }
-              },
-              {
-                "storeKey": "SubRoomRewards",
-                "remaining": {
-                  "kind": "exact",
-                  "count": 23
-                }
-              },
-              {
-                "storeKey": "SubRoomRewardsHard",
-                "remaining": {
-                  "kind": "exact",
-                  "count": 8
-                }
-              },
+              { "storeKey": "RunProgress", "remaining": { "kind": "exact", "count": 17 } },
+              { "storeKey": "MetaProgress", "remaining": { "kind": "exact", "count": 12 } },
+              { "storeKey": "HubRewards", "remaining": { "kind": "exact", "count": 10 } },
+              { "storeKey": "SubRoomRewards", "remaining": { "kind": "exact", "count": 23 } },
+              { "storeKey": "SubRoomRewardsHard", "remaining": { "kind": "exact", "count": 8 } },
               {
                 "storeKey": "FieldsOptionalRewards",
-                "remaining": {
-                  "kind": "exact",
-                  "count": 19
-                }
+                "remaining": { "kind": "exact", "count": 19 }
               },
-              {
-                "storeKey": "TartarusRewards",
-                "remaining": {
-                  "kind": "exact",
-                  "count": 9
-                }
-              },
-              {
-                "storeKey": "TyphonBossRewards",
-                "remaining": {
-                  "kind": "exact",
-                  "count": 6
-                }
-              }
+              { "storeKey": "TartarusRewards", "remaining": { "kind": "exact", "count": 9 } },
+              { "storeKey": "TyphonBossRewards", "remaining": { "kind": "exact", "count": 6 } },
+              { "storeKey": "Secrets", "remaining": { "kind": "exact", "count": 1 } }
             ],
             "godPool": {
               "acquiredSourceKeys": ["ApolloUpgrade"],
@@ -799,44 +652,17 @@
               "capNarrowed": false
             },
             "traits": {
-              "equipped": [
-                {
-                  "traitKey": "ApolloWeaponBoon",
-                  "rarity": "Common",
-                  "level": 1
-                }
-              ],
+              "equipped": [{ "traitKey": "ApolloWeaponBoon", "rarity": "Common", "level": 1 }],
               "slots": [
-                {
-                  "slot": "Melee",
-                  "traitKey": "ApolloWeaponBoon"
-                },
-                {
-                  "slot": "Secondary"
-                },
-                {
-                  "slot": "Ranged"
-                },
-                {
-                  "slot": "Rush"
-                },
-                {
-                  "slot": "Mana"
-                },
-                {
-                  "slot": "Spell"
-                }
+                { "slot": "Melee", "traitKey": "ApolloWeaponBoon" },
+                { "slot": "Secondary" },
+                { "slot": "Ranged" },
+                { "slot": "Rush" },
+                { "slot": "Mana" },
+                { "slot": "Spell" }
               ],
-              "elements": {
-                "Aether": 0,
-                "Earth": 0,
-                "Air": 1,
-                "Fire": 0,
-                "Water": 0
-              },
-              "godRarityCounts": {
-                "Common": 1
-              },
+              "elements": { "Aether": 0, "Earth": 0, "Air": 1, "Fire": 0, "Water": 0 },
+              "godRarityCounts": { "Common": 1 },
               "upgradableCount": 1,
               "bannedTraitKeys": []
             }
@@ -857,11 +683,7 @@
           "resolvedStoreKey": "MetaProgress"
         },
         "encounterPhases": [
-          {
-            "slotKey": "Encounter",
-            "encounterKey": "GeneratedF",
-            "kind": "combat"
-          }
+          { "slotKey": "Encounter", "encounterKey": "GeneratedF", "kind": "combat" }
         ],
         "requiredObjects": []
       },
@@ -890,10 +712,7 @@
                 }
               }
             ],
-            "window": {
-              "kind": "standard",
-              "phase": "afterCombat"
-            }
+            "window": { "kind": "standard", "phase": "afterCombat" }
           }
         ],
         "dependencies": [],
@@ -906,11 +725,7 @@
           {
             "exitKey": "exit1",
             "index": 1,
-            "room": {
-              "id": "golden-f-b2-e1",
-              "biomeKey": "F",
-              "gameName": "F_Combat03"
-            },
+            "room": { "id": "golden-f-b2-e1", "biomeKey": "F", "gameName": "F_Combat03" },
             "zagreusContractPresent": false,
             "reward": {
               "rewardType": "Boon",
@@ -922,11 +737,7 @@
           {
             "exitKey": "exit2",
             "index": 2,
-            "room": {
-              "id": "golden-f-b2-e2",
-              "biomeKey": "F",
-              "gameName": "F_Combat03"
-            },
+            "room": { "id": "golden-f-b2-e2", "biomeKey": "F", "gameName": "F_Combat03" },
             "zagreusContractPresent": false,
             "reward": {
               "rewardType": "MaxHealthDrop",
@@ -937,13 +748,7 @@
         ],
         "resolvedSharedRewardStoreKey": "RunProgress"
       },
-      "roomExitConformance": {
-        "facts": [
-          {
-            "kind": "elementCounts"
-          }
-        ]
-      },
+      "roomExitConformance": { "facts": [{ "kind": "elementCounts" }] },
       "diagnostics": {
         "roomEntered": {
           "frame": 2,
@@ -963,62 +768,18 @@
               "roomHistoryOrdinal": 2
             },
             "bags": [
-              {
-                "storeKey": "RunProgress",
-                "remaining": {
-                  "kind": "exact",
-                  "count": 15
-                }
-              },
-              {
-                "storeKey": "MetaProgress",
-                "remaining": {
-                  "kind": "exact",
-                  "count": 12
-                }
-              },
-              {
-                "storeKey": "HubRewards",
-                "remaining": {
-                  "kind": "exact",
-                  "count": 10
-                }
-              },
-              {
-                "storeKey": "SubRoomRewards",
-                "remaining": {
-                  "kind": "exact",
-                  "count": 23
-                }
-              },
-              {
-                "storeKey": "SubRoomRewardsHard",
-                "remaining": {
-                  "kind": "exact",
-                  "count": 8
-                }
-              },
+              { "storeKey": "RunProgress", "remaining": { "kind": "exact", "count": 15 } },
+              { "storeKey": "MetaProgress", "remaining": { "kind": "exact", "count": 12 } },
+              { "storeKey": "HubRewards", "remaining": { "kind": "exact", "count": 10 } },
+              { "storeKey": "SubRoomRewards", "remaining": { "kind": "exact", "count": 23 } },
+              { "storeKey": "SubRoomRewardsHard", "remaining": { "kind": "exact", "count": 8 } },
               {
                 "storeKey": "FieldsOptionalRewards",
-                "remaining": {
-                  "kind": "exact",
-                  "count": 19
-                }
+                "remaining": { "kind": "exact", "count": 19 }
               },
-              {
-                "storeKey": "TartarusRewards",
-                "remaining": {
-                  "kind": "exact",
-                  "count": 9
-                }
-              },
-              {
-                "storeKey": "TyphonBossRewards",
-                "remaining": {
-                  "kind": "exact",
-                  "count": 6
-                }
-              }
+              { "storeKey": "TartarusRewards", "remaining": { "kind": "exact", "count": 9 } },
+              { "storeKey": "TyphonBossRewards", "remaining": { "kind": "exact", "count": 6 } },
+              { "storeKey": "Secrets", "remaining": { "kind": "exact", "count": 1 } }
             ]
           }
         }
@@ -1038,11 +799,7 @@
           "source": "ZeusUpgrade"
         },
         "encounterPhases": [
-          {
-            "slotKey": "Encounter",
-            "encounterKey": "GeneratedF",
-            "kind": "combat"
-          }
+          { "slotKey": "Encounter", "encounterKey": "GeneratedF", "kind": "combat" }
         ],
         "requiredObjects": []
       },
@@ -1074,30 +831,15 @@
                   "kind": "traits",
                   "giver": "Zeus",
                   "options": [
-                    {
-                      "key": "ZeusSpecialBoon",
-                      "rarity": "Common",
-                      "effectiveLevel": 1
-                    },
-                    {
-                      "key": "ZeusCastBoon",
-                      "rarity": "Common",
-                      "effectiveLevel": 1
-                    },
-                    {
-                      "key": "ZeusSprintBoon",
-                      "rarity": "Common",
-                      "effectiveLevel": 1
-                    }
+                    { "key": "ZeusSpecialBoon", "rarity": "Common", "effectiveLevel": 1 },
+                    { "key": "ZeusCastBoon", "rarity": "Common", "effectiveLevel": 1 },
+                    { "key": "ZeusSprintBoon", "rarity": "Common", "effectiveLevel": 1 }
                   ],
                   "selected": "option1"
                 }
               }
             ],
-            "window": {
-              "kind": "standard",
-              "phase": "afterCombat"
-            }
+            "window": { "kind": "standard", "phase": "afterCombat" }
           }
         ],
         "dependencies": [],
@@ -1110,11 +852,7 @@
           {
             "exitKey": "exit1",
             "index": 1,
-            "room": {
-              "id": "golden-f-b3-e1",
-              "biomeKey": "F",
-              "gameName": "F_Combat04"
-            },
+            "room": { "id": "golden-f-b3-e1", "biomeKey": "F", "gameName": "F_Combat04" },
             "zagreusContractPresent": false,
             "reward": {
               "rewardType": "MaxHealthDrop",
@@ -1125,11 +863,7 @@
           {
             "exitKey": "exit2",
             "index": 2,
-            "room": {
-              "id": "golden-f-b3-e2",
-              "biomeKey": "F",
-              "gameName": "F_Combat04"
-            },
+            "room": { "id": "golden-f-b3-e2", "biomeKey": "F", "gameName": "F_Combat04" },
             "zagreusContractPresent": false,
             "reward": {
               "rewardType": "MaxManaDrop",
@@ -1141,14 +875,7 @@
         "resolvedSharedRewardStoreKey": "RunProgress"
       },
       "roomExitConformance": {
-        "facts": [
-          {
-            "kind": "elementCounts"
-          },
-          {
-            "kind": "traitInventory"
-          }
-        ]
+        "facts": [{ "kind": "elementCounts" }, { "kind": "traitInventory" }]
       },
       "diagnostics": {
         "roomEntered": {
@@ -1169,62 +896,18 @@
               "roomHistoryOrdinal": 3
             },
             "bags": [
-              {
-                "storeKey": "RunProgress",
-                "remaining": {
-                  "kind": "exact",
-                  "count": 13
-                }
-              },
-              {
-                "storeKey": "MetaProgress",
-                "remaining": {
-                  "kind": "exact",
-                  "count": 12
-                }
-              },
-              {
-                "storeKey": "HubRewards",
-                "remaining": {
-                  "kind": "exact",
-                  "count": 10
-                }
-              },
-              {
-                "storeKey": "SubRoomRewards",
-                "remaining": {
-                  "kind": "exact",
-                  "count": 23
-                }
-              },
-              {
-                "storeKey": "SubRoomRewardsHard",
-                "remaining": {
-                  "kind": "exact",
-                  "count": 8
-                }
-              },
+              { "storeKey": "RunProgress", "remaining": { "kind": "exact", "count": 13 } },
+              { "storeKey": "MetaProgress", "remaining": { "kind": "exact", "count": 12 } },
+              { "storeKey": "HubRewards", "remaining": { "kind": "exact", "count": 10 } },
+              { "storeKey": "SubRoomRewards", "remaining": { "kind": "exact", "count": 23 } },
+              { "storeKey": "SubRoomRewardsHard", "remaining": { "kind": "exact", "count": 8 } },
               {
                 "storeKey": "FieldsOptionalRewards",
-                "remaining": {
-                  "kind": "exact",
-                  "count": 19
-                }
+                "remaining": { "kind": "exact", "count": 19 }
               },
-              {
-                "storeKey": "TartarusRewards",
-                "remaining": {
-                  "kind": "exact",
-                  "count": 9
-                }
-              },
-              {
-                "storeKey": "TyphonBossRewards",
-                "remaining": {
-                  "kind": "exact",
-                  "count": 6
-                }
-              }
+              { "storeKey": "TartarusRewards", "remaining": { "kind": "exact", "count": 9 } },
+              { "storeKey": "TyphonBossRewards", "remaining": { "kind": "exact", "count": 6 } },
+              { "storeKey": "Secrets", "remaining": { "kind": "exact", "count": 1 } }
             ],
             "godPool": {
               "acquiredSourceKeys": ["ApolloUpgrade", "ZeusUpgrade"],
@@ -1243,49 +926,19 @@
             },
             "traits": {
               "equipped": [
-                {
-                  "traitKey": "ApolloWeaponBoon",
-                  "rarity": "Common",
-                  "level": 1
-                },
-                {
-                  "traitKey": "ZeusSpecialBoon",
-                  "rarity": "Common",
-                  "level": 1
-                }
+                { "traitKey": "ApolloWeaponBoon", "rarity": "Common", "level": 1 },
+                { "traitKey": "ZeusSpecialBoon", "rarity": "Common", "level": 1 }
               ],
               "slots": [
-                {
-                  "slot": "Melee",
-                  "traitKey": "ApolloWeaponBoon"
-                },
-                {
-                  "slot": "Secondary",
-                  "traitKey": "ZeusSpecialBoon"
-                },
-                {
-                  "slot": "Ranged"
-                },
-                {
-                  "slot": "Rush"
-                },
-                {
-                  "slot": "Mana"
-                },
-                {
-                  "slot": "Spell"
-                }
+                { "slot": "Melee", "traitKey": "ApolloWeaponBoon" },
+                { "slot": "Secondary", "traitKey": "ZeusSpecialBoon" },
+                { "slot": "Ranged" },
+                { "slot": "Rush" },
+                { "slot": "Mana" },
+                { "slot": "Spell" }
               ],
-              "elements": {
-                "Aether": 0,
-                "Earth": 0,
-                "Air": 2,
-                "Fire": 0,
-                "Water": 0
-              },
-              "godRarityCounts": {
-                "Common": 2
-              },
+              "elements": { "Aether": 0, "Earth": 0, "Air": 2, "Fire": 0, "Water": 0 },
+              "godRarityCounts": { "Common": 2 },
               "upgradableCount": 2,
               "bannedTraitKeys": []
             }
@@ -1306,19 +959,11 @@
           "resolvedStoreKey": "RunProgress"
         },
         "encounterPhases": [
-          {
-            "slotKey": "Encounter",
-            "encounterKey": "GeneratedF",
-            "kind": "combat"
-          }
+          { "slotKey": "Encounter", "encounterKey": "GeneratedF", "kind": "combat" }
         ],
         "requiredObjects": []
       },
-      "timeline": {
-        "transactions": [],
-        "dependencies": [],
-        "obligations": []
-      },
+      "timeline": { "transactions": [], "dependencies": [], "obligations": [] },
       "doors": {
         "owner": "[\"occurrence\",\"Underworld\",\"F\",\"golden-f-b2-e2\"]",
         "kind": "terminal"
@@ -1337,11 +982,7 @@
           "resolvedStoreKey": "RunProgress"
         },
         "encounterPhases": [
-          {
-            "slotKey": "Encounter",
-            "encounterKey": "GeneratedF",
-            "kind": "combat"
-          }
+          { "slotKey": "Encounter", "encounterKey": "GeneratedF", "kind": "combat" }
         ],
         "requiredObjects": []
       },
@@ -1370,10 +1011,7 @@
                 }
               }
             ],
-            "window": {
-              "kind": "standard",
-              "phase": "afterCombat"
-            }
+            "window": { "kind": "standard", "phase": "afterCombat" }
           }
         ],
         "dependencies": [],
@@ -1386,11 +1024,7 @@
           {
             "exitKey": "exit1",
             "index": 1,
-            "room": {
-              "id": "golden-f-b4-e1",
-              "biomeKey": "F",
-              "gameName": "F_Combat05"
-            },
+            "room": { "id": "golden-f-b4-e1", "biomeKey": "F", "gameName": "F_Combat05" },
             "zagreusContractPresent": false,
             "reward": {
               "rewardType": "StackUpgrade",
@@ -1401,11 +1035,7 @@
           {
             "exitKey": "exit2",
             "index": 2,
-            "room": {
-              "id": "golden-f-b4-e2",
-              "biomeKey": "F",
-              "gameName": "F_Combat11"
-            },
+            "room": { "id": "golden-f-b4-e2", "biomeKey": "F", "gameName": "F_Combat11" },
             "zagreusContractPresent": false,
             "reward": {
               "rewardType": "RoomMoneyDrop",
@@ -1416,13 +1046,7 @@
         ],
         "resolvedSharedRewardStoreKey": "RunProgress"
       },
-      "roomExitConformance": {
-        "facts": [
-          {
-            "kind": "elementCounts"
-          }
-        ]
-      },
+      "roomExitConformance": { "facts": [{ "kind": "elementCounts" }] },
       "diagnostics": {
         "roomEntered": {
           "frame": 6,
@@ -1442,62 +1066,18 @@
               "roomHistoryOrdinal": 4
             },
             "bags": [
-              {
-                "storeKey": "RunProgress",
-                "remaining": {
-                  "kind": "exact",
-                  "count": 11
-                }
-              },
-              {
-                "storeKey": "MetaProgress",
-                "remaining": {
-                  "kind": "exact",
-                  "count": 12
-                }
-              },
-              {
-                "storeKey": "HubRewards",
-                "remaining": {
-                  "kind": "exact",
-                  "count": 10
-                }
-              },
-              {
-                "storeKey": "SubRoomRewards",
-                "remaining": {
-                  "kind": "exact",
-                  "count": 23
-                }
-              },
-              {
-                "storeKey": "SubRoomRewardsHard",
-                "remaining": {
-                  "kind": "exact",
-                  "count": 8
-                }
-              },
+              { "storeKey": "RunProgress", "remaining": { "kind": "exact", "count": 11 } },
+              { "storeKey": "MetaProgress", "remaining": { "kind": "exact", "count": 12 } },
+              { "storeKey": "HubRewards", "remaining": { "kind": "exact", "count": 10 } },
+              { "storeKey": "SubRoomRewards", "remaining": { "kind": "exact", "count": 23 } },
+              { "storeKey": "SubRoomRewardsHard", "remaining": { "kind": "exact", "count": 8 } },
               {
                 "storeKey": "FieldsOptionalRewards",
-                "remaining": {
-                  "kind": "exact",
-                  "count": 19
-                }
+                "remaining": { "kind": "exact", "count": 19 }
               },
-              {
-                "storeKey": "TartarusRewards",
-                "remaining": {
-                  "kind": "exact",
-                  "count": 9
-                }
-              },
-              {
-                "storeKey": "TyphonBossRewards",
-                "remaining": {
-                  "kind": "exact",
-                  "count": 6
-                }
-              }
+              { "storeKey": "TartarusRewards", "remaining": { "kind": "exact", "count": 9 } },
+              { "storeKey": "TyphonBossRewards", "remaining": { "kind": "exact", "count": 6 } },
+              { "storeKey": "Secrets", "remaining": { "kind": "exact", "count": 1 } }
             ]
           }
         }
@@ -1516,19 +1096,11 @@
           "resolvedStoreKey": "RunProgress"
         },
         "encounterPhases": [
-          {
-            "slotKey": "Encounter",
-            "encounterKey": "GeneratedF",
-            "kind": "combat"
-          }
+          { "slotKey": "Encounter", "encounterKey": "GeneratedF", "kind": "combat" }
         ],
         "requiredObjects": []
       },
-      "timeline": {
-        "transactions": [],
-        "dependencies": [],
-        "obligations": []
-      },
+      "timeline": { "transactions": [], "dependencies": [], "obligations": [] },
       "doors": {
         "owner": "[\"occurrence\",\"Underworld\",\"F\",\"golden-f-b3-e2\"]",
         "kind": "terminal"
@@ -1547,11 +1119,7 @@
           "resolvedStoreKey": "RunProgress"
         },
         "encounterPhases": [
-          {
-            "slotKey": "Encounter",
-            "encounterKey": "GeneratedF",
-            "kind": "combat"
-          }
+          { "slotKey": "Encounter", "encounterKey": "GeneratedF", "kind": "combat" }
         ],
         "requiredObjects": []
       },
@@ -1585,10 +1153,7 @@
                 }
               }
             ],
-            "window": {
-              "kind": "standard",
-              "phase": "afterCombat"
-            }
+            "window": { "kind": "standard", "phase": "afterCombat" }
           }
         ],
         "dependencies": [],
@@ -1601,11 +1166,7 @@
           {
             "exitKey": "exit1",
             "index": 1,
-            "room": {
-              "id": "golden-f-b5-e1",
-              "biomeKey": "F",
-              "gameName": "F_Combat06"
-            },
+            "room": { "id": "golden-f-b5-e1", "biomeKey": "F", "gameName": "F_Combat06" },
             "zagreusContractPresent": false,
             "reward": {
               "rewardType": "MetaCardPointsCommonDrop",
@@ -1616,11 +1177,7 @@
           {
             "exitKey": "exit2",
             "index": 2,
-            "room": {
-              "id": "golden-f-b5-e2",
-              "biomeKey": "F",
-              "gameName": "F_Combat06"
-            },
+            "room": { "id": "golden-f-b5-e2", "biomeKey": "F", "gameName": "F_Combat06" },
             "zagreusContractPresent": false,
             "reward": {
               "rewardType": "MetaCurrencyDrop",
@@ -1632,14 +1189,7 @@
         "resolvedSharedRewardStoreKey": "MetaProgress"
       },
       "roomExitConformance": {
-        "facts": [
-          {
-            "kind": "elementCounts"
-          },
-          {
-            "kind": "traitInventory"
-          }
-        ]
+        "facts": [{ "kind": "elementCounts" }, { "kind": "traitInventory" }]
       },
       "diagnostics": {
         "roomEntered": {
@@ -1660,108 +1210,34 @@
               "roomHistoryOrdinal": 5
             },
             "bags": [
-              {
-                "storeKey": "RunProgress",
-                "remaining": {
-                  "kind": "exact",
-                  "count": 11
-                }
-              },
-              {
-                "storeKey": "MetaProgress",
-                "remaining": {
-                  "kind": "exact",
-                  "count": 10
-                }
-              },
-              {
-                "storeKey": "HubRewards",
-                "remaining": {
-                  "kind": "exact",
-                  "count": 10
-                }
-              },
-              {
-                "storeKey": "SubRoomRewards",
-                "remaining": {
-                  "kind": "exact",
-                  "count": 23
-                }
-              },
-              {
-                "storeKey": "SubRoomRewardsHard",
-                "remaining": {
-                  "kind": "exact",
-                  "count": 8
-                }
-              },
+              { "storeKey": "RunProgress", "remaining": { "kind": "exact", "count": 11 } },
+              { "storeKey": "MetaProgress", "remaining": { "kind": "exact", "count": 10 } },
+              { "storeKey": "HubRewards", "remaining": { "kind": "exact", "count": 10 } },
+              { "storeKey": "SubRoomRewards", "remaining": { "kind": "exact", "count": 23 } },
+              { "storeKey": "SubRoomRewardsHard", "remaining": { "kind": "exact", "count": 8 } },
               {
                 "storeKey": "FieldsOptionalRewards",
-                "remaining": {
-                  "kind": "exact",
-                  "count": 19
-                }
+                "remaining": { "kind": "exact", "count": 19 }
               },
-              {
-                "storeKey": "TartarusRewards",
-                "remaining": {
-                  "kind": "exact",
-                  "count": 9
-                }
-              },
-              {
-                "storeKey": "TyphonBossRewards",
-                "remaining": {
-                  "kind": "exact",
-                  "count": 6
-                }
-              }
+              { "storeKey": "TartarusRewards", "remaining": { "kind": "exact", "count": 9 } },
+              { "storeKey": "TyphonBossRewards", "remaining": { "kind": "exact", "count": 6 } },
+              { "storeKey": "Secrets", "remaining": { "kind": "exact", "count": 1 } }
             ],
             "traits": {
               "equipped": [
-                {
-                  "traitKey": "ApolloWeaponBoon",
-                  "rarity": "Common",
-                  "level": 2
-                },
-                {
-                  "traitKey": "ZeusSpecialBoon",
-                  "rarity": "Common",
-                  "level": 1
-                }
+                { "traitKey": "ApolloWeaponBoon", "rarity": "Common", "level": 2 },
+                { "traitKey": "ZeusSpecialBoon", "rarity": "Common", "level": 1 }
               ],
               "slots": [
-                {
-                  "slot": "Melee",
-                  "traitKey": "ApolloWeaponBoon"
-                },
-                {
-                  "slot": "Secondary",
-                  "traitKey": "ZeusSpecialBoon"
-                },
-                {
-                  "slot": "Ranged"
-                },
-                {
-                  "slot": "Rush"
-                },
-                {
-                  "slot": "Mana"
-                },
-                {
-                  "slot": "Spell"
-                }
+                { "slot": "Melee", "traitKey": "ApolloWeaponBoon" },
+                { "slot": "Secondary", "traitKey": "ZeusSpecialBoon" },
+                { "slot": "Ranged" },
+                { "slot": "Rush" },
+                { "slot": "Mana" },
+                { "slot": "Spell" }
               ],
-              "elements": {
-                "Aether": 0,
-                "Earth": 0,
-                "Air": 2,
-                "Fire": 0,
-                "Water": 0
-              },
-              "godRarityCounts": {
-                "Common": 2
-              },
+              "elements": { "Aether": 0, "Earth": 0, "Air": 2, "Fire": 0, "Water": 0 },
+              "godRarityCounts": { "Common": 2 },
               "upgradableCount": 2,
               "bannedTraitKeys": []
             }
@@ -1782,19 +1258,11 @@
           "resolvedStoreKey": "RunProgress"
         },
         "encounterPhases": [
-          {
-            "slotKey": "Encounter",
-            "encounterKey": "GeneratedF",
-            "kind": "combat"
-          }
+          { "slotKey": "Encounter", "encounterKey": "GeneratedF", "kind": "combat" }
         ],
         "requiredObjects": []
       },
-      "timeline": {
-        "transactions": [],
-        "dependencies": [],
-        "obligations": []
-      },
+      "timeline": { "transactions": [], "dependencies": [], "obligations": [] },
       "doors": {
         "owner": "[\"occurrence\",\"Underworld\",\"F\",\"golden-f-b4-e2\"]",
         "kind": "terminal"
@@ -1813,11 +1281,7 @@
           "resolvedStoreKey": "MetaProgress"
         },
         "encounterPhases": [
-          {
-            "slotKey": "Encounter",
-            "encounterKey": "GeneratedF",
-            "kind": "combat"
-          }
+          { "slotKey": "Encounter", "encounterKey": "GeneratedF", "kind": "combat" }
         ],
         "requiredObjects": []
       },
@@ -1846,10 +1310,7 @@
                 }
               }
             ],
-            "window": {
-              "kind": "standard",
-              "phase": "afterCombat"
-            }
+            "window": { "kind": "standard", "phase": "afterCombat" }
           }
         ],
         "dependencies": [],
@@ -1862,11 +1323,7 @@
           {
             "exitKey": "exit1",
             "index": 1,
-            "room": {
-              "id": "golden-f-b6-e1",
-              "biomeKey": "F",
-              "gameName": "F_MiniBoss01"
-            },
+            "room": { "id": "golden-f-b6-e1", "biomeKey": "F", "gameName": "F_MiniBoss01" },
             "zagreusContractPresent": false,
             "reward": {
               "rewardType": "Boon",
@@ -1878,11 +1335,7 @@
           {
             "exitKey": "exit2",
             "index": 2,
-            "room": {
-              "id": "golden-f-b6-e2",
-              "biomeKey": "F",
-              "gameName": "F_MiniBoss02"
-            },
+            "room": { "id": "golden-f-b6-e2", "biomeKey": "F", "gameName": "F_MiniBoss02" },
             "zagreusContractPresent": false,
             "reward": {
               "rewardType": "Boon",
@@ -1894,13 +1347,7 @@
         ],
         "resolvedSharedRewardStoreKey": "RunProgress"
       },
-      "roomExitConformance": {
-        "facts": [
-          {
-            "kind": "elementCounts"
-          }
-        ]
-      },
+      "roomExitConformance": { "facts": [{ "kind": "elementCounts" }] },
       "diagnostics": {
         "roomEntered": {
           "frame": 10,
@@ -1920,62 +1367,18 @@
               "roomHistoryOrdinal": 6
             },
             "bags": [
-              {
-                "storeKey": "RunProgress",
-                "remaining": {
-                  "kind": "exact",
-                  "count": 9
-                }
-              },
-              {
-                "storeKey": "MetaProgress",
-                "remaining": {
-                  "kind": "exact",
-                  "count": 10
-                }
-              },
-              {
-                "storeKey": "HubRewards",
-                "remaining": {
-                  "kind": "exact",
-                  "count": 10
-                }
-              },
-              {
-                "storeKey": "SubRoomRewards",
-                "remaining": {
-                  "kind": "exact",
-                  "count": 23
-                }
-              },
-              {
-                "storeKey": "SubRoomRewardsHard",
-                "remaining": {
-                  "kind": "exact",
-                  "count": 8
-                }
-              },
+              { "storeKey": "RunProgress", "remaining": { "kind": "exact", "count": 9 } },
+              { "storeKey": "MetaProgress", "remaining": { "kind": "exact", "count": 10 } },
+              { "storeKey": "HubRewards", "remaining": { "kind": "exact", "count": 10 } },
+              { "storeKey": "SubRoomRewards", "remaining": { "kind": "exact", "count": 23 } },
+              { "storeKey": "SubRoomRewardsHard", "remaining": { "kind": "exact", "count": 8 } },
               {
                 "storeKey": "FieldsOptionalRewards",
-                "remaining": {
-                  "kind": "exact",
-                  "count": 19
-                }
+                "remaining": { "kind": "exact", "count": 19 }
               },
-              {
-                "storeKey": "TartarusRewards",
-                "remaining": {
-                  "kind": "exact",
-                  "count": 9
-                }
-              },
-              {
-                "storeKey": "TyphonBossRewards",
-                "remaining": {
-                  "kind": "exact",
-                  "count": 6
-                }
-              }
+              { "storeKey": "TartarusRewards", "remaining": { "kind": "exact", "count": 9 } },
+              { "storeKey": "TyphonBossRewards", "remaining": { "kind": "exact", "count": 6 } },
+              { "storeKey": "Secrets", "remaining": { "kind": "exact", "count": 1 } }
             ]
           }
         }
@@ -1994,19 +1397,11 @@
           "resolvedStoreKey": "MetaProgress"
         },
         "encounterPhases": [
-          {
-            "slotKey": "Encounter",
-            "encounterKey": "GeneratedF",
-            "kind": "combat"
-          }
+          { "slotKey": "Encounter", "encounterKey": "GeneratedF", "kind": "combat" }
         ],
         "requiredObjects": []
       },
-      "timeline": {
-        "transactions": [],
-        "dependencies": [],
-        "obligations": []
-      },
+      "timeline": { "transactions": [], "dependencies": [], "obligations": [] },
       "doors": {
         "owner": "[\"occurrence\",\"Underworld\",\"F\",\"golden-f-b5-e2\"]",
         "kind": "terminal"
@@ -2026,11 +1421,7 @@
           "source": "HeraUpgrade"
         },
         "encounterPhases": [
-          {
-            "slotKey": "Encounter",
-            "encounterKey": "MiniBossTreant",
-            "kind": "miniboss"
-          }
+          { "slotKey": "Encounter", "encounterKey": "MiniBossTreant", "kind": "miniboss" }
         ],
         "requiredObjects": []
       },
@@ -2062,30 +1453,15 @@
                   "kind": "traits",
                   "giver": "Hera",
                   "options": [
-                    {
-                      "key": "HeraCastBoon",
-                      "rarity": "Common",
-                      "effectiveLevel": 1
-                    },
-                    {
-                      "key": "HeraSprintBoon",
-                      "rarity": "Common",
-                      "effectiveLevel": 1
-                    },
-                    {
-                      "key": "HeraManaBoon",
-                      "rarity": "Common",
-                      "effectiveLevel": 1
-                    }
+                    { "key": "HeraCastBoon", "rarity": "Common", "effectiveLevel": 1 },
+                    { "key": "HeraSprintBoon", "rarity": "Common", "effectiveLevel": 1 },
+                    { "key": "HeraManaBoon", "rarity": "Common", "effectiveLevel": 1 }
                   ],
                   "selected": "option1"
                 }
               }
             ],
-            "window": {
-              "kind": "standard",
-              "phase": "afterCombat"
-            }
+            "window": { "kind": "standard", "phase": "afterCombat" }
           }
         ],
         "dependencies": [],
@@ -2098,11 +1474,7 @@
           {
             "exitKey": "exit1",
             "index": 1,
-            "room": {
-              "id": "golden-f-b7-e1",
-              "biomeKey": "F",
-              "gameName": "F_Combat11"
-            },
+            "room": { "id": "golden-f-b7-e1", "biomeKey": "F", "gameName": "F_Combat11" },
             "zagreusContractPresent": false,
             "reward": {
               "rewardType": "MaxManaDrop",
@@ -2114,14 +1486,7 @@
         "resolvedSharedRewardStoreKey": "RunProgress"
       },
       "roomExitConformance": {
-        "facts": [
-          {
-            "kind": "elementCounts"
-          },
-          {
-            "kind": "traitInventory"
-          }
-        ]
+        "facts": [{ "kind": "elementCounts" }, { "kind": "traitInventory" }]
       },
       "diagnostics": {
         "roomEntered": {
@@ -2142,62 +1507,18 @@
               "roomHistoryOrdinal": 7
             },
             "bags": [
-              {
-                "storeKey": "RunProgress",
-                "remaining": {
-                  "kind": "exact",
-                  "count": 8
-                }
-              },
-              {
-                "storeKey": "MetaProgress",
-                "remaining": {
-                  "kind": "exact",
-                  "count": 10
-                }
-              },
-              {
-                "storeKey": "HubRewards",
-                "remaining": {
-                  "kind": "exact",
-                  "count": 10
-                }
-              },
-              {
-                "storeKey": "SubRoomRewards",
-                "remaining": {
-                  "kind": "exact",
-                  "count": 23
-                }
-              },
-              {
-                "storeKey": "SubRoomRewardsHard",
-                "remaining": {
-                  "kind": "exact",
-                  "count": 8
-                }
-              },
+              { "storeKey": "RunProgress", "remaining": { "kind": "exact", "count": 8 } },
+              { "storeKey": "MetaProgress", "remaining": { "kind": "exact", "count": 10 } },
+              { "storeKey": "HubRewards", "remaining": { "kind": "exact", "count": 10 } },
+              { "storeKey": "SubRoomRewards", "remaining": { "kind": "exact", "count": 23 } },
+              { "storeKey": "SubRoomRewardsHard", "remaining": { "kind": "exact", "count": 8 } },
               {
                 "storeKey": "FieldsOptionalRewards",
-                "remaining": {
-                  "kind": "exact",
-                  "count": 19
-                }
+                "remaining": { "kind": "exact", "count": 19 }
               },
-              {
-                "storeKey": "TartarusRewards",
-                "remaining": {
-                  "kind": "exact",
-                  "count": 9
-                }
-              },
-              {
-                "storeKey": "TyphonBossRewards",
-                "remaining": {
-                  "kind": "exact",
-                  "count": 6
-                }
-              }
+              { "storeKey": "TartarusRewards", "remaining": { "kind": "exact", "count": 9 } },
+              { "storeKey": "TyphonBossRewards", "remaining": { "kind": "exact", "count": 6 } },
+              { "storeKey": "Secrets", "remaining": { "kind": "exact", "count": 1 } }
             ],
             "godPool": {
               "acquiredSourceKeys": ["ApolloUpgrade", "HeraUpgrade", "ZeusUpgrade"],
@@ -2216,55 +1537,20 @@
             },
             "traits": {
               "equipped": [
-                {
-                  "traitKey": "ApolloWeaponBoon",
-                  "rarity": "Common",
-                  "level": 2
-                },
-                {
-                  "traitKey": "ZeusSpecialBoon",
-                  "rarity": "Common",
-                  "level": 1
-                },
-                {
-                  "traitKey": "HeraCastBoon",
-                  "rarity": "Common",
-                  "level": 1
-                }
+                { "traitKey": "ApolloWeaponBoon", "rarity": "Common", "level": 2 },
+                { "traitKey": "ZeusSpecialBoon", "rarity": "Common", "level": 1 },
+                { "traitKey": "HeraCastBoon", "rarity": "Common", "level": 1 }
               ],
               "slots": [
-                {
-                  "slot": "Melee",
-                  "traitKey": "ApolloWeaponBoon"
-                },
-                {
-                  "slot": "Secondary",
-                  "traitKey": "ZeusSpecialBoon"
-                },
-                {
-                  "slot": "Ranged",
-                  "traitKey": "HeraCastBoon"
-                },
-                {
-                  "slot": "Rush"
-                },
-                {
-                  "slot": "Mana"
-                },
-                {
-                  "slot": "Spell"
-                }
+                { "slot": "Melee", "traitKey": "ApolloWeaponBoon" },
+                { "slot": "Secondary", "traitKey": "ZeusSpecialBoon" },
+                { "slot": "Ranged", "traitKey": "HeraCastBoon" },
+                { "slot": "Rush" },
+                { "slot": "Mana" },
+                { "slot": "Spell" }
               ],
-              "elements": {
-                "Aether": 0,
-                "Earth": 0,
-                "Air": 3,
-                "Fire": 0,
-                "Water": 0
-              },
-              "godRarityCounts": {
-                "Common": 3
-              },
+              "elements": { "Aether": 0, "Earth": 0, "Air": 3, "Fire": 0, "Water": 0 },
+              "godRarityCounts": { "Common": 3 },
               "upgradableCount": 3,
               "bannedTraitKeys": []
             }
@@ -2286,19 +1572,11 @@
           "source": "PoseidonUpgrade"
         },
         "encounterPhases": [
-          {
-            "slotKey": "Encounter",
-            "encounterKey": "MiniBossFogEmitter",
-            "kind": "miniboss"
-          }
+          { "slotKey": "Encounter", "encounterKey": "MiniBossFogEmitter", "kind": "miniboss" }
         ],
         "requiredObjects": []
       },
-      "timeline": {
-        "transactions": [],
-        "dependencies": [],
-        "obligations": []
-      },
+      "timeline": { "transactions": [], "dependencies": [], "obligations": [] },
       "doors": {
         "owner": "[\"occurrence\",\"Underworld\",\"F\",\"golden-f-b6-e2\"]",
         "kind": "terminal"
@@ -2317,11 +1595,7 @@
           "resolvedStoreKey": "RunProgress"
         },
         "encounterPhases": [
-          {
-            "slotKey": "Encounter",
-            "encounterKey": "GeneratedF",
-            "kind": "combat"
-          }
+          { "slotKey": "Encounter", "encounterKey": "GeneratedF", "kind": "combat" }
         ],
         "requiredObjects": []
       },
@@ -2350,10 +1624,7 @@
                 }
               }
             ],
-            "window": {
-              "kind": "standard",
-              "phase": "afterCombat"
-            }
+            "window": { "kind": "standard", "phase": "afterCombat" }
           }
         ],
         "dependencies": [],
@@ -2366,11 +1637,7 @@
           {
             "exitKey": "exit1",
             "index": 1,
-            "room": {
-              "id": "golden-f-b8-e1",
-              "biomeKey": "F",
-              "gameName": "F_Combat12"
-            },
+            "room": { "id": "golden-f-b8-e1", "biomeKey": "F", "gameName": "F_Combat12" },
             "zagreusContractPresent": false,
             "reward": {
               "rewardType": "WeaponUpgrade",
@@ -2381,11 +1648,7 @@
           {
             "exitKey": "exit2",
             "index": 2,
-            "room": {
-              "id": "golden-f-b8-e2",
-              "biomeKey": "F",
-              "gameName": "F_Combat12"
-            },
+            "room": { "id": "golden-f-b8-e2", "biomeKey": "F", "gameName": "F_Combat12" },
             "zagreusContractPresent": false,
             "reward": {
               "rewardType": "HermesUpgrade",
@@ -2396,13 +1659,7 @@
         ],
         "resolvedSharedRewardStoreKey": "RunProgress"
       },
-      "roomExitConformance": {
-        "facts": [
-          {
-            "kind": "elementCounts"
-          }
-        ]
-      },
+      "roomExitConformance": { "facts": [{ "kind": "elementCounts" }] },
       "diagnostics": {
         "roomEntered": {
           "frame": 14,
@@ -2422,62 +1679,18 @@
               "roomHistoryOrdinal": 8
             },
             "bags": [
-              {
-                "storeKey": "RunProgress",
-                "remaining": {
-                  "kind": "exact",
-                  "count": 6
-                }
-              },
-              {
-                "storeKey": "MetaProgress",
-                "remaining": {
-                  "kind": "exact",
-                  "count": 10
-                }
-              },
-              {
-                "storeKey": "HubRewards",
-                "remaining": {
-                  "kind": "exact",
-                  "count": 10
-                }
-              },
-              {
-                "storeKey": "SubRoomRewards",
-                "remaining": {
-                  "kind": "exact",
-                  "count": 23
-                }
-              },
-              {
-                "storeKey": "SubRoomRewardsHard",
-                "remaining": {
-                  "kind": "exact",
-                  "count": 8
-                }
-              },
+              { "storeKey": "RunProgress", "remaining": { "kind": "exact", "count": 6 } },
+              { "storeKey": "MetaProgress", "remaining": { "kind": "exact", "count": 10 } },
+              { "storeKey": "HubRewards", "remaining": { "kind": "exact", "count": 10 } },
+              { "storeKey": "SubRoomRewards", "remaining": { "kind": "exact", "count": 23 } },
+              { "storeKey": "SubRoomRewardsHard", "remaining": { "kind": "exact", "count": 8 } },
               {
                 "storeKey": "FieldsOptionalRewards",
-                "remaining": {
-                  "kind": "exact",
-                  "count": 19
-                }
+                "remaining": { "kind": "exact", "count": 19 }
               },
-              {
-                "storeKey": "TartarusRewards",
-                "remaining": {
-                  "kind": "exact",
-                  "count": 9
-                }
-              },
-              {
-                "storeKey": "TyphonBossRewards",
-                "remaining": {
-                  "kind": "exact",
-                  "count": 6
-                }
-              }
+              { "storeKey": "TartarusRewards", "remaining": { "kind": "exact", "count": 9 } },
+              { "storeKey": "TyphonBossRewards", "remaining": { "kind": "exact", "count": 6 } },
+              { "storeKey": "Secrets", "remaining": { "kind": "exact", "count": 1 } }
             ]
           }
         }
@@ -2496,11 +1709,7 @@
           "resolvedStoreKey": "RunProgress"
         },
         "encounterPhases": [
-          {
-            "slotKey": "Encounter",
-            "encounterKey": "GeneratedF",
-            "kind": "combat"
-          }
+          { "slotKey": "Encounter", "encounterKey": "GeneratedF", "kind": "combat" }
         ],
         "requiredObjects": []
       },
@@ -2531,24 +1740,15 @@
                   "kind": "traits",
                   "giver": "WeaponUpgrade",
                   "options": [
-                    {
-                      "key": "StaffDoubleAttackTrait"
-                    },
-                    {
-                      "key": "StaffLongAttackTrait"
-                    },
-                    {
-                      "key": "StaffDashAttackTrait"
-                    }
+                    { "key": "StaffDoubleAttackTrait" },
+                    { "key": "StaffLongAttackTrait" },
+                    { "key": "StaffDashAttackTrait" }
                   ],
                   "selected": "option1"
                 }
               }
             ],
-            "window": {
-              "kind": "standard",
-              "phase": "afterCombat"
-            }
+            "window": { "kind": "standard", "phase": "afterCombat" }
           }
         ],
         "dependencies": [],
@@ -2561,11 +1761,7 @@
           {
             "exitKey": "exit1",
             "index": 1,
-            "room": {
-              "id": "golden-f-b9-e1",
-              "biomeKey": "F",
-              "gameName": "F_Combat14"
-            },
+            "room": { "id": "golden-f-b9-e1", "biomeKey": "F", "gameName": "F_Combat14" },
             "zagreusContractPresent": false,
             "reward": {
               "rewardType": "MetaCardPointsCommonDrop",
@@ -2576,11 +1772,7 @@
           {
             "exitKey": "exit2",
             "index": 2,
-            "room": {
-              "id": "golden-f-b9-e2",
-              "biomeKey": "F",
-              "gameName": "F_Combat14"
-            },
+            "room": { "id": "golden-f-b9-e2", "biomeKey": "F", "gameName": "F_Combat14" },
             "zagreusContractPresent": false,
             "reward": {
               "rewardType": "GiftDrop",
@@ -2592,14 +1784,7 @@
         "resolvedSharedRewardStoreKey": "MetaProgress"
       },
       "roomExitConformance": {
-        "facts": [
-          {
-            "kind": "elementCounts"
-          },
-          {
-            "kind": "traitInventory"
-          }
-        ]
+        "facts": [{ "kind": "elementCounts" }, { "kind": "traitInventory" }]
       },
       "diagnostics": {
         "roomEntered": {
@@ -2620,118 +1805,36 @@
               "roomHistoryOrdinal": 9
             },
             "bags": [
-              {
-                "storeKey": "RunProgress",
-                "remaining": {
-                  "kind": "exact",
-                  "count": 6
-                }
-              },
-              {
-                "storeKey": "MetaProgress",
-                "remaining": {
-                  "kind": "exact",
-                  "count": 8
-                }
-              },
-              {
-                "storeKey": "HubRewards",
-                "remaining": {
-                  "kind": "exact",
-                  "count": 10
-                }
-              },
-              {
-                "storeKey": "SubRoomRewards",
-                "remaining": {
-                  "kind": "exact",
-                  "count": 23
-                }
-              },
-              {
-                "storeKey": "SubRoomRewardsHard",
-                "remaining": {
-                  "kind": "exact",
-                  "count": 8
-                }
-              },
+              { "storeKey": "RunProgress", "remaining": { "kind": "exact", "count": 6 } },
+              { "storeKey": "MetaProgress", "remaining": { "kind": "exact", "count": 8 } },
+              { "storeKey": "HubRewards", "remaining": { "kind": "exact", "count": 10 } },
+              { "storeKey": "SubRoomRewards", "remaining": { "kind": "exact", "count": 23 } },
+              { "storeKey": "SubRoomRewardsHard", "remaining": { "kind": "exact", "count": 8 } },
               {
                 "storeKey": "FieldsOptionalRewards",
-                "remaining": {
-                  "kind": "exact",
-                  "count": 19
-                }
+                "remaining": { "kind": "exact", "count": 19 }
               },
-              {
-                "storeKey": "TartarusRewards",
-                "remaining": {
-                  "kind": "exact",
-                  "count": 9
-                }
-              },
-              {
-                "storeKey": "TyphonBossRewards",
-                "remaining": {
-                  "kind": "exact",
-                  "count": 6
-                }
-              }
+              { "storeKey": "TartarusRewards", "remaining": { "kind": "exact", "count": 9 } },
+              { "storeKey": "TyphonBossRewards", "remaining": { "kind": "exact", "count": 6 } },
+              { "storeKey": "Secrets", "remaining": { "kind": "exact", "count": 1 } }
             ],
             "traits": {
               "equipped": [
-                {
-                  "traitKey": "ApolloWeaponBoon",
-                  "rarity": "Common",
-                  "level": 2
-                },
-                {
-                  "traitKey": "ZeusSpecialBoon",
-                  "rarity": "Common",
-                  "level": 1
-                },
-                {
-                  "traitKey": "HeraCastBoon",
-                  "rarity": "Common",
-                  "level": 1
-                },
-                {
-                  "traitKey": "StaffDoubleAttackTrait",
-                  "hammerRank": "RankI"
-                }
+                { "traitKey": "ApolloWeaponBoon", "rarity": "Common", "level": 2 },
+                { "traitKey": "ZeusSpecialBoon", "rarity": "Common", "level": 1 },
+                { "traitKey": "HeraCastBoon", "rarity": "Common", "level": 1 },
+                { "traitKey": "StaffDoubleAttackTrait", "hammerRank": "RankI" }
               ],
               "slots": [
-                {
-                  "slot": "Melee",
-                  "traitKey": "ApolloWeaponBoon"
-                },
-                {
-                  "slot": "Secondary",
-                  "traitKey": "ZeusSpecialBoon"
-                },
-                {
-                  "slot": "Ranged",
-                  "traitKey": "HeraCastBoon"
-                },
-                {
-                  "slot": "Rush"
-                },
-                {
-                  "slot": "Mana"
-                },
-                {
-                  "slot": "Spell"
-                }
+                { "slot": "Melee", "traitKey": "ApolloWeaponBoon" },
+                { "slot": "Secondary", "traitKey": "ZeusSpecialBoon" },
+                { "slot": "Ranged", "traitKey": "HeraCastBoon" },
+                { "slot": "Rush" },
+                { "slot": "Mana" },
+                { "slot": "Spell" }
               ],
-              "elements": {
-                "Aether": 0,
-                "Earth": 0,
-                "Air": 3,
-                "Fire": 0,
-                "Water": 0
-              },
-              "godRarityCounts": {
-                "Common": 3
-              },
+              "elements": { "Aether": 0, "Earth": 0, "Air": 3, "Fire": 0, "Water": 0 },
+              "godRarityCounts": { "Common": 3 },
               "upgradableCount": 3,
               "bannedTraitKeys": []
             }
@@ -2752,19 +1855,11 @@
           "resolvedStoreKey": "RunProgress"
         },
         "encounterPhases": [
-          {
-            "slotKey": "Encounter",
-            "encounterKey": "GeneratedF",
-            "kind": "combat"
-          }
+          { "slotKey": "Encounter", "encounterKey": "GeneratedF", "kind": "combat" }
         ],
         "requiredObjects": []
       },
-      "timeline": {
-        "transactions": [],
-        "dependencies": [],
-        "obligations": []
-      },
+      "timeline": { "transactions": [], "dependencies": [], "obligations": [] },
       "doors": {
         "owner": "[\"occurrence\",\"Underworld\",\"F\",\"golden-f-b8-e2\"]",
         "kind": "terminal"
@@ -2783,11 +1878,7 @@
           "resolvedStoreKey": "MetaProgress"
         },
         "encounterPhases": [
-          {
-            "slotKey": "Encounter",
-            "encounterKey": "GeneratedF",
-            "kind": "combat"
-          }
+          { "slotKey": "Encounter", "encounterKey": "GeneratedF", "kind": "combat" }
         ],
         "requiredObjects": []
       },
@@ -2816,10 +1907,7 @@
                 }
               }
             ],
-            "window": {
-              "kind": "standard",
-              "phase": "afterCombat"
-            }
+            "window": { "kind": "standard", "phase": "afterCombat" }
           }
         ],
         "dependencies": [],
@@ -2832,11 +1920,7 @@
           {
             "exitKey": "exit1",
             "index": 1,
-            "room": {
-              "id": "golden-f-b10-e1",
-              "biomeKey": "F",
-              "gameName": "F_Combat15"
-            },
+            "room": { "id": "golden-f-b10-e1", "biomeKey": "F", "gameName": "F_Combat15" },
             "zagreusContractPresent": false,
             "reward": {
               "rewardType": "RoomMoneyDrop",
@@ -2847,11 +1931,7 @@
           {
             "exitKey": "exit2",
             "index": 2,
-            "room": {
-              "id": "golden-f-b10-e2",
-              "biomeKey": "F",
-              "gameName": "F_Combat15"
-            },
+            "room": { "id": "golden-f-b10-e2", "biomeKey": "F", "gameName": "F_Combat15" },
             "zagreusContractPresent": false,
             "reward": {
               "rewardType": "SpellDrop",
@@ -2862,13 +1942,7 @@
         ],
         "resolvedSharedRewardStoreKey": "RunProgress"
       },
-      "roomExitConformance": {
-        "facts": [
-          {
-            "kind": "elementCounts"
-          }
-        ]
-      },
+      "roomExitConformance": { "facts": [{ "kind": "elementCounts" }] },
       "diagnostics": {
         "roomEntered": {
           "frame": 18,
@@ -2888,62 +1962,18 @@
               "roomHistoryOrdinal": 10
             },
             "bags": [
-              {
-                "storeKey": "RunProgress",
-                "remaining": {
-                  "kind": "exact",
-                  "count": 4
-                }
-              },
-              {
-                "storeKey": "MetaProgress",
-                "remaining": {
-                  "kind": "exact",
-                  "count": 8
-                }
-              },
-              {
-                "storeKey": "HubRewards",
-                "remaining": {
-                  "kind": "exact",
-                  "count": 10
-                }
-              },
-              {
-                "storeKey": "SubRoomRewards",
-                "remaining": {
-                  "kind": "exact",
-                  "count": 23
-                }
-              },
-              {
-                "storeKey": "SubRoomRewardsHard",
-                "remaining": {
-                  "kind": "exact",
-                  "count": 8
-                }
-              },
+              { "storeKey": "RunProgress", "remaining": { "kind": "exact", "count": 4 } },
+              { "storeKey": "MetaProgress", "remaining": { "kind": "exact", "count": 8 } },
+              { "storeKey": "HubRewards", "remaining": { "kind": "exact", "count": 10 } },
+              { "storeKey": "SubRoomRewards", "remaining": { "kind": "exact", "count": 23 } },
+              { "storeKey": "SubRoomRewardsHard", "remaining": { "kind": "exact", "count": 8 } },
               {
                 "storeKey": "FieldsOptionalRewards",
-                "remaining": {
-                  "kind": "exact",
-                  "count": 19
-                }
+                "remaining": { "kind": "exact", "count": 19 }
               },
-              {
-                "storeKey": "TartarusRewards",
-                "remaining": {
-                  "kind": "exact",
-                  "count": 9
-                }
-              },
-              {
-                "storeKey": "TyphonBossRewards",
-                "remaining": {
-                  "kind": "exact",
-                  "count": 6
-                }
-              }
+              { "storeKey": "TartarusRewards", "remaining": { "kind": "exact", "count": 9 } },
+              { "storeKey": "TyphonBossRewards", "remaining": { "kind": "exact", "count": 6 } },
+              { "storeKey": "Secrets", "remaining": { "kind": "exact", "count": 1 } }
             ]
           }
         }
@@ -2962,19 +1992,11 @@
           "resolvedStoreKey": "MetaProgress"
         },
         "encounterPhases": [
-          {
-            "slotKey": "Encounter",
-            "encounterKey": "GeneratedF",
-            "kind": "combat"
-          }
+          { "slotKey": "Encounter", "encounterKey": "GeneratedF", "kind": "combat" }
         ],
         "requiredObjects": []
       },
-      "timeline": {
-        "transactions": [],
-        "dependencies": [],
-        "obligations": []
-      },
+      "timeline": { "transactions": [], "dependencies": [], "obligations": [] },
       "doors": {
         "owner": "[\"occurrence\",\"Underworld\",\"F\",\"golden-f-b9-e2\"]",
         "kind": "terminal"
@@ -2993,11 +2015,7 @@
           "resolvedStoreKey": "RunProgress"
         },
         "encounterPhases": [
-          {
-            "slotKey": "Encounter",
-            "encounterKey": "GeneratedF",
-            "kind": "combat"
-          }
+          { "slotKey": "Encounter", "encounterKey": "GeneratedF", "kind": "combat" }
         ],
         "requiredObjects": []
       },
@@ -3026,10 +2044,7 @@
                 }
               }
             ],
-            "window": {
-              "kind": "standard",
-              "phase": "afterCombat"
-            }
+            "window": { "kind": "standard", "phase": "afterCombat" }
           }
         ],
         "dependencies": [],
@@ -3042,11 +2057,7 @@
           {
             "exitKey": "exit1",
             "index": 1,
-            "room": {
-              "id": "golden-f-preboss-shop",
-              "biomeKey": "F",
-              "gameName": "F_PreBoss01"
-            },
+            "room": { "id": "golden-f-preboss-shop", "biomeKey": "F", "gameName": "F_PreBoss01" },
             "zagreusContractPresent": false,
             "reward": {
               "rewardType": "Shop",
@@ -3057,11 +2068,7 @@
           {
             "exitKey": "exit2",
             "index": 2,
-            "room": {
-              "id": "golden-f-preboss-free",
-              "biomeKey": "F",
-              "gameName": "F_PreBoss01"
-            },
+            "room": { "id": "golden-f-preboss-free", "biomeKey": "F", "gameName": "F_PreBoss01" },
             "zagreusContractPresent": false,
             "reward": {
               "rewardType": "StackUpgrade",
@@ -3072,13 +2079,7 @@
         ],
         "resolvedSharedRewardStoreKey": "RunProgress"
       },
-      "roomExitConformance": {
-        "facts": [
-          {
-            "kind": "elementCounts"
-          }
-        ]
-      },
+      "roomExitConformance": { "facts": [{ "kind": "elementCounts" }] },
       "diagnostics": {
         "roomEntered": {
           "frame": 20,
@@ -3098,62 +2099,18 @@
               "roomHistoryOrdinal": 11
             },
             "bags": [
-              {
-                "storeKey": "RunProgress",
-                "remaining": {
-                  "kind": "exact",
-                  "count": 3
-                }
-              },
-              {
-                "storeKey": "MetaProgress",
-                "remaining": {
-                  "kind": "exact",
-                  "count": 8
-                }
-              },
-              {
-                "storeKey": "HubRewards",
-                "remaining": {
-                  "kind": "exact",
-                  "count": 10
-                }
-              },
-              {
-                "storeKey": "SubRoomRewards",
-                "remaining": {
-                  "kind": "exact",
-                  "count": 23
-                }
-              },
-              {
-                "storeKey": "SubRoomRewardsHard",
-                "remaining": {
-                  "kind": "exact",
-                  "count": 8
-                }
-              },
+              { "storeKey": "RunProgress", "remaining": { "kind": "exact", "count": 3 } },
+              { "storeKey": "MetaProgress", "remaining": { "kind": "exact", "count": 8 } },
+              { "storeKey": "HubRewards", "remaining": { "kind": "exact", "count": 10 } },
+              { "storeKey": "SubRoomRewards", "remaining": { "kind": "exact", "count": 23 } },
+              { "storeKey": "SubRoomRewardsHard", "remaining": { "kind": "exact", "count": 8 } },
               {
                 "storeKey": "FieldsOptionalRewards",
-                "remaining": {
-                  "kind": "exact",
-                  "count": 19
-                }
+                "remaining": { "kind": "exact", "count": 19 }
               },
-              {
-                "storeKey": "TartarusRewards",
-                "remaining": {
-                  "kind": "exact",
-                  "count": 9
-                }
-              },
-              {
-                "storeKey": "TyphonBossRewards",
-                "remaining": {
-                  "kind": "exact",
-                  "count": 6
-                }
-              }
+              { "storeKey": "TartarusRewards", "remaining": { "kind": "exact", "count": 9 } },
+              { "storeKey": "TyphonBossRewards", "remaining": { "kind": "exact", "count": 6 } },
+              { "storeKey": "Secrets", "remaining": { "kind": "exact", "count": 1 } }
             ]
           }
         }
@@ -3172,19 +2129,11 @@
           "resolvedStoreKey": "RunProgress"
         },
         "encounterPhases": [
-          {
-            "slotKey": "Encounter",
-            "encounterKey": "GeneratedF",
-            "kind": "combat"
-          }
+          { "slotKey": "Encounter", "encounterKey": "GeneratedF", "kind": "combat" }
         ],
         "requiredObjects": []
       },
-      "timeline": {
-        "transactions": [],
-        "dependencies": [],
-        "obligations": []
-      },
+      "timeline": { "transactions": [], "dependencies": [], "obligations": [] },
       "doors": {
         "owner": "[\"occurrence\",\"Underworld\",\"F\",\"golden-f-b10-e2\"]",
         "kind": "terminal"
@@ -3203,11 +2152,7 @@
           "resolvedStoreKey": "RunProgress"
         },
         "encounterPhases": [
-          {
-            "slotKey": "Encounter",
-            "encounterKey": "Shop",
-            "kind": "nonCombat"
-          }
+          { "slotKey": "Encounter", "encounterKey": "Shop", "kind": "nonCombat" }
         ],
         "requiredObjects": [],
         "shop": {
@@ -3224,36 +2169,18 @@
               "optionKey": "RoomRewardHealDrop",
               "rewardType": "RoomRewardHealDrop"
             },
-            {
-              "offerKey": "Minor",
-              "optionKey": "MaxManaDrop",
-              "rewardType": "MaxManaDrop"
-            }
+            { "offerKey": "Minor", "optionKey": "MaxManaDrop", "rewardType": "MaxManaDrop" }
           ]
         }
       },
-      "timeline": {
-        "transactions": [],
-        "dependencies": [],
-        "obligations": []
-      },
+      "timeline": { "transactions": [], "dependencies": [], "obligations": [] },
       "doors": {
         "owner": "[\"occurrence\",\"Underworld\",\"F\",\"golden-f-preboss-shop\"]",
         "kind": "fixed",
-        "target": {
-          "id": "golden-f-preboss-shop:boss",
-          "biomeKey": "F",
-          "gameName": "F_Boss01"
-        },
+        "target": { "id": "golden-f-preboss-shop:boss", "biomeKey": "F", "gameName": "F_Boss01" },
         "zagreusContractPresent": false
       },
-      "roomExitConformance": {
-        "facts": [
-          {
-            "kind": "elementCounts"
-          }
-        ]
-      },
+      "roomExitConformance": { "facts": [{ "kind": "elementCounts" }] },
       "diagnostics": {
         "roomEntered": {
           "frame": 22,
@@ -3289,19 +2216,11 @@
           "resolvedStoreKey": "RunProgress"
         },
         "encounterPhases": [
-          {
-            "slotKey": "Encounter",
-            "encounterKey": "Shop",
-            "kind": "nonCombat"
-          }
+          { "slotKey": "Encounter", "encounterKey": "Shop", "kind": "nonCombat" }
         ],
         "requiredObjects": []
       },
-      "timeline": {
-        "transactions": [],
-        "dependencies": [],
-        "obligations": []
-      },
+      "timeline": { "transactions": [], "dependencies": [], "obligations": [] },
       "doors": {
         "owner": "[\"occurrence\",\"Underworld\",\"F\",\"golden-f-preboss-free\"]",
         "kind": "terminal"
@@ -3316,19 +2235,11 @@
       "overview": {
         "effectNeutralRequiredReward": true,
         "encounterPhases": [
-          {
-            "slotKey": "Encounter",
-            "encounterKey": "BossHecate01",
-            "kind": "boss"
-          }
+          { "slotKey": "Encounter", "encounterKey": "BossHecate01", "kind": "boss" }
         ],
         "requiredObjects": []
       },
-      "timeline": {
-        "transactions": [],
-        "dependencies": [],
-        "obligations": []
-      },
+      "timeline": { "transactions": [], "dependencies": [], "obligations": [] },
       "doors": {
         "owner": "[\"occurrence\",\"Underworld\",\"F\",\"golden-f-preboss-shop:boss\"]",
         "kind": "fixed",
@@ -3339,13 +2250,7 @@
         },
         "zagreusContractPresent": false
       },
-      "roomExitConformance": {
-        "facts": [
-          {
-            "kind": "elementCounts"
-          }
-        ]
-      },
+      "roomExitConformance": { "facts": [{ "kind": "elementCounts" }] },
       "diagnostics": {
         "roomEntered": {
           "frame": 24,
@@ -3377,19 +2282,11 @@
       "resumeBoundary": "postbossEntry",
       "overview": {
         "encounterPhases": [
-          {
-            "slotKey": "Encounter",
-            "encounterKey": "Empty",
-            "kind": "nonCombat"
-          }
+          { "slotKey": "Encounter", "encounterKey": "Empty", "kind": "nonCombat" }
         ],
         "requiredObjects": [],
-        "stygianWell": {
-          "interacted": false
-        },
-        "purgingPool": {
-          "interacted": false
-        },
+        "stygianWell": { "interacted": false },
+        "purgingPool": { "interacted": false },
         "keepsakeRack": {},
         "fountain": {}
       },
@@ -3399,10 +2296,7 @@
             "kind": "fountainUse",
             "owner": "[\"roomAction\",\"Underworld\",\"F\",\"golden-f-preboss-shop:postboss\",\"[\\\"useFountain\\\"]\"]",
             "interactionKey": "fountain",
-            "window": {
-              "kind": "standard",
-              "phase": "afterCombat"
-            }
+            "window": { "kind": "standard", "phase": "afterCombat" }
           }
         ],
         "dependencies": [],
@@ -3416,20 +2310,10 @@
       "doors": {
         "owner": "[\"occurrence\",\"Underworld\",\"F\",\"golden-f-preboss-shop:postboss\"]",
         "kind": "fixed",
-        "target": {
-          "id": "golden-g-intro",
-          "biomeKey": "G",
-          "gameName": "G_Intro"
-        },
+        "target": { "id": "golden-g-intro", "biomeKey": "G", "gameName": "G_Intro" },
         "zagreusContractPresent": false
       },
-      "roomExitConformance": {
-        "facts": [
-          {
-            "kind": "elementCounts"
-          }
-        ]
-      },
+      "roomExitConformance": { "facts": [{ "kind": "elementCounts" }] },
       "diagnostics": {
         "roomEntered": {
           "frame": 26,
@@ -3463,11 +2347,7 @@
         "encounterPhases": [],
         "requiredObjects": []
       },
-      "timeline": {
-        "transactions": [],
-        "dependencies": [],
-        "obligations": []
-      },
+      "timeline": { "transactions": [], "dependencies": [], "obligations": [] },
       "doors": {
         "owner": "[\"exitDecision\",\"Underworld\",\"G\",{\"kind\":\"occurrence\",\"occurrenceId\":\"golden-g-intro\"}]",
         "kind": "batch",
@@ -3475,11 +2355,7 @@
           {
             "exitKey": "exit1",
             "index": 1,
-            "room": {
-              "id": "golden-g-b1-e1",
-              "biomeKey": "G",
-              "gameName": "G_Combat01"
-            },
+            "room": { "id": "golden-g-b1-e1", "biomeKey": "G", "gameName": "G_Combat01" },
             "zagreusContractPresent": false,
             "reward": {
               "rewardType": "Boon",
@@ -3491,13 +2367,7 @@
         ],
         "resolvedSharedRewardStoreKey": "RunProgress"
       },
-      "roomExitConformance": {
-        "facts": [
-          {
-            "kind": "elementCounts"
-          }
-        ]
-      },
+      "roomExitConformance": { "facts": [{ "kind": "elementCounts" }] },
       "diagnostics": {
         "roomEntered": {
           "frame": 28,
@@ -3524,62 +2394,18 @@
               "roomHistoryOrdinal": 15
             },
             "bags": [
-              {
-                "storeKey": "RunProgress",
-                "remaining": {
-                  "kind": "exact",
-                  "count": 20
-                }
-              },
-              {
-                "storeKey": "MetaProgress",
-                "remaining": {
-                  "kind": "exact",
-                  "count": 8
-                }
-              },
-              {
-                "storeKey": "HubRewards",
-                "remaining": {
-                  "kind": "exact",
-                  "count": 10
-                }
-              },
-              {
-                "storeKey": "SubRoomRewards",
-                "remaining": {
-                  "kind": "exact",
-                  "count": 23
-                }
-              },
-              {
-                "storeKey": "SubRoomRewardsHard",
-                "remaining": {
-                  "kind": "exact",
-                  "count": 8
-                }
-              },
+              { "storeKey": "RunProgress", "remaining": { "kind": "exact", "count": 20 } },
+              { "storeKey": "MetaProgress", "remaining": { "kind": "exact", "count": 8 } },
+              { "storeKey": "HubRewards", "remaining": { "kind": "exact", "count": 10 } },
+              { "storeKey": "SubRoomRewards", "remaining": { "kind": "exact", "count": 23 } },
+              { "storeKey": "SubRoomRewardsHard", "remaining": { "kind": "exact", "count": 8 } },
               {
                 "storeKey": "FieldsOptionalRewards",
-                "remaining": {
-                  "kind": "exact",
-                  "count": 19
-                }
+                "remaining": { "kind": "exact", "count": 19 }
               },
-              {
-                "storeKey": "TartarusRewards",
-                "remaining": {
-                  "kind": "exact",
-                  "count": 9
-                }
-              },
-              {
-                "storeKey": "TyphonBossRewards",
-                "remaining": {
-                  "kind": "exact",
-                  "count": 6
-                }
-              }
+              { "storeKey": "TartarusRewards", "remaining": { "kind": "exact", "count": 9 } },
+              { "storeKey": "TyphonBossRewards", "remaining": { "kind": "exact", "count": 6 } },
+              { "storeKey": "Secrets", "remaining": { "kind": "exact", "count": 1 } }
             ]
           }
         }
@@ -3599,11 +2425,7 @@
           "source": "HestiaUpgrade"
         },
         "encounterPhases": [
-          {
-            "slotKey": "Encounter",
-            "encounterKey": "GeneratedG",
-            "kind": "combat"
-          }
+          { "slotKey": "Encounter", "encounterKey": "GeneratedG", "kind": "combat" }
         ],
         "requiredObjects": []
       },
@@ -3635,30 +2457,15 @@
                   "kind": "traits",
                   "giver": "Hestia",
                   "options": [
-                    {
-                      "key": "HestiaSprintBoon",
-                      "rarity": "Common",
-                      "effectiveLevel": 1
-                    },
-                    {
-                      "key": "HestiaManaBoon",
-                      "rarity": "Common",
-                      "effectiveLevel": 1
-                    },
-                    {
-                      "key": "CastProjectileBoon",
-                      "rarity": "Common",
-                      "effectiveLevel": 1
-                    }
+                    { "key": "HestiaSprintBoon", "rarity": "Common", "effectiveLevel": 1 },
+                    { "key": "HestiaManaBoon", "rarity": "Common", "effectiveLevel": 1 },
+                    { "key": "CastProjectileBoon", "rarity": "Common", "effectiveLevel": 1 }
                   ],
                   "selected": "option1"
                 }
               }
             ],
-            "window": {
-              "kind": "standard",
-              "phase": "afterCombat"
-            }
+            "window": { "kind": "standard", "phase": "afterCombat" }
           }
         ],
         "dependencies": [],
@@ -3671,11 +2478,7 @@
           {
             "exitKey": "exit1",
             "index": 1,
-            "room": {
-              "id": "golden-g-b2-e1",
-              "biomeKey": "G",
-              "gameName": "G_Combat02"
-            },
+            "room": { "id": "golden-g-b2-e1", "biomeKey": "G", "gameName": "G_Combat02" },
             "zagreusContractPresent": false,
             "reward": {
               "rewardType": "MetaCurrencyBigDrop",
@@ -3686,11 +2489,7 @@
           {
             "exitKey": "exit2",
             "index": 2,
-            "room": {
-              "id": "golden-g-b2-e2",
-              "biomeKey": "G",
-              "gameName": "G_Combat02"
-            },
+            "room": { "id": "golden-g-b2-e2", "biomeKey": "G", "gameName": "G_Combat02" },
             "zagreusContractPresent": false,
             "reward": {
               "rewardType": "MetaCardPointsCommonBigDrop",
@@ -3702,14 +2501,7 @@
         "resolvedSharedRewardStoreKey": "MetaProgress"
       },
       "roomExitConformance": {
-        "facts": [
-          {
-            "kind": "elementCounts"
-          },
-          {
-            "kind": "traitInventory"
-          }
-        ]
+        "facts": [{ "kind": "elementCounts" }, { "kind": "traitInventory" }]
       },
       "diagnostics": {
         "roomEntered": {
@@ -3730,62 +2522,18 @@
               "roomHistoryOrdinal": 16
             },
             "bags": [
-              {
-                "storeKey": "RunProgress",
-                "remaining": {
-                  "kind": "exact",
-                  "count": 20
-                }
-              },
-              {
-                "storeKey": "MetaProgress",
-                "remaining": {
-                  "kind": "exact",
-                  "count": 6
-                }
-              },
-              {
-                "storeKey": "HubRewards",
-                "remaining": {
-                  "kind": "exact",
-                  "count": 10
-                }
-              },
-              {
-                "storeKey": "SubRoomRewards",
-                "remaining": {
-                  "kind": "exact",
-                  "count": 23
-                }
-              },
-              {
-                "storeKey": "SubRoomRewardsHard",
-                "remaining": {
-                  "kind": "exact",
-                  "count": 8
-                }
-              },
+              { "storeKey": "RunProgress", "remaining": { "kind": "exact", "count": 20 } },
+              { "storeKey": "MetaProgress", "remaining": { "kind": "exact", "count": 6 } },
+              { "storeKey": "HubRewards", "remaining": { "kind": "exact", "count": 10 } },
+              { "storeKey": "SubRoomRewards", "remaining": { "kind": "exact", "count": 23 } },
+              { "storeKey": "SubRoomRewardsHard", "remaining": { "kind": "exact", "count": 8 } },
               {
                 "storeKey": "FieldsOptionalRewards",
-                "remaining": {
-                  "kind": "exact",
-                  "count": 19
-                }
+                "remaining": { "kind": "exact", "count": 19 }
               },
-              {
-                "storeKey": "TartarusRewards",
-                "remaining": {
-                  "kind": "exact",
-                  "count": 9
-                }
-              },
-              {
-                "storeKey": "TyphonBossRewards",
-                "remaining": {
-                  "kind": "exact",
-                  "count": 6
-                }
-              }
+              { "storeKey": "TartarusRewards", "remaining": { "kind": "exact", "count": 9 } },
+              { "storeKey": "TyphonBossRewards", "remaining": { "kind": "exact", "count": 6 } },
+              { "storeKey": "Secrets", "remaining": { "kind": "exact", "count": 1 } }
             ],
             "godPool": {
               "acquiredSourceKeys": [
@@ -3804,65 +2552,22 @@
             },
             "traits": {
               "equipped": [
-                {
-                  "traitKey": "ApolloWeaponBoon",
-                  "rarity": "Common",
-                  "level": 2
-                },
-                {
-                  "traitKey": "ZeusSpecialBoon",
-                  "rarity": "Common",
-                  "level": 1
-                },
-                {
-                  "traitKey": "HeraCastBoon",
-                  "rarity": "Common",
-                  "level": 1
-                },
-                {
-                  "traitKey": "StaffDoubleAttackTrait",
-                  "hammerRank": "RankI"
-                },
-                {
-                  "traitKey": "HestiaSprintBoon",
-                  "rarity": "Common",
-                  "level": 1
-                }
+                { "traitKey": "ApolloWeaponBoon", "rarity": "Common", "level": 2 },
+                { "traitKey": "ZeusSpecialBoon", "rarity": "Common", "level": 1 },
+                { "traitKey": "HeraCastBoon", "rarity": "Common", "level": 1 },
+                { "traitKey": "StaffDoubleAttackTrait", "hammerRank": "RankI" },
+                { "traitKey": "HestiaSprintBoon", "rarity": "Common", "level": 1 }
               ],
               "slots": [
-                {
-                  "slot": "Melee",
-                  "traitKey": "ApolloWeaponBoon"
-                },
-                {
-                  "slot": "Secondary",
-                  "traitKey": "ZeusSpecialBoon"
-                },
-                {
-                  "slot": "Ranged",
-                  "traitKey": "HeraCastBoon"
-                },
-                {
-                  "slot": "Rush",
-                  "traitKey": "HestiaSprintBoon"
-                },
-                {
-                  "slot": "Mana"
-                },
-                {
-                  "slot": "Spell"
-                }
+                { "slot": "Melee", "traitKey": "ApolloWeaponBoon" },
+                { "slot": "Secondary", "traitKey": "ZeusSpecialBoon" },
+                { "slot": "Ranged", "traitKey": "HeraCastBoon" },
+                { "slot": "Rush", "traitKey": "HestiaSprintBoon" },
+                { "slot": "Mana" },
+                { "slot": "Spell" }
               ],
-              "elements": {
-                "Aether": 0,
-                "Earth": 0,
-                "Air": 3,
-                "Fire": 1,
-                "Water": 0
-              },
-              "godRarityCounts": {
-                "Common": 4
-              },
+              "elements": { "Aether": 0, "Earth": 0, "Air": 3, "Fire": 1, "Water": 0 },
+              "godRarityCounts": { "Common": 4 },
               "upgradableCount": 4,
               "bannedTraitKeys": []
             }
@@ -3883,11 +2588,7 @@
           "resolvedStoreKey": "MetaProgress"
         },
         "encounterPhases": [
-          {
-            "slotKey": "Encounter",
-            "encounterKey": "GeneratedG",
-            "kind": "combat"
-          }
+          { "slotKey": "Encounter", "encounterKey": "GeneratedG", "kind": "combat" }
         ],
         "requiredObjects": []
       },
@@ -3916,10 +2617,7 @@
                 }
               }
             ],
-            "window": {
-              "kind": "standard",
-              "phase": "afterCombat"
-            }
+            "window": { "kind": "standard", "phase": "afterCombat" }
           }
         ],
         "dependencies": [],
@@ -3932,11 +2630,7 @@
           {
             "exitKey": "exit1",
             "index": 1,
-            "room": {
-              "id": "golden-g-b3-e1",
-              "biomeKey": "G",
-              "gameName": "G_Story01"
-            },
+            "room": { "id": "golden-g-b3-e1", "biomeKey": "G", "gameName": "G_Story01" },
             "zagreusContractPresent": false,
             "reward": {
               "rewardType": "Story",
@@ -3947,11 +2641,7 @@
           {
             "exitKey": "exit2",
             "index": 2,
-            "room": {
-              "id": "golden-g-b3-e2",
-              "biomeKey": "G",
-              "gameName": "G_Combat03"
-            },
+            "room": { "id": "golden-g-b3-e2", "biomeKey": "G", "gameName": "G_Combat03" },
             "zagreusContractPresent": false,
             "reward": {
               "rewardType": "MaxManaDrop",
@@ -3962,11 +2652,7 @@
           {
             "exitKey": "exit3",
             "index": 3,
-            "room": {
-              "id": "golden-g-b3-e3",
-              "biomeKey": "G",
-              "gameName": "G_Combat03"
-            },
+            "room": { "id": "golden-g-b3-e3", "biomeKey": "G", "gameName": "G_Combat03" },
             "zagreusContractPresent": false,
             "reward": {
               "rewardType": "RoomMoneyDrop",
@@ -3977,13 +2663,7 @@
         ],
         "resolvedSharedRewardStoreKey": "RunProgress"
       },
-      "roomExitConformance": {
-        "facts": [
-          {
-            "kind": "elementCounts"
-          }
-        ]
-      },
+      "roomExitConformance": { "facts": [{ "kind": "elementCounts" }] },
       "diagnostics": {
         "roomEntered": {
           "frame": 32,
@@ -4003,62 +2683,18 @@
               "roomHistoryOrdinal": 17
             },
             "bags": [
-              {
-                "storeKey": "RunProgress",
-                "remaining": {
-                  "kind": "exact",
-                  "count": 18
-                }
-              },
-              {
-                "storeKey": "MetaProgress",
-                "remaining": {
-                  "kind": "exact",
-                  "count": 6
-                }
-              },
-              {
-                "storeKey": "HubRewards",
-                "remaining": {
-                  "kind": "exact",
-                  "count": 10
-                }
-              },
-              {
-                "storeKey": "SubRoomRewards",
-                "remaining": {
-                  "kind": "exact",
-                  "count": 23
-                }
-              },
-              {
-                "storeKey": "SubRoomRewardsHard",
-                "remaining": {
-                  "kind": "exact",
-                  "count": 8
-                }
-              },
+              { "storeKey": "RunProgress", "remaining": { "kind": "exact", "count": 18 } },
+              { "storeKey": "MetaProgress", "remaining": { "kind": "exact", "count": 6 } },
+              { "storeKey": "HubRewards", "remaining": { "kind": "exact", "count": 10 } },
+              { "storeKey": "SubRoomRewards", "remaining": { "kind": "exact", "count": 23 } },
+              { "storeKey": "SubRoomRewardsHard", "remaining": { "kind": "exact", "count": 8 } },
               {
                 "storeKey": "FieldsOptionalRewards",
-                "remaining": {
-                  "kind": "exact",
-                  "count": 19
-                }
+                "remaining": { "kind": "exact", "count": 19 }
               },
-              {
-                "storeKey": "TartarusRewards",
-                "remaining": {
-                  "kind": "exact",
-                  "count": 9
-                }
-              },
-              {
-                "storeKey": "TyphonBossRewards",
-                "remaining": {
-                  "kind": "exact",
-                  "count": 6
-                }
-              }
+              { "storeKey": "TartarusRewards", "remaining": { "kind": "exact", "count": 9 } },
+              { "storeKey": "TyphonBossRewards", "remaining": { "kind": "exact", "count": 6 } },
+              { "storeKey": "Secrets", "remaining": { "kind": "exact", "count": 1 } }
             ]
           }
         }
@@ -4077,19 +2713,11 @@
           "resolvedStoreKey": "MetaProgress"
         },
         "encounterPhases": [
-          {
-            "slotKey": "Encounter",
-            "encounterKey": "GeneratedG",
-            "kind": "combat"
-          }
+          { "slotKey": "Encounter", "encounterKey": "GeneratedG", "kind": "combat" }
         ],
         "requiredObjects": []
       },
-      "timeline": {
-        "transactions": [],
-        "dependencies": [],
-        "obligations": []
-      },
+      "timeline": { "transactions": [], "dependencies": [], "obligations": [] },
       "doors": {
         "owner": "[\"occurrence\",\"Underworld\",\"G\",\"golden-g-b2-e2\"]",
         "kind": "terminal"
@@ -4108,11 +2736,7 @@
           "resolvedStoreKey": "RunProgress"
         },
         "encounterPhases": [
-          {
-            "slotKey": "Encounter",
-            "encounterKey": "Story_Narcissus_01",
-            "kind": "story"
-          }
+          { "slotKey": "Encounter", "encounterKey": "Story_Narcissus_01", "kind": "story" }
         ],
         "requiredObjects": []
       },
@@ -4128,23 +2752,14 @@
                 "kind": "traits",
                 "giver": "Narcissus",
                 "options": [
-                  {
-                    "key": "NarcissusA"
-                  },
-                  {
-                    "key": "NarcissusB"
-                  },
-                  {
-                    "key": "NarcissusC"
-                  }
+                  { "key": "NarcissusA" },
+                  { "key": "NarcissusB" },
+                  { "key": "NarcissusC" }
                 ],
                 "selected": "option1"
               }
             },
-            "window": {
-              "kind": "standard",
-              "phase": "afterCombat"
-            }
+            "window": { "kind": "standard", "phase": "afterCombat" }
           }
         ],
         "dependencies": [],
@@ -4162,11 +2777,7 @@
           {
             "exitKey": "exit1",
             "index": 1,
-            "room": {
-              "id": "golden-g-b4-e1",
-              "biomeKey": "G",
-              "gameName": "G_Combat10"
-            },
+            "room": { "id": "golden-g-b4-e1", "biomeKey": "G", "gameName": "G_Combat10" },
             "zagreusContractPresent": false,
             "reward": {
               "rewardType": "MetaCardPointsCommonBigDrop",
@@ -4178,14 +2789,7 @@
         "resolvedSharedRewardStoreKey": "MetaProgress"
       },
       "roomExitConformance": {
-        "facts": [
-          {
-            "kind": "elementCounts"
-          },
-          {
-            "kind": "traitInventory"
-          }
-        ]
+        "facts": [{ "kind": "elementCounts" }, { "kind": "traitInventory" }]
       },
       "diagnostics": {
         "roomEntered": {
@@ -4206,127 +2810,38 @@
               "roomHistoryOrdinal": 18
             },
             "bags": [
-              {
-                "storeKey": "RunProgress",
-                "remaining": {
-                  "kind": "exact",
-                  "count": 18
-                }
-              },
-              {
-                "storeKey": "MetaProgress",
-                "remaining": {
-                  "kind": "exact",
-                  "count": 5
-                }
-              },
-              {
-                "storeKey": "HubRewards",
-                "remaining": {
-                  "kind": "exact",
-                  "count": 10
-                }
-              },
-              {
-                "storeKey": "SubRoomRewards",
-                "remaining": {
-                  "kind": "exact",
-                  "count": 23
-                }
-              },
-              {
-                "storeKey": "SubRoomRewardsHard",
-                "remaining": {
-                  "kind": "exact",
-                  "count": 8
-                }
-              },
+              { "storeKey": "RunProgress", "remaining": { "kind": "exact", "count": 18 } },
+              { "storeKey": "MetaProgress", "remaining": { "kind": "exact", "count": 5 } },
+              { "storeKey": "HubRewards", "remaining": { "kind": "exact", "count": 10 } },
+              { "storeKey": "SubRoomRewards", "remaining": { "kind": "exact", "count": 23 } },
+              { "storeKey": "SubRoomRewardsHard", "remaining": { "kind": "exact", "count": 8 } },
               {
                 "storeKey": "FieldsOptionalRewards",
-                "remaining": {
-                  "kind": "exact",
-                  "count": 19
-                }
+                "remaining": { "kind": "exact", "count": 19 }
               },
-              {
-                "storeKey": "TartarusRewards",
-                "remaining": {
-                  "kind": "exact",
-                  "count": 9
-                }
-              },
-              {
-                "storeKey": "TyphonBossRewards",
-                "remaining": {
-                  "kind": "exact",
-                  "count": 6
-                }
-              }
+              { "storeKey": "TartarusRewards", "remaining": { "kind": "exact", "count": 9 } },
+              { "storeKey": "TyphonBossRewards", "remaining": { "kind": "exact", "count": 6 } },
+              { "storeKey": "Secrets", "remaining": { "kind": "exact", "count": 1 } }
             ],
             "traits": {
               "equipped": [
-                {
-                  "traitKey": "ApolloWeaponBoon",
-                  "rarity": "Common",
-                  "level": 2
-                },
-                {
-                  "traitKey": "ZeusSpecialBoon",
-                  "rarity": "Common",
-                  "level": 1
-                },
-                {
-                  "traitKey": "HeraCastBoon",
-                  "rarity": "Common",
-                  "level": 1
-                },
-                {
-                  "traitKey": "StaffDoubleAttackTrait",
-                  "hammerRank": "RankI"
-                },
-                {
-                  "traitKey": "HestiaSprintBoon",
-                  "rarity": "Common",
-                  "level": 1
-                },
-                {
-                  "traitKey": "NarcissusA"
-                }
+                { "traitKey": "ApolloWeaponBoon", "rarity": "Common", "level": 2 },
+                { "traitKey": "ZeusSpecialBoon", "rarity": "Common", "level": 1 },
+                { "traitKey": "HeraCastBoon", "rarity": "Common", "level": 1 },
+                { "traitKey": "StaffDoubleAttackTrait", "hammerRank": "RankI" },
+                { "traitKey": "HestiaSprintBoon", "rarity": "Common", "level": 1 },
+                { "traitKey": "NarcissusA" }
               ],
               "slots": [
-                {
-                  "slot": "Melee",
-                  "traitKey": "ApolloWeaponBoon"
-                },
-                {
-                  "slot": "Secondary",
-                  "traitKey": "ZeusSpecialBoon"
-                },
-                {
-                  "slot": "Ranged",
-                  "traitKey": "HeraCastBoon"
-                },
-                {
-                  "slot": "Rush",
-                  "traitKey": "HestiaSprintBoon"
-                },
-                {
-                  "slot": "Mana"
-                },
-                {
-                  "slot": "Spell"
-                }
+                { "slot": "Melee", "traitKey": "ApolloWeaponBoon" },
+                { "slot": "Secondary", "traitKey": "ZeusSpecialBoon" },
+                { "slot": "Ranged", "traitKey": "HeraCastBoon" },
+                { "slot": "Rush", "traitKey": "HestiaSprintBoon" },
+                { "slot": "Mana" },
+                { "slot": "Spell" }
               ],
-              "elements": {
-                "Aether": 0,
-                "Earth": 0,
-                "Air": 3,
-                "Fire": 1,
-                "Water": 0
-              },
-              "godRarityCounts": {
-                "Common": 4
-              },
+              "elements": { "Aether": 0, "Earth": 0, "Air": 3, "Fire": 1, "Water": 0 },
+              "godRarityCounts": { "Common": 4 },
               "upgradableCount": 4,
               "bannedTraitKeys": []
             }
@@ -4347,19 +2862,11 @@
           "resolvedStoreKey": "RunProgress"
         },
         "encounterPhases": [
-          {
-            "slotKey": "Encounter",
-            "encounterKey": "GeneratedG",
-            "kind": "combat"
-          }
+          { "slotKey": "Encounter", "encounterKey": "GeneratedG", "kind": "combat" }
         ],
         "requiredObjects": []
       },
-      "timeline": {
-        "transactions": [],
-        "dependencies": [],
-        "obligations": []
-      },
+      "timeline": { "transactions": [], "dependencies": [], "obligations": [] },
       "doors": {
         "owner": "[\"occurrence\",\"Underworld\",\"G\",\"golden-g-b3-e2\"]",
         "kind": "terminal"
@@ -4378,19 +2885,11 @@
           "resolvedStoreKey": "RunProgress"
         },
         "encounterPhases": [
-          {
-            "slotKey": "Encounter",
-            "encounterKey": "GeneratedG",
-            "kind": "combat"
-          }
+          { "slotKey": "Encounter", "encounterKey": "GeneratedG", "kind": "combat" }
         ],
         "requiredObjects": []
       },
-      "timeline": {
-        "transactions": [],
-        "dependencies": [],
-        "obligations": []
-      },
+      "timeline": { "transactions": [], "dependencies": [], "obligations": [] },
       "doors": {
         "owner": "[\"occurrence\",\"Underworld\",\"G\",\"golden-g-b3-e3\"]",
         "kind": "terminal"
@@ -4409,11 +2908,7 @@
           "resolvedStoreKey": "MetaProgress"
         },
         "encounterPhases": [
-          {
-            "slotKey": "Encounter",
-            "encounterKey": "GeneratedG",
-            "kind": "combat"
-          }
+          { "slotKey": "Encounter", "encounterKey": "GeneratedG", "kind": "combat" }
         ],
         "requiredObjects": []
       },
@@ -4442,10 +2937,7 @@
                 }
               }
             ],
-            "window": {
-              "kind": "standard",
-              "phase": "afterCombat"
-            }
+            "window": { "kind": "standard", "phase": "afterCombat" }
           }
         ],
         "dependencies": [],
@@ -4458,11 +2950,7 @@
           {
             "exitKey": "exit1",
             "index": 1,
-            "room": {
-              "id": "golden-g-b5-e1",
-              "biomeKey": "G",
-              "gameName": "G_Shop01"
-            },
+            "room": { "id": "golden-g-b5-e1", "biomeKey": "G", "gameName": "G_Shop01" },
             "zagreusContractPresent": false,
             "reward": {
               "rewardType": "Shop",
@@ -4473,11 +2961,7 @@
           {
             "exitKey": "exit2",
             "index": 2,
-            "room": {
-              "id": "golden-g-b5-e2",
-              "biomeKey": "G",
-              "gameName": "G_Combat12"
-            },
+            "room": { "id": "golden-g-b5-e2", "biomeKey": "G", "gameName": "G_Combat12" },
             "zagreusContractPresent": false,
             "reward": {
               "rewardType": "StackUpgrade",
@@ -4488,13 +2972,7 @@
         ],
         "resolvedSharedRewardStoreKey": "RunProgress"
       },
-      "roomExitConformance": {
-        "facts": [
-          {
-            "kind": "elementCounts"
-          }
-        ]
-      },
+      "roomExitConformance": { "facts": [{ "kind": "elementCounts" }] },
       "diagnostics": {
         "roomEntered": {
           "frame": 36,
@@ -4514,62 +2992,18 @@
               "roomHistoryOrdinal": 19
             },
             "bags": [
-              {
-                "storeKey": "RunProgress",
-                "remaining": {
-                  "kind": "exact",
-                  "count": 17
-                }
-              },
-              {
-                "storeKey": "MetaProgress",
-                "remaining": {
-                  "kind": "exact",
-                  "count": 5
-                }
-              },
-              {
-                "storeKey": "HubRewards",
-                "remaining": {
-                  "kind": "exact",
-                  "count": 10
-                }
-              },
-              {
-                "storeKey": "SubRoomRewards",
-                "remaining": {
-                  "kind": "exact",
-                  "count": 23
-                }
-              },
-              {
-                "storeKey": "SubRoomRewardsHard",
-                "remaining": {
-                  "kind": "exact",
-                  "count": 8
-                }
-              },
+              { "storeKey": "RunProgress", "remaining": { "kind": "exact", "count": 17 } },
+              { "storeKey": "MetaProgress", "remaining": { "kind": "exact", "count": 5 } },
+              { "storeKey": "HubRewards", "remaining": { "kind": "exact", "count": 10 } },
+              { "storeKey": "SubRoomRewards", "remaining": { "kind": "exact", "count": 23 } },
+              { "storeKey": "SubRoomRewardsHard", "remaining": { "kind": "exact", "count": 8 } },
               {
                 "storeKey": "FieldsOptionalRewards",
-                "remaining": {
-                  "kind": "exact",
-                  "count": 19
-                }
+                "remaining": { "kind": "exact", "count": 19 }
               },
-              {
-                "storeKey": "TartarusRewards",
-                "remaining": {
-                  "kind": "exact",
-                  "count": 9
-                }
-              },
-              {
-                "storeKey": "TyphonBossRewards",
-                "remaining": {
-                  "kind": "exact",
-                  "count": 6
-                }
-              }
+              { "storeKey": "TartarusRewards", "remaining": { "kind": "exact", "count": 9 } },
+              { "storeKey": "TyphonBossRewards", "remaining": { "kind": "exact", "count": 6 } },
+              { "storeKey": "Secrets", "remaining": { "kind": "exact", "count": 1 } }
             ]
           }
         }
@@ -4588,11 +3022,7 @@
           "resolvedStoreKey": "RunProgress"
         },
         "encounterPhases": [
-          {
-            "slotKey": "Encounter",
-            "encounterKey": "Shop",
-            "kind": "nonCombat"
-          }
+          { "slotKey": "Encounter", "encounterKey": "Shop", "kind": "nonCombat" }
         ],
         "requiredObjects": [],
         "shop": {
@@ -4609,19 +3039,11 @@
               "optionKey": "RoomRewardHealDrop",
               "rewardType": "RoomRewardHealDrop"
             },
-            {
-              "offerKey": "Minor",
-              "optionKey": "MaxManaDrop",
-              "rewardType": "MaxManaDrop"
-            }
+            { "offerKey": "Minor", "optionKey": "MaxManaDrop", "rewardType": "MaxManaDrop" }
           ]
         }
       },
-      "timeline": {
-        "transactions": [],
-        "dependencies": [],
-        "obligations": []
-      },
+      "timeline": { "transactions": [], "dependencies": [], "obligations": [] },
       "doors": {
         "owner": "[\"exitDecision\",\"Underworld\",\"G\",{\"kind\":\"occurrence\",\"occurrenceId\":\"golden-g-b5-e1\"}]",
         "kind": "batch",
@@ -4629,11 +3051,7 @@
           {
             "exitKey": "exit1",
             "index": 1,
-            "room": {
-              "id": "golden-g-b6-e1",
-              "biomeKey": "G",
-              "gameName": "G_MiniBoss01"
-            },
+            "room": { "id": "golden-g-b6-e1", "biomeKey": "G", "gameName": "G_MiniBoss01" },
             "zagreusContractPresent": false,
             "reward": {
               "rewardType": "Boon",
@@ -4645,11 +3063,7 @@
           {
             "exitKey": "exit2",
             "index": 2,
-            "room": {
-              "id": "golden-g-b6-e2",
-              "biomeKey": "G",
-              "gameName": "G_MiniBoss02"
-            },
+            "room": { "id": "golden-g-b6-e2", "biomeKey": "G", "gameName": "G_MiniBoss02" },
             "zagreusContractPresent": false,
             "reward": {
               "rewardType": "Boon",
@@ -4661,13 +3075,7 @@
         ],
         "resolvedSharedRewardStoreKey": "RunProgress"
       },
-      "roomExitConformance": {
-        "facts": [
-          {
-            "kind": "elementCounts"
-          }
-        ]
-      },
+      "roomExitConformance": { "facts": [{ "kind": "elementCounts" }] },
       "diagnostics": {
         "roomEntered": {
           "frame": 38,
@@ -4687,62 +3095,18 @@
               "roomHistoryOrdinal": 20
             },
             "bags": [
-              {
-                "storeKey": "RunProgress",
-                "remaining": {
-                  "kind": "exact",
-                  "count": 15
-                }
-              },
-              {
-                "storeKey": "MetaProgress",
-                "remaining": {
-                  "kind": "exact",
-                  "count": 5
-                }
-              },
-              {
-                "storeKey": "HubRewards",
-                "remaining": {
-                  "kind": "exact",
-                  "count": 10
-                }
-              },
-              {
-                "storeKey": "SubRoomRewards",
-                "remaining": {
-                  "kind": "exact",
-                  "count": 23
-                }
-              },
-              {
-                "storeKey": "SubRoomRewardsHard",
-                "remaining": {
-                  "kind": "exact",
-                  "count": 8
-                }
-              },
+              { "storeKey": "RunProgress", "remaining": { "kind": "exact", "count": 15 } },
+              { "storeKey": "MetaProgress", "remaining": { "kind": "exact", "count": 5 } },
+              { "storeKey": "HubRewards", "remaining": { "kind": "exact", "count": 10 } },
+              { "storeKey": "SubRoomRewards", "remaining": { "kind": "exact", "count": 23 } },
+              { "storeKey": "SubRoomRewardsHard", "remaining": { "kind": "exact", "count": 8 } },
               {
                 "storeKey": "FieldsOptionalRewards",
-                "remaining": {
-                  "kind": "exact",
-                  "count": 19
-                }
+                "remaining": { "kind": "exact", "count": 19 }
               },
-              {
-                "storeKey": "TartarusRewards",
-                "remaining": {
-                  "kind": "exact",
-                  "count": 9
-                }
-              },
-              {
-                "storeKey": "TyphonBossRewards",
-                "remaining": {
-                  "kind": "exact",
-                  "count": 6
-                }
-              }
+              { "storeKey": "TartarusRewards", "remaining": { "kind": "exact", "count": 9 } },
+              { "storeKey": "TyphonBossRewards", "remaining": { "kind": "exact", "count": 6 } },
+              { "storeKey": "Secrets", "remaining": { "kind": "exact", "count": 1 } }
             ]
           }
         }
@@ -4761,19 +3125,11 @@
           "resolvedStoreKey": "RunProgress"
         },
         "encounterPhases": [
-          {
-            "slotKey": "Encounter",
-            "encounterKey": "GeneratedG",
-            "kind": "combat"
-          }
+          { "slotKey": "Encounter", "encounterKey": "GeneratedG", "kind": "combat" }
         ],
         "requiredObjects": []
       },
-      "timeline": {
-        "transactions": [],
-        "dependencies": [],
-        "obligations": []
-      },
+      "timeline": { "transactions": [], "dependencies": [], "obligations": [] },
       "doors": {
         "owner": "[\"occurrence\",\"Underworld\",\"G\",\"golden-g-b5-e2\"]",
         "kind": "terminal"
@@ -4793,11 +3149,7 @@
           "source": "HestiaUpgrade"
         },
         "encounterPhases": [
-          {
-            "slotKey": "Encounter",
-            "encounterKey": "MiniBossWaterUnit",
-            "kind": "miniboss"
-          }
+          { "slotKey": "Encounter", "encounterKey": "MiniBossWaterUnit", "kind": "miniboss" }
         ],
         "requiredObjects": []
       },
@@ -4829,30 +3181,15 @@
                   "kind": "traits",
                   "giver": "Hestia",
                   "options": [
-                    {
-                      "key": "HestiaManaBoon",
-                      "rarity": "Common",
-                      "effectiveLevel": 1
-                    },
-                    {
-                      "key": "CastProjectileBoon",
-                      "rarity": "Common",
-                      "effectiveLevel": 1
-                    },
-                    {
-                      "key": "FireballManaSpecialBoon",
-                      "rarity": "Common",
-                      "effectiveLevel": 1
-                    }
+                    { "key": "HestiaManaBoon", "rarity": "Common", "effectiveLevel": 1 },
+                    { "key": "CastProjectileBoon", "rarity": "Common", "effectiveLevel": 1 },
+                    { "key": "FireballManaSpecialBoon", "rarity": "Common", "effectiveLevel": 1 }
                   ],
                   "selected": "option1"
                 }
               }
             ],
-            "window": {
-              "kind": "standard",
-              "phase": "afterCombat"
-            }
+            "window": { "kind": "standard", "phase": "afterCombat" }
           }
         ],
         "dependencies": [],
@@ -4865,11 +3202,7 @@
           {
             "exitKey": "exit1",
             "index": 1,
-            "room": {
-              "id": "golden-g-b7-e1",
-              "biomeKey": "G",
-              "gameName": "G_Combat12"
-            },
+            "room": { "id": "golden-g-b7-e1", "biomeKey": "G", "gameName": "G_Combat12" },
             "zagreusContractPresent": false,
             "reward": {
               "rewardType": "Boon",
@@ -4881,11 +3214,7 @@
           {
             "exitKey": "exit2",
             "index": 2,
-            "room": {
-              "id": "golden-g-b7-e2",
-              "biomeKey": "G",
-              "gameName": "G_Combat13"
-            },
+            "room": { "id": "golden-g-b7-e2", "biomeKey": "G", "gameName": "G_Combat13" },
             "zagreusContractPresent": false,
             "reward": {
               "rewardType": "RoomMoneyDrop",
@@ -4897,14 +3226,7 @@
         "resolvedSharedRewardStoreKey": "RunProgress"
       },
       "roomExitConformance": {
-        "facts": [
-          {
-            "kind": "elementCounts"
-          },
-          {
-            "kind": "traitInventory"
-          }
-        ]
+        "facts": [{ "kind": "elementCounts" }, { "kind": "traitInventory" }]
       },
       "diagnostics": {
         "roomEntered": {
@@ -4925,133 +3247,39 @@
               "roomHistoryOrdinal": 21
             },
             "bags": [
-              {
-                "storeKey": "RunProgress",
-                "remaining": {
-                  "kind": "exact",
-                  "count": 13
-                }
-              },
-              {
-                "storeKey": "MetaProgress",
-                "remaining": {
-                  "kind": "exact",
-                  "count": 5
-                }
-              },
-              {
-                "storeKey": "HubRewards",
-                "remaining": {
-                  "kind": "exact",
-                  "count": 10
-                }
-              },
-              {
-                "storeKey": "SubRoomRewards",
-                "remaining": {
-                  "kind": "exact",
-                  "count": 23
-                }
-              },
-              {
-                "storeKey": "SubRoomRewardsHard",
-                "remaining": {
-                  "kind": "exact",
-                  "count": 8
-                }
-              },
+              { "storeKey": "RunProgress", "remaining": { "kind": "exact", "count": 13 } },
+              { "storeKey": "MetaProgress", "remaining": { "kind": "exact", "count": 5 } },
+              { "storeKey": "HubRewards", "remaining": { "kind": "exact", "count": 10 } },
+              { "storeKey": "SubRoomRewards", "remaining": { "kind": "exact", "count": 23 } },
+              { "storeKey": "SubRoomRewardsHard", "remaining": { "kind": "exact", "count": 8 } },
               {
                 "storeKey": "FieldsOptionalRewards",
-                "remaining": {
-                  "kind": "exact",
-                  "count": 19
-                }
+                "remaining": { "kind": "exact", "count": 19 }
               },
-              {
-                "storeKey": "TartarusRewards",
-                "remaining": {
-                  "kind": "exact",
-                  "count": 9
-                }
-              },
-              {
-                "storeKey": "TyphonBossRewards",
-                "remaining": {
-                  "kind": "exact",
-                  "count": 6
-                }
-              }
+              { "storeKey": "TartarusRewards", "remaining": { "kind": "exact", "count": 9 } },
+              { "storeKey": "TyphonBossRewards", "remaining": { "kind": "exact", "count": 6 } },
+              { "storeKey": "Secrets", "remaining": { "kind": "exact", "count": 1 } }
             ],
             "traits": {
               "equipped": [
-                {
-                  "traitKey": "ApolloWeaponBoon",
-                  "rarity": "Common",
-                  "level": 2
-                },
-                {
-                  "traitKey": "ZeusSpecialBoon",
-                  "rarity": "Common",
-                  "level": 1
-                },
-                {
-                  "traitKey": "HeraCastBoon",
-                  "rarity": "Common",
-                  "level": 1
-                },
-                {
-                  "traitKey": "StaffDoubleAttackTrait",
-                  "hammerRank": "RankI"
-                },
-                {
-                  "traitKey": "HestiaSprintBoon",
-                  "rarity": "Common",
-                  "level": 1
-                },
-                {
-                  "traitKey": "NarcissusA"
-                },
-                {
-                  "traitKey": "HestiaManaBoon",
-                  "rarity": "Common",
-                  "level": 1
-                }
+                { "traitKey": "ApolloWeaponBoon", "rarity": "Common", "level": 2 },
+                { "traitKey": "ZeusSpecialBoon", "rarity": "Common", "level": 1 },
+                { "traitKey": "HeraCastBoon", "rarity": "Common", "level": 1 },
+                { "traitKey": "StaffDoubleAttackTrait", "hammerRank": "RankI" },
+                { "traitKey": "HestiaSprintBoon", "rarity": "Common", "level": 1 },
+                { "traitKey": "NarcissusA" },
+                { "traitKey": "HestiaManaBoon", "rarity": "Common", "level": 1 }
               ],
               "slots": [
-                {
-                  "slot": "Melee",
-                  "traitKey": "ApolloWeaponBoon"
-                },
-                {
-                  "slot": "Secondary",
-                  "traitKey": "ZeusSpecialBoon"
-                },
-                {
-                  "slot": "Ranged",
-                  "traitKey": "HeraCastBoon"
-                },
-                {
-                  "slot": "Rush",
-                  "traitKey": "HestiaSprintBoon"
-                },
-                {
-                  "slot": "Mana",
-                  "traitKey": "HestiaManaBoon"
-                },
-                {
-                  "slot": "Spell"
-                }
+                { "slot": "Melee", "traitKey": "ApolloWeaponBoon" },
+                { "slot": "Secondary", "traitKey": "ZeusSpecialBoon" },
+                { "slot": "Ranged", "traitKey": "HeraCastBoon" },
+                { "slot": "Rush", "traitKey": "HestiaSprintBoon" },
+                { "slot": "Mana", "traitKey": "HestiaManaBoon" },
+                { "slot": "Spell" }
               ],
-              "elements": {
-                "Aether": 0,
-                "Earth": 0,
-                "Air": 3,
-                "Fire": 2,
-                "Water": 0
-              },
-              "godRarityCounts": {
-                "Common": 5
-              },
+              "elements": { "Aether": 0, "Earth": 0, "Air": 3, "Fire": 2, "Water": 0 },
+              "godRarityCounts": { "Common": 5 },
               "upgradableCount": 5,
               "bannedTraitKeys": []
             }
@@ -5073,19 +3301,11 @@
           "source": "ZeusUpgrade"
         },
         "encounterPhases": [
-          {
-            "slotKey": "Encounter",
-            "encounterKey": "MiniBossCrawler",
-            "kind": "miniboss"
-          }
+          { "slotKey": "Encounter", "encounterKey": "MiniBossCrawler", "kind": "miniboss" }
         ],
         "requiredObjects": []
       },
-      "timeline": {
-        "transactions": [],
-        "dependencies": [],
-        "obligations": []
-      },
+      "timeline": { "transactions": [], "dependencies": [], "obligations": [] },
       "doors": {
         "owner": "[\"occurrence\",\"Underworld\",\"G\",\"golden-g-b6-e2\"]",
         "kind": "terminal"
@@ -5105,11 +3325,7 @@
           "source": "HestiaUpgrade"
         },
         "encounterPhases": [
-          {
-            "slotKey": "Encounter",
-            "encounterKey": "GeneratedG",
-            "kind": "combat"
-          }
+          { "slotKey": "Encounter", "encounterKey": "GeneratedG", "kind": "combat" }
         ],
         "requiredObjects": []
       },
@@ -5141,30 +3357,15 @@
                   "kind": "traits",
                   "giver": "Hestia",
                   "options": [
-                    {
-                      "key": "CastProjectileBoon",
-                      "rarity": "Common",
-                      "effectiveLevel": 1
-                    },
-                    {
-                      "key": "FireballManaSpecialBoon",
-                      "rarity": "Common",
-                      "effectiveLevel": 1
-                    },
-                    {
-                      "key": "BurnExplodeBoon",
-                      "rarity": "Common",
-                      "effectiveLevel": 1
-                    }
+                    { "key": "CastProjectileBoon", "rarity": "Common", "effectiveLevel": 1 },
+                    { "key": "FireballManaSpecialBoon", "rarity": "Common", "effectiveLevel": 1 },
+                    { "key": "BurnExplodeBoon", "rarity": "Common", "effectiveLevel": 1 }
                   ],
                   "selected": "option1"
                 }
               }
             ],
-            "window": {
-              "kind": "standard",
-              "phase": "afterCombat"
-            }
+            "window": { "kind": "standard", "phase": "afterCombat" }
           }
         ],
         "dependencies": [],
@@ -5177,11 +3378,7 @@
           {
             "exitKey": "exit1",
             "index": 1,
-            "room": {
-              "id": "golden-g-preboss-shop",
-              "biomeKey": "G",
-              "gameName": "G_PreBoss01"
-            },
+            "room": { "id": "golden-g-preboss-shop", "biomeKey": "G", "gameName": "G_PreBoss01" },
             "zagreusContractPresent": false,
             "reward": {
               "rewardType": "Shop",
@@ -5192,11 +3389,7 @@
           {
             "exitKey": "exit2",
             "index": 2,
-            "room": {
-              "id": "golden-g-preboss-free-2",
-              "biomeKey": "G",
-              "gameName": "G_PreBoss01"
-            },
+            "room": { "id": "golden-g-preboss-free-2", "biomeKey": "G", "gameName": "G_PreBoss01" },
             "zagreusContractPresent": false,
             "reward": {
               "rewardType": "StackUpgrade",
@@ -5208,14 +3401,7 @@
         "resolvedSharedRewardStoreKey": "RunProgress"
       },
       "roomExitConformance": {
-        "facts": [
-          {
-            "kind": "elementCounts"
-          },
-          {
-            "kind": "traitInventory"
-          }
-        ]
+        "facts": [{ "kind": "elementCounts" }, { "kind": "traitInventory" }]
       },
       "diagnostics": {
         "roomEntered": {
@@ -5236,138 +3422,40 @@
               "roomHistoryOrdinal": 22
             },
             "bags": [
-              {
-                "storeKey": "RunProgress",
-                "remaining": {
-                  "kind": "exact",
-                  "count": 12
-                }
-              },
-              {
-                "storeKey": "MetaProgress",
-                "remaining": {
-                  "kind": "exact",
-                  "count": 5
-                }
-              },
-              {
-                "storeKey": "HubRewards",
-                "remaining": {
-                  "kind": "exact",
-                  "count": 10
-                }
-              },
-              {
-                "storeKey": "SubRoomRewards",
-                "remaining": {
-                  "kind": "exact",
-                  "count": 23
-                }
-              },
-              {
-                "storeKey": "SubRoomRewardsHard",
-                "remaining": {
-                  "kind": "exact",
-                  "count": 8
-                }
-              },
+              { "storeKey": "RunProgress", "remaining": { "kind": "exact", "count": 12 } },
+              { "storeKey": "MetaProgress", "remaining": { "kind": "exact", "count": 5 } },
+              { "storeKey": "HubRewards", "remaining": { "kind": "exact", "count": 10 } },
+              { "storeKey": "SubRoomRewards", "remaining": { "kind": "exact", "count": 23 } },
+              { "storeKey": "SubRoomRewardsHard", "remaining": { "kind": "exact", "count": 8 } },
               {
                 "storeKey": "FieldsOptionalRewards",
-                "remaining": {
-                  "kind": "exact",
-                  "count": 19
-                }
+                "remaining": { "kind": "exact", "count": 19 }
               },
-              {
-                "storeKey": "TartarusRewards",
-                "remaining": {
-                  "kind": "exact",
-                  "count": 9
-                }
-              },
-              {
-                "storeKey": "TyphonBossRewards",
-                "remaining": {
-                  "kind": "exact",
-                  "count": 6
-                }
-              }
+              { "storeKey": "TartarusRewards", "remaining": { "kind": "exact", "count": 9 } },
+              { "storeKey": "TyphonBossRewards", "remaining": { "kind": "exact", "count": 6 } },
+              { "storeKey": "Secrets", "remaining": { "kind": "exact", "count": 1 } }
             ],
             "traits": {
               "equipped": [
-                {
-                  "traitKey": "ApolloWeaponBoon",
-                  "rarity": "Common",
-                  "level": 2
-                },
-                {
-                  "traitKey": "ZeusSpecialBoon",
-                  "rarity": "Common",
-                  "level": 1
-                },
-                {
-                  "traitKey": "HeraCastBoon",
-                  "rarity": "Common",
-                  "level": 1
-                },
-                {
-                  "traitKey": "StaffDoubleAttackTrait",
-                  "hammerRank": "RankI"
-                },
-                {
-                  "traitKey": "HestiaSprintBoon",
-                  "rarity": "Common",
-                  "level": 1
-                },
-                {
-                  "traitKey": "NarcissusA"
-                },
-                {
-                  "traitKey": "HestiaManaBoon",
-                  "rarity": "Common",
-                  "level": 1
-                },
-                {
-                  "traitKey": "CastProjectileBoon",
-                  "rarity": "Common",
-                  "level": 1
-                }
+                { "traitKey": "ApolloWeaponBoon", "rarity": "Common", "level": 2 },
+                { "traitKey": "ZeusSpecialBoon", "rarity": "Common", "level": 1 },
+                { "traitKey": "HeraCastBoon", "rarity": "Common", "level": 1 },
+                { "traitKey": "StaffDoubleAttackTrait", "hammerRank": "RankI" },
+                { "traitKey": "HestiaSprintBoon", "rarity": "Common", "level": 1 },
+                { "traitKey": "NarcissusA" },
+                { "traitKey": "HestiaManaBoon", "rarity": "Common", "level": 1 },
+                { "traitKey": "CastProjectileBoon", "rarity": "Common", "level": 1 }
               ],
               "slots": [
-                {
-                  "slot": "Melee",
-                  "traitKey": "ApolloWeaponBoon"
-                },
-                {
-                  "slot": "Secondary",
-                  "traitKey": "ZeusSpecialBoon"
-                },
-                {
-                  "slot": "Ranged",
-                  "traitKey": "HeraCastBoon"
-                },
-                {
-                  "slot": "Rush",
-                  "traitKey": "HestiaSprintBoon"
-                },
-                {
-                  "slot": "Mana",
-                  "traitKey": "HestiaManaBoon"
-                },
-                {
-                  "slot": "Spell"
-                }
+                { "slot": "Melee", "traitKey": "ApolloWeaponBoon" },
+                { "slot": "Secondary", "traitKey": "ZeusSpecialBoon" },
+                { "slot": "Ranged", "traitKey": "HeraCastBoon" },
+                { "slot": "Rush", "traitKey": "HestiaSprintBoon" },
+                { "slot": "Mana", "traitKey": "HestiaManaBoon" },
+                { "slot": "Spell" }
               ],
-              "elements": {
-                "Aether": 0,
-                "Earth": 0,
-                "Air": 3,
-                "Fire": 3,
-                "Water": 0
-              },
-              "godRarityCounts": {
-                "Common": 6
-              },
+              "elements": { "Aether": 0, "Earth": 0, "Air": 3, "Fire": 3, "Water": 0 },
+              "godRarityCounts": { "Common": 6 },
               "upgradableCount": 6,
               "bannedTraitKeys": []
             }
@@ -5388,19 +3476,11 @@
           "resolvedStoreKey": "RunProgress"
         },
         "encounterPhases": [
-          {
-            "slotKey": "Encounter",
-            "encounterKey": "GeneratedG",
-            "kind": "combat"
-          }
+          { "slotKey": "Encounter", "encounterKey": "GeneratedG", "kind": "combat" }
         ],
         "requiredObjects": []
       },
-      "timeline": {
-        "transactions": [],
-        "dependencies": [],
-        "obligations": []
-      },
+      "timeline": { "transactions": [], "dependencies": [], "obligations": [] },
       "doors": {
         "owner": "[\"occurrence\",\"Underworld\",\"G\",\"golden-g-b7-e2\"]",
         "kind": "terminal"
@@ -5419,11 +3499,7 @@
           "resolvedStoreKey": "RunProgress"
         },
         "encounterPhases": [
-          {
-            "slotKey": "Encounter",
-            "encounterKey": "Shop",
-            "kind": "nonCombat"
-          }
+          { "slotKey": "Encounter", "encounterKey": "Shop", "kind": "nonCombat" }
         ],
         "requiredObjects": [],
         "shop": {
@@ -5440,36 +3516,18 @@
               "optionKey": "RoomRewardHealDrop",
               "rewardType": "RoomRewardHealDrop"
             },
-            {
-              "offerKey": "Minor",
-              "optionKey": "MaxManaDrop",
-              "rewardType": "MaxManaDrop"
-            }
+            { "offerKey": "Minor", "optionKey": "MaxManaDrop", "rewardType": "MaxManaDrop" }
           ]
         }
       },
-      "timeline": {
-        "transactions": [],
-        "dependencies": [],
-        "obligations": []
-      },
+      "timeline": { "transactions": [], "dependencies": [], "obligations": [] },
       "doors": {
         "owner": "[\"occurrence\",\"Underworld\",\"G\",\"golden-g-preboss-shop\"]",
         "kind": "fixed",
-        "target": {
-          "id": "golden-g-preboss-shop:boss",
-          "biomeKey": "G",
-          "gameName": "G_Boss01"
-        },
+        "target": { "id": "golden-g-preboss-shop:boss", "biomeKey": "G", "gameName": "G_Boss01" },
         "zagreusContractPresent": false
       },
-      "roomExitConformance": {
-        "facts": [
-          {
-            "kind": "elementCounts"
-          }
-        ]
-      },
+      "roomExitConformance": { "facts": [{ "kind": "elementCounts" }] },
       "diagnostics": {
         "roomEntered": {
           "frame": 44,
@@ -5505,19 +3563,11 @@
           "resolvedStoreKey": "RunProgress"
         },
         "encounterPhases": [
-          {
-            "slotKey": "Encounter",
-            "encounterKey": "Shop",
-            "kind": "nonCombat"
-          }
+          { "slotKey": "Encounter", "encounterKey": "Shop", "kind": "nonCombat" }
         ],
         "requiredObjects": []
       },
-      "timeline": {
-        "transactions": [],
-        "dependencies": [],
-        "obligations": []
-      },
+      "timeline": { "transactions": [], "dependencies": [], "obligations": [] },
       "doors": {
         "owner": "[\"occurrence\",\"Underworld\",\"G\",\"golden-g-preboss-free-2\"]",
         "kind": "terminal"
@@ -5532,19 +3582,11 @@
       "overview": {
         "effectNeutralRequiredReward": true,
         "encounterPhases": [
-          {
-            "slotKey": "Encounter",
-            "encounterKey": "BossScylla01",
-            "kind": "boss"
-          }
+          { "slotKey": "Encounter", "encounterKey": "BossScylla01", "kind": "boss" }
         ],
         "requiredObjects": []
       },
-      "timeline": {
-        "transactions": [],
-        "dependencies": [],
-        "obligations": []
-      },
+      "timeline": { "transactions": [], "dependencies": [], "obligations": [] },
       "doors": {
         "owner": "[\"occurrence\",\"Underworld\",\"G\",\"golden-g-preboss-shop:boss\"]",
         "kind": "fixed",
@@ -5555,13 +3597,7 @@
         },
         "zagreusContractPresent": false
       },
-      "roomExitConformance": {
-        "facts": [
-          {
-            "kind": "elementCounts"
-          }
-        ]
-      },
+      "roomExitConformance": { "facts": [{ "kind": "elementCounts" }] },
       "diagnostics": {
         "roomEntered": {
           "frame": 46,
@@ -5593,19 +3629,11 @@
       "resumeBoundary": "postbossEntry",
       "overview": {
         "encounterPhases": [
-          {
-            "slotKey": "Encounter",
-            "encounterKey": "Empty",
-            "kind": "nonCombat"
-          }
+          { "slotKey": "Encounter", "encounterKey": "Empty", "kind": "nonCombat" }
         ],
         "requiredObjects": [],
-        "stygianWell": {
-          "interacted": false
-        },
-        "purgingPool": {
-          "interacted": false
-        },
+        "stygianWell": { "interacted": false },
+        "purgingPool": { "interacted": false },
         "keepsakeRack": {},
         "fountain": {}
       },
@@ -5615,10 +3643,7 @@
             "kind": "fountainUse",
             "owner": "[\"roomAction\",\"Underworld\",\"G\",\"golden-g-preboss-shop:postboss\",\"[\\\"useFountain\\\"]\"]",
             "interactionKey": "fountain",
-            "window": {
-              "kind": "standard",
-              "phase": "afterCombat"
-            }
+            "window": { "kind": "standard", "phase": "afterCombat" }
           }
         ],
         "dependencies": [],
@@ -5632,20 +3657,10 @@
       "doors": {
         "owner": "[\"occurrence\",\"Underworld\",\"G\",\"golden-g-preboss-shop:postboss\"]",
         "kind": "fixed",
-        "target": {
-          "id": "golden-h-intro",
-          "biomeKey": "H",
-          "gameName": "H_Intro"
-        },
+        "target": { "id": "golden-h-intro", "biomeKey": "H", "gameName": "H_Intro" },
         "zagreusContractPresent": false
       },
-      "roomExitConformance": {
-        "facts": [
-          {
-            "kind": "elementCounts"
-          }
-        ]
-      },
+      "roomExitConformance": { "facts": [{ "kind": "elementCounts" }] },
       "diagnostics": {
         "roomEntered": {
           "frame": 48,
@@ -5679,11 +3694,7 @@
         "encounterPhases": [],
         "requiredObjects": []
       },
-      "timeline": {
-        "transactions": [],
-        "dependencies": [],
-        "obligations": []
-      },
+      "timeline": { "transactions": [], "dependencies": [], "obligations": [] },
       "doors": {
         "owner": "[\"exitDecision\",\"Underworld\",\"H\",{\"kind\":\"occurrence\",\"occurrenceId\":\"golden-h-intro\"}]",
         "kind": "batch",
@@ -5691,11 +3702,7 @@
           {
             "exitKey": "exit1",
             "index": 1,
-            "room": {
-              "id": "golden-h-combat02",
-              "biomeKey": "H",
-              "gameName": "H_Combat02"
-            },
+            "room": { "id": "golden-h-combat02", "biomeKey": "H", "gameName": "H_Combat02" },
             "zagreusContractPresent": false,
             "cageRewards": [
               {
@@ -5712,13 +3719,7 @@
           }
         ]
       },
-      "roomExitConformance": {
-        "facts": [
-          {
-            "kind": "elementCounts"
-          }
-        ]
-      },
+      "roomExitConformance": { "facts": [{ "kind": "elementCounts" }] },
       "diagnostics": {
         "roomEntered": {
           "frame": 50,
@@ -5745,62 +3746,18 @@
               "roomHistoryOrdinal": 26
             },
             "bags": [
-              {
-                "storeKey": "RunProgress",
-                "remaining": {
-                  "kind": "exact",
-                  "count": 10
-                }
-              },
-              {
-                "storeKey": "MetaProgress",
-                "remaining": {
-                  "kind": "exact",
-                  "count": 5
-                }
-              },
-              {
-                "storeKey": "HubRewards",
-                "remaining": {
-                  "kind": "exact",
-                  "count": 10
-                }
-              },
-              {
-                "storeKey": "SubRoomRewards",
-                "remaining": {
-                  "kind": "exact",
-                  "count": 23
-                }
-              },
-              {
-                "storeKey": "SubRoomRewardsHard",
-                "remaining": {
-                  "kind": "exact",
-                  "count": 8
-                }
-              },
+              { "storeKey": "RunProgress", "remaining": { "kind": "exact", "count": 10 } },
+              { "storeKey": "MetaProgress", "remaining": { "kind": "exact", "count": 5 } },
+              { "storeKey": "HubRewards", "remaining": { "kind": "exact", "count": 10 } },
+              { "storeKey": "SubRoomRewards", "remaining": { "kind": "exact", "count": 23 } },
+              { "storeKey": "SubRoomRewardsHard", "remaining": { "kind": "exact", "count": 8 } },
               {
                 "storeKey": "FieldsOptionalRewards",
-                "remaining": {
-                  "kind": "exact",
-                  "count": 19
-                }
+                "remaining": { "kind": "exact", "count": 19 }
               },
-              {
-                "storeKey": "TartarusRewards",
-                "remaining": {
-                  "kind": "exact",
-                  "count": 9
-                }
-              },
-              {
-                "storeKey": "TyphonBossRewards",
-                "remaining": {
-                  "kind": "exact",
-                  "count": 6
-                }
-              }
+              { "storeKey": "TartarusRewards", "remaining": { "kind": "exact", "count": 9 } },
+              { "storeKey": "TyphonBossRewards", "remaining": { "kind": "exact", "count": 6 } },
+              { "storeKey": "Secrets", "remaining": { "kind": "exact", "count": 1 } }
             ]
           }
         }
@@ -5814,37 +3771,16 @@
       "kind": "FieldsEncounter",
       "overview": {
         "encounterPhases": [
-          {
-            "slotKey": "Passive",
-            "encounterKey": "GeneratedH_PassiveSmall",
-            "kind": "combat"
-          },
-          {
-            "slotKey": "Cage01",
-            "encounterKey": "GeneratedH",
-            "kind": "combat"
-          },
-          {
-            "slotKey": "Cage02",
-            "encounterKey": "GeneratedH",
-            "kind": "combat"
-          }
+          { "slotKey": "Passive", "encounterKey": "GeneratedH_PassiveSmall", "kind": "combat" },
+          { "slotKey": "Cage01", "encounterKey": "GeneratedH", "kind": "combat" },
+          { "slotKey": "Cage02", "encounterKey": "GeneratedH", "kind": "combat" }
         ],
         "requiredObjects": [],
         "fields": {
-          "entryPair": {
-            "startPointId": 565481,
-            "endPointId": 565479
-          },
+          "entryPair": { "startPointId": 565481, "endPointId": 565479 },
           "cagePoints": [
-            {
-              "slotKey": "cage1",
-              "pointId": 621502
-            },
-            {
-              "slotKey": "cage2",
-              "pointId": 622508
-            }
+            { "slotKey": "cage1", "pointId": 621502 },
+            { "slotKey": "cage2", "pointId": 622508 }
           ],
           "optionalRewards": [
             {
@@ -5893,10 +3829,7 @@
                 }
               }
             ],
-            "window": {
-              "kind": "encounterEnd",
-              "phaseKey": "Cage02"
-            }
+            "window": { "kind": "encounterEnd", "phaseKey": "Cage02" }
           },
           {
             "kind": "acquisition",
@@ -5921,10 +3854,7 @@
                 }
               }
             ],
-            "window": {
-              "kind": "encounterEnd",
-              "phaseKey": "Cage01"
-            }
+            "window": { "kind": "encounterEnd", "phaseKey": "Cage01" }
           }
         ],
         "dependencies": [],
@@ -5937,11 +3867,7 @@
           {
             "exitKey": "exit1",
             "index": 1,
-            "room": {
-              "id": "golden-h-combat09",
-              "biomeKey": "H",
-              "gameName": "H_Combat09"
-            },
+            "room": { "id": "golden-h-combat09", "biomeKey": "H", "gameName": "H_Combat09" },
             "zagreusContractPresent": false,
             "cageRewards": [
               {
@@ -5959,11 +3885,7 @@
           {
             "exitKey": "exit2",
             "index": 2,
-            "room": {
-              "id": "golden-h-combat03",
-              "biomeKey": "H",
-              "gameName": "H_Combat03"
-            },
+            "room": { "id": "golden-h-combat03", "biomeKey": "H", "gameName": "H_Combat03" },
             "zagreusContractPresent": false,
             "cageRewards": [
               {
@@ -5980,13 +3902,7 @@
           }
         ]
       },
-      "roomExitConformance": {
-        "facts": [
-          {
-            "kind": "elementCounts"
-          }
-        ]
-      },
+      "roomExitConformance": { "facts": [{ "kind": "elementCounts" }] },
       "diagnostics": {
         "roomEntered": {
           "frame": 52,
@@ -6006,62 +3922,18 @@
               "roomHistoryOrdinal": 27
             },
             "bags": [
-              {
-                "storeKey": "RunProgress",
-                "remaining": {
-                  "kind": "exact",
-                  "count": 6
-                }
-              },
-              {
-                "storeKey": "MetaProgress",
-                "remaining": {
-                  "kind": "exact",
-                  "count": 5
-                }
-              },
-              {
-                "storeKey": "HubRewards",
-                "remaining": {
-                  "kind": "exact",
-                  "count": 10
-                }
-              },
-              {
-                "storeKey": "SubRoomRewards",
-                "remaining": {
-                  "kind": "exact",
-                  "count": 23
-                }
-              },
-              {
-                "storeKey": "SubRoomRewardsHard",
-                "remaining": {
-                  "kind": "exact",
-                  "count": 8
-                }
-              },
+              { "storeKey": "RunProgress", "remaining": { "kind": "exact", "count": 6 } },
+              { "storeKey": "MetaProgress", "remaining": { "kind": "exact", "count": 5 } },
+              { "storeKey": "HubRewards", "remaining": { "kind": "exact", "count": 10 } },
+              { "storeKey": "SubRoomRewards", "remaining": { "kind": "exact", "count": 23 } },
+              { "storeKey": "SubRoomRewardsHard", "remaining": { "kind": "exact", "count": 8 } },
               {
                 "storeKey": "FieldsOptionalRewards",
-                "remaining": {
-                  "kind": "exact",
-                  "count": 17
-                }
+                "remaining": { "kind": "exact", "count": 17 }
               },
-              {
-                "storeKey": "TartarusRewards",
-                "remaining": {
-                  "kind": "exact",
-                  "count": 9
-                }
-              },
-              {
-                "storeKey": "TyphonBossRewards",
-                "remaining": {
-                  "kind": "exact",
-                  "count": 6
-                }
-              }
+              { "storeKey": "TartarusRewards", "remaining": { "kind": "exact", "count": 9 } },
+              { "storeKey": "TyphonBossRewards", "remaining": { "kind": "exact", "count": 6 } },
+              { "storeKey": "Secrets", "remaining": { "kind": "exact", "count": 1 } }
             ]
           }
         }
@@ -6075,37 +3947,16 @@
       "kind": "FieldsEncounter",
       "overview": {
         "encounterPhases": [
-          {
-            "slotKey": "Passive",
-            "encounterKey": "GeneratedH_PassiveSmall",
-            "kind": "combat"
-          },
-          {
-            "slotKey": "Cage01",
-            "encounterKey": "GeneratedH",
-            "kind": "combat"
-          },
-          {
-            "slotKey": "Cage02",
-            "encounterKey": "GeneratedH",
-            "kind": "combat"
-          }
+          { "slotKey": "Passive", "encounterKey": "GeneratedH_PassiveSmall", "kind": "combat" },
+          { "slotKey": "Cage01", "encounterKey": "GeneratedH", "kind": "combat" },
+          { "slotKey": "Cage02", "encounterKey": "GeneratedH", "kind": "combat" }
         ],
         "requiredObjects": [],
         "fields": {
-          "entryPair": {
-            "startPointId": 755837,
-            "endPointId": 755840
-          },
+          "entryPair": { "startPointId": 755837, "endPointId": 755840 },
           "cagePoints": [
-            {
-              "slotKey": "cage1",
-              "pointId": 621502
-            },
-            {
-              "slotKey": "cage2",
-              "pointId": 715348
-            }
+            { "slotKey": "cage1", "pointId": 621502 },
+            { "slotKey": "cage2", "pointId": 715348 }
           ],
           "optionalRewards": [
             {
@@ -6156,24 +4007,15 @@
                   "kind": "traits",
                   "giver": "WeaponUpgrade",
                   "options": [
-                    {
-                      "key": "StaffLongAttackTrait"
-                    },
-                    {
-                      "key": "StaffDashAttackTrait"
-                    },
-                    {
-                      "key": "StaffTripleShotTrait"
-                    }
+                    { "key": "StaffLongAttackTrait" },
+                    { "key": "StaffDashAttackTrait" },
+                    { "key": "StaffTripleShotTrait" }
                   ],
                   "selected": "option1"
                 }
               }
             ],
-            "window": {
-              "kind": "encounterEnd",
-              "phaseKey": "Cage02"
-            }
+            "window": { "kind": "encounterEnd", "phaseKey": "Cage02" }
           },
           {
             "kind": "acquisition",
@@ -6200,27 +4042,15 @@
                   "kind": "traits",
                   "giver": "Hermes",
                   "options": [
-                    {
-                      "key": "HermesWeaponBoon",
-                      "rarity": "Common"
-                    },
-                    {
-                      "key": "HermesSpecialBoon",
-                      "rarity": "Common"
-                    },
-                    {
-                      "key": "HermesCastDiscountBoon",
-                      "rarity": "Common"
-                    }
+                    { "key": "HermesWeaponBoon", "rarity": "Common" },
+                    { "key": "HermesSpecialBoon", "rarity": "Common" },
+                    { "key": "HermesCastDiscountBoon", "rarity": "Common" }
                   ],
                   "selected": "option1"
                 }
               }
             ],
-            "window": {
-              "kind": "encounterEnd",
-              "phaseKey": "Cage01"
-            }
+            "window": { "kind": "encounterEnd", "phaseKey": "Cage01" }
           }
         ],
         "dependencies": [
@@ -6238,11 +4068,7 @@
           {
             "exitKey": "exit1",
             "index": 1,
-            "room": {
-              "id": "golden-h-miniboss01",
-              "biomeKey": "H",
-              "gameName": "H_MiniBoss01"
-            },
+            "room": { "id": "golden-h-miniboss01", "biomeKey": "H", "gameName": "H_MiniBoss01" },
             "zagreusContractPresent": false,
             "reward": {
               "rewardType": "Boon",
@@ -6254,11 +4080,7 @@
           {
             "exitKey": "exit2",
             "index": 2,
-            "room": {
-              "id": "golden-h-bridge01",
-              "biomeKey": "H",
-              "gameName": "H_Bridge01"
-            },
+            "room": { "id": "golden-h-bridge01", "biomeKey": "H", "gameName": "H_Bridge01" },
             "zagreusContractPresent": false,
             "reward": {
               "rewardType": "Story",
@@ -6270,14 +4092,7 @@
         "resolvedSharedRewardStoreKey": "RunProgress"
       },
       "roomExitConformance": {
-        "facts": [
-          {
-            "kind": "elementCounts"
-          },
-          {
-            "kind": "traitInventory"
-          }
-        ]
+        "facts": [{ "kind": "elementCounts" }, { "kind": "traitInventory" }]
       },
       "diagnostics": {
         "roomEntered": {
@@ -6298,146 +4113,42 @@
               "roomHistoryOrdinal": 28
             },
             "bags": [
-              {
-                "storeKey": "RunProgress",
-                "remaining": {
-                  "kind": "exact",
-                  "count": 23
-                }
-              },
-              {
-                "storeKey": "MetaProgress",
-                "remaining": {
-                  "kind": "exact",
-                  "count": 5
-                }
-              },
-              {
-                "storeKey": "HubRewards",
-                "remaining": {
-                  "kind": "exact",
-                  "count": 10
-                }
-              },
-              {
-                "storeKey": "SubRoomRewards",
-                "remaining": {
-                  "kind": "exact",
-                  "count": 23
-                }
-              },
-              {
-                "storeKey": "SubRoomRewardsHard",
-                "remaining": {
-                  "kind": "exact",
-                  "count": 8
-                }
-              },
+              { "storeKey": "RunProgress", "remaining": { "kind": "exact", "count": 23 } },
+              { "storeKey": "MetaProgress", "remaining": { "kind": "exact", "count": 5 } },
+              { "storeKey": "HubRewards", "remaining": { "kind": "exact", "count": 10 } },
+              { "storeKey": "SubRoomRewards", "remaining": { "kind": "exact", "count": 23 } },
+              { "storeKey": "SubRoomRewardsHard", "remaining": { "kind": "exact", "count": 8 } },
               {
                 "storeKey": "FieldsOptionalRewards",
-                "remaining": {
-                  "kind": "exact",
-                  "count": 15
-                }
+                "remaining": { "kind": "exact", "count": 15 }
               },
-              {
-                "storeKey": "TartarusRewards",
-                "remaining": {
-                  "kind": "exact",
-                  "count": 9
-                }
-              },
-              {
-                "storeKey": "TyphonBossRewards",
-                "remaining": {
-                  "kind": "exact",
-                  "count": 6
-                }
-              }
+              { "storeKey": "TartarusRewards", "remaining": { "kind": "exact", "count": 9 } },
+              { "storeKey": "TyphonBossRewards", "remaining": { "kind": "exact", "count": 6 } },
+              { "storeKey": "Secrets", "remaining": { "kind": "exact", "count": 1 } }
             ],
             "traits": {
               "equipped": [
-                {
-                  "traitKey": "ApolloWeaponBoon",
-                  "rarity": "Common",
-                  "level": 2
-                },
-                {
-                  "traitKey": "ZeusSpecialBoon",
-                  "rarity": "Common",
-                  "level": 1
-                },
-                {
-                  "traitKey": "HeraCastBoon",
-                  "rarity": "Common",
-                  "level": 1
-                },
-                {
-                  "traitKey": "StaffDoubleAttackTrait",
-                  "hammerRank": "RankI"
-                },
-                {
-                  "traitKey": "HestiaSprintBoon",
-                  "rarity": "Common",
-                  "level": 1
-                },
-                {
-                  "traitKey": "NarcissusA"
-                },
-                {
-                  "traitKey": "HestiaManaBoon",
-                  "rarity": "Common",
-                  "level": 1
-                },
-                {
-                  "traitKey": "CastProjectileBoon",
-                  "rarity": "Common",
-                  "level": 1
-                },
-                {
-                  "traitKey": "StaffLongAttackTrait",
-                  "hammerRank": "RankI"
-                },
-                {
-                  "traitKey": "HermesWeaponBoon",
-                  "rarity": "Common"
-                }
+                { "traitKey": "ApolloWeaponBoon", "rarity": "Common", "level": 2 },
+                { "traitKey": "ZeusSpecialBoon", "rarity": "Common", "level": 1 },
+                { "traitKey": "HeraCastBoon", "rarity": "Common", "level": 1 },
+                { "traitKey": "StaffDoubleAttackTrait", "hammerRank": "RankI" },
+                { "traitKey": "HestiaSprintBoon", "rarity": "Common", "level": 1 },
+                { "traitKey": "NarcissusA" },
+                { "traitKey": "HestiaManaBoon", "rarity": "Common", "level": 1 },
+                { "traitKey": "CastProjectileBoon", "rarity": "Common", "level": 1 },
+                { "traitKey": "StaffLongAttackTrait", "hammerRank": "RankI" },
+                { "traitKey": "HermesWeaponBoon", "rarity": "Common" }
               ],
               "slots": [
-                {
-                  "slot": "Melee",
-                  "traitKey": "ApolloWeaponBoon"
-                },
-                {
-                  "slot": "Secondary",
-                  "traitKey": "ZeusSpecialBoon"
-                },
-                {
-                  "slot": "Ranged",
-                  "traitKey": "HeraCastBoon"
-                },
-                {
-                  "slot": "Rush",
-                  "traitKey": "HestiaSprintBoon"
-                },
-                {
-                  "slot": "Mana",
-                  "traitKey": "HestiaManaBoon"
-                },
-                {
-                  "slot": "Spell"
-                }
+                { "slot": "Melee", "traitKey": "ApolloWeaponBoon" },
+                { "slot": "Secondary", "traitKey": "ZeusSpecialBoon" },
+                { "slot": "Ranged", "traitKey": "HeraCastBoon" },
+                { "slot": "Rush", "traitKey": "HestiaSprintBoon" },
+                { "slot": "Mana", "traitKey": "HestiaManaBoon" },
+                { "slot": "Spell" }
               ],
-              "elements": {
-                "Aether": 0,
-                "Earth": 1,
-                "Air": 3,
-                "Fire": 3,
-                "Water": 0
-              },
-              "godRarityCounts": {
-                "Common": 7
-              },
+              "elements": { "Aether": 0, "Earth": 1, "Air": 3, "Fire": 3, "Water": 0 },
+              "godRarityCounts": { "Common": 7 },
               "upgradableCount": 6,
               "bannedTraitKeys": []
             }
@@ -6453,29 +4164,13 @@
       "kind": "FieldsEncounter",
       "overview": {
         "encounterPhases": [
-          {
-            "slotKey": "Passive",
-            "encounterKey": "GeneratedH_Passive",
-            "kind": "combat"
-          },
-          {
-            "slotKey": "Cage01",
-            "encounterKey": "GeneratedH",
-            "kind": "combat"
-          },
-          {
-            "slotKey": "Cage02",
-            "encounterKey": "GeneratedH",
-            "kind": "combat"
-          }
+          { "slotKey": "Passive", "encounterKey": "GeneratedH_Passive", "kind": "combat" },
+          { "slotKey": "Cage01", "encounterKey": "GeneratedH", "kind": "combat" },
+          { "slotKey": "Cage02", "encounterKey": "GeneratedH", "kind": "combat" }
         ],
         "requiredObjects": []
       },
-      "timeline": {
-        "transactions": [],
-        "dependencies": [],
-        "obligations": []
-      },
+      "timeline": { "transactions": [], "dependencies": [], "obligations": [] },
       "doors": {
         "owner": "[\"occurrence\",\"Underworld\",\"H\",\"golden-h-combat03\"]",
         "kind": "terminal"
@@ -6495,11 +4190,7 @@
           "source": "HestiaUpgrade"
         },
         "encounterPhases": [
-          {
-            "slotKey": "Encounter",
-            "encounterKey": "MiniBossVampire",
-            "kind": "miniboss"
-          }
+          { "slotKey": "Encounter", "encounterKey": "MiniBossVampire", "kind": "miniboss" }
         ],
         "requiredObjects": []
       },
@@ -6531,30 +4222,15 @@
                   "kind": "traits",
                   "giver": "Hestia",
                   "options": [
-                    {
-                      "key": "FireballManaSpecialBoon",
-                      "rarity": "Common",
-                      "effectiveLevel": 1
-                    },
-                    {
-                      "key": "BurnExplodeBoon",
-                      "rarity": "Common",
-                      "effectiveLevel": 1
-                    },
-                    {
-                      "key": "AloneDamageBoon",
-                      "rarity": "Common",
-                      "effectiveLevel": 1
-                    }
+                    { "key": "FireballManaSpecialBoon", "rarity": "Common", "effectiveLevel": 1 },
+                    { "key": "BurnExplodeBoon", "rarity": "Common", "effectiveLevel": 1 },
+                    { "key": "AloneDamageBoon", "rarity": "Common", "effectiveLevel": 1 }
                   ],
                   "selected": "option1"
                 }
               }
             ],
-            "window": {
-              "kind": "standard",
-              "phase": "afterCombat"
-            }
+            "window": { "kind": "standard", "phase": "afterCombat" }
           }
         ],
         "dependencies": [],
@@ -6567,11 +4243,7 @@
           {
             "exitKey": "exit1",
             "index": 1,
-            "room": {
-              "id": "golden-h-combat05",
-              "biomeKey": "H",
-              "gameName": "H_Combat05"
-            },
+            "room": { "id": "golden-h-combat05", "biomeKey": "H", "gameName": "H_Combat05" },
             "zagreusContractPresent": false,
             "cageRewards": [
               {
@@ -6596,11 +4268,7 @@
           {
             "exitKey": "exit2",
             "index": 2,
-            "room": {
-              "id": "golden-h-combat04",
-              "biomeKey": "H",
-              "gameName": "H_Combat04"
-            },
+            "room": { "id": "golden-h-combat04", "biomeKey": "H", "gameName": "H_Combat04" },
             "zagreusContractPresent": false,
             "cageRewards": [
               {
@@ -6623,14 +4291,7 @@
         ]
       },
       "roomExitConformance": {
-        "facts": [
-          {
-            "kind": "elementCounts"
-          },
-          {
-            "kind": "traitInventory"
-          }
-        ]
+        "facts": [{ "kind": "elementCounts" }, { "kind": "traitInventory" }]
       },
       "diagnostics": {
         "roomEntered": {
@@ -6651,151 +4312,43 @@
               "roomHistoryOrdinal": 29
             },
             "bags": [
-              {
-                "storeKey": "RunProgress",
-                "remaining": {
-                  "kind": "exact",
-                  "count": 17
-                }
-              },
-              {
-                "storeKey": "MetaProgress",
-                "remaining": {
-                  "kind": "exact",
-                  "count": 5
-                }
-              },
-              {
-                "storeKey": "HubRewards",
-                "remaining": {
-                  "kind": "exact",
-                  "count": 10
-                }
-              },
-              {
-                "storeKey": "SubRoomRewards",
-                "remaining": {
-                  "kind": "exact",
-                  "count": 23
-                }
-              },
-              {
-                "storeKey": "SubRoomRewardsHard",
-                "remaining": {
-                  "kind": "exact",
-                  "count": 8
-                }
-              },
+              { "storeKey": "RunProgress", "remaining": { "kind": "exact", "count": 17 } },
+              { "storeKey": "MetaProgress", "remaining": { "kind": "exact", "count": 5 } },
+              { "storeKey": "HubRewards", "remaining": { "kind": "exact", "count": 10 } },
+              { "storeKey": "SubRoomRewards", "remaining": { "kind": "exact", "count": 23 } },
+              { "storeKey": "SubRoomRewardsHard", "remaining": { "kind": "exact", "count": 8 } },
               {
                 "storeKey": "FieldsOptionalRewards",
-                "remaining": {
-                  "kind": "exact",
-                  "count": 15
-                }
+                "remaining": { "kind": "exact", "count": 15 }
               },
-              {
-                "storeKey": "TartarusRewards",
-                "remaining": {
-                  "kind": "exact",
-                  "count": 9
-                }
-              },
-              {
-                "storeKey": "TyphonBossRewards",
-                "remaining": {
-                  "kind": "exact",
-                  "count": 6
-                }
-              }
+              { "storeKey": "TartarusRewards", "remaining": { "kind": "exact", "count": 9 } },
+              { "storeKey": "TyphonBossRewards", "remaining": { "kind": "exact", "count": 6 } },
+              { "storeKey": "Secrets", "remaining": { "kind": "exact", "count": 1 } }
             ],
             "traits": {
               "equipped": [
-                {
-                  "traitKey": "ApolloWeaponBoon",
-                  "rarity": "Common",
-                  "level": 2
-                },
-                {
-                  "traitKey": "ZeusSpecialBoon",
-                  "rarity": "Common",
-                  "level": 1
-                },
-                {
-                  "traitKey": "HeraCastBoon",
-                  "rarity": "Common",
-                  "level": 1
-                },
-                {
-                  "traitKey": "StaffDoubleAttackTrait",
-                  "hammerRank": "RankI"
-                },
-                {
-                  "traitKey": "HestiaSprintBoon",
-                  "rarity": "Common",
-                  "level": 1
-                },
-                {
-                  "traitKey": "NarcissusA"
-                },
-                {
-                  "traitKey": "HestiaManaBoon",
-                  "rarity": "Common",
-                  "level": 1
-                },
-                {
-                  "traitKey": "CastProjectileBoon",
-                  "rarity": "Common",
-                  "level": 1
-                },
-                {
-                  "traitKey": "StaffLongAttackTrait",
-                  "hammerRank": "RankI"
-                },
-                {
-                  "traitKey": "HermesWeaponBoon",
-                  "rarity": "Common"
-                },
-                {
-                  "traitKey": "FireballManaSpecialBoon",
-                  "rarity": "Common",
-                  "level": 1
-                }
+                { "traitKey": "ApolloWeaponBoon", "rarity": "Common", "level": 2 },
+                { "traitKey": "ZeusSpecialBoon", "rarity": "Common", "level": 1 },
+                { "traitKey": "HeraCastBoon", "rarity": "Common", "level": 1 },
+                { "traitKey": "StaffDoubleAttackTrait", "hammerRank": "RankI" },
+                { "traitKey": "HestiaSprintBoon", "rarity": "Common", "level": 1 },
+                { "traitKey": "NarcissusA" },
+                { "traitKey": "HestiaManaBoon", "rarity": "Common", "level": 1 },
+                { "traitKey": "CastProjectileBoon", "rarity": "Common", "level": 1 },
+                { "traitKey": "StaffLongAttackTrait", "hammerRank": "RankI" },
+                { "traitKey": "HermesWeaponBoon", "rarity": "Common" },
+                { "traitKey": "FireballManaSpecialBoon", "rarity": "Common", "level": 1 }
               ],
               "slots": [
-                {
-                  "slot": "Melee",
-                  "traitKey": "ApolloWeaponBoon"
-                },
-                {
-                  "slot": "Secondary",
-                  "traitKey": "ZeusSpecialBoon"
-                },
-                {
-                  "slot": "Ranged",
-                  "traitKey": "HeraCastBoon"
-                },
-                {
-                  "slot": "Rush",
-                  "traitKey": "HestiaSprintBoon"
-                },
-                {
-                  "slot": "Mana",
-                  "traitKey": "HestiaManaBoon"
-                },
-                {
-                  "slot": "Spell"
-                }
+                { "slot": "Melee", "traitKey": "ApolloWeaponBoon" },
+                { "slot": "Secondary", "traitKey": "ZeusSpecialBoon" },
+                { "slot": "Ranged", "traitKey": "HeraCastBoon" },
+                { "slot": "Rush", "traitKey": "HestiaSprintBoon" },
+                { "slot": "Mana", "traitKey": "HestiaManaBoon" },
+                { "slot": "Spell" }
               ],
-              "elements": {
-                "Aether": 0,
-                "Earth": 1,
-                "Air": 3,
-                "Fire": 4,
-                "Water": 0
-              },
-              "godRarityCounts": {
-                "Common": 8
-              },
+              "elements": { "Aether": 0, "Earth": 1, "Air": 3, "Fire": 4, "Water": 0 },
+              "godRarityCounts": { "Common": 8 },
               "upgradableCount": 7,
               "bannedTraitKeys": []
             }
@@ -6816,19 +4369,11 @@
           "resolvedStoreKey": "RunProgress"
         },
         "encounterPhases": [
-          {
-            "slotKey": "Encounter",
-            "encounterKey": "Story_Echo_01",
-            "kind": "story"
-          }
+          { "slotKey": "Encounter", "encounterKey": "Story_Echo_01", "kind": "story" }
         ],
         "requiredObjects": []
       },
-      "timeline": {
-        "transactions": [],
-        "dependencies": [],
-        "obligations": []
-      },
+      "timeline": { "transactions": [], "dependencies": [], "obligations": [] },
       "doors": {
         "owner": "[\"occurrence\",\"Underworld\",\"H\",\"golden-h-bridge01\"]",
         "kind": "terminal"
@@ -6842,46 +4387,18 @@
       "kind": "FieldsEncounter",
       "overview": {
         "encounterPhases": [
-          {
-            "slotKey": "Passive",
-            "encounterKey": "GeneratedH_Passive",
-            "kind": "combat"
-          },
-          {
-            "slotKey": "Cage01",
-            "encounterKey": "GeneratedH",
-            "kind": "combat"
-          },
-          {
-            "slotKey": "Cage02",
-            "encounterKey": "GeneratedH",
-            "kind": "combat"
-          },
-          {
-            "slotKey": "Cage03",
-            "encounterKey": "GeneratedH",
-            "kind": "combat"
-          }
+          { "slotKey": "Passive", "encounterKey": "GeneratedH_Passive", "kind": "combat" },
+          { "slotKey": "Cage01", "encounterKey": "GeneratedH", "kind": "combat" },
+          { "slotKey": "Cage02", "encounterKey": "GeneratedH", "kind": "combat" },
+          { "slotKey": "Cage03", "encounterKey": "GeneratedH", "kind": "combat" }
         ],
         "requiredObjects": [],
         "fields": {
-          "entryPair": {
-            "startPointId": 755863,
-            "endPointId": 755864
-          },
+          "entryPair": { "startPointId": 755863, "endPointId": 755864 },
           "cagePoints": [
-            {
-              "slotKey": "cage1",
-              "pointId": 573087
-            },
-            {
-              "slotKey": "cage2",
-              "pointId": 621494
-            },
-            {
-              "slotKey": "cage3",
-              "pointId": 621539
-            }
+            { "slotKey": "cage1", "pointId": 573087 },
+            { "slotKey": "cage2", "pointId": 621494 },
+            { "slotKey": "cage3", "pointId": 621539 }
           ],
           "optionalRewards": [
             {
@@ -6933,29 +4450,15 @@
                   "kind": "traits",
                   "giver": "Hestia",
                   "options": [
-                    {
-                      "key": "BurnExplodeBoon",
-                      "rarity": "Common",
-                      "effectiveLevel": 1
-                    },
-                    {
-                      "key": "AloneDamageBoon",
-                      "rarity": "Common",
-                      "effectiveLevel": 1
-                    },
-                    {
-                      "key": "ElementalBaseDamageBoon",
-                      "rarity": "Common"
-                    }
+                    { "key": "BurnExplodeBoon", "rarity": "Common", "effectiveLevel": 1 },
+                    { "key": "AloneDamageBoon", "rarity": "Common", "effectiveLevel": 1 },
+                    { "key": "ElementalBaseDamageBoon", "rarity": "Common" }
                   ],
                   "selected": "option1"
                 }
               }
             ],
-            "window": {
-              "kind": "encounterEnd",
-              "phaseKey": "Cage03"
-            }
+            "window": { "kind": "encounterEnd", "phaseKey": "Cage03" }
           },
           {
             "kind": "acquisition",
@@ -6983,30 +4486,15 @@
                   "kind": "traits",
                   "giver": "Apollo",
                   "options": [
-                    {
-                      "key": "ApolloRetaliateBoon",
-                      "rarity": "Common",
-                      "effectiveLevel": 1
-                    },
-                    {
-                      "key": "PerfectDamageBonusBoon",
-                      "rarity": "Common",
-                      "effectiveLevel": 1
-                    },
-                    {
-                      "key": "BlindChanceBoon",
-                      "rarity": "Common",
-                      "effectiveLevel": 1
-                    }
+                    { "key": "ApolloRetaliateBoon", "rarity": "Common", "effectiveLevel": 1 },
+                    { "key": "PerfectDamageBonusBoon", "rarity": "Common", "effectiveLevel": 1 },
+                    { "key": "BlindChanceBoon", "rarity": "Common", "effectiveLevel": 1 }
                   ],
                   "selected": "option1"
                 }
               }
             ],
-            "window": {
-              "kind": "encounterEnd",
-              "phaseKey": "Cage02"
-            }
+            "window": { "kind": "encounterEnd", "phaseKey": "Cage02" }
           },
           {
             "kind": "acquisition",
@@ -7036,10 +4524,7 @@
                 }
               }
             ],
-            "window": {
-              "kind": "encounterEnd",
-              "phaseKey": "Cage01"
-            }
+            "window": { "kind": "encounterEnd", "phaseKey": "Cage01" }
           }
         ],
         "dependencies": [
@@ -7057,11 +4542,7 @@
           {
             "exitKey": "exit1",
             "index": 1,
-            "room": {
-              "id": "golden-h-preboss-shop",
-              "biomeKey": "H",
-              "gameName": "H_PreBoss01"
-            },
+            "room": { "id": "golden-h-preboss-shop", "biomeKey": "H", "gameName": "H_PreBoss01" },
             "zagreusContractPresent": false,
             "reward": {
               "rewardType": "Shop",
@@ -7072,11 +4553,7 @@
           {
             "exitKey": "exit2",
             "index": 2,
-            "room": {
-              "id": "golden-h-preboss-free",
-              "biomeKey": "H",
-              "gameName": "H_PreBoss01"
-            },
+            "room": { "id": "golden-h-preboss-free", "biomeKey": "H", "gameName": "H_PreBoss01" },
             "zagreusContractPresent": false,
             "reward": {
               "rewardType": "StackUpgrade",
@@ -7088,14 +4565,7 @@
         "resolvedSharedRewardStoreKey": "RunProgress"
       },
       "roomExitConformance": {
-        "facts": [
-          {
-            "kind": "elementCounts"
-          },
-          {
-            "kind": "traitInventory"
-          }
-        ]
+        "facts": [{ "kind": "elementCounts" }, { "kind": "traitInventory" }]
       },
       "diagnostics": {
         "roomEntered": {
@@ -7116,161 +4586,45 @@
               "roomHistoryOrdinal": 30
             },
             "bags": [
-              {
-                "storeKey": "RunProgress",
-                "remaining": {
-                  "kind": "exact",
-                  "count": 16
-                }
-              },
-              {
-                "storeKey": "MetaProgress",
-                "remaining": {
-                  "kind": "exact",
-                  "count": 5
-                }
-              },
-              {
-                "storeKey": "HubRewards",
-                "remaining": {
-                  "kind": "exact",
-                  "count": 10
-                }
-              },
-              {
-                "storeKey": "SubRoomRewards",
-                "remaining": {
-                  "kind": "exact",
-                  "count": 23
-                }
-              },
-              {
-                "storeKey": "SubRoomRewardsHard",
-                "remaining": {
-                  "kind": "exact",
-                  "count": 8
-                }
-              },
+              { "storeKey": "RunProgress", "remaining": { "kind": "exact", "count": 16 } },
+              { "storeKey": "MetaProgress", "remaining": { "kind": "exact", "count": 5 } },
+              { "storeKey": "HubRewards", "remaining": { "kind": "exact", "count": 10 } },
+              { "storeKey": "SubRoomRewards", "remaining": { "kind": "exact", "count": 23 } },
+              { "storeKey": "SubRoomRewardsHard", "remaining": { "kind": "exact", "count": 8 } },
               {
                 "storeKey": "FieldsOptionalRewards",
-                "remaining": {
-                  "kind": "exact",
-                  "count": 13
-                }
+                "remaining": { "kind": "exact", "count": 13 }
               },
-              {
-                "storeKey": "TartarusRewards",
-                "remaining": {
-                  "kind": "exact",
-                  "count": 9
-                }
-              },
-              {
-                "storeKey": "TyphonBossRewards",
-                "remaining": {
-                  "kind": "exact",
-                  "count": 6
-                }
-              }
+              { "storeKey": "TartarusRewards", "remaining": { "kind": "exact", "count": 9 } },
+              { "storeKey": "TyphonBossRewards", "remaining": { "kind": "exact", "count": 6 } },
+              { "storeKey": "Secrets", "remaining": { "kind": "exact", "count": 1 } }
             ],
             "traits": {
               "equipped": [
-                {
-                  "traitKey": "ApolloWeaponBoon",
-                  "rarity": "Common",
-                  "level": 3
-                },
-                {
-                  "traitKey": "ZeusSpecialBoon",
-                  "rarity": "Common",
-                  "level": 1
-                },
-                {
-                  "traitKey": "HeraCastBoon",
-                  "rarity": "Common",
-                  "level": 1
-                },
-                {
-                  "traitKey": "StaffDoubleAttackTrait",
-                  "hammerRank": "RankI"
-                },
-                {
-                  "traitKey": "HestiaSprintBoon",
-                  "rarity": "Common",
-                  "level": 1
-                },
-                {
-                  "traitKey": "NarcissusA"
-                },
-                {
-                  "traitKey": "HestiaManaBoon",
-                  "rarity": "Common",
-                  "level": 1
-                },
-                {
-                  "traitKey": "CastProjectileBoon",
-                  "rarity": "Common",
-                  "level": 1
-                },
-                {
-                  "traitKey": "StaffLongAttackTrait",
-                  "hammerRank": "RankI"
-                },
-                {
-                  "traitKey": "HermesWeaponBoon",
-                  "rarity": "Common"
-                },
-                {
-                  "traitKey": "FireballManaSpecialBoon",
-                  "rarity": "Common",
-                  "level": 1
-                },
-                {
-                  "traitKey": "BurnExplodeBoon",
-                  "rarity": "Common",
-                  "level": 1
-                },
-                {
-                  "traitKey": "ApolloRetaliateBoon",
-                  "rarity": "Common",
-                  "level": 1
-                }
+                { "traitKey": "ApolloWeaponBoon", "rarity": "Common", "level": 3 },
+                { "traitKey": "ZeusSpecialBoon", "rarity": "Common", "level": 1 },
+                { "traitKey": "HeraCastBoon", "rarity": "Common", "level": 1 },
+                { "traitKey": "StaffDoubleAttackTrait", "hammerRank": "RankI" },
+                { "traitKey": "HestiaSprintBoon", "rarity": "Common", "level": 1 },
+                { "traitKey": "NarcissusA" },
+                { "traitKey": "HestiaManaBoon", "rarity": "Common", "level": 1 },
+                { "traitKey": "CastProjectileBoon", "rarity": "Common", "level": 1 },
+                { "traitKey": "StaffLongAttackTrait", "hammerRank": "RankI" },
+                { "traitKey": "HermesWeaponBoon", "rarity": "Common" },
+                { "traitKey": "FireballManaSpecialBoon", "rarity": "Common", "level": 1 },
+                { "traitKey": "BurnExplodeBoon", "rarity": "Common", "level": 1 },
+                { "traitKey": "ApolloRetaliateBoon", "rarity": "Common", "level": 1 }
               ],
               "slots": [
-                {
-                  "slot": "Melee",
-                  "traitKey": "ApolloWeaponBoon"
-                },
-                {
-                  "slot": "Secondary",
-                  "traitKey": "ZeusSpecialBoon"
-                },
-                {
-                  "slot": "Ranged",
-                  "traitKey": "HeraCastBoon"
-                },
-                {
-                  "slot": "Rush",
-                  "traitKey": "HestiaSprintBoon"
-                },
-                {
-                  "slot": "Mana",
-                  "traitKey": "HestiaManaBoon"
-                },
-                {
-                  "slot": "Spell"
-                }
+                { "slot": "Melee", "traitKey": "ApolloWeaponBoon" },
+                { "slot": "Secondary", "traitKey": "ZeusSpecialBoon" },
+                { "slot": "Ranged", "traitKey": "HeraCastBoon" },
+                { "slot": "Rush", "traitKey": "HestiaSprintBoon" },
+                { "slot": "Mana", "traitKey": "HestiaManaBoon" },
+                { "slot": "Spell" }
               ],
-              "elements": {
-                "Aether": 0,
-                "Earth": 1,
-                "Air": 3,
-                "Fire": 6,
-                "Water": 0
-              },
-              "godRarityCounts": {
-                "Common": 10
-              },
+              "elements": { "Aether": 0, "Earth": 1, "Air": 3, "Fire": 6, "Water": 0 },
+              "godRarityCounts": { "Common": 10 },
               "upgradableCount": 9,
               "bannedTraitKeys": []
             }
@@ -7286,34 +4640,14 @@
       "kind": "FieldsEncounter",
       "overview": {
         "encounterPhases": [
-          {
-            "slotKey": "Passive",
-            "encounterKey": "GeneratedH_Passive",
-            "kind": "combat"
-          },
-          {
-            "slotKey": "Cage01",
-            "encounterKey": "GeneratedH",
-            "kind": "combat"
-          },
-          {
-            "slotKey": "Cage02",
-            "encounterKey": "GeneratedH",
-            "kind": "combat"
-          },
-          {
-            "slotKey": "Cage03",
-            "encounterKey": "GeneratedH",
-            "kind": "combat"
-          }
+          { "slotKey": "Passive", "encounterKey": "GeneratedH_Passive", "kind": "combat" },
+          { "slotKey": "Cage01", "encounterKey": "GeneratedH", "kind": "combat" },
+          { "slotKey": "Cage02", "encounterKey": "GeneratedH", "kind": "combat" },
+          { "slotKey": "Cage03", "encounterKey": "GeneratedH", "kind": "combat" }
         ],
         "requiredObjects": []
       },
-      "timeline": {
-        "transactions": [],
-        "dependencies": [],
-        "obligations": []
-      },
+      "timeline": { "transactions": [], "dependencies": [], "obligations": [] },
       "doors": {
         "owner": "[\"occurrence\",\"Underworld\",\"H\",\"golden-h-combat04\"]",
         "kind": "terminal"
@@ -7332,11 +4666,7 @@
           "resolvedStoreKey": "RunProgress"
         },
         "encounterPhases": [
-          {
-            "slotKey": "Encounter",
-            "encounterKey": "Shop",
-            "kind": "nonCombat"
-          }
+          { "slotKey": "Encounter", "encounterKey": "Shop", "kind": "nonCombat" }
         ],
         "requiredObjects": [],
         "shop": {
@@ -7353,36 +4683,18 @@
               "optionKey": "RoomRewardHealDrop",
               "rewardType": "RoomRewardHealDrop"
             },
-            {
-              "offerKey": "Minor",
-              "optionKey": "MaxManaDrop",
-              "rewardType": "MaxManaDrop"
-            }
+            { "offerKey": "Minor", "optionKey": "MaxManaDrop", "rewardType": "MaxManaDrop" }
           ]
         }
       },
-      "timeline": {
-        "transactions": [],
-        "dependencies": [],
-        "obligations": []
-      },
+      "timeline": { "transactions": [], "dependencies": [], "obligations": [] },
       "doors": {
         "owner": "[\"occurrence\",\"Underworld\",\"H\",\"golden-h-preboss-shop\"]",
         "kind": "fixed",
-        "target": {
-          "id": "golden-h-preboss-shop:boss",
-          "biomeKey": "H",
-          "gameName": "H_Boss01"
-        },
+        "target": { "id": "golden-h-preboss-shop:boss", "biomeKey": "H", "gameName": "H_Boss01" },
         "zagreusContractPresent": false
       },
-      "roomExitConformance": {
-        "facts": [
-          {
-            "kind": "elementCounts"
-          }
-        ]
-      },
+      "roomExitConformance": { "facts": [{ "kind": "elementCounts" }] },
       "diagnostics": {
         "roomEntered": {
           "frame": 60,
@@ -7418,19 +4730,11 @@
           "resolvedStoreKey": "RunProgress"
         },
         "encounterPhases": [
-          {
-            "slotKey": "Encounter",
-            "encounterKey": "Shop",
-            "kind": "nonCombat"
-          }
+          { "slotKey": "Encounter", "encounterKey": "Shop", "kind": "nonCombat" }
         ],
         "requiredObjects": []
       },
-      "timeline": {
-        "transactions": [],
-        "dependencies": [],
-        "obligations": []
-      },
+      "timeline": { "transactions": [], "dependencies": [], "obligations": [] },
       "doors": {
         "owner": "[\"occurrence\",\"Underworld\",\"H\",\"golden-h-preboss-free\"]",
         "kind": "terminal"
@@ -7445,19 +4749,11 @@
       "overview": {
         "effectNeutralRequiredReward": true,
         "encounterPhases": [
-          {
-            "slotKey": "Encounter",
-            "encounterKey": "BossInfestedCerberus01",
-            "kind": "boss"
-          }
+          { "slotKey": "Encounter", "encounterKey": "BossInfestedCerberus01", "kind": "boss" }
         ],
         "requiredObjects": []
       },
-      "timeline": {
-        "transactions": [],
-        "dependencies": [],
-        "obligations": []
-      },
+      "timeline": { "transactions": [], "dependencies": [], "obligations": [] },
       "doors": {
         "owner": "[\"occurrence\",\"Underworld\",\"H\",\"golden-h-preboss-shop:boss\"]",
         "kind": "fixed",
@@ -7468,13 +4764,7 @@
         },
         "zagreusContractPresent": false
       },
-      "roomExitConformance": {
-        "facts": [
-          {
-            "kind": "elementCounts"
-          }
-        ]
-      },
+      "roomExitConformance": { "facts": [{ "kind": "elementCounts" }] },
       "diagnostics": {
         "roomEntered": {
           "frame": 62,
@@ -7506,19 +4796,11 @@
       "resumeBoundary": "postbossEntry",
       "overview": {
         "encounterPhases": [
-          {
-            "slotKey": "Encounter",
-            "encounterKey": "Empty",
-            "kind": "nonCombat"
-          }
+          { "slotKey": "Encounter", "encounterKey": "Empty", "kind": "nonCombat" }
         ],
         "requiredObjects": [],
-        "stygianWell": {
-          "interacted": false
-        },
-        "purgingPool": {
-          "interacted": false
-        },
+        "stygianWell": { "interacted": false },
+        "purgingPool": { "interacted": false },
         "keepsakeRack": {},
         "fountain": {}
       },
@@ -7528,10 +4810,7 @@
             "kind": "fountainUse",
             "owner": "[\"roomAction\",\"Underworld\",\"H\",\"golden-h-preboss-shop:postboss\",\"[\\\"useFountain\\\"]\"]",
             "interactionKey": "fountain",
-            "window": {
-              "kind": "standard",
-              "phase": "afterCombat"
-            }
+            "window": { "kind": "standard", "phase": "afterCombat" }
           }
         ],
         "dependencies": [],
@@ -7546,13 +4825,7 @@
         "owner": "[\"occurrence\",\"Underworld\",\"H\",\"golden-h-preboss-shop:postboss\"]",
         "kind": "terminal"
       },
-      "roomExitConformance": {
-        "facts": [
-          {
-            "kind": "elementCounts"
-          }
-        ]
-      },
+      "roomExitConformance": { "facts": [{ "kind": "elementCounts" }] },
       "diagnostics": {
         "roomEntered": {
           "frame": 64,
@@ -7576,5 +4849,5 @@
       }
     }
   ],
-  "planFingerprint": "5978c179"
+  "planFingerprint": "3189eee3"
 }
