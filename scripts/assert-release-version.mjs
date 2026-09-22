@@ -20,7 +20,7 @@ if (repository === undefined || repository === '')
   fail('GITHUB_REPOSITORY must identify the repository whose releases gate this version.');
 
 const listed = spawnSync(
-  'gh',
+  platform === 'win32' ? 'gh.exe' : 'gh',
   [
     'api',
     '--paginate',
@@ -28,7 +28,8 @@ const listed = spawnSync(
     '--jq',
     '.[] | select(.draft == false and .prerelease == false) | .tag_name',
   ],
-  { encoding: 'utf8', shell: platform === 'win32' },
+  // Pass the jq expression verbatim; a Windows shell interprets its pipes.
+  { encoding: 'utf8', shell: false },
 );
 if (listed.error !== undefined || listed.status !== 0)
   fail(`Unable to inspect published stable releases: ${listed.error?.message ?? listed.stderr}`);

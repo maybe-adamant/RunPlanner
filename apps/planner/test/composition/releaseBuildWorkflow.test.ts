@@ -6,6 +6,15 @@ import { describe, expect, it } from 'vitest';
 const repositoryRoot = join(dirname(fileURLToPath(import.meta.url)), '../../../..');
 
 describe('Windows portable release build metadata', () => {
+  it('invokes the native GitHub CLI without a shell interpreting the jq pipes', () => {
+    const script = readFileSync(join(repositoryRoot, 'scripts/assert-release-version.mjs'), 'utf8');
+    expect(script).toContain("platform === 'win32' ? 'gh.exe' : 'gh'");
+    expect(script).toContain("{ encoding: 'utf8', shell: false }");
+    expect(script).toContain(
+      "'.[] | select(.draft == false and .prerelease == false) | .tag_name'",
+    );
+  });
+
   it('passes one validated version and commit to Tauri and the frontend', () => {
     const workflow = readFileSync(
       join(repositoryRoot, '.github/workflows/windows-portable.yml'),
