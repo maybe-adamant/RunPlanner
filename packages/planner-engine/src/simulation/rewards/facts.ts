@@ -16,6 +16,7 @@ import type { CanonicalLifecycleRoom } from '../history/lifecycleInput';
 import type { HermesShrineCandidateContext } from '../commerce/hermes-shrine';
 import type { SimulationState } from '../state/model';
 import { rewardLookupSets } from '../state/reward-lookups';
+import { offeredRewardTypeSet } from '../state/offered-rewards';
 import { BiomeRewardSimulationContractError } from './biome/biome-contract';
 
 /** Visible store names that participate in RequiredNotInStore at room entry. */
@@ -121,6 +122,12 @@ interface RewardFactsOptions {
   readonly currentBatchRoomGameNames: readonly string[];
   readonly currentRoomShopOptionNames?: ReadonlySet<string>;
   readonly rewardLookups?: Readonly<Record<string, ReadonlySet<string>>>;
+  /**
+   * Reward types the transition into this room offered on every exit. Required
+   * rather than defaulted: an empty set encodes no policy and silently permits,
+   * which is the failure direction of the entries that consult it.
+   */
+  readonly offeredRewardTypes: ReadonlySet<string>;
   /** Branch-local delayed Shrine Spell reservation. */
   readonly pendingSpellDrop?: boolean;
   readonly allSpellInvested?: boolean;
@@ -138,6 +145,7 @@ export function createRewardFacts({
   currentBatchRoomGameNames,
   currentRoomShopOptionNames = new Set(),
   rewardLookups = Object.freeze({}),
+  offeredRewardTypes,
   pendingSpellDrop = false,
   allSpellInvested = false,
   fail,
@@ -175,6 +183,7 @@ export function createRewardFacts({
         : undefined,
     currentRoomStructuralTags: sourceDeclaration?.structuralTags ?? Object.freeze([]),
     rewardLookups,
+    offeredRewardTypes,
     runDepthCache: view.ledgers.counters.roomHistoryOrdinal + 1,
     lastEventRunDepthCaches: Object.freeze(
       history.lastDevotionDepth === undefined ? {} : { Devotion: history.lastDevotionDepth },
@@ -252,6 +261,9 @@ export function createBiomeRewardFacts(input: BiomeRewardFactsInput): RewardKern
       input.hubBoardLookups === 'consulted'
         ? rewardLookupSets(state.rewardLookups)
         : Object.freeze({}),
+    // The game reads MapState at every requirement, so this fact is not a
+    // per-contact policy: the consuming inventory entry selects it.
+    offeredRewardTypes: offeredRewardTypeSet(state.offeredRewardTypes),
     pendingSpellDrop: Object.values(state.pendingHermesShrineDeliveries).some(
       (delivery) => delivery.rewardType === 'SpellDrop',
     ),
@@ -292,6 +304,7 @@ export function createRouteStartRewardFacts(
     currentRoomRewardType: undefined,
     currentRoomStructuralTags: Object.freeze([]),
     rewardLookups: Object.freeze({}),
+    offeredRewardTypes: offeredRewardTypeSet(state.offeredRewardTypes),
     runDepthCache: 1,
     lastEventRunDepthCaches: Object.freeze(
       history.lastDevotionDepth === undefined ? {} : { Devotion: history.lastDevotionDepth },

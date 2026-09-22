@@ -264,6 +264,9 @@ function projectRoomGenerationRequirementContext(
     currentRoomRewardType: source.incomingReward?.offer.rewardType,
     currentRoomStructuralTags: sourceDeclaration.structuralTags,
     rewardLookups: rewardLookups ?? Object.freeze({}),
+    // Room generation never consults the per-map offered-reward fact: the game
+    // rebuilds MapState.OfferedRewards only once this batch's doors unlock.
+    offeredRewardTypes: new Set<string>(),
     runDepthCache: view.ledgers.counters.roomHistoryOrdinal + 1,
     lastEventRunDepthCaches: Object.freeze({}),
     recentEncounterEnvelopeSlots: projectRecentEncounterEnvelopeSlots(view),

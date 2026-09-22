@@ -47,5 +47,6 @@ export function createInitialSimulationState(
       extendedUses: 0,
     }),
     rewardLookups: createEmptyRewardLookups(catalog),
+    offeredRewardTypes: Object.freeze([]),
   });
 }

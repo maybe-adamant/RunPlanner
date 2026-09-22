@@ -118,6 +118,16 @@ export const spellLegal: RequirementExpression = {
   ],
 };
 
+/**
+ * Ordinary World Shop only: the transition that led into this Shop must not
+ * already have offered a Spell Drop on any of its exits, taken or not. The
+ * Shrine and the I/Q Shops carry no such entry rule.
+ */
+export const transitionSpellDropExcludes: RequirementExpression = {
+  kind: 'offeredRewardExcludes',
+  rewardType: 'SpellDrop',
+};
+
 /** StoreData applies this lookup only to the named shrine/shop entries. */
 export const hubSpellDropExcludes: RequirementExpression = {
   kind: 'rewardLookupExcludes',

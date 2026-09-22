@@ -22,7 +22,64 @@ function excludesHubOffer(
   return requirement.kind === 'not' && excludesHubOffer(requirement.requirement, rewardType);
 }
 
+/** Structural walk: a kind rename must break this, not silently pass. */
+function excludesOfferedTransitionReward(
+  requirement: RequirementExpression | undefined,
+  rewardType: string,
+): boolean {
+  if (requirement === undefined) return false;
+  if (requirement.kind === 'offeredRewardExcludes') return requirement.rewardType === rewardType;
+  if (requirement.kind === 'all' || requirement.kind === 'any')
+    return requirement.requirements.some((child) =>
+      excludesOfferedTransitionReward(child, rewardType),
+    );
+  return (
+    requirement.kind === 'not' &&
+    excludesOfferedTransitionReward(requirement.requirement, rewardType)
+  );
+}
+
 describe('reward compiler Shop normalizer', () => {
+  it('applies the transition offered-reward exclusion to the ordinary World Shop Spell entry only', () => {
+    const option = (profileKey: string, groupKey: string, optionKey: string) =>
+      rewardKernelCatalog.shops.byKey[profileKey]?.groups.byKey[groupKey]?.options.byKey[optionKey];
+
+    expect(
+      excludesOfferedTransitionReward(
+        option('WorldShop', 'Minor', 'SpellDrop')?.requirement,
+        'SpellDrop',
+      ),
+    ).toBe(true);
+    // The Shrine and the I/Q Shops carry no MapState.OfferedRewards clause.
+    expect(
+      excludesOfferedTransitionReward(
+        option('SurfaceShop', 'Second', 'SpellDrop')?.requirement,
+        'SpellDrop',
+      ),
+    ).toBe(false);
+    expect(
+      excludesOfferedTransitionReward(
+        option('I_WorldShop', 'MixedProgress', 'SpellDrop')?.requirement,
+        'SpellDrop',
+      ),
+    ).toBe(false);
+    expect(
+      excludesOfferedTransitionReward(
+        option('Q_WorldShop', 'MixedProgress', 'SpellDrop')?.requirement,
+        'SpellDrop',
+      ),
+    ).toBe(false);
+    // No other ordinary World Shop entry gains the rule.
+    const worldShop = rewardKernelCatalog.shops.byKey.WorldShop;
+    expect(
+      worldShop?.groups.values.flatMap((group) =>
+        group.options.values.flatMap((entry) =>
+          excludesOfferedTransitionReward(entry.requirement, 'SpellDrop') ? [entry.key] : [],
+        ),
+      ),
+    ).toEqual(['SpellDrop']);
+  });
+
   it('keeps Ephyra offer exclusions on only the source-specific inventory entries', () => {
     const option = (profileKey: string, groupKey: string, optionKey: string) =>
       rewardKernelCatalog.shops.byKey[profileKey]?.groups.byKey[groupKey]?.options.byKey[optionKey];

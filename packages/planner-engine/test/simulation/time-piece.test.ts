@@ -49,6 +49,7 @@ function facts(): RewardKernelFacts {
       currentRoomRewardType: undefined,
       currentRoomStructuralTags: [],
       rewardLookups: {},
+      offeredRewardTypes: new Set<string>(),
       runDepthCache: 1,
       lastEventRunDepthCaches: {},
       recentEncounterEnvelopeSlots: [],

@@ -19,6 +19,7 @@ import { simulateProject } from '@run-planner/engine/simulation';
 import { createArcanaFearState } from '../../src/simulation/arcana-fear';
 import { materializeAuthoredRoom } from '../../src/simulation/materialization/rooms/assemble';
 import { createRewardFacts } from '../../src/simulation/rewards/facts';
+import { offeredRewardTypeSet } from '../../src/simulation/state/offered-rewards';
 import { initializeTestRewardBranchesForRoute as initializeRewardBranches } from '../support/arcana-fear';
 import { processShopInventory } from '../../src/simulation/rewards/shop/inventory';
 import { deriveTravelRefill } from '../../src/simulation/rewards/shop/derived-rewards';
@@ -168,6 +169,7 @@ describe('Dream Shop availability', () => {
         enteredBiomeCount: 1,
         currentBatchRoomGameNames: [],
         rewardLookups: { hubRewardLookup: new Set() },
+        offeredRewardTypes: offeredRewardTypeSet(state.offeredRewardTypes),
         fail: (detail) => {
           throw new Error(detail);
         },
@@ -214,6 +216,7 @@ describe('Dream Shop availability', () => {
         enteredBiomeCount: 1,
         currentBatchRoomGameNames: [],
         rewardLookups: { hubRewardLookup: new Set() },
+        offeredRewardTypes: offeredRewardTypeSet(state.offeredRewardTypes),
         fail: (detail) => {
           throw new Error(detail);
         },

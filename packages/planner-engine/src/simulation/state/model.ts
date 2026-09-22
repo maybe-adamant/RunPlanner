@@ -87,6 +87,12 @@ export interface SimulationState {
   readonly pendingHermesShrineDeliveries: Readonly<Record<string, PendingHermesShrineDelivery>>;
   readonly stygianWell: StygianWellRunState;
   readonly rewardLookups: Readonly<Record<string, readonly string[]>>;
+  /**
+   * Transient per-map offered rewards from the transition that reached this
+   * room; see `state/offered-rewards.ts`. Sorted and deduplicated so branch
+   * equivalence compares the set rather than a generation order.
+   */
+  readonly offeredRewardTypes: readonly string[];
 }
 
 export function createEmptyRewardLookups(

@@ -76,6 +76,8 @@ function requirementExplanation(requirement: RequirementExpression): string {
       return `Requires ${requirement.rewardType} not to be a current Shop option.`;
     case 'rewardLookupExcludes':
       return `Requires ${requirement.rewardType} to be excluded by ${requirement.lookupKey}.`;
+    case 'offeredRewardExcludes':
+      return `Requires the way into this room not to have offered ${requirement.rewardType}.`;
     case 'minRoomsSinceEvent':
       return `Requires at least ${requirement.count} rooms since ${requirement.event}.`;
     case 'minExits':

@@ -94,6 +94,15 @@ export type RequirementExpression =
       readonly rewardTypes: readonly string[];
     }
   | {
+      /**
+       * Rejects an entry when the transition that reached this contact already
+       * offered the type on any exit, chosen or not. This is the per-map
+       * offered-reward fact, not the run-persistent hub lookup.
+       */
+      readonly kind: 'offeredRewardExcludes';
+      readonly rewardType: string;
+    }
+  | {
       /** Requires every listed static tag on the room whose phase is resolving. */
       readonly kind: 'currentRoomStructuralTagsInclude';
       readonly tags: readonly RoomStructuralTag[];

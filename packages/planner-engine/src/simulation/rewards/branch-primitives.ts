@@ -115,6 +115,7 @@ function equivalentBranchStateKey(branch: RewardBranchState): string {
       arcanaFear: state.arcanaFear,
       keepsakes: state.keepsakes,
       rewardLookups: orderedRecord(state.rewardLookups),
+      offeredRewardTypes: state.offeredRewardTypes,
     },
     rewardForfeited: branch.events
       .filter((event) => event.kind === 'rewardForfeited')
