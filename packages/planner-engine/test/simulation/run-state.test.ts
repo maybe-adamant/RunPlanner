@@ -24,15 +24,25 @@ import { authorSurfaceWorldShop } from '@run-planner/test-fixtures/surface';
 import {
   createCompleteFGProject,
   createGoldenFGHProject,
+  createGoldenFGHIProject,
   goldenFStartId,
   goldenFOccurrenceId,
+  goldenGBiome,
+  goldenHBiome,
+  goldenHStartId,
+  goldenIBiome,
+  goldenIStartId,
 } from '@run-planner/test-fixtures/underworld';
 import {
   loadSurfaceNOProject,
   loadSurfaceNCompleteHubFrontierProject,
+  loadSurfaceNOPQProject,
   loadSurfaceNProject,
+  nBiome,
+  nOccurrenceIds,
   oBiome,
   oOccurrenceIds,
+  qBiome,
 } from '@run-planner/test-fixtures/surface';
 import { createRewardHistoryState, type RewardKernelFacts } from '../../src/reward-kernel';
 import { deriveRouteLoadout } from '../../src/authored-project/loadout';
@@ -55,6 +65,7 @@ import {
 
 /** Every direct adapter below projects the first Underworld biome. */
 const runStatePosition = ordinaryRoutePosition(catalog, 'Underworld', 'F');
+const fLayout = catalog.biomeLayouts.byKey.F!;
 
 /** The exact reached snapshots a checkpoint projection receives, in branch order. */
 function reachedTestStates(
@@ -271,6 +282,7 @@ describe('decision run-state snapshots', () => {
     ) =>
       createRunState({
         catalog,
+        layout: fLayout,
         owner: createRoomRunStateCheckpointAddress(occurrence, { kind: checkpoint }),
         states: reachedTestStates([branch], historyView),
         rewardFacts: () => requirementFacts(0),
@@ -359,6 +371,7 @@ describe('decision run-state snapshots', () => {
     ) =>
       createRunState({
         catalog,
+        layout: fLayout,
         owner,
         states: reachedTestStates([branch], view),
         rewardFacts: () => facts,
@@ -419,6 +432,7 @@ describe('decision run-state snapshots', () => {
     const snapshot = (bankedPathPoints: number, talentDropsClosed = false) =>
       createRunState({
         catalog,
+        layout: fLayout,
         owner,
         states: reachedTestStates(
           [
@@ -467,6 +481,7 @@ describe('decision run-state snapshots', () => {
     const spellEligibility = (pending: boolean) =>
       createRunState({
         catalog,
+        layout: fLayout,
         owner,
         states: reachedTestStates(
           [
@@ -527,6 +542,7 @@ describe('decision run-state snapshots', () => {
     for (const branch of [base, withReservation, base]) {
       createRunState({
         catalog,
+        layout: fLayout,
         owner,
         states: reachedTestStates([branch], historyView),
         derivationCache: lookupCache,
@@ -1181,6 +1197,7 @@ describe('decision run-state snapshots', () => {
     });
     const snapshot = createRunState({
       catalog,
+      layout: fLayout,
       owner: createExitDecisionAddress(createBiomeAddress('Underworld', 'F'), {
         kind: 'occurrence',
         occurrenceId: goldenFStartId,
@@ -1269,6 +1286,7 @@ describe('decision run-state snapshots', () => {
     });
     const snapshot = createRunState({
       catalog,
+      layout: fLayout,
       owner,
       states: reachedTestStates([branch], {
         sequence: traits.events.length,
@@ -1301,5 +1319,93 @@ describe('decision run-state snapshots', () => {
     });
     expect(snapshot?.traits.properUpbringingActive).toBe(true);
     expect(snapshot?.counters.upgradableTraitCount).toBe(traits.upgradableTraitCount);
+  });
+});
+
+describe('run-state base-store controller', () => {
+  const controllerAt = (
+    project: ReturnType<typeof createGoldenFGHIProject>,
+    biome: ReturnType<typeof createBiomeAddress>,
+    occurrenceId: ReturnType<typeof createOccurrenceId>,
+    checkpoint: 'roomEntered' | 'beforeRoomExit',
+  ) => {
+    const evaluated = simulateProject(catalog, project).route?.biomes.find(
+      (candidate) => candidate.biomeKey === biome.biomeKey,
+    );
+    if (evaluated === undefined || !('rewards' in evaluated)) {
+      throw new Error(`${biome.biomeKey} published no rewards`);
+    }
+    const owner = createRoomRunStateCheckpointAddress(
+      createOccurrenceAddress(biome, occurrenceId),
+      { kind: checkpoint },
+    );
+    const snapshot = evaluated.rewards.runStateSnapshots.find(
+      (candidate) => semanticAddressKey(candidate.owner) === semanticAddressKey(owner),
+    );
+    if (snapshot === undefined) throw new Error(`${occurrenceId} has no ${checkpoint} snapshot`);
+    return snapshot.rewardStoreController;
+  };
+
+  it('reports the run-wide ledger the controller reads and the biome target in effect', () => {
+    // The same G and Q Preboss exits the boss-door support reads: 20 entered / 6 meta
+    // in G, 21 / 3 in Q. Q's target comes from its completion descriptor, because only
+    // its boss door rolls.
+    expect(
+      controllerAt(
+        createGoldenFGHIProject(),
+        goldenGBiome,
+        createOccurrenceId('golden-g-preboss-shop'),
+        'beforeRoomExit',
+      ),
+    ).toEqual({
+      enteredStoreCount: 20,
+      enteredMetaStoreCount: 6,
+      currentMetaRatio: 0.3,
+      targetMetaRewardsRatio: 0.35,
+    });
+    expect(
+      controllerAt(
+        loadSurfaceNOPQProject(),
+        qBiome,
+        createOccurrenceId('surface-q-preboss'),
+        'beforeRoomExit',
+      ),
+    ).toEqual({
+      enteredStoreCount: 21,
+      enteredMetaStoreCount: 3,
+      currentMetaRatio: 3 / 21,
+      targetMetaRewardsRatio: 0.15,
+    });
+  });
+
+  it('omits a target where no door rolls and leaves the ratio null before anything counts', () => {
+    // H and I pin every door on their base block, so their declared 0.0 and 0.25 targets
+    // are dead; the one key each biome can still bank replaces the target.
+    const inH = controllerAt(
+      createGoldenFGHIProject(),
+      goldenHBiome,
+      goldenHStartId,
+      'beforeRoomExit',
+    );
+    expect(inH.targetMetaRewardsRatio).toBeUndefined();
+    expect(inH.bankableStoreKeys).toEqual(['RunProgress']);
+    expect(inH.enteredStoreCount).toBeGreaterThan(0);
+    const inI = controllerAt(
+      createGoldenFGHIProject(),
+      goldenIBiome,
+      goldenIStartId,
+      'beforeRoomExit',
+    );
+    expect(inI.targetMetaRewardsRatio).toBeUndefined();
+    expect(inI.bankableStoreKeys).toEqual(['TartarusRewards']);
+    // Every N room carries the native count exclusion and banks nothing at all.
+    expect(
+      controllerAt(loadSurfaceNOPQProject(), nBiome, nOccurrenceIds.preboss, 'beforeRoomExit'),
+    ).toEqual({
+      enteredStoreCount: 0,
+      enteredMetaStoreCount: 0,
+      currentMetaRatio: null,
+      bankableStoreKeys: [],
+    });
   });
 });

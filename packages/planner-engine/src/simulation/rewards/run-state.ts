@@ -5,7 +5,7 @@ import {
   type RoomRunStateCheckpointAddress,
 } from '../../authored-project/addresses';
 import { optionIndex } from '../../authored-project/traits/state';
-import type { Catalog, TraitElement } from '../../catalog-schema';
+import type { BiomeLayout, Catalog, TraitElement } from '../../catalog-schema';
 import type { RequirementExpression } from '../../requirements/model';
 import { evaluateRequirement } from '../../requirements/evaluator';
 import {
@@ -16,6 +16,12 @@ import {
   type RewardTypeDeclaration,
 } from '../../reward-kernel';
 import type { HistoryCounters } from '../history';
+import {
+  bankableRewardStoreKeys,
+  enteredRewardStoreTally,
+  rolledRewardStoreTargetRatio,
+  type EnteredRewardStoreTally,
+} from './biome/reward-store-support';
 import type { TraitHistoryState } from '../traits/history/model';
 import type { SimulationState } from '../state/model';
 import { artificerStatus } from '../arcana-fear';
@@ -101,6 +107,13 @@ export interface DecisionRewardBagState {
   readonly entries: readonly DecisionRewardBagEntryGroup[];
 }
 
+/** The base-store controller's inputs at this checkpoint, for comparison against the live game. */
+export interface RunStateRewardStoreController extends EnteredRewardStoreTally {
+  /** The biome's rolled target, or `bankableStoreKeys` instead where no door rolls. */
+  readonly targetMetaRewardsRatio?: number;
+  readonly bankableStoreKeys?: readonly string[];
+}
+
 export interface RunStateSnapshot {
   readonly owner: RunStateOwner;
   readonly historySequence: number;
@@ -133,6 +146,7 @@ export interface RunStateSnapshot {
     readonly remainingCount: number;
   };
   readonly forfeitStatus: 'inactive' | 'available' | 'consumed';
+  readonly rewardStoreController: RunStateRewardStoreController;
   readonly bags: readonly DecisionRewardBagState[];
 }
 
@@ -156,6 +170,8 @@ export interface RunStatePublication {
 
 interface RunStateContext {
   readonly catalog: Catalog;
+  /** This checkpoint's biome; the controller's target is a biome declaration, not a run fact. */
+  readonly layout: BiomeLayout;
   readonly owner: RunStateOwner;
   /**
    * The exact reached snapshots this checkpoint projects, in branch order. Each
@@ -729,6 +745,7 @@ export function createRunState(context: RunStateContext): RunStateSnapshot | und
     }
   }
   const currentArtificerStatus = artificerStatus(context.catalog, first.arcanaFear);
+  const targetMetaRewardsRatio = rolledRewardStoreTargetRatio(context.layout);
   return Object.freeze({
     owner: context.owner,
     historySequence: firstState.reached.historyView.sequence,
@@ -777,6 +794,13 @@ export function createRunState(context: RunStateContext): RunStateSnapshot | und
           }),
         }),
     forfeitStatus: first.forfeitStatus,
+    rewardStoreController: Object.freeze({
+      // No `currentStoreKey`: a checkpoint reports the ledger at its own settled boundary.
+      ...enteredRewardStoreTally(firstState.reached.historyView),
+      ...(targetMetaRewardsRatio === undefined
+        ? { bankableStoreKeys: bankableRewardStoreKeys(context.catalog, context.layout) }
+        : { targetMetaRewardsRatio }),
+    }),
     bags,
   });
 }

@@ -1,18 +1,80 @@
-import type { BiomeLayout, RewardStorePolicy, RoomDeclaration } from '../../../catalog-schema';
+import type {
+  BiomeLayout,
+  Catalog,
+  RewardStorePolicy,
+  RoomDeclaration,
+} from '../../../catalog-schema';
 import type { EnteredRewardStoreHistoryPolicy } from '../../../reward-kernel/bindings';
 import type { BatchRewardStoreAddress } from '../../../authored-project/addresses';
-import { bossDoorRewardStorePolicyForLayout } from '../../../authored-project/topology/query';
+import {
+  bossDoorRewardStorePolicyForLayout,
+  normalDecisionProgressionForLayout,
+} from '../../../authored-project/topology/query';
 import type { CanonicalAuthoredRoom, CanonicalBatch } from '../../materialization';
 import type { HistoryStateView } from '../../history';
 import type { RewardStoreCandidateSupport, RewardStoreSupportEntry } from '../model';
 import { BiomeRewardSimulationContractError } from './biome-contract';
 
-export interface RewardStoreHistorySupport {
+export interface EnteredRewardStoreTally {
   readonly enteredStoreCount: number;
   readonly enteredMetaStoreCount: number;
+  /** Null, never 0, before anything is counted: CalcMetaProgressRatio returns nil there. */
   readonly currentMetaRatio: number | null;
+}
+
+export interface RewardStoreHistorySupport extends EnteredRewardStoreTally {
   readonly metaSelectionValue: number;
   readonly supportStoreKeys: readonly string[];
+}
+
+/**
+ * Run-scoped, not per-biome: CalcMetaProgressRatio (RewardLogic.lua:469-489) walks the
+ * whole run history plus the current room. `currentStoreKey` is for a store the boundary
+ * has resolved but the ledger has not folded yet.
+ */
+export function enteredRewardStoreTally(
+  view: HistoryStateView,
+  currentStoreKey?: string,
+): EnteredRewardStoreTally {
+  const priorStores = view.ledgers.enteredRewardStores.map((entry) => entry.storeKey);
+  const stores = currentStoreKey === undefined ? priorStores : [...priorStores, currentStoreKey];
+  const metaCount = stores.filter((storeKey) => storeKey === 'MetaProgress').length;
+  return Object.freeze({
+    enteredStoreCount: stores.length,
+    enteredMetaStoreCount: metaCount,
+    currentMetaRatio: stores.length === 0 ? null : metaCount / stores.length,
+  });
+}
+
+/**
+ * The controller's `T` for this biome's rolled doors — ordinary progression first, then the
+ * completion descriptor for Q, whose only rolling door is the boss door. Undefined where no
+ * door rolls at all: H and I pin every door, and the N hub declares no base store.
+ */
+export function rolledRewardStoreTargetRatio(layout: BiomeLayout): number | undefined {
+  const ordinary = normalDecisionProgressionForLayout(layout)?.rewardStorePolicy;
+  const policy =
+    ordinary?.kind === 'authoredBaseStore' ? ordinary : bossDoorRewardStorePolicyForLayout(layout);
+  return policy?.kind === 'authoredBaseStore' ? policy.targetMetaRewardsRatio : undefined;
+}
+
+/**
+ * The distinct store keys this biome's rooms can bank, from its declarations alone: a room's
+ * fixed key, or the pin a `resolvedOffer` room carries where the door never rolls for it.
+ */
+export function bankableRewardStoreKeys(catalog: Catalog, layout: BiomeLayout): readonly string[] {
+  const keys = new Set<string>();
+  for (const room of catalog.rooms.values) {
+    if (room.roomSetKey !== layout.biomeKey) continue;
+    const policy = room.enteredRewardStoreHistory;
+    if (policy.kind === 'fixed') keys.add(policy.storeKey);
+    else if (policy.kind === 'resolvedOffer') {
+      // Individual wins over forced, as it does at the door (RoomLogic.lua:3951-3956).
+      const pinned = room.individualRewardStoreKey ?? room.forcedRewardStoreKey;
+      if (pinned !== undefined) keys.add(pinned);
+    }
+  }
+  return Object.freeze([...keys]);
 }
 
 /**
@@ -103,14 +165,8 @@ function rewardStorePolicySupport(
   view: HistoryStateView,
   currentStoreKey?: string,
 ): RewardStoreHistorySupport {
-  // Run-scoped, not per-biome: native CalcMetaProgressRatio (RewardLogic.lua:
-  // 469-489) walks the whole run.RoomHistory plus CurrentRoom, so every counted
-  // room entered so far in the run feeds the ratio regardless of which biome
-  // recorded it. The controller has no per-biome window to reset.
-  const priorStores = view.ledgers.enteredRewardStores.map((entry) => entry.storeKey);
-  const stores = currentStoreKey === undefined ? priorStores : [...priorStores, currentStoreKey];
-  const metaCount = stores.filter((storeKey) => storeKey === 'MetaProgress').length;
-  const ratio = stores.length === 0 ? null : metaCount / stores.length;
+  const tally = enteredRewardStoreTally(view, currentStoreKey);
+  const ratio = tally.currentMetaRatio;
   const metaSelectionValue =
     ratio === null
       ? policy.targetMetaRewardsRatio
@@ -123,13 +179,7 @@ function rewardStorePolicySupport(
         ? policy.storeKeys.filter((storeKey) => storeKey === 'MetaProgress')
         : [...policy.storeKeys],
   );
-  return Object.freeze({
-    enteredStoreCount: stores.length,
-    enteredMetaStoreCount: metaCount,
-    currentMetaRatio: ratio,
-    metaSelectionValue,
-    supportStoreKeys,
-  });
+  return Object.freeze({ ...tally, metaSelectionValue, supportStoreKeys });
 }
 
 /**

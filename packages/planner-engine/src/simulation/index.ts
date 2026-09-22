@@ -343,6 +343,7 @@ export {
   type DecisionRewardBagState,
   type RunStateAvailability,
   type RunStateOwner,
+  type RunStateRewardStoreController,
   type RunStateSnapshot,
   type DecisionTraitState,
 } from './rewards';

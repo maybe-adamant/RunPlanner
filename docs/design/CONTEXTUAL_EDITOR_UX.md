@@ -114,7 +114,13 @@ effect ledgers that actually exist; it does not enumerate inactive keepsakes,
 infer an effect from the current identity, or recreate charge and encounter-use
 folds. Arcana omits redundant rarity and activation-origin labels, while Fear
 uses one vow per row. The sheet also presents elements, followed by a `More
-Info` section with collapsed `Counters` and `Reward Bags` disclosures. Counters
+Info` section with a `Reward Store Ratio` block and collapsed `Counters` and
+`Reward Bags` disclosures. Reward Store Ratio states the run-wide entered-store
+tallies, the current ratio, and the biome target in effect so a reading can be
+compared against the live game. Where no door rolls it never prints the dead
+declared target: a biome that banks nothing reads `This biome ignores Reward
+Store.`, and one that banks a single key reads `This biome rolls only` that
+store's label. Counters
 use one key/value row each;
 individual reward bags retain their nested disclosures. Bag disclosures use the
 projected `Eligible now` and `Ineligible now` groups; they do not claim which
