@@ -177,6 +177,7 @@ function baseFacts(enteredBiomes = 4, routeKey = 'Underworld'): RewardKernelFact
       currentRoomRewardType: undefined,
       currentRoomStructuralTags: [],
       rewardLookups: { hubRewardLookup: new Set() },
+      offeredRewardTypes: new Set<string>(),
       runDepthCache: 8,
       lastEventRunDepthCaches: {},
       recentEncounterEnvelopeSlots: [],

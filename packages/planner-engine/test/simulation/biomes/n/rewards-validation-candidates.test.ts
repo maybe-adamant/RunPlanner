@@ -959,6 +959,7 @@ describe('N Hub rewards, validation, and candidates', () => {
         currentRoomRewardType: undefined,
         currentRoomStructuralTags: [],
         rewardLookups: {},
+        offeredRewardTypes: new Set<string>(),
         runDepthCache: 8,
         lastEventRunDepthCaches: {},
         recentEncounterEnvelopeSlots: [],

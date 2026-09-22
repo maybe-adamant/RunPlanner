@@ -107,6 +107,7 @@ function rewardFacts(): RewardKernelFacts {
       currentRoomRewardType: undefined,
       currentRoomStructuralTags: [],
       rewardLookups: {},
+      offeredRewardTypes: new Set<string>(),
       runDepthCache: 8,
       lastEventRunDepthCaches: {},
       recentEncounterEnvelopeSlots: [],

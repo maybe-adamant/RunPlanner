@@ -140,6 +140,9 @@ function requirementContext(
     })(),
     currentRoomStructuralTags: declaration.structuralTags,
     rewardLookups: Object.freeze({}),
+    // No encounter declaration consults the per-map offered-reward fact; the
+    // ordinary World Shop inventory entry is its only consumer.
+    offeredRewardTypes: new Set<string>(),
     runDepthCache: view.ledgers.counters.roomHistoryOrdinal + 1,
     lastEventRunDepthCaches: Object.freeze({}),
     recentEncounterEnvelopeSlots: projectRecentEncounterEnvelopeSlots(view),

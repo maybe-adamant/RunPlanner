@@ -38,6 +38,7 @@ import type { LifecycleFinding } from './types';
 import { dueHermesShrineDeliveryFrontier } from './hermes-shrine-delivery';
 import type { DerivedAcquisitionEntryFrontier } from '../../acquisition/contracts';
 import { attestSharedRewardLookups } from '../../../state/reward-lookups';
+import { clearOfferedRewardTypes } from '../../../state/offered-rewards';
 
 export interface RoomEnteredTransition {
   readonly branches: readonly RewardBranchState[];
@@ -79,7 +80,13 @@ export function applyRoomEnteredTransition(
     readonly stygianWell: boolean;
   },
 ): RoomEnteredTransition {
-  let next = advanceRewardBranches(branches, event.sequence);
+  // Entering a room initializes its map: the transition that offered the way
+  // here stops being a fact before this room can generate anything of its own.
+  let next: readonly RewardBranchState[] = Object.freeze(
+    advanceRewardBranches(branches, event.sequence).map((branch) =>
+      Object.freeze({ ...branch, state: clearOfferedRewardTypes(branch.state) }),
+    ),
+  );
   const findings: LifecycleFinding[] = [];
   // Shrine inventory consults the completed hub board through each branch's own
   // reached snapshot; the entering cohort must still agree on that board.

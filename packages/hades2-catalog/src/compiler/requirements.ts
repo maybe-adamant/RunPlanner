@@ -152,6 +152,11 @@ export function normalizeRequirement(
         kind: 'minExits',
         count: requirePositiveInteger(requirement.count, `${path}.count`),
       });
+    case 'offeredRewardExcludes':
+      return Object.freeze({
+        kind: 'offeredRewardExcludes',
+        rewardType: requireNonEmpty(requirement.rewardType, `${path}.rewardType`),
+      });
     case 'currentRoomRewardExcludes':
       if (requirement.rewardTypes.length === 0) {
         fail(`${path}.rewardTypes`, 'must not be empty');
@@ -216,6 +221,11 @@ export function validateRequirementReferences(
       return;
     case 'notInCurrentRoomShopOptions':
     case 'rewardLookupExcludes':
+      if (rewardTypes.byKey[requirement.rewardType] === undefined) {
+        fail(`${path}.rewardType`, `unknown reward type ${requirement.rewardType}`);
+      }
+      return;
+    case 'offeredRewardExcludes':
       if (rewardTypes.byKey[requirement.rewardType] === undefined) {
         fail(`${path}.rewardType`, `unknown reward type ${requirement.rewardType}`);
       }

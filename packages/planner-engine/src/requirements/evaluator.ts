@@ -30,6 +30,8 @@ export interface RequirementEvaluationContext {
   readonly currentRoomRewardType: string | undefined;
   readonly currentRoomStructuralTags: readonly RoomStructuralTag[];
   readonly rewardLookups: Readonly<Record<string, ReadonlySet<string>>>;
+  /** Reward types offered by the transition that reached this contact. */
+  readonly offeredRewardTypes: ReadonlySet<string>;
   readonly runDepthCache: number;
   readonly lastEventRunDepthCaches: Readonly<Record<string, number>>;
   readonly recentEncounterEnvelopeSlots: readonly {
@@ -155,6 +157,8 @@ export const requirementEvaluatorRegistry = Object.freeze({
     );
   },
   minExits: (requirement, context) => context.offeredExitCount >= requirement.count,
+  offeredRewardExcludes: (requirement, context) =>
+    !context.offeredRewardTypes.has(requirement.rewardType),
   currentRoomRewardExcludes: (requirement, context) =>
     context.currentRoomRewardType === undefined ||
     !requirement.rewardTypes.includes(context.currentRoomRewardType),
@@ -213,6 +217,8 @@ export function evaluateRequirement(
       return requirementEvaluatorRegistry.minRoomsSinceEvent(requirement, context);
     case 'minExits':
       return requirementEvaluatorRegistry.minExits(requirement, context);
+    case 'offeredRewardExcludes':
+      return requirementEvaluatorRegistry.offeredRewardExcludes(requirement, context);
     case 'currentRoomRewardExcludes':
       return requirementEvaluatorRegistry.currentRoomRewardExcludes(requirement, context);
     case 'currentRoomStructuralTagsInclude':

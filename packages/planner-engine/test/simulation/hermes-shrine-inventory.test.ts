@@ -144,6 +144,7 @@ function rewardFacts(history: RewardHistoryState): RewardKernelFacts {
       currentRoomRewardType: undefined,
       currentRoomStructuralTags: [],
       rewardLookups: { hubRewardLookup: new Set<string>() },
+      offeredRewardTypes: new Set<string>(),
       runDepthCache: 8,
       lastEventRunDepthCaches: {},
       recentEncounterEnvelopeSlots: [],
@@ -1025,6 +1026,7 @@ describe('Hermes Shrine Travel Deal generation', () => {
     if (history === undefined) throw new Error('Dream fixture lost its N branch history');
     const requirements = {
       ...rewardFacts(history).requirements,
+      offeredRewardTypes: new Set<string>(),
       rewardLookups: Object.freeze(
         Object.fromEntries(
           Object.entries(n.rewards.branches[0]!.state.rewardLookups).map(([key, values]) => [

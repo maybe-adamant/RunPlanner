@@ -25,6 +25,7 @@ const baseContext = {
   currentRoomRewardType: undefined,
   currentRoomStructuralTags: [],
   rewardLookups: {},
+  offeredRewardTypes: new Set<string>(),
   runDepthCache: 10,
   lastEventRunDepthCaches: {},
   recentEncounterEnvelopeSlots: [],
@@ -53,6 +54,7 @@ describe('requirement evaluator registry', () => {
       'rewardLookupExcludes',
       'minRoomsSinceEvent',
       'minExits',
+      'offeredRewardExcludes',
       'currentRoomRewardExcludes',
       'currentRoomStructuralTagsInclude',
       'currentBatchTargetCount',
@@ -177,6 +179,23 @@ describe('requirement evaluator registry', () => {
       ),
     ).toBe(false);
     expect(evaluateRequirement({ kind: 'minExits', count: 2 }, context)).toBe(true);
+    const offeredRewardExcludes = {
+      kind: 'offeredRewardExcludes' as const,
+      rewardType: 'SpellDrop',
+    };
+    expect(evaluateRequirement(offeredRewardExcludes, context)).toBe(true);
+    expect(
+      evaluateRequirement(offeredRewardExcludes, {
+        ...context,
+        offeredRewardTypes: new Set(['SpellDrop']),
+      }),
+    ).toBe(false);
+    expect(
+      evaluateRequirement(offeredRewardExcludes, {
+        ...context,
+        offeredRewardTypes: new Set(['StackUpgrade']),
+      }),
+    ).toBe(true);
     expect(
       evaluateRequirement({ kind: 'flagEquals', flag: 'pendingSpellDrop', value: false }, context),
     ).toBe(false);
@@ -369,12 +388,14 @@ describe('requirement evaluator registry', () => {
       evaluateRequirement(requirement, {
         ...baseContext,
         rewardLookups: { hubRewardLookup: new Set(['SpellDrop']) },
+        offeredRewardTypes: new Set<string>(),
       }),
     ).toBe(true);
     expect(
       evaluateRequirement(requirement, {
         ...baseContext,
         rewardLookups: { hubRewardLookup: new Set(['WeaponUpgrade']) },
+        offeredRewardTypes: new Set<string>(),
       }),
     ).toBe(false);
     expect(() => evaluateRequirement(requirement, baseContext)).toThrowError(

@@ -108,8 +108,9 @@ producer inclusion/exclusion matrix. Required cases:
 
 ### Gate B — Product witness, review and closure
 
-Add one real authored G preboss split witness through supported commands and
-production simulation/candidate APIs. Assert the inventory finding and picker
+Add one real authored split witness through supported commands and production
+simulation/candidate APIs, in the cheapest biome whose fixtures express the
+shape with a covered, non-terminal Shop. Assert the inventory finding and picker
 unavailability, then replace the sibling reward and verify repair. Keep the
 complete policy matrix in primary tests rather than duplicating it in React.
 

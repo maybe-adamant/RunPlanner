@@ -54,6 +54,7 @@ function requirementContext(
     currentRoomRewardType: undefined,
     currentRoomStructuralTags: [],
     rewardLookups: { hubRewardLookup: new Set() },
+    offeredRewardTypes: new Set<string>(),
     runDepthCache: 8,
     lastEventRunDepthCaches: {},
     recentEncounterEnvelopeSlots: [],
@@ -771,6 +772,7 @@ describe('ordered shop transitions', () => {
     };
     const supportedFacts = facts([], {
       rewardLookups: { hubRewardLookup: new Set() },
+      offeredRewardTypes: new Set<string>(),
     });
     const witness = findShopGenerationWitnesses(
       rewardKernelCatalog,
@@ -784,6 +786,7 @@ describe('ordered shop transitions', () => {
     }
     const blockedFacts = facts([], {
       rewardLookups: { hubRewardLookup: new Set(['WeaponUpgrade']) },
+      offeredRewardTypes: new Set<string>(),
     });
 
     expect(

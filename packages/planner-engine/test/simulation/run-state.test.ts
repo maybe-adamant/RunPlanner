@@ -90,6 +90,7 @@ function requirementFacts(ordinaryLootCount: number): RewardKernelFacts {
       currentRoomRewardType: undefined,
       currentRoomStructuralTags: [],
       rewardLookups: {},
+      offeredRewardTypes: new Set<string>(),
       runDepthCache: 0,
       lastEventRunDepthCaches: {},
       recentEncounterEnvelopeSlots: [],

@@ -3,6 +3,7 @@ import {
   hammerEarly,
   hammerLate,
   hubSpellDropExcludes,
+  transitionSpellDropExcludes,
   hubWeaponUpgradeExcludes,
   inRunFirstHalf,
   inRunSecondHalf,
@@ -159,7 +160,10 @@ const worldGroups = [
       option({
         key: 'SpellDrop',
         rewardType: 'SpellDrop',
-        requirement: { kind: 'all', requirements: [spellLegal, hubSpellDropExcludes] },
+        requirement: {
+          kind: 'all',
+          requirements: [spellLegal, hubSpellDropExcludes, transitionSpellDropExcludes],
+        },
       }),
       option({
         key: 'TalentDrop',

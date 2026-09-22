@@ -173,6 +173,7 @@ export function baseFacts(): RewardKernelFacts {
       currentRoomRewardType: undefined,
       currentRoomStructuralTags: [],
       rewardLookups: { hubRewardLookup: new Set() },
+      offeredRewardTypes: new Set<string>(),
       runDepthCache: 8,
       lastEventRunDepthCaches: {},
       recentEncounterEnvelopeSlots: [],

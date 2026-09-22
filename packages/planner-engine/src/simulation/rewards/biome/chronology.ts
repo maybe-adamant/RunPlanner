@@ -73,6 +73,10 @@ import { selectedTraitOfferProducts } from './selected-trait-products';
 import { prepareRewardEvaluationInputs } from './prepared-inputs';
 import { addHubBoardRewardLookup } from '../../state/reward-lookups';
 import { reachSimulationHistory, replaceSimulationTraitHistory } from '../../state/transitions';
+import {
+  normalizeOfferedRewardTypes,
+  publishOfferedRewardTypes,
+} from '../../state/offered-rewards';
 import { applyEncounterStartedTransition } from './lifecycle-transitions/encounter-started';
 import { applyEncounterEndEffectsTransition } from './lifecycle-transitions/encounter-end-effects';
 import { applyKeepsakeRackUsedTransition } from './lifecycle-transitions/keepsake-rack-used';
@@ -1460,6 +1464,41 @@ export function evaluateBiomeRewardChronology(
         if (transition.nextTargetHistory !== undefined)
           recordTargetSlotHistory(transition.nextTargetHistory, event.sequence);
         branches = advanceRewardBranches(branches, event.sequence);
+        // The game rebuilds its offered-reward set once, when the whole batch
+        // has rooms and its exits unlock. The completed batch's own generated
+        // offers are that set, so nothing reconstructs the rule here: the last
+        // generated target simply publishes the peers this batch produced.
+        //
+        // Only ordinary exit batches publish. Hub slot and local visit slot
+        // generations, the hub handoff batch and declaration-fixed room links
+        // are deliberately excluded: the hub board has its own run-persistent
+        // lookup with a different lifetime, and a fixed link reaches its target
+        // without an offered door batch. Extra exits (Chaos gate, Zagreus
+        // contract) are created at the parent's entry, so their offers are
+        // already flushed from `peers` by this batch's outgoing checkpoint;
+        // the game does count those doors, which is a recorded fidelity gap
+        // rather than a behavior difference, since no such room offers a type
+        // any inventory entry currently consults.
+        if (
+          event.origin.kind === 'target' &&
+          targetGeneration !== undefined &&
+          transition.nextTargetHistory === undefined &&
+          targetGeneration.exitKeys.at(-1) === event.origin.exitKey
+        ) {
+          // Normalized once for the whole cohort: every branch of one batch
+          // shares the same offered set and therefore the same frozen array.
+          const offeredRewardTypes = normalizeOfferedRewardTypes(
+            peers.map((peer) => peer.offer.rewardType),
+          );
+          branches = Object.freeze(
+            branches.map((branch) =>
+              Object.freeze({
+                ...branch,
+                state: publishOfferedRewardTypes(branch.state, offeredRewardTypes),
+              }),
+            ),
+          );
+        }
         break;
       }
       case 'outgoingGenerationCheckpoint': {
