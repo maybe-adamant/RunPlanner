@@ -47,6 +47,9 @@ export function CandidatePicker<T extends number | string>({
       }}
       onSelect={onReplace}
       placeholder={placeholder}
+      // Support evidence lives in the popover; under the trigger it is only a
+      // warning for a selection the controller no longer supports.
+      selectedExplanation="impossible-only"
       {...(selected === undefined ? {} : { triggerLabel: selected.label })}
     />
   );
