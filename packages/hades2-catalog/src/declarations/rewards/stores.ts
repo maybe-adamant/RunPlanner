@@ -167,4 +167,13 @@ export const stores = [
       { rewardType: 'WeaponUpgrade', requirement: hammerLate },
     ],
   },
+  {
+    // Chaos gate rooms draw from this store: native BaseChaos sets
+    // ForcedRewardStore = "Secrets" and the store itself holds one entry
+    // (LootData.lua:807-812). Native also lists it in
+    // RewardStoreData.InvalidOverrides (LootData.lua:802-805), so it never
+    // becomes a sibling door's store through the per-door override path.
+    key: 'Secrets',
+    entries: [{ rewardType: 'TrialUpgrade' }],
+  },
 ] satisfies RawRewardKernelInput['stores'];

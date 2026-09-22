@@ -151,6 +151,7 @@ describe('reward compiler acquisition, reward-type, and store normalizers', () =
       FieldsOptionalRewards: 19,
       TartarusRewards: 9,
       TyphonBossRewards: 6,
+      Secrets: 1,
     });
 
     expect(
@@ -200,6 +201,7 @@ describe('reward compiler acquisition, reward-type, and store normalizers', () =
       FieldsOptionalRewards: [],
       TartarusRewards: [6, 7, 8],
       TyphonBossRewards: [0, 1],
+      Secrets: [],
     });
     expect(rewardKernelCatalog.stores.byKey.RunProgress?.entries[0]?.rewardType).toBe(
       'MaxHealthDrop',
