@@ -25,7 +25,18 @@ export const cRooms = [
       rewardType: 'InfernalContractBoon',
       producerLifecycleKey: 'RoomReward',
     },
-    enteredRewardStoreHistory: { kind: 'none' },
+    // Native fixes this store at spawn, not by inheriting from the host biome.
+    // EventLogic.lua:1892 calls CreateRoom with no arguments, so args carries no
+    // store and RunLogic.lua:604-606 takes its fallback:
+    // `args.RewardStoreName = room.ForcedRewardStore or "RunProgress"`. The value
+    // is RunProgress precisely because RoomDataC declares no ForcedRewardStore,
+    // and it reaches the room at RunLogic.lua:619. No host store ever reaches it.
+    // The door reward pass never revisits this room either: RoomLogic.lua:3916-17
+    // marks NeedsReward only on a room that pass itself creates for a door, and
+    // C_Boss01 is spawned ahead of it. Its door also never depletes the store —
+    // ForcedReward short-circuits at RewardLogic.lua:86-88, ahead of both the
+    // store read at :141 and the RemoveIndexAndCollapse depletion at :178.
+    enteredRewardStoreHistory: { kind: 'fixed', storeKey: 'RunProgress' },
     encounterEnvelopeKey: 'SingleEncounter',
     encounterSlotBindings: [
       { slotKey: 'Encounter', kind: 'fixed', encounterDefinitionKey: 'BossZagreus01' },

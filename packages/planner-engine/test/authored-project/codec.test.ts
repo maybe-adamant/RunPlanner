@@ -4,8 +4,10 @@ import { catalog } from '@run-planner/hades2-catalog';
 import {
   decodeProjectDocument,
   encodeProjectDocument,
+  type OccurrenceId,
   type RoomActionReference,
 } from '@run-planner/engine/authored-project';
+import { fixedRoomLink } from '../../src/authored-project/fixed-room-links';
 import { createCompleteFGProject } from '@run-planner/test-fixtures/underworld';
 import { surfaceCheckpointArtifacts } from '@run-planner/test-fixtures/checkpoints/surface';
 
@@ -298,6 +300,50 @@ describe('project document codec', () => {
     expect(() => decodeProjectDocument(unselected, catalog)).toThrow(
       'must be empty when no Preboss is selected',
     );
+  });
+
+  it('carries an authored boss-door store only on a Preboss to Boss link', () => {
+    // The field is wire-optional, so a link that never authors a store encodes
+    // exactly the two keys it encoded before the field existed.
+    const untouched = encodedFStart();
+    for (const link of fTopology(untouched).fixedRoomLinks as Array<Record<string, unknown>>) {
+      expect(Object.keys(link)).toEqual(['sourceOccurrenceId', 'targetOccurrenceId']);
+    }
+
+    const onBossLink = encodedFStart();
+    const bossLinks = fTopology(onBossLink).fixedRoomLinks as Array<Record<string, unknown>>;
+    bossLinks[1]!.rewardStoreKey = 'RunProgress';
+    expect(() => decodeProjectDocument(onBossLink, catalog)).toThrow(
+      'is only authored on a Preboss to Boss link',
+    );
+
+    const notAString = encodedFStart();
+    const badLinks = fTopology(notAString).fixedRoomLinks as Array<Record<string, unknown>>;
+    badLinks[0]!.rewardStoreKey = 7;
+    expect(() => decodeProjectDocument(notAString, catalog)).toThrow(
+      'fixedRoomLinks[0].rewardStoreKey: must be a string',
+    );
+
+    // The constructed link survives the wire: encode -> decode -> encode keeps
+    // the authored key, and the decoded model exposes it on the same link.
+    const authored = encodedFStart();
+    const authoredLinks = fTopology(authored).fixedRoomLinks as Array<Record<string, unknown>>;
+    const constructed = fixedRoomLink(
+      authoredLinks[0]!.sourceOccurrenceId as OccurrenceId,
+      authoredLinks[0]!.targetOccurrenceId as OccurrenceId,
+      'RunProgress',
+    );
+    authoredLinks[0] = { ...constructed };
+    const decoded = decodeProjectDocument(authored, catalog);
+    expect(decoded.route?.biomes[0]?.topology?.fixedRoomLinks[0]).toEqual({
+      sourceOccurrenceId: authoredLinks[0].sourceOccurrenceId,
+      targetOccurrenceId: authoredLinks[0].targetOccurrenceId,
+      rewardStoreKey: 'RunProgress',
+    });
+    const reencoded = JSON.parse(encodeProjectDocument(decoded)) as Record<string, unknown>;
+    expect(
+      (fTopology(reencoded).fixedRoomLinks as Array<Record<string, unknown>>)[0]?.rewardStoreKey,
+    ).toBe('RunProgress');
   });
 
   it('decodes the real Surface resource checkpoint at the current schema boundary', () => {
