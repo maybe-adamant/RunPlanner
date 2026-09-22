@@ -111,7 +111,10 @@ describe('run-wide entered-store ledger', () => {
     // stands at 17 entered / 2 meta, so the selection value is
     // 0.20 + 10 * (0.20 - 2/17) = 1.0235 and MetaProgress is the only supported
     // key. G (20/6), O (7/2) and Q (21/3) support both keys and stand on Run.
-    for (const [project, biome, preboss, bossGameName, authoredKey, otherKey] of [
+    // Flipping P's door to RunProgress therefore leaves the controller forbidding
+    // it, and an unsupported door is not entered: the boss falls out of the
+    // assessed prefix and contributes no ledger entry until the store is repaired.
+    for (const [project, biome, preboss, bossGameName, authoredKey, otherKey, otherSupported] of [
       [
         createGoldenFGHIProject(),
         goldenGBiome,
@@ -119,6 +122,7 @@ describe('run-wide entered-store ledger', () => {
         'G_Boss01',
         'RunProgress',
         'MetaProgress',
+        true,
       ],
       [
         loadSurfaceNOPQProject(),
@@ -127,6 +131,7 @@ describe('run-wide entered-store ledger', () => {
         'O_Boss01',
         'RunProgress',
         'MetaProgress',
+        true,
       ],
       [
         loadSurfaceNOPQProject(),
@@ -135,6 +140,7 @@ describe('run-wide entered-store ledger', () => {
         'P_Boss01',
         'MetaProgress',
         'RunProgress',
+        false,
       ],
       [
         loadSurfaceNOPQProject(),
@@ -143,6 +149,7 @@ describe('run-wide entered-store ledger', () => {
         'Q_Boss01',
         'RunProgress',
         'MetaProgress',
+        true,
       ],
     ] as const) {
       const authored = routeLedger(project).filter((entry) => entry.startsWith(bossGameName));
@@ -155,9 +162,9 @@ describe('run-wide entered-store ledger', () => {
         }),
         storeKey: otherKey,
       });
-      expect(routeLedger(reauthored).filter((entry) => entry.startsWith(bossGameName))).toEqual([
-        `${bossGameName}=${otherKey}`,
-      ]);
+      expect(routeLedger(reauthored).filter((entry) => entry.startsWith(bossGameName))).toEqual(
+        otherSupported ? [`${bossGameName}=${otherKey}`] : [],
+      );
     }
   });
 

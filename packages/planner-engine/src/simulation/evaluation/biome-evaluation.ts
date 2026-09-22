@@ -26,7 +26,7 @@ import { initialFigLeafState } from '../keepsakes/state';
 import { attestPendingHermesSpellDrop } from '../commerce/hermes-shrine';
 import { attestTalentDropsClosed } from '../hex-progress';
 import { attestEffectiveShadowRank } from '../arcana-fear';
-import { assessmentRepairOwner, authoringRegion } from '../finding-regions';
+import { assessmentRepairOwner, authoringRegion, findingIdentityKey } from '../finding-regions';
 import {
   composeBiomeHistoryWithEncounterValidation,
   type BiomeHistoryPrefix,
@@ -94,6 +94,23 @@ function lifecycleBlockFinding(blockedAt: SemanticAddress): SemanticFinding {
     origin: blockedAt,
     evidence: Object.freeze({}),
   });
+}
+
+/**
+ * A required input can be owned both structurally and chronologically — the
+ * boss-door store is the standing case — so the two passes publish one finding.
+ */
+function mergeFindingsByIdentity(
+  ...groups: readonly (readonly SemanticFinding[])[]
+): readonly SemanticFinding[] {
+  const byIdentity = new Map<string, SemanticFinding>();
+  for (const group of groups) {
+    for (const finding of group) {
+      const key = findingIdentityKey(finding);
+      if (!byIdentity.has(key)) byIdentity.set(key, finding);
+    }
+  }
+  return Object.freeze([...byIdentity.values()]);
 }
 
 function completenessIssue(completeness: IncompleteBiomeCompletenessResult) {
@@ -496,7 +513,7 @@ export function evaluateBiomeAssembly(
         ),
         findings:
           blockedAt === undefined || incompleteStop
-            ? Object.freeze([...completeness.findings, ...progressive.evaluation.findings])
+            ? mergeFindingsByIdentity(completeness.findings, progressive.evaluation.findings)
             : progressive.evaluation.findings,
       }),
       candidateArtifacts: progressive.candidateArtifacts,

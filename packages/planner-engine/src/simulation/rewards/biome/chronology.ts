@@ -28,6 +28,7 @@ import type { HistoryStateView } from '../../history';
 import type { CanonicalAuthoredRoom, CanonicalHubRoom } from '../../materialization';
 import type { CanonicalDecision } from '../../materialization/model';
 import { findingIdentityKey, ownerRegion, type FindingRegionEntry } from '../../finding-regions';
+import { bossDoorRewardStoreMissingFinding } from '../../completeness';
 import { fieldsOptionalRewardCountFindings } from '../../fields/optional-count';
 import type {
   RewardBranch,
@@ -1934,17 +1935,29 @@ export function evaluateBiomeRewardChronology(
     }
   }
 
-  // An authored boss-door store is not an outgoing batch — a Preboss owns no
-  // exit decision — so it never reaches the outgoing-generation assessment.
-  // It is assessed here against the same controller, at the Preboss's exit
-  // boundary, so an unsupported authored key raises `baseRewardStoreUnavailable`
-  // exactly like an ordinary batch and the selector reads real support.
+  // A boss-door store is not an outgoing batch — the source room owns no exit
+  // decision — so it never reaches the outgoing-generation assessment. It is
+  // reached here at that room's exit boundary, before the boss and everything
+  // the boss leads to: unauthored it is the required input at that position,
+  // authored it raises `baseRewardStoreUnavailable` against the same controller
+  // as an ordinary batch and the selector reads real support.
   for (const link of snapshot.fixedRoomLinks ?? []) {
     const door = link.bossDoorRewardStore;
     if (door === undefined) continue;
     const sourceViews = views.get(semanticAddressKey(link.source.origin));
     const view = sourceViews?.exit ?? sourceViews?.postCommit;
     if (view === undefined) continue;
+    if (door.storeKey === undefined) {
+      // Identical to the completeness pass's copy so the two collapse by
+      // finding identity once both reach the published findings.
+      addRewardFinding(
+        findings,
+        bossDoorRewardStoreMissingFinding(door.origin, link.target.gameName),
+        ownerRegion(door.origin),
+        { kind: 'history', sequence: view.sequence, boundary: 'at' },
+      );
+      continue;
+    }
     const support = assessAuthoredBossDoorRewardStore(
       layout,
       door.origin,

@@ -28,6 +28,7 @@ import type {
 import type { ResolvedRoutePosition } from '../../authored-project/route-context';
 import {
   additionalExitsForDecision,
+  bossDoorRewardStoreLinkForSource,
   exitDecisionForSource,
   hubDecisionHandoffReadiness,
   hubTerminalTakeoverForSource,
@@ -263,14 +264,14 @@ function fixedRoomSuccessor(
     loadout,
     configuredRivalsRank: loadout.fearRanks.BossDifficultyShrineUpgrade ?? 0,
   });
+  // The store this door rolls is decided as the source room is left, resolved
+  // or not, and is addressed by that room, as the completeness pass addresses it.
+  const bossDoor = bossDoorRewardStoreLinkForSource(catalog, topology, source.occurrenceId);
   return Object.freeze({
     kind: 'fixedRoomLink',
     source,
     target,
-    // Carried so the reward chronology can assess the authored roll against
-    // support; the address is the Preboss's own batch-store address, the same
-    // one the completeness pass and the authoring command use.
-    ...(link.rewardStoreKey === undefined
+    ...(bossDoor === undefined
       ? {}
       : {
           bossDoorRewardStore: Object.freeze({
@@ -278,7 +279,7 @@ function fixedRoomSuccessor(
               kind: 'occurrence',
               occurrenceId: source.occurrenceId,
             }),
-            storeKey: link.rewardStoreKey,
+            ...(link.rewardStoreKey === undefined ? {} : { storeKey: link.rewardStoreKey }),
           }),
         }),
   });
