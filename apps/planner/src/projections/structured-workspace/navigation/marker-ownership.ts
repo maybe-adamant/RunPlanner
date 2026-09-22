@@ -101,7 +101,7 @@ export function workspaceOccurrenceOwnedMarkers(
 ): readonly WorkspaceMarker[] {
   return Object.freeze([
     room.marker,
-    ...(room.bossDoorRewardStore === undefined ? [] : [room.bossDoorRewardStore.marker]),
+    ...(room.bossDoorRewardStore?.kind === 'editor' ? [room.bossDoorRewardStore.marker] : []),
     ...room.encounterPhases.flatMap((phase) => [
       phase.marker,
       ...(phase.nemesisEvent === undefined ? [] : [phase.nemesisEvent.marker]),

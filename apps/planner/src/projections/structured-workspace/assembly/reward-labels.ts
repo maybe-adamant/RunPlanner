@@ -5,6 +5,8 @@ export function workspaceRewardStoreLabel(storeKey: string): string {
       return 'Major Reward';
     case 'MetaProgress':
       return 'Minor Reward';
+    case 'TartarusRewards':
+      return 'Tartarus Reward';
     default:
       return storeKey;
   }

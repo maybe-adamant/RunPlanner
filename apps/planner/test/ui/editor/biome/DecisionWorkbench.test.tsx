@@ -1304,7 +1304,6 @@ describe('DecisionWorkbench', () => {
     renderStaticDecisionWorkbench(project, 'Surface', 'O', subjectForOwner(shipOwner));
 
     expect(screen.queryByLabelText('Reward Pool')).toBeNull();
-    expect(screen.queryByLabelText('Next store roll')).toBeNull();
     cleanup();
 
     const ordinaryOwner = createExitDecisionAddress(oBiome, {
@@ -1313,8 +1312,8 @@ describe('DecisionWorkbench', () => {
     });
     renderStaticDecisionWorkbench(project, 'Surface', 'O', subjectForOwner(ordinaryOwner));
 
-    expect(screen.getByLabelText('Next store roll')).toBeTruthy();
-    expect(screen.queryByLabelText('Reward Pool')).toBeNull();
+    // O names its pool exactly as every other biome does.
+    expect(screen.getByLabelText('Reward Pool')).toBeTruthy();
   });
 
   it('labels authored-selected retained rooms without claiming evaluated entry', () => {

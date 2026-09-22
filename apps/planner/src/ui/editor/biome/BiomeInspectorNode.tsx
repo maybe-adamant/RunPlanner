@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 
 import {
   requireWorkspaceInteraction,
+  type WorkspaceBossDoorRewardStoreControl,
   type WorkspaceAuthoringFrontier,
   type WorkspaceHubTab,
   type WorkspaceInteractionCatalog,
@@ -12,6 +13,7 @@ import {
 import { AuthoringFrontier, BatchWorkbench, TopologyRemovalAction } from './DecisionWorkbench';
 import { HubDecisionWorkbench } from './HubDecisionWorkbench';
 import { OccurrenceWorkbench } from './OccurrenceWorkbench';
+import { BossDoorRewardPoolRow } from './OccurrenceDirectRoomWorkbench';
 import {
   inspectorLifecycleBoundaryContent,
   inspectorRoomActionContent,
@@ -38,9 +40,14 @@ interface BiomeInspectorNodeProps {
 }
 
 function OccurrenceOutgoing({
+  bossDoorRewardStore,
+  idPrefix,
   interactions,
   outgoing,
 }: {
+  /** A fixed boss door authors or reports its pool alongside its destination. */
+  readonly bossDoorRewardStore?: WorkspaceBossDoorRewardStoreControl;
+  readonly idPrefix: string;
   readonly interactions: WorkspaceInteractionCatalog;
   readonly outgoing: WorkspaceOccurrenceStageOutgoing;
 }): ReactNode {
@@ -64,6 +71,13 @@ function OccurrenceOutgoing({
           <div className="owner-markers">
             <h3>Outgoing doors</h3>
           </div>
+          {bossDoorRewardStore === undefined ? null : (
+            <BossDoorRewardPoolRow
+              idPrefix={idPrefix}
+              interactions={interactions}
+              store={bossDoorRewardStore}
+            />
+          )}
           <p className="fixed-room-state">
             {outgoing.kind === 'blockedOrUnentered' ? outgoing.message : outgoing.label}
           </p>
@@ -126,7 +140,14 @@ function OccurrenceInspector({
         doors={
           outgoingDecision === undefined ? (
             outgoing === undefined ? undefined : (
-              <OccurrenceOutgoing interactions={interactions} outgoing={outgoing} />
+              <OccurrenceOutgoing
+                {...(node.room.bossDoorRewardStore === undefined
+                  ? {}
+                  : { bossDoorRewardStore: node.room.bossDoorRewardStore })}
+                idPrefix={`occurrence-${node.room.occurrenceId}`}
+                interactions={interactions}
+                outgoing={outgoing}
+              />
             )
           ) : (
             <BatchWorkbench

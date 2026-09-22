@@ -67,12 +67,44 @@ export function ShipCombatPhaseCountWorkbench({
 }
 
 /**
- * The authored store on a Preboss's boss door. The interaction is an ordinary
- * batch reward-store interaction — same catalog map, same candidate model, same
- * select — so this renders exactly like the batch control and carries no
- * boss-door logic of its own.
+ * The authored variant. Its interaction is an ordinary batch reward-store
+ * interaction — same catalog map, same candidate model, same select — so this
+ * renders exactly like the batch control and carries no boss-door logic.
  */
-export function BossDoorRewardStoreWorkbench({
+function BossDoorRewardStoreEditor({
+  idPrefix,
+  interactions,
+  store,
+}: {
+  readonly idPrefix: string;
+  readonly interactions: WorkspaceInteractionCatalog;
+  readonly store: Extract<WorkspaceBossDoorRewardStoreControl, { readonly kind: 'editor' }>;
+}) {
+  const executeIntent = useCommandIntent();
+  const interaction = requireWorkspaceInteraction(
+    interactions.batchRewardStores,
+    workspaceInteractionKey(store.address),
+  );
+  return (
+    <CandidateSelect
+      id={`${idPrefix}-boss-door-reward-store`}
+      interaction={interaction}
+      label={store.label}
+      onReplace={(storeKey) => executeIntent(interaction.intentFor(storeKey))}
+      placeholder="Select pool"
+    />
+  );
+}
+
+/**
+ * The pool row of a boss door, carried in the ordinary outgoing-door section
+ * and wearing the ordinary door batch's control layout: a boss door is a door
+ * whose destination happens to be fixed. The target boss's declaration selects
+ * the variant — a boss that resolves its entered store from the chosen offer is
+ * authored here, while a pinned or store-ignoring boss reports its declared
+ * outcome with nothing to author.
+ */
+export function BossDoorRewardPoolRow({
   idPrefix,
   interactions,
   store,
@@ -81,21 +113,14 @@ export function BossDoorRewardStoreWorkbench({
   readonly interactions: WorkspaceInteractionCatalog;
   readonly store: WorkspaceBossDoorRewardStoreControl;
 }) {
-  const executeIntent = useCommandIntent();
-  const interaction = requireWorkspaceInteraction(
-    interactions.batchRewardStores,
-    workspaceInteractionKey(store.address),
-  );
   return (
-    <section aria-label="Boss door" className="boss-door-store-editor">
-      <CandidateSelect
-        id={`${idPrefix}-boss-door-reward-store`}
-        interaction={interaction}
-        label={store.label}
-        onReplace={(storeKey) => executeIntent(interaction.intentFor(storeKey))}
-        placeholder="Select pool"
-      />
-    </section>
+    <div className="batch-controls">
+      {store.kind === 'editor' ? (
+        <BossDoorRewardStoreEditor idPrefix={idPrefix} interactions={interactions} store={store} />
+      ) : (
+        <p className="boss-door-store-declared">{store.summary}</p>
+      )}
+    </div>
   );
 }
 
@@ -150,22 +175,11 @@ export function DirectRoomWorkbench({
       {children}
     </RoomEncounterStructureWorkbench>
   );
-  // A Preboss room carries the boss-door store decision whatever its workbench
-  // kind: shop Prebosses (G/O/P) and standard ones (Q) both own it.
-  const renderBossDoorRewardStore = (): ReactNode =>
-    room.bossDoorRewardStore === undefined ? null : (
-      <BossDoorRewardStoreWorkbench
-        idPrefix={idPrefix}
-        interactions={interactions}
-        store={room.bossDoorRewardStore}
-      />
-    );
   switch (workbench.kind) {
     case 'standard':
       if (view === 'overview') {
         return (
           <>
-            {renderBossDoorRewardStore()}
             {renderFeatures()}
             {renderSideRooms()}
             {renderEncounterStructure()}
@@ -226,7 +240,6 @@ export function DirectRoomWorkbench({
       if (view === 'overview') {
         return (
           <>
-            {renderBossDoorRewardStore()}
             <ShopWorkbench
               {...(workbench.roomActions === undefined ? {} : { actions: workbench.roomActions })}
               interactions={interactions}

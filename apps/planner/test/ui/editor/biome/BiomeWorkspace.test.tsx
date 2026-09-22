@@ -59,6 +59,7 @@ import {
   workspaceBiome,
   workspaceProjection,
 } from '@planner-test/support/biome-workbench';
+import { expectBefore } from '@planner-test/support/occurrence-workbench';
 
 afterEach(() => {
   cleanup();
@@ -1781,5 +1782,62 @@ describe('BiomeWorkspace', () => {
     const workbench = inspector.querySelector<HTMLElement>('.biome-batch-workbench');
     if (workbench === null) throw new Error('P target finding decision is missing');
     expect(within(workbench).getByRole('article', { name: 'Combat 02 room offer' })).toBeTruthy();
+  });
+});
+
+describe('boss-door reward pool in the outgoing-door section', () => {
+  /** Focus the one room in this biome that owns a boss door, and open its doors. */
+  async function openBossDoors(
+    project: ProjectDocument,
+    routeKey: string,
+    biomeKey: string,
+  ): Promise<HTMLElement> {
+    const view = renderWorkspace(project, routeKey, biomeKey);
+    const node = workspaceBiome(view.application, routeKey, biomeKey).nodes.find(
+      (candidate): candidate is Extract<WorkspaceNode, { readonly kind: 'occurrenceWorkbench' }> =>
+        candidate.kind === 'occurrenceWorkbench' &&
+        candidate.room.bossDoorRewardStore !== undefined,
+    );
+    if (node === undefined) throw new Error(`${biomeKey} has no boss-door room`);
+    act(() => view.application.store.dispatch(semanticOwnerFocused(node.room.address)));
+    await view.user.click(screen.getByRole('tab', { name: 'Room Doors' }));
+    return screen.getByRole('region', { name: 'Outgoing doors' });
+  }
+
+  it('authors a rolling boss pool between the door heading and its destination', async () => {
+    const section = await openBossDoors(loadSurfaceNOPQProject(), 'Surface', 'O');
+    // The boss door reads as an ordinary outgoing door with a fixed
+    // destination: heading, pool control, then where it goes.
+    const heading = within(section).getByRole('heading', { level: 3, name: 'Outgoing doors' });
+    const select = within(section).getByRole('combobox');
+    const destination = within(section).getByText(/^Continue to /);
+    expect(within(section).getByText('Reward Pool')).toBeTruthy();
+    expect((select as HTMLSelectElement).value).not.toBe('');
+    expectBefore(heading, select);
+    expectBefore(select, destination);
+  });
+
+  it('reports a pinned boss pool in the same place, with nothing to author', async () => {
+    const section = await openBossDoors(createGoldenFGHIProject(), 'Underworld', 'H');
+    // H's boss pins its entered store at spawn.
+    expect(within(section).queryByRole('combobox')).toBeNull();
+    const line = within(section).getByText('Reward Pool is fixed as Major Reward for this boss.');
+    expectBefore(within(section).getByRole('heading', { level: 3, name: 'Outgoing doors' }), line);
+    expectBefore(line, within(section).getByText(/^Continue to /));
+  });
+
+  it('presents I’s pinned Tartarus pool in player-facing language', async () => {
+    const section = await openBossDoors(createGoldenFGHIProject(), 'Underworld', 'I');
+    expect(
+      within(section).getByText('Reward Pool is fixed as Tartarus Reward for this boss.'),
+    ).toBeTruthy();
+  });
+
+  it('reports a store-ignoring boss pool in the same place', async () => {
+    const section = await openBossDoors(createGoldenFGHIProject(), 'Underworld', 'F');
+    expect(within(section).queryByRole('combobox')).toBeNull();
+    const line = within(section).getByText('Reward Pool is ignored for this boss.');
+    expectBefore(within(section).getByRole('heading', { level: 3, name: 'Outgoing doors' }), line);
+    expectBefore(line, within(section).getByText(/^Continue to /));
   });
 });

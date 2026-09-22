@@ -22,7 +22,9 @@ import { createTraitDomainProjection } from '@planner/projections/rewards/traitD
 import {
   createStructuredWorkspaceProjection,
   type StructuredWorkspaceProjection,
+  type WorkspaceBossDoorRewardStoreControl,
 } from '@planner/projections/structured-workspace';
+import { createGoldenFGHIProject } from '@run-planner/test-fixtures/underworld';
 
 const contextualPicker = createContextualPickerProjection(createContextualOptionResolver(catalog));
 const projection = createStructuredWorkspaceProjection(
@@ -105,7 +107,9 @@ describe('boss-door reward store workspace binding', () => {
     // It is published on the Preboss room itself.
     if (node?.kind !== 'occurrenceWorkbench') throw new Error('unreachable');
     expect(node.room.kind).toBe('Preboss');
-    expect(node.room.bossDoorRewardStore?.address).toEqual(origin);
+    const control = node.room.bossDoorRewardStore;
+    if (control?.kind !== 'editor') throw new Error('the Preboss lost its boss-door store editor');
+    expect(control.address).toEqual(origin);
   });
 
   it('repairs through ReplaceBossDoorRewardStore and clears the finding', () => {
@@ -190,5 +194,67 @@ describe('boss-door reward store workspace binding', () => {
         storeKey: 'NotAStore',
       }),
     ).toThrow();
+  });
+});
+
+interface BossDoorRow {
+  readonly gameName: string;
+  readonly control: WorkspaceBossDoorRewardStoreControl;
+}
+
+/** Every room that publishes a boss-door pool row, by biome. */
+function bossDoorControlsByBiome(
+  workspace: StructuredWorkspaceProjection,
+): ReadonlyMap<string, readonly BossDoorRow[]> {
+  return new Map(
+    workspace.route.biomes.map((biome) => [
+      biome.biomeKey,
+      biome.nodes.flatMap((node) =>
+        node.kind === 'occurrenceWorkbench' && node.room.bossDoorRewardStore !== undefined
+          ? [{ gameName: node.room.gameName, control: node.room.bossDoorRewardStore }]
+          : [],
+      ),
+    ]),
+  );
+}
+
+describe('boss-door reward pool row selection', () => {
+  it('follows the target boss declaration in the Underworld', () => {
+    const byBiome = bossDoorControlsByBiome(project(createGoldenFGHIProject()));
+
+    // F's bosses are flagged out of the store count, so the pool is ignored.
+    const f = byBiome.get('F') ?? [];
+    expect(f.map((row) => row.gameName)).toEqual(['F_PreBoss01']);
+    expect(f[0]?.control).toEqual({
+      kind: 'ignored',
+      summary: 'Reward Pool is ignored for this boss.',
+    });
+
+    // H and I pin their entered store at spawn, so the row reports it.
+    expect(byBiome.get('H')?.[0]?.control).toEqual({
+      kind: 'fixed',
+      summary: 'Reward Pool is fixed as Major Reward for this boss.',
+    });
+    expect(byBiome.get('I')?.[0]?.control).toEqual({
+      kind: 'fixed',
+      summary: 'Reward Pool is fixed as Tartarus Reward for this boss.',
+    });
+
+    // G resolves its entered store from the chosen offer, so it stays editable.
+    expect(byBiome.get('G')?.[0]?.control.kind).toBe('editor');
+  });
+
+  it('keeps the editor on the Surface rolling doors and nowhere else', () => {
+    const byBiome = bossDoorControlsByBiome(project(loadSurfaceNOPQProject()));
+    for (const biomeKey of ['O', 'P', 'Q']) {
+      const controls = byBiome.get(biomeKey) ?? [];
+      expect(controls.length).toBe(1);
+      expect(controls[0]?.control.kind).toBe('editor');
+    }
+    // N's boss is flagged out of the store count like F's, so its Preboss
+    // reports the pool as ignored rather than offering an editor.
+    expect(byBiome.get('N')?.map((row) => row.control.kind)).toEqual(['ignored']);
+    // C's contract boss is reached without a Preboss link, so C publishes none.
+    expect(byBiome.get('C') ?? []).toEqual([]);
   });
 });

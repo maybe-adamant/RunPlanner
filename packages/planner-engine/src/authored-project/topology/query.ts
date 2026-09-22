@@ -146,6 +146,25 @@ export function bossDoorRewardStoreLinkForSource(
   topology: Pick<BiomeTopology, 'fixedRoomLinks' | 'occurrences'>,
   sourceOccurrenceId: OccurrenceId,
 ): BossDoorRewardStoreLink | undefined {
+  const door = bossDoorLinkForSource(catalog, topology, sourceOccurrenceId);
+  return door !== undefined && bossDeclarationTakesAuthoredRewardStore(door.bossRoom)
+    ? door
+    : undefined;
+}
+
+/**
+ * This room's fixed boss door and the boss declaration behind it, whatever that
+ * declaration says about stores. Fixed room links also carry Boss -> PostBoss,
+ * so the target must declare itself a Boss room.
+ * `bossDoorRewardStoreLinkForSource` is this lookup narrowed to the doors that
+ * take an authored store, so a caller that must also describe a pinned or
+ * store-ignoring boss reads the same one door rather than re-deriving it.
+ */
+export function bossDoorLinkForSource(
+  catalog: Catalog,
+  topology: Pick<BiomeTopology, 'fixedRoomLinks' | 'occurrences'>,
+  sourceOccurrenceId: OccurrenceId,
+): BossDoorRewardStoreLink | undefined {
   const link = topology.fixedRoomLinks.find(
     (candidate) => candidate.sourceOccurrenceId === sourceOccurrenceId,
   );
@@ -154,10 +173,9 @@ export function bossDoorRewardStoreLinkForSource(
     (occurrence) => occurrence.occurrenceId === link.targetOccurrenceId,
   );
   const bossRoom = boss === undefined ? undefined : catalog.rooms.byKey[boss.gameName];
-  if (bossRoom === undefined || !bossDeclarationTakesAuthoredRewardStore(bossRoom)) {
-    return undefined;
-  }
-  return Object.freeze({ bossRoom, link });
+  return bossRoom === undefined || bossRoom.kind !== 'Boss'
+    ? undefined
+    : Object.freeze({ bossRoom, link });
 }
 
 function physicalExit(

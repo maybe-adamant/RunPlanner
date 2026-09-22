@@ -524,9 +524,9 @@ describe('structured workspace decision assembly', () => {
   it('labels O outgoing store controls without adding a Ship selector', () => {
     const source = biomeSource(loadSurfaceNOPQProject(), 'Surface', 'O');
     const cases = [
-      [oOccurrenceIds.intro, 'Next store roll'],
+      [oOccurrenceIds.intro, 'Reward Pool'],
       [oOccurrenceIds.combat01, undefined],
-      [oOccurrenceIds.devotion, 'Next store roll'],
+      [oOccurrenceIds.devotion, 'Reward Pool'],
       [oOccurrenceIds.combat02, undefined],
     ] as const;
 

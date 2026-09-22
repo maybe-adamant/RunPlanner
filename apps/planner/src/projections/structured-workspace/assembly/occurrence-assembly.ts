@@ -42,10 +42,26 @@ import { summarizeRewardOffer } from '@planner/projections/rewards/rewardPicker'
 import { requireWorkspaceRoom as requireRoom } from './catalog-room';
 import {
   StructuredWorkspaceProjectionContractError,
+  type WorkspaceBossDoorRewardStoreControl,
   type WorkspaceInteractionChoice,
   type WorkspaceRoomPickerControl,
   type WorkspaceRoomSummary,
 } from '../contract';
+import { workspaceRewardStoreLabel } from './reward-labels';
+
+/**
+ * The boss-door pool variant the biome assembler admits, before this assembly
+ * attaches the row's presentation copy and the editor's marker.
+ */
+export type WorkspaceBossDoorRewardStoreInput =
+  | {
+      readonly kind: 'editor';
+      readonly address: import('@run-planner/engine/authored-project').BatchRewardStoreAddress;
+      readonly selected?: string;
+      readonly storeChoices: readonly WorkspaceInteractionChoice<string>[];
+    }
+  | { readonly kind: 'fixed'; readonly storeKey: string }
+  | { readonly kind: 'ignored' };
 import type { WorkspaceRewardControl } from '../contracts/rewards';
 import type { WorkspaceRoomLocal } from '../contracts/locals';
 import type { WorkspaceOccurrenceInteractionRequirement } from '../interactions/interaction-requirements';
@@ -177,15 +193,11 @@ export interface WorkspaceOccurrenceAssemblyInput {
   readonly anomalyReplacementRoomGameNames?: readonly string[];
   readonly biome: BiomeAddress;
   /**
-   * Present only for a Preboss whose boss door genuinely rolls a store. The
-   * caller owns the declaration predicate and the policy bound; this assembly
-   * only publishes the control and registers its marker on this room.
+   * Present for any room with a boss door. The caller owns the declaration
+   * predicate and the policy bound; this assembly only turns the admitted
+   * variant into its room-summary row and registers the editor's marker.
    */
-  readonly bossDoorRewardStore?: {
-    readonly address: import('@run-planner/engine/authored-project').BatchRewardStoreAddress;
-    readonly selected?: string;
-    readonly storeChoices: readonly WorkspaceInteractionChoice<string>[];
-  };
+  readonly bossDoorRewardStore?: WorkspaceBossDoorRewardStoreInput;
   readonly catalog: Catalog;
   readonly encounterPhaseStatus: (
     phase: EncounterPhaseAddress,
@@ -473,18 +485,34 @@ export function assembleWorkspaceOccurrence(
     ...(zagreusSpawn === undefined ? [] : [zagreusSpawn.marker]),
     ...(chaosSpawn === undefined ? [] : [chaosSpawn.marker]),
   ]);
-  const bossDoorRewardStore =
-    input.bossDoorRewardStore === undefined
-      ? undefined
-      : Object.freeze({
-          address: input.bossDoorRewardStore.address,
-          label: 'Boss door pool',
-          marker: input.markerDestinations.marker(input.bossDoorRewardStore.address),
-          ...(input.bossDoorRewardStore.selected === undefined
-            ? {}
-            : { selected: input.bossDoorRewardStore.selected }),
-          storeChoices: input.bossDoorRewardStore.storeChoices,
+  const bossDoorRewardStore = ((
+    admitted: WorkspaceBossDoorRewardStoreInput | undefined,
+  ): WorkspaceBossDoorRewardStoreControl | undefined => {
+    if (admitted === undefined) return undefined;
+    switch (admitted.kind) {
+      case 'ignored':
+        return Object.freeze({
+          kind: 'ignored' as const,
+          summary: 'Reward Pool is ignored for this boss.',
         });
+      case 'fixed':
+        return Object.freeze({
+          kind: 'fixed' as const,
+          summary: `Reward Pool is fixed as ${workspaceRewardStoreLabel(admitted.storeKey)} for this boss.`,
+        });
+      case 'editor':
+        return Object.freeze({
+          kind: 'editor' as const,
+          address: admitted.address,
+          // The same label term the three variants share and the ordinary
+          // batch store control uses.
+          label: 'Reward Pool',
+          marker: input.markerDestinations.marker(admitted.address),
+          ...(admitted.selected === undefined ? {} : { selected: admitted.selected }),
+          storeChoices: admitted.storeChoices,
+        });
+    }
+  })(input.bossDoorRewardStore);
   const roomSummary: WorkspaceRoomSummary = Object.freeze({
     address,
     ...(bossDoorRewardStore === undefined ? {} : { bossDoorRewardStore }),
@@ -633,10 +661,13 @@ export function assembleWorkspaceOccurrence(
       ...(input.isEntry === true && roomLocal.kind === 'incomingReward'
         ? [roomLocal.control.marker]
         : []),
-      ...(bossDoorRewardStore === undefined ? [] : [bossDoorRewardStore.marker]),
     ],
     'overview',
   );
+  // The boss-door pool sits beside its door, so its findings route to Doors.
+  if (bossDoorRewardStore?.kind === 'editor') {
+    input.markerDestinations.setRoomTab([bossDoorRewardStore.marker], 'doors');
+  }
   if (roomLocal.kind === 'fields') {
     input.markerDestinations.setRoomTab(
       [

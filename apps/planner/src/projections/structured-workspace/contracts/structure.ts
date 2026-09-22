@@ -120,9 +120,16 @@ export interface WorkspaceFieldsBatchContext {
   };
 }
 
+/**
+ * What becomes of the pool this door carries — the one presentation for that
+ * question. Usually a concrete store: the one a forced room substitutes for the
+ * batch's own. Where the room takes the pool without naming a store, the label
+ * says what it does with it instead and no `storeKey` accompanies it.
+ */
 export interface WorkspaceEffectiveRewardStore {
   readonly label: string;
-  readonly storeKey: string;
+  /** Present only when the outcome is a concrete store. */
+  readonly storeKey?: string;
 }
 
 /**
@@ -144,7 +151,7 @@ interface WorkspaceBatchNodeBase {
   /** Present only when a forced room changes an evaluated authored base store. */
   readonly effectiveRewardStore?: WorkspaceEffectiveRewardStore;
   readonly fields?: WorkspaceFieldsBatchContext;
-  /** Present only where a ship-decided store reaches a target that takes it. */
+  /** Present only where the source's own wheel decided this batch's store. */
   readonly inheritedRewardStore?: WorkspaceInheritedRewardStore;
   /** An authored additional exit is a sibling of normal targets, never a target row. */
   readonly chaos?: WorkspaceChaosExitControl;
