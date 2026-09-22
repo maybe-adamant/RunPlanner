@@ -61,8 +61,20 @@ Real O pair relation (all O decisions are single-door):
 3. Ship rooms count once per active wheel encounter, as native counts
    encounters. Model this as a declaration-owned history kind, not a
    room-name special case in the fold.
-4. H/I/Q gain no authored store controls and no batch policy changes; their
-   biome rules stand. Their contribution is count-only.
+4. Amended after the boss-door source verification: the original "H/I/Q gain
+   no authored store controls" guardrail was undermodeling. Native applies one
+   rule at every boss door — individual store, else forced store, else the
+   ordinary batch roll — and genuinely rolls at exactly the G, O, P and Q boss
+   doors. The planner therefore models those four boss links with one authored
+   store decision each (the roll as a choice, selector and support bounds
+   identical to ordinary batch decisions), replacing G/O/P's previous
+   preboss-inheritance approximation and filling Q with the same surface.
+   Pinned boss doors stay `fixed` (H `RunProgress`, I `TartarusRewards`, and
+   `C_Boss01` `RunProgress` — spawn-time default, not host inheritance); F and
+   N stay excluded by the native flags. H/I/Q batch policies otherwise stand;
+   no other authoring surface changes. Two recorded facts: H and I never roll
+   for any door (their ratio targets are dead for door stores), and boss doors
+   never deplete a store bag — the assignment counts, the reward is forced.
 5. The O read-only inherited-store row is a projection of the same authored
    resolution the commands use (`sourceOfferPointStoreKey`), never a second
    derivation; it links to the owning wheel control. Forced-store and selector
@@ -81,8 +93,9 @@ like every other support rule. No advisory-only special case and no automatic
 rewrite of authored state.
 
 No probability analysis or RNG replay (the documented support-only boundary
-stands). No new counted fact outside the existing ledger. No authoring schema
-or execution protocol change expected; stop and amend if one appears.
+stands). No new counted fact outside the existing ledger. The one authoring
+schema change is Gate A1b's boss-door store decision; no execution protocol
+change is expected — stop and amend if one appears.
 
 ## Delivery
 
@@ -108,6 +121,20 @@ counting kind with its catalog declarations, and the consolidation of the two
 same-named `enteredStoreKey` helpers (`history/lifecycleInput.ts:22` and
 `reward-store-support.ts:16`, swapped argument orders) onto one owner.
 Primary tests beside the ledger and store-support owners.
+
+### Gate A1b — Authored boss-door store decisions
+
+The authored store decision on the G/O/P/Q boss links, per amended guardrail 4. This changes the authored schema: before edits, inventory the boss-link
+model, codec, and decode path, and state the schema-version and migration
+treatment under the release migration loading (saved projects decode with the
+store unresolved and repairable, per the saved-project policy — no automatic
+rewrite). `C_Boss01` corrects to `fixed(RunProgress)` in the same slice. The
+boss count entries switch from preboss inheritance to the authored value.
+Selector presentation reuses the ordinary batch-decision store surface.
+Witnesses: the authored choice bounds under store support, the decode default
+finding-and-repair path, and the count following the authored value. Stop and
+report if the codec inventory shows the change cannot ride the migration
+loading cleanly.
 
 ### Gate A2 — Filter removal and sequential fixture re-authoring
 
