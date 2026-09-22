@@ -341,7 +341,11 @@ export function createTarget(
       failCommand(command, 'remove the prior selected target’s downstream decision first');
     }
   }
-  const batchRewardStoreKey = resolvedStoreKey(decision.normal.rewardStore);
+  const batchRewardStoreKey = resolvedStoreKey(
+    decision.normal.rewardStore,
+    topology,
+    decision.source,
+  );
   const role: RoomOccurrenceRole = room.kind === 'Preboss' ? 'prebossShop' : 'ordinary';
   const withTarget = appendOccurrence(
     topology,

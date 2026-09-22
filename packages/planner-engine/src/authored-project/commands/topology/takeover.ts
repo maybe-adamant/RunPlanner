@@ -62,7 +62,9 @@ function sourceIncomingStore(
       decision.normal.kind === 'batch' &&
       decision.normal.targets.some((target) => target.occurrenceId === source.occurrenceId),
   );
-  return owner?.normal.kind === 'batch' ? resolvedStoreKey(owner.normal.rewardStore) : undefined;
+  return owner?.normal.kind === 'batch'
+    ? resolvedStoreKey(owner.normal.rewardStore, topology, owner.source)
+    : undefined;
 }
 
 function prebossFreeRewardStore(

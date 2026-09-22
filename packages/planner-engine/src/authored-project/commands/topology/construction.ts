@@ -11,6 +11,7 @@ import type {
   RoomOccurrence,
 } from '../../model';
 import type { RoomOccurrenceRole } from '../../room-state/declaration';
+import { sourceOfferPointStoreKey } from '../../batchState';
 import { isHostRouteDetourRoom } from '../../topology/query';
 import { sameExitDecisionSource } from '../../topology/source-identity';
 import { failCommand, requireOccurrence, withBiome, type LocatedBiome } from '../contract';
@@ -84,10 +85,19 @@ export function appendDecision(
   });
 }
 
-export function resolvedStoreKey(rewardStore: BatchRewardStoreState): string | undefined {
-  return rewardStore.kind === 'authoredBaseStore'
-    ? (rewardStore.baseRewardStoreKey ?? undefined)
-    : undefined;
+export function resolvedStoreKey(
+  rewardStore: BatchRewardStoreState,
+  topology: Pick<BiomeTopology, 'occurrences'>,
+  source: ExitDecisionSource,
+): string | undefined {
+  switch (rewardStore.kind) {
+    case 'authoredBaseStore':
+      return rewardStore.baseRewardStoreKey ?? undefined;
+    case 'sourceOfferPoint':
+      return sourceOfferPointStoreKey(topology, source);
+    case 'none':
+      return undefined;
+  }
 }
 
 export function appendOccurrence(
