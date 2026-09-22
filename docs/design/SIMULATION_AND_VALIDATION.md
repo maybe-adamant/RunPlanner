@@ -442,6 +442,16 @@ already-reached snapshot. Presentation may group equivalent branches and show
 ranges for real differences, but must preserve correlated condition groups.
 Lazy bags show their declared initial contents without materializing a branch.
 
+Snapshots also publish the generated base-store controller's inputs at the
+checkpoint's own settled boundary: the run-wide entered/Meta entered tallies and
+their ratio, read from the same ledger the door controller reads rather than
+counted again, plus the `targetMetaRewardsRatio` this biome's rolled doors
+consult. The ratio is null before anything is counted. Where no door in the
+biome rolls, the target is absent and the snapshot reports instead the distinct
+store keys the biome's room declarations can bank — a room's fixed key, or the
+individual/forced pin a `resolvedOffer` room carries. H banks only
+`RunProgress`, I only `TartarusRewards`, and N banks nothing.
+
 Snapshots include trait/element history, god-pool state, Arcana/Fear,
 keepsakes and their retained effects. Configured Fear and effective suppression
 remain distinct; spent effects are not restored by later suppression.

@@ -13,6 +13,7 @@ import type {
   WorkspaceRunStateBagEntry,
   WorkspaceRunStateBagSection,
   WorkspaceRunStatePresentation,
+  WorkspaceRunStateRewardStoreController,
   WorkspaceRunStateSource,
 } from '../contracts/run-state';
 
@@ -157,6 +158,32 @@ function bagSection(
   return Object.freeze({
     entries: Object.freeze(rows),
     total: sumCounts(selected.map((entry) => entry.remaining)),
+  });
+}
+
+/** Where no door rolls, the biome's bankable keys say what it does instead of naming a dead target. */
+function unrolledTargetLabel(bankableStoreKeys: readonly string[] | undefined): string {
+  const only = bankableStoreKeys?.length === 1 ? bankableStoreKeys[0] : undefined;
+  if (only !== undefined) return `This biome rolls only ${workspaceRewardStoreLabel(only)}.`;
+  return bankableStoreKeys?.length === 0
+    ? 'This biome ignores Reward Store.'
+    : 'This biome rolls no base store.';
+}
+
+function rewardStoreControllerPresentation(
+  controller: RunStateSnapshot['rewardStoreController'],
+): WorkspaceRunStateRewardStoreController {
+  // Three decimals on both ratios so a reading lines up with the declared target digit for digit.
+  return Object.freeze({
+    enteredLabel: `${controller.enteredStoreCount} entered, ${controller.enteredMetaStoreCount} ${workspaceRewardStoreLabel('MetaProgress')}`,
+    ratioLabel:
+      controller.currentMetaRatio === null
+        ? 'None counted yet'
+        : controller.currentMetaRatio.toFixed(3),
+    targetLabel:
+      controller.targetMetaRewardsRatio === undefined
+        ? unrolledTargetLabel(controller.bankableStoreKeys)
+        : controller.targetMetaRewardsRatio.toFixed(3),
   });
 }
 
@@ -356,6 +383,7 @@ export function presentRunState(
         }),
       ),
     ),
+    rewardStoreController: rewardStoreControllerPresentation(snapshot.rewardStoreController),
     counters: Object.freeze(
       Object.entries(snapshot.counters)
         .filter(([, value]) => typeof value === 'number')

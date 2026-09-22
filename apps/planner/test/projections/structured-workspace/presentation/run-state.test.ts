@@ -205,6 +205,12 @@ describe('Run State presentation', () => {
         investedPathPoints: 5,
       },
       forfeitStatus: 'consumed',
+      rewardStoreController: {
+        enteredStoreCount: 7,
+        enteredMetaStoreCount: 2,
+        currentMetaRatio: 2 / 7,
+        targetMetaRewardsRatio: 0.3,
+      },
       bags: [
         {
           storeKey: 'RunProgress',
@@ -226,6 +232,33 @@ describe('Run State presentation', () => {
       ],
     } as const;
     const state = presentRunState(catalog, snapshot);
+    expect(state.rewardStoreController).toEqual({
+      enteredLabel: '7 entered, 2 Minor Reward',
+      ratioLabel: '0.286',
+      targetLabel: '0.300',
+    });
+    const unrolled = (bankableStoreKeys: readonly string[]) =>
+      presentRunState(catalog, {
+        ...snapshot,
+        rewardStoreController: {
+          enteredStoreCount: 0,
+          enteredMetaStoreCount: 0,
+          currentMetaRatio: null,
+          bankableStoreKeys,
+        },
+      }).rewardStoreController;
+    expect(unrolled([])).toEqual({
+      enteredLabel: '0 entered, 0 Minor Reward',
+      ratioLabel: 'None counted yet',
+      targetLabel: 'This biome ignores Reward Store.',
+    });
+    expect(unrolled(['RunProgress']).targetLabel).toBe('This biome rolls only Major Reward.');
+    expect(unrolled(['TartarusRewards']).targetLabel).toBe(
+      'This biome rolls only Tartarus Reward.',
+    );
+    expect(unrolled(['RunProgress', 'MetaProgress']).targetLabel).toBe(
+      'This biome rolls no base store.',
+    );
     expect(state.traits.banned).toEqual([{ key: 'ApolloSpecialBoon', label: 'Nova Flourish' }]);
     expect(state.keepsakes.pendingRewardPriorities).toEqual(['Boon', 'Boon']);
     expect(state.hexProgress).toEqual({

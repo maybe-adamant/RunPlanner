@@ -502,6 +502,20 @@ export function RunStateSheet({ launcher }: { readonly launcher: WorkspaceRunSta
               </dl>
             </section>
             <section className="run-state-section">
+              <h3>Reward Store Ratio</h3>
+              <p className="run-state-muted">
+                Every counted room entered so far this run. A door rolls Minor Reward with chance 11
+                × target − 10 × ratio.
+              </p>
+              <dl className="run-state-values">
+                <StateRow label="Entered stores">
+                  {state.rewardStoreController.enteredLabel}
+                </StateRow>
+                <StateRow label="Current ratio">{state.rewardStoreController.ratioLabel}</StateRow>
+                <StateRow label="Biome target">{state.rewardStoreController.targetLabel}</StateRow>
+              </dl>
+            </section>
+            <section className="run-state-section">
               <h3>Reward Bags</h3>
               {state.bags.map((bag) => (
                 <article className="run-state-bag" key={bag.technicalKey}>

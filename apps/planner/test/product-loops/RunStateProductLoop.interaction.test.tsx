@@ -55,6 +55,12 @@ function expectNoEvaluationWork(
   expect(events, `${label} must read the already-published workspace product`).toHaveLength(0);
 }
 
+function stateRowValue(sheet: HTMLElement, label: string): string | undefined {
+  return (
+    within(sheet).getByText(label, { selector: 'dt' }).nextElementSibling?.textContent ?? undefined
+  );
+}
+
 function projectedRunStateTitles(
   application: PlannerApplication,
   routeKey: string,
@@ -98,6 +104,10 @@ describe('Run State product loop', () => {
     await view.user.click(within(sheet).getByRole('tab', { name: 'More Info' }));
     expect(within(sheet).getByRole('heading', { name: 'Counters' })).toBeTruthy();
     expect(within(sheet).getByRole('heading', { name: 'Reward Bags' })).toBeTruthy();
+    // Nothing is counted yet at the Opening's first action, and F declares 0.315.
+    expect(stateRowValue(sheet, 'Entered stores')).toBe('0 entered, 0 Minor Reward');
+    expect(stateRowValue(sheet, 'Current ratio')).toBe('None counted yet');
+    expect(stateRowValue(sheet, 'Biome target')).toBe('0.315');
     await view.user.click(within(sheet).getByRole('button', { name: 'Close Run State' }));
     expect(screen.queryByRole('region', { name: /State before/ })).toBeNull();
     expect(document.activeElement).toBe(launcher);
@@ -106,7 +116,11 @@ describe('Run State product loop', () => {
     await view.user.click(screen.getByRole('tab', { name: 'Room Doors' }));
     const exitLauncher = screen.getByRole('button', { name: 'Run State' });
     await view.user.click(exitLauncher);
-    expect(screen.getByRole('region', { name: 'State before exiting Opening 01' })).toBeTruthy();
+    const exitSheet = screen.getByRole('region', { name: 'State before exiting Opening 01' });
+    // The Opening's own RunProgress entry is folded by its pre-exit boundary.
+    await view.user.click(within(exitSheet).getByRole('tab', { name: 'More Info' }));
+    expect(stateRowValue(exitSheet, 'Entered stores')).toBe('1 entered, 0 Minor Reward');
+    expect(stateRowValue(exitSheet, 'Current ratio')).toBe('0.000');
     await view.user.keyboard('{Escape}');
     expectNoEvaluationWork(events, 'F pre-exit Run State open/close');
 
@@ -136,6 +150,10 @@ describe('Run State product loop', () => {
     const sheet = screen.getByRole('region', { name: 'State before Hub' });
     await view.user.click(within(sheet).getByRole('tab', { name: 'More Info' }));
     expect(within(sheet).getByRole('heading', { name: 'Major Reward' })).toBeTruthy();
+    // Every N room is count-excluded natively and banks no store of any kind.
+    expect(stateRowValue(sheet, 'Entered stores')).toBe('0 entered, 0 Minor Reward');
+    expect(stateRowValue(sheet, 'Current ratio')).toBe('None counted yet');
+    expect(stateRowValue(sheet, 'Biome target')).toBe('This biome ignores Reward Store.');
     await view.user.keyboard('{Escape}');
     expect(screen.queryByRole('region', { name: /State before/ })).toBeNull();
     expect(document.activeElement).toBe(launcher);

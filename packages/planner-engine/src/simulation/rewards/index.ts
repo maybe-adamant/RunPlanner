@@ -31,6 +31,7 @@ export type {
   DecisionRewardBagState,
   RunStateAvailability,
   RunStateOwner,
+  RunStateRewardStoreController,
   RunStateSnapshot,
   DecisionTraitState,
 } from './run-state';

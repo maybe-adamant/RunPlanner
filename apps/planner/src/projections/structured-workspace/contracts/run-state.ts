@@ -91,6 +91,7 @@ export interface WorkspaceRunStatePresentation {
     readonly remaining: number;
   };
   readonly bags: readonly WorkspaceRunStateBagPresentation[];
+  readonly rewardStoreController: WorkspaceRunStateRewardStoreController;
   readonly counters: readonly { readonly key: string; readonly value: number }[];
   readonly elements: readonly { readonly key: string; readonly value: number }[];
   readonly godPool: {
@@ -122,6 +123,13 @@ export interface WorkspaceRunStatePresentation {
 export interface WorkspaceRunStateSource {
   readonly key: string;
   readonly label: string;
+}
+
+/** Already-formatted copy; React renders these rows without deciding what an absent value means. */
+export interface WorkspaceRunStateRewardStoreController {
+  readonly enteredLabel: string;
+  readonly ratioLabel: string;
+  readonly targetLabel: string;
 }
 
 export interface WorkspaceRunStateTrait {

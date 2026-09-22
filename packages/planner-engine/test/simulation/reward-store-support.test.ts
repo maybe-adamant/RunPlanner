@@ -110,7 +110,7 @@ describe('run-wide entered-store ledger', () => {
     // P's door is the saturated case: at the Preboss's exit the run-wide ledger
     // stands at 17 entered / 2 meta, so the selection value is
     // 0.20 + 10 * (0.20 - 2/17) = 1.0235 and MetaProgress is the only supported
-    // key. G (20/6), O (7/2) and Q (21/2) support both keys and stand on Run.
+    // key. G (20/6), O (7/2) and Q (21/3) support both keys and stand on Run.
     for (const [project, biome, preboss, bossGameName, authoredKey, otherKey] of [
       [
         createGoldenFGHIProject(),

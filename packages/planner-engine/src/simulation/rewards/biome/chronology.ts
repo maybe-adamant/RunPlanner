@@ -1060,6 +1060,7 @@ export function evaluateBiomeRewardChronology(
     const snapshotFor = (checkpointBranches: readonly RewardBranchState[]) =>
       createRunState({
         catalog,
+        layout,
         owner,
         states: checkpointBranches.map((branch) =>
           reachSimulationHistory(branch.state, routePosition, view),
