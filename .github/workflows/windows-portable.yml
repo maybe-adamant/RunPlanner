@@ -41,7 +41,7 @@ jobs:
         run: |
           node scripts/assert-release-version.mjs $env:RELEASE_VERSION
           if ($LASTEXITCODE -ne 0) {
-            throw 'The release version was rejected against the published stable releases.'
+            throw 'Release version validation failed. See the diagnostic above.'
           }
           if ($env:GITHUB_SHA -notmatch '^[0-9a-f]{40}$') {
             throw 'GitHub must supply a full lowercase commit hash for an official release.'
