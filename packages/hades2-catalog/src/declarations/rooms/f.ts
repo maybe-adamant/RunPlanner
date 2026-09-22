@@ -20,6 +20,12 @@ const wellHost = (challengeSwitchAnchorCount: number) => ({
 
 const fRoomDeclarations: readonly RawRoomDeclaration[] = [
   {
+    // The openings keep `resolvedOffer`: their entered store arrives through the
+    // route-start ownership path (entry-resolution.ts `enteredRewardStoreKey`),
+    // which supplies an exact resolved key for the loadout-owned starting
+    // reward rather than from a room offer. Native gives them
+    // ForcedRewardStore = "RunProgress" and no reward gate, so they do count;
+    // the resolved key already records that.
     gameName: 'F_Opening01',
     secretPointAnchorCount: 1,
     resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),

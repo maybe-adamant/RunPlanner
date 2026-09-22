@@ -3,6 +3,7 @@ import type { EnteredRewardStoreHistoryPolicy } from '../../reward-kernel/bindin
 import type { RoomLifecycleExecutionInput } from '../lifecycle';
 import type { ResolvedEncounterPhase } from '../encounters/model';
 import { scopeRoomActionRoster } from '../room-actions';
+import { declaredEnteredStoreKey } from '../rewards/biome/reward-store-support';
 import type {
   CanonicalAuthoredRoom,
   CanonicalHubRoom,
@@ -19,6 +20,13 @@ export class HistoryLifecycleInputContractError extends Error {
   }
 }
 
+/**
+ * The one owner of "which store did entering this room count with". Callers
+ * that only hold a materialized room and its declaration use
+ * `declaredEnteredStoreKey`; this wrapper adds the lifecycle-only Clockwork
+ * goal exclusion and the contract error, which the support reader cannot
+ * raise because it evaluates rooms that were never entered.
+ */
 function enteredStoreKey(
   policy: EnteredRewardStoreHistoryPolicy,
   room: CanonicalLifecycleRoom,
@@ -26,26 +34,14 @@ function enteredStoreKey(
   if (room.kind === 'authored' && room.clockworkReward === 'goal') {
     return undefined;
   }
-  if (room.kind === 'authored' && room.enteredRewardStoreKey !== undefined)
-    return room.enteredRewardStoreKey;
-  switch (policy.kind) {
-    case 'fixed':
-      return policy.storeKey;
-    case 'none':
-      return undefined;
-    case 'resolvedOffer': {
-      const resolvedStoreKey =
-        room.kind === 'authored'
-          ? (room.enteredRewardStoreKey ?? room.incomingReward?.resolvedStoreKey)
-          : undefined;
-      if (resolvedStoreKey === undefined) {
-        throw new HistoryLifecycleInputContractError(
-          `${room.gameName} requires resolved entered-store provenance`,
-        );
-      }
-      return resolvedStoreKey;
-    }
+  if (room.kind !== 'authored') return policy.kind === 'fixed' ? policy.storeKey : undefined;
+  const storeKey = declaredEnteredStoreKey(room, policy);
+  if (storeKey === undefined && policy.kind === 'resolvedOffer') {
+    throw new HistoryLifecycleInputContractError(
+      `${room.gameName} requires resolved entered-store provenance`,
+    );
   }
+  return storeKey;
 }
 
 export function createRoomLifecycleInput(
