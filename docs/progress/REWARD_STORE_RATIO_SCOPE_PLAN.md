@@ -74,32 +74,52 @@ Real O pair relation (all O decisions are single-door):
 7. Dream itineraries must witness the order-independence: the same rooms in a
    reordered itinerary produce the same run-wide count.
 
+Saved-project policy: previously valid authored routes that become
+context-invalid under the corrected controller surface the existing
+`baseRewardStoreUnavailable` finding and are repaired by re-picking the store,
+like every other support rule. No advisory-only special case and no automatic
+rewrite of authored state.
+
 No probability analysis or RNG replay (the documented support-only boundary
 stands). No new counted fact outside the existing ledger. No authoring schema
 or execution protocol change expected; stop and amend if one appears.
 
 ## Delivery
 
-### Gate A — Run-scoped counting
+The Gate A entry measurement was executed at base `71a93d6d` and stopped the
+original single-slice shape on both of its triggers: the census contradicts
+native beyond individual corrections (I, Q and `C_Boss01` under-count, plus
+`I_Story01`), and the filter removal alone flips all three golden route
+families invalid at their second biome's first batch, with a self-referential
+fixture migration (each re-authored store moves the ratio for every later
+batch). The gate is therefore split.
 
-Entry requirement, accepted before any landing: verify declarations per
-guardrail 2 (including the G-boss predicate question) and the exact ledger
-write/read symbols, then apply the filter removal in a scratch state, run the
-engine suite once, and produce a fixture-migration inventory — exactly which
-golden-fixture batch stores flip per route family, and which failures are
-fixture-induced versus genuinely re-pinned expectations. The inventory is the
-scope check: a bounded mechanical migration proceeds; broad route-validity
-flips stop the gate for a plan amendment.
+### Gate A1 — Census corrections under the current scope
 
-Then one slice: filter removal, the per-encounter ship counting kind with its
-catalog declarations, any individually corrected declarations, and the golden
-fixture builders re-authored to run-scope-legal stores in the same commit,
-with the inventory as the audit trail so review can distinguish moved policy
-from weakened assertions. Primary tests with the store-support suite; measure
-and re-pin `baseRewardStoreUnavailable` and candidate-domain expectations at
-F/G/O/P batches; state-baseline counts explained if moved; fixture JSON
-unchanged unless a semantic product genuinely moved, reported before
-regeneration. Add the Dream reorder witness (guardrail 7).
+Deliverable one, requiring explicit user sign-off before any correction
+lands: a complete per-room enumeration of every catalog room — declared
+`enteredRewardStoreHistory`, the native count verdict with its exact source
+citation, and correction required or not. No sampling; every room, every
+biome, boss/preboss/postboss/miniboss/story/shop/special rooms included.
+
+After sign-off, one slice under the existing per-biome scope so fixtures
+barely move: the signed-off declaration corrections, the per-encounter ship
+counting kind with its catalog declarations, and the consolidation of the two
+same-named `enteredStoreKey` helpers (`history/lifecycleInput.ts:22` and
+`reward-store-support.ts:16`, swapped argument orders) onto one owner.
+Primary tests beside the ledger and store-support owners.
+
+### Gate A2 — Filter removal and sequential fixture re-authoring
+
+Only after A1 lands: remove the per-biome filter (no scope parameter), re-run
+the fixture-migration measurement against the corrected census, and re-author
+the golden fixture builders sequentially under the run-scoped controller —
+each batch store chosen legal given the entries before it. Re-pin
+`baseRewardStoreUnavailable` and candidate-domain expectations traced to the
+corrected scope; repair the two fixture builders that throw; state-baseline
+counts explained if moved; fixture JSON regenerated only where a semantic
+product genuinely moved, reported first. Add the Dream reorder witness
+(guardrail 7).
 
 ### Gate B — O pair-relation presentation
 
