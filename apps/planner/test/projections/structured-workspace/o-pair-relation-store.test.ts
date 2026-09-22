@@ -166,17 +166,15 @@ describe('O door-store pair relation', () => {
       storeKey: 'RunProgress',
     });
 
-    // Story carries the pool through to a declaration-fixed reward type.
+    // Story banks the carried pool (its fixed reward type changes nothing about
+    // the count) — the default fate, so no row beyond the selector's own value.
     expect(storeSelector(workspace, 'surface-o-devotion')?.selected).toBe('MetaProgress');
-    expect(outcomeAt('surface-o-devotion')).toEqual({
-      label: 'Minor Reward',
-      storeKey: 'MetaProgress',
-    });
+    expect(outcomeAt('surface-o-devotion')).toBeUndefined();
 
-    // A shop fixes only its visible reward: the door still stamps the carried
-    // store on its entry, so the pool reaches the run ledger.
+    // A shop also banks the carried store into the run count (only its visible
+    // reward is fixed to the shop) — default fate, silent.
     expect(catalog.rooms.byKey.O_PreBoss01?.enteredRewardStoreHistory.kind).toBe('resolvedOffer');
-    expect(outcomeAt('surface-o-combat02')).toEqual({ label: 'Counted by this room' });
+    expect(outcomeAt('surface-o-combat02')).toBeUndefined();
   });
 
   it('reports the forced store when a target overrides the carried value', () => {
@@ -225,8 +223,9 @@ describe('O door-store pair relation', () => {
     expect(node.rewardStore).toBeUndefined();
     expect(storeSelector(workspace, 'surface-o-combat07')).toBeUndefined();
 
-    // The Fountain is the room that actually draws from the pool.
-    expect(node.effectiveRewardStore).toEqual({ label: 'Banked by this room' });
+    // Drawing from the pool is the default fate: no outcome row beyond the
+    // read-only value above.
+    expect(node.effectiveRewardStore).toBeUndefined();
   });
 
   it('follows the third wheel when the ship runs three encounters', () => {
@@ -251,8 +250,8 @@ describe('O door-store pair relation', () => {
     // store: a selector rather than a read-only row.
     expect(node.inheritedRewardStore).toBeUndefined();
     expect(node.rewardStore).toBeDefined();
-    // The authored value and the outcome row coexist on the same door.
-    expect(node.effectiveRewardStore).toEqual({ label: 'Banked by this room' });
+    // Drawing from the pool is the default fate: the selector alone tells it.
+    expect(node.effectiveRewardStore).toBeUndefined();
     expect(storeSelector(workspace, 'surface-o-devotion')?.selected).toBe('RunProgress');
   });
 });

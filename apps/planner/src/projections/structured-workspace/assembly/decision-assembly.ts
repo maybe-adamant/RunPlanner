@@ -338,21 +338,19 @@ function batchRewardStoreValue(
 }
 
 /**
- * What the room behind this door does with the pool the decision carries.
- *
- * The backbone is the count model, not reward presentation: a room's
- * `enteredRewardStoreHistory` says whether the carried store reaches the run
- * ledger. A room excluded from the count discards it; a room that resolves its
- * entry from the chosen offer consumes it, whether as the pool its own reward
- * is drawn from or as nothing more than a count entry; a room carrying its own
- * store replaces the carried one before the entry is made. The declarations are
- * therefore read in the order the store resolution itself applies them — forced,
- * then individual, then the carried value stands — and the incoming reward only
- * distinguishes the ways a consuming room spends it.
+ * A row appears only where the door deviates from the default of banking the
+ * carried pool: a room whose `enteredRewardStoreHistory` is `none` never puts
+ * it in the run ledger ("Discarded"), and a room pinning its own store replaces
+ * the carried one before the entry is made (the store's label and value, the
+ * same shape the evaluated substitution row uses). A room that simply banks the
+ * pool — combat, Fountain, shop, fixed-reward story — gets no row: the value
+ * surface above already names the pool, and silence is the unmarked case in
+ * every biome. Pins are read in the order the store resolution applies them —
+ * an individual store wins over a forced one (RoomLogic.lua:3951-3956).
  *
  * Scoped to a source that declares exactly one normal exit, so the batch has one
  * door by construction. With siblings, a forced door rewrites the shared store
- * for the doors after it and a single per-batch line could not be truthful.
+ * for the doors after it and the evaluated substitution row owns that story.
  */
 function declaredEffectiveRewardStore(
   input: WorkspaceDecisionAssemblyBaseInput,
@@ -377,20 +375,9 @@ function declaredEffectiveRewardStore(
   if (room.enteredRewardStoreHistory.kind === 'none') {
     return Object.freeze({ label: 'Discarded by this room' });
   }
-  if (room.forcedRewardStoreKey !== undefined) return store(room.forcedRewardStoreKey);
   if (room.individualRewardStoreKey !== undefined) return store(room.individualRewardStoreKey);
-  switch (room.incomingReward.kind) {
-    case 'countedChoice':
-      return Object.freeze({ label: 'Banked by this room' });
-    case 'fixed':
-      return store(carried);
-    case 'shop':
-      // The door still stamps the carried store on the room's entry, and the
-      // shop's own forced reward supplies the chosen type, so the room counts.
-      // Only the visible reward is fixed to the shop; the pool reaches the
-      // ledger all the same.
-      return Object.freeze({ label: 'Counted by this room' });
-  }
+  if (room.forcedRewardStoreKey !== undefined) return store(room.forcedRewardStoreKey);
+  return undefined;
 }
 
 /**
