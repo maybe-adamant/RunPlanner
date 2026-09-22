@@ -3,9 +3,12 @@ import { describe, expect, it } from 'vitest';
 import { catalog } from '@run-planner/hades2-catalog';
 import {
   applyProjectCommand,
+  createExitDecisionAddress,
   createOccurrenceAddress,
+  createOccurrenceId,
   createRewardWheelAddress,
   createRewardWheelOfferAddress,
+  createTargetAddress,
   createTraitOfferAddress,
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
@@ -200,5 +203,54 @@ describe('authored-project Ship occurrence commands', () => {
         detail: 'unknown wheel offer offer3',
       }),
     );
+  });
+
+  it('creates a counted target after a Ship room by deriving the wheel store', () => {
+    const decision = createExitDecisionAddress(oBiome, {
+      kind: 'occurrence',
+      occurrenceId: oOccurrenceIds.combat07,
+    });
+    let project = applyProjectCommand(loadSurfaceNOProject(), catalog, {
+      kind: 'RemoveExitDecision',
+      decision,
+    });
+    project = applyProjectCommand(project, catalog, { kind: 'CreateBatch', decision });
+    const wheel1 = createRewardWheelAddress(oBiome, oOccurrenceIds.combat07, 'wheel1');
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceRewardWheelStore',
+      wheel: wheel1,
+      storeKey: 'MetaProgress',
+    });
+
+    // The batch derives its store from the source's last active wheel, so a
+    // counted room with no declaration-owned store is authorable here.
+    const fountainId = createOccurrenceId('occurrence-ship-fountain');
+    const created = applyProjectCommand(project, catalog, {
+      kind: 'CreateTarget',
+      target: createTargetAddress(oBiome, decision.source, 'exit1'),
+      occurrenceId: fountainId,
+      gameName: 'O_Reprieve01',
+    });
+    const fountain = created.route.biomes
+      .find((biome) => biome.biomeKey === 'O')
+      ?.topology?.occurrences.find((occurrence) => occurrence.occurrenceId === fountainId);
+    expect(fountain?.state.kind).toBe('counted');
+
+    // A three-phase ship derives wheel2 instead; the target stays authorable.
+    let threePhase = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceShipEncounterCount',
+      occurrence: createOccurrenceAddress(oBiome, oOccurrenceIds.combat07),
+      encounterCount: 3,
+    });
+    threePhase = applyProjectCommand(threePhase, catalog, {
+      kind: 'CreateTarget',
+      target: createTargetAddress(oBiome, decision.source, 'exit1'),
+      occurrenceId: fountainId,
+      gameName: 'O_Reprieve01',
+    });
+    const wheel2Fountain = threePhase.route.biomes
+      .find((biome) => biome.biomeKey === 'O')
+      ?.topology?.occurrences.find((occurrence) => occurrence.occurrenceId === fountainId);
+    expect(wheel2Fountain?.state.kind).toBe('counted');
   });
 });

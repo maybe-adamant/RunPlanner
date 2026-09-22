@@ -9,6 +9,7 @@ import type {
   RoomOccurrence,
 } from '../model';
 import { createBiomeAddress, createOccurrenceAddress } from '../addresses';
+import { sourceOfferPointStoreKey } from '../batchState';
 import { authoredAcquisitionSources } from '../acquisition/acquisition-sources';
 import {
   acquisitionSiteStorageKey,
@@ -58,16 +59,11 @@ function resolvedBatchStore(
   if (decision.source.kind !== 'occurrence') {
     failCommand(command, 'a Hub batch cannot derive a source reward wheel');
   }
-  const sourceId = decision.source.occurrenceId;
-  const source = topology.occurrences.find((occurrence) => occurrence.occurrenceId === sourceId);
-  if (source?.state.kind !== 'shipCombat') {
-    failCommand(command, 'source-derived reward store requires ShipCombat source state');
+  const storeKey = sourceOfferPointStoreKey(topology, decision.source);
+  if (storeKey === undefined) {
+    failCommand(command, 'source-derived reward store requires an active ShipCombat wheel');
   }
-  const wheel = source.state.wheels[source.state.encounterCount === 3 ? 'wheel2' : 'wheel1'];
-  if (wheel === undefined) {
-    failCommand(command, 'source-derived reward store is missing its active wheel');
-  }
-  return wheel.storeKey;
+  return storeKey;
 }
 
 function incomingStore(

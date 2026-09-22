@@ -77,3 +77,23 @@ export function decodeBatchState(
   }
   return Object.freeze({ cageOutcome });
 }
+
+/**
+ * The authored store a `sourceOfferPoint` batch derives: its ShipCombat
+ * source's last active wheel. The authored `encounterCount` owns which wheels
+ * are active, so a two-phase ship resolves `wheel1` and a three-phase ship
+ * resolves `wheel2`. Undefined only for a source that is not a reachable
+ * ShipCombat occurrence.
+ */
+export function sourceOfferPointStoreKey(
+  topology: Pick<import('./model').BiomeTopology, 'occurrences'>,
+  source: ExitDecisionSource,
+): string | undefined {
+  if (source.kind !== 'occurrence') return undefined;
+  const occurrence = topology.occurrences.find(
+    (candidate) => candidate.occurrenceId === source.occurrenceId,
+  );
+  if (occurrence?.state.kind !== 'shipCombat') return undefined;
+  const state = occurrence.state;
+  return state.wheels[state.encounterCount === 3 ? 'wheel2' : 'wheel1']?.storeKey;
+}
