@@ -1022,7 +1022,12 @@ export const iRooms = [
     structuralTags: [],
     exits: [{ index: 1, type: 'TartarusExitDoor' }],
     incomingReward: { kind: 'none' },
-    // Native TartarusRewards store: ForcedRewardStore on BaseI (RoomDataI.lua).
+    // Native TartarusRewards store: ForcedRewardStore on BaseI
+    // (RoomDataI.lua:305). Pinned, so this door never rolls — the forced store
+    // wins ahead of any batch store — and it never depletes that store either,
+    // because ForcedReward short-circuits at RewardLogic.lua:86-88, ahead of the
+    // RemoveIndexAndCollapse depletion at :178. No authored boss-door store
+    // applies here.
     enteredRewardStoreHistory: { kind: 'fixed', storeKey: 'TartarusRewards' },
     encounterEnvelopeKey: 'SingleEncounter',
     encounterSlotBindings: [

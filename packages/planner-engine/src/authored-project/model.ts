@@ -500,9 +500,29 @@ export interface BiomeTopology {
   readonly fixedRoomLinks: readonly FixedRoomLink[];
 }
 
+/**
+ * A Preboss -> Boss link is an ordinary door in native: the boss room receives
+ * a reward store by the same rule every other door uses (individual store,
+ * else forced store, else the batch roll). Where the biome genuinely rolls at
+ * that door the author owns the outcome, and `rewardStoreKey` carries it.
+ *
+ * Unresolved is encoded as ABSENCE here, deliberately unlike the sibling
+ * `authoredBaseStore.baseRewardStoreKey`, which spells it `null`. Absence is
+ * what buys the byte-identical, no-bump serialization: a link that never
+ * authors a store emits exactly the two keys it emitted before this field
+ * existed. Switching to `null` to "mirror" the batch surface would write a new
+ * key into every existing link and force a schema bump, so it must not be done.
+ *
+ * The field is wire-optional. Absent means unresolved — a saved project from
+ * before the field existed decodes as unresolved and is repaired through the
+ * ordinary store command surface, never rewritten on load. Links that cannot
+ * roll (pinned or excluded boss doors, and every Boss -> PostBoss link) leave
+ * it absent permanently; the command surface bounds which links may carry it.
+ */
 export interface FixedRoomLink {
   readonly sourceOccurrenceId: OccurrenceId;
   readonly targetOccurrenceId: OccurrenceId;
+  readonly rewardStoreKey?: string;
 }
 
 export interface AuthoredBiomePlan {

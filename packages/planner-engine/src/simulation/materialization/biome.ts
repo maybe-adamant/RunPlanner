@@ -249,9 +249,16 @@ function fixedRoomSuccessor(
     occurrence,
     role: 'ordinary',
     entered: true,
-    ...(source.kind === 'authored' && source.incomingReward?.resolvedStoreKey !== undefined
-      ? { batchStoreKey: source.incomingReward.resolvedStoreKey }
-      : {}),
+    // The boss door runs the ordinary door rule. Where the author owns that
+    // roll the authored value is the batch store outright; it is not a tweak
+    // to the host's store, so it replaces the Preboss inheritance rather than
+    // layering over it. Absent, the link is unresolved and the previous
+    // inheritance stands, which is what every pinned or excluded door needs.
+    ...(link.rewardStoreKey !== undefined
+      ? { batchStoreKey: link.rewardStoreKey }
+      : source.kind === 'authored' && source.incomingReward?.resolvedStoreKey !== undefined
+        ? { batchStoreKey: source.incomingReward.resolvedStoreKey }
+        : {}),
     loadout,
     configuredRivalsRank: loadout.fearRanks.BossDifficultyShrineUpgrade ?? 0,
   });

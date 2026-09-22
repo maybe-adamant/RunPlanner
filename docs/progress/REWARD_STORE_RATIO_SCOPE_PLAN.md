@@ -1,6 +1,6 @@
 # Run-Scoped Reward-Store Ratio and the O Pair Relation
 
-Status: approved and locked; implementation not started.
+Status: approved and locked; Gate A1 landed, Gate A1b foundation landing.
 Base: `0c6655c7`.
 
 ## Objective
@@ -94,8 +94,9 @@ rewrite of authored state.
 
 No probability analysis or RNG replay (the documented support-only boundary
 stands). No new counted fact outside the existing ledger. The one authoring
-schema change is Gate A1b's boss-door store decision; no execution protocol
-change is expected — stop and amend if one appears.
+schema change is the boss-door store field (its wire-optional carrier lands
+in Gate A1b, the decision surface in Gate A2); no execution protocol change
+is expected — stop and amend if one appears.
 
 ## Delivery
 
@@ -122,31 +123,85 @@ same-named `enteredStoreKey` helpers (`history/lifecycleInput.ts:22` and
 `reward-store-support.ts:16`, swapped argument orders) onto one owner.
 Primary tests beside the ledger and store-support owners.
 
-### Gate A1b — Authored boss-door store decisions
+### Gate A1b — Boss-door store foundation (rescoped after measurement)
 
-The authored store decision on the G/O/P/Q boss links, per amended guardrail 4. This changes the authored schema: before edits, inventory the boss-link
-model, codec, and decode path, and state the schema-version and migration
-treatment under the release migration loading (saved projects decode with the
-store unresolved and repairable, per the saved-project policy — no automatic
-rewrite). `C_Boss01` corrects to `fixed(RunProgress)` in the same slice. The
-boss count entries switch from preboss inheritance to the authored value.
-Selector presentation reuses the ordinary batch-decision store surface.
-Witnesses: the authored choice bounds under store support, the decode default
-finding-and-repair path, and the count following the authored value. Stop and
-report if the codec inventory shows the change cannot ride the migration
-loading cleanly.
+Originally the whole authored store decision on the G/O/P/Q boss links, per
+amended guardrail 4. The inventory confirmed the no-bump route: the field
+rides as a wire-optional `FixedRoomLink.rewardStoreKey` (the
+`AuthoredAdditionalExit.origin` precedent), absent on every existing document,
+so untouched saves serialize byte-identically and no migration is owed while
+the transition band stays empty.
 
-### Gate A2 — Filter removal and sequential fixture re-authoring
+The activation measurement then split the gate. Because G/O/P bosses already
+declare `resolvedOffer`, the moment an unresolved-store finding exists every
+plan reaching those bosses is incomplete (576 test failures across 99 files),
+and the fixtures can only be repaired by the very command the ordering
+sequenced last. The finding, the Q flip, the command, the workspace owner
+binding, and the boss-reaching fixture re-authoring are one atomic change —
+and authoring those stores under the current per-biome scope would be redone
+when Gate A2 corrects the scope. The activation therefore moves into Gate A2
+so the fixtures are re-authored once, under the final run-scoped controller.
 
-Only after A1 lands: remove the per-biome filter (no scope parameter), re-run
+A1b delivers the inert foundation only: the optional field with its decode
+(accepted only on a Preboss-to-Boss link), the single materialization seam
+(an authored key replaces the Preboss inheritance; absent, inheritance stands),
+`C_Boss01` corrected to `fixed(RunProgress)` with the spawn-time citation, the
+H/I never-roll and no-bag-depletion facts recorded on their declarations, and
+the C declaration witness (the run-wide ledger pin for C's entry lands in A2,
+where the per-biome filter that masks it today is removed). No behavior
+changes until a command writes the field.
+
+Rulings settled for the activation, binding on A2:
+
+- The unresolved boss store surfaces the existing `batchRewardStoreMissing`
+  finding through the completeness pass (the same gate that keeps ordinary
+  batches' `baseRewardStoreKey: null` out of the lifecycle fold), raised at
+  the Preboss terminal when the target boss declares `resolvedOffer` —
+  declaration-selected, no biome or room-name conditionals.
+  `baseRewardStoreUnavailable` stays "chosen but unsupported" only.
+- The address is `createBatchRewardStoreAddress` over the Preboss occurrence
+  (collision-free: completeness terminates at the Preboss, which owns no
+  ordinary exit decision).
+- The structured workspace binds the boss-door store owner on the Preboss
+  node — the concrete home of "selector presentation reuses the ordinary
+  batch-decision store surface"; `finding-routing.ts` requires the owner node
+  to exist.
+- Decode-time bounding of `rewardStoreKey` is deliberately deferred to A2 so
+  the command and the decoder share one authority. The open question that
+  forces the deferral: Q's layout `rewardStorePolicy` is `none`, so the
+  ordinary `storeKeys` bound cannot authorize Q's boss store — A2 must settle
+  where Q's bound comes from (native rolls RunProgress/MetaProgress there)
+  before any bound is enforced. Until then a hand-edited document can carry an
+  arbitrary key; A2 closes this alongside the sibling `baseRewardStoreKey`
+  precedent (`decisions.ts:142-148`).
+- Takeover reconstruction (`takeover.ts:162`) rebuilds the Preboss -> Boss
+  link without the store; once the command can write one, takeover must
+  preserve an authored `rewardStoreKey` rather than silently discarding it.
+
+### Gate A2 — Filter removal, boss-store activation, sequential fixture re-authoring
+
+Only after A1 and the A1b foundation land: one atomic slice.
+
+Boss-store activation (moved from A1b, per its rulings above): the
+`batchRewardStoreMissing` completeness finding at qualifying Preboss
+terminals; `Q_Boss01` flips to `resolvedOffer`; the authoring command
+mirroring `replaceBatchRewardStore` with support bounded by the layout's
+`rewardStorePolicy.storeKeys`; the Preboss workspace owner binding and the
+selector presentation. The boss count entries switch from Preboss inheritance
+to the authored value. Witnesses: the authored choice bounds under store
+support; a pre-change schema-86 document through `loadProjectDocument` decodes
+unresolved, surfaces `batchRewardStoreMissing`, and repairs through the
+command; the count follows the authored value for each of G/O/P/Q.
+
+Controller scope: remove the per-biome filter (no scope parameter), re-run
 the fixture-migration measurement against the corrected census, and re-author
 the golden fixture builders sequentially under the run-scoped controller —
-each batch store chosen legal given the entries before it. Re-pin
-`baseRewardStoreUnavailable` and candidate-domain expectations traced to the
-corrected scope; repair the two fixture builders that throw; state-baseline
-counts explained if moved; fixture JSON regenerated only where a semantic
-product genuinely moved, reported first. Add the Dream reorder witness
-(guardrail 7).
+each batch store and each boss store chosen legal given the entries before
+it, in one pass. Re-pin `baseRewardStoreUnavailable` and candidate-domain
+expectations traced to the corrected scope; repair the two fixture builders
+that throw; state-baseline counts explained if moved; fixture JSON
+regenerated only where a semantic product genuinely moved, reported first.
+Add the Dream reorder witness (guardrail 7).
 
 ### Gate B — O pair-relation presentation
 
@@ -173,5 +228,6 @@ inaccurate; delete this plan and
   behavior.
 - No store selector appears on ship decisions; no read-only row appears where
   a selector belongs.
-- H/I/Q authoring surfaces are byte-identical before and after.
+- H and I authoring surfaces are byte-identical before and after; Q gains
+  exactly the boss-door store decision and nothing else.
 - The plan does not decide Fountain reachability; eligibility already owns it.

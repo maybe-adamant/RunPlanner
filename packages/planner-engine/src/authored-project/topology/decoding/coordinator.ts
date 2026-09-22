@@ -672,7 +672,13 @@ export function decodeTopologyStructure(
   const fixedRoomLinks = rawFixedLinks.map((value, index): FixedRoomLink => {
     const linkPath = `${path}.fixedRoomLinks[${index}]`;
     const link = expectRecord(value, linkPath);
-    expectExactKeys(link, ['sourceOccurrenceId', 'targetOccurrenceId'], linkPath);
+    expectExactKeys(
+      link,
+      link.rewardStoreKey === undefined
+        ? ['sourceOccurrenceId', 'targetOccurrenceId']
+        : ['sourceOccurrenceId', 'targetOccurrenceId', 'rewardStoreKey'],
+      linkPath,
+    );
     const sourceOccurrenceId = occurrenceId(
       link.sourceOccurrenceId,
       `${linkPath}.sourceOccurrenceId`,
@@ -705,7 +711,28 @@ export function decodeTopologyStructure(
       if (expected === null || targetRoom.gameName !== expected)
         failProjectDocument(linkPath, 'must target this route position PostBoss');
     }
-    return Object.freeze({ sourceOccurrenceId, targetOccurrenceId });
+    // Only the Preboss -> Boss door can roll for a store; a Boss -> PostBoss
+    // link never does, so the key is rejected there. Which keys a rolling door
+    // may name is NOT bounded here, unlike the sibling baseRewardStoreKey,
+    // which decode does bound (decoding/decisions.ts:142-148). That bound is
+    // deferred to Gate A2, where the boss door's authority is settled — Q's
+    // layout declares rewardStorePolicy `none`, so there is no per-layout key
+    // set to validate against yet. Until then the decoder accepts any string
+    // and the command surface is the only bound.
+    const rewardStoreKey =
+      link.rewardStoreKey === undefined
+        ? undefined
+        : validPrebossLink
+          ? expectString(link.rewardStoreKey, `${linkPath}.rewardStoreKey`)
+          : failProjectDocument(
+              `${linkPath}.rewardStoreKey`,
+              'is only authored on a Preboss to Boss link',
+            );
+    return Object.freeze({
+      sourceOccurrenceId,
+      targetOccurrenceId,
+      ...(rewardStoreKey === undefined ? {} : { rewardStoreKey }),
+    });
   });
   if (
     new Set(fixedRoomLinks.map((link) => `${link.sourceOccurrenceId}:${link.targetOccurrenceId}`))

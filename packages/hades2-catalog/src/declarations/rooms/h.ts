@@ -1059,6 +1059,12 @@ export const hRooms = [
     exits: [{ index: 1, type: 'FieldsExitDoor' }],
     incomingReward: { kind: 'none' },
     individualRewardStoreKey: 'RunProgress',
+    // Pinned, so this door never rolls: BaseH.IndividualRewardStore =
+    // "RunProgress" (RoomDataH.lua:332) wins ahead of any batch store, and H's
+    // biome target is 0.0 regardless. The door also never depletes the store —
+    // ForcedReward short-circuits at RewardLogic.lua:86-88, ahead of the
+    // RemoveIndexAndCollapse depletion at :178 — so no authored boss-door store
+    // applies here.
     enteredRewardStoreHistory: { kind: 'fixed', storeKey: 'RunProgress' },
     encounterEnvelopeKey: 'SingleEncounter',
     encounterSlotBindings: [
