@@ -90,6 +90,9 @@ function nodeOwnedFocusKeys(node: WorkspaceNode): readonly string[] {
         node.selection.focusKey,
         ...(node.rewardStore === undefined ? [] : [node.rewardStore.focusKey]),
         ...node.targets.map((target) => target.marker.focusKey),
+        ...node.targets.flatMap((target) =>
+          target.door.offerRewardSurface.rewards.map((reward) => reward.marker.focusKey),
+        ),
         ...node.missingTargets.map((target) => target.marker.focusKey),
       ]);
     case 'hubDecision':
