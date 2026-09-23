@@ -85,6 +85,7 @@ import {
   type PlannerTimelineFacts,
 } from '../../src/simulation/timeline-facts';
 import { bossAutomaticOutcomeProject } from './support/automatic-fixture';
+import { surfaceQShopCorrelationProject } from './support/surface-q-shop-correlation-fixture';
 
 function fOnlyProject(project = createCompleteFGProject()) {
   return Object.freeze({
@@ -743,6 +744,103 @@ describe('engine-owned F/G execution semantic product', () => {
       true,
     );
     expect(opening.timeline.dependencies).toEqual(expect.any(Array));
+  });
+
+  it('projects canonical room actions as ordered guide rows without changing transaction ownership', () => {
+    const ordinary = productFor(createCompleteFGProject());
+    for (const occurrence of ordinary.occurrences) {
+      const owners = new Set(
+        occurrence.timeline.transactions.map((transaction) => transaction.owner),
+      );
+      expect(new Set(occurrence.roomGuide.map((row) => row.key)).size).toBe(
+        occurrence.roomGuide.length,
+      );
+      for (const row of occurrence.roomGuide) {
+        if (row.transactionOwner !== undefined) expect(owners.has(row.transactionOwner)).toBe(true);
+      }
+    }
+    const unentered = ordinary.occurrences.find(
+      (occurrence) => !ordinary.selectedOccurrenceIds.includes(occurrence.id),
+    );
+    expect(unentered?.roomGuide).toEqual([]);
+
+    const orderedFields = productFor(loadUnderworldFGHICheckpoint()).occurrences.find(
+      (occurrence) => occurrence.id === 'golden-h-combat05',
+    );
+    expect(orderedFields?.roomGuide.map((row) => row.description.kind)).toEqual([
+      'completeFieldsCage',
+      'interactLocalReward',
+      'completeFieldsCage',
+      'interactLocalReward',
+      'completeFieldsCage',
+      'interactLocalReward',
+    ]);
+    expect(
+      orderedFields?.roomGuide.flatMap((row) =>
+        row.description.kind === 'interactLocalReward' && row.transactionOwner !== undefined
+          ? [row.transactionOwner]
+          : [],
+      ),
+    ).toEqual(
+      orderedFields?.timeline.transactions.flatMap((transaction) =>
+        transaction.kind === 'acquisition' ? [transaction.owner] : [],
+      ),
+    );
+
+    const pool = productFor(authorLegalTraitOffers(createUnderworldFPoolCheckpoint()));
+    const sale = pool.occurrences
+      .flatMap((occurrence) => occurrence.roomGuide)
+      .find((row) => row.description.kind === 'sellPurgingPoolTrait');
+    expect(sale).toMatchObject({
+      description: {
+        kind: 'sellPurgingPoolTrait',
+        slotKey: expect.any(String),
+        traitKey: expect.any(String),
+      },
+    });
+    expect(sale).not.toHaveProperty('transactionOwner');
+
+    const well = productFor(authorLegalTraitOffers(createUnderworldFWellCheckpoint()));
+    expect(
+      well.occurrences
+        .flatMap((occurrence) => occurrence.roomGuide)
+        .some(
+          (row) =>
+            row.description.kind === 'purchaseStygianWellOffer' &&
+            row.description.itemKey !== undefined,
+        ),
+    ).toBe(true);
+
+    const timePieced = productFor(timePieceCreatedBoonProject());
+    expect(
+      timePieced.occurrences
+        .flatMap((occurrence) => occurrence.roomGuide)
+        .some(
+          (row) =>
+            (row.description.kind === 'interactIncomingReward' ||
+              row.description.kind === 'interactLocalReward' ||
+              row.description.kind === 'interactWheelReward' ||
+              row.description.kind === 'interactAcquisitionEntry') &&
+            row.description.conversion === 'timePiece' &&
+            row.transactionOwner === undefined,
+        ),
+    ).toBe(true);
+
+    const surface = productFor(loadSurfaceNOProject());
+    expect(
+      surface.occurrences
+        .flatMap((occurrence) => occurrence.roomGuide)
+        .some((row) => row.description.kind === 'chooseRewardWheel'),
+    ).toBe(true);
+    const fields = productFor(createGoldenFGHProject());
+    expect(
+      fields.occurrences
+        .flatMap((occurrence) => occurrence.roomGuide)
+        .some(
+          (row) =>
+            row.description.kind === 'completeFieldsCage' && row.transactionOwner === undefined,
+        ),
+    ).toBe(true);
   });
 
   it('publishes exact Fig Leaf results only for supported encounter phases', () => {
@@ -1827,36 +1925,9 @@ describe('engine-owned F/G execution semantic product', () => {
 
   it('publishes exact owners for distinct normal and boosted same-provider Q boons', () => {
     const shopId = createOccurrenceId('surface-q-preboss');
-    const shop = createOccurrenceAddress(qBiome, shopId);
     const normal = createShopOfferAddress(qBiome, shopId, 'MixedProgress1');
     const boosted = createShopOfferAddress(qBiome, shopId, 'MixedProgress2');
-    let project = applyProjectCommand(loadSurfaceNOPQProject(), catalog, {
-      kind: 'ReplaceShopOfferOption',
-      offer: normal,
-      value: {
-        optionKey: 'RandomLoot',
-        offer: {
-          rewardType: 'RandomLoot',
-          payload: { kind: 'BoonSource', source: 'ApolloUpgrade' },
-        },
-      },
-    });
-    project = applyProjectCommand(project, catalog, {
-      kind: 'ReplaceShopOfferOption',
-      offer: boosted,
-      value: {
-        optionKey: 'BoostedRandomLoot',
-        offer: {
-          rewardType: 'RandomLoot',
-          payload: { kind: 'BoonSource', source: 'ApolloUpgrade' },
-        },
-      },
-    });
-    project = replaceTestShopOfferActions(project, catalog, shop, [
-      'MixedProgress1',
-      'MixedProgress2',
-    ]);
-    project = authorLegalTraitOffers(project);
+    const project = surfaceQShopCorrelationProject();
 
     const occurrence = productFor(project).occurrences.find((candidate) => candidate.id === shopId);
     const rows = occurrence?.overview.shop?.offers.filter(

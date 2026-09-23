@@ -16,6 +16,7 @@ import type {
   CanonicalLocalVisitRoom,
 } from '../../simulation/materialization';
 import { hubOverview, localSlotsOverview } from './hub';
+import { assembleExecutionRoomGuide } from './room-guide';
 
 export function executionOccurrence(
   room: CanonicalAuthoredRoom,
@@ -32,6 +33,7 @@ export function executionOccurrence(
   hubExit: CanonicalBatch | undefined,
   localSlots: readonly CanonicalLocalVisitRoom[] | undefined,
   resumeBoundary: 'postbossEntry' | undefined,
+  selected: boolean,
 ): ExecutionOccurrence {
   const batch = batches.get(executionRoomOwnerKey(room));
   const publishedHub = hub === undefined ? undefined : hubOverview(hub, hubExit);
@@ -52,6 +54,7 @@ export function executionOccurrence(
       ...(publishedLocalSlots === undefined ? {} : { localSlots: publishedLocalSlots }),
     }),
     timeline: assembleTimelineRelations(transactions, room, timelineFacts),
+    roomGuide: assembleExecutionRoomGuide(room, biome, transactions, selected),
     doors: assembleExecutionDoors({
       room,
       batches,

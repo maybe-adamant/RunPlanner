@@ -65,6 +65,14 @@ invalid project can be saved, but it cannot be published. The wire carries
 resolved game identifiers and semantic owners, never authored commands,
 candidate products, findings, UI labels, callbacks, or Lua.
 
+Each occurrence carries an ordered room-guide projection, empty for unselected
+occurrences, with small resolved description operands and optional exact
+transaction owners. The module presents it as read-only guidance: owner
+completion can hide its
+associated row, while informational rows remain visible. Guide rows neither
+add transactions nor participate in Timeline dependencies, obligations, or
+conformance; unavailable or desynchronized room state hides the presentation.
+
 Feature presence and feature interaction remain distinct facts on the wire.
 A present uninteracted Stygian Well or Pool of Purging is emitted with
 `interacted: false` and no fabricated inventory. A present interacted feature

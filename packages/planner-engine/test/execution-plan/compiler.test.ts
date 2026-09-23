@@ -1924,6 +1924,38 @@ describe('execution-plan compiler and codec', () => {
     expect(() => decodeExecutionPlan(surfaceNFixture)).not.toThrow();
   });
 
+  it('strictly validates guide row shape, unique keys, and local transaction owners', () => {
+    const wire = JSON.parse(JSON.stringify(fOpeningFixture)) as {
+      occurrences: Array<{
+        roomGuide: Array<{
+          key: string;
+          transactionOwner?: string;
+          description: Record<string, unknown>;
+        }>;
+      }>;
+      [key: string]: unknown;
+    };
+    const occurrence = wire.occurrences.find((candidate) =>
+      candidate.roomGuide.some((row) => row.transactionOwner !== undefined),
+    );
+    if (occurrence === undefined) throw new Error('fixture lacks an associated guide row');
+    const associated = occurrence.roomGuide.find((row) => row.transactionOwner !== undefined)!;
+
+    associated.transactionOwner = 'missing-owner';
+    refreshWireFingerprint(wire);
+    expect(() => decodeExecutionPlan(wire)).toThrow(ExecutionPlanCodecError);
+
+    delete associated.transactionOwner;
+    occurrence.roomGuide.push({ ...occurrence.roomGuide[0]! });
+    refreshWireFingerprint(wire);
+    expect(() => decodeExecutionPlan(wire)).toThrow(ExecutionPlanCodecError);
+
+    occurrence.roomGuide.pop();
+    (associated.description as Record<string, unknown>).unexpected = true;
+    refreshWireFingerprint(wire);
+    expect(() => decodeExecutionPlan(wire)).toThrow(ExecutionPlanCodecError);
+  });
+
   it('reaches a complete Surface automatic and scheduled-acquisition lifecycle', () => {
     const { plan } = planFor(surfaceScheduledLifecycleProject());
     expect(plan.extent.biomeKeys).toEqual(['N', 'O', 'P', 'Q']);
@@ -3000,6 +3032,14 @@ describe('execution-plan compiler and codec', () => {
       ...sourceForUnselected,
       id: 'unselected-occurrence',
       owner: unselectedOwner,
+      roomGuide: Object.freeze(
+        sourceForUnselected.roomGuide.map((row) => {
+          if (row.transactionOwner === sourceTransaction.owner)
+            return Object.freeze({ ...row, transactionOwner: unselectedOwner });
+          if (row.transactionOwner === undefined) return row;
+          return Object.freeze({ key: row.key, description: row.description });
+        }),
+      ),
       timeline: Object.freeze({
         ...sourceForUnselected.timeline,
         transactions: Object.freeze([
