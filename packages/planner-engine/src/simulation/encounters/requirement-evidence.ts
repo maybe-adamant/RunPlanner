@@ -14,6 +14,7 @@ export type EncounterRequirementEvidence = { readonly satisfied: boolean } & (
       readonly children: readonly EncounterRequirementEvidence[];
     }
   | { readonly kind: 'not'; readonly child: EncounterRequirementEvidence }
+  | { readonly kind: 'routeKeyEquals'; readonly expected: string; readonly actual: string }
   | {
       readonly kind: 'counterRange';
       readonly axis: CounterAxis;
@@ -88,6 +89,14 @@ export function encounterRequirementEvidence(
         axis: requirement.axis,
         actual: context.counters[requirement.axis],
         expected: requirement.range,
+      });
+    case 'routeKeyEquals':
+      if (context.routeKey === undefined) throw new Error('Missing encounter route');
+      return Object.freeze({
+        kind: requirement.kind,
+        satisfied,
+        expected: requirement.routeKey,
+        actual: context.routeKey,
       });
     case 'encounterKeyCount': {
       if (context.encounterHistory === undefined) throw new Error('Missing encounter history');

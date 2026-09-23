@@ -58,6 +58,10 @@ function requirementMessages(
     }
     case 'not':
       return requirementMessages(catalog, evidence.child, !expected);
+    case 'routeKeyEquals': {
+      const label = catalog.routes.byKey[evidence.expected]?.label ?? evidence.expected;
+      return [expected ? `Requires the ${label} route.` : `Unavailable in ${label}.`];
+    }
     case 'counterRange':
       return [
         `Requires ${counterLabels[evidence.axis]} ${expected ? '' : 'outside '}${rangeLabel(evidence.expected)}; currently ${evidence.actual}.`,

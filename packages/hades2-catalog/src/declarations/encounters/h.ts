@@ -34,6 +34,18 @@ export const hEncounterDefinitions = [
   },
   {
     key: 'GeneratedH_Treant2',
+    requirements: {
+      kind: 'all',
+      requirements: [
+        { kind: 'counterRange', axis: 'biomeDepthCache', range: { min: 4 } },
+        {
+          kind: 'encounterKeyCount',
+          scope: 'route',
+          encounterKeys: ['GeneratedH_Treant2'],
+          range: { max: 0 },
+        },
+      ],
+    },
     customization: [generatedEncounterChoices.GeneratedH_Treant2],
     label: 'Treant combat',
     kind: 'combat',
@@ -43,6 +55,18 @@ export const hEncounterDefinitions = [
   },
   {
     key: 'GeneratedH_Screamer2',
+    requirements: {
+      kind: 'all',
+      requirements: [
+        { kind: 'counterRange', axis: 'biomeDepthCache', range: { min: 4 } },
+        {
+          kind: 'encounterKeyCount',
+          scope: 'route',
+          encounterKeys: ['GeneratedH_Screamer2'],
+          range: { max: 0 },
+        },
+      ],
+    },
     customization: [generatedEncounterChoices.GeneratedH_Screamer2],
     label: 'Screamer combat',
     kind: 'combat',
