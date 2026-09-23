@@ -104,7 +104,8 @@ const n = [
   ...pair('Zombie', 'Shambler', {}, encounterDepth(3)),
   ...pair('ZombieSpawner', 'Tombstone', soloBlocked, encounterDepth(3)),
   ...pair('ZombieHeavyRanged', 'Lubber', {}, encounterDepth(3)),
-  ...pair('ZombieAssassin', 'Cutthroat', {}, encounterDepth(3)),
+  // Armored variants retain their native names but do not inherit IsElite.
+  ...pair('ZombieAssassin', 'Cutthroat', {}, { ...encounterDepth(3), elite: false }),
 ];
 const o = [
   ...pair('Stickler', 'Stickler'),
@@ -119,7 +120,7 @@ const oIntro = [
   ...pair('Stickler', 'Stickler'),
   ...pair('Swab', 'Anchor'),
   ...pair('Drunk', 'Boozer'),
-  ...pair('ZombieCrewman', 'Sea-Shambler'),
+  ...pair('ZombieCrewman', 'Sea-Shambler', {}, { elite: false }),
 ];
 const p = [
   ...pair('SentryBot', 'Auto-Seeker', automatons, automatons),
@@ -130,7 +131,7 @@ const p = [
   ...pair('SatyrSapper', 'Satyr Sapper', chronosForces, chronosForces),
   ...pair('SatyrLancer2', 'Satyr Goldpike', chronosForces, chronosForces),
   ...pair('SatyrCrossbow2', 'Satyr Raider', chronosForces, chronosForces),
-  ...pair('ZombieOlympus', 'Snow-Shambler', chronosForces, chronosForces),
+  ...pair('ZombieOlympus', 'Snow-Shambler', chronosForces, { ...chronosForces, elite: false }),
 ];
 const q = [
   ...pair('SimpleSquad', 'Polyp'),
@@ -169,5 +170,5 @@ export const generatedEnemyPools = {
 
 export const fixedFieldsEnemies = {
   treant: enemy('Treant2', 'Brush-Stalker', { elite: true }),
-  screamer: enemy('Screamer2', 'Dread-Wailer', { elite: true, excludes: ['Screamer_Elite'] }),
+  screamer: enemy('Screamer2', 'Dread-Wailer', { elite: true }),
 } as const;

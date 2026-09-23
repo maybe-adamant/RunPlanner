@@ -370,9 +370,13 @@ Those preparation-time records are immediately visible through
 `CurrentRun.EncountersOccurredBiomeCache`, so an occurrence-based requirement
 on a later position sees an encounter recorded earlier in the same room.
 `SumPrevRooms` has a different boundary: while the next room is being prepared,
-it reads `CurrentRun.CurrentRoom` followed by `RoomHistory`. It therefore counts
-the predecessor and earlier rooms, not positions already recorded for the next
-room. Same-room occurrence exclusion and previous-room spacing are distinct
+it reads `CurrentRun.CurrentRoom` followed by `RoomHistory`. `LeaveRoom` has
+already appended the departing room but has not replaced `CurrentRoom`, so the
+departing room occupies two entries. A six-entry exclusion therefore covers
+five distinct predecessor rooms at this contact. Encounter preparation mirrors
+this duplication without changing history projections at other contacts.
+It does not count positions already recorded for the next room.
+Same-room occurrence exclusion and previous-room spacing are distinct
 source checkpoints even though both ultimately inspect encounter history.
 
 If the chosen Encounter has `BlockMultipleEncounters`, construction stops and
@@ -498,18 +502,20 @@ reward is not substituted for that incoming-room value in these requirements.
 
 The game does not use one common NPC-history field:
 
-| Family   | Same-family guard                                                                          | Spacing requirement                                                                                          |
-| -------- | ------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------ |
-| Artemis  | `CurrentRun.UseRecord.NPC_Artemis_Field_01` must be false                                  | no listed field NPC in the previous 6 rooms                                                                  |
-| Heracles | no Heracles encounter in `CurrentRun.EncountersCompletedCache`                             | no Heracles encounter in the previous 20 rooms and no listed field NPC in the previous 6 rooms               |
-| Icarus   | `CurrentRun.UseRecord.NPC_Icarus_01` false, plus concrete current-run encounter exclusions | no listed field NPC in the previous 6 rooms                                                                  |
-| Athena   | `CurrentRun.UseRecord.NPC_Athena_01` must be false                                         | no listed field NPC in the previous 6 rooms                                                                  |
-| Nemesis  | no Nemesis encounter occurrence; the family predicate looks back 99 rooms                  | no listed field NPC in the previous 6 rooms; Shop appearances suppress encounters for an additional 12 rooms |
-| Arachne  | no Arachne occurrence in `CurrentRun.EncountersOccurredBiomeCache`                         | no Arachne encounter in the previous 5 rooms; Arachne is not in the shared six-room field-NPC predicate      |
+| Family   | Same-family guard                                                                          | Spacing requirement                                                                                                |
+| -------- | ------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------ |
+| Artemis  | `CurrentRun.UseRecord.NPC_Artemis_Field_01` must be false                                  | no listed field NPC in the previous 6 rooms                                                                        |
+| Heracles | no Heracles encounter in `CurrentRun.EncountersCompletedCache`                             | no Heracles encounter in the previous 20 rooms and no listed field NPC in the previous 6 rooms                     |
+| Icarus   | `CurrentRun.UseRecord.NPC_Icarus_01` false, plus concrete current-run encounter exclusions | no listed field NPC in the previous 6 rooms                                                                        |
+| Athena   | `CurrentRun.UseRecord.NPC_Athena_01` must be false                                         | no listed field NPC in the previous 6 rooms                                                                        |
+| Nemesis  | no Nemesis encounter occurrence; the family predicate looks back 99 rooms                  | no listed field NPC in the previous 6 rooms; Shop appearances suppress encounters for an additional 12 rooms       |
+| Arachne  | no Arachne occurrence in `CurrentRun.EncountersOccurredBiomeCache`                         | G inherits a five-entry Arachne history exclusion; F replaces the parent requirements and has no spacing predicate |
 
 `EncountersOccurredBiomeCache` resets at biome transition. An Arachne encounter
-in F therefore does not consume the G biome-local cap, although the five-room
-lookback can still suppress an early G appearance.
+in F therefore does not consume the G biome-local cap, although G's five-entry
+lookback can still suppress an early G appearance. The numeric windows in this
+table are native `SumPrevRooms` entry counts, subject to the preparation-time
+duplication above, not counts of distinct predecessor rooms.
 
 The raw `NoRecentFieldNPCEncounter` list omits `AthenaCombatP02`. That omission
 is present in the installed source.

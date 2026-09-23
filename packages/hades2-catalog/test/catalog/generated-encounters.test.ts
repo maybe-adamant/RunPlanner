@@ -13,6 +13,70 @@ function selection(key: string) {
 }
 
 describe('source-declared generated encounter policies', () => {
+  it('keeps Arachne spacing only where native requirements inherit it', () => {
+    const f = catalog.encounterDefinitions.byKey.ArachneCombatF!.requirements!;
+    const g = catalog.encounterDefinitions.byKey.ArachneCombatG!.requirements!;
+    if (f.kind !== 'all' || g.kind !== 'all') throw new Error('Missing Arachne requirements');
+    expect(f.requirements.some((rule) => rule.kind === 'previousRoomEncounterKeyCount')).toBe(
+      false,
+    );
+    expect(f.requirements).toContainEqual({
+      kind: 'counterRange',
+      axis: 'biomeDepthCache',
+      range: { min: 4, max: 8 },
+    });
+    expect(g.requirements).toContainEqual({
+      kind: 'previousRoomEncounterKeyCount',
+      encounterKeys: ['ArachneCombatF', 'ArachneCombatG'],
+      roomWindow: 5,
+      range: { max: 0 },
+    });
+  });
+  it('preserves native armored variants without counting them as elites', () => {
+    for (const [encounter, key, axis] of [
+      ['GeneratedN', 'ZombieAssassin_Elite', 'biomeEncounterDepth'],
+      ['GeneratedO_Intro01', 'ZombieCrewman_Elite', 'biomeDepthCache'],
+      ['GeneratedP', 'ZombieOlympus_Elite', 'biomeDepthCache'],
+    ] as const) {
+      expect(selection(encounter).choices.find((enemy) => enemy.key === key)).toMatchObject({
+        nativeId: key,
+        elite: false,
+        minimumDepth: { axis, value: 3 },
+        excludes: [key.replace('_Elite', '')],
+      });
+    }
+    expect(
+      selection('GeneratedP').choices.find((enemy) => enemy.key === 'HarpyDropper_Elite')?.elite,
+    ).toBe(true);
+    expect(selection('GeneratedH_Screamer2').fixedEnemies[0]?.excludes).toEqual([]);
+  });
+
+  it('retains Fields special encounter admission independently of composition', () => {
+    for (const key of ['GeneratedH_Treant2', 'GeneratedH_Screamer2']) {
+      expect(catalog.encounterDefinitions.byKey[key]?.requirements).toEqual({
+        kind: 'all',
+        requirements: [
+          { kind: 'counterRange', axis: 'biomeDepthCache', range: { min: 4 } },
+          { kind: 'encounterKeyCount', scope: 'route', encounterKeys: [key], range: { max: 0 } },
+        ],
+      });
+    }
+  });
+
+  it('excludes Nemesis random events from Dream without excluding her combat encounters', () => {
+    const exclusion = { kind: 'not', requirement: { kind: 'routeKeyEquals', routeKey: 'Dream' } };
+    expect(catalog.encounterDefinitions.byKey.NemesisRandomEvent?.requirements).toMatchObject({
+      kind: 'all',
+      requirements: expect.arrayContaining([exclusion]),
+    });
+    for (const key of ['NemesisCombatF', 'NemesisCombatG', 'NemesisCombatH', 'NemesisCombatI']) {
+      expect(catalog.encounterDefinitions.byKey[key]?.requirements).not.toMatchObject({
+        kind: 'all',
+        requirements: expect.arrayContaining([exclusion]),
+      });
+    }
+  });
+
   it('covers the audited 39 concrete identities without boss/prescribed vignettes', () => {
     expect(definitions).toHaveLength(39);
     expect(definitions.every((definition) => definition.kind === 'combat')).toBe(true);

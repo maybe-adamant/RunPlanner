@@ -209,7 +209,7 @@ function replaceCollectionEntry<T>(
   });
 }
 
-function historyProbeCatalog(): Catalog {
+function historyProbeCatalog(roomWindow = 5): Catalog {
   const ordinaryCombat = catalog.encounterDefinitions.byKey.GeneratedO;
   const defaultSet = catalog.encounterSets.byKey.OEncountersDefault;
   if (ordinaryCombat === undefined || defaultSet === undefined) {
@@ -241,13 +241,13 @@ function historyProbeCatalog(): Catalog {
         Object.freeze({
           kind: 'previousRoomEncounterKeyCount',
           encounterKeys: Object.freeze(['ArachneCombatF']),
-          roomWindow: 5,
+          roomWindow,
           range: Object.freeze({ max: 0 }),
         }),
         Object.freeze({
           kind: 'previousRoomEncounterKeyCount',
           encounterKeys: Object.freeze(['GeneratedO_Intro01']),
-          roomWindow: 5,
+          roomWindow,
           range: Object.freeze({ max: 0 }),
         }),
       ]),
@@ -538,9 +538,10 @@ function predecessorWindow(preparation: HistoryStateView, count: number): Histor
 function combatOneCandidates(
   room: CanonicalAuthoredRoom,
   preparation: HistoryStateView,
+  roomWindow = 5,
 ): readonly string[] {
   const candidate = prepareRoomEncounterPhases(
-    historyProbeCatalog(),
+    historyProbeCatalog(roomWindow),
     room,
     ordinaryPositionFor(historyProbeCatalog(), room.origin),
     preparation,
@@ -1436,17 +1437,24 @@ describe('field NPC encounter requirements', () => {
     ).toEqual(retainedCageRewards.cage1?.offer);
   });
 
-  it('applies exact predecessor-room spacing without treating an earlier current-room phase as a predecessor', () => {
-    const { preparation, room } = oCombatPreparationFixture();
+  it.each([5, 6])(
+    'counts the departing room twice in a native %i-entry preparation window',
+    (window) => {
+      const { preparation, room } = oCombatPreparationFixture();
 
-    const insideFive = combatOneCandidates(room, predecessorWindow(preparation, 5));
-    expect(insideFive).not.toContain('PreviousRoomProbe');
-    expect(insideFive).not.toContain('GeneratedO');
+      const insideFive = combatOneCandidates(
+        room,
+        predecessorWindow(preparation, window - 1),
+        window,
+      );
+      expect(insideFive).not.toContain('PreviousRoomProbe');
+      expect(insideFive).not.toContain('GeneratedO');
 
-    const outsideFive = combatOneCandidates(room, predecessorWindow(preparation, 6));
-    expect(outsideFive).toContain('PreviousRoomProbe');
-    expect(outsideFive).not.toContain('GeneratedO');
-  });
+      const outsideFive = combatOneCandidates(room, predecessorWindow(preparation, window), window);
+      expect(outsideFive).toContain('PreviousRoomProbe');
+      expect(outsideFive).not.toContain('GeneratedO');
+    },
+  );
 
   it('keeps Heracles O counting without terminating the Ship suffix, while Icarus excludes its later same-room slot', () => {
     const occurrenceId = oOccurrenceIds.combat01;

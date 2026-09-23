@@ -35,6 +35,46 @@ function candidate(
 }
 
 describe('encounter picker projection', () => {
+  it('explains a Dream route exclusion without hiding the encounter', () => {
+    const picker = createContextualPickerProjection(createContextualOptionResolver(catalog));
+    const model = projectEncounterPicker(
+      catalog,
+      picker,
+      [{ label: 'Nemesis event', value: 'NemesisRandomEvent' }],
+      'GeneratedF',
+      [
+        candidate('NemesisRandomEvent', 'impossible', {
+          kind: 'requirementsExcluded',
+          exclusions: [
+            {
+              kind: 'requirements',
+              encounterKey: 'NemesisRandomEvent',
+              definitions: [
+                {
+                  encounterDefinitionKey: 'NemesisRandomEvent',
+                  evaluation: {
+                    kind: 'not',
+                    satisfied: false,
+                    child: {
+                      kind: 'routeKeyEquals',
+                      satisfied: true,
+                      actual: 'Dream',
+                      expected: 'Dream',
+                    },
+                  },
+                },
+              ],
+            },
+          ],
+        }),
+      ],
+    );
+    expect(model.sections[0]?.items[0]).toMatchObject({
+      disabled: true,
+      explanation: `Unavailable in ${catalog.routes.byKey.Dream!.label}.`,
+    });
+  });
+
   it('allows reopening an invalid selected Nemesis family without enabling an unavailable new encounter', () => {
     const picker = createContextualPickerProjection(createContextualOptionResolver(catalog));
     const choices = [{ label: 'Nemesis event', value: 'NemesisRandomEvent' }];

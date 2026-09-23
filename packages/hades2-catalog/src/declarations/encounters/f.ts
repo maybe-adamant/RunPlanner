@@ -1,7 +1,6 @@
 import { generatedEncounterChoices } from './generated/policies';
 import type { RawEncounterDefinitionDeclaration, RawEncounterSetDeclaration } from './types';
 import {
-  arachneEncounterKeys,
   arachneIncomingRewardExclusions,
   artemisEncounterKeys,
   artemisIncomingRewardExclusions,
@@ -86,12 +85,6 @@ export const fEncounterDefinitions = [
           kind: 'encounterKeyCount',
           scope: 'biome',
           encounterKeys: ['ArachneCombatF'],
-          range: { max: 0 },
-        },
-        {
-          kind: 'previousRoomEncounterKeyCount',
-          encounterKeys: arachneEncounterKeys,
-          roomWindow: 5,
           range: { max: 0 },
         },
       ],
@@ -259,6 +252,7 @@ export const fEncounterDefinitions = [
     requirements: {
       kind: 'all',
       requirements: [
+        { kind: 'not', requirement: { kind: 'routeKeyEquals', routeKey: 'Dream' } },
         { kind: 'counterRange', axis: 'biomeDepthCache', range: { min: 4 } },
         { kind: 'currentRoomRewardExcludes', rewardTypes: nemesisIncomingRewardExclusions },
         {

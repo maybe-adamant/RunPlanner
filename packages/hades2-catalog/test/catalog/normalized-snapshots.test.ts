@@ -3,13 +3,13 @@ import { describe, expect, it } from 'vitest';
 import { catalog } from '@run-planner/hades2-catalog';
 
 const normalizedBiomeSnapshotHashes = [
-  ['F', '269dc92e4ca97d93'],
-  ['G', '75d801ba73e7778d'],
-  ['H', '3765c8d523f56953'],
+  ['F', '8039859da9c2a577'],
+  ['G', 'b6bba0d3932fc40d'],
+  ['H', 'db7757c94a4b4849'],
   ['I', '2b6cba2199158785'],
-  ['N', '5247a63abbdab7ed'],
-  ['O', '26294166894c83ef'],
-  ['P', '157617a916c4dee2'],
+  ['N', '13fb60aa9b8d1a12'],
+  ['O', 'd369212fad7d029a'],
+  ['P', 'bf0b19b6d4b78a41'],
   // Q_Boss01/02 declare resolvedOffer and Q's completion descriptor
   // carries the boss-door store policy.
   ['Q', 'edaebcb95b461c83'],

@@ -117,7 +117,15 @@ function requirementContext(
   if (!hasClockwork && clockworkValues.some((value) => value !== undefined)) {
     throw new Error('encounter requirements received partial Clockwork facts');
   }
+  const previousRooms = projectPreviousRoomEncounterKeys(view, room.origin);
+  const departingRoom = previousRooms.at(-1);
+  // LeaveRoom has appended CurrentRoom to RoomHistory before choosing encounters.
+  // Native SumPrevRooms reads that same room once as CurrentRoom and once as the
+  // history tail. Keep this duplication local to the preparation contact.
+  const preparationRoomWindow =
+    departingRoom === undefined ? previousRooms : Object.freeze([...previousRooms, departingRoom]);
   return Object.freeze({
+    routeKey: routePosition.routeKey,
     counters: Object.freeze({
       biomeDepthCache: view.ledgers.counters.biomeDepthCache,
       biomeEncounterDepth: view.ledgers.counters.biomeEncounterDepth,
@@ -153,7 +161,7 @@ function requirementContext(
         room.origin.routeKey,
         room.origin.biomeKey,
       ),
-      previousRoomEncounterKeys: projectPreviousRoomEncounterKeys(view, room.origin),
+      previousRoomEncounterKeys: preparationRoomWindow,
     }),
     offeredExitCount: projectOfferedExitCount(view, room.origin, declaration.exits.length),
     currentBatchRoomGameNames: Object.freeze([]),

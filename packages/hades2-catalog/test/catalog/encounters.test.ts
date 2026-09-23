@@ -1251,6 +1251,7 @@ describe('encounter envelope catalog', () => {
       requirements: {
         kind: 'all',
         requirements: [
+          { kind: 'not', requirement: { kind: 'routeKeyEquals', routeKey: 'Dream' } },
           { kind: 'counterRange', axis: 'biomeDepthCache', range: { min: 4 } },
           {
             kind: 'currentRoomRewardExcludes',
