@@ -79,7 +79,7 @@ Source families: `RoomLogic.lua`, `StoreLogic.lua`, `SellTraitLogic.lua`,
 | Encounter identities and phase slots, including H/O/P         | `room/timeline/encounters/hooks.lua`, `phases.lua`                  | `SetupRoomMultipleEncountersData`, `ChooseEncounter`, `StartEncounter`, `EndEncounterEffects`                                                                    | Insert + Bind          | Assembly chooses identities; actual native encounter tables bind later phase contacts. Repeated H choices and prebuilt multi-phase tables share phase ownership, not a second timeline cursor. | Spawning, combat and encounter progression.                                                          |
 | O wheels, offer count/store/rewards and selected continuation | `room/timeline/encounters/thessaly.lua`, `navigation/hooks.lua`     | `ShipsEncounterSetup`, `RandomChance`, `ChooseNextRewardStore`, `CreateDoorRewardPreview`, `ChooseRoomReward`, `UseShipWheel`                                    | Insert + Select + Bind | Generation scope retires at the final preview. Wheel identity survives player input; accepted use publishes continuation before native notification resumes encounter setup.                   | Wheel construction, player choice, notification and encounter progression.                           |
 | Fig Leaf phase skip                                           | `keepsakes/fig_leaf.lua`                                            | `HandleEncounterPreSpawns`, `HandleEnemySpawns`, `IsTraitActive`, `GetTotalHeroTraitValue`, `RandomChance`                                                       | Bind + Select          | Native active-trait/chance reads identify the exact skip roll; coroutine-local spawn context cannot arm an unrelated later enemy roll. Reads themselves remain native.                         | Skip eligibility, charge/latch changes and spawning.                                                 |
-| Gorgon Athena acquisition                                     | Ordinary trait adapter                                              | `HandleLootPickup`, then ordinary menu/selection hooks                                                                                                           | Insert + Bind          | Accepted native Athena pickup claims the ready published encounter offer through the shared lifecycle/DAG path. No dedicated Athena-use or spawn hook.                                         | Athena eligibility, appearance and keepsake consumption; trait inventory proves the acquired result. |
+| Gorgon Athena acquisition                                     | Ordinary trait adapter                                              | `HandleLootPickup`, then ordinary menu/selection hooks                                                                                                           | Insert + Bind          | Accepted native Athena pickup claims the ready published encounter offer through shared acquisition discovery and DAG readiness. No dedicated Athena-use or spawn hook.                        | Athena eligibility, appearance and keepsake consumption; trait inventory proves the acquired result. |
 
 ## Encounter customization
 
@@ -138,10 +138,10 @@ Source families: `InteractLogic.lua`, `UpgradeChoiceLogic.lua`, `TraitLogic.lua`
 [traits and offers](TRAITS_AND_OFFERS.md). Acquisition completion releases
 steering dependencies; it is not proof of the player's retained result.
 
-An encounter-end delivery becomes a later player pickup. Its discovery window
-survives the final `EndEncounterEffects` return, without keeping the automatic
-effect contact active. Exact bound acquisitions consult DAG prerequisites, not
-callback-window assertions; room-exit conformance verifies the retained result.
+An encounter-end delivery becomes a separate player pickup. Native availability
+and the acquisition DAG govern its discovery, not the active encounter window.
+Automatic effects retain their exact callback contact; room-exit conformance
+verifies the retained acquisition result.
 
 A shared source is not a unique acquisition owner. A trial publishes separate
 chosen/spurned acquisitions under one incoming reward. The source and producer
