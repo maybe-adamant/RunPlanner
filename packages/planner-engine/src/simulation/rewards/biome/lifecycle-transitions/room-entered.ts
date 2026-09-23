@@ -23,7 +23,6 @@ import {
   priorTwoSurfaceShopPresence,
   type HermesShrineCandidateContext,
 } from '../../../commerce/hermes-shrine';
-import { assessPurgingPool, type PurgingPoolAssessment } from '../../../commerce/purging-pool';
 import { createBiomeRewardFacts } from '../../facts';
 import { appendRewardEvent, type RewardBranchState } from '../../branch-primitives';
 import { advanceRewardBranches } from '../../branch-lifecycle';
@@ -45,10 +44,6 @@ export interface RoomEnteredTransition {
   readonly findings: readonly LifecycleFinding[];
   readonly derivedAcquisitionEntryFrontiers: readonly DerivedAcquisitionEntryFrontier[];
   readonly hermesShrineDeliveryPlacementRequired: boolean;
-  readonly purgingPoolAssessment?: {
-    readonly origin: OccurrenceAddress;
-    readonly assessments: readonly PurgingPoolAssessment[];
-  };
   readonly hermesShrineAssessment?: {
     readonly origin: OccurrenceAddress;
     readonly assessments: readonly HermesShrineCandidateContext[];
@@ -75,7 +70,6 @@ export function applyRoomEnteredTransition(
   findingChronology: FindingChronology,
   routePosition: ResolvedRoutePosition,
   alreadyAssessed: {
-    readonly purgingPool: boolean;
     readonly hermesShrine: boolean;
     readonly stygianWell: boolean;
   },
@@ -248,39 +242,8 @@ export function applyRoomEnteredTransition(
           view: roomView!.entry,
         })
       : undefined;
-  let purgingPoolAssessment: RoomEnteredTransition['purgingPoolAssessment'];
   let hermesShrineAssessment: RoomEnteredTransition['hermesShrineAssessment'];
   let stygianWellAssessment: RoomEnteredTransition['stygianWellAssessment'];
-  if (room !== undefined && room.purgingPool?.interacted === true && !alreadyAssessed.purgingPool) {
-    const assessments = Object.freeze(
-      next.map((branch) =>
-        assessPurgingPool(catalog, room.purgingPool!, branch.state.traitHistory.equippedTraits),
-      ),
-    );
-    purgingPoolAssessment = Object.freeze({ origin: room.origin, assessments });
-    for (const assessment of assessments) {
-      for (const finding of assessment.findings)
-        findings.push(
-          Object.freeze({
-            finding: rewardFinding(
-              finding.code,
-              finding.slotKey === undefined
-                ? createRoomFeatureAddress(room.origin, { kind: 'purgingPoolInventory' })
-                : createRoomFeatureAddress(room.origin, {
-                    kind: 'purgingPoolOffer',
-                    slotKey: finding.slotKey,
-                  }),
-              {
-                ...finding.evidence,
-                ...(finding.slotKey === undefined ? {} : { slotKey: finding.slotKey }),
-              },
-            ),
-            region: ownerRegion(room.origin),
-            chronology: findingChronology,
-          }),
-        );
-    }
-  }
   if (room !== undefined && !alreadyAssessed.hermesShrine) {
     const declaration = catalog.rooms.byKey[room.gameName];
     const entry = roomView?.entry;
@@ -452,7 +415,6 @@ export function applyRoomEnteredTransition(
     findings: Object.freeze(findings),
     derivedAcquisitionEntryFrontiers: dueDeliveries?.frontiers ?? Object.freeze([]),
     hermesShrineDeliveryPlacementRequired: dueDeliveries?.placementRequired ?? false,
-    ...(purgingPoolAssessment === undefined ? {} : { purgingPoolAssessment }),
     ...(hermesShrineAssessment === undefined ? {} : { hermesShrineAssessment }),
     ...(stygianWellAssessment === undefined ? {} : { stygianWellAssessment }),
     ...(checkpoint === undefined ? {} : { runStateCheckpoint: checkpoint }),

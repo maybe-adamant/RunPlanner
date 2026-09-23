@@ -78,6 +78,79 @@ function asConfiguredTailF(project: ProjectDocument): ProjectDocument {
 }
 
 describe('Purging Pool sales', () => {
+  it('waits for the fountain outcome before exposing pool inventory and then sells the rarified boon', () => {
+    let project = applyProjectCommand(createCompleteFGProject(), catalog, {
+      kind: 'ReplaceStartingKeepsake',
+      selection: {
+        kind: 'keepsakeSelection',
+        routeKey: 'Underworld',
+        biomeKey: 'routeStart',
+        owner: 'routeStart',
+      },
+      keepsakeKey: 'FountainRarityKeepsake',
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'SetPurgingPoolInteraction',
+      occurrence,
+      interacted: true,
+    });
+    for (const slotKey of ['left', 'middle', 'right'] as const)
+      project = applyProjectCommand(project, catalog, {
+        kind: 'ReplacePurgingPoolSlot',
+        occurrence,
+        slotKey,
+        traitKey: null,
+      });
+    const fountain = createRoomActionAddress(
+      biome,
+      occurrence.occurrenceId,
+      roomActionKey({ kind: 'useFountain' }),
+    );
+    const outcome = createFountainRarityOutcomeAddress(fountain);
+    const pending = simulateProjectAssembly(catalog, project);
+    expect(purgingPoolCandidateForProjectEvaluationAssembly(pending, occurrence)).toBeUndefined();
+    expect(pending.evaluation.route.biomes[0]?.findings).toContainEqual(
+      expect.objectContaining({ code: 'fountainRarityResultMissing', origin: outcome }),
+    );
+    expect(pending.evaluation.route.biomes[0]?.findings).not.toContainEqual(
+      expect.objectContaining({ code: 'purgingPoolTraitMissing' }),
+    );
+
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceFountainRarityTarget',
+      outcome,
+      targetTraitKey: 'ApolloWeaponBoon',
+    });
+    const ready = simulateProjectAssembly(catalog, project);
+    const capability = purgingPoolCandidateForProjectEvaluationAssembly(ready, occurrence);
+    expect(capability?.candidateTraitKeysBySlot.left).toContain('ApolloWeaponBoon');
+    expect(ready.evaluation.route.biomes[0]?.findings).toContainEqual(
+      expect.objectContaining({ code: 'purgingPoolTraitMissing' }),
+    );
+    const selected = withPoolSlots(project, [
+      'ApolloWeaponBoon',
+      'ZeusSpecialBoon',
+      'HeraCastBoon',
+    ]);
+    const beforeSale = fRewards(selected);
+    expect(beforeSale.branches.length).toBeGreaterThan(0);
+    expect(
+      beforeSale.branches[0]?.state.traitHistory.equippedTraits.ApolloWeaponBoon,
+    ).toMatchObject({
+      rarity: 'Heroic',
+    });
+    const afterSale = fRewards(sell(selected, 'left'));
+    expect(afterSale.findings).not.toContainEqual(
+      expect.objectContaining({ code: 'purgingPoolSaleUnavailable' }),
+    );
+    expect(afterSale.branches.length).toBeGreaterThan(0);
+    expect(
+      afterSale.branches.every(
+        (branch) => branch.state.traitHistory.equippedTraits.ApolloWeaponBoon === undefined,
+      ),
+    ).toBe(true);
+  });
+
   it('rejects an unknown Pool slot before mutating authored state', () => {
     const interacted = applyProjectCommand(createGoldenFGHProject(), catalog, {
       kind: 'SetPurgingPoolInteraction',

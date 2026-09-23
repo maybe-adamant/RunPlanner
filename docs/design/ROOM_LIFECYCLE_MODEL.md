@@ -863,6 +863,15 @@ is active. World Shop and Shrine inventories are always fully authored; neither
 receives that convenience because their visible identities affect outgoing
 generation.
 
+Postboss Purging Pool inventory is assessed once immediately after the required
+fountain action and its rarity effects settle, before cleanup sales. Its
+candidates and inventory findings consume that post-fountain state, not room
+entry; an unresolved Phial outcome withholds the pool frontier. This models
+the inventory available when the fountain unlocks the facilities, including
+native regeneration caused by a changed offered rarity. Later sales consume
+the retained inventory and the current equipped traits; they do not regenerate
+the candidate set.
+
 Well purchases settle immediately as paid effects and never invoke free-pickup
 alternatives. A rushed Shrine purchase, including a Travel Deal replacement,
 derives one required same-room pickup at the post-outgoing action rank. A delayed
