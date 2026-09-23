@@ -209,6 +209,7 @@ export function assembleExecutionProduct({
       room.roomKind === 'PostBoss' && selectedOccurrenceIdSet.has(room.occurrenceId)
         ? 'postbossEntry'
         : undefined,
+      selectedOccurrenceIdSet.has(room.occurrenceId),
     );
   });
   const extent = Object.freeze({

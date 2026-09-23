@@ -9,7 +9,7 @@ import type {
 
 /** The single room-session execution artifact supported by the app compiler. */
 export const EXECUTION_PLAN_FORMAT = 'run-planner-execution' as const;
-export const EXECUTION_PROTOCOL_VERSION = 43 as const;
+export const EXECUTION_PROTOCOL_VERSION = 44 as const;
 export const EXECUTION_CATALOG_VERSION = '0.55.0-anvil-of-fates' as const;
 export type ExecutionBiomeKey = 'F' | 'G' | 'H' | 'I' | 'N' | 'O' | 'P' | 'Q';
 
@@ -758,6 +758,72 @@ export interface ExecutionTimeline {
   readonly obligations: readonly ExecutionTimelineObligation[];
 }
 
+/**
+ * Minimal resolved operands for one authored room action. The game module owns
+ * wording and native display-name lookup; this protocol product deliberately
+ * carries no editor labels or authored reference structure.
+ */
+export type ExecutionRoomGuideDescription =
+  | { readonly kind: 'collectRequiredReward' }
+  | { readonly kind: 'completeFieldsCage'; readonly phaseKey: string }
+  | {
+      readonly kind: 'interactIncomingReward';
+      readonly reward?: ExecutionReward;
+      readonly conversion?: 'timePiece';
+    }
+  | {
+      readonly kind: 'interactLocalReward';
+      readonly reward?: ExecutionReward;
+      readonly conversion?: 'timePiece';
+    }
+  | { readonly kind: 'chooseRewardWheel'; readonly wheelKey: string }
+  | {
+      readonly kind: 'interactWheelReward';
+      readonly wheelKey: string;
+      readonly reward?: ExecutionReward;
+      readonly conversion?: 'timePiece';
+    }
+  | {
+      readonly kind: 'interactShopOffer';
+      readonly offerKey: string;
+      readonly rewardType?: string;
+      readonly conversion?: 'timePiece' | 'anvilOfFates';
+    }
+  | {
+      readonly kind: 'purchaseStygianWellOffer';
+      readonly generationKey: ExecutionWellGenerationKey;
+      readonly itemKey?: string;
+      readonly effect?: ExecutionWellEffect;
+      readonly twistResultKey?: string;
+    }
+  | {
+      readonly kind: 'sellPurgingPoolTrait';
+      readonly slotKey: 'left' | 'middle' | 'right';
+      readonly traitKey: string;
+    }
+  | {
+      readonly kind: 'interactEncounter';
+      readonly phaseKey: string;
+      readonly encounterKey?: string;
+    }
+  | { readonly kind: 'interactGorgon'; readonly phaseKey: string; readonly encounterKey?: string }
+  | {
+      readonly kind: 'interactAcquisitionEntry';
+      readonly reward?: ExecutionReward;
+      readonly conversion?: 'timePiece' | 'anvilOfFates';
+    }
+  | { readonly kind: 'useFountain'; readonly aromaticPhialTarget?: string }
+  | { readonly kind: 'interactKeepsakeRack'; readonly keepsakeKey?: string };
+
+/** One display-ordered authored action, optionally joined to its exact transaction. */
+export interface ExecutionRoomGuideRow {
+  /** Stable opaque Room Action key; this is not presentation text. */
+  readonly key: string;
+  readonly description: ExecutionRoomGuideDescription;
+  /** Present only when this action owner's exact occurrence transaction exists. */
+  readonly transactionOwner?: string;
+}
+
 export interface ExecutionDoorTarget {
   readonly exitKey: string;
   readonly index: number;
@@ -801,6 +867,8 @@ export interface ExecutionOccurrence {
   readonly anomaly?: ExecutionAnomalyReplacement;
   readonly overview: ExecutionOverview;
   readonly timeline: ExecutionTimeline;
+  /** Existing canonical action chronology, projected for read-only room guidance. */
+  readonly roomGuide: readonly ExecutionRoomGuideRow[];
   readonly doors: ExecutionDoors;
   readonly roomExitConformance?: ExecutionRoomExitConformance;
   readonly diagnostics?: {

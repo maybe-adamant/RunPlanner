@@ -13,7 +13,11 @@ import {
   loadUnderworldFGHCheckpoint,
   loadUnderworldFGHICheckpoint,
 } from '@run-planner/test-fixtures/checkpoints/underworld';
-import { loadSurfaceNOProject, loadSurfaceNOPProject } from '@run-planner/test-fixtures/surface';
+import {
+  loadSurfaceNProject,
+  loadSurfaceNOProject,
+  loadSurfaceNOPProject,
+} from '@run-planner/test-fixtures/surface';
 import { dreamMixedHandoffProject } from '@run-planner/test-fixtures/dream';
 
 import { assembleExecutionProduct } from '../../../src/execution-plan/assembler';
@@ -22,6 +26,7 @@ import { encodeExecutionPlan } from '../../../src/execution-plan/codec';
 import { simulateProjectAssembly } from '../../../src/simulation';
 import { bossAutomaticOutcomeProject } from './automatic-fixture';
 import { surfaceScheduledLifecycleProject } from './scheduled-lifecycle-fixture';
+import { surfaceQShopCorrelationProject } from './surface-q-shop-correlation-fixture';
 import { typhonCustomizationProject } from './typhon-customization-fixture';
 
 const fixtureDirectory = join(dirname(fileURLToPath(import.meta.url)), '..', 'fixtures');
@@ -54,9 +59,11 @@ export const executionFixtures: readonly {
   { name: 'fg-ixion-chaos', project: createCompleteFGIxionChaosProject },
   { name: 'fg-anomaly', project: createCompleteFGAnomalyProject },
   { name: 'automatic-boss', project: bossAutomaticOutcomeProject },
+  { name: 'surface-n', project: loadSurfaceNProject },
   { name: 'surface-no', project: loadSurfaceNOProject },
   { name: 'surface-nop', project: loadSurfaceNOPProject },
   { name: 'surface-nopq', project: typhonCustomizationProject },
+  { name: 'surface-q-shop-correlation', project: surfaceQShopCorrelationProject },
   { name: 'dream-mixed-prefix', project: dreamMixedHandoffProject },
   { name: 'surface-scheduled-lifecycle', project: surfaceScheduledLifecycleProject },
 ]);

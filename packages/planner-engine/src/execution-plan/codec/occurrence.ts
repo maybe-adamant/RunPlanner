@@ -18,6 +18,7 @@ import { runState } from './diagnostics';
 import { doors } from './doors';
 import { overview } from './overview';
 import { timeline } from './timeline';
+import { reward } from './rewards';
 
 function validateRewardWheelProduct(
   occurrence: Pick<
@@ -185,12 +186,206 @@ function validateShopTransactionOwners(
   }
 }
 
+function roomGuideDescription(value: unknown, label: string) {
+  const record = object(value, label);
+  const kind = stringValue(record.kind, `${label}.kind`);
+  const optionalReward = () =>
+    record.reward === undefined ? undefined : reward(record.reward, `${label}.reward`);
+  switch (kind) {
+    case 'collectRequiredReward':
+      exact(record, ['kind'], [], label);
+      return Object.freeze({ kind });
+    case 'completeFieldsCage':
+      exact(record, ['kind', 'phaseKey'], [], label);
+      return Object.freeze({ kind, phaseKey: stringValue(record.phaseKey, `${label}.phaseKey`) });
+    case 'interactIncomingReward':
+    case 'interactLocalReward': {
+      exact(record, ['kind'], ['reward', 'conversion'], label);
+      const parsedReward = optionalReward();
+      if (record.conversion !== undefined && record.conversion !== 'timePiece')
+        fail(`${label}.conversion is unsupported`);
+      return Object.freeze({
+        kind,
+        ...(parsedReward === undefined ? {} : { reward: parsedReward }),
+        ...(record.conversion === undefined ? {} : { conversion: 'timePiece' as const }),
+      });
+    }
+    case 'chooseRewardWheel':
+      exact(record, ['kind', 'wheelKey'], [], label);
+      return Object.freeze({ kind, wheelKey: stringValue(record.wheelKey, `${label}.wheelKey`) });
+    case 'interactWheelReward': {
+      exact(record, ['kind', 'wheelKey'], ['reward', 'conversion'], label);
+      const parsedReward = optionalReward();
+      if (record.conversion !== undefined && record.conversion !== 'timePiece')
+        fail(`${label}.conversion is unsupported`);
+      return Object.freeze({
+        kind,
+        wheelKey: stringValue(record.wheelKey, `${label}.wheelKey`),
+        ...(parsedReward === undefined ? {} : { reward: parsedReward }),
+        ...(record.conversion === undefined ? {} : { conversion: 'timePiece' as const }),
+      });
+    }
+    case 'interactShopOffer': {
+      exact(record, ['kind', 'offerKey'], ['rewardType', 'conversion'], label);
+      const conversion =
+        record.conversion === undefined
+          ? undefined
+          : stringValue(record.conversion, `${label}.conversion`);
+      if (conversion !== undefined && conversion !== 'timePiece' && conversion !== 'anvilOfFates')
+        fail(`${label}.conversion is unsupported`);
+      return Object.freeze({
+        kind,
+        offerKey: stringValue(record.offerKey, `${label}.offerKey`),
+        ...(record.rewardType === undefined
+          ? {}
+          : { rewardType: stringValue(record.rewardType, `${label}.rewardType`) }),
+        ...(conversion === undefined
+          ? {}
+          : { conversion: conversion as 'timePiece' | 'anvilOfFates' }),
+      });
+    }
+    case 'purchaseStygianWellOffer': {
+      exact(record, ['kind', 'generationKey'], ['itemKey', 'effect', 'twistResultKey'], label);
+      const generationKey = stringValue(record.generationKey, `${label}.generationKey`);
+      if (
+        ![
+          'initial:healing',
+          'initial:secondLeft',
+          'initial:secondRight',
+          'travelDealRefill',
+        ].includes(generationKey)
+      )
+        fail(`${label}.generationKey is unsupported`);
+      const effect =
+        record.effect === undefined ? undefined : stringValue(record.effect, `${label}.effect`);
+      if (
+        effect !== undefined &&
+        ![
+          'neutral',
+          'spark',
+          'yarn',
+          'hymn',
+          'discount',
+          'emptySlot',
+          'extended',
+          'twist',
+          'lastStand',
+        ].includes(effect)
+      )
+        fail(`${label}.effect is unsupported`);
+      return Object.freeze({
+        kind,
+        generationKey: generationKey as import('../model').ExecutionWellGenerationKey,
+        ...(record.itemKey === undefined
+          ? {}
+          : { itemKey: stringValue(record.itemKey, `${label}.itemKey`) }),
+        ...(effect === undefined
+          ? {}
+          : { effect: effect as import('../model').ExecutionWellEffect }),
+        ...(record.twistResultKey === undefined
+          ? {}
+          : { twistResultKey: stringValue(record.twistResultKey, `${label}.twistResultKey`) }),
+      });
+    }
+    case 'sellPurgingPoolTrait': {
+      exact(record, ['kind', 'slotKey', 'traitKey'], [], label);
+      const slotKey = stringValue(record.slotKey, `${label}.slotKey`);
+      if (slotKey !== 'left' && slotKey !== 'middle' && slotKey !== 'right')
+        fail(`${label}.slotKey is unsupported`);
+      return Object.freeze({
+        kind,
+        slotKey,
+        traitKey: stringValue(record.traitKey, `${label}.traitKey`),
+      });
+    }
+    case 'interactEncounter':
+    case 'interactGorgon':
+      exact(record, ['kind', 'phaseKey'], ['encounterKey'], label);
+      return Object.freeze({
+        kind,
+        phaseKey: stringValue(record.phaseKey, `${label}.phaseKey`),
+        ...(record.encounterKey === undefined
+          ? {}
+          : { encounterKey: stringValue(record.encounterKey, `${label}.encounterKey`) }),
+      });
+    case 'interactAcquisitionEntry': {
+      exact(record, ['kind'], ['reward', 'conversion'], label);
+      const parsedReward = optionalReward();
+      const conversion =
+        record.conversion === undefined
+          ? undefined
+          : stringValue(record.conversion, `${label}.conversion`);
+      if (conversion !== undefined && conversion !== 'timePiece' && conversion !== 'anvilOfFates')
+        fail(`${label}.conversion is unsupported`);
+      return Object.freeze({
+        kind,
+        ...(parsedReward === undefined ? {} : { reward: parsedReward }),
+        ...(conversion === undefined
+          ? {}
+          : { conversion: conversion as 'timePiece' | 'anvilOfFates' }),
+      });
+    }
+    case 'useFountain':
+      exact(record, ['kind'], ['aromaticPhialTarget'], label);
+      return Object.freeze({
+        kind,
+        ...(record.aromaticPhialTarget === undefined
+          ? {}
+          : {
+              aromaticPhialTarget: stringValue(
+                record.aromaticPhialTarget,
+                `${label}.aromaticPhialTarget`,
+              ),
+            }),
+      });
+    case 'interactKeepsakeRack':
+      exact(record, ['kind'], ['keepsakeKey'], label);
+      return Object.freeze({
+        kind,
+        ...(record.keepsakeKey === undefined
+          ? {}
+          : { keepsakeKey: stringValue(record.keepsakeKey, `${label}.keepsakeKey`) }),
+      });
+    default:
+      fail(`${label}.kind is unsupported`);
+  }
+}
+
+function roomGuide(value: unknown, timelineValue: ExecutionOccurrence['timeline'], label: string) {
+  const rows = array(value, label);
+  const keys = new Set<string>();
+  const transactionOwners = new Set(
+    timelineValue.transactions.map((transaction) => transaction.owner),
+  );
+  return Object.freeze(
+    rows.map((value, index) => {
+      const rowLabel = `${label}[${index}]`;
+      const record = object(value, rowLabel);
+      exact(record, ['key', 'description'], ['transactionOwner'], rowLabel);
+      const key = stringValue(record.key, `${rowLabel}.key`, MAX_OWNER_STRING);
+      if (keys.has(key)) fail(`${label} has duplicate action key`);
+      keys.add(key);
+      const transactionOwner =
+        record.transactionOwner === undefined
+          ? undefined
+          : stringValue(record.transactionOwner, `${rowLabel}.transactionOwner`, MAX_OWNER_STRING);
+      if (transactionOwner !== undefined && !transactionOwners.has(transactionOwner))
+        fail(`${rowLabel}.transactionOwner must name one occurrence transaction`);
+      return Object.freeze({
+        key,
+        description: roomGuideDescription(record.description, `${rowLabel}.description`),
+        ...(transactionOwner === undefined ? {} : { transactionOwner }),
+      });
+    }),
+  );
+}
+
 export function occurrence(value: unknown, index: number): ExecutionOccurrence {
   const label = `occurrences[${index}]`;
   const record = object(value, label);
   exact(
     record,
-    ['id', 'owner', 'biomeKey', 'gameName', 'kind', 'overview', 'timeline', 'doors'],
+    ['id', 'owner', 'biomeKey', 'gameName', 'kind', 'overview', 'timeline', 'roomGuide', 'doors'],
     ['anomaly', 'resumeBoundary', 'roomExitConformance', 'diagnostics'],
     label,
   );
@@ -267,6 +462,7 @@ export function occurrence(value: unknown, index: number): ExecutionOccurrence {
   if (!['F', 'G', 'H', 'I', 'N', 'O', 'P', 'Q'].includes(biomeKey))
     fail(`${label}.biomeKey is unsupported`);
   const parsedTimeline = timeline(record.timeline, `${label}.timeline`);
+  const parsedRoomGuide = roomGuide(record.roomGuide, parsedTimeline, `${label}.roomGuide`);
   const parsed = Object.freeze({
     id: stringValue(record.id, `${label}.id`, 256),
     owner: stringValue(record.owner, `${label}.owner`, MAX_OWNER_STRING),
@@ -277,6 +473,7 @@ export function occurrence(value: unknown, index: number): ExecutionOccurrence {
     ...(parsedAnomaly === undefined ? {} : { anomaly: parsedAnomaly }),
     overview: parsedOverview,
     timeline: parsedTimeline,
+    roomGuide: parsedRoomGuide,
     doors: doors(record.doors, `${label}.doors`),
     ...(conformanceFacts === undefined
       ? {}
