@@ -704,7 +704,7 @@ describe('Hermes Shrine delayed deliveries', () => {
           boundary: 'at' as const,
         }),
         routePosition,
-        { purgingPool: true, hermesShrine: true, stygianWell: true },
+        { hermesShrine: true, stygianWell: true },
       );
       const delivery = transition.derivedAcquisitionEntryFrontiers.find(
         (frontier) => frontier.kind === 'hermesShrineDelivery',
@@ -1764,7 +1764,7 @@ describe('Hermes Shrine entry inventory requirements', () => {
         boundary: 'at' as const,
       }),
       routePosition,
-      { purgingPool: true, hermesShrine: false, stygianWell: true },
+      { hermesShrine: false, stygianWell: true },
     );
   }
 

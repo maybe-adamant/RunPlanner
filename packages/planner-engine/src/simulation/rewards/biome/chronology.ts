@@ -11,6 +11,7 @@ import {
   createTargetAddress,
   createEchoKeepsakeReplayAddress,
   createRoomRunStateCheckpointAddress,
+  createRoomFeatureAddress,
   semanticAddressKey,
   type SemanticAddress,
   type SteadyGrowthOutcomeAddress,
@@ -46,7 +47,10 @@ import {
   createTranscendentEmbryoCandidateArtifacts,
   createFountainRarityCandidateArtifacts,
 } from '../../keepsakes/candidate-artifacts';
-import { createPurgingPoolCandidateArtifacts } from '../../commerce/purging-pool';
+import {
+  assessPurgingPool,
+  createPurgingPoolCandidateArtifacts,
+} from '../../commerce/purging-pool';
 import { createHermesShrineCandidateArtifacts } from '../../commerce/hermes-shrine';
 import { createStygianWellCandidateArtifacts } from '../../commerce/stygian-well';
 import {
@@ -1304,9 +1308,6 @@ export function evaluateBiomeRewardChronology(
           ),
           routePosition,
           Object.freeze({
-            purgingPool:
-              room?.kind === 'authored' &&
-              purgingPoolAssessments.has(semanticAddressKey(room.origin)),
             hermesShrine:
               room?.kind === 'authored' &&
               hermesShrineAssessments.has(semanticAddressKey(room.origin)),
@@ -1319,11 +1320,6 @@ export function evaluateBiomeRewardChronology(
         for (const entry of entered.findings)
           addRewardFinding(findings, entry.finding, entry.region, entry.chronology);
         recordDerivedAcquisitionEntryFrontiers(entered.derivedAcquisitionEntryFrontiers);
-        if (entered.purgingPoolAssessment !== undefined)
-          purgingPoolAssessments.set(
-            semanticAddressKey(entered.purgingPoolAssessment.origin),
-            entered.purgingPoolAssessment,
-          );
         if (entered.hermesShrineAssessment !== undefined)
           hermesShrineAssessments.set(
             semanticAddressKey(entered.hermesShrineAssessment.origin),
@@ -1405,6 +1401,44 @@ export function evaluateBiomeRewardChronology(
           fountainRarityCandidateContexts.set(transition.candidate.key, transition.candidate.value);
         for (const finding of transition.findings)
           addRewardFinding(findings, finding.finding, finding.region, finding.chronology);
+        // The fountain unlocks Postboss facilities. Capture the pool only after
+        // its rarity effects settle, never from entry or an unresolved Phial.
+        if (room?.kind === 'authored' && room.purgingPool?.interacted && branches.length > 0) {
+          const assessments = Object.freeze(
+            branches.map((branch) =>
+              assessPurgingPool(
+                catalog,
+                room.purgingPool!,
+                branch.state.traitHistory.equippedTraits,
+              ),
+            ),
+          );
+          purgingPoolAssessments.set(
+            semanticAddressKey(room.origin),
+            Object.freeze({ origin: room.origin, assessments }),
+          );
+          for (const assessment of assessments) {
+            for (const finding of assessment.findings)
+              addRewardFinding(
+                findings,
+                rewardFinding(
+                  finding.code,
+                  createRoomFeatureAddress(
+                    room.origin,
+                    finding.slotKey === undefined
+                      ? { kind: 'purgingPoolInventory' }
+                      : { kind: 'purgingPoolOffer', slotKey: finding.slotKey },
+                  ),
+                  {
+                    ...finding.evidence,
+                    ...(finding.slotKey === undefined ? {} : { slotKey: finding.slotKey }),
+                  },
+                ),
+                ownerRegion(room.origin),
+                Object.freeze({ kind: 'history', sequence: event.sequence, boundary: 'after' }),
+              );
+          }
+        }
         break;
       }
       case 'roomCreated': {
