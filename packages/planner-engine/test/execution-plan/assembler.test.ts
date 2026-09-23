@@ -764,9 +764,27 @@ describe('engine-owned F/G execution semantic product', () => {
     );
     expect(unentered?.roomGuide).toEqual([]);
 
-    const orderedFields = productFor(loadUnderworldFGHICheckpoint()).occurrences.find(
+    const fieldsProduct = productFor(loadUnderworldFGHICheckpoint());
+    const orderedFields = fieldsProduct.occurrences.find(
       (occurrence) => occurrence.id === 'golden-h-combat05',
     );
+
+    const reversedCages = fieldsProduct.occurrences.find(
+      (occurrence) => occurrence.id === 'golden-h-combat02',
+    );
+    expect(
+      reversedCages?.roomGuide
+        .filter((row) => row.description.kind === 'completeFieldsCage')
+        .map((row) => row.description),
+    ).toMatchObject([
+      { kind: 'completeFieldsCage', phaseKey: 'Cage02', reward: { rewardType: 'MaxManaDrop' } },
+      { kind: 'completeFieldsCage', phaseKey: 'Cage01', reward: { rewardType: 'MaxHealthDrop' } },
+    ]);
+    expect(
+      reversedCages?.roomGuide
+        .filter((row) => row.description.kind === 'completeFieldsCage')
+        .every((row) => row.transactionOwner === undefined),
+    ).toBe(true);
     expect(orderedFields?.roomGuide.map((row) => row.description.kind)).toEqual([
       'completeFieldsCage',
       'interactLocalReward',
@@ -822,6 +840,8 @@ describe('engine-owned F/G execution semantic product', () => {
               row.description.kind === 'interactWheelReward' ||
               row.description.kind === 'interactAcquisitionEntry') &&
             row.description.conversion === 'timePiece' &&
+            row.description.reward?.rewardType === 'Boon' &&
+            row.description.reward.source === 'ApolloUpgrade' &&
             row.transactionOwner === undefined,
         ),
     ).toBe(true);

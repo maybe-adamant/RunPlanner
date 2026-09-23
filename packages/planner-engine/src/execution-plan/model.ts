@@ -765,7 +765,11 @@ export interface ExecutionTimeline {
  */
 export type ExecutionRoomGuideDescription =
   | { readonly kind: 'collectRequiredReward' }
-  | { readonly kind: 'completeFieldsCage'; readonly phaseKey: string }
+  | {
+      readonly kind: 'completeFieldsCage';
+      readonly phaseKey: string;
+      readonly reward?: ExecutionReward;
+    }
   | {
       readonly kind: 'interactIncomingReward';
       readonly reward?: ExecutionReward;

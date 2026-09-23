@@ -4,10 +4,13 @@ import { roomActionKey } from '../../authored-project/room-actions/key';
 import type { CanonicalAuthoredRoom } from '../../simulation/materialization';
 import type { CompleteValidBiomeProjectEvaluation } from '../../simulation/evaluation/evaluation-products';
 import type {
+  ExecutionReward,
   ExecutionRoomGuideDescription,
   ExecutionRoomGuideRow,
   ExecutionTimelineTransaction,
 } from '../model';
+import { executionRewardFromOffer } from './overview';
+import { agreement } from './support';
 
 function rewardFor(transaction: ExecutionTimelineTransaction | undefined) {
   return transaction?.kind === 'acquisition' ? transaction.reward : undefined;
@@ -18,15 +21,37 @@ function descriptionFor(
   room: CanonicalAuthoredRoom,
   transaction: ExecutionTimelineTransaction | undefined,
   timePieced: boolean,
+  convertedReward: ExecutionReward | undefined,
 ): ExecutionRoomGuideDescription {
   switch (reference.kind) {
     case 'collectRequiredReward':
       return Object.freeze({ kind: reference.kind });
-    case 'completeFieldsCage':
-      return Object.freeze({ kind: reference.kind, phaseKey: reference.phaseKey });
+    case 'completeFieldsCage': {
+      const attachment = room.encounterPhases.find(
+        (phase) => phase.slotKey === reference.phaseKey,
+      )?.rewardAttachment;
+      const localReward =
+        attachment?.kind === 'localReward'
+          ? room.localRewards?.find(
+              (reward) =>
+                reward.groupKey === attachment.groupKey && reward.slotKey === attachment.slotKey,
+            )
+          : undefined;
+      if (localReward === undefined)
+        throw new Error(`room guide cage ${reference.phaseKey} lacks its attached reward`);
+      return Object.freeze({
+        kind: reference.kind,
+        phaseKey: reference.phaseKey,
+        reward: executionRewardFromOffer(
+          localReward.offer,
+          localReward.producerLifecycleKey,
+          localReward.resolvedStoreKey,
+        ),
+      });
+    }
     case 'interactIncomingReward':
     case 'interactLocalReward': {
-      const reward = rewardFor(transaction);
+      const reward = rewardFor(transaction) ?? convertedReward;
       return Object.freeze({
         kind: reference.kind,
         ...(reward === undefined ? {} : { reward }),
@@ -36,7 +61,7 @@ function descriptionFor(
     case 'chooseRewardWheel':
       return Object.freeze({ kind: reference.kind, wheelKey: reference.wheelKey });
     case 'interactWheelReward': {
-      const reward = rewardFor(transaction);
+      const reward = rewardFor(transaction) ?? convertedReward;
       return Object.freeze({
         kind: reference.kind,
         wheelKey: reference.wheelKey,
@@ -45,7 +70,7 @@ function descriptionFor(
       });
     }
     case 'interactShopOffer': {
-      const rewardType = rewardFor(transaction)?.rewardType;
+      const rewardType = (rewardFor(transaction) ?? convertedReward)?.rewardType;
       return Object.freeze({
         kind: reference.kind,
         offerKey: reference.offerKey,
@@ -98,7 +123,7 @@ function descriptionFor(
           : { encounterKey: room.encounters.encounterKeyByPhase[reference.phaseKey] }),
       });
     case 'interactAcquisitionEntry': {
-      const reward = rewardFor(transaction);
+      const reward = rewardFor(transaction) ?? convertedReward;
       return Object.freeze({
         kind: reference.kind,
         ...(reward === undefined ? {} : { reward }),
@@ -138,16 +163,27 @@ export function assembleExecutionRoomGuide(
   const transactionsByOwner = new Map(
     transactions.map((transaction) => [transaction.owner, transaction]),
   );
-  const timePieced = (actionOwner: (typeof room.roomActionRoster.rows)[number]['owner']) => {
+  const timePiecedReward = (actionOwner: (typeof room.roomActionRoster.rows)[number]['owner']) => {
     const source = actionOwner.kind === 'acquisitionRole' ? actionOwner.owner : actionOwner;
     const role = actionOwner.kind === 'acquisitionRole' ? actionOwner.acquisitionRole : undefined;
-    return biome.rewards.branches.every((branch) =>
-      branch.events.some(
+    const events = biome.rewards.branches.map((branch) =>
+      branch.events.find(
         (event) =>
           event.kind === 'conversionToGold' &&
           semanticAddressKey(event.origin) === semanticAddressKey(source) &&
           (role === undefined || event.acquisition.role === role),
       ),
+    );
+    if (!events.every((event) => event?.kind === 'conversionToGold')) return undefined;
+    return agreement(
+      events.map((event) =>
+        executionRewardFromOffer(
+          event.source.offer,
+          event.source.producerLifecycleKey,
+          event.source.resolvedStoreKey,
+        ),
+      ),
+      `room guide Time Piece target ${semanticAddressKey(actionOwner)}`,
     );
   };
   return Object.freeze(
@@ -155,6 +191,7 @@ export function assembleExecutionRoomGuide(
       if (entry.kind !== 'action') return [];
       const owner = semanticAddressKey(entry.action.owner);
       const transaction = transactionsByOwner.get(owner);
+      const convertedReward = timePiecedReward(entry.action.owner);
       const key = roomActionKey(entry.action.reference);
       if (typeof key !== 'string' || key.length === 0)
         throw new Error(
@@ -167,7 +204,8 @@ export function assembleExecutionRoomGuide(
             entry.action.reference,
             room,
             transaction,
-            timePieced(entry.action.owner),
+            convertedReward !== undefined,
+            convertedReward,
           ),
           ...(transaction === undefined ? {} : { transactionOwner: transaction.owner }),
         }),
