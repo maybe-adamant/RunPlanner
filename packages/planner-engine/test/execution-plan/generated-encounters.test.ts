@@ -59,7 +59,7 @@ describe('generated customization publication', () => {
       waveCount: 3,
       highlightKey: 'Guard',
       waves: [
-        { waveIndex: 3, typeKeys: ['Brawler', 'Mage'], weights: { Guard: 1, Brawler: 2, Mage: 3 } },
+        { waveIndex: 3, typeKeys: ['Brawler', 'Mage'], allocations: { Guard: 1, Brawler: 2 } },
       ],
     } as const;
     const project = replace(base, value);
@@ -85,7 +85,7 @@ describe('generated customization publication', () => {
               { choiceKey: 'Brawler', nativeId: 'Brawler' },
               { choiceKey: 'Mage', nativeId: 'Mage' },
             ],
-            shares: [1 / 6, 2 / 6, 3 / 6],
+            allocations: { Guard: 1, Brawler: 2 },
           },
         ],
       },
@@ -225,7 +225,7 @@ describe('generated execution decoding', () => {
           { choiceKey: 'Guard', nativeId: 'Guard' },
           { choiceKey: 'Mage', nativeId: 'Mage' },
         ],
-        shares: [0.4, 0.6],
+        allocations: { Guard: 40 },
       },
     ],
   };
@@ -234,11 +234,12 @@ describe('generated execution decoding', () => {
     for (const malformed of [
       { ...value, waveCount: 6 },
       { ...value, waveCount: 1 },
+      { ...value, baseRoll: 10001 },
       { ...value, unsupported: true },
       { ...value, waves: [value.waves[0], value.waves[0]] },
-      ...[[0.2, 0.2], [0, 1], [Number.NaN, 1], [0.5]].map((shares) => ({
+      ...[null, { Guard: -1 }, { Guard: Number.NaN }, { Unknown: 1 }].map((allocations) => ({
         ...value,
-        waves: [{ ...value.waves[0], shares }],
+        waves: [{ ...value.waves[0], allocations }],
       })),
       { ...value, waves: [{ ...value.waves[0], waveIndex: 4 }] },
       { ...value, waves: [{ ...value.waves[0], types: [...value.waves[0]!.types].reverse() }] },

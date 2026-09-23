@@ -702,6 +702,7 @@ function executionEncounterCustomization(
         Object.freeze({
           decisionKey: decision.key,
           kind: 'generated',
+          ...(operands.baseRoll === undefined ? {} : { baseRoll: operands.baseRoll }),
           ...(operands.waveCount === undefined ? {} : { waveCount: operands.waveCount }),
           ...(operands.highlightKey === undefined
             ? {}
@@ -714,7 +715,18 @@ function executionEncounterCustomization(
                     Object.freeze({
                       waveIndex: wave.waveIndex,
                       types: Object.freeze(wave.typeKeys.map(choice)),
-                      ...(wave.shares === undefined ? {} : { shares: wave.shares }),
+                      ...(wave.allocations === undefined
+                        ? {}
+                        : {
+                            allocations: Object.freeze(
+                              Object.fromEntries(
+                                Object.entries(wave.allocations).map(([key, allocation]) => [
+                                  choice(key).nativeId,
+                                  allocation,
+                                ]),
+                              ),
+                            ),
+                          }),
                     }),
                   ),
                 ),

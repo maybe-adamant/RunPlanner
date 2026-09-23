@@ -21,10 +21,13 @@ export function generatedEncounter(
   label: string,
 ): ExecutionGeneratedEncounterCustomization {
   const row = object(value, label);
-  exact(row, ['decisionKey', 'kind'], ['waveCount', 'highlight', 'waves'], label);
+  exact(row, ['decisionKey', 'kind'], ['baseRoll', 'waveCount', 'highlight', 'waves'], label);
   if (row.kind !== 'generated') fail(`${label}.kind is unsupported`);
   const waveCount =
     row.waveCount === undefined ? undefined : ordinal(row.waveCount, `${label}.waveCount`);
+  const baseRoll =
+    row.baseRoll === undefined ? undefined : integer(row.baseRoll, `${label}.baseRoll`, 0);
+  if (baseRoll !== undefined && baseRoll > 10000) fail(`${label}.baseRoll exceeds 10000`);
   const highlight =
     row.highlight === undefined ? undefined : enemy(row.highlight, `${label}.highlight`);
   if (waveCount === 1 && highlight !== undefined) fail(`${label} cannot highlight a single wave`);
@@ -36,7 +39,7 @@ export function generatedEncounter(
           array(row.waves, `${label}.waves`, 5).map((value, index) => {
             const path = `${label}.waves[${index}]`;
             const wave = object(value, path);
-            exact(wave, ['waveIndex', 'types'], ['shares'], path);
+            exact(wave, ['waveIndex', 'types'], ['allocations'], path);
             const waveIndex = ordinal(wave.waveIndex, `${path}.waveIndex`);
             if (seen.has(waveIndex) || (waveCount !== undefined && waveIndex > waveCount))
               fail(`${path} has duplicate or out-of-range wave index`);
@@ -58,35 +61,44 @@ export function generatedEncounter(
                 types[0]?.nativeId !== highlight.nativeId)
             )
               fail(`${path} must seed its declared highlight first`);
-            const shares =
-              wave.shares === undefined
+            const allocations =
+              wave.allocations === undefined
                 ? undefined
                 : Object.freeze(
-                    array(wave.shares, `${path}.shares`, 5).map((value) => {
-                      const share = numberValue(value, `${path}.shares`);
-                      if (share <= 0 || share > 1)
-                        fail(`${path}.shares must be positive fractions`);
-                      return share;
-                    }),
+                    Object.fromEntries(
+                      Object.entries(object(wave.allocations, `${path}.allocations`)).map(
+                        ([key, value]) => {
+                          const allocation = numberValue(value, `${path}.allocations.${key}`);
+                          if (allocation < 0) fail(`${path}.allocations must be nonnegative`);
+                          return [key, allocation];
+                        },
+                      ),
+                    ),
                   );
             if (
-              shares !== undefined &&
-              (types.length < 2 ||
-                shares.length !== types.length ||
-                Math.abs(shares.reduce((sum, share) => sum + share, 0) - 1) > 1e-9)
+              allocations !== undefined &&
+              Object.keys(allocations).some((key) => !types.some((type) => type.nativeId === key))
             )
-              fail(`${path}.shares must match types and sum to one`);
-            return Object.freeze({ waveIndex, types, ...(shares === undefined ? {} : { shares }) });
+              fail(`${path}.allocations must name generated types`);
+            return Object.freeze({
+              waveIndex,
+              types,
+              ...(allocations === undefined ? {} : { allocations }),
+            });
           }),
         );
   if (
     waves?.length === 0 ||
-    (waveCount === undefined && highlight === undefined && waves === undefined)
+    (baseRoll === undefined &&
+      waveCount === undefined &&
+      highlight === undefined &&
+      waves === undefined)
   )
     fail(`${label} has no active override`);
   return Object.freeze({
     decisionKey: stringValue(row.decisionKey, `${label}.decisionKey`),
     kind: 'generated',
+    ...(baseRoll === undefined ? {} : { baseRoll }),
     ...(waveCount === undefined ? {} : { waveCount }),
     ...(highlight === undefined ? {} : { highlight }),
     ...(waves === undefined ? {} : { waves }),

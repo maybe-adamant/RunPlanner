@@ -24,7 +24,7 @@ import {
 } from './biome/reward-store-support';
 import type { TraitHistoryState } from '../traits/history/model';
 import type { SimulationState } from '../state/model';
-import { artificerStatus } from '../arcana-fear';
+import { artificerStatus, attestEffectiveHordesRank } from '../arcana-fear';
 
 export type RunStateOwner =
   ExitDecisionAddress | HubDecisionAddress | RoomRunStateCheckpointAddress;
@@ -123,6 +123,8 @@ export interface RunStateSnapshot {
   readonly traits: DecisionTraitState;
   readonly counters: DecisionCounterState;
   readonly arcanaFear: SimulationState['arcanaFear'];
+  /** Attested at this lifecycle checkpoint; generated encounters consume this exact rank. */
+  readonly effectiveHordesRank?: number;
   /** Branch-derived identity chronology; effects are introduced by later gates. */
   readonly keepsakes: SimulationState['keepsakes'];
   readonly rewardPriorities: SimulationState['rewardPriorities'];
@@ -757,6 +759,7 @@ export function createRunState(context: RunStateContext): RunStateSnapshot | und
     traits: first.traits,
     counters: first.counters,
     arcanaFear: first.arcanaFear,
+    effectiveHordesRank: attestEffectiveHordesRank(context.states),
     keepsakes: first.keepsakes,
     rewardPriorities: first.rewardPriorities,
     pendingHermesShrineDeliveries: first.pendingHermesShrineDeliveries,

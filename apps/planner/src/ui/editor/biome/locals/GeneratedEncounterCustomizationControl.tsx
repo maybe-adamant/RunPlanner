@@ -22,18 +22,21 @@ function authored(decision: Decision): AuthoredGeneratedEncounterCustomization {
 function empty(
   value: AuthoredGeneratedEncounterCustomization,
 ): AuthoredGeneratedEncounterCustomization | null {
-  return value.waveCount === undefined && value.highlightKey === undefined && !value.waves?.length
+  return value.baseRoll === undefined &&
+    value.waveCount === undefined &&
+    value.highlightKey === undefined &&
+    !value.waves?.length
     ? null
     : value;
 }
 
-function replaceMemberWeight(
-  weights: Readonly<Record<string, number>>,
+function replaceMemberAllocation(
+  allocations: Readonly<Record<string, number>>,
   previousKey: string | undefined,
   nextKey: string,
 ) {
-  const next = { ...weights };
-  const inherited = previousKey === undefined ? 1 : (next[previousKey] ?? 1);
+  const next = { ...allocations };
+  const inherited = previousKey === undefined ? 0 : (next[previousKey] ?? 0);
   if (previousKey !== undefined) delete next[previousKey];
   if (nextKey !== '') next[nextKey] = inherited;
   return next;
@@ -57,6 +60,7 @@ function withWave(
   ].sort((left, right) => left.waveIndex - right.waveIndex);
   const base = {
     kind: 'generated' as const,
+    ...(value.baseRoll === undefined ? {} : { baseRoll: value.baseRoll }),
     ...(value.waveCount === undefined ? {} : { waveCount: value.waveCount }),
     ...(value.highlightKey === undefined ? {} : { highlightKey: value.highlightKey }),
   };
@@ -75,21 +79,34 @@ function replacementWave(
   waveIndex: number,
   typeKeys: readonly string[],
   highlightKeys: readonly string[],
+  fixedSeedCount: number,
 ) {
   const previous = value.waves?.find((wave) => wave.waveIndex === waveIndex);
-  const previousWeights = previous?.weights;
+  const previousAllocations = previous?.allocations;
   const members = [...highlightKeys, ...typeKeys];
-  if (previousWeights === undefined || members.length < 2)
-    return { waveIndex, typeKeys: [...typeKeys] };
+  if (previousAllocations === undefined) return { waveIndex, typeKeys: [...typeKeys] };
   const previousTypeKeys = previous?.typeKeys ?? [];
-  const weights: Record<string, number> = {};
+  const allocations: Record<string, number> = {};
   for (const key of highlightKeys) {
-    weights[key] = previousWeights[key] ?? 1;
+    const allocation = previousAllocations[key];
+    if (Object.hasOwn(previousAllocations, key) && allocation !== undefined)
+      allocations[key] = allocation;
   }
   for (const [index, key] of typeKeys.entries()) {
-    weights[key] = previousWeights[previousTypeKeys[index] ?? ''] ?? 1;
+    const previousKey = previousTypeKeys[index];
+    const allocation = previousKey === undefined ? undefined : previousAllocations[previousKey];
+    if (
+      previousKey !== undefined &&
+      Object.hasOwn(previousAllocations, previousKey) &&
+      allocation !== undefined
+    )
+      allocations[key] = allocation;
   }
-  return { waveIndex, typeKeys: [...typeKeys], weights };
+  for (const [index, key] of members.entries())
+    if (fixedSeedCount + index + 1 === members.length) delete allocations[key];
+  return Object.keys(allocations).length === 0
+    ? { waveIndex, typeKeys: [...typeKeys] }
+    : { waveIndex, typeKeys: [...typeKeys], allocations };
 }
 
 function GeneratedEncounterWaveDraftPicker({
@@ -107,7 +124,7 @@ function GeneratedEncounterWaveDraftPicker({
     readonly key: string;
     readonly label: string;
     readonly kind?: 'fixed' | 'highlight';
-    readonly weight?: ReactNode;
+    readonly allocation?: ReactNode;
   }[];
   readonly update: (
     change: (
@@ -156,6 +173,7 @@ function GeneratedEncounterWaveDraftPicker({
                     wave.waveIndex,
                     draft.typeKeys,
                     wave.seeds.filter((seed) => seed.kind === 'highlight').map((seed) => seed.key),
+                    wave.seeds.filter((seed) => seed.kind === 'fixed').length,
                   ),
                 ),
               );
@@ -187,7 +205,7 @@ function GeneratedEncounterWaveDraftPicker({
               {member.label}
               {member.kind === 'fixed' ? <small>fixed</small> : null}
             </button>
-            {member.weight}
+            {member.allocation}
           </div>
         ))}
       </div>
@@ -245,6 +263,59 @@ export function GeneratedEncounterCustomizationControl({
           Reset customization
         </button>
       </div>
+      {assessment?.budget?.kind === 'exact' ? (
+        <div className="encounter-customization-row">
+          <span>Wave budget</span>
+          <span className="encounter-fixed-value">
+            {(assessment.budget.waveBudgets as readonly number[])
+              .map((budget, index) => `Wave ${index + 1}: ${budget}`)
+              .join(' · ')}
+          </span>
+        </div>
+      ) : null}
+      {assessment?.budget?.baseRoll !== undefined ? (
+        <div className="encounter-customization-row">
+          <label htmlFor={`generated-base-roll-${interaction.key}`}>Native base roll</label>
+          <input
+            id={`generated-base-roll-${interaction.key}`}
+            aria-label="Native base roll"
+            min={assessment.budget.baseRoll?.min}
+            max={assessment.budget.baseRoll?.max}
+            step={1}
+            type="range"
+            value={value.baseRoll ?? assessment.budget.baseRoll?.min ?? 0}
+            onChange={(event) =>
+              update((current) => ({ ...current, baseRoll: event.currentTarget.valueAsNumber }))
+            }
+          />
+          <button
+            className="quiet-action"
+            disabled={value.baseRoll === undefined}
+            onClick={() =>
+              update((current) => {
+                const next = { ...current };
+                delete next.baseRoll;
+                return next;
+              })
+            }
+            type="button"
+          >
+            Default
+          </button>
+          <span className="encounter-generated-context">
+            {value.baseRoll === undefined
+              ? `Default native random · ${(
+                  assessment.budget.waveBudgets as readonly {
+                    readonly min: number;
+                    readonly max: number;
+                  }[]
+                )
+                  .map((budget, index) => `Wave ${index + 1}: ${budget.min}–${budget.max}`)
+                  .join(' · ')}`
+              : `Native roll ${value.baseRoll}`}
+          </span>
+        </div>
+      ) : null}
       {fixedCount ? (
         <div className="encounter-customization-row">
           <span>Waves</span>
@@ -257,6 +328,7 @@ export function GeneratedEncounterCustomizationControl({
                 replace(
                   empty({
                     kind: 'generated',
+                    ...(value.baseRoll === undefined ? {} : { baseRoll: value.baseRoll }),
                     ...(value.highlightKey === undefined
                       ? {}
                       : { highlightKey: value.highlightKey }),
@@ -290,6 +362,7 @@ export function GeneratedEncounterCustomizationControl({
                     update((current) => {
                       const base = {
                         kind: 'generated' as const,
+                        ...(current.baseRoll === undefined ? {} : { baseRoll: current.baseRoll }),
                         ...(current.highlightKey === undefined
                           ? {}
                           : { highlightKey: current.highlightKey }),
@@ -327,17 +400,16 @@ export function GeneratedEncounterCustomizationControl({
               update((current) => {
                 const base = {
                   kind: 'generated' as const,
+                  ...(current.baseRoll === undefined ? {} : { baseRoll: current.baseRoll }),
                   ...(current.waveCount === undefined ? {} : { waveCount: current.waveCount }),
                   ...(current.waves === undefined
                     ? {}
                     : {
                         waves: current.waves.map((wave) => {
-                          if (highlightKey === '' || wave.weights === undefined) return wave;
-                          // Default retains the highlight's weight outside the additional types.
-                          const retainedHighlightKeys = Object.keys(wave.weights).filter(
+                          if (highlightKey === '' || wave.allocations === undefined) return wave;
+                          const retainedHighlightKeys = Object.keys(wave.allocations).filter(
                             (key) => !wave.typeKeys.includes(key),
                           );
-                          // Ambiguous retained weights stay intact for explicit repair.
                           if (
                             current.highlightKey === undefined &&
                             retainedHighlightKeys.length > 1
@@ -347,8 +419,8 @@ export function GeneratedEncounterCustomizationControl({
                             current.highlightKey ?? retainedHighlightKeys[0];
                           return {
                             ...wave,
-                            weights: replaceMemberWeight(
-                              wave.weights,
+                            allocations: replaceMemberAllocation(
+                              wave.allocations,
                               previousHighlight,
                               highlightKey,
                             ),
@@ -377,44 +449,44 @@ export function GeneratedEncounterCustomizationControl({
       ) : (
         <div className="encounter-generated-waves">
           <p className="encounter-generated-weight-note">
-            NA uses game weights. Editing starts other weights at 1. Weights guide allocation, not
-            exact counts.
+            Default allocation stays native. Explicit samples guide native allocation; counts remain
+            derived.
           </p>
           {assessment.waves.map((wave) => {
             const current = value.waves?.find((entry) => entry.waveIndex === wave.waveIndex);
             const selected = current?.typeKeys ?? [];
             const members = wave.generatedMemberKeys ?? [];
-            const weightsFor = (key: string, position: number) => {
-              const enabled = members.length >= 2 && members.includes(key);
-              const weight = current?.weights?.[key];
+            const allocationsFor = (key: string, position: number) => {
+              const generatedIndex = members.indexOf(key);
+              const fixedSeedCount = wave.seeds.filter((seed) => seed.kind === 'fixed').length;
+              const enabled =
+                generatedIndex !== -1 && fixedSeedCount + generatedIndex + 1 !== members.length;
+              const allocation = current?.allocations?.[key];
               const name = label(key);
               return (
-                <label className="encounter-generated-weight" key={`weight-${position}`}>
+                <label className="encounter-generated-weight" key={`allocation-${position}`}>
                   <input
-                    aria-label={`Wave ${wave.waveIndex} ${name} weight`}
+                    aria-label={`Wave ${wave.waveIndex} ${name} allocation`}
                     disabled={!enabled}
-                    max={1000}
                     min={0}
                     onChange={(event) => {
                       if (!enabled) return;
                       const next = event.target.valueAsNumber;
-                      if (!Number.isFinite(next) || next <= 0 || next > 1000) return;
+                      if (!Number.isFinite(next) || next < 0) return;
                       update((state) =>
                         withWave(state, wave.waveIndex, (row) => ({
                           ...row,
-                          weights:
-                            row.weights === undefined
-                              ? Object.fromEntries(
-                                  members.map((member) => [member, member === key ? next : 1]),
-                                )
-                              : { ...row.weights, [key]: next },
+                          allocations:
+                            row.allocations === undefined
+                              ? Object.fromEntries([[key, next]])
+                              : { ...row.allocations, [key]: next },
                         })),
                       );
                     }}
                     placeholder="NA"
                     step={1}
                     type="number"
-                    value={weight ?? ''}
+                    value={allocation ?? ''}
                   />
                 </label>
               );
@@ -429,7 +501,7 @@ export function GeneratedEncounterCustomizationControl({
                     <span>
                       <button
                         className="danger-action action-compact"
-                        disabled={current?.weights === undefined}
+                        disabled={current?.allocations === undefined}
                         onClick={() =>
                           update((state) =>
                             withWave(state, wave.waveIndex, (row) => ({
@@ -440,7 +512,7 @@ export function GeneratedEncounterCustomizationControl({
                         }
                         type="button"
                       >
-                        Reset weights
+                        Reset allocations
                       </button>
                       <button
                         className="danger-action action-compact"
@@ -461,17 +533,26 @@ export function GeneratedEncounterCustomizationControl({
                       key: `${seed.kind}-${seed.key}`,
                       label: label(seed.key),
                       kind: seed.kind,
-                      weight: seed.kind === 'highlight' ? weightsFor(seed.key, index + 1) : null,
+                      allocation:
+                        seed.kind === 'highlight' ? allocationsFor(seed.key, index + 1) : null,
                     })),
                     ...selected.slice(0, wave.additionalTypeCount.max).map((key, index) => ({
                       key: `${index}-${key}`,
                       label: label(key),
-                      weight: weightsFor(key, wave.seeds.length + index + 1),
+                      allocation: allocationsFor(key, wave.seeds.length + index + 1),
                     })),
                   ]}
                   update={update}
                   wave={wave}
                 />
+                {wave.countPreview?.map((entry) => (
+                  <span className="encounter-generated-context" key={`count-${entry.key}`}>
+                    {label(entry.key)}:{' '}
+                    {entry.count === undefined
+                      ? 'Native count'
+                      : `${entry.count} derived${entry.requested === undefined ? '' : ` (requested ${entry.requested}, effective ${entry.effective})`}`}
+                  </span>
+                ))}
                 {selected.length > wave.additionalTypeCount.max ? (
                   <div className="encounter-generated-retained">
                     <span>Extra enemies</span>
@@ -498,11 +579,11 @@ export function GeneratedEncounterCustomizationControl({
                                       : {
                                           ...row,
                                           typeKeys,
-                                          ...(row.weights === undefined
+                                          ...(row.allocations === undefined
                                             ? {}
                                             : {
-                                                weights: replaceMemberWeight(
-                                                  row.weights,
+                                                allocations: replaceMemberAllocation(
+                                                  row.allocations,
                                                   row.typeKeys.at(-1),
                                                   '',
                                                 ),

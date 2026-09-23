@@ -24,6 +24,19 @@ export function attestEffectiveShadowRank(
     throw new Error('Shadow preparation frontier is divergent');
   return rank;
 }
+
+/** One generated encounter may consume Hordes only from its reached reward state. */
+export function attestEffectiveHordesRank(
+  states: readonly { readonly arcanaFear: ArcanaFearState }[],
+): number {
+  if (states.length === 0) throw new Error('Hordes generation state is empty');
+  const ranks = states.map(
+    (state) => state.arcanaFear.fear.effectiveRanks.EnemyCountShrineUpgrade ?? 0,
+  );
+  if (ranks.some((value) => value !== ranks[0]))
+    throw new Error('Hordes preparation frontier is divergent');
+  return ranks[0]!;
+}
 export interface ActiveArcanaState {
   readonly key: string;
   readonly origin: ArcanaActivationOrigin;

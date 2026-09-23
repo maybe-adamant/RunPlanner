@@ -303,7 +303,8 @@ export function createProjectOperations(
         if (loaded === null) {
           return result('loadProfile', 'cancelled', 'Load Profile cancelled.');
         }
-        const { project } = loadProjectDocument(loaded.json, options.catalog);
+        const loadedDocument = loadProjectDocument(loaded.json, options.catalog);
+        const { project } = loadedDocument;
         assertPublicProjectAdmission(options.catalog, project);
         const baselineJson = encodeProjectDocument(project);
         const fileName = loadedProfileFileName(loaded.file.fileName);
@@ -345,7 +346,13 @@ export function createProjectOperations(
           }),
         );
         activeProfileFile = loaded.file;
-        return result('loadProfile', 'success', 'Loaded the profile.');
+        return result(
+          'loadProfile',
+          'success',
+          loadedDocument.migrationProvenance.length === 0
+            ? 'Loaded the profile.'
+            : 'Migrated the profile to schema 87; old/custom encounter weights were reset.',
+        );
       } catch (error) {
         return failure('loadProfile', error);
       }

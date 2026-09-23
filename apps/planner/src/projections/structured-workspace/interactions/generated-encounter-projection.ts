@@ -86,8 +86,8 @@ function issueMessage(
     }
     case 'placeholderCount':
       return `${wave}needs ${issue.allowed} generated companion; found ${issue.actual}.`;
-    case 'weightMembers':
-      return `${wave}weights must cover every generated member with positive values.`;
+    case 'allocationMembers':
+      return `${wave}allocation samples must name generated members.`;
     default:
       return 'This customization needs repair for the current encounter context.';
   }
@@ -114,6 +114,7 @@ export function projectGeneratedEncounterAssessment(
       }),
     ),
     composition: assessment.composition,
+    ...(assessment.budget === undefined ? {} : { budget: assessment.budget }),
     waves: Object.freeze(
       assessment.waves.map((wave) => {
         const generated = assessment.operands?.waves?.find(
@@ -127,6 +128,7 @@ export function projectGeneratedEncounterAssessment(
             ? {}
             : {
                 generatedMemberKeys: generated.typeKeys,
+                countPreview: wave.countPreview,
               }),
         });
       }),

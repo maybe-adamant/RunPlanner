@@ -4,18 +4,22 @@ import type { AuthoredGeneratedEncounterCustomization } from '../../authored-pro
 export interface EncounterGenerationContext {
   readonly biomeDepthCache: number;
   readonly biomeEncounterDepth: number;
+  readonly runDepthCache?: number;
   /** Only consequences of earlier explicit, valid ordinary additions are known. */
   readonly knownRunBlacklist: readonly string[];
+  readonly hard?: boolean;
+  readonly hordesRank?: number;
 }
 
 export interface GeneratedEncounterOperands {
+  readonly baseRoll?: number;
   readonly waveCount?: number;
   readonly highlightKey?: string;
   readonly waves?: readonly {
     readonly waveIndex: number;
     /** Complete generated roster, including highlight, excluding fixed spawns. */
     readonly typeKeys: readonly string[];
-    readonly shares?: readonly number[];
+    readonly allocations?: Readonly<Record<string, number>>;
   }[];
 }
 
@@ -36,12 +40,26 @@ export interface GeneratedEncounterAssessment {
     readonly exhausted: boolean;
     /** One domain per legal editable position; never includes a trailing dead slot. */
     readonly eligibleKeysByPosition: readonly (readonly string[])[];
+    /** Ordered FillEnemyCounts preview; omitted counts remain native-random. */
+    readonly countPreview?: readonly {
+      readonly key: string;
+      readonly requested?: number;
+      readonly effective?: number;
+      readonly count?: number;
+    }[];
   }[];
   readonly operands?: GeneratedEncounterOperands;
   readonly knownRunBlacklistAdditions: readonly string[];
+  readonly budget?: {
+    readonly kind: 'exact' | 'range';
+    readonly baseRoll?: { readonly min: number; readonly max: number };
+    readonly waveBudgets:
+      readonly number[] | readonly { readonly min: number; readonly max: number }[];
+  };
 }
 
 export type GeneratedEncounterIssue =
+  | { readonly reason: 'baseRoll'; readonly actual: number }
   | {
       readonly reason: 'waveCount';
       readonly actual: number;
@@ -67,7 +85,28 @@ export type GeneratedEncounterIssue =
       readonly actual: number;
       readonly allowed: number;
     }
-  | { readonly reason: 'weightMembers'; readonly waveIndex: number };
+  | { readonly reason: 'allocationMembers'; readonly waveIndex: number };
+
+const wavePatterns: Readonly<Record<number, readonly number[]>> = Object.freeze({
+  1: [1],
+  2: [0.5, 0.5],
+  3: [0.3, 0.15, 0.55],
+  4: [0.3, 0.1, 0.2, 0.4],
+});
+
+function totalBudget(
+  policy: GeneratedEncounterSelection,
+  context: EncounterGenerationContext,
+  roll: number,
+) {
+  const depth = context[policy.budget.depthAxis] ?? 0;
+  const ramp =
+    context.hard === true && policy.budget.hardDepthRamp !== undefined
+      ? policy.budget.hardDepthRamp
+      : policy.budget.depthRamp;
+  const hordes = [1, 1.2, 1.4, 1.6][Math.max(0, Math.min(3, context.hordesRank ?? 0))]!;
+  return Math.max(policy.budget.minimum, (roll + depth * ramp) * policy.budget.multiplier * hordes);
+}
 
 /** All scoped generators use the native multi-wave highlight branch. Fixed
  * templates have one wave; no scoped identity blocks highlight globally. */
@@ -86,6 +125,109 @@ export function assessGeneratedEncounter(
   )
     issues.push({ reason: 'waveCount', actual: waveCount, allowed: policy.waveCount });
   const possibleHighlight = policy.waveCount.max > 1;
+  const selectedBase = authored.baseRoll;
+  const base = policy.budget.base;
+  if (
+    selectedBase !== undefined &&
+    (typeof base === 'number' || selectedBase < base.min || selectedBase > base.max)
+  )
+    issues.push({ reason: 'baseRoll', actual: selectedBase });
+  const budget =
+    waveCount === undefined || wavePatterns[waveCount] === undefined
+      ? undefined
+      : typeof base === 'number'
+        ? Object.freeze({
+            kind: 'exact' as const,
+            waveBudgets: Object.freeze(
+              wavePatterns[waveCount]!.map((share) => totalBudget(policy, context, base) * share),
+            ),
+          })
+        : selectedBase === undefined
+          ? Object.freeze({
+              kind: 'range' as const,
+              baseRoll: Object.freeze({ min: base.min, max: base.max }),
+              waveBudgets: Object.freeze(
+                wavePatterns[waveCount]!.map((share) =>
+                  Object.freeze({
+                    min: totalBudget(policy, context, base.min) * share,
+                    max: totalBudget(policy, context, base.max) * share,
+                  }),
+                ),
+              ),
+            })
+          : selectedBase < base.min || selectedBase > base.max
+            ? undefined
+            : Object.freeze({
+                kind: 'exact' as const,
+                baseRoll: Object.freeze({ min: base.min, max: base.max }),
+                waveBudgets: Object.freeze(
+                  wavePatterns[waveCount]!.map(
+                    (share) => totalBudget(policy, context, selectedBase) * share,
+                  ),
+                ),
+              });
+  const previewFor = (waveIndex: number, generated: readonly string[]) => {
+    if (budget?.kind !== 'exact') return undefined;
+    const waveBudget = (budget.waveBudgets as readonly number[])[waveIndex - 1];
+    if (waveBudget === undefined) return undefined;
+    const row = authored.waves?.find((wave) => wave.waveIndex === waveIndex);
+    const result: { key: string; requested?: number; effective?: number; count?: number }[] = [];
+    let accumulatedDifficulty = 0;
+    for (const fixed of policy.fixedEnemies) {
+      const count = fixed.fixedCount ?? 1;
+      accumulatedDifficulty += fixed.difficultyRating * count;
+      result.push({ key: fixed.key, count });
+    }
+    // FillEnemyCounts compares the full native spawn-table index to the number
+    // of generated entries. A missing sampled slice makes both the remaining
+    // budget and a later capped redistribution unknown, so never publish a
+    // partly exact generated wave.
+    const sampled = generated.map(
+      (_key, index) => policy.fixedEnemies.length + index + 1 !== generated.length,
+    );
+    if (
+      sampled.some(
+        (isSampled, index) => isSampled && row?.allocations?.[generated[index]!] === undefined,
+      )
+    )
+      return Object.freeze([
+        ...result.map((entry) => Object.freeze(entry)),
+        ...generated.map((key) =>
+          Object.freeze({
+            key,
+            ...(row?.allocations?.[key] === undefined ? {} : { requested: row.allocations[key] }),
+          }),
+        ),
+      ]);
+    const uncapped: { index: number; count: number; difficultyRating: number }[] = [];
+    for (let index = 0; index < generated.length; index++) {
+      const key = generated[index]!;
+      const enemy = choices.get(key);
+      if (enemy === undefined) continue;
+      const remaining = waveBudget - accumulatedDifficulty;
+      const isSampled = sampled[index]!;
+      const requested = row?.allocations?.[key];
+      let effective = isSampled ? Math.min(requested!, remaining) : Math.max(0, remaining);
+      if (effective < enemy.difficultyRating) effective = enemy.difficultyRating;
+      let count = Math.ceil(effective / enemy.difficultyRating);
+      if (enemy.maxCount !== undefined) {
+        if (count > enemy.maxCount) count = enemy.maxCount;
+        const earlier = uncapped.at(-1);
+        const spareDifficulty = effective - count * enemy.difficultyRating;
+        if (earlier !== undefined && spareDifficulty > earlier.difficultyRating) {
+          const additionalCount = Math.ceil(spareDifficulty / earlier.difficultyRating);
+          earlier.count += additionalCount;
+          const earlierResult = result[earlier.index];
+          if (earlierResult !== undefined) earlierResult.count = earlier.count;
+        }
+      } else
+        uncapped.push({ index: result.length, count, difficultyRating: enemy.difficultyRating });
+      if (count < 1) count = 1;
+      accumulatedDifficulty += enemy.difficultyRating * count;
+      result.push({ key, ...(requested === undefined ? {} : { requested }), effective, count });
+    }
+    return Object.freeze(result.map((entry) => Object.freeze(entry)));
+  };
   const usesHighlight = waveCount !== undefined && waveCount > 1;
   const choices = new Map(policy.choices.map((choice) => [choice.key, choice]));
   const runBlacklist = new Set(context.knownRunBlacklist);
@@ -226,6 +368,14 @@ export function assessGeneratedEncounter(
         ]),
         exhausted,
         eligibleKeysByPosition: Object.freeze(positions),
+        ...(row === undefined
+          ? {}
+          : {
+              countPreview: previewFor(waveIndex, [
+                ...(usesHighlight && highlight !== undefined ? [highlight.key] : []),
+                ...row.typeKeys,
+              ]),
+            }),
       });
       if (row === undefined) continue; // Native rosters never become fabricated blacklist facts.
       if (policy.fixedEnemies.length !== 0) {
@@ -247,32 +397,31 @@ export function assessGeneratedEncounter(
         ...(usesHighlight && highlight !== undefined ? [highlight.key] : []),
         ...row.typeKeys,
       ];
-      let shares: readonly number[] | undefined;
-      if (row.weights !== undefined) {
-        const keys = Object.keys(row.weights);
+      let allocations: Readonly<Record<string, number>> | undefined;
+      if (row.allocations !== undefined) {
+        const keys = Object.keys(row.allocations);
         if (
-          generated.length < 2 ||
-          keys.length !== generated.length ||
-          generated.some((key) => row.weights?.[key] === undefined) ||
-          keys.some((key) => !generated.includes(key))
+          keys.some(
+            (key) =>
+              !generated.includes(key) ||
+              policy.fixedEnemies.length + generated.indexOf(key) + 1 === generated.length,
+          )
         )
-          issues.push({ reason: 'weightMembers', waveIndex });
-        else {
-          const total = generated.reduce((sum, key) => sum + row.weights![key]!, 0);
-          shares = Object.freeze(generated.map((key) => row.weights![key]! / total));
-        }
+          issues.push({ reason: 'allocationMembers', waveIndex });
+        else allocations = Object.freeze({ ...row.allocations });
       }
       waves.push(
         Object.freeze({
           waveIndex,
           typeKeys: Object.freeze(generated),
-          ...(shares === undefined ? {} : { shares }),
+          ...(allocations === undefined ? {} : { allocations }),
         }),
       );
     }
   }
   const supported = issues.length === 0;
   const operands: GeneratedEncounterOperands = Object.freeze({
+    ...(authored.baseRoll === undefined ? {} : { baseRoll: authored.baseRoll }),
     ...(authored.waveCount === undefined ? {} : { waveCount: authored.waveCount }),
     ...(authored.highlightKey === undefined || !possibleHighlight || waveCount === 1
       ? {}
@@ -296,5 +445,6 @@ export function assessGeneratedEncounter(
     ),
     ...(supported && Object.keys(operands).length !== 0 ? { operands } : {}),
     knownRunBlacklistAdditions: Object.freeze(supported ? [...knownAdditions] : []),
+    ...(budget === undefined ? {} : { budget }),
   });
 }

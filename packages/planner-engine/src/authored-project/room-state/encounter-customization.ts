@@ -65,7 +65,7 @@ export function customizationValueKnown(
       (parsed.waves ?? []).every(
         (wave) =>
           wave.typeKeys.every((key) => known.has(key)) &&
-          Object.keys(wave.weights ?? {}).every((key) => known.has(key)),
+          Object.keys(wave.allocations ?? {}).every((key) => known.has(key)),
       )
     );
   }

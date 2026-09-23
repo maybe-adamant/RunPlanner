@@ -186,6 +186,8 @@ function generation(
     rewards.nemesisRandomEventCandidates,
     history.events,
     history.rooms,
+    rewards.runStateSnapshots,
+    rewards.targetHistory,
   );
   const validation: BiomeGenerationValidation = Object.freeze({
     validity:

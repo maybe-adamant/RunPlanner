@@ -3,16 +3,16 @@ import { describe, expect, it } from 'vitest';
 import { catalog } from '@run-planner/hades2-catalog';
 
 const normalizedBiomeSnapshotHashes = [
-  ['F', '8039859da9c2a577'],
-  ['G', 'b6bba0d3932fc40d'],
-  ['H', 'db7757c94a4b4849'],
-  ['I', '2b6cba2199158785'],
-  ['N', '13fb60aa9b8d1a12'],
-  ['O', 'd369212fad7d029a'],
-  ['P', 'bf0b19b6d4b78a41'],
+  ['F', 'd53fae6e6f4d6477'],
+  ['G', '4b526884d4530792'],
+  ['H', '927f6290a20e8411'],
+  ['I', '261241583d953164'],
+  ['N', '864c31fb2854aa1d'],
+  ['O', 'afd2cf4583aff558'],
+  ['P', '5bbda8495199d849'],
   // Q_Boss01/02 declare resolvedOffer and Q's completion descriptor
   // carries the boss-door store policy.
-  ['Q', 'edaebcb95b461c83'],
+  ['Q', '7ba7a0e8f8792966'],
 ] as const;
 
 function normalizedBiomeSnapshot(biomeKey: string) {

@@ -111,11 +111,11 @@ describe('generated encounter customization workflows', () => {
     ).toBeTruthy();
   });
 
-  it('keeps native weights as NA until an edit, then restores them through reset', async () => {
+  it('keeps native allocation Default until an edit, then restores it through reset', async () => {
     const view = await open(customize(createGoldenFGHIProject(), phase, composed));
     const ui = within(view.dialog);
     expect(ui.getByText('GeneratedF')).toBeTruthy();
-    const weight = await ui.findByRole('spinbutton', { name: 'Wave 3 Casket weight' });
+    const weight = await ui.findByRole('spinbutton', { name: 'Wave 3 Wastrel allocation' });
     expect((weight as HTMLInputElement).placeholder).toBe('NA');
     expect((weight as HTMLInputElement).value).toBe('');
     expect(current(view)).toEqual(composed);
@@ -123,21 +123,21 @@ describe('generated encounter customization workflows', () => {
     fireEvent.change(weight, { target: { value: '4' } });
     await waitFor(() =>
       expect(current(view)).toMatchObject({
-        waves: [{ weights: { Guard: 1, Brawler: 1, Mage: 4 } }],
+        waves: [{ allocations: { Brawler: 4 } }],
       }),
     );
-    expect(ui.getByRole('spinbutton', { name: 'Wave 3 Casket weight' })).toBe(weight);
+    expect(ui.getByRole('spinbutton', { name: 'Wave 3 Wastrel allocation' })).toBe(weight);
     expect(document.activeElement).toBe(weight);
     fireEvent.change(weight, { target: { value: '0' } });
-    expect(current(view)).toMatchObject({ waves: [{ weights: { Mage: 4 } }] });
+    expect(current(view)).toMatchObject({ waves: [{ allocations: { Brawler: 0 } }] });
     await view.user.click(
       ui
-        .getAllByRole('button', { name: 'Reset weights' })
+        .getAllByRole('button', { name: 'Reset allocations' })
         .find((button) => !(button as HTMLButtonElement).disabled)!,
     );
     expect(current(view)).toEqual(composed);
     expect(
-      (ui.getByRole('spinbutton', { name: 'Wave 3 Casket weight' }) as HTMLInputElement).value,
+      (ui.getByRole('spinbutton', { name: 'Wave 3 Wastrel allocation' }) as HTMLInputElement).value,
     ).toBe('');
     await view.user.click(ui.getByRole('radio', { name: 'Default' }));
     expect(ui.getByRole('heading', { name: 'Wave 3' })).toBeTruthy();
@@ -158,7 +158,7 @@ describe('generated encounter customization workflows', () => {
     expect(current(view)).toMatchObject({ waveCount: 3, highlightKey: 'Guard' });
   });
 
-  it('carries weights through enemy and highlight replacements and removes departed members', async () => {
+  it('carries allocation samples through enemy and highlight replacements and removes departed members', async () => {
     const view = await open(
       customize(createGoldenFGHIProject(), phase, {
         ...composed,
@@ -166,7 +166,7 @@ describe('generated encounter customization workflows', () => {
           {
             waveIndex: 3,
             typeKeys: ['Brawler', 'Mage'],
-            weights: { Guard: 2, Brawler: 3, Mage: 4 },
+            allocations: { Guard: 2, Brawler: 3 },
           },
         ],
       }),
@@ -178,60 +178,76 @@ describe('generated encounter customization workflows', () => {
     await view.user.click(await screen.findByRole('option', { name: 'Casket' }));
     await finishWave(view);
     expect(current(view)).toMatchObject({
-      waves: [{ weights: { Guard: 2, Radiator: 3, Mage: 4 } }],
+      waves: [{ allocations: { Guard: 2, Radiator: 3 } }],
     });
     const replaced = current(view);
-    expect(replaced?.kind === 'generated' && replaced.waves?.[0]?.weights).toEqual({
+    expect(replaced?.kind === 'generated' && replaced.waves?.[0]?.allocations).toEqual({
       Guard: 2,
       Radiator: 3,
-      Mage: 4,
     });
     expect(
-      (ui.getByRole('spinbutton', { name: 'Wave 3 Spindle weight' }) as HTMLInputElement).value,
+      (ui.getByRole('spinbutton', { name: 'Wave 3 Spindle allocation' }) as HTMLInputElement).value,
     ).toBe('3');
     await choosePicker(view, 'Shared highlight', 'Default');
     expect(current(view)).toMatchObject({
-      waves: [{ weights: { Guard: 2, Radiator: 3, Mage: 4 } }],
+      waves: [{ allocations: { Guard: 2, Radiator: 3 } }],
     });
     await choosePicker(view, 'Shared highlight', 'Whisper');
     expect(current(view)).toMatchObject({
-      waves: [{ weights: { Guard: 2, Radiator: 3, Mage: 4 } }],
+      waves: [{ allocations: { Guard: 2, Radiator: 3 } }],
     });
     await choosePicker(view, 'Shared highlight', 'Default');
     await choosePicker(view, 'Shared highlight', 'Wastrel');
     const highlighted = current(view);
-    expect(highlighted?.kind === 'generated' && highlighted.waves?.[0]?.weights).toEqual({
+    expect(highlighted?.kind === 'generated' && highlighted.waves?.[0]?.allocations).toEqual({
       Brawler: 2,
       Radiator: 3,
-      Mage: 4,
     });
     expect(ui.getByText('Spindle')).toBeTruthy();
   });
 
-  it('retains ambiguous dormant weights for explicit repair when choosing a highlight', async () => {
-    const weights = { Radiator: 5, Guard: 2, Brawler: 3, Mage: 4 };
+  it('does not turn an omitted native allocation into an explicit zero during replacement', async () => {
+    const view = await open(
+      customize(createGoldenFGHIProject(), phase, {
+        ...composed,
+        waves: [{ waveIndex: 3, typeKeys: ['Brawler', 'Mage'], allocations: { Brawler: 3 } }],
+      }),
+    );
+    await view.user.click(
+      within(view.dialog).getByRole('button', { name: 'Edit Wave 3 enemies: Casket' }),
+    );
+    await view.user.click(await screen.findByRole('option', { name: 'Whisper' }));
+    await view.user.click(await screen.findByRole('option', { name: 'Spindle' }));
+    await view.user.click(await screen.findByRole('option', { name: 'Casket' }));
+    await finishWave(view);
+    const authored = current(view);
+    const allocations =
+      authored?.kind === 'generated' ? authored.waves?.[0]?.allocations : undefined;
+    expect(allocations).toEqual({ Radiator: 3 });
+  });
+
+  it('retains ambiguous dormant allocation samples for explicit repair when choosing a highlight', async () => {
+    const allocations = { Radiator: 5, Guard: 2, Brawler: 3, Mage: 4 };
     const view = await open(
       customize(createGoldenFGHIProject(), phase, {
         kind: 'generated',
         waveCount: 3,
-        waves: [{ waveIndex: 3, typeKeys: ['Brawler', 'Mage'], weights }],
+        waves: [{ waveIndex: 3, typeKeys: ['Brawler', 'Mage'], allocations }],
       }),
     );
     await choosePicker(view, 'Shared highlight', 'Whisper');
-    expect(current(view)).toMatchObject({ waves: [{ weights }] });
+    expect(current(view)).toMatchObject({ waves: [{ allocations }] });
     expect(
-      within(view.dialog).getByText(
-        'Wave 3: weights must cover every generated member with positive values.',
-      ),
+      within(view.dialog).getByText('Wave 3: allocation samples must name generated members.'),
     ).toBeTruthy();
     await view.user.click(
-      within(view.dialog).getAllByRole('button', { name: 'Reset weights' })[2]!,
+      within(view.dialog).getAllByRole('button', { name: 'Reset allocations' })[2]!,
     );
     const repaired = current(view);
-    expect(repaired?.kind === 'generated' && repaired.waves?.[0]?.weights).toBeUndefined();
+    expect(repaired?.kind === 'generated' && repaired.waves?.[0]?.allocations).toBeUndefined();
   });
 
-  it('drops custom weights when a completed replacement leaves one generated member', async () => {
+  it('clears a now-unreachable allocation when a completed replacement leaves one ordinary member', async () => {
     const view = await open(
       customize(createGoldenFGHIProject(), phase, {
         kind: 'generated',
@@ -241,7 +257,7 @@ describe('generated encounter customization workflows', () => {
           {
             waveIndex: 1,
             typeKeys: ['Brawler'],
-            weights: { Guard: 2, Brawler: 3 },
+            allocations: { Guard: 2, Brawler: 3 },
           },
         ],
       }),
@@ -250,7 +266,7 @@ describe('generated encounter customization workflows', () => {
     await finishWave(view);
     expect(current(view)).toMatchObject({ waves: [{ waveIndex: 1, typeKeys: [] }] });
     const first = current(view);
-    expect(first?.kind === 'generated' && first.waves?.[0]?.weights).toBeUndefined();
+    expect(first?.kind === 'generated' && first.waves?.[0]?.allocations).toBeUndefined();
   });
 
   it('focuses the customization launcher for invalid composition without opening it', async () => {
@@ -315,7 +331,7 @@ describe('generated encounter customization workflows', () => {
     expect(current(view)).toBeUndefined();
   });
 
-  it('renders the fixed H template and only authors its generated companion', async () => {
+  it('does not fabricate a fixed H template when the retained source profile is not a native candidate', async () => {
     const owner = createEncounterPhaseAddress(
       goldenHBiome,
       { kind: 'occurrence', occurrenceId: createOccurrenceId('golden-h-combat09') },
@@ -330,15 +346,8 @@ describe('generated encounter customization workflows', () => {
     const ui = within(view.dialog);
     expect(ui.getByText('1 (fixed)')).toBeTruthy();
     expect(ui.queryByRole('radiogroup', { name: 'Waves' })).toBeNull();
-    expect(ui.getByText('Brush-Stalker')).toBeTruthy();
-    await choosePicker(view, 'Wave 1 enemies', 'Brush-Stalker');
-    await view.user.click(await screen.findByRole('option', { name: 'Lamia' }));
-    await finishWave(view);
-    expect(current(view, owner)).toEqual({
-      kind: 'generated',
-      waves: [{ waveIndex: 1, typeKeys: ['Lamia'] }],
-    });
-    expect(ui.queryByRole('button', { name: 'Set relative weights' })).toBeNull();
+    expect(ui.getByText('Complete earlier choices to evaluate this encounter.')).toBeTruthy();
+    expect(ui.queryByText('Brush-Stalker')).toBeNull();
   });
 
   it('binds NPC fixed waves and ship phases through their own existing owners', () => {
@@ -412,6 +421,25 @@ describe('generated encounter customization workflows', () => {
       ).workspace.interactions.encounterCustomizations.get(semanticAddressKey(owner))
         ?.generatedAssessment,
     ).toMatchObject({ issues: [] });
+  });
+
+  it('keeps the P native base-roll control after selecting a concrete roll', async () => {
+    const owner = createEncounterPhaseAddress(
+      pBiome,
+      { kind: 'occurrence', occurrenceId: pOccurrenceId('P_Combat07', 4, 1) },
+      'Intro',
+    );
+    const view = await open(loadSurfaceNOPQProject(), owner);
+    const ui = within(view.dialog);
+    const slider = ui.getByRole('slider', { name: 'Native base roll' });
+    fireEvent.change(slider, { target: { value: '412' } });
+    await waitFor(() => expect(current(view, owner)).toMatchObject({ baseRoll: 412 }));
+    expect(ui.getByRole('slider', { name: 'Native base roll' })).toBe(slider);
+    expect(ui.getByText(/Wave budget/)).toBeTruthy();
+    await view.user.click(ui.getByRole('button', { name: 'Default' }));
+    const authored = current(view, owner);
+    expect(authored?.kind === 'generated' ? authored.baseRoll : undefined).toBeUndefined();
+    expect(ui.getByRole('slider', { name: 'Native base roll' })).toBe(slider);
   });
 
   it('keeps an optional F wave local until its first Finish Wave edit', async () => {

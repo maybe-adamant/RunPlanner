@@ -1,5 +1,6 @@
 import type { AuthoredGeneratedEncounterCustomization } from '../../authored-project/model';
 import { semanticAddressKey, type EncounterPhaseAddress } from '../../authored-project/addresses';
+import type { GeneratedEncounterSelection } from '../../catalog-schema';
 import type { HistoryStateView, ProgressiveRoomHistoryViews } from '../history/model';
 import type { RoomHistoryOrigin } from '../lifecycle';
 import type { ResolvedEncounterPhase } from './model';
@@ -22,11 +23,25 @@ export function targetRewardGenerationCheckpoint(
     .find((generation) => semanticAddressKey(generation.roomOrigin) === key)?.before;
 }
 
+export function targetRewardGeneration(
+  rooms: readonly ProgressiveRoomHistoryViews[],
+  origin: RoomHistoryOrigin,
+) {
+  const key = semanticAddressKey(origin);
+  return rooms
+    .flatMap((room) => room.targetGenerations)
+    .find((generation) => semanticAddressKey(generation.roomOrigin) === key);
+}
+
 export function prepareGeneratedEncounter(
   phase: ResolvedEncounterPhase,
   origin: EncounterPhaseAddress,
   preparation: HistoryStateView,
   rewardGeneration: HistoryStateView | undefined,
+  hordesRankAt?: (
+    selection: GeneratedEncounterSelection,
+    origin: EncounterPhaseAddress,
+  ) => number | undefined,
 ): {
   readonly phase: ResolvedEncounterPhase;
   readonly capability?: GeneratedEncounterCandidateCapability;
@@ -42,6 +57,12 @@ export function prepareGeneratedEncounter(
       throw new Error(`${phase.encounterKey} lost its reward-generation checkpoint`);
     return { phase };
   }
+  const exactHordesRank = hordesRankAt?.(policy, origin);
+  // Candidate publication may stop at an incomplete reward frontier. Keep the
+  // existing structural phase, but do not publish a generated candidate from
+  // a fabricated Hordes value.
+  if (hordesRankAt !== undefined && exactHordesRank === undefined) return { phase };
+  const hordesRank = exactHordesRank ?? 0;
   const context = Object.freeze({
     biomeDepthCache: before.ledgers.counters.biomeDepthCache,
     biomeEncounterDepth: before.ledgers.counters.biomeEncounterDepth,
@@ -52,6 +73,10 @@ export function prepareGeneratedEncounter(
         ),
       ),
     ]),
+    // RewardLogic forwards declared reward Overrides; the complete modeled
+    // reward domain contains no MakeHardEncounter producer.
+    hard: false,
+    hordesRank,
   });
   const assess = (value: AuthoredGeneratedEncounterCustomization) =>
     assessGeneratedEncounter(policy, value, context);

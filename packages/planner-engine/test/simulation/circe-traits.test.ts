@@ -14,6 +14,7 @@ import {
 import {
   activateTemporaryArcana,
   createPreparedProjectCandidateSession,
+  generatedEncounterSupportForProjectEvaluationAssembly,
   promoteArcana,
   simulateProjectAssembly,
   suppressFearVows,
@@ -22,6 +23,9 @@ import { describe, expect, it } from 'vitest';
 
 import { loadSurfaceNOProject, oBiome, oOccurrenceIds } from '@run-planner/test-fixtures/surface';
 import { createDefaultRouteLoadout } from '../../src/authored-project/loadout';
+import { EMPTY_RESOURCE_PLACEMENTS } from '../../src/authored-project/defaults';
+import { ordinaryRoutePosition } from '../support/route-position';
+import { evaluateProgressiveBiomeAssembly } from '../../src/simulation/progressive/biome';
 import { initializeTestRewardBranches } from '../support/arcana-fear';
 import { createTraitOfferCandidateArtifacts } from '../../src/simulation/candidates/trait-offer/capability';
 import { evaluateCirceResolutionDomain } from '../../src/simulation/candidates/trait-offer/query';
@@ -310,6 +314,57 @@ describe('Circe selected trait acquisition', () => {
     expect(repeated.findingEntries.some((entry) => entry.finding.code === 'offerContext')).toBe(
       true,
     );
+  });
+
+  it('uses the same-biome Black Night Hordes state at a later generated encounter', () => {
+    const options = [
+      {
+        traitKey: 'RemoveShrineTrait',
+        circeResolution: { kind: 'disableFear' as const, vowKeys: ['EnemyCountShrineUpgrade'] },
+      },
+      { traitKey: 'CirceShrinkTrait' },
+      { traitKey: 'CirceEnlargeTrait' },
+    ] as const;
+    const fearRanks = { EnemyCountShrineUpgrade: 1 };
+    const suppressedProject = withCirce(circeOffer('option1', options), [], fearRanks);
+    const suppressed = oEvaluation(suppressedProject);
+    const active = oEvaluation(withCirce(circeOffer('option2', options), [], fearRanks));
+    const phase = createEncounterPhaseAddress(
+      oBiome,
+      { kind: 'occurrence', occurrenceId: oOccurrenceIds.combat02 },
+      'Combat1',
+    );
+    const suppressedSupport = generatedEncounterSupportForProjectEvaluationAssembly(
+      suppressed.assembly,
+      phase,
+    );
+    const activeSupport = generatedEncounterSupportForProjectEvaluationAssembly(
+      active.assembly,
+      phase,
+    );
+    const budgetFor = (support: typeof suppressedSupport) =>
+      support?.assess({ kind: 'generated', waveCount: 1 }).budget?.waveBudgets[0];
+    expect(budgetFor(suppressedSupport)).toBeDefined();
+    expect(budgetFor(activeSupport)).toBeCloseTo((budgetFor(suppressedSupport) as number) * 1.2);
+
+    const previous = suppressed.assembly.evaluation.route.biomes.find(
+      (biome) => biome.biomeKey === 'N',
+    );
+    const plan = suppressedProject.route.biomes.find((biome) => biome.biomeKey === 'O');
+    if (previous?.authoring !== 'complete' || previous.validity !== 'valid' || plan === undefined)
+      throw new Error('Black Night progressive fixture lacks an N seed or O plan');
+    const progressive = evaluateProgressiveBiomeAssembly(catalog, oBiome, plan, {
+      routePosition: ordinaryRoutePosition(catalog, 'Surface', 'O'),
+      resourcePlacements: EMPTY_RESOURCE_PLACEMENTS,
+      loadout: suppressedProject.route.loadout,
+      seed: { history: previous.history, rewardBranches: previous.rewards.branches },
+    });
+    expect(
+      progressive?.candidateArtifacts.encounters.generationAt(phase)?.assess({
+        kind: 'generated',
+        waveCount: 1,
+      }).budget?.waveBudgets[0],
+    ).toBe(budgetFor(suppressedSupport));
   });
 
   it('retains the missing child repair domain at Circe and stops later O state', () => {

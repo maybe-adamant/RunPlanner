@@ -130,12 +130,24 @@ export interface WorkspaceGeneratedEncounterAssessment {
     readonly field?: 'waveCount' | 'highlight';
   }[];
   readonly composition: 'active' | 'nativeWaveCount' | 'nativeHighlight';
+  readonly budget?: {
+    readonly kind: 'exact' | 'range';
+    readonly baseRoll?: { readonly min: number; readonly max: number };
+    readonly waveBudgets:
+      readonly number[] | readonly { readonly min: number; readonly max: number }[];
+  };
   readonly waves: readonly {
     readonly waveIndex: number;
     readonly additionalTypeCount: { readonly min: number; readonly max: number };
     readonly seeds: readonly { readonly key: string; readonly kind: 'fixed' | 'highlight' }[];
     /** Complete generated members when the explicit row is valid. */
     readonly generatedMemberKeys?: readonly string[];
+    readonly countPreview?: readonly {
+      readonly key: string;
+      readonly requested?: number;
+      readonly effective?: number;
+      readonly count?: number;
+    }[];
   }[];
 }
 

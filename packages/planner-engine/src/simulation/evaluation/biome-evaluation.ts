@@ -258,6 +258,8 @@ function generation(
     rewards.nemesisRandomEventCandidates,
     history.events,
     history.rooms,
+    rewards.runStateSnapshots,
+    rewards.targetHistory,
   );
   const encounterArtifacts = encounters.artifacts;
   const validation: BiomeGenerationValidation = Object.freeze({
