@@ -195,9 +195,15 @@ function roomGuideDescription(value: unknown, label: string) {
     case 'collectRequiredReward':
       exact(record, ['kind'], [], label);
       return Object.freeze({ kind });
-    case 'completeFieldsCage':
-      exact(record, ['kind', 'phaseKey'], [], label);
-      return Object.freeze({ kind, phaseKey: stringValue(record.phaseKey, `${label}.phaseKey`) });
+    case 'completeFieldsCage': {
+      exact(record, ['kind', 'phaseKey'], ['reward'], label);
+      const parsedReward = optionalReward();
+      return Object.freeze({
+        kind,
+        phaseKey: stringValue(record.phaseKey, `${label}.phaseKey`),
+        ...(parsedReward === undefined ? {} : { reward: parsedReward }),
+      });
+    }
     case 'interactIncomingReward':
     case 'interactLocalReward': {
       exact(record, ['kind'], ['reward', 'conversion'], label);
