@@ -55,6 +55,13 @@ export function normalizeEncounterGeneration(
             value.blacklistAfterAppearance,
             `${field}[${index}].blacklistAfterAppearance`,
           ),
+          difficultyRating: integer(value.difficultyRating, `${label}.difficultyRating`, 1, 1000),
+          ...(value.maxCount === undefined
+            ? {}
+            : { maxCount: integer(value.maxCount, `${label}.maxCount`, 1, 1000) }),
+          ...(value.fixedCount === undefined
+            ? {}
+            : { fixedCount: integer(value.fixedCount, `${label}.fixedCount`, 1, 1000) }),
           excludes: Object.freeze(
             value.excludes.map((excluded) => requireNonEmpty(excluded, `${label}.excludes`)),
           ),
@@ -104,6 +111,18 @@ export function normalizeEncounterGeneration(
       fail(`${path}.maxTypesPerGroup`, 'has unknown group');
     groups[key] = integer(value, `maxTypesPerGroup.${key}`);
   }
+  const budgetBase = raw.budget.base;
+  const base =
+    typeof budgetBase === 'number'
+      ? integer(budgetBase, 'budget.base', 0, 10000)
+      : Object.freeze({
+          min: integer(budgetBase.min, 'budget.base.min', 0, 10000),
+          max: integer(budgetBase.max, 'budget.base.max', 0, 10000),
+        });
+  if (typeof base !== 'number' && base.min > base.max)
+    fail(`${path}.budget.base`, 'has reversed range');
+  if (!Number.isFinite(raw.budget.multiplier) || raw.budget.multiplier <= 0)
+    fail(`${path}.budget.multiplier`, 'must be finite and positive');
   return Object.freeze({
     kind: 'generated',
     preparation: raw.preparation,
@@ -125,5 +144,15 @@ export function normalizeEncounterGeneration(
     blockHighlightElites: boolean(raw.blockHighlightElites, 'blockHighlightElites'),
     blockTypesAcrossWaves: boolean(raw.blockTypesAcrossWaves, 'blockTypesAcrossWaves'),
     maxTypesPerGroup: Object.freeze(groups),
+    budget: Object.freeze({
+      base,
+      depthRamp: integer(raw.budget.depthRamp, 'budget.depthRamp', 0, 10000),
+      depthAxis: raw.budget.depthAxis,
+      multiplier: raw.budget.multiplier,
+      minimum: integer(raw.budget.minimum, 'budget.minimum', 0, 10000),
+      ...(raw.budget.hardDepthRamp === undefined
+        ? {}
+        : { hardDepthRamp: integer(raw.budget.hardDepthRamp, 'budget.hardDepthRamp', 0, 10000) }),
+    }),
   });
 }

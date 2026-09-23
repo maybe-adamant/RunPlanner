@@ -9,7 +9,7 @@ import type {
 
 /** The single room-session execution artifact supported by the app compiler. */
 export const EXECUTION_PLAN_FORMAT = 'run-planner-execution' as const;
-export const EXECUTION_PROTOCOL_VERSION = 44 as const;
+export const EXECUTION_PROTOCOL_VERSION = 45 as const;
 export const EXECUTION_CATALOG_VERSION = '0.55.0-anvil-of-fates' as const;
 export type ExecutionBiomeKey = 'F' | 'G' | 'H' | 'I' | 'N' | 'O' | 'P' | 'Q';
 
@@ -468,11 +468,13 @@ export interface ExecutionGeneratedEncounterCustomization {
   readonly decisionKey: string;
   readonly kind: 'generated';
   readonly waveCount?: number;
+  readonly baseRoll?: number;
   readonly highlight?: { readonly choiceKey: string; readonly nativeId: string };
   readonly waves?: readonly {
     readonly waveIndex: number;
     readonly types: readonly { readonly choiceKey: string; readonly nativeId: string }[];
-    readonly shares?: readonly number[];
+    /** Sparse absolute RandomNormal samples keyed by native enemy id. */
+    readonly allocations?: Readonly<Record<string, number>>;
   }[];
 }
 

@@ -7,7 +7,7 @@ import type {
   AuthoredTraitOffer,
 } from './traits/state';
 
-export const PROJECT_DOCUMENT_SCHEMA_VERSION = 86 as const;
+export const PROJECT_DOCUMENT_SCHEMA_VERSION = 87 as const;
 export type ResourceFamily = import('../catalog-schema').ResourceFamily;
 /** Route ownership supplies the route key; the selected host is exact and durable. */
 export interface ResourcePlacement {
@@ -276,6 +276,8 @@ export type AuthoredEncounterCustomization =
 
 export interface AuthoredGeneratedEncounterCustomization {
   readonly kind: 'generated';
+  /** Optional native base-difficulty roll; omission retains native RandomInt. */
+  readonly baseRoll?: number;
   readonly waveCount?: number;
   readonly highlightKey?: string;
   /** Unlisted native wave indices remain Default. */
@@ -283,8 +285,8 @@ export interface AuthoredGeneratedEncounterCustomization {
     readonly waveIndex: number;
     /** Remaining generated types, excluding the shared highlight and fixed spawns. */
     readonly typeKeys: readonly string[];
-    /** Identity-owned positive relative weights, including the generated highlight. */
-    readonly weights?: Readonly<Record<string, number>>;
+    /** Sparse native RandomNormal samples, keyed to generated enemy identity. */
+    readonly allocations?: Readonly<Record<string, number>>;
   }[];
 }
 

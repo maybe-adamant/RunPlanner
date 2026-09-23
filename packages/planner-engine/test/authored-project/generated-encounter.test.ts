@@ -101,7 +101,7 @@ describe('sparse generated encounter authorship', () => {
       { kind: 'generated', waves: [{ waveIndex: 1, typeKeys: ['Guard'], weights: { Guard: 0 } }] },
       {
         kind: 'generated',
-        waves: [{ waveIndex: 1, typeKeys: ['Guard'], weights: { Guard: Infinity } }],
+        waves: [{ waveIndex: 1, typeKeys: ['Guard'], allocations: { Guard: Infinity } }],
       },
     ])
       expect(() => decodeGeneratedEncounterCustomization(value, 'test')).toThrow();

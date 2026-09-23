@@ -113,6 +113,7 @@ import { migrateProjectDocument as migrateProject82To83 } from '../../../../sche
 import { migrateProjectDocument as migrateProject83To84 } from '../../../../schema/migrate-project-83-to-84.js';
 import { migrateProjectDocument as migrateProject84To85 } from '../../../../schema/migrate-project-84-to-85.js';
 import { migrateProjectDocument as migrateProject85To86 } from '../../../../schema/migrate-project-85-to-86.js';
+import { migrateProjectDocument as migrateProject86To87 } from '../../../../schema/migrate-project-86-to-87.js';
 
 function fOnlyProject(project = createCompleteFGProject()) {
   return Object.freeze({
@@ -2186,7 +2187,10 @@ describe('execution-plan compiler and codec', () => {
         ),
       ),
     );
-    const loaded = parseProjectDocument(JSON.stringify(migrateProject85To86(migrated)), catalog);
+    const loaded = parseProjectDocument(
+      JSON.stringify(migrateProject86To87(migrateProject85To86(migrated))),
+      catalog,
+    );
     expect(qSupplyChainSlices(loaded)).toEqual(before);
     expect(
       simulateProjectAssembly(catalog, loaded).evaluation.route.summary.eligibleForExecutionPlan,

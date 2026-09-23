@@ -7,6 +7,11 @@ export interface EncounterEnemyChoice {
   readonly blockSolo: boolean;
   readonly excludes: readonly string[];
   readonly blacklistAfterAppearance: boolean;
+  /** Native GeneratorData difficulty and optional generated-count cap. */
+  readonly difficultyRating: number;
+  readonly maxCount?: number;
+  /** Count on a declaration-owned manual template spawn. */
+  readonly fixedCount?: number;
   readonly group?: 'Automatons' | 'ChronosForces';
   readonly minimumDepth?: {
     readonly axis: 'biomeDepthCache' | 'biomeEncounterDepth';
@@ -35,4 +40,13 @@ export interface GeneratedEncounterSelection {
   readonly maxTypesPerGroup: Readonly<Partial<Record<'Automatons' | 'ChronosForces', number>>>;
   /** Named fixed spawns precede generated placeholder entries, not ordinary additions. */
   readonly fixedEnemies: readonly EncounterEnemyChoice[];
+  /** Resolved native base difficulty, depth ramp and wave pattern operands. */
+  readonly budget: {
+    readonly base: number | { readonly min: number; readonly max: number };
+    readonly depthRamp: number;
+    readonly depthAxis: 'biomeDepthCache' | 'biomeEncounterDepth' | 'runDepthCache';
+    readonly multiplier: number;
+    readonly minimum: number;
+    readonly hardDepthRamp?: number;
+  };
 }

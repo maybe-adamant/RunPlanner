@@ -4,6 +4,7 @@ import {
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
 import type { Catalog } from '@run-planner/engine/catalog-schema';
+import { migrateProjectDocument as migrate86To87 } from './project-86-to-87.js';
 
 export const PROJECT_DOCUMENT_SCHEMA_SUPPORT_FLOOR = 86 as const;
 
@@ -30,7 +31,13 @@ export interface LoadedProjectDocument {
   readonly project: ProjectDocument;
 }
 
-const productionTransitions: readonly ProjectDocumentTransition[] = Object.freeze([]);
+const productionTransitions: readonly ProjectDocumentTransition[] = Object.freeze([
+  Object.freeze({
+    source: Object.freeze({ catalogVersion: '0.55.0-anvil-of-fates', schemaVersion: 86 }),
+    target: Object.freeze({ catalogVersion: '0.55.0-anvil-of-fates', schemaVersion: 87 }),
+    migrate: migrate86To87,
+  }),
+]);
 const noMigrations: readonly ProjectMigrationProvenance[] = Object.freeze([]);
 
 export function loadProjectDocument(json: string, catalog: Catalog): LoadedProjectDocument {

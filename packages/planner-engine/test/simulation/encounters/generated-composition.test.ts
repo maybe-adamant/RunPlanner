@@ -25,11 +25,103 @@ function assess(
 }
 
 describe('native generated composition possibility', () => {
+  it('derives native wave patterns from catalog budget facts and effective Hordes', () => {
+    const result = assessGeneratedEncounter(
+      policy('GeneratedF'),
+      { kind: 'generated', waveCount: 3, highlightKey: 'Guard' },
+      {
+        biomeDepthCache: 8,
+        biomeEncounterDepth: 8,
+        knownRunBlacklist: [],
+        hordesRank: 1,
+        hard: false,
+      },
+    );
+    expect(result.budget?.kind).toBe('exact');
+    expect((result.budget?.waveBudgets as readonly number[])[2]).toBeCloseTo(115.5);
+  });
+
+  it('keeps P native-random until an explicit base roll is selected', () => {
+    expect(assess('GeneratedP_PreCombat', {}).budget).toMatchObject({
+      kind: 'range',
+      baseRoll: { min: 340, max: 500 },
+    });
+    expect(assess('GeneratedP_PreCombat', { baseRoll: 412 }).budget).toMatchObject({
+      kind: 'exact',
+      baseRoll: { min: 340, max: 500 },
+    });
+  });
+
+  it('previews ordered explicit slices and leaves a default sampled branch native', () => {
+    const explicit = assess('GeneratedF', {
+      waveCount: 1,
+      waves: [{ waveIndex: 1, typeKeys: ['Guard', 'Brawler'], allocations: { Guard: 70 } }],
+    });
+    expect(explicit.waves[0]?.countPreview).toMatchObject([
+      { key: 'Guard', requested: 70, effective: 70, count: 14 },
+      { key: 'Brawler', effective: 105, count: 6 },
+    ]);
+    const native = assess('GeneratedF', {
+      waveCount: 1,
+      waves: [{ waveIndex: 1, typeKeys: ['Guard', 'Brawler'] }],
+    });
+    expect(native.waves[0]?.countPreview?.[0]).toEqual({ key: 'Guard' });
+  });
+
+  it('mirrors native capped redistribution without inventing counts around a default sample', () => {
+    const source = policy('GeneratedF');
+    const guard = source.choices.find((choice) => choice.key === 'Guard')!;
+    const fog = policy('GeneratedH').choices.find((choice) => choice.key === 'FogEmitter2')!;
+    const capped = (base: number, allocation: number) =>
+      assessGeneratedEncounter(
+        {
+          ...source,
+          waveCount: { min: 1, max: 1 },
+          types: { ...source.types, min: 2, max: 2, depthRamp: 0, cap: 2 },
+          choices: [guard, fog],
+          budget: { ...source.budget, base, depthRamp: 0 },
+        },
+        {
+          kind: 'generated',
+          waves: [
+            {
+              waveIndex: 1,
+              typeKeys: ['Guard', 'FogEmitter2'],
+              allocations: { Guard: allocation },
+            },
+          ],
+        },
+        { biomeDepthCache: 0, biomeEncounterDepth: 0, knownRunBlacklist: [] },
+      );
+    // A capped type with exactly one allowed spawn does not become the spare
+    // target; only an earlier uncapped generated entry can receive surplus.
+    expect(capped(100, 20).waves[0]?.countPreview).toMatchObject([
+      { key: 'Guard', count: 4 },
+      { key: 'FogEmitter2', effective: 80, count: 1 },
+    ]);
+    // Native uses a strict `>` comparison: spare difficulty equal to the
+    // earlier Guard cost must not add another Guard.
+    expect(capped(105, 20).waves[0]?.countPreview).toMatchObject([
+      { key: 'Guard', count: 4 },
+      { key: 'FogEmitter2', effective: 85, count: 1 },
+    ]);
+    const unknown = capped(105, 20);
+    const withDefaultSample = assessGeneratedEncounter(
+      { ...policy('GeneratedH'), waveCount: { min: 1, max: 1 } },
+      { kind: 'generated', waves: [{ waveIndex: 1, typeKeys: ['BrokenHearted', 'FogEmitter2'] }] },
+      { biomeDepthCache: 8, biomeEncounterDepth: 8, knownRunBlacklist: [] },
+    );
+    expect(unknown.supported).toBe(true);
+    expect(withDefaultSample.waves[0]?.countPreview).toEqual([
+      { key: 'BrokenHearted' },
+      { key: 'FogEmitter2' },
+    ]);
+  });
   it('keeps independent overrides and sparse dormant rows', () => {
     const row = {
       waveIndex: 3,
       typeKeys: ['Brawler', 'Mage'],
-      weights: { Guard: 2, Brawler: 3, Mage: 5 },
+      allocations: { Guard: 2, Brawler: 3 },
     };
     expect(assess('GeneratedF', {}).operands).toBeUndefined();
     const dormant = assess('GeneratedF', { waves: [row] });
@@ -55,7 +147,7 @@ describe('native generated composition possibility', () => {
       operands: {
         waveCount: 3,
         highlightKey: 'Guard',
-        waves: [{ waveIndex: 3, typeKeys: ['Guard', 'Brawler', 'Mage'], shares: [0.2, 0.3, 0.5] }],
+        waves: [{ waveIndex: 3, typeKeys: ['Guard', 'Brawler', 'Mage'] }],
       },
     });
     expect(
@@ -225,8 +317,13 @@ describe('native generated composition possibility', () => {
         .supported,
     ).toBe(false);
     expect(
-      assess('GeneratedH_Treant2', { waves: [{ ...row, weights: { FogEmitter2: 1 } }] }).supported,
-    ).toBe(false);
+      assess('GeneratedH_Treant2', { waves: [{ ...row, allocations: { FogEmitter2: 1 } }] })
+        .supported,
+    ).toBe(true);
+    expect(mixed.waves[0]?.countPreview).toEqual([
+      { key: 'Treant2', count: 1 },
+      { key: 'FogEmitter2' },
+    ]);
   });
 
   it('records known run blacklist consequences only for valid ordinary additions', () => {

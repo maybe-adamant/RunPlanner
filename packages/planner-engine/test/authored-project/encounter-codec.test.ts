@@ -643,10 +643,10 @@ describe('schema-54 occurrence-owned encounter persistence', () => {
     expect(decoded).toEqual(project);
   });
 
-  it('preserves schema-86 Persephone encodings, including omission and positive one', () => {
+  it('preserves current-schema Persephone encodings, including omission and positive one', () => {
     for (const bonus of [undefined, 0, 1, 5, 8] as const) {
       const document = encoded(arachneStoryProject());
-      expect(document.schemaVersion).toBe(86);
+      expect(document.schemaVersion).toBe(PROJECT_DOCUMENT_SCHEMA_VERSION);
       const option = (arachneStoryOffer(document).options as JsonRecord[])[0]!;
       if (bonus === undefined) delete option.persephoneLevelBonus;
       else option.persephoneLevelBonus = bonus;

@@ -1,5 +1,6 @@
 import type { ResolvedRoutePosition } from '../../authored-project/route-context';
 import {
+  createRoomRunStateCheckpointAddress,
   semanticAddressKey,
   type EncounterPhaseAddress,
   type NemesisRandomEventAddress,
@@ -8,6 +9,7 @@ import {
 import { projectRoomPreparationCheckpoint } from '../history/facts';
 import type { HistoryEvent, HistoryStateView, ProgressiveRoomHistoryViews } from '../history/model';
 import {
+  targetRewardGeneration,
   targetRewardGenerationCheckpoint,
   type GeneratedEncounterCandidateCapability,
 } from './generation-preparation';
@@ -27,7 +29,9 @@ import {
 } from './preparation';
 import type { MaterializedEncounterPhase } from './model';
 import type { Catalog } from '../../catalog-schema';
-import type { FigLeafPhaseCandidateSupport } from '../rewards/model';
+import type { FigLeafPhaseCandidateSupport, TargetRewardHistoryCheckpoint } from '../rewards/model';
+import type { RunStateSnapshot } from '../rewards/run-state';
+import { attestEffectiveHordesRank } from '../arcana-fear';
 import { assessGorgonCandidate } from '../keepsakes/encounter-effects';
 import { type GorgonLifecycleStatus } from '../keepsakes/state';
 import type { GorgonPhaseCandidateSupport } from '../rewards/model';
@@ -137,6 +141,8 @@ export function evaluateEncounterCandidatesInternal(
   nemesisRandomEventCandidates: readonly NemesisRandomEventCandidateSupport[] = [],
   historyEvents: readonly HistoryEvent[] = [],
   historyRooms: readonly ProgressiveRoomHistoryViews[] = [],
+  runStateSnapshots: readonly RunStateSnapshot[] = [],
+  rewardHistory: readonly TargetRewardHistoryCheckpoint[] = [],
 ): EncounterCandidateEvaluation & { readonly findingRegions: readonly FindingRegionEntry[] } {
   const entries = new Map<string, EncounterPhaseCandidateSupport>();
   const generation = new Map<string, GeneratedEncounterCandidateCapability>();
@@ -144,12 +150,44 @@ export function evaluateEncounterCandidatesInternal(
   const roomsByOwner = new Map<string, EncounterRoomCandidateCapability>();
   const findings: SemanticFinding[] = [];
   const findingChronologies = new Map<string, HistoryFindingChronology>();
+  const runStateByOwner = new Map(
+    runStateSnapshots.map((snapshot) => [semanticAddressKey(snapshot.owner), snapshot]),
+  );
+  const rewardHistoryByOrigin = new Map(
+    rewardHistory.map((checkpoint) => [semanticAddressKey(checkpoint.origin), checkpoint]),
+  );
   for (const room of rooms) {
     if (!room.entered) continue;
     const context = candidateContext(room, views, boundary);
     if (context === undefined) continue;
     const preparationState = {
       rewardGeneration: targetRewardGenerationCheckpoint(historyRooms, room.origin),
+      hordesRankAt: (
+        selection: import('../../catalog-schema').GeneratedEncounterSelection,
+        origin: EncounterPhaseAddress,
+      ) => {
+        if (selection.preparation === 'rewardGeneration') {
+          const generation = targetRewardGeneration(historyRooms, room.origin);
+          const checkpoint =
+            generation === undefined
+              ? undefined
+              : rewardHistoryByOrigin.get(semanticAddressKey(generation.targetOrigin));
+          return checkpoint === undefined
+            ? undefined
+            : attestEffectiveHordesRank(checkpoint.states);
+        }
+        const owner =
+          room.lifecycleProfileKey === 'ShipCombatRoom'
+            ? createRoomRunStateCheckpointAddress(room.origin, {
+                kind: 'beforeEncounterStart',
+                phaseKey: origin.phaseKey,
+              })
+            : createRoomRunStateCheckpointAddress(room.origin, { kind: 'roomEntered' });
+        const snapshot = runStateByOwner.get(semanticAddressKey(owner));
+        return snapshot === undefined
+          ? undefined
+          : (snapshot.effectiveHordesRank ?? attestEffectiveHordesRank([snapshot]));
+      },
     };
     const preparedSource = prepareRoomEncounterPhases(
       catalog,

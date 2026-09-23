@@ -1126,7 +1126,7 @@ describe('project profile operations', () => {
 
     for (const json of [
       JSON.stringify({ ...current, schemaVersion: 8 }),
-      JSON.stringify({ ...current, schemaVersion: 87 }),
+      JSON.stringify({ ...current, schemaVersion: 88 }),
       JSON.stringify({ ...current, catalogVersion: 'stale-catalog-version' }),
     ]) {
       profile.setLoadJson(json);
@@ -1136,5 +1136,27 @@ describe('project profile operations', () => {
       });
       expect(application.store.getState()).toBe(state);
     }
+  });
+
+  it('reports the generated-allocation reset when loading a schema-86 profile', async () => {
+    const profile = createProfileFixture();
+    const legacy = JSON.parse(
+      encodeProjectDocument(
+        createProjectDocument(catalog, {
+          configuredBiomeCount: 1,
+          projectId: 'legacy-generated-allocations',
+          routeKey: 'Underworld',
+        }),
+      ),
+    ) as Record<string, unknown>;
+    legacy.schemaVersion = 86;
+    profile.setLoadJson(JSON.stringify(legacy));
+    const application = createApplication({ profileFile: profile.adapter });
+
+    await expect(application.projectOperations.loadProfile()).resolves.toEqual({
+      operation: 'loadProfile',
+      status: 'success',
+      message: 'Migrated the profile to schema 87; old/custom encounter weights were reset.',
+    });
   });
 });

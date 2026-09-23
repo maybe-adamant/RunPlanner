@@ -21,6 +21,238 @@ interface GenerationDeclaration {
   readonly groups?: GeneratedEncounterSelection['maxTypesPerGroup'];
 }
 
+const budgetByEncounter: Readonly<
+  Record<
+    string,
+    {
+      readonly base: number | { readonly min: number; readonly max: number };
+      readonly depthRamp: number;
+      readonly depthAxis: 'biomeDepthCache' | 'biomeEncounterDepth';
+      readonly multiplier: number;
+      readonly hardDepthRamp?: number;
+    }
+  >
+> = {
+  GeneratedF: {
+    base: 55,
+    depthRamp: 15,
+    depthAxis: 'biomeDepthCache',
+    multiplier: 1,
+    hardDepthRamp: 30,
+  },
+  DevotionTestF: {
+    base: 150,
+    depthRamp: 0,
+    depthAxis: 'biomeDepthCache',
+    multiplier: 1,
+    hardDepthRamp: 30,
+  },
+  ArtemisCombatF: {
+    base: 55,
+    depthRamp: 15,
+    depthAxis: 'biomeDepthCache',
+    multiplier: 1,
+    hardDepthRamp: 30,
+  },
+  NemesisCombatF: {
+    base: 55,
+    depthRamp: 15,
+    depthAxis: 'biomeDepthCache',
+    multiplier: 1,
+    hardDepthRamp: 30,
+  },
+  GeneratedG: {
+    base: 140,
+    depthRamp: 40,
+    depthAxis: 'biomeDepthCache',
+    multiplier: 1,
+    hardDepthRamp: 30,
+  },
+  DevotionTestG: {
+    base: 270,
+    depthRamp: 5,
+    depthAxis: 'biomeDepthCache',
+    multiplier: 1,
+    hardDepthRamp: 30,
+  },
+  ArtemisCombatG: {
+    base: 140,
+    depthRamp: 40,
+    depthAxis: 'biomeDepthCache',
+    multiplier: 1,
+    hardDepthRamp: 30,
+  },
+  NemesisCombatG: {
+    base: 140,
+    depthRamp: 40,
+    depthAxis: 'biomeDepthCache',
+    multiplier: 1,
+    hardDepthRamp: 30,
+  },
+  GeneratedH_Passive: { base: 180, depthRamp: 60, depthAxis: 'biomeEncounterDepth', multiplier: 1 },
+  GeneratedH_PassiveSmall: {
+    base: 60,
+    depthRamp: 15,
+    depthAxis: 'biomeEncounterDepth',
+    multiplier: 1,
+  },
+  GeneratedH: {
+    base: 290,
+    depthRamp: 82,
+    depthAxis: 'biomeEncounterDepth',
+    multiplier: 1,
+    hardDepthRamp: 30,
+  },
+  GeneratedH_Treant2: {
+    base: 290,
+    depthRamp: 82,
+    depthAxis: 'biomeEncounterDepth',
+    multiplier: 1,
+    hardDepthRamp: 30,
+  },
+  GeneratedH_Screamer2: {
+    base: 290,
+    depthRamp: 82,
+    depthAxis: 'biomeEncounterDepth',
+    multiplier: 1,
+    hardDepthRamp: 30,
+  },
+  NemesisCombatH: {
+    base: 290,
+    depthRamp: 82,
+    depthAxis: 'biomeEncounterDepth',
+    multiplier: 1,
+    hardDepthRamp: 30,
+  },
+  GeneratedI: {
+    base: 325,
+    depthRamp: 105,
+    depthAxis: 'biomeDepthCache',
+    multiplier: 1,
+    hardDepthRamp: 30,
+  },
+  GeneratedI_GoalReward: {
+    base: 250,
+    depthRamp: 105,
+    depthAxis: 'biomeDepthCache',
+    multiplier: 1,
+    hardDepthRamp: 30,
+  },
+  GeneratedI_Small: {
+    base: 325,
+    depthRamp: 105,
+    depthAxis: 'biomeDepthCache',
+    multiplier: 0.85,
+    hardDepthRamp: 30,
+  },
+  GeneratedI_Small_GoalReward: {
+    base: 325,
+    depthRamp: 105,
+    depthAxis: 'biomeDepthCache',
+    multiplier: 0.85,
+    hardDepthRamp: 30,
+  },
+  DevotionTestI: {
+    base: 400,
+    depthRamp: 110,
+    depthAxis: 'biomeDepthCache',
+    multiplier: 1,
+    hardDepthRamp: 30,
+  },
+  NemesisCombatI: {
+    base: 325,
+    depthRamp: 105,
+    depthAxis: 'biomeDepthCache',
+    multiplier: 1,
+    hardDepthRamp: 30,
+  },
+  GeneratedN: { base: 110, depthRamp: 25, depthAxis: 'biomeEncounterDepth', multiplier: 1 },
+  GeneratedN_Smaller: { base: 85, depthRamp: 25, depthAxis: 'biomeEncounterDepth', multiplier: 1 },
+  GeneratedN_Bigger: { base: 135, depthRamp: 25, depthAxis: 'biomeEncounterDepth', multiplier: 1 },
+  ArtemisCombatN: { base: 200, depthRamp: 20, depthAxis: 'biomeEncounterDepth', multiplier: 1 },
+  HeraclesCombatN: { base: 110, depthRamp: 25, depthAxis: 'biomeEncounterDepth', multiplier: 1 },
+  GeneratedO_Intro01: {
+    base: 50,
+    depthRamp: 45,
+    depthAxis: 'biomeEncounterDepth',
+    multiplier: 1,
+    hardDepthRamp: 45,
+  },
+  GeneratedO: {
+    base: 115,
+    depthRamp: 55,
+    depthAxis: 'biomeEncounterDepth',
+    multiplier: 1,
+    hardDepthRamp: 45,
+  },
+  DevotionTestO: {
+    base: 425,
+    depthRamp: 15,
+    depthAxis: 'biomeEncounterDepth',
+    multiplier: 1,
+    hardDepthRamp: 45,
+  },
+  HeraclesCombatO: {
+    base: 115,
+    depthRamp: 55,
+    depthAxis: 'biomeEncounterDepth',
+    multiplier: 1,
+    hardDepthRamp: 45,
+  },
+  IcarusCombatO: {
+    base: 115,
+    depthRamp: 55,
+    depthAxis: 'biomeEncounterDepth',
+    multiplier: 3,
+    hardDepthRamp: 45,
+  },
+  GeneratedP_PreCombat: {
+    base: { min: 340, max: 500 },
+    depthRamp: 0,
+    depthAxis: 'biomeDepthCache',
+    multiplier: 1,
+    hardDepthRamp: 50,
+  },
+  GeneratedP: {
+    base: 430,
+    depthRamp: 85,
+    depthAxis: 'biomeDepthCache',
+    multiplier: 1,
+    hardDepthRamp: 50,
+  },
+  GeneratedP_Large: {
+    base: 430,
+    depthRamp: 85,
+    depthAxis: 'biomeDepthCache',
+    multiplier: 1,
+    hardDepthRamp: 50,
+  },
+  HeraclesCombatP: {
+    base: 600,
+    depthRamp: 50,
+    depthAxis: 'biomeDepthCache',
+    multiplier: 1,
+    hardDepthRamp: 50,
+  },
+  IcarusCombatP: {
+    base: 430,
+    depthRamp: 85,
+    depthAxis: 'biomeDepthCache',
+    multiplier: 3,
+    hardDepthRamp: 50,
+  },
+  AthenaCombatP: {
+    base: 680,
+    depthRamp: 180,
+    depthAxis: 'biomeDepthCache',
+    multiplier: 1,
+    hardDepthRamp: 50,
+  },
+  GeneratedQ: { base: 150, depthRamp: 25, depthAxis: 'biomeEncounterDepth', multiplier: 1 },
+  GeneratedQ_Large: { base: 525, depthRamp: 25, depthAxis: 'biomeEncounterDepth', multiplier: 1 },
+  GeneratedQ_Islands: { base: 150, depthRamp: 25, depthAxis: 'biomeEncounterDepth', multiplier: 1 },
+};
+
 // Native inherited defaults: no ramp/escalation, room depth, unrestricted
 // highlight, cross-wave counterpart exclusion. Each concrete row names its
 // effective wave/type/elite bounds; NPCs do not borrow another NPC's policy.
@@ -46,12 +278,13 @@ function generation(data: GenerationDeclaration) {
       blockHighlightElites: data.blockHighlightElites ?? false,
       blockTypesAcrossWaves: true,
       fixedEnemies: data.fixedEnemies ?? [],
+      budget: { base: 0, depthRamp: 0, depthAxis: 'biomeDepthCache', multiplier: 1, minimum: 10 },
       maxTypesPerGroup: data.groups ?? {},
     } satisfies GeneratedEncounterSelection,
   } as const;
 }
 
-export const generatedEncounterChoices = {
+const unbudgetedGeneratedEncounterChoices = {
   GeneratedF: generation({
     pool: pools.f,
     waves: [1, 3],
@@ -466,3 +699,23 @@ export const generatedEncounterChoices = {
     eliteTypes: 2,
   }),
 } as const;
+
+export const generatedEncounterChoices = Object.freeze(
+  Object.fromEntries(
+    Object.entries(unbudgetedGeneratedEncounterChoices).map(([key, decision]) => {
+      const budget = budgetByEncounter[key];
+      if (budget === undefined)
+        throw new Error(`Missing generated encounter budget fact for ${key}`);
+      return [
+        key,
+        Object.freeze({
+          ...decision,
+          selection: Object.freeze({
+            ...decision.selection,
+            budget: Object.freeze({ ...budget, minimum: 10 }),
+          }),
+        }),
+      ];
+    }),
+  ),
+) as typeof unbudgetedGeneratedEncounterChoices;

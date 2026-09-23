@@ -1,6 +1,11 @@
 import type { ResolvedRoutePosition } from '../../authored-project/route-context';
 import { resolveEntryDeclaration } from '../../authored-project/room-state/entry-resolution';
-import type { Catalog, EncounterEnvelopeSlot, RoomDeclaration } from '../../catalog-schema';
+import type {
+  Catalog,
+  EncounterEnvelopeSlot,
+  GeneratedEncounterSelection,
+  RoomDeclaration,
+} from '../../catalog-schema';
 import {
   createBiomeAddress,
   createEncounterPhaseAddress,
@@ -185,6 +190,10 @@ export interface EncounterPreparationRunState {
   readonly pendingSpellDrop?: boolean;
   readonly allSpellInvested?: boolean;
   readonly rewardGeneration?: HistoryStateView | undefined;
+  readonly hordesRankAt?: (
+    selection: GeneratedEncounterSelection,
+    origin: EncounterPhaseAddress,
+  ) => number | undefined;
 }
 
 function phaseAddress(room: EncounterAuthoringRoom, slotKey: string): EncounterPhaseAddress {
@@ -322,7 +331,13 @@ export function prepareRoomEncounterPhases(
   let suffixTerminated = false;
 
   const prepareCustomization = (phase: ResolvedEncounterPhase, origin: EncounterPhaseAddress) => {
-    const result = prepareGeneratedEncounter(phase, origin, preparation, runState.rewardGeneration);
+    const result = prepareGeneratedEncounter(
+      phase,
+      origin,
+      preparation,
+      runState.rewardGeneration,
+      runState.hordesRankAt,
+    );
     if (result.capability !== undefined) generation.push(result.capability);
     return result.phase;
   };

@@ -2,9 +2,17 @@
 
 ## Status and objective
 
-Implementation contract rewritten around the owner's settled decisions.
-No implementation started. Commit this contract before execution.
-Planner base: `f7101232`. Executor base: `6397f05`.
+Gate A implemented against planner base `bdb75893` and executor base `6397f05`;
+targeted validation and independent-review remediation are complete. Gates B and C
+have not started.
+
+Gate A verification: all 2,160 engine tests, 282 catalog tests, 40 migration tests,
+focused application/UI tests, workspace typechecking, application build, lint and
+format checks passed. Executor: all 629 Lua tests and source Luacheck passed.
+All 14 execution fixture mirrors match byte-for-byte; their edits are limited to
+schema/protocol versions. Independent review passed after bounded remediation.
+Full phase closure and live-game acceptance remain pending; these results do not
+close later gates.
 
 Keep the current optional wave-count, highlight and composition editor, but
 replace relative weights with native difficulty-slice authoring and derived
