@@ -11,6 +11,7 @@ export type { EncounterResolutionContext, EncounterResolutionRoomFacts } from '.
 export type { ResolvedEncounterPhase } from './model';
 export type { GeneratedEncounterCandidateCapability } from './generation-preparation';
 export type { GeneratedEncounterAssessment, GeneratedEncounterOperands } from './generation';
+export { assessFangs, type FangsAssessment } from './fangs';
 export type {
   EncounterCandidateExclusion,
   EncounterRequirementEvidence,

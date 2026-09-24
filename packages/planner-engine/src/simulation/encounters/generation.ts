@@ -1,5 +1,6 @@
 import type { EncounterEnemyChoice, GeneratedEncounterSelection } from '../../catalog-schema';
 import type { AuthoredGeneratedEncounterCustomization } from '../../authored-project/model';
+import { assessFangs } from './fangs';
 
 export interface EncounterGenerationContext {
   readonly biomeDepthCache: number;
@@ -9,12 +10,16 @@ export interface EncounterGenerationContext {
   readonly knownRunBlacklist: readonly string[];
   readonly hard?: boolean;
   readonly hordesRank?: number;
+  /** Effective Vow of Fangs rank at this exact generation checkpoint. */
+  readonly fangsRank?: number;
+  readonly roomSetKey?: string;
 }
 
 export interface GeneratedEncounterOperands {
   readonly baseRoll?: number;
   readonly waveCount?: number;
   readonly highlightKey?: string;
+  readonly fangs?: { readonly typeKey: string; readonly perkKeys: readonly string[] };
   readonly waves?: readonly {
     readonly waveIndex: number;
     /** Complete generated roster, including highlight, excluding fixed spawns. */
@@ -29,6 +34,16 @@ export interface GeneratedEncounterAssessment {
   readonly effectiveWaveCount?: number;
   readonly composition: 'active' | 'nativeWaveCount' | 'nativeHighlight';
   readonly eligibleHighlightKeys: readonly string[];
+  readonly fangs?: {
+    readonly rank: number;
+    readonly active: boolean;
+    readonly eligibleTypeKeys: readonly string[];
+    readonly perkKeys: readonly string[];
+    readonly eligiblePerkKeys: readonly string[];
+    readonly next: 'type' | 'perk' | 'finish' | 'unavailable';
+    readonly canFinish: boolean;
+    readonly issue?: 'blocked' | 'typeUnavailable' | 'perkUnavailable' | 'incomplete';
+  };
   readonly waves: readonly {
     readonly waveIndex: number;
     /** Complete native count, including fixed/template and highlight members. */
@@ -92,7 +107,11 @@ export type GeneratedEncounterIssue =
       readonly actual: number;
       readonly allowed: number;
     }
-  | { readonly reason: 'allocationMembers'; readonly waveIndex: number };
+  | { readonly reason: 'allocationMembers'; readonly waveIndex: number }
+  | {
+      readonly reason: 'fangs';
+      readonly issue: 'typeUnavailable' | 'perkUnavailable' | 'incomplete';
+    };
 
 const wavePatterns: Readonly<Record<number, readonly number[]>> = Object.freeze({
   1: [1],
@@ -423,13 +442,33 @@ export function assessGeneratedEncounter(
       );
     }
   }
+  const fangs = assessFangs(
+    policy,
+    authored,
+    context.fangsRank ?? 0,
+    context.roomSetKey,
+    waves.flatMap((wave) => wave.typeKeys),
+  );
+  if (
+    authored.fangs !== undefined &&
+    fangs.active &&
+    fangs.issue !== undefined &&
+    fangs.issue !== 'blocked'
+  )
+    issues.push({ reason: 'fangs', issue: fangs.issue });
   const supported = issues.length === 0;
+  // Fangs is an independent child of the generated composition: a retained
+  // stale target must not make its waves or budget impossible to repair.
+  const compositionSupported = issues.every((issue) => issue.reason === 'fangs');
   const operands: GeneratedEncounterOperands = Object.freeze({
     ...(authored.baseRoll === undefined ? {} : { baseRoll: authored.baseRoll }),
     ...(authored.waveCount === undefined ? {} : { waveCount: authored.waveCount }),
     ...(authored.highlightKey === undefined || !possibleHighlight || waveCount === 1
       ? {}
       : { highlightKey: authored.highlightKey }),
+    ...(authored.fangs === undefined || !fangs.active || fangs.issue !== undefined
+      ? {}
+      : { fangs: authored.fangs }),
     ...(waves.length === 0 ? {} : { waves: Object.freeze(waves) }),
   });
   return Object.freeze({
@@ -438,6 +477,7 @@ export function assessGeneratedEncounter(
     ...(waveCount === undefined ? {} : { effectiveWaveCount: waveCount }),
     composition,
     eligibleHighlightKeys: Object.freeze(eligibleHighlights.map((choice) => choice.key)),
+    fangs,
     waves: Object.freeze(
       waveDomains.map((wave) => {
         const generated = waves.find((entry) => entry.waveIndex === wave.waveIndex)?.typeKeys;
@@ -450,7 +490,7 @@ export function assessGeneratedEncounter(
           0,
         );
         const equalAllocations =
-          !supported || waveBudget === undefined || !generated?.length
+          !compositionSupported || waveBudget === undefined || !generated?.length
             ? undefined
             : Object.freeze(
                 Object.fromEntries(
@@ -469,8 +509,8 @@ export function assessGeneratedEncounter(
         });
       }),
     ),
-    ...(supported && Object.keys(operands).length !== 0 ? { operands } : {}),
-    knownRunBlacklistAdditions: Object.freeze(supported ? [...knownAdditions] : []),
+    ...(compositionSupported && Object.keys(operands).length !== 0 ? { operands } : {}),
+    knownRunBlacklistAdditions: Object.freeze(compositionSupported ? [...knownAdditions] : []),
     ...(typeof base === 'number'
       ? {}
       : {

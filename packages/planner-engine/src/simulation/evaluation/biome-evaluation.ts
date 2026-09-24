@@ -271,6 +271,7 @@ function generation(
         : 'invalid',
     ordinary: ordinary.validation,
     hub,
+    resolvedGenerated: encounters.resolvedGenerated,
     findings: Object.freeze([
       ...ordinary.validation.findings,
       ...hub.findings,

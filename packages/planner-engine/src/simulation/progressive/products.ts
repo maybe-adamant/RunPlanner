@@ -16,6 +16,13 @@ export interface BiomeGenerationValidation {
   readonly ordinary: GeneratedRoomGenerationValidation;
   readonly hub: HubRoomGenerationValidation;
   readonly findings: readonly SemanticFinding[];
+  /** Exact active generated operands produced after reward evaluation. */
+  readonly resolvedGenerated: readonly {
+    readonly origin: import('../../authored-project/addresses').EncounterPhaseAddress;
+    readonly customization: NonNullable<
+      import('../encounters/model').ResolvedEncounterPhase['generatedCustomization']
+    >;
+  }[];
 }
 
 /** The evaluated prefix and its progressive simulation products. */

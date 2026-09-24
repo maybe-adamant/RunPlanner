@@ -687,10 +687,13 @@ function executionEncounterCustomization(
   for (const decision of customization) {
     const value = decision.value;
     if (decision.selection.kind === 'generated') {
+      const generatedSelection = decision.selection;
       const operands = generated?.decisionKey === decision.key ? generated.operands : undefined;
       if (operands === undefined) continue;
       const choice = (key: string) => {
-        const found = decision.selection.choices.find((entry) => entry.key === key);
+        const found = [...generatedSelection.choices, ...generatedSelection.fixedEnemies].find(
+          (entry) => entry.key === key,
+        );
         if (found === undefined)
           throw new CompilerError(
             'executionCoverageMissing',
@@ -707,6 +710,14 @@ function executionEncounterCustomization(
           ...(operands.highlightKey === undefined
             ? {}
             : { highlight: choice(operands.highlightKey) }),
+          ...(operands.fangs === undefined
+            ? {}
+            : {
+                fangs: Object.freeze({
+                  type: choice(operands.fangs.typeKey),
+                  perks: Object.freeze(operands.fangs.perkKeys),
+                }),
+              }),
           ...(operands.waves === undefined
             ? {}
             : {
@@ -847,11 +858,25 @@ export function assembleExecutionOverview(
               semanticAddressKey(candidate.origin) === semanticAddressKey(phaseAddress),
           );
           const structural = structuralIdentities.get(phase.slotKey);
+          const resolvedGenerated = biome.roomGeneration.resolvedGenerated.find(
+            (entry) => semanticAddressKey(entry.origin) === semanticAddressKey(phaseAddress),
+          )?.customization;
+          if (
+            room.entered &&
+            structural?.customization?.some(
+              (decision) => decision.selection.kind === 'generated' && decision.value !== undefined,
+            ) &&
+            resolvedGenerated === undefined
+          )
+            throw new CompilerError(
+              'executionCoverageMissing',
+              `${room.gameName}.${phase.slotKey} lacks resolved generated customization`,
+            );
           const customization = executionEncounterCustomization(
             structural?.customization,
             room,
             phase.slotKey,
-            recorded?.generatedCustomization,
+            resolvedGenerated,
           );
           return Object.freeze({
             slotKey: phase.slotKey,

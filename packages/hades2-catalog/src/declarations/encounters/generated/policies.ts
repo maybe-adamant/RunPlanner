@@ -2,7 +2,7 @@ import type {
   EncounterEnemyChoice,
   GeneratedEncounterSelection,
 } from '@run-planner/engine/catalog-schema';
-import { fixedFieldsEnemies, generatedEnemyPools as pools } from './enemies';
+import { fangsPerks, fixedFieldsEnemies, generatedEnemyPools as pools } from './enemies';
 
 interface GenerationDeclaration {
   readonly preparation?: GeneratedEncounterSelection['preparation'];
@@ -17,6 +17,7 @@ interface GenerationDeclaration {
   readonly escalate?: boolean;
   readonly hardCap?: number;
   readonly blockHighlightElites?: boolean;
+  readonly blockFangsAttributes?: boolean;
   readonly fixedEnemies?: readonly EncounterEnemyChoice[];
   readonly groups?: GeneratedEncounterSelection['maxTypesPerGroup'];
 }
@@ -276,8 +277,10 @@ function generation(data: GenerationDeclaration) {
       },
       maxEliteTypes: data.eliteTypes,
       blockHighlightElites: data.blockHighlightElites ?? false,
+      blockFangsAttributes: data.blockFangsAttributes ?? false,
       blockTypesAcrossWaves: true,
       fixedEnemies: data.fixedEnemies ?? [],
+      fangs: { perks: fangsPerks },
       budget: { base: 0, depthRamp: 0, depthAxis: 'biomeDepthCache', multiplier: 1, minimum: 10 },
       maxTypesPerGroup: data.groups ?? {},
     } satisfies GeneratedEncounterSelection,
@@ -373,6 +376,7 @@ const unbudgetedGeneratedEncounterChoices = {
     ramp: 0.5,
     cap: 4,
     eliteTypes: 3,
+    blockFangsAttributes: true,
   }),
   GeneratedH_PassiveSmall: generation({
     pool: pools.hPassive,
@@ -382,6 +386,7 @@ const unbudgetedGeneratedEncounterChoices = {
     ramp: 0.5,
     cap: 4,
     eliteTypes: 1,
+    blockFangsAttributes: true,
   }),
   GeneratedH: generation({
     pool: pools.h,

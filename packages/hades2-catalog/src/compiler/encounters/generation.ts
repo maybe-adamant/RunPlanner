@@ -50,6 +50,23 @@ export function normalizeEncounterGeneration(
           nativeId,
           label: requireNonEmpty(value.label, `${label}.label`),
           elite: boolean(value.elite, `${field}[${index}].elite`),
+          ...(value.fangs === undefined
+            ? {}
+            : {
+                fangs: Object.freeze({
+                  options: Object.freeze(
+                    value.fangs.options.map((option) =>
+                      requireNonEmpty(option, `${label}.fangs.options`),
+                    ),
+                  ),
+                  blockedOptions: Object.freeze(
+                    value.fangs.blockedOptions.map((option) =>
+                      requireNonEmpty(option, `${label}.fangs.blockedOptions`),
+                    ),
+                  ),
+                  ...(value.fangs.caveat === undefined ? {} : { caveat: value.fangs.caveat }),
+                }),
+              }),
           blockSolo: boolean(value.blockSolo, `${field}[${index}].blockSolo`),
           blacklistAfterAppearance: boolean(
             value.blacklistAfterAppearance,
@@ -128,6 +145,31 @@ export function normalizeEncounterGeneration(
     preparation: raw.preparation,
     choices,
     fixedEnemies,
+    ...(raw.fangs === undefined
+      ? {}
+      : {
+          fangs: Object.freeze({
+            perks: Object.freeze(
+              Object.fromEntries(
+                Object.entries(raw.fangs.perks).map(([key, perk]) => [
+                  requireNonEmpty(key, `${path}.fangs.perks`),
+                  Object.freeze({
+                    label: requireNonEmpty(perk.label, `${path}.fangs.perks.${key}.label`),
+                    excludes: Object.freeze(
+                      perk.excludes.map((entry) =>
+                        requireNonEmpty(entry, `${path}.fangs.perks.${key}.excludes`),
+                      ),
+                    ),
+                    ...(perk.roomSets === undefined
+                      ? {}
+                      : { roomSets: Object.freeze(perk.roomSets) }),
+                    ...(perk.maxPerRoom === undefined ? {} : { maxPerRoom: perk.maxPerRoom }),
+                  }),
+                ]),
+              ),
+            ),
+          }),
+        }),
     waveCount: Object.freeze({ min, max }),
     types: Object.freeze({
       min: minTypes,
@@ -142,6 +184,7 @@ export function normalizeEncounterGeneration(
     }),
     maxEliteTypes: integer(raw.maxEliteTypes, 'maxEliteTypes', 0),
     blockHighlightElites: boolean(raw.blockHighlightElites, 'blockHighlightElites'),
+    blockFangsAttributes: boolean(raw.blockFangsAttributes, 'blockFangsAttributes'),
     blockTypesAcrossWaves: boolean(raw.blockTypesAcrossWaves, 'blockTypesAcrossWaves'),
     maxTypesPerGroup: Object.freeze(groups),
     budget: Object.freeze({

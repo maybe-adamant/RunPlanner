@@ -17,6 +17,7 @@ export type {
   WorkspaceEncounterPhase,
   WorkspaceGeneratedEncounterAssessment,
   WorkspaceGeneratedWaveDraftChoice,
+  WorkspaceGeneratedFangsDraftChoice,
   WorkspaceFieldsCageDescriptor,
   WorkspaceFieldsCageOutcomeInteraction,
   WorkspaceFieldsOptionalRewardDescriptor,

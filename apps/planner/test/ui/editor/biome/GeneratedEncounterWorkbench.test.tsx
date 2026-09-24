@@ -100,6 +100,31 @@ async function selectBudgetWave(view: Awaited<ReturnType<typeof open>>, index: n
 }
 
 describe('generated encounter customization workflows', () => {
+  it('persists a Fangs target, commits only finished perks, and clears it through target Default', async () => {
+    let project = applyProjectCommand(createGoldenFGHIProject(), catalog, {
+      kind: 'ReplaceFearVowRank',
+      route: { kind: 'route', routeKey: 'Underworld' },
+      vowKey: 'EnemyEliteShrineUpgrade',
+      rank: 1,
+    });
+    project = customize(project, phase, {
+      kind: 'generated',
+      waveCount: 1,
+      waves: [{ waveIndex: 1, typeKeys: ['Guard_Elite', 'Brawler'] }],
+    });
+    const view = await open(project);
+    await choosePicker(view, 'Fangs target', 'Elite Whisper');
+    expect(current(view)).toMatchObject({ fangs: { typeKey: 'Guard_Elite', perkKeys: [] } });
+    await view.user.click(within(view.dialog).getByRole('button', { name: 'Fangs perks' }));
+    await view.user.click(await screen.findByRole('option', { name: 'Shifter' }));
+    expect(current(view)).toMatchObject({ fangs: { perkKeys: [] } });
+    await view.user.click(await screen.findByRole('option', { name: 'Finish' }));
+    expect(current(view)).toMatchObject({ fangs: { typeKey: 'Guard_Elite', perkKeys: ['Blink'] } });
+    await choosePicker(view, 'Fangs target', 'Default');
+    const cleared = current(view);
+    expect(cleared?.kind === 'generated' ? cleared.fangs : undefined).toBeUndefined();
+  });
+
   it('removes the final retained budget entry along with an extra enemy', async () => {
     const view = await open(
       customize(createGoldenFGHIProject(), phase, {

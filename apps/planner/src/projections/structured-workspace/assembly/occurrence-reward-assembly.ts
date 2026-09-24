@@ -867,6 +867,9 @@ export function activeEncounterPhasesForOwner(
                           key: choice.key,
                           label: generatedEnemyLabel(choice.label),
                           difficultyRating: choice.difficultyRating,
+                          ...(choice.fangs?.caveat === 'squad'
+                            ? { fangsCaveat: 'squad' as const }
+                            : {}),
                         }),
                       ),
                     ),
@@ -876,10 +879,35 @@ export function activeEncounterPhasesForOwner(
                           key: enemy.key,
                           label: generatedEnemyLabel(enemy.label),
                           difficultyRating: enemy.difficultyRating,
+                          ...(enemy.fangs?.caveat === 'squad'
+                            ? { fangsCaveat: 'squad' as const }
+                            : {}),
                         }),
                       ),
                     ),
                     waveCount: Object.freeze({ ...decision.selection.waveCount }),
+                    ...(decision.selection.fangs === undefined
+                      ? {}
+                      : {
+                          fangs: Object.freeze({
+                            perks: Object.freeze(
+                              Object.fromEntries(
+                                Object.entries(decision.selection.fangs.perks).map(
+                                  ([key, perk]) =>
+                                    [
+                                      key,
+                                      Object.freeze({
+                                        label: perk.label,
+                                        ...(perk.maxPerRoom === undefined
+                                          ? {}
+                                          : { maxPerRoom: perk.maxPerRoom }),
+                                      }),
+                                    ] as const,
+                                ),
+                              ),
+                            ),
+                          }),
+                        }),
                   }),
                 });
               }

@@ -4,6 +4,12 @@ export interface EncounterEnemyChoice {
   readonly label: string;
   readonly nativeId: string;
   readonly elite: boolean;
+  /** Native Fangs selection facts. Absent means this spawn cannot be selected by Fangs. */
+  readonly fangs?: {
+    readonly options: readonly string[];
+    readonly blockedOptions: readonly string[];
+    readonly caveat?: 'squad';
+  };
   readonly blockSolo: boolean;
   readonly excludes: readonly string[];
   readonly blacklistAfterAppearance: boolean;
@@ -36,10 +42,25 @@ export interface GeneratedEncounterSelection {
   };
   readonly maxEliteTypes: number;
   readonly blockHighlightElites: boolean;
+  /** Native encounter-level BlockEliteAttributes (the H passive cages). */
+  readonly blockFangsAttributes: boolean;
   readonly blockTypesAcrossWaves: boolean;
   readonly maxTypesPerGroup: Readonly<Partial<Record<'Automatons' | 'ChronosForces', number>>>;
   /** Named fixed spawns precede generated placeholder entries, not ordinary additions. */
   readonly fixedEnemies: readonly EncounterEnemyChoice[];
+  readonly fangs?: {
+    readonly perks: Readonly<
+      Record<
+        string,
+        {
+          readonly label: string;
+          readonly excludes: readonly string[];
+          readonly roomSets?: readonly string[];
+          readonly maxPerRoom?: number;
+        }
+      >
+    >;
+  };
   /** Resolved native base difficulty, depth ramp and wave pattern operands. */
   readonly budget: {
     readonly base: number | { readonly min: number; readonly max: number };

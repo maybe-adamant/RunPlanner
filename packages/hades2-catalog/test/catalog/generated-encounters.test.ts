@@ -125,6 +125,37 @@ describe('source-declared generated encounter policies', () => {
       ChronosForces: 1,
     });
   });
+  it('normalizes the audited Fangs pools, blocks, room restrictions, and native presentation', () => {
+    const fangs = selection('GeneratedF').fangs!;
+    expect(fangs.perks).toMatchObject({
+      Massive: { label: 'Bigger' },
+      ExtraDamage: { label: 'Bruiser', excludes: ['Molten'] },
+      Molten: { label: 'Burner', excludes: ['ExtraDamage'] },
+      Blink: { label: 'Shifter', excludes: ['Orbit'] },
+      Orbit: { label: 'Spinner', excludes: ['Blink'] },
+      Frenzy: { label: 'Swifter', excludes: ['Homing', 'Vacuuming'] },
+      Homing: { label: 'Seeker', excludes: ['Frenzy'] },
+      Vacuuming: { label: 'Sucker', excludes: ['Frenzy'] },
+      Fog: { label: 'Spiller', excludes: ['Metallic'], maxPerRoom: 1 },
+      Metallic: { label: 'Clanger', excludes: ['Fog'], maxPerRoom: 1 },
+      Hex: { label: 'Morpher', maxPerRoom: 1 },
+      Rooting: { label: 'Burrower', roomSets: ['F', 'H'] },
+      StasisDeath: { label: 'Stopper', roomSets: ['N', 'N_SubRooms', 'O', 'P'] },
+    });
+    expect(
+      selection('GeneratedF').choices.find((enemy) => enemy.key === 'Mage_Elite')?.fangs,
+    ).toMatchObject({ blockedOptions: ['ExtraDamage'] });
+    expect(
+      selection('GeneratedH_Screamer2').fixedEnemies.find((enemy) => enemy.key === 'Screamer2')
+        ?.fangs,
+    ).toMatchObject({ blockedOptions: ['Tracking', 'Vacuuming'] });
+    expect(selection('GeneratedH_Treant2').fixedEnemies[0]?.fangs).toMatchObject({
+      blockedOptions: ['Frenzy'],
+    });
+    expect(
+      selection('GeneratedN').choices.find((enemy) => enemy.key === 'ZombieAssassin_Elite')?.fangs,
+    ).toBeUndefined();
+  });
   it('rejects malformed declaration boundaries', () => {
     const base = selection('GeneratedF');
     expect(() =>

@@ -470,6 +470,10 @@ export interface ExecutionGeneratedEncounterCustomization {
   readonly waveCount?: number;
   readonly baseRoll?: number;
   readonly highlight?: { readonly choiceKey: string; readonly nativeId: string };
+  readonly fangs?: {
+    readonly type: { readonly choiceKey: string; readonly nativeId: string };
+    readonly perks: readonly string[];
+  };
   readonly waves?: readonly {
     readonly waveIndex: number;
     readonly types: readonly { readonly choiceKey: string; readonly nativeId: string }[];

@@ -42,6 +42,7 @@ export function prepareGeneratedEncounter(
     selection: GeneratedEncounterSelection,
     origin: EncounterPhaseAddress,
   ) => number | undefined,
+  fangsRankAt?: (origin: EncounterPhaseAddress) => number | undefined,
 ): {
   readonly phase: ResolvedEncounterPhase;
   readonly capability?: GeneratedEncounterCandidateCapability;
@@ -63,6 +64,10 @@ export function prepareGeneratedEncounter(
   // a fabricated Hordes value.
   if (hordesRankAt !== undefined && exactHordesRank === undefined) return { phase };
   const hordesRank = exactHordesRank ?? 0;
+  const exactFangsRank = fangsRankAt?.(origin);
+  // A reached snapshot without Fangs is rank zero; a missing snapshot is not
+  // an authorization to invent the post-reward selection context.
+  if (fangsRankAt !== undefined && exactFangsRank === undefined) return { phase };
   const context = Object.freeze({
     biomeDepthCache: before.ledgers.counters.biomeDepthCache,
     biomeEncounterDepth: before.ledgers.counters.biomeEncounterDepth,
@@ -77,12 +82,15 @@ export function prepareGeneratedEncounter(
     // reward domain contains no MakeHardEncounter producer.
     hard: false,
     hordesRank,
+    fangsRank: exactFangsRank ?? 0,
+    roomSetKey: origin.biomeKey,
   });
   const assess = (value: AuthoredGeneratedEncounterCustomization) =>
     assessGeneratedEncounter(policy, value, context);
   const capability = Object.freeze({ origin, decisionKey: decision.key, assess });
   if (decision.value?.kind !== 'generated') return { phase, capability };
   const assessment = assess(decision.value);
+  const operands = assessment.operands;
   return {
     capability,
     phase: Object.freeze({
@@ -96,7 +104,7 @@ export function prepareGeneratedEncounter(
       ),
       generatedCustomization: Object.freeze({
         decisionKey: decision.key,
-        ...(assessment.operands === undefined ? {} : { operands: assessment.operands }),
+        ...(operands === undefined ? {} : { operands }),
         knownRunBlacklistAdditions: assessment.knownRunBlacklistAdditions,
       }),
     }),

@@ -2,13 +2,15 @@ import type {
   WorkspaceGeneratedEncounterAssessment,
   WorkspaceGeneratedWaveDraft,
   WorkspaceGeneratedWaveDraftChoice,
+  WorkspaceGeneratedFangsDraft,
+  WorkspaceGeneratedFangsDraftChoice,
 } from '../contracts/locals';
 import type { ContextualPickerModel } from '@planner/projections/contextual/contextualPicker';
 import type { GeneratedEncounterAssessment } from '@run-planner/engine/simulation';
 
 import { projectStableIdentityPicker } from './room-feature-picker-model';
 
-type ChoiceLabel = { readonly key: string; readonly label: string };
+type ChoiceLabel = { readonly key: string; readonly label: string; readonly fangsCaveat?: 'squad' };
 
 export function generatedEnemyLabel(label: string): string {
   return label.endsWith(' (Elite)') ? `Elite ${label.slice(0, -8)}` : label;
@@ -94,6 +96,12 @@ function issueMessage(
       return `${wave}needs ${issue.allowed} generated companion; found ${issue.actual}.`;
     case 'allocationMembers':
       return `${wave}budgets include an enemy that no longer has an editable budget. Reset Budgets to repair.`;
+    case 'fangs':
+      return issue.issue === 'typeUnavailable'
+        ? 'The stored Fangs elite is not in the active encounter composition. Choose an available elite or Default.'
+        : issue.issue === 'perkUnavailable'
+          ? 'The stored Fangs perks are no longer a legal native pick order. Repair the selection or choose Default.'
+          : 'Choose the next available Fangs perk or Default.';
     default:
       return 'This customization needs repair for the current encounter context.';
   }
@@ -115,7 +123,8 @@ export function projectGeneratedEncounterAssessment(
           ...(waveIndex === undefined ? {} : { waveIndex }),
           ...(issue.reason === 'baseRoll' ||
           issue.reason === 'waveCount' ||
-          issue.reason === 'highlight'
+          issue.reason === 'highlight' ||
+          issue.reason === 'fangs'
             ? { field: issue.reason }
             : {}),
         });
@@ -124,6 +133,7 @@ export function projectGeneratedEncounterAssessment(
     composition: assessment.composition,
     ...(assessment.budgetDomain === undefined ? {} : { budgetDomain: assessment.budgetDomain }),
     ...(assessment.budget === undefined ? {} : { budget: assessment.budget }),
+    ...(assessment.fangs === undefined ? {} : { fangs: assessment.fangs }),
     waves: Object.freeze(
       assessment.waves.map((wave) => {
         const generated = assessment.operands?.waves?.find(
@@ -164,7 +174,9 @@ export function projectGeneratedEncounterWaveDraft(
       sampledBudgetKeys: Object.freeze([]),
     });
   }
-  const globalIssues = assessment.issues.filter((issue) => issueWaveIndex(issue) === undefined);
+  const globalIssues = assessment.issues.filter(
+    (issue) => issueWaveIndex(issue) === undefined && issue.reason !== 'fangs',
+  );
   const waveIssues = assessment.issues.filter((issue) => issueWaveIndex(issue) === waveIndex);
   const seedsConfirmed = confirmedSeedCount >= wave.seeds.length;
   const canFinish =
@@ -257,5 +269,133 @@ export function projectGeneratedEncounterWaveDraft(
     picker: Object.freeze({ sections: Object.freeze(sections) }),
     stepLabel,
     sampledBudgetKeys: wave.sampledBudgetKeys,
+  });
+}
+
+/** Target selection is authored immediately; perk prefixes remain transient until Finish. */
+export function projectGeneratedFangsDraft(
+  assessment: GeneratedEncounterAssessment,
+  value: { readonly typeKey: string; readonly perkKeys: readonly string[] } | undefined,
+  labels: readonly ChoiceLabel[],
+  perkLabels: Readonly<Record<string, { readonly label: string; readonly maxPerRoom?: number }>>,
+  includeDefault = true,
+): WorkspaceGeneratedFangsDraft {
+  const fangs = assessment.fangs;
+  const enemy = (key: string) => labels.find((entry) => entry.key === key);
+  const label = (key: string) => {
+    const choice = enemy(key);
+    return `${generatedEnemyLabel(choice?.label ?? 'Unavailable enemy')}${
+      choice?.fangsCaveat === 'squad' ? ' (squad selection)' : ''
+    }`;
+  };
+  const item = (key: string, text: string, value: WorkspaceGeneratedFangsDraftChoice) =>
+    Object.freeze({
+      key,
+      label: text,
+      value,
+      selected: false,
+      disabled: false,
+      state: 'possible' as const,
+    });
+  const sections: ContextualPickerModel<WorkspaceGeneratedFangsDraftChoice>['sections'][number][] =
+    includeDefault
+      ? [
+          Object.freeze({
+            key: 'default',
+            kind: 'category',
+            label: 'Default',
+            collapsible: false,
+            items: Object.freeze([item('default', 'Default', { kind: 'default' })]),
+          }),
+        ]
+      : [];
+  if (fangs === undefined || !fangs.active)
+    return Object.freeze({
+      picker: Object.freeze({ sections: Object.freeze(sections) }),
+      stepLabel: 'Vow of Fangs is inactive',
+    });
+  if (fangs.next === 'unavailable')
+    return Object.freeze({
+      picker: Object.freeze({ sections: Object.freeze(sections) }),
+      stepLabel:
+        fangs.issue === 'blocked'
+          ? 'This encounter blocks Fangs attributes'
+          : 'Vow of Fangs is inactive',
+    });
+  if (fangs.next === 'type') {
+    sections.push(
+      Object.freeze({
+        key: 'type',
+        kind: 'required',
+        label: 'Elite enemy',
+        collapsible: false,
+        items: Object.freeze(
+          fangs.eligibleTypeKeys.map((key) =>
+            item(`type:${key}`, label(key), { kind: 'type', key }),
+          ),
+        ),
+      }),
+    );
+    return Object.freeze({
+      picker: Object.freeze({ sections: Object.freeze(sections) }),
+      stepLabel: 'Choose an elite enemy',
+    });
+  }
+  const selected = value?.perkKeys ?? [];
+  if (selected.length > 0) {
+    sections.push(
+      Object.freeze({
+        key: 'selected',
+        kind: 'category',
+        label: 'Selected perks',
+        collapsible: false,
+        items: Object.freeze(
+          selected.map((key, index) =>
+            item(`prefix:${index}`, `${perkLabels[key]?.label ?? key} · edit from here`, {
+              kind: 'perkPrefix',
+              perkKeys: Object.freeze(selected.slice(0, index)),
+            }),
+          ),
+        ),
+      }),
+    );
+  }
+  if (fangs.canFinish) {
+    sections.push(
+      Object.freeze({
+        key: 'finish',
+        kind: 'category',
+        label: 'Ready',
+        collapsible: false,
+        items: Object.freeze([item('finish', 'Finish', { kind: 'finish' })]),
+      }),
+    );
+    return Object.freeze({
+      picker: Object.freeze({ sections: Object.freeze(sections) }),
+      stepLabel: 'Finish Fangs selection',
+    });
+  }
+  if (fangs.eligiblePerkKeys.length > 0)
+    sections.push(
+      Object.freeze({
+        key: 'perk',
+        kind: 'required',
+        label: `Perk ${selected.length + 1}`,
+        collapsible: false,
+        items: Object.freeze(
+          fangs.eligiblePerkKeys.map((key) =>
+            item(
+              `perk:${key}`,
+              `${perkLabels[key]?.label ?? key}${perkLabels[key]?.maxPerRoom === 1 ? ' (one per room)' : ''}`,
+              { kind: 'perk', key },
+            ),
+          ),
+        ),
+      }),
+    );
+  return Object.freeze({
+    picker: Object.freeze({ sections: Object.freeze(sections) }),
+    stepLabel:
+      fangs.next === 'perk' ? `Choose perk ${selected.length + 1}` : 'Repair the Fangs selection',
   });
 }

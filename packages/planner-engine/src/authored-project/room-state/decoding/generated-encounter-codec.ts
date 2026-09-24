@@ -16,7 +16,9 @@ export function decodeGeneratedEncounterCustomization(
     row,
     [
       'kind',
-      ...['baseRoll', 'waveCount', 'highlightKey', 'waves'].filter((key) => row[key] !== undefined),
+      ...['baseRoll', 'waveCount', 'highlightKey', 'fangs', 'waves'].filter(
+        (key) => row[key] !== undefined,
+      ),
     ],
     path,
   );
@@ -69,6 +71,22 @@ export function decodeGeneratedEncounterCustomization(
             ...(wave.allocations === undefined ? {} : { allocations: Object.freeze(allocations) }),
           });
         });
+  const fangs =
+    row.fangs === undefined
+      ? undefined
+      : (() => {
+          const entry = expectRecord(row.fangs, `${path}.fangs`);
+          expectExactKeys(entry, ['typeKey', 'perkKeys'], `${path}.fangs`);
+          const perkKeys = expectArray(entry.perkKeys, `${path}.fangs.perkKeys`).map((key) =>
+            expectNonBlankString(key, `${path}.fangs.perkKeys`),
+          );
+          if (perkKeys.length > 2 || new Set(perkKeys).size !== perkKeys.length)
+            failProjectDocument(`${path}.fangs.perkKeys`, 'requires zero to two distinct perks');
+          return Object.freeze({
+            typeKey: expectNonBlankString(entry.typeKey, `${path}.fangs.typeKey`),
+            perkKeys: Object.freeze(perkKeys),
+          });
+        })();
   if (
     waves !== undefined &&
     (waves.length < 1 ||
@@ -85,6 +103,7 @@ export function decodeGeneratedEncounterCustomization(
     ...(row.highlightKey === undefined
       ? {}
       : { highlightKey: expectNonBlankString(row.highlightKey, `${path}.highlightKey`) }),
+    ...(fangs === undefined ? {} : { fangs }),
     ...(waves === undefined ? {} : { waves: Object.freeze(waves) }),
   });
 }

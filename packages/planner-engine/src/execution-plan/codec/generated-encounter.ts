@@ -21,7 +21,12 @@ export function generatedEncounter(
   label: string,
 ): ExecutionGeneratedEncounterCustomization {
   const row = object(value, label);
-  exact(row, ['decisionKey', 'kind'], ['baseRoll', 'waveCount', 'highlight', 'waves'], label);
+  exact(
+    row,
+    ['decisionKey', 'kind'],
+    ['baseRoll', 'waveCount', 'highlight', 'fangs', 'waves'],
+    label,
+  );
   if (row.kind !== 'generated') fail(`${label}.kind is unsupported`);
   const waveCount =
     row.waveCount === undefined ? undefined : ordinal(row.waveCount, `${label}.waveCount`);
@@ -30,6 +35,20 @@ export function generatedEncounter(
   if (baseRoll !== undefined && baseRoll > 10000) fail(`${label}.baseRoll exceeds 10000`);
   const highlight =
     row.highlight === undefined ? undefined : enemy(row.highlight, `${label}.highlight`);
+  const fangs =
+    row.fangs === undefined
+      ? undefined
+      : (() => {
+          const entry = object(row.fangs, `${label}.fangs`);
+          exact(entry, ['type', 'perks'], [], `${label}.fangs`);
+          const perks = Object.freeze(
+            array(entry.perks, `${label}.fangs.perks`, 2).map((perk, index) =>
+              stringValue(perk, `${label}.fangs.perks[${index}]`),
+            ),
+          );
+          if (new Set(perks).size !== perks.length) fail(`${label}.fangs.perks must be distinct`);
+          return Object.freeze({ type: enemy(entry.type, `${label}.fangs.type`), perks });
+        })();
   if (waveCount === 1 && highlight !== undefined) fail(`${label} cannot highlight a single wave`);
   const seen = new Set<number>();
   const waves =
@@ -92,6 +111,7 @@ export function generatedEncounter(
     (baseRoll === undefined &&
       waveCount === undefined &&
       highlight === undefined &&
+      fangs === undefined &&
       waves === undefined)
   )
     fail(`${label} has no active override`);
@@ -101,6 +121,7 @@ export function generatedEncounter(
     ...(baseRoll === undefined ? {} : { baseRoll }),
     ...(waveCount === undefined ? {} : { waveCount }),
     ...(highlight === undefined ? {} : { highlight }),
+    ...(fangs === undefined ? {} : { fangs }),
     ...(waves === undefined ? {} : { waves }),
   });
 }

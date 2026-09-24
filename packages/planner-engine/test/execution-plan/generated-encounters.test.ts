@@ -122,6 +122,28 @@ describe('generated customization publication', () => {
     expect(customization(replace(project, null))).toBeUndefined();
   });
 
+  it('publishes an active Fangs override from the reached selected product', () => {
+    let project = applyProjectCommand(createGoldenFGHIProject(), catalog, {
+      kind: 'ReplaceFearVowRank',
+      route: { kind: 'route', routeKey: 'Underworld' },
+      vowKey: 'EnemyEliteShrineUpgrade',
+      rank: 1,
+    });
+    project = replace(project, {
+      kind: 'generated',
+      waveCount: 1,
+      waves: [{ waveIndex: 1, typeKeys: ['Guard_Elite', 'Brawler'] }],
+      fangs: { typeKey: 'Guard_Elite', perkKeys: ['Blink'] },
+    });
+    expect(customization(project)).toContainEqual(
+      expect.objectContaining({
+        kind: 'generated',
+        decisionKey: 'generatedComposition',
+        fangs: { type: { choiceKey: 'Guard_Elite', nativeId: 'Guard_Elite' }, perks: ['Blink'] },
+      }),
+    );
+  });
+
   it('uses earlier reward-generation depth for Trial, not destination entry depth', () => {
     const trialId = goldenFOccurrenceId(8, 1);
     const trialPhase = createEncounterPhaseAddress(
@@ -231,6 +253,18 @@ describe('generated execution decoding', () => {
   };
   it('accepts sparse normalized requests and rejects malformed operands', () => {
     expect(generatedEncounter(value, 'test')).toEqual(value);
+    expect(
+      generatedEncounter(
+        {
+          ...value,
+          fangs: {
+            type: { choiceKey: 'DespairElemental_Elite', nativeId: 'DespairElemental_Elite' },
+            perks: [],
+          },
+        },
+        'test',
+      ),
+    ).toMatchObject({ fangs: { type: { nativeId: 'DespairElemental_Elite' }, perks: [] } });
     for (const malformed of [
       { ...value, waveCount: 6 },
       { ...value, waveCount: 1 },

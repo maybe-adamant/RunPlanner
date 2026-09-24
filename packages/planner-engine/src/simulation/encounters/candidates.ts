@@ -82,6 +82,13 @@ export interface EncounterRoomCandidateCapability {
 export interface EncounterCandidateEvaluation {
   readonly artifacts: EncounterCandidateArtifacts;
   readonly findings: readonly SemanticFinding[];
+  /** Data product, not a candidate capability: exact selected generated operands after reward settlement. */
+  readonly resolvedGenerated: readonly {
+    readonly origin: EncounterPhaseAddress;
+    readonly customization: NonNullable<
+      import('./model').ResolvedEncounterPhase['generatedCustomization']
+    >;
+  }[];
 }
 
 export interface EncounterCandidateBoundary {
@@ -146,6 +153,7 @@ export function evaluateEncounterCandidatesInternal(
 ): EncounterCandidateEvaluation & { readonly findingRegions: readonly FindingRegionEntry[] } {
   const entries = new Map<string, EncounterPhaseCandidateSupport>();
   const generation = new Map<string, GeneratedEncounterCandidateCapability>();
+  const resolvedGenerated: EncounterCandidateEvaluation['resolvedGenerated'][number][] = [];
   const statuses = new Map<string, EncounterPhaseSequenceStatus>();
   const roomsByOwner = new Map<string, EncounterRoomCandidateCapability>();
   const findings: SemanticFinding[] = [];
@@ -187,6 +195,19 @@ export function evaluateEncounterCandidatesInternal(
         return snapshot === undefined
           ? undefined
           : (snapshot.effectiveHordesRank ?? attestEffectiveHordesRank([snapshot]));
+      },
+      fangsRankAt: (origin: EncounterPhaseAddress) => {
+        const owner =
+          room.lifecycleProfileKey === 'ShipCombatRoom'
+            ? createRoomRunStateCheckpointAddress(room.origin, {
+                kind: 'beforeEncounterStart',
+                phaseKey: origin.phaseKey,
+              })
+            : createRoomRunStateCheckpointAddress(room.origin, { kind: 'roomEntered' });
+        const snapshot = runStateByOwner.get(semanticAddressKey(owner));
+        return snapshot === undefined
+          ? undefined
+          : (snapshot.arcanaFear.fear.effectiveRanks.EnemyEliteShrineUpgrade ?? 0);
       },
     };
     const preparedSource = prepareRoomEncounterPhases(
@@ -272,6 +293,15 @@ export function evaluateEncounterCandidatesInternal(
     }
     for (const capability of prepared.generation)
       generation.set(semanticAddressKey(capability.origin), capability);
+    for (const capability of prepared.generation) {
+      const phase = prepared.validPrefix.find(
+        (entry) => entry.slotKey === capability.origin.phaseKey,
+      );
+      if (phase?.generatedCustomization !== undefined)
+        resolvedGenerated.push(
+          Object.freeze({ origin: capability.origin, customization: phase.generatedCustomization }),
+        );
+    }
     for (const entry of prepared.statuses) {
       const key = semanticAddressKey(entry.origin);
       if (statuses.has(key)) throw new Error(`duplicate encounter phase status ${key}`);
@@ -339,6 +369,7 @@ export function evaluateEncounterCandidatesInternal(
       figLeafAt: (origin: EncounterPhaseAddress) => privateFigLeaf.get(semanticAddressKey(origin)),
     }),
     findings: Object.freeze(findings),
+    resolvedGenerated: Object.freeze(resolvedGenerated),
     findingRegions: Object.freeze(
       findings.map((finding) => {
         const chronology = findingChronologies.get(semanticAddressKey(finding.origin));
@@ -362,5 +393,9 @@ export function evaluateEncounterCandidates(
     routePosition,
     boundary,
   );
-  return Object.freeze({ artifacts: evaluation.artifacts, findings: evaluation.findings });
+  return Object.freeze({
+    artifacts: evaluation.artifacts,
+    findings: evaluation.findings,
+    resolvedGenerated: evaluation.resolvedGenerated,
+  });
 }

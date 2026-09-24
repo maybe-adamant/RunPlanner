@@ -111,6 +111,11 @@ export interface WorkspaceEncounterCustomizationInteraction {
     confirmedSeedCount: number,
     typeKeys: readonly string[],
   ) => WorkspaceGeneratedWaveDraft;
+  /** Engine-backed Fangs target/perk picker products; perks commit only on Finish. */
+  readonly generatedFangsDraftFor?: (
+    value: { readonly typeKey: string; readonly perkKeys: readonly string[] } | undefined,
+    includeDefault?: boolean,
+  ) => WorkspaceGeneratedFangsDraft;
 }
 
 export type WorkspaceGeneratedWaveDraftChoice =
@@ -125,11 +130,24 @@ export interface WorkspaceGeneratedWaveDraft {
   readonly sampledBudgetKeys: readonly string[];
 }
 
+export type WorkspaceGeneratedFangsDraftChoice =
+  | { readonly kind: 'default' }
+  | { readonly kind: 'type'; readonly key: string }
+  | { readonly kind: 'perk'; readonly key: string }
+  | { readonly kind: 'perkPrefix'; readonly perkKeys: readonly string[] }
+  | { readonly kind: 'finish' };
+
+export interface WorkspaceGeneratedFangsDraft {
+  readonly picker: ContextualPickerModel<WorkspaceGeneratedFangsDraftChoice>;
+  readonly stepLabel: string;
+  readonly triggerLabel?: string;
+}
+
 export interface WorkspaceGeneratedEncounterAssessment {
   readonly issues: readonly {
     readonly message: string;
     readonly waveIndex?: number;
-    readonly field?: 'baseRoll' | 'waveCount' | 'highlight';
+    readonly field?: 'baseRoll' | 'waveCount' | 'highlight' | 'fangs';
   }[];
   readonly composition: 'active' | 'nativeWaveCount' | 'nativeHighlight';
   readonly budgetDomain?: {
@@ -140,6 +158,16 @@ export interface WorkspaceGeneratedEncounterAssessment {
     readonly kind: 'exact' | 'range';
     readonly waveBudgets:
       readonly number[] | readonly { readonly min: number; readonly max: number }[];
+  };
+  readonly fangs?: {
+    readonly rank: number;
+    readonly active: boolean;
+    readonly eligibleTypeKeys: readonly string[];
+    readonly perkKeys: readonly string[];
+    readonly eligiblePerkKeys: readonly string[];
+    readonly next: 'type' | 'perk' | 'finish' | 'unavailable';
+    readonly canFinish: boolean;
+    readonly issue?: 'blocked' | 'typeUnavailable' | 'perkUnavailable' | 'incomplete';
   };
   readonly waves: readonly {
     readonly waveIndex: number;
@@ -381,13 +409,20 @@ export type WorkspaceEncounterCustomizationDecision =
           readonly key: string;
           readonly label: string;
           readonly difficultyRating: number;
+          readonly fangsCaveat?: 'squad';
         }[];
         readonly fixedEnemies: readonly {
           readonly key: string;
           readonly label: string;
           readonly difficultyRating: number;
+          readonly fangsCaveat?: 'squad';
         }[];
         readonly waveCount: { readonly min: number; readonly max: number };
+        readonly fangs?: {
+          readonly perks: Readonly<
+            Record<string, { readonly label: string; readonly maxPerRoom?: number }>
+          >;
+        };
       };
     });
 

@@ -4,6 +4,104 @@ type EnemyFacts = Partial<
   Omit<EncounterEnemyChoice, 'key' | 'label' | 'nativeId' | 'difficultyRating'>
 >;
 
+const genericFangs = [
+  'Blink',
+  'ExtraDamage',
+  'Fog',
+  'Frenzy',
+  'HeavyArmor',
+  'ManaDrain',
+  'Massive',
+  'Miasma',
+  'Molten',
+  'Orbit',
+  'Rooting',
+  'SpreadHitShields',
+  'StasisDeath',
+  'Unflinching',
+  'Vacuuming',
+] as const;
+export const fangsPerks = Object.freeze({
+  Massive: { label: 'Bigger', excludes: [] },
+  ExtraDamage: { label: 'Bruiser', excludes: ['Molten'] },
+  Molten: { label: 'Burner', excludes: ['ExtraDamage'] },
+  Rooting: { label: 'Burrower', excludes: [], roomSets: ['F', 'H'] },
+  Metallic: { label: 'Clanger', excludes: ['Fog'], maxPerRoom: 1 },
+  Miasma: { label: 'Downer', excludes: [] },
+  ManaDrain: { label: 'Drainer', excludes: [] },
+  Hex: { label: 'Morpher', excludes: [], maxPerRoom: 1 },
+  Rifts: { label: 'Scraper', excludes: [] },
+  Homing: { label: 'Seeker', excludes: ['Frenzy'] },
+  SpreadHitShields: { label: 'Shielder', excludes: [] },
+  Blink: { label: 'Shifter', excludes: ['Orbit'] },
+  Radial: { label: 'Slicer', excludes: [] },
+  Fog: { label: 'Spiller', excludes: ['Metallic'], maxPerRoom: 1 },
+  Orbit: { label: 'Spinner', excludes: ['Blink'] },
+  StasisDeath: { label: 'Stopper', excludes: [], roomSets: ['N', 'N_SubRooms', 'O', 'P'] },
+  Vacuuming: { label: 'Sucker', excludes: ['Frenzy'] },
+  Frenzy: { label: 'Swifter', excludes: ['Homing', 'Vacuuming'] },
+  HeavyArmor: { label: 'Thicker', excludes: [] },
+  Unflinching: { label: 'Tougher', excludes: [] },
+});
+const fangsOptions: Readonly<Record<string, readonly string[]>> = {
+  Carrion_Elite: [...genericFangs, 'Rifts'],
+  Drunk_Elite: [...genericFangs, 'Rifts'],
+  HarpyCutter_Elite: [...genericFangs, 'Rifts'],
+  AutomatonEnforcer_Elite: [...genericFangs, 'Rifts'],
+  HarpyDropper_Elite: [...genericFangs, 'Rifts'],
+  Mourner_Elite: [...genericFangs, 'Metallic'],
+  ZombieHeavyRanged_Elite: [...genericFangs, 'Metallic'],
+  AutomatonBeamer_Elite: [...genericFangs, 'Metallic'],
+  Screamer_Elite: [...genericFangs, 'Hex'],
+  CorruptedShadeLarge_Elite: [...genericFangs, 'Hex'],
+  SatyrRatCatcher_Elite: [...genericFangs, 'Hex'],
+  Mudman_Elite: [...genericFangs, 'Hex'],
+  Mage_Elite: [...genericFangs, 'Homing'],
+  WaterUnit_Elite: [...genericFangs, 'Homing'],
+  CorruptedShadeSmall_Elite: [...genericFangs, 'Homing'],
+  SatyrLancer_Elite: [...genericFangs, 'Homing'],
+  Mage2_Elite: [...genericFangs, 'Homing'],
+  SentryBot_Elite: [...genericFangs, 'Homing'],
+  SatyrLancer2_Elite: [...genericFangs, 'Homing'],
+  Brawler_Elite: [...genericFangs, 'Rifts', 'Metallic'],
+  ClockworkHeavyMelee_Elite: [...genericFangs, 'Rifts', 'Metallic'],
+  FishmanMelee_Elite: [...genericFangs, 'Hex', 'Metallic'],
+  Swab_Elite: [...genericFangs, 'Hex', 'Metallic'],
+  Dragon_Elite: [...genericFangs, 'Hex', 'Metallic'],
+  Brute_Elite: [...genericFangs, 'Hex', 'Metallic'],
+  Lycanthrope_Elite: [...genericFangs, 'Rifts', 'Hex'],
+  SiegeVine_Elite: ['Fog', 'HeavyArmor', 'Orbit', 'Radial'],
+  ZombieSpawner_Elite: ['Fog', 'HeavyArmor', 'Orbit', 'Radial'],
+  DespairElemental_Elite: [],
+};
+const fangsBlocks: Readonly<Record<string, readonly string[]>> = {
+  Mage_Elite: ['ExtraDamage'],
+  Mage2_Elite: ['ExtraDamage'],
+  GoldElemental_Elite: ['Tracking', 'ExtraDamage'],
+  TimeElemental_Elite: ['StasisDeath'],
+  SwarmerClockwork_Elite: ['SpreadHitShields'],
+  ClockworkHeavyMelee_Elite: ['Orbit', 'Vacuum'],
+  ZombieHeavyRanged_Elite: ['Orbit', 'Vacuum'],
+  AutomatonEnforcer_Elite: ['Orbit', 'Vacuum'],
+  Dragon_Elite: ['Orbit', 'Vacuum'],
+  Brute_Elite: ['Orbit', 'Vacuum'],
+  WaterElemental_Elite: ['Metallic', 'Orbit', 'Vacuum'],
+  Screamer_Elite: ['Tracking'],
+  Screamer2: ['Tracking', 'Vacuuming'],
+  Treant2: ['Frenzy'],
+};
+function fangsFor(key: string, elite: boolean): EnemyFacts['fangs'] | undefined {
+  if (!elite) return undefined;
+  const options = fangsOptions[key] ?? genericFangs;
+  return {
+    options,
+    blockedOptions: fangsBlocks[key] ?? [],
+    ...(key === 'FishSwarmerSquad_Elite' || key === 'SimpleSquad_Elite'
+      ? { caveat: 'squad' as const }
+      : {}),
+  };
+}
+
 const budgetFacts: Readonly<Record<string, readonly [number, number?]>> = {
   Guard: [5],
   Guard_Elite: [12],
@@ -135,6 +233,12 @@ function enemy(key: string, label: string, facts: EnemyFacts = {}): EncounterEne
     difficultyRating: budget[0],
     ...(budget[1] === undefined ? {} : { maxCount: budget[1] }),
     ...facts,
+    ...(facts.fangs === undefined
+      ? (() => {
+          const fangs = fangsFor(key, facts.elite === true);
+          return fangs === undefined ? {} : { fangs };
+        })()
+      : {}),
   };
 }
 
@@ -153,6 +257,12 @@ function pair(
       excludes: [key],
       minimumDepth: { axis: 'biomeDepthCache', value: 3 },
       ...elite,
+      ...(elite.fangs === undefined
+        ? (() => {
+            const fangs = fangsFor(`${key}_Elite`, elite.elite !== false);
+            return fangs === undefined ? {} : { fangs };
+          })()
+        : {}),
     }),
   ];
 }

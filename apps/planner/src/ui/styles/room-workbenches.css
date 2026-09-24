@@ -444,6 +444,27 @@
   grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
 }
 
+/* Fangs has adjacent target and transient-perk controls, unlike the ordinary
+ * one-picker rows above. Keep them together when the dialog has room. */
+.encounter-fangs-controls {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: start;
+}
+
+.encounter-fangs-controls > .contextual-picker {
+  grid-column: auto;
+}
+
+@media (max-width: 680px) {
+  .encounter-fangs-controls {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .encounter-fangs-controls > .contextual-picker {
+    grid-column: 1 / -1;
+  }
+}
+
 .encounter-customization-row > .contextual-picker > label {
   color: var(--muted);
   font-size: inherit;

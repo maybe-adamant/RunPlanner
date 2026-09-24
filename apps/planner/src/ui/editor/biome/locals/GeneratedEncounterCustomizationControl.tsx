@@ -5,6 +5,7 @@ import type {
   WorkspaceEncounterPhase,
   WorkspaceGeneratedEncounterAssessment,
   WorkspaceGeneratedWaveDraftChoice,
+  WorkspaceGeneratedFangsDraftChoice,
 } from '@planner/projections/structured-workspace';
 import type { ContextualPickerModel } from '@planner/projections/contextual/contextualPicker';
 import { ContextualPicker } from '@planner/ui/controls/ContextualPicker';
@@ -126,6 +127,7 @@ function empty(
   return value.baseRoll === undefined &&
     value.waveCount === undefined &&
     value.highlightKey === undefined &&
+    value.fangs === undefined &&
     !value.waves?.length
     ? null
     : value;
@@ -164,6 +166,7 @@ function withWave(
     ...(value.baseRoll === undefined ? {} : { baseRoll: value.baseRoll }),
     ...(value.waveCount === undefined ? {} : { waveCount: value.waveCount }),
     ...(value.highlightKey === undefined ? {} : { highlightKey: value.highlightKey }),
+    ...(value.fangs === undefined ? {} : { fangs: value.fangs }),
   };
   return waves.length === 0 ? base : { ...base, waves };
 }
@@ -174,6 +177,106 @@ const emptyDraftPicker: ContextualPickerModel<WorkspaceGeneratedWaveDraftChoice>
 const emptyHighlightPicker: ContextualPickerModel<string> = Object.freeze({
   sections: Object.freeze([]),
 });
+const emptyFangsPicker: ContextualPickerModel<WorkspaceGeneratedFangsDraftChoice> = Object.freeze({
+  sections: Object.freeze([]),
+});
+
+function GeneratedFangsPicker({
+  interaction,
+  presentation,
+  value,
+  update,
+}: {
+  readonly interaction: WorkspaceEncounterCustomizationInteraction;
+  readonly presentation: {
+    readonly choices: readonly { readonly key: string; readonly label: string }[];
+    readonly perks: Readonly<
+      Record<string, { readonly label: string; readonly maxPerRoom?: number }>
+    >;
+  };
+  readonly value: AuthoredGeneratedEncounterCustomization;
+  readonly update: (
+    change: (
+      current: AuthoredGeneratedEncounterCustomization,
+    ) => AuthoredGeneratedEncounterCustomization,
+  ) => void;
+}) {
+  const [perkDraft, setPerkDraft] = useState<readonly string[] | undefined>();
+  const targetProduct = interaction.generatedFangsDraftFor?.(undefined, true);
+  const perkProduct =
+    value.fangs === undefined || perkDraft === undefined
+      ? undefined
+      : interaction.generatedFangsDraftFor?.(
+          { typeKey: value.fangs.typeKey, perkKeys: perkDraft },
+          false,
+        );
+  const display =
+    value.fangs === undefined
+      ? 'Default'
+      : (presentation.choices.find((choice) => choice.key === value.fangs!.typeKey)?.label ??
+        'Unavailable enemy');
+  return (
+    <div className="encounter-customization-row encounter-fangs-controls" aria-label="Vow of Fangs">
+      <ContextualPicker<WorkspaceGeneratedFangsDraftChoice>
+        ariaLabel="Fangs target"
+        choiceLabel={targetProduct?.stepLabel ?? 'Fangs target'}
+        disabled={interaction.generatedFangsDraftFor === undefined}
+        id={`generated-fangs-target-${interaction.key}`}
+        label="Fangs target"
+        layout="inline"
+        model={targetProduct?.picker ?? emptyFangsPicker}
+        onSelect={(choice) => {
+          if (choice.kind === 'default') {
+            update((current) => {
+              const next = { ...current };
+              delete next.fangs;
+              return next;
+            });
+            setPerkDraft(undefined);
+          } else if (choice.kind === 'type')
+            update((current) => ({
+              ...current,
+              fangs: { typeKey: choice.key, perkKeys: current.fangs?.perkKeys ?? [] },
+            }));
+        }}
+        placeholder="Default"
+        triggerLabel={display}
+      />
+      <ContextualPicker<WorkspaceGeneratedFangsDraftChoice>
+        ariaLabel="Fangs perks"
+        cancelLabel="Cancel"
+        choiceLabel={perkProduct?.stepLabel ?? 'Fangs perks'}
+        closeOnSelect={false}
+        disabled={value.fangs === undefined || interaction.generatedFangsDraftFor === undefined}
+        id={`generated-fangs-perks-${interaction.key}`}
+        label="Perks"
+        layout="inline"
+        model={perkProduct?.picker ?? emptyFangsPicker}
+        onOpenChange={(open) => setPerkDraft(open ? Object.freeze([]) : undefined)}
+        onSelect={(choice) => {
+          if (perkDraft === undefined || value.fangs === undefined) return;
+          if (choice.kind === 'finish') {
+            update((current) => ({
+              ...current,
+              fangs: { typeKey: value.fangs!.typeKey, perkKeys: perkDraft },
+            }));
+            setPerkDraft(undefined);
+          } else if (choice.kind === 'perkPrefix') setPerkDraft(choice.perkKeys);
+          else if (choice.kind === 'perk') setPerkDraft(Object.freeze([...perkDraft, choice.key]));
+        }}
+        open={perkDraft !== undefined}
+        placeholder="Select perks"
+        triggerLabel={
+          value.fangs === undefined
+            ? 'Select target first'
+            : value.fangs.perkKeys.length === 0
+              ? 'No perks'
+              : value.fangs.perkKeys.map((key) => presentation.perks[key]?.label ?? key).join(' · ')
+        }
+      />
+    </div>
+  );
+}
 
 function replacementWave(
   value: AuthoredGeneratedEncounterCustomization,
@@ -471,6 +574,7 @@ export function GeneratedEncounterCustomizationControl({
                         ...(current.highlightKey === undefined
                           ? {}
                           : { highlightKey: current.highlightKey }),
+                        ...(current.fangs === undefined ? {} : { fangs: current.fangs }),
                         ...(current.waves === undefined ? {} : { waves: current.waves }),
                       };
                       return count === undefined || fixedCount
@@ -509,6 +613,7 @@ export function GeneratedEncounterCustomizationControl({
                   kind: 'generated' as const,
                   ...(current.baseRoll === undefined ? {} : { baseRoll: current.baseRoll }),
                   ...(current.waveCount === undefined ? {} : { waveCount: current.waveCount }),
+                  ...(current.fangs === undefined ? {} : { fangs: current.fangs }),
                   ...(current.waves === undefined
                     ? {}
                     : {
@@ -579,6 +684,17 @@ export function GeneratedEncounterCustomizationControl({
             Set the enemy budget for each wave. The last enemy uses what remains. Enemy counts are
             derived from their budget and cost. Costs are shown next to enemy names.
           </p>
+          {assessment.fangs !== undefined ? (
+            <GeneratedFangsPicker
+              interaction={interaction}
+              presentation={{
+                choices: [...decision.selection.choices, ...decision.selection.fixedEnemies],
+                perks: decision.selection.fangs?.perks ?? {},
+              }}
+              value={value}
+              update={update}
+            />
+          ) : null}
           <div className="encounter-budget-tabs-header">
             <nav className="run-state-tabs" aria-label="Wave budgets" role="tablist">
               {assessment.waves.map((wave, index) => (
