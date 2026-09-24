@@ -50,53 +50,52 @@ function customization(project: ProjectDocument) {
   return publish(project).occurrences.find((room) => room.id === phase.owner.occurrenceId)?.overview
     .encounterPhases[0]?.customization;
 }
+function initialized(project: ProjectDocument, owner = phase) {
+  const assembly = simulateProjectAssembly(catalog, project);
+  const capability = generatedEncounterSupportForProjectEvaluationAssembly(assembly, owner);
+  const value = capability?.initialize();
+  expect(value, JSON.stringify(assembly.evaluation.findings)).toBeDefined();
+  return value!;
+}
 
 describe('generated customization publication', () => {
-  it('round trips exact sparse operands without adding acquisition or conformance obligations', () => {
+  it('publishes a complete resolved composition without adding acquisition or conformance obligations', () => {
     const base = createGoldenFGHIProject();
-    const value = {
-      kind: 'generated',
-      waveCount: 3,
-      highlightKey: 'Guard',
-      waves: [
-        { waveIndex: 3, typeKeys: ['Brawler', 'Mage'], allocations: { Guard: 1, Brawler: 2 } },
-      ],
-    } as const;
+    const value = initialized(base);
     const project = replace(base, value);
     const assembly = simulateProjectAssembly(catalog, project);
     expect(
       generatedEncounterSupportForProjectEvaluationAssembly(assembly, phase)?.assess(value)
-        .supported,
-    ).toBe(true);
+        .operands,
+    ).toBeDefined();
     const plan = publish(project);
     const original = publish(base);
     const index = plan.occurrences.findIndex((room) => room.id === phase.owner.occurrenceId);
-    expect(plan.occurrences[index]?.overview.encounterPhases[0]?.customization).toEqual([
-      {
-        kind: 'generated',
-        decisionKey: 'generatedComposition',
-        waveCount: 3,
-        highlight: { choiceKey: 'Guard', nativeId: 'Guard' },
-        waves: [
-          {
-            waveIndex: 3,
-            types: [
-              { choiceKey: 'Guard', nativeId: 'Guard' },
-              { choiceKey: 'Brawler', nativeId: 'Brawler' },
-              { choiceKey: 'Mage', nativeId: 'Mage' },
-            ],
-            allocations: { Guard: 1, Brawler: 2 },
-          },
-        ],
-      },
-    ]);
+    const published = plan.occurrences[index]?.overview.encounterPhases[0]?.customization?.[0];
+    expect(published).toMatchObject({ kind: 'generated', decisionKey: 'generatedComposition' });
+    if (published?.kind !== 'generated') throw new Error('Generated result was not published');
+    expect(published.waves).toHaveLength(published.waveCount);
+    for (const wave of published.waves) {
+      expect(wave.types.length).toBeGreaterThan(0);
+      expect(Object.keys(wave.counts).sort()).toEqual(
+        wave.types.map((entry) => entry.nativeId).sort(),
+      );
+      expect(wave.types.every((entry) => entry.source !== undefined)).toBe(true);
+    }
     expect(plan.occurrences[index]?.timeline).toEqual(original.occurrences[index]?.timeline);
     expect(plan.occurrences[index]?.roomExitConformance).toEqual(
       original.occurrences[index]?.roomExitConformance,
     );
     expect(decodeExecutionPlan(JSON.parse(encodeExecutionPlan(plan)))).toEqual(plan);
+    const partial =
+      value.waves === undefined
+        ? { kind: 'generated' as const }
+        : { kind: 'generated' as const, waves: value.waves };
     expect(
-      customization(replace(project, { kind: 'generated', waves: value.waves })),
+      generatedEncounterSupportForProjectEvaluationAssembly(
+        simulateProjectAssembly(catalog, replace(project, partial)),
+        phase,
+      )?.assess(partial).operands,
     ).toBeUndefined();
     expect(customization(replace(project, null))).toBeUndefined();
   });
@@ -112,13 +111,7 @@ describe('generated customization publication', () => {
       expect.objectContaining({ code: 'encounterCustomizationUnavailable', origin: phase }),
     );
     const capability = generatedEncounterSupportForProjectEvaluationAssembly(assembly, phase);
-    expect(
-      capability?.assess({
-        kind: 'generated',
-        waveCount: 1,
-        waves: [{ waveIndex: 1, typeKeys: ['Guard', 'Brawler'] }],
-      }).supported,
-    ).toBe(true);
+    expect(capability?.initialize()).toBeDefined();
     expect(customization(replace(project, null))).toBeUndefined();
   });
 
@@ -132,7 +125,9 @@ describe('generated customization publication', () => {
     project = replace(project, {
       kind: 'generated',
       waveCount: 1,
-      waves: [{ waveIndex: 1, typeKeys: ['Guard_Elite', 'Brawler'] }],
+      waves: [
+        { waveIndex: 1, typeKeys: ['Guard_Elite', 'Brawler'], allocations: { Guard_Elite: 87.5 } },
+      ],
       fangs: { typeKey: 'Guard_Elite', perkKeys: ['Blink'] },
     });
     expect(customization(project)).toContainEqual(
@@ -187,14 +182,14 @@ describe('generated customization publication', () => {
       kind: 'ReplaceEncounterCustomization',
       phase: trialPhase,
       decisionKey: 'generatedComposition',
-      value: { kind: 'generated', waveCount: 2, highlightKey: 'Guard' },
+      value: initialized(project, trialPhase),
     });
     const plan = publish(project);
     expect(
       plan.occurrences.find((room) => room.id === trialId)?.overview.encounterPhases[0],
     ).toMatchObject({
       encounterKey: 'DevotionTestF',
-      customization: [{ kind: 'generated', waveCount: 2, highlight: { nativeId: 'Guard' } }],
+      customization: [expect.objectContaining({ kind: 'generated', waves: expect.any(Array) })],
     });
   });
 
@@ -210,11 +205,17 @@ describe('generated customization publication', () => {
       { kind: 'occurrence', occurrenceId },
       'Cage02',
     );
-    const project = applyProjectCommand(createGoldenFGHIProject(), catalog, {
+    const base = createGoldenFGHIProject();
+    const project = applyProjectCommand(base, catalog, {
       kind: 'ReplaceEncounterCustomization',
       phase: cage1,
       decisionKey: 'generatedComposition',
-      value: { kind: 'generated', waves: [{ waveIndex: 1, typeKeys: ['FogEmitter2', 'Lamia'] }] },
+      value: {
+        kind: 'generated',
+        waves: [
+          { waveIndex: 1, typeKeys: ['FogEmitter2', 'Lamia'], allocations: { FogEmitter2: 10 } },
+        ],
+      },
     });
     const assembly = simulateProjectAssembly(catalog, project);
     const support = generatedEncounterSupportForProjectEvaluationAssembly(assembly, cage2);
@@ -222,15 +223,72 @@ describe('generated customization publication', () => {
     expect(
       support?.assess({
         kind: 'generated',
-        waves: [{ waveIndex: 1, typeKeys: ['FogEmitter2', 'Lamia'] }],
-      }).supported,
-    ).toBe(false);
+        waves: [
+          { waveIndex: 1, typeKeys: ['FogEmitter2', 'Lamia'], allocations: { FogEmitter2: 10 } },
+        ],
+      }).issues,
+    ).toContainEqual(expect.objectContaining({ reason: 'enemyUnavailable', key: 'FogEmitter2' }));
     expect(
       support?.assess({
         kind: 'generated',
-        waves: [{ waveIndex: 1, typeKeys: ['Lamia', 'Mourner'] }],
+        waves: [{ waveIndex: 1, typeKeys: ['Lamia', 'Mourner'], allocations: { Lamia: 10 } }],
       }).supported,
     ).toBe(true);
+    const published = publish(project)
+      .occurrences.find((room) => room.id === occurrenceId)
+      ?.overview.encounterPhases.find((entry) => entry.slotKey === 'Cage01')?.customization?.[0];
+    expect(published).toMatchObject({
+      kind: 'generated',
+      waves: [
+        expect.objectContaining({
+          types: expect.arrayContaining([
+            expect.objectContaining({ nativeId: 'FogEmitter2', source: 'addition' }),
+          ]),
+        }),
+      ],
+    });
+  });
+
+  it('publishes and decodes the fixed H template with its native fixed and template entries', () => {
+    const occurrenceId = createOccurrenceId('golden-h-combat05');
+    const cage1 = createEncounterPhaseAddress(
+      createBiomeAddress('Underworld', 'H'),
+      { kind: 'occurrence', occurrenceId },
+      'Cage01',
+    );
+    const selected = applyProjectCommand(createGoldenFGHIProject(), catalog, {
+      kind: 'SelectEncounter',
+      phase: cage1,
+      encounterKey: 'GeneratedH_Treant2',
+    });
+    const project = applyProjectCommand(selected, catalog, {
+      kind: 'ReplaceEncounterCustomization',
+      phase: cage1,
+      decisionKey: 'generatedComposition',
+      value: {
+        kind: 'generated',
+        waveCount: 1,
+        waves: [{ waveIndex: 1, typeKeys: ['FogEmitter2'], allocations: { FogEmitter2: 1 } }],
+      },
+    });
+    const plan = publish(project);
+    const decoded = decodeExecutionPlan(JSON.parse(encodeExecutionPlan(plan)));
+    const published = decoded.occurrences
+      .find((room) => room.id === occurrenceId)
+      ?.overview.encounterPhases.find((entry) => entry.slotKey === 'Cage01')?.customization?.[0];
+    expect(published).toMatchObject({
+      kind: 'generated',
+      waveCount: 1,
+      waves: [
+        {
+          types: [
+            { choiceKey: 'Treant2', nativeId: 'Treant2', source: 'fixed' },
+            { choiceKey: 'FogEmitter2', nativeId: 'FogEmitter2', source: 'template' },
+          ],
+          counts: { Treant2: 1, FogEmitter2: 1 },
+        },
+      ],
+    });
   });
 });
 
@@ -238,45 +296,48 @@ describe('generated execution decoding', () => {
   const value = {
     decisionKey: 'generatedComposition',
     kind: 'generated',
-    waveCount: 3,
-    highlight: { choiceKey: 'Guard', nativeId: 'Guard' },
+    waveCount: 1,
     waves: [
       {
-        waveIndex: 3,
+        waveIndex: 1,
         types: [
-          { choiceKey: 'Guard', nativeId: 'Guard' },
-          { choiceKey: 'Mage', nativeId: 'Mage' },
+          { choiceKey: 'Guard', nativeId: 'Guard', source: 'addition' },
+          { choiceKey: 'Mage', nativeId: 'Mage', source: 'addition' },
         ],
-        allocations: { Guard: 40 },
+        counts: { Guard: 4, Mage: 6 },
       },
     ],
   };
-  it('accepts sparse normalized requests and rejects malformed operands', () => {
+  it('accepts only complete normalized requests and rejects malformed operands', () => {
     expect(generatedEncounter(value, 'test')).toEqual(value);
     expect(
       generatedEncounter(
         {
           ...value,
           fangs: {
-            type: { choiceKey: 'DespairElemental_Elite', nativeId: 'DespairElemental_Elite' },
+            type: { choiceKey: 'Guard', nativeId: 'Guard' },
             perks: [],
           },
         },
         'test',
       ),
-    ).toMatchObject({ fangs: { type: { nativeId: 'DespairElemental_Elite' }, perks: [] } });
+    ).toMatchObject({ fangs: { type: { nativeId: 'Guard' }, perks: [] } });
     for (const malformed of [
       { ...value, waveCount: 6 },
-      { ...value, waveCount: 1 },
       { ...value, baseRoll: 10001 },
       { ...value, unsupported: true },
       { ...value, waves: [value.waves[0], value.waves[0]] },
-      ...[null, { Guard: -1 }, { Guard: Number.NaN }, { Unknown: 1 }].map((allocations) => ({
+      ...[null, { Guard: -1 }, { Guard: Number.NaN }, { Unknown: 1 }].map((counts) => ({
         ...value,
-        waves: [{ ...value.waves[0], allocations }],
+        waves: [{ ...value.waves[0], counts }],
       })),
       { ...value, waves: [{ ...value.waves[0], waveIndex: 4 }] },
-      { ...value, waves: [{ ...value.waves[0], types: [...value.waves[0]!.types].reverse() }] },
+      {
+        ...value,
+        waves: [
+          { ...value.waves[0], types: [value.waves[0]!.types[0]!, value.waves[0]!.types[0]!] },
+        ],
+      },
     ])
       expect(() => generatedEncounter(malformed, 'test')).toThrow();
   });

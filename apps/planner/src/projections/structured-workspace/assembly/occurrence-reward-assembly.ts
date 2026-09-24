@@ -1,5 +1,8 @@
 import type { ResolvedRoutePosition } from '@run-planner/engine/authored-project';
-import { generatedEnemyLabel } from '../interactions/generated-encounter-projection';
+import {
+  generatedEnemyLabel,
+  projectGeneratedEncounterWarnings,
+} from '../interactions/generated-encounter-projection';
 import type {
   WorkspaceAcquisitionConversionControl,
   WorkspaceLevelResolutionControl,
@@ -861,6 +864,10 @@ export function activeEncounterPhasesForOwner(
                       }),
                   selection: Object.freeze({
                     kind: 'generated' as const,
+                    warnings: projectGeneratedEncounterWarnings(
+                      decision.value?.kind === 'generated' ? decision.value : undefined,
+                      decision.selection.choices,
+                    ),
                     choices: Object.freeze(
                       decision.selection.choices.map((choice) =>
                         Object.freeze({

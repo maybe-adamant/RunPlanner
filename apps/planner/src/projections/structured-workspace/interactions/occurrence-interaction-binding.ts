@@ -544,7 +544,6 @@ export function bindOccurrenceLocalInteractions(
                     fangs:
                       | { readonly typeKey: string; readonly perkKeys: readonly string[] }
                       | undefined,
-                    includeDefault = true,
                   ) =>
                     projectGeneratedFangsDraft(
                       generatedCapability.assess(
@@ -568,7 +567,6 @@ export function bindOccurrenceLocalInteractions(
                       fangs,
                       generatedLabels,
                       generatedSelection.fangs?.perks ?? {},
-                      includeDefault,
                     );
             encounterCustomizations.set(
               key,
@@ -590,6 +588,9 @@ export function bindOccurrenceLocalInteractions(
                     }),
                   }),
                 ...(generatedAssessment === undefined ? {} : { generatedAssessment }),
+                ...(generatedDecision?.value === undefined && generatedCapability !== undefined
+                  ? { initializeGenerated: generatedCapability.initialize }
+                  : {}),
                 ...(generatedHighlightPicker === undefined ? {} : { generatedHighlightPicker }),
                 ...(generatedWaveDraftFor === undefined ? {} : { generatedWaveDraftFor }),
                 ...(generatedFangsDraftFor === undefined ? {} : { generatedFangsDraftFor }),

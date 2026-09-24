@@ -16,15 +16,18 @@ export interface EncounterGenerationContext {
 }
 
 export interface GeneratedEncounterOperands {
+  /** A published generated encounter is a complete installation request. */
   readonly baseRoll?: number;
-  readonly waveCount?: number;
+  readonly waveCount: number;
   readonly highlightKey?: string;
   readonly fangs?: { readonly typeKey: string; readonly perkKeys: readonly string[] };
-  readonly waves?: readonly {
+  readonly waves: readonly {
     readonly waveIndex: number;
-    /** Complete generated roster, including highlight, excluding fixed spawns. */
+    /** Complete native roster, including fixed template entries. */
     readonly typeKeys: readonly string[];
-    readonly allocations?: Readonly<Record<string, number>>;
+    readonly sources: Readonly<Record<string, 'fixed' | 'template' | 'highlight' | 'addition'>>;
+    /** Exact native TotalCount requests, in native spawn order. */
+    readonly counts: Readonly<Record<string, number>>;
   }[];
 }
 
@@ -32,7 +35,7 @@ export interface GeneratedEncounterAssessment {
   readonly supported: boolean;
   readonly issues: readonly GeneratedEncounterIssue[];
   readonly effectiveWaveCount?: number;
-  readonly composition: 'active' | 'nativeWaveCount' | 'nativeHighlight';
+  readonly composition: 'active' | 'missingWaveCount' | 'missingHighlight';
   readonly eligibleHighlightKeys: readonly string[];
   readonly fangs?: {
     readonly rank: number;
@@ -81,6 +84,11 @@ export interface GeneratedEncounterAssessment {
 }
 
 export type GeneratedEncounterIssue =
+  | {
+      readonly reason: 'required';
+      readonly field: 'waveCount' | 'baseRoll' | 'highlight' | 'wave' | 'allocations';
+      readonly waveIndex?: number;
+    }
   | { readonly reason: 'baseRoll'; readonly actual: number }
   | {
       readonly reason: 'waveCount';
@@ -88,7 +96,6 @@ export type GeneratedEncounterIssue =
       readonly allowed: { readonly min: number; readonly max: number };
     }
   | { readonly reason: 'highlight'; readonly key: string }
-  | { readonly reason: 'waveOutsideCount'; readonly waveIndex: number; readonly allowed: number }
   | {
       readonly reason: 'enemyUnavailable';
       readonly waveIndex: number;
@@ -155,9 +162,13 @@ export function assessGeneratedEncounter(
   const base = policy.budget.base;
   const sampledBudgetKeys = (generated: readonly string[]) =>
     generated.filter((_key, index) => policy.fixedEnemies.length + index + 1 !== generated.length);
+  // A fixed budget has no authored base-roll contact. Preserve a retained
+  // value for a later context without making the currently fixed policy
+  // impossible to repair through the only whole-customization reset.
   if (
     selectedBase !== undefined &&
-    (typeof base === 'number' || selectedBase < base.min || selectedBase > base.max)
+    typeof base !== 'number' &&
+    (selectedBase < base.min || selectedBase > base.max)
   )
     issues.push({ reason: 'baseRoll', actual: selectedBase });
   const budget =
@@ -192,7 +203,17 @@ export function assessGeneratedEncounter(
                   ),
                 ),
               });
-  const previewFor = (waveIndex: number, generated: readonly string[]) => {
+  const previewFor = (
+    waveIndex: number,
+    generated: readonly string[],
+  ):
+    | readonly {
+        readonly key: string;
+        readonly requested?: number;
+        readonly effective?: number;
+        readonly count?: number;
+      }[]
+    | undefined => {
     if (budget?.kind !== 'exact') return undefined;
     const waveBudget = (budget.waveBudgets as readonly number[])[waveIndex - 1];
     if (waveBudget === undefined) return undefined;
@@ -286,9 +307,9 @@ export function assessGeneratedEncounter(
     issues.push({ reason: 'highlight', key: authored.highlightKey });
   const composition =
     waveCount === undefined
-      ? 'nativeWaveCount'
+      ? 'missingWaveCount'
       : usesHighlight && authored.highlightKey === undefined
-        ? 'nativeHighlight'
+        ? 'missingHighlight'
         : 'active';
   const waveDomains: {
     waveIndex: number;
@@ -298,16 +319,17 @@ export function assessGeneratedEncounter(
     exhausted: boolean;
     eligibleKeysByPosition: readonly (readonly string[])[];
   }[] = [];
-  const waves: NonNullable<GeneratedEncounterOperands['waves']>[number][] = [];
+  const waves: {
+    readonly waveIndex: number;
+    readonly typeKeys: readonly string[];
+    readonly allocations?: Readonly<Record<string, number>>;
+  }[] = [];
   if (
     composition === 'active' &&
     waveCount !== undefined &&
     (!usesHighlight || highlight !== undefined)
   ) {
     if (usesHighlight && highlight !== undefined) encounterBlacklist.add(highlight.key);
-    for (const row of authored.waves ?? [])
-      if (row.waveIndex > waveCount)
-        issues.push({ reason: 'waveOutsideCount', waveIndex: row.waveIndex, allowed: waveCount });
     for (let waveIndex = 1; waveIndex <= waveCount; waveIndex++) {
       const row = authored.waves?.find((wave) => wave.waveIndex === waveIndex);
       const max = Math.floor(
@@ -456,20 +478,90 @@ export function assessGeneratedEncounter(
     fangs.issue !== 'blocked'
   )
     issues.push({ reason: 'fangs', issue: fangs.issue });
+  if (waveCount === undefined) issues.push({ reason: 'required', field: 'waveCount' });
+  if (typeof base !== 'number' && selectedBase === undefined)
+    issues.push({ reason: 'required', field: 'baseRoll' });
+  if (usesHighlight && authored.highlightKey === undefined)
+    issues.push({ reason: 'required', field: 'highlight' });
+  for (const wave of waveDomains) {
+    const row = authored.waves?.find((entry) => entry.waveIndex === wave.waveIndex);
+    if (row === undefined)
+      issues.push({ reason: 'required', field: 'wave', waveIndex: wave.waveIndex });
+    else {
+      const keys = [
+        ...(usesHighlight && highlight !== undefined ? [highlight.key] : []),
+        ...row.typeKeys,
+      ];
+      if (sampledBudgetKeys(keys).some((key) => row.allocations?.[key] === undefined))
+        issues.push({ reason: 'required', field: 'allocations', waveIndex: wave.waveIndex });
+    }
+  }
+  if (
+    fangs.active &&
+    !policy.blockFangsAttributes &&
+    fangs.eligibleTypeKeys.length > 0 &&
+    authored.fangs === undefined
+  )
+    issues.push({ reason: 'fangs', issue: 'incomplete' });
   const supported = issues.length === 0;
   // Fangs is an independent child of the generated composition: a retained
   // stale target must not make its waves or budget impossible to repair.
-  const compositionSupported = issues.every((issue) => issue.reason === 'fangs');
+  const compositionSupported = issues.every(
+    (issue) => issue.reason === 'fangs' || issue.reason === 'required',
+  );
+  const completeCounts: (
+    | {
+        readonly waveIndex: number;
+        readonly typeKeys: readonly string[];
+        readonly sources: Readonly<Record<string, 'fixed' | 'template' | 'highlight' | 'addition'>>;
+        readonly counts: Readonly<Record<string, number>>;
+      }
+    | undefined
+  )[] = waves.map((wave) => {
+    const preview = previewFor(wave.waveIndex, wave.typeKeys);
+    if (preview === undefined || preview.some((entry) => entry.count === undefined))
+      return undefined;
+    return Object.freeze({
+      waveIndex: wave.waveIndex,
+      typeKeys: Object.freeze(preview.map((entry) => entry.key)),
+      sources: Object.freeze(
+        Object.fromEntries(
+          preview.map(
+            (entry) =>
+              [
+                entry.key,
+                policy.fixedEnemies.some((fixed) => fixed.key === entry.key)
+                  ? 'fixed'
+                  : usesHighlight && entry.key === highlight?.key
+                    ? 'highlight'
+                    : policy.fixedEnemies.length > 0
+                      ? 'template'
+                      : 'addition',
+              ] as const,
+          ),
+        ),
+      ),
+      counts: Object.freeze(Object.fromEntries(preview.map((entry) => [entry.key, entry.count!]))),
+    });
+  });
   const operands: GeneratedEncounterOperands = Object.freeze({
-    ...(authored.baseRoll === undefined ? {} : { baseRoll: authored.baseRoll }),
-    ...(authored.waveCount === undefined ? {} : { waveCount: authored.waveCount }),
+    ...(typeof base === 'number' || authored.baseRoll === undefined
+      ? {}
+      : { baseRoll: authored.baseRoll }),
+    // Fixed wave declarations are just as concrete at installation time.
+    waveCount: waveCount ?? 0,
     ...(authored.highlightKey === undefined || !possibleHighlight || waveCount === 1
       ? {}
       : { highlightKey: authored.highlightKey }),
-    ...(authored.fangs === undefined || !fangs.active || fangs.issue !== undefined
+    ...(authored.fangs === undefined ||
+    !fangs.active ||
+    fangs.eligibleTypeKeys.length === 0 ||
+    fangs.issue !== undefined
       ? {}
       : { fangs: authored.fangs }),
-    ...(waves.length === 0 ? {} : { waves: Object.freeze(waves) }),
+    waves: Object.freeze(
+      completeCounts.filter((wave): wave is NonNullable<typeof wave> => wave !== undefined),
+    ),
   });
   return Object.freeze({
     supported,
@@ -509,7 +601,12 @@ export function assessGeneratedEncounter(
         });
       }),
     ),
-    ...(compositionSupported && Object.keys(operands).length !== 0 ? { operands } : {}),
+    ...(supported &&
+    waveCount !== undefined &&
+    completeCounts.length === waveCount &&
+    completeCounts.every((wave) => wave !== undefined)
+      ? { operands }
+      : {}),
     knownRunBlacklistAdditions: Object.freeze(compositionSupported ? [...knownAdditions] : []),
     ...(typeof base === 'number'
       ? {}
@@ -524,4 +621,104 @@ export function assessGeneratedEncounter(
         }),
     ...(budget === undefined ? {} : { budget }),
   });
+}
+
+/** Construct only on explicit Customize, using the same ordered candidate domains
+ * and final validator as authoring. The finite wave/slot tree backtracks when a
+ * locally legal prefix strands a later wave. */
+export function initializeGeneratedEncounter(
+  policy: GeneratedEncounterSelection,
+  context: EncounterGenerationContext,
+): AuthoredGeneratedEncounterCustomization | undefined {
+  const assess = (value: AuthoredGeneratedEncounterCustomization) =>
+    assessGeneratedEncounter(policy, value, context);
+  const finish = (
+    value: AuthoredGeneratedEncounterCustomization,
+  ): AuthoredGeneratedEncounterCustomization | undefined => {
+    const assessment = assess(value);
+    const budgeted = {
+      ...value,
+      waves: value.waves!.map((wave) => {
+        const allocations = assessment.waves.find(
+          (entry) => entry.waveIndex === wave.waveIndex,
+        )?.equalAllocations;
+        return {
+          ...wave,
+          ...(allocations === undefined || Object.keys(allocations).length === 0
+            ? {}
+            : { allocations }),
+        };
+      }),
+    };
+    const result = assess(budgeted);
+    if (result.supported && result.operands !== undefined) return budgeted;
+    if (!result.fangs?.active || policy.blockFangsAttributes) return undefined;
+    for (const typeKey of result.fangs.eligibleTypeKeys) {
+      let selected = { ...budgeted, fangs: { typeKey, perkKeys: [] as string[] } };
+      for (let count = 0; count <= 2; count++) {
+        const next = assess(selected);
+        if (next.supported && next.operands !== undefined) return selected;
+        const perk = next.fangs?.eligiblePerkKeys[0];
+        if (perk === undefined) break;
+        selected = {
+          ...selected,
+          fangs: { typeKey, perkKeys: [...selected.fangs.perkKeys, perk] },
+        };
+      }
+    }
+    return undefined;
+  };
+  const visit = (
+    value: AuthoredGeneratedEncounterCustomization,
+    waveIndex: number,
+  ): AuthoredGeneratedEncounterCustomization | undefined => {
+    if (waveIndex > value.waveCount!) return finish(value);
+    const row = value.waves?.find((entry) => entry.waveIndex === waveIndex);
+    if (row === undefined)
+      return visit(
+        {
+          ...value,
+          waves: [...(value.waves ?? []), { waveIndex, typeKeys: [] }],
+        },
+        waveIndex,
+      );
+    const assessment = assess(value);
+    const wave = assessment.waves.find((entry) => entry.waveIndex === waveIndex);
+    if (wave === undefined) return undefined;
+    if (row.typeKeys.length >= wave.additionalTypeCount.min || wave.exhausted) {
+      const result = visit(value, waveIndex + 1);
+      if (result !== undefined) return result;
+    }
+    if (row.typeKeys.length >= wave.additionalTypeCount.max) return undefined;
+    for (const key of wave.eligibleKeysByPosition[row.typeKeys.length] ?? []) {
+      const result = visit(
+        {
+          ...value,
+          waves: value.waves!.map((entry) =>
+            entry === row ? { ...entry, typeKeys: [...entry.typeKeys, key] } : entry,
+          ),
+        },
+        waveIndex,
+      );
+      if (result !== undefined) return result;
+    }
+    return undefined;
+  };
+  for (let waveCount = policy.waveCount.min; waveCount <= policy.waveCount.max; waveCount++) {
+    const base: AuthoredGeneratedEncounterCustomization = {
+      kind: 'generated',
+      waveCount,
+      ...(typeof policy.budget.base === 'number' ? {} : { baseRoll: policy.budget.base.min }),
+    };
+    if (waveCount === 1) {
+      const result = visit(base, 1);
+      if (result !== undefined) return result;
+    } else {
+      for (const highlightKey of assess(base).eligibleHighlightKeys) {
+        const result = visit({ ...base, highlightKey }, 1);
+        if (result !== undefined) return result;
+      }
+    }
+  }
+  return undefined;
 }

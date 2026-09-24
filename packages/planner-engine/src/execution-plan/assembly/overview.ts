@@ -706,7 +706,7 @@ function executionEncounterCustomization(
           decisionKey: decision.key,
           kind: 'generated',
           ...(operands.baseRoll === undefined ? {} : { baseRoll: operands.baseRoll }),
-          ...(operands.waveCount === undefined ? {} : { waveCount: operands.waveCount }),
+          waveCount: operands.waveCount,
           ...(operands.highlightKey === undefined
             ? {}
             : { highlight: choice(operands.highlightKey) }),
@@ -718,30 +718,26 @@ function executionEncounterCustomization(
                   perks: Object.freeze(operands.fangs.perkKeys),
                 }),
               }),
-          ...(operands.waves === undefined
-            ? {}
-            : {
-                waves: Object.freeze(
-                  operands.waves.map((wave) =>
-                    Object.freeze({
-                      waveIndex: wave.waveIndex,
-                      types: Object.freeze(wave.typeKeys.map(choice)),
-                      ...(wave.allocations === undefined
-                        ? {}
-                        : {
-                            allocations: Object.freeze(
-                              Object.fromEntries(
-                                Object.entries(wave.allocations).map(([key, allocation]) => [
-                                  choice(key).nativeId,
-                                  allocation,
-                                ]),
-                              ),
-                            ),
-                          }),
-                    }),
+          waves: Object.freeze(
+            operands.waves.map((wave) =>
+              Object.freeze({
+                waveIndex: wave.waveIndex,
+                types: Object.freeze(
+                  wave.typeKeys.map((key) =>
+                    Object.freeze({ ...choice(key), source: wave.sources[key]! }),
+                  ),
+                ),
+                counts: Object.freeze(
+                  Object.fromEntries(
+                    Object.entries(wave.counts).map(([key, count]) => [
+                      choice(key).nativeId,
+                      count,
+                    ]),
                   ),
                 ),
               }),
+            ),
+          ),
         }),
       );
       continue;

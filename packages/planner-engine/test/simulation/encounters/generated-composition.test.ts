@@ -1,7 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { catalog } from '@run-planner/hades2-catalog';
 import type { AuthoredGeneratedEncounterCustomization } from '../../../src/authored-project/model';
-import { assessGeneratedEncounter } from '../../../src/simulation/encounters/generation';
+import {
+  assessGeneratedEncounter,
+  initializeGeneratedEncounter,
+} from '../../../src/simulation/encounters/generation';
 
 function policy(key: string) {
   const value = catalog.encounterDefinitions.byKey[key]?.customization?.find(
@@ -25,6 +28,54 @@ function assess(
 }
 
 describe('native generated composition possibility', () => {
+  it('initializes every supported profile into a complete publishable composition', () => {
+    const profiles = Object.entries(catalog.encounterDefinitions.byKey).flatMap(
+      ([definitionKey, definition]) =>
+        (definition.customization ?? []).flatMap((decision) =>
+          decision.selection.kind === 'generated'
+            ? [{ definitionKey, policy: decision.selection }]
+            : [],
+        ),
+    );
+    expect(profiles).toHaveLength(39);
+    for (const { definitionKey, policy: profile } of profiles) {
+      const context = {
+        biomeDepthCache: 8,
+        biomeEncounterDepth: 8,
+        knownRunBlacklist: [],
+      };
+      const value = initializeGeneratedEncounter(profile, context);
+      expect(value, definitionKey).toBeDefined();
+      const assessment = assessGeneratedEncounter(profile, value!, context);
+      expect(assessment.operands, definitionKey).toBeDefined();
+      expect(assessment.operands!.waves).toHaveLength(assessment.operands!.waveCount);
+      expect(
+        assessment.operands!.waves.every(
+          (wave) => Object.keys(wave.counts).length === wave.typeKeys.length,
+        ),
+      ).toBe(true);
+    }
+  });
+  it('bounds backtracking at native pool exhaustion without fabricating a dead slot', () => {
+    const source = policy('GeneratedF');
+    const onlyChoice = source.choices.find((choice) => !choice.blockSolo)!;
+    const constrained = {
+      ...source,
+      waveCount: { min: 1, max: 1 },
+      types: { ...source.types, min: 2, max: 2, depthRamp: 0, cap: 2 },
+      choices: [onlyChoice],
+    };
+    const context = { biomeDepthCache: 8, biomeEncounterDepth: 8, knownRunBlacklist: [] };
+    const value = initializeGeneratedEncounter(constrained, context);
+    expect(value).toMatchObject({
+      waveCount: 1,
+      waves: [{ waveIndex: 1, typeKeys: [onlyChoice.key] }],
+    });
+    expect(assessGeneratedEncounter(constrained, value!, context)).toMatchObject({
+      supported: true,
+      operands: { waves: [{ typeKeys: [onlyChoice.key] }] },
+    });
+  });
   it('classifies editable budget members independently of the native remainder', () => {
     expect(
       assess('GeneratedF', {
@@ -79,7 +130,7 @@ describe('native generated composition possibility', () => {
     expect((result.budget?.waveBudgets as readonly number[])[2]).toBeCloseTo(115.5);
   });
 
-  it('keeps P native-random until an explicit base roll is selected', () => {
+  it('keeps P incomplete until an explicit base roll resolves its budget', () => {
     expect(assess('GeneratedP_PreCombat', {}).budget).toMatchObject({
       kind: 'range',
     });
@@ -98,7 +149,7 @@ describe('native generated composition possibility', () => {
     expect(assess('GeneratedF', {}).budgetDomain).toBeUndefined();
   });
 
-  it('previews ordered explicit slices and leaves a default sampled branch native', () => {
+  it('previews ordered explicit slices and leaves incomplete samples unresolved', () => {
     const explicit = assess('GeneratedF', {
       waveCount: 1,
       waves: [{ waveIndex: 1, typeKeys: ['Guard', 'Brawler'], allocations: { Guard: 70 } }],
@@ -163,7 +214,7 @@ describe('native generated composition possibility', () => {
       { key: 'FogEmitter2' },
     ]);
   });
-  it('keeps independent overrides and sparse dormant rows', () => {
+  it('retains partial rows while reporting every missing completion field', () => {
     const row = {
       waveIndex: 3,
       typeKeys: ['Brawler', 'Mage'],
@@ -172,33 +223,25 @@ describe('native generated composition possibility', () => {
     expect(assess('GeneratedF', {}).operands).toBeUndefined();
     const dormant = assess('GeneratedF', { waves: [row] });
     expect(dormant).toMatchObject({
-      supported: true,
-      composition: 'nativeWaveCount',
+      supported: false,
+      composition: 'missingWaveCount',
       knownRunBlacklistAdditions: [],
     });
     expect(dormant.operands).toBeUndefined();
     expect(assess('GeneratedF', { waveCount: 3, waves: [row] })).toMatchObject({
-      supported: true,
-      composition: 'nativeHighlight',
-      operands: { waveCount: 3 },
+      supported: false,
+      composition: 'missingHighlight',
     });
-    expect(assess('GeneratedF', { highlightKey: 'Guard', waves: [row] })).toMatchObject({
-      supported: true,
-      operands: { highlightKey: 'Guard' },
+    expect(assess('GeneratedF', { highlightKey: 'Guard', waves: [row] }).issues).toContainEqual({
+      reason: 'required',
+      field: 'waveCount',
     });
     expect(
-      assess('GeneratedF', { waveCount: 3, highlightKey: 'Guard', waves: [row] }),
-    ).toMatchObject({
-      supported: true,
-      operands: {
-        waveCount: 3,
-        highlightKey: 'Guard',
-        waves: [{ waveIndex: 3, typeKeys: ['Guard', 'Brawler', 'Mage'] }],
-      },
-    });
+      assess('GeneratedF', { waveCount: 3, highlightKey: 'Guard', waves: [row] }).operands,
+    ).toBeUndefined();
     expect(
       assess('GeneratedF', { waveCount: 2, highlightKey: 'Guard', waves: [row] }).issues,
-    ).toContainEqual({ reason: 'waveOutsideCount', waveIndex: 3, allowed: 2 });
+    ).toContainEqual({ reason: 'required', field: 'wave', waveIndex: 1 });
   });
 
   it('exposes only reachable fixed-capacity slots and marks native pool exhaustion', () => {
@@ -278,19 +321,19 @@ describe('native generated composition possibility', () => {
       { min: 3, max: 3 },
       { min: 3, max: 3 },
     ]);
-    expect(assess('GeneratedF', { waveCount: 1, highlightKey: 'Guard' }).operands).toEqual({
-      waveCount: 1,
-    });
+    expect(assess('GeneratedF', { waveCount: 1, highlightKey: 'Guard' }).operands).toBeUndefined();
   });
 
   it('checks seed exclusions, elite limits, solo restrictions and preparation depth', () => {
-    expect(assess('GeneratedF', { waveCount: 2, highlightKey: 'Guard_Elite' }, 2).supported).toBe(
-      false,
+    expect(
+      assess('GeneratedF', { waveCount: 2, highlightKey: 'Guard_Elite' }, 2).issues,
+    ).toContainEqual(expect.objectContaining({ reason: 'highlight' }));
+    expect(
+      assess('GeneratedF', { waveCount: 2, highlightKey: 'Guard_Elite' }, 3).issues,
+    ).not.toContainEqual(expect.objectContaining({ reason: 'highlight' }));
+    expect(assess('ArtemisCombatF', { highlightKey: 'Guard_Elite' }).issues).toContainEqual(
+      expect.objectContaining({ reason: 'highlight' }),
     );
-    expect(assess('GeneratedF', { waveCount: 2, highlightKey: 'Guard_Elite' }, 3).supported).toBe(
-      true,
-    );
-    expect(assess('ArtemisCombatF', { highlightKey: 'Guard_Elite' }).supported).toBe(false);
     expect(
       assess('GeneratedF', {
         waveCount: 2,
@@ -313,8 +356,10 @@ describe('native generated composition possibility', () => {
   it('applies cross-wave counterpart exclusion but does not invent prior native rosters', () => {
     const last = { waveIndex: 3, typeKeys: ['Brawler_Elite', 'Mage'] };
     expect(
-      assess('GeneratedF', { waveCount: 3, highlightKey: 'Guard', waves: [last] }).supported,
-    ).toBe(true);
+      assess('GeneratedF', { waveCount: 3, highlightKey: 'Guard', waves: [last] }).issues.some(
+        (issue) => issue.reason === 'enemyUnavailable',
+      ),
+    ).toBe(false);
     expect(
       assess('GeneratedF', {
         waveCount: 3,
@@ -330,8 +375,8 @@ describe('native generated composition possibility', () => {
           { waveIndex: 2, typeKeys: ['Brawler'] },
           { waveIndex: 3, typeKeys: ['Brawler', 'Mage'] },
         ],
-      }).supported,
-    ).toBe(true);
+      }).issues.some((issue) => issue.reason === 'enemyUnavailable'),
+    ).toBe(false);
   });
 
   it('prunes P groups after additions rather than rejecting a native-valid seed plus first filler', () => {
@@ -340,7 +385,9 @@ describe('native generated composition possibility', () => {
       highlightKey: 'SentryBot',
       waves: [{ waveIndex: 2, typeKeys: ['AutomatonBeamer'] }],
     };
-    expect(assess('GeneratedP', value).supported).toBe(true);
+    expect(
+      assess('GeneratedP', value).issues.some((issue) => issue.reason === 'enemyUnavailable'),
+    ).toBe(false);
     const third = assess('GeneratedP_Large', {
       highlightKey: 'SentryBot',
       waves: [{ waveIndex: 3, typeKeys: ['AutomatonBeamer', 'AutomatonEnforcer'] }],
@@ -350,35 +397,48 @@ describe('native generated composition possibility', () => {
   });
 
   it('preserves fixed H elite seeds and their separate placeholder semantics', () => {
-    const row = { waveIndex: 1, typeKeys: ['FogEmitter2'] };
+    const row = { waveIndex: 1, typeKeys: ['FogEmitter2'], allocations: { FogEmitter2: 1 } };
     const mixed = assess('GeneratedH_Treant2', { waves: [row] });
-    expect(mixed).toMatchObject({
-      supported: true,
-      knownRunBlacklistAdditions: [],
-      operands: { waves: [row] },
-    });
+    expect(mixed).toMatchObject({ supported: true, knownRunBlacklistAdditions: [] });
+    expect(mixed.operands?.waves).toEqual([
+      expect.objectContaining({
+        typeKeys: ['Treant2', 'FogEmitter2'],
+        sources: { Treant2: 'fixed', FogEmitter2: 'template' },
+        counts: { Treant2: 1, FogEmitter2: 1 },
+      }),
+    ]);
     expect(mixed.waves[0]?.eligibleKeysByPosition[0]).not.toContain('Lamia_Elite');
     expect(
       assess('GeneratedH_Treant2', { waves: [{ waveIndex: 1, typeKeys: ['Lamia_Elite'] }] })
         .supported,
     ).toBe(false);
-    expect(
-      assess('GeneratedH_Treant2', { waves: [{ ...row, allocations: { FogEmitter2: 1 } }] })
-        .supported,
-    ).toBe(true);
+    expect(assess('GeneratedH_Treant2', { waves: [row] }).operands?.waves[0]?.counts).toEqual({
+      Treant2: 1,
+      FogEmitter2: 1,
+    });
     expect(mixed.waves[0]?.countPreview).toEqual([
       { key: 'Treant2', count: 1 },
-      { key: 'FogEmitter2' },
+      { key: 'FogEmitter2', requested: 1, effective: 80, count: 1 },
     ]);
   });
 
   it('records known run blacklist consequences only for valid ordinary additions', () => {
-    const value = { waves: [{ waveIndex: 1, typeKeys: ['FogEmitter2', 'Lamia', 'Mourner'] }] };
+    const value = {
+      waves: [
+        {
+          waveIndex: 1,
+          typeKeys: ['FogEmitter2', 'Lamia', 'Mourner'],
+          allocations: { FogEmitter2: 10, Lamia: 10 },
+        },
+      ],
+    };
     expect(assess('GeneratedH', value)).toMatchObject({
       supported: true,
       knownRunBlacklistAdditions: ['FogEmitter2'],
     });
-    expect(assess('GeneratedH', value, 8, 8, ['FogEmitter2']).supported).toBe(false);
+    expect(assess('GeneratedH', value, 8, 8, ['FogEmitter2']).issues).toContainEqual(
+      expect.objectContaining({ reason: 'enemyUnavailable', key: 'FogEmitter2' }),
+    );
     expect(
       assess('GeneratedH', { waves: [{ waveIndex: 1, typeKeys: ['FogEmitter2'] }] })
         .knownRunBlacklistAdditions,

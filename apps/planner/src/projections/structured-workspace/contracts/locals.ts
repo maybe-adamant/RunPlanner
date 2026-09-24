@@ -1,5 +1,6 @@
 import type {
   AuthoredEncounterCustomization,
+  AuthoredGeneratedEncounterCustomization,
   AuthoredNemesisRandomEventKind,
   AuthoredNemesisRandomEventOutcome,
   EncounterPhaseAddress,
@@ -100,7 +101,9 @@ export interface WorkspaceEncounterCustomizationInteraction {
    * intent and authored choices. Absent only when context is genuinely unavailable.
    */
   readonly generatedAssessment?: WorkspaceGeneratedEncounterAssessment;
-  /** Contextual generated-highlight domain, including the explicit Default value. */
+  /** Lazily requests the engine-built complete Customize result for this exact reached phase. */
+  readonly initializeGenerated?: () => AuthoredGeneratedEncounterCustomization | undefined;
+  /** Contextual generated-highlight domain for the exact active customization. */
   readonly generatedHighlightPicker?: ContextualPickerModel<string>;
   /**
    * Assesses a local whole-wave draft against this exact phase without
@@ -114,12 +117,10 @@ export interface WorkspaceEncounterCustomizationInteraction {
   /** Engine-backed Fangs target/perk picker products; perks commit only on Finish. */
   readonly generatedFangsDraftFor?: (
     value: { readonly typeKey: string; readonly perkKeys: readonly string[] } | undefined,
-    includeDefault?: boolean,
   ) => WorkspaceGeneratedFangsDraft;
 }
 
 export type WorkspaceGeneratedWaveDraftChoice =
-  | { readonly kind: 'default' }
   | { readonly kind: 'finish' }
   | { readonly kind: 'confirmSeed'; readonly key: string }
   | { readonly kind: 'enemy'; readonly key: string };
@@ -131,7 +132,6 @@ export interface WorkspaceGeneratedWaveDraft {
 }
 
 export type WorkspaceGeneratedFangsDraftChoice =
-  | { readonly kind: 'default' }
   | { readonly kind: 'type'; readonly key: string }
   | { readonly kind: 'perk'; readonly key: string }
   | { readonly kind: 'perkPrefix'; readonly perkKeys: readonly string[] }
@@ -149,7 +149,7 @@ export interface WorkspaceGeneratedEncounterAssessment {
     readonly waveIndex?: number;
     readonly field?: 'baseRoll' | 'waveCount' | 'highlight' | 'fangs';
   }[];
-  readonly composition: 'active' | 'nativeWaveCount' | 'nativeHighlight';
+  readonly composition: 'active' | 'missingWaveCount' | 'missingHighlight';
   readonly budgetDomain?: {
     readonly baseRoll: { readonly min: number; readonly max: number };
     readonly total: { readonly min: number; readonly max: number };
@@ -405,6 +405,7 @@ export type WorkspaceEncounterCustomizationDecision =
   | (WorkspaceEncounterCustomizationDecisionBase & {
       readonly selection: {
         readonly kind: 'generated';
+        readonly warnings: readonly string[];
         readonly choices: readonly {
           readonly key: string;
           readonly label: string;

@@ -467,18 +467,22 @@ export interface ExecutionStartingLoadout {
 export interface ExecutionGeneratedEncounterCustomization {
   readonly decisionKey: string;
   readonly kind: 'generated';
-  readonly waveCount?: number;
+  readonly waveCount: number;
   readonly baseRoll?: number;
   readonly highlight?: { readonly choiceKey: string; readonly nativeId: string };
   readonly fangs?: {
     readonly type: { readonly choiceKey: string; readonly nativeId: string };
     readonly perks: readonly string[];
   };
-  readonly waves?: readonly {
+  readonly waves: readonly {
     readonly waveIndex: number;
-    readonly types: readonly { readonly choiceKey: string; readonly nativeId: string }[];
-    /** Sparse absolute RandomNormal samples keyed by native enemy id. */
-    readonly allocations?: Readonly<Record<string, number>>;
+    readonly types: readonly {
+      readonly choiceKey: string;
+      readonly nativeId: string;
+      readonly source: 'fixed' | 'template' | 'highlight' | 'addition';
+    }[];
+    /** Complete source spawn requests keyed by native enemy id. */
+    readonly counts: Readonly<Record<string, number>>;
   }[];
 }
 

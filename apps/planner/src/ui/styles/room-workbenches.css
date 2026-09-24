@@ -528,6 +528,12 @@
   font-size: 0.88rem;
 }
 
+.encounter-composition-warning {
+  margin: 0;
+  color: #e2b971;
+  font-size: 0.88rem;
+}
+
 .encounter-generated-heading,
 .encounter-generated-wave-heading {
   display: flex;
@@ -631,16 +637,6 @@
   margin-left: auto;
 }
 
-.encounter-adjust-budgets {
-  color: #b9e7b5;
-  border-color: #588153;
-  background: #24362a;
-}
-
-.encounter-adjust-budgets:hover:not(:disabled) {
-  background: #304936;
-}
-
 .encounter-generated-wave-heading {
   flex-wrap: wrap;
   justify-content: flex-start;
@@ -703,7 +699,13 @@
 
 .encounter-budget-table .encounter-budget-input {
   margin-inline: auto;
-  width: min(100%, 3rem);
+  display: inline-flex;
+  align-items: center;
+  white-space: nowrap;
+}
+
+.encounter-budget-table .encounter-budget-input input {
+  width: 3rem;
 }
 
 .encounter-generated-retained {
