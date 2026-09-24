@@ -1,374 +1,395 @@
-# Encounter budget slices, Fangs and Menace
+# Native or fully authored encounter composition
 
-## Status and objective
+## Status, baseline and objective
 
-Gate A implemented against planner base `bdb75893` and executor base `6397f05`;
-targeted validation and independent-review remediation are complete. Gate B is
-implemented against planner `5c8f5282` and executor `4044ec5`, pending the
-parent-orchestrated independent review. Gate C has not started.
+Rewritten after the owner replaced partial overrides with one choice: leave
+generation native, or own the complete generated composition. The product
+direction below is agreed. C0 source investigation now establishes the bounded
+installation path and compatibility disposition. Delivery proceeds as a complete
+pre-Menace conversion across planner/executor, then Menace authoring layered on
+that contract. This revision does not itself implement production changes.
 
-Gate B independent remediation review passed. Full phase closure and live-game
-acceptance remain pending.
+Delivered checkpoints retained as the starting implementation:
 
-Gate A verification: all 2,160 engine tests, 282 catalog tests, 40 migration tests,
-focused application/UI tests, workspace typechecking, application build, lint and
-format checks passed. Executor: all 629 Lua tests and source Luacheck passed.
-All 14 execution fixture mirrors match byte-for-byte; their edits are limited to
-schema/protocol versions. Independent review passed after bounded remediation.
-Full phase closure and live-game acceptance remain pending; these results do not
-close later gates.
+- A: budget/slice replacement and migration, planner `d880956f`, executor
+  `4044ec5`; editor/migration follow-ups through planner `5c8f5282`.
+- B: Fangs declarations, assessment, split Target/Perks UI and steering,
+  planner `fce3d23a`, executor `008f2af`. Independent remediation review passed.
+- A validation included engine/catalog/migration and application checks. B
+  targeted validation: 57 TypeScript tests, typechecks, lint/format checks and
+  632 Lua tests; final split-picker UI rerun: 21 passed. These checkpoint results
+  do not constitute full-phase or live-game acceptance.
 
-Gate A committed: planner `d880956f`, executor `4044ec5`. Gate B's focused
-pre-implementation audit is recorded in
-`docs/investigations/FANGS_PERK_ELIGIBILITY.md`.
+Current delivery uses authored schema 87 and execution protocol 45. GitHub's
+published planner v0.10.0 and executor 0.9.2 still use 86/44 (checked 2026-09-23).
+Keep the previously approved 87/45 transition; do not add another bump. The owner
+explicitly chose to preserve partial choices and repair missing fields, not reset
+customization. Intermediate local publications require republishing.
 
-Gate A editor follow-up: compact budget/wave controls, whole-wave pickers,
-tabbed budget tables and explicit Adjust/Reset Budgets are delivered. Slider
-dragging and numeric typing remain local until commit. Repair coverage includes
-single-enemy remainder, empty retained allocations and invalid base budgets.
-All 74 focused engine/application/UI tests, planner typechecking and targeted
-lint passed. The shipped migration now traverses occurrence-owned encounters.
+The outcome is optional customization with a complete engine-resolved answer
+that the game module installs, rather than a collection of RNG instructions.
+Full ownership means generated composition, not combat execution.
 
-Keep the current optional wave-count, highlight and composition editor, but
-replace relative weights with native difficulty-slice authoring and derived
-counts. Add optional encounter-level Fangs elite-type/perk selection and per-wave,
-per-type Menace target counts for deterministic replacements. Preserve
-native generation and unit setup; this is not an exact final-live-roster editor.
+## Authorities and evidence
 
-The owner explicitly approved one authored schema bump with a shipped migration
-that resets old weights. This supersedes the proposed legacy-weight reader.
-The starting authored schema is 86 and execution protocol is 44; coordinate one
-new version of each for this delivery, not one per subfeature. Confirm these
-bases at implementation start if another task has advanced either authority.
+- `docs/design/SIMULATION_AND_VALIDATION.md`: exact state, explicit products,
+  incomplete/invalid retention, findings and candidate capabilities.
+- `docs/design/AUTHORED_PROJECT_MODEL.md`: commands, encounter ownership and
+  schema-change approval.
+- `docs/design/GAME_INTEGRATION_BOUNDARY.md`: prefer inserting the published
+  answer, then narrow steering; do not recreate native effects.
+- `docs/design/ROOM_LIFECYCLE_MODEL.md`: exact preparation contacts.
+- `docs/investigations/ENEMY_BUDGET_AND_VOWS.md`: native budgets/allocation,
+  Menace inventory and full-ownership installation questions.
+- `docs/investigations/FANGS_PERK_ELIGIBILITY.md`: native elite eligibility,
+  ordered perk pools/exclusions, caps and squad caveats.
+- Source matrices under `docs/audits/rooms-and-routes/`: supported profiles.
 
-## Governing evidence and authorities
+Stable documents still describe the earlier delivered surface in places.
+Replace those owning sections at closure, not prospectively as if this work
+already exists. Keep implementation status in this plan.
 
-- Investigation: `docs/investigations/ENEMY_BUDGET_AND_VOWS.md`.
-- Fangs pool, combination and application audit:
-  `docs/investigations/FANGS_PERK_ELIGIBILITY.md`.
-- Game facts: enemy formation/Fear audit and combat encounter composition matrix
-  under `docs/audits/rooms-and-routes/`.
-- `docs/design/SIMULATION_AND_VALIDATION.md`: exact reached state, candidate
-  capabilities, chronology, retained invalidity and test ownership.
-- `AUTHORED_PROJECT_MODEL.md`: encounter customization and schema approval.
-- `ROOM_LIFECYCLE_MODEL.md`: concrete encounter preparation contacts.
-- `GAME_INTEGRATION_BOUNDARY.md`: phase-owned optional steering and diagnostics.
+## Scope and ownership contract
 
-The existing generated-encounter plan's delivered weights model is superseded
-only for this work's scope. Its pending runtime acceptance is not silently closed.
+Use the existing 39 supported generated policies in combat rooms and supported
+Devotion contacts, including fixed template seeds. Do not extend to scripted
+boss decisions, miniboss-room customization or other encounter families.
 
-## Settled product contract
+| Mode       | Authored meaning                                          | Execution meaning                       |
+| ---------- | --------------------------------------------------------- | --------------------------------------- |
+| Native     | No generated customization payload                        | No generation intervention              |
+| Customized | Concrete choices for every applicable generation decision | Install a complete resolved composition |
 
-### Optional defaults and scope
+There is no third mode for partial native ownership. Incomplete or invalid
+customization remains editable but cannot publish a partial answer. Missing
+active values produce findings, not permission to roll them in game.
+Inapplicable choices are not missing: one wave needs no shared highlight,
+inactive/blocked Fangs needs no assignment, and blocked Menace has no conversion.
+Retained inactive values remain dormant rather than being silently deleted.
 
-Use the existing 39 generated policies in combat rooms and supported Devotion
-contacts. Do not extend to scripted encounters, boss attacks or miniboss rooms.
-No required editing: untouched customization, budgets, allocations, Fangs and Menace
-remain native. Merely opening the dialog creates no choices.
+Native still owns wave timing/events, positioning/pacing, active caps, failed
+spawn retries, unit groups, AI/combat, perk application, summons and later
+scripted replacements. No exact final-live-roster promise, new transactions,
+conformance obligations or customization mismatch.
 
-Keep current wave-count and staged type/highlight selection. Fixed seeds remain
-read-only. The engine owns count preview; neither React nor the executor becomes
-a second authority for authored legality.
+The pre-Menace slice owns the generated wave and Fangs completely and suppresses
+all Menace conversions for customized encounters, including when the vow is active.
+The owner explicitly selected this legal all-failed-roll outcome. Native encounters
+remain untouched. The later Menace slice replaces zero conversion with authored
+conversion outcomes; it does not introduce a partial/native ownership mode.
 
-Random-pool Menace authoring, Return, summons, spawn positions, combat simulation
-and exact final-spawn counts are excluded. Deferred Menace types retain native
-behavior. Failure to realize customization stays diagnostic-only, without new
-transactions, conformance checks or acquisition dependencies.
+## Authoring and initialization
 
-### Wave budget
+Opening the popup remains read-only. An explicit Customize action requests a
+complete legal starting configuration from the engine's exact reached capability.
+The app commits it as one semantic edit. Unavailable context disables creation
+with its coverage reason; do not fabricate predecessor state.
 
-Calculate native encounter difficulty from resolved base, depth axis/ramp,
-modifiers, hard/Dream overrides, effective Hordes and minimum difficulty. Divide
-through native WaveDifficultyPatterns, not equal shares. One/two/three/four
-waves use 100%, 50/50%, 30/15/55%, and 30/10/20/40% respectively.
+Initialize deterministically through existing generation rules, not React policy
+or a second random simulator. Prefer the smallest supported wave count, a concrete
+supported base roll, legal types in catalog order, and the existing equal-budget
+initialization where applicable. Select a legal ordered Fangs combination when
+required; eligible Menace counts start at zero. These are explicit planner defaults,
+not claims about the most likely native result. Composition construction must
+avoid greedy dead ends and validate the complete result through the same evaluator.
 
-- Deterministic wave budget: read-only label.
-- Variable wave budget: slider constrained to reachable native values, with a
-  numeric value and explicit native Default/reset state.
-- The census has one variable profile, GeneratedP_PreCombat: integer base
-  340–500, one wave. All other supported base budgets are deterministic.
-- Store the chosen native base roll at encounter scope; display its resulting
-  wave budget after modifiers. Engine conversion supplies slider bounds/steps
-  and handles clamped duplicate results without treating arbitrary final values
-  as legal base rolls. Do not hardcode P logic into the UI.
-- An omitted variable roll remains native random. Show its budget range; do not
-  seed an average or claim exact counts. Explicit exact slice editing requires
-  selecting that roll first. Previously retained slices remain dormant while
-  this prerequisite is Default, consistent with current customization behavior.
+Reset Customization removes the whole generated value and returns to Native.
+It is the only reset/default control. Remove per-wave resets, Reset/Adjust Budgets,
+variable-budget Default, shared-enemy/wave picker Default and Fangs target Default.
+Customized values are directly editable; there is no inner reset to either native
+behavior or a fresh concrete default. Initial construction still supplies complete
+engine-owned starting values, but does not expose a second reset/repair preset.
 
-### Slice authoring and count preview
+Retain staged enemy pickers, local input/slider drafts, wave tabs and adjacent
+Fangs Target/Perks controls before the tabs. Target selection persists immediately;
+perk prefixes stay transient until Finish. Incomplete required choices stay
+repairable through their ordinary controls, not a native fallback.
 
-Persist nonnegative finite requested allocation samples by enemy identity for
-each authored wave. They replace weights; they are not quantities or percentages.
-Zero is permitted and follows native minimum-one behavior. UI numeric stepping
-may be one without restricting derived budgets to integers.
+Changing composition, wave count or upstream Fear/depth may require new choices.
+Preserve meaningful authorship and report missing/incompatible children. Do not
+silently regenerate the encounter. Customize initializes the whole composition;
+Reset Customization removes it. Both remain atomic Undo entries. Findings keep the exact
+encounter customization launcher as repair destination; never auto-open the popup.
 
-Each sampled branch can be native Default or explicit. Preview exact derived
-counts only where preceding allocation is known; a default random sample must
-not produce fabricated exact downstream counts. A wave may therefore contain
-native and explicit requests without an artificial all-or-nothing finding.
+## Concrete generation model
 
-The engine follows FillEnemyCounts in order:
+### Budget, waves and counts
 
-1. Charge fixed template entries using native TotalCount/CountMax semantics.
-2. Resolve each generated branch as sampled or native remainder.
-3. Clamp a sample to remaining budget, then apply the base-cost floor.
-4. Ceil quantity, apply MaxCount and native redistribution to the earlier
-   uncapped type, and account for consumed difficulty.
-5. Expose requested/effective allocation and the resulting generated counts.
+Retain A's source-validated allocation rules:
 
-There is no sum-to-budget constraint, strict capacity, or minimal-overflow rule.
-Requests above a changed budget follow native clamps; they are not automatically
-invalid or silently rewritten. Native rounding can overshoot and caps can
-underfill. A later capped type can change an earlier count through redistribution;
-render the completed allocation result, not stale sequential row totals.
+- Difficulty consumes exact depth, hard/Dream profile, modifiers, Hordes and
+  minimums. Wave shares are 100%; 50/50%; 30/15/55%; 30/10/20/40%.
+- Fixed budgets are labels. Variable budgets require a concrete supported base
+  roll, selected with the engine-mapped slider. Current variable profile:
+  GeneratedP_PreCombat, integer base 340–500.
+- Every wave has a complete legal composition, with shared highlight when
+  applicable and declaration-owned fixed seeds.
+- Every sampled allocation branch has a finite nonnegative authored request.
+  Remainder branches are derived, not extra required fields.
+- Counts preserve native order, fixed-cost charging, clamping, minimum-one,
+  ceilings, MaxCount and redistribution. No sum-to-budget or minimal-overflow
+  validity rule; fractional budgets are legitimate.
+- H Treant/Screamer templates retain actual array-index semantics: fixed seed
+  first, generated companion second; the companion samples rather than becoming
+  an invented remainder.
 
-Preserve actual native spawn-array order. Ordinary arrays put highlight first,
-then selected types, with the final type receiving the remainder. A one-type
-ordinary wave has no sampled slice to edit. In H Treant/Screamer templates the
-fixed type occupies index 1 and the generated companion index 2, while generated
-count is 1: the companion is sampled, not a remainder. Expose its editable slice
-and the fixed seed read-only. Do not replace this with an intuitive last-row rule.
-
-Count previews describe generated allocation, not later Menace/group/spawn
-transformations. Ordinary Fangs perks do not change this calculation: native
-selection happens later and uses encounter.EliteAttributes, whereas the cost
-helper's optional modifier reads room.EliteAttributes.
+Preview and publication consume the same resolved product. Account for the
+transformation from generated TotalCount to effective spawn requests before
+using a count as the Menace maximum. Any remaining random count input in a
+supported profile needs a concrete source-backed resolution before full ownership
+can be claimed. No estimate may masquerade as an exact answer.
 
 ### Fangs
 
-Add one optional encounter-level selector: choose a native eligible elite type
-present in the authored composition, then one/two distinct compatible perks
-according to effective Fangs rank. Include fixed elite seeds. Same type across
-waves shares one selection; separate encounters/cages remain independent.
+Preserve B's catalog/engine rules: one native IsElite type from the complete
+encounter, deduplicated across waves, including fixed seeds; exactly the effective
+rank's ordered distinct perks unless the remaining legal pool is exhausted.
+Respect encounter/enemy blocking, room-set restrictions and directed exclusions.
+Armor appearance is not IsElite.
 
-Native IsElite, attribute options, bans, mutual exclusions and encounter blocking
-govern candidates. H passive/passive-small block attributes. No supported profile
-has a nondefault elite-type count or forced perk count; do not build arbitrary
-multi-type customization in anticipation of another scope.
+When active, unblocked and a selectable type exists, an assignment is required.
+No eligible type, rank zero or blocked encounter resolves to no assignment.
+A selected type with an empty perk pool follows native exhaustion. Distinguish
+these legitimate empty results from incomplete authorship.
 
-Use native option exhaustion semantics if fewer compatible attributes remain;
-do not create an impossible requirement to select unavailable perks. Preserve
-known choices invalidated by composition/rank changes for explicit repair.
-With Fangs inactive or encounter blocking, retain values dormant and publish no
-override. Selecting a type requires known composition, not speculative native
-random membership. Native Default remains available throughout.
+Publish source-type perk assignments. Preserve native application caps and
+actual-unit-name lookup, including room-level fallback where it exists. Do not
+transfer source perks to differently named Menace replacements or squad members.
+Do not introduce a planner application-cap ledger. Preserve B's exact reached
+state/same-biome suppression handoff.
 
-Use adjacent contextual pickers for Fangs target and perks. The target picker
-persists the selected native elite while retaining any known perks for repair;
-its Default clears the override. The perk picker stays transient, starts a
-fresh ordered prefix and commits it only on Finish. Place both immediately
-before the wave budget tabs, after composition pickers; neither belongs to an
-individual wave panel. The engine supplies candidates and completion rules;
-unavailable choices have readable reasons and enemy/perk badges show native
-caps or squad caveats. No separate per-wave or native-random-perks editor.
+### Menace
 
-Declare the audited pools, native enemy blocks, biome requirements and five
-incompatible pairs in the catalog. Do not interpret a `_Elite` suffix as native
-IsElite, repair `Vacuum` into `Vacuuming`, or borrow squad-member option pools.
-Current catalog IsElite facts already handle the three armored nonelite types.
+With effective Menace enabled, add two aligned rows beneath Count:
 
-Selection remains distinct from application: Fog/Hex/Metallic have native
-room-wide application caps of one. Render that limit in supporting text, not a
-new planner application ledger or selection ban. Squad-key application to child
-units remains a named live-game probe; preserve native keys and explain the
-limitation rather than silently granting perks to children. The adapter must
-leave application caps, final-name lookup and Menace interaction native.
+1. **Replacement**: fixed label for deterministic mappings; an equally sized
+   contextual picker for random-pool sources.
+2. **Converted**: integer zero through the source's effective request count.
 
-### Menace target counts
+No per-cell native Default or probability-derived quota. Both enabled vow ranks
+allow zero through all eligible requests. Blocked/no-destination columns show
+noneditable NA. Hide the rows while the vow is inactive, retaining dormant data.
 
-When effective Menace is enabled, expose a `Menace targets` cell beneath the
-derived count of a type with a deterministic native replacement. Its domain is
-Default or an integer from zero through that type's known effective spawn-request
-count in that wave. There is no probability-derived quota: both enabled ranks
-permit zero through all eligible requests. Default leaves native rolls; explicit
-zero suppresses substitution. Show the mapped replacement as supporting context.
+Include all nine random-pool H identities now: DespairElemental_Elite; normal/elite
+CorruptedShadeSmall, CorruptedShadeMedium and CorruptedShadeLarge; Lycanthrope;
+Treant2. Each picks one replacement per source per wave, shared by all authored
+conversions in that cell. This intentionally selects a subset of possible native
+outcomes, not arbitrary mixtures. Native pool: the 12 BiomeI identities, including
+normal/elite changes. Do not filter it through ordinary composition eligibility.
+It follows the game's biome declarations, not the next Dream-route biome.
 
-Use catalog-owned mapping and enemy/encounter blocking facts. The inventory has
-68 mapped identities, 15 enemy-blocked identities and 22 without destinations.
-Do not expose authoring for the latter two groups, or for encounter-wide blocks.
-Native progression guards remain native; do not manufacture eligibility.
+Preserve the inventory partition: 68 mapped, 9 random, 15 enemy-blocked and 22
+without destinations; encounter blocking wins. Positive random-source conversion
+counts require a selected replacement. Zero needs no replacement but may retain
+one dormant. A later count reduction below Converted creates a finding, not clamping.
 
-The nine random-pool Fields identities remain native and unauthorable in this
-slice: DespairElemental_Elite; normal/elite CorruptedShadeSmall,
-CorruptedShadeMedium and CorruptedShadeLarge; Lycanthrope; and Treant2.
-Their exact inventory and replacement pool stay documented in the investigation.
-They must be revisited explicitly after Menace delivery and before closure;
-deferral is not authorization to add a replacement picker automatically.
+Count source spawn requests, not necessarily final entities: replacements may be
+groups. Resolved products retain source identity/order, generated and effective
+counts, conversion count and target identity. Do not merge different source
+entries merely because they convert into the same enemy.
 
-Target counts require a known effective count. If allocation is unresolved,
-do not invent a maximum; retain dependent settings dormant until their prerequisite
-is restored. If an assessed count falls below a retained target count, produce
-a repairable finding rather than clamp or erase authorship. Inactive Menace
-retains dormant settings and publishes no override.
+Absent Menace settings on an owned encounter resolve deterministically to zero,
+including encounters authored during the pre-Menace slice. Omission never restores
+native rolls. This preserves the earlier complete result when Menace authoring
+is added and does not require users to reauthor an already-owned encounter.
 
-The count refers to eligible native spawn requests, not necessarily final entities:
-a deterministic replacement can be a unit group. Account for any native
-post-allocation count transformation at the owning engine contact before calling
-a displayed count effective; do not equate a budget estimate with spawn capacity.
-Menace does not change the generated difficulty budget or Fangs selection.
-The resulting replacement unit receives native setup; do not transfer original
-type perks onto a differently named replacement.
+## Execution contract and settled contact strategy
 
-## Compatibility and migration
+Prefer installing the complete answer at native preparation contacts. Do not
+replace GenerateEncounter, HandleNextSpawn, ApplyEliteAttribute or combat loops
+wholesale. Do not keep sparse steering as a permanent parallel path.
 
-One explicit migration advances the current authored schema. Walk every authored
-generated customization, including dormant/unpicked retained occurrences, and
-remove only its old wave weights. Preserve project/occurrence identity, topology,
-wave count, highlight, type order and unrelated customization. Missing slices
-mean native allocation; migration creates no new blocker or required edit.
+C0 source traces and raw-function probes support this contact matrix. Integration
+tests must retain these witnesses when implementing the adapter:
 
-Ship the standalone migration script and register the same implementation in
-the app's automatic migration chain. Inform users that custom encounter weights
-were reset, without displaying raw internals. Do not duplicate migration logic
-in React or silently convert weights into guessed slices. Test migration purity,
-unrelated-field preservation, weight-free inputs, dormant owners and normal
-app-load/Save workflows. The migration must not touch unrelated numeric fields.
+| Contact           | Required proof                                                                                                          |
+| ----------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| Binding           | Exact occurrence/phase/native object; separate same-name cages; reward-owned O Devotion                                 |
+| Preparation       | Preserve hard overrides, money store, passive/ambient setup, custom sets, difficulty/caps and setup events              |
+| Wave assembly     | Preserve templates, delays/events, fixed seeds, preexisting waves and intro-encounter substitution                      |
+| Type installation | Apply only selected-source blacklist/cap side effects, once; no leakage from discarded native draws                     |
+| Counts            | Define pre/post CalcTotalSpawns ownership; no double multiplier or fixed-count resampling                               |
+| Fangs             | Install before native application, prevent random overwrite at normal/forced selection contacts, preserve room fallback |
+| Menace            | Preserve provenance and spawn overrides; suppress only the owned entry's second conversion                              |
+| Spawn execution   | Preserve native cap selection, retries, group expansion and source accounting                                           |
+| Restore           | Do not reinstall completed waves or duplicate native bookkeeping                                                        |
 
-Remove production weights/shares encoding, normalization, validation, controls
-and executor interpretation. Legacy knowledge belongs only in migration inputs
-and their tests. Coordinate protocol version, decoder and release compatibility
-for explicit budget/slice/Fangs/Menace operands; old publications require republishing.
-Do not silently accept old share operands as new slices.
+Keep native GenerateEncounter. On the owned encounter copy, pin wave bounds and
+the concrete base budget (including copied hard overrides), temporarily disable
+native highlight generation, and let native code construct its wave templates.
+Intercept FillEnemyTypes to install the published complete roster and
+FillEnemyCounts to preserve published counts instead of sampling. This preserves
+native manual templates, first-wave timing, final-wave templates and setup events;
+it is preferred over copying template construction into the adapter.
 
-## Ownership and starting code
+Apply only the bounded native selected-type side effects: encounter highlight
+blacklist; appended-type first-appearance run blacklist; blocked-type encounter
+blacklist when declared; appended-type ActiveEnemyCapBonus. Preserve provenance:
+native does not apply the appended-type effects to highlights or fixed seeds.
+Export/source this distinction explicitly rather than guessing from final names.
+Do not run random composition and then overwrite its effects, or replay side
+effects on restored/already-prepared encounters.
 
-Catalog owns source coefficients, costs/caps, fixed templates, wave patterns and
-perk declarations and Menace mapping/blocking facts in
-`packages/hades2-catalog/src/declarations/encounters/`.
-Extend the engine-defined normalized contract rather than importing catalog into
-engine. Perks belong beside their enemy/encounter declarations, not an app map.
+The fresh inherited census of all 39 profiles proves CalcTotalSpawns is identity
+for the supported domain: no effective count ramps or declared hero SpawnMultiplier;
+both fixed H seeds have count 1. Keep native AddEncounterLayer/count initialization.
+Assert this source-backed domain in coverage rather than adding a speculative
+multiplier subsystem or overriding CalcTotalSpawns.
 
-Engine owns persisted choices/codecs/commands, exact effective Fear and generation
-context, ordered pure assessment, findings/candidates and publication. Start at
-`authored-project/model.ts`, `room-state/decoding/generated-encounter-codec.ts`,
-`simulation/encounters/generation.ts` and `generation-preparation.ts`. Extend the
-existing assessment capability; no separate simulation state or query replay.
+Install Fangs at PickEncounterEliteAttributes for the exactly bound owned object,
+covering ordinary and forced selection contacts without random draws. Preserve
+native SetupUnit/ApplyEliteAttribute and room fallback for absent type keys.
+Recover phase ownership through existing room-entry rebinding on reload, not a
+generation-only weak map. Do not regenerate saved waves.
 
-App owns projection, semantic binding and existing encounter popup presentation:
-`generated-encounter-projection.ts` and `GeneratedEncounterCustomizationControl.tsx`.
-Keep wave panels/picker badges; replace adjacent weights with slice controls and
-derived counts. Fangs is encounter-level, not copied into each wave. Findings
-keep exact encounter/decision repair ownership and do not auto-open the popup.
-Slider interaction must not lose dragging during simulation refresh.
+For the pre-Menace slice, pass a copied args table with IgnoreShrineOverrides=true
+to native HandleNextSpawn only for bound owned encounters. Raw-source probes
+confirm this suppresses Menace RNG and preserves native spawning/decrement;
+unowned encounters and unrelated calls remain native. No fabricated zero-roll
+counter or authored Menace UI is needed in this slice.
 
-Executor owns scoped native realization in encounter `generated.lua` and a
-focused Fangs module beside it. Allocation continues to intercept the existing
-RandomNormal contact, returning the explicit sample. Budget selection intercepts
-only the bound generation's base RandomInt call. Do not replace FillEnemyCounts,
-inject TotalCount, override global budget declarations or intercept unrelated RNG.
-Fangs steers native encounter-type and attribute selection, preserving its
-application in unit setup; no manual per-unit perk installation. Use bound native
-encounter identity, never a same-name scan across cages.
+The planner owns complete composition legality. Runtime preflight checks payload
+coverage, supported declaration/contact shape, identities and finite counts before
+mutation. Preserve existing native encounter-eligibility diagnostics; do not add
+a second exhaustive Lua validator. Any enemy-eligibility diagnostics use detached
+preselection views, never populated waves or mutated blacklists, and must not
+become a new semantic enforcement system. Ordinary type eligibility is not Menace
+replacement eligibility.
 
-Menace uses a focused adapter at the native HandleNextSpawn substitution contact.
-Bind counters to exact encounter, wave and source spawn entry, not enemy name
-alone across the room. Steer only the existing Menace roll; leave SwapMap and
-unit creation native. Select the first requested number of eligible successful
-spawn requests deterministically, then suppress remaining rolls for that authored
-entry. Do not count failed spawn attempts, nested group-member calls with
-IgnoreShrineOverrides, summons, unrelated calls or deferred random-pool types.
-Restore scope on return/error and avoid double counting retries or restored rooms.
-Use the narrowest native identity/state needed, not a general spawn ledger.
-Missing realization produces diagnostics only, never a mismatch.
+Preserve native intro substitution after generation/setup. If SetupEncounter
+returns a different encounter, diagnose the changed identity and do not attach
+the requested customization to the substitute. Do not override external save
+progression. Unsupported contacts, such as newly introduced preexisting waves,
+fall back before installation rather than guessing their preparation behavior.
 
-## Delivery gates
+Menace changes IsFromNextBiomeEnemyShrineUpgrade, RequiredSpawnPoint (including
+the native string sentinel) and mapped ActiveCapWeight. The provenance flag also
+affects Dream scaling. Renaming entries alone is insufficient. Changing a field
+on an encounter copy may not suppress a branch that consults EncounterData.
+Use a narrowly bound native contact, never global declaration mutation.
 
-### A — Budget/slice vertical replacement and migration
+Full ownership can span necessary lifecycle contacts; it is not a requirement
+for one giant hook or a transactional rollback of native gameplay. Preflight the
+whole answer before installing its waves. Failure there leaves generation native
+with diagnostics; never deliberately fill missing fields with random choices.
+Later native substitution/errors remain diagnostic realization failures, not
+proof of success or an invitation to undo completed native side effects. Keep
+scope restoration/error handling and accurate installation diagnostics. This
+best-effort runtime behavior is distinct from the complete authored contract.
 
-Deliver declaration facts, normalized contracts, pure allocation/context,
-authored migration, editor, publication and executor sample/base-roll steering
-as one coherent slice. Include the coordinated wire/schema contract needed by
-this plan; do not land a wrapper/interface-only gate. Remove the old weights path.
+## Compatibility and publication
 
-Primary tests: catalog fact/normalization matrices; engine ordered allocation and
-retained-state matrices; migration tests. Representative app tests cover native
-Default, fixed label, variable slider, editing/types/reset/Undo and finding repair.
-Executor tests cover exact contact, native remainder, fixed seed, error restoration,
-nested/unrelated generation and diagnostics. Verify counts against native
-FillEnemyCounts in an isolated source probe, not a duplicate test algorithm.
+Authored state stores choices; derived counts/native structures belong to the
+resolved execution product. Structural decoding still accepts representable
+incomplete edits; evaluation owns completeness and context legality.
 
-### B — Fangs vertical delivery
+Keep 87/45: the published release baseline remains 86/44. Preserve the existing
+86-to-87 removal of weights and all retained wave/type choices. Existing partial
+87 documents remain structurally loadable; the evaluator reports missing active
+choices under the new complete-ownership contract. No automatic filling on load,
+no generated-customization reset and no reinterpretation of allocations as counts.
+Missing choices are repaired through the ordinary controls while retaining
+compatible authored values. Do not add a fill-missing/reset-to-default action.
+Never reset boss choices, encounter identities, topology or unrelated state.
+Update migration/load copy to explain repair, and retain one shared app/offline
+migration implementation. If release status advances before implementation,
+recheck compatibility rather than changing an already-shipped version in place.
 
-Prerequisite: complete the focused perk eligibility/combination audit before
-implementation. Its matrix is the acceptance baseline, not picker-local rules.
+Publication requires a complete resolved product for each active customized
+encounter. Missing coverage is an internal publication failure, not a sparse
+fallback. Coordinate strict protocol decoding and republish requirements; old
+allocation samples must never be reinterpreted as direct counts.
 
-Deliver perk declarations, exact active context, authored choices/candidates,
-encounter-level UI, publication and native adapter. Complete schema/protocol
-fields within the single version established for this delivery, without a
-second migration step. Do not ship intermediate mixed-version releases.
+## Ownership and retirement
 
-Primary tests cover ranks 0/1/2, effective suppression, native IsElite versus
-armor appearance, blocked encounters, eligible fixed seeds, mutually exclusive
-perks, exhausted options, changed composition and repeated type across waves.
-Executor witnesses prove separate same-name cage encounters remain isolated,
-Default remains native and assigned perks do not alter generated count budgets.
-Audit all eligible distinct pairs and both orders of the five exclusions in the
-engine authority tests. Keep representative staged-picker completion/reset,
-unavailable-reason and stale-selection repair witnesses in the app. Include
-room-set restrictions under Dream order. Test native application caps and squad
-identity behavior separately from successful encounter selection; do not claim
-every unit receives a selected perk.
+- Catalog owns declarations, costs/caps/templates, Fangs facts, Menace mappings,
+  random pools and blocking. Extend generated `enemies.ts`/`policies.ts`.
+- Engine owns the authored contract, codecs/commands, exact-state initialization,
+  completeness/legality, resolved counts/Fangs/Menace, candidates/findings and
+  execution assembly. Extend the existing generation capability and resolved
+  post-reward product, not another state carrier or candidate replay.
+- App owns Native/Customize/Reset, the existing workbench and two Menace rows,
+  local drafts, findings navigation and Undo. No domain math/defaults in React.
+- Executor owns focused installation using exact native bindings and scaffolding.
+  No general spawn framework or acquisition dependency.
 
-### C — Deterministic Menace vertical delivery
+Retain source-backed declarations, evaluators and exact-state matrices from A/B.
+Replace partial-default assessment/controls and sparse publication with their
+consumers. Delete superseded base/count/type/perk RNG hooks in the adapter delivery.
+Replace steering-specific tests with installation-contact witnesses; keep native
+isolation and lifecycle coverage. No legacy parallel path, unrelated fixture
+reserialization or directory reorganization.
 
-Deliver mapping/block declarations, optional target counts and exact count
-readiness/validation, UI cell, publication, and scoped native substitution
-steering. Use the same coordinated schema/protocol version as A/B; no additional
-migration. Preserve native behavior for absent settings and all deferred types.
+## Remaining delivery gates
 
-Primary tests cover Default versus zero, one/all targets at either enabled rank,
-blocked enemies/encounters, no-destination types, the nine deferred types,
-count reductions and inactive suppression. Executor witnesses cover wave/type
-isolation, same-name cages, failed/retried spawns, nested groups, native replacement
-setup and counters across supported room restoration. Test generation and
-substitution diagnostics separately; no broad live-enemy accounting.
+### C0 — Blocker investigation (completed for the bounded scope)
 
-### D — Mandatory pre-closure disposition of random Menace types
+Fresh source/inheritance census and raw-source probes establish the direct-fill
+strategy, count identity, zero-Menace contact and native binding/application
+boundaries. Public release inspection confirms 86/44. Owner chose preservation
+and repair of partial choices and explicit Menace suppression before its authoring
+slice. Details and probe limitations live in the investigation; these results
+are not production integration or live-game acceptance.
 
-After C is implemented, revisit the nine documented random-pool Fields types
-with the owner using the delivered model and available runtime evidence.
-Explicitly choose continued native-only deferral or a bounded follow-up scope.
-Record that disposition before proceeding to closure. Do not mark these types
-supported because the deterministic adapter works, and do not silently expand
-C into replacement identity authoring. Continued deferral is an acceptable
-closure result; retain the source inventory and clear supported boundary.
+### C — Pre-Menace full-ownership conversion
 
-### E — Closure and runtime acceptance
+Deliver current functionality as one vertical planner/executor gate: exact-state
+complete initialization and repair, authored completeness/findings, UI controls,
+resolved wave/count/Fangs product, strict wire decoder and direct native
+installation. Owned encounters have zero Menace conversions; native remains native.
+No Menace rows or conversion counters yet. Preserve split Fangs before tabs.
+Remove all partial Default/reset controls and superseded RNG hooks in this gate, not
+in a later cleanup. Do not ship an intermediate planner-only protocol change.
 
-Use repository multi-agent delivery routine: one write-capable executor with a
-focused gate packet; independent review after each stable vertical slice and
-bounded remediation. Main session owns cross-repository review and broad closure.
+Primary tests: supported-profile initialization/completeness and bounded
+backtracking; exact count/source equivalence; missing versus inapplicable Fangs;
+same-biome suppression; partial-save repair without lost choices; Reset Customization/Undo;
+absence of inner Default/reset/Adjust Budgets controls;
+real ordinary/fixed-H execution products. Runtime tests cover same-name cages,
+O Devotion, hard/manual/fixed waves, selected-type side effects once, native
+templates, Fangs maps/caps, Menace suppression versus untouched native encounters,
+intro substitution, restoration and error scope cleanup.
 
-Run full planner `npm run check` and executor `lua tests/all.lua` / `luacheck src/`
-after narrow tests stabilize. Regenerate only affected execution fixtures through
-the planner builder, format with Prettier, mirror byte-for-byte and inspect churn.
-Migration/version-only fixture updates do not warrant unrelated regeneration.
+### D — Menace layered onto the owned product
 
-In-game acceptance: ordinary multiple waves; Hordes ranks; P budget slider;
-capped redistribution; fixed H template; reward-owned O Devotion; Fangs ranks;
-same type across waves and distinct cages; Menace zero/partial/all targets,
-mapped group replacement, deferred random-pool behavior; native defaults.
-Compare generation diagnostics with allocation previews and scoped substitution
-diagnostics with Menace targets, not the complete final-live roster. Do not call runtime
-acceptance complete before actual testing. Keep a bounded pending checklist if
-the owner tests after code delivery.
+Add deterministic mappings and all nine random-source pickers, the Replacement /
+Converted rows, legality and complete resolved conversion facts. Omitted settings
+retain the earlier deterministic zero result. Both enabled ranks allow zero/all;
+blocked/no-destination columns remain NA. Preserve native conversion metadata,
+Dream provenance and actual-unit Fangs lookup.
 
-At actual closure, update current owning model/audit sections, removing obsolete
-weight descriptions rather than appending bug history. Retire this plan and its
-investigation; reconcile earlier encounter runtime checklists without claiming
-untested obligations passed. The broader encounter audit stays in investigations
-until the user finalizes that work.
+Do not flatten converted entries into a name-keyed wave table: native
+AddEncounterLayer overwrites duplicate names. Keep the original source entries
+and apply the resolved conversion at the bound spawn contact, without steering
+RNG. Derive successful-source progress from native RemainingSpawns where possible;
+failed attempts do not consume conversions. Native source-based cap selection,
+groups and retries remain intact. No general spawn ledger or alias enemy types.
 
-## Review checklist
+Before implementation, retain a focused contact witness for conversion accounting,
+copied spawn metadata and restoration, building on C's zero-conversion hook. This
+is localized implementation verification, not another open domain-model audit.
+Primary tests: zero/partial/all, every mapping/pool/block class, positive count
+requiring a random replacement, reduced count findings, same target from multiple
+sources, original target already present, source/group replacement, retry/reload,
+normal/elite changes and native Dream metadata. No generated-count recomputation.
 
-- No equal-wave-budget assumption or UI calculation of native domain policy.
-- No fake exact preview with default/random prerequisites.
-- No last-row shortcut for fixed templates; no minimum-overflow validation.
-- No Fangs feedback into budget or per-wave/per-unit perk authoring.
-- Menace steers only authored deterministic substitutions; no final roster
-  promise or additional mismatch boundary.
-- Explicit pre-closure owner disposition for all nine deferred random-pool types.
-- No legacy weights implementation outside migration; reset scope is exact.
-- No extra schema bump, duplicate migration, unrelated fixture churn or silent
-  destructive cleanup after upstream changes.
+### E — Coherent review, closure and runtime acceptance
+
+Use the repository gated routine: one write-capable executor per coherent gate,
+independent review after stable work and bounded remediation. Main owns Git,
+cross-repository review and broad closure. Carry forward A/B runtime obligations.
+
+After narrow checks stabilize run planner `npm run check`, executor
+`lua tests/all.lua` and `luacheck src/`. Regenerate only affected execution fixtures
+with the owning builder, Prettier-format, mirror byte-for-byte and inspect churn.
+
+Live acceptance: native control; owned ordinary multi-wave; Hordes; P budget;
+capped redistribution; fixed H; O Devotion; Fangs ranks/exhaustion/caps/squads;
+separate cages; Menace zero/partial/all, mapped groups and random replacements;
+reload/restoration. Inspect generated requests/native setup, not unrelated summons
+or final live-entity counts. Keep runtime acceptance pending until actual testing.
+
+At actual closure rewrite obsolete generated-composition sections in the owning
+authored/integration docs, promote source facts to audits, and retire this plan
+and investigations once unresolved questions have dispositions. Do not append
+historical steering explanations to durable current-model documentation.
