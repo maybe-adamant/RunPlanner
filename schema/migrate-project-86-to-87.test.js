@@ -13,17 +13,15 @@ const document = () => ({
             {
               occurrenceId: 'retained',
               unrelatedNumber: 7,
-              state: {
-                encounters: {
-                  customizationByPhase: {
-                    dormant: {
-                      generatedComposition: {
-                        kind: 'generated',
-                        waves: [{ waveIndex: 1, typeKeys: ['Guard'], weights: { Guard: 2 } }],
-                      },
+              encounters: {
+                customizationByPhase: {
+                  dormant: {
+                    generatedComposition: {
+                      kind: 'generated',
+                      waves: [{ waveIndex: 1, typeKeys: ['Guard'], weights: { Guard: 2 } }],
                     },
-                    ordinary: { other: { kind: 'single', choiceKey: 'keep' } },
                   },
+                  ordinary: { other: { kind: 'single', choiceKey: 'keep' } },
                 },
               },
             },
@@ -42,12 +40,17 @@ describe('schema 86 to 87 migration', () => {
     assert.equal(migrated.schemaVersion, 87);
     assert.equal(source.schemaVersion, 86);
     assert.equal(occurrence.unrelatedNumber, 7);
-    assert.deepEqual(occurrence.state.encounters.customizationByPhase.ordinary, {
+    assert.deepEqual(occurrence.encounters.customizationByPhase.ordinary, {
       other: { kind: 'single', choiceKey: 'keep' },
     });
     assert.deepEqual(
-      occurrence.state.encounters.customizationByPhase.dormant.generatedComposition.waves[0],
+      occurrence.encounters.customizationByPhase.dormant.generatedComposition.waves[0],
       { waveIndex: 1, typeKeys: ['Guard'] },
+    );
+    assert.deepEqual(
+      source.route.biomes[0].topology.occurrences[0].encounters.customizationByPhase.dormant
+        .generatedComposition.waves[0].weights,
+      { Guard: 2 },
     );
   });
 });

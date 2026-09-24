@@ -22,7 +22,7 @@ export function migrateProjectDocument(value) {
   const migrated = JSON.parse(JSON.stringify(source));
   for (const biome of migrated.route?.biomes ?? [])
     for (const occurrence of biome?.topology?.occurrences ?? []) {
-      const customizations = occurrence?.state?.encounters?.customizationByPhase;
+      const customizations = occurrence?.encounters?.customizationByPhase;
       if (customizations === null || typeof customizations !== 'object') continue;
       for (const decisions of Object.values(customizations)) {
         if (decisions === null || typeof decisions !== 'object') continue;
