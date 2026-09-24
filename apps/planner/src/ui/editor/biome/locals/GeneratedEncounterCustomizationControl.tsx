@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react';
+import { useRef, useState } from 'react';
 import type { AuthoredGeneratedEncounterCustomization } from '@run-planner/engine/authored-project';
 import type {
   WorkspaceEncounterCustomizationInteraction,
@@ -14,6 +14,107 @@ type Decision = Extract<
   NonNullable<WorkspaceEncounterPhase['customization']>[number],
   { readonly selection: { readonly kind: 'generated' } }
 >;
+
+const budgetNumber = new Intl.NumberFormat('en-US', {
+  maximumFractionDigits: 2,
+  useGrouping: false,
+});
+
+function EncounterBudgetSlider({
+  id,
+  min,
+  max,
+  value,
+  onCommit,
+}: {
+  readonly id: string;
+  readonly min: number;
+  readonly max: number;
+  readonly value: number | undefined;
+  readonly onCommit: (value: number) => void;
+}) {
+  const [draft, setDraft] = useState<number | undefined>();
+  const pending = useRef<number | undefined>(undefined);
+  const commit = () => {
+    const next = pending.current;
+    pending.current = undefined;
+    setDraft(undefined);
+    if (next !== undefined && next !== value) onCommit(next);
+  };
+  return (
+    <input
+      id={id}
+      aria-label="Native base roll"
+      min={min}
+      max={max}
+      step={1}
+      type="range"
+      value={draft ?? value ?? min}
+      onChange={(event) => {
+        pending.current = event.currentTarget.valueAsNumber;
+        setDraft(pending.current);
+      }}
+      onPointerDown={(event) => event.currentTarget.setPointerCapture?.(event.pointerId)}
+      onPointerUp={commit}
+      onLostPointerCapture={commit}
+      onBlur={commit}
+      onKeyUp={(event) => {
+        if (
+          [
+            'ArrowLeft',
+            'ArrowRight',
+            'ArrowUp',
+            'ArrowDown',
+            'Home',
+            'End',
+            'PageUp',
+            'PageDown',
+            'Enter',
+          ].includes(event.key)
+        )
+          commit();
+      }}
+    />
+  );
+}
+
+function EnemyBudgetInput({
+  value,
+  label,
+  onCommit,
+}: {
+  readonly value: number | undefined;
+  readonly label: string;
+  readonly onCommit: (value: number) => void;
+}) {
+  const [draft, setDraft] = useState<string | undefined>();
+  const commit = () => {
+    if (draft === undefined) return;
+    const next = draft.trim() === '' ? NaN : Number(draft);
+    setDraft(undefined);
+    if (Number.isFinite(next) && next >= 0 && next !== value) onCommit(next);
+  };
+  return (
+    <input
+      aria-label={label}
+      inputMode="decimal"
+      type="text"
+      value={draft ?? (value === undefined ? '' : budgetNumber.format(value))}
+      placeholder="NA"
+      onChange={(event) => setDraft(event.target.value)}
+      onBlur={commit}
+      onKeyDown={(event) => {
+        if (event.key === 'Enter') {
+          event.preventDefault();
+          commit();
+        } else if (event.key === 'Escape') {
+          event.preventDefault();
+          setDraft(undefined);
+        }
+      }}
+    />
+  );
+}
 
 function authored(decision: Decision): AuthoredGeneratedEncounterCustomization {
   return decision.value?.kind === 'generated' ? decision.value : { kind: 'generated' };
@@ -79,7 +180,7 @@ function replacementWave(
   waveIndex: number,
   typeKeys: readonly string[],
   highlightKeys: readonly string[],
-  fixedSeedCount: number,
+  sampledBudgetKeys: readonly string[],
 ) {
   const previous = value.waves?.find((wave) => wave.waveIndex === waveIndex);
   const previousAllocations = previous?.allocations;
@@ -102,29 +203,33 @@ function replacementWave(
     )
       allocations[key] = allocation;
   }
-  for (const [index, key] of members.entries())
-    if (fixedSeedCount + index + 1 === members.length) delete allocations[key];
+  for (const key of members) if (!sampledBudgetKeys.includes(key)) delete allocations[key];
   return Object.keys(allocations).length === 0
     ? { waveIndex, typeKeys: [...typeKeys] }
     : { waveIndex, typeKeys: [...typeKeys], allocations };
+}
+
+function withoutWavesFrom(value: AuthoredGeneratedEncounterCustomization, waveIndex: number) {
+  const next = { ...value };
+  const waves = value.waves?.filter((entry) => entry.waveIndex < waveIndex);
+  if (waves?.length) next.waves = waves;
+  else delete next.waves;
+  return next;
 }
 
 function GeneratedEncounterWaveDraftPicker({
   interaction,
   hasAuthoredEnemies,
   selection,
-  actions,
   update,
   wave,
 }: {
   readonly interaction: WorkspaceEncounterCustomizationInteraction;
   readonly hasAuthoredEnemies: boolean;
-  readonly actions: ReactNode;
   readonly selection: readonly {
     readonly key: string;
     readonly label: string;
     readonly kind?: 'fixed' | 'highlight';
-    readonly allocation?: ReactNode;
   }[];
   readonly update: (
     change: (
@@ -145,11 +250,9 @@ function GeneratedEncounterWaveDraftPicker({
           draft.typeKeys,
         );
   const actionLabel = hasAuthoredEnemies ? 'Edit enemies' : 'Select enemies';
-  const begin = () => setDraft({ confirmedSeedCount: 0, typeKeys: Object.freeze([]) });
   return (
     <div className="encounter-wave-picker">
       <div className="encounter-generated-wave-heading">
-        <h4>Wave {wave.waveIndex}</h4>
         <ContextualPicker<WorkspaceGeneratedWaveDraftChoice>
           ariaLabel={`Wave ${wave.waveIndex} enemies`}
           cancelLabel="Cancel"
@@ -157,7 +260,7 @@ function GeneratedEncounterWaveDraftPicker({
           closeOnSelect={false}
           disabled={interaction.generatedWaveDraftFor === undefined}
           id={`generated-wave-${interaction.key}-${wave.waveIndex}`}
-          label="Enemies"
+          label={`Wave ${wave.waveIndex}`}
           layout="inline"
           model={product?.picker ?? emptyDraftPicker}
           onOpenChange={(open) =>
@@ -165,6 +268,11 @@ function GeneratedEncounterWaveDraftPicker({
           }
           onSelect={(choice) => {
             if (draft === undefined) return;
+            if (choice.kind === 'default') {
+              update((current) => withoutWavesFrom(current, wave.waveIndex));
+              setDraft(undefined);
+              return;
+            }
             if (choice.kind === 'finish') {
               update((current) =>
                 withWave(current, wave.waveIndex, () =>
@@ -173,7 +281,7 @@ function GeneratedEncounterWaveDraftPicker({
                     wave.waveIndex,
                     draft.typeKeys,
                     wave.seeds.filter((seed) => seed.kind === 'highlight').map((seed) => seed.key),
-                    wave.seeds.filter((seed) => seed.kind === 'fixed').length,
+                    product!.sampledBudgetKeys,
                   ),
                 ),
               );
@@ -188,26 +296,12 @@ function GeneratedEncounterWaveDraftPicker({
           }}
           open={draft !== undefined}
           placeholder={actionLabel}
-          triggerLabel={actionLabel}
+          triggerLabel={
+            selection.length === 0
+              ? actionLabel
+              : selection.map((member) => member.label).join(' · ')
+          }
         />
-        {actions}
-      </div>
-      <div className="encounter-wave-selection">
-        {selection.map((member) => (
-          <div className="encounter-enemy-badge" key={member.key}>
-            <button
-              className="quiet-action action-compact"
-              disabled={interaction.generatedWaveDraftFor === undefined}
-              onClick={begin}
-              type="button"
-              aria-label={`Edit Wave ${wave.waveIndex} enemies: ${member.label}`}
-            >
-              {member.label}
-              {member.kind === 'fixed' ? <small>fixed</small> : null}
-            </button>
-            {member.allocation}
-          </div>
-        ))}
       </div>
     </div>
   );
@@ -225,11 +319,39 @@ export function GeneratedEncounterCustomizationControl({
   const execute = useCommandIntent();
   const value = authored(decision);
   const assessment = interaction.generatedAssessment;
+  const [selectedWave, setSelectedWave] = useState(1);
+  const activeWave =
+    assessment?.waves.find((wave) => wave.waveIndex === selectedWave)?.waveIndex ??
+    assessment?.waves[0]?.waveIndex;
+  const budgets = assessment?.budget;
+  const budgetDomain = assessment?.budgetDomain;
+  const budgetMinimums =
+    budgets?.waveBudgets.map((budget) => (typeof budget === 'number' ? budget : budget.min)) ?? [];
+  const totalMinimum = budgetMinimums.reduce((sum, budget) => sum + budget, 0);
+  const encounterBudget =
+    budgets === undefined
+      ? 'Game computed'
+      : budgets.kind === 'exact'
+        ? budgetNumber.format(
+            (budgets.waveBudgets as readonly number[]).reduce((sum, budget) => sum + budget, 0),
+          )
+        : `${budgetNumber.format((budgets.waveBudgets as readonly { min: number; max: number }[]).reduce((sum, budget) => sum + budget.min, 0))}–${budgetNumber.format((budgets.waveBudgets as readonly { min: number; max: number }[]).reduce((sum, budget) => sum + budget.max, 0))}`;
+  const waveBudget = (index: number) => {
+    const budget = budgets?.waveBudgets[index - 1];
+    return budget === undefined
+      ? 'Game computed'
+      : typeof budget === 'number'
+        ? budgetNumber.format(budget)
+        : `${budgetNumber.format(budget.min)}–${budgetNumber.format(budget.max)}`;
+  };
   const label = (key: string) =>
     decision.selection.choices.find((choice) => choice.key === key)?.label ??
     decision.selection.fixedEnemies.find((choice) => choice.key === key)?.label ??
     decision.retainedChoiceLabels?.find((choice) => choice.key === key)?.label ??
     'Unavailable enemy';
+  const cost = (key: string) =>
+    decision.selection.choices.find((choice) => choice.key === key)?.difficultyRating ??
+    decision.selection.fixedEnemies.find((choice) => choice.key === key)?.difficultyRating;
   const replace = (next: AuthoredGeneratedEncounterCustomization | null) =>
     execute(interaction.intentFor(decision.key, next));
   const update = (
@@ -237,11 +359,18 @@ export function GeneratedEncounterCustomizationControl({
       current: AuthoredGeneratedEncounterCustomization,
     ) => AuthoredGeneratedEncounterCustomization,
   ) => replace(empty(change(value)));
+  const resetWavesFrom = (waveIndex: number) =>
+    update((current) => withoutWavesFrom(current, waveIndex));
+  const lastWave = Math.max(
+    0,
+    ...(assessment?.waves.map((wave) => wave.waveIndex) ?? []),
+    ...(value.waves?.map((wave) => wave.waveIndex) ?? []),
+  );
   const fixedCount = decision.selection.waveCount.min === decision.selection.waveCount.max;
   const retainedWaves = (value.waves ?? []).filter(
     (row) => !assessment?.waves.some((wave) => wave.waveIndex === row.waveIndex),
   );
-  const fieldIssues = (field: 'waveCount' | 'highlight') =>
+  const fieldIssues = (field: 'baseRoll' | 'waveCount' | 'highlight') =>
     assessment?.issues
       .filter((issue) => issue.field === field)
       .map((issue) => (
@@ -252,7 +381,7 @@ export function GeneratedEncounterCustomizationControl({
   return (
     <section className="encounter-generated-customization">
       <div className="encounter-generated-heading">
-        <h3>Generated composition</h3>
+        <h3>Encounter Composition</h3>
         <span className="encounter-generated-context">{encounterKey}</span>
         <button
           className="danger-action action-compact"
@@ -263,91 +392,63 @@ export function GeneratedEncounterCustomizationControl({
           Reset customization
         </button>
       </div>
-      {assessment?.budget?.kind === 'exact' ? (
-        <div className="encounter-customization-row">
-          <span>Wave budget</span>
-          <span className="encounter-fixed-value">
-            {(assessment.budget.waveBudgets as readonly number[])
-              .map((budget, index) => `Wave ${index + 1}: ${budget}`)
-              .join(' · ')}
-          </span>
-        </div>
-      ) : null}
-      {assessment?.budget?.baseRoll !== undefined ? (
-        <div className="encounter-customization-row">
-          <label htmlFor={`generated-base-roll-${interaction.key}`}>Native base roll</label>
-          <input
-            id={`generated-base-roll-${interaction.key}`}
-            aria-label="Native base roll"
-            min={assessment.budget.baseRoll?.min}
-            max={assessment.budget.baseRoll?.max}
-            step={1}
-            type="range"
-            value={value.baseRoll ?? assessment.budget.baseRoll?.min ?? 0}
-            onChange={(event) =>
-              update((current) => ({ ...current, baseRoll: event.currentTarget.valueAsNumber }))
-            }
-          />
-          <button
-            className="quiet-action"
-            disabled={value.baseRoll === undefined}
-            onClick={() =>
-              update((current) => {
-                const next = { ...current };
-                delete next.baseRoll;
-                return next;
-              })
-            }
-            type="button"
-          >
-            Default
-          </button>
-          <span className="encounter-generated-context">
-            {value.baseRoll === undefined
-              ? `Default native random · ${(
-                  assessment.budget.waveBudgets as readonly {
-                    readonly min: number;
-                    readonly max: number;
-                  }[]
-                )
-                  .map((budget, index) => `Wave ${index + 1}: ${budget.min}–${budget.max}`)
-                  .join(' · ')}`
-              : `Native roll ${value.baseRoll}`}
-          </span>
-        </div>
-      ) : null}
-      {fixedCount ? (
-        <div className="encounter-customization-row">
-          <span>Waves</span>
-          <span className="encounter-fixed-value">{decision.selection.waveCount.min} (fixed)</span>
-          {value.waveCount !== undefined ? (
+      <div className="encounter-summary-controls">
+        {budgetDomain === undefined ? (
+          <div className="encounter-budget-control">
+            <span>Budget</span>
+            <span>{encounterBudget}</span>
+            {value.baseRoll !== undefined ? (
+              <button
+                className="quiet-action"
+                type="button"
+                onClick={() =>
+                  update((current) => {
+                    const next = { ...current };
+                    delete next.baseRoll;
+                    return next;
+                  })
+                }
+              >
+                Default
+              </button>
+            ) : null}
+            {fieldIssues('baseRoll')}
+          </div>
+        ) : null}
+        {budgetDomain !== undefined ? (
+          <div className="encounter-budget-control">
+            <label htmlFor={`generated-base-roll-${interaction.key}`}>Budget</label>
+            <span>{budgetNumber.format(budgetDomain.total.min)}</span>
+            <EncounterBudgetSlider
+              id={`generated-base-roll-${interaction.key}`}
+              min={budgetDomain.baseRoll.min}
+              max={budgetDomain.baseRoll.max}
+              value={value.baseRoll}
+              onCommit={(baseRoll) => update((current) => ({ ...current, baseRoll }))}
+            />
+            <span>{budgetNumber.format(budgetDomain.total.max)}</span>
             <button
               className="quiet-action"
+              disabled={value.baseRoll === undefined}
+              onClick={() =>
+                update((current) => {
+                  const next = { ...current };
+                  delete next.baseRoll;
+                  return next;
+                })
+              }
               type="button"
-              onClick={() => {
-                replace(
-                  empty({
-                    kind: 'generated',
-                    ...(value.baseRoll === undefined ? {} : { baseRoll: value.baseRoll }),
-                    ...(value.highlightKey === undefined
-                      ? {}
-                      : { highlightKey: value.highlightKey }),
-                    ...(value.waves === undefined ? {} : { waves: value.waves }),
-                  }),
-                );
-              }}
             >
-              Clear stored wave count ({value.waveCount})
+              Default
             </button>
-          ) : null}
-          {fieldIssues('waveCount')}
-        </div>
-      ) : (
-        <div className="encounter-customization-row">
+            {fieldIssues('baseRoll')}
+          </div>
+        ) : null}
+        <div className="encounter-customization-row encounter-waves-control">
           <span>Waves</span>
           <div className="encounter-wave-count" role="radiogroup" aria-label="Waves">
             {[
-              undefined,
+              ...(fixedCount ? [] : [undefined]),
               ...Array.from(
                 { length: decision.selection.waveCount.max - decision.selection.waveCount.min + 1 },
                 (_, index) => decision.selection.waveCount.min + index,
@@ -357,7 +458,11 @@ export function GeneratedEncounterCustomizationControl({
                 <input
                   type="radio"
                   name={`generated-wave-count-${interaction.key}`}
-                  checked={value.waveCount === count}
+                  checked={
+                    (fixedCount
+                      ? (value.waveCount ?? decision.selection.waveCount.min)
+                      : value.waveCount) === count
+                  }
                   onChange={() =>
                     update((current) => {
                       const base = {
@@ -368,7 +473,9 @@ export function GeneratedEncounterCustomizationControl({
                           : { highlightKey: current.highlightKey }),
                         ...(current.waves === undefined ? {} : { waves: current.waves }),
                       };
-                      return count === undefined ? base : { ...base, waveCount: count };
+                      return count === undefined || fixedCount
+                        ? base
+                        : { ...base, waveCount: count };
                     })
                   }
                 />
@@ -385,15 +492,15 @@ export function GeneratedEncounterCustomizationControl({
           </div>
           {fieldIssues('waveCount')}
         </div>
-      )}
+      </div>
       {decision.selection.waveCount.max > 1 || value.highlightKey !== undefined ? (
         <div className="encounter-customization-row" title="Only used with multiple waves">
           <ContextualPicker
-            aria-label="Shared highlight"
-            choiceLabel="Shared highlight"
+            ariaLabel="Shared Enemy"
+            choiceLabel="Shared Enemy"
             disabled={interaction.generatedHighlightPicker === undefined}
             id={`generated-highlight-${interaction.key}`}
-            label="Shared highlight"
+            label="Shared Enemy"
             layout="inline"
             model={interaction.generatedHighlightPicker ?? emptyHighlightPicker}
             onSelect={(highlightKey) =>
@@ -444,174 +551,265 @@ export function GeneratedEncounterCustomizationControl({
         <p className="encounter-customization-explanation">Choose Waves to customize enemies.</p>
       ) : assessment.composition === 'nativeHighlight' ? (
         <p className="encounter-customization-explanation">
-          Choose a shared highlight to customize enemies.
+          Choose a shared enemy to customize enemies.
         </p>
       ) : (
         <div className="encounter-generated-waves">
-          <p className="encounter-generated-weight-note">
-            Default allocation stays native. Explicit samples guide native allocation; counts remain
-            derived.
-          </p>
           {assessment.waves.map((wave) => {
             const current = value.waves?.find((entry) => entry.waveIndex === wave.waveIndex);
-            const selected = current?.typeKeys ?? [];
-            const members = wave.generatedMemberKeys ?? [];
-            const allocationsFor = (key: string, position: number) => {
-              const generatedIndex = members.indexOf(key);
-              const fixedSeedCount = wave.seeds.filter((seed) => seed.kind === 'fixed').length;
-              const enabled =
-                generatedIndex !== -1 && fixedSeedCount + generatedIndex + 1 !== members.length;
-              const allocation = current?.allocations?.[key];
-              const name = label(key);
-              return (
-                <label className="encounter-generated-weight" key={`allocation-${position}`}>
-                  <input
-                    aria-label={`Wave ${wave.waveIndex} ${name} allocation`}
-                    disabled={!enabled}
-                    min={0}
-                    onChange={(event) => {
-                      if (!enabled) return;
-                      const next = event.target.valueAsNumber;
-                      if (!Number.isFinite(next) || next < 0) return;
-                      update((state) =>
-                        withWave(state, wave.waveIndex, (row) => ({
-                          ...row,
-                          allocations:
-                            row.allocations === undefined
-                              ? Object.fromEntries([[key, next]])
-                              : { ...row.allocations, [key]: next },
-                        })),
-                      );
-                    }}
-                    placeholder="NA"
-                    step={1}
-                    type="number"
-                    value={allocation ?? ''}
-                  />
-                </label>
-              );
-            };
             return (
-              <section
-                className="encounter-customization-group encounter-generated-wave"
+              <GeneratedEncounterWaveDraftPicker
                 key={wave.waveIndex}
-              >
-                <GeneratedEncounterWaveDraftPicker
-                  actions={
-                    <span>
-                      <button
-                        className="danger-action action-compact"
-                        disabled={current?.allocations === undefined}
-                        onClick={() =>
-                          update((state) =>
-                            withWave(state, wave.waveIndex, (row) => ({
-                              waveIndex: row.waveIndex,
-                              typeKeys: row.typeKeys,
-                            })),
-                          )
-                        }
-                        type="button"
-                      >
-                        Reset allocations
-                      </button>
-                      <button
-                        className="danger-action action-compact"
-                        disabled={current === undefined}
-                        onClick={() =>
-                          update((state) => withWave(state, wave.waveIndex, () => undefined))
-                        }
-                        type="button"
-                      >
-                        Reset wave
-                      </button>
-                    </span>
-                  }
-                  hasAuthoredEnemies={current !== undefined}
-                  interaction={interaction}
-                  selection={[
-                    ...wave.seeds.map((seed, index) => ({
-                      key: `${seed.kind}-${seed.key}`,
-                      label: label(seed.key),
-                      kind: seed.kind,
-                      allocation:
-                        seed.kind === 'highlight' ? allocationsFor(seed.key, index + 1) : null,
-                    })),
-                    ...selected.slice(0, wave.additionalTypeCount.max).map((key, index) => ({
-                      key: `${index}-${key}`,
-                      label: label(key),
-                      allocation: allocationsFor(key, wave.seeds.length + index + 1),
-                    })),
-                  ]}
-                  update={update}
-                  wave={wave}
-                />
-                {wave.countPreview?.map((entry) => (
-                  <span className="encounter-generated-context" key={`count-${entry.key}`}>
-                    {label(entry.key)}:{' '}
-                    {entry.count === undefined
-                      ? 'Native count'
-                      : `${entry.count} derived${entry.requested === undefined ? '' : ` (requested ${entry.requested}, effective ${entry.effective})`}`}
-                  </span>
-                ))}
-                {selected.length > wave.additionalTypeCount.max ? (
-                  <div className="encounter-generated-retained">
-                    <span>Extra enemies</span>
-                    <p className="encounter-generated-context">
-                      Remove extra enemies from the end.
-                    </p>
-                    {selected.slice(wave.additionalTypeCount.max).map((key, index) => {
-                      const position = wave.additionalTypeCount.max + index;
-                      return (
-                        <div key={`${position}-${key}`}>
-                          <span>
-                            Enemy {wave.seeds.length + position + 1}: {label(key)}
-                          </span>
-                          {position === selected.length - 1 ? (
-                            <button
-                              aria-label={`Remove Wave ${wave.waveIndex} Enemy ${wave.seeds.length + position + 1}`}
-                              className="quiet-action"
-                              onClick={() =>
-                                update((state) =>
-                                  withWave(state, wave.waveIndex, (row) => {
-                                    const typeKeys = row.typeKeys.slice(0, -1);
-                                    return typeKeys.length === 0
-                                      ? undefined
-                                      : {
-                                          ...row,
-                                          typeKeys,
-                                          ...(row.allocations === undefined
-                                            ? {}
-                                            : {
-                                                allocations: replaceMemberAllocation(
-                                                  row.allocations,
-                                                  row.typeKeys.at(-1),
-                                                  '',
-                                                ),
-                                              }),
-                                        };
-                                  }),
-                                )
-                              }
-                              type="button"
-                            >
-                              Remove
-                            </button>
-                          ) : null}
-                        </div>
-                      );
-                    })}
-                  </div>
-                ) : null}
-                {assessment.issues
-                  .filter((issue) => issue.waveIndex === wave.waveIndex)
-                  .map((issue) => (
-                    <p className="encounter-customization-repair" key={issue.message}>
-                      {issue.message}
-                    </p>
-                  ))}
-              </section>
+                hasAuthoredEnemies={current !== undefined}
+                interaction={interaction}
+                selection={[
+                  ...wave.seeds.map((seed) => ({
+                    key: seed.key,
+                    label: label(seed.key),
+                    kind: seed.kind,
+                  })),
+                  ...(current?.typeKeys ?? []).map((key) => ({ key, label: label(key) })),
+                ]}
+                update={update}
+                wave={wave}
+              />
             );
           })}
+          <p className="encounter-budget-note">
+            Set the enemy budget for each wave. The last enemy uses what remains. Enemy counts are
+            derived from their budget and cost. Costs are shown next to enemy names.
+          </p>
+          <div className="encounter-budget-tabs-header">
+            <nav className="run-state-tabs" aria-label="Wave budgets" role="tablist">
+              {assessment.waves.map((wave, index) => (
+                <button
+                  key={wave.waveIndex}
+                  id={`wave-budget-tab-${interaction.key}-${wave.waveIndex}`}
+                  aria-controls={`wave-budget-panel-${interaction.key}-${wave.waveIndex}`}
+                  aria-selected={activeWave === wave.waveIndex}
+                  tabIndex={activeWave === wave.waveIndex ? 0 : -1}
+                  role="tab"
+                  type="button"
+                  onClick={() => setSelectedWave(wave.waveIndex)}
+                  onKeyDown={(event) => {
+                    const nextIndex =
+                      event.key === 'ArrowRight'
+                        ? (index + 1) % assessment.waves.length
+                        : event.key === 'ArrowLeft'
+                          ? (index + assessment.waves.length - 1) % assessment.waves.length
+                          : event.key === 'Home'
+                            ? 0
+                            : event.key === 'End'
+                              ? assessment.waves.length - 1
+                              : undefined;
+                    if (nextIndex === undefined) return;
+                    event.preventDefault();
+                    setSelectedWave(assessment.waves[nextIndex]!.waveIndex);
+                    const tabs =
+                      event.currentTarget.parentElement?.querySelectorAll<HTMLButtonElement>(
+                        '[role="tab"]',
+                      );
+                    tabs?.[nextIndex]?.focus();
+                  }}
+                >
+                  Wave {wave.waveIndex}
+                  {assessment.issues.some((issue) => issue.waveIndex === wave.waveIndex)
+                    ? ' · Needs attention'
+                    : ''}
+                </button>
+              ))}
+            </nav>
+          </div>
+          {assessment.waves
+            .filter((wave) => wave.waveIndex === activeWave)
+            .map((wave) => {
+              const current = value.waves?.find((entry) => entry.waveIndex === wave.waveIndex);
+              const adjusting = current?.allocations !== undefined;
+              const automaticBudget =
+                wave.equalAllocations !== undefined &&
+                Object.keys(wave.equalAllocations).length === 0;
+              const selected = current?.typeKeys ?? [];
+              const tableKeys = [
+                ...wave.seeds.map((seed) => seed.key),
+                ...selected.slice(0, wave.additionalTypeCount.max),
+              ];
+              const allocationsFor = (key: string, position: number) => {
+                if (!adjusting && !automaticBudget)
+                  return <span className="encounter-generated-context">NA</span>;
+                const enabled = wave.sampledBudgetKeys.includes(key);
+                const allocation = current?.allocations?.[key];
+                const name = label(key);
+                const effective = wave.countPreview?.find((entry) => entry.key === key)?.effective;
+                if (!enabled)
+                  return (
+                    <span className="encounter-generated-context">
+                      {wave.seeds.some((seed) => seed.key === key && seed.kind === 'fixed')
+                        ? 'Fixed'
+                        : effective === undefined
+                          ? 'NA'
+                          : budgetNumber.format(effective)}
+                    </span>
+                  );
+                return (
+                  <label className="encounter-budget-input" key={`allocation-${position}`}>
+                    <EnemyBudgetInput
+                      label={`Wave ${wave.waveIndex} ${name} budget`}
+                      onCommit={(next) => {
+                        update((state) =>
+                          withWave(state, wave.waveIndex, (row) => ({
+                            ...row,
+                            allocations: { ...row.allocations, [key]: next },
+                          })),
+                        );
+                      }}
+                      value={allocation}
+                    />
+                  </label>
+                );
+              };
+              return (
+                <section
+                  className="encounter-customization-group encounter-generated-wave"
+                  key={wave.waveIndex}
+                  role="tabpanel"
+                  id={`wave-budget-panel-${interaction.key}-${wave.waveIndex}`}
+                  aria-labelledby={`wave-budget-tab-${interaction.key}-${wave.waveIndex}`}
+                >
+                  <div className="encounter-budget-panel-heading">
+                    <p className="encounter-generated-context">
+                      {totalMinimum > 0
+                        ? `This wave takes ${budgetNumber.format((budgetMinimums[wave.waveIndex - 1]! / totalMinimum) * 100)}% of the encounter and has a budget of ${waveBudget(wave.waveIndex)} / ${encounterBudget}.`
+                        : 'The wave budget is game computed.'}
+                    </p>
+                    <button
+                      className={`${adjusting ? 'danger-action' : 'encounter-adjust-budgets'} action-compact`}
+                      type="button"
+                      disabled={
+                        !adjusting && (wave.equalAllocations === undefined || automaticBudget)
+                      }
+                      title={
+                        automaticBudget
+                          ? 'This enemy uses the entire remaining wave budget.'
+                          : !adjusting && wave.equalAllocations === undefined
+                            ? 'Choose the enemies and a definite encounter budget first.'
+                            : undefined
+                      }
+                      onClick={() =>
+                        update((state) =>
+                          withWave(state, wave.waveIndex, (row) => {
+                            const next = { ...row };
+                            if (adjusting) delete next.allocations;
+                            else if (wave.equalAllocations !== undefined && !automaticBudget)
+                              next.allocations = wave.equalAllocations;
+                            return next;
+                          }),
+                        )
+                      }
+                    >
+                      {adjusting ? 'Reset Budgets' : 'Adjust Budgets'}
+                    </button>
+                  </div>
+                  {current === undefined && wave.seeds.length === 0 ? (
+                    <p className="encounter-generated-context">
+                      Select enemies to edit their budgets.
+                    </p>
+                  ) : (
+                    <div className="encounter-budget-table-scroll">
+                      <table
+                        className="encounter-budget-table"
+                        aria-label={`Wave ${wave.waveIndex} enemy budgets`}
+                      >
+                        <thead>
+                          <tr>
+                            <th scope="col" />
+                            {tableKeys.map((key, index) => (
+                              <th scope="col" key={`${index}-${key}`}>
+                                {label(key)}
+                                {cost(key) === undefined
+                                  ? ''
+                                  : ` (${budgetNumber.format(cost(key)!)})`}
+                              </th>
+                            ))}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          <tr>
+                            <th scope="row">Budget</th>
+                            {tableKeys.map((key, index) => (
+                              <td key={`${index}-${key}`}>{allocationsFor(key, index)}</td>
+                            ))}
+                          </tr>
+                          <tr>
+                            <th scope="row">Count</th>
+                            {tableKeys.map((key, index) => (
+                              <td key={`${index}-${key}`}>
+                                {adjusting || automaticBudget
+                                  ? (wave.countPreview?.find((entry) => entry.key === key)?.count ??
+                                    'NA')
+                                  : 'NA'}
+                              </td>
+                            ))}
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                  {selected.length > wave.additionalTypeCount.max ? (
+                    <div className="encounter-generated-retained">
+                      <span>Extra enemies</span>
+                      <p className="encounter-generated-context">
+                        Remove extra enemies from the end.
+                      </p>
+                      {selected.slice(wave.additionalTypeCount.max).map((key, index) => {
+                        const position = wave.additionalTypeCount.max + index;
+                        return (
+                          <div key={`${position}-${key}`}>
+                            <span>
+                              Enemy {wave.seeds.length + position + 1}: {label(key)}
+                            </span>
+                            {position === selected.length - 1 ? (
+                              <button
+                                aria-label={`Remove Wave ${wave.waveIndex} Enemy ${wave.seeds.length + position + 1}`}
+                                className="quiet-action"
+                                onClick={() =>
+                                  update((state) =>
+                                    withWave(state, wave.waveIndex, (row) => {
+                                      const typeKeys = row.typeKeys.slice(0, -1);
+                                      const next = { ...row, typeKeys };
+                                      if (row.allocations !== undefined) {
+                                        const allocations = replaceMemberAllocation(
+                                          row.allocations,
+                                          row.typeKeys.at(-1),
+                                          '',
+                                        );
+                                        if (Object.keys(allocations).length)
+                                          next.allocations = allocations;
+                                        else delete next.allocations;
+                                      }
+                                      return typeKeys.length === 0 ? undefined : next;
+                                    }),
+                                  )
+                                }
+                                type="button"
+                              >
+                                Remove
+                              </button>
+                            ) : null}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : null}
+                  {assessment.issues
+                    .filter((issue) => issue.waveIndex === wave.waveIndex)
+                    .map((issue) => (
+                      <p className="encounter-customization-repair" key={issue.message}>
+                        {issue.message}
+                      </p>
+                    ))}
+                </section>
+              );
+            })}
         </div>
       )}
       {retainedWaves.map((wave) => (
@@ -633,9 +831,10 @@ export function GeneratedEncounterCustomizationControl({
           <button
             className="danger-action action-compact"
             type="button"
-            onClick={() => update((state) => withWave(state, wave.waveIndex, () => undefined))}
+            onClick={() => resetWavesFrom(wave.waveIndex)}
           >
-            Reset wave {wave.waveIndex}
+            Reset Wave {wave.waveIndex}
+            {wave.waveIndex < lastWave ? ' onward' : ''}
           </button>
         </section>
       ))}

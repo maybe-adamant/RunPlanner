@@ -114,6 +114,7 @@ export interface WorkspaceEncounterCustomizationInteraction {
 }
 
 export type WorkspaceGeneratedWaveDraftChoice =
+  | { readonly kind: 'default' }
   | { readonly kind: 'finish' }
   | { readonly kind: 'confirmSeed'; readonly key: string }
   | { readonly kind: 'enemy'; readonly key: string };
@@ -121,18 +122,22 @@ export type WorkspaceGeneratedWaveDraftChoice =
 export interface WorkspaceGeneratedWaveDraft {
   readonly picker: ContextualPickerModel<WorkspaceGeneratedWaveDraftChoice>;
   readonly stepLabel: string;
+  readonly sampledBudgetKeys: readonly string[];
 }
 
 export interface WorkspaceGeneratedEncounterAssessment {
   readonly issues: readonly {
     readonly message: string;
     readonly waveIndex?: number;
-    readonly field?: 'waveCount' | 'highlight';
+    readonly field?: 'baseRoll' | 'waveCount' | 'highlight';
   }[];
   readonly composition: 'active' | 'nativeWaveCount' | 'nativeHighlight';
+  readonly budgetDomain?: {
+    readonly baseRoll: { readonly min: number; readonly max: number };
+    readonly total: { readonly min: number; readonly max: number };
+  };
   readonly budget?: {
     readonly kind: 'exact' | 'range';
-    readonly baseRoll?: { readonly min: number; readonly max: number };
     readonly waveBudgets:
       readonly number[] | readonly { readonly min: number; readonly max: number }[];
   };
@@ -140,8 +145,8 @@ export interface WorkspaceGeneratedEncounterAssessment {
     readonly waveIndex: number;
     readonly additionalTypeCount: { readonly min: number; readonly max: number };
     readonly seeds: readonly { readonly key: string; readonly kind: 'fixed' | 'highlight' }[];
-    /** Complete generated members when the explicit row is valid. */
-    readonly generatedMemberKeys?: readonly string[];
+    readonly sampledBudgetKeys: readonly string[];
+    readonly equalAllocations?: Readonly<Record<string, number>>;
     readonly countPreview?: readonly {
       readonly key: string;
       readonly requested?: number;
@@ -375,8 +380,13 @@ export type WorkspaceEncounterCustomizationDecision =
         readonly choices: readonly {
           readonly key: string;
           readonly label: string;
+          readonly difficultyRating: number;
         }[];
-        readonly fixedEnemies: readonly { readonly key: string; readonly label: string }[];
+        readonly fixedEnemies: readonly {
+          readonly key: string;
+          readonly label: string;
+          readonly difficultyRating: number;
+        }[];
         readonly waveCount: { readonly min: number; readonly max: number };
       };
     });

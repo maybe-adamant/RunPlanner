@@ -25,6 +25,44 @@ function assess(
 }
 
 describe('native generated composition possibility', () => {
+  it('classifies editable budget members independently of the native remainder', () => {
+    expect(
+      assess('GeneratedF', {
+        waveCount: 1,
+        waves: [{ waveIndex: 1, typeKeys: ['Guard', 'Brawler'] }],
+      }).waves[0]?.sampledBudgetKeys,
+    ).toEqual(['Guard']);
+    expect(
+      assess('GeneratedF', {
+        waveCount: 3,
+        highlightKey: 'Guard',
+        waves: [{ waveIndex: 1, typeKeys: [] }],
+      }).waves[0]?.sampledBudgetKeys,
+    ).toEqual([]);
+    expect(
+      assess('GeneratedH_Treant2', {
+        waves: [{ waveIndex: 1, typeKeys: ['FogEmitter2'] }],
+      }).waves[0]?.sampledBudgetKeys,
+    ).toEqual(['FogEmitter2']);
+  });
+
+  it('suggests equal remaining-budget samples without authoring the native remainder', () => {
+    expect(
+      assess('GeneratedF', {
+        waveCount: 1,
+        waves: [{ waveIndex: 1, typeKeys: ['Guard', 'Brawler'] }],
+      }).waves[0]?.equalAllocations,
+    ).toEqual({ Guard: 87.5 });
+    expect(
+      assess('GeneratedH_Treant2', {
+        waves: [{ waveIndex: 1, typeKeys: ['FogEmitter2'] }],
+      }).waves[0]?.equalAllocations,
+    ).toEqual({ FogEmitter2: 466 });
+    expect(
+      assess('GeneratedP_PreCombat', {}).waves.every((wave) => wave.equalAllocations === undefined),
+    ).toBe(true);
+  });
+
   it('derives native wave patterns from catalog budget facts and effective Hordes', () => {
     const result = assessGeneratedEncounter(
       policy('GeneratedF'),
@@ -44,12 +82,20 @@ describe('native generated composition possibility', () => {
   it('keeps P native-random until an explicit base roll is selected', () => {
     expect(assess('GeneratedP_PreCombat', {}).budget).toMatchObject({
       kind: 'range',
-      baseRoll: { min: 340, max: 500 },
     });
     expect(assess('GeneratedP_PreCombat', { baseRoll: 412 }).budget).toMatchObject({
       kind: 'exact',
-      baseRoll: { min: 340, max: 500 },
     });
+  });
+
+  it('retains the budget domain for invalid values and unresolved wave counts', () => {
+    const native = assess('GeneratedP_PreCombat', {});
+    const invalid = assess('GeneratedP_PreCombat', { baseRoll: 9999 });
+    expect(native.budgetDomain?.baseRoll).toEqual({ min: 340, max: 500 });
+    expect(invalid.budgetDomain).toEqual(native.budgetDomain);
+    expect(invalid.budget).toBeUndefined();
+    expect(invalid.issues).toContainEqual({ reason: 'baseRoll', actual: 9999 });
+    expect(assess('GeneratedF', {}).budgetDomain).toBeUndefined();
   });
 
   it('previews ordered explicit slices and leaves a default sampled branch native', () => {

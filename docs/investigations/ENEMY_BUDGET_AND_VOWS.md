@@ -1,7 +1,7 @@
 # Enemy budget and vow scope
 
-Status: bounded source investigation; delivery choices settled, no production
-implementation changed.
+Status: bounded source investigation; budget-slice Gate A delivered. Fangs and
+Menace implementation remain pending.
 Source: installed Hades II scripts, inspected 2026-09-23.
 
 ## Question
@@ -62,8 +62,10 @@ native eligibility, and mutual exclusions. It records the result under
 `encounter.EliteAttributes[enemyName]`. Rank specifies attribute count, not the
 number of upgraded types. Explicit encounter overrides can alter these counts.
 
-`RoomLogic.lua:3309` applies that same type-level selection to each matching
-elite, non-charmed unit, preferring its encounter map over the room map. Thus
+`RoomLogic.lua:3309` attempts that same type-level selection on each matching
+elite, non-charmed unit, preferring its encounter map over the room map. Native
+per-room application caps still apply; squad-to-child identity is a separate
+realization caveat detailed in `FANGS_PERK_ELIGIBILITY.md`. Thus
 it is neither independent per entity nor independently chosen per wave.
 Separate cage encounters can select different attributes for the same type.
 
@@ -98,8 +100,8 @@ the resulting unit's name, not the originally budgeted type.
 - An exact quantity editor would need allocation, fixed entries, random base
   ranges, ceilings, caps, and ordering modeled explicitly. Perk authoring alone
   does not solve those issues.
-- No exhaustive perk-options matrix or executor intervention design is included.
-  Those need a separate bounded follow-up only if this direction is selected.
+- The focused `FANGS_PERK_ELIGIBILITY.md` follow-up now owns the complete perk
+  pool/filter/combination matrix and its bounded application caveats for Gate B.
 
 ## Menace replacement inventory
 

@@ -512,6 +512,9 @@ export function bindOccurrenceLocalInteractions(
                     ].sort((left, right) => left.waveIndex - right.waveIndex);
                     const draft: AuthoredGeneratedEncounterCustomization = Object.freeze({
                       kind: 'generated',
+                      ...(generatedValue.baseRoll === undefined
+                        ? {}
+                        : { baseRoll: generatedValue.baseRoll }),
                       ...(generatedValue.waveCount === undefined
                         ? {}
                         : { waveCount: generatedValue.waveCount }),

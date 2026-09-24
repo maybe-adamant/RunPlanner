@@ -121,7 +121,7 @@ describe('OccurrenceEncounterWorkbench', () => {
           ?.encounters.customizationByPhase?.Encounter?.generatedComposition,
       ).toMatchObject({ kind: 'generated', waveCount: 3 }),
     );
-    await view.user.click(within(dialog).getByRole('button', { name: 'Shared highlight' }));
+    await view.user.click(within(dialog).getByRole('button', { name: 'Shared Enemy' }));
     await view.user.click(await screen.findByRole('option', { name: 'Whisper' }));
     await view.user.click(within(dialog).getByRole('button', { name: 'Wave 2 enemies' }));
     await view.user.click(await screen.findByRole('option', { name: 'Whisper' }));
