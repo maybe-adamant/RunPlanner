@@ -1,6 +1,7 @@
 # Fangs perk eligibility and combinations
 
-Status: pre-Gate B source audit, 2026-09-23. No Fangs implementation yet.
+Status: source audit, 2026-09-23; Fangs checkpoint delivered. Direct installation
+under the complete-ownership contract is the next adapter revision.
 Scope: the 39 supported generated encounter policies, including fixed seeds.
 Source paths below are relative to the installed `1GameData/Scripts` snapshot.
 
@@ -124,14 +125,13 @@ the chosen squad perks may not reach members. Keep native selection semantics,
 explain this limitation for those candidates, and test in game before claiming
 member effects. Do not insert child-key copies as an unapproved game correction.
 
-## Gate B recommendation
+## Current disposition
 
-Use one staged contextual picker: enemy type → perk 1 → perk 2 when rank permits.
-The saved summary shows the enemy and selected perks as badges. Use the existing
-transient staged-picker pattern; commit a complete choice at finish, not half a
-choice after each stage. Default clears the override. Candidate policy belongs
-to the engine; the application only groups available/unavailable choices and
-renders readable reasons. Show native capped/squad caveats where relevant.
+The delivered Fangs checkpoint uses separate Target and Perks pickers: target
+changes persist, perk prefixes are transient until Finish. The revised complete
+composition plan retains these controls but replaces optional native perk draws
+with required assignments wherever Fangs applies. UI details and delivery gates
+belong to that plan, not this source matrix.
 
 Candidates come from the resolved authored encounter composition, deduplicated
 across waves, including fixed seeds. No speculative random types. Retain stale
@@ -141,5 +141,5 @@ blocked encounters retain dormant values without exporting overrides.
 Primary coverage: complete pool/filter matrix, five pair exclusions in both
 orders, all distinct eligible pairs, rank/exhaustion, fixed seeds, nonelite armor,
 biome requirements in Dream order, repeated waves and separate cages. Cover
-native selection separately from capped/grouped application. No runtime success
-or full Gate B completion is asserted by this audit.
+native selection separately from capped/grouped application. The source matrix
+and delivered code do not by themselves establish live-game acceptance.
