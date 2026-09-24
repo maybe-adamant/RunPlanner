@@ -55,10 +55,23 @@ function EncounterBudgetSlider({
         pending.current = event.currentTarget.valueAsNumber;
         setDraft(pending.current);
       }}
-      onPointerDown={(event) => event.currentTarget.setPointerCapture?.(event.pointerId)}
+      onPointerDown={(event) => {
+        // A blank required roll is visually positioned at its minimum.  A
+        // pointer click at that exact position produces no change event, but
+        // it is still an explicit choice.
+        if (value === undefined) pending.current = min;
+        event.currentTarget.setPointerCapture?.(event.pointerId);
+      }}
       onPointerUp={commit}
       onLostPointerCapture={commit}
       onBlur={commit}
+      onKeyDown={(event) => {
+        if (
+          value === undefined &&
+          ['ArrowLeft', 'ArrowDown', 'Home', 'PageDown'].includes(event.key)
+        )
+          pending.current = min;
+      }}
       onKeyUp={(event) => {
         if (
           [
@@ -81,17 +94,20 @@ function EncounterBudgetSlider({
 
 function EnemyBudgetInput({
   value,
+  max,
   label,
   onCommit,
 }: {
   readonly value: number | undefined;
+  readonly max: number | undefined;
   readonly label: string;
   readonly onCommit: (value: number) => void;
 }) {
   const [draft, setDraft] = useState<string | undefined>();
   const commit = () => {
     if (draft === undefined) return;
-    const next = draft.trim() === '' ? NaN : Number(draft);
+    const parsed = draft.trim() === '' ? NaN : Number(draft);
+    const next = max === undefined ? parsed : Math.min(parsed, max);
     setDraft(undefined);
     if (Number.isFinite(next) && next >= 0 && next !== value) onCommit(next);
   };
@@ -121,18 +137,6 @@ function authored(decision: Decision): AuthoredGeneratedEncounterCustomization {
   return decision.value?.kind === 'generated' ? decision.value : { kind: 'generated' };
 }
 
-function empty(
-  value: AuthoredGeneratedEncounterCustomization,
-): AuthoredGeneratedEncounterCustomization | null {
-  return value.baseRoll === undefined &&
-    value.waveCount === undefined &&
-    value.highlightKey === undefined &&
-    value.fangs === undefined &&
-    !value.waves?.length
-    ? null
-    : value;
-}
-
 function replaceMemberAllocation(
   allocations: Readonly<Record<string, number>>,
   previousKey: string | undefined,
@@ -141,7 +145,7 @@ function replaceMemberAllocation(
   const next = { ...allocations };
   const inherited = previousKey === undefined ? 0 : (next[previousKey] ?? 0);
   if (previousKey !== undefined) delete next[previousKey];
-  if (nextKey !== '') next[nextKey] = inherited;
+  next[nextKey] = inherited;
   return next;
 }
 
@@ -202,17 +206,14 @@ function GeneratedFangsPicker({
   ) => void;
 }) {
   const [perkDraft, setPerkDraft] = useState<readonly string[] | undefined>();
-  const targetProduct = interaction.generatedFangsDraftFor?.(undefined, true);
+  const targetProduct = interaction.generatedFangsDraftFor?.(undefined);
   const perkProduct =
     value.fangs === undefined || perkDraft === undefined
       ? undefined
-      : interaction.generatedFangsDraftFor?.(
-          { typeKey: value.fangs.typeKey, perkKeys: perkDraft },
-          false,
-        );
+      : interaction.generatedFangsDraftFor?.({ typeKey: value.fangs.typeKey, perkKeys: perkDraft });
   const display =
     value.fangs === undefined
-      ? 'Default'
+      ? 'Select target'
       : (presentation.choices.find((choice) => choice.key === value.fangs!.typeKey)?.label ??
         'Unavailable enemy');
   return (
@@ -226,20 +227,13 @@ function GeneratedFangsPicker({
         layout="inline"
         model={targetProduct?.picker ?? emptyFangsPicker}
         onSelect={(choice) => {
-          if (choice.kind === 'default') {
-            update((current) => {
-              const next = { ...current };
-              delete next.fangs;
-              return next;
-            });
-            setPerkDraft(undefined);
-          } else if (choice.kind === 'type')
+          if (choice.kind === 'type')
             update((current) => ({
               ...current,
               fangs: { typeKey: choice.key, perkKeys: current.fangs?.perkKeys ?? [] },
             }));
         }}
-        placeholder="Default"
+        placeholder="Select target"
         triggerLabel={display}
       />
       <ContextualPicker<WorkspaceGeneratedFangsDraftChoice>
@@ -312,14 +306,6 @@ function replacementWave(
     : { waveIndex, typeKeys: [...typeKeys], allocations };
 }
 
-function withoutWavesFrom(value: AuthoredGeneratedEncounterCustomization, waveIndex: number) {
-  const next = { ...value };
-  const waves = value.waves?.filter((entry) => entry.waveIndex < waveIndex);
-  if (waves?.length) next.waves = waves;
-  else delete next.waves;
-  return next;
-}
-
 function GeneratedEncounterWaveDraftPicker({
   interaction,
   hasAuthoredEnemies,
@@ -371,11 +357,6 @@ function GeneratedEncounterWaveDraftPicker({
           }
           onSelect={(choice) => {
             if (draft === undefined) return;
-            if (choice.kind === 'default') {
-              update((current) => withoutWavesFrom(current, wave.waveIndex));
-              setDraft(undefined);
-              return;
-            }
             if (choice.kind === 'finish') {
               update((current) =>
                 withWave(current, wave.waveIndex, () =>
@@ -391,11 +372,10 @@ function GeneratedEncounterWaveDraftPicker({
               setDraft(undefined);
               return;
             }
-            setDraft(
-              choice.kind === 'confirmSeed'
-                ? { ...draft, confirmedSeedCount: draft.confirmedSeedCount + 1 }
-                : { ...draft, typeKeys: Object.freeze([...draft.typeKeys, choice.key]) },
-            );
+            if (choice.kind === 'confirmSeed')
+              setDraft({ ...draft, confirmedSeedCount: draft.confirmedSeedCount + 1 });
+            else if (choice.kind === 'enemy')
+              setDraft({ ...draft, typeKeys: Object.freeze([...draft.typeKeys, choice.key]) });
           }}
           open={draft !== undefined}
           placeholder={actionLabel}
@@ -420,9 +400,50 @@ export function GeneratedEncounterCustomizationControl({
   readonly interaction: WorkspaceEncounterCustomizationInteraction;
 }) {
   const execute = useCommandIntent();
+  const [selectedWave, setSelectedWave] = useState(1);
+  const [initializationFailure, setInitializationFailure] = useState(false);
+  if (decision.value === undefined) {
+    return (
+      <section className="encounter-generated-customization">
+        <div className="encounter-generated-heading">
+          <h3>Encounter Composition</h3>
+          <span className="encounter-generated-context">{encounterKey}</span>
+          <span>Native</span>
+          <button
+            disabled={interaction.initializeGenerated === undefined}
+            title={
+              interaction.initializeGenerated === undefined
+                ? 'Complete earlier choices to evaluate this encounter.'
+                : undefined
+            }
+            onClick={() => {
+              const initial = interaction.initializeGenerated?.();
+              if (initial === undefined) {
+                setInitializationFailure(true);
+                return;
+              }
+              setInitializationFailure(false);
+              execute(interaction.intentFor(decision.key, initial));
+            }}
+            type="button"
+          >
+            Customize
+          </button>
+          {initializationFailure ? (
+            <p className="encounter-customization-repair">
+              This encounter has no complete supported composition in the current context.
+            </p>
+          ) : interaction.initializeGenerated === undefined ? (
+            <p className="encounter-customization-repair">
+              Complete earlier choices to evaluate this encounter.
+            </p>
+          ) : null}
+        </div>
+      </section>
+    );
+  }
   const value = authored(decision);
   const assessment = interaction.generatedAssessment;
-  const [selectedWave, setSelectedWave] = useState(1);
   const activeWave =
     assessment?.waves.find((wave) => wave.waveIndex === selectedWave)?.waveIndex ??
     assessment?.waves[0]?.waveIndex;
@@ -433,7 +454,7 @@ export function GeneratedEncounterCustomizationControl({
   const totalMinimum = budgetMinimums.reduce((sum, budget) => sum + budget, 0);
   const encounterBudget =
     budgets === undefined
-      ? 'Game computed'
+      ? 'Choose a budget'
       : budgets.kind === 'exact'
         ? budgetNumber.format(
             (budgets.waveBudgets as readonly number[]).reduce((sum, budget) => sum + budget, 0),
@@ -442,7 +463,7 @@ export function GeneratedEncounterCustomizationControl({
   const waveBudget = (index: number) => {
     const budget = budgets?.waveBudgets[index - 1];
     return budget === undefined
-      ? 'Game computed'
+      ? 'Choose a budget'
       : typeof budget === 'number'
         ? budgetNumber.format(budget)
         : `${budgetNumber.format(budget.min)}–${budgetNumber.format(budget.max)}`;
@@ -461,14 +482,7 @@ export function GeneratedEncounterCustomizationControl({
     change: (
       current: AuthoredGeneratedEncounterCustomization,
     ) => AuthoredGeneratedEncounterCustomization,
-  ) => replace(empty(change(value)));
-  const resetWavesFrom = (waveIndex: number) =>
-    update((current) => withoutWavesFrom(current, waveIndex));
-  const lastWave = Math.max(
-    0,
-    ...(assessment?.waves.map((wave) => wave.waveIndex) ?? []),
-    ...(value.waves?.map((wave) => wave.waveIndex) ?? []),
-  );
+  ) => replace(change(value));
   const fixedCount = decision.selection.waveCount.min === decision.selection.waveCount.max;
   const retainedWaves = (value.waves ?? []).filter(
     (row) => !assessment?.waves.some((wave) => wave.waveIndex === row.waveIndex),
@@ -500,21 +514,6 @@ export function GeneratedEncounterCustomizationControl({
           <div className="encounter-budget-control">
             <span>Budget</span>
             <span>{encounterBudget}</span>
-            {value.baseRoll !== undefined ? (
-              <button
-                className="quiet-action"
-                type="button"
-                onClick={() =>
-                  update((current) => {
-                    const next = { ...current };
-                    delete next.baseRoll;
-                    return next;
-                  })
-                }
-              >
-                Default
-              </button>
-            ) : null}
             {fieldIssues('baseRoll')}
           </div>
         ) : null}
@@ -530,20 +529,6 @@ export function GeneratedEncounterCustomizationControl({
               onCommit={(baseRoll) => update((current) => ({ ...current, baseRoll }))}
             />
             <span>{budgetNumber.format(budgetDomain.total.max)}</span>
-            <button
-              className="quiet-action"
-              disabled={value.baseRoll === undefined}
-              onClick={() =>
-                update((current) => {
-                  const next = { ...current };
-                  delete next.baseRoll;
-                  return next;
-                })
-              }
-              type="button"
-            >
-              Default
-            </button>
             {fieldIssues('baseRoll')}
           </div>
         ) : null}
@@ -551,13 +536,12 @@ export function GeneratedEncounterCustomizationControl({
           <span>Waves</span>
           <div className="encounter-wave-count" role="radiogroup" aria-label="Waves">
             {[
-              ...(fixedCount ? [] : [undefined]),
               ...Array.from(
                 { length: decision.selection.waveCount.max - decision.selection.waveCount.min + 1 },
                 (_, index) => decision.selection.waveCount.min + index,
               ),
             ].map((count) => (
-              <label key={count ?? 'default'}>
+              <label key={count}>
                 <input
                   type="radio"
                   name={`generated-wave-count-${interaction.key}`}
@@ -577,13 +561,11 @@ export function GeneratedEncounterCustomizationControl({
                         ...(current.fangs === undefined ? {} : { fangs: current.fangs }),
                         ...(current.waves === undefined ? {} : { waves: current.waves }),
                       };
-                      return count === undefined || fixedCount
-                        ? base
-                        : { ...base, waveCount: count };
+                      return { ...base, waveCount: count };
                     })
                   }
                 />
-                {count ?? 'Default'}
+                {count}
               </label>
             ))}
             {value.waveCount !== undefined &&
@@ -640,10 +622,10 @@ export function GeneratedEncounterCustomizationControl({
                         }),
                       }),
                 };
-                return highlightKey === '' ? base : { ...base, highlightKey };
+                return { ...base, highlightKey };
               })
             }
-            placeholder="Default"
+            placeholder="Select shared enemy"
           />
           {fieldIssues('highlight')}
         </div>
@@ -652,9 +634,9 @@ export function GeneratedEncounterCustomizationControl({
         <p className="encounter-customization-repair">
           Complete earlier choices to evaluate this encounter.
         </p>
-      ) : assessment.composition === 'nativeWaveCount' ? (
+      ) : assessment.composition === 'missingWaveCount' ? (
         <p className="encounter-customization-explanation">Choose Waves to customize enemies.</p>
-      ) : assessment.composition === 'nativeHighlight' ? (
+      ) : assessment.composition === 'missingHighlight' ? (
         <p className="encounter-customization-explanation">
           Choose a shared enemy to customize enemies.
         </p>
@@ -680,11 +662,17 @@ export function GeneratedEncounterCustomizationControl({
               />
             );
           })}
+          {decision.selection.warnings.map((warning) => (
+            <p className="encounter-composition-warning" key={warning}>
+              {warning}
+            </p>
+          ))}
           <p className="encounter-budget-note">
-            Set the enemy budget for each wave. The last enemy uses what remains. Enemy counts are
-            derived from their budget and cost. Costs are shown next to enemy names.
+            Set the enemy budget for each wave. The last enemy uses what remains. Enemy counts round
+            up, with at least one of each selected type. Costs appear next to enemy names; each
+            budget cell shows allocation / final cost.
           </p>
-          {assessment.fangs !== undefined ? (
+          {assessment.fangs?.active ? (
             <GeneratedFangsPicker
               interaction={interaction}
               presentation={{
@@ -740,22 +728,22 @@ export function GeneratedEncounterCustomizationControl({
             .filter((wave) => wave.waveIndex === activeWave)
             .map((wave) => {
               const current = value.waves?.find((entry) => entry.waveIndex === wave.waveIndex);
-              const adjusting = current?.allocations !== undefined;
-              const automaticBudget =
-                wave.equalAllocations !== undefined &&
-                Object.keys(wave.equalAllocations).length === 0;
               const selected = current?.typeKeys ?? [];
               const tableKeys = [
                 ...wave.seeds.map((seed) => seed.key),
                 ...selected.slice(0, wave.additionalTypeCount.max),
               ];
               const allocationsFor = (key: string, position: number) => {
-                if (!adjusting && !automaticBudget)
-                  return <span className="encounter-generated-context">NA</span>;
                 const enabled = wave.sampledBudgetKeys.includes(key);
                 const allocation = current?.allocations?.[key];
                 const name = label(key);
-                const effective = wave.countPreview?.find((entry) => entry.key === key)?.effective;
+                const preview = wave.countPreview?.find((entry) => entry.key === key);
+                const effective = preview?.effective;
+                const unitCost = cost(key);
+                const finalCost =
+                  preview?.count === undefined || unitCost === undefined
+                    ? 'NA'
+                    : budgetNumber.format(preview.count * unitCost);
                 if (!enabled)
                   return (
                     <span className="encounter-generated-context">
@@ -764,12 +752,19 @@ export function GeneratedEncounterCustomizationControl({
                         : effective === undefined
                           ? 'NA'
                           : budgetNumber.format(effective)}
+                      {' / '}
+                      {finalCost}
                     </span>
                   );
                 return (
                   <label className="encounter-budget-input" key={`allocation-${position}`}>
                     <EnemyBudgetInput
                       label={`Wave ${wave.waveIndex} ${name} budget`}
+                      max={
+                        budgets?.kind === 'exact'
+                          ? (budgets.waveBudgets[wave.waveIndex - 1] as number)
+                          : undefined
+                      }
                       onCommit={(next) => {
                         update((state) =>
                           withWave(state, wave.waveIndex, (row) => ({
@@ -780,6 +775,7 @@ export function GeneratedEncounterCustomizationControl({
                       }}
                       value={allocation}
                     />
+                    <span className="encounter-generated-context">/ {finalCost}</span>
                   </label>
                 );
               };
@@ -795,35 +791,8 @@ export function GeneratedEncounterCustomizationControl({
                     <p className="encounter-generated-context">
                       {totalMinimum > 0
                         ? `This wave takes ${budgetNumber.format((budgetMinimums[wave.waveIndex - 1]! / totalMinimum) * 100)}% of the encounter and has a budget of ${waveBudget(wave.waveIndex)} / ${encounterBudget}.`
-                        : 'The wave budget is game computed.'}
+                        : 'Choose a budget to resolve this wave.'}
                     </p>
-                    <button
-                      className={`${adjusting ? 'danger-action' : 'encounter-adjust-budgets'} action-compact`}
-                      type="button"
-                      disabled={
-                        !adjusting && (wave.equalAllocations === undefined || automaticBudget)
-                      }
-                      title={
-                        automaticBudget
-                          ? 'This enemy uses the entire remaining wave budget.'
-                          : !adjusting && wave.equalAllocations === undefined
-                            ? 'Choose the enemies and a definite encounter budget first.'
-                            : undefined
-                      }
-                      onClick={() =>
-                        update((state) =>
-                          withWave(state, wave.waveIndex, (row) => {
-                            const next = { ...row };
-                            if (adjusting) delete next.allocations;
-                            else if (wave.equalAllocations !== undefined && !automaticBudget)
-                              next.allocations = wave.equalAllocations;
-                            return next;
-                          }),
-                        )
-                      }
-                    >
-                      {adjusting ? 'Reset Budgets' : 'Adjust Budgets'}
-                    </button>
                   </div>
                   {current === undefined && wave.seeds.length === 0 ? (
                     <p className="encounter-generated-context">
@@ -859,10 +828,8 @@ export function GeneratedEncounterCustomizationControl({
                             <th scope="row">Count</th>
                             {tableKeys.map((key, index) => (
                               <td key={`${index}-${key}`}>
-                                {adjusting || automaticBudget
-                                  ? (wave.countPreview?.find((entry) => entry.key === key)?.count ??
-                                    'NA')
-                                  : 'NA'}
+                                {wave.countPreview?.find((entry) => entry.key === key)?.count ??
+                                  'NA'}
                               </td>
                             ))}
                           </tr>
@@ -944,14 +911,6 @@ export function GeneratedEncounterCustomizationControl({
                 {issue.message}
               </p>
             ))}
-          <button
-            className="danger-action action-compact"
-            type="button"
-            onClick={() => resetWavesFrom(wave.waveIndex)}
-          >
-            Reset Wave {wave.waveIndex}
-            {wave.waveIndex < lastWave ? ' onward' : ''}
-          </button>
         </section>
       ))}
     </section>

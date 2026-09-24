@@ -226,7 +226,7 @@ function findingExplanation(catalog: Catalog, finding: SemanticFinding): Candida
     case 'encounterCustomizationUnavailable':
       return {
         kind: 'generic',
-        message: 'Repair this encounter customization or restore Default.',
+        message: 'Repair this encounter customization or reset customization.',
       };
     case 'fieldsSpatialPointMissing':
       return { kind: 'generic', message: 'Choose a physical point for this active Fields item.' };

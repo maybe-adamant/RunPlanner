@@ -1,9 +1,9 @@
 import type { ExecutionGeneratedEncounterCustomization } from '../model';
-import { array, exact, fail, integer, numberValue, object, stringValue } from './primitives';
+import { array, exact, fail, integer, object, stringValue } from './primitives';
 
 function ordinal(value: unknown, label: string): number {
   const result = integer(value, label, 1);
-  if (result > 5) fail(`${label} exceeds five waves`);
+  if (result > 4) fail(`${label} exceeds four waves`);
   return result;
 }
 
@@ -23,13 +23,12 @@ export function generatedEncounter(
   const row = object(value, label);
   exact(
     row,
-    ['decisionKey', 'kind'],
-    ['baseRoll', 'waveCount', 'highlight', 'fangs', 'waves'],
+    ['decisionKey', 'kind', 'waveCount', 'waves'],
+    ['baseRoll', 'highlight', 'fangs'],
     label,
   );
   if (row.kind !== 'generated') fail(`${label}.kind is unsupported`);
-  const waveCount =
-    row.waveCount === undefined ? undefined : ordinal(row.waveCount, `${label}.waveCount`);
+  const waveCount = ordinal(row.waveCount, `${label}.waveCount`);
   const baseRoll =
     row.baseRoll === undefined ? undefined : integer(row.baseRoll, `${label}.baseRoll`, 0);
   if (baseRoll !== undefined && baseRoll > 10000) fail(`${label}.baseRoll exceeds 10000`);
@@ -58,15 +57,29 @@ export function generatedEncounter(
           array(row.waves, `${label}.waves`, 5).map((value, index) => {
             const path = `${label}.waves[${index}]`;
             const wave = object(value, path);
-            exact(wave, ['waveIndex', 'types'], ['allocations'], path);
+            exact(wave, ['waveIndex', 'types', 'counts'], [], path);
             const waveIndex = ordinal(wave.waveIndex, `${path}.waveIndex`);
-            if (seen.has(waveIndex) || (waveCount !== undefined && waveIndex > waveCount))
+            if (seen.has(waveIndex) || waveIndex !== index + 1 || waveIndex > waveCount)
               fail(`${path} has duplicate or out-of-range wave index`);
             seen.add(waveIndex);
             const types = Object.freeze(
-              array(wave.types, `${path}.types`, 5).map((value, index) =>
-                enemy(value, `${path}.types[${index}]`),
-              ),
+              array(wave.types, `${path}.types`, 5).map((value, index) => {
+                const entryPath = `${path}.types[${index}]`;
+                const entry = object(value, entryPath);
+                exact(entry, ['choiceKey', 'nativeId', 'source'], [], entryPath);
+                const source = entry.source;
+                if (
+                  source !== 'fixed' &&
+                  source !== 'template' &&
+                  source !== 'highlight' &&
+                  source !== 'addition'
+                )
+                  fail(`${entryPath}.source is invalid`);
+                return Object.freeze({
+                  ...enemy({ choiceKey: entry.choiceKey, nativeId: entry.nativeId }, entryPath),
+                  source,
+                });
+              }),
             );
             if (
               types.length === 0 ||
@@ -74,54 +87,54 @@ export function generatedEncounter(
               new Set(types.map((type) => type.nativeId)).size !== types.length
             )
               fail(`${path} requires distinct generated types`);
+            const highlights = types.filter((entry) => entry.source === 'highlight');
             if (
-              highlight !== undefined &&
-              (types[0]?.choiceKey !== highlight.choiceKey ||
-                types[0]?.nativeId !== highlight.nativeId)
+              (highlight === undefined && highlights.length !== 0) ||
+              (highlight !== undefined &&
+                (highlights.length !== 1 ||
+                  types[0]?.source !== 'highlight' ||
+                  types[0]?.choiceKey !== highlight.choiceKey ||
+                  types[0]?.nativeId !== highlight.nativeId))
             )
-              fail(`${path} must seed its declared highlight first`);
-            const allocations =
-              wave.allocations === undefined
-                ? undefined
-                : Object.freeze(
-                    Object.fromEntries(
-                      Object.entries(object(wave.allocations, `${path}.allocations`)).map(
-                        ([key, value]) => {
-                          const allocation = numberValue(value, `${path}.allocations.${key}`);
-                          if (allocation < 0) fail(`${path}.allocations must be nonnegative`);
-                          return [key, allocation];
-                        },
-                      ),
-                    ),
-                  );
+              fail(`${path} must have exactly its declared highlight first`);
+            const counts = Object.freeze(
+              Object.fromEntries(
+                Object.entries(object(wave.counts, `${path}.counts`)).map(([key, value]) => {
+                  const count = integer(value, `${path}.counts.${key}`, 1);
+                  return [key, count];
+                }),
+              ),
+            );
             if (
-              allocations !== undefined &&
-              Object.keys(allocations).some((key) => !types.some((type) => type.nativeId === key))
+              Object.keys(counts).length !== types.length ||
+              Object.keys(counts).some((key) => !types.some((type) => type.nativeId === key))
             )
-              fail(`${path}.allocations must name generated types`);
+              fail(`${path}.counts must exactly name generated types`);
             return Object.freeze({
               waveIndex,
               types,
-              ...(allocations === undefined ? {} : { allocations }),
+              counts,
             });
           }),
         );
+  if (waves === undefined || waves.length !== waveCount) fail(`${label} must cover all waves`);
   if (
-    waves?.length === 0 ||
-    (baseRoll === undefined &&
-      waveCount === undefined &&
-      highlight === undefined &&
-      fangs === undefined &&
-      waves === undefined)
+    fangs !== undefined &&
+    !waves.some((wave) =>
+      wave.types.some(
+        (entry) =>
+          entry.choiceKey === fangs.type.choiceKey && entry.nativeId === fangs.type.nativeId,
+      ),
+    )
   )
-    fail(`${label} has no active override`);
+    fail(`${label}.fangs.type must be in the published roster`);
   return Object.freeze({
     decisionKey: stringValue(row.decisionKey, `${label}.decisionKey`),
     kind: 'generated',
     ...(baseRoll === undefined ? {} : { baseRoll }),
-    ...(waveCount === undefined ? {} : { waveCount }),
+    waveCount,
     ...(highlight === undefined ? {} : { highlight }),
     ...(fangs === undefined ? {} : { fangs }),
-    ...(waves === undefined ? {} : { waves }),
+    waves,
   });
 }

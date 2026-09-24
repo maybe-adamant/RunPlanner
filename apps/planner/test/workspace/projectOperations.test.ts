@@ -1138,7 +1138,7 @@ describe('project profile operations', () => {
     }
   });
 
-  it('reports the generated-allocation reset when loading a schema-86 profile', async () => {
+  it('reports retained generated choices needing repair when loading a schema-86 profile', async () => {
     const profile = createProfileFixture();
     const legacy = JSON.parse(
       encodeProjectDocument(
@@ -1156,7 +1156,8 @@ describe('project profile operations', () => {
     await expect(application.projectOperations.loadProfile()).resolves.toEqual({
       operation: 'loadProfile',
       status: 'success',
-      message: 'Migrated the profile to schema 87; old/custom encounter weights were reset.',
+      message:
+        'Migrated the profile to schema 87; retained encounter choices may need missing fields repaired.',
     });
   });
 });

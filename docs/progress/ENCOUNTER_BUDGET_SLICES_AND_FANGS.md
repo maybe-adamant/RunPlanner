@@ -4,10 +4,12 @@
 
 Rewritten after the owner replaced partial overrides with one choice: leave
 generation native, or own the complete generated composition. The product
-direction below is agreed. C0 source investigation now establishes the bounded
+direction below is agreed. C0 source investigation establishes the bounded
 installation path and compatibility disposition. Delivery proceeds as a complete
 pre-Menace conversion across planner/executor, then Menace authoring layered on
-that contract. This revision does not itself implement production changes.
+that contract. The locked correction plan was committed as `7176ae97`.
+Gate C is implemented and independently reviewed; this checkpoint delivers it.
+Gate D and final phase closure remain pending.
 
 Delivered checkpoints retained as the starting implementation:
 
@@ -217,8 +219,9 @@ tests must retain these witnesses when implementing the adapter:
 Keep native GenerateEncounter. On the owned encounter copy, pin wave bounds and
 the concrete base budget (including copied hard overrides), temporarily disable
 native highlight generation, and let native code construct its wave templates.
-Intercept FillEnemyTypes to install the published complete roster and
-FillEnemyCounts to preserve published counts instead of sampling. This preserves
+Intercept FillEnemyTypes to install the published complete roster and counts
+together. Leave FillEnemyCounts unwrapped: native initialization attaches metadata
+and preserves entries with installed TotalCount rather than sampling. This preserves
 native manual templates, first-wave timing, final-wave templates and setup events;
 it is preferred over copying template construction into the adapter.
 
@@ -248,9 +251,19 @@ confirm this suppresses Menace RNG and preserves native spawning/decrement;
 unowned encounters and unrelated calls remain native. No fabricated zero-roll
 counter or authored Menace UI is needed in this slice.
 
-The planner owns complete composition legality. Runtime preflight checks payload
-coverage, supported declaration/contact shape, identities and finite counts before
-mutation. Preserve existing native encounter-eligibility diagnostics; do not add
+The planner owns composition legality against known history. Selected enemies
+declaring BlacklistAfterFirstAppearance receive a yellow warning above the budget
+explanation: an earlier uncustomized encounter may already have included them.
+Known authored run exclusions and encounter-local exclusions remain planner validation.
+Protocol admission validates payload coverage, identities, provenance and integer
+counts. Runtime preflight checks live enemy declarations, native template/contact
+compatibility and the existing run blacklist before mutation. A published flagged
+enemy already in that blacklist delegates the whole composition to native generation,
+including Fangs and Menace, and emits an enemy-specific diagnostic, not a mismatch.
+Check once before installation; never use the installation's own blacklist additions
+to invalidate later waves. Encounter-local blacklists remain bookkeeping, not a
+second executor composition validator.
+Preserve existing native encounter-eligibility diagnostics; do not add
 a second exhaustive Lua validator. Any enemy-eligibility diagnostics use detached
 preselection views, never populated waves or mutated blacklists, and must not
 become a new semantic enforcement system. Ordinary type eligibility is not Menace
@@ -332,6 +345,18 @@ slice. Details and probe limitations live in the investigation; these results
 are not production integration or live-game acceptance.
 
 ### C — Pre-Menace full-ownership conversion
+
+Status: implementation and independent review passed. Focused verification:
+eight TypeScript files / 97 tests, engine and application typechecks, changed-file
+ESLint/Prettier checks, 631 Lua tests, five direct native-source probes, the native
+Fangs application-cap probe, Lua syntax checks and source luacheck. Review caught
+and corrected an empty Fangs map entry that masked native room-level fallback.
+No execution fixtures required regeneration. Full repository verification and
+live-game acceptance remain Gate E obligations, not claimed by these results.
+Subsequent focused UI verification passed 12 workbench tests, application typecheck
+and lint after adding the run-blacklist warning, inactive Fangs visibility and
+allocation/final-cost presentation. Direct allocation edits cap at the exact wave
+budget; upstream changes preserve existing authorship and simulation remains unchanged.
 
 Deliver current functionality as one vertical planner/executor gate: exact-state
 complete initialization and repair, authored completeness/findings, UI controls,

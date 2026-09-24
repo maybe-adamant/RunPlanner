@@ -7,6 +7,7 @@ import type {
 } from '../contracts/locals';
 import type { ContextualPickerModel } from '@planner/projections/contextual/contextualPicker';
 import type { GeneratedEncounterAssessment } from '@run-planner/engine/simulation';
+import type { AuthoredGeneratedEncounterCustomization } from '@run-planner/engine/authored-project';
 
 import { projectStableIdentityPicker } from './room-feature-picker-model';
 
@@ -14,6 +15,27 @@ type ChoiceLabel = { readonly key: string; readonly label: string; readonly fang
 
 export function generatedEnemyLabel(label: string): string {
   return label.endsWith(' (Elite)') ? `Elite ${label.slice(0, -8)}` : label;
+}
+
+export function projectGeneratedEncounterWarnings(
+  value: AuthoredGeneratedEncounterCustomization | undefined,
+  choices: readonly (ChoiceLabel & { readonly blacklistAfterAppearance: boolean })[],
+): readonly string[] {
+  if (value === undefined) return Object.freeze([]);
+  const selected = new Set([
+    ...(value.highlightKey === undefined || value.waveCount === 1 ? [] : [value.highlightKey]),
+    ...(value.waves ?? [])
+      .filter((wave) => value.waveCount === undefined || wave.waveIndex <= value.waveCount)
+      .flatMap((wave) => wave.typeKeys),
+  ]);
+  return Object.freeze(
+    choices
+      .filter((choice) => choice.blacklistAfterAppearance && selected.has(choice.key))
+      .map(
+        (choice) =>
+          `${generatedEnemyLabel(choice.label)} can appear only once per run. An earlier uncustomized encounter may already include it.`,
+      ),
+  );
 }
 
 export function projectGeneratedEncounterHighlightPicker(
@@ -27,14 +49,13 @@ export function projectGeneratedEncounterHighlightPicker(
   return projectStableIdentityPicker({
     assessment: assessment === undefined ? 'unassessed' : 'assessed',
     choices: [
-      { label: 'Default', value: '' },
       ...(assessment?.eligibleHighlightKeys ?? declarationKeys).map((key) => ({
         label: labelFor(key),
         value: key,
       })),
     ],
     selected: selected ?? '',
-    selectedLabel: selected === undefined ? 'Default' : labelFor(selected),
+    selectedLabel: selected === undefined ? 'Select shared enemy' : labelFor(selected),
   });
 }
 
@@ -70,14 +91,22 @@ function issueMessage(
   const waveIndex = issueWaveIndex(issue);
   const wave = waveIndex === undefined ? '' : `Wave ${waveIndex}: `;
   switch (issue.reason) {
+    case 'required':
+      return issue.field === 'waveCount'
+        ? 'Choose the number of waves.'
+        : issue.field === 'baseRoll'
+          ? 'Choose an encounter budget.'
+          : issue.field === 'highlight'
+            ? 'Choose the shared enemy.'
+            : issue.field === 'wave'
+              ? `${wave}choose its enemies.`
+              : `${wave}set each editable enemy budget.`;
     case 'baseRoll':
-      return `Stored budget ${issue.actual} is unavailable. Choose a budget or reset it to Default.`;
+      return `Stored budget ${issue.actual} is unavailable. Choose a supported budget.`;
     case 'waveCount':
       return `Wave count ${issue.actual} is outside ${issue.allowed.min}–${issue.allowed.max}.`;
     case 'highlight':
       return `Shared enemy ${labelFor(issue.key)} is not available in this encounter context.`;
-    case 'waveOutsideCount':
-      return `${wave}is outside the selected count of ${issue.allowed}.`;
     case 'enemyUnavailable':
       return `${wave}enemy ${issue.position} (${labelFor(issue.key)}) is not available.`;
     case 'typeCount': {
@@ -95,13 +124,13 @@ function issueMessage(
     case 'placeholderCount':
       return `${wave}needs ${issue.allowed} generated companion; found ${issue.actual}.`;
     case 'allocationMembers':
-      return `${wave}budgets include an enemy that no longer has an editable budget. Reset Budgets to repair.`;
+      return `${wave}budgets include an enemy that no longer has an editable budget. Edit the affected wave.`;
     case 'fangs':
       return issue.issue === 'typeUnavailable'
-        ? 'The stored Fangs elite is not in the active encounter composition. Choose an available elite or Default.'
+        ? 'The stored Fangs elite is not in the active encounter composition. Choose an available elite.'
         : issue.issue === 'perkUnavailable'
-          ? 'The stored Fangs perks are no longer a legal native pick order. Repair the selection or choose Default.'
-          : 'Choose the next available Fangs perk or Default.';
+          ? 'The stored Fangs perks are no longer a legal native pick order. Repair the selection.'
+          : 'Choose the next available Fangs perk.';
     default:
       return 'This customization needs repair for the current encounter context.';
   }
@@ -121,6 +150,10 @@ export function projectGeneratedEncounterAssessment(
         return Object.freeze({
           message: issueMessage(issue, assessment, labelFor),
           ...(waveIndex === undefined ? {} : { waveIndex }),
+          ...(issue.reason === 'required' &&
+          (issue.field === 'baseRoll' || issue.field === 'waveCount' || issue.field === 'highlight')
+            ? { field: issue.field }
+            : {}),
           ...(issue.reason === 'baseRoll' ||
           issue.reason === 'waveCount' ||
           issue.reason === 'highlight' ||
@@ -136,20 +169,15 @@ export function projectGeneratedEncounterAssessment(
     ...(assessment.fangs === undefined ? {} : { fangs: assessment.fangs }),
     waves: Object.freeze(
       assessment.waves.map((wave) => {
-        const generated = assessment.operands?.waves?.find(
-          (operand) => operand.waveIndex === wave.waveIndex,
-        );
         return Object.freeze({
           waveIndex: wave.waveIndex,
           additionalTypeCount: wave.additionalTypeCount,
           seeds: wave.seeds,
           sampledBudgetKeys: wave.sampledBudgetKeys,
-          ...(generated === undefined
+          ...(wave.equalAllocations === undefined
             ? {}
-            : {
-                equalAllocations: wave.equalAllocations,
-                countPreview: wave.countPreview,
-              }),
+            : { equalAllocations: wave.equalAllocations }),
+          ...(wave.countPreview === undefined ? {} : { countPreview: wave.countPreview }),
         });
       }),
     ),
@@ -174,32 +202,17 @@ export function projectGeneratedEncounterWaveDraft(
       sampledBudgetKeys: Object.freeze([]),
     });
   }
-  const globalIssues = assessment.issues.filter(
-    (issue) => issueWaveIndex(issue) === undefined && issue.reason !== 'fangs',
+  const waveIssues = assessment.issues.filter(
+    (issue) =>
+      issueWaveIndex(issue) === waveIndex &&
+      issue.reason !== 'required' &&
+      issue.reason !== 'allocationMembers',
   );
-  const waveIssues = assessment.issues.filter((issue) => issueWaveIndex(issue) === waveIndex);
   const seedsConfirmed = confirmedSeedCount >= wave.seeds.length;
   const canFinish =
-    assessment.composition === 'active' &&
-    seedsConfirmed &&
-    globalIssues.length === 0 &&
-    waveIssues.length === 0;
+    assessment.composition === 'active' && seedsConfirmed && waveIssues.length === 0;
   const sections: ContextualPickerModel<WorkspaceGeneratedWaveDraftChoice>['sections'][number][] =
     [];
-  if (confirmedSeedCount === 0 && typeKeys.length === 0) {
-    sections.push({
-      key: 'default',
-      kind: 'category',
-      label: 'Default',
-      collapsible: false,
-      items: [
-        {
-          ...draftItem('default', 'Default', { kind: 'default' }, 'possible'),
-          explanation: 'Resets this wave and all later waves, including their enemy budgets.',
-        },
-      ],
-    });
-  }
   if (canFinish) {
     sections.push(
       Object.freeze({
@@ -251,7 +264,7 @@ export function projectGeneratedEncounterWaveDraft(
       );
     }
   }
-  const blockingIssue = [...globalIssues, ...waveIssues][0];
+  const blockingIssue = waveIssues[0];
   const hasFurtherCandidates =
     seedsConfirmed && (wave.eligibleKeysByPosition[typeKeys.length]?.length ?? 0) > 0;
   const stepLabel = !seedsConfirmed
@@ -278,7 +291,6 @@ export function projectGeneratedFangsDraft(
   value: { readonly typeKey: string; readonly perkKeys: readonly string[] } | undefined,
   labels: readonly ChoiceLabel[],
   perkLabels: Readonly<Record<string, { readonly label: string; readonly maxPerRoom?: number }>>,
-  includeDefault = true,
 ): WorkspaceGeneratedFangsDraft {
   const fangs = assessment.fangs;
   const enemy = (key: string) => labels.find((entry) => entry.key === key);
@@ -298,17 +310,7 @@ export function projectGeneratedFangsDraft(
       state: 'possible' as const,
     });
   const sections: ContextualPickerModel<WorkspaceGeneratedFangsDraftChoice>['sections'][number][] =
-    includeDefault
-      ? [
-          Object.freeze({
-            key: 'default',
-            kind: 'category',
-            label: 'Default',
-            collapsible: false,
-            items: Object.freeze([item('default', 'Default', { kind: 'default' })]),
-          }),
-        ]
-      : [];
+    [];
   if (fangs === undefined || !fangs.active)
     return Object.freeze({
       picker: Object.freeze({ sections: Object.freeze(sections) }),

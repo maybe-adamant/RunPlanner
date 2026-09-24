@@ -39,6 +39,7 @@ export function assessFangs(
   const selected = candidates.find((entry) => entry.key === authored.fangs?.typeKey);
   const effectiveRank = Math.max(0, Math.min(2, rank));
   const active = effectiveRank > 0;
+  const selectionRequired = active && !policy.blockFangsAttributes && candidates.length > 0;
   const options =
     selected?.fangs?.options.filter(
       (option) =>
@@ -66,7 +67,7 @@ export function assessFangs(
     validPerks &&
     (selectedPerks.length >= effectiveRank || remaining.length === 0);
   const issue =
-    !active || authored.fangs === undefined
+    !selectionRequired || authored.fangs === undefined
       ? undefined
       : policy.blockFangsAttributes
         ? 'blocked'
@@ -77,16 +78,15 @@ export function assessFangs(
             : !complete
               ? 'incomplete'
               : undefined;
-  const next =
-    !active || policy.blockFangsAttributes
-      ? 'unavailable'
-      : authored.fangs === undefined || selected === undefined
-        ? 'type'
-        : !validPerks
-          ? 'perk'
-          : complete
-            ? 'finish'
-            : 'perk';
+  const next = !selectionRequired
+    ? 'unavailable'
+    : authored.fangs === undefined || selected === undefined
+      ? 'type'
+      : !validPerks
+        ? 'perk'
+        : complete
+          ? 'finish'
+          : 'perk';
   return Object.freeze({
     rank: effectiveRank,
     active,
@@ -96,7 +96,7 @@ export function assessFangs(
     perkKeys: Object.freeze(selectedPerks),
     eligiblePerkKeys: Object.freeze(remaining),
     next,
-    canFinish: active && !policy.blockFangsAttributes && selected !== undefined && complete,
+    canFinish: selectionRequired && selected !== undefined && complete,
     ...(issue === undefined ? {} : { issue }),
   });
 }

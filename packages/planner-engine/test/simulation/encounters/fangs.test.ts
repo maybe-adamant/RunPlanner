@@ -133,7 +133,7 @@ describe('Fangs encounter assessment', () => {
   });
 
   it('uses only explicit resolved composition, room restrictions, IsElite, and encounter blocking', () => {
-    expect(assessFangs(policy, guard(['Blink']), 1, 'F', []).issue).toBe('typeUnavailable');
+    expect(assessFangs(policy, guard(['Blink']), 1, 'F', []).issue).toBeUndefined();
     expect(assessFangs(policy, guard(['Rooting']), 1, 'N', ['Guard_Elite']).issue).toBe(
       'perkUnavailable',
     );
@@ -149,7 +149,7 @@ describe('Fangs encounter assessment', () => {
         'N',
         [suffixNonElite.key],
       ).issue,
-    ).toBe('typeUnavailable');
+    ).toBeUndefined();
     expect(
       assessFangs(
         generatedPolicy('GeneratedH_Passive'),
@@ -158,7 +158,7 @@ describe('Fangs encounter assessment', () => {
         'H',
         ['DespairElemental_Elite'],
       ),
-    ).toMatchObject({ issue: 'blocked', next: 'unavailable' });
+    ).toMatchObject({ next: 'unavailable' });
   });
 
   it('raises phase-owned Fangs repairs only for active invalid choices', () => {
@@ -180,7 +180,7 @@ describe('Fangs encounter assessment', () => {
     );
     expect(invalid.supported).toBe(false);
     expect(invalid.issues).toContainEqual({ reason: 'fangs', issue: 'perkUnavailable' });
-    expect(invalid.operands?.waves?.[0]?.typeKeys).toEqual(['Guard_Elite', 'Brawler']);
+    expect(invalid.operands).toBeUndefined();
     const blocked = assessGeneratedEncounter(
       generatedPolicy('GeneratedH_Passive'),
       { kind: 'generated', fangs: { typeKey: 'DespairElemental_Elite', perkKeys: [] } },
