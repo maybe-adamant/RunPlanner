@@ -1,10 +1,17 @@
 import {
+  applyProjectCommand,
+  createEncounterPhaseAddress,
   createProjectDocument,
   encodeProjectDocument,
   parseProjectDocument,
 } from '@run-planner/engine/authored-project';
 import { catalog } from '@run-planner/hades2-catalog';
 import { describe, expect, it } from 'vitest';
+import {
+  createGoldenFGHIProject,
+  goldenFBiome,
+  goldenFOccurrenceId,
+} from '@run-planner/test-fixtures/underworld';
 
 import {
   applyProjectDocumentTransitions,
@@ -28,8 +35,62 @@ describe('project document loader', () => {
   });
 
   it('migrates schema-86 generated weights before strict decoding', () => {
-    const legacy = JSON.parse(encodeProjectDocument(project)) as Record<string, unknown>;
-    legacy.schemaVersion = 86;
+    const occurrenceId = goldenFOccurrenceId(5, 1);
+    const value = {
+      kind: 'generated',
+      waveCount: 1,
+      highlightKey: 'Brawler',
+      waves: [{ waveIndex: 1, typeKeys: ['Brawler', 'SiegeVine'] }],
+    } as const;
+    const expected = applyProjectCommand(createGoldenFGHIProject(), catalog, {
+      kind: 'ReplaceEncounterCustomization',
+      phase: createEncounterPhaseAddress(
+        goldenFBiome,
+        { kind: 'occurrence', occurrenceId },
+        'Encounter',
+      ),
+      decisionKey: 'generatedComposition',
+      value,
+    });
+    const legacy = {
+      ...expected,
+      schemaVersion: 86,
+      route: {
+        ...expected.route,
+        biomes: expected.route.biomes.map((biome) => ({
+          ...biome,
+          topology:
+            biome.topology === null
+              ? null
+              : {
+                  ...biome.topology,
+                  occurrences: biome.topology.occurrences.map((occurrence) =>
+                    occurrence.occurrenceId !== occurrenceId
+                      ? occurrence
+                      : {
+                          ...occurrence,
+                          encounters: {
+                            ...occurrence.encounters,
+                            customizationByPhase: {
+                              Encounter: {
+                                generatedComposition: {
+                                  ...value,
+                                  waves: [
+                                    { ...value.waves[0], weights: { Brawler: 10, SiegeVine: 1 } },
+                                  ],
+                                },
+                              },
+                            },
+                          },
+                        },
+                  ),
+                },
+        })),
+      },
+    };
+    expect(() =>
+      parseProjectDocument(JSON.stringify({ ...legacy, schemaVersion: 87 }), catalog),
+    ).toThrow(/weights/);
     const loaded = loadProjectDocument(JSON.stringify(legacy), catalog);
 
     expect(loaded).toMatchObject({
@@ -41,7 +102,7 @@ describe('project document loader', () => {
           targetSchemaVersion: 87,
         },
       ],
-      project,
+      project: expected,
     });
   });
 
