@@ -706,6 +706,7 @@ function executionEncounterCustomization(
           decisionKey: decision.key,
           kind: 'generated',
           ...(operands.baseRoll === undefined ? {} : { baseRoll: operands.baseRoll }),
+          expectedBudget: operands.expectedBudget,
           waveCount: operands.waveCount,
           ...(operands.highlightKey === undefined
             ? {}

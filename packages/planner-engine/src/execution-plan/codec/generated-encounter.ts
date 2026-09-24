@@ -1,5 +1,5 @@
 import type { ExecutionGeneratedEncounterCustomization } from '../model';
-import { array, exact, fail, integer, object, stringValue } from './primitives';
+import { array, exact, fail, integer, numberValue, object, stringValue } from './primitives';
 
 function ordinal(value: unknown, label: string): number {
   const result = integer(value, label, 1);
@@ -23,7 +23,7 @@ export function generatedEncounter(
   const row = object(value, label);
   exact(
     row,
-    ['decisionKey', 'kind', 'waveCount', 'waves'],
+    ['decisionKey', 'kind', 'expectedBudget', 'waveCount', 'waves'],
     ['baseRoll', 'highlight', 'fangs', 'menace'],
     label,
   );
@@ -32,6 +32,8 @@ export function generatedEncounter(
   const baseRoll =
     row.baseRoll === undefined ? undefined : integer(row.baseRoll, `${label}.baseRoll`, 0);
   if (baseRoll !== undefined && baseRoll > 10000) fail(`${label}.baseRoll exceeds 10000`);
+  const expectedBudget = numberValue(row.expectedBudget, `${label}.expectedBudget`);
+  if (expectedBudget < 0) fail(`${label}.expectedBudget must be non-negative`);
   const highlight =
     row.highlight === undefined ? undefined : enemy(row.highlight, `${label}.highlight`);
   const fangs =
@@ -204,6 +206,7 @@ export function generatedEncounter(
     decisionKey: stringValue(row.decisionKey, `${label}.decisionKey`),
     kind: 'generated',
     ...(baseRoll === undefined ? {} : { baseRoll }),
+    expectedBudget,
     waveCount,
     ...(highlight === undefined ? {} : { highlight }),
     ...(fangs === undefined ? {} : { fangs }),

@@ -41,7 +41,7 @@ Authority split:
 Bosses, miniboss rooms, opening/biome-intro rooms, N side rooms, G Anomaly rooms
 and incidental challenge/locked-door combats are not added to this scope.
 Being omitted here does not mean their generation is identical or unsupported
-elsewhere. No composition controls described here are implemented yet.
+elsewhere.
 
 ## Room and phase coverage
 
@@ -184,7 +184,9 @@ and reward-generation context must supply it. The inspected script baseline has
 no assignment to `MakeHardEncounter`; declaration presence or a rarity boost
 does not establish that flag. The matrix records conditional native support,
 not additional reachable planner states. Dream-run overrides remain outside
-the supported ordinary-route scope.
+the supported ordinary-route scope. Each declared hard override also replaces
+`DepthDifficultyRamp`; that is its only budget key, recorded in the
+[budget table](#encounter-budgets).
 
 ## Field-NPC combats
 
@@ -220,8 +222,8 @@ four types into its first wave: the preassigned highlight target bypasses that
 random lower bound. N/O escalating inheritance is equally material.
 
 Native contacts: `EncounterData_Artemis.lua` Base 4, F 74, G 156, N 183;
-`EncounterData_Nemesis.lua` Base 4, F 120, G 126, H 155, I 193;
-`EncounterData_Heracles.lua` Base 4, N 60, O 113, P 168;
+`EncounterData_Nemesis.lua` Base 3, F 120, G 126, H 155, I 193;
+`EncounterData_Heracles.lua` Base 3, N 60, O 113, P 168;
 `EncounterData_Icarus.lua` Base 4, O 64, P 149;
 `EncounterData_Athena.lua` Base 4, P 73.
 
@@ -237,6 +239,84 @@ its formed waves. Trait dispatch invokes `HandleAthenaSpawn` on the current
 encounter (`RoomLogic.lua`, `EncounterLogic.lua:54`); its live active-enemy-cap
 adjustment is separate from type quota. Likewise Fig Leaf can prevent native
 spawning without turning a configured composition into an obligatory combat.
+
+## Encounter budgets
+
+`GenerateEncounter` computes the encounter budget once, before the active cap
+and wave-count draw (`RunLogic.lua:1182,1194-1213`):
+
+```text
+DifficultyRating = (BaseDifficulty + depth * DepthDifficultyRamp + DifficultyModifier)
+                   * DifficultyMultiplier
+```
+
+It then multiplies by the Vow of Hordes `ChangeValue` (`MetaUpgradeData.lua:1795-1799`)
+and clamps to `MinimumDifficulty`, falling back to
+`ConstantsData.MinimumDifficulty = 10` (`EncounterData.lua:1`). A `BaseDifficultyMin`/`BaseDifficultyMax` pair
+replaces the base with one `RandomInt` roll. Absent modifier and multiplier use
+native 0 and 1. No supported row declares `MinimumDifficulty`,
+`DepthDifficultyMultiplier` or `UseRunDepth`, so every row uses minimum 10.
+
+`depth` is `BiomeDepthCache` unless `UseEncounterDepth` selects
+`BiomeEncounterDepth`. That flag occurs only at `EncounterData_Generated.lua:245,697,850,1314`
+(H cage, N, O, Q lineages) and is independent of `UseEncounterDepthForTypes`.
+H passive encounters do not set it, so they price from `BiomeDepthCache` while
+H cages price from encounter depth. Values below are inheritance-resolved (own value, then first
+parent; `RunData.lua:1363-1416`). **Hard** is the `HardEncounterOverrideValues`
+`DepthDifficultyRamp`; hard and Dream overrides carry no other budget key.
+
+| Identity                      | Base    | Depth ramp | Axis      | Modifier | Multiplier | Hard | Source                                                  |
+| ----------------------------- | ------- | ---------: | --------- | -------: | ---------: | ---: | ------------------------------------------------------- |
+| `GeneratedF`                  | 55      |         15 | Cache     |        0 |          1 |   30 | `EncounterData.lua:199-200`, hard 248                   |
+| `DevotionTestF`               | 150     |          0 | Cache     |        0 |          1 |   30 | `EncounterData_Devotion.lua:6-7` (Base), 157            |
+| `ArtemisCombatF`              | 55      |         15 | Cache     |       60 |          1 |   30 | `GeneratedF`; `EncounterData_Artemis.lua:55` (Base)     |
+| `NemesisCombatF`              | 55      |         15 | Cache     |       60 |          1 |   30 | `GeneratedF`; `EncounterData_Nemesis.lua:57` (Base)     |
+| `GeneratedG`                  | 140     |         40 | Cache     |        0 |          1 |   30 | `EncounterData_Generated.lua:23-24`, hard 110           |
+| `DevotionTestG`               | 270     |          5 | Cache     |        0 |          1 |   30 | `EncounterData_Devotion.lua:167-168,175`                |
+| `ArtemisCombatG`              | 140     |         40 | Cache     |      145 |          1 |   30 | `GeneratedG`; `EncounterData_Artemis.lua:160`           |
+| `NemesisCombatG`              | 140     |         40 | Cache     |       60 |          1 |   30 | `GeneratedG`; `EncounterData_Nemesis.lua:57` (Base)     |
+| `GeneratedH_Passive`          | 180     |         60 | Cache     |        0 |          1 |    — | `EncounterData_Generated.lua:162-163`                   |
+| `GeneratedH_PassiveSmall`     | 60      |         15 | Cache     |        0 |          1 |    — | `EncounterData_Generated.lua:217-218`                   |
+| `GeneratedH`                  | 290     |         82 | Encounter |        0 |          1 |   30 | `EncounterData_Generated.lua:243-245`, hard 309         |
+| `GeneratedH_Treant2`          | 290     |         82 | Encounter |        0 |          1 |   30 | Inherits `GeneratedH`                                   |
+| `GeneratedH_Screamer2`        | 290     |         82 | Encounter |        0 |          1 |   30 | Inherits `GeneratedH`                                   |
+| `NemesisCombatH`              | 290     |         82 | Encounter |       60 |          1 |   30 | `GeneratedH`; `EncounterData_Nemesis.lua:57` (Base)     |
+| `GeneratedI`                  | 325     |        105 | Cache     |        0 |          1 |   30 | `EncounterData_Generated.lua:440-441`, hard 485         |
+| `GeneratedI_GoalReward`       | 250     |        105 | Cache     |        0 |          1 |   30 | `EncounterData_Generated.lua:568-569`                   |
+| `GeneratedI_Small`            | 325     |        105 | Cache     |        0 |       0.85 |   30 | `GeneratedI`; `EncounterData_Generated.lua:585`         |
+| `GeneratedI_Small_GoalReward` | 325     |        105 | Cache     |        0 |       0.85 |   30 | `GeneratedI`; `EncounterData_Generated.lua:604`         |
+| `DevotionTestI`               | 400     |        110 | Cache     |        0 |          1 |   30 | `EncounterData_Devotion.lua:198-199`                    |
+| `NemesisCombatI`              | 325     |        105 | Cache     |       60 |          1 |   30 | `GeneratedI`; `EncounterData_Nemesis.lua:57` (Base)     |
+| `GeneratedN`                  | 110     |         25 | Encounter |        0 |          1 |    — | `EncounterData_Generated.lua:695-697`                   |
+| `GeneratedN_Smaller`          | 85      |         25 | Encounter |        0 |          1 |    — | `EncounterData_Generated.lua:749-750`                   |
+| `GeneratedN_Bigger`           | 135     |         25 | Encounter |        0 |          1 |    — | `EncounterData_Generated.lua:756,759`                   |
+| `ArtemisCombatN`              | 200     |         20 | Encounter |       60 |          1 |    — | `EncounterData_Artemis.lua:191-192`, modifier 55 (Base) |
+| `HeraclesCombatN`             | 110     |         25 | Encounter |      150 |          1 |    — | `GeneratedN`; `EncounterData_Heracles.lua:64`           |
+| `GeneratedO_Intro01`          | 50      |         45 | Encounter |        0 |          1 |   45 | `EncounterData_Generated.lua:940-941`; axis 850         |
+| `GeneratedO`                  | 115     |         55 | Encounter |        0 |          1 |   45 | `EncounterData_Generated.lua:848-850`, hard 895         |
+| `DevotionTestO`               | 425     |         15 | Encounter |        0 |          1 |   45 | `EncounterData_Devotion.lua:227-228`                    |
+| `HeraclesCombatO`             | 115     |         55 | Encounter |      155 |          1 |   45 | `GeneratedO`; `EncounterData_Heracles.lua:130`          |
+| `IcarusCombatO`               | 115     |         55 | Encounter |        0 |          3 |   45 | `GeneratedO`; `EncounterData_Icarus.lua:46` (Base)      |
+| `GeneratedP_PreCombat`        | 340–500 |          0 | Cache     |        0 |          1 |   50 | `EncounterData_Generated.lua:1204-1206`; hard 1150      |
+| `GeneratedP`                  | 430     |         85 | Cache     |        0 |          1 |   50 | `EncounterData_Generated.lua:1023-1024`, hard 1150      |
+| `GeneratedP_Large`            | 430     |         85 | Cache     |        0 |          1 |   50 | Inherits `GeneratedP`                                   |
+| `HeraclesCombatP`             | 600     |         50 | Cache     |        0 |          1 |   50 | `EncounterData_Heracles.lua:185-186`                    |
+| `IcarusCombatP`               | 430     |         85 | Cache     |        0 |          3 |   50 | `GeneratedP`; `EncounterData_Icarus.lua:46` (Base)      |
+| `AthenaCombatP`               | 680     |        180 | Cache     |        0 |          1 |   50 | `EncounterData_Athena.lua:48-49` (Base)                 |
+| `GeneratedQ`                  | 150     |         25 | Encounter |        0 |          1 |    — | `EncounterData_Generated.lua:1312-1314`                 |
+| `GeneratedQ_Large`            | 525     |         25 | Encounter |        0 |          1 |    — | `EncounterData_Generated.lua:1416-1417`                 |
+| `GeneratedQ_Islands`          | 150     |         25 | Encounter |        0 |          1 |    — | Inherits `GeneratedQ`                                   |
+
+Cache is `BiomeDepthCache`; Encounter is `BiomeEncounterDepth`; — means no hard
+override. `GeneratedP_PreCombat` is the only supported variable base; it is not
+also depth-scaled unless its hard override applies. Other modifier declarations
+in the same files (for example intro encounters at `EncounterData.lua:314,358,393`
+and `OpeningGeneratedF` at 489) belong to encounters outside this scope.
+
+The supported budget domain is exactly these two axes and wave patterns 1-4.
+Native's fifth pattern row (`EncounterData.lua:9`) and `UseRunDepth` are unused
+by supported policies; the catalog rejects such declarations at construction
+instead of pricing them.
 
 ## Exact enemy pools
 
@@ -275,18 +355,21 @@ Generic gates live in `RunLogic.lua:IsEnemyEligible` (1576) and the ordered
 `FillEnemyTypes` loop (1317). The pool inventory above has these concrete
 qualifications after inheritance:
 
-| Gate                               | Exact affected pool members / rule                                                                                                                                                                         | Primary declaration evidence                                                     |
-| ---------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------- |
-| Ordinary elite depth               | Most elite members require `BiomeDepthCache >= 3`                                                                                                                                                          | `EnemyData.lua:Elite` (237)                                                      |
-| N elite depth                      | Every `BiomeN` elite instead requires `BiomeEncounterDepth >= 3`                                                                                                                                           | N enemy-family `_Elite` declarations                                             |
-| H cage elite depth                 | `BrokenHearted_Elite`, `Lovesick_Elite`, `Mourner_Elite`, `Lamia_Elite` require `BiomeEncounterDepth > 1`; `Lycanthrope_Elite` keeps the ordinary cached-depth rule                                        | Corresponding H enemy-family declarations                                        |
-| Other elite overrides              | `DespairElemental_Elite`: cached biome depth >=2; `Stalker_Elite` and `Brute_Elite`: encounter depth >=3                                                                                                   | `EnemyData_DespairElemental.lua`, `EnemyData_Stalker.lua`, `EnemyData_Brute.lua` |
-| Cannot be sole type / highlight    | Both `SiegeVine` variants; both `Radiator2` variants; `FogEmitter2`; ordinary `TimeElemental`; ordinary `ZombieSpawner`                                                                                    | Their `GeneratorData.BlockSolo`                                                  |
-| Once-per-run generated type        | `FogEmitter2.BlacklistAfterFirstAppearance = true`; ordinary type-add updates the run blacklist                                                                                                            | `EnemyData_FogEmitter.lua`, `RunLogic.lua:1397`                                  |
-| Profile gate without an intro name | Both `SiegeVine` variants require a prior `MiniBossFogEmitter` occurrence; ordinary `WaterUnit` requires completed `MiniBossWaterUnit`; ordinary `Turtle` requires two `G_Intro` visits                    | `EnemyData_SiegeVine.lua`, `EnemyData_WaterUnit.lua`, `EnemyData_Turtle.lua`     |
-| Combined run/profile gate          | Ordinary `Brute` requires encounter depth >=1 and completed `MiniBossBrute`; its elite has its own encounter-depth requirement instead                                                                     | `EnemyData_Brute.lua`                                                            |
-| Unconditional completed intro      | Both `HarpyDropper` variants require completed `OlympusIntro` even if the wave otherwise admits unseen introductions                                                                                       | `EnemyData_Harpy.lua:IneligibleIfUncompletedIntroEncounter`                      |
-| Pair exclusions                    | Every listed ordinary/elite pair excludes its counterpart. Lamia additionally excludes `Lamia_Miniboss`; `FogEmitter2` excludes `FogEmitter`; passive `DespairElemental_Elite` excludes `DespairElemental` | Each resolved `GeneratorData.BlockEnemyTypes`                                    |
+| Gate                                     | Exact affected pool members / rule                                                                                                                                                                                                                                                                           | Primary declaration evidence                                                                                                                                             |
+| ---------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Ordinary elite depth                     | Most elite members require `BiomeDepthCache >= 3`                                                                                                                                                                                                                                                            | `EnemyData.lua:Elite` (237)                                                                                                                                              |
+| N elite depth                            | Every `BiomeN` elite instead requires `BiomeEncounterDepth >= 3`                                                                                                                                                                                                                                             | N enemy-family `_Elite` declarations                                                                                                                                     |
+| H cage elite depth                       | `BrokenHearted_Elite`, `Lovesick_Elite`, `Mourner_Elite`, `Lamia_Elite` require `BiomeEncounterDepth > 1`; `Lycanthrope_Elite` keeps the ordinary cached-depth rule                                                                                                                                          | Corresponding H enemy-family declarations                                                                                                                                |
+| Other elite overrides                    | `DespairElemental_Elite`: cached biome depth >=2; `Stalker_Elite` and `Brute_Elite`: encounter depth >=3                                                                                                                                                                                                     | `EnemyData_DespairElemental.lua`, `EnemyData_Stalker.lua`, `EnemyData_Brute.lua`                                                                                         |
+| Cannot be sole type / highlight          | Both `SiegeVine` variants; both `Radiator2` variants; `FogEmitter2`; ordinary `TimeElemental`; ordinary `ZombieSpawner`                                                                                                                                                                                      | Their `GeneratorData.BlockSolo`                                                                                                                                          |
+| Once-per-run generated type              | `FogEmitter2.BlacklistAfterFirstAppearance = true`; ordinary type-add updates the run blacklist                                                                                                                                                                                                              | `EnemyData_FogEmitter.lua`, `RunLogic.lua:1405-1407`                                                                                                                     |
+| Profile gate without an intro name       | Both `SiegeVine` variants require a prior `MiniBossFogEmitter` occurrence; ordinary `WaterUnit` requires completed `MiniBossWaterUnit`; ordinary `Turtle` requires two `G_Intro` visits                                                                                                                      | `EnemyData_SiegeVine.lua`, `EnemyData_WaterUnit.lua`, `EnemyData_Turtle.lua`                                                                                             |
+| Combined run/profile gate                | Ordinary `Brute` requires encounter depth >=1 and completed `MiniBossBrute`; its elite has its own encounter-depth requirement instead                                                                                                                                                                       | `EnemyData_Brute.lua`                                                                                                                                                    |
+| Unconditional completed intro            | Both `HarpyDropper` variants require completed `OlympusIntro` even if the wave otherwise admits unseen introductions                                                                                                                                                                                         | `EnemyData_Harpy.lua:IneligibleIfUncompletedIntroEncounter`                                                                                                              |
+| Pair exclusions                          | Every listed ordinary/elite pair excludes its counterpart. Lamia additionally excludes `Lamia_Miniboss`; `FogEmitter2` excludes `FogEmitter`; passive `DespairElemental_Elite` excludes `DespairElemental`                                                                                                   | Each resolved `GeneratorData.BlockEnemyTypes`                                                                                                                            |
+| Active-cap bonus, not eligibility        | Both `SiegeVine` variants add 2 and both `Mudman` variants add 1 to `encounter.ActiveEnemyCapBonus` when added as a type (`RunLogic.lua:1455-1457`); later cap calculations consume it (`EncounterLogic.lua:1341-1342`). `SwarmerClockwork` replaces the inherited `Swarmer` generator data and carries none | `EnemyData_SiegeVine.lua:59,140`, `EnemyData_Mudman.lua:83,170`                                                                                                          |
+| Voice-line profile gate, not eligibility | `Carrion`, `Mudman`, `Zombie` and `ZombieAssassin` gate `EnemySightedVoiceLines` on `GameState.SpeechRecord["/VO/MelinoeField_0387"]`; `ZombieCrewman` and `ZombieOlympus` inherit it. It never filters generation and is correctly absent from catalog data                                                 | `EnemyData_Carrion.lua:102`, `EnemyData_Mudman.lua:93`, `EnemyData_Zombie.lua:91`, `EnemyData_ZombieAssassin.lua:94`                                                     |
+| P presentation gate, not eligibility     | `Dragon`, `HarpyDropper`, `SatyrSapper`, `SatyrLancer2` and `SatyrCrossbow2` run their cold-breath `SetupEvents` only when `RoomSetName` IsAny `{ "P" }` and room `Name` IsNone `{ "P_Boss01" }`. Presentation only; no generation effect                                                                    | `EnemyData_Dragon.lua:22-35`, `EnemyData_Harpy.lua:123-136`, `EnemyData_SatyrSapper.lua:22-35`, `EnemyData_SatyrLancer.lua:153-166`, `EnemyData_SatyrCrossbow.lua:85-98` |
 
 All supported generator lineages inherit `BlockTypesAcrossWaves = true`.
 Ordinary type additions carry excluded identities into the encounter blacklist;
@@ -304,12 +387,16 @@ encounter with their intro afterward:
 | --------- | -------------------------------------------------------------------------------------------------------------- |
 | F         | `Radiator` → `RadiatorIntro`; `Screamer` → `ScreamerIntro`                                                     |
 | G         | `FishSwarmerSquad` → `FishSwarmerIntro`; `Turtle` → `TurtleIntro`; `Guard2` and `Radiator2` → `FishmanIntro`   |
-| H cage    | `Lovesick`, `Lycanthrope`, `Mourner`, `Lamia` → corresponding `*Intro`                                         |
+| H cage    | `Lovesick`, `Lycanthrope`, `Mourner`, `Lamia` → corresponding `*Intro`; fixed `Screamer2` → `ScreamerIntro`    |
 | N         | `Mudman`, `ZombieSpawner`, `ZombieHeavyRanged`, `ZombieAssassin` → corresponding `*Intro`                      |
 | O         | `Scimiterror`, `Drunk`, `HarpyCutter`, `WaterElemental`, `Mage2` → corresponding `*Intro`                      |
 | P         | `SentryBot`, `AutomatonBeamer`, `AutomatonEnforcer`, `HarpyDropper` → `OlympusIntro`; `Dragon` → `DragonIntro` |
 | Q         | `Mati` → `MatiIntro`                                                                                           |
 
+`Screamer2` is not a pool member: it is `GeneratedH_Screamer2`'s fixed seed and
+inherits `Screamer`'s intro identity (`EnemyData_Screamer.lua:7,130-132`). Fixed
+seeds bypass the ordinary intro filter, so the post-generation scan
+(`RunLogic.lua:1125-1143`) is their only intro contact.
 I and H passive pool members have no intro identity. Unlisted families in the
 listed pools also have none. These statements do not cover scripted-only
 enemies outside those pools.
@@ -380,7 +467,7 @@ Cocoon enemy supports are not per-wave choices:
 | G hard      | `FishSwarmerSquad`, `FishSwarmerSquad_Elite`, `FishmanMelee_Elite`, `FishmanRanged_Elite`, `Turtle_Elite`                 |
 
 Other cocoon outcomes include money and `BloodMinePreFused`; these are not enemy
-generator types. Sources: `EncounterData_Arachne.lua` Base/F/G (4/24/245),
+generator types. Sources: `EncounterData_Arachne.lua` Base/F/G (4/213/245),
 `EncounterLogic.lua:SetupArachneCombatEncounter` (2722), `ObstacleData.lua`
 cocoon selectors (486/538/589), `EnemySets.lua` cocoon pools (43/126), and
 `EncounterData_Story.lua:NemesisRandomEvent` (1915).
@@ -434,12 +521,14 @@ acceptance. The implementation preserves the following boundaries:
 3. Ordered type-choice possibility, including highlight/placeholder seeding,
    P group gates, run blacklists and declaration-owned hard context. A blanket
    independent-per-wave or final-set validator would misstate native support.
-4. The planner resolves allocation requests using native array-order count rules,
-   including fixed costs and the full-index remainder branch. The executor
-   preflights all waves against native preselection eligibility and installs the
-   complete roster/count result at `FillEnemyTypes`; native template construction
-   and count metadata initialization remain intact. No runtime allocation solver
-   or partial RNG-steering path remains.
+4. The planner resolves the budget table above and allocation requests using
+   native array-order count rules, including fixed costs and the full-index
+   remainder branch. The executor admits the whole encounter once after native
+   computes `DifficultyRating`, then installs the complete roster/count result
+   at `FillEnemyTypes`; native template construction and count metadata
+   initialization remain intact. No runtime budget or allocation solver exists.
+   The [integration boundary](../../design/GAME_INTEGRATION_BOUNDARY.md) owns
+   the admission contract.
 
 NPC assist logic, prescribed spawns, perk application, spawn timing, active caps,
 groups, retries and Return respawns remain native-owned. Authored Menace retains

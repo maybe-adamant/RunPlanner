@@ -25,6 +25,10 @@ import { compileExecutionPlan } from '../../../src/execution-plan/compiler';
 import { encodeExecutionPlan } from '../../../src/execution-plan/codec';
 import { simulateProjectAssembly } from '../../../src/simulation';
 import { bossAutomaticOutcomeProject } from './automatic-fixture';
+import {
+  surfaceGeneratedPreCombatProject,
+  underworldGeneratedCompositionProject,
+} from './generated-composition-fixture';
 import { surfaceScheduledLifecycleProject } from './scheduled-lifecycle-fixture';
 import { surfaceQShopCorrelationProject } from './surface-q-shop-correlation-fixture';
 import { typhonCustomizationProject } from './typhon-customization-fixture';
@@ -66,6 +70,8 @@ export const executionFixtures: readonly {
   { name: 'surface-q-shop-correlation', project: surfaceQShopCorrelationProject },
   { name: 'dream-mixed-prefix', project: dreamMixedHandoffProject },
   { name: 'surface-scheduled-lifecycle', project: surfaceScheduledLifecycleProject },
+  { name: 'underworld-generated-composition', project: underworldGeneratedCompositionProject },
+  { name: 'surface-generated-precombat', project: surfaceGeneratedPreCombatProject },
 ]);
 
 export function executionFixturePath(name: string): string {

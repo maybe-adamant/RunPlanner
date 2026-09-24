@@ -184,23 +184,49 @@ state, including NPC traits; this admission adds no mismatch boundary.
 
 Generated composition is native or fully owned. The resolved export contains every
 wave's enemy identities, source provenance and counts, including fixed/template
-seeds, plus applicable Fangs and Menace outcomes. The exact phase scopes synchronous
-native preparation, with a stamped destination handoff for reward-owned Devotion.
-Uncustomized encounters delegate unchanged. Customized encounters preflight their
-whole composition before installation using native live eligibility and detached
-preselection context, including run/encounter blacklist effects in selection order.
-Shared highlights, fixed seeds and sampled additions retain their native admission
-roles; Menace replacements are not ordinary sampled enemy candidates.
+seeds, plus applicable Fangs and Menace outcomes, an optional variable base roll
+and a required `expectedBudget`. That budget is the engine's exact final encounter
+budget from the same preparation assessment that derived the counts; neither the
+compiler nor the runtime recomputes it. Execution protocol 46 requires it on every
+generated customization. Authored schema 87 is unchanged, so plans published under
+an earlier protocol are re-exported from their unchanged projects.
 
-Rejected customization delegates wholly to native generation with diagnostics.
-Accepted customization installs the resolved roster and counts at native fill
-contacts while preserving templates/setup and selected-type bookkeeping. The game
-retains active-enemy caps, spawn pacing, groups, retries and native perk application;
-the planner owns total generated counts, rounding and generation count limits.
-There is no second runtime budget solver or mid-combat re-generation fallback.
+The exact phase scopes synchronous native preparation, with a stamped destination
+handoff for reward-owned Devotion. Uncustomized encounters delegate unchanged. A
+supplied base roll is validated against the effective native range, including hard
+overrides, before native consumes it; an invalid roll declines customization.
+Native then computes `DifficultyRating` with all its modifiers, Hordes and minimum.
+At the generation-scoped `CalculateActiveEnemyCap` contact, after that rating and
+before wave construction, the executor makes one whole-encounter admission decision:
+
+- exported `expectedBudget` against native `DifficultyRating`, float-tolerant;
+- the published wave count within the effective native wave bounds;
+- role-correct composition eligibility on the effective prepared encounter, with
+  preselection context and run/encounter blacklist effects in selection order;
+  shared highlights, fixed seeds and sampled additions keep their native roles;
+- the published Fangs perks against native ordered compatibility for their target;
+- positive Menace conversions against native target mapping or replacement pool
+  and its availability gates; zero conversions need no target;
+- native introduction substitution, using its actual skip, completion and
+  introduction-requirement conditions.
+
+Acceptance configures the published wave count and suppresses native highlight
+generation; native fill contacts then mount the roster and counts, and later
+hooks apply Fangs and Menace from that same decision without per-wave re-checks.
+Decline records the reason with expected and observed evidence, and native
+generation continues uncustomized. A valid supplied base roll is retained on
+decline: that is native continuation from a legal roll, not untouched RNG history.
+
+Planner evaluation and decoding own the facts admission trusts: highlight
+placement, Fangs roster membership and elite eligibility, source counts, rounding,
+count limits and Menace count bounds. The game retains active-enemy caps, spawn
+pacing, groups, retries and native perk application. There is no rollback,
+second generator, Lua budget or count arithmetic, or mid-combat re-generation.
 Scope is restored on return or error; unrelated work and introduction replacements
-never inherit an override. Failure to realize optional composition is diagnostic-only,
-not a new transaction or mismatch boundary.
+never inherit an override. Native errors propagate. A missing admission or fill
+contact, or a native error after acceptance, is reported as a realization failure,
+never as clean native fallback. These outcomes are diagnostic-only, not a new
+transaction or mismatch boundary.
 
 Commands fall into three execution dispositions:
 
