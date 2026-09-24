@@ -277,16 +277,25 @@ The resolved definition's customization domain supplies a separate **Customize
 encounter** control, including for fixed identities. One dialog renders declared
 single choices, bounded ordered prefixes and generated compositions; it does not switch on Boss names
 or calculate Rivals. Changes dispatch immediately through bound commands and
-Undo. Unsupported retained choices remain visible for repair, and Default is
-always available. Finding navigation selects the occurrence Timeline and
+Undo. Unsupported retained choices remain visible for repair. Boss decisions
+retain their declared defaults; generated customization can reset wholly to
+native control. Finding navigation selects the occurrence Timeline and
 focuses/highlights the launcher without automatically opening the dialog.
 
-Generated composition uses count radios, a shared-highlight picker and a staged
-whole-wave picker backed by the exact engine assessment. Intermediate wave
-choices are local; Finish Wave publishes one replacement and one Undo entry,
-while Cancel is inert. Finish appears first whenever the composition is valid.
-Completed enemy badges carry inline relative weights; count, highlight, weight
-and reset edits remain immediate. Retained invalid values and per-control repair
+Opening generated composition is read-only. Edit initializes a complete value
+through the exact engine capability; Reset removes that value. Customized controls
+have no inner native defaults. Wave tabs contain staged whole-wave pickers and
+budget tables showing allocations, derived counts and final cost. Variable budget
+sliders map through the engine; fixed budgets remain labels. Intermediate picker
+choices and input drafts are local; Finish Wave publishes one replacement and one
+Undo entry, while Cancel is inert. Finish depends on composition validity, not
+unrelated retained Menace count findings.
+
+Fangs uses adjacent Target and Perks controls: target edits persist immediately,
+while ordered perk prefixes remain local until Finish. Active Menace adds aligned
+Menace Target and Menace Count rows under Count; inactive values remain dormant.
+The application renders engine-owned domains/counts and does not calculate budget,
+perk or conversion legality. Retained invalid values and per-control repair
 messages stay visible. The dialog itself is not another saved draft.
 
 P uses the same exact-phase presentation. Its workspace labels are **Opening

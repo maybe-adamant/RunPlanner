@@ -197,8 +197,9 @@ explicit rather than inferred from a template name. NPC grouping keys are
 presentation metadata, never requirement or history identity.
 
 Definitions may additionally declare optional generated-composition decisions:
-wave bounds, shared-highlight rules, fixed seeds, native enemy identities and
-ordered type exclusions. Normalization preserves family-specific depth/hard
+wave/budget bounds, shared-highlight rules, fixed seeds, native enemy costs/caps,
+ordered type exclusions, Fangs pools/filters and Menace mappings/replacement pools.
+Normalization preserves family-specific depth/hard
 context and fixed-template rules; it does not turn every Combat-room encounter
 into a generic generator. The
 [composition matrix](../audits/rooms-and-routes/COMBAT_ENCOUNTER_COMPOSITION_MATRIX.md)

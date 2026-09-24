@@ -337,7 +337,11 @@ describe('autosave recovery lifecycle', () => {
       JSON.stringify({ ...current, catalogVersion: 'stale-catalog-version' }),
     );
     const future = createRecoveryFixture(
-      JSON.stringify({ ...current, schemaVersion: 87, catalogVersion: catalog.version }),
+      JSON.stringify({
+        ...current,
+        schemaVersion: fallback.schemaVersion + 1,
+        catalogVersion: catalog.version,
+      }),
     );
 
     for (const recovery of [legacy, stale, future]) {

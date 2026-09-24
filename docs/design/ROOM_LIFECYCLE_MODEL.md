@@ -554,9 +554,11 @@ concrete identity, not the authored choice.
 
 Optional generated-composition assessment uses this resolved phase's exact
 preparation context. Ordered selection accounts for fixed/highlight seeds,
-exclusions and known prior explicit selections; native Default rosters do not
-become invented blacklist facts. Assessment returns typed repair evidence and
-active native operands, without simulating enemy counts or combat. It introduces
+exclusions and known prior explicit selections; native rosters do not become
+invented blacklist facts. Assessment returns typed repair evidence and a complete
+resolved composition: budgets, ordered source entries, generated/effective request
+counts and applicable Fangs/Menace outcomes. Initialization and preview consume
+the same exact capability. Combat and native spawn pacing are not simulated. It introduces
 no additional lifecycle operation, reward obligation or conformance checkpoint.
 
 A later slot in the same room evaluates against the preceding recorded prefix.
