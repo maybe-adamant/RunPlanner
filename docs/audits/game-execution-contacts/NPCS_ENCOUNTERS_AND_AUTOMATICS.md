@@ -165,8 +165,10 @@ Composition admission therefore uses preselection views, not an already-installe
 wave. Native highlights are selected once before replication; fixed seeds are not
 sampled candidates. `FillEnemyTypes` adds declared run/encounter exclusions as
 selection proceeds. Menace's replacement selection does not use ordinary enemy
-eligibility. These native contacts bound whole-composition preflight; spawning
-caps and pacing remain in `EncounterLogic.lua`.
+eligibility. These native contacts bound whole-composition admission, which runs
+at the generation-scoped `CalculateActiveEnemyCap` call (`RunLogic.lua:1215`)
+after `DifficultyRating` is final and before the wave-count draw; spawning caps
+and pacing remain in `EncounterLogic.lua`.
 
 Consequently, an encounter name is a declaration identity, not a selected
 phase identity. Two phases may legitimately contain separate native tables

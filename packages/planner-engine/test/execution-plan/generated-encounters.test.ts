@@ -103,16 +103,17 @@ describe('generated customization publication', () => {
     const value = initialized(base);
     const project = replace(base, value);
     const assembly = simulateProjectAssembly(catalog, project);
-    expect(
-      generatedEncounterSupportForProjectEvaluationAssembly(assembly, phase)?.assess(value)
-        .operands,
-    ).toBeDefined();
+    const operands = generatedEncounterSupportForProjectEvaluationAssembly(assembly, phase)?.assess(
+      value,
+    ).operands;
+    expect(operands).toBeDefined();
     const plan = publish(project);
     const original = publish(base);
     const index = plan.occurrences.findIndex((room) => room.id === phase.owner.occurrenceId);
     const published = plan.occurrences[index]?.overview.encounterPhases[0]?.customization?.[0];
     expect(published).toMatchObject({ kind: 'generated', decisionKey: 'generatedComposition' });
     if (published?.kind !== 'generated') throw new Error('Generated result was not published');
+    expect(published.expectedBudget).toBe(operands!.expectedBudget);
     expect(published.waves).toHaveLength(published.waveCount);
     for (const wave of published.waves) {
       expect(wave.types.length).toBeGreaterThan(0);
@@ -335,6 +336,7 @@ describe('generated execution decoding', () => {
   const value = {
     decisionKey: 'generatedComposition',
     kind: 'generated',
+    expectedBudget: 72.5,
     waveCount: 1,
     waves: [
       {
@@ -364,6 +366,10 @@ describe('generated execution decoding', () => {
     for (const malformed of [
       { ...value, waveCount: 6 },
       { ...value, baseRoll: 10001 },
+      ...[undefined, -1, Number.NaN, Number.POSITIVE_INFINITY, '72.5'].map((expectedBudget) => ({
+        ...value,
+        expectedBudget,
+      })),
       { ...value, unsupported: true },
       { ...value, waves: [value.waves[0], value.waves[0]] },
       ...[null, { Guard: -1 }, { Guard: Number.NaN }, { Unknown: 1 }].map((counts) => ({

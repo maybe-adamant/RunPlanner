@@ -92,7 +92,10 @@ roster.
    ramps, modifiers, and multipliers;
 2. apply Vow of Hordes to that difficulty rating;
 3. calculate the simultaneous active-enemy cap, including the separate Vow of
-   Hordes cap addition;
+   Hordes cap addition (`RunLogic.lua:1215`; this is the only
+   `CalculateActiveEnemyCap` call inside generation, the others being
+   `EncounterLogic.lua:397,527,570`). The optional `BuildCustomEnemySet` hook
+   that follows (`RunLogic.lua:1218`) has no assignment in the inspected scripts;
 4. choose the wave count and copy the applicable wave templates;
 5. divide encounter difficulty among the waves through
    `WaveDifficultyPatterns`;
@@ -261,7 +264,9 @@ belong to admitted source selections, not discarded draws or replacement names.
 ### Introduction replacement occurs after initial generation
 
 After generation and setup events, `SetupEncounter` scans the produced waves
-for an eligible unseen introduction. It can discard the generated encounter
+for an eligible unseen introduction (`RunLogic.lua:1125-1143`): a spawn whose
+`IntroEncounterName` is incomplete and whose introduction's own
+`GameStateRequirements` pass. It can discard the generated encounter
 and deep-copy the introduction encounter; when that replacement declaration is
 itself generated, the game runs generation again for the replacement.
 
@@ -328,7 +333,9 @@ The generated encounter first calculates:
 ```
 
 It then multiplies that result by Hordes' effective `ChangeValue`: 1.2, 1.4,
-or 1.6. The minimum-difficulty clamp runs afterward. Wave difficulty is derived
+or 1.6. The minimum-difficulty clamp runs afterward. Per-encounter bases, depth
+axes, modifiers, multipliers and hard ramps are owned by the
+[composition matrix budget table](COMBAT_ENCOUNTER_COMPOSITION_MATRIX.md#encounter-budgets). Wave difficulty is derived
 from this increased encounter rating, and `FillEnemyCounts` spends that larger
 budget on the already selected enemy types.
 
@@ -372,7 +379,11 @@ On success:
 
 The already calculated `TotalCount` and wave difficulty are not recomputed
 against the replacement's generator rating. Menace is therefore spawn
-substitution, not an alternate formation pass.
+substitution, not an alternate formation pass. The per-wave request budget is
+`CalcTotalSpawns` (`RoomLogic.lua:3744-3775`): `TotalCount` scaled by
+`EnemyCountDepthRamp`, `EnemyCountRunRamp` and the hero `SpawnMultiplier`.
+Every declared ramp in scope is zero and no trait declares `SpawnMultiplier`,
+so supported requests equal `TotalCount`.
 
 The ordinary route mappings are F -> G, G -> H, H -> I, N -> O, O -> P, and
 P -> Q. For those routes, the next biome must have been visited in the profile
@@ -461,7 +472,8 @@ For each encounter it:
 1. collects the elite enemy types already present in its waves;
 2. selects at most `EliteTypeUpgradeCount` distinct types, defaulting to one;
 3. filters that type's attribute options through encounter bans, enemy bans,
-   run bans, and attribute-specific requirements; and
+   run bans, and attribute-specific requirements (`ShrineLogic.lua:687-742`;
+   run-ban selection is commented out at `RunLogic.lua:503`); and
 4. assigns up to the effective Fangs rank—one or two—distinct compatible
    attributes to the selected type.
 
