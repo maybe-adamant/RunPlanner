@@ -3,8 +3,12 @@
 ## Status and objective
 
 Gate A implemented against planner base `bdb75893` and executor base `6397f05`;
-targeted validation and independent-review remediation are complete. Gates B and C
-have not started.
+targeted validation and independent-review remediation are complete. Gate B is
+implemented against planner `5c8f5282` and executor `4044ec5`, pending the
+parent-orchestrated independent review. Gate C has not started.
+
+Gate B independent remediation review passed. Full phase closure and live-game
+acceptance remain pending.
 
 Gate A verification: all 2,160 engine tests, 282 catalog tests, 40 migration tests,
 focused application/UI tests, workspace typechecking, application build, lint and
@@ -16,7 +20,7 @@ close later gates.
 
 Gate A committed: planner `d880956f`, executor `4044ec5`. Gate B's focused
 pre-implementation audit is recorded in
-`docs/investigations/FANGS_PERK_ELIGIBILITY.md`; implementation has not started.
+`docs/investigations/FANGS_PERK_ELIGIBILITY.md`.
 
 Gate A editor follow-up: compact budget/wave controls, whole-wave pickers,
 tabbed budget tables and explicit Adjust/Reset Budgets are delivered. Slider
@@ -150,13 +154,14 @@ With Fangs inactive or encounter blocking, retain values dormant and publish no
 override. Selecting a type requires known composition, not speculative native
 random membership. Native Default remains available throughout.
 
-Use one staged contextual picker: enemy type → perk 1 → perk 2 if needed.
-Place the encounter-level Fangs control immediately before the wave budget tabs,
-after the wave composition pickers; it is not part of any individual wave panel.
-Reuse the current transient staged-picker interaction, committing the complete
-selection on finish and displaying enemy/perk badges. The engine supplies
-eligible candidates and completion rules; unavailable choices have readable
-reasons. Default clears the override. No separate per-wave Fangs editor.
+Use adjacent contextual pickers for Fangs target and perks. The target picker
+persists the selected native elite while retaining any known perks for repair;
+its Default clears the override. The perk picker stays transient, starts a
+fresh ordered prefix and commits it only on Finish. Place both immediately
+before the wave budget tabs, after composition pickers; neither belongs to an
+individual wave panel. The engine supplies candidates and completion rules;
+unavailable choices have readable reasons and enemy/perk badges show native
+caps or squad caveats. No separate per-wave or native-random-perks editor.
 
 Declare the audited pools, native enemy blocks, biome requirements and five
 incompatible pairs in the catalog. Do not interpret a `_Elite` suffix as native

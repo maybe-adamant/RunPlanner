@@ -56,6 +56,17 @@ describe('sparse generated encounter authorship', () => {
     expect(Object.isFrozen(value.waves![0]!.typeKeys)).toBe(true);
   });
 
+  it('round trips Fangs targets with both ranked prefixes and an explicit empty native pool', () => {
+    for (const fangs of [
+      { typeKey: 'Guard_Elite', perkKeys: ['Blink'] },
+      { typeKey: 'Guard_Elite', perkKeys: ['Blink', 'Fog'] },
+      { typeKey: 'DespairElemental_Elite', perkKeys: [] },
+    ] as const) {
+      const value = decodeGeneratedEncounterCustomization({ kind: 'generated', fangs }, 'test');
+      expect(value.fangs).toEqual(fangs);
+    }
+  });
+
   it('retains the generic payload when concrete encounter identity changes', () => {
     const changed = applyProjectCommand(
       applyProjectCommand(createGoldenFGHIProject(), catalog, command),

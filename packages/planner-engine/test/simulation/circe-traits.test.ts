@@ -367,6 +367,45 @@ describe('Circe selected trait acquisition', () => {
     ).toBe(budgetFor(suppressedSupport));
   });
 
+  it('suppresses Fangs at the same-biome later generated checkpoint', () => {
+    const options = [
+      {
+        traitKey: 'RemoveShrineTrait',
+        circeResolution: { kind: 'disableFear' as const, vowKeys: ['EnemyEliteShrineUpgrade'] },
+      },
+      { traitKey: 'CirceShrinkTrait' },
+      { traitKey: 'CirceEnlargeTrait' },
+    ] as const;
+    const fearRanks = { EnemyEliteShrineUpgrade: 1 };
+    const suppressedProject = withCirce(circeOffer('option1', options), [], fearRanks);
+    const suppressed = oEvaluation(suppressedProject);
+    const active = oEvaluation(withCirce(circeOffer('option2', options), [], fearRanks));
+    const phase = createEncounterPhaseAddress(
+      oBiome,
+      { kind: 'occurrence', occurrenceId: oOccurrenceIds.combat02 },
+      'Combat1',
+    );
+    const suppressedSupport = generatedEncounterSupportForProjectEvaluationAssembly(
+      suppressed.assembly,
+      phase,
+    );
+    const activeSupport = generatedEncounterSupportForProjectEvaluationAssembly(
+      active.assembly,
+      phase,
+    );
+    expect(suppressedSupport?.assess({ kind: 'generated', waveCount: 1 }).fangs).toMatchObject({
+      rank: 0,
+      active: false,
+    });
+    expect(activeSupport?.assess({ kind: 'generated', waveCount: 1 }).fangs).toMatchObject({
+      rank: 1,
+      active: true,
+    });
+    expect(
+      suppressedSupport?.assess({ kind: 'generated', waveCount: 1 }).operands?.fangs,
+    ).toBeUndefined();
+  });
+
   it('retains the missing child repair domain at Circe and stops later O state', () => {
     const project = withCirce(
       circeOffer('option1', [

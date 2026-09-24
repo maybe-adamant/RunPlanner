@@ -72,6 +72,7 @@ import {
   projectGeneratedEncounterAssessment,
   projectGeneratedEncounterHighlightPicker,
   projectGeneratedEncounterWaveDraft,
+  projectGeneratedFangsDraft,
 } from './generated-encounter-projection';
 import {
   createMemoizedStableIdentityPickerLoad,
@@ -521,6 +522,9 @@ export function bindOccurrenceLocalInteractions(
                       ...(generatedValue.highlightKey === undefined
                         ? {}
                         : { highlightKey: generatedValue.highlightKey }),
+                      ...(generatedValue.fangs === undefined
+                        ? {}
+                        : { fangs: generatedValue.fangs }),
                       waves: Object.freeze(waves),
                     });
                     return projectGeneratedEncounterWaveDraft(
@@ -531,6 +535,41 @@ export function bindOccurrenceLocalInteractions(
                       generatedLabels,
                     );
                   };
+            const generatedFangsDraftFor =
+              generatedDecision === undefined ||
+              generatedSelection === undefined ||
+              generatedCapability?.decisionKey !== generatedDecision.key
+                ? undefined
+                : (
+                    fangs:
+                      | { readonly typeKey: string; readonly perkKeys: readonly string[] }
+                      | undefined,
+                    includeDefault = true,
+                  ) =>
+                    projectGeneratedFangsDraft(
+                      generatedCapability.assess(
+                        Object.freeze({
+                          kind: 'generated',
+                          ...(generatedValue.baseRoll === undefined
+                            ? {}
+                            : { baseRoll: generatedValue.baseRoll }),
+                          ...(generatedValue.waveCount === undefined
+                            ? {}
+                            : { waveCount: generatedValue.waveCount }),
+                          ...(generatedValue.highlightKey === undefined
+                            ? {}
+                            : { highlightKey: generatedValue.highlightKey }),
+                          ...(generatedValue.waves === undefined
+                            ? {}
+                            : { waves: generatedValue.waves }),
+                          ...(fangs === undefined ? {} : { fangs }),
+                        }),
+                      ),
+                      fangs,
+                      generatedLabels,
+                      generatedSelection.fangs?.perks ?? {},
+                      includeDefault,
+                    );
             encounterCustomizations.set(
               key,
               Object.freeze({
@@ -553,6 +592,7 @@ export function bindOccurrenceLocalInteractions(
                 ...(generatedAssessment === undefined ? {} : { generatedAssessment }),
                 ...(generatedHighlightPicker === undefined ? {} : { generatedHighlightPicker }),
                 ...(generatedWaveDraftFor === undefined ? {} : { generatedWaveDraftFor }),
+                ...(generatedFangsDraftFor === undefined ? {} : { generatedFangsDraftFor }),
               }),
             );
           }

@@ -57,6 +57,7 @@ export type {
   WorkspaceEncounterCustomizationInteraction,
   WorkspaceGeneratedEncounterAssessment,
   WorkspaceGeneratedWaveDraftChoice,
+  WorkspaceGeneratedFangsDraftChoice,
   WorkspaceNemesisEventInteraction,
   WorkspaceNemesisEventDomain,
   WorkspaceNemesisFeatureInteraction,

@@ -280,6 +280,8 @@ export interface AuthoredGeneratedEncounterCustomization {
   readonly baseRoll?: number;
   readonly waveCount?: number;
   readonly highlightKey?: string;
+  /** Optional native Fangs type and ordered attribute prefix. */
+  readonly fangs?: { readonly typeKey: string; readonly perkKeys: readonly string[] };
   /** Unlisted native wave indices remain Default. */
   readonly waves?: readonly {
     readonly waveIndex: number;
