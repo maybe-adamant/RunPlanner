@@ -257,6 +257,32 @@
   margin-top: 0.75rem;
 }
 
+.dream-route-selection {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.dream-route-badge {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  max-width: 100%;
+  padding: 6px 8px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #202128;
+}
+
+.dream-route-badge > button {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+  text-align: left;
+  white-space: normal;
+}
+
 .game-publication-actions {
   display: flex;
   justify-content: flex-end;

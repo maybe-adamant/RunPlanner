@@ -14,6 +14,17 @@ schema/protocol versions. Independent review passed after bounded remediation.
 Full phase closure and live-game acceptance remain pending; these results do not
 close later gates.
 
+Gate A committed: planner `d880956f`, executor `4044ec5`. Gate B's focused
+pre-implementation audit is recorded in
+`docs/investigations/FANGS_PERK_ELIGIBILITY.md`; implementation has not started.
+
+Gate A editor follow-up: compact budget/wave controls, whole-wave pickers,
+tabbed budget tables and explicit Adjust/Reset Budgets are delivered. Slider
+dragging and numeric typing remain local until commit. Repair coverage includes
+single-enemy remainder, empty retained allocations and invalid base budgets.
+All 74 focused engine/application/UI tests, planner typechecking and targeted
+lint passed. The shipped migration now traverses occurrence-owned encounters.
+
 Keep the current optional wave-count, highlight and composition editor, but
 replace relative weights with native difficulty-slice authoring and derived
 counts. Add optional encounter-level Fangs elite-type/perk selection and per-wave,
@@ -29,6 +40,8 @@ bases at implementation start if another task has advanced either authority.
 ## Governing evidence and authorities
 
 - Investigation: `docs/investigations/ENEMY_BUDGET_AND_VOWS.md`.
+- Fangs pool, combination and application audit:
+  `docs/investigations/FANGS_PERK_ELIGIBILITY.md`.
 - Game facts: enemy formation/Fear audit and combat encounter composition matrix
   under `docs/audits/rooms-and-routes/`.
 - `docs/design/SIMULATION_AND_VALIDATION.md`: exact reached state, candidate
@@ -136,6 +149,26 @@ known choices invalidated by composition/rank changes for explicit repair.
 With Fangs inactive or encounter blocking, retain values dormant and publish no
 override. Selecting a type requires known composition, not speculative native
 random membership. Native Default remains available throughout.
+
+Use one staged contextual picker: enemy type → perk 1 → perk 2 if needed.
+Place the encounter-level Fangs control immediately before the wave budget tabs,
+after the wave composition pickers; it is not part of any individual wave panel.
+Reuse the current transient staged-picker interaction, committing the complete
+selection on finish and displaying enemy/perk badges. The engine supplies
+eligible candidates and completion rules; unavailable choices have readable
+reasons. Default clears the override. No separate per-wave Fangs editor.
+
+Declare the audited pools, native enemy blocks, biome requirements and five
+incompatible pairs in the catalog. Do not interpret a `_Elite` suffix as native
+IsElite, repair `Vacuum` into `Vacuuming`, or borrow squad-member option pools.
+Current catalog IsElite facts already handle the three armored nonelite types.
+
+Selection remains distinct from application: Fog/Hex/Metallic have native
+room-wide application caps of one. Render that limit in supporting text, not a
+new planner application ledger or selection ban. Squad-key application to child
+units remains a named live-game probe; preserve native keys and explain the
+limitation rather than silently granting perks to children. The adapter must
+leave application caps, final-name lookup and Menace interaction native.
 
 ### Menace target counts
 
@@ -252,6 +285,9 @@ FillEnemyCounts in an isolated source probe, not a duplicate test algorithm.
 
 ### B — Fangs vertical delivery
 
+Prerequisite: complete the focused perk eligibility/combination audit before
+implementation. Its matrix is the acceptance baseline, not picker-local rules.
+
 Deliver perk declarations, exact active context, authored choices/candidates,
 encounter-level UI, publication and native adapter. Complete schema/protocol
 fields within the single version established for this delivery, without a
@@ -262,6 +298,12 @@ armor appearance, blocked encounters, eligible fixed seeds, mutually exclusive
 perks, exhausted options, changed composition and repeated type across waves.
 Executor witnesses prove separate same-name cage encounters remain isolated,
 Default remains native and assigned perks do not alter generated count budgets.
+Audit all eligible distinct pairs and both orders of the five exclusions in the
+engine authority tests. Keep representative staged-picker completion/reset,
+unavailable-reason and stale-selection repair witnesses in the app. Include
+room-set restrictions under Dream order. Test native application caps and squad
+identity behavior separately from successful encounter selection; do not claim
+every unit receives a selected perk.
 
 ### C — Deterministic Menace vertical delivery
 

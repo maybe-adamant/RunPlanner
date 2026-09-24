@@ -10,6 +10,10 @@ import { projectStableIdentityPicker } from './room-feature-picker-model';
 
 type ChoiceLabel = { readonly key: string; readonly label: string };
 
+export function generatedEnemyLabel(label: string): string {
+  return label.endsWith(' (Elite)') ? `Elite ${label.slice(0, -8)}` : label;
+}
+
 export function projectGeneratedEncounterHighlightPicker(
   assessment: GeneratedEncounterAssessment | undefined,
   selected: string | undefined,
@@ -17,7 +21,7 @@ export function projectGeneratedEncounterHighlightPicker(
   declarationKeys: readonly string[],
 ): ContextualPickerModel<string> {
   const labelFor = (key: string) =>
-    labels.find((choice) => choice.key === key)?.label ?? 'Unavailable enemy';
+    generatedEnemyLabel(labels.find((choice) => choice.key === key)?.label ?? 'Unavailable enemy');
   return projectStableIdentityPicker({
     assessment: assessment === undefined ? 'unassessed' : 'assessed',
     choices: [
@@ -64,10 +68,12 @@ function issueMessage(
   const waveIndex = issueWaveIndex(issue);
   const wave = waveIndex === undefined ? '' : `Wave ${waveIndex}: `;
   switch (issue.reason) {
+    case 'baseRoll':
+      return `Stored budget ${issue.actual} is unavailable. Choose a budget or reset it to Default.`;
     case 'waveCount':
       return `Wave count ${issue.actual} is outside ${issue.allowed.min}–${issue.allowed.max}.`;
     case 'highlight':
-      return `Highlight ${labelFor(issue.key)} is not available in this encounter context.`;
+      return `Shared enemy ${labelFor(issue.key)} is not available in this encounter context.`;
     case 'waveOutsideCount':
       return `${wave}is outside the selected count of ${issue.allowed}.`;
     case 'enemyUnavailable':
@@ -79,15 +85,15 @@ function issueMessage(
       if (missing > 0)
         return `${wave}needs at least ${plural(issue.allowed.min, 'total type')}; add ${plural(missing, 'type')}.`;
       if (issue.allowed.min === issue.allowed.max && seeds.length === issue.allowed.max)
-        return `${wave}allows only ${seeds.map((seed) => (seed.kind === 'highlight' ? 'the highlight' : labelFor(seed.key))).join(' and ')}; remove ${plural(excess, 'additional type')}.`;
+        return `${wave}allows only ${seeds.map((seed) => (seed.kind === 'highlight' ? 'the shared enemy' : labelFor(seed.key))).join(' and ')}; remove ${plural(excess, 'additional type')}.`;
       return `${wave}allows ${plural(issue.allowed.max, 'total type')}${
-        seeds.some((seed) => seed.kind === 'highlight') ? ' including the highlight' : ''
+        seeds.some((seed) => seed.kind === 'highlight') ? ' including the shared enemy' : ''
       }; remove ${plural(excess, 'type')}.`;
     }
     case 'placeholderCount':
       return `${wave}needs ${issue.allowed} generated companion; found ${issue.actual}.`;
     case 'allocationMembers':
-      return `${wave}allocation samples must name generated members.`;
+      return `${wave}budgets include an enemy that no longer has an editable budget. Reset Budgets to repair.`;
     default:
       return 'This customization needs repair for the current encounter context.';
   }
@@ -99,7 +105,7 @@ export function projectGeneratedEncounterAssessment(
   labels: readonly ChoiceLabel[],
 ): WorkspaceGeneratedEncounterAssessment {
   const labelFor = (key: string) =>
-    labels.find((choice) => choice.key === key)?.label ?? 'Unavailable enemy';
+    generatedEnemyLabel(labels.find((choice) => choice.key === key)?.label ?? 'Unavailable enemy');
   return Object.freeze({
     issues: Object.freeze(
       assessment.issues.map((issue) => {
@@ -107,13 +113,16 @@ export function projectGeneratedEncounterAssessment(
         return Object.freeze({
           message: issueMessage(issue, assessment, labelFor),
           ...(waveIndex === undefined ? {} : { waveIndex }),
-          ...(issue.reason === 'waveCount' || issue.reason === 'highlight'
+          ...(issue.reason === 'baseRoll' ||
+          issue.reason === 'waveCount' ||
+          issue.reason === 'highlight'
             ? { field: issue.reason }
             : {}),
         });
       }),
     ),
     composition: assessment.composition,
+    ...(assessment.budgetDomain === undefined ? {} : { budgetDomain: assessment.budgetDomain }),
     ...(assessment.budget === undefined ? {} : { budget: assessment.budget }),
     waves: Object.freeze(
       assessment.waves.map((wave) => {
@@ -124,10 +133,11 @@ export function projectGeneratedEncounterAssessment(
           waveIndex: wave.waveIndex,
           additionalTypeCount: wave.additionalTypeCount,
           seeds: wave.seeds,
+          sampledBudgetKeys: wave.sampledBudgetKeys,
           ...(generated === undefined
             ? {}
             : {
-                generatedMemberKeys: generated.typeKeys,
+                equalAllocations: wave.equalAllocations,
                 countPreview: wave.countPreview,
               }),
         });
@@ -145,12 +155,13 @@ export function projectGeneratedEncounterWaveDraft(
   labels: readonly ChoiceLabel[],
 ): WorkspaceGeneratedWaveDraft {
   const labelFor = (key: string) =>
-    labels.find((choice) => choice.key === key)?.label ?? 'Unavailable enemy';
+    generatedEnemyLabel(labels.find((choice) => choice.key === key)?.label ?? 'Unavailable enemy');
   const wave = assessment.waves.find((entry) => entry.waveIndex === waveIndex);
   if (wave === undefined) {
     return Object.freeze({
       picker: Object.freeze({ sections: Object.freeze([]) }),
       stepLabel: 'Wave is not active',
+      sampledBudgetKeys: Object.freeze([]),
     });
   }
   const globalIssues = assessment.issues.filter((issue) => issueWaveIndex(issue) === undefined);
@@ -163,6 +174,20 @@ export function projectGeneratedEncounterWaveDraft(
     waveIssues.length === 0;
   const sections: ContextualPickerModel<WorkspaceGeneratedWaveDraftChoice>['sections'][number][] =
     [];
+  if (confirmedSeedCount === 0 && typeKeys.length === 0) {
+    sections.push({
+      key: 'default',
+      kind: 'category',
+      label: 'Default',
+      collapsible: false,
+      items: [
+        {
+          ...draftItem('default', 'Default', { kind: 'default' }, 'possible'),
+          explanation: 'Resets this wave and all later waves, including their enemy budgets.',
+        },
+      ],
+    });
+  }
   if (canFinish) {
     sections.push(
       Object.freeze({
@@ -190,7 +215,7 @@ export function projectGeneratedEncounterWaveDraft(
           ]),
           key: `seed:${confirmedSeedCount}`,
           kind: 'required',
-          label: `Enemy ${confirmedSeedCount + 1} (${seed.kind})`,
+          label: `Enemy ${confirmedSeedCount + 1} (${seed.kind === 'highlight' ? 'shared enemy' : 'fixed'})`,
         }),
       );
     }
@@ -231,5 +256,6 @@ export function projectGeneratedEncounterWaveDraft(
   return Object.freeze({
     picker: Object.freeze({ sections: Object.freeze(sections) }),
     stepLabel,
+    sampledBudgetKeys: wave.sampledBudgetKeys,
   });
 }

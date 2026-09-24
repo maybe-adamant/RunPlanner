@@ -40,6 +40,10 @@ export interface GeneratedEncounterAssessment {
     readonly exhausted: boolean;
     /** One domain per legal editable position; never includes a trailing dead slot. */
     readonly eligibleKeysByPosition: readonly (readonly string[])[];
+    /** Equal remaining-budget samples for an explicit authoring action. */
+    readonly equalAllocations?: Readonly<Record<string, number>>;
+    /** Generated members that use a sampled budget rather than the native remainder. */
+    readonly sampledBudgetKeys: readonly string[];
     /** Ordered FillEnemyCounts preview; omitted counts remain native-random. */
     readonly countPreview?: readonly {
       readonly key: string;
@@ -50,9 +54,12 @@ export interface GeneratedEncounterAssessment {
   }[];
   readonly operands?: GeneratedEncounterOperands;
   readonly knownRunBlacklistAdditions: readonly string[];
+  readonly budgetDomain?: {
+    readonly baseRoll: { readonly min: number; readonly max: number };
+    readonly total: { readonly min: number; readonly max: number };
+  };
   readonly budget?: {
     readonly kind: 'exact' | 'range';
-    readonly baseRoll?: { readonly min: number; readonly max: number };
     readonly waveBudgets:
       readonly number[] | readonly { readonly min: number; readonly max: number }[];
   };
@@ -127,6 +134,8 @@ export function assessGeneratedEncounter(
   const possibleHighlight = policy.waveCount.max > 1;
   const selectedBase = authored.baseRoll;
   const base = policy.budget.base;
+  const sampledBudgetKeys = (generated: readonly string[]) =>
+    generated.filter((_key, index) => policy.fixedEnemies.length + index + 1 !== generated.length);
   if (
     selectedBase !== undefined &&
     (typeof base === 'number' || selectedBase < base.min || selectedBase > base.max)
@@ -145,7 +154,6 @@ export function assessGeneratedEncounter(
         : selectedBase === undefined
           ? Object.freeze({
               kind: 'range' as const,
-              baseRoll: Object.freeze({ min: base.min, max: base.max }),
               waveBudgets: Object.freeze(
                 wavePatterns[waveCount]!.map((share) =>
                   Object.freeze({
@@ -159,7 +167,6 @@ export function assessGeneratedEncounter(
             ? undefined
             : Object.freeze({
                 kind: 'exact' as const,
-                baseRoll: Object.freeze({ min: base.min, max: base.max }),
                 waveBudgets: Object.freeze(
                   wavePatterns[waveCount]!.map(
                     (share) => totalBudget(policy, context, selectedBase) * share,
@@ -182,9 +189,8 @@ export function assessGeneratedEncounter(
     // of generated entries. A missing sampled slice makes both the remaining
     // budget and a later capped redistribution unknown, so never publish a
     // partly exact generated wave.
-    const sampled = generated.map(
-      (_key, index) => policy.fixedEnemies.length + index + 1 !== generated.length,
-    );
+    const sampledKeys = sampledBudgetKeys(generated);
+    const sampled = generated.map((key) => sampledKeys.includes(key));
     if (
       sampled.some(
         (isSampled, index) => isSampled && row?.allocations?.[generated[index]!] === undefined,
@@ -402,9 +408,7 @@ export function assessGeneratedEncounter(
         const keys = Object.keys(row.allocations);
         if (
           keys.some(
-            (key) =>
-              !generated.includes(key) ||
-              policy.fixedEnemies.length + generated.indexOf(key) + 1 === generated.length,
+            (key) => !generated.includes(key) || !sampledBudgetKeys(generated).includes(key),
           )
         )
           issues.push({ reason: 'allocationMembers', waveIndex });
@@ -435,16 +439,49 @@ export function assessGeneratedEncounter(
     composition,
     eligibleHighlightKeys: Object.freeze(eligibleHighlights.map((choice) => choice.key)),
     waves: Object.freeze(
-      waveDomains.map((wave) =>
-        Object.freeze({
+      waveDomains.map((wave) => {
+        const generated = waves.find((entry) => entry.waveIndex === wave.waveIndex)?.typeKeys;
+        const waveBudget =
+          budget?.kind === 'exact'
+            ? (budget.waveBudgets as readonly number[])[wave.waveIndex - 1]
+            : undefined;
+        const fixedCost = policy.fixedEnemies.reduce(
+          (sum, enemy) => sum + enemy.difficultyRating * (enemy.fixedCount ?? 1),
+          0,
+        );
+        const equalAllocations =
+          !supported || waveBudget === undefined || !generated?.length
+            ? undefined
+            : Object.freeze(
+                Object.fromEntries(
+                  sampledBudgetKeys(generated).map((key) => [
+                    key,
+                    Math.max(0, waveBudget - fixedCost) / generated.length,
+                  ]),
+                ),
+              );
+        return Object.freeze({
           ...wave,
+          sampledBudgetKeys: Object.freeze(sampledBudgetKeys(generated ?? [])),
+          ...(equalAllocations === undefined ? {} : { equalAllocations }),
           typeCount: Object.freeze(wave.typeCount),
           additionalTypeCount: Object.freeze(wave.additionalTypeCount),
-        }),
-      ),
+        });
+      }),
     ),
     ...(supported && Object.keys(operands).length !== 0 ? { operands } : {}),
     knownRunBlacklistAdditions: Object.freeze(supported ? [...knownAdditions] : []),
+    ...(typeof base === 'number'
+      ? {}
+      : {
+          budgetDomain: Object.freeze({
+            baseRoll: Object.freeze({ min: base.min, max: base.max }),
+            total: Object.freeze({
+              min: totalBudget(policy, context, base.min),
+              max: totalBudget(policy, context, base.max),
+            }),
+          }),
+        }),
     ...(budget === undefined ? {} : { budget }),
   });
 }

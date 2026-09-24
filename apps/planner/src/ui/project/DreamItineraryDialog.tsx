@@ -57,9 +57,9 @@ export function DreamItineraryDialog({
             <p>Route is fixed after creation.</p>
           </div>
         </header>
-        <div aria-label="Route order" className="encounter-wave-selection">
+        <div aria-label="Route order" className="dream-route-selection">
           {projection.badges.map((badge) => (
-            <div className="encounter-enemy-badge" key={badge.index}>
+            <div className="dream-route-badge" key={badge.index}>
               <button
                 className="quiet-action action-compact"
                 disabled={pending || !badge.selected}
