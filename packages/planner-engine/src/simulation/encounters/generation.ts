@@ -72,6 +72,8 @@ export interface GeneratedEncounterAssessment {
     /** Editable generated additions after the declaration-owned seeds. */
     readonly additionalTypeCount: { readonly min: number; readonly max: number };
     readonly seeds: readonly { readonly key: string; readonly kind: 'fixed' | 'highlight' }[];
+    /** Seeds and eligible authored additions in native order, up to the first unavailable entry. */
+    readonly activeMemberKeys: readonly string[];
     /** A legal native roster can stop below the declared minimum when its pool is exhausted. */
     readonly exhausted: boolean;
     /** One domain per legal editable position; never includes a trailing dead slot. */
@@ -341,6 +343,7 @@ export function assessGeneratedEncounter(
     typeCount: { min: number; max: number };
     additionalTypeCount: { min: number; max: number };
     seeds: readonly { readonly key: string; readonly kind: 'fixed' | 'highlight' }[];
+    activeMemberKeys: readonly string[];
     exhausted: boolean;
     eligibleKeysByPosition: readonly (readonly string[])[];
   }[] = [];
@@ -438,6 +441,7 @@ export function assessGeneratedEncounter(
             ? [{ key: highlight.key, kind: 'highlight' as const }]
             : []),
         ]),
+        activeMemberKeys: Object.freeze(spawns.map((spawn) => spawn.key)),
         exhausted,
         eligibleKeysByPosition: Object.freeze(positions),
         ...(row === undefined

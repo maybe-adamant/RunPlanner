@@ -622,6 +622,65 @@ describe('OccurrenceRoomFeatures', () => {
     expect(removed.disabled).toBe(true);
   });
 
+  it('binds an unavailable Passive Nemesis selection to its checkbox for repair', async () => {
+    const occurrenceId = createOccurrenceId('golden-h-combat05');
+    const passive = createEncounterPhaseAddress(
+      goldenHBiome,
+      { kind: 'occurrence', occurrenceId },
+      'Passive',
+    );
+    const claimants = () =>
+      [...document.querySelectorAll<HTMLElement>('[data-semantic-owner]')].filter(
+        (element) => element.dataset.semanticOwner === semanticAddressKey(passive),
+      );
+    let project = applyProjectCommand(createGoldenFGHIProject(), catalog, {
+      kind: 'SelectEncounter',
+      phase: createEncounterPhaseAddress(
+        goldenHBiome,
+        { kind: 'occurrence', occurrenceId: createOccurrenceId('golden-h-combat09') },
+        'Cage01',
+      ),
+      encounterKey: 'NemesisCombatH',
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'SelectEncounter',
+      phase: passive,
+      encounterKey: 'NemesisRandomEvent',
+    });
+    const finding = simulateProject(catalog, project).findings.find(
+      (entry) => entry.code === 'encounterUnavailable',
+    )!;
+    expect(finding.origin).toEqual(passive);
+    const view = renderOccurrenceWorkbench(
+      project,
+      'Underworld',
+      'H',
+      occurrenceById(occurrenceId),
+    );
+    openRoomTab('Room Timeline');
+    expect(claimants()).toEqual([]);
+    openRoomTab('Room Overview');
+    act(() =>
+      view.application.store.dispatch(
+        findingSelected({ key: semanticFindingKey(finding), origin: finding.origin }),
+      ),
+    );
+    const checkbox = screen.getByRole('checkbox', { name: 'Nemesis Event' });
+    await waitFor(() => expect(document.activeElement).toBe(checkbox));
+    expect(checkbox.getAttribute('data-selected-finding')).toBe('true');
+    expect(checkbox.getAttribute('data-semantic-owner')).toBe(semanticAddressKey(passive));
+    expect(claimants()).toEqual([checkbox]);
+    const before = view.application.store.getState().projectWorkspace.history!.present;
+    await view.user.click(checkbox);
+    await waitFor(() =>
+      expect(
+        (screen.getByRole('checkbox', { name: 'Nemesis Event' }) as HTMLInputElement).checked,
+      ).toBe(false),
+    );
+    act(() => view.application.store.dispatch(authoredProjectUndoRequested()));
+    expect(view.application.store.getState().projectWorkspace.history!.present).toBe(before);
+  });
+
   it('allows adding Nemesis despite an authored encounter on an unvisited alternative', async () => {
     const laterId = createOccurrenceId('golden-h-combat04');
     const project = applyProjectCommand(createGoldenFGHIProject(), catalog, {

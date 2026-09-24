@@ -109,7 +109,7 @@ const findingCopy = {
   },
   encounterCustomizationUnavailable: {
     title: 'Encounter customization unavailable',
-    description: 'Choose an available result or restore Default.',
+    description: 'Repair this encounter customization or reset customization.',
   },
   encounterSlotActivationUnavailable: {
     title: 'Encounter phase inactive',

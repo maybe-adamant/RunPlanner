@@ -93,6 +93,10 @@ async function choosePicker(
 async function finishWave(view: Awaited<ReturnType<typeof open>>) {
   await view.user.click(await screen.findByRole('option', { name: 'Finish Wave' }));
 }
+function firstWaveAllocations(view: ReturnType<typeof renderOccurrenceWorkbench>) {
+  const value = current(view);
+  return value?.kind === 'generated' ? value.waves?.[0]?.allocations : undefined;
+}
 async function selectBudgetWave(view: Awaited<ReturnType<typeof open>>, index: number) {
   await view.user.click(
     within(view.dialog).getByRole('tab', { name: new RegExp(`^Wave ${index}(,|$)`) }),
@@ -223,9 +227,9 @@ describe('generated encounter customization workflows', () => {
     fireEvent.change(budget, { target: { value: '5' } });
     fireEvent.blur(budget);
     expect(current(view)).toMatchObject({ menace: [{ conversions: { Guard: { count: 14 } } }] });
-    expect(view.dialog.textContent).toContain('Converted requests exceed');
+    expect(view.dialog.textContent).toContain('Converted Whisper requests exceed');
     const findings = within(view.dialog).getByRole('region', { name: 'Customization findings' });
-    expect(findings.textContent).toContain('Wave 1: Converted requests exceed');
+    expect(findings.textContent).toContain('Wave 1: Converted Whisper requests exceed');
     const invalidTab = within(view.dialog).getByRole('tab', { name: 'Wave 1, needs attention' });
     expect(invalidTab.textContent).toContain('!');
     expect(invalidTab.textContent).not.toContain('Needs attention');
@@ -234,7 +238,7 @@ describe('generated encounter customization workflows', () => {
     await view.user.click(await screen.findByRole('option', { name: 'Wastrel' }));
     await finishWave(view);
     expect(current(view)).toMatchObject({ menace: [{ conversions: { Guard: { count: 14 } } }] });
-    expect(view.dialog.textContent).toContain('Converted requests exceed');
+    expect(view.dialog.textContent).toContain('Converted Whisper requests exceed');
     fireEvent.change(
       within(view.dialog).getByRole('textbox', { name: 'Wave 1 Whisper converted' }),
       { target: { value: '1' } },
@@ -290,7 +294,7 @@ describe('generated encounter customization workflows', () => {
     });
     expect(within(view.dialog).getAllByText('NA').length).toBeGreaterThanOrEqual(2);
   });
-  it('retains oversized budgets until edited, then caps the edit at the wave budget', async () => {
+  it('keeps typed budget over-requests authored exactly like saved ones', async () => {
     const view = await open(
       customize(createGoldenFGHIProject(), phase, {
         kind: 'generated',
@@ -321,9 +325,17 @@ describe('generated encounter customization workflows', () => {
           useGrouping: false,
         }).format(count * unitCost),
     );
+    const savedResult = input.closest('td')!.textContent;
     fireEvent.change(input, { target: { value: '10000' } });
     fireEvent.blur(input);
-    expect(current(view)).toMatchObject({ waves: [{ allocations: { Guard: waveBudget } }] });
+    expect(waveBudget).toBeLessThan(10000);
+    expect(current(view)).toMatchObject({ waves: [{ allocations: { Guard: 10000 } }] });
+    const typed = within(view.dialog).getByRole('textbox', { name: 'Wave 1 Whisper budget' });
+    expect((typed as HTMLInputElement).value).toBe('10000');
+    expect(typed.closest('td')!.textContent).toBe(savedResult);
+    fireEvent.change(typed, { target: { value: '12x' } });
+    fireEvent.blur(typed);
+    expect(current(view)).toMatchObject({ waves: [{ allocations: { Guard: 10000 } }] });
   });
   it('creates the complete composition only through Customize and resets it atomically', async () => {
     const view = await open(createGoldenFGHIProject());
@@ -561,6 +573,281 @@ describe('generated encounter customization workflows', () => {
     expect(
       within(view.dialog).getByText('Complete earlier choices to evaluate this encounter.'),
     ).toBeTruthy();
+  });
+  it('selects a shared enemy from assessed and unassessed pickers without a blank choice', async () => {
+    const unassessed = applyProjectCommand(
+      customize(createGoldenFGHIProject(), phase, { kind: 'generated', waveCount: 3 }),
+      catalog,
+      {
+        kind: 'SelectEncounter',
+        phase: createEncounterPhaseAddress(
+          goldenFBiome,
+          { kind: 'occurrence', occurrenceId: goldenFOccurrenceId(1, 1) },
+          'Encounter',
+        ),
+        encounterKey: 'ArtemisCombatF',
+      },
+    );
+    for (const project of [
+      customize(createGoldenFGHIProject(), phase, { kind: 'generated', waveCount: 3 }),
+      unassessed,
+    ]) {
+      const view = await open(project);
+      const trigger = within(view.dialog).getByRole('button', { name: 'Shared Enemy' });
+      expect(trigger.textContent).toContain('Select shared enemy');
+      expect(trigger.getAttribute('aria-invalid')).not.toBe('true');
+      await view.user.click(trigger);
+      const options = within(await screen.findByRole('listbox')).getAllByRole('option');
+      expect(options.map((option) => option.textContent)).not.toContainEqual(
+        expect.stringMatching(/Select shared enemy|no longer available/),
+      );
+      expect(screen.queryByText('This current choice is no longer available here.')).toBeNull();
+      await view.user.click(await screen.findByRole('option', { name: 'Whisper' }));
+      expect(current(view)).toMatchObject({ waveCount: 3, highlightKey: 'Guard' });
+      expect(screen.getByRole('dialog', { name: 'Customize' })).toBeTruthy();
+      cleanup();
+    }
+  });
+  it('keeps initialized budgets when a shared enemy is first chosen', async () => {
+    const view = await open(createGoldenFGHIProject());
+    await initialize(view);
+    await view.user.click(within(view.dialog).getByRole('radio', { name: '3' }));
+    const before = view.application.store.getState().projectWorkspace.history!.present;
+    expect(current(view)).toMatchObject({ waves: [{ allocations: { Guard: 65 } }] });
+    await choosePicker(view, 'Shared Enemy', 'Spindle');
+    expect(current(view)).toEqual({
+      kind: 'generated',
+      waveCount: 3,
+      highlightKey: 'Radiator',
+      waves: [{ waveIndex: 1, typeKeys: ['Guard', 'Brawler'], allocations: { Guard: 65 } }],
+    });
+    act(() => view.application.store.dispatch(authoredProjectUndoRequested()));
+    expect(view.application.store.getState().projectWorkspace.history!.present).toBe(before);
+  });
+  it('never invents or guesses a shared-enemy allocation', async () => {
+    const assessed = (view: Awaited<ReturnType<typeof open>>) =>
+      within(view.dialog).getByRole('region', { name: 'Customization findings' }).textContent;
+    const unallocated = await open(
+      customize(createGoldenFGHIProject(), phase, {
+        kind: 'generated',
+        waveCount: 3,
+        highlightKey: 'Guard',
+        waves: [{ waveIndex: 3, typeKeys: ['Brawler', 'Mage'], allocations: { Brawler: 10 } }],
+      }),
+    );
+    await choosePicker(unallocated, 'Shared Enemy', 'Spindle');
+    expect(current(unallocated)).toMatchObject({ highlightKey: 'Radiator' });
+    expect(firstWaveAllocations(unallocated)).toEqual({ Brawler: 10 });
+    expect(assessed(unallocated)).toContain('Wave 3: Set each editable enemy budget.');
+    cleanup();
+    const orphan = await open(
+      customize(createGoldenFGHIProject(), phase, {
+        kind: 'generated',
+        waveCount: 3,
+        waves: [
+          { waveIndex: 3, typeKeys: ['Brawler', 'Mage'], allocations: { Guard: 20, Brawler: 10 } },
+        ],
+      }),
+    );
+    await choosePicker(orphan, 'Shared Enemy', 'Spindle');
+    expect(current(orphan)).toMatchObject({ highlightKey: 'Radiator' });
+    expect(firstWaveAllocations(orphan)).toEqual({ Guard: 20, Brawler: 10 });
+    expect(assessed(orphan)).toContain('Wave 3: Budgets include an enemy');
+  });
+  it('preserves both budgets when the new shared enemy already has one', async () => {
+    const view = await open(
+      customize(createGoldenFGHIProject(), phase, {
+        kind: 'generated',
+        waveCount: 3,
+        highlightKey: 'Guard',
+        waves: [
+          { waveIndex: 3, typeKeys: ['Brawler', 'Mage'], allocations: { Guard: 20, Brawler: 10 } },
+        ],
+      }),
+    );
+    await choosePicker(view, 'Shared Enemy', 'Wastrel');
+    expect(current(view)).toMatchObject({ highlightKey: 'Brawler' });
+    expect(firstWaveAllocations(view)).toEqual({ Guard: 20, Brawler: 10 });
+    const findings = within(view.dialog).getByRole('region', {
+      name: 'Customization findings',
+    }).textContent;
+    expect(findings).toContain('Wave 3: Enemy 2 (Wastrel) is not available.');
+    expect(findings).toContain('Wave 3: Budgets include an enemy');
+    await choosePicker(view, 'Shared Enemy', 'Spindle');
+    expect(current(view)).toMatchObject({ highlightKey: 'Radiator' });
+    expect(firstWaveAllocations(view)).toEqual({ Guard: 20, Brawler: 10 });
+  });
+  it('keeps waves, shared enemy, Fangs and Menace across a wave-count edit', async () => {
+    const value = {
+      ...composed,
+      fangs: { typeKey: 'Guard_Elite', perkKeys: ['Blink'] },
+      menace: [{ waveIndex: 3, conversions: { Brawler: { count: 1 } } }],
+    } as const;
+    const view = await open(customize(createGoldenFGHIProject(), phase, value));
+    await view.user.click(within(view.dialog).getByRole('radio', { name: '2' }));
+    expect(current(view)).toEqual({ ...value, waveCount: 2 });
+    act(() => view.application.store.dispatch(authoredProjectUndoRequested()));
+    expect(current(view)).toEqual(value);
+  });
+  it('keeps Fangs perks when the Fangs target is replaced', async () => {
+    let project = applyProjectCommand(createGoldenFGHIProject(), catalog, {
+      kind: 'ReplaceFearVowRank',
+      route: { kind: 'route', routeKey: 'Underworld' },
+      vowKey: 'EnemyEliteShrineUpgrade',
+      rank: 1,
+    });
+    project = customize(project, phase, {
+      kind: 'generated',
+      waveCount: 1,
+      waves: [
+        { waveIndex: 1, typeKeys: ['Guard_Elite', 'Brawler'], allocations: { Guard_Elite: 87.5 } },
+      ],
+      fangs: { typeKey: 'Brawler_Elite', perkKeys: ['Blink'] },
+    });
+    const view = await open(project);
+    await choosePicker(view, 'Fangs target', 'Elite Whisper');
+    expect(current(view)).toMatchObject({ fangs: { typeKey: 'Guard_Elite', perkKeys: ['Blink'] } });
+  });
+  it('keeps Menace keyed to its source when the shared enemy is replaced', async () => {
+    const project = applyProjectCommand(
+      customize(createGoldenFGHIProject(), phase, {
+        ...composed,
+        menace: [{ waveIndex: 3, conversions: { Guard: { count: 1 } } }],
+      }),
+      catalog,
+      {
+        kind: 'ReplaceFearVowRank',
+        route: { kind: 'route', routeKey: 'Underworld' },
+        vowKey: 'NextBiomeEnemyShrineUpgrade',
+        rank: 1,
+      },
+    );
+    const view = await open(project);
+    await choosePicker(view, 'Shared Enemy', 'Spindle');
+    expect(current(view)).toMatchObject({
+      highlightKey: 'Radiator',
+      menace: [{ waveIndex: 3, conversions: { Guard: { count: 1 } } }],
+    });
+    expect(firstWaveAllocations(view)).toEqual({ Radiator: 2, Brawler: 3 });
+    expect(view.dialog.textContent).not.toContain('Menace Count.');
+  });
+  it('omits the allocation map when removing the last allocated excess enemy', async () => {
+    const view = await open(
+      customize(createGoldenFGHIProject(), phase, {
+        kind: 'generated',
+        waveCount: 1,
+        waves: [
+          {
+            waveIndex: 1,
+            typeKeys: ['Guard', 'Brawler', 'Mage', 'Guard_Elite', 'Brawler_Elite'],
+            allocations: { Brawler_Elite: 20 },
+          },
+        ],
+      }),
+    );
+    await view.user.click(
+      within(view.dialog).getByRole('button', { name: 'Remove Wave 1 Enemy 5' }),
+    );
+    expect(current(view)).toEqual({
+      kind: 'generated',
+      waveCount: 1,
+      waves: [{ waveIndex: 1, typeKeys: ['Guard', 'Brawler', 'Mage', 'Guard_Elite'] }],
+    });
+  });
+  it('authors an excessive Menace count for engine repair and Undo', async () => {
+    const enabled = applyProjectCommand(
+      customize(createGoldenFGHIProject(), phase, {
+        kind: 'generated',
+        waveCount: 1,
+        waves: [{ waveIndex: 1, typeKeys: ['Guard', 'Brawler'], allocations: { Guard: 70 } }],
+      }),
+      catalog,
+      {
+        kind: 'ReplaceFearVowRank',
+        route: { kind: 'route', routeKey: 'Underworld' },
+        vowKey: 'NextBiomeEnemyShrineUpgrade',
+        rank: 1,
+      },
+    );
+    const view = await open(enabled);
+    const before = view.application.store.getState().projectWorkspace.history!.present;
+    const input = () =>
+      within(view.dialog).getByRole('textbox', { name: 'Wave 1 Whisper converted' });
+    fireEvent.change(input(), { target: { value: '999' } });
+    fireEvent.keyDown(input(), { key: 'Enter' });
+    expect(current(view)).toMatchObject({ menace: [{ conversions: { Guard: { count: 999 } } }] });
+    expect(
+      within(view.dialog).getByRole('region', { name: 'Customization findings' }).textContent,
+    ).toContain('Wave 1: Converted Whisper requests exceed its current count.');
+    fireEvent.change(input(), { target: { value: '1' } });
+    fireEvent.blur(input());
+    expect(current(view)).toMatchObject({ menace: [{ conversions: { Guard: { count: 1 } } }] });
+    expect(
+      within(view.dialog).queryByRole('region', { name: 'Customization findings' }),
+    ).toBeNull();
+    act(() => view.application.store.dispatch(authoredProjectUndoRequested()));
+    act(() => view.application.store.dispatch(authoredProjectUndoRequested()));
+    expect(view.application.store.getState().projectWorkspace.history!.present).toBe(before);
+  });
+  it('warns about declared once-per-run enemies among engine-assessed active members', async () => {
+    const warning =
+      'Sorrow-Spiller can appear only once per run. An earlier uncustomized encounter may already include it.';
+    const cage = (occurrenceId: string) =>
+      createEncounterPhaseAddress(
+        goldenHBiome,
+        { kind: 'occurrence', occurrenceId: createOccurrenceId(occurrenceId) },
+        'Cage01',
+      );
+    const withValue = (
+      owner: EncounterPhaseAddress,
+      waves: NonNullable<AuthoredGeneratedEncounterCustomization['waves']>,
+      encounterKey?: string,
+    ) =>
+      customize(
+        encounterKey === undefined
+          ? createGoldenFGHIProject()
+          : applyProjectCommand(createGoldenFGHIProject(), catalog, {
+              kind: 'SelectEncounter',
+              phase: owner,
+              encounterKey,
+            }),
+        owner,
+        { kind: 'generated', waveCount: 1, waves },
+      );
+    const owner = cage('golden-h-combat05');
+    for (const [waves, encounterKey, warns] of [
+      [[{ waveIndex: 1, typeKeys: ['FogEmitter2', 'BrokenHearted', 'Lovesick'] }], undefined, true],
+      // A template companion is an active member, although it never enters the run blacklist.
+      [[{ waveIndex: 1, typeKeys: ['FogEmitter2'] }], 'GeneratedH_Treant2', true],
+      // An incomplete wave still reports its validated prefix.
+      [[{ waveIndex: 1, typeKeys: ['FogEmitter2'] }], undefined, true],
+      [
+        [
+          { waveIndex: 1, typeKeys: ['BrokenHearted', 'Lovesick', 'Mourner'] },
+          { waveIndex: 2, typeKeys: ['FogEmitter2'] },
+        ],
+        undefined,
+        false,
+      ],
+    ] as const) {
+      const view = await open(withValue(owner, waves, encounterKey), owner);
+      expect(within(view.dialog).queryByText(warning) !== null).toBe(warns);
+      cleanup();
+    }
+    const unavailableOwner = cage('golden-h-combat09');
+    const unavailable = withValue(
+      unavailableOwner,
+      [{ waveIndex: 1, typeKeys: ['FogEmitter2'] }],
+      'GeneratedH_Treant2',
+    );
+    expect(
+      projectStructuredWorkspaceFixture(
+        unavailable,
+      ).workspace.interactions.encounterCustomizations.get(semanticAddressKey(unavailableOwner))
+        ?.generatedAssessment,
+    ).toBeUndefined();
+    const view = await open(unavailable, unavailableOwner);
+    expect(within(view.dialog).queryByText(warning)).toBeNull();
   });
   it('initializes reward-owned Devotion at its exact phase', async () => {
     const owner = createEncounterPhaseAddress(

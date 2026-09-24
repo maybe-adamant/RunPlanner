@@ -686,14 +686,21 @@ export function assembleWorkspaceOccurrence(
     if (phase.customizable && phase.nemesisEvent !== undefined) {
       input.markerDestinations.redirectTo(phase.nemesisEvent.marker, phase.marker, node.key);
     }
+    const phaseTab = roomTabForPhase(roomLocal, phase.address.phaseKey);
+    // An uncustomized Fields Passive selection is repaired by its Overview room-feature control.
+    input.markerDestinations.setRoomTab(
+      [phase.marker],
+      phase.nemesisFeature !== undefined && phase.customization === undefined
+        ? 'overview'
+        : phaseTab,
+    );
     input.markerDestinations.setRoomTab(
       [
-        phase.marker,
         ...(phase.nemesisEvent === undefined ? [] : [phase.nemesisEvent.marker]),
         ...(phase.traitOffer === undefined ? [] : [phase.traitOffer.marker]),
         ...(phase.gorgonAthena === undefined ? [] : [phase.gorgonAthena.marker]),
       ],
-      roomTabForPhase(roomLocal, phase.address.phaseKey),
+      phaseTab,
     );
   }
   if (judgment !== undefined) {

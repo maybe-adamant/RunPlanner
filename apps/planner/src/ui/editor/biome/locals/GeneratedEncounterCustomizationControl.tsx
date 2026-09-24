@@ -95,20 +95,18 @@ function EncounterBudgetSlider({
 
 function EnemyBudgetInput({
   value,
-  max,
   label,
   onCommit,
 }: {
   readonly value: number | undefined;
-  readonly max: number | undefined;
   readonly label: string;
   readonly onCommit: (value: number) => void;
 }) {
   const [draft, setDraft] = useState<string | undefined>();
   const commit = () => {
     if (draft === undefined) return;
-    const parsed = draft.trim() === '' ? NaN : Number(draft);
-    const next = max === undefined ? parsed : Math.min(parsed, max);
+    // Over-requests are legal; the engine reports the effective budget.
+    const next = draft.trim() === '' ? NaN : Number(draft);
     setDraft(undefined);
     if (Number.isFinite(next) && next >= 0 && next !== value) onCommit(next);
   };
@@ -136,21 +134,20 @@ function EnemyBudgetInput({
 
 function ConvertedInput({
   value,
-  max,
   label,
   onCommit,
 }: {
   readonly value: number;
-  readonly max: number;
   readonly label: string;
   readonly onCommit: (value: number) => void;
 }) {
   const [draft, setDraft] = useState<string | undefined>();
   const commit = () => {
     if (draft === undefined) return;
+    // A count above the current source count is authored; the engine reports it.
     const next = draft.trim() === '' ? NaN : Number(draft);
     setDraft(undefined);
-    if (Number.isInteger(next) && next >= 0 && next <= max && next !== value) onCommit(next);
+    if (Number.isInteger(next) && next >= 0 && next !== value) onCommit(next);
   };
   return (
     <span className="encounter-budget-input">
@@ -179,16 +176,23 @@ function authored(decision: Decision): AuthoredGeneratedEncounterCustomization {
   return decision.value?.kind === 'generated' ? decision.value : { kind: 'generated' };
 }
 
-function replaceMemberAllocation(
+/** Moves only an explicit prior highlight's own allocation onto an unallocated new highlight. */
+function transferHighlightAllocation(
   allocations: Readonly<Record<string, number>>,
+  typeKeys: readonly string[],
   previousKey: string | undefined,
   nextKey: string,
-) {
-  const next = { ...allocations };
-  const inherited = previousKey === undefined ? 0 : (next[previousKey] ?? 0);
-  if (previousKey !== undefined) delete next[previousKey];
-  next[nextKey] = inherited;
-  return next;
+): Readonly<Record<string, number>> {
+  // A listed type owns its allocation even when it was also the highlight.
+  if (
+    previousKey === undefined ||
+    typeKeys.includes(previousKey) ||
+    !Object.hasOwn(allocations, previousKey) ||
+    Object.hasOwn(allocations, nextKey)
+  )
+    return allocations;
+  const { [previousKey]: inherited, ...rest } = allocations;
+  return { ...rest, [nextKey]: inherited! };
 }
 
 function withWave(
@@ -567,7 +571,6 @@ export function GeneratedEncounterCustomizationControl({
         </button>
         <button
           className="danger-action action-compact"
-          disabled={decision.value === undefined}
           onClick={() => replace(null)}
           type="button"
         >
@@ -704,27 +707,19 @@ export function GeneratedEncounterCustomizationControl({
                     ...(current.waves === undefined
                       ? {}
                       : {
-                          waves: current.waves.map((wave) => {
-                            if (highlightKey === '' || wave.allocations === undefined) return wave;
-                            const retainedHighlightKeys = Object.keys(wave.allocations).filter(
-                              (key) => !wave.typeKeys.includes(key),
-                            );
-                            if (
-                              current.highlightKey === undefined &&
-                              retainedHighlightKeys.length > 1
-                            )
-                              return wave;
-                            const previousHighlight =
-                              current.highlightKey ?? retainedHighlightKeys[0];
-                            return {
-                              ...wave,
-                              allocations: replaceMemberAllocation(
-                                wave.allocations,
-                                previousHighlight,
-                                highlightKey,
-                              ),
-                            };
-                          }),
+                          waves: current.waves.map((wave) =>
+                            wave.allocations === undefined
+                              ? wave
+                              : {
+                                  ...wave,
+                                  allocations: transferHighlightAllocation(
+                                    wave.allocations,
+                                    wave.typeKeys,
+                                    current.highlightKey,
+                                    highlightKey,
+                                  ),
+                                },
+                          ),
                         }),
                   };
                   return { ...base, highlightKey };
@@ -747,7 +742,7 @@ export function GeneratedEncounterCustomizationControl({
         </p>
       ) : (
         <div className="encounter-generated-waves">
-          {decision.selection.warnings.map((warning) => (
+          {assessment.warnings.map((warning) => (
             <p className="encounter-composition-warning" key={warning}>
               {warning}
             </p>
@@ -839,11 +834,6 @@ export function GeneratedEncounterCustomizationControl({
                   <label className="encounter-budget-input" key={`allocation-${position}`}>
                     <EnemyBudgetInput
                       label={`Wave ${wave.waveIndex} ${name} budget`}
-                      max={
-                        budgets?.kind === 'exact'
-                          ? (budgets.waveBudgets[wave.waveIndex - 1] as number)
-                          : undefined
-                      }
                       onCommit={(next) => {
                         update((state) =>
                           withWave(state, wave.waveIndex, (row) => ({
@@ -1025,7 +1015,6 @@ export function GeneratedEncounterCustomizationControl({
                                     <td key={`${index}-${key}`}>
                                       <ConvertedInput
                                         label={`Wave ${wave.waveIndex} ${label(key)} converted`}
-                                        max={cell.maximum}
                                         value={currentMenace?.count ?? 0}
                                         onCommit={(count) =>
                                           update((state) =>
