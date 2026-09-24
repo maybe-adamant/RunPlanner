@@ -11,10 +11,35 @@ import type { AuthoredGeneratedEncounterCustomization } from '@run-planner/engin
 
 import { projectStableIdentityPicker } from './room-feature-picker-model';
 
-type ChoiceLabel = { readonly key: string; readonly label: string; readonly fangsCaveat?: 'squad' };
+type ChoiceLabel = {
+  readonly key: string;
+  readonly label: string;
+  readonly fangsCaveat?: 'squad';
+  readonly menace?: import('@run-planner/engine/catalog-schema').EncounterEnemyChoice['menace'];
+};
 
 export function generatedEnemyLabel(label: string): string {
   return label.endsWith(' (Elite)') ? `Elite ${label.slice(0, -8)}` : label;
+}
+
+export function projectGeneratedMenace(
+  fact: import('@run-planner/engine/catalog-schema').EncounterEnemyChoice['menace'],
+) {
+  if (fact?.kind === 'mapped')
+    return { ...fact, targetLabel: generatedEnemyLabel(fact.targetLabel ?? 'Unavailable enemy') };
+  if (fact?.kind === 'random')
+    return {
+      ...fact,
+      targetLabels: Object.freeze(
+        Object.fromEntries(
+          fact.targetNativeIds.map((key) => [
+            key,
+            generatedEnemyLabel(fact.targetLabels?.[key] ?? 'Unavailable enemy'),
+          ]),
+        ),
+      ),
+    };
+  return fact;
 }
 
 export function projectGeneratedEncounterWarnings(
@@ -89,7 +114,6 @@ function issueMessage(
   labelFor: (key: string) => string,
 ): string {
   const waveIndex = issueWaveIndex(issue);
-  const wave = waveIndex === undefined ? '' : `Wave ${waveIndex}: `;
   switch (issue.reason) {
     case 'required':
       return issue.field === 'waveCount'
@@ -99,8 +123,8 @@ function issueMessage(
           : issue.field === 'highlight'
             ? 'Choose the shared enemy.'
             : issue.field === 'wave'
-              ? `${wave}choose its enemies.`
-              : `${wave}set each editable enemy budget.`;
+              ? 'Choose its enemies.'
+              : 'Set each editable enemy budget.';
     case 'baseRoll':
       return `Stored budget ${issue.actual} is unavailable. Choose a supported budget.`;
     case 'waveCount':
@@ -108,29 +132,35 @@ function issueMessage(
     case 'highlight':
       return `Shared enemy ${labelFor(issue.key)} is not available in this encounter context.`;
     case 'enemyUnavailable':
-      return `${wave}enemy ${issue.position} (${labelFor(issue.key)}) is not available.`;
+      return `Enemy ${issue.position} (${labelFor(issue.key)}) is not available.`;
     case 'typeCount': {
       const seeds = assessment.waves.find((entry) => entry.waveIndex === waveIndex)?.seeds ?? [];
       const excess = Math.max(0, issue.actual - issue.allowed.max);
       const missing = Math.max(0, issue.allowed.min - issue.actual);
       if (missing > 0)
-        return `${wave}needs at least ${plural(issue.allowed.min, 'total type')}; add ${plural(missing, 'type')}.`;
+        return `Needs at least ${plural(issue.allowed.min, 'total type')}; add ${plural(missing, 'type')}.`;
       if (issue.allowed.min === issue.allowed.max && seeds.length === issue.allowed.max)
-        return `${wave}allows only ${seeds.map((seed) => (seed.kind === 'highlight' ? 'the shared enemy' : labelFor(seed.key))).join(' and ')}; remove ${plural(excess, 'additional type')}.`;
-      return `${wave}allows ${plural(issue.allowed.max, 'total type')}${
+        return `Allows only ${seeds.map((seed) => (seed.kind === 'highlight' ? 'the shared enemy' : labelFor(seed.key))).join(' and ')}; remove ${plural(excess, 'additional type')}.`;
+      return `Allows ${plural(issue.allowed.max, 'total type')}${
         seeds.some((seed) => seed.kind === 'highlight') ? ' including the shared enemy' : ''
       }; remove ${plural(excess, 'type')}.`;
     }
     case 'placeholderCount':
-      return `${wave}needs ${issue.allowed} generated companion; found ${issue.actual}.`;
+      return `Needs ${issue.allowed} generated companion; found ${issue.actual}.`;
     case 'allocationMembers':
-      return `${wave}budgets include an enemy that no longer has an editable budget. Edit the affected wave.`;
+      return 'Budgets include an enemy that no longer has an editable budget. Edit the affected wave.';
     case 'fangs':
       return issue.issue === 'typeUnavailable'
         ? 'The stored Fangs elite is not in the active encounter composition. Choose an available elite.'
         : issue.issue === 'perkUnavailable'
           ? 'The stored Fangs perks are no longer a legal native pick order. Repair the selection.'
           : 'Choose the next available Fangs perk.';
+    case 'menace':
+      return issue.issue === 'targetRequired'
+        ? 'Choose a Menace replacement before converting this source.'
+        : issue.issue === 'targetUnavailable'
+          ? 'The stored Menace replacement is unavailable. Choose another replacement.'
+          : 'Converted requests exceed this source’s current count. Reduce Menace Count.';
     default:
       return 'This customization needs repair for the current encounter context.';
   }
@@ -140,6 +170,7 @@ function issueMessage(
 export function projectGeneratedEncounterAssessment(
   assessment: GeneratedEncounterAssessment,
   labels: readonly ChoiceLabel[],
+  authored?: AuthoredGeneratedEncounterCustomization,
 ): WorkspaceGeneratedEncounterAssessment {
   const labelFor = (key: string) =>
     generatedEnemyLabel(labels.find((choice) => choice.key === key)?.label ?? 'Unavailable enemy');
@@ -150,6 +181,12 @@ export function projectGeneratedEncounterAssessment(
         return Object.freeze({
           message: issueMessage(issue, assessment, labelFor),
           ...(waveIndex === undefined ? {} : { waveIndex }),
+          ...(issue.reason === 'enemyUnavailable' ||
+          issue.reason === 'typeCount' ||
+          issue.reason === 'placeholderCount' ||
+          (issue.reason === 'required' && issue.field === 'wave')
+            ? { field: 'enemies' as const }
+            : {}),
           ...(issue.reason === 'required' &&
           (issue.field === 'baseRoll' || issue.field === 'waveCount' || issue.field === 'highlight')
             ? { field: issue.field }
@@ -167,16 +204,60 @@ export function projectGeneratedEncounterAssessment(
     ...(assessment.budgetDomain === undefined ? {} : { budgetDomain: assessment.budgetDomain }),
     ...(assessment.budget === undefined ? {} : { budget: assessment.budget }),
     ...(assessment.fangs === undefined ? {} : { fangs: assessment.fangs }),
+    ...(assessment.menace === undefined ? {} : { menace: assessment.menace }),
     waves: Object.freeze(
       assessment.waves.map((wave) => {
         return Object.freeze({
           waveIndex: wave.waveIndex,
+          menaceCells: Object.freeze(
+            Object.fromEntries(
+              (wave.menaceSources ?? []).map((source) => {
+                const fact = labels.find((entry) => entry.key === source.sourceKey)?.menace;
+                const selected = authored?.menace?.find(
+                  (entry) => entry.waveIndex === wave.waveIndex,
+                )?.conversions[source.sourceKey]?.targetKey;
+                const labelFor = (key: string) =>
+                  generatedEnemyLabel(
+                    fact?.kind === 'random'
+                      ? (fact.targetLabels?.[key] ?? 'Unavailable enemy')
+                      : 'Unavailable enemy',
+                  );
+                return [
+                  source.sourceKey,
+                  Object.freeze({
+                    maximum: source.maximum,
+                    replacementLabel:
+                      source.targetNativeId === undefined
+                        ? selected === undefined
+                          ? 'Select replacement'
+                          : labelFor(selected)
+                        : generatedEnemyLabel(
+                            fact?.kind === 'mapped'
+                              ? (fact.targetLabel ?? 'Unavailable enemy')
+                              : 'Unavailable enemy',
+                          ),
+                    ...(source.targetNativeIds === undefined
+                      ? {}
+                      : {
+                          picker: projectStableIdentityPicker({
+                            assessment: 'assessed',
+                            choices: source.targetNativeIds.map((key) => ({
+                              value: key,
+                              label: labelFor(key),
+                            })),
+                            selected,
+                            selectedLabel:
+                              selected === undefined ? 'Select replacement' : labelFor(selected),
+                          }),
+                        }),
+                  }),
+                ];
+              }),
+            ),
+          ),
           additionalTypeCount: wave.additionalTypeCount,
           seeds: wave.seeds,
           sampledBudgetKeys: wave.sampledBudgetKeys,
-          ...(wave.equalAllocations === undefined
-            ? {}
-            : { equalAllocations: wave.equalAllocations }),
           ...(wave.countPreview === undefined ? {} : { countPreview: wave.countPreview }),
         });
       }),
@@ -206,6 +287,7 @@ export function projectGeneratedEncounterWaveDraft(
     (issue) =>
       issueWaveIndex(issue) === waveIndex &&
       issue.reason !== 'required' &&
+      issue.reason !== 'menace' &&
       issue.reason !== 'allocationMembers',
   );
   const seedsConfirmed = confirmedSeedCount >= wave.seeds.length;
@@ -319,10 +401,7 @@ export function projectGeneratedFangsDraft(
   if (fangs.next === 'unavailable')
     return Object.freeze({
       picker: Object.freeze({ sections: Object.freeze(sections) }),
-      stepLabel:
-        fangs.issue === 'blocked'
-          ? 'This encounter blocks Fangs attributes'
-          : 'Vow of Fangs is inactive',
+      stepLabel: 'No Fangs selection is available for this composition',
     });
   if (fangs.next === 'type') {
     sections.push(

@@ -490,7 +490,11 @@ export function bindOccurrenceLocalInteractions(
             const generatedAssessment =
               generatedEngineAssessment === undefined
                 ? undefined
-                : projectGeneratedEncounterAssessment(generatedEngineAssessment, generatedLabels);
+                : projectGeneratedEncounterAssessment(
+                    generatedEngineAssessment,
+                    generatedLabels,
+                    generatedValue,
+                  );
             const generatedHighlightPicker =
               generatedDecision === undefined || generatedSelection === undefined
                 ? undefined
@@ -525,6 +529,9 @@ export function bindOccurrenceLocalInteractions(
                       ...(generatedValue.fangs === undefined
                         ? {}
                         : { fangs: generatedValue.fangs }),
+                      ...(generatedValue.menace === undefined
+                        ? {}
+                        : { menace: generatedValue.menace }),
                       waves: Object.freeze(waves),
                     });
                     return projectGeneratedEncounterWaveDraft(
@@ -561,6 +568,9 @@ export function bindOccurrenceLocalInteractions(
                           ...(generatedValue.waves === undefined
                             ? {}
                             : { waves: generatedValue.waves }),
+                          ...(generatedValue.menace === undefined
+                            ? {}
+                            : { menace: generatedValue.menace }),
                           ...(fangs === undefined ? {} : { fangs }),
                         }),
                       ),

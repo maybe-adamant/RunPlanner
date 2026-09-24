@@ -28,6 +28,41 @@ function assess(
 }
 
 describe('native generated composition possibility', () => {
+  it('resolves active Menace by source request, retains zero defaults, and reports reductions', () => {
+    const source = policy('GeneratedF');
+    const context = {
+      biomeDepthCache: 8,
+      biomeEncounterDepth: 8,
+      knownRunBlacklist: [],
+      menaceRank: 1,
+    };
+    const initial = initializeGeneratedEncounter(source, context)!;
+    const first = assessGeneratedEncounter(source, initial, context).operands!.waves[0]!;
+    const key = first.typeKeys.find(
+      (candidate) =>
+        source.choices.find((choice) => choice.key === candidate)?.menace?.kind === 'mapped',
+    )!;
+    const count = first.counts[key]!;
+    const configured = {
+      ...initial,
+      menace: [{ waveIndex: 1, conversions: { [key]: { count } } }],
+    } as const;
+    expect(assessGeneratedEncounter(source, configured, context)).toMatchObject({
+      supported: true,
+      menace: { active: true },
+      operands: { menace: [{ conversions: [{ sourceKey: key, count }] }] },
+    });
+    expect(
+      assessGeneratedEncounter(source, configured, { ...context, menaceRank: 0 }).operands?.menace,
+    ).toEqual([]);
+    expect(
+      assessGeneratedEncounter(
+        source,
+        { ...configured, menace: [{ waveIndex: 1, conversions: { [key]: { count: count + 1 } } }] },
+        context,
+      ).issues,
+    ).toContainEqual(expect.objectContaining({ reason: 'menace', issue: 'countUnavailable' }));
+  });
   it('initializes every supported profile into a complete publishable composition', () => {
     const profiles = Object.entries(catalog.encounterDefinitions.byKey).flatMap(
       ([definitionKey, definition]) =>

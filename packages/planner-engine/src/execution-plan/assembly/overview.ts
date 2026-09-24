@@ -718,6 +718,29 @@ function executionEncounterCustomization(
                   perks: Object.freeze(operands.fangs.perkKeys),
                 }),
               }),
+          menace: Object.freeze(
+            operands.menace.map((wave) =>
+              Object.freeze({
+                waveIndex: wave.waveIndex,
+                conversions: Object.freeze(
+                  wave.conversions.map((conversion) =>
+                    Object.freeze({
+                      source: choice(conversion.sourceKey),
+                      count: conversion.count,
+                      ...(conversion.targetNativeId === undefined
+                        ? {}
+                        : {
+                            target: Object.freeze({
+                              choiceKey: conversion.targetNativeId,
+                              nativeId: conversion.targetNativeId,
+                            }),
+                          }),
+                    }),
+                  ),
+                ),
+              }),
+            ),
+          ),
           waves: Object.freeze(
             operands.waves.map((wave) =>
               Object.freeze({

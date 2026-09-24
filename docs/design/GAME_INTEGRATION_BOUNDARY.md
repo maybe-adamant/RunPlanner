@@ -177,15 +177,30 @@ Explicit decisions steer reached behavior without adding required attacks,
 transactions or conformance facts. The [encounter audit](../audits/game-execution-contacts/NPCS_ENCOUNTERS_AND_AUTOMATICS.md#boss-decisions)
 owns the supported native contacts and narrowly agreed progression overrides.
 
-Generated composition publishes only active wave/highlight/type/share operands;
-each wave's generated list includes its highlight but excludes fixed template
-enemies. Generation steering carries the existing exact phase into synchronous
+Encounter selection checks the requested variant through native eligibility before
+forcing it. Rejection delegates selection to the game with a diagnostic and without
+applying the rejected variant's customization. Existing conformance checks resulting
+state, including NPC traits; this admission adds no mismatch boundary.
+
+Generated composition is native or fully owned. The resolved export contains every
+wave's enemy identities, source provenance and counts, including fixed/template
+seeds, plus applicable Fangs and Menace outcomes. The exact phase scopes synchronous
 native preparation, with a stamped destination handoff for reward-owned Devotion.
-The native game retains difficulty, eligibility, selection side effects, counts,
-rounding, caps and spawning. Default delegates unchanged. Scope is restored on
-return or error; unrelated work and introduction replacements never inherit an
-override. Failure to realize optional composition is diagnostic-only, not a new
-transaction or mismatch boundary.
+Uncustomized encounters delegate unchanged. Customized encounters preflight their
+whole composition before installation using native live eligibility and detached
+preselection context, including run/encounter blacklist effects in selection order.
+Shared highlights, fixed seeds and sampled additions retain their native admission
+roles; Menace replacements are not ordinary sampled enemy candidates.
+
+Rejected customization delegates wholly to native generation with diagnostics.
+Accepted customization installs the resolved roster and counts at native fill
+contacts while preserving templates/setup and selected-type bookkeeping. The game
+retains active-enemy caps, spawn pacing, groups, retries and native perk application;
+the planner owns total generated counts, rounding and generation count limits.
+There is no second runtime budget solver or mid-combat re-generation fallback.
+Scope is restored on return or error; unrelated work and introduction replacements
+never inherit an override. Failure to realize optional composition is diagnostic-only,
+not a new transaction or mismatch boundary.
 
 Commands fall into three execution dispositions:
 
@@ -223,6 +238,9 @@ than its authored placement when those dependencies permit it. Automatic effects
 remain bound to their exact, transient encounter callback contact. Resulting
 acquisition state is checked at room exit, not by asserting that player input
 happened inside the spawning callback.
+Read-only encounter/composition admission probes may reject an override with a
+diagnostic when eligibility cannot be established. This bounded fallback does not
+swallow errors from actual native generation, spawning or effect application.
 The supported native game functions used by those adapters are required host
 infrastructure. A missing function or an error raised by it propagates as an
 executor fault; it is not converted into ineligibility, a default value, or a

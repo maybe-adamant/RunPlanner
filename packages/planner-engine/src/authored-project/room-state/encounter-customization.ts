@@ -60,7 +60,29 @@ export function customizationValueKnown(
     if (choices.length === 0) return false;
     const parsed = decodeGeneratedEncounterCustomization(value, 'generated customization');
     const known = new Set(choices.map((choice) => choice.key));
+    const sources = declarations.flatMap((decision) =>
+      decision.key === decisionKey && decision.selection.kind === 'generated'
+        ? [...decision.selection.choices, ...decision.selection.fixedEnemies]
+        : [],
+    );
+    const sourceKeys = new Set(sources.map((source) => source.key));
+    const targets = new Set(
+      sources.flatMap((source) =>
+        source.menace?.kind === 'mapped'
+          ? [source.menace.targetNativeId]
+          : source.menace?.kind === 'random'
+            ? source.menace.targetNativeIds
+            : [],
+      ),
+    );
     return (
+      (parsed.menace ?? []).every((wave) =>
+        Object.entries(wave.conversions).every(
+          ([key, conversion]) =>
+            sourceKeys.has(key) &&
+            (conversion.targetKey === undefined || targets.has(conversion.targetKey)),
+        ),
+      ) &&
       (parsed.highlightKey === undefined || known.has(parsed.highlightKey)) &&
       (parsed.waves ?? []).every(
         (wave) =>

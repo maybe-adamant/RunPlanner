@@ -147,7 +147,7 @@ export interface WorkspaceGeneratedEncounterAssessment {
   readonly issues: readonly {
     readonly message: string;
     readonly waveIndex?: number;
-    readonly field?: 'baseRoll' | 'waveCount' | 'highlight' | 'fangs';
+    readonly field?: 'baseRoll' | 'waveCount' | 'highlight' | 'fangs' | 'enemies';
   }[];
   readonly composition: 'active' | 'missingWaveCount' | 'missingHighlight';
   readonly budgetDomain?: {
@@ -167,14 +167,24 @@ export interface WorkspaceGeneratedEncounterAssessment {
     readonly eligiblePerkKeys: readonly string[];
     readonly next: 'type' | 'perk' | 'finish' | 'unavailable';
     readonly canFinish: boolean;
-    readonly issue?: 'blocked' | 'typeUnavailable' | 'perkUnavailable' | 'incomplete';
+    readonly issue?: 'typeUnavailable' | 'perkUnavailable' | 'incomplete';
   };
+  readonly menace?: { readonly rank: number; readonly active: boolean; readonly blocked: boolean };
   readonly waves: readonly {
     readonly waveIndex: number;
+    readonly menaceCells?: Readonly<
+      Record<
+        string,
+        {
+          readonly maximum: number;
+          readonly replacementLabel: string;
+          readonly picker?: ContextualPickerModel<string>;
+        }
+      >
+    >;
     readonly additionalTypeCount: { readonly min: number; readonly max: number };
     readonly seeds: readonly { readonly key: string; readonly kind: 'fixed' | 'highlight' }[];
     readonly sampledBudgetKeys: readonly string[];
-    readonly equalAllocations?: Readonly<Record<string, number>>;
     readonly countPreview?: readonly {
       readonly key: string;
       readonly requested?: number;
@@ -410,13 +420,17 @@ export type WorkspaceEncounterCustomizationDecision =
           readonly key: string;
           readonly label: string;
           readonly difficultyRating: number;
+          readonly unitGroupSize?: number;
           readonly fangsCaveat?: 'squad';
+          readonly menace?: import('@run-planner/engine/catalog-schema').EncounterEnemyChoice['menace'];
         }[];
         readonly fixedEnemies: readonly {
           readonly key: string;
           readonly label: string;
           readonly difficultyRating: number;
+          readonly unitGroupSize?: number;
           readonly fangsCaveat?: 'squad';
+          readonly menace?: import('@run-planner/engine/catalog-schema').EncounterEnemyChoice['menace'];
         }[];
         readonly waveCount: { readonly min: number; readonly max: number };
         readonly fangs?: {

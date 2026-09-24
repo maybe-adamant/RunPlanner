@@ -24,7 +24,7 @@ export function generatedEncounter(
   exact(
     row,
     ['decisionKey', 'kind', 'waveCount', 'waves'],
-    ['baseRoll', 'highlight', 'fangs'],
+    ['baseRoll', 'highlight', 'fangs', 'menace'],
     label,
   );
   if (row.kind !== 'generated') fail(`${label}.kind is unsupported`);
@@ -49,6 +49,63 @@ export function generatedEncounter(
           return Object.freeze({ type: enemy(entry.type, `${label}.fangs.type`), perks });
         })();
   if (waveCount === 1 && highlight !== undefined) fail(`${label} cannot highlight a single wave`);
+  const menace = Object.freeze(
+    (row.menace === undefined ? [] : array(row.menace, `${label}.menace`, 4)).map(
+      (value, index) => {
+        const entry = object(value, `${label}.menace[${index}]`);
+        exact(entry, ['waveIndex', 'conversions'], [], `${label}.menace[${index}]`);
+        const conversions = Object.freeze(
+          array(entry.conversions, `${label}.menace[${index}].conversions`, 5).map(
+            (conversion, conversionIndex) => {
+              const item = object(
+                conversion,
+                `${label}.menace[${index}].conversions[${conversionIndex}]`,
+              );
+              exact(
+                item,
+                ['source', 'count'],
+                ['target'],
+                `${label}.menace[${index}].conversions[${conversionIndex}]`,
+              );
+              const count = integer(
+                item.count,
+                `${label}.menace[${index}].conversions[${conversionIndex}].count`,
+                0,
+              );
+              if (count > 0 && item.target === undefined)
+                fail(
+                  `${label}.menace[${index}].conversions[${conversionIndex}] requires target for a positive conversion`,
+                );
+              return Object.freeze({
+                source: enemy(
+                  item.source,
+                  `${label}.menace[${index}].conversions[${conversionIndex}].source`,
+                ),
+                count,
+                ...(item.target === undefined
+                  ? {}
+                  : {
+                      target: enemy(
+                        item.target,
+                        `${label}.menace[${index}].conversions[${conversionIndex}].target`,
+                      ),
+                    }),
+              });
+            },
+          ),
+        );
+        if (
+          new Set(conversions.map((conversion) => conversion.source.nativeId)).size !==
+          conversions.length
+        )
+          fail(`${label}.menace[${index}].conversions must have distinct sources`);
+        return Object.freeze({
+          waveIndex: ordinal(entry.waveIndex, `${label}.menace[${index}].waveIndex`),
+          conversions,
+        });
+      },
+    ),
+  );
   const seen = new Set<number>();
   const waves =
     row.waves === undefined
@@ -118,6 +175,21 @@ export function generatedEncounter(
           }),
         );
   if (waves === undefined || waves.length !== waveCount) fail(`${label} must cover all waves`);
+  if (new Set(menace.map((entry) => entry.waveIndex)).size !== menace.length)
+    fail(`${label}.menace must have distinct wave indices`);
+  for (const menaceWave of menace) {
+    const wave = waves.find((candidate) => candidate.waveIndex === menaceWave.waveIndex);
+    if (wave === undefined) fail(`${label}.menace has an unknown wave`);
+    for (const conversion of menaceWave.conversions) {
+      const source = wave.types.find(
+        (entry) =>
+          entry.nativeId === conversion.source.nativeId &&
+          entry.choiceKey === conversion.source.choiceKey,
+      );
+      if (source === undefined || conversion.count > (wave.counts[conversion.source.nativeId] ?? 0))
+        fail(`${label}.menace conversion exceeds its source request`);
+    }
+  }
   if (
     fangs !== undefined &&
     !waves.some((wave) =>
@@ -135,6 +207,7 @@ export function generatedEncounter(
     waveCount,
     ...(highlight === undefined ? {} : { highlight }),
     ...(fangs === undefined ? {} : { fangs }),
+    ...(row.menace === undefined ? {} : { menace }),
     waves,
   });
 }

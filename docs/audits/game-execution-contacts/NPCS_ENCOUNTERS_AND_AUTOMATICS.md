@@ -137,9 +137,11 @@ the declared boss-defeated window.
 | Devotion                                                                                                       | Covered where its chosen/spurned acquisitions are published.                                                                                                   |
 | P PreCombat plus room-ending encounter, H bonus encounter, N side rooms, O wheels, I goals, Q structured rooms | Covered through the generic phase adapter, Ephyra and ShipCombat adapters, and ordinary resolved I/Q room products; complete-route live proof remains pending. |
 
-General enemy composition, wave counts, and Fear-modified enemy generation are
-not authored execution facts. The bounded Boss decisions below select existing
-native behaviors, not independently authored enemy waves.
+Optional generated composition publishes complete wave rosters/counts and applicable
+Fangs/Menace outcomes. Native `GenerateEncounter` builds templates and setup;
+the executor installs admitted results at `FillEnemyTypes`, leaving native count
+metadata initialization and spawning intact. The bounded Boss decisions below
+select existing native behaviors separately from generated enemy waves.
 
 ### Native encounter and phase identity
 
@@ -150,10 +152,21 @@ position and stores the returned tables in order in `room.Encounters`.
 `StartEncounter` and `EndEncounterEffects` later receive those same native
 tables.
 
-The selected encounter declaration remains an enforceable planner outcome. It
-is steered at `ChooseEncounter` before `SetupEncounter` constructs the native
-table; the returned table is then bound to the corresponding published phase.
-Selection steering and phase binding are separate contacts.
+At `ChooseEncounter`, native `IsEncounterEligible` checks the requested declaration
+before forcing it. Rejection leaves selection native and produces a diagnostic;
+the rejected customization scope does not leak into native selection. A returned
+matching encounter table binds to the corresponding published phase. Selection
+admission and phase binding are separate contacts. Existing conformance detects
+meaningful downstream divergence rather than adding an eligibility mismatch.
+
+Native `IsEnemyEligible` reads the current run and encounter blacklists, wave
+members, elite constraints, live blocked types and progression requirements.
+Composition admission therefore uses preselection views, not an already-installed
+wave. Native highlights are selected once before replication; fixed seeds are not
+sampled candidates. `FillEnemyTypes` adds declared run/encounter exclusions as
+selection proceeds. Menace's replacement selection does not use ordinary enemy
+eligibility. These native contacts bound whole-composition preflight; spawning
+caps and pacing remain in `EncounterLogic.lua`.
 
 Consequently, an encounter name is a declaration identity, not a selected
 phase identity. Two phases may legitimately contain separate native tables

@@ -10,7 +10,7 @@ export interface FangsAssessment {
   /** The engine-owned next authoring action. `finish` permits the current prefix. */
   readonly next: 'type' | 'perk' | 'finish' | 'unavailable';
   readonly canFinish: boolean;
-  readonly issue?: 'blocked' | 'typeUnavailable' | 'perkUnavailable' | 'incomplete';
+  readonly issue?: 'typeUnavailable' | 'perkUnavailable' | 'incomplete';
 }
 
 /** Native Fangs chooses one deduplicated IsElite spawn from the reached composition. */
@@ -69,15 +69,13 @@ export function assessFangs(
   const issue =
     !selectionRequired || authored.fangs === undefined
       ? undefined
-      : policy.blockFangsAttributes
-        ? 'blocked'
-        : selected === undefined
-          ? 'typeUnavailable'
-          : !validPerks
-            ? 'perkUnavailable'
-            : !complete
-              ? 'incomplete'
-              : undefined;
+      : selected === undefined
+        ? 'typeUnavailable'
+        : !validPerks
+          ? 'perkUnavailable'
+          : !complete
+            ? 'incomplete'
+            : undefined;
   const next = !selectionRequired
     ? 'unavailable'
     : authored.fangs === undefined || selected === undefined

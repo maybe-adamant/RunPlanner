@@ -8,8 +8,9 @@ direction below is agreed. C0 source investigation establishes the bounded
 installation path and compatibility disposition. Delivery proceeds as a complete
 pre-Menace conversion across planner/executor, then Menace authoring layered on
 that contract. The locked correction plan was committed as `7176ae97`.
-Gate C is implemented and independently reviewed; this checkpoint delivers it.
-Gate D and final phase closure remain pending.
+Gates C and D are implemented and independently reviewed. Post-review planner
+cleanup is complete; full-phase verification and runtime acceptance remain
+Gate E obligations.
 
 Delivered checkpoints retained as the starting implementation:
 
@@ -82,7 +83,7 @@ conversion outcomes; it does not introduce a partial/native ownership mode.
 
 ## Authoring and initialization
 
-Opening the popup remains read-only. An explicit Customize action requests a
+Opening the popup remains read-only. An explicit Edit action requests a
 complete legal starting configuration from the engine's exact reached capability.
 The app commits it as one semantic edit. Unavailable context disables creation
 with its coverage reason; do not fabricate predecessor state.
@@ -95,22 +96,23 @@ required; eligible Menace counts start at zero. These are explicit planner defau
 not claims about the most likely native result. Composition construction must
 avoid greedy dead ends and validate the complete result through the same evaluator.
 
-Reset Customization removes the whole generated value and returns to Native.
+Reset removes the whole generated value and returns to native game control.
 It is the only reset/default control. Remove per-wave resets, Reset/Adjust Budgets,
 variable-budget Default, shared-enemy/wave picker Default and Fangs target Default.
 Customized values are directly editable; there is no inner reset to either native
 behavior or a fresh concrete default. Initial construction still supplies complete
 engine-owned starting values, but does not expose a second reset/repair preset.
 
-Retain staged enemy pickers, local input/slider drafts, wave tabs and adjacent
-Fangs Target/Perks controls before the tabs. Target selection persists immediately;
+Retain staged enemy pickers, local input/slider drafts and wave tabs. The active
+wave contains its enemy picker and budget table; adjacent Fangs Target/Perks
+controls follow the wave panel. Target selection persists immediately;
 perk prefixes stay transient until Finish. Incomplete required choices stay
 repairable through their ordinary controls, not a native fallback.
 
 Changing composition, wave count or upstream Fear/depth may require new choices.
 Preserve meaningful authorship and report missing/incompatible children. Do not
-silently regenerate the encounter. Customize initializes the whole composition;
-Reset Customization removes it. Both remain atomic Undo entries. Findings keep the exact
+silently regenerate the encounter. Edit initializes the whole composition;
+Reset removes it. Both remain atomic Undo entries. Findings keep the exact
 encounter customization launcher as repair destination; never auto-open the popup.
 
 ## Concrete generation model
@@ -256,18 +258,27 @@ declaring BlacklistAfterFirstAppearance receive a yellow warning above the budge
 explanation: an earlier uncustomized encounter may already have included them.
 Known authored run exclusions and encounter-local exclusions remain planner validation.
 Protocol admission validates payload coverage, identities, provenance and integer
-counts. Runtime preflight checks live enemy declarations, native template/contact
-compatibility and the existing run blacklist before mutation. A published flagged
-enemy already in that blacklist delegates the whole composition to native generation,
-including Fangs and Menace, and emits an enemy-specific diagnostic, not a mismatch.
-Check once before installation; never use the installation's own blacklist additions
-to invalidate later waves. Encounter-local blacklists remain bookkeeping, not a
-second executor composition validator.
-Preserve existing native encounter-eligibility diagnostics; do not add
-a second exhaustive Lua validator. Any enemy-eligibility diagnostics use detached
-preselection views, never populated waves or mutated blacklists, and must not
-become a new semantic enforcement system. Ordinary type eligibility is not Menace
-replacement eligibility.
+counts. Before forcing an encounter variant, consult native encounter eligibility.
+Rejection delegates selection to the game with a diagnostic and a neutral
+customization scope, even if native selection happens to return the same variant.
+Existing conformance, including NPC traits, detects meaningful downstream failure;
+the admission contact adds no mismatch.
+
+An uncustomized encounter delegates unchanged. A customized encounter preflights
+all waves before mutation: live declarations, native template/contact compatibility
+and native enemy eligibility against detached preselection views. Check live run
+and encounter blacklists and carry selection-owned exclusions through the proposed
+waves without changing live state. Respect native provenance: highlights are
+admitted once then replicated; fixed seeds are not sampled additions; template
+placeholders use their native selection domain. Never test a selected enemy against
+its own installed roster or its own newly applied exclusion. Ordinary type
+eligibility is not Menace replacement eligibility.
+
+Any rejected composition delegates wholly to native generation, including Fangs and
+Menace, with a scoped diagnostic. Successful admission installs the resolved answer;
+do not recompute budgets/counts or build a second Lua planner. Native spawning keeps
+active caps, pacing, retries and groups. All-wave admission matches native generation
+timing; do not add per-wave re-generation or mid-combat takeover machinery.
 
 Preserve native intro substitution after generation/setup. If SetupEncounter
 returns a different encounter, diagnose the changed identity and do not attach
@@ -377,6 +388,19 @@ intro substitution, restoration and error scope cleanup.
 
 ### D — Menace layered onto the owned product
 
+Status: implementation and fresh independent review passed on 2026-09-24, with
+no actionable review findings. Focused verification passed eight TypeScript
+files / 78 tests, all workspace typechecks, changed-file ESLint/Prettier,
+632 Lua tests, source luacheck (108 files, zero warnings/errors), changed-file
+Lua syntax checks, 13 direct native-source probes and the native Fangs cap probe.
+The probes exercise the shipped conversion wrapper with native HandleNextSpawn,
+SpawnUnitGroup, SetupUnit and ApplyEliteAttribute bodies, including successful-only
+source accounting, copied metadata, Dream provenance, actual-unit Fangs, native
+isolation and reconstructed reload progress. Reload reconstruction rebinds a copied
+saved encounter in the harness; live save-graph restoration and combat acceptance
+remain Gate E obligations. No execution fixtures required regeneration. Full
+repository verification remains with Gate E.
+
 Add deterministic mappings and all nine random-source pickers, the Replacement /
 Converted rows, legality and complete resolved conversion facts. Omitted settings
 retain the earlier deterministic zero result. Both enabled ranks allow zero/all;
@@ -399,6 +423,22 @@ sources, original target already present, source/group replacement, retry/reload
 normal/elite changes and native Dream metadata. No generated-count recomputation.
 
 ### E — Coherent review, closure and runtime acceptance
+
+Focused planner review remediation passed 55 tests across the editor, generated
+publication, composition, Fangs and Menace suites, plus all workspace typechecks
+and changed-file lint/format checks. Enemy selection now finishes independently
+of retained Menace count findings; wave findings have one location prefix. Removed
+unused UI equal-allocation plumbing and unreachable Fangs issue handling. The
+positive Menace publication witness now includes full wire encode/decode.
+These checks do not replace the full-phase gate or live acceptance below.
+
+Runtime admission remediation is independently reviewed: native variant rejection
+uses neutral passthrough; complete-composition admission checks source eligibility,
+blacklist progression and native post-addition elite/group filters before mutation.
+All 632 Lua tests and 16 native-source probes passed, including whole-composition
+rejection without leaked state and valid fixed/highlight/template controls. Full
+source luacheck, Lua parsing and diff checks passed. This adds no protocol change
+or new mismatch boundary; live acceptance remains pending.
 
 Use the repository gated routine: one write-capable executor per coherent gate,
 independent review after stable work and bounded remediation. Main owns Git,

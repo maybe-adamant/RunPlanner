@@ -50,6 +50,47 @@ export function normalizeEncounterGeneration(
           nativeId,
           label: requireNonEmpty(value.label, `${label}.label`),
           elite: boolean(value.elite, `${field}[${index}].elite`),
+          ...(value.menace === undefined
+            ? {}
+            : value.menace.kind === 'mapped'
+              ? {
+                  menace: Object.freeze({
+                    kind: 'mapped' as const,
+                    targetNativeId: requireNonEmpty(
+                      value.menace.targetNativeId,
+                      `${label}.menace.targetNativeId`,
+                    ),
+                    targetLabel: requireNonEmpty(
+                      value.menace.targetLabel ?? '',
+                      `${label}.menace.targetLabel`,
+                    ),
+                  }),
+                }
+              : value.menace.kind === 'random'
+                ? {
+                    menace: Object.freeze({
+                      kind: 'random' as const,
+                      targetNativeIds: Object.freeze(
+                        value.menace.targetNativeIds.map((target) =>
+                          requireNonEmpty(target, `${label}.menace.targetNativeIds`),
+                        ),
+                      ),
+                      targetLabels: Object.freeze(
+                        Object.fromEntries(
+                          value.menace.targetNativeIds.map((target) => [
+                            target,
+                            requireNonEmpty(
+                              value.menace?.kind === 'random'
+                                ? (value.menace.targetLabels?.[target] ?? '')
+                                : '',
+                              `${label}.menace.targetLabels.${target}`,
+                            ),
+                          ]),
+                        ),
+                      ),
+                    }),
+                  }
+                : { menace: Object.freeze({ kind: value.menace.kind }) }),
           ...(value.fangs === undefined
             ? {}
             : {
@@ -73,6 +114,9 @@ export function normalizeEncounterGeneration(
             `${field}[${index}].blacklistAfterAppearance`,
           ),
           difficultyRating: integer(value.difficultyRating, `${label}.difficultyRating`, 1, 1000),
+          ...(value.unitGroupSize === undefined
+            ? {}
+            : { unitGroupSize: integer(value.unitGroupSize, `${label}.unitGroupSize`, 1, 1000) }),
           ...(value.maxCount === undefined
             ? {}
             : { maxCount: integer(value.maxCount, `${label}.maxCount`, 1, 1000) }),
@@ -185,6 +229,9 @@ export function normalizeEncounterGeneration(
     maxEliteTypes: integer(raw.maxEliteTypes, 'maxEliteTypes', 0),
     blockHighlightElites: boolean(raw.blockHighlightElites, 'blockHighlightElites'),
     blockFangsAttributes: boolean(raw.blockFangsAttributes, 'blockFangsAttributes'),
+    ...(raw.blockMenace === undefined
+      ? {}
+      : { blockMenace: boolean(raw.blockMenace, 'blockMenace') }),
     blockTypesAcrossWaves: boolean(raw.blockTypesAcrossWaves, 'blockTypesAcrossWaves'),
     maxTypesPerGroup: Object.freeze(groups),
     budget: Object.freeze({

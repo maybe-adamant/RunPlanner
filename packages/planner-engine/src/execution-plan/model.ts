@@ -474,6 +474,15 @@ export interface ExecutionGeneratedEncounterCustomization {
     readonly type: { readonly choiceKey: string; readonly nativeId: string };
     readonly perks: readonly string[];
   };
+  /** Source request conversions resolved by the engine; zero values remain explicit only when authored. */
+  readonly menace?: readonly {
+    readonly waveIndex: number;
+    readonly conversions: readonly {
+      readonly source: { readonly choiceKey: string; readonly nativeId: string };
+      readonly count: number;
+      readonly target?: { readonly choiceKey: string; readonly nativeId: string };
+    }[];
+  }[];
   readonly waves: readonly {
     readonly waveIndex: number;
     readonly types: readonly {

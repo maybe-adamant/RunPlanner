@@ -12,6 +12,7 @@ export interface EncounterGenerationContext {
   readonly hordesRank?: number;
   /** Effective Vow of Fangs rank at this exact generation checkpoint. */
   readonly fangsRank?: number;
+  readonly menaceRank?: number;
   readonly roomSetKey?: string;
 }
 
@@ -21,6 +22,15 @@ export interface GeneratedEncounterOperands {
   readonly waveCount: number;
   readonly highlightKey?: string;
   readonly fangs?: { readonly typeKey: string; readonly perkKeys: readonly string[] };
+  readonly menace: readonly {
+    readonly waveIndex: number;
+    readonly conversions: readonly {
+      readonly sourceKey: string;
+      readonly sourceNativeId: string;
+      readonly count: number;
+      readonly targetNativeId?: string;
+    }[];
+  }[];
   readonly waves: readonly {
     readonly waveIndex: number;
     /** Complete native roster, including fixed template entries. */
@@ -45,11 +55,18 @@ export interface GeneratedEncounterAssessment {
     readonly eligiblePerkKeys: readonly string[];
     readonly next: 'type' | 'perk' | 'finish' | 'unavailable';
     readonly canFinish: boolean;
-    readonly issue?: 'blocked' | 'typeUnavailable' | 'perkUnavailable' | 'incomplete';
+    readonly issue?: 'typeUnavailable' | 'perkUnavailable' | 'incomplete';
   };
+  readonly menace?: { readonly rank: number; readonly active: boolean; readonly blocked: boolean };
   readonly waves: readonly {
     readonly waveIndex: number;
     /** Complete native count, including fixed/template and highlight members. */
+    readonly menaceSources?: readonly {
+      readonly sourceKey: string;
+      readonly maximum: number;
+      readonly targetNativeId?: string;
+      readonly targetNativeIds?: readonly string[];
+    }[];
     readonly typeCount: { readonly min: number; readonly max: number };
     /** Editable generated additions after the declaration-owned seeds. */
     readonly additionalTypeCount: { readonly min: number; readonly max: number };
@@ -62,7 +79,7 @@ export interface GeneratedEncounterAssessment {
     readonly equalAllocations?: Readonly<Record<string, number>>;
     /** Generated members that use a sampled budget rather than the native remainder. */
     readonly sampledBudgetKeys: readonly string[];
-    /** Ordered FillEnemyCounts preview; omitted counts remain native-random. */
+    /** Ordered FillEnemyCounts preview; missing counts require authoring repair. */
     readonly countPreview?: readonly {
       readonly key: string;
       readonly requested?: number;
@@ -118,6 +135,12 @@ export type GeneratedEncounterIssue =
   | {
       readonly reason: 'fangs';
       readonly issue: 'typeUnavailable' | 'perkUnavailable' | 'incomplete';
+    }
+  | {
+      readonly reason: 'menace';
+      readonly issue: 'countUnavailable' | 'targetRequired' | 'targetUnavailable';
+      readonly waveIndex: number;
+      readonly key: string;
     };
 
 const wavePatterns: Readonly<Record<number, readonly number[]>> = Object.freeze({
@@ -471,12 +494,12 @@ export function assessGeneratedEncounter(
     context.roomSetKey,
     waves.flatMap((wave) => wave.typeKeys),
   );
-  if (
-    authored.fangs !== undefined &&
-    fangs.active &&
-    fangs.issue !== undefined &&
-    fangs.issue !== 'blocked'
-  )
+  const menace = Object.freeze({
+    rank: Math.max(0, Math.min(2, context.menaceRank ?? 0)),
+    active: (context.menaceRank ?? 0) > 0,
+    blocked: policy.blockMenace === true,
+  });
+  if (authored.fangs !== undefined && fangs.active && fangs.issue !== undefined)
     issues.push({ reason: 'fangs', issue: fangs.issue });
   if (waveCount === undefined) issues.push({ reason: 'required', field: 'waveCount' });
   if (typeof base !== 'number' && selectedBase === undefined)
@@ -503,12 +526,6 @@ export function assessGeneratedEncounter(
     authored.fangs === undefined
   )
     issues.push({ reason: 'fangs', issue: 'incomplete' });
-  const supported = issues.length === 0;
-  // Fangs is an independent child of the generated composition: a retained
-  // stale target must not make its waves or budget impossible to repair.
-  const compositionSupported = issues.every(
-    (issue) => issue.reason === 'fangs' || issue.reason === 'required',
-  );
   const completeCounts: (
     | {
         readonly waveIndex: number;
@@ -544,6 +561,75 @@ export function assessGeneratedEncounter(
       counts: Object.freeze(Object.fromEntries(preview.map((entry) => [entry.key, entry.count!]))),
     });
   });
+  const menaceOperands = menace.active
+    ? completeCounts.flatMap((wave) => {
+        if (wave === undefined) return [];
+        const values =
+          authored.menace?.find((entry) => entry.waveIndex === wave.waveIndex)?.conversions ?? {};
+        return [
+          Object.freeze({
+            waveIndex: wave.waveIndex,
+            conversions: Object.freeze(
+              Object.entries(values).flatMap(([key, value]) => {
+                const source =
+                  choices.get(key) ?? policy.fixedEnemies.find((entry) => entry.key === key);
+                // A removed source is dormant retained authorship, like an inactive
+                // wave. It becomes assessable again only if that source returns.
+                if (source === undefined || wave.counts[key] === undefined) return [];
+                const maximum = wave.counts[key];
+                const fact = policy.blockMenace
+                  ? { kind: 'blocked' as const }
+                  : (source?.menace ?? { kind: 'none' as const });
+                if (fact.kind === 'blocked' || fact.kind === 'none') return [];
+                if (value.count > maximum)
+                  issues.push({
+                    reason: 'menace',
+                    issue: 'countUnavailable',
+                    waveIndex: wave.waveIndex,
+                    key,
+                  });
+                if (value.count > 0 && fact.kind === 'random' && value.targetKey === undefined)
+                  issues.push({
+                    reason: 'menace',
+                    issue: 'targetRequired',
+                    waveIndex: wave.waveIndex,
+                    key,
+                  });
+                if (
+                  value.count > 0 &&
+                  value.targetKey !== undefined &&
+                  (fact.kind !== 'random' || !fact.targetNativeIds.includes(value.targetKey))
+                )
+                  issues.push({
+                    reason: 'menace',
+                    issue: 'targetUnavailable',
+                    waveIndex: wave.waveIndex,
+                    key,
+                  });
+                return [
+                  Object.freeze({
+                    sourceKey: key,
+                    sourceNativeId: source.nativeId,
+                    count: value.count,
+                    ...(fact.kind === 'mapped'
+                      ? { targetNativeId: fact.targetNativeId }
+                      : value.targetKey === undefined
+                        ? {}
+                        : { targetNativeId: value.targetKey }),
+                  }),
+                ];
+              }),
+            ),
+          }),
+        ];
+      })
+    : [];
+  const supported = issues.length === 0;
+  // Fangs and Menace are retained leaf children. Their stale values keep the
+  // composition editable and do not erase exact count/domain products.
+  const compositionSupported = issues.every(
+    (issue) => issue.reason === 'fangs' || issue.reason === 'menace' || issue.reason === 'required',
+  );
   const operands: GeneratedEncounterOperands = Object.freeze({
     ...(typeof base === 'number' || authored.baseRoll === undefined
       ? {}
@@ -559,6 +645,7 @@ export function assessGeneratedEncounter(
     fangs.issue !== undefined
       ? {}
       : { fangs: authored.fangs }),
+    menace: Object.freeze(menaceOperands),
     waves: Object.freeze(
       completeCounts.filter((wave): wave is NonNullable<typeof wave> => wave !== undefined),
     ),
@@ -570,6 +657,7 @@ export function assessGeneratedEncounter(
     composition,
     eligibleHighlightKeys: Object.freeze(eligibleHighlights.map((choice) => choice.key)),
     fangs,
+    menace,
     waves: Object.freeze(
       waveDomains.map((wave) => {
         const generated = waves.find((entry) => entry.waveIndex === wave.waveIndex)?.typeKeys;
@@ -594,6 +682,26 @@ export function assessGeneratedEncounter(
               );
         return Object.freeze({
           ...wave,
+          menaceSources: Object.freeze(
+            !menace.active || menace.blocked
+              ? []
+              : Object.entries(
+                  completeCounts.find((entry) => entry?.waveIndex === wave.waveIndex)?.counts ?? {},
+                ).flatMap<
+                  NonNullable<
+                    GeneratedEncounterAssessment['waves'][number]['menaceSources']
+                  >[number]
+                >(([key, maximum]) => {
+                  const fact = (
+                    choices.get(key) ?? policy.fixedEnemies.find((entry) => entry.key === key)
+                  )?.menace;
+                  if (fact?.kind === 'mapped')
+                    return [{ sourceKey: key, maximum, targetNativeId: fact.targetNativeId }];
+                  if (fact?.kind === 'random')
+                    return [{ sourceKey: key, maximum, targetNativeIds: fact.targetNativeIds }];
+                  return [];
+                }),
+          ),
           sampledBudgetKeys: Object.freeze(sampledBudgetKeys(generated ?? [])),
           ...(equalAllocations === undefined ? {} : { equalAllocations }),
           typeCount: Object.freeze(wave.typeCount),
