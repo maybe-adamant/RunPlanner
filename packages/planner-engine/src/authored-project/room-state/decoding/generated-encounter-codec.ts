@@ -16,9 +16,9 @@ export function decodeGeneratedEncounterCustomization(
     row,
     [
       'kind',
-      ...['baseRoll', 'waveCount', 'highlightKey', 'fangs', 'waves'].filter(
-        (key) => row[key] !== undefined,
-      ),
+      ...['baseRoll', 'waveCount', 'highlightKey', 'fangs', 'waves']
+        .filter((key) => row[key] !== undefined)
+        .concat(row.menace === undefined ? [] : ['menace']),
     ],
     path,
   );
@@ -87,6 +87,57 @@ export function decodeGeneratedEncounterCustomization(
             perkKeys: Object.freeze(perkKeys),
           });
         })();
+  const menace =
+    row.menace === undefined
+      ? undefined
+      : expectArray(row.menace, `${path}.menace`).map((entry, ordinal) => {
+          const label = `${path}.menace[${ordinal}]`,
+            wave = expectRecord(entry, label);
+          expectExactKeys(wave, ['waveIndex', 'conversions'], label);
+          const conversions: Record<
+            string,
+            { readonly count: number; readonly targetKey?: string }
+          > = {};
+          for (const [key, raw] of Object.entries(
+            expectRecord(wave.conversions, `${label}.conversions`),
+          )) {
+            const value = expectRecord(raw, `${label}.conversions.${key}`);
+            expectExactKeys(
+              value,
+              ['count', ...(value.targetKey === undefined ? [] : ['targetKey'])],
+              `${label}.conversions.${key}`,
+            );
+            if (
+              typeof value.count !== 'number' ||
+              !Number.isInteger(value.count) ||
+              value.count < 0
+            )
+              failProjectDocument(
+                `${label}.conversions.${key}.count`,
+                'must be a nonnegative integer',
+              );
+            conversions[expectNonBlankString(key, `${label}.conversions`)] = Object.freeze({
+              count: value.count,
+              ...(value.targetKey === undefined
+                ? {}
+                : {
+                    targetKey: expectNonBlankString(
+                      value.targetKey,
+                      `${label}.conversions.${key}.targetKey`,
+                    ),
+                  }),
+            });
+          }
+          return Object.freeze({
+            waveIndex: index(wave.waveIndex, `${label}.waveIndex`),
+            conversions: Object.freeze(conversions),
+          });
+        });
+  if (
+    menace !== undefined &&
+    (menace.length > 5 || new Set(menace.map((wave) => wave.waveIndex)).size !== menace.length)
+  )
+    failProjectDocument(`${path}.menace`, 'requires distinct bounded wave indices');
   if (
     waves !== undefined &&
     (waves.length < 1 ||
@@ -104,6 +155,7 @@ export function decodeGeneratedEncounterCustomization(
       ? {}
       : { highlightKey: expectNonBlankString(row.highlightKey, `${path}.highlightKey`) }),
     ...(fangs === undefined ? {} : { fangs }),
+    ...(menace === undefined ? {} : { menace: Object.freeze(menace) }),
     ...(waves === undefined ? {} : { waves: Object.freeze(waves) }),
   });
 }

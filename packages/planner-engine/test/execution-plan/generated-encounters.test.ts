@@ -59,6 +59,45 @@ function initialized(project: ProjectDocument, owner = phase) {
 }
 
 describe('generated customization publication', () => {
+  it('publishes reached source-specific Menace without changing the generated roster or counts', () => {
+    const enabled = applyProjectCommand(createGoldenFGHIProject(), catalog, {
+      kind: 'ReplaceFearVowRank',
+      route: { kind: 'route', routeKey: 'Underworld' },
+      vowKey: 'NextBiomeEnemyShrineUpgrade',
+      rank: 2,
+    });
+    const value = {
+      kind: 'generated',
+      waveCount: 1,
+      waves: [{ waveIndex: 1, typeKeys: ['Guard', 'Brawler'], allocations: { Guard: 70 } }],
+      menace: [{ waveIndex: 1, conversions: { Guard: { count: 2 } } }],
+    } as const;
+    const plan = publish(replace(enabled, value));
+    const published = plan.occurrences.find((room) => room.id === phase.owner.occurrenceId)!
+      .overview.encounterPhases[0]!.customization![0]!;
+    expect(published).toMatchObject({
+      menace: [
+        {
+          waveIndex: 1,
+          conversions: [
+            {
+              source: { choiceKey: 'Guard', nativeId: 'Guard' },
+              count: 2,
+              target: { choiceKey: 'Guard2', nativeId: 'Guard2' },
+            },
+          ],
+        },
+      ],
+      waves: [
+        {
+          counts: { Guard: 14 },
+          types: expect.arrayContaining([expect.objectContaining({ nativeId: 'Guard' })]),
+        },
+      ],
+    });
+    expect(generatedEncounter(published, 'test')).toEqual(published);
+    expect(decodeExecutionPlan(JSON.parse(encodeExecutionPlan(plan)))).toEqual(plan);
+  });
   it('publishes a complete resolved composition without adding acquisition or conformance obligations', () => {
     const base = createGoldenFGHIProject();
     const value = initialized(base);
@@ -340,5 +379,31 @@ describe('generated execution decoding', () => {
       },
     ])
       expect(() => generatedEncounter(malformed, 'test')).toThrow();
+  });
+  it('strictly decodes source-bound Menace while omission and explicit zero stay deterministic', () => {
+    const source = { choiceKey: 'Guard', nativeId: 'Guard' };
+    const target = { choiceKey: 'Guard2', nativeId: 'Guard2' };
+    const conversion = { source, target, count: 2 };
+    const wave = { waveIndex: 1, conversions: [conversion] };
+    for (const menace of [[], [wave], [{ waveIndex: 1, conversions: [{ source, count: 0 }] }]]) {
+      expect(generatedEncounter({ ...value, menace }, 'test')).toEqual({ ...value, menace });
+    }
+    expect(generatedEncounter(value, 'test')).toEqual(value);
+    for (const menace of [
+      [wave, wave],
+      [{ ...wave, waveIndex: 2 }],
+      [{ ...wave, conversions: [conversion, conversion] }],
+      ...[
+        { ...conversion, count: 5 },
+        { ...conversion, count: -1 },
+        { ...conversion, count: 0.5 },
+        { source, count: 1 },
+        { ...conversion, source: { ...source, choiceKey: 'Mage' } },
+        { ...conversion, source: { choiceKey: 'Unknown', nativeId: 'Unknown' } },
+        { ...conversion, extra: true },
+      ].map((entry) => [{ ...wave, conversions: [entry] }]),
+    ]) {
+      expect(() => generatedEncounter({ ...value, menace }, 'test')).toThrow();
+    }
   });
 });

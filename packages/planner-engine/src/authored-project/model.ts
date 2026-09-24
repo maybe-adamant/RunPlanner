@@ -282,6 +282,13 @@ export interface AuthoredGeneratedEncounterCustomization {
   readonly highlightKey?: string;
   /** Optional native Fangs type and ordered attribute prefix. */
   readonly fangs?: { readonly typeKey: string; readonly perkKeys: readonly string[] };
+  /** Per-wave source request conversions for Vow of Menace. Omission resolves to zero. */
+  readonly menace?: readonly {
+    readonly waveIndex: number;
+    readonly conversions: Readonly<
+      Record<string, { readonly count: number; readonly targetKey?: string }>
+    >;
+  }[];
   /** Unlisted native wave indices remain Default. */
   readonly waves?: readonly {
     readonly waveIndex: number;

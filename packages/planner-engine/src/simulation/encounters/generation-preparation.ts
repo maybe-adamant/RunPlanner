@@ -49,6 +49,7 @@ export function prepareGeneratedEncounter(
     origin: EncounterPhaseAddress,
   ) => number | undefined,
   fangsRankAt?: (origin: EncounterPhaseAddress) => number | undefined,
+  menaceRankAt?: (origin: EncounterPhaseAddress) => number | undefined,
 ): {
   readonly phase: ResolvedEncounterPhase;
   readonly capability?: GeneratedEncounterCandidateCapability;
@@ -74,6 +75,8 @@ export function prepareGeneratedEncounter(
   // A reached snapshot without Fangs is rank zero; a missing snapshot is not
   // an authorization to invent the post-reward selection context.
   if (fangsRankAt !== undefined && exactFangsRank === undefined) return { phase };
+  const exactMenaceRank = menaceRankAt?.(origin);
+  if (menaceRankAt !== undefined && exactMenaceRank === undefined) return { phase };
   const context = Object.freeze({
     biomeDepthCache: before.ledgers.counters.biomeDepthCache,
     biomeEncounterDepth: before.ledgers.counters.biomeEncounterDepth,
@@ -89,6 +92,7 @@ export function prepareGeneratedEncounter(
     hard: false,
     hordesRank,
     fangsRank: exactFangsRank ?? 0,
+    menaceRank: exactMenaceRank ?? 0,
     roomSetKey: origin.biomeKey,
   });
   const assess = (value: AuthoredGeneratedEncounterCustomization) =>

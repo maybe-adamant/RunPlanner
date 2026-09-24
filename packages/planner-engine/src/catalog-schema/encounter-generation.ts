@@ -4,6 +4,16 @@ export interface EncounterEnemyChoice {
   readonly label: string;
   readonly nativeId: string;
   readonly elite: boolean;
+  /** Native Next Biome Enemy Shrine replacement contact for this source identity. */
+  readonly menace?:
+    | { readonly kind: 'mapped'; readonly targetNativeId: string; readonly targetLabel?: string }
+    | {
+        readonly kind: 'random';
+        readonly targetNativeIds: readonly string[];
+        readonly targetLabels?: Readonly<Record<string, string>>;
+      }
+    | { readonly kind: 'blocked' }
+    | { readonly kind: 'none' };
   /** Native Fangs selection facts. Absent means this spawn cannot be selected by Fangs. */
   readonly fangs?: {
     readonly options: readonly string[];
@@ -15,6 +25,8 @@ export interface EncounterEnemyChoice {
   readonly blacklistAfterAppearance: boolean;
   /** Native GeneratorData difficulty and optional generated-count cap. */
   readonly difficultyRating: number;
+  /** Native units created by one group spawn request; absent for individual enemies. */
+  readonly unitGroupSize?: number;
   readonly maxCount?: number;
   /** Count on a declaration-owned manual template spawn. */
   readonly fixedCount?: number;
@@ -44,6 +56,8 @@ export interface GeneratedEncounterSelection {
   readonly blockHighlightElites: boolean;
   /** Native encounter-level BlockEliteAttributes (the H passive cages). */
   readonly blockFangsAttributes: boolean;
+  /** Native encounter-level BlockNextBiomeEnemyShrineUpgrade. */
+  readonly blockMenace?: boolean;
   readonly blockTypesAcrossWaves: boolean;
   readonly maxTypesPerGroup: Readonly<Partial<Record<'Automatons' | 'ChronosForces', number>>>;
   /** Named fixed spawns precede generated placeholder entries, not ordinary additions. */

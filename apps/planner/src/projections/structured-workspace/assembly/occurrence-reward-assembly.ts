@@ -1,6 +1,7 @@
 import type { ResolvedRoutePosition } from '@run-planner/engine/authored-project';
 import {
   generatedEnemyLabel,
+  projectGeneratedMenace,
   projectGeneratedEncounterWarnings,
 } from '../interactions/generated-encounter-projection';
 import type {
@@ -874,6 +875,12 @@ export function activeEncounterPhasesForOwner(
                           key: choice.key,
                           label: generatedEnemyLabel(choice.label),
                           difficultyRating: choice.difficultyRating,
+                          ...(choice.unitGroupSize === undefined
+                            ? {}
+                            : { unitGroupSize: choice.unitGroupSize }),
+                          ...(choice.menace === undefined
+                            ? {}
+                            : { menace: projectGeneratedMenace(choice.menace)! }),
                           ...(choice.fangs?.caveat === 'squad'
                             ? { fangsCaveat: 'squad' as const }
                             : {}),
@@ -886,6 +893,12 @@ export function activeEncounterPhasesForOwner(
                           key: enemy.key,
                           label: generatedEnemyLabel(enemy.label),
                           difficultyRating: enemy.difficultyRating,
+                          ...(enemy.unitGroupSize === undefined
+                            ? {}
+                            : { unitGroupSize: enemy.unitGroupSize }),
+                          ...(enemy.menace === undefined
+                            ? {}
+                            : { menace: projectGeneratedMenace(enemy.menace)! }),
                           ...(enemy.fangs?.caveat === 'squad'
                             ? { fangsCaveat: 'squad' as const }
                             : {}),

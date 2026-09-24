@@ -195,6 +195,7 @@ export interface EncounterPreparationRunState {
     origin: EncounterPhaseAddress,
   ) => number | undefined;
   readonly fangsRankAt?: (origin: EncounterPhaseAddress) => number | undefined;
+  readonly menaceRankAt?: (origin: EncounterPhaseAddress) => number | undefined;
 }
 
 function phaseAddress(room: EncounterAuthoringRoom, slotKey: string): EncounterPhaseAddress {
@@ -339,6 +340,7 @@ export function prepareRoomEncounterPhases(
       runState.rewardGeneration,
       runState.hordesRankAt,
       runState.fangsRankAt,
+      runState.menaceRankAt,
     );
     if (result.capability !== undefined) generation.push(result.capability);
     return result.phase;

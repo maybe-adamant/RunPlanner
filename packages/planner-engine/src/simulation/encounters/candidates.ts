@@ -209,6 +209,19 @@ export function evaluateEncounterCandidatesInternal(
           ? undefined
           : (snapshot.arcanaFear.fear.effectiveRanks.EnemyEliteShrineUpgrade ?? 0);
       },
+      menaceRankAt: (origin: EncounterPhaseAddress) => {
+        const owner =
+          room.lifecycleProfileKey === 'ShipCombatRoom'
+            ? createRoomRunStateCheckpointAddress(room.origin, {
+                kind: 'beforeEncounterStart',
+                phaseKey: origin.phaseKey,
+              })
+            : createRoomRunStateCheckpointAddress(room.origin, { kind: 'roomEntered' });
+        const snapshot = runStateByOwner.get(semanticAddressKey(owner));
+        return snapshot === undefined
+          ? undefined
+          : (snapshot.arcanaFear.fear.effectiveRanks.NextBiomeEnemyShrineUpgrade ?? 0);
+      },
     };
     const preparedSource = prepareRoomEncounterPhases(
       catalog,

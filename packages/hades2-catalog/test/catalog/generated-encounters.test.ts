@@ -13,6 +13,143 @@ function selection(key: string) {
 }
 
 describe('source-declared generated encounter policies', () => {
+  it('preserves native unit-group sizes without treating ordinary enemies as groups', () => {
+    const enemies = new Map(
+      definitions
+        .flatMap((definition) => [
+          ...selection(definition.key).choices,
+          ...selection(definition.key).fixedEnemies,
+        ])
+        .map((enemy) => [enemy.key, enemy]),
+    );
+    expect(
+      Object.fromEntries(
+        [...enemies.values()]
+          .filter((enemy) => enemy.unitGroupSize !== undefined)
+          .map((enemy) => [enemy.key, enemy.unitGroupSize]),
+      ),
+    ).toEqual({
+      FishSwarmerSquad: 5,
+      FishSwarmerSquad_Elite: 2,
+      SimpleSquad: 4,
+      SimpleSquad_Elite: 2,
+    });
+    expect(enemies.get('Guard')?.unitGroupSize).toBeUndefined();
+  });
+  it('partitions all 114 Menace sources and preserves every mapped replacement identity', () => {
+    const enemies = new Map(
+      definitions
+        .flatMap((definition) => [
+          ...selection(definition.key).choices,
+          ...selection(definition.key).fixedEnemies,
+        ])
+        .map((enemy) => [enemy.key, enemy]),
+    );
+    expect(enemies.size).toBe(114);
+    const classes = [...enemies.values()].reduce<Record<string, number>>((counts, enemy) => {
+      const kind = enemy.menace!.kind;
+      counts[kind] = (counts[kind] ?? 0) + 1;
+      return counts;
+    }, {});
+    expect(classes).toEqual({ mapped: 68, random: 9, blocked: 15, none: 22 });
+    const mappings = {
+      Guard: 'Guard2',
+      Brawler: 'FishmanMelee',
+      Radiator: 'Radiator2',
+      Screamer: 'FishSwarmerSquad',
+      Mage: 'FishmanRanged',
+      SiegeVine: 'Turtle',
+      FishmanMelee: 'Mourner',
+      FishmanRanged: 'Lamia',
+      FishSwarmerSquad: 'LycanSwarmer',
+      Turtle: 'DespairElemental',
+      Guard2: 'CorruptedShadeMedium',
+      Radiator2: 'CorruptedShadeSmall',
+      BrokenHearted: 'SwarmerClockwork',
+      Lovesick: 'TimeElemental',
+      Mourner: 'ClockworkHeavyMelee',
+      Lamia: 'SatyrLancer',
+      Carrion: 'Scimiterror',
+      Mudman: 'Stickler',
+      Zombie: 'WaterElemental',
+      ZombieSpawner: 'Swab',
+      ZombieHeavyRanged: 'HarpyCutter',
+      ZombieAssassin: 'Drunk',
+      Stickler: 'AutomatonBeamer',
+      Swab: 'Dragon',
+      Drunk: 'AutomatonEnforcer',
+      Scimiterror: 'SatyrSapper',
+      HarpyCutter: 'HarpyDropper',
+      WaterElemental: 'SentryBot',
+      Mage2: 'SatyrLancer2',
+      Dragon: 'Brute',
+      HarpyDropper: 'Stalker',
+      SatyrLancer2: 'Mati',
+      SatyrCrossbow2: 'DragonBurrower',
+      ZombieOlympus: 'Simple',
+    };
+    for (const [source, target] of Object.entries(mappings))
+      for (const suffix of ['', '_Elite']) {
+        expect(enemies.get(`${source}${suffix}`)?.menace).toMatchObject({
+          kind: 'mapped',
+          targetNativeId: `${target}${suffix}`,
+        });
+      }
+    const random = [...enemies.values()].filter((enemy) => enemy.menace?.kind === 'random');
+    expect(random.map((enemy) => enemy.key).sort()).toEqual(
+      [
+        'DespairElemental_Elite',
+        'CorruptedShadeSmall',
+        'CorruptedShadeSmall_Elite',
+        'CorruptedShadeMedium',
+        'CorruptedShadeMedium_Elite',
+        'CorruptedShadeLarge',
+        'CorruptedShadeLarge_Elite',
+        'Lycanthrope',
+        'Treant2',
+      ].sort(),
+    );
+    const pool = [
+      'GoldElemental',
+      'TimeElemental',
+      'SwarmerClockwork',
+      'ClockworkHeavyMelee',
+      'SatyrLancer',
+      'SatyrRatCatcher',
+    ].flatMap((key) => [key, `${key}_Elite`]);
+    for (const enemy of random)
+      expect(enemy.menace).toMatchObject({ kind: 'random', targetNativeIds: pool });
+    expect(
+      [...enemies.values()]
+        .filter((enemy) => enemy.menace?.kind === 'blocked')
+        .map((enemy) => enemy.key)
+        .sort(),
+    ).toEqual(
+      [
+        'WaterUnit',
+        'WaterUnit_Elite',
+        'Lycanthrope_Elite',
+        'FogEmitter2',
+        'Screamer2',
+        'ZombieCrewman',
+        'ZombieCrewman_Elite',
+        'SentryBot',
+        'AutomatonBeamer',
+        'AutomatonEnforcer',
+        'SatyrSapper',
+        'SentryBot_Elite',
+        'AutomatonBeamer_Elite',
+        'AutomatonEnforcer_Elite',
+        'SatyrSapper_Elite',
+      ].sort(),
+    );
+    expect(
+      definitions
+        .filter((definition) => selection(definition.key).blockMenace)
+        .map((definition) => definition.key)
+        .sort(),
+    ).toEqual(['GeneratedH_Passive', 'GeneratedH_PassiveSmall', 'GeneratedP_PreCombat']);
+  });
   it('keeps Arachne spacing only where native requirements inherit it', () => {
     const f = catalog.encounterDefinitions.byKey.ArachneCombatF!.requirements!;
     const g = catalog.encounterDefinitions.byKey.ArachneCombatG!.requirements!;

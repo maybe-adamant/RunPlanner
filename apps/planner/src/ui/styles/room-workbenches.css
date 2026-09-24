@@ -393,6 +393,7 @@
 
 .trait-offer-dialog.encounter-customization-dialog {
   max-width: 48rem;
+  width: min(100%, 48rem);
 }
 
 .encounter-customization-header {
@@ -512,17 +513,23 @@
 }
 
 .encounter-generated-heading > button {
-  margin-left: auto;
+  flex-shrink: 0;
+}
+
+.encounter-composition-edit {
+  border-color: rgb(104 186 137 / 55%);
+  color: #9bd7af;
+  background: rgb(60 130 84 / 16%);
+}
+
+.encounter-composition-edit:hover:not(:disabled) {
+  border-color: #9bd7af;
+  color: #c2ecd0;
+  background: rgb(60 130 84 / 30%);
 }
 
 .encounter-generated-context,
 .encounter-customization-explanation {
-  margin: 0;
-  color: var(--muted);
-  font-size: 0.88rem;
-}
-
-.encounter-budget-note {
   margin: 0;
   color: var(--muted);
   font-size: 0.88rem;
@@ -590,10 +597,48 @@
 }
 
 .encounter-summary-controls {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: center;
   gap: 12px 24px;
+}
+
+.encounter-summary-controls
+  > .encounter-customization-row
+  > .contextual-picker.field-control-inline {
+  grid-template-columns: auto minmax(0, 1fr);
+}
+
+.encounter-shared-enemy {
+  grid-column: 1 / -1;
+}
+
+.encounter-wave-picker[data-has-issues='true'] .contextual-picker-trigger {
+  box-shadow: inset 0 0 0 2px #da7373;
+}
+
+.encounter-composition-help,
+.encounter-composition-findings {
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.encounter-composition-help :is(h4, p),
+.encounter-composition-findings h4 {
+  margin: 0;
+}
+
+.encounter-composition-help p {
+  color: var(--muted);
+}
+
+@media (max-width: 680px) {
+  .encounter-summary-controls {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 
 .encounter-budget-control,
@@ -619,22 +664,7 @@
 
 .encounter-budget-control:has(input[type='range']) {
   display: grid;
-  grid-template-columns: auto auto minmax(5rem, 1fr) auto auto;
-}
-
-.encounter-budget-panel-heading {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px 16px;
-}
-
-.encounter-budget-panel-heading > p {
-  flex: 1 1 20rem;
-}
-
-.encounter-budget-panel-heading > button {
-  margin-left: auto;
+  grid-template-columns: auto auto minmax(3rem, 1fr) auto;
 }
 
 .encounter-generated-wave-heading {
@@ -661,6 +691,10 @@
 }
 
 .encounter-budget-tabs-header > .run-state-tabs > button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
   font-size: 0.95rem;
   font-weight: 500;
   padding: 8px 12px;
@@ -675,6 +709,40 @@
   width: 100%;
   table-layout: fixed;
   border-collapse: collapse;
+}
+
+.encounter-menace-replacement {
+  width: max-content;
+  max-width: 100%;
+  margin-inline: auto;
+  min-height: 2rem;
+  display: flex;
+  align-items: center;
+}
+
+.encounter-menace-replacement > * {
+  width: 100%;
+  min-width: 0;
+}
+
+.encounter-menace-replacement > span,
+.encounter-menace-replacement .contextual-picker-trigger > span:first-child {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.encounter-menace-replacement .contextual-picker-trigger-icon {
+  flex-shrink: 0;
+}
+
+.encounter-menace-replacement > .contextual-picker.field-control-inline {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.encounter-menace-replacement > .contextual-picker > label {
+  display: none;
 }
 
 .encounter-budget-table th,
@@ -697,11 +765,30 @@
   font-weight: normal;
 }
 
-.encounter-budget-table .encounter-budget-input {
-  margin-inline: auto;
-  display: inline-flex;
-  align-items: center;
+.encounter-wave-budget-ratio {
   white-space: nowrap;
+  overflow-wrap: normal;
+}
+
+.encounter-budget-table .encounter-budget-input {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 3rem minmax(0, 1fr);
+  gap: 0;
+  width: 100%;
+  min-height: 36px;
+  align-items: center;
+}
+
+.encounter-budget-table .encounter-budget-input > input,
+.encounter-budget-table .encounter-budget-value {
+  grid-column: 2;
+  text-align: center;
+}
+
+.encounter-budget-table .encounter-budget-result {
+  grid-column: 3;
+  margin-left: 0.4rem;
+  text-align: left;
 }
 
 .encounter-budget-table .encounter-budget-input input {

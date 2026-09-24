@@ -2,7 +2,12 @@ import type {
   EncounterEnemyChoice,
   GeneratedEncounterSelection,
 } from '@run-planner/engine/catalog-schema';
-import { fangsPerks, fixedFieldsEnemies, generatedEnemyPools as pools } from './enemies';
+import {
+  fangsPerks,
+  fixedFieldsEnemies,
+  generatedEnemyPools as pools,
+  withMenaceLabels,
+} from './enemies';
 
 interface GenerationDeclaration {
   readonly preparation?: GeneratedEncounterSelection['preparation'];
@@ -18,6 +23,7 @@ interface GenerationDeclaration {
   readonly hardCap?: number;
   readonly blockHighlightElites?: boolean;
   readonly blockFangsAttributes?: boolean;
+  readonly blockMenace?: boolean;
   readonly fixedEnemies?: readonly EncounterEnemyChoice[];
   readonly groups?: GeneratedEncounterSelection['maxTypesPerGroup'];
 }
@@ -263,7 +269,7 @@ function generation(data: GenerationDeclaration) {
     label: 'Composition',
     selection: {
       kind: 'generated',
-      choices: data.pool,
+      choices: data.pool.map(withMenaceLabels),
       preparation: data.preparation ?? 'roomEntry',
       waveCount: { min: data.waves[0], max: data.waves[1] },
       types: {
@@ -278,8 +284,9 @@ function generation(data: GenerationDeclaration) {
       maxEliteTypes: data.eliteTypes,
       blockHighlightElites: data.blockHighlightElites ?? false,
       blockFangsAttributes: data.blockFangsAttributes ?? false,
+      ...(data.blockMenace ? { blockMenace: true } : {}),
       blockTypesAcrossWaves: true,
-      fixedEnemies: data.fixedEnemies ?? [],
+      fixedEnemies: (data.fixedEnemies ?? []).map(withMenaceLabels),
       fangs: { perks: fangsPerks },
       budget: { base: 0, depthRamp: 0, depthAxis: 'biomeDepthCache', multiplier: 1, minimum: 10 },
       maxTypesPerGroup: data.groups ?? {},
@@ -377,6 +384,7 @@ const unbudgetedGeneratedEncounterChoices = {
     cap: 4,
     eliteTypes: 3,
     blockFangsAttributes: true,
+    blockMenace: true,
   }),
   GeneratedH_PassiveSmall: generation({
     pool: pools.hPassive,
@@ -387,6 +395,7 @@ const unbudgetedGeneratedEncounterChoices = {
     cap: 4,
     eliteTypes: 1,
     blockFangsAttributes: true,
+    blockMenace: true,
   }),
   GeneratedH: generation({
     pool: pools.h,
@@ -613,6 +622,7 @@ const unbudgetedGeneratedEncounterChoices = {
     cap: 2,
     eliteTypes: 3,
     hardCap: 3,
+    blockMenace: true,
     groups: { Automatons: 1, ChronosForces: 1 },
   }),
   GeneratedP: generation({

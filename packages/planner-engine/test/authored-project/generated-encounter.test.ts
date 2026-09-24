@@ -37,6 +37,43 @@ const command = {
 } as const;
 
 describe('sparse generated encounter authorship', () => {
+  it('rejects unknown Menace source and replacement identities at the authored command boundary', () => {
+    for (const conversions of [
+      { Unknown: { count: 0 } },
+      { Guard: { count: 0, targetKey: 'Unknown' } },
+    ]) {
+      expect(() =>
+        applyProjectCommand(createGoldenFGHIProject(), catalog, {
+          ...command,
+          value: { ...command.value, menace: [{ waveIndex: 1, conversions }] },
+        }),
+      ).toThrow();
+    }
+  });
+  it('retains incomplete, zero, and dormant Menace authorship but rejects malformed wave/count shapes', () => {
+    const wave = {
+      waveIndex: 1,
+      conversions: { Guard: { count: 1 }, Treant2: { count: 0, targetKey: 'GoldElemental' } },
+    };
+    const value = { kind: 'generated', menace: [wave] };
+    expect(decodeGeneratedEncounterCustomization(value, 'test')).toEqual(value);
+    expect(decodeGeneratedEncounterCustomization({ kind: 'generated' }, 'test')).toEqual({
+      kind: 'generated',
+    });
+    for (const menace of [
+      [wave, wave],
+      [{ ...wave, waveIndex: 0 }],
+      [{ ...wave, waveIndex: 6 }],
+      ...[-1, 0.5, Infinity, NaN].map((count) => [
+        { waveIndex: 1, conversions: { Guard: { count } } },
+      ]),
+      [{ waveIndex: 1, conversions: { Guard: { count: 0, extra: true } } }],
+    ]) {
+      expect(() =>
+        decodeGeneratedEncounterCustomization({ kind: 'generated', menace }, 'test'),
+      ).toThrow();
+    }
+  });
   it('persists complete values immutably, with semantic undo/redo and reset', () => {
     const base = createGoldenFGHIProject();
     const changed = applyProjectHistoryCommand(createProjectHistory(base), catalog, command);

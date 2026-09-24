@@ -4,6 +4,94 @@ type EnemyFacts = Partial<
   Omit<EncounterEnemyChoice, 'key' | 'label' | 'nativeId' | 'difficultyRating'>
 >;
 
+const menaceMappings: Readonly<Record<string, string>> = {
+  Guard: 'Guard2',
+  Brawler: 'FishmanMelee',
+  Radiator: 'Radiator2',
+  Screamer: 'FishSwarmerSquad',
+  Mage: 'FishmanRanged',
+  SiegeVine: 'Turtle',
+  FishmanMelee: 'Mourner',
+  FishmanRanged: 'Lamia',
+  FishSwarmerSquad: 'LycanSwarmer',
+  Turtle: 'DespairElemental',
+  Guard2: 'CorruptedShadeMedium',
+  Radiator2: 'CorruptedShadeSmall',
+  BrokenHearted: 'SwarmerClockwork',
+  Lovesick: 'TimeElemental',
+  Mourner: 'ClockworkHeavyMelee',
+  Lamia: 'SatyrLancer',
+  Carrion: 'Scimiterror',
+  Mudman: 'Stickler',
+  Zombie: 'WaterElemental',
+  ZombieSpawner: 'Swab',
+  ZombieHeavyRanged: 'HarpyCutter',
+  ZombieAssassin: 'Drunk',
+  Stickler: 'AutomatonBeamer',
+  Swab: 'Dragon',
+  Drunk: 'AutomatonEnforcer',
+  Scimiterror: 'SatyrSapper',
+  HarpyCutter: 'HarpyDropper',
+  WaterElemental: 'SentryBot',
+  Mage2: 'SatyrLancer2',
+  Dragon: 'Brute',
+  HarpyDropper: 'Stalker',
+  SatyrLancer2: 'Mati',
+  SatyrCrossbow2: 'DragonBurrower',
+  ZombieOlympus: 'Simple',
+};
+const menaceRandom = new Set([
+  'DespairElemental_Elite',
+  'CorruptedShadeSmall',
+  'CorruptedShadeSmall_Elite',
+  'CorruptedShadeMedium',
+  'CorruptedShadeMedium_Elite',
+  'CorruptedShadeLarge',
+  'CorruptedShadeLarge_Elite',
+  'Lycanthrope',
+  'Treant2',
+]);
+const menaceBlocked = new Set([
+  'WaterUnit',
+  'WaterUnit_Elite',
+  'Lycanthrope_Elite',
+  'FogEmitter2',
+  'Screamer2',
+  'ZombieCrewman',
+  'ZombieCrewman_Elite',
+  'SentryBot',
+  'AutomatonBeamer',
+  'AutomatonEnforcer',
+  'SatyrSapper',
+  'SentryBot_Elite',
+  'AutomatonBeamer_Elite',
+  'AutomatonEnforcer_Elite',
+  'SatyrSapper_Elite',
+]);
+const menaceRandomPool = Object.freeze([
+  'GoldElemental',
+  'GoldElemental_Elite',
+  'TimeElemental',
+  'TimeElemental_Elite',
+  'SwarmerClockwork',
+  'SwarmerClockwork_Elite',
+  'ClockworkHeavyMelee',
+  'ClockworkHeavyMelee_Elite',
+  'SatyrLancer',
+  'SatyrLancer_Elite',
+  'SatyrRatCatcher',
+  'SatyrRatCatcher_Elite',
+]);
+function menaceFor(key: string): EnemyFacts['menace'] {
+  if (menaceBlocked.has(key)) return { kind: 'blocked' };
+  if (menaceRandom.has(key)) return { kind: 'random', targetNativeIds: menaceRandomPool };
+  const base = key.endsWith('_Elite') ? key.slice(0, -6) : key;
+  const target = menaceMappings[base];
+  return target === undefined
+    ? { kind: 'none' }
+    : { kind: 'mapped', targetNativeId: `${target}${key.endsWith('_Elite') ? '_Elite' : ''}` };
+}
+
 const genericFangs = [
   'Blink',
   'ExtraDamage',
@@ -219,6 +307,14 @@ const budgetFacts: Readonly<Record<string, readonly [number, number?]>> = {
   Screamer2: [405],
 };
 
+// EnemyData_FishSwarmer / EnemyData_Simple: native UnitGroup array lengths.
+const unitGroupSizes: Readonly<Record<string, number>> = {
+  FishSwarmerSquad: 5,
+  FishSwarmerSquad_Elite: 2,
+  SimpleSquad: 4,
+  SimpleSquad_Elite: 2,
+};
+
 function enemy(key: string, label: string, facts: EnemyFacts = {}): EncounterEnemyChoice {
   const budget = budgetFacts[key];
   if (budget === undefined) throw new Error(`Missing generated enemy budget fact for ${key}`);
@@ -231,6 +327,8 @@ function enemy(key: string, label: string, facts: EnemyFacts = {}): EncounterEne
     excludes: [],
     blacklistAfterAppearance: false,
     difficultyRating: budget[0],
+    ...(unitGroupSizes[key] === undefined ? {} : { unitGroupSize: unitGroupSizes[key] }),
+    menace: menaceFor(key) ?? { kind: 'none' },
     ...(budget[1] === undefined ? {} : { maxCount: budget[1] }),
     ...facts,
     ...(facts.fangs === undefined
@@ -405,3 +503,35 @@ export const fixedFieldsEnemies = {
   treant: enemy('Treant2', 'Brush-Stalker', { elite: true, fixedCount: 1 }),
   screamer: enemy('Screamer2', 'Dread-Wailer', { elite: true, fixedCount: 1 }),
 } as const;
+
+// Replacement identities need not belong to a generated composition pool.
+// HelpText.en.sjson owns these three additional native display names.
+const replacementLabels = new Map([
+  ...Object.values(generatedEnemyPools)
+    .flat()
+    .map((enemy) => [enemy.nativeId, enemy.label] as const),
+  ['DespairElemental', 'Bawlder'],
+  ['LycanSwarmer', 'Canine'],
+  ['LycanSwarmer_Elite', 'Canine (Elite)'],
+  ['Simple', 'Polyp'],
+  ['Simple_Elite', 'Polyp (Elite)'],
+]);
+export function withMenaceLabels(enemy: EncounterEnemyChoice): EncounterEnemyChoice {
+  const fact = enemy.menace;
+  const label = (key: string) => {
+    const value = replacementLabels.get(key);
+    if (value === undefined) throw new Error(`Missing Menace replacement label: ${key}`);
+    return value;
+  };
+  if (fact?.kind === 'mapped')
+    return { ...enemy, menace: { ...fact, targetLabel: label(fact.targetNativeId) } };
+  if (fact?.kind === 'random')
+    return {
+      ...enemy,
+      menace: {
+        ...fact,
+        targetLabels: Object.fromEntries(fact.targetNativeIds.map((key) => [key, label(key)])),
+      },
+    };
+  return enemy;
+}
