@@ -111,6 +111,7 @@ describe('OccurrenceEncounterWorkbench', () => {
     ).toBe(canonical);
     await view.user.click(launcher);
     const dialog = await screen.findByRole('dialog', { name: 'Customize' });
+    await view.user.click(within(dialog).getByRole('button', { name: 'Edit' }));
     await view.user.click(within(dialog).getByRole('radio', { name: '3' }));
     await waitFor(() =>
       expect(
@@ -123,6 +124,7 @@ describe('OccurrenceEncounterWorkbench', () => {
     );
     await view.user.click(within(dialog).getByRole('button', { name: 'Shared Enemy' }));
     await view.user.click(await screen.findByRole('option', { name: 'Whisper' }));
+    await view.user.click(within(dialog).getByRole('tab', { name: /^Wave 2/ }));
     await view.user.click(within(dialog).getByRole('button', { name: 'Wave 2 enemies' }));
     await view.user.click(await screen.findByRole('option', { name: 'Whisper' }));
     await view.user.click(await screen.findByRole('option', { name: 'Wastrel' }));
@@ -138,7 +140,9 @@ describe('OccurrenceEncounterWorkbench', () => {
         kind: 'generated',
         waveCount: 3,
         highlightKey: 'Guard',
-        waves: [{ waveIndex: 2, typeKeys: ['Brawler'] }],
+        waves: expect.arrayContaining([
+          expect.objectContaining({ waveIndex: 2, typeKeys: ['Brawler'] }),
+        ]),
       }),
     );
     view.application.store.dispatch(authoredProjectUndoRequested());

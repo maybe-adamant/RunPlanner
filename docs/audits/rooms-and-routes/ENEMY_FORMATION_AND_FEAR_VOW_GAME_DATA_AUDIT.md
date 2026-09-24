@@ -19,6 +19,12 @@ byte-equal to the installed scripts. The companion
 owns the concrete encounter domains and enemy pools; this document owns the
 shared generation algorithm and Vow interactions.
 
+Budget/count inheritance, the 114 supported source identities, and Fangs
+pool/filter declarations were rechecked on 2026-09-23. The supported-domain
+censuses below include all 39 policies in the companion matrix, including NPC,
+passive and fixed-template contacts. Native-source probes establish bounded
+contact behavior with controlled scaffolding, not live combat or save restoration.
+
 The primary scope is the generated encounter used by an ordinary main Combat
 room and the generated `DevotionTest*` encounter used by a Devotion room. The
 same lower-level functions may be reused elsewhere, but this audit does not by
@@ -36,10 +42,9 @@ This audit distinguishes four different concepts that should not be collapsed:
    unit; and
 4. **post-death extension** may add a respawn egg and another required enemy.
 
-Exact RNG outcomes, exact authored wave control, combat success, damage taken,
-and elapsed combat time are outside the current Planner model. Static source
-inspection establishes the order and eligibility rules below, not one
-deterministic enemy roster for a room.
+Unauthored RNG outcomes, combat success, damage taken, and elapsed combat time
+are outside the Planner model. Customized encounters resolve complete generated
+composition choices using these rules; this is not a final live-entity roster.
 
 ## Primary Sources
 
@@ -190,11 +195,31 @@ the remainder. Mixed fixed/generated templates need separate attention: the
 native final-slice test compares the full spawn-array index with the number of
 generated entries, not a separate generated-entry ordinal.
 
-There is no native per-type percentage field. Authored shares would steer
-requested difficulty slices, not guarantee exact final spending or quantities.
-Zero allocation would not remove a selected type because of the minimum-one
-rule. Enemy-set entry multiplicity weights **type selection**, not this later
-budget allocation; these are different kinds of weight.
+`RandomLogic.lua:135` defines `RandomNormal` as mean plus a Gaussian sample
+times standard deviation, without Lua-side truncation. Negative samples collapse
+to the minimum-one result. Authored allocation requests use the nonnegative
+pre-clamp domain, not percentages; they need not sum to the wave budget.
+Zero allocation does not remove a selected type. Enemy-set entry multiplicity
+weights type selection, not this later allocation.
+
+The inherited 39-policy census (including hard/Dream overrides) has one variable
+base: `GeneratedP_PreCombat`, integer 340–500. The other 38 have fixed bases,
+though final budgets still depend on exact depth, modifiers and Hordes. The H
+Treant/Screamer templates charge their fixed count-one seed at index 1; their
+generated companion at index 2 samples rather than receiving the remainder,
+because generated count is one.
+
+`EncounterLogic.lua:AddEncounterLayer` initializes counts through
+`RoomLogic.lua:CalcTotalSpawns`. In this bounded domain generated count equals
+effective source-request count: 37 profiles have no count transforms, the two
+fixed H profiles have `EnemyCountDepthRamp = 0`, and none has run ramps,
+randomized fixed counts, infinite spawns or `RequiredMiniBossShrine`. The current
+trait declarations contain no `SpawnMultiplier`. This is a current-data census,
+not a claim that native count transforms can never exist.
+
+`CalculateEnemyDifficultyRating` prices configured attributes from
+`room.EliteAttributes`; ordinary Fangs selection occurs later and writes
+`encounter.EliteAttributes`. It does not feed back into generated quantities.
 
 ### Enemy eligibility is run dependent
 
@@ -225,6 +250,13 @@ post-add exclusion/blacklist/cap-update block. A validator must preserve these
 contacts rather than assume all declared limits are unconditional final-set
 constraints. The concrete affected templates and pool restrictions belong to
 the companion matrix.
+
+Selection also owns bounded side effects (`RunLogic.lua:1317`): the highlight
+enters the encounter blacklist; ordinary appended types may enter the run
+first-appearance blacklist, add blocked successors when `BlockTypesAcrossWaves`
+is declared, and contribute `ActiveEnemyCapBonus`. Fixed seeds and template
+placeholders do not inherit that ordinary appended-type block. These effects
+belong to admitted source selections, not discarded draws or replacement names.
 
 ### Introduction replacement occurs after initial generation
 
@@ -267,7 +299,7 @@ room availability or change how an eligible Devotion encounter is formed.
 | Vow            | Game key                        |                                                 Effect ranks | Stage                | Enemy-formation disposition                                                                                                                                                             |
 | -------------- | ------------------------------- | -----------------------------------------------------------: | -------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Vow of Hordes  | `EnemyCountShrineUpgrade`       | difficulty x1.2 / x1.4 / x1.6; active cap +0.4 / +0.8 / +1.2 | formation            | Directly changes generated total counts and may allow more concurrent enemies. Does not add waves or types directly.                                                                    |
-| Vow of Menace  | `NextBiomeEnemyShrineUpgrade`   |                                   10% / 25% per spawned unit | spawn substitution   | May replace an individual formed enemy with a next-biome enemy immediately before unit creation. Does not recalculate the wave budget or count.                                         |
+| Vow of Menace  | `NextBiomeEnemyShrineUpgrade`   |                                 10% / 25% per source request | spawn substitution   | May replace a formed source request with a next-biome enemy immediately before unit creation. Does not recalculate the wave budget or count.                                            |
 | Vow of Fangs   | `EnemyEliteShrineUpgrade`       |                                             1 / 2 attributes | room/unit setup      | Gives one selected elite enemy type in the formed encounter up to the effective rank's number of distinct legal elite attributes. It neither creates elites nor increases elite counts. |
 | Vow of Return  | `EnemyRespawnShrineUpgrade`     |                  25% / 50% per eligible required-enemy death | post-death extension | May replace the cleared required enemy with a required respawn egg and then another unit of the dead enemy's final name. The respawn cannot recursively trigger Return.                 |
 | Vow of Wards   | `EnemyShieldShrineUpgrade`      |                                            1 / 2 hit shields | unit setup           | Adds shields to spawned shrine-eligible units unless that enemy ignores Wards. It does not change formation.                                                                            |
@@ -326,7 +358,8 @@ units.
 Menace runs inside `HandleNextSpawn`, after generation has selected the
 original enemy type and count but before `EnemyData` is copied into a live
 unit. Unless the encounter, call site, or original enemy blocks the Vow, each
-unit independently rolls the effective chance.
+source spawn request independently rolls the effective chance. A request may
+expand into a unit group; it is not necessarily one final entity.
 
 On success:
 
@@ -354,6 +387,69 @@ formed encounter and the original enemy before substitution. Ordinary main
 generated Combat and eligible Devotion declarations do not globally block
 Menace, but a particular selected enemy still can.
 
+### Supported Menace inventory
+
+Inventory of the 114 enemy identities in the 39 supported composition policies,
+including fixed seeds. Compared normalized policy pools with inheritance-resolved
+EnemyData, native MetaUpgradeData.NextBiomeEnemyShrineUpgrade.SwapMap and
+BiomeEnemySets. Native source: MetaUpgradeData.lua:1829–1950,
+EnemySets.lua:252, EncounterLogic.lua:784–813. A block takes precedence over a
+declared mapping. Each paired row below includes base and `_Elite` source and
+destination variants unless explicitly qualified.
+
+#### Deterministic replacements
+
+| Biome | Source -> replacement (both variants)                                                                                                                                                |
+| ----- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| F     | Guard -> Guard2; Brawler -> FishmanMelee; Radiator -> Radiator2; Screamer -> FishSwarmerSquad; Mage -> FishmanRanged; SiegeVine -> Turtle                                            |
+| G     | FishmanMelee -> Mourner; FishmanRanged -> Lamia; FishSwarmerSquad -> LycanSwarmer; Turtle -> DespairElemental; Guard2 -> CorruptedShadeMedium; Radiator2 -> CorruptedShadeSmall      |
+| H     | BrokenHearted -> SwarmerClockwork; Lovesick -> TimeElemental; Mourner -> ClockworkHeavyMelee; Lamia -> SatyrLancer                                                                   |
+| N     | Carrion -> Scimiterror; Mudman -> Stickler; Zombie -> WaterElemental; ZombieSpawner -> Swab; ZombieHeavyRanged -> HarpyCutter; ZombieAssassin -> Drunk                               |
+| O     | Stickler -> AutomatonBeamer; Swab -> Dragon; Drunk -> AutomatonEnforcer; Scimiterror -> SatyrSapper; HarpyCutter -> HarpyDropper; WaterElemental -> SentryBot; Mage2 -> SatyrLancer2 |
+| P     | Dragon -> Brute; HarpyDropper -> Stalker; SatyrLancer2 -> Mati; SatyrCrossbow2 -> DragonBurrower; ZombieOlympus -> Simple                                                            |
+
+#### Random replacements: Fields only in the supported inventory
+
+Nine source identities lack a fixed mapping and are not enemy-blocked:
+
+- DespairElemental_Elite (Bawlder).
+- CorruptedShadeSmall and CorruptedShadeSmall_Elite (Blight-Shade).
+- CorruptedShadeMedium and CorruptedShadeMedium_Elite (Blood-Shade).
+- CorruptedShadeLarge and CorruptedShadeLarge_Elite (Bloat-Shade).
+- Lycanthrope (normal Lycaon only).
+- Treant2 (fixed Brush-Stalker seed).
+
+Each samples the full BiomeI pool: GoldElemental, TimeElemental,
+SwarmerClockwork, ClockworkHeavyMelee, SatyrLancer, SatyrRatCatcher, and each
+one's `_Elite` variant (12 identities). The replacement branch uses GetRandomValue
+directly, without calling IsEnemyEligible or preserving the original elite flag.
+Normal-to-elite and elite-to-normal replacements are therefore possible here.
+Do not apply composition eligibility filtering to this separate replacement pool.
+
+#### Enemy-blocked identities
+
+| Biome | Blocked sources                                                                            |
+| ----- | ------------------------------------------------------------------------------------------ |
+| G     | WaterUnit and WaterUnit_Elite (both have SwapMap rows, but the block wins)                 |
+| H     | Lycanthrope_Elite, FogEmitter2, Screamer2                                                  |
+| O     | ZombieCrewman and ZombieCrewman_Elite                                                      |
+| P     | SentryBot, AutomatonBeamer, AutomatonEnforcer, SatyrSapper, and all four `_Elite` variants |
+
+#### No replacement destination
+
+All 12 supported I types and all 10 supported Q types have neither a SwapMap
+entry nor a biome fallback pool. I: GoldElemental, TimeElemental,
+SwarmerClockwork, ClockworkHeavyMelee, SatyrLancer, SatyrRatCatcher and elites.
+Q: SimpleSquad, Stalker, Brute, Mati, DragonBurrower and elites.
+Do not present these as real substitution targets. Native code can still mark
+a successful chance branch with IsFromNextBiomeEnemyShrineUpgrade without
+changing the name; lack of a destination is not the same as an explicit block.
+
+Counts partition the 114 identities: 68 mapped, 9 random, 15 enemy-blocked,
+22 without a destination. Encounter blocks additionally suppress all replacement
+in GeneratedH_Passive, GeneratedH_PassiveSmall and GeneratedP_PreCombat.
+These are biome-owned pools even in Dream routes, not itinerary-next-biome pools.
+
 ## Vow of Fangs
 
 Fangs does not convert normal enemies into elites. After room entry has the
@@ -369,16 +465,127 @@ For each encounter it:
 4. assigns up to the effective Fangs rank—one or two—distinct compatible
    attributes to the selected type.
 
-All spawned units of that keyed elite type receive the selected attributes
-during `SetupUnit`. If no elite type formed, no legal attribute remains, or
-the encounter blocks elite attributes, Fangs has no target. Ordinary main
+`SetupUnit` attempts application for elite, non-charmed units using the actual
+unit name, preferring its encounter entry and otherwise falling back to the room
+entry. Per-room application caps still apply. An empty pool yields no perks but
+does not exclude the type from native target selection. If no elite type formed
+or the encounter blocks elite attributes, Fangs has no target. Ordinary main
 generated Combat and eligible Devotion encounters do not inherit the
 miniboss-wide `BlockEliteAttributes` rule.
 
 Attribute assignment occurs after enemy counts are generated. Although the
-count helper can price already-recorded elite attributes, the room-level Fangs
-attributes do not exist during the earlier `FillEnemyCounts` pass and therefore
-do not reduce or rebalance that generated roster.
+count helper can price already-recorded room attributes, ordinary Fangs writes
+the encounter map after `FillEnemyCounts` and does not rebalance that roster.
+
+Native target sampling initially includes repeated wave entries, then removes
+all copies of each chosen type. Supported profiles use one target type and the
+effective rank's one/two perks, without nondefault type-count or forced-count
+overrides. `GeneratedH_Passive` and `GeneratedH_PassiveSmall` block attributes.
+
+### Complete eligible-type pool inventory
+
+G denotes the generic pool (`EnemySets.lua:649`, `EnemyData.lua:262`):
+Blink, ExtraDamage, Fog, Frenzy, HeavyArmor, ManaDrain, Massive, Miasma,
+Molten, Orbit, Rooting, SpreadHitShields, StasisDeath, Unflinching, Vacuuming.
+
+All names below carry `_Elite` unless explicitly stated otherwise. Apply the
+following context and enemy filters after this declaration-level table.
+
+| Declared pool                  | Supported identities                                                                                                                                                                                                                                                                                                                        |
+| ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| G                              | Guard, Radiator, FishmanRanged, FishSwarmerSquad, Turtle, Guard2, Radiator2, CorruptedShadeMedium, BrokenHearted, Lovesick, Lamia, GoldElemental, TimeElemental, SwarmerClockwork, Zombie, Stickler, Scimiterror, WaterElemental, SatyrSapper, SatyrCrossbow2, SimpleSquad, Stalker, Mati, DragonBurrower; unsuffixed Treant2 and Screamer2 |
+| G + Rifts                      | Carrion, Drunk, HarpyCutter, AutomatonEnforcer, HarpyDropper                                                                                                                                                                                                                                                                                |
+| G + Metallic                   | Mourner, ZombieHeavyRanged, AutomatonBeamer                                                                                                                                                                                                                                                                                                 |
+| G + Hex                        | Screamer, CorruptedShadeLarge, SatyrRatCatcher, Mudman                                                                                                                                                                                                                                                                                      |
+| G + Homing                     | Mage, WaterUnit, CorruptedShadeSmall, SatyrLancer, Mage2, SentryBot, SatyrLancer2                                                                                                                                                                                                                                                           |
+| G + Rifts + Metallic           | Brawler, ClockworkHeavyMelee                                                                                                                                                                                                                                                                                                                |
+| G + Hex + Metallic             | FishmanMelee, Swab, Dragon, Brute                                                                                                                                                                                                                                                                                                           |
+| G + Rifts + Hex                | Lycanthrope                                                                                                                                                                                                                                                                                                                                 |
+| Fog, HeavyArmor, Orbit, Radial | SiegeVine, ZombieSpawner                                                                                                                                                                                                                                                                                                                    |
+| Empty                          | DespairElemental                                                                                                                                                                                                                                                                                                                            |
+
+Explicit pool sources: `EnemyData_Brawler.lua:87`, `EnemyData_Screamer.lua:110`,
+`EnemyData_Mage.lua:103,199`, `EnemyData_SiegeVine.lua:104`,
+`EnemyData_FishmanMelee.lua:82`, `EnemyData_WaterUnit.lua:130`,
+`EnemyData_CorruptedShadeSmall.lua:69`, `EnemyData_CorruptedShadeLarge.lua:70`,
+`EnemyData_Lycanthrope.lua:104`, `EnemyData_Mourner.lua:116`,
+`EnemyData_ClockworkHeavyMelee.lua:85`, `EnemyData_SatyrLancer.lua:95,232`,
+`EnemyData_SatyrRatCatcher.lua:105`, `EnemyData_Carrion.lua:148`,
+`EnemyData_Mudman.lua:144`, `EnemyData_ZombieSpawner.lua:110`,
+`EnemyData_ZombieHeavyRanged.lua:114`, `EnemyData_Swab.lua:99`,
+`EnemyData_Drunk.lua:107`, `EnemyData_Harpy.lua:100,205`,
+`EnemyData_SentryBot.lua:118`, `EnemyData_AutomatonBeamer.lua:120`,
+`EnemyData_AutomatonEnforcer.lua:111`, `EnemyData_Dragon.lua:126`,
+`EnemyData_Brute.lua:99`, `EnemyData_DespairElemental.lua:81`.
+Inheritance (`RunData.lua:1363–1416`) takes own values before missing parent
+values; ordinary option arrays replace, not union with, inherited arrays.
+
+### Filters
+
+| Enemy                     | Native blocks           | Source                               |
+| ------------------------- | ----------------------- | ------------------------------------ |
+| Mage_Elite, Mage2_Elite   | ExtraDamage             | EnemyData_Mage.lua:64                |
+| GoldElemental_Elite       | Tracking, ExtraDamage   | EnemyData_GoldElemental.lua:65       |
+| TimeElemental_Elite       | StasisDeath             | EnemyData_TimeElemental.lua:54       |
+| SwarmerClockwork_Elite    | SpreadHitShields        | EnemyData_Swarmer.lua:20             |
+| ClockworkHeavyMelee_Elite | Orbit, Vacuum           | EnemyData_ClockworkHeavyMelee.lua:47 |
+| ZombieHeavyRanged_Elite   | Orbit, Vacuum           | EnemyData_ZombieHeavyRanged.lua:63   |
+| AutomatonEnforcer_Elite   | Orbit, Vacuum           | EnemyData_AutomatonEnforcer.lua:66   |
+| Dragon_Elite              | Orbit, Vacuum           | EnemyData_Dragon.lua:88              |
+| Brute_Elite               | Orbit, Vacuum           | EnemyData_Brute.lua:78               |
+| WaterElemental_Elite      | Metallic, Orbit, Vacuum | EnemyData_WaterElemental.lua:58      |
+| Screamer_Elite            | Tracking                | EnemyData_Screamer.lua:61            |
+| Screamer2                 | Tracking, Vacuuming     | EnemyData_Screamer.lua:161           |
+| Treant2                   | Frenzy                  | EnemyData_Treant.lua:60              |
+
+`Vacuum` is not `Vacuuming`: do not silently repair that native spelling.
+Blocks of absent options do nothing. Rooting requires room set F/H;
+StasisDeath requires N/N_SubRooms/O/P (`EnemyData.lua:436–471`). HeavyArmor
+excludes SuperElite (`:313`); no supported identity inherits SuperElite.
+
+The catalog sets `elite: false` for
+ZombieAssassin_Elite, ZombieCrewman_Elite and ZombieOlympus_Elite. Their names and
+armor do not make them Fangs candidates. Conversely Treant2/Screamer2 inherit
+Elite and participate as fixed seeds.
+
+Run bans have an initialized table (`RunLogic.lua:421`), but their ordinary
+selection call is commented (`:503`). The only encounter-specific ban declaration
+found is Challenge (`EncounterData_Challenge.lua:412`), outside scope. Preserve
+native runtime guards; do not add hypothetical authored progression inputs.
+
+### Legal combinations
+
+Every pair of distinct, individually eligible options is possible except:
+
+| Incompatible pair    | EnemyData.lua lines |
+| -------------------- | ------------------- |
+| Blink / Orbit        | 282, 411            |
+| Frenzy / Homing      | 298, 372            |
+| Frenzy / Vacuuming   | 298, 352            |
+| ExtraDamage / Molten | 333, 359            |
+| Fog / Metallic       | 494, 522            |
+
+Native removal is ordered/directed; these current declarations happen to be
+symmetric. Rank 1 chooses one perk and rank 2 two when available; selection
+stops early only when no compatible option remains. Empty pools do not grant perks.
+
+### Selection is not a promise about every spawned unit
+
+Fog, Hex and Metallic each have `MaxPerRoom = 1`
+(`EnemyData.lua:484,510,516`). `ApplyEliteAttribute` enforces that at application
+(`ShrineLogic.lua:612–622`), not during selection. Thus repeated waves/cages can
+legally select them, but not every copy will receive them. Selection and native
+application are separate; the planner does not maintain an application ledger.
+
+Squad application has a bounded live-game uncertainty: FishSwarmerSquad_Elite and
+SimpleSquad_Elite inherit generic options, not their children's additions/blocks
+(`EnemyData_FishSwarmer.lua:183`, `EnemyData_Simple.lua:147`). Selection records
+the squad key. `SpawnUnitGroup` changes the identity to the child
+(`EncounterLogic.lua:1011–1040`); `SetupUnit` looks up the final unit name
+(`RoomLogic.lua:3309–3319`). No remapping was found. Source therefore indicates
+the chosen squad perks may not reach members. Native-source probes exercise
+actual-unit lookup, but do not establish live member effects. The planner retains
+native selection semantics and does not insert child-key copies to change them.
 
 ## Vow of Return
 
@@ -430,7 +637,7 @@ The source order establishes these interactions:
 
 | Combination             | Result                                                                                                                                                                                                                                               |
 | ----------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Hordes + Menace         | Hordes may generate more units; each final spawn gets its own Menace roll. Menace does not reprice the Hordes budget for the substituted identity.                                                                                                   |
+| Hordes + Menace         | Hordes may generate more source requests; each eligible request gets its own Menace roll. Menace does not reprice the Hordes budget for the substituted identity.                                                                                    |
 | Hordes + Fangs          | Hordes changes counts, while Fangs selects from elite types already present. More copies of a selected elite type share the same chosen attributes.                                                                                                  |
 | Hordes + Return         | Hordes may create more eligible deaths, each with an independent Return roll. Return does not feed units back into the formation budget.                                                                                                             |
 | Fangs + Menace          | Fangs entries are keyed by the formed elite type before spawn substitution. A Menace replacement with a different final name does not inherit the original type's keyed attributes. This is a direct sequencing inference from the two lookup paths. |
@@ -452,14 +659,14 @@ The following are established by static source:
 - exact formation/spawn/setup/death ordering;
 - each Vow's declared rank values and intervention point;
 - Hordes' two distinct modifications;
-- Menace's per-unit replacement and profile gate;
+- Menace's per-source-request replacement and profile gate;
 - Fangs' elite-type and attribute-selection cardinality;
 - Return's block conditions and no-chain rule; and
 - Devotion's reuse of generated encounter formation.
 
 The following are not collapsed into deterministic Planner facts:
 
-1. unauthored wave/type draws and all count, attribute, replacement or respawn RNG results;
+1. unauthored wave/type/count/attribute/replacement draws and all respawn RNG results;
 2. native-engine behavior around fractional active-cap comparisons beyond the
    visible Lua arithmetic;
 3. one universally legal enemy roster independent of introduction and profile
@@ -467,30 +674,32 @@ The following are not collapsed into deterministic Planner facts:
 
 ## Planner Disposition
 
-The Planner persists configured Fear ranks and run-local suppression. Supported
-generated encounters additionally allow optional wave counts, shared highlights,
-per-wave enemy types and relative weights. It does not simulate health, damage,
-combat success, duration, enemy quantities, attributes or respawn rolls.
-The four native formation stages remain separate; customization does not
-precompute a combined Vow-adjusted live roster.
+Generated encounters are native or fully customized. The planner resolves
+concrete budget/wave/type/allocation choices into ordered source counts, plus
+applicable Fangs assignments and Menace conversions. Incomplete active choices
+remain editable but do not publish; unauthored encounters retain native draws.
+Health, damage, combat success, duration, summons and Return rolls are not modeled.
 
-Requested per-type difficulty shares are steering operands, not a native data
-field or an exact count contract. Encounter
-difficulty, the fixed distribution between waves, quantity calculation,
-spawning, attributes, substitutions and respawns remain native-owned.
+Fangs selects a native elite source type from the complete composition, including
+fixed seeds, with the effective rank's ordered distinct perks unless the pool is
+exhausted. Actual-unit lookup, application caps and room fallback remain native;
+source perks are not copied to differently named replacements or squad children.
 
-The companion matrix records the supported encounter identities in biome
-Combat rooms plus `O_Devotion01`,
-including fixed rosters and non-generator contacts that cannot inherit an
-ordinary-generation policy merely because they occur in a Combat room.
+Menace accepts zero through all effective source requests at either enabled rank.
+Mapped sources have fixed destinations; the nine random sources select one
+destination per source per wave from the full native pool. This deliberately
+expresses a subset of possible native mixtures. Missing settings resolve to zero,
+not native rolls. Converted entries preserve source identity/order, required spawn
+point, active-cap override and Dream-scaling provenance. Native AddEncounterLayer
+keys spawns by name and overwrites duplicate names, so different sources must not
+be flattened into a shared replacement bucket. Progress follows successful native
+source-request consumption; retries and groups remain native.
 
-Native-source probes establish synchronous preparation, highlight/type-fill
-and count-sample contacts without replacing these algorithms. Ownership follows
-the copied encounter and wave; unmatched nested work and introduction
-replacements must not inherit an outer customization scope. Count samples map
-to the allocator's native spawn-array branches, not generic RNG call order.
-
-Profile/introduction assumptions and ordered composition validity remain
-catalog/engine boundaries. Production-hook source probes verify these contacts,
-not live in-game acceptance. No enemy quantity simulation or promise about every
-final live enemy follows from authoring the generated roster.
+Runtime contact ownership and all-wave native admission are documented in
+[the encounter contact audit](../game-execution-contacts/NPCS_ENCOUNTERS_AND_AUTOMATICS.md#native-encounter-and-phase-identity)
+and [the integration boundary](../../design/GAME_INTEGRATION_BOUNDARY.md).
+Profile/introduction assumptions and known-history legality remain distinct.
+Earlier native compositions are unknown to the planner; selected first-appearance
+types carry that warning. Native-source probes do not establish live combat,
+squad perk effects or full save-graph restoration. These remain bounded runtime
+acceptance questions, not reasons to invent a combat ledger or bypass progression.

@@ -837,12 +837,27 @@ Valid resolved choices travel with that phase into execution publication, not as
 room features or additional Timeline actions. A choice steers a native decision
 if reached; it does not oblige an attack, advance a clock or create a checkpoint.
 
-Generated composition stores an optional wave count, shared highlight and sparse
-per-wave additional enemy types with optional positive relative weights.
-Fixed seeds remain declaration-owned. Default prerequisites retain dependent
-choices as dormant; they are not published until active. Known incompatible
-choices remain repairable rather than being erased. Counts, perks and spawn
-positions are not authored, and weights do not promise exact enemy quantities.
+Generated composition is native or fully customized. Absence leaves generation
+native. A customized value owns concrete wave/base-budget choices, shared highlight
+where applicable, ordered per-wave additions and nonnegative budget allocation
+requests for sampled branches. Fixed seeds and remainder allocations remain
+declaration/engine-owned. The engine resolves native-order clamping, minimum-one,
+ceilings, count caps and redistribution into complete generated counts; allocations
+need not sum to the wave budget and are not relative weights or direct counts.
+
+Applicable Fangs choices own one elite source type and an ordered legal perk
+assignment. Menace choices own converted source-request counts and, for random-pool
+sources, one replacement identity per source per wave. Omitted Menace settings
+mean zero conversions, not native rolls. Counts describe source spawn requests,
+not final entities after groups, summons or respawns. Native perk application,
+spawn timing, positions and combat remain outside authored state.
+
+Opening the editor is read-only. Explicit customization initialization uses the
+exact reached engine capability and commits a complete starting value as one
+semantic edit. Reset removes the whole customization; there are no inner native
+defaults. Upstream edits and migration preserve structurally representable choices,
+including dormant values; missing or incompatible active choices remain repairable
+and prevent publication instead of requesting partial native generation.
 
 #### Encounter trait offers
 

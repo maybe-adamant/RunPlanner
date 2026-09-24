@@ -410,15 +410,13 @@ work.
 
 ## Planner disposition and runtime boundaries
 
-The implementation uses encounter-owned optional wave/type customization,
-including field-NPC generated combats, not a room-wide default-combat override.
-Default leaves native generation untouched and requires no authoring. A resolved
-wave count determines highlight participation; one highlight type is shared,
-remaining types belong to individual waves. Exact wave composition requires an
-explicit highlight when that branch uses one. Optional type-budget weights are
-best-effort requests within each native wave budget, not a guarantee of realized
-shares, enemy counts or encounter difficulty. Realization failures warrant
-diagnostics, not synchronization failure or new conformance obligations.
+The implementation uses encounter-owned native-or-full customization, including
+field-NPC generated combats, not a room-wide default-combat override. Native
+requires no authoring. Customized encounters resolve complete ordered waves,
+shared highlight where applicable, budget allocations/counts and applicable
+Fangs/Menace outcomes. Fixed seeds remain declaration-owned. Incomplete active
+choices stay repairable but cannot publish a partial answer. Realization failures
+warrant diagnostics, not new synchronization or conformance obligations.
 
 Production-hook native-source probes verify these contacts, not live in-game
 acceptance. The implementation preserves the following boundaries:
@@ -436,13 +434,16 @@ acceptance. The implementation preserves the following boundaries:
 3. Ordered type-choice possibility, including highlight/placeholder seeding,
    P group gates, run blacklists and declaration-owned hard context. A blanket
    independent-per-wave or final-set validator would misstate native support.
-4. Requested shares steer the proven `FillEnemyCounts` sample
-   contacts, keyed by copied encounter, wave and native spawn-array branch.
-   There is no native share field. Fixed entries and the full-index remainder
-   rule make a generic next-random-draw override unsound; rounding/caps remain
-   native constraints, not grounds for validating realized percentages.
+4. The planner resolves allocation requests using native array-order count rules,
+   including fixed costs and the full-index remainder branch. The executor
+   preflights all waves against native preselection eligibility and installs the
+   complete roster/count result at `FillEnemyTypes`; native template construction
+   and count metadata initialization remain intact. No runtime allocation solver
+   or partial RNG-steering path remains.
 
-NPC assist logic, all prescribed spawns, enemy quantities, perks, spawn timing,
-Menace substitutions and Return respawns remain native-owned. This audit does
-not require a combat simulator, a new lifecycle clock, or final-live-roster
-conformance checks. Source matrix completeness is not live adapter acceptance.
+NPC assist logic, prescribed spawns, perk application, spawn timing, active caps,
+groups, retries and Return respawns remain native-owned. Authored Menace retains
+source entries and transforms bounded spawn requests rather than merging by
+replacement identity. This audit does not require a combat simulator, a new
+lifecycle clock, or final-live-roster conformance checks. Source matrix
+completeness is not live adapter acceptance.

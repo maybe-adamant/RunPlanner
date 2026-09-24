@@ -756,6 +756,7 @@ export function GeneratedEncounterCustomizationControl({
             <nav className="run-state-tabs" aria-label="Wave budgets" role="tablist">
               {assessment.waves.map((wave, index) => (
                 <button
+                  className="run-state-tab"
                   key={wave.waveIndex}
                   id={`wave-budget-tab-${interaction.key}-${wave.waveIndex}`}
                   aria-controls={`wave-budget-panel-${interaction.key}-${wave.waveIndex}`}
