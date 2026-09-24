@@ -540,6 +540,29 @@ describe('native generated composition possibility', () => {
     ]);
   });
 
+  it("exposes each wave's validated members in native order, including template companions", () => {
+    const template = assess('GeneratedH_Treant2', {
+      waves: [{ waveIndex: 1, typeKeys: ['FogEmitter2'], allocations: { FogEmitter2: 1 } }],
+    });
+    expect(template.waves.map((wave) => wave.activeMemberKeys)).toEqual([
+      ['Treant2', 'FogEmitter2'],
+    ]);
+    const ordinary = assess('GeneratedF', {
+      waveCount: 3,
+      highlightKey: 'Guard',
+      waves: [
+        { waveIndex: 2, typeKeys: ['Guard', 'Mage'] },
+        { waveIndex: 3, typeKeys: ['Brawler', 'Mage'] },
+      ],
+    });
+    expect(ordinary.waves.map((wave) => wave.activeMemberKeys)).toEqual([
+      ['Guard'],
+      ['Guard'],
+      ['Guard', 'Brawler', 'Mage'],
+    ]);
+    expect(assess('GeneratedF', { waveCount: 3 }).waves).toEqual([]);
+  });
+
   it('records known run blacklist consequences only for valid ordinary additions', () => {
     const value = {
       waves: [

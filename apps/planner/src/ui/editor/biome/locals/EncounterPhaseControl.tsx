@@ -376,7 +376,9 @@ export function EncounterPhaseControl({
     );
   return (
     <section
-      {...(!phase.customizable && customizationControl === null
+      {...(!phase.customizable &&
+      customizationControl === null &&
+      phase.nemesisFeature === undefined
         ? { ...findingTarget(phase.address), tabIndex: -1 }
         : {})}
       aria-label={ariaLabel}

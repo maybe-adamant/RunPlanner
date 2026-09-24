@@ -15,6 +15,7 @@ type ChoiceLabel = {
   readonly key: string;
   readonly label: string;
   readonly fangsCaveat?: 'squad';
+  readonly blacklistAfterAppearance?: true;
   readonly menace?: import('@run-planner/engine/catalog-schema').EncounterEnemyChoice['menace'];
 };
 
@@ -42,27 +43,6 @@ export function projectGeneratedMenace(
   return fact;
 }
 
-export function projectGeneratedEncounterWarnings(
-  value: AuthoredGeneratedEncounterCustomization | undefined,
-  choices: readonly (ChoiceLabel & { readonly blacklistAfterAppearance: boolean })[],
-): readonly string[] {
-  if (value === undefined) return Object.freeze([]);
-  const selected = new Set([
-    ...(value.highlightKey === undefined || value.waveCount === 1 ? [] : [value.highlightKey]),
-    ...(value.waves ?? [])
-      .filter((wave) => value.waveCount === undefined || wave.waveIndex <= value.waveCount)
-      .flatMap((wave) => wave.typeKeys),
-  ]);
-  return Object.freeze(
-    choices
-      .filter((choice) => choice.blacklistAfterAppearance && selected.has(choice.key))
-      .map(
-        (choice) =>
-          `${generatedEnemyLabel(choice.label)} can appear only once per run. An earlier uncustomized encounter may already include it.`,
-      ),
-  );
-}
-
 export function projectGeneratedEncounterHighlightPicker(
   assessment: GeneratedEncounterAssessment | undefined,
   selected: string | undefined,
@@ -79,8 +59,8 @@ export function projectGeneratedEncounterHighlightPicker(
         value: key,
       })),
     ],
-    selected: selected ?? '',
-    selectedLabel: selected === undefined ? 'Select shared enemy' : labelFor(selected),
+    selected,
+    selectedLabel: selected === undefined ? undefined : labelFor(selected),
   });
 }
 
@@ -157,10 +137,10 @@ function issueMessage(
           : 'Choose the next available Fangs perk.';
     case 'menace':
       return issue.issue === 'targetRequired'
-        ? 'Choose a Menace replacement before converting this source.'
+        ? `Choose a Menace replacement before converting ${labelFor(issue.key)}.`
         : issue.issue === 'targetUnavailable'
-          ? 'The stored Menace replacement is unavailable. Choose another replacement.'
-          : 'Converted requests exceed this source’s current count. Reduce Menace Count.';
+          ? `The stored Menace replacement for ${labelFor(issue.key)} is unavailable. Choose another replacement.`
+          : `Converted ${labelFor(issue.key)} requests exceed its current count. Reduce Menace Count.`;
     default:
       return 'This customization needs repair for the current encounter context.';
   }
@@ -201,10 +181,24 @@ export function projectGeneratedEncounterAssessment(
       }),
     ),
     composition: assessment.composition,
+    warnings: Object.freeze(
+      [...new Set(assessment.waves.flatMap((wave) => wave.activeMemberKeys))]
+        .filter(
+          (key) => labels.find((choice) => choice.key === key)?.blacklistAfterAppearance === true,
+        )
+        .map(
+          (key) =>
+            `${labelFor(key)} can appear only once per run. An earlier uncustomized encounter may already include it.`,
+        ),
+    ),
     ...(assessment.budgetDomain === undefined ? {} : { budgetDomain: assessment.budgetDomain }),
     ...(assessment.budget === undefined ? {} : { budget: assessment.budget }),
-    ...(assessment.fangs === undefined ? {} : { fangs: assessment.fangs }),
-    ...(assessment.menace === undefined ? {} : { menace: assessment.menace }),
+    ...(assessment.fangs === undefined
+      ? {}
+      : { fangs: Object.freeze({ active: assessment.fangs.active }) }),
+    ...(assessment.menace === undefined
+      ? {}
+      : { menace: Object.freeze({ active: assessment.menace.active }) }),
     waves: Object.freeze(
       assessment.waves.map((wave) => {
         return Object.freeze({
@@ -225,7 +219,6 @@ export function projectGeneratedEncounterAssessment(
                 return [
                   source.sourceKey,
                   Object.freeze({
-                    maximum: source.maximum,
                     replacementLabel:
                       source.targetNativeId === undefined
                         ? selected === undefined
@@ -393,12 +386,7 @@ export function projectGeneratedFangsDraft(
     });
   const sections: ContextualPickerModel<WorkspaceGeneratedFangsDraftChoice>['sections'][number][] =
     [];
-  if (fangs === undefined || !fangs.active)
-    return Object.freeze({
-      picker: Object.freeze({ sections: Object.freeze(sections) }),
-      stepLabel: 'Vow of Fangs is inactive',
-    });
-  if (fangs.next === 'unavailable')
+  if (fangs === undefined || !fangs.active || fangs.next === 'unavailable')
     return Object.freeze({
       picker: Object.freeze({ sections: Object.freeze(sections) }),
       stepLabel: 'No Fangs selection is available for this composition',

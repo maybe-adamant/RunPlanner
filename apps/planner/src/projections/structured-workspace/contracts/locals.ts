@@ -140,7 +140,6 @@ export type WorkspaceGeneratedFangsDraftChoice =
 export interface WorkspaceGeneratedFangsDraft {
   readonly picker: ContextualPickerModel<WorkspaceGeneratedFangsDraftChoice>;
   readonly stepLabel: string;
-  readonly triggerLabel?: string;
 }
 
 export interface WorkspaceGeneratedEncounterAssessment {
@@ -150,6 +149,8 @@ export interface WorkspaceGeneratedEncounterAssessment {
     readonly field?: 'baseRoll' | 'waveCount' | 'highlight' | 'fangs' | 'enemies';
   }[];
   readonly composition: 'active' | 'missingWaveCount' | 'missingHighlight';
+  /** Declared once-per-run enemies among the engine-assessed active members. */
+  readonly warnings: readonly string[];
   readonly budgetDomain?: {
     readonly baseRoll: { readonly min: number; readonly max: number };
     readonly total: { readonly min: number; readonly max: number };
@@ -159,24 +160,14 @@ export interface WorkspaceGeneratedEncounterAssessment {
     readonly waveBudgets:
       readonly number[] | readonly { readonly min: number; readonly max: number }[];
   };
-  readonly fangs?: {
-    readonly rank: number;
-    readonly active: boolean;
-    readonly eligibleTypeKeys: readonly string[];
-    readonly perkKeys: readonly string[];
-    readonly eligiblePerkKeys: readonly string[];
-    readonly next: 'type' | 'perk' | 'finish' | 'unavailable';
-    readonly canFinish: boolean;
-    readonly issue?: 'typeUnavailable' | 'perkUnavailable' | 'incomplete';
-  };
-  readonly menace?: { readonly rank: number; readonly active: boolean; readonly blocked: boolean };
+  readonly fangs?: { readonly active: boolean };
+  readonly menace?: { readonly active: boolean };
   readonly waves: readonly {
     readonly waveIndex: number;
     readonly menaceCells?: Readonly<
       Record<
         string,
         {
-          readonly maximum: number;
           readonly replacementLabel: string;
           readonly picker?: ContextualPickerModel<string>;
         }
@@ -415,13 +406,14 @@ export type WorkspaceEncounterCustomizationDecision =
   | (WorkspaceEncounterCustomizationDecisionBase & {
       readonly selection: {
         readonly kind: 'generated';
-        readonly warnings: readonly string[];
         readonly choices: readonly {
           readonly key: string;
           readonly label: string;
           readonly difficultyRating: number;
           readonly unitGroupSize?: number;
           readonly fangsCaveat?: 'squad';
+          /** Declared once-per-run identity. */
+          readonly blacklistAfterAppearance?: true;
           readonly menace?: import('@run-planner/engine/catalog-schema').EncounterEnemyChoice['menace'];
         }[];
         readonly fixedEnemies: readonly {
@@ -430,6 +422,8 @@ export type WorkspaceEncounterCustomizationDecision =
           readonly difficultyRating: number;
           readonly unitGroupSize?: number;
           readonly fangsCaveat?: 'squad';
+          /** Declared once-per-run identity. */
+          readonly blacklistAfterAppearance?: true;
           readonly menace?: import('@run-planner/engine/catalog-schema').EncounterEnemyChoice['menace'];
         }[];
         readonly waveCount: { readonly min: number; readonly max: number };

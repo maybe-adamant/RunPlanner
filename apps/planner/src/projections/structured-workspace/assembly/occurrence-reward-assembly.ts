@@ -2,7 +2,6 @@ import type { ResolvedRoutePosition } from '@run-planner/engine/authored-project
 import {
   generatedEnemyLabel,
   projectGeneratedMenace,
-  projectGeneratedEncounterWarnings,
 } from '../interactions/generated-encounter-projection';
 import type {
   WorkspaceAcquisitionConversionControl,
@@ -865,10 +864,6 @@ export function activeEncounterPhasesForOwner(
                       }),
                   selection: Object.freeze({
                     kind: 'generated' as const,
-                    warnings: projectGeneratedEncounterWarnings(
-                      decision.value?.kind === 'generated' ? decision.value : undefined,
-                      decision.selection.choices,
-                    ),
                     choices: Object.freeze(
                       decision.selection.choices.map((choice) =>
                         Object.freeze({
@@ -883,6 +878,9 @@ export function activeEncounterPhasesForOwner(
                             : { menace: projectGeneratedMenace(choice.menace)! }),
                           ...(choice.fangs?.caveat === 'squad'
                             ? { fangsCaveat: 'squad' as const }
+                            : {}),
+                          ...(choice.blacklistAfterAppearance
+                            ? { blacklistAfterAppearance: true as const }
                             : {}),
                         }),
                       ),
@@ -901,6 +899,9 @@ export function activeEncounterPhasesForOwner(
                             : { menace: projectGeneratedMenace(enemy.menace)! }),
                           ...(enemy.fangs?.caveat === 'squad'
                             ? { fangsCaveat: 'squad' as const }
+                            : {}),
+                          ...(enemy.blacklistAfterAppearance
+                            ? { blacklistAfterAppearance: true as const }
                             : {}),
                         }),
                       ),
