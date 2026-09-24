@@ -391,24 +391,3 @@ export function evaluateEncounterCandidatesInternal(
     ),
   });
 }
-
-export function evaluateEncounterCandidates(
-  catalog: Catalog,
-  rooms: readonly (CanonicalAuthoredRoom | CanonicalLocalVisitRoom)[],
-  views: ReadonlyMap<string, HistoryStateView>,
-  routePosition: ResolvedRoutePosition,
-  boundary?: EncounterCandidateBoundary,
-): EncounterCandidateEvaluation {
-  const evaluation = evaluateEncounterCandidatesInternal(
-    catalog,
-    rooms,
-    views,
-    routePosition,
-    boundary,
-  );
-  return Object.freeze({
-    artifacts: evaluation.artifacts,
-    findings: evaluation.findings,
-    resolvedGenerated: evaluation.resolvedGenerated,
-  });
-}

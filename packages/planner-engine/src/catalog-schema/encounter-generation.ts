@@ -75,11 +75,13 @@ export interface GeneratedEncounterSelection {
       >
     >;
   };
-  /** Resolved native base difficulty, depth ramp and wave pattern operands. */
+  /** Resolved native base difficulty, depth ramp, modifier and multiplier operands. */
   readonly budget: {
     readonly base: number | { readonly min: number; readonly max: number };
     readonly depthRamp: number;
-    readonly depthAxis: 'biomeDepthCache' | 'biomeEncounterDepth' | 'runDepthCache';
+    readonly depthAxis: 'biomeDepthCache' | 'biomeEncounterDepth';
+    /** Native DifficultyModifier, added before DifficultyMultiplier. */
+    readonly modifier: number;
     readonly multiplier: number;
     readonly minimum: number;
     readonly hardDepthRamp?: number;
