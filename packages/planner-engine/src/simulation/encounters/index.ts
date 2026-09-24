@@ -36,7 +36,6 @@ export {
   type PreparedEncounterPhases,
 } from './preparation';
 export {
-  evaluateEncounterCandidates,
   type EncounterCandidateArtifacts,
   type EncounterCandidateEvaluation,
   type EncounterCandidateBoundary,

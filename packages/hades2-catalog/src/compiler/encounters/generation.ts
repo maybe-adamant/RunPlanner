@@ -155,8 +155,9 @@ export function normalizeEncounterGeneration(
       path,
       'requires a nonempty generated pool separate from at most one fixed template member',
     );
-  const min = integer(raw.waveCount.min, 'waveCount.min');
-  const max = integer(raw.waveCount.max, 'waveCount.max');
+  // The engine prices native wave patterns 1..4; a five-wave generator is unsupported.
+  const min = integer(raw.waveCount.min, 'waveCount.min', 1, 4);
+  const max = integer(raw.waveCount.max, 'waveCount.max', 1, 4);
   if (min > max || (fixedEnemies.length !== 0 && (min !== 1 || max !== 1)))
     fail(path, 'has incompatible wave bounds/template');
   if (!Number.isFinite(raw.types.depthRamp) || raw.types.depthRamp < 0 || raw.types.depthRamp > 1)
@@ -184,6 +185,8 @@ export function normalizeEncounterGeneration(
     fail(`${path}.budget.base`, 'has reversed range');
   if (!Number.isFinite(raw.budget.multiplier) || raw.budget.multiplier <= 0)
     fail(`${path}.budget.multiplier`, 'must be finite and positive');
+  if (!['biomeDepthCache', 'biomeEncounterDepth'].includes(raw.budget.depthAxis))
+    fail(`${path}.budget.depthAxis`, 'is unsupported');
   return Object.freeze({
     kind: 'generated',
     preparation: raw.preparation,
@@ -238,6 +241,7 @@ export function normalizeEncounterGeneration(
       base,
       depthRamp: integer(raw.budget.depthRamp, 'budget.depthRamp', 0, 10000),
       depthAxis: raw.budget.depthAxis,
+      modifier: integer(raw.budget.modifier, 'budget.modifier', -10000, 10000),
       multiplier: raw.budget.multiplier,
       minimum: integer(raw.budget.minimum, 'budget.minimum', 0, 10000),
       ...(raw.budget.hardDepthRamp === undefined

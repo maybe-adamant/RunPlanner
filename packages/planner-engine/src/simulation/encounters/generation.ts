@@ -5,7 +5,6 @@ import { assessFangs } from './fangs';
 export interface EncounterGenerationContext {
   readonly biomeDepthCache: number;
   readonly biomeEncounterDepth: number;
-  readonly runDepthCache?: number;
   /** Only consequences of earlier explicit, valid ordinary additions are known. */
   readonly knownRunBlacklist: readonly string[];
   readonly hard?: boolean;
@@ -19,6 +18,8 @@ export interface EncounterGenerationContext {
 export interface GeneratedEncounterOperands {
   /** A published generated encounter is a complete installation request. */
   readonly baseRoll?: number;
+  /** Final native DifficultyRating from which the published counts were derived. */
+  readonly expectedBudget: number;
   readonly waveCount: number;
   readonly highlightKey?: string;
   readonly fangs?: { readonly typeKey: string; readonly perkKeys: readonly string[] };
@@ -155,13 +156,15 @@ function totalBudget(
   context: EncounterGenerationContext,
   roll: number,
 ) {
-  const depth = context[policy.budget.depthAxis] ?? 0;
+  const depth = context[policy.budget.depthAxis];
   const ramp =
     context.hard === true && policy.budget.hardDepthRamp !== undefined
       ? policy.budget.hardDepthRamp
       : policy.budget.depthRamp;
   const hordes = [1, 1.2, 1.4, 1.6][Math.max(0, Math.min(3, context.hordesRank ?? 0))]!;
-  return Math.max(policy.budget.minimum, (roll + depth * ramp) * policy.budget.multiplier * hordes);
+  // RunLogic GenerateEncounter: modifier precedes the multiplier; Hordes, then the minimum.
+  const rating = (roll + depth * ramp + policy.budget.modifier) * policy.budget.multiplier;
+  return Math.max(policy.budget.minimum, rating * hordes);
 }
 
 /** All scoped generators use the native multi-wave highlight branch. Fixed
@@ -194,17 +197,25 @@ export function assessGeneratedEncounter(
     (selectedBase < base.min || selectedBase > base.max)
   )
     issues.push({ reason: 'baseRoll', actual: selectedBase });
+  const exactRoll =
+    typeof base === 'number'
+      ? base
+      : selectedBase !== undefined && selectedBase >= base.min && selectedBase <= base.max
+        ? selectedBase
+        : undefined;
+  const expectedBudget =
+    exactRoll === undefined ? undefined : totalBudget(policy, context, exactRoll);
   const budget =
     waveCount === undefined || wavePatterns[waveCount] === undefined
       ? undefined
-      : typeof base === 'number'
+      : expectedBudget !== undefined
         ? Object.freeze({
             kind: 'exact' as const,
             waveBudgets: Object.freeze(
-              wavePatterns[waveCount]!.map((share) => totalBudget(policy, context, base) * share),
+              wavePatterns[waveCount]!.map((share) => expectedBudget * share),
             ),
           })
-        : selectedBase === undefined
+        : typeof base !== 'number' && selectedBase === undefined
           ? Object.freeze({
               kind: 'range' as const,
               waveBudgets: Object.freeze(
@@ -216,16 +227,7 @@ export function assessGeneratedEncounter(
                 ),
               ),
             })
-          : selectedBase < base.min || selectedBase > base.max
-            ? undefined
-            : Object.freeze({
-                kind: 'exact' as const,
-                waveBudgets: Object.freeze(
-                  wavePatterns[waveCount]!.map(
-                    (share) => totalBudget(policy, context, selectedBase) * share,
-                  ),
-                ),
-              });
+          : undefined;
   const previewFor = (
     waveIndex: number,
     generated: readonly string[],
@@ -630,26 +632,35 @@ export function assessGeneratedEncounter(
   const compositionSupported = issues.every(
     (issue) => issue.reason === 'fangs' || issue.reason === 'menace' || issue.reason === 'required',
   );
-  const operands: GeneratedEncounterOperands = Object.freeze({
-    ...(typeof base === 'number' || authored.baseRoll === undefined
-      ? {}
-      : { baseRoll: authored.baseRoll }),
-    // Fixed wave declarations are just as concrete at installation time.
-    waveCount: waveCount ?? 0,
-    ...(authored.highlightKey === undefined || !possibleHighlight || waveCount === 1
-      ? {}
-      : { highlightKey: authored.highlightKey }),
-    ...(authored.fangs === undefined ||
-    !fangs.active ||
-    fangs.eligibleTypeKeys.length === 0 ||
-    fangs.issue !== undefined
-      ? {}
-      : { fangs: authored.fangs }),
-    menace: Object.freeze(menaceOperands),
-    waves: Object.freeze(
-      completeCounts.filter((wave): wave is NonNullable<typeof wave> => wave !== undefined),
-    ),
-  });
+  const publishable =
+    supported &&
+    expectedBudget !== undefined &&
+    waveCount !== undefined &&
+    completeCounts.length === waveCount &&
+    completeCounts.every((wave) => wave !== undefined);
+  const operands: GeneratedEncounterOperands | undefined = !publishable
+    ? undefined
+    : Object.freeze({
+        ...(typeof base === 'number' || authored.baseRoll === undefined
+          ? {}
+          : { baseRoll: authored.baseRoll }),
+        expectedBudget,
+        // Fixed wave declarations are just as concrete at installation time.
+        waveCount,
+        ...(authored.highlightKey === undefined || !possibleHighlight || waveCount === 1
+          ? {}
+          : { highlightKey: authored.highlightKey }),
+        ...(authored.fangs === undefined ||
+        !fangs.active ||
+        fangs.eligibleTypeKeys.length === 0 ||
+        fangs.issue !== undefined
+          ? {}
+          : { fangs: authored.fangs }),
+        menace: Object.freeze(menaceOperands),
+        waves: Object.freeze(
+          completeCounts.filter((wave): wave is NonNullable<typeof wave> => wave !== undefined),
+        ),
+      });
   return Object.freeze({
     supported,
     issues: Object.freeze(issues.map((entry) => Object.freeze(entry))),
@@ -709,12 +720,7 @@ export function assessGeneratedEncounter(
         });
       }),
     ),
-    ...(supported &&
-    waveCount !== undefined &&
-    completeCounts.length === waveCount &&
-    completeCounts.every((wave) => wave !== undefined)
-      ? { operands }
-      : {}),
+    ...(operands === undefined ? {} : { operands }),
     knownRunBlacklistAdditions: Object.freeze(compositionSupported ? [...knownAdditions] : []),
     ...(typeof base === 'number'
       ? {}

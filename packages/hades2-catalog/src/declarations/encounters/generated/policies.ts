@@ -35,6 +35,8 @@ const budgetByEncounter: Readonly<
       readonly base: number | { readonly min: number; readonly max: number };
       readonly depthRamp: number;
       readonly depthAxis: 'biomeDepthCache' | 'biomeEncounterDepth';
+      /** Native DifficultyModifier; absent means the native `or 0` default. */
+      readonly modifier?: number;
       readonly multiplier: number;
       readonly hardDepthRamp?: number;
     }
@@ -58,6 +60,8 @@ const budgetByEncounter: Readonly<
     base: 55,
     depthRamp: 15,
     depthAxis: 'biomeDepthCache',
+    // BaseArtemisCombat, EncounterData_Artemis.lua:55
+    modifier: 60,
     multiplier: 1,
     hardDepthRamp: 30,
   },
@@ -65,6 +69,8 @@ const budgetByEncounter: Readonly<
     base: 55,
     depthRamp: 15,
     depthAxis: 'biomeDepthCache',
+    // BaseNemesisCombat, EncounterData_Nemesis.lua:57
+    modifier: 60,
     multiplier: 1,
     hardDepthRamp: 30,
   },
@@ -86,6 +92,8 @@ const budgetByEncounter: Readonly<
     base: 140,
     depthRamp: 40,
     depthAxis: 'biomeDepthCache',
+    // EncounterData_Artemis.lua:160
+    modifier: 145,
     multiplier: 1,
     hardDepthRamp: 30,
   },
@@ -93,16 +101,14 @@ const budgetByEncounter: Readonly<
     base: 140,
     depthRamp: 40,
     depthAxis: 'biomeDepthCache',
+    // BaseNemesisCombat, EncounterData_Nemesis.lua:57
+    modifier: 60,
     multiplier: 1,
     hardDepthRamp: 30,
   },
-  GeneratedH_Passive: { base: 180, depthRamp: 60, depthAxis: 'biomeEncounterDepth', multiplier: 1 },
-  GeneratedH_PassiveSmall: {
-    base: 60,
-    depthRamp: 15,
-    depthAxis: 'biomeEncounterDepth',
-    multiplier: 1,
-  },
+  // Neither passive cage nor its parents declare UseEncounterDepth.
+  GeneratedH_Passive: { base: 180, depthRamp: 60, depthAxis: 'biomeDepthCache', multiplier: 1 },
+  GeneratedH_PassiveSmall: { base: 60, depthRamp: 15, depthAxis: 'biomeDepthCache', multiplier: 1 },
   GeneratedH: {
     base: 290,
     depthRamp: 82,
@@ -128,6 +134,8 @@ const budgetByEncounter: Readonly<
     base: 290,
     depthRamp: 82,
     depthAxis: 'biomeEncounterDepth',
+    // BaseNemesisCombat, EncounterData_Nemesis.lua:57
+    modifier: 60,
     multiplier: 1,
     hardDepthRamp: 30,
   },
@@ -170,14 +178,30 @@ const budgetByEncounter: Readonly<
     base: 325,
     depthRamp: 105,
     depthAxis: 'biomeDepthCache',
+    // BaseNemesisCombat, EncounterData_Nemesis.lua:57
+    modifier: 60,
     multiplier: 1,
     hardDepthRamp: 30,
   },
   GeneratedN: { base: 110, depthRamp: 25, depthAxis: 'biomeEncounterDepth', multiplier: 1 },
   GeneratedN_Smaller: { base: 85, depthRamp: 25, depthAxis: 'biomeEncounterDepth', multiplier: 1 },
   GeneratedN_Bigger: { base: 135, depthRamp: 25, depthAxis: 'biomeEncounterDepth', multiplier: 1 },
-  ArtemisCombatN: { base: 200, depthRamp: 20, depthAxis: 'biomeEncounterDepth', multiplier: 1 },
-  HeraclesCombatN: { base: 110, depthRamp: 25, depthAxis: 'biomeEncounterDepth', multiplier: 1 },
+  ArtemisCombatN: {
+    base: 200,
+    depthRamp: 20,
+    depthAxis: 'biomeEncounterDepth',
+    // BaseArtemisCombat, EncounterData_Artemis.lua:55
+    modifier: 60,
+    multiplier: 1,
+  },
+  HeraclesCombatN: {
+    base: 110,
+    depthRamp: 25,
+    depthAxis: 'biomeEncounterDepth',
+    // EncounterData_Heracles.lua:64
+    modifier: 150,
+    multiplier: 1,
+  },
   GeneratedO_Intro01: {
     base: 50,
     depthRamp: 45,
@@ -203,6 +227,8 @@ const budgetByEncounter: Readonly<
     base: 115,
     depthRamp: 55,
     depthAxis: 'biomeEncounterDepth',
+    // EncounterData_Heracles.lua:130
+    modifier: 155,
     multiplier: 1,
     hardDepthRamp: 45,
   },
@@ -288,7 +314,14 @@ function generation(data: GenerationDeclaration) {
       blockTypesAcrossWaves: true,
       fixedEnemies: (data.fixedEnemies ?? []).map(withMenaceLabels),
       fangs: { perks: fangsPerks },
-      budget: { base: 0, depthRamp: 0, depthAxis: 'biomeDepthCache', multiplier: 1, minimum: 10 },
+      budget: {
+        base: 0,
+        depthRamp: 0,
+        depthAxis: 'biomeDepthCache',
+        modifier: 0,
+        multiplier: 1,
+        minimum: 10,
+      },
       maxTypesPerGroup: data.groups ?? {},
     } satisfies GeneratedEncounterSelection,
   } as const;
@@ -727,7 +760,7 @@ export const generatedEncounterChoices = Object.freeze(
           ...decision,
           selection: Object.freeze({
             ...decision.selection,
-            budget: Object.freeze({ ...budget, minimum: 10 }),
+            budget: Object.freeze({ modifier: 0, ...budget, minimum: 10 }),
           }),
         }),
       ];

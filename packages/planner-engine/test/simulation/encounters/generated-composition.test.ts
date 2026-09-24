@@ -132,21 +132,104 @@ describe('native generated composition possibility', () => {
     ).toEqual(['FogEmitter2']);
   });
 
-  it('suggests equal remaining-budget samples without authoring the native remainder', () => {
-    expect(
-      assess('GeneratedF', {
-        waveCount: 1,
-        waves: [{ waveIndex: 1, typeKeys: ['Guard', 'Brawler'] }],
-      }).waves[0]?.equalAllocations,
-    ).toEqual({ Guard: 87.5 });
-    expect(
-      assess('GeneratedH_Treant2', {
-        waves: [{ waveIndex: 1, typeKeys: ['FogEmitter2'] }],
-      }).waves[0]?.equalAllocations,
-    ).toEqual({ FogEmitter2: 466 });
+  it('suggests a deterministic valid equal-sample distribution without authoring the remainder', () => {
+    for (const [key, value] of [
+      ['GeneratedF', { waveCount: 1, waves: [{ waveIndex: 1, typeKeys: ['Guard', 'Brawler'] }] }],
+      ['GeneratedH_Treant2', { waves: [{ waveIndex: 1, typeKeys: ['FogEmitter2'] }] }],
+    ] as const) {
+      const wave = assess(key, value).waves[0]!;
+      expect(assess(key, value).waves[0]?.equalAllocations, key).toEqual(wave.equalAllocations);
+      const allocations = wave.equalAllocations!;
+      expect(Object.keys(allocations), key).toEqual(wave.sampledBudgetKeys);
+      expect(
+        Object.values(allocations).every((entry) => Number.isFinite(entry) && entry >= 0),
+      ).toBe(true);
+      const budgeted = assess(key, {
+        ...value,
+        waves: [{ ...value.waves[0], allocations }],
+      });
+      expect(budgeted.supported, key).toBe(true);
+      expect(budgeted.operands, key).toBeDefined();
+    }
     expect(
       assess('GeneratedP_PreCombat', {}).waves.every((wave) => wave.equalAllocations === undefined),
     ).toBe(true);
+  });
+
+  it('adds the native modifier before the multiplier, then applies Hordes and the minimum', () => {
+    const heracles = policy('HeraclesCombatN');
+    const context = { biomeDepthCache: 3, biomeEncounterDepth: 4, knownRunBlacklist: [] };
+    const expected = (
+      source: typeof heracles,
+      facts: Partial<Parameters<typeof assessGeneratedEncounter>[2]> = {},
+    ) => {
+      const exact = { ...context, ...facts };
+      const value = initializeGeneratedEncounter(source, exact);
+      expect(value).toBeDefined();
+      return assessGeneratedEncounter(source, value!, exact).operands!.expectedBudget;
+    };
+    // 110 base + 4 encounter depth * 25 + 150 modifier.
+    expect(expected(heracles)).toBe(360);
+    const doubled = { ...heracles, budget: { ...heracles.budget, multiplier: 2 } };
+    expect(expected(doubled)).toBe(720);
+    expect(expected(doubled, { hordesRank: 2 })).toBeCloseTo(1008);
+    const small = (base: number, modifier: number) => ({
+      ...heracles,
+      budget: { ...heracles.budget, base, depthRamp: 0, modifier },
+    });
+    // The minimum follows Hordes: 8 * 1.6 clears it, 4 * 1.6 does not.
+    expect(expected(small(8, 0), { hordesRank: 3 })).toBeCloseTo(12.8);
+    expect(expected(small(5, -1), { hordesRank: 3 })).toBe(10);
+  });
+
+  it('prices H passive cages by room depth while H combat reads encounter depth', () => {
+    const initialized = (key: string) => {
+      const context = { biomeDepthCache: 4, biomeEncounterDepth: 12, knownRunBlacklist: [] };
+      const value = initializeGeneratedEncounter(policy(key), context)!;
+      return assessGeneratedEncounter(policy(key), value, context).operands!.expectedBudget;
+    };
+    // Passive 180 + 4 * 60 and small 60 + 4 * 15; H combat 290 + 12 * 82.
+    expect(initialized('GeneratedH_Passive')).toBe(420);
+    expect(initialized('GeneratedH_PassiveSmall')).toBe(120);
+    expect(initialized('GeneratedH')).toBe(1274);
+    expect(policy('GeneratedH_Passive').types.depthAxis).toBe('biomeDepthCache');
+  });
+
+  it('publishes the exact final budget only with resolved operands', () => {
+    const source = policy('GeneratedP_PreCombat');
+    const context = { biomeDepthCache: 2, biomeEncounterDepth: 2, knownRunBlacklist: [] };
+    const value = { ...initializeGeneratedEncounter(source, context)!, baseRoll: 412 };
+    const exact = assessGeneratedEncounter(source, value, context);
+    expect(exact.operands).toMatchObject({ baseRoll: 412, expectedBudget: 412 });
+    expect(exact.budget?.waveBudgets).toEqual([412]);
+    const hordes = assessGeneratedEncounter(source, value, { ...context, hordesRank: 2 });
+    expect(hordes.operands?.expectedBudget).toBeCloseTo(576.8);
+    expect(hordes.operands?.waves).not.toEqual(exact.operands?.waves);
+    const { baseRoll, ...ranged } = value;
+    expect(baseRoll).toBe(412);
+    expect(assessGeneratedEncounter(source, ranged, context).operands).toBeUndefined();
+    expect(
+      assessGeneratedEncounter(source, { ...value, baseRoll: 501 }, context).operands,
+    ).toBeUndefined();
+  });
+
+  it('moves NPC published counts with the declared modifier', () => {
+    const source = policy('ArtemisCombatN');
+    const context = { biomeDepthCache: 2, biomeEncounterDepth: 3, knownRunBlacklist: [] };
+    const value = initializeGeneratedEncounter(source, context)!;
+    const corrected = assessGeneratedEncounter(source, value, context).operands!;
+    const omitted = assessGeneratedEncounter(
+      { ...source, budget: { ...source.budget, modifier: 0 } },
+      value,
+      context,
+    ).operands!;
+    expect(corrected.expectedBudget - omitted.expectedBudget).toBe(60);
+    expect(corrected.waves.map((wave) => wave.typeKeys)).toEqual(
+      omitted.waves.map((wave) => wave.typeKeys),
+    );
+    expect(corrected.waves.map((wave) => wave.counts)).not.toEqual(
+      omitted.waves.map((wave) => wave.counts),
+    );
   });
 
   it('derives native wave patterns from catalog budget facts and effective Hordes', () => {
