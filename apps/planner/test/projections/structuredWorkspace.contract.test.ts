@@ -2293,7 +2293,7 @@ describe('structured workspace overlay contract', () => {
 });
 
 describe('Hub fountain finding destinations', () => {
-  it('routes the Hub-owned Phial outcome and fountain placement to the Hub timeline', () => {
+  it('routes fountain placement to the Hub timeline and its Phial outcome to the next room', () => {
     const hub = createHubDecisionAddress(nBiome, 'hub');
     const fountain = createHubFountainAddress(nBiome, 'hub');
     const outcome = createFountainRarityOutcomeAddress(fountain);
@@ -2307,17 +2307,23 @@ describe('Hub fountain finding destinations', () => {
       hub,
       actions: hubVisitActions(nVisitSlotKeys, null),
     });
-    for (const [project, owner] of [
-      [phial, outcome],
-      [unplanned, fountain],
-    ] as const) {
-      const workspace = projectWorkspace(project);
-      expect(workspace.findingsByRepairTarget.has(semanticAddressKey(owner))).toBe(true);
-      expect(workspace.focusByOwner.get(semanticAddressKey(owner))).toMatchObject({
-        hubTab: 'timeline',
-        inspectorSubject: { kind: 'node', nodeKey: `hub:${semanticAddressKey(hub)}` },
-        ownerAddress: owner,
-      });
-    }
+    const phialWorkspace = projectWorkspace(phial);
+    expect(phialWorkspace.findingsByRepairTarget.has(semanticAddressKey(outcome))).toBe(true);
+    // The fountain-first use displays before the first visited room.
+    const firstRoom = createOccurrenceAddress(nBiome, nOccurrenceId(nVisitSlotKeys[0]!));
+    const outcomeDestination = phialWorkspace.focusByOwner.get(semanticAddressKey(outcome));
+    expect(outcomeDestination).toMatchObject({
+      inspectorSubject: { kind: 'node', nodeKey: `occurrence:${semanticAddressKey(firstRoom)}` },
+      ownerAddress: outcome,
+    });
+    expect(outcomeDestination).not.toHaveProperty('hubTab');
+
+    const unplannedWorkspace = projectWorkspace(unplanned);
+    expect(unplannedWorkspace.findingsByRepairTarget.has(semanticAddressKey(fountain))).toBe(true);
+    expect(unplannedWorkspace.focusByOwner.get(semanticAddressKey(fountain))).toMatchObject({
+      hubTab: 'timeline',
+      inspectorSubject: { kind: 'node', nodeKey: `hub:${semanticAddressKey(hub)}` },
+      ownerAddress: fountain,
+    });
   });
 });

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import * as support from '@planner-test/support/structured-workspace/interaction-binding.test-support';
+import { createHubFountainAddress } from '@run-planner/engine/authored-project';
 import { hubVisitActions } from '@run-planner/test-fixtures/shared';
 
 const {
@@ -101,6 +102,18 @@ describe('structured workspace interaction binding', () => {
         kind: 'ReplaceHubActionOrder',
       },
     });
+    // Moving the fountain is one complete reorder of the same Hub action order.
+    const selectedVisits = visitOrder.selectedHubSlotKeys;
+    const movedFountain = visitOrder.proposalFor(hubVisitActions(selectedVisits, 2));
+    expect(movedFountain.choices[0]?.label).toBe(
+      [...selectedVisits.slice(0, 2), 'Fountain', ...selectedVisits.slice(2)].join(' → '),
+    );
+    expect(movedFountain.intent()).toEqual({
+      command: { hub, actions: hubVisitActions(selectedVisits, 2), kind: 'ReplaceHubActionOrder' },
+      focus: { owner: createHubFountainAddress(nBiome, 'hub'), timing: 'after' },
+    });
+    // Room-only edits keep the fountain where it is and carry no focus.
+    expect(visitOrder.proposalFor(hubVisitActions(reordered)).intent()).not.toHaveProperty('focus');
     const shortened = visitOrder.proposalFor(
       hubVisitActions(visitOrder.selectedHubSlotKeys.slice(0, 3)),
     );

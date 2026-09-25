@@ -1375,6 +1375,43 @@
   }
 }
 
+.hub-fountain-controls {
+  display: grid;
+  gap: 8px;
+  margin: 12px 0;
+  padding: 12px;
+  border: 1px solid #3a5a70;
+  border-radius: 8px;
+  background: rgb(22 38 50 / 60%);
+}
+
+.hub-fountain-controls p {
+  margin: 0;
+}
+
+.hub-fountain-placements {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.hub-fountain-placements > button[aria-pressed='true'] {
+  border-color: #6cc4ff;
+  color: #eaf6ff;
+}
+
+.hub-fountain-controls-fields {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 16px;
+}
+
+.hub-fountain-host-note {
+  margin: 8px 12px 0;
+  justify-self: start;
+}
+
 .fountain-rarity-inline {
   display: flex;
   flex: 0 1 20rem;

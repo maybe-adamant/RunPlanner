@@ -10,12 +10,14 @@ import {
   createLocalVisitOrderAddress,
   createLocalVisitSlotAddress,
   createOccurrenceAddress,
+  hubFountainPrecedingVisitCount,
   hubVisitSlotKeys,
   semanticAddressKey,
   selectedExitTarget,
   type BiomeAddress,
   type BiomeTopology,
   type ExitDecision,
+  type HubAction,
   type HubDecision,
   type HubDecisionAddress,
   type LocalVisitDecision,
@@ -52,12 +54,18 @@ import {
 } from '../navigation/marker-ownership';
 import type { WorkspaceMarkerDestinationEmitter } from '../navigation/marker-builder';
 import type { WorkspaceOccurrenceAssembler } from './occurrence-assembly';
+import {
+  projectFountainRarityControl,
+  type WorkspaceOccurrenceActionsInput,
+} from './occurrence-action-row-projection';
 import type { WorkspaceBiomeSource } from '../source-index';
 import { presentRunState } from '../presentation/run-state';
 import { projectWorkspaceDoorContract } from './door-contract';
 import type {
   WorkspaceDoorContract,
   WorkspaceHubDecisionNode,
+  WorkspaceHubFountain,
+  WorkspaceHubFountainPlacement,
   WorkspaceOccurrenceWorkbenchNode,
 } from '../contracts/structure';
 import type { WorkspaceMarker } from '../contracts/navigation';
@@ -83,6 +91,7 @@ interface WorkspaceHubAssemblyBaseInput {
   /** The frontier-derived create capability for the fixed completed-Hub exit. */
   readonly completedExitReady?: boolean;
   readonly descriptor: HubDecisionDescriptor;
+  readonly fountainRarityAssessment?: WorkspaceOccurrenceActionsInput['fountainRarityAssessment'];
   readonly markerDestinations: WorkspaceMarkerDestinationEmitter;
   readonly nextVisitIndex?: number;
   readonly topology: BiomeTopology | null;
@@ -170,6 +179,32 @@ function redirectHubMainRewardFocus(
   mainReward: WorkspaceMarker,
 ): void {
   markerDestinations.redirectTo(mainReward, hub, `hub:${hub.focusKey}`);
+}
+
+/** Complete action orders placing the fountain use after each authored visit prefix. */
+function hubFountainPlacements(
+  actions: readonly HubAction[],
+): readonly WorkspaceHubFountainPlacement[] {
+  const withoutFountain = actions.filter((action) => action.kind !== 'useFountain');
+  const visitIndexes = withoutFountain.flatMap((action, index) =>
+    action.kind === 'roomVisit' ? [index] : [],
+  );
+  const fountain: HubAction = Object.freeze({ kind: 'useFountain' as const });
+  return Object.freeze(
+    Array.from({ length: visitIndexes.length + 1 }, (_, visits) => {
+      const insertion = visits === 0 ? 0 : visitIndexes[visits - 1]! + 1;
+      return Object.freeze({
+        key: `after:${visits}`,
+        label: visits === 0 ? 'Before visit 1' : `After visit ${visits}`,
+        precedingVisitCount: visits,
+        proposedActions: Object.freeze([
+          ...withoutFountain.slice(0, insertion),
+          fountain,
+          ...withoutFountain.slice(insertion),
+        ]),
+      });
+    }),
+  );
 }
 
 function projectHubNode(
@@ -463,9 +498,13 @@ function projectHubNode(
       visited: detailsActive,
     });
   });
+  const visitActionPositions = hub.actions.flatMap((action, index) =>
+    action.kind === 'roomVisit' ? [index + 1] : [],
+  );
   const visits = Array.from({ length: descriptor.requiredVisits }, (_, index) => {
     const visitIndex = index + 1;
     const hubSlotKey = visitOrder[index];
+    const actionPosition = visitActionPositions[index];
     const authoring =
       hubSlotKey !== undefined
         ? ('authored' as const)
@@ -484,6 +523,7 @@ function projectHubNode(
       ...(hubSlotKey === undefined || roomsBySlot.get(hubSlotKey) === undefined
         ? {}
         : { room: roomsBySlot.get(hubSlotKey)! }),
+      ...(actionPosition === undefined ? {} : { actionPosition }),
       visitIndex,
     });
   });
@@ -531,9 +571,68 @@ function projectHubNode(
           }),
           targetLabel: completedExitRoom.label,
         });
+  const fountainAddress = createHubFountainAddress(biome, descriptor.hubKey);
+  const fountainOutcome = createFountainRarityOutcomeAddress(fountainAddress);
+  const fountainIndex = hub.actions.findIndex((action) => action.kind === 'useFountain');
+  const fountainPrecedingVisits = hubFountainPrecedingVisitCount(hub);
+  const placements = hubFountainPlacements(hub.actions);
+  // The next room entered after the use hosts its controls; Preboss follows a final use.
+  const hostOccurrenceId =
+    fountainPrecedingVisits === undefined
+      ? undefined
+      : fountainPrecedingVisits < descriptor.requiredVisits
+        ? (() => {
+            const slotKey = visitOrder[fountainPrecedingVisits];
+            return slotKey === undefined ? undefined : targets.get(slotKey)?.occurrenceId;
+          })()
+        : completedExitTarget?.occurrenceId;
+  const hostOccurrence =
+    hostOccurrenceId === undefined ? undefined : occurrences.get(hostOccurrenceId);
+  const rarity =
+    fountainPrecedingVisits === undefined || input.fountainRarityAssessment === undefined
+      ? undefined
+      : projectFountainRarityControl(
+          fountainOutcome,
+          hub.fountainRarityResult?.targetTraitKey,
+          input.fountainRarityAssessment,
+          markerDestinations,
+        );
+  const fountain: WorkspaceHubFountain = Object.freeze({
+    address: fountainAddress,
+    hub: owner,
+    marker: markerDestinations.marker(fountainAddress),
+    ...(fountainIndex < 0 ? {} : { actionPosition: fountainIndex + 1 }),
+    ...(fountainIndex < 0
+      ? {
+          appendActions: Object.freeze([
+            ...hub.actions,
+            Object.freeze({ kind: 'useFountain' as const }),
+          ]),
+        }
+      : {}),
+    placements,
+    ...(fountainPrecedingVisits === undefined
+      ? {}
+      : { selectedPlacementKey: `after:${fountainPrecedingVisits}` }),
+    outcomeMarker: markerDestinations.marker(fountainOutcome),
+    ...(rarity === undefined ? {} : { rarity }),
+    ...(fountainPrecedingVisits === undefined
+      ? {}
+      : {
+          controlsHost:
+            hostOccurrence === undefined
+              ? Object.freeze({ kind: 'hub' as const })
+              : Object.freeze({
+                  kind: 'room' as const,
+                  label: requireWorkspaceRoom(catalog, hostOccurrence.gameName).label,
+                  occurrenceId: hostOccurrence.occurrenceId,
+                }),
+        }),
+  });
   const node = Object.freeze({
     authoring: 'authored' as const,
     kind: 'hubDecision' as const,
+    fountain,
     key: `hub:${semanticAddressKey(owner)}`,
     hubKey: descriptor.hubKey,
     gameName: descriptor.terminal.roomGameName,
@@ -604,14 +703,12 @@ function projectHubNode(
   markerDestinations.setHubTab(Object.freeze(node.visits.map((visit) => visit.marker)), 'timeline');
   markerDestinations.redirect([completedExitMarker], node.key);
   markerDestinations.setHubTab([completedExitMarker], 'exit');
-  // The Hub owns its fountain use and Phial outcome; both repair from the Hub timeline.
-  const fountain = createHubFountainAddress(biome, descriptor.hubKey);
-  const fountainMarkers = Object.freeze([
-    markerDestinations.marker(fountain),
-    markerDestinations.marker(createFountainRarityOutcomeAddress(fountain)),
-  ]);
-  markerDestinations.redirect(fountainMarkers, node.key);
-  markerDestinations.setHubTab(fountainMarkers, 'timeline');
+  // An unused fountain repairs on the Hub map; a used one follows its displayed controls.
+  if (fountain.controlsHost?.kind !== 'room') {
+    const fountainMarkers = [fountain.marker, fountain.outcomeMarker];
+    markerDestinations.redirect(fountainMarkers, node.key);
+    markerDestinations.setHubTab(fountainMarkers, 'timeline');
+  }
   hubInteractionRequirements.push(
     Object.freeze({
       kind: 'hubControls' as const,

@@ -518,6 +518,12 @@ export function createStructuredWorkspaceProjection(
               node.targets.map((target) => target.room),
             );
           } else if (node.kind === 'hubDecision') {
+            if (node.fountain.rarity !== undefined) {
+              fountainRarityControls.set(
+                semanticAddressKey(node.fountain.rarity.address),
+                node.fountain.rarity,
+              );
+            }
             appendEncounterTraitControls(
               traitControls,
               node.slots.flatMap((slot) => (slot.room === undefined ? [] : [slot.room])),

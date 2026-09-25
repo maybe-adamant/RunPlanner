@@ -245,9 +245,9 @@ Visibility and zoom belong to the local host, not the authored project. Edits
 within that host preserve the reference; changing its room image resets Fit,
 and changing the host cannot inherit another room's open reference. Images,
 including placeholders and Fields annotations, are replaceable static assets.
-The Hub uses a clean background with shared door coordinates: read-only
-inspection and the interactive Overview/Timeline project their own markers
-over that same image. Coordinates are presentation data, not room topology.
+The Hub uses a clean background with shared door and fountain coordinates:
+read-only inspection and the interactive Overview/Timeline project their own
+markers over that same image. Coordinates are presentation data, not room topology.
 See the [asset replacement note](../../apps/planner/src/ui/room-maps/README.md).
 
 ### Encounter Phase Products
@@ -624,9 +624,10 @@ language, but its center is not an ordinary decision spine. The
   open members;
 - one complete room and incoming reward for each open slot;
 - Hub Overview for the complete fixed-slot set, open/closed membership, and
-  each open room's reward editor; Hub Timeline for the exact dense authored
-  visit prefix (through six positions) on the map, with read-only reward context;
-  and Hub Exit's fixed `Preboss` card for the existing completed-Hub handoff;
+  each open room's reward editor; Hub Timeline for the exact authored action
+  prefix (up to six room visits and one fountain use) on the map, with
+  read-only reward context; and Hub Exit's fixed `Preboss` card for the
+  existing completed-Hub handoff;
 - side-room generation and entry state under visited parents;
 - derived Hub returns and parent restores;
 - the fixed completed-Hub handoff to the width-one Preboss Shop and its derived
@@ -638,9 +639,11 @@ visit and ordering owners open Hub Timeline; entered main-room occurrences and
 their incoming-reward acquisition children open the main occurrence Timeline;
 parent-owned side generation, entry order, and side reward identity open the
 parent main occurrence Overview; entered side occurrences and their acquisition
-children open the side occurrence Timeline; and the uncommitted completed-Hub
-handoff opens Exit. React consumes that explicit destination and does not infer
-tab ownership from semantic-address shapes or rendered ancestry.
+children open the side occurrence Timeline; the uncommitted completed-Hub
+handoff opens Exit; an unused Hub fountain opens Hub Timeline; and a used
+fountain and its Phial outcome open the room entered after the use, or Hub
+Timeline until that room exists. React consumes that explicit destination and
+does not infer tab ownership from semantic-address shapes or rendered ancestry.
 
 The board remains a joint generation region. Open-set membership and the dense
 authored visit prefix are distinct engine-owned products. There is no persisted
@@ -660,14 +663,24 @@ their owned visits, rooms and handoff subtree while retaining the Hub and its
 source. It differs from Remove Hub and participates in ordinary Undo/Redo.
 
 Timeline is map-only. Open doors retain their stable room labels and reward
-icons; transparent markers are unvisited, solid markers carry the authored
-visit badge above the room circle. Clicking an unvisited door appends it to the
-dense prefix when capacity permits; visited doors do not reorder or open a
-second reward preview. **Reset visits** submits the empty action prefix,
-clearing the fountain use and its Phial outcome, as one undoable edit,
-including normal downstream cleanup. The engine and application retain
-complete action-order proposal/reordering support even though this UI uses only
-append and Reset.
+icons; transparent markers are unvisited, solid markers carry a badge above the
+room circle. Badges show the combined action order, while room visit ordinals
+stay 1–6. Clicking an unvisited door appends it when fewer than six rooms are
+visited; the fountain's distinct marker appends its one use regardless of room
+capacity. Used markers and visited doors do not reorder or open a second reward
+preview. Overview shows the fountain marker without interaction or board
+membership. **Reset visits** submits the empty action prefix, clearing the
+fountain use and its Phial outcome, as one undoable edit, including normal
+downstream cleanup.
+
+The Hub-owned fountain controls—its position in the action order and the
+Phial target—display above the room entered after the use (Preboss after a
+final use). That room owns no persistence, candidate, or execution product for
+them. Until the room exists, Hub Timeline shows the controls; otherwise it
+links to them. Each position is an explicitly chosen, candidate-assessed
+reorder of the same action order: it keeps and reassesses an authored Phial
+target, and focus follows the controls to their new host. Only **Reset
+visits** removes the fountain use, clearing its target with it.
 
 The existing Hub-owned interaction assesses complete proposals with Hub-level
 readiness, not the interior readiness of each visited room. Exact visit markers

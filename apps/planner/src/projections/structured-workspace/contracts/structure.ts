@@ -10,6 +10,7 @@ import type {
   ExitDecisionSourceAddress,
   HubAction,
   HubDecisionAddress,
+  HubFountainAddress,
   HubOpenSetAddress,
   HubVisitAddress,
   HubSlotAddress,
@@ -40,6 +41,7 @@ import type {
   WorkspaceMarker,
 } from './navigation';
 import type { WorkspaceRunStateLauncher } from './run-state';
+import type { WorkspaceFountainRarityControl } from './timeline';
 
 export interface WorkspaceAnomalyControl {
   readonly mapChoices: readonly WorkspaceInteractionChoice<string>[];
@@ -249,6 +251,40 @@ export interface WorkspaceHubVisit {
   readonly room?: WorkspaceRoomSummary;
   readonly hubSlotKey?: string;
   readonly visitIndex: number;
+  /** One-based position in the combined Hub action order, including the fountain use. */
+  readonly actionPosition?: number;
+}
+
+/** One complete Hub action order that places or moves the fountain use. */
+export interface WorkspaceHubFountainPlacement {
+  readonly key: string;
+  readonly label: string;
+  /** Room visits completed before the use. */
+  readonly precedingVisitCount: number;
+  readonly proposedActions: readonly HubAction[];
+}
+
+/**
+ * The Hub-owned fountain use. Its controls display before the next room, or
+ * in the Hub until that room exists; the display room owns none of it.
+ */
+export interface WorkspaceHubFountain {
+  readonly address: HubFountainAddress;
+  readonly hub: HubDecisionAddress;
+  readonly marker: WorkspaceMarker;
+  /** One-based position in the combined Hub action order, absent while unused. */
+  readonly actionPosition?: number;
+  /** The complete appended order, offered only while the fountain is unused. */
+  readonly appendActions?: readonly HubAction[];
+  readonly placements: readonly WorkspaceHubFountainPlacement[];
+  /** The current placement, absent while the fountain is unused. */
+  readonly selectedPlacementKey?: string;
+  /** The Phial outcome owner; its target control is present only while one is required. */
+  readonly outcomeMarker: WorkspaceMarker;
+  readonly rarity?: WorkspaceFountainRarityControl;
+  readonly controlsHost?:
+    | { readonly kind: 'hub' }
+    | { readonly kind: 'room'; readonly label: string; readonly occurrenceId: OccurrenceId };
 }
 
 export interface WorkspaceHubDecisionNode {
@@ -283,6 +319,7 @@ export interface WorkspaceHubDecisionNode {
       };
   readonly slots: readonly WorkspaceHubSlot[];
   readonly visits: readonly WorkspaceHubVisit[];
+  readonly fountain: WorkspaceHubFountain;
   readonly runState?: WorkspaceRunStateLauncher;
 }
 
@@ -304,6 +341,8 @@ export interface WorkspaceOccurrenceWorkbenchNode {
   readonly railMarker?: WorkspaceMarker;
   readonly railVisibility?: 'inspectorOnly';
   readonly room: WorkspaceRoomSummary;
+  /** Hub fountain controls presented before this room's chronology. */
+  readonly hubFountain?: WorkspaceHubFountain;
 }
 
 export type WorkspaceBiomeField =

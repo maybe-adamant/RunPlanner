@@ -31,6 +31,8 @@ export type {
   WorkspaceDoorContract,
   WorkspaceDoorReward,
   WorkspaceHubDecisionNode,
+  WorkspaceHubFountain,
+  WorkspaceHubFountainPlacement,
   WorkspaceHubSlot,
   WorkspaceHubVisit,
   WorkspaceInheritedRewardStore,

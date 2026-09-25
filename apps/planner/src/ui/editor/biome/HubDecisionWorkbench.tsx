@@ -9,12 +9,14 @@ import {
   type WorkspaceHubTab,
   type WorkspaceInteractionCatalog,
 } from '@planner/projections/structured-workspace';
-import { useAppSelector } from '@planner/state/store';
+import { semanticOwnerFocused } from '@planner/state/editorSessionSlice';
+import { useAppDispatch, useAppSelector } from '@planner/state/store';
 import { useFindingTarget } from '@planner/ui/feedback/useFindingTarget';
 import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
 import { useWorkspaceInteraction } from '@planner/ui/controls/useWorkspaceInteraction';
 import { candidateMayBeAuthored } from '@planner/ui/feedback/candidatePresentation';
 import { HubCompletionHandoff } from './HubCompletionHandoff';
+import { HubFountainControls } from './HubFountainControls';
 import {
   ClosedHubRoomOption,
   MarkerAssessment,
@@ -69,6 +71,7 @@ export function HubDecisionWorkbench({
   };
   const openSetTarget = findingTarget(node.openSet.address);
   const executeIntent = useCommandIntent();
+  const dispatch = useAppDispatch();
   const focusedOwner = useAppSelector((state) => state.editorSession.focusedSemanticOwner);
   const handoff =
     frontier?.kind === 'exitDecision' && frontier.owner.source.kind === 'hubDecision'
@@ -379,13 +382,26 @@ export function HubDecisionWorkbench({
                 )}
               </section>
             ) : (
-              <HubMapTimeline
-                hubIdentity={hubIdentity}
-                interactions={interactions}
-                locked={hubTarget.inert}
-                node={node}
-                resetVisitsControl={resetVisitsControl}
-              />
+              <>
+                <HubMapTimeline
+                  hubIdentity={hubIdentity}
+                  interactions={interactions}
+                  locked={hubTarget.inert}
+                  node={node}
+                  resetVisitsControl={resetVisitsControl}
+                />
+                {node.fountain.controlsHost?.kind === 'hub' ? (
+                  <HubFountainControls fountain={node.fountain} interactions={interactions} />
+                ) : node.fountain.controlsHost?.kind === 'room' ? (
+                  <button
+                    className="quiet-action action-compact hub-fountain-host-note"
+                    onClick={() => dispatch(semanticOwnerFocused(node.fountain.address))}
+                    type="button"
+                  >
+                    Hub fountain controls: before {node.fountain.controlsHost.label} →
+                  </button>
+                ) : null}
+              </>
             )}
           </div>
         )}

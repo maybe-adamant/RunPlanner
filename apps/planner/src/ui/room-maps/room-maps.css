@@ -307,6 +307,61 @@
   --hub-marker-opacity: 56%;
 }
 
+/* The fountain is an action site: a sky-blue diamond, never a room-quality circle. */
+.hub-map-fountain-marker {
+  position: absolute;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  width: 3.6%;
+  min-width: 26px;
+  min-height: 0;
+  aspect-ratio: 1;
+  padding: 0;
+  border: 2px solid #eaf6ff;
+  border-radius: 22%;
+  color: #0c2233;
+  background: #6cc4ff;
+  box-shadow:
+    0 0 0 2px #0c2233,
+    0 2px 8px rgb(0 0 0 / 55%);
+  transform: translate(-50%, -50%) rotate(45deg);
+}
+
+.hub-map-overview .hub-map-marker-layer > .hub-map-fountain-marker:not(button) {
+  pointer-events: none;
+}
+
+.hub-timeline-fountain-marker[data-used='false'] {
+  opacity: 80%;
+  background: color-mix(in srgb, #6cc4ff 60%, transparent);
+}
+
+.hub-timeline-fountain-marker[aria-disabled='true']:not(:disabled) {
+  cursor: default;
+}
+
+.hub-timeline-fountain-marker:focus-visible {
+  z-index: 2;
+  outline: 3px solid #fff4c7;
+  outline-offset: 3px;
+}
+
+.hub-map-fountain-glyph {
+  width: 62%;
+  height: 62%;
+  fill: currentcolor;
+  transform: rotate(-45deg);
+  pointer-events: none;
+}
+
+.hub-map-fountain-glyph-shine {
+  fill: none;
+  stroke: #eaf6ff;
+  stroke-linecap: round;
+  stroke-width: 1.6;
+}
+
 .hub-map-legend {
   position: absolute;
   z-index: 2;

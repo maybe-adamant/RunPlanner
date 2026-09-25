@@ -405,6 +405,31 @@ function appendHubAssembly(
   appendUniqueWorkspaceNodes(nodes, [assembly.node, ...assembly.workbenches]);
 }
 
+/**
+ * The Hub fountain controls display before the room entered after the use.
+ * That room receives them for presentation; the used fountain and its Phial outcome navigate there.
+ */
+function attachHubFountainControls(
+  nodes: WorkspaceNode[],
+  markerDestinations: WorkspaceMarkerDestinationEmitter,
+): void {
+  for (const hub of nodes) {
+    if (hub.kind !== 'hubDecision' || hub.fountain.controlsHost?.kind !== 'room') continue;
+    const { occurrenceId } = hub.fountain.controlsHost;
+    const index = nodes.findIndex(
+      (node) => node.kind === 'occurrenceWorkbench' && node.room.occurrenceId === occurrenceId,
+    );
+    const host = nodes[index];
+    if (host?.kind !== 'occurrenceWorkbench') {
+      throw new StructuredWorkspaceProjectionContractError(
+        `${hub.key} has no room workbench for its fountain controls`,
+      );
+    }
+    nodes[index] = Object.freeze({ ...host, hubFountain: hub.fountain });
+    markerDestinations.redirect([hub.fountain.marker, hub.fountain.outcomeMarker], host.key);
+  }
+}
+
 function enrichFrontierPredecessor(
   frontier: WorkspaceAuthoringFrontierSeed | null,
   structuralNodes: readonly WorkspaceNode[],
@@ -683,6 +708,7 @@ export function assembleWorkspaceBiomeSemantics(
       biome,
       catalog,
       descriptor,
+      ...(fountainRarityAssessment === undefined ? {} : { fountainRarityAssessment }),
       markerDestinations,
       completedExitReady:
         frontier?.kind === 'exitDecision' &&
@@ -712,6 +738,7 @@ export function assembleWorkspaceBiomeSemantics(
     if (decision.source.kind !== 'hubDecision') continue;
     projectAuthoredExitDecision(decision);
   }
+  attachHubFountainControls(nodes, markerDestinations);
   if (frontier?.kind === 'exitDecision' && frontier.owner.source.kind === 'hubDecision') {
     markerDestinations.setHubTab([frontier.marker], 'exit');
   }
