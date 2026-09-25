@@ -551,6 +551,12 @@ export interface ExecutionOverview {
           readonly kind: 'cocoonCount';
           readonly count: number;
         }
+      | {
+          readonly decisionKey: string;
+          /** Ordered FillEnemyTypes roster; native FillEnemyCounts marks it infinite. */
+          readonly kind: 'infiniteRoster';
+          readonly types: readonly { readonly choiceKey: string; readonly nativeId: string }[];
+        }
       | ExecutionGeneratedEncounterCustomization
     )[];
   }[];

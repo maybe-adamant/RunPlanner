@@ -7,8 +7,13 @@ import type { RewardKernelCatalog } from '../reward-kernel/model';
 import type { CounterAxis, RequirementExpression, RoomStructuralTag } from '../requirements/model';
 import type { ProducerLifecyclePointKey } from '../reward-kernel/model';
 import type { CatalogCollection } from '../normalized/collection';
-import type { GeneratedEncounterSelection } from './encounter-generation';
-export type { EncounterEnemyChoice, GeneratedEncounterSelection } from './encounter-generation';
+import type { GeneratedEncounterSelection, InfiniteRosterSelection } from './encounter-generation';
+export type {
+  EncounterEnemyChoice,
+  GeneratedEncounterSelection,
+  InfiniteRosterEnemyChoice,
+  InfiniteRosterSelection,
+} from './encounter-generation';
 
 export type {
   AspectDeclaration,
@@ -487,6 +492,11 @@ export type EncounterCustomizationDecision =
         readonly minimum: number;
         readonly maximum: number;
       };
+    }
+  | {
+      readonly key: string;
+      readonly label: string;
+      readonly selection: InfiniteRosterSelection;
     };
 
 /** Closed concrete identity mapping for one persisted authored encounter choice. */

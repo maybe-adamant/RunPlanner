@@ -289,6 +289,16 @@ export function generatedEncounterSupportForProjectEvaluationAssembly(
     ?.encounters.generationAt(phase);
 }
 
+/** Supported exact-assembly query for one reached infinite-roster phase. */
+export function infiniteRosterSupportForProjectEvaluationAssembly(
+  assembly: ProjectEvaluationAssembly,
+  phase: EncounterPhaseAddress,
+): import('../encounters/infinite-roster').InfiniteRosterCandidateCapability | undefined {
+  return candidateArtifactsForProjectEvaluationAssembly(assembly)
+    .biomeAt(createBiomeAddress(phase.routeKey, phase.biomeKey))
+    ?.encounters.rosterAt(phase);
+}
+
 export function encounterPhaseCandidateSupportForProjectEvaluationAssembly(
   assembly: ProjectEvaluationAssembly,
   phase: EncounterPhaseAddress,

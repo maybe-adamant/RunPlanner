@@ -24,6 +24,7 @@ import { assembleExecutionProduct } from '../../../src/execution-plan/assembler'
 import { compileExecutionPlan } from '../../../src/execution-plan/compiler';
 import { encodeExecutionPlan } from '../../../src/execution-plan/codec';
 import { simulateProjectAssembly } from '../../../src/simulation';
+import { anomalyRosterProject } from './anomaly-roster-fixture';
 import { underworldArachneCocoonProject } from './arachne-cocoon-fixture';
 import { bossAutomaticOutcomeProject } from './automatic-fixture';
 import {
@@ -63,6 +64,7 @@ export const executionFixtures: readonly {
   { name: 'underworld-fghi', project: loadUnderworldFGHICheckpoint },
   { name: 'fg-ixion-chaos', project: createCompleteFGIxionChaosProject },
   { name: 'fg-anomaly', project: createCompleteFGAnomalyProject },
+  { name: 'fg-anomaly-roster', project: () => anomalyRosterProject() },
   { name: 'automatic-boss', project: bossAutomaticOutcomeProject },
   { name: 'surface-n', project: loadSurfaceNProject },
   { name: 'surface-no', project: loadSurfaceNOProject },

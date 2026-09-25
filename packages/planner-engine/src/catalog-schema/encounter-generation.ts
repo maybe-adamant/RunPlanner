@@ -87,3 +87,23 @@ export interface GeneratedEncounterSelection {
     readonly hardDepthRamp?: number;
   };
 }
+
+/** Native identity and eligibility facts for one infinite-spawn roster member. */
+export type InfiniteRosterEnemyChoice = Pick<
+  EncounterEnemyChoice,
+  'key' | 'label' | 'nativeId' | 'elite' | 'excludes'
+> & {
+  /** Native Elite GameStateRequirements read CurrentRun.BiomeDepthCache. */
+  readonly minimumDepth?: { readonly axis: 'biomeDepthCache'; readonly value: number };
+};
+
+/**
+ * One FillEnemyTypes roster that native FillEnemyCounts marks infinite. It has
+ * no wave, budget or count domain; `excludes` apply only to later draws.
+ */
+export interface InfiniteRosterSelection {
+  readonly kind: 'infiniteRoster';
+  readonly choices: readonly InfiniteRosterEnemyChoice[];
+  readonly types: { readonly min: number; readonly max: number };
+  readonly maxEliteTypes: number;
+}

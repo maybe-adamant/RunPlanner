@@ -138,7 +138,8 @@ are retained while its game name, encounter state, and downstream decision are
 replaced. `Devotion` and `SpellDrop` are invalid-but-editable retained offers.
 
 The replacement uses one of the seven declared B maps (default `B_Combat01`),
-fixed `GeneratedAnomalyB`, and authored success. Its offer is consumed on
+fixed `GeneratedAnomalyB` with an optional ordered enemy roster that survives a
+map change, and authored success. Its offer is consumed on
 creation; success acquires it and failure does not. On selected entry it
 consumes the once-per-route cap, generates one fresh hidden G continuation
 before its own commit, then commits as an ordinary room. The displaced G room

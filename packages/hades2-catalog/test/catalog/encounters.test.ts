@@ -300,6 +300,68 @@ describe('encounter envelope catalog', () => {
     }
   });
 
+  it('publishes the Anomaly B-pool roster facts and rejects malformed rosters', () => {
+    const decision =
+      createCatalog(declarations).encounterDefinitions.byKey.GeneratedAnomalyB?.customization?.[0];
+    expect(decision?.key).toBe('infiniteRoster');
+    if (decision?.selection.kind !== 'infiniteRoster') throw new Error('missing roster decision');
+    const { choices, ...bounds } = decision.selection;
+    // EncounterData_Challenge.lua GeneratedAnomalyBase: MinTypes 2, MaxTypes 3, MaxEliteTypes 1.
+    expect(bounds).toEqual({ kind: 'infiniteRoster', types: { min: 2, max: 3 }, maxEliteTypes: 1 });
+    const gate = { axis: 'biomeDepthCache', value: 3 };
+    const pair = (key: string) => [
+      { key, elite: false, excludes: [`${key}_Elite`] },
+      { key: `${key}_Elite`, elite: true, excludes: [key], minimumDepth: gate },
+    ];
+    // EnemySets.lua BiomeB, in native declaration order.
+    expect(
+      choices.map(({ key, nativeId, elite, excludes, minimumDepth }) => {
+        expect(nativeId).toBe(key);
+        return { key, elite, excludes, ...(minimumDepth === undefined ? {} : { minimumDepth }) };
+      }),
+    ).toEqual([
+      { key: 'Swarmer_Elite', elite: true, excludes: ['Swarmer'] },
+      { key: 'SpreadShotUnit', elite: false, excludes: ['SpreadShotUnit_Elite'] },
+      { key: 'SpreadShotUnit_Elite', elite: true, excludes: [], minimumDepth: gate },
+      ...pair('BloodlessNaked'),
+      ...pair('BloodlessWaveFist'),
+      ...pair('BloodlessBerserker'),
+      ...pair('BloodlessGrenadier'),
+      ...pair('BloodlessSelfDestruct'),
+      ...pair('BloodlessPitcher'),
+    ]);
+
+    for (const change of [
+      { types: { min: 0, max: 3 } },
+      { types: { min: 3, max: 2 } },
+      { maxEliteTypes: -1 },
+      { choices: [choices[0], choices[0], choices[1]] },
+      { choices: [{ ...choices[1]!, excludes: ['SpreadShotUnit'] }, ...choices.slice(2)] },
+      {
+        choices: choices.map((choice) =>
+          choice.minimumDepth === undefined
+            ? choice
+            : { ...choice, minimumDepth: { axis: 'biomeEncounterDepth', value: 3 } },
+        ),
+      },
+      { choices: choices.slice(0, 2) },
+    ]) {
+      const malformed = input();
+      const anomaly = malformed.encounterDefinitions.find(
+        (definition) => definition.key === 'GeneratedAnomalyB',
+      );
+      if (anomaly === undefined) throw new Error('missing GeneratedAnomalyB declaration');
+      (anomaly as { customization?: unknown }).customization = [
+        {
+          key: 'infiniteRoster',
+          label: 'Enemy roster',
+          selection: { ...decision.selection, ...change },
+        },
+      ];
+      expect(() => createCatalog(malformed)).toThrow(CatalogContractError);
+    }
+  });
+
   it('publishes the complete declaration-owned Gorgon matrix', () => {
     const built = createCatalog(declarations);
     const definitions = built.encounterDefinitions.byKey;

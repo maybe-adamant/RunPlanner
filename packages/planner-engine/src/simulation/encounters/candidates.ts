@@ -13,6 +13,7 @@ import {
   targetRewardGenerationCheckpoint,
   type GeneratedEncounterCandidateCapability,
 } from './generation-preparation';
+import type { InfiniteRosterCandidateCapability } from './infinite-roster';
 import type { CanonicalAuthoredRoom, CanonicalLocalVisitRoom } from '../materialization';
 import type { SemanticFinding } from '../model';
 import {
@@ -42,6 +43,9 @@ export interface EncounterCandidateArtifacts {
   readonly generationAt: (
     origin: EncounterPhaseAddress,
   ) => GeneratedEncounterCandidateCapability | undefined;
+  readonly rosterAt: (
+    origin: EncounterPhaseAddress,
+  ) => InfiniteRosterCandidateCapability | undefined;
   readonly at: (origin: EncounterPhaseAddress) => EncounterPhaseCandidateSupport | undefined;
   readonly statusAt: (origin: EncounterPhaseAddress) => EncounterPhaseSequenceStatus | undefined;
   /** Exact reached/pending Gorgon control capability for this phase. */
@@ -61,6 +65,7 @@ export interface EncounterCandidateArtifacts {
 export function createEmptyEncounterCandidateArtifacts(): EncounterCandidateArtifacts {
   return Object.freeze({
     generationAt: () => undefined,
+    rosterAt: () => undefined,
     at: () => undefined,
     statusAt: () => undefined,
     gorgonAt: () => undefined,
@@ -153,6 +158,7 @@ export function evaluateEncounterCandidatesInternal(
 ): EncounterCandidateEvaluation & { readonly findingRegions: readonly FindingRegionEntry[] } {
   const entries = new Map<string, EncounterPhaseCandidateSupport>();
   const generation = new Map<string, GeneratedEncounterCandidateCapability>();
+  const rosters = new Map<string, InfiniteRosterCandidateCapability>();
   const resolvedGenerated: EncounterCandidateEvaluation['resolvedGenerated'][number][] = [];
   const statuses = new Map<string, EncounterPhaseSequenceStatus>();
   const roomsByOwner = new Map<string, EncounterRoomCandidateCapability>();
@@ -306,6 +312,8 @@ export function evaluateEncounterCandidatesInternal(
     }
     for (const capability of prepared.generation)
       generation.set(semanticAddressKey(capability.origin), capability);
+    for (const capability of prepared.rosters)
+      rosters.set(semanticAddressKey(capability.origin), capability);
     for (const capability of prepared.generation) {
       const phase = prepared.validPrefix.find(
         (entry) => entry.slotKey === capability.origin.phaseKey,
@@ -373,6 +381,7 @@ export function evaluateEncounterCandidatesInternal(
   return Object.freeze({
     artifacts: Object.freeze({
       generationAt: (origin: EncounterPhaseAddress) => generation.get(semanticAddressKey(origin)),
+      rosterAt: (origin: EncounterPhaseAddress) => rosters.get(semanticAddressKey(origin)),
       at: (origin: EncounterPhaseAddress) => privateEntries.get(semanticAddressKey(origin)),
       statusAt: (origin: EncounterPhaseAddress) => privateStatuses.get(semanticAddressKey(origin)),
       gorgonAt: (origin: EncounterPhaseAddress) => gorgonSupport.get(semanticAddressKey(origin)),

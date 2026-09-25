@@ -932,6 +932,30 @@ export function activeEncounterPhasesForOwner(
                   }),
                 });
               }
+              if (decision.selection.kind === 'infiniteRoster') {
+                return Object.freeze({
+                  ...common,
+                  ...(decision.retainedChoiceLabels === undefined
+                    ? {}
+                    : {
+                        retainedChoiceLabels: decision.retainedChoiceLabels.map((choice) => ({
+                          ...choice,
+                          label: generatedEnemyLabel(choice.label),
+                        })),
+                      }),
+                  selection: Object.freeze({
+                    kind: 'infiniteRoster' as const,
+                    choices: Object.freeze(
+                      decision.selection.choices.map((choice) =>
+                        Object.freeze({
+                          key: choice.key,
+                          label: generatedEnemyLabel(choice.label),
+                        }),
+                      ),
+                    ),
+                  }),
+                });
+              }
               if (decision.selection.kind === 'cocoonCount') {
                 return Object.freeze({
                   ...common,

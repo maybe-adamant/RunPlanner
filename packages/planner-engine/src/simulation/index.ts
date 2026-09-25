@@ -257,6 +257,8 @@ export {
   type EncounterResolutionContext,
   type EncounterResolutionRoomFacts,
   type GeneratedEncounterAssessment,
+  type InfiniteRosterAssessment,
+  type InfiniteRosterCandidateCapability,
   type ResolvedEncounterPhase,
 } from './encounters';
 export {
@@ -428,6 +430,7 @@ export {
   zagreusContractCandidateForProjectEvaluationAssembly,
   encounterPhaseCandidateSupportForProjectEvaluationAssembly,
   generatedEncounterSupportForProjectEvaluationAssembly,
+  infiniteRosterSupportForProjectEvaluationAssembly,
   encounterPhaseFigLeafSupportForProjectEvaluationAssembly,
   encounterPhaseGorgonSupportForProjectEvaluationAssembly,
   nemesisRandomEventCandidateSupportForProjectEvaluationAssembly,

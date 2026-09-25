@@ -20,6 +20,7 @@ import {
 } from '../../room-state/encounter-customization';
 import {
   failCommand,
+  requireAnomalyRoom,
   requireOccurrence,
   requireRoom,
   requireTopology,
@@ -419,7 +420,12 @@ function updatedCustomization(
         ? decodeGeneratedEncounterCustomization(value, command.decisionKey)
         : value.kind === 'cocoonCount'
           ? Object.freeze({ kind: 'cocoonCount', count: value.count })
-          : (Object.freeze(value) as AuthoredEncounterCustomization);
+          : value.kind === 'infiniteRoster'
+            ? Object.freeze({
+                kind: 'infiniteRoster',
+                typeKeys: Object.freeze([...value.typeKeys]),
+              })
+            : (Object.freeze(value) as AuthoredEncounterCustomization);
   const next = { ...prior };
   if (Object.keys(phaseValues).length === 0) delete next[phase.phaseKey];
   else next[phase.phaseKey] = Object.freeze(phaseValues);
@@ -444,7 +450,11 @@ function replaceTopLevel(
       ? command.event.encounter
       : command.phase;
   const occurrence = requireOccurrence(located.plan, phase.owner.occurrenceId, command);
-  const room = requireRoom(catalog, occurrence.gameName, located.layout.biomeKey, command);
+  // A declared Anomaly replacement runs its own room's encounter inside the host biome.
+  const room =
+    occurrence.anomalyReplacement === undefined
+      ? requireRoom(catalog, occurrence.gameName, located.layout.biomeKey, command)
+      : requireAnomalyRoom(catalog, occurrence.gameName, command);
   const encounters = updatedSelections(catalog, room, occurrence.encounters, phase, command);
   const withFigLeaf = updatedFigLeafSkip(catalog, room, encounters, phase, command);
   const withCustomization = updatedCustomization(catalog, room, withFigLeaf, phase, command);

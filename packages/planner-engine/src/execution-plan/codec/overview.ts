@@ -59,6 +59,29 @@ function encounterCustomization(value: unknown, label: string) {
         count: integer(row.count, `${decisionLabel}.count`, 1),
       });
     }
+    if (kind === 'infiniteRoster') {
+      exact(row, ['decisionKey', 'kind', 'types'], [], decisionLabel);
+      const types = array(row.types, `${decisionLabel}.types`, 16).map((type, typeIndex) => {
+        const typeLabel = `${decisionLabel}.types[${typeIndex}]`;
+        const typeRecord = object(type, typeLabel);
+        exact(typeRecord, ['choiceKey', 'nativeId'], [], typeLabel);
+        return Object.freeze({
+          choiceKey: stringValue(typeRecord.choiceKey, `${typeLabel}.choiceKey`),
+          nativeId: stringValue(typeRecord.nativeId, `${typeLabel}.nativeId`),
+        });
+      });
+      if (types.length === 0) fail(`${decisionLabel}.types must be non-empty`);
+      if (
+        new Set(types.map((type) => type.choiceKey)).size !== types.length ||
+        new Set(types.map((type) => type.nativeId)).size !== types.length
+      )
+        fail(`${decisionLabel}.types must be distinct`);
+      return Object.freeze({
+        decisionKey: stringValue(row.decisionKey, `${decisionLabel}.decisionKey`),
+        kind: 'infiniteRoster' as const,
+        types: Object.freeze(types),
+      });
+    }
     fail(`${decisionLabel}.kind is unsupported`);
   });
   if (decisions.length === 0) fail(`${label} must be non-empty when present`);

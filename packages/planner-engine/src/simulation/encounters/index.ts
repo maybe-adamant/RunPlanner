@@ -17,6 +17,12 @@ export {
   type GeneratedEncounterOperands,
 } from './generation';
 export { assessFangs, type FangsAssessment } from './fangs';
+export {
+  assessInfiniteRoster,
+  type InfiniteRosterAssessment,
+  type InfiniteRosterCandidateCapability,
+  type InfiniteRosterIssue,
+} from './infinite-roster';
 export type {
   EncounterCandidateExclusion,
   EncounterRequirementEvidence,

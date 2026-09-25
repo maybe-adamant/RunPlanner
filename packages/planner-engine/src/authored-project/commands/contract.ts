@@ -373,6 +373,24 @@ export function requireRoom(
   return room;
 }
 
+/** A declared Anomaly map, hosted by a biome outside its own room set. */
+export function requireAnomalyRoom(
+  catalog: Catalog,
+  gameName: string,
+  command: CommandContractSubject,
+): RoomDeclaration {
+  const room = catalog.rooms.byKey[gameName];
+  if (
+    room === undefined ||
+    room.roomSetKey !== 'Anomaly' ||
+    room.mode.kind !== 'authored' ||
+    room.mode.templateKey !== 'Anomaly'
+  ) {
+    failCommand(command, `${gameName} is not a declared Anomaly room`);
+  }
+  return room;
+}
+
 export function withBiome(
   document: ProjectDocument,
   located: LocatedBiome,

@@ -15,6 +15,7 @@ import { useWorkspaceInteraction } from '@planner/ui/controls/useWorkspaceIntera
 import { NemesisEventSelector } from '../NemesisEventEditor';
 import { GeneratedEncounterCustomizationControl } from './GeneratedEncounterCustomizationControl';
 import { CocoonCountControl } from './CocoonCountControl';
+import { InfiniteRosterControl } from './InfiniteRosterControl';
 
 const emptyEncounterPicker: import('@planner/projections/contextual/contextualPicker').ContextualPickerModel<string> =
   Object.freeze({ sections: Object.freeze([]) });
@@ -128,6 +129,16 @@ function EncounterCustomizationControl({
                 if (decision.selection.kind === 'cocoonCount') {
                   return (
                     <CocoonCountControl
+                      decision={{ ...decision, selection: decision.selection }}
+                      id={`encounter-customization-${customizationId}-${decision.key}`}
+                      interaction={interaction}
+                      key={decision.key}
+                    />
+                  );
+                }
+                if (decision.selection.kind === 'infiniteRoster') {
+                  return (
+                    <InfiniteRosterControl
                       decision={{ ...decision, selection: decision.selection }}
                       id={`encounter-customization-${customizationId}-${decision.key}`}
                       interaction={interaction}
