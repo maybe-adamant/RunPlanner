@@ -270,6 +270,13 @@ export const fEncounterDefinitions = [
       ],
     },
   },
+  // Native F postboss carrier; inherits Empty and adds progression conversations.
+  {
+    key: 'Story_Chronos_01',
+    label: 'Chronos story',
+    kind: 'nonCombat',
+    countsEncounterDepth: false,
+  },
   {
     key: 'Story_Arachne_01',
     label: 'Arachne story',

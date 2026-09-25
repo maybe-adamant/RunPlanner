@@ -509,14 +509,6 @@ describe('encounter envelope catalog', () => {
     ]);
     expect(catalog).not.toHaveProperty('encounterProfiles');
 
-    for (const gameName of ['G_Intro', 'H_Intro', 'I_Intro', 'N_Hub', 'O_Intro', 'Q_Intro']) {
-      expect(catalog.rooms.byKey[gameName]).toMatchObject({
-        encounterEnvelopeKey: 'EmptyEncounter',
-        encounterSlotBindings: [],
-        unmodeledEncounterKeys: ['Empty'],
-      });
-    }
-
     for (const room of catalog.rooms.values) {
       const envelope = catalog.encounterEnvelopes.byKey[room.encounterEnvelopeKey];
       expect(envelope).toBeDefined();
@@ -534,6 +526,124 @@ describe('encounter envelope catalog', () => {
           encounterSet?.defaultAuthoringProfileKey,
         );
       }
+    }
+  });
+
+  it('binds every single-carrier noncombat fixed slot to its native legal encounter', () => {
+    const catalog = createCatalog(declarations);
+    // Native LegalEncounters is a single key for each of these rooms.
+    const singleCarrier: Readonly<Record<string, string>> = {
+      Chaos_01: 'Empty_Chaos', // RoomDataChaos.lua:161 (BaseChaos)
+      Chaos_02: 'Empty_Chaos', // RoomDataChaos.lua:161 (BaseChaos)
+      Chaos_03: 'Empty_Chaos', // RoomDataChaos.lua:161 (BaseChaos)
+      Chaos_04: 'Empty_Chaos', // RoomDataChaos.lua:161 (BaseChaos)
+      Chaos_05: 'Empty_Chaos', // RoomDataChaos.lua:161 (BaseChaos)
+      Chaos_06: 'Empty_Chaos', // RoomDataChaos.lua:161 (BaseChaos)
+      Dream_PostBoss01: 'Empty', // RoomDataDream.lua:104
+      Dream_PostBoss02: 'Empty', // RoomDataDream.lua:104 (Dream_PostBoss01)
+      Dream_PostBoss03: 'Empty', // RoomDataDream.lua:104 (Dream_PostBoss01)
+      F_Story01: 'Story_Arachne_01', // RoomDataF.lua:3258
+      F_Reprieve01: 'HealthRestore', // RoomDataF.lua:2967
+      F_Shop01: 'Shop', // RoomDataF.lua:2887
+      F_PreBoss01: 'Shop', // RoomDataF.lua:1953
+      F_PostBoss01: 'Story_Chronos_01', // RoomDataF.lua:2526
+      G_Story01: 'Story_Narcissus_01', // RoomDataG.lua:2683
+      G_Reprieve01: 'HealthRestore', // RoomDataG.lua:2455
+      G_Shop01: 'Shop', // RoomDataG.lua:1803
+      G_PreBoss01: 'Shop', // RoomDataG.lua:495
+      G_PostBoss01: 'Empty', // RoomDataG.lua:1026
+      H_PreBoss01: 'Shop', // RoomDataH.lua:1365
+      H_PostBoss01: 'Empty', // RoomDataH.lua:1856
+      I_Story01: 'Story_Hades_01', // RoomDataI.lua:3182
+      I_Reprieve01: 'HealthRestore', // RoomDataI.lua:2364
+      I_PreBoss01: 'Empty', // RoomDataI.lua:888
+      I_PreBoss02: 'Empty', // RoomDataI.lua:888 (I_PreBoss01)
+      N_Story01: 'Story_Medea_01', // RoomDataN.lua:3730
+      N_PreBoss01: 'Shop', // RoomDataN.lua:2052
+      N_PostBoss01: 'Empty', // RoomDataN.lua:2538
+      O_Shop01: 'Shop', // RoomDataO.lua:744
+      O_Reprieve01: 'HealthRestore', // RoomDataO.lua:2648
+      O_Story01: 'Story_Circe_01', // RoomDataO.lua:2886
+      O_PreBoss01: 'Shop', // RoomDataO.lua:876
+      O_PostBoss01: 'Empty', // RoomDataO.lua:1420
+      P_Story01: 'Story_Dionysus_01', // RoomDataP.lua:2354
+      P_Reprieve01: 'HealthRestore', // RoomDataP.lua:2162
+      P_Shop01: 'Shop', // RoomDataP.lua:673
+      P_PreBoss01: 'Shop', // RoomDataP.lua:778
+      P_PostBoss01: 'Empty', // RoomDataP.lua:1444
+      Q_PreBoss01: 'TyphonShop', // RoomDataQ.lua:1217
+    };
+    // Several native carriers; the catalog models one authored alternative.
+    const multiCarrier: Readonly<Record<string, string>> = {
+      // RoomDataH.lua:819: Story_Echo_01 x4, BridgeShop x2, BridgeNemesisRandomEvent.
+      H_Bridge01: 'Story_Echo_01',
+    };
+    const noncombatFixedRooms = catalog.rooms.values.filter((room) => {
+      const envelope = catalog.encounterEnvelopes.byKey[room.encounterEnvelopeKey];
+      const [binding] = room.encounterSlotBindings;
+      if (envelope?.slots.length !== 1 || binding?.kind !== 'fixed') return false;
+      const kind = catalog.encounterDefinitions.byKey[binding.encounterDefinitionKey]?.kind;
+      return kind === 'nonCombat' || kind === 'story';
+    });
+
+    expect(noncombatFixedRooms.map((room) => room.gameName).sort()).toEqual(
+      [...Object.keys(singleCarrier), ...Object.keys(multiCarrier)].sort(),
+    );
+    for (const room of noncombatFixedRooms) {
+      expect(room.encounterSlotBindings, room.gameName).toEqual([
+        {
+          slotKey: 'Encounter',
+          kind: 'fixed',
+          encounterDefinitionKey: singleCarrier[room.gameName] ?? multiCarrier[room.gameName],
+        },
+      ]);
+    }
+
+    // Route-contextual entry carriers select one member of a multi-key native set.
+    const routeContextual: Readonly<Record<string, readonly string[]>> = {
+      F_Opening01: ['OpeningEmpty', 'OpeningGeneratedF', 'FCastTutorialFight'], // RoomDataF.lua:374
+      F_Opening02: ['OpeningEmpty', 'OpeningGeneratedF', 'FCastTutorialFight'], // RoomDataF.lua:894
+      F_Opening03: ['OpeningEmpty', 'OpeningGeneratedF', 'FCastTutorialFight'], // RoomDataF.lua:965
+      N_Opening01: ['OpeningEmpty', 'OpeningGeneratedN'], // RoomDataN.lua:434
+      P_Intro: ['PIntroDreamRunEmpty'], // RoomDataP.lua:426, alongside the P intro combats
+    };
+    expect(
+      catalog.rooms.values
+        .filter((room) => room.entryContextualEncounterRules !== undefined)
+        .map((room) => room.gameName)
+        .sort(),
+    ).toEqual(Object.keys(routeContextual).sort());
+    for (const [gameName, nativeKeys] of Object.entries(routeContextual)) {
+      for (const rule of catalog.rooms.byKey[gameName]?.entryContextualEncounterRules ?? []) {
+        expect(nativeKeys, gameName).toContain(rule.encounterDefinitionKey);
+      }
+    }
+  });
+
+  it('keeps zero-slot intro and Hub envelopes on their unmodeled native Empty carrier', () => {
+    const catalog = createCatalog(declarations);
+    // Native LegalEncounters = { "Empty" }; the envelope models no phase.
+    const zeroSlotRooms = {
+      G_Intro: 'RoomDataG.lua:1296',
+      H_Intro: 'RoomDataH.lua:510',
+      I_Intro: 'RoomDataI.lua:443',
+      N_Hub: 'RoomDataN.lua:969',
+      O_Intro: 'RoomDataO.lua:431',
+      Q_Intro: 'RoomDataQ.lua:392',
+    };
+
+    expect(
+      catalog.rooms.values
+        .filter((room) => room.unmodeledEncounterKeys !== undefined)
+        .map((room) => room.gameName)
+        .sort(),
+    ).toEqual(Object.keys(zeroSlotRooms).sort());
+    for (const gameName of Object.keys(zeroSlotRooms)) {
+      expect(catalog.rooms.byKey[gameName]).toMatchObject({
+        encounterEnvelopeKey: 'EmptyEncounter',
+        encounterSlotBindings: [],
+        unmodeledEncounterKeys: ['Empty'],
+      });
     }
   });
 
@@ -559,12 +669,6 @@ describe('encounter envelope catalog', () => {
         { slotKey: 'Encounter', kind: 'fixed', encounterDefinitionKey: 'MiniBossAssassin' },
       ],
     });
-    expect(catalog.rooms.byKey.F_PostBoss01).toMatchObject({
-      encounterEnvelopeKey: 'SingleEncounter',
-      encounterSlotBindings: [
-        { slotKey: 'Encounter', kind: 'fixed', encounterDefinitionKey: 'Empty' },
-      ],
-    });
     for (const gameName of ['I_PreBoss01', 'I_PreBoss02']) {
       expect(catalog.rooms.byKey[gameName]).toMatchObject({
         incomingReward: { kind: 'shop', shopProfileKey: 'I_WorldShop' },
@@ -585,7 +689,13 @@ describe('encounter envelope catalog', () => {
       kind: 'nonCombat',
       countsEncounterDepth: false,
     });
-    expect(catalog.encounterDefinitions.byKey).not.toHaveProperty('Story_Chronos_01');
+    expect(catalog.encounterDefinitions.byKey.Story_Chronos_01).toMatchObject({
+      kind: 'nonCombat',
+      countsEncounterDepth: false,
+    });
+    expect(catalog.encounterDefinitions.byKey.Story_Chronos_01).not.toHaveProperty(
+      'traitOfferProducer',
+    );
     expect(catalog.encounterSets.byKey.IEncountersDefault).toMatchObject({
       encounterDefinitionKeys: [
         'GeneratedI',
