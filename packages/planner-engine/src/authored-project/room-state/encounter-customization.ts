@@ -59,9 +59,11 @@ export function customizationValueKnown(
   value: AuthoredEncounterCustomization,
 ): boolean {
   if (value.kind === 'generated') {
-    const choices = declarations
-      .filter((decision) => decision.key === decisionKey && decision.selection.kind === 'generated')
-      .flatMap((decision) => decision.selection.choices);
+    const choices = declarations.flatMap((decision) =>
+      decision.key === decisionKey && decision.selection.kind === 'generated'
+        ? decision.selection.choices
+        : [],
+    );
     if (choices.length === 0) return false;
     const parsed = decodeGeneratedEncounterCustomization(value, 'generated customization');
     const known = new Set(choices.map((choice) => choice.key));
@@ -96,18 +98,45 @@ export function customizationValueKnown(
       )
     );
   }
-  return declarations.some(
-    (decision) =>
-      decision.key === decisionKey &&
-      decision.selection.kind === value.kind &&
-      (value.kind === 'single'
-        ? decision.selection.choices.some((choice) => choice.key === value.choiceKey)
-        : decision.selection.kind === 'orderedPrefix' &&
+  return declarations.some((decision) => {
+    if (decision.key !== decisionKey) return false;
+    const selection = decision.selection;
+    switch (value.kind) {
+      case 'single':
+        return (
+          selection.kind === 'single' &&
+          selection.choices.some((choice) => choice.key === value.choiceKey)
+        );
+      case 'orderedPrefix':
+        return (
+          selection.kind === 'orderedPrefix' &&
           value.choiceKeys.length > 0 &&
-          value.choiceKeys.length <= decision.selection.maximumLength &&
+          value.choiceKeys.length <= selection.maximumLength &&
           new Set(value.choiceKeys).size === value.choiceKeys.length &&
           value.choiceKeys.every((choiceKey) =>
-            decision.selection.choices.some((choice) => choice.key === choiceKey),
-          )),
-  );
+            selection.choices.some((choice) => choice.key === choiceKey),
+          )
+        );
+      case 'cocoonCount':
+        return (
+          selection.kind === 'cocoonCount' &&
+          Number.isInteger(value.count) &&
+          value.count >= selection.minimum &&
+          value.count <= selection.maximum
+        );
+    }
+  });
+}
+
+/** Persistable shape: an out-of-range cocoon count is retained for a preparation finding. */
+export function customizationValueRepresentable(
+  declarations: readonly EncounterCustomizationDecision[],
+  decisionKey: string,
+  value: AuthoredEncounterCustomization,
+): boolean {
+  return value.kind === 'cocoonCount'
+    ? declarations.some(
+        (decision) => decision.key === decisionKey && decision.selection.kind === 'cocoonCount',
+      )
+    : customizationValueKnown(declarations, decisionKey, value);
 }

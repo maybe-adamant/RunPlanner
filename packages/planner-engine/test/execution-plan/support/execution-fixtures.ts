@@ -24,6 +24,7 @@ import { assembleExecutionProduct } from '../../../src/execution-plan/assembler'
 import { compileExecutionPlan } from '../../../src/execution-plan/compiler';
 import { encodeExecutionPlan } from '../../../src/execution-plan/codec';
 import { simulateProjectAssembly } from '../../../src/simulation';
+import { underworldArachneCocoonProject } from './arachne-cocoon-fixture';
 import { bossAutomaticOutcomeProject } from './automatic-fixture';
 import {
   surfaceGeneratedPreCombatProject,
@@ -72,6 +73,7 @@ export const executionFixtures: readonly {
   { name: 'surface-scheduled-lifecycle', project: surfaceScheduledLifecycleProject },
   { name: 'underworld-generated-composition', project: underworldGeneratedCompositionProject },
   { name: 'surface-generated-precombat', project: surfaceGeneratedPreCombatProject },
+  { name: 'underworld-arachne-cocoons', project: underworldArachneCocoonProject },
 ]);
 
 export function executionFixturePath(name: string): string {

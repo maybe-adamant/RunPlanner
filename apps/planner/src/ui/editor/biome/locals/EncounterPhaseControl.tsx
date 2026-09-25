@@ -14,6 +14,7 @@ import { ContextualPicker } from '@planner/ui/controls/ContextualPicker';
 import { useWorkspaceInteraction } from '@planner/ui/controls/useWorkspaceInteraction';
 import { NemesisEventSelector } from '../NemesisEventEditor';
 import { GeneratedEncounterCustomizationControl } from './GeneratedEncounterCustomizationControl';
+import { CocoonCountControl } from './CocoonCountControl';
 
 const emptyEncounterPicker: import('@planner/projections/contextual/contextualPicker').ContextualPickerModel<string> =
   Object.freeze({ sections: Object.freeze([]) });
@@ -124,6 +125,16 @@ function EncounterCustomizationControl({
                     />
                   );
                 }
+                if (decision.selection.kind === 'cocoonCount') {
+                  return (
+                    <CocoonCountControl
+                      decision={{ ...decision, selection: decision.selection }}
+                      id={`encounter-customization-${customizationId}-${decision.key}`}
+                      interaction={interaction}
+                      key={decision.key}
+                    />
+                  );
+                }
                 if (decision.selection.kind === 'single') {
                   const selected = value?.kind === 'single' ? value.choiceKey : '';
                   return (
@@ -164,6 +175,7 @@ function EncounterCustomizationControl({
                     </label>
                   );
                 }
+                const prefixSelection = decision.selection;
                 const selected = value?.kind === 'orderedPrefix' ? value.choiceKeys : [];
                 const replace = (index: number, choiceKey: string): void => {
                   const next =
@@ -190,7 +202,7 @@ function EncounterCustomizationControl({
                     <h3 id={`encounter-customization-group-${customizationId}-${decision.key}`}>
                       {decision.label}
                     </h3>
-                    {Array.from({ length: decision.selection.maximumLength }, (_, index) => (
+                    {Array.from({ length: prefixSelection.maximumLength }, (_, index) => (
                       <label className="encounter-customization-row" key={index}>
                         <span>Use {index + 1}</span>
                         <select
@@ -207,14 +219,14 @@ function EncounterCustomizationControl({
                           <option value="">Default</option>
                           {!decision.valueSupported &&
                           selected[index] !== undefined &&
-                          !decision.selection.choices.some(
+                          !prefixSelection.choices.some(
                             (choice) => choice.key === selected[index],
                           ) ? (
                             <option disabled value={selected[index]}>
                               {`${retainedLabel(decision, selected[index]!)} (unavailable)`}
                             </option>
                           ) : null}
-                          {decision.selection.choices.map((choice) => (
+                          {prefixSelection.choices.map((choice) => (
                             <option
                               disabled={selected.some(
                                 (selectedKey, selectedIndex) =>

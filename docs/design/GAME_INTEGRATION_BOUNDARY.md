@@ -177,6 +177,13 @@ Explicit decisions steer reached behavior without adding required attacks,
 transactions or conformance facts. The [encounter audit](../audits/game-execution-contacts/NPCS_ENCOUNTERS_AND_AUTOMATICS.md#boss-decisions)
 owns the supported native contacts and narrowly agreed progression overrides.
 
+A cocoon count applies only to Arachne combat setup. `SetupArachneCombatEncounter`
+receives a private argument copy with equal count bounds, so native `RandomInt`,
+placement, sizes, contents and reward-cocoon selection still run. Story cocoons
+spawned directly through `SpawnArachneCocoons` stay untouched. A count outside the
+native bounds declines with a diagnostic; a placement shortfall or setup error stays
+native, with a diagnostic.
+
 Encounter selection checks the requested variant through native eligibility before
 forcing it. Rejection delegates selection to the game with a diagnostic and without
 applying the rejected variant's customization. Existing conformance checks resulting
@@ -187,9 +194,9 @@ wave's enemy identities, source provenance and counts, including fixed/template
 seeds, plus applicable Fangs and Menace outcomes, an optional variable base roll
 and a required `expectedBudget`. That budget is the engine's exact final encounter
 budget from the same preparation assessment that derived the counts; neither the
-compiler nor the runtime recomputes it. Execution protocol 46 requires it on every
-generated customization. Authored schema 87 is unchanged, so plans published under
-an earlier protocol are re-exported from their unchanged projects.
+compiler nor the runtime recomputes it. Execution protocol 47 requires it on every
+generated customization. Plans published under an earlier protocol are re-exported
+from their authored projects, which migrate to schema 88.
 
 The exact phase scopes synchronous native preparation, with a stamped destination
 handoff for reward-owned Devotion. Uncustomized encounters delegate unchanged. A

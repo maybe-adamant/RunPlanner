@@ -268,6 +268,38 @@ describe('encounter envelope catalog', () => {
     ]);
   });
 
+  it('publishes the combat-only Arachne cocoon count range and rejects malformed bounds', () => {
+    const definitions = createCatalog(declarations).encounterDefinitions.byKey;
+    // EncounterData_Arachne.lua: BaseArachneCombat (~28) and ArachneCombatG's own
+    // StartRoomUnthreadedEvents override (~251) both set CocoonCountMin = 8, CocoonCountMax = 14.
+    const expected = [
+      {
+        key: 'cocoonCount',
+        label: 'Cocoons',
+        selection: { kind: 'cocoonCount', minimum: 8, maximum: 14 },
+      },
+    ];
+    expect(definitions.ArachneCombatF?.customization).toEqual(expected);
+    expect(definitions.ArachneCombatG?.customization).toEqual(expected);
+    expect(definitions.Story_Arachne_01?.customization).toBeUndefined();
+
+    for (const bounds of [
+      { minimum: 0, maximum: 14 },
+      { minimum: 8, maximum: 7 },
+      { minimum: 8.5, maximum: 14 },
+    ]) {
+      const malformed = input();
+      const arachne = malformed.encounterDefinitions.find(
+        (definition) => definition.key === 'ArachneCombatF',
+      );
+      if (arachne === undefined) throw new Error('missing ArachneCombatF declaration');
+      (arachne as { customization?: unknown }).customization = [
+        { key: 'cocoonCount', label: 'Cocoons', selection: { kind: 'cocoonCount', ...bounds } },
+      ];
+      expect(() => createCatalog(malformed)).toThrow(CatalogContractError);
+    }
+  });
+
   it('publishes the complete declaration-owned Gorgon matrix', () => {
     const built = createCatalog(declarations);
     const definitions = built.encounterDefinitions.byKey;

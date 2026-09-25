@@ -1126,7 +1126,7 @@ describe('project profile operations', () => {
 
     for (const json of [
       JSON.stringify({ ...current, schemaVersion: 8 }),
-      JSON.stringify({ ...current, schemaVersion: 88 }),
+      JSON.stringify({ ...current, schemaVersion: 89 }),
       JSON.stringify({ ...current, catalogVersion: 'stale-catalog-version' }),
     ]) {
       profile.setLoadJson(json);
@@ -1157,7 +1157,7 @@ describe('project profile operations', () => {
       operation: 'loadProfile',
       status: 'success',
       message:
-        'Migrated the profile to schema 87; retained encounter choices may need missing fields repaired.',
+        'Migrated the profile to schema 88; retained encounter choices may need missing fields repaired.',
     });
   });
 });

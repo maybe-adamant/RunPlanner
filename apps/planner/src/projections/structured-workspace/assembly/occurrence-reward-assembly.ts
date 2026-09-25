@@ -932,6 +932,16 @@ export function activeEncounterPhasesForOwner(
                   }),
                 });
               }
+              if (decision.selection.kind === 'cocoonCount') {
+                return Object.freeze({
+                  ...common,
+                  selection: Object.freeze({
+                    kind: 'cocoonCount' as const,
+                    minimum: decision.selection.minimum,
+                    maximum: decision.selection.maximum,
+                  }),
+                });
+              }
               if (decision.selection.kind === 'single') {
                 return Object.freeze({
                   ...common,
