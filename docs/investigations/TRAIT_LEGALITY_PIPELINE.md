@@ -643,3 +643,37 @@ hammer cage then boon opens post-blessing (class-2 rebuild); Steady Growth at
 cage 1, Creation at cage 2, boon last opens with elements (deferred
 regeneration). Dream shop essence before the shop boon: silent, no new
 Infusion.
+
+## Bounded unknowns for audit promotion
+
+- **Loot flags persist across regeneration.** `SetTraitsOnLoot` only ever sets
+  `ForceCommon`, `RarityBoosted` and `UseSwapTrait` (`TraitLogic.lua:1765-1779,
+1797-1800`); a rebuild or open-time regeneration never clears them, and the
+  close reads them to spend Ordinary, Yarn and Hymn (`UpgradeChoiceLogic.lua:
+1124-1142`). An offer built under Ordinary and rebuilt after Ordinary expired
+  would keep replacement disabled and try to spend Ordinary. The planner
+  derives these from the context it evaluates; not modeled.
+- **Delayed Hermes delivery versus curse maturation in one encounter end.**
+  Both land in the same `traitsToRemove` loop in hero-trait order
+  (`RoomLogic.lua:2994-2996`; delivery via `OnExpire.SpawnShopItem`,
+  `TraitLogic.lua:1337-1347`), so which comes first depends on acquisition
+  order. The planner advances the Chaos clock before marking deliveries due,
+  so a delivery due with a maturing curse is built after the blessing.
+  `IgnoreRoomRarityBonus` is also set only after the spawn (`TraitLogic.lua:
+1342-1347`), so the first build and a rebuild differ in room rarity bonus.
+- **Devotion's Duo block after a rebuild (U1).** The close rebuild calls
+  `SetTraitsOnLoot(item)` without `BlockRarities`
+  (`UpgradeChoiceLogic.lua:1144-1153`), so a spurned Devotion loot rebuilt by
+  another screen in its room (for example a delayed Hermes delivery hosted at
+  the same encounter end) would admit a Duo. The planner keeps `devotionNoDuo`
+  for the whole reward.
+- **Consumable-triggered Travel Deal restock.** `RestockWorldItem` waits only
+  for a named screen (`StoreLogic.lua:404, 411-432`); a consumable passes its
+  `ScreenNameOnUse` (`InteractLogic.lua:1016-1017`), usually none, so the
+  restock thread may spawn before or after the consumable's own effects
+  (`InteractLogic.lua:1098-1116`). The planner builds the refill after the
+  triggering purchase settles.
+- **Hermes Shrine Travel Deal refill contact.** The native shrine path for a
+  first-purchase refill (`SurfaceShopLogic.lua:355-400`) was not traced to a
+  spawn; the planner builds the refill when the rushed initial delivery is
+  picked up.

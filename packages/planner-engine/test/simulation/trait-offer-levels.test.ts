@@ -23,7 +23,7 @@ import { createTraitOfferCandidateArtifacts } from '../../src/simulation/candida
 import { applyTraitOfferForAcquisition } from '../../src/simulation/rewards/trait-settlement/coordinator';
 import { initializeTestRewardBranches } from '../support/arcana-fear';
 import type { TraitOfferCandidateContext } from '../../src/simulation/traits';
-import { traitFrontierState } from '../support/simulation-state';
+import { traitFrontierState, openTimeTraitOfferContext } from '../support/simulation-state';
 
 /** The Persephone aspect this suite assesses every offer level against. */
 const persephoneLoadout = Object.freeze({
@@ -181,7 +181,7 @@ function hymnReplacementOffer(): AuthoredTraitOfferTraits {
 }
 
 function context(withSuppression = false): TraitOfferCandidateContext {
-  return Object.freeze({
+  return openTimeTraitOfferContext({
     state: traitFrontierState(createTraitHistoryState(), {
       loadout: persephoneLoadout,
       keepsakes: pomBranch().state.keepsakes,
@@ -241,7 +241,7 @@ describe('Persephone effective offer levels', () => {
         [
           semanticAddressKey(address),
           Object.freeze([
-            Object.freeze({
+            openTimeTraitOfferContext({
               state: traitFrontierState(createTraitHistoryState(), { loadout: persephoneLoadout }),
               source: Object.freeze({}),
             }),

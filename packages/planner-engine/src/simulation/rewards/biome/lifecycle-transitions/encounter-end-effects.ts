@@ -1,3 +1,8 @@
+import {
+  applyTraitOfferTransition,
+  invalidatedTraitOffers,
+  spawnDueHermesDeliveries,
+} from '../offer-lifecycle/spawned-trait-offers';
 import { replaceSimulationTraitHistory } from '../../../state/transitions';
 import type { Catalog } from '../../../../catalog-schema';
 import {
@@ -225,15 +230,23 @@ function advanceSteadyGrowthAt(
       }
       traitHistory = settled.history;
     }
-    if (!blockedAtThreshold)
-      next.push(
-        traitHistory === before
-          ? branch
-          : Object.freeze({
-              ...branch,
-              state: replaceSimulationTraitHistory(branch.state, traitHistory),
-            }),
-      );
+    if (blockedAtThreshold) continue;
+    const settled =
+      traitHistory === before
+        ? branch
+        : Object.freeze({
+            ...branch,
+            state: replaceSimulationTraitHistory(branch.state, traitHistory),
+          });
+    // Each reached interval runs `AddRarityToTraits`, which clears live loot
+    // options whether or not a trait was promotable.
+    const invalidation =
+      advanced.thresholds.length === 0
+        ? undefined
+        : invalidatedTraitOffers(owner, 'steadyGrowthInterval');
+    next.push(
+      invalidation === undefined ? settled : applyTraitOfferTransition(settled, invalidation),
+    );
   }
   return Object.freeze({
     branches: Object.freeze(next),
@@ -350,12 +363,18 @@ function advanceTranscendentEmbryoAt(
       );
       continue;
     }
+    // The interval clears live loot options with or without a blessing to transform.
+    const invalidation = invalidatedTraitOffers(owner, 'transcendentEmbryoInterval');
+    const invalidate = (settled: RewardBranchState) =>
+      invalidation === undefined ? settled : applyTraitOfferTransition(settled, invalidation);
     if (assessment.blessingKey === null) {
       next.push(
-        Object.freeze({
-          ...branch,
-          state: Object.freeze({ ...branch.state, keepsakes: progressed.state }),
-        }),
+        invalidate(
+          Object.freeze({
+            ...branch,
+            state: Object.freeze({ ...branch.state, keepsakes: progressed.state }),
+          }),
+        ),
       );
       continue;
     }
@@ -383,20 +402,22 @@ function advanceTranscendentEmbryoAt(
       }),
     ]);
     next.push(
-      Object.freeze({
-        ...branch,
-        state: replaceSimulationTraitHistory(
-          Object.freeze({
-            ...branch.state,
-            keepsakes: replaceTranscendentEmbryoBlessing(
-              progressed.state,
-              assessment.value!,
-              acquisitionIdentity,
-            ),
-          }),
-          traitHistory,
-        ),
-      }),
+      invalidate(
+        Object.freeze({
+          ...branch,
+          state: replaceSimulationTraitHistory(
+            Object.freeze({
+              ...branch.state,
+              keepsakes: replaceTranscendentEmbryoBlessing(
+                progressed.state,
+                assessment.value!,
+                acquisitionIdentity,
+              ),
+            }),
+            traitHistory,
+          ),
+        }),
+      ),
     );
   }
   return Object.freeze({
@@ -488,13 +509,20 @@ export function applyEncounterEndEffectsTransition(
             ] as const;
           }),
         );
-        return Object.freeze({
-          ...branch,
-          state: Object.freeze({
-            ...branch.state,
-            pendingHermesShrineDeliveries: Object.freeze(deliveries),
+        // A delivery falling due spawns with the encounter's expiring traits,
+        // before the chamber-count effects below.
+        return spawnDueHermesDeliveries(
+          catalog,
+          room,
+          Object.freeze({
+            ...branch,
+            state: Object.freeze({
+              ...branch.state,
+              pendingHermesShrineDeliveries: Object.freeze(deliveries),
+            }),
           }),
-        });
+          event.sequence,
+        );
       }),
     );
   }

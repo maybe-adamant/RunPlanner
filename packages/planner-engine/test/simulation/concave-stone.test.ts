@@ -30,7 +30,7 @@ import {
 import { createTraitOfferCandidateArtifacts } from '../../src/simulation/candidates/trait-offer/capability';
 import { initializeTestRewardBranches } from '../support/arcana-fear';
 import { describe, expect, it } from 'vitest';
-import { traitFrontierState } from '../support/simulation-state';
+import { traitFrontierState, openTimeTraitOfferContexts } from '../support/simulation-state';
 
 const biome = createBiomeAddress('Underworld', 'F');
 const origin = createIncomingRewardAddress(biome, createOccurrenceId('concave-stone-test'));
@@ -243,19 +243,21 @@ describe('Concave Stone trait settlement', () => {
     };
     const capability = createTraitOfferCandidateArtifacts(
       catalog,
-      new Map([
-        [
-          semanticAddressKey(trait),
+      openTimeTraitOfferContexts(
+        new Map([
           [
-            {
-              state: traitFrontierState(before, {
-                keepsakes: branchWithStone('Common', before).state.keepsakes,
-              }),
-              source: {},
-            },
+            semanticAddressKey(trait),
+            [
+              {
+                state: traitFrontierState(before, {
+                  keepsakes: branchWithStone('Common', before).state.keepsakes,
+                }),
+                source: {},
+              },
+            ],
           ],
-        ],
-      ]),
+        ]),
+      ),
     ).at(trait)!;
     expect(capability.targetedAcquisitionTargets(value, 'option2')).toEqual([
       { sourceSupported: true, targetTraitKeys: ['HeraWeaponBoon', 'BoonDecayBoon'] },
@@ -339,19 +341,21 @@ describe('Concave Stone trait settlement', () => {
     };
     const capability = createTraitOfferCandidateArtifacts(
       catalog,
-      new Map([
-        [
-          semanticAddressKey(trait),
+      openTimeTraitOfferContexts(
+        new Map([
           [
-            {
-              state: traitFrontierState(before, {
-                keepsakes: branchWithStone('Common', before).state.keepsakes,
-              }),
-              source: {},
-            },
+            semanticAddressKey(trait),
+            [
+              {
+                state: traitFrontierState(before, {
+                  keepsakes: branchWithStone('Common', before).state.keepsakes,
+                }),
+                source: {},
+              },
+            ],
           ],
-        ],
-      ]),
+        ]),
+      ),
     ).at(trait)!;
     expect(capability.allTogetherSet(value, 'option2', 'earth')[0]).toContain(result.earth);
     const unresolvedPrimary: AuthoredTraitOfferTraits = {
@@ -419,19 +423,21 @@ describe('Concave Stone trait settlement', () => {
     expect(missing.blockedChild?.address).toEqual(address);
     const capability = createTraitOfferCandidateArtifacts(
       catalog,
-      new Map([
-        [
-          semanticAddressKey(trait),
+      openTimeTraitOfferContexts(
+        new Map([
           [
-            {
-              state: traitFrontierState(before, {
-                keepsakes: branchWithStone('Common', before).state.keepsakes,
-              }),
-              source: {},
-            },
+            semanticAddressKey(trait),
+            [
+              {
+                state: traitFrontierState(before, {
+                  keepsakes: branchWithStone('Common', before).state.keepsakes,
+                }),
+                source: {},
+              },
+            ],
           ],
-        ],
-      ]),
+        ]),
+      ),
     ).at(trait)!;
     const disposition = catalog.traits.byKey.GoodStuffBoon!.selectedDisposition;
     if (disposition.kind !== 'naturalSelection')
@@ -752,17 +758,19 @@ describe('Concave Stone candidate capability', () => {
     const state = createKeepsakeState(catalog, 'UnpickedBoonKeepsake');
     const artifacts = createTraitOfferCandidateArtifacts(
       catalog,
-      new Map([
-        [
-          semanticAddressKey(trait),
+      openTimeTraitOfferContexts(
+        new Map([
           [
-            {
-              state: traitFrontierState(createTraitHistoryState(), { keepsakes: state }),
-              source: Object.freeze({}),
-            },
+            semanticAddressKey(trait),
+            [
+              {
+                state: traitFrontierState(createTraitHistoryState(), { keepsakes: state }),
+                source: Object.freeze({}),
+              },
+            ],
           ],
-        ],
-      ]),
+        ]),
+      ),
     );
     const capability = artifacts.at(trait);
     if (capability === undefined) throw new Error('missing Stone candidate capability');
@@ -784,17 +792,19 @@ describe('Concave Stone candidate capability', () => {
     });
     const heroic = createTraitOfferCandidateArtifacts(
       catalog,
-      new Map([
-        [
-          semanticAddressKey(trait),
+      openTimeTraitOfferContexts(
+        new Map([
           [
-            {
-              state: traitFrontierState(createTraitHistoryState(), { keepsakes: heroicState }),
-              source: {},
-            },
+            semanticAddressKey(trait),
+            [
+              {
+                state: traitFrontierState(createTraitHistoryState(), { keepsakes: heroicState }),
+                source: {},
+              },
+            ],
           ],
-        ],
-      ]),
+        ]),
+      ),
     ).at(trait);
     if (heroic === undefined) throw new Error('missing Stone candidate capability');
     expect(heroic.concaveStone(offer())).toMatchObject([
@@ -805,19 +815,21 @@ describe('Concave Stone candidate capability', () => {
   it('retains a Stone result as unavailable after the source is gone', () => {
     const artifacts = createTraitOfferCandidateArtifacts(
       catalog,
-      new Map([
-        [
-          semanticAddressKey(trait),
+      openTimeTraitOfferContexts(
+        new Map([
           [
-            {
-              state: traitFrontierState(createTraitHistoryState(), {
-                keepsakes: createKeepsakeState(catalog, 'SilverWheelKeepsake'),
-              }),
-              source: {},
-            },
+            semanticAddressKey(trait),
+            [
+              {
+                state: traitFrontierState(createTraitHistoryState(), {
+                  keepsakes: createKeepsakeState(catalog, 'SilverWheelKeepsake'),
+                }),
+                source: {},
+              },
+            ],
           ],
-        ],
-      ]),
+        ]),
+      ),
     );
     const capability = artifacts.at(trait);
     if (capability === undefined) throw new Error('missing retained Stone candidate capability');

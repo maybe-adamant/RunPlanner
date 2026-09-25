@@ -152,9 +152,20 @@ describe('Gold Gold Gold Shop pickups', () => {
     }
   });
 
-  it('keeps a materialized Gold Pom on its source-time frontier while every source target remains', () => {
+  it('rebuilds a materialized Gold Pom at every later completed Shop screen', () => {
     const sourcePom = shopPomReward('ApolloWeaponBoon');
-    const duplicatePom = shopPomReward('ZeusSpecialBoon');
+    // The Boon bought after the source Pom closes its screen before the
+    // duplicate opens, so the duplicate offers the newly held Zeus boon too.
+    const duplicatePom = Object.freeze({
+      ...shopPomReward('ZeusSpecialBoon'),
+      levelResolutionsByAcquisitionRole: Object.freeze({
+        self: Object.freeze({
+          kind: 'choice' as const,
+          offeredTraitKeys: Object.freeze(['ApolloWeaponBoon', 'ZeusSpecialBoon']),
+          selectedTraitKey: 'ZeusSpecialBoon',
+        }),
+      }),
+    });
     const traits = foldTraitHistoryEvents(catalog, [
       ...echoGoldHistory().events,
       ...pomTargetHistory().events,
@@ -180,16 +191,14 @@ describe('Gold Gold Gold Shop pickups', () => {
       duplicateRewardOverride: duplicatePom,
     });
 
-    expect([...result.findings.values()].map((entry) => entry.finding.code)).toContain(
-      'pomTargetUnavailable',
-    );
+    expect([...result.findings.values()].map((entry) => entry.finding.code)).toEqual([]);
     expect(result.settlement.branches[0]?.state.traitHistory?.equippedTraits).toMatchObject({
       ApolloWeaponBoon: { level: 2 },
-      ZeusSpecialBoon: { level: 1 },
+      ZeusSpecialBoon: { level: 2 },
     });
   });
 
-  it('regenerates a materialized Gold Pom only after a source-time eligible target disappears', () => {
+  it('targets the replacement once a later completed screen replaces the source target', () => {
     const sourcePom = shopPomReward('ApolloWeaponBoon');
     const duplicatePom = shopPomReward('ZeusWeaponBoon');
     const result = echoGoldShop(['Minor', 'Boon', ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY], {

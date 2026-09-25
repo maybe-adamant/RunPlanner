@@ -38,8 +38,9 @@ import { applyEncounterEndEffectsTransition } from '../../src/simulation/rewards
 import { applyKeepsakeRackUsedTransition } from '../../src/simulation/rewards/biome/lifecycle-transitions/keepsake-rack-used';
 import { createTraitOfferCandidateArtifacts } from '../../src/simulation/candidates/trait-offer/capability';
 import type { CanonicalAuthoredRoom } from '../../src/simulation/materialization';
+import { spawnPendingTraitOffers } from '../../src/simulation/state/pending-trait-offers';
 import { initializeTestRewardBranches } from '../support/arcana-fear';
-import { traitFrontierState } from '../support/simulation-state';
+import { traitFrontierState, openTimeTraitOfferContexts } from '../support/simulation-state';
 
 const owner = createBiomeAddress('Underworld', 'F');
 
@@ -210,6 +211,73 @@ describe('Transcendent Embryo declaration and direct Chaos fold', () => {
     expect(resolved.branches[0]?.state.traitHistory?.maturedChaosBlessings).toMatchObject([
       { blessingKey: 'ChaosWeaponBlessing' },
     ]);
+  });
+
+  it('marks unopened loot in its room stale on the interval', () => {
+    const encounterOwner = createOccurrenceAddress(
+      createBiomeAddress('Underworld', 'F'),
+      createOccurrenceId('embryo-freshness'),
+    );
+    const initial = applyTranscendentEmbryoEquipResult(
+      catalog,
+      branchWithHistory(
+        createTraitHistoryState(),
+        createKeepsakeState(catalog, 'RandomBlessingKeepsake'),
+      ),
+      'RandomBlessingKeepsake',
+      embryoOutcome('ChaosElementalBlessing'),
+      encounterOwner,
+      0,
+      'ordinary',
+      'Epic',
+      { routeKey: 'Underworld' },
+    );
+    const waiting = Object.freeze({
+      origin: createIncomingRewardAddress(owner, encounterOwner.occurrenceId),
+      offer: Object.freeze({ rewardType: 'Boon' }),
+      traitOffersByAcquisitionRole: Object.freeze({ source: null }),
+    });
+    const room = {
+      kind: 'authored',
+      origin: encounterOwner,
+      occurrenceId: encounterOwner.occurrenceId,
+      gameName: 'RoomOpening01',
+      encounters: {
+        transcendentEmbryoBlessingByPhase: {
+          Encounter: embryoOutcome('ChaosWeaponBlessing'),
+        },
+      },
+      encounterPhases: [],
+    } as unknown as CanonicalAuthoredRoom;
+    let branches: readonly RewardBranchState[] = [
+      Object.freeze({
+        ...initial,
+        state: spawnPendingTraitOffers(catalog, initial.state, [waiting]),
+      }),
+    ];
+    const record = () =>
+      branches[0]?.state.pendingTraitOffers[semanticAddressKey(encounterOwner)]?.[
+        semanticAddressKey(createTraitOfferAddress(waiting.origin, 'source'))
+      ];
+    for (let sequence = 1; sequence <= 8; sequence += 1) {
+      expect(record()?.stale).toBe(false);
+      branches = applyEncounterEndEffectsTransition(
+        catalog,
+        Object.freeze({
+          kind: 'encounterEndEffectsApplied' as const,
+          origin: encounterOwner,
+          phaseKey: 'Encounter',
+          execution: 'normal' as const,
+          figLeafSkipOwner: false,
+          operationIndex: sequence,
+          sequence,
+        }),
+        room,
+        branches,
+      ).branches;
+    }
+    expect(branches[0]?.state.keepsakes.transcendentEmbryo?.progress).toBe(0);
+    expect(record()?.stale).toBe(true);
   });
 
   it('publishes a same-phase Shrine delivery from the final Embryo branch', () => {
@@ -586,17 +654,19 @@ describe('Transcendent Embryo declaration and direct Chaos fold', () => {
     );
     const capability = createTraitOfferCandidateArtifacts(
       catalog,
-      new Map([
-        [
-          semanticAddressKey(laterChaos),
+      openTimeTraitOfferContexts(
+        new Map([
           [
-            Object.freeze({
-              state: traitFrontierState(replaced.state.traitHistory!),
-              source: Object.freeze({}),
-            }),
+            semanticAddressKey(laterChaos),
+            [
+              Object.freeze({
+                state: traitFrontierState(replaced.state.traitHistory!),
+                source: Object.freeze({}),
+              }),
+            ],
           ],
-        ],
-      ]),
+        ]),
+      ),
     ).at(laterChaos);
     const domain = capability?.chaosOfferDomain({
       kind: 'chaos',

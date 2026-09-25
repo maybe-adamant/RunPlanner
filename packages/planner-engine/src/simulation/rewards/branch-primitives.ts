@@ -13,6 +13,7 @@ import {
   type ReachedTraitOfferEvaluation,
 } from '../traits';
 import type { SimulationState } from '../state/model';
+import { pendingTraitOffersProjection } from '../state/pending-trait-offers';
 
 export interface PendingShopTravelRefillCapability {
   readonly evaluateOffer: (
@@ -116,6 +117,7 @@ function equivalentBranchStateKey(branch: RewardBranchState): string {
       keepsakes: state.keepsakes,
       rewardLookups: orderedRecord(state.rewardLookups),
       offeredRewardTypes: state.offeredRewardTypes,
+      pendingTraitOffers: pendingTraitOffersProjection(state),
     },
     rewardForfeited: branch.events
       .filter((event) => event.kind === 'rewardForfeited')

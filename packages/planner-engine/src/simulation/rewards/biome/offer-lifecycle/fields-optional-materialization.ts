@@ -20,6 +20,7 @@ import type { RewardLifecycleReferences } from '../prepared-inputs';
 import { processRewardOffer } from '../../offer-generation';
 import type { RewardProducerFrontier } from '../../producer-frontiers';
 import { localRewardBinding } from '../room-reward-bindings';
+import { spawnTraitOffers } from './spawned-trait-offers';
 import type { SimulationState } from '../../../state/model';
 
 export interface FieldsOptionalOfferPointMaterialization {
@@ -41,7 +42,8 @@ export interface FieldsOptionalOfferPointMaterializationInputs {
 }
 
 /**
- * Materializes the Fields optional-reward cohort at its exact offer point.
+ * Materializes the Fields offer point: the cage and optional rewards spawned
+ * at room entry. Optional rewards also resolve their counted cohort here.
  * Chronology owns applying this complete immutable transition.
  */
 export function materializeFieldsOptionalOfferPoint(
@@ -281,8 +283,10 @@ export function materializeFieldsOptionalOfferPoint(
         ownerRegion(room.origin),
         historyFindingChronology(event.sequence),
       );
+  // `SpawnRewardCages` builds every cage reward and optional reward at this point.
+  const spawned = [...(room.localRewards ?? []), ...optionalRewards];
   return Object.freeze({
-    branches,
+    branches: Object.freeze(branches.map((branch) => spawnTraitOffers(catalog, branch, spawned))),
     findings: Object.freeze([...findings.values()]),
     producerFrontiers: Object.freeze(producerFrontiers),
   });

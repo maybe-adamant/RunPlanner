@@ -41,7 +41,7 @@ import { normalizeAuthoredChaosTraitOffer } from '../../src/authored-project/tra
 import { createTraitOfferCandidateArtifacts } from '../../src/simulation/candidates/trait-offer/capability';
 import { evaluateBiomeRewardsAssemblyInternal } from '../../src/simulation/rewards/biome';
 import { loadSurfaceNOPProject } from '@run-planner/test-fixtures/surface';
-import { traitFrontierState } from '../support/simulation-state';
+import { traitFrontierState, openTimeTraitOfferContexts } from '../support/simulation-state';
 
 const owner = createBiomeAddress('Underworld', 'F');
 const rewardOwner = createIncomingRewardAddress(owner, createOccurrenceId('chaos-test-reward'));
@@ -242,12 +242,14 @@ describe('Chaos paired-trait history', () => {
       );
       const capability = createTraitOfferCandidateArtifacts(
         catalog,
-        new Map([
-          [
-            semanticAddressKey(address),
-            [{ state: traitFrontierState(undefined, { routeKey, biomeKey }), source: {} }],
-          ],
-        ]),
+        openTimeTraitOfferContexts(
+          new Map([
+            [
+              semanticAddressKey(address),
+              [{ state: traitFrontierState(undefined, { routeKey, biomeKey }), source: {} }],
+            ],
+          ]),
+        ),
       ).at(address)!;
       const offer = chaos('ChaosCommonCurse', 'ChaosHarvestBlessing');
       expect(
@@ -770,17 +772,19 @@ describe('Chaos paired-trait history', () => {
     const address = createTraitOfferAddress(rewardOwner, 'chaos-rarity');
     const capability = createTraitOfferCandidateArtifacts(
       catalog,
-      new Map([
-        [
-          semanticAddressKey(address),
-          Object.freeze([
-            Object.freeze({
-              state: traitFrontierState(undefined, { arcanaFear: rankIVExcellence }),
-              source: Object.freeze({}),
-            }),
-          ]),
-        ],
-      ]),
+      openTimeTraitOfferContexts(
+        new Map([
+          [
+            semanticAddressKey(address),
+            Object.freeze([
+              Object.freeze({
+                state: traitFrontierState(undefined, { arcanaFear: rankIVExcellence }),
+                source: Object.freeze({}),
+              }),
+            ]),
+          ],
+        ]),
+      ),
     ).at(address);
     const domain = capability?.chaosOfferDomain(common)[0];
     expect(domain?.rarities).toEqual(['Rare', 'Epic']);
@@ -1003,12 +1007,14 @@ describe('Chaos paired-trait history', () => {
     const address = createTraitOfferAddress(rewardOwner, 'ordinary-replacement');
     const capability = createTraitOfferCandidateArtifacts(
       catalog,
-      new Map([
-        [
-          semanticAddressKey(address),
-          Object.freeze([Object.freeze({ state: hymnState, source: staleContext })]),
-        ],
-      ]),
+      openTimeTraitOfferContexts(
+        new Map([
+          [
+            semanticAddressKey(address),
+            Object.freeze([Object.freeze({ state: hymnState, source: staleContext })]),
+          ],
+        ]),
+      ),
     ).at(address);
     const draft = capability?.traitOfferStartingOutcome('Zeus');
     if (draft?.kind !== 'traits') throw new Error('expected Zeus traits');
@@ -1325,12 +1331,14 @@ describe('Chaos paired-trait history', () => {
       const state = traitFrontierState(exhaustedTo(count));
       const capability = createTraitOfferCandidateArtifacts(
         catalog,
-        new Map([
-          [
-            semanticAddressKey(address),
-            Object.freeze([Object.freeze({ state, source: Object.freeze({}) })]),
-          ],
-        ]),
+        openTimeTraitOfferContexts(
+          new Map([
+            [
+              semanticAddressKey(address),
+              Object.freeze([Object.freeze({ state, source: Object.freeze({}) })]),
+            ],
+          ]),
+        ),
       ).at(address);
       return {
         composition: evaluateReachedTraitOffer(catalog, owner, 'self', offer, state, {}, 0)

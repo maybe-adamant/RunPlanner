@@ -1,3 +1,7 @@
+import {
+  applyTraitOfferTransition,
+  invalidatedTraitOffers,
+} from '../offer-lifecycle/spawned-trait-offers';
 import { replaceSimulationTraitHistory } from '../../../state/transitions';
 import type { Catalog } from '../../../../catalog-schema';
 import {
@@ -113,15 +117,25 @@ export function applyFountainUsedTransition(
       timelineFacts,
     });
   }
+  const invalidation = invalidatedTraitOffers(event.origin, 'fountainRarity');
   const nextBranches = branches.map((branch) => {
     const frontier = assessPhialTraitTargets(catalog, branch.state.traitHistory);
     if (branch.state.keepsakes.phial?.status !== 'pending') return branch;
     if (frontier.consumptionTargetKeys.length === 0) return branch;
+    // A firing Phial runs `AddRarityToTraits`, clearing live loot options even
+    // when no rarifiable trait can actually promote.
+    const invalidate = (settled: RewardBranchState) =>
+      invalidation === undefined ? settled : applyTraitOfferTransition(settled, invalidation);
     if (frontier.mutationTargetKeys.length === 0)
-      return Object.freeze({
-        ...branch,
-        state: Object.freeze({ ...branch.state, keepsakes: consumePhial(branch.state.keepsakes) }),
-      });
+      return invalidate(
+        Object.freeze({
+          ...branch,
+          state: Object.freeze({
+            ...branch.state,
+            keepsakes: consumePhial(branch.state.keepsakes),
+          }),
+        }),
+      );
     const before = branch.state.traitHistory;
     const settled = settleFountainRarityMutation(
       catalog,
@@ -131,13 +145,15 @@ export function applyFountainUsedTransition(
       targetTraitKey!,
     );
     if (!settled.legal) return branch;
-    return Object.freeze({
-      ...branch,
-      state: replaceSimulationTraitHistory(
-        Object.freeze({ ...branch.state, keepsakes: consumePhial(branch.state.keepsakes) }),
-        settled.history,
-      ),
-    });
+    return invalidate(
+      Object.freeze({
+        ...branch,
+        state: replaceSimulationTraitHistory(
+          Object.freeze({ ...branch.state, keepsakes: consumePhial(branch.state.keepsakes) }),
+          settled.history,
+        ),
+      }),
+    );
   });
   return Object.freeze({
     branches: advanceRewardBranches(Object.freeze(nextBranches), event.sequence),

@@ -33,7 +33,7 @@ import { createTraitOfferCandidateArtifacts } from '../../src/simulation/candida
 import { createSteadyGrowthCandidateArtifacts } from '../../src/simulation/candidates/steady-growth';
 import { evaluateNaturalSelectionResultCandidate } from '../../src/simulation/candidates/trait-offer/query';
 import { selectedTargetedAcquisitionTargetKeys } from '../../src/simulation/traits/level-effects';
-import { traitFrontierState } from '../support/simulation-state';
+import { traitFrontierState, openTimeTraitOfferContexts } from '../support/simulation-state';
 
 const owner = { kind: 'project' } as SemanticAddress;
 const naturalSelectionSlots = ['Melee', 'Secondary', 'Ranged', 'Rush', 'Mana'] as const;
@@ -257,14 +257,16 @@ describe('Boon Growth and Boon Decay target predicates', () => {
     const before = historyWith('Apollo', 'ApolloWeaponBoon', 'Common');
     const artifacts = createTraitOfferCandidateArtifacts(
       catalog,
-      new Map([
-        [
-          semanticAddressKey(result),
-          Object.freeze([
-            Object.freeze({ state: traitFrontierState(before), source: Object.freeze({}) }),
-          ]),
-        ],
-      ]),
+      openTimeTraitOfferContexts(
+        new Map([
+          [
+            semanticAddressKey(result),
+            Object.freeze([
+              Object.freeze({ state: traitFrontierState(before), source: Object.freeze({}) }),
+            ]),
+          ],
+        ]),
+      ),
     );
     const value: AuthoredTraitOffer = Object.freeze({
       kind: 'traits',

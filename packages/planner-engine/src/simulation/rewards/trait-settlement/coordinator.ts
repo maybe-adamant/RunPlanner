@@ -1,10 +1,19 @@
 import { replaceSimulationTraitHistory } from '../../state/transitions';
+import {
+  applyTraitOfferContextTransition,
+  openPendingTraitOffer,
+  traitOfferGenerationState,
+  traitOfferRoomKey,
+  type TraitOfferContextTransition,
+} from '../../state/pending-trait-offers';
+import type { SimulationState } from '../../state/model';
 import type { Catalog } from '../../../catalog-schema';
 import { evaluateCallingCardOffer } from '../../keepsakes/reward-effects';
 import {
   createCirceResolutionAddress,
   createEchoLastRunBoonAddress,
   createEchoPomTargetAddress,
+  createLevelResolutionAddress,
   createTraitOfferAddress,
   semanticAddressKey,
   type EchoLastRunBoonAddress,
@@ -93,6 +102,12 @@ interface ApplyTraitOfferOptions {
   readonly directTraitSetBranchHistories?: readonly TraitHistoryState[];
 }
 
+/** A completed upgrade screen rebuilds every unopened loot in its room. */
+export type TraitOfferScreenCompletion = Extract<
+  TraitOfferContextTransition,
+  { readonly kind: 'screenCompleted' }
+>;
+
 type TraitOfferAcquisitionSettlement = ReturnType<typeof applyTraitOfferForAcquisitionInternal> & {
   /** The immediately preceding same-occurrence trait mutations. */
   readonly priorTraitMutations?: readonly PriorTraitMutation[];
@@ -108,6 +123,27 @@ export interface PriorTraitMutation {
 interface EchoLastRunBoonSettlement {
   readonly address: EchoLastRunBoonAddress;
   readonly outcome: EchoLastRunBoonOutcome;
+}
+
+/** Upgrade screens close through `CloseUpgradeChoiceScreen`; Spell screens do not. */
+function screenCompletion(
+  catalog: Catalog,
+  origin: SemanticAddress,
+  giverKey: string,
+): TraitOfferScreenCompletion | undefined {
+  if (catalog.traitGivers.byKey[giverKey]?.providerKind === 'spell') return undefined;
+  const room = traitOfferRoomKey(origin);
+  return room === undefined ? undefined : Object.freeze({ kind: 'screenCompleted', room });
+}
+
+/** Publishes one screen completion after its selection, children and charges settled. */
+export function publishTraitOfferScreenCompletion(
+  branch: RewardBranchState,
+  completion: TraitOfferScreenCompletion | undefined,
+): RewardBranchState {
+  if (completion === undefined) return branch;
+  const state = applyTraitOfferContextTransition(branch.state, completion);
+  return state === branch.state ? branch : Object.freeze({ ...branch, state });
 }
 
 function consumeChaosGodScreen(
@@ -129,7 +165,7 @@ function consumeChaosGodScreen(
 
 function applyTraitOfferForAcquisitionInternal(
   catalog: Catalog,
-  branch: RewardBranchState,
+  reachedBranch: RewardBranchState,
   reward: {
     readonly origin: SemanticAddress;
     readonly offer?: CanonicalResolvedIncomingReward['offer'];
@@ -137,7 +173,6 @@ function applyTraitOfferForAcquisitionInternal(
     readonly producerKind?: CanonicalResolvedIncomingReward['producerKind'];
     readonly traitOffersByAcquisitionRole?: CanonicalResolvedIncomingReward['traitOffersByAcquisitionRole'];
     readonly levelResolutionsByAcquisitionRole?: CanonicalResolvedIncomingReward['levelResolutionsByAcquisitionRole'];
-    readonly levelResolutionGenerationHistory?: TraitHistoryState;
     readonly traitContext?: CanonicalResolvedIncomingReward['traitContext'];
   },
   role: string,
@@ -151,8 +186,32 @@ function applyTraitOfferForAcquisitionInternal(
   readonly branch: RewardBranchState;
   readonly blockedChild?: ReachedTraitChildCheckpoint;
   readonly candidateContact?: ReachedTraitOfferCandidateContact;
+  /** Present only when a legal upgrade screen settled completely. */
+  readonly completion?: TraitOfferScreenCompletion;
 } {
   const acquisitionMode = options.mode ?? Object.freeze({ kind: 'ordinary' as const });
+  const openedOwner =
+    acquisitionMode.kind === 'ordinary' ? traitOwnerAddress(reward.origin) : undefined;
+  const openedAddress =
+    openedOwner === undefined
+      ? undefined
+      : reward.levelResolutionsByAcquisitionRole?.[role] !== undefined
+        ? createLevelResolutionAddress(openedOwner, role)
+        : createTraitOfferAddress(openedOwner, role);
+  // Opening a loot reads the options built at its spawn or last rebuild.
+  const generation: SimulationState =
+    openedAddress === undefined
+      ? reachedBranch.state
+      : traitOfferGenerationState(reachedBranch.state, openedAddress);
+  const branch: RewardBranchState =
+    openedAddress === undefined
+      ? reachedBranch
+      : (() => {
+          const state = openPendingTraitOffer(reachedBranch.state, openedAddress);
+          return state === reachedBranch.state
+            ? reachedBranch
+            : Object.freeze({ ...reachedBranch, state });
+        })();
   // Aspect of Selene routes a later Spell Drop directly to Path settlement.
   // The concrete acquisition retains its history identity; its base-spell child
   // stays absent and must neither block nor change trait history.
@@ -204,9 +263,10 @@ function applyTraitOfferForAcquisitionInternal(
                 : {
                     candidateContext: Object.freeze({
                       state: branch.state,
+                      generationState: generation,
                       source: withBoonRarityFacts(
                         catalog,
-                        branch,
+                        generation,
                         Object.freeze({
                           ...sourceTraitContext,
                           devotionNoDuo:
@@ -226,7 +286,7 @@ function applyTraitOfferForAcquisitionInternal(
       ? undefined
       : withBoonRarityFacts(
           catalog,
-          branch,
+          generation,
           Object.freeze({
             ...sourceTraitContext,
             devotionNoDuo:
@@ -237,7 +297,7 @@ function applyTraitOfferForAcquisitionInternal(
   const baseOffer =
     authored === undefined || authoredContext === undefined || acquisitionMode.kind !== 'ordinary'
       ? undefined
-      : assessTraitOfferBeforeRarification(catalog, authored, branch.state, authoredContext);
+      : assessTraitOfferBeforeRarification(catalog, authored, generation, authoredContext);
   const callingCard =
     authored === undefined || acquisitionMode.kind !== 'ordinary'
       ? undefined
@@ -258,6 +318,7 @@ function applyTraitOfferForAcquisitionInternal(
   const levelResolution = settleReachedLevelResolution({
     catalog,
     branch,
+    generation: generation.traitHistory,
     reward,
     owner: traitOwnerAddress(reward.origin),
     role,
@@ -280,12 +341,27 @@ function applyTraitOfferForAcquisitionInternal(
         }
       }
     }
-    return Object.freeze({ branch: levelResolution.branch });
+    // Only a Pom screen this settlement reached closes; a skipped effect appends nothing.
+    const priorCount = branch.levelResolutionEvaluations?.length ?? 0;
+    const evaluations = levelResolution.branch.levelResolutionEvaluations ?? [];
+    const evaluated = evaluations.length > priorCount ? evaluations.at(-1) : undefined;
+    const completion =
+      acquisitionMode.kind === 'ordinary' &&
+      levelResolution.findingEntries.length === 0 &&
+      evaluated?.effectKind === 'choice'
+        ? traitOfferRoomKey(reward.origin)
+        : undefined;
+    return Object.freeze({
+      branch: levelResolution.branch,
+      ...(completion === undefined
+        ? {}
+        : { completion: Object.freeze({ kind: 'screenCompleted' as const, room: completion }) }),
+    });
   }
   if (effectiveAuthored === undefined) return Object.freeze({ branch: effectiveBranch });
   const evaluationContext = withBoonRarityFacts(
     catalog,
-    effectiveBranch,
+    generation,
     Object.freeze({
       ...sourceTraitContext,
       devotionNoDuo: sourceTraitContext.devotionNoDuo ?? reward.offer?.rewardType === 'Devotion',
@@ -309,6 +385,7 @@ function applyTraitOfferForAcquisitionInternal(
             acquisitionMode.levelResolution === undefined
             ? undefined
             : Object.freeze([acquisitionMode.levelResolution]),
+          generation,
         )
       : effectiveAuthored.kind !== 'traits'
         ? (() => {
@@ -485,6 +562,7 @@ function applyTraitOfferForAcquisitionInternal(
             address: createTraitOfferAddress(candidateOwner, role),
             context: Object.freeze({
               state: branch.state,
+              generationState: generation,
               source: evaluationContext,
             }),
           });
@@ -496,16 +574,21 @@ function applyTraitOfferForAcquisitionInternal(
             state: replaceSimulationTraitHistory(effectiveBranch.state, applied.history),
           })
         : Object.freeze({ ...effectiveBranch, traitEvaluations });
+    const legal = traitOfferGenerationLegal(evaluation) && evaluation.targetedAcquisition.legal;
+    // Valid Gold and Chaos screens settle without a trait event.
+    const completion =
+      legal && acquisitionMode.kind === 'ordinary'
+        ? screenCompletion(catalog, reward.origin, effectiveAuthored.giverKey)
+        : undefined;
     return Object.freeze({
       branch: consumeChaosGodScreen(
         catalog,
         branchAfterOffer,
         sequence,
-        traitOfferGenerationLegal(evaluation) && evaluation.targetedAcquisition.legal
-          ? effectiveAuthored
-          : undefined,
+        legal ? effectiveAuthored : undefined,
       ),
       ...(candidateContact === undefined ? {} : { candidateContact }),
+      ...(completion === undefined ? {} : { completion }),
     });
   }
   const selected = applied.event.options[optionIndex(applied.event.selectedOptionKey)];
@@ -532,9 +615,10 @@ function applyTraitOfferForAcquisitionInternal(
       : effectiveBranch.state.keepsakes;
   const childCandidateContext = Object.freeze({
     state: evaluation.state,
+    generationState: generation,
     source: withBoonRarityFacts(
       catalog,
-      branch,
+      generation,
       Object.freeze({ ...sourceTraitContext, resolvedProviderKey: evaluation.offer.giverKey }),
     ),
   });
@@ -612,7 +696,11 @@ function applyTraitOfferForAcquisitionInternal(
       effectiveAuthored,
       evaluation,
       selected?.traitKey,
-      Object.freeze({ state: evaluation.state, source: evaluation.source }),
+      Object.freeze({
+        state: evaluation.state,
+        generationState: generation,
+        source: evaluation.source,
+      }),
       lifecyclePoint,
       sequence,
       findingChronology,
@@ -663,8 +751,16 @@ function applyTraitOfferForAcquisitionInternal(
         blockedChildCandidateContext ??= childCandidateContext;
     }
   }
+  const completion =
+    blockedChildAddress === undefined &&
+    acquisitionMode.kind === 'ordinary' &&
+    traitOfferGenerationLegal(evaluation) &&
+    evaluation.targetedAcquisition.legal
+      ? screenCompletion(catalog, reward.origin, effectiveAuthored.giverKey)
+      : undefined;
   return Object.freeze({
     branch: stoneBranch,
+    ...(completion === undefined ? {} : { completion }),
     ...(blockedChildAddress === undefined
       ? {}
       : {
@@ -732,16 +828,18 @@ export function applyTraitOfferForAcquisition(
         ]);
   const closedContext = withBoonRarityFacts(
     catalog,
-    branch,
+    branch.state,
     Object.freeze({ ...traitContext, resolvedProviderKey: authored.giverKey }),
   );
   const consumesYarn =
     temporaryBoonRarityUses(branch.state, traitContext) > 0 &&
     boonRarityFactsForOffer(catalog, branch.state, closedContext) !== undefined;
   const evaluation = settlement.branch.traitEvaluations?.[branch.traitEvaluations?.length ?? 0];
+  // Hymn is spent only by a screen whose options were built while Hymn was held.
   const consumesHymn =
-    limitedSwapUses(branch.state) > 0 &&
     evaluation !== undefined &&
+    limitedSwapUses(evaluation.generationState) > 0 &&
+    limitedSwapUses(branch.state) > 0 &&
     traitOfferGenerationLegal(evaluation) &&
     evaluation.assessments.some((assessment) => assessment.replacementTransition !== undefined);
   if (!consumesYarn && !consumesHymn)
@@ -838,23 +936,20 @@ function traitOwnerAddress(origin: SemanticAddress): TraitOfferOwnerAddress | un
   }
 }
 
-/** Resolve the concrete occurrence behind the small set of nested owners that
- * can emit or consume a trait mutation. This remains local to trait
- * settlement; execution only receives the resulting opaque edge. */
-function traitOccurrenceId(address: SemanticAddress): string | undefined {
+/** Timeline dependencies compare bare occurrence ids of mutation owners; entry and site owners never match. */
+function traitMutationOccurrenceId(address: SemanticAddress): string | undefined {
   if ('occurrenceId' in address) return address.occurrenceId;
   switch (address.kind) {
     case 'fountainRarityOutcome':
-      return traitOccurrenceId(address.action);
+      return traitMutationOccurrenceId(address.action);
     case 'keepsakeEquipResult':
-      return traitOccurrenceId(address.selection);
+      return traitMutationOccurrenceId(address.selection);
     case 'traitOffer':
     case 'acquisitionRole':
     case 'levelResolution':
-      return traitOccurrenceId(address.owner);
     case 'steadyGrowthOutcome':
     case 'transcendentEmbryoOutcome':
-      return traitOccurrenceId(address.owner);
+      return traitMutationOccurrenceId(address.owner);
     case 'traitAcquisitionTarget':
     case 'circeResolution':
     case 'echoPomTarget':
@@ -862,20 +957,19 @@ function traitOccurrenceId(address: SemanticAddress): string | undefined {
     case 'echoLastRunBoon':
     case 'echoLastReward':
     case 'allTogetherSet':
-      return traitOccurrenceId(address.trait);
+      return traitMutationOccurrenceId(address.trait);
     case 'encounterPhase':
       return address.owner.occurrenceId;
     case 'nemesisRandomEvent':
-      return traitOccurrenceId(address.encounter);
+      return traitMutationOccurrenceId(address.encounter);
     default:
       return undefined;
   }
 }
 
 function sameTraitOccurrence(left: SemanticAddress, right: SemanticAddress): boolean {
-  const leftOccurrence = traitOccurrenceId(left);
-  const rightOccurrence = traitOccurrenceId(right);
-  return leftOccurrence !== undefined && leftOccurrence === rightOccurrence;
+  const leftOccurrence = traitMutationOccurrenceId(left);
+  return leftOccurrence !== undefined && leftOccurrence === traitMutationOccurrenceId(right);
 }
 
 export interface EncounterTraitOfferSettlement {
@@ -886,16 +980,18 @@ export interface EncounterTraitOfferSettlement {
   readonly blockedChild?: ReachedTraitChildCheckpoint;
   /** Exact invalid outer-offer contact retained independently of later branch survival. */
   readonly candidateContact?: ReachedTraitOfferCandidateContact;
+  /** Whether this screen settled completely and rebuilt the room's unopened loot. */
+  readonly screenCompleted: boolean;
 }
 
 function withBoonRarityFacts(
   catalog: Catalog,
-  branch: RewardBranchState,
+  generation: SimulationState,
   source: ResolvedTraitOfferSource,
 ): ResolvedTraitOfferSource {
   return source.resolvedProviderKey === undefined
     ? source
-    : resolveTraitOfferSource(catalog, branch.state, source.resolvedProviderKey, source);
+    : resolveTraitOfferSource(catalog, generation, source.resolvedProviderKey, source);
 }
 
 /** Settles one encounter-local trait offer and returns its exact child checkpoint when blocked. */
@@ -943,10 +1039,11 @@ export function settleEncounterTraitOffer(
       findingChronology,
     );
     mergeTraitSettlementFindings(localFindings, settlement.findingEntries);
-    return complete(settlement);
+    return complete({ ...settlement, screenCompleted: false });
   }
   let blockedChild: EncounterTraitOfferSettlement['blockedChild'];
   let candidateContact: EncounterTraitOfferSettlement['candidateContact'];
+  let completion: TraitOfferScreenCompletion | undefined;
   const settledBranch = ((): RewardBranchState => {
     if (offer.kind !== 'traits') {
       const settlement = applyTraitOfferForAcquisition(
@@ -964,6 +1061,7 @@ export function settleEncounterTraitOffer(
       );
       mergeTraitSettlementFindings(localFindings, settlement.findingEntries);
       candidateContact = settlement.candidateContact;
+      completion = settlement.completion;
       return settlement.branch;
     }
     const selected = offer.options[optionIndex(offer.selectedOptionKey)];
@@ -996,6 +1094,7 @@ export function settleEncounterTraitOffer(
     );
     mergeTraitSettlementFindings(provisionalFindings, appliedSettlement.findingEntries);
     candidateContact = appliedSettlement.candidateContact;
+    completion = appliedSettlement.completion;
     const applied = appliedSettlement.branch;
     blockedChild ??= appliedSettlement.blockedChild;
     const rejectCirce = (code: TraitFindingCode, detail?: string): RewardBranchState => {
@@ -1157,10 +1256,12 @@ export function settleEncounterTraitOffer(
       acquisitionOrdinal,
     );
   })();
+  const published = blockedChild === undefined ? completion : undefined;
   return complete({
-    branch: settledBranch,
+    branch: publishTraitOfferScreenCompletion(settledBranch, published),
     ...(blockedChild === undefined ? {} : { blockedChild }),
     ...(candidateContact === undefined ? {} : { candidateContact }),
+    screenCompleted: published !== undefined,
   });
 }
 

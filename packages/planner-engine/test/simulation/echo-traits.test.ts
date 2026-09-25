@@ -68,7 +68,11 @@ import {
 } from '../../src/simulation/traits';
 import { initializeTestRewardBranches } from '../support/arcana-fear';
 import { createKeepsakeState } from '../../src/simulation/keepsakes/state';
-import { traitFrontierState, withSettledSpellDrop } from '../support/simulation-state';
+import {
+  traitFrontierState,
+  withSettledSpellDrop,
+  openTimeTraitOfferContexts,
+} from '../support/simulation-state';
 
 type JsonRecord = Record<string, unknown>;
 
@@ -393,17 +397,19 @@ describe('Echo Gate A direct choices', () => {
     ]);
     const candidateArtifacts = createTraitOfferCandidateArtifacts(
       catalog,
-      new Map([
-        [
-          semanticAddressKey(echoOwner),
+      openTimeTraitOfferContexts(
+        new Map([
           [
-            Object.freeze({
-              state: traitFrontierState(createTraitHistoryState()),
-              source: Object.freeze({ resolvedProviderKey: 'Echo' }),
-            }),
+            semanticAddressKey(echoOwner),
+            [
+              Object.freeze({
+                state: traitFrontierState(createTraitHistoryState()),
+                source: Object.freeze({ resolvedProviderKey: 'Echo' }),
+              }),
+            ],
           ],
-        ],
-      ]),
+        ]),
+      ),
     );
     expect(
       (['option1', 'option2', 'option3'] as const).map((optionKey) =>
@@ -431,17 +437,19 @@ describe('Echo Gate A direct choices', () => {
     ]);
     const candidateArtifacts = createTraitOfferCandidateArtifacts(
       catalog,
-      new Map([
-        [
-          semanticAddressKey(echoOwner),
+      openTimeTraitOfferContexts(
+        new Map([
           [
-            Object.freeze({
-              state: traitFrontierState(createTraitHistoryState()),
-              source: Object.freeze({ resolvedProviderKey: 'Echo' }),
-            }),
+            semanticAddressKey(echoOwner),
+            [
+              Object.freeze({
+                state: traitFrontierState(createTraitHistoryState()),
+                source: Object.freeze({ resolvedProviderKey: 'Echo' }),
+              }),
+            ],
           ],
-        ],
-      ]),
+        ]),
+      ),
     );
     const survive = evaluateTraitOfferFocusedOptionCandidate(
       catalog,
@@ -466,17 +474,19 @@ describe('Echo Gate A direct choices', () => {
     ]);
     const candidateArtifacts = createTraitOfferCandidateArtifacts(
       catalog,
-      new Map([
-        [
-          semanticAddressKey(echoOwner),
+      openTimeTraitOfferContexts(
+        new Map([
           [
-            Object.freeze({
-              state: traitFrontierState(createTraitHistoryState()),
-              source: Object.freeze({ resolvedProviderKey: 'Echo' }),
-            }),
+            semanticAddressKey(echoOwner),
+            [
+              Object.freeze({
+                state: traitFrontierState(createTraitHistoryState()),
+                source: Object.freeze({ resolvedProviderKey: 'Echo' }),
+              }),
+            ],
           ],
-        ],
-      ]),
+        ]),
+      ),
     );
     expect(
       evaluateEchoPomTargetDomain(catalog, project, evaluation, candidateArtifacts, {
@@ -645,17 +655,19 @@ describe('Echo Gate A direct choices', () => {
     ]);
     const capability = createTraitOfferCandidateArtifacts(
       catalog,
-      new Map([
-        [
-          semanticAddressKey(echoOwner),
+      openTimeTraitOfferContexts(
+        new Map([
           [
-            Object.freeze({
-              state: traitFrontierState(history),
-              source: Object.freeze({ resolvedProviderKey: 'Echo' }),
-            }),
+            semanticAddressKey(echoOwner),
+            [
+              Object.freeze({
+                state: traitFrontierState(history),
+                source: Object.freeze({ resolvedProviderKey: 'Echo' }),
+              }),
+            ],
           ],
-        ],
-      ]),
+        ]),
+      ),
     ).at(echoOwner);
     expect(capability?.echoPomTargets(offer, 'option1')).toEqual([
       ['ApolloWeaponBoon', 'ZeusWeaponBoon'],
@@ -901,17 +913,19 @@ describe('Echo Gate B Boon Boon Boon', () => {
     );
     const capability = createTraitOfferCandidateArtifacts(
       catalog,
-      new Map([
-        [
-          semanticAddressKey(echoOwner),
+      openTimeTraitOfferContexts(
+        new Map([
           [
-            Object.freeze({
-              state: traitFrontierState(history),
-              source: Object.freeze({ resolvedProviderKey: 'Echo' }),
-            }),
+            semanticAddressKey(echoOwner),
+            [
+              Object.freeze({
+                state: traitFrontierState(history),
+                source: Object.freeze({ resolvedProviderKey: 'Echo' }),
+              }),
+            ],
           ],
-        ],
-      ]),
+        ]),
+      ),
     ).at(echoOwner);
     const firstAthena = capability
       ?.echoLastRunBoon(echoBoonOffer(child), 'option1')[0]
@@ -927,17 +941,19 @@ describe('Echo Gate B Boon Boon Boon', () => {
     expect(uninvestedTaskForce).toMatchObject({ assessment: { legal: false } });
     const settledCapability = createTraitOfferCandidateArtifacts(
       catalog,
-      new Map([
-        [
-          semanticAddressKey(echoOwner),
+      openTimeTraitOfferContexts(
+        new Map([
           [
-            Object.freeze({
-              state: withSettledSpellDrop(traitFrontierState(history)),
-              source: Object.freeze({ resolvedProviderKey: 'Echo' }),
-            }),
+            semanticAddressKey(echoOwner),
+            [
+              Object.freeze({
+                state: withSettledSpellDrop(traitFrontierState(history)),
+                source: Object.freeze({ resolvedProviderKey: 'Echo' }),
+              }),
+            ],
           ],
-        ],
-      ]),
+        ]),
+      ),
     ).at(echoOwner);
     expect(
       settledCapability
@@ -1003,17 +1019,19 @@ describe('Echo Gate B Boon Boon Boon', () => {
     );
     const artifacts = createTraitOfferCandidateArtifacts(
       catalog,
-      new Map([
-        [
-          semanticAddressKey(echoOwner),
+      openTimeTraitOfferContexts(
+        new Map([
           [
-            Object.freeze({
-              state: traitFrontierState(history),
-              source: Object.freeze({ resolvedProviderKey: 'Echo' }),
-            }),
+            semanticAddressKey(echoOwner),
+            [
+              Object.freeze({
+                state: traitFrontierState(history),
+                source: Object.freeze({ resolvedProviderKey: 'Echo' }),
+              }),
+            ],
           ],
-        ],
-      ]),
+        ]),
+      ),
     );
     const domain = evaluateEchoLastRunBoonDomain(
       catalog,
@@ -1122,29 +1140,31 @@ describe('Echo Gate B Boon Boon Boon', () => {
     const project = completeGoldenFGHProject();
     const artifacts = createTraitOfferCandidateArtifacts(
       catalog,
-      new Map([
-        [
-          semanticAddressKey(echoOwner),
+      openTimeTraitOfferContexts(
+        new Map([
           [
-            Object.freeze({
-              state: traitFrontierState(createTraitHistoryState()),
-              source: Object.freeze({ resolvedProviderKey: 'Echo' }),
-            }),
-            Object.freeze({
-              state: traitFrontierState(
-                historyFromTraits([
-                  {
-                    giverKey: 'Aphrodite',
-                    traitKey: 'AphroditeWeaponBoon',
-                    rarity: 'Common',
-                  },
-                ]),
-              ),
-              source: Object.freeze({ resolvedProviderKey: 'Echo' }),
-            }),
+            semanticAddressKey(echoOwner),
+            [
+              Object.freeze({
+                state: traitFrontierState(createTraitHistoryState()),
+                source: Object.freeze({ resolvedProviderKey: 'Echo' }),
+              }),
+              Object.freeze({
+                state: traitFrontierState(
+                  historyFromTraits([
+                    {
+                      giverKey: 'Aphrodite',
+                      traitKey: 'AphroditeWeaponBoon',
+                      rarity: 'Common',
+                    },
+                  ]),
+                ),
+                source: Object.freeze({ resolvedProviderKey: 'Echo' }),
+              }),
+            ],
           ],
-        ],
-      ]),
+        ]),
+      ),
     );
     const domain = evaluateEchoLastRunBoonDomain(
       catalog,
@@ -1191,21 +1211,23 @@ describe('Echo Gate B Boon Boon Boon', () => {
     );
     const artifacts = createTraitOfferCandidateArtifacts(
       catalog,
-      new Map([
-        [
-          semanticAddressKey(echoOwner),
+      openTimeTraitOfferContexts(
+        new Map([
           [
-            Object.freeze({
-              state: traitFrontierState(ordinary),
-              source: Object.freeze({ resolvedProviderKey: 'Echo' }),
-            }),
-            Object.freeze({
-              state: traitFrontierState(floored),
-              source: Object.freeze({ resolvedProviderKey: 'Echo' }),
-            }),
+            semanticAddressKey(echoOwner),
+            [
+              Object.freeze({
+                state: traitFrontierState(ordinary),
+                source: Object.freeze({ resolvedProviderKey: 'Echo' }),
+              }),
+              Object.freeze({
+                state: traitFrontierState(floored),
+                source: Object.freeze({ resolvedProviderKey: 'Echo' }),
+              }),
+            ],
           ],
-        ],
-      ]),
+        ]),
+      ),
     );
     const domain = evaluateEchoLastRunBoonDomain(
       catalog,
@@ -1454,17 +1476,19 @@ describe('Echo Gate B Boon Boon Boon', () => {
     ]);
     const capability = createTraitOfferCandidateArtifacts(
       catalog,
-      new Map([
-        [
-          semanticAddressKey(echoOwner),
+      openTimeTraitOfferContexts(
+        new Map([
           [
-            Object.freeze({
-              state: traitFrontierState(history),
-              source: Object.freeze({ resolvedProviderKey: 'Echo' }),
-            }),
+            semanticAddressKey(echoOwner),
+            [
+              Object.freeze({
+                state: traitFrontierState(history),
+                source: Object.freeze({ resolvedProviderKey: 'Echo' }),
+              }),
+            ],
           ],
-        ],
-      ]),
+        ]),
+      ),
     ).at(echoOwner);
     const offer = echoBoonOffer(
       echoBoonChild(
@@ -1515,17 +1539,19 @@ describe('Echo Gate B Boon Boon Boon', () => {
     ]);
     const artifacts = createTraitOfferCandidateArtifacts(
       catalog,
-      new Map([
-        [
-          semanticAddressKey(echoOwner),
+      openTimeTraitOfferContexts(
+        new Map([
           [
-            Object.freeze({
-              state: traitFrontierState(history),
-              source: Object.freeze({ resolvedProviderKey: 'Echo' }),
-            }),
+            semanticAddressKey(echoOwner),
+            [
+              Object.freeze({
+                state: traitFrontierState(history),
+                source: Object.freeze({ resolvedProviderKey: 'Echo' }),
+              }),
+            ],
           ],
-        ],
-      ]),
+        ]),
+      ),
     );
     const allTogether = evaluateEchoLastRunBoonDomain(
       catalog,
@@ -1561,17 +1587,19 @@ describe('Echo Gate B Boon Boon Boon', () => {
     ]);
     const naturalArtifacts = createTraitOfferCandidateArtifacts(
       catalog,
-      new Map([
-        [
-          semanticAddressKey(echoOwner),
+      openTimeTraitOfferContexts(
+        new Map([
           [
-            Object.freeze({
-              state: traitFrontierState(naturalHistory),
-              source: Object.freeze({ resolvedProviderKey: 'Echo' }),
-            }),
+            semanticAddressKey(echoOwner),
+            [
+              Object.freeze({
+                state: traitFrontierState(naturalHistory),
+                source: Object.freeze({ resolvedProviderKey: 'Echo' }),
+              }),
+            ],
           ],
-        ],
-      ]),
+        ]),
+      ),
     );
     const natural = evaluateEchoLastRunBoonDomain(
       catalog,

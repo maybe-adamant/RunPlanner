@@ -19,6 +19,7 @@ import { createBiomeRewardFacts } from '../../facts';
 import { rewardFindingChronologyForRoom } from '../finding-chronology';
 import { addRewardFinding, mergeRewardFindingEmissions, rewardFinding } from '../../findings';
 import type { BiomeRewardSnapshot } from '../evaluation-contract';
+import { spawnTraitOffers } from './spawned-trait-offers';
 import { BiomeRewardSimulationContractError } from '../biome-contract';
 import type { RewardBranchState } from '../../branch-primitives';
 import type { RewardProducerFrontier } from '../../producer-frontiers';
@@ -224,7 +225,25 @@ export function applyShopOfferPointMaterialization(
           },
         });
   if (inventory !== undefined) mergeRewardFindingEmissions(findings, inventory.findingEmissions);
-  const nextBranches = inventory?.branches ?? Object.freeze([]);
+  // World Shop loot is spawned at room entry with its options built.
+  const nextBranches = Object.freeze(
+    (inventory?.branches ?? []).map((branch) => {
+      const contract =
+        branch.state.pendingShops[semanticAddressKey(room.origin)]?.infernalContractOffer;
+      return spawnTraitOffers(
+        catalog,
+        branch,
+        [...(shopEntry?.offers ?? []), ...(contract === undefined ? [] : [contract])].map((offer) =>
+          Object.freeze({
+            origin: offer.offerOrigin,
+            offer: offer.offer,
+            traitOffersByAcquisitionRole: offer.traitOffersByAcquisitionRole,
+            levelResolutionsByAcquisitionRole: offer.levelResolutionsByAcquisitionRole,
+          }),
+        ),
+      );
+    }),
+  );
   if ((shopEntry?.unresolvedOffers.length ?? 0) > 0) {
     for (const unresolved of shopEntry!.unresolvedOffers) {
       addRewardFinding(

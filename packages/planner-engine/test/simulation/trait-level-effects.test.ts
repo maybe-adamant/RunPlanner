@@ -38,6 +38,7 @@ import { applyEncounterEndEffectsTransition } from '../../src/simulation/rewards
 import type { CanonicalAuthoredRoom } from '../../src/simulation/materialization';
 import type { RewardBranchState } from '../../src/simulation/rewards/branch-primitives';
 import { testRewardBranchesAtOrdinal, traitFrontierState } from '../support/simulation-state';
+import { createTraitOfferCandidateArtifacts } from '../../src/simulation/candidates/trait-offer/capability';
 
 const owner = { kind: 'project' } as SemanticAddress;
 
@@ -1295,4 +1296,49 @@ describe('targeted selected-trait child chronology', () => {
       }
     },
   );
+});
+
+describe('Latest Model targets at a waiting screen', () => {
+  it('offers only Hammers still held when the screen opens, not those held when it was built', () => {
+    const built = historyFrom([
+      { giverKey: 'WeaponUpgrade', traitKey: 'StaffDoubleAttackTrait' },
+      { giverKey: 'WeaponUpgrade', traitKey: 'StaffDashAttackTrait' },
+    ]);
+    // A Hammer that expires between spawn and open leaves only one target.
+    const current = historyFrom([
+      { giverKey: 'WeaponUpgrade', traitKey: 'StaffDoubleAttackTrait' },
+    ]);
+    const address = createTraitOfferAddress(
+      createIncomingRewardAddress(createBiomeAddress('Underworld', 'F'), goldenFStartId),
+      'source',
+    );
+    const value: AuthoredTraitOffer = Object.freeze({
+      kind: 'traits',
+      giverKey: 'Icarus',
+      options: Object.freeze([
+        { traitKey: 'UpgradeHammerBoon' },
+        { traitKey: 'OmegaExplodeBoon' },
+        { traitKey: 'CastHazardBoon' },
+      ]) as Extract<AuthoredTraitOffer, { kind: 'traits' }>['options'],
+      selectedOptionKey: 'option1',
+    });
+    const capability = createTraitOfferCandidateArtifacts(
+      catalog,
+      new Map([
+        [
+          semanticAddressKey(address),
+          [
+            Object.freeze({
+              state: traitFrontierState(current, { acquisitionOrdinal: 1 }),
+              generationState: traitFrontierState(built, { acquisitionOrdinal: 1 }),
+              source: Object.freeze({}),
+            }),
+          ],
+        ],
+      ]),
+    ).at(address);
+    expect(capability?.targetedAcquisitionTargets(value, 'option1')).toEqual([
+      expect.objectContaining({ targetTraitKeys: ['StaffDoubleAttackTrait'] }),
+    ]);
+  });
 });
