@@ -21,7 +21,6 @@ export {
   assessInfiniteRoster,
   type InfiniteRosterAssessment,
   type InfiniteRosterCandidateCapability,
-  type InfiniteRosterIssue,
 } from './infinite-roster';
 export type {
   EncounterCandidateExclusion,

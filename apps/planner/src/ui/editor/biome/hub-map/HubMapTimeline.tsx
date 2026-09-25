@@ -285,7 +285,7 @@ export function HubMapTimeline({
             />
           </div>
         }
-        title="Ephyra Hub visit order"
+        title="Ephyra Hub timeline"
         viewportOverlay={
           <div className="hub-map-corner-actions">
             {resetVisitsControl}

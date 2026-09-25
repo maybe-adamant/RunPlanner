@@ -2,9 +2,10 @@
 
 ## Status
 
-Pending live acceptance, 2026-09-24. Automated closure of the encounter budget
-correction and one-time native admission delivery (execution protocol 46,
-authored schema 87) preceded in-game verification. Native-source probes and
+Pending live acceptance, 2026-09-25. Automated closure of the encounter budget
+correction, one-time native admission, Arachne cocoon count, Anomaly roster and
+Hub fountain deliveries (execution protocol 47, authored schema 88) preceded
+in-game verification. Native-source probes and
 executor tests do not establish these obligations; do not record an in-game
 pass from a source probe.
 
@@ -31,3 +32,23 @@ is confirmed, or when the owner explicitly waives the remainder.
       encounter mismatch and stays synchronized through the fountain, Purging
       Pool and the exit into G. Its Chronos conversation remains conditional on
       game progression.
+- [ ] An F and a G Arachne combat customized to the declared minimum (8) and
+      maximum (14) cocoon counts places that many cocoons, or reports an
+      `arachne-cocoon-count` `placement-shortfall` diagnostic. Breaking the
+      native reward cocoon still spawns the room reward and releases the
+      encounter.
+- [ ] A customized Anomaly installs its ordered roster with a `roster-installed`
+      diagnostic. The same roster keeps replenishing until capture success, and
+      again in a separate run until capture failure; neither outcome produces a
+      `roster-not-realized` or `roster-admission` diagnostic, and native cleanup
+      removes the remaining enemies.
+- [ ] With an Aromatic Phial target, a Hub fountain placed first, one placed
+      between two visits, and one placed after the last visit each guide the
+      use at that point and survive the intervening Hub returns. The forced
+      rarity upgrade is visible on the next room's offer.
+- [ ] Leaving the Hub at the fountain's due point without using it reports an
+      `obligation:hubDeparture` mismatch. Resyncing after a fountain use this
+      session did not observe reports only the `hub-fountain` `unobserved`
+      diagnostic and continues.
+- [ ] The Hub map is readable at the fountain and each visit, and each guided
+      marker targets the correct fountain or Soul Pylon.

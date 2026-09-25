@@ -218,19 +218,18 @@ computed from only the six visited entries.
 
 ### Hub fountain
 
-The Hub's `HealthFountainN` (`RoomDataN.lua:1605`, `ObstacleDataN.lua:849`)
-is available from Hub entry and becomes a required departure object once six
-Soul Pylons have spawned (`EventLogic.lua:1832`); its used state survives Hub
-returns. `UseHealthFountain` (`InteractLogic.lua:741`) records the use and
-applies Aromatic Phial there. Use is therefore mandatory before leaving the
-Hub, but its position among the visits is flexible.
+The Hub fountain must be used before leaving the Hub, but its position among
+the visits is flexible; the
+[room action audit](../audits/rooms-and-routes/ROOM_ACTION_ORDER_GAME_DATA_AUDIT.md#fountains-persistent-hub-state-and-postboss-cleanup)
+owns the source facts.
 
 The planner models one Hub-owned fountain action in the same action list:
 initially, after a completed visit and its Hub return, or after the sixth visit
 before the Preboss handoff. It settles in the Hub before the next room's entry,
 reusing ordinary fountain Phial assessment, consumption, rarity mutation and
-offer invalidation. It neither regenerates the board, replays Hub entry nor
-advances counters. Side-room excursions stay inside their visit.
+offer invalidation. Its chronology follows
+[Ephyra restoration](../design/ROOM_LIFECYCLE_MODEL.md#ephyra-restoration).
+Side-room excursions stay inside their visit.
 
 ### Main targets, pylons, and side rooms
 

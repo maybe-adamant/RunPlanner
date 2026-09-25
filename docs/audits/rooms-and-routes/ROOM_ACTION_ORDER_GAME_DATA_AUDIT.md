@@ -528,13 +528,22 @@ doors. `H_Bridge01` has a start hook for `HealthFountainH`, but the planner's
 modeled Echo Bridge realization does not expose a fountain and is not part of
 this required-fountain set.
 
-`HealthFountainN` normally sets `BlockExitUntilUsed = false` because the
-Ephyra Hub persists across visits. Once the sixth Soul Pylon is present,
-`HealthFountainNExitCheck` makes an unused fountain required at the completed
-Hub-exit frontier, and `HealthFountainNRestoreState` preserves its used state
-on restoration. It may be used on an earlier visit, becomes mandatory only at
-the completed-Hub boundary, and must not replay after a side-room return. N
-Hub is therefore not an ordinary one-visit fountain chronology.
+The Ephyra Hub installs object 664734 as `HealthFountainN` with
+`RecordObjectState = true` (`RoomDataN.lua:1605`). `HealthFountainN` sets
+`BlockExitUntilUsed = false` because the Hub persists across visits
+(`ObstacleDataN.lua:849`). `UseHealthFountain` (`InteractLogic.lua:741`)
+records `ObjectStates[664734].UseableOff`, removes the fountain from the room's
+required objects, applies fountain traits including Aromatic Phial, and heals.
+Once the sixth Soul Pylon is present, `HealthFountainNExitCheck`
+(`EventLogic.lua:1832`) reads that recorded state and makes an unused fountain
+required at the completed Hub-exit frontier; `HealthFountainNRestoreState`
+(`EventLogic.lua:1839`) restores its used presentation. It may be used on an
+earlier visit, becomes mandatory only at the completed-Hub boundary, and does
+not replay after a side-room return.
+
+Planner disposition: one Hub-owned fountain action ordered among the room
+visits; see the [Hub fountain](../../biomes/N_GAME_RULES.md#hub-fountain)
+model.
 
 The nonfinal Postboss interaction set is:
 
