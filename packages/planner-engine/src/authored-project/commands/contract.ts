@@ -109,7 +109,7 @@ function commandContractAddress(
     case 'OpenHubSlot':
     case 'CloseHubSlot':
       return command.slot;
-    case 'ReplaceHubVisitOrder':
+    case 'ReplaceHubActionOrder':
       return command.hub;
     case 'SetLocalVisitGeneration':
       return command.slot;

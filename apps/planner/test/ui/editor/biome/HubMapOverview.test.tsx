@@ -30,7 +30,7 @@ describe('HubMapOverview', () => {
       }
       await view.user.click(reset);
       await waitFor(() => expect(nHubState(view.application).decision.openTargets).toEqual([]));
-      expect(nHubState(view.application).decision.visitOrder).toEqual([]);
+      expect(nHubState(view.application).decision.actions).toEqual([]);
       expect(screen.getByRole('region', { name: 'Ephyra Hub' })).toBeTruthy();
       expect(reset).toHaveProperty('disabled', true);
       expect(view.application.store.getState().projectWorkspace.history!.past).toHaveLength(

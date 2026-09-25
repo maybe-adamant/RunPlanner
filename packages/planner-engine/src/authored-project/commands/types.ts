@@ -39,6 +39,7 @@ import type {
 import type {
   AuthoredFieldValue,
   ExitSelection,
+  HubAction,
   OccurrenceId,
   RoomActionReference,
   StygianWellGenerationKey,
@@ -217,9 +218,9 @@ export type TopologyCommand =
     }
   | { readonly kind: 'CloseHubSlot'; readonly slot: HubSlotAddress }
   | {
-      readonly kind: 'ReplaceHubVisitOrder';
+      readonly kind: 'ReplaceHubActionOrder';
       readonly hub: HubDecisionAddress;
-      readonly hubSlotKeys: readonly string[];
+      readonly actions: readonly HubAction[];
     }
   | LocalVisitCommand
   | {

@@ -16,6 +16,7 @@ import {
 
 import { createCompleteNProject } from './support/complete-n-project';
 import { fProject, nBiome } from './support/configured-projects';
+import { hubVisitActions } from '@run-planner/test-fixtures/shared';
 
 describe('authored project history', () => {
   it('records effective semantic edits, preserves no-op identity, and restores exact snapshots', () => {
@@ -83,9 +84,16 @@ describe('authored project history', () => {
   it('records one aggregate Hub order replacement as one undoable topology edit', () => {
     const initial = createProjectHistory(createCompleteNProject());
     const ordered = applyProjectHistoryCommand(initial, catalog, {
-      kind: 'ReplaceHubVisitOrder',
+      kind: 'ReplaceHubActionOrder',
       hub: createHubDecisionAddress(nBiome, 'hub'),
-      hubSlotKeys: ['combat06', 'combat05', 'combat04', 'combat03', 'combat02', 'combat01'],
+      actions: hubVisitActions([
+        'combat06',
+        'combat05',
+        'combat04',
+        'combat03',
+        'combat02',
+        'combat01',
+      ]),
     });
 
     expect(ordered.past).toEqual([initial.present]);

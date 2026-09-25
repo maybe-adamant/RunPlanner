@@ -4,7 +4,7 @@ import type {
   CanonicalHubDecision,
   CanonicalLocalVisitRoom,
 } from '../../simulation/materialization';
-import type { ExecutionOverview } from '../model';
+import type { ExecutionHubFountainUse, ExecutionOverview } from '../model';
 import { ExecutionCompilerError as CompilerError } from '../assembler-errors';
 import { executionReward } from './overview';
 
@@ -50,6 +50,24 @@ export function hubOverview(
       }),
     ),
     finalHandoff: reference(final),
+    // A complete canonical Hub holds exactly its declaration's required visits.
+    requiredVisitCount: hub.visits.length,
+    fountain: hubFountainUse(hub),
+  });
+}
+
+function hubFountainUse(hub: CanonicalHubDecision): ExecutionHubFountainUse {
+  const fountain = hub.fountain;
+  if (fountain === undefined)
+    throw new CompilerError('executionCoverageMissing', `${hub.room.gameName} lacks fountain use`);
+  return Object.freeze({
+    kind: 'fountainUse',
+    owner: semanticAddressKey(fountain.origin),
+    interactionKey: 'fountain',
+    precedingVisitCount: fountain.precedingVisitCount,
+    ...(fountain.fountainRarityResult === undefined
+      ? {}
+      : { aromaticPhialTarget: fountain.fountainRarityResult.targetTraitKey }),
   });
 }
 

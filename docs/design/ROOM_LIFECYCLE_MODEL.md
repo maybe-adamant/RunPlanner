@@ -119,6 +119,9 @@ carry the persisted order, immediate equip result, findings, and history.
 These interactions emit exact ranked-action events. `fountainUsed` carries a
 `RoomActionSemanticAddress`: an ordinary Reprieve event is owned by that
 occurrence, while a Postboss event is owned by its occurrence action address.
+The Hub fountain use is the one exception outside a room timeline: its
+`fountainUsed` event is owned by the `HubFountainAddress` and emitted from the
+Hub room, as described under Ephyra restoration.
 `keepsakeRackUsed` carries the same `RoomActionSemanticAddress` and is emitted only
 by the active Postboss rack action. The event owners are the same semantic
 owners consumed by the Room Action roster and history fold; neither event is
@@ -198,6 +201,13 @@ state without replaying room entry, encounters, or earlier local actions. The
 planner therefore treats Hub/main/side traversal and restoration as topology
 between distinct entered-occurrence fragments, not additional `roomEntered`,
 `encounterStart`, or `encounterEnd` events inside one room timeline.
+
+The Hub action order places one `fountainUsed` event in the Hub: after Hub
+entry and board generation, after a completed visit's Hub return (including
+its side-room excursions), or after the sixth return before the Preboss
+handoff generation. The next room's entry therefore observes its rarity and
+Phial effects. The use replays no Hub entry or board generation and advances no
+counter.
 
 ### Rule for adding or moving a boundary
 

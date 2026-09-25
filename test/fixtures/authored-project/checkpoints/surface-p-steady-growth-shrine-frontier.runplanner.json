@@ -1307,13 +1307,34 @@
                   "occurrenceId": "5cabf94d-51d4-4ad0-9f31-75832cfd5e1e"
                 }
               ],
-              "visitOrder": [
-                "story",
-                "combat15",
-                "combat14",
-                "combat11",
-                "combat10",
-                "combat23"
+              "actions": [
+                {
+                  "kind": "useFountain"
+                },
+                {
+                  "kind": "roomVisit",
+                  "hubSlotKey": "story"
+                },
+                {
+                  "kind": "roomVisit",
+                  "hubSlotKey": "combat15"
+                },
+                {
+                  "kind": "roomVisit",
+                  "hubSlotKey": "combat14"
+                },
+                {
+                  "kind": "roomVisit",
+                  "hubSlotKey": "combat11"
+                },
+                {
+                  "kind": "roomVisit",
+                  "hubSlotKey": "combat10"
+                },
+                {
+                  "kind": "roomVisit",
+                  "hubSlotKey": "combat23"
+                }
               ]
             },
             {

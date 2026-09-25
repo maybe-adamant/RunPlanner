@@ -16,7 +16,11 @@ import type {
   RoomOccurrence,
   StygianWellGenerationKey,
 } from './model';
-import { exitDecisionForSource, selectedExitContinuation } from './topology/query';
+import {
+  exitDecisionForSource,
+  hubVisitSlotKeys,
+  selectedExitContinuation,
+} from './topology/query';
 import { applyRouteDetourCommand } from './commands/route-detours';
 import type { LocatedBiome } from './commands/contract';
 
@@ -100,7 +104,7 @@ function reachedBiome(plan: AuthoredBiomePlan, catalog: Catalog): ReachedBiome {
         candidate.kind === 'hub' && candidate.source.occurrenceId === current!.occurrenceId,
     );
     if (hub?.kind === 'hub') {
-      for (const slotKey of hub.visitOrder) {
+      for (const slotKey of hubVisitSlotKeys(hub)) {
         const target = hub.openTargets.find((candidate) => candidate.hubSlotKey === slotKey);
         const visit =
           target === undefined ? undefined : occurrenceById(topology, target.occurrenceId);

@@ -8,6 +8,7 @@ import type {
   BiomeFieldAddress,
   ExitDecisionAddress,
   ExitDecisionSourceAddress,
+  HubAction,
   HubDecisionAddress,
   HubOpenSetAddress,
   HubVisitAddress,
@@ -636,24 +637,25 @@ export type WorkspaceHubSlotInteraction =
       readonly selected: true;
     };
 
-/** One lazily-evaluated complete Hub traversal proposal. */
-export interface WorkspaceHubVisitOrderProposal extends WorkspaceCandidateInteraction<
-  readonly string[]
+/** One lazily-evaluated complete Hub action-order proposal. */
+export interface WorkspaceHubActionOrderProposal extends WorkspaceCandidateInteraction<
+  readonly HubAction[]
 > {
   readonly intent: () => WorkspaceCommandIntent<
-    Extract<ProjectCommand, { readonly kind: 'ReplaceHubVisitOrder' }>
+    Extract<ProjectCommand, { readonly kind: 'ReplaceHubActionOrder' }>
   >;
 }
 
 /**
- * The Hub decision owns one aggregate traversal interaction. Room cards may
+ * The Hub decision owns one aggregate action-order interaction. Room cards may
  * request a complete proposed prefix, but individual rendered positions never
- * become command owners.
+ * become command owners. Room visits are a derived view of the same order.
  */
-export interface WorkspaceHubVisitOrderInteraction {
+export interface WorkspaceHubActionOrderInteraction {
   readonly key: string;
   readonly owner: HubDecisionAddress;
-  readonly proposalFor: (hubSlotKeys: readonly string[]) => WorkspaceHubVisitOrderProposal;
+  readonly proposalFor: (actions: readonly HubAction[]) => WorkspaceHubActionOrderProposal;
+  readonly selectedActions: readonly HubAction[];
   readonly selectedHubSlotKeys: readonly string[];
 }
 

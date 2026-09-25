@@ -25,6 +25,7 @@ import {
 import { loadSurfaceNOPQProject, nBiome } from '@run-planner/test-fixtures/surface';
 import { writeFileSync } from 'node:fs';
 import performanceSnapshotContract from './performance-snapshot-contract.json';
+import { hubVisitActions } from '@run-planner/test-fixtures/shared';
 
 export const performanceSnapshotFormat = performanceSnapshotContract.format;
 export const performanceSnapshotSampleCount = performanceSnapshotContract.sampleCount;
@@ -143,8 +144,15 @@ const routeDefinitions: Readonly<Record<PerformanceRoute, RouteDefinition>> = Ob
       application.store.dispatch(
         authoredProjectCommandDispatched({
           hub: createHubDecisionAddress(nBiome, 'hub'),
-          hubSlotKeys: ['combat02', 'combat01', 'combat03', 'combat05', 'combat09', 'combat10'],
-          kind: 'ReplaceHubVisitOrder',
+          actions: hubVisitActions([
+            'combat02',
+            'combat01',
+            'combat03',
+            'combat05',
+            'combat09',
+            'combat10',
+          ]),
+          kind: 'ReplaceHubActionOrder',
         }),
       );
     },

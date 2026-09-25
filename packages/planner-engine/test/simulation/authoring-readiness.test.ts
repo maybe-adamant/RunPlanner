@@ -53,7 +53,7 @@ import {
   goldenHBiome,
   createCompleteFGIxionChaosProject,
 } from '@run-planner/test-fixtures/underworld';
-import { authorLegalTraitOffers } from '@run-planner/test-fixtures/shared';
+import { authorLegalTraitOffers, hubVisitActions } from '@run-planner/test-fixtures/shared';
 import { compareOwnerLocations } from '../../src/simulation/progressive/finding-location';
 
 import {
@@ -607,9 +607,9 @@ describe('chronological authoring horizon', () => {
     const incompleteVisits = simulateProjectAssembly(
       catalog,
       applyProjectCommand(loadSurfaceNProject(), catalog, {
-        kind: 'ReplaceHubVisitOrder',
+        kind: 'ReplaceHubActionOrder',
         hub,
-        hubSlotKeys: nVisitSlotKeys.slice(0, 5),
+        actions: hubVisitActions(nVisitSlotKeys.slice(0, 5)),
       }),
     );
     expect(incompleteVisits.evaluation.authoringHorizon).toMatchObject({

@@ -154,6 +154,10 @@ export function resolveAuthoringBoundary(
       return ownerBiome;
     case 'keepsakeSelection':
       return address.owner === 'routeStart' ? ownerBiome : address.owner;
+    case 'fountainRarityOutcome':
+      if (address.action.kind === 'hubFountain')
+        return createHubDecisionAddress(ownerBiome, address.action.hubKey);
+      break;
   }
   const occurrence =
     occurrenceOwnerAddress(address) ?? occurrenceOwnerAddress(ownerOrigin(address));
@@ -174,6 +178,9 @@ function coarseLocation(location: OwnerLocation): OwnerLocation {
     ...(location.hubLocalLifecycleIndex === undefined
       ? {}
       : { hubLocalLifecycleIndex: location.hubLocalLifecycleIndex }),
+    ...(location.hubFountainPrecedingVisitCount === undefined
+      ? {}
+      : { hubFountainPrecedingVisitCount: location.hubFountainPrecedingVisitCount }),
   });
 }
 

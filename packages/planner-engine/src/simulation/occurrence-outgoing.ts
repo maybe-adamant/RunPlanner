@@ -25,6 +25,7 @@ import {
   additionalExitsForDecision,
   exitDecisionForSource,
   selectedExitContinuation,
+  hubVisitSlotKeys,
 } from '../authored-project/topology/query';
 import type { BiomeCompletenessResult } from './completeness';
 import type { SemanticFinding } from './model';
@@ -104,7 +105,7 @@ function selectedSpineOccurrenceIds(topology: BiomeTopology): ReadonlySet<Occurr
   }
   for (const decision of topology.decisions) {
     if (decision.kind === 'hub') {
-      for (const slotKey of decision.visitOrder) {
+      for (const slotKey of hubVisitSlotKeys(decision)) {
         const target = decision.openTargets.find((candidate) => candidate.hubSlotKey === slotKey);
         if (target !== undefined) entered.add(target.occurrenceId);
       }

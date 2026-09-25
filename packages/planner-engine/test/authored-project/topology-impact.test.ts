@@ -312,7 +312,7 @@ describe('topology removal impact', () => {
           hubKey: 'hub',
           source: { kind: 'occurrence' as const, occurrenceId: preHub },
           openTargets: [{ hubSlotKey: 'combat01', occurrenceId: hubSlot }],
-          visitOrder: [],
+          actions: [],
         },
         {
           kind: 'exit' as const,
@@ -432,7 +432,7 @@ describe('topology removal impact', () => {
           hubKey: 'hub',
           source: { kind: 'occurrence' as const, occurrenceId: root },
           openTargets: [{ hubSlotKey: 'combat01', occurrenceId: hubSlot }],
-          visitOrder: [],
+          actions: [],
         },
         {
           kind: 'exit' as const,
@@ -476,7 +476,7 @@ describe('topology removal impact', () => {
             { hubSlotKey: 'combat01', occurrenceId: hubSlot },
             { hubSlotKey: 'combat02', occurrenceId: retainedSlot },
           ],
-          visitOrder: ['combat01'],
+          actions: [{ kind: 'roomVisit' as const, hubSlotKey: 'combat01' }],
         },
         {
           kind: 'exit' as const,
@@ -547,7 +547,7 @@ describe('topology removal impact', () => {
           hubKey: 'hub',
           source: { kind: 'occurrence' as const, occurrenceId: child },
           openTargets: [],
-          visitOrder: [],
+          actions: [],
         },
         {
           kind: 'exit' as const,

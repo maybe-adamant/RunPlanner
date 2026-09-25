@@ -10,6 +10,7 @@ import {
   createExitSelectionAddress,
   createHubDecisionAddress,
   createHubVisitAddress,
+  createHubFountainAddress,
   type BiomeAddress,
   type ExitDecisionSourceAddress,
 } from '../../authored-project/addresses';
@@ -574,6 +575,19 @@ export function materializeBiomePrefix(
         }
         if (hubReadiness.kind !== 'ready') {
           fail(`${layout.progression.hubKey} Hub handoff lost its authored decision`);
+        }
+        // Six visits keep the authored handoff, but departure follows the fountain use.
+        if (hub.fountain === undefined) {
+          return prefix(
+            biome,
+            biomeState,
+            entryRoom,
+            decisions,
+            Object.freeze({
+              kind: 'hubFountain',
+              origin: createHubFountainAddress(biome, layout.progression.hubKey),
+            }),
+          );
         }
         const handoffSource: ExitDecisionSource = Object.freeze({
           kind: 'hubDecision',

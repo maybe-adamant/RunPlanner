@@ -78,13 +78,13 @@ export function HubDecisionWorkbench({
     throw new Error('The completed Hub frontier must expose its fixed Preboss handoff.');
   }
   const titleId = `hub-${domId(node.marker.focusKey)}`;
-  const visitOrderInteraction = requireWorkspaceInteraction(
-    interactions.hubVisitOrders,
+  const actionOrderInteraction = requireWorkspaceInteraction(
+    interactions.hubActionOrders,
     workspaceInteractionKey(node.owner),
   );
-  const resetVisitOrder = visitOrderInteraction.proposalFor([]);
-  const resetCandidates = useWorkspaceInteraction(resetVisitOrder);
-  const authoredVisitCount = visitOrderInteraction.selectedHubSlotKeys.length;
+  const resetActionOrder = actionOrderInteraction.proposalFor([]);
+  const resetCandidates = useWorkspaceInteraction(resetActionOrder);
+  const authoredVisitCount = actionOrderInteraction.selectedHubSlotKeys.length;
   const nextVisit = node.visits[authoredVisitCount];
   if (authoredVisitCount < node.requiredVisitCount && nextVisit === undefined) {
     throw new Error('An incomplete Hub visit order must expose its next visit marker.');
@@ -225,13 +225,13 @@ export function HubDecisionWorkbench({
       className="danger-action action-compact"
       disabled={
         hubTarget.inert ||
-        authoredVisitCount === 0 ||
+        actionOrderInteraction.selectedActions.length === 0 ||
         resetCandidates.pending ||
         (resetCandidates.result !== undefined && !candidateMayBeAuthored(resetCandidates.result[0]))
       }
       onClick={() => {
         const options = resetCandidates.result ?? resetCandidates.activate();
-        if (candidateMayBeAuthored(options?.[0])) executeIntent(resetVisitOrder.intent());
+        if (candidateMayBeAuthored(options?.[0])) executeIntent(resetActionOrder.intent());
       }}
       onFocus={() => resetCandidates.activate()}
       onPointerDown={() => resetCandidates.activate()}

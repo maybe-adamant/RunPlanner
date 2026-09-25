@@ -16,6 +16,7 @@ import {
   type AuthoredBiomePlan,
   type ProjectDocument,
   type RoomOccurrence,
+  hubVisitSlotKeys,
 } from '@run-planner/engine/authored-project';
 import type { Catalog, RoomDeclaration } from '@run-planner/engine/catalog-schema';
 import type { CountedRewardBinding } from '@run-planner/engine/reward-kernel';
@@ -133,7 +134,11 @@ function withIncompleteHubVisits(project: ProjectDocument): ProjectDocument {
                   decision.kind === 'hub'
                     ? Object.freeze({
                         ...decision,
-                        visitOrder: decision.visitOrder.slice(0, 5),
+                        actions: decision.actions.filter(
+                          (action) =>
+                            action.kind !== 'roomVisit' ||
+                            action.hubSlotKey !== hubVisitSlotKeys(decision)[5],
+                        ),
                       })
                     : decision,
                 ),

@@ -129,8 +129,9 @@ the selection among its normal exits.
 as H cage outcome, and target references. Its target keys are declaration-owned
 physical or semantic exit keys, never rendered indexes.
 
-`Hub Decision` owns N's persistent board: fixed-slot open references, ordered
-visits, and completion predicate. It does not own N Preboss room-local state.
+`Hub Decision` owns N's persistent board: fixed-slot open references, one
+ordered action list of room visits and the fountain use, that use's Phial
+outcome, and completion predicate. It does not own N Preboss room-local state.
 
 `Local Visit Decision` is parent-occurrence-owned topology for one declared N
 side-room group. It owns generated/not-generated slot membership and ordered
@@ -329,8 +330,11 @@ interface HubDecision {
   hubKey: string;
   source: { kind: 'occurrence'; occurrenceId: OccurrenceId };
   openTargets: readonly HubTargetReference[];
-  visitOrder: readonly string[];
+  actions: readonly HubAction[];
+  fountainRarityResult?: AuthoredFountainRarityResult;
 }
+
+type HubAction = { kind: 'roomVisit'; hubSlotKey: string } | { kind: 'useFountain' };
 ```
 
 An `ExitDecision` has at most one semantic source. Occurrence-sourced batches
@@ -498,18 +502,26 @@ staged `N_PreHub01` target at biome depth 1. After PreHub reaches depth 2,
 the PreHub occurrence as its source; `RemoveHubDecision` removes Hub-owned
 state and restores the exact envelope. The Hub declaration owns the fixed
 physical slot-to-room mapping, opening bounds and constraints, six distinct
-ordered visits, side-room policy, restores, and the dedicated completed-Hub
-handoff. An open slot creates one occurrence; its room identity is not
-replaceable. Open unvisited slots remain real offered leaves.
+ordered room visits, the one fountain use, side-room policy, restores, and the
+dedicated completed-Hub handoff. An open slot creates one occurrence; its room
+identity is not replaceable. Open unvisited slots remain real offered leaves.
 
-`ResetHubBoard` retains the Hub decision and its source while atomically clearing
-its open slots, visits, owned main/side rooms, and completed-Hub handoff subtree.
+The action list is a chronological prefix: at most six distinct open-slot
+visits and one fountain use, possibly empty. New Hubs start empty and decoding
+never infers a use. `ReplaceHubActionOrder` edits it by action identity; visit
+ordinals count room visits only. Reordering keeps the Phial outcome, while
+removing the fountain use removes it. `ResetHubBoard` retains the Hub decision
+and its source while atomically clearing its open slots, actions, fountain
+outcome, owned main/side rooms, and completed-Hub handoff subtree.
 Unlike `RemoveHubDecision`, it does not restore the preceding terminal envelope.
 Resetting an empty board is a no-op; Undo restores all cleared contents together.
 
 The completed-Hub batch is permitted only after the declared open-set and
-six-visit predicate holds. Its source is `{ kind: 'hubDecision', decisionKey: 'hub' }`, not
-a rendered visit index or synthetic completion source.
+six-visit predicate holds. Fountain placement is not part of that structural
+predicate: removing only the fountain use keeps the handoff and its downstream
+rooms, and completeness separately requires the use. Its source is
+`{ kind: 'hubDecision', decisionKey: 'hub' }`, not a rendered visit index or
+synthetic completion source.
 
 Each entered main occurrence may own a `LocalVisitDecision` whose generated
 targets are distinct side-room occurrences. Generation and visit order remain
@@ -906,6 +918,7 @@ canonical projection for maps and markers, not another identity source.
 | batch reward store                | `BatchRewardStoreAddress` with source                                       |
 | Hub board                         | `HubDecisionAddress`                                                        |
 | Hub slot and visit                | `HubSlotAddress` and `HubVisitAddress`                                      |
+| Hub fountain use and Phial target | `HubFountainAddress` and its `FountainRarityOutcomeAddress`                 |
 | local reward and wheel            | occurrence plus declaration-owned child key                                 |
 | N local visit topology            | parent occurrence, local group, and declaration-owned slot key              |
 | pool-backed encounter phase       | `EncounterPhaseAddress` with occurrence owner and stable phase key          |

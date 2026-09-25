@@ -17,13 +17,13 @@ export type {
 } from './fields-cage-outcome';
 export type {
   EvaluatedHubSlotCandidate,
-  EvaluatedHubVisitOrderCandidate,
+  EvaluatedHubActionOrderCandidate,
   EvaluatedSideRoomEntryOrderCandidate,
   EvaluatedSideRoomGenerationCandidate,
   HubSlotCandidateQuery,
   HubSlotCandidateSupport,
-  HubVisitOrderCandidateQuery,
-  HubVisitOrderCandidateSupport,
+  HubActionOrderCandidateQuery,
+  HubActionOrderCandidateSupport,
   SideRoomEntryOrderCandidateQuery,
   SideRoomEntryOrderCandidateSupport,
   SideRoomGenerationCandidateQuery,

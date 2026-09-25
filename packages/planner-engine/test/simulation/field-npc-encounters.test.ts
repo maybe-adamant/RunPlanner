@@ -64,7 +64,7 @@ import {
 } from '@run-planner/engine/simulation';
 import { beforeAll, describe, expect, it } from 'vitest';
 
-import { authorLegalTraitOffers } from '@run-planner/test-fixtures/shared';
+import { authorLegalTraitOffers, hubVisitActions } from '@run-planner/test-fixtures/shared';
 import {
   createCompleteFGProject,
   createGoldenFGHProject,
@@ -148,9 +148,16 @@ function select(project: ProjectDocument, owner: ReturnType<typeof phase>, encou
 
 function surfaceProjectWithEnteredRankIHammer(): ProjectDocument {
   const project = applyProjectCommand(loadSurfaceNOPQProject(), catalog, {
-    kind: 'ReplaceHubVisitOrder',
+    kind: 'ReplaceHubActionOrder',
     hub: createHubDecisionAddress(nBiome, 'hub'),
-    hubSlotKeys: ['combat05', 'miniBoss01', 'combat02', 'combat11', 'combat23', 'combat03'],
+    actions: hubVisitActions([
+      'combat05',
+      'miniBoss01',
+      'combat02',
+      'combat11',
+      'combat23',
+      'combat03',
+    ]),
   });
   return authorLegalTraitOffers(project);
 }

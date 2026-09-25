@@ -27,6 +27,7 @@ import {
   selectedExitContinuation,
   selectedExitKey,
   selectedOrdinaryBatchIndex,
+  hubVisitSlotKeys,
 } from '../query';
 import { exitDecisionSourceKey } from '../source-identity';
 import {
@@ -1114,7 +1115,7 @@ export function decodeTopologyStructure(
         own(target.occurrenceId, {
           gameName: slot.roomGameName,
           role: 'ordinary',
-          entryActive: decision.visitOrder.includes(target.hubSlotKey),
+          entryActive: hubVisitSlotKeys(decision).includes(target.hubSlotKey),
           path: `${decisionPath}.openTargets`,
         });
       }

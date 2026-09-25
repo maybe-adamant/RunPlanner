@@ -30,7 +30,7 @@ import { ordinaryRoutePosition } from '../support/route-position';
 import { evaluateProgressiveBiome } from '../../src/simulation/progressive/biome';
 import { EMPTY_RESOURCE_PLACEMENTS } from '../../src/authored-project/defaults';
 
-import { authorLegalTraitOffers } from '@run-planner/test-fixtures/shared';
+import { authorLegalTraitOffers, hubVisitActions } from '@run-planner/test-fixtures/shared';
 import {
   loadSurfaceNProject,
   nBiome,
@@ -322,7 +322,7 @@ describe('Hub progressive biome evaluation', () => {
         ?.topology?.decisions.find((decision) => decision.kind === 'hub');
       if (hub?.kind !== 'hub') throw new Error('partial Hub board lost its authored decision');
       expect(hub.openTargets).toHaveLength(slotCount);
-      expect(hub.visitOrder).toEqual([]);
+      expect(hub.actions).toEqual([]);
 
       const candidates = createPreparedProjectCandidateSession(
         catalog,
@@ -559,9 +559,9 @@ describe('Hub progressive biome evaluation', () => {
 
   it('publishes the reached visit as coverage at a Hub local frontier', () => {
     const project = applyProjectCommand(openHub(9, true), catalog, {
-      kind: 'ReplaceHubVisitOrder',
+      kind: 'ReplaceHubActionOrder',
       hub: createHubDecisionAddress(nBiome, 'hub'),
-      hubSlotKeys: ['combat05'],
+      actions: hubVisitActions(['combat05']),
     });
     const biome = nEvaluation(project);
 
@@ -814,14 +814,14 @@ describe('Hub progressive biome evaluation', () => {
 
   it('derives one-based Hub visit addresses from aggregate authored order', () => {
     const project = applyProjectCommand(openHub(9), catalog, {
-      kind: 'ReplaceHubVisitOrder',
+      kind: 'ReplaceHubActionOrder',
       hub: createHubDecisionAddress(nBiome, 'hub'),
-      hubSlotKeys: ['combat05'],
+      actions: hubVisitActions(['combat05']),
     });
     const plan = project.route.biomes.find((biome) => biome.biomeKey === 'N');
 
     expect(plan?.topology?.decisions).toContainEqual(
-      expect.objectContaining({ kind: 'hub', visitOrder: ['combat05'] }),
+      expect.objectContaining({ kind: 'hub', actions: hubVisitActions(['combat05']) }),
     );
   });
 });

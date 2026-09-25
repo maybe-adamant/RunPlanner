@@ -9,6 +9,7 @@ import {
   type ExitDecisionAddress,
   type ExitSelectionAddress,
   type HubDecisionAddress,
+  type HubAction,
   type HubSlotAddress,
   type LocalVisitDecisionAddress,
   type LocalVisitOrderAddress,
@@ -284,8 +285,8 @@ export interface WorkspaceHubInteractionRequirement {
         readonly selected: true;
       }
   )[];
-  /** The exact authored prefix; per-visit markers remain separately projected. */
-  readonly visitOrder: readonly string[];
+  /** The exact authored action prefix; per-visit markers remain separately projected. */
+  readonly actions: readonly HubAction[];
 }
 
 /**

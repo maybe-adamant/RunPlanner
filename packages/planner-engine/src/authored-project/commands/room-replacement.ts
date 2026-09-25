@@ -30,6 +30,7 @@ import {
   normalDecisionProgressionForLayout,
   selectedExitKey,
   selectedOrdinaryBatchIndex,
+  hubVisitSlotKeys,
 } from '../topology/query';
 import { fieldsDefaultActiveCageCount } from '../fields';
 import { resolveRoutePosition } from '../route-context';
@@ -213,7 +214,7 @@ function occurrenceContext(
           entryActive: decision.openTargets.some(
             (target) =>
               target.occurrenceId === occurrenceId &&
-              decision.visitOrder.includes(target.hubSlotKey),
+              hubVisitSlotKeys(decision).includes(target.hubSlotKey),
           ),
         });
       }

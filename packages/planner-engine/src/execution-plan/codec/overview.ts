@@ -11,7 +11,7 @@ import {
 } from './primitives';
 import { reward } from './rewards';
 import { roomReference } from './room';
-import type { ExecutionFieldsLayout } from '../model';
+import type { ExecutionFieldsLayout, ExecutionHubFountainUse } from '../model';
 import { generatedEncounter } from './generated-encounter';
 
 function encounterCustomization(value: unknown, label: string) {
@@ -147,6 +147,39 @@ function fields(value: unknown, label: string): ExecutionFieldsLayout {
     cagePoints,
     optionalRewards,
     ...(parsedNemesisPointId === undefined ? {} : { nemesisPointId: parsedNemesisPointId }),
+  });
+}
+
+function hubFountainUse(
+  value: unknown,
+  requiredVisitCount: number,
+  label: string,
+): ExecutionHubFountainUse {
+  const record = object(value, label);
+  exact(
+    record,
+    ['kind', 'owner', 'interactionKey', 'precedingVisitCount'],
+    ['aromaticPhialTarget'],
+    label,
+  );
+  if (record.kind !== 'fountainUse') fail(`${label}.kind is unsupported`);
+  if (record.interactionKey !== 'fountain') fail(`${label}.interactionKey is unsupported`);
+  const precedingVisitCount = integer(record.precedingVisitCount, `${label}.precedingVisitCount`);
+  if (precedingVisitCount > requiredVisitCount)
+    fail(`${label}.precedingVisitCount exceeds the required Hub visits`);
+  return Object.freeze({
+    kind: 'fountainUse',
+    owner: stringValue(record.owner, `${label}.owner`, MAX_OWNER_STRING),
+    interactionKey: 'fountain',
+    precedingVisitCount,
+    ...(record.aromaticPhialTarget === undefined
+      ? {}
+      : {
+          aromaticPhialTarget: stringValue(
+            record.aromaticPhialTarget,
+            `${label}.aromaticPhialTarget`,
+          ),
+        }),
   });
 }
 
@@ -615,13 +648,27 @@ export function overview(value: unknown, label: string) {
   const parsedFields =
     record.fields === undefined ? undefined : fields(record.fields, `${label}.fields`);
   const hub = record.hub === undefined ? undefined : object(record.hub, `${label}.hub`);
-  if (hub !== undefined) exact(hub, ['room', 'slots', 'finalHandoff'], [], `${label}.hub`);
+  if (hub !== undefined)
+    exact(
+      hub,
+      ['room', 'slots', 'finalHandoff', 'requiredVisitCount', 'fountain'],
+      [],
+      `${label}.hub`,
+    );
   const parsedHub =
     hub === undefined
       ? undefined
       : (() => {
           const room = object(hub.room, `${label}.hub.room`);
           exact(room, ['gameName'], [], `${label}.hub.room`);
+          const slotCount = array(hub.slots, `${label}.hub.slots`).length;
+          const requiredVisitCount = integer(
+            hub.requiredVisitCount,
+            `${label}.hub.requiredVisitCount`,
+            1,
+          );
+          if (requiredVisitCount > slotCount)
+            fail(`${label}.hub.requiredVisitCount exceeds the open Hub slots`);
           return Object.freeze({
             room: Object.freeze({
               gameName: stringValue(room.gameName, `${label}.hub.room.gameName`),
@@ -648,6 +695,8 @@ export function overview(value: unknown, label: string) {
               }),
             ),
             finalHandoff: roomReference(hub.finalHandoff, `${label}.hub.finalHandoff`),
+            requiredVisitCount,
+            fountain: hubFountainUse(hub.fountain, requiredVisitCount, `${label}.hub.fountain`),
           });
         })();
   const localSlots =

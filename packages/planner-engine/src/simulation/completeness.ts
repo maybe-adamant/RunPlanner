@@ -6,10 +6,13 @@ import {
   createExitSelectionAddress,
   createHubDecisionAddress,
   createHubOpenSetAddress,
+  createHubFountainAddress,
   createHubVisitAddress,
   createOccurrenceAddress,
   createTargetAddress,
   type BiomeAddress,
+  type HubFountainAddress,
+  type HubVisitAddress,
   type ExitDecisionSourceAddress,
   type SemanticAddress,
 } from '../authored-project/addresses';
@@ -236,9 +239,16 @@ function evaluateHubDecisionCompleteness(
   const decision = hubDecision(topology, layout.progression.hubKey);
   const hub = createHubDecisionAddress(biome, layout.progression.hubKey);
   const readiness = hubDecisionHandoffReadiness(layout.progression, decision);
+  const fountainUsed = decision?.actions.some((action) => action.kind === 'useFountain') ?? false;
   switch (readiness.kind) {
     case 'ready':
-      return undefined;
+      if (fountainUsed) return undefined;
+      return hubActionsIncomplete(
+        createHubFountainAddress(biome, layout.progression.hubKey),
+        layout.progression.requiredVisits,
+        layout.progression.requiredVisits,
+        fountainUsed,
+      );
     case 'missing':
       return Object.freeze({
         completion: 'incomplete',
@@ -261,24 +271,30 @@ function evaluateHubDecisionCompleteness(
         ]),
       });
     }
-    case 'visitOrderIncomplete': {
-      const origin = createHubVisitAddress(
-        biome,
-        layout.progression.hubKey,
-        readiness.actualCount + 1,
+    case 'visitOrderIncomplete':
+      return hubActionsIncomplete(
+        createHubVisitAddress(biome, layout.progression.hubKey, readiness.actualCount + 1),
+        readiness.actualCount,
+        readiness.requiredCount,
+        fountainUsed,
       );
-      return Object.freeze({
-        completion: 'incomplete',
-        frontier: origin,
-        findings: Object.freeze([
-          finding('hubVisitOrderIncomplete', origin, {
-            actualCount: readiness.actualCount,
-            requiredCount: readiness.requiredCount,
-          }),
-        ]),
-      });
-    }
   }
+}
+
+/** Six room visits plus the fountain use, addressed to the next missing action. */
+function hubActionsIncomplete(
+  origin: HubVisitAddress | HubFountainAddress,
+  actualCount: number,
+  requiredCount: number,
+  fountainUsed: boolean,
+): IncompleteBiomeCompletenessResult {
+  return Object.freeze({
+    completion: 'incomplete',
+    frontier: origin,
+    findings: Object.freeze([
+      finding('hubVisitOrderIncomplete', origin, { actualCount, requiredCount, fountainUsed }),
+    ]),
+  });
 }
 
 function incomplete(

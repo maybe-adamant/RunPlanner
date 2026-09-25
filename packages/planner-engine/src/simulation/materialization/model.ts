@@ -14,6 +14,7 @@ import type {
   HubRoomAddress,
   HubSlotAddress,
   HubVisitAddress,
+  HubFountainAddress,
   IncomingRewardAddress,
   LocalVisitSlotAddress,
   LocalRewardAddress,
@@ -454,6 +455,16 @@ export interface CanonicalHubDecision {
   readonly room: CanonicalHubRoom;
   readonly board: CanonicalHubBoard;
   readonly visits: readonly CanonicalHubVisit[];
+  /** Present once the fountain use is placed; absent while it is unplanned. */
+  readonly fountain?: CanonicalHubFountainUse;
+}
+
+/** The Hub fountain use, settled in the Hub after its preceding room visits. */
+export interface CanonicalHubFountainUse {
+  readonly origin: HubFountainAddress;
+  /** Room visits completed, including their Hub returns, before the use. */
+  readonly precedingVisitCount: number;
+  readonly fountainRarityResult?: import('../../authored-project/model').AuthoredFountainRarityResult;
 }
 
 export type CanonicalDecision = CanonicalBatch | CanonicalHubDecision;
@@ -547,6 +558,8 @@ export interface MaterializedHubVisitFrontier {
 export type MaterializedHubDecisionFrontier =
   | { readonly kind: 'hubBoard'; readonly origin: HubDecisionAddress }
   | { readonly kind: 'hubVisit'; readonly origin: HubVisitAddress }
+  /** Every preceding visit is retained; the fountain use is unplanned or blocked. */
+  | { readonly kind: 'hubFountain'; readonly origin: HubFountainAddress }
   | MaterializedHubVisitFrontier;
 
 export interface MaterializedBiomePrefix {

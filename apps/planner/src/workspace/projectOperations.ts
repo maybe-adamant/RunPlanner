@@ -351,11 +351,33 @@ export function createProjectOperations(
           'success',
           loadedDocument.migrationProvenance.length === 0
             ? 'Loaded the profile.'
-            : 'Migrated the profile to schema 88; retained encounter choices may need missing fields repaired.',
+            : migratedProfileMessage(project, loadedDocument.migrationProvenance),
         );
       } catch (error) {
         return failure('loadProfile', error);
       }
     },
   });
+}
+
+/** Every Hub in a migrated profile received the legacy fountain-first placement. */
+function migratedProfileMessage(
+  project: ProjectDocument,
+  provenance: readonly { readonly sourceSchemaVersion: number }[],
+): string {
+  const repairs = [
+    ...(project.route.biomes.some((biome) =>
+      biome.topology?.decisions.some((decision) => decision.kind === 'hub'),
+    )
+      ? [
+          'the Hub fountain use is placed before the first visit, so an Aromatic Phial target may need repair',
+        ]
+      : []),
+    ...(provenance.some((migration) => migration.sourceSchemaVersion === 86)
+      ? ['retained encounter choices may need missing fields repaired']
+      : []),
+  ];
+  return repairs.length === 0
+    ? 'Migrated the profile to schema 88.'
+    : `Migrated the profile to schema 88; ${repairs.join(', and ')}.`;
 }

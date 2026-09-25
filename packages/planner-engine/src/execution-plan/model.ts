@@ -497,6 +497,16 @@ export interface ExecutionGeneratedEncounterCustomization {
   }[];
 }
 
+/** Settled in the Hub before the next room entry, or before the final handoff when last. */
+export interface ExecutionHubFountainUse {
+  readonly kind: 'fountainUse';
+  readonly owner: string;
+  readonly interactionKey: 'fountain';
+  /** Completed room visits, each returned to the Hub, before this use. */
+  readonly precedingVisitCount: number;
+  readonly aromaticPhialTarget?: string;
+}
+
 export interface ExecutionOverview {
   /** Persistent N Hub board, published on the selected occurrence that reaches the Hub. */
   readonly hub?: {
@@ -512,6 +522,10 @@ export interface ExecutionOverview {
       readonly biomeKey: string;
       readonly gameName: string;
     };
+    /** Distinct room visits the Hub requires before its final handoff. */
+    readonly requiredVisitCount: number;
+    /** The one Hub-owned fountain use, after its preceding completed room visits. */
+    readonly fountain: ExecutionHubFountainUse;
   };
   /** Complete declared N side-door state for a visited main room. */
   readonly localSlots?: readonly {

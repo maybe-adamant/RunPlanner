@@ -1,6 +1,8 @@
 import type { Catalog } from '../../catalog-schema';
 import {
   createBiomeAddress,
+  createFountainRarityOutcomeAddress,
+  createHubFountainAddress,
   createHubOpenSetAddress,
   semanticAddressKey,
   type HubDecisionAddress,
@@ -13,12 +15,14 @@ import {
   ProjectCommandContractError,
 } from '../../authored-project/commands/dispatch';
 import type {
+  HubAction,
   HubDecision,
   LocalVisitDecision,
   OccurrenceId,
   ProjectDocument,
 } from '../../authored-project/model';
 import { resolveRoutePosition } from '../../authored-project/route-context';
+import { hubVisitSlotKeys, isHubAction } from '../../authored-project/topology/query';
 import {
   evaluateHubOpenSetConstraints,
   type HubSideRoomGenerationSupportEntry,
@@ -62,10 +66,10 @@ export interface HubSlotCandidateQuery {
   readonly localOccurrenceIdsBySlot: Readonly<Record<string, OccurrenceId>>;
 }
 
-export interface HubVisitOrderCandidateQuery {
-  readonly kind: 'hubVisitOrder';
+export interface HubActionOrderCandidateQuery {
+  readonly kind: 'hubActionOrder';
   readonly hub: HubDecisionAddress;
-  readonly hubSlotKeys: readonly string[];
+  readonly actions: readonly HubAction[];
 }
 
 export interface SideRoomGenerationCandidateQuery {
@@ -96,16 +100,16 @@ export interface EvaluatedHubSlotCandidate {
   readonly result: HubSlotCandidateSupport;
 }
 
-export interface HubVisitOrderCandidateSupport {
-  readonly candidateHubSlotKeys: readonly string[];
+export interface HubActionOrderCandidateSupport {
+  readonly candidateActions: readonly HubAction[];
   readonly openHubSlotKeys: readonly string[];
   readonly findings: readonly SemanticFinding[];
   readonly selectedPossible: boolean;
 }
 
-export interface EvaluatedHubVisitOrderCandidate {
-  readonly kind: 'hubVisitOrder';
-  readonly result: HubVisitOrderCandidateSupport;
+export interface EvaluatedHubActionOrderCandidate {
+  readonly kind: 'hubActionOrder';
+  readonly result: HubActionOrderCandidateSupport;
 }
 
 export interface SideRoomGenerationCandidateSupport {
@@ -136,8 +140,8 @@ export interface EvaluatedSideRoomEntryOrderCandidate {
 }
 
 export type HubSlotCandidateEvaluation = CandidateContextUnavailable | EvaluatedHubSlotCandidate;
-export type HubVisitOrderCandidateEvaluation =
-  CandidateContextUnavailable | EvaluatedHubVisitOrderCandidate;
+export type HubActionOrderCandidateEvaluation =
+  CandidateContextUnavailable | EvaluatedHubActionOrderCandidate;
 export type SideRoomGenerationCandidateEvaluation =
   CandidateContextUnavailable | EvaluatedSideRoomGenerationCandidate;
 export type SideRoomEntryOrderCandidateEvaluation =
@@ -296,7 +300,7 @@ function hubRegionalPlan(
   routeKey: string,
   biomeKey: string,
   hubKey: string,
-  visitIndex: number,
+  visitIndex: number | undefined,
 ) {
   const plan = planFor(project, routeKey, biomeKey);
   const topology = plan.topology;
@@ -315,7 +319,7 @@ function hubRegionalPlan(
           candidate === decision
             ? Object.freeze({
                 ...candidate,
-                visitOrder: Object.freeze(candidate.visitOrder.slice(0, visitIndex)),
+                actions: actionsThroughVisit(candidate.actions, visitIndex),
               })
             : candidate,
         ),
@@ -323,6 +327,20 @@ function hubRegionalPlan(
     }),
   });
   return regionalPlan;
+}
+
+/** Keeps Hub actions through the addressed room visit, including an earlier fountain use. */
+function actionsThroughVisit(
+  actions: readonly HubAction[],
+  visitIndex: number | undefined,
+): readonly HubAction[] {
+  if (visitIndex === undefined) return actions;
+  let visits = 0;
+  for (const [index, action] of actions.entries()) {
+    if (action.kind === 'roomVisit') visits += 1;
+    if (visits === visitIndex) return Object.freeze(actions.slice(0, index + 1));
+  }
+  return actions;
 }
 
 /** Evaluate only the addressed visit prefix of the persistent Hub region. */
@@ -350,16 +368,15 @@ function hubRegionEvaluation(
  * retains every affected visit and room-local finding, not only the first
  * currently reachable visit.
  */
-function hubVisitOrderEvaluation(
+function hubActionOrderEvaluation(
   catalog: Catalog,
   project: ProjectDocument,
   evaluation: ProjectEvaluation,
   routeKey: string,
   biomeKey: string,
   hubKey: string,
-  visitCount: number,
 ) {
-  const regionalPlan = hubRegionalPlan(project, routeKey, biomeKey, hubKey, visitCount);
+  const regionalPlan = hubRegionalPlan(project, routeKey, biomeKey, hubKey, undefined);
   if (regionalPlan === undefined) return undefined;
   return evaluateProgressiveBiomeBeforeClamp(
     catalog,
@@ -369,7 +386,7 @@ function hubVisitOrderEvaluation(
   );
 }
 
-function findingOwnsHubVisitOrder(
+function findingOwnsHubActionOrder(
   finding: SemanticFinding,
   occurrenceIds: ReadonlySet<OccurrenceId>,
   visitOrigins: ReadonlySet<string>,
@@ -478,7 +495,7 @@ export function evaluateHubSlotCandidate(
   const closesReferencedSlot =
     !query.open &&
     current !== undefined &&
-    state.decision.visitOrder.includes(query.slot.hubSlotKey);
+    hubVisitSlotKeys(state.decision).includes(query.slot.hubSlotKey);
   if (query.open && current === undefined) {
     if (typeof query.occurrenceId !== 'string' || query.occurrenceId.trim().length === 0) {
       throw new CandidateEvaluationContractError(
@@ -528,7 +545,7 @@ export function evaluateHubSlotCandidate(
       minimumOpenCount: state.descriptor.openCount.min,
       maximumOpenCount: state.descriptor.openCount.max,
       referencedVisitIndexes: Object.freeze(
-        state.decision.visitOrder.flatMap((slotKey, index) =>
+        hubVisitSlotKeys(state.decision).flatMap((slotKey, index) =>
           slotKey === query.slot.hubSlotKey ? [index + 1] : [],
         ),
       ),
@@ -538,12 +555,12 @@ export function evaluateHubSlotCandidate(
   });
 }
 
-export function evaluateHubVisitOrderCandidate(
+export function evaluateHubActionOrderCandidate(
   catalog: Catalog,
   project: ProjectDocument,
   evaluation: ProjectEvaluation,
-  query: HubVisitOrderCandidateQuery,
-): HubVisitOrderCandidateEvaluation {
+  query: HubActionOrderCandidateQuery,
+): HubActionOrderCandidateEvaluation {
   const state = candidateHubState(
     catalog,
     project,
@@ -560,11 +577,8 @@ export function evaluateHubVisitOrderCandidate(
       'afterTargetGeneration',
     );
   }
-  if (
-    !Array.isArray(query.hubSlotKeys) ||
-    !query.hubSlotKeys.every((hubSlotKey) => typeof hubSlotKey === 'string')
-  ) {
-    throw new CandidateEvaluationContractError('Hub visit order must contain slot keys');
+  if (!Array.isArray(query.actions) || !query.actions.every(isHubAction)) {
+    throw new CandidateEvaluationContractError('Hub action order must contain Hub actions');
   }
   if (candidateBiome(evaluation, query.hub.routeKey, query.hub.biomeKey) === undefined) {
     return unavailableForBiome(
@@ -575,7 +589,10 @@ export function evaluateHubVisitOrderCandidate(
       'afterTargetGeneration',
     );
   }
-  const candidateHubSlotKeys = Object.freeze([...query.hubSlotKeys]);
+  const candidateActions = Object.freeze([...query.actions]);
+  const candidateHubSlotKeys = candidateActions.flatMap((action) =>
+    action.kind === 'roomVisit' ? [action.hubSlotKey] : [],
+  );
   const openHubSlotKeys = Object.freeze(
     state.descriptor.slots.flatMap((slot) =>
       state.decision.openTargets.some((target) => target.hubSlotKey === slot.slotKey)
@@ -586,25 +603,25 @@ export function evaluateHubVisitOrderCandidate(
   const structurallyPossible =
     candidateHubSlotKeys.length <= state.descriptor.requiredVisits &&
     new Set(candidateHubSlotKeys).size === candidateHubSlotKeys.length &&
-    candidateHubSlotKeys.every((hubSlotKey) => openHubSlotKeys.includes(hubSlotKey));
+    candidateHubSlotKeys.every((hubSlotKey) => openHubSlotKeys.includes(hubSlotKey)) &&
+    candidateActions.filter((action) => action.kind === 'useFountain').length <= 1;
   const proposal = structurallyPossible
     ? hubCandidateProposal(catalog, project, {
-        kind: 'ReplaceHubVisitOrder',
+        kind: 'ReplaceHubActionOrder',
         hub: query.hub,
-        hubSlotKeys: candidateHubSlotKeys,
+        actions: candidateActions,
       })
     : undefined;
   const regional =
     proposal === undefined
       ? undefined
-      : hubVisitOrderEvaluation(
+      : hubActionOrderEvaluation(
           catalog,
           proposal,
           evaluation,
           query.hub.routeKey,
           query.hub.biomeKey,
           query.hub.hubKey,
-          candidateHubSlotKeys.length,
         );
   const mainOccurrenceIds = new Set<OccurrenceId>(
     candidateHubSlotKeys.flatMap((hubSlotKey) =>
@@ -629,15 +646,22 @@ export function evaluateHubVisitOrderCandidate(
       )
       ?.visits.map((visit) => semanticAddressKey(visit.origin)) ?? [],
   );
+  // The fountain use and its Phial outcome belong to the Hub action order itself.
+  const fountain = createHubFountainAddress(
+    createBiomeAddress(query.hub.routeKey, query.hub.biomeKey),
+    query.hub.hubKey,
+  );
+  visitOrigins.add(semanticAddressKey(fountain));
+  visitOrigins.add(semanticAddressKey(createFountainRarityOutcomeAddress(fountain)));
   const findings = Object.freeze(
     (regional?.findings ?? []).filter((finding) =>
-      findingOwnsHubVisitOrder(finding, occurrenceIds, visitOrigins),
+      findingOwnsHubActionOrder(finding, occurrenceIds, visitOrigins),
     ),
   );
   return Object.freeze({
-    kind: 'hubVisitOrder',
+    kind: 'hubActionOrder',
     result: Object.freeze({
-      candidateHubSlotKeys,
+      candidateActions,
       openHubSlotKeys,
       findings,
       // Downstream room-local work is feedback, not a reason to reject an
@@ -838,7 +862,9 @@ export function evaluateSideRoomEntryOrderCandidate(
     (target) => target.occurrenceId === query.group.sourceOccurrenceId,
   )?.hubSlotKey;
   const visitIndex =
-    hubSlotKey === undefined ? undefined : (hub?.decision.visitOrder.indexOf(hubSlotKey) ?? -1);
+    hubSlotKey === undefined || hub === undefined
+      ? undefined
+      : hubVisitSlotKeys(hub.decision).indexOf(hubSlotKey);
   if (hub === undefined || visitIndex === undefined || visitIndex < 0) {
     return coverageUnavailable(evaluation, query.group, 'afterRoomLifecycle');
   }

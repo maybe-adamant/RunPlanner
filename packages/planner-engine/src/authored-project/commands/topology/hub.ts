@@ -9,6 +9,7 @@ import type {
   BiomeTopology,
   ExitDecision,
   ExitDecisionSource,
+  HubAction,
   HubDecision,
   OccurrenceId,
   ProjectDocument,
@@ -17,7 +18,9 @@ import { requireEphyraSideRooms } from '../../room-state/declaration';
 import {
   exitDecisionForSource,
   hubTerminalTakeoverForSource,
+  hubVisitSlotKeys,
   isExactTerminalTakeoverEnvelope,
+  isHubAction,
 } from '../../topology/query';
 import { failCommand, requireRoom, requireTopology, type LocatedBiome } from '../contract';
 import type { TopologyCommand } from '../types';
@@ -25,10 +28,11 @@ import { replaceDecision, appendDecision, appendOccurrence, updateTopology } fro
 import { defaultOccurrence } from '../../topology/construction';
 
 /**
- * A completed Hub owns one fixed width-one Preboss handoff. Reducing the
- * visit sequence below its declared completion requirement must remove that
- * handoff and its target subtree in the same semantic edit; otherwise the
- * persisted topology would retain an invalid Hub-source exit.
+ * A completed Hub owns one fixed width-one Preboss handoff. Reducing the room
+ * visits below its declared completion requirement must remove that handoff
+ * and its target subtree in the same semantic edit; otherwise the persisted
+ * topology would retain an invalid Hub-source exit. Fountain placement alone
+ * never gates the handoff.
  */
 function removeCompletedHubHandoff(topology: BiomeTopology, hubKey: string): BiomeTopology {
   const impact = describeExitDecisionRemovalImpact(topology, {
@@ -97,7 +101,7 @@ export function replaceWithHubDecision(
         hubKey: command.hub.hubKey,
         source,
         openTargets: Object.freeze([]),
-        visitOrder: Object.freeze([]),
+        actions: Object.freeze([]),
       }),
     ),
   );
@@ -141,7 +145,7 @@ export function updateHub(
   command: Extract<
     TopologyCommand,
     {
-      readonly kind: 'OpenHubSlot' | 'CloseHubSlot' | 'ReplaceHubVisitOrder' | 'ResetHubBoard';
+      readonly kind: 'OpenHubSlot' | 'CloseHubSlot' | 'ReplaceHubActionOrder' | 'ResetHubBoard';
     }
   >,
 ): ProjectDocument {
@@ -273,7 +277,7 @@ export function updateHub(
       (candidate) => candidate.hubSlotKey === command.slot.hubSlotKey,
     );
     if (target === undefined) return document;
-    if (hub.visitOrder.includes(target.hubSlotKey))
+    if (hubVisitSlotKeys(hub).includes(target.hubSlotKey))
       failCommand(command, 'remove Hub visits before closing a slot');
     const impact = describeHubSlotClosureImpact(
       topology,
@@ -296,7 +300,7 @@ export function updateHub(
   if (command.hub.hubKey !== descriptor.hubKey)
     failCommand(command, 'Hub address does not match this decision');
   if (command.kind === 'ResetHubBoard') {
-    if (hub.openTargets.length === 0) return document;
+    if (hub.openTargets.length === 0 && hub.actions.length === 0) return document;
     const impact = describeHubDecisionRemovalImpact(topology, hub.hubKey);
     if (impact === undefined) throw new Error('Hub decision disappeared during reset');
     return updateTopology(
@@ -305,24 +309,25 @@ export function updateHub(
       appendDecision(
         applyTopologyRemovalImpact(topology, impact),
         Object.freeze({
-          ...hub,
+          kind: 'hub',
+          hubKey: hub.hubKey,
+          source: hub.source,
           openTargets: Object.freeze([]),
-          visitOrder: Object.freeze([]),
+          actions: Object.freeze([]),
         }),
       ),
     );
   }
-  if (
-    !Array.isArray(command.hubSlotKeys) ||
-    !command.hubSlotKeys.every((hubSlotKey) => typeof hubSlotKey === 'string')
-  ) {
-    failCommand(command, 'Hub visit order must contain slot keys');
-  }
-  const visits = [...command.hubSlotKeys];
+  const actions = normalizedHubActions(command);
+  const visits = actions.flatMap((action) =>
+    action.kind === 'roomVisit' ? [action.hubSlotKey] : [],
+  );
   if (visits.some((hubSlotKey) => hubSlotKey.trim().length === 0)) {
     failCommand(command, 'Hub visit order must contain non-blank slot keys');
   }
   if (new Set(visits).size !== visits.length) failCommand(command, 'Hub visits must be distinct');
+  if (actions.filter((action) => action.kind === 'useFountain').length > 1)
+    failCommand(command, 'Hub fountain can be used only once');
   if (
     visits.some((hubSlotKey) => !hub.openTargets.some((target) => target.hubSlotKey === hubSlotKey))
   ) {
@@ -331,21 +336,48 @@ export function updateHub(
   if (visits.length > descriptor.requiredVisits)
     failCommand(command, `Hub supports ${descriptor.requiredVisits} visits`);
   if (
-    visits.length === hub.visitOrder.length &&
-    visits.every((hubSlotKey, index) => hub.visitOrder[index] === hubSlotKey)
+    actions.length === hub.actions.length &&
+    actions.every((action, index) => sameHubAction(action, hub.actions[index]!))
   ) {
     return document;
   }
   const withoutCompletedHandoff =
-    hub.visitOrder.length === descriptor.requiredVisits && visits.length < descriptor.requiredVisits
+    hubVisitSlotKeys(hub).length === descriptor.requiredVisits &&
+    visits.length < descriptor.requiredVisits
       ? removeCompletedHubHandoff(topology, descriptor.hubKey)
       : topology;
+  // An authored Phial target follows the fountain use through reordering, but
+  // no outcome survives once the use itself is no longer planned.
+  const { fountainRarityResult, ...withoutOutcome } = hub;
+  const fountainUsed = actions.some((action) => action.kind === 'useFountain');
   return updateTopology(
     document,
     located,
     replaceDecision(
       withoutCompletedHandoff,
-      Object.freeze({ ...hub, visitOrder: Object.freeze(visits) }),
+      Object.freeze({
+        ...withoutOutcome,
+        actions: Object.freeze(actions),
+        ...(fountainUsed && fountainRarityResult !== undefined ? { fountainRarityResult } : {}),
+      }),
     ),
   );
+}
+
+function normalizedHubActions(
+  command: Extract<TopologyCommand, { readonly kind: 'ReplaceHubActionOrder' }>,
+): readonly HubAction[] {
+  if (!Array.isArray(command.actions) || !command.actions.every(isHubAction))
+    failCommand(command, 'Hub action order must contain Hub actions');
+  return command.actions.map((action): HubAction =>
+    action.kind === 'useFountain'
+      ? Object.freeze({ kind: 'useFountain' })
+      : Object.freeze({ kind: 'roomVisit', hubSlotKey: action.hubSlotKey }),
+  );
+}
+
+function sameHubAction(left: HubAction, right: HubAction): boolean {
+  return left.kind === 'roomVisit'
+    ? right.kind === 'roomVisit' && left.hubSlotKey === right.hubSlotKey
+    : right.kind === 'useFountain';
 }

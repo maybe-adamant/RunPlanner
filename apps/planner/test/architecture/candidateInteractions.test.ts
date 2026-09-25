@@ -19,7 +19,7 @@ import {
 import { describe, expect, it } from 'vitest';
 
 import type {
-  WorkspaceHubVisitOrderInteraction,
+  WorkspaceHubActionOrderInteraction,
   WorkspaceInteractionCatalog,
 } from '@planner/projections/structured-workspace';
 import { createStructuredWorkspaceTestServices } from '../fixtures/structuredWorkspace';
@@ -46,7 +46,7 @@ const families = [
   'encounterPhases',
   'fieldsCageOutcomes',
   'hubSlots',
-  'hubVisitOrders',
+  'hubActionOrders',
   'rewards',
   'rewardWheelOfferCounts',
   'rewardWheelPicks',
@@ -69,7 +69,7 @@ const expectedColdQueryBatchCounts: Readonly<Record<InteractionFamily, number>> 
   encounterPhases: 0,
   fieldsCageOutcomes: 1,
   hubSlots: 1,
-  hubVisitOrders: 1,
+  hubActionOrders: 1,
   rewards: 14,
   rewardWheelOfferCounts: 1,
   rewardWheelPicks: 1,
@@ -114,7 +114,7 @@ describe('workspace candidate interaction families', () => {
       domain.offers.find((entry) => entry.value.rewardType === 'SpellDrop')?.evaluation,
     ).toMatchObject({ kind: 'incomingReward', result: { supported: true, findings: [] } });
     expect([...workspace.interactions.hubSlots.values()].some((slot) => !slot.selected)).toBe(true);
-    expect(workspace.interactions.hubVisitOrders.size).toBe(1);
+    expect(workspace.interactions.hubActionOrders.size).toBe(1);
   });
 
   it('does not evaluate room candidates until the created start occurrence is edited', () => {
@@ -255,9 +255,9 @@ describe('workspace candidate interaction families', () => {
               if (hubSlot === undefined) throw new Error('closed Hub-slot interaction is missing');
               return hubSlot.beginOpeningAttempt();
             })()
-          : family === 'hubVisitOrders'
-            ? (interaction as WorkspaceHubVisitOrderInteraction).proposalFor(
-                (interaction as WorkspaceHubVisitOrderInteraction).selectedHubSlotKeys,
+          : family === 'hubActionOrders'
+            ? (interaction as WorkspaceHubActionOrderInteraction).proposalFor(
+                (interaction as WorkspaceHubActionOrderInteraction).selectedActions,
               )
             : (interaction as LoadableInteraction);
       await loadable.load();

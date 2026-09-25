@@ -1,5 +1,7 @@
 import {
+  createFountainRarityOutcomeAddress,
   createHubDecisionAddress,
+  createHubFountainAddress,
   createExitDecisionAddress,
   createHubOpenSetAddress,
   createHubSlotAddress,
@@ -8,6 +10,7 @@ import {
   createLocalVisitOrderAddress,
   createLocalVisitSlotAddress,
   createOccurrenceAddress,
+  hubVisitSlotKeys,
   semanticAddressKey,
   selectedExitTarget,
   type BiomeAddress,
@@ -173,9 +176,10 @@ function projectHubNode(
   input: WorkspaceHubAssemblyInput,
   owner: HubDecisionAddress,
   targets: ReadonlyMap<string, ProjectedHubTarget>,
-  visitOrder: readonly string[],
+  hub: HubDecision,
 ): WorkspaceHubAssembly {
   const { biome, catalog, descriptor, markerDestinations, topology } = input;
+  const visitOrder = hubVisitSlotKeys(hub);
   const hubMarker = markerDestinations.marker(owner);
   const occurrences = hubOccurrenceMap(topology);
   const hubInteractionRequirements: WorkspaceHubInteractionRequirement[] = [];
@@ -600,12 +604,20 @@ function projectHubNode(
   markerDestinations.setHubTab(Object.freeze(node.visits.map((visit) => visit.marker)), 'timeline');
   markerDestinations.redirect([completedExitMarker], node.key);
   markerDestinations.setHubTab([completedExitMarker], 'exit');
+  // The Hub owns its fountain use and Phial outcome; both repair from the Hub timeline.
+  const fountain = createHubFountainAddress(biome, descriptor.hubKey);
+  const fountainMarkers = Object.freeze([
+    markerDestinations.marker(fountain),
+    markerDestinations.marker(createFountainRarityOutcomeAddress(fountain)),
+  ]);
+  markerDestinations.redirect(fountainMarkers, node.key);
+  markerDestinations.setHubTab(fountainMarkers, 'timeline');
   hubInteractionRequirements.push(
     Object.freeze({
       kind: 'hubControls' as const,
       owner,
       slots: Object.freeze(slotRequirements),
-      visitOrder: Object.freeze([...visitOrder]),
+      actions: hub.actions,
     }),
   );
   return Object.freeze({
@@ -688,7 +700,7 @@ function projectAuthoredHubWithOverlay(
       );
     }
     evaluatedVisitIndexes.add(visit.visitIndex);
-    const expectedSlot = hub.visitOrder[visit.visitIndex - 1];
+    const expectedSlot = hubVisitSlotKeys(hub)[visit.visitIndex - 1];
     const target = authoredTargets.get(visit.target.hubSlotKey);
     const expectedVisit = createHubVisitAddress(biome, descriptor.hubKey, visit.visitIndex);
     const expectedTarget = createHubSlotAddress(biome, descriptor.hubKey, visit.target.hubSlotKey);
@@ -707,7 +719,7 @@ function projectAuthoredHubWithOverlay(
       );
     }
   }
-  return projectHubNode(input, owner, targets, hub.visitOrder);
+  return projectHubNode(input, owner, targets, hub);
 }
 
 /** Assemble the authored persistent Hub board. */

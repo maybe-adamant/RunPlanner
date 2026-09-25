@@ -6,6 +6,7 @@ import {
   createIncomingRewardAddress,
   semanticAddressKey,
   type ProjectDocument,
+  hubVisitSlotKeys,
 } from '@run-planner/engine/authored-project';
 import {
   encounterPhaseSequenceStatusForProjectEvaluationAssembly,
@@ -32,6 +33,7 @@ import {
   createWorkspaceProjectSourceIndex,
   type WorkspaceBiomeSource,
 } from '@planner/projections/structured-workspace/source-index';
+import { hubVisitActions } from '@run-planner/test-fixtures/shared';
 
 function biomeSource(project: ProjectDocument): WorkspaceBiomeSource {
   const assembly = simulateProjectAssembly(catalog, project);
@@ -153,7 +155,7 @@ describe('structured workspace Hub assembly', () => {
     );
     expect(assembly.hubInteractionRequirements).toHaveLength(1);
     expect(assembly.hubInteractionRequirements[0]?.slots).toHaveLength(kit.descriptor.slots.length);
-    expect(assembly.hubInteractionRequirements[0]?.visitOrder).toEqual(kit.hub.visitOrder);
+    expect(assembly.hubInteractionRequirements[0]?.actions).toEqual(kit.hub.actions);
 
     const visited = assembly.node.slots.find((slot) => slot.hubSlotKey === 'combat02');
     const unvisited = assembly.node.slots.find((slot) => slot.hubSlotKey === 'combat03');
@@ -204,7 +206,9 @@ describe('structured workspace Hub assembly', () => {
     expect(assembly.node.slots.filter((slot) => slot.open)).toHaveLength(
       kit.hub.openTargets.length,
     );
-    expect(assembly.node.visits.map((visit) => visit.hubSlotKey)).toEqual(kit.hub.visitOrder);
+    expect(assembly.node.visits.map((visit) => visit.hubSlotKey)).toEqual(
+      hubVisitSlotKeys(kit.hub),
+    );
     expect(assembly.workbenches.map((node) => node.room.occurrenceId)).toEqual(
       assembly.node.slots.flatMap((slot) =>
         slot.room === undefined
@@ -269,8 +273,8 @@ describe('structured workspace Hub assembly', () => {
 
     const retainedProject = applyProjectCommand(invalidBoard, catalog, {
       hub: kit.owner,
-      hubSlotKeys: kit.hub.visitOrder.slice(0, 3),
-      kind: 'ReplaceHubVisitOrder',
+      actions: hubVisitActions(hubVisitSlotKeys(kit.hub).slice(0, 3)),
+      kind: 'ReplaceHubActionOrder',
     });
     const retainedSource = biomeSource(retainedProject);
     const retainedKit = hubKit(retainedSource);
@@ -316,7 +320,7 @@ describe('structured workspace Hub assembly', () => {
       'unassessed',
       'unassessed',
     ]);
-    expect(retained.hubInteractionRequirements[0]?.visitOrder).toEqual(retainedKit.hub.visitOrder);
+    expect(retained.hubInteractionRequirements[0]?.actions).toEqual(retainedKit.hub.actions);
   });
 
   it('publishes authored Hub controls and the structural first visit before evaluation enters it', () => {
@@ -345,7 +349,7 @@ describe('structured workspace Hub assembly', () => {
 
     expect(assembly.node.authoring).toBe('authored');
     expect(requirement?.slots).toHaveLength(kit.descriptor.slots.length);
-    expect(requirement?.visitOrder).toEqual([]);
+    expect(requirement?.actions).toEqual([]);
     expect(assembly.node.visits[0]?.authoring).toBe('locked');
   });
 });

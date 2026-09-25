@@ -36,6 +36,7 @@ import {
 } from '@planner/projections/structured-workspace/navigation/inspector-defaults';
 import type { WorkspaceDefaultInspectorDestination } from '@planner/projections/structured-workspace/contracts/navigation';
 import type { WorkspaceNode } from '@planner/projections/structured-workspace/contracts/structure';
+import { hubVisitActions } from '@run-planner/test-fixtures/shared';
 
 const { structuredWorkspace } = createStructuredWorkspaceTestServices();
 
@@ -253,8 +254,8 @@ describe('workspace inspector defaults', () => {
     const truncated = biome(
       applyProjectCommand(loadSurfaceNOPQProject(), catalog, {
         hub: createHubDecisionAddress(nBiome, 'hub'),
-        hubSlotKeys: nVisitSlotKeys.slice(0, 3),
-        kind: 'ReplaceHubVisitOrder',
+        actions: hubVisitActions(nVisitSlotKeys.slice(0, 3)),
+        kind: 'ReplaceHubActionOrder',
       }),
       'N',
     );

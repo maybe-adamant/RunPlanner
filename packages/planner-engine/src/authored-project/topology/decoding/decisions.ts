@@ -1,5 +1,6 @@
 import type { BiomeLayout, Catalog, RoomDeclaration } from '../../../catalog-schema';
 import { decodeBatchState } from '../../batchState';
+import { decodeFountainRarityResult } from '../../fountain-rarity-codec';
 import type {
   AuthoredBatchState,
   BatchRewardStoreState,
@@ -7,6 +8,7 @@ import type {
   ExitDecisionSource,
   ExitSelection,
   ExitTargetReference,
+  HubAction,
   HubDecision,
   HubTargetReference,
   LocalVisitDecision,
@@ -413,7 +415,19 @@ export function decodeHubDecision(
   }
   const hub = layout.progression;
   const value = raw.value;
-  expectExactKeys(value, ['kind', 'hubKey', 'source', 'openTargets', 'visitOrder'], raw.path);
+  const hasFountainRarityResult = Object.hasOwn(value, 'fountainRarityResult');
+  expectExactKeys(
+    value,
+    [
+      'kind',
+      'hubKey',
+      'source',
+      'openTargets',
+      'actions',
+      ...(hasFountainRarityResult ? ['fountainRarityResult'] : []),
+    ],
+    raw.path,
+  );
   const hubKey = expectNonBlankString(value.hubKey, `${raw.path}.hubKey`);
   if (hubKey !== hub.hubKey) failProjectDocument(`${raw.path}.hubKey`, `expected ${hub.hubKey}`);
   const source = decodeSource(value.source, `${raw.path}.source`);
@@ -468,25 +482,57 @@ export function decodeHubDecision(
       );
     }
   }
-  const visitOrder = expectArray(value.visitOrder, `${raw.path}.visitOrder`).map((visit, index) =>
-    expectNonBlankString(visit, `${raw.path}.visitOrder[${index}]`),
+  const actions = expectArray(value.actions, `${raw.path}.actions`).map(
+    (rawAction, index): HubAction => {
+      const actionPath = `${raw.path}.actions[${index}]`;
+      const action = expectRecord(rawAction, actionPath);
+      const kind = expectString(action.kind, `${actionPath}.kind`);
+      if (kind === 'useFountain') {
+        expectExactKeys(action, ['kind'], actionPath);
+        return Object.freeze({ kind: 'useFountain' });
+      }
+      if (kind !== 'roomVisit')
+        failProjectDocument(`${actionPath}.kind`, `unknown Hub action ${kind}`);
+      expectExactKeys(action, ['kind', 'hubSlotKey'], actionPath);
+      return Object.freeze({
+        kind: 'roomVisit',
+        hubSlotKey: expectNonBlankString(action.hubSlotKey, `${actionPath}.hubSlotKey`),
+      });
+    },
   );
-  if (visitOrder.length > hub.requiredVisits)
-    failProjectDocument(`${raw.path}.visitOrder`, `exceeds ${hub.requiredVisits} Hub visits`);
   const visited = new Set<string>();
-  for (const [index, slotKey] of visitOrder.entries()) {
-    if (!seenSlots.has(slotKey))
-      failProjectDocument(`${raw.path}.visitOrder[${index}]`, `${slotKey} is not open`);
-    if (visited.has(slotKey))
-      failProjectDocument(`${raw.path}.visitOrder[${index}]`, `duplicates Hub visit ${slotKey}`);
-    visited.add(slotKey);
+  let fountainUsed = false;
+  for (const [index, action] of actions.entries()) {
+    const actionPath = `${raw.path}.actions[${index}]`;
+    if (action.kind === 'useFountain') {
+      if (fountainUsed) failProjectDocument(actionPath, 'duplicates the Hub fountain use');
+      fountainUsed = true;
+      continue;
+    }
+    if (!seenSlots.has(action.hubSlotKey))
+      failProjectDocument(`${actionPath}.hubSlotKey`, `${action.hubSlotKey} is not open`);
+    if (visited.has(action.hubSlotKey))
+      failProjectDocument(`${actionPath}.hubSlotKey`, `duplicates Hub visit ${action.hubSlotKey}`);
+    visited.add(action.hubSlotKey);
   }
+  if (visited.size > hub.requiredVisits)
+    failProjectDocument(`${raw.path}.actions`, `exceeds ${hub.requiredVisits} Hub visits`);
+  const fountainRarityResult = hasFountainRarityResult
+    ? decodeFountainRarityResult(
+        value.fountainRarityResult,
+        catalog,
+        `${raw.path}.fountainRarityResult`,
+      )
+    : undefined;
+  if (fountainRarityResult !== undefined && !fountainUsed)
+    failProjectDocument(`${raw.path}.fountainRarityResult`, 'requires the planned fountain use');
   return Object.freeze({
     kind: 'hub',
     hubKey,
     source,
     openTargets: Object.freeze(openTargets),
-    visitOrder: Object.freeze(visitOrder),
+    actions: Object.freeze(actions),
+    ...(fountainRarityResult === undefined ? {} : { fountainRarityResult }),
   });
 }
 

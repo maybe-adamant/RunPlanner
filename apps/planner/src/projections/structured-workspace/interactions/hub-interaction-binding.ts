@@ -1,4 +1,8 @@
-import { semanticAddressKey } from '@run-planner/engine/authored-project';
+import {
+  hubVisitSlotKeys,
+  semanticAddressKey,
+  type HubAction,
+} from '@run-planner/engine/authored-project';
 import {
   candidateSupport,
   type CandidateOptionProjection,
@@ -10,15 +14,15 @@ import { StructuredWorkspaceProjectionContractError } from '../contract';
 import type {
   WorkspaceHubBoardResetInteraction,
   WorkspaceHubSlotInteraction,
-  WorkspaceHubVisitOrderInteraction,
-  WorkspaceHubVisitOrderProposal,
+  WorkspaceHubActionOrderInteraction,
+  WorkspaceHubActionOrderProposal,
 } from '../contracts/structure';
 import type { WorkspaceHubInteractionRequirement } from './interaction-requirements';
 
 export interface WorkspaceHubInteractionCatalog {
   readonly hubBoardResets: ReadonlyMap<string, WorkspaceHubBoardResetInteraction>;
   readonly hubSlots: ReadonlyMap<string, WorkspaceHubSlotInteraction>;
-  readonly hubVisitOrders: ReadonlyMap<string, WorkspaceHubVisitOrderInteraction>;
+  readonly hubActionOrders: ReadonlyMap<string, WorkspaceHubActionOrderInteraction>;
 }
 
 export function bindHubInteractions(
@@ -28,7 +32,7 @@ export function bindHubInteractions(
 ): WorkspaceHubInteractionCatalog {
   const hubBoardResets = new Map<string, WorkspaceHubBoardResetInteraction>();
   const hubSlots = new Map<string, WorkspaceHubSlotInteraction>();
-  const hubVisitOrders = new Map<string, WorkspaceHubVisitOrderInteraction>();
+  const hubActionOrders = new Map<string, WorkspaceHubActionOrderInteraction>();
   const assertCandidateMayBeAuthored = <T>(
     options: readonly CandidateOptionProjection<T>[],
     value: T,
@@ -131,12 +135,12 @@ export function bindHubInteractions(
       );
     }
     const key = semanticAddressKey(requirement.owner);
-    if (hubVisitOrders.has(key)) {
+    if (hubActionOrders.has(key)) {
       throw new StructuredWorkspaceProjectionContractError(
-        `${key} has multiple bound Hub visit-order interactions`,
+        `${key} has multiple bound Hub action-order interactions`,
       );
     }
-    const proposals = new Map<string, WorkspaceHubVisitOrderProposal>();
+    const proposals = new Map<string, WorkspaceHubActionOrderProposal>();
     hubBoardResets.set(
       key,
       Object.freeze({
@@ -147,23 +151,30 @@ export function bindHubInteractions(
         owner: requirement.owner,
       }),
     );
-    hubVisitOrders.set(
+    hubActionOrders.set(
       key,
       Object.freeze({
         key,
         owner: requirement.owner,
-        proposalFor: (hubSlotKeys: readonly string[]) => {
-          const value = Object.freeze([...hubSlotKeys]);
+        proposalFor: (actions: readonly HubAction[]) => {
+          const value = Object.freeze([...actions]);
           const proposalKey = JSON.stringify(value);
           const existing = proposals.get(proposalKey);
           if (existing !== undefined) return existing;
-          let loaded: readonly CandidateOptionProjection<readonly string[]>[] | undefined;
+          let loaded: readonly CandidateOptionProjection<readonly HubAction[]>[] | undefined;
           const load = () =>
-            (loaded ??= candidates.hubVisitOrders(requirement.owner, Object.freeze([value])));
+            (loaded ??= candidates.hubActionOrders(requirement.owner, Object.freeze([value])));
           const proposal = Object.freeze({
             choices: Object.freeze([
               Object.freeze({
-                label: value.length === 0 ? 'No visits' : value.join(' → '),
+                label:
+                  value.length === 0
+                    ? 'No Hub actions'
+                    : value
+                        .map((action) =>
+                          action.kind === 'roomVisit' ? action.hubSlotKey : 'Fountain',
+                        )
+                        .join(' → '),
                 value,
               }),
             ]),
@@ -171,18 +182,18 @@ export function bindHubInteractions(
               const candidate = load()[0];
               if (candidate === undefined || candidateSupport(candidate) === 'impossible') {
                 throw new StructuredWorkspaceProjectionContractError(
-                  `Hub visit order ${key} is not currently authorable.`,
+                  `Hub action order ${key} is not currently authorable.`,
                 );
               }
               return Object.freeze({
                 command: Object.freeze({
+                  actions: value,
                   hub: requirement.owner,
-                  hubSlotKeys: value,
-                  kind: 'ReplaceHubVisitOrder' as const,
+                  kind: 'ReplaceHubActionOrder' as const,
                 }),
               });
             },
-            key: `${key}:visit-order:${proposalKey}`,
+            key: `${key}:action-order:${proposalKey}`,
             load,
             owner: requirement.owner,
             selected: value,
@@ -190,9 +201,10 @@ export function bindHubInteractions(
           proposals.set(proposalKey, proposal);
           return proposal;
         },
-        selectedHubSlotKeys: Object.freeze([...requirement.visitOrder]),
+        selectedActions: requirement.actions,
+        selectedHubSlotKeys: hubVisitSlotKeys(requirement),
       }),
     );
   }
-  return Object.freeze({ hubBoardResets, hubSlots, hubVisitOrders });
+  return Object.freeze({ hubBoardResets, hubSlots, hubActionOrders });
 }

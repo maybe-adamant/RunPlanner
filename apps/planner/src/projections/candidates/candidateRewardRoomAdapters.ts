@@ -245,7 +245,7 @@ export type RewardRoomCandidateAdapters = Pick<
   | 'rewardWheelStores'
   | 'rewardWheelPicks'
   | 'hubSlots'
-  | 'hubVisitOrders'
+  | 'hubActionOrders'
   | 'localVisitGenerations'
   | 'localVisitOrders'
 >;
@@ -326,13 +326,13 @@ export function createRewardRoomCandidateAdapters(
           localOccurrenceIdsBySlot,
         })),
       ),
-    hubVisitOrders: (hub, values) =>
+    hubActionOrders: (hub, values) =>
       core.projectOptions(
-        `hub-visit-order:${semanticAddressKey(hub)}:${domainKey(
+        `hub-action-order:${semanticAddressKey(hub)}:${domainKey(
           values.map((value) => JSON.stringify(value)),
         )}`,
         values,
-        values.map((hubSlotKeys) => ({ kind: 'hubVisitOrder', hub, hubSlotKeys })),
+        values.map((actions) => ({ kind: 'hubActionOrder', hub, actions })),
       ),
     localVisitGenerations: (sideRoom, values) =>
       core.projectOptions(

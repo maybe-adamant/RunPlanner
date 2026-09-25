@@ -19,3 +19,4 @@ export {
   replaceTestRoomActionOrder,
   replaceTestShopOfferActions,
 } from './room-actions';
+export { hubVisitActions } from './hub-actions';

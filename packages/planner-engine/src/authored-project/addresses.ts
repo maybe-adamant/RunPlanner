@@ -112,10 +112,10 @@ export interface KeepsakeEquipResultAddress {
   readonly resultKind: 'jeweledPom' | 'experimentalHammer' | 'transcendentEmbryo';
 }
 
-/** The authored Phial target beneath the exact occurrence-owned fountain use. */
+/** The authored Phial target beneath one exact occurrence- or Hub-owned fountain use. */
 export interface FountainRarityOutcomeAddress extends BiomeOwnedAddress {
   readonly kind: 'fountainRarityOutcome';
-  readonly action: RoomActionAddress;
+  readonly action: RoomActionAddress | HubFountainAddress;
 }
 
 export type ExitDecisionSourceAddress =
@@ -249,6 +249,11 @@ export interface HubVisitAddress extends BiomeOwnedAddress {
   readonly kind: 'hubVisit';
   readonly hubKey: string;
   readonly visitIndex: number;
+}
+/** The Hub's one fountain-use action, independent of its position in the action order. */
+export interface HubFountainAddress extends BiomeOwnedAddress {
+  readonly kind: 'hubFountain';
+  readonly hubKey: string;
 }
 export interface ShopOfferAddress extends BiomeOwnedAddress {
   readonly kind: 'shopOffer';
@@ -400,6 +405,7 @@ export type SemanticAddress =
   | HubOpenSetAddress
   | HubRoomAddress
   | HubVisitAddress
+  | HubFountainAddress
   | ShopOfferAddress
   | AcquisitionSiteAddress
   | AcquisitionEntryAddress
@@ -608,7 +614,7 @@ export function createKeepsakeEquipResultAddress<
   });
 }
 export function createFountainRarityOutcomeAddress(
-  action: RoomActionAddress,
+  action: RoomActionAddress | HubFountainAddress,
 ): FountainRarityOutcomeAddress {
   return Object.freeze({
     kind: 'fountainRarityOutcome',
@@ -869,6 +875,13 @@ export function createHubVisitAddress(
     visitIndex: positiveInteger(visitIndex, 'visitIndex'),
   });
 }
+export function createHubFountainAddress(biome: BiomeAddress, hubKey: string): HubFountainAddress {
+  return Object.freeze({
+    kind: 'hubFountain',
+    ...owner(biome),
+    hubKey: nonBlank(hubKey, 'hubKey'),
+  });
+}
 export function createShopOfferAddress(
   biome: BiomeAddress,
   occurrenceId: OccurrenceId,
@@ -1112,6 +1125,8 @@ export function semanticAddressKey(address: SemanticAddress): string {
       return JSON.stringify([...base, address.hubKey]);
     case 'hubVisit':
       return JSON.stringify([...base, address.hubKey, address.visitIndex]);
+    case 'hubFountain':
+      return JSON.stringify([...base, address.hubKey]);
     case 'localReward':
       return JSON.stringify([...base, address.occurrenceId, address.groupKey, address.slotKey]);
     case 'roomAction':

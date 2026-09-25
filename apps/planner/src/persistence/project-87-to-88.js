@@ -20,6 +20,21 @@ export function migrateProjectDocument(value) {
       `schema 87 -> 88 migration expects catalog ${CATALOG_VERSION}, received ${String(source.catalogVersion)}`,
     );
   const migrated = JSON.parse(JSON.stringify(source));
+  for (const biome of migrated.route?.biomes ?? [])
+    for (const [index, decision] of (biome?.topology?.decisions ?? []).entries()) {
+      if (decision?.kind !== 'hub') continue;
+      if (!Array.isArray(decision.visitOrder))
+        throw new Error(`Hub decision ${index} must have a visit order`);
+      // Schema 87 had no fountain placement; its fixed legacy default is use before the first visit.
+      const { visitOrder, ...rest } = decision;
+      biome.topology.decisions[index] = {
+        ...rest,
+        actions: [
+          { kind: 'useFountain' },
+          ...visitOrder.map((hubSlotKey) => ({ kind: 'roomVisit', hubSlotKey })),
+        ],
+      };
+    }
   migrated.schemaVersion = OUTPUT_SCHEMA_VERSION;
   return migrated;
 }

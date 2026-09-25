@@ -1,6 +1,7 @@
 import {
   applyProjectCommand,
   createEncounterPhaseAddress,
+  createHubDecisionAddress,
   createProjectDocument,
   encodeProjectDocument,
   parseProjectDocument,
@@ -12,6 +13,8 @@ import {
   goldenFBiome,
   goldenFOccurrenceId,
 } from '@run-planner/test-fixtures/underworld';
+import { hubVisitActions } from '@run-planner/test-fixtures/shared';
+import { loadSurfaceNProject, nBiome, nVisitSlotKeys } from '@run-planner/test-fixtures/surface';
 
 import {
   applyProjectDocumentTransitions,
@@ -32,6 +35,34 @@ describe('project document loader', () => {
       migrationProvenance: [],
       project,
     });
+  });
+
+  it('migrates a schema-87 Hub to fountain use before its retained visits', () => {
+    const current = loadSurfaceNProject();
+    const legacy = JSON.parse(encodeProjectDocument(current)) as {
+      schemaVersion: number;
+      route: { biomes: { topology: { decisions: Record<string, unknown>[] } | null }[] };
+    };
+    legacy.schemaVersion = 87;
+    for (const biome of legacy.route.biomes)
+      for (const decision of biome.topology?.decisions ?? []) {
+        if (decision.kind !== 'hub') continue;
+        decision.visitOrder = [...nVisitSlotKeys];
+        delete decision.actions;
+      }
+    expect(() =>
+      parseProjectDocument(JSON.stringify({ ...legacy, schemaVersion: 88 }), catalog),
+    ).toThrow(/visitOrder/);
+
+    const loaded = loadProjectDocument(JSON.stringify(legacy), catalog);
+    expect(loaded.migrationProvenance).toHaveLength(1);
+    expect(loaded.project).toEqual(
+      applyProjectCommand(current, catalog, {
+        kind: 'ReplaceHubActionOrder',
+        hub: createHubDecisionAddress(nBiome, 'hub'),
+        actions: hubVisitActions(nVisitSlotKeys, 0),
+      }),
+    );
   });
 
   it('migrates a schema-87 document by version only', () => {

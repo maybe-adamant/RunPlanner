@@ -179,7 +179,7 @@ function applyUnchecked(
     case 'ResetHubBoard':
     case 'OpenHubSlot':
     case 'CloseHubSlot':
-    case 'ReplaceHubVisitOrder':
+    case 'ReplaceHubActionOrder':
     case 'SetLocalVisitGeneration':
     case 'ReplaceLocalVisitOrder':
     case 'SetExitSelection':

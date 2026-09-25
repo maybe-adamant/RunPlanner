@@ -30,6 +30,7 @@ export type {
   CanonicalHubRoomReference,
   CanonicalHubTarget,
   CanonicalHubVisit,
+  CanonicalHubFountainUse,
   CanonicalLocalVisitRoom,
   CanonicalFieldsOptionalReward,
   CanonicalFieldsEntryPair,

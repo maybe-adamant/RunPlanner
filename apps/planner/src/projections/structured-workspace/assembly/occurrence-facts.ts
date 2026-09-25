@@ -1,6 +1,7 @@
 import {
   createOccurrenceAddress,
   createShopOfferAddress,
+  hubVisitSlotKeys,
   semanticAddressKey,
   type AuthoredBiomePlan,
   selectedExitContinuation,
@@ -46,7 +47,7 @@ function authoredDetailsActiveOccurrenceIds(plan: AuthoredBiomePlan): ReadonlySe
   active.add(topology.startOccurrenceId);
   for (const decision of topology.decisions) {
     if (decision.kind === 'hub') {
-      for (const slotKey of decision.visitOrder) {
+      for (const slotKey of hubVisitSlotKeys(decision)) {
         const target = decision.openTargets.find((candidate) => candidate.hubSlotKey === slotKey);
         if (target !== undefined) active.add(target.occurrenceId);
       }

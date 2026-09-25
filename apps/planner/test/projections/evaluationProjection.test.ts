@@ -106,8 +106,7 @@ describe('evaluation presentation', () => {
       title: 'Purchase order unavailable',
     });
     expect(presentFinding(finding('hubVisitOrderIncomplete'))).toEqual({
-      title: 'Choose six Hub visits',
-      description: 'Visit six different open rooms.',
+      title: 'Plan six room visits and use the fountain',
     });
   });
 
