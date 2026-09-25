@@ -320,6 +320,12 @@ describe('native generated composition possibility', () => {
       { key: 'Guard', count: 4 },
       { key: 'FogEmitter2', effective: 85, count: 1 },
     ]);
+    // Redistribution changes the earlier final count, not the recorded remainder
+    // at the capped enemy's allocation step.
+    expect(capped(110, 20).waves[0]?.countPreview).toMatchObject([
+      { key: 'Guard', count: 6 },
+      { key: 'FogEmitter2', remainder: 90, effective: 90, count: 1 },
+    ]);
     const unknown = capped(105, 20);
     const withDefaultSample = assessGeneratedEncounter(
       { ...policy('GeneratedH'), waveCount: { min: 1, max: 1 } },
@@ -331,6 +337,21 @@ describe('native generated composition possibility', () => {
       { key: 'BrokenHearted' },
       { key: 'FogEmitter2' },
     ]);
+  });
+  it.each([
+    [160, 15],
+    [180, 0],
+  ])('retains pre-minimum remainder after a %s request', (requested, remainder) => {
+    const result = assess('GeneratedF', {
+      waveCount: 1,
+      waves: [{ waveIndex: 1, typeKeys: ['Guard', 'Brawler'], allocations: { Guard: requested } }],
+    });
+    expect(result.waves[0]?.countPreview?.[1]).toMatchObject({
+      key: 'Brawler',
+      remainder,
+      effective: 18,
+      count: 1,
+    });
   });
   it('retains partial rows while reporting every missing completion field', () => {
     const row = {

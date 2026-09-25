@@ -86,6 +86,8 @@ export interface GeneratedEncounterAssessment {
     readonly countPreview?: readonly {
       readonly key: string;
       readonly requested?: number;
+      /** Native remainder at this unsampled allocation step, before minimums and rounding. */
+      readonly remainder?: number;
       readonly effective?: number;
       readonly count?: number;
     }[];
@@ -237,6 +239,7 @@ export function assessGeneratedEncounter(
     | readonly {
         readonly key: string;
         readonly requested?: number;
+        readonly remainder?: number;
         readonly effective?: number;
         readonly count?: number;
       }[]
@@ -245,7 +248,13 @@ export function assessGeneratedEncounter(
     const waveBudget = (budget.waveBudgets as readonly number[])[waveIndex - 1];
     if (waveBudget === undefined) return undefined;
     const row = authored.waves?.find((wave) => wave.waveIndex === waveIndex);
-    const result: { key: string; requested?: number; effective?: number; count?: number }[] = [];
+    const result: {
+      key: string;
+      requested?: number;
+      remainder?: number;
+      effective?: number;
+      count?: number;
+    }[] = [];
     let accumulatedDifficulty = 0;
     for (const fixed of policy.fixedEnemies) {
       const count = fixed.fixedCount ?? 1;
@@ -297,7 +306,13 @@ export function assessGeneratedEncounter(
         uncapped.push({ index: result.length, count, difficultyRating: enemy.difficultyRating });
       if (count < 1) count = 1;
       accumulatedDifficulty += enemy.difficultyRating * count;
-      result.push({ key, ...(requested === undefined ? {} : { requested }), effective, count });
+      result.push({
+        key,
+        ...(requested === undefined ? {} : { requested }),
+        ...(isSampled ? {} : { remainder: Math.max(0, remaining) }),
+        effective,
+        count,
+      });
     }
     return Object.freeze(result.map((entry) => Object.freeze(entry)));
   };
