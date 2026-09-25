@@ -189,6 +189,24 @@ This identity model serves both fixed routes, including H cage encounters and O
 multi-phase rooms, without a second encounter cursor or a different
 phase-binding scheme.
 
+Noncombat rooms follow the same exact identity. A derived carrier is its own
+declaration: `Story_Chronos_01` is `InheritFrom = { "Empty" }`
+(`EncounterData_Story.lua:177-179`) yet native selection and room entry
+report `Story_Chronos_01`. Each fixed noncombat slot therefore binds its
+room's native `LegalEncounters` key; the catalog encounter test owns the
+per-room source-line table.
+
+| Native carrier                                            | Rooms (`LegalEncounters`)                                                 | Planner disposition                                                             |
+| --------------------------------------------------------- | ------------------------------------------------------------------------- | ------------------------------------------------------------------------------- |
+| `Empty`                                                   | `G/H/N/O/P_PostBoss01`, `Dream_PostBoss01..03`, `I_PreBoss01/02`          | Fixed slot binds `Empty`.                                                       |
+| `Story_Chronos_01`                                        | `F_PostBoss01`                                                            | Fixed slot binds `Story_Chronos_01`; conversations remain native progression.   |
+| `Story_<NPC>_01`                                          | `F/G/I/N/O/P_Story01` (Arachne, Narcissus, Hades, Medea, Circe, Dionysus) | Fixed slot binds the story key.                                                 |
+| `Shop`, `TyphonShop`, `HealthRestore`                     | Shops, prebosses, reprieves; `Q_PreBoss01` uses `TyphonShop`              | Fixed slot binds the native key.                                                |
+| `Empty_Chaos`                                             | `Chaos_01..06` through `BaseChaos`                                        | Fixed slot binds `Empty_Chaos`.                                                 |
+| `Empty` (no modeled phase)                                | `G/H/I/O/Q_Intro`, `N_Hub`                                                | Zero-slot envelope; `unmodeledEncounterKeys` publishes `Empty` for exact proof. |
+| `Story_Echo_01`, `BridgeShop`, `BridgeNemesisRandomEvent` | `H_Bridge01`                                                              | Multi-carrier; the catalog models and forces the Echo alternative.              |
+| `OpeningEmpty` beside combat openings                     | `F_Opening01..03`, `N_Opening01`; `P_Intro` (`PIntroDreamRunEmpty`)       | Route-contextual entry rule selects the noncombat member on Dream routes.       |
+
 ### Boss decisions
 
 Room and encounter identity are distinct. `RoomDataI.lua` and `RoomDataP.lua`

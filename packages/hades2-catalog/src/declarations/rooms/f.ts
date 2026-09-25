@@ -1245,7 +1245,7 @@ const fRoomDeclarations: readonly RawRoomDeclaration[] = [
     enteredRewardStoreHistory: { kind: 'none' },
     encounterEnvelopeKey: 'SingleEncounter',
     encounterSlotBindings: [
-      { slotKey: 'Encounter', kind: 'fixed', encounterDefinitionKey: 'Empty' },
+      { slotKey: 'Encounter', kind: 'fixed', encounterDefinitionKey: 'Story_Chronos_01' },
     ],
     counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },

@@ -27,3 +27,7 @@ is confirmed, or when the owner explicitly waives the remainder.
       evidence, and the encounter continues natively.
 - [ ] Supplying a base roll as a single-value `RandomInt(n, n)` range consumes
       exactly one engine RNG step, as the unsupplied native roll does.
+- [ ] F postboss runs its native `Story_Chronos_01` carrier without an
+      encounter mismatch and stays synchronized through the fountain, Purging
+      Pool and the exit into G. Its Chronos conversation remains conditional on
+      game progression.

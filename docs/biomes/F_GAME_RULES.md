@@ -198,9 +198,11 @@ and remains excluded under the neutral baseline. Automatic Mixer and
 weapon-dependent boss drops are intentionally outside the modeled reward
 surface. `F_Boss01` also records no reward-store history contribution because
 the game marks the boss ignored for that ledger. The normalized `F_PostBoss01`
-binds shared `Empty`, with no modeled reward or store contribution, before the
-route enters `G_Intro`. The raw `Story_Chronos_01` binding is a progression-event
-carrier over `Empty` and remains outside the static planner baseline.
+binds its native `Story_Chronos_01` carrier, with no modeled reward or store
+contribution, before the route enters `G_Intro`. The carrier inherits `Empty`
+and adds Chronos conversation and taunt events gated on game progression,
+which remain outside the static planner baseline. It is bound by name because
+execution forces and proves the exact native encounter identity.
 
 Both rooms are ordinary Room Declarations referenced by the fixed topology
 links. They are not generated candidates, authored topology choices, or editor
