@@ -3,6 +3,7 @@ import {
   applyProjectCommand,
   createExitDecisionAddress,
   createHubDecisionAddress,
+  createHubFountainAddress,
   createIncomingRewardAddress,
   semanticAddressKey,
   type ProjectDocument,
@@ -21,6 +22,7 @@ import {
   nBiome,
   nOccurrenceId,
   nOccurrenceIds,
+  nVisitSlotKeys,
 } from '@run-planner/test-fixtures/surface';
 import { assembleWorkspaceHub } from '@planner/projections/structured-workspace/assembly/hub-assembly';
 import {
@@ -86,7 +88,93 @@ function hubKit(source: WorkspaceBiomeSource) {
   return { assembleOccurrence, descriptor, hub, markers, owner };
 }
 
+function assembleAuthoredHub(project: ProjectDocument) {
+  const source = biomeSource(project);
+  const kit = hubKit(source);
+  if (kit.hub === undefined) throw new Error('authored N Hub is missing');
+  return assembleWorkspaceHub({
+    assembleOccurrence: kit.assembleOccurrence,
+    biome: source.biome,
+    catalog,
+    descriptor: kit.descriptor,
+    hub: kit.hub,
+    markerDestinations: kit.markers.emitter,
+    topology: source.plan.topology,
+  });
+}
+
 describe('structured workspace Hub assembly', () => {
+  it('projects the fountain use in the combined action order with complete placement proposals', () => {
+    const hub = createHubDecisionAddress(nBiome, 'hub');
+    const visits = nVisitSlotKeys.slice(0, 2);
+    const withActions = (fountainAfterVisits: number | null) =>
+      assembleAuthoredHub(
+        applyProjectCommand(loadSurfaceNProject(), catalog, {
+          kind: 'ReplaceHubActionOrder',
+          hub,
+          actions: hubVisitActions(visits, fountainAfterVisits),
+        }),
+      ).node;
+
+    const unused = withActions(null);
+    expect(unused.fountain).toMatchObject({
+      address: createHubFountainAddress(nBiome, 'hub'),
+      appendActions: hubVisitActions(visits, 2),
+      hub,
+    });
+    expect(unused.fountain).not.toHaveProperty('actionPosition');
+    expect(unused.fountain).not.toHaveProperty('selectedPlacementKey');
+    expect(unused.fountain).not.toHaveProperty('controlsHost');
+    expect(unused.fountain.placements).toEqual([
+      {
+        key: 'after:0',
+        label: 'Before visit 1',
+        precedingVisitCount: 0,
+        proposedActions: hubVisitActions(visits, 0),
+      },
+      {
+        key: 'after:1',
+        label: 'After visit 1',
+        precedingVisitCount: 1,
+        proposedActions: hubVisitActions(visits, 1),
+      },
+      {
+        key: 'after:2',
+        label: 'After visit 2',
+        precedingVisitCount: 2,
+        proposedActions: hubVisitActions(visits, 2),
+      },
+    ]);
+    expect(unused.visits.map((visit) => visit.actionPosition)).toEqual([
+      1,
+      2,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+    ]);
+
+    const between = withActions(1);
+    expect(between.fountain).toMatchObject({
+      actionPosition: 2,
+      controlsHost: { kind: 'room', occurrenceId: nOccurrenceId(visits[1]!) },
+      selectedPlacementKey: 'after:1',
+    });
+    expect(between.fountain).not.toHaveProperty('appendActions');
+    expect(between.visits.slice(0, 2).map((visit) => visit.actionPosition)).toEqual([1, 3]);
+    // Moving keeps every room visit and differs only in the fountain position.
+    expect(
+      between.fountain.placements.find((placement) => placement.key === 'after:0'),
+    ).toMatchObject({ proposedActions: hubVisitActions(visits, 0) });
+
+    const first = withActions(0);
+    expect(first.fountain.actionPosition).toBe(1);
+    expect(first.visits.slice(0, 2).map((visit) => visit.actionPosition)).toEqual([2, 3]);
+
+    // No room follows the last planned action yet, so the Hub hosts the controls.
+    expect(withActions(2).fountain.controlsHost).toEqual({ kind: 'hub' });
+  });
+
   it('returns the authored board, room-local workbenches, exact controls, and Hub reward redirects', () => {
     const source = biomeSource(loadSurfaceNProject());
     const kit = hubKit(source);

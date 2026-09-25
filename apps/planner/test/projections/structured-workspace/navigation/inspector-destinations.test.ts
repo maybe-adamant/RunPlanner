@@ -9,7 +9,9 @@ import {
   createNemesisRandomEventAddress,
   createExitDecisionAddress,
   createExitSelectionAddress,
+  createFountainRarityOutcomeAddress,
   createHubDecisionAddress,
+  createHubFountainAddress,
   createHubSlotAddress,
   createHubVisitAddress,
   createIncomingRewardAddress,
@@ -19,6 +21,7 @@ import {
   createRoomActionAddress,
   createShopOfferAddress,
   createProjectDocument,
+  createRouteStartKeepsakeSelectionAddress,
   createStartingRewardAddress,
   createTargetAddress,
   createTraitOfferAddress,
@@ -47,6 +50,7 @@ import {
   loadSurfaceNCompleteHubFrontierProject,
   loadSurfaceNEntryFrontierProject,
   loadSurfaceNOPQProject,
+  loadSurfaceNProject,
   nBiome,
   nLocalOccurrenceId,
   nOccurrenceId,
@@ -1314,6 +1318,74 @@ describe('workspace inspector destinations', () => {
     expect(handoffDestination.hubTab).toBe('exit');
     expect(handoffDestination.inspectorSubject).toEqual({ kind: 'node', nodeKey: handoffHub.key });
     expect(handoffDestination.selectedRailKey).toBeUndefined();
+  });
+
+  it('routes Hub fountain placement to the Timeline map and its Phial outcome to the displayed controls', () => {
+    const hub = createHubDecisionAddress(nBiome, 'hub');
+    const fountain = createHubFountainAddress(nBiome, 'hub');
+    const outcome = createFountainRarityOutcomeAddress(fountain);
+    const withPhial = applyProjectCommand(loadSurfaceNProject(), catalog, {
+      kind: 'ReplaceStartingKeepsake',
+      selection: createRouteStartKeepsakeSelectionAddress('Surface'),
+      keepsakeKey: 'FountainRarityKeepsake',
+    });
+    const placed = (visits: readonly string[], fountainAfterVisits: number | null) =>
+      project(
+        applyProjectCommand(withPhial, catalog, {
+          kind: 'ReplaceHubActionOrder',
+          hub,
+          actions: hubVisitActions(visits, fountainAfterVisits),
+        }),
+      );
+    const hubNodeKey = (workspace: StructuredWorkspaceProjection) => {
+      const node = biome(workspace, 'N').nodes.find(
+        (candidate) => candidate.kind === 'hubDecision',
+      );
+      if (node === undefined) throw new Error('N Hub node is missing');
+      return node.key;
+    };
+    const nextRoomKey = (workspace: StructuredWorkspaceProjection, occurrenceId: string) =>
+      occurrenceWorkbenchFor(biome(workspace, 'N'), occurrenceId).key;
+
+    const unused = placed(nVisitSlotKeys, null);
+    expect(destination(unused, fountain)).toMatchObject({
+      hubTab: 'timeline',
+      inspectorSubject: { kind: 'node', nodeKey: hubNodeKey(unused) },
+    });
+
+    const beforeFourthVisit = placed(nVisitSlotKeys, 3);
+    const fourthRoom = nOccurrenceId(nVisitSlotKeys[3]!);
+    const beforeFourthDestination = destination(beforeFourthVisit, outcome);
+    expect(beforeFourthDestination.inspectorSubject).toEqual({
+      kind: 'node',
+      nodeKey: nextRoomKey(beforeFourthVisit, fourthRoom),
+    });
+    expect(beforeFourthDestination).not.toHaveProperty('hubTab');
+    // A used fountain follows its displayed controls as well.
+    expect(destination(beforeFourthVisit, fountain).inspectorSubject).toEqual(
+      beforeFourthDestination.inspectorSubject,
+    );
+    expect(
+      occurrenceWorkbenchFor(biome(beforeFourthVisit, 'N'), fourthRoom).hubFountain?.address,
+    ).toEqual(fountain);
+
+    const beforePreboss = placed(nVisitSlotKeys, 6);
+    expect(destination(beforePreboss, outcome).inspectorSubject).toEqual({
+      kind: 'node',
+      nodeKey: nextRoomKey(beforePreboss, nOccurrenceIds.preboss),
+    });
+
+    // With no room after the use yet, the Hub keeps the actionable controls.
+    const lastPlanned = placed(nVisitSlotKeys.slice(0, 3), 3);
+    expect(destination(lastPlanned, outcome)).toMatchObject({
+      hubTab: 'timeline',
+      inspectorSubject: { kind: 'node', nodeKey: hubNodeKey(lastPlanned) },
+    });
+    expect(
+      biome(lastPlanned, 'N').nodes.some(
+        (node) => node.kind === 'occurrenceWorkbench' && node.hubFountain !== undefined,
+      ),
+    ).toBe(false);
   });
 
   it('binds Fields and Ship local leaves to their containing decision rail', () => {

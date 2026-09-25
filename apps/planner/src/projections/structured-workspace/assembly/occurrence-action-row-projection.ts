@@ -72,6 +72,29 @@ export interface WorkspaceOccurrenceActionsInput {
   ) => import('@run-planner/engine/simulation').StygianWellCandidateCapability | undefined;
 }
 
+/** The Phial target control for one fountain use, present only while a target is required. */
+export function projectFountainRarityControl(
+  outcome: FountainRarityOutcomeAddress,
+  targetTraitKey: string | undefined,
+  assess: NonNullable<WorkspaceOccurrenceActionsInput['fountainRarityAssessment']>,
+  markerDestinations: WorkspaceMarkerDestinationEmitter,
+): WorkspaceFountainRarityControl | undefined {
+  const evaluated = assess(outcome, targetTraitKey);
+  if (evaluated.kind !== 'fountainRarityOutcome') return undefined;
+  if (
+    evaluated.result.status !== 'pending' ||
+    evaluated.result.targetRequired !== true ||
+    evaluated.result.mutationTargetKeys.length === 0
+  ) {
+    return undefined;
+  }
+  return Object.freeze<WorkspaceFountainRarityControl>({
+    address: outcome,
+    marker: markerDestinations.marker(outcome),
+    ...(targetTraitKey === undefined ? {} : { targetTraitKey }),
+  });
+}
+
 export interface WorkspaceOccurrenceActionAssemblyInput extends WorkspaceOccurrenceActionsInput {
   readonly controls: readonly WorkspaceRewardControl[];
   readonly encounterPhases: readonly WorkspaceEncounterPhase[];
@@ -231,27 +254,15 @@ function roomActionsForOccurrence(
         (roomLocal.kind === 'shop' &&
           row.reference.kind === 'interactAcquisitionEntry' &&
           row.reference.entryKey === TRAVEL_DEAL_REFILL_ENTRY_KEY);
-      const fountainRarity = (() => {
-        if (row.reference.kind !== 'useFountain' || input.fountainRarityAssessment === undefined) {
-          return undefined;
-        }
-        const outcome = createFountainRarityOutcomeAddress(address);
-        const targetTraitKey = input.occurrence.fountainRarityResult?.targetTraitKey;
-        const evaluated = input.fountainRarityAssessment(outcome, targetTraitKey);
-        if (evaluated.kind !== 'fountainRarityOutcome') return undefined;
-        if (
-          evaluated.result.status !== 'pending' ||
-          evaluated.result.targetRequired !== true ||
-          evaluated.result.mutationTargetKeys.length === 0
-        ) {
-          return undefined;
-        }
-        return Object.freeze<WorkspaceFountainRarityControl>({
-          address: outcome,
-          marker: input.markerDestinations.marker(outcome),
-          ...(targetTraitKey === undefined ? {} : { targetTraitKey }),
-        });
-      })();
+      const fountainRarity =
+        row.reference.kind !== 'useFountain' || input.fountainRarityAssessment === undefined
+          ? undefined
+          : projectFountainRarityControl(
+              createFountainRarityOutcomeAddress(address),
+              input.occurrence.fountainRarityResult?.targetTraitKey,
+              input.fountainRarityAssessment,
+              input.markerDestinations,
+            );
       const artificerConversion = resolvedRewardControl?.conversions?.find(
         (conversion) => conversion.value.kind === 'artificer',
       );

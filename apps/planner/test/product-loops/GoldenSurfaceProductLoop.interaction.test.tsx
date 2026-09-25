@@ -4,8 +4,12 @@ import { act, cleanup, screen, waitFor, within } from '@testing-library/react';
 import {
   applyProjectCommand,
   createExitDecisionAddress,
+  createFountainRarityOutcomeAddress,
+  createHubDecisionAddress,
+  createHubFountainAddress,
   createHubSlotAddress,
   createOccurrenceAddress,
+  createRouteStartKeepsakeSelectionAddress,
   createShopOfferAddress,
   createTargetAddress,
   createTraitOfferAddress,
@@ -35,6 +39,7 @@ import {
 import { selectProfileStatus } from '@planner/state/store';
 import {
   authorLegalTraitOffers,
+  hubVisitActions,
   reachedTraitOffers,
   traitCandidateOptions,
   type TraitCandidateProbe,
@@ -46,6 +51,7 @@ import {
   nBiome,
   nOccurrenceId,
   nOccurrenceIds,
+  nVisitSlotKeys,
   oBiome,
   oOccurrenceIds,
   pBiome,
@@ -154,6 +160,14 @@ function currentHistory(application: PlannerApplication) {
   const workspace = application.store.getState().projectWorkspace;
   if (workspace.kind !== 'openProject') throw new Error('expected an open project');
   return workspace.history;
+}
+
+function nHub(project: ReturnType<typeof currentProject>) {
+  const hub = project.route.biomes
+    .find((biome) => biome.biomeKey === 'N')
+    ?.topology?.decisions.find((decision) => decision.kind === 'hub');
+  if (hub?.kind !== 'hub') throw new Error('N Hub is missing');
+  return hub;
 }
 
 function hubRailButton(): HTMLElement {
@@ -486,6 +500,53 @@ describe('surface product loop', () => {
     const inspector = screen.getByRole('complementary', { name: 'Details' });
     expect(inspector.querySelector('.biome-batch-workbench')).not.toBeNull();
     expect(within(inspector).getByRole('article', { name: 'Combat 02 room offer' })).toBeTruthy();
+  });
+
+  it('repairs a Hub Phial target from the fountain controls before the next room and moves the fountain with it', async () => {
+    const application = createApplication();
+    const hub = createHubDecisionAddress(nBiome, 'hub');
+    const outcome = createFountainRarityOutcomeAddress(createHubFountainAddress(nBiome, 'hub'));
+    const withPhial = applyProjectCommand(loadSurfaceNProject(), application.catalog, {
+      kind: 'ReplaceStartingKeepsake',
+      selection: createRouteStartKeepsakeSelectionAddress('Surface'),
+      keepsakeKey: 'FountainRarityKeepsake',
+    });
+    application.store.dispatch(
+      authoredProjectReplaced(
+        applyProjectCommand(withPhial, application.catalog, {
+          kind: 'ReplaceHubActionOrder',
+          hub,
+          actions: hubVisitActions(nVisitSlotKeys, 3),
+        }),
+      ),
+    );
+    expect(currentEvaluation(application).issue?.owner).toEqual(outcome);
+    const view = renderPlannerForInteraction({ application });
+    const repair = screen.getByRole('heading', { name: 'Next repair' }).closest('section');
+    if (repair === null) throw new Error('selected repair banner is missing');
+    await view.user.click(within(repair).getByRole('button'));
+
+    const inspector = screen.getByRole('complementary', { name: 'Details' });
+    const controls = within(inspector).getByRole('region', { name: 'Hub fountain' });
+    expect(within(controls).getByText('Used in the Hub before Combat 11.')).toBeTruthy();
+    await view.user.click(
+      await screen.findByText(application.catalog.traits.byKey['HermesWeaponBoon']!.label),
+    );
+    await waitFor(() => expect(currentEvaluation(application).findings).toEqual([]));
+
+    const historyBefore = currentHistory(application).past.length;
+    await view.user.click(within(controls).getByRole('button', { name: 'After visit 5' }));
+    const moved = nHub(currentProject(application));
+    expect(moved.actions).toEqual(hubVisitActions(nVisitSlotKeys, 5));
+    expect(moved.fountainRarityResult).toEqual({ targetTraitKey: 'HermesWeaponBoon' });
+    expect(currentHistory(application).past).toHaveLength(historyBefore + 1);
+    // Focus follows the moved controls to the sixth visit's room.
+    await waitFor(() => expect(document.activeElement?.textContent).toBe('After visit 5'));
+    const movedControls = within(inspector).getByRole('region', { name: 'Hub fountain' });
+    expect(movedControls.contains(document.activeElement)).toBe(true);
+    expect(within(movedControls).getByText('Used in the Hub before Combat 09.')).toBeTruthy();
+    await view.user.click(screen.getByRole('button', { name: 'Undo' }));
+    expect(nHub(currentProject(application)).actions).toEqual(hubVisitActions(nVisitSlotKeys, 3));
   });
 
   it('routes the selected nested Natural Selection issue to its Timeline pickup without opening a dialog', async () => {

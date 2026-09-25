@@ -1,4 +1,7 @@
 import {
+  createBiomeAddress,
+  createHubFountainAddress,
+  hubFountainPrecedingVisitCount,
   hubVisitSlotKeys,
   semanticAddressKey,
   type HubAction,
@@ -161,6 +164,17 @@ export function bindHubInteractions(
           const proposalKey = JSON.stringify(value);
           const existing = proposals.get(proposalKey);
           if (existing !== undefined) return existing;
+          // Moving a used fountain keeps focus on its controls wherever they are displayed next.
+          const selectedFountain = hubFountainPrecedingVisitCount(requirement);
+          const proposedFountain = hubFountainPrecedingVisitCount({ actions: value });
+          const movesFountain =
+            selectedFountain !== undefined &&
+            proposedFountain !== undefined &&
+            selectedFountain !== proposedFountain;
+          const fountain = createHubFountainAddress(
+            createBiomeAddress(requirement.owner.routeKey, requirement.owner.biomeKey),
+            requirement.owner.hubKey,
+          );
           let loaded: readonly CandidateOptionProjection<readonly HubAction[]>[] | undefined;
           const load = () =>
             (loaded ??= candidates.hubActionOrders(requirement.owner, Object.freeze([value])));
@@ -191,6 +205,9 @@ export function bindHubInteractions(
                   hub: requirement.owner,
                   kind: 'ReplaceHubActionOrder' as const,
                 }),
+                ...(movesFountain
+                  ? { focus: Object.freeze({ owner: fountain, timing: 'after' as const }) }
+                  : {}),
               });
             },
             key: `${key}:action-order:${proposalKey}`,

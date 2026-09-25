@@ -9,13 +9,16 @@ import {
   createBiomeAddress,
   createExitDecisionAddress,
   createExitSelectionAddress,
+  createFountainRarityOutcomeAddress,
   createHubDecisionAddress,
+  createHubFountainAddress,
   createHubSlotAddress,
   createHubVisitAddress,
   createIncomingRewardAddress,
   createOccurrenceAddress,
   createOccurrenceId,
   createProjectDocument,
+  createRouteStartKeepsakeSelectionAddress,
   createStartingRewardAddress,
   decodeProjectDocument,
   createTargetAddress,
@@ -27,7 +30,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { Provider } from 'react-redux';
 
 import { createApplication, type PlannerApplication } from '@planner/composition/createApplication';
-import { semanticFindingKey } from '@planner/projections/evaluationProjection';
+import { presentFinding, semanticFindingKey } from '@planner/projections/evaluationProjection';
 import type { WorkspaceBiome, WorkspaceNode } from '@planner/projections/structured-workspace';
 import { findingSelected, semanticOwnerFocused } from '@planner/state/editorSessionSlice';
 import {
@@ -40,9 +43,11 @@ import {
   loadSurfaceNEntryFrontierProject,
   loadSurfaceNEntryFrontierResolvedProject,
   loadSurfaceNOPQProject,
+  loadSurfaceNProject,
   nBiome,
   nOccurrenceId,
   nOccurrenceIds,
+  nVisitSlotKeys,
   pBiome,
   pOccurrenceId,
   pOccurrenceIds,
@@ -421,6 +426,157 @@ describe('BiomeWorkspace', () => {
     await waitFor(() => expect(document.activeElement).toBe(nextCount));
   });
 
+  it('routes the combined Hub action finding to the Timeline fountain and repairs it there', async () => {
+    const project = applyProjectCommand(loadSurfaceNProject(), catalog, {
+      kind: 'ReplaceHubActionOrder',
+      hub: createHubDecisionAddress(nBiome, 'hub'),
+      actions: hubVisitActions(nVisitSlotKeys, null),
+    });
+    const fountain = createHubFountainAddress(nBiome, 'hub');
+    const view = renderWorkspace(project, 'Surface', 'N');
+    const finding = view.application.store
+      .getState()
+      .projectWorkspace.assembly!.evaluation.findings.find(
+        (candidate) => candidate.code === 'hubVisitOrderIncomplete',
+      );
+    if (finding === undefined) throw new Error('combined Hub action finding is missing');
+    expect(finding.origin).toEqual(fountain);
+    expect(presentFinding(finding).title).toBe('Plan six room visits and use the fountain');
+
+    act(() =>
+      view.application.store.dispatch(
+        findingSelected({ key: semanticFindingKey(finding), origin: finding.origin }),
+      ),
+    );
+    expect(screen.getByRole('tab', { name: 'Hub Timeline' }).getAttribute('aria-selected')).toBe(
+      'true',
+    );
+    const marker = screen.getByRole('button', { name: 'Hub fountain: Unused. Use fountain.' });
+    expect(marker.getAttribute('data-semantic-owner')).toBe(semanticAddressKey(fountain));
+    expect(marker.getAttribute('data-selected-finding')).toBe('true');
+    await waitFor(() => expect(document.activeElement).toBe(marker));
+    await view.user.click(marker);
+    await waitFor(() =>
+      expect(
+        view.application.store
+          .getState()
+          .projectWorkspace.assembly!.evaluation.findings.some(
+            (candidate) => candidate.code === 'hubVisitOrderIncomplete',
+          ),
+      ).toBe(false),
+    );
+  });
+
+  it.each([
+    ['before the next room', nVisitSlotKeys, 'Combat 11'],
+    ['in the Hub before that room exists', nVisitSlotKeys.slice(0, 3), undefined],
+  ] as const)(
+    'routes a missing Phial target to the Hub fountain controls %s',
+    async (_case, visits, hostLabel) => {
+      const withPhial = applyProjectCommand(loadSurfaceNProject(), catalog, {
+        kind: 'ReplaceStartingKeepsake',
+        selection: createRouteStartKeepsakeSelectionAddress('Surface'),
+        keepsakeKey: 'FountainRarityKeepsake',
+      });
+      const project = applyProjectCommand(withPhial, catalog, {
+        kind: 'ReplaceHubActionOrder',
+        hub: createHubDecisionAddress(nBiome, 'hub'),
+        actions: hubVisitActions(visits, 3),
+      });
+      const outcome = createFountainRarityOutcomeAddress(createHubFountainAddress(nBiome, 'hub'));
+      const view = renderWorkspace(project, 'Surface', 'N');
+      const finding = view.application.store
+        .getState()
+        .projectWorkspace.assembly!.evaluation.findings.find(
+          (candidate) => candidate.code === 'fountainRarityResultMissing',
+        );
+      if (finding === undefined) throw new Error('missing Phial target finding is absent');
+      expect(finding.origin).toEqual(outcome);
+
+      act(() =>
+        view.application.store.dispatch(
+          findingSelected({ key: semanticFindingKey(finding), origin: finding.origin }),
+        ),
+      );
+      const controls = await screen.findByRole('region', { name: 'Hub fountain' });
+      const target = Array.from(
+        document.querySelectorAll<HTMLElement>('[data-semantic-owner]'),
+      ).find(
+        (element) => element.getAttribute('data-semantic-owner') === semanticAddressKey(outcome),
+      );
+      if (target === undefined) throw new Error('Phial outcome target is not rendered');
+      expect(controls.contains(target)).toBe(true);
+      expect(target.getAttribute('data-selected-finding')).toBe('true');
+      expect(target.closest('[inert]')).toBeNull();
+      if (hostLabel === undefined) {
+        // The Hub Timeline keeps the actionable Hub-owned destination.
+        expect(
+          screen.getByRole('tab', { name: 'Hub Timeline' }).getAttribute('aria-selected'),
+        ).toBe('true');
+        expect(
+          within(controls).getByText('Used in the Hub after the planned visits.'),
+        ).toBeTruthy();
+        return;
+      }
+      expect(within(controls).getByText(`Used in the Hub before ${hostLabel}.`)).toBeTruthy();
+      expect(controls.nextElementSibling?.querySelector('h3')?.textContent).toBe(hostLabel);
+      await view.user.click(
+        await screen.findByText(catalog.traits.byKey['HermesWeaponBoon']?.label ?? ''),
+      );
+      await waitFor(() =>
+        expect(
+          view.application.store
+            .getState()
+            .projectWorkspace.assembly!.evaluation.findings.some(
+              (candidate) => candidate.code === 'fountainRarityResultMissing',
+            ),
+        ).toBe(false),
+      );
+    },
+  );
+
+  it('moves the fountain from its room-hosted controls by keyboard and keeps focus on them', async () => {
+    const project = applyProjectCommand(loadSurfaceNProject(), catalog, {
+      kind: 'ReplaceHubActionOrder',
+      hub: createHubDecisionAddress(nBiome, 'hub'),
+      actions: hubVisitActions(nVisitSlotKeys, 3),
+    });
+    const view = renderWorkspace(project, 'Surface', 'N');
+    act(() =>
+      view.application.store.dispatch(
+        semanticOwnerFocused(createHubVisitAddress(nBiome, 'hub', 1)),
+      ),
+    );
+    // Hub Timeline links to the controls displayed before the next room.
+    await view.user.click(
+      screen.getByRole('button', { name: 'Hub fountain controls: before Combat 11 →' }),
+    );
+    const controls = await screen.findByRole('region', { name: 'Hub fountain' });
+    const current = within(controls).getByRole('button', { name: 'After visit 3' });
+    await waitFor(() => expect(document.activeElement).toBe(current));
+    expect(current.getAttribute('aria-pressed')).toBe('true');
+
+    await view.user.tab({ shift: true });
+    expect(document.activeElement?.textContent).toBe('After visit 2');
+    await view.user.keyboard('{Enter}');
+    const hub = () => {
+      const plan = view.application.store
+        .getState()
+        .projectWorkspace.history!.present.route.biomes.find((biome) => biome.biomeKey === 'N');
+      const decision = plan?.topology?.decisions.find((candidate) => candidate.kind === 'hub');
+      if (decision?.kind !== 'hub') throw new Error('N Hub is missing');
+      return decision;
+    };
+    await waitFor(() => expect(hub().actions).toEqual(hubVisitActions(nVisitSlotKeys, 2)));
+    const moved = await screen.findByRole('region', { name: 'Hub fountain' });
+    expect(within(moved).getByText('Used in the Hub before Combat 02.')).toBeTruthy();
+    await waitFor(() =>
+      expect(document.activeElement).toBe(
+        within(moved).getByRole('button', { name: 'After visit 2' }),
+      ),
+    );
+  });
+
   it('returns an Overview finding from Map to its canonical List presentation', async () => {
     const view = renderWorkspace(loadSurfaceNOPQProject(), 'Surface', 'N');
     const projection = workspaceProjection(view.application);
@@ -760,7 +916,7 @@ describe('BiomeWorkspace', () => {
     await view.user.click(screen.getByRole('tab', { name: 'Hub Timeline' }));
     expect(
       screen.getByRole('button', {
-        name: `${firstVisit.node.room.label}: Visit 1.`,
+        name: `${firstVisit.node.room.label}: Visit 1, step 2.`,
       }),
     ).toBeTruthy();
   });
@@ -815,7 +971,7 @@ describe('BiomeWorkspace', () => {
     const view = renderWorkspace(loadSurfaceNOPQProject(), 'Surface', 'N');
     await view.user.click(hubRailButton());
     await view.user.click(screen.getByRole('tab', { name: 'Hub Timeline' }));
-    expect(screen.getByRole('button', { name: 'Combat 02: Visit 3.' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Combat 02: Visit 3, step 4.' })).toBeTruthy();
 
     const visit = screen.getByRole('button', { name: /Visit 3 · Combat 02/ });
     act(() => visit.focus());

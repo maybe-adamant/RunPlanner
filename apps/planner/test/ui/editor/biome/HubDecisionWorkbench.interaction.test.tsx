@@ -22,7 +22,7 @@ describe('HubDecisionWorkbench interaction', () => {
     expect(screen.queryByRole('button', { name: 'Reset visits' })).toBeNull();
     fireEvent.click(screen.getByRole('tab', { name: 'Hub Timeline' }));
     expect(screen.getByRole('button', { name: 'Reset visits' })).toHaveProperty('disabled', true);
-    expect(screen.getByRole('button', { name: 'Combat 02: Visit 3.' })).not.toHaveProperty(
+    expect(screen.getByRole('button', { name: 'Combat 02: Visit 3, step 4.' })).not.toHaveProperty(
       'disabled',
       true,
     );
@@ -114,7 +114,7 @@ describe('HubDecisionWorkbench interaction', () => {
     expect(timeline.getAttribute('aria-selected')).toBe('true');
     expect(screen.getByRole('button', { name: 'Remove Hub' })).toBe(removal);
     expect(screen.queryByRole('checkbox', { name: 'Combat 01 open' })).toBeNull();
-    expect(screen.getByRole('button', { name: 'Combat 05: Visit 1.' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Combat 05: Visit 1, step 2.' })).toBeTruthy();
     expect(screen.queryByLabelText('Reward')).toBeNull();
     expect(screen.getByLabelText('Ephyra Hub timeline map controls')).toBeTruthy();
     const timelinePanel = screen.getByRole('region', { name: 'Ephyra Hub timeline map' });
@@ -136,7 +136,7 @@ describe('HubDecisionWorkbench interaction', () => {
       'disabled',
       true,
     );
-    expect(screen.queryByRole('button', { name: 'Combat 05: Visit 1.' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Combat 05: Visit 1, step 2.' })).toBeNull();
     expect(screen.queryByRole('button', { name: 'Details →' })).toBeNull();
 
     fireEvent.keyDown(exit, { key: 'Home' });

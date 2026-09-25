@@ -12,6 +12,7 @@ import {
 } from '@planner/projections/structured-workspace';
 import { AuthoringFrontier, BatchWorkbench, TopologyRemovalAction } from './DecisionWorkbench';
 import { HubDecisionWorkbench } from './HubDecisionWorkbench';
+import { HubFountainControls } from './HubFountainControls';
 import { OccurrenceWorkbench } from './OccurrenceWorkbench';
 import { BossDoorRewardPoolRow } from './OccurrenceDirectRoomWorkbench';
 import {
@@ -116,6 +117,10 @@ function OccurrenceInspector({
         );
   return (
     <>
+      {/* The Hub fountain use settles before this room is entered. */}
+      {node.hubFountain === undefined ? null : (
+        <HubFountainControls fountain={node.hubFountain} interactions={interactions} />
+      )}
       <OccurrenceWorkbench
         entryIdentity={<StartRoomIdentityEditor interactions={interactions} node={node} />}
         {...(node.incomingDoor === undefined ? {} : { incomingDoor: node.incomingDoor })}

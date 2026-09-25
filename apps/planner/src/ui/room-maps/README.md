@@ -29,7 +29,8 @@ and Exit positions. Stitch split captures and verify the full room's markers
 before exporting the final image; never use one half as the complete map.
 
 `N_Hub.webp` is a clean background. `HubMapAnnotations.tsx` owns the door positions
-shared by read-only inspection and both interactive Hub maps. When replacing
+shared by read-only inspection and both interactive Hub maps, and the fountain
+position shared by both interactive maps. When replacing
 this image, align those coordinates to the new capture rather than baking labels
 into it. Individual main and side rooms keep their own images.
 Main-room side-door annotations are baked into their images: cyan circles identify

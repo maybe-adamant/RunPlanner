@@ -16,13 +16,15 @@ import type {
 import {
   HubMapQualityLegend,
   hubMapAnnotations,
+  hubMapFountainAnnotation,
+  hubMapPosition,
   type HubMapAnnotation,
 } from '@planner/ui/room-maps/HubMapAnnotations';
 import { RoomMapViewport } from '@planner/ui/room-maps/RoomMapViewport';
 import { roomMapAssetFor } from '@planner/ui/room-maps/roomMapAssets';
 import { DoorRewardEditor } from '../DoorRewardEditor';
 import { useHubSlotMembership } from '../HubMembershipBoard';
-import { HubMapMarkerContent } from './HubMapMarkerContent';
+import { HubMapFountainGlyph, HubMapMarkerContent } from './HubMapMarkerContent';
 import { hubMapReward } from './hubMapReward';
 
 interface HubMapOverviewProps {
@@ -131,7 +133,7 @@ function HubMapMarker({
             pointerStart.current = undefined;
           }}
           ref={marker}
-          style={{ left: `${(x / 2560) * 100}%`, top: `${(y / 1440) * 100}%` }}
+          style={hubMapPosition({ x, y })}
           title={open ? `${slot.label}: ${reward.summary}` : `${slot.label}: Closed`}
           type="button"
         >
@@ -222,6 +224,17 @@ function HubMapMarkerLayer({
           />
         );
       })}
+      {/* Fountain use is authored on Timeline; Overview only locates it. */}
+      <span
+        aria-label="Hub fountain"
+        className="hub-map-fountain-marker"
+        data-hub-fountain
+        role="img"
+        style={hubMapPosition(hubMapFountainAnnotation)}
+        title="Hub fountain"
+      >
+        <HubMapFountainGlyph />
+      </span>
     </div>
   );
 }
