@@ -32,6 +32,7 @@ import {
   underworldGeneratedCompositionProject,
 } from './generated-composition-fixture';
 import { surfaceScheduledLifecycleProject } from './scheduled-lifecycle-fixture';
+import { surfaceNPhialIntermediateFountainProject } from './surface-n-phial-fountain-fixture';
 import { surfaceQShopCorrelationProject } from './surface-q-shop-correlation-fixture';
 import { typhonCustomizationProject } from './typhon-customization-fixture';
 
@@ -76,6 +77,10 @@ export const executionFixtures: readonly {
   { name: 'underworld-generated-composition', project: underworldGeneratedCompositionProject },
   { name: 'surface-generated-precombat', project: surfaceGeneratedPreCombatProject },
   { name: 'underworld-arachne-cocoons', project: underworldArachneCocoonProject },
+  {
+    name: 'surface-n-phial-intermediate-fountain',
+    project: surfaceNPhialIntermediateFountainProject,
+  },
 ]);
 
 export function executionFixturePath(name: string): string {
