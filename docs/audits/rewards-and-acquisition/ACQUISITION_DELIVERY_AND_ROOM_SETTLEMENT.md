@@ -387,6 +387,46 @@ details—from the direct reward control into the reward's canonical settlement
 row. A simple room with no competing acquisition can render that row compactly;
 the audit does not require an empty second card.
 
+### Interactions between a god loot's creation and its opening
+
+A god loot's options are built when it is created, so only interactions
+reachable between creation and opening can make its options differ from the
+state at opening (source-checked 2026-09-24):
+
+- **Wells of Charon cannot intervene.** `WellShop` uses
+  `AttemptUseChallengeSwitch` (`ObstacleData.lua:3267–3274`), which requires
+  `ReadyToUse` (set only in `UnlockRoomExits`, `RoomLogic.lua:4056–4077`) and
+  `CheckRoomExitsReady` (`RoomLogic.lua:3080–3108`), false while any required
+  object remains. `CreateLoot` registers every god, Hermes, Chaos and Devotion
+  loot as required unless `DoesNotBlockExit` (`RoomLogic.lua:2276–2279`),
+  released only on selection (`UpgradeChoiceLogic.lua:940,1039`). Surface
+  biomes spawn no Wells (`WellShopSpawnChance = 0.0` in BaseN, BaseO, BaseP,
+  BaseQ and BaseN_SubRooms; Postbosses `ForceWellShop = false`). The only
+  optional god loot—World Shop `RandomLoot`, `BoostedRandomLoot` and
+  `ShopHermesUpgrade` (`StoreLogic.lua:133–191`) and the Surface shrine
+  speed-up delivery (`SurfaceShopLogic.lua:527–537`)—lives in rooms with no
+  Well. Yarn and Sacrificial Hymn therefore never fall between.
+- **Purging Pools cannot intervene.** Pools exist only in F/G/H Postboss
+  rooms, which carry no reward loot.
+- **Narcissus cannot intervene.** His screen is built at talk time and offers
+  no god boon; the mystery option drops a non-required `BlindBoxLoot` whose
+  god loot is created and opened in one state by `UnwrapRandomLoot`
+  (`StoreLogic.lua:1334–1363`). `G_Story01` has no Well.
+- **Story NPC screens** (Artemis, Hades, Dionysus through `UseLoot`; Echo,
+  Icarus, Arachne, Medea, Circe, Nemesis inside their choice functions) are
+  built at open. Keepsake racks sit in Postboss rooms without god loot. Nectar
+  gifted to a boon destroys it and spawns a fresh reward
+  (`GiftLogic.lua:25–42`); that progression path is not modeled.
+
+Two reachable windows remain. Encounter-end effects run after the reward
+spawns on every route (`EncounterSets.lua:452`; `RoomLogic.lua:1919,1931`),
+so a Chaos curse maturing on the reward encounter (`OnExpire.TraitData`,
+`TraitLogic.lua:1314–1319`) adds its blessing after the options were built;
+cage, Fields miniboss, Devotion, Trial and ship encounters carry the same
+window. In a Dream World Shop, an essence (`StoreData.lua:265–268`) or
+`ElementalBoost` bought before the shop boon adds elements after the boon's
+room-entry build.
+
 ## Timing comparison
 
 | Producer family                 | Source action                   | When an item/effect becomes due               | Acquisition form                          | Can affect current outgoing offers?           |
@@ -735,10 +775,11 @@ one generic trait-outcome mechanism:
   later pickup behavior. `UseLoot` and `UseConsumableItem` call
   `RemoveStoreItem` before the purchased item's own acquisition effect settles,
   so Gold consumption and duplicate generation observe the pre-acquisition
-  branch even though the paid source identity is already known. Pom loot is the
-  closed exception to immutable generated options: `CreateBoonLootButtons`
-  regenerates a `StackOnly` option set at interaction if any stored target is no
-  longer equipped.
+  branch even though the paid source identity is already known. The duplicate
+  loot's options are then rebuilt when the source screen closes, like every
+  other live loot in the room; the
+  [composition audit](../traits/TRAIT_OFFER_COMPOSITION_AND_FEAR_PRESSURE_AUDIT.md#generation-position-and-option-rebuild)
+  owns when options are built, rebuilt and regenerated.
 
 Gold therefore extends one reached Shop site with the stable
 `echoDoubleShopReward` supplemental pickup; it does not justify a Shop-private
@@ -773,8 +814,9 @@ trait; Gold later removes only its exact one-use outer acquisition.
    pickups. Whether its outer descriptor also enters equipped-trait history is
    source-owned: Narcissus choice descriptors do not, while every selected Echo
    identity does before its callback settles.
-3. Pickup-owned trait offers and level resolutions are evaluated only when
-   that pickup is due and acquired.
+3. Pickup-owned trait offers and level resolutions settle only when that
+   pickup is due and acquired; their options are assessed against the state
+   at which the game built them.
 4. Current outgoing doors are generated from the correct pre-interaction
    history and are never regenerated from settlement results.
 5. Each optional concrete item has one acquired/not-acquired participation
@@ -830,7 +872,16 @@ The following remain open for focused follow-up work:
 
 - default insertion for future acquisition families that have not yet declared
   an engine-owned complete site-order proposal;
-- dropped-item families outside the current Narcissus slice.
+- dropped-item families outside the current Narcissus slice;
+- the order of a delayed Hermes delivery and a maturing Chaos curse in one
+  encounter end. Both land in the same `traitsToRemove` loop in hero-trait
+  order (`RoomLogic.lua:2994–2996`; delivery through
+  `OnExpire.SpawnShopItem`, `TraitLogic.lua:1337–1347`), so which comes first
+  depends on acquisition order. The planner advances the Chaos clock before
+  marking deliveries due, so a delivery due with a maturing curse is built
+  after the blessing. `IgnoreRoomRarityBonus` is also set only after the
+  spawn (`TraitLogic.lua:1342–1347`), so its first build and a rebuild differ
+  in room rarity bonus.
 
 These gaps do not weaken the delivered conclusion: producer selection and
 concrete acquisition are already separate in the game. The first-class ordered

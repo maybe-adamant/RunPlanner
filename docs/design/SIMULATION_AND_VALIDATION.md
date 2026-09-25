@@ -229,8 +229,19 @@ candidate support and workspace consumers.
 `SimulationState` is the immutable, branch-local authority for live equipment,
 trait history, Arcana/Fear, keepsakes, Hex progression, Well effects, reward
 bags/history/priorities, persistent offered-reward lookups, the transient
-per-map transition-offered reward types and pending Shop or Shrine work. It
-also carries the reached route position and history view.
+per-map transition-offered reward types, pending Shop or Shrine work and
+pending trait offers. It also carries the reached route position and history
+view.
+
+`pendingTraitOffers` (`simulation/state/pending-trait-offers.ts`) records each
+spawned, unopened trait-bearing loot by room: a reference to the substates its
+options were built from, or a stale mark. It changes only through spawn, open,
+room exit and one closed `TraitOfferContextTransition` union—`screenCompleted`
+rebuilds every record in the room; `invalidated` (Steady Growth, Transcendent
+Embryo, fountain rarity, Nemesis trade) marks them stale. Offer lifecycle
+owners spawn records; the transitions owning each native contact return the
+union member. The [Reward Model](REWARD_MODEL.md#generation-time-offer-context)
+owns the policy.
 Transitions return a new state while retaining unchanged substates; replacing
 trait history also updates the reward kernel's derived trait facts atomically.
 Catalog declarations remain separate from acquired instances and their clocks.
@@ -244,8 +255,8 @@ for example, inventory consults persistent Hub offers while ordinary acquisition
 settlement does not.
 
 Earlier source witnesses remain explicit when they differ from current state,
-such as Travel Deal's post-purchase generation facts and Echo Gold's source
-trait history. Branch evaluation products and executable candidate/continuation
+such as Travel Deal's post-purchase generation facts and a pending trait
+offer's generation context. Branch evaluation products and executable candidate/continuation
 capabilities remain outside `SimulationState`. The state is neither a service
 container nor an inspector summary used to authorize transitions.
 
@@ -339,7 +350,9 @@ The ordered Shop coordinator retains inventory witnesses, purchase cohorts,
 branch survival and pending state across interleaved actions.
 
 Travel Deal uses its settled triggering purchase and post-purchase generation
-facts. Echo Gold retains its pre-source acquisition frontier. Resuming the
+facts. Echo Gold consumes its use and registers the duplicate as a pending
+trait offer before the source acquisition, and the source screen's completion
+rebuilds it. Resuming the
 room must not regenerate inventory, replay the first purchase or substitute
 Shop-entry history for those captured contacts. Room exit closes pending
 inventory. Exact ordinary/boosted item witnesses remain distinct even when
@@ -357,7 +370,8 @@ Selected settlement answers what the authored outcome does. Candidate
 capability answers what can replace it at the exact pre-effect frontier.
 They use the same policy but are not interchangeable products.
 
-All offer options are assessed against the same immutable pre-offer context;
+All offer options are assessed against the same immutable generation-time
+context, while selected effects settle against the current branch;
 unselected alternatives do not equip traits. Selected children, Hex effects
 and Concave Stone residuals return complete products to their coordinator.
 Structural child discovery and alternative probes do not become another
@@ -377,7 +391,8 @@ threading every trait-specific field through a parallel route.
 ### Branch equivalence
 
 Merge only states equivalent to every downstream consumer. Distinct active
-Arcana, keepsake history, pending effects or future bag support remain distinct.
+Arcana, keepsake history, pending effects, pending trait-offer contexts or
+stale marks, or future bag support remain distinct.
 Declaration-certified interchangeable entries may collapse; arbitrary
 first-entry selection cannot replace possibility branching.
 
@@ -460,7 +475,7 @@ observe those engine products instead of reconstructing clocks, charges or
 rarity state from the current selected key.
 
 Offer-local rarity and level context is not a global Run State table.
-Exact room/item witnesses, current contributions and pre-offer history govern
+Exact room/item witnesses, generation-time contributions and history govern
 each offer; sibling selection cannot rewrite that frozen context. Detailed
 rarity, level and effect facts belong to the
 [trait audits](../audits/README.md#traits) and their owning reward/candidate

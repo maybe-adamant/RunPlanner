@@ -72,7 +72,7 @@ The picker is not three independent choices made in sequence. The game offers
 three already-paired curse/blessing alternatives and the player selects one
 pair. All three curses are processed button identities, while each blessing is
 stored below its paired curse. Engine validation must assess all three curse
-identities against one pre-pickup context and must not imply that the game first
+identities against one generation-time context and must not imply that the game first
 chooses a curse and then grants a free blessing choice.
 
 Ordinary pairs can be Common, Rare, or Epic. `ChaosLastStandBlessing` has only
@@ -276,7 +276,7 @@ not governed by one universal encounter clock.
 | `ChaosMetaUpgradeCurse`      | Barren       | `3–6` encounters       | none                               | disables Arcana; requires a prior matured Chaos blessing        |
 | `ChaosHiddenRoomRewardCurse` | Enshrouded   | `4–6` locations        | none                               | hides door reward previews; Underworld-only source gate         |
 | `ChaosCommonCurse`           | Ordinary     | `2–3` god-boon pickups | none                               | forces those god offers to Common                               |
-| `ChaosRestrictBoonCurse`     | Rejected     | `2–4` god-boon pickups | none                               | blocks one of three generated choices from selection            |
+| `ChaosRestrictBoonCurse`     | Rejected     | `2–4` god-boon pickups | none                               | blocks one row of a three-option screen from selection          |
 
 Every curse therefore needs its exact duration value. Only Atrophic,
 Excruciating, Maimed, Flayed, Slothful, Gagged, Addled, Neurotic, and
@@ -305,12 +305,16 @@ decrement only when a qualifying god-loot screen is resolved; Chaos itself is
 not god loot. Their maturity points therefore depend on authored lifecycle and
 reward events, not on subtraction from either depth cache.
 
-Rejected does not reduce generation to two identities. `SetTraitsOnLoot` still
-fills the ordinary god offer to `GetTotalLootChoices()`—three options. The
-screen then creates one index for every generated option, removes only
-`CalcNumLootChoices()` indices from that blocked set, and leaves one randomly
-chosen index blocked while Rejected is active. The third option is visible and
-processed, enters `GameState.TraitsSeen`, and receives the `TraitLocked`
+Rejected does not change generation. `SetTraitsOnLoot` still fills the
+ordinary god offer toward `GetTotalLootChoices()`—three options. The screen
+then creates one index for every generated option and removes
+`CalcNumLootChoices()` random indices from that blocked set
+(`UpgradeChoiceLogic.lua:153–162`). Under `RestrictBoonChoices`,
+`CalcNumLootChoices` returns the three-row maximum less one—two—for god and
+shop-aware loot (`TraitLogic.lua:1746–1754`). Only a three-option screen
+therefore keeps a blocked index; a one- or two-option screen from an exhausted
+pool blocks nothing and every row is selectable. On a three-option screen the
+blocked option is visible and processed, enters `GameState.TraitsSeen`, and receives the `TraitLocked`
 interaction block; the player may select either of the other two. Its lock
 overlay supports only the locked hover presentation. It does not run the normal
 `MouseOverBoonButton` path, does not become `screen.MouseOverButton`, and
@@ -382,7 +386,7 @@ Five source effects intersect current planner authority:
    eligible replacement. The later shortage-fill replacement pass is
    independent of both checks.
 3. **Rejected** retains the generated screen identities but makes one exact
-   option unselectable. The authored trait-offer contract must retain that
+   option of a three-option screen unselectable. The authored trait-offer contract must retain that
    blocked option because it is still seen and can be consumed by Vow of
    Denial's unpicked-trait ban.
 4. **Barren** removes active Arcana until maturity and restores them on
@@ -396,7 +400,14 @@ Five source effects intersect current planner authority:
 Ordinary and Rejected apply to qualifying god/shop-aware screens, including
 Olympian, Hermes, Artemis, Athena (also Gorgon) and Dionysus. The source checks
 `GodLoot or TreatAsGodLootByShops` and consumes the curse use when the screen
-closes. A supported fallback-Gold result therefore
+closes. Hades is shop-aware in `FieldLootData` (`RunData.lua:556–569`) but
+declares `BlockForceCommon` (`NPCData_Hades.lua:21`), so `IsRarityForcedCommon`
+(`RoomLogic.lua:2120`) never forces his screen Common and its close never
+spends an Ordinary use, which requires `ForceCommon`
+(`UpgradeChoiceLogic.lua:1124–1125`). His `IgnoreRestrictBoonChoices` also
+exempts him from Rejected (`:1131–1133`). The planner's `godBoonScreens` clock
+advances only for givers with a boon-rarity policy; Hades is the only
+shop-aware giver without one, so he consumes neither curse. A supported fallback-Gold result therefore
 still consumes one use of the active curse even though it equips no god trait.
 This is screen-resolution chronology, not a narrower count of successfully
 equipped Olympian boons.
@@ -472,7 +483,8 @@ available without fabricated inputs, while retained invalid identities remain
 available for repair.
 
 The prepared trait-offer candidate also publishes the active Ordinary/Rejected
-consequences only for ordinary Olympian and Hermes screens. The workspace
+consequences only for ordinary Olympian and Hermes screens; Rejected requires
+and accepts a blocked row only when the screen has three options. The workspace
 intersects branch-local legal Rejected rows and React renders the resulting
 single blocked-row control; that row remains visible but cannot be selected or
 Rarified. This preserves both Rejected's generated-screen history and its Vow
