@@ -1,5 +1,32 @@
 # Project schema boundary
 
+Schema 88 replaces a Hub decision's room-only `visitOrder` with one ordered
+`actions` list of room visits (`{ kind: 'roomVisit', hubSlotKey }`) and the
+single Hub fountain use (`{ kind: 'useFountain' }`). It adds the Hub-owned
+Phial outcome `fountainRarityResult`. Encounter customization may also record an
+Arachne cocoon count or an ordered Anomaly roster; neither needs migrated values.
+
+```bash
+npm run schema:migrate-87-to-88 -- path/to/schema-87-project.runplanner.json
+```
+
+The migration places fountain use before the first visit of every Hub,
+including incomplete and empty visit lists. It preserves room order, open
+targets, and other data, and selects no Phial target, so a Phial route reports a
+repairable target finding. It writes a sibling file without overwriting the
+source.
+
+Schema 87 removes the retired per-wave `weights` from generated encounter
+customizations.
+
+```bash
+npm run schema:migrate-86-to-87 -- path/to/schema-86-project.runplanner.json
+```
+
+The migration deletes only those weights, preserving wave type selections and
+every other customization. It writes a sibling file without overwriting the
+source.
+
 Schema 86 gives the starting reward to the route Loadout while its acquisition
 settings remain on the first room occurrence.
 
@@ -122,8 +149,8 @@ output. It has no route-selection, in-place, or target-version mode.
 
 The schema-72 splitter's pure transformation is exported from
 `schema/split-project-72-to-73.js` for checkpoint conversion. The source value
-is never mutated. The production decoder accepts schema 86 only; stale
-documents are not migrated implicitly in the application.
+is never mutated. The application migrates schema 86 and 87 documents to schema
+88 when it opens them; older documents need the offline tools above.
 
 Migrate a schema-74 document with:
 

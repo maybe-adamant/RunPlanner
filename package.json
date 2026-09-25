@@ -31,6 +31,8 @@
     "schema:migrate-83-to-84": "node schema/migrate-project-83-to-84.js",
     "schema:migrate-84-to-85": "node schema/migrate-project-84-to-85.js",
     "schema:migrate-85-to-86": "node schema/migrate-project-85-to-86.js",
+    "schema:migrate-86-to-87": "node schema/migrate-project-86-to-87.js",
+    "schema:migrate-87-to-88": "node schema/migrate-project-87-to-88.js",
     "build": "npm run build --workspace @run-planner/planner",
     "typecheck": "npm run typecheck --workspaces --if-present && npm run typecheck:fixtures",
     "typecheck:fixtures": "tsc --project test/fixtures/authored-project/tsconfig.json",

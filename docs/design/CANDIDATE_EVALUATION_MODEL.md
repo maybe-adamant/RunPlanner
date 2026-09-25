@@ -216,7 +216,7 @@ Candidate consumers select the already-published complete-valid or assessed
 prefix product. They do not call a progressive evaluator to reconstruct a
 missing selected-path context. The only replay after publication is the
 declared scoped alternative replay owned by the candidate family itself, such
-as one proposed Hub visit order, side-room region, Shop order, or joint reward
+as one proposed Hub action order, side-room region, Shop order, or joint reward
 group.
 
 ### Outgoing-batch repair horizon

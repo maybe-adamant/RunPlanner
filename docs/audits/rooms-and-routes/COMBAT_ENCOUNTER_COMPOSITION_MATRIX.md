@@ -18,7 +18,8 @@ The Combat-room customization candidates are the **39 generator-family identitie
 including H's two mixed fixed/generated templates. The other 55 identities
 remain in this inventory to explain their exclusion from wave/type
 customization: P's prescribed rosters stay fixed, Arachne keeps its cocoon
-mechanism, and Nemesis's noncombat event has no roster. Native-only variants
+mechanism with only an optional exact count, and Nemesis's noncombat event has
+no roster. Native-only variants
 are summarized as intentional exclusions, not additional implementation scope.
 
 Source inspection: 2026-09-18, installed Steam build `24556151`. The 125 local
@@ -70,8 +71,8 @@ table only when the child has none. None of these declarations blocks Fangs or
 Menace. Dream F/N openings resolve to `OpeningEmpty` and expose no generated
 customization.
 
-Arachne cocoons and scripted P vignettes remain excluded for their distinct
-generation mechanisms.
+Arachne cocoons and scripted P vignettes remain outside this wave contract for
+their distinct generation mechanisms; the cocoon count is described below.
 
 ### Anomaly infinite roster
 
@@ -82,16 +83,26 @@ manual template with `InfiniteSpawns = true`, `MinTypes = 2`,
 active cap 5 and zero `DifficultyModifier`/`DepthDifficultyRamp`.
 `FillEnemyTypes` draws the roster once; `FillEnemyCounts` marks its generated
 entries infinite and returns before count allocation (`RunLogic.lua:1485`).
-There is no wave-count, budget or count domain.
+There is no wave-count, budget or count domain. `GetNextSpawn` keeps admitting
+infinite entries and `HandleNextSpawn` never decrements them
+(`EncounterLogic.lua:838,889,903`); clearing the live enemies does not call
+`GenerateEncounter` again. The declared `AddAtTime`/`AddAtTimeInterval` fields
+are read only while `GenerateEncounter` builds wave templates
+(`RunLogic.lua:1249`), not as a repeated generation trigger.
 
 Its pool is `BiomeB` (`EnemySets.lua:599`), 15 identities each once:
 `Swarmer_Elite`; pair(`SpreadShotUnit`); pair(`BloodlessNaked`);
 pair(`BloodlessWaveFist`); pair(`BloodlessBerserker`); pair(`BloodlessGrenadier`);
 pair(`BloodlessSelfDestruct`); pair(`BloodlessPitcher`). After inheritance through
-`BaseGEnemy`, `BaseVulnerableEnemy` and `Elite`:
+`BaseGEnemy`, `BaseVulnerableEnemy` and `Elite`, with child-defined tables
+kept whole unless deep inheritance is requested (`RunData.lua:1363-1425`):
 
 - Elites require `BiomeDepthCache >= 3`, except `Swarmer_Elite`, whose own empty
   `GameStateRequirements` replaces that gate (`EnemyData_Swarmer.lua:75-96`).
+  The depth is the actual `BiomeDepthCache`: `GetBiomeDepth`
+  (`RunLogic.lua:1893`) counts room history back to the latest room with a
+  `NextRoomSet`, and the Anomaly declares none, so it continues the depth of the
+  G room set it replaced a target in.
 - Bloodless pairs exclude their counterparts. `SpreadShotUnit` blocks its elite;
   the elite inherits that `BlockEnemyTypes` and blocks only itself
   (`EnemyData_LightRanged.lua:112-164`). Exclusions prune only later draws, so
@@ -99,13 +110,25 @@ pair(`BloodlessSelfDestruct`); pair(`BloodlessPitcher`). After inheritance throu
 - `Swarmer_Elite` blocks `Swarmer` (outside the pool) and adds
   `ActiveEnemyCapBonus = 2`. It inherits `ActiveCapWeight = 0.35`; most other
   elites use 1.5 and `BloodlessNaked_Elite` has no override. The cap is
-  active-cap weight, not an entity count.
+  active-cap weight, not an entity count. `CalculateActiveEnemyCap` still
+  clamps the bonused cap to its maximum (`EncounterLogic.lua:1321-1351`), so the
+  bonus does not promise two extra enemies.
 - No member declares an intro encounter, once-per-run blacklist, allegiance cap
-  or other generation requirement; zero or one elite is valid.
+  or other generation requirement; zero or one elite is valid. Neither
+  `GeneratedAnomalyB`, its base nor `Generated` declares the encounter-level
+  allegiance cap `MaxTypesPerGroup` (`RunLogic.lua:1436`).
+- `FillEnemyTypes` (`RunLogic.lua:1317-1457`) collects candidates, draws distinct
+  types, applies the elite cap, prunes directional exclusions after each draw
+  and accumulates `ActiveEnemyCapBonus`. `IsEnemyEligible` (`RunLogic.lua:1576`)
+  also checks the live encounter and run blacklists and hero
+  `BlockedEnemyTypes`; its intro and solo checks add no restriction for this
+  pool and two-to-three-type roster.
 
 Planner disposition: an optional ordered two-to-three-type roster in native
 draw order. Capture progress, pacing, caps, replenishment and cleanup stay
-native.
+native. Live blacklists remain admission contacts; the mature pool has ample
+normal types, so the planner offers no one-type fallback for hypothetical
+blacklist exhaustion.
 
 ## Room and phase coverage
 
@@ -545,6 +568,35 @@ generator types. Sources: `EncounterData_Arachne.lua` Base/F/G (4/213/245),
 `EncounterLogic.lua:SetupArachneCombatEncounter` (2722), `ObstacleData.lua`
 cocoon selectors (486/538/589), `EnemySets.lua` cocoon pools (43/126), and
 `EncounterData_Story.lua:NemesisRandomEvent` (1915).
+
+Both `BaseArachneCombat` and G's own setup override request 8–14 cocoons
+(`EncounterData_Arachne.lua:28,251`). Cocoon setup and reward ownership:
+
+- `SetupArachneCombatEncounter` first calls `SpawnArachneCocoons`, then picks
+  one spawned cocoon from `CoocoonIds` at random. It sets that cocoon's death
+  callback to `SpawnRoomReward`, records it as `SpawnRewardOnId` and clears its
+  `SpawnUnitOnDeath` (`EncounterLogic.lua:2722-2732`). The reward belongs to a
+  physical cocoon before any is broken; there is no break-count counter.
+- `SpawnArachneCocoons` rolls the count, then places each cocoon through
+  `SelectSpawnPoint` and returns early when no point is available
+  (`EncounterLogic.lua:2734-2755`). The requested count does not prove
+  placement.
+- `ProcessObjectValueOptions` (`RunLogic.lua:2382`) tries the ordered bomb,
+  enemy and money options and stops at the first success; no success leaves an
+  empty cocoon. The chances are ordered rolls, not exclusive weights. The enemy
+  option draws from the biome cocoon set filtered by `IsEnemyEligible`, and
+  breaking the cocoon spawns that preselected unit (`CombatLogic.lua:3998`).
+  Reward assignment does not clear an already-set `MoneyDropOnDeath`.
+- `EncounterSets.EncounterEventsArachneCombat` waits for `ArachneRewardFound`
+  (`EncounterSets.lua:509`), which `SpawnRoomReward` notifies through the
+  reward cocoon's callback arguments (`RewardLogic.lua:303,328`). Finding the
+  reward, not breaking every cocoon, releases that wait.
+- Story cocoons call `SpawnArachneCocoons` directly with their own 0–3 range
+  (`EncounterData_Story.lua:39`) and never pass through combat setup.
+
+Planner disposition: an optional exact cocoon count within the declared range,
+applied at combat setup. Placement, sizes, contents and the reward cocoon stay
+native.
 
 ## Intentional native-only exclusions
 

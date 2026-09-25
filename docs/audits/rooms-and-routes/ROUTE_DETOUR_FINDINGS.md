@@ -410,7 +410,10 @@ do not provide.
 
 That reward is selected and removed from its reward store when the Anomaly
 room is created for the host's ordinary exit. The capture-point result controls
-acquisition, not selection:
+acquisition, not selection. `TrackCapturePointChallengeProgressReal`
+(`EncounterLogic.lua:2581`) starts progress at `StartingCaptureProgress = 15`
+(`EncounterData_Challenge.lua:107`), raises it while the player is inside the
+capture area, lowers it outside, and stops the encounter at 100 or 0:
 
 - when `CapturePointProgress >= 100`, `EndCapturePointChallengeEncounter`
   calls `SpawnRoomReward`, making the selected reward available;
