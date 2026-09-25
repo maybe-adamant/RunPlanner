@@ -936,40 +936,10 @@ function traitOwnerAddress(origin: SemanticAddress): TraitOfferOwnerAddress | un
   }
 }
 
-/** Timeline dependencies compare bare occurrence ids of mutation owners; entry and site owners never match. */
-function traitMutationOccurrenceId(address: SemanticAddress): string | undefined {
-  if ('occurrenceId' in address) return address.occurrenceId;
-  switch (address.kind) {
-    case 'fountainRarityOutcome':
-      return traitMutationOccurrenceId(address.action);
-    case 'keepsakeEquipResult':
-      return traitMutationOccurrenceId(address.selection);
-    case 'traitOffer':
-    case 'acquisitionRole':
-    case 'levelResolution':
-    case 'steadyGrowthOutcome':
-    case 'transcendentEmbryoOutcome':
-      return traitMutationOccurrenceId(address.owner);
-    case 'traitAcquisitionTarget':
-    case 'circeResolution':
-    case 'echoPomTarget':
-    case 'naturalSelectionResult':
-    case 'echoLastRunBoon':
-    case 'echoLastReward':
-    case 'allTogetherSet':
-      return traitMutationOccurrenceId(address.trait);
-    case 'encounterPhase':
-      return address.owner.occurrenceId;
-    case 'nemesisRandomEvent':
-      return traitMutationOccurrenceId(address.encounter);
-    default:
-      return undefined;
-  }
-}
-
+/** Whether two owners belong to the same room: equal route, biome and occurrence. */
 function sameTraitOccurrence(left: SemanticAddress, right: SemanticAddress): boolean {
-  const leftOccurrence = traitMutationOccurrenceId(left);
-  return leftOccurrence !== undefined && leftOccurrence === traitMutationOccurrenceId(right);
+  const leftRoom = traitOfferRoomKey(left);
+  return leftRoom !== undefined && leftRoom === traitOfferRoomKey(right);
 }
 
 export interface EncounterTraitOfferSettlement {
