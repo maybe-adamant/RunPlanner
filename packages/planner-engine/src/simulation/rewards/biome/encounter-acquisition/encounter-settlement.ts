@@ -1,3 +1,5 @@
+import type { ResolvedRoutePosition } from '../../../../authored-project/route-context';
+import { resolveEntryDeclaration } from '../../../../authored-project/room-state/entry-resolution';
 import { replaceSimulationTraitHistory } from '../../../state/transitions';
 import type { Catalog } from '../../../../catalog-schema';
 import {
@@ -154,6 +156,7 @@ export function applyEncounterSettlementTransition(inputs: {
   readonly room: CanonicalAuthoredRoom | CanonicalHubRoom | undefined;
   readonly view: ProgressiveRoomHistoryViews | undefined;
   readonly branches: readonly RewardBranchState[];
+  readonly routePosition: ResolvedRoutePosition;
   readonly enteredBiomeCount: number;
   readonly fullRunBiomeCount: number;
   readonly authoredSeaStarDuplicateSiteKeys: ReadonlySet<string>;
@@ -682,13 +685,23 @@ export function applyEncounterSettlementTransition(inputs: {
       ...(blockGorgonPhaseKey === undefined ? {} : { blockGorgonPhaseKey }),
     });
   if (event.kind === 'encounterCompleted') {
+    const entryDeclaration = resolveEntryDeclaration(declaration, inputs.routePosition);
+    const roomEncounterKeys = room.encounterPhases.flatMap((phase) => {
+      const resolved = resolveMaterializedEncounterPhase(
+        catalog,
+        entryDeclaration,
+        phase,
+        encounterResolutionContext(room, entryDeclaration),
+      );
+      return resolved === undefined ? [] : [resolved.encounterKey];
+    });
     branches = Object.freeze(
       branches.map((branch) =>
         spawnWheelRewardAtEncounterCompletion(
           catalog,
           room,
           event.phaseKey,
-          spawnIncomingRewardAtEncounterCompletion(catalog, room, branch),
+          spawnIncomingRewardAtEncounterCompletion(catalog, room, roomEncounterKeys, branch),
         ),
       ),
     );

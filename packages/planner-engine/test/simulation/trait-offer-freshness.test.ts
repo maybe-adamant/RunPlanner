@@ -68,6 +68,10 @@ import {
   type RewardBranchState,
 } from '../../src/simulation/rewards/branch-primitives';
 import { applyEncounterEndEffectsTransition } from '../../src/simulation/rewards/biome/lifecycle-transitions/encounter-end-effects';
+import { applyEncounterStartedTransition } from '../../src/simulation/rewards/biome/lifecycle-transitions/encounter-started';
+import { applyEncounterSettlementTransition } from '../../src/simulation/rewards/biome/encounter-acquisition/encounter-settlement';
+import { materializeAuthoredRoom } from '../../src/simulation/materialization/rooms/assemble';
+import type { HistoryEvent } from '../../src/simulation/history';
 import type { CanonicalAuthoredRoom } from '../../src/simulation/materialization';
 
 const underworldH = createBiomeAddress('Underworld', 'H');
@@ -1000,3 +1004,138 @@ function ordinaryPair(): TraitHistoryState {
     }),
   ]);
 }
+
+describe('room rewards created before combat', () => {
+  const room = createOccurrenceAddress(underworldH, createOccurrenceId('golden-h-miniboss01'));
+  const reward = createIncomingRewardAddress(underworldH, room.occurrenceId);
+  const rewardOffer = createTraitOfferAddress(reward, 'source');
+  const minibossRoom = {
+    kind: 'authored',
+    origin: room,
+    occurrenceId: room.occurrenceId,
+    gameName: 'H_MiniBoss01',
+    encounterPhases: [],
+    incomingReward: {
+      origin: reward,
+      offer: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'HestiaUpgrade' } },
+      traitOffersByAcquisitionRole: { source: null },
+    },
+  } as unknown as CanonicalAuthoredRoom;
+  const start = (encounterKey: string) =>
+    applyEncounterStartedTransition(
+      catalog,
+      ordinaryRoutePosition(catalog, 'Underworld', 'H'),
+      {},
+      Object.freeze({
+        kind: 'encounterStarted' as const,
+        origin: room,
+        phaseKey: 'Encounter',
+        encounterEnvelopeKey: 'SingleEncounter',
+        encounterKey,
+        phaseKind: 'miniboss' as const,
+        execution: 'skippedByFigLeaf' as const,
+        figLeafSkipOwner: true,
+        operationIndex: 1,
+        sequence: 1,
+      }),
+      minibossRoom,
+      [
+        Object.freeze({
+          ...(initializeTestRewardBranches()[0]! as RewardBranchState),
+          state: Object.freeze({
+            ...initializeTestRewardBranches()[0]!.state,
+            keepsakes: createKeepsakeState(catalog, 'SkipEncounterKeepsake'),
+          }),
+        }) as RewardBranchState,
+      ],
+    ).branches[0]!;
+
+  it('spawns an H miniboss reward at encounter start, before the Fig Leaf use', () => {
+    const branch = start('MiniBossVampire');
+    const record =
+      branch.state.pendingTraitOffers[semanticAddressKey(room)]?.[semanticAddressKey(rewardOffer)];
+    expect(branch.state.keepsakes.figLeaf?.activatedThisBiome).toBe(true);
+    expect(record?.context.keepsakes.figLeaf?.activatedThisBiome).toBe(false);
+  });
+
+  it('leaves an ordinary encounter reward for its completion', () => {
+    expect(start('GeneratedH').state.pendingTraitOffers).toEqual({});
+  });
+
+  it('keeps the start-time context through the miniboss encounter completion', () => {
+    // The golden route's real miniboss occurrence, materialized as the chronology sees it.
+    const project = createGoldenFGHProject();
+    const occurrence = project
+      .route!.biomes.find((biome) => biome.biomeKey === 'H')
+      ?.topology?.occurrences.find((candidate) => candidate.occurrenceId === room.occurrenceId);
+    const declaration = catalog.rooms.byKey.H_MiniBoss01!;
+    if (occurrence === undefined) throw new Error('golden H has no miniboss occurrence');
+    const routePosition = ordinaryRoutePosition(catalog, 'Underworld', 'H');
+    const realRoom = materializeAuthoredRoom({
+      catalog,
+      biome: underworldH,
+      routePosition,
+      room: declaration,
+      occurrence,
+      role: 'ordinary',
+      entered: true,
+      loadout: project.route!.loadout,
+    });
+    const phaseKey = realRoom.encounterPhases[0]!.slotKey;
+    const event = (kind: 'encounterStarted' | 'encounterCompleted', sequence: number) =>
+      Object.freeze({
+        kind,
+        origin: room,
+        phaseKey,
+        encounterEnvelopeKey: 'SingleEncounter',
+        encounterKey: 'MiniBossVampire',
+        phaseKind: 'miniboss' as const,
+        execution: 'skippedByFigLeaf' as const,
+        figLeafSkipOwner: true,
+        operationIndex: sequence,
+        sequence,
+      });
+    const base = initializeTestRewardBranches()[0]! as RewardBranchState;
+    const started = applyEncounterStartedTransition(
+      catalog,
+      routePosition,
+      {},
+      event('encounterStarted', 1) as Extract<HistoryEvent, { readonly kind: 'encounterStarted' }>,
+      realRoom,
+      [
+        Object.freeze({
+          ...base,
+          state: Object.freeze({
+            ...base.state,
+            keepsakes: createKeepsakeState(catalog, 'SkipEncounterKeepsake'),
+          }),
+        }) as RewardBranchState,
+      ],
+    ).branches;
+    const completed = applyEncounterSettlementTransition({
+      catalog,
+      snapshot: {} as never,
+      routePosition,
+      event: event('encounterCompleted', 2) as Extract<
+        HistoryEvent,
+        { readonly kind: 'encounterCompleted' }
+      >,
+      room: realRoom,
+      view: {} as never,
+      branches: started,
+      enteredBiomeCount: 3,
+      fullRunBiomeCount: 4,
+      authoredSeaStarDuplicateSiteKeys: new Set(),
+      gorgonEligible: false,
+      gorgonCandidate: undefined,
+      gorgonPhaseBlocked: false,
+      gorgonEvaluationBlocked: false,
+    }).branches[0]!;
+    const record =
+      completed.state.pendingTraitOffers[semanticAddressKey(room)]?.[
+        semanticAddressKey(createTraitOfferAddress(realRoom.incomingReward!.origin, 'source'))
+      ];
+    expect(completed.state.keepsakes.figLeaf?.activatedThisBiome).toBe(true);
+    expect(record?.context.keepsakes.figLeaf?.activatedThisBiome).toBe(false);
+  });
+});

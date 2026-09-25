@@ -193,6 +193,11 @@ export function normalizeEncounterDefinitions(
         typeof raw.suppressesIncomingReward !== 'boolean'
       )
         fail(`${path}.suppressesIncomingReward`, 'must be boolean');
+      if (
+        raw.createsIncomingRewardAtStart !== undefined &&
+        typeof raw.createsIncomingRewardAtStart !== 'boolean'
+      )
+        fail(`${path}.createsIncomingRewardAtStart`, 'must be boolean');
       const nemesisRandomEvent =
         raw.nemesisRandomEvent === undefined
           ? undefined
@@ -445,6 +450,9 @@ export function normalizeEncounterDefinitions(
         skipEndEncounterEffects: raw.skipEndEncounterEffects ?? false,
         requiresInteraction: raw.requiresInteraction ?? false,
         suppressesIncomingReward: raw.suppressesIncomingReward ?? false,
+        ...(raw.createsIncomingRewardAtStart === true
+          ? { createsIncomingRewardAtStart: true as const }
+          : {}),
         ...(blocksKeepsakeSelectionKeys === undefined ? {} : { blocksKeepsakeSelectionKeys }),
         ...(requirements === undefined ? {} : { requirements }),
         ...(raw.sequenceEffect === undefined

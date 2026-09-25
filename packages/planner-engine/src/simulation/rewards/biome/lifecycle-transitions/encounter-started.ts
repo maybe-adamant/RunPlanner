@@ -20,6 +20,7 @@ import type { RewardBranchState } from '../../branch-primitives';
 import { ownerRegion } from '../../../finding-regions';
 import type { FigLeafPhaseCandidateSupport } from '../../model';
 import type { LifecycleFinding } from './types';
+import { spawnIncomingRewardAtEncounterStart } from '../offer-lifecycle/spawned-trait-offers';
 
 export interface EncounterStartedTransition {
   readonly branches: readonly RewardBranchState[];
@@ -30,7 +31,7 @@ export interface EncounterStartedTransition {
   readonly findings: readonly LifecycleFinding[];
 }
 
-/** Applies only the Fig Leaf half of encounter start. Gorgon stays with E4 settlement. */
+/** Applies the reward spawn and Fig Leaf half of encounter start; Gorgon settles separately. */
 export function applyEncounterStartedTransition(
   catalog: Catalog,
   routePosition: ResolvedRoutePosition,
@@ -39,7 +40,15 @@ export function applyEncounterStartedTransition(
   room: CanonicalAuthoredRoom | undefined,
   branches: readonly RewardBranchState[],
 ): EncounterStartedTransition {
-  let next = branches;
+  // The reward is spawned before this encounter's own start effects (Fig Leaf, Gorgon).
+  let next =
+    room === undefined
+      ? branches
+      : Object.freeze(
+          branches.map((branch) =>
+            spawnIncomingRewardAtEncounterStart(catalog, room, event.encounterKey, branch),
+          ),
+        );
   const findings: LifecycleFinding[] = [];
   const figLeafCandidates: {
     key: string;

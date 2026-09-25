@@ -112,6 +112,8 @@ export const hEncounterDefinitions = [
     countsEncounterDepth: true,
     blocksGorgon: true,
     canEncounterSkip: true,
+    // EncounterEventsHMiniboss opens with SpawnRewardCagesMiniboss (EncounterSets.lua:464-466).
+    createsIncomingRewardAtStart: true,
   },
   {
     key: 'MiniBossLamia',
@@ -120,6 +122,8 @@ export const hEncounterDefinitions = [
     countsEncounterDepth: true,
     blocksGorgon: true,
     canEncounterSkip: true,
+    // EncounterEventsHMiniboss opens with SpawnRewardCagesMiniboss (EncounterSets.lua:464-466).
+    createsIncomingRewardAtStart: true,
   },
   {
     key: 'Story_Echo_01',
