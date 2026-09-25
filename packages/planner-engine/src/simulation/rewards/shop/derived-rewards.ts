@@ -3,7 +3,6 @@ import type { Catalog } from '../../../catalog-schema';
 import {
   createAcquisitionEntryAddress,
   type AcquisitionSiteAddress,
-  type SemanticAddress,
 } from '../../../authored-project/addresses';
 import { createUnresolvedShopAcquisitionRewardState } from '../../../authored-project/traits/state';
 import {
@@ -18,20 +17,15 @@ import {
   type ResolvedRewardOffer,
   type ShopProfileDeclaration,
 } from '../../../reward-kernel';
-import { ownerRegion, type FindingChronology } from '../../finding-regions';
-import { foldTraitHistoryEvents, isPomUpgradeTarget } from '../../traits';
+import { foldTraitHistoryEvents } from '../../traits';
+import { spawnPendingTraitOffers } from '../../state/pending-trait-offers';
 import type {
   PendingShopGoldMaterialization,
   PendingShopPaidOffer,
   PendingShopTravelRefillState,
 } from '../../state/model';
 import type { RewardBranchState, PendingShopTravelRefillCapability } from '../branch-primitives';
-import { applyProducerRoleHistory } from '../acquisition/role-settlement';
-import type {
-  AcquisitionRoleFrontier,
-  DerivedAcquisitionEntryFrontier,
-  RewardFactsFactory,
-} from '../acquisition/contracts';
+import type { DerivedAcquisitionEntryFrontier, RewardFactsFactory } from '../acquisition/contracts';
 
 export interface ShopTravelRefillProduct {
   readonly data: PendingShopTravelRefillState;
@@ -153,18 +147,15 @@ export function materializeShopGold(input: {
   readonly pendingGold?: import('../../../authored-project/traits/state').EquippedTrait | undefined;
   readonly existingMaterialization?: PendingShopGoldMaterialization | undefined;
   readonly pickupPlaced: boolean;
-  readonly authoredOffer?: ResolvedRewardOffer | undefined;
+  /** The authored duplicate entry, when the room retains one. */
+  readonly authoredEntry?:
+    import('../../../authored-project/model').AuthoredRewardState | null | undefined;
   readonly sourceOffer: PendingShopPaidOffer;
   readonly roleBindings: PendingShopGoldMaterialization['roleBindings'];
   readonly profile: ShopProfileDeclaration;
   readonly site: AcquisitionSiteAddress;
-  readonly owner: SemanticAddress;
-  readonly actionOwner?: SemanticAddress | undefined;
   readonly branchCohortSize: number;
   readonly historySequence: number;
-  readonly facts: RewardFactsFactory;
-  readonly findingChronology?: FindingChronology | undefined;
-  readonly authoredSeaStarDuplicateSiteKeys?: ReadonlySet<string> | undefined;
   readonly eligibleSourceOfferKeys: readonly string[];
 }): ShopGoldMaterializationProduct {
   const {
@@ -176,13 +167,8 @@ export function materializeShopGold(input: {
     roleBindings,
     profile,
     site,
-    owner,
-    actionOwner,
     branchCohortSize,
     historySequence,
-    facts,
-    findingChronology,
-    authoredSeaStarDuplicateSiteKeys,
     eligibleSourceOfferKeys,
   } = input;
   if (existingMaterialization !== undefined)
@@ -205,9 +191,8 @@ export function materializeShopGold(input: {
     return Object.freeze({ branch, derivedEntryFrontiers: Object.freeze([]) });
 
   const address = createAcquisitionEntryAddress(site, ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY);
-  const sourceTraitHistory = branch.state.traitHistory;
   const traitHistory = foldTraitHistoryEvents(catalog, [
-    ...sourceTraitHistory.events,
+    ...branch.state.traitHistory.events,
     Object.freeze({
       kind: 'traitRemoval' as const,
       owner: address,
@@ -219,20 +204,35 @@ export function materializeShopGold(input: {
       match: 'acquisitionIdentity' as const,
     }),
   ]);
+  const consumedState = replaceSimulationTraitHistory(branch.state, traitHistory);
+  // The duplicate loot exists before the source screen opens; that screen's
+  // close rebuilds it.
+  const authoredEntry = input.authoredEntry ?? undefined;
   const updatedBranch = Object.freeze({
     ...branch,
-    state: replaceSimulationTraitHistory(branch.state, traitHistory),
+    state:
+      authoredEntry === undefined || !input.pickupPlaced
+        ? consumedState
+        : spawnPendingTraitOffers(catalog, consumedState, [
+            Object.freeze({
+              origin: address,
+              offer: authoredEntry.offer,
+              ...(authoredEntry.traitOffersByAcquisitionRole === undefined
+                ? {}
+                : { traitOffersByAcquisitionRole: authoredEntry.traitOffersByAcquisitionRole }),
+              ...(authoredEntry.levelResolutionsByAcquisitionRole === undefined
+                ? {}
+                : {
+                    levelResolutionsByAcquisitionRole:
+                      authoredEntry.levelResolutionsByAcquisitionRole,
+                  }),
+            }),
+          ]),
   });
   const materialization = Object.freeze({
     sourceOfferKey: sourceOffer.offerKey,
     roleBindings,
     sourceOffer,
-    sourceTraitHistory,
-    sourcePomEligibleTraitKeys: Object.freeze(
-      Object.values(sourceTraitHistory.equippedTraits)
-        .filter((trait) => isPomUpgradeTarget(catalog, trait))
-        .map((trait) => trait.traitKey),
-    ),
   });
   const branchesBeforeEntry = Object.freeze([updatedBranch]);
   const duplicateOffer = echoShopDuplicateOffer(catalog, sourceOffer.offer);
@@ -240,45 +240,6 @@ export function materializeShopGold(input: {
     duplicateOffer === null
       ? undefined
       : createUnresolvedShopAcquisitionRewardState(catalog, duplicateOffer, profile.key);
-  const roleFrontiers: AcquisitionRoleFrontier[] = [];
-  if (fixedReward !== undefined && input.pickupPlaced) {
-    const source = Object.freeze({
-      origin: address,
-      offer: fixedReward.offer,
-      producerLifecycleKey: profile.key,
-      producerKind: 'shop' as const,
-      instanceProvenance: 'free' as const,
-      // A placed derived pickup stands on the Shop screen that produced it.
-      presentsMaterializedScreen: true,
-      traitOffersByAcquisitionRole: fixedReward.traitOffersByAcquisitionRole,
-      ...(fixedReward.levelResolutionsByAcquisitionRole === undefined
-        ? {}
-        : { levelResolutionsByAcquisitionRole: fixedReward.levelResolutionsByAcquisitionRole }),
-      dispositionByAcquisitionRole: fixedReward.dispositionByAcquisitionRole,
-      ...(sourceOffer.traitContext === undefined ? {} : { traitContext: sourceOffer.traitContext }),
-      ...(actionOwner === undefined ? {} : { timelineOwner: actionOwner }),
-    });
-    const settlement = Object.freeze({ site, entry: address });
-    let candidateBranches: readonly RewardBranchState[] = branchesBeforeEntry;
-    for (const binding of roleBindings) {
-      const settled = applyProducerRoleHistory(
-        catalog,
-        candidateBranches,
-        source,
-        Object.freeze({ ...binding, historySequence }),
-        facts,
-        ownerRegion(owner),
-        findingChronology,
-        settlement,
-        branchesBeforeEntry,
-        true,
-        false,
-        authoredSeaStarDuplicateSiteKeys,
-      );
-      candidateBranches = settled.branches;
-      roleFrontiers.push(...settled.roleFrontiers);
-    }
-  }
   return Object.freeze({
     branch: updatedBranch,
     materialization,
@@ -288,8 +249,8 @@ export function materializeShopGold(input: {
         kind: 'echoDoubleShopReward' as const,
         retainedSourceMismatch:
           input.pickupPlaced &&
-          input.authoredOffer !== undefined &&
-          !echoShopDuplicateOfferMatches(catalog, sourceOffer.offer, input.authoredOffer),
+          authoredEntry !== undefined &&
+          !echoShopDuplicateOfferMatches(catalog, sourceOffer.offer, authoredEntry.offer),
         participation: echoShopDuplicateRequiresPickup(catalog, sourceOffer.offer)
           ? ('required' as const)
           : ('optional' as const),
@@ -297,7 +258,6 @@ export function materializeShopGold(input: {
         sourceOfferKey: sourceOffer.offerKey,
         rewardTypes: Object.freeze([sourceOffer.offer.rewardType]),
         ...(fixedReward === undefined ? {} : { fixedReward }),
-        ...(roleFrontiers.length === 0 ? {} : { roleFrontiers: Object.freeze(roleFrontiers) }),
         eligibleSourceOfferKeys,
         branchesBeforeEntry,
         ...(input.pickupPlaced && fixedReward !== undefined

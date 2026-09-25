@@ -202,7 +202,13 @@ export function selectedTraitOfferProducts(
     candidateContexts.set(
       semanticAddressKey(address),
       Object.freeze(
-        entry.branches.map((trace) => Object.freeze({ state: trace.state, source: trace.source })),
+        entry.branches.map((trace) =>
+          Object.freeze({
+            state: trace.state,
+            generationState: trace.generationState,
+            source: trace.source,
+          }),
+        ),
       ),
     );
   }

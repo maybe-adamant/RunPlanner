@@ -1,3 +1,4 @@
+import { spawnPendingTraitOffers } from '../../state/pending-trait-offers';
 import {
   createAcquisitionEntryAddress,
   createAcquisitionSiteAddress,
@@ -406,19 +407,14 @@ export function settleShopAcquisitionSite(
             pendingGold: refillExecution.goldActiveAtEntry,
             existingMaterialization: refillExecution.goldMaterialization,
             pickupPlaced: goldPickupPlaced,
-            authoredOffer:
-              room.acquisitionSites.roomExit?.entries[ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY]?.offer,
+            authoredEntry:
+              room.acquisitionSites.roomExit?.entries[ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY],
             sourceOffer: refillOffer,
             roleBindings: bindings,
             profile,
             site,
-            owner: room.origin,
-            actionOwner: actionOwnerForOffer(refillOffer.offerKey),
             branchCohortSize,
             historySequence,
-            facts: context.facts,
-            findingChronology: context.findingChronology,
-            authoredSeaStarDuplicateSiteKeys: context.authoredSeaStarDuplicateSiteKeys,
             eligibleSourceOfferKeys: eligibleGoldSourceOfferKeys(),
           });
           refillExecution.candidate = gold.branch;
@@ -546,10 +542,6 @@ export function settleShopAcquisitionSite(
           continue;
         }
         const source = materialization.sourceOffer;
-        const currentTraits = execution.candidate.state.traitHistory;
-        const sourceTargetDisappeared = materialization.sourcePomEligibleTraitKeys.some(
-          (traitKey) => currentTraits.equippedTraits[traitKey] === undefined,
-        );
         const duplicateActionOwner = actionOwnerForOffer(entryKey);
         const settled = settleOwnedAcquisitionSite(
           catalog,
@@ -572,9 +564,6 @@ export function settleShopAcquisitionSite(
                 ...(child.levelResolutionsByAcquisitionRole === undefined
                   ? {}
                   : { levelResolutionsByAcquisitionRole: child.levelResolutionsByAcquisitionRole }),
-                levelResolutionGenerationHistory: sourceTargetDisappeared
-                  ? currentTraits
-                  : materialization.sourceTraitHistory,
                 dispositionByAcquisitionRole: child.dispositionByAcquisitionRole,
                 ...(source.traitContext === undefined ? {} : { traitContext: source.traitContext }),
                 ...(duplicateActionOwner === undefined
@@ -658,19 +647,13 @@ export function settleShopAcquisitionSite(
         pendingGold: execution.goldActiveAtEntry,
         existingMaterialization: execution.goldMaterialization,
         pickupPlaced: goldPickupPlaced,
-        authoredOffer:
-          room.acquisitionSites.roomExit?.entries[ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY]?.offer,
+        authoredEntry: room.acquisitionSites.roomExit?.entries[ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY],
         sourceOffer: paidOffer,
         roleBindings: bindings,
         profile,
         site,
-        owner: room.origin,
-        actionOwner: actionOwnerForOffer(paidOffer.offerKey),
         branchCohortSize,
         historySequence,
-        facts: context.facts,
-        findingChronology: context.findingChronology,
-        authoredSeaStarDuplicateSiteKeys: context.authoredSeaStarDuplicateSiteKeys,
         eligibleSourceOfferKeys: eligibleGoldSourceOfferKeys(),
       });
       execution.candidate = gold.branch;
@@ -711,6 +694,20 @@ export function settleShopAcquisitionSite(
           });
           if (travelRefill !== undefined) {
             execution.travelRefill = travelRefill;
+            // The restocked loot spawns once the triggering purchase's screen closes.
+            const refill = entry.travelDealRefill;
+            if (refill !== undefined && refill !== null)
+              execution.candidate = Object.freeze({
+                ...execution.candidate,
+                state: spawnPendingTraitOffers(catalog, execution.candidate.state, [
+                  Object.freeze({
+                    origin: refill.offerOrigin,
+                    offer: refill.offer,
+                    traitOffersByAcquisitionRole: refill.traitOffersByAcquisitionRole,
+                    levelResolutionsByAcquisitionRole: refill.levelResolutionsByAcquisitionRole,
+                  }),
+                ]),
+              });
             const address = createAcquisitionEntryAddress(site, TRAVEL_DEAL_REFILL_ENTRY_KEY);
             const inventoryOwner = createShopOfferAddress(
               createBiomeAddress(room.origin.routeKey, room.origin.biomeKey),

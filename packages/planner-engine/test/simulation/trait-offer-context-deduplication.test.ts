@@ -19,6 +19,7 @@ import {
   arcanaFearWithActive,
   traitFrontierState,
   withSettledSpellDrop,
+  openTimeTraitOfferContext,
 } from '../support/simulation-state';
 
 const owner = createIncomingRewardAddress(
@@ -181,7 +182,7 @@ describe('trait offer context deduplication', () => {
       devotionNoDuo: true,
       freshRarityOverride: 'Epic' as const,
     });
-    const identity = traitOfferContextIdentity({ state, source });
+    const identity = traitOfferContextIdentity(openTimeTraitOfferContext({ state, source }));
     expect(JSON.parse(JSON.stringify(identity))).toEqual(identity);
   });
 });

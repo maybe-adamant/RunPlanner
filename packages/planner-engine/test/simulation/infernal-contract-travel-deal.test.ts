@@ -604,7 +604,7 @@ describe('Infernal Contract and Travel Deal chronology', () => {
       goldFrontier === undefined
     )
       throw new Error('first Shop purchase did not materialize Gold');
-    const sourceHistory = firstPending.goldMaterialization.sourceTraitHistory;
+    const goldMaterialization = firstPending.goldMaterialization;
     const travelGenerationFacts = firstPending.travelRefill.generationFacts;
     expect(firstPending.travelRefill).toMatchObject({ sourceOfferKey: 'Minor', slotIndex: 2 });
 
@@ -623,7 +623,7 @@ describe('Infernal Contract and Travel Deal chronology', () => {
       },
     });
     const interleavedPending = interleaved.branches[0]?.state.pendingShops[shopKey];
-    expect(interleavedPending?.goldMaterialization?.sourceTraitHistory).toBe(sourceHistory);
+    expect(interleavedPending?.goldMaterialization).toBe(goldMaterialization);
     expect(interleavedPending?.travelRefill?.generationFacts).toBe(travelGenerationFacts);
     expect(goldFrontier.branchesBeforeEntry[0]?.state.traitHistory?.events).toContainEqual(
       expect.objectContaining({

@@ -52,6 +52,7 @@ import type {
   DirectTraitGrantEvent,
 } from './history/model';
 import type { RansomAssessment } from './history/transitions';
+import { traitOfferContextProjection } from '../state/pending-trait-offers';
 
 function boonRarityProviderForGiver(
   giver: Catalog['traitGivers']['values'][number] | undefined,
@@ -298,8 +299,10 @@ export function hasActiveChaosSemanticTag(
 export interface ReachedTraitOfferEvaluation {
   readonly address: SemanticAddress;
   readonly acquisitionRole: string;
-  /** Exact pre-offer simulation snapshot this evaluation was assessed against. */
+  /** Exact pre-offer state: open-time restrictions, levels, targets and the history append. */
   readonly state: SimulationState;
+  /** The state the offer's options were built from: eligibility, rarity and replacement. */
+  readonly generationState: SimulationState;
   readonly offer: AuthoredTraitOffer;
   /** Row rarities before Calling Card/provider-keepsake rarification. */
   readonly baseRarities: readonly (TraitRarity | undefined)[];
@@ -345,11 +348,12 @@ export interface TraitOfferBranchAssessment {
  * contexts, and callable capabilities are never faithfully comparable.
  */
 export function traitOfferContextIdentity(
-  context: Pick<TraitOfferCandidateContext, 'state' | 'source'>,
+  context: Pick<TraitOfferCandidateContext, 'state' | 'generationState' | 'source'>,
 ): readonly unknown[] {
   const state = context.state;
   return Object.freeze([
     context.source,
+    traitOfferContextProjection(context.generationState),
     state.traitHistory,
     state.arcanaFear,
     state.keepsakes,
@@ -367,7 +371,7 @@ export function traitOfferContextIdentity(
 
 /** The same inputs for one reached selected-offer assessment. */
 export function traitOfferAssessmentIdentity(
-  evaluation: Pick<ReachedTraitOfferEvaluation, 'state' | 'source' | 'offer'>,
+  evaluation: Pick<ReachedTraitOfferEvaluation, 'state' | 'generationState' | 'source' | 'offer'>,
 ): readonly unknown[] {
   return Object.freeze([evaluation.offer, ...traitOfferContextIdentity(evaluation)]);
 }
@@ -415,6 +419,8 @@ export interface SelectedTraitOfferAssessment {
 export interface TraitOfferCandidateContext {
   /** One exact pre-effect snapshot; candidates never borrow facts from another branch. */
   readonly state: SimulationState;
+  /** The same branch's state the offer's options were built from. */
+  readonly generationState: SimulationState;
   readonly source: ResolvedTraitOfferSource;
 }
 
@@ -439,8 +445,9 @@ function evaluateReachedTraitOfferWithAssessments(
   assessments?: readonly TraitAssessment[],
   frozenAcquisition = false,
   frozenLevelResolutions?: readonly TraitOfferOptionLevelResolution[],
+  generationState: SimulationState = state,
 ): ReachedTraitOfferEvaluation {
-  const before = state.traitHistory;
+  const built = generationState.traitHistory;
   const baseRarities = Object.freeze(
     (rarificationBaseOffer?.kind === 'traits'
       ? rarificationBaseOffer
@@ -455,8 +462,8 @@ function evaluateReachedTraitOfferWithAssessments(
     return giver?.providerKind === 'olympian' || giver?.providerKind === 'hermes';
   })();
   const effectiveSource = ordinaryGiver
-    ? resolveTraitOfferSource(catalog, state, offer.giverKey, context)
-    : offerGenerationAdjustedOfferSource(catalog, state, offer, context);
+    ? resolveTraitOfferSource(catalog, generationState, offer.giverKey, context)
+    : offerGenerationAdjustedOfferSource(catalog, generationState, offer, context);
   // Exact one-result sources (for example, a keepsake equip) are direct
   // acquisitions, not a sparse ordinary offer. They retain the normal
   // trait-level assessment and history event path without inheriting the
@@ -472,7 +479,12 @@ function evaluateReachedTraitOfferWithAssessments(
     directAcquisition || frozenAcquisition || !ordinary
       ? undefined
       : assessInitialOfferSupport({
-          ...traitOfferGenerationInput(catalog, legalityOffer.giverKey, state, effectiveSource),
+          ...traitOfferGenerationInput(
+            catalog,
+            legalityOffer.giverKey,
+            generationState,
+            effectiveSource,
+          ),
           offer: legalityOffer,
         });
   const baseComposition = directAcquisition
@@ -487,17 +499,17 @@ function evaluateReachedTraitOfferWithAssessments(
           ) => {
             switch (requirement.kind) {
               case 'matureChaosBlessing':
-                return before.maturedChaosBlessings.length === 0;
+                return built.maturedChaosBlessings.length === 0;
               case 'elementMinimum':
-                return before.elementCounts[requirement.element] < requirement.minimum;
+                return built.elementCounts[requirement.element] < requirement.minimum;
               case 'notKeepsake':
-                return state.keepsakes.currentKey === requirement.keepsakeKey;
+                return generationState.keepsakes.currentKey === requirement.keepsakeKey;
               case 'notAspect':
-                return state.equipment.aspectKey === requirement.aspectKey;
+                return generationState.equipment.aspectKey === requirement.aspectKey;
               case 'routeKey':
-                return state.reached.routePosition.routeKey !== requirement.routeKey;
+                return generationState.reached.routePosition.routeKey !== requirement.routeKey;
               case 'routeKeyNot':
-                return state.reached.routePosition.routeKey === requirement.routeKey;
+                return generationState.reached.routePosition.routeKey === requirement.routeKey;
             }
           };
           // Every authored curse is part of the generated Chaos screen. A
@@ -508,7 +520,7 @@ function evaluateReachedTraitOfferWithAssessments(
             const curse = catalog.chaos.curses.byKey[option.curseKey];
             return (
               curse === undefined ||
-              before.bannedTraitKeys.includes(option.curseKey) ||
+              built.bannedTraitKeys.includes(option.curseKey) ||
               (curse.offerRequirements ?? []).some(requirementUnavailable)
             );
           });
@@ -528,7 +540,8 @@ function evaluateReachedTraitOfferWithAssessments(
         if (offer.kind !== 'traits') return baseComposition;
         if (!isChaosGodScreenGiver(catalog, offer.giverKey)) return baseComposition;
         const chaosFindings: TraitOfferCompositionFinding[] = [];
-        if (rejectedBlocksRow(hasActiveChaosSemanticTag(before, 'Rejected'), offer)) {
+        // Rejected restricts the screen when it opens, not when its options are built.
+        if (rejectedBlocksRow(hasActiveChaosSemanticTag(state.traitHistory, 'Rejected'), offer)) {
           const blocked = offer.rejectedOptionKey;
           if (blocked === undefined)
             chaosFindings.push(Object.freeze({ code: 'chaosRejectedBlockMissing' }));
@@ -559,8 +572,10 @@ function evaluateReachedTraitOfferWithAssessments(
     ? Object.freeze([])
     : (assessments ??
       (legalityOffer.kind === 'chaos'
-        ? Object.freeze([assessChaosPairRarity(catalog, state, legalityOffer, effectiveSource)])
-        : assessTraitOffer(catalog, legalityOffer, state, effectiveSource)));
+        ? Object.freeze([
+            assessChaosPairRarity(catalog, generationState, legalityOffer, effectiveSource),
+          ])
+        : assessTraitOffer(catalog, legalityOffer, generationState, effectiveSource)));
   const levelResolutions =
     frozenLevelResolutions ??
     (offer.kind !== 'traits'
@@ -598,6 +613,7 @@ function evaluateReachedTraitOfferWithAssessments(
     address,
     acquisitionRole,
     state,
+    generationState,
     offer,
     baseRarities,
     source: effectiveSource,
@@ -624,6 +640,8 @@ export function evaluateReachedTraitOffer(
   rarificationBaseOffer?: AuthoredTraitOffer,
   frozenAcquisition = false,
   frozenLevelResolutions?: readonly TraitOfferOptionLevelResolution[],
+  /** Where the options were built; defaults to the evaluation state for open-time screens. */
+  generationState: SimulationState = state,
 ): ReachedTraitOfferEvaluation {
   return evaluateReachedTraitOfferWithAssessments(
     catalog,
@@ -638,6 +656,7 @@ export function evaluateReachedTraitOffer(
     undefined,
     frozenAcquisition,
     frozenLevelResolutions,
+    generationState,
   );
 }
 

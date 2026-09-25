@@ -24,8 +24,9 @@ export interface LevelResolutionSettlementInput {
     readonly offer?: CanonicalResolvedIncomingReward['offer'];
     readonly producerKind?: CanonicalResolvedIncomingReward['producerKind'];
     readonly producerLifecycleKey?: string;
-    readonly levelResolutionGenerationHistory?: TraitHistoryState;
   };
+  /** Trait history the Pom's options were built from. */
+  readonly generation: TraitHistoryState;
   readonly owner: TraitOfferOwnerAddress | undefined;
   readonly role: string;
   readonly authoredLevelResolution: AuthoredLevelResolution | undefined;
@@ -55,6 +56,7 @@ export function settleReachedLevelResolution(
     authoredLevelResolution,
     lifecyclePoint,
     sequence,
+    generation,
   } = input;
   if (reward.offer === undefined || reward.producerLifecycleKey === undefined) return undefined;
   const effect = levelResolutionEffectFor(
@@ -78,7 +80,7 @@ export function settleReachedLevelResolution(
       ? { kind: 'choice' as const, offeredTraitKeys: Object.freeze([]), selectedTraitKey: null }
       : { kind: 'random' as const, targetTraitKey: null });
   const before = branch.state.traitHistory;
-  const generationBefore = reward.levelResolutionGenerationHistory ?? before;
+  const generationBefore = generation;
   const evaluation = evaluateReachedLevelResolution(
     catalog,
     address,

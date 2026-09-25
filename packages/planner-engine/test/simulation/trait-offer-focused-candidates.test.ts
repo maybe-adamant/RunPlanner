@@ -40,7 +40,7 @@ import {
   evaluateTraitOfferFocusedOptionCandidate,
   type TraitOfferFocusedOptionCandidateQuery,
 } from '../../src/simulation/candidates/trait-offer/query';
-import { traitFrontierState } from '../support/simulation-state';
+import { traitFrontierState, openTimeTraitOfferContext } from '../support/simulation-state';
 
 const project = createGoldenFGHIProject();
 const evaluation = simulateProject(catalog, project);
@@ -98,7 +98,10 @@ function focused(
 }
 
 function reachedContext(before = createTraitHistoryState()): TraitOfferCandidateContext {
-  return Object.freeze({ state: traitFrontierState(before), source: Object.freeze({}) });
+  return openTimeTraitOfferContext({
+    state: traitFrontierState(before),
+    source: Object.freeze({}),
+  });
 }
 
 describe('focused trait offer candidates', () => {
@@ -296,7 +299,7 @@ describe('focused trait offer candidates', () => {
     );
     // This is the retained candidate context published for a missing child after
     // `withBoonRarityFacts` resolves Q_Miniboss02's reached room facts.
-    const missingChildContext: TraitOfferCandidateContext = Object.freeze({
+    const missingChildContext: TraitOfferCandidateContext = openTimeTraitOfferContext({
       state: traitFrontierState(createTraitHistoryState()),
       source: Object.freeze({
         resolvedProviderKey: 'Apollo',
@@ -340,11 +343,11 @@ describe('focused trait offer candidates', () => {
       project,
       evaluation,
       artifacts([
-        Object.freeze({
+        openTimeTraitOfferContext({
           state: traitFrontierState(createTraitHistoryState()),
           source: Object.freeze({ resolvedProviderKey: 'Apollo' }),
         }),
-        Object.freeze({
+        openTimeTraitOfferContext({
           state: traitFrontierState(createTraitHistoryState()),
           source: Object.freeze({
             resolvedProviderKey: 'Apollo',
@@ -659,7 +662,7 @@ describe('focused trait offer candidates', () => {
     );
     const before = historyWith('WeaponUpgrade', 'LobAmmoMagnetismTrait', 'Common');
     const result = focused(value, 'option1', [
-      Object.freeze({
+      openTimeTraitOfferContext({
         state: traitFrontierState(before, {
           loadout: { weaponKey: 'WeaponStaffSwing', aspectKey: 'BaseStaffAspect' },
         }),

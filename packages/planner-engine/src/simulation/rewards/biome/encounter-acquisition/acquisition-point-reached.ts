@@ -1,3 +1,4 @@
+import { spawnDueHermesDeliveries } from '../offer-lifecycle/spawned-trait-offers';
 import { replaceSimulationTraitHistory } from '../../../state/transitions';
 import type { Catalog, RoomDeclaration } from '../../../../catalog-schema';
 import type { PlannerTimelineFacts } from '../../../timeline-facts';
@@ -167,16 +168,21 @@ export function applyAcquisitionPointReachedTransition(
     );
     return transitionResult({
       branches: inputs.sourceBranches.map((branch) =>
-        Object.freeze({
-          ...branch,
-          state: Object.freeze({
-            ...branch.state,
-            pendingHermesShrineDeliveries: Object.freeze({
-              ...branch.state.pendingHermesShrineDeliveries,
-              ...scheduled,
+        spawnDueHermesDeliveries(
+          catalog,
+          room,
+          Object.freeze({
+            ...branch,
+            state: Object.freeze({
+              ...branch.state,
+              pendingHermesShrineDeliveries: Object.freeze({
+                ...branch.state.pendingHermesShrineDeliveries,
+                ...scheduled,
+              }),
             }),
           }),
-        }),
+          event.sequence,
+        ),
       ),
       findings,
     });
@@ -616,13 +622,18 @@ export function applyAcquisitionPointReachedTransition(
             });
           }
         }
-        return Object.freeze({
-          ...branch,
-          state: Object.freeze({
-            ...branch.state,
-            pendingHermesShrineDeliveries: Object.freeze(nextPending),
+        return spawnDueHermesDeliveries(
+          catalog,
+          room,
+          Object.freeze({
+            ...branch,
+            state: Object.freeze({
+              ...branch.state,
+              pendingHermesShrineDeliveries: Object.freeze(nextPending),
+            }),
           }),
-        });
+          event.sequence,
+        );
       });
       return transitionResult({
         branches,

@@ -38,7 +38,7 @@ import {
   createPreparedProjectCandidateSession,
   simulateProjectAssembly,
 } from '@run-planner/engine/simulation';
-import { traitFrontierState } from '../support/simulation-state';
+import { traitFrontierState, openTimeTraitOfferContexts } from '../support/simulation-state';
 
 const owner = { kind: 'project' } as const;
 
@@ -113,17 +113,19 @@ describe('run-impacting trait candidate contacts', () => {
     const result = createNaturalSelectionResultAddress(trait, 'option1');
     const artifacts = createTraitOfferCandidateArtifacts(
       catalog,
-      new Map([
-        [
-          semanticAddressKey(result),
-          Object.freeze([
-            {
-              state: traitFrontierState(historyWithCoreTrait('ApolloWeaponBoon')),
-              source: Object.freeze({}),
-            },
-          ]),
-        ],
-      ]),
+      openTimeTraitOfferContexts(
+        new Map([
+          [
+            semanticAddressKey(result),
+            Object.freeze([
+              {
+                state: traitFrontierState(historyWithCoreTrait('ApolloWeaponBoon')),
+                source: Object.freeze({}),
+              },
+            ]),
+          ],
+        ]),
+      ),
     );
     const missing = evaluateNaturalSelectionResultCandidate(
       catalog,
@@ -461,21 +463,23 @@ describe('run-impacting trait candidate contacts', () => {
     );
     const artifacts = createTraitOfferCandidateArtifacts(
       catalog,
-      new Map([
-        [
-          semanticAddressKey(createNaturalSelectionResultAddress(trait, 'option1')),
-          Object.freeze([
-            {
-              state: traitFrontierState(historyWithCoreTrait('ApolloWeaponBoon')),
-              source: Object.freeze({}),
-            },
-            {
-              state: traitFrontierState(historyWithCoreTrait('HestiaWeaponBoon')),
-              source: Object.freeze({}),
-            },
-          ]),
-        ],
-      ]),
+      openTimeTraitOfferContexts(
+        new Map([
+          [
+            semanticAddressKey(createNaturalSelectionResultAddress(trait, 'option1')),
+            Object.freeze([
+              {
+                state: traitFrontierState(historyWithCoreTrait('ApolloWeaponBoon')),
+                source: Object.freeze({}),
+              },
+              {
+                state: traitFrontierState(historyWithCoreTrait('HestiaWeaponBoon')),
+                source: Object.freeze({}),
+              },
+            ]),
+          ],
+        ]),
+      ),
     );
     const divergent = evaluateNaturalSelectionResultCandidate(
       catalog,

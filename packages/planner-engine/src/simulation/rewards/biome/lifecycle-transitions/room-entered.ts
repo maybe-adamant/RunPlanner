@@ -1,3 +1,4 @@
+import { spawnDueHermesDeliveries } from '../offer-lifecycle/spawned-trait-offers';
 import type { Catalog } from '../../../../catalog-schema';
 import type { ResolvedRoutePosition } from '../../../../authored-project/route-context';
 import {
@@ -219,6 +220,10 @@ export function applyRoomEnteredTransition(
           }),
         }),
       ),
+    );
+    // Expiring deliveries spawn their loot on entry.
+    next = Object.freeze(
+      next.map((branch) => spawnDueHermesDeliveries(catalog, room, branch, event.sequence)),
     );
   }
   const dueDeliveries =

@@ -53,7 +53,11 @@ import {
   simulateProject,
   simulateProjectAssembly,
 } from '../../src/simulation';
-import { traitFrontierState, withSettledSpellDrop } from '../support/simulation-state';
+import {
+  traitFrontierState,
+  withSettledSpellDrop,
+  openTimeTraitOfferContexts,
+} from '../support/simulation-state';
 import { createDefaultRouteLoadout } from '../../src/authored-project/loadout';
 
 const owner = { kind: 'project' } as SemanticAddress;
@@ -1134,15 +1138,17 @@ describe('reached trait offer chronology', () => {
     );
     const candidateArtifacts = createTraitOfferCandidateArtifacts(
       catalog,
-      new Map([
-        [
-          semanticAddressKey(trait),
-          Object.freeze([
-            Object.freeze({ state: legalBranchTrace.state, source: legalBranchTrace.source }),
-            Object.freeze({ state: invalidBranchTrace.state, source: invalidBranchTrace.source }),
-          ]),
-        ],
-      ]),
+      openTimeTraitOfferContexts(
+        new Map([
+          [
+            semanticAddressKey(trait),
+            Object.freeze([
+              Object.freeze({ state: legalBranchTrace.state, source: legalBranchTrace.source }),
+              Object.freeze({ state: invalidBranchTrace.state, source: invalidBranchTrace.source }),
+            ]),
+          ],
+        ]),
+      ),
     );
     const query: TraitOfferCandidateQuery = { kind: 'traitOffer', trait, value };
     const result = evaluateTraitOfferCandidate(

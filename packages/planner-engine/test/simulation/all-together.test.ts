@@ -28,7 +28,7 @@ import {
 import { initializeTestRewardBranches } from '../support/arcana-fear';
 import { installHexTree } from '../../src/simulation/hex-progress';
 import type { RewardBranchState } from '../../src/simulation/rewards/branch-primitives';
-import { traitFrontierState } from '../support/simulation-state';
+import { traitFrontierState, openTimeTraitOfferContexts } from '../support/simulation-state';
 
 const owner = createTraitOfferAddress(
   createEncounterPhaseAddress(
@@ -466,17 +466,19 @@ describe('All Together direct trait settlement', () => {
     const forced = requiredHistory([acquired(4, 'Hephaestus', 'ElementalDamageBoon')]);
     const single = createTraitOfferCandidateArtifacts(
       catalog,
-      new Map([
-        [
-          semanticAddressKey(owner),
+      openTimeTraitOfferContexts(
+        new Map([
           [
-            Object.freeze({
-              state: traitFrontierState(first),
-              source: Object.freeze({ resolvedProviderKey: 'Hera' }),
-            }),
+            semanticAddressKey(owner),
+            [
+              Object.freeze({
+                state: traitFrontierState(first),
+                source: Object.freeze({ resolvedProviderKey: 'Hera' }),
+              }),
+            ],
           ],
-        ],
-      ]),
+        ]),
+      ),
     ).at(owner)!;
     expect(single.allTogetherSet(offer(), 'option1', 'earth')).toEqual([
       ['ElementalDamageBoon', 'ElementalOlympianDamageBoon'],
@@ -484,21 +486,23 @@ describe('All Together direct trait settlement', () => {
 
     const divergentArtifacts = createTraitOfferCandidateArtifacts(
       catalog,
-      new Map([
-        [
-          semanticAddressKey(owner),
+      openTimeTraitOfferContexts(
+        new Map([
           [
-            Object.freeze({
-              state: traitFrontierState(first),
-              source: Object.freeze({ resolvedProviderKey: 'Hera' }),
-            }),
-            Object.freeze({
-              state: traitFrontierState(forced),
-              source: Object.freeze({ resolvedProviderKey: 'Hera' }),
-            }),
+            semanticAddressKey(owner),
+            [
+              Object.freeze({
+                state: traitFrontierState(first),
+                source: Object.freeze({ resolvedProviderKey: 'Hera' }),
+              }),
+              Object.freeze({
+                state: traitFrontierState(forced),
+                source: Object.freeze({ resolvedProviderKey: 'Hera' }),
+              }),
+            ],
           ],
-        ],
-      ]),
+        ]),
+      ),
     );
     const evaluated = evaluateAllTogetherSetDomain(
       catalog,

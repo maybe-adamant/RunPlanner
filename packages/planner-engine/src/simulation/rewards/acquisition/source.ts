@@ -6,7 +6,6 @@ import type {
 import type { AuthoredRewardState } from '../../../authored-project/model';
 import type { ResolvedRewardOffer } from '../../../reward-kernel';
 import type { CanonicalResolvedIncomingReward } from '../../materialization';
-import type { TraitHistoryState } from '../../traits';
 import type { ResolvedAcquisitionSource } from '../model';
 
 export interface AcquisitionSource {
@@ -32,8 +31,6 @@ export interface AcquisitionSource {
   readonly traitOffersByAcquisitionRole?: CanonicalResolvedIncomingReward['traitOffersByAcquisitionRole'];
   readonly levelResolutionsByAcquisitionRole?: CanonicalResolvedIncomingReward['levelResolutionsByAcquisitionRole'];
   readonly anvilResult?: import('../../../authored-project/model').AuthoredAnvilResult | null;
-  /** Optional creation-time Pom frontier for an already-materialized loot object. */
-  readonly levelResolutionGenerationHistory?: TraitHistoryState;
   readonly dispositionByAcquisitionRole?: AuthoredRewardState['dispositionByAcquisitionRole'];
   /** Exact source-produced payload stored at the occurrence acquisition site. */
   readonly artificerReplacementByAcquisitionRole?: Readonly<

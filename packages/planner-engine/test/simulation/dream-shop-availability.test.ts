@@ -14,6 +14,10 @@ import {
   createTargetAddress,
   createTraitOfferAddress,
   resolveRoutePosition,
+  semanticAddressKey,
+  createAcquisitionEntryAddress,
+  createAcquisitionSiteAddress,
+  createOccurrenceAddress,
 } from '@run-planner/engine/authored-project';
 import { simulateProject } from '@run-planner/engine/simulation';
 import { createArcanaFearState } from '../../src/simulation/arcana-fear';
@@ -24,6 +28,7 @@ import { initializeTestRewardBranchesForRoute as initializeRewardBranches } from
 import { processShopInventory } from '../../src/simulation/rewards/shop/inventory';
 import { deriveTravelRefill } from '../../src/simulation/rewards/shop/derived-rewards';
 import { settleShopAcquisitionSite } from '../../src/simulation/rewards/shop/settlement';
+import { spawnPendingTraitOffers } from '../../src/simulation/state/pending-trait-offers';
 
 const dreamI = createBiomeAddress('Dream', 'I');
 
@@ -55,7 +60,12 @@ function authorApolloOpening(
   return next;
 }
 
-function dreamIShopContact(metaOption: 'ElementalBoost' | 'CardUpgradePointsDrop') {
+function dreamIShopContact(
+  metaOption: 'ElementalBoost' | 'CardUpgradePointsDrop',
+  edit: (
+    project: ReturnType<typeof createProjectDocument>,
+  ) => ReturnType<typeof createProjectDocument> = (project) => project,
+) {
   const shop = createOccurrenceId('dream-shop-i-preboss');
   let project = createProjectDocument(catalog, {
     projectId: 'dream-i-shop-contact',
@@ -119,6 +129,7 @@ function dreamIShopContact(metaOption: 'ElementalBoost' | 'CardUpgradePointsDrop
     offer: createShopOfferAddress(dreamI, shop, 'MetaProgress'),
     purchased: true,
   });
+  project = edit(project);
   const plan = project.route?.biomes[0];
   const occurrence = plan?.topology?.occurrences.find(
     (candidate) => candidate.occurrenceId === shop,
@@ -142,7 +153,7 @@ function dreamIShopContact(metaOption: 'ElementalBoost' | 'CardUpgradePointsDrop
   if (biome?.coverage.kind !== 'prefix') throw new Error('Dream I contact has no reached prefix');
   if (!('history' in biome)) throw new Error('Dream I contact has no assessed history');
   if (!('current' in biome.history)) throw new Error('Dream I contact expected prefix history');
-  return { project, declaration, room, view: biome.history.current };
+  return { project, declaration, room, view: biome.history.current, shop };
 }
 
 describe('Dream Shop availability', () => {
@@ -285,5 +296,162 @@ describe('Dream Shop availability', () => {
         offer: { rewardType: 'CardUpgradePointsDrop' },
       }),
     ).toMatchObject({ supported: false });
+  });
+});
+
+describe('Dream Shop trait offers against the state they were built from', () => {
+  const heraOffer = (selected: string) =>
+    ({
+      kind: 'traits',
+      giverKey: 'Hera',
+      options: [
+        { traitKey: selected, rarity: 'Common' },
+        { traitKey: 'HeraSprintBoon', rarity: 'Common' },
+        { traitKey: 'ElementalRarityUpgradeBoon', rarity: 'Common' },
+      ],
+      selectedOptionKey: 'option1',
+    }) as const;
+
+  it('keeps an essence bought first out of a spawned shop boon, but not out of a Mystery Box', () => {
+    const shopKey = createOccurrenceId('dream-shop-i-preboss');
+    const boon = createTraitOfferAddress(
+      createShopOfferAddress(dreamI, shopKey, 'BoostedBoon'),
+      'source',
+    );
+    // A shop Mystery Box's hidden source is authored on its purchase entry.
+    const boxEntry = createAcquisitionEntryAddress(
+      createAcquisitionSiteAddress(createOccurrenceAddress(dreamI, shopKey), 'roomExit'),
+      'MixedProgress',
+    );
+    const hidden = createTraitOfferAddress(boxEntry, 'hiddenSource');
+    const { project, declaration, room, view } = dreamIShopContact('ElementalBoost', (authored) => {
+      let next = authored;
+      for (const [offerKey, value] of [
+        [
+          'BoostedBoon',
+          {
+            optionKey: 'RandomLoot',
+            offer: {
+              rewardType: 'RandomLoot' as const,
+              payload: { kind: 'BoonSource' as const, source: 'HeraUpgrade' },
+            },
+          },
+        ],
+        [
+          'MixedProgress',
+          {
+            optionKey: 'BlindBoxLoot',
+            offer: {
+              rewardType: 'BlindBoxLoot' as const,
+              payload: { kind: 'BoonSource' as const, source: 'HeraUpgrade' },
+            },
+          },
+        ],
+      ] as const)
+        next = applyProjectCommand(next, catalog, {
+          kind: 'ReplaceShopOfferOption',
+          offer: createShopOfferAddress(dreamI, shopKey, offerKey),
+          value,
+        });
+      for (const offerKey of ['BoostedBoon', 'MixedProgress'])
+        next = applyProjectCommand(next, catalog, {
+          kind: 'ReplaceShopPurchaseParticipation',
+          offer: createShopOfferAddress(dreamI, shopKey, offerKey),
+          purchased: true,
+        });
+      next = applyProjectCommand(next, catalog, {
+        kind: 'ReplaceTraitOffer',
+        trait: boon,
+        value: heraOffer('HeraWeaponBoon'),
+      });
+      next = applyProjectCommand(next, catalog, {
+        kind: 'ReplaceAcquisitionEntryOffer',
+        entry: boxEntry,
+        value: {
+          rewardType: 'BlindBoxLoot',
+          payload: { kind: 'BoonSource', source: 'HeraUpgrade' },
+        },
+      });
+      next = applyProjectCommand(next, catalog, {
+        kind: 'ReplaceTraitOffer',
+        trait: hidden,
+        value: heraOffer('HeraSpecialBoon'),
+      });
+      return next;
+    });
+    const branches = initializeRewardBranches(
+      undefined,
+      createArcanaFearState(catalog, project.route!.loadout),
+      catalog,
+      project.route!.loadout.startingKeepsakeKey,
+      undefined,
+      'Dream',
+      project.route!.loadout,
+      { routePosition: resolveRoutePosition(catalog, project.route, 'I'), historyView: view },
+    );
+    const facts = (state: (typeof branches)[number]['state']) =>
+      createRewardFacts({
+        catalog,
+        sourceOrigin: room.origin,
+        currentRoom: room,
+        sourceDeclaration: declaration,
+        view,
+        history: state.rewardHistory,
+        enteredBiomeCount: 1,
+        currentBatchRoomGameNames: [],
+        rewardLookups: { hubRewardLookup: new Set() },
+        offeredRewardTypes: offeredRewardTypeSet(state.offeredRewardTypes),
+        fail: (detail) => {
+          throw new Error(detail);
+        },
+      });
+    const inventory = processShopInventory(branches, {
+      catalog,
+      room,
+      declaration,
+      historySequence: 1,
+      facts,
+      fail: (detail) => {
+        throw new Error(detail);
+      },
+    });
+    const offers = room.entryState?.kind === 'shop' ? room.entryState.offers : [];
+    // The shop's loot spawns at room entry, before any purchase.
+    const spawned = inventory.branches.map((branch) =>
+      Object.freeze({
+        ...branch,
+        state: spawnPendingTraitOffers(
+          catalog,
+          branch.state,
+          offers.map((offer) =>
+            Object.freeze({
+              origin: offer.offerOrigin,
+              offer: offer.offer,
+              traitOffersByAcquisitionRole: offer.traitOffersByAcquisitionRole,
+            }),
+          ),
+        ),
+      }),
+    );
+    const settlement = settleShopAcquisitionSite(spawned, {
+      catalog,
+      room,
+      declaration,
+      historySequence: 2,
+      facts,
+      order: ['MetaProgress', 'BoostedBoon', 'MixedProgress'],
+      fail: (detail) => {
+        throw new Error(detail);
+      },
+    });
+    const infusionFinding = (address: typeof boon) =>
+      settlement.findingEmissions.some(
+        (entry) =>
+          semanticAddressKey(entry.finding.origin) === semanticAddressKey(address) &&
+          entry.finding.code === 'elementThreshold',
+      );
+    // The boon's options were built before the essence; the box's god loot at unwrap.
+    expect(infusionFinding(boon)).toBe(true);
+    expect(infusionFinding(hidden)).toBe(false);
   });
 });

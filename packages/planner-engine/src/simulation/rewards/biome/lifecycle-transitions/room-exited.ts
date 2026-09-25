@@ -1,3 +1,4 @@
+import { closePendingTraitOfferRoom, traitOfferRoomKey } from '../../../state/pending-trait-offers';
 import { replaceSimulationTraitHistory } from '../../../state/transitions';
 import type { Catalog } from '../../../../catalog-schema';
 import type { ResourcePlacements } from '../../../../authored-project/model';
@@ -90,6 +91,15 @@ export function applyRoomExitedTransition(
         }),
       );
   }
+  // Loot left unopened in the room disappears with it.
+  const exitedRoom = traitOfferRoomKey(event.origin);
+  if (exitedRoom !== undefined)
+    next = Object.freeze(
+      next.map((branch) => {
+        const state = closePendingTraitOfferRoom(branch.state, exitedRoom);
+        return state === branch.state ? branch : Object.freeze({ ...branch, state });
+      }),
+    );
   next = Object.freeze(
     next.map((branch) => {
       const before = branch.state.traitHistory;

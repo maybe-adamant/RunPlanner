@@ -11,11 +11,13 @@ import {
   createEncounterPhaseAddress,
   createFieldsSpatialAddress,
   createIncomingRewardAddress,
+  createLocalRewardAddress,
   createNemesisRandomEventAddress,
   createOccurrenceAddress,
   createOccurrenceId,
   createRoomActionAddress,
   roomActionKey,
+  createTraitOfferAddress,
   semanticAddressKey,
   type AuthoredNemesisRandomEventOutcome,
   type ProjectDocument,
@@ -553,6 +555,69 @@ describe('Nemesis random events', () => {
     const repair = nemesisRandomEventCandidateSupportForProjectEvaluationAssembly(moved, event);
     expect(repair?.branches[0]?.traitTradeTraitKeys.length).toBeGreaterThan(0);
     expect(repair?.branches[0]?.traitTradeTraitKeys).not.toContain('ApolloRetaliateBoon');
+  });
+
+  it('invalidates spawned cage loot when a trade sells a trait before the cages open', () => {
+    const occurrenceId = createOccurrenceId('golden-h-combat05');
+    const owner = createOccurrenceAddress(goldenHBiome, occurrenceId);
+    const passive = createEncounterPhaseAddress(
+      goldenHBiome,
+      { kind: 'occurrence', occurrenceId },
+      'Passive',
+    );
+    const event = createNemesisRandomEventAddress(passive);
+    const hestiaCage = createTraitOfferAddress(
+      createLocalRewardAddress(goldenHBiome, occurrenceId, 'cages', 'cage3'),
+      'source',
+    );
+    const withTrade = (response: 'accept' | 'decline') => {
+      let project = applyProjectCommand(createGoldenFGHIProject(), catalog, {
+        kind: 'SelectEncounter',
+        phase: passive,
+        encounterKey: 'NemesisRandomEvent',
+      });
+      project = applyProjectCommand(project, catalog, {
+        kind: 'ReplaceFieldsSpatialPoint',
+        spatial: createFieldsSpatialAddress(owner, { kind: 'nemesis' }),
+        pointId: 623602,
+      });
+      project = applyProjectCommand(project, catalog, {
+        kind: 'SelectNemesisRandomEventFamily',
+        event,
+        family: 'traitTrade',
+      });
+      project = replaceNemesisRandomEventInteraction(
+        project,
+        event,
+        { kind: 'traitTrade', traitKey: 'HeraCastBoon', response },
+        response === 'accept' ? { rewardType: 'RoomMoneyTripleDrop' } : null,
+      );
+      project = applyProjectCommand(project, catalog, {
+        kind: 'MoveRoomAction',
+        action: createRoomActionAddress(
+          goldenHBiome,
+          occurrenceId,
+          roomActionKey({ kind: 'interactEncounter', phaseKey: 'Passive' }),
+        ),
+        toIndex: 0,
+      });
+      const h = simulateProjectAssembly(catalog, project).evaluation.route.biomes.find(
+        (biome) => biome.origin.biomeKey === 'H',
+      );
+      if (h === undefined || !('rewards' in h)) throw new Error('missing evaluated H rewards');
+      const offer = h.rewards.selectedTraitOffers.find(
+        (candidate) => semanticAddressKey(candidate.address) === semanticAddressKey(hestiaCage),
+      );
+      if (offer?.offer.kind !== 'traits') throw new Error('Hestia cage was not reached');
+      const row = offer.offer.options.findIndex((option) => option.traitKey === 'HestiaCastBoon');
+      return offer.branches.map((branch) => branch.assessments[row]?.replacementTransition);
+    };
+    // Declined, the cage keeps its room-entry options: Hestia replaces the held Hera cast.
+    expect(withTrade('decline')).toEqual([
+      expect.objectContaining({ replacedTraitKey: 'HeraCastBoon' }),
+    ]);
+    // Sold, the cleared options regenerate at the open with the Cast slot empty.
+    expect(withTrade('accept')).toEqual([undefined]);
   });
 
   it('places the H event beside four optionals when the room has spare physical capacity', () => {

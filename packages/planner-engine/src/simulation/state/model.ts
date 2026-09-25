@@ -42,9 +42,6 @@ export interface PendingShopGoldMaterialization {
     readonly lifecyclePoint: ProducerLifecyclePointKey;
   }[];
   readonly sourceOffer: PendingShopPaidOffer;
-  /** Earlier source witness; this is deliberately not replaced by current state. */
-  readonly sourceTraitHistory: TraitHistoryState;
-  readonly sourcePomEligibleTraitKeys: readonly string[];
 }
 
 export interface PendingShopState {
@@ -70,6 +67,22 @@ export interface PendingHermesShrineDelivery {
   readonly dueSequence?: number;
 }
 
+/** The state substates native trait-offer generation reads when a loot's options are built. */
+export interface PendingTraitOfferContext {
+  readonly traitHistory: TraitHistoryState;
+  readonly arcanaFear: ArcanaFearState;
+  readonly keepsakes: KeepsakeState;
+  readonly equipment: SimulationEquipmentState;
+  readonly stygianWell: StygianWellRunState;
+  readonly rewardHistory: RewardHistoryState;
+}
+
+/** A spawned, unopened loot: its options' build context, or stale when they were cleared. */
+export interface PendingTraitOfferRecord {
+  readonly context: PendingTraitOfferContext;
+  readonly stale: boolean;
+}
+
 export interface SimulationState {
   readonly equipment: SimulationEquipmentState;
   readonly reached: {
@@ -93,6 +106,10 @@ export interface SimulationState {
    * equivalence compares the set rather than a generation order.
    */
   readonly offeredRewardTypes: readonly string[];
+  /** Unopened trait-bearing loot by room, then by trait-offer or Pom address. */
+  readonly pendingTraitOffers: Readonly<
+    Record<string, Readonly<Record<string, PendingTraitOfferRecord>>>
+  >;
 }
 
 export function createEmptyRewardLookups(

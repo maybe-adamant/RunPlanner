@@ -134,3 +134,23 @@ export function arcanaFearWithActive(
     }),
   });
 }
+
+/** A candidate context for a screen whose options are built when it opens. */
+export function openTimeTraitOfferContext<
+  Context extends { readonly state: SimulationState; readonly source: object },
+>(context: Context): Context & { readonly generationState: SimulationState } {
+  return Object.freeze({ ...context, generationState: context.state });
+}
+
+export function openTimeTraitOfferContexts<
+  Context extends { readonly state: SimulationState; readonly source: object },
+>(
+  contexts: ReadonlyMap<string, readonly Context[]>,
+): ReadonlyMap<string, readonly (Context & { readonly generationState: SimulationState })[]> {
+  return new Map(
+    [...contexts].map(([key, values]) => [
+      key,
+      Object.freeze(values.map((value) => openTimeTraitOfferContext(value))),
+    ]),
+  );
+}

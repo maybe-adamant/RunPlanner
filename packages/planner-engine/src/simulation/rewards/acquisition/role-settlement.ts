@@ -7,7 +7,6 @@ import {
   type AcquisitionSiteAddress,
 } from '../../../authored-project/addresses';
 import { artificerReplacementEntryKey } from '../../../authored-project/acquisition/artificer';
-import { seaStarDuplicateSiteKey } from '../../../authored-project/acquisition/sea-star';
 import {
   createUnresolvedAcquisitionRewardState,
   optionIndex,
@@ -50,6 +49,7 @@ import {
 } from '../findings';
 import {
   applyTraitOfferForAcquisition,
+  publishTraitOfferScreenCompletion,
   type PriorTraitMutation,
   type ReachedTraitChildCheckpoint,
   type ReachedTraitOfferCandidateContact,
@@ -67,6 +67,42 @@ import {
   generateArtificerReplacement,
 } from './conversions';
 import { resolvedAcquisitionSource, type AcquisitionSource } from './source';
+import {
+  spawnPendingTraitOffers,
+  traitOfferRoomOccurrence,
+} from '../../state/pending-trait-offers';
+import {
+  SEA_STAR_DUPLICATE_ENTRY_KEY,
+  seaStarDuplicateAcquisitionSite,
+  seaStarDuplicateSiteKey,
+} from '../../../authored-project/acquisition/sea-star';
+
+/** A Sea Star duplicate loot is created after its source screen closes. */
+function spawnSeaStarDuplicate(
+  catalog: Catalog,
+  branch: RewardBranchState,
+  incoming: AcquisitionSource,
+  role: string,
+): RewardBranchState {
+  const occurrence = traitOfferRoomOccurrence(incoming.origin);
+  if (occurrence === undefined || incoming.levelResolutionsByAcquisitionRole === undefined)
+    return branch;
+  const origin = createAcquisitionEntryAddress(
+    seaStarDuplicateAcquisitionSite(
+      occurrence,
+      createAcquisitionRoleAddress(incoming.origin, role),
+    ),
+    SEA_STAR_DUPLICATE_ENTRY_KEY,
+  );
+  const state = spawnPendingTraitOffers(catalog, branch.state, [
+    Object.freeze({
+      origin,
+      offer: incoming.offer,
+      levelResolutionsByAcquisitionRole: incoming.levelResolutionsByAcquisitionRole,
+    }),
+  ]);
+  return state === branch.state ? branch : Object.freeze({ ...branch, state });
+}
 import type { RewardEvent } from '../model';
 
 export function applyProducerRoleHistory(
@@ -325,11 +361,16 @@ export function applyProducerRoleHistory(
       mergeRewardFindingEmissions(findingEmissions, conversion.findingEmissions);
       unresolvedArtificerReplacement ||= conversion.status === 'missing';
       for (const generated of conversion.generatedReplacements) {
+        // The conversion spawns the replacement loot, whose options are built now.
+        const spawned = Object.freeze({
+          ...generated.branch,
+          state: spawnPendingTraitOffers(catalog, generated.branch.state, [generated.source]),
+        });
         if (deferArtificerReplacement) {
-          next.push(generated.branch);
+          next.push(spawned);
           continue;
         }
-        let replacementBranches: readonly RewardBranchState[] = Object.freeze([generated.branch]);
+        let replacementBranches: readonly RewardBranchState[] = Object.freeze([spawned]);
         for (const binding of generated.roles) {
           const replacementSettlement = applyProducerRoleHistory(
             catalog,
@@ -541,7 +582,14 @@ export function applyProducerRoleHistory(
       traitChildSettlements.push(
         Object.freeze({ ...traitSettlement.blockedChild, branch: withEvent }),
       );
-    } else next.push(withEvent);
+    } else {
+      const completed = publishTraitOfferScreenCompletion(withEvent, traitSettlement.completion);
+      next.push(
+        seaStarResult?.kind === 'proc' && traitSettlement.completion !== undefined
+          ? spawnSeaStarDuplicate(catalog, completed, incoming, resolution.role)
+          : completed,
+      );
+    }
   }
   if (next.length === 0 && !unresolvedArtificerReplacement && !unresolvedTraitOffer) {
     addRewardFinding(

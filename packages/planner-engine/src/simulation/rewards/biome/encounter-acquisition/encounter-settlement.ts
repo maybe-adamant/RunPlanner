@@ -65,6 +65,16 @@ import {
 import { addRewardFinding, mergeRewardFindingEmissions, rewardFinding } from '../../findings';
 import type { BossArcanaOutcome } from '../../model';
 import type { PlannerTimelineFacts } from '../../../timeline-facts';
+import { nemesisGeneratedPickupSiteKey } from '../../../../authored-project/acquisition/pickup-producers';
+import {
+  applyTraitOfferTransition,
+  invalidatedTraitOffers,
+  siteEntryTraitOffers,
+  spawnIncomingRewardAtEncounterCompletion,
+  spawnScreenProducedPickups,
+  spawnTraitOffers,
+  spawnWheelRewardAtEncounterCompletion,
+} from '../offer-lifecycle/spawned-trait-offers';
 
 type EncounterSettlementEvent = Extract<
   HistoryEvent,
@@ -672,6 +682,16 @@ export function applyEncounterSettlementTransition(inputs: {
       ...(blockGorgonPhaseKey === undefined ? {} : { blockGorgonPhaseKey }),
     });
   if (event.kind === 'encounterCompleted') {
+    branches = Object.freeze(
+      branches.map((branch) =>
+        spawnWheelRewardAtEncounterCompletion(
+          catalog,
+          room,
+          event.phaseKey,
+          spawnIncomingRewardAtEncounterCompletion(catalog, room, branch),
+        ),
+      ),
+    );
     const rewards =
       room.localRewards?.filter((reward) => reward.encounterPhaseKey === event.phaseKey) ?? [];
     if (room.lifecycleProfileKey === 'FieldsCombatRoom' || rewards.length === 0)
@@ -928,6 +948,10 @@ export function applyEncounterSettlementTransition(inputs: {
       } else {
         const removedTraitKey =
           outcome.kind === 'traitTrade' && outcome.response === 'accept' ? outcome.traitKey : null;
+        const trade =
+          removedTraitKey === null
+            ? undefined
+            : invalidatedTraitOffers(room.origin, 'nemesisTraitTrade');
         if (removedTraitKey !== null)
           branches = Object.freeze(
             branches.map((branch) => {
@@ -948,12 +972,20 @@ export function applyEncounterSettlementTransition(inputs: {
                   match: 'currentTraitKey' as const,
                 }),
               ]);
-              return Object.freeze({
+              const traded = Object.freeze({
                 ...branch,
                 state: replaceSimulationTraitHistory(branch.state, traitHistory),
               });
+              return trade === undefined ? traded : applyTraitOfferTransition(traded, trade);
             }),
           );
+        // The trade's result loot is created after the sale clears live options.
+        const resultSite = nemesisGeneratedPickupSiteKey(event.phaseKey);
+        branches = Object.freeze(
+          branches.map((branch) =>
+            spawnTraitOffers(catalog, branch, siteEntryTraitOffers(room, resultSite)),
+          ),
+        );
       }
     }
   }
@@ -996,7 +1028,14 @@ export function applyEncounterSettlementTransition(inputs: {
       if (item.candidateContact !== undefined)
         traitOfferCandidateContacts.push(item.candidateContact);
     }
-    if (authored !== null) branches = Object.freeze(settled.map((item) => item.branch));
+    if (authored !== null)
+      branches = Object.freeze(
+        settled.map((item) =>
+          item.screenCompleted
+            ? spawnScreenProducedPickups(catalog, room, owner, 'selection', item.branch)
+            : item.branch,
+        ),
+      );
   }
   return Object.freeze({
     branches,

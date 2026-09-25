@@ -1,8 +1,13 @@
+import { spawnPendingTraitOffers } from '../../src/simulation/state/pending-trait-offers';
 import { catalog } from '@run-planner/hades2-catalog';
 import {
   applyProjectCommand,
   createFountainRarityOutcomeAddress,
+  createBiomeAddress,
+  createIncomingRewardAddress,
   createOccurrenceAddress,
+  createTraitOfferAddress,
+  semanticAddressKey,
   createOccurrenceId,
   createRoomActionAddress,
   roomActionKey,
@@ -488,6 +493,53 @@ describe('Aromatic Phial fountain lifecycle', () => {
     expect(later.branches[0]?.state.traitHistory?.equippedTraits.ApolloWeaponBoon?.rarity).toBe(
       'Common',
     );
+  });
+
+  it('marks unopened loot stale whenever the Phial fires, promotion or not', () => {
+    const waiting = Object.freeze({
+      origin: createIncomingRewardAddress(
+        createBiomeAddress(occurrence.routeKey, occurrence.biomeKey),
+        occurrence.occurrenceId,
+      ),
+      offer: Object.freeze({ rewardType: 'Boon' }),
+      traitOffersByAcquisitionRole: Object.freeze({ source: null }),
+    });
+    const withWaiting = (branch: RewardBranchState) =>
+      Object.freeze({
+        ...branch,
+        state: spawnPendingTraitOffers(catalog, branch.state, [waiting]),
+      });
+    const stale = (result: ReturnType<typeof applyFountainUsedTransition>) =>
+      result.branches[0]?.state.pendingTraitOffers[semanticAddressKey(occurrence)]?.[
+        semanticAddressKey(createTraitOfferAddress(waiting.origin, 'source'))
+      ]?.stale;
+    expect(
+      stale(
+        applyFountainUsedTransition(catalog, fountainEvent(), fountainRoom('ApolloWeaponBoon'), [
+          withWaiting(fountainBranch(equippedTrait('ApolloWeaponBoon', 'Apollo'))),
+        ]),
+      ),
+    ).toBe(true);
+    expect(
+      stale(
+        applyFountainUsedTransition(catalog, fountainEvent(), undefined, [
+          withWaiting(
+            fountainBranch(
+              equippedTrait('HephaestusWeaponBoon', 'Hephaestus', 1),
+              cappedHephaestusHistory(),
+            ),
+          ),
+        ]),
+      ),
+    ).toBe(true);
+    // With no rarifiable trait the Phial never fires.
+    expect(
+      stale(
+        applyFountainUsedTransition(catalog, fountainEvent(), undefined, [
+          withWaiting(fountainBranch(equippedTrait('ElementalDamageFloorBoon', 'Apollo'))),
+        ]),
+      ),
+    ).toBe(false);
   });
 
   it('blocks later chronology on a missing or unavailable required target', () => {
