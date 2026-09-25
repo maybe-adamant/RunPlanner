@@ -28,7 +28,9 @@ import {
 } from '../evaluation/candidate-artifacts';
 import {
   createKeepsakeEquipResultCandidateArtifacts,
+  createFountainRarityCandidateArtifacts,
   createKeepsakeSelectionCandidateArtifacts,
+  type FountainRarityCandidateArtifacts,
   type TranscendentEmbryoCandidateArtifacts,
 } from '../keepsakes/candidate-artifacts';
 import { type DerivedAcquisitionEntryCandidateArtifacts } from '../rewards/acquisition/artifacts';
@@ -339,6 +341,22 @@ export function retainBlockedRegionProducts(
           retainedArtifacts.transcendentEmbryo.at(address))
         : retainedArtifacts.transcendentEmbryo.at(address),
   });
+  // Only reached fountain uses and the blocking outcome itself retain a Phial capability.
+  const blockedFountainAt = blockedAt.kind === 'fountainRarityOutcome' ? blockedAt : undefined;
+  const blockedFountainCapability =
+    blockedFountainAt === undefined
+      ? undefined
+      : (selectedArtifacts.fountainRarity.at(blockedFountainAt) ??
+        blockedArtifacts.fountainRarity.at(blockedFountainAt));
+  const fountainRarity: FountainRarityCandidateArtifacts =
+    blockedFountainAt === undefined || blockedFountainCapability === undefined
+      ? retainedArtifacts.fountainRarity
+      : createFountainRarityCandidateArtifacts(
+          new Map([
+            ...retainedArtifacts.fountainRarity.entries(),
+            [semanticAddressKey(blockedFountainAt), blockedFountainCapability] as const,
+          ]),
+        );
   const blockedKeepsakeCapability =
     blockedKeepsakeAt === undefined
       ? undefined
@@ -656,7 +674,7 @@ export function retainBlockedRegionProducts(
     undefined,
     undefined,
     undefined,
-    retainedArtifacts.fountainRarity,
+    fountainRarity,
     figurineArcana,
     transcendentEmbryo,
     retainedArtifacts.chaos,

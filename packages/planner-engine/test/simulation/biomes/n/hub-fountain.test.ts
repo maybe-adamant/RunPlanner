@@ -5,6 +5,7 @@ import {
   createFountainRarityOutcomeAddress,
   createHubDecisionAddress,
   createHubFountainAddress,
+  createIncomingRewardAddress,
   createRouteStartKeepsakeSelectionAddress,
   hubVisitSlotKeys,
   semanticAddressKey,
@@ -21,6 +22,7 @@ import { hubVisitActions } from '@run-planner/test-fixtures/shared';
 import {
   loadSurfaceNProject,
   nBiome,
+  nLocalOccurrenceId,
   nOccurrenceId,
   nVisitSlotKeys,
 } from '@run-planner/test-fixtures/surface';
@@ -113,6 +115,25 @@ function assessedHub(n: AssessedBiome): CanonicalHubDecision | undefined {
   return prefix.decisions.find(
     (decision): decision is CanonicalHubDecision => decision.kind === 'hub',
   );
+}
+
+function expectPhialCandidate(project: ProjectDocument): void {
+  expect(nEvaluation(project).findings).toContainEqual(
+    expect.objectContaining({ code: 'fountainRarityResultMissing', origin: outcome }),
+  );
+  const candidate = createPreparedProjectCandidateSession(
+    catalog,
+    simulateProjectAssembly(catalog, project),
+  ).evaluate({ kind: 'fountainRarityOutcome', outcome, targetTraitKey: 'ApolloWeaponBoon' });
+  expect(candidate).toMatchObject({
+    kind: 'fountainRarityOutcome',
+    result: {
+      status: 'pending',
+      targetRequired: true,
+      selectedPossible: true,
+      mutationTargetKeys: expect.arrayContaining(['ApolloWeaponBoon']),
+    },
+  });
 }
 
 describe('Hub fountain settlement', () => {
@@ -271,6 +292,59 @@ describe('Hub fountain settlement', () => {
         ],
       },
     });
+  });
+
+  it.each([
+    ['after three of three authored visits', hubVisitActions(nVisitSlotKeys.slice(0, 3), 3)],
+    ['first with no authored visits', hubVisitActions([], 0)],
+  ] as const)('offers the Hub Phial target candidate for a fountain use %s', (_label, actions) => {
+    const project = applyProjectCommand(withPhial(), catalog, {
+      kind: 'ReplaceHubActionOrder',
+      hub,
+      actions,
+    });
+    expect(nEvaluation(project).authoring).toBe('incomplete');
+    expectPhialCandidate(project);
+  });
+
+  it('offers the Hub Phial target candidate for a final use before any handoff exists', () => {
+    const shortened = applyProjectCommand(withPhial(), catalog, {
+      kind: 'ReplaceHubActionOrder',
+      hub,
+      actions: hubVisitActions(nVisitSlotKeys.slice(0, 5), 0),
+    });
+    const project = withFountainAfter(shortened, 6);
+    expect(
+      project.route.biomes
+        .find((biome) => biome.biomeKey === 'N')
+        ?.topology?.decisions.some(
+          (decision) => decision.kind === 'exit' && decision.source.kind === 'hubDecision',
+        ),
+    ).toBe(false);
+    expect(nEvaluation(project).findings).toContainEqual(
+      expect.objectContaining({ code: 'continuationMissing' }),
+    );
+    expectPhialCandidate(project);
+  });
+
+  it('keeps the Hub Phial candidate unavailable when assessment stops before the fountain use', () => {
+    const project = applyProjectCommand(withFountainAfter(withPhial(), 3), catalog, {
+      kind: 'ReplaceIncomingReward',
+      reward: createIncomingRewardAddress(nBiome, nLocalOccurrenceId('combat02', 'sideDoor1')),
+      value: { rewardType: 'AirBoost' },
+    });
+    const n = nEvaluation(project);
+    expect(n.issue).toBeDefined();
+    expect(n.issue?.owner).not.toEqual(outcome);
+    expect(n.findings).not.toContainEqual(
+      expect.objectContaining({ code: 'fountainRarityResultMissing' }),
+    );
+    expect(
+      createPreparedProjectCandidateSession(
+        catalog,
+        simulateProjectAssembly(catalog, project),
+      ).evaluate({ kind: 'fountainRarityOutcome', outcome, targetTraitKey: 'ApolloWeaponBoon' }),
+    ).toMatchObject({ kind: 'unavailable', reason: 'coverageNotReached' });
   });
 
   it('keeps a six-visit handoff and downstream rooms while an unplanned fountain stops assessment', () => {

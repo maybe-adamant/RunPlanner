@@ -24,6 +24,7 @@ import {
 } from '../rewards/acquisition/artifacts';
 import {
   type FigurineArcanaCandidateArtifacts,
+  type FountainRarityCandidateArtifacts,
   type KeepsakeEquipResultCandidateArtifacts,
   type KeepsakeSelectionCandidateArtifacts,
   type TranscendentEmbryoCandidateArtifacts,
@@ -156,6 +157,7 @@ function generation(
   hermesShrines: HermesShrineCandidateArtifacts,
   stygianWells: StygianWellCandidateArtifacts,
   transcendentEmbryo: TranscendentEmbryoCandidateArtifacts,
+  fountainRarity: FountainRarityCandidateArtifacts,
   forcedChaosOccurrenceKeys?: ReadonlySet<string>,
   encounterBoundary?: EncounterCandidateBoundary,
   carriedRewardLookups?: Readonly<Record<string, readonly string[]>>,
@@ -224,7 +226,7 @@ function generation(
       undefined,
       hermesShrines,
       stygianWells,
-      undefined,
+      fountainRarity,
       figurineArcana,
       transcendentEmbryo,
       ordinary.chaos,
@@ -313,6 +315,7 @@ function products(
     rewards.hermesShrineArtifacts,
     rewards.stygianWellArtifacts,
     rewards.transcendentEmbryoArtifacts,
+    rewards.fountainRarityArtifacts,
     context.forcedChaosOccurrenceKeys,
     encounterBoundary,
     context.seed === undefined
