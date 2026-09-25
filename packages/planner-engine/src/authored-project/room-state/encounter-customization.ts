@@ -124,6 +124,14 @@ export function customizationValueKnown(
           value.count >= selection.minimum &&
           value.count <= selection.maximum
         );
+      case 'infiniteRoster':
+        return (
+          selection.kind === 'infiniteRoster' &&
+          value.typeKeys.length >= selection.types.min &&
+          value.typeKeys.length <= selection.types.max &&
+          new Set(value.typeKeys).size === value.typeKeys.length &&
+          value.typeKeys.every((key) => selection.choices.some((choice) => choice.key === key))
+        );
     }
   });
 }

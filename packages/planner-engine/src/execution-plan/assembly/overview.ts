@@ -784,7 +784,32 @@ function executionEncounterCustomization(
       );
       continue;
     }
-    if (decision.selection.kind === 'cocoonCount')
+    if (value.kind === 'infiniteRoster') {
+      const rosterSelection = decision.selection;
+      if (rosterSelection.kind !== 'infiniteRoster')
+        throw new CompilerError(
+          'executionCoverageMissing',
+          `${room.gameName}.${slotKey}.${decision.key} lost its declared selection shape`,
+        );
+      const types = value.typeKeys.map((typeKey) => {
+        const choice = rosterSelection.choices.find((candidate) => candidate.key === typeKey);
+        if (choice === undefined)
+          throw new CompilerError(
+            'executionCoverageMissing',
+            `${room.gameName}.${slotKey}.${decision.key} lost roster enemy ${typeKey}`,
+          );
+        return Object.freeze({ choiceKey: choice.key, nativeId: choice.nativeId });
+      });
+      published.push(
+        Object.freeze({
+          decisionKey: decision.key,
+          kind: 'infiniteRoster',
+          types: Object.freeze(types),
+        }),
+      );
+      continue;
+    }
+    if (decision.selection.kind === 'cocoonCount' || decision.selection.kind === 'infiniteRoster')
       throw new CompilerError(
         'executionCoverageMissing',
         `${room.gameName}.${slotKey}.${decision.key} lost its declared selection shape`,

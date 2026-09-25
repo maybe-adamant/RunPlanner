@@ -821,7 +821,8 @@ resolved product and its exact chronological assessment.
 
 Concrete Encounter Definitions may declare optional decisions with stable keys,
 display labels, native operands and a single-choice, bounded distinct
-ordered-prefix, generated-composition, or inclusive integer cocoon-count domain.
+ordered-prefix, generated-composition, infinite-roster, or inclusive integer
+cocoon-count domain.
 The resolved definition owns the active domain, including normal/Rival
 differences; customization does not independently calculate Rivals.
 
@@ -847,6 +848,12 @@ requests for sampled branches. Fixed seeds and remainder allocations remain
 declaration/engine-owned. The engine resolves native-order clamping, minimum-one,
 ceilings, count caps and redistribution into complete generated counts; allocations
 need not sum to the wave budget and are not relative weights or direct counts.
+
+An infinite roster is native or one ordered list of distinct declared types
+within the declared type bounds, for an encounter whose native counts are
+infinite. Commands and decoding enforce that shape; preparation assesses depth
+gates, draw-order exclusions and the elite limit at the phase's exact
+checkpoint. It owns no wave, budget, count, highlight, Fangs or Menace choice.
 
 Applicable Fangs choices own one elite source type and an ordered legal perk
 assignment. Menace choices own converted source-request counts and, for random-pool

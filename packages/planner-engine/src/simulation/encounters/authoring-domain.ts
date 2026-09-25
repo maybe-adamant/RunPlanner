@@ -183,10 +183,12 @@ export function encounterPhaseAuthoringDomainForRoom(
                         ? [value.choiceKey]
                         : value.kind === 'orderedPrefix'
                           ? value.choiceKeys
-                          : [
-                              ...(value.highlightKey === undefined ? [] : [value.highlightKey]),
-                              ...(value.waves ?? []).flatMap((wave) => wave.typeKeys),
-                            ]
+                          : value.kind === 'infiniteRoster'
+                            ? value.typeKeys
+                            : [
+                                ...(value.highlightKey === undefined ? [] : [value.highlightKey]),
+                                ...(value.waves ?? []).flatMap((wave) => wave.typeKeys),
+                              ]
                       ).flatMap((choiceKey) => {
                         const choice = catalog.encounterDefinitions.values
                           .flatMap((candidate) => candidate.customization ?? [])

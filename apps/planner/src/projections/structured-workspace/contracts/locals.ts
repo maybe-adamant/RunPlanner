@@ -118,6 +118,18 @@ export interface WorkspaceEncounterCustomizationInteraction {
   readonly generatedFangsDraftFor?: (
     value: { readonly typeKey: string; readonly perkKeys: readonly string[] } | undefined,
   ) => WorkspaceGeneratedFangsDraft;
+  /** Engine-assessed staged roster draft for this exact reached infinite-spawn phase. */
+  readonly infiniteRosterDraftFor?: (typeKeys: readonly string[]) => WorkspaceInfiniteRosterDraft;
+  /** Exact-context support for the retained roster; absent when none is authored or reached. */
+  readonly infiniteRosterSupported?: boolean;
+}
+
+export type WorkspaceInfiniteRosterDraftChoice =
+  { readonly kind: 'finish' } | { readonly kind: 'enemy'; readonly key: string };
+
+export interface WorkspaceInfiniteRosterDraft {
+  readonly picker: ContextualPickerModel<WorkspaceInfiniteRosterDraftChoice>;
+  readonly stepLabel: string;
 }
 
 export type WorkspaceGeneratedWaveDraftChoice =
@@ -409,6 +421,12 @@ export type WorkspaceEncounterCustomizationDecision =
         readonly kind: 'cocoonCount';
         readonly minimum: number;
         readonly maximum: number;
+      };
+    })
+  | (WorkspaceEncounterCustomizationDecisionBase & {
+      readonly selection: {
+        readonly kind: 'infiniteRoster';
+        readonly choices: readonly { readonly key: string; readonly label: string }[];
       };
     })
   | (WorkspaceEncounterCustomizationDecisionBase & {

@@ -15,6 +15,7 @@ import type { Catalog } from '@run-planner/engine/catalog-schema';
 import type { ResolvedRewardOffer } from '@run-planner/engine/reward-kernel';
 import {
   generatedEncounterSupportForProjectEvaluationAssembly,
+  infiniteRosterSupportForProjectEvaluationAssembly,
   nemesisRandomEventCandidateSupportForProjectEvaluationAssembly,
   type NemesisRandomEventCandidateSupport,
   type ProjectEvaluationAssembly,
@@ -74,6 +75,7 @@ import {
   projectGeneratedEncounterWaveDraft,
   projectGeneratedFangsDraft,
 } from './generated-encounter-projection';
+import { projectInfiniteRosterDraft } from './infinite-roster-projection';
 import {
   createMemoizedStableIdentityPickerLoad,
   projectStableIdentityPicker,
@@ -578,11 +580,42 @@ export function bindOccurrenceLocalInteractions(
                       generatedLabels,
                       generatedSelection.fangs?.perks ?? {},
                     );
+            const rosterDecision = phase.customization.find(
+              (decision) => decision.selection.kind === 'infiniteRoster',
+            );
+            const rosterCapability =
+              rosterDecision === undefined
+                ? undefined
+                : infiniteRosterSupportForProjectEvaluationAssembly(assembly, phase.owner);
+            const rosterBound =
+              rosterDecision?.selection.kind === 'infiniteRoster' &&
+              rosterCapability?.decisionKey === rosterDecision.key
+                ? { capability: rosterCapability, choices: rosterDecision.selection.choices }
+                : undefined;
+            const rosterValue =
+              rosterDecision?.value?.kind === 'infiniteRoster' ? rosterDecision.value : undefined;
             encounterCustomizations.set(
               key,
               Object.freeze({
                 key,
                 owner: phase.owner,
+                ...(rosterBound === undefined
+                  ? {}
+                  : {
+                      infiniteRosterDraftFor: (typeKeys: readonly string[]) =>
+                        projectInfiniteRosterDraft(
+                          rosterBound.capability.assess(typeKeys),
+                          typeKeys,
+                          rosterBound.choices,
+                        ),
+                      ...(rosterValue === undefined
+                        ? {}
+                        : {
+                            infiniteRosterSupported: rosterBound.capability.assess(
+                              rosterValue.typeKeys,
+                            ).supported,
+                          }),
+                    }),
                 intentFor: (
                   decisionKey: string,
                   value:

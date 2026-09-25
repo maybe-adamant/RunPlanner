@@ -20,7 +20,10 @@ import {
   decodeExecutionPlan,
 } from '../../src/execution-plan';
 import { overview as decodeExecutionOverview } from '../../src/execution-plan/codec/overview';
-import { createGoldenFGHIProject } from '@run-planner/test-fixtures/underworld';
+import {
+  createCompleteFGAnomalyProject,
+  createGoldenFGHIProject,
+} from '@run-planner/test-fixtures/underworld';
 import {
   loadSurfaceNOPQProject,
   pBiome,
@@ -28,6 +31,7 @@ import {
 } from '@run-planner/test-fixtures/surface';
 import { authorLegalTraitOffers } from '@run-planner/test-fixtures/shared';
 import { underworldArachneCocoonProject } from './support/arachne-cocoon-fixture';
+import { anomalyRosterProject } from './support/anomaly-roster-fixture';
 
 describe('resolved execution encounters', () => {
   it.each([
@@ -255,6 +259,70 @@ describe('resolved execution encounters', () => {
     expect(() => decode({ count: 8.5 })).toThrow(/integer >= 1/);
     expect(() => decode({})).toThrow();
     expect(() => decode({ count: 8, minimum: 8 })).toThrow(/unknown field minimum/);
+  });
+
+  it('publishes the ordered Anomaly roster without counts or budget and omits Default', () => {
+    const anomalyPhases = (project: ReturnType<typeof anomalyRosterProject>) =>
+      compileExecutionPlan({
+        product: assembleExecutionProduct({
+          assembly: simulateProjectAssembly(catalog, project),
+          catalog,
+        }),
+      }).occurrences.find((occurrence) => occurrence.id === 'golden-g-b3-e2')?.overview
+        .encounterPhases;
+    expect(anomalyPhases(anomalyRosterProject())).toEqual([
+      {
+        slotKey: 'Encounter',
+        encounterKey: 'GeneratedAnomalyB',
+        kind: 'combat',
+        customization: [
+          {
+            decisionKey: 'infiniteRoster',
+            kind: 'infiniteRoster',
+            types: [
+              { choiceKey: 'SpreadShotUnit_Elite', nativeId: 'SpreadShotUnit_Elite' },
+              { choiceKey: 'SpreadShotUnit', nativeId: 'SpreadShotUnit' },
+              { choiceKey: 'BloodlessPitcher', nativeId: 'BloodlessPitcher' },
+            ],
+          },
+        ],
+      },
+    ]);
+    expect(anomalyPhases(createCompleteFGAnomalyProject())).toEqual([
+      { slotKey: 'Encounter', encounterKey: 'GeneratedAnomalyB', kind: 'combat' },
+    ]);
+  });
+
+  it('strictly decodes the infinite roster wire shape', () => {
+    const decode = (decision: Record<string, unknown>) =>
+      decodeExecutionOverview(
+        {
+          encounterPhases: [
+            {
+              slotKey: 'Encounter',
+              encounterKey: 'GeneratedAnomalyB',
+              kind: 'combat',
+              customization: [
+                { decisionKey: 'infiniteRoster', kind: 'infiniteRoster', ...decision },
+              ],
+            },
+          ],
+          requiredObjects: [],
+        },
+        'overview',
+      );
+    const types = [
+      { choiceKey: 'BloodlessNaked', nativeId: 'BloodlessNaked' },
+      { choiceKey: 'BloodlessPitcher', nativeId: 'BloodlessPitcher' },
+    ];
+    expect(decode({ types }).encounterPhases[0]?.customization).toEqual([
+      { decisionKey: 'infiniteRoster', kind: 'infiniteRoster', types },
+    ]);
+    expect(() => decode({ types: [] })).toThrow(/non-empty/);
+    expect(() => decode({ types: [types[0], types[0]] })).toThrow(/distinct/);
+    expect(() => decode({ types: [{ ...types[0], count: 3 }] })).toThrow(/unknown field count/);
+    expect(() => decode({ types, expectedBudget: 30 })).toThrow(/unknown field expectedBudget/);
+    expect(() => decode({})).toThrow();
   });
 
   it('publishes Underworld Scylla native choice operands from the resolved fixed phase', () => {

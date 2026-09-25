@@ -41,6 +41,7 @@ import {
   replaceTestShopOfferActions,
 } from '@run-planner/test-fixtures/shared';
 import {
+  createCompleteFGAnomalyProject,
   createCompleteFGProject,
   createGoldenFGHIProject,
   goldenFBiome,
@@ -350,6 +351,92 @@ describe('OccurrenceEncounterWorkbench', () => {
     });
     fireEvent.keyUp(within(dialog).getByRole('slider', { name: 'Cocoons' }), { key: 'Home' });
     await waitFor(() => expect(cocoonCount(view)).toBeUndefined());
+  });
+
+  it('stages an ordered Anomaly roster from engine candidates and resets it to Default', async () => {
+    const occurrenceId = 'golden-g-b3-e2';
+    const roster = (view: ReturnType<typeof renderOccurrenceWorkbench>) =>
+      view.application.store
+        .getState()
+        .projectWorkspace.history!.present.route.biomes.find((biome) => biome.biomeKey === 'G')
+        ?.topology?.occurrences.find((candidate) => candidate.occurrenceId === occurrenceId)
+        ?.encounters.customizationByPhase?.Encounter?.infiniteRoster;
+    const view = renderOccurrenceWorkbench(
+      createCompleteFGAnomalyProject(),
+      'Underworld',
+      'G',
+      occurrenceById(occurrenceId),
+    );
+    openRoomTab('Room Timeline');
+    await view.user.click(screen.getByRole('button', { name: 'Customize encounter' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Customize' });
+    expect(within(dialog).getByRole('button', { name: 'Reset' }).hasAttribute('disabled')).toBe(
+      true,
+    );
+
+    // Normal-then-elite SpreadShot is not a native draw order.
+    await view.user.click(within(dialog).getByRole('button', { name: 'Enemy roster' }));
+    await view.user.click(await screen.findByRole('option', { name: 'Wretched Witch' }));
+    await screen.findByRole('option', { name: 'Burn-Flinger' });
+    expect(screen.queryByRole('option', { name: 'Elite Wretched Witch' })).toBeNull();
+    expect(screen.queryByRole('option', { name: 'Finish Roster' })).toBeNull();
+    await view.user.click(screen.getByRole('button', { name: 'Cancel' }));
+    expect(roster(view)).toBeUndefined();
+
+    await view.user.click(within(dialog).getByRole('button', { name: 'Enemy roster' }));
+    await view.user.click(await screen.findByRole('option', { name: 'Elite Wretched Witch' }));
+    await view.user.click(await screen.findByRole('option', { name: 'Wretched Witch' }));
+    // The single elite slot is spent.
+    expect(screen.queryByRole('option', { name: 'Elite Bloodless' })).toBeNull();
+    await view.user.click(await screen.findByRole('option', { name: 'Burn-Flinger' }));
+    await view.user.click(await screen.findByRole('option', { name: 'Finish Roster' }));
+    await waitFor(() =>
+      expect(roster(view)).toEqual({
+        kind: 'infiniteRoster',
+        typeKeys: ['SpreadShotUnit_Elite', 'SpreadShotUnit', 'BloodlessPitcher'],
+      }),
+    );
+    expect(within(dialog).getByRole('button', { name: 'Enemy roster' }).textContent).toContain(
+      'Elite Wretched Witch · Wretched Witch · Burn-Flinger',
+    );
+
+    await view.user.click(within(dialog).getByRole('button', { name: 'Reset' }));
+    await waitFor(() => expect(roster(view)).toBeUndefined());
+  });
+
+  it('marks a retained context-invalid Anomaly roster for repair without rewriting it', async () => {
+    const occurrenceId = createOccurrenceId('golden-g-b3-e2');
+    const invalid = {
+      kind: 'infiniteRoster' as const,
+      typeKeys: ['SpreadShotUnit', 'SpreadShotUnit_Elite'],
+    };
+    const project = applyProjectCommand(createCompleteFGAnomalyProject(), catalog, {
+      kind: 'ReplaceEncounterCustomization',
+      phase: createEncounterPhaseAddress(
+        goldenGBiome,
+        { kind: 'occurrence', occurrenceId },
+        'Encounter',
+      ),
+      decisionKey: 'infiniteRoster',
+      value: invalid,
+    });
+    const view = renderOccurrenceWorkbench(
+      project,
+      'Underworld',
+      'G',
+      occurrenceById(occurrenceId),
+    );
+    openRoomTab('Room Timeline');
+    await view.user.click(screen.getByRole('button', { name: 'Customize encounter' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Customize' });
+    expect(within(dialog).getByText('Needs repair')).toBeTruthy();
+    expect(
+      view.application.store
+        .getState()
+        .projectWorkspace.history!.present.route.biomes.find((biome) => biome.biomeKey === 'G')
+        ?.topology?.occurrences.find((candidate) => candidate.occurrenceId === occurrenceId)
+        ?.encounters.customizationByPhase?.Encounter?.infiniteRoster,
+    ).toEqual(invalid);
   });
 
   it('repairs a retained out-of-range cocoon count by choosing its clamped stop', async () => {

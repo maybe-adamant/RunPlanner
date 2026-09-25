@@ -443,6 +443,23 @@ export function decodeRoomEncounterState(
           if (!customizationValueRepresentable(declarations.structural, decisionKey, parsed))
             failProjectDocument(label, 'is not a declared cocoon count');
           decisions[decisionKey] = parsed;
+        } else if (kind === 'infiniteRoster') {
+          const label = `${path}.customizationByPhase.${phaseKey}.${decisionKey}`;
+          expectExactKeys(value, ['kind', 'typeKeys'], label);
+          const parsed = Object.freeze({
+            kind: 'infiniteRoster' as const,
+            typeKeys: Object.freeze(
+              expectArray(value.typeKeys, `${label}.typeKeys`).map((key, index) =>
+                expectNonBlankString(key, `${label}.typeKeys[${index}]`),
+              ),
+            ),
+          });
+          if (!customizationValueKnown(declarations.structural, decisionKey, parsed))
+            failProjectDocument(
+              `${label}.typeKeys`,
+              'must be a distinct bounded declaration-known roster',
+            );
+          decisions[decisionKey] = parsed;
         } else {
           failProjectDocument(
             `${path}.customizationByPhase.${phaseKey}.${decisionKey}.kind`,

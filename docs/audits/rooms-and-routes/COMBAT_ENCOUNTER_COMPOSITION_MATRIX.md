@@ -39,10 +39,10 @@ Authority split:
   enemy pools, and the generated-versus-scripted boundary in the scoped rooms.
 
 The supplemental opening/pre-hub/side-room profiles below bring supported
-generated identities to **44**. Bosses, miniboss rooms, other biome-intro rooms,
-G Anomaly rooms and incidental challenge/locked-door combats are not added to this scope.
-Being omitted here does not mean their generation is identical or unsupported
-elsewhere.
+generated identities to **44**. Bosses, miniboss rooms, other biome-intro rooms
+and incidental challenge/locked-door combats are not added to this scope; the
+Anomaly's infinite roster is a separate product below. Being omitted here does
+not mean their generation is identical or unsupported elsewhere.
 
 ### Opening, pre-hub and side-room supplement
 
@@ -70,9 +70,42 @@ table only when the child has none. None of these declarations blocks Fangs or
 Menace. Dream F/N openings resolve to `OpeningEmpty` and expose no generated
 customization.
 
-`GeneratedAnomalyB` remains excluded: its infinite-spawn capture-point encounter
-is not a finite wave product. Arachne cocoons and scripted P vignettes remain
-excluded for their distinct generation mechanisms.
+Arachne cocoons and scripted P vignettes remain excluded for their distinct
+generation mechanisms.
+
+### Anomaly infinite roster
+
+`GeneratedAnomalyB` (`EncounterData_Challenge.lua:92-192`, via
+`GeneratedAnomalyBase`) is not a finite wave product. Its one wave uses the
+manual template with `InfiniteSpawns = true`, `MinTypes = 2`,
+`MaxTypes = MaxTypesCap = 3`, `TypeCountDepthRamp = 0`, `MaxEliteTypes = 1`,
+active cap 5 and zero `DifficultyModifier`/`DepthDifficultyRamp`.
+`FillEnemyTypes` draws the roster once; `FillEnemyCounts` marks its generated
+entries infinite and returns before count allocation (`RunLogic.lua:1485`).
+There is no wave-count, budget or count domain.
+
+Its pool is `BiomeB` (`EnemySets.lua:599`), 15 identities each once:
+`Swarmer_Elite`; pair(`SpreadShotUnit`); pair(`BloodlessNaked`);
+pair(`BloodlessWaveFist`); pair(`BloodlessBerserker`); pair(`BloodlessGrenadier`);
+pair(`BloodlessSelfDestruct`); pair(`BloodlessPitcher`). After inheritance through
+`BaseGEnemy`, `BaseVulnerableEnemy` and `Elite`:
+
+- Elites require `BiomeDepthCache >= 3`, except `Swarmer_Elite`, whose own empty
+  `GameStateRequirements` replaces that gate (`EnemyData_Swarmer.lua:75-96`).
+- Bloodless pairs exclude their counterparts. `SpreadShotUnit` blocks its elite;
+  the elite inherits that `BlockEnemyTypes` and blocks only itself
+  (`EnemyData_LightRanged.lua:112-164`). Exclusions prune only later draws, so
+  elite-then-normal is realizable and normal-then-elite is not.
+- `Swarmer_Elite` blocks `Swarmer` (outside the pool) and adds
+  `ActiveEnemyCapBonus = 2`. It inherits `ActiveCapWeight = 0.35`; most other
+  elites use 1.5 and `BloodlessNaked_Elite` has no override. The cap is
+  active-cap weight, not an entity count.
+- No member declares an intro encounter, once-per-run blacklist, allegiance cap
+  or other generation requirement; zero or one elite is valid.
+
+Planner disposition: an optional ordered two-to-three-type roster in native
+draw order. Capture progress, pacing, caps, replenishment and cleanup stay
+native.
 
 ## Room and phase coverage
 

@@ -14,7 +14,7 @@ import {
 } from '../common';
 import { fail } from '../errors';
 import { normalizeRequirement } from '../requirements';
-import { normalizeEncounterGeneration } from './generation';
+import { normalizeEncounterGeneration, normalizeInfiniteRoster } from './generation';
 
 const encounterPhaseKinds = new Set<EncounterPhaseKind>([
   'boss',
@@ -188,6 +188,15 @@ export function normalizeEncounterDefinitions(
                       selection: Object.freeze({ kind: 'cocoonCount' as const, minimum, maximum }),
                     });
                   }
+                  case 'infiniteRoster':
+                    return Object.freeze({
+                      key,
+                      label,
+                      selection: normalizeInfiniteRoster(
+                        decision.selection,
+                        `${decisionPath}.selection`,
+                      ),
+                    });
                   default:
                     return fail(`${decisionPath}.selection.kind`, 'is unsupported');
                 }

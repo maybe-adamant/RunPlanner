@@ -184,6 +184,17 @@ spawned directly through `SpawnArachneCocoons` stay untouched. A count outside t
 native bounds declines with a diagnostic; a placement shortfall or setup error stays
 native, with a diagnostic.
 
+An infinite roster owns only the ordered `FillEnemyTypes` draws of an
+`InfiniteSpawns` encounter. It has no budget, wave or count admission. At the
+same generation-scoped `CalculateActiveEnemyCap` contact, before mutation, the
+executor checks one native wave, an empty manual template, the effective type
+bounds and pool, and each type through live `IsEnemyEligible` against a wave
+holding the earlier types. That applies blacklists, draw-order exclusions and
+the elite limit as native does. Acceptance installs ordered generated entries with
+native draw side effects and no `TotalCount`. Native `FillEnemyCounts` marks them
+infinite; Fangs and Menace remain native. Decline, realization failure and
+diagnostics follow the finite contract.
+
 Encounter selection checks the requested variant through native eligibility before
 forcing it. Rejection delegates selection to the game with a diagnostic and without
 applying the rejected variant's customization. Existing conformance checks resulting

@@ -14,6 +14,7 @@ import type {
 } from '../model';
 import { createDefaultRoomState } from '../room-state/defaults';
 import { createDefaultRoomEncounterState } from '../room-state/encounter-envelope';
+import { reconcileRoomEncounterState } from '../room-state/encounter-reconciliation';
 import { requireCountedBinding } from '../room-state/declaration';
 import {
   exitDecisionForSource,
@@ -26,6 +27,7 @@ import { applyTopologyRemovalImpact, describeTopologyRemovalImpact } from '../to
 import { createDefaultRoomActionState } from '../room-actions/state';
 import {
   failCommand,
+  requireAnomalyRoom,
   requireOccurrence,
   requireRoom,
   requireTopology,
@@ -95,23 +97,6 @@ function anomalyDescriptor(
     failCommand(command, `${located.layout.biomeKey} has no declared Anomaly replacement`);
   }
   return descriptor;
-}
-
-function requireAnomalyRoom(
-  catalog: Catalog,
-  gameName: string,
-  command: RouteDetourCommand,
-): RoomDeclaration {
-  const room = catalog.rooms.byKey[gameName];
-  if (
-    room === undefined ||
-    room.roomSetKey !== 'Anomaly' ||
-    room.mode.kind !== 'authored' ||
-    room.mode.templateKey !== 'Anomaly'
-  ) {
-    failCommand(command, `${gameName} is not a declared Anomaly room`);
-  }
-  return room;
 }
 
 function requireContractBossRoom(
@@ -290,10 +275,16 @@ function replaceAnomalyMap(
       Object.freeze({
         ...occurrence,
         gameName: replacementRoom.gameName,
-        encounters: createDefaultRoomEncounterState(
+        encounters: reconcileRoomEncounterState(
           catalog,
+          requireAnomalyRoom(catalog, occurrence.gameName, command),
+          occurrence.encounters,
           replacementRoom,
-          `occurrences.${occurrence.occurrenceId}.encounters`,
+          createDefaultRoomEncounterState(
+            catalog,
+            replacementRoom,
+            `occurrences.${occurrence.occurrenceId}.encounters`,
+          ),
         ),
       }),
     ),

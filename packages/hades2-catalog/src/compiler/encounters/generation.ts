@@ -1,6 +1,7 @@
 import type {
   EncounterEnemyChoice,
   GeneratedEncounterSelection,
+  InfiniteRosterSelection,
 } from '@run-planner/engine/catalog-schema';
 import { requireNonEmpty } from '../common';
 import { fail } from '../errors';
@@ -248,5 +249,57 @@ export function normalizeEncounterGeneration(
         ? {}
         : { hardDepthRamp: integer(raw.budget.hardDepthRamp, 'budget.hardDepthRamp', 0, 10000) }),
     }),
+  });
+}
+
+export function normalizeInfiniteRoster(
+  raw: InfiniteRosterSelection,
+  path: string,
+): InfiniteRosterSelection {
+  const keys = new Set<string>();
+  const natives = new Set<string>();
+  const choices = Object.freeze(
+    raw.choices.map((value, index) => {
+      const label = `${path}.choices[${index}]`;
+      const key = requireNonEmpty(value.key, `${label}.key`);
+      const nativeId = requireNonEmpty(value.nativeId, `${label}.nativeId`);
+      if (keys.has(key) || natives.has(nativeId))
+        fail(label, 'must have distinct enemy identities');
+      keys.add(key);
+      natives.add(nativeId);
+      if (typeof value.elite !== 'boolean') fail(`${label}.elite`, 'must be boolean');
+      if (new Set(value.excludes).size !== value.excludes.length || value.excludes.includes(key))
+        fail(label, 'has invalid exclusions');
+      const depth = value.minimumDepth;
+      if (
+        depth !== undefined &&
+        (depth.axis !== 'biomeDepthCache' || !Number.isInteger(depth.value) || depth.value < 1)
+      )
+        fail(`${label}.minimumDepth`, 'must be a positive biome depth-cache gate');
+      return Object.freeze({
+        key,
+        label: requireNonEmpty(value.label, `${label}.label`),
+        nativeId,
+        elite: value.elite,
+        excludes: Object.freeze(
+          value.excludes.map((entry) => requireNonEmpty(entry, `${label}.excludes`)),
+        ),
+        ...(depth === undefined
+          ? {}
+          : { minimumDepth: Object.freeze({ axis: depth.axis, value: depth.value }) }),
+      });
+    }),
+  );
+  const { min, max } = raw.types;
+  if (!Number.isInteger(min) || min < 1 || !Number.isInteger(max) || max < min)
+    fail(`${path}.types`, 'must be positive integer bounds');
+  if (choices.length < max) fail(`${path}.choices`, 'must cover the maximum type count');
+  if (!Number.isInteger(raw.maxEliteTypes) || raw.maxEliteTypes < 0)
+    fail(`${path}.maxEliteTypes`, 'must be a nonnegative integer');
+  return Object.freeze({
+    kind: 'infiniteRoster' as const,
+    choices,
+    types: Object.freeze({ min, max }),
+    maxEliteTypes: raw.maxEliteTypes,
   });
 }

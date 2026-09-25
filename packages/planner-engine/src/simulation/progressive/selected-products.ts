@@ -591,6 +591,12 @@ export function retainBlockedRegionProducts(
               ? (selectedArtifacts.encounters.generationAt(address) ??
                 blockedArtifacts.encounters.generationAt(address))
               : retainedArtifacts.encounters.generationAt(address),
+          rosterAt: (address: import('../../authored-project/addresses').EncounterPhaseAddress) =>
+            blockedAt.kind === 'encounterPhase' &&
+            semanticAddressKey(address) === semanticAddressKey(blockedAt)
+              ? (selectedArtifacts.encounters.rosterAt(address) ??
+                blockedArtifacts.encounters.rosterAt(address))
+              : retainedArtifacts.encounters.rosterAt(address),
           at: (address: import('../../authored-project/addresses').EncounterPhaseAddress) =>
             blockedAt.kind === 'encounterPhase' &&
             semanticAddressKey(address) === semanticAddressKey(blockedAt)

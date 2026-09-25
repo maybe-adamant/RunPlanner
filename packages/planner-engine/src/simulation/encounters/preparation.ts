@@ -34,6 +34,7 @@ import {
   prepareGeneratedEncounter,
   type GeneratedEncounterCandidateCapability,
 } from './generation-preparation';
+import { prepareInfiniteRoster, type InfiniteRosterCandidateCapability } from './infinite-roster';
 import {
   encounterResolutionContext,
   resolveEncounterAuthoringProfile,
@@ -90,6 +91,7 @@ export interface PreparedEncounterPhases {
   readonly validPrefix: readonly ResolvedEncounterPhase[];
   readonly candidates: readonly EncounterPhaseCandidateSupport[];
   readonly generation: readonly GeneratedEncounterCandidateCapability[];
+  readonly rosters: readonly InfiniteRosterCandidateCapability[];
   readonly statuses: readonly EncounterPhaseSequenceStatusEntry[];
   readonly findings: readonly SemanticFinding[];
   readonly blockedAt?: EncounterPhaseAddress;
@@ -321,6 +323,7 @@ export function prepareRoomEncounterPhases(
   );
   const candidates: EncounterPhaseCandidateSupport[] = [];
   const generation: GeneratedEncounterCandidateCapability[] = [];
+  const rosters: InfiniteRosterCandidateCapability[] = [];
   const statuses: EncounterPhaseSequenceStatusEntry[] = [];
   const findings: SemanticFinding[] = [];
   const validPrefix: ResolvedEncounterPhase[] = [];
@@ -343,7 +346,9 @@ export function prepareRoomEncounterPhases(
       runState.menaceRankAt,
     );
     if (result.capability !== undefined) generation.push(result.capability);
-    return result.phase;
+    const roster = prepareInfiniteRoster(result.phase, origin, preparation);
+    if (roster.capability !== undefined) rosters.push(roster.capability);
+    return roster.phase;
   };
 
   for (const phase of room.encounterPhases) {
@@ -526,6 +531,7 @@ export function prepareRoomEncounterPhases(
     validPrefix: Object.freeze(validPrefix),
     candidates: Object.freeze(candidates),
     generation: Object.freeze(generation),
+    rosters: Object.freeze(rosters),
     statuses: Object.freeze(statuses),
     findings: Object.freeze(findings),
     ...(blockedAt === undefined ? {} : { blockedAt }),

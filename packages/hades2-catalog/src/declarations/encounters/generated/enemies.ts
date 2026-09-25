@@ -1,4 +1,7 @@
-import type { EncounterEnemyChoice } from '@run-planner/engine/catalog-schema';
+import type {
+  EncounterEnemyChoice,
+  InfiniteRosterEnemyChoice,
+} from '@run-planner/engine/catalog-schema';
 
 type EnemyFacts = Partial<
   Omit<EncounterEnemyChoice, 'key' | 'label' | 'nativeId' | 'difficultyRating'>
@@ -501,6 +504,51 @@ export const generatedEnemyPools = {
     ].includes(entry.key),
   ),
 } as const;
+
+// Infinite-roster identities carry no GeneratorData budget, count, Fangs or
+// Menace facts. Elite requirements replace normal ones, as for finite pairs.
+function rosterPair(
+  key: string,
+  label: string,
+  elite: Partial<InfiniteRosterEnemyChoice> = {},
+): readonly InfiniteRosterEnemyChoice[] {
+  return [
+    { key, label, nativeId: key, elite: false, excludes: [`${key}_Elite`] },
+    {
+      key: `${key}_Elite`,
+      label: `${label} (Elite)`,
+      nativeId: `${key}_Elite`,
+      elite: true,
+      excludes: [key],
+      minimumDepth: { axis: 'biomeDepthCache', value: 3 },
+      ...elite,
+    },
+  ];
+}
+
+// EnemySets.BiomeB, consumed by GeneratedAnomalyB (EnemySets.lua:599).
+export const infiniteRosterEnemyPools = {
+  b: [
+    // EnemyData_Swarmer.lua: an own empty GameStateRequirements replaces Elite's
+    // depth gate; its BlockEnemyTypes names Swarmer, which is outside this pool.
+    {
+      key: 'Swarmer_Elite',
+      label: 'Numbskull (Elite)',
+      nativeId: 'Swarmer_Elite',
+      elite: true,
+      excludes: ['Swarmer'],
+    },
+    // EnemyData_LightRanged.lua: the elite inherits BlockEnemyTypes naming only
+    // itself, so elite-then-normal is native while normal-then-elite is not.
+    ...rosterPair('SpreadShotUnit', 'Wretched Witch', { excludes: [] }),
+    ...rosterPair('BloodlessNaked', 'Bloodless'),
+    ...rosterPair('BloodlessWaveFist', 'Wave-Maker'),
+    ...rosterPair('BloodlessBerserker', 'Bone-Raker'),
+    ...rosterPair('BloodlessGrenadier', 'Inferno-Bomber'),
+    ...rosterPair('BloodlessSelfDestruct', 'Slam-Dancer'),
+    ...rosterPair('BloodlessPitcher', 'Burn-Flinger'),
+  ],
+} as const satisfies Record<string, readonly InfiniteRosterEnemyChoice[]>;
 
 export const fixedFieldsEnemies = {
   treant: enemy('Treant2', 'Brush-Stalker', { elite: true, fixedCount: 1 }),

@@ -2,6 +2,7 @@ import type {
   EncounterSlotActivation,
   EncounterPhaseKind,
   GeneratedEncounterSelection,
+  InfiniteRosterSelection,
 } from '@run-planner/engine/catalog-schema';
 import type { RequirementExpression } from '@run-planner/engine/requirements';
 import type { RawCountedRewardBinding } from '../rewards/types';
@@ -158,6 +159,11 @@ export type RawEncounterCustomizationDecisionDeclaration =
         readonly minimum: number;
         readonly maximum: number;
       };
+    }
+  | {
+      readonly key: string;
+      readonly label: string;
+      readonly selection: InfiniteRosterSelection;
     };
 
 export interface RawEncounterSetDeclaration {
