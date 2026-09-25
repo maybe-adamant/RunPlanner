@@ -12,9 +12,9 @@ from, refreshed only by the events that natively rebuild or invalidate it —
 so the planner neither raises rarity nor admits Infusions the game cannot show
 after a Chaos curse matures, and it does show them when a screen in the same
 room has rebuilt the offer or an invalidation has deferred its generation to
-the open. Two smaller legality rules are corrected alongside — Rejected
-blocks a row only on three-option screens; Hades screens consume an Ordinary
-charge — and the stale documentation statements are fixed at closure.
+the open. One smaller legality rule is corrected alongside — Rejected blocks
+a row only on three-option screens — and the stale documentation statements
+are fixed at closure.
 
 This is a correction of evaluation timing. The screen-construction model
 (replacement/Hymn precedence, core seeding, priority seeds, rarity buckets,
@@ -180,9 +180,15 @@ oldBlessing`, `:2935-2962` — with or without a blessing to transform); the
   (D2) blocks a row only when the screen has three options: blocked rows are
   the options beyond `CalcNumLootChoices`, which is the three-row maximum
   less one under `RestrictBoonChoices` (`TraitLogic.lua:1746-1754`,
-  `UpgradeChoiceLogic.lua:153-162`). Hades screens (D3) are shop-aware in
-  `FieldLootData` (`RunData.lua:556-569`): forced Common, consume an Ordinary
-  charge, exempt from Rejected only.
+  `UpgradeChoiceLogic.lua:153-162`). Hades screens are shop-aware in
+  `FieldLootData` (`RunData.lua:556-569`) but `BlockForceCommon`
+  (`NPCData_Hades.lua:21`), so `IsRarityForcedCommon` (`RoomLogic.lua:2120`)
+  never forces them Common and the close never spends an Ordinary use
+  (`UpgradeChoiceLogic.lua:1124-1125` requires `ForceCommon`); they are also
+  `IgnoreRestrictBoonChoices`. The engine already matches: Hades is the only
+  shop-aware giver without a rarity policy, so `isChaosGodScreenGiver` skips
+  it, and `chaos-traits.test.ts` pins it. Investigation D3 was wrong and is
+  withdrawn.
 
 No authored schema change: the offer's context and stale mark are simulation
 state, never persisted. No execution protocol change: published offers are
@@ -197,26 +203,20 @@ does not change: it consumes the same candidate domains and findings.
   (`packages/planner-engine/src/simulation/traits/offers.ts`, the composition
   rule and its candidate mirror). A one- or two-option screen under Rejected
   is fully selectable and completable.
-- Hades screens advance the Ordinary clock: `advanceChaosClock(...,
-'godBoonScreens')` in
-  `simulation/rewards/trait-settlement/coordinator.ts:121` currently skips
-  rarity-less givers through `isChaosGodScreenGiver`; a Hades screen counts.
-  Express the fact as a catalog giver declaration (shop-aware /
-  forced-Common giver), not a giver-name test; keep the Rejected exemption.
 - Flip the pinned expectation at
   `packages/planner-engine/test/simulation/chaos-traits.test.ts:1298`
   (two-option block) to the native rule with a comment stating it.
 
 ### Ownership and acceptance
 
-Engine owns both rules and their candidate mirrors; catalog owns the giver
-fact. Witnesses: Rejected on one-, two- and three-option screens (block only
-on three); a Hades screen consuming the last Ordinary charge so the next god
-screen is unrestricted; Ordinary clock unchanged for genuinely rarity-less
-non-shop givers. Run engine and catalog lanes plus typecheck. Measure the
-golden fixtures: re-pin only findings that trace to the corrected rules.
+Engine owns the rule and its candidate mirror. Witnesses: Rejected on one-,
+two- and three-option screens (block only on three); a two-option screen
+under Rejected settling with no blocked row; the existing Hades witness
+(no Ordinary use) untouched. Run engine and catalog lanes plus typecheck.
+Measure the golden fixtures: re-pin only findings that trace to the
+corrected rule.
 
-Commit boundary: the two rule corrections and their tests.
+Commit boundary: the rule correction and its tests.
 
 ## Gate B — Generation-time offer context
 
@@ -363,8 +363,9 @@ and `:1164`), the native pipeline facts and reachability census into the
 acquisition and composition audits (fixing the stale statements the
 investigation lists under Documentation-only: `RestrictBoonChoices` "has no
 modeled supplier", the one-row block presented as universal, Pom as the sole
-regenerated offer, and evaluation at pickup), and the Hades/Rejected facts
-into the Chaos audit. Delete this plan
+regenerated offer, and evaluation at pickup), and the Rejected three-option
+rule and Hades `BlockForceCommon` exemption into the Chaos audit. Delete this
+plan
 and `TRAIT_LEGALITY_PIPELINE.md`; keep only genuine unresolved evidence in
 its owning audit. No bug-changelog paragraphs.
 
@@ -372,9 +373,8 @@ Live acceptance (owner-confirmed, recorded in a checklist that survives
 automated closure): Fields curse-maturation pair (magick then boon:
 pre-blessing; hammer then boon: post-blessing); the Steady Growth then
 Creation cage sequence; an ordinary room's boon after a curse matures on its
-encounter; a Hades screen consuming the last Ordinary charge; a two-option
-screen under Rejected fully selectable; Dream shop essence before the shop
-boon.
+encounter; a two-option screen under Rejected fully selectable; Dream shop
+essence before the shop boon.
 
 Commit boundary: closure documentation. No push without an explicit request.
 
