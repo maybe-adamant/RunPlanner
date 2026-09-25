@@ -6,6 +6,8 @@ import {
   createEncounterPhaseAddress,
   createOccurrenceId,
   createIncomingRewardAddress,
+  createLocalVisitSlotAddress,
+  createLocalVisitOrderAddress,
   type ProjectDocument,
   type AuthoredGeneratedEncounterCustomization,
 } from '../../src/authored-project';
@@ -23,7 +25,9 @@ import {
   createGoldenFGHIProject,
   goldenFBiome,
   goldenFOccurrenceId,
+  goldenFStartId,
 } from '@run-planner/test-fixtures/underworld';
+import { loadSurfaceNOPProject, nBiome, nOccurrenceIds } from '@run-planner/test-fixtures/surface';
 import { authorLegalTraitOffers } from '@run-planner/test-fixtures/shared';
 import { generatedEncounter } from '../../src/execution-plan/codec/generated-encounter';
 import { targetRewardGenerationCheckpoint } from '../../src/simulation/encounters/generation-preparation';
@@ -59,6 +63,79 @@ function initialized(project: ProjectDocument, owner = phase) {
 }
 
 describe('generated customization publication', () => {
+  it.each([
+    ['OpeningGeneratedF', 'Underworld', goldenFStartId],
+    ['OpeningGeneratedN', 'Surface', nOccurrenceIds.opening],
+    ['PreHubGeneratedN', 'Surface', nOccurrenceIds.preHub],
+    ['GeneratedNSubRoom', 'Surface', createOccurrenceId('surface-n-combat11-sideDoor1')],
+    ['GeneratedNSubRoom_Bigger', 'Surface', createOccurrenceId('surface-n-combat09-sideDoor1')],
+  ] as const)('authors and publishes %s through its actual room phase', (key, route, id) => {
+    const base = route === 'Underworld' ? createGoldenFGHIProject() : loadSurfaceNOPProject();
+    let project: ProjectDocument = {
+      ...base,
+      route: { ...base.route, biomes: base.route.biomes.slice(0, 1) },
+    };
+    const owner = createEncounterPhaseAddress(
+      route === 'Underworld' ? goldenFBiome : nBiome,
+      { kind: 'occurrence', occurrenceId: id },
+      'Encounter',
+    );
+    if (key === 'GeneratedNSubRoom_Bigger') {
+      const source = createOccurrenceId('surface-n-combat09');
+      project = applyProjectCommand(project, catalog, {
+        kind: 'SetLocalVisitGeneration',
+        slot: createLocalVisitSlotAddress(nBiome, source, 'sideRooms', 'sideDoor1'),
+        generation: 'generated',
+      });
+      project = applyProjectCommand(project, catalog, {
+        kind: 'ReplaceIncomingReward',
+        reward: createIncomingRewardAddress(nBiome, id),
+        value: { rewardType: 'MaxHealthDrop' },
+      });
+      project = applyProjectCommand(project, catalog, {
+        kind: 'ReplaceLocalVisitOrder',
+        order: createLocalVisitOrderAddress(nBiome, source, 'sideRooms'),
+        occurrenceIds: [id],
+      });
+    }
+    project = authorLegalTraitOffers(project);
+    const before = publish(project);
+    expect(
+      before.occurrences.find((room) => room.id === id)?.overview.encounterPhases[0]?.customization,
+    ).toBeUndefined();
+    const value = initialized(project, owner);
+    expect(value.waveCount).toBe(1);
+    const customized = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceEncounterCustomization',
+      phase: owner,
+      decisionKey: 'generatedComposition',
+      value,
+    });
+    const plan = publish(customized);
+    const phase = plan.occurrences.find((room) => room.id === id)?.overview.encounterPhases[0];
+    expect(phase).toMatchObject({
+      encounterKey: key,
+      customization: [
+        expect.objectContaining({
+          kind: 'generated',
+          waveCount: 1,
+          expectedBudget: expect.any(Number),
+          waves: expect.any(Array),
+        }),
+      ],
+    });
+    expect(decodeExecutionPlan(JSON.parse(encodeExecutionPlan(plan)))).toEqual(plan);
+    expect(
+      publish(
+        applyProjectCommand(customized, catalog, {
+          kind: 'ReplaceEncounterCustomization',
+          phase: owner,
+          decisionKey: 'generatedComposition',
+          value: null,
+        }),
+      ),
+    ).toEqual(before);
+  });
   it('publishes reached source-specific Menace without changing the generated roster or counts', () => {
     const enabled = applyProjectCommand(createGoldenFGHIProject(), catalog, {
       kind: 'ReplaceFearVowRank',

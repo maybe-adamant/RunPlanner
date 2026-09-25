@@ -7,14 +7,14 @@ only the default Combat choice, plus `O_Devotion01`. Field-NPC combats are
 first-class entries. The unit is the resolved encounter identity at its phase:
 H passive/cage phases, O Intro/Combat1/Combat2, and P Intro/Combat remain separate.
 
-The current catalog exposes 155 scoped rooms and 94 distinct resolved encounter
+The Combat-room inventory exposes 155 scoped rooms and 94 distinct resolved encounter
 identities: 39 generator-family identities (including 13 field-NPC combats and
 four Devotion identities), 52 prescribed P precombat vignettes, two Arachne
 cocoon encounters, and one shared Nemesis random event. These are not 94 picker
 choices: ordinary Combat profiles also resolve reward-dependent Trial/Goal
 identities.
 
-The customization candidates are the **39 generator-family identities**,
+The Combat-room customization candidates are the **39 generator-family identities**,
 including H's two mixed fixed/generated templates. The other 55 identities
 remain in this inventory to explain their exclusion from wave/type
 customization: P's prescribed rosters stay fixed, Arachne keeps its cocoon
@@ -38,10 +38,41 @@ Authority split:
 - This matrix owns concrete composition declarations, inherited differences,
   enemy pools, and the generated-versus-scripted boundary in the scoped rooms.
 
-Bosses, miniboss rooms, opening/biome-intro rooms, N side rooms, G Anomaly rooms
-and incidental challenge/locked-door combats are not added to this scope.
+The supplemental opening/pre-hub/side-room profiles below bring supported
+generated identities to **44**. Bosses, miniboss rooms, other biome-intro rooms,
+G Anomaly rooms and incidental challenge/locked-door combats are not added to this scope.
 Being omitted here does not mean their generation is identical or unsupported
 elsewhere.
+
+### Opening, pre-hub and side-room supplement
+
+These five identities use the same finite wave generator and expose the
+existing customization contract; native reward timing and encounter entry
+behavior do not change. Each has exactly one wave. Their budgets are rows of
+the budget table below; their generation shape is:
+
+| Identity                   | Types | Type ramp / axis |   Type cap | Escalates | Pool                        |
+| -------------------------- | ----- | ---------------- | ---------: | --------- | --------------------------- |
+| `OpeningGeneratedF`        | 2–2   | 0.2 / Cache      | 3 (4 hard) | no        | F                           |
+| `OpeningGeneratedN`        | 1–2   | 0.2 / Encounter  |          2 | yes       | N                           |
+| `PreHubGeneratedN`         | 1–2   | 0.2 / Encounter  |          2 | yes       | N                           |
+| `GeneratedNSubRoom`        | 1–2   | 0 / Encounter    |          2 | yes       | N excluding both Tombstones |
+| `GeneratedNSubRoom_Bigger` | 1–2   | 0 / Encounter    |          2 | yes       | N                           |
+
+`OpeningGeneratedF` inherits `GeneratedF` (`EncounterData.lua:472`);
+`OpeningGeneratedN` and `PreHubGeneratedN` inherit `GeneratedN`
+(`EncounterData_Opening.lua:8,56`); `GeneratedNSubRoom` inherits `GeneratedN`
+and `_Bigger` inherits it in turn (`EncounterData_Generated.lua:762,794`). All
+keep the elite-type cap of one. The side-room profiles set
+`TypeCountDepthRamp = 0`. `GeneratedNSubRoom_Bigger.Blacklist = {}` replaces
+the inherited Tombstone blacklist: `RunData.lua:DeepInheritData` copies a parent
+table only when the child has none. None of these declarations blocks Fangs or
+Menace. Dream F/N openings resolve to `OpeningEmpty` and expose no generated
+customization.
+
+`GeneratedAnomalyB` remains excluded: its infinite-spawn capture-point encounter
+is not a finite wave product. Arachne cocoons and scripted P vignettes remain
+excluded for their distinct generation mechanisms.
 
 ## Room and phase coverage
 
@@ -51,6 +82,7 @@ every choice is simultaneously eligible.
 
 | Rooms / phase                           | Supported resolved identities                                                                             |
 | --------------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| F Opening01–03                          | `OpeningGeneratedF` (Dream routes: `OpeningEmpty`)                                                        |
 | F Combat01                              | `GeneratedF`                                                                                              |
 | F Combat02–22                           | `GeneratedF`, `DevotionTestF`, `ArtemisCombatF`, `ArachneCombatF`, `NemesisCombatF`, `NemesisRandomEvent` |
 | G Combat01–20                           | `GeneratedG`, `DevotionTestG`, `ArtemisCombatG`, `ArachneCombatG`, `NemesisCombatG`, `NemesisRandomEvent` |
@@ -59,6 +91,10 @@ every choice is simultaneously eligible.
 | Every active H cage                     | `GeneratedH`, `GeneratedH_Treant2`, `GeneratedH_Screamer2`, `NemesisCombatH`                              |
 | I Combat01,06–19,21,24                  | `GeneratedI`, `GeneratedI_GoalReward`, `DevotionTestI`, `NemesisCombatI`                                  |
 | I Combat02–05,20,22,23                  | `GeneratedI_Small`, `GeneratedI_Small_GoalReward`, `DevotionTestI`, `NemesisCombatI`                      |
+| N Opening01                             | `OpeningGeneratedN` (Dream routes: `OpeningEmpty`)                                                        |
+| N PreHub01                              | `PreHubGeneratedN`                                                                                        |
+| N Sub01–08,12,13,15                     | `GeneratedNSubRoom`, `GeneratedNSubRoom_Bigger`                                                           |
+| N Sub09–11,14                           | `GeneratedNSubRoom_Bigger`                                                                                |
 | N Combat02–08,14,22,23                  | `GeneratedN`, `ArtemisCombatN`, `HeraclesCombatN`                                                         |
 | N Combat12,17                           | `GeneratedN_Smaller`, `ArtemisCombatN`, `HeraclesCombatN`                                                 |
 | N Combat01,09–11,13,15,16,18–21         | `GeneratedN_Bigger`, `ArtemisCombatN`, `HeraclesCombatN`                                                  |
@@ -267,6 +303,7 @@ parent; `RunData.lua:1363-1416`). **Hard** is the `HardEncounterOverrideValues`
 
 | Identity                      | Base    | Depth ramp | Axis      | Modifier | Multiplier | Hard | Source                                                  |
 | ----------------------------- | ------- | ---------: | --------- | -------: | ---------: | ---: | ------------------------------------------------------- |
+| `OpeningGeneratedF`           | 55      |         15 | Cache     |      -20 |          1 |   30 | `GeneratedF`; `EncounterData.lua:489` (modifier)        |
 | `GeneratedF`                  | 55      |         15 | Cache     |        0 |          1 |   30 | `EncounterData.lua:199-200`, hard 248                   |
 | `DevotionTestF`               | 150     |          0 | Cache     |        0 |          1 |   30 | `EncounterData_Devotion.lua:6-7` (Base), 157            |
 | `ArtemisCombatF`              | 55      |         15 | Cache     |       60 |          1 |   30 | `GeneratedF`; `EncounterData_Artemis.lua:55` (Base)     |
@@ -287,6 +324,10 @@ parent; `RunData.lua:1363-1416`). **Hard** is the `HardEncounterOverrideValues`
 | `GeneratedI_Small_GoalReward` | 325     |        105 | Cache     |        0 |       0.85 |   30 | `GeneratedI`; `EncounterData_Generated.lua:604`         |
 | `DevotionTestI`               | 400     |        110 | Cache     |        0 |          1 |   30 | `EncounterData_Devotion.lua:198-199`                    |
 | `NemesisCombatI`              | 325     |        105 | Cache     |       60 |          1 |   30 | `GeneratedI`; `EncounterData_Nemesis.lua:57` (Base)     |
+| `OpeningGeneratedN`           | 60      |         25 | Encounter |        0 |          1 |    — | `GeneratedN`; `EncounterData_Opening.lua:16` (Base)     |
+| `PreHubGeneratedN`            | 100     |          0 | Encounter |        0 |          1 |    — | `EncounterData_Opening.lua:62-63`                       |
+| `GeneratedNSubRoom`           | 20      |          5 | Encounter |        0 |          1 |    — | `EncounterData_Generated.lua:775-776`                   |
+| `GeneratedNSubRoom_Bigger`    | 40      |          5 | Encounter |        0 |          1 |    — | `EncounterData_Generated.lua:806-807`                   |
 | `GeneratedN`                  | 110     |         25 | Encounter |        0 |          1 |    — | `EncounterData_Generated.lua:695-697`                   |
 | `GeneratedN_Smaller`          | 85      |         25 | Encounter |        0 |          1 |    — | `EncounterData_Generated.lua:749-750`                   |
 | `GeneratedN_Bigger`           | 135     |         25 | Encounter |        0 |          1 |    — | `EncounterData_Generated.lua:756,759`                   |
@@ -310,8 +351,8 @@ parent; `RunData.lua:1363-1416`). **Hard** is the `HardEncounterOverrideValues`
 Cache is `BiomeDepthCache`; Encounter is `BiomeEncounterDepth`; — means no hard
 override. `GeneratedP_PreCombat` is the only supported variable base; it is not
 also depth-scaled unless its hard override applies. Other modifier declarations
-in the same files (for example intro encounters at `EncounterData.lua:314,358,393`
-and `OpeningGeneratedF` at 489) belong to encounters outside this scope.
+in the same files (for example intro encounters at `EncounterData.lua:314,358,393`)
+belong to encounters outside this scope.
 
 The supported budget domain is exactly these two axes and wave patterns 1-4.
 Native's fifth pattern row (`EncounterData.lua:9`) and `UseRunDepth` are unused

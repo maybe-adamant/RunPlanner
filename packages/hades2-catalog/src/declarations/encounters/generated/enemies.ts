@@ -479,6 +479,9 @@ export const generatedEnemyPools = {
   h,
   i,
   n,
+  // GeneratedNSubRoom's encounter blacklist. Bigger replaces it with an empty
+  // table (native DeepInheritData does not merge ordinary table properties).
+  nSubRoom: n.filter((entry) => !['ZombieSpawner', 'ZombieSpawner_Elite'].includes(entry.key)),
   o,
   oIntro,
   p,

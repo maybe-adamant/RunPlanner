@@ -42,6 +42,14 @@ const budgetByEncounter: Readonly<
     }
   >
 > = {
+  OpeningGeneratedF: {
+    base: 55,
+    depthRamp: 15,
+    depthAxis: 'biomeDepthCache',
+    modifier: -20,
+    multiplier: 1,
+    hardDepthRamp: 30,
+  },
   GeneratedF: {
     base: 55,
     depthRamp: 15,
@@ -182,6 +190,15 @@ const budgetByEncounter: Readonly<
     modifier: 60,
     multiplier: 1,
     hardDepthRamp: 30,
+  },
+  OpeningGeneratedN: { base: 60, depthRamp: 25, depthAxis: 'biomeEncounterDepth', multiplier: 1 },
+  PreHubGeneratedN: { base: 100, depthRamp: 0, depthAxis: 'biomeEncounterDepth', multiplier: 1 },
+  GeneratedNSubRoom: { base: 20, depthRamp: 5, depthAxis: 'biomeEncounterDepth', multiplier: 1 },
+  GeneratedNSubRoom_Bigger: {
+    base: 40,
+    depthRamp: 5,
+    depthAxis: 'biomeEncounterDepth',
+    multiplier: 1,
   },
   GeneratedN: { base: 110, depthRamp: 25, depthAxis: 'biomeEncounterDepth', multiplier: 1 },
   GeneratedN_Smaller: { base: 85, depthRamp: 25, depthAxis: 'biomeEncounterDepth', multiplier: 1 },
@@ -328,6 +345,16 @@ function generation(data: GenerationDeclaration) {
 }
 
 const unbudgetedGeneratedEncounterChoices = {
+  OpeningGeneratedF: generation({
+    pool: pools.f,
+    waves: [1, 1],
+    minTypes: 2,
+    maxTypes: 2,
+    ramp: 0.2,
+    cap: 3,
+    eliteTypes: 1,
+    hardCap: 4,
+  }),
   GeneratedF: generation({
     pool: pools.f,
     waves: [1, 3],
@@ -533,6 +560,48 @@ const unbudgetedGeneratedEncounterChoices = {
     eliteTypes: 3,
     hardCap: 4,
     blockHighlightElites: true,
+  }),
+  OpeningGeneratedN: generation({
+    pool: pools.n,
+    waves: [1, 1],
+    minTypes: 1,
+    maxTypes: 2,
+    ramp: 0.2,
+    encounterDepth: true,
+    escalate: true,
+    cap: 2,
+    eliteTypes: 1,
+  }),
+  PreHubGeneratedN: generation({
+    pool: pools.n,
+    waves: [1, 1],
+    minTypes: 1,
+    maxTypes: 2,
+    ramp: 0.2,
+    encounterDepth: true,
+    escalate: true,
+    cap: 2,
+    eliteTypes: 1,
+  }),
+  GeneratedNSubRoom: generation({
+    pool: pools.nSubRoom,
+    waves: [1, 1],
+    minTypes: 1,
+    maxTypes: 2,
+    encounterDepth: true,
+    escalate: true,
+    cap: 2,
+    eliteTypes: 1,
+  }),
+  GeneratedNSubRoom_Bigger: generation({
+    pool: pools.n,
+    waves: [1, 1],
+    minTypes: 1,
+    maxTypes: 2,
+    encounterDepth: true,
+    escalate: true,
+    cap: 2,
+    eliteTypes: 1,
   }),
   GeneratedN: generation({
     pool: pools.n,

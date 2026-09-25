@@ -12,6 +12,7 @@ import {
 export const fEncounterDefinitions = [
   {
     key: 'OpeningGeneratedF',
+    customization: [generatedEncounterChoices.OpeningGeneratedF],
     label: 'Opening combat',
     kind: 'combat',
     countsEncounterDepth: true,

@@ -11,6 +11,7 @@ import {
 export const nEncounterDefinitions = [
   {
     key: 'OpeningGeneratedN',
+    customization: [generatedEncounterChoices.OpeningGeneratedN],
     label: 'Opening combat',
     kind: 'combat',
     countsEncounterDepth: true,
@@ -19,6 +20,7 @@ export const nEncounterDefinitions = [
   },
   {
     key: 'PreHubGeneratedN',
+    customization: [generatedEncounterChoices.PreHubGeneratedN],
     label: 'Pre-Hub combat',
     kind: 'combat',
     countsEncounterDepth: false,
@@ -122,6 +124,7 @@ export const nEncounterDefinitions = [
   },
   {
     key: 'GeneratedNSubRoom',
+    customization: [generatedEncounterChoices.GeneratedNSubRoom],
     label: 'Side-room combat',
     kind: 'combat',
     countsEncounterDepth: false,
@@ -131,6 +134,7 @@ export const nEncounterDefinitions = [
   },
   {
     key: 'GeneratedNSubRoom_Bigger',
+    customization: [generatedEncounterChoices.GeneratedNSubRoom_Bigger],
     label: 'Large side-room combat',
     kind: 'combat',
     countsEncounterDepth: false,
