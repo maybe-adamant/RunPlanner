@@ -138,7 +138,7 @@ Embryo also inserts the published magnitude through processed-trait data.
 Automatic Embryo resolves its due owner directly; it needs no executor clock.
 
 Phial is different: native `UseHealthFountain` reaches a later rarity callback.
-The room/source-bound target survives until that contact supplies native
+The room- or Hub-bound target survives until that contact supplies native
 `ForceUpgrade`; fountain healing, consumption and rarity application remain
 native. A fountain-use-return-only scope would lose this target.
 
