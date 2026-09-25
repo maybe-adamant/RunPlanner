@@ -136,7 +136,7 @@ export function clampSelectedProducts(
       selectedProducts.candidateArtifacts.purgingPools,
       selectedProducts.candidateArtifacts.hermesShrines,
       selectedProducts.candidateArtifacts.stygianWells,
-      selectedProducts.candidateArtifacts.fountainRarity,
+      retainedInteractions.fountainRarity,
       selectedProducts.candidateArtifacts.figurineArcana,
       retainedInteractions.transcendentEmbryo,
       selectedProducts.candidateArtifacts.chaos,
