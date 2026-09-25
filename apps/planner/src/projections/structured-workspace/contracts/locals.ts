@@ -179,6 +179,7 @@ export interface WorkspaceGeneratedEncounterAssessment {
     readonly countPreview?: readonly {
       readonly key: string;
       readonly requested?: number;
+      readonly remainder?: number;
       readonly effective?: number;
       readonly count?: number;
     }[];

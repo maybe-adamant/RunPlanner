@@ -806,7 +806,7 @@ export function GeneratedEncounterCustomizationControl({
                 const allocation = current?.allocations?.[key];
                 const name = label(key);
                 const preview = wave.countPreview?.find((entry) => entry.key === key);
-                const effective = preview?.effective;
+                const remainder = preview?.remainder;
                 const unitCost = cost(key);
                 const finalCost =
                   preview?.count === undefined || unitCost === undefined
@@ -818,9 +818,9 @@ export function GeneratedEncounterCustomizationControl({
                       <span className="encounter-budget-value">
                         {wave.seeds.some((seed) => seed.key === key && seed.kind === 'fixed')
                           ? 'Fixed'
-                          : effective === undefined
+                          : remainder === undefined
                             ? 'NA'
-                            : budgetNumber.format(effective)}
+                            : budgetNumber.format(remainder)}
                       </span>
                       <span
                         className="encounter-budget-result"

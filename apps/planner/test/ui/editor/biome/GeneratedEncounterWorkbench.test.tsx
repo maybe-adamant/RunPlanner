@@ -111,6 +111,18 @@ const composed = {
 } as const;
 
 describe('generated encounter customization workflows', () => {
+  it('shows the engine remainder before the minimum-one adjustment', async () => {
+    const view = await open(
+      customize(createGoldenFGHIProject(), phase, {
+        kind: 'generated',
+        waveCount: 1,
+        waves: [{ waveIndex: 1, typeKeys: ['Guard', 'Brawler'], allocations: { Guard: 9999 } }],
+      }),
+    );
+    const table = within(view.dialog).getByRole('table', { name: 'Wave 1 enemy budgets' });
+    const row = within(table).getByRole('row', { name: /^Budget/ });
+    expect(within(row).getAllByRole('cell').at(-1)?.textContent).toBe('0→ 18');
+  });
   it('shows group counts as groups and individual totals with derived-value hovers', async () => {
     const owner = createEncounterPhaseAddress(
       goldenGBiome,
