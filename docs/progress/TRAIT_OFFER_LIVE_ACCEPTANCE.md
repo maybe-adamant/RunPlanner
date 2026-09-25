@@ -10,8 +10,8 @@ obligations; do not record an in-game pass from a source probe.
 The owner confirms each item from a live run in which no published plan
 installs the observed screen, so the native offer is what appears, and
 compares it with the planner's evaluation of the same authored route.
-Delete this file once every item is confirmed and the follow-up below is
-tracked elsewhere or done, or when the owner explicitly waives the remainder.
+Delete this file once every item is confirmed, or when the owner explicitly
+waives the remainder.
 
 "Creation" below is the Chaos blessing that adds elements; "Favor" is the
 Chaos blessing that adds rarity bonus. Either works for items that name one.
@@ -53,14 +53,3 @@ Chaos blessing that adds rarity bonus. Either works for items that name one.
       options reflect the state after the Echo screen closed. Planner:
       evaluates it against that post-screen state. No engine test covers this
       path; it is confirmed live only.
-
-## Deferred follow-up
-
-`traitMutationOccurrenceId` in
-`packages/planner-engine/src/simulation/rewards/trait-settlement/coordinator.ts`
-and `traitOfferRoomOccurrence` in
-`packages/planner-engine/src/simulation/state/pending-trait-offers.ts` both map
-a semantic address to its owning occurrence, with different case coverage
-(`gorgonPhase`, acquisition entries and sites) and result shapes. Unify them
-behind one owner once a timeline-dependency witness pins the cases where they
-must agree.
