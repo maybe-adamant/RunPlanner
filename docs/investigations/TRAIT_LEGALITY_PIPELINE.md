@@ -146,10 +146,11 @@ Five Duos replace the inherited Devotion exclusion with their own table
 - Field NPCs (Artemis, Athena, Dionysus, Hades) have no `CreateLoot`; their
   `UpgradeOptions` start nil, so `SetTraitsOnLoot` runs at interaction
   (`UpgradeChoiceLogic.lua:119-121`). Hades is registered in `FieldLootData`
-  with `TreatAsGodLootByShops` (`RunData.lua:556-569`; `NPCData_Hades.lua:17-20`),
-  so Chaos Ordinary forces it Common and **consumes an Ordinary use** at close
-  (`RoomLogic.lua:2114-2122`; `UpgradeChoiceLogic.lua:1124-1126`), while its
-  `IgnoreRestrictBoonChoices` exempts it from Rejected (`:1131-1133`).
+  with `TreatAsGodLootByShops` but `BlockForceCommon` (`RunData.lua:556-569`;
+  `NPCData_Hades.lua:17-21`), so Chaos Ordinary neither forces it Common nor
+  spends a use at close (`RoomLogic.lua:2120`; `UpgradeChoiceLogic.lua:1124-1126`
+  requires `ForceCommon`), and its `IgnoreRestrictBoonChoices` exempts it from
+  Rejected (`:1131-1133`).
 - Chaos uses `SetTransformingTraitsOnLoot` (`TraitLogic.lua:1710-1744`); Echo's
   last-run menu and Story menus write options directly (`EventLogic.lua:954-1624`).
   Neither shares stages 1-9.
@@ -292,7 +293,7 @@ does not model.
 | Rarity rescue, Denial gate, present-zero Duo in Trials                          | `:157-175`; `offers.ts:132-134`                                   | exact                                                 |
 | Denial bans                                                                     | `offers.ts:669-690`                                               | exact                                                 |
 | Rejected blocked index                                                          | `offers.ts:522-540` requires a block on any trait screen          | **WRONG** for one- and two-option screens (D2)        |
-| Ordinary clock consumption                                                      | `coordinator.ts:119-121`, only rarity-bearing givers              | **WRONG** for Hades (D3)                              |
+| Ordinary clock consumption                                                      | `coordinator.ts:119-121`, only rarity-bearing givers              | correct (Hades is `BlockForceCommon`; D3 withdrawn)   |
 | Weights                                                                         | none modeled                                                      | exact (native uniform)                                |
 | Generation frontier = materialization, rebuilt at four contacts                 | evaluated at acquisition state (`coordinator.ts:297-303`)         | **MISSING / WRONG** (D1)                              |
 | Field NPC generation at interaction                                             | acquisition state                                                 | exact                                                 |
@@ -355,16 +356,17 @@ the game allows either. The executor then writes `BlockedIndexes` for a row
 the game would leave selectable (`ordinary.lua:194-201`). Rare in practice,
 but unambiguous.
 
-**D3 — Hades screens do not advance Ordinary.** Native: Hades is shop-aware in
-`FieldLootData`, so an active Ordinary forces its screen Common and one use is
-consumed at close; `IgnoreRestrictBoonChoices` exempts it from Rejected only
-(§5). Planner: the `godBoonScreens` clock advances only for givers with a
-player rarity (`offers.ts:56-67`; `coordinator.ts:119-121`), and Hades is
-rarityless. Scenario: Ordinary with one use left, a Hades field screen, then an
-Olympian boon. The game's boon is free of Ordinary; the planner still forces it
-Common, forbidding the Rare/Epic/Duo/Legendary rows the game can show. The
-Chaos audit's applicability list (`CHAOS_TRAIT_GAME_DATA_AUDIT.md:396-397`)
-omits Hades.
+**D3 — withdrawn.** First stated as "Hades screens consume an Ordinary use".
+Hades is `TreatAsGodLootByShops` but also `BlockForceCommon`
+(`NPCData_Hades.lua:21`), and `IsRarityForcedCommon` applies the Ordinary
+curse only to `(GodLoot or TreatAsGodLootByShops) and not BlockForceCommon`
+(`RoomLogic.lua:2120`), so `SetTraitsOnLoot` never sets `ForceCommon` on a
+Hades screen and the close never spends a use
+(`UpgradeChoiceLogic.lua:1124-1125`). `IgnoreRestrictBoonChoices` separately
+exempts it from Rejected. The planner's `godBoonScreens` clock advances only
+for givers with a boon rarity (`offers.ts:65`; `coordinator.ts:119-121`), and
+Hades is the only shop-aware giver without one, so the engine already matches
+and `chaos-traits.test.ts` pins it. No discrepancy.
 
 ### Undermodeling with user-visible consequence
 
@@ -434,10 +436,7 @@ omits Hades.
   `chaosRejectedBlockUnavailable`. This touches the engine (composition rule,
   candidate `chaosOfferRules`) and inverts test `:1298`. The executor already
   omits the block when none is published. No schema change.
-- **D3 — correct after a probe.** Split `godBoonScreens` consumption so Ordinary
-  counts shop-aware screens including Hades and Rejected excludes
-  `IgnoreRestrictBoonChoices` givers. This needs a catalog giver flag and an
-  engine clock predicate. It is small.
+- **D3 — no change.** Withdrawn on source evidence (`BlockForceCommon`).
 - **Docs — fix in the same closure** as the owning corrections. Promote the
   §6 materialization/invalidation table into the composition audit and delete
   this investigation.
@@ -456,8 +455,8 @@ omits Hades.
    maturing on the room's last encounter. Expected: that room's boon lacks the
    new elements or bonus, and the next boon has them.
 5. Rejected with a two-option (exhausted) screen: are both rows selectable?
-6. Ordinary with one use, then a Hades field screen: is the following Olympian
-   boon free of Ordinary?
+6. Resolved from source: a Hades field screen is `BlockForceCommon`, so it
+   neither is forced Common nor spends an Ordinary use.
 7. Fields: does a cage boon picked first reflect entry state rather than the
    cage encounter's end effects?
 8. Devotion: can any upgrade screen close while the spurned loot is live, and
