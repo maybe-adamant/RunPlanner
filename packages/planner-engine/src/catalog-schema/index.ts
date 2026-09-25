@@ -393,6 +393,8 @@ export interface EncounterDefinition {
   };
   readonly requiresInteraction?: boolean;
   readonly suppressesIncomingReward?: boolean;
+  /** The encounter spawns the room reward before its combat rather than after it. */
+  readonly createsIncomingRewardAtStart?: boolean;
   readonly nemesisRandomEvent?: {
     readonly freeItem: {
       readonly resultRewardTypes: readonly [

@@ -1186,16 +1186,17 @@ settle at their authored timeline positions.
 A trait offer is evaluated against the state at the position where the game
 builds its options, not the state when it is opened:
 
-| Offer                                                                        | Options built at                                                                                                                               |
-| ---------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
-| Ordinary incoming reward, incl. Devotion's spurned reward and the H miniboss | The producing phase's `encounterCompleted`, or the producer point when no encounter precedes it (Opening, Devotion's chosen pair, story rooms) |
-| Ship-wheel reward                                                            | Its own phase's `encounterCompleted`                                                                                                           |
-| Fields cage and optional rewards; World Shop items                           | The room's `offerPointMaterialized`                                                                                                            |
-| Hermes Shrine delivery                                                       | Falling due: at encounter end before chamber-count effects, or at room entry                                                                   |
-| Echo last reward; Sea Star duplicate                                         | Its source screen's completion                                                                                                                 |
-| Echo Gold duplicate                                                          | Gold's materialization, before the source screen                                                                                               |
-| Nemesis trade result; Artificer replacement; Travel Deal refill              | The trade, the conversion, or the triggering purchase                                                                                          |
-| `afterUnwrap` roles (Mystery Box), field NPC and Story screens               | Open time                                                                                                                                      |
+| Offer                                                                                  | Options built at                                                                                                                               |
+| -------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| Ordinary incoming reward, incl. Devotion's spurned reward                              | The producing phase's `encounterCompleted`, or the producer point when no encounter precedes it (Opening, Devotion's chosen pair, story rooms) |
+| Incoming reward of an encounter declared to create it before combat (the H minibosses) | That encounter's `encounterStarted`, before its start effects                                                                                  |
+| Ship-wheel reward                                                                      | Its own phase's `encounterCompleted`                                                                                                           |
+| Fields cage and optional rewards; World Shop items                                     | The room's `offerPointMaterialized`                                                                                                            |
+| Hermes Shrine delivery                                                                 | Falling due: at encounter end before chamber-count effects, or at room entry                                                                   |
+| Echo last reward; Sea Star duplicate                                                   | Its source screen's completion                                                                                                                 |
+| Echo Gold duplicate                                                                    | Gold's materialization, before the source screen                                                                                               |
+| Nemesis trade result; Artificer replacement; Travel Deal refill                        | The trade, the conversion, or the triggering purchase                                                                                          |
+| `afterUnwrap` roles (Mystery Box), field NPC and Story screens                         | Open time                                                                                                                                      |
 
 Three classes of event touch an unopened offer, each a property of the
 transition that owns the native contact:

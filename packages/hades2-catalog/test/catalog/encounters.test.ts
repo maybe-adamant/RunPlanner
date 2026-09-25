@@ -768,6 +768,13 @@ describe('encounter envelope catalog', () => {
       requiresInteraction: true,
       suppressesIncomingReward: true,
     });
+    // Only the H minibosses spawn their room reward before combat.
+    expect(
+      catalog.encounterDefinitions.values
+        .filter((definition) => definition.createsIncomingRewardAtStart === true)
+        .map((definition) => definition.key)
+        .sort(),
+    ).toEqual(['MiniBossLamia', 'MiniBossVampire']);
     expect(catalog.encounterDefinitions.byKey).not.toHaveProperty('BridgeNemesisRandomEvent');
     expect(catalog.encounterDefinitions.byKey).not.toHaveProperty('NemesisShopping');
     const artemisRequirements = catalog.encounterDefinitions.byKey.ArtemisCombatF?.requirements;

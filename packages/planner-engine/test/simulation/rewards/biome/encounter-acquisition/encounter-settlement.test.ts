@@ -10,6 +10,7 @@ import { beforeAll, describe, expect, it } from 'vitest';
 import { attachTraitHistory } from '../../../../../src/simulation/traits';
 import { applyEncounterSettlementTransition } from '../../../../../src/simulation/rewards/biome/encounter-acquisition/encounter-settlement';
 import { initializeTestRewardBranches } from '../../../../support/arcana-fear';
+import { ordinaryPositionFor } from '../../../../support/route-position';
 
 describe('Personal Loan boss checkpoint', () => {
   const project = loadSurfaceNOPQProject();
@@ -72,6 +73,7 @@ describe('Personal Loan boss checkpoint', () => {
       const result = applyEncounterSettlementTransition({
         catalog,
         snapshot: biome.snapshot,
+        routePosition: ordinaryPositionFor(catalog, biome.snapshot),
         event,
         room,
         view: undefined,

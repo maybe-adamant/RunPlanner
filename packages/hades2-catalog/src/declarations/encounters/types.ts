@@ -62,6 +62,8 @@ export interface RawEncounterDefinitionDeclaration {
   readonly requiresInteraction?: boolean;
   /** F/G event contact retains its draw but disables its canonical acquisition. */
   readonly suppressesIncomingReward?: boolean;
+  /** The encounter spawns the room reward before its combat rather than after it. */
+  readonly createsIncomingRewardAtStart?: boolean;
   /** Closed policy owned by the one ordinary Nemesis random-event identity. */
   readonly nemesisRandomEvent?: {
     readonly freeItem: {

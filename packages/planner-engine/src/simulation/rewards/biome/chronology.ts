@@ -1682,6 +1682,7 @@ export function evaluateBiomeRewardChronology(
         const transition = applyEncounterSettlementTransition({
           catalog,
           snapshot,
+          routePosition,
           event,
           room,
           view: views.get(semanticAddressKey(event.origin)),

@@ -62,14 +62,7 @@ function settledRoles(branch: RewardBranchState, origin: SemanticAddress): reado
   );
 }
 
-/**
- * An incoming reward spawns at the end of its producing encounter: the last
- * completed encounter before the role's producer point. Roles already
- * acquired before that encounter (Devotion's chosen pair) are not respawned.
- * This relies on the declared lifecycles: every post-combat producer point
- * follows the room's last encounter, and pre-combat roles settle before combat.
- */
-export function spawnIncomingRewardAtEncounterCompletion(
+function spawnIncomingReward(
   catalog: Catalog,
   room: CanonicalAuthoredRoom,
   branch: RewardBranchState,
@@ -82,6 +75,46 @@ export function spawnIncomingRewardAtEncounterCompletion(
     ...Object.keys(reward.levelResolutionsByAcquisitionRole ?? {}),
   ].filter((role) => !settled.includes(role));
   return roles.length === 0 ? branch : spawnTraitOffers(catalog, branch, [reward], roles);
+}
+
+/** Whether one of the room's encounters spawns its incoming reward before combat. */
+export function incomingRewardCreatedAtEncounterStart(
+  catalog: Catalog,
+  encounterKeys: readonly string[],
+): boolean {
+  return encounterKeys.some(
+    (key) => catalog.encounterDefinitions.byKey[key]?.createsIncomingRewardAtStart === true,
+  );
+}
+
+/** An encounter that spawns the room reward first (the H minibosses) anchors it at its start. */
+export function spawnIncomingRewardAtEncounterStart(
+  catalog: Catalog,
+  room: CanonicalAuthoredRoom,
+  encounterKey: string,
+  branch: RewardBranchState,
+): RewardBranchState {
+  return incomingRewardCreatedAtEncounterStart(catalog, [encounterKey])
+    ? spawnIncomingReward(catalog, room, branch)
+    : branch;
+}
+
+/**
+ * Otherwise an incoming reward spawns at the end of its producing encounter:
+ * the last completed encounter before the role's producer point. Roles already
+ * acquired before that encounter (Devotion's chosen pair) are not respawned.
+ * This relies on the declared lifecycles: every post-combat producer point
+ * follows the room's last encounter, and pre-combat roles settle before combat.
+ */
+export function spawnIncomingRewardAtEncounterCompletion(
+  catalog: Catalog,
+  room: CanonicalAuthoredRoom,
+  roomEncounterKeys: readonly string[],
+  branch: RewardBranchState,
+): RewardBranchState {
+  return incomingRewardCreatedAtEncounterStart(catalog, roomEncounterKeys)
+    ? branch
+    : spawnIncomingReward(catalog, room, branch);
 }
 
 /** A ship wheel's selected reward spawns after its own phase's combat. */
