@@ -27,6 +27,7 @@ import {
   reachedPOutdoorIcarusFixture,
 } from '@run-planner/test-fixtures/surface';
 import { authorLegalTraitOffers } from '@run-planner/test-fixtures/shared';
+import { underworldArachneCocoonProject } from './support/arachne-cocoon-fixture';
 
 describe('resolved execution encounters', () => {
   it.each([
@@ -206,6 +207,54 @@ describe('resolved execution encounters', () => {
         'overview',
       ),
     ).toThrow(/unknown field customization/);
+  });
+
+  it('publishes an exact Arachne combat cocoon count and omits the native Default', () => {
+    const plan = compileExecutionPlan({
+      product: assembleExecutionProduct({
+        assembly: simulateProjectAssembly(catalog, underworldArachneCocoonProject()),
+        catalog,
+      }),
+    });
+    const phases = (occurrenceId: string) =>
+      plan.occurrences.find((occurrence) => occurrence.id === occurrenceId)?.overview
+        .encounterPhases;
+    expect(phases('golden-f-b5-e1')).toEqual([
+      {
+        slotKey: 'Encounter',
+        encounterKey: 'ArachneCombatF',
+        kind: 'combat',
+        customization: [{ decisionKey: 'cocoonCount', kind: 'cocoonCount', count: 11 }],
+      },
+    ]);
+    expect(phases('golden-g-b4-e1')).toEqual([
+      { slotKey: 'Encounter', encounterKey: 'ArachneCombatG', kind: 'combat' },
+    ]);
+  });
+
+  it('strictly decodes the cocoon count wire shape', () => {
+    const decode = (decision: Record<string, unknown>) =>
+      decodeExecutionOverview(
+        {
+          encounterPhases: [
+            {
+              slotKey: 'Encounter',
+              encounterKey: 'ArachneCombatF',
+              kind: 'combat',
+              customization: [{ decisionKey: 'cocoonCount', kind: 'cocoonCount', ...decision }],
+            },
+          ],
+          requiredObjects: [],
+        },
+        'overview',
+      );
+    expect(decode({ count: 8 }).encounterPhases[0]?.customization).toEqual([
+      { decisionKey: 'cocoonCount', kind: 'cocoonCount', count: 8 },
+    ]);
+    expect(() => decode({ count: 0 })).toThrow(/integer >= 1/);
+    expect(() => decode({ count: 8.5 })).toThrow(/integer >= 1/);
+    expect(() => decode({})).toThrow();
+    expect(() => decode({ count: 8, minimum: 8 })).toThrow(/unknown field minimum/);
   });
 
   it('publishes Underworld Scylla native choice operands from the resolved fixed phase', () => {

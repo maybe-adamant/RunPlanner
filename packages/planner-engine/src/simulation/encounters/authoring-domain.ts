@@ -177,7 +177,7 @@ export function encounterPhaseAuthoringDomainForRoom(
                 const valueSupported =
                   value === undefined || customizationValueKnown([decision], decision.key, value);
                 const retainedChoiceLabels =
-                  value === undefined
+                  value === undefined || value.kind === 'cocoonCount'
                     ? []
                     : (value.kind === 'single'
                         ? [value.choiceKey]
@@ -190,8 +190,12 @@ export function encounterPhaseAuthoringDomainForRoom(
                       ).flatMap((choiceKey) => {
                         const choice = catalog.encounterDefinitions.values
                           .flatMap((candidate) => candidate.customization ?? [])
-                          .filter((candidate) => candidate.key === decision.key)
-                          .flatMap((candidate) => candidate.selection.choices)
+                          .flatMap((candidate) =>
+                            candidate.key === decision.key &&
+                            candidate.selection.kind !== 'cocoonCount'
+                              ? candidate.selection.choices
+                              : [],
+                          )
                           .find((candidate) => candidate.key === choiceKey);
                         return choice === undefined
                           ? []

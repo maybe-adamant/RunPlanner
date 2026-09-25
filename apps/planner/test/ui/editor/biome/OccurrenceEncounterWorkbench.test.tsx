@@ -295,6 +295,117 @@ describe('OccurrenceEncounterWorkbench', () => {
     });
   });
 
+  it('slides an Arachne cocoon count from Default and resets it to Default', async () => {
+    const occurrenceId = goldenFOccurrenceId(5, 1);
+    const phase = createEncounterPhaseAddress(
+      goldenFBiome,
+      { kind: 'occurrence', occurrenceId },
+      'Encounter',
+    );
+    const project = applyProjectCommand(createCompleteFGProject(), catalog, {
+      kind: 'SelectEncounter',
+      phase,
+      encounterKey: 'ArachneCombatF',
+    });
+    const cocoonCount = (view: ReturnType<typeof renderOccurrenceWorkbench>) =>
+      view.application.store
+        .getState()
+        .projectWorkspace.history!.present.route.biomes.find((biome) => biome.biomeKey === 'F')
+        ?.topology?.occurrences.find((candidate) => candidate.occurrenceId === occurrenceId)
+        ?.encounters.customizationByPhase?.Encounter?.cocoonCount;
+    const view = renderOccurrenceWorkbench(
+      project,
+      'Underworld',
+      'F',
+      occurrenceById(occurrenceId),
+    );
+    openRoomTab('Room Timeline');
+    await view.user.click(screen.getByRole('button', { name: 'Customize encounter' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Customize' });
+    const slider = within(dialog).getByRole('slider', { name: 'Cocoons' });
+    expect(slider.getAttribute('aria-valuetext')).toBe('Default');
+    expect(slider.getAttribute('min')).toBe('0');
+    expect(slider.getAttribute('max')).toBe('7');
+    expect(within(dialog).getByRole('button', { name: 'Reset' }).hasAttribute('disabled')).toBe(
+      true,
+    );
+
+    fireEvent.change(slider, { target: { value: '4' } });
+    fireEvent.keyUp(slider, { key: 'ArrowRight' });
+    await waitFor(() => expect(cocoonCount(view)).toEqual({ kind: 'cocoonCount', count: 11 }));
+    expect(
+      within(dialog).getByRole('slider', { name: 'Cocoons' }).getAttribute('aria-valuetext'),
+    ).toBe('11');
+
+    await view.user.click(within(dialog).getByRole('button', { name: 'Reset' }));
+    await waitFor(() => expect(cocoonCount(view)).toBeUndefined());
+
+    fireEvent.change(within(dialog).getByRole('slider', { name: 'Cocoons' }), {
+      target: { value: '7' },
+    });
+    fireEvent.keyUp(within(dialog).getByRole('slider', { name: 'Cocoons' }), { key: 'End' });
+    await waitFor(() => expect(cocoonCount(view)).toEqual({ kind: 'cocoonCount', count: 14 }));
+    fireEvent.change(within(dialog).getByRole('slider', { name: 'Cocoons' }), {
+      target: { value: '0' },
+    });
+    fireEvent.keyUp(within(dialog).getByRole('slider', { name: 'Cocoons' }), { key: 'Home' });
+    await waitFor(() => expect(cocoonCount(view)).toBeUndefined());
+  });
+
+  it('repairs a retained out-of-range cocoon count by choosing its clamped stop', async () => {
+    const occurrenceId = goldenFOccurrenceId(5, 1);
+    const selected = applyProjectCommand(createCompleteFGProject(), catalog, {
+      kind: 'SelectEncounter',
+      phase: createEncounterPhaseAddress(
+        goldenFBiome,
+        { kind: 'occurrence', occurrenceId },
+        'Encounter',
+      ),
+      encounterKey: 'ArachneCombatF',
+    });
+    const saved = JSON.parse(encodeProjectDocument(selected)) as {
+      route: {
+        biomes: {
+          biomeKey: string;
+          topology: {
+            occurrences: { occurrenceId: string; encounters: Record<string, unknown> }[];
+          };
+        }[];
+      };
+    };
+    saved.route.biomes
+      .find((biome) => biome.biomeKey === 'F')!
+      .topology.occurrences.find(
+        (occurrence) => occurrence.occurrenceId === occurrenceId,
+      )!.encounters.customizationByPhase = {
+      Encounter: { cocoonCount: { kind: 'cocoonCount', count: 20 } },
+    };
+    const project = parseProjectDocument(JSON.stringify(saved), catalog);
+    const view = renderOccurrenceWorkbench(
+      project,
+      'Underworld',
+      'F',
+      occurrenceById(occurrenceId),
+    );
+    const cocoonCount = () =>
+      view.application.store
+        .getState()
+        .projectWorkspace.history!.present.route.biomes.find((biome) => biome.biomeKey === 'F')
+        ?.topology?.occurrences.find((candidate) => candidate.occurrenceId === occurrenceId)
+        ?.encounters.customizationByPhase?.Encounter?.cocoonCount;
+    openRoomTab('Room Timeline');
+    await view.user.click(screen.getByRole('button', { name: 'Customize encounter' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Customize' });
+    const slider = within(dialog).getByRole('slider', { name: 'Cocoons' });
+    expect((slider as HTMLInputElement).value).toBe('7');
+    expect(within(dialog).getByText('20 (unavailable)')).toBeTruthy();
+    expect(within(dialog).getByText('Needs repair')).toBeTruthy();
+
+    fireEvent.keyDown(slider, { key: 'End' });
+    fireEvent.keyUp(slider, { key: 'End' });
+    await waitFor(() => expect(cocoonCount()).toEqual({ kind: 'cocoonCount', count: 14 }));
+  });
+
   it('routes a reached retained Scylla finding to the manual popup trigger', async () => {
     let project = applyProjectCommand(createGoldenFGHIProject(), catalog, {
       kind: 'ReplaceFearVowRank',

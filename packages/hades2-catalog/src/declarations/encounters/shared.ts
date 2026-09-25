@@ -156,3 +156,13 @@ export const arachneIncomingRewardExclusions = [
 ] as const;
 
 export const nemesisIncomingRewardExclusions = arachneIncomingRewardExclusions;
+
+/**
+ * EncounterData_Arachne.lua SetupArachneCombatEncounter CocoonCountMin/Max: BaseArachneCombat
+ * (~28) and ArachneCombatG's own StartRoomUnthreadedEvents override (~251) both declare 8-14.
+ */
+export const arachneCombatCocoonCount = {
+  key: 'cocoonCount',
+  label: 'Cocoons',
+  selection: { kind: 'cocoonCount', minimum: 8, maximum: 14 },
+} as const;

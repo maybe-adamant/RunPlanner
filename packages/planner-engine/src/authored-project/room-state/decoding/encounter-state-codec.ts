@@ -14,6 +14,7 @@ import {
   expectBoolean,
   expectExactKeys,
   expectNonBlankString,
+  expectPositiveInteger,
   expectRecord,
   expectString,
   failProjectDocument,
@@ -27,6 +28,7 @@ import {
 import {
   customizationDecisionOwned,
   customizationValueKnown,
+  customizationValueRepresentable,
   encounterCustomizationDeclarations,
 } from '../encounter-customization';
 import {
@@ -431,6 +433,16 @@ export function decodeRoomEncounterState(
             kind: 'orderedPrefix',
             choiceKeys: Object.freeze(choiceKeys),
           });
+        } else if (kind === 'cocoonCount') {
+          const label = `${path}.customizationByPhase.${phaseKey}.${decisionKey}`;
+          expectExactKeys(value, ['kind', 'count'], label);
+          const parsed = Object.freeze({
+            kind: 'cocoonCount' as const,
+            count: expectPositiveInteger(value.count, `${label}.count`),
+          });
+          if (!customizationValueRepresentable(declarations.structural, decisionKey, parsed))
+            failProjectDocument(label, 'is not a declared cocoon count');
+          decisions[decisionKey] = parsed;
         } else {
           failProjectDocument(
             `${path}.customizationByPhase.${phaseKey}.${decisionKey}.kind`,

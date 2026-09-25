@@ -7,7 +7,7 @@ import type {
   AuthoredTraitOffer,
 } from './traits/state';
 
-export const PROJECT_DOCUMENT_SCHEMA_VERSION = 87 as const;
+export const PROJECT_DOCUMENT_SCHEMA_VERSION = 88 as const;
 export type ResourceFamily = import('../catalog-schema').ResourceFamily;
 /** Route ownership supplies the route key; the selected host is exact and durable. */
 export interface ResourcePlacement {
@@ -272,7 +272,9 @@ export type AuthoredNemesisRandomEventOutcome =
 export type AuthoredEncounterCustomization =
   | AuthoredGeneratedEncounterCustomization
   | { readonly kind: 'single'; readonly choiceKey: string }
-  | { readonly kind: 'orderedPrefix'; readonly choiceKeys: readonly string[] };
+  | { readonly kind: 'orderedPrefix'; readonly choiceKeys: readonly string[] }
+  /** Exact cocoon count; the declared native range is assessed during preparation. */
+  | { readonly kind: 'cocoonCount'; readonly count: number };
 
 export interface AuthoredGeneratedEncounterCustomization {
   readonly kind: 'generated';

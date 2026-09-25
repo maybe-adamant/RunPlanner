@@ -436,6 +436,18 @@
   min-width: 0;
 }
 
+.encounter-cocoon-count {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 8px;
+}
+
+.encounter-cocoon-count > output {
+  min-width: 5ch;
+  font-variant-numeric: tabular-nums;
+}
+
 .encounter-customization-row > .contextual-picker {
   grid-column: 1 / -1;
   min-width: 0;

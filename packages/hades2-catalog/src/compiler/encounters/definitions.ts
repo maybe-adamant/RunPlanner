@@ -176,6 +176,18 @@ export function normalizeEncounterDefinitions(
                         maximumLength: 2 as const,
                       }),
                     });
+                  case 'cocoonCount': {
+                    const { minimum, maximum } = decision.selection;
+                    if (!Number.isInteger(minimum) || minimum < 1)
+                      fail(`${decisionPath}.selection.minimum`, 'must be a positive integer');
+                    if (!Number.isInteger(maximum) || maximum < minimum)
+                      fail(`${decisionPath}.selection.maximum`, 'must be an integer >= minimum');
+                    return Object.freeze({
+                      key,
+                      label,
+                      selection: Object.freeze({ kind: 'cocoonCount' as const, minimum, maximum }),
+                    });
+                  }
                   default:
                     return fail(`${decisionPath}.selection.kind`, 'is unsupported');
                 }

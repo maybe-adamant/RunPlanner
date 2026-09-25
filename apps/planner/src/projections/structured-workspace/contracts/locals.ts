@@ -406,6 +406,13 @@ export type WorkspaceEncounterCustomizationDecision =
     })
   | (WorkspaceEncounterCustomizationDecisionBase & {
       readonly selection: {
+        readonly kind: 'cocoonCount';
+        readonly minimum: number;
+        readonly maximum: number;
+      };
+    })
+  | (WorkspaceEncounterCustomizationDecisionBase & {
+      readonly selection: {
         readonly kind: 'generated';
         readonly choices: readonly {
           readonly key: string;

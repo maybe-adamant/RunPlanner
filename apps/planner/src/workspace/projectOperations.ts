@@ -351,7 +351,7 @@ export function createProjectOperations(
           'success',
           loadedDocument.migrationProvenance.length === 0
             ? 'Loaded the profile.'
-            : 'Migrated the profile to schema 87; retained encounter choices may need missing fields repaired.',
+            : 'Migrated the profile to schema 88; retained encounter choices may need missing fields repaired.',
         );
       } catch (error) {
         return failure('loadProfile', error);

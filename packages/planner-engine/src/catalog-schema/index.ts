@@ -477,6 +477,16 @@ export type EncounterCustomizationDecision =
         readonly choices: readonly EncounterCustomizationChoice[];
         readonly maximumLength: 2;
       };
+    }
+  | {
+      readonly key: string;
+      readonly label: string;
+      /** Native inclusive cocoon-count draw bounds for combat setup. */
+      readonly selection: {
+        readonly kind: 'cocoonCount';
+        readonly minimum: number;
+        readonly maximum: number;
+      };
     };
 
 /** Closed concrete identity mapping for one persisted authored encounter choice. */

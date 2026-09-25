@@ -51,6 +51,14 @@ function encounterCustomization(value: unknown, label: string) {
         choices: Object.freeze(choices),
       });
     }
+    if (kind === 'cocoonCount') {
+      exact(row, ['decisionKey', 'kind', 'count'], [], decisionLabel);
+      return Object.freeze({
+        decisionKey: stringValue(row.decisionKey, `${decisionLabel}.decisionKey`),
+        kind: 'cocoonCount' as const,
+        count: integer(row.count, `${decisionLabel}.count`, 1),
+      });
+    }
     fail(`${decisionLabel}.kind is unsupported`);
   });
   if (decisions.length === 0) fail(`${label} must be non-empty when present`);

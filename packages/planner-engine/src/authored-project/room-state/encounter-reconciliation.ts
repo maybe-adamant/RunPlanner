@@ -10,7 +10,7 @@ import {
 } from './encounter-envelope';
 import {
   customizationDecisionOwned,
-  customizationValueKnown,
+  customizationValueRepresentable,
   encounterCustomizationDeclarations,
 } from './encounter-customization';
 
@@ -137,7 +137,7 @@ export function reconcileRoomEncounterState(
     for (const [decisionKey, value] of Object.entries(prior)) {
       if (
         customizationDecisionOwned(declarations.active, decisionKey) &&
-        customizationValueKnown(declarations.structural, decisionKey, value)
+        customizationValueRepresentable(declarations.structural, decisionKey, value)
       )
         retained[decisionKey] = value;
     }

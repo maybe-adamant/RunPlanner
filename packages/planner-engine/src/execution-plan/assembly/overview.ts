@@ -778,10 +778,20 @@ function executionEncounterCustomization(
         'executionCoverageMissing',
         `${room.gameName}.${slotKey}.${decision.key} lost its declared selection shape`,
       );
-    if (value.kind === 'single') {
-      const choice = decision.selection.choices.find(
-        (candidate) => candidate.key === value.choiceKey,
+    if (value.kind === 'cocoonCount') {
+      published.push(
+        Object.freeze({ decisionKey: decision.key, kind: 'cocoonCount', count: value.count }),
       );
+      continue;
+    }
+    if (decision.selection.kind === 'cocoonCount')
+      throw new CompilerError(
+        'executionCoverageMissing',
+        `${room.gameName}.${slotKey}.${decision.key} lost its declared selection shape`,
+      );
+    const selection = decision.selection;
+    if (value.kind === 'single') {
+      const choice = selection.choices.find((candidate) => candidate.key === value.choiceKey);
       if (choice === undefined)
         throw new CompilerError(
           'executionCoverageMissing',
@@ -803,7 +813,7 @@ function executionEncounterCustomization(
         `${room.gameName}.${slotKey} lost ordered customization`,
       );
     const choices = value.choiceKeys.map((choiceKey) => {
-      const choice = decision.selection.choices.find((candidate) => candidate.key === choiceKey);
+      const choice = selection.choices.find((candidate) => candidate.key === choiceKey);
       if (choice === undefined)
         throw new CompilerError(
           'executionCoverageMissing',
