@@ -22,6 +22,12 @@ import {
 } from '@run-planner/engine/execution-plan';
 import { hubVisitActions } from '@run-planner/test-fixtures/shared';
 import { loadSurfaceNProject, nBiome, nVisitSlotKeys } from '@run-planner/test-fixtures/surface';
+import phialFountainFixture from './fixtures/surface-n-phial-intermediate-fountain.execution.json';
+import {
+  phialFountainPrecedingVisits,
+  phialFountainTargetTraitKey,
+  surfaceNPhialIntermediateFountainProject,
+} from './support/surface-n-phial-fountain-fixture';
 import { migrateProjectDocument as migrateProject87To88 } from '../../../../schema/migrate-project-87-to-88.js';
 
 const hub = createHubDecisionAddress(nBiome, 'hub');
@@ -179,5 +185,27 @@ describe('Hub fountain execution export', () => {
     const { wire, hub: published } = wireHub(encodeExecutionPlan(plan(loadSurfaceNProject())));
     mutate(published);
     expect(() => decodeExecutionPlan(wire)).toThrow(ExecutionPlanCodecError);
+  });
+});
+
+describe('Surface N Phial intermediate fountain fixture', () => {
+  it('publishes the Hub fountain use with a legal Common Pre-Hub Phial target', () => {
+    const project = surfaceNPhialIntermediateFountainProject();
+    const evaluation = simulateProjectAssembly(catalog, project).evaluation;
+    expect(evaluation.findings).toEqual([]);
+    const decoded = decodeExecutionPlan(phialFountainFixture);
+    expect(decoded).toEqual(plan(project));
+    expect(decodeExecutionPlan(JSON.parse(encodeExecutionPlan(decoded)))).toEqual(decoded);
+    const published = publishedHub(decoded);
+    expect(published.requiredVisitCount).toBe(6);
+    expect(published.fountain).toEqual({
+      kind: 'fountainUse',
+      owner: semanticAddressKey(fountain),
+      interactionKey: 'fountain',
+      precedingVisitCount: phialFountainPrecedingVisits,
+      aromaticPhialTarget: phialFountainTargetTraitKey,
+    });
+    expect(phialFountainPrecedingVisits).toBeGreaterThanOrEqual(1);
+    expect(phialFountainPrecedingVisits).toBeLessThanOrEqual(5);
   });
 });
