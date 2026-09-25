@@ -1,5 +1,5 @@
 import { catalog } from '@run-planner/hades2-catalog';
-import { authorLegalTraitOffers } from '@run-planner/test-fixtures/shared';
+import { authorLegalTraitOffers, hubVisitActions } from '@run-planner/test-fixtures/shared';
 import {
   applyProjectCommand,
   createBiomeAddress,
@@ -213,9 +213,16 @@ export function createCompleteNProject(): ProjectDocument {
     });
   }
   document = applyProjectCommand(document, catalog, {
-    kind: 'ReplaceHubVisitOrder',
+    kind: 'ReplaceHubActionOrder',
     hub: createHubDecisionAddress(nBiome, 'hub'),
-    hubSlotKeys: ['combat01', 'combat02', 'combat03', 'combat04', 'combat05', 'combat06'],
+    actions: hubVisitActions([
+      'combat01',
+      'combat02',
+      'combat03',
+      'combat04',
+      'combat05',
+      'combat06',
+    ]),
   });
   document = applyProjectCommand(document, catalog, {
     kind: 'CreateTakeoverBatch',

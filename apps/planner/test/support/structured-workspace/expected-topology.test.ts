@@ -4,6 +4,7 @@ import {
   createOccurrenceId,
   semanticAddressKey,
   type AuthoredBiomePlan,
+  hubVisitSlotKeys,
 } from '@run-planner/engine/authored-project';
 import { describe, expect, it } from 'vitest';
 
@@ -36,7 +37,7 @@ describe('structured workspace topology expectations', () => {
     const expected = expectedWorkspaceTopologyManifest(nBiome, planWithOrphan);
     const hub = plan.topology.decisions.find((decision) => decision.kind === 'hub');
     const firstTarget = hub?.openTargets[0];
-    const firstVisit = hub?.visitOrder[0];
+    const firstVisit = hub === undefined ? undefined : hubVisitSlotKeys(hub)[0];
     if (hub === undefined || firstTarget === undefined || firstVisit === undefined) {
       throw new Error('Surface/N Hub owner fixture is missing');
     }

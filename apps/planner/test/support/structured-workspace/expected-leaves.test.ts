@@ -115,7 +115,10 @@ describe('structured workspace test expectations', () => {
             ? decision
             : {
                 ...decision,
-                visitOrder: Object.freeze([...decision.visitOrder.slice(0, -1), 'combat10']),
+                actions: Object.freeze([
+                  ...decision.actions.slice(0, -1),
+                  { kind: 'roomVisit' as const, hubSlotKey: 'combat10' },
+                ]),
               },
         ),
       },
@@ -159,7 +162,10 @@ describe('structured workspace test expectations', () => {
             ? decision
             : {
                 ...decision,
-                visitOrder: Object.freeze([...decision.visitOrder.slice(0, -1), 'combat10']),
+                actions: Object.freeze([
+                  ...decision.actions.slice(0, -1),
+                  { kind: 'roomVisit' as const, hubSlotKey: 'combat10' },
+                ]),
               },
         ),
       },

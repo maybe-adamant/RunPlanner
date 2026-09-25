@@ -21,6 +21,7 @@ import {
 import type { ResolvedRewardOffer } from '@run-planner/engine/reward-kernel';
 import { loadSurfaceNCheckpoint } from '../checkpoints/surface';
 import { authorLegalTraitOffers, authorLegalPomResolutions } from '../shared';
+import { hubVisitActions } from '../hub-actions';
 
 const qBiome = createBiomeAddress('Dream', 'Q');
 
@@ -469,9 +470,16 @@ export function dreamMixedHandoffProject(fBatchOrder?: readonly number[]): Proje
     }
   }
   project = applyProjectCommand(project, catalog, {
-    kind: 'ReplaceHubVisitOrder',
+    kind: 'ReplaceHubActionOrder',
     hub,
-    hubSlotKeys: ['combat05', 'miniBoss01', 'combat02', 'combat11', 'combat23', 'combat01'],
+    actions: hubVisitActions([
+      'combat05',
+      'miniBoss01',
+      'combat02',
+      'combat11',
+      'combat23',
+      'combat01',
+    ]),
   });
   project = applyProjectCommand(project, catalog, {
     kind: 'CreateTakeoverBatch',

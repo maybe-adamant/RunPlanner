@@ -21,6 +21,7 @@ import {
   createTraitOfferAddress,
   semanticAddressKey,
   type ProjectDocument,
+  hubVisitSlotKeys,
 } from '@run-planner/engine/authored-project';
 import {
   encounterPhaseSequenceStatusForProjectEvaluationAssembly,
@@ -833,7 +834,8 @@ describe('structured workspace biome semantic assembly', () => {
     const authoredHub = blockedNSource.plan.topology?.decisions.find(
       (decision) => decision.kind === 'hub',
     );
-    const visitedSlotKey = authoredHub?.kind === 'hub' ? authoredHub.visitOrder[0] : undefined;
+    const visitedSlotKey =
+      authoredHub?.kind === 'hub' ? hubVisitSlotKeys(authoredHub)[0] : undefined;
     const retainedEphyra = hub.slots.find(
       (slot) => slot.hubSlotKey === visitedSlotKey && slot.room?.gameName.startsWith('N_Combat'),
     );

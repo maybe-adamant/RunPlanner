@@ -33,6 +33,7 @@ export {
   type ExecutionOccurrence,
   type ExecutionAnomalyReplacement,
   type ExecutionOverview,
+  type ExecutionHubFountainUse,
   type ExecutionResourcePolicy,
   type ExecutionResourcePointDisposition,
 } from './model';

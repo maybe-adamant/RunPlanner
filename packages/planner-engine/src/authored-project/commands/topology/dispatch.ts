@@ -57,7 +57,7 @@ export function applyTopologyCommand(
     case 'OpenHubSlot':
     case 'CloseHubSlot':
     case 'ResetHubBoard':
-    case 'ReplaceHubVisitOrder':
+    case 'ReplaceHubActionOrder':
       return updateHub(document, catalog, located, command);
     case 'SetLocalVisitGeneration':
     case 'ReplaceLocalVisitOrder':

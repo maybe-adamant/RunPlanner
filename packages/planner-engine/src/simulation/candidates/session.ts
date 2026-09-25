@@ -23,15 +23,15 @@ import {
 } from './fields-cage-outcome';
 import {
   evaluateHubSlotCandidate,
-  evaluateHubVisitOrderCandidate,
+  evaluateHubActionOrderCandidate,
   evaluateSideRoomEntryOrderCandidate,
   evaluateSideRoomGenerationCandidate,
   type EvaluatedHubSlotCandidate,
-  type EvaluatedHubVisitOrderCandidate,
+  type EvaluatedHubActionOrderCandidate,
   type EvaluatedSideRoomEntryOrderCandidate,
   type EvaluatedSideRoomGenerationCandidate,
   type HubSlotCandidateQuery,
-  type HubVisitOrderCandidateQuery,
+  type HubActionOrderCandidateQuery,
   type SideRoomEntryOrderCandidateQuery,
   type SideRoomGenerationCandidateQuery,
 } from './hub';
@@ -176,7 +176,7 @@ export type ProjectCandidateQuery =
   | BatchRewardStoreCandidateQuery
   | FieldsCageOutcomeCandidateQuery
   | HubSlotCandidateQuery
-  | HubVisitOrderCandidateQuery
+  | HubActionOrderCandidateQuery
   | IncomingRewardCandidateQuery
   | StartingRewardCandidateQuery
   | LocalRewardCandidateQuery
@@ -224,7 +224,7 @@ export type ProjectCandidateEvaluation =
   | EvaluatedBatchRewardStoreCandidate
   | EvaluatedFieldsCageOutcomeCandidate
   | EvaluatedHubSlotCandidate
-  | EvaluatedHubVisitOrderCandidate
+  | EvaluatedHubActionOrderCandidate
   | EvaluatedIncomingRewardCandidate
   | EvaluatedStartingRewardCandidate
   | EvaluatedLocalRewardCandidate
@@ -449,8 +449,8 @@ function evaluateCandidateQuery(
       return evaluateFieldsCageOutcomeCandidate(catalog, project, evaluation, query);
     case 'hubSlot':
       return evaluateHubSlotCandidate(catalog, project, evaluation, query);
-    case 'hubVisitOrder':
-      return evaluateHubVisitOrderCandidate(catalog, project, evaluation, query);
+    case 'hubActionOrder':
+      return evaluateHubActionOrderCandidate(catalog, project, evaluation, query);
     case 'sideRoomGeneration':
       return evaluateSideRoomGenerationCandidate(catalog, project, evaluation, query);
     case 'sideRoomEntryOrder':

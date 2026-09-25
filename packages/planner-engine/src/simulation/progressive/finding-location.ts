@@ -70,6 +70,9 @@ function findingParentAddress(address: SemanticAddress): SemanticAddress | undef
       return address.encounter;
     case 'acquisitionEntry':
       return address.site;
+    case 'fountainRarityOutcome':
+      // A Hub Phial outcome belongs to the Hub action; occurrence outcomes keep their own origin.
+      return address.action.kind === 'hubFountain' ? address.action : undefined;
     default:
       return undefined;
   }
@@ -359,6 +362,8 @@ export interface OwnerLocation {
   readonly hubVisitIndex?: number;
   readonly hubVisitPhase?: MaterializedHubVisitFrontier['phase'];
   readonly hubLocalLifecycleIndex?: number;
+  /** The Hub fountain use follows this many completed room visits. */
+  readonly hubFountainPrecedingVisitCount?: number;
 }
 
 function targetIndex(
@@ -744,6 +749,13 @@ function locateStructuralOwner(
     decision.kind === 'hub' ? hubVisitFindingLocation(decision, address, chronology) : undefined;
   const indexedHubBoard =
     decision.kind === 'hub' ? hubBoardTargetIndex(decision, address, hubVisitLocation) : undefined;
+  const fountainOwner = ownerOrigin(address);
+  const hubFountainPrecedingVisitCount =
+    decision.kind === 'hub' &&
+    fountainOwner.kind === 'hubFountain' &&
+    fountainOwner.hubKey === decision.origin.hubKey
+      ? (decision.fountain?.precedingVisitCount ?? decision.visits.length)
+      : undefined;
   return Object.freeze({
     ...(historyChronology === undefined
       ? {}
@@ -765,6 +777,7 @@ function locateStructuralOwner(
             ? {}
             : { hubLocalLifecycleIndex: hubVisitLocation.localLifecycleIndex }),
         }),
+    ...(hubFountainPrecedingVisitCount === undefined ? {} : { hubFountainPrecedingVisitCount }),
   });
 }
 
@@ -887,6 +900,9 @@ export function findingLocation(located: LocatedFinding): OwnerLocation {
     ...(located.hubLocalLifecycleIndex === undefined
       ? {}
       : { hubLocalLifecycleIndex: located.hubLocalLifecycleIndex }),
+    ...(located.hubFountainPrecedingVisitCount === undefined
+      ? {}
+      : { hubFountainPrecedingVisitCount: located.hubFountainPrecedingVisitCount }),
   });
 }
 
@@ -1001,7 +1017,12 @@ export function compareOwnerLocations(left: OwnerLocation, right: OwnerLocation)
           ? 2
           : -1;
   const hubStageOrder = (value: OwnerLocation): number =>
-    value.hubVisitIndex === undefined ? 0 : 1;
+    value.hubVisitIndex === undefined && value.hubFountainPrecedingVisitCount === undefined ? 0 : 1;
+  // The fountain use precedes the next visit's lifecycle at the same visit index.
+  const hubPosition = (value: OwnerLocation): readonly [number, number] =>
+    value.hubFountainPrecedingVisitCount !== undefined
+      ? [value.hubFountainPrecedingVisitCount, -2]
+      : [value.hubVisitIndex ?? -1, visitPhaseOrder(value.hubVisitPhase)];
   const historyPosition = (value: OwnerLocation): readonly [number, number] | undefined =>
     value.historySequence === undefined || value.historyBoundary === undefined
       ? undefined
@@ -1029,8 +1050,8 @@ export function compareOwnerLocations(left: OwnerLocation, right: OwnerLocation)
       (right.additionalIndex === undefined ? Number.MAX_SAFE_INTEGER : right.additionalIndex) ||
     hubStageOrder(left) - hubStageOrder(right) ||
     (left.hubBoardTargetIndex ?? -1) - (right.hubBoardTargetIndex ?? -1) ||
-    (left.hubVisitIndex ?? -1) - (right.hubVisitIndex ?? -1) ||
-    visitPhaseOrder(left.hubVisitPhase) - visitPhaseOrder(right.hubVisitPhase) ||
+    hubPosition(left)[0] - hubPosition(right)[0] ||
+    hubPosition(left)[1] - hubPosition(right)[1] ||
     (left.hubLocalLifecycleIndex ?? -1) - (right.hubLocalLifecycleIndex ?? -1)
   );
 }

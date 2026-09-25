@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import { catalog } from '@run-planner/hades2-catalog';
-import { authorLegalTraitOffers } from '@run-planner/test-fixtures/shared';
+import { authorLegalTraitOffers, hubVisitActions } from '@run-planner/test-fixtures/shared';
 import {
   applyProjectCommand,
   createAdditionalExitAddress,
@@ -369,9 +369,9 @@ describe('BiomeWorkspace', () => {
 
   it('binds an incomplete Hub visit finding to its next Timeline count and repairs it from the map', async () => {
     const project = applyProjectCommand(loadSurfaceNOPQProject(), catalog, {
-      kind: 'ReplaceHubVisitOrder',
+      kind: 'ReplaceHubActionOrder',
       hub: createHubDecisionAddress(nBiome, 'hub'),
-      hubSlotKeys: ['combat05', 'miniBoss01'],
+      actions: hubVisitActions(['combat05', 'miniBoss01']),
     });
     const view = renderWorkspace(project, 'Surface', 'N');
     const findingForNextVisit = () => {

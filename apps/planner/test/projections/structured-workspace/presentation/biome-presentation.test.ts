@@ -48,6 +48,7 @@ import type {
   WorkspaceOccurrenceWorkbenchNode,
   WorkspaceRailEntry,
 } from '@planner/projections/structured-workspace/contracts/structure';
+import { hubVisitActions } from '@run-planner/test-fixtures/shared';
 
 let goldenProject: ReturnType<typeof createGoldenFGHIProject>;
 let surfaceProject: ReturnType<typeof loadSurfaceNOPQProject>;
@@ -691,8 +692,8 @@ describe('structured workspace biome presentation', () => {
     ]);
     const replaced = applyProjectCommand(initial, catalog, {
       hub: createHubDecisionAddress(nBiome, 'hub'),
-      hubSlotKeys: [nVisitSlotKeys[0], 'combat10', nVisitSlotKeys[2]],
-      kind: 'ReplaceHubVisitOrder',
+      actions: hubVisitActions([nVisitSlotKeys[0], 'combat10', nVisitSlotKeys[2]]),
+      kind: 'ReplaceHubActionOrder',
     });
     expect(labels(replaced)).toEqual([
       'Visit 1 · Combat 05',
@@ -701,8 +702,8 @@ describe('structured workspace biome presentation', () => {
     ]);
     const truncated = applyProjectCommand(replaced, catalog, {
       hub: createHubDecisionAddress(nBiome, 'hub'),
-      hubSlotKeys: nVisitSlotKeys.slice(0, 1),
-      kind: 'ReplaceHubVisitOrder',
+      actions: hubVisitActions(nVisitSlotKeys.slice(0, 1)),
+      kind: 'ReplaceHubActionOrder',
     });
     expect(labels(truncated)).toEqual(['Visit 1 · Combat 05']);
   });

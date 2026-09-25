@@ -54,7 +54,14 @@ export function FountainRarityEffectRow({
     if (!nextOpen && focused) setClosedAtNavigationRevision(semanticNavigationRevision);
   };
   return (
-    <div className="fountain-rarity-inline" data-fountain-rarity={control.address.action.actionKey}>
+    <div
+      className="fountain-rarity-inline"
+      data-fountain-rarity={
+        control.address.action.kind === 'roomAction'
+          ? control.address.action.actionKey
+          : semanticAddressKey(control.address.action)
+      }
+    >
       <RandomTraitTargetPicker
         findingTarget={findingTarget(control.address)}
         ariaLabel="Phial Target"

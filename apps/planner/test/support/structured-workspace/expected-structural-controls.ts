@@ -37,7 +37,7 @@ export type ExpectedWorkspaceStructuralControlKind =
   | 'exitSelection'
   | 'fieldsCageOutcome'
   | 'hubSlot'
-  | 'hubVisitOrder'
+  | 'hubActionOrder'
   | 'roomPicker'
   | 'start'
   | 'takeoverBatch'
@@ -304,7 +304,7 @@ export function expectedWorkspaceStructuralControls(
       // closure. One Hub-decision interaction owns every complete order
       // proposal, so this oracle intentionally does not impose a per-position
       // UI interaction shape.
-      add('hubVisitOrder', workspaceTestOwnerKey(hubOwner), hubOwner);
+      add('hubActionOrder', workspaceTestOwnerKey(hubOwner), hubOwner);
     }
   }
 

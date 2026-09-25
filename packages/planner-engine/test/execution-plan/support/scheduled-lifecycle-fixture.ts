@@ -10,7 +10,7 @@ import {
   qBiome,
   qOccurrenceIds,
 } from '@run-planner/test-fixtures/surface';
-import { authorLegalTraitOffers } from '@run-planner/test-fixtures/shared';
+import { authorLegalTraitOffers, hubVisitActions } from '@run-planner/test-fixtures/shared';
 import {
   applyProjectCommand,
   createAcquisitionSiteAddress,
@@ -239,9 +239,16 @@ function acceptQSupplyChainSlices(project: ProjectDocument): ProjectDocument {
 function buildSurfaceScheduledLifecycleProject(clearLocalVisits = false): ProjectDocument {
   let project = authorLegalTraitOffers(
     applyProjectCommand(loadSurfaceNOPQProject(), catalog, {
-      kind: 'ReplaceHubVisitOrder',
+      kind: 'ReplaceHubActionOrder',
       hub: createHubDecisionAddress(nBiome, 'hub'),
-      hubSlotKeys: ['combat05', 'miniBoss01', 'combat02', 'combat11', 'combat23', 'combat03'],
+      actions: hubVisitActions([
+        'combat05',
+        'miniBoss01',
+        'combat02',
+        'combat11',
+        'combat23',
+        'combat03',
+      ]),
     }),
   );
   if (clearLocalVisits) {

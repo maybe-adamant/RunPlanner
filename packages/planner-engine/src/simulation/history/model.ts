@@ -4,6 +4,8 @@ import type {
   BiomeAddress,
   ExitDecisionAddress,
   HubDecisionAddress,
+  HubFountainAddress,
+  HubRoomAddress,
   HubSlotAddress,
   HubVisitAddress,
   LocalVisitSlotAddress,
@@ -146,6 +148,13 @@ export interface RoomRestoredHistoryEvent extends HistoryEventBase {
   readonly roomShopPresent?: boolean;
 }
 
+/** The Hub-owned fountain use, settled in the restored Hub between room visits. */
+export interface HubFountainUsedHistoryEvent extends HistoryEventBase {
+  readonly kind: 'fountainUsed';
+  readonly origin: HubRoomAddress;
+  readonly owner: HubFountainAddress;
+}
+
 export type HistoryEvent =
   | BiomeCompletedHistoryEvent
   | BiomeCounterResetHistoryEvent
@@ -155,6 +164,7 @@ export type HistoryEvent =
   | ClockworkNonGoalRewardSpawnedHistoryEvent
   | EmptyOutgoingGenerationHistoryEvent
   | FieldsBatchOutcomeHistoryEvent
+  | HubFountainUsedHistoryEvent
   | RoomCreatedHistoryEvent
   | RoomRestoredHistoryEvent
   | TargetGenerationCompletedHistoryEvent

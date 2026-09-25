@@ -25,8 +25,9 @@ import {
   ProjectCommandContractError,
   redoProjectHistory,
   undoProjectHistory,
+  hubVisitSlotKeys,
 } from '@run-planner/engine/authored-project';
-import { replaceTestShopOfferActions } from '@run-planner/test-fixtures/shared';
+import { replaceTestShopOfferActions, hubVisitActions } from '@run-planner/test-fixtures/shared';
 import { loadSurfaceNOPQCheckpoint } from '@run-planner/test-fixtures/checkpoints/surface';
 import { loadUnderworldFGHICheckpoint } from '@run-planner/test-fixtures/checkpoints/underworld';
 import { loadSurfaceNProject } from '@run-planner/test-fixtures/surface';
@@ -249,7 +250,7 @@ describe('authored-project commands and topology', () => {
     expect(reset.decisions.find((decision) => decision.kind === 'hub')).toEqual({
       ...hub,
       openTargets: [],
-      visitOrder: [],
+      actions: [],
     });
     const preservedRooms = before.occurrences.filter((room) =>
       ['N_Opening01', 'N_PreHub01'].includes(room.gameName),
@@ -273,9 +274,9 @@ describe('authored-project commands and topology', () => {
 
   it('resets an incomplete Hub board without requiring a completed visit sequence', () => {
     const partial = applyProjectCommand(createCompleteNProject(), catalog, {
-      kind: 'ReplaceHubVisitOrder',
+      kind: 'ReplaceHubActionOrder',
       hub: createHubDecisionAddress(nBiome, 'hub'),
-      hubSlotKeys: ['combat01'],
+      actions: hubVisitActions(['combat01']),
     });
     const reset = applyProjectCommand(partial, catalog, {
       kind: 'ResetHubBoard',
@@ -285,7 +286,7 @@ describe('authored-project commands and topology', () => {
       startedNTopology(reset).decisions.find((decision) => decision.kind === 'hub'),
     ).toMatchObject({
       openTargets: [],
-      visitOrder: [],
+      actions: [],
     });
     expect(() =>
       applyProjectCommand(partial, catalog, {
@@ -326,9 +327,9 @@ describe('authored-project commands and topology', () => {
 
   it('removes the completed-Hub Preboss handoff when an aggregate visit order shortens the Hub', () => {
     const project = applyProjectCommand(createCompleteNProject(), catalog, {
-      kind: 'ReplaceHubVisitOrder',
+      kind: 'ReplaceHubActionOrder',
       hub: createHubDecisionAddress(nBiome, 'hub'),
-      hubSlotKeys: ['combat01', 'combat02', 'combat03', 'combat04', 'combat05'],
+      actions: hubVisitActions(['combat01', 'combat02', 'combat03', 'combat04', 'combat05']),
     });
     const topology = project.route.biomes.find((biome) => biome.biomeKey === 'N')?.topology;
     if (topology === null || topology === undefined) throw new Error('N topology is required');
@@ -342,21 +343,35 @@ describe('authored-project commands and topology', () => {
       false,
     );
     expect(topology.decisions.find((decision) => decision.kind === 'hub')).toMatchObject({
-      visitOrder: ['combat01', 'combat02', 'combat03', 'combat04', 'combat05'],
+      actions: hubVisitActions(['combat01', 'combat02', 'combat03', 'combat04', 'combat05']),
     });
   });
 
   it('reorders a complete Hub visit prefix without rewriting its completed handoff', () => {
     const project = applyProjectCommand(createCompleteNProject(), catalog, {
-      kind: 'ReplaceHubVisitOrder',
+      kind: 'ReplaceHubActionOrder',
       hub: createHubDecisionAddress(nBiome, 'hub'),
-      hubSlotKeys: ['combat06', 'combat05', 'combat04', 'combat03', 'combat02', 'combat01'],
+      actions: hubVisitActions([
+        'combat06',
+        'combat05',
+        'combat04',
+        'combat03',
+        'combat02',
+        'combat01',
+      ]),
     });
     const topology = project.route.biomes.find((biome) => biome.biomeKey === 'N')?.topology;
     if (topology === null || topology === undefined) throw new Error('N topology is required');
 
     expect(topology.decisions.find((decision) => decision.kind === 'hub')).toMatchObject({
-      visitOrder: ['combat06', 'combat05', 'combat04', 'combat03', 'combat02', 'combat01'],
+      actions: hubVisitActions([
+        'combat06',
+        'combat05',
+        'combat04',
+        'combat03',
+        'combat02',
+        'combat01',
+      ]),
     });
     expect(
       topology.decisions.some(
@@ -379,9 +394,9 @@ describe('authored-project commands and topology', () => {
     ]) {
       expect(() =>
         applyProjectCommand(project, catalog, {
-          kind: 'ReplaceHubVisitOrder',
+          kind: 'ReplaceHubActionOrder',
           hub,
-          hubSlotKeys,
+          actions: hubVisitActions(hubSlotKeys),
         }),
       ).toThrow(ProjectCommandContractError);
     }
@@ -400,7 +415,7 @@ describe('authored-project commands and topology', () => {
     expect(hub.openTargets).toHaveLength(8);
     expect(hub.openTargets.map((target) => target.hubSlotKey)).not.toContain('combat07');
     expect(hub.openTargets.map((target) => target.hubSlotKey)).toContain('combat08');
-    expect(hub.visitOrder).toHaveLength(6);
+    expect(hubVisitSlotKeys(hub)).toHaveLength(6);
     expect(
       topology.decisions.some(
         (decision) => decision.kind === 'exit' && decision.source.kind === 'hubDecision',

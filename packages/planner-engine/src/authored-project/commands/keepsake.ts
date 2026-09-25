@@ -1,6 +1,7 @@
 import type { Catalog } from '../../catalog-schema';
-import type { AuthoredKeepsakeEquipResults, ProjectDocument } from '../model';
-import { failCommand, locateBiome, requireOccurrence } from './contract';
+import type { AuthoredKeepsakeEquipResults, HubDecision, ProjectDocument } from '../model';
+import { failCommand, locateBiome, requireOccurrence, requireTopology } from './contract';
+import { replaceDecision, updateTopology } from './topology/construction';
 import { updateOccurrence } from './occurrence/mutation';
 import { roomActionKey } from '../room-actions/key';
 import { createBiomeAddress } from '../addresses';
@@ -37,11 +38,39 @@ export function applyKeepsakeCommand(
     )
       failCommand(command, `unknown trait ${command.targetTraitKey}`);
     const located = locateBiome(document, catalog, command);
-    const occurrence = requireOccurrence(
-      located.plan,
-      command.outcome.action.occurrenceId,
-      command,
-    );
+    const action = command.outcome.action;
+    if (action.kind === 'hubFountain') {
+      const topology = requireTopology(located.plan, command);
+      const hub = topology.decisions.find(
+        (decision): decision is HubDecision =>
+          decision.kind === 'hub' && decision.hubKey === action.hubKey,
+      );
+      if (
+        action.routeKey !== command.outcome.routeKey ||
+        action.biomeKey !== command.outcome.biomeKey ||
+        hub === undefined ||
+        !hub.actions.some((candidate) => candidate.kind === 'useFountain')
+      )
+        failCommand(command, 'outcome does not own the exact fountain action');
+      const { fountainRarityResult, ...withoutOutcome } = hub;
+      void fountainRarityResult;
+      return updateTopology(
+        document,
+        located,
+        replaceDecision(
+          topology,
+          Object.freeze(
+            command.targetTraitKey === null
+              ? withoutOutcome
+              : {
+                  ...withoutOutcome,
+                  fountainRarityResult: Object.freeze({ targetTraitKey: command.targetTraitKey }),
+                },
+          ),
+        ),
+      );
+    }
+    const occurrence = requireOccurrence(located.plan, action.occurrenceId, command);
     const expectedActionKey = roomActionKey({ kind: 'useFountain' });
     const declarationActions = assembleRoomActionDomain({
       catalog,
@@ -50,15 +79,13 @@ export function applyKeepsakeCommand(
       routePosition: resolveRoutePosition(catalog, document.route, command.outcome.biomeKey),
     }).activeReferences;
     if (
-      command.outcome.action.kind !== 'roomAction' ||
-      command.outcome.action.routeKey !== command.outcome.routeKey ||
-      command.outcome.action.biomeKey !== command.outcome.biomeKey ||
-      command.outcome.action.actionKey !== expectedActionKey ||
+      action.routeKey !== command.outcome.routeKey ||
+      action.biomeKey !== command.outcome.biomeKey ||
+      action.actionKey !== expectedActionKey ||
       !declarationActions.some((reference) => reference.kind === 'useFountain') ||
       !occurrence.roomActions.order.some(
         (reference) =>
-          reference.kind === 'useFountain' &&
-          roomActionKey(reference) === command.outcome.action.actionKey,
+          reference.kind === 'useFountain' && roomActionKey(reference) === action.actionKey,
       )
     )
       failCommand(command, 'outcome does not own the exact fountain action');

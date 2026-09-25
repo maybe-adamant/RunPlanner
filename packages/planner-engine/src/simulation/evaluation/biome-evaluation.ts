@@ -320,7 +320,11 @@ export function materializedBiomePrefixCoveragePoint(
       ? Object.freeze({ owner: prefix.frontier.origin, checkpoint: 'beforeTargetGeneration' })
       : Object.freeze({ owner: lastTarget.origin, checkpoint: 'afterTargetGeneration' });
   }
-  if (prefix.frontier?.kind === 'hubBoard' || prefix.frontier?.kind === 'hubVisit') {
+  if (
+    prefix.frontier?.kind === 'hubBoard' ||
+    prefix.frontier?.kind === 'hubVisit' ||
+    prefix.frontier?.kind === 'hubFountain'
+  ) {
     if (prefix.frontier.kind === 'hubVisit' && 'phase' in prefix.frontier) {
       if (prefix.frontier.phase === 'targetLifecycle') {
         return Object.freeze({

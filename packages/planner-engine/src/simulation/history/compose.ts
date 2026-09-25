@@ -355,7 +355,9 @@ function appendHubVisitFrontier(
  * batch. The board is generated when the Hub reaches its outgoing checkpoint;
  * the Handoff target is appended after the chosen visits, but remains in that
  * same physical generation sequence. This preserves the persistent Hub as
- * the stable parent without inventing a second outgoing lifecycle.
+ * the stable parent without inventing a second outgoing lifecycle. The
+ * fountain use happens in the Hub itself: after entry or a completed visit's
+ * return, and always before the next room entry or the Handoff generation.
  */
 function appendHubDecision(
   writer: HistorySegmentWriter,
@@ -378,7 +380,19 @@ function appendHubDecision(
       });
     },
   });
-  for (const visit of decision.visits) appendVisit(writer, catalog, visit, decision.room);
+  const appendFountainAfter = (visitCount: number): void => {
+    if (decision.fountain?.precedingVisitCount !== visitCount) return;
+    writer.append({
+      kind: 'fountainUsed',
+      origin: decision.room.origin,
+      owner: decision.fountain.origin,
+    });
+  };
+  appendFountainAfter(0);
+  for (const visit of decision.visits) {
+    appendVisit(writer, catalog, visit, decision.room);
+    appendFountainAfter(visit.visitIndex);
+  }
   if (handoff === undefined) return decision.room;
   appendBatchState(writer, handoff);
   appendGeneratedTargets(writer, decision.room.origin, handoff.targets, {
@@ -824,6 +838,8 @@ function composeBiomeHistoryPrefixResult(
       } else if (snapshot.frontier?.kind === 'hubVisit' && 'phase' in snapshot.frontier) {
         if (current.kind !== 'hub') fail('Hub visit frontier does not follow the persistent Hub');
         appendHubVisitFrontier(writer, catalog, snapshot.frontier);
+      } else if (snapshot.frontier?.kind === 'hubFountain' && current.kind !== 'hub') {
+        fail('Hub fountain frontier does not follow the persistent Hub');
       }
     },
   };

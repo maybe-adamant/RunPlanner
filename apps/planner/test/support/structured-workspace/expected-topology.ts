@@ -16,6 +16,7 @@ import {
   type OccurrenceId,
   type TargetAddress,
   type AdditionalExitAddress,
+  hubVisitSlotKeys,
 } from '@run-planner/engine/authored-project';
 
 export interface ExpectedWorkspaceOccurrenceOwner {
@@ -147,7 +148,7 @@ export function expectedWorkspaceTopologyManifest(
           }),
         );
       }
-      for (const [index, hubSlotKey] of decision.visitOrder.entries()) {
+      for (const [index, hubSlotKey] of hubVisitSlotKeys(decision).entries()) {
         hubVisits.push(
           Object.freeze({
             address: createHubVisitAddress(biome, decision.hubKey, index + 1),

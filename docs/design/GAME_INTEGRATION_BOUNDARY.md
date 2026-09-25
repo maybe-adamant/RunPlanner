@@ -388,6 +388,12 @@ special topology and interaction owners:
   pair, acquisition, and the selected Chaos map's declaration-sized visible
   return batch to G.
 
+The N Hub overview publishes its required room-visit count and its one
+required fountain use as `hub.fountain`: a `fountainUse` interaction owned by
+the Hub fountain address, the number of completed room visits and Hub returns
+preceding it, and any Aromatic Phial target. It is a Hub-owned interaction,
+not a next-room Timeline transaction.
+
 For Chaos, the selected blessing is reserved for the selected curse before the
 native screen is constructed. The other two blessings remain distinct
 native-generated peers. Their omission from the engine document is deliberate:

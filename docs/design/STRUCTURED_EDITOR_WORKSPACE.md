@@ -663,9 +663,10 @@ Timeline is map-only. Open doors retain their stable room labels and reward
 icons; transparent markers are unvisited, solid markers carry the authored
 visit badge above the room circle. Clicking an unvisited door appends it to the
 dense prefix when capacity permits; visited doors do not reorder or open a
-second reward preview. **Reset visits** submits the empty prefix as one undoable
-edit, including normal downstream cleanup. The engine and application retain
-complete visit-order proposal/reordering support even though this UI uses only
+second reward preview. **Reset visits** submits the empty action prefix,
+clearing the fountain use and its Phial outcome, as one undoable edit,
+including normal downstream cleanup. The engine and application retain
+complete action-order proposal/reordering support even though this UI uses only
 append and Reset.
 
 The existing Hub-owned interaction assesses complete proposals with Hub-level

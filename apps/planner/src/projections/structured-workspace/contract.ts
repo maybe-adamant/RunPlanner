@@ -52,8 +52,8 @@ export type {
   WorkspaceHubSlotCloseInteraction,
   WorkspaceHubSlotInteraction,
   WorkspaceHubSlotOpeningAttempt,
-  WorkspaceHubVisitOrderInteraction,
-  WorkspaceHubVisitOrderProposal,
+  WorkspaceHubActionOrderInteraction,
+  WorkspaceHubActionOrderProposal,
   WorkspaceStageDecisionRemoval,
   WorkspaceStartInteraction,
   WorkspaceTakeoverBatchInteraction,
@@ -156,7 +156,7 @@ import type {
   WorkspaceExitSelectionInteraction,
   WorkspaceHubBoardResetInteraction,
   WorkspaceHubSlotInteraction,
-  WorkspaceHubVisitOrderInteraction,
+  WorkspaceHubActionOrderInteraction,
   WorkspaceStartInteraction,
   WorkspaceTakeoverBatchInteraction,
   WorkspaceTopologyRemovalInteraction,
@@ -348,7 +348,7 @@ export interface WorkspaceInteractionCatalog {
   readonly roomActions: ReadonlyMap<string, WorkspaceRoomActionInteraction>;
   readonly hubSlots: ReadonlyMap<string, WorkspaceHubSlotInteraction>;
   readonly hubBoardResets: ReadonlyMap<string, WorkspaceHubBoardResetInteraction>;
-  readonly hubVisitOrders: ReadonlyMap<string, WorkspaceHubVisitOrderInteraction>;
+  readonly hubActionOrders: ReadonlyMap<string, WorkspaceHubActionOrderInteraction>;
   readonly rewards: ReadonlyMap<string, WorkspaceRewardInteraction>;
   readonly acquisitionConversions: ReadonlyMap<string, WorkspaceAcquisitionConversionInteraction>;
   readonly traitOffers: ReadonlyMap<string, WorkspaceTraitOfferInteraction>;

@@ -30,8 +30,8 @@ function expectedStructuralInteraction(
       return interactions.fieldsCageOutcomes.get(key);
     case 'hubSlot':
       return interactions.hubSlots.get(key);
-    case 'hubVisitOrder':
-      return interactions.hubVisitOrders.get(key);
+    case 'hubActionOrder':
+      return interactions.hubActionOrders.get(key);
     case 'roomPicker':
       return interactions.rooms.get(key);
     case 'start':
@@ -303,7 +303,7 @@ function assertRenderedNodeControls(
         }
       }
       const visitOrderKey = workspaceTestOwnerKey(node.owner);
-      const interaction = interactions.hubVisitOrders.get(visitOrderKey);
+      const interaction = interactions.hubActionOrders.get(visitOrderKey);
       assertExactObservedInteraction(
         interaction,
         visitOrderKey,

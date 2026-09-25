@@ -35,7 +35,7 @@ import {
   encounterPhaseSequenceStatusForProjectEvaluationAssembly,
   simulateProjectAssembly,
 } from '@run-planner/engine/simulation';
-import { authorLegalTraitOffers } from '@run-planner/test-fixtures/shared';
+import { authorLegalTraitOffers, hubVisitActions } from '@run-planner/test-fixtures/shared';
 import {
   createCompleteFGProject,
   goldenFBiome,
@@ -802,9 +802,9 @@ describe('authored encounter occurrence commands', () => {
     });
 
     const withoutStory = applyProjectCommand(authored, catalog, {
-      kind: 'ReplaceHubVisitOrder',
+      kind: 'ReplaceHubActionOrder',
       hub: createHubDecisionAddress(nBiome, 'hub'),
-      hubSlotKeys: visitSlotKeys.filter((slotKey) => slotKey !== 'story'),
+      actions: hubVisitActions(visitSlotKeys.filter((slotKey) => slotKey !== 'story')),
     });
     expect(
       encounterPhaseCandidateSupportForProjectEvaluationAssembly(
@@ -817,9 +817,9 @@ describe('authored encounter occurrence commands', () => {
     });
 
     const repicked = applyProjectCommand(withoutStory, catalog, {
-      kind: 'ReplaceHubVisitOrder',
+      kind: 'ReplaceHubActionOrder',
       hub: createHubDecisionAddress(nBiome, 'hub'),
-      hubSlotKeys: visitSlotKeys,
+      actions: hubVisitActions(visitSlotKeys),
     });
     expect(occurrence(repicked, 'N', storyId).encounters.traitOffersByPhase).toMatchObject({
       Encounter: { Story_Medea_01: { selectedOptionKey: 'option2' } },
@@ -930,9 +930,9 @@ describe('authored encounter occurrence commands', () => {
     });
     const initial = createProjectHistory(selected);
     const withoutVisit = applyProjectHistoryCommand(initial, catalog, {
-      kind: 'ReplaceHubVisitOrder',
+      kind: 'ReplaceHubActionOrder',
       hub: createHubDecisionAddress(nBiome, 'hub'),
-      hubSlotKeys: ['combat01', 'combat03', 'combat04', 'combat05', 'combat06'],
+      actions: hubVisitActions(['combat01', 'combat03', 'combat04', 'combat05', 'combat06']),
     });
     const closed = applyProjectHistoryCommand(withoutVisit, catalog, {
       kind: 'CloseHubSlot',

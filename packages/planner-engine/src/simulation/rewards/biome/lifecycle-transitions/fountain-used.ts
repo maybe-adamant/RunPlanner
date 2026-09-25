@@ -9,7 +9,7 @@ import {
   semanticAddressKey,
 } from '../../../../authored-project/addresses';
 import { ownerRegion } from '../../../finding-regions';
-import type { CanonicalAuthoredRoom } from '../../../materialization';
+import type { AuthoredFountainRarityResult } from '../../../../authored-project/model';
 import { assessPhialTraitTargets, consumePhial } from '../../../keepsakes/trait-effects';
 import { settleFountainRarityMutation } from '../../../traits';
 import { advanceRewardBranches } from '../../branch-lifecycle';
@@ -29,11 +29,11 @@ export interface FountainUsedTransition {
   readonly timelineFacts: PlannerTimelineFacts;
 }
 
-/** Resolves the one occurrence-owned Phial use, immediately before later actions. */
+/** Resolves one occurrence- or Hub-owned fountain use, immediately before later actions. */
 export function applyFountainUsedTransition(
   catalog: Catalog,
   event: Extract<import('../../../history').HistoryEvent, { readonly kind: 'fountainUsed' }>,
-  room: CanonicalAuthoredRoom | undefined,
+  result: AuthoredFountainRarityResult | undefined,
   branches: readonly RewardBranchState[],
 ): FountainUsedTransition {
   const outcome = createFountainRarityOutcomeAddress(event.owner);
@@ -62,11 +62,7 @@ export function applyFountainUsedTransition(
   const hasConsumptionGuard = frontiers.some(
     (frontier) => frontier.status === 'pending' && frontier.consumptionTargetKeys.length > 0,
   );
-  if (
-    room === undefined ||
-    event.origin.kind !== 'occurrence' ||
-    room.fountainRarityResult === undefined
-  ) {
+  if (result === undefined) {
     if (!needsTarget && !hasConsumptionGuard)
       return Object.freeze({
         branches: advanceRewardBranches(branches, event.sequence),
@@ -75,7 +71,7 @@ export function applyFountainUsedTransition(
         timelineFacts,
       });
   }
-  if (needsTarget && room?.fountainRarityResult === undefined) {
+  if (needsTarget && result === undefined) {
     return Object.freeze({
       branches: Object.freeze([]),
       candidate,
@@ -91,7 +87,7 @@ export function applyFountainUsedTransition(
       timelineFacts,
     });
   }
-  const targetTraitKey = room?.fountainRarityResult?.targetTraitKey;
+  const targetTraitKey = result?.targetTraitKey;
   if (
     targetTraitKey !== undefined &&
     frontiers.some(

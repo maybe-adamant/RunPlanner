@@ -1362,13 +1362,34 @@
                   "occurrenceId": "surface-n-combat23"
                 }
               ],
-              "visitOrder": [
-                "combat05",
-                "miniBoss01",
-                "combat02",
-                "combat11",
-                "combat23",
-                "combat09"
+              "actions": [
+                {
+                  "kind": "useFountain"
+                },
+                {
+                  "kind": "roomVisit",
+                  "hubSlotKey": "combat05"
+                },
+                {
+                  "kind": "roomVisit",
+                  "hubSlotKey": "miniBoss01"
+                },
+                {
+                  "kind": "roomVisit",
+                  "hubSlotKey": "combat02"
+                },
+                {
+                  "kind": "roomVisit",
+                  "hubSlotKey": "combat11"
+                },
+                {
+                  "kind": "roomVisit",
+                  "hubSlotKey": "combat23"
+                },
+                {
+                  "kind": "roomVisit",
+                  "hubSlotKey": "combat09"
+                }
               ]
             },
             {

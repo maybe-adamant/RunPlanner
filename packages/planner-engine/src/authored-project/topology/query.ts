@@ -16,6 +16,7 @@ import type {
   ExitDecision,
   ExitDecisionSource,
   ExitTargetReference,
+  HubAction,
   HubDecision,
   OccurrenceId,
   RoomOccurrence,
@@ -653,9 +654,9 @@ export interface HubTerminalTakeoverForSource {
 
 /**
  * The completed-Hub Preboss handoff is structurally available only after the
- * persisted board satisfies the declaration's open-set bound and visit
- * count.  This deliberately does not inspect reward or generation validity:
- * those findings may remain editable without hiding the Hub-owned handoff.
+ * persisted board satisfies the declaration's open-set bound and room-visit
+ * count.  This deliberately does not inspect fountain placement, reward or
+ * generation validity: those remain editable without hiding the handoff.
  */
 export type HubDecisionHandoffReadiness =
   | { readonly kind: 'missing' }
@@ -696,14 +697,42 @@ export function hubDecisionHandoffReadiness(
       maximumCount: descriptor.openCount.max,
     });
   }
-  if (decision.visitOrder.length !== descriptor.requiredVisits) {
+  const visits = hubVisitSlotKeys(decision);
+  if (visits.length !== descriptor.requiredVisits) {
     return Object.freeze({
       kind: 'visitOrderIncomplete',
-      actualCount: decision.visitOrder.length,
+      actualCount: visits.length,
       requiredCount: descriptor.requiredVisits,
     });
   }
   return Object.freeze({ kind: 'ready' });
+}
+
+/** Room-only view of the Hub action order; visit ordinals count room visits only. */
+export function hubVisitSlotKeys(decision: Pick<HubDecision, 'actions'>): readonly string[] {
+  return Object.freeze(
+    decision.actions.flatMap((action) => (action.kind === 'roomVisit' ? [action.hubSlotKey] : [])),
+  );
+}
+
+/** Exact structural shape of one Hub action. */
+export function isHubAction(value: unknown): value is HubAction {
+  if (value === null || typeof value !== 'object') return false;
+  const action = value as Readonly<Record<string, unknown>>;
+  const keys = Object.keys(action);
+  return action.kind === 'useFountain'
+    ? keys.length === 1
+    : action.kind === 'roomVisit' && typeof action.hubSlotKey === 'string' && keys.length === 2;
+}
+
+/** Room visits completed before the Hub fountain use, or undefined while it is unplaced. */
+export function hubFountainPrecedingVisitCount(
+  decision: Pick<HubDecision, 'actions'>,
+): number | undefined {
+  const index = decision.actions.findIndex((action) => action.kind === 'useFountain');
+  return index < 0
+    ? undefined
+    : decision.actions.slice(0, index).filter((action) => action.kind === 'roomVisit').length;
 }
 
 /**

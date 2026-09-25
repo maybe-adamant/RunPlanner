@@ -9,6 +9,9 @@ import {
   createEncounterPhaseAddress,
   createExitDecisionAddress,
   createExitSelectionAddress,
+  createFountainRarityOutcomeAddress,
+  createHubDecisionAddress,
+  createHubFountainAddress,
   createHubSlotAddress,
   createHubVisitAddress,
   createIncomingRewardAddress,
@@ -26,6 +29,7 @@ import {
   type AuthoredBiomePlan,
   type ProjectDocument,
   type TraitOfferAddress,
+  hubVisitSlotKeys,
 } from '@run-planner/engine/authored-project';
 import {
   encounterPhaseCandidateSupportForProjectEvaluationAssembly,
@@ -43,7 +47,7 @@ import {
 } from '@run-planner/engine/simulation';
 import { beforeAll, describe, expect, it, vi } from 'vitest';
 
-import { authorLegalTraitOffers } from '@run-planner/test-fixtures/shared';
+import { authorLegalTraitOffers, hubVisitActions } from '@run-planner/test-fixtures/shared';
 import {
   createGoldenFGHIProject,
   createUnderworldFWellCheckpoint,
@@ -54,9 +58,11 @@ import {
 import {
   loadSurfaceNEntryFrontierProject,
   loadSurfaceNOPQProject,
+  loadSurfaceNProject,
   nBiome,
   nLocalOccurrenceId,
   nOccurrenceId,
+  nVisitSlotKeys,
   oBiome,
   oOccurrenceIds,
 } from '@run-planner/test-fixtures/surface';
@@ -378,8 +384,8 @@ function withoutStructuralInteraction(
       return { ...interactions, fieldsCageOutcomes: without(interactions.fieldsCageOutcomes) };
     case 'hubSlot':
       return { ...interactions, hubSlots: without(interactions.hubSlots) };
-    case 'hubVisitOrder':
-      return { ...interactions, hubVisitOrders: without(interactions.hubVisitOrders) };
+    case 'hubActionOrder':
+      return { ...interactions, hubActionOrders: without(interactions.hubActionOrders) };
     case 'roomPicker':
       return { ...interactions, rooms: without(interactions.rooms) };
     case 'start':
@@ -1853,7 +1859,7 @@ describe('structured workspace overlay contract', () => {
         node.kind === 'hubDecision',
     );
     const slotTarget = decision?.openTargets[0];
-    const firstVisitSlotKey = decision?.visitOrder[0];
+    const firstVisitSlotKey = decision === undefined ? undefined : hubVisitSlotKeys(decision)[0];
     if (
       decision === undefined ||
       hub === undefined ||
@@ -2098,7 +2104,7 @@ describe('structured workspace overlay contract', () => {
         'exitSelection',
         'fieldsCageOutcome',
         'hubSlot',
-        'hubVisitOrder',
+        'hubActionOrder',
         'roomPicker',
         'start',
         'takeoverBatch',
@@ -2145,16 +2151,16 @@ describe('structured workspace overlay contract', () => {
 
     const visitOrderInteraction =
       hub?.kind === 'hubDecision'
-        ? projected.interactions.hubVisitOrders.get(hub.marker.focusKey)
+        ? projected.interactions.hubActionOrders.get(hub.marker.focusKey)
         : undefined;
     if (hub?.kind !== 'hubDecision' || visitOrderInteraction === undefined) {
       throw new Error('Hub visit-order mutation fixture is missing');
     }
-    const hubVisitOrders = new Map(projected.interactions.hubVisitOrders);
-    hubVisitOrders.delete(hub.marker.focusKey);
+    const hubActionOrders = new Map(projected.interactions.hubActionOrders);
+    hubActionOrders.delete(hub.marker.focusKey);
     expect(() =>
       assertRenderedWorkspaceStructuralControlClosure({
-        interactions: { ...projected.interactions, hubVisitOrders },
+        interactions: { ...projected.interactions, hubActionOrders },
         route: projected.route,
       }),
     ).toThrow(/Hub visit order .* has no exact workspace interaction/);
@@ -2283,5 +2289,35 @@ describe('structured workspace overlay contract', () => {
     expect(() => assertRoutes(projected.focusByOwner, withoutDecisionMarker)).toThrow(
       /decision-owned takeover route has no workspace marker/,
     );
+  });
+});
+
+describe('Hub fountain finding destinations', () => {
+  it('routes the Hub-owned Phial outcome and fountain placement to the Hub timeline', () => {
+    const hub = createHubDecisionAddress(nBiome, 'hub');
+    const fountain = createHubFountainAddress(nBiome, 'hub');
+    const outcome = createFountainRarityOutcomeAddress(fountain);
+    const phial = applyProjectCommand(loadSurfaceNProject(), catalog, {
+      kind: 'ReplaceStartingKeepsake',
+      selection: createRouteStartKeepsakeSelectionAddress('Surface'),
+      keepsakeKey: 'FountainRarityKeepsake',
+    });
+    const unplanned = applyProjectCommand(loadSurfaceNProject(), catalog, {
+      kind: 'ReplaceHubActionOrder',
+      hub,
+      actions: hubVisitActions(nVisitSlotKeys, null),
+    });
+    for (const [project, owner] of [
+      [phial, outcome],
+      [unplanned, fountain],
+    ] as const) {
+      const workspace = projectWorkspace(project);
+      expect(workspace.findingsByRepairTarget.has(semanticAddressKey(owner))).toBe(true);
+      expect(workspace.focusByOwner.get(semanticAddressKey(owner))).toMatchObject({
+        hubTab: 'timeline',
+        inspectorSubject: { kind: 'node', nodeKey: `hub:${semanticAddressKey(hub)}` },
+        ownerAddress: owner,
+      });
+    }
   });
 });

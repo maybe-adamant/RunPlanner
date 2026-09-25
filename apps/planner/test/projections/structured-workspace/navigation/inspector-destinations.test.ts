@@ -32,7 +32,7 @@ import {
 import { simulateProjectAssembly } from '@run-planner/engine/simulation';
 import { describe, expect, it } from 'vitest';
 
-import { editTestRoomActionOrder } from '@run-planner/test-fixtures/shared';
+import { editTestRoomActionOrder, hubVisitActions } from '@run-planner/test-fixtures/shared';
 import {
   createGoldenFGHProject,
   createGoldenFGHIProject,
@@ -1286,8 +1286,8 @@ describe('workspace inspector destinations', () => {
     const truncated = project(
       applyProjectCommand(loadSurfaceNOPQProject(), catalog, {
         hub: createHubDecisionAddress(nBiome, 'hub'),
-        hubSlotKeys: nVisitSlotKeys.slice(0, 3),
-        kind: 'ReplaceHubVisitOrder',
+        actions: hubVisitActions(nVisitSlotKeys.slice(0, 3)),
+        kind: 'ReplaceHubActionOrder',
       }),
     );
     const truncatedN = biome(truncated, 'N');

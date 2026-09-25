@@ -1,5 +1,9 @@
 import type { FountainRarityOutcomeAddress } from '../../authored-project/addresses';
-import type { AuthoredFountainRarityResult, ProjectDocument } from '../../authored-project/model';
+import type {
+  AuthoredFountainRarityResult,
+  HubDecision,
+  ProjectDocument,
+} from '../../authored-project/model';
 import type { Catalog } from '../../catalog-schema';
 import { type FountainRarityCandidateArtifacts } from '../keepsakes/candidate-artifacts';
 import type { ProjectEvaluation } from '../evaluation/evaluation-products';
@@ -31,8 +35,14 @@ function authoredValue(
     project.route.routeKey === address.routeKey
       ? project.route.biomes.find((biome) => biome.biomeKey === address.biomeKey)
       : undefined;
+  const action = address.action;
+  if (action.kind === 'hubFountain')
+    return plan?.topology?.decisions.find(
+      (decision): decision is HubDecision =>
+        decision.kind === 'hub' && decision.hubKey === action.hubKey,
+    )?.fountainRarityResult;
   return (plan?.topology?.occurrences ?? []).find(
-    (occurrence) => occurrence.occurrenceId === address.action.occurrenceId,
+    (occurrence) => occurrence.occurrenceId === action.occurrenceId,
   )?.fountainRarityResult;
 }
 

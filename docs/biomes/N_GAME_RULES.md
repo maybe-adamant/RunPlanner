@@ -109,15 +109,17 @@ or make `N_PreBoss01` an occurrence-sourced candidate.
   it with the persistent Hub decision identified by the semantic key `hub`;
   removing the Hub restores the exact envelope.
 - The Hub decision records the PreHub occurrence as its source and owns its
-  open slot membership and ordered visit list; it does not own room-local
-  target state.
-- Nine or ten declaration-fixed Hub slots may be open. Exactly six distinct
-  open slots are visited in authored order. A target occurrence remains owned
+  open slot membership, one ordered action list, and the fountain's Phial
+  outcome; it does not own room-local target state.
+- Nine or ten declaration-fixed Hub slots may be open. The action list holds
+  exactly six distinct open-slot room visits and one fountain use in authored
+  order. A target occurrence remains owned
   by its slot while its incoming reward belongs to that occurrence. Its local
   generation and visit order belong to a parent-sourced `LocalVisitDecision`;
   each generated side target is a distinct occurrence.
 - Completing the six-visit predicate enables the declaration-fixed
-  completed-Hub exit.
+  completed-Hub exit. Fountain placement does not gate that handoff, but an
+  unplanned fountain use stops assessment before departure.
   Its persisted source is `{ kind: 'hubDecision', decisionKey: 'hub' }` and
   it creates the fixed width-one `N_PreBoss01` Shop occurrence.
 - Selecting that Preboss creates the ordinary `N_Boss01` and route-position
@@ -177,8 +179,9 @@ when that slot is never visited. Revisiting the physical Hub restores the same
 board and offers; it does not consume reward bags again or create a second
 topology owner.
 
-The visit list is independent from board generation order. It contains six
-distinct open slot keys and is the only authored traversal order. Fixed slot
+The action list is independent from board generation order. Its room visits
+are six distinct open slot keys and it is the only authored traversal order.
+Visit ordinals count room visits only. Fixed slot
 identity, physical-door evidence, target game name, incoming reward, pylon
 requirements, and side-slot descriptors remain catalog facts. The UI must not
 offer arbitrary room replacement for one of those slots.
@@ -212,6 +215,22 @@ All open Hub offers contribute to the Hub reward lookup before the final shop
 is validated. This includes unvisited targets, because the game creates the
 full board as one reward region. The Preboss Shop's lookup therefore cannot be
 computed from only the six visited entries.
+
+### Hub fountain
+
+The Hub's `HealthFountainN` (`RoomDataN.lua:1605`, `ObstacleDataN.lua:849`)
+is available from Hub entry and becomes a required departure object once six
+Soul Pylons have spawned (`EventLogic.lua:1832`); its used state survives Hub
+returns. `UseHealthFountain` (`InteractLogic.lua:741`) records the use and
+applies Aromatic Phial there. Use is therefore mandatory before leaving the
+Hub, but its position among the visits is flexible.
+
+The planner models one Hub-owned fountain action in the same action list:
+initially, after a completed visit and its Hub return, or after the sixth visit
+before the Preboss handoff. It settles in the Hub before the next room's entry,
+reusing ordinary fountain Phial assessment, consumption, rarity mutation and
+offer invalidation. It neither regenerates the board, replays Hub entry nor
+advances counters. Side-room excursions stay inside their visit.
 
 ### Main targets, pylons, and side rooms
 

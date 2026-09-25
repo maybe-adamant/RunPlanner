@@ -28,6 +28,7 @@ import {
   type AcquisitionRoleAddress,
   type ExitDecisionAddress,
   type EncounterPhaseAddress,
+  type HubAction,
   type HubDecisionAddress,
   type HubSlotAddress,
   type IncomingRewardAddress,
@@ -214,10 +215,10 @@ export interface CandidateProjectionSession {
     localOccurrenceIdsBySlot: Readonly<Record<string, OccurrenceId>>,
     values: readonly boolean[],
   ) => readonly CandidateOptionProjection<boolean>[];
-  readonly hubVisitOrders: (
+  readonly hubActionOrders: (
     hub: HubDecisionAddress,
-    values: readonly (readonly string[])[],
-  ) => readonly CandidateOptionProjection<readonly string[]>[];
+    values: readonly (readonly HubAction[])[],
+  ) => readonly CandidateOptionProjection<readonly HubAction[]>[];
   readonly localVisitGenerations: (
     slot: LocalVisitSlotAddress,
     values: readonly SideRoomGeneration[],
@@ -470,7 +471,7 @@ function candidateForced(
         evaluation.result.selectedPossible && evaluation.result.supportedStoreKeys.length === 1
       );
     case 'hubSlot':
-    case 'hubVisitOrder':
+    case 'hubActionOrder':
     case 'rewardWheelOfferCount':
     case 'rewardWheelPicked':
     case 'sideRoomGeneration':

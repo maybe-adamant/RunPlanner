@@ -83,8 +83,7 @@ const findingCopy = {
     description: 'Open nine or ten rooms.',
   },
   hubVisitOrderIncomplete: {
-    title: 'Choose six Hub visits',
-    description: 'Visit six different open rooms.',
+    title: 'Plan six room visits and use the fountain',
   },
   hubOpenSlotUnavailable: {
     title: 'Hub rooms conflict',

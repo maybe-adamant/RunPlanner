@@ -12,6 +12,7 @@ import {
   encodeProjectDocument,
   semanticAddressKey,
   type TraitOfferOwnerAddress,
+  hubVisitSlotKeys,
 } from '@run-planner/engine/authored-project';
 import { simulateProject, type SelectedTraitOfferAssessment } from '@run-planner/engine/simulation';
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -333,7 +334,7 @@ describe('surface product loop', () => {
     const nTopology = edited.route.biomes.find((biome) => biome.biomeKey === 'N')?.topology;
     const hub = nTopology?.decisions.find((decision) => decision.kind === 'hub');
     if (hub === undefined || hub.kind !== 'hub') throw new Error('edited Hub is missing');
-    expect(hub.visitOrder).toEqual([]);
+    expect(hub.actions).toEqual([]);
     expect(
       nTopology?.decisions.some(
         (decision) => decision.kind === 'exit' && decision.source.kind === 'hubDecision',
@@ -403,7 +404,7 @@ describe('surface product loop', () => {
       throw new Error('N Hub topology is missing after closing Combat 03');
     }
     expect(hub.openTargets).toHaveLength(8);
-    expect(hub.visitOrder).toHaveLength(6);
+    expect(hubVisitSlotKeys(hub)).toHaveLength(6);
     expect(
       topology.decisions.some(
         (decision) => decision.kind === 'exit' && decision.source.kind === 'hubDecision',

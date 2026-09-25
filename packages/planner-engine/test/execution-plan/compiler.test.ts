@@ -2148,6 +2148,18 @@ describe('execution-plan compiler and codec', () => {
       for (const occurrence of biome.topology?.occurrences ?? []) {
         delete occurrence.startingRewardAcquisition;
       }
+      const decisions = (biome.topology as { decisions?: Record<string, unknown>[] } | null)
+        ?.decisions;
+      for (const decision of decisions ?? []) {
+        if (decision.kind !== 'hub') continue;
+        // Schema 87 persisted room visits only; its migration restores fountain use first.
+        const actions = decision.actions as { kind: string; hubSlotKey?: string }[];
+        expect(actions[0]).toEqual({ kind: 'useFountain' });
+        decision.visitOrder = actions.flatMap((action) =>
+          action.hubSlotKey === undefined ? [] : [action.hubSlotKey],
+        );
+        delete decision.actions;
+      }
     }
     for (const biome of legacy.route.biomes) {
       if (biome.biomeKey !== 'Q') continue;

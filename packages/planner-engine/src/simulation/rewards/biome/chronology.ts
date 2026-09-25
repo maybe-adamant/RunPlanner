@@ -26,7 +26,11 @@ import { parseSeaStarDuplicateSiteKey } from '../../../authored-project/acquisit
 import { parseHermesShrineDeliveryEntryKey } from '../../../authored-project/hermes-shrine-delivery';
 import type { ResolvedRewardOffer } from '../../../reward-kernel';
 import type { HistoryStateView } from '../../history';
-import type { CanonicalAuthoredRoom, CanonicalHubRoom } from '../../materialization';
+import type {
+  CanonicalAuthoredRoom,
+  CanonicalHubDecision,
+  CanonicalHubRoom,
+} from '../../materialization';
 import type { CanonicalDecision } from '../../materialization/model';
 import { findingIdentityKey, ownerRegion, type FindingRegionEntry } from '../../finding-regions';
 import { bossDoorRewardStoreMissingFinding } from '../../completeness';
@@ -1389,10 +1393,18 @@ export function evaluateBiomeRewardChronology(
       }
       case 'fountainUsed': {
         const room = rooms.get(semanticAddressKey(event.origin));
+        const owner = event.owner;
         const transition = applyFountainUsedTransition(
           catalog,
           event,
-          room?.kind === 'authored' ? room : undefined,
+          owner.kind === 'hubFountain'
+            ? snapshot.decisions.find(
+                (decision): decision is CanonicalHubDecision =>
+                  decision.kind === 'hub' && decision.origin.hubKey === owner.hubKey,
+              )?.fountain?.fountainRarityResult
+            : room?.kind === 'authored'
+              ? room.fountainRarityResult
+              : undefined,
           branches,
         );
         branches = transition.branches;

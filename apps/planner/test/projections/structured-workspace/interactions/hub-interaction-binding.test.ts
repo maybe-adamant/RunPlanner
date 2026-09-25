@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import * as support from '@planner-test/support/structured-workspace/interaction-binding.test-support';
+import { hubVisitActions } from '@run-planner/test-fixtures/shared';
 
 const {
   bind,
@@ -18,8 +19,8 @@ describe('structured workspace interaction binding', () => {
   it('binds one provisional Hub-slot identity per explicit opening attempt', () => {
     const project = applyProjectCommand(loadSurfaceNOPQProject(), catalog, {
       hub: createHubDecisionAddress(nBiome, 'hub'),
-      hubSlotKeys: nVisitSlotKeys.slice(0, 5),
-      kind: 'ReplaceHubVisitOrder',
+      actions: hubVisitActions(nVisitSlotKeys.slice(0, 5)),
+      kind: 'ReplaceHubActionOrder',
     });
     const allocated: ReturnType<typeof createOccurrenceId>[] = [];
     const { interactions } = bind(project, 'Surface', 'N', () => {
@@ -60,8 +61,8 @@ describe('structured workspace interaction binding', () => {
   it('binds Hub closure and complete visit-order proposals to exact commands', () => {
     const project = applyProjectCommand(loadSurfaceNOPQProject(), catalog, {
       hub: createHubDecisionAddress(nBiome, 'hub'),
-      hubSlotKeys: nVisitSlotKeys.slice(0, 5),
-      kind: 'ReplaceHubVisitOrder',
+      actions: hubVisitActions(nVisitSlotKeys.slice(0, 5)),
+      kind: 'ReplaceHubActionOrder',
     });
     const { interactions } = bind(project, 'Surface', 'N');
     const opened = [...interactions.hubSlots.values()].find(
@@ -80,32 +81,34 @@ describe('structured workspace interaction binding', () => {
     expect(interactions.hubBoardResets.get(semanticAddressKey(hub))?.intent).toEqual({
       command: { kind: 'ResetHubBoard', hub },
     });
-    const visitOrder = interactions.hubVisitOrders.get(semanticAddressKey(hub));
+    const visitOrder = interactions.hubActionOrders.get(semanticAddressKey(hub));
     if (visitOrder === undefined) throw new Error('Hub visit-order interaction is missing');
-    expect(interactions.hubVisitOrders).toHaveLength(1);
+    expect(interactions.hubActionOrders).toHaveLength(1);
     const reordered = [
       visitOrder.selectedHubSlotKeys[0]!,
       visitOrder.selectedHubSlotKeys[2]!,
       visitOrder.selectedHubSlotKeys[1]!,
       ...visitOrder.selectedHubSlotKeys.slice(3),
     ];
-    const replacement = visitOrder.proposalFor(reordered);
+    const replacement = visitOrder.proposalFor(hubVisitActions(reordered));
 
-    expect(visitOrder.proposalFor(reordered)).toBe(replacement);
-    expect(replacement.selected).toEqual(reordered);
+    expect(visitOrder.proposalFor(hubVisitActions(reordered))).toBe(replacement);
+    expect(replacement.selected).toEqual(hubVisitActions(reordered));
     expect(replacement.intent()).toEqual({
       command: {
         hub,
-        hubSlotKeys: reordered,
-        kind: 'ReplaceHubVisitOrder',
+        actions: hubVisitActions(reordered),
+        kind: 'ReplaceHubActionOrder',
       },
     });
-    const shortened = visitOrder.proposalFor(visitOrder.selectedHubSlotKeys.slice(0, 3));
+    const shortened = visitOrder.proposalFor(
+      hubVisitActions(visitOrder.selectedHubSlotKeys.slice(0, 3)),
+    );
     expect(shortened.intent()).toEqual({
       command: {
         hub,
-        hubSlotKeys: visitOrder.selectedHubSlotKeys.slice(0, 3),
-        kind: 'ReplaceHubVisitOrder',
+        actions: hubVisitActions(visitOrder.selectedHubSlotKeys.slice(0, 3)),
+        kind: 'ReplaceHubActionOrder',
       },
     });
   });

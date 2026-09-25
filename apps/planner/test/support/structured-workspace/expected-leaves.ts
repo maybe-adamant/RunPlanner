@@ -22,6 +22,7 @@ import {
   type SemanticAddress,
   type TraitOfferOwnerAddress,
   type LevelResolutionAddress,
+  hubVisitSlotKeys,
 } from '@run-planner/engine/authored-project';
 import type { Catalog, RoomDeclaration } from '@run-planner/engine/catalog-schema';
 import { fieldsBatchFacts } from '@run-planner/engine/simulation';
@@ -112,7 +113,7 @@ export function expectedWorkspaceDetailsActiveOccurrenceIds(
   active.add(topology.startOccurrenceId);
   for (const decision of topology.decisions) {
     if (decision.kind === 'hub') {
-      for (const slotKey of decision.visitOrder) {
+      for (const slotKey of hubVisitSlotKeys(decision)) {
         const target = decision.openTargets.find((candidate) => candidate.hubSlotKey === slotKey);
         if (target !== undefined) active.add(target.occurrenceId);
       }

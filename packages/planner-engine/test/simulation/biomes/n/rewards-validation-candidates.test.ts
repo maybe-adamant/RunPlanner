@@ -41,6 +41,7 @@ import {
   replaceTestShopOfferActions,
   authorLegalTraitOffers,
   authorTestArtificerReplacement,
+  hubVisitActions,
 } from '@run-planner/test-fixtures/shared';
 import {
   loadSurfaceNProject,
@@ -296,12 +297,12 @@ describe('N Hub rewards, validation, and candidates', () => {
     });
     expect(
       candidates.evaluate({
-        kind: 'hubVisitOrder',
+        kind: 'hubActionOrder',
         hub,
-        hubSlotKeys: ['combat05', 'miniBoss01', 'combat02'],
+        actions: hubVisitActions(['combat05', 'miniBoss01', 'combat02']),
       }),
     ).toMatchObject({
-      kind: 'hubVisitOrder',
+      kind: 'hubActionOrder',
       result: {
         selectedPossible: true,
         findings: [
@@ -344,11 +345,18 @@ describe('N Hub rewards, validation, and candidates', () => {
 
     expect(
       candidates.evaluate({
-        kind: 'hubVisitOrder',
+        kind: 'hubActionOrder',
         hub: createHubDecisionAddress(nBiome, 'hub'),
-        hubSlotKeys: ['combat05', 'miniBoss01', 'combat02', 'combat11', 'combat23', 'combat09'],
+        actions: hubVisitActions([
+          'combat05',
+          'miniBoss01',
+          'combat02',
+          'combat11',
+          'combat23',
+          'combat09',
+        ]),
       }),
-    ).toMatchObject({ kind: 'hubVisitOrder', result: { selectedPossible: true } });
+    ).toMatchObject({ kind: 'hubActionOrder', result: { selectedPossible: true } });
     expect(
       candidates.evaluate({
         kind: 'sideRoomGeneration',
@@ -387,9 +395,9 @@ describe('N Hub rewards, validation, and candidates', () => {
       decision: createExitDecisionAddress(nBiome, { kind: 'hubDecision', decisionKey: 'hub' }),
     });
     project = applyProjectCommand(project, catalog, {
-      kind: 'ReplaceHubVisitOrder',
+      kind: 'ReplaceHubActionOrder',
       hub: createHubDecisionAddress(nBiome, 'hub'),
-      hubSlotKeys: ['combat05', 'miniBoss01', 'combat02'],
+      actions: hubVisitActions(['combat05', 'miniBoss01', 'combat02']),
     });
     const evaluation = simulateProject(catalog, project);
     const biome = evaluation.route.biomes.find((candidate) => candidate.biomeKey === 'N');
@@ -400,11 +408,11 @@ describe('N Hub rewards, validation, and candidates', () => {
         catalog,
         simulateProjectAssembly(catalog, project),
       ).evaluate({
-        kind: 'hubVisitOrder',
+        kind: 'hubActionOrder',
         hub: createHubDecisionAddress(nBiome, 'hub'),
-        hubSlotKeys: ['combat05', 'miniBoss01', 'combat02', 'combat09'],
+        actions: hubVisitActions(['combat05', 'miniBoss01', 'combat02', 'combat09']),
       }),
-    ).toMatchObject({ kind: 'hubVisitOrder', result: { selectedPossible: true } });
+    ).toMatchObject({ kind: 'hubActionOrder', result: { selectedPossible: true } });
   });
 
   it('permits the audited ten-target peer-source repeat without changing physical-board ownership', () => {
@@ -456,9 +464,9 @@ describe('N Hub rewards, validation, and candidates', () => {
       miniBoss01: 'PoseidonUpgrade',
     } as const;
     let project = applyProjectCommand(loadSurfaceNProject(), catalog, {
-      kind: 'ReplaceHubVisitOrder',
+      kind: 'ReplaceHubActionOrder',
       hub: createHubDecisionAddress(nBiome, 'hub'),
-      hubSlotKeys: Object.keys(hubSources),
+      actions: hubVisitActions(Object.keys(hubSources)),
     });
     for (const [occurrenceId, source] of [
       [nOccurrenceIds.opening, 'ApolloUpgrade'],
@@ -542,9 +550,16 @@ describe('N Hub rewards, validation, and candidates', () => {
     }
     expect(validN(project).biome.validity).toBe('valid');
     project = applyProjectCommand(project, catalog, {
-      kind: 'ReplaceHubVisitOrder',
+      kind: 'ReplaceHubActionOrder',
       hub: createHubDecisionAddress(nBiome, 'hub'),
-      hubSlotKeys: ['combat02', 'combat09', 'miniBoss01', 'combat05', 'combat03', 'combat01'],
+      actions: hubVisitActions([
+        'combat02',
+        'combat09',
+        'miniBoss01',
+        'combat05',
+        'combat03',
+        'combat01',
+      ]),
     });
     const { biome } = validN(project);
     const hub = biome.snapshot.decisions.find((decision) => decision.kind === 'hub');
@@ -773,9 +788,16 @@ describe('N Hub rewards, validation, and candidates', () => {
     ).evaluate({ kind: 'incomingReward', reward, value });
 
     let blocked = applyProjectCommand(loadSurfaceNProject(), catalog, {
-      kind: 'ReplaceHubVisitOrder',
+      kind: 'ReplaceHubActionOrder',
       hub: createHubDecisionAddress(nBiome, 'hub'),
-      hubSlotKeys: ['combat02', 'combat05', 'miniBoss01', 'combat11', 'combat23', 'combat09'],
+      actions: hubVisitActions([
+        'combat02',
+        'combat05',
+        'miniBoss01',
+        'combat11',
+        'combat23',
+        'combat09',
+      ]),
     });
     blocked = applyProjectCommand(blocked, catalog, {
       kind: 'ReplaceLocalVisitOrder',
@@ -1059,12 +1081,12 @@ describe('N Hub rewards, validation, and candidates', () => {
     });
     expect(
       candidates.evaluate({
-        kind: 'hubVisitOrder',
+        kind: 'hubActionOrder',
         hub: createHubDecisionAddress(nBiome, 'hub'),
-        hubSlotKeys: [...nVisitSlotKeys],
+        actions: hubVisitActions([...nVisitSlotKeys]),
       }),
     ).toMatchObject({
-      kind: 'hubVisitOrder',
+      kind: 'hubActionOrder',
       result: {
         selectedPossible: true,
         findings: [
@@ -1111,12 +1133,12 @@ describe('N Hub rewards, validation, and candidates', () => {
     });
     expect(
       candidates.evaluate({
-        kind: 'hubVisitOrder',
+        kind: 'hubActionOrder',
         hub: createHubDecisionAddress(nBiome, 'hub'),
-        hubSlotKeys: [...nVisitSlotKeys],
+        actions: hubVisitActions([...nVisitSlotKeys]),
       }),
     ).toMatchObject({
-      kind: 'hubVisitOrder',
+      kind: 'hubActionOrder',
       result: {
         selectedPossible: true,
         findings: expect.arrayContaining([
@@ -1285,14 +1307,28 @@ describe('N Hub rewards, validation, and candidates', () => {
         localOccurrenceIdsBySlot: {},
       },
       {
-        kind: 'hubVisitOrder',
+        kind: 'hubActionOrder',
         hub: createHubDecisionAddress(nBiome, 'hub'),
-        hubSlotKeys: ['combat03', 'miniBoss01', 'combat02', 'combat11', 'combat23', 'combat09'],
+        actions: hubVisitActions([
+          'combat03',
+          'miniBoss01',
+          'combat02',
+          'combat11',
+          'combat23',
+          'combat09',
+        ]),
       },
       {
-        kind: 'hubVisitOrder',
+        kind: 'hubActionOrder',
         hub: createHubDecisionAddress(nBiome, 'hub'),
-        hubSlotKeys: ['miniBoss01', 'miniBoss01', 'combat02', 'combat11', 'combat23', 'combat09'],
+        actions: hubVisitActions([
+          'miniBoss01',
+          'miniBoss01',
+          'combat02',
+          'combat11',
+          'combat23',
+          'combat09',
+        ]),
       },
       {
         kind: 'sideRoomGeneration',
@@ -1352,7 +1388,7 @@ describe('N Hub rewards, validation, and candidates', () => {
       result: { selectedPossible: true, findings: [] },
     });
     expect(alternateVisit).toMatchObject({
-      kind: 'hubVisitOrder',
+      kind: 'hubActionOrder',
       result: {
         selectedPossible: true,
         findings: expect.arrayContaining([
@@ -1368,7 +1404,7 @@ describe('N Hub rewards, validation, and candidates', () => {
       },
     });
     expect(duplicateVisit).toMatchObject({
-      kind: 'hubVisitOrder',
+      kind: 'hubActionOrder',
       result: { selectedPossible: false },
     });
     expect(forcedSideGeneration).toMatchObject({
@@ -1427,22 +1463,29 @@ describe('N Hub rewards, validation, and candidates', () => {
       catalog,
       simulateProjectAssembly(catalog, project),
     ).evaluate({
-      kind: 'hubVisitOrder',
+      kind: 'hubActionOrder',
       hub: createHubDecisionAddress(nBiome, 'hub'),
-      hubSlotKeys: ['combat03', 'combat05', 'miniBoss01', 'combat02', 'combat11', 'combat23'],
+      actions: hubVisitActions([
+        'combat03',
+        'combat05',
+        'miniBoss01',
+        'combat02',
+        'combat11',
+        'combat23',
+      ]),
     });
 
     expect(candidate).toMatchObject({
-      kind: 'hubVisitOrder',
+      kind: 'hubActionOrder',
       result: {
-        candidateHubSlotKeys: [
+        candidateActions: hubVisitActions([
           'combat03',
           'combat05',
           'miniBoss01',
           'combat02',
           'combat11',
           'combat23',
-        ],
+        ]),
         selectedPossible: true,
         findings: expect.arrayContaining([
           expect.objectContaining({

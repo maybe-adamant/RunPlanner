@@ -46,6 +46,7 @@ import {
   selectProjectHistory,
   selectProfileSession,
 } from '@planner/state/store';
+import { loadSurfaceNProject } from '@run-planner/test-fixtures/surface';
 
 interface ProfileFixture {
   readonly adapter: ProfileFileAdapter;
@@ -1158,6 +1159,33 @@ describe('project profile operations', () => {
       status: 'success',
       message:
         'Migrated the profile to schema 88; retained encounter choices may need missing fields repaired.',
+    });
+    legacy.schemaVersion = 87;
+    profile.setLoadJson(JSON.stringify(legacy));
+    await expect(application.projectOperations.loadProfile()).resolves.toEqual({
+      operation: 'loadProfile',
+      status: 'success',
+      message: 'Migrated the profile to schema 88.',
+    });
+    const hubLegacy = JSON.parse(encodeProjectDocument(loadSurfaceNProject())) as {
+      schemaVersion: number;
+      route: { biomes: { topology: { decisions: Record<string, unknown>[] } | null }[] };
+    };
+    hubLegacy.schemaVersion = 87;
+    for (const biome of hubLegacy.route.biomes)
+      for (const decision of biome.topology?.decisions ?? []) {
+        if (decision.kind !== 'hub') continue;
+        decision.visitOrder = (decision.actions as { hubSlotKey?: string }[]).flatMap((action) =>
+          action.hubSlotKey === undefined ? [] : [action.hubSlotKey],
+        );
+        delete decision.actions;
+      }
+    profile.setLoadJson(JSON.stringify(hubLegacy));
+    await expect(application.projectOperations.loadProfile()).resolves.toEqual({
+      operation: 'loadProfile',
+      status: 'success',
+      message:
+        'Migrated the profile to schema 88; the Hub fountain use is placed before the first visit, so an Aromatic Phial target may need repair.',
     });
   });
 });

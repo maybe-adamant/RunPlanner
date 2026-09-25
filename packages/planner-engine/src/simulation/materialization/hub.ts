@@ -3,6 +3,7 @@ import { createDefaultRoomEncounterState } from '../../authored-project/room-sta
 import { alwaysActiveEncounterSlotKeys, materializeEncounterPhases } from '../encounters/resolve';
 import {
   createHubDecisionAddress,
+  createHubFountainAddress,
   createHubOpenSetAddress,
   createHubRoomAddress,
   createHubSlotAddress,
@@ -32,6 +33,10 @@ import type {
 } from './model';
 import { materializeAuthoredRoom } from './rooms/assemble';
 import type { ResolvedRoutePosition } from '../../authored-project/route-context';
+import {
+  hubFountainPrecedingVisitCount,
+  hubVisitSlotKeys,
+} from '../../authored-project/topology/query';
 
 export class HubMaterializationContractError extends Error {
   constructor(detail: string) {
@@ -221,7 +226,7 @@ function materializeBoard(
   loadout: RouteWeaponAspectLoadout,
 ): CanonicalHubBoard {
   const bySlot = new Map(decision.openTargets.map((target) => [target.hubSlotKey, target]));
-  const visited = new Set(decision.visitOrder);
+  const visited = new Set(hubVisitSlotKeys(decision));
   return Object.freeze({
     origin: createHubOpenSetAddress(biome, descriptor.hubKey),
     room,
@@ -267,7 +272,7 @@ function materializeVisits(
 ): readonly CanonicalHubVisit[] {
   const targets = new Map(board.targets.map((target) => [target.hubSlotKey, target]));
   return Object.freeze(
-    decision.visitOrder.map((slotKey, index): CanonicalHubVisit => {
+    hubVisitSlotKeys(decision).map((slotKey, index): CanonicalHubVisit => {
       const target = targets.get(slotKey);
       if (target === undefined) fail(`Hub visit ${index + 1} lost open slot ${slotKey}`);
       const occurrence = requireOccurrence(occurrences, target.room.occurrenceId);
@@ -348,12 +353,24 @@ export function materializeHubDecision(
     room,
     loadout,
   );
+  const precedingVisitCount = hubFountainPrecedingVisitCount(decision);
   return Object.freeze({
     kind: 'hub',
     origin: createHubDecisionAddress(biome, descriptor.hubKey),
     source: hubSourceReference(biome, decision, occurrences),
     room,
     board,
+    ...(precedingVisitCount === undefined
+      ? {}
+      : {
+          fountain: Object.freeze({
+            origin: createHubFountainAddress(biome, descriptor.hubKey),
+            precedingVisitCount,
+            ...(decision.fountainRarityResult === undefined
+              ? {}
+              : { fountainRarityResult: decision.fountainRarityResult }),
+          }),
+        }),
     visits: materializeVisits(
       catalog,
       biome,

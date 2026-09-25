@@ -4,6 +4,7 @@ import { catalog } from '@run-planner/hades2-catalog';
 import {
   applyProjectCommand,
   createIncomingRewardAddress,
+  hubVisitSlotKeys,
 } from '@run-planner/engine/authored-project';
 import { act, screen, waitFor } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
@@ -41,7 +42,7 @@ describe('HubMapTimeline', () => {
       if (next === undefined) throw new Error('partial Hub has no next open room to append');
       await view.user.click(next.querySelector('img') ?? next);
       await waitFor(() =>
-        expect(nHubState(view.application).decision.visitOrder).toHaveLength(visitCount + 1),
+        expect(hubVisitSlotKeys(nHubState(view.application).decision)).toHaveLength(visitCount + 1),
       );
     }
 
@@ -98,7 +99,7 @@ describe('HubMapTimeline', () => {
 
     await showTimeline(view.user);
     await view.user.click(screen.getByRole('button', { name: 'Reset visits' }));
-    await waitFor(() => expect(nHubState(view.application).decision.visitOrder).toEqual([]));
+    await waitFor(() => expect(nHubState(view.application).decision.actions).toEqual([]));
     expect(
       nHubState(view.application).topology.decisions.some(
         (decision) => decision.kind === 'exit' && decision.source.kind === 'hubDecision',
@@ -113,7 +114,9 @@ describe('HubMapTimeline', () => {
     }
 
     act(() => view.application.store.dispatch(authoredProjectUndoRequested()));
-    await waitFor(() => expect(nHubState(view.application).decision.visitOrder).toHaveLength(6));
+    await waitFor(() =>
+      expect(hubVisitSlotKeys(nHubState(view.application).decision)).toHaveLength(6),
+    );
     expect(nHubState(view.application).topology).toEqual(before);
   });
 
@@ -133,8 +136,10 @@ describe('HubMapTimeline', () => {
       true,
     );
     await view.user.click(next);
-    await waitFor(() => expect(nHubState(view.application).decision.visitOrder).toHaveLength(3));
+    await waitFor(() =>
+      expect(hubVisitSlotKeys(nHubState(view.application).decision)).toHaveLength(3),
+    );
     await view.user.click(screen.getByRole('button', { name: 'Reset visits' }));
-    await waitFor(() => expect(nHubState(view.application).decision.visitOrder).toEqual([]));
+    await waitFor(() => expect(nHubState(view.application).decision.actions).toEqual([]));
   });
 });

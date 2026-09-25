@@ -21,6 +21,7 @@ import {
   authorLegalTraitOffers,
   replaceTestRoomActionOrder,
   replaceTestShopOfferActions,
+  hubVisitActions,
 } from '@run-planner/test-fixtures/shared';
 import { loadUnderworldFGHICheckpoint } from '@run-planner/test-fixtures/checkpoints/underworld';
 import {
@@ -1175,9 +1176,16 @@ describe('engine-owned F/G execution semantic product', () => {
 
   it('publishes Latest Model exact Hammer target from a complete-valid Icarus occurrence', () => {
     let project = applyProjectCommand(loadSurfaceNOPQProject(), catalog, {
-      kind: 'ReplaceHubVisitOrder',
+      kind: 'ReplaceHubActionOrder',
       hub: createHubDecisionAddress(nBiome, 'hub'),
-      hubSlotKeys: ['combat05', 'miniBoss01', 'combat02', 'combat11', 'combat23', 'combat03'],
+      actions: hubVisitActions([
+        'combat05',
+        'miniBoss01',
+        'combat02',
+        'combat11',
+        'combat23',
+        'combat03',
+      ]),
     });
     project = authorLegalTraitOffers(project);
     const phase = createEncounterPhaseAddress(

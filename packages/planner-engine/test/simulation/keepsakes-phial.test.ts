@@ -35,7 +35,7 @@ import { simulateProjectAssembly } from '../../src/simulation';
 import { candidateArtifactsForProjectEvaluationAssembly } from '../../src/simulation/evaluation/project-evaluation-assembly';
 import { applyFountainUsedTransition } from '../../src/simulation/rewards/biome/lifecycle-transitions/fountain-used';
 import { settleNonFinalBossRarityBlocks } from '../../src/simulation/traits/history/transitions';
-import type { CanonicalAuthoredRoom } from '../../src/simulation/materialization';
+import type { AuthoredFountainRarityResult } from '@run-planner/engine/authored-project';
 import type { RewardBranchState } from '../../src/simulation/rewards/branch-primitives';
 import type { HistoryEvent } from '../../src/simulation/history';
 import { initializeTestRewardBranches } from '../support/arcana-fear';
@@ -173,8 +173,8 @@ function bridalPhialHistory() {
   ]);
 }
 
-function fountainRoom(targetTraitKey: string): CanonicalAuthoredRoom {
-  return { fountainRarityResult: { targetTraitKey } } as unknown as CanonicalAuthoredRoom;
+function fountainRoom(targetTraitKey: string): AuthoredFountainRarityResult {
+  return { targetTraitKey };
 }
 
 describe('Aromatic Phial catalog and target domains', () => {

@@ -83,7 +83,7 @@ export interface AuthoredKeepsakeEquipResults {
   readonly transcendentEmbryo?: AuthoredTranscendentEmbryoOutcome;
 }
 
-/** Sparse choice for the exact next fountain use owned by one occurrence. */
+/** Sparse Phial choice for one exact fountain use, owned by an occurrence or the Hub. */
 export interface AuthoredFountainRarityResult {
   readonly targetTraitKey: string;
 }
@@ -481,12 +481,19 @@ export interface HubTargetReference {
   readonly occurrenceId: OccurrenceId;
 }
 
+/** One ordered Hub action: a main-room visit through an open slot, or the fountain use. */
+export type HubAction =
+  { readonly kind: 'roomVisit'; readonly hubSlotKey: string } | { readonly kind: 'useFountain' };
+
 export interface HubDecision {
   readonly kind: 'hub';
   readonly hubKey: string;
   readonly source: Extract<ExitDecisionSource, { readonly kind: 'occurrence' }>;
   readonly openTargets: readonly HubTargetReference[];
-  readonly visitOrder: readonly string[];
+  /** Chronological prefix of distinct room visits and at most one fountain use. */
+  readonly actions: readonly HubAction[];
+  /** Present only when the Hub fountain use owns an authored Phial target. */
+  readonly fountainRarityResult?: AuthoredFountainRarityResult;
 }
 
 export interface LocalVisitTargetReference {

@@ -5,7 +5,7 @@ import {
   workspaceInteractionKey,
   type WorkspaceHubDecisionNode,
   type WorkspaceHubSlot,
-  type WorkspaceHubVisitOrderInteraction,
+  type WorkspaceHubActionOrderInteraction,
   type WorkspaceInteractionCatalog,
   type WorkspaceMarker,
 } from '@planner/projections/structured-workspace';
@@ -144,18 +144,23 @@ export function HubMapTimeline({
   const openSlots = node.slots.filter((slot) => slot.open);
   const slotsByKey = new Map(openSlots.map((slot) => [slot.hubSlotKey, slot] as const));
   const interaction = requireWorkspaceInteraction(
-    interactions.hubVisitOrders,
+    interactions.hubActionOrders,
     workspaceInteractionKey(node.owner),
   );
   const executeIntent = useCommandIntent();
   const candidates =
     useWorkspaceInteractionController<
-      ReturnType<ReturnType<WorkspaceHubVisitOrderInteraction['proposalFor']>['load']>
+      ReturnType<ReturnType<WorkspaceHubActionOrderInteraction['proposalFor']>['load']>
     >();
   const visitOrder = interaction.selectedHubSlotKeys;
   const atCapacity = visitOrder.length === node.requiredVisitCount;
   const appendVisit = (slot: WorkspaceHubSlot): void => {
-    const proposal = interaction.proposalFor(Object.freeze([...visitOrder, slot.hubSlotKey]));
+    const proposal = interaction.proposalFor(
+      Object.freeze([
+        ...interaction.selectedActions,
+        { kind: 'roomVisit' as const, hubSlotKey: slot.hubSlotKey },
+      ]),
+    );
     const options = candidates.activate(proposal);
     if (!candidateMayBeAuthored(options?.[0])) return;
     executeIntent(proposal.intent());

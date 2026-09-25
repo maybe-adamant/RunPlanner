@@ -19,7 +19,11 @@ import {
 import { authoredRoomLifecycleProfileKey, roomLifecycleWindowOrdinal } from './lifecycle-structure';
 import { fieldsDefaultActiveCageCount } from '../fields';
 import { roomActionKey } from './state';
-import { additionalExitsForDecision, selectedExitContinuation } from '../topology/query';
+import {
+  additionalExitsForDecision,
+  hubVisitSlotKeys,
+  selectedExitContinuation,
+} from '../topology/query';
 import { encounterEnvelopeSlots } from '../room-state/encounter-envelope';
 
 function frozen<T>(value: T): T {
@@ -55,7 +59,7 @@ export function structurallyActiveOccurrenceIds(
           changed = true;
         }
         const bySlot = new Map(decision.openTargets.map((target) => [target.hubSlotKey, target]));
-        for (const slotKey of decision.visitOrder) {
+        for (const slotKey of hubVisitSlotKeys(decision)) {
           const target = bySlot.get(slotKey);
           if (target === undefined || active.has(target.occurrenceId)) continue;
           active.add(target.occurrenceId);

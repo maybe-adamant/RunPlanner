@@ -1,4 +1,9 @@
-import { semanticAddressKey, type TargetAddress } from '../../authored-project/addresses';
+import {
+  createBiomeAddress,
+  createHubFountainAddress,
+  semanticAddressKey,
+  type TargetAddress,
+} from '../../authored-project/addresses';
 import type {
   CanonicalAdditionalContinuation,
   CanonicalDecision,
@@ -174,6 +179,29 @@ export function clampPrefix(
     : prefix.decisions[located.decisionIndex];
   if (decision === undefined) return prefix;
   if (decision.kind === 'hub') {
+    if (located.hubFountainPrecedingVisitCount !== undefined) {
+      // Earlier visits and returns stay assessed; the fountain use and later visits do not.
+      const { fountain, ...withoutFountain } = decision;
+      void fountain;
+      return Object.freeze({
+        ...prefix,
+        fixedRoomLinks: Object.freeze([]),
+        decisions: Object.freeze([
+          ...prefix.decisions.slice(0, located.decisionIndex),
+          Object.freeze({
+            ...withoutFountain,
+            visits: Object.freeze(decision.visits.slice(0, located.hubFountainPrecedingVisitCount)),
+          }),
+        ]),
+        frontier: Object.freeze({
+          kind: 'hubFountain',
+          origin: createHubFountainAddress(
+            createBiomeAddress(decision.origin.routeKey, decision.origin.biomeKey),
+            decision.origin.hubKey,
+          ),
+        }),
+      });
+    }
     if (located.hubVisitIndex !== undefined) {
       const frontierVisit = decision.visits[located.hubVisitIndex];
       if (frontierVisit === undefined) return prefix;

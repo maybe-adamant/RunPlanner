@@ -15,6 +15,7 @@ import {
   nBiome,
   nOccurrenceId,
 } from '@run-planner/test-fixtures/surface';
+import { hubVisitActions } from '@run-planner/test-fixtures/shared';
 
 export let invalidTenDoorHubProject: ProjectDocument;
 
@@ -57,9 +58,9 @@ export function nHubOccurrence(application: PlannerApplication, hubSlotKey: stri
 
 export function twoVisitHubProject(): ProjectDocument {
   return applyProjectCommand(loadSurfaceNPartialHubProject(), catalog, {
-    kind: 'ReplaceHubVisitOrder',
+    kind: 'ReplaceHubActionOrder',
     hub: createHubDecisionAddress(nBiome, 'hub'),
-    hubSlotKeys: ['combat05', 'miniBoss01'],
+    actions: hubVisitActions(['combat05', 'miniBoss01']),
   });
 }
 

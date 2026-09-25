@@ -37,7 +37,7 @@ describe('structured workspace structural-control expectations', () => {
       (decision): decision is HubDecision => decision.kind === 'hub',
     );
     if (hub === undefined) throw new Error('Surface/N authored Hub is missing');
-    expect(controls.filter((control) => control.kind === 'hubVisitOrder')).toHaveLength(1);
+    expect(controls.filter((control) => control.kind === 'hubActionOrder')).toHaveLength(1);
 
     const slot = createHubSlotAddress(biome, layout.progression.hubKey, 'combat05');
     const hubOwner = createHubDecisionAddress(biome, layout.progression.hubKey);
@@ -48,7 +48,7 @@ describe('structured workspace structural-control expectations', () => {
     });
     expect(controls).toContainEqual({
       key: semanticAddressKey(hubOwner),
-      kind: 'hubVisitOrder',
+      kind: 'hubActionOrder',
       owner: hubOwner,
     });
   });
