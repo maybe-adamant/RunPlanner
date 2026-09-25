@@ -71,15 +71,24 @@ Chosen model, owner-settled:
   where native builds its options. For an ordinary room reward that is the
   producing phase's `encounterCompleted` event, which the lifecycle appends
   immediately before `encounterEndEffectsApplied`
-  (`simulation/lifecycle/execute.ts`, `recordEncounterCompletion`). For an
-  offer with its own offer point (Fields cages, World Shop items, ship
-  wheels) it is that offer's `offerPointMaterialized` event
+  (`simulation/lifecycle/execute.ts`, `recordEncounterCompletion`). An
+  incoming reward's producing phase is the occurrence's last
+  `encounterCompleted` before the role's producer point, or the producer
+  point itself when no encounter precedes it (Opening rooms, Devotion's
+  chosen pair, story rooms). A ship wheel's reward is also created after its
+  combat (`SpawnRoomReward` in `EncounterEventsShipsCombat`,
+  `EncounterSets.lua:482-489`), so it anchors at its phase's
+  `encounterCompleted`, not at the wheel's offer point: `encounterStarted`
+  writes keepsake state (Fig Leaf, Gorgon) that would otherwise differ. For
+  an offer created at room entry (Fields cages main and optional, both
+  spawned by one `SpawnRewardCages` call, `RoomLogic.lua:5683-5733`; World
+  Shop items) it is that room's `offerPointMaterialized` event
   (`offer-lifecycle/fields-optional-materialization.ts`,
-  `offer-lifecycle/shop-offer-point-materialized.ts`,
-  `offer-lifecycle/reward-wheel-offer-point-materialized.ts`); a wheel's
-  point precedes its own phase and follows the previous phase's deferred end
-  effects (`declarations/lifecycles/ship.ts:14-17`, `execute.ts:405`), so
-  no trait-relevant state separates it from native's spawn. Neither existing
+  `offer-lifecycle/shop-offer-point-materialized.ts`); Fields main cages
+  share the optional-rewards event, named as the Fields offer point. A loot
+  created by a screen (Echo last reward, Sea Star duplicate, Travel Deal
+  refill, Artificer replacement, Nemesis results) anchors at that screen's
+  completion. Neither existing
   reward-identity event is the anchor: `rewardOffered` for an ordinary
   reward is emitted at `roomCreated` (`generation/room-created.ts`, from
   `history/compose.ts`), before the room is entered, and
@@ -100,8 +109,14 @@ Chosen model, owner-settled:
   consuming that result. Every screen kind reaches those two owners: boon,
   hammer, Pom, Chaos (`chaosPair`, `traits/offers.ts:731`), NPC screens, and
   Fallback Gold, which native shows as a row in the same screen
-  (`UpgradeChoiceLogic.lua:149-150`). Direct-child helpers never emit it;
-  missing, invalid and blocked paths never emit it. Each other class below is
+  (`UpgradeChoiceLogic.lua:149-150`). Spell Drop screens close through
+  `AcceptAndCloseSpellScreen` (`SpellScreenLogic.lua:325-354`), never
+  `CloseUpgradeChoiceScreen`, so `providerKind: 'spell'`, direct grants and
+  keepsake equips never publish it. Completion is derived from legality
+  (generation legal, targeted acquisition legal, no blocked child), not from
+  `applied.event`, which a valid Gold screen or Chaos pair leaves undefined.
+  Direct-child helpers never emit it; missing, invalid and blocked paths
+  never emit it. Each other class below is
   a product returned by the transition that models its native contact, never
   an inference from which ledger kinds or equipped traits changed.
 - Rebuild (immediate): the screen-completed product — natively every upgrade
@@ -121,9 +136,11 @@ Chosen model, owner-settled:
   reaching its count (engine `advanceTranscendentEmbryoProgress` reached;
   natively the loot loop runs under `transformBlessing`, outside `if
 oldBlessing`, `:2935-2962` — with or without a blessing to transform); the
-  fountain-rarity keepsake (`rarityMutation` role `fountainRarity`; natively
-  gated by `HasRarifiableTraits`, `InteractLogic.lua:769-773`, so it fires
-  only with a promotion); and the Nemesis trade sale (`traitRemoval` role
+  fountain-rarity keepsake whenever it fires (natively gated by
+  `HasRarifiableTraits`, `InteractLogic.lua:769-773`; the engine's
+  equivalent is a non-empty consumption target set, so both the promotion
+  path and the use-without-mutation path in `fountain-used.ts` invalidate);
+  and the Nemesis trade sale (`traitRemoval` role
   `nemesisTraitTrade`; `TradeDoExchange`, `TradeLogic.lua:191`). The Purging
   Pool sale (`purgingPoolSale`) is silent: `HandleSellChoiceSelection`
   (`SellTraitLogic.lua:327-329`) only removes the trait and pays. A stale
