@@ -1000,8 +1000,8 @@ consumable reuses its ordinary pickup path; replay does not synthesize a
 generic Boon, Pom, or consumable alias. Gold Gold Gold instead observes the
 equipped one-use Echo trait while folding a World Shop's authored order. Once
 the Shop kernel accepts the first paid non-`SpellDrop` source, Gold consumes
-the exact Echo acquisition and materializes the singleton free duplicate from
-pre-source-acquisition history before that paid entry's acquisition roles run.
+the exact Echo acquisition and materializes the singleton free duplicate
+before that paid entry's acquisition roles run.
 Materialization does not acquire the duplicate. A native loot duplicate
 (Boon, Hermes, Hammer, or full Pom) requires pickup; a consumable duplicate,
 including an unopened Mystery Boon, may remain unpicked. Both require explicit
@@ -1015,12 +1015,14 @@ fresh hidden source independently; a Gold duplicate of Nectar follows the Shop
 duplicate profile and does not invent the run-progress Pom effect. Missing or
 context-invalid active children remain exact finding-backed repair owners,
 while dormant or not-yet-generated entries publish no acquisition child.
-Ordinary Gold candidate context is frozen at materialization, even though
-its outcome is authored only after placement. A Mystery Boon's hidden source
-instead uses its actual pickup context. Pom alone
-regenerates its `StackOnly` options at pickup when at least one stored target is
-no longer equipped; if every stored target remains, its materialized options
-stay fixed.
+Recreated and duplicated loot follows the
+[generation-time context](#generation-time-offer-context) rule like any other
+offer: a Gold duplicate exists before its source screen opens and is rebuilt
+when that screen completes, and Reward Reward Reward's loot is created at the
+Echo screen's completion. A Mystery Boon's hidden source does not exist until
+unwrap and uses that state. No open-time Pom target check is modeled; the
+native `StackOnly` regeneration has no reachable trigger once duplicates
+re-anchor at their source screen.
 
 `SpellDrop` deliberately has no last-reward recreation descriptor, so a
 settled spell selection never becomes Reward Reward Reward's replay source.
@@ -1162,14 +1164,15 @@ presentation. Dormant, unpicked and unpurchased sources produce no reached
 trait event.
 
 At the declared lifecycle point, the kernel applies the exact loot/use
-projection and captures one pre-selection history per retained branch.
-Validation separates three products:
+projection. Each retained branch assesses the offer against its
+[generation-time context](#generation-time-offer-context) and settles the
+selection against its current state. Validation separates three products:
 
-| Product                      | Question                                                                                                                |
-| ---------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
-| Individual option assessment | Does this identity and concrete rarity satisfy its declaration, current-state requirements and exact replacement rules? |
-| Complete-screen generation   | Can these distinct alternatives coexist as an initial screen through the provider's construction stages?                |
-| Selected acquisition         | Are the selected child results complete and legal, and what history transitions follow?                                 |
+| Product                      | Question                                                                                                                  |
+| ---------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| Individual option assessment | Does this identity and concrete rarity satisfy its declaration, generation-time requirements and exact replacement rules? |
+| Complete-screen generation   | Can these distinct alternatives coexist as an initial screen through the provider's construction stages?                  |
+| Selected acquisition         | Are the selected child results complete and legal, and what history transitions follow?                                   |
 
 An invalid reached offer keeps its trace, semantic owner and repair capability;
 it does not fold the selected trait. A valid offer folds only its selection
@@ -1178,10 +1181,57 @@ offer but no trait acquisition. Devotion's chosen offer precedes combat and
 the spurned offer observes the resulting state afterward. Shop acquisitions
 settle at their authored timeline positions.
 
+#### Generation-time offer context
+
+A trait offer is evaluated against the state at the position where the game
+builds its options, not the state when it is opened:
+
+| Offer                                                                        | Options built at                                                                                                                               |
+| ---------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| Ordinary incoming reward, incl. Devotion's spurned reward and the H miniboss | The producing phase's `encounterCompleted`, or the producer point when no encounter precedes it (Opening, Devotion's chosen pair, story rooms) |
+| Ship-wheel reward                                                            | Its own phase's `encounterCompleted`                                                                                                           |
+| Fields cage and optional rewards; World Shop items                           | The room's `offerPointMaterialized`                                                                                                            |
+| Hermes Shrine delivery                                                       | Falling due: at encounter end before chamber-count effects, or at room entry                                                                   |
+| Echo last reward; Sea Star duplicate                                         | Its source screen's completion                                                                                                                 |
+| Echo Gold duplicate                                                          | Gold's materialization, before the source screen                                                                                               |
+| Nemesis trade result; Artificer replacement; Travel Deal refill              | The trade, the conversion, or the triggering purchase                                                                                          |
+| `afterUnwrap` roles (Mystery Box), field NPC and Story screens               | Open time                                                                                                                                      |
+
+Three classes of event touch an unopened offer, each a property of the
+transition that owns the native contact:
+
+- **Rebuild.** A completed upgrade screen—boon, Hermes, Hammer, Pom, Chaos
+  pair, NPC screen or Fallback Gold, but not a Spell Drop—publishes one
+  screen-completed product after its selection, nested children (Concave
+  Stone residual, acquisition effects, derived level mutations) and charge
+  consumption (Ordinary, Hymn, Yarn). It re-anchors every unopened offer in
+  the room to the resulting state and clears stale marks. Completion follows
+  legality; a missing, invalid or blocked screen publishes none.
+- **Invalidate.** A Steady Growth interval, a Transcendent Embryo interval, a
+  firing fountain-rarity keepsake and a Nemesis trade sale mark every unopened
+  offer in the room stale, whether or not a trait changed. A stale offer's
+  context is the state at the next rebuild in the room or at its open,
+  whichever comes first.
+- **Silent.** Everything else: curse maturation, essences and element grants,
+  consumables, level changes outside a screen, direct grants, rarity blocks,
+  trait removal (Anvil, Purging Pool sale, Echo double-shop consumption,
+  Experimental Hammer expiry, Jeweled Pom cleanup), Chaos clocks and Death
+  Defiance uses.
+
+The generation-time context supplies identity eligibility, base rarity from
+held rarity sources, replacement support and whether Hymn seeded a swap. The
+current state supplies Rejected, Denial, Calling Card, level and keepsake
+calculations, targeted acquisition, charge consumption and the history
+append, so events between generation and open are never discarded. Offer
+contexts are replaceable simulation state, never persisted authored data;
+opening an offer or leaving its room discards its record. The
+[composition audit](../audits/traits/TRAIT_OFFER_COMPOSITION_AND_FEAR_PRESSURE_AUDIT.md#generation-position-and-option-rebuild)
+owns the native contacts.
+
 #### Ordinary initial-screen support
 
 Olympian/Hermes generation consumes the exact source-rarity context and an
-unchanged pre-offer history. Its staged possibility model covers replacement
+unchanged generation-time history. Its staged possibility model covers replacement
 or core seeding, optional linked-priority insertion, seed rarity, finite
 ordinary bucket draws, replacement vacancy rescue and—only when effective
 Denial is off—final rarity rescue. Empty terminal output means Gold. Short

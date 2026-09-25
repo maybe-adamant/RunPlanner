@@ -574,7 +574,8 @@ same reached reward walk:
   `SelectedTraitOfferAssessment` values at exact `TraitOfferAddress` owners,
   with branch-correlated option, generation and selected-effect assessments.
 - `BiomeCandidateArtifacts.traitOffers.at(address)` returns opaque operations
-  over the captured pre-offer `SimulationState` and source context: complete assessment,
+  over the captured current and generation-time `SimulationState` and source
+  context: complete assessment,
   starting outcome, structural append/removal and selected child queries.
 
 The capability captures each branch before selected settlement or equivalent

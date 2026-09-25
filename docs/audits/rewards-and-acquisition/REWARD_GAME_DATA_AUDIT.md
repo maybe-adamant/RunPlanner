@@ -920,11 +920,12 @@ not automatically acquire that object: its later interaction may be interwoven
 with other purchases and pickups in the room. Loot creation fixes its generated
 offer at materialization, while consumable behavior occurs at interaction.
 `RemoveStoreItem` runs before the purchased loot choice or consumable effect is
-settled, so the duplicate's generation frontier is the pre-source-acquisition
-history rather than the branch after applying that paid reward. Pom loot alone
-has a later conditional regeneration contact: `CreateBoonLootButtons` reruns
-`SetTraitsOnLoot` when any stored `StackOnly` target disappeared before
-interaction.
+settled, so the duplicate loot is created from the pre-source-acquisition
+history; the source screen's close then rebuilds its options, like every live
+loot in the room. The
+[composition audit](../traits/TRAIT_OFFER_COMPOSITION_AND_FEAR_PRESSURE_AUDIT.md#generation-position-and-option-rebuild)
+owns option build, rebuild and regeneration contacts, including why the
+open-time `StackOnly` regeneration has no reachable trigger.
 Blind Box resolves its hidden loot on interaction in the game. Gold's
 `CreateLoot` branch registers a required room object (`RoomLogic.lua`,
 `CreateLoot`); its `CreateConsumableItem` branch does not (`InteractLogic.lua`).
@@ -932,11 +933,10 @@ Thus duplicated boons, Hermes, hammers, and full Poms require pickup, while
 consumables—including unopened Blind Boxes—remain optional. The planner
 requires Timeline placement before editing the stable `echoDoubleShopReward`
 payload, using pickup context for its hidden source. The Shop kernel's
-accepted paid removal consumes Gold and freezes
-the pre-source-acquisition materialization even when later nested source detail
-is invalid; rejection before that checkpoint leaves the trait armed. Ordinary
-payloads remain frozen, while Pom regenerates only under the audited
-existential missing-`StackOnly` condition.
+accepted paid removal consumes Gold and materializes the duplicate even when
+later nested source detail is invalid; rejection before that checkpoint leaves
+the trait armed. A loot duplicate's options are rebuilt when its source screen
+completes and otherwise keep that context until opened.
 
 Fields optional offers now consume the persistent
 `FieldsOptionalRewards` bag sequentially on room entry, independently of cage

@@ -2,8 +2,9 @@
 
 ## Scope and source ownership
 
-This audit owns ordinary initial Olympian/Hermes screen construction, Denial's
-bans and exhaustion effect, and Forfeit's reward substitution. The supported
+This audit owns ordinary initial Olympian/Hermes screen construction, when a
+loot's options are built and rebuilt, Denial's bans and exhaustion effect, and
+Forfeit's reward substitution. The supported
 baseline is a progressed run with three generation positions. Rerolls,
 first-run overrides, profile-first-seen priorities and debug requirement
 stripping are outside the planner model.
@@ -173,6 +174,98 @@ rescue. A native-helper probe produced Glorious Disaster this way. This does
 not permit all Duos in Trials, bypass prerequisites, or enable a normal Duo
 roll. Catalog requirements preserve the resolved source facts; the engine
 needs no five-trait exception switch.
+
+## Generation position and option rebuild
+
+Source anchors in this section were read on 2026-09-24.
+
+### Options are built when the loot is created
+
+`CreateLoot` (`RoomLogic.lua:2240–2300`) calls `RandomSynchronize` (`:2242`)
+and `SetTraitsOnLoot` (`:2266`) immediately. `CreateBoonLootButtons` reuses
+the stored `UpgradeOptions` and regenerates only when they are nil
+(`UpgradeChoiceLogic.lua:117–121`); regeneration recomputes rarity chances as
+well (`SetTraitsOnLoot` calls `GetRarityChances`, `TraitLogic.lua:1776`).
+
+| Carrier                                 | Options built                                                                                         | Source                                                                            |
+| --------------------------------------- | ----------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------- |
+| Ordinary room reward                    | `SpawnRoomReward`, the last event of the encounter's `UnthreadedEvents`, before `EndEncounterEffects` | `EncounterSets.lua:446–452`; `RoomLogic.lua:1919,1931`; `RewardLogic.lua:368–389` |
+| Ship-wheel reward                       | `SpawnRoomReward` after that wheel's combat                                                           | `EncounterSets.lua:482–489`                                                       |
+| Fields cage rewards (main and optional) | one `SpawnRewardCages` call at room setup, before any cage combat                                     | `RoomLogic.lua:5683–5733`                                                         |
+| H miniboss reward                       | before combat                                                                                         | `EncounterSets.lua:464–466`; `RoomLogic.lua:5758–5768`                            |
+| Devotion pair / spurned loot            | before combat / at the post-combat `SpawnRoomReward`                                                  | `EncounterLogic.lua:1682–1698`; `RewardLogic.lua:395–397`                         |
+| World Shop loot                         | room entry (`SpawnStoreItemsInWorld`)                                                                 | `StoreLogic.lua:596–615`                                                          |
+| Blind Box (`BlindBoxLoot`) god loot     | created and opened in one state at unwrap                                                             | `UnwrapRandomLoot`, `StoreLogic.lua:1334–1363`                                    |
+| Echo Gold duplicate                     | `RemoveStoreItem` from `UseLoot`, copying the purchased loot's name, before the source screen opens   | `InteractLogic.lua:649`; `StoreLogic.lua:361–370`                                 |
+| Reward Reward Reward loot               | inside the Echo screen's selection                                                                    | `EchoLastReward`, `EventLogic.lua:1537`                                           |
+| Field NPC and Story screens             | no `CreateLoot`; options start nil and are built at interaction                                       | `UpgradeChoiceLogic.lua:119–121`; `EventLogic.lua:954–1624`                       |
+
+`EndEncounterEffects` runs for every cage encounter (its guard accepts
+`MapState.EncounterOverride`, `RoomLogic.lua:2928`), and `CheckChamberTraits`
+follows the curse-expiry loop within it (`:2965–2969`).
+
+### The contacts that touch stored options
+
+A search for `UpgradeOptions = nil` finds four run-reachable sites:
+
+| Contact                                                | Effect                                                                                                                                                                                                                                                                                                                                                                | Source                                       |
+| ------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------- |
+| Any upgrade screen closes (`CloseUpgradeChoiceScreen`) | After the selection and its Yarn/Ordinary/Rejected/Hymn consumption (`:1124–1142`), every other live loot in the room is rebuilt at once: `RandomSynchronize`, rarity chances recomputed, options nil, then `SetTraitsOnLoot(item)` without arguments, so `BlockRarities` is not reapplied                                                                            | `UpgradeChoiceLogic.lua:1144–1153`           |
+| `AddRarityToTraits`                                    | Nils every live loot unconditionally, even with no promotable trait; regenerated at open. Called by `CheckChamberTraits` whenever a `RoomsPerUpgrade.Rarity` interval hits (Steady Growth, `TraitData_Demeter.lua:1894`), by the fountain-rarity keepsake behind `HasRarifiableTraits` (`InteractLogic.lua:769–773`), and by Hera's supercharge inside its own screen | `TraitLogic.lua:2919,3044–3050`              |
+| Transcendent Embryo interval in `CheckChamberTraits`   | Nils every live loot under `transformBlessing`, outside `if oldBlessing`, so even with no blessing to transform                                                                                                                                                                                                                                                       | `TraitLogic.lua:2935–2962`                   |
+| Nemesis trade sale (`TradeDoExchange`, `SellTrait`)    | Nils every live loot; regenerated at open                                                                                                                                                                                                                                                                                                                             | `TradeLogic.lua:181–194`; `NPCData.lua:5766` |
+
+The three remaining sites (`EventLogic.lua:650,657`, `InteractLogic.lua:722`)
+serve `SpawnAllLoot` and `RespawnAfterUse`, reached only from
+`RoomDataTest.lua:213`.
+
+Every upgrade screen closes through `CloseUpgradeChoiceScreen`, including
+Hammer, Pom, Chaos and every NPC screen opened through
+`OpenUpgradeChoiceMenu`. Fallback Gold is a row of that same screen
+(`UpgradeChoiceLogic.lua:149–150`). The Concave Stone residual is granted
+inside `HandleUpgradeChoiceSelection` (`:1002–1023`), so it shares the one
+close. Spell Drop screens close through `AcceptAndCloseSpellScreen`
+(`SpellScreenLogic.lua:325–354`) and rebuild nothing.
+
+Everything else is silent. Level changes never touch options
+(`AddStackToTraits`, `TraitLogic.lua:2482`; `IncreaseTraitLevel`, `:2533`),
+including the random-stack consumable `UseStoreRewardRandomStack`
+(`ConsumableData.lua:788`) and Hera's `CreditMissingStacks`
+(`TraitData_Hera.lua:2040`). Trait removal never does (`RemoveTraitData`,
+`:1221`): the Anvil's `ChaosHammerUpgrade` (`:2573`) calls only
+`RemoveWeaponTrait`, `AddTraitToHero` and `InvalidateCheckpoint`, which is the
+save checkpoint (`RunLogic.lua:2698`), and Echo's double-shop consumption ends
+in `RemoveTraitData` through `UseHeroTraitsWithValue` (`:430`). The Purging
+Pool's `HandleSellChoiceSelection` only removes the trait and pays
+(`SellTraitLogic.lua:327–329`). Chaos curse maturation (`RoomLogic.lua:2941–
+2997`; `TraitLogic.lua:1304–1334`), Dream essences and `ElementalBoost`,
+consumables, Well purchases (`StoreLogic.lua` only reads `LootObjects`,
+`:317,391`), keepsake swaps and Hex selection leave built options untouched.
+`RoomsPerUpgrade.TraitStacks` has no shipped carrier.
+
+Open-time `StackOnly` regeneration (`CreateBoonLootButtons`,
+`UpgradeChoiceLogic.lua:122–131`: a Pom whose stored targets are no longer all
+held) has no reachable trigger once an Echo duplicate is rebuilt at its source
+screen's close. Echo boons are in no `LootData` or `FieldLootData`
+`TraitIndex` (`IsGodTrait` is false, `TraitLogic.lua:1547–1560`), so consuming
+Gold Gold Gold strands no target; Hammers are not Pom targets; Jeweled Pom
+cleanup and Pool sales occur in rooms without loot; the Nemesis trade
+invalidates anyway.
+
+### Bounded unknowns
+
+- **Loot flags persist across regeneration.** `SetTraitsOnLoot` only ever
+  sets `ForceCommon`, `RarityBoosted` and `UseSwapTrait`
+  (`TraitLogic.lua:1765–1779,1797–1800`); a rebuild or open-time regeneration
+  never clears them, and the close reads them to spend Ordinary, Yarn and Hymn
+  (`UpgradeChoiceLogic.lua:1124–1142`). An offer built under Ordinary and
+  rebuilt after Ordinary expired would keep replacement disabled and try to
+  spend Ordinary. The planner derives these from the context it evaluates.
+- **Devotion's Duo block after a rebuild.** The close rebuild omits
+  `BlockRarities`, so a spurned Devotion loot rebuilt by another screen in its
+  room (for example a delayed Hermes delivery hosted at the same encounter
+  end) would admit a Duo. The planner keeps `devotionNoDuo` for the whole
+  reward. Unprobed.
 
 ## Vow of Denial
 
@@ -347,10 +440,19 @@ requires a concrete legal interleaving that changes the modeled outcome.
 ## Planner disposition
 
 The engine asks whether a complete authored initial screen has one supported
-construction path against one exact pre-offer branch. It does not combine
-evidence from different histories or require a particular random seed. Row
-eligibility, generation feasibility and selected acquisition effects are
-separate questions.
+construction path against one exact generation-time context per branch. It
+does not combine evidence from different histories or require a particular
+random seed. Row eligibility, generation feasibility and selected acquisition
+effects are separate questions.
+
+Each offer's generation context follows the contacts above: creation, one
+rebuild per completed upgrade screen in the room, and deferred regeneration at
+open after any of the three invalidating operations. The
+[Reward Model](../../design/REWARD_MODEL.md#generation-time-offer-context) owns
+the engine rule. The H miniboss reward is anchored at its encounter's
+completion like an ordinary incoming reward rather than at its pre-combat
+creation; state written between the two (encounter-start keepsake effects) is
+not distinguished.
 
 Olympian/Hermes outcomes contain one to three distinct traits or mutually
 exclusive Fallback Gold. Empty and short outcomes obey terminal-stage rules,
@@ -360,5 +462,6 @@ replay and later rerolls do not inherit this algorithm.
 Denial records actual unselected keys; Forfeit substitutes a concrete required
 Onion before the affected trait lifecycle begins. Original reward/bag evidence
 remains intact. Neither effect changes the initial generation envelope.
-The separate native `RestrictBoonChoices` effect has no currently modeled
-supplier and is not conflated with exhaustion.
+Chaos Rejected (`RestrictBoonChoices`) blocks a displayed row without changing
+generation and is not conflated with exhaustion; the
+[Chaos audit](CHAOS_TRAIT_GAME_DATA_AUDIT.md#curse-inventory-and-clocks) owns it.
