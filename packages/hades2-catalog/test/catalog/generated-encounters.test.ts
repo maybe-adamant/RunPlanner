@@ -28,6 +28,14 @@ type BudgetRow = readonly [
 // Dream DataOverrides and HardEncounterOverrideValues carry no budget key except
 // the hard DepthDifficultyRamp, so no Dream rows exist.
 const budgetEvidence: readonly BudgetRow[] = [
+  // OpeningGeneratedF inherits GeneratedF; EncounterData.lua:489 subtracts 20.
+  ['OpeningGeneratedF', 55, 15, 'biomeDepthCache', -20, 1, 30],
+  // EncounterData_Opening.lua:8-80; inherited N encounter-depth axis and opening ramp.
+  ['OpeningGeneratedN', 60, 25, 'biomeEncounterDepth', 0, 1, undefined],
+  ['PreHubGeneratedN', 100, 0, 'biomeEncounterDepth', 0, 1, undefined],
+  // EncounterData_Generated.lua:762-819; both retain UseEncounterDepth from GeneratedN.
+  ['GeneratedNSubRoom', 20, 5, 'biomeEncounterDepth', 0, 1, undefined],
+  ['GeneratedNSubRoom_Bigger', 40, 5, 'biomeEncounterDepth', 0, 1, undefined],
   // EncounterData.lua:199-200, hard :248
   ['GeneratedF', 55, 15, 'biomeDepthCache', 0, 1, 30],
   // BaseDevotion EncounterData_Devotion.lua:6-7, own base :157
@@ -295,8 +303,8 @@ describe('source-declared generated encounter policies', () => {
     }
   });
 
-  it('covers the audited 39 concrete identities without boss/prescribed vignettes', () => {
-    expect(definitions).toHaveLength(39);
+  it('covers the audited 44 concrete identities without boss/prescribed vignettes', () => {
+    expect(definitions).toHaveLength(44);
     expect(definitions.every((definition) => definition.kind === 'combat')).toBe(true);
     expect(
       definitions
@@ -314,6 +322,43 @@ describe('source-declared generated encounter policies', () => {
         policy.choices.length,
       );
     }
+  });
+  it('preserves opening and side-room bounds and the explicit larger-side-room blacklist reset', () => {
+    expect(selection('OpeningGeneratedF')).toMatchObject({
+      waveCount: { min: 1, max: 1 },
+      types: { min: 2, max: 2, cap: 3, hardCap: 4, depthRamp: 0.2, depthAxis: 'biomeDepthCache' },
+      maxEliteTypes: 1,
+    });
+    for (const key of [
+      'OpeningGeneratedN',
+      'PreHubGeneratedN',
+      'GeneratedNSubRoom',
+      'GeneratedNSubRoom_Bigger',
+    ]) {
+      expect(selection(key)).toMatchObject({
+        preparation: 'roomEntry',
+        waveCount: { min: 1, max: 1 },
+        types: {
+          min: 1,
+          max: 2,
+          cap: 2,
+          depthAxis: 'biomeEncounterDepth',
+          escalate: true,
+          depthRamp: key.startsWith('GeneratedNSubRoom') ? 0 : 0.2,
+        },
+        maxEliteTypes: 1,
+        blockFangsAttributes: false,
+      });
+    }
+    // DeepInheritData replaces ordinary tables: Bigger's {} clears the blacklist.
+    const excluded = ['ZombieSpawner', 'ZombieSpawner_Elite'];
+    expect(selection('GeneratedNSubRoom').choices.map((enemy) => enemy.key)).toEqual(
+      selection('GeneratedN')
+        .choices.map((enemy) => enemy.key)
+        .filter((key) => !excluded.includes(key)),
+    );
+    for (const key of ['OpeningGeneratedN', 'PreHubGeneratedN', 'GeneratedNSubRoom_Bigger'])
+      expect(selection(key).choices).toEqual(selection('GeneratedN').choices);
   });
   it('retains exact NPC, template, depth and pool differences', () => {
     expect(selection('ArtemisCombatF')).toMatchObject({

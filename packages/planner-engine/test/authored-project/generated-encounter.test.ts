@@ -139,7 +139,7 @@ describe('sparse generated encounter authorship', () => {
     });
   });
 
-  it('rejects malformed shapes, unknown identities and generation outside the supported room scope', () => {
+  it('rejects malformed shapes and unknown identities', () => {
     for (const value of [
       { kind: 'generated', waveCount: 0 },
       { kind: 'generated', waveCount: 6 },
@@ -159,19 +159,5 @@ describe('sparse generated encounter authorship', () => {
         value: { kind: 'generated', highlightKey: 'InventedEnemy' },
       }),
     ).toThrow();
-    const opening = createGoldenFGHIProject().route.biomes[0]!.topology!.occurrences[0]!;
-    const openingDomain = encounterPhaseAuthoringDomainForRoom(
-      catalog,
-      goldenFBiome,
-      catalog.rooms.byKey[opening.gameName]!,
-      { kind: 'occurrence', occurrenceId: opening.occurrenceId },
-      opening.encounters,
-      { includeFixedPhases: true, resolutionContext: { kind: 'knownReward', rewardType: 'Boon' } },
-    );
-    expect(
-      openingDomain
-        .flatMap((entry) => entry.customization ?? [])
-        .some((entry) => entry.selection.kind === 'generated'),
-    ).toBe(false);
   });
 });

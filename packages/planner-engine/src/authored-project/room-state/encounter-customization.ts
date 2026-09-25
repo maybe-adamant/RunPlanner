@@ -9,7 +9,12 @@ import { encounterSetForBinding } from './encounter-envelope';
 import { decodeGeneratedEncounterCustomization } from './decoding/generated-encounter-codec';
 
 export function supportsGeneratedEncounterCustomization(room: RoomDeclaration): boolean {
-  return room.kind === 'Combat' || room.gameName === 'O_Devotion01';
+  return (
+    room.kind === 'Combat' ||
+    room.kind === 'Opening' ||
+    room.kind === 'PreHub' ||
+    room.gameName === 'O_Devotion01'
+  );
 }
 
 /** Structural customization family for one declared phase; active options stay concrete elsewhere. */

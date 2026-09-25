@@ -44,6 +44,7 @@ import {
   createCompleteFGProject,
   createGoldenFGHIProject,
   goldenFBiome,
+  goldenFStartId,
   goldenFOccurrenceId,
   goldenGBiome,
   createUnderworldFWellCheckpoint,
@@ -90,6 +91,27 @@ afterEach(() => {
 });
 
 describe('OccurrenceEncounterWorkbench', () => {
+  it('exposes generated customization on a fixed opening encounter', async () => {
+    const view = renderOccurrenceWorkbench(
+      createGoldenFGHIProject(),
+      'Underworld',
+      'F',
+      occurrenceById(goldenFStartId),
+    );
+    openRoomTab('Room Timeline');
+    await view.user.click(screen.getByRole('button', { name: 'Customize encounter' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Customize' });
+    await view.user.click(within(dialog).getByRole('button', { name: 'Edit' }));
+    expect(within(dialog).getByRole('radio', { name: '1' })).toBeDefined();
+    expect(within(dialog).queryByRole('radio', { name: '2' })).toBeNull();
+    expect(
+      view.application.store
+        .getState()
+        .projectWorkspace.history!.present.route.biomes[0]?.topology?.occurrences.find(
+          (room) => room.occurrenceId === goldenFStartId,
+        )?.encounters.customizationByPhase?.Encounter?.generatedComposition,
+    ).toMatchObject({ kind: 'generated', waveCount: 1 });
+  });
   it('keeps an ordinary generated encounter Default until a compact customization edit', async () => {
     const occurrenceId = goldenFOccurrenceId(5, 1);
     const project = createGoldenFGHIProject();
