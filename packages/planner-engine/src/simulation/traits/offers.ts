@@ -66,6 +66,15 @@ export function isChaosGodScreenGiver(catalog: Catalog, giverKey: string): boole
   return boonRarityProviderForGiver(catalog.traitGivers.byKey[giverKey]) !== undefined;
 }
 
+/** Rejected shows one fewer choice than the three-row maximum, so only a
+ * three-option screen has a blocked row. */
+export function rejectedBlocksRow(
+  rejectedActive: boolean,
+  offer: Pick<AuthoredTraitOfferTraits, 'options'>,
+): boolean {
+  return rejectedActive && offer.options.length === 3;
+}
+
 /** Resolves offer-generation overrides at one source-screen frontier.
  * Authored rows stay untouched: stale non-Common fresh rows are assessed as
  * invalid, while exact promoted replacement rows remain legal. */
@@ -519,7 +528,7 @@ function evaluateReachedTraitOfferWithAssessments(
         if (offer.kind !== 'traits') return baseComposition;
         if (!isChaosGodScreenGiver(catalog, offer.giverKey)) return baseComposition;
         const chaosFindings: TraitOfferCompositionFinding[] = [];
-        if (hasActiveChaosSemanticTag(before, 'Rejected')) {
+        if (rejectedBlocksRow(hasActiveChaosSemanticTag(before, 'Rejected'), offer)) {
           const blocked = offer.rejectedOptionKey;
           if (blocked === undefined)
             chaosFindings.push(Object.freeze({ code: 'chaosRejectedBlockMissing' }));

@@ -1295,64 +1295,134 @@ describe('Chaos paired-trait history', () => {
     ).toContainEqual({ code: 'chaosRejectedBlockUnavailable', optionKey: 'option1' });
   });
 
-  it('publishes only visible, unselected Rejected rows for a sparse two-option offer', () => {
-    const history = pairHistory(chaos('ChaosRestrictBoonCurse'));
+  it('blocks a Rejected row only on a three-option screen', () => {
+    // Native blocks the rows beyond Rejected's two choices, so only a full screen has one.
+    const rows = [
+      { traitKey: 'HermesWeaponBoon', rarity: 'Common' },
+      { traitKey: 'HermesSpecialBoon', rarity: 'Common' },
+      { traitKey: 'HermesCastDiscountBoon', rarity: 'Common' },
+    ] as const;
+    const active = pairHistory(chaos('ChaosRestrictBoonCurse'));
+    const exhaustedTo = (count: 1 | 2 | 3) =>
+      Object.freeze({
+        ...active,
+        bannedTraitKeys: Object.freeze(
+          catalog.traitGivers.byKey.Hermes!.traitKeys.filter(
+            (key) => !rows.slice(0, count).some((row) => row.traitKey === key),
+          ),
+        ),
+      });
+    const screen = (count: 1 | 2 | 3): AuthoredTraitOfferTraits =>
+      Object.freeze({
+        kind: 'traits',
+        giverKey: 'Hermes',
+        options: Object.freeze(rows.slice(0, count)) as AuthoredTraitOfferTraits['options'],
+        selectedOptionKey: 'option1',
+        rarificationActions: Object.freeze([]),
+      });
     const address = createTraitOfferAddress(rewardOwner, 'self');
-    const capability = createTraitOfferCandidateArtifacts(
-      catalog,
-      new Map([
-        [
-          semanticAddressKey(address),
-          Object.freeze([
-            Object.freeze({ state: traitFrontierState(history), source: Object.freeze({}) }),
-          ]),
-        ],
-      ]),
-    ).at(address);
-    const offer: AuthoredTraitOfferTraits = Object.freeze({
-      kind: 'traits',
-      giverKey: 'Zeus',
-      options: Object.freeze([
-        { traitKey: 'ZeusWeaponBoon', rarity: 'Common' },
-        { traitKey: 'ZeusSpecialBoon', rarity: 'Common' },
-      ]) as AuthoredTraitOfferTraits['options'],
-      selectedOptionKey: 'option2',
-      rarificationActions: Object.freeze([]),
-    });
-    expect(capability?.chaosOfferRules(offer)).toEqual([
-      {
-        rejectedBlockRequired: true,
-        rejectedBlockableOptionKeys: ['option1'],
-        rejectedBlockNeedsRepair: true,
-      },
-    ]);
-    expect(capability?.chaosOfferRules({ ...offer, giverKey: 'SpellDrop' })).toEqual([]);
-    const artemisOffer: AuthoredTraitOfferTraits = Object.freeze({
-      ...offer,
-      giverKey: 'Artemis',
-      options: Object.freeze([
-        { traitKey: 'SupportingFireBoon', rarity: 'Common' },
-        { traitKey: 'CritBonusBoon', rarity: 'Common' },
-      ]) as AuthoredTraitOfferTraits['options'],
-    });
-    expect(
-      evaluateReachedTraitOffer(
+    const assess = (count: 1 | 2 | 3, offer: AuthoredTraitOfferTraits = screen(count)) => {
+      const state = traitFrontierState(exhaustedTo(count));
+      const capability = createTraitOfferCandidateArtifacts(
         catalog,
-        owner,
-        'self',
-        artemisOffer,
-        traitFrontierState(history),
-        {},
-        0,
-      ).composition.findings,
-    ).toContainEqual({ code: 'chaosRejectedBlockMissing' });
-    expect(capability?.chaosOfferRules(artemisOffer)).toEqual([
-      {
-        rejectedBlockRequired: true,
-        rejectedBlockableOptionKeys: ['option1'],
-        rejectedBlockNeedsRepair: true,
-      },
-    ]);
+        new Map([
+          [
+            semanticAddressKey(address),
+            Object.freeze([Object.freeze({ state, source: Object.freeze({}) })]),
+          ],
+        ]),
+      ).at(address);
+      return {
+        composition: evaluateReachedTraitOffer(catalog, owner, 'self', offer, state, {}, 0)
+          .composition,
+        rules: capability?.chaosOfferRules(offer),
+      };
+    };
+
+    for (const count of [1, 2] as const) {
+      expect(assess(count)).toEqual({
+        composition: expect.objectContaining({ legal: true, findings: [] }),
+        rules: [
+          {
+            rejectedBlockRequired: false,
+            rejectedBlockableOptionKeys: [],
+            rejectedBlockNeedsRepair: false,
+          },
+        ],
+      });
+    }
+    expect(assess(2, Object.freeze({ ...screen(2), rejectedOptionKey: 'option2' }))).toEqual({
+      composition: expect.objectContaining({
+        legal: false,
+        findings: [{ code: 'chaosRejectedBlockUnavailable', optionKey: 'option2' }],
+      }),
+      rules: [
+        {
+          rejectedBlockRequired: false,
+          rejectedBlockableOptionKeys: [],
+          rejectedBlockNeedsRepair: true,
+        },
+      ],
+    });
+
+    expect(assess(3)).toEqual({
+      composition: expect.objectContaining({
+        legal: false,
+        findings: [{ code: 'chaosRejectedBlockMissing' }],
+      }),
+      rules: [
+        {
+          rejectedBlockRequired: true,
+          rejectedBlockableOptionKeys: ['option2', 'option3'],
+          rejectedBlockNeedsRepair: true,
+        },
+      ],
+    });
+    expect(assess(3, Object.freeze({ ...screen(3), rejectedOptionKey: 'option3' }))).toEqual({
+      composition: expect.objectContaining({ legal: true, findings: [] }),
+      rules: [
+        {
+          rejectedBlockRequired: true,
+          rejectedBlockableOptionKeys: ['option2', 'option3'],
+          rejectedBlockNeedsRepair: false,
+        },
+      ],
+    });
+    expect(assess(3, Object.freeze({ ...screen(3), giverKey: 'SpellDrop' })).rules).toEqual([]);
+  });
+
+  it('settles a two-option screen under Rejected without a blocked row', () => {
+    const active = pairHistory(chaos('ChaosRestrictBoonCurse'));
+    const exhausted = Object.freeze({
+      ...active,
+      bannedTraitKeys: Object.freeze(
+        catalog.traitGivers.byKey.Hermes!.traitKeys.filter(
+          (key) => key !== 'HermesWeaponBoon' && key !== 'HermesSpecialBoon',
+        ),
+      ),
+    });
+    const settled = settleEncounterTraitOffer(
+      catalog,
+      branchWithHistory(exhausted),
+      rewardOwner,
+      Object.freeze({
+        kind: 'traits' as const,
+        giverKey: 'Hermes',
+        selectedOptionKey: 'option1' as const,
+        rarificationActions: Object.freeze([]),
+        options: Object.freeze([
+          { traitKey: 'HermesWeaponBoon', rarity: 'Common' },
+          { traitKey: 'HermesSpecialBoon', rarity: 'Common' },
+        ]) as AuthoredTraitOfferTraits['options'],
+      }),
+      2,
+      'encounterCompleted',
+    );
+    expect(settled.branch.traitEvaluations?.at(-1)?.composition.findings).toEqual([]);
+    expect(settled.branch.state.traitHistory?.equippedTraits.HermesWeaponBoon).toBeDefined();
+    expect(
+      settled.branch.state.traitHistory?.activeChaosCurses.map((curse) => curse.remaining),
+    ).toEqual([active.activeChaosCurses[0]!.remaining - 1]);
   });
 
   it('keeps Rejected’s blocked identity visible to Denial as an unselected trait, not a replacement row', () => {
@@ -1623,6 +1693,7 @@ describe('Chaos paired-trait history', () => {
   });
 
   it('does not consume Ordinary for rarityless Hades or other story screens', () => {
+    // Native Hades is BlockForceCommon: Ordinary neither forces its screen nor spends a use.
     const offers = [
       {
         selectedTraitKey: 'HadesLifestealBoon',

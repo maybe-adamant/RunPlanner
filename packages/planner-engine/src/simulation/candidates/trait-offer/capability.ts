@@ -39,6 +39,8 @@ import {
   offerGenerationAdjustedOfferSource,
   resolveTraitOfferSource,
   isChaosGodScreenGiver,
+  hasActiveChaosSemanticTag,
+  rejectedBlocksRow,
   assessNaturalSelectionTargets,
   type NaturalSelectionTargetAssessment,
   evaluateReachedTraitOffer,
@@ -798,29 +800,22 @@ export function createTraitOfferCandidateArtifacts(
             ? Object.freeze([])
             : Object.freeze(
                 branchContexts.map((context) => {
-                  const rejected = context.state.traitHistory.activeChaosCurses.some(
-                    (curse) => curse.semanticTag === 'Rejected',
+                  const required = rejectedBlocksRow(
+                    hasActiveChaosSemanticTag(context.state.traitHistory, 'Rejected'),
+                    value,
                   );
+                  const blockable = required
+                    ? (['option1', 'option2', 'option3'] as const).filter(
+                        (key) => key !== value.selectedOptionKey,
+                      )
+                    : [];
                   return Object.freeze({
-                    rejectedBlockRequired: rejected,
-                    rejectedBlockableOptionKeys: Object.freeze(
-                      !rejected
-                        ? []
-                        : (['option1', 'option2', 'option3'] as const)
-                            .slice(0, value?.kind === 'traits' ? value.options.length : 3)
-                            .filter(
-                              (key) => value?.kind !== 'traits' || key !== value.selectedOptionKey,
-                            ),
-                    ),
-                    rejectedBlockNeedsRepair:
-                      value?.kind === 'traits' &&
-                      (rejected
-                        ? value.rejectedOptionKey === undefined ||
-                          !(['option1', 'option2', 'option3'] as const)
-                            .slice(0, value.options.length)
-                            .filter((key) => key !== value.selectedOptionKey)
-                            .includes(value.rejectedOptionKey)
-                        : value.rejectedOptionKey !== undefined),
+                    rejectedBlockRequired: required,
+                    rejectedBlockableOptionKeys: Object.freeze(blockable),
+                    rejectedBlockNeedsRepair: required
+                      ? value.rejectedOptionKey === undefined ||
+                        !blockable.includes(value.rejectedOptionKey)
+                      : value.rejectedOptionKey !== undefined,
                   });
                 }),
               ),
