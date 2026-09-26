@@ -117,7 +117,7 @@ describe('Hub fountain execution export', () => {
       const decoded = decodeExecutionPlan(JSON.parse(encoded));
       expect(decoded).toEqual(compiled);
       expect(publishedHub(decoded).requiredVisitCount).toBe(6);
-      expect(publishedHub(decoded).fountain).toEqual({
+      expect(publishedHub(decoded).fountain).toMatchObject({
         kind: 'fountainUse',
         owner: semanticAddressKey(fountain),
         interactionKey: 'fountain',
@@ -204,8 +204,127 @@ describe('Surface N Phial intermediate fountain fixture', () => {
       interactionKey: 'fountain',
       precedingVisitCount: phialFountainPrecedingVisits,
       aromaticPhialTarget: phialFountainTargetTraitKey,
+      departureConformance: {
+        facts: [{ kind: 'traitInventory' }],
+        traits: { equipped: expect.any(Array) },
+      },
+    });
+    expect(published.fountain.departureConformance?.traits.equipped).toContainEqual({
+      traitKey: phialFountainTargetTraitKey,
+      rarity: 'Heroic',
+      level: 1,
     });
     expect(phialFountainPrecedingVisits).toBeGreaterThanOrEqual(1);
     expect(phialFountainPrecedingVisits).toBeLessThanOrEqual(5);
+  });
+});
+
+function nRewards(project: ProjectDocument) {
+  const n = simulateProjectAssembly(catalog, project).evaluation.route.biomes.find(
+    (biome) => biome.biomeKey === 'N',
+  );
+  if (n?.authoring !== 'complete' || n.validity !== 'valid') throw new Error('valid N required');
+  return n.rewards;
+}
+
+function rarityAt(
+  rewards: ReturnType<typeof nRewards>,
+  occurrenceId: string,
+  checkpoint: 'roomEntered' | 'beforeRoomExit',
+): string | undefined {
+  return rewards.runStateSnapshots.find(
+    (snapshot) =>
+      snapshot.owner.kind === 'roomRunStateCheckpoint' &&
+      snapshot.owner.occurrenceId === occurrenceId &&
+      snapshot.owner.checkpoint.kind === checkpoint,
+  )?.traits.equippedTraits.ApolloWeaponBoon?.rarity;
+}
+
+describe('Hub interval departure conformance', () => {
+  it.each([
+    [0, 'surface-n-prehub', `surface-n-${nVisitSlotKeys[0]}`],
+    [3, `surface-n-${nVisitSlotKeys[2]}`, `surface-n-${nVisitSlotKeys[3]}`],
+    [6, `surface-n-${nVisitSlotKeys[5]}`, 'surface-n-preboss'],
+  ] as const)(
+    'publishes the upgraded inventory at the Hub departure after %i visits',
+    (visits, previousRoom, nextRoom) => {
+      const project = placed(migratedPhialProject(), visits);
+      const rewards = nRewards(project);
+      const [interval] = rewards.hubFountainIntervals;
+      expect(rewards.hubFountainIntervals).toHaveLength(1);
+      expect(interval!.origin).toEqual(fountain);
+      expect(interval!.intervalStart.traits.equippedTraits.ApolloWeaponBoon?.rarity).toBe('Common');
+      expect(interval!.departure.traits.equippedTraits.ApolloWeaponBoon?.rarity).toBe('Heroic');
+      expect(rarityAt(rewards, previousRoom, 'beforeRoomExit')).toBe('Common');
+      expect(rarityAt(rewards, nextRoom, 'roomEntered')).toBe('Heroic');
+      const departure = publishedHub(plan(project)).fountain.departureConformance;
+      expect(departure?.facts).toEqual([{ kind: 'traitInventory' }]);
+      expect(departure?.traits.equipped).toContainEqual({
+        traitKey: 'ApolloWeaponBoon',
+        rarity: 'Heroic',
+        level: 1,
+      });
+      expect(departure?.traits.equipped.map((trait) => trait.traitKey)).toEqual(
+        Object.keys(interval!.departure.traits.equippedTraits),
+      );
+    },
+  );
+
+  it('publishes nothing for a Hub interval without a modeled trait change', () => {
+    const rewards = nRewards(loadSurfaceNProject());
+    expect(rewards.hubFountainIntervals).toHaveLength(1);
+    expect(publishedHub(plan(loadSurfaceNProject())).fountain).not.toHaveProperty(
+      'departureConformance',
+    );
+  });
+
+  it.each([
+    [
+      'an unknown fact',
+      (value: Record<string, unknown>) => {
+        value.facts = [{ kind: 'elementCounts' }];
+      },
+    ],
+    [
+      'a repeated fact',
+      (value: Record<string, unknown>) => {
+        value.facts = [{ kind: 'traitInventory' }, { kind: 'traitInventory' }];
+      },
+    ],
+    [
+      'no facts',
+      (value: Record<string, unknown>) => {
+        value.facts = [];
+      },
+    ],
+    [
+      'a duplicate trait',
+      (value: Record<string, unknown>) => {
+        const traits = value.traits as { equipped: unknown[] };
+        traits.equipped = [...traits.equipped, traits.equipped[0]];
+      },
+    ],
+    [
+      'an extra trait field',
+      (value: Record<string, unknown>) => {
+        const traits = value.traits as { equipped: Record<string, unknown>[] };
+        traits.equipped = [{ ...traits.equipped[0], acquisitionIdentity: 'x' }];
+      },
+    ],
+    [
+      'an extra conformance field',
+      (value: Record<string, unknown>) => {
+        value.elements = {};
+      },
+    ],
+  ])('strictly rejects departure conformance with %s', (_label, mutate) => {
+    const encoded = encodeExecutionPlan(plan(surfaceNPhialIntermediateFountainProject()));
+    expect(() => decodeExecutionPlan(JSON.parse(encoded))).not.toThrow();
+    const { wire, hub: published } = wireHub(encoded);
+    mutate(
+      (published.fountain as { departureConformance: Record<string, unknown> })
+        .departureConformance,
+    );
+    expect(() => decodeExecutionPlan(wire)).toThrow(ExecutionPlanCodecError);
   });
 });

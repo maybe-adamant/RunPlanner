@@ -11,7 +11,12 @@ import {
 } from './primitives';
 import { reward } from './rewards';
 import { roomReference } from './room';
-import type { ExecutionFieldsLayout, ExecutionHubFountainUse } from '../model';
+import type {
+  ExecutionFieldsLayout,
+  ExecutionHubDepartureConformance,
+  ExecutionHubFountainUse,
+} from '../model';
+import { equippedTraits } from './diagnostics';
 import { generatedEncounter } from './generated-encounter';
 
 function encounterCustomization(value: unknown, label: string) {
@@ -159,7 +164,7 @@ function hubFountainUse(
   exact(
     record,
     ['kind', 'owner', 'interactionKey', 'precedingVisitCount'],
-    ['aromaticPhialTarget'],
+    ['aromaticPhialTarget', 'departureConformance'],
     label,
   );
   if (record.kind !== 'fountainUse') fail(`${label}.kind is unsupported`);
@@ -180,6 +185,35 @@ function hubFountainUse(
             `${label}.aromaticPhialTarget`,
           ),
         }),
+    ...(record.departureConformance === undefined
+      ? {}
+      : {
+          departureConformance: hubDepartureConformance(
+            record.departureConformance,
+            `${label}.departureConformance`,
+          ),
+        }),
+  });
+}
+
+function hubDepartureConformance(value: unknown, label: string): ExecutionHubDepartureConformance {
+  const record = object(value, label);
+  exact(record, ['facts', 'traits'], [], label);
+  const facts = array(record.facts, `${label}.facts`).map((entry, index) => {
+    const fact = object(entry, `${label}.facts[${index}]`);
+    exact(fact, ['kind'], [], `${label}.facts[${index}]`);
+    if (fact.kind !== 'traitInventory') fail(`${label}.facts[${index}].kind is unsupported`);
+    return Object.freeze({ kind: 'traitInventory' as const });
+  });
+  if (facts.length !== 1) fail(`${label}.facts must name the trait inventory once`);
+  const traits = object(record.traits, `${label}.traits`);
+  exact(traits, ['equipped'], [], `${label}.traits`);
+  const equipped = equippedTraits(traits.equipped, `${label}.traits.equipped`);
+  if (new Set(equipped.map((trait) => trait.traitKey)).size !== equipped.length)
+    fail(`${label}.traits.equipped has duplicate traits`);
+  return Object.freeze({
+    facts: Object.freeze(facts),
+    traits: Object.freeze({ equipped: Object.freeze(equipped) }),
   });
 }
 

@@ -208,6 +208,9 @@ its side-room excursions), or after the sixth return before the Preboss
 handoff generation. The next room's entry therefore observes its rarity and
 Phial effects. The use replays no Hub entry or board generation and advances no
 counter.
+The engine also captures the canonical Run State before and after that use as
+the Hub interval's start and departure. They are execution conformance inputs,
+not Run State checkpoints.
 
 ### Rule for adding or moving a boundary
 

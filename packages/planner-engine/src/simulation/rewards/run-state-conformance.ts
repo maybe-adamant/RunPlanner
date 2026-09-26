@@ -3,6 +3,7 @@ import {
   semanticAddressKey,
   type OccurrenceAddress,
 } from '../../authored-project/addresses';
+import type { HubFountainIntervalRunState } from './model';
 import type { RunStateSnapshot } from './run-state';
 import type { KeepsakeState } from '../keepsakes/state';
 
@@ -72,7 +73,16 @@ function changed(left: unknown, right: unknown): boolean {
  * snapshots, so room-exit conformance does not accidentally publish the
  * simulation's private acquisition metadata.
  */
-function modeledTraitInventory(snapshot: RunStateSnapshot): Readonly<Record<string, unknown>> {
+export interface ModeledTraitInventoryEntry {
+  readonly traitKey: string;
+  readonly rarity?: string;
+  readonly level?: number;
+  readonly hammerRank?: 'RankI' | 'RankII';
+}
+
+function modeledTraitInventory(
+  snapshot: RunStateSnapshot,
+): Readonly<Record<string, ModeledTraitInventoryEntry>> {
   return Object.fromEntries(
     Object.values(snapshot.traits.equippedTraits).map((trait) => [
       trait.traitKey,
@@ -163,4 +173,17 @@ export function deriveRoomExitConformanceDeltas(
       );
   }
   return result;
+}
+
+/**
+ * A Hub interval is its own conformance window: it compares the Hub's entry or
+ * return state with its departure, so it never proves a change from before an
+ * unobserved boundary. Only a changed modeled trait inventory is published.
+ */
+export function deriveHubDepartureTraitInventory(
+  interval: HubFountainIntervalRunState,
+): readonly ModeledTraitInventoryEntry[] | undefined {
+  const start = modeledTraitInventory(interval.intervalStart);
+  const departure = modeledTraitInventory(interval.departure);
+  return changed(start, departure) ? Object.freeze(Object.values(departure)) : undefined;
 }
