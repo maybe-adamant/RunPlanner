@@ -621,11 +621,11 @@ describe('resolved execution encounters', () => {
     },
   );
 
-  it('publishes the concrete I goal definition already recorded by simulation', () => {
+  it('publishes the concrete I introduction already recorded by simulation', () => {
     const assembly = simulateProjectAssembly(catalog, createGoldenFGHIProject());
     const plan = compileExecutionPlan({ product: assembleExecutionProduct({ assembly, catalog }) });
     expect(
       plan.occurrences.find((value) => value.id === 'golden-i-combat01')?.overview.encounterPhases,
-    ).toEqual([{ slotKey: 'Encounter', encounterKey: 'GeneratedI_GoalReward', kind: 'combat' }]);
+    ).toEqual([{ slotKey: 'Encounter', encounterKey: 'GeneratedIChronosIntro', kind: 'combat' }]);
   });
 });

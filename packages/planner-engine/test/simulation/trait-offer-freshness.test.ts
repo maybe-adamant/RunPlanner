@@ -1024,7 +1024,6 @@ describe('room rewards created before combat', () => {
   const start = (encounterKey: string) =>
     applyEncounterStartedTransition(
       catalog,
-      ordinaryRoutePosition(catalog, 'Underworld', 'H'),
       {},
       Object.freeze({
         kind: 'encounterStarted' as const,
@@ -1096,9 +1095,18 @@ describe('room rewards created before combat', () => {
         sequence,
       });
     const base = initializeTestRewardBranches()[0]! as RewardBranchState;
+    const evaluated = simulateProject(catalog, project).route.biomes.find(
+      (biome) => biome.biomeKey === 'H',
+    );
+    const historyView =
+      evaluated !== undefined && 'history' in evaluated
+        ? evaluated.history?.rooms.find(
+            (value) => semanticAddressKey(value.origin) === semanticAddressKey(room),
+          )?.entry
+        : undefined;
+    if (historyView === undefined) throw new Error('miniboss fixture has no prepared history');
     const started = applyEncounterStartedTransition(
       catalog,
-      routePosition,
       {},
       event('encounterStarted', 1) as Extract<HistoryEvent, { readonly kind: 'encounterStarted' }>,
       realRoom,
@@ -1107,6 +1115,7 @@ describe('room rewards created before combat', () => {
           ...base,
           state: Object.freeze({
             ...base.state,
+            reached: { routePosition, historyView },
             keepsakes: createKeepsakeState(catalog, 'SkipEncounterKeepsake'),
           }),
         }) as RewardBranchState,

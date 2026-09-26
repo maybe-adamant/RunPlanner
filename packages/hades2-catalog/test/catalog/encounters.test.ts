@@ -100,18 +100,21 @@ describe('encounter envelope catalog', () => {
     ).toBe('DevotionTestG');
     expect(
       resolveEncounterAuthoringProfile(choiceFor('IEncountersDefault', 'GeneratedI'), {
+        biomeEncounterDepth: 2,
         kind: 'knownReward',
         rewardType: 'ClockworkGoal',
       }),
     ).toBe('GeneratedI_GoalReward');
     expect(
       resolveEncounterAuthoringProfile(choiceFor('IEncountersSmaller', 'GeneratedI_Small'), {
+        biomeEncounterDepth: 2,
         kind: 'knownReward',
         rewardType: 'ClockworkGoal',
       }),
     ).toBe('GeneratedI_Small_GoalReward');
     expect(
       resolveEncounterAuthoringProfile(choiceFor('IEncountersDefault', 'GeneratedI'), {
+        biomeEncounterDepth: 2,
         kind: 'knownReward',
         rewardType: 'Devotion',
       }),
@@ -131,8 +134,10 @@ describe('encounter envelope catalog', () => {
           }
         }
         const contexts: readonly EncounterResolutionContext[] = [
-          noReward,
-          ...[...rewardTypes].map((rewardType) => ({ kind: 'knownReward', rewardType }) as const),
+          { ...noReward, biomeEncounterDepth: 2 },
+          ...[...rewardTypes].map(
+            (rewardType) => ({ kind: 'knownReward', rewardType, biomeEncounterDepth: 2 }) as const,
+          ),
         ];
         for (const context of contexts) {
           const visible = visibleChoiceKeys(profiles, context);
@@ -792,6 +797,7 @@ describe('encounter envelope catalog', () => {
     );
     expect(catalog.encounterSets.byKey.IEncountersDefault).toMatchObject({
       encounterDefinitionKeys: [
+        'GeneratedIChronosIntro',
         'GeneratedI',
         'GeneratedI_GoalReward',
         'DevotionTestI',
@@ -801,7 +807,12 @@ describe('encounter envelope catalog', () => {
       authoringProfiles: [
         {
           key: 'GeneratedI',
-          encounterDefinitionKeys: ['GeneratedI', 'GeneratedI_GoalReward', 'DevotionTestI'],
+          encounterDefinitionKeys: [
+            'GeneratedI',
+            'GeneratedI_GoalReward',
+            'DevotionTestI',
+            'GeneratedIChronosIntro',
+          ],
         },
         { key: 'NemesisCombatI', encounterDefinitionKeys: ['NemesisCombatI'] },
       ],

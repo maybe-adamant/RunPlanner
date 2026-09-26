@@ -1675,9 +1675,13 @@ describe('engine-owned F/G execution semantic product', () => {
       (candidate) => candidate.occurrenceId === shopId,
     );
     if (room === undefined) throw new Error('Q World Shop occurrence is missing');
-    const overviewOffer = assembleExecutionOverview(room, biome, undefined, []).shop?.offers.find(
-      (offer) => offer.offerKey === 'PremiumProgress',
-    );
+    const overviewOffer = assembleExecutionOverview(
+      catalog,
+      room,
+      biome,
+      undefined,
+      [],
+    ).shop?.offers.find((offer) => offer.offerKey === 'PremiumProgress');
     expect(overviewOffer).toMatchObject({
       offerKey: 'PremiumProgress',
       optionKey: 'ChaosWeaponUpgrade',
@@ -1767,7 +1771,7 @@ describe('engine-owned F/G execution semantic product', () => {
       (room) => room.occurrenceId === shrineAddress.occurrenceId,
     );
     if (shrineRoom === undefined) throw new Error('Shrine execution fixture lacks N Postboss');
-    const overview = assembleExecutionOverview(shrineRoom, nEvaluation, undefined, []);
+    const overview = assembleExecutionOverview(catalog, shrineRoom, nEvaluation, undefined, []);
     expect(overview.hermesShrine?.offers).toEqual([
       expect.objectContaining({
         generationKey: 'initial:first',
@@ -2188,7 +2192,13 @@ describe('engine-owned F/G execution semantic product', () => {
         f.rewards.timelineFacts,
       ),
     );
-    const inactive = assembleExecutionOverview(inactiveRoom, f, undefined, inactiveTimeline);
+    const inactive = assembleExecutionOverview(
+      catalog,
+      inactiveRoom,
+      f,
+      undefined,
+      inactiveTimeline,
+    );
     expect(
       inactiveTimeline.some(
         (transaction) =>

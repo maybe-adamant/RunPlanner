@@ -379,7 +379,11 @@ export function prepareRoomEncounterPhases(
       pendingSpellDrop,
       allSpellInvested,
     );
-    const resolution = encounterResolutionContext(room, declaration);
+    const resolution = encounterResolutionContext(
+      room,
+      declaration,
+      preparation.ledgers.counters.biomeEncounterDepth,
+    );
     if (binding.kind === 'fixed') {
       const preparedPhase =
         binding.shadowEncounterDefinitionKey === undefined

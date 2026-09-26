@@ -8,6 +8,17 @@ export interface RecentEncounterEnvelopeSlotFact {
   readonly slotKeys: readonly string[];
 }
 
+/** Prepared identities for this exact occurrence, including its active phase prefix. */
+export function projectRoomEncounterRecords(
+  view: HistoryStateView,
+  origin: RoomHistoryOrigin,
+): readonly EncounterHistoryEntry[] {
+  const key = semanticAddressKey(origin);
+  return Object.freeze(
+    view.ledgers.encounterRecords.filter((record) => semanticAddressKey(record.origin) === key),
+  );
+}
+
 /** Offered doors include created additional exits, without widening the normal batch. */
 export function projectOfferedExitCount(
   view: HistoryStateView,

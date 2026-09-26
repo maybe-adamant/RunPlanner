@@ -25,6 +25,7 @@ import {
 } from '@run-planner/test-fixtures/surface';
 import { createEnteredNLocalProject, nLocalOccurrenceId } from '../support/complete-n-project';
 import { initializeTestRewardBranches } from '../../support/arcana-fear';
+import { withTestEncounterRecord } from '../../support/simulation-state';
 import type { CanonicalAuthoredRoom } from '../../../src/simulation/materialization';
 import { applyEncounterEndEffectsTransition } from '../../../src/simulation/rewards/biome/lifecycle-transitions/encounter-end-effects';
 import {
@@ -386,7 +387,7 @@ describe('Hermes Shrine delivery placement', () => {
         figLeafSkipOwner: false,
       },
       room,
-      [pending],
+      [withTestEncounterRecord(pending, room, 'Combat1', 'GeneratedO')],
     );
 
     expect(transition.findings).toContainEqual(
@@ -461,7 +462,14 @@ describe('Hermes Shrine delivery placement', () => {
       catalog,
       endEffects(source, 1),
       roomFor('N_Sub10', 'EphyraSideRoom'),
-      [pending],
+      [
+        withTestEncounterRecord(
+          pending,
+          roomFor('N_Sub10', 'EphyraSideRoom'),
+          'Encounter',
+          'GeneratedNSubRoom_Bigger',
+        ),
+      ],
     );
     expect(sideRoom.branches[0]?.state.pendingHermesShrineDeliveries[entryKey]).toMatchObject({
       sourceOrigin: source,
@@ -473,7 +481,14 @@ describe('Hermes Shrine delivery placement', () => {
       catalog,
       endEffects(host, 2),
       roomFor('N_Combat01', 'EphyraCombat'),
-      sideRoom.branches,
+      sideRoom.branches.map((branch) =>
+        withTestEncounterRecord(
+          branch,
+          roomFor('N_Combat01', 'EphyraCombat'),
+          'Encounter',
+          'GeneratedN_Bigger',
+        ),
+      ),
     );
     expect(
       firstMainEncounter.branches[0]?.state.pendingHermesShrineDeliveries[entryKey],
@@ -561,7 +576,7 @@ describe('Hermes Shrine delivery placement', () => {
         figLeafSkipOwner: false,
       },
       room,
-      [pending],
+      [withTestEncounterRecord(pending, room, 'Combat1', 'GeneratedO')],
     );
     expect(transition.findings).toContainEqual(
       expect.objectContaining({

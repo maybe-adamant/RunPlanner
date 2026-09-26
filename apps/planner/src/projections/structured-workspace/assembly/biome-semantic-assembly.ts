@@ -573,6 +573,9 @@ export function assembleWorkspaceBiomeSemantics(
       biome,
       catalog,
       encounterPhaseStatus: source.encounterPhaseStatus,
+      preparedEncounterDefinitionKeysBySlot: source.preparedEncounterDefinitionKeys(
+        request.occurrence.occurrenceId,
+      ),
       figLeafSupport: source.figLeafSupport,
       gorgonSupport: source.gorgonSupport,
       ...(evaluatedRoom === undefined ? {} : { evaluatedRoom }),

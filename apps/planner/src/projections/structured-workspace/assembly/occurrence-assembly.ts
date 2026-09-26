@@ -209,6 +209,7 @@ export interface WorkspaceOccurrenceAssemblyInput {
     phase: EncounterPhaseAddress,
   ) => GorgonPhaseCandidateSupport | undefined;
   readonly evaluatedRoom?: CanonicalAuthoredRoom;
+  readonly preparedEncounterDefinitionKeysBySlot?: Readonly<Record<string, string>>;
   /** Shared decision-owned Fields derivation for this target occurrence. */
   readonly fieldsBatchFacts?: FieldsBatchFacts;
   readonly facts: WorkspaceOccurrenceProjectionFacts;
@@ -313,6 +314,9 @@ export function assembleWorkspaceOccurrence(
       biome: input.biome,
       catalog: input.catalog,
       encounterPhaseStatus: input.encounterPhaseStatus,
+      ...(input.preparedEncounterDefinitionKeysBySlot === undefined
+        ? {}
+        : { preparedEncounterDefinitionKeysBySlot: input.preparedEncounterDefinitionKeysBySlot }),
       ...(input.figLeafSupport === undefined ? {} : { figLeafSupport: input.figLeafSupport }),
       ...(input.gorgonSupport === undefined ? {} : { gorgonSupport: input.gorgonSupport }),
       ...(input.evaluatedRoom === undefined ? {} : { evaluatedRoom: input.evaluatedRoom }),

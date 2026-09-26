@@ -111,6 +111,7 @@ describe('encounter choice identity context', () => {
     expect(resolveEncounterAuthoringProfile(fCombat, { kind: 'unavailable' })).toBeUndefined();
     expect(
       resolveEncounterAuthoringProfile(iCombat, {
+        biomeEncounterDepth: 2,
         kind: 'knownReward',
         rewardType: 'ClockworkGoal',
       }),

@@ -2,8 +2,19 @@
 
 ## Status and objective
 
-Draft for owner review, 2026-09-25. Implementation has not started.
+Locked for implementation, 2026-09-25. Plan committed as `74c94d64`;
+slice A is implemented. Slice B has not started.
 Planner base: `8841c8b8`; executor base: `61818e7`.
+
+Slice A verification: independent code review found no actionable defects.
+All planner check components pass: 3,812 correctness tests, fixture integrity,
+typecheck, performance comparison, lint, formatting and build. The initial full
+run exposed stale direct-transition test setup and catalog expectations; after
+repair, the full correctness suite and affected static checks passed again.
+The executor suite passes 685 tests and Lua source/test lint is clean; changed
+execution fixtures match byte-for-byte. No executor production changes were
+needed for this slice; its contact witness uses the refreshed planner fixture.
+Live-game acceptance remains pending.
 
 Correct three confirmed gaps:
 
@@ -143,11 +154,11 @@ Existing NPC acquisition/conformance remains the meaningful failure check.
 Authored schema stays 88: existing Combat choices and all saved state remain
 representable; no save migration or authored schema bump is authorized here.
 
-The shopping field requires a bilateral execution contract update. Proposed
+The shopping field requires a bilateral execution contract update. Planned
 execution protocol: 47 → 48, owned by slice B, with matching executor
 `execution-compatibility.json` and strict codec tests. This is artifact-only:
-existing projects are republished, not migrated. Confirm the execution revision
-when locking this draft; do not silently change a shipped protocol's meaning.
+existing projects are republished, not migrated. Do not silently change a
+shipped protocol's meaning.
 Slice A can remain on 47 because it uses existing encounter payload shapes.
 
 ## Delivery and acceptance

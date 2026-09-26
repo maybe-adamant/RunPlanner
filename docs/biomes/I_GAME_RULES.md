@@ -94,11 +94,16 @@ requirements hold, Nemesis as the genuine encounter choices. Gorgon Athena is
 the existing additive phase result rather than a third ordinary encounter
 identity.
 
-Combat is one authored profile. At encounter preparation, the derived
+Combat is one authored profile. At encounter preparation, reached
+`biomeEncounterDepth === 1` selects `GeneratedIChronosIntro` or
+`GeneratedI_SmallChronosIntro` before reward resolution. These recurring
+progressed-save encounters inherit their Standard/Small generation policies;
+only Standard adds the native difficulty modifier of 85. Native presentation
+and delay remain game-owned. At later depths the derived
 Clockwork realization selects exactly one internal game definition:
 `GeneratedI` or `GeneratedI_GoalReward` for the default set, and
 `GeneratedI_Small` or `GeneratedI_Small_GoalReward` for the smaller set. The
-Goal variants remain exact history identities but never appear in persisted
+Intro and Goal variants remain exact history identities but never appear in persisted
 authoring or the encounter picker. Fixed starts, specials, Shops, minibosses,
 Preboss, and completion rooms remain direct-definition slots with no encounter
 picker.

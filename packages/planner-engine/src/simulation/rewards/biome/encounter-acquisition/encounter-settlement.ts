@@ -1,11 +1,7 @@
 import type { ResolvedRoutePosition } from '../../../../authored-project/route-context';
-import { resolveEntryDeclaration } from '../../../../authored-project/room-state/entry-resolution';
 import { replaceSimulationTraitHistory } from '../../../state/transitions';
 import type { Catalog } from '../../../../catalog-schema';
-import {
-  encounterResolutionContext,
-  resolveMaterializedEncounterPhase,
-} from '../../../encounters/resolve';
+import { projectRoomEncounterRecords } from '../../../history/facts';
 import { directEncounterDefinitionKeyForSlot } from '../../../../authored-project/room-state/encounter-envelope';
 import { evaluateRequirement } from '../../../../requirements';
 import {
@@ -234,7 +230,6 @@ export function applyEncounterSettlementTransition(inputs: {
     inputs.gorgonEligible
   ) {
     const result = room.encounters.gorgonResultByPhase?.[event.phaseKey];
-    const phase = room.encounterPhases.find((candidate) => candidate.slotKey === event.phaseKey);
     const phaseAddress = createEncounterPhaseAddress(
       createBiomeAddress(event.origin.routeKey, event.origin.biomeKey),
       { kind: 'occurrence', occurrenceId: room.occurrenceId },
@@ -249,15 +244,14 @@ export function applyEncounterSettlementTransition(inputs: {
       result?.athenaOffer == null || inputs.gorgonCandidate?.rarity === undefined
         ? undefined
         : materializeGorgonAthenaOffer(catalog, result.athenaOffer, inputs.gorgonCandidate.rarity);
-    const resolvedPhase =
-      phase === undefined
+    const record =
+      branches[0] === undefined
         ? undefined
-        : resolveMaterializedEncounterPhase(
-            catalog,
-            declaration,
-            phase,
-            encounterResolutionContext(room, declaration),
+        : projectRoomEncounterRecords(branches[0].state.reached.historyView, event.origin).find(
+            (entry) => entry.slotKey === event.phaseKey,
           );
+    const resolvedPhase =
+      record === undefined ? undefined : catalog.encounterDefinitions.byKey[record.encounterKey];
     const eligible =
       resolvedPhase?.blocksGorgon !== true &&
       declaration.blocksGorgon !== true &&
@@ -685,16 +679,12 @@ export function applyEncounterSettlementTransition(inputs: {
       ...(blockGorgonPhaseKey === undefined ? {} : { blockGorgonPhaseKey }),
     });
   if (event.kind === 'encounterCompleted') {
-    const entryDeclaration = resolveEntryDeclaration(declaration, inputs.routePosition);
-    const roomEncounterKeys = room.encounterPhases.flatMap((phase) => {
-      const resolved = resolveMaterializedEncounterPhase(
-        catalog,
-        entryDeclaration,
-        phase,
-        encounterResolutionContext(room, entryDeclaration),
-      );
-      return resolved === undefined ? [] : [resolved.encounterKey];
-    });
+    const roomEncounterKeys =
+      branches[0] === undefined
+        ? []
+        : projectRoomEncounterRecords(branches[0].state.reached.historyView, event.origin).map(
+            (record) => record.encounterKey,
+          );
     branches = Object.freeze(
       branches.map((branch) =>
         spawnWheelRewardAtEncounterCompletion(

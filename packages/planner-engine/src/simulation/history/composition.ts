@@ -13,6 +13,7 @@ import {
 } from '../encounters/preparation';
 import {
   encounterResolutionContext,
+  resolveMaterializedEncounterPhase,
   resolveMaterializedEncounterPhases,
 } from '../encounters/resolve';
 import type { CanonicalFixedRoomLink } from '../materialization';
@@ -337,14 +338,21 @@ export function appendRoomLifecycle(
   ).declaration;
   const encounterPhases =
     encounterPreparation?.validPrefix ??
-    resolveMaterializedEncounterPhases(
-      catalog,
-      declaration,
-      room.encounterPhases,
-      room.kind === 'authored'
-        ? encounterResolutionContext(room, declaration)
-        : Object.freeze({ kind: 'noReward' as const }),
-    );
+    (() => {
+      const context =
+        room.kind === 'authored'
+          ? encounterResolutionContext(room, declaration)
+          : Object.freeze({ kind: 'noReward' as const });
+      const phases = room.encounterPhases.map((phase) =>
+        resolveMaterializedEncounterPhase(catalog, declaration, phase, context),
+      );
+      // Only depth-dependent identities need the fold in the unvalidated history pass.
+      if (phases.every((phase) => phase !== undefined)) return Object.freeze(phases);
+      return resolveMaterializedEncounterPhases(catalog, declaration, room.encounterPhases, {
+        ...context,
+        biomeEncounterDepth: writer.current().ledgers.counters.biomeEncounterDepth,
+      });
+    })();
   const effectiveEncounterPhases = writer.resolveFigLeafEncounterPhases(room, encounterPhases);
   if (encounterPreparation !== undefined && !encounterPreparation.valid) {
     const prefix = executeEncounterRecordPrefix(

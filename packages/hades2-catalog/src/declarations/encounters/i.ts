@@ -8,6 +8,24 @@ import {
 
 export const iEncounterDefinitions = [
   {
+    key: 'GeneratedIChronosIntro',
+    customization: [generatedEncounterChoices.GeneratedIChronosIntro],
+    label: 'Combat',
+    kind: 'combat',
+    countsEncounterDepth: true,
+    hostsGorgon: true,
+    canEncounterSkip: true,
+  },
+  {
+    key: 'GeneratedI_SmallChronosIntro',
+    customization: [generatedEncounterChoices.GeneratedI_SmallChronosIntro],
+    label: 'Combat',
+    kind: 'combat',
+    countsEncounterDepth: true,
+    hostsGorgon: true,
+    canEncounterSkip: true,
+  },
+  {
     key: 'GeneratedI',
     customization: [generatedEncounterChoices.GeneratedI],
     label: 'Combat',
@@ -170,6 +188,7 @@ export const iEncounterSets = [
   {
     key: 'IEncountersDefault',
     encounterDefinitionKeys: [
+      'GeneratedIChronosIntro',
       'GeneratedI',
       'GeneratedI_GoalReward',
       'DevotionTestI',
@@ -180,9 +199,15 @@ export const iEncounterSets = [
       {
         key: 'GeneratedI',
         label: 'Combat',
-        encounterDefinitionKeys: ['GeneratedI', 'GeneratedI_GoalReward', 'DevotionTestI'],
+        encounterDefinitionKeys: [
+          'GeneratedI',
+          'GeneratedI_GoalReward',
+          'DevotionTestI',
+          'GeneratedIChronosIntro',
+        ],
         resolution: {
           kind: 'rewardContext',
+          firstBiomeEncounterDefinitionKey: 'GeneratedIChronosIntro',
           defaultEncounterDefinitionKey: 'GeneratedI',
           encounterDefinitionKeyByRewardType: {
             ClockworkGoal: 'GeneratedI_GoalReward',
@@ -196,6 +221,7 @@ export const iEncounterSets = [
   {
     key: 'IEncountersSmaller',
     encounterDefinitionKeys: [
+      'GeneratedI_SmallChronosIntro',
       'GeneratedI_Small',
       'GeneratedI_Small_GoalReward',
       'DevotionTestI',
@@ -206,6 +232,7 @@ export const iEncounterSets = [
       {
         key: 'GeneratedI_Small',
         encounterDefinitionKeys: [
+          'GeneratedI_SmallChronosIntro',
           'GeneratedI_Small',
           'GeneratedI_Small_GoalReward',
           'DevotionTestI',
@@ -213,6 +240,7 @@ export const iEncounterSets = [
         label: 'Combat',
         resolution: {
           kind: 'rewardContext',
+          firstBiomeEncounterDefinitionKey: 'GeneratedI_SmallChronosIntro',
           defaultEncounterDefinitionKey: 'GeneratedI_Small',
           encounterDefinitionKeyByRewardType: {
             ClockworkGoal: 'GeneratedI_Small_GoalReward',

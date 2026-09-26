@@ -33,6 +33,7 @@ import {
   initializeTestRewardBranchesForRoute as initializeRewardBranches,
 } from '../support/arcana-fear';
 import { publicRewardBranch } from '../../src/simulation/rewards/branch-lifecycle';
+import { withTestEncounterRecord } from '../support/simulation-state';
 import { settleEncounterTraitOffer } from '../../src/simulation/rewards/trait-settlement/coordinator';
 import { applyEncounterEndEffectsTransition } from '../../src/simulation/rewards/biome/lifecycle-transitions/encounter-end-effects';
 import type { CanonicalAuthoredRoom } from '../../src/simulation/materialization';
@@ -836,7 +837,7 @@ describe('Supply Chain lifecycle', () => {
         sequence: 6,
       }),
       room,
-      [branch],
+      [withTestEncounterRecord(branch, room, 'Encounter', 'OpeningGeneratedF')],
     );
     const pickup = transition.derivedAcquisitionEntryFrontiers.find(
       (frontier) => frontier.kind === 'clockedTraitPickup',
@@ -902,7 +903,9 @@ describe('Supply Chain lifecycle', () => {
       operationIndex: 1,
       sequence: 1,
     });
-    const advanced = applyEncounterEndEffectsTransition(catalog, figLeafEnd, room, [branch]);
+    const advanced = applyEncounterEndEffectsTransition(catalog, figLeafEnd, room, [
+      withTestEncounterRecord(branch, room, 'Encounter', 'OpeningGeneratedF'),
+    ]);
     expect(advanced.branches[0]?.state.pendingHermesShrineDeliveries.delivery).toMatchObject({
       remainingUses: 0,
       dueAt: occurrence,
@@ -912,22 +915,23 @@ describe('Supply Chain lifecycle', () => {
       expect.objectContaining({ kind: 'hermesShrineDelivery' }),
     ]);
 
+    const suppressedRoom = {
+      ...room,
+      gameName: 'N_Sub01',
+      encounterPhases: [
+        {
+          slotKey: 'Encounter',
+          envelopeKey: 'SingleEncounter',
+          authoredChoiceKey: 'GeneratedNSubRoom',
+          figLeafSkip: false,
+        },
+      ],
+    } as unknown as CanonicalAuthoredRoom;
     const suppressed = applyEncounterEndEffectsTransition(
       catalog,
       Object.freeze({ ...figLeafEnd, sequence: 2, operationIndex: 2 }),
-      {
-        ...room,
-        gameName: 'N_Sub01',
-        encounterPhases: [
-          {
-            slotKey: 'Encounter',
-            envelopeKey: 'SingleEncounter',
-            authoredChoiceKey: 'GeneratedNSubRoom',
-            figLeafSkip: false,
-          },
-        ],
-      } as unknown as CanonicalAuthoredRoom,
-      [branch],
+      suppressedRoom,
+      [withTestEncounterRecord(branch, suppressedRoom, 'Encounter', 'GeneratedNSubRoom')],
     );
     expect(suppressed.branches[0]?.state.pendingHermesShrineDeliveries.delivery).toMatchObject({
       remainingUses: 1,
