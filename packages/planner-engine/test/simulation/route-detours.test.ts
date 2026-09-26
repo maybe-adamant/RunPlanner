@@ -35,6 +35,8 @@ import {
   zagreusContractCandidateForProjectEvaluationAssembly,
   simulateProject,
   simulateProjectAssembly,
+  evaluateBiomeCompleteness,
+  evaluateOccurrenceOutgoingStatus,
   type BiomeHistoryPrefix,
   type CanonicalAuthoredRoom,
   type HistoryEvent,
@@ -602,6 +604,51 @@ function buildDepthFiveOContractProject() {
 }
 
 describe('route-detour simulation', () => {
+  it.each(['contract', 'chaos', 'anomaly'] as const)(
+    'keeps an unfinished %s return out of biome completion',
+    (kind) => {
+      const fixture = (() => {
+        if (kind === 'chaos') {
+          const value = buildNaturalChaosProject();
+          return { project: value.project, occurrenceId: value.chaos, biome: fBiome };
+        }
+        if (kind === 'anomaly') {
+          const value = buildAnomalyProject(true);
+          return { project: value.project, occurrenceId: value.anomaly, biome: gBiome };
+        }
+        const value = buildMidshopProject({ normalTargets: true });
+        return { project: value.project, occurrenceId: value.contract, biome: fBiome };
+      })();
+      const owner = createExitDecisionAddress(fixture.biome, source(fixture.occurrenceId));
+      const project = applyProjectCommand(fixture.project, catalog, {
+        kind: 'RemoveExitDecision',
+        decision: owner,
+      });
+      const authored = plan(project, fixture.biome);
+      const completeness = evaluateBiomeCompleteness(catalog, fixture.biome, authored);
+      expect(
+        evaluateOccurrenceOutgoingStatus({
+          catalog,
+          biome: fixture.biome,
+          plan: authored,
+          occurrenceId: fixture.occurrenceId,
+          routePosition: ordinaryPositionFor(catalog, fixture.biome),
+          completeness,
+          findings: completeness.findings,
+        }),
+      ).toMatchObject(
+        // This Chaos fixture still needs its trait offer; that is an interior
+        // readiness block, not a completion transition to another biome.
+        kind === 'chaos'
+          ? { kind: 'blockedOrUnentered', reason: 'notCurrentFrontier' }
+          : { kind: 'frontier', capability: 'createBatch', owner },
+      );
+      expect(prefix(project, fixture.biome).snapshot.frontier).toMatchObject({
+        kind: 'exitDecision',
+        origin: owner,
+      });
+    },
+  );
   it('keeps an authored N Chaos map outside the host domain materialized and finding-backed', () => {
     const opening = createOccurrenceId('natural-chaos-n-opening');
     const chaos = createOccurrenceId('natural-chaos-n-room');
@@ -1182,6 +1229,19 @@ describe('route-detour simulation', () => {
   it('acquires the genuine C_Boss01 fixed reward as one rarityless Infernal Contract', () => {
     const { project, contract } = buildMidshopProject({ normalTargets: true });
     const { snapshot, history } = prefix(project, fBiome);
+    const contractRoom = snapshot.decisions
+      .flatMap((decision) =>
+        decision.kind === 'batch' ? decision.additional.map((target) => target.room) : [],
+      )
+      .find((room) => room.occurrenceId === contract);
+    expect(contractRoom?.lifecycleProfileKey).toBe('StandardRewardRoom');
+    expect(
+      contractRoom?.roomLifecycleTimeline.structure.points.map((point) => point.kind),
+    ).not.toContain('bossDefeated');
+    expect(
+      plan(project, fBiome).topology!.occurrences.find((room) => room.occurrenceId === contract)
+        ?.roomActions.order,
+    ).toContainEqual({ kind: 'collectRequiredReward' });
     const rewards = evaluateBiomeRewards(
       catalog,
       snapshot,

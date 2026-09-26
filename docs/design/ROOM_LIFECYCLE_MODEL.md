@@ -1240,8 +1240,10 @@ and traversal facts, not an accounting-free callback.
 
 Anomaly's fixed `GeneratedAnomalyB` uses the normal counting encounter path;
 its retained incoming offer is acquired only when authored success is true.
-`C_Boss01` runs fixed `BossZagreus01`, acquires `InfernalContractBoon`, and
-does not advance encounter depth. Both once-per-route limits are consumed only
+`C_Boss01` is classified as Combat with the contract-specific template and
+`StandardRewardRoom` lifecycle. It runs fixed `BossZagreus01` and requires
+acquiring `InfernalContractBoon`, but does not emit `bossDefeated`, advance
+encounter depth, or complete the host biome. Both once-per-route limits are consumed only
 when the inserted occurrence enters, not when an authored replacement or
 additional exit is created.
 

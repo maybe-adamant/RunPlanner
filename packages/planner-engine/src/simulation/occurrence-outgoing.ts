@@ -1,4 +1,5 @@
 import type { Catalog } from '../catalog-schema';
+import { isRouteCompletionRoom } from '../authored-project/completion-boss';
 import {
   createExitDecisionAddress,
   createHubDecisionAddress,
@@ -231,8 +232,7 @@ export function evaluateOccurrenceOutgoingStatus(
   }
 
   const entered = selectedSpineOccurrenceIds(topology).has(occurrenceId);
-  const room = catalog.rooms.byKey[occurrence.gameName];
-  if (entered && (room?.kind === 'Boss' || room?.kind === 'PostBoss')) {
+  if (entered && isRouteCompletionRoom(catalog, input.routePosition, occurrence.gameName)) {
     const nextBiomeKey = input.routePosition.nextBiomeKey;
     return Object.freeze({
       kind: 'fixedRoom' as const,

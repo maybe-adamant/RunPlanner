@@ -91,7 +91,7 @@ export function validateRoomCollectionClosure(
       if (target === undefined) fail(path, `unknown room ${exit.targetRoomGameName}`);
       if (
         target.roomSetKey !== 'C' ||
-        target.kind !== 'Boss' ||
+        target.kind !== 'Combat' ||
         target.mode.kind !== 'authored' ||
         target.mode.templateKey !== 'ContractBoss' ||
         target.exits.length !== 1 ||

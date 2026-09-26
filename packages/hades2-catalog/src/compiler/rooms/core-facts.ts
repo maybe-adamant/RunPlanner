@@ -49,7 +49,7 @@ const roomTemplateKinds = {
   Anomaly: 'Combat',
   Boss: 'Boss',
   Chaos: 'Combat',
-  ContractBoss: 'Boss',
+  ContractBoss: 'Combat',
   Devotion: 'Devotion',
   EphyraCombat: 'Combat',
   EphyraSideRoom: 'Combat',

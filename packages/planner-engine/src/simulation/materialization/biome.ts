@@ -27,6 +27,7 @@ import type {
   RouteWeaponAspectLoadout,
 } from '../../authored-project/model';
 import type { ResolvedRoutePosition } from '../../authored-project/route-context';
+import { isRouteCompletionRoom } from '../../authored-project/completion-boss';
 import {
   additionalExitsForDecision,
   bossDoorRewardStoreLinkForSource,
@@ -146,10 +147,6 @@ function roomReference(room: CanonicalAuthoredRoom): CanonicalRoomReference {
     occurrenceId: room.occurrenceId,
     gameName: room.gameName,
   });
-}
-
-function isCompletionTerminal(room: RoomDeclaration): boolean {
-  return room.kind === 'Boss' || room.kind === 'PostBoss';
 }
 
 function canonicalBiomeState(biomeKey: string, state: AuthoredBiomeState): CanonicalBiomeState {
@@ -658,7 +655,7 @@ export function materializeBiomePrefix(
         current = fixed.target;
         continue;
       }
-      if (isCompletionTerminal(sourceRoom)) {
+      if (isRouteCompletionRoom(catalog, routePosition, sourceRoom.gameName)) {
         return prefix(
           biome,
           biomeState,
@@ -867,7 +864,7 @@ export function materializeBiome(
         }
         break;
       }
-      if (isCompletionTerminal(sourceRoom)) break;
+      if (isRouteCompletionRoom(catalog, routePosition, sourceRoom.gameName)) break;
       fail(`${currentRoom.gameName} has no selected-spine exit decision`);
     }
     const materialized = materializeBatch(

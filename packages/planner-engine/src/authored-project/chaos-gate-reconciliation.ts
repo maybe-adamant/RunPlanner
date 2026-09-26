@@ -1,4 +1,6 @@
 import type { Catalog } from '../catalog-schema';
+import { isRouteCompletionRoom } from './completion-boss';
+import type { ResolvedRoutePosition } from './route-context';
 import {
   createAdditionalExitAddress,
   createBiomeAddress,
@@ -59,7 +61,11 @@ function localVisits(topology: BiomeTopology, sourceOccurrenceId: OccurrenceId) 
   );
 }
 
-function reachedBiome(plan: AuthoredBiomePlan, catalog: Catalog): ReachedBiome {
+function reachedBiome(
+  plan: AuthoredBiomePlan,
+  catalog: Catalog,
+  position: ResolvedRoutePosition,
+): ReachedBiome {
   const topology = plan.topology;
   if (topology === null) return Object.freeze({ complete: false, occurrences: Object.freeze([]) });
   const reached: ReachedOccurrence[] = [];
@@ -131,9 +137,8 @@ function reachedBiome(plan: AuthoredBiomePlan, catalog: Catalog): ReachedBiome {
       current = occurrenceById(topology, target.occurrenceId);
       continue;
     }
-    const room = catalog.rooms.byKey[current.gameName];
     return Object.freeze({
-      complete: room?.kind === 'Boss' || room?.kind === 'PostBoss',
+      complete: isRouteCompletionRoom(catalog, position, current.gameName),
       occurrences: Object.freeze(reached),
     });
   }
@@ -148,7 +153,7 @@ interface ReachedBiome {
 function reachedRoute(route: AuthoredRoutePlan, catalog: Catalog): readonly ReachedOccurrence[] {
   const reached: ReachedOccurrence[] = [];
   for (const plan of route.biomes) {
-    const biome = reachedBiome(plan, catalog);
+    const biome = reachedBiome(plan, catalog, resolveRoutePosition(catalog, route, plan.biomeKey));
     reached.push(...biome.occurrences);
     if (!biome.complete) break;
   }
