@@ -204,16 +204,14 @@ describe('Surface N Phial intermediate fountain fixture', () => {
       interactionKey: 'fountain',
       precedingVisitCount: phialFountainPrecedingVisits,
       aromaticPhialTarget: phialFountainTargetTraitKey,
-      departureConformance: {
-        facts: [{ kind: 'traitInventory' }],
-        traits: { equipped: expect.any(Array) },
-      },
     });
-    expect(published.fountain.departureConformance?.traits.equipped).toContainEqual({
-      traitKey: phialFountainTargetTraitKey,
-      rarity: 'Heroic',
-      level: 1,
-    });
+    expect(
+      published.departures.map(
+        (departure) =>
+          departure.traits.equipped.find((trait) => trait.traitKey === phialFountainTargetTraitKey)
+            ?.rarity,
+      ),
+    ).toEqual(['Common', 'Common', 'Common', 'Heroic', 'Heroic', 'Heroic', 'Heroic']);
     expect(phialFountainPrecedingVisits).toBeGreaterThanOrEqual(1);
     expect(phialFountainPrecedingVisits).toBeLessThanOrEqual(5);
   });
@@ -227,104 +225,143 @@ function nRewards(project: ProjectDocument) {
   return n.rewards;
 }
 
-function rarityAt(
-  rewards: ReturnType<typeof nRewards>,
-  occurrenceId: string,
-  checkpoint: 'roomEntered' | 'beforeRoomExit',
-): string | undefined {
-  return rewards.runStateSnapshots.find(
-    (snapshot) =>
-      snapshot.owner.kind === 'roomRunStateCheckpoint' &&
-      snapshot.owner.occurrenceId === occurrenceId &&
-      snapshot.owner.checkpoint.kind === checkpoint,
-  )?.traits.equippedTraits.ApolloWeaponBoon?.rarity;
+/** The room-exit Run State row projection for one room-entry snapshot. */
+function enteredInventory(rewards: ReturnType<typeof nRewards>, occurrenceId: string) {
+  const snapshot = rewards.runStateSnapshots.find(
+    (candidate) =>
+      candidate.owner.kind === 'roomRunStateCheckpoint' &&
+      candidate.owner.occurrenceId === occurrenceId &&
+      candidate.owner.checkpoint.kind === 'roomEntered',
+  );
+  if (snapshot === undefined) throw new Error(`${occurrenceId} has no entry Run State`);
+  return Object.values(snapshot.traits.equippedTraits).map((trait) => ({
+    traitKey: trait.traitKey,
+    ...(trait.rarity === undefined ? {} : { rarity: trait.rarity }),
+    ...(trait.level === undefined ? {} : { level: trait.level }),
+    ...(trait.hammerRank === undefined ? {} : { hammerRank: trait.hammerRank }),
+  }));
 }
 
-describe('Hub interval departure conformance', () => {
-  it.each([
-    [0, 'surface-n-prehub', `surface-n-${nVisitSlotKeys[0]}`],
-    [3, `surface-n-${nVisitSlotKeys[2]}`, `surface-n-${nVisitSlotKeys[3]}`],
-    [6, `surface-n-${nVisitSlotKeys[5]}`, 'surface-n-preboss'],
-  ] as const)(
-    'publishes the upgraded inventory at the Hub departure after %i visits',
-    (visits, previousRoom, nextRoom) => {
+const nextRooms = [
+  ...nVisitSlotKeys.map((slotKey) => `surface-n-${slotKey}`),
+  'surface-n-preboss',
+] as const;
+
+describe('Hub departure conformance', () => {
+  it.each([0, 3, 6])(
+    'publishes seven ordered departures each matching the next entry, fountain after %i visits',
+    (visits) => {
       const project = placed(migratedPhialProject(), visits);
       const rewards = nRewards(project);
-      const [interval] = rewards.hubFountainIntervals;
-      expect(rewards.hubFountainIntervals).toHaveLength(1);
-      expect(interval!.origin).toEqual(fountain);
-      expect(interval!.intervalStart.traits.equippedTraits.ApolloWeaponBoon?.rarity).toBe('Common');
-      expect(interval!.departure.traits.equippedTraits.ApolloWeaponBoon?.rarity).toBe('Heroic');
-      expect(rarityAt(rewards, previousRoom, 'beforeRoomExit')).toBe('Common');
-      expect(rarityAt(rewards, nextRoom, 'roomEntered')).toBe('Heroic');
-      const departure = publishedHub(plan(project)).fountain.departureConformance;
-      expect(departure?.facts).toEqual([{ kind: 'traitInventory' }]);
-      expect(departure?.traits.equipped).toContainEqual({
-        traitKey: 'ApolloWeaponBoon',
-        rarity: 'Heroic',
-        level: 1,
+      const departures = publishedHub(plan(project)).departures;
+      expect(departures.map((departure) => departure.precedingVisitCount)).toEqual([
+        0, 1, 2, 3, 4, 5, 6,
+      ]);
+      expect(rewards.hubDepartures.map((departure) => departure.precedingVisitCount)).toEqual([
+        0, 1, 2, 3, 4, 5, 6,
+      ]);
+      departures.forEach((departure, index) => {
+        expect(departure.facts).toEqual([{ kind: 'traitInventory' }]);
+        expect(departure.traits.equipped).toEqual(enteredInventory(rewards, nextRooms[index]!));
+        expect(
+          departure.traits.equipped.find((trait) => trait.traitKey === 'ApolloWeaponBoon')?.rarity,
+        ).toBe(index < visits ? 'Common' : 'Heroic');
       });
-      expect(departure?.traits.equipped.map((trait) => trait.traitKey)).toEqual(
-        Object.keys(interval!.departure.traits.equippedTraits),
-      );
     },
   );
 
-  it('publishes nothing for a Hub interval without a modeled trait change', () => {
+  it('publishes every departure without rarity change when no Phial is equipped', () => {
     const rewards = nRewards(loadSurfaceNProject());
-    expect(rewards.hubFountainIntervals).toHaveLength(1);
-    expect(publishedHub(plan(loadSurfaceNProject())).fountain).not.toHaveProperty(
-      'departureConformance',
-    );
+    const departures = publishedHub(plan(loadSurfaceNProject())).departures;
+    expect(departures).toHaveLength(7);
+    departures.forEach((departure, index) => {
+      expect(departure.traits.equipped).toEqual(enteredInventory(rewards, nextRooms[index]!));
+      expect(departure.traits.equipped.every((trait) => trait.rarity !== 'Heroic')).toBe(true);
+    });
+  });
+
+  it('exports no departures for an incomplete Hub', () => {
+    const project = applyProjectCommand(loadSurfaceNProject(), catalog, {
+      kind: 'ReplaceHubActionOrder',
+      hub,
+      actions: hubVisitActions(nVisitSlotKeys.slice(0, 4), 2),
+    });
+    expect(
+      simulateProjectAssembly(catalog, project).evaluation.route.summary.eligibleForExecutionPlan,
+    ).toBe(false);
   });
 
   it.each([
+    ['a missing departure', (departures: Record<string, unknown>[]) => departures.pop()],
+    [
+      'an out-of-order departure',
+      (departures: Record<string, unknown>[]) => {
+        const [first, second] = departures;
+        departures[0] = second!;
+        departures[1] = first!;
+      },
+    ],
+    [
+      'a duplicate departure',
+      (departures: Record<string, unknown>[]) => {
+        departures[6] = departures[5]!;
+      },
+    ],
     [
       'an unknown fact',
-      (value: Record<string, unknown>) => {
-        value.facts = [{ kind: 'elementCounts' }];
+      (departures: Record<string, unknown>[]) => {
+        departures[0] = { ...departures[0], facts: [{ kind: 'elementCounts' }] };
       },
     ],
     [
       'a repeated fact',
-      (value: Record<string, unknown>) => {
-        value.facts = [{ kind: 'traitInventory' }, { kind: 'traitInventory' }];
-      },
-    ],
-    [
-      'no facts',
-      (value: Record<string, unknown>) => {
-        value.facts = [];
+      (departures: Record<string, unknown>[]) => {
+        departures[0] = {
+          ...departures[0],
+          facts: [{ kind: 'traitInventory' }, { kind: 'traitInventory' }],
+        };
       },
     ],
     [
       'a duplicate trait',
-      (value: Record<string, unknown>) => {
-        const traits = value.traits as { equipped: unknown[] };
-        traits.equipped = [...traits.equipped, traits.equipped[0]];
+      (departures: Record<string, unknown>[]) => {
+        const traits = departures[0]!.traits as { equipped: unknown[] };
+        departures[0] = {
+          ...departures[0],
+          traits: { equipped: [...traits.equipped, traits.equipped[0]] },
+        };
       },
     ],
     [
       'an extra trait field',
-      (value: Record<string, unknown>) => {
-        const traits = value.traits as { equipped: Record<string, unknown>[] };
-        traits.equipped = [{ ...traits.equipped[0], acquisitionIdentity: 'x' }];
+      (departures: Record<string, unknown>[]) => {
+        const traits = departures[0]!.traits as { equipped: Record<string, unknown>[] };
+        departures[0] = {
+          ...departures[0],
+          traits: { equipped: [{ ...traits.equipped[0], acquisitionIdentity: 'x' }] },
+        };
       },
     ],
     [
-      'an extra conformance field',
-      (value: Record<string, unknown>) => {
-        value.elements = {};
+      'an extra departure field',
+      (departures: Record<string, unknown>[]) => {
+        departures[0] = { ...departures[0], elements: {} };
       },
     ],
-  ])('strictly rejects departure conformance with %s', (_label, mutate) => {
+  ])('strictly rejects Hub departures with %s', (_label, mutate) => {
     const encoded = encodeExecutionPlan(plan(surfaceNPhialIntermediateFountainProject()));
     expect(() => decodeExecutionPlan(JSON.parse(encoded))).not.toThrow();
     const { wire, hub: published } = wireHub(encoded);
-    mutate(
-      (published.fountain as { departureConformance: Record<string, unknown> })
-        .departureConformance,
-    );
+    mutate(published.departures as Record<string, unknown>[]);
+    expect(() => decodeExecutionPlan(wire)).toThrow(ExecutionPlanCodecError);
+  });
+
+  it('rejects a departure conformance field on the fountain use', () => {
+    const { wire, hub: published } = wireHub(encodeExecutionPlan(plan(loadSurfaceNProject())));
+    published.fountain = {
+      ...(published.fountain as object),
+      departureConformance: (published.departures as unknown[])[0],
+    };
     expect(() => decodeExecutionPlan(wire)).toThrow(ExecutionPlanCodecError);
   });
 });

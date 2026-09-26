@@ -51,7 +51,9 @@ is confirmed, or when the owner explicitly waives the remainder.
       `hub-departure-conformance:traitInventory` mismatch. Without a target, the
       same skip reports only the `missed` diagnostic and execution continues.
       Resyncing after a fountain use this session did not observe reports the
-      `unobserved` diagnostic; with a target, the departure inventory is still
-      checked and passes only when the planned upgrade is present.
+      `unobserved` diagnostic; every departure still checks its planned inventory.
+- [ ] An early Phial upgrade fails at the immediate Hub departure, even when
+      it matches the target planned for a later interval. With no Phial, all
+      seven departures (including Preboss) pass with the planned inventory.
 - [ ] The Hub map is readable at the fountain and each visit, and each guided
       marker targets the correct fountain or Soul Pylon.

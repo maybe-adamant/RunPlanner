@@ -208,9 +208,9 @@ its side-room excursions), or after the sixth return before the Preboss
 handoff generation. The next room's entry therefore observes its rarity and
 Phial effects. The use replays no Hub entry or board generation and advances no
 counter.
-The engine also captures the canonical Run State before and after that use as
-the Hub interval's start and departure. They are execution conformance inputs,
-not Run State checkpoints.
+The engine captures canonical Run State for every Hub departure, after any
+fountain use in that interval. These snapshots are execution conformance inputs,
+not additional Run State checkpoints, and exist even without a trait mutation.
 
 ### Rule for adding or moving a boundary
 

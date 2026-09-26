@@ -198,11 +198,11 @@ interface RewardSimulationBase {
   readonly findings: readonly SemanticFinding[];
 }
 
-export interface HubFountainIntervalRunState {
-  readonly origin: import('../../authored-project/addresses').HubFountainAddress;
-  /** Hub entry or the return from the preceding visit, before the fountain use. */
-  readonly intervalStart: RunStateSnapshot;
-  /** After the fountain settles, before the next visit's entry or the final handoff. */
+/** Canonical Run State when the Hub is left after `precedingVisitCount` completed visits. */
+export interface HubDepartureRunState {
+  readonly hub: import('../../authored-project/addresses').HubDecisionAddress;
+  readonly precedingVisitCount: number;
+  /** After Hub entry or the visit's return, and any fountain use in that interval. */
   readonly departure: RunStateSnapshot;
 }
 
@@ -230,11 +230,8 @@ export interface BiomeRewardSimulation extends RewardSimulationBase {
   readonly targetHistory: readonly TargetRewardHistoryCheckpoint[];
   readonly runStateSnapshots: readonly RunStateSnapshot[];
   readonly runStateAvailability: readonly RunStateAvailability[];
-  /**
-   * Canonical Run State at the start and departure of the Hub interval that
-   * contains the fountain use. Execution-only; never a Run State launcher.
-   */
-  readonly hubFountainIntervals: readonly HubFountainIntervalRunState[];
+  /** Every reached Hub departure in order; execution-only, never a Run State launcher. */
+  readonly hubDepartures: readonly HubDepartureRunState[];
   /** Exact room-entry Pool generation assessments, before any sale action. */
   readonly purgingPoolAssessments: readonly {
     readonly origin: import('../../authored-project/addresses').OccurrenceAddress;

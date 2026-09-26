@@ -164,7 +164,7 @@ function hubFountainUse(
   exact(
     record,
     ['kind', 'owner', 'interactionKey', 'precedingVisitCount'],
-    ['aromaticPhialTarget', 'departureConformance'],
+    ['aromaticPhialTarget'],
     label,
   );
   if (record.kind !== 'fountainUse') fail(`${label}.kind is unsupported`);
@@ -185,20 +185,30 @@ function hubFountainUse(
             `${label}.aromaticPhialTarget`,
           ),
         }),
-    ...(record.departureConformance === undefined
-      ? {}
-      : {
-          departureConformance: hubDepartureConformance(
-            record.departureConformance,
-            `${label}.departureConformance`,
-          ),
-        }),
   });
+}
+
+function hubDepartures(
+  value: unknown,
+  requiredVisitCount: number,
+  label: string,
+): readonly ExecutionHubDepartureConformance[] {
+  const departures = array(value, label).map((entry, index) =>
+    hubDepartureConformance(entry, `${label}[${index}]`),
+  );
+  if (departures.length !== requiredVisitCount + 1)
+    fail(`${label} must publish one entry per Hub departure`);
+  departures.forEach((departure, index) => {
+    if (departure.precedingVisitCount !== index)
+      fail(`${label}[${index}].precedingVisitCount must be ${index}`);
+  });
+  return Object.freeze(departures);
 }
 
 function hubDepartureConformance(value: unknown, label: string): ExecutionHubDepartureConformance {
   const record = object(value, label);
-  exact(record, ['facts', 'traits'], [], label);
+  exact(record, ['precedingVisitCount', 'facts', 'traits'], [], label);
+  const precedingVisitCount = integer(record.precedingVisitCount, `${label}.precedingVisitCount`);
   const facts = array(record.facts, `${label}.facts`).map((entry, index) => {
     const fact = object(entry, `${label}.facts[${index}]`);
     exact(fact, ['kind'], [], `${label}.facts[${index}]`);
@@ -212,6 +222,7 @@ function hubDepartureConformance(value: unknown, label: string): ExecutionHubDep
   if (new Set(equipped.map((trait) => trait.traitKey)).size !== equipped.length)
     fail(`${label}.traits.equipped has duplicate traits`);
   return Object.freeze({
+    precedingVisitCount,
     facts: Object.freeze(facts),
     traits: Object.freeze({ equipped: Object.freeze(equipped) }),
   });
@@ -685,7 +696,7 @@ export function overview(value: unknown, label: string) {
   if (hub !== undefined)
     exact(
       hub,
-      ['room', 'slots', 'finalHandoff', 'requiredVisitCount', 'fountain'],
+      ['room', 'slots', 'finalHandoff', 'requiredVisitCount', 'fountain', 'departures'],
       [],
       `${label}.hub`,
     );
@@ -731,6 +742,11 @@ export function overview(value: unknown, label: string) {
             finalHandoff: roomReference(hub.finalHandoff, `${label}.hub.finalHandoff`),
             requiredVisitCount,
             fountain: hubFountainUse(hub.fountain, requiredVisitCount, `${label}.hub.fountain`),
+            departures: hubDepartures(
+              hub.departures,
+              requiredVisitCount,
+              `${label}.hub.departures`,
+            ),
           });
         })();
   const localSlots =

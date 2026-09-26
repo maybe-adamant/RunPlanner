@@ -37,7 +37,7 @@ export function executionOccurrence(
 ): ExecutionOccurrence {
   const batch = batches.get(executionRoomOwnerKey(room));
   const publishedHub =
-    hub === undefined ? undefined : hubOverview(hub, hubExit, biome.rewards.hubFountainIntervals);
+    hub === undefined ? undefined : hubOverview(hub, hubExit, biome.rewards.hubDepartures);
   const publishedLocalSlots = localSlots === undefined ? undefined : localSlotsOverview(localSlots);
   const diagnostics = assembleOccurrenceDiagnostics(room, snapshots);
   const anomaly = assembleGAnomalyReplacement(room);

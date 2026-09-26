@@ -312,7 +312,7 @@ The conformance surface is bounded to:
 | Semantic Timeline transaction | the exact published transaction bound to the native action when it is an explicit obligation; acquisition handles instead express steering and local DAG readiness |
 | Exits ready                   | complete exit count, physical types, target room identities, reward identities, and obligations due at outgoing generation                                         |
 | Room exit                     | obligations due at `exitUsable` and `roomExit`, and only the planner-published named conformance facts that changed in this occurrence                             |
-| Hub departure                 | the published `hub.fountain.departureConformance` trait inventory, only when the fountain changed it within that Hub interval                                      |
+| Hub departure                 | the full modeled trait inventory published in `hub.departures` for that completed-visit count, on every departure                                                  |
 
 The published `exitUsable` deadline is checked at actual room closure, before
 the timeline is discarded. It does not require a separate door-use callback:
@@ -398,17 +398,15 @@ not a next-room Timeline transaction.
 Each Hub interval, from Hub entry or a visit's return to the departure into the
 next visit or the final handoff, is its own conformance window. Room-exit facts
 cannot observe it because they compare one occurrence's own entry and exit.
-When the fountain use changes the modeled trait inventory of its interval,
-`hub.fountain.departureConformance` publishes `facts: [{ kind: 'traitInventory' }]`
-and the expected `traits.equipped` rows, in the Run State frame's shape. The
-executor compares them with the live modeled inventory when the Hub is left at
-the fountain's due position, whether or not the use was observed there; a
-missing or misplaced use is otherwise only a diagnostic. The interval gates
-publication only: like room-exit facts, the comparison covers the full modeled
-inventory. An interval without a modeled trait change publishes nothing. An
-early use that happens to match the planned upgrade therefore passes the Hub
-check, but a visit before the due position that publishes its own trait fact
-still reports the rarity it was planned against.
+`hub.departures` publishes one frame for each completed-visit count, from zero
+through the required visit count, including the final handoff. Each frame has
+`facts: [{ kind: 'traitInventory' }]` and the expected `traits.equipped` rows,
+in the Run State frame's shape. The executor compares the full modeled inventory
+on every Hub departure, independently of whether a fountain use or trait change
+was planned in that interval. An early Phial upgrade therefore fails at the
+immediate departure even if it matches the upgrade planned for later. Fountain
+use and timing remain diagnostic: only a resulting inventory discrepancy fails
+conformance.
 
 For Chaos, the selected blessing is reserved for the selected curse before the
 native screen is constructed. The other two blessings remain distinct
