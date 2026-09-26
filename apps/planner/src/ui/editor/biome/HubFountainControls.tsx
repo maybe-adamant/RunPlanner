@@ -64,8 +64,8 @@ function FountainPlacementOption({
   );
 }
 
-/** Hub-owned fountain placement and Phial target, shown wherever the projection hosts them. */
-export function HubFountainControls({
+/** Fountain ordering belongs to the Hub Timeline, never the following room. */
+export function HubFountainPlacementControls({
   fountain,
   interactions,
 }: {
@@ -85,37 +85,19 @@ export function HubFountainControls({
   const [armed, setArmed] = useState(false);
   const selectedButton = useRef<HTMLButtonElement | null>(null);
   const locked = findingTarget(fountain.hub).inert;
-  // A moved fountain focuses its controls at their new position.
+  // Moving the fountain keeps focus on its Hub ordering control.
   useLayoutEffect(() => {
     if (focusedOwnerKey === fountain.marker.focusKey) {
       selectedButton.current?.focus({ preventScroll: true });
     }
   }, [focusedOwnerKey, fountain.marker.focusKey, fountain.selectedPlacementKey]);
-  // Without a target control, the section itself receives Phial outcome findings.
-  const outcomeTarget =
-    fountain.rarity === undefined ? findingTarget(fountain.outcomeMarker.address) : undefined;
   return (
     <section
-      aria-label="Hub fountain"
+      {...findingTarget(fountain.address)}
+      aria-label="Fountain order"
       className="hub-fountain-controls"
-      {...(outcomeTarget === undefined
-        ? {}
-        : {
-            'aria-description': outcomeTarget['aria-description'],
-            'data-has-findings': outcomeTarget['data-has-findings'],
-            'data-selected-finding': outcomeTarget['data-selected-finding'],
-            'data-semantic-owner': outcomeTarget['data-semantic-owner'],
-            id: outcomeTarget.id,
-            ref: outcomeTarget.ref,
-            tabIndex: -1,
-          })}
     >
-      <p>
-        <strong>Hub fountain</strong>{' '}
-        {fountain.controlsHost?.kind === 'room'
-          ? `Used in the Hub before ${fountain.controlsHost.label}.`
-          : 'Used in the Hub after the planned visits.'}
-      </p>
+      <strong>Fountain order</strong>
       <div className="hub-fountain-controls-fields">
         <div
           aria-label="Fountain use"
@@ -145,10 +127,36 @@ export function HubFountainControls({
             );
           })}
         </div>
-        {fountain.rarity === undefined ? null : (
-          <FountainRarityEffectRow control={fountain.rarity} interactions={interactions} />
-        )}
       </div>
+    </section>
+  );
+}
+
+/** Read-only timing and the Hub-owned Phial target, hosted before the next room. */
+export function HubFountainControls({
+  fountain,
+  interactions,
+}: {
+  readonly fountain: WorkspaceHubFountain;
+  readonly interactions: WorkspaceInteractionCatalog;
+}) {
+  const findingTarget = useFindingTarget();
+  return (
+    <section
+      aria-label="Hub fountain"
+      className="hub-fountain-controls"
+      {...(fountain.rarity === undefined ? findingTarget(fountain.outcomeMarker.address) : {})}
+      tabIndex={-1}
+    >
+      <p>
+        <strong>Hub fountain</strong>{' '}
+        {fountain.controlsHost?.kind === 'room'
+          ? `Used in the Hub before ${fountain.controlsHost.label}.`
+          : 'Used in the Hub after the planned visits.'}
+      </p>
+      {fountain.rarity === undefined ? null : (
+        <FountainRarityEffectRow control={fountain.rarity} interactions={interactions} />
+      )}
     </section>
   );
 }

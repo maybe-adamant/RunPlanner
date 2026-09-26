@@ -14,6 +14,8 @@ import {
 import { candidateMayBeAuthored } from '@planner/ui/feedback/candidatePresentation';
 import { useWorkspaceInteractionController } from '@planner/ui/controls/useWorkspaceInteraction';
 import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
+import { semanticOwnerFocused } from '@planner/state/editorSessionSlice';
+import { useAppDispatch } from '@planner/state/store';
 import { useFindingTarget } from '@planner/ui/feedback/useFindingTarget';
 import {
   HubMapQualityLegend,
@@ -75,6 +77,7 @@ function TimelineMapMarker({
   actionPosition,
   annotation,
   atCapacity,
+  complete,
   locked,
   onAppend,
   readinessOwner,
@@ -85,6 +88,7 @@ function TimelineMapMarker({
   readonly actionPosition: number | undefined;
   readonly annotation: HubMapAnnotation;
   readonly atCapacity: boolean;
+  readonly complete: boolean;
   readonly locked: boolean;
   readonly onAppend: (slot: WorkspaceHubSlot) => void;
   readonly readinessOwner: WorkspaceHubDecisionNode['owner'];
@@ -93,6 +97,7 @@ function TimelineMapMarker({
   readonly visitPosition: number;
 }) {
   const findingTarget = useFindingTarget();
+  const dispatch = useAppDispatch();
   const markerTarget =
     visitMarker === undefined
       ? undefined
@@ -100,10 +105,12 @@ function TimelineMapMarker({
   const isVisited = visitPosition !== -1;
   const reward = hubMapReward(slot);
   const canAppend = !isVisited && !atCapacity;
+  const canOpen = isVisited && complete && slot.room !== undefined;
   const markerDisabled = canAppend && locked;
   const position = hubMapPosition(annotation);
   const pointer = useDragSuppressedActivation(() => {
     if (canAppend && !locked) onAppend(slot);
+    else if (canOpen && slot.room !== undefined) dispatch(semanticOwnerFocused(slot.room.address));
   });
   const markerLabel = isVisited
     ? `${slot.label}: Visit ${visitPosition + 1}, step ${actionPosition}.`
@@ -125,7 +132,7 @@ function TimelineMapMarker({
         aria-description={[`Reward: ${reward.summary}`, markerTarget?.['aria-description']]
           .filter(Boolean)
           .join(' ')}
-        aria-disabled={!canAppend || locked || undefined}
+        aria-disabled={(!canAppend && !canOpen) || (canAppend && locked) || undefined}
         data-authoring-locked={markerDisabled || undefined}
         disabled={markerDisabled}
         inert={markerDisabled}
@@ -145,32 +152,40 @@ function TimelineMapMarker({
   );
 }
 
-/** The fountain is appended once; later moves reorder it from its displayed controls. */
+/** Append once; after completing the board, open the hosted fountain interaction. */
 function TimelineFountainMarker({
   fountain,
   locked,
+  complete,
   onAppend,
   readinessOwner,
 }: {
   readonly fountain: WorkspaceHubFountain;
   readonly locked: boolean;
+  readonly complete: boolean;
   readonly onAppend: (actions: readonly HubAction[]) => void;
   readonly readinessOwner: WorkspaceHubDecisionNode['owner'];
 }) {
   const findingTarget = useFindingTarget();
-  const target = findingTarget(fountain.address, undefined, readinessOwner);
+  const dispatch = useAppDispatch();
+  const target =
+    fountain.actionPosition === undefined
+      ? findingTarget(fountain.address, undefined, readinessOwner)
+      : undefined;
   const appendActions = fountain.appendActions;
   const canAppend = appendActions !== undefined;
+  const canOpen = !canAppend && complete;
   const markerDisabled = canAppend && locked;
   const position = hubMapPosition(hubMapFountainAnnotation);
   const pointer = useDragSuppressedActivation(() => {
     if (appendActions !== undefined && !locked) onAppend(appendActions);
+    else if (canOpen) dispatch(semanticOwnerFocused(fountain.outcomeMarker.address));
   });
   return (
     <>
       <button
         {...target}
-        aria-disabled={!canAppend || locked || undefined}
+        aria-disabled={(!canAppend && !canOpen) || (canAppend && locked) || undefined}
         aria-label={
           fountain.actionPosition === undefined
             ? 'Hub fountain: Unused. Use fountain.'
@@ -221,6 +236,7 @@ export function HubMapTimeline({
   const visitOrder = interaction.selectedHubSlotKeys;
   // Capacity counts room visits only; the fountain use never occupies a visit.
   const atCapacity = visitOrder.length === node.requiredVisitCount;
+  const complete = atCapacity && node.fountain.actionPosition !== undefined;
   const replaceActions = (actions: readonly HubAction[]): void => {
     const proposal = interaction.proposalFor(actions);
     const options = candidates.activate(proposal);
@@ -267,6 +283,7 @@ export function HubMapTimeline({
                   }
                   annotation={annotation}
                   atCapacity={atCapacity}
+                  complete={complete}
                   key={annotation.hubSlotKey}
                   locked={locked}
                   onAppend={appendVisit}
@@ -279,6 +296,7 @@ export function HubMapTimeline({
             })}
             <TimelineFountainMarker
               fountain={node.fountain}
+              complete={complete}
               locked={locked}
               onAppend={replaceActions}
               readinessOwner={node.owner}

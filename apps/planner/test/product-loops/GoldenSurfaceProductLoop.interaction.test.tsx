@@ -37,6 +37,7 @@ import {
   authoredProjectReplaced,
 } from '@planner/state/projectWorkspaceSlice';
 import { selectProfileStatus } from '@planner/state/store';
+import { semanticOwnerFocused } from '@planner/state/editorSessionSlice';
 import {
   authorLegalTraitOffers,
   hubVisitActions,
@@ -535,15 +536,20 @@ describe('surface product loop', () => {
     await waitFor(() => expect(currentEvaluation(application).findings).toEqual([]));
 
     const historyBefore = currentHistory(application).past.length;
-    await view.user.click(within(controls).getByRole('button', { name: 'After visit 5' }));
+    expect(within(controls).queryByRole('group', { name: 'Fountain use' })).toBeNull();
+    act(() =>
+      application.store.dispatch(semanticOwnerFocused(createHubFountainAddress(nBiome, 'hub'))),
+    );
+    const ordering = await screen.findByRole('region', { name: 'Fountain order' });
+    await view.user.click(within(ordering).getByRole('button', { name: 'After visit 5' }));
     const moved = nHub(currentProject(application));
     expect(moved.actions).toEqual(hubVisitActions(nVisitSlotKeys, 5));
     expect(moved.fountainRarityResult).toEqual({ targetTraitKey: 'HermesWeaponBoon' });
     expect(currentHistory(application).past).toHaveLength(historyBefore + 1);
-    // Focus follows the moved controls to the sixth visit's room.
+    // Focus stays on Hub ordering; the map opens the new host.
     await waitFor(() => expect(document.activeElement?.textContent).toBe('After visit 5'));
+    await view.user.click(screen.getByRole('button', { name: 'Hub fountain: Step 6.' }));
     const movedControls = within(inspector).getByRole('region', { name: 'Hub fountain' });
-    expect(movedControls.contains(document.activeElement)).toBe(true);
     expect(within(movedControls).getByText('Used in the Hub before Combat 09.')).toBeTruthy();
     await view.user.click(screen.getByRole('button', { name: 'Undo' }));
     expect(nHub(currentProject(application)).actions).toEqual(hubVisitActions(nVisitSlotKeys, 3));

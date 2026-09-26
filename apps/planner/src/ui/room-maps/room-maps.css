@@ -347,11 +347,30 @@
   outline-offset: 3px;
 }
 
+.hub-map-fountain-content {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  transform: rotate(-45deg);
+  pointer-events: none;
+}
+
+.hub-map-fountain-label {
+  position: absolute;
+  top: calc(100% + 5px);
+  color: #eaf6ff;
+  font-size: clamp(9px, calc(0.85 * var(--app-vw)), 14px);
+  font-weight: 700;
+  text-shadow:
+    0 1px 3px #101923,
+    0 0 4px #101923;
+}
+
 .hub-map-fountain-glyph {
   width: 62%;
   height: 62%;
   fill: currentcolor;
-  transform: rotate(-45deg);
   pointer-events: none;
 }
 
@@ -402,6 +421,15 @@
 
 .hub-map-legend span[data-category='Special'] {
   color: #facc45;
+}
+
+.hub-map-legend span[data-category='Fountain'] {
+  color: #6cc4ff;
+}
+
+.hub-map-legend span[data-category='Fountain']::before {
+  border-radius: 20%;
+  transform: rotate(45deg);
 }
 
 .hub-map-popover {

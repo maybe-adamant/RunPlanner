@@ -1361,10 +1361,11 @@ describe('workspace inspector destinations', () => {
       nodeKey: nextRoomKey(beforeFourthVisit, fourthRoom),
     });
     expect(beforeFourthDestination).not.toHaveProperty('hubTab');
-    // A used fountain follows its displayed controls as well.
-    expect(destination(beforeFourthVisit, fountain).inspectorSubject).toEqual(
-      beforeFourthDestination.inspectorSubject,
-    );
+    // Ordering stays on the Hub even when the Phial target has a room host.
+    expect(destination(beforeFourthVisit, fountain)).toMatchObject({
+      hubTab: 'timeline',
+      inspectorSubject: { kind: 'node', nodeKey: hubNodeKey(beforeFourthVisit) },
+    });
     expect(
       occurrenceWorkbenchFor(biome(beforeFourthVisit, 'N'), fourthRoom).hubFountain?.address,
     ).toEqual(fountain);

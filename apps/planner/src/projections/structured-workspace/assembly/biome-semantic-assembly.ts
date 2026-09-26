@@ -407,7 +407,7 @@ function appendHubAssembly(
 
 /**
  * The Hub fountain controls display before the room entered after the use.
- * That room receives them for presentation; the used fountain and its Phial outcome navigate there.
+ * That room receives the Phial target for presentation; ordering stays on Hub Timeline.
  */
 function attachHubFountainControls(
   nodes: WorkspaceNode[],
@@ -426,7 +426,7 @@ function attachHubFountainControls(
       );
     }
     nodes[index] = Object.freeze({ ...host, hubFountain: hub.fountain });
-    markerDestinations.redirect([hub.fountain.marker, hub.fountain.outcomeMarker], host.key);
+    markerDestinations.redirect([hub.fountain.outcomeMarker], host.key);
   }
 }
 

@@ -265,8 +265,8 @@ export interface WorkspaceHubFountainPlacement {
 }
 
 /**
- * The Hub-owned fountain use. Its controls display before the next room, or
- * in the Hub until that room exists; the display room owns none of it.
+ * The Hub-owned fountain use. Ordering stays in Hub Timeline; its Phial target
+ * displays before the next room, or in the Hub until that room exists.
  */
 export interface WorkspaceHubFountain {
   readonly address: HubFountainAddress;

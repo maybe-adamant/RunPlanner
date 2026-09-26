@@ -63,6 +63,7 @@ describe('HubMapOverview', () => {
     expect(fountain.tagName).not.toBe('BUTTON');
     expect(fountain.hasAttribute('data-hub-slot-key')).toBe(false);
     expect(fountain.hasAttribute('data-category')).toBe(false);
+    expect(within(fountain).getByText('Fountain')).toBeTruthy();
     expect(fountain.style.left).toBe(`${(1360 / 2560) * 100}%`);
     expect(fountain.style.top).toBe(`${(800 / 1440) * 100}%`);
     expect(within(map).queryByRole('button', { name: /fountain/i })).toBeNull();
@@ -70,7 +71,7 @@ describe('HubMapOverview', () => {
       within(screen.getByLabelText('Hub room quality legend'))
         .getAllByText(/./)
         .map((entry) => entry.textContent),
-    ).toEqual(['Perfect', 'Good', 'Bad', 'Special']);
+    ).toEqual(['Perfect', 'Good', 'Bad', 'Special', 'Fountain']);
 
     await view.user.click(fountain);
     fireEvent.keyDown(fountain, { key: 'Enter' });
