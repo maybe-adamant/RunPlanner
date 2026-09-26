@@ -38,7 +38,6 @@ import type {
 import {
   loadSurfaceNOProject,
   loadSurfaceNOPQProject,
-  createSurfaceNShrineSideRoomDeliveryCheckpoint,
   nBiome,
   nLocalOccurrenceId,
   nOccurrenceId,
@@ -49,6 +48,7 @@ import {
   qBiome,
   qOccurrenceIds,
 } from '@run-planner/test-fixtures/surface';
+import { loadSurfaceNShrineSideRoomDeliveryCheckpoint } from '@run-planner/test-fixtures/checkpoints/surface';
 import { authorLegalTraitOffers, supportedTraitOffer } from '@run-planner/test-fixtures/shared';
 import {
   renderOccurrenceWorkbench,
@@ -655,7 +655,7 @@ describe('Hermes Shrine workbench', () => {
     );
     const application = createApplication();
     const view = renderOccurrenceWorkbench(
-      createSurfaceNShrineSideRoomDeliveryCheckpoint(),
+      loadSurfaceNShrineSideRoomDeliveryCheckpoint(),
       'Surface',
       'N',
       occurrence(hostId),

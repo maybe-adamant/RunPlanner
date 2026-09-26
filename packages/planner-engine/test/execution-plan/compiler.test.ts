@@ -2,11 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { catalog } from '@run-planner/hades2-catalog';
 import {
-  createCompleteFGIxionChaosProject,
-  createCompleteFGAnomalyProject,
   createCompleteFGProject,
-  createUnderworldFPoolCheckpoint,
-  createUnderworldFWellCheckpoint,
   goldenFBiome,
   goldenGBiome,
   goldenHBiome,
@@ -15,6 +11,8 @@ import {
 import {
   loadUnderworldFGHCheckpoint,
   loadUnderworldFGHICheckpoint,
+  loadUnderworldFPoolCheckpoint,
+  loadUnderworldFStygianWellCheckpoint,
 } from '@run-planner/test-fixtures/checkpoints/underworld';
 import {
   createPreparedProjectCandidateSession,
@@ -23,12 +21,7 @@ import {
   simulateProjectAssembly,
 } from '../../src/simulation';
 import { authorLegalTraitOffers } from '@run-planner/test-fixtures/shared';
-import {
-  loadSurfaceNOProject,
-  loadSurfaceNOPProject,
-  oBiome,
-  oOccurrenceIds,
-} from '@run-planner/test-fixtures/surface';
+import { oBiome, oOccurrenceIds } from '@run-planner/test-fixtures/surface';
 import { allTogetherOffer, allTogetherResult } from '../simulation/shop-trait-purchase-support';
 import {
   applyProjectCommand,
@@ -80,26 +73,16 @@ import fOpeningFixture from './fixtures/f-opening.execution.json';
 import fgFixture from './fixtures/fg.execution.json';
 import fgAnomalyFixture from './fixtures/fg-anomaly.execution.json';
 import fgIxionChaosFixture from './fixtures/fg-ixion-chaos.execution.json';
-import automaticBossFixture from './fixtures/automatic-boss.execution.json';
 import underworldFGHFixture from './fixtures/underworld-fgh.execution.json';
 import underworldFGHIFixture from './fixtures/underworld-fghi.execution.json';
 import surfaceNFixture from './fixtures/surface-n.execution.json';
 import surfaceNOFixture from './fixtures/surface-no.execution.json';
-import surfaceNOPFixture from './fixtures/surface-nop.execution.json';
-import surfaceNOPQFixture from './fixtures/surface-nopq.execution.json';
 import surfaceQShopCorrelationFixture from './fixtures/surface-q-shop-correlation.execution.json';
-import surfaceScheduledLifecycleFixture from './fixtures/surface-scheduled-lifecycle.execution.json';
-import dreamMixedPrefixFixture from './fixtures/dream-mixed-prefix.execution.json';
-import { bossAutomaticOutcomeProject } from './support/automatic-fixture';
 import {
   surfaceScheduledLifecycleProject,
   surfaceScheduledLifecycleWithQSupplyChainSlicesProject,
 } from './support/scheduled-lifecycle-fixture';
-import { typhonCustomizationProject } from './support/typhon-customization-fixture';
-import {
-  dreamMixedPrefixProject,
-  dreamMixedHandoffProject,
-} from '@run-planner/test-fixtures/dream';
+import { dreamMixedPrefixProject } from '@run-planner/test-fixtures/dream';
 import { executionTimelineTransactions } from '../../src/execution-plan/assembly/timeline-transactions';
 import { orderedExecutionRooms } from '../../src/execution-plan/assembly/route';
 import {
@@ -501,7 +484,7 @@ function echoCarrierProjection(echoLastRunBoon: AuthoredEchoLastRunBoonOffer) {
 }
 
 function planWithGenericDependency() {
-  const { product } = planFor(authorLegalTraitOffers(createUnderworldFWellCheckpoint()));
+  const { product } = planFor(authorLegalTraitOffers(loadUnderworldFStygianWellCheckpoint()));
   const occurrence = product.occurrences.find((entry) => entry.timeline.transactions.length >= 2);
   if (occurrence === undefined) throw new Error('fixture lacks a multi-transaction occurrence');
   const pair = occurrence.timeline.transactions
@@ -1793,29 +1776,6 @@ describe('execution-plan compiler and codec', () => {
     }
   });
 
-  it.each([
-    ['f-opening', fOnlyProject(), fOpeningFixture],
-    ['fg', createCompleteFGProject(), fgFixture],
-    ['fgh', loadUnderworldFGHCheckpoint(), underworldFGHFixture],
-    ['fghi', loadUnderworldFGHICheckpoint(), underworldFGHIFixture],
-    ['fg-ixion-chaos', createCompleteFGIxionChaosProject(), fgIxionChaosFixture],
-    ['fg-anomaly', createCompleteFGAnomalyProject(), fgAnomalyFixture],
-    ['automatic-boss', bossAutomaticOutcomeProject(), automaticBossFixture],
-    ['surface-no', loadSurfaceNOProject(), surfaceNOFixture],
-    ['surface-nop', loadSurfaceNOPProject(), surfaceNOPFixture],
-    ['surface-nopq', typhonCustomizationProject(), surfaceNOPQFixture],
-    ['dream-mixed-prefix', dreamMixedHandoffProject(), dreamMixedPrefixFixture],
-    [
-      'surface-scheduled-lifecycle',
-      surfaceScheduledLifecycleProject(),
-      surfaceScheduledLifecycleFixture,
-    ],
-  ])('keeps the %s product byte-stable', (_name, project, fixture) => {
-    const { plan } = planFor(project);
-    if (fixture !== undefined) expect(decodeExecutionPlan(fixture)).toEqual(plan);
-    expect(decodeExecutionPlan(JSON.parse(encodeExecutionPlan(plan)))).toEqual(plan);
-  });
-
   it('compiles a command-authored Dream Q/F/N/H itinerary as a configured Q prefix', () => {
     const project = dreamMixedPrefixProject();
     const assembly = simulateProjectAssembly(catalog, project);
@@ -2849,25 +2809,14 @@ describe('execution-plan compiler and codec', () => {
   });
 
   it('rejects the G-only Anomaly payload on an F occurrence', () => {
-    const { product } = planFor(fOnlyProject());
-    const malformed = compileExecutionPlan({
-      product: Object.freeze({
-        ...product,
-        occurrences: Object.freeze(
-          product.occurrences.map((occurrence, index) =>
-            index === 0
-              ? Object.freeze({
-                  ...occurrence,
-                  anomaly: Object.freeze({
-                    replacedRoomGameName: 'F_Combat01',
-                    success: true,
-                  }),
-                })
-              : occurrence,
-          ),
-        ),
-      }),
-    });
+    const malformed = JSON.parse(JSON.stringify(fOpeningFixture)) as Record<string, unknown>;
+    const occurrences = malformed.occurrences as Array<Record<string, unknown>>;
+    const anomalyOccurrence = fgAnomalyFixture.occurrences.find(
+      (occurrence) => occurrence.anomaly !== undefined,
+    );
+    if (anomalyOccurrence?.anomaly === undefined) throw new Error('fixture lacks Anomaly payload');
+    occurrences[0]!.anomaly = anomalyOccurrence.anomaly;
+    refreshWireFingerprint(malformed);
     expect(() => decodeExecutionPlan(malformed)).toThrow(/only supported for G occurrences/);
   });
 
@@ -2932,7 +2881,7 @@ describe('execution-plan compiler and codec', () => {
     );
 
     const duplicatePool = JSON.parse(
-      JSON.stringify(planFor(authorLegalTraitOffers(createUnderworldFPoolCheckpoint())).plan),
+      JSON.stringify(planFor(authorLegalTraitOffers(loadUnderworldFPoolCheckpoint())).plan),
     ) as {
       occurrences: Array<{
         overview: { purgingPool?: { interacted: boolean; traits?: unknown[] } };

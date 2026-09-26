@@ -51,12 +51,8 @@ import {
   goldenFStartId,
   goldenHBiome,
 } from '@run-planner/test-fixtures/underworld';
-import {
-  createSurfaceNShrineSideRoomDeliveryCheckpoint,
-  nBiome,
-  nLocalOccurrenceId,
-  nOccurrenceId,
-} from '@run-planner/test-fixtures/surface';
+import { nBiome, nLocalOccurrenceId, nOccurrenceId } from '@run-planner/test-fixtures/surface';
+import { loadSurfaceNShrineSideRoomDeliveryCheckpoint } from '@run-planner/test-fixtures/checkpoints/surface';
 
 function createStore() {
   const assembleProjectEvaluation = vi.fn((project: ProjectDocument) =>
@@ -411,7 +407,7 @@ describe('project workspace application state', () => {
     const { store } = createStore();
     const source = createOccurrenceAddress(nBiome, nLocalOccurrenceId('combat11', 'sideDoor1'));
     const entryKey = hermesShrineDeliveryEntryKey(source, 'initial:secondLeft');
-    store.dispatch(authoredProjectReplaced(createSurfaceNShrineSideRoomDeliveryCheckpoint()));
+    store.dispatch(authoredProjectReplaced(loadSurfaceNShrineSideRoomDeliveryCheckpoint()));
 
     store.dispatch(
       authoredProjectCommandDispatched({

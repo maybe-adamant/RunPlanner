@@ -37,7 +37,6 @@ import type { RewardHistoryState, RewardKernelFacts } from '@run-planner/engine/
 import {
   createSurfaceNUnresolvedBossHermesDeliveryCheckpoint,
   loadSurfaceNOProject,
-  createSurfaceNOHermesShrineDeliveryCheckpoint,
   loadSurfaceNOPProject,
   loadSurfaceNOPQProject,
   nBiome,
@@ -46,6 +45,7 @@ import {
   oOccurrenceIds,
   pBiome,
 } from '@run-planner/test-fixtures/surface';
+import { loadSurfaceNOHermesShrineDeliveryCheckpoint } from '@run-planner/test-fixtures/checkpoints/surface';
 import { dreamMixedHandoffProject } from '@run-planner/test-fixtures/dream';
 import { authorLegalTraitOffers } from '@run-planner/test-fixtures/shared';
 import { loadSurfacePSteadyGrowthShrineFrontierCheckpoint } from '@run-planner/test-fixtures/checkpoints/surface';
@@ -1401,7 +1401,7 @@ describe('Hermes Shrine pickup settlement', () => {
   it('settles the canonical delayed delivery at its exact derived host and phase', () => {
     const assembly = simulateProjectAssembly(
       catalog,
-      createSurfaceNOHermesShrineDeliveryCheckpoint(),
+      loadSurfaceNOHermesShrineDeliveryCheckpoint(),
     );
     const o = assembly.evaluation.route.biomes.find((biome) => biome.biomeKey === 'O');
     if (o === undefined) throw new Error('fixture lost O evaluation');

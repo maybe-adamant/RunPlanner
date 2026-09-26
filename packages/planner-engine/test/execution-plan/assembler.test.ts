@@ -7,8 +7,6 @@ import {
   createCompleteFGIxionChaosProject,
   createCompleteFGProject,
   createGoldenFGHProject,
-  createUnderworldFPoolCheckpoint,
-  createUnderworldFWellCheckpoint,
   goldenFBiome,
   replaceNemesisRandomEventInteraction,
   goldenFStartId,
@@ -23,7 +21,11 @@ import {
   replaceTestShopOfferActions,
   hubVisitActions,
 } from '@run-planner/test-fixtures/shared';
-import { loadUnderworldFGHICheckpoint } from '@run-planner/test-fixtures/checkpoints/underworld';
+import {
+  loadUnderworldFGHICheckpoint,
+  loadUnderworldFPoolCheckpoint,
+  loadUnderworldFStygianWellCheckpoint,
+} from '@run-planner/test-fixtures/checkpoints/underworld';
 import {
   loadSurfaceNOProject,
   loadSurfaceNOPQProject,
@@ -806,7 +808,7 @@ describe('engine-owned F/G execution semantic product', () => {
       ),
     );
 
-    const pool = productFor(authorLegalTraitOffers(createUnderworldFPoolCheckpoint()));
+    const pool = productFor(authorLegalTraitOffers(loadUnderworldFPoolCheckpoint()));
     const sale = pool.occurrences
       .flatMap((occurrence) => occurrence.roomGuide)
       .find((row) => row.description.kind === 'sellPurgingPoolTrait');
@@ -819,7 +821,7 @@ describe('engine-owned F/G execution semantic product', () => {
     });
     expect(sale).not.toHaveProperty('transactionOwner');
 
-    const well = productFor(authorLegalTraitOffers(createUnderworldFWellCheckpoint()));
+    const well = productFor(authorLegalTraitOffers(loadUnderworldFStygianWellCheckpoint()));
     expect(
       well.occurrences
         .flatMap((occurrence) => occurrence.roomGuide)
@@ -1552,7 +1554,7 @@ describe('engine-owned F/G execution semantic product', () => {
     const shopId = createOccurrenceId('golden-f-preboss-shop');
     const shop = createOccurrenceAddress(goldenFBiome, shopId);
     const refill = createShopOfferAddress(goldenFBiome, shopId, 'travelDealRefill');
-    let project = applyProjectCommand(createUnderworldFWellCheckpoint(), catalog, {
+    let project = applyProjectCommand(loadUnderworldFStygianWellCheckpoint(), catalog, {
       kind: 'ReplaceShopOffer',
       offer: createShopOfferAddress(goldenFBiome, shopId, 'MajorNonBoon'),
       value: { rewardType: 'MaxHealthDrop' },
@@ -2375,7 +2377,7 @@ describe('engine-owned F/G execution semantic product', () => {
       afterOwner: reverseFountain?.owner,
     });
 
-    const pool = productFor(authorLegalTraitOffers(createUnderworldFPoolCheckpoint()));
+    const pool = productFor(authorLegalTraitOffers(loadUnderworldFPoolCheckpoint()));
     expect(
       pool.occurrences.flatMap((occurrence) =>
         occurrence.timeline.transactions.map((transaction) => transaction.kind),
@@ -2388,7 +2390,7 @@ describe('engine-owned F/G execution semantic product', () => {
       kind: 'traitInventory',
     });
 
-    let wellProject = createUnderworldFWellCheckpoint();
+    let wellProject = loadUnderworldFStygianWellCheckpoint();
     const wellId = createOccurrenceId('golden-f-preboss-shop:postboss');
     const well = createOccurrenceAddress(goldenFBiome, wellId);
     // Make the first accepted purchase neutral. Travel Deal still retains it
@@ -2486,7 +2488,7 @@ describe('engine-owned F/G execution semantic product', () => {
   it('realizes a Travel Deal Well refill and protects its source when the refill is not purchased', () => {
     const wellId = createOccurrenceId('golden-f-preboss-shop:postboss');
     const well = createOccurrenceAddress(goldenFBiome, wellId);
-    let project = applyProjectCommand(createUnderworldFWellCheckpoint(), catalog, {
+    let project = applyProjectCommand(loadUnderworldFStygianWellCheckpoint(), catalog, {
       kind: 'ReplaceStygianWellOffer',
       occurrence: well,
       slotKey: 'secondLeft',

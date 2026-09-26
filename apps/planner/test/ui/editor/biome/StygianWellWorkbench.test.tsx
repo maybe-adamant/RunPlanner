@@ -28,6 +28,7 @@ import {
   goldenFBiome,
   loadUnderworldFGProject,
 } from '@run-planner/test-fixtures/underworld';
+import { loadUnderworldFStygianWellCheckpoint } from '@run-planner/test-fixtures/checkpoints/underworld';
 import { authorLegalTraitOffers } from '@run-planner/test-fixtures/shared';
 import { renderOccurrenceWorkbench } from '@planner-test/support/biome-workbench';
 
@@ -144,7 +145,7 @@ describe('Stygian Well workbench', () => {
 
   it('hides a dormant refill when the last initial purchase is cleared and restores it on purchase', async () => {
     const owner = createOccurrenceAddress(goldenFBiome, postbossId);
-    let project = createUnderworldFWellCheckpoint();
+    let project = loadUnderworldFStygianWellCheckpoint();
     for (const generationKey of ['initial:secondRight', 'travelDealRefill'] as const) {
       project = applyProjectCommand(project, catalog, {
         kind: 'SetStygianWellPurchase',

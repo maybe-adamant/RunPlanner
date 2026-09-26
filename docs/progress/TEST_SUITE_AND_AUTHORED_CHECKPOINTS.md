@@ -1,6 +1,6 @@
 # Test-suite cleanup and authored checkpoint coverage
 
-Status: Gate A implemented and independently reviewed. Gates B–D await implementation.
+Status: Gates A–B implemented and reviewed; review findings resolved. Gates C–D await implementation.
 Base: `7dea8cfe` (September 26, 2026).
 
 ## Objective
@@ -116,6 +116,24 @@ Primary checks: affected catalog/architecture/UI tests and typecheck for type
 assertion changes. Commit cleanup independently of fixture enrichment.
 
 ### Gate B — existing fixture reuse and execution construction
+
+Disposition: implemented against `1fd0207f` (September 26, 2026); independent
+review completed and its decoder-setup finding resolved. Equivalent Pool, placed Shrine, side-room Shrine and F-only Well
+consumers load their saved checkpoints, while their central recipes remain the
+provenance witnesses. The Well F/G-tail and unplaced-delivery recipe variants
+remain because their states differ deliberately; raw Surface prefix loaders and
+their forced-Shrine completion wrappers also remain distinct. The fixture lane
+now builds each execution fixture once for bytes, decoded equality and wire
+round trips; no execution JSON changed. The duplicate-Pool decoder mutation
+retains its producer because no committed wire has an interacted Pool inventory;
+the G-only Anomaly decoder mutation now clones saved F and Anomaly wire instead
+of compiling an artificial product.
+Focused tests passed: 62 compiler, 20 execution-fixture, 135 engine-consumer,
+93 application-consumer and 24 checkpoint-integrity tests. Full typechecking,
+changed-file lint, formatting and diff checks passed. The fixture matrix now
+requires 20 producer builds rather than 32, retaining all three checks for each.
+The pre-change compiler timing did not complete in the command window,
+so no speedup claim is made.
 
 Starting contacts:
 

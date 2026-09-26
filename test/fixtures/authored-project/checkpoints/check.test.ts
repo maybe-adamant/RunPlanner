@@ -20,7 +20,10 @@ import {
   nOccurrenceId,
   oOccurrenceIds,
 } from '../routes/surface';
-import { createUnderworldFPoolCheckpoint } from '../routes/underworld';
+import {
+  createUnderworldFPoolCheckpoint,
+  createUnderworldFWellCheckpoint,
+} from '../routes/underworld';
 
 const checkpointDirectory = resolve(process.cwd(), 'test/fixtures/authored-project/checkpoints');
 
@@ -147,6 +150,17 @@ describe('authored-project checkpoint integrity', () => {
         branch.state.traitHistory?.previouslyPickedTraitKeys.includes('ApolloWeaponBoon'),
       ),
     ).toBe(true);
+  });
+
+  it('keeps the F-only Stygian Well checkpoint equivalent to its command recipe', () => {
+    const saved = loadCheckpoint('underworld-f-stygian-well');
+    expect(encodeProjectDocument(saved)).toBe(
+      encodeProjectDocument(createUnderworldFWellCheckpoint()),
+    );
+    expect(saved.route.biomes.map((biome) => biome.biomeKey)).toEqual(['F']);
+    expect(
+      createUnderworldFWellCheckpoint(false).route.biomes.map((biome) => biome.biomeKey),
+    ).toEqual(['F', 'G']);
   });
 
   it('keeps ordinary Postboss features and terminal I/Q Boss-only topology in canonical checkpoints', () => {
