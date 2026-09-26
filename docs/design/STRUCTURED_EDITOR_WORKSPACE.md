@@ -640,9 +640,9 @@ their incoming-reward acquisition children open the main occurrence Timeline;
 parent-owned side generation, entry order, and side reward identity open the
 parent main occurrence Overview; entered side occurrences and their acquisition
 children open the side occurrence Timeline; the uncommitted completed-Hub
-handoff opens Exit; an unused Hub fountain opens Hub Timeline; and a used
-fountain and its Phial outcome open the room entered after the use, or Hub
-Timeline until that room exists. React consumes that explicit destination and
+handoff opens Exit; Hub fountain placement opens Hub Timeline; and its Phial
+outcome opens the room entered after the use, or Hub Timeline until that room
+exists. React consumes that explicit destination and
 does not infer tab ownership from semantic-address shapes or rendered ancestry.
 
 The board remains a joint generation region. Open-set membership and the dense
@@ -667,20 +667,23 @@ icons; transparent markers are unvisited, solid markers carry a badge above the
 room circle. Badges show the combined action order, while room visit ordinals
 stay 1–6. Clicking an unvisited door appends it when fewer than six rooms are
 visited; the fountain's distinct marker appends its one use regardless of room
-capacity. Used markers and visited doors do not reorder or open a second reward
-preview. Overview shows the fountain marker without interaction or board
-membership. **Reset visits** submits the empty action prefix, clearing the
+capacity. Once all six visits and the fountain are placed, visited doors open
+their room and the fountain opens its hosted interaction. Markers do not reorder
+or open a second reward preview. Overview shows the labeled fountain diamond
+without interaction or board membership. **Reset visits** submits the empty
+action prefix, clearing the
 fountain use and its Phial outcome, as one undoable edit, including normal
 downstream cleanup.
 
-The Hub-owned fountain controls—its position in the action order and the
-Phial target—display above the room entered after the use (Preboss after a
+Fountain ordering stays on Hub Timeline. The read-only timing label and
+Phial target display above the room entered after the use (Preboss after a
 final use). That room owns no persistence, candidate, or execution product for
-them. Until the room exists, Hub Timeline shows the controls; otherwise it
-links to them. Each position is an explicitly chosen, candidate-assessed
-reorder of the same action order: it keeps and reassesses an authored Phial
-target, and focus follows the controls to their new host. Only **Reset
-visits** removes the fountain use, clearing its target with it.
+them. Until the room exists, Hub Timeline also hosts the target. Each position
+is an explicitly chosen, candidate-assessed reorder of the same action order:
+it keeps and reassesses an authored Phial target, while focus stays on the Hub
+ordering control. The shared map legend identifies the fountain diamond beside
+the room-quality circles. Only **Reset visits** removes the fountain use,
+clearing its target with it.
 
 The existing Hub-owned interaction assesses complete proposals with Hub-level
 readiness, not the interior readiness of each visited room. Exact visit markers

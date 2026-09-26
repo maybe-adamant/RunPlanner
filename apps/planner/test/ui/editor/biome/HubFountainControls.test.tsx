@@ -18,7 +18,7 @@ import type {
   WorkspaceHubFountain,
   WorkspaceInteractionCatalog,
 } from '@planner/projections/structured-workspace';
-import { HubFountainControls } from '@planner/ui/editor/biome/HubFountainControls';
+import { HubFountainPlacementControls } from '@planner/ui/editor/biome/HubFountainControls';
 import { nBiome } from '@run-planner/test-fixtures/surface';
 import { hubVisitActions } from '@run-planner/test-fixtures/shared';
 
@@ -105,7 +105,7 @@ describe('HubFountainControls', () => {
     } as unknown as WorkspaceInteractionCatalog;
     render(
       <Provider store={application.store}>
-        <HubFountainControls fountain={fountain} interactions={interactions} />
+        <HubFountainPlacementControls fountain={fountain} interactions={interactions} />
       </Provider>,
     );
     const group = screen.getByRole('group', { name: 'Fountain use' });

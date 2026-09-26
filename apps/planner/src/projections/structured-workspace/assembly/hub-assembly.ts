@@ -703,9 +703,11 @@ function projectHubNode(
   markerDestinations.setHubTab(Object.freeze(node.visits.map((visit) => visit.marker)), 'timeline');
   markerDestinations.redirect([completedExitMarker], node.key);
   markerDestinations.setHubTab([completedExitMarker], 'exit');
-  // An unused fountain repairs on the Hub map; a used one follows its displayed controls.
+  // Placement always repairs on Hub Timeline; only the Phial target follows its host.
+  markerDestinations.redirect([fountain.marker], node.key);
+  markerDestinations.setHubTab([fountain.marker], 'timeline');
   if (fountain.controlsHost?.kind !== 'room') {
-    const fountainMarkers = [fountain.marker, fountain.outcomeMarker];
+    const fountainMarkers = [fountain.outcomeMarker];
     markerDestinations.redirect(fountainMarkers, node.key);
     markerDestinations.setHubTab(fountainMarkers, 'timeline');
   }

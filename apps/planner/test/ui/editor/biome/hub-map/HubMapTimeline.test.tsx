@@ -154,7 +154,7 @@ describe('HubMapTimeline', () => {
     const view = renderHubDecisionWorkbench(targeted);
     await showTimeline(view.user);
     // No room follows the final planned action, so the Hub hosts its controls.
-    const controls = screen.getByRole('region', { name: 'Hub fountain' });
+    const controls = screen.getByRole('region', { name: 'Fountain order' });
     const placements = within(controls).getByRole('group', { name: 'Fountain use' });
     expect(
       within(placements)
@@ -177,11 +177,10 @@ describe('HubMapTimeline', () => {
     expect(nHubState(view.application).decision.fountainRarityResult).toEqual({
       targetTraitKey: 'HermesWeaponBoon',
     });
-    // The third visit's room now displays the controls instead of the Hub.
+    // Ordering remains here; only the Phial target moves to the third visit's room.
     expect(screen.queryByRole('region', { name: 'Hub fountain' })).toBeNull();
-    expect(
-      screen.getByRole('button', { name: 'Hub fountain controls: before Combat 02 →' }),
-    ).toBeTruthy();
+    expect(screen.getByRole('region', { name: 'Fountain order' })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: /Hub fountain controls:/ })).toBeNull();
   });
 
   it('appends unvisited rooms sequentially until the authored visit order reaches capacity', async () => {
@@ -210,16 +209,20 @@ describe('HubMapTimeline', () => {
     expect(nHubState(view.application).decision.actions).toHaveLength(7);
   });
 
-  it('keeps rewards readable without activating visited rooms or appending past capacity', async () => {
+  it('opens visited rooms on a complete board without appending past capacity', async () => {
     const view = renderHubDecisionWorkbench(loadSurfaceNCompleteHubFrontierProject());
     await showTimeline(view.user);
     const historyBefore = view.application.store.getState().projectWorkspace.history!.past.length;
     const visited = screen.getByRole('button', { name: 'Combat 05: Visit 1, step 2.' });
 
-    expect(visited.getAttribute('aria-disabled')).toBe('true');
+    expect(visited.getAttribute('aria-disabled')).toBeNull();
     expect(visited.getAttribute('aria-description')).toBe('Reward: Hermes');
     expect(visited.getAttribute('title')).toBe('Combat 05: Hermes');
     await view.user.click(visited);
+    expect(view.application.store.getState().editorSession.focusedSemanticOwner).toMatchObject({
+      kind: 'occurrence',
+      occurrenceId: nOccurrenceId('combat05'),
+    });
     await view.user.keyboard('{Enter}');
 
     const unvisited = screen.getByRole('button', {

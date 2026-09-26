@@ -111,6 +111,7 @@ export function HubMapQualityLegend(): ReactNode {
           {category}
         </span>
       ))}
+      <span data-category="Fountain">Fountain</span>
     </div>
   );
 }
@@ -143,6 +144,31 @@ export function HubMapReadOnlyOverlay(): ReactNode {
           </text>
         </g>
       ))}
+      <g transform={`translate(${hubMapFountainAnnotation.x} ${hubMapFountainAnnotation.y})`}>
+        <rect
+          x="-30"
+          y="-30"
+          width="60"
+          height="60"
+          rx="10"
+          fill="#6cc4ff"
+          stroke="#101923"
+          strokeWidth="4"
+          transform="rotate(45)"
+        />
+        <text
+          y="66"
+          fill="#eaf6ff"
+          stroke="#101923"
+          strokeWidth="5"
+          paintOrder="stroke"
+          fontSize="24"
+          fontWeight="bold"
+          textAnchor="middle"
+        >
+          Fountain
+        </text>
+      </g>
     </svg>
   );
 }

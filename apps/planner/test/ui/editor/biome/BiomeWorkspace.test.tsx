@@ -535,7 +535,7 @@ describe('BiomeWorkspace', () => {
     },
   );
 
-  it('moves the fountain from its room-hosted controls by keyboard and keeps focus on them', async () => {
+  it('moves the fountain on Hub Timeline and opens its read-only timing in the next room', async () => {
     const project = applyProjectCommand(loadSurfaceNProject(), catalog, {
       kind: 'ReplaceHubActionOrder',
       hub: createHubDecisionAddress(nBiome, 'hub'),
@@ -547,13 +547,9 @@ describe('BiomeWorkspace', () => {
         semanticOwnerFocused(createHubVisitAddress(nBiome, 'hub', 1)),
       ),
     );
-    // Hub Timeline links to the controls displayed before the next room.
-    await view.user.click(
-      screen.getByRole('button', { name: 'Hub fountain controls: before Combat 11 →' }),
-    );
-    const controls = await screen.findByRole('region', { name: 'Hub fountain' });
+    const controls = await screen.findByRole('region', { name: 'Fountain order' });
     const current = within(controls).getByRole('button', { name: 'After visit 3' });
-    await waitFor(() => expect(document.activeElement).toBe(current));
+    act(() => current.focus());
     expect(current.getAttribute('aria-pressed')).toBe('true');
 
     await view.user.tab({ shift: true });
@@ -568,13 +564,16 @@ describe('BiomeWorkspace', () => {
       return decision;
     };
     await waitFor(() => expect(hub().actions).toEqual(hubVisitActions(nVisitSlotKeys, 2)));
-    const moved = await screen.findByRole('region', { name: 'Hub fountain' });
-    expect(within(moved).getByText('Used in the Hub before Combat 02.')).toBeTruthy();
+    const moved = await screen.findByRole('region', { name: 'Fountain order' });
     await waitFor(() =>
       expect(document.activeElement).toBe(
         within(moved).getByRole('button', { name: 'After visit 2' }),
       ),
     );
+    await view.user.click(screen.getByRole('button', { name: 'Hub fountain: Step 3.' }));
+    const hosted = await screen.findByRole('region', { name: 'Hub fountain' });
+    expect(within(hosted).getByText('Used in the Hub before Combat 02.')).toBeTruthy();
+    expect(within(hosted).queryByRole('group', { name: 'Fountain use' })).toBeNull();
   });
 
   it('returns an Overview finding from Map to its canonical List presentation', async () => {
