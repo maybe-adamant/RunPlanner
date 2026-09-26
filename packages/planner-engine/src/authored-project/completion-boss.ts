@@ -1,6 +1,20 @@
 import type { Catalog, RoomDeclaration } from '../catalog-schema';
 import type { ResolvedRoutePosition } from './route-context';
 
+/** Completion identity is route-owned; a detour boss does not end its host biome. */
+export function isRouteCompletionRoom(
+  catalog: Catalog,
+  position: ResolvedRoutePosition,
+  gameName: string,
+): boolean {
+  const completion = catalog.biomeLayouts.byKey[position.biomeKey]?.completion;
+  return (
+    gameName === completion?.bossRoomGameName ||
+    gameName === completion?.rivalsBossRoomGameName ||
+    gameName === position.completion.postbossRoomGameName
+  );
+}
+
 /** Rivals applies to the first configured number of biomes on the route. */
 export function rivalsActiveForBiome(position: ResolvedRoutePosition, rivalsRank: number): boolean {
   return rivalsRank >= position.ordinal;

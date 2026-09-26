@@ -28,6 +28,7 @@ import { describe, expect, it } from 'vitest';
 import { requireTraits } from '@run-planner/test-fixtures/shared';
 import {
   createCompleteFGProject,
+  createGContractAvailabilityProject,
   createGoldenFGHIProject,
   goldenFBiome,
   goldenFOccurrenceId,
@@ -156,6 +157,27 @@ function selectedAdditionalExitWithDownstream(kind: 'chaos' | 'zagreusContract')
 }
 
 describe('structured workspace source index', () => {
+  it('exposes the selected contract return as a door-authoring frontier, not the next biome', () => {
+    const fixture = createGContractAvailabilityProject(true);
+    const biome = createBiomeAddress('Underworld', 'G');
+    const contract = fixture.project.route.biomes
+      .find((plan) => plan.biomeKey === 'G')!
+      .topology!.occurrences.find((room) => room.gameName === 'C_Boss01')!;
+    const owner = createExitDecisionAddress(biome, {
+      kind: 'occurrence',
+      occurrenceId: contract.occurrenceId,
+    });
+    const project = applyProjectCommand(fixture.project, catalog, {
+      kind: 'RemoveExitDecision',
+      decision: owner,
+    });
+    const source = biomeSource(sourceIndexForExactProject(project), 'Underworld', 'G');
+    expect(source.outgoingStatus(contract.occurrenceId)).toMatchObject({
+      kind: 'frontier',
+      capability: 'createBatch',
+      owner,
+    });
+  });
   it.each(['chaos', 'zagreusContract'] as const)(
     'orders a selected %s continuation before retained unpicked topology',
     (kind) => {

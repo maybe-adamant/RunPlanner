@@ -211,7 +211,7 @@ describe('route detour catalog declarations', () => {
 
     expect(catalog.rooms.byKey.C_Boss01).toMatchObject({
       roomSetKey: 'C',
-      kind: 'Boss',
+      kind: 'Combat',
       mode: { kind: 'authored', templateKey: 'ContractBoss' },
       blockGiftBoons: true,
       incomingReward: {
