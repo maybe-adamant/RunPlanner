@@ -17,7 +17,6 @@ import {
   type BiomeAddress,
   type BiomeTopology,
   type ExitDecision,
-  type HubAction,
   type HubDecision,
   type HubDecisionAddress,
   type LocalVisitDecision,
@@ -65,7 +64,6 @@ import type {
   WorkspaceDoorContract,
   WorkspaceHubDecisionNode,
   WorkspaceHubFountain,
-  WorkspaceHubFountainPlacement,
   WorkspaceOccurrenceWorkbenchNode,
 } from '../contracts/structure';
 import type { WorkspaceMarker } from '../contracts/navigation';
@@ -179,32 +177,6 @@ function redirectHubMainRewardFocus(
   mainReward: WorkspaceMarker,
 ): void {
   markerDestinations.redirectTo(mainReward, hub, `hub:${hub.focusKey}`);
-}
-
-/** Complete action orders placing the fountain use after each authored visit prefix. */
-function hubFountainPlacements(
-  actions: readonly HubAction[],
-): readonly WorkspaceHubFountainPlacement[] {
-  const withoutFountain = actions.filter((action) => action.kind !== 'useFountain');
-  const visitIndexes = withoutFountain.flatMap((action, index) =>
-    action.kind === 'roomVisit' ? [index] : [],
-  );
-  const fountain: HubAction = Object.freeze({ kind: 'useFountain' as const });
-  return Object.freeze(
-    Array.from({ length: visitIndexes.length + 1 }, (_, visits) => {
-      const insertion = visits === 0 ? 0 : visitIndexes[visits - 1]! + 1;
-      return Object.freeze({
-        key: `after:${visits}`,
-        label: visits === 0 ? 'Before visit 1' : `After visit ${visits}`,
-        precedingVisitCount: visits,
-        proposedActions: Object.freeze([
-          ...withoutFountain.slice(0, insertion),
-          fountain,
-          ...withoutFountain.slice(insertion),
-        ]),
-      });
-    }),
-  );
 }
 
 function projectHubNode(
@@ -575,7 +547,6 @@ function projectHubNode(
   const fountainOutcome = createFountainRarityOutcomeAddress(fountainAddress);
   const fountainIndex = hub.actions.findIndex((action) => action.kind === 'useFountain');
   const fountainPrecedingVisits = hubFountainPrecedingVisitCount(hub);
-  const placements = hubFountainPlacements(hub.actions);
   // The next room entered after the use hosts its controls; Preboss follows a final use.
   const hostOccurrenceId =
     fountainPrecedingVisits === undefined
@@ -610,10 +581,6 @@ function projectHubNode(
           ]),
         }
       : {}),
-    placements,
-    ...(fountainPrecedingVisits === undefined
-      ? {}
-      : { selectedPlacementKey: `after:${fountainPrecedingVisits}` }),
     outcomeMarker: markerDestinations.marker(fountainOutcome),
     ...(rarity === undefined ? {} : { rarity }),
     ...(fountainPrecedingVisits === undefined

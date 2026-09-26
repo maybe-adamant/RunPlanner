@@ -24,7 +24,7 @@ import { RoomMapViewport } from '@planner/ui/room-maps/RoomMapViewport';
 import { roomMapAssetFor } from '@planner/ui/room-maps/roomMapAssets';
 import { DoorRewardEditor } from '../DoorRewardEditor';
 import { useHubSlotMembership } from '../HubMembershipBoard';
-import { HubMapFountainGlyph, HubMapMarkerContent } from './HubMapMarkerContent';
+import { HubMapFountainContent, HubMapMarkerContent } from './HubMapMarkerContent';
 import { hubMapReward } from './hubMapReward';
 
 interface HubMapOverviewProps {
@@ -233,7 +233,7 @@ function HubMapMarkerLayer({
         style={hubMapPosition(hubMapFountainAnnotation)}
         title="Hub fountain"
       >
-        <HubMapFountainGlyph />
+        <HubMapFountainContent />
       </span>
     </div>
   );

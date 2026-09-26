@@ -406,15 +406,26 @@ function appendHubAssembly(
 }
 
 /**
- * The Hub fountain controls display before the room entered after the use.
- * That room receives the Phial target for presentation; ordering stays on Hub Timeline.
+ * Hub visits return to their Timeline; the fountain's next room also hosts its Phial target.
  */
-function attachHubFountainControls(
+function attachHubRoomPresentation(
   nodes: WorkspaceNode[],
   markerDestinations: WorkspaceMarkerDestinationEmitter,
 ): void {
   for (const hub of nodes) {
-    if (hub.kind !== 'hubDecision' || hub.fountain.controlsHost?.kind !== 'room') continue;
+    if (hub.kind !== 'hubDecision') continue;
+    for (const visit of hub.visits) {
+      if (visit.room === undefined) continue;
+      const index = nodes.findIndex(
+        (node) =>
+          node.kind === 'occurrenceWorkbench' &&
+          node.room.occurrenceId === visit.room!.occurrenceId,
+      );
+      const room = nodes[index];
+      if (room?.kind === 'occurrenceWorkbench')
+        nodes[index] = Object.freeze({ ...room, hubTimeline: visit.marker });
+    }
+    if (hub.fountain.controlsHost?.kind !== 'room') continue;
     const { occurrenceId } = hub.fountain.controlsHost;
     const index = nodes.findIndex(
       (node) => node.kind === 'occurrenceWorkbench' && node.room.occurrenceId === occurrenceId,
@@ -425,7 +436,11 @@ function attachHubFountainControls(
         `${hub.key} has no room workbench for its fountain controls`,
       );
     }
-    nodes[index] = Object.freeze({ ...host, hubFountain: hub.fountain });
+    nodes[index] = Object.freeze({
+      ...host,
+      hubFountain: hub.fountain,
+      hubTimeline: host.hubTimeline ?? hub.fountain.marker,
+    });
     markerDestinations.redirect([hub.fountain.outcomeMarker], host.key);
   }
 }
@@ -741,7 +756,7 @@ export function assembleWorkspaceBiomeSemantics(
     if (decision.source.kind !== 'hubDecision') continue;
     projectAuthoredExitDecision(decision);
   }
-  attachHubFountainControls(nodes, markerDestinations);
+  attachHubRoomPresentation(nodes, markerDestinations);
   if (frontier?.kind === 'exitDecision' && frontier.owner.source.kind === 'hubDecision') {
     markerDestinations.setHubTab([frontier.marker], 'exit');
   }

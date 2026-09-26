@@ -535,7 +535,7 @@ describe('BiomeWorkspace', () => {
     },
   );
 
-  it('moves the fountain on Hub Timeline and opens its read-only timing in the next room', async () => {
+  it('opens fountain timing from the completed map without separate ordering controls', async () => {
     const project = applyProjectCommand(loadSurfaceNProject(), catalog, {
       kind: 'ReplaceHubActionOrder',
       hub: createHubDecisionAddress(nBiome, 'hub'),
@@ -547,33 +547,17 @@ describe('BiomeWorkspace', () => {
         semanticOwnerFocused(createHubVisitAddress(nBiome, 'hub', 1)),
       ),
     );
-    const controls = await screen.findByRole('region', { name: 'Fountain order' });
-    const current = within(controls).getByRole('button', { name: 'After visit 3' });
-    act(() => current.focus());
-    expect(current.getAttribute('aria-pressed')).toBe('true');
-
-    await view.user.tab({ shift: true });
-    expect(document.activeElement?.textContent).toBe('After visit 2');
-    await view.user.keyboard('{Enter}');
-    const hub = () => {
-      const plan = view.application.store
-        .getState()
-        .projectWorkspace.history!.present.route.biomes.find((biome) => biome.biomeKey === 'N');
-      const decision = plan?.topology?.decisions.find((candidate) => candidate.kind === 'hub');
-      if (decision?.kind !== 'hub') throw new Error('N Hub is missing');
-      return decision;
-    };
-    await waitFor(() => expect(hub().actions).toEqual(hubVisitActions(nVisitSlotKeys, 2)));
-    const moved = await screen.findByRole('region', { name: 'Fountain order' });
-    await waitFor(() =>
-      expect(document.activeElement).toBe(
-        within(moved).getByRole('button', { name: 'After visit 2' }),
-      ),
-    );
-    await view.user.click(screen.getByRole('button', { name: 'Hub fountain: Step 3.' }));
+    expect(screen.queryByRole('region', { name: 'Fountain order' })).toBeNull();
+    await view.user.click(await screen.findByRole('button', { name: 'Hub fountain: Step 4.' }));
+    expect(screen.getByRole('region', { name: 'Ephyra Hub timeline map' })).toBeTruthy();
+    await view.user.click(screen.getByRole('button', { name: 'Open Interaction →' }));
     const hosted = await screen.findByRole('region', { name: 'Hub fountain' });
-    expect(within(hosted).getByText('Used in the Hub before Combat 02.')).toBeTruthy();
+    expect(within(hosted).getByText('Used in the Hub before Combat 11.')).toBeTruthy();
     expect(within(hosted).queryByRole('group', { name: 'Fountain use' })).toBeNull();
+    const back = screen.getByRole('button', { name: '← Hub Timeline' });
+    expect(back.closest('.room-card-heading')?.textContent).toContain('View Map');
+    await view.user.click(back);
+    expect(await screen.findByRole('region', { name: 'Ephyra Hub timeline map' })).toBeTruthy();
   });
 
   it('returns an Overview finding from Map to its canonical List presentation', async () => {

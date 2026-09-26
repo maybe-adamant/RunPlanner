@@ -1371,6 +1371,15 @@ describe('workspace inspector destinations', () => {
     ).toEqual(fountain);
 
     const beforePreboss = placed(nVisitSlotKeys, 6);
+    const returnMarker = occurrenceWorkbenchFor(
+      biome(beforePreboss, 'N'),
+      nOccurrenceIds.preboss,
+    ).hubTimeline;
+    expect(returnMarker).toBeDefined();
+    expect(destination(beforePreboss, returnMarker!.address)).toMatchObject({
+      hubTab: 'timeline',
+      inspectorSubject: { kind: 'node', nodeKey: hubNodeKey(beforePreboss) },
+    });
     expect(destination(beforePreboss, outcome).inspectorSubject).toEqual({
       kind: 'node',
       nodeKey: nextRoomKey(beforePreboss, nOccurrenceIds.preboss),

@@ -32,7 +32,6 @@ export type {
   WorkspaceDoorReward,
   WorkspaceHubDecisionNode,
   WorkspaceHubFountain,
-  WorkspaceHubFountainPlacement,
   WorkspaceHubSlot,
   WorkspaceHubVisit,
   WorkspaceInheritedRewardStore,

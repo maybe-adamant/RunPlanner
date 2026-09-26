@@ -255,15 +255,6 @@ export interface WorkspaceHubVisit {
   readonly actionPosition?: number;
 }
 
-/** One complete Hub action order that places or moves the fountain use. */
-export interface WorkspaceHubFountainPlacement {
-  readonly key: string;
-  readonly label: string;
-  /** Room visits completed before the use. */
-  readonly precedingVisitCount: number;
-  readonly proposedActions: readonly HubAction[];
-}
-
 /**
  * The Hub-owned fountain use. Ordering stays in Hub Timeline; its Phial target
  * displays before the next room, or in the Hub until that room exists.
@@ -276,9 +267,6 @@ export interface WorkspaceHubFountain {
   readonly actionPosition?: number;
   /** The complete appended order, offered only while the fountain is unused. */
   readonly appendActions?: readonly HubAction[];
-  readonly placements: readonly WorkspaceHubFountainPlacement[];
-  /** The current placement, absent while the fountain is unused. */
-  readonly selectedPlacementKey?: string;
   /** The Phial outcome owner; its target control is present only while one is required. */
   readonly outcomeMarker: WorkspaceMarker;
   readonly rarity?: WorkspaceFountainRarityControl;
@@ -343,6 +331,8 @@ export interface WorkspaceOccurrenceWorkbenchNode {
   readonly room: WorkspaceRoomSummary;
   /** Hub fountain controls presented before this room's chronology. */
   readonly hubFountain?: WorkspaceHubFountain;
+  /** Stable Hub Timeline destination for visited rooms and the fountain's room host. */
+  readonly hubTimeline?: WorkspaceMarker;
 }
 
 export type WorkspaceBiomeField =

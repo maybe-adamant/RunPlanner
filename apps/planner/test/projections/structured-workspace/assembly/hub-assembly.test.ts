@@ -123,28 +123,7 @@ describe('structured workspace Hub assembly', () => {
       hub,
     });
     expect(unused.fountain).not.toHaveProperty('actionPosition');
-    expect(unused.fountain).not.toHaveProperty('selectedPlacementKey');
     expect(unused.fountain).not.toHaveProperty('controlsHost');
-    expect(unused.fountain.placements).toEqual([
-      {
-        key: 'after:0',
-        label: 'Before visit 1',
-        precedingVisitCount: 0,
-        proposedActions: hubVisitActions(visits, 0),
-      },
-      {
-        key: 'after:1',
-        label: 'After visit 1',
-        precedingVisitCount: 1,
-        proposedActions: hubVisitActions(visits, 1),
-      },
-      {
-        key: 'after:2',
-        label: 'After visit 2',
-        precedingVisitCount: 2,
-        proposedActions: hubVisitActions(visits, 2),
-      },
-    ]);
     expect(unused.visits.map((visit) => visit.actionPosition)).toEqual([
       1,
       2,
@@ -158,14 +137,9 @@ describe('structured workspace Hub assembly', () => {
     expect(between.fountain).toMatchObject({
       actionPosition: 2,
       controlsHost: { kind: 'room', occurrenceId: nOccurrenceId(visits[1]!) },
-      selectedPlacementKey: 'after:1',
     });
     expect(between.fountain).not.toHaveProperty('appendActions');
     expect(between.visits.slice(0, 2).map((visit) => visit.actionPosition)).toEqual([1, 3]);
-    // Moving keeps every room visit and differs only in the fountain position.
-    expect(
-      between.fountain.placements.find((placement) => placement.key === 'after:0'),
-    ).toMatchObject({ proposedActions: hubVisitActions(visits, 0) });
 
     const first = withActions(0);
     expect(first.fountain.actionPosition).toBe(1);
