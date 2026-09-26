@@ -176,9 +176,8 @@ export function deriveRoomExitConformanceDeltas(
 }
 
 /**
- * A Hub interval is its own conformance window: it compares the Hub's entry or
- * return state with its departure, so it never proves a change from before an
- * unobserved boundary. Only a changed modeled trait inventory is published.
+ * A Hub interval gates publication by comparing its entry or return state with
+ * its departure; the published rows are the full modeled departure inventory.
  */
 export function deriveHubDepartureTraitInventory(
   interval: HubFountainIntervalRunState,
