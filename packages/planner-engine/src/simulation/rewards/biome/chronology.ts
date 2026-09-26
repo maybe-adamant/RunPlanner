@@ -8,6 +8,7 @@ import {
   createTravelDealRefillRealizationAddress,
   createEncounterPhaseAddress,
   createBiomeAddress,
+  createHubDecisionAddress,
   createTargetAddress,
   createEchoKeepsakeReplayAddress,
   createRoomRunStateCheckpointAddress,
@@ -150,7 +151,7 @@ import {
   type PlannerTimelineDependency,
   type PlannerTimelineNode,
 } from '../../timeline-facts';
-import type { WellRefillRealization } from '../model';
+import type { HubFountainIntervalRunState, WellRefillRealization } from '../model';
 import {
   assessExperimentalHammerEquipResult,
   applyEchoFigurineReplay,
@@ -1040,16 +1041,14 @@ export function evaluateBiomeRewardChronology(
     }
   }
   let pendingHubBoard: PendingHubBoardGeneration | undefined;
+  const hubFountainIntervals = new Map<string, HubFountainIntervalRunState>();
   const runStateDerivationCache = createRunStateDerivationCache();
 
-  function captureRunState(
+  function runStateAt(
     owner: RunStateSnapshot['owner'],
     source: CanonicalRewardSource,
     view: HistoryStateView,
-    checkpointBranches: readonly RewardBranchState[] = branches,
-  ): void {
-    const ownerKey = semanticAddressKey(owner);
-    if (runStateSnapshotsByOwner.has(ownerKey) || branches.length === 0) return;
+  ) {
     const declaration = catalog.rooms.byKey[source.gameName];
     if (declaration === undefined) {
       throw new BiomeRewardSimulationContractError(
@@ -1090,6 +1089,18 @@ export function evaluateBiomeRewardChronology(
             hubBoardLookups: 'consulted',
           }),
       });
+    return snapshotFor;
+  }
+
+  function captureRunState(
+    owner: RunStateSnapshot['owner'],
+    source: CanonicalRewardSource,
+    view: HistoryStateView,
+    checkpointBranches: readonly RewardBranchState[] = branches,
+  ): void {
+    const ownerKey = semanticAddressKey(owner);
+    if (runStateSnapshotsByOwner.has(ownerKey) || branches.length === 0) return;
+    const snapshotFor = runStateAt(owner, source, view);
     const snapshot = snapshotFor(checkpointBranches);
     if (snapshot !== undefined) runStateSnapshotsByOwner.set(ownerKey, snapshot);
     // Trait-child candidate checkpoints retain only generation snapshots. Room
@@ -1394,6 +1405,7 @@ export function evaluateBiomeRewardChronology(
       case 'fountainUsed': {
         const room = rooms.get(semanticAddressKey(event.origin));
         const owner = event.owner;
+        const fountainStartBranches = branches;
         const transition = applyFountainUsedTransition(
           catalog,
           event,
@@ -1411,6 +1423,27 @@ export function evaluateBiomeRewardChronology(
         recordTimelineFacts(transition.timelineFacts);
         if (transition.candidate !== undefined)
           fountainRarityCandidateContexts.set(transition.candidate.key, transition.candidate.value);
+        // Nothing else happens in a Hub interval, so the state before the use is
+        // its start and the settled state is its departure.
+        if (owner.kind === 'hubFountain' && room?.kind === 'hub' && branches.length > 0) {
+          const startView = history.viewsBySequence[event.sequence - 1];
+          const departureView = history.viewsBySequence[event.sequence];
+          if (startView === undefined || departureView === undefined)
+            throw new BiomeRewardSimulationContractError(
+              `${room.gameName} fountain use has no Hub interval Run State view`,
+            );
+          const hubOwner = createHubDecisionAddress(
+            createBiomeAddress(owner.routeKey, owner.biomeKey),
+            owner.hubKey,
+          );
+          const intervalStart = runStateAt(hubOwner, room, startView)(fountainStartBranches);
+          const departure = runStateAt(hubOwner, room, departureView)(branches);
+          if (intervalStart !== undefined && departure !== undefined)
+            hubFountainIntervals.set(
+              semanticAddressKey(owner),
+              Object.freeze({ origin: owner, intervalStart, departure }),
+            );
+        }
         for (const finding of transition.findings)
           addRewardFinding(findings, finding.finding, finding.region, finding.chronology);
         // The fountain unlocks Postboss facilities. Capture the pool only after
@@ -2120,6 +2153,7 @@ export function evaluateBiomeRewardChronology(
     findings: immutableFindings,
     runStateSnapshots: runStatePublication.snapshots,
     runStateAvailability: runStatePublication.availability,
+    hubFountainIntervals: Object.freeze([...hubFountainIntervals.values()]),
     purgingPoolAssessments: Object.freeze([...purgingPoolAssessments.values()]),
     hermesShrineAssessments: publishedHermesShrineAssessments,
     stygianWellAssessments: Object.freeze([...stygianWellAssessments.values()]),

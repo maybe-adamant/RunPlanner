@@ -84,27 +84,7 @@ export function runState(value: unknown, label: string): ExecutionRunStateDiagno
     [],
     `${label}.traits`,
   );
-  const equipped = array(traits.equipped, `${label}.traits.equipped`).map((entry, index) => {
-    const row = object(entry, `${label}.traits.equipped[${index}]`);
-    exact(
-      row,
-      ['traitKey'],
-      ['rarity', 'level', 'hammerRank'],
-      `${label}.traits.equipped[${index}]`,
-    );
-    if (row.hammerRank !== undefined && row.hammerRank !== 'RankI' && row.hammerRank !== 'RankII')
-      fail(`${label}.traits.equipped[${index}].hammerRank is unsupported`);
-    return Object.freeze({
-      traitKey: stringValue(row.traitKey, `${label}.traits.equipped[${index}].traitKey`),
-      ...(row.rarity === undefined
-        ? {}
-        : { rarity: stringValue(row.rarity, `${label}.traits.equipped[${index}].rarity`) }),
-      ...(row.level === undefined
-        ? {}
-        : { level: integer(row.level, `${label}.traits.equipped[${index}].level`) }),
-      ...(row.hammerRank === undefined ? {} : { hammerRank: row.hammerRank as 'RankI' | 'RankII' }),
-    });
-  });
+  const equipped = equippedTraits(traits.equipped, `${label}.traits.equipped`);
   const slots = array(traits.slots, `${label}.traits.slots`, 6).map((entry, index) => {
     const row = object(entry, `${label}.traits.slots[${index}]`);
     exact(row, ['slot'], ['traitKey'], `${label}.traits.slots[${index}]`);
@@ -716,4 +696,22 @@ export function wireDiagnostic(
       replace[section] = source[section];
   }
   return { frame, owner: state.owner, checkpoint: state.checkpoint, replace };
+}
+
+/** Modeled equipped-trait rows, shared by Run State frames and Hub departure conformance. */
+export function equippedTraits(value: unknown, label: string) {
+  return array(value, label).map((entry, index) => {
+    const row = object(entry, `${label}[${index}]`);
+    exact(row, ['traitKey'], ['rarity', 'level', 'hammerRank'], `${label}[${index}]`);
+    if (row.hammerRank !== undefined && row.hammerRank !== 'RankI' && row.hammerRank !== 'RankII')
+      fail(`${label}[${index}].hammerRank is unsupported`);
+    return Object.freeze({
+      traitKey: stringValue(row.traitKey, `${label}[${index}].traitKey`),
+      ...(row.rarity === undefined
+        ? {}
+        : { rarity: stringValue(row.rarity, `${label}[${index}].rarity`) }),
+      ...(row.level === undefined ? {} : { level: integer(row.level, `${label}[${index}].level`) }),
+      ...(row.hammerRank === undefined ? {} : { hammerRank: row.hammerRank as 'RankI' | 'RankII' }),
+    });
+  });
 }

@@ -34,6 +34,7 @@ export {
   type ExecutionAnomalyReplacement,
   type ExecutionOverview,
   type ExecutionHubFountainUse,
+  type ExecutionHubDepartureConformance,
   type ExecutionResourcePolicy,
   type ExecutionResourcePointDisposition,
 } from './model';

@@ -7,6 +7,8 @@ import type {
 import type { ExecutionHubFountainUse, ExecutionOverview } from '../model';
 import { ExecutionCompilerError as CompilerError } from '../assembler-errors';
 import { executionReward } from './overview';
+import type { HubFountainIntervalRunState } from '../../simulation/rewards/model';
+import { deriveHubDepartureTraitInventory } from '../../simulation/rewards/run-state-conformance';
 
 function reference(room: {
   readonly occurrenceId: string;
@@ -23,6 +25,7 @@ function reference(room: {
 export function hubOverview(
   hub: CanonicalHubDecision | undefined,
   hubExit: CanonicalBatch | undefined,
+  fountainIntervals: readonly HubFountainIntervalRunState[],
 ): ExecutionOverview['hub'] | undefined {
   if (hub === undefined) return undefined;
   const final = hubExit?.targets[0]?.room;
@@ -52,14 +55,26 @@ export function hubOverview(
     finalHandoff: reference(final),
     // A complete canonical Hub holds exactly its declaration's required visits.
     requiredVisitCount: hub.visits.length,
-    fountain: hubFountainUse(hub),
+    fountain: hubFountainUse(hub, fountainIntervals),
   });
 }
 
-function hubFountainUse(hub: CanonicalHubDecision): ExecutionHubFountainUse {
+function hubFountainUse(
+  hub: CanonicalHubDecision,
+  fountainIntervals: readonly HubFountainIntervalRunState[],
+): ExecutionHubFountainUse {
   const fountain = hub.fountain;
   if (fountain === undefined)
     throw new CompilerError('executionCoverageMissing', `${hub.room.gameName} lacks fountain use`);
+  const interval = fountainIntervals.find(
+    (candidate) => semanticAddressKey(candidate.origin) === semanticAddressKey(fountain.origin),
+  );
+  if (interval === undefined)
+    throw new CompilerError(
+      'executionCoverageMissing',
+      `${hub.room.gameName} fountain use lacks its Hub interval Run State`,
+    );
+  const equipped = deriveHubDepartureTraitInventory(interval);
   return Object.freeze({
     kind: 'fountainUse',
     owner: semanticAddressKey(fountain.origin),
@@ -68,6 +83,16 @@ function hubFountainUse(hub: CanonicalHubDecision): ExecutionHubFountainUse {
     ...(fountain.fountainRarityResult === undefined
       ? {}
       : { aromaticPhialTarget: fountain.fountainRarityResult.targetTraitKey }),
+    ...(equipped === undefined
+      ? {}
+      : {
+          departureConformance: Object.freeze({
+            facts: Object.freeze([Object.freeze({ kind: 'traitInventory' as const })]),
+            traits: Object.freeze({
+              equipped: Object.freeze(equipped.map((trait) => Object.freeze({ ...trait }))),
+            }),
+          }),
+        }),
   });
 }
 

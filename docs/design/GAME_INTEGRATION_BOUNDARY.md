@@ -312,6 +312,7 @@ The conformance surface is bounded to:
 | Semantic Timeline transaction | the exact published transaction bound to the native action when it is an explicit obligation; acquisition handles instead express steering and local DAG readiness |
 | Exits ready                   | complete exit count, physical types, target room identities, reward identities, and obligations due at outgoing generation                                         |
 | Room exit                     | obligations due at `exitUsable` and `roomExit`, and only the planner-published named conformance facts that changed in this occurrence                             |
+| Hub departure                 | the published `hub.fountain.departureConformance` trait inventory, only when the fountain changed it within that Hub interval                                      |
 
 The published `exitUsable` deadline is checked at actual room closure, before
 the timeline is discarded. It does not require a separate door-use callback:
@@ -393,6 +394,16 @@ required fountain use as `hub.fountain`: a `fountainUse` interaction owned by
 the Hub fountain address, the number of completed room visits and Hub returns
 preceding it, and any Aromatic Phial target. It is a Hub-owned interaction,
 not a next-room Timeline transaction.
+
+Each Hub interval, from Hub entry or a visit's return to the departure into the
+next visit or the final handoff, is its own conformance window. Room-exit facts
+cannot observe it because they compare one occurrence's own entry and exit.
+When the fountain use changes the modeled trait inventory of its interval,
+`hub.fountain.departureConformance` publishes `facts: [{ kind: 'traitInventory' }]`
+and the expected `traits.equipped` rows, in the Run State frame's shape, to be
+compared when the Hub is left after that use. An interval without a modeled
+trait change publishes nothing, and the window never proves a change from
+before the Hub interval.
 
 For Chaos, the selected blessing is reserved for the selected curse before the
 native screen is constructed. The other two blessings remain distinct
