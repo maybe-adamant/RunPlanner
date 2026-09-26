@@ -13,6 +13,34 @@ import { replaceSimulationTraitHistory } from '../../src/simulation/state/transi
 import { createTraitHistoryState } from '../../src/simulation/traits/history/fold';
 import { initializeTestRewardBranchesForRoute } from './arcana-fear';
 import type { TraitHistoryState } from '../../src/simulation/traits/history/model';
+import type { RewardBranchState } from '../../src/simulation/rewards/branch-primitives';
+import type { CanonicalAuthoredRoom } from '../../src/simulation/materialization';
+import { projectEncounterRecordPreparation } from '../../src/simulation/history/facts';
+import { resolvedEncounterPhaseForDefinition } from '../../src/simulation/encounters/resolve';
+
+/** Supplies a declared prepared identity to a direct lifecycle-transition fixture. */
+export function withTestEncounterRecord(
+  branch: RewardBranchState,
+  room: CanonicalAuthoredRoom,
+  slotKey: string,
+  encounterKey: string,
+): RewardBranchState {
+  const phase = room.encounterPhases.find((value) => value.slotKey === slotKey);
+  if (phase === undefined) throw new Error(`Missing fixture phase ${slotKey}`);
+  const historyView = projectEncounterRecordPreparation(
+    branch.state.reached.historyView,
+    room.origin,
+    room.gameName,
+    resolvedEncounterPhaseForDefinition(productionCatalog, phase, encounterKey),
+  );
+  return Object.freeze({
+    ...branch,
+    state: Object.freeze({
+      ...branch.state,
+      reached: Object.freeze({ ...branch.state.reached, historyView }),
+    }),
+  });
+}
 
 export interface TraitFrontierOverrides {
   readonly catalog?: Catalog;

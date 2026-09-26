@@ -182,6 +182,7 @@ export interface RawEncounterSetDeclaration {
       | { readonly kind: 'direct'; readonly encounterDefinitionKey: string }
       | {
           readonly kind: 'rewardContext';
+          readonly firstBiomeEncounterDefinitionKey?: string;
           readonly defaultEncounterDefinitionKey: string;
           readonly encounterDefinitionKeyByRewardType: Readonly<Record<string, string>>;
         };

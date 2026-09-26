@@ -60,6 +60,8 @@ export type EncounterPhaseAuthoringOwner = EncounterPhaseAddress['owner'];
  * structural facts, not contextual candidate eligibility.
  */
 export interface EncounterPhaseAuthoringRoomOptions {
+  /** Concrete identities already established by reached encounter preparation. */
+  readonly preparedDefinitionKeysBySlot?: Readonly<Record<string, string>>;
   readonly resolutionContext?: EncounterResolutionContext;
   readonly rivalsContext?: {
     readonly routePosition: ResolvedRoutePosition;
@@ -152,12 +154,13 @@ export function encounterPhaseAuthoringDomainForRoom(
       );
     }
     const selectedEncounterDefinitionKey =
-      binding.kind === 'fixed'
+      options.preparedDefinitionKeysBySlot?.[binding.slotKey] ??
+      (binding.kind === 'fixed'
         ? selectedEncounterKey
         : resolveEncounterAuthoringProfile(
             profiles.find((candidate) => candidate.key === selectedEncounterKey)!,
             options.resolutionContext ?? { kind: 'unavailable' },
-          );
+          ));
     const definition =
       selectedEncounterDefinitionKey === undefined
         ? undefined

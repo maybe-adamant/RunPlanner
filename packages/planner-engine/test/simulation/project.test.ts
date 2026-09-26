@@ -236,7 +236,7 @@ describe('project simulation composition', () => {
     });
   });
 
-  it('keeps I Combat authored while resolving its exact Goal definition from topology', () => {
+  it('keeps I Combat authored while resolving its exact first-depth introduction', () => {
     const occurrenceId = createOccurrenceId('golden-i-combat01');
     const phase = createEncounterPhaseAddress(
       goldenIBiome,
@@ -272,7 +272,7 @@ describe('project simulation composition', () => {
     );
     expect(encounterRecord).toMatchObject({
       kind: 'encounterRecorded',
-      encounterKey: 'GeneratedI_GoalReward',
+      encounterKey: 'GeneratedIChronosIntro',
     });
     expect(() =>
       applyProjectCommand(initial, catalog, {

@@ -91,6 +91,9 @@ export interface WorkspaceBiomeSource {
   readonly encounterPhaseStatus: (
     phase: EncounterPhaseAddress,
   ) => EncounterPhaseSequenceStatus | undefined;
+  readonly preparedEncounterDefinitionKeys: (
+    occurrenceId: OccurrenceId,
+  ) => Readonly<Record<string, string>>;
   readonly figLeafSupport: (
     phase: EncounterPhaseAddress,
   ) => FigLeafPhaseCandidateSupport | undefined;
@@ -805,6 +808,21 @@ function createWorkspaceBiomeSource(
     biome,
     completeness,
     encounterPhaseStatus,
+    preparedEncounterDefinitionKeys: (occurrenceId: OccurrenceId) =>
+      Object.freeze(
+        Object.fromEntries(
+          (evaluation !== undefined && 'history' in evaluation
+            ? (evaluation.history?.events ?? [])
+            : []
+          ).flatMap((event) =>
+            event.kind === 'encounterRecorded' &&
+            event.origin.kind === 'occurrence' &&
+            event.origin.occurrenceId === occurrenceId
+              ? [[event.phaseKey, event.encounterKey]]
+              : [],
+          ),
+        ),
+      ),
     figLeafSupport,
     gorgonSupport,
     ...(overlay.entryRoom === undefined ? {} : { entryRoom: overlay.entryRoom }),

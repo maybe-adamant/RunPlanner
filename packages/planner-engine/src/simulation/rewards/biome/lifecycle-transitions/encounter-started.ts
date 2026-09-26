@@ -1,6 +1,4 @@
 import type { Catalog } from '../../../../catalog-schema';
-import type { ResolvedRoutePosition } from '../../../../authored-project/route-context';
-import { resolveEntryDeclaration } from '../../../../authored-project/room-state/entry-resolution';
 import {
   createBiomeAddress,
   createEncounterPhaseAddress,
@@ -10,10 +8,7 @@ import {
 import type { HistoryEvent } from '../../../history';
 import type { CanonicalAuthoredRoom } from '../../../materialization';
 import { assessFigLeafSkip } from '../../../encounters';
-import {
-  encounterResolutionContext,
-  resolveMaterializedEncounterPhases,
-} from '../../../encounters/resolve';
+import { projectRoomEncounterRecords } from '../../../history/facts';
 import { attestFigLeafBranchState, consumeFigLeafUse } from '../../../keepsakes/encounter-effects';
 import { advanceRewardBranches } from '../../branch-lifecycle';
 import type { RewardBranchState } from '../../branch-primitives';
@@ -34,7 +29,6 @@ export interface EncounterStartedTransition {
 /** Applies the reward spawn and Fig Leaf half of encounter start; Gorgon settles separately. */
 export function applyEncounterStartedTransition(
   catalog: Catalog,
-  routePosition: ResolvedRoutePosition,
   snapshot: { readonly entryRoom?: { readonly origin: SemanticAddress } },
   event: Extract<HistoryEvent, { readonly kind: 'encounterStarted' }>,
   room: CanonicalAuthoredRoom | undefined,
@@ -58,19 +52,11 @@ export function applyEncounterStartedTransition(
     const phase = room.encounterPhases.find((candidate) => candidate.slotKey === event.phaseKey);
     if (phase !== undefined) {
       const definition = catalog.encounterDefinitions.byKey[event.encounterKey]!;
-      const rawDeclaration = catalog.rooms.byKey[room.gameName];
-      const declaration =
-        rawDeclaration === undefined
-          ? undefined
-          : resolveEntryDeclaration(rawDeclaration, routePosition);
       const resolvedEnvelope =
-        declaration === undefined
+        next[0] === undefined
           ? []
-          : resolveMaterializedEncounterPhases(
-              catalog,
-              declaration,
-              room.encounterPhases,
-              encounterResolutionContext(room, declaration),
+          : projectRoomEncounterRecords(next[0].state.reached.historyView, event.origin).map(
+              (record) => catalog.encounterDefinitions.byKey[record.encounterKey]!,
             );
       const origin = createEncounterPhaseAddress(
         createBiomeAddress(event.origin.routeKey, event.origin.biomeKey),

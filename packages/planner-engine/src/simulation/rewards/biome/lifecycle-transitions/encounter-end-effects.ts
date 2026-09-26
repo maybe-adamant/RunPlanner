@@ -5,10 +5,7 @@ import {
 } from '../offer-lifecycle/spawned-trait-offers';
 import { replaceSimulationTraitHistory } from '../../../state/transitions';
 import type { Catalog } from '../../../../catalog-schema';
-import {
-  encounterResolutionContext,
-  resolveMaterializedEncounterPhase,
-} from '../../../encounters/resolve';
+import { projectRoomEncounterRecords } from '../../../history/facts';
 import {
   createAcquisitionEntryAddress,
   createAcquisitionSiteAddress,
@@ -475,16 +472,16 @@ export function applyEncounterEndEffectsTransition(
     next = pickupAdvance.branches;
   }
   const deliveryPlacementFindings: LifecycleFinding[] = [];
-  const materializedPhase = room?.encounterPhases.find((phase) => phase.slotKey === event.phaseKey);
-  const encounterPhase =
-    declaration === undefined || room === undefined || materializedPhase === undefined
+  const recordedPhase =
+    next[0] === undefined
       ? undefined
-      : resolveMaterializedEncounterPhase(
-          catalog,
-          declaration,
-          materializedPhase,
-          encounterResolutionContext(room, declaration),
+      : projectRoomEncounterRecords(next[0].state.reached.historyView, event.origin).find(
+          (phase) => phase.slotKey === event.phaseKey,
         );
+  const encounterPhase =
+    recordedPhase === undefined
+      ? undefined
+      : catalog.encounterDefinitions.byKey[recordedPhase.encounterKey];
   if (
     event.origin.kind === 'occurrence' &&
     declaration?.advancesHermesShrineDeliveryUses === true &&

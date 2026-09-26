@@ -193,6 +193,7 @@ export function assembleExecutionProduct({
     const crossBiomeSourceId =
       crossBiomeTarget === undefined ? undefined : executionRoomOwnerKey(room);
     return executionOccurrence(
+      catalog,
       room,
       snapshots,
       batches,

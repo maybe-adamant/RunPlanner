@@ -551,13 +551,17 @@ labels may repeat in different rooms or phases.
 `prepareRoom` resolves identity and then assesses that definition at the
 post-predecessor-commit checkpoint. Eligibility never selects another identity.
 The identity context distinguishes known reward type, known no-reward, and
-unavailable authorship; a Clockwork goal disposition takes precedence over the
-incoming reward. Missing contextual authorship does not select ordinary Combat.
+unavailable authorship; a declared first-biome-encounter identity resolves at
+reached encounter depth one before reward context, and a Clockwork goal
+disposition takes precedence over the incoming reward. Missing depth for a
+depth-dependent identity, or missing contextual authorship, does not select
+ordinary Combat.
 Direct bindings need no reward context. Structural traversal uses the same
 identity resolver without claiming eligibility, and never borrows behavior from
 a choice's namesake or first possible definition. Materialization publishes known
-structural identities for unentered rooms so execution translation needs no
-separate resolution policy.
+structural identities when their inputs are known. An unentered room whose
+identity requires unreached depth publishes no concrete execution phase;
+entered execution translation consumes its recorded identity.
 
 Only a resolved phase carries effective encounter behavior. For each valid
 active slot, preparation appends an `encounterRecorded` event before entry.

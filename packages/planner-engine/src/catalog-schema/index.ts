@@ -504,6 +504,8 @@ export type EncounterChoiceResolution =
   | { readonly kind: 'direct'; readonly encounterDefinitionKey: string }
   | {
       readonly kind: 'rewardContext';
+      /** Overrides reward resolution only at reached biome encounter depth one. */
+      readonly firstBiomeEncounterDefinitionKey?: string;
       readonly defaultEncounterDefinitionKey: string;
       readonly encounterDefinitionKeyByRewardType: Readonly<Record<string, string>>;
     };

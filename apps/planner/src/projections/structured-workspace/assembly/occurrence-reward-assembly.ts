@@ -133,6 +133,7 @@ export type WorkspaceDerivedAcquisitionEntry = {
 };
 
 export interface WorkspaceOccurrenceRewardAssemblyInput {
+  readonly preparedEncounterDefinitionKeysBySlot?: Readonly<Record<string, string>>;
   readonly configuredRivalsRank: number;
   readonly routePosition: ResolvedRoutePosition;
   readonly biome: BiomeAddress;
@@ -809,6 +810,11 @@ export function activeEncounterPhasesForOwner(
     encounters,
     {
       ...options,
+      ...(input.preparedEncounterDefinitionKeysBySlot === undefined ||
+      owner.kind !== 'occurrence' ||
+      owner.occurrenceId !== input.occurrence.occurrenceId
+        ? {}
+        : { preparedDefinitionKeysBySlot: input.preparedEncounterDefinitionKeysBySlot }),
       includeFixedPhases: true,
       rivalsContext: {
         configuredRivalsRank: input.configuredRivalsRank,

@@ -61,6 +61,8 @@ const budgetEvidence: readonly BudgetRow[] = [
   ['NemesisCombatH', 290, 82, 'biomeEncounterDepth', 60, 1, 30],
   // EncounterData_Generated.lua:440-441, hard :485
   ['GeneratedI', 325, 105, 'biomeDepthCache', 0, 1, 30],
+  ['GeneratedIChronosIntro', 325, 105, 'biomeDepthCache', 85, 1, 30],
+  ['GeneratedI_SmallChronosIntro', 325, 105, 'biomeDepthCache', 0, 0.85, 30],
   ['GeneratedI_GoalReward', 250, 105, 'biomeDepthCache', 0, 1, 30],
   // DifficultyMultiplier EncounterData_Generated.lua:585,604
   ['GeneratedI_Small', 325, 105, 'biomeDepthCache', 0, 0.85, 30],
@@ -303,8 +305,8 @@ describe('source-declared generated encounter policies', () => {
     }
   });
 
-  it('covers the audited 44 concrete identities without boss/prescribed vignettes', () => {
-    expect(definitions).toHaveLength(44);
+  it('covers the audited 46 concrete identities without boss/prescribed vignettes', () => {
+    expect(definitions).toHaveLength(46);
     expect(definitions.every((definition) => definition.kind === 'combat')).toBe(true);
     expect(
       definitions
@@ -434,12 +436,19 @@ describe('source-declared generated encounter policies', () => {
         ...(hard === undefined ? {} : { hardDepthRamp: hard }),
       });
   });
-  it('excludes the Tartarus Chronos introductions from ordinary authored encounters', () => {
-    for (const key of ['GeneratedIChronosIntro', 'GeneratedI_SmallChronosIntro']) {
-      expect(catalog.encounterDefinitions.byKey[key], key).toBeUndefined();
+  it('inherits each recurring Tartarus introduction generation policy from its own parent', () => {
+    for (const [key, parent, modifier] of [
+      ['GeneratedIChronosIntro', 'GeneratedI', 85],
+      ['GeneratedI_SmallChronosIntro', 'GeneratedI_Small', 0],
+    ] as const) {
+      expect(selection(key)).toEqual({
+        ...selection(parent),
+        budget: { ...selection(parent).budget, modifier },
+      });
       expect(
-        catalog.encounterSets.values.some((set) => set.encounterDefinitionKeys.includes(key)),
-        key,
+        catalog.encounterSets.values
+          .flatMap((set) => set.authoringProfiles)
+          .some((profile) => profile.key === key),
       ).toBe(false);
     }
   });

@@ -40,7 +40,11 @@ import { createTraitOfferCandidateArtifacts } from '../../src/simulation/candida
 import type { CanonicalAuthoredRoom } from '../../src/simulation/materialization';
 import { spawnPendingTraitOffers } from '../../src/simulation/state/pending-trait-offers';
 import { initializeTestRewardBranches } from '../support/arcana-fear';
-import { traitFrontierState, openTimeTraitOfferContexts } from '../support/simulation-state';
+import {
+  traitFrontierState,
+  openTimeTraitOfferContexts,
+  withTestEncounterRecord,
+} from '../support/simulation-state';
 
 const owner = createBiomeAddress('Underworld', 'F');
 
@@ -349,7 +353,7 @@ describe('Transcendent Embryo declaration and direct Chaos fold', () => {
         sequence: 1,
       }),
       room,
-      [branch],
+      [withTestEncounterRecord(branch, room, 'Encounter', 'OpeningGeneratedF')],
     );
     const delivery = transition.derivedAcquisitionEntryFrontiers.find(
       (frontier) => frontier.kind === 'hermesShrineDelivery',

@@ -6,6 +6,8 @@ import {
 } from '../../authored-project/addresses';
 import { hermesShrineDeliveryEntryKey } from '../../authored-project/hermes-shrine-delivery';
 import type { AuthoredKeepsakeEquipResults } from '../../authored-project/model';
+import type { Catalog } from '../../catalog-schema';
+import { resolvedEncounterPhaseForDefinition } from '../../simulation/encounters/resolve';
 import type { CompleteValidBiomeProjectEvaluation } from '../../simulation/evaluation/evaluation-products';
 import type {
   CanonicalAuthoredRoom,
@@ -859,6 +861,7 @@ function executionEncounterCustomization(
 
 /** Assemble the complete room-entry realization facts for one occurrence. */
 export function assembleExecutionOverview(
+  catalog: Catalog,
   room: CanonicalAuthoredRoom,
   biome: CompleteValidBiomeProjectEvaluation,
   batch: CanonicalBatch | undefined,
@@ -894,70 +897,81 @@ export function assembleExecutionOverview(
       ? {}
       : { unmodeledEncounterKeys: room.unmodeledEncounterKeys }),
     encounterPhases: Object.freeze(
-      room.encounterPhases.map((phase) =>
-        (() => {
-          const recorded = recordedPhases.get(phase.slotKey);
-          if (room.entered && recorded === undefined)
-            throw new CompilerError(
-              'executionCoverageMissing',
-              `${room.gameName} lacks recorded encounter ${phase.slotKey}`,
+      room.encounterPhases
+        .filter(
+          (phase) =>
+            room.entered ||
+            recordedPhases.has(phase.slotKey) ||
+            structuralIdentities.has(phase.slotKey),
+        )
+        .map((phase) =>
+          (() => {
+            const recorded = recordedPhases.get(phase.slotKey);
+            if (room.entered && recorded === undefined)
+              throw new CompilerError(
+                'executionCoverageMissing',
+                `${room.gameName} lacks recorded encounter ${phase.slotKey}`,
+              );
+            const phaseAddress = createEncounterPhaseAddress(
+              biomeAddress,
+              { kind: 'occurrence', occurrenceId: room.occurrenceId },
+              phase.slotKey,
             );
-          const phaseAddress = createEncounterPhaseAddress(
-            biomeAddress,
-            { kind: 'occurrence', occurrenceId: room.occurrenceId },
-            phase.slotKey,
-          );
-          const figLeaf = biome.rewards.figLeafPhaseCandidates.find(
-            (candidate) =>
-              candidate.supported &&
-              semanticAddressKey(candidate.origin) === semanticAddressKey(phaseAddress),
-          );
-          const structural = structuralIdentities.get(phase.slotKey);
-          const resolvedGenerated = biome.roomGeneration.resolvedGenerated.find(
-            (entry) => semanticAddressKey(entry.origin) === semanticAddressKey(phaseAddress),
-          )?.customization;
-          if (
-            room.entered &&
-            structural?.customization?.some(
-              (decision) => decision.selection.kind === 'generated' && decision.value !== undefined,
-            ) &&
-            resolvedGenerated === undefined
-          )
-            throw new CompilerError(
-              'executionCoverageMissing',
-              `${room.gameName}.${phase.slotKey} lacks resolved generated customization`,
+            const figLeaf = biome.rewards.figLeafPhaseCandidates.find(
+              (candidate) =>
+                candidate.supported &&
+                semanticAddressKey(candidate.origin) === semanticAddressKey(phaseAddress),
             );
-          const customization = executionEncounterCustomization(
-            structural?.customization,
-            room,
-            phase.slotKey,
-            resolvedGenerated,
-          );
-          return Object.freeze({
-            slotKey: phase.slotKey,
-            encounterKey:
-              recorded?.encounterKey ??
-              structural?.encounterKey ??
-              (() => {
-                throw new CompilerError(
-                  'executionCoverageMissing',
-                  `${room.gameName} lacks resolved encounter ${phase.slotKey}`,
-                );
-              })(),
-            kind:
-              recorded?.phaseKind ??
-              structural?.kind ??
-              (() => {
-                throw new CompilerError(
-                  'executionCoverageMissing',
-                  `${room.gameName} lacks resolved encounter kind ${phase.slotKey}`,
-                );
-              })(),
-            ...(figLeaf === undefined ? {} : { figLeafSkip: figLeaf.selected }),
-            ...(customization === undefined ? {} : { customization }),
-          });
-        })(),
-      ),
+            const structural =
+              recorded === undefined
+                ? structuralIdentities.get(phase.slotKey)
+                : resolvedEncounterPhaseForDefinition(catalog, phase, recorded.encounterKey);
+            const resolvedGenerated = biome.roomGeneration.resolvedGenerated.find(
+              (entry) => semanticAddressKey(entry.origin) === semanticAddressKey(phaseAddress),
+            )?.customization;
+            if (
+              room.entered &&
+              structural?.customization?.some(
+                (decision) =>
+                  decision.selection.kind === 'generated' && decision.value !== undefined,
+              ) &&
+              resolvedGenerated === undefined
+            )
+              throw new CompilerError(
+                'executionCoverageMissing',
+                `${room.gameName}.${phase.slotKey} lacks resolved generated customization`,
+              );
+            const customization = executionEncounterCustomization(
+              structural?.customization,
+              room,
+              phase.slotKey,
+              resolvedGenerated,
+            );
+            return Object.freeze({
+              slotKey: phase.slotKey,
+              encounterKey:
+                recorded?.encounterKey ??
+                structural?.encounterKey ??
+                (() => {
+                  throw new CompilerError(
+                    'executionCoverageMissing',
+                    `${room.gameName} lacks resolved encounter ${phase.slotKey}`,
+                  );
+                })(),
+              kind:
+                recorded?.phaseKind ??
+                structural?.kind ??
+                (() => {
+                  throw new CompilerError(
+                    'executionCoverageMissing',
+                    `${room.gameName} lacks resolved encounter kind ${phase.slotKey}`,
+                  );
+                })(),
+              ...(figLeaf === undefined ? {} : { figLeafSkip: figLeaf.selected }),
+              ...(customization === undefined ? {} : { customization }),
+            });
+          })(),
+        ),
     ),
     ...(rewardWheels === undefined ? {} : { rewardWheels }),
     requiredObjects: Object.freeze((room.requiredObjects ?? []).map((object) => object.key)),

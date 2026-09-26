@@ -1,4 +1,5 @@
 import type { CanonicalAuthoredRoom, CanonicalBatch } from '../../simulation/materialization';
+import type { Catalog } from '../../catalog-schema';
 import type { CompleteValidBiomeProjectEvaluation } from '../../simulation/evaluation/evaluation-products';
 import type { RunStateSnapshot } from '../../simulation/rewards/run-state';
 import { executionRoomOwnerKey } from './support';
@@ -19,6 +20,7 @@ import { hubOverview, localSlotsOverview } from './hub';
 import { assembleExecutionRoomGuide } from './room-guide';
 
 export function executionOccurrence(
+  catalog: Catalog,
   room: CanonicalAuthoredRoom,
   snapshots: ReadonlyMap<string, RunStateSnapshot>,
   batches: ReadonlyMap<string, CanonicalBatch>,
@@ -50,7 +52,7 @@ export function executionOccurrence(
     ...(resumeBoundary === undefined ? {} : { resumeBoundary }),
     ...(anomaly === undefined ? {} : { anomaly }),
     overview: Object.freeze({
-      ...assembleExecutionOverview(room, biome, batch, transactions),
+      ...assembleExecutionOverview(catalog, room, biome, batch, transactions),
       ...(publishedHub === undefined ? {} : { hub: publishedHub }),
       ...(publishedLocalSlots === undefined ? {} : { localSlots: publishedLocalSlots }),
     }),

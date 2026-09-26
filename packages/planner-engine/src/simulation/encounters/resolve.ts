@@ -73,10 +73,11 @@ export function resolvedEncounterPhaseForDefinition(
 }
 
 /** Reward authorship is intentionally tri-state; absence is not incompleteness. */
-export type EncounterResolutionContext =
+export type EncounterResolutionContext = (
   | { readonly kind: 'knownReward'; readonly rewardType: string }
   | { readonly kind: 'noReward' }
-  | { readonly kind: 'unavailable' };
+  | { readonly kind: 'unavailable' }
+) & { readonly biomeEncounterDepth?: number };
 
 /** Narrow retained facts needed to resolve contextual encounter identity. */
 export interface EncounterResolutionRoomFacts {
@@ -88,17 +89,24 @@ export interface EncounterResolutionRoomFacts {
 export function encounterResolutionContext(
   room: EncounterResolutionRoomFacts,
   declaration: RoomDeclaration,
+  biomeEncounterDepth?: number,
 ): EncounterResolutionContext {
+  const depth = biomeEncounterDepth === undefined ? {} : { biomeEncounterDepth };
   if (room.clockworkReward === 'goal') {
-    return Object.freeze({ kind: 'knownReward', rewardType: 'ClockworkGoal' });
+    return Object.freeze({ ...depth, kind: 'knownReward', rewardType: 'ClockworkGoal' });
   }
   if (room.incomingReward !== undefined) {
-    return Object.freeze({ kind: 'knownReward', rewardType: room.incomingReward.offer.rewardType });
+    return Object.freeze({
+      ...depth,
+      kind: 'knownReward',
+      rewardType: room.incomingReward.offer.rewardType,
+    });
   }
-  if (room.unresolvedIncomingReward !== undefined) return Object.freeze({ kind: 'unavailable' });
+  if (room.unresolvedIncomingReward !== undefined)
+    return Object.freeze({ ...depth, kind: 'unavailable' });
   return declaration.incomingReward.kind === 'none'
-    ? Object.freeze({ kind: 'noReward' })
-    : Object.freeze({ kind: 'unavailable' });
+    ? Object.freeze({ ...depth, kind: 'noReward' })
+    : Object.freeze({ ...depth, kind: 'unavailable' });
 }
 
 export function resolveEncounterAuthoringProfile(
@@ -107,6 +115,11 @@ export function resolveEncounterAuthoringProfile(
 ): string | undefined {
   if (profile.resolution.kind === 'direct') {
     return profile.resolution.encounterDefinitionKey;
+  }
+  if (profile.resolution.firstBiomeEncounterDefinitionKey !== undefined) {
+    if (context.biomeEncounterDepth === undefined) return undefined;
+    if (context.biomeEncounterDepth === 1)
+      return profile.resolution.firstBiomeEncounterDefinitionKey;
   }
   if (context.kind === 'unavailable') return undefined;
   return context.kind === 'knownReward'

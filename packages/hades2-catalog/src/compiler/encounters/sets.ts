@@ -64,6 +64,9 @@ export function normalizeEncounterSets(
               : [
                   resolution.defaultEncounterDefinitionKey,
                   ...Object.values(resolution.encounterDefinitionKeyByRewardType),
+                  ...(resolution.firstBiomeEncounterDefinitionKey === undefined
+                    ? []
+                    : [resolution.firstBiomeEncounterDefinitionKey]),
                 ];
           if (
             resolution.kind === 'rewardContext' &&
@@ -118,6 +121,12 @@ export function normalizeEncounterSets(
                   }
                 : {
                     kind: 'rewardContext' as const,
+                    ...(resolution.firstBiomeEncounterDefinitionKey === undefined
+                      ? {}
+                      : {
+                          firstBiomeEncounterDefinitionKey:
+                            resolution.firstBiomeEncounterDefinitionKey,
+                        }),
                     defaultEncounterDefinitionKey: resolution.defaultEncounterDefinitionKey,
                     encounterDefinitionKeyByRewardType: Object.freeze({
                       ...resolution.encounterDefinitionKeyByRewardType,

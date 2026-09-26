@@ -202,6 +202,30 @@ function batchTargets(assembly: ReturnType<typeof assembleWorkspaceBiomeSemantic
 }
 
 describe('structured workspace biome semantic assembly', () => {
+  it('retains exact first Tartarus customization in a reached incomplete workspace', () => {
+    const first = createOccurrenceId('golden-i-combat01');
+    const project = applyProjectCommand(createGoldenFGHIProject(), catalog, {
+      kind: 'RemoveExitDecision',
+      decision: createExitDecisionAddress(goldenIBiome, {
+        kind: 'occurrence',
+        occurrenceId: first,
+      }),
+    });
+    const assembly = assembleWorkspaceBiomeSemantics(
+      catalog,
+      biomeSource(project, 'Underworld', 'I'),
+    );
+    const room = batchTargets(assembly).find((target) => target.room.occurrenceId === first)?.room;
+    expect(room).toBeDefined();
+    const phase = room!.encounterPhases[0];
+    expect(phase?.selectedEncounter.nativeEncounterDefinitionKey).toBe('GeneratedIChronosIntro');
+    expect(phase?.customization).toContainEqual(
+      expect.objectContaining({
+        key: 'generatedComposition',
+        selection: expect.objectContaining({ kind: 'generated' }),
+      }),
+    );
+  });
   it('assembles a real Boss completion contact from an engine Steady Growth outcome', () => {
     const completion = createOccurrenceAddress(
       nBiome,
