@@ -16,6 +16,7 @@ import {
 } from '../../../src/authored-project';
 import {
   encounterPhaseCandidateSupportForProjectEvaluationAssembly,
+  encounterPhaseSequenceStatusForProjectEvaluationAssembly,
   generatedEncounterSupportForProjectEvaluationAssembly,
   simulateProjectAssembly,
 } from '../../../src/simulation';
@@ -26,6 +27,53 @@ import { authorLegalTraitOffers } from '@run-planner/test-fixtures/shared';
 import { dreamMixedHandoffProject } from '@run-planner/test-fixtures/dream';
 
 describe('Tartarus reached first-combat identity', () => {
+  it.each([
+    ['I_Combat01', 'GeneratedIChronosIntro'],
+    ['I_Combat04', 'GeneratedI_SmallChronosIntro'],
+  ])(
+    'retains prepared %s identity before an incomplete composition can execute',
+    (gameName, definitionKey) => {
+      const occurrence = createOccurrenceAddress(
+        goldenIBiome,
+        createOccurrenceId('golden-i-combat01'),
+      );
+      let project = createGoldenFGHIProject();
+      if (gameName !== 'I_Combat01')
+        project = applyProjectCommand(project, catalog, {
+          kind: 'ReplaceOccurrenceRoom',
+          occurrence,
+          gameName,
+        });
+      const phase = createEncounterPhaseAddress(
+        goldenIBiome,
+        { kind: 'occurrence', occurrenceId: occurrence.occurrenceId },
+        'Encounter',
+      );
+      project = applyProjectCommand(project, catalog, {
+        kind: 'ReplaceEncounterCustomization',
+        phase,
+        decisionKey: 'generatedComposition',
+        value: { kind: 'generated', waveCount: 1 },
+      });
+      const assembly = simulateProjectAssembly(catalog, project);
+      expect(encounterPhaseSequenceStatusForProjectEvaluationAssembly(assembly, phase)).toEqual({
+        kind: 'active',
+        encounterDefinitionKey: definitionKey,
+      });
+      expect(generatedEncounterSupportForProjectEvaluationAssembly(assembly, phase)).toBeDefined();
+      const biome = assembly.evaluation.route.biomes.find((value) => value.biomeKey === 'I');
+      expect(
+        biome &&
+          'history' in biome &&
+          biome.history.events.some(
+            (event) =>
+              event.kind === 'encounterRecorded' &&
+              event.origin.kind === 'occurrence' &&
+              event.origin.occurrenceId === occurrence.occurrenceId,
+          ),
+      ).toBe(false);
+    },
+  );
   it.each([
     ['IEncountersDefault', 'GeneratedI', 'GeneratedIChronosIntro', 'GeneratedI_GoalReward'],
     [

@@ -202,6 +202,37 @@ function batchTargets(assembly: ReturnType<typeof assembleWorkspaceBiomeSemantic
 }
 
 describe('structured workspace biome semantic assembly', () => {
+  it('keeps first Tartarus customization available when its composition needs repair', () => {
+    const first = createOccurrenceId('golden-i-combat01');
+    const project = applyProjectCommand(createGoldenFGHIProject(), catalog, {
+      kind: 'ReplaceEncounterCustomization',
+      phase: createEncounterPhaseAddress(
+        goldenIBiome,
+        { kind: 'occurrence', occurrenceId: first },
+        'Encounter',
+      ),
+      decisionKey: 'generatedComposition',
+      value: { kind: 'generated', waveCount: 1 },
+    });
+    const source = biomeSource(project, 'Underworld', 'I');
+    expect(
+      source.encounterPhaseStatus(
+        createEncounterPhaseAddress(
+          goldenIBiome,
+          { kind: 'occurrence', occurrenceId: first },
+          'Encounter',
+        ),
+      ),
+    ).toMatchObject({ kind: 'active', encounterDefinitionKey: 'GeneratedIChronosIntro' });
+    const assembly = assembleWorkspaceBiomeSemantics(catalog, source);
+    const room = batchTargets(assembly).find((target) => target.room.occurrenceId === first)?.room;
+    expect(room?.encounterPhases[0]?.selectedEncounter.nativeEncounterDefinitionKey).toBe(
+      'GeneratedIChronosIntro',
+    );
+    expect(room?.encounterPhases[0]?.customization).toContainEqual(
+      expect.objectContaining({ key: 'generatedComposition' }),
+    );
+  });
   it('retains exact first Tartarus customization in a reached incomplete workspace', () => {
     const first = createOccurrenceId('golden-i-combat01');
     const project = applyProjectCommand(createGoldenFGHIProject(), catalog, {

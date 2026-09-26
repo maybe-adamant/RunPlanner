@@ -627,7 +627,14 @@ export function retainBlockedRegionProducts(
             )
               return retainedArtifacts.encounters.statusAt(address);
             const status = selectedArtifacts.encounters.statusAt(address);
-            return status?.kind === 'active' ? Object.freeze({ kind: 'active' as const }) : status;
+            return status?.kind === 'active'
+              ? Object.freeze({
+                  kind: 'active' as const,
+                  ...(status.encounterDefinitionKey === undefined
+                    ? {}
+                    : { encounterDefinitionKey: status.encounterDefinitionKey }),
+                })
+              : status;
           },
           gorgonAt: retainedArtifacts.encounters.gorgonAt,
           nemesisAt: retainedArtifacts.encounters.nemesisAt,

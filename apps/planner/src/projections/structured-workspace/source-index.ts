@@ -810,8 +810,8 @@ function createWorkspaceBiomeSource(
     encounterPhaseStatus,
     preparedEncounterDefinitionKeys: (occurrenceId: OccurrenceId) =>
       Object.freeze(
-        Object.fromEntries(
-          (evaluation !== undefined && 'history' in evaluation
+        Object.fromEntries([
+          ...(evaluation !== undefined && 'history' in evaluation
             ? (evaluation.history?.events ?? [])
             : []
           ).flatMap((event) =>
@@ -821,7 +821,17 @@ function createWorkspaceBiomeSource(
               ? [[event.phaseKey, event.encounterKey]]
               : [],
           ),
-        ),
+          ...Object.keys(
+            occurrencesById.get(occurrenceId)?.encounters.encounterKeyByPhase ?? {},
+          ).flatMap((slotKey) => {
+            const status = encounterPhaseStatus(
+              createEncounterPhaseAddress(biome, { kind: 'occurrence', occurrenceId }, slotKey),
+            );
+            return status?.kind === 'active' && status.encounterDefinitionKey !== undefined
+              ? [[slotKey, status.encounterDefinitionKey]]
+              : [];
+          }),
+        ]),
       ),
     figLeafSupport,
     gorgonSupport,
