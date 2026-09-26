@@ -15,7 +15,6 @@ import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
 import { useWorkspaceInteraction } from '@planner/ui/controls/useWorkspaceInteraction';
 import { candidateMayBeAuthored } from '@planner/ui/feedback/candidatePresentation';
 import { HubCompletionHandoff } from './HubCompletionHandoff';
-import { HubFountainControls } from './HubFountainControls';
 import {
   ClosedHubRoomOption,
   MarkerAssessment,
@@ -388,9 +387,6 @@ export function HubDecisionWorkbench({
                   node={node}
                   resetVisitsControl={resetVisitsControl}
                 />
-                {node.fountain.controlsHost?.kind === 'hub' ? (
-                  <HubFountainControls fountain={node.fountain} interactions={interactions} />
-                ) : null}
               </>
             )}
           </div>

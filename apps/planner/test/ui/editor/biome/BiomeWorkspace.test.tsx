@@ -468,21 +468,28 @@ describe('BiomeWorkspace', () => {
   });
 
   it.each([
-    ['before the next room', nVisitSlotKeys, 'Combat 11'],
-    ['in the Hub before that room exists', nVisitSlotKeys.slice(0, 3), undefined],
+    ['after the preceding room', nVisitSlotKeys, 'Combat 02', 3],
+    ['without a following room', nVisitSlotKeys.slice(0, 3), 'Combat 02', 3],
+    ['before Preboss exists', nVisitSlotKeys, 'Combat 09', 6],
   ] as const)(
     'routes a missing Phial target to the Hub fountain controls %s',
-    async (_case, visits, hostLabel) => {
+    async (_case, visits, hostLabel, afterVisits) => {
       const withPhial = applyProjectCommand(loadSurfaceNProject(), catalog, {
         kind: 'ReplaceStartingKeepsake',
         selection: createRouteStartKeepsakeSelectionAddress('Surface'),
         keepsakeKey: 'FountainRarityKeepsake',
       });
-      const project = applyProjectCommand(withPhial, catalog, {
+      let project = applyProjectCommand(withPhial, catalog, {
         kind: 'ReplaceHubActionOrder',
         hub: createHubDecisionAddress(nBiome, 'hub'),
-        actions: hubVisitActions(visits, 3),
+        actions: hubVisitActions(visits, afterVisits),
       });
+      if (afterVisits === 6) {
+        project = applyProjectCommand(project, catalog, {
+          kind: 'RemoveExitDecision',
+          decision: createExitDecisionAddress(nBiome, { kind: 'hubDecision', decisionKey: 'hub' }),
+        });
+      }
       const outcome = createFountainRarityOutcomeAddress(createHubFountainAddress(nBiome, 'hub'));
       const view = renderWorkspace(project, 'Surface', 'N');
       const finding = view.application.store
@@ -508,18 +515,9 @@ describe('BiomeWorkspace', () => {
       expect(controls.contains(target)).toBe(true);
       expect(target.getAttribute('data-selected-finding')).toBe('true');
       expect(target.closest('[inert]')).toBeNull();
-      if (hostLabel === undefined) {
-        // The Hub Timeline keeps the actionable Hub-owned destination.
-        expect(
-          screen.getByRole('tab', { name: 'Hub Timeline' }).getAttribute('aria-selected'),
-        ).toBe('true');
-        expect(
-          within(controls).getByText('Used in the Hub after the planned visits.'),
-        ).toBeTruthy();
-        return;
-      }
-      expect(within(controls).getByText(`Used in the Hub before ${hostLabel}.`)).toBeTruthy();
-      expect(controls.nextElementSibling?.querySelector('h3')?.textContent).toBe(hostLabel);
+      expect(within(controls).getByText('Fountain used in the Hub after this room.')).toBeTruthy();
+      expect(screen.getByRole('heading', { name: hostLabel })).toBeTruthy();
+      expect(controls.nextElementSibling).toBeNull();
       await view.user.click(
         await screen.findByText(catalog.traits.byKey['HermesWeaponBoon']?.label ?? ''),
       );
@@ -552,7 +550,7 @@ describe('BiomeWorkspace', () => {
     expect(screen.getByRole('region', { name: 'Ephyra Hub timeline map' })).toBeTruthy();
     await view.user.click(screen.getByRole('button', { name: 'Open Interaction →' }));
     const hosted = await screen.findByRole('region', { name: 'Hub fountain' });
-    expect(within(hosted).getByText('Used in the Hub before Combat 11.')).toBeTruthy();
+    expect(within(hosted).getByText('Fountain used in the Hub after this room.')).toBeTruthy();
     expect(within(hosted).queryByRole('group', { name: 'Fountain use' })).toBeNull();
     const back = screen.getByRole('button', { name: '← Hub Timeline' });
     expect(back.closest('.room-card-heading')?.textContent).toContain('View Map');
