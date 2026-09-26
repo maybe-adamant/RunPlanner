@@ -48,8 +48,8 @@ import {
   goldenFStartId,
   goldenFOccurrenceId,
   goldenGBiome,
-  createUnderworldFWellCheckpoint,
 } from '@run-planner/test-fixtures/underworld';
+import { loadUnderworldFStygianWellCheckpoint } from '@run-planner/test-fixtures/checkpoints/underworld';
 import {
   loadSurfaceNProject,
   loadSurfaceNStoryBoardProject,
@@ -2147,7 +2147,7 @@ describe('OccurrenceEncounterWorkbench', () => {
     const shopId = createOccurrenceId('golden-f-preboss-shop');
     const shop = createOccurrenceAddress(goldenFBiome, shopId);
     const project = authorLegalTraitOffers(
-      replaceTestShopOfferActions(createUnderworldFWellCheckpoint(), catalog, shop, ['Boon']),
+      replaceTestShopOfferActions(loadUnderworldFStygianWellCheckpoint(), catalog, shop, ['Boon']),
     );
     const view = renderOccurrenceWorkbench(project, 'Underworld', 'F', occurrenceById(shopId));
     const current = () => view.application.store.getState().projectWorkspace.history!.present;

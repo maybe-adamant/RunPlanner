@@ -36,6 +36,26 @@ import { surfaceNPhialIntermediateFountainProject } from './surface-n-phial-foun
 import { surfaceQShopCorrelationProject } from './surface-q-shop-correlation-fixture';
 import { typhonCustomizationProject } from './typhon-customization-fixture';
 import { npcShoppingProtectionProject } from './npc-shopping-fixture';
+import automaticBossFixture from '../fixtures/automatic-boss.execution.json';
+import dreamMixedPrefixFixture from '../fixtures/dream-mixed-prefix.execution.json';
+import fOpeningFixture from '../fixtures/f-opening.execution.json';
+import fgFixture from '../fixtures/fg.execution.json';
+import fgAnomalyFixture from '../fixtures/fg-anomaly.execution.json';
+import fgAnomalyRosterFixture from '../fixtures/fg-anomaly-roster.execution.json';
+import fgIxionChaosFixture from '../fixtures/fg-ixion-chaos.execution.json';
+import fgNpcShoppingProtectionFixture from '../fixtures/fg-npc-shopping-protection.execution.json';
+import surfaceGeneratedPrecombatFixture from '../fixtures/surface-generated-precombat.execution.json';
+import surfaceNPhialIntermediateFountainFixture from '../fixtures/surface-n-phial-intermediate-fountain.execution.json';
+import surfaceNFixture from '../fixtures/surface-n.execution.json';
+import surfaceNOFixture from '../fixtures/surface-no.execution.json';
+import surfaceNOPFixture from '../fixtures/surface-nop.execution.json';
+import surfaceNOPQFixture from '../fixtures/surface-nopq.execution.json';
+import surfaceQShopCorrelationFixture from '../fixtures/surface-q-shop-correlation.execution.json';
+import surfaceScheduledLifecycleFixture from '../fixtures/surface-scheduled-lifecycle.execution.json';
+import underworldArachneCocoonsFixture from '../fixtures/underworld-arachne-cocoons.execution.json';
+import underworldFGHFixture from '../fixtures/underworld-fgh.execution.json';
+import underworldFGHIFixture from '../fixtures/underworld-fghi.execution.json';
+import underworldGeneratedCompositionFixture from '../fixtures/underworld-generated-composition.execution.json';
 
 const fixtureDirectory = join(dirname(fileURLToPath(import.meta.url)), '..', 'fixtures');
 
@@ -56,32 +76,68 @@ function fOnlyProject(): ProjectDocument {
  * content. Regeneration and byte stability read this one table, so a fixture
  * can neither be regenerated from a different project nor drift unwatched.
  */
-export const executionFixtures: readonly {
+interface ExecutionFixture {
   readonly name: string;
   readonly project: () => ProjectDocument;
-}[] = Object.freeze([
-  { name: 'f-opening', project: fOnlyProject },
-  { name: 'fg', project: createCompleteFGProject },
-  { name: 'fg-npc-shopping-protection', project: npcShoppingProtectionProject },
-  { name: 'underworld-fgh', project: loadUnderworldFGHCheckpoint },
-  { name: 'underworld-fghi', project: loadUnderworldFGHICheckpoint },
-  { name: 'fg-ixion-chaos', project: createCompleteFGIxionChaosProject },
-  { name: 'fg-anomaly', project: createCompleteFGAnomalyProject },
-  { name: 'fg-anomaly-roster', project: () => anomalyRosterProject() },
-  { name: 'automatic-boss', project: bossAutomaticOutcomeProject },
-  { name: 'surface-n', project: loadSurfaceNProject },
-  { name: 'surface-no', project: loadSurfaceNOProject },
-  { name: 'surface-nop', project: loadSurfaceNOPProject },
-  { name: 'surface-nopq', project: typhonCustomizationProject },
-  { name: 'surface-q-shop-correlation', project: surfaceQShopCorrelationProject },
-  { name: 'dream-mixed-prefix', project: dreamMixedHandoffProject },
-  { name: 'surface-scheduled-lifecycle', project: surfaceScheduledLifecycleProject },
-  { name: 'underworld-generated-composition', project: underworldGeneratedCompositionProject },
-  { name: 'surface-generated-precombat', project: surfaceGeneratedPreCombatProject },
-  { name: 'underworld-arachne-cocoons', project: underworldArachneCocoonProject },
+  readonly wire: unknown;
+}
+
+export const executionFixtures: readonly ExecutionFixture[] = Object.freeze([
+  { name: 'f-opening', project: fOnlyProject, wire: fOpeningFixture },
+  { name: 'fg', project: createCompleteFGProject, wire: fgFixture },
+  {
+    name: 'fg-npc-shopping-protection',
+    project: npcShoppingProtectionProject,
+    wire: fgNpcShoppingProtectionFixture,
+  },
+  { name: 'underworld-fgh', project: loadUnderworldFGHCheckpoint, wire: underworldFGHFixture },
+  {
+    name: 'underworld-fghi',
+    project: loadUnderworldFGHICheckpoint,
+    wire: underworldFGHIFixture,
+  },
+  { name: 'fg-ixion-chaos', project: createCompleteFGIxionChaosProject, wire: fgIxionChaosFixture },
+  { name: 'fg-anomaly', project: createCompleteFGAnomalyProject, wire: fgAnomalyFixture },
+  {
+    name: 'fg-anomaly-roster',
+    project: () => anomalyRosterProject(),
+    wire: fgAnomalyRosterFixture,
+  },
+  { name: 'automatic-boss', project: bossAutomaticOutcomeProject, wire: automaticBossFixture },
+  { name: 'surface-n', project: loadSurfaceNProject, wire: surfaceNFixture },
+  { name: 'surface-no', project: loadSurfaceNOProject, wire: surfaceNOFixture },
+  { name: 'surface-nop', project: loadSurfaceNOPProject, wire: surfaceNOPFixture },
+  { name: 'surface-nopq', project: typhonCustomizationProject, wire: surfaceNOPQFixture },
+  {
+    name: 'surface-q-shop-correlation',
+    project: surfaceQShopCorrelationProject,
+    wire: surfaceQShopCorrelationFixture,
+  },
+  { name: 'dream-mixed-prefix', project: dreamMixedHandoffProject, wire: dreamMixedPrefixFixture },
+  {
+    name: 'surface-scheduled-lifecycle',
+    project: surfaceScheduledLifecycleProject,
+    wire: surfaceScheduledLifecycleFixture,
+  },
+  {
+    name: 'underworld-generated-composition',
+    project: underworldGeneratedCompositionProject,
+    wire: underworldGeneratedCompositionFixture,
+  },
+  {
+    name: 'surface-generated-precombat',
+    project: surfaceGeneratedPreCombatProject,
+    wire: surfaceGeneratedPrecombatFixture,
+  },
+  {
+    name: 'underworld-arachne-cocoons',
+    project: underworldArachneCocoonProject,
+    wire: underworldArachneCocoonsFixture,
+  },
   {
     name: 'surface-n-phial-intermediate-fountain',
     project: surfaceNPhialIntermediateFountainProject,
+    wire: surfaceNPhialIntermediateFountainFixture,
   },
 ]);
 
@@ -95,13 +151,15 @@ export function executionFixturePath(name: string): string {
  * resolved configuration. The encoder emits one minified line, so Prettier
  * decides every line break; that is the canonical pre-print for all fixtures.
  */
-export async function executionFixtureBytes(
-  name: string,
-  project: ProjectDocument,
-): Promise<string> {
-  const assembly = simulateProjectAssembly(catalog, project);
+export async function buildExecutionFixture(
+  fixture: ExecutionFixture,
+): Promise<
+  Readonly<{ readonly bytes: string; readonly plan: ReturnType<typeof compileExecutionPlan> }>
+> {
+  const assembly = simulateProjectAssembly(catalog, fixture.project());
   const plan = compileExecutionPlan({ product: assembleExecutionProduct({ assembly, catalog }) });
-  const filepath = executionFixturePath(name);
+  const filepath = executionFixturePath(fixture.name);
   const options = await resolveConfig(filepath);
-  return format(encodeExecutionPlan(plan), { ...options, filepath });
+  const bytes = await format(encodeExecutionPlan(plan), { ...options, filepath });
+  return Object.freeze({ bytes, plan });
 }

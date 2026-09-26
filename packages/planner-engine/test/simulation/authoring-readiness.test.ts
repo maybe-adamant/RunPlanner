@@ -41,8 +41,8 @@ import {
   nVisitSlotKeys,
   oBiome,
   oOccurrenceIds,
-  createSurfaceNOHermesShrineDeliveryCheckpoint,
 } from '@run-planner/test-fixtures/surface';
+import { loadSurfaceNOHermesShrineDeliveryCheckpoint } from '@run-planner/test-fixtures/checkpoints/surface';
 import {
   createCompleteFGProject,
   goldenFBiome,
@@ -369,7 +369,7 @@ describe('chronological authoring horizon', () => {
   });
 
   it('classifies an omitted due Shrine delivery placement as incomplete', () => {
-    let project = createSurfaceNOHermesShrineDeliveryCheckpoint();
+    let project = loadSurfaceNOHermesShrineDeliveryCheckpoint();
     const deliveryHost = oOccurrenceIds.devotion;
     const source = createOccurrenceAddress(oBiome, oOccurrenceIds.combat07);
     const entryKey = hermesShrineDeliveryEntryKey(source, 'initial:secondLeft');

@@ -25,6 +25,7 @@ import {
   goldenGStartId,
   goldenGOccurrenceId,
 } from '@run-planner/test-fixtures/underworld';
+import { loadUnderworldFStygianWellCheckpoint } from '@run-planner/test-fixtures/checkpoints/underworld';
 import { simulateProjectAssembly } from '../../src/simulation/evaluation/project';
 import { createTraitHistoryState } from '../../src/simulation/traits';
 import { stygianWellCandidateForProjectEvaluationAssembly } from '../../src/simulation/evaluation/project-evaluation-assembly';
@@ -100,7 +101,9 @@ describe('Stygian Well consequential purchase state', () => {
     const outcomes = [true, false].map((configuredTail) => {
       const assembly = simulateProjectAssembly(
         catalog,
-        createUnderworldFWellCheckpoint(configuredTail),
+        configuredTail
+          ? loadUnderworldFStygianWellCheckpoint()
+          : createUnderworldFWellCheckpoint(false),
       );
       const candidate = stygianWellCandidateForProjectEvaluationAssembly(assembly, owner);
       expect(candidate?.assessments).not.toHaveLength(0);
@@ -640,7 +643,7 @@ describe('Stygian Well consequential purchase state', () => {
       goldenFBiome,
       createOccurrenceId('golden-f-preboss-shop:postboss'),
     );
-    let project = createUnderworldFWellCheckpoint();
+    let project = loadUnderworldFStygianWellCheckpoint();
     project = applyProjectCommand(project, catalog, {
       kind: 'ReplaceStygianWellOffer',
       occurrence: well,
@@ -668,7 +671,7 @@ describe('Stygian Well consequential purchase state', () => {
       goldenFBiome,
       createOccurrenceId('golden-f-preboss-shop:postboss'),
     );
-    let project = createUnderworldFWellCheckpoint();
+    let project = loadUnderworldFStygianWellCheckpoint();
     project = applyProjectCommand(project, catalog, {
       kind: 'ReplaceStygianWellOffer',
       occurrence: well,

@@ -2,18 +2,17 @@ import { readFileSync, writeFileSync } from 'node:fs';
 import process from 'node:process';
 import { describe, expect, it } from 'vitest';
 
+import { decodeExecutionPlan, encodeExecutionPlan } from '../../src/execution-plan';
 import {
-  executionFixtureBytes,
+  buildExecutionFixture,
   executionFixturePath,
   executionFixtures,
 } from './support/execution-fixtures';
 
 /**
- * `keeps the %s product byte-stable` in the compiler suite compares decoded
- * plans, so it accepts a committed fixture whose bytes no longer match what the
- * encoder emits — key order and formatting can drift invisibly. These fixtures
- * are mirrored byte-for-byte to the Plan Executor, so that drift matters.
- * This suite compares the bytes themselves.
+ * Each fixture build produces decoded-plan equality, a wire round trip, and
+ * byte stability from one compilation. These fixtures are mirrored byte-for-byte
+ * to the Plan Executor, so formatting and key-order drift matter.
  *
  * `npm run fixtures:execution` rewrites them through the same one code path.
  */
@@ -23,13 +22,15 @@ describe('committed execution fixtures', () => {
   it.each(executionFixtures.map((fixture) => [fixture.name, fixture] as const))(
     'keeps %s byte-identical to its regenerated wire form',
     async (name, fixture) => {
-      const bytes = await executionFixtureBytes(name, fixture.project());
+      const built = await buildExecutionFixture(fixture);
       const path = executionFixturePath(name);
       if (rewrite) {
-        writeFileSync(path, bytes);
+        writeFileSync(path, built.bytes);
         return;
       }
-      expect(readFileSync(path, 'utf8')).toBe(bytes);
+      expect(readFileSync(path, 'utf8')).toBe(built.bytes);
+      expect(decodeExecutionPlan(fixture.wire)).toEqual(built.plan);
+      expect(decodeExecutionPlan(JSON.parse(encodeExecutionPlan(built.plan)))).toEqual(built.plan);
     },
   );
 });

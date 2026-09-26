@@ -26,13 +26,13 @@ import { findingSelected } from '@planner/state/editorSessionSlice';
 import { simulateProject } from '@run-planner/engine/simulation';
 import {
   createGoldenFGHIProject,
-  createUnderworldFPoolCheckpoint,
   goldenFBiome,
   goldenFOccurrenceId,
   goldenHBiome,
   loadNemesisFieldsCheckpoint,
   loadUnderworldFGProject,
 } from '@run-planner/test-fixtures/underworld';
+import { loadUnderworldFPoolCheckpoint } from '@run-planner/test-fixtures/checkpoints/underworld';
 import {
   authoredAnomalyProject,
   decisionContainingOccurrence,
@@ -536,7 +536,7 @@ describe('OccurrenceRoomFeatures', () => {
   it('marks a reached stale Pool trait as selected-invalid', async () => {
     const occurrenceId = createOccurrenceId('golden-f-preboss-shop:postboss');
     const owner = createOccurrenceAddress(goldenFBiome, occurrenceId);
-    const project = applyProjectCommand(createUnderworldFPoolCheckpoint(), catalog, {
+    const project = applyProjectCommand(loadUnderworldFPoolCheckpoint(), catalog, {
       kind: 'ReplacePurgingPoolSlot',
       occurrence: owner,
       slotKey: 'left',
