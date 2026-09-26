@@ -505,15 +505,14 @@ export interface ExecutionHubFountainUse {
   /** Completed room visits, each returned to the Hub, before this use. */
   readonly precedingVisitCount: number;
   readonly aromaticPhialTarget?: string;
-  /** Present only when this use changes the modeled trait inventory of its Hub interval. */
-  readonly departureConformance?: ExecutionHubDepartureConformance;
 }
 
 /**
- * Hub-interval conformance, checked when the Hub is left after this use. Each
- * fact kind selects its expected value from this departure frame.
+ * Conformance checked when the Hub is left after `precedingVisitCount`
+ * completed visits. Each fact kind selects its expected value from this frame.
  */
 export interface ExecutionHubDepartureConformance {
+  readonly precedingVisitCount: number;
   readonly facts: readonly { readonly kind: 'traitInventory' }[];
   readonly traits: { readonly equipped: ExecutionRunStateDiagnostic['traits']['equipped'] };
 }
@@ -537,6 +536,8 @@ export interface ExecutionOverview {
     readonly requiredVisitCount: number;
     /** The one Hub-owned fountain use, after its preceding completed room visits. */
     readonly fountain: ExecutionHubFountainUse;
+    /** One entry per Hub departure, ordered by preceding visits 0..requiredVisitCount. */
+    readonly departures: readonly ExecutionHubDepartureConformance[];
   };
   /** Complete declared N side-door state for a visited main room. */
   readonly localSlots?: readonly {

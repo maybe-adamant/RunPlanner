@@ -3,7 +3,6 @@ import {
   semanticAddressKey,
   type OccurrenceAddress,
 } from '../../authored-project/addresses';
-import type { HubFountainIntervalRunState } from './model';
 import type { RunStateSnapshot } from './run-state';
 import type { KeepsakeState } from '../keepsakes/state';
 
@@ -176,13 +175,11 @@ export function deriveRoomExitConformanceDeltas(
 }
 
 /**
- * A Hub interval gates publication by comparing its entry or return state with
- * its departure; the published rows are the full modeled departure inventory.
+ * Each Hub departure is its own conformance window: the expected modeled trait
+ * inventory when the Hub is left, in the room-exit Run State row shape and order.
  */
-export function deriveHubDepartureTraitInventory(
-  interval: HubFountainIntervalRunState,
-): readonly ModeledTraitInventoryEntry[] | undefined {
-  const start = modeledTraitInventory(interval.intervalStart);
-  const departure = modeledTraitInventory(interval.departure);
-  return changed(start, departure) ? Object.freeze(Object.values(departure)) : undefined;
+export function hubDepartureTraitInventory(
+  departure: RunStateSnapshot,
+): readonly ModeledTraitInventoryEntry[] {
+  return Object.freeze(Object.values(modeledTraitInventory(departure)));
 }

@@ -4,11 +4,15 @@ import type {
   CanonicalHubDecision,
   CanonicalLocalVisitRoom,
 } from '../../simulation/materialization';
-import type { ExecutionHubFountainUse, ExecutionOverview } from '../model';
+import type {
+  ExecutionHubDepartureConformance,
+  ExecutionHubFountainUse,
+  ExecutionOverview,
+} from '../model';
 import { ExecutionCompilerError as CompilerError } from '../assembler-errors';
 import { executionReward } from './overview';
-import type { HubFountainIntervalRunState } from '../../simulation/rewards/model';
-import { deriveHubDepartureTraitInventory } from '../../simulation/rewards/run-state-conformance';
+import type { HubDepartureRunState } from '../../simulation/rewards/model';
+import { hubDepartureTraitInventory } from '../../simulation/rewards/run-state-conformance';
 
 function reference(room: {
   readonly occurrenceId: string;
@@ -25,7 +29,7 @@ function reference(room: {
 export function hubOverview(
   hub: CanonicalHubDecision | undefined,
   hubExit: CanonicalBatch | undefined,
-  fountainIntervals: readonly HubFountainIntervalRunState[],
+  departures: readonly HubDepartureRunState[],
 ): ExecutionOverview['hub'] | undefined {
   if (hub === undefined) return undefined;
   const final = hubExit?.targets[0]?.room;
@@ -55,26 +59,47 @@ export function hubOverview(
     finalHandoff: reference(final),
     // A complete canonical Hub holds exactly its declaration's required visits.
     requiredVisitCount: hub.visits.length,
-    fountain: hubFountainUse(hub, fountainIntervals),
+    fountain: hubFountainUse(hub),
+    departures: hubDepartures(hub, departures),
   });
 }
 
-function hubFountainUse(
+function hubDepartures(
   hub: CanonicalHubDecision,
-  fountainIntervals: readonly HubFountainIntervalRunState[],
-): ExecutionHubFountainUse {
+  departures: readonly HubDepartureRunState[],
+): readonly ExecutionHubDepartureConformance[] {
+  const owned = departures.filter(
+    (departure) => semanticAddressKey(departure.hub) === semanticAddressKey(hub.origin),
+  );
+  if (
+    owned.length !== hub.visits.length + 1 ||
+    owned.some((departure, index) => departure.precedingVisitCount !== index)
+  )
+    throw new CompilerError(
+      'executionCoverageMissing',
+      `${hub.room.gameName} lacks one Run State per Hub departure`,
+    );
+  return Object.freeze(
+    owned.map((departure) =>
+      Object.freeze({
+        precedingVisitCount: departure.precedingVisitCount,
+        facts: Object.freeze([Object.freeze({ kind: 'traitInventory' as const })]),
+        traits: Object.freeze({
+          equipped: Object.freeze(
+            hubDepartureTraitInventory(departure.departure).map((trait) =>
+              Object.freeze({ ...trait }),
+            ),
+          ),
+        }),
+      }),
+    ),
+  );
+}
+
+function hubFountainUse(hub: CanonicalHubDecision): ExecutionHubFountainUse {
   const fountain = hub.fountain;
   if (fountain === undefined)
     throw new CompilerError('executionCoverageMissing', `${hub.room.gameName} lacks fountain use`);
-  const interval = fountainIntervals.find(
-    (candidate) => semanticAddressKey(candidate.origin) === semanticAddressKey(fountain.origin),
-  );
-  if (interval === undefined)
-    throw new CompilerError(
-      'executionCoverageMissing',
-      `${hub.room.gameName} fountain use lacks its Hub interval Run State`,
-    );
-  const equipped = deriveHubDepartureTraitInventory(interval);
   return Object.freeze({
     kind: 'fountainUse',
     owner: semanticAddressKey(fountain.origin),
@@ -83,16 +108,6 @@ function hubFountainUse(
     ...(fountain.fountainRarityResult === undefined
       ? {}
       : { aromaticPhialTarget: fountain.fountainRarityResult.targetTraitKey }),
-    ...(equipped === undefined
-      ? {}
-      : {
-          departureConformance: Object.freeze({
-            facts: Object.freeze([Object.freeze({ kind: 'traitInventory' as const })]),
-            traits: Object.freeze({
-              equipped: Object.freeze(equipped.map((trait) => Object.freeze({ ...trait }))),
-            }),
-          }),
-        }),
   });
 }
 
