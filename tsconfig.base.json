@@ -16,6 +16,9 @@
       "@run-planner/test-fixtures/checkpoints/manifest": [
         "./test/fixtures/authored-project/checkpoints/manifest.ts"
       ],
+      "@run-planner/test-fixtures/checkpoints/dream": [
+        "./test/fixtures/authored-project/checkpoints/dream.ts"
+      ],
       "@run-planner/test-fixtures/checkpoints/underworld": [
         "./test/fixtures/authored-project/checkpoints/underworld.ts"
       ],

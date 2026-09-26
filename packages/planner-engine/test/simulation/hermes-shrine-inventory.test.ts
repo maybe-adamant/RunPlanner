@@ -46,7 +46,7 @@ import {
   pBiome,
 } from '@run-planner/test-fixtures/surface';
 import { loadSurfaceNOHermesShrineDeliveryCheckpoint } from '@run-planner/test-fixtures/checkpoints/surface';
-import { dreamMixedHandoffProject } from '@run-planner/test-fixtures/dream';
+import { loadDreamMixedHandoffCheckpoint } from '@run-planner/test-fixtures/checkpoints/dream';
 import { authorLegalTraitOffers } from '@run-planner/test-fixtures/shared';
 import { loadSurfacePSteadyGrowthShrineFrontierCheckpoint } from '@run-planner/test-fixtures/checkpoints/surface';
 import {
@@ -992,7 +992,7 @@ describe('Hermes Shrine Travel Deal generation', () => {
 
   it('applies the carried Dream N board SpellDrop lookup to the Travel Deal refill domain', () => {
     const dreamN = createBiomeAddress('Dream', 'N');
-    let project = dreamMixedHandoffProject();
+    let project = loadDreamMixedHandoffCheckpoint();
     const nPlan = project.route?.biomes.find((biome) => biome.biomeKey === 'N');
     const nTopology = nPlan?.topology;
     const spellSource = nTopology?.occurrences.find((room) => room.gameName === 'N_Combat09');

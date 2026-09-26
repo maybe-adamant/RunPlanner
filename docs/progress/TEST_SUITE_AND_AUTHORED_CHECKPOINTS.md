@@ -1,6 +1,7 @@
 # Test-suite cleanup and authored checkpoint coverage
 
-Status: Gates A–B implemented and reviewed; review findings resolved. Gates C–D await implementation.
+Status: Gates A–B implemented and reviewed. C1 Dream slice implemented and reviewed;
+remaining C1 promotions and Gates C2–D await implementation.
 Base: `7dea8cfe` (September 26, 2026).
 
 ## Objective
@@ -174,6 +175,17 @@ its consumers, then generate JSON through real commands/codec, register it, and
 move/add its representative tests. No fixture-only commits awaiting later tests.
 
 #### C1 — established recipe promotions
+
+Partial disposition (Dream slice, against `ce0d4279`, September 26, 2026): completed
+the saved `dream-mixed-handoff` Q/F/N checkpoint, its manifest/registry/static
+loader registration, non-circular command-recipe attestation, the reached
+execution-export witness, and the representative NPC-protection edit/codec
+reload/Undo consumer. The parameterized F-batch reorder recipe remains its
+own rule witness. The Underworld generated-encounter, Surface encounter,
+Surface scheduled-lifecycle, and Hub Phial promotions remain pending; C2 and
+C3 remain pending. Independent review passed without findings. Checkpoint integrity
+(25 tests), focused engine consumers (82 tests, including unchanged Dream execution
+bytes), full typechecking, changed-file lint and formatting passed.
 
 - Dream mixed-handoff: default configured Q/F/N prefix; retain the parameterized
   F-batch-order recipe for tests whose subject is reordered history.

@@ -15,10 +15,10 @@ import {
   decodeExecutionPlan,
   encodeExecutionPlan,
 } from '../../src/execution-plan';
-import { dreamMixedHandoffProject } from '@run-planner/test-fixtures/dream';
+import { loadDreamMixedHandoffCheckpoint } from '@run-planner/test-fixtures/checkpoints/dream';
 
-it('publishes a command-authored Dream route through the strict execution codec', () => {
-  const assembly = simulateProjectAssembly(catalog, dreamMixedHandoffProject());
+it('publishes the saved Dream mixed-handoff route through the strict execution codec', () => {
+  const assembly = simulateProjectAssembly(catalog, loadDreamMixedHandoffCheckpoint());
   expect(assembly.evaluation.findings).toEqual([]);
   const candidates = createPreparedProjectCandidateSession(catalog, assembly);
   const n = createBiomeAddress('Dream', 'N');

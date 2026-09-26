@@ -1,7 +1,7 @@
 export interface AuthoredProjectCheckpointManifestEntry {
   readonly id: string;
   readonly file: string;
-  readonly route: 'Underworld' | 'Surface';
+  readonly route: 'Underworld' | 'Surface' | 'Dream';
   readonly configuredBiomePrefix: readonly string[];
   readonly scenario: string;
   readonly schemaVersion: 88;
@@ -10,6 +10,16 @@ export interface AuthoredProjectCheckpointManifestEntry {
 }
 
 export const checkpointManifest = Object.freeze([
+  {
+    id: 'dream-mixed-handoff',
+    file: 'dream-mixed-handoff.runplanner.json',
+    route: 'Dream',
+    configuredBiomePrefix: ['Q', 'F', 'N'],
+    scenario: 'Configured Dream Q/F/N mixed handoff with reached postboss transitions',
+    schemaVersion: 88,
+    catalogVersion: '0.55.0-anvil-of-fates',
+    provenance: 'semantic-command recipe for the mixed Dream handoff itinerary',
+  },
   {
     id: 'underworld-fg',
     file: 'underworld-fg.runplanner.json',

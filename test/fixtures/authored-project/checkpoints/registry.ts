@@ -1,9 +1,11 @@
 import type { ProjectDocument } from '@run-planner/engine/authored-project';
 import { checkpointManifest, type AuthoredProjectCheckpointId } from './manifest';
+import { dreamCheckpointArtifacts } from './dream';
 import { surfaceCheckpointArtifacts } from './surface';
 import { underworldCheckpointArtifacts } from './underworld';
 
 const artifactsById = Object.freeze({
+  ...dreamCheckpointArtifacts,
   ...underworldCheckpointArtifacts,
   ...surfaceCheckpointArtifacts,
 });

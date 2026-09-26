@@ -2,7 +2,7 @@ import { expect, it, vi } from 'vitest';
 import { catalog } from '@run-planner/hades2-catalog';
 import { createGoldenFGHIProject } from '@run-planner/test-fixtures/underworld';
 import { loadSurfaceNOPQProject } from '@run-planner/test-fixtures/surface';
-import { dreamMixedHandoffProject } from '@run-planner/test-fixtures/dream';
+import { loadDreamMixedHandoffCheckpoint } from '@run-planner/test-fixtures/checkpoints/dream';
 import { simulateProjectAssembly } from '../../src/simulation';
 import * as traitCapabilities from '../../src/simulation/candidates/trait-offer/capability';
 import { createTraitHistoryState } from '../../src/simulation/traits';
@@ -61,7 +61,11 @@ it('retains old lookup snapshots and does not merge divergent reservation states
 });
 
 it('preserves route branch and candidate-context counts through state consolidation', () => {
-  for (const build of [createGoldenFGHIProject, loadSurfaceNOPQProject, dreamMixedHandoffProject]) {
+  for (const build of [
+    createGoldenFGHIProject,
+    loadSurfaceNOPQProject,
+    loadDreamMixedHandoffCheckpoint,
+  ]) {
     const project = build();
     const observer = vi.spyOn(traitCapabilities, 'createTraitOfferCandidateArtifacts');
     try {

@@ -22,6 +22,7 @@ import {
 import { createGoldenFGHIProject, goldenGBiome } from '@run-planner/test-fixtures/underworld';
 import { loadSurfaceNOPQProject, oBiome, pBiome, qBiome } from '@run-planner/test-fixtures/surface';
 import { dreamMixedHandoffProject } from '@run-planner/test-fixtures/dream';
+import { loadDreamMixedHandoffCheckpoint } from '@run-planner/test-fixtures/checkpoints/dream';
 
 describe('reward store support', () => {
   it('evaluates an unresolved F base store from its source prefix and blocks its dependent target', () => {
@@ -218,7 +219,7 @@ describe('run-wide entered-store ledger', () => {
     // unchanged because it must: the controller saturates at every F boundary,
     // so the store sequence is forced and only a same-store permutation is a
     // legal itinerary.
-    const base = dreamMixedHandoffProject();
+    const base = loadDreamMixedHandoffCheckpoint();
     const reordered = dreamMixedHandoffProject([0, 1, 3, 2, 4, 5, 6, 7, 8]);
     const sorted = (entries: readonly string[]): readonly string[] => [...entries].sort();
 
