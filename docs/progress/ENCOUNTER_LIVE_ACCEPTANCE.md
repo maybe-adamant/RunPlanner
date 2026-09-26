@@ -46,9 +46,12 @@ is confirmed, or when the owner explicitly waives the remainder.
       between two visits, and one placed after the last visit each guide the
       use at that point and survive the intervening Hub returns. The forced
       rarity upgrade is visible on the next room's offer.
-- [ ] Leaving the Hub at the fountain's due point without using it reports an
-      `obligation:hubDeparture` mismatch. Resyncing after a fountain use this
-      session did not observe reports only the `hub-fountain` `unobserved`
-      diagnostic and continues.
+- [ ] With an Aromatic Phial target, leaving the Hub at the fountain's due
+      point without using it reports a `hub-fountain` `missed` diagnostic and a
+      `hub-departure-conformance:traitInventory` mismatch. Without a target, the
+      same skip reports only the `missed` diagnostic and execution continues.
+      Resyncing after a fountain use this session did not observe reports the
+      `unobserved` diagnostic; with a target, the departure inventory is still
+      checked and passes only when the planned upgrade is present.
 - [ ] The Hub map is readable at the fountain and each visit, and each guided
       marker targets the correct fountain or Soul Pylon.

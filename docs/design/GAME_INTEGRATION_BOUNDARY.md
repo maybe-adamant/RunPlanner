@@ -400,10 +400,15 @@ next visit or the final handoff, is its own conformance window. Room-exit facts
 cannot observe it because they compare one occurrence's own entry and exit.
 When the fountain use changes the modeled trait inventory of its interval,
 `hub.fountain.departureConformance` publishes `facts: [{ kind: 'traitInventory' }]`
-and the expected `traits.equipped` rows, in the Run State frame's shape, to be
-compared when the Hub is left after that use. An interval without a modeled
-trait change publishes nothing, and the window never proves a change from
-before the Hub interval.
+and the expected `traits.equipped` rows, in the Run State frame's shape. The
+executor compares them with the live modeled inventory when the Hub is left at
+the fountain's due position, whether or not the use was observed there; a
+missing or misplaced use is otherwise only a diagnostic. The interval gates
+publication only: like room-exit facts, the comparison covers the full modeled
+inventory. An interval without a modeled trait change publishes nothing. An
+early use that happens to match the planned upgrade therefore passes the Hub
+check, but a visit before the due position that publishes its own trait fact
+still reports the rarity it was planned against.
 
 For Chaos, the selected blessing is reserved for the selected curse before the
 native screen is constructed. The other two blessings remain distinct
