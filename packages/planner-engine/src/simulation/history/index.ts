@@ -15,7 +15,7 @@ export {
   projectEncounterRecordPreparation,
   projectOfferedExitCount,
   projectBiomeEncounterKeyCounts,
-  projectPreviousRoomEncounterKeys,
+  projectEncounterPreparationRoomWindow,
   projectRoomPreparationCheckpoint,
   projectRecentEncounterEnvelopeSlots,
   projectRouteEncounterKeyCounts,

@@ -31,6 +31,7 @@ export const qEncounterDefinitions = [
   },
   {
     key: 'TyphonShop',
+    hostsNpcShoppingEvents: true,
     label: 'Typhon shop',
     kind: 'nonCombat',
     countsEncounterDepth: false,

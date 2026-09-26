@@ -583,7 +583,10 @@ It can therefore observe exact earlier encounter identities, while encounter
 counters remain at the post-predecessor snapshot until the matching
 `encounterStarted` event. Previous-room spacing is a different view: it
 examines committed predecessor room origins and excludes every slot owned by
-the room currently being prepared. These are checkpointed projections of one
+the room currently being prepared. Its identity-bearing preparation window
+preserves repeated appearances and the native departing-room duplication;
+encounter requirements and NPC shopping protection consume this same view.
+These are checkpointed projections of one
 canonical event fold, not a profile baseline, provisional counter slate, or
 NPC-specific ledger.
 

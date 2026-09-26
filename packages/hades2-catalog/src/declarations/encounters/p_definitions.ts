@@ -652,6 +652,7 @@ export const pEncounterDefinitions = [
     blocksGorgon: true,
     sequenceEffect: { kind: 'terminateSuffix' },
     npcPresentationKey: 'Heracles',
+    npcShoppingProtection: { family: 'Heracles', roomWindow: 10 },
     requirements: {
       kind: 'all',
       requirements: [

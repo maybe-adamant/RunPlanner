@@ -99,6 +99,7 @@ export const gEncounterDefinitions = [
     countsEncounterDepth: true,
     blocksGorgon: true,
     npcPresentationKey: 'Nemesis',
+    npcShoppingProtection: { family: 'Nemesis', roomWindow: 12 },
     requirements: {
       kind: 'all',
       requirements: [

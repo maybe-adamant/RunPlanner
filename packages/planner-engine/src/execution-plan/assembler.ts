@@ -192,7 +192,7 @@ export function assembleExecutionProduct({
         : undefined;
     const crossBiomeSourceId =
       crossBiomeTarget === undefined ? undefined : executionRoomOwnerKey(room);
-    return executionOccurrence(
+    const occurrence = executionOccurrence(
       catalog,
       room,
       snapshots,
@@ -212,6 +212,15 @@ export function assembleExecutionProduct({
         : undefined,
       selectedOccurrenceIdSet.has(room.occurrenceId),
     );
+    const policy = evaluation.route.npcShopping.occurrences.find(
+      (entry) => entry.occurrenceId === room.occurrenceId,
+    );
+    return policy === undefined
+      ? occurrence
+      : Object.freeze({
+          ...occurrence,
+          suppressedNpcShopping: policy.suppressedNpcShopping,
+        });
   });
   const extent = Object.freeze({
     kind: 'configuredPrefix' as const,

@@ -9,6 +9,15 @@ in-game verification. Native-source probes and
 executor tests do not establish these obligations; do not record an in-game
 pass from a source probe.
 
+Tartarus entry identity and NPC shopping protection are also implemented and
+independently reviewed (execution protocol 48, authored schema still 88).
+Planner verification passed after refreshing eight catalog snapshot hashes:
+3,831 correctness tests across the full run and focused snapshot rerun, plus
+typecheck, fixture integrity, performance, lint, formatting and build. The
+executor passed 687 tests and lint; all 20 fixture mirrors match byte-for-byte.
+Inherited Q shopping callback coverage is retained; native eligibility keeps
+it inert. The live obligations below remain open.
+
 The owner confirms each item from a live run. Delete this file once every item
 is confirmed, or when the owner explicitly waives the remainder.
 
@@ -57,3 +66,10 @@ is confirmed, or when the owner explicitly waives the remainder.
       seven departures (including Preboss) pass with the planned inventory.
 - [ ] The Hub map is readable at the fountain and each visit, and each guided
       marker targets the correct fountain or Soul Pylon.
+- [ ] The first Tartarus combat uses its published Standard/Small Chronos-intro
+      identity; native presentation runs without an encounter mismatch.
+- [ ] A Shop inside the published Nemesis or Heracles protection window
+      suppresses that NPC's shopping callback before its history flags are set;
+      the later planned NPC encounter remains eligible.
+- [ ] Shopping outside the protection window, for the other NPC, and while
+      execution is unbound or desynchronized remains native.

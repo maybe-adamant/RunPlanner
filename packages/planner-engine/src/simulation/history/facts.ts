@@ -71,14 +71,15 @@ export function projectBiomeEncounterKeyCounts(
 }
 
 /**
- * Ordered exact encounter identities for each committed predecessor room
- * appearance. The owner under preparation is deliberately omitted from the
- * room window even when an earlier phase already recorded an identity.
+ * Native encounter-preparation room window, oldest first. LeaveRoom has already
+ * appended the departing CurrentRoom to RoomHistory, so SumPrevRooms counts it
+ * twice. Preserve appearances (including restores) and identity until consumers
+ * have taken their window; occurrence deduplication before that loses contacts.
  */
-export function projectPreviousRoomEncounterKeys(
+export function projectEncounterPreparationRoomWindow(
   view: HistoryStateView,
   currentOrigin: RoomHistoryOrigin,
-): readonly (readonly string[])[] {
+): readonly EncounterPreparationRoomFact[] {
   const encounterKeysByOrigin = new Map<string, Set<string>>();
   for (const encounter of view.ledgers.encounterRecords) {
     const originKey = semanticAddressKey(encounter.origin);
@@ -91,19 +92,30 @@ export function projectPreviousRoomEncounterKeys(
   }
   const currentOriginKey = semanticAddressKey(currentOrigin);
   const routeKey = currentOrigin.routeKey;
-  return Object.freeze(
-    view.ledgers.roomAppearances
-      .filter(
-        (appearance) =>
-          appearance.origin.routeKey === routeKey &&
-          semanticAddressKey(appearance.origin) !== currentOriginKey,
-      )
-      .map((appearance) =>
-        Object.freeze([
-          ...(encounterKeysByOrigin.get(semanticAddressKey(appearance.origin)) ?? new Set()),
+  const appearances = view.ledgers.roomAppearances
+    .filter(
+      (appearance) =>
+        appearance.origin.routeKey === routeKey &&
+        semanticAddressKey(appearance.origin) !== currentOriginKey,
+    )
+    .map((appearance) =>
+      Object.freeze({
+        origin: appearance.origin,
+        gameName: appearance.gameName,
+        encounterKeys: Object.freeze([
+          ...(encounterKeysByOrigin.get(semanticAddressKey(appearance.origin)) ??
+            new Set<string>()),
         ]),
-      ),
-  );
+      }),
+    );
+  const departing = appearances.at(-1);
+  return Object.freeze(departing === undefined ? appearances : [...appearances, departing]);
+}
+
+export interface EncounterPreparationRoomFact {
+  readonly origin: RoomHistoryOrigin;
+  readonly gameName: string;
+  readonly encounterKeys: readonly string[];
 }
 
 /**
