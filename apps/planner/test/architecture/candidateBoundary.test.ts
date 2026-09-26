@@ -98,8 +98,6 @@ describe('candidate application boundary', () => {
       for (const forbidden of [
         'evaluateProgressiveBiomeAssembly',
         'evaluateProgressiveBiomeAssemblyBeforeClamp',
-        'completeInvalidSoleOwnerSource',
-        'hubRegionRepairForSideRoom',
       ]) {
         expect(
           source,

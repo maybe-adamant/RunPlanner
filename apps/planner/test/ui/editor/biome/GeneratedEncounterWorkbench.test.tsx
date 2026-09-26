@@ -355,7 +355,6 @@ describe('generated encounter customization workflows', () => {
     const explanation =
       'The game currently controls this encounter’s enemies. Select Edit to customize them.';
     expect(within(view.dialog).getByText(explanation)).toBeTruthy();
-    expect(within(view.dialog).queryByText('Native')).toBeNull();
     await initialize(view);
     expect(current(view)).toMatchObject({
       kind: 'generated',
@@ -363,7 +362,6 @@ describe('generated encounter customization workflows', () => {
       waves: expect.any(Array),
     });
     const created = view.application.store.getState().projectWorkspace.history!;
-    expect(within(view.dialog).queryByText(/Set the enemy budget for each wave/)).toBeNull();
     expect(
       within(view.dialog).getByRole('columnheader', { name: /Wave budget .* encounter budget/ }),
     ).toBeTruthy();
@@ -376,9 +374,6 @@ describe('generated encounter customization workflows', () => {
       within(view.dialog).queryByRole('region', { name: 'Encounter composition help' }),
     ).toBeNull();
     expect(view.application.store.getState().projectWorkspace.history).toBe(created);
-    expect(
-      within(view.dialog).queryByRole('button', { name: /Reset Budgets|Adjust Budgets/ }),
-    ).toBeNull();
     await view.user.click(within(view.dialog).getByRole('button', { name: 'Reset' }));
     expect(current(view)).toBeUndefined();
     expect(within(view.dialog).getByText(explanation)).toBeTruthy();

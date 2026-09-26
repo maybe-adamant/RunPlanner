@@ -1,6 +1,6 @@
 # Test-suite cleanup and authored checkpoint coverage
 
-Status: proposed execution contract; implementation has not started.
+Status: Gate A implemented and independently reviewed. Gates B–D await implementation.
 Base: `7dea8cfe` (September 26, 2026).
 
 ## Objective
@@ -85,6 +85,14 @@ consumers and remove the displaced path together; avoid forwarding barrels.
 ## Delivery gates and commit boundaries
 
 ### Gate A — test cleanup
+
+Disposition: implemented against `ed74bdcb` (September 26, 2026); independent
+review passed without findings. Retired-name and historical-command assertions were removed
+while current closed API snapshots, positive catalog/shell/encounter contracts,
+both Hub control bindings, and one complete Hub history witness remain. CSS
+layout contracts remain unchanged; Menace and allocation branch witnesses
+remain distinct. Focused tests (8 files / 100 tests) and `npm run typecheck`
+passed.
 
 Included:
 

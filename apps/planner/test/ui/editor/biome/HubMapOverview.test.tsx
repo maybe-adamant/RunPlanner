@@ -14,44 +14,51 @@ import { nHubOccurrence, nHubState } from '@planner-test/support/hub-workbench';
 import { renderHubDecisionWorkbench } from '@planner-test/support/biome-workbench';
 
 describe('HubMapOverview', () => {
-  it.each(['List', 'Map'] as const)(
-    'resets the board from %s and restores all contents with Undo',
-    async (mode) => {
-      const project = loadSurfaceNProject();
-      const view = renderHubDecisionWorkbench(project);
-      if (mode === 'List') await view.user.click(screen.getByRole('button', { name: 'Details →' }));
-      const before = nHubState(view.application).topology;
-      const historySize = view.application.store.getState().projectWorkspace.history!.past.length;
-      const reset = screen.getByRole('button', { name: 'Reset Board' });
-      if (mode === 'Map') {
-        expect(reset.closest('.room-map-canvas')).toBeTruthy();
-      } else {
-        expect(reset.closest('.hub-board-heading')).toBeTruthy();
-      }
-      await view.user.click(reset);
-      await waitFor(() => expect(nHubState(view.application).decision.openTargets).toEqual([]));
-      expect(nHubState(view.application).decision.actions).toEqual([]);
-      expect(screen.getByRole('region', { name: 'Ephyra Hub' })).toBeTruthy();
-      expect(reset).toHaveProperty('disabled', true);
-      expect(view.application.store.getState().projectWorkspace.history!.past).toHaveLength(
-        historySize + 1,
-      );
-      if (mode === 'Map') {
-        expect(screen.getAllByRole('button', { name: /Closed\. Open room\./ })).toHaveLength(26);
-        await view.user.click(screen.getByRole('button', { name: 'Details →' }));
-      }
-      expect(
-        screen.getAllByRole('checkbox').every((box) => !(box as HTMLInputElement).checked),
-      ).toBe(true);
-      act(() => view.application.store.dispatch(authoredProjectUndoRequested()));
-      await waitFor(() => expect(nHubState(view.application).topology).toEqual(before));
-      act(() => view.application.store.dispatch(authoredProjectRedoRequested()));
-      await waitFor(() => expect(nHubState(view.application).decision.openTargets).toEqual([]));
-      await view.user.click(screen.getByRole('checkbox', { name: 'Combat 01 open' }));
-      await waitFor(() => expect(nHubState(view.application).decision.openTargets).toHaveLength(1));
-      expect(screen.getByRole('button', { name: 'Reset Board' })).toHaveProperty('disabled', false);
-    },
-  );
+  it('resets the board from List and restores all contents with Undo', async () => {
+    const view = renderHubDecisionWorkbench(loadSurfaceNProject());
+    await view.user.click(screen.getByRole('button', { name: 'Details →' }));
+    const before = nHubState(view.application).topology;
+    const historySize = view.application.store.getState().projectWorkspace.history!.past.length;
+    const reset = screen.getByRole('button', { name: 'Reset Board' });
+    expect(reset.closest('.hub-board-heading')).toBeTruthy();
+
+    await view.user.click(reset);
+    await waitFor(() => expect(nHubState(view.application).decision.openTargets).toEqual([]));
+    expect(nHubState(view.application).decision.actions).toEqual([]);
+    expect(screen.getByRole('region', { name: 'Ephyra Hub' })).toBeTruthy();
+    expect(reset).toHaveProperty('disabled', true);
+    expect(view.application.store.getState().projectWorkspace.history!.past).toHaveLength(
+      historySize + 1,
+    );
+    expect(screen.getAllByRole('checkbox').every((box) => !(box as HTMLInputElement).checked)).toBe(
+      true,
+    );
+
+    act(() => view.application.store.dispatch(authoredProjectUndoRequested()));
+    await waitFor(() => expect(nHubState(view.application).topology).toEqual(before));
+    act(() => view.application.store.dispatch(authoredProjectRedoRequested()));
+    await waitFor(() => expect(nHubState(view.application).decision.openTargets).toEqual([]));
+    await view.user.click(screen.getByRole('checkbox', { name: 'Combat 01 open' }));
+    await waitFor(() => expect(nHubState(view.application).decision.openTargets).toHaveLength(1));
+    expect(screen.getByRole('button', { name: 'Reset Board' })).toHaveProperty('disabled', false);
+  });
+
+  it('resets the board from Map', async () => {
+    const view = renderHubDecisionWorkbench(loadSurfaceNProject());
+    const historySize = view.application.store.getState().projectWorkspace.history!.past.length;
+    const reset = screen.getByRole('button', { name: 'Reset Board' });
+    expect(reset.closest('.room-map-canvas')).toBeTruthy();
+
+    await view.user.click(reset);
+    await waitFor(() => expect(nHubState(view.application).decision.openTargets).toEqual([]));
+    expect(nHubState(view.application).decision.actions).toEqual([]);
+    expect(screen.getByRole('region', { name: 'Ephyra Hub' })).toBeTruthy();
+    expect(reset).toHaveProperty('disabled', true);
+    expect(view.application.store.getState().projectWorkspace.history!.past).toHaveLength(
+      historySize + 1,
+    );
+    expect(screen.getAllByRole('button', { name: /Closed\. Open room\./ })).toHaveLength(26);
+  });
 
   it('locates the Hub fountain without making it a room, board member, or edit', async () => {
     const view = renderHubDecisionWorkbench(loadSurfaceNProject());

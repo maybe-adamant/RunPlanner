@@ -1,4 +1,4 @@
-import { readFileSync, readdirSync, existsSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
 import { relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import * as ts from 'typescript';
@@ -169,7 +169,7 @@ describe('repository test execution policy', () => {
   it('keeps application tests in the dedicated test tree', () => {
     expect(testFilesUnder(`${repositoryRoot}apps/planner/src`)).toEqual([]);
   });
-  it('uses one correctness entry point and retires regular/heavy lane machinery', () => {
+  it('uses the shared correctness entry point', () => {
     const packageJson = JSON.parse(readFileSync(`${repositoryRoot}/package.json`, 'utf8')) as {
       scripts: Record<string, string>;
     };
@@ -177,11 +177,6 @@ describe('repository test execution policy', () => {
     expect(packageJson.scripts['test']).toBe(
       'npm run test:correctness && npm run test:performance',
     );
-    expect(packageJson.scripts['test:regular']).toBeUndefined();
-    expect(packageJson.scripts['test:heavy']).toBeUndefined();
-    expect(existsSync(`${repositoryRoot}/vitest.regular.config.ts`)).toBe(false);
-    expect(existsSync(`${repositoryRoot}/vitest.heavy.config.ts`)).toBe(false);
-    expect(existsSync(`${repositoryRoot}/vitest.test-lanes.ts`)).toBe(false);
   });
 
   it('keeps watchdogs and worker ownership in the shared configuration', () => {
@@ -207,7 +202,6 @@ describe('repository test execution policy', () => {
     expect(correctnessConfig).toContain("'packages/*/test/**/*.test.ts'");
     expect(correctnessConfig).toContain("'apps/*/test/**/*.test.{ts,tsx}'");
     expect(correctnessConfig).toContain('exclude: [performanceTestFile]');
-    expect(correctnessConfig).not.toContain('vitest.test-lanes');
     expect(performanceConfig).toContain('include: [performanceTestFile]');
     expect(performanceConfig).toContain('maxWorkers: 1');
     expect(fixtureConfig).toContain('maxWorkers: 1');

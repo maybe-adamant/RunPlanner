@@ -1,4 +1,4 @@
-import { describe, expect, expectTypeOf, it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 
 import { catalog } from '@run-planner/hades2-catalog';
 import {
@@ -19,7 +19,6 @@ import {
   redoProjectHistory,
   undoProjectHistory,
   normalDecisionProgressionForLayout,
-  type ProjectCommand,
 } from '@run-planner/engine/authored-project';
 
 import { createNormalDispositionByAcquisitionRole } from '../../../src/authored-project/acquisition/reward-state';
@@ -745,15 +744,6 @@ describe('authored-project route detour commands', () => {
     expect(decodeProjectDocument(JSON.parse(encodeProjectDocument(project)), catalog)).toEqual(
       project,
     );
-  });
-
-  it('does not expose generated topology creation or removal as author commands', () => {
-    expectTypeOf<
-      Extract<ProjectCommand, { readonly kind: 'GenerateChaos' }>
-    >().toEqualTypeOf<never>();
-    expectTypeOf<
-      Extract<ProjectCommand, { readonly kind: 'RemoveGeneratedChaos' }>
-    >().toEqualTypeOf<never>();
   });
 
   it('rejects a Chaos map outside N’s declared target domain', () => {
