@@ -3,6 +3,9 @@ import type { AuthoredProjectCheckpointId } from './manifest';
 import { checkpointArtifact, type CheckpointArtifact } from './loader';
 
 import surfaceNRaw from './surface-n.runplanner.json';
+import surfaceEncounterShowcaseRaw from './surface-encounter-showcase.runplanner.json';
+import surfaceScheduledLifecycleRaw from './surface-scheduled-lifecycle.runplanner.json';
+import surfaceNPhialIntermediateFountainRaw from './surface-n-phial-intermediate-fountain.runplanner.json';
 import surfaceNNaturalSelectionRaw from './surface-n-natural-selection-frontier.runplanner.json';
 import surfaceNQueensRansomRaw from './surface-n-queens-ransom.runplanner.json';
 import surfaceNSteadyGrowthRaw from './surface-n-steady-growth-frontier.runplanner.json';
@@ -26,6 +29,9 @@ type SurfaceCheckpointId = Extract<AuthoredProjectCheckpointId, `surface-${strin
 
 export const surfaceCheckpointArtifacts = Object.freeze({
   'surface-n': checkpointArtifact(surfaceNRaw),
+  'surface-encounter-showcase': checkpointArtifact(surfaceEncounterShowcaseRaw),
+  'surface-scheduled-lifecycle': checkpointArtifact(surfaceScheduledLifecycleRaw),
+  'surface-n-phial-intermediate-fountain': checkpointArtifact(surfaceNPhialIntermediateFountainRaw),
   'surface-n-natural-selection-frontier': checkpointArtifact(surfaceNNaturalSelectionRaw),
   'surface-n-queens-ransom': checkpointArtifact(surfaceNQueensRansomRaw),
   'surface-n-steady-growth-frontier': checkpointArtifact(surfaceNSteadyGrowthRaw),
@@ -50,6 +56,18 @@ export const surfaceCheckpointArtifacts = Object.freeze({
 
 export function loadSurfaceNCheckpoint(): ProjectDocument {
   return surfaceCheckpointArtifacts['surface-n'].load();
+}
+
+export function loadSurfaceEncounterShowcaseCheckpoint(): ProjectDocument {
+  return surfaceCheckpointArtifacts['surface-encounter-showcase'].load();
+}
+
+export function loadSurfaceScheduledLifecycleCheckpoint(): ProjectDocument {
+  return surfaceCheckpointArtifacts['surface-scheduled-lifecycle'].load();
+}
+
+export function loadSurfaceNPhialIntermediateFountainCheckpoint(): ProjectDocument {
+  return surfaceCheckpointArtifacts['surface-n-phial-intermediate-fountain'].load();
 }
 
 export function loadSurfaceNNaturalSelectionFrontierCheckpoint(): ProjectDocument {

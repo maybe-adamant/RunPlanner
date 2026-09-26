@@ -7,6 +7,7 @@ import {
   createAcquisitionRoleAddress,
   createBatchRewardStoreAddress,
   createBiomeAddress,
+  createEncounterPhaseAddress,
   createExitDecisionAddress,
   createExitSelectionAddress,
   createIncomingRewardAddress,
@@ -673,6 +674,99 @@ export function createGoldenFGHProject(): ProjectDocument {
 
 export function createGoldenFGHIProject(): ProjectDocument {
   return loadUnderworldFGHICheckpoint();
+}
+
+/** Complete F/G/H/I route with positive Menace, Fangs, and an H Treant cage. */
+export function underworldGeneratedCompositionProject(): ProjectDocument {
+  let project = createGoldenFGHIProject();
+  for (const [vowKey, rank] of [
+    ['EnemyEliteShrineUpgrade', 1],
+    ['NextBiomeEnemyShrineUpgrade', 2],
+  ] as const)
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceFearVowRank',
+      route: { kind: 'route', routeKey: 'Underworld' },
+      vowKey,
+      rank,
+    });
+  for (const [phase, value] of [
+    [
+      createEncounterPhaseAddress(
+        goldenFBiome,
+        { kind: 'occurrence', occurrenceId: goldenFOccurrenceId(3, 1) },
+        'Encounter',
+      ),
+      {
+        kind: 'generated',
+        waveCount: 1,
+        waves: [{ waveIndex: 1, typeKeys: ['Guard', 'Brawler'], allocations: { Guard: 50 } }],
+        menace: [{ waveIndex: 1, conversions: { Guard: { count: 2 } } }],
+      },
+    ],
+    [
+      createEncounterPhaseAddress(
+        goldenFBiome,
+        { kind: 'occurrence', occurrenceId: goldenFOccurrenceId(5, 1) },
+        'Encounter',
+      ),
+      {
+        kind: 'generated',
+        waveCount: 2,
+        highlightKey: 'Guard',
+        waves: [
+          { waveIndex: 1, typeKeys: [] },
+          { waveIndex: 2, typeKeys: ['Brawler'], allocations: { Guard: 30 } },
+        ],
+      },
+    ],
+    [
+      createEncounterPhaseAddress(
+        goldenFBiome,
+        { kind: 'occurrence', occurrenceId: goldenFOccurrenceId(7, 1) },
+        'Encounter',
+      ),
+      {
+        kind: 'generated',
+        waveCount: 1,
+        waves: [
+          {
+            waveIndex: 1,
+            typeKeys: ['Guard_Elite', 'Brawler'],
+            allocations: { Guard_Elite: 100 },
+          },
+        ],
+        fangs: { typeKey: 'Guard_Elite', perkKeys: ['Blink'] },
+      },
+    ],
+    [
+      createEncounterPhaseAddress(
+        goldenHBiome,
+        { kind: 'occurrence', occurrenceId: createOccurrenceId('golden-h-combat05') },
+        'Cage01',
+      ),
+      {
+        kind: 'generated',
+        waveCount: 1,
+        waves: [{ waveIndex: 1, typeKeys: ['FogEmitter2'], allocations: { FogEmitter2: 1 } }],
+        fangs: { typeKey: 'Treant2', perkKeys: ['Blink'] },
+      },
+    ],
+  ] as const) {
+    if (phase.owner.occurrenceId === 'golden-h-combat05') {
+      project = applyProjectCommand(project, catalog, {
+        kind: 'SelectEncounter',
+        phase,
+        encounterKey: 'GeneratedH_Treant2',
+      });
+    }
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceEncounterCustomization',
+      phase,
+      decisionKey: 'generatedComposition',
+      value,
+    });
+  }
+  return project;
 }
 
 interface FConversionFrontierFixture {

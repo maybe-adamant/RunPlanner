@@ -60,6 +60,15 @@ export const sharedVitestConfig = defineConfig({
         ),
       },
       {
+        find: '@run-planner/test-fixtures/scheduled-lifecycle',
+        replacement: fileURLToPath(
+          new URL(
+            './test/fixtures/authored-project/routes/scheduled-lifecycle.ts',
+            import.meta.url,
+          ),
+        ),
+      },
+      {
         find: '@run-planner/test-config/progress-reporter',
         replacement: fileURLToPath(new URL('./vitest.progress-reporter.ts', import.meta.url)),
       },

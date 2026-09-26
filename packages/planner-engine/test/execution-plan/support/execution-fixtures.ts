@@ -12,12 +12,19 @@ import {
 import {
   loadUnderworldFGHCheckpoint,
   loadUnderworldFGHICheckpoint,
+  loadUnderworldGeneratedCompositionCheckpoint,
 } from '@run-planner/test-fixtures/checkpoints/underworld';
 import { loadDreamMixedHandoffCheckpoint } from '@run-planner/test-fixtures/checkpoints/dream';
+import {
+  loadSurfaceNPhialIntermediateFountainCheckpoint,
+  loadSurfaceScheduledLifecycleCheckpoint,
+} from '@run-planner/test-fixtures/checkpoints/surface';
 import {
   loadSurfaceNProject,
   loadSurfaceNOProject,
   loadSurfaceNOPProject,
+  surfaceGeneratedPreCombatProject,
+  typhonCustomizationProject,
 } from '@run-planner/test-fixtures/surface';
 
 import { assembleExecutionProduct } from '../../../src/execution-plan/assembler';
@@ -27,14 +34,7 @@ import { simulateProjectAssembly } from '../../../src/simulation';
 import { anomalyRosterProject } from './anomaly-roster-fixture';
 import { underworldArachneCocoonProject } from './arachne-cocoon-fixture';
 import { bossAutomaticOutcomeProject } from './automatic-fixture';
-import {
-  surfaceGeneratedPreCombatProject,
-  underworldGeneratedCompositionProject,
-} from './generated-composition-fixture';
-import { surfaceScheduledLifecycleProject } from './scheduled-lifecycle-fixture';
-import { surfaceNPhialIntermediateFountainProject } from './surface-n-phial-fountain-fixture';
 import { surfaceQShopCorrelationProject } from './surface-q-shop-correlation-fixture';
-import { typhonCustomizationProject } from './typhon-customization-fixture';
 import { npcShoppingProtectionProject } from './npc-shopping-fixture';
 import automaticBossFixture from '../fixtures/automatic-boss.execution.json';
 import dreamMixedPrefixFixture from '../fixtures/dream-mixed-prefix.execution.json';
@@ -120,12 +120,12 @@ export const executionFixtures: readonly ExecutionFixture[] = Object.freeze([
   },
   {
     name: 'surface-scheduled-lifecycle',
-    project: surfaceScheduledLifecycleProject,
+    project: loadSurfaceScheduledLifecycleCheckpoint,
     wire: surfaceScheduledLifecycleFixture,
   },
   {
     name: 'underworld-generated-composition',
-    project: underworldGeneratedCompositionProject,
+    project: loadUnderworldGeneratedCompositionCheckpoint,
     wire: underworldGeneratedCompositionFixture,
   },
   {
@@ -140,7 +140,7 @@ export const executionFixtures: readonly ExecutionFixture[] = Object.freeze([
   },
   {
     name: 'surface-n-phial-intermediate-fountain',
-    project: surfaceNPhialIntermediateFountainProject,
+    project: loadSurfaceNPhialIntermediateFountainCheckpoint,
     wire: surfaceNPhialIntermediateFountainFixture,
   },
 ]);
