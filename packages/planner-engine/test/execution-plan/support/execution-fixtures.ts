@@ -13,12 +13,12 @@ import {
   loadUnderworldFGHCheckpoint,
   loadUnderworldFGHICheckpoint,
 } from '@run-planner/test-fixtures/checkpoints/underworld';
+import { loadDreamMixedHandoffCheckpoint } from '@run-planner/test-fixtures/checkpoints/dream';
 import {
   loadSurfaceNProject,
   loadSurfaceNOProject,
   loadSurfaceNOPProject,
 } from '@run-planner/test-fixtures/surface';
-import { dreamMixedHandoffProject } from '@run-planner/test-fixtures/dream';
 
 import { assembleExecutionProduct } from '../../../src/execution-plan/assembler';
 import { compileExecutionPlan } from '../../../src/execution-plan/compiler';
@@ -113,7 +113,11 @@ export const executionFixtures: readonly ExecutionFixture[] = Object.freeze([
     project: surfaceQShopCorrelationProject,
     wire: surfaceQShopCorrelationFixture,
   },
-  { name: 'dream-mixed-prefix', project: dreamMixedHandoffProject, wire: dreamMixedPrefixFixture },
+  {
+    name: 'dream-mixed-prefix',
+    project: loadDreamMixedHandoffCheckpoint,
+    wire: dreamMixedPrefixFixture,
+  },
   {
     name: 'surface-scheduled-lifecycle',
     project: surfaceScheduledLifecycleProject,

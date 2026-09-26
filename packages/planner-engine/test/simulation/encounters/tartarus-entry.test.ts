@@ -24,7 +24,7 @@ import { resolveEncounterAuthoringProfile } from '../../../src/simulation/encoun
 import { assembleExecutionProduct, compileExecutionPlan } from '../../../src/execution-plan';
 import { createGoldenFGHIProject, goldenIBiome } from '@run-planner/test-fixtures/underworld';
 import { authorLegalTraitOffers } from '@run-planner/test-fixtures/shared';
-import { dreamMixedHandoffProject } from '@run-planner/test-fixtures/dream';
+import { loadDreamMixedHandoffCheckpoint } from '@run-planner/test-fixtures/checkpoints/dream';
 
 describe('Tartarus reached first-combat identity', () => {
   it.each([
@@ -196,7 +196,7 @@ describe('Tartarus reached first-combat identity', () => {
     (gameName, laterBiome) => {
       const biome = createBiomeAddress('Dream', 'I');
       let project = laterBiome
-        ? dreamMixedHandoffProject()
+        ? loadDreamMixedHandoffCheckpoint()
         : createProjectDocument(catalog, {
             projectId: 'dream-i-intro',
             routeKey: 'Dream',

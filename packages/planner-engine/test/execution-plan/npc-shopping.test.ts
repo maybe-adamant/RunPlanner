@@ -12,6 +12,8 @@ import {
   createProjectHistory,
   undoProjectHistory,
   createEncounterPhaseAddress,
+  decodeProjectDocument,
+  encodeProjectDocument,
 } from '../../src/authored-project';
 import { simulateProjectAssembly } from '../../src/simulation';
 import { assembleExecutionProduct } from '../../src/execution-plan/assembler';
@@ -19,7 +21,7 @@ import { compileExecutionPlan } from '../../src/execution-plan/compiler';
 import { decodeExecutionPlan, encodeExecutionPlan } from '../../src/execution-plan/codec';
 import { fingerprint } from '../../src/execution-plan/fingerprint';
 import { npcShoppingProtectionProject } from './support/npc-shopping-fixture';
-import { dreamMixedHandoffProject } from '@run-planner/test-fixtures/dream';
+import { loadDreamMixedHandoffCheckpoint } from '@run-planner/test-fixtures/checkpoints/dream';
 import { createBiomeAddress, createOccurrenceId } from '../../src/authored-project';
 
 const phase = (index: number) =>
@@ -59,7 +61,11 @@ describe('published NPC shopping protection', () => {
   });
 
   it('derives the same preceding-biome protection in an authored Dream itinerary', () => {
-    const project = applyProjectCommand(dreamMixedHandoffProject(), catalog, {
+    const base = loadDreamMixedHandoffCheckpoint();
+    expect(simulateProjectAssembly(catalog, base).evaluation.route.npcShopping.occurrences).toEqual(
+      [],
+    );
+    const edited = applyProjectHistoryCommand(createProjectHistory(base), catalog, {
       kind: 'SelectEncounter',
       phase: createEncounterPhaseAddress(
         createBiomeAddress('Dream', 'F'),
@@ -68,9 +74,15 @@ describe('published NPC shopping protection', () => {
       ),
       encounterKey: 'NemesisCombatF',
     });
-    const evaluation = simulateProjectAssembly(catalog, project).evaluation;
+    const reloaded = decodeProjectDocument(
+      JSON.parse(encodeProjectDocument(edited.present)),
+      catalog,
+    );
+    expect(reloaded).toEqual(edited.present);
+    const evaluation = simulateProjectAssembly(catalog, reloaded).evaluation;
     expect(evaluation.status).toBe('valid');
     expect(evaluation.route.npcShopping.occurrences.length).toBeGreaterThan(0);
+    expect(undoProjectHistory(edited).present).toBe(base);
   });
   it('publishes reached selected protection and recomputes it when the selected encounter is removed or moved', () => {
     const project = npcShoppingProtectionProject();

@@ -12,6 +12,12 @@ export const sharedVitestConfig = defineConfig({
   resolve: {
     alias: [
       {
+        find: '@run-planner/test-fixtures/checkpoints/dream',
+        replacement: fileURLToPath(
+          new URL('./test/fixtures/authored-project/checkpoints/dream.ts', import.meta.url),
+        ),
+      },
+      {
         find: '@run-planner/test-fixtures/checkpoints/manifest',
         replacement: fileURLToPath(
           new URL('./test/fixtures/authored-project/checkpoints/manifest.ts', import.meta.url),

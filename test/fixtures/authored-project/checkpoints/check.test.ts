@@ -24,6 +24,7 @@ import {
   createUnderworldFPoolCheckpoint,
   createUnderworldFWellCheckpoint,
 } from '../routes/underworld';
+import { dreamMixedHandoffProject } from '../routes/dream';
 
 const checkpointDirectory = resolve(process.cwd(), 'test/fixtures/authored-project/checkpoints');
 
@@ -113,7 +114,7 @@ describe('authored-project checkpoint integrity', () => {
     const chaosRoom = occurrences?.find(
       (occurrence) => occurrence.occurrenceId === 'fixture-chaos-room',
     );
-    expect(checkpointManifest).toHaveLength(29);
+    expect(checkpointManifest).toHaveLength(30);
     expect(chaosRoom?.gameName).toMatch(/^Chaos_/);
     expect(chaosRoom?.state).toMatchObject({
       kind: 'fixed',
@@ -150,6 +151,12 @@ describe('authored-project checkpoint integrity', () => {
         branch.state.traitHistory?.previouslyPickedTraitKeys.includes('ApolloWeaponBoon'),
       ),
     ).toBe(true);
+  });
+
+  it('keeps the Dream mixed-handoff checkpoint equivalent to its command recipe', () => {
+    const saved = loadCheckpoint('dream-mixed-handoff');
+    expect(encodeProjectDocument(saved)).toBe(encodeProjectDocument(dreamMixedHandoffProject()));
+    expect(saved.route.biomes.map((biome) => biome.biomeKey)).toEqual(['Q', 'F', 'N']);
   });
 
   it('keeps the F-only Stygian Well checkpoint equivalent to its command recipe', () => {
