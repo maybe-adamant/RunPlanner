@@ -96,7 +96,13 @@ export const sharedEncounterDefinitions = [
     kind: 'nonCombat',
     countsEncounterDepth: false,
   },
-  { key: 'Shop', label: 'Shop', kind: 'nonCombat', countsEncounterDepth: false },
+  {
+    key: 'Shop',
+    label: 'Shop',
+    kind: 'nonCombat',
+    countsEncounterDepth: false,
+    hostsNpcShoppingEvents: true,
+  },
 ] as const satisfies readonly RawEncounterDefinitionDeclaration[];
 
 export const sharedEncounterSets = [] as const satisfies readonly RawEncounterSetDeclaration[];

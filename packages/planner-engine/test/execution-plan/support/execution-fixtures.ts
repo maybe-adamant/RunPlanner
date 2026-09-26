@@ -35,6 +35,7 @@ import { surfaceScheduledLifecycleProject } from './scheduled-lifecycle-fixture'
 import { surfaceNPhialIntermediateFountainProject } from './surface-n-phial-fountain-fixture';
 import { surfaceQShopCorrelationProject } from './surface-q-shop-correlation-fixture';
 import { typhonCustomizationProject } from './typhon-customization-fixture';
+import { npcShoppingProtectionProject } from './npc-shopping-fixture';
 
 const fixtureDirectory = join(dirname(fileURLToPath(import.meta.url)), '..', 'fixtures');
 
@@ -61,6 +62,7 @@ export const executionFixtures: readonly {
 }[] = Object.freeze([
   { name: 'f-opening', project: fOnlyProject },
   { name: 'fg', project: createCompleteFGProject },
+  { name: 'fg-npc-shopping-protection', project: npcShoppingProtectionProject },
   { name: 'underworld-fgh', project: loadUnderworldFGHCheckpoint },
   { name: 'underworld-fghi', project: loadUnderworldFGHICheckpoint },
   { name: 'fg-ixion-chaos', project: createCompleteFGIxionChaosProject },

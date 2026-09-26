@@ -143,19 +143,19 @@ Audited the supported Artemis F/G/N, Arachne F/G, Nemesis combat F/G/H/I
 and random event, Heracles N/O/P, Icarus O/P, and Athena P identities,
 including inherited named requirements in `RequirementsData.lua`.
 
-| Rule family                                              | Disposition                                                                                                                                                                                                                                                                                 |
-| -------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Depth, incoming reward exclusions, P Indoor/Outdoor tags | Supported primary declarations match the native predicates                                                                                                                                                                                                                                  |
-| Artemis/Athena interaction-use guards                    | Planner uses encounter occurrence as the cooperative once-per-run proxy; it does not model abandoning the NPC interaction and later meeting that NPC again                                                                                                                                  |
-| Icarus occurrence/use guards                             | Supported identities are route-once; same-room earlier records exclude a later Icarus slot                                                                                                                                                                                                  |
-| Heracles completed-encounter guard                       | Route-once occurrence is the existing supported proxy. Its separate 20-room family spacing is redundant once a supported occurrence is recorded                                                                                                                                             |
-| Nemesis family guard                                     | Existing route-once rule intentionally subsumes the 99-room history lookback and biome-local random-event exclusions                                                                                                                                                                        |
-| Shared field-NPC spacing                                 | Declaration membership matches the supported primary identities, but the history-window interpretation has the concrete discrepancy below                                                                                                                                                   |
-| Arachne                                                  | Biome-local cap is appropriate; G inherits the five-entry history predicate. F replaces its parent requirement table and does not inherit that predicate                                                                                                                                    |
-| Nemesis/Heracles Shop appearances                        | Native `CheckNemesisShoppingEvent` / `CheckHeraclesShoppingEvent` set flags on the Shop encounter; the respective named requirements reject recent flags over 12/10 entries. Neither event is authored or recorded by the planner. Both shopping events are natively excluded in Dream runs |
-| NPC introductions, prior-run visits/dialogue, plot locks | Mature-save/story-progression exclusions remain intentional. Includes HecateMissing, SurfaceRouteLockedByTyphonKill, NemesisBecomingCloserAvailable, and Heracles's prior-run Prometheus dialogue restriction                                                                               |
-| StandardPackageBountyActive / ActiveBounty               | Bounty runs are outside supported project modes; not a missing ordinary/Dream player-state input                                                                                                                                                                                            |
-| Echo MutePermanent                                       | Explicitly accepted as out of scope by the owner: one special story event suppressing NPC interaction, not a new planner live-state condition                                                                                                                                               |
+| Rule family                                              | Disposition                                                                                                                                                                                                                                                                                                         |
+| -------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Depth, incoming reward exclusions, P Indoor/Outdoor tags | Supported primary declarations match the native predicates                                                                                                                                                                                                                                                          |
+| Artemis/Athena interaction-use guards                    | Planner uses encounter occurrence as the cooperative once-per-run proxy; it does not model abandoning the NPC interaction and later meeting that NPC again                                                                                                                                                          |
+| Icarus occurrence/use guards                             | Supported identities are route-once; same-room earlier records exclude a later Icarus slot                                                                                                                                                                                                                          |
+| Heracles completed-encounter guard                       | Route-once occurrence is the existing supported proxy. Its separate 20-room family spacing is redundant once a supported occurrence is recorded                                                                                                                                                                     |
+| Nemesis family guard                                     | Existing route-once rule intentionally subsumes the 99-room history lookback and biome-local random-event exclusions                                                                                                                                                                                                |
+| Shared field-NPC spacing                                 | Declaration membership matches the supported primary identities, but the history-window interpretation has the concrete discrepancy below                                                                                                                                                                           |
+| Arachne                                                  | Biome-local cap is appropriate; G inherits the five-entry history predicate. F replaces its parent requirement table and does not inherit that predicate                                                                                                                                                            |
+| Nemesis/Heracles Shop appearances                        | Native callbacks set encounter flags; named requirements reject recent flags over 12/10 entries. The planner derives suppression for prior Shops inside a planned NPC's exact preparation window; shopping outcomes remain native outside that protection. Both shopping events are natively excluded in Dream runs |
+| NPC introductions, prior-run visits/dialogue, plot locks | Mature-save/story-progression exclusions remain intentional. Includes HecateMissing, SurfaceRouteLockedByTyphonKill, NemesisBecomingCloserAvailable, and Heracles's prior-run Prometheus dialogue restriction                                                                                                       |
+| StandardPackageBountyActive / ActiveBounty               | Bounty runs are outside supported project modes; not a missing ordinary/Dream player-state input                                                                                                                                                                                                                    |
+| Echo MutePermanent                                       | Explicitly accepted as out of scope by the owner: one special story event suppressing NPC interaction, not a new planner live-state condition                                                                                                                                                                       |
 
 ### Confirmed history-window discrepancy
 
@@ -189,13 +189,12 @@ as a demonstrated gameplay failure.
 ### Shopping scope boundary
 
 Shopping flags are real run-local facts, not save-progression assumptions.
-Their omission is nevertheless tied to an already-unmodeled event, rather than
-missing threading of a fact the planner owns. The executor forces an authored
-encounter identity instead of reenacting natural encounter eligibility, so an
-incidental Shop appearance need not prevent it from executing that identity.
-Closing this audit does not make those cooldowns simulated or natively exact.
-Adding Shop NPC authoring/history would be a separate feature; do not infer
-authorization to suppress native Shop events or add new mismatch checks.
+Native encounter admission can reject the planned NPC after an incidental Shop
+appearance. The accepted protection derives the exact preparation window and
+suppresses only the corresponding earlier shopping callbacks, before native
+flag writes. It does not author shopping outcomes, add shopping history to the
+simulation, or introduce a mismatch check. Source facts and the current bounded
+disposition live in the encounter selection audit.
 
 ## Closure disposition
 
@@ -205,8 +204,8 @@ with five/six-entry boundary witnesses and catalog declaration coverage. Their
 source facts are integrated into the encounter selection audit. Retain this
 inventory through review of the accumulated correction work, then promote its
 remaining durable dispositions and retire it.
-Shopping events and the specified story/meta predicates are bounded exclusions,
-not open-ended requests for more production machinery. In-game steering remains
+Shopping outcomes and the specified story/meta predicates are bounded exclusions;
+the shopping cooldown envelope is protected as described above. In-game steering remains
 best effort and is not proven by a static catalog audit.
 
 The durable composition matrix also retains stale prospective language

@@ -95,6 +95,16 @@ resolves that destination's published incoming reward for both realization and
 exit proof; absence of an inline reward does not mean no reward. Native required
 Boss drops retain their explicit preservation policy.
 
+An occurrence's optional `suppressedNpcShopping` names only the native shopping
+events that would invalidate a later planned Nemesis or Heracles encounter.
+The engine derives this protection from reached encounter preparation and its
+exact room-history window; execution assembly copies it without lookahead.
+At a synchronized, bound occurrence the module suppresses the named
+`CheckNemesisShoppingEvent` or `CheckHeraclesShoppingEvent` callback before its
+history flags or shopping thread. Other callbacks, unbound rooms and
+desynchronized execution remain native. Suppression is diagnostic, not a new
+transaction or mismatch obligation.
+
 ### Content fingerprint
 
 The compiler and execution decoders verify the expanded execution product with
@@ -205,9 +215,10 @@ wave's enemy identities, source provenance and counts, including fixed/template
 seeds, plus applicable Fangs and Menace outcomes, an optional variable base roll
 and a required `expectedBudget`. That budget is the engine's exact final encounter
 budget from the same preparation assessment that derived the counts; neither the
-compiler nor the runtime recomputes it. Execution protocol 47 requires it on every
-generated customization. Plans published under an earlier protocol are re-exported
-from their authored projects, which migrate to schema 88.
+compiler nor the runtime recomputes it. The execution protocol requires it on
+every generated customization. Incompatible published plans are re-exported
+from their authored projects; execution-only protocol changes do not require
+an authored-project migration.
 
 The exact phase scopes synchronous native preparation, with a stamped destination
 handoff for reward-owned Devotion. Uncustomized encounters delegate unchanged. A

@@ -88,6 +88,24 @@ export function normalizeEncounterDefinitions(
         raw.npcPresentationKey === undefined
           ? undefined
           : requireNonEmpty(raw.npcPresentationKey, `${path}.npcPresentationKey`);
+      const npcShoppingProtection = raw.npcShoppingProtection;
+      if (
+        raw.hostsNpcShoppingEvents !== undefined &&
+        typeof raw.hostsNpcShoppingEvents !== 'boolean'
+      ) {
+        fail(`${path}.hostsNpcShoppingEvents`, 'must be boolean');
+      }
+      if (npcShoppingProtection !== undefined) {
+        if (!['Nemesis', 'Heracles'].includes(npcShoppingProtection.family)) {
+          fail(`${path}.npcShoppingProtection.family`, 'unknown NPC shopping family');
+        }
+        if (
+          !Number.isInteger(npcShoppingProtection.roomWindow) ||
+          npcShoppingProtection.roomWindow < 1
+        ) {
+          fail(`${path}.npcShoppingProtection.roomWindow`, 'must be a positive integer');
+        }
+      }
       const traitOfferProducer =
         raw.traitOfferProducer === undefined
           ? undefined
@@ -480,6 +498,10 @@ export function normalizeEncounterDefinitions(
           ? {}
           : { sequenceEffect: Object.freeze({ kind: 'terminateSuffix' as const }) }),
         ...(npcPresentationKey === undefined ? {} : { npcPresentationKey }),
+        ...(raw.hostsNpcShoppingEvents === true ? { hostsNpcShoppingEvents: true } : {}),
+        ...(npcShoppingProtection === undefined
+          ? {}
+          : { npcShoppingProtection: Object.freeze({ ...npcShoppingProtection }) }),
         ...(traitOfferProducer === undefined ? {} : { traitOfferProducer }),
         ...(customization === undefined ? {} : { customization }),
         ...(nemesisRandomEvent === undefined ? {} : { nemesisRandomEvent }),

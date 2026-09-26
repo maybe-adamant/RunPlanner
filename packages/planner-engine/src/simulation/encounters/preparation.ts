@@ -22,7 +22,7 @@ import {
   projectBiomeEncounterKeyCounts,
   projectEncounterRecordPreparation,
   projectOfferedExitCount,
-  projectPreviousRoomEncounterKeys,
+  projectEncounterPreparationRoomWindow,
   projectRecentEncounterEnvelopeSlots,
   projectRouteEncounterKeyCounts,
 } from '../history/facts';
@@ -124,13 +124,9 @@ function requirementContext(
   if (!hasClockwork && clockworkValues.some((value) => value !== undefined)) {
     throw new Error('encounter requirements received partial Clockwork facts');
   }
-  const previousRooms = projectPreviousRoomEncounterKeys(view, room.origin);
-  const departingRoom = previousRooms.at(-1);
-  // LeaveRoom has appended CurrentRoom to RoomHistory before choosing encounters.
-  // Native SumPrevRooms reads that same room once as CurrentRoom and once as the
-  // history tail. Keep this duplication local to the preparation contact.
-  const preparationRoomWindow =
-    departingRoom === undefined ? previousRooms : Object.freeze([...previousRooms, departingRoom]);
+  const preparationRoomWindow = projectEncounterPreparationRoomWindow(view, room.origin).map(
+    (appearance) => appearance.encounterKeys,
+  );
   return Object.freeze({
     routeKey: routePosition.routeKey,
     counters: Object.freeze({

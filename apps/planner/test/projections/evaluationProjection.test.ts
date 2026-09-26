@@ -233,6 +233,7 @@ describe('evaluation presentation', () => {
       issue: fIssue,
       findings: [fFinding],
       resources: emptyResourceExecutionPolicy,
+      npcShopping: { occurrences: [] },
       summary: {
         configuredBiomeCount: 2,
         evaluatedBiomeCount: 1,

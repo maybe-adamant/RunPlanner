@@ -76,6 +76,7 @@ export const nEncounterDefinitions = [
     countsEncounterDepth: true,
     blocksGorgon: true,
     npcPresentationKey: 'Heracles',
+    npcShoppingProtection: { family: 'Heracles', roomWindow: 10 },
     requirements: {
       kind: 'all',
       requirements: [

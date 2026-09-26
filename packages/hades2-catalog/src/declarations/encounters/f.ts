@@ -101,6 +101,7 @@ export const fEncounterDefinitions = [
     countsEncounterDepth: true,
     blocksGorgon: true,
     npcPresentationKey: 'Nemesis',
+    npcShoppingProtection: { family: 'Nemesis', roomWindow: 12 },
     requirements: {
       kind: 'all',
       requirements: [
@@ -131,6 +132,7 @@ export const fEncounterDefinitions = [
     countsEncounterDepth: false,
     blocksGorgon: true,
     npcPresentationKey: 'Nemesis',
+    npcShoppingProtection: { family: 'Nemesis', roomWindow: 12 },
     requiresInteraction: true,
     suppressesIncomingReward: true,
     nemesisRandomEvent: {

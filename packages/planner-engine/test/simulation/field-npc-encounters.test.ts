@@ -11,6 +11,7 @@ import {
   createExitDecisionAddress,
   createExitSelectionAddress,
   createHubDecisionAddress,
+  createHubRoomAddress,
   createIncomingRewardAddress,
   createLocalVisitOrderAddress,
   createLocalVisitSlotAddress,
@@ -53,6 +54,7 @@ import {
   createPreparedProjectCandidateSession,
   simulateProject,
   simulateProjectAssembly,
+  projectEncounterPreparationRoomWindow,
   targetedAcquisitionTargetKeys,
   traitCandidates,
   createTraitHistoryState,
@@ -582,6 +584,12 @@ function createHeraclesCombatFixture(project: ProjectDocument) {
     throw new Error('P fixture lost its selected combat room');
   }
   const selectedP = Object.freeze({
+    preparationTail: projectEncounterPreparationRoomWindow(
+      selectedRoom.preparation,
+      selectedRoom.origin,
+    )
+      .slice(-3)
+      .map((row) => ({ origin: row.origin, encounterKeys: row.encounterKeys })),
     combatSequence: sequenceStatus(selectedPProject, combat),
     combatSupport: support(selectedPProject, combat),
     encounterKeys: selectedRoom.postCommit.ledgers.encounterRecords
@@ -1169,6 +1177,23 @@ describe('field NPC encounter requirements', () => {
       (candidate) => semanticAddressKey(candidate.address) === semanticAddressKey(traitAddress),
     );
     expect(trace).toMatchObject({ acquisitionRole: 'selection' });
+    if ('history' in biome) {
+      const afterReturn = biome.history.rooms.find(
+        (row) =>
+          row.origin.kind === 'occurrence' && row.origin.occurrenceId === 'round-trip-n-combat03',
+      );
+      if (afterReturn === undefined) throw new Error('N fixture lost room after side-room restore');
+      expect(
+        projectEncounterPreparationRoomWindow(afterReturn.preparation, afterReturn.origin)
+          .slice(-4)
+          .map((row) => row.origin),
+      ).toEqual([
+        createOccurrenceAddress(nBiome, nRoundTripLocalOccurrenceId('combat02', 'sideDoor1')),
+        createOccurrenceAddress(nBiome, nCombatId),
+        createHubRoomAddress(nBiome, 'hub'),
+        createHubRoomAddress(nBiome, 'hub'),
+      ]);
+    }
     expect(
       biome.rewards.branches[0]?.state.traitHistory?.equippedTraits.CritBonusBoon,
     ).toBeDefined();
@@ -1369,6 +1394,10 @@ describe('field NPC encounter requirements', () => {
     expect(support(initial, cage1)?.candidateEncounterKeys).toContain('NemesisCombatH');
     expect(support(initial, cage2)?.candidateEncounterKeys).toContain('NemesisCombatH');
     expect(support(initial, cage3)).toBeUndefined();
+    expect(
+      simulateProject(catalog, select(initial, cage3, 'NemesisCombatH')).route.npcShopping
+        .occurrences,
+    ).toEqual([]);
 
     let blocked = select(initial, cage2, 'NemesisCombatH');
     blocked = select(blocked, cage1, 'NemesisCombatH');
@@ -1536,6 +1565,27 @@ describe('field NPC encounter requirements', () => {
       .filter((entry) => semanticAddressKey(entry.origin) === semanticAddressKey(room))
       .map((entry) => entry.encounterKey);
     expect(selectedRecords).toEqual(['HeraclesCombatO', 'IcarusCombatO', 'GeneratedO']);
+    expect(projectEncounterPreparationRoomWindow(selected.preparation, selected.origin)).toEqual(
+      projectEncounterPreparationRoomWindow(ordinary.preparation, ordinary.origin),
+    );
+    expect(
+      projectEncounterPreparationRoomWindow(selected.preparation, selected.origin)
+        .slice(-3)
+        .map((row) => ({ origin: row.origin, encounterKeys: row.encounterKeys })),
+    ).toEqual([
+      {
+        origin: createOccurrenceAddress(oBiome, oOccurrenceIds.combat04),
+        encounterKeys: ['GeneratedO_Intro01', 'GeneratedO'],
+      },
+      {
+        origin: createOccurrenceAddress(oBiome, oOccurrenceIds.combat07),
+        encounterKeys: ['GeneratedO_Intro01', 'GeneratedO'],
+      },
+      {
+        origin: createOccurrenceAddress(oBiome, oOccurrenceIds.combat07),
+        encounterKeys: ['GeneratedO_Intro01', 'GeneratedO'],
+      },
+    ]);
     expect(
       selectedPostCommit.ledgers.counters.biomeEncounterDepth -
         selected.preparation.ledgers.counters.biomeEncounterDepth,
@@ -2182,6 +2232,20 @@ describe('field NPC encounter requirements', () => {
       Combat: retainedCombat,
     });
     expect(selectedP.encounterKeys).toEqual(['HeraclesCombatP']);
+    expect(selectedP.preparationTail).toEqual([
+      {
+        origin: createOccurrenceAddress(pBiome, createOccurrenceId('surface-p-intro')),
+        encounterKeys: ['PIntroCombat01'],
+      },
+      {
+        origin: createOccurrenceAddress(pBiome, pOccurrenceId('P_Combat03', 1, 1)),
+        encounterKeys: ['GeneratedP_PreCombat', 'GeneratedP'],
+      },
+      {
+        origin: createOccurrenceAddress(pBiome, pOccurrenceId('P_Combat03', 1, 1)),
+        encounterKeys: ['GeneratedP_PreCombat', 'GeneratedP'],
+      },
+    ]);
     expect(selectedP.encounterDepthDelta).toBe(1);
 
     expect(selectedP.nHeraclesSupport?.candidateEncounterKeys).toContain('HeraclesCombatN');

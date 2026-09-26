@@ -368,6 +368,14 @@ export interface EncounterEnvelope {
   readonly slots: readonly EncounterEnvelopeSlot[];
 }
 
+export type NpcShoppingFamily = 'Nemesis' | 'Heracles';
+
+/** Native named requirement consumed when this encounter is prepared. */
+export interface NpcShoppingProtection {
+  readonly family: NpcShoppingFamily;
+  readonly roomWindow: number;
+}
+
 /** One concrete normalized game encounter selected by a fixed or pool slot. */
 export interface EncounterDefinition {
   readonly key: string;
@@ -391,6 +399,9 @@ export interface EncounterDefinition {
   readonly sequenceEffect?: { readonly kind: 'terminateSuffix' };
   /** Presentation-only grouping for the later read-only NPC route index. */
   readonly npcPresentationKey?: string;
+  readonly npcShoppingProtection?: NpcShoppingProtection;
+  /** This encounter inherits the native Shop NPC shopping start callbacks. */
+  readonly hostsNpcShoppingEvents?: boolean;
   /** Explicit declaration-owned producer for an encounter-local trait offer. */
   readonly traitOfferProducer?: {
     readonly kind: 'traitOffer';

@@ -29,6 +29,39 @@ function visibleChoiceKeys(
 }
 
 describe('encounter envelope catalog', () => {
+  it('normalizes native shopping requirements independently of NPC presentation', () => {
+    const built = createCatalog(declarations);
+    expect(
+      built.encounterDefinitions.values
+        .filter((row) => row.hostsNpcShoppingEvents)
+        .map((row) => row.key)
+        .sort(),
+    ).toEqual(['Shop', 'TyphonShop']);
+    expect(
+      built.encounterDefinitions.values
+        .filter((row) => row.npcShoppingProtection !== undefined)
+        .map((row) => [row.key, row.npcShoppingProtection]),
+    ).toEqual(
+      expect.arrayContaining([
+        ['NemesisCombatF', { family: 'Nemesis', roomWindow: 12 }],
+        ['NemesisRandomEvent', { family: 'Nemesis', roomWindow: 12 }],
+        ['HeraclesCombatP', { family: 'Heracles', roomWindow: 10 }],
+      ]),
+    );
+    for (const protection of [
+      { family: 'Artemis', roomWindow: 12 },
+      { family: 'Nemesis', roomWindow: 0 },
+      { family: 'Heracles', roomWindow: 1.5 },
+    ]) {
+      const broken = input();
+      const index = broken.encounterDefinitions.findIndex((row) => row.key === 'NemesisCombatF');
+      (broken.encounterDefinitions as unknown as unknown[])[index] = {
+        ...broken.encounterDefinitions[index],
+        npcShoppingProtection: protection,
+      };
+      expect(() => createCatalog(broken)).toThrow(CatalogContractError);
+    }
+  });
   it('normalizes closed authored choice mappings without treating a choice key as a definition', () => {
     const built = createCatalog(declarations);
     const profile = (setKey: string, choiceKey: string) =>

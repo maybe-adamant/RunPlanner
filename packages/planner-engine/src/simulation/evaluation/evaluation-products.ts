@@ -6,6 +6,7 @@ import type { BiomeGenerationValidation } from '../progressive/products';
 import type { BiomeRewardSimulation } from '../rewards/model';
 import type { SemanticFinding } from '../model';
 import type { ResourceExecutionPolicy } from '../resources';
+import type { NpcShoppingExecutionPolicy } from '../encounters/npc-shopping';
 import type { AssessmentIssue } from '../assessment-issue';
 
 export interface BiomeEvaluationBase {
@@ -142,6 +143,7 @@ export interface ProjectRouteEvaluation {
   readonly summary: RouteEvaluationSummary;
   /** Complete route-owned resource point envelope and post-exit counters. */
   readonly resources: ResourceExecutionPolicy;
+  readonly npcShopping: NpcShoppingExecutionPolicy;
 }
 
 export interface ProjectEvaluation {

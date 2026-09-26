@@ -1,4 +1,5 @@
 import type { Catalog } from '../../catalog-schema';
+import { deriveNpcShoppingExecutionPolicy } from '../encounters/npc-shopping';
 import {
   createBiomeAddress,
   createKeepsakeEquipResultAddress,
@@ -349,6 +350,10 @@ function evaluateRouteAssembly(
       findings: Object.freeze(findings),
       summary: summarizeRoute(route.biomes.length, frozenEvaluations, processing),
       resources,
+      npcShopping: deriveNpcShoppingExecutionPolicy(
+        catalog,
+        frozenEvaluations.flatMap((biome) => ('history' in biome ? [biome.history] : [])),
+      ),
     }),
     candidateArtifacts: Object.freeze(candidateArtifacts),
     routeStartKeepsakes,

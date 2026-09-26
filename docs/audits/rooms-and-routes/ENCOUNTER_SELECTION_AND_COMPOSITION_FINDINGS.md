@@ -517,6 +517,17 @@ lookback can still suppress an early G appearance. The numeric windows in this
 table are native `SumPrevRooms` entry counts, subject to the preparation-time
 duplication above, not counts of distinct predecessor rooms.
 
+`StoreLogic.lua:CheckNemesisShoppingEvent` and `CheckHeraclesShoppingEvent`
+set their encounter shopping flags before launching the shopping thread.
+Their `NoRecentNemesisEncounter` / `NoRecentHeraclesEncounter` requirements
+inspect 12 / 10 native history entries. At ordinary departure preparation the
+sequence is `[P1, P1, P2, ...]`, so a Shop at P11 / P9 respectively is still
+inside the window; P12 / P10 is outside. Repeated appearances consume entries
+before source occurrences are deduplicated. The planner protects supported
+planned NPC encounters by publishing suppression for earlier Shops inside
+these exact windows, rather than modeling shopping outcomes. Native Dream
+shopping exclusions remain unchanged.
+
 The raw `NoRecentFieldNPCEncounter` list omits `AthenaCombatP02`. That omission
 is present in the installed source.
 
@@ -729,9 +740,10 @@ its own premium free-item pool. It is outside the Planner's run-local Nemesis
 model.
 
 `NemesisShopping` is Shop-owned behavior. Nemesis takes long enough to buy an
-item that the player can purchase an intended offer first; modeling shop theft
-would add timing without improving route validity, so it is excluded. The
-current source event steals one Shop item and then calls
+item that the player can purchase an intended offer first; shop theft timing
+is not authored. Only the cooldown-producing callback is suppressed where the
+planner's published protection window requires it. Outside those windows, the
+source event steals one Shop item and then calls
 `NemesisTeleportExitPresentation`; it does not call `NemesisTakeRoomExit` or
 disable an offered exit.
 

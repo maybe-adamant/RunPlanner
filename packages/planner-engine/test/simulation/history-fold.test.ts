@@ -10,7 +10,7 @@ import {
   foldHistoryEvents,
   HistoryFoldContractError,
   projectBiomeEncounterKeyCounts,
-  projectPreviousRoomEncounterKeys,
+  projectEncounterPreparationRoomWindow,
   projectRouteEncounterKeyCounts,
   type HistoryEvent,
   type HistoryStateView,
@@ -364,10 +364,8 @@ describe('history fold encounter checkpoint closure', () => {
     });
     expect(projectBiomeEncounterKeyCounts(view, 'Underworld', 'F')).toEqual({ GeneratedF: 1 });
     expect(projectBiomeEncounterKeyCounts(view, 'Underworld', 'G')).toEqual({ ArtemisCombatG: 1 });
-    expect(projectPreviousRoomEncounterKeys(view, gOrigin)).toEqual([
-      ['GeneratedF'],
-      [],
-      ['GeneratedF'],
-    ]);
+    expect(
+      projectEncounterPreparationRoomWindow(view, gOrigin).map((room) => room.encounterKeys),
+    ).toEqual([['GeneratedF'], [], ['GeneratedF'], ['GeneratedF']]);
   });
 });

@@ -268,7 +268,7 @@ export {
   HistoryFoldContractError,
   foldHistoryEvents,
   projectBiomeEncounterKeyCounts,
-  projectPreviousRoomEncounterKeys,
+  projectEncounterPreparationRoomWindow,
   projectRouteEncounterKeyCounts,
   type BiomeCompletedHistoryEvent,
   type BiomeCounterResetHistoryEvent,

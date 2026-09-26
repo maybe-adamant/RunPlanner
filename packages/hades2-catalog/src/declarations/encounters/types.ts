@@ -3,6 +3,7 @@ import type {
   EncounterPhaseKind,
   GeneratedEncounterSelection,
   InfiniteRosterSelection,
+  NpcShoppingProtection,
 } from '@run-planner/engine/catalog-schema';
 import type { RequirementExpression } from '@run-planner/engine/requirements';
 import type { RawCountedRewardBinding } from '../rewards/types';
@@ -55,6 +56,8 @@ export interface RawEncounterDefinitionDeclaration {
   readonly requirements?: RequirementExpression;
   readonly sequenceEffect?: { readonly kind: 'terminateSuffix' };
   readonly npcPresentationKey?: string;
+  readonly npcShoppingProtection?: NpcShoppingProtection;
+  readonly hostsNpcShoppingEvents?: boolean;
   readonly traitOfferProducer?: {
     readonly kind: 'traitOffer';
     readonly giverKey: string;

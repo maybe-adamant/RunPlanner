@@ -392,13 +392,26 @@ export function occurrence(value: unknown, index: number): ExecutionOccurrence {
   exact(
     record,
     ['id', 'owner', 'biomeKey', 'gameName', 'kind', 'overview', 'timeline', 'roomGuide', 'doors'],
-    ['anomaly', 'resumeBoundary', 'roomExitConformance', 'diagnostics'],
+    ['anomaly', 'resumeBoundary', 'roomExitConformance', 'diagnostics', 'suppressedNpcShopping'],
     label,
   );
   const resumeBoundary =
     record.resumeBoundary === undefined
       ? undefined
       : stringValue(record.resumeBoundary, `${label}.resumeBoundary`);
+  const suppressedNpcShopping =
+    record.suppressedNpcShopping === undefined
+      ? undefined
+      : array(record.suppressedNpcShopping, `${label}.suppressedNpcShopping`).map((value) => {
+          if (value !== 'Nemesis' && value !== 'Heracles')
+            fail(`${label}.suppressedNpcShopping has an unsupported family`);
+          return value as 'Nemesis' | 'Heracles';
+        });
+  if (
+    suppressedNpcShopping !== undefined &&
+    new Set(suppressedNpcShopping).size !== suppressedNpcShopping.length
+  )
+    fail(`${label}.suppressedNpcShopping has duplicate families`);
   if (resumeBoundary !== undefined && resumeBoundary !== 'postbossEntry')
     fail(`${label}.resumeBoundary is unsupported`);
   const anomaly =
@@ -470,6 +483,9 @@ export function occurrence(value: unknown, index: number): ExecutionOccurrence {
   const parsedTimeline = timeline(record.timeline, `${label}.timeline`);
   const parsedRoomGuide = roomGuide(record.roomGuide, parsedTimeline, `${label}.roomGuide`);
   const parsed = Object.freeze({
+    ...(suppressedNpcShopping === undefined
+      ? {}
+      : { suppressedNpcShopping: Object.freeze(suppressedNpcShopping) }),
     id: stringValue(record.id, `${label}.id`, 256),
     owner: stringValue(record.owner, `${label}.owner`, MAX_OWNER_STRING),
     biomeKey: biomeKey as ExecutionBiomeKey,
