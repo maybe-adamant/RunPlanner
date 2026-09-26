@@ -104,7 +104,7 @@ function assembleAuthoredHub(project: ProjectDocument) {
 }
 
 describe('structured workspace Hub assembly', () => {
-  it('projects the fountain use in the combined action order with complete placement proposals', () => {
+  it('projects the fountain use in the combined action order with its existing predecessor host', () => {
     const hub = createHubDecisionAddress(nBiome, 'hub');
     const visits = nVisitSlotKeys.slice(0, 2);
     const withActions = (fountainAfterVisits: number | null) =>
@@ -136,7 +136,7 @@ describe('structured workspace Hub assembly', () => {
     const between = withActions(1);
     expect(between.fountain).toMatchObject({
       actionPosition: 2,
-      controlsHost: { kind: 'room', occurrenceId: nOccurrenceId(visits[1]!) },
+      controlsHost: { kind: 'room', occurrenceId: nOccurrenceId(visits[0]!) },
     });
     expect(between.fountain).not.toHaveProperty('appendActions');
     expect(between.visits.slice(0, 2).map((visit) => visit.actionPosition)).toEqual([1, 3]);
@@ -145,8 +145,11 @@ describe('structured workspace Hub assembly', () => {
     expect(first.fountain.actionPosition).toBe(1);
     expect(first.visits.slice(0, 2).map((visit) => visit.actionPosition)).toEqual([2, 3]);
 
-    // No room follows the last planned action yet, so the Hub hosts the controls.
-    expect(withActions(2).fountain.controlsHost).toEqual({ kind: 'hub' });
+    // No following room is needed to host the last planned fountain use.
+    expect(withActions(2).fountain.controlsHost).toMatchObject({
+      kind: 'room',
+      occurrenceId: nOccurrenceId(visits[1]!),
+    });
   });
 
   it('returns the authored board, room-local workbenches, exact controls, and Hub reward redirects', () => {

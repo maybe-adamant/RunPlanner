@@ -1353,8 +1353,14 @@ describe('workspace inspector destinations', () => {
       inspectorSubject: { kind: 'node', nodeKey: hubNodeKey(unused) },
     });
 
+    const onEntry = placed(nVisitSlotKeys, 0);
+    expect(destination(onEntry, outcome).inspectorSubject).toEqual({
+      kind: 'node',
+      nodeKey: nextRoomKey(onEntry, nOccurrenceIds.preHub),
+    });
+
     const beforeFourthVisit = placed(nVisitSlotKeys, 3);
-    const fourthRoom = nOccurrenceId(nVisitSlotKeys[3]!);
+    const fourthRoom = nOccurrenceId(nVisitSlotKeys[2]!);
     const beforeFourthDestination = destination(beforeFourthVisit, outcome);
     expect(beforeFourthDestination.inspectorSubject).toEqual({
       kind: 'node',
@@ -1373,7 +1379,7 @@ describe('workspace inspector destinations', () => {
     const beforePreboss = placed(nVisitSlotKeys, 6);
     const returnMarker = occurrenceWorkbenchFor(
       biome(beforePreboss, 'N'),
-      nOccurrenceIds.preboss,
+      nOccurrenceId(nVisitSlotKeys[5]!),
     ).hubTimeline;
     expect(returnMarker).toBeDefined();
     expect(destination(beforePreboss, returnMarker!.address)).toMatchObject({
@@ -1382,20 +1388,19 @@ describe('workspace inspector destinations', () => {
     });
     expect(destination(beforePreboss, outcome).inspectorSubject).toEqual({
       kind: 'node',
-      nodeKey: nextRoomKey(beforePreboss, nOccurrenceIds.preboss),
+      nodeKey: nextRoomKey(beforePreboss, nOccurrenceId(nVisitSlotKeys[5]!)),
     });
 
-    // With no room after the use yet, the Hub keeps the actionable controls.
+    // With no following room, the preceding room still hosts the controls.
     const lastPlanned = placed(nVisitSlotKeys.slice(0, 3), 3);
     expect(destination(lastPlanned, outcome)).toMatchObject({
-      hubTab: 'timeline',
-      inspectorSubject: { kind: 'node', nodeKey: hubNodeKey(lastPlanned) },
+      inspectorSubject: { kind: 'node', nodeKey: nextRoomKey(lastPlanned, fourthRoom) },
     });
     expect(
       biome(lastPlanned, 'N').nodes.some(
         (node) => node.kind === 'occurrenceWorkbench' && node.hubFountain !== undefined,
       ),
-    ).toBe(false);
+    ).toBe(true);
   });
 
   it('binds Fields and Ship local leaves to their containing decision rail', () => {

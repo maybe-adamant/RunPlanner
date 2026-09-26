@@ -503,7 +503,7 @@ describe('surface product loop', () => {
     expect(within(inspector).getByRole('article', { name: 'Combat 02 room offer' })).toBeTruthy();
   });
 
-  it('repairs a Hub Phial target from the fountain controls before the next room and returns to the Hub map', async () => {
+  it('repairs a Hub Phial target from the fountain controls after the preceding room and returns to the Hub map', async () => {
     const application = createApplication();
     const hub = createHubDecisionAddress(nBiome, 'hub');
     const outcome = createFountainRarityOutcomeAddress(createHubFountainAddress(nBiome, 'hub'));
@@ -529,7 +529,7 @@ describe('surface product loop', () => {
 
     const inspector = screen.getByRole('complementary', { name: 'Details' });
     const controls = within(inspector).getByRole('region', { name: 'Hub fountain' });
-    expect(within(controls).getByText('Used in the Hub before Combat 11.')).toBeTruthy();
+    expect(within(controls).getByText('Fountain used in the Hub after this room.')).toBeTruthy();
     await view.user.click(
       await screen.findByText(application.catalog.traits.byKey['HermesWeaponBoon']!.label),
     );

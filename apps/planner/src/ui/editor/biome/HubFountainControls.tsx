@@ -5,7 +5,7 @@ import type {
 import { useFindingTarget } from '@planner/ui/feedback/useFindingTarget';
 import { FountainRarityEffectRow } from './FountainRarityEffectRow';
 
-/** Read-only timing and the Hub-owned Phial target, hosted before the next room. */
+/** Read-only timing and the Hub-owned Phial target, hosted after the preceding room. */
 export function HubFountainControls({
   fountain,
   interactions,
@@ -22,10 +22,7 @@ export function HubFountainControls({
       tabIndex={-1}
     >
       <p>
-        <strong>Hub fountain</strong>{' '}
-        {fountain.controlsHost?.kind === 'room'
-          ? `Used in the Hub before ${fountain.controlsHost.label}.`
-          : 'Used in the Hub after the planned visits.'}
+        <strong>Fountain used in the Hub after this room.</strong>
       </p>
       {fountain.rarity === undefined ? null : (
         <FountainRarityEffectRow control={fountain.rarity} interactions={interactions} />

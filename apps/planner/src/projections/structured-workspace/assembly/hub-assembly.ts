@@ -547,18 +547,23 @@ function projectHubNode(
   const fountainOutcome = createFountainRarityOutcomeAddress(fountainAddress);
   const fountainIndex = hub.actions.findIndex((action) => action.kind === 'useFountain');
   const fountainPrecedingVisits = hubFountainPrecedingVisitCount(hub);
-  // The next room entered after the use hosts its controls; Preboss follows a final use.
+  // The preceding occurrence always exists, including before the first visit.
   const hostOccurrenceId =
     fountainPrecedingVisits === undefined
       ? undefined
-      : fountainPrecedingVisits < descriptor.requiredVisits
+      : fountainPrecedingVisits > 0
         ? (() => {
-            const slotKey = visitOrder[fountainPrecedingVisits];
+            const slotKey = visitOrder[fountainPrecedingVisits - 1];
             return slotKey === undefined ? undefined : targets.get(slotKey)?.occurrenceId;
           })()
-        : completedExitTarget?.occurrenceId;
+        : hub.source.occurrenceId;
   const hostOccurrence =
     hostOccurrenceId === undefined ? undefined : occurrences.get(hostOccurrenceId);
+  if (fountainPrecedingVisits !== undefined && hostOccurrence === undefined) {
+    throw new StructuredWorkspaceProjectionContractError(
+      'Hub fountain has no preceding occurrence',
+    );
+  }
   const rarity =
     fountainPrecedingVisits === undefined || input.fountainRarityAssessment === undefined
       ? undefined
@@ -583,17 +588,14 @@ function projectHubNode(
       : {}),
     outcomeMarker: markerDestinations.marker(fountainOutcome),
     ...(rarity === undefined ? {} : { rarity }),
-    ...(fountainPrecedingVisits === undefined
+    ...(hostOccurrence === undefined
       ? {}
       : {
-          controlsHost:
-            hostOccurrence === undefined
-              ? Object.freeze({ kind: 'hub' as const })
-              : Object.freeze({
-                  kind: 'room' as const,
-                  label: requireWorkspaceRoom(catalog, hostOccurrence.gameName).label,
-                  occurrenceId: hostOccurrence.occurrenceId,
-                }),
+          controlsHost: Object.freeze({
+            kind: 'room' as const,
+            label: requireWorkspaceRoom(catalog, hostOccurrence.gameName).label,
+            occurrenceId: hostOccurrence.occurrenceId,
+          }),
         }),
   });
   const node = Object.freeze({

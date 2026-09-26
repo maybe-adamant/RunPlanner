@@ -272,7 +272,7 @@ function TimelineFountainMarker({
         title="Hub fountain"
         summary={
           fountain.controlsHost?.kind === 'room'
-            ? `Used before ${fountain.controlsHost.label}.`
+            ? `Used after ${fountain.controlsHost.label}.`
             : 'Used after the planned visits.'
         }
         actionLabel="Open Interaction →"

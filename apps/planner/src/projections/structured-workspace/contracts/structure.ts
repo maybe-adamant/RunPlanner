@@ -257,7 +257,7 @@ export interface WorkspaceHubVisit {
 
 /**
  * The Hub-owned fountain use. Ordering stays in Hub Timeline; its Phial target
- * displays before the next room, or in the Hub until that room exists.
+ * displays after the preceding room, including the Hub source for an entry use.
  */
 export interface WorkspaceHubFountain {
   readonly address: HubFountainAddress;
@@ -270,9 +270,11 @@ export interface WorkspaceHubFountain {
   /** The Phial outcome owner; its target control is present only while one is required. */
   readonly outcomeMarker: WorkspaceMarker;
   readonly rarity?: WorkspaceFountainRarityControl;
-  readonly controlsHost?:
-    | { readonly kind: 'hub' }
-    | { readonly kind: 'room'; readonly label: string; readonly occurrenceId: OccurrenceId };
+  readonly controlsHost?: {
+    readonly kind: 'room';
+    readonly label: string;
+    readonly occurrenceId: OccurrenceId;
+  };
 }
 
 export interface WorkspaceHubDecisionNode {

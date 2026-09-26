@@ -406,7 +406,7 @@ function appendHubAssembly(
 }
 
 /**
- * Hub visits return to their Timeline; the fountain's next room also hosts its Phial target.
+ * Hub visits return to their Timeline; the preceding room hosts the Hub's Phial target.
  */
 function attachHubRoomPresentation(
   nodes: WorkspaceNode[],

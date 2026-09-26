@@ -680,9 +680,10 @@ fountain use and its Phial outcome, as one undoable edit, including normal
 downstream cleanup.
 
 Fountain ordering stays on Hub Timeline. The read-only timing label and
-Phial target display above the room entered after the use (Preboss after a
-final use). That room owns no persistence, candidate, or execution product for
-them. Until the room exists, Hub Timeline also hosts the target. Ordering uses
+Phial target display below the preceding main room, or the Hub's source
+occurrence when the fountain is first. This host always exists; the final use
+never depends on creating Preboss. That room owns no persistence, candidate,
+or execution product for them. Hub Timeline contains no fountain outcome editor. Ordering uses
 the same map append interaction as room visits: reset visits and rebuild the
 action order to change the fountain position. There is no separate fountain
 ordering control. The shared map legend identifies the fountain diamond beside

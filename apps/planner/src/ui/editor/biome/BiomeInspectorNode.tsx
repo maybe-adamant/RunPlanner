@@ -120,10 +120,6 @@ function OccurrenceInspector({
         );
   return (
     <>
-      {/* The Hub fountain use settles before this room is entered. */}
-      {node.hubFountain === undefined ? null : (
-        <HubFountainControls fountain={node.hubFountain} interactions={interactions} />
-      )}
       <OccurrenceWorkbench
         headerActions={
           node.hubTimeline === undefined ? undefined : (
@@ -179,6 +175,9 @@ function OccurrenceInspector({
       />
       {sourceRemovalAnchor === undefined || sourceRemoval === undefined ? null : (
         <TopologyRemovalAction interaction={sourceRemoval} label={sourceRemovalAnchor.label} />
+      )}
+      {node.hubFountain === undefined ? null : (
+        <HubFountainControls fountain={node.hubFountain} interactions={interactions} />
       )}
     </>
   );
