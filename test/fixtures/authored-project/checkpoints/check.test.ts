@@ -23,8 +23,14 @@ import {
 import {
   createUnderworldFPoolCheckpoint,
   createUnderworldFWellCheckpoint,
+  underworldGeneratedCompositionProject,
 } from '../routes/underworld';
+import {
+  surfaceEncounterShowcaseProject,
+  surfaceNPhialIntermediateFountainProject,
+} from '../routes/surface';
 import { dreamMixedHandoffProject } from '../routes/dream';
+import { surfaceScheduledLifecycleProject } from '../routes/scheduled-lifecycle';
 
 const checkpointDirectory = resolve(process.cwd(), 'test/fixtures/authored-project/checkpoints');
 
@@ -114,7 +120,7 @@ describe('authored-project checkpoint integrity', () => {
     const chaosRoom = occurrences?.find(
       (occurrence) => occurrence.occurrenceId === 'fixture-chaos-room',
     );
-    expect(checkpointManifest).toHaveLength(30);
+    expect(checkpointManifest).toHaveLength(34);
     expect(chaosRoom?.gameName).toMatch(/^Chaos_/);
     expect(chaosRoom?.state).toMatchObject({
       kind: 'fixed',
@@ -157,6 +163,16 @@ describe('authored-project checkpoint integrity', () => {
     const saved = loadCheckpoint('dream-mixed-handoff');
     expect(encodeProjectDocument(saved)).toBe(encodeProjectDocument(dreamMixedHandoffProject()));
     expect(saved.route.biomes.map((biome) => biome.biomeKey)).toEqual(['Q', 'F', 'N']);
+  });
+
+  it.each([
+    ['underworld-generated-composition', underworldGeneratedCompositionProject],
+    ['surface-encounter-showcase', surfaceEncounterShowcaseProject],
+    ['surface-scheduled-lifecycle', surfaceScheduledLifecycleProject],
+    ['surface-n-phial-intermediate-fountain', surfaceNPhialIntermediateFountainProject],
+  ] as const)('keeps %s equivalent to its command recipe', (id, recipe) => {
+    const saved = loadCheckpoint(id);
+    expect(encodeProjectDocument(saved)).toBe(encodeProjectDocument(recipe()));
   });
 
   it('keeps the F-only Stygian Well checkpoint equivalent to its command recipe', () => {

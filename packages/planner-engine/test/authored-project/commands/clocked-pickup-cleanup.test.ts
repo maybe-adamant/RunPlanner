@@ -19,7 +19,7 @@ import {
   derivedAcquisitionEntriesForProjectEvaluationAssembly,
   simulateProjectAssembly,
 } from '../../../src/simulation';
-import { surfaceScheduledLifecycleWithQSupplyChainSlicesProject } from '../../execution-plan/support/scheduled-lifecycle-fixture';
+import { surfaceScheduledLifecycleWithQSupplyChainSlicesProject } from '@run-planner/test-fixtures/scheduled-lifecycle';
 
 function placements(project: ProjectDocument) {
   return project.route.biomes.flatMap((biome) =>

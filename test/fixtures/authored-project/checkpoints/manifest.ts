@@ -31,6 +31,16 @@ export const checkpointManifest = Object.freeze([
     provenance: 'saved canonical Underworld F/G checkpoint',
   },
   {
+    id: 'underworld-generated-composition',
+    file: 'underworld-generated-composition.runplanner.json',
+    route: 'Underworld',
+    configuredBiomePrefix: ['F', 'G', 'H', 'I'],
+    scenario: 'Fangs and Menace generated encounters with a selected H Treant cage',
+    schemaVersion: 88,
+    catalogVersion: '0.55.0-anvil-of-fates',
+    provenance: 'semantic-command generated-composition recipe from canonical Underworld F/G/H/I',
+  },
+  {
     id: 'underworld-f-pool',
     file: 'underworld-f-pool.runplanner.json',
     route: 'Underworld',
@@ -89,6 +99,37 @@ export const checkpointManifest = Object.freeze([
     schemaVersion: 88,
     catalogVersion: '0.55.0-anvil-of-fates',
     provenance: 'saved canonical editor/generated checkpoint',
+  },
+  {
+    id: 'surface-encounter-showcase',
+    file: 'surface-encounter-showcase.runplanner.json',
+    route: 'Surface',
+    configuredBiomePrefix: ['N', 'O', 'P', 'Q'],
+    scenario: 'P variable generated base roll with selected Q Boss egg choices',
+    schemaVersion: 88,
+    catalogVersion: '0.55.0-anvil-of-fates',
+    provenance: 'semantic-command combined P/Q encounter recipe from canonical Surface N/O/P/Q',
+  },
+  {
+    id: 'surface-scheduled-lifecycle',
+    file: 'surface-scheduled-lifecycle.runplanner.json',
+    route: 'Surface',
+    configuredBiomePrefix: ['N', 'O', 'P', 'Q'],
+    scenario: 'Settled Embryo, Growth, Supply Chain, and Hermes Shrine delivery lifecycle',
+    schemaVersion: 88,
+    catalogVersion: '0.55.0-anvil-of-fates',
+    provenance:
+      'semantic-command complete scheduled-lifecycle recipe from canonical Surface N/O/P/Q',
+  },
+  {
+    id: 'surface-n-phial-intermediate-fountain',
+    file: 'surface-n-phial-intermediate-fountain.runplanner.json',
+    route: 'Surface',
+    configuredBiomePrefix: ['N'],
+    scenario: 'N Hub Aromatic Phial at the intermediate three-visit fountain position',
+    schemaVersion: 88,
+    catalogVersion: '0.55.0-anvil-of-fates',
+    provenance: 'semantic-command intermediate-fountain recipe from canonical Surface N',
   },
   {
     id: 'surface-n-natural-selection-frontier',
@@ -320,6 +361,9 @@ export const checkpointManifest = Object.freeze([
 
 /** Explicit schema-50 SpellDrop migration intent; no fixture is mass-filled. */
 export const checkpointSpellDropIntents = Object.freeze([
+  ['surface-encounter-showcase', 'surface-n-combat09', 'SpellPotionTrait'],
+  ['surface-n-phial-intermediate-fountain', 'surface-n-combat09', 'SpellLaserTrait'],
+  ['surface-scheduled-lifecycle', 'surface-n-combat09', 'SpellPotionTrait'],
   ['surface-n-complete-hub-frontier', 'surface-n-combat09', 'SpellPolymorphTrait'],
   ['surface-n-partial-hub', 'surface-n-combat09', 'SpellMeteorTrait'],
   ['surface-n-story-board', 'surface-n-combat09', 'SpellTransformTrait'],
@@ -345,6 +389,8 @@ export const checkpointSpellDropIntents = Object.freeze([
   ['underworld-fgh', 'golden-h-combat03', 'SpellTransformTrait'],
   ['underworld-fghi', 'golden-f-b10-e2', 'SpellLeapTrait'],
   ['underworld-fghi', 'golden-h-combat03', 'SpellLaserTrait'],
+  ['underworld-generated-composition', 'golden-f-b10-e2', 'SpellLeapTrait'],
+  ['underworld-generated-composition', 'golden-h-combat03', 'SpellLaserTrait'],
   ['nemesis-f-trait-trade', 'golden-f-b10-e2', 'SpellLeapTrait'],
   ['nemesis-f-trait-trade', 'golden-h-combat03', 'SpellLaserTrait'],
   ['nemesis-h-fields', 'golden-f-b10-e2', 'SpellMeteorTrait'],

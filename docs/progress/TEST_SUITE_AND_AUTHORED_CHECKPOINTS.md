@@ -1,7 +1,7 @@
 # Test-suite cleanup and authored checkpoint coverage
 
-Status: Gates A–B implemented and reviewed. C1 Dream slice implemented and reviewed;
-remaining C1 promotions and Gates C2–D await implementation.
+Status: Gates A–B and C1 implemented and reviewed; review findings resolved.
+Gates C2–D await implementation.
 Base: `7dea8cfe` (September 26, 2026).
 
 ## Objective
@@ -176,16 +176,21 @@ move/add its representative tests. No fixture-only commits awaiting later tests.
 
 #### C1 — established recipe promotions
 
-Partial disposition (Dream slice, against `ce0d4279`, September 26, 2026): completed
-the saved `dream-mixed-handoff` Q/F/N checkpoint, its manifest/registry/static
-loader registration, non-circular command-recipe attestation, the reached
-execution-export witness, and the representative NPC-protection edit/codec
-reload/Undo consumer. The parameterized F-batch reorder recipe remains its
-own rule witness. The Underworld generated-encounter, Surface encounter,
-Surface scheduled-lifecycle, and Hub Phial promotions remain pending; C2 and
-C3 remain pending. Independent review passed without findings. Checkpoint integrity
-(25 tests), focused engine consumers (82 tests, including unchanged Dream execution
-bytes), full typechecking, changed-file lint and formatting passed.
+Disposition: completed against `daf729ac` (September 26, 2026). C1 now has
+saved Dream mixed-handoff; Underworld generated-composition with positive
+Menace, Fangs and an H cage; one legal combined Surface P/Q encounter showcase;
+Surface scheduled lifecycle; and intermediate Hub Phial checkpoints. Each uses
+the manifest/registry/static loader, a non-circular recipe attestation, reached
+export evidence, and a narrow semantic edit/codec reload/Undo witness. Existing
+P-only and Q-only execution producers remain to preserve their distinct wire
+fixtures. C2 and C3 remain pending.
+Independent review remediation tightened the checkpoint witnesses to exact
+addressed export and repair products, including the settled Steady Growth reset.
+Verification passed: checkpoint integrity (29 tests), compiler/Hub/export fixtures
+(109 tests), clocked-pickup cleanup (3 tests), and the four new checkpoint
+scenarios. The final remediation reran the compiler and checkpoint scenarios
+(66 tests), full typechecking and lint. Formatting and diff checks passed;
+execution fixture bytes remain unchanged.
 
 - Dream mixed-handoff: default configured Q/F/N prefix; retain the parameterized
   F-batch-order recipe for tests whose subject is reordered history.

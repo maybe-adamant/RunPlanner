@@ -21,13 +21,15 @@ import {
   type ExecutionPlan,
 } from '@run-planner/engine/execution-plan';
 import { hubVisitActions } from '@run-planner/test-fixtures/shared';
-import { loadSurfaceNProject, nBiome, nVisitSlotKeys } from '@run-planner/test-fixtures/surface';
-import phialFountainFixture from './fixtures/surface-n-phial-intermediate-fountain.execution.json';
 import {
+  loadSurfaceNProject,
+  nBiome,
+  nVisitSlotKeys,
   phialFountainPrecedingVisits,
   phialFountainTargetTraitKey,
-  surfaceNPhialIntermediateFountainProject,
-} from './support/surface-n-phial-fountain-fixture';
+} from '@run-planner/test-fixtures/surface';
+import { loadSurfaceNPhialIntermediateFountainCheckpoint } from '@run-planner/test-fixtures/checkpoints/surface';
+import phialFountainFixture from './fixtures/surface-n-phial-intermediate-fountain.execution.json';
 import { migrateProjectDocument as migrateProject87To88 } from '../../../../schema/migrate-project-87-to-88.js';
 
 const hub = createHubDecisionAddress(nBiome, 'hub');
@@ -190,7 +192,7 @@ describe('Hub fountain execution export', () => {
 
 describe('Surface N Phial intermediate fountain fixture', () => {
   it('publishes the Hub fountain use with a legal Common Pre-Hub Phial target', () => {
-    const project = surfaceNPhialIntermediateFountainProject();
+    const project = loadSurfaceNPhialIntermediateFountainCheckpoint();
     const evaluation = simulateProjectAssembly(catalog, project).evaluation;
     expect(evaluation.findings).toEqual([]);
     const decoded = decodeExecutionPlan(phialFountainFixture);
@@ -349,7 +351,7 @@ describe('Hub departure conformance', () => {
       },
     ],
   ])('strictly rejects Hub departures with %s', (_label, mutate) => {
-    const encoded = encodeExecutionPlan(plan(surfaceNPhialIntermediateFountainProject()));
+    const encoded = encodeExecutionPlan(plan(loadSurfaceNPhialIntermediateFountainCheckpoint()));
     expect(() => decodeExecutionPlan(JSON.parse(encoded))).not.toThrow();
     const { wire, hub: published } = wireHub(encoded);
     mutate(published.departures as Record<string, unknown>[]);

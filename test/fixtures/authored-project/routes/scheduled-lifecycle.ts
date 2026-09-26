@@ -26,7 +26,7 @@ import {
   createTraitOfferAddress,
   type AcquisitionEntryAddress,
   type ProjectDocument,
-} from '../../../src/authored-project';
+} from '@run-planner/engine/authored-project';
 import {
   clockedTraitPickupPlacementForProjectEvaluationAssembly,
   createPreparedProjectCandidateSession,
@@ -34,7 +34,7 @@ import {
   hermesShrineDeliveryPlacementForPurchaseReschedule,
   levelResolutionCandidateForProjectEvaluationAssembly,
   simulateProjectAssembly,
-} from '../../../src/simulation';
+} from '@run-planner/engine/simulation';
 
 const nPostboss = createOccurrenceAddress(nBiome, createOccurrenceId('surface-n-preboss:postboss'));
 const oPostboss = createOccurrenceAddress(oBiome, createOccurrenceId('surface-o-preboss:postboss'));

@@ -5,16 +5,20 @@ import {
   createAcquisitionSiteAddress,
   createBiomeAddress,
   createEncounterPhaseAddress,
+  createFountainRarityOutcomeAddress,
+  createHubDecisionAddress,
+  createHubFountainAddress,
   createIncomingRewardAddress,
   createOccurrenceAddress,
   createOccurrenceId,
+  createRouteStartKeepsakeSelectionAddress,
   createShopOfferAddress,
   hermesShrineDeliveryEntryKey,
   type OccurrenceId,
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
 import type { ResolvedRewardOffer } from '@run-planner/engine/reward-kernel';
-import { authorLegalTraitOffers, replaceTestShopOfferActions } from '../shared';
+import { authorLegalTraitOffers, hubVisitActions, replaceTestShopOfferActions } from '../shared';
 import {
   loadSurfaceNCheckpoint,
   loadSurfaceNNaturalSelectionFrontierCheckpoint,
@@ -339,6 +343,82 @@ export function loadSurfaceNOPProject(): ProjectDocument {
 
 export function loadSurfaceNOPQProject(): ProjectDocument {
   return authorForcedShrines(loadSurfaceNOPQCheckpoint(), [nBiome, oBiome, pBiome]);
+}
+
+function authorSurfaceGeneratedPreCombat(project: ProjectDocument): ProjectDocument {
+  return applyProjectCommand(project, catalog, {
+    kind: 'ReplaceEncounterCustomization',
+    phase: createEncounterPhaseAddress(
+      pBiome,
+      { kind: 'occurrence', occurrenceId: pOccurrenceId('P_Combat07', 4, 1) },
+      'Intro',
+    ),
+    decisionKey: 'generatedComposition',
+    value: {
+      kind: 'generated',
+      waveCount: 1,
+      baseRoll: 412,
+      waves: [{ waveIndex: 1, typeKeys: ['SentryBot', 'Dragon'], allocations: { SentryBot: 206 } }],
+    },
+  });
+}
+
+/** The variable-budget P pre-combat encounter with an authored native base roll. */
+export function surfaceGeneratedPreCombatProject(): ProjectDocument {
+  return authorSurfaceGeneratedPreCombat(loadSurfaceNOPProject());
+}
+
+/** Q Boss egg choices retained as the producer for the existing N/O/P/Q execution wire. */
+export function typhonCustomizationProject(): ProjectDocument {
+  let project = loadSurfaceNOPQProject();
+  const boss = project.route.biomes
+    .find((biome) => biome.biomeKey === 'Q')
+    ?.topology?.occurrences.find((occurrence) => occurrence.gameName === 'Q_Boss01');
+  if (boss === undefined) throw new Error('Typhon fixture is missing its normal Head occurrence');
+  const phase = createEncounterPhaseAddress(
+    qBiome,
+    { kind: 'occurrence', occurrenceId: boss.occurrenceId },
+    'Encounter',
+  );
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceEncounterCustomization',
+    phase,
+    decisionKey: 'firstEggWave',
+    value: { kind: 'single', choiceKey: 'eidolons' },
+  });
+  return applyProjectCommand(project, catalog, {
+    kind: 'ReplaceEncounterCustomization',
+    phase,
+    decisionKey: 'secondEggWave',
+    value: { kind: 'single', choiceKey: 'lurkers' },
+  });
+}
+
+/** A complete P/Q route with P's authored variable base roll and Q's egg choices. */
+export function surfaceEncounterShowcaseProject(): ProjectDocument {
+  return authorSurfaceGeneratedPreCombat(typhonCustomizationProject());
+}
+
+export const phialFountainPrecedingVisits = 3;
+export const phialFountainTargetTraitKey = 'AresSpecialBoon';
+
+/** Surface N with Aromatic Phial, used at the Hub after three visits on the Pre-Hub boon. */
+export function surfaceNPhialIntermediateFountainProject(): ProjectDocument {
+  let project = applyProjectCommand(loadSurfaceNProject(), catalog, {
+    kind: 'ReplaceStartingKeepsake',
+    selection: createRouteStartKeepsakeSelectionAddress('Surface'),
+    keepsakeKey: 'FountainRarityKeepsake',
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceHubActionOrder',
+    hub: createHubDecisionAddress(nBiome, 'hub'),
+    actions: hubVisitActions(nVisitSlotKeys, phialFountainPrecedingVisits),
+  });
+  return applyProjectCommand(project, catalog, {
+    kind: 'ReplaceFountainRarityTarget',
+    outcome: createFountainRarityOutcomeAddress(createHubFountainAddress(nBiome, 'hub')),
+    targetTraitKey: phialFountainTargetTraitKey,
+  });
 }
 
 export function authorSurfaceWorldShop(

@@ -8,6 +8,7 @@ import underworldFStygianWellRaw from './underworld-f-stygian-well.runplanner.js
 import underworldFGRaw from './underworld-fg.runplanner.json';
 import underworldFGHRaw from './underworld-fgh.runplanner.json';
 import underworldFGHIRaw from './underworld-fghi.runplanner.json';
+import underworldGeneratedCompositionRaw from './underworld-generated-composition.runplanner.json';
 import naturalChaosUnresolvedTrialRaw from './natural-chaos-unresolved-trial.runplanner.json';
 import nemesisFTraitTradeRaw from './nemesis-f-trait-trade.runplanner.json';
 import nemesisHFieldsRaw from './nemesis-h-fields.runplanner.json';
@@ -26,6 +27,7 @@ export const underworldCheckpointArtifacts = Object.freeze({
   'underworld-f-stygian-well': checkpointArtifact(underworldFStygianWellRaw),
   'underworld-fgh': checkpointArtifact(underworldFGHRaw),
   'underworld-fghi': checkpointArtifact(underworldFGHIRaw),
+  'underworld-generated-composition': checkpointArtifact(underworldGeneratedCompositionRaw),
   'underworld-f-midshop-pom-frontier': checkpointArtifact(underworldFMidshopPomRaw),
   'natural-chaos-unresolved-trial': checkpointArtifact(naturalChaosUnresolvedTrialRaw),
   'nemesis-f-trait-trade': checkpointArtifact(nemesisFTraitTradeRaw),
@@ -51,6 +53,10 @@ export function loadUnderworldFGHCheckpoint(): ProjectDocument {
 
 export function loadUnderworldFGHICheckpoint(): ProjectDocument {
   return underworldCheckpointArtifacts['underworld-fghi'].load();
+}
+
+export function loadUnderworldGeneratedCompositionCheckpoint(): ProjectDocument {
+  return underworldCheckpointArtifacts['underworld-generated-composition'].load();
 }
 
 export function loadUnderworldFMidshopPomFrontierCheckpoint(): ProjectDocument {

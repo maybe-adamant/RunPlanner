@@ -14,6 +14,7 @@ import {
   loadUnderworldFPoolCheckpoint,
   loadUnderworldFStygianWellCheckpoint,
 } from '@run-planner/test-fixtures/checkpoints/underworld';
+import { loadSurfaceScheduledLifecycleCheckpoint } from '@run-planner/test-fixtures/checkpoints/surface';
 import {
   createPreparedProjectCandidateSession,
   derivedAcquisitionEntriesForProjectEvaluationAssembly,
@@ -78,10 +79,7 @@ import underworldFGHIFixture from './fixtures/underworld-fghi.execution.json';
 import surfaceNFixture from './fixtures/surface-n.execution.json';
 import surfaceNOFixture from './fixtures/surface-no.execution.json';
 import surfaceQShopCorrelationFixture from './fixtures/surface-q-shop-correlation.execution.json';
-import {
-  surfaceScheduledLifecycleProject,
-  surfaceScheduledLifecycleWithQSupplyChainSlicesProject,
-} from './support/scheduled-lifecycle-fixture';
+import { surfaceScheduledLifecycleWithQSupplyChainSlicesProject } from '@run-planner/test-fixtures/scheduled-lifecycle';
 import { dreamMixedPrefixProject } from '@run-planner/test-fixtures/dream';
 import { executionTimelineTransactions } from '../../src/execution-plan/assembly/timeline-transactions';
 import { orderedExecutionRooms } from '../../src/execution-plan/assembly/route';
@@ -608,7 +606,7 @@ function selectedTransactionPair(product: ExecutionSemanticProduct): {
 
 describe('execution-plan compiler and codec', () => {
   it('keeps the current wheel on the old Embryo blessing and applies Favor to later offers', () => {
-    const complete = surfaceScheduledLifecycleProject();
+    const complete = loadSurfaceScheduledLifecycleCheckpoint();
     let project: ProjectDocument = {
       ...complete,
       route: { ...complete.route, biomes: complete.route.biomes.slice(0, 2) },
@@ -689,7 +687,7 @@ describe('execution-plan compiler and codec', () => {
   });
 
   it('acquires a wheel boon before Steady Growth and repairs its target after a wheel edit', () => {
-    const complete = surfaceScheduledLifecycleProject();
+    const complete = loadSurfaceScheduledLifecycleCheckpoint();
     let project: ProjectDocument = {
       ...complete,
       route: { ...complete.route, biomes: complete.route.biomes.slice(0, 2) },
@@ -1919,7 +1917,7 @@ describe('execution-plan compiler and codec', () => {
   });
 
   it('reaches a complete Surface automatic and scheduled-acquisition lifecycle', () => {
-    const { plan } = planFor(surfaceScheduledLifecycleProject());
+    const { plan } = planFor(loadSurfaceScheduledLifecycleCheckpoint());
     expect(plan.extent.biomeKeys).toEqual(['N', 'O', 'P', 'Q']);
     const entrance = plan.occurrences.find((occurrence) => occurrence.gameName === 'P_Intro');
     const entered = entrance?.diagnostics?.roomEntered;
