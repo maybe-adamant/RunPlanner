@@ -503,7 +503,7 @@ describe('surface product loop', () => {
     expect(within(inspector).getByRole('article', { name: 'Combat 02 room offer' })).toBeTruthy();
   });
 
-  it('repairs a Hub Phial target from the fountain controls before the next room and moves the fountain with it', async () => {
+  it('repairs a Hub Phial target from the fountain controls before the next room and returns to the Hub map', async () => {
     const application = createApplication();
     const hub = createHubDecisionAddress(nBiome, 'hub');
     const outcome = createFountainRarityOutcomeAddress(createHubFountainAddress(nBiome, 'hub'));
@@ -540,19 +540,13 @@ describe('surface product loop', () => {
     act(() =>
       application.store.dispatch(semanticOwnerFocused(createHubFountainAddress(nBiome, 'hub'))),
     );
-    const ordering = await screen.findByRole('region', { name: 'Fountain order' });
-    await view.user.click(within(ordering).getByRole('button', { name: 'After visit 5' }));
-    const moved = nHub(currentProject(application));
-    expect(moved.actions).toEqual(hubVisitActions(nVisitSlotKeys, 5));
-    expect(moved.fountainRarityResult).toEqual({ targetTraitKey: 'HermesWeaponBoon' });
-    expect(currentHistory(application).past).toHaveLength(historyBefore + 1);
-    // Focus stays on Hub ordering; the map opens the new host.
-    await waitFor(() => expect(document.activeElement?.textContent).toBe('After visit 5'));
-    await view.user.click(screen.getByRole('button', { name: 'Hub fountain: Step 6.' }));
-    const movedControls = within(inspector).getByRole('region', { name: 'Hub fountain' });
-    expect(within(movedControls).getByText('Used in the Hub before Combat 09.')).toBeTruthy();
-    await view.user.click(screen.getByRole('button', { name: 'Undo' }));
+    expect(await screen.findByRole('region', { name: 'Ephyra Hub timeline map' })).toBeTruthy();
+    expect(screen.queryByRole('region', { name: 'Fountain order' })).toBeNull();
     expect(nHub(currentProject(application)).actions).toEqual(hubVisitActions(nVisitSlotKeys, 3));
+    expect(nHub(currentProject(application)).fountainRarityResult).toEqual({
+      targetTraitKey: 'HermesWeaponBoon',
+    });
+    expect(currentHistory(application).past).toHaveLength(historyBefore);
   });
 
   it('routes the selected nested Natural Selection issue to its Timeline pickup without opening a dialog', async () => {

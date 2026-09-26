@@ -1,4 +1,12 @@
-import { useRef, type MouseEvent, type PointerEvent, type ReactNode } from 'react';
+import {
+  useRef,
+  useState,
+  type MouseEvent,
+  type PointerEvent,
+  type ReactNode,
+  type RefObject,
+} from 'react';
+import * as Popover from '@radix-ui/react-popover';
 
 import type { HubAction } from '@run-planner/engine/authored-project';
 import {
@@ -26,7 +34,7 @@ import {
 } from '@planner/ui/room-maps/HubMapAnnotations';
 import { RoomMapViewport } from '@planner/ui/room-maps/RoomMapViewport';
 import { roomMapAssetFor } from '@planner/ui/room-maps/roomMapAssets';
-import { HubMapFountainGlyph, HubMapMarkerContent } from './HubMapMarkerContent';
+import { HubMapFountainContent, HubMapMarkerContent } from './HubMapMarkerContent';
 import { hubMapReward } from './hubMapReward';
 
 interface HubMapTimelineProps {
@@ -35,6 +43,63 @@ interface HubMapTimelineProps {
   readonly locked: boolean;
   readonly node: WorkspaceHubDecisionNode;
   readonly resetVisitsControl: ReactNode;
+}
+
+function TimelineMarkerPopover({
+  open,
+  onOpenChange,
+  marker,
+  title,
+  summary,
+  actionLabel,
+  onNavigate,
+  children,
+}: {
+  readonly open: boolean;
+  readonly onOpenChange: (open: boolean) => void;
+  readonly marker: RefObject<HTMLButtonElement | null>;
+  readonly title: string;
+  readonly summary: string;
+  readonly actionLabel: string;
+  readonly onNavigate: () => void;
+  readonly children: ReactNode;
+}) {
+  const navigating = useRef(false);
+  return (
+    <Popover.Root open={open} onOpenChange={onOpenChange}>
+      <Popover.Anchor asChild>{children}</Popover.Anchor>
+      <Popover.Portal>
+        <Popover.Content
+          className="hub-map-popover hub-timeline-popover"
+          aria-label={title}
+          sideOffset={8}
+          collisionPadding={12}
+          onCloseAutoFocus={(event) => {
+            event.preventDefault();
+            if (!navigating.current) marker.current?.focus();
+            navigating.current = false;
+          }}
+        >
+          <header>
+            <h4>{title}</h4>
+            <Popover.Close className="quiet-action action-compact">Close</Popover.Close>
+          </header>
+          <p>{summary}</p>
+          <button
+            className="quiet-action action-compact"
+            type="button"
+            onClick={() => {
+              navigating.current = true;
+              onOpenChange(false);
+              onNavigate();
+            }}
+          >
+            {actionLabel}
+          </button>
+        </Popover.Content>
+      </Popover.Portal>
+    </Popover.Root>
+  );
 }
 
 /** Map markers pan with the image; a pointer drag past a few pixels is never a click. */
@@ -98,6 +163,8 @@ function TimelineMapMarker({
 }) {
   const findingTarget = useFindingTarget();
   const dispatch = useAppDispatch();
+  const [open, setOpen] = useState(false);
+  const marker = useRef<HTMLButtonElement>(null);
   const markerTarget =
     visitMarker === undefined
       ? undefined
@@ -110,7 +177,7 @@ function TimelineMapMarker({
   const position = hubMapPosition(annotation);
   const pointer = useDragSuppressedActivation(() => {
     if (canAppend && !locked) onAppend(slot);
-    else if (canOpen && slot.room !== undefined) dispatch(semanticOwnerFocused(slot.room.address));
+    else if (canOpen) setOpen(true);
   });
   const markerLabel = isVisited
     ? `${slot.label}: Visit ${visitPosition + 1}, step ${actionPosition}.`
@@ -120,29 +187,45 @@ function TimelineMapMarker({
 
   return (
     <>
-      <button
-        aria-label={markerLabel}
-        className="hub-map-marker hub-timeline-map-marker"
-        data-category={annotation.category}
-        data-hub-slot-key={slot.hubSlotKey}
-        data-open="true"
-        data-room-map-overlay-control
-        data-visited={isVisited}
-        {...(markerTarget ?? {})}
-        aria-description={[`Reward: ${reward.summary}`, markerTarget?.['aria-description']]
-          .filter(Boolean)
-          .join(' ')}
-        aria-disabled={(!canAppend && !canOpen) || (canAppend && locked) || undefined}
-        data-authoring-locked={markerDisabled || undefined}
-        disabled={markerDisabled}
-        inert={markerDisabled}
-        {...pointer}
-        style={position}
-        title={`${slot.label}: ${reward.summary}`}
-        type="button"
+      <TimelineMarkerPopover
+        open={open && canOpen}
+        onOpenChange={setOpen}
+        marker={marker}
+        title={slot.label}
+        summary={`Reward: ${reward.summary}`}
+        actionLabel="Open Room →"
+        onNavigate={() => {
+          if (slot.room !== undefined) dispatch(semanticOwnerFocused(slot.room.address));
+        }}
       >
-        <HubMapMarkerContent label={annotation.mapLabel} open reward={reward} />
-      </button>
+        <button
+          aria-label={markerLabel}
+          className="hub-map-marker hub-timeline-map-marker"
+          data-category={annotation.category}
+          data-hub-slot-key={slot.hubSlotKey}
+          data-open="true"
+          data-room-map-overlay-control
+          data-visited={isVisited}
+          {...(markerTarget ?? {})}
+          ref={(element) => {
+            marker.current = element;
+            markerTarget?.ref(element);
+          }}
+          aria-description={[`Reward: ${reward.summary}`, markerTarget?.['aria-description']]
+            .filter(Boolean)
+            .join(' ')}
+          aria-disabled={(!canAppend && !canOpen) || (canAppend && locked) || undefined}
+          data-authoring-locked={markerDisabled || undefined}
+          disabled={markerDisabled}
+          inert={markerDisabled}
+          {...pointer}
+          style={position}
+          title={`${slot.label}: ${reward.summary}`}
+          type="button"
+        >
+          <HubMapMarkerContent label={annotation.mapLabel} open reward={reward} />
+        </button>
+      </TimelineMarkerPopover>
       {!isVisited ? null : (
         <span aria-hidden="true" className="hub-map-visit-badge-anchor" style={position}>
           <span className="hub-map-visit-badge">{actionPosition}</span>
@@ -168,10 +251,9 @@ function TimelineFountainMarker({
 }) {
   const findingTarget = useFindingTarget();
   const dispatch = useAppDispatch();
-  const target =
-    fountain.actionPosition === undefined
-      ? findingTarget(fountain.address, undefined, readinessOwner)
-      : undefined;
+  const [open, setOpen] = useState(false);
+  const marker = useRef<HTMLButtonElement>(null);
+  const target = findingTarget(fountain.address, undefined, readinessOwner);
   const appendActions = fountain.appendActions;
   const canAppend = appendActions !== undefined;
   const canOpen = !canAppend && complete;
@@ -179,32 +261,50 @@ function TimelineFountainMarker({
   const position = hubMapPosition(hubMapFountainAnnotation);
   const pointer = useDragSuppressedActivation(() => {
     if (appendActions !== undefined && !locked) onAppend(appendActions);
-    else if (canOpen) dispatch(semanticOwnerFocused(fountain.outcomeMarker.address));
+    else if (canOpen) setOpen(true);
   });
   return (
     <>
-      <button
-        {...target}
-        aria-disabled={(!canAppend && !canOpen) || (canAppend && locked) || undefined}
-        aria-label={
-          fountain.actionPosition === undefined
-            ? 'Hub fountain: Unused. Use fountain.'
-            : `Hub fountain: Step ${fountain.actionPosition}.`
-        }
-        className="hub-map-fountain-marker hub-timeline-fountain-marker"
-        data-authoring-locked={markerDisabled || undefined}
-        data-hub-fountain
-        data-room-map-overlay-control
-        data-used={fountain.actionPosition !== undefined}
-        disabled={markerDisabled}
-        inert={markerDisabled}
-        {...pointer}
-        style={position}
+      <TimelineMarkerPopover
+        open={open && canOpen}
+        onOpenChange={setOpen}
+        marker={marker}
         title="Hub fountain"
-        type="button"
+        summary={
+          fountain.controlsHost?.kind === 'room'
+            ? `Used before ${fountain.controlsHost.label}.`
+            : 'Used after the planned visits.'
+        }
+        actionLabel="Open Interaction →"
+        onNavigate={() => dispatch(semanticOwnerFocused(fountain.outcomeMarker.address))}
       >
-        <HubMapFountainGlyph />
-      </button>
+        <button
+          {...target}
+          ref={(element) => {
+            marker.current = element;
+            target.ref(element);
+          }}
+          aria-disabled={(!canAppend && !canOpen) || (canAppend && locked) || undefined}
+          aria-label={
+            fountain.actionPosition === undefined
+              ? 'Hub fountain: Unused. Use fountain.'
+              : `Hub fountain: Step ${fountain.actionPosition}.`
+          }
+          className="hub-map-fountain-marker hub-timeline-fountain-marker"
+          data-authoring-locked={markerDisabled || undefined}
+          data-hub-fountain
+          data-room-map-overlay-control
+          data-used={fountain.actionPosition !== undefined}
+          disabled={markerDisabled}
+          inert={markerDisabled}
+          {...pointer}
+          style={position}
+          title="Hub fountain"
+          type="button"
+        >
+          <HubMapFountainContent />
+        </button>
+      </TimelineMarkerPopover>
       {fountain.actionPosition === undefined ? null : (
         <span aria-hidden="true" className="hub-map-visit-badge-anchor" style={position}>
           <span className="hub-map-visit-badge">{fountain.actionPosition}</span>

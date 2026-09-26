@@ -1389,24 +1389,6 @@
   margin: 0;
 }
 
-.hub-fountain-placements {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-}
-
-.hub-fountain-placements > button[aria-pressed='true'] {
-  border-color: #6cc4ff;
-  color: #eaf6ff;
-}
-
-.hub-fountain-controls-fields {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px 16px;
-}
-
 .fountain-rarity-inline {
   display: flex;
   flex: 0 1 20rem;

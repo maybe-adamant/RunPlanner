@@ -19,6 +19,7 @@ import { DirectRoomWorkbench, IncomingRewardOverview } from './OccurrenceDirectR
 import { FieldsLayoutWorkbench } from './locals/FieldsWorkbench';
 
 interface OccurrenceWorkbenchProps {
+  readonly headerActions?: ReactNode;
   /** Entry identity is an Overview-only biome authoring control. */
   readonly entryIdentity?: ReactNode;
   readonly incomingDoor?: WorkspaceDoorContract;
@@ -43,6 +44,7 @@ interface OccurrenceWorkbenchProps {
 
 /** A room-local editor that consumes the structured workspace only. */
 export function OccurrenceWorkbench({
+  headerActions,
   doors,
   entryIdentity,
   incomingDoor,
@@ -173,6 +175,7 @@ export function OccurrenceWorkbench({
       <header className="room-card-heading">
         <h3 aria-label={heading}>{heading}</h3>
         <div className="owner-markers">
+          {headerActions}
           <RoomMapLauncher gameName={room.gameName} hostId={roomIdentity} title={room.label} />
           {runState === undefined ? null : <RunStateLauncher launcher={runState} />}
         </div>

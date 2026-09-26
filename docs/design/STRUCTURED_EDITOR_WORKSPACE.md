@@ -667,8 +667,12 @@ icons; transparent markers are unvisited, solid markers carry a badge above the
 room circle. Badges show the combined action order, while room visit ordinals
 stay 1–6. Clicking an unvisited door appends it when fewer than six rooms are
 visited; the fountain's distinct marker appends its one use regardless of room
-capacity. Once all six visits and the fountain are placed, visited doors open
-their room and the fountain opens its hosted interaction. Markers do not reorder
+capacity. Once all six visits and the fountain are placed, visited doors show
+a room/reward popup with an explicit Open Room action; the fountain shows its
+timing and an Open Interaction action. Clicking outside or Escape dismisses
+the popup without leaving the map. Visited room banners and the fountain's
+room host offer a Hub Timeline return beside View Map, regardless of navigation
+entry point. Markers do not reorder
 or open a second reward preview. Overview shows the labeled fountain diamond
 without interaction or board membership. **Reset visits** submits the empty
 action prefix, clearing the
@@ -678,9 +682,9 @@ downstream cleanup.
 Fountain ordering stays on Hub Timeline. The read-only timing label and
 Phial target display above the room entered after the use (Preboss after a
 final use). That room owns no persistence, candidate, or execution product for
-them. Until the room exists, Hub Timeline also hosts the target. Each position
-is an explicitly chosen, candidate-assessed reorder of the same action order:
-it keeps and reassesses an authored Phial target, while focus stays on the Hub
+them. Until the room exists, Hub Timeline also hosts the target. Ordering uses
+the same map append interaction as room visits: reset visits and rebuild the
+action order to change the fountain position. There is no separate fountain
 ordering control. The shared map legend identifies the fountain diamond beside
 the room-quality circles. Only **Reset visits** removes the fountain use,
 clearing its target with it.

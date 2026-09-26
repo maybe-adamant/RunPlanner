@@ -1,4 +1,6 @@
 import type { ReactNode } from 'react';
+import { useAppDispatch } from '@planner/state/store';
+import { semanticOwnerFocused } from '@planner/state/editorSessionSlice';
 
 import {
   requireWorkspaceInteraction,
@@ -108,6 +110,7 @@ function OccurrenceInspector({
   readonly node: Extract<WorkspaceNode, { readonly kind: 'occurrenceWorkbench' }>;
 }) {
   const sourceRemovalAnchor = node.sourceDecisionRemoval;
+  const dispatch = useAppDispatch();
   const sourceRemoval =
     sourceRemovalAnchor === undefined
       ? undefined
@@ -122,6 +125,17 @@ function OccurrenceInspector({
         <HubFountainControls fountain={node.hubFountain} interactions={interactions} />
       )}
       <OccurrenceWorkbench
+        headerActions={
+          node.hubTimeline === undefined ? undefined : (
+            <button
+              type="button"
+              className="primary-action action-compact"
+              onClick={() => dispatch(semanticOwnerFocused(node.hubTimeline!.address))}
+            >
+              ← Hub Timeline
+            </button>
+          )
+        }
         entryIdentity={<StartRoomIdentityEditor interactions={interactions} node={node} />}
         {...(node.incomingDoor === undefined ? {} : { incomingDoor: node.incomingDoor })}
         interactions={interactions}

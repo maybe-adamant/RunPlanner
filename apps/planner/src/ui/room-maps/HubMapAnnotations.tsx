@@ -133,39 +133,24 @@ export function HubMapReadOnlyOverlay(): ReactNode {
             stroke="#101923"
             strokeWidth="4"
           />
-          <text
-            dy="0.34em"
-            fill="#101923"
-            fontSize={annotation.category === 'Special' ? 18 : 27}
-            fontWeight="bold"
-            textAnchor="middle"
-          >
+          <text dy="0.34em" fill="#101923" fontSize="20" fontWeight="700" textAnchor="middle">
             {annotation.mapLabel}
           </text>
         </g>
       ))}
       <g transform={`translate(${hubMapFountainAnnotation.x} ${hubMapFountainAnnotation.y})`}>
         <rect
-          x="-30"
-          y="-30"
-          width="60"
-          height="60"
+          x="-40"
+          y="-40"
+          width="80"
+          height="80"
           rx="10"
           fill="#6cc4ff"
           stroke="#101923"
           strokeWidth="4"
           transform="rotate(45)"
         />
-        <text
-          y="66"
-          fill="#eaf6ff"
-          stroke="#101923"
-          strokeWidth="5"
-          paintOrder="stroke"
-          fontSize="24"
-          fontWeight="bold"
-          textAnchor="middle"
-        >
+        <text dy="0.34em" fill="#101923" fontSize="20" fontWeight="700" textAnchor="middle">
           Fountain
         </text>
       </g>

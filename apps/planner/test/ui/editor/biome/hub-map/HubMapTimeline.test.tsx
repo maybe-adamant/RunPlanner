@@ -3,11 +3,8 @@
 import { catalog } from '@run-planner/hades2-catalog';
 import {
   applyProjectCommand,
-  createFountainRarityOutcomeAddress,
   createHubDecisionAddress,
-  createHubFountainAddress,
   createIncomingRewardAddress,
-  createRouteStartKeepsakeSelectionAddress,
   hubVisitSlotKeys,
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
@@ -35,7 +32,6 @@ async function showTimeline(user: {
 }
 
 const hub = createHubDecisionAddress(nBiome, 'hub');
-const fountainOutcome = createFountainRarityOutcomeAddress(createHubFountainAddress(nBiome, 'hub'));
 
 function withHubActions(
   project: ProjectDocument,
@@ -139,50 +135,6 @@ describe('HubMapTimeline', () => {
     );
   });
 
-  it('moves the fountain as a reorder that keeps its Phial target', async () => {
-    const withPhial = applyProjectCommand(loadSurfaceNProject(), catalog, {
-      kind: 'ReplaceStartingKeepsake',
-      selection: createRouteStartKeepsakeSelectionAddress('Surface'),
-      keepsakeKey: 'FountainRarityKeepsake',
-    });
-    const visits = nVisitSlotKeys.slice(0, 3);
-    const targeted = applyProjectCommand(withHubActions(withPhial, visits, 3), catalog, {
-      kind: 'ReplaceFountainRarityTarget',
-      outcome: fountainOutcome,
-      targetTraitKey: 'HermesWeaponBoon',
-    });
-    const view = renderHubDecisionWorkbench(targeted);
-    await showTimeline(view.user);
-    // No room follows the final planned action, so the Hub hosts its controls.
-    const controls = screen.getByRole('region', { name: 'Fountain order' });
-    const placements = within(controls).getByRole('group', { name: 'Fountain use' });
-    expect(
-      within(placements)
-        .getByRole('button', { name: 'After visit 3' })
-        .getAttribute('aria-pressed'),
-    ).toBe('true');
-    expect(within(placements).queryByRole('button', { name: /Not used/ })).toBeNull();
-
-    // Keyboard focus alone never commits; Enter chooses the position.
-    const historySize = view.application.store.getState().projectWorkspace.history!.past.length;
-    act(() => within(placements).getByRole('button', { name: 'After visit 2' }).focus());
-    await view.user.keyboard('{ArrowLeft}{ArrowRight}');
-    expect(view.application.store.getState().projectWorkspace.history!.past).toHaveLength(
-      historySize,
-    );
-    await view.user.keyboard('{Enter}');
-    await waitFor(() =>
-      expect(nHubState(view.application).decision.actions).toEqual(hubVisitActions(visits, 2)),
-    );
-    expect(nHubState(view.application).decision.fountainRarityResult).toEqual({
-      targetTraitKey: 'HermesWeaponBoon',
-    });
-    // Ordering remains here; only the Phial target moves to the third visit's room.
-    expect(screen.queryByRole('region', { name: 'Hub fountain' })).toBeNull();
-    expect(screen.getByRole('region', { name: 'Fountain order' })).toBeTruthy();
-    expect(screen.queryByRole('button', { name: /Hub fountain controls:/ })).toBeNull();
-  });
-
   it('appends unvisited rooms sequentially until the authored visit order reaches capacity', async () => {
     const view = renderHubDecisionWorkbench(twoVisitHubProject());
     await showTimeline(view.user);
@@ -218,7 +170,18 @@ describe('HubMapTimeline', () => {
     expect(visited.getAttribute('aria-disabled')).toBeNull();
     expect(visited.getAttribute('aria-description')).toBe('Reward: Hermes');
     expect(visited.getAttribute('title')).toBe('Combat 05: Hermes');
+    const focusBefore = view.application.store.getState().editorSession.focusedSemanticOwner;
     await view.user.click(visited);
+    expect(view.application.store.getState().editorSession.focusedSemanticOwner).toEqual(
+      focusBefore,
+    );
+    const popup = screen.getByRole('dialog', { name: 'Combat 05' });
+    expect(within(popup).getByText('Reward: Hermes')).toBeTruthy();
+    await view.user.keyboard('{Escape}');
+    expect(screen.queryByRole('dialog')).toBeNull();
+    await waitFor(() => expect(document.activeElement).toBe(visited));
+    await view.user.click(visited);
+    await view.user.click(screen.getByRole('button', { name: 'Open Room →' }));
     expect(view.application.store.getState().editorSession.focusedSemanticOwner).toMatchObject({
       kind: 'occurrence',
       occurrenceId: nOccurrenceId('combat05'),
