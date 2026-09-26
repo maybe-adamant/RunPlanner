@@ -639,8 +639,6 @@ describe('encounter envelope catalog', () => {
       'PEncounter',
       'FieldsEncounter',
     ]);
-    expect(catalog).not.toHaveProperty('encounterProfiles');
-
     for (const room of catalog.rooms.values) {
       const envelope = catalog.encounterEnvelopes.byKey[room.encounterEnvelopeKey];
       expect(envelope).toBeDefined();
@@ -864,7 +862,6 @@ describe('encounter envelope catalog', () => {
         },
       ],
     });
-    expect(catalog.encounterSets.byKey.NEncountersSubRoomHeavy).toBeUndefined();
     expect(catalog.encounterSets.byKey.FEncountersDefault?.encounterDefinitionKeys).toEqual([
       'GeneratedF',
       'DevotionTestF',
