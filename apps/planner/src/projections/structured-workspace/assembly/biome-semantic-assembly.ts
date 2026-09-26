@@ -432,9 +432,10 @@ function attachHubRoomPresentation(
     );
     const host = nodes[index];
     if (host?.kind !== 'occurrenceWorkbench') {
-      throw new StructuredWorkspaceProjectionContractError(
-        `${hub.key} has no room workbench for its fountain controls`,
-      );
+      // A retained Hub can sit beyond the materialized route frontier.
+      markerDestinations.redirect([hub.fountain.outcomeMarker], hub.key);
+      markerDestinations.setHubTab([hub.fountain.outcomeMarker], 'timeline');
+      continue;
     }
     nodes[index] = Object.freeze({
       ...host,
