@@ -69,6 +69,8 @@ export interface EncounterPhaseCandidateSupport {
 export type EncounterPhaseSequenceStatus =
   | {
       readonly kind: 'active';
+      /** Exact selected identity resolved at preparation, before recording or execution. */
+      readonly encounterDefinitionKey?: string;
       /** Present only after this phase actually starts; preparation alone is not execution. */
       readonly execution?: 'normal' | 'skippedByFigLeaf';
     }
@@ -400,6 +402,13 @@ export function prepareRoomEncounterPhases(
       if (resolvedPhase === undefined) {
         throw new Error(`${room.gameName}.${phase.slotKey} lost fixed encounter identity`);
       }
+      statuses[statuses.length - 1] = Object.freeze({
+        origin,
+        status: Object.freeze({
+          kind: 'active',
+          encounterDefinitionKey: resolvedPhase.encounterKey,
+        }),
+      });
       if (!activationSatisfied) {
         findings.push(slotActivationFinding(origin, preparation.sequence, phase.slotKey));
         blockedAt ??= origin;
@@ -438,6 +447,13 @@ export function prepareRoomEncounterPhases(
         resolveEncounterAuthoringProfile(profile, resolution),
       ]),
     );
+    const selectedDefinitionKey = resolvedDefinitionsByProfile.get(phase.authoredChoiceKey);
+    if (selectedDefinitionKey !== undefined) {
+      statuses[statuses.length - 1] = Object.freeze({
+        origin,
+        status: Object.freeze({ kind: 'active', encounterDefinitionKey: selectedDefinitionKey }),
+      });
+    }
     const candidateEncounterKeys = Object.freeze(
       profiles
         .filter((profile) => {
