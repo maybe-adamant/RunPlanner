@@ -178,6 +178,10 @@ semantic interpretation.
 
 Keep the complete policy matrix with its owning authority. Consumer suites
 retain representative contact witnesses rather than repeat that matrix.
+Where a policy has a callable owner, enumerate its edge cases against that
+owner with minimal inputs; whole-route evaluation proves the wiring with one or
+two witnesses rather than carrying the matrix. A slice that adds a stronger
+witness removes the one it supersedes.
 A targeted effect needs an incomplete-target repair witness, not just proof
 that a complete acquisition succeeds. A generated pickup needs a source edit
 and removal witness, not just proof that it appears once.
