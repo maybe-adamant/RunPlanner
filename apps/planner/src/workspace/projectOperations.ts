@@ -14,12 +14,8 @@ import type { AutosaveRecoveryAdapter } from '../persistence/autosaveRecovery';
 import { loadProjectDocument } from '../persistence/projectDocumentLoader';
 import { createInitialProject } from '../composition/projectBootstrap';
 import type { ProfileFileAdapter, ProfileFileReference } from '../persistence/profileFile';
-import type {
-  GameModuleStatus,
-  GamePlanPublisher,
-  GamePlanSlotNumber,
-} from '../persistence/gameModuleHost';
-import { describePublicationBlocker } from '../projections/gameModuleSettings';
+import type { GamePlanPublisher, GamePlanSlotNumber } from '../persistence/gameModuleHost';
+import { describePublicationBlocker } from '../projections/gamePanel';
 import {
   newProjectCreated,
   profileLoadSucceeded,
@@ -39,6 +35,13 @@ export type ProjectOperation =
   | 'saveProfile'
   | 'saveProfileAs';
 
+export type CurrentGamePlan =
+  | { readonly kind: 'noProject' }
+  | { readonly kind: 'notPublishable'; readonly reason: string }
+  | { readonly kind: 'publishable'; readonly planFingerprint: string };
+
+const NO_PROJECT_PLAN: CurrentGamePlan = Object.freeze({ kind: 'noProject' });
+
 export type ProjectOperationResult = {
   readonly operation: ProjectOperation;
   readonly status: 'cancelled' | 'failure' | 'success';
@@ -52,10 +55,9 @@ export interface ProjectOperations {
   ): Promise<ProjectOperationResult>;
   discardAutosaveRecovery(): ProjectOperationResult;
   exportAutosaveRecovery(): Promise<ProjectOperationResult>;
-  readonly gamePlanAvailable: boolean;
   readonly saveAsAvailable: boolean;
-  inspectGamePublication(): Promise<GameModuleStatus>;
-  openGamePage(url: string): Promise<void>;
+  /** Whether the current project compiles to an execution plan, and its fingerprint. */
+  inspectCurrentGamePlan(): CurrentGamePlan;
   publishGame(slotNumber: GamePlanSlotNumber): Promise<ProjectOperationResult>;
   saveProfile(): Promise<ProjectOperationResult>;
   saveProfileAs(): Promise<ProjectOperationResult>;
@@ -77,7 +79,7 @@ const operationLabels: Readonly<Record<ProjectOperation, string>> = Object.freez
   exportRecovery: 'Export Autosave',
   loadProfile: 'Load Profile',
   new: 'New project',
-  publishGame: 'Publish to Game',
+  publishGame: 'Send to game',
   saveProfile: 'Save Profile',
   saveProfileAs: 'Save As',
 });
@@ -115,9 +117,9 @@ export function createProjectOperations(
   options: CreateProjectOperationsOptions,
 ): ProjectOperations {
   let activeProfileFile = options.activeProfileFile ?? null;
+  const currentPlans = new WeakMap<object, CurrentGamePlan>();
   const currentProject = () => selectPresentProject(options.store.getState());
   return Object.freeze({
-    gamePlanAvailable: options.gamePlanPublisher !== undefined,
     saveAsAvailable: options.profileFile.supportsSaveAs === true,
     async createNew(
       routeKey: string,
@@ -181,17 +183,25 @@ export function createProjectOperations(
         return failure('exportRecovery', error);
       }
     },
-    async inspectGamePublication(): Promise<GameModuleStatus> {
-      if (options.gamePlanPublisher === undefined) {
-        throw new Error('Publish to Game is available only in the desktop application.');
+    inspectCurrentGamePlan(): CurrentGamePlan {
+      const workspace = options.store.getState().projectWorkspace;
+      if (workspace.kind !== 'openProject') return NO_PROJECT_PLAN;
+      const cached = currentPlans.get(workspace.assembly);
+      if (cached !== undefined) return cached;
+      let current: CurrentGamePlan;
+      try {
+        const plan = compileExecutionPlan({
+          product: assembleExecutionProduct({
+            assembly: workspace.assembly,
+            catalog: options.catalog,
+          }),
+        });
+        current = Object.freeze({ kind: 'publishable', planFingerprint: plan.planFingerprint });
+      } catch (error) {
+        current = Object.freeze({ kind: 'notPublishable', reason: errorDetail(error) });
       }
-      return options.gamePlanPublisher.status();
-    },
-    async openGamePage(url: string): Promise<void> {
-      if (options.gamePlanPublisher === undefined) {
-        throw new Error('Opening game pages is available only in the desktop application.');
-      }
-      await options.gamePlanPublisher.openExternalPage(url);
+      currentPlans.set(workspace.assembly, current);
+      return current;
     },
     async publishGame(slotNumber: GamePlanSlotNumber): Promise<ProjectOperationResult> {
       try {

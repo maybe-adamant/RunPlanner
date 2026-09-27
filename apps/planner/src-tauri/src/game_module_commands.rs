@@ -45,7 +45,7 @@ fn established_target(config_dir: &Path) -> Result<ResolvedTarget, String> {
     target.ok_or_else(|| {
         status
             .target_problem
-            .unwrap_or_else(|| "Locate the game module target in Settings first.".to_owned())
+            .unwrap_or_else(|| "Set the game location in the Game panel first.".to_owned())
     })
 }
 

@@ -81,8 +81,9 @@ describe('App', () => {
     expect(markup).toContain('Underworld');
     expect(markup).toContain('Surface');
     expect(markup).toContain('About</button>');
-    expect(markup).toContain('Settings</button>');
-    expect(markup).not.toContain('<h2 id="settings-dialog-title">');
+    expect(markup).toContain('>Game</button>');
+    expect(markup).not.toContain('Settings');
+    expect(markup).not.toContain('<h2 id="game-dialog-title">');
   });
 
   it('keeps project information out of the route workspace', () => {
@@ -92,7 +93,7 @@ describe('App', () => {
     expect(markup).not.toContain('class="project-findings"');
     expect(markup).toContain('class="app-route-identity">Underworld');
     expect(markup).toContain('About</button>');
-    expect(markup).not.toContain('<h2>Settings</h2>');
+    expect(markup).not.toContain('<h2 id="game-dialog-title">');
   });
 
   it('limits Findings to the selected route', () => {

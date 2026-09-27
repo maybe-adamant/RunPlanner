@@ -24,6 +24,9 @@ pub enum TargetKind {
 pub struct TargetRecord {
     pub path: PathBuf,
     pub kind: TargetKind,
+    /// The slot most recently published from this planner to this target.
+    #[serde(default, rename = "lastSlot", skip_serializing_if = "Option::is_none")]
+    pub last_slot: Option<u8>,
 }
 
 /// A validated game target: the folder holding `ReturnOfModding` and that
@@ -222,12 +225,39 @@ pub fn validate_target(
 pub fn remember_target(config_dir: &Path, target: &ResolvedTarget) -> Result<(), String> {
     fs::create_dir_all(config_dir)
         .map_err(|error| format!("Could not save the game target: {error}"))?;
-    let json = serde_json::to_vec(&TargetRecord {
-        path: target.root.clone(),
-        kind: target.kind,
-    })
-    .map_err(|error| error.to_string())?;
+    // Re-choosing the same folder keeps its last slot; any other target starts without one.
+    let last_slot = remembered_target(config_dir)
+        .ok()
+        .flatten()
+        .filter(|record| record.path == target.root)
+        .and_then(|record| record.last_slot);
+    write_record(
+        config_dir,
+        &TargetRecord {
+            path: target.root.clone(),
+            kind: target.kind,
+            last_slot,
+        },
+    )
+}
+
+fn write_record(config_dir: &Path, record: &TargetRecord) -> Result<(), String> {
+    let json = serde_json::to_vec(record).map_err(|error| error.to_string())?;
     atomic_file::write(&config_dir.join(TARGET_FILE), &json, "game target")
+}
+
+/// Records the last published slot for the saved target, if it is still `root`.
+pub fn remember_last_slot(config_dir: &Path, root: &Path, slot: u8) -> Result<(), String> {
+    match remembered_target(config_dir)? {
+        Some(record) if record.path == root => write_record(
+            config_dir,
+            &TargetRecord {
+                last_slot: Some(slot),
+                ..record
+            },
+        ),
+        _ => Ok(()),
+    }
 }
 
 /// Clears the saved target; files at the target are never touched.
@@ -251,8 +281,13 @@ pub fn remembered_target(config_dir: &Path) -> Result<Option<TargetRecord>, Stri
     }
     let json = fs::read(&file)
         .map_err(|error| format!("The saved game target could not be read: {error}"))?;
-    serde_json::from_slice(&json)
-        .map(Some)
+    serde_json::from_slice::<TargetRecord>(&json)
+        .map(|record| {
+            Some(TargetRecord {
+                last_slot: record.last_slot.filter(|slot| (1..=6).contains(slot)),
+                ..record
+            })
+        })
         .map_err(|_| "The saved game target could not be read.".to_owned())
 }
 
@@ -367,6 +402,21 @@ mod tests {
         let record = remembered_target(&config).unwrap().unwrap();
         assert_eq!(record.path, target.root);
         assert_eq!(record.kind, TargetKind::Discovered);
+        remember_last_slot(&config, &target.root, 4).unwrap();
+        remember_target(&config, &target).unwrap();
+        assert_eq!(
+            remembered_target(&config).unwrap().unwrap().last_slot,
+            Some(4)
+        );
+        fs::write(
+            config.join(TARGET_FILE),
+            serde_json::to_vec(&serde_json::json!({
+                "path": target.root, "kind": "discovered", "lastSlot": 9
+            }))
+            .unwrap(),
+        )
+        .unwrap();
+        assert_eq!(remembered_target(&config).unwrap().unwrap().last_slot, None);
         let manual = resolve_target(&elsewhere, TargetKind::Manual).unwrap();
         remember_target(&config, &manual).unwrap();
         assert_eq!(

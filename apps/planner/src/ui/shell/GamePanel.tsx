@@ -1,18 +1,29 @@
-import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  useSyncExternalStore,
+  type ReactNode,
+} from 'react';
 
 import type {
-  GameModuleHost,
-  GameModuleStatus,
+  GamePlanSlotNumber,
+  GameStatusController,
   GameTargetDiscovery,
 } from '@planner/persistence/gameModuleHost';
+import type { ProjectOperations } from '@planner/workspace/projectOperations';
 import {
   describeInstallOutcome,
   describeRemoveOutcome,
-  projectGameModuleSettings,
+  projectGamePanel,
+  projectGameIndicator,
+  projectGamePlans,
   projectGameProfileChoices,
+  type GamePlansProduct,
   type GameLocationProduct,
   type GameModuleSectionProduct,
-} from '@planner/projections/gameModuleSettings';
+} from '@planner/projections/gamePanel';
 import { ContextualPicker } from '../controls/ContextualPicker';
 import { ExternalPageLink } from '../controls/ExternalPageLink';
 
@@ -57,7 +68,7 @@ function ModalDialog({
       }}
       ref={dialogRef}
     >
-      <section className="game-publication-dialog settings-dialog">{children}</section>
+      <section className="game-publication-dialog game-panel-dialog">{children}</section>
     </dialog>
   );
 }
@@ -65,6 +76,7 @@ function ModalDialog({
 function ConfirmationDialog({
   children,
   confirmLabel,
+  describedBy,
   id,
   onCancel,
   onConfirm,
@@ -73,6 +85,7 @@ function ConfirmationDialog({
 }: {
   readonly children: ReactNode;
   readonly confirmLabel: string;
+  readonly describedBy?: string;
   readonly id: string;
   readonly onCancel: () => void;
   readonly onConfirm: () => void;
@@ -80,7 +93,12 @@ function ConfirmationDialog({
   readonly title: string;
 }) {
   return (
-    <ModalDialog labelledBy={id} onCancel={onCancel} pending={pending}>
+    <ModalDialog
+      {...(describedBy === undefined ? {} : { describedBy })}
+      labelledBy={id}
+      onCancel={onCancel}
+      pending={pending}
+    >
       <header className="panel-heading">
         <h2 id={id}>{title}</h2>
       </header>
@@ -209,8 +227,12 @@ function LocationSection({
   }, [focusRequest, pending, changing, location.state]);
   if (location.state === 'set' && !changing) {
     return (
-      <section aria-labelledby="game-location-title" className="settings-section" ref={sectionRef}>
-        <div className="settings-location-line">
+      <section
+        aria-labelledby="game-location-title"
+        className="game-panel-section"
+        ref={sectionRef}
+      >
+        <div className="game-panel-location-line">
           <h3 id="game-location-title">Game location</h3>
           <span title={location.path ?? undefined}>
             {location.name} ({location.kindLabel})
@@ -246,10 +268,10 @@ function LocationSection({
     );
   }
   return (
-    <section aria-labelledby="game-location-title" className="settings-section" ref={sectionRef}>
+    <section aria-labelledby="game-location-title" className="game-panel-section" ref={sectionRef}>
       <h3 id="game-location-title">Game location</h3>
       <p className="game-publication-hint">Choose where Hades II mods are installed.</p>
-      <div className="settings-actions">
+      <div className="game-panel-actions">
         <button
           className="secondary-action action-compact"
           disabled={pending}
@@ -318,16 +340,16 @@ function ModuleSection({
   readonly pending: boolean;
 }) {
   return (
-    <section aria-labelledby="game-module-settings-title" className="settings-section">
-      <h3 id="game-module-settings-title">Game module</h3>
-      <p className="settings-module-status" data-tone={module.tone}>
+    <section aria-labelledby="game-module-title" className="game-panel-section">
+      <h3 id="game-module-title">Game module</h3>
+      <p className="game-panel-module-status" data-tone={module.tone}>
         {module.summary}
       </p>
       {module.steps.length === 0 ? null : (
-        <ol aria-label="Game module steps" className="settings-steps">
+        <ol aria-label="Game module steps" className="game-panel-steps">
           {module.steps.map((step) => (
             <li data-tone={step.tone} key={step.key}>
-              <span aria-hidden="true" className="settings-step-icon">
+              <span aria-hidden="true" className="game-panel-step-icon">
                 {step.tone === 'error' ? '✕' : '!'}
               </span>
               <span className="visually-hidden">
@@ -336,7 +358,7 @@ function ModuleSection({
               <span>
                 {step.text}
                 {step.found === null ? null : (
-                  <span className="settings-step-found"> (found {step.found})</span>
+                  <span className="game-panel-step-found"> (found {step.found})</span>
                 )}
                 {step.link === null ? null : (
                   <>
@@ -370,9 +392,9 @@ function ModuleSection({
           Remove game module
         </button>
       )}
-      <details className="settings-details">
+      <details className="game-panel-details">
         <summary>Details</summary>
-        <dl className="settings-status-list">
+        <dl className="game-panel-status-list">
           {module.details.map((detail) => (
             <div key={detail.key}>
               <dt>{detail.label}</dt>
@@ -395,9 +417,88 @@ function ModuleSection({
   );
 }
 
-function GameSettings({ host }: { readonly host: GameModuleHost }) {
-  const [status, setStatus] = useState<GameModuleStatus | null>(null);
+function PlansSection({
+  feedback,
+  focusSlot,
+  onSend,
+  pending,
+  plans,
+}: {
+  readonly focusSlot: { readonly slot: GamePlanSlotNumber; readonly request: number } | null;
+  readonly feedback: Feedback | null;
+  readonly onSend: (slot: GamePlanSlotNumber, confirm: boolean) => void;
+  readonly pending: boolean;
+  readonly plans: GamePlansProduct;
+}) {
+  const sectionRef = useRef<HTMLElement>(null);
+  const focused = useRef(0);
+  // Returns focus to the slot's action once a confirmation closes and the panel is idle.
+  useEffect(() => {
+    if (focusSlot === null || pending || focusSlot.request === focused.current) return;
+    focused.current = focusSlot.request;
+    sectionRef.current
+      ?.querySelector<HTMLButtonElement>(`button[data-slot="${focusSlot.slot}"]`)
+      ?.focus();
+  }, [focusSlot, pending]);
+  return (
+    <section aria-labelledby="game-plans-title" className="game-panel-section" ref={sectionRef}>
+      <h3 id="game-plans-title">Plans in game</h3>
+      {plans.unavailableReason === null ? null : (
+        <p className="game-publication-hint">{plans.unavailableReason}</p>
+      )}
+      <ol aria-label="Plan slots" className="game-panel-slots">
+        {plans.rows.map((row) => (
+          <li data-state={row.state} key={row.slot}>
+            <span className="game-panel-slot-number">Slot {row.slot}</span>
+            <span className="game-panel-slot-summary">
+              {row.summary}
+              {row.sent === null ? null : ` · ${row.sent}`}
+            </span>
+            {row.current && <span className="game-panel-slot-current">current plan</span>}
+            {row.action === null ? null : (
+              <button
+                aria-label={`${row.action.label} (slot ${row.slot})`}
+                className="secondary-action action-compact"
+                data-slot={row.slot}
+                disabled={pending}
+                onClick={() => onSend(row.slot, row.action?.confirm === true)}
+                type="button"
+              >
+                {row.action.label}
+              </button>
+            )}
+          </li>
+        ))}
+      </ol>
+      <FeedbackLine feedback={feedback} />
+    </section>
+  );
+}
+
+function GameSection({
+  gameStatus,
+  operations,
+}: {
+  readonly gameStatus: GameStatusController;
+  readonly operations: ProjectOperations;
+}) {
+  const host = gameStatus.host;
+  const snapshot = useSyncExternalStore(
+    gameStatus.subscribe,
+    gameStatus.getSnapshot,
+    gameStatus.getSnapshot,
+  );
+  const status = snapshot.status;
+  const setStatus = gameStatus.publish;
   const [pending, setPending] = useState(true);
+  const [plansFeedback, setPlansFeedback] = useState<Feedback | null>(null);
+  const [replaceSlot, setReplaceSlot] = useState<GamePlanSlotNumber | null>(null);
+  const [focusSlot, setFocusSlot] = useState<{
+    readonly slot: GamePlanSlotNumber;
+    readonly request: number;
+  } | null>(null);
+  const returnFocusTo = (slot: GamePlanSlotNumber) =>
+    setFocusSlot((current) => ({ slot, request: (current?.request ?? 0) + 1 }));
   const [feedback, setFeedback] = useState<Feedback | null>(null);
   const [changing, setChanging] = useState(false);
   const [discovery, setDiscovery] = useState<GameTargetDiscovery | null>(null);
@@ -427,11 +528,8 @@ function GameSettings({ host }: { readonly host: GameModuleHost }) {
 
   useEffect(() => {
     let current = true;
-    host
-      .status()
-      .then((next) => {
-        if (current) setStatus(next);
-      })
+    gameStatus
+      .refresh()
       .catch((error: unknown) => {
         if (current) setFeedback({ tone: 'alert', text: errorText(error) });
       })
@@ -441,9 +539,32 @@ function GameSettings({ host }: { readonly host: GameModuleHost }) {
     return () => {
       current = false;
     };
-  }, [host]);
+  }, [gameStatus]);
 
-  const product = status === null ? null : projectGameModuleSettings(status);
+  const product = status === null ? null : projectGamePanel(status);
+  // The current plan is compiled only while the Plans section can show.
+  const plans =
+    status !== null && projectGameIndicator(snapshot).state === 'ready'
+      ? projectGamePlans(status, operations.inspectCurrentGamePlan(), snapshot.readAt)
+      : null;
+  const send = async (slot: GamePlanSlotNumber) => {
+    setPending(true);
+    setPlansFeedback(null);
+    setReplaceSlot(null);
+    try {
+      const result = await operations.publishGame(slot);
+      setPlansFeedback({
+        tone: result.status === 'success' ? 'status' : 'alert',
+        text: result.message,
+      });
+      await gameStatus.refresh();
+    } catch (error) {
+      setPlansFeedback({ tone: 'alert', text: errorText(error) });
+    } finally {
+      setPending(false);
+      returnFocusTo(slot);
+    }
+  };
 
   const applyTarget = async (request: TargetRequest) => {
     const next =
@@ -594,6 +715,37 @@ function GameSettings({ host }: { readonly host: GameModuleHost }) {
           pending={pending}
         />
       )}
+      {plans === null ? null : (
+        <PlansSection
+          feedback={plansFeedback}
+          focusSlot={focusSlot}
+          onSend={(slot, confirm) => {
+            if (confirm) setReplaceSlot(slot);
+            else void send(slot);
+          }}
+          pending={pending}
+          plans={plans}
+        />
+      )}
+      {replaceSlot !== null && (
+        <ConfirmationDialog
+          confirmLabel="Replace"
+          describedBy="game-plan-replace-message"
+          id="game-plan-replace-title"
+          onCancel={() => {
+            setReplaceSlot(null);
+            returnFocusTo(replaceSlot);
+          }}
+          onConfirm={() => void send(replaceSlot)}
+          pending={pending}
+          title={`Replace the plan in slot ${replaceSlot}?`}
+        >
+          <p className="game-publication-message" id="game-plan-replace-message">
+            The plan already in this slot is overwritten with the current plan. A run already in
+            progress keeps the plan it started with.
+          </p>
+        </ConfirmationDialog>
+      )}
       {switchRequest !== null && (
         <SwitchAwayDialog
           name={product.location.name ?? 'the current game location'}
@@ -617,7 +769,7 @@ function GameSettings({ host }: { readonly host: GameModuleHost }) {
             pending={pending}
             title="Replace existing game module?"
           >
-            <ul className="settings-notices">
+            <ul className="game-panel-notices">
               {product.module.consent.facts.map((fact) => (
                 <li key={fact}>{fact}</li>
               ))}
@@ -642,27 +794,29 @@ function GameSettings({ host }: { readonly host: GameModuleHost }) {
   );
 }
 
-export function SettingsPanel({
-  gameModule,
+export function GamePanel({
+  gameStatus,
   onClose,
+  operations,
 }: {
-  readonly gameModule?: GameModuleHost;
+  readonly gameStatus?: GameStatusController;
   readonly onClose: () => void;
+  readonly operations: ProjectOperations;
 }) {
   return (
-    <ModalDialog labelledBy="settings-dialog-title" onCancel={onClose} pending={false}>
+    <ModalDialog labelledBy="game-dialog-title" onCancel={onClose} pending={false}>
       <header className="panel-heading">
         <div>
           <p className="eyebrow">Run Planner</p>
-          <h2 id="settings-dialog-title">Settings</h2>
+          <h2 id="game-dialog-title">Game</h2>
         </div>
       </header>
-      {gameModule === undefined ? (
+      {gameStatus === undefined ? (
         <p className="game-publication-hint">
           Game location and game module management are available in the desktop application.
         </p>
       ) : (
-        <GameSettings host={gameModule} />
+        <GameSection gameStatus={gameStatus} operations={operations} />
       )}
       <footer className="game-publication-actions">
         <button className="quiet-action" onClick={onClose} type="button">

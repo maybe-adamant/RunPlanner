@@ -43,7 +43,7 @@ export function renderPlannerForInteraction(options: RenderPlannerOptions = {}) 
         catalogSummary={application.catalogSummary}
         buildIdentity={application.buildIdentity}
         editorNavigation={application.editorNavigation}
-        {...(application.gameModule === undefined ? {} : { gameModule: application.gameModule })}
+        {...(application.gameStatus === undefined ? {} : { gameStatus: application.gameStatus })}
         projectOperations={application.projectOperations}
         selectStructuredWorkspace={application.selectStructuredWorkspace}
       />

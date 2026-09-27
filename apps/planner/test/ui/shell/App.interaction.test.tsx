@@ -663,49 +663,7 @@ describe('planner history interaction', () => {
     expect(screen.getByRole('button', { name: 'Loadout' })).toBeTruthy();
   });
 
-  it('blocks publication with the found and required values and links to Settings', async () => {
-    const game = createFakeGameModuleHost(
-      gameModuleStatus({
-        inspection: { modpackLib: { state: 'older', found: '4.0.1' } },
-        publicationBlockers: [{ code: 'modpackLibOlder', found: '4.0.1', required: '4.1.0' }],
-      }),
-    );
-    const application = createApplication({ gameModuleHost: game.host });
-    const project = createCompleteFGProject();
-    application.store.dispatch(
-      authoredProjectReplaced({
-        ...project,
-        route: { ...project.route, biomes: project.route.biomes.slice(0, 1) },
-      }),
-    );
-    const { user } = renderPlannerForInteraction({ application });
-    await user.click(screen.getByRole('button', { name: 'File' }));
-    await user.click(screen.getByRole('menuitem', { name: 'Publish to Game…' }));
-    const dialog = await screen.findByRole('dialog', { name: 'Publish to game' });
-    expect(within(dialog).getByText('Target: /profiles/h2-dev')).toBeTruthy();
-    expect(within(dialog).getByRole('alert').textContent).toBe(
-      'Update ModpackLib to 4.1.0+ in r2modman (found 4.0.1). — Thunderstore page',
-    );
-    expect(within(dialog).queryByLabelText('Slot')).toBeNull();
-    expect(within(dialog).queryByRole('button', { name: 'Publish' })).toBeNull();
-    await user.click(
-      within(dialog).getByRole('link', {
-        name: 'Open ModpackLib’s Thunderstore page in your browser',
-      }),
-    );
-    expect(game.host.openExternalPage).toHaveBeenCalledWith(
-      'https://thunderstore.io/c/hades-ii/p/adamant/ModpackLib/',
-    );
-    await user.click(within(dialog).getByRole('button', { name: 'Open Settings' }));
-    expect(screen.queryByRole('dialog', { name: 'Publish to game' })).toBeNull();
-    const settings = await screen.findByRole('dialog', { name: 'Settings' });
-    expect(
-      (await within(settings).findByRole('list', { name: 'Game module steps' })).textContent,
-    ).toBe('✕Required: Update ModpackLib to 4.1.0+ in r2modman (found 4.0.1) — Thunderstore page');
-    expect(game.published).toHaveLength(0);
-  });
-
-  it('requires a plan slot and publishes to the established target', async () => {
+  it('offers no Publish to Game in the File menu', async () => {
     const game = createFakeGameModuleHost();
     const application = createApplication({ gameModuleHost: game.host });
     const project = createCompleteFGProject();
@@ -716,50 +674,12 @@ describe('planner history interaction', () => {
       }),
     );
     const { user } = renderPlannerForInteraction({ application });
-
     await user.click(screen.getByRole('button', { name: 'File' }));
-    await user.click(screen.getByRole('menuitem', { name: 'Publish to Game…' }));
-    const publicationDialog = await screen.findByRole('dialog', { name: 'Publish to game' });
-    expect(document.querySelector('.project-file-actions')?.contains(publicationDialog)).toBe(
-      false,
-    );
-    expect(within(publicationDialog).queryByLabelText('Profile')).toBeNull();
-    const slot = within(publicationDialog).getByLabelText('Slot') as HTMLSelectElement;
-    expect(slot.value).toBe('');
-    expect(Array.from(slot.options).map((option) => option.value)).toEqual([
-      '',
-      '1',
-      '2',
-      '3',
-      '4',
-      '5',
-      '6',
-    ]);
-    expect(within(publicationDialog).getByRole('button', { name: /^Publish$/ })).toHaveProperty(
-      'disabled',
-      true,
-    );
-
-    await user.click(screen.getByRole('button', { name: /^Cancel$/ }));
-    await user.click(screen.getByRole('button', { name: 'File' }));
-    await user.click(screen.getByRole('menuitem', { name: 'Publish to Game…' }));
-    expect((screen.getByLabelText('Slot') as HTMLSelectElement).value).toBe('');
-    await user.selectOptions(screen.getByLabelText('Slot'), '3');
-    await user.click(screen.getByRole('button', { name: /^Publish$/ }));
-
-    expect(game.published).toHaveLength(1);
-    expect(game.published[0]).toMatchObject({ slotNumber: 3 });
-    expect(game.host.discoverTargets).not.toHaveBeenCalled();
-    expect(screen.queryByRole('dialog', { name: 'Publish to game' })).toBeNull();
-    expect(screen.getByText('Published to game')).toBeTruthy();
+    expect(screen.queryByRole('menuitem', { name: /Publish/ })).toBeNull();
   });
 
-  it('keeps the publish dialog open with the host reason when publication is refused', async () => {
-    const game = createFakeGameModuleHost(gameModuleStatus(), {
-      status: 'blocked',
-      message: 'The game target is not ready for publication.',
-      blockers: [{ code: 'moduleMismatch', found: null, required: '0.1.0' }],
-    });
+  it('re-sends the current plan from the header to the last slot sent', async () => {
+    const game = createFakeGameModuleHost(gameModuleStatus({ lastSlot: 4 }));
     const application = createApplication({ gameModuleHost: game.host });
     const project = createCompleteFGProject();
     application.store.dispatch(
@@ -769,15 +689,89 @@ describe('planner history interaction', () => {
       }),
     );
     const { user } = renderPlannerForInteraction({ application });
-    await user.click(screen.getByRole('button', { name: 'File' }));
-    await user.click(screen.getByRole('menuitem', { name: 'Publish to Game…' }));
-    const dialog = await screen.findByRole('dialog', { name: 'Publish to game' });
-    await user.selectOptions(within(dialog).getByLabelText('Slot'), '1');
-    await user.click(within(dialog).getByRole('button', { name: 'Publish' }));
-    expect(
-      await within(dialog).findByText('Update the game module in Settings (found unrecognized).'),
-    ).toBeTruthy();
-    expect(within(dialog).getByRole('button', { name: 'Open Settings' })).toBeTruthy();
+    expect(await screen.findByRole('button', { name: 'Game — ready' })).toBeTruthy();
+    await user.click(await screen.findByRole('button', { name: 'Send to game (slot 4)' }));
+    expect(game.published.map((publication) => publication.slotNumber)).toEqual([4]);
+    expect(await screen.findByText('Sent to slot 4.')).toBeTruthy();
+    expect(game.host.status.mock.calls.length).toBeGreaterThanOrEqual(2);
+
+    game.host.publish.mockResolvedValueOnce({
+      status: 'nativeWrite',
+      message: 'could not write plan slot.',
+      blockers: [],
+    });
+    await user.click(screen.getByRole('button', { name: 'Send to game (slot 4)' }));
+    expect(await screen.findByText('could not write plan slot. Open Game to check.')).toBeTruthy();
+  });
+
+  it('hides the header quick send when the module is not ready or the last slot holds another project', async () => {
+    const notReady = createFakeGameModuleHost(
+      gameModuleStatus({
+        lastSlot: 2,
+        inspection: { modpackLib: { state: 'missing', found: null } },
+        publicationBlockers: [{ code: 'modpackLibMissing', found: null, required: '4.1.0' }],
+      }),
+    );
+    const project = createCompleteFGProject();
+    const firstBiome = {
+      ...project,
+      route: { ...project.route, biomes: project.route.biomes.slice(0, 1) },
+    };
+    const first = createApplication({ gameModuleHost: notReady.host });
+    first.store.dispatch(authoredProjectReplaced(firstBiome));
+    renderPlannerForInteraction({ application: first });
+    expect(await screen.findByRole('button', { name: 'Game — needs setup' })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: /Send to game/ })).toBeNull();
+    cleanup();
+
+    const occupied = gameModuleStatus({ lastSlot: 2 });
+    const other = createFakeGameModuleHost({
+      ...occupied,
+      inspection: {
+        ...occupied.inspection!,
+        planSlots: occupied.inspection!.planSlots.map((slot) =>
+          slot.slot === 2
+            ? {
+                ...slot,
+                state: 'present' as const,
+                modifiedAtMs: 1,
+                routeKey: 'Surface',
+                biomeKeys: ['N'],
+                planFingerprint: 'theirs',
+                projectId: 'someone-else',
+              }
+            : slot,
+        ),
+      },
+    });
+    const second = createApplication({ gameModuleHost: other.host });
+    second.store.dispatch(authoredProjectReplaced(firstBiome));
+    renderPlannerForInteraction({ application: second });
+    expect(await screen.findByRole('button', { name: 'Game — ready' })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: /Send to game/ })).toBeNull();
+  });
+
+  it('hides the header quick send without a last slot or a sendable plan', async () => {
+    const game = createFakeGameModuleHost(gameModuleStatus());
+    const application = createApplication({ gameModuleHost: game.host });
+    const project = createCompleteFGProject();
+    application.store.dispatch(
+      authoredProjectReplaced({
+        ...project,
+        route: { ...project.route, biomes: project.route.biomes.slice(0, 1) },
+      }),
+    );
+    renderPlannerForInteraction({ application });
+    expect(await screen.findByRole('button', { name: 'Game — ready' })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: /Send to game/ })).toBeNull();
+    cleanup();
+
+    const unsendable = createFakeGameModuleHost(gameModuleStatus({ lastSlot: 1 }));
+    const fresh = createApplication({ gameModuleHost: unsendable.host });
+    await fresh.projectOperations.createNew('Underworld');
+    renderPlannerForInteraction({ application: fresh });
+    expect(await screen.findByRole('button', { name: 'Game — ready' })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: /Send to game/ })).toBeNull();
   });
 
   it('binds visible history controls to semantic project history', async () => {

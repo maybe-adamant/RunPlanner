@@ -1,10 +1,14 @@
 import type { ContextualPickerModel } from '@planner/projections/contextual/contextualPicker';
+import type { CurrentGamePlan } from '@planner/workspace/projectOperations';
 import type {
   GameModuleInstallResult,
   GameModuleRemoveResult,
   GameModuleStatus,
   GamePublicationBlocker,
   GameTargetDiscovery,
+  GamePlanSlot,
+  GamePlanSlotNumber,
+  GameStatusSnapshot,
   GameTargetInspection,
   ModpackLibState,
 } from '@planner/persistence/gameModuleHost';
@@ -61,16 +65,10 @@ export interface GameModuleSectionProduct {
   readonly developmentInstallAvailable: boolean;
 }
 
-export interface GameModuleSettingsProduct {
+export interface GamePanelProduct {
   readonly location: GameLocationProduct;
   /** Present only when a target is set and could be inspected. */
   readonly module: GameModuleSectionProduct | null;
-}
-
-export interface GamePublicationReadiness {
-  readonly ready: boolean;
-  readonly targetLocation: string | null;
-  readonly reasons: readonly { readonly text: string; readonly link: GameModuleLink | null }[];
 }
 
 const DEVELOPMENT_VERSION = 'development build';
@@ -121,13 +119,13 @@ export function describePublicationBlocker(blocker: GamePublicationBlocker): str
   const required = blocker.required ?? 'unknown';
   switch (blocker.code) {
     case 'noTarget':
-      return 'Set the game location in Settings.';
+      return 'Set the game location in the Game panel.';
     case 'targetUnavailable':
-      return 'The game location is unavailable. Change it in Settings.';
+      return 'The game location is unavailable. Change it in the Game panel.';
     case 'moduleMissing':
-      return sentence('Install the game module in Settings', null);
+      return sentence('Install the game module in the Game panel', null);
     case 'moduleMismatch':
-      return sentence('Update the game module in Settings', blocker.found ?? 'unrecognized');
+      return sentence('Update the game module in the Game panel', blocker.found ?? 'unrecognized');
     case 'modpackLibMissing': {
       const step = modpackLibStep('missing', blocker.found, required);
       return sentence(step.text, step.found);
@@ -362,7 +360,7 @@ function removalRefusal(inspection: GameTargetInspection): string | null {
   }
 }
 
-export function projectGameModuleSettings(status: GameModuleStatus): GameModuleSettingsProduct {
+export function projectGamePanel(status: GameModuleStatus): GamePanelProduct {
   const { target, inspection } = status;
   return Object.freeze({
     location: Object.freeze({
@@ -420,22 +418,6 @@ export function projectGameProfileChoices(
   });
 }
 
-export function projectGamePublicationReadiness(
-  status: GameModuleStatus,
-): GamePublicationReadiness {
-  return Object.freeze({
-    ready: status.publicationBlockers.length === 0,
-    targetLocation: status.target?.location ?? null,
-    reasons: status.publicationBlockers.map((blocker) => ({
-      text: describePublicationBlocker(blocker),
-      link:
-        blocker.code.startsWith('modpackLib') && status.inspection !== null
-          ? modpackLibLink(status.inspection.modpackLib.pageUrl)
-          : null,
-    })),
-  });
-}
-
 export function describeInstallOutcome(outcome: GameModuleInstallResult['outcome']): string {
   switch (outcome) {
     case 'installed':
@@ -460,4 +442,138 @@ export function describeRemoveOutcome(outcome: GameModuleRemoveResult['outcome']
     case 'r2modmanUnreadable':
       return `${UNREADABLE_MOD_LIST}, so the module was not removed.`;
   }
+}
+
+export interface GameIndicator {
+  readonly state: 'ready' | 'needsSetup' | 'noLocation' | 'checking' | 'unavailable';
+  readonly symbol: '✓' | '!' | '○' | '…';
+  readonly accessibleName: string;
+}
+
+function isReady(status: GameModuleStatus): boolean {
+  return (
+    status.publicationBlockers.length === 0 && projectGamePanel(status).module?.state === 'ready'
+  );
+}
+
+/** The header indicator: one overall state from the same host facts as the Game panel. */
+export function projectGameIndicator(snapshot: GameStatusSnapshot): GameIndicator {
+  const { status, error } = snapshot;
+  if (status === null) {
+    return error === null
+      ? { state: 'checking', symbol: '…', accessibleName: 'Game — checking' }
+      : {
+          state: 'unavailable',
+          symbol: '!',
+          accessibleName: `Game — status unavailable: ${error}`,
+        };
+  }
+  if (status.target === null) {
+    return { state: 'noLocation', symbol: '○', accessibleName: 'Game — no location' };
+  }
+  return isReady(status)
+    ? { state: 'ready', symbol: '✓', accessibleName: 'Game — ready' }
+    : { state: 'needsSetup', symbol: '!', accessibleName: 'Game — needs setup' };
+}
+
+export interface GamePlanSlotRow {
+  readonly slot: GamePlanSlotNumber;
+  readonly state: GamePlanSlot['state'];
+  readonly summary: string;
+  readonly sent: string | null;
+  readonly current: boolean;
+  readonly action: { readonly label: 'Send here' | 'Replace'; readonly confirm: boolean } | null;
+}
+
+export interface GamePlansProduct {
+  readonly rows: readonly GamePlanSlotRow[];
+  /** Why the current project cannot be sent; send actions are absent while set. */
+  readonly unavailableReason: string | null;
+}
+
+function sentAgo(modifiedAtMs: number, now: number): string {
+  const seconds = Math.max(0, Math.round((now - modifiedAtMs) / 1000));
+  if (seconds < 60) return 'sent just now';
+  const minutes = Math.round(seconds / 60);
+  if (minutes < 60) return `sent ${minutes} min ago`;
+  const hours = Math.round(minutes / 60);
+  if (hours < 24) return `sent ${hours} h ago`;
+  const days = Math.round(hours / 24);
+  return `sent ${days} day${days === 1 ? '' : 's'} ago`;
+}
+
+function slotSummary(slot: GamePlanSlot): string {
+  switch (slot.state) {
+    case 'empty':
+      return 'Empty';
+    case 'unreadable':
+      return 'Unreadable';
+    case 'present':
+      return `${slot.routeKey ?? 'Unknown route'} · ${slot.biomeKeys.join(' → ')}`;
+  }
+}
+
+function unavailableReason(current: CurrentGamePlan): string | null {
+  switch (current.kind) {
+    case 'publishable':
+      return null;
+    case 'noProject':
+      return 'Open a project to send it to the game.';
+    case 'notPublishable':
+      return `This plan can’t be sent yet: ${current.reason}`;
+  }
+}
+
+/** The six plan slots, shown only while the game module is ready. */
+export function projectGamePlans(
+  status: GameModuleStatus,
+  current: CurrentGamePlan,
+  now: number,
+): GamePlansProduct | null {
+  if (!isReady(status) || status.inspection === null) return null;
+  const reason = unavailableReason(current);
+  return Object.freeze({
+    unavailableReason: reason,
+    rows: status.inspection.planSlots.map((slot): GamePlanSlotRow => ({
+      slot: slot.slot,
+      state: slot.state,
+      summary: slotSummary(slot),
+      sent:
+        slot.modifiedAtMs === null || slot.state !== 'present'
+          ? null
+          : sentAgo(slot.modifiedAtMs, now),
+      current:
+        current.kind === 'publishable' &&
+        slot.state === 'present' &&
+        slot.planFingerprint === current.planFingerprint,
+      action:
+        reason !== null
+          ? null
+          : slot.state === 'empty'
+            ? { label: 'Send here', confirm: false }
+            : { label: 'Replace', confirm: true },
+    })),
+  });
+}
+
+export interface GameQuickSend {
+  readonly slot: GamePlanSlotNumber;
+  readonly label: string;
+}
+
+/**
+ * The header re-send: a ready target, an engine-eligible project, and a last slot that is
+ * empty or already holds this project, so it never overwrites another project's plan.
+ */
+export function projectGameQuickSend(
+  status: GameModuleStatus | null,
+  sendableProjectId: string | null,
+): GameQuickSend | null {
+  if (status === null || status.lastSlot === null || sendableProjectId === null) return null;
+  if (!isReady(status)) return null;
+  const slot = status.inspection?.planSlots.find((entry) => entry.slot === status.lastSlot);
+  const ownSlot =
+    slot?.state === 'empty' || (slot?.state === 'present' && slot.projectId === sendableProjectId);
+  if (!ownSlot) return null;
+  return { slot: status.lastSlot, label: `Send to game (slot ${status.lastSlot})` };
 }

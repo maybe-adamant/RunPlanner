@@ -169,33 +169,8 @@
   background: #363741;
 }
 
-.game-publication-selection {
-  display: grid;
-  min-width: 0;
-  gap: 7px;
-  padding: 0;
-  border: 0;
-  margin: 18px 0 0;
-}
-
-.game-publication-selection label {
-  color: #aaa7af;
-  font-size: 0.8rem;
-  font-weight: 700;
-}
-
-.game-publication-selection label:not(:first-of-type) {
-  margin-top: 6px;
-}
-
-.game-publication-selection select {
-  width: 100%;
-  min-width: 0;
-}
-
 .game-publication-hint,
-.game-publication-message,
-.game-publication-location {
+.game-publication-message {
   margin: 8px 0;
   color: #aaa7af;
   font-size: 0.8rem;
@@ -205,11 +180,6 @@
 
 .game-publication-message[role='alert'] {
   color: #f0a3a3;
-}
-
-.game-publication-location {
-  grid-column: 1 / -1;
-  margin: 0;
 }
 
 .game-publication-dialog-backdrop {
@@ -697,8 +667,7 @@
   margin-left: 0.35rem;
 }
 
-.game-publication-reasons,
-.settings-notices {
+.game-panel-notices {
   display: grid;
   gap: 6px;
   padding-left: 1.1rem;
@@ -708,43 +677,39 @@
   overflow-wrap: anywhere;
 }
 
-.game-publication-reasons {
-  color: #f0a3a3;
-}
-
-.settings-dialog {
+.game-panel-dialog {
   width: min(100%, 36rem);
 }
 
-.settings-section h3 {
+.game-panel-section h3 {
   margin: 12px 0 8px;
   font-size: 0.95rem;
 }
 
-.settings-status-list {
+.game-panel-status-list {
   display: grid;
   gap: 6px;
   margin: 0;
   font-size: 0.82rem;
 }
 
-.settings-status-list > div {
+.game-panel-status-list > div {
   display: grid;
   grid-template-columns: 8rem minmax(0, 1fr);
   gap: 8px;
 }
 
-.settings-status-list dt {
+.game-panel-status-list dt {
   color: #aaa7af;
   font-weight: 700;
 }
 
-.settings-status-list dd {
+.game-panel-status-list dd {
   margin: 0;
   overflow-wrap: anywhere;
 }
 
-.settings-location-line {
+.game-panel-location-line {
   display: flex;
   flex-wrap: wrap;
   align-items: baseline;
@@ -752,19 +717,19 @@
   font-size: 0.85rem;
 }
 
-.settings-location-line h3 {
+.game-panel-location-line h3 {
   margin: 12px 0 8px;
   color: #aaa7af;
   font-size: 0.85rem;
 }
 
-.settings-module-status {
+.game-panel-module-status {
   margin: 0 0 8px;
   font-size: 0.85rem;
   font-weight: 700;
 }
 
-.settings-steps {
+.game-panel-steps {
   display: grid;
   gap: 8px;
   padding-left: 1.2rem;
@@ -773,55 +738,55 @@
   line-height: 1.4;
 }
 
-.settings-steps li {
+.game-panel-steps li {
   overflow-wrap: anywhere;
 }
 
-.settings-steps li button {
+.game-panel-steps li button {
   margin-left: 8px;
 }
 
-.settings-step-icon {
+.game-panel-step-icon {
   display: inline-block;
   width: 1.1em;
   margin-right: 4px;
   font-weight: 700;
 }
 
-.settings-step-found {
+.game-panel-step-found {
   color: #aaa7af;
 }
 
-.settings-details {
+.game-panel-details {
   margin-top: 12px;
   font-size: 0.82rem;
 }
 
-.settings-details summary {
+.game-panel-details summary {
   cursor: pointer;
   color: #aaa7af;
   font-weight: 700;
 }
 
-.settings-details .settings-status-list {
+.game-panel-details .game-panel-status-list {
   margin: 8px 0;
 }
 
-.settings-module-status[data-tone='ok'] {
+.game-panel-module-status[data-tone='ok'] {
   color: #9fd6a8;
 }
 
-.settings-module-status[data-tone='warning'],
-.settings-steps [data-tone='warning'] {
+.game-panel-module-status[data-tone='warning'],
+.game-panel-steps [data-tone='warning'] {
   color: #e8c27a;
 }
 
-.settings-module-status[data-tone='error'],
-.settings-steps [data-tone='error'] {
+.game-panel-module-status[data-tone='error'],
+.game-panel-steps [data-tone='error'] {
   color: #f0a3a3;
 }
 
-.settings-actions {
+.game-panel-actions {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
@@ -831,4 +796,58 @@
 .external-page-link {
   color: inherit;
   text-decoration: underline;
+}
+
+.game-indicator {
+  margin-left: 4px;
+  font-size: 0.7rem;
+}
+
+.game-indicator[data-state='ready'] {
+  color: #9fd6a8;
+}
+
+.game-indicator[data-state='needsSetup'] {
+  color: #e8c27a;
+}
+
+.game-header-feedback {
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.game-header-feedback[data-tone='failure'] {
+  color: #f0a3a3;
+}
+
+.game-panel-slots {
+  display: grid;
+  gap: 6px;
+  padding: 0;
+  margin: 8px 0;
+  list-style: none;
+  font-size: 0.82rem;
+}
+
+.game-panel-slots li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.game-panel-slot-number {
+  min-width: 3.5rem;
+  color: #aaa7af;
+  font-weight: 700;
+}
+
+.game-panel-slot-summary {
+  flex: 1 1 12rem;
+  overflow-wrap: anywhere;
+}
+
+.game-panel-slot-current {
+  color: #9fd6a8;
+  font-weight: 700;
 }

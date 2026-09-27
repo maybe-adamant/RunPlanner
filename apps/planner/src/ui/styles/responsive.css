@@ -83,20 +83,6 @@
     text-align: left;
   }
 
-  .game-publication-selection {
-    flex-basis: 100%;
-    min-width: 0;
-    grid-template-columns: auto minmax(0, 1fr);
-  }
-
-  .game-publication-selection legend {
-    grid-column: 1 / -1;
-  }
-
-  .game-publication-selection button {
-    grid-column: span 1;
-  }
-
   .project-entry-panel {
     margin-top: 28px;
     padding: 22px;

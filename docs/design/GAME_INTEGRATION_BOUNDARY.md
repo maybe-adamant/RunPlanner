@@ -43,7 +43,7 @@ keep that declaration aligned with its decoder and decode the planner-engine
 execution fixtures in place.
 
 The game target is an application setting in the desktop configuration
-directory, never authored state or history. Settings → Game location offers
+directory, never authored state or history. The Game panel's Game location offers
 **Find r2modman profiles**, which lists the Hades II profiles under the
 platform's r2modman data root (`%APPDATA%\r2modmanPlus-local\HadesII\profiles`
 on Windows; other platforms currently offer only the folder picker), and
@@ -84,7 +84,7 @@ Status is reported by the host and presented by the application:
 
 The planner reports ModpackLib and dependencies but never installs, updates or
 removes them, and never edits `mods.yml`. Users install ModpackLib through
-r2modman, which brings its dependency chain. The ModpackLib step and publish blocker link to its Thunderstore page, a URL the host owns and adds as the only non-release entry in its allowlist of pages it opens in the browser.
+r2modman, which brings its dependency chain. The ModpackLib step links to its Thunderstore page, a URL the host owns and adds as the only non-release entry in its allowlist of pages it opens in the browser.
 
 **Install** or **Update** operates only on the established target and
 does nothing when the installed files already match this build. A folder the
@@ -109,13 +109,30 @@ files match its record.
 
 ### Publication preconditions
 
-Publish to Game uses only the established target and performs no discovery.
+Sending a plan uses only the established target and performs no discovery.
 The host rechecks the target when publishing and refuses with the blocking
 reasons, including found and required versions, unless the installed module
-matches this build and ModpackLib is compatible. The planner shows those
-reasons with a link to Settings. The installed `execution-compatibility.json`
-must equal the outgoing plan header before any write. `mods.yml` is never
-edited, and only plan slots are written under `config/`.
+matches this build and ModpackLib is compatible. The installed
+`execution-compatibility.json` must equal the outgoing plan header before any
+write. `mods.yml` is never edited, and only plan slots are written under
+`config/`.
+
+Once the module is ready, the Game panel lists the six slots. The host reads
+each slot under the same link and containment rules and the 1 MiB bound, and
+reports it as empty, present or unreadable with its modified time and only
+existing wire fields: `projectId`, `routeKey`, `extent.biomeKeys` and
+`planFingerprint`. A slot whose `planFingerprint` equals the current project's
+compiled plan is marked as the current plan. **Send here** fills an empty slot
+and **Replace** overwrites an occupied one after confirmation; both are absent
+while the current project cannot compile, which the panel explains. The host
+records the last slot published from this planner with the saved target; it
+survives re-choosing the same folder and is cleared when the target changes or
+is forgotten. The header **Send to game (slot N)** re-sends there only while the
+module is ready, the engine reports the project eligible for an execution plan,
+and that slot is empty or holds the same `projectId`, so it never overwrites
+another project's plan; it compiles only when clicked. The header Game button
+shows the same overall state as the panel with a distinct symbol and a text
+alternative, including when status could not be read.
 
 The compiler consumes the exact simulation assembly that the planner already
 validated. It does not rerun candidate policy or duplicate validation. The

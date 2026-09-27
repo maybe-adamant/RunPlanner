@@ -8,3 +8,4 @@ pub mod game_module_install;
 pub mod game_module_package;
 pub mod game_plan_publication;
 pub mod game_target;
+pub mod plan_slots;

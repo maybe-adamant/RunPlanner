@@ -241,9 +241,9 @@ describe('project profile operations', () => {
     const beforePendingAutosaves = autosave.scheduler.pendingCount;
     const beforeAutosaveWrites = profile.saves.length;
 
-    await expect(application.projectOperations.inspectGamePublication()).resolves.toMatchObject({
-      publicationBlockers: [],
-    });
+    const current = application.projectOperations.inspectCurrentGamePlan();
+    expect(current.kind).toBe('publishable');
+    expect(application.projectOperations.inspectCurrentGamePlan()).toBe(current);
     await expect(application.projectOperations.publishGame(3)).resolves.toEqual({
       operation: 'publishGame',
       status: 'success',
@@ -254,6 +254,7 @@ describe('project profile operations', () => {
     if (publication === undefined) throw new Error('publication was not recorded');
     expect(publication.slotNumber).toBe(3);
     expect(JSON.parse(publication.json)).toMatchObject({
+      planFingerprint: current.kind === 'publishable' ? current.planFingerprint : null,
       format: EXECUTION_PLAN_FORMAT,
       protocolVersion: EXECUTION_PROTOCOL_VERSION,
       catalogVersion: application.catalog.version,
@@ -324,7 +325,7 @@ describe('project profile operations', () => {
       operation: 'publishGame',
       status: 'failure',
       message:
-        'Update the game module in Settings (found 0.10.0). ' +
+        'Update the game module in the Game panel (found 0.10.0). ' +
         'Update ModpackLib to 4.1.0+ in r2modman (found 4.0.1).',
     });
   });
@@ -332,7 +333,14 @@ describe('project profile operations', () => {
   it('rejects an invalid publication before invoking the game writer', async () => {
     const game = createFakeGameModuleHost();
     const application = createApplication({ gameModuleHost: game.host });
+    expect(application.projectOperations.inspectCurrentGamePlan()).toEqual({ kind: 'noProject' });
     await application.projectOperations.createNew('Underworld');
+    const current = application.projectOperations.inspectCurrentGamePlan();
+    expect(current.kind).toBe('notPublishable');
+    const failure = await application.projectOperations.publishGame(1);
+    expect(failure.message).toBe(
+      `Send to game failed: ${current.kind === 'notPublishable' ? current.reason : ''}`,
+    );
 
     await expect(application.projectOperations.publishGame(1)).resolves.toMatchObject({
       operation: 'publishGame',
