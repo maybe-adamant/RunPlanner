@@ -1,0 +1,188 @@
+-- Private correlation index for published Timeline contacts. Hooks use only
+-- descriptors through coordinator.lua; they never see these index namespaces.
+local json = type(import) == "function" and import("mods/protocol/json.lua") or require("mods.protocol.json")
+local bindings = {}
+
+local function add(index, namespace, key, transaction, detail)
+    if key == nil then return true end
+    local rows, prior = index[namespace], index[namespace][key]
+    if prior ~= nil and prior.transaction ~= transaction then
+        return nil, { checkpoint = "timeline-binding", expected = "unique " .. namespace, observed = key }
+    end
+    rows[key] = { transaction = transaction, detail = detail }
+    return true
+end
+
+-- A source/producer can publish several acquisitions (e.g. both trial gods).
+-- Keep those owners separate; material identity selects a row, never readiness.
+local function addSource(index, namespace, key, transaction)
+    if key == nil then return end
+    local rows = index[namespace][key] or {}
+    index[namespace][key] = rows
+    rows[#rows + 1] = { transaction = transaction }
+end
+
+local function resolveSource(index, namespace, key, gameName)
+    local matching
+    for _, row in ipairs(index[namespace][key] or {}) do
+        local matches = gameName == nil
+        for _, role in ipairs(row.transaction.roles or {}) do
+            if role.gameName == gameName then matches = true end
+        end
+        if matches then
+            if matching ~= nil then
+                return nil, { checkpoint = "timeline-binding",
+                    expected = "unique material source", observed = key }
+            end
+            matching = row
+        end
+    end
+    return matching
+end
+
+function bindings.index(occurrence)
+    local index = {
+        owner = {}, producer = {}, offer = {}, generation = {}, hermesShrineSource = {}, refill = {}, source = {},
+        slot = {}, keepsake = {}, automatic = {}, encounterInteraction = {}, interaction = {}, produced = {},
+        materialized = {}, keepsakeReplay = {}, rewardWheel = {}, rewardWheelAcquisition = {},
+    }
+    for owner, transaction in pairs(occurrence.transactionsByOwner or {}) do
+        index.owner[owner] = { transaction = transaction }
+        local ok, errorValue
+        if transaction.kind == "travelDealRefill" then
+            ok, errorValue = add(index, "refill", transaction.refill.carrier, transaction)
+            if not ok then return nil, errorValue end
+        end
+        ok, errorValue = add(index, "offer", transaction.offerKey, transaction)
+        if not ok then return nil, errorValue end
+        ok, errorValue = add(index, "generation", transaction.generationKey, transaction)
+        if not ok then return nil, errorValue end
+        if transaction.hermesShrineSourceKey ~= nil then
+            ok, errorValue = add(index, "hermesShrineSource", transaction.hermesShrineSourceKey, transaction)
+            if not ok then return nil, errorValue end
+        end
+        if transaction.kind == "encounterInteraction" then
+            ok, errorValue = add(index, "encounterInteraction", transaction.phaseKey, transaction)
+            if not ok then return nil, errorValue end
+        elseif transaction.kind == "chooseRewardWheel" then
+            ok, errorValue = add(index, "rewardWheel", transaction.wheelKey, transaction)
+            if not ok then return nil, errorValue end
+        elseif transaction.kind == "acquisition" and transaction.window.kind == "shipPostCombat" then
+            -- The window also contains generated pickups such as Artificer
+            -- replacements. Only the wheel offer itself owns its native spawn.
+            local source = json.decode(transaction.sourceOwner)
+            if source and json.isArray(source) and source[1] == "rewardWheelOffer" then
+                ok, errorValue = add(index, "rewardWheelAcquisition", source[5], transaction)
+                if not ok then return nil, errorValue end
+            end
+        end
+        addSource(index, "source", transaction.sourceOwner, transaction)
+        if transaction.producerLifecycleKey and transaction.reward then
+            addSource(index, "producer",
+                transaction.producerLifecycleKey .. "\0" .. transaction.reward.rewardType, transaction)
+        end
+        ok, errorValue = add(index, "slot", transaction.slotKey, transaction)
+        if not ok then return nil, errorValue end
+        if transaction.kind == "keepsakeChange" then
+            ok, errorValue = add(index, "keepsake", transaction.keepsakeKey, transaction)
+            if not ok then return nil, errorValue end
+        elseif transaction.kind == "keepsakeReplay" then
+            ok, errorValue = add(index, "keepsakeReplay", transaction.keepsakeKey, transaction)
+            if not ok then return nil, errorValue end
+        end
+        ok, errorValue = add(index, "interaction", transaction.interactionKey, transaction)
+        if not ok then return nil, errorValue end
+        if transaction.kind == "automatic" then
+            ok, errorValue = add(index, "automatic", transaction.effect .. "\0" .. transaction.phaseKey,
+                transaction)
+            if not ok then return nil, errorValue end
+        end
+        for _, role in ipairs(transaction.roles or {}) do
+            if role.producer then
+                ok, errorValue = add(index, "produced", role.producer.sourceOwner .. "\0" .. role.producer.sourceRole,
+                    transaction, role)
+                if not ok then return nil, errorValue end
+            end
+        end
+    end
+    return index
+end
+
+local function indexed(index, namespace, key)
+    return index and index[namespace] and index[namespace][key] or nil
+end
+
+function bindings.resolve(index, contact, source)
+    if type(contact) ~= "table" then
+        return nil, { checkpoint = "timeline-contact", expected = "published contact descriptor", observed = contact }
+    end
+    if contact.kind == "owner" then return indexed(index, "owner", contact.owner)
+    elseif contact.kind == "offer" then return indexed(index, "offer", contact.offerKey)
+    elseif contact.kind == "generation" then return indexed(index, "generation", contact.generationKey)
+    elseif contact.kind == "hermesShrineDelivery" then
+        return indexed(index, "hermesShrineSource", contact.sourceKey)
+    elseif contact.kind == "travelDealRefill" then return indexed(index, "refill", contact.carrier)
+    elseif contact.kind == "source" then
+        return resolveSource(index, "source", contact.sourceOwner, contact.gameName)
+    elseif contact.kind == "encounterInteraction" then
+        return indexed(index, "encounterInteraction", contact.phaseKey)
+    elseif contact.kind == "rewardWheel" then
+        return indexed(index, "rewardWheel", contact.wheelKey)
+    elseif contact.kind == "rewardWheelAcquisition" then
+        return indexed(index, "rewardWheelAcquisition", contact.wheelKey)
+    elseif contact.kind == "slot" then return indexed(index, "slot", contact.slotKey)
+    elseif contact.kind == "keepsake" then return indexed(index, "keepsake", contact.keepsakeKey)
+    elseif contact.kind == "keepsakeReplay" then
+        return indexed(index, "keepsakeReplay", contact.keepsakeKey)
+    elseif contact.kind == "interaction" then return indexed(index, "interaction", contact.interactionKey)
+    elseif contact.kind == "automatic" then
+        return indexed(index, "automatic", contact.effect .. "\0" .. contact.phaseKey)
+    elseif contact.kind == "producer" then
+        return resolveSource(index, "producer",
+            contact.producerLifecycleKey .. "\0" .. contact.rewardType, contact.gameName)
+    elseif contact.kind == "produced" then
+        local transaction = source and source.transaction
+        if transaction == nil then return nil end
+        return indexed(index, "produced", (transaction.sourceOwner or transaction.owner) .. "\0" .. contact.role)
+    elseif contact.kind == "materialized" then
+        local transaction = source and source.transaction
+        if transaction == nil then return nil end
+        local matching
+        for _, role in ipairs(transaction.roles or {}) do
+            if role.gameName == contact.gameName then
+                if matching ~= nil then
+                    return nil, {
+                        checkpoint = "timeline-binding", expected = "one materialized role",
+                        observed = contact.gameName,
+                    }
+                end
+                matching = role
+            end
+        end
+        if matching == nil then return nil end
+        local key = transaction.owner .. "\0" .. matching.role .. "\0" .. matching.gameName
+        local row = indexed(index, "materialized", key)
+        if row == nil then
+            row = { transaction = transaction, detail = matching }
+            index.materialized[key] = row
+        end
+        return row
+    end
+    return nil, { checkpoint = "timeline-contact", expected = "published contact kind", observed = contact.kind }
+end
+
+function bindings.sourceRole(row, gameName)
+    if row == nil or row.transaction == nil then return nil end
+    if row.detail and row.detail.role then return row.detail.role end
+    for _, role in ipairs(row.transaction.roles or {}) do
+        if role.gameName == gameName then return role.role end
+    end
+    return nil
+end
+
+function bindings.payload(row)
+    if row == nil then return nil end
+    return { transaction = row.transaction, detail = row.detail }
+end
+
+return bindings

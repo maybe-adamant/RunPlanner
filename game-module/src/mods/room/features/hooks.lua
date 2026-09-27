@@ -1,0 +1,86 @@
+-- Native spawning contacts for structural room features. Resulting exit
+-- binding remains navigation-owned; resource rolls remain feature-owned.
+local resources = type(import) == "function"
+    and import("mods/room/features/resources.lua")
+    or require("mods.room.features.resources")
+local fields = type(import) == "function"
+    and import("mods/room/features/fields.lua")
+    or require("mods.room.features.fields")
+local npcShopping = type(import) == "function"
+    and import("mods/room/features/npc_shopping.lua")
+    or require("mods.room.features.npc_shopping")
+local hooks = {}
+
+function hooks.attach(module, session, getState, report, room)
+    local secretScope
+    local pendingAdditional
+
+    module.hooks.wrap("HandleSecretSpawns", "run-planner-room-features", function(_, runtime, base, currentRun)
+        local state = getState(runtime)
+        if state == nil or state.state ~= "synchronized" then return base(currentRun) end
+        secretScope = room.additional(state, "chaos") ~= nil
+        local ok, result = pcall(base, currentRun)
+        secretScope = nil
+        if not ok then error(result, 0) end
+        report(runtime)
+        return result
+    end)
+
+    module.hooks.wrap("IsSecretDoorEligible", "run-planner-chaos-eligibility", function(_, runtime, base,
+        currentRun, currentRoom)
+        local state = getState(runtime)
+        if state == nil or state.state ~= "synchronized" then return base(currentRun, currentRoom) end
+        if secretScope ~= nil then return secretScope end
+        return base(currentRun, currentRoom)
+    end)
+
+    module.hooks.wrap("IsSellTraitShopEligible", "run-planner-purging-pool-presence", function(_, runtime, base,
+        currentRoom)
+        local state = getState(runtime)
+        if state == nil or state.state ~= "synchronized" then return base(currentRoom) end
+        local occurrence = room.occurrence(state, currentRoom)
+        if occurrence ~= nil then return occurrence.overview.purgingPool ~= nil end
+        return base(currentRoom)
+    end)
+
+    module.hooks.wrap("IsWellShopEligible", "run-planner-well-presence", function(_, runtime, base, currentRun,
+        currentRoom)
+        local state = getState(runtime)
+        if state == nil or state.state ~= "synchronized" then return base(currentRun, currentRoom) end
+        local occurrence = room.occurrence(state, currentRoom)
+        if occurrence ~= nil then return occurrence.overview.stygianWell ~= nil end
+        return base(currentRun, currentRoom)
+    end)
+
+    module.hooks.wrap("IsSurfaceShopEligible", "run-planner-shrine-presence", function(_, runtime, base,
+        currentRun, currentRoom)
+        local state = getState(runtime)
+        if state == nil or state.state ~= "synchronized" then return base(currentRun, currentRoom) end
+        local occurrence = room.occurrence(state, currentRoom)
+        if occurrence ~= nil then return occurrence.overview.hermesShrine ~= nil end
+        return base(currentRun, currentRoom)
+    end)
+
+    module.hooks.wrap("SpawnZagContract", "run-planner-zagreus-contract", function(_, runtime, base, nativeRoom,
+        args)
+        local state = getState(runtime)
+        if state == nil or state.state ~= "synchronized" then return base(nativeRoom, args) end
+        local additional, occurrence = room.additional(state, "zagreusContract")
+        pendingAdditional = occurrence and { occurrence = occurrence, additional = additional } or nil
+        local ok, result = pcall(base, nativeRoom, args)
+        pendingAdditional = nil
+        if not ok then error(result, 0) end
+        report(runtime)
+        return result
+    end)
+
+    resources.attach(module, getState, report)
+    fields.attach(module, session, getState, report, room)
+    npcShopping.attach(module, session, getState, report, room)
+
+    return {
+        currentAdditional = function() return pendingAdditional end,
+    }
+end
+
+return hooks

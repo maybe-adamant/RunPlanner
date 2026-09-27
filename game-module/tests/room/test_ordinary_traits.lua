@@ -1,0 +1,738 @@
+-- luacheck: globals TestOrdinaryTraits
+local lu = require("luaunit")
+local json = require("mods.protocol.json")
+local ordinary = require("mods.room.timeline.acquisitions.traits.ordinary")
+local seaStar = require("mods.room.timeline.acquisitions.sea_star").create()
+local hooks = require("mods.room.timeline.acquisitions.traits.hooks")
+local traitSupport = require("tests.room.ordinary_trait_support")
+local nativeGame = require("tests.harness.native_game")
+
+TestOrdinaryTraits = {}
+
+function TestOrdinaryTraits:setUp()
+    self.restoreNative = nativeGame.install({
+        TraitData = nativeGame.anyTraitDeclarations(),
+        IsTraitEligible = nativeGame.alwaysEligible,
+    })
+end
+
+function TestOrdinaryTraits:tearDown()
+    self.restoreNative()
+end
+
+local function payload(offer, disposition)
+    return traitSupport.payload(offer, disposition)
+end
+
+local attached = traitSupport.attached
+
+function TestOrdinaryTraits.testInstallsBaseRarityAndFinalEffectiveLevelOnNativeCarriers()
+    local row = payload({
+        kind = "traits", selected = "option1", options = {
+            { key = "ApolloAttack", baseRarity = "Common", rarity = "Rare", effectiveLevel = 4 },
+            { key = "ApolloSpecial", rarity = "Epic" },
+        },
+    })
+    local loot = { GodLoot = true, UpgradeOptions = { { Type = "Trait", Native = true } } }
+    lu.assertTrue(ordinary.install(row, loot))
+    lu.assertEquals(loot.UpgradeOptions[1].ItemName, "ApolloAttack")
+    lu.assertEquals(loot.UpgradeOptions[1].Rarity, "Common")
+    lu.assertEquals(loot.UpgradeOptions[1].StackNum, 4)
+    lu.assertTrue(loot.UpgradeOptions[1].Native)
+end
+
+function TestOrdinaryTraits.testRejectedIdentitySurvivesNativeReorder()
+    local row = payload({
+        kind = "traits", selected = "option1", rejected = "option2", options = {
+            { key = "ApolloAttack" }, { key = "ApolloCast" }, { key = "ApolloSpecial" },
+        },
+    })
+    local loot = { UpgradeOptions = { { ItemName = "ApolloCast" }, { ItemName = "ApolloAttack" } } }
+    local screen = { BlockedIndexes = {} }
+    ordinary.alignRejected(row, screen, loot)
+    lu.assertEquals(screen.BlockedIndexes, { 1 })
+end
+
+function TestOrdinaryTraits.testFallbackGoldHasItsOwnExactTerminal()
+    local row = payload({ kind = "fallbackGold", giver = "Hermes" })
+    lu.assertEquals(ordinary.selectedKey(row), "FallbackGold")
+end
+
+function TestOrdinaryTraits.testHammerAndHermesAreOrdinaryNativeCarriers()
+    lu.assertTrue(ordinary.isCarrier({ Name = "WeaponUpgrade" }, { kind = "traits", options = {} }))
+    lu.assertTrue(ordinary.isCarrier({ Name = "HermesUpgrade" }, { kind = "traits", options = {} }))
+    lu.assertFalse(ordinary.isCarrier({ Name = "Chaos" }, { kind = "traits", options = {} }))
+end
+
+function TestOrdinaryTraits.testPublishedNormalRoleUsesOneSourceAgnosticAcquisitionCarrier()
+    for _, carrier in ipairs({
+        { kind = "acquisition", lifecyclePoint = "roomRewardPickup" },
+        { kind = "acquisition", lifecyclePoint = "roomRewardPickup" },
+    }) do
+        local role = {
+            role = "self", disposition = "normal", lifecyclePoint = carrier.lifecyclePoint,
+            kind = "loot", gameName = "ApolloUpgrade", traitOffer = { kind = "traits" },
+        }
+        lu.assertTrue(rawequal(ordinary.normalRole({ kind = carrier.kind, roles = { role } }, {
+            gameName = "ApolloUpgrade",
+        }), role))
+    end
+end
+
+function TestOrdinaryTraits.testEncounterLootCarriersMatchOnlyTheirPublishedGiver()
+    for _, witness in ipairs({
+        { name = "NPC_Artemis_Field_01", giver = "Artemis" },
+        { name = "NPC_Athena_01", giver = "Athena" },
+        { name = "NPC_Dionysus_01", giver = "Dionysus" },
+        { name = "NPC_Hades_Field_01", giver = "Hades" },
+    }) do
+        local transaction = {
+            kind = "encounterInteraction",
+            resolution = { kind = "traitOffer", offer = { kind = "traits", giver = witness.giver } },
+        }
+        local contact = { gameName = witness.name }
+        local wrapped = { transaction = transaction }
+        lu.assertTrue(ordinary.isNormalPayload(wrapped), witness.giver)
+        lu.assertTrue(ordinary.isEncounterTraitOfferCarrier({ Name = witness.name }), witness.giver)
+        lu.assertTrue(ordinary.encounterTraitOffer(transaction, contact), witness.giver)
+        lu.assertTrue(ordinary.isCarrier({ Name = witness.name }, transaction.resolution.offer), witness.giver)
+        local wrongName = witness.giver == "Artemis" and "NPC_Athena_01" or "NPC_Artemis_Field_01"
+        lu.assertNil(ordinary.encounterTraitOffer(transaction, { gameName = wrongName }), witness.giver)
+    end
+end
+
+local function encounterLootUsesTheOrdinaryOfferLifecycle(giver, name, keys)
+    local callbacks = {}
+    local module = { hooks = { wrap = function(name, _, callback) callbacks[name] = callback end } }
+    local state = { state = "synchronized" }
+    local active = { occurrence = { overview = {} } }
+    local offer = {
+        kind = "traits", giver = giver, selected = "option2",
+        options = {
+            { key = keys[1], rarity = "Common" },
+            { key = keys[2], rarity = "Epic" },
+            { key = keys[3], rarity = "Common" },
+        },
+    }
+    local transaction = {
+        owner = "encounter-offer", kind = "encounterInteraction",
+        resolution = { kind = "traitOffer", offer = offer },
+    }
+    local handle = {}
+    local payloadValue = { transaction = transaction }
+    local bound = setmetatable({}, { __mode = "k" })
+    local completed, mismatches = 0, {}
+    local room = {
+        current = function() return active end,
+        bound = function(_, _, native) return bound[native] end,
+        claimReady = function(_, _, contact, native, compatible)
+            if compatible(transaction, contact) == nil then return nil end
+            bound[native] = handle
+            return handle, payloadValue
+        end,
+        peek = function(_, value) return value == handle and payloadValue or nil end,
+        begin = function(_, value) return value == handle and payloadValue or nil end,
+    }
+    local session = {
+        complete = function() completed = completed + 1; return true end,
+        mismatch = function(_, checkpoint, expected, observed)
+            mismatches[#mismatches + 1] = { checkpoint = checkpoint, expected = expected, observed = observed }
+        end,
+        diagnostic = function(_, checkpoint, observed)
+            mismatches[#mismatches + 1] = { checkpoint = checkpoint, observed = observed }
+        end,
+    }
+    hooks.attach(module, session, function() return state end, function() end, room, seaStar)
+    local loot = {
+        Name = name,
+        UpgradeOptions = {
+            { Type = "Trait", ItemName = "CritBonusBoon", Rarity = "Common" },
+            { Type = "Trait", ItemName = "InsideCastCritBoon", Rarity = "Common" },
+            { Type = "Trait", ItemName = "OmegaCastVolleyBoon", Rarity = "Common" },
+        },
+    }
+    callbacks.HandleLootPickup(nil, {}, function(_, nativeLoot)
+        callbacks.CreateBoonLootButtons(nil, {}, function(_, installed)
+            lu.assertEquals(installed.UpgradeOptions, {
+                { Type = "Trait", ItemName = keys[1], Rarity = "Common" },
+                { Type = "Trait", ItemName = keys[2], Rarity = "Epic" },
+                { Type = "Trait", ItemName = keys[3], Rarity = "Common" },
+            })
+        end, {}, nativeLoot, false, {})
+        return callbacks.HandleUpgradeChoiceSelection(nil, {}, function() return true end,
+            {}, { LootData = nativeLoot, Data = { Name = keys[2] } }, {})
+    end, {}, loot, {})
+    lu.assertEquals(completed, 1)
+    lu.assertEquals(mismatches, {})
+end
+
+function TestOrdinaryTraits.testArtemisEncounterLootUsesTheOrdinaryOfferLifecycle()
+    encounterLootUsesTheOrdinaryOfferLifecycle("Artemis", "NPC_Artemis_Field_01",
+        { "SupportingFireBoon", "FocusCritBoon", "DashOmegaBuffBoon" })
+end
+
+function TestOrdinaryTraits.testUnboundAthenaUsesTheOrdinaryOfferLifecycle()
+    encounterLootUsesTheOrdinaryOfferLifecycle("Athena", "NPC_Athena_01",
+        { "InvulnerabilityCastBoon", "RetaliateInvulnerabilityBoon", "FocusLastStandBoon" })
+end
+
+function TestOrdinaryTraits.testAthenaClaimRequiresDependenciesButNotItsAuthoredWindow()
+    local timeline = require("mods.room.timeline.session")
+    local transaction = {
+        owner = "athena", kind = "encounterInteraction", phaseKey = "Cage02",
+        window = { kind = "encounterEnd", phaseKey = "Cage02" },
+        resolution = { kind = "traitOffer", offer = { giver = "Athena", kind = "traits", options = {} } },
+    }
+    local active = timeline.new({
+        transactionsByOwner = { athena = transaction },
+        timeline = { transactions = { transaction },
+            dependencies = { { owner = "athena", afterOwner = "earlier" } }, obligations = {} },
+    })
+    local native = { Name = "NPC_Athena_01" }
+    local contact = { kind = "encounterTraitOffer", gameName = native.Name }
+    local function claim()
+        return timeline.claimReady(active, contact, native, ordinary.encounterTraitOffer)
+    end
+    lu.assertNil(claim())
+    active.completedOwners.earlier = true
+    local handle = claim()
+    lu.assertNotNil(handle)
+    lu.assertEquals(timeline.bound(active, native), handle)
+end
+
+function TestOrdinaryTraits.testOlympianHermesAndHammerShareTheNativeRowContract()
+    local row = payload({ kind = "traits", selected = "option1", options = {
+        { key = "Chosen", baseRarity = "Common", rarity = "Rare" },
+    } })
+    for _, loot in ipairs({
+        { GodLoot = true, Name = "ApolloUpgrade", UpgradeOptions = {} },
+        { Name = "HermesUpgrade", UpgradeOptions = {} },
+        { Name = "WeaponUpgrade", UpgradeOptions = {} },
+    }) do
+        lu.assertTrue(ordinary.isCarrier(loot, ordinary.offer(row)))
+        lu.assertTrue(ordinary.install(row, loot))
+        lu.assertEquals(loot.UpgradeOptions[1].ItemName, "Chosen")
+        lu.assertEquals(loot.UpgradeOptions[1].Rarity, "Common")
+    end
+end
+
+function TestOrdinaryTraits.testFailedUseLootHasNoC1BeginAndPickupBeginsTheBoundOwner()
+    local callbacks, begins = attached()
+    lu.assertNil(callbacks.UseLoot)
+    lu.assertEquals(begins(), 0)
+    local loot = { GodLoot = true, Name = "ApolloUpgrade" }
+    callbacks.SpawnRoomReward(nil, {}, function()
+        local created = callbacks.CreateLoot(nil, {}, function() return loot end, {})
+        callbacks.HandleLootPickup(nil, {}, function() return true end, {}, created, {})
+        return created
+    end, {}, {})
+    lu.assertEquals(begins(), 1)
+    callbacks.HandleLootPickup(nil, {}, function() return true end, {}, { GodLoot = true, Name = "ApolloUpgrade" }, {})
+    lu.assertEquals(begins(), 1)
+end
+
+function TestOrdinaryTraits.testArtificerDispositionDoesNotEnterTheOrdinaryAdapter()
+    local callbacks, begins = attached({
+        kind = "traits", selected = "option1", options = { { key = "ApolloAttack", rarity = "Rare" } },
+    }, "artificer")
+    local loot = { GodLoot = true, Name = "ApolloUpgrade" }
+    callbacks.SpawnRoomReward(nil, {}, function()
+        return callbacks.CreateLoot(nil, {}, function() return loot end, {})
+    end, {}, {})
+    callbacks.HandleLootPickup(nil, {}, function() return true end, {}, loot, {})
+    lu.assertEquals(begins(), 0)
+end
+
+function TestOrdinaryTraits.testMissingDispositionDoesNotEnterTheOrdinaryAdapter()
+    local offer = { kind = "traits", selected = "option1", options = { { key = "ApolloAttack" } } }
+    lu.assertFalse(ordinary.isNormalPayload({ detail = { traitOffer = offer } }))
+    lu.assertNil(ordinary.offer({ detail = { traitOffer = offer } }))
+end
+
+function TestOrdinaryTraits.testUnboundHammerCarriersUsePublishedReadyOrderWithoutSourceProvenance()
+    local callbacks = {}
+    local module = { hooks = { wrap = function(name, _, callback) callbacks[name] = callback end } }
+    local state = { state = "synchronized" }
+    local active = { occurrence = { overview = {} } }
+    local offer = { kind = "traits", selected = "option1", options = { { key = "ApolloAttack" } } }
+    local rows, handles = {}, {}
+    for index, owner in ipairs({ "child-a", "child-b" }) do
+        local detail = {
+            role = "self", disposition = "normal", lifecyclePoint = "roomRewardPickup",
+            kind = "loot", gameName = "WeaponUpgrade", traitOffer = offer,
+        }
+        rows[index] = { transaction = { owner = owner, kind = "acquisition", roles = { detail } }, detail = detail }
+        handles[index] = {}
+    end
+    local nativeHandles, claimed, begins, completions, completedHandles = {}, {}, 0, {}, {}
+    local room = {
+        current = function() return active end,
+        bound = function(_, _, native) return nativeHandles[native] end,
+        claimReady = function(_, _, contact, native, compatible)
+            for index, row in ipairs(rows) do
+                if not claimed[index] and compatible(row.transaction, contact) ~= nil then
+                    claimed[index] = true
+                    nativeHandles[native] = handles[index]
+                    return handles[index], row
+                end
+            end
+        end,
+        peek = function(_, handle)
+            for index, value in ipairs(handles) do if value == handle then return rows[index] end end
+        end,
+        begin = function(_, handle)
+            if completedHandles[handle] then return nil end
+            begins = begins + 1
+            for index, value in ipairs(handles) do if value == handle then return rows[index] end end
+        end,
+    }
+    local session = {
+        complete = function(_, handle)
+            completedHandles[handle] = true
+            completions[#completions + 1] = { handle = handle }
+        end,
+    }
+    hooks.attach(module, session, function() return state end, function() end, room, seaStar)
+
+    local priorRun = _G.CurrentRun
+    _G.CurrentRun = { Hero = { Traits = { { Name = "ApolloAttack" } } } }
+    local firstPhysical = { Name = "WeaponUpgrade", UpgradeOptions = {} }
+    local secondPhysical = { Name = "WeaponUpgrade", UpgradeOptions = {} }
+    for _, loot in ipairs({ secondPhysical, firstPhysical }) do
+        callbacks.HandleLootPickup(nil, {}, function() return true end, {}, loot, {})
+        callbacks.CreateBoonLootButtons(nil, {}, function() return true end, {}, loot, false, {})
+        callbacks.HandleUpgradeChoiceSelection(nil, {}, function() return true end, {}, {
+            LootData = loot, Data = { Name = "ApolloAttack" },
+        }, {})
+    end
+    _G.CurrentRun = priorRun
+
+    lu.assertEquals(nativeHandles[secondPhysical], handles[1])
+    lu.assertEquals(nativeHandles[firstPhysical], handles[2])
+    lu.assertEquals(completions, {
+        { handle = handles[1] }, { handle = handles[2] },
+    })
+    lu.assertEquals(begins, 4)
+end
+
+function TestOrdinaryTraits.testRerollDoesNotReinstallFrozenOffer()
+    local callbacks = attached()
+    local loot = { GodLoot = true, Name = "ApolloUpgrade", UpgradeOptions = { { ItemName = "Native" } } }
+    callbacks.SpawnRoomReward(nil, {}, function()
+        return callbacks.CreateLoot(nil, {}, function() return loot end, {})
+    end, {}, {})
+    callbacks.CreateBoonLootButtons(nil, {}, function() return true end, {}, loot, true, {})
+    lu.assertEquals(loot.UpgradeOptions[1].ItemName, "Native")
+end
+
+function TestOrdinaryTraits.testPublishedRowsInstallWithoutRepeatingNativeEligibilityPolicy()
+    local originalTraitData, originalEligible = _G.TraitData, _G.IsTraitEligible
+    _G.TraitData = { ApolloAttack = {} }
+    _G.IsTraitEligible = function() return false end
+    local callbacks, _, completed, mismatches = attached({
+        kind = "traits", selected = "option1", options = { { key = "ApolloAttack", rarity = "Rare" } },
+    })
+    local loot = { GodLoot = true, Name = "ApolloUpgrade", UpgradeOptions = {} }
+    callbacks.SpawnRoomReward(nil, {}, function()
+        local created = callbacks.CreateLoot(nil, {}, function() return loot end, {})
+        callbacks.HandleLootPickup(nil, {}, function() return true end, {}, created, {})
+        return created
+    end, {}, {})
+    callbacks.CreateBoonLootButtons(nil, {}, function() return true end, {}, loot, false, {})
+    lu.assertEquals(loot.UpgradeOptions, {
+        { Type = "Trait", ItemName = "ApolloAttack", Rarity = "Rare" },
+    })
+    lu.assertEquals(completed(), 1)
+    lu.assertEquals(mismatches(), {})
+    _G.TraitData, _G.IsTraitEligible = originalTraitData, originalEligible
+end
+
+function TestOrdinaryTraits.testLaterPlayerChoiceDoesNotBecomeAnAcquisitionAdapterMismatch()
+    local callbacks, _, completed, mismatches = attached({
+        kind = "traits", selected = "option1", options = {
+            { key = "ApolloAttack", rarity = "Rare" },
+            { key = "ApolloSpecial", rarity = "Common" },
+        },
+    })
+    local loot = { GodLoot = true, Name = "ApolloUpgrade", UpgradeOptions = {} }
+    callbacks.SpawnRoomReward(nil, {}, function()
+        local created = callbacks.CreateLoot(nil, {}, function() return loot end, {})
+        callbacks.HandleLootPickup(nil, {}, function() return true end, {}, created, {})
+        return created
+    end, {}, {})
+    callbacks.CreateBoonLootButtons(nil, {}, function() return true end, {}, loot, false, {})
+    callbacks.HandleUpgradeChoiceSelection(nil, {}, function() return true end, {}, {
+        LootData = loot, Data = { Name = "ApolloSpecial" },
+    }, {})
+
+    lu.assertEquals(completed(), 1)
+    lu.assertEquals(mismatches(), {})
+end
+
+function TestOrdinaryTraits.testConcaveNestedSelectionDoesNotCompletePrimary()
+    local callbacks, _, completed = attached()
+    local loot = { GodLoot = true, Name = "ApolloUpgrade" }
+    callbacks.SpawnRoomReward(nil, {}, function()
+        return callbacks.CreateLoot(nil, {}, function() return loot end, {})
+    end, {}, {})
+    local button = { LootData = loot, Data = { Name = "ApolloAttack" } }
+    callbacks.HandleUpgradeChoiceSelection(nil, {}, function() return true end, {}, button, { DoubleBoonChance = true })
+    lu.assertEquals(completed(), 0)
+end
+
+function TestOrdinaryTraits.testQuickBuckC1CompletesWithoutWaitingForItsDelayedNativePickup()
+    local callbacks, _, completed, mismatches = attached({
+        kind = "traits", selected = "option1", options = { { key = "MoneyMultiplierBoon" } },
+    }, nil, "HermesUpgrade")
+    lu.assertNil(callbacks.GiveRandomConsumables)
+    local loot = { GodLoot = true, Name = "HermesUpgrade" }
+    callbacks.SpawnRoomReward(nil, {}, function()
+        return callbacks.CreateLoot(nil, {}, function() return loot end, {})
+    end, {}, {})
+    callbacks.HandleLootPickup(nil, {}, function() return true end, {}, loot, {})
+    local pendingDrop
+    callbacks.HandleUpgradeChoiceSelection(nil, {}, function()
+        pendingDrop = {
+            Delay = 0.2,
+            NotRequiredPickup = true,
+            LootOptions = { { Name = "RoomMoneyDrop" } },
+        }
+        return true
+    end, {}, {
+        LootData = loot, Data = { Name = "MoneyMultiplierBoon" },
+    }, {})
+    lu.assertNotNil(pendingDrop)
+    lu.assertEquals(pendingDrop.LootOptions[1].Name, "RoomMoneyDrop")
+    lu.assertTrue(pendingDrop.NotRequiredPickup)
+    lu.assertEquals(completed(), 1)
+    lu.assertEquals(mismatches(), {})
+end
+
+function TestOrdinaryTraits.testBridalGlowForcesThePublishedEquippedTargetAtTheNativeProvider()
+    local target = { Name = "ApolloSprintBoon", Rarity = "Epic" }
+    local callbacks, _, completed, mismatches = attached({
+        kind = "traits", selected = "option1", options = {
+            { key = "BoonDecayBoon", targetTraitKey = target.Name },
+        },
+    }, nil, "HeraUpgrade")
+    local loot = { GodLoot = true, Name = "HeraUpgrade" }
+    callbacks.SpawnRoomReward(nil, {}, function()
+        return callbacks.CreateLoot(nil, {}, function() return loot end, {})
+    end, {}, {})
+    callbacks.HandleLootPickup(nil, {}, function() return true end, {}, loot, {})
+
+    local priorRun = _G.CurrentRun
+    _G.CurrentRun = { Hero = { Traits = { { Name = "ZeusWeaponBoon" }, target } } }
+    local bridalGlow = { Name = "BoonDecayBoon" }
+    local nativeArgs = { NumTraits = 1, TargetRarity = 4, MaxRarity = 3, StackEligibleOnly = true }
+    local forcedTarget
+    callbacks.HandleUpgradeChoiceSelection(nil, {}, function()
+        callbacks.HeraSuperchargeBoon(nil, {}, function()
+            return callbacks.AddRarityToTraits(nil, {}, function(_, args)
+                forcedTarget = args.ForceUpgrade[1]
+                return forcedTarget
+            end, bridalGlow, nativeArgs)
+        end, {}, bridalGlow, {})
+        return true
+    end, {}, { LootData = loot, Data = { Name = "BoonDecayBoon" } }, {})
+    _G.CurrentRun = priorRun
+
+    lu.assertTrue(rawequal(forcedTarget, target))
+    lu.assertNil(nativeArgs.ForceUpgrade)
+    lu.assertEquals(completed(), 1)
+    lu.assertEquals(mismatches(), {})
+end
+
+function TestOrdinaryTraits.testFreshImportedTraitCarrierUsesTheProvidedSeaStar()
+    local freshSeaStar = assert(loadfile("src/mods/room/timeline/acquisitions/sea_star.lua"))().create()
+    local freshTraits = assert(loadfile("src/mods/room/timeline/acquisitions/traits/hooks.lua"))()
+    local callbacks, _, completed, mismatches = attached({
+        kind = "traits", selected = "option1", options = { { key = "ApolloAttack" } },
+    }, nil, "ApolloUpgrade", {
+        traits = freshTraits, seaStar = freshSeaStar,
+        detail = { seaStarResult = { kind = "proc" } },
+    })
+    local loot = { GodLoot = true, Name = "ApolloUpgrade" }
+    callbacks.SpawnRoomReward(nil, {}, function()
+        return callbacks.CreateLoot(nil, {}, function() return loot end, {})
+    end, {}, {})
+    callbacks.HandleLootPickup(nil, {}, function() return true end, {}, loot, {})
+    local chance = {}
+    callbacks.HandleUpgradeChoiceSelection(nil, {}, function()
+        chance.value = callbacks.GetTotalHeroTraitValue(nil, {}, function() return 0 end,
+            "DoubleRewardChance", {})
+        chance.result = nativeGame.randomChance(0)(chance.value)
+        return true
+    end, {}, { LootData = loot, Data = { Name = "ApolloAttack" } }, {})
+    lu.assertEquals(chance, { value = 1, result = true })
+    lu.assertEquals(completed(), 1)
+    lu.assertEquals(mismatches(), {})
+end
+
+local function beginAllTogether(callbacks)
+    local loot = { GodLoot = true, Name = "ApolloUpgrade" }
+    callbacks.SpawnRoomReward(nil, {}, function()
+        return callbacks.CreateLoot(nil, {}, function() return loot end, {})
+    end, {}, {})
+    callbacks.HandleLootPickup(nil, {}, function() return true end, {}, loot, {})
+    callbacks.HandleUpgradeChoiceSelection(nil, {}, function() return true end, {}, {
+        LootData = loot, Data = { Name = "AllElementalBoon" },
+    }, {})
+end
+
+local function grant(callbacks, sets, eligible)
+    local granted = {}
+    callbacks.GrantBoons(nil, {}, function(args)
+        for index, _ in ipairs(args.BoonSets) do
+            local candidates = eligible[index]
+            if #candidates > 0 then
+                granted[#granted + 1] = callbacks.GetRandomValue(nil, {}, function(values)
+                    return values[1]
+                end, candidates)
+            end
+        end
+    end, { BoonSets = sets }, { Name = "AllElementalBoon" })
+    return granted
+end
+
+function TestOrdinaryTraits.testAllTogetherSteersEachEligibleNativePairToItsFourExactGrants()
+    local offer = { kind = "traits", selected = "option1", options = {
+        { key = "AllElementalBoon", allTogetherResult = {
+            earth = "ElementalDamageBoon", fire = "ElementalBaseDamageBoon",
+            air = "ElementalDamageFloorBoon", water = "ElementalHealthBoon",
+        } },
+    } }
+    local callbacks, _, completed, mismatches = attached(offer)
+    beginAllTogether(callbacks)
+    lu.assertEquals(completed(), 0)
+    local granted = grant(callbacks, {
+        { "ElementalDamageBoon", "ElementalOlympianDamageBoon" },
+        { "ElementalBaseDamageBoon", "ElementalRallyBoon" },
+        { "ElementalDamageFloorBoon", "ElementalDodgeBoon" },
+        { "ElementalHealthBoon", "ElementalDamageCapBoon" },
+    }, {
+        { "ElementalDamageBoon", "ElementalOlympianDamageBoon" },
+        { "ElementalBaseDamageBoon", "ElementalRallyBoon" },
+        { "ElementalDamageFloorBoon", "ElementalDodgeBoon" },
+        { "ElementalHealthBoon", "ElementalDamageCapBoon" },
+    })
+    lu.assertEquals(granted, {
+        "ElementalDamageBoon", "ElementalBaseDamageBoon",
+        "ElementalDamageFloorBoon", "ElementalHealthBoon",
+    })
+    lu.assertEquals(completed(), 1)
+    lu.assertEquals(mismatches(), {})
+end
+
+function TestOrdinaryTraits.testAllTogetherAcceptsForcedRemainingMemberAndExplicitExhaustedSet()
+    local offer = { kind = "traits", selected = "option1", options = {
+        { key = "AllElementalBoon", allTogetherResult = {
+            earth = "ElementalOlympianDamageBoon", fire = "ElementalBaseDamageBoon",
+            air = "ElementalDamageFloorBoon", water = json.null,
+        } },
+    } }
+    local callbacks, _, completed, mismatches = attached(offer)
+    beginAllTogether(callbacks)
+    local granted = grant(callbacks, {
+        { "ElementalDamageBoon", "ElementalOlympianDamageBoon" },
+        { "ElementalBaseDamageBoon", "ElementalRallyBoon" },
+        { "ElementalDamageFloorBoon", "ElementalDodgeBoon" },
+        { "ElementalHealthBoon", "ElementalDamageCapBoon" },
+    }, {
+        { "ElementalOlympianDamageBoon" },
+        { "ElementalBaseDamageBoon", "ElementalRallyBoon" },
+        { "ElementalDamageFloorBoon", "ElementalDodgeBoon" },
+        {},
+    })
+    lu.assertEquals(granted, {
+        "ElementalOlympianDamageBoon", "ElementalBaseDamageBoon", "ElementalDamageFloorBoon",
+    })
+    lu.assertEquals(completed(), 1)
+    lu.assertEquals(mismatches(), {})
+end
+
+function TestOrdinaryTraits.testAllTogetherUnavailableGrantDiagnosesAndCompletesAtNativeTerminal()
+    local offer = { kind = "traits", selected = "option1", options = {
+        { key = "AllElementalBoon", allTogetherResult = {
+            earth = "ElementalDamageBoon", fire = json.null, air = json.null, water = json.null,
+        } },
+    } }
+    local callbacks, _, completed, mismatches, setActive = attached(offer)
+    beginAllTogether(callbacks)
+    local granted = grant(callbacks, {
+        { "ElementalDamageBoon", "ElementalOlympianDamageBoon" }, {}, {}, {},
+    }, {
+        { "ElementalOlympianDamageBoon" }, {}, {}, {},
+    })
+    lu.assertEquals(granted, { "ElementalOlympianDamageBoon" })
+    lu.assertEquals(completed(), 1)
+    lu.assertEquals(mismatches()[1].checkpoint, "all-together-steering")
+
+    setActive({ occurrence = { overview = {} } })
+    local native = grant(callbacks, {
+        { "ElementalOlympianDamageBoon", "ElementalDamageBoon" }, {}, {}, {},
+    }, {
+        { "ElementalOlympianDamageBoon", "ElementalDamageBoon" }, {}, {}, {},
+    })
+    lu.assertEquals(native, { "ElementalOlympianDamageBoon" })
+    lu.assertEquals(#mismatches(), 1)
+end
+
+function TestOrdinaryTraits.testAllTogetherBaseErrorAndLaterRoomCannotReuseStaleGrantScope()
+    local offer = { kind = "traits", selected = "option1", options = {
+        { key = "AllElementalBoon", allTogetherResult = {
+            earth = "ElementalDamageBoon", fire = json.null, air = json.null, water = json.null,
+        } },
+    } }
+    local callbacks, _, completed, mismatches, setActive = attached(offer)
+    beginAllTogether(callbacks)
+    local ok = pcall(function()
+        callbacks.GrantBoons(nil, {}, function() error("native GrantBoons failure") end,
+            { BoonSets = { { "ElementalDamageBoon", "ElementalOlympianDamageBoon" }, {}, {}, {} } },
+            { Name = "AllElementalBoon" })
+    end)
+    lu.assertFalse(ok)
+    setActive({ occurrence = { overview = {} } })
+    local native = grant(callbacks, {
+        { "ElementalDamageBoon", "ElementalOlympianDamageBoon" }, {}, {}, {},
+    }, {
+        { "ElementalOlympianDamageBoon", "ElementalDamageBoon" }, {}, {}, {},
+    })
+    lu.assertEquals(native, { "ElementalOlympianDamageBoon" })
+    lu.assertEquals(completed(), 0)
+    lu.assertEquals(mismatches(), {})
+end
+
+local function naturalOffer(targets)
+    return { kind = "traits", selected = "option1", options = {
+        { key = "GoodStuffBoon", naturalSelectionTargets = targets },
+    } }
+end
+
+local function selectNatural(callbacks, distribute)
+    local loot = { GodLoot = true, Name = "ApolloUpgrade" }
+    callbacks.SpawnRoomReward(nil, {}, function()
+        return callbacks.CreateLoot(nil, {}, function() return loot end, {})
+    end, {}, {})
+    callbacks.HandleLootPickup(nil, {}, function() return true end, {}, loot, {})
+    callbacks.HandleUpgradeChoiceSelection(nil, {}, function()
+        distribute()
+        return true
+    end, {}, { LootData = loot, Data = { Name = "GoodStuffBoon" } }, {})
+end
+
+local function distribute(callbacks, candidates, successfulTargets)
+    local order, applied = nil, {}
+    callbacks.DistributeLevels(nil, {}, function()
+        order = callbacks.FYShuffle(nil, {}, function(values) return values end, candidates)
+        for _, target in ipairs(successfulTargets) do
+            applied[#applied + 1] = target
+        end
+        return true
+    end, { Slots = {} }, { Name = "GoodStuffBoon" })
+    return order, applied
+end
+
+function TestOrdinaryTraits.testNaturalSelectionCompletesFewerThanEightSuccessfulLevelsAfterExhaustion()
+    local callbacks, _, completed, mismatches = attached(naturalOffer({ "Attack", "Special" }))
+    local order, applied
+    selectNatural(callbacks, function()
+        order, applied = distribute(callbacks, { "Attack", "Special", "Cast" }, { "Attack", "Special" })
+    end)
+    lu.assertEquals(order, { "Attack", "Special", "Cast" })
+    lu.assertEquals(applied, { "Attack", "Special" })
+    lu.assertEquals(completed(), 1)
+    lu.assertEquals(mismatches(), {})
+end
+
+function TestOrdinaryTraits.testNaturalSelectionRetainsThenLetsNativeCondemnACappedTargetBetweenRounds()
+    local targets = { "Attack", "Special", "Cast", "Attack", "Special" }
+    local callbacks, _, completed, mismatches = attached(naturalOffer(targets))
+    local order, applied
+    selectNatural(callbacks, function()
+        order, applied = distribute(callbacks, { "Attack", "Special", "Cast", "Mana" }, targets)
+    end)
+    lu.assertEquals(order, { "Attack", "Special", "Cast", "Mana" })
+    lu.assertEquals(applied, targets)
+    lu.assertEquals(#applied, 5)
+    lu.assertEquals(applied[3], "Cast")
+    lu.assertEquals(applied[4], "Attack")
+    local castCallbacks = 0
+    for _, target in ipairs(applied) do
+        if target == "Cast" then castCallbacks = castCallbacks + 1 end
+    end
+    lu.assertEquals(castCallbacks, 1)
+    lu.assertEquals(completed(), 1)
+    lu.assertEquals(mismatches(), {})
+end
+
+function TestOrdinaryTraits.testNaturalSelectionConsumesEightSuccessfulLevelsAcrossSeveralSlots()
+    local targets = { "Attack", "Special", "Cast", "Attack", "Special", "Cast", "Attack", "Special" }
+    local callbacks, _, completed, mismatches = attached(naturalOffer(targets))
+    local applied
+    selectNatural(callbacks, function()
+        _, applied = distribute(callbacks, { "Attack", "Special", "Cast" }, targets)
+    end)
+    lu.assertEquals(applied, targets)
+    lu.assertEquals(completed(), 1)
+    lu.assertEquals(mismatches(), {})
+end
+
+function TestOrdinaryTraits.testNaturalSelectionDoesNotUseAppliedLevelsAsSettlementProof()
+    local callbacks, _, completed, mismatches, setActive = attached(naturalOffer({ "Attack", "Special" }))
+    selectNatural(callbacks, function()
+        distribute(callbacks, { "Attack", "Special" }, { "Attack" })
+    end)
+    lu.assertEquals(completed(), 1)
+    lu.assertEquals(mismatches(), {})
+
+    setActive({ occurrence = { overview = {} } })
+    local order = distribute(callbacks, { "NativeOne", "NativeTwo" }, {})
+    lu.assertEquals(order, { "NativeOne", "NativeTwo" })
+    lu.assertEquals(#mismatches(), 0)
+end
+
+function TestOrdinaryTraits.testNaturalSelectionUnavailableTargetDiagnosesAndCompletesAtNativeTerminal()
+    local callbacks, _, completed, mismatches, setActive = attached(naturalOffer({ "Attack" }))
+    local order
+    selectNatural(callbacks, function()
+        order = distribute(callbacks, { "Special" }, { "Special" })
+    end)
+    lu.assertEquals(order, { "Special" })
+    lu.assertEquals(completed(), 1)
+    lu.assertEquals(mismatches()[1].checkpoint, "natural-selection-steering")
+
+    setActive({ occurrence = { overview = {} } })
+    local native = distribute(callbacks, { "NativeOne", "NativeTwo" }, {})
+    lu.assertEquals(native, { "NativeOne", "NativeTwo" })
+    lu.assertEquals(#mismatches(), 1)
+end
+
+function TestOrdinaryTraits.testNaturalSelectionSteersOnlyTheFirstShuffleInItsExactNativeDistribution()
+    local targets = { "Special", "Attack" }
+    local callbacks, _, completed, mismatches = attached(naturalOffer(targets))
+    local firstOrder, laterOrder = nil, nil
+    selectNatural(callbacks, function()
+        callbacks.DistributeLevels(nil, {}, function()
+            firstOrder = callbacks.FYShuffle(nil, {}, function(values) return values end, { "Attack", "Special" })
+            laterOrder = callbacks.FYShuffle(nil, {}, function(values) return values end, { "Attack", "Special" })
+        end, { Slots = {} }, { Name = "GoodStuffBoon" })
+    end)
+    lu.assertEquals(firstOrder, { "Special", "Attack" })
+    lu.assertEquals(laterOrder, { "Attack", "Special" })
+    lu.assertEquals(completed(), 1)
+    lu.assertEquals(mismatches(), {})
+end
+
+function TestOrdinaryTraits.testNaturalSelectionOuterBaseErrorClearsScopeBeforeNativeReentry()
+    local callbacks, _, completed, mismatches = attached(naturalOffer({ "Special", "Attack" }))
+    local failed = pcall(function()
+        selectNatural(callbacks, function() error("native selection failure") end)
+    end)
+    lu.assertFalse(failed)
+
+    local nativeOrder = distribute(callbacks, { "Attack", "Special" }, {})
+    lu.assertEquals(nativeOrder, { "Attack", "Special" })
+    lu.assertEquals(completed(), 0)
+    lu.assertEquals(mismatches(), {})
+end

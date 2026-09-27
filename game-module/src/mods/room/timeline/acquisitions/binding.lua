@@ -1,0 +1,99 @@
+-- Shared exact-object correlation for acquisition carriers.  Producers own
+-- materialization; acquisition adapters own the later native lifecycle.
+local ordinary = type(import) == "function" and import("mods/room/timeline/acquisitions/traits/ordinary.lua")
+    or require("mods.room.timeline.acquisitions.traits.ordinary")
+local levelCarrier = type(import) == "function"
+        and import("mods/room/timeline/acquisitions/levels/carrier.lua")
+    or require("mods.room.timeline.acquisitions.levels.carrier")
+local chaos = type(import) == "function" and import("mods/traits/chaos.lua") or require("mods.traits.chaos")
+
+local binding = {}
+
+local function producerContact(state, room, rewardWheelProducer)
+    local current = room.current(state)
+    local wheel = current and rewardWheelProducer and rewardWheelProducer(state, current) or nil
+    if wheel ~= nil then
+        return {
+            kind = "rewardWheelAcquisition", wheelKey = wheel.wheelKey,
+        }, current
+    end
+    local reward = current and current.occurrence.overview.incomingReward
+    if current == nil or reward == nil or reward.producerLifecycleKey == nil or reward.rewardType == nil then
+        return nil, current
+    end
+    return {
+        kind = "producer", producerLifecycleKey = reward.producerLifecycleKey,
+        rewardType = reward.rewardType,
+    }, current
+end
+
+function binding.attach(module, _session, getState, _report, room, rewardWheelProducer)
+    local producerScope
+
+    module.hooks.wrap("SpawnRoomReward", "run-planner-scope-acquisition-producer", function(_, runtime, base,
+        source, args)
+        local state = getState(runtime)
+        local prior = producerScope
+        -- Artificer invokes SpawnRoomReward for a replacement physical object.
+        -- Its child is already published and must be claimed by its own
+        -- acquisition adapter; never let this spawn inherit the incoming
+        -- room-reward producer scope.
+        producerScope = nil
+        if not (type(args) == "table" and args.IgnoreRoomSpawnOnLootPoint == true) then
+            local contact, current = producerContact(state, room, rewardWheelProducer)
+            if contact ~= nil then
+                producerScope = { state = state, current = current, contact = contact }
+            end
+        end
+        local ok, result = pcall(base, source, args)
+        producerScope = prior
+        if not ok then error(result, 0) end
+        return result
+    end)
+
+    module.hooks.wrap("CreateLoot", "run-planner-bind-loot-carrier", function(_, _runtime, base, args)
+        local result = base(args)
+        if producerScope ~= nil and (ordinary.isNativeCarrier(result) or levelCarrier.isVisible(result)
+            or chaos.isNativeCarrier(result)) then
+            local scope = producerScope
+            local gameName = result and (result.Name or result.ItemName or result.LootName)
+            local current = scope.current
+            scope.contact.gameName = gameName
+            local producer = room.resolve(scope.state, current, scope.contact)
+            local handle = producer and room.resolve(scope.state, current, {
+                kind = "materialized", source = producer, gameName = gameName,
+            })
+            if handle ~= nil then
+                room.bind(scope.state, current, handle, result)
+                scope.bound = true
+            end
+            -- A producer owns one concrete carrier. Retire the scope even if
+            -- the published materialized role was absent; a later reward
+            -- object must never inherit a stale producer address.
+            if producerScope == scope then producerScope = nil end
+        end
+        return result
+    end)
+
+    module.hooks.wrap("CreateConsumableItem", "run-planner-bind-direct-carrier", function(_, _runtime, base, ...)
+        local result = base(...)
+        if producerScope ~= nil and type(result) == "table" then
+            local scope = producerScope
+            local gameName = result and (result.Name or result.ItemName or result.LootName)
+            local current = scope.current
+            scope.contact.gameName = gameName
+            local producer = room.resolve(scope.state, current, scope.contact)
+            local handle = producer and room.resolve(scope.state, current, {
+                kind = "materialized", source = producer, gameName = gameName,
+            })
+            if handle ~= nil then
+                room.bind(scope.state, current, handle, result)
+                scope.bound = true
+                if producerScope == scope then producerScope = nil end
+            end
+        end
+        return result
+    end)
+end
+
+return binding

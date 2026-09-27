@@ -1,0 +1,626 @@
+local p = type(import) == "function" and import("mods/protocol/primitives.lua")
+    or require("mods.protocol.primitives")
+local rewards = type(import) == "function" and import("mods/protocol/rewards.lua")
+    or require("mods.protocol.rewards")
+local diagnostics = type(import) == "function" and import("mods/protocol/diagnostics.lua")
+    or require("mods.protocol.diagnostics")
+
+local overview = {}
+local generatedEncounter = type(import) == "function" and import("mods/protocol/generated_encounter.lua")
+    or require("mods.protocol.generated_encounter")
+
+local function customization(value, label)
+    local decisions, decisionsError = p.arr(value, label, 16)
+    if not decisions then return nil, decisionsError end
+    if #decisions == 0 then return p.fail(label .. " must be non-empty when present") end
+    local seenDecisions = {}
+    for index, entry in ipairs(decisions) do
+        local decisionLabel = label .. "[" .. index .. "]"
+        local raw, rawError = p.obj(entry, decisionLabel)
+        if not raw then return nil, rawError end
+        local kind = raw.kind
+        local row, rowError
+        if kind == "generated" then
+            row, rowError = generatedEncounter.decode(raw, decisionLabel)
+            if not row then return nil, rowError end
+        elseif kind == "single" then
+            row, rowError = p.exact(raw, { "decisionKey", "kind", "choiceKey", "nativeId" }, {}, decisionLabel)
+            if not row then return nil, rowError end
+            if not p.str(row.choiceKey, decisionLabel .. ".choiceKey")
+                or not p.str(row.nativeId, decisionLabel .. ".nativeId") then
+                return p.fail(decisionLabel .. " has invalid single choice")
+            end
+        elseif kind == "orderedPrefix" then
+            row, rowError = p.exact(raw, { "decisionKey", "kind", "choices" }, {}, decisionLabel)
+            if not row then return nil, rowError end
+            local choices, choicesError = p.arr(row.choices, decisionLabel .. ".choices", 2)
+            if not choices then return nil, choicesError end
+            if #choices == 0 then return p.fail(decisionLabel .. ".choices must be a non-empty prefix") end
+            local seenChoices = {}
+            for choiceIndex, choiceEntry in ipairs(choices) do
+                local choiceLabel = decisionLabel .. ".choices[" .. choiceIndex .. "]"
+                local choice, choiceError = p.exact(choiceEntry, { "choiceKey", "nativeId" }, {}, choiceLabel)
+                if not choice then return nil, choiceError end
+                if not p.str(choice.choiceKey, choiceLabel .. ".choiceKey")
+                    or not p.str(choice.nativeId, choiceLabel .. ".nativeId")
+                    or seenChoices[choice.choiceKey] then
+                    return p.fail(choiceLabel .. " has invalid or duplicate prefix choice")
+                end
+                seenChoices[choice.choiceKey] = true
+            end
+        elseif kind == "cocoonCount" then
+            row, rowError = p.exact(raw, { "decisionKey", "kind", "count" }, {}, decisionLabel)
+            if not row then return nil, rowError end
+            local _, countError = p.int(row.count, decisionLabel .. ".count", 1)
+            if countError then return nil, countError end
+        elseif kind == "infiniteRoster" then
+            row, rowError = p.exact(raw, { "decisionKey", "kind", "types" }, {}, decisionLabel)
+            if not row then return nil, rowError end
+            local types, typesError = p.arr(row.types, decisionLabel .. ".types", 16)
+            if not types then return nil, typesError end
+            if #types == 0 then return p.fail(decisionLabel .. ".types must be non-empty") end
+            local seenKeys, seenNatives = {}, {}
+            for typeIndex, typeEntry in ipairs(types) do
+                local typeLabel = decisionLabel .. ".types[" .. typeIndex .. "]"
+                local typeRow, typeError = p.exact(typeEntry, { "choiceKey", "nativeId" }, {}, typeLabel)
+                if not typeRow then return nil, typeError end
+                if not p.str(typeRow.choiceKey, typeLabel .. ".choiceKey")
+                    or not p.str(typeRow.nativeId, typeLabel .. ".nativeId")
+                    or seenKeys[typeRow.choiceKey] or seenNatives[typeRow.nativeId] then
+                    return p.fail(typeLabel .. " has invalid or duplicate roster type")
+                end
+                seenKeys[typeRow.choiceKey], seenNatives[typeRow.nativeId] = true, true
+            end
+        else
+            return p.fail(decisionLabel .. ".kind is unsupported")
+        end
+        if not p.str(row.decisionKey, decisionLabel .. ".decisionKey") or seenDecisions[row.decisionKey] then
+            return p.fail(decisionLabel .. " has invalid or duplicate decision key")
+        end
+        seenDecisions[row.decisionKey] = true
+    end
+    return decisions
+end
+local generationKeys = {
+    ["initial:healing"] = true,
+    ["initial:secondLeft"] = true,
+    ["initial:secondRight"] = true,
+}
+local shrineGenerationKeys = {
+    ["initial:first"] = true,
+    ["initial:secondLeft"] = true,
+    ["initial:secondRight"] = true,
+}
+
+local function shop(value, label)
+    local record, errorMessage = p.exact(
+        value, { "profileKey", "offers" }, { "infernalContract" }, label
+    )
+    if not record then return nil, errorMessage end
+    if not p.str(record.profileKey, label .. ".profileKey") then
+        return p.fail(label .. " has invalid profileKey")
+    end
+    local offers, offersError = p.arr(record.offers, label .. ".offers")
+    if not offers then return nil, offersError end
+    local seenTransactionOwners = {}
+    for index, valueRow in ipairs(offers) do
+        local row, rowError = p.exact(
+            valueRow,
+            { "offerKey", "optionKey", "rewardType" },
+            { "transactionOwner", "source", "spurnedSource" },
+            label .. ".offers[" .. index .. "]"
+        )
+        if not row then return nil, rowError end
+        for _, key in ipairs({ "offerKey", "optionKey", "rewardType" }) do
+            if not p.str(row[key], label .. ".offers." .. key) then
+                return p.fail(label .. " has invalid shop offer")
+            end
+        end
+        if row.transactionOwner ~= nil and (
+            not p.str(row.transactionOwner, label .. ".offers.transactionOwner", p.MAX_OWNER_STRING)
+            or seenTransactionOwners[row.transactionOwner]) then
+            return p.fail(label .. " has invalid shop offer transaction owner")
+        end
+        if row.transactionOwner ~= nil then seenTransactionOwners[row.transactionOwner] = true end
+        for _, key in ipairs({ "source", "spurnedSource" }) do
+            if row[key] ~= nil and not p.str(row[key], label .. ".offers." .. key) then
+                return p.fail(label .. " has invalid shop offer")
+            end
+        end
+    end
+    if record.infernalContract ~= nil then
+        local contract, contractError = p.exact(
+            record.infernalContract, { "sourceOwner", "rewardType" }, {}, label .. ".infernalContract"
+        )
+        if not contract then return nil, contractError end
+        if not p.str(contract.sourceOwner, label .. ".infernalContract.sourceOwner", p.MAX_OWNER_STRING)
+            or not p.str(contract.rewardType, label .. ".infernalContract.rewardType") then
+            return p.fail(label .. " has invalid Infernal Contract pedestal")
+        end
+    end
+    return record
+end
+
+local function stygianWell(value, label)
+    local record, errorMessage = p.exact(value, { "interacted" }, { "offers" }, label)
+    if not record then return nil, errorMessage end
+    if not p.bool(record.interacted, label .. ".interacted")
+        or record.interacted ~= (record.offers ~= nil) then
+        return p.fail(label .. " has invalid interaction state")
+    end
+    if record.offers == nil then return record end
+    local offers, offersError = p.arr(record.offers, label .. ".offers")
+    if not offers then return nil, offersError end
+    local seen = {}
+    for index, valueRow in ipairs(offers) do
+        local row, rowError = p.exact(
+            valueRow,
+            { "generationKey", "offerKey" },
+            { "twistResultKey" },
+            label .. ".offers[" .. index .. "]"
+        )
+        if not row then return nil, rowError end
+        if not p.one(row.generationKey, generationKeys, label .. ".generationKey")
+            or seen[row.generationKey]
+            or not p.str(row.offerKey, label .. ".offerKey")
+            or (row.twistResultKey ~= nil and not p.str(row.twistResultKey, label .. ".twistResultKey")) then
+            return p.fail(label .. " has invalid Well offer")
+        end
+        seen[row.generationKey] = true
+    end
+    return record
+end
+
+local function shrinePurchase(value, label)
+    local row, errorMessage = p.exact(value, { "roomDelay", "rushed" }, {}, label)
+    if not row then return nil, errorMessage end
+    if not p.int(row.roomDelay, label .. ".roomDelay", 2)
+        or row.roomDelay > 8
+        or not p.bool(row.rushed, label .. ".rushed") then
+        return p.fail(label .. " has invalid purchase disposition")
+    end
+    return row
+end
+
+local function hermesShrine(value, label)
+    local record, errorMessage = p.exact(value, { "offers" }, {}, label)
+    if not record then return nil, errorMessage end
+    local offers, offersError = p.arr(record.offers, label .. ".offers")
+    if not offers then return nil, offersError end
+    if #offers ~= 3 then return p.fail(label .. " must publish three offers") end
+    local seen = {}
+    for index, valueRow in ipairs(offers) do
+        local row, rowError = p.exact(
+            valueRow,
+            { "generationKey", "optionKey", "rewardType", "slotIndex" },
+            { "purchase", "deliverySourceKey" },
+            label .. ".offers[" .. index .. "]"
+        )
+        if not row then return nil, rowError end
+        if not p.one(row.generationKey, shrineGenerationKeys, label .. ".generationKey")
+            or seen[row.generationKey]
+            or row.generationKey ~= ({
+                [1] = "initial:first", [2] = "initial:secondLeft", [3] = "initial:secondRight",
+            })[index]
+            or row.slotIndex ~= index
+            or not p.int(row.slotIndex, label .. ".slotIndex", 1)
+            or row.slotIndex > 3
+            or not p.str(row.optionKey, label .. ".optionKey")
+            or not p.str(row.rewardType, label .. ".rewardType") then
+            return p.fail(label .. " has invalid Shrine offer")
+        end
+        if row.deliverySourceKey ~= nil
+            and not p.str(row.deliverySourceKey, label .. ".deliverySourceKey", p.MAX_OWNER_STRING) then
+            return p.fail(label .. " has invalid Shrine delivery source")
+        end
+        if (row.purchase == nil) ~= (row.deliverySourceKey == nil) then
+            return p.fail(label .. " purchase and delivery source must be paired")
+        end
+        if row.purchase ~= nil then
+            local _, purchaseError = shrinePurchase(row.purchase, label .. ".offers[" .. index .. "].purchase")
+            if purchaseError then return nil, purchaseError end
+        end
+        seen[row.generationKey] = true
+    end
+    return record
+end
+
+local function rewardWheels(value, label)
+    local rows, rowsError = p.arr(value, label)
+    if not rows then return nil, rowsError end
+    local seenWheels, seenPhases = {}, {}
+    for index, valueRow in ipairs(rows) do
+        local rowLabel = label .. "[" .. index .. "]"
+        local row, rowError = p.exact(
+            valueRow,
+            { "wheelKey", "phaseKey", "phaseOwner", "offerCount", "storeKey", "offers", "pickedOfferKey" },
+            {},
+            rowLabel
+        )
+        if not row then return nil, rowError end
+        if not p.str(row.wheelKey, rowLabel .. ".wheelKey") or seenWheels[row.wheelKey]
+            or not p.str(row.phaseKey, rowLabel .. ".phaseKey") or seenPhases[row.phaseKey]
+            or not p.str(row.phaseOwner, rowLabel .. ".phaseOwner", p.MAX_OWNER_STRING)
+            or not p.int(row.offerCount, rowLabel .. ".offerCount", 1)
+            or row.offerCount > 2
+            or not p.one(row.storeKey, { RunProgress = true, MetaProgress = true }, rowLabel .. ".storeKey")
+            or not p.str(row.pickedOfferKey, rowLabel .. ".pickedOfferKey") then
+            return p.fail(rowLabel .. " has invalid wheel identity")
+        end
+        seenWheels[row.wheelKey], seenPhases[row.phaseKey] = true, true
+        local offers, offersError = p.arr(row.offers, rowLabel .. ".offers", 2)
+        if not offers then return nil, offersError end
+        if #offers ~= row.offerCount then return p.fail(rowLabel .. ".offerCount must match its offers") end
+        local seenOffers, pickedCount = {}, 0
+        for offerIndex, offerValue in ipairs(offers) do
+            local offerLabel = rowLabel .. ".offers[" .. offerIndex .. "]"
+            local offer, offerError = p.exact(offerValue, { "offerKey", "reward" }, {}, offerLabel)
+            if not offer then return nil, offerError end
+            if not p.str(offer.offerKey, offerLabel .. ".offerKey") or seenOffers[offer.offerKey] then
+                return p.fail(offerLabel .. " has invalid offer identity")
+            end
+            seenOffers[offer.offerKey] = true
+            if offer.offerKey == row.pickedOfferKey then pickedCount = pickedCount + 1 end
+            local _, rewardError = rewards.reward(offer.reward, offerLabel .. ".reward")
+            if rewardError then return nil, rewardError end
+        end
+        if pickedCount ~= 1 then return p.fail(rowLabel .. ".pickedOfferKey must identify one offer") end
+    end
+    return rows
+end
+
+local function purgingPool(value, label)
+    local record, errorMessage = p.exact(value, { "interacted" }, { "traits" }, label)
+    if not record then return nil, errorMessage end
+    if not p.bool(record.interacted, label .. ".interacted")
+        or record.interacted ~= (record.traits ~= nil) then
+        return p.fail(label .. " has invalid interaction state")
+    end
+    if record.traits == nil then return record end
+    local traits, traitsError = p.arr(record.traits, label .. ".traits", 3)
+    if not traits then return nil, traitsError end
+    local seen = {}
+    for index, valueRow in ipairs(traits) do
+        local row, rowError = p.exact(
+            valueRow,
+            { "slotKey", "traitKey" },
+            {},
+            label .. ".traits[" .. index .. "]"
+        )
+        if not row then return nil, rowError end
+        if not p.one(row.slotKey, { left = true, middle = true, right = true }, label .. ".slotKey")
+            or seen[row.slotKey]
+            or (not p.json.isNull(row.traitKey) and not p.str(row.traitKey, label .. ".traitKey")) then
+            return p.fail(label .. " has invalid trait row")
+        end
+        seen[row.slotKey] = true
+    end
+    return record
+end
+
+local function additional(value, label)
+    local rows, errorMessage = p.arr(value, label)
+    if not rows then return nil, errorMessage end
+    for index, valueRow in ipairs(rows) do
+        local row, rowError = p.exact(
+            valueRow,
+            { "kind", "owner", "room" },
+            { "ixionOrigin" },
+            label .. "[" .. index .. "]"
+        )
+        if not row then return nil, rowError end
+        if not p.one(row.kind, { chaos = true, zagreusContract = true }, label .. ".kind")
+            or not p.str(row.owner, label .. ".owner", p.MAX_OWNER_STRING)
+            or not p.roomRef(row.room, label .. ".room") then
+            return p.fail(label .. " has invalid additional exit")
+        end
+        if row.ixionOrigin ~= nil then
+            local origin, originError = p.exact(
+                row.ixionOrigin,
+                { "sourceBiomeKey", "sourceOccurrenceId", "generationKey" },
+                {},
+                label .. ".ixionOrigin"
+            )
+            if not origin then return nil, originError end
+            if not p.str(origin.sourceBiomeKey, label .. ".ixionOrigin.sourceBiomeKey")
+                or not p.str(origin.sourceOccurrenceId, label .. ".ixionOrigin.sourceOccurrenceId", 256)
+                or not p.str(origin.generationKey, label .. ".ixionOrigin.generationKey") then
+                return p.fail(label .. " has invalid Ixion origin")
+            end
+        end
+    end
+    return rows
+end
+
+local function fields(value, label)
+    local record, errorMessage = p.exact(
+        value,
+        { "entryPair", "cagePoints", "optionalRewards" },
+        { "nemesisPointId" },
+        label
+    )
+    if not record then return nil, errorMessage end
+    local entry, entryError = p.exact(
+        record.entryPair,
+        { "startPointId", "endPointId" },
+        {},
+        label .. ".entryPair"
+    )
+    if not entry then return nil, entryError end
+    if not p.int(entry.startPointId, label .. ".entryPair.startPointId", 1)
+        or not p.int(entry.endPointId, label .. ".entryPair.endPointId", 1) then
+        return p.fail(label .. " has invalid entry pair")
+    end
+    local cages, cagesError = p.arr(record.cagePoints, label .. ".cagePoints")
+    if not cages then return nil, cagesError end
+    if #cages < 2 or #cages > 3 then
+        return p.fail(label .. ".cagePoints must contain two or three active cages")
+    end
+    local seenCages = {}
+    local pointIds = {}
+    for index, valueRow in ipairs(cages) do
+        local row, rowError = p.exact(
+            valueRow,
+            { "slotKey", "pointId" },
+            {},
+            label .. ".cagePoints[" .. index .. "]"
+        )
+        if not row then return nil, rowError end
+        if not p.str(row.slotKey, label .. ".cagePoints[" .. index .. "].slotKey")
+            or seenCages[row.slotKey]
+            or not p.int(row.pointId, label .. ".cagePoints[" .. index .. "].pointId", 1)
+            or pointIds[row.pointId] then
+            return p.fail(label .. " has invalid cage point")
+        end
+        seenCages[row.slotKey] = true
+        pointIds[row.pointId] = true
+    end
+    local optionals, optionalsError = p.arr(record.optionalRewards, label .. ".optionalRewards")
+    if not optionals then return nil, optionalsError end
+    local seenOptionals = {}
+    for index, valueRow in ipairs(optionals) do
+        local row, rowError = p.exact(
+            valueRow,
+            { "slotKey", "pointId", "reward" },
+            {},
+            label .. ".optionalRewards[" .. index .. "]"
+        )
+        if not row then return nil, rowError end
+        if not p.str(row.slotKey, label .. ".optionalRewards[" .. index .. "].slotKey")
+            or seenOptionals[row.slotKey]
+            or not p.int(row.pointId, label .. ".optionalRewards[" .. index .. "].pointId", 1)
+            or pointIds[row.pointId] then
+            return p.fail(label .. " has invalid optional point")
+        end
+        local _, rewardError = rewards.reward(row.reward, label .. ".optionalRewards[" .. index .. "].reward")
+        if rewardError then return nil, rewardError end
+        seenOptionals[row.slotKey] = true
+        pointIds[row.pointId] = true
+    end
+    if record.nemesisPointId ~= nil
+        and (not p.int(record.nemesisPointId, label .. ".nemesisPointId", 1)
+            or pointIds[record.nemesisPointId]) then
+        return p.fail(label .. " has invalid Nemesis point")
+    end
+    return record
+end
+
+-- Expected modeled trait inventory at one ordered Hub departure.
+local function hubDepartureConformance(value, label)
+    local record, errorMessage = p.exact(value, { "precedingVisitCount", "facts", "traits" }, {}, label)
+    if not record then return nil, errorMessage end
+    local _, countError = p.int(record.precedingVisitCount, label .. ".precedingVisitCount", 0)
+    if countError then return nil, countError end
+    local facts, factsError = p.arr(record.facts, label .. ".facts")
+    if not facts then return nil, factsError end
+    for index, factValue in ipairs(facts) do
+        local fact, factError = p.exact(factValue, { "kind" }, {}, label .. ".facts[" .. index .. "]")
+        if not fact then return nil, factError end
+        if fact.kind ~= "traitInventory" then return p.fail(label .. ".facts[" .. index .. "].kind is unsupported") end
+    end
+    if #facts ~= 1 then return p.fail(label .. ".facts must name the trait inventory once") end
+    local traits, traitsError = p.exact(record.traits, { "equipped" }, {}, label .. ".traits")
+    if not traits then return nil, traitsError end
+    local equipped, equippedError = diagnostics.equippedTraits(traits.equipped, label .. ".traits.equipped")
+    if not equipped then return nil, equippedError end
+    local seen = {}
+    for _, row in ipairs(equipped) do
+        if seen[row.traitKey] then return p.fail(label .. ".traits.equipped has duplicate traits") end
+        seen[row.traitKey] = true
+    end
+    return record
+end
+
+-- The one Hub-owned fountain use, after its completed preceding room visits.
+local function hubFountain(value, requiredVisitCount, label)
+    local record, errorMessage = p.exact(
+        value, { "kind", "owner", "interactionKey", "precedingVisitCount" },
+        { "aromaticPhialTarget" }, label
+    )
+    if not record then return nil, errorMessage end
+    if record.kind ~= "fountainUse" or record.interactionKey ~= "fountain"
+        or not p.str(record.owner, label .. ".owner", p.MAX_OWNER_STRING) then
+        return p.fail(label .. " has invalid fountain use")
+    end
+    local _, countError = p.int(record.precedingVisitCount, label .. ".precedingVisitCount", 0)
+    if countError then return nil, countError end
+    if record.precedingVisitCount > requiredVisitCount then
+        return p.fail(label .. ".precedingVisitCount exceeds the required Hub visits")
+    end
+    if record.aromaticPhialTarget ~= nil
+        and not p.str(record.aromaticPhialTarget, label .. ".aromaticPhialTarget") then
+        return p.fail(label .. " has invalid Aromatic Phial target")
+    end
+    return record
+end
+
+function overview.decode(value, label)
+    local record, errorMessage = p.exact(
+        value,
+        { "encounterPhases", "requiredObjects" },
+        {
+            "incomingReward", "effectNeutralRequiredReward", "unmodeledEncounterKeys",
+            "rewardWheels",
+            "shop", "hermesShrine", "stygianWell",
+            "purgingPool", "keepsakeRack",
+            "fountain", "fields", "additional",
+            "hub", "localSlots",
+        },
+        label
+    )
+    if not record then return nil, errorMessage end
+    local phases, phasesError = p.arr(record.encounterPhases, label .. ".encounterPhases")
+    if not phases then return nil, phasesError end
+    if record.unmodeledEncounterKeys ~= nil then
+        local _, keysError = p.strings(record.unmodeledEncounterKeys, label .. ".unmodeledEncounterKeys")
+        if keysError then return nil, keysError end
+        if #record.unmodeledEncounterKeys == 0 then
+            return p.fail(label .. ".unmodeledEncounterKeys must be non-empty when present")
+        end
+        if #phases > 0 then return p.fail(label .. ".unmodeledEncounterKeys cannot coexist with modeled phases") end
+    end
+    local _, objectsError = p.strings(record.requiredObjects, label .. ".requiredObjects")
+    if objectsError then return nil, objectsError end
+    for index, valueRow in ipairs(phases) do
+        local phaseLabel = label .. ".encounterPhases[" .. index .. "]"
+        local row, rowError = p.exact(
+            valueRow,
+            { "slotKey", "encounterKey", "kind" },
+            { "figLeafSkip", "customization" },
+            phaseLabel
+        )
+        if not row then return nil, rowError end
+        if not p.str(row.slotKey, phaseLabel .. ".slotKey")
+            or not p.str(row.encounterKey, phaseLabel .. ".encounterKey")
+            or not p.str(row.kind, phaseLabel .. ".kind") then
+            return p.fail(phaseLabel .. " has invalid encounter phase")
+        end
+        if row.figLeafSkip ~= nil then
+            local _, figLeafError = p.bool(row.figLeafSkip, phaseLabel .. ".figLeafSkip")
+            if figLeafError then return nil, figLeafError end
+        end
+        if row.customization ~= nil then
+            local _, customizationError = customization(row.customization, phaseLabel .. ".customization")
+            if customizationError then return nil, customizationError end
+        end
+    end
+    if record.incomingReward ~= nil then
+        local _, rewardError = rewards.reward(record.incomingReward, label .. ".incomingReward")
+        if rewardError then return nil, rewardError end
+    end
+    if record.effectNeutralRequiredReward ~= nil
+        and (not p.bool(record.effectNeutralRequiredReward, label .. ".effectNeutralRequiredReward")
+            or record.effectNeutralRequiredReward ~= true) then
+        return p.fail(label .. ".effectNeutralRequiredReward must be true when present")
+    end
+    if record.rewardWheels ~= nil then
+        local _, wheelsError = rewardWheels(record.rewardWheels, label .. ".rewardWheels")
+        if wheelsError then return nil, wheelsError end
+    end
+    if record.shop ~= nil then
+        local _, shopError = shop(record.shop, label .. ".shop")
+        if shopError then return nil, shopError end
+    end
+    if record.hermesShrine ~= nil then
+        local _, shrineError = hermesShrine(record.hermesShrine, label .. ".hermesShrine")
+        if shrineError then return nil, shrineError end
+    end
+    if record.stygianWell ~= nil then
+        local _, wellError = stygianWell(record.stygianWell, label .. ".stygianWell")
+        if wellError then return nil, wellError end
+    end
+    if record.purgingPool ~= nil then
+        local _, poolError = purgingPool(record.purgingPool, label .. ".purgingPool")
+        if poolError then return nil, poolError end
+    end
+    if record.keepsakeRack ~= nil then
+        local rack, rackError = p.exact(
+            record.keepsakeRack,
+            {},
+            { "keepsakeKey" },
+            label .. ".keepsakeRack"
+        )
+        if not rack then return nil, rackError end
+        if rack.keepsakeKey ~= nil and not p.str(rack.keepsakeKey, label .. ".keepsakeKey") then
+            return p.fail(label .. " has invalid keepsake Rack")
+        end
+    end
+    if record.fountain ~= nil then
+        local fountain, fountainError = p.exact(
+            record.fountain,
+            {},
+            { "aromaticPhialTarget" },
+            label .. ".fountain"
+        )
+        if not fountain then return nil, fountainError end
+        if fountain.aromaticPhialTarget ~= nil
+            and not p.str(fountain.aromaticPhialTarget, label .. ".aromaticPhialTarget") then
+            return p.fail(label .. " has invalid fountain")
+        end
+    end
+    if record.additional ~= nil then
+        local _, additionalError = additional(record.additional, label .. ".additional")
+        if additionalError then return nil, additionalError end
+    end
+    if record.fields ~= nil then
+        local _, fieldsError = fields(record.fields, label .. ".fields")
+        if fieldsError then return nil, fieldsError end
+    end
+    if record.hub ~= nil then
+        local hub, hubError = p.exact(record.hub,
+            { "room", "slots", "finalHandoff", "requiredVisitCount", "fountain", "departures" }, {}, label .. ".hub")
+        if not hub then return nil, hubError end
+        local room = p.exact(hub.room, { "gameName" }, {}, label .. ".hub.room")
+        if not room or not p.str(room.gameName, label .. ".hub.room.gameName") then
+            return p.fail(label .. ".hub has invalid room")
+        end
+        local slots, slotsError = p.arr(hub.slots, label .. ".hub.slots")
+        if not slots then return nil, slotsError end
+        for index, slotValue in ipairs(slots) do
+            local slot, slotError = p.exact(slotValue, { "slotKey", "physicalDoorId", "room", "reward" }, {}, label .. ".hub.slots[" .. index .. "]")
+            if not slot then return nil, slotError end
+            if not p.str(slot.slotKey, label .. ".hub.slotKey")
+                or not p.int(slot.physicalDoorId, label .. ".hub.physicalDoorId", 1)
+                or not p.roomRef(slot.room, label .. ".hub.room")
+                or not rewards.reward(slot.reward, label .. ".hub.reward") then
+                return p.fail(label .. ".hub has invalid slot")
+            end
+        end
+        if not p.roomRef(hub.finalHandoff, label .. ".hub.finalHandoff") then return p.fail(label .. ".hub has invalid final handoff") end
+        local required = p.int(hub.requiredVisitCount, label .. ".hub.requiredVisitCount", 1)
+        if not required or required > #slots then
+            return p.fail(label .. ".hub.requiredVisitCount must be between 1 and the open Hub slots")
+        end
+        local _, fountainError = hubFountain(hub.fountain, required, label .. ".hub.fountain")
+        if fountainError then return nil, fountainError end
+        local departures, departuresError = p.arr(hub.departures, label .. ".hub.departures")
+        if not departures then return nil, departuresError end
+        if #departures ~= required + 1 then return p.fail(label .. ".hub.departures has invalid length") end
+        for index, valueRow in ipairs(departures) do
+            local departure, departureError = hubDepartureConformance(valueRow, label .. ".hub.departures[" .. index .. "]")
+            if not departure then return nil, departureError end
+            if departure.precedingVisitCount ~= index - 1 then
+                return p.fail(label .. ".hub.departures has invalid precedingVisitCount order")
+            end
+        end
+    end
+    if record.localSlots ~= nil then
+        local slots, slotsError = p.arr(record.localSlots, label .. ".localSlots")
+        if not slots then return nil, slotsError end
+        for index, slotValue in ipairs(slots) do
+            local slot, slotError = p.exact(slotValue, { "slotKey", "physicalDoorId", "generation" }, { "room", "reward" }, label .. ".localSlots[" .. index .. "]")
+            if not slot then return nil, slotError end
+            local generated = slot.generation == "generated"
+            if not p.str(slot.slotKey, label .. ".localSlots.slotKey") or not p.int(slot.physicalDoorId, label .. ".localSlots.physicalDoorId", 1)
+                or (not generated and slot.generation ~= "notGenerated")
+                or (generated ~= (slot.room ~= nil)) or (generated ~= (slot.reward ~= nil))
+                or (generated and (not p.roomRef(slot.room, label .. ".localSlots.room")
+                    or not rewards.reward(slot.reward, label .. ".localSlots.reward"))) then
+                return p.fail(label .. ".localSlots has invalid slot")
+            end
+        end
+    end
+    return record
+end
+
+return overview
