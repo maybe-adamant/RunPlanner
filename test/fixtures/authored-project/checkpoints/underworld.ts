@@ -11,6 +11,7 @@ import underworldFGHIRaw from './underworld-fghi.runplanner.json';
 import underworldIxionChaosRaw from './underworld-ixion-chaos.runplanner.json';
 import underworldGAnomalyRosterRaw from './underworld-g-anomaly-roster.runplanner.json';
 import underworldArachneCocoonsRaw from './underworld-arachne-cocoons.runplanner.json';
+import underworldAutomaticBossRaw from './underworld-automatic-boss.runplanner.json';
 import underworldTwistScyllaRaw from './underworld-twist-scylla.runplanner.json';
 import underworldZagreusContractRaw from './underworld-zagreus-contract.runplanner.json';
 import underworldWorldShopTravelDealRaw from './underworld-world-shop-travel-deal.runplanner.json';
@@ -36,6 +37,7 @@ export const underworldCheckpointArtifacts = Object.freeze({
   'underworld-ixion-chaos': checkpointArtifact(underworldIxionChaosRaw),
   'underworld-g-anomaly-roster': checkpointArtifact(underworldGAnomalyRosterRaw),
   'underworld-arachne-cocoons': checkpointArtifact(underworldArachneCocoonsRaw),
+  'underworld-automatic-boss': checkpointArtifact(underworldAutomaticBossRaw),
   'underworld-twist-scylla': checkpointArtifact(underworldTwistScyllaRaw),
   'underworld-zagreus-contract': checkpointArtifact(underworldZagreusContractRaw),
   'underworld-world-shop-travel-deal': checkpointArtifact(underworldWorldShopTravelDealRaw),
@@ -77,6 +79,10 @@ export function loadUnderworldGAnomalyRosterCheckpoint(): ProjectDocument {
 
 export function loadUnderworldArachneCocoonsCheckpoint(): ProjectDocument {
   return underworldCheckpointArtifacts['underworld-arachne-cocoons'].load();
+}
+
+export function loadUnderworldAutomaticBossCheckpoint(): ProjectDocument {
+  return underworldCheckpointArtifacts['underworld-automatic-boss'].load();
 }
 
 export function loadUnderworldTwistScyllaCheckpoint(): ProjectDocument {

@@ -10,7 +10,9 @@ import {
   createEncounterPhaseAddress,
   createExitDecisionAddress,
   createExitSelectionAddress,
+  createFigurineArcanaAddress,
   createIncomingRewardAddress,
+  createJudgmentArcanaAddress,
   createLevelResolutionAddress,
   createOccurrenceAddress,
   createOccurrenceId,
@@ -20,6 +22,7 @@ import {
   type NemesisRandomEventAddress,
   createRouteStartKeepsakeSelectionAddress,
   createRouteAddress,
+  deriveRouteLoadout,
   createStartingRewardAddress,
   createShopOfferAddress,
   createTargetAddress,
@@ -866,6 +869,60 @@ export function underworldZagreusContractProject(): ProjectDocument {
     ['infernalContractReward'],
   );
   return authorLegalTraitOffers(project);
+}
+
+/** Complete F/G route with reached Judgment and Crystal Figurine Boss outcomes. */
+export function underworldAutomaticBossProject(): ProjectDocument {
+  let project = applyProjectCommand(createCompleteFGProject(), catalog, {
+    kind: 'ReplaceManualArcanaSelection',
+    route: createRouteAddress('Underworld'),
+    arcanaKeys: ['ChanneledCast'],
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceStartingKeepsake',
+    selection: createRouteStartKeepsakeSelectionAddress('Underworld'),
+    keepsakeKey: 'BossMetaUpgradeKeepsake',
+  });
+  const active = deriveRouteLoadout(catalog, project.route.loadout).activeArcanaKeys;
+  const judgmentKeys = catalog.arcanaCards.values
+    .filter((card) => !active.includes(card.key))
+    .slice(0, 5)
+    .map((card) => card.key);
+  const figurineKeys = catalog.arcanaCards.values
+    .filter((card) => !active.includes(card.key) && !judgmentKeys.includes(card.key))
+    .slice(0, 2)
+    .map((card) => card.key);
+  const boss = createOccurrenceAddress(
+    goldenFBiome,
+    createOccurrenceId('golden-f-preboss-shop:boss'),
+  );
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceJudgmentArcana',
+    judgment: createJudgmentArcanaAddress(boss, 'Encounter'),
+    arcanaKeys: judgmentKeys,
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceFigurineArcana',
+    figurine: createFigurineArcanaAddress(boss, 'Encounter'),
+    arcanaKeys: figurineKeys,
+  });
+  const gJudgmentKeys = catalog.arcanaCards.values
+    .filter(
+      (card) =>
+        !active.includes(card.key) &&
+        !judgmentKeys.includes(card.key) &&
+        !figurineKeys.includes(card.key),
+    )
+    .slice(0, 5)
+    .map((card) => card.key);
+  return applyProjectCommand(project, catalog, {
+    kind: 'ReplaceJudgmentArcana',
+    judgment: createJudgmentArcanaAddress(
+      createOccurrenceAddress(goldenGBiome, createOccurrenceId('golden-g-preboss-shop:boss')),
+      'Encounter',
+    ),
+    arcanaKeys: gJudgmentKeys,
+  });
 }
 
 /** Short F/G witness: the F Postboss Pool sells one of its realized traits. */

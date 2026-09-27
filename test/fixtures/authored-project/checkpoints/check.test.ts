@@ -27,6 +27,7 @@ import {
   createCompleteFGIxionChaosProject,
   anomalyRosterProject,
   underworldArachneCocoonProject,
+  underworldAutomaticBossProject,
   underworldTwistScyllaProject,
   underworldWorldShopTravelDealProject,
   underworldZagreusContractProject,
@@ -128,7 +129,7 @@ describe('authored-project checkpoint integrity', () => {
     const chaosRoom = occurrences?.find(
       (occurrence) => occurrence.occurrenceId === 'fixture-chaos-room',
     );
-    expect(checkpointManifest).toHaveLength(42);
+    expect(checkpointManifest).toHaveLength(43);
     expect(chaosRoom?.gameName).toMatch(/^Chaos_/);
     expect(chaosRoom?.state).toMatchObject({
       kind: 'fixed',
@@ -178,6 +179,7 @@ describe('authored-project checkpoint integrity', () => {
     ['underworld-ixion-chaos', createCompleteFGIxionChaosProject],
     ['underworld-g-anomaly-roster', anomalyRosterProject],
     ['underworld-arachne-cocoons', underworldArachneCocoonProject],
+    ['underworld-automatic-boss', underworldAutomaticBossProject],
     ['underworld-twist-scylla', underworldTwistScyllaProject],
     ['underworld-world-shop-travel-deal', underworldWorldShopTravelDealProject],
     ['underworld-zagreus-contract', underworldZagreusContractProject],
