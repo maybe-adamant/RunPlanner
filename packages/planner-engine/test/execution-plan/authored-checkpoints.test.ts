@@ -15,6 +15,8 @@ import {
   createOccurrenceAddress,
   decodeProjectDocument,
   encodeProjectDocument,
+  hermesShrineDeliveryEntryKey,
+  semanticAddressKey,
   undoProjectHistory,
   type ProjectDocument,
 } from '../../src/authored-project';
@@ -26,12 +28,14 @@ import {
   loadUnderworldGeneratedCompositionCheckpoint,
   loadUnderworldIxionChaosCheckpoint,
   loadUnderworldTwistScyllaCheckpoint,
+  loadUnderworldWorldShopTravelDealCheckpoint,
 } from '@run-planner/test-fixtures/checkpoints/underworld';
 import {
   loadSurfaceEncounterShowcaseCheckpoint,
   loadSurfaceNPhialIntermediateFountainCheckpoint,
   loadSurfaceScheduledLifecycleCheckpoint,
   loadSurfaceAnvilCheckpoint,
+  loadSurfaceShrineTravelDealCheckpoint,
 } from '@run-planner/test-fixtures/checkpoints/surface';
 import {
   anomalyRosterPhase,
@@ -346,6 +350,89 @@ it('exports the purchased Anvil result and retains its reset through reload and 
         owner: offer,
         acquisitionRole: 'self',
       }),
+    }),
+  );
+  expect(undoProjectHistory(edited).present).toBe(saved);
+});
+
+it('exports the acquired World Shop Travel Deal replacement and retains its edited result', () => {
+  const saved = loadUnderworldWorldShopTravelDealCheckpoint();
+  const refill = createShopOfferAddress(
+    goldenFBiome,
+    createOccurrenceId('golden-f-preboss-shop'),
+    'travelDealRefill',
+  );
+  expect(
+    plan(saved).occurrences.find((room) => room.id === 'golden-f-preboss-shop')?.timeline
+      .transactions,
+  ).toContainEqual(
+    expect.objectContaining({
+      kind: 'travelDealRefill',
+      refill: expect.objectContaining({
+        carrier: 'worldShop',
+        replacement: expect.objectContaining({ optionKey: 'ArmorBoost' }),
+      }),
+    }),
+  );
+  expect(
+    plan(saved).occurrences.find((room) => room.id === 'golden-f-preboss-shop')?.timeline
+      .transactions,
+  ).toContainEqual(
+    expect.objectContaining({
+      kind: 'acquisition',
+      sourceOwner: semanticAddressKey(refill),
+      reward: expect.objectContaining({ rewardType: 'ArmorBoost' }),
+    }),
+  );
+  const edited = applyProjectHistoryCommand(createProjectHistory(saved), catalog, {
+    kind: 'ReplaceShopOffer',
+    offer: refill,
+    value: { rewardType: 'MaxManaDrop' },
+  });
+  const reloaded = reload(edited.present);
+  expect(reloaded).toEqual(edited.present);
+  expect(simulateProjectAssembly(catalog, reloaded).evaluation.findings).toContainEqual(
+    expect.objectContaining({
+      code: 'shopPurchaseUnavailable',
+      origin: refill,
+      evidence: { kind: 'travelDealRefillUnavailable' },
+    }),
+  );
+  expect(undoProjectHistory(edited).present).toBe(saved);
+});
+
+it('exports the acquired Shrine Travel Deal delivery and retains its removal through reload', () => {
+  const saved = loadSurfaceShrineTravelDealCheckpoint();
+  const shrine = createOccurrenceAddress(
+    createBiomeAddress('Surface', 'N'),
+    createOccurrenceId('surface-n-preboss:postboss'),
+  );
+  const refillSourceKey = hermesShrineDeliveryEntryKey(shrine, 'travelDealRefill');
+  expect(
+    plan(saved).occurrences.find((room) => room.id === 'surface-o-combat04')?.timeline.transactions,
+  ).toContainEqual(
+    expect.objectContaining({
+      kind: 'acquisition',
+      reward: expect.objectContaining({ rewardType: 'ArmorBoost' }),
+      hermesShrineSourceKey: refillSourceKey,
+    }),
+  );
+  const edited = applyProjectHistoryCommand(createProjectHistory(saved), catalog, {
+    kind: 'SetHermesShrinePurchase',
+    occurrence: shrine,
+    generationKey: 'travelDealRefill',
+    purchase: null,
+  });
+  const reloaded = reload(edited.present);
+  expect(reloaded).toEqual(edited.present);
+  expect(
+    plan(reloaded).occurrences.find((room) => room.id === 'surface-o-combat04')?.timeline
+      .transactions,
+  ).not.toContainEqual(
+    expect.objectContaining({
+      kind: 'acquisition',
+      reward: expect.objectContaining({ rewardType: 'ArmorBoost' }),
+      hermesShrineSourceKey: refillSourceKey,
     }),
   );
   expect(undoProjectHistory(edited).present).toBe(saved);

@@ -219,13 +219,19 @@ equivalent engine consumers and their existing wire producers now load these
 saved documents; the parameterized Anomaly recipe remains for its order-invalid
 matrix. Execution fixture bytes are unchanged.
 
-Still pending in C2: selected Zagreus with return and Contract item; World Shop
-and Shrine Travel Deal. The completed bounded follow-up adds a purchased Q Anvil
-and a reached Fateful Twist with selected rival Scylla performer as separate
-complete checkpoints. The available Contract helper remains a partial frontier,
-and combining the existing Shrine Travel Deal with the complete Q Anvil route
-requires an unavailable delivery placement; neither is claimed as a success
-checkpoint. The existing Well refill and Pool checkpoint retain their ownership.
+The completed bounded follow-up adds a purchased Q Anvil; a reached Fateful
+Twist with selected rival Scylla performer; an acquired F World Shop Travel Deal
+replacement; and an N Shrine Travel Deal acquired at its placed O Combat1
+delivery. Each Travel Deal carrier remains an independent complete checkpoint
+because its purchase and delivery chronology differ. The selected Zagreus return
+and Contract item remain pending: the available Contract helper is a partial
+frontier, so it is not claimed as a success checkpoint. The existing Well refill
+and Pool checkpoint retain their ownership.
+
+Travel Deal follow-up verification passed: fixture integrity (4 files / 36
+tests), focused assembler and authored-checkpoint scenarios (54 tests), workspace
+and fixture typechecks, and full ESLint. The independent review found no remaining
+actionable issue after the consumer cleanup; execution fixture bytes remain unchanged.
 
 Detour-slice verification: fixture integrity (32 tests), focused C2 engine consumers and
 scenario witnesses (113 tests), and execution-fixture byte checks (20 tests)

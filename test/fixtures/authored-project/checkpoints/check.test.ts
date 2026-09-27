@@ -28,11 +28,13 @@ import {
   anomalyRosterProject,
   underworldArachneCocoonProject,
   underworldTwistScyllaProject,
+  underworldWorldShopTravelDealProject,
 } from '../routes/underworld';
 import {
   surfaceEncounterShowcaseProject,
   surfaceNPhialIntermediateFountainProject,
   surfaceAnvilProject,
+  surfaceShrineTravelDealProject,
 } from '../routes/surface';
 import { dreamMixedHandoffProject } from '../routes/dream';
 import { surfaceScheduledLifecycleProject } from '../routes/scheduled-lifecycle';
@@ -125,7 +127,7 @@ describe('authored-project checkpoint integrity', () => {
     const chaosRoom = occurrences?.find(
       (occurrence) => occurrence.occurrenceId === 'fixture-chaos-room',
     );
-    expect(checkpointManifest).toHaveLength(39);
+    expect(checkpointManifest).toHaveLength(41);
     expect(chaosRoom?.gameName).toMatch(/^Chaos_/);
     expect(chaosRoom?.state).toMatchObject({
       kind: 'fixed',
@@ -176,7 +178,9 @@ describe('authored-project checkpoint integrity', () => {
     ['underworld-g-anomaly-roster', anomalyRosterProject],
     ['underworld-arachne-cocoons', underworldArachneCocoonProject],
     ['underworld-twist-scylla', underworldTwistScyllaProject],
+    ['underworld-world-shop-travel-deal', underworldWorldShopTravelDealProject],
     ['surface-anvil', surfaceAnvilProject],
+    ['surface-shrine-travel-deal', surfaceShrineTravelDealProject],
     ['surface-encounter-showcase', surfaceEncounterShowcaseProject],
     ['surface-scheduled-lifecycle', surfaceScheduledLifecycleProject],
     ['surface-n-phial-intermediate-fountain', surfaceNPhialIntermediateFountainProject],

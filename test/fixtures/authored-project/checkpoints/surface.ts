@@ -5,6 +5,7 @@ import { checkpointArtifact, type CheckpointArtifact } from './loader';
 import surfaceNRaw from './surface-n.runplanner.json';
 import surfaceEncounterShowcaseRaw from './surface-encounter-showcase.runplanner.json';
 import surfaceAnvilRaw from './surface-anvil.runplanner.json';
+import surfaceShrineTravelDealRaw from './surface-shrine-travel-deal.runplanner.json';
 import surfaceScheduledLifecycleRaw from './surface-scheduled-lifecycle.runplanner.json';
 import surfaceNPhialIntermediateFountainRaw from './surface-n-phial-intermediate-fountain.runplanner.json';
 import surfaceNNaturalSelectionRaw from './surface-n-natural-selection-frontier.runplanner.json';
@@ -32,6 +33,7 @@ export const surfaceCheckpointArtifacts = Object.freeze({
   'surface-n': checkpointArtifact(surfaceNRaw),
   'surface-encounter-showcase': checkpointArtifact(surfaceEncounterShowcaseRaw),
   'surface-anvil': checkpointArtifact(surfaceAnvilRaw),
+  'surface-shrine-travel-deal': checkpointArtifact(surfaceShrineTravelDealRaw),
   'surface-scheduled-lifecycle': checkpointArtifact(surfaceScheduledLifecycleRaw),
   'surface-n-phial-intermediate-fountain': checkpointArtifact(surfaceNPhialIntermediateFountainRaw),
   'surface-n-natural-selection-frontier': checkpointArtifact(surfaceNNaturalSelectionRaw),
@@ -66,6 +68,10 @@ export function loadSurfaceEncounterShowcaseCheckpoint(): ProjectDocument {
 
 export function loadSurfaceAnvilCheckpoint(): ProjectDocument {
   return surfaceCheckpointArtifacts['surface-anvil'].load();
+}
+
+export function loadSurfaceShrineTravelDealCheckpoint(): ProjectDocument {
+  return surfaceCheckpointArtifacts['surface-shrine-travel-deal'].load();
 }
 
 export function loadSurfaceScheduledLifecycleCheckpoint(): ProjectDocument {
