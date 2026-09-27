@@ -15,7 +15,7 @@ sequence. It separates literal game chronology from bounded planner
 abstractions so a later plan does not accidentally turn one into the other.
 
 The existing contract-entry and automatic-return evidence remains owned by
-`../rooms-and-routes/ROUTE_DETOUR_FINDINGS.md`. This audit begins with the trait awarded inside
+`../rooms-and-routes/ROUTE_DETOURS_GAME_DATA_AUDIT.md`. This audit begins with the trait awarded inside
 `C_Boss01` and follows its later Shop consequence.
 
 ## Sources

@@ -1,4 +1,4 @@
-# Route Detour Game-Data Findings
+# Route Detours Game-Data Audit
 
 ## Status and scope
 
@@ -55,29 +55,6 @@ These distinctions matter because Chaos spacing is based on an offered gate,
 while route history and depth are based on entered rooms. Ixion consumption is
 derived from the next reached host-capable room that already has that gate.
 
-## Current planner boundary
-
-The current authored topology has:
-
-- one start occurrence;
-- `ExitDecision` for linked exits and a normal lane, including a zero-target
-  generated envelope before its first ordinary target or takeover resolves;
-- `HubDecision` for Ephyra;
-- one selection among the normal targets and declared additional exits of a
-  realized `ExitDecision`;
-- fixed-linked Boss/Postboss completion after a selected Preboss.
-
-`ExitDecision.normal` owns normal exits, while declaration-owned additional
-exits represent the unified Chaos gate and the Zagreus contract.
-Anomaly remains a normal-target replacement; there is no detached room-set
-node, automatic hidden resume outside the declared detour paths, or generic
-route edge. A Room Declaration also has one route `biomeKey`, and current
-topology decoding requires an occurrence's declaration to match its owning
-authored biome.
-
-Those are current-code facts, not the desired detour contract. This audit does
-not resolve them by adding fake `Chaos`, `B`, or `C` route biomes.
-
 ## Natural Chaos
 
 ### Creation and entry form
@@ -120,7 +97,7 @@ set relevant to this audit.
 Several gates are external save/profile progression facts: Chaos must be
 unlocked, and Surface Chaos additionally depends on progressed-save flags.
 They are real game requirements but are not automatically planner inputs.
-Their eventual disposition is an implementation decision.
+The planner assumes these progression predicates are met.
 
 ### Concrete supported-source inventory
 
@@ -298,6 +275,52 @@ I Intro and I Preboss are explicit lifecycle exclusions. The catalog stores
 physical capability on room declarations as `canHost`; ordinary authored
 spawning is a separate `canSpawn` declaration and never follows from this
 matrix alone.
+
+### Physical anchor multiplicity versus usable hosts
+
+A 2026-09-26 scan of `Maps/bin/*.thing_bin` counted exact length-prefixed
+`SecretPoint` object-name records (11 bytes). The F/G/H/I results agree with
+the host matrix above. A point's presence alone is not Chaos eligibility:
+excluded boss maps, O/Q maps and Anomaly maps also contain these objects.
+Ixion is available in F/G/H/I, not N/O/P/Q; its force predicate must not be
+used to promote otherwise-ineligible Surface rooms into supported hosts.
+
+For the supported planner room inventory, applying natural-host restrictions
+and the Ixion-only matrix yields:
+
+| Biome | Natural-capable hosts | Additional Ixion-only hosts | Hosts with one point | Hosts with multiple points |
+| ----- | --------------------: | --------------------------: | -------------------: | -------------------------: |
+| F     |                    28 |                           3 |                   25 |                          6 |
+| G     |                    27 |                           0 |                   15 |                         12 |
+| H     |                     0 |                          19 |                    1 |                         18 |
+| I     |                     0 |                          25 |                   10 |                         15 |
+| N     |                     1 |                           0 |                    0 |                          1 |
+| O     |                     0 |                           0 |                    0 |                          0 |
+| P     |                    22 |                           0 |                   11 |                         11 |
+| Q     |                     0 |                           0 |                    0 |                          0 |
+
+Thus 62 of 125 supported hosts have one anchor and 63 have multiple. Natural
+hosts alone comprise 48 single-point and 30 multi-point maps. These are host
+capabilities across eligible contexts, not a claim that depth, spacing and
+progression checks always pass. All Preboss/Boss/Postboss rooms are excluded;
+I_MiniBoss03 is outside the supported catalog inventory.
+
+Surface natural-host anchor counts complete the map matrix:
+
+- `N_Opening01`: 2. Other N maps are not natural or Ixion-supported hosts.
+- `P_Intro`, `P_Reprieve01`, `P_Shop01`: each 1.
+- `P_Combat01`–`P_Combat19`, in room-number order:
+  `1,2,2,2,1,1,3,2,2,1,2,1,2,1,2,2,3,1,1`.
+  P's depth-five ceiling still applies. P miniboss and Story anchors do not
+  create supported hosts.
+
+`HandleSecretSpawns` chooses one native `SecretPoint` randomly. A static image
+showing a gate at one anchor therefore does not identify its only possible
+position. All 15 H combat maps have multiple anchors (2–4 each). The binary
+inventory establishes multiplicity; runtime point enumeration remains a
+separate check of the installed map's active objects and coordinates.
+
+### Ixion behavior
 
 This means Spark of Ixion can:
 
@@ -604,9 +627,9 @@ outgoing interaction, outgoing preview, biome-state treatment, or reward and
 encounter declarations. A future model that reduces them to an undifferentiated
 `special` edge would erase player-visible and history-visible facts.
 
-## Facts any later model must account for
+## Source invariants
 
-Without choosing a schema yet, the live evidence creates these constraints:
+The source evidence establishes these distinctions:
 
 - A room's game room-set identity is declaration data. The containing topology
   supplies route context; neither fact creates a second room class or
@@ -661,9 +684,9 @@ Stable catalog, authored-project, lifecycle, simulation, editor, G-biome, and
 integration-boundary contracts own the implementation details; this audit
 retains only their source evidence and disposition.
 
-### Settled Chaos planner baseline
+### Chaos normalization
 
-The unified Chaos plan may treat these product choices as closed:
+The planner applies these deliberate normalizations:
 
 - collapse profile-gated targets to the progressed-save pools:
   `Chaos_03`/`Chaos_06` from N and `Chaos_01`–`Chaos_06` from F/G/P;
@@ -691,25 +714,3 @@ the concrete per-map counts above. An authored Chaos occurrence therefore owns
 the same one-, two-, or three-offer ordinary batch the game generates. This
 does not change the separate rule that the host room has at most one Chaos
 entrance gate.
-
-## Required fixture ownership
-
-Focused lifecycle fixtures cover Anomaly replacement, a Zagreus Midshop, and
-Ixion's first capable-host consumption; representative browser workflows cover
-Anomaly failure and selected Zagreus return. The source establishes the expected
-history/depth and return behavior; fixtures should protect each selected
-planner interpretation rather than stand in for missing production semantics.
-
-The automatic hidden continuation editor policy is also closed: its exact
-authored target and reward remain visible through an ordinary width-one
-decision. The derived selection needs no special return control or explanatory
-label; the catalog retains the game's hidden-preview and automatic-traversal
-facts. Simulation still selects and consumes the reward before automatic entry.
-
-The Anomaly target inventory, forced encounter, source/target eligibility
-split, and Anomaly/Zagreus entry-consumed run caps are closed. They are not
-remaining audit questions.
-
-Runtime adapter control is intentionally not an audit completion gate. The
-standalone app must first settle a declarative plan and simulation contract;
-game-module forcing and conformance belong to the later integration boundary.
