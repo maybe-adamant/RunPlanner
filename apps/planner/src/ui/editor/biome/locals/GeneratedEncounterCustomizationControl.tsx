@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react';
 import type { AuthoredGeneratedEncounterCustomization } from '@run-planner/engine/authored-project';
 import type {
+  WorkspaceCommandIntent,
   WorkspaceEncounterCustomizationInteraction,
   WorkspaceEncounterPhase,
   WorkspaceGeneratedEncounterAssessment,
@@ -11,6 +12,16 @@ import type { ContextualPickerModel } from '@planner/projections/contextual/cont
 import { ContextualPicker } from '@planner/ui/controls/ContextualPicker';
 import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
 import { NavigationStatusMarker } from '@planner/ui/feedback/EvaluationFeedback';
+
+type GeneratedEdits = NonNullable<WorkspaceEncounterCustomizationInteraction['generatedEdits']>;
+
+/** Dispatches one bound generated-composition edit when the interaction publishes them. */
+function useGeneratedEdit(interaction: WorkspaceEncounterCustomizationInteraction) {
+  const execute = useCommandIntent();
+  return (build: (edits: GeneratedEdits) => WorkspaceCommandIntent) => {
+    if (interaction.generatedEdits !== undefined) execute(build(interaction.generatedEdits));
+  };
+}
 
 type Decision = Extract<
   NonNullable<WorkspaceEncounterPhase['customization']>[number],
@@ -176,67 +187,6 @@ function authored(decision: Decision): AuthoredGeneratedEncounterCustomization {
   return decision.value?.kind === 'generated' ? decision.value : { kind: 'generated' };
 }
 
-/** Moves only an explicit prior highlight's own allocation onto an unallocated new highlight. */
-function transferHighlightAllocation(
-  allocations: Readonly<Record<string, number>>,
-  typeKeys: readonly string[],
-  previousKey: string | undefined,
-  nextKey: string,
-): Readonly<Record<string, number>> {
-  // A listed type owns its allocation even when it was also the highlight.
-  if (
-    previousKey === undefined ||
-    typeKeys.includes(previousKey) ||
-    !Object.hasOwn(allocations, previousKey) ||
-    Object.hasOwn(allocations, nextKey)
-  )
-    return allocations;
-  const { [previousKey]: inherited, ...rest } = allocations;
-  return { ...rest, [nextKey]: inherited! };
-}
-
-function withWave(
-  value: AuthoredGeneratedEncounterCustomization,
-  waveIndex: number,
-  change: (
-    wave: NonNullable<AuthoredGeneratedEncounterCustomization['waves']>[number],
-  ) => NonNullable<AuthoredGeneratedEncounterCustomization['waves']>[number] | undefined,
-): AuthoredGeneratedEncounterCustomization {
-  const current = value.waves?.find((wave) => wave.waveIndex === waveIndex) ?? {
-    waveIndex,
-    typeKeys: [],
-  };
-  const next = change(current);
-  const waves = [
-    ...(value.waves?.filter((wave) => wave.waveIndex !== waveIndex) ?? []),
-    ...(next === undefined ? [] : [next]),
-  ].sort((left, right) => left.waveIndex - right.waveIndex);
-  const base = {
-    kind: 'generated' as const,
-    ...(value.baseRoll === undefined ? {} : { baseRoll: value.baseRoll }),
-    ...(value.waveCount === undefined ? {} : { waveCount: value.waveCount }),
-    ...(value.highlightKey === undefined ? {} : { highlightKey: value.highlightKey }),
-    ...(value.fangs === undefined ? {} : { fangs: value.fangs }),
-    ...(value.menace === undefined ? {} : { menace: value.menace }),
-  };
-  return waves.length === 0 ? base : { ...base, waves };
-}
-
-function withMenace(
-  value: AuthoredGeneratedEncounterCustomization,
-  waveIndex: number,
-  sourceKey: string,
-  change: { readonly count: number; readonly targetKey?: string },
-): AuthoredGeneratedEncounterCustomization {
-  const prior = value.menace?.find((wave) => wave.waveIndex === waveIndex);
-  const conversions = { ...(prior?.conversions ?? {}), [sourceKey]: change };
-  const menace = [
-    ...(value.menace?.filter((wave) => wave.waveIndex !== waveIndex) ?? []),
-    { waveIndex, conversions },
-  ].sort((left, right) => left.waveIndex - right.waveIndex);
-  return { ...value, menace };
-}
-
 const emptyDraftPicker: ContextualPickerModel<WorkspaceGeneratedWaveDraftChoice> = Object.freeze({
   sections: Object.freeze([]),
 });
@@ -251,7 +201,6 @@ function GeneratedFangsPicker({
   interaction,
   presentation,
   value,
-  update,
 }: {
   readonly interaction: WorkspaceEncounterCustomizationInteraction;
   readonly presentation: {
@@ -261,12 +210,8 @@ function GeneratedFangsPicker({
     >;
   };
   readonly value: AuthoredGeneratedEncounterCustomization;
-  readonly update: (
-    change: (
-      current: AuthoredGeneratedEncounterCustomization,
-    ) => AuthoredGeneratedEncounterCustomization,
-  ) => void;
 }) {
+  const edit = useGeneratedEdit(interaction);
   const [perkDraft, setPerkDraft] = useState<readonly string[] | undefined>();
   const targetProduct = interaction.generatedFangsDraftFor?.(undefined);
   const perkProduct =
@@ -289,11 +234,7 @@ function GeneratedFangsPicker({
         layout="inline"
         model={targetProduct?.picker ?? emptyFangsPicker}
         onSelect={(choice) => {
-          if (choice.kind === 'type')
-            update((current) => ({
-              ...current,
-              fangs: { typeKey: choice.key, perkKeys: current.fangs?.perkKeys ?? [] },
-            }));
+          if (choice.kind === 'type') edit((edits) => edits.setFangsTarget(choice.key));
         }}
         placeholder="Select target"
         triggerLabel={display}
@@ -312,10 +253,7 @@ function GeneratedFangsPicker({
         onSelect={(choice) => {
           if (perkDraft === undefined || value.fangs === undefined) return;
           if (choice.kind === 'finish') {
-            update((current) => ({
-              ...current,
-              fangs: { typeKey: value.fangs!.typeKey, perkKeys: perkDraft },
-            }));
+            edit((edits) => edits.setFangsPerks(perkDraft));
             setPerkDraft(undefined);
           } else if (choice.kind === 'perkPrefix') setPerkDraft(choice.perkKeys);
           else if (choice.kind === 'perk') setPerkDraft(Object.freeze([...perkDraft, choice.key]));
@@ -334,46 +272,11 @@ function GeneratedFangsPicker({
   );
 }
 
-function replacementWave(
-  value: AuthoredGeneratedEncounterCustomization,
-  waveIndex: number,
-  typeKeys: readonly string[],
-  highlightKeys: readonly string[],
-  sampledBudgetKeys: readonly string[],
-) {
-  const previous = value.waves?.find((wave) => wave.waveIndex === waveIndex);
-  const previousAllocations = previous?.allocations;
-  const members = [...highlightKeys, ...typeKeys];
-  if (previousAllocations === undefined) return { waveIndex, typeKeys: [...typeKeys] };
-  const previousTypeKeys = previous?.typeKeys ?? [];
-  const allocations: Record<string, number> = {};
-  for (const key of highlightKeys) {
-    const allocation = previousAllocations[key];
-    if (Object.hasOwn(previousAllocations, key) && allocation !== undefined)
-      allocations[key] = allocation;
-  }
-  for (const [index, key] of typeKeys.entries()) {
-    const previousKey = previousTypeKeys[index];
-    const allocation = previousKey === undefined ? undefined : previousAllocations[previousKey];
-    if (
-      previousKey !== undefined &&
-      Object.hasOwn(previousAllocations, previousKey) &&
-      allocation !== undefined
-    )
-      allocations[key] = allocation;
-  }
-  for (const key of members) if (!sampledBudgetKeys.includes(key)) delete allocations[key];
-  return Object.keys(allocations).length === 0
-    ? { waveIndex, typeKeys: [...typeKeys] }
-    : { waveIndex, typeKeys: [...typeKeys], allocations };
-}
-
 function GeneratedEncounterWaveDraftPicker({
   interaction,
   hasIssues,
   hasAuthoredEnemies,
   selection,
-  update,
   wave,
 }: {
   readonly interaction: WorkspaceEncounterCustomizationInteraction;
@@ -384,13 +287,9 @@ function GeneratedEncounterWaveDraftPicker({
     readonly label: string;
     readonly kind?: 'fixed' | 'highlight';
   }[];
-  readonly update: (
-    change: (
-      current: AuthoredGeneratedEncounterCustomization,
-    ) => AuthoredGeneratedEncounterCustomization,
-  ) => void;
   readonly wave: WorkspaceGeneratedEncounterAssessment['waves'][number];
 }) {
+  const edit = useGeneratedEdit(interaction);
   const [draft, setDraft] = useState<
     { readonly confirmedSeedCount: number; readonly typeKeys: readonly string[] } | undefined
   >();
@@ -422,15 +321,11 @@ function GeneratedEncounterWaveDraftPicker({
           onSelect={(choice) => {
             if (draft === undefined) return;
             if (choice.kind === 'finish') {
-              update((current) =>
-                withWave(current, wave.waveIndex, () =>
-                  replacementWave(
-                    current,
-                    wave.waveIndex,
-                    draft.typeKeys,
-                    wave.seeds.filter((seed) => seed.kind === 'highlight').map((seed) => seed.key),
-                    product!.sampledBudgetKeys,
-                  ),
+              edit((edits) =>
+                edits.replaceWaveEnemies(
+                  wave.waveIndex,
+                  draft.typeKeys,
+                  product!.sampledBudgetKeys,
                 ),
               );
               setDraft(undefined);
@@ -464,6 +359,7 @@ export function GeneratedEncounterCustomizationControl({
   readonly interaction: WorkspaceEncounterCustomizationInteraction;
 }) {
   const execute = useCommandIntent();
+  const edit = useGeneratedEdit(interaction);
   const [selectedWave, setSelectedWave] = useState(1);
   const [initializationFailure, setInitializationFailure] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
@@ -546,11 +442,6 @@ export function GeneratedEncounterCustomizationControl({
     decision.selection.fixedEnemies.find((choice) => choice.key === key)?.unitGroupSize;
   const replace = (next: AuthoredGeneratedEncounterCustomization | null) =>
     execute(interaction.intentFor(decision.key, next));
-  const update = (
-    change: (
-      current: AuthoredGeneratedEncounterCustomization,
-    ) => AuthoredGeneratedEncounterCustomization,
-  ) => replace(change(value));
   const fixedCount = decision.selection.waveCount.min === decision.selection.waveCount.max;
   const retainedWaves = (value.waves ?? []).filter(
     (row) => !assessment?.waves.some((wave) => wave.waveIndex === row.waveIndex),
@@ -632,7 +523,7 @@ export function GeneratedEncounterCustomizationControl({
               min={budgetDomain.baseRoll.min}
               max={budgetDomain.baseRoll.max}
               value={value.baseRoll}
-              onCommit={(baseRoll) => update((current) => ({ ...current, baseRoll }))}
+              onCommit={(baseRoll) => edit((edits) => edits.setBaseRoll(baseRoll))}
             />
             <span>{budgetNumber.format(budgetDomain.total.max)}</span>
           </div>
@@ -655,21 +546,7 @@ export function GeneratedEncounterCustomizationControl({
                       ? (value.waveCount ?? decision.selection.waveCount.min)
                       : value.waveCount) === count
                   }
-                  onChange={() =>
-                    update((current) => {
-                      const base = {
-                        kind: 'generated' as const,
-                        ...(current.baseRoll === undefined ? {} : { baseRoll: current.baseRoll }),
-                        ...(current.highlightKey === undefined
-                          ? {}
-                          : { highlightKey: current.highlightKey }),
-                        ...(current.fangs === undefined ? {} : { fangs: current.fangs }),
-                        ...(current.menace === undefined ? {} : { menace: current.menace }),
-                        ...(current.waves === undefined ? {} : { waves: current.waves }),
-                      };
-                      return { ...base, waveCount: count };
-                    })
-                  }
+                  onChange={() => edit((edits) => edits.setWaveCount(count))}
                 />
                 {count}
               </label>
@@ -696,35 +573,7 @@ export function GeneratedEncounterCustomizationControl({
               label="Shared Enemy"
               layout="inline"
               model={interaction.generatedHighlightPicker ?? emptyHighlightPicker}
-              onSelect={(highlightKey) =>
-                update((current) => {
-                  const base = {
-                    kind: 'generated' as const,
-                    ...(current.baseRoll === undefined ? {} : { baseRoll: current.baseRoll }),
-                    ...(current.waveCount === undefined ? {} : { waveCount: current.waveCount }),
-                    ...(current.fangs === undefined ? {} : { fangs: current.fangs }),
-                    ...(current.menace === undefined ? {} : { menace: current.menace }),
-                    ...(current.waves === undefined
-                      ? {}
-                      : {
-                          waves: current.waves.map((wave) =>
-                            wave.allocations === undefined
-                              ? wave
-                              : {
-                                  ...wave,
-                                  allocations: transferHighlightAllocation(
-                                    wave.allocations,
-                                    wave.typeKeys,
-                                    current.highlightKey,
-                                    highlightKey,
-                                  ),
-                                },
-                          ),
-                        }),
-                  };
-                  return { ...base, highlightKey };
-                })
-              }
+              onSelect={(highlightKey) => edit((edits) => edits.setSharedEnemy(highlightKey))}
               placeholder="Select shared enemy"
             />
           </div>
@@ -834,14 +683,9 @@ export function GeneratedEncounterCustomizationControl({
                   <label className="encounter-budget-input" key={`allocation-${position}`}>
                     <EnemyBudgetInput
                       label={`Wave ${wave.waveIndex} ${name} budget`}
-                      onCommit={(next) => {
-                        update((state) =>
-                          withWave(state, wave.waveIndex, (row) => ({
-                            ...row,
-                            allocations: { ...row.allocations, [key]: next },
-                          })),
-                        );
-                      }}
+                      onCommit={(next) =>
+                        edit((edits) => edits.setAllocation(wave.waveIndex, key, next))
+                      }
                       value={allocation}
                     />
                     <span
@@ -875,7 +719,6 @@ export function GeneratedEncounterCustomizationControl({
                       })),
                       ...(current?.typeKeys ?? []).map((key) => ({ key, label: label(key) })),
                     ]}
-                    update={update}
                     wave={wave}
                   />
                   {current === undefined && wave.seeds.length === 0 ? (
@@ -961,9 +804,6 @@ export function GeneratedEncounterCustomizationControl({
                                 </th>
                                 {tableKeys.map((key, index) => {
                                   const cell = wave.menaceCells?.[key];
-                                  const currentMenace = value.menace?.find(
-                                    (entry) => entry.waveIndex === wave.waveIndex,
-                                  )?.conversions[key];
                                   if (cell === undefined)
                                     return <td key={`${index}-${key}`}>NA</td>;
                                   return (
@@ -983,11 +823,8 @@ export function GeneratedEncounterCustomizationControl({
                                             layout="inline"
                                             model={cell.picker}
                                             onSelect={(target) =>
-                                              update((state) =>
-                                                withMenace(state, wave.waveIndex, key, {
-                                                  count: currentMenace?.count ?? 0,
-                                                  targetKey: target,
-                                                }),
+                                              edit((edits) =>
+                                                edits.setMenaceTarget(wave.waveIndex, key, target),
                                               )
                                             }
                                             placeholder="Select replacement"
@@ -1017,13 +854,8 @@ export function GeneratedEncounterCustomizationControl({
                                         label={`Wave ${wave.waveIndex} ${label(key)} converted`}
                                         value={currentMenace?.count ?? 0}
                                         onCommit={(count) =>
-                                          update((state) =>
-                                            withMenace(state, wave.waveIndex, key, {
-                                              count,
-                                              ...(currentMenace?.targetKey === undefined
-                                                ? {}
-                                                : { targetKey: currentMenace.targetKey }),
-                                            }),
+                                          edit((edits) =>
+                                            edits.setMenaceCount(wave.waveIndex, key, count),
                                           )
                                         }
                                       />
@@ -1055,22 +887,7 @@ export function GeneratedEncounterCustomizationControl({
                                 aria-label={`Remove Wave ${wave.waveIndex} Enemy ${wave.seeds.length + position + 1}`}
                                 className="quiet-action"
                                 onClick={() =>
-                                  update((state) =>
-                                    withWave(state, wave.waveIndex, (row) => {
-                                      const typeKeys = row.typeKeys.slice(0, -1);
-                                      const next = { ...row, typeKeys };
-                                      if (row.allocations !== undefined) {
-                                        const allocations = { ...row.allocations };
-                                        const removedKey = row.typeKeys.at(-1);
-                                        if (removedKey !== undefined)
-                                          delete allocations[removedKey];
-                                        if (Object.keys(allocations).length)
-                                          next.allocations = allocations;
-                                        else delete next.allocations;
-                                      }
-                                      return next;
-                                    }),
-                                  )
+                                  edit((edits) => edits.removeLastEnemy(wave.waveIndex))
                                 }
                                 type="button"
                               >
@@ -1095,7 +912,6 @@ export function GeneratedEncounterCustomizationControl({
             perks: decision.selection.fangs?.perks ?? {},
           }}
           value={value}
-          update={update}
         />
       ) : null}
       {retainedWaves.map((wave) => (
