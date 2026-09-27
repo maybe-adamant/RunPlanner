@@ -11,8 +11,8 @@ import {
 
 /**
  * Each fixture build produces decoded-plan equality, a wire round trip, and
- * byte stability from one compilation. These fixtures are mirrored byte-for-byte
- * to the Plan Executor, so formatting and key-order drift matter.
+ * byte stability from one compilation. The game module's Lua tests read these
+ * fixtures in place, so formatting and key-order drift matter.
  *
  * `npm run fixtures:execution` rewrites them through the same one code path.
  */

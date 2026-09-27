@@ -1,5 +1,6 @@
 -- luacheck: globals TestStatusUi
 local lu = require("luaunit")
+local fixtures = require("tests/harness/fixture_loader")
 local statusUi = require("mods.host.status_ui")
 local hostData = require("mods.host.data")
 local nativeGame = require("tests.harness.native_game")
@@ -28,7 +29,7 @@ local function canvas(lines, tab, detailTab)
 end
 
 local function publishedPlan()
-    local file = assert(io.open("fixtures/execution-plan/automatic-boss.execution.json", "rb"))
+    local file = assert(io.open(fixtures.path("automatic-boss.execution.json"), "rb"))
     local raw = file:read("*a")
     file:close()
     return assert(require("mods.protocol.decoder").decode(assert(require("mods.protocol.json").decode(raw))))

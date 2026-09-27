@@ -1,5 +1,6 @@
 -- luacheck: globals TestNavigationHooks
 local lu = require("luaunit")
+local fixtures = require("tests/harness/fixture_loader")
 local navigation = require("mods.navigation.hooks")
 local ephyra = require("mods.navigation.ephyra")
 local routeSession = require("mods.route.session")
@@ -9,7 +10,7 @@ local capture, stub = support.capture, support.stub
 TestNavigationHooks = {}
 
 function TestNavigationHooks.testPublishedDreamPostbossRecoverySteersTheNextBiomeAndReleasesThePrefixEnd()
-    local file = assert(io.open("fixtures/execution-plan/dream-mixed-prefix.execution.json", "rb"))
+    local file = assert(io.open(fixtures.path("dream-mixed-prefix.execution.json"), "rb"))
     local source = file:read("*a")
     file:close()
     local plan = assert(require("mods.protocol.decoder").decode(assert(require("mods.protocol.json").decode(source))))

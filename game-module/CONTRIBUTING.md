@@ -1,39 +1,37 @@
 # Development
 
-This repository contains the Hades II game module for
-[Run Planner](https://github.com/maybe-adamant/RunPlanner). The application owns
-authoring, simulation, and validation. This module consumes its published
-execution plans; it is not a second planner or simulator.
+This directory contains the Hades II game module for Run Planner. The planner
+owns authoring, simulation, and validation. This module consumes its published
+execution plans; it is not a second planner or simulator. Ownership rules for
+this lane live in the repository's `AGENTS.md`.
 
-## Repository layout
+## Layout
 
 - `src/` — the active Hades II module.
-- `fixtures/` — execution plans shared with the planner for compatibility testing.
 - `tests/` — Lua unit and integration tests.
 
 Within `src/mods/`, code is grouped by runtime responsibility: host and protocol
 integration, route navigation, room behavior, timeline interactions, and
 modeled traits or keepsakes.
 
+The tests read the planner's execution fixtures in place from
+`packages/planner-engine/test/execution-plan/fixtures/`; there is no module-local
+copy.
+
 ## Checks
 
-Run the Lua test suite from the repository root:
+From the repository root, run the Lua suite and Luacheck together:
 
 ```sh
-lua tests/all.lua
+npm run test:game-module
 ```
 
-Check the module with Luacheck:
+This parses every Lua file under `src/` and `tests/` with `luac -p`, then runs
+`lua tests/all.lua` and `luacheck src` from `game-module/`. It requires Lua 5.2
+with LuaUnit and Luacheck installed from LuaRocks.
 
-```sh
-luacheck src/
-```
+`manifest.template.json` is the source of the package manifest; the release
+build adds `version_number`.
 
-For local deployment and modpack-level checks, see the
-[Run Planner modpack repository](https://github.com/h2pack-runplanner/run-planner-modpack).
-
-## Documentation
-
-`README.md` is the user-facing introduction for both GitHub and Thunderstore.
-The package's `thunderstore.toml` points to that same file. Keep implementation
-and development details here rather than maintaining a second user guide.
+`README.md` is the player-facing introduction; keep implementation and
+development details here.

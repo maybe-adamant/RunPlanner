@@ -1,10 +1,10 @@
 # Agent Instructions
 
-This repository is the standalone Run Planner application. It is app-first:
-the catalog, authored plan, simulator, validator, and sophisticated editor live
-here. The Hades II game module is an external downstream consumer of a
-declarative plan and must not shape the current UI or simulation around ImGui
-or ModpackLib.
+This repository is the Run Planner application and its Hades II game module.
+It is app-first: the catalog, authored plan, simulator, validator, and
+sophisticated editor own planner meaning. The game module in `game-module/` is
+a downstream consumer of a declarative plan and must not shape the UI or
+simulation around ImGui or ModpackLib.
 
 ## Read Before Editing
 
@@ -33,7 +33,8 @@ repair.
 
 ## Ownership Lanes
 
-Treat the repository as three ownership lanes—two packages and one application.
+Treat the repository as four ownership lanes—two packages, one application,
+and one game module.
 Route a change by the question it answers, not by the layer that first needs
 the result.
 
@@ -91,6 +92,18 @@ the result.
   product-loop witnesses. Use `npm run test:planner`, `npm run test:ui`,
   `npm run test:contract`, or `npm run test:product` according to the boundary
   changed.
+
+### Game Module — `game-module/`
+
+- Owns runtime execution of published plans in Hades II: strict decoding of
+  the execution protocol, native adapters, steering, and conformance checks.
+- Answers “how does the game realize and check this published plan?”
+- Consumes the execution protocol and the planner-engine execution fixtures
+  under `packages/planner-engine/test/execution-plan/fixtures/`. It must not
+  own planner semantics, reproduce eligibility or candidate policy, or import
+  planner code.
+- Primary tests are the Lua syntax pass, Lua suite, and Luacheck. Use
+  `npm run test:game-module` while developing this lane.
 
 When a feature crosses lanes, establish the authoritative fact or transition in
 its owning lane first, expose the narrow supported product, and adapt it
@@ -249,7 +262,9 @@ broad phase-closure verification:
   architecture-boundary changes;
 - `npm run test:contract` for application/workspace capability changes;
 - `npm run test:product` for cross-layer browser workflows;
-- `npm run test:engine` or `npm run test:catalog` for their owning packages.
+- `npm run test:engine` or `npm run test:catalog` for their owning packages;
+- `npm run test:game-module` for the game module's Lua syntax, tests, and
+  Luacheck.
 
 `npm run test` and `npm run check` remain the complete phase, push, and release
 gates. Run the complete gate for test/configuration changes, shared package
@@ -318,15 +333,14 @@ scratch serialization output.
 - For a generator using Prettier's API, resolve the repository configuration
   for the destination and pass its filepath to `prettier.format`. A shell-based
   refresh must finish with `npx prettier --write <changed-fixture-paths>` before
-  mirroring or handoff. This is part of generation, not a later cleanup pass.
+  handoff. This is part of generation, not a later cleanup pass.
   `npm run format:check` enforces the same format. Do not manually wrap lines or
   reformat unrelated fixtures during semantic changes.
 - Regenerate only fixtures whose semantic product changed. For a protocol-wide
   scalar such as the version number, use a bounded mechanical edit rather than
   rebuilding otherwise unchanged products.
-- The planner copy is authoritative. Mirror changed execution fixtures to the
-  Plan Executor byte-for-byte, then verify every mirrored pair with `cmp` (or an
-  equivalent byte comparison).
+- The planner-engine corpus is the only copy. The game module's Lua tests read
+  it in place; run `npm run test:game-module` after changing a fixture.
 - Before handoff, inspect fixture `git diff --numstat` and a representative diff.
   Unexpected whole-file churn or formatting-only changes are a failed fixture
   update and must be corrected before review.

@@ -2,10 +2,11 @@
 
 ## Purpose and Reading Map
 
-Run Planner is an authoring and simulation application. Its three ownership
-lanes are the Hades II catalog, the pure planner engine, and the planner
-application. This document explains their relationship and how to extend them
-without creating parallel policy.
+Run Planner is an authoring and simulation application. Its three planner
+ownership lanes are the Hades II catalog, the pure planner engine, and the
+planner application; the Hades II game module in `game-module/` is a fourth,
+downstream lane. This document explains their relationship and how to extend
+them without creating parallel policy.
 
 Start with the lane that owns the question:
 
@@ -39,7 +40,7 @@ A project contains one route. Catalog Room Declarations have unique game
 names, while authored Room Occurrences have stable IDs and may repeat a game
 name. Rendered rows, tabs and component identities are not domain identities.
 
-The external game module consumes a declarative execution plan. It realizes
+The game module (`game-module/`) consumes a declarative execution plan. It realizes
 supported outcomes and checks conformance under the integration contract. It
 is not another planner or simulator, and its Lua/UI constraints must not shape
 the application's authored model or React editor.
@@ -58,7 +59,7 @@ profile / semantic commands → immutable authored project
 catalog + project → exact engine evaluation assembly
 project + matching assembly → application projections and bound interactions
 bound interaction → command → replacement project
-validated engine product → execution document → external game module
+validated engine product → execution document → game module
 ```
 
 ### Catalog — packages/hades2-catalog
@@ -90,6 +91,12 @@ Redux coordinates authored history, session state and atomic publication.
 React renders supported products and invokes bound intents or deliberately
 retained fixed semantic mappings. Neither layer repairs topology, determines
 eligibility or counts lifecycle events.
+
+### Game Module — game-module/
+
+Owns runtime execution of published plans in Hades II. It is Lua that
+consumes the execution protocol and the planner-engine execution fixtures; it
+imports no planner code and owns no planner semantics.
 
 ## Construction and Publication
 
@@ -199,7 +206,7 @@ decoding and regenerate canonical bytes and hashes. A one-to-many migration
 must emit all documents rather than silently select a sibling. Temporary
 transformers are removed after conversion; no permanent alternate fixture
 decoder is introduced. Generated execution fixtures follow the separate
-byte-preservation and mirroring discipline in contributor instructions.
+byte-preservation discipline in contributor instructions.
 
 Checkpoint support owns manifest/registry closure, static loader reachability,
 and recipe-backed canonical-byte integrity. Engine domain suites own reached

@@ -1,5 +1,6 @@
 -- luacheck: globals TestProtocol
 local lu = require("luaunit")
+local fixtures = require("tests/harness/fixture_loader")
 local json = require("mods/protocol/json")
 local protocol = require("mods.protocol.decoder")
 local rewards = require("mods.protocol.rewards")
@@ -59,7 +60,7 @@ function TestProtocol.testPublishedCompatibilityMatchesDecoder()
         catalogVersion = protocol.CATALOG_VERSION,
     })
 end
-local root = "fixtures/execution-plan/"
+local root = fixtures.root
 
 function TestProtocol.testGeneratedEncounterRequiresACompleteProvenancedComposition()
     local function value()

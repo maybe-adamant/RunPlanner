@@ -42,19 +42,19 @@ the plan already in progress.
 Create an **Underworld**, **Surface**, or **Dream Dive** project—or load an
 existing plan.
 
-![New project screen with Underworld, Surface, Dream Dive, and Load options](https://raw.githubusercontent.com/h2pack-runplanner/adamantRunPlanner-Run_Planner/main/docs/images/planner-new-project.webp)
+![New project screen with Underworld, Surface, Dream Dive, and Load options](docs/images/planner-new-project.webp)
 
 Choose your starting weapon, Arcana, Fear, keepsake, and reward in **Loadout**.
 
-![Underworld loadout with Argent Skull, Aspect of Persephone, Jeweled Pom, and a Zeus starting reward](https://raw.githubusercontent.com/h2pack-runplanner/adamantRunPlanner-Run_Planner/main/docs/images/planner-loadout.webp)
+![Underworld loadout with Argent Skull, Aspect of Persephone, Jeweled Pom, and a Zeus starting reward](docs/images/planner-loadout.webp)
 
 Select a room and open **Room Timeline** to configure its planned interactions.
 
-![Erebus opening-room timeline with the planned Zeus boon pickup](https://raw.githubusercontent.com/h2pack-runplanner/adamantRunPlanner-Run_Planner/main/docs/images/planner-timeline.webp)
+![Erebus opening-room timeline with the planned Zeus boon pickup](docs/images/planner-timeline.webp)
 
 Open **Edit Trait** to configure the offered boons and the one you intend to pick.
 
-![Zeus trait offer with Epic Heaven Strike selected and no current findings](https://raw.githubusercontent.com/h2pack-runplanner/adamantRunPlanner-Run_Planner/main/docs/images/planner-trait-offer.webp)
+![Zeus trait offer with Epic Heaven Strike selected and no current findings](docs/images/planner-trait-offer.webp)
 
 ### Publish to the game
 
@@ -62,20 +62,20 @@ You can leave choices unfinished or conflicting while editing. Before
 publishing, fix the issues the planner points out so the plan passes its
 game-rule checks. Then open **File → Publish to Game**.
 
-![File menu with Publish to Game highlighted](https://raw.githubusercontent.com/h2pack-runplanner/adamantRunPlanner-Run_Planner/main/docs/images/planner-publish-menu.webp)
+![File menu with Publish to Game highlighted](docs/images/planner-publish-menu.webp)
 
 Choose the mod-manager profile containing Run Planner, select a plan slot,
 and click **Publish**. The screenshots use the author's profile, **h2-dev**;
 choose the profile you play with.
 
-![Publish to game dialog showing profile and plan-slot selection](https://raw.githubusercontent.com/h2pack-runplanner/adamantRunPlanner-Run_Planner/main/docs/images/planner-publish-slot.webp)
+![Publish to game dialog showing profile and plan-slot selection](docs/images/planner-publish-slot.webp)
 
 ### Inspect before starting
 
 Select the slot you published to and click **Inspect / Reload Selected Plan** to check its
 loadout. **Inactive | Steering: off** is expected before starting a run.
 
-![Plan inspection before a run, showing the selected slot, weapon, keepsake, and Arcana](https://raw.githubusercontent.com/h2pack-runplanner/adamantRunPlanner-Run_Planner/main/docs/images/plan-inspection.webp)
+![Plan inspection before a run, showing the selected slot, weapon, keepsake, and Arcana](docs/images/plan-inspection.webp)
 
 ### While playing
 
@@ -94,7 +94,7 @@ The optional **Highlight planned choices** setting is also off by default. It
 marks an available planned exit, Ship wheel offer, or trait-screen row when the
 exact native object is available; it never selects it for you.
 
-![A synchronized run with steering active](https://raw.githubusercontent.com/h2pack-runplanner/adamantRunPlanner-Run_Planner/main/docs/images/run-synchronized.webp)
+![A synchronized run with steering active](docs/images/run-synchronized.webp)
 
 Follow the rooms and choices you planned in the app. If the run no longer
 matches the plan, the mod reports the mismatch and stops steering. Normal
@@ -103,14 +103,14 @@ gameplay continues—you can keep playing or start a fresh planned run.
 **Desynchronized | Steering: off** means the run no longer matches the plan.
 Open **Current Run** to see what went wrong.
 
-![A desynchronized run with steering stopped and the failed checkpoint displayed](https://raw.githubusercontent.com/h2pack-runplanner/adamantRunPlanner-Run_Planner/main/docs/images/run-desynchronized.webp)
+![A desynchronized run with steering stopped and the failed checkpoint displayed](docs/images/run-desynchronized.webp)
 
 ## Beta and feedback
 
 Run Planner is in beta. You may encounter bugs or differences between your
 plan and the game.
 
-If something goes wrong, [report an issue](https://github.com/h2pack-runplanner/adamantRunPlanner-Run_Planner/issues)
+If something goes wrong, [report an issue](https://github.com/maybe-adamant/RunPlanner/issues)
 with your plan, the room where it happened, what you expected, and what you
 actually saw. Include `logOutput.log` from your profile's `ReturnOfModding`
 folder when possible.
@@ -127,5 +127,4 @@ To find the log when using r2modman:
 3. Open its `ReturnOfModding` folder.
 4. Attach `logOutput.log` to your issue report.
 
-Interested in the code? See the
-[development guide](https://github.com/h2pack-runplanner/adamantRunPlanner-Run_Planner/blob/main/CONTRIBUTING.md).
+Interested in the code? See the [development guide](CONTRIBUTING.md).

@@ -1,6 +1,7 @@
 -- D1 encounter ownership and identity witnesses.
 -- luacheck: globals TestEncounters
 local lu = require("luaunit")
+local fixtures = require("tests/harness/fixture_loader")
 local json = require("mods/protocol/json")
 local protocol = require("mods.protocol.decoder")
 local bindings = require("mods.room.timeline.bindings")
@@ -422,7 +423,7 @@ end
 
 function TestEncounters.testPublishedStoryCarrierIsForcedProvenAndBound()
     -- F postboss publishes Story_Chronos_01, the native carrier derived from Empty.
-    local file = assert(io.open("fixtures/execution-plan/fg.execution.json", "rb"))
+    local file = assert(io.open(fixtures.path("fg.execution.json"), "rb"))
     local plan = assert(protocol.decode(assert(json.decode(file:read("*a")))))
     file:close()
     local occurrence
@@ -473,7 +474,7 @@ function TestEncounters.testPublishedStoryCarrierIsForcedProvenAndBound()
 end
 
 function TestEncounters.testPublishedFirstTartarusCombatInstallsItsExactIntroDefinition()
-    local file = assert(io.open("fixtures/execution-plan/underworld-fghi.execution.json", "rb"))
+    local file = assert(io.open(fixtures.path("underworld-fghi.execution.json"), "rb"))
     local plan = assert(protocol.decode(assert(json.decode(file:read("*a")))))
     file:close()
     local occurrence

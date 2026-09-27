@@ -28,8 +28,10 @@ Desktop discovery matches module identity and the installed
 `execution-compatibility.json` declaration against the application's execution
 format, protocol and catalog versions, not the module release number or authored
 save schema. Publication rechecks against the actual outgoing plan header before
-writing. Module tests keep this packaged declaration aligned with its decoder;
-missing or incompatible declarations require a module update.
+writing. The module lives in `game-module/`; its tests keep this packaged
+declaration aligned with its decoder and decode the planner-engine execution
+fixtures in place. Missing or incompatible declarations require a module
+update.
 
 Manual folder selection complements automatic discovery. The desktop accepts
 a profile folder or its `ReturnOfModding` folder, normalizes it to the profile,

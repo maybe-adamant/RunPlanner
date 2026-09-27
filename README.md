@@ -4,9 +4,8 @@ Run Planner is a standalone Hades II route-authoring and simulation
 application for Run Director. It owns the supported catalog, authored route,
 deterministic game-language history, possibility and eligibility evaluation,
 validation, findings, editor projections, profiles, recovery, and undo/redo.
-The [Run Planner game module](https://github.com/h2pack-runplanner/adamantRunPlanner-Run_Planner)
-consumes a validated execution plan and audits live
-runtime behavior; it is not a second planner or simulator.
+The [Run Planner game module](game-module/) consumes a validated execution plan
+and audits live runtime behavior; it is not a second planner or simulator.
 
 ## Architecture
 
@@ -16,6 +15,7 @@ The repository is split by ownership:
 packages/hades2-catalog   Hades II declarations and catalog construction
 packages/planner-engine   pure authored model, reward kernel, simulation, and validation
 apps/planner              application composition, Redux session state, and React UI
+game-module               Hades II Lua module that executes published plans
 ```
 
 The dependency direction is:
@@ -90,12 +90,14 @@ npm run test:contract  # application architecture and workspace contracts
 npm run test:product   # browser product loops
 npm run test:engine    # authored model, simulator, and validation
 npm run test:catalog   # declaration and catalog construction
+npm run test:game-module  # game module Lua syntax, tests, and Luacheck
 ```
 
 Individual `typecheck`, `lint`, `format:check`, `build`, and `test:watch`
-scripts are also available. Use the narrowest truthful lane while developing;
-configuration, dependency, shared setup, and cross-layer changes require the
-complete gate.
+scripts are also available. The game module lane, which `check` includes,
+needs Lua 5.2 (`lua` and `luac`) with LuaUnit and Luacheck from LuaRocks on
+`PATH`. Use the narrowest truthful lane while developing; configuration,
+dependency, shared setup, and cross-layer changes require the complete gate.
 
 ## Desktop preview
 
@@ -131,8 +133,9 @@ in About, uploads the archive and checksum to a draft, then publishes it. Each
 published version identifies one build; choose a new version for a new build.
 Run `npm run check` locally on the commit being
 released before dispatching it; packaging does not repeat that repository gate.
-The separate **Desktop host** workflow checks Windows Rust compilation on
-pull requests and pushes to `main`.
+The separate **Desktop host** workflow checks Windows Rust compilation, and the
+**Game module** workflow runs `npm run test:game-module`, on pull requests and
+pushes to `main`.
 
 Official desktop releases check for updates without delaying startup. Use About
 to check manually or identify your installed version. Download opens the new

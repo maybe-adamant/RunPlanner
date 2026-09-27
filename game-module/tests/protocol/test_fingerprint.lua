@@ -1,10 +1,11 @@
 local lu = require("luaunit")
+local fixtures = require("tests/harness/fixture_loader")
 local p = require("mods.protocol.primitives")
 
 TestFingerprint = {}
 
 function TestFingerprint.testSharedCanonicalVectors()
-    local file = assert(io.open("fixtures/execution-plan/fingerprint-vectors.json", "rb"))
+    local file = assert(io.open(fixtures.path("fingerprint-vectors.json"), "rb"))
     local source = file:read("*a"); file:close()
     local vectors = assert(p.json.decode(source))
     for _, vector in ipairs(vectors) do

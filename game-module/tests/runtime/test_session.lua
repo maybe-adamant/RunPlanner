@@ -1,5 +1,6 @@
 -- luacheck: globals TestRuntimeSession
 local lu = require("luaunit")
+local fixtures = require("tests/harness/fixture_loader")
 local route = require("mods.route.session")
 local room = require("mods.room.coordinator")
 local runtime = require("mods.runtime.session")
@@ -441,7 +442,7 @@ function TestRuntimeSession.testEntryProofFiresThePublishedRoomEnteredDeadline()
 end
 
 function TestRuntimeSession.testStrictDecodeTransactionOrderDoesNotChangeRuntimeReadiness()
-    local file = assert(io.open("fixtures/execution-plan/fg-ixion-chaos.execution.json", "rb"))
+    local file = assert(io.open(fixtures.path("fg-ixion-chaos.execution.json"), "rb"))
     local source = file:read("*a")
     file:close()
     local function reverseTransactions(plan)
