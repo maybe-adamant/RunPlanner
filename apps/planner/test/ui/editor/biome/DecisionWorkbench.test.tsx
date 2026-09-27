@@ -41,6 +41,7 @@ import {
 import { authorLegalTraitOffers, requireTraits } from '@run-planner/test-fixtures/shared';
 import {
   loadUnderworldFMidshopPomFrontierProject,
+  createCompleteFGProject,
   createGoldenFGHIProject,
   createUnderworldFWellCheckpoint,
   fMidshopPomShopId,
@@ -200,7 +201,7 @@ function fTwoDoorBatchProject(): {
     kind: 'occurrence',
     occurrenceId: source.occurrenceId,
   });
-  let project = applyProjectCommand(authorLegalTraitOffers(createGoldenFGHIProject()), catalog, {
+  let project = applyProjectCommand(authorLegalTraitOffers(createCompleteFGProject()), catalog, {
     kind: 'RemoveExitDecision',
     decision: owner,
   });
@@ -449,7 +450,7 @@ describe('DecisionWorkbench', () => {
   });
 
   it('renders an authored Zagreus exit in its owning decision, not the Midshop workbench', async () => {
-    const base = createGoldenFGHIProject();
+    const base = createCompleteFGProject();
     const located = base.route.biomes.flatMap((plan) =>
       (plan.topology?.occurrences ?? []).flatMap((occurrence) => {
         const room = catalog.rooms.byKey[occurrence.gameName];
@@ -703,7 +704,7 @@ describe('DecisionWorkbench', () => {
     expect(screen.queryByLabelText('Door 2 room')).toBeNull();
 
     cleanup();
-    const complete = authorLegalTraitOffers(createGoldenFGHIProject());
+    const complete = authorLegalTraitOffers(createCompleteFGProject());
     const completeView = renderDecisionWorkbench(
       complete,
       'Underworld',
@@ -941,7 +942,7 @@ describe('DecisionWorkbench', () => {
       kind: 'occurrence',
       occurrenceId: goldenFOccurrenceId(10, 1),
     });
-    const withoutDecision = applyProjectCommand(createGoldenFGHIProject(), catalog, {
+    const withoutDecision = applyProjectCommand(createCompleteFGProject(), catalog, {
       kind: 'RemoveExitDecision',
       decision: owner,
     });
@@ -985,7 +986,7 @@ describe('DecisionWorkbench', () => {
       occurrenceId: goldenFStartId,
     });
     renderDecisionWorkbench(
-      createGoldenFGHIProject(),
+      createCompleteFGProject(),
       'Underworld',
       'F',
       subjectForOwner(ordinaryOwner),
@@ -999,7 +1000,7 @@ describe('DecisionWorkbench', () => {
       kind: 'occurrence',
       occurrenceId: goldenFOccurrenceId(10, 1),
     });
-    renderDecisionWorkbench(createGoldenFGHIProject(), 'Underworld', 'F', subjectForOwner(owner));
+    renderDecisionWorkbench(createCompleteFGProject(), 'Underworld', 'F', subjectForOwner(owner));
 
     const prebossOffers = screen.getAllByRole('article', { name: 'Preboss room offer' });
     expect(prebossOffers).toHaveLength(2);
@@ -1120,7 +1121,7 @@ describe('DecisionWorkbench', () => {
         biome: goldenGBiome,
         biomeKey: 'G',
         gameName: 'G_PreBoss01',
-        project: createGoldenFGHIProject(),
+        project: createCompleteFGProject(),
         routeKey: 'Underworld',
       },
       {
@@ -1190,7 +1191,7 @@ describe('DecisionWorkbench', () => {
       occurrenceId: goldenFStartId,
     });
     const view = renderDecisionWorkbench(
-      createGoldenFGHIProject(),
+      createCompleteFGProject(),
       'Underworld',
       'F',
       subjectForOwner(owner),
@@ -1215,7 +1216,7 @@ describe('DecisionWorkbench', () => {
       occurrenceId: goldenGOccurrenceId(2, 1),
     };
     const occurrenceId = goldenGOccurrenceId(3, 3);
-    let project = applyProjectCommand(createGoldenFGHIProject(), catalog, {
+    let project = applyProjectCommand(createCompleteFGProject(), catalog, {
       kind: 'SetExitSelection',
       selection: createExitSelectionAddress(goldenGBiome, source),
       value: { kind: 'normal', exitKey: 'exit3' },
@@ -1334,7 +1335,7 @@ describe('DecisionWorkbench', () => {
       occurrenceId: goldenFStartId,
     });
     const project = authorLegalTraitOffers(
-      applyProjectCommand(createGoldenFGHIProject(), catalog, {
+      applyProjectCommand(createCompleteFGProject(), catalog, {
         gameName: 'F_Combat01',
         kind: 'ReplaceOccurrenceRoom',
         occurrence: createOccurrenceAddress(goldenFBiome, goldenFOccurrenceId(1, 1)),
@@ -1406,7 +1407,7 @@ describe('DecisionWorkbench', () => {
   });
 
   it('labels authored-selected retained rooms without claiming evaluated entry', () => {
-    const base = createGoldenFGHIProject();
+    const base = createCompleteFGProject();
     const blocked = {
       ...base,
       route: {
@@ -1583,7 +1584,7 @@ describe('DecisionWorkbench', () => {
       occurrenceId: goldenFStartId,
     });
     const decision = renderDecisionWorkbench(
-      createGoldenFGHIProject(),
+      createCompleteFGProject(),
       'Underworld',
       'F',
       subjectForOwner(owner),
@@ -1628,7 +1629,7 @@ describe('DecisionWorkbench', () => {
     );
     cleanup();
 
-    const clearing = renderBiomeClearAction(createGoldenFGHIProject(), 'Underworld', 'F');
+    const clearing = renderBiomeClearAction(createCompleteFGProject(), 'Underworld', 'F');
     await clearing.user.click(screen.getByRole('button', { name: 'Clear Erebus' }));
     await waitFor(() =>
       expect(
@@ -1641,7 +1642,7 @@ describe('DecisionWorkbench', () => {
   });
 
   it('reconciles retained, expanded, ordinary, and blocked-suffix repair controls', async () => {
-    const complete = createGoldenFGHIProject();
+    const complete = createCompleteFGProject();
     const takeover = takeoverDecision(complete);
     let retainedProject = applyProjectCommand(complete, catalog, {
       kind: 'ReplaceOccurrenceRoom',
@@ -1698,7 +1699,7 @@ describe('DecisionWorkbench', () => {
       kind: 'occurrence',
       occurrenceId: goldenFOccurrenceId(1, 1),
     });
-    let ordinaryProject = applyProjectCommand(createGoldenFGHIProject(), catalog, {
+    let ordinaryProject = applyProjectCommand(createCompleteFGProject(), catalog, {
       kind: 'ReplaceOccurrenceRoom',
       occurrence: createOccurrenceAddress(goldenFBiome, goldenFOccurrenceId(1, 1)),
       gameName: 'F_Combat01',
@@ -1744,7 +1745,7 @@ describe('DecisionWorkbench', () => {
   });
 
   it('replaces an existing ordinary target from its door card with exact focus and undo', async () => {
-    const project = createGoldenFGHIProject();
+    const project = createCompleteFGProject();
     const initial = createApplication();
     initial.store.dispatch(authoredProjectReplaced(project));
     const node = workspaceBiome(initial, 'Underworld', 'F').nodes.find(
@@ -1808,7 +1809,7 @@ describe('DecisionWorkbench', () => {
   });
 
   it('selects an Anomaly-capable target before taking it over', async () => {
-    const project = createGoldenFGHIProject();
+    const project = createCompleteFGProject();
     // The golden fixture is deliberately complete enough to include several
     // ordinary G batches; locate the declaration-projected target rather than
     // duplicating target eligibility in this UI fixture.

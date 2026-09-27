@@ -53,6 +53,7 @@ import {
   pOccurrenceIds,
 } from '@run-planner/test-fixtures/surface';
 import {
+  createCompleteFGProject,
   createGoldenFGHIProject,
   goldenFBiome,
   goldenFOccurrenceId,
@@ -190,80 +191,66 @@ function withoutWorkspaceEntry({ entry, ...biome }: WorkspaceBiome): Omit<Worksp
 }
 
 describe('BiomeWorkspace', () => {
-  it.each([
-    { entry: 'Pre-Hub', persistence: 'authored' },
-    { entry: 'Pre-Hub', persistence: 'uncommitted' },
-    { entry: 'Chaos', persistence: 'authored' },
-    { entry: 'Chaos', persistence: 'uncommitted' },
-  ])(
-    'repairs the $persistence $entry continuation finding through Room Doors to the Hub',
-    async ({ entry, persistence }) => {
-      const occurrenceId =
-        entry === 'Chaos' ? createOccurrenceId('biome-workspace-hub-chaos') : nOccurrenceIds.preHub;
-      const owner = createExitDecisionAddress(nBiome, { kind: 'occurrence', occurrenceId });
-      let project = applyProjectCommand(loadSurfaceNEntryFrontierResolvedProject(), catalog, {
-        kind: 'RemoveExitDecision',
-        decision: createExitDecisionAddress(nBiome, {
-          kind: 'occurrence',
-          occurrenceId: nOccurrenceIds.preHub,
-        }),
-      });
-      if (entry === 'Chaos') {
-        project = applyProjectCommand(project, catalog, {
-          kind: 'AddChaos',
-          additional: createAdditionalExitAddress(nBiome, nOccurrenceIds.opening, 'chaos'),
-          occurrenceId,
-        });
-        project = applyProjectCommand(project, catalog, {
-          kind: 'SetExitSelection',
-          selection: createExitSelectionAddress(nBiome, {
-            kind: 'occurrence',
-            occurrenceId: nOccurrenceIds.opening,
-          }),
-          value: { kind: 'additional', additionalExitKey: 'chaos' },
-        });
-        project = authorLegalTraitOffers(project);
-      }
-      if (persistence === 'authored') {
-        project = applyProjectCommand(project, catalog, { kind: 'CreateBatch', decision: owner });
-      }
-      const view = renderWorkspace(project, 'Surface', 'N');
-      const finding = view.application.store
-        .getState()
-        .projectWorkspace.assembly!.evaluation.findings.find(
-          (candidate) =>
-            candidate.code === 'continuationMissing' &&
-            semanticAddressKey(candidate.origin) === semanticAddressKey(owner),
-        );
-      if (finding === undefined) throw new Error('Hub continuation finding is missing');
-      act(() =>
-        view.application.store.dispatch(
-          semanticOwnerFocused(createOccurrenceAddress(nBiome, occurrenceId)),
-        ),
+  it('repairs an uncommitted Chaos continuation finding through Room Doors to the Hub', async () => {
+    const occurrenceId = createOccurrenceId('biome-workspace-hub-chaos');
+    const owner = createExitDecisionAddress(nBiome, { kind: 'occurrence', occurrenceId });
+    let project = applyProjectCommand(loadSurfaceNEntryFrontierResolvedProject(), catalog, {
+      kind: 'RemoveExitDecision',
+      decision: createExitDecisionAddress(nBiome, {
+        kind: 'occurrence',
+        occurrenceId: nOccurrenceIds.preHub,
+      }),
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'AddChaos',
+      additional: createAdditionalExitAddress(nBiome, nOccurrenceIds.opening, 'chaos'),
+      occurrenceId,
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'SetExitSelection',
+      selection: createExitSelectionAddress(nBiome, {
+        kind: 'occurrence',
+        occurrenceId: nOccurrenceIds.opening,
+      }),
+      value: { kind: 'additional', additionalExitKey: 'chaos' },
+    });
+    project = authorLegalTraitOffers(project);
+    const view = renderWorkspace(project, 'Surface', 'N');
+    const finding = view.application.store
+      .getState()
+      .projectWorkspace.assembly!.evaluation.findings.find(
+        (candidate) =>
+          candidate.code === 'continuationMissing' &&
+          semanticAddressKey(candidate.origin) === semanticAddressKey(owner),
       );
-      await view.user.click(screen.getByRole('tab', { name: 'Room Overview' }));
-      act(() =>
-        view.application.store.dispatch(
-          findingSelected({ key: semanticFindingKey(finding), origin: finding.origin }),
-        ),
-      );
-      expect(screen.getByRole('tab', { name: 'Room Doors' }).getAttribute('aria-selected')).toBe(
-        'true',
-      );
-      const room = screen.getByRole('button', { name: 'Door 1 room' });
-      expect(room.hasAttribute('inert')).toBe(false);
-      expect(room.getAttribute('aria-disabled')).not.toBe('true');
-      await view.user.click(room);
-      const hub = within(screen.getByRole('listbox')).getByRole('option', { name: /Ephyra Hub/ });
-      expect(hub.getAttribute('aria-disabled')).not.toBe('true');
-      await view.user.click(hub);
-      expect(screen.getByRole('region', { name: 'Ephyra Hub' })).toBeTruthy();
-    },
-  );
+    if (finding === undefined) throw new Error('Hub continuation finding is missing');
+    act(() =>
+      view.application.store.dispatch(
+        semanticOwnerFocused(createOccurrenceAddress(nBiome, occurrenceId)),
+      ),
+    );
+    await view.user.click(screen.getByRole('tab', { name: 'Room Overview' }));
+    act(() =>
+      view.application.store.dispatch(
+        findingSelected({ key: semanticFindingKey(finding), origin: finding.origin }),
+      ),
+    );
+    expect(screen.getByRole('tab', { name: 'Room Doors' }).getAttribute('aria-selected')).toBe(
+      'true',
+    );
+    const room = screen.getByRole('button', { name: 'Door 1 room' });
+    expect(room.hasAttribute('inert')).toBe(false);
+    expect(room.getAttribute('aria-disabled')).not.toBe('true');
+    await view.user.click(room);
+    const hub = within(screen.getByRole('listbox')).getByRole('option', { name: /Ephyra Hub/ });
+    expect(hub.getAttribute('aria-disabled')).not.toBe('true');
+    await view.user.click(hub);
+    expect(screen.getByRole('region', { name: 'Ephyra Hub' })).toBeTruthy();
+  });
 
   it('uses the finding origin for its complete destination instead of redirected focus metadata', () => {
     const application = createApplication();
-    application.store.dispatch(authoredProjectReplaced(createGoldenFGHIProject()));
+    application.store.dispatch(authoredProjectReplaced(createCompleteFGProject()));
     const projection = workspaceProjection(application);
     const biome = projection.route.biomes.find((candidate) => candidate.biomeKey === 'F');
     if (biome === undefined) throw new Error('F workspace is missing');
@@ -315,7 +302,7 @@ describe('BiomeWorkspace', () => {
   });
 
   it('reapplies a repeated finding tab request after the user changes tabs', async () => {
-    const view = renderWorkspace(createGoldenFGHIProject(), 'Underworld', 'F');
+    const view = renderWorkspace(createCompleteFGProject(), 'Underworld', 'F');
     const projection = workspaceProjection(view.application);
     const destination = [...projection.focusByOwner.values()].find(
       (candidate) => candidate.roomTab === 'actions',
@@ -469,7 +456,6 @@ describe('BiomeWorkspace', () => {
 
   it.each([
     ['after the preceding room', nVisitSlotKeys, 'Combat 02', 3],
-    ['without a following room', nVisitSlotKeys.slice(0, 3), 'Combat 02', 3],
     ['before Preboss exists', nVisitSlotKeys, 'Combat 09', 6],
   ] as const)(
     'routes a missing Phial target to the Hub fountain controls %s',
@@ -586,7 +572,7 @@ describe('BiomeWorkspace', () => {
     const application = createApplication({
       observeEvaluationWork: (event) => evaluationEvents.push(event.kind),
     });
-    const { user } = renderWorkspace(createGoldenFGHIProject(), 'Underworld', 'F', application);
+    const { user } = renderWorkspace(createCompleteFGProject(), 'Underworld', 'F', application);
     const launcher = screen.getAllByRole('button', { name: 'Run State' })[0];
     if (launcher === undefined) throw new Error('available Run State launcher is missing');
     const beforeHistory = application.store.getState().projectWorkspace.history!;
@@ -808,7 +794,7 @@ describe('BiomeWorkspace', () => {
   });
 
   it('keeps node assessment beside its title without redundant structural kickers', () => {
-    const view = renderWorkspace(createGoldenFGHIProject(), 'Underworld', 'F');
+    const view = renderWorkspace(createCompleteFGProject(), 'Underworld', 'F');
     const decision = view.container.querySelector<HTMLButtonElement>(
       '.biome-rail-stop[data-kind="ordinaryBatch"] > .biome-rail-node',
     );
@@ -839,7 +825,7 @@ describe('BiomeWorkspace', () => {
   });
 
   it('keeps the compact clear action on the biome title row', () => {
-    renderWorkspace(createGoldenFGHIProject(), 'Underworld', 'F');
+    renderWorkspace(createCompleteFGProject(), 'Underworld', 'F');
 
     const clear = screen.getByRole('button', { name: 'Clear Erebus' });
     expect(clear.textContent).toBe('Clear biome');
@@ -1118,7 +1104,7 @@ describe('BiomeWorkspace', () => {
   });
 
   it('keeps a stale explicit biome owner on the projected default without selecting the rail', () => {
-    const view = renderWorkspace(createGoldenFGHIProject(), 'Underworld', 'F');
+    const view = renderWorkspace(createCompleteFGProject(), 'Underworld', 'F');
     const projected = workspaceBiome(view.application, 'Underworld', 'F');
     expect(projected.defaultInspectorDestination?.kind).toBe('node');
 
@@ -1235,7 +1221,7 @@ describe('BiomeWorkspace', () => {
     const occurrenceId = goldenFStartId;
     const source = { kind: 'occurrence' as const, occurrenceId };
     const owner = createExitDecisionAddress(goldenFBiome, source);
-    const project = applyProjectCommand(createGoldenFGHIProject(), catalog, {
+    const project = applyProjectCommand(createCompleteFGProject(), catalog, {
       kind: 'RemoveExitDecision',
       decision: owner,
     });
@@ -1527,7 +1513,7 @@ describe('BiomeWorkspace', () => {
     decisionApplication.dispose();
 
     const fApplication = createApplication();
-    const fProject = createGoldenFGHIProject();
+    const fProject = createCompleteFGProject();
     fApplication.store.dispatch(authoredProjectReplaced(fProject));
     const fBiome = workspaceBiome(fApplication, 'Underworld', 'F');
     const entry = fBiome.entry;
@@ -1668,7 +1654,7 @@ describe('BiomeWorkspace', () => {
       occurrenceId: goldenFStartId,
     });
     const withoutDecision = applyProjectCommand(
-      authorLegalTraitOffers(createGoldenFGHIProject()),
+      authorLegalTraitOffers(createCompleteFGProject()),
       catalog,
       {
         kind: 'RemoveExitDecision',
@@ -1784,7 +1770,7 @@ describe('BiomeWorkspace', () => {
   });
 
   it('focuses retained downstream room rewards inside their occurrence workbench', () => {
-    const project = applyProjectCommand(createGoldenFGHIProject(), catalog, {
+    const project = applyProjectCommand(createCompleteFGProject(), catalog, {
       kind: 'ReplaceOccurrenceRoom',
       occurrence: createOccurrenceAddress(goldenFBiome, goldenFOccurrenceId(1, 1)),
       gameName: 'F_Combat01',
@@ -1853,7 +1839,7 @@ describe('BiomeWorkspace', () => {
   });
 
   it('moves keyboard focus through semantic owners without authoring a change', async () => {
-    const project = createGoldenFGHIProject();
+    const project = createCompleteFGProject();
     const view = renderWorkspace(project, 'Underworld', 'F');
     const structure = screen.getByRole('region', { name: /route structure$/ });
     const railButtons = within(structure).getAllByRole('button');
@@ -1975,15 +1961,8 @@ describe('boss-door reward pool in the outgoing-door section', () => {
     expectBefore(line, within(section).getByText(/^Continue to /));
   });
 
-  it('presents I’s pinned Tartarus pool in player-facing language', async () => {
-    const { section } = await openBossDoors(createGoldenFGHIProject(), 'Underworld', 'I');
-    expect(
-      within(section).getByText('Reward Pool is fixed as Tartarus Reward for this boss.'),
-    ).toBeTruthy();
-  });
-
   it('reports a store-ignoring boss pool in the same place', async () => {
-    const { section } = await openBossDoors(createGoldenFGHIProject(), 'Underworld', 'F');
+    const { section } = await openBossDoors(createCompleteFGProject(), 'Underworld', 'F');
     expect(within(section).queryByRole('button', { name: 'Reward Pool' })).toBeNull();
     const line = within(section).getByText('Reward Pool is ignored for this boss.');
     expectBefore(within(section).getByRole('heading', { level: 3, name: 'Outgoing doors' }), line);

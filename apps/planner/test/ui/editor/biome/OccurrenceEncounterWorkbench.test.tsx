@@ -94,7 +94,7 @@ afterEach(() => {
 describe('OccurrenceEncounterWorkbench', () => {
   it('exposes generated customization on a fixed opening encounter', async () => {
     const view = renderOccurrenceWorkbench(
-      createGoldenFGHIProject(),
+      createCompleteFGProject(),
       'Underworld',
       'F',
       occurrenceById(goldenFStartId),
@@ -115,7 +115,7 @@ describe('OccurrenceEncounterWorkbench', () => {
   });
   it('keeps an ordinary generated encounter Default until a compact customization edit', async () => {
     const occurrenceId = goldenFOccurrenceId(5, 1);
-    const project = createGoldenFGHIProject();
+    const project = createCompleteFGProject();
     const canonical = encodeProjectDocument(project);
     const view = renderOccurrenceWorkbench(
       project,
@@ -179,7 +179,7 @@ describe('OccurrenceEncounterWorkbench', () => {
   });
 
   it('edits a fixed Scylla phase in place and retains a now-invalid choice for finding repair', async () => {
-    const project = applyProjectCommand(createGoldenFGHIProject(), catalog, {
+    const project = applyProjectCommand(createCompleteFGProject(), catalog, {
       kind: 'ReplaceFearVowRank',
       route: { kind: 'route', routeKey: 'Underworld' },
       vowKey: 'BossDifficultyShrineUpgrade',
@@ -494,7 +494,7 @@ describe('OccurrenceEncounterWorkbench', () => {
   });
 
   it('routes a reached retained Scylla finding to the manual popup trigger', async () => {
-    let project = applyProjectCommand(createGoldenFGHIProject(), catalog, {
+    let project = applyProjectCommand(createCompleteFGProject(), catalog, {
       kind: 'ReplaceFearVowRank',
       route: { kind: 'route', routeKey: 'Underworld' },
       vowKey: 'BossDifficultyShrineUpgrade',
@@ -960,7 +960,7 @@ describe('OccurrenceEncounterWorkbench', () => {
   });
 
   it('picks up and Time Piece-converts Psyche as one undoable Narcissus row edit', async () => {
-    let project = createGoldenFGHIProject();
+    let project = createCompleteFGProject();
     const occurrence = project.route.biomes
       .find((biome) => biome.biomeKey === 'G')
       ?.topology?.occurrences.find((candidate) => candidate.gameName === 'G_Story01');
@@ -1059,7 +1059,7 @@ describe('OccurrenceEncounterWorkbench', () => {
   });
 
   it('adds a later Narcissus pickup while an earlier participant is context-invalid', async () => {
-    let project = createGoldenFGHIProject();
+    let project = createCompleteFGProject();
     const occurrence = project.route.biomes
       .find((biome) => biome.biomeKey === 'G')
       ?.topology?.occurrences.find((candidate) => candidate.gameName === 'G_Story01');
@@ -1213,7 +1213,7 @@ describe('OccurrenceEncounterWorkbench', () => {
       'Encounter',
     );
     const view = renderOccurrenceWorkbench(
-      createGoldenFGHIProject(),
+      createCompleteFGProject(),
       'Underworld',
       'F',
       occurrenceById(occurrenceId),
@@ -2065,7 +2065,7 @@ describe('OccurrenceEncounterWorkbench', () => {
     cleanup();
 
     const goldenView = renderOccurrenceWorkbench(
-      createGoldenFGHIProject(),
+      createCompleteFGProject(),
       'Underworld',
       'F',
       occurrenceById(createOccurrenceId('golden-f-preboss-shop')),
