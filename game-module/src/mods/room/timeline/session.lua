@@ -1,0 +1,326 @@
+-- Occurrence-local Timeline DAG: readiness, intervention completion, and
+-- explicit obligation deadlines. Native adapters own actual effects;
+-- completion only releases the exact published owner and is not semantic
+-- outcome proof.
+local lifecycle = type(import) == "function" and import("mods/room/timeline/lifecycle.lua")
+    or require("mods.room.timeline.lifecycle")
+local bindings = type(import) == "function" and import("mods/room/timeline/bindings.lua")
+    or require("mods.room.timeline.bindings")
+
+local timeline = {}
+
+local function mismatch(session, checkpoint, expected, observed)
+    if session.firstMismatch == nil then
+        session.firstMismatch = { checkpoint = checkpoint, expected = expected, observed = observed }
+    end
+    return nil, session.firstMismatch
+end
+
+local function fault(session, checkpoint, expected, observed)
+    if session.firstFault == nil then
+        session.firstFault = {
+            outcome = "fault", checkpoint = checkpoint, expected = expected, observed = observed,
+        }
+    end
+    return nil, session.firstFault
+end
+
+local function terminal(session)
+    return session.firstFault or session.firstMismatch
+end
+
+function timeline.new(occurrence, index)
+    if index == nil or index.owner == nil then index = assert(bindings.index(occurrence)) end
+    local prerequisites, obligations = {}, {}
+    for _, edge in ipairs(occurrence.timeline.dependencies or {}) do
+        prerequisites[edge.owner] = prerequisites[edge.owner] or {}
+        prerequisites[edge.owner][edge.afterOwner] = true
+    end
+    for _, obligation in ipairs(occurrence.timeline.obligations or {}) do
+        obligations[obligation.checkpoint] = obligations[obligation.checkpoint] or {}
+        obligations[obligation.checkpoint][obligation.owner] = true
+    end
+    local transactionOrder = {}
+    for _, published in ipairs(occurrence.timeline and occurrence.timeline.transactions or {}) do
+        local row = index.owner[published.owner]
+        if row ~= nil then transactionOrder[#transactionOrder + 1] = row end
+    end
+    local session = {
+        occurrence = occurrence,
+        bindings = index,
+        prerequisites = prerequisites,
+        obligations = obligations,
+        transactionOrder = transactionOrder,
+        completedOwners = {},
+        claimedOwners = {},
+        claimedHandles = {},
+        capabilities = lifecycle.new(),
+        firstMismatch = nil, firstFault = nil,
+        closed = false,
+        handles = {},
+        nativeHandles = {},
+        handleNatives = {},
+    }
+    return session
+end
+
+local function rowFor(session, handle)
+    local row = type(handle) == "table" and session.handles[handle] or nil
+    if row == nil then
+        local _, errorValue = fault(session, "timeline-handle", "handle from this occurrence", "unknown")
+        return nil, errorValue
+    end
+    return row
+end
+
+local function handleFor(session, row)
+    if row == nil then return nil end
+    session.handles = session.handles or {}
+    for handle, existing in pairs(session.handles) do
+        if existing == row then return handle end
+    end
+    local handle = {}
+    session.handles[handle] = row
+    return handle
+end
+
+-- Diagnostic lookup must not begin an owner or fault an unknown handle.
+function timeline.describeHandle(session, handle)
+    local row = session and session.handles[handle]
+    if row == nil then return nil end
+    return {
+        owner = row.transaction.owner, kind = row.transaction.kind,
+        role = row.detail and row.detail.role,
+    }
+end
+
+function timeline.resolve(session, resolver, contact, sourceHandle)
+    if session.closed then return fault(session, "room-session", "open session", "closed") end
+    if terminal(session) ~= nil then return nil, terminal(session) end
+    local source
+    if sourceHandle ~= nil then
+        source = rowFor(session, sourceHandle)
+        if source == nil then return nil, terminal(session) end
+    end
+    local row, errorValue = resolver(session.bindings, contact, source)
+    if errorValue ~= nil then
+        return fault(session, errorValue.checkpoint, errorValue.expected, errorValue.observed)
+    end
+    return handleFor(session, row)
+end
+
+function timeline.bind(session, handle, native)
+    if session.closed then return fault(session, "room-session", "open session", "closed") end
+    if terminal(session) ~= nil then return nil, terminal(session) end
+    local row, errorValue = rowFor(session, handle)
+    if row == nil then return nil, errorValue end
+    if native == nil then return handle end
+    local priorHandle = session.nativeHandles[native]
+    if priorHandle ~= nil and priorHandle ~= handle then
+        return fault(session, "timeline-binding", "one native carrier per exact handle", "different binding")
+    end
+    -- A multi-contact owner keeps one handle, while a uniquely named later
+    -- carrier advances that handle's active role for downstream adapters.
+    local gameName = type(native) == "table"
+        and (native.Name or native.ItemName or native.LootName) or nil
+    local matching
+    if gameName ~= nil then
+        for _, role in ipairs(row.transaction.roles or {}) do
+            if role.gameName == gameName then
+                if matching ~= nil then
+                    return fault(session, "timeline-binding", "unique transaction role", gameName)
+                end
+                matching = role
+            end
+        end
+    end
+    session.nativeHandles[native] = handle
+    session.handleNatives[handle] = session.handleNatives[handle] or {}
+    session.handleNatives[handle][native] = true
+    if matching ~= nil then row.detail = matching end
+    return handle
+end
+
+function timeline.bound(session, native)
+    if session.closed or terminal(session) ~= nil then return nil end
+    return session.nativeHandles[native]
+end
+
+-- Native carriers can survive their completed action (Sea Star consumables,
+-- ship wheels). Release that binding without undoing the owner's completion,
+-- so the adapter can bind the carrier's next action independently.
+function timeline.releaseCompletedBinding(session, handle, native)
+    if session.closed then return fault(session, "room-session", "open session", "closed") end
+    if terminal(session) ~= nil then return nil, terminal(session) end
+    local row, errorValue = rowFor(session, handle)
+    if row == nil then return nil, errorValue end
+    if not session.completedOwners[row.transaction.owner] then
+        return fault(session, "timeline-binding", "completed owner", "active owner")
+    end
+    if session.nativeHandles[native] ~= handle then return nil end
+    session.nativeHandles[native] = nil
+    if session.handleNatives[handle] ~= nil then session.handleNatives[handle][native] = nil end
+    return true
+end
+
+function timeline.sourceRole(session, handle, gameName)
+    local row = rowFor(session, handle)
+    return row and bindings.sourceRole(row, gameName) or nil
+end
+
+-- Claim one ready action in published transaction order.  The caller owns
+-- structural contact semantics and native availability; published placement
+-- windows do not constrain discovery. Returning a role table supplies the payload
+-- detail that the claimed native carrier will consume.
+function timeline.claimReady(session, contact, native, compatible)
+    if session.closed or terminal(session) ~= nil then return nil end
+    if type(native) == "table" and native.__runPlannerWorldShop == true then return nil end
+    if type(compatible) ~= "function" then
+        return fault(session, "timeline-claim", "compatibility predicate", compatible)
+    end
+    for _, row in ipairs(session.transactionOrder or {}) do
+        local transaction = row.transaction
+        local owner = transaction.owner
+        local boundOwner = false
+        for _, handle in pairs(session.nativeHandles) do
+            if session.handles[handle].transaction.owner == owner then boundOwner = true; break end
+        end
+        if not session.completedOwners[owner] and not session.claimedOwners[owner] and not boundOwner then
+            local ready = true
+            for prerequisite in pairs(session.prerequisites[owner] or {}) do
+                if not session.completedOwners[prerequisite] then ready = false; break end
+            end
+            if ready then
+                local detail = compatible(transaction, contact)
+                -- Nested results are reached through their exact producer
+                -- binding, never by an unrelated matching pickup.
+                local nested = type(detail) == "table" and detail.lifecyclePoint == "afterUnwrap"
+                if detail ~= nil and detail ~= false and not nested then
+                    if detail == true then detail = nil end
+                    local claimedRow = { transaction = transaction, detail = detail, claimed = true }
+                    local handle = handleFor(session, claimedRow)
+                    local bound, errorValue = timeline.bind(session, handle, native)
+                    if bound == nil then return nil, errorValue end
+                    session.claimedOwners[owner] = true
+                    session.claimedHandles[owner] = handle
+                    return handle, bindings.payload(claimedRow)
+                end
+            end
+        end
+    end
+    return nil
+end
+
+function timeline.open(session, window)
+    if session.closed then return fault(session, "room-session", "open session", "closed") end
+    if terminal(session) ~= nil then return nil, terminal(session) end
+    local ok, errorValue = lifecycle.open(session.capabilities, window)
+    if not ok then return fault(session, errorValue.checkpoint, errorValue.expected, errorValue.observed) end
+    return true
+end
+
+function timeline.startEncounter(session)
+    if session.closed then return fault(session, "room-session", "open session", "closed") end
+    if terminal(session) ~= nil then return nil, terminal(session) end
+    lifecycle.startEncounter(session.capabilities)
+    return true
+end
+
+local function beginOwner(session, owner)
+    if session.closed then return fault(session, "room-session", "open session", "closed") end
+    if terminal(session) ~= nil then return nil, terminal(session) end
+    local transaction = session.occurrence.transactionsByOwner[owner]
+    if transaction == nil then return fault(session, "transaction-owner", "published owner", owner) end
+    -- Native availability owns pickup timing. DAG prerequisites remain the
+    -- ordering authority for an exact bound owner.
+    for prerequisite in pairs(session.prerequisites[owner] or {}) do
+        if not session.completedOwners[prerequisite] then
+            return mismatch(session, "transaction-prerequisite", prerequisite, owner)
+        end
+    end
+    return true
+end
+
+function timeline.begin(session, handle)
+    if session.closed then return fault(session, "room-session", "open session", "closed") end
+    if terminal(session) ~= nil then return nil, terminal(session) end
+    local row, errorValue = rowFor(session, handle)
+    if row == nil then return nil, errorValue end
+    local owner = row.transaction.owner
+    local claimedHandle = session.claimedHandles[owner]
+    if claimedHandle ~= nil and claimedHandle ~= handle then
+        return fault(session, "timeline-claim", "canonical claimed handle", handle)
+    end
+    if session.completedOwners[owner] then return nil, "completed" end
+    local ok, beginError = beginOwner(session, owner)
+    if not ok then return nil, beginError end
+    return bindings.payload(row)
+end
+
+-- Read the published transaction without opening it.  Accepted native
+-- interaction is still the only operation that advances a Timeline owner;
+-- adapters use this for contacts that can return before native guards pass.
+function timeline.peek(session, handle)
+    if session.closed then return fault(session, "room-session", "open session", "closed") end
+    if terminal(session) ~= nil then return nil, terminal(session) end
+    local row, errorValue = rowFor(session, handle)
+    if row == nil then return nil, errorValue end
+    return bindings.payload(row)
+end
+
+function timeline.activePhase(session, kind)
+    if session.closed or terminal(session) ~= nil then return nil end
+    return lifecycle.activePhase(session.capabilities, kind)
+end
+
+function timeline.complete(session, handle)
+    if session.closed then return fault(session, "room-session", "open session", "closed") end
+    if terminal(session) ~= nil then return nil, terminal(session) end
+    local row, rowError = rowFor(session, handle)
+    if row == nil then return nil, rowError end
+    local owner = row.transaction.owner
+    local claimedHandle = session.claimedHandles[owner]
+    if claimedHandle ~= nil and claimedHandle ~= handle then
+        return fault(session, "timeline-claim", "canonical claimed handle", handle)
+    end
+    if session.completedOwners[owner] then return true end
+    local payload, errorValue = timeline.begin(session, handle)
+    if payload == nil then return nil, errorValue end
+    session.completedOwners[payload.transaction.owner] = true
+    return true
+end
+
+function timeline.incidental(session)
+    if session.closed then return fault(session, "room-session", "open session", "closed") end
+    if terminal(session) ~= nil then return nil, terminal(session) end
+    return true
+end
+
+function timeline.checkpoint(session, checkpoint)
+    if session.closed then return fault(session, "room-session", "open session", "closed") end
+    if terminal(session) ~= nil then return nil, terminal(session) end
+    if not lifecycle.isCheckpoint(checkpoint) then
+        return fault(session, "checkpoint", "published checkpoint", checkpoint)
+    end
+    for owner in pairs(session.obligations[checkpoint] or {}) do
+        if not session.completedOwners[owner] then
+            return mismatch(session, "obligation:" .. checkpoint, owner, "incomplete")
+        end
+    end
+    return true
+end
+
+function timeline.close(session)
+    session.closed = true
+    session.completedOwners = {}
+    session.claimedOwners = {}
+    session.claimedHandles = {}
+    session.capabilities = {}
+    session.bindings = nil
+    session.handles = {}
+    session.transactionOrder = {}
+    session.nativeHandles, session.handleNatives = {}, {}
+    return true
+end
+
+return timeline

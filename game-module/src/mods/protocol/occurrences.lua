@@ -1,0 +1,619 @@
+local p = type(import) == "function" and import("mods/protocol/primitives.lua")
+    or require("mods.protocol.primitives")
+local rewards = type(import) == "function" and import("mods/protocol/rewards.lua")
+    or require("mods.protocol.rewards")
+local overview = type(import) == "function" and import("mods/protocol/overview.lua")
+    or require("mods.protocol.overview")
+local timeline = type(import) == "function" and import("mods/protocol/timeline.lua")
+    or require("mods.protocol.timeline")
+local diagnostics = type(import) == "function" and import("mods/protocol/diagnostics.lua")
+    or require("mods.protocol.diagnostics")
+local conformance = type(import) == "function" and import("mods/protocol/conformance.lua")
+    or require("mods.protocol.conformance")
+
+local occurrences = {}
+
+local function validateRewardWheelProduct(row, label)
+    local wheels = row.overview.rewardWheels or {}
+    local combatPhaseCount = 0
+    for _, phase in ipairs(row.overview.encounterPhases) do
+        if phase.slotKey ~= "Intro" and phase.kind == "combat" then
+            combatPhaseCount = combatPhaseCount + 1
+        end
+    end
+    if (row.kind == "ShipEncounter" and #wheels ~= combatPhaseCount)
+        or (row.kind ~= "ShipEncounter" and #wheels > 0) then
+        return p.fail(label .. ".overview.rewardWheels must match the Ship encounter phases")
+    end
+    local owner, ownerError = p.json.decode(row.owner)
+    local routeKey = owner and owner[1] == "occurrence" and owner[2] or nil
+    if #wheels > 0 and (ownerError ~= nil or not p.json.isArray(owner) or #owner ~= 4
+        or not p.str(routeKey, label .. ".owner.routeKey")
+        or owner[3] ~= row.biomeKey or owner[4] ~= row.id) then
+        return p.fail(label .. ".owner cannot identify its reward-wheel phases")
+    end
+
+    local choiceCount, acquisitionCount = 0, 0
+    for _, transaction in ipairs(row.timeline.transactions) do
+        if transaction.kind == "chooseRewardWheel" then choiceCount = choiceCount + 1 end
+        if transaction.kind == "acquisition" then
+            local source = p.json.decode(transaction.sourceOwner)
+            local acquisitionOwner = p.json.decode(transaction.owner)
+            if (source ~= nil and p.json.isArray(source) and source[1] == "rewardWheelOffer")
+                or (acquisitionOwner ~= nil and p.json.isArray(acquisitionOwner)
+                    and acquisitionOwner[1] == "rewardWheelOffer") then
+                acquisitionCount = acquisitionCount + 1
+            end
+        end
+    end
+    if choiceCount ~= #wheels then
+        return p.fail(label .. ".overview.rewardWheels is disconnected from its timeline product")
+    end
+
+    local matchedAcquisitionCount = 0
+    for _, wheel in ipairs(wheels) do
+        local phaseCount = 0
+        for _, phase in ipairs(row.overview.encounterPhases) do
+            if phase.slotKey == wheel.phaseKey and phase.slotKey ~= "Intro" and phase.kind == "combat" then
+                phaseCount = phaseCount + 1
+            end
+        end
+        if phaseCount ~= 1 then
+            return p.fail(label .. ".overview.rewardWheels." .. wheel.wheelKey
+                .. " must name one active combat phase")
+        end
+        local expectedPhaseOwner = string.format(
+            '["encounterPhase",%q,%q,{"kind":"occurrence","occurrenceId":%q},%q]',
+            routeKey, row.biomeKey, row.id, wheel.phaseKey
+        )
+        if wheel.phaseOwner ~= expectedPhaseOwner then
+            return p.fail(label .. ".overview.rewardWheels." .. wheel.wheelKey
+                .. " has a mismatched phase owner")
+        end
+
+        local expectedChoiceOwner = string.format(
+            '["rewardWheel",%q,%q,%q,%q]', routeKey, row.biomeKey, row.id, wheel.wheelKey
+        )
+        local choice
+        for _, transaction in ipairs(row.timeline.transactions) do
+            if transaction.kind == "chooseRewardWheel" and transaction.owner == expectedChoiceOwner
+                and transaction.wheelKey == wheel.wheelKey
+                and transaction.pickedOfferKey == wheel.pickedOfferKey
+                and transaction.window.kind == "shipPreCombat"
+                and transaction.window.wheelKey == wheel.wheelKey then
+                if choice ~= nil then
+                    return p.fail(label .. ".overview.rewardWheels." .. wheel.wheelKey
+                        .. " must match one wheel choice")
+                end
+                choice = transaction
+            end
+        end
+        if choice == nil then
+            return p.fail(label .. ".overview.rewardWheels." .. wheel.wheelKey
+                .. " must match one wheel choice")
+        end
+
+        local picked
+        for _, offer in ipairs(wheel.offers) do
+            if offer.offerKey == wheel.pickedOfferKey then picked = offer end
+        end
+        local expectedAcquisitionOwner = string.format(
+            '["rewardWheelOffer",%q,%q,%q,%q,%q]',
+            routeKey, row.biomeKey, row.id, wheel.wheelKey, wheel.pickedOfferKey
+        )
+        local acquisition
+        for _, transaction in ipairs(row.timeline.transactions) do
+            if transaction.kind == "acquisition" and transaction.owner == expectedAcquisitionOwner
+                and transaction.sourceOwner == expectedAcquisitionOwner
+                and transaction.producerLifecycleKey == picked.reward.producerLifecycleKey
+                and p.fingerprint(transaction.reward) == p.fingerprint(picked.reward)
+                and transaction.window.kind == "shipPostCombat"
+                and transaction.window.wheelKey == wheel.wheelKey then
+                if acquisition ~= nil then
+                    return p.fail(label .. ".overview.rewardWheels." .. wheel.wheelKey
+                        .. " must match one picked acquisition")
+                end
+                acquisition = transaction
+            end
+        end
+        -- Time Piece destroys the selected reward without an acquisition.
+        if acquisition ~= nil then
+            matchedAcquisitionCount = matchedAcquisitionCount + 1
+            local hasDependency = false
+            for _, dependency in ipairs(row.timeline.dependencies) do
+                if dependency.owner == acquisition.owner and dependency.afterOwner == choice.owner then
+                    hasDependency = true
+                end
+            end
+            if not hasDependency then
+                return p.fail(label .. ".overview.rewardWheels." .. wheel.wheelKey
+                    .. " is missing its choice dependency")
+            end
+        end
+    end
+    if matchedAcquisitionCount ~= acquisitionCount then
+        return p.fail(label .. ".overview.rewardWheels has an unmatched picked acquisition")
+    end
+    return true
+end
+
+local function validateFieldsCageSlots(row, label)
+    local layout = row.overview.fields
+    if layout == nil then return true end
+    local activeCagePhases = {}
+    for _, phase in ipairs(row.overview.encounterPhases or {}) do
+        if string.match(phase.slotKey, "^Cage%d+$") then
+            activeCagePhases[#activeCagePhases + 1] = phase
+        end
+    end
+    if #activeCagePhases ~= #layout.cagePoints then
+        return p.fail(label .. ".cagePoints must match the active cage encounter phases")
+    end
+    for index, phase in ipairs(activeCagePhases) do
+        local expectedPhase = string.format("Cage%02d", index)
+        local expectedSlot = "cage" .. index
+        if phase.slotKey ~= expectedPhase or layout.cagePoints[index].slotKey ~= expectedSlot then
+            return p.fail(label .. ".cagePoints must use canonical ordered cage slots")
+        end
+    end
+    return true
+end
+
+local function guideDescription(value, label)
+    local record, errorMessage = p.obj(value, label)
+    if not record then return nil, errorMessage end
+    local kind = record.kind
+    if kind == "collectRequiredReward" then
+        return p.exact(record, { "kind" }, {}, label)
+    end
+    if kind == "completeFieldsCage" then
+        local row, rowError = p.exact(record, { "kind", "phaseKey" }, { "reward" }, label)
+        if not row then return nil, rowError end
+        if not p.str(row.phaseKey, label .. ".phaseKey") then return p.fail(label .. " has invalid phaseKey") end
+        if row.reward ~= nil then
+            local _, rewardError = rewards.reward(row.reward, label .. ".reward")
+            if rewardError then return nil, rewardError end
+        end
+        return row
+    end
+    if kind == "interactIncomingReward" or kind == "interactLocalReward" then
+        local row, rowError = p.exact(record, { "kind" }, { "reward", "conversion" }, label)
+        if not row then return nil, rowError end
+        if row.reward ~= nil then
+            local _, rewardError = rewards.reward(row.reward, label .. ".reward")
+            if rewardError then return nil, rewardError end
+        end
+        if row.conversion ~= nil and row.conversion ~= "timePiece" then
+            return p.fail(label .. " has invalid reward conversion")
+        end
+        return row
+    end
+    if kind == "chooseRewardWheel" then
+        local row, rowError = p.exact(record, { "kind", "wheelKey" }, {}, label)
+        if not row then return nil, rowError end
+        if not p.str(row.wheelKey, label .. ".wheelKey") then return p.fail(label .. " has invalid wheelKey") end
+        return row
+    end
+    if kind == "interactWheelReward" then
+        local row, rowError = p.exact(record, { "kind", "wheelKey" }, { "reward", "conversion" }, label)
+        if not row then return nil, rowError end
+        if not p.str(row.wheelKey, label .. ".wheelKey") then return p.fail(label .. " has invalid wheelKey") end
+        if row.reward ~= nil then
+            local _, rewardError = rewards.reward(row.reward, label .. ".reward")
+            if rewardError then return nil, rewardError end
+        end
+        if row.conversion ~= nil and row.conversion ~= "timePiece" then
+            return p.fail(label .. " has invalid wheel conversion")
+        end
+        return row
+    end
+    if kind == "interactShopOffer" then
+        local row, rowError = p.exact(record, { "kind", "offerKey" }, { "rewardType", "conversion" }, label)
+        if not row then return nil, rowError end
+        if not p.str(row.offerKey, label .. ".offerKey")
+            or (row.rewardType ~= nil and not p.str(row.rewardType, label .. ".rewardType"))
+            or (row.conversion ~= nil and row.conversion ~= "timePiece" and row.conversion ~= "anvilOfFates") then
+            return p.fail(label .. " has invalid Shop guide operands")
+        end
+        return row
+    end
+    if kind == "purchaseStygianWellOffer" then
+        local row, rowError = p.exact(record, { "kind", "generationKey" }, { "itemKey", "effect", "twistResultKey" }, label)
+        if not row then return nil, rowError end
+        local effects = { neutral = true, spark = true, yarn = true, hymn = true, discount = true, emptySlot = true,
+            extended = true, twist = true, lastStand = true }
+        if not p.one(row.generationKey, { ["initial:healing"] = true, ["initial:secondLeft"] = true,
+            ["initial:secondRight"] = true, travelDealRefill = true }, label .. ".generationKey")
+            or (row.itemKey ~= nil and not p.str(row.itemKey, label .. ".itemKey"))
+            or (row.effect ~= nil and not p.one(row.effect, effects, label .. ".effect"))
+            or (row.twistResultKey ~= nil and not p.str(row.twistResultKey, label .. ".twistResultKey")) then
+            return p.fail(label .. " has invalid Well guide operands")
+        end
+        return row
+    end
+    if kind == "sellPurgingPoolTrait" then
+        local row, rowError = p.exact(record, { "kind", "slotKey", "traitKey" }, {}, label)
+        if not row then return nil, rowError end
+        if not p.one(row.slotKey, { left = true, middle = true, right = true }, label .. ".slotKey")
+            or not p.str(row.traitKey, label .. ".traitKey") then
+            return p.fail(label .. " has invalid Pool guide operands")
+        end
+        return row
+    end
+    if kind == "interactEncounter" or kind == "interactGorgon" then
+        local row, rowError = p.exact(record, { "kind", "phaseKey" }, { "encounterKey" }, label)
+        if not row then return nil, rowError end
+        if not p.str(row.phaseKey, label .. ".phaseKey")
+            or (row.encounterKey ~= nil and not p.str(row.encounterKey, label .. ".encounterKey")) then
+            return p.fail(label .. " has invalid encounter guide operands")
+        end
+        return row
+    end
+    if kind == "interactAcquisitionEntry" then
+        local row, rowError = p.exact(record, { "kind" }, { "reward", "conversion" }, label)
+        if not row then return nil, rowError end
+        if row.reward ~= nil then
+            local _, rewardError = rewards.reward(row.reward, label .. ".reward")
+            if rewardError then return nil, rewardError end
+        end
+        if row.conversion ~= nil and row.conversion ~= "timePiece" and row.conversion ~= "anvilOfFates" then
+            return p.fail(label .. " has invalid acquisition conversion")
+        end
+        return row
+    end
+    if kind == "useFountain" then
+        local row, rowError = p.exact(record, { "kind" }, { "aromaticPhialTarget" }, label)
+        if not row then return nil, rowError end
+        if row.aromaticPhialTarget ~= nil and not p.str(row.aromaticPhialTarget, label .. ".aromaticPhialTarget") then
+            return p.fail(label .. " has invalid fountain guide operand")
+        end
+        return row
+    end
+    if kind == "interactKeepsakeRack" then
+        local row, rowError = p.exact(record, { "kind" }, { "keepsakeKey" }, label)
+        if not row then return nil, rowError end
+        if row.keepsakeKey ~= nil and not p.str(row.keepsakeKey, label .. ".keepsakeKey") then
+            return p.fail(label .. " has invalid keepsake guide operand")
+        end
+        return row
+    end
+    return p.fail(label .. ".kind is unsupported")
+end
+
+local function roomGuide(value, transactionsByOwner, label)
+    local rows, errorMessage = p.arr(value, label)
+    if not rows then return nil, errorMessage end
+    local keys = {}
+    for index, valueRow in ipairs(rows) do
+        local row, rowError = p.exact(valueRow, { "key", "description" }, { "transactionOwner" }, label .. "[" .. index .. "]")
+        if not row then return nil, rowError end
+        if not p.str(row.key, label .. "[" .. index .. "].key", p.MAX_OWNER_STRING) or keys[row.key] then
+            return p.fail(label .. " has invalid or duplicate action key")
+        end
+        keys[row.key] = true
+        if row.transactionOwner ~= nil and (not p.str(row.transactionOwner,
+            label .. "[" .. index .. "].transactionOwner", p.MAX_OWNER_STRING)
+            or transactionsByOwner[row.transactionOwner] == nil) then
+            return p.fail(label .. ".transactionOwner must name one occurrence transaction")
+        end
+        local _, descriptionError = guideDescription(row.description, label .. "[" .. index .. "].description")
+        if descriptionError then return nil, descriptionError end
+    end
+    return rows
+end
+
+local function anomaly(value, biomeKey, label)
+    local record, errorMessage = p.exact(
+        value,
+        { "replacedRoomGameName", "success" },
+        {},
+        label
+    )
+    if not record then return nil, errorMessage end
+    if biomeKey ~= "G"
+        or not p.str(record.replacedRoomGameName, label .. ".replacedRoomGameName")
+        or not p.bool(record.success, label .. ".success") then
+        return p.fail(label .. " is invalid")
+    end
+    return record
+end
+
+local function assertRoomReference(value, ids, label)
+    local reference, errorMessage = p.roomRef(value, label)
+    if not reference then return nil, errorMessage end
+    local target = ids[reference.id]
+    if target == nil
+        or target.biomeKey ~= reference.biomeKey
+        or target.gameName ~= reference.gameName then
+        return p.fail(label .. " is unresolved or contradicts occurrence identity")
+    end
+    return reference
+end
+
+local function doors(value, ids, label)
+    local record, errorMessage = p.obj(value, label)
+    if not record then return nil, errorMessage end
+    if record.kind == "batch" then
+        local batch, batchError = p.exact(
+            record,
+            { "kind", "owner", "targets" },
+            { "resolvedSharedRewardStoreKey" },
+            label
+        )
+        if not batch then return nil, batchError end
+        if not p.str(batch.owner, label .. ".owner", p.MAX_OWNER_STRING)
+            or (batch.resolvedSharedRewardStoreKey ~= nil
+                and not p.str(batch.resolvedSharedRewardStoreKey, label .. ".resolvedSharedRewardStoreKey")) then
+            return p.fail(label .. " is malformed")
+        end
+        local targets, targetsError = p.arr(batch.targets, label .. ".targets")
+        if not targets then return nil, targetsError end
+        local exitKeys = {}
+        local continuations = {}
+        for index, valueTarget in ipairs(targets) do
+            local target, targetError = p.exact(
+                valueTarget,
+                { "exitKey", "index", "room", "zagreusContractPresent" },
+                { "reward", "cageRewards" },
+                label .. ".targets[" .. index .. "]"
+            )
+            if not target then return nil, targetError end
+            if not p.str(target.exitKey, label .. ".exitKey")
+                or exitKeys[target.exitKey]
+                or not p.int(target.index, label .. ".index", 0) then
+                return p.fail(label .. " has invalid door target")
+            end
+            exitKeys[target.exitKey] = true
+            local reference, referenceError = assertRoomReference(target.room, ids, label .. ".room")
+            if not reference then return nil, referenceError end
+            continuations[reference.id] = true
+            local targetOccurrence = ids[reference.id]
+            local targetLabel = label .. ".targets[" .. index .. "]"
+            local expectedContract = false
+            for _, additional in ipairs(targetOccurrence.overview.additional or {}) do
+                if additional.kind == "zagreusContract" then expectedContract = true end
+            end
+            if not p.bool(target.zagreusContractPresent, targetLabel .. ".zagreusContractPresent")
+                or target.zagreusContractPresent ~= expectedContract then
+                return p.fail(targetLabel .. ".zagreusContractPresent must match the destination Overview.additional")
+            end
+            if targetOccurrence.kind == "FieldsEncounter" then
+                if target.cageRewards == nil then
+                    return p.fail(targetLabel .. ".cageRewards is required for FieldsEncounter target")
+                end
+                local cageCount = 0
+                for _, phase in ipairs(targetOccurrence.overview.encounterPhases) do
+                    if string.match(phase.slotKey, "^Cage%d+$") then cageCount = cageCount + 1 end
+                end
+                if #target.cageRewards ~= cageCount then
+                    return p.fail(targetLabel .. ".cageRewards must match Fields target cage encounter count")
+                end
+            elseif target.cageRewards ~= nil then
+                return p.fail(targetLabel .. ".cageRewards is only valid for FieldsEncounter target")
+            end
+            if target.reward ~= nil then
+                local _, rewardError = rewards.reward(target.reward, label .. ".reward")
+                if rewardError then return nil, rewardError end
+            end
+            if target.cageRewards ~= nil then
+                local cageRewards, cageError = p.arr(target.cageRewards, label .. ".cageRewards")
+                if not cageRewards then return nil, cageError end
+                for cageIndex, cageReward in ipairs(cageRewards) do
+                    local _, cageRewardError = rewards.reward(
+                        cageReward, label .. ".cageRewards[" .. cageIndex .. "]"
+                    )
+                    if cageRewardError then return nil, cageRewardError end
+                end
+            end
+        end
+        return batch, continuations
+    end
+    if record.kind == "fixed" then
+        local fixed, fixedError = p.exact(
+            record, { "kind", "owner", "target", "zagreusContractPresent" }, {}, label
+        )
+        if not fixed then return nil, fixedError end
+        if not p.str(fixed.owner, label .. ".owner", p.MAX_OWNER_STRING) then return p.fail(label .. " invalid owner") end
+        local reference, referenceError = assertRoomReference(fixed.target, ids, label .. ".target")
+        if not reference then return nil, referenceError end
+        local expectedContract = false
+        for _, additional in ipairs(ids[reference.id].overview.additional or {}) do
+            if additional.kind == "zagreusContract" then expectedContract = true end
+        end
+        if not p.bool(fixed.zagreusContractPresent, label .. ".zagreusContractPresent")
+            or fixed.zagreusContractPresent ~= expectedContract then
+            return p.fail(label .. ".zagreusContractPresent must match the destination Overview.additional")
+        end
+        return fixed, { [reference.id] = true }
+    end
+    if record.kind == "terminal" then
+        local terminal, terminalError = p.exact(record, { "kind", "owner" }, {}, label)
+        if not terminal then return nil, terminalError end
+        if not p.str(terminal.owner, label .. ".owner", p.MAX_OWNER_STRING) then
+            return p.fail(label .. " has invalid owner")
+        end
+        return terminal, {}
+    end
+    return p.fail(label .. ".kind is unsupported")
+end
+
+function occurrences.decode(value, selected, label)
+    local rows, errorMessage = p.arr(value, label)
+    if not rows then return nil, errorMessage end
+    local ids = {}
+    local globalOwners = {}
+    local framing = { next = 0, values = {} }
+    local result = setmetatable({}, getmetatable(rows))
+    for index, valueRow in ipairs(rows) do
+        local row, rowError = p.exact(
+            valueRow,
+            { "id", "owner", "biomeKey", "gameName", "kind", "overview", "timeline", "roomGuide", "doors" },
+            { "anomaly", "resumeBoundary", "roomExitConformance", "diagnostics", "suppressedNpcShopping" },
+            label .. "[" .. index .. "]"
+        )
+        if not row then return nil, rowError end
+        if row.suppressedNpcShopping ~= nil then
+            local families, familiesError = p.arr(row.suppressedNpcShopping, label .. ".suppressedNpcShopping")
+            if not families then return nil, familiesError end
+            local seen = {}
+            for _, family in ipairs(families) do
+                if (family ~= "Nemesis" and family ~= "Heracles") or seen[family] then
+                    return p.fail(label .. ".suppressedNpcShopping has an unsupported or duplicate family")
+                end
+                seen[family] = true
+            end
+        end
+        if not p.str(row.id, label .. ".id", 256)
+            or ids[row.id]
+            or not p.str(row.owner, label .. ".owner", p.MAX_OWNER_STRING)
+            or not p.one(row.biomeKey, { F = true, G = true, H = true, I = true, N = true, O = true, P = true, Q = true }, label .. ".biomeKey")
+            or not p.str(row.gameName, label .. ".gameName")
+            or not p.str(row.kind, label .. ".kind") then
+            return p.fail(label .. " has invalid occurrence identity")
+        end
+        if row.resumeBoundary ~= nil and row.resumeBoundary ~= "postbossEntry" then
+            return p.fail(label .. ".resumeBoundary is unsupported")
+        end
+        ids[row.id] = row
+        local _, overviewError = overview.decode(row.overview, label .. ".overview")
+        if overviewError then return nil, overviewError end
+        if (row.kind == "FieldsEncounter" and row.biomeKey ~= "H")
+            or (row.overview.fields ~= nil and row.kind ~= "FieldsEncounter") then
+            return p.fail(label .. ".overview.fields is only valid for H FieldsEncounter")
+        end
+        local fieldsSlotsOk, fieldsSlotsError = validateFieldsCageSlots(
+            row, label .. ".overview.fields"
+        )
+        if not fieldsSlotsOk then return nil, fieldsSlotsError end
+        if row.anomaly ~= nil then
+            local _, anomalyError = anomaly(row.anomaly, row.biomeKey, label .. ".anomaly")
+            if anomalyError then return nil, anomalyError end
+        end
+        local _, byOwnerOrError = timeline.decode(
+            row.timeline,
+            label .. ".timeline",
+            globalOwners
+        )
+        if type(byOwnerOrError) == "string" then return nil, byOwnerOrError end
+        row.transactionsByOwner = byOwnerOrError
+        local _, guideError = roomGuide(row.roomGuide, row.transactionsByOwner, label .. "[" .. index .. "].roomGuide")
+        if guideError then return nil, guideError end
+        for _, offer in ipairs((row.overview.shop and row.overview.shop.offers) or {}) do
+            if offer.transactionOwner ~= nil and row.transactionsByOwner[offer.transactionOwner] == nil then
+                return p.fail(label .. ".overview.shop transaction owner must name one occurrence transaction")
+            end
+        end
+        local wheelsOk, wheelsError = validateRewardWheelProduct(row, label .. "[" .. index .. "]")
+        if not wheelsOk then return nil, wheelsError end
+        local hadDiagnostics = row.diagnostics ~= nil
+        local expanded, diagnosticError = diagnostics.expand(
+            row.diagnostics,
+            label .. ".diagnostics",
+            framing
+        )
+        if not expanded then return nil, diagnosticError end
+        if hadDiagnostics then row.diagnostics = expanded end
+        if row.roomExitConformance ~= nil then
+            if expanded.beforeRoomExit == nil then
+                return p.fail(label .. " conformance requires beforeRoomExit diagnostic")
+            end
+            local expected, conformanceError = conformance.resolve(
+                row.roomExitConformance,
+                expanded,
+                label .. ".roomExitConformance"
+            )
+            if not expected then return nil, conformanceError end
+            if expected.elementCounts == nil then
+                return p.fail(label .. " conformance is missing elementCounts")
+            end
+            row.conformanceExpected = expected
+        elseif expanded.beforeRoomExit ~= nil then
+            return p.fail(label .. " beforeRoomExit diagnostic is missing room-exit conformance")
+        end
+        result[index] = row
+    end
+    if #selected == 0 or result[1] == nil or selected[1] ~= result[1].id then
+        return p.fail("selected route must start at opening occurrence")
+    end
+    local selectedSeen = {}
+    for _, id in ipairs(selected) do
+        if ids[id] == nil or selectedSeen[id] then return p.fail("invalid selected occurrence") end
+        selectedSeen[id] = true
+    end
+    for _, row in ipairs(result) do
+        if selectedSeen[row.id] and row.kind == "FieldsEncounter" and row.overview.fields == nil then
+            return p.fail(label .. "[" .. row.id .. "].overview.fields is required for a selected Fields encounter")
+        end
+        if row.resumeBoundary ~= nil then
+            if not selectedSeen[row.id] then
+                return p.fail(label .. "[" .. row.id .. "] resume boundary must be selected")
+            end
+            if row.diagnostics == nil or row.diagnostics.roomEntered == nil then
+                return p.fail(label .. "[" .. row.id .. "] resume boundary requires roomEntered diagnostics")
+            end
+        end
+    end
+    local continuations = {}
+    for _, row in ipairs(result) do
+        local _, rowContinuationsOrError = doors(row.doors, ids, label .. ".doors")
+        if type(rowContinuationsOrError) == "string" then return nil, rowContinuationsOrError end
+        continuations[row.id] = rowContinuationsOrError
+        for _, additional in ipairs(row.overview.additional or {}) do
+            local reference, referenceError = assertRoomReference(
+                additional.room,
+                ids,
+                label .. ".additional.room"
+            )
+            if not reference then return nil, referenceError end
+            continuations[row.id][reference.id] = true
+        end
+        local hub = row.overview.hub
+        if hub ~= nil then
+            for _, slot in ipairs(hub.slots) do
+                local reference, referenceError = assertRoomReference(slot.room, ids, label .. ".hub.slot")
+                if not reference then return nil, referenceError end
+                continuations[row.id][reference.id] = true
+            end
+            local reference, referenceError = assertRoomReference(hub.finalHandoff, ids, label .. ".hub.finalHandoff")
+            if not reference then return nil, referenceError end
+            continuations[row.id][reference.id] = true
+        end
+        for _, slot in ipairs(row.overview.localSlots or {}) do
+            if slot.room ~= nil then
+                local reference, referenceError = assertRoomReference(slot.room, ids, label .. ".localSlots.room")
+                if not reference then return nil, referenceError end
+                continuations[row.id][reference.id] = true
+            end
+        end
+    end
+    local hubTargets, sideParents = {}, {}
+    for _, row in ipairs(result) do
+        if row.overview.hub ~= nil then
+            for _, slot in ipairs(row.overview.hub.slots) do hubTargets[slot.room.id] = true end
+            hubTargets[row.overview.hub.finalHandoff.id] = true
+        end
+        for _, slot in ipairs(row.overview.localSlots or {}) do
+            if slot.room ~= nil then sideParents[slot.room.id] = row end
+        end
+    end
+    for index = 1, #selected - 1 do
+        local prior, nextId = ids[selected[index]], selected[index + 1]
+        local parent = prior and sideParents[prior.id] or nil
+        local siblingSide = false
+        if parent ~= nil then
+            for _, slot in ipairs(parent.overview.localSlots or {}) do
+                if slot.room ~= nil and slot.room.id == nextId then siblingSide = true end
+            end
+        end
+        local nativeRestore = prior and prior.biomeKey == "N" and (
+            (parent ~= nil and (siblingSide or hubTargets[nextId]))
+            or (prior.overview.localSlots ~= nil and hubTargets[nextId])
+        )
+        if not continuations[selected[index]][nextId] and not nativeRestore then
+            return p.fail("selected route is disconnected")
+        end
+    end
+    return result, ids
+end
+
+return occurrences

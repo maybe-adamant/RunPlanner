@@ -1,0 +1,232 @@
+-- Source-backed room-exit readers. These functions project native run
+-- ownership into the already-decoded expected shape; they do not reconstruct
+-- planner chronology or action provenance.
+local chaos = type(import) == "function" and import("mods/traits/chaos.lua") or require("mods.traits.chaos")
+local nativeBindings = type(import) == "function" and import("mods/native_bindings.lua")
+    or require("mods.native_bindings")
+local conformanceBindings = nativeBindings.conformance
+local keepsakeConformance = type(import) == "function" and import("mods/keepsakes/conformance.lua")
+    or require("mods.keepsakes.conformance")
+local readers = {}
+local elementKeys = { "Aether", "Earth", "Air", "Fire", "Water" }
+local supported = {
+    traitInventory = true, elementCounts = true,
+    steadyGrowth = true, chaos = true, keepsakeEffects = true,
+    rewardPriorities = true, pathOfStars = true, forfeit = true, stygianWell = true,
+}
+
+local function traitKey(value)
+    return type(value) == "table" and (value.Name or value.TraitName) or value
+end
+
+local function traits(run)
+    local hero = type(run) == "table" and run.Hero or nil
+    return type(hero) == "table" and hero.Traits or nil
+end
+
+local function elements(run)
+    local hero = type(run) == "table" and run.Hero or nil
+    local native = type(hero) == "table" and hero.Elements or nil
+    local result = {}
+    for _, key in ipairs(elementKeys) do
+        result[key] = type(native) == "table" and (native[key] or 0) or 0
+    end
+    return result
+end
+
+local function findTrait(run, key)
+    for _, trait in pairs(traits(run) or {}) do
+        if traitKey(trait) == key then return trait end
+    end
+    return nil
+end
+
+local function modeledTraitInventory(run, expected)
+    local wanted, expectedRows = {}, {}
+    for _, row in ipairs(expected and expected.present or {}) do
+        if type(row) == "table" and type(row.traitKey) == "string" then
+            wanted[row.traitKey], expectedRows[row.traitKey] = true, row
+        end
+    end
+    for _, key in ipairs(expected and expected.absent or {}) do
+        if type(key) == "string" then wanted[key] = true end
+    end
+    local present, observed = {}, {}
+    for _, trait in pairs(traits(run) or {}) do
+        local key = traitKey(trait)
+        if wanted[key] and not observed[key] then
+            local expectedRow = expectedRows[key]
+            local row = { traitKey = key }
+            if expectedRow and expectedRow.rarity ~= nil then row.rarity = trait.Rarity end
+            if expectedRow and expectedRow.level ~= nil then
+                row.level = _G.GetTraitCount(run.Hero, { Name = key })
+            end
+            if expectedRow and expectedRow.hammerRank ~= nil then
+                row.hammerRank = trait.Rarity == "Legendary" and "RankII" or "RankI"
+            end
+            present[#present + 1], observed[key] = row, true
+        end
+    end
+    local absent = {}
+    for _, key in ipairs(expected and expected.absent or {}) do
+        if not observed[key] then absent[#absent + 1] = key end
+    end
+    table.sort(present, function(left, right) return left.traitKey < right.traitKey end)
+    table.sort(absent)
+    return { present = present, absent = absent }
+end
+
+local function enabledKeys(values)
+    local result = {}
+    for key, enabled in pairs(values or {}) do if enabled then result[#result + 1] = key end end
+    table.sort(result)
+    return result
+end
+
+local function activeChaos(run)
+    local active, matured = {}, {}
+    for _, trait in pairs(traits(run) or {}) do
+        if type(trait) == "table" and type(trait.Name) == "string" then
+            if trait.Name:match("^Chaos.*Curse$") then
+                local blessing = trait.OnExpire and trait.OnExpire.TraitData
+                if type(blessing) == "table" then
+                    active[#active + 1] = {
+                        curseKey = trait.Name, blessingKey = blessing.Name,
+                        rarity = blessing.Rarity, clock = chaos.clock(trait),
+                        remaining = trait.RemainingUses,
+                    }
+                end
+            elseif trait.Name:match("^Chaos.*Blessing$") then
+                matured[#matured + 1] = { blessingKey = trait.Name, rarity = trait.Rarity }
+            end
+        end
+    end
+    return { active = active, matured = matured }
+end
+
+local function forfeit(run)
+    local rank = _G.GetNumShrineUpgrades(conformanceBindings.shrineUpgrades.forfeit)
+    if type(rank) ~= "number" or rank <= 0 then return "inactive" end
+    local count = type(run) == "table" and run.BiomeBoonSkipCount or nil
+    if type(count) ~= "number" then return nil end
+    return count >= rank and "consumed" or "available"
+end
+
+local function pathOfStars(run, expected)
+    local hero = type(run) == "table" and run.Hero or nil
+    local spell = type(hero) == "table" and hero.SlottedSpell or nil
+    local talents = type(spell) == "table" and spell.Talents or nil
+    local nativeTalentKeys = {}
+    local expectedKeys = type(expected) == "table" and expected.talentKeys or nil
+    local expectedSet = {}
+    for _, key in ipairs(expectedKeys or {}) do expectedSet[key] = true end
+    -- Native trees have sequential depths but sparse positions within each depth.
+    for _, column in ipairs(talents or {}) do
+        for _, node in pairs(column) do
+            if type(node.Name) == "string"
+                and (expectedSet[node.Name] or node.Rarity == "Rare" or node.Rarity == "Epic"
+                    or node.Rarity == "Duo") then
+                nativeTalentKeys[node.Name] = true
+            end
+        end
+    end
+    -- The planner intentionally projects only frozen Rare/Epic/God Sent
+    -- identities. Reconstruct that canonical published order from native
+    -- presence, then retain unexpected high-value nodes as evidence instead
+    -- of leaking unmodeled common/repeatable talents into conformance.
+    local talentKeys, emitted = {}, {}
+    for _, key in ipairs(expectedKeys or {}) do
+        if nativeTalentKeys[key] then
+            talentKeys[#talentKeys + 1] = key
+            emitted[key] = true
+        end
+    end
+    local unexpected = {}
+    for key in pairs(nativeTalentKeys) do
+        if not emitted[key] and not expectedSet[key] then unexpected[#unexpected + 1] = key end
+    end
+    table.sort(unexpected)
+    for _, key in ipairs(unexpected) do talentKeys[#talentKeys + 1] = key end
+    return {
+        -- SpellData.Name is the native spell-table key; planner conformance
+        -- publishes the installed trait identity carried by TraitName.
+        spellTraitKey = type(spell) == "table" and spell.TraitName or nil,
+        layoutKey = type(talents) == "table" and talents.Name or nil,
+        talentKeys = talentKeys,
+        closed = type(run) == "table" and run.AllSpellInvestedCache or false,
+        bankedPathPoints = type(run) == "table" and (run.NumTalentPoints or 0) or 0,
+        investedPathPoints = type(run) == "table" and (run.InvestedTalentPoints or 0) or 0,
+    }
+end
+
+local function steadyGrowth(run, expected)
+    local result = {}
+    for _, row in ipairs(expected or {}) do
+        local trait = findTrait(run, row.traitKey)
+        local roomsPerUpgrade = type(trait) == "table" and trait.RoomsPerUpgrade or nil
+        result[#result + 1] = {
+            traitKey = row.traitKey,
+            progress = type(trait) == "table" and (trait.CurrentRoom or 0) or 0,
+            interval = type(roomsPerUpgrade) == "table" and (roomsPerUpgrade.Amount or 0) or 0,
+        }
+    end
+    return result
+end
+
+local function remaining(run, key)
+    local trait = findTrait(run, key)
+    return type(trait) == "table" and (trait.RemainingUses or trait.Uses or 1) or 0
+end
+
+local function durationList(run, key)
+    local result = {}
+    for _, trait in pairs(traits(run) or {}) do
+        if traitKey(trait) == key then
+            local uses = trait.RemainingUses or 0
+            -- The planner uses a negative counter for an Extended item whose
+            -- native duration advances on bosses rather than encounters.
+            result[#result + 1] = trait.UsesAsBosses and -uses or uses
+        end
+    end
+    table.sort(result)
+    return result
+end
+
+local function stygianWell(run)
+    local keys = conformanceBindings.stygianWellTraits
+    return {
+        sparkUses = remaining(run, keys.sparkUses),
+        yarnUses = remaining(run, keys.yarnUses),
+        hymnUses = remaining(run, keys.hymnUses),
+        discountUses = durationList(run, keys.discountUses),
+        emptySlotUses = durationList(run, keys.emptySlotUses),
+        extendedUses = remaining(run, keys.extendedUses),
+    }
+end
+
+function readers.read(kind, run, gameState, expected)
+    if kind == "traitInventory" then return modeledTraitInventory(run, expected) end
+    if kind == "elementCounts" then return elements(run) end
+    if kind == "steadyGrowth" then return steadyGrowth(run, expected) end
+    if kind == "chaos" then return activeChaos(run) end
+    if kind == "keepsakeEffects" then return keepsakeConformance.read(run, gameState, expected) end
+    if kind == "rewardPriorities" then return type(run) == "table" and run.RewardPriorities or nil end
+    if kind == "pathOfStars" then return pathOfStars(run, expected) end
+    if kind == "forfeit" then return forfeit(run) end
+    if kind == "stygianWell" then return stygianWell(run) end
+    return nil
+end
+
+function readers.supports(kind)
+    return supported[kind] == true
+end
+
+function readers.diagnostic(run)
+    return {
+        rewardPriorities = type(run) == "table" and run.RewardPriorities or nil,
+        bannedTraits = type(run) == "table" and enabledKeys(run.BannedTraits) or {},
+        chaos = activeChaos(run), pathOfStars = pathOfStars(run),
+    }
+end
+
+return readers

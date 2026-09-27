@@ -1,0 +1,44 @@
+-- Run Planner's game companion consumes the application's execution-only JSON.
+-- It freezes a decoded plan at StartNewRun and never imports planner code.
+-- luacheck: globals rom import_as_fallback modutil lib _PLUGIN game reload import
+
+local mods = rom.mods
+mods["SGG_Modding-ENVY"].auto()
+
+rom = rom
+_PLUGIN = _PLUGIN
+game = rom.game
+modutil = mods["SGG_Modding-ModUtil"]
+reload = mods["SGG_Modding-ReLoad"]
+lib = mods["adamant-ModpackLib"]
+
+local function initialize()
+    import_as_fallback(rom.game)
+    local data = import("mods/host/data.lua")
+    local runtime = import("mods/runtime/composition.lua").bind(_PLUGIN.config_mod_folder_path)
+    local ui = import("mods/host/status_ui.lua").bind(runtime.inboxInspection, runtime.sessionInspection)
+    local guide = import("mods/room/guide.lua")
+    local module = lib.createModule({
+        pluginGuid = _PLUGIN.guid,
+        modpack = "run-planner",
+        id = "Run_Planner",
+        name = "Run Planner",
+        shortName = "Run Planner",
+        tooltip = "Play a run planned in the Run Planner application.",
+    })
+    if not module then return end
+    module.data.define(data.buildStorage())
+    module.status.define(data.buildStatus())
+    module.ui.tab(ui.drawTab)
+    module.ui.quickContent(ui.drawQuickContent)
+    guide.attach(module, runtime.roomGuideInspection)
+    runtime.attach(module)
+    module.fallbackUi.attachGuiOnce(function(fallbackUi)
+        rom.gui.add_imgui(fallbackUi.renderWindow)
+        rom.gui.add_to_menu_bar(fallbackUi.addMenuBar)
+    end)
+    module.activate()
+end
+
+local loader = reload.auto_single()
+modutil.once_loaded.game(function() loader.load(nil, initialize) end)

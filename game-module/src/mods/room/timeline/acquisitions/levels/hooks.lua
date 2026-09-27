@@ -1,0 +1,346 @@
+-- Native contacts for planner-published level acquisitions.  This module
+-- steers the native Pom menu and direct room-reward Nectar effect; it never
+-- mutates a trait itself.
+local levels = {}
+local levelCarrier = type(import) == "function" and import("mods/room/timeline/acquisitions/levels/carrier.lua")
+    or require("mods.room.timeline.acquisitions.levels.carrier")
+
+function levels.isVisibleCarrier(value)
+    return levelCarrier.isVisible(value)
+end
+
+function levels.isDirectCarrier(value)
+    return levelCarrier.isDirect(value)
+end
+
+local function resolution(payload)
+    local detail = payload and payload.detail
+    return detail and detail.levelResolution or nil
+end
+
+function levels.isNormalPayload(payload)
+    local detail = payload and payload.detail
+    return type(detail) == "table" and detail.disposition == "normal"
+end
+
+local function copy(value)
+    local result = {}
+    for key, nested in pairs(value or {}) do result[key] = nested end
+    return result
+end
+
+function levels.prepareVisible(row, loot)
+    local effect = resolution(row)
+    if effect == nil or type(loot) ~= "table" then return false end
+    local installed = {}
+    local existing = loot.UpgradeOptions or {}
+    for index, target in ipairs(effect.offeredTargets or {}) do
+        local option = copy(existing[index])
+        option.ItemName = target
+        installed[index] = option
+    end
+    loot.StackOnly = true
+    -- The published count is final.  The surrounding screen adapter masks
+    -- the native FatedPomLevelBonus query during this row build so that the
+    -- same final count remains available to native eligibility checks.
+    loot.StackNum = effect.levelCount
+    loot.UpgradeOptions = installed
+    return true
+end
+
+local function markedArguments(source, args)
+    if type(source) == "table" and source.__runPlannerTimelineHandle ~= nil then return source end
+    if type(args) == "table" and args.__runPlannerTimelineHandle ~= nil then return args end
+    return nil
+end
+
+local function clearAdapterTransport(arguments)
+    if type(arguments) ~= "table" then return end
+    arguments.__runPlannerTimelineHandle = nil
+end
+
+local function carrier(state, room, native)
+    local current = room.current(state)
+    if current == nil then return nil end
+    local handle = room.bound(state, current, native)
+    if handle == nil or type(room.peek) ~= "function" then return nil end
+    local payload = room.peek(state, handle)
+    return handle, payload
+end
+
+local function nativeName(value)
+    return type(value) == "table" and (value.Name or value.ItemName or value.LootName) or nil
+end
+
+local function directLevelRole(transaction, contact)
+    if type(transaction) ~= "table" then return nil end
+    for _, role in ipairs(transaction.roles or {}) do
+        if role.gameName == contact.gameName
+            and role.disposition == "normal"
+            and role.levelResolution ~= nil then
+            return role
+        end
+    end
+    return nil
+end
+
+function levels.visibleRole(transaction, contact)
+    if type(transaction) ~= "table" then return nil end
+    for _, role in ipairs(transaction.roles or {}) do
+        if role.gameName == contact.gameName and role.disposition == "normal"
+            and role.levelResolution ~= nil then
+            return role
+        end
+    end
+    return nil
+end
+
+function levels.attach(module, session, getState, report, room, seaStar, highlights)
+    assert(type(seaStar) == "table", "level acquisition Sea Star instance is required")
+    local roomCoordinator = room
+    local suppressFatedPomBonus = 0
+    local begunVisible = setmetatable({}, { __mode = "k" })
+    local retainedVisible = setmetatable({}, { __mode = "k" })
+    local activeDirectUses = setmetatable({}, { __mode = "k" })
+    local activeDirectTerminals = {}
+    local function seaStarDiagnostic(state, checkpoint, expected, observed)
+        session.diagnostic(state, checkpoint, { expected = expected, observed = observed })
+    end
+
+    local function forwardDirect(scope)
+        if scope.forwarded or scope.handle == nil then return end
+        local forwarded = {}
+        for key, value in pairs(scope.originalArgs or {}) do forwarded[key] = value end
+        forwarded.__runPlannerTimelineHandle = scope.handle
+        scope.item.UseFunctionArgs = forwarded
+        scope.forwarded = true
+    end
+
+    local function withoutFatedPomBonus(callback)
+        suppressFatedPomBonus = suppressFatedPomBonus + 1
+        local ok, result = pcall(callback)
+        suppressFatedPomBonus = suppressFatedPomBonus - 1
+        if not ok then error(result, 0) end
+        return result
+    end
+
+    module.hooks.wrap("GetTotalHeroTraitValue", "run-planner-level-fated-bonus", function(_, _, base,
+        propertyName, args)
+        if propertyName == "FatedPomLevelBonus" and suppressFatedPomBonus > 0 then return 0 end
+        return base(propertyName, args)
+    end)
+
+    module.hooks.wrap("HandleLootPickup", "run-planner-level-begin-loot", function(_, runtime, base,
+        currentRun, loot, args)
+        if not levels.isVisibleCarrier(loot) then return base(currentRun, loot, args) end
+        local state = getState(runtime)
+        local handle, payload = carrier(state, roomCoordinator, loot)
+        local current = roomCoordinator.current(state)
+        if handle ~= nil and not levels.isNormalPayload(payload) then
+            return base(currentRun, loot, args)
+        end
+        if handle == nil and current ~= nil and type(roomCoordinator.claimReady) == "function" then
+            handle, payload = roomCoordinator.claimReady(state, current, {
+                kind = "visibleLevel", gameName = loot.Name or loot.ItemName or loot.LootName,
+            }, loot, levels.visibleRole)
+        end
+        if resolution(payload) == nil then return base(currentRun, loot, args) end
+        local started = roomCoordinator.begin(state, handle)
+        if started == nil then return base(currentRun, loot, args) end
+        begunVisible[handle] = true
+        local result = base(currentRun, loot, args)
+        report(runtime)
+        return result
+    end)
+
+    module.hooks.wrap("CreateBoonLootButtons", "run-planner-level-screen", function(_, runtime, base,
+        screen, loot, reroll, args)
+        if not levels.isVisibleCarrier(loot) then return base(screen, loot, reroll, args) end
+        local state = getState(runtime)
+        local handle, payload = carrier(state, roomCoordinator, loot)
+        if handle ~= nil and not levels.isNormalPayload(payload) then
+            return base(screen, loot, reroll, args)
+        end
+        if resolution(payload) == nil or not begunVisible[handle] then
+            return base(screen, loot, reroll, args)
+        end
+        local initial = reroll ~= true
+        local installed = not initial or levels.prepareVisible(payload, loot)
+        if not installed then
+            session.diagnostic(state, "level-offer-install", {
+                expected = "published level rows", observed = "not installed",
+            })
+        end
+        local result
+        if initial then
+            result = withoutFatedPomBonus(function()
+                return base(screen, loot, reroll, args)
+            end)
+        else
+            result = base(screen, loot, reroll, args)
+        end
+        local selected = resolution(payload) and resolution(payload).selectedTarget
+        if highlights and type(selected) == "string" then
+            highlights.screen(runtime, state, screen, selected, false)
+        end
+        if initial then
+            local seaStarScope = seaStar.scope(state, payload)
+            if seaStarScope.result == nil then
+                session.complete(state, handle)
+                begunVisible[handle] = nil
+                report(runtime)
+            else
+                retainedVisible[handle] = true
+            end
+        end
+        return result
+    end)
+
+    module.hooks.wrap("HandleUpgradeChoiceSelection", "run-planner-level-selection", function(_, runtime, base,
+        screen, button, args)
+        local loot = button and button.LootData
+        if not levels.isVisibleCarrier(loot) then return base(screen, button, args) end
+        if type(args) == "table" and args.DoubleBoonChance then return base(screen, button, args) end
+        local state = getState(runtime)
+        local handle, payload = carrier(state, roomCoordinator, loot)
+        if handle ~= nil and not levels.isNormalPayload(payload) then
+            return base(screen, button, args)
+        end
+        local effect = resolution(payload)
+        if effect == nil then return base(screen, button, args) end
+        if not begunVisible[handle] or not retainedVisible[handle] then return base(screen, button, args) end
+        local seaStarScope = seaStar.scope(state, payload)
+        local result = seaStar.call(seaStarScope, function() return base(screen, button, args) end,
+            seaStarDiagnostic)
+        seaStar.requireConsumed(seaStarScope, seaStarDiagnostic)
+        session.complete(state, handle)
+        begunVisible[handle], retainedVisible[handle] = nil, nil
+        report(runtime)
+        return result
+    end)
+
+    module.hooks.wrap("UseConsumableItem", "run-planner-level-use-consumable", function(_, runtime, base,
+        item, args, user)
+        if not levels.isDirectCarrier(item) then return base(item, args, user) end
+        local state = getState(runtime)
+        local current = roomCoordinator.current(state)
+        if current == nil then return base(item, args, user) end
+        local handle, payload = carrier(state, roomCoordinator, item)
+        if handle ~= nil and not levels.isNormalPayload(payload) then
+            return base(item, args, user)
+        end
+        if handle ~= nil and resolution(payload) == nil then return base(item, args, user) end
+
+        local scope = {
+            state = state, current = current, handle = handle, payload = payload,
+            item = item, originalArgs = item.UseFunctionArgs, accepted = false,
+            deferred = type(item.UseFunctionArgs) == "table" and item.UseFunctionArgs.Thread == true,
+            seaStar = seaStar.scope(state, payload),
+        }
+        activeDirectUses[item] = scope
+        if resolution(payload) ~= nil then forwardDirect(scope) end
+        local ok, result = pcall(function()
+            return seaStar.call(scope.seaStar, function() return base(item, args, user) end,
+                seaStarDiagnostic)
+        end)
+        if scope.forwarded then item.UseFunctionArgs = scope.originalArgs end
+        if activeDirectUses[item] == scope then activeDirectUses[item] = nil end
+        if scope.handle ~= nil and activeDirectTerminals[scope.handle] == scope
+            and (scope.completed or not scope.deferred) then
+            activeDirectTerminals[scope.handle] = nil
+        end
+        if not ok then error(result, 0) end
+        if scope.completed and not scope.deferred and scope.handle ~= nil and scope.seaStar.result
+            and scope.seaStar.result.kind == "proc" then
+            roomCoordinator.releaseCompletedBinding(state, scope.current, scope.handle, item)
+        end
+        if scope.accepted then report(runtime) end
+        return result
+    end)
+
+    module.hooks.wrap("ConsumableUsedPresentation", "run-planner-level-direct-accepted", function(_, runtime, base,
+        currentRun, item, args)
+        local result = base(currentRun, item, args)
+        local scope = activeDirectUses[item]
+        if scope ~= nil and not scope.accepted and result ~= false then
+            if scope.handle == nil and type(roomCoordinator.claimReady) == "function" then
+                scope.handle, scope.payload = roomCoordinator.claimReady(scope.state, scope.current, {
+                    kind = "directLevel", gameName = nativeName(item),
+                }, item, directLevelRole)
+            end
+            if scope.handle == nil or resolution(scope.payload) == nil then return result end
+            activeDirectTerminals[scope.handle] = scope
+            scope.accepted = true
+            forwardDirect(scope)
+            seaStar.activate(scope.seaStar, scope.payload)
+        end
+        report(runtime)
+        return result
+    end)
+
+    module.hooks.wrap("UseStoreRewardRandomStack", "run-planner-level-direct-entry", function(_, runtime, base,
+        source, args)
+        -- CallFunctionName passes UseFunctionArgs first and the consumable
+        -- object second. The object is not the carrier; the first argument is.
+        local directArgs = markedArguments(source, args)
+        if directArgs == nil then return base(source, args) end
+        local handle = directArgs.__runPlannerTimelineHandle
+        local state = getState(runtime)
+        local payload = roomCoordinator.begin(state, handle)
+        local effect = resolution(payload)
+        if effect == nil then
+            clearAdapterTransport(directArgs)
+            return base(source, args)
+        end
+        return base(source, args)
+    end)
+
+    module.hooks.wrap("AddStackToTraits", "run-planner-level-direct-terminal", function(_, runtime, base,
+        source, args)
+        local directArgs = markedArguments(source, args)
+        if directArgs == nil then return base(source, args) end
+        local handle = directArgs.__runPlannerTimelineHandle
+        local state = getState(runtime)
+        local payload = roomCoordinator.begin(state, handle)
+        local effect = resolution(payload)
+        if effect == nil then
+            clearAdapterTransport(directArgs)
+            return base(source, args)
+        end
+
+        local target = type(effect.selectedTarget) == "string" and effect.selectedTarget or nil
+        -- UseStoreRewardRandomStack has already applied the native fated
+        -- addition by this point. The published levelCount is the final
+        -- effect, so restore that exact count before native eligibility and
+        -- mutation rather than applying the bonus a second time.
+        local stackNum = effect.levelCount
+        if target ~= nil then
+            directArgs.NumStacks = stackNum
+            directArgs.TraitName = target
+            directArgs.NumTraits = 1
+        else
+            directArgs.NumStacks = stackNum
+            directArgs.TraitName = nil
+            directArgs.NumTraits = 0
+        end
+
+        local threadedDispatch = directArgs.Thread == true
+        local result = base(source, args)
+        local scope = activeDirectTerminals[handle]
+        if not threadedDispatch then
+            seaStar.requireConsumed(scope and scope.seaStar, seaStarDiagnostic)
+            session.complete(state, handle)
+            if scope ~= nil then scope.completed = true end
+            report(runtime)
+        end
+        if not threadedDispatch and scope ~= nil then
+            if scope.completed and scope.seaStar.result and scope.seaStar.result.kind == "proc" then
+                roomCoordinator.releaseCompletedBinding(state, scope.current, scope.handle, scope.item)
+            end
+            if activeDirectTerminals[handle] == scope then activeDirectTerminals[handle] = nil end
+        end
+        return result
+    end)
+end
+
+return levels

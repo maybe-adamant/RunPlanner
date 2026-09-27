@@ -1,0 +1,130 @@
+-- Run-start and keepsake native contacts.  Room hooks are deliberately absent.
+local hooks = {}
+
+function hooks.attach(module, loadoutRuntime, getState, report, room, hexTree)
+    assert(type(loadoutRuntime) == "table" and loadoutRuntime.inbox and loadoutRuntime.session
+        and type(loadoutRuntime.session.beginNewRun) == "function"
+        and loadoutRuntime.loadout and type(loadoutRuntime.activePlanSlot) == "function",
+        "loadout runtime dependencies are required")
+    assert(type(hexTree) == "table", "loadout Hex Tree instance is required")
+    local nativeBindings = import("mods/native_bindings.lua")
+    local roomCoordinator = room
+    local startDepth, startingHexScope = 0, nil
+
+    local function synchronizeStartingRoom(runtime, args)
+        local state = getState(runtime)
+        if state == nil or state.state ~= "starting" then return false end
+        -- Dream_Intro is a native prologue. It starts before the first planned
+        -- biome and must leave the route cursor untouched until its native
+        -- selector reaches ChooseStartingRoom.
+        local current = _G.CurrentRun and _G.CurrentRun.CurrentRoom
+        local name = type(current) == "table" and (current.GenusName or current.Name) or nil
+        if state.plan and state.plan.routeKey == "Dream" and name == "Dream_Intro"
+            and (type(args) ~= "table" or args.StartingBiome == nil) then return false end
+        loadoutRuntime.loadout.verifyCompleted(state, loadoutRuntime.session.mismatch)
+        report(runtime)
+        return state.state == "synchronized"
+    end
+
+    local equipResults = import("mods/keepsakes/equip_results.lua").attach(module, {
+        contacts = nativeBindings.keepsakeEffects.equipContacts,
+        enforcing = function(runtime)
+            local state = getState(runtime)
+            return state ~= nil and (state.state == "synchronized"
+                or (startDepth > 0 and state.state == "starting"))
+        end,
+        state = getState,
+        diagnostic = loadoutRuntime.session.diagnostic,
+    })
+
+    local function expectedEquip(state, keepsakeKey, args)
+        if startDepth > 0 then return state.plan and state.plan.startingKeepsake.equipResults end
+        local current = roomCoordinator.current(state)
+        local replay = type(args) == "table"
+            and args.ForceRarity == "Common"
+            and args.FromLoot == true
+            and args.OverwriteSlot == true
+        local contact = replay
+            and { kind = "keepsakeReplay", keepsakeKey = keepsakeKey }
+            or { kind = "keepsake", keepsakeKey = keepsakeKey }
+        local handle = current and roomCoordinator.resolve(state, current,
+            contact)
+        local payload = handle and roomCoordinator.begin(state, handle) or nil
+        return payload and payload.transaction.equipResults, handle, payload, replay
+    end
+    module.hooks.wrap("StartNewRun", "run-planner-start", function(_, runtime, base, previousRun, args)
+        if startDepth == 0 then
+            loadoutRuntime.session.beginNewRun(getState(runtime))
+        end
+        startDepth = startDepth + 1
+        local ok, result = pcall(base, previousRun, args)
+        startDepth = startDepth - 1
+        if startDepth == 0 and startingHexScope ~= nil then
+            hexTree.clear(startingHexScope)
+            startingHexScope = nil
+        end
+        if not ok then error(result, 0) end
+        local state = getState(runtime)
+        if state ~= nil and state.state == "starting" then synchronizeStartingRoom(runtime) end
+        report(runtime)
+        return result
+    end)
+    module.hooks.wrap("CreateNewHero", "run-planner-session-start", function(_, runtime, base, previousRun, args)
+        if startDepth <= 0 then return base(previousRun, args) end
+        local state = getState(runtime)
+        if not state.initialized then
+            local activeSlot = loadoutRuntime.activePlanSlot(runtime)
+            loadoutRuntime.session.start(state, loadoutRuntime.inbox, "starting", activeSlot)
+        end
+        local expected = state.state == "starting" and state.plan and state.plan.startingLoadout
+        local startingHex = expected and expected.startingHex or nil
+        if startingHex ~= nil then
+            startingHexScope = hexTree.prepare(startingHex, startingHex.spellTraitKey,
+                function(checkpoint, _, observed)
+                loadoutRuntime.session.diagnostic(state, checkpoint, observed)
+            end)
+        end
+        local ok, result = pcall(base, previousRun, args)
+        if not ok then error(result, 0) end
+        return result
+    end)
+    module.hooks.wrap("EquipKeepsake", "run-planner-equip-keepsake", function(_, runtime, base, hero,
+        keepsakeKey, args)
+        local state = getState(runtime)
+        if state == nil then return base(hero, keepsakeKey, args) end
+        local key = keepsakeKey or (_G.GameState and _G.GameState.LastAwardTrait)
+        if startDepth > 0 then
+            local expectedStarting = loadoutRuntime.loadout.beginKeepsake(state, key)
+            if expectedStarting == nil then
+                local result = base(hero, keepsakeKey, args)
+                report(runtime)
+                return result
+            end
+            if state.state ~= "starting" then
+                local result = base(hero, keepsakeKey, args)
+                report(runtime)
+                return result
+            end
+        end
+        local expected, handle, payload, replay = expectedEquip(state, key, args)
+        local deferReplay = replay and expected ~= nil
+        local result = equipResults.run(runtime, expected, function()
+            return base(hero, keepsakeKey, args)
+        end, deferReplay, function(terminalRuntime)
+            local terminalState = getState(terminalRuntime)
+            if terminalState ~= nil and handle ~= nil and payload ~= nil then
+                loadoutRuntime.session.complete(terminalState, handle)
+            end
+            report(terminalRuntime)
+        end)
+        if not deferReplay and startDepth == 0 and handle ~= nil and payload ~= nil then
+            loadoutRuntime.session.complete(state, handle)
+        end
+        if not deferReplay then report(runtime) end
+        return result
+    end)
+
+    return { synchronizeStartingRoom = synchronizeStartingRoom }
+end
+
+return hooks

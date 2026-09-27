@@ -1,0 +1,687 @@
+-- luacheck: globals TestConformanceReaders
+local lu = require("luaunit")
+local readers = require("mods.room.conformance.readers")
+local proof = require("mods.room.conformance.proof")
+local admission = require("mods.room.conformance.admission")
+local protocolConformance = require("mods.protocol.conformance")
+local json = require("mods.protocol.json")
+local chaos = require("mods.traits.chaos")
+local nativeGame = require("tests.harness.native_game")
+
+TestConformanceReaders = {}
+
+function TestConformanceReaders:setUp()
+    self.restoreNative = nativeGame.install({
+        GetNumShrineUpgrades = nativeGame.noShrineUpgrades,
+    })
+end
+
+function TestConformanceReaders:tearDown()
+    self.restoreNative()
+end
+
+local function admissionFixture()
+    local priorGame, priorRun, priorWeapon, priorTraitCount =
+        _G.GameState, _G.CurrentRun, _G.GetEquippedWeapon, _G.GetTraitCount
+    local entry = {
+        traits = {
+            equipped = {
+                { traitKey = "HammerTrait", rarity = "Legendary", level = 2, hammerRank = "RankII" },
+            },
+            elements = { Aether = 0, Earth = 2, Air = 0, Fire = 0, Water = 0 },
+        },
+        chaos = { active = {}, matured = {} },
+        retainedEffects = {
+            steadyGrowth = {},
+            keepsakes = {
+                olympianSources = {}, jeweledPom = json.null, experimentalHammers = {},
+                callingCard = json.null, timePiece = json.null, figLeaf = json.null,
+                gorgon = json.null, phial = json.null, figurine = json.null,
+                stone = json.null, transcendentEmbryo = json.null,
+            },
+            stygianWell = {
+                sparkUses = 0, yarnUses = 0, hymnUses = 0,
+                discountUses = {}, emptySlotUses = {}, extendedUses = 0,
+            },
+        },
+        rewardPriorities = {},
+        hexProgress = {
+            talentKeys = {}, closed = false, bankedPathPoints = 0, investedPathPoints = 0,
+        },
+        forfeit = "inactive",
+    }
+    local occurrence = {
+        resumeBoundary = "postbossEntry",
+        diagnostics = { roomEntered = entry },
+    }
+    local startingLoadout = { weaponKey = "WeaponStaffSwing", aspectKey = "BaseStaffAspect" }
+    _G.GameState = {
+        LastWeaponUpgradeName = { WeaponStaffSwing = "BaseStaffAspect" },
+    }
+    _G.GetEquippedWeapon = function() return "WeaponStaffSwing" end
+    _G.CurrentRun = {
+        Hero = {
+            TraitDictionary = { BaseStaffAspect = true },
+            Traits = { { Name = "HammerTrait", Rarity = "Legendary" } },
+            Elements = { Earth = 2 },
+        },
+        RewardPriorities = {},
+    }
+    _G.GetTraitCount = function() return 2 end
+    return occurrence, startingLoadout, function()
+        _G.GameState, _G.CurrentRun, _G.GetEquippedWeapon, _G.GetTraitCount =
+            priorGame, priorRun, priorWeapon, priorTraitCount
+    end
+end
+
+function TestConformanceReaders.testSupportBoundaryIsExactlyTheReachedFGFactSet()
+    local active = {
+        traitInventory = true,
+        elementCounts = true,
+        steadyGrowth = true,
+        chaos = true,
+        keepsakeEffects = true,
+        rewardPriorities = true,
+        pathOfStars = true,
+        forfeit = true,
+        stygianWell = true,
+    }
+    for kind in pairs(active) do lu.assertTrue(readers.supports(kind), kind) end
+    for _, kind in ipairs({ "echoShopDuplicate", "hermesShrineDeliveries" }) do
+        lu.assertFalse(readers.supports(kind), kind)
+    end
+end
+
+function TestConformanceReaders.testPostbossAdmissionAcceptsACompleteEntryMatch()
+    local occurrence, startingLoadout, restore = admissionFixture()
+    local ok, errorValue = admission.verify(occurrence, startingLoadout)
+    restore()
+    lu.assertTrue(ok, errorValue)
+end
+
+function TestConformanceReaders.testNumericProofToleratesOnlyRoundoffAndPreservesStructure()
+    for _, values in ipairs({
+        { 1.2, (1 + 1.2) - 1 },
+        { 0.3, 0.1 + 0.2 },
+        { 0, 1e-9 },
+        { 1e-9, 0 },
+    }) do
+        lu.assertTrue(proof.compare("state", { values = { values[1] } }, { values = { values[2] } }))
+    end
+    for _, values in ipairs({
+        { 0, 1.01e-9 }, { 1.2, 1.2001 }, { 1000000, 1000000.0001 },
+        { 3, 4 }, { 1.2, "1.2" }, { 1, true },
+        { math.huge, math.huge }, { -math.huge, -math.huge }, { 0/0, 0/0 },
+    }) do
+        local ok, mismatch = proof.compare("state", { value = values[1] }, { value = values[2] })
+        lu.assertNil(ok)
+        lu.assertEquals(mismatch.checkpoint, "state")
+    end
+    lu.assertNil(proof.compare("state", { count = 3 }, {}))
+    lu.assertNil(proof.compare("state", {}, { count = 3 }))
+    lu.assertNil(proof.compare("state", { "one", "two" }, { "two", "one" }))
+    lu.assertNil(proof.compare("state", "Epic", "Rare"))
+end
+
+function TestConformanceReaders.testEmbryoOperandRoundTripsAtRoomExitAndPostbossAdmission()
+    for _, row in ipairs({
+        { "ChaosWeaponBlessing", "damageBonus", 1.2 },
+        { "ChaosSpecialBlessing", "damageBonus", 1.2 },
+        { "ChaosCastBlessing", "damageBonus", 1.2 },
+        { "ChaosMoneyBlessing", "moneyBonus", 0.4 },
+        { "ChaosManaCostBlessing", "costReduction", 0.3 },
+    }) do
+        local key, operand, value = row[1], row[2], row[3]
+        local occurrence, startingLoadout, restore = admissionFixture()
+        local expected = occurrence.diagnostics.roomEntered.retainedEffects.keepsakes
+        expected.transcendentEmbryo = {
+            origin = "ordinary", rarity = "Epic", progress = 0,
+            markedBlessingKey = key, markedBlessingValues = { [operand] = value },
+            markedBlessingAcquisitionIdentity = "embryo-acquisition",
+        }
+        local blessing = chaos.applyBlessing({
+            Name = key, Rarity = "Epic", FromChaosKeepsake = true,
+            AddOutgoingDamageModifiers = {}, ManaCostModifiers = {},
+        }, key, { [operand] = value })
+        table.insert(_G.CurrentRun.Hero.Traits, {
+            Name = "RandomBlessingKeepsake", Rarity = "Epic", CurrentRoom = 0,
+        })
+        table.insert(_G.CurrentRun.Hero.Traits, blessing)
+        occurrence.diagnostics.roomEntered.chaos.matured = { { blessingKey = key, rarity = "Epic" } }
+        occurrence.roomExitConformance = { facts = { { kind = "keepsakeEffects" } } }
+        occurrence.conformanceExpected = { keepsakeEffects = expected }
+        local function read(kind, factExpected)
+            return readers.read(kind, _G.CurrentRun, _G.GameState, factExpected)
+        end
+        local observed = read("keepsakeEffects", expected)
+        lu.assertTrue(observed.transcendentEmbryo.markedBlessingValues[operand] ~= value, key)
+        local exitOk = proof.prove(occurrence, read)
+        local admissionOk = admission.verify(occurrence, startingLoadout)
+
+        chaos.applyBlessing(blessing, key, { [operand] = value + 0.01 })
+        local wrongExit, exitMismatch = proof.prove(occurrence, read)
+        local wrongAdmission, admissionMismatch = admission.verify(occurrence, startingLoadout)
+        restore()
+        lu.assertTrue(exitOk, key)
+        lu.assertTrue(admissionOk, key)
+        lu.assertNil(wrongExit, key)
+        lu.assertEquals(exitMismatch.checkpoint, "room-exit-conformance:keepsakeEffects")
+        lu.assertNil(wrongAdmission, key)
+        lu.assertEquals(admissionMismatch.checkpoint, "postboss-admission:keepsakeEffects")
+    end
+end
+
+function TestConformanceReaders.testPostbossAdmissionRejectsWeaponAndAspectIdentityMismatch()
+    local occurrence, startingLoadout, restore = admissionFixture()
+    _G.GetEquippedWeapon = function() return "WeaponSword" end
+    local ok, mismatch = admission.verify(occurrence, startingLoadout)
+    lu.assertNil(ok)
+    lu.assertEquals(mismatch.checkpoint, "postboss-admission:weapon")
+    restore()
+
+    occurrence, startingLoadout, restore = admissionFixture()
+    _G.GameState.LastWeaponUpgradeName.WeaponStaffSwing = "WrongAspect"
+    ok, mismatch = admission.verify(occurrence, startingLoadout)
+    lu.assertNil(ok)
+    lu.assertEquals(mismatch.checkpoint, "postboss-admission:aspect")
+    restore()
+
+    occurrence, startingLoadout, restore = admissionFixture()
+    _G.CurrentRun.Hero.TraitDictionary.BaseStaffAspect = nil
+    ok, mismatch = admission.verify(occurrence, startingLoadout)
+    lu.assertNil(ok)
+    lu.assertEquals(mismatch.checkpoint, "postboss-admission:aspect")
+    restore()
+end
+
+function TestConformanceReaders.testPostbossAdmissionDispatchesEveryNamedFamilyToTheOrdinaryReader()
+    local occurrence, startingLoadout, restore = admissionFixture()
+    local expected = assert(protocolConformance.admissionExpected(occurrence.diagnostics))
+    local priorRead, calls = readers.read, {}
+    readers.read = function(kind)
+        calls[kind] = (calls[kind] or 0) + 1
+        return expected[kind]
+    end
+    local ok, errorValue = admission.verify(occurrence, startingLoadout)
+    readers.read = priorRead
+    restore()
+    lu.assertTrue(ok, errorValue)
+    for _, kind in ipairs({
+        "traitInventory", "elementCounts", "steadyGrowth", "chaos", "keepsakeEffects",
+        "rewardPriorities", "pathOfStars", "forfeit", "stygianWell",
+    }) do
+        lu.assertEquals(calls[kind], 1, kind)
+    end
+end
+
+function TestConformanceReaders.testPostbossAdmissionRejectsModeledTraitDifference()
+    local occurrence, startingLoadout, restore = admissionFixture()
+    _G.CurrentRun.Hero.Traits[1].Rarity = "Rare"
+    local ok, mismatch = admission.verify(occurrence, startingLoadout)
+    lu.assertNil(ok)
+    lu.assertEquals(mismatch.checkpoint, "postboss-admission:traitInventory")
+    restore()
+end
+
+function TestConformanceReaders.testPostbossAdmissionIgnoresExtraTraitsAndDiagnosticOnlyState()
+    local occurrence, startingLoadout, restore = admissionFixture()
+    _G.CurrentRun.Hero.Traits[#_G.CurrentRun.Hero.Traits + 1] = {
+        Name = "UnmodeledNativeTrait", Rarity = "Common",
+    }
+    occurrence.diagnostics.roomEntered.counters = { routeEncounterDepth = 999 }
+    occurrence.diagnostics.roomEntered.bags = { { storeKey = "unrelated", remaining = { kind = "exact", count = 99 } } }
+    local ok, errorValue = admission.verify(occurrence, startingLoadout)
+    restore()
+    lu.assertTrue(ok, errorValue)
+end
+
+function TestConformanceReaders.testDisposableNpcArmorDoesNotRequirePresenceOrAbsenceAtCheckpoints()
+    for _, key in ipairs({
+        "AgilityCostume", "ManaCostume", "VitalityCostume", "HighArmorCostume",
+        "CastDamageCostume", "IncomeCostume", "SpellCostume", "EscalatingCostume",
+        "BreakInvincibleArmorBoon", "BreakExplosiveArmorBoon",
+    }) do
+        local occurrence, startingLoadout, restore = admissionFixture()
+        local entry = occurrence.diagnostics.roomEntered
+        entry.traits.equipped[2] = { traitKey = key }
+        occurrence.diagnostics.beforeRoomExit = { traits = { equipped = entry.traits.equipped } }
+        occurrence.roomExitConformance = assert(json.decode('{"facts":[{"kind":"traitInventory"}]}'))
+        occurrence.conformanceExpected = assert(protocolConformance.resolve(
+            occurrence.roomExitConformance, occurrence.diagnostics, "roomExitConformance"))
+        local function read(kind, expected)
+            return readers.read(kind, _G.CurrentRun, _G.GameState, expected)
+        end
+        for _, armorPresent in ipairs({ false, true }) do
+            _G.CurrentRun.Hero.Traits[2] = armorPresent and { Name = key, CurrentArmor = 30 } or nil
+            lu.assertTrue(proof.prove(occurrence, read), key)
+            lu.assertTrue(admission.verify(occurrence, startingLoadout), key)
+        end
+        -- The native garment may survive even if the retained history no longer
+        -- names it. Neither side of inventory conformance owns armor depletion.
+        occurrence.diagnostics.beforeRoomExit.traits.equipped = { entry.traits.equipped[1] }
+        occurrence.conformanceExpected = assert(protocolConformance.resolve(
+            occurrence.roomExitConformance, occurrence.diagnostics, "roomExitConformance"))
+        lu.assertEquals(occurrence.conformanceExpected.traitInventory.absent, {})
+        lu.assertTrue(proof.prove(occurrence, read), key)
+        lu.assertEquals(entry.traits.equipped[2], { traitKey = key })
+        restore()
+    end
+end
+
+function TestConformanceReaders.testNonArmorNpcTraitsStillRequireInventoryConformance()
+    local occurrence, startingLoadout, restore = admissionFixture()
+    local entry = occurrence.diagnostics.roomEntered
+    entry.traits.equipped[2] = { traitKey = "FocusAttackDamageTrait" }
+    occurrence.diagnostics.beforeRoomExit = entry
+    occurrence.roomExitConformance = assert(json.decode('{"facts":[{"kind":"traitInventory"}]}'))
+    occurrence.conformanceExpected = assert(protocolConformance.resolve(
+        occurrence.roomExitConformance, occurrence.diagnostics, "roomExitConformance"))
+    local function read(kind, expected)
+        return readers.read(kind, _G.CurrentRun, _G.GameState, expected)
+    end
+    local exitOk, exitMismatch = proof.prove(occurrence, read)
+    local admissionOk, admissionMismatch = admission.verify(occurrence, startingLoadout)
+    restore()
+    lu.assertNil(exitOk)
+    lu.assertEquals(exitMismatch.checkpoint, "room-exit-conformance:traitInventory")
+    lu.assertNil(admissionOk)
+    lu.assertEquals(admissionMismatch.checkpoint, "postboss-admission:traitInventory")
+end
+
+function TestConformanceReaders.testTraitInventoryChecksOneAndThreeRemovalsButIgnoresUnmodeledTraits()
+    local oneRemoval = {
+        present = {
+            { traitKey = "HammerTrait", rarity = "Legendary", hammerRank = "RankII" },
+            { traitKey = "KeptTrait", rarity = "Rare", level = 2 },
+        },
+        absent = { "SoldOne" },
+    }
+    local expected = {
+        present = {
+            { traitKey = "HammerTrait", rarity = "Legendary", hammerRank = "RankII" },
+            { traitKey = "KeptTrait", rarity = "Rare", level = 2 },
+        },
+        absent = { "SoldOne", "SoldThree", "SoldTwo" },
+    }
+    local run = { Hero = { Traits = {
+        { Name = "HammerTrait", Rarity = "Legendary" },
+        { Name = "KeptTrait", Rarity = "Rare", StackNum = 2 },
+        { Name = "UnmodeledTrait", Rarity = "Common", StackNum = 9 },
+    } } }
+    local priorGetTraitCount = _G.GetTraitCount
+    _G.GetTraitCount = function(hero, args)
+        for _, trait in ipairs(hero.Traits) do
+            if trait.Name == args.Name then return trait.StackNum or 1 end
+        end
+        return 0
+    end
+    lu.assertEquals(readers.read("traitInventory", run, nil, oneRemoval), oneRemoval)
+    local observed = readers.read("traitInventory", run, nil, expected)
+    lu.assertEquals(observed, expected)
+    local occurrence = {
+        roomExitConformance = { facts = { { kind = "traitInventory" } } },
+        conformanceExpected = { traitInventory = expected },
+    }
+    lu.assertTrue(proof.prove(occurrence, function() return observed end))
+
+    run.Hero.Traits[#run.Hero.Traits + 1] = { Name = "SoldTwo", Rarity = "Common" }
+    local missingRemoval = readers.read("traitInventory", run, nil, expected)
+    _G.GetTraitCount = priorGetTraitCount
+    lu.assertNil(proof.prove(occurrence, function() return missingRemoval end))
+end
+
+function TestConformanceReaders.testTraitInventoryReadsTheEquippedNativeStackCountByName()
+    local expected = {
+        present = { { traitKey = "AphroditeSpecialBoon", rarity = "Epic", level = 4 } },
+        absent = {},
+    }
+    local run = { Hero = { Traits = {
+        { Name = "AphroditeSpecialBoon", Rarity = "Epic", StackNum = 1 },
+    } } }
+    local priorGetTraitCount = _G.GetTraitCount
+    _G.GetTraitCount = function(hero, args)
+        lu.assertEquals(hero, run.Hero)
+        lu.assertEquals(args, { Name = "AphroditeSpecialBoon" })
+        return 4
+    end
+
+    local observed = readers.read("traitInventory", run, nil, expected)
+    _G.GetTraitCount = priorGetTraitCount
+
+    lu.assertEquals(observed, expected)
+end
+
+function TestConformanceReaders.testReachableReadersProjectNativeState()
+    local run = { Hero = { Traits = {}, Elements = { Earth = 2 } }, RewardPriorities = { "Boon" } }
+    lu.assertEquals(readers.read("steadyGrowth", run, nil, {}), {})
+    lu.assertEquals(readers.read("chaos", run), { active = {}, matured = {} })
+    local keepsakes = readers.read("keepsakeEffects", run, nil, {})
+    lu.assertEquals(keepsakes.olympianSources, {})
+    lu.assertEquals(keepsakes.experimentalHammers, {})
+    lu.assertTrue(require("mods/protocol/json").isNull(keepsakes.figurine))
+    lu.assertEquals(readers.read("rewardPriorities", run), { "Boon" })
+    lu.assertEquals(readers.read("elementCounts", run), {
+        Aether = 0, Earth = 2, Air = 0, Fire = 0, Water = 0,
+    })
+    lu.assertEquals(readers.read("pathOfStars", run), {
+        spellTraitKey = nil, layoutKey = nil, talentKeys = {}, closed = false,
+        bankedPathPoints = 0, investedPathPoints = 0,
+    })
+    lu.assertEquals(readers.read("forfeit", run), "inactive")
+    lu.assertEquals(readers.read("stygianWell", run), {
+        sparkUses = 0, yarnUses = 0, hymnUses = 0, discountUses = {},
+        emptySlotUses = {}, extendedUses = 0,
+    })
+    lu.assertNil(readers.read("echoShopDuplicate", run))
+    lu.assertNil(readers.read("hermesShrineDeliveries", run))
+end
+
+function TestConformanceReaders.testElementCountsUseOrdinaryExitProofAndNormalizeMissingKeys()
+    local expected = { Aether = 0, Earth = 2, Air = 0, Fire = 0, Water = 0 }
+    local occurrence = {
+        roomExitConformance = { facts = { { kind = "elementCounts" } } },
+        conformanceExpected = { elementCounts = expected },
+    }
+    local run = { Hero = { Elements = { Earth = 2 } } }
+    lu.assertTrue(proof.prove(occurrence, function(kind, factExpected)
+        return readers.read(kind, run, nil, factExpected)
+    end))
+
+    run.Hero.Elements.Fire = 1
+    local ok, mismatch = proof.prove(occurrence, function(kind, factExpected)
+        return readers.read(kind, run, nil, factExpected)
+    end)
+    lu.assertNil(ok)
+    lu.assertEquals(mismatch.checkpoint, "room-exit-conformance:elementCounts")
+    lu.assertEquals(mismatch.expected, expected)
+    lu.assertEquals(mismatch.observed, {
+        Aether = 0, Earth = 2, Air = 0, Fire = 1, Water = 0,
+    })
+end
+
+function TestConformanceReaders.testSteadyGrowthReadsTheProcessedNativeClockAndInterval()
+    local expected = { { traitKey = "BoonGrowthBoon", progress = 1, interval = 4 } }
+    local run = { Hero = { Traits = { {
+        Name = "BoonGrowthBoon",
+        CurrentRoom = 3,
+        RoomsPerUpgrade = { Amount = 5 },
+    } } } }
+
+    lu.assertEquals(readers.read("steadyGrowth", run, nil, expected), {
+        { traitKey = "BoonGrowthBoon", progress = 3, interval = 5 },
+    })
+
+    run.Hero.Traits = {}
+    lu.assertEquals(readers.read("steadyGrowth", run, nil, expected), {
+        { traitKey = "BoonGrowthBoon", progress = 0, interval = 0 },
+    })
+end
+
+function TestConformanceReaders.testChaosReaderUsesTheLivePairClockAndRemainingUses()
+    local run = { Hero = { Traits = {
+        {
+            Name = "ChaosDamageCurse",
+            Rarity = "Common",
+            RemainingUses = 2,
+            UsesAsEncounters = true,
+            OnExpire = { TraitData = { Name = "ChaosWeaponBlessing", Rarity = "Epic" } },
+        },
+        { Name = "ChaosHealthBlessing", Rarity = "Rare" },
+    } } }
+    lu.assertEquals(readers.read("chaos", run), {
+        active = { {
+            curseKey = "ChaosDamageCurse", blessingKey = "ChaosWeaponBlessing",
+            rarity = "Epic", clock = "encounters", remaining = 2,
+        } },
+        matured = { { blessingKey = "ChaosHealthBlessing", rarity = "Rare" } },
+    })
+end
+
+function TestConformanceReaders.testForfeitUsesTheNativeShrineRankAndBiomeCounter()
+    _G.GetNumShrineUpgrades = function(name)
+        lu.assertEquals(name, "BoonSkipShrineUpgrade")
+        return 2
+    end
+    local run = { BiomeBoonSkipCount = 1 }
+    lu.assertEquals(readers.read("forfeit", run), "available")
+    run.BiomeBoonSkipCount = 2
+    lu.assertEquals(readers.read("forfeit", run), "consumed")
+end
+
+function TestConformanceReaders.testPathReaderProjectsOnlyPublishedHighValueTalentsInCanonicalOrder()
+    local run = {
+        Hero = { SlottedSpell = {
+            Name = "Polymorph",
+            TraitName = "SpellPolymorphTrait",
+            Talents = { Name = "Lung", {
+                { Name = "CommonUnmodeledTalent", Rarity = "Common" },
+                { Name = "EpicExpected", Rarity = "Epic" },
+                { Name = "RareExpected", Rarity = "Rare" },
+            } },
+        } },
+        NumTalentPoints = 2,
+        InvestedTalentPoints = 4,
+        AllSpellInvestedCache = false,
+    }
+    lu.assertEquals(readers.read("pathOfStars", run, nil, {
+        talentKeys = { "RareExpected", "EpicExpected" },
+    }), {
+        spellTraitKey = "SpellPolymorphTrait", layoutKey = "Lung",
+        talentKeys = { "RareExpected", "EpicExpected" }, closed = false,
+        bankedPathPoints = 2, investedPathPoints = 4,
+    })
+end
+
+function TestConformanceReaders.testPathReaderVisitsSparseNativeTalentPositions()
+    local common = { Name = "UnmodeledCommonTalent", Rarity = "Common" }
+    -- SpellData's Nacelle grid: depth is sequential, but node positions are not.
+    local talents = {
+        Name = "Nacelle", OffsetY = 15,
+        [1] = { [2] = common, [4] = common },
+        [2] = { [2] = common, [4] = common },
+        [3] = {
+            [0] = common, [1] = common,
+            [2] = { Name = "PolymorphBossDamageTalent", Rarity = "Rare" },
+            [3] = common,
+            [4] = { Name = "PolymorphDeathExplodeTalent", Rarity = "Rare" },
+            [5] = common, [6] = common,
+        },
+        [4] = {
+            [2] = common,
+            [3] = { Name = "PolymorphTauntTalent", Rarity = "Rare" },
+            [4] = common,
+            [5] = { Name = "PolymorphZeusTalent" },
+        },
+        [5] = {
+            [2] = common,
+            [3] = { Name = "OlympianSpellCountTalent", Rarity = "Common" },
+            [4] = common,
+        },
+        [6] = {
+            [2] = { Name = "PolymorphSandwichTalent", Rarity = "Epic" },
+            [4] = { Name = "PolymorphCurseTalent", Rarity = "Epic" },
+        },
+    }
+    local expected = { talentKeys = {
+        "PolymorphBossDamageTalent", "PolymorphDeathExplodeTalent", "PolymorphTauntTalent",
+        "PolymorphSandwichTalent", "PolymorphCurseTalent", "PolymorphZeusTalent", "OlympianSpellCountTalent",
+    } }
+    local run = { Hero = { SlottedSpell = {
+        TraitName = "SpellPolymorphTrait", Talents = talents,
+    } } }
+    lu.assertEquals(readers.read("pathOfStars", run, nil, expected), {
+        spellTraitKey = "SpellPolymorphTrait", layoutKey = "Nacelle", talentKeys = expected.talentKeys,
+        closed = false, bankedPathPoints = 0, investedPathPoints = 0,
+    })
+
+    talents[6][4] = { Name = "PolymorphTeleportCastTalent", Rarity = "Epic" }
+    lu.assertEquals(readers.read("pathOfStars", run, nil, expected).talentKeys, {
+        "PolymorphBossDamageTalent", "PolymorphDeathExplodeTalent", "PolymorphTauntTalent",
+        "PolymorphSandwichTalent", "PolymorphZeusTalent", "OlympianSpellCountTalent",
+        "PolymorphTeleportCastTalent",
+    })
+end
+
+function TestConformanceReaders.testStygianWellReaderRetainsIxionAndDurationStateExactlyOnce()
+    local run = { Hero = { Traits = {
+        { Name = "TemporaryForcedSecretDoorTrait", RemainingUses = 2 },
+        { Name = "TemporaryDiscountTrait", RemainingUses = 4 },
+    } } }
+    lu.assertEquals(readers.read("stygianWell", run), {
+        sparkUses = 2, yarnUses = 0, hymnUses = 0, discountUses = { 4 },
+        emptySlotUses = {}, extendedUses = 0,
+    })
+end
+
+function TestConformanceReaders.testStygianWellReaderDistinguishesEncounterAndBossDurations()
+    local run = { Hero = { Traits = {
+        { Name = "TemporaryDiscountTrait", RemainingUses = 2, UsesAsEncounters = true },
+        { Name = "TemporaryEmptySlotDamageTrait", RemainingUses = 2, UsesAsBosses = true },
+    } } }
+    lu.assertEquals(readers.read("stygianWell", run), {
+        sparkUses = 0, yarnUses = 0, hymnUses = 0, discountUses = { 2 },
+        emptySlotUses = { -2 }, extendedUses = 0,
+    })
+end
+
+function TestConformanceReaders.testKeepsakeReaderDerivesMutableFigurineStateFromNativeTraits()
+    local expected = { figurine = { origin = "ordinary", status = "pending", rarity = "Epic" } }
+    local run = {
+        Hero = { Traits = { { Name = "BossMetaUpgradeKeepsake", Rarity = "Rare", RemainingUses = 1 } } },
+        TemporaryMetaUpgrades = {},
+    }
+    lu.assertEquals(readers.read("keepsakeEffects", run, nil, expected).figurine, {
+        origin = "ordinary", status = "pending", rarity = "Rare",
+    })
+    run.TemporaryMetaUpgrades.SomeUnrelatedTemporaryArcana = true
+    lu.assertEquals(readers.read("keepsakeEffects", run, nil, expected).figurine, {
+        origin = "ordinary", status = "pending", rarity = "Rare",
+    })
+    run.Hero.Traits[1].RemainingUses = 0
+    lu.assertEquals(readers.read("keepsakeEffects", run, nil, expected).figurine, {
+        origin = "ordinary", status = "consumed", rarity = "Rare",
+    })
+
+    run.Hero.Traits = {}
+    lu.assertEquals(readers.read("keepsakeEffects", run, nil, expected).figurine, {
+        origin = "ordinary", status = "consumed", rarity = "Epic",
+    })
+end
+
+function TestConformanceReaders.testKeepsakeReaderUsesNativeCardAndTimePieceFields()
+    local expected = {
+        callingCard = { remainingCharges = 2 },
+        timePiece = { remainingCharges = 2 },
+    }
+    local run = {
+        Hero = { Traits = {
+            { Name = "RarifyKeepsake", RarityUpgradeData = { Uses = 1 } },
+            { Name = "GoldifyKeepsake", BoonConversionUses = 0 },
+        } },
+    }
+    local observed = readers.read("keepsakeEffects", run, nil, expected)
+    lu.assertEquals(observed.callingCard, { remainingCharges = 1 })
+    lu.assertEquals(observed.timePiece, { remainingCharges = 0 })
+end
+
+function TestConformanceReaders.testFigLeafReaderUsesLiveLatchOrCurrentRoomExhaustion()
+    local expected = { figLeaf = { remainingUses = 2, activatedThisBiome = true } }
+    local run = {
+        Hero = { Traits = {
+            { Name = "PersistentDionysusSkipKeepsake", RemainingUses = 2, ActivatedThisBiome = true },
+        } },
+        CurrentRoom = { TraitUses = {} },
+    }
+    -- Non-final uses set the live latch but do not log TraitUses.
+    lu.assertEquals(readers.read("keepsakeEffects", run, nil, expected).figLeaf,
+        { activatedThisBiome = true })
+    run.Hero.Traits = {}
+    lu.assertEquals(readers.read("keepsakeEffects", run, nil, expected).figLeaf,
+        { activatedThisBiome = false })
+    -- Exhaustion removes the trait and logs the use in the current room.
+    run.CurrentRoom.TraitUses.PersistentDionysusSkipKeepsake = 1
+    lu.assertEquals(readers.read("keepsakeEffects", run, nil, expected).figLeaf,
+        { activatedThisBiome = true })
+    run.RoomHistory = { run.CurrentRoom }
+    run.CurrentRoom = { TraitUses = {} }
+    lu.assertEquals(readers.read("keepsakeEffects", run, nil, expected).figLeaf,
+        { activatedThisBiome = false })
+end
+
+function TestConformanceReaders.testFigLeafProofChecksActivationOnlyInPlannedRoom()
+    local run = { Hero = { Traits = {} }, CurrentRoom = { TraitUses = {} } }
+    local expected = readers.read("keepsakeEffects", run, nil, {
+        figLeaf = { remainingUses = 0, activatedThisBiome = true },
+    })
+    expected.figLeaf.activatedThisBiome = true
+    local occurrence = {
+        overview = { encounterPhases = { { figLeafSkip = true } } },
+        roomExitConformance = { facts = { { kind = "keepsakeEffects" } } },
+        conformanceExpected = { keepsakeEffects = expected },
+    }
+    local function read(kind, value) return readers.read(kind, run, nil, value) end
+    lu.assertNil(proof.prove(occurrence, read))
+    run.Hero.Traits = { {
+        Name = "PersistentDionysusSkipKeepsake", RemainingUses = 2, ActivatedThisBiome = true,
+    } }
+    expected.figLeaf.remainingUses = 0 -- Charge differences are not checkpoint failures.
+    lu.assertTrue(proof.prove(occurrence, read))
+    run.Hero.Traits = {}
+    run.CurrentRoom.TraitUses.PersistentDionysusSkipKeepsake = 1
+    lu.assertTrue(proof.prove(occurrence, read))
+
+    -- Native Save strips old TraitUses and BiomeStartRoom in place. Neither
+    -- the next room nor any later room needs to re-prove the consumed last use.
+    run.RoomHistory = { { Name = "I_Intro" }, { Name = "I_Combat05" } }
+    run.CurrentRoom = { Name = "I_Combat02", TraitUses = {} }
+    occurrence.overview.encounterPhases = { { figLeafSkip = false } }
+    lu.assertTrue(proof.prove(occurrence, read))
+    lu.assertTrue(expected.figLeaf.activatedThisBiome)
+    run.Hero.Traits = { { Name = "PersistentDionysusSkipKeepsake", RemainingUses = 1 } }
+    lu.assertTrue(proof.prove(occurrence, read))
+    -- A later planned use still fails when native activation did not happen.
+    occurrence.overview.encounterPhases = { { figLeafSkip = true } }
+    lu.assertNil(proof.prove(occurrence, read))
+end
+
+function TestConformanceReaders.testPostbossFigLeafAdmissionDoesNotReproveActivation()
+    local occurrence, startingLoadout, restore = admissionFixture()
+    occurrence.diagnostics.roomEntered.retainedEffects.keepsakes.figLeaf = {
+        remainingUses = 0, activatedThisBiome = true,
+    }
+    local ok = admission.verify(occurrence, startingLoadout)
+    table.insert(_G.CurrentRun.Hero.Traits, {
+        Name = "PersistentDionysusSkipKeepsake", RemainingUses = 1,
+    })
+    local differentCharges = admission.verify(occurrence, startingLoadout)
+    restore()
+    lu.assertTrue(ok)
+    lu.assertTrue(differentCharges)
+end
+
+function TestConformanceReaders.testKeepsakeReaderUsesNativeOlympianSourceCharges()
+    local expected = {
+        olympianSources = {
+            {
+                keepsakeKey = "ForceApolloBoonKeepsake", providerKey = "Apollo", origin = "ordinary",
+                acquisitionOrder = 3, remainingForceUses = 1, remainingRarificationUses = 1,
+                maximumSourceRarityLevel = 3,
+            },
+        },
+    }
+    local run = {
+        Hero = { Traits = { {
+            Name = "ForceApolloBoonKeepsake", Uses = 1,
+            RarityUpgradeData = { Uses = 0, LootName = "ApolloUpgrade", MaxRarity = 2 },
+        } } },
+    }
+    lu.assertEquals(readers.read("keepsakeEffects", run, nil, expected).olympianSources, { {
+        keepsakeKey = "ForceApolloBoonKeepsake", providerKey = "Apollo", origin = "ordinary",
+        acquisitionOrder = 3, remainingForceUses = 1, remainingRarificationUses = 0,
+        maximumSourceRarityLevel = 2,
+    } })
+
+    run.Hero.Traits[1].RarityUpgradeData = nil
+    local malformed = readers.read("keepsakeEffects", run, nil, expected).olympianSources[1]
+    lu.assertEquals(malformed.maximumSourceRarityLevel, 0)
+end

@@ -1,0 +1,805 @@
+-- luacheck: globals TestNavigationHooks
+local lu = require("luaunit")
+local navigation = require("mods.navigation.hooks")
+local ephyra = require("mods.navigation.ephyra")
+local routeSession = require("mods.route.session")
+local support = require("tests.harness.hook_composition")
+local capture, stub = support.capture, support.stub
+
+TestNavigationHooks = {}
+
+function TestNavigationHooks.testPublishedDreamPostbossRecoverySteersTheNextBiomeAndReleasesThePrefixEnd()
+    local file = assert(io.open("fixtures/execution-plan/dream-mixed-prefix.execution.json", "rb"))
+    local source = file:read("*a")
+    file:close()
+    local plan = assert(require("mods.protocol.decoder").decode(assert(require("mods.protocol.json").decode(source))))
+    local module, _, callbacks = capture()
+    local state = { state = "synchronized", plan = plan }
+    navigation.attach(module, stub(), function() return state end, function() end, routeSession, {})
+    local priorRun, priorGameState, priorRemove = _G.CurrentRun, _G.GameState, _G.RemoveValue
+    _G.GameState = {}
+    local function remove(values, value)
+        for index, candidate in pairs(values) do
+            if candidate == value then values[index] = nil; return candidate end
+        end
+    end
+    _G.RemoveValue = function(values, value) return callbacks.RemoveValue(nil, {}, remove, values, value) end
+    local checked = 0
+    for index, id in ipairs(plan.selectedOccurrenceIds) do
+        local occurrence = plan.occurrencesById[id]
+        if occurrence.resumeBoundary == "postbossEntry" then
+            checked = checked + 1
+            state.route = assert(routeSession.newAt(plan, index))
+            assert(routeSession.enter(state.route, id, occurrence.gameName))
+            _G.CurrentRun = { IsDreamRun = true, CurrentRoom = {}, DreamBiomePool = { "H", "F", "N" } }
+            local expected = ({ "F", "N", "H" })[checked]
+            local nativeDraws = 0
+            callbacks.SelectNextDreamBiome(nil, {}, function()
+                local selected = callbacks.RemoveRandomValue(nil, {}, function(values)
+                    nativeDraws = nativeDraws + 1
+                    return remove(values, "H")
+                end, _G.CurrentRun.DreamBiomePool)
+                _G.CurrentRun.CurrentRoom.NextRoomSet = { selected }
+            end, {}, {})
+            lu.assertEquals(_G.CurrentRun.CurrentRoom.NextRoomSet, { expected })
+            lu.assertEquals(nativeDraws, checked == 3 and 1 or 0)
+        end
+    end
+    lu.assertEquals(checked, 3)
+    _G.CurrentRun, _G.GameState, _G.RemoveValue = priorRun, priorGameState, priorRemove
+end
+
+function TestNavigationHooks.testDreamSelectorUsesThePublishedFirstAndPostbossSuccessorThroughNativePoolRemoval()
+    local module, _, callbacks = capture()
+    local first = { id = "first", gameName = "Q_Opening01", biomeKey = "Q" }
+    local postboss = { id = "postboss", gameName = "Dream_PostBoss01", biomeKey = "Q",
+        resumeBoundary = "postbossEntry" }
+    local following = { id = "next", gameName = "N_Opening01", biomeKey = "N" }
+    local plan = { routeKey = "Dream", selectedOccurrenceIds = { "first", "postboss", "next" },
+        occurrencesById = { first = first, postboss = postboss, next = following } }
+    local cursor = routeSession.new(plan)
+    local state = { state = "starting", plan = plan, route = cursor }
+    navigation.attach(module, stub(), function() return state end, function() end, routeSession, {})
+
+    local priorRun, priorState, priorRemove = _G.CurrentRun, _G.GameState, _G.RemoveValue
+    _G.CurrentRun = { IsDreamRun = true, DreamBiomePool = {}, CurrentRoom = {} }
+    _G.GameState = { LastDreamStartingBiome = "Q" }
+    local function nativeRemove(values, key)
+        for index, value in pairs(values) do
+            if value == key then values[index] = nil; return value end
+        end
+    end
+    _G.RemoveValue = function(values, key)
+        return callbacks.RemoveValue(nil, {}, nativeRemove, values, key)
+    end
+    local function nativeSelect(source)
+        if next(_G.CurrentRun.DreamBiomePool) == nil then
+            _G.CurrentRun.DreamBiomePool = { "G", "H", "I", "O", "P", "Q" }
+            local selected
+            if source and source.forceH then
+                selected = callbacks.RemoveValue(nil, {}, nativeRemove,
+                    _G.CurrentRun.DreamBiomePool, "H")
+            else
+                selected = callbacks.RemoveRandomValue(nil, {}, function() error("random selector used") end,
+                    _G.CurrentRun.DreamBiomePool)
+            end
+            if selected == _G.GameState.LastDreamStartingBiome then
+                selected = callbacks.RemoveRandomValue(nil, {}, function() error("reroll selector used") end,
+                    _G.CurrentRun.DreamBiomePool)
+                table.insert(_G.CurrentRun.DreamBiomePool, _G.GameState.LastDreamStartingBiome)
+            end
+            _G.GameState.LastDreamStartingBiome = selected
+            table.insert(_G.CurrentRun.DreamBiomePool, "F")
+            table.insert(_G.CurrentRun.DreamBiomePool, "N")
+            _G.CurrentRun.CurrentRoom.NextRoomSet = { selected }
+            return
+        end
+        _G.CurrentRun.CurrentRoom.NextRoomSet = {
+            callbacks.RemoveRandomValue(nil, {}, function() error("random selector used") end,
+                _G.CurrentRun.DreamBiomePool),
+        }
+    end
+    callbacks.SelectNextDreamBiome(nil, {}, nativeSelect, {}, {})
+    lu.assertEquals(_G.CurrentRun.CurrentRoom.NextRoomSet, { "Q" })
+    lu.assertEquals(_G.GameState.LastDreamStartingBiome, "Q")
+    lu.assertFalse(table.concat(_G.CurrentRun.DreamBiomePool, ","):find("Q") ~= nil)
+
+    state.state = "synchronized"
+    assert(routeSession.enter(cursor, "first", "Q_Opening01"))
+    assert(routeSession.exit(cursor))
+    assert(routeSession.enter(cursor, "postboss", "Dream_PostBoss01"))
+    callbacks.SelectNextDreamBiome(nil, {}, nativeSelect, {}, {})
+    lu.assertEquals(_G.CurrentRun.CurrentRoom.NextRoomSet, { "N" })
+    for _, biomeKey in pairs(_G.CurrentRun.DreamBiomePool) do lu.assertNotEquals(biomeKey, "N") end
+
+    state.state, state.route = "starting", routeSession.new(plan)
+    _G.CurrentRun.DreamBiomePool = {}
+    _G.GameState.LastDreamStartingBiome = "H"
+    callbacks.SelectNextDreamBiome(nil, {}, nativeSelect, { forceH = true }, {})
+    lu.assertEquals(_G.CurrentRun.CurrentRoom.NextRoomSet, { "Q" })
+    local containsH, containsQ = false, false
+    for _, biomeKey in pairs(_G.CurrentRun.DreamBiomePool) do
+        containsH = containsH or biomeKey == "H"
+        containsQ = containsQ or biomeKey == "Q"
+    end
+    lu.assertTrue(containsH)
+    lu.assertFalse(containsQ)
+    _G.CurrentRun, _G.GameState, _G.RemoveValue = priorRun, priorState, priorRemove
+end
+
+function TestNavigationHooks.testDreamSelectorPassesThroughOutsideNativeDreamMode()
+    local module, _, callbacks = capture()
+    local state = { state = "synchronized", plan = { routeKey = "Dream" }, route = {} }
+    navigation.attach(module, stub(), function() return state end, function() end,
+        { next = function() error("cursor must not be read outside Dream mode") end }, {})
+    local prior = _G.CurrentRun
+    _G.CurrentRun = { IsDreamRun = false }
+    local called = false
+    callbacks.SelectNextDreamBiome(nil, {}, function()
+        called = true
+        return "native"
+    end, {}, {})
+    lu.assertTrue(called)
+    _G.CurrentRun = prior
+end
+
+function TestNavigationHooks.testDevotionRewardSetupCarriesTheStampedDestinationToGeneratedPreparation()
+    local module, _, callbacks = capture()
+    local occurrence = { id = "devotion", overview = { incomingReward = {} } }
+    local phase = { slotKey = "Devotion", encounterKey = "DevotionTestO", customization = {
+        { kind = "generated", decisionKey = "generatedComposition", waveCount = 3 },
+    } }
+    local state = { state = "synchronized", plan = { occurrencesById = { [occurrence.id] = occurrence } } }
+    local destination = { __runPlannerExecutionRoomId = occurrence.id }
+    local received, calls = nil, 0
+    local generated = {
+        withRewardDestination = function(receivedState, room, nativeRoom, action)
+            received = { state = receivedState, room = room, destination = nativeRoom }
+            lu.assertEquals(room.encounterAt(receivedState, 1, nativeRoom), phase)
+            return action()
+        end,
+    }
+    local room = {
+        encounterAt = function(receivedState, index, nativeRoom)
+            lu.assertEquals(receivedState, state)
+            lu.assertEquals(index, 1)
+            lu.assertEquals(nativeRoom, destination)
+            return phase
+        end,
+    }
+    navigation.attach(module, stub(), function() return state end, function() end,
+        { current = function() return nil end }, room, nil, nil, generated)
+
+    local result = callbacks.SetupRoomReward(nil, {}, function(currentRun, nativeRoom, _prior, _args)
+        calls = calls + 1
+        lu.assertEquals(currentRun.CurrentRoom.Name, "predecessor")
+        lu.assertEquals(nativeRoom, destination)
+        return nil
+    end, { CurrentRoom = { Name = "predecessor" } }, destination, nil, {})
+
+    lu.assertNil(result)
+    lu.assertEquals(calls, 1)
+    lu.assertEquals(received, { state = state, room = room, destination = destination })
+end
+
+function TestNavigationHooks.testClockworkGoalUsesTheOrdinaryRewardSelectionWithoutHookingItsNativeLifecycle()
+    local module, _, callbacks = capture()
+    local occurrence = {
+        id = "clockwork-goal",
+        overview = { incomingReward = { rewardType = "ClockworkGoal", producerLifecycleKey = "ClockworkGoalRoom" } },
+    }
+    local state = { state = "synchronized", plan = { occurrencesById = { [occurrence.id] = occurrence } } }
+    local active = { occurrence = occurrence }
+    local room = {
+        current = function() return active end,
+        checkpoint = function() return true end,
+        window = function() return true end,
+    }
+    navigation.attach(module, stub(), function() return state end, function() end,
+        { current = function() return occurrence end }, room)
+
+    local run = { RewardStores = { TartarusRewards = {
+        { Name = "RoomMoneyTripleDrop" }, { Name = "ClockworkGoal" },
+    } } }
+    local nativeRoom = { __runPlannerExecutionRoomId = occurrence.id }
+    local chosen = callbacks.ChooseRoomReward(nil, {}, function(currentRun, roomValue, store)
+        for index, reward in ipairs(currentRun.RewardStores[store]) do
+            if callbacks.IsRoomRewardEligible(nil, {}, function() return false end,
+                currentRun, roomValue, reward, {}, {}) then
+                table.remove(currentRun.RewardStores[store], index)
+                return reward.Name
+            end
+        end
+    end, run, nativeRoom, "TartarusRewards", {}, {})
+
+    lu.assertEquals(chosen, "ClockworkGoal")
+    lu.assertEquals(run.RewardStores.TartarusRewards, { { Name = "RoomMoneyTripleDrop" } })
+    lu.assertNil(callbacks.SpawnClockworkGoalReward)
+end
+
+function TestNavigationHooks.testDoorChoiceIsForcedDuringNativeGeneration()
+    local module, _, callbacks = capture()
+    local selected, mismatch
+    local target = {
+        room = { id = "next", gameName = "F_Next" }, zagreusContractPresent = true,
+        reward = { rewardType = "Boon" },
+    }
+    local active = { occurrence = {
+        overview = { additional = {} },
+        doors = { kind = "batch", targets = { target } },
+    } }
+    local session = stub()
+    session.mismatch = function(_, value) mismatch = value end
+    local room = {
+        current = function() return active end,
+        checkpoint = function() return true end,
+        window = function() return true end,
+    }
+    local state = { state = "synchronized", plan = { occurrencesById = { next = {} } }, route = {} }
+    local navigationScope = navigation.attach(module, session, function() return state end, function() end,
+        { current = function() return active.occurrence end }, room)
+    local priorMap, priorGame, priorCollapse = _G.MapState, _G.game, _G.CollapseTableOrdered
+    local physicalDoor = { ObjectId = 101 }
+    _G.MapState = { OfferedExitDoors = { [101] = physicalDoor } }
+    _G.game = { RoomData = { F_Next = { GenusName = "F_Next" } } }
+    _G.CollapseTableOrdered = function(values)
+        lu.assertEquals(values[101], physicalDoor)
+        return { physicalDoor }
+    end
+    callbacks.DoUnlockRoomExits(nil, {}, function()
+        selected = callbacks.ChooseNextRoomData(nil, {}, function() return nil end, {}, {}, {})
+        physicalDoor.Room = selected
+        physicalDoor.RewardType = "Boon"
+        return true
+    end, {}, {})
+    local proved, errorValue = navigationScope.proveOutgoingDoors(state, {})
+    _G.MapState, _G.game, _G.CollapseTableOrdered = priorMap, priorGame, priorCollapse
+    lu.assertEquals(selected.__runPlannerExecutionRoomId, "next")
+    lu.assertTrue(selected.__runPlannerExecutionZagreusContractPresent)
+    lu.assertNil(mismatch)
+    lu.assertTrue(proved, errorValue)
+    lu.assertEquals(physicalDoor.Room.__runPlannerExecutionRoomId, "next")
+end
+
+function TestNavigationHooks.testDestinationContractPresenceReplacesNativeCreateRoomInitialization()
+    local module = { hooks = { wrap = function() end } }
+    local scope = navigation.attach(module, stub(), function() return nil end, function() end, {}, {})
+    local native = { ZagreusContractSuccess = true }
+
+    scope.applyZagreusContractPresence({ __runPlannerExecutionZagreusContractPresent = false }, native)
+    lu.assertFalse(native.ZagreusContractSuccess)
+    scope.applyZagreusContractPresence({ __runPlannerExecutionZagreusContractPresent = true }, native)
+    lu.assertTrue(native.ZagreusContractSuccess)
+end
+
+function TestNavigationHooks.testFixedDoorCarriesDestinationRewardAndContractPresence()
+    local module, _, callbacks = capture()
+    local target = { id = "next", gameName = "F_Next" }
+    local occurrence = {
+        overview = { additional = {} },
+        doors = { kind = "fixed", target = target, zagreusContractPresent = true },
+    }
+    local state = { state = "synchronized", plan = { occurrencesById = {
+        next = { overview = { incomingReward = { rewardType = "MaxManaDrop" } } },
+    } }, route = {} }
+    local room = {
+        checkpoint = function() return true end,
+        window = function() return true end,
+    }
+    local scope = navigation.attach(module, stub(), function() return state end, function() end,
+        { current = function() return occurrence end }, room)
+    local priorMap, priorGame, priorCollapse = _G.MapState, _G.game, _G.CollapseTableOrdered
+    local physicalDoor = { ObjectId = 101 }
+    _G.MapState = { OfferedExitDoors = { [101] = physicalDoor } }
+    _G.game = { RoomData = { F_Next = { GenusName = "F_Next" } } }
+    _G.CollapseTableOrdered = function() return { physicalDoor } end
+    callbacks.DoUnlockRoomExits(nil, {}, function()
+        physicalDoor.Room = callbacks.ChooseNextRoomData(nil, {}, function() return nil end, {}, {}, {})
+        physicalDoor.Room.ChosenRewardType = callbacks.ChooseRoomReward(nil, {}, function()
+            return "MaxManaDrop"
+        end, {}, physicalDoor.Room, "RunProgress", {}, {})
+        return true
+    end, {}, {})
+    local proved, mismatch = scope.proveOutgoingDoors(state, {})
+    _G.MapState, _G.game, _G.CollapseTableOrdered = priorMap, priorGame, priorCollapse
+    lu.assertTrue(physicalDoor.Room.__runPlannerExecutionZagreusContractPresent)
+    lu.assertTrue(proved, mismatch)
+end
+
+function TestNavigationHooks.testAnomalyDoorUsesNativeReplacementPresentation()
+    local module, _, callbacks = capture()
+    local anomaly = {
+        id = "anomaly", gameName = "B_Combat01", biomeKey = "G",
+        anomaly = { replacedRoomGameName = "G_Combat08", success = true },
+        overview = { additional = {} },
+    }
+    local source = {
+        id = "source", gameName = "G_Combat01", biomeKey = "G",
+        overview = { additional = {} },
+        doors = { kind = "batch", targets = {
+            { room = { id = "anomaly", gameName = "B_Combat01" } },
+        } },
+    }
+    local active = { occurrence = source }
+    local mismatch
+    local session = stub()
+    session.mismatch = function(_, value) mismatch = value end
+    local room = {
+        current = function() return active end,
+        checkpoint = function() return true end,
+        window = function() return true end,
+    }
+    local state = {
+        state = "synchronized", route = {},
+        plan = { occurrencesById = { anomaly = anomaly } },
+    }
+    local navigationScope = navigation.attach(module, session, function() return state end, function() end,
+        { current = function() return active.occurrence end }, room)
+
+    local physicalDoor = { ObjectId = 101 }
+    local currentRun = { CurrentRoom = { Name = "G_Combat01" } }
+    local forcedRoom
+    local priorMap, priorGame, priorCollapse = _G.MapState, _G.game, _G.CollapseTableOrdered
+    _G.MapState = { OfferedExitDoors = { [101] = physicalDoor } }
+    _G.game = { RoomData = {
+        G_Combat08 = { Name = "G_Combat08", AllowAnomalyReplacement = true },
+        B_Combat01 = { Name = "B_Combat01" },
+    } }
+    _G.CollapseTableOrdered = function() return { physicalDoor } end
+
+    local function nativeChoose(run, args, otherDoors)
+        if args.ForceNextRoomSet == "Anomaly" then
+            error("the nested Anomaly choice must be supplied by the planner hook")
+        end
+        forcedRoom = args.ForceNextRoom
+        local selected = _G.game.RoomData[forcedRoom]
+        if run.CurrentRoom.DoAnomalies and selected.AllowAnomalyReplacement then
+            selected = callbacks.ChooseNextRoomData(
+                nil, {}, nativeChoose, run, { ForceNextRoomSet = "Anomaly" }, otherDoors)
+            selected.PrevRoomExitFunctionName = "ExitToAnomalyPresentation"
+        end
+        return selected
+    end
+
+    callbacks.DoUnlockRoomExits(nil, {}, function(run)
+        physicalDoor.Room = callbacks.ChooseNextRoomData(nil, {}, nativeChoose, run, {}, {})
+        return true
+    end, currentRun, currentRun.CurrentRoom)
+    local proved, errorValue = navigationScope.proveOutgoingDoors(state, currentRun)
+    _G.MapState, _G.game, _G.CollapseTableOrdered = priorMap, priorGame, priorCollapse
+
+    lu.assertNil(mismatch)
+    lu.assertTrue(proved, errorValue)
+    lu.assertEquals(forcedRoom, "G_Combat08")
+    lu.assertEquals(physicalDoor.Room.Name, "B_Combat01")
+    lu.assertEquals(physicalDoor.Room.__runPlannerExecutionRoomId, "anomaly")
+    lu.assertEquals(physicalDoor.Room.PrevRoomExitFunctionName, "ExitToAnomalyPresentation")
+    lu.assertNil(currentRun.CurrentRoom.DoAnomalies)
+end
+
+function TestNavigationHooks.testDoorMismatchIsDeferredUntilExitProof()
+    local module, _, callbacks = capture()
+    local occurrence = {
+        id = "opening", overview = { additional = {} },
+        doors = { kind = "batch", targets = {
+            { room = { id = "next", gameName = "F_Next" }, reward = { rewardType = "Boon" } },
+        } },
+    }
+    local active = { occurrence = occurrence }
+    local state = {
+        state = "synchronized", route = {},
+        plan = { occurrencesById = { next = {} } },
+    }
+    local mismatch
+    local session = stub()
+    session.mismatch = function(_, value) mismatch = value end
+    local room = {
+        checkpoint = function() return true end,
+        window = function() return true end,
+    }
+    local scope = navigation.attach(module, session, function() return state end, function() end,
+        { current = function() return active.occurrence end }, room)
+    local physicalDoor = { ObjectId = 101 }
+    local priorMap, priorGame, priorCollapse = _G.MapState, _G.game, _G.CollapseTableOrdered
+    _G.MapState = { OfferedExitDoors = { [101] = physicalDoor } }
+    _G.game = { RoomData = { F_Next = { GenusName = "F_Next" } } }
+    _G.CollapseTableOrdered = function() return { physicalDoor } end
+
+    callbacks.DoUnlockRoomExits(nil, {}, function()
+        physicalDoor.Room = callbacks.ChooseNextRoomData(nil, {}, function() return nil end, {}, {}, {})
+        physicalDoor.RewardType = "WeaponUpgrade"
+        return true
+    end, {}, {})
+    lu.assertNil(mismatch)
+    local proved, errorValue = scope.proveOutgoingDoors(state, {})
+    _G.MapState, _G.game, _G.CollapseTableOrdered = priorMap, priorGame, priorCollapse
+
+    lu.assertNil(proved)
+    lu.assertEquals(errorValue.kind, "reward")
+end
+
+function TestNavigationHooks.testChaosDoorIsExcludedAfterNormalDoorGeneration()
+    local module, _, callbacks = capture()
+    local additional = {
+        owner = "chaos-exit", kind = "chaos",
+        room = { id = "chaos", gameName = "Chaos_01" },
+    }
+    local occurrence = {
+        id = "opening", overview = { additional = { additional } },
+        doors = { kind = "batch", targets = {
+            { room = { id = "next", gameName = "F_Next" } },
+        } },
+    }
+    local active = { occurrence = occurrence }
+    local mismatch
+    local session = stub()
+    session.mismatch = function(_, value) mismatch = value end
+    local room = {
+        current = function() return active end,
+        checkpoint = function() return true end,
+        window = function() return true end,
+    }
+    local state = {
+        state = "synchronized", route = {},
+        plan = { occurrencesById = { next = {}, chaos = {} } },
+    }
+    local priorGame = _G.game
+    _G.game = { RoomData = { F_Next = { GenusName = "F_Next" } } }
+    local navigationScope = navigation.attach(module, session, function() return state end, function() end,
+        { current = function() return active.occurrence end }, room)
+
+    local normalDoor = { ObjectId = 101 }
+    local chaosRoom = {
+        Name = "Chaos_01", __runPlannerExecutionRoomId = "chaos",
+        __runPlannerExecutionAdditionalOwner = "chaos-exit",
+        __runPlannerExecutionAdditionalKind = "chaos",
+    }
+    local chaosDoor = {
+        ObjectId = 102, Room = chaosRoom,
+        __runPlannerExecutionAdditionalOwner = "chaos-exit",
+        __runPlannerExecutionAdditionalKind = "chaos",
+    }
+    local priorMap, priorCollapse = _G.MapState, _G.CollapseTableOrdered
+    _G.MapState = { OfferedExitDoors = { [101] = normalDoor, [102] = chaosDoor } }
+    _G.CollapseTableOrdered = function() return { normalDoor, chaosDoor } end
+    callbacks.DoUnlockRoomExits(nil, {}, function()
+        normalDoor.Room = callbacks.ChooseNextRoomData(nil, {}, function() return nil end, {}, {}, {})
+        return true
+    end, {}, {})
+    local proved, errorValue = navigationScope.proveOutgoingDoors(state, {})
+    _G.MapState, _G.CollapseTableOrdered, _G.game = priorMap, priorCollapse, priorGame
+
+    lu.assertNil(mismatch)
+    lu.assertTrue(proved, errorValue)
+    lu.assertEquals(normalDoor.Room.__runPlannerExecutionRoomId, "next")
+    lu.assertEquals(chaosDoor.Room.__runPlannerExecutionRoomId, "chaos")
+end
+
+function TestNavigationHooks.testEphyraHubForcesTheCompletePhysicalBoardBeforeNativeAssignment()
+    local module, _, callbacks = capture()
+    local target = {
+        id = "main", gameName = "N_Combat01", biomeKey = "N",
+        overview = { incomingReward = {
+            rewardType = "Boon", source = "ApolloUpgrade", resolvedStoreKey = "HubRewards",
+        } },
+    }
+    local source = {
+        id = "prehub", gameName = "N_PreHub01", biomeKey = "N",
+        overview = { hub = {
+            room = { gameName = "N_Hub" },
+            slots = { {
+                slotKey = "combat01", physicalDoorId = 101,
+                room = { id = "main", biomeKey = "N", gameName = "N_Combat01" },
+                reward = target.overview.incomingReward,
+            } },
+            finalHandoff = { id = "preboss", biomeKey = "N", gameName = "N_PreBoss01" },
+        } },
+    }
+    local plan = {
+        selectedOccurrenceIds = { "main" },
+        occurrencesById = { prehub = source, main = target },
+    }
+    local state = { state = "synchronized", plan = plan, route = routeSession.new(plan) }
+    local room = { checkpoint = function() end, window = function() end }
+    navigation.attach(module, stub(), function() return state end, function() end, routeSession, room)
+
+    local priorMap, priorGame, priorRun, priorCollapse =
+        _G.MapState, _G.game, _G.CurrentRun, _G.CollapseTableOrdered
+    local plannedDoor = { ObjectId = 101 }
+    local hubRoom = { Name = "N_Hub", UnavailableDoors = {} }
+    _G.MapState = { OfferedExitDoors = { [101] = plannedDoor } }
+    _G.game = { RoomData = {
+        N_Hub = { PredeterminedDoorRooms = { [101] = "N_Combat01", [102] = "N_Combat02" } },
+        N_Combat01 = { Name = "N_Combat01" },
+    } }
+    _G.CurrentRun = {
+        CurrentRoom = hubRoom,
+        RewardStores = { HubRewards = { { Name = "WeaponUpgrade" }, { Name = "Boon" } } },
+    }
+    _G.CollapseTableOrdered = function() return { plannedDoor } end
+
+    callbacks.ChooseAvailableN_HubDoors(nil, {}, function(roomValue)
+        roomValue.UnavailableDoors[101] = true
+        roomValue.DoorsChosen = true
+    end, hubRoom, {})
+    callbacks.DoUnlockRoomExits(nil, {}, function(run)
+        local nativeTarget = { Name = "N_Combat01" }
+        nativeTarget.ChosenRewardType = callbacks.ChooseRoomReward(nil, {},
+            function(currentRun, candidate, store)
+                for _, reward in ipairs(currentRun.RewardStores[store]) do
+                    if callbacks.IsRoomRewardEligible(nil, {}, function() return true end,
+                        currentRun, candidate, reward, {}, {}) then return reward.Name end
+                end
+            end, run, nativeTarget, "HubRewards", {}, { Door = plannedDoor })
+        callbacks.AssignRoomToExitDoor(nil, {}, function(door, assigned)
+            lu.assertEquals(assigned.__runPlannerExecutionRoomId, "main")
+            door.Room, door.RewardType = assigned, assigned.ChosenRewardType
+            run.CurrentRoom.OfferedRewards = {
+                [door.ObjectId] = { Type = assigned.ChosenRewardType, ForceLootName = assigned.ForceLootName },
+            }
+        end, plannedDoor, nativeTarget)
+    end, _G.CurrentRun, hubRoom)
+
+    lu.assertNil(hubRoom.UnavailableDoors[101])
+    lu.assertTrue(hubRoom.UnavailableDoors[102])
+    lu.assertEquals(plannedDoor.Room.ChosenRewardType, "Boon")
+    lu.assertEquals(plannedDoor.Room.ForceLootName, "ApolloUpgrade")
+    lu.assertEquals(_G.CurrentRun.CurrentRoom.OfferedRewards[101], {
+        Type = "Boon", ForceLootName = "ApolloUpgrade",
+    })
+    _G.MapState, _G.game, _G.CurrentRun, _G.CollapseTableOrdered =
+        priorMap, priorGame, priorRun, priorCollapse
+end
+
+function TestNavigationHooks.testEphyraHubEntryOwnersForceAndProveTheNativeStructuralDoor()
+    for _, sourceName in ipairs({ "N_PreHub01", "Chaos_03" }) do
+        local module, _, callbacks = capture()
+        local source = {
+            id = "source", gameName = sourceName, biomeKey = "N",
+            overview = {
+                additional = {},
+                hub = {
+                    room = { gameName = "N_Hub" }, slots = {},
+                    finalHandoff = { id = "preboss", biomeKey = "N", gameName = "N_PreBoss01" },
+                },
+            },
+            doors = { kind = "terminal" },
+        }
+        local plan = { selectedOccurrenceIds = { "source" }, occurrencesById = { source = source } }
+        local cursor = routeSession.new(plan)
+        assert(routeSession.enter(cursor, "source", sourceName))
+        local state = { state = "synchronized", plan = plan, route = cursor }
+        local room = { checkpoint = function() return true end, window = function() return true end }
+        local scope = navigation.attach(module, stub(), function() return state end, function() end,
+            routeSession, room)
+
+        local priorMap, priorGame, priorCollapse = _G.MapState, _G.game, _G.CollapseTableOrdered
+        local nativeDoor = { ObjectId = 101 }
+        _G.MapState = { OfferedExitDoors = { [101] = nativeDoor } }
+        _G.game = { RoomData = { N_Hub = { Name = "N_Hub" } } }
+        _G.CollapseTableOrdered = function() return { nativeDoor } end
+
+        callbacks.DoUnlockRoomExits(nil, {}, function(run)
+            nativeDoor.Room = callbacks.ChooseNextRoomData(nil, {}, function()
+                return { Name = "N_Combat01" }
+            end, run, {}, { nativeDoor })
+        end, { CurrentRoom = { Name = sourceName } }, { Name = sourceName })
+        local proved, errorValue = scope.proveOutgoingDoors(state, {})
+        _G.MapState, _G.game, _G.CollapseTableOrdered = priorMap, priorGame, priorCollapse
+
+        lu.assertEquals(nativeDoor.Room.Name, "N_Hub")
+        lu.assertTrue(proved, errorValue)
+    end
+end
+
+function TestNavigationHooks.testEphyraProofRejectsAnUnpublishedDeclaredBoardDoor()
+    local occurrence = {
+        overview = { localSlots = {
+            {
+                slotKey = "side1", physicalDoorId = 201, generation = "generated",
+                room = { id = "side", gameName = "N_Sub01" },
+                reward = { rewardType = "MaxHealthDropSmall" },
+            },
+        } },
+    }
+    local nativeRoom = { Name = "N_Combat02" }
+    local game = { RoomData = { N_Combat02 = {
+        PredeterminedDoorRooms = { [201] = "N_Sub01", [202] = "N_Sub03" },
+    } } }
+    local scope = assert(ephyra.scope({}, occurrence, nativeRoom, game))
+    local proved, errorValue = ephyra.prove(scope, {
+        {
+            ObjectId = 201,
+            Room = { Name = "N_Sub01", ChosenRewardType = "MaxHealthDropSmall" },
+        },
+        {
+            ObjectId = 202,
+            Room = { Name = "N_Sub03", ChosenRewardType = "MaxManaDropSmall" },
+        },
+        { ObjectId = 999, Room = { Name = "N_Hub" } },
+    })
+
+    lu.assertNil(proved)
+    lu.assertEquals(errorValue.kind, "ephyraUnexpectedDoor")
+    lu.assertEquals(errorValue.doorId, 202)
+end
+
+function TestNavigationHooks.testEphyraProofRejectsAnUnpublishedDeclaredHubDoor()
+    local owner = {
+        overview = { hub = {
+            room = { gameName = "N_Hub" },
+            slots = { {
+                slotKey = "combat01", physicalDoorId = 101,
+                room = { id = "main", gameName = "N_Combat01" },
+                reward = { rewardType = "Boon" },
+            } },
+            finalHandoff = { id = "preboss", gameName = "N_PreBoss01" },
+        } },
+    }
+    local plan = { occurrencesById = { owner = owner } }
+    local nativeRoom = { Name = "N_Hub" }
+    local game = { RoomData = { N_Hub = {
+        PredeterminedDoorRooms = { [101] = "N_Combat01", [102] = "N_Combat02" },
+    } } }
+    local scope = assert(ephyra.scope(plan, nil, nativeRoom, game))
+    local proved, errorValue = ephyra.prove(scope, {
+        { ObjectId = 101, Room = { Name = "N_Combat01", ChosenRewardType = "Boon" } },
+        { ObjectId = 102, Room = { Name = "N_Combat02", ChosenRewardType = "WeaponUpgrade" } },
+    })
+
+    lu.assertNil(proved)
+    lu.assertEquals(errorValue.kind, "ephyraUnexpectedDoor")
+    lu.assertEquals(errorValue.doorId, 102)
+end
+
+function TestNavigationHooks.testEphyraHubRevisitRetainsIdentityBindingWithoutRepeatingBoardProof()
+    local hub = {
+        room = { gameName = "N_Hub" },
+        slots = {
+            {
+                slotKey = "combat01", physicalDoorId = 101,
+                room = { id = "main1", gameName = "N_Combat01" },
+                reward = { rewardType = "Boon" },
+            },
+            {
+                slotKey = "combat02", physicalDoorId = 102,
+                room = { id = "main2", gameName = "N_Combat02" },
+                reward = { rewardType = "WeaponUpgrade" },
+            },
+        },
+        finalHandoff = { id = "preboss", gameName = "N_PreBoss01" },
+    }
+    local plan = {
+        selectedOccurrenceIds = { "prehub", "main1", "main2", "preboss" },
+        occurrencesById = {
+            prehub = { id = "prehub", overview = { hub = hub } },
+            main1 = { id = "main1", gameName = "N_Combat01" },
+            main2 = { id = "main2", gameName = "N_Combat02" },
+            preboss = {
+                id = "preboss", gameName = "N_PreBoss01",
+                overview = { incomingReward = { rewardType = "Shop" } },
+            },
+        },
+    }
+    local route = routeSession.new(plan)
+    route.index = 3
+    local scope = ephyra.scope(plan, nil, { Name = "N_Hub" }, { RoomData = {
+        N_Hub = { PredeterminedDoorRooms = { [101] = "N_Combat01", [102] = "N_Combat02" } },
+    } }, route)
+
+    lu.assertNotNil(scope)
+    lu.assertFalse(scope.initialBoard)
+
+    local module, _, callbacks = capture()
+    local state = { state = "synchronized", plan = plan, route = route }
+    local mismatch
+    local session = stub()
+    session.mismatch = function(_, errorValue) mismatch = errorValue end
+    navigation.attach(module, session, function() return state end, function() end,
+        routeSession, { checkpoint = function() end, window = function() end })
+    local priorMap, priorGame, priorCollapse = _G.MapState, _G.game, _G.CollapseTableOrdered
+    local door = { ObjectId = 102 }
+    _G.MapState = { OfferedExitDoors = { [102] = door } }
+    _G.game = { RoomData = { N_Hub = {
+        PredeterminedDoorRooms = { [101] = "N_Combat01", [102] = "N_Combat02" },
+    } } }
+    _G.CollapseTableOrdered = function() return { door } end
+
+    callbacks.DoUnlockRoomExits(nil, {}, function()
+        -- Native hub restoration may reconstruct an unvisited destination.
+        door.Room = { Name = "N_Combat02" }
+    end, {}, { Name = "N_Hub" })
+    _G.MapState, _G.game, _G.CollapseTableOrdered = priorMap, priorGame, priorCollapse
+
+    lu.assertNil(mismatch)
+    lu.assertEquals(door.Room.__runPlannerExecutionRoomId, "main2")
+end
+
+function TestNavigationHooks.testEphyraLocalSlotsUseNativeCounterAndForceGeneratedRoomReward()
+    local module, _, callbacks = capture()
+    local child = {
+        id = "side", gameName = "N_Sub01", biomeKey = "N",
+        overview = { incomingReward = {
+            rewardType = "MaxHealthDropSmall", resolvedStoreKey = "SubRoomRewards",
+        } },
+    }
+    local main = {
+        id = "main", gameName = "N_Combat02", biomeKey = "N",
+        overview = { additional = {}, localSlots = {
+            {
+                slotKey = "side1", physicalDoorId = 201, generation = "generated",
+                room = { id = "side", biomeKey = "N", gameName = "N_Sub01" },
+                reward = child.overview.incomingReward,
+            },
+            { slotKey = "side2", physicalDoorId = 202, generation = "notGenerated" },
+        } },
+        doors = { kind = "terminal" },
+    }
+    local plan = {
+        selectedOccurrenceIds = { "main", "side" },
+        occurrencesById = { main = main, side = child },
+    }
+    local cursor = routeSession.new(plan)
+    assert(routeSession.enter(cursor, "main", "N_Combat02"))
+    local state = { state = "synchronized", plan = plan, route = cursor }
+    local room = {
+        checkpoint = function() return true end,
+        window = function() return true end,
+    }
+    local scope = navigation.attach(module, stub(), function() return state end, function() end,
+        routeSession, room)
+
+    local priorMap, priorGame, priorRun, priorCollapse =
+        _G.MapState, _G.game, _G.CurrentRun, _G.CollapseTableOrdered
+    local generatedDoor = {
+        ObjectId = 201, ChooseRoomArgs = { ForceNextRoomSet = "N_SubRooms" },
+    }
+    local returnDoor = { ObjectId = 999 }
+    local nativeMain = { Name = "N_Combat02", __runPlannerExecutionRoomId = "main" }
+    _G.CurrentRun = {
+        CurrentRoom = nativeMain, NumSubRoomsSpawned = 0,
+        RewardStores = { SubRoomRewards = { { Name = "MaxManaDropSmall" }, { Name = "MaxHealthDropSmall" } } },
+    }
+    _G.MapState = { OfferedExitDoors = { [201] = generatedDoor, [999] = returnDoor } }
+    _G.game = { RoomData = {
+        N_Sub01 = { Name = "N_Sub01" },
+        N_SubWrong = { Name = "N_SubWrong" },
+    } }
+    _G.CollapseTableOrdered = function() return { generatedDoor, returnDoor } end
+
+    callbacks.CheckN_SubRoomDoorUnavailable(nil, {}, function(_, args)
+        lu.assertEquals(args.AboveMinAvailableChance, 1)
+        _G.CurrentRun.NumSubRoomsSpawned = _G.CurrentRun.NumSubRoomsSpawned + 1
+    end, generatedDoor, { AboveMinAvailableChance = 0.3 })
+    local disabledBaseCalled = false
+    callbacks.CheckN_SubRoomDoorUnavailable(nil, {}, function()
+        disabledBaseCalled = true
+    end, { ObjectId = 202 }, { AboveMinAvailableChance = 0.3 })
+    callbacks.DoUnlockRoomExits(nil, {}, function(run)
+        local nativeTarget = callbacks.ChooseNextRoomData(nil, {}, function()
+            return { Name = "N_SubWrong" }
+        end, run, generatedDoor.ChooseRoomArgs, { generatedDoor, returnDoor })
+        nativeTarget.ChosenRewardType = callbacks.ChooseRoomReward(nil, {},
+            function(currentRun, candidate, store)
+                for _, reward in ipairs(currentRun.RewardStores[store]) do
+                    if callbacks.IsRoomRewardEligible(nil, {}, function() return true end,
+                        currentRun, candidate, reward, {}, {}) then return reward.Name end
+                end
+            end, run, nativeTarget, "SubRoomRewards", {}, { Door = generatedDoor })
+        callbacks.AssignRoomToExitDoor(nil, {}, function(door, assigned)
+            lu.assertEquals(assigned.__runPlannerExecutionRoomId, "side")
+            door.Room, door.RewardType = assigned, assigned.ChosenRewardType
+        end, generatedDoor, nativeTarget)
+    end, _G.CurrentRun, nativeMain)
+    local proved, errorValue = scope.proveOutgoingDoors(state, _G.CurrentRun)
+
+    lu.assertFalse(disabledBaseCalled)
+    lu.assertEquals(_G.CurrentRun.NumSubRoomsSpawned, 1)
+    lu.assertTrue(nativeMain.UnavailableDoors[202])
+    lu.assertEquals(generatedDoor.Room.Name, "N_Sub01")
+    lu.assertEquals(generatedDoor.Room.__runPlannerExecutionRoomId, "side")
+    lu.assertEquals(generatedDoor.Room.ChosenRewardType, "MaxHealthDropSmall")
+    lu.assertTrue(proved, errorValue)
+    _G.MapState, _G.game, _G.CurrentRun, _G.CollapseTableOrdered =
+        priorMap, priorGame, priorRun, priorCollapse
+end
