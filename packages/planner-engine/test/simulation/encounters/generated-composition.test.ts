@@ -1,10 +1,24 @@
 import { describe, expect, it } from 'vitest';
 import { catalog } from '@run-planner/hades2-catalog';
-import type { AuthoredGeneratedEncounterCustomization } from '../../../src/authored-project/model';
+import {
+  applyProjectCommand,
+  createEncounterPhaseAddress,
+  semanticAddressKey,
+  type AuthoredGeneratedEncounterCustomization,
+} from '../../../src/authored-project';
+import {
+  generatedEncounterSupportForProjectEvaluationAssembly,
+  simulateProjectAssembly,
+} from '../../../src/simulation';
 import {
   assessGeneratedEncounter,
   initializeGeneratedEncounter,
 } from '../../../src/simulation/encounters/generation';
+import {
+  createGoldenFGHIProject,
+  goldenFBiome,
+  goldenFOccurrenceId,
+} from '@run-planner/test-fixtures/underworld';
 
 function policy(key: string) {
   const value = catalog.encounterDefinitions.byKey[key]?.customization?.find(
@@ -606,5 +620,155 @@ describe('native generated composition possibility', () => {
         .knownRunBlacklistAdditions,
     ).toEqual([]);
     expect(assess('GeneratedH', {}).knownRunBlacklistAdditions).toEqual([]);
+  });
+});
+
+describe('generated wave budget allocations', () => {
+  const allocationIssues = (result: ReturnType<typeof assess>) =>
+    result.issues.filter(
+      (issue) =>
+        issue.reason === 'allocationMembers' ||
+        (issue.reason === 'required' && issue.field === 'allocations'),
+    );
+  const single = (allocations?: Readonly<Record<string, number>>) =>
+    assess('GeneratedF', {
+      waveCount: 1,
+      waves: [
+        {
+          waveIndex: 1,
+          typeKeys: ['Guard', 'Brawler'],
+          ...(allocations === undefined ? {} : { allocations }),
+        },
+      ],
+    });
+
+  it('requires an authored budget for every editable member', () => {
+    expect(allocationIssues(single())).toEqual([
+      { reason: 'required', field: 'allocations', waveIndex: 1 },
+    ]);
+    expect(single()).toMatchObject({ supported: false });
+    expect(single().operands).toBeUndefined();
+    expect(allocationIssues(single({ Guard: 65 }))).toEqual([]);
+    expect(single({ Guard: 65 })).toMatchObject({ supported: true });
+  });
+
+  it('never requires a budget for the sole native remainder', () => {
+    const shape = [
+      { waveIndex: 1, typeKeys: [] },
+      { waveIndex: 2, typeKeys: ['Brawler'] },
+      { waveIndex: 3, typeKeys: ['Brawler', 'Mage'] },
+    ];
+    const unbudgeted = assess('GeneratedF', { waveCount: 3, highlightKey: 'Guard', waves: shape });
+    expect(unbudgeted.waves[0]?.sampledBudgetKeys).toEqual([]);
+    expect(allocationIssues(unbudgeted)).toEqual([
+      { reason: 'required', field: 'allocations', waveIndex: 2 },
+      { reason: 'required', field: 'allocations', waveIndex: 3 },
+    ]);
+    const budgeted = assess('GeneratedF', {
+      waveCount: 3,
+      highlightKey: 'Guard',
+      waves: shape.map((row, index) => {
+        const allocations = unbudgeted.waves[index]!.equalAllocations!;
+        return Object.keys(allocations).length === 0 ? row : { ...row, allocations };
+      }),
+    });
+    expect(budgeted.issues).toEqual([]);
+    expect(budgeted.operands).toBeDefined();
+  });
+
+  it('rejects budgets keyed outside the editable members of their wave', () => {
+    // A departed enemy and the native remainder both lack an editable budget.
+    for (const allocations of [
+      { Guard: 65, Mage: 5 },
+      { Guard: 65, Brawler: 5 },
+    ])
+      expect(allocationIssues(single(allocations)), JSON.stringify(allocations)).toEqual([
+        { reason: 'allocationMembers', waveIndex: 1 },
+      ]);
+    // The previous shared enemy's budget is stale once another enemy is shared.
+    const stale = assess('GeneratedF', {
+      waveCount: 3,
+      highlightKey: 'Radiator',
+      waves: [
+        {
+          waveIndex: 3,
+          typeKeys: ['Brawler', 'Mage'],
+          allocations: { Guard: 20, Radiator: 20, Brawler: 10 },
+        },
+      ],
+    });
+    expect(allocationIssues(stale)).toEqual([{ reason: 'allocationMembers', waveIndex: 3 }]);
+    expect(
+      allocationIssues(
+        assess('GeneratedF', {
+          waveCount: 3,
+          highlightKey: 'Radiator',
+          waves: [
+            {
+              waveIndex: 3,
+              typeKeys: ['Brawler', 'Mage'],
+              allocations: { Radiator: 20, Brawler: 10 },
+            },
+          ],
+        }),
+      ),
+    ).toEqual([]);
+  });
+
+  it('publishes each allocation issue as the phase customization finding', () => {
+    const phase = createEncounterPhaseAddress(
+      goldenFBiome,
+      { kind: 'occurrence', occurrenceId: goldenFOccurrenceId(5, 1) },
+      'Encounter',
+    );
+    const phaseFindings = (allocations?: Readonly<Record<string, number>>) => {
+      const value: AuthoredGeneratedEncounterCustomization = {
+        kind: 'generated',
+        waveCount: 1,
+        waves: [
+          {
+            waveIndex: 1,
+            typeKeys: ['Guard', 'Brawler'],
+            ...(allocations === undefined ? {} : { allocations }),
+          },
+        ],
+      };
+      const assembly = simulateProjectAssembly(
+        catalog,
+        applyProjectCommand(createGoldenFGHIProject(), catalog, {
+          kind: 'ReplaceEncounterCustomization',
+          phase,
+          decisionKey: 'generatedComposition',
+          value,
+        }),
+      );
+      return {
+        issues: generatedEncounterSupportForProjectEvaluationAssembly(assembly, phase)?.assess(
+          value,
+        ).issues,
+        findings: assembly.evaluation.findings.filter(
+          (finding) => semanticAddressKey(finding.origin) === semanticAddressKey(phase),
+        ),
+      };
+    };
+    const finding = {
+      code: 'encounterCustomizationUnavailable',
+      severity: 'error',
+      phase: 'encounterResolution',
+      origin: phase,
+      evidence: { beforeSequence: expect.any(Number), decisionKey: 'generatedComposition' },
+    };
+    const missing = phaseFindings();
+    const stale = phaseFindings({ Guard: 65, Mage: 5 });
+    expect(missing).toEqual({
+      issues: [{ reason: 'required', field: 'allocations', waveIndex: 1 }],
+      findings: [finding],
+    });
+    expect(stale).toEqual({
+      issues: [{ reason: 'allocationMembers', waveIndex: 1 }],
+      findings: [finding],
+    });
+    expect(stale.findings).toEqual(missing.findings);
+    expect(phaseFindings({ Guard: 65 })).toEqual({ issues: [], findings: [] });
   });
 });
