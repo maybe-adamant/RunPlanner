@@ -1,6 +1,7 @@
 import { catalog } from '@run-planner/hades2-catalog';
 import {
   applyProjectCommand,
+  createAdditionalExitAddress,
   createEchoLastRewardAddress,
   createAcquisitionEntryAddress,
   createAcquisitionRoleAddress,
@@ -35,7 +36,11 @@ import {
 import { simulateProjectAssembly } from '@run-planner/engine/simulation';
 import { describe, expect, it } from 'vitest';
 
-import { editTestRoomActionOrder, hubVisitActions } from '@run-planner/test-fixtures/shared';
+import {
+  authorLegalTraitOffers,
+  editTestRoomActionOrder,
+  hubVisitActions,
+} from '@run-planner/test-fixtures/shared';
 import {
   createGoldenFGHProject,
   createGoldenFGHIProject,
@@ -49,6 +54,7 @@ import { loadSurfaceNOCheckpoint } from '@run-planner/test-fixtures/checkpoints/
 import {
   loadSurfaceNCompleteHubFrontierProject,
   loadSurfaceNEntryFrontierProject,
+  loadSurfaceNEntryFrontierResolvedProject,
   loadSurfaceNOPQProject,
   loadSurfaceNProject,
   nBiome,
@@ -1080,6 +1086,69 @@ describe('workspace inspector destinations', () => {
       nodeKey: batch.key,
     });
   });
+
+  it.each([
+    { entry: 'Pre-Hub', persistence: 'authored' },
+    { entry: 'Pre-Hub', persistence: 'uncommitted' },
+    { entry: 'Chaos', persistence: 'authored' },
+    { entry: 'Chaos', persistence: 'uncommitted' },
+  ])(
+    'routes the $persistence $entry Hub continuation finding to its Room Doors',
+    ({ entry, persistence }) => {
+      const occurrenceId =
+        entry === 'Chaos' ? createOccurrenceId('inspector-hub-chaos') : nOccurrenceIds.preHub;
+      const owner = createExitDecisionAddress(nBiome, { kind: 'occurrence', occurrenceId });
+      let source = applyProjectCommand(loadSurfaceNEntryFrontierResolvedProject(), catalog, {
+        kind: 'RemoveExitDecision',
+        decision: createExitDecisionAddress(nBiome, {
+          kind: 'occurrence',
+          occurrenceId: nOccurrenceIds.preHub,
+        }),
+      });
+      if (entry === 'Chaos') {
+        source = applyProjectCommand(source, catalog, {
+          kind: 'AddChaos',
+          additional: createAdditionalExitAddress(nBiome, nOccurrenceIds.opening, 'chaos'),
+          occurrenceId,
+        });
+        source = applyProjectCommand(source, catalog, {
+          kind: 'SetExitSelection',
+          selection: createExitSelectionAddress(nBiome, {
+            kind: 'occurrence',
+            occurrenceId: nOccurrenceIds.opening,
+          }),
+          value: { kind: 'additional', additionalExitKey: 'chaos' },
+        });
+        source = authorLegalTraitOffers(source);
+      }
+      if (persistence === 'authored')
+        source = applyProjectCommand(source, catalog, { kind: 'CreateBatch', decision: owner });
+      const evaluated = assembly(source);
+      expect(
+        evaluated.evaluation.findings.some(
+          (finding) =>
+            finding.code === 'continuationMissing' &&
+            semanticAddressKey(finding.origin) === semanticAddressKey(owner),
+        ),
+      ).toBe(true);
+      const workspace = structuredWorkspace.project(evaluated);
+      const n = biome(workspace, 'N');
+      const host =
+        persistence === 'authored'
+          ? n.nodes.find(
+              (node) =>
+                node.kind === 'ordinaryBatch' &&
+                semanticAddressKey(node.owner) === semanticAddressKey(owner),
+            )
+          : occurrenceWorkbenchFor(n, occurrenceId);
+      if (host === undefined) throw new Error('Hub continuation host is missing');
+      expect(destination(workspace, owner)).toMatchObject({
+        roomTab: 'doors',
+        inspectorSubject: { kind: 'node', nodeKey: host.key },
+        selectedRailKey: semanticAddressKey(owner),
+      });
+    },
+  );
 
   it('binds Hub board, visit, handoff, and fixed-stage presentation without React ownership scans', () => {
     const complete = project(loadSurfaceNOPQProject());

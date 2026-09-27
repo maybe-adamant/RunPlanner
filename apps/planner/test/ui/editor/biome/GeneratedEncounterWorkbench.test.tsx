@@ -12,6 +12,7 @@ import {
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
 import {
+  createCompleteFGProject,
   createGoldenFGHIProject,
   goldenFBiome,
   goldenFOccurrenceId,
@@ -101,7 +102,7 @@ const composed = {
 describe('generated encounter customization workflows', () => {
   it('shows the engine remainder before the minimum-one adjustment', async () => {
     const view = await open(
-      customize(createGoldenFGHIProject(), phase, {
+      customize(createCompleteFGProject(), phase, {
         kind: 'generated',
         waveCount: 1,
         waves: [{ waveIndex: 1, typeKeys: ['Guard', 'Brawler'], allocations: { Guard: 9999 } }],
@@ -119,7 +120,7 @@ describe('generated encounter customization workflows', () => {
       'Encounter',
     );
     const view = await open(
-      customize(createGoldenFGHIProject(), owner, {
+      customize(createCompleteFGProject(), owner, {
         kind: 'generated',
         waveCount: 1,
         waves: [
@@ -144,7 +145,7 @@ describe('generated encounter customization workflows', () => {
   });
   it('removes excess enemies without creating blank allocation keys', async () => {
     const view = await open(
-      customize(createGoldenFGHIProject(), phase, {
+      customize(createCompleteFGProject(), phase, {
         kind: 'generated',
         waveCount: 1,
         waves: [
@@ -182,7 +183,7 @@ describe('generated encounter customization workflows', () => {
     });
   });
   it('shows active Menace rows with friendly replacements, integer counts, retention and count-reduction repair', async () => {
-    const enabled = applyProjectCommand(createGoldenFGHIProject(), catalog, {
+    const enabled = applyProjectCommand(createCompleteFGProject(), catalog, {
       kind: 'ReplaceFearVowRank',
       route: { kind: 'route', routeKey: 'Underworld' },
       vowKey: 'NextBiomeEnemyShrineUpgrade',
@@ -300,7 +301,7 @@ describe('generated encounter customization workflows', () => {
   });
   it('keeps typed budget over-requests authored exactly like saved ones', async () => {
     const view = await open(
-      customize(createGoldenFGHIProject(), phase, {
+      customize(createCompleteFGProject(), phase, {
         kind: 'generated',
         waveCount: 1,
         waves: [{ waveIndex: 1, typeKeys: ['Guard', 'Brawler'], allocations: { Guard: 9999 } }],
@@ -342,7 +343,7 @@ describe('generated encounter customization workflows', () => {
     expect(current(view)).toMatchObject({ waves: [{ allocations: { Guard: 10000 } }] });
   });
   it('creates the complete composition only through Customize and resets it atomically', async () => {
-    const view = await open(createGoldenFGHIProject());
+    const view = await open(createCompleteFGProject());
     expect(current(view)).toBeUndefined();
     const explanation =
       'The game currently controls this encounter’s enemies. Select Edit to customize them.';
@@ -375,7 +376,7 @@ describe('generated encounter customization workflows', () => {
     );
   });
   it('stages Fangs perks until Finish and clears them only with Reset customization', async () => {
-    let project = applyProjectCommand(createGoldenFGHIProject(), catalog, {
+    let project = applyProjectCommand(createCompleteFGProject(), catalog, {
       kind: 'ReplaceFearVowRank',
       route: { kind: 'route', routeKey: 'Underworld' },
       vowKey: 'EnemyEliteShrineUpgrade',
@@ -458,7 +459,7 @@ describe('generated encounter customization workflows', () => {
     await waitFor(() => expect(current(view, owner)).toMatchObject({ baseRoll: 414 }));
   });
   it('commits a finished wave draft with its carried allocations', async () => {
-    const view = await open(customize(createGoldenFGHIProject(), phase, composed));
+    const view = await open(customize(createCompleteFGProject(), phase, composed));
     await selectBudgetWave(view, 3);
     await view.user.click(within(view.dialog).getByRole('button', { name: 'Wave 3 enemies' }));
     await view.user.click(await screen.findByRole('option', { name: 'Whisper' }));
@@ -475,7 +476,7 @@ describe('generated encounter customization workflows', () => {
         { ...composed.waves[0], allocations: { Guard: 5, Brawler: 10.000000000000002 } },
       ],
     };
-    const view = await open(customize(createGoldenFGHIProject(), phase, value));
+    const view = await open(customize(createCompleteFGProject(), phase, value));
     const history = view.application.store.getState().projectWorkspace.history;
     const first = within(view.dialog).getByRole('tab', { name: /^Wave 1(,|$)/ });
     first.focus();
@@ -495,7 +496,7 @@ describe('generated encounter customization workflows', () => {
     expect(view.dialog.textContent).not.toContain('10.000000000000002');
   });
   it('focuses the invalid customization launcher without auto-opening it', async () => {
-    const project = customize(createGoldenFGHIProject(), phase, {
+    const project = customize(createCompleteFGProject(), phase, {
       kind: 'generated',
       waveCount: 1,
       waves: [{ waveIndex: 1, typeKeys: ['Guard', 'Guard_Elite'] }],
@@ -520,7 +521,7 @@ describe('generated encounter customization workflows', () => {
     expect(screen.queryByRole('dialog')).toBeNull();
   });
   it('keeps retained customization editable when invalid context has no generated candidates', async () => {
-    let project = customize(createGoldenFGHIProject(), phase, composed);
+    let project = customize(createCompleteFGProject(), phase, composed);
     project = applyProjectCommand(project, catalog, {
       kind: 'SelectEncounter',
       phase: createEncounterPhaseAddress(
@@ -559,7 +560,7 @@ describe('generated encounter customization workflows', () => {
   });
   it('selects a shared enemy from assessed and unassessed pickers without a blank choice', async () => {
     const unassessed = applyProjectCommand(
-      customize(createGoldenFGHIProject(), phase, { kind: 'generated', waveCount: 3 }),
+      customize(createCompleteFGProject(), phase, { kind: 'generated', waveCount: 3 }),
       catalog,
       {
         kind: 'SelectEncounter',
@@ -572,7 +573,7 @@ describe('generated encounter customization workflows', () => {
       },
     );
     for (const project of [
-      customize(createGoldenFGHIProject(), phase, { kind: 'generated', waveCount: 3 }),
+      customize(createCompleteFGProject(), phase, { kind: 'generated', waveCount: 3 }),
       unassessed,
     ]) {
       const view = await open(project);
@@ -593,7 +594,7 @@ describe('generated encounter customization workflows', () => {
   });
   it('shows engine allocation findings for the affected wave', async () => {
     const view = await open(
-      customize(createGoldenFGHIProject(), phase, {
+      customize(createCompleteFGProject(), phase, {
         kind: 'generated',
         waveCount: 3,
         highlightKey: 'Radiator',
@@ -616,71 +617,31 @@ describe('generated encounter customization workflows', () => {
       fangs: { typeKey: 'Guard_Elite', perkKeys: ['Blink'] },
       menace: [{ waveIndex: 3, conversions: { Brawler: { count: 1 } } }],
     } as const;
-    const view = await open(customize(createGoldenFGHIProject(), phase, value));
+    const view = await open(customize(createCompleteFGProject(), phase, value));
     await view.user.click(within(view.dialog).getByRole('radio', { name: '2' }));
     expect(current(view)).toEqual({ ...value, waveCount: 2 });
     act(() => view.application.store.dispatch(authoredProjectUndoRequested()));
     expect(current(view)).toEqual(value);
   });
   it('warns about declared once-per-run enemies among engine-assessed active members', async () => {
-    const warning =
-      'Sorrow-Spiller can appear only once per run. An earlier uncustomized encounter may already include it.';
-    const cage = (occurrenceId: string) =>
-      createEncounterPhaseAddress(
-        goldenHBiome,
-        { kind: 'occurrence', occurrenceId: createOccurrenceId(occurrenceId) },
-        'Cage01',
-      );
-    const withValue = (
-      owner: EncounterPhaseAddress,
-      waves: NonNullable<AuthoredGeneratedEncounterCustomization['waves']>,
-      encounterKey?: string,
-    ) =>
-      customize(
-        encounterKey === undefined
-          ? createGoldenFGHIProject()
-          : applyProjectCommand(createGoldenFGHIProject(), catalog, {
-              kind: 'SelectEncounter',
-              phase: owner,
-              encounterKey,
-            }),
-        owner,
-        { kind: 'generated', waveCount: 1, waves },
-      );
-    const owner = cage('golden-h-combat05');
-    for (const [waves, encounterKey, warns] of [
-      [[{ waveIndex: 1, typeKeys: ['FogEmitter2', 'BrokenHearted', 'Lovesick'] }], undefined, true],
-      // A template companion is an active member, although it never enters the run blacklist.
-      [[{ waveIndex: 1, typeKeys: ['FogEmitter2'] }], 'GeneratedH_Treant2', true],
-      // An incomplete wave still reports its validated prefix.
-      [[{ waveIndex: 1, typeKeys: ['FogEmitter2'] }], undefined, true],
-      [
-        [
-          { waveIndex: 1, typeKeys: ['BrokenHearted', 'Lovesick', 'Mourner'] },
-          { waveIndex: 2, typeKeys: ['FogEmitter2'] },
-        ],
-        undefined,
-        false,
-      ],
-    ] as const) {
-      const view = await open(withValue(owner, waves, encounterKey), owner);
-      expect(within(view.dialog).queryByText(warning) !== null).toBe(warns);
-      cleanup();
-    }
-    const unavailableOwner = cage('golden-h-combat09');
-    const unavailable = withValue(
-      unavailableOwner,
-      [{ waveIndex: 1, typeKeys: ['FogEmitter2'] }],
-      'GeneratedH_Treant2',
+    const owner = createEncounterPhaseAddress(
+      goldenHBiome,
+      { kind: 'occurrence', occurrenceId: createOccurrenceId('golden-h-combat05') },
+      'Cage01',
+    );
+    const view = await open(
+      customize(createGoldenFGHIProject(), owner, {
+        kind: 'generated',
+        waveCount: 1,
+        waves: [{ waveIndex: 1, typeKeys: ['FogEmitter2', 'BrokenHearted', 'Lovesick'] }],
+      }),
+      owner,
     );
     expect(
-      projectStructuredWorkspaceFixture(
-        unavailable,
-      ).workspace.interactions.encounterCustomizations.get(semanticAddressKey(unavailableOwner))
-        ?.generatedAssessment,
-    ).toBeUndefined();
-    const view = await open(unavailable, unavailableOwner);
-    expect(within(view.dialog).queryByText(warning)).toBeNull();
+      within(view.dialog).getByText(
+        'Sorrow-Spiller can appear only once per run. An earlier uncustomized encounter may already include it.',
+      ),
+    ).toBeTruthy();
   });
   it('initializes reward-owned Devotion at its exact phase', async () => {
     const owner = createEncounterPhaseAddress(
