@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 *.zip
 *.7z
 
@@ -16,7 +15,6 @@
 tcli.exe
 /ThunderstoreCLI
 /R2M
-=======
 # Compiled Lua sources
 luac.out
 
@@ -57,5 +55,4 @@ luac.out
 *.i*86
 *.x86_64
 *.hex
->>>>>>> 3de09625b2007387af6231b042a5068d35845982
 
