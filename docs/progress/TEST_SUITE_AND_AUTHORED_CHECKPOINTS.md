@@ -1,7 +1,8 @@
 # Test-suite cleanup and authored checkpoint coverage
 
 Status: Gates A–C2 implemented and reviewed; review findings resolved.
-C3 is partially implemented with its automatic-Boss slice reviewed; D awaits
+C3 is partially implemented with its automatic-Boss and Fig Leaf/Gorgon slices
+reviewed; D awaits
 implementation.
 Base: `7dea8cfe` (September 26, 2026).
 
@@ -267,16 +268,25 @@ real scenario/compatibility boundary. Preserve unresolved Chaos as a repair inpu
 #### C3 — advanced loadout, traits and Hex
 
 Disposition: the automatic-Boss slice is implemented against `b6dce276`
-(September 26, 2026). It promotes a saved F/G checkpoint with reached Judgment
-and Crystal Figurine outcomes, including central recipe attestation, exact
-execution witnesses, and a Figurine edit/reload/Undo repair witness. Fig Leaf,
-Gorgon, targeted traits, normal and aspect Hex, and Persephone remain planned
-portfolio candidates below; none are claimed by this slice.
+(September 26, 2026) and independently reviewed. It promotes a saved F/G
+checkpoint with reached Judgment and Crystal Figurine outcomes, including central
+recipe attestation, exact execution witnesses, and a Figurine edit/reload/Undo
+repair witness. The next Fig Leaf/Gorgon slice is implemented against `f321956c`
+and independently reviewed: separate saved F/G checkpoints reach the legal Fig
+Leaf skip and Epic selected Gorgon Athena child, respectively. Their semantic
+edits reload to the exact addressed Fig Leaf repair and suppressed Gorgon
+interaction, then Undo to the saved checkpoint. Targeted traits, normal and
+aspect Hex, and Persephone remain planned portfolio candidates below.
 
 Verification passed: 77 focused engine tests (including all 20 execution-fixture
 byte checks), 38 fixture-integrity tests, full typechecking, lint, formatting and
 diff checks. Independent review is complete; its stale private-helper import
 finding was resolved. Execution fixture bytes are unchanged.
+
+The Fig Leaf/Gorgon slice passed 59 focused execution-plan tests, 40
+fixture-integrity tests, full typechecking, lint, formatting and Git diff checks.
+Independent review is complete; its Fig Leaf repair witness now asserts the exact
+`alreadyUsed` evaluation evidence. Execution fixture bytes remain unchanged.
 
 Resolve the remaining feature rows into a bounded portfolio before creating files:
 
@@ -298,10 +308,12 @@ expand production scope. Exhaustive trait/perk variants remain excluded.
 Planned portfolio assignment (not yet success claims):
 
 - `underworld-automatic-boss` promotes the existing complete F/G automatic-outcome
-  recipe for reached Judgment and Crystal Figurine. This is the first C3 slice.
-- A separate `underworld-fig-leaf` plan owns one actual legal skip; a separate
-  Gorgon plan owns the Athena starting-keepsake, selected child and rarity. They
-  cannot share the one starting-keepsake slot.
+  recipe for reached Judgment and Crystal Figurine. This reviewed first C3 slice
+  remains its own starting-keepsake scenario.
+- Separate `underworld-fig-leaf` and `underworld-gorgon-athena` checkpoints now
+  own the actual legal F skip and the G first-combat Athena starting-keepsake,
+  condition, selected child and Epic rarity. They cannot share the one
+  starting-keepsake slot.
 - A targeted-traits portfolio begins from the Natural Selection frontier only
   after its child is command-settled. All Together, Concave Stone and Echo each
   require their own command-reachable chronology; their branch-only test helpers

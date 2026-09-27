@@ -12,6 +12,8 @@ import underworldIxionChaosRaw from './underworld-ixion-chaos.runplanner.json';
 import underworldGAnomalyRosterRaw from './underworld-g-anomaly-roster.runplanner.json';
 import underworldArachneCocoonsRaw from './underworld-arachne-cocoons.runplanner.json';
 import underworldAutomaticBossRaw from './underworld-automatic-boss.runplanner.json';
+import underworldFigLeafRaw from './underworld-fig-leaf.runplanner.json';
+import underworldGorgonAthenaRaw from './underworld-gorgon-athena.runplanner.json';
 import underworldTwistScyllaRaw from './underworld-twist-scylla.runplanner.json';
 import underworldZagreusContractRaw from './underworld-zagreus-contract.runplanner.json';
 import underworldWorldShopTravelDealRaw from './underworld-world-shop-travel-deal.runplanner.json';
@@ -38,6 +40,8 @@ export const underworldCheckpointArtifacts = Object.freeze({
   'underworld-g-anomaly-roster': checkpointArtifact(underworldGAnomalyRosterRaw),
   'underworld-arachne-cocoons': checkpointArtifact(underworldArachneCocoonsRaw),
   'underworld-automatic-boss': checkpointArtifact(underworldAutomaticBossRaw),
+  'underworld-fig-leaf': checkpointArtifact(underworldFigLeafRaw),
+  'underworld-gorgon-athena': checkpointArtifact(underworldGorgonAthenaRaw),
   'underworld-twist-scylla': checkpointArtifact(underworldTwistScyllaRaw),
   'underworld-zagreus-contract': checkpointArtifact(underworldZagreusContractRaw),
   'underworld-world-shop-travel-deal': checkpointArtifact(underworldWorldShopTravelDealRaw),
@@ -83,6 +87,14 @@ export function loadUnderworldArachneCocoonsCheckpoint(): ProjectDocument {
 
 export function loadUnderworldAutomaticBossCheckpoint(): ProjectDocument {
   return underworldCheckpointArtifacts['underworld-automatic-boss'].load();
+}
+
+export function loadUnderworldFigLeafCheckpoint(): ProjectDocument {
+  return underworldCheckpointArtifacts['underworld-fig-leaf'].load();
+}
+
+export function loadUnderworldGorgonAthenaCheckpoint(): ProjectDocument {
+  return underworldCheckpointArtifacts['underworld-gorgon-athena'].load();
 }
 
 export function loadUnderworldTwistScyllaCheckpoint(): ProjectDocument {

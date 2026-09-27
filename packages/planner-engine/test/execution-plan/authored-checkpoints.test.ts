@@ -26,6 +26,8 @@ import { simulateProjectAssembly } from '../../src/simulation';
 import {
   loadUnderworldArachneCocoonsCheckpoint,
   loadUnderworldAutomaticBossCheckpoint,
+  loadUnderworldFigLeafCheckpoint,
+  loadUnderworldGorgonAthenaCheckpoint,
   loadUnderworldGAnomalyRosterCheckpoint,
   loadUnderworldGeneratedCompositionCheckpoint,
   loadUnderworldIxionChaosCheckpoint,
@@ -549,6 +551,103 @@ it('exports reached Judgment and Crystal Figurine Boss outcomes, then retains th
     phase: 'rewardGeneration',
     severity: 'error',
   });
+  expect(undoProjectHistory(edited).present).toBe(saved);
+});
+
+it('exports the reached Fig Leaf skip and reloads its addressed second-skip repair', () => {
+  const saved = loadUnderworldFigLeafCheckpoint();
+  const skipped = createOccurrenceId('golden-f-b2-e1');
+  const f = simulateProjectAssembly(catalog, saved).evaluation.route.biomes.find(
+    (biome) => biome.biomeKey === 'F',
+  );
+  if (f === undefined || !('rewards' in f)) throw new Error('Fig Leaf F evaluation is missing');
+  expect(f.rewards.branches[0]?.state.keepsakes.figLeaf).toEqual({
+    remainingUses: 2,
+    activatedThisBiome: true,
+  });
+  const later = createEncounterPhaseAddress(
+    goldenFBiome,
+    { kind: 'occurrence', occurrenceId: createOccurrenceId('golden-f-b3-e1') },
+    'Encounter',
+  );
+  expect(
+    plan(saved)
+      .occurrences.find((room) => room.id === skipped)
+      ?.overview.encounterPhases.find((phase) => phase.slotKey === 'Encounter'),
+  ).toMatchObject({ figLeafSkip: true });
+  const edited = applyProjectHistoryCommand(createProjectHistory(saved), catalog, {
+    kind: 'ReplaceFigLeafSkip',
+    phase: later,
+    value: true,
+  });
+  const reloaded = reload(edited.present);
+  expect(reloaded).toEqual(edited.present);
+  expect(simulateProjectAssembly(catalog, reloaded).evaluation.findings).toContainEqual(
+    expect.objectContaining({
+      code: 'figLeafSkipUnavailable',
+      origin: later,
+      evidence: { reason: 'alreadyUsed' },
+      phase: 'encounterResolution',
+      severity: 'error',
+    }),
+  );
+  expect(undoProjectHistory(edited).present).toBe(saved);
+});
+
+it('exports the reached Epic Gorgon Athena child and reloads its condition edit', () => {
+  const saved = loadUnderworldGorgonAthenaCheckpoint();
+  const occurrenceId = createOccurrenceId('golden-g-b1-e1');
+  const g = simulateProjectAssembly(catalog, saved).evaluation.route.biomes.find(
+    (biome) => biome.biomeKey === 'G',
+  );
+  if (g === undefined || !('rewards' in g)) throw new Error('Gorgon G evaluation is missing');
+  expect(g.rewards.branches[0]?.state.keepsakes.gorgon).toEqual({ status: 'consumed' });
+  expect(g.rewards.selectedTraitOffers).toContainEqual(
+    expect.objectContaining({ acquisitionRole: 'gorgonAthena', reached: true }),
+  );
+  const phase = createEncounterPhaseAddress(
+    goldenGBiome,
+    { kind: 'occurrence', occurrenceId },
+    'Encounter',
+  );
+  expect(
+    plan(saved)
+      .occurrences.find((room) => room.id === occurrenceId)
+      ?.timeline.transactions.find(
+        (transaction) =>
+          transaction.kind === 'encounterInteraction' &&
+          transaction.resolution?.kind === 'traitOffer',
+      ),
+  ).toMatchObject({
+    resolution: {
+      offer: {
+        giver: 'Athena',
+        selected: 'option1',
+        options: [
+          { key: 'InvulnerabilityDashBoon', rarity: 'Epic' },
+          { key: 'RetaliateInvulnerabilityBoon', rarity: 'Epic' },
+          { key: 'FocusLastStandBoon', rarity: 'Epic' },
+        ],
+      },
+    },
+  });
+  const edited = applyProjectHistoryCommand(createProjectHistory(saved), catalog, {
+    kind: 'ReplaceGorgonDeathDefianceCondition',
+    phase,
+    value: false,
+  });
+  const reloaded = reload(edited.present);
+  expect(reloaded).toEqual(edited.present);
+  expect(simulateProjectAssembly(catalog, reloaded).evaluation.findings).toEqual([]);
+  expect(
+    plan(reloaded)
+      .occurrences.find((room) => room.id === occurrenceId)
+      ?.timeline.transactions.find(
+        (transaction) =>
+          transaction.kind === 'encounterInteraction' &&
+          transaction.resolution?.kind === 'traitOffer',
+      ),
+  ).toBeUndefined();
   expect(undoProjectHistory(edited).present).toBe(saved);
 });
 

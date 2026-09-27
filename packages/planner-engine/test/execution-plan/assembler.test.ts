@@ -16,7 +16,6 @@ import {
 } from '@run-planner/test-fixtures/underworld';
 import {
   authorLegalTraitOffers,
-  replaceTestRoomActionOrder,
   replaceTestShopOfferActions,
   hubVisitActions,
 } from '@run-planner/test-fixtures/shared';
@@ -25,6 +24,8 @@ import {
   loadUnderworldFPoolCheckpoint,
   loadUnderworldFStygianWellCheckpoint,
   loadUnderworldAutomaticBossCheckpoint,
+  loadUnderworldFigLeafCheckpoint,
+  loadUnderworldGorgonAthenaCheckpoint,
   loadUnderworldIxionChaosCheckpoint,
   loadUnderworldWorldShopTravelDealCheckpoint,
   loadUnderworldZagreusContractCheckpoint,
@@ -398,38 +399,7 @@ describe('engine-owned F/G execution semantic product', () => {
       { kind: 'occurrence', occurrenceId },
       'Encounter',
     );
-    let project = applyProjectCommand(createCompleteFGProject(), catalog, {
-      kind: 'ReplaceStartingKeepsake',
-      selection: createRouteStartKeepsakeSelectionAddress('Underworld'),
-      keepsakeKey: 'AthenaEncounterKeepsake',
-    });
-    project = applyProjectCommand(project, catalog, {
-      kind: 'ReplaceGorgonDeathDefianceCondition',
-      phase,
-      value: true,
-    });
-    project = applyProjectCommand(project, catalog, {
-      kind: 'ReplaceGorgonAthenaOffer',
-      trait: createTraitOfferAddress(createGorgonPhaseAddress(phase), 'gorgonAthena'),
-      value: {
-        traitKeys: [
-          'InvulnerabilityDashBoon',
-          'RetaliateInvulnerabilityBoon',
-          'FocusLastStandBoon',
-        ],
-        selectedOptionKey: 'option1',
-      },
-    });
-    // G's opening batch is a Meta batch run-wide, so this room's reward is a
-    // self-acquired drop rather than a Boon.
-    project = replaceTestRoomActionOrder(project, catalog, goldenGBiome, occurrenceId, [
-      {
-        kind: 'interactIncomingReward',
-        producerPoint: 'roomRewardPickup',
-        acquisitionRole: 'self',
-      },
-      { kind: 'interactGorgon', phaseKey: 'Encounter' },
-    ]);
+    const project = loadUnderworldGorgonAthenaCheckpoint();
     const assembly = simulateProjectAssembly(catalog, project);
     const product = assembleExecutionProduct({ assembly, catalog });
     const owner = semanticAddressKey(createGorgonPhaseAddress(phase));
@@ -873,18 +843,8 @@ describe('engine-owned F/G execution semantic product', () => {
   });
 
   it('publishes exact Fig Leaf results only for supported encounter phases', () => {
-    const positivePhase = createEncounterPhaseAddress(
-      goldenFBiome,
-      { kind: 'occurrence', occurrenceId: goldenFOccurrenceId(1, 1) },
-      'Encounter',
-    );
-    const positiveProject = applyProjectCommand(withFigLeaf(createCompleteFGProject()), catalog, {
-      kind: 'ReplaceFigLeafSkip',
-      phase: positivePhase,
-      value: true,
-    });
-    const positive = productFor(positiveProject).occurrences.find(
-      (occurrence) => occurrence.id === goldenFOccurrenceId(1, 1),
+    const positive = productFor(loadUnderworldFigLeafCheckpoint()).occurrences.find(
+      (occurrence) => occurrence.id === goldenFOccurrenceId(2, 1),
     );
     expect(positive?.overview.encounterPhases).toContainEqual(
       expect.objectContaining({
