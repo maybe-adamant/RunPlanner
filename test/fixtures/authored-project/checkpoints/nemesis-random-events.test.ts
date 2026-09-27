@@ -18,10 +18,7 @@ import {
   loadNemesisTraitTradeCheckpoint,
 } from './underworld';
 import {
-  createNemesisFieldsCheckpoint,
   createNemesisPomCheckpoint,
-  createNemesisPomSeaStarCheckpoint,
-  createNemesisTraitTradeCheckpoint,
   nemesisPomResultAcquisition,
 } from '../routes/nemesis-random-events';
 import {
@@ -43,13 +40,7 @@ function occurrence(
   return selected;
 }
 
-describe('Nemesis random-event checkpoint recipes', () => {
-  it('attests each saved checkpoint to its semantic-command recipe', () => {
-    expect(loadNemesisTraitTradeCheckpoint()).toEqual(createNemesisTraitTradeCheckpoint());
-    expect(loadNemesisFieldsCheckpoint()).toEqual(createNemesisFieldsCheckpoint());
-    expect(loadNemesisPomSeaStarCheckpoint()).toEqual(createNemesisPomSeaStarCheckpoint());
-  });
-
+describe('Nemesis random-event checkpoint workflows', () => {
   it('keeps the accepted F trait trade required, suppresses its incoming reward, and retains normal continuation', () => {
     const project = loadNemesisTraitTradeCheckpoint();
     const id = goldenFOccurrenceId(5, 1);

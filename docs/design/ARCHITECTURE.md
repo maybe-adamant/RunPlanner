@@ -197,6 +197,15 @@ transformers are removed after conversion; no permanent alternate fixture
 decoder is introduced. Generated execution fixtures follow the separate
 byte-preservation and mirroring discipline in contributor instructions.
 
+Checkpoint support owns manifest/registry closure, static loader reachability,
+and recipe-backed canonical-byte integrity. Engine domain suites own reached
+scenario/export workflows. `fixtures:checkpoints:regenerate` explicitly
+rewrites only recipe-backed checkpoints through `encodeProjectDocument`; normal
+integrity verifies their recipe equality. This is not save migration: migrate
+source saves before regeneration when schema changes. Imported user-authored
+checkpoints retain canonical loader/integrity coverage and are not reconstructed
+by the command.
+
 ## Hosts, Performance and Maintenance
 
 Vite builds the same React application for browser and desktop. Tauri owns
