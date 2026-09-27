@@ -212,6 +212,16 @@ export const checkpointManifest = Object.freeze([
     provenance: 'semantic-command Q World Shop Anvil recipe from canonical Surface N/O/P/Q',
   },
   {
+    id: 'surface-ordinary-hex-path',
+    file: 'surface-ordinary-hex-path.runplanner.json',
+    route: 'Surface',
+    configuredBiomePrefix: ['N', 'O', 'P', 'Q'],
+    scenario: 'Installed N SpellPotion Hex with reached P TalentDrop Path allocation',
+    schemaVersion: 88,
+    catalogVersion: '0.55.0-anvil-of-fates',
+    provenance: 'semantic-command N/O/P/Q ordinary Hex and P Path acquisition recipe',
+  },
+  {
     id: 'surface-shrine-travel-deal',
     file: 'surface-shrine-travel-deal.runplanner.json',
     route: 'Surface',
@@ -474,6 +484,7 @@ export const checkpointManifest = Object.freeze([
 export const checkpointSpellDropIntents = Object.freeze([
   ['surface-encounter-showcase', 'surface-n-combat09', 'SpellPotionTrait'],
   ['surface-anvil', 'surface-n-combat09', 'SpellPotionTrait'],
+  ['surface-ordinary-hex-path', 'surface-n-combat09', 'SpellPotionTrait'],
   ['surface-n-phial-intermediate-fountain', 'surface-n-combat09', 'SpellLaserTrait'],
   ['surface-scheduled-lifecycle', 'surface-n-combat09', 'SpellPotionTrait'],
   ['surface-n-complete-hub-frontier', 'surface-n-combat09', 'SpellPolymorphTrait'],

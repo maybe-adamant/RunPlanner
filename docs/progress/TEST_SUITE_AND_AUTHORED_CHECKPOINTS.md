@@ -1,8 +1,8 @@
 # Test-suite cleanup and authored checkpoint coverage
 
 Status: Gates A–C2 implemented and reviewed; review findings resolved.
-C3 is partially implemented with its automatic-Boss and Fig Leaf/Gorgon slices
-reviewed; D awaits
+C3 is partially implemented with its automatic-Boss, Fig Leaf/Gorgon, and
+ordinary Hex/Path slices reviewed; D awaits
 implementation.
 Base: `7dea8cfe` (September 26, 2026).
 
@@ -275,8 +275,14 @@ repair witness. The next Fig Leaf/Gorgon slice is implemented against `f321956c`
 and independently reviewed: separate saved F/G checkpoints reach the legal Fig
 Leaf skip and Epic selected Gorgon Athena child, respectively. Their semantic
 edits reload to the exact addressed Fig Leaf repair and suppressed Gorgon
-interaction, then Undo to the saved checkpoint. Targeted traits, normal and
-aspect Hex, and Persephone remain planned portfolio candidates below.
+interaction, then Undo to the saved checkpoint. Targeted traits, aspect Hex,
+and Persephone remain planned portfolio candidates below. The
+ordinary Hex/Path slice is implemented against `4d932a74` and independently
+reviewed: a complete N/O/P/Q checkpoint installs `SpellPotionTrait` at N and
+reaches a P `TalentDrop` with three invested Lung points; replacing that reward
+reloads to the exact addressed unavailable-bag repair and Undo restores the
+checkpoint. Selene and Persephone remain pending route-level recipe construction,
+not blocked owner work.
 
 Verification passed: 77 focused engine tests (including all 20 execution-fixture
 byte checks), 38 fixture-integrity tests, full typechecking, lint, formatting and
@@ -287,6 +293,11 @@ The Fig Leaf/Gorgon slice passed 59 focused execution-plan tests, 40
 fixture-integrity tests, full typechecking, lint, formatting and Git diff checks.
 Independent review is complete; its Fig Leaf repair witness now asserts the exact
 `alreadyUsed` evaluation evidence. Execution fixture bytes remain unchanged.
+
+The ordinary Hex/Path slice passed 16 focused checkpoint tests, 41
+fixture-integrity tests, full typechecking, lint, formatting and Git diff checks.
+Independent review is complete without findings. Execution fixture bytes remain
+unchanged.
 
 Resolve the remaining feature rows into a bounded portfolio before creating files:
 
@@ -314,13 +325,17 @@ Planned portfolio assignment (not yet success claims):
   own the actual legal F skip and the G first-combat Athena starting-keepsake,
   condition, selected child and Epic rarity. They cannot share the one
   starting-keepsake slot.
+- `surface-ordinary-hex-path` now owns the normal installed SpellPotion/Lung
+  tree and reached P TalentDrop allocation. Selene aspect-Hex/Path and
+  Persephone level-bonus remain separate route-level constructions.
 - A targeted-traits portfolio begins from the Natural Selection frontier only
   after its child is command-settled. All Together, Concave Stone and Echo each
   require their own command-reachable chronology; their branch-only test helpers
   are source evidence, not saved-plan recipes.
-- Normal installed-Hex/Path, Selene aspect-Hex/Path, and Persephone
-  level-bonus scenarios are separate: the latter two use incompatible aspects.
-  The Selene and Persephone plans also provide the non-base loadout witnesses.
+- Normal installed-Hex/Path is now independently saved. Selene aspect-Hex/Path
+  and Persephone level-bonus scenarios remain separate route-level
+  constructions: the latter two use incompatible aspects and also provide the
+  non-base loadout witnesses.
 
 Each candidate needs its own static checkpoint, recipe attestation, reached
 consumer/export witness and edit/reload result before the matrix moves to

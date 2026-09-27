@@ -580,5 +580,10 @@ export function reachedPOutdoorIcarusFixture() {
   });
 }
 
+/** Complete N/O/P/Q route with an installed ordinary Hex and reached P Path grant. */
+export function surfaceOrdinaryHexPathProject(): ProjectDocument {
+  return authorLegalTraitOffers(reachedPOutdoorIcarusFixture().project);
+}
+
 export { authorLegalTraitOffers };
 export type { ResolvedRewardOffer };
