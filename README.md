@@ -144,11 +144,11 @@ pushes to `main`.
 1. Install `adamant-ModpackLib` in your Hades II r2modman profile. r2modman
    also installs its dependencies. The planner reports ModpackLib and missing
    dependencies but never installs them.
-2. In the desktop planner, open **Settings → Game Module**, choose **Locate
-   Game Module** and pick your r2modman profile, or choose the folder that
-   contains `ReturnOfModding` for a manual Hell2Modding install.
-3. Choose **Install / Update Game Module**. The module is built into the
-   planner, so each planner release carries its matching module.
+2. In the desktop planner, open **Settings**. Under Game location, choose
+   **Find r2modman profiles** and pick your profile, or **Choose folder…** for
+   the folder that contains `ReturnOfModding` in a manual Hell2Modding install.
+3. Follow the Game module steps, ending with **Install**. The module is built
+   into the planner, so each planner release carries its matching module.
 4. Use **File → Publish to Game** to write a plan slot to that target.
 
 Official desktop releases check for updates without delaying startup. Use About

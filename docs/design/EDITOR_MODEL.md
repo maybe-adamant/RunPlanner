@@ -272,13 +272,17 @@ Publish opens its own slot dialog for the established game target and does not
 change the project file. When the host reports blockers, the dialog shows their
 text and links to Settings instead of offering slots.
 
-Settings, beside About, holds the Game Module section. `GameModuleHost` is the
-desktop adapter over the host's target, status, install, remove and publish
-commands; the host persists the game target and owns every compatibility and
-install decision. `projectGameModuleSettings` and
-`projectGamePublicationReadiness` only present the reported facts as rows,
-notices, consent facts, action availability and blocker text. The game target
-is neither authored state nor Redux state and never enters history.
+Settings, beside About, holds a Game location section and, once a target is
+set, a Game module section. `GameModuleHost` is the desktop adapter over the
+host's target, status, install, remove and publish commands; the host persists
+the game target and owns every compatibility and install decision.
+`projectGameModuleSettings` groups the reported facts into the collapsed
+location line, one overall state, ordered steps (each issue once, with the
+planner's Install or Update as the only step action), the Remove availability
+and a collapsed details list; `projectGameProfileChoices` feeds the profile
+picker, and `projectGamePublicationReadiness` reuses the step wording for
+publish blockers. The game target is neither authored state nor Redux state
+and never enters history.
 
 Browser Load uses file input; Save downloads a file. Browser Save As would be
 the same operation and is omitted. Tauri uses native dialogs and a remembered

@@ -14,6 +14,8 @@ export interface DiscoveredGameProfile {
   readonly path: string;
   readonly location: string;
   readonly label: string;
+  /** The Run Planner copy the profile already holds, from cheap folder checks. */
+  readonly module: 'none' | 'plannerInstalled' | 'modListUnreadable' | 'thunderstore';
 }
 
 export interface GameTargetDiscovery {
@@ -111,7 +113,12 @@ export interface GameModuleHost extends GamePlanPublisher {
   readonly discoverTargets: () => Promise<GameTargetDiscovery>;
   readonly useDiscoveredTarget: (path: string) => Promise<GameModuleStatus>;
   /** Resolves null when the folder picker is cancelled. */
-  readonly chooseTargetFolder: () => Promise<GameModuleStatus | null>;
+  readonly pickTargetFolder: () => Promise<string | null>;
+  readonly useChosenTarget: (path: string) => Promise<GameModuleStatus>;
+  /** Resolves a candidate by the rules of setting it, without saving; rejects with the reason. */
+  readonly validateTarget: (path: string, kind: GameTargetKind) => Promise<GameTarget>;
+  /** Clears the saved target without touching any files. */
+  readonly forgetTarget: () => Promise<GameModuleStatus>;
   readonly install: (overwriteConsent: boolean) => Promise<GameModuleInstallResult>;
   readonly installFromCheckout: (overwriteConsent: boolean) => Promise<GameModuleInstallResult>;
   readonly remove: () => Promise<GameModuleRemoveResult>;
@@ -138,11 +145,12 @@ export function createTauriGameModuleHost(
     discoverTargets: () => environment.invoke<GameTargetDiscovery>('game_target_discover'),
     useDiscoveredTarget: (path: string) =>
       environment.invoke<GameModuleStatus>('game_target_use_discovered', { path }),
-    chooseTargetFolder: async () => {
-      const path = await environment.chooseDirectory();
-      if (path === null) return null;
-      return environment.invoke<GameModuleStatus>('game_target_choose', { path });
-    },
+    pickTargetFolder: () => environment.chooseDirectory(),
+    useChosenTarget: (path: string) =>
+      environment.invoke<GameModuleStatus>('game_target_choose', { path }),
+    validateTarget: (path: string, kind: GameTargetKind) =>
+      environment.invoke<GameTarget>('game_target_validate', { path, kind }),
+    forgetTarget: () => environment.invoke<GameModuleStatus>('game_target_clear'),
     install: (overwriteConsent: boolean) =>
       environment.invoke<GameModuleInstallResult>('game_module_install', { overwriteConsent }),
     installFromCheckout: (overwriteConsent: boolean) =>

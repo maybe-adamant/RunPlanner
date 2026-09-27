@@ -43,14 +43,32 @@ keep that declaration aligned with its decoder and decode the planner-engine
 execution fixtures in place.
 
 The game target is an application setting in the desktop configuration
-directory, never authored state or history. Settings → **Locate Game Module**
-lists the r2modman Hades II profiles under the platform's r2modman data root
-(`%APPDATA%\r2modmanPlus-local\HadesII\profiles` on Windows; other platforms
-currently offer only the folder picker) and also accepts any chosen folder
-that is, or directly contains, a real `ReturnOfModding` folder: an r2modman
-profile or a manual Hell2Modding install. The record keeps whether the target
-was discovered or chosen. Links, files and paths resolving outside the chosen
-folder are rejected; every write stays inside its `ReturnOfModding` folder.
+directory, never authored state or history. Settings → Game location offers
+**Find r2modman profiles**, which lists the Hades II profiles under the
+platform's r2modman data root (`%APPDATA%\r2modmanPlus-local\HadesII\profiles`
+on Windows; other platforms currently offer only the folder picker), and
+**Choose folder…**, which accepts any folder that is, or directly contains, a
+real `ReturnOfModding` folder: an r2modman profile or a manual Hell2Modding
+install. Discovery marks each profile's existing copy from cheap folder checks:
+the same ownership rule as removal (a planner install record that r2modman
+does not manage), a planner record whose `mods.yml` cannot be read, another
+copy (Thunderstore or r2modman-managed), or none. The record keeps whether the
+target was discovered or chosen. Links, files and paths resolving outside the
+chosen folder are rejected; every write stays inside its `ReturnOfModding`
+folder.
+
+The planner tracks one target. Changing it only changes the saved setting: it
+never installs into the new target or removes from the old one. The candidate
+is validated by the same rules, without saving, before anything else; an
+invalid one reports its reason and changes nothing, and reselecting the current
+target is no change. Switching away from a target holding a planner install
+first asks whether to keep that copy, which is then untracked and receives no
+planner updates, or to remove it through the ordinary remove path; removal is
+offered only when the host reports the module removable. A refused removal, or
+a failure to set the new target after removal, leaves the target unchanged and
+is reported. **Forget** clears the saved setting without touching files, and
+publishing is blocked until a target is set again. Plan slots under the old
+target's `config/` are never touched.
 
 Status is reported by the host and presented by the application:
 
@@ -68,7 +86,7 @@ The planner reports ModpackLib and dependencies but never installs, updates or
 removes them, and never edits `mods.yml`. Users install ModpackLib through
 r2modman, which brings its dependency chain.
 
-**Install / Update Game Module** operates only on the established target and
+**Install** or **Update** operates only on the established target and
 does nothing when the installed files already match this build. A folder the
 planner did not install, or one r2modman manages, is replaced only after
 explicit consent; the r2modman warning explains that disabling or uninstalling
@@ -81,7 +99,7 @@ If a swap and its restore both fail, status reports the previous install left
 beside `plugins/`; the next successful install backs it up before removing it.
 Stale staging and removal folders are cleared when an install starts. The planner-owned install record,
 `run-planner-install.json` in the module folder, holds the version, source and
-file hashes. **Remove Game Module** deletes only a module whose install record
+file hashes. **Remove game module** deletes only a module whose install record
 identifies a planner install that r2modman does not manage (an unreadable
 `mods.yml` counts as possibly managed), and leaves
 `config/` plan slots and ModpackLib in place. Development builds also offer an

@@ -7,7 +7,9 @@ use run_planner_game_host::game_module_install::{
 };
 use run_planner_game_host::game_module_package::ModulePackage;
 use run_planner_game_host::game_plan_publication::{self, GamePlanPublication};
-use run_planner_game_host::game_target::{self, GameTargetDiscovery, ResolvedTarget, TargetKind};
+use run_planner_game_host::game_target::{
+    self, GameTargetDiscovery, GameTargetFacts, ResolvedTarget, TargetKind,
+};
 
 const BACKUP_DIRECTORY: &str = "game-module-backup";
 
@@ -82,7 +84,7 @@ pub(crate) fn game_target_discover() -> Result<GameTargetDiscovery, String> {
     Ok(match game_target::r2modman_profiles_root() {
         Some(root) => GameTargetDiscovery {
             supported: true,
-            profiles: game_target::discover_profiles(&root)?,
+            profiles: game_module_install::discover(&root)?,
         },
         None => GameTargetDiscovery {
             supported: false,
@@ -113,6 +115,25 @@ pub(crate) fn game_target_choose(
         &app,
         game_target::resolve_target(Path::new(&path), TargetKind::Manual)?,
     )
+}
+
+#[tauri::command]
+pub(crate) fn game_target_validate(
+    path: String,
+    kind: TargetKind,
+) -> Result<GameTargetFacts, String> {
+    game_target::validate_target(
+        game_target::r2modman_profiles_root().as_deref(),
+        Path::new(&path),
+        kind,
+    )
+}
+
+#[tauri::command]
+pub(crate) fn game_target_clear(app: tauri::AppHandle) -> Result<GameModuleStatus, String> {
+    let config_dir = config_dir(&app)?;
+    game_target::forget_target(&config_dir)?;
+    Ok(current_status(&config_dir))
 }
 
 #[tauri::command]

@@ -9,8 +9,9 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use crate::game_module_assembly::{parse_version, sha256_hex, INSTALL_RECORD_FILE, MANIFEST_FILE};
 use crate::game_module_package::{ModulePackage, PackageSource};
 use crate::game_target::{
-    existing_directory, remembered_target, resolve_target, target_facts, GameTargetFacts,
-    ResolvedTarget, PLUGINS_DIRECTORY,
+    discover_profiles, existing_directory, remembered_target, resolve_target, target_facts,
+    DiscoveredProfile, GameTargetFacts, ProfileModule, ResolvedTarget, TargetKind,
+    PLUGINS_DIRECTORY,
 };
 
 pub const MODULE_DIRECTORY: &str = "adamantRunPlanner-Run_Planner";
@@ -475,13 +476,17 @@ fn missing_dependencies(
     missing
 }
 
+/// The planner owns a copy it installed that r2modman does not (or may not) manage.
+fn planner_owns(state: ModuleState, r2modman: R2modmanState) -> bool {
+    state == ModuleState::PlannerInstalled
+        && matches!(
+            r2modman,
+            R2modmanState::NotApplicable | R2modmanState::Unmanaged
+        )
+}
+
 fn consent_required(module: &InstalledModule, r2modman: &R2modmanFacts) -> bool {
-    module.state == ModuleState::Unrecognized
-        || (module.state == ModuleState::PlannerInstalled
-            && matches!(
-                r2modman.state,
-                R2modmanState::Managed | R2modmanState::Unreadable
-            ))
+    module.state != ModuleState::Absent && !planner_owns(module.state, r2modman.state)
 }
 
 fn is_current(module: &InstalledModule, package: &ModulePackage) -> bool {
@@ -489,6 +494,43 @@ fn is_current(module: &InstalledModule, package: &ModulePackage) -> bool {
         && module.matches_bundled
         && !module.modified
         && module.source == Some(package.source)
+}
+
+fn profile_module(profile: &Path) -> ProfileModule {
+    let Ok(target) = resolve_target(profile, TargetKind::Discovered) else {
+        return ProfileModule::None;
+    };
+    let module = match plugins_dir(&target) {
+        Ok(Some(plugins)) => module_dir(&plugins, &target.rom).ok().flatten(),
+        _ => None,
+    };
+    let Some(module) = module else {
+        return ProfileModule::None;
+    };
+    let state = if read_record(&module).is_some() {
+        ModuleState::PlannerInstalled
+    } else {
+        ModuleState::Unrecognized
+    };
+    let r2modman = r2modman_facts(&read_mods_yml(&target.root)).state;
+    if planner_owns(state, r2modman) {
+        ProfileModule::PlannerInstalled
+    } else if state == ModuleState::PlannerInstalled && r2modman == R2modmanState::Unreadable {
+        ProfileModule::ModListUnreadable
+    } else {
+        ProfileModule::Thunderstore
+    }
+}
+
+/// Discovered r2modman profiles with the Run Planner copy each one holds.
+pub fn discover(profiles_root: &Path) -> Result<Vec<DiscoveredProfile>, String> {
+    Ok(discover_profiles(profiles_root)?
+        .into_iter()
+        .map(|profile| DiscoveredProfile {
+            module: profile_module(Path::new(&profile.path)),
+            ..profile
+        })
+        .collect())
 }
 
 pub fn inspect(
@@ -536,11 +578,7 @@ pub fn inspect(
         },
         consent_required: consent_required(&module, &r2modman),
     };
-    let removable = module.state == ModuleState::PlannerInstalled
-        && !matches!(
-            r2modman.state,
-            R2modmanState::Managed | R2modmanState::Unreadable
-        );
+    let removable = planner_owns(module.state, r2modman.state);
     Ok(TargetInspection {
         module,
         r2modman,
@@ -1536,6 +1574,76 @@ mod tests {
             assert_eq!(remove(&target, &update).unwrap(), expected_remove);
             assert_eq!(snapshot(&module_path(&target)), before);
         }
+    }
+
+    #[test]
+    fn discovery_hints_name_the_run_planner_copy_each_profile_holds() {
+        let temporary = TemporaryDirectory::new("discovery-hints");
+        let profiles = temporary.0.join("profiles");
+        let package = package("1.2.0", "return 1");
+        let backup = temporary.0.join("backup");
+        target(&profiles.join("empty"), TargetKind::Discovered);
+        let planner = target(&profiles.join("planner"), TargetKind::Discovered);
+        install(&planner, &package, &backup, false, &mut NativeSwap).unwrap();
+        let thunderstore = target(&profiles.join("thunderstore"), TargetKind::Discovered);
+        write(&module_path(&thunderstore).join("main.lua"), "thunderstore");
+        let managed = target(&profiles.join("managed"), TargetKind::Discovered);
+        install(&managed, &package, &backup, false, &mut NativeSwap).unwrap();
+        write(
+            &managed.root.join(MODS_YML_FILE),
+            "- manifestVersion: 1\n  name: adamantRunPlanner-Run_Planner\n",
+        );
+        let unreadable = target(&profiles.join("unreadable"), TargetKind::Discovered);
+        install(&unreadable, &package, &backup, false, &mut NativeSwap).unwrap();
+        fs::write(unreadable.root.join(MODS_YML_FILE), [0xff, 0xfe]).unwrap();
+        let hints: Vec<(String, ProfileModule)> = discover(&profiles)
+            .unwrap()
+            .into_iter()
+            .map(|profile| (profile.label, profile.module))
+            .collect();
+        assert_eq!(
+            hints,
+            [
+                ("empty".to_owned(), ProfileModule::None),
+                ("managed".to_owned(), ProfileModule::Thunderstore),
+                ("planner".to_owned(), ProfileModule::PlannerInstalled),
+                ("thunderstore".to_owned(), ProfileModule::Thunderstore),
+                ("unreadable".to_owned(), ProfileModule::ModListUnreadable),
+            ]
+        );
+    }
+
+    #[test]
+    fn forgetting_the_target_clears_only_the_saved_setting() {
+        let temporary = TemporaryDirectory::new("forget");
+        let target = target(&temporary.0.join("profile"), TargetKind::Discovered);
+        let package = package("1.2.0", "return 1");
+        install(
+            &target,
+            &package,
+            &temporary.0.join("backup"),
+            false,
+            &mut NativeSwap,
+        )
+        .unwrap();
+        write(
+            &target
+                .rom
+                .join(CONFIG_DIRECTORY)
+                .join(MODULE_DIRECTORY)
+                .join("slot-1.runplanner.json"),
+            "plan",
+        );
+        let config = temporary.0.join("app-config");
+        remember_target(&config, &target).unwrap();
+        let before = snapshot(&target.root);
+        crate::game_target::forget_target(&config).unwrap();
+        crate::game_target::forget_target(&config).unwrap();
+        assert_eq!(snapshot(&target.root), before);
+        let (status, resolved) = status(&config, &package);
+        assert!(resolved.is_none());
+        assert!(status.target.is_none());
+        assert_eq!(status.publication_blockers[0].code, BlockerCode::NoTarget);
     }
 
     #[test]

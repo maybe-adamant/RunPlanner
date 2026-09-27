@@ -1,39 +1,63 @@
+import type { ContextualPickerModel } from '@planner/projections/contextual/contextualPicker';
 import type {
   GameModuleInstallResult,
   GameModuleRemoveResult,
   GameModuleStatus,
   GamePublicationBlocker,
+  GameTargetDiscovery,
   GameTargetInspection,
-  GameTargetKind,
+  ModpackLibState,
 } from '@planner/persistence/gameModuleHost';
 
-export type GameModuleTone = 'ok' | 'warning' | 'error' | 'info';
+export type GameModuleTone = 'ok' | 'warning' | 'error';
+export type GameModuleOverallState = 'ready' | 'needsSetup' | 'updateAvailable' | 'stranded';
 
-export interface GameModuleStatusRow {
-  readonly key: 'module' | 'modpackLib' | 'r2modman' | 'dependencies';
-  readonly label: string;
-  readonly value: string;
-  readonly tone: GameModuleTone;
+export interface GameLocationProduct {
+  readonly state: 'unset' | 'set';
+  readonly name: string | null;
+  readonly kindLabel: 'r2modman profile' | 'folder' | null;
+  readonly path: string | null;
+  readonly problem: string | null;
+  /** Switching away first asks what to do with the planner's install here. */
+  readonly confirmSwitchAway: boolean;
+  /** Whether that question may offer removal, with Rust's reason when it may not. */
+  readonly switchAwayRemoval: { readonly available: boolean; readonly reason: string | null };
 }
 
-export interface GameModuleNotice {
-  readonly key: 'modpackLib' | 'r2modmanManaged' | 'coordinator' | 'modified' | 'strandedInstall';
-  readonly tone: GameModuleTone;
+export interface GameModuleStepAction {
+  readonly label: 'Install' | 'Update';
+}
+
+export interface GameModuleStep {
+  readonly key: 'modpackLib' | 'dependencies' | 'r2modman' | 'stranded' | 'module';
   readonly text: string;
+  readonly found: string | null;
+  readonly tone: GameModuleTone;
+  readonly action: GameModuleStepAction | null;
+}
+
+export interface GameModuleDetail {
+  readonly key: 'path' | 'module' | 'modpackLib' | 'dependencies' | 'r2modman' | 'coordinator';
+  readonly label: string;
+  readonly value: string;
+}
+
+export interface GameModuleSectionProduct {
+  readonly state: GameModuleOverallState;
+  readonly tone: GameModuleTone;
+  readonly summary: string;
+  readonly steps: readonly GameModuleStep[];
+  /** Whether installing asks before replacing the existing folder, and what it states. */
+  readonly consent: { readonly required: boolean; readonly facts: readonly string[] };
+  readonly removeAvailable: boolean;
+  readonly details: readonly GameModuleDetail[];
+  readonly developmentInstallAvailable: boolean;
 }
 
 export interface GameModuleSettingsProduct {
-  readonly target: { readonly location: string; readonly kindLabel: string } | null;
-  readonly targetProblem: string | null;
-  readonly rows: readonly GameModuleStatusRow[];
-  readonly notices: readonly GameModuleNotice[];
-  readonly install: {
-    readonly available: boolean;
-    readonly consentRequired: boolean;
-    readonly consentFacts: readonly string[];
-  };
-  readonly remove: { readonly available: boolean; readonly unavailableReason: string | null };
-  readonly developmentInstallAvailable: boolean;
+  readonly location: GameLocationProduct;
+  /** Present only when a target is set and could be inspected. */
+  readonly module: GameModuleSectionProduct | null;
 }
 
 export interface GamePublicationReadiness {
@@ -42,178 +66,80 @@ export interface GamePublicationReadiness {
   readonly reasons: readonly string[];
 }
 
-const TARGET_KIND_LABELS: Record<GameTargetKind, string> = {
-  discovered: 'r2modman profile',
-  manual: 'Chosen folder',
-};
-
+const DEVELOPMENT_VERSION = 'development build';
 const R2MODMAN_MANAGED_WARNING =
   'r2modman manages this Run Planner folder. Disabling or uninstalling Run Planner in r2modman renames or deletes the planner’s files. Remove the Run Planner package in r2modman.';
+const UNREADABLE_MOD_LIST = 'r2modman’s mod list couldn’t be read';
 
-function majorOf(version: string | null): string {
-  return version?.split('.')[0] ?? '?';
+function majorOf(version: string): string {
+  return version.split('.')[0] ?? '?';
 }
 
-function requirementText(required: string): string {
-  return `${required} or newer ${majorOf(required)}.x`;
+function sentence(text: string, found: string | null): string {
+  return `${text}${found === null ? '' : ` (found ${found})`}.`;
+}
+
+function modpackLibStep(
+  state: Exclude<ModpackLibState, 'compatible'>,
+  found: string | null,
+  required: string,
+): { readonly text: string; readonly found: string | null } {
+  switch (state) {
+    case 'missing':
+      return { text: `Install ModpackLib ${required}+ in r2modman`, found: null };
+    case 'unreadable':
+      return {
+        text: `Reinstall or enable ModpackLib ${required}+ in r2modman`,
+        found: found ?? 'unreadable',
+      };
+    case 'older':
+      return { text: `Update ModpackLib to ${required}+ in r2modman`, found };
+    case 'incompatibleMajor':
+      return {
+        text: `Install a ModpackLib ${majorOf(required)}.x release (${required}+) in r2modman`,
+        found,
+      };
+  }
 }
 
 export function describePublicationBlocker(blocker: GamePublicationBlocker): string {
   const required = blocker.required ?? 'unknown';
   switch (blocker.code) {
     case 'noTarget':
-      return 'No game target is set. Locate the game module in Settings.';
+      return 'Set the game location in Settings.';
     case 'targetUnavailable':
-      return 'The game target is unavailable. Locate it again in Settings.';
+      return 'The game location is unavailable. Change it in Settings.';
     case 'moduleMissing':
-      return `The Run Planner game module is not installed (this planner needs ${required}). Install it in Settings.`;
+      return sentence('Install the game module in Settings', null);
     case 'moduleMismatch':
-      return `The installed game module (${blocker.found ?? 'unrecognized'}) does not match this planner (${required}). Update it in Settings.`;
-    case 'modpackLibMissing':
-      return `ModpackLib is not installed (requires ${requirementText(required)}). Install ModpackLib in r2modman.`;
-    case 'modpackLibUnreadable':
-      return `ModpackLib${blocker.found === null ? '' : ` ${blocker.found}`} could not be read (requires ${requirementText(required)}). Reinstall or enable ModpackLib in r2modman.`;
-    case 'modpackLibOlder':
-      return `ModpackLib ${blocker.found ?? 'unknown'} is older than required (${requirementText(required)}). Update ModpackLib in r2modman.`;
-    case 'modpackLibIncompatibleMajor':
-      return `ModpackLib ${blocker.found ?? 'unknown'} is not compatible (requires ${requirementText(required)}). Install a compatible ModpackLib in r2modman.`;
+      return sentence('Update the game module in Settings', blocker.found ?? 'unrecognized');
+    case 'modpackLibMissing': {
+      const step = modpackLibStep('missing', blocker.found, required);
+      return sentence(step.text, step.found);
+    }
+    case 'modpackLibUnreadable': {
+      const step = modpackLibStep('unreadable', blocker.found, required);
+      return sentence(step.text, step.found);
+    }
+    case 'modpackLibOlder': {
+      const step = modpackLibStep('older', blocker.found, required);
+      return sentence(step.text, step.found);
+    }
+    case 'modpackLibIncompatibleMajor': {
+      const step = modpackLibStep('incompatibleMajor', blocker.found, required);
+      return sentence(step.text, step.found);
+    }
   }
 }
 
-function moduleRow(
-  inspection: GameTargetInspection,
-  status: GameModuleStatus,
-): GameModuleStatusRow {
-  const { module } = inspection;
-  const bundled = `this planner ${status.bundledVersion}`;
-  if (module.state === 'absent') {
-    return {
-      key: 'module',
-      label: 'Game module',
-      value: `Not installed · ${bundled}`,
-      tone: 'warning',
-    };
-  }
-  const found = module.version ?? 'unknown version';
+function versions(status: GameModuleStatus, inspection: GameTargetInspection) {
+  const development = status.developmentInstallAvailable;
+  const bundled = development ? DEVELOPMENT_VERSION : status.bundledVersion;
   const installed =
-    module.state === 'unrecognized'
-      ? `Found ${found}, not installed by the planner`
-      : module.source === 'checkout'
-        ? `Installed ${found} from this checkout`
-        : `Installed ${found}`;
-  return {
-    key: 'module',
-    label: 'Game module',
-    value: `${installed}${module.modified ? ' (modified)' : ''} · ${bundled}`,
-    // The host decides publishability, which accepts an intact development checkout install.
-    tone: status.publicationBlockers.some(
-      (blocker) => blocker.code === 'moduleMismatch' || blocker.code === 'moduleMissing',
-    )
-      ? 'warning'
-      : 'ok',
-  };
-}
-
-function modpackLibRow(inspection: GameTargetInspection): GameModuleStatusRow {
-  const { modpackLib } = inspection;
-  const required = `requires ${requirementText(modpackLib.required)}`;
-  const found =
-    modpackLib.state === 'missing'
-      ? 'Not found'
-      : modpackLib.found === null
-        ? 'Found, unreadable'
-        : `Found ${modpackLib.found}`;
-  return {
-    key: 'modpackLib',
-    label: 'ModpackLib',
-    value: `${found} · ${required}`,
-    tone: modpackLib.state === 'compatible' ? 'ok' : 'error',
-  };
-}
-
-function r2modmanRow(inspection: GameTargetInspection): GameModuleStatusRow {
-  const { r2modman } = inspection;
-  switch (r2modman.state) {
-    case 'notApplicable':
-      return {
-        key: 'r2modman',
-        label: 'r2modman',
-        value: 'Not applicable (no mods.yml)',
-        tone: 'info',
-      };
-    case 'unmanaged':
-      return {
-        key: 'r2modman',
-        label: 'r2modman',
-        value: 'Does not manage the game module',
-        tone: 'ok',
-      };
-    case 'managed':
-      return {
-        key: 'r2modman',
-        label: 'r2modman',
-        value: `Manages the game module${r2modman.moduleEnabled === false ? ' (disabled)' : ''}`,
-        tone: 'warning',
-      };
-    case 'unreadable':
-      return {
-        key: 'r2modman',
-        label: 'r2modman',
-        value: 'r2modman’s mod list couldn’t be read',
-        tone: 'warning',
-      };
-  }
-}
-
-function dependencyRow(inspection: GameTargetInspection): GameModuleStatusRow {
-  const missing = inspection.missingDependencies;
-  return {
-    key: 'dependencies',
-    label: 'Dependencies',
-    value:
-      missing.length === 0
-        ? 'All found'
-        : `Missing: ${missing.map((dependency) => `${dependency.name} ${dependency.version}`).join(', ')}`,
-    tone: missing.length === 0 ? 'ok' : 'warning',
-  };
-}
-
-function notices(inspection: GameTargetInspection): readonly GameModuleNotice[] {
-  const result: GameModuleNotice[] = [];
-  if (inspection.modpackLib.state !== 'compatible') {
-    result.push({
-      key: 'modpackLib',
-      tone: 'error',
-      text: 'Install or update ModpackLib in r2modman, which also installs its dependencies. The planner never installs ModpackLib.',
-    });
-  }
-  if (inspection.r2modman.state === 'managed') {
-    result.push({ key: 'r2modmanManaged', tone: 'warning', text: R2MODMAN_MANAGED_WARNING });
-  }
-  if (inspection.module.state === 'plannerInstalled' && inspection.module.modified) {
-    result.push({
-      key: 'modified',
-      tone: 'warning',
-      text: 'The installed module’s files differ from its install record.',
-    });
-  }
-  if (inspection.strandedInstall !== null) {
-    result.push({
-      key: 'strandedInstall',
-      tone: 'error',
-      text: `A failed update left the previous game module at ReturnOfModding/${inspection.strandedInstall}. Install / Update Game Module again; the planner backs it up before cleaning it away.`,
-    });
-  }
-  if (inspection.coordinator.present) {
-    result.push({
-      key: 'coordinator',
-      tone: 'info',
-      text: inspection.coordinator.managed
-        ? 'The RunPlanner_Modpack coordinator is no longer needed. Remove it in r2modman.'
-        : 'The RunPlanner_Modpack coordinator is no longer needed. Remove its plugin folder.',
-    });
-  }
-  return result;
+    inspection.module.state === 'plannerInstalled' && development
+      ? DEVELOPMENT_VERSION
+      : (inspection.module.version ?? 'unknown version');
+  return { bundled, installed };
 }
 
 function consentFacts(inspection: GameTargetInspection): readonly string[] {
@@ -222,54 +148,255 @@ function consentFacts(inspection: GameTargetInspection): readonly string[] {
   ];
   if (inspection.r2modman.state === 'managed') facts.push(R2MODMAN_MANAGED_WARNING);
   else if (inspection.r2modman.state === 'unreadable')
-    facts.push('r2modman’s mod list couldn’t be read, so r2modman may manage this folder.');
+    facts.push(`${UNREADABLE_MOD_LIST}, so r2modman may manage this folder.`);
   else if (inspection.r2modman.state === 'unmanaged')
     facts.push('r2modman does not manage this folder.');
   facts.push('The replaced copy is backed up to the planner’s application data.');
   return facts;
 }
 
-function removeUnavailableReason(inspection: GameTargetInspection): string | null {
+function hasModuleBlocker(status: GameModuleStatus): boolean {
+  return status.publicationBlockers.some(
+    (blocker) => blocker.code === 'moduleMissing' || blocker.code === 'moduleMismatch',
+  );
+}
+
+function instructionSteps(
+  inspection: GameTargetInspection,
+  installStep: boolean,
+): GameModuleStep[] {
+  const steps: GameModuleStep[] = [];
+  const library = inspection.modpackLib;
+  if (library.state !== 'compatible') {
+    steps.push({
+      key: 'modpackLib',
+      ...modpackLibStep(library.state, library.found, library.required),
+      tone: 'error',
+      action: null,
+    });
+  }
+  if (inspection.missingDependencies.length > 0) {
+    steps.push({
+      key: 'dependencies',
+      text: `Install ${inspection.missingDependencies.map((dependency) => dependency.name).join(', ')} through r2modman or ModpackLib`,
+      found: null,
+      tone: 'warning',
+      action: null,
+    });
+  }
+  if (inspection.r2modman.state === 'managed' || inspection.r2modman.state === 'unreadable') {
+    steps.push({
+      key: 'r2modman',
+      text:
+        inspection.r2modman.state === 'managed'
+          ? 'Remove the Run Planner package in r2modman'
+          : `Check r2modman: ${UNREADABLE_MOD_LIST}, so it may manage this Run Planner folder`,
+      found: null,
+      tone: 'warning',
+      action: null,
+    });
+  }
+  if (inspection.strandedInstall !== null) {
+    steps.push({
+      key: 'stranded',
+      text: installStep
+        ? `A failed update left the previous module at ReturnOfModding/${inspection.strandedInstall}. Install again to recover; the planner backs it up first`
+        : `A failed update left an old module copy at ReturnOfModding/${inspection.strandedInstall}. The game does not load it; delete it once you no longer need it`,
+      found: null,
+      tone: 'error',
+      action: null,
+    });
+  }
+  return steps;
+}
+
+function moduleDetail(status: GameModuleStatus, inspection: GameTargetInspection): string {
+  const { module } = inspection;
+  const { bundled, installed } = versions(status, inspection);
+  const found =
+    module.state === 'absent'
+      ? 'Not installed'
+      : module.state === 'unrecognized'
+        ? `Found ${installed}, not installed by the planner`
+        : `Installed ${installed}${module.source === 'checkout' ? ' from this checkout' : ''}`;
+  return `${found}${module.modified ? ' (modified)' : ''} · this planner ${bundled}`;
+}
+
+function r2modmanDetail(inspection: GameTargetInspection): string {
+  switch (inspection.r2modman.state) {
+    case 'notApplicable':
+      return 'Not applicable (no mods.yml)';
+    case 'unmanaged':
+      return 'Does not manage the game module';
+    case 'managed':
+      return `Manages the game module${inspection.r2modman.moduleEnabled === false ? ' (disabled)' : ''}`;
+    case 'unreadable':
+      return UNREADABLE_MOD_LIST;
+  }
+}
+
+function details(
+  status: GameModuleStatus,
+  inspection: GameTargetInspection,
+): readonly GameModuleDetail[] {
+  const library = inspection.modpackLib;
+  const missing = inspection.missingDependencies;
+  const result: GameModuleDetail[] = [
+    { key: 'path', label: 'Path', value: status.target?.location ?? '' },
+    { key: 'module', label: 'Game module', value: moduleDetail(status, inspection) },
+    {
+      key: 'modpackLib',
+      label: 'ModpackLib',
+      value: `${library.state === 'missing' ? 'Not found' : `Found ${library.found ?? 'unreadable'}`} · requires ${library.required}+ (${majorOf(library.required)}.x)`,
+    },
+    {
+      key: 'dependencies',
+      label: 'Dependencies',
+      value:
+        missing.length === 0
+          ? 'All found'
+          : `Missing: ${missing.map((dependency) => `${dependency.name} ${dependency.version}`).join(', ')}`,
+    },
+    { key: 'r2modman', label: 'r2modman', value: r2modmanDetail(inspection) },
+  ];
+  if (inspection.coordinator.present) {
+    result.push({
+      key: 'coordinator',
+      label: 'Coordinator',
+      value: inspection.coordinator.managed
+        ? 'The RunPlanner_Modpack coordinator is no longer needed. Remove it in r2modman.'
+        : 'The RunPlanner_Modpack coordinator is no longer needed. Remove its plugin folder.',
+    });
+  }
+  return result;
+}
+
+function moduleSection(
+  status: GameModuleStatus,
+  inspection: GameTargetInspection,
+): GameModuleSectionProduct {
+  // The planner's own step follows Rust's install action, shown only while the module blocks publishing.
+  const action = inspection.install.action;
+  const moduleStep = action !== 'current' && hasModuleBlocker(status);
+  const steps = instructionSteps(inspection, moduleStep);
+  const instructed = steps.length > 0;
+  if (moduleStep) {
+    const label = action === 'install' ? 'Install' : 'Update';
+    steps.push({
+      key: 'module',
+      text: `${label} the game module`,
+      found:
+        status.publicationBlockers.find((blocker) => blocker.code === 'moduleMismatch')?.found ??
+        null,
+      tone: 'warning',
+      action: { label },
+    });
+  }
+  const { bundled, installed } = versions(status, inspection);
+  const state: GameModuleOverallState =
+    inspection.strandedInstall !== null
+      ? 'stranded'
+      : instructed || (moduleStep && action === 'install')
+        ? 'needsSetup'
+        : moduleStep
+          ? 'updateAvailable'
+          : 'ready';
+  const summary =
+    state === 'ready'
+      ? `Ready · module ${installed} · ModpackLib ${inspection.modpackLib.found ?? ''} · dependencies found`
+      : state === 'needsSetup'
+        ? 'Needs setup'
+        : state === 'stranded'
+          ? 'Stranded install'
+          : `Update available · this planner ${bundled}`;
+  const tone: GameModuleTone =
+    state === 'ready'
+      ? 'ok'
+      : state === 'stranded' || steps.some((step) => step.tone === 'error')
+        ? 'error'
+        : 'warning';
+  return Object.freeze({
+    state,
+    tone,
+    summary,
+    steps,
+    consent: { required: inspection.install.consentRequired, facts: consentFacts(inspection) },
+    removeAvailable: inspection.removable,
+    details: details(status, inspection),
+    developmentInstallAvailable: status.developmentInstallAvailable,
+  });
+}
+
+function removalRefusal(inspection: GameTargetInspection): string | null {
   if (inspection.removable) return null;
-  if (inspection.module.state === 'absent') return 'The game module is not installed.';
-  if (inspection.module.state === 'unrecognized')
-    return 'This module was not installed by the planner. Remove it with your mod manager.';
-  if (inspection.r2modman.state === 'unreadable')
-    return 'r2modman’s mod list couldn’t be read, so the planner cannot confirm r2modman does not manage this module.';
-  return 'r2modman manages this module. Remove it in r2modman.';
+  switch (inspection.r2modman.state) {
+    case 'managed':
+      return describeRemoveOutcome('managedByR2modman');
+    case 'unreadable':
+      return describeRemoveOutcome('r2modmanUnreadable');
+    case 'notApplicable':
+    case 'unmanaged':
+      return inspection.module.state === 'absent'
+        ? describeRemoveOutcome('absent')
+        : describeRemoveOutcome('notPlannerInstalled');
+  }
 }
 
 export function projectGameModuleSettings(status: GameModuleStatus): GameModuleSettingsProduct {
-  const inspection = status.inspection;
+  const { target, inspection } = status;
   return Object.freeze({
-    target:
-      status.target === null
-        ? null
-        : {
-            location: status.target.location,
-            kindLabel: TARGET_KIND_LABELS[status.target.kind],
-          },
-    targetProblem: status.targetProblem,
-    rows:
-      inspection === null
-        ? []
-        : [
-            moduleRow(inspection, status),
-            modpackLibRow(inspection),
-            r2modmanRow(inspection),
-            dependencyRow(inspection),
-          ],
-    notices: inspection === null ? [] : notices(inspection),
-    install: {
-      available: inspection !== null,
-      consentRequired: inspection?.install.consentRequired ?? false,
-      consentFacts: inspection === null ? [] : consentFacts(inspection),
-    },
-    remove: {
-      available: inspection?.removable ?? false,
-      unavailableReason: inspection === null ? null : removeUnavailableReason(inspection),
-    },
-    developmentInstallAvailable: status.developmentInstallAvailable && inspection !== null,
+    location: Object.freeze({
+      state: target === null ? 'unset' : 'set',
+      name: target?.label ?? null,
+      kindLabel:
+        target === null ? null : target.kind === 'discovered' ? 'r2modman profile' : 'folder',
+      path: target?.location ?? null,
+      problem: status.targetProblem,
+      confirmSwitchAway: inspection?.module.state === 'plannerInstalled',
+      switchAwayRemoval: {
+        available: inspection?.removable ?? false,
+        reason: inspection === null ? null : removalRefusal(inspection),
+      },
+    }),
+    module: target === null || inspection === null ? null : moduleSection(status, inspection),
+  });
+}
+
+const PROFILE_HINTS = {
+  none: undefined,
+  plannerInstalled: 'Run Planner installed',
+  modListUnreadable: 'Run Planner (mod list unreadable)',
+  thunderstore: 'Run Planner (Thunderstore)',
+} as const;
+
+/** Discovered profiles as picker choices whose value is the profile path. */
+export function projectGameProfileChoices(
+  discovery: GameTargetDiscovery,
+  currentPath: string | null,
+): ContextualPickerModel<string> {
+  return Object.freeze({
+    sections: [
+      {
+        key: 'profiles',
+        kind: 'category' as const,
+        label: 'r2modman profiles',
+        collapsible: false,
+        items: discovery.profiles.map((profile) => {
+          const hint = PROFILE_HINTS[profile.module];
+          return {
+            key: profile.path,
+            value: profile.path,
+            label: profile.label,
+            ariaLabel: hint === undefined ? profile.label : `${profile.label}, ${hint}`,
+            state: 'possible' as const,
+            selected: profile.path === currentPath,
+            disabled: false,
+            ...(hint === undefined ? {} : { status: hint }),
+            explanation: profile.location,
+          };
+        }),
+      },
+    ],
   });
 }
 
@@ -305,6 +432,6 @@ export function describeRemoveOutcome(outcome: GameModuleRemoveResult['outcome']
     case 'managedByR2modman':
       return 'r2modman manages this module. Remove it in r2modman.';
     case 'r2modmanUnreadable':
-      return 'r2modman’s mod list couldn’t be read, so the module was not removed.';
+      return `${UNREADABLE_MOD_LIST}, so the module was not removed.`;
   }
 }

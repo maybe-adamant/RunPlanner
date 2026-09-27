@@ -50,6 +50,18 @@ pub struct DiscoveredProfile {
     pub path: String,
     pub location: String,
     pub label: String,
+    pub module: ProfileModule,
+}
+
+/// Which Run Planner copy, if any, a discovered profile already holds.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub enum ProfileModule {
+    None,
+    PlannerInstalled,
+    /// A planner install record whose r2modman mod list could not be read.
+    ModListUnreadable,
+    Thunderstore,
 }
 
 #[derive(Clone, Debug, Serialize)]
@@ -172,6 +184,7 @@ pub fn discover_profiles(profiles_root: &Path) -> Result<Vec<DiscoveredProfile>,
                 path: facts.path,
                 location: facts.location,
                 label: facts.label,
+                module: ProfileModule::None,
             });
         }
     }
@@ -190,6 +203,22 @@ pub fn resolve_discovered(profiles_root: &Path, path: &Path) -> Result<ResolvedT
     Ok(target)
 }
 
+/// Resolves a candidate target by the same rules as setting it, without saving.
+pub fn validate_target(
+    profiles_root: Option<&Path>,
+    path: &Path,
+    kind: TargetKind,
+) -> Result<GameTargetFacts, String> {
+    let target = match kind {
+        TargetKind::Manual => resolve_target(path, kind)?,
+        TargetKind::Discovered => resolve_discovered(
+            profiles_root.ok_or("r2modman profile discovery is unavailable on this platform.")?,
+            path,
+        )?,
+    };
+    Ok(target_facts(&target.root, target.kind))
+}
+
 pub fn remember_target(config_dir: &Path, target: &ResolvedTarget) -> Result<(), String> {
     fs::create_dir_all(config_dir)
         .map_err(|error| format!("Could not save the game target: {error}"))?;
@@ -199,6 +228,15 @@ pub fn remember_target(config_dir: &Path, target: &ResolvedTarget) -> Result<(),
     })
     .map_err(|error| error.to_string())?;
     atomic_file::write(&config_dir.join(TARGET_FILE), &json, "game target")
+}
+
+/// Clears the saved target; files at the target are never touched.
+pub fn forget_target(config_dir: &Path) -> Result<(), String> {
+    match fs::remove_file(config_dir.join(TARGET_FILE)) {
+        Ok(()) => Ok(()),
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => Ok(()),
+        Err(error) => Err(format!("Could not forget the game target: {error}")),
+    }
 }
 
 pub fn remembered_target(config_dir: &Path) -> Result<Option<TargetRecord>, String> {
@@ -337,6 +375,49 @@ mod tests {
         );
         fs::write(config.join(TARGET_FILE), "not json").unwrap();
         assert!(remembered_target(&config).is_err());
+    }
+
+    #[test]
+    fn validation_resolves_candidates_without_saving_the_setting() {
+        let temporary = TemporaryDirectory::new("validate");
+        let profiles = temporary.0.join("profiles");
+        let dev = profile(&profiles, "h2-dev");
+        let game = profile(&temporary.0, "Ship");
+        let facts = validate_target(
+            None,
+            &game.join(RETURN_OF_MODDING_DIRECTORY),
+            TargetKind::Manual,
+        )
+        .unwrap();
+        assert_eq!(Path::new(&facts.path), game);
+        assert_eq!(facts.kind, TargetKind::Manual);
+        assert_eq!(
+            validate_target(Some(&profiles), &dev, TargetKind::Discovered)
+                .unwrap()
+                .label,
+            "h2-dev"
+        );
+        assert!(validate_target(Some(&profiles), &game, TargetKind::Discovered).is_err());
+        assert!(validate_target(None, &dev, TargetKind::Discovered).is_err());
+        assert!(validate_target(None, Path::new("relative"), TargetKind::Manual).is_err());
+        assert!(validate_target(None, &temporary.0.join("missing"), TargetKind::Manual).is_err());
+        assert!(validate_target(None, &temporary.0, TargetKind::Manual)
+            .unwrap_err()
+            .starts_with("No ReturnOfModding folder found"));
+        #[cfg(unix)]
+        {
+            let link = temporary.0.join("link");
+            std::os::unix::fs::symlink(&game, &link).unwrap();
+            assert!(validate_target(None, &link, TargetKind::Manual).is_err());
+        }
+        let names: Vec<_> = fs::read_dir(&temporary.0)
+            .unwrap()
+            .map(|entry| entry.unwrap().file_name().into_string().unwrap())
+            .collect();
+        assert!(
+            !names.iter().any(|name| name.ends_with(".json")),
+            "{names:?}"
+        );
     }
 
     #[test]

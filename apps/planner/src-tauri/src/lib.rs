@@ -9,6 +9,8 @@ pub fn run() {
             game_module_commands::game_target_discover,
             game_module_commands::game_target_use_discovered,
             game_module_commands::game_target_choose,
+            game_module_commands::game_target_clear,
+            game_module_commands::game_target_validate,
             game_module_commands::game_module_status,
             game_module_commands::game_module_install,
             game_module_commands::game_module_install_from_checkout,

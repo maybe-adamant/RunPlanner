@@ -4,26 +4,46 @@ import {
   describePublicationBlocker,
   describeRemoveOutcome,
   projectGameModuleSettings,
+  projectGameProfileChoices,
   projectGamePublicationReadiness,
 } from '@planner/projections/gameModuleSettings';
 import { gameModuleStatus } from '@planner-test/fixtures/gameModuleHost';
 
-const rowValues = (status: Parameters<typeof projectGameModuleSettings>[0]) =>
-  Object.fromEntries(projectGameModuleSettings(status).rows.map((row) => [row.key, row.value]));
+type StatusOverrides = NonNullable<Parameters<typeof gameModuleStatus>[0]>;
+
+const moduleOf = (overrides: StatusOverrides) => {
+  const module = projectGameModuleSettings(gameModuleStatus(overrides)).module;
+  if (module === null) throw new Error('module section is hidden');
+  return module;
+};
+const stepKeys = (overrides: StatusOverrides) => moduleOf(overrides).steps.map((step) => step.key);
 
 describe('game module settings projection', () => {
-  it('presents a matching planner install on an r2modman profile', () => {
+  it('collapses a ready target to one location line and one Ready status', () => {
     const product = projectGameModuleSettings(gameModuleStatus());
-    expect(product.target).toEqual({ location: '/profiles/h2-dev', kindLabel: 'r2modman profile' });
-    expect(product.rows.map((row) => [row.key, row.value, row.tone])).toEqual([
-      ['module', 'Installed 0.1.0 · this planner 0.1.0', 'ok'],
-      ['modpackLib', 'Found 4.1.0 · requires 4.1.0 or newer 4.x', 'ok'],
-      ['r2modman', 'Does not manage the game module', 'ok'],
-      ['dependencies', 'All found', 'ok'],
+    expect(product.location).toEqual({
+      state: 'set',
+      name: 'h2-dev',
+      kindLabel: 'r2modman profile',
+      path: '/profiles/h2-dev',
+      problem: null,
+      confirmSwitchAway: true,
+      switchAwayRemoval: { available: true, reason: null },
+    });
+    expect(product.module).toMatchObject({
+      state: 'ready',
+      tone: 'ok',
+      summary: 'Ready · module 0.1.0 · ModpackLib 4.1.0 · dependencies found',
+      steps: [],
+      removeAvailable: true,
+    });
+    expect(product.module?.details.map((detail) => detail.key)).toEqual([
+      'path',
+      'module',
+      'modpackLib',
+      'dependencies',
+      'r2modman',
     ]);
-    expect(product.notices).toEqual([]);
-    expect(product.remove).toEqual({ available: true, unavailableReason: null });
-    expect(product.install.consentRequired).toBe(false);
     expect(projectGamePublicationReadiness(gameModuleStatus())).toEqual({
       ready: true,
       targetLocation: '/profiles/h2-dev',
@@ -31,202 +51,255 @@ describe('game module settings projection', () => {
     });
   });
 
-  it('presents a manual target without mods.yml as not applicable', () => {
-    const status = gameModuleStatus({
-      target: {
-        path: '/games/Hades II/Ship',
-        location: '/games/Hades II/Ship',
-        label: 'Ship',
-        kind: 'manual',
-      },
+  it('hides the module section until a target is set and inspected', () => {
+    const unset = projectGameModuleSettings(
+      gameModuleStatus({
+        target: null,
+        inspection: null,
+        publicationBlockers: [{ code: 'noTarget', found: null, required: null }],
+      }),
+    );
+    expect(unset.location).toMatchObject({ state: 'unset', confirmSwitchAway: false });
+    expect(unset.module).toBeNull();
+    const unavailable = projectGameModuleSettings(
+      gameModuleStatus({ inspection: null, targetProblem: 'That folder is unavailable.' }),
+    );
+    expect(unavailable.location.problem).toBe('That folder is unavailable.');
+    expect(unavailable.module).toBeNull();
+  });
+
+  it('shows the development build instead of the stamped version', () => {
+    const module = moduleOf({ developmentInstallAvailable: true });
+    expect(module.summary).toBe(
+      'Ready · module development build · ModpackLib 4.1.0 · dependencies found',
+    );
+    expect(module.details.find((detail) => detail.key === 'module')?.value).toBe(
+      'Installed development build · this planner development build',
+    );
+    expect(module.developmentInstallAvailable).toBe(true);
+  });
+
+  it('orders every issue once as a step with its found value, ending with the planner action', () => {
+    const overrides: StatusOverrides = {
       inspection: {
-        r2modman: { state: 'notApplicable' },
+        module: { state: 'unrecognized', version: '0.10.0', source: null, matchesBundled: false },
+        modpackLib: { state: 'older', found: '4.0.1' },
+        missingDependencies: [
+          { name: 'LuaENVY-ENVY', version: '1.2.0' },
+          { name: 'SGG_Modding-ModUtil', version: '4.0.1' },
+        ],
+        r2modman: { state: 'managed', moduleEnabled: true },
+        strandedInstall: '.run-planner-replaced-01-2-3',
+        coordinator: { present: true, managed: true },
+        install: { action: 'update', consentRequired: true },
+        removable: false,
+      },
+      publicationBlockers: [
+        { code: 'moduleMismatch', found: '0.10.0', required: '0.1.0' },
+        { code: 'modpackLibOlder', found: '4.0.1', required: '4.1.0' },
+      ],
+    };
+    const module = moduleOf(overrides);
+    expect(module.state).toBe('stranded');
+    expect(module.tone).toBe('error');
+    expect(module.summary).toBe('Stranded install');
+    expect(module.steps.map((step) => [step.key, step.text, step.found, step.action])).toEqual([
+      ['modpackLib', 'Update ModpackLib to 4.1.0+ in r2modman', '4.0.1', null],
+      [
+        'dependencies',
+        'Install LuaENVY-ENVY, SGG_Modding-ModUtil through r2modman or ModpackLib',
+        null,
+        null,
+      ],
+      ['r2modman', 'Remove the Run Planner package in r2modman', null, null],
+      [
+        'stranded',
+        'A failed update left the previous module at ReturnOfModding/.run-planner-replaced-01-2-3. Install again to recover; the planner backs it up first',
+        null,
+        null,
+      ],
+      ['module', 'Update the game module', '0.10.0', { label: 'Update' }],
+    ]);
+    expect(module.steps.filter((step) => step.action !== null)).toHaveLength(1);
+    expect(module.consent.required).toBe(true);
+    expect(module.consent.facts[1]).toContain('renames or deletes the planner’s files');
+    expect(module.removeAvailable).toBe(false);
+    expect(module.details.find((detail) => detail.key === 'coordinator')?.value).toBe(
+      'The RunPlanner_Modpack coordinator is no longer needed. Remove it in r2modman.',
+    );
+    expect(module.steps.some((step) => step.text.includes('coordinator'))).toBe(false);
+  });
+
+  it('derives needs setup, update available and ready from the reported facts', () => {
+    const absent: StatusOverrides = {
+      inspection: {
         module: { state: 'absent', version: null, source: null, matchesBundled: false },
         install: { action: 'install' },
         removable: false,
       },
       publicationBlockers: [{ code: 'moduleMissing', found: null, required: '0.1.0' }],
-    });
-    const product = projectGameModuleSettings(status);
-    expect(product.target?.kindLabel).toBe('Chosen folder');
-    expect(rowValues(status)).toMatchObject({
-      module: 'Not installed · this planner 0.1.0',
-      r2modman: 'Not applicable (no mods.yml)',
-    });
-    expect(product.remove.unavailableReason).toBe('The game module is not installed.');
-    expect(projectGamePublicationReadiness(status).reasons).toEqual([
-      'The Run Planner game module is not installed (this planner needs 0.1.0). Install it in Settings.',
-    ]);
+    };
+    expect(moduleOf(absent)).toMatchObject({ state: 'needsSetup', tone: 'warning' });
+    expect(stepKeys(absent)).toEqual(['module']);
+    expect(moduleOf(absent).removeAvailable).toBe(false);
 
-    const installed = gameModuleStatus({
-      target: status.target,
-      inspection: { r2modman: { state: 'notApplicable' } },
-    });
-    expect(projectGameModuleSettings(installed).remove.available).toBe(true);
-    expect(projectGamePublicationReadiness(installed)).toEqual({
-      ready: true,
-      targetLocation: '/games/Hades II/Ship',
-      reasons: [],
-    });
-  });
-
-  it('presents an r2modman-managed Thunderstore copy with consent facts and notices', () => {
-    const status = gameModuleStatus({
+    const update: StatusOverrides = {
       inspection: {
-        module: { state: 'unrecognized', version: '0.10.0', source: null, matchesBundled: false },
-        r2modman: { state: 'managed', moduleEnabled: true },
-        coordinator: { present: true, managed: true },
-        install: { action: 'update', consentRequired: true },
-        removable: false,
+        module: { version: '0.0.9', matchesBundled: false },
+        install: { action: 'update' },
       },
+      publicationBlockers: [{ code: 'moduleMismatch', found: '0.0.9', required: '0.1.0' }],
+    };
+    expect(moduleOf(update)).toMatchObject({
+      state: 'updateAvailable',
+      summary: 'Update available · this planner 0.1.0',
     });
-    const product = projectGameModuleSettings(status);
-    expect(rowValues(status)).toMatchObject({
-      module: 'Found 0.10.0, not installed by the planner · this planner 0.1.0',
-      r2modman: 'Manages the game module',
+    expect(moduleOf(update).steps[0]?.action).toEqual({ label: 'Update' });
+
+    const library: StatusOverrides = {
+      inspection: { modpackLib: { state: 'missing', found: null } },
+      publicationBlockers: [{ code: 'modpackLibMissing', found: null, required: '4.1.0' }],
+    };
+    expect(moduleOf(library)).toMatchObject({ state: 'needsSetup', tone: 'error' });
+    expect(moduleOf(library).steps[0]?.text).toBe('Install ModpackLib 4.1.0+ in r2modman');
+
+    // An intact development checkout install is publishable, so it is not an update step.
+    const checkout = moduleOf({
+      developmentInstallAvailable: true,
+      inspection: { module: { source: 'checkout', matchesBundled: false } },
     });
-    expect(product.install.consentRequired).toBe(true);
-    expect(product.install.consentFacts[0]).toBe(
-      'An existing Run Planner folder (0.10.0) will be replaced.',
-    );
-    expect(product.install.consentFacts[1]).toContain('renames or deletes the planner’s files');
-    expect(product.notices.map((notice) => notice.key)).toEqual(['r2modmanManaged', 'coordinator']);
-    expect(product.remove.unavailableReason).toBe(
-      'This module was not installed by the planner. Remove it with your mod manager.',
-    );
+    expect(checkout.state).toBe('ready');
+    expect(checkout.steps).toEqual([]);
   });
 
-  it('presents ModpackLib states and missing dependencies with the r2modman instruction', () => {
-    for (const [state, found, value] of [
-      ['missing', null, 'Not found · requires 4.1.0 or newer 4.x'],
-      ['older', '4.0.1', 'Found 4.0.1 · requires 4.1.0 or newer 4.x'],
-      ['incompatibleMajor', '5.0.0', 'Found 5.0.0 · requires 4.1.0 or newer 4.x'],
-      ['unreadable', null, 'Found, unreadable · requires 4.1.0 or newer 4.x'],
-    ] as const) {
-      const status = gameModuleStatus({
-        inspection: {
-          modpackLib: { state, found },
-          missingDependencies: [{ name: 'LuaENVY-ENVY', version: '1.2.0' }],
-        },
-      });
-      const product = projectGameModuleSettings(status);
-      expect(rowValues(status)).toMatchObject({
-        modpackLib: value,
-        dependencies: 'Missing: LuaENVY-ENVY 1.2.0',
-      });
-      expect(product.notices[0]?.text).toContain('Install or update ModpackLib in r2modman');
-    }
-  });
-
-  it('describes each publication blocker with its found and required values', () => {
-    expect(
-      [
-        { code: 'noTarget', found: null, required: null },
-        { code: 'targetUnavailable', found: null, required: null },
-        { code: 'moduleMismatch', found: '0.10.0', required: '0.1.0' },
-        { code: 'modpackLibMissing', found: null, required: '4.1.0' },
-        { code: 'modpackLibUnreadable', found: null, required: '4.1.0' },
-        { code: 'modpackLibIncompatibleMajor', found: '5.0.0', required: '4.1.0' },
-      ].map((blocker) =>
-        describePublicationBlocker(blocker as Parameters<typeof describePublicationBlocker>[0]),
-      ),
-    ).toEqual([
-      'No game target is set. Locate the game module in Settings.',
-      'The game target is unavailable. Locate it again in Settings.',
-      'The installed game module (0.10.0) does not match this planner (0.1.0). Update it in Settings.',
-      'ModpackLib is not installed (requires 4.1.0 or newer 4.x). Install ModpackLib in r2modman.',
-      'ModpackLib could not be read (requires 4.1.0 or newer 4.x). Reinstall or enable ModpackLib in r2modman.',
-      'ModpackLib 5.0.0 is not compatible (requires 4.1.0 or newer 4.x). Install a compatible ModpackLib in r2modman.',
-    ]);
-  });
-
-  it('presents an unavailable target without inspection rows or actions', () => {
-    const status = gameModuleStatus({
-      inspection: null,
-      targetProblem: 'That folder is unavailable.',
-      publicationBlockers: [{ code: 'targetUnavailable', found: null, required: null }],
-    });
-    const product = projectGameModuleSettings(status);
-    expect(product.rows).toEqual([]);
-    expect(product.targetProblem).toBe('That folder is unavailable.');
-    expect(product.install.available).toBe(false);
-    expect(product.remove.available).toBe(false);
-    expect(projectGamePublicationReadiness(status).ready).toBe(false);
-  });
-  it('presents an unreadable mod list distinctly from r2modman management', () => {
-    const status = gameModuleStatus({
+  it('uses the unreadable mod list wording distinctly from r2modman management', () => {
+    const overrides: StatusOverrides = {
       inspection: {
         r2modman: { state: 'unreadable' },
         install: { action: 'update', consentRequired: true },
         removable: false,
       },
-    });
-    const product = projectGameModuleSettings(status);
-    expect(rowValues(status).r2modman).toBe('r2modman’s mod list couldn’t be read');
-    expect(product.install.consentFacts).toContain(
+    };
+    const module = moduleOf(overrides);
+    expect(module.steps.map((step) => step.text)).toEqual([
+      'Check r2modman: r2modman’s mod list couldn’t be read, so it may manage this Run Planner folder',
+    ]);
+    expect(module.consent.facts).toContain(
       'r2modman’s mod list couldn’t be read, so r2modman may manage this folder.',
     );
-    expect(product.notices.map((notice) => notice.key)).not.toContain('r2modmanManaged');
-    expect(product.remove.unavailableReason).toBe(
-      'r2modman’s mod list couldn’t be read, so the planner cannot confirm r2modman does not manage this module.',
+    expect(module.details.find((detail) => detail.key === 'r2modman')?.value).toBe(
+      'r2modman’s mod list couldn’t be read',
     );
     expect(describeRemoveOutcome('r2modmanUnreadable')).toBe(
       'r2modman’s mod list couldn’t be read, so the module was not removed.',
     );
-    expect(describeRemoveOutcome('managedByR2modman')).toBe(
-      'r2modman manages this module. Remove it in r2modman.',
-    );
   });
 
-  it('gives each unavailable removal its own reason', () => {
-    const reason = (
-      inspection: NonNullable<NonNullable<Parameters<typeof gameModuleStatus>[0]>['inspection']>,
-    ) => projectGameModuleSettings(gameModuleStatus({ inspection })).remove.unavailableReason;
-    expect(reason({})).toBeNull();
-    expect(
-      reason({ module: { state: 'absent', version: null, source: null }, removable: false }),
-    ).toBe('The game module is not installed.');
-    expect(reason({ module: { state: 'unrecognized' }, removable: false })).toBe(
-      'This module was not installed by the planner. Remove it with your mod manager.',
-    );
-    expect(reason({ r2modman: { state: 'managed' }, removable: false })).toBe(
-      'r2modman manages this module. Remove it in r2modman.',
-    );
-  });
-
-  it('presents a checkout install by the host publishability and flags modified files', () => {
-    const checkout = gameModuleStatus({
-      inspection: { module: { source: 'checkout', matchesBundled: false } },
-    });
-    expect(projectGameModuleSettings(checkout).rows[0]).toEqual({
-      key: 'module',
-      label: 'Game module',
-      value: 'Installed 0.1.0 from this checkout · this planner 0.1.0',
-      tone: 'ok',
-    });
-    const modified = gameModuleStatus({
-      inspection: { module: { source: 'checkout', matchesBundled: false, modified: true } },
+  it('keeps module source and modified state in details', () => {
+    const module = moduleOf({
+      inspection: {
+        module: { source: 'checkout', matchesBundled: false, modified: true },
+        install: { action: 'update' },
+      },
       publicationBlockers: [{ code: 'moduleMismatch', found: '0.1.0', required: '0.1.0' }],
     });
-    const product = projectGameModuleSettings(modified);
-    expect(product.rows[0]?.value).toBe(
+    expect(module.details.find((detail) => detail.key === 'module')?.value).toBe(
       'Installed 0.1.0 from this checkout (modified) · this planner 0.1.0',
     );
-    expect(product.rows[0]?.tone).toBe('warning');
-    expect(product.notices.map((notice) => notice.key)).toEqual(['modified']);
+    expect(module.state).toBe('updateAvailable');
   });
 
-  it('reports a stranded previous install after a failed restore', () => {
-    const status = gameModuleStatus({
-      inspection: {
-        module: { state: 'absent', version: null, source: null, matchesBundled: false },
-        strandedInstall: '.run-planner-replaced-01-2-3',
+  it('asks before switching away only from a planner install', () => {
+    for (const [state, expected] of [
+      ['plannerInstalled', true],
+      ['unrecognized', false],
+      ['absent', false],
+    ] as const) {
+      expect(
+        projectGameModuleSettings(gameModuleStatus({ inspection: { module: { state } } })).location
+          .confirmSwitchAway,
+      ).toBe(expected);
+    }
+  });
+
+  it('offers discovered profiles with their Run Planner hints', () => {
+    const model = projectGameProfileChoices(
+      {
+        supported: true,
+        profiles: [
+          { path: '/p/a', location: '/p/a', label: 'a', module: 'plannerInstalled' },
+          { path: '/p/b', location: '/p/b', label: 'b', module: 'thunderstore' },
+          { path: '/p/c', location: '/p/c', label: 'c', module: 'none' },
+          { path: '/p/d', location: '/p/d', label: 'd', module: 'modListUnreadable' },
+        ],
       },
+      '/p/b',
+    );
+    expect(
+      model.sections[0]?.items.map((item) => [item.label, item.status, item.selected]),
+    ).toEqual([
+      ['a', 'Run Planner installed', false],
+      ['b', 'Run Planner (Thunderstore)', true],
+      ['c', undefined, false],
+      ['d', 'Run Planner (mod list unreadable)', false],
+    ]);
+  });
+
+  it('reuses the step wording for publication blockers', () => {
+    expect(
+      [
+        { code: 'noTarget', found: null, required: null },
+        { code: 'targetUnavailable', found: null, required: null },
+        { code: 'moduleMissing', found: null, required: '0.1.0' },
+        { code: 'moduleMismatch', found: '0.10.0', required: '0.1.0' },
+        { code: 'modpackLibMissing', found: null, required: '4.1.0' },
+        { code: 'modpackLibUnreadable', found: null, required: '4.1.0' },
+        { code: 'modpackLibOlder', found: '4.0.1', required: '4.1.0' },
+        { code: 'modpackLibIncompatibleMajor', found: '5.0.0', required: '4.1.0' },
+      ].map((blocker) =>
+        describePublicationBlocker(blocker as Parameters<typeof describePublicationBlocker>[0]),
+      ),
+    ).toEqual([
+      'Set the game location in Settings.',
+      'The game location is unavailable. Change it in Settings.',
+      'Install the game module in Settings.',
+      'Update the game module in Settings (found 0.10.0).',
+      'Install ModpackLib 4.1.0+ in r2modman.',
+      'Reinstall or enable ModpackLib 4.1.0+ in r2modman (found unreadable).',
+      'Update ModpackLib to 4.1.0+ in r2modman (found 4.0.1).',
+      'Install a ModpackLib 4.x release (4.1.0+) in r2modman (found 5.0.0).',
+    ]);
+  });
+  it('words a stranded copy by whether an install step exists', () => {
+    const current = moduleOf({ inspection: { strandedInstall: '.run-planner-replaced-01' } });
+    expect(current.steps.map((step) => [step.key, step.text])).toEqual([
+      [
+        'stranded',
+        'A failed update left an old module copy at ReturnOfModding/.run-planner-replaced-01. The game does not load it; delete it once you no longer need it',
+      ],
+    ]);
+    expect(current.steps.every((step) => step.action === null)).toBe(true);
+  });
+
+  it('takes the install label and state from the host action', () => {
+    const install = moduleOf({
+      inspection: { install: { action: 'install' } },
+      publicationBlockers: [{ code: 'moduleMissing', found: null, required: '0.1.0' }],
     });
-    expect(projectGameModuleSettings(status).notices).toContainEqual({
-      key: 'strandedInstall',
-      tone: 'error',
-      text: 'A failed update left the previous game module at ReturnOfModding/.run-planner-replaced-01-2-3. Install / Update Game Module again; the planner backs it up before cleaning it away.',
+    expect(install.steps.at(-1)?.action).toEqual({ label: 'Install' });
+    expect(install.state).toBe('needsSetup');
+    expect(moduleOf({ inspection: { install: { action: 'current' } } }).steps).toEqual([]);
+  });
+
+  it('explains why switching away cannot offer removal', () => {
+    const reason = (inspection: NonNullable<StatusOverrides['inspection']>) =>
+      projectGameModuleSettings(gameModuleStatus({ inspection })).location.switchAwayRemoval;
+    expect(reason({ r2modman: { state: 'managed' }, removable: false })).toEqual({
+      available: false,
+      reason: 'r2modman manages this module. Remove it in r2modman.',
     });
+    expect(reason({ r2modman: { state: 'unreadable' }, removable: false }).reason).toBe(
+      'r2modman’s mod list couldn’t be read, so the module was not removed.',
+    );
   });
 });

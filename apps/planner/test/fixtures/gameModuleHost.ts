@@ -78,7 +78,14 @@ export function createFakeGameModuleHost(
     useDiscoveredTarget: vi.fn<GameModuleHost['useDiscoveredTarget']>(() =>
       Promise.resolve(status),
     ),
-    chooseTargetFolder: vi.fn<GameModuleHost['chooseTargetFolder']>(() => Promise.resolve(null)),
+    pickTargetFolder: vi.fn<GameModuleHost['pickTargetFolder']>(() => Promise.resolve(null)),
+    useChosenTarget: vi.fn<GameModuleHost['useChosenTarget']>(() => Promise.resolve(status)),
+    validateTarget: vi.fn<GameModuleHost['validateTarget']>((path, kind) =>
+      Promise.resolve({ path, location: path, label: path.split('/').at(-1) ?? path, kind }),
+    ),
+    forgetTarget: vi.fn<GameModuleHost['forgetTarget']>(() =>
+      Promise.resolve({ ...status, target: null, inspection: null }),
+    ),
     install: vi.fn<GameModuleHost['install']>(() =>
       Promise.resolve({ outcome: 'installed', status }),
     ),
