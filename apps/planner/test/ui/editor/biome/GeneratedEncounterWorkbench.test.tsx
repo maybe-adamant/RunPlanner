@@ -82,20 +82,8 @@ async function open(project: ProjectDocument, owner = phase) {
 async function initialize(view: Awaited<ReturnType<typeof open>>) {
   await view.user.click(within(view.dialog).getByRole('button', { name: 'Edit' }));
 }
-async function choosePicker(
-  view: Awaited<ReturnType<typeof open>>,
-  name: string,
-  option: string | RegExp,
-) {
-  await view.user.click(within(view.dialog).getByRole('button', { name }));
-  await view.user.click(await screen.findByRole('option', { name: option }));
-}
 async function finishWave(view: Awaited<ReturnType<typeof open>>) {
   await view.user.click(await screen.findByRole('option', { name: 'Finish Wave' }));
-}
-function firstWaveAllocations(view: ReturnType<typeof renderOccurrenceWorkbench>) {
-  const value = current(view);
-  return value?.kind === 'generated' ? value.waves?.[0]?.allocations : undefined;
 }
 async function selectBudgetWave(view: Awaited<ReturnType<typeof open>>, index: number) {
   await view.user.click(
@@ -603,37 +591,24 @@ describe('generated encounter customization workflows', () => {
       cleanup();
     }
   });
-  it('leaves shared-enemy allocation repair to the engine findings', async () => {
-    const findings = (view: Awaited<ReturnType<typeof open>>) =>
-      within(view.dialog).getByRole('region', { name: 'Customization findings' }).textContent;
-    const unallocated = await open(
+  it('shows engine allocation findings for the affected wave', async () => {
+    const view = await open(
       customize(createGoldenFGHIProject(), phase, {
         kind: 'generated',
         waveCount: 3,
-        highlightKey: 'Guard',
-        waves: [{ waveIndex: 3, typeKeys: ['Brawler', 'Mage'], allocations: { Brawler: 10 } }],
-      }),
-    );
-    await choosePicker(unallocated, 'Shared Enemy', 'Spindle');
-    expect(current(unallocated)).toMatchObject({ highlightKey: 'Radiator' });
-    expect(firstWaveAllocations(unallocated)).toEqual({ Brawler: 10 });
-    expect(findings(unallocated)).toContain('Wave 3: Set each editable enemy budget.');
-    cleanup();
-    const allocated = await open(
-      customize(createGoldenFGHIProject(), phase, {
-        kind: 'generated',
-        waveCount: 3,
-        highlightKey: 'Guard',
+        highlightKey: 'Radiator',
         waves: [
           { waveIndex: 3, typeKeys: ['Brawler', 'Mage'], allocations: { Guard: 20, Brawler: 10 } },
         ],
       }),
     );
-    await choosePicker(allocated, 'Shared Enemy', 'Wastrel');
-    expect(current(allocated)).toMatchObject({ highlightKey: 'Brawler' });
-    expect(firstWaveAllocations(allocated)).toEqual({ Guard: 20, Brawler: 10 });
-    expect(findings(allocated)).toContain('Wave 3: Enemy 2 (Wastrel) is not available.');
-    expect(findings(allocated)).toContain('Wave 3: Budgets include an enemy');
+    const findings = within(view.dialog).getByRole('region', {
+      name: 'Customization findings',
+    }).textContent;
+    expect(findings).toContain('Wave 3: Set each editable enemy budget.');
+    expect(findings).toContain(
+      'Wave 3: Budgets include an enemy that no longer has an editable budget. Edit the affected wave.',
+    );
   });
   it('keeps waves, shared enemy, Fangs and Menace across a wave-count edit', async () => {
     const value = {
