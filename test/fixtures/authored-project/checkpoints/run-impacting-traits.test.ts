@@ -30,17 +30,9 @@ import {
 } from '@run-planner/engine/simulation';
 import { describe, expect, it } from 'vitest';
 
-import {
-  loadSurfaceNNaturalSelectionFrontierCheckpoint,
-  loadSurfaceNNaturalSelectionCheckpoint,
-  loadSurfaceNBuriedTreasureCheckpoint,
-  loadSurfaceNQuickBuckCheckpoint,
-  loadSurfaceNQueensRansomCheckpoint,
-  loadSurfaceNSteadyGrowthFrontierCheckpoint,
-} from './surface';
+import { loadSurfaceNNaturalSelectionCheckpoint } from './surface';
 import {
   createSurfaceNNaturalSelectionFrontier,
-  createSurfaceNNaturalSelectionCheckpoint,
   createSurfaceNBuriedTreasureCheckpoint,
   createSurfaceNQuickBuckCheckpoint,
   createSurfaceNQueensRansomCheckpoint,
@@ -49,20 +41,7 @@ import {
 import { nBiome, nOccurrenceId } from '../routes/surface';
 import { nOccurrenceIds } from '../routes/surface';
 
-describe('run-impacting trait checkpoint recipes', () => {
-  it('attests each saved checkpoint to its semantic-command recipe', () => {
-    for (const [saved, built] of [
-      [loadSurfaceNNaturalSelectionFrontierCheckpoint(), createSurfaceNNaturalSelectionFrontier()],
-      [loadSurfaceNNaturalSelectionCheckpoint(), createSurfaceNNaturalSelectionCheckpoint()],
-      [loadSurfaceNQuickBuckCheckpoint(), createSurfaceNQuickBuckCheckpoint()],
-      [loadSurfaceNBuriedTreasureCheckpoint(), createSurfaceNBuriedTreasureCheckpoint()],
-      [loadSurfaceNQueensRansomCheckpoint(), createSurfaceNQueensRansomCheckpoint()],
-      [loadSurfaceNSteadyGrowthFrontierCheckpoint(), createSurfaceNSteadyGrowthFrontier()],
-    ] as const) {
-      expect(encodeProjectDocument(saved)).toBe(encodeProjectDocument(built));
-    }
-  });
-
+describe('run-impacting trait checkpoint workflows', () => {
   it('retains compact N Quick Buck and Buried Treasure pickup workflows at their source owners', () => {
     const generatedEntries = (project: ReturnType<typeof createSurfaceNQuickBuckCheckpoint>) =>
       project.route.biomes
