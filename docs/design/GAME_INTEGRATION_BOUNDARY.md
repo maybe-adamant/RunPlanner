@@ -84,7 +84,7 @@ Status is reported by the host and presented by the application:
 
 The planner reports ModpackLib and dependencies but never installs, updates or
 removes them, and never edits `mods.yml`. Users install ModpackLib through
-r2modman, which brings its dependency chain.
+r2modman, which brings its dependency chain. The ModpackLib step and publish blocker link to its Thunderstore page, a URL the host owns and adds as the only non-release entry in its allowlist of pages it opens in the browser.
 
 **Install** or **Update** operates only on the established target and
 does nothing when the installed files already match this build. A folder the

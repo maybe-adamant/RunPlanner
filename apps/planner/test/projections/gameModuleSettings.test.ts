@@ -161,6 +161,22 @@ describe('game module settings projection', () => {
       publicationBlockers: [{ code: 'modpackLibMissing', found: null, required: '4.1.0' }],
     };
     expect(moduleOf(library)).toMatchObject({ state: 'needsSetup', tone: 'error' });
+    expect(moduleOf(library).steps[0]?.link).toEqual({
+      url: 'https://thunderstore.io/c/hades-ii/p/adamant/ModpackLib/',
+      label: 'Thunderstore page',
+      accessibleName: 'Open ModpackLib’s Thunderstore page in your browser',
+    });
+    expect(
+      projectGamePublicationReadiness(gameModuleStatus(library)).reasons.map((reason) => [
+        reason.text,
+        reason.link?.url,
+      ]),
+    ).toEqual([
+      [
+        'Install ModpackLib 4.1.0+ in r2modman.',
+        'https://thunderstore.io/c/hades-ii/p/adamant/ModpackLib/',
+      ],
+    ]);
     expect(moduleOf(library).steps[0]?.text).toBe('Install ModpackLib 4.1.0+ in r2modman');
 
     // An intact development checkout install is publishable, so it is not an update step.

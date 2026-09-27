@@ -6,6 +6,7 @@ use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::{SystemTime, UNIX_EPOCH};
 
+use crate::external_url::MODPACKLIB_PAGE_URL;
 use crate::game_module_assembly::{parse_version, sha256_hex, INSTALL_RECORD_FILE, MANIFEST_FILE};
 use crate::game_module_package::{ModulePackage, PackageSource};
 use crate::game_target::{
@@ -81,6 +82,8 @@ pub struct ModpackLibFacts {
     pub state: ModpackLibState,
     pub found: Option<String>,
     pub required: String,
+    /// Where users get ModpackLib: its Thunderstore store page.
+    pub page_url: &'static str,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize)]
@@ -413,6 +416,7 @@ fn modpack_lib_facts(plugins: Option<&Path>, required: String) -> (ModpackLibFac
                 state: ModpackLibState::Missing,
                 found: None,
                 required,
+                page_url: MODPACKLIB_PAGE_URL,
             },
             Vec::new(),
         );
@@ -424,6 +428,7 @@ fn modpack_lib_facts(plugins: Option<&Path>, required: String) -> (ModpackLibFac
                 state: ModpackLibState::Unreadable,
                 found: None,
                 required,
+                page_url: MODPACKLIB_PAGE_URL,
             },
             Vec::new(),
         );
@@ -440,6 +445,7 @@ fn modpack_lib_facts(plugins: Option<&Path>, required: String) -> (ModpackLibFac
             state,
             found: Some(manifest.version_number),
             required,
+            page_url: MODPACKLIB_PAGE_URL,
         },
         manifest.dependencies,
     )

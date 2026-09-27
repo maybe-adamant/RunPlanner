@@ -26,7 +26,12 @@ export function gameModuleStatus(
       modified: false,
     },
     r2modman: { state: 'unmanaged', moduleEnabled: null },
-    modpackLib: { state: 'compatible', found: '4.1.0', required: '4.1.0' },
+    modpackLib: {
+      state: 'compatible',
+      found: '4.1.0',
+      required: '4.1.0',
+      pageUrl: 'https://thunderstore.io/c/hades-ii/p/adamant/ModpackLib/',
+    },
     missingDependencies: [],
     coordinator: { present: false, managed: false },
     install: { action: 'current', consentRequired: false },
@@ -72,6 +77,7 @@ export function createFakeGameModuleHost(
   const published: { slotNumber: number; json: string }[] = [];
   const host = {
     status: vi.fn<GameModuleHost['status']>(() => Promise.resolve(status)),
+    openExternalPage: vi.fn<GameModuleHost['openExternalPage']>(() => Promise.resolve()),
     discoverTargets: vi.fn<GameModuleHost['discoverTargets']>(() =>
       Promise.resolve({ supported: true, profiles: [] }),
     ),

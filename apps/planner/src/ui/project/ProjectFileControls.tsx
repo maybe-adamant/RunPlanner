@@ -19,6 +19,7 @@ import {
 } from '@planner/projections/gameModuleSettings';
 import { selectProfileSession, selectProfileStatus, useAppSelector } from '@planner/state/store';
 import { ActionIcon } from '../controls/ActionIcon';
+import { ExternalPageLink } from '../controls/ExternalPageLink';
 import { DreamItineraryDialog } from './DreamItineraryDialog';
 import { ProjectFileFeedback } from './ProjectFileFeedback';
 
@@ -27,6 +28,7 @@ function GamePublicationDialog({
   pending,
   selectedSlot,
   onCancel,
+  onOpenPage,
   onOpenSettings,
   onPublish,
   onSlotChange,
@@ -36,6 +38,7 @@ function GamePublicationDialog({
   readonly pending: boolean;
   readonly selectedSlot: GamePlanSlotNumber | '';
   readonly onCancel: () => void;
+  readonly onOpenPage: (url: string) => void;
   readonly onOpenSettings?: (() => void) | undefined;
   readonly onPublish: () => void;
   readonly onSlotChange: (slot: GamePlanSlotNumber | '') => void;
@@ -92,7 +95,15 @@ function GamePublicationDialog({
         {readiness.ready ? null : (
           <ul aria-label="Publication blocked" className="game-publication-reasons" role="alert">
             {readiness.reasons.map((reason) => (
-              <li key={reason}>{reason}</li>
+              <li key={reason.text}>
+                {reason.text}
+                {reason.link === null ? null : (
+                  <>
+                    {' — '}
+                    <ExternalPageLink link={reason.link} onOpen={onOpenPage} />
+                  </>
+                )}
+              </li>
             ))}
           </ul>
         )}
@@ -228,7 +239,10 @@ export function ProjectFileControls({
           ready: false,
           targetLocation: null,
           reasons: [
-            `Could not inspect the game target: ${error instanceof Error ? error.message : String(error)}`,
+            {
+              text: `Could not inspect the game target: ${error instanceof Error ? error.message : String(error)}`,
+              link: null,
+            },
           ],
         };
       }
@@ -490,6 +504,11 @@ export function ProjectFileControls({
         <GamePublicationDialog
           readiness={gameReadiness}
           onCancel={closeGamePublication}
+          onOpenPage={(url) => {
+            operations.openGamePage(url).catch((error: unknown) => {
+              setGamePublicationError(error instanceof Error ? error.message : String(error));
+            });
+          }}
           onOpenSettings={
             onOpenSettings === undefined
               ? undefined

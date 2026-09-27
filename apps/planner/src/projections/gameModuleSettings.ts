@@ -28,12 +28,19 @@ export interface GameModuleStepAction {
   readonly label: 'Install' | 'Update';
 }
 
+export interface GameModuleLink {
+  readonly url: string;
+  readonly label: string;
+  readonly accessibleName: string;
+}
+
 export interface GameModuleStep {
   readonly key: 'modpackLib' | 'dependencies' | 'r2modman' | 'stranded' | 'module';
   readonly text: string;
   readonly found: string | null;
   readonly tone: GameModuleTone;
   readonly action: GameModuleStepAction | null;
+  readonly link: GameModuleLink | null;
 }
 
 export interface GameModuleDetail {
@@ -63,10 +70,18 @@ export interface GameModuleSettingsProduct {
 export interface GamePublicationReadiness {
   readonly ready: boolean;
   readonly targetLocation: string | null;
-  readonly reasons: readonly string[];
+  readonly reasons: readonly { readonly text: string; readonly link: GameModuleLink | null }[];
 }
 
 const DEVELOPMENT_VERSION = 'development build';
+
+function modpackLibLink(url: string): GameModuleLink {
+  return {
+    url,
+    label: 'Thunderstore page',
+    accessibleName: 'Open ModpackLib’s Thunderstore page in your browser',
+  };
+}
 const R2MODMAN_MANAGED_WARNING =
   'r2modman manages this Run Planner folder. Disabling or uninstalling Run Planner in r2modman renames or deletes the planner’s files. Remove the Run Planner package in r2modman.';
 const UNREADABLE_MOD_LIST = 'r2modman’s mod list couldn’t be read';
@@ -173,6 +188,7 @@ function instructionSteps(
       ...modpackLibStep(library.state, library.found, library.required),
       tone: 'error',
       action: null,
+      link: modpackLibLink(library.pageUrl),
     });
   }
   if (inspection.missingDependencies.length > 0) {
@@ -182,6 +198,7 @@ function instructionSteps(
       found: null,
       tone: 'warning',
       action: null,
+      link: null,
     });
   }
   if (inspection.r2modman.state === 'managed' || inspection.r2modman.state === 'unreadable') {
@@ -194,6 +211,7 @@ function instructionSteps(
       found: null,
       tone: 'warning',
       action: null,
+      link: null,
     });
   }
   if (inspection.strandedInstall !== null) {
@@ -205,6 +223,7 @@ function instructionSteps(
       found: null,
       tone: 'error',
       action: null,
+      link: null,
     });
   }
   return steps;
@@ -290,6 +309,7 @@ function moduleSection(
         null,
       tone: 'warning',
       action: { label },
+      link: null,
     });
   }
   const { bundled, installed } = versions(status, inspection);
@@ -406,7 +426,13 @@ export function projectGamePublicationReadiness(
   return Object.freeze({
     ready: status.publicationBlockers.length === 0,
     targetLocation: status.target?.location ?? null,
-    reasons: status.publicationBlockers.map(describePublicationBlocker),
+    reasons: status.publicationBlockers.map((blocker) => ({
+      text: describePublicationBlocker(blocker),
+      link:
+        blocker.code.startsWith('modpackLib') && status.inspection !== null
+          ? modpackLibLink(status.inspection.modpackLib.pageUrl)
+          : null,
+    })),
   });
 }
 

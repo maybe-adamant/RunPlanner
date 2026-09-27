@@ -55,6 +55,7 @@ export interface ProjectOperations {
   readonly gamePlanAvailable: boolean;
   readonly saveAsAvailable: boolean;
   inspectGamePublication(): Promise<GameModuleStatus>;
+  openGamePage(url: string): Promise<void>;
   publishGame(slotNumber: GamePlanSlotNumber): Promise<ProjectOperationResult>;
   saveProfile(): Promise<ProjectOperationResult>;
   saveProfileAs(): Promise<ProjectOperationResult>;
@@ -185,6 +186,12 @@ export function createProjectOperations(
         throw new Error('Publish to Game is available only in the desktop application.');
       }
       return options.gamePlanPublisher.status();
+    },
+    async openGamePage(url: string): Promise<void> {
+      if (options.gamePlanPublisher === undefined) {
+        throw new Error('Opening game pages is available only in the desktop application.');
+      }
+      await options.gamePlanPublisher.openExternalPage(url);
     },
     async publishGame(slotNumber: GamePlanSlotNumber): Promise<ProjectOperationResult> {
       try {

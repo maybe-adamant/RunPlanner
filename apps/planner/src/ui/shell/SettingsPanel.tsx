@@ -14,6 +14,7 @@ import {
   type GameModuleSectionProduct,
 } from '@planner/projections/gameModuleSettings';
 import { ContextualPicker } from '../controls/ContextualPicker';
+import { ExternalPageLink } from '../controls/ExternalPageLink';
 
 function ModalDialog({
   children,
@@ -304,9 +305,11 @@ function ModuleSection({
   module,
   onCheckoutInstall,
   onInstall,
+  onOpenPage,
   onRemove,
   pending,
 }: {
+  readonly onOpenPage: (url: string) => void;
   readonly feedback: Feedback | null;
   readonly module: GameModuleSectionProduct;
   readonly onCheckoutInstall: () => void;
@@ -334,6 +337,12 @@ function ModuleSection({
                 {step.text}
                 {step.found === null ? null : (
                   <span className="settings-step-found"> (found {step.found})</span>
+                )}
+                {step.link === null ? null : (
+                  <>
+                    {' — '}
+                    <ExternalPageLink link={step.link} onOpen={onOpenPage} />
+                  </>
                 )}
               </span>
               {step.action === null ? null : (
@@ -576,6 +585,11 @@ function GameSettings({ host }: { readonly host: GameModuleHost }) {
           module={product.module}
           onCheckoutInstall={() => requestInstall(true)}
           onInstall={() => requestInstall(false)}
+          onOpenPage={(url) => {
+            host.openExternalPage(url).catch((error: unknown) => {
+              setFeedback({ tone: 'alert', text: errorText(error) });
+            });
+          }}
           onRemove={() => setConfirmation('remove')}
           pending={pending}
         />
