@@ -11,6 +11,7 @@ import {
   createExitDecisionAddress,
   createExitSelectionAddress,
   createFigurineArcanaAddress,
+  createGorgonPhaseAddress,
   createIncomingRewardAddress,
   createJudgmentArcanaAddress,
   createLevelResolutionAddress,
@@ -33,7 +34,11 @@ import {
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
 import type { ResolvedRewardOffer } from '@run-planner/engine/reward-kernel';
-import { authorLegalTraitOffers, replaceTestShopOfferActions } from '../shared';
+import {
+  authorLegalTraitOffers,
+  replaceTestRoomActionOrder,
+  replaceTestShopOfferActions,
+} from '../shared';
 import { authorTestArtificerReplacement } from '../room-actions';
 import {
   loadUnderworldFGCheckpoint,
@@ -923,6 +928,57 @@ export function underworldAutomaticBossProject(): ProjectDocument {
     ),
     arcanaKeys: gJudgmentKeys,
   });
+}
+
+/** Complete F/G route with its first legal Fig Leaf Encounter skip selected. */
+export function underworldFigLeafSkipProject(): ProjectDocument {
+  const phase = createEncounterPhaseAddress(
+    goldenFBiome,
+    { kind: 'occurrence', occurrenceId: goldenFOccurrenceId(2, 1) },
+    'Encounter',
+  );
+  const project = applyProjectCommand(createCompleteFGProject(), catalog, {
+    kind: 'ReplaceStartingKeepsake',
+    selection: createRouteStartKeepsakeSelectionAddress('Underworld'),
+    keepsakeKey: 'SkipEncounterKeepsake',
+  });
+  return applyProjectCommand(project, catalog, {
+    kind: 'ReplaceFigLeafSkip',
+    phase,
+    value: true,
+  });
+}
+
+/** Complete F/G route with a reached Gorgon Athena child at the first G combat. */
+export function underworldGorgonAthenaProject(): ProjectDocument {
+  const occurrenceId = goldenGOccurrenceId(1, 1);
+  const phase = createEncounterPhaseAddress(
+    goldenGBiome,
+    { kind: 'occurrence', occurrenceId },
+    'Encounter',
+  );
+  let project = applyProjectCommand(createCompleteFGProject(), catalog, {
+    kind: 'ReplaceStartingKeepsake',
+    selection: createRouteStartKeepsakeSelectionAddress('Underworld'),
+    keepsakeKey: 'AthenaEncounterKeepsake',
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceGorgonDeathDefianceCondition',
+    phase,
+    value: true,
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceGorgonAthenaOffer',
+    trait: createTraitOfferAddress(createGorgonPhaseAddress(phase), 'gorgonAthena'),
+    value: {
+      traitKeys: ['InvulnerabilityDashBoon', 'RetaliateInvulnerabilityBoon', 'FocusLastStandBoon'],
+      selectedOptionKey: 'option1',
+    },
+  });
+  return replaceTestRoomActionOrder(project, catalog, goldenGBiome, occurrenceId, [
+    { kind: 'interactIncomingReward', producerPoint: 'roomRewardPickup', acquisitionRole: 'self' },
+    { kind: 'interactGorgon', phaseKey: 'Encounter' },
+  ]);
 }
 
 /** Short F/G witness: the F Postboss Pool sells one of its realized traits. */
