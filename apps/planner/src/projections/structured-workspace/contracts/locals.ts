@@ -103,6 +103,8 @@ export interface WorkspaceEncounterCustomizationInteraction {
   readonly generatedAssessment?: WorkspaceGeneratedEncounterAssessment;
   /** Lazily requests the engine-built complete Customize result for this exact reached phase. */
   readonly initializeGenerated?: () => AuthoredGeneratedEncounterCustomization | undefined;
+  /** Complete generated-composition edits built from the current authored value. */
+  readonly generatedEdits?: WorkspaceGeneratedEncounterEdits;
   /** Contextual generated-highlight domain for the exact active customization. */
   readonly generatedHighlightPicker?: ContextualPickerModel<string>;
   /**
@@ -122,6 +124,40 @@ export interface WorkspaceEncounterCustomizationInteraction {
   readonly infiniteRosterDraftFor?: (typeKeys: readonly string[]) => WorkspaceInfiniteRosterDraft;
   /** Exact-context support for the retained roster; absent when none is authored or reached. */
   readonly infiniteRosterSupported?: boolean;
+}
+
+type WorkspaceEncounterCustomizationIntent = WorkspaceCommandIntent<
+  Extract<ProjectCommand, { readonly kind: 'ReplaceEncounterCustomization' }>
+>;
+
+export interface WorkspaceGeneratedEncounterEdits {
+  /** `sampledBudgetKeys` is the finished wave draft's engine product. */
+  readonly replaceWaveEnemies: (
+    waveIndex: number,
+    typeKeys: readonly string[],
+    sampledBudgetKeys: readonly string[],
+  ) => WorkspaceEncounterCustomizationIntent;
+  readonly setSharedEnemy: (highlightKey: string) => WorkspaceEncounterCustomizationIntent;
+  readonly setWaveCount: (waveCount: number) => WorkspaceEncounterCustomizationIntent;
+  readonly setBaseRoll: (baseRoll: number) => WorkspaceEncounterCustomizationIntent;
+  readonly setAllocation: (
+    waveIndex: number,
+    key: string,
+    allocation: number,
+  ) => WorkspaceEncounterCustomizationIntent;
+  readonly removeLastEnemy: (waveIndex: number) => WorkspaceEncounterCustomizationIntent;
+  readonly setFangsTarget: (typeKey: string) => WorkspaceEncounterCustomizationIntent;
+  readonly setFangsPerks: (perkKeys: readonly string[]) => WorkspaceEncounterCustomizationIntent;
+  readonly setMenaceTarget: (
+    waveIndex: number,
+    sourceKey: string,
+    targetKey: string,
+  ) => WorkspaceEncounterCustomizationIntent;
+  readonly setMenaceCount: (
+    waveIndex: number,
+    sourceKey: string,
+    count: number,
+  ) => WorkspaceEncounterCustomizationIntent;
 }
 
 export type WorkspaceInfiniteRosterDraftChoice =

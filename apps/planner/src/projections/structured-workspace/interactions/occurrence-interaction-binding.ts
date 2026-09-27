@@ -75,6 +75,7 @@ import {
   projectGeneratedEncounterWaveDraft,
   projectGeneratedFangsDraft,
 } from './generated-encounter-projection';
+import { bindGeneratedEncounterEdits } from './generated-encounter-edits';
 import { projectInfiniteRosterDraft } from './infinite-roster-projection';
 import {
   createMemoizedStableIdentityPickerLoad,
@@ -594,6 +595,26 @@ export function bindOccurrenceLocalInteractions(
                 : undefined;
             const rosterValue =
               rosterDecision?.value?.kind === 'infiniteRoster' ? rosterDecision.value : undefined;
+            const customizationIntentFor = (
+              decisionKey: string,
+              value:
+                | import('@run-planner/engine/authored-project').AuthoredEncounterCustomization
+                | null,
+            ) =>
+              Object.freeze({
+                command: Object.freeze({
+                  kind: 'ReplaceEncounterCustomization' as const,
+                  phase: phase.owner,
+                  decisionKey,
+                  value,
+                }),
+              });
+            const generatedEdits =
+              generatedDecision === undefined
+                ? undefined
+                : bindGeneratedEncounterEdits(generatedValue, generatedAssessment, (value) =>
+                    customizationIntentFor(generatedDecision.key, value),
+                  );
             encounterCustomizations.set(
               key,
               Object.freeze({
@@ -616,21 +637,9 @@ export function bindOccurrenceLocalInteractions(
                             ).supported,
                           }),
                     }),
-                intentFor: (
-                  decisionKey: string,
-                  value:
-                    | import('@run-planner/engine/authored-project').AuthoredEncounterCustomization
-                    | null,
-                ) =>
-                  Object.freeze({
-                    command: Object.freeze({
-                      kind: 'ReplaceEncounterCustomization' as const,
-                      phase: phase.owner,
-                      decisionKey,
-                      value,
-                    }),
-                  }),
+                intentFor: customizationIntentFor,
                 ...(generatedAssessment === undefined ? {} : { generatedAssessment }),
+                ...(generatedEdits === undefined ? {} : { generatedEdits }),
                 ...(generatedDecision?.value === undefined && generatedCapability !== undefined
                   ? { initializeGenerated: generatedCapability.initialize }
                   : {}),
