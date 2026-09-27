@@ -100,19 +100,27 @@ it('exports the purchased Anvil result and retains its reset through reload and 
     createOccurrenceId('surface-q-preboss'),
     'PremiumProgress',
   );
-  expect(
-    compileEligibleProject(saved).occurrences.find((room) => room.id === 'surface-q-preboss')
-      ?.timeline.transactions,
-  ).toContainEqual(
-    expect.objectContaining({
-      kind: 'transformation',
-      transformation: {
-        kind: 'anvilOfFates',
-        removedTraitKey: 'StaffDoubleAttackTrait',
-        addedTraitKeys: ['StaffLongAttackTrait', 'StaffJumpSpecialTrait'],
-      },
-    }),
+  const shop = compileEligibleProject(saved).occurrences.find(
+    (room) => room.id === 'surface-q-preboss',
   );
+  const transformation = shop?.timeline.transactions.find(
+    (transaction) =>
+      transaction.kind === 'transformation' &&
+      transaction.transformation.kind === 'anvilOfFates' &&
+      transaction.transformation.removedTraitKey === 'StaffDoubleAttackTrait',
+  );
+  expect(transformation).toMatchObject({
+    kind: 'transformation',
+    transformation: {
+      kind: 'anvilOfFates',
+      removedTraitKey: 'StaffDoubleAttackTrait',
+      addedTraitKeys: ['StaffLongAttackTrait', 'StaffJumpSpecialTrait'],
+    },
+  });
+  expect(
+    shop?.overview.shop?.offers.find((candidate) => candidate.offerKey === 'PremiumProgress')
+      ?.transactionOwner,
+  ).toBe(transformation?.owner);
   const edited = applyProjectHistoryCommand(createProjectHistory(saved), catalog, {
     kind: 'ReplaceAnvilResult',
     offer,
@@ -257,6 +265,9 @@ it('exports the selected Zagreus Contract return and acquired Preboss Contract i
       ]),
     }),
   );
+  expect(
+    published.occurrences.find((room) => room.id === prebossShop)?.overview.shop?.infernalContract,
+  ).toEqual({ sourceOwner: semanticAddressKey(item), rewardType: 'StackUpgrade' });
   const edited = applyProjectHistoryCommand(createProjectHistory(saved), catalog, {
     kind: 'ReplaceShopOffer',
     offer: item,

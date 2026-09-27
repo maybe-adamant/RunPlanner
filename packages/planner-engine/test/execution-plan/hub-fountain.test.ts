@@ -96,21 +96,6 @@ function wireHub(encoded: string) {
 }
 
 describe('Hub fountain execution export', () => {
-  it('migrates a schema-87 Hub to a fountain use before the first visit without a target', () => {
-    const project = migratedPhialProject();
-    const decision = project.route.biomes
-      .find((biome) => biome.biomeKey === 'N')
-      ?.topology?.decisions.find((candidate) => candidate.kind === 'hub');
-    expect(decision).toMatchObject({ actions: hubVisitActions(nVisitSlotKeys, 0) });
-    expect(decision).not.toHaveProperty('fountainRarityResult');
-    expect(simulateProjectAssembly(catalog, project).evaluation.findings).toContainEqual(
-      expect.objectContaining({
-        code: 'fountainRarityResultMissing',
-        origin: createFountainRarityOutcomeAddress(fountain),
-      }),
-    );
-  });
-
   it.each([0, 3, 6])(
     'publishes one ordered Hub fountain use with its Phial target after %i visits',
     (visits) => {

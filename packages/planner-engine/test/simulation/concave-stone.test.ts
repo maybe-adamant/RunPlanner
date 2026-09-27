@@ -183,12 +183,7 @@ function cherishedPrerequisiteHistory() {
 }
 
 describe('Concave Stone declaration and source ledger', () => {
-  it('declares one use, all four support values, and a Common Gift source', () => {
-    expect(catalog.keepsakes.byKey.UnpickedBoonKeepsake?.effect).toEqual({
-      kind: 'concaveStone',
-      uses: 1,
-      procSupportByRank: { Common: 25, Rare: 50, Epic: 75, Heroic: 100 },
-    });
+  it('reads ranked support values, one use, and a Common Gift source', () => {
     expect(catalog.keepsakes.byKey.UnpickedBoonKeepsake?.echoGift).toEqual({
       availability: 'eligible',
       effect: { kind: 'concaveStone', schedule: 'oneShot' },

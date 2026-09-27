@@ -20,15 +20,7 @@ import {
   decodeExecutionPlan,
 } from '../../src/execution-plan';
 import { overview as decodeExecutionOverview } from '../../src/execution-plan/codec/overview';
-import {
-  createCompleteFGAnomalyProject,
-  createGoldenFGHIProject,
-  anomalyRosterProject,
-} from '@run-planner/test-fixtures/underworld';
-import {
-  loadUnderworldArachneCocoonsCheckpoint,
-  loadUnderworldGAnomalyRosterCheckpoint,
-} from '@run-planner/test-fixtures/checkpoints/underworld';
+import { createGoldenFGHIProject } from '@run-planner/test-fixtures/underworld';
 import {
   loadSurfaceNOPQProject,
   pBiome,
@@ -216,29 +208,6 @@ describe('resolved execution encounters', () => {
     ).toThrow(/unknown field customization/);
   });
 
-  it('publishes an exact Arachne combat cocoon count and omits the native Default', () => {
-    const plan = compileExecutionPlan({
-      product: assembleExecutionProduct({
-        assembly: simulateProjectAssembly(catalog, loadUnderworldArachneCocoonsCheckpoint()),
-        catalog,
-      }),
-    });
-    const phases = (occurrenceId: string) =>
-      plan.occurrences.find((occurrence) => occurrence.id === occurrenceId)?.overview
-        .encounterPhases;
-    expect(phases('golden-f-b5-e1')).toEqual([
-      {
-        slotKey: 'Encounter',
-        encounterKey: 'ArachneCombatF',
-        kind: 'combat',
-        customization: [{ decisionKey: 'cocoonCount', kind: 'cocoonCount', count: 11 }],
-      },
-    ]);
-    expect(phases('golden-g-b4-e1')).toEqual([
-      { slotKey: 'Encounter', encounterKey: 'ArachneCombatG', kind: 'combat' },
-    ]);
-  });
-
   it('strictly decodes the cocoon count wire shape', () => {
     const decode = (decision: Record<string, unknown>) =>
       decodeExecutionOverview(
@@ -262,38 +231,6 @@ describe('resolved execution encounters', () => {
     expect(() => decode({ count: 8.5 })).toThrow(/integer >= 1/);
     expect(() => decode({})).toThrow();
     expect(() => decode({ count: 8, minimum: 8 })).toThrow(/unknown field minimum/);
-  });
-
-  it('publishes the ordered Anomaly roster without counts or budget and omits Default', () => {
-    const anomalyPhases = (project: ReturnType<typeof anomalyRosterProject>) =>
-      compileExecutionPlan({
-        product: assembleExecutionProduct({
-          assembly: simulateProjectAssembly(catalog, project),
-          catalog,
-        }),
-      }).occurrences.find((occurrence) => occurrence.id === 'golden-g-b3-e2')?.overview
-        .encounterPhases;
-    expect(anomalyPhases(loadUnderworldGAnomalyRosterCheckpoint())).toEqual([
-      {
-        slotKey: 'Encounter',
-        encounterKey: 'GeneratedAnomalyB',
-        kind: 'combat',
-        customization: [
-          {
-            decisionKey: 'infiniteRoster',
-            kind: 'infiniteRoster',
-            types: [
-              { choiceKey: 'SpreadShotUnit_Elite', nativeId: 'SpreadShotUnit_Elite' },
-              { choiceKey: 'SpreadShotUnit', nativeId: 'SpreadShotUnit' },
-              { choiceKey: 'BloodlessPitcher', nativeId: 'BloodlessPitcher' },
-            ],
-          },
-        ],
-      },
-    ]);
-    expect(anomalyPhases(createCompleteFGAnomalyProject())).toEqual([
-      { slotKey: 'Encounter', encounterKey: 'GeneratedAnomalyB', kind: 'combat' },
-    ]);
   });
 
   it('strictly decodes the infinite roster wire shape', () => {

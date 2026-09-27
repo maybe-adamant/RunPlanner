@@ -582,6 +582,26 @@ describe('native generated composition possibility', () => {
     expect(template.waves.map((wave) => wave.activeMemberKeys)).toEqual([
       ['Treant2', 'FogEmitter2'],
     ]);
+    const incomplete = assess('GeneratedH', {
+      waveCount: 1,
+      waves: [{ waveIndex: 1, typeKeys: ['FogEmitter2'] }],
+    });
+    // An incomplete wave still exposes its validated prefix.
+    expect(incomplete.issues).toContainEqual(
+      expect.objectContaining({ reason: 'typeCount', waveIndex: 1, actual: 1 }),
+    );
+    expect(incomplete.waves.map((wave) => wave.activeMemberKeys)).toEqual([['FogEmitter2']]);
+    // A retained wave beyond the authored wave count is not assessed.
+    const beyondCount = assess('GeneratedH', {
+      waveCount: 1,
+      waves: [
+        { waveIndex: 1, typeKeys: ['BrokenHearted', 'Lovesick', 'Mourner'] },
+        { waveIndex: 2, typeKeys: ['FogEmitter2'] },
+      ],
+    });
+    expect(beyondCount.waves.map((wave) => wave.waveIndex)).toEqual([1]);
+    expect(beyondCount.waves.flatMap((wave) => wave.activeMemberKeys)).not.toContain('FogEmitter2');
+    expect(beyondCount.knownRunBlacklistAdditions).not.toContain('FogEmitter2');
     const ordinary = assess('GeneratedF', {
       waveCount: 3,
       highlightKey: 'Guard',

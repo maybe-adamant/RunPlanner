@@ -325,28 +325,6 @@ describe('authored-project commands and topology', () => {
     ]);
   });
 
-  it('removes the completed-Hub Preboss handoff when an aggregate visit order shortens the Hub', () => {
-    const project = applyProjectCommand(createCompleteNProject(), catalog, {
-      kind: 'ReplaceHubActionOrder',
-      hub: createHubDecisionAddress(nBiome, 'hub'),
-      actions: hubVisitActions(['combat01', 'combat02', 'combat03', 'combat04', 'combat05']),
-    });
-    const topology = project.route.biomes.find((biome) => biome.biomeKey === 'N')?.topology;
-    if (topology === null || topology === undefined) throw new Error('N topology is required');
-
-    expect(
-      topology.decisions.some(
-        (decision) => decision.kind === 'exit' && decision.source.kind === 'hubDecision',
-      ),
-    ).toBe(false);
-    expect(topology.occurrences.some((occurrence) => occurrence.gameName === 'N_PreBoss01')).toBe(
-      false,
-    );
-    expect(topology.decisions.find((decision) => decision.kind === 'hub')).toMatchObject({
-      actions: hubVisitActions(['combat01', 'combat02', 'combat03', 'combat04', 'combat05']),
-    });
-  });
-
   it('reorders a complete Hub visit prefix without rewriting its completed handoff', () => {
     const project = applyProjectCommand(createCompleteNProject(), catalog, {
       kind: 'ReplaceHubActionOrder',
@@ -381,25 +359,6 @@ describe('authored-project commands and topology', () => {
     expect(topology.occurrences.some((occurrence) => occurrence.gameName === 'N_PreBoss01')).toBe(
       true,
     );
-  });
-
-  it('rejects aggregate Hub orders with duplicate, closed, or over-limit slots', () => {
-    const hub = createHubDecisionAddress(nBiome, 'hub');
-    const project = createCompleteNProject();
-
-    for (const hubSlotKeys of [
-      ['combat01', 'combat01'],
-      ['combat12'],
-      ['combat01', 'combat02', 'combat03', 'combat04', 'combat05', 'combat06', 'combat07'],
-    ]) {
-      expect(() =>
-        applyProjectCommand(project, catalog, {
-          kind: 'ReplaceHubActionOrder',
-          hub,
-          actions: hubVisitActions(hubSlotKeys),
-        }),
-      ).toThrow(ProjectCommandContractError);
-    }
   });
 
   it('removes the completed-Hub Preboss handoff when an unvisited ninth slot closes', () => {

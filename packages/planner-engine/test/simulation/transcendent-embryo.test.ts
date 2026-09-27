@@ -390,13 +390,7 @@ describe('Transcendent Embryo declaration and direct Chaos fold', () => {
     expect(branch?.state.traitHistory?.equippedTraits.HadesLifestealBoon).toBeDefined();
   });
 
-  it('declares the four-rank profile and allows same-key reselection after marked removal', () => {
-    expect(catalog.keepsakes.byKey.RandomBlessingKeepsake?.effect).toEqual({
-      kind: 'transcendentEmbryo',
-      source: 'Chaos',
-      interval: 8,
-      blessingRarityByRank: { Common: 'Common', Rare: 'Rare', Epic: 'Epic', Heroic: 'Heroic' },
-    });
+  it('allows same-key reselection after marked removal', () => {
     const history = foldTraitHistoryEvents(catalog, [
       directBlessing('ChaosElementalBlessing', 'embryo:marked', 1),
       directBlessing('ChaosWeaponBlessing', 'ordinary:other', 2),

@@ -186,9 +186,11 @@ describe('fixed-chain assessment order', () => {
       storeKey: 'RunProgress',
     });
 
-    const blocked = simulateProjectAssembly(catalog, forbidden).evaluation.route.biomes.find(
-      (candidate) => candidate.biomeKey === 'P',
-    );
+    const evaluation = simulateProjectAssembly(catalog, forbidden).evaluation;
+    expect(evaluation.findings.map((finding) => [finding.code, finding.origin])).toEqual([
+      ['baseRewardStoreUnavailable', owner],
+    ]);
+    const blocked = evaluation.route.biomes.find((candidate) => candidate.biomeKey === 'P');
     if (blocked === undefined || blocked.coverage.kind !== 'prefix') {
       throw new Error('P lost its prefix coverage');
     }
