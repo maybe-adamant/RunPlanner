@@ -6,8 +6,11 @@ import {
   createEncounterPhaseAddress,
   createFountainRarityOutcomeAddress,
   createHubFountainAddress,
+  createIncomingRewardAddress,
+  createOccurrenceId,
   createProjectHistory,
   createSteadyGrowthOutcomeAddress,
+  createTraitOfferAddress,
   createOccurrenceAddress,
   decodeProjectDocument,
   encodeProjectDocument,
@@ -16,13 +19,24 @@ import {
 } from '../../src/authored-project';
 import { assembleExecutionProduct, compileExecutionPlan } from '../../src/execution-plan';
 import { simulateProjectAssembly } from '../../src/simulation';
-import { loadUnderworldGeneratedCompositionCheckpoint } from '@run-planner/test-fixtures/checkpoints/underworld';
+import {
+  loadUnderworldArachneCocoonsCheckpoint,
+  loadUnderworldGAnomalyRosterCheckpoint,
+  loadUnderworldGeneratedCompositionCheckpoint,
+  loadUnderworldIxionChaosCheckpoint,
+} from '@run-planner/test-fixtures/checkpoints/underworld';
 import {
   loadSurfaceEncounterShowcaseCheckpoint,
   loadSurfaceNPhialIntermediateFountainCheckpoint,
   loadSurfaceScheduledLifecycleCheckpoint,
 } from '@run-planner/test-fixtures/checkpoints/surface';
-import { goldenFBiome, goldenFOccurrenceId } from '@run-planner/test-fixtures/underworld';
+import {
+  anomalyRosterPhase,
+  arachneCocoonPhases,
+  goldenFBiome,
+  goldenFOccurrenceId,
+  goldenGBiome,
+} from '@run-planner/test-fixtures/underworld';
 import { oBiome, oOccurrenceIds, pBiome, pOccurrenceId } from '@run-planner/test-fixtures/surface';
 
 function plan(project: ProjectDocument) {
@@ -149,5 +163,148 @@ it('reloads a cleared reached Steady Growth target to its exact repair owner', (
   expect(simulateProjectAssembly(catalog, reloaded).evaluation.findings).toContainEqual(
     expect.objectContaining({ code: 'steadyGrowthOutcomeMissing', origin: outcome }),
   );
+  expect(undoProjectHistory(edited).present).toBe(saved);
+});
+
+it('exports the settled Ixion Chaos acquisition and reloads its edited selection', () => {
+  const saved = loadUnderworldIxionChaosCheckpoint();
+  const chaosTrait = createTraitOfferAddress(
+    createIncomingRewardAddress(goldenGBiome, createOccurrenceId('golden-g-intro:chaos')),
+    'self',
+  );
+  expect(plan(saved).occurrences.find((room) => room.id === 'golden-g-intro:chaos')).toMatchObject({
+    gameName: 'Chaos_01',
+    overview: { incomingReward: { rewardType: 'TrialUpgrade' } },
+    timeline: {
+      transactions: [
+        {
+          kind: 'acquisition',
+          roles: [
+            {
+              traitOffer: {
+                kind: 'chaos',
+                giver: 'Chaos',
+                selected: 'option1',
+                blessingKey: 'ChaosWeaponBlessing',
+              },
+            },
+          ],
+        },
+      ],
+    },
+  });
+  const edited = applyProjectHistoryCommand(createProjectHistory(saved), catalog, {
+    kind: 'ReplaceTraitOffer',
+    trait: chaosTrait,
+    value: {
+      kind: 'chaos',
+      giverKey: 'Chaos',
+      curseOptions: [
+        { curseKey: 'ChaosNoMoneyCurse', requirementCount: 3 },
+        { curseKey: 'ChaosNoMoneyCurse', requirementCount: 3 },
+        { curseKey: 'ChaosNoMoneyCurse', requirementCount: 3 },
+      ],
+      selectedOptionKey: 'option1',
+      selectedCurseValues: {},
+      blessingKey: 'ChaosWeaponBlessing',
+      rarity: 'Common',
+      blessingValues: { damageBonus: 0.2 },
+    },
+  });
+  const reloaded = reload(edited.present);
+  expect(reloaded).toEqual(edited.present);
+  expect(
+    plan(reloaded).occurrences.find((room) => room.id === 'golden-g-intro:chaos')?.timeline
+      .transactions[0]?.roles[0]?.traitOffer,
+  ).toMatchObject({
+    kind: 'chaos',
+    selected: 'option1',
+    curseOptions: [
+      { curseKey: 'ChaosNoMoneyCurse' },
+      { curseKey: 'ChaosNoMoneyCurse' },
+      { curseKey: 'ChaosNoMoneyCurse' },
+    ],
+    blessingKey: 'ChaosWeaponBlessing',
+  });
+  expect(undoProjectHistory(edited).present).toBe(saved);
+});
+
+it('exports the reached G Anomaly roster and native return, then reloads its roster reset', () => {
+  const saved = loadUnderworldGAnomalyRosterCheckpoint();
+  expect(
+    plan(saved).occurrences.find((room) => room.id === anomalyRosterPhase.owner.occurrenceId),
+  ).toMatchObject({
+    gameName: 'B_Combat01',
+    anomaly: { replacedRoomGameName: 'G_Combat03', success: true },
+    overview: {
+      encounterPhases: [
+        {
+          slotKey: 'Encounter',
+          encounterKey: 'GeneratedAnomalyB',
+          kind: 'combat',
+          customization: [
+            {
+              decisionKey: 'infiniteRoster',
+              kind: 'infiniteRoster',
+              types: [
+                { choiceKey: 'SpreadShotUnit_Elite', nativeId: 'SpreadShotUnit_Elite' },
+                { choiceKey: 'SpreadShotUnit', nativeId: 'SpreadShotUnit' },
+                { choiceKey: 'BloodlessPitcher', nativeId: 'BloodlessPitcher' },
+              ],
+            },
+          ],
+        },
+      ],
+    },
+    doors: {
+      kind: 'fixed',
+      target: { id: 'golden-g-b4-e1', gameName: 'G_Combat10' },
+    },
+  });
+  const edited = applyProjectHistoryCommand(createProjectHistory(saved), catalog, {
+    kind: 'ReplaceEncounterCustomization',
+    phase: anomalyRosterPhase,
+    decisionKey: 'infiniteRoster',
+    value: null,
+  });
+  const reloaded = reload(edited.present);
+  expect(reloaded).toEqual(edited.present);
+  expect(
+    plan(reloaded).occurrences.find((room) => room.id === anomalyRosterPhase.owner.occurrenceId)
+      ?.overview.encounterPhases,
+  ).toEqual([{ slotKey: 'Encounter', encounterKey: 'GeneratedAnomalyB', kind: 'combat' }]);
+  expect(undoProjectHistory(edited).present).toBe(saved);
+});
+
+it('exports the selected F/G Arachne encounters and reloads the F cocoon reset', () => {
+  const saved = loadUnderworldArachneCocoonsCheckpoint();
+  const published = plan(saved);
+  expect(
+    published.occurrences.find((room) => room.id === arachneCocoonPhases.F.owner.occurrenceId)
+      ?.overview.encounterPhases,
+  ).toEqual([
+    {
+      slotKey: 'Encounter',
+      encounterKey: 'ArachneCombatF',
+      kind: 'combat',
+      customization: [{ decisionKey: 'cocoonCount', kind: 'cocoonCount', count: 11 }],
+    },
+  ]);
+  expect(
+    published.occurrences.find((room) => room.id === arachneCocoonPhases.G.owner.occurrenceId)
+      ?.overview.encounterPhases,
+  ).toEqual([{ slotKey: 'Encounter', encounterKey: 'ArachneCombatG', kind: 'combat' }]);
+  const edited = applyProjectHistoryCommand(createProjectHistory(saved), catalog, {
+    kind: 'ReplaceEncounterCustomization',
+    phase: arachneCocoonPhases.F,
+    decisionKey: 'cocoonCount',
+    value: null,
+  });
+  const reloaded = reload(edited.present);
+  expect(reloaded).toEqual(edited.present);
+  expect(
+    plan(reloaded).occurrences.find((room) => room.id === arachneCocoonPhases.F.owner.occurrenceId)
+      ?.overview.encounterPhases,
+  ).toEqual([{ slotKey: 'Encounter', encounterKey: 'ArachneCombatF', kind: 'combat' }]);
   expect(undoProjectHistory(edited).present).toBe(saved);
 });

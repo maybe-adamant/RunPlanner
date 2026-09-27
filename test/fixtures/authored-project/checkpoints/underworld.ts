@@ -8,6 +8,9 @@ import underworldFStygianWellRaw from './underworld-f-stygian-well.runplanner.js
 import underworldFGRaw from './underworld-fg.runplanner.json';
 import underworldFGHRaw from './underworld-fgh.runplanner.json';
 import underworldFGHIRaw from './underworld-fghi.runplanner.json';
+import underworldIxionChaosRaw from './underworld-ixion-chaos.runplanner.json';
+import underworldGAnomalyRosterRaw from './underworld-g-anomaly-roster.runplanner.json';
+import underworldArachneCocoonsRaw from './underworld-arachne-cocoons.runplanner.json';
 import underworldGeneratedCompositionRaw from './underworld-generated-composition.runplanner.json';
 import naturalChaosUnresolvedTrialRaw from './natural-chaos-unresolved-trial.runplanner.json';
 import nemesisFTraitTradeRaw from './nemesis-f-trait-trade.runplanner.json';
@@ -27,6 +30,9 @@ export const underworldCheckpointArtifacts = Object.freeze({
   'underworld-f-stygian-well': checkpointArtifact(underworldFStygianWellRaw),
   'underworld-fgh': checkpointArtifact(underworldFGHRaw),
   'underworld-fghi': checkpointArtifact(underworldFGHIRaw),
+  'underworld-ixion-chaos': checkpointArtifact(underworldIxionChaosRaw),
+  'underworld-g-anomaly-roster': checkpointArtifact(underworldGAnomalyRosterRaw),
+  'underworld-arachne-cocoons': checkpointArtifact(underworldArachneCocoonsRaw),
   'underworld-generated-composition': checkpointArtifact(underworldGeneratedCompositionRaw),
   'underworld-f-midshop-pom-frontier': checkpointArtifact(underworldFMidshopPomRaw),
   'natural-chaos-unresolved-trial': checkpointArtifact(naturalChaosUnresolvedTrialRaw),
@@ -53,6 +59,18 @@ export function loadUnderworldFGHCheckpoint(): ProjectDocument {
 
 export function loadUnderworldFGHICheckpoint(): ProjectDocument {
   return underworldCheckpointArtifacts['underworld-fghi'].load();
+}
+
+export function loadUnderworldIxionChaosCheckpoint(): ProjectDocument {
+  return underworldCheckpointArtifacts['underworld-ixion-chaos'].load();
+}
+
+export function loadUnderworldGAnomalyRosterCheckpoint(): ProjectDocument {
+  return underworldCheckpointArtifacts['underworld-g-anomaly-roster'].load();
+}
+
+export function loadUnderworldArachneCocoonsCheckpoint(): ProjectDocument {
+  return underworldCheckpointArtifacts['underworld-arachne-cocoons'].load();
 }
 
 export function loadUnderworldGeneratedCompositionCheckpoint(): ProjectDocument {

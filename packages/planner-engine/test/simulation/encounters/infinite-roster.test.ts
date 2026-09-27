@@ -4,7 +4,10 @@ import { catalog } from '@run-planner/hades2-catalog';
 import {
   createCompleteFGAnomalyProject,
   goldenGBiome,
+  anomalyRosterPhase,
+  anomalyRosterProject,
 } from '@run-planner/test-fixtures/underworld';
+import { loadUnderworldGAnomalyRosterCheckpoint } from '@run-planner/test-fixtures/checkpoints/underworld';
 import {
   applyProjectCommand,
   createExitSelectionAddress,
@@ -21,10 +24,6 @@ import {
   simulateProject,
   simulateProjectAssembly,
 } from '../../../src/simulation';
-import {
-  anomalyRosterPhase,
-  anomalyRosterProject,
-} from '../../execution-plan/support/anomaly-roster-fixture';
 
 const selection = (() => {
   const decision = catalog.encounterDefinitions.byKey.GeneratedAnomalyB?.customization?.find(
@@ -145,7 +144,7 @@ describe('Anomaly infinite roster assessment', () => {
 
 describe('Anomaly infinite roster authoring', () => {
   it('persists an ordered roster, resets to absent Default, and round-trips', () => {
-    const project = anomalyRosterProject();
+    const project = loadUnderworldGAnomalyRosterCheckpoint();
     expect(anomalyEncounters(project).customizationByPhase).toEqual({
       Encounter: {
         infiniteRoster: {
@@ -188,7 +187,7 @@ describe('Anomaly infinite roster authoring', () => {
   });
 
   it('strictly decodes the persisted shape', () => {
-    const project = anomalyRosterProject();
+    const project = loadUnderworldGAnomalyRosterCheckpoint();
     for (const raw of [
       { kind: 'infiniteRoster' },
       { kind: 'infiniteRoster', typeKeys: 'BloodlessNaked' },
@@ -261,13 +260,14 @@ describe('Anomaly infinite roster authoring', () => {
   });
 
   it('retains the roster through an Anomaly map replacement', () => {
-    const replaced = applyProjectCommand(anomalyRosterProject(), catalog, {
+    const saved = loadUnderworldGAnomalyRosterCheckpoint();
+    const replaced = applyProjectCommand(saved, catalog, {
       kind: 'ReplaceAnomalyMap',
       occurrence: createOccurrenceAddress(goldenGBiome, anomalyRosterPhase.owner.occurrenceId),
       gameName: 'B_Combat05',
     });
     expect(anomalyEncounters(replaced).customizationByPhase).toEqual(
-      anomalyEncounters(anomalyRosterProject()).customizationByPhase,
+      anomalyEncounters(saved).customizationByPhase,
     );
     expect(rosterFindings(replaced)).toEqual([]);
   });

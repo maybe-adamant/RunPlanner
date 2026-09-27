@@ -24,6 +24,9 @@ import {
   createUnderworldFPoolCheckpoint,
   createUnderworldFWellCheckpoint,
   underworldGeneratedCompositionProject,
+  createCompleteFGIxionChaosProject,
+  anomalyRosterProject,
+  underworldArachneCocoonProject,
 } from '../routes/underworld';
 import {
   surfaceEncounterShowcaseProject,
@@ -120,7 +123,7 @@ describe('authored-project checkpoint integrity', () => {
     const chaosRoom = occurrences?.find(
       (occurrence) => occurrence.occurrenceId === 'fixture-chaos-room',
     );
-    expect(checkpointManifest).toHaveLength(34);
+    expect(checkpointManifest).toHaveLength(37);
     expect(chaosRoom?.gameName).toMatch(/^Chaos_/);
     expect(chaosRoom?.state).toMatchObject({
       kind: 'fixed',
@@ -167,6 +170,9 @@ describe('authored-project checkpoint integrity', () => {
 
   it.each([
     ['underworld-generated-composition', underworldGeneratedCompositionProject],
+    ['underworld-ixion-chaos', createCompleteFGIxionChaosProject],
+    ['underworld-g-anomaly-roster', anomalyRosterProject],
+    ['underworld-arachne-cocoons', underworldArachneCocoonProject],
     ['surface-encounter-showcase', surfaceEncounterShowcaseProject],
     ['surface-scheduled-lifecycle', surfaceScheduledLifecycleProject],
     ['surface-n-phial-intermediate-fountain', surfaceNPhialIntermediateFountainProject],

@@ -11,16 +11,14 @@ import {
   createProjectHistory,
   undoProjectHistory,
 } from '@run-planner/engine/authored-project';
-import {
-  createCompleteFGIxionChaosProject,
-  loadUnderworldFGProject,
-} from '@run-planner/test-fixtures/underworld';
+import { loadUnderworldFGProject } from '@run-planner/test-fixtures/underworld';
+import { loadUnderworldIxionChaosCheckpoint } from '@run-planner/test-fixtures/checkpoints/underworld';
 
 describe('route-owned selected resource placement command', () => {
   it.each(['clearIxionOffer', 'disableWell', 'unpurchaseIxion'] as const)(
     'retracts resources deleted by indirect Ixion topology cleanup: %s',
     (edit) => {
-      let project = createCompleteFGIxionChaosProject();
+      let project = loadUnderworldIxionChaosCheckpoint();
       const f = project.route.biomes.find((biome) => biome.biomeKey === 'F')!;
       const g = project.route.biomes.find((biome) => biome.biomeKey === 'G')!;
       const gate = g
