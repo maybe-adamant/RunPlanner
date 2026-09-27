@@ -13,6 +13,7 @@ import {
   createOccurrenceId,
   createRouteStartKeepsakeSelectionAddress,
   createShopOfferAddress,
+  createTraitOfferAddress,
   hermesShrineDeliveryEntryKey,
   type OccurrenceId,
   type ProjectDocument,
@@ -196,6 +197,70 @@ export function createSurfaceNOHermesShrineDeliveryCheckpoint(options?: {
     ),
     encounterPhaseKey: 'Encounter',
   });
+}
+
+/**
+ * Complete N/O route with a purchased N Shrine Travel Deal and its placed O
+ * Combat1 delivery.
+ */
+export function surfaceShrineTravelDealProject(): ProjectDocument {
+  const shrine = createOccurrenceAddress(nBiome, createOccurrenceId('surface-n-preboss:postboss'));
+  const travelDealSource = createIncomingRewardAddress(nBiome, nOccurrenceId('combat09'));
+  let project = loadSurfaceNOProject();
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceIncomingReward',
+    reward: createIncomingRewardAddress(nBiome, nOccurrenceId('combat05')),
+    value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'AresUpgrade' } },
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceIncomingReward',
+    reward: travelDealSource,
+    value: { rewardType: 'HermesUpgrade' },
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceTraitOffer',
+    trait: createTraitOfferAddress(travelDealSource, 'self'),
+    value: {
+      kind: 'traits',
+      giverKey: 'Hermes',
+      options: [
+        { traitKey: 'RestockBoon', rarity: 'Epic' },
+        { traitKey: 'HermesWeaponBoon', rarity: 'Rare' },
+        { traitKey: 'SprintShieldBoon', rarity: 'Common' },
+      ],
+      selectedOptionKey: 'option1',
+    },
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceHermesShrineTravelDealRefill',
+    occurrence: shrine,
+    value: { rewardType: 'ArmorBoost' },
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'SetHermesShrinePurchase',
+    occurrence: shrine,
+    generationKey: 'initial:first',
+    purchase: { delay: 2, rushed: true },
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'SetHermesShrinePurchase',
+    occurrence: shrine,
+    generationKey: 'travelDealRefill',
+    purchase: { delay: 2, rushed: false },
+  });
+  return authorLegalTraitOffers(
+    applyProjectCommand(project, catalog, {
+      kind: 'PlaceHermesShrineDelivery',
+      entry: createAcquisitionEntryAddress(
+        createAcquisitionSiteAddress(
+          createOccurrenceAddress(oBiome, oOccurrenceIds.combat04),
+          'hermesShrineDelivery',
+        ),
+        hermesShrineDeliveryEntryKey(shrine, 'travelDealRefill'),
+      ),
+      encounterPhaseKey: 'Combat1',
+    }),
+  );
 }
 
 /**

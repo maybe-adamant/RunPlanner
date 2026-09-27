@@ -25,8 +25,12 @@ import {
   loadUnderworldFPoolCheckpoint,
   loadUnderworldFStygianWellCheckpoint,
   loadUnderworldIxionChaosCheckpoint,
+  loadUnderworldWorldShopTravelDealCheckpoint,
 } from '@run-planner/test-fixtures/checkpoints/underworld';
-import { loadSurfaceAnvilCheckpoint } from '@run-planner/test-fixtures/checkpoints/surface';
+import {
+  loadSurfaceAnvilCheckpoint,
+  loadSurfaceShrineTravelDealCheckpoint,
+} from '@run-planner/test-fixtures/checkpoints/surface';
 import {
   loadSurfaceNOProject,
   loadSurfaceNOPQProject,
@@ -1555,36 +1559,8 @@ describe('engine-owned F/G execution semantic product', () => {
     const shopId = createOccurrenceId('golden-f-preboss-shop');
     const shop = createOccurrenceAddress(goldenFBiome, shopId);
     const refill = createShopOfferAddress(goldenFBiome, shopId, 'travelDealRefill');
-    let project = applyProjectCommand(loadUnderworldFStygianWellCheckpoint(), catalog, {
-      kind: 'ReplaceShopOffer',
-      offer: createShopOfferAddress(goldenFBiome, shopId, 'MajorNonBoon'),
-      value: { rewardType: 'MaxHealthDrop' },
-    });
-    project = replaceTestShopOfferActions(project, catalog, shop, ['MajorNonBoon']);
-    project = applyProjectCommand(project, catalog, {
-      kind: 'ReplaceShopOffer',
-      offer: refill,
-      value: { rewardType: 'ArmorBoost' },
-    });
-    project = applyProjectCommand(project, catalog, {
-      kind: 'InsertRoomAction',
-      action: createRoomActionAddress(
-        goldenFBiome,
-        shopId,
-        roomActionKey({
-          kind: 'interactAcquisitionEntry',
-          siteKey: 'roomExit',
-          entryKey: 'travelDealRefill',
-        }),
-      ),
-      reference: {
-        kind: 'interactAcquisitionEntry',
-        siteKey: 'roomExit',
-        entryKey: 'travelDealRefill',
-      },
-      index: 1,
-    });
-    const product = productFor(authorLegalTraitOffers(project));
+    let project = loadUnderworldWorldShopTravelDealCheckpoint();
+    const product = productFor(project);
     const room = product.occurrences.find((occurrence) => occurrence.id === shopId);
     expect(room?.timeline.transactions).toEqual(
       expect.arrayContaining([
@@ -1627,7 +1603,7 @@ describe('engine-owned F/G execution semantic product', () => {
         }),
       ),
     });
-    const unpurchased = productFor(authorLegalTraitOffers(project));
+    const unpurchased = productFor(project);
     expect(
       unpurchased.occurrences.find((candidate) => candidate.id === shopId)?.timeline.transactions,
     ).toContainEqual(expect.objectContaining({ kind: 'travelDealRefill' }));
@@ -1641,7 +1617,7 @@ describe('engine-owned F/G execution semantic product', () => {
         ? dormantRoom.state.shop?.travelDealRefill?.reward?.offer
         : undefined,
     ).toEqual({ rewardType: 'ArmorBoost' });
-    const inactive = productFor(authorLegalTraitOffers(project));
+    const inactive = productFor(project);
     expect(
       inactive.occurrences.find((candidate) => candidate.id === shopId)?.timeline.transactions,
     ).not.toContainEqual(expect.objectContaining({ kind: 'travelDealRefill' }));
@@ -1649,9 +1625,8 @@ describe('engine-owned F/G execution semantic product', () => {
 
     project = replaceTestShopOfferActions(project, catalog, shop, ['MajorNonBoon']);
     expect(
-      productFor(authorLegalTraitOffers(project)).occurrences.find(
-        (candidate) => candidate.id === shopId,
-      )?.timeline.transactions,
+      productFor(project).occurrences.find((candidate) => candidate.id === shopId)?.timeline
+        .transactions,
     ).toContainEqual(expect.objectContaining({ kind: 'travelDealRefill' }));
   });
 
@@ -1708,56 +1683,7 @@ describe('engine-owned F/G execution semantic product', () => {
       nBiome,
       createOccurrenceId('surface-n-preboss:postboss'),
     );
-    let project = loadSurfaceNOProject();
-    const travelDealSource = createIncomingRewardAddress(
-      nBiome,
-      createOccurrenceId('surface-n-combat09'),
-    );
-    project = applyProjectCommand(project, catalog, {
-      kind: 'ReplaceIncomingReward',
-      reward: createIncomingRewardAddress(nBiome, createOccurrenceId('surface-n-combat05')),
-      value: {
-        rewardType: 'Boon',
-        payload: { kind: 'BoonSource', source: 'AresUpgrade' },
-      },
-    });
-    project = applyProjectCommand(project, catalog, {
-      kind: 'ReplaceIncomingReward',
-      reward: travelDealSource,
-      value: { rewardType: 'HermesUpgrade' },
-    });
-    project = applyProjectCommand(project, catalog, {
-      kind: 'ReplaceTraitOffer',
-      trait: createTraitOfferAddress(travelDealSource, 'self'),
-      value: {
-        kind: 'traits',
-        giverKey: 'Hermes',
-        options: [
-          { traitKey: 'RestockBoon', rarity: 'Epic' },
-          { traitKey: 'HermesWeaponBoon', rarity: 'Rare' },
-          { traitKey: 'SprintShieldBoon', rarity: 'Common' },
-        ],
-        selectedOptionKey: 'option1',
-      },
-    });
-    project = applyProjectCommand(project, catalog, {
-      kind: 'ReplaceHermesShrineTravelDealRefill',
-      occurrence: shrineAddress,
-      value: { rewardType: 'ArmorBoost' },
-    });
-    project = applyProjectCommand(project, catalog, {
-      kind: 'SetHermesShrinePurchase',
-      occurrence: shrineAddress,
-      generationKey: 'initial:first',
-      purchase: { delay: 2, rushed: true },
-    });
-    project = applyProjectCommand(project, catalog, {
-      kind: 'SetHermesShrinePurchase',
-      occurrence: shrineAddress,
-      generationKey: 'travelDealRefill',
-      purchase: { delay: 2, rushed: false },
-    });
-    project = authorLegalTraitOffers(project);
+    const project = loadSurfaceShrineTravelDealCheckpoint();
 
     const assembly = simulateProjectAssembly(catalog, project);
     const nEvaluation = assembly.evaluation.route.biomes.find(

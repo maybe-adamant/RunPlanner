@@ -190,11 +190,11 @@ that test's semantic transition. Assess setup and evaluation cost separately.
 ## Major-feature coverage of the actual authored JSON
 
 Coverage here means a concrete saved authoring example, not merely a field in
-the codec or a scenario produced at test runtime. This pass parsed 29 JSONs
-and inspected nonempty values, selected options, and action references. It did
-not re-simulate every saved plan to certify each owner's reachability. The C2
-detour addendum updates the three promoted rows below; other rows retain their
-original inventory status.
+the codec or a scenario produced at test runtime. The baseline pass parsed 29
+JSONs and inspected nonempty values, selected options, and action references.
+It did not re-simulate every saved plan to certify each owner's reachability.
+The C2 addenda update the promoted rows below; other rows retain their original
+inventory status.
 
 Statuses:
 
@@ -226,8 +226,8 @@ Statuses:
 | Nested/targeted trait outcomes                                          | Natural Selection checkpoint selects the trait without `naturalSelectionTargets`; no `allTogetherResult`, `concaveStoneResult`, or targeted trait-option result found | Partial/absent success outcomes; Pom target fields elsewhere are not evidence for these carrier children |
 | Echo replay and duplicate families                                      | No selected Echo effect or `echoLastRunBoon` / `echoPomTarget`                                                                                                        | Absent; TS Echo fixtures/tests are not saved-plan examples                                               |
 | Nemesis interaction and generated pickups                               | Three Nemesis JSONs store free item, gold trade, or boon trade, with generated pickups / Sea Star case                                                                | Present; all five event variants need not become five JSONs                                              |
-| World Shop purchases / Mystery acquisition                              | P repair plan and F Midshop frontier include purchase actions; P plan includes BlindBoxLoot                                                                           | Present/partial; no generic guarantee of complete valid purchases from frontier files                    |
-| Travel Deal across inventory families                                   | Well checkpoint has `travelDealRefillKey` and purchase; no World Shop/Shrine `travelDealRefill`                                                                       | Partial; a Well refill alone doesn't demonstrate the other two authoring paths                           |
+| World Shop purchases / Mystery acquisition                              | `underworld-world-shop-travel-deal` acquires the F World Shop Armor replacement; P repair plan includes BlindBoxLoot                                                  | Present; retain the smaller P repair frontier for its targeted semantics                                 |
+| Travel Deal across inventory families                                   | Well, `underworld-world-shop-travel-deal`, and `surface-shrine-travel-deal` each acquire their carrier's refill; the Shrine delivery is placed at O Combat1           | Present; distinct World Shop and Shrine chronology is now reached rather than retained inventory         |
 | Wells, Fateful Twist, Anvil                                             | Concrete Well purchases exist; no `twistResultKeyBySlot` or Anvil reward/result                                                                                       | Partial; transformation-result authoring lacks saved examples                                            |
 | Purging Pool and sale                                                   | `underworld-f-pool` includes inventory and sale action                                                                                                                | Present; Phial-before-Pool chronology still needs a rich success witness if chosen                       |
 | Hermes deliveries: rushed, delayed, placed                              | `surface-no-hermes-shrine-delivery` has both delivery acquisition actions; N side-room file retains an unplaced delivery                                              | Present success and repair inputs; reuse rather than duplicate                                           |

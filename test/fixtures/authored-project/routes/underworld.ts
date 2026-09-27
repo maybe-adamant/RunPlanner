@@ -37,6 +37,7 @@ import {
   loadUnderworldFGHCheckpoint,
   loadUnderworldFGHICheckpoint,
   loadUnderworldFMidshopPomFrontierCheckpoint,
+  loadUnderworldFStygianWellCheckpoint,
   loadUnderworldIxionChaosCheckpoint,
 } from '../checkpoints/underworld';
 
@@ -211,6 +212,36 @@ export function createUnderworldFWellCheckpoint(configuredTail = true): ProjectD
           biomes: Object.freeze(project.route.biomes.filter((biome) => biome.biomeKey === 'F')),
         }),
       });
+}
+
+/** Purchased F World Shop Travel Deal with its acquired replacement reward. */
+export function underworldWorldShopTravelDealProject(): ProjectDocument {
+  const shopId = createOccurrenceId('golden-f-preboss-shop');
+  const shop = createOccurrenceAddress(goldenFBiome, shopId);
+  const refill = createShopOfferAddress(goldenFBiome, shopId, 'travelDealRefill');
+  let project = applyProjectCommand(loadUnderworldFStygianWellCheckpoint(), catalog, {
+    kind: 'ReplaceShopOffer',
+    offer: createShopOfferAddress(goldenFBiome, shopId, 'MajorNonBoon'),
+    value: { rewardType: 'MaxHealthDrop' },
+  });
+  project = replaceTestShopOfferActions(project, catalog, shop, ['MajorNonBoon']);
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceShopOffer',
+    offer: refill,
+    value: { rewardType: 'ArmorBoost' },
+  });
+  const reference = {
+    kind: 'interactAcquisitionEntry' as const,
+    siteKey: 'roomExit' as const,
+    entryKey: 'travelDealRefill',
+  };
+  project = applyProjectCommand(project, catalog, {
+    kind: 'InsertRoomAction',
+    action: createRoomActionAddress(goldenFBiome, shopId, roomActionKey(reference)),
+    reference,
+    index: 1,
+  });
+  return authorLegalTraitOffers(project);
 }
 
 export function createCompleteFGProject(options: GoldenGProjectOptions = {}): ProjectDocument {
