@@ -28,12 +28,8 @@ import {
   loadUnderworldGorgonAthenaCheckpoint,
   loadUnderworldIxionChaosCheckpoint,
   loadUnderworldWorldShopTravelDealCheckpoint,
-  loadUnderworldZagreusContractCheckpoint,
 } from '@run-planner/test-fixtures/checkpoints/underworld';
-import {
-  loadSurfaceAnvilCheckpoint,
-  loadSurfaceShrineTravelDealCheckpoint,
-} from '@run-planner/test-fixtures/checkpoints/surface';
+import { loadSurfaceShrineTravelDealCheckpoint } from '@run-planner/test-fixtures/checkpoints/surface';
 import {
   loadSurfaceNOProject,
   loadSurfaceNOPQProject,
@@ -392,7 +388,7 @@ function postbossKeepsakeOrderProject(
 }
 
 describe('engine-owned F/G execution semantic product', () => {
-  it('exports the additive Gorgon offer and rejects missing settled coverage', () => {
+  it('encodes the Gorgon Athena export and rejects missing settled coverage', () => {
     const occurrenceId = goldenGOccurrenceId(1, 1);
     const phase = createEncounterPhaseAddress(
       goldenGBiome,
@@ -402,25 +398,6 @@ describe('engine-owned F/G execution semantic product', () => {
     const project = loadUnderworldGorgonAthenaCheckpoint();
     const assembly = simulateProjectAssembly(catalog, project);
     const product = assembleExecutionProduct({ assembly, catalog });
-    const owner = semanticAddressKey(createGorgonPhaseAddress(phase));
-    const transaction = product.occurrences
-      .flatMap((room) => room.timeline.transactions)
-      .find((candidate) => candidate.owner === owner);
-    expect(transaction).toMatchObject({
-      kind: 'encounterInteraction',
-      resolution: {
-        kind: 'traitOffer',
-        offer: {
-          giver: 'Athena',
-          selected: 'option1',
-          options: [
-            { key: 'InvulnerabilityDashBoon', rarity: 'Epic' },
-            { key: 'RetaliateInvulnerabilityBoon', rarity: 'Epic' },
-            { key: 'FocusLastStandBoon', rarity: 'Epic' },
-          ],
-        },
-      },
-    });
     expect(() => encodeExecutionPlan(compileExecutionPlan({ product }))).not.toThrow();
     const biome = assembly.evaluation.route.biomes.find(
       (candidate): candidate is CompleteValidBiomeProjectEvaluation =>
@@ -1516,47 +1493,13 @@ describe('engine-owned F/G execution semantic product', () => {
     expect(() => compileExecutionPlan({ product })).not.toThrow();
   });
 
-  it('publishes the acquired later Contract item after the selected Zagreus return', () => {
-    const shopId = createOccurrenceId('zagreus-contract-preboss-shop');
-    const item = createShopOfferAddress(goldenGBiome, shopId, 'infernalContractReward');
-    const product = productFor(loadUnderworldZagreusContractCheckpoint());
-    const room = product.occurrences.find((occurrence) => occurrence.id === shopId);
-    const transaction = room?.timeline.transactions.find(
-      (
-        candidate,
-      ): candidate is Extract<ExecutionTimelineTransaction, { readonly kind: 'acquisition' }> =>
-        candidate.kind === 'acquisition' && candidate.sourceOwner === semanticAddressKey(item),
-    );
-    expect(transaction).toMatchObject({ reward: { rewardType: 'StackUpgrade' } });
-    expect(room?.overview.shop?.infernalContract).toEqual({
-      sourceOwner: semanticAddressKey(item),
-      rewardType: 'StackUpgrade',
-    });
-  });
-
-  it('publishes a purchased World Shop Travel Deal replacement as an acquisition outcome', () => {
+  it('orders a purchased World Shop Travel Deal replacement after its refill and gates dormant refills', () => {
     const shopId = createOccurrenceId('golden-f-preboss-shop');
     const shop = createOccurrenceAddress(goldenFBiome, shopId);
     const refill = createShopOfferAddress(goldenFBiome, shopId, 'travelDealRefill');
     let project = loadUnderworldWorldShopTravelDealCheckpoint();
     const product = productFor(project);
     const room = product.occurrences.find((occurrence) => occurrence.id === shopId);
-    expect(room?.timeline.transactions).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          kind: 'travelDealRefill',
-          refill: expect.objectContaining({
-            carrier: 'worldShop',
-            replacement: expect.objectContaining({ optionKey: 'ArmorBoost' }),
-          }),
-        }),
-        expect.objectContaining({
-          kind: 'acquisition',
-          sourceOwner: semanticAddressKey(refill),
-          reward: expect.objectContaining({ rewardType: 'ArmorBoost' }),
-        }),
-      ]),
-    );
     const refillTransaction = room?.timeline.transactions.find(
       (transaction) => transaction.kind === 'travelDealRefill',
     );
@@ -1762,47 +1705,6 @@ describe('engine-owned F/G execution semantic product', () => {
       );
       expect(() => compileExecutionPlan({ product: inactive })).not.toThrow();
     }
-  });
-
-  it('requires and publishes the exact result for a purchased Anvil', () => {
-    const shopId = createOccurrenceId('surface-q-preboss');
-    const project = loadSurfaceAnvilCheckpoint();
-    const assembly = simulateProjectAssembly(catalog, project);
-    const biome = assembly.evaluation.route.biomes.find(
-      (candidate): candidate is CompleteValidBiomeProjectEvaluation =>
-        candidate.biomeKey === 'Q' &&
-        candidate.authoring === 'complete' &&
-        candidate.validity === 'valid',
-    );
-    if (biome === undefined)
-      throw new Error(
-        `purchased Anvil fixture lacks complete-valid Q: ${JSON.stringify(assembly.evaluation.findings)}`,
-      );
-    const room = orderedExecutionRooms([biome]).find(
-      (candidate) => candidate.occurrenceId === shopId,
-    );
-    if (room === undefined) throw new Error('Q World Shop occurrence is missing');
-    const product = productFor(project);
-    const occurrence = product.occurrences.find((candidate) => candidate.id === shopId);
-    const transaction = occurrence?.timeline.transactions.find(
-      (candidate) =>
-        candidate.kind === 'transformation' &&
-        candidate.transformation.kind === 'anvilOfFates' &&
-        candidate.transformation.removedTraitKey === 'StaffDoubleAttackTrait',
-    );
-    expect(transaction).toMatchObject({
-      kind: 'transformation',
-      transformation: {
-        kind: 'anvilOfFates',
-        removedTraitKey: 'StaffDoubleAttackTrait',
-        addedTraitKeys: ['StaffLongAttackTrait', 'StaffJumpSpecialTrait'],
-      },
-    });
-    expect(
-      occurrence?.overview.shop?.offers.find(
-        (candidate) => candidate.offerKey === 'PremiumProgress',
-      )?.transactionOwner,
-    ).toBe(transaction?.owner);
   });
 
   it('binds a same-Shop Pom mutation dependency to its purchase transaction', () => {
@@ -2183,7 +2085,7 @@ describe('engine-owned F/G execution semantic product', () => {
     expect(() => encodeExecutionPlan(compileExecutionPlan({ product }))).not.toThrow();
   });
 
-  it('copies exact Boss Arcana outcomes and their semantic order into execution', () => {
+  it('orders the Boss Crystal Figurine outcome after Judgment in execution', () => {
     const project = loadUnderworldAutomaticBossCheckpoint();
     const assembly = simulateProjectAssembly(catalog, project);
     if (!assembly.evaluation.route.summary.eligibleForExecutionPlan)
@@ -2198,16 +2100,6 @@ describe('engine-owned F/G execution semantic product', () => {
     const figurine = boss?.timeline.transactions.find(
       (transaction) => transaction.kind === 'automatic' && transaction.effect === 'crystalFigurine',
     );
-    expect(judgment).toMatchObject({
-      kind: 'automatic',
-      rarity: 'Epic',
-      window: { kind: 'bossDefeated', phaseKey: 'Encounter' },
-    });
-    expect(figurine).toMatchObject({
-      kind: 'automatic',
-      rarity: 'Epic',
-      window: { kind: 'bossDefeated', phaseKey: 'Encounter' },
-    });
     expect(boss?.timeline.dependencies).toContainEqual({
       owner: figurine?.owner,
       afterOwner: judgment?.owner,

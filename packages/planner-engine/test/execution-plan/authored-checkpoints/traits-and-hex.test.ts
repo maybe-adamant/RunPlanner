@@ -3,6 +3,8 @@ import { catalog } from '@run-planner/hades2-catalog';
 import {
   applyProjectHistoryCommand,
   createEncounterPhaseAddress,
+  semanticAddressKey,
+  createGorgonPhaseAddress,
   createIncomingRewardAddress,
   createOccurrenceId,
   createProjectHistory,
@@ -199,6 +201,7 @@ it('exports the reached Epic Gorgon Athena child and reloads its condition edit'
           transaction.resolution?.kind === 'traitOffer',
       ),
   ).toMatchObject({
+    owner: semanticAddressKey(createGorgonPhaseAddress(phase)),
     resolution: {
       offer: {
         giver: 'Athena',

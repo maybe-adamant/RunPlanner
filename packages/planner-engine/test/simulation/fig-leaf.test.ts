@@ -19,6 +19,7 @@ import {
   simulateProjectAssembly,
 } from '../../src/simulation';
 import { createCompleteFGProject } from '@run-planner/test-fixtures/underworld';
+import { loadUnderworldFigLeafCheckpoint } from '@run-planner/test-fixtures/checkpoints/underworld';
 import {
   loadSurfaceNProject,
   loadSurfaceNOProject,
@@ -64,16 +65,7 @@ describe('Fig Leaf state contract', () => {
   });
 
   it('consumes one legal skip and preserves the later same-biome guard through the real walker', () => {
-    const phase = createEncounterPhaseAddress(
-      { kind: 'biome', routeKey: 'Underworld', biomeKey: 'F' },
-      { kind: 'occurrence', occurrenceId: createOccurrenceId('golden-f-b2-e1') },
-      'Encounter',
-    );
-    const firstSelected = applyProjectCommand(withFigLeaf(), catalog, {
-      kind: 'ReplaceFigLeafSkip',
-      phase,
-      value: true,
-    });
+    const firstSelected = loadUnderworldFigLeafCheckpoint();
     const laterPhase = createEncounterPhaseAddress(
       { kind: 'biome', routeKey: 'Underworld', biomeKey: 'F' },
       { kind: 'occurrence', occurrenceId: createOccurrenceId('golden-f-b3-e1') },

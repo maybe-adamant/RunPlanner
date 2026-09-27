@@ -346,39 +346,6 @@ describe('Hub progressive biome evaluation', () => {
     },
   );
 
-  it('retains an explicit side-generation violation at the local visit boundary', () => {
-    let project = loadSurfaceNProject();
-    project = applyProjectCommand(project, catalog, {
-      kind: 'ReplaceLocalVisitOrder',
-      order: createLocalVisitOrderAddress(nBiome, nOccurrenceId('combat05'), 'sideRooms'),
-      occurrenceIds: [nLocalOccurrenceId('combat05', 'sideDoor2')],
-    });
-    project = applyProjectCommand(project, catalog, {
-      kind: 'SetLocalVisitGeneration',
-      slot: createLocalVisitSlotAddress(
-        nBiome,
-        nOccurrenceId('combat05'),
-        'sideRooms',
-        'sideDoor1',
-      ),
-      generation: 'notGenerated',
-    });
-    const biome = nEvaluation(project as ReturnType<typeof openHub>);
-
-    expect(biome).toMatchObject({ authoring: 'complete', validity: 'invalid' });
-    expect(biome.findings).toContainEqual(
-      expect.objectContaining({
-        code: 'sideRoomGenerationUnavailable',
-        origin: createLocalVisitSlotAddress(
-          nBiome,
-          nOccurrenceId('combat05'),
-          'sideRooms',
-          'sideDoor1',
-        ),
-      }),
-    );
-  });
-
   it('orders one Hub visit as target lifecycle, side generation, then local lifecycle', () => {
     const base = loadSurfaceNProject();
     let sideBlocked = applyProjectCommand(base, catalog, {

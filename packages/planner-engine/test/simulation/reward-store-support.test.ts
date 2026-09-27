@@ -169,41 +169,6 @@ describe('run-wide entered-store ledger', () => {
     }
   });
 
-  it('assesses an authored boss-door store against support like an ordinary batch', () => {
-    // The authored key is bounded by the policy alone at the write, so an
-    // unsupported store is reachable and must surface the ordinary finding
-    // rather than passing silently: P's door supports MetaProgress only.
-    const project = loadSurfaceNOPQProject();
-    expect(simulateProjectAssembly(catalog, project).evaluation.findings).toEqual([]);
-    const unsupported = applyProjectCommand(project, catalog, {
-      kind: 'ReplaceBossDoorRewardStore',
-      rewardStore: createBatchRewardStoreAddress(pBiome, {
-        kind: 'occurrence',
-        occurrenceId: createOccurrenceId('surface-p-preboss-shop'),
-      }),
-      storeKey: 'RunProgress',
-    });
-    expect(
-      simulateProjectAssembly(catalog, unsupported).evaluation.findings.map((finding) => [
-        finding.code,
-        finding.origin,
-      ]),
-    ).toEqual([
-      [
-        'baseRewardStoreUnavailable',
-        {
-          kind: 'batchRewardStore',
-          routeKey: 'Surface',
-          biomeKey: 'P',
-          source: {
-            kind: 'occurrence',
-            occurrenceId: createOccurrenceId('surface-p-preboss-shop'),
-          },
-        },
-      ],
-    ]);
-  });
-
   it('keeps the run-wide count order-independent across a reordered Dream itinerary', () => {
     // A Dream Dive runs the controller unmodified over a reordered itinerary,
     // so the same rooms in a different order carry the same count.

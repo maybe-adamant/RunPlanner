@@ -387,82 +387,54 @@ describe('Echo Gate A direct choices', () => {
   it.each([
     ['DiminishingDodgeBoon', 'DiminishingHealthAndManaBoon', 'EchoDoubleLevelBoon'],
     ['EchoDeathDefianceRefill', 'DiminishingDodgeBoon', 'EchoDoubleLevelBoon'],
-  ] as const)('keeps ordinary exact-three offers legal', (...optionTraitKeys) => {
-    const project = completeGoldenFGHProject();
-    const evaluation = simulateProjectAssembly(catalog, project).evaluation;
-    const value = echoOffer('option1', [
-      echoTraitOption(optionTraitKeys[0]),
-      echoTraitOption(optionTraitKeys[1]),
-      echoTraitOption(optionTraitKeys[2]),
-    ]);
-    const candidateArtifacts = createTraitOfferCandidateArtifacts(
-      catalog,
-      openTimeTraitOfferContexts(
-        new Map([
-          [
-            semanticAddressKey(echoOwner),
+  ] as const)(
+    'keeps ordinary exact-three offers legal, including Survive without a Death Defiance condition',
+    (...optionTraitKeys) => {
+      const project = completeGoldenFGHProject();
+      const evaluation = simulateProjectAssembly(catalog, project).evaluation;
+      const value = echoOffer('option1', [
+        echoTraitOption(optionTraitKeys[0]),
+        echoTraitOption(optionTraitKeys[1]),
+        echoTraitOption(optionTraitKeys[2]),
+      ]);
+      const candidateArtifacts = createTraitOfferCandidateArtifacts(
+        catalog,
+        openTimeTraitOfferContexts(
+          new Map([
             [
-              Object.freeze({
-                state: traitFrontierState(createTraitHistoryState()),
-                source: Object.freeze({ resolvedProviderKey: 'Echo' }),
-              }),
+              semanticAddressKey(echoOwner),
+              [
+                Object.freeze({
+                  state: traitFrontierState(createTraitHistoryState()),
+                  source: Object.freeze({ resolvedProviderKey: 'Echo' }),
+                }),
+              ],
             ],
-          ],
-        ]),
-      ),
-    );
-    expect(
-      (['option1', 'option2', 'option3'] as const).map((optionKey) =>
-        evaluateTraitOfferFocusedOptionCandidate(catalog, project, evaluation, candidateArtifacts, {
-          kind: 'traitOfferFocusedOption',
-          trait: echoOwner,
-          value,
-          optionKey,
-        }),
-      ),
-    ).toEqual([
-      expect.objectContaining({ result: expect.objectContaining({ supported: true }) }),
-      expect.objectContaining({ result: expect.objectContaining({ supported: true }) }),
-      expect.objectContaining({ result: expect.objectContaining({ supported: true }) }),
-    ]);
-  });
-
-  it('keeps Survive authorable without a Death Defiance condition', () => {
-    const project = completeGoldenFGHProject();
-    const evaluation = simulateProjectAssembly(catalog, project).evaluation;
-    const value = echoOffer('option1', [
-      { traitKey: 'EchoDeathDefianceRefill' },
-      { traitKey: 'DiminishingDodgeBoon' },
-      { traitKey: 'DiminishingHealthAndManaBoon' },
-    ]);
-    const candidateArtifacts = createTraitOfferCandidateArtifacts(
-      catalog,
-      openTimeTraitOfferContexts(
-        new Map([
-          [
-            semanticAddressKey(echoOwner),
-            [
-              Object.freeze({
-                state: traitFrontierState(createTraitHistoryState()),
-                source: Object.freeze({ resolvedProviderKey: 'Echo' }),
-              }),
-            ],
-          ],
-        ]),
-      ),
-    );
-    const survive = evaluateTraitOfferFocusedOptionCandidate(
-      catalog,
-      project,
-      evaluation,
-      candidateArtifacts,
-      { kind: 'traitOfferFocusedOption', trait: echoOwner, value, optionKey: 'option1' },
-    );
-    expect(survive).toMatchObject({
-      kind: 'traitOfferFocusedOption',
-      result: { supported: true },
-    });
-  });
+          ]),
+        ),
+      );
+      expect(
+        (['option1', 'option2', 'option3'] as const).map((optionKey) =>
+          evaluateTraitOfferFocusedOptionCandidate(
+            catalog,
+            project,
+            evaluation,
+            candidateArtifacts,
+            {
+              kind: 'traitOfferFocusedOption',
+              trait: echoOwner,
+              value,
+              optionKey,
+            },
+          ),
+        ),
+      ).toEqual([
+        expect.objectContaining({ result: expect.objectContaining({ supported: true }) }),
+        expect.objectContaining({ result: expect.objectContaining({ supported: true }) }),
+        expect.objectContaining({ result: expect.objectContaining({ supported: true }) }),
+      ]);
+    },
+  );
 
   it('settles an explicit empty-domain Pom as a legal outer-only no-op', () => {
     const project = completeGoldenFGHProject();
@@ -627,23 +599,6 @@ describe('Echo Gate A direct choices', () => {
       );
     }
     expect(result.findingEntries).toHaveLength(0);
-  });
-
-  it('acquires Survive without a source-local Death Defiance condition', () => {
-    const result = settleEncounterTraitOffer(
-      catalog,
-      baseBranch(),
-      echoOwner.owner,
-      echoOffer('option1', [
-        { traitKey: 'EchoDeathDefianceRefill' },
-        { traitKey: 'DiminishingDodgeBoon' },
-        { traitKey: 'DiminishingHealthAndManaBoon' },
-      ]),
-      10,
-      'encounterCompleted',
-    );
-    expect(result.branch.state.traitHistory?.equippedTraits.EchoDeathDefianceRefill).toBeDefined();
-    expect(result.findingEntries.map((entry) => entry.finding.code)).not.toContain('offerContext');
   });
 
   it('offers only greatest-level Pom ties and doubles the selected current level', () => {

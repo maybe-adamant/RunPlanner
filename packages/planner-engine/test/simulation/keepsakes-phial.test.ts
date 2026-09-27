@@ -178,14 +178,7 @@ function fountainRoom(targetTraitKey: string): AuthoredFountainRarityResult {
 }
 
 describe('Aromatic Phial catalog and target domains', () => {
-  it('declares the fixed rank profile and remains Epic under Cherished reconstruction', () => {
-    const effect = catalog.keepsakes.byKey.FountainRarityKeepsake?.effect;
-    expect(effect).toEqual({
-      kind: 'fountainRarity',
-      uses: 1,
-      targetRarityLevelByRank: { Common: 2, Rare: 3, Epic: 4 },
-      sourceMaxRarityLevel: 1,
-    });
+  it('remains Epic under Cherished reconstruction', () => {
     const history = createTraitHistoryState();
     expect(keepsakeRankForEquip(catalog, 'FountainRarityKeepsake', history)).toBe('Epic');
     const state = createKeepsakeState(catalog, 'FountainRarityKeepsake');

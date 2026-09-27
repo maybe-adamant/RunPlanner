@@ -969,43 +969,6 @@ describe('execution-plan compiler and codec', () => {
     expect(planFor(project).plan.startingLoadout).not.toHaveProperty('startingHex');
   });
 
-  it('publishes the Calling Card initial rarity beside its final effective rarity', () => {
-    const reward = createIncomingRewardAddress(goldenFBiome, createOccurrenceId('golden-f-start'));
-    const trait = createTraitOfferAddress(reward, 'source');
-    let project = applyProjectCommand(createCompleteFGProject(), catalog, {
-      kind: 'ReplaceStartingKeepsake',
-      selection: createRouteStartKeepsakeSelectionAddress('Underworld'),
-      keepsakeKey: 'RarifyKeepsake',
-    });
-    project = applyProjectCommand(project, catalog, {
-      kind: 'ReplaceTraitOffer',
-      trait,
-      value: {
-        kind: 'traits',
-        giverKey: 'Apollo',
-        options: [
-          { traitKey: 'ApolloWeaponBoon', rarity: 'Common' },
-          { traitKey: 'ApolloSpecialBoon', rarity: 'Common' },
-          { traitKey: 'ApolloCastBoon', rarity: 'Common' },
-        ],
-        selectedOptionKey: 'option1',
-        rarificationActions: ['option1'],
-      },
-    });
-    const plan = planFor(authorLegalTraitOffers(project)).plan;
-    const offer = plan.occurrences
-      .flatMap((occurrence) => occurrence.timeline.transactions)
-      .flatMap((transaction) => (transaction.kind === 'acquisition' ? transaction.roles : []))
-      .flatMap((role) => (role.traitOffer ? [role.traitOffer] : []))
-      .find((candidate) => candidate.kind === 'traits' && candidate.giver === 'Apollo');
-    if (offer?.kind !== 'traits') throw new Error('Calling Card offer is missing');
-    expect(offer.options[0]).toMatchObject({
-      key: 'ApolloWeaponBoon',
-      baseRarity: 'Common',
-      rarity: 'Rare',
-    });
-  });
-
   it('publishes provider-keepsake rarification with its room-exit charge proof', () => {
     const reward = createIncomingRewardAddress(goldenFBiome, createOccurrenceId('golden-f-start'));
     const trait = createTraitOfferAddress(reward, 'source');

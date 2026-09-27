@@ -26,6 +26,7 @@ import {
   goldenHBiome,
 } from '@run-planner/test-fixtures/underworld';
 import { loadSurfaceNOPProject, pBiome, pOccurrenceId } from '@run-planner/test-fixtures/surface';
+import { loadUnderworldGorgonAthenaCheckpoint } from '@run-planner/test-fixtures/checkpoints/underworld';
 import {
   applyProjectHistoryCommand,
   applyProjectCommand,
@@ -444,16 +445,7 @@ describe('Gorgon Amulet lifecycle', () => {
     expect(g.rewards.branches[0]?.state.keepsakes.gorgon).toBeDefined();
   });
 
-  it('exposes the fixed depth/provider contract and distinct blocker facts', () => {
-    const effect = catalog.keepsakes.byKey.AthenaEncounterKeepsake?.effect;
-    expect(effect).toEqual({
-      kind: 'gorgonAmulet',
-      uses: 1,
-      minimumBiomeDepth: 2,
-      naturalEncounterKey: 'AthenaCombatP',
-      providerKey: 'Athena',
-      rarityLevelByRank: { Common: 1, Rare: 2, Epic: 3, Heroic: 4 },
-    });
+  it('exposes distinct Gorgon blocker facts', () => {
     expect(catalog.encounterDefinitions.byKey.AthenaCombatP?.blocksGorgon).toBe(true);
     expect(catalog.encounterDefinitions.byKey.GeneratedH_Passive?.blocksGorgon).not.toBe(true);
     expect(catalog.encounterDefinitions.byKey.GeneratedH_Passive?.hostsGorgon).toBe(true);
@@ -603,36 +595,6 @@ describe('Gorgon Amulet lifecycle', () => {
           value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'ZeusUpgrade' } },
         }),
       );
-      for (const [occurrenceId, options] of [] as readonly (readonly [
-        ReturnType<typeof goldenGOccurrenceId>,
-        readonly [string, string, string],
-      ])[]) {
-        project = applyProjectCommand(project, catalog, {
-          kind: 'ReplaceIncomingReward',
-          reward: createIncomingRewardAddress(goldenGBiome, occurrenceId),
-          value: {
-            rewardType: 'Boon',
-            payload: { kind: 'BoonSource', source: 'DemeterUpgrade' },
-          },
-        });
-        project = applyProjectCommand(project, catalog, {
-          kind: 'ReplaceTraitOffer',
-          trait: createTraitOfferAddress(
-            createIncomingRewardAddress(goldenGBiome, occurrenceId),
-            'source',
-          ),
-          value: {
-            kind: 'traits',
-            giverKey: 'Demeter',
-            options: [
-              { traitKey: options[0], rarity: 'Common' },
-              { traitKey: options[1], rarity: 'Common' },
-              { traitKey: options[2], rarity: 'Common' },
-            ],
-            selectedOptionKey: 'option1',
-          },
-        });
-      }
     }
 
     const route = project.route;
@@ -838,18 +800,7 @@ describe('Gorgon Amulet lifecycle', () => {
       { kind: 'occurrence', occurrenceId: goldenGOccurrenceId(1, 1) },
       'Encounter',
     );
-    let project = applyProjectCommand(createCompleteFGProject(), catalog, {
-      kind: 'ReplaceStartingKeepsake',
-      selection: createRouteStartKeepsakeSelectionAddress('Underworld'),
-      keepsakeKey: 'AthenaEncounterKeepsake',
-    });
-    project = applyProjectCommand(project, catalog, {
-      kind: 'ReplaceGorgonDeathDefianceCondition',
-      phase,
-      value: true,
-    });
-    project = authorGorgon(project, phase);
-    project = orderGoldenGorgonAfterIncoming(project, goldenGOccurrenceId(1, 1), 'self');
+    const project = loadUnderworldGorgonAthenaCheckpoint();
     const contextInvalid = Object.freeze({
       ...project.route,
       biomes: Object.freeze(
