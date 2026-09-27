@@ -3,6 +3,7 @@ import { catalog } from '@run-planner/hades2-catalog';
 import {
   applyProjectHistoryCommand,
   createBiomeAddress,
+  createFigurineArcanaAddress,
   createEncounterPhaseAddress,
   createFountainRarityOutcomeAddress,
   createHubFountainAddress,
@@ -24,6 +25,7 @@ import { assembleExecutionProduct, compileExecutionPlan } from '../../src/execut
 import { simulateProjectAssembly } from '../../src/simulation';
 import {
   loadUnderworldArachneCocoonsCheckpoint,
+  loadUnderworldAutomaticBossCheckpoint,
   loadUnderworldGAnomalyRosterCheckpoint,
   loadUnderworldGeneratedCompositionCheckpoint,
   loadUnderworldIxionChaosCheckpoint,
@@ -505,6 +507,48 @@ it('exports the selected Zagreus Contract return and acquired Preboss Contract i
       },
     }),
   );
+  expect(undoProjectHistory(edited).present).toBe(saved);
+});
+
+it('exports reached Judgment and Crystal Figurine Boss outcomes, then retains the Figurine edit', () => {
+  const saved = loadUnderworldAutomaticBossCheckpoint();
+  const boss = createOccurrenceId('golden-f-preboss-shop:boss');
+  const figurine = createFigurineArcanaAddress(
+    createOccurrenceAddress(goldenFBiome, boss),
+    'Encounter',
+  );
+  const transactions = plan(saved).occurrences.find((room) => room.id === boss)?.timeline
+    .transactions;
+  expect(transactions).toContainEqual(
+    expect.objectContaining({
+      kind: 'automatic',
+      effect: 'judgment',
+      rarity: 'Epic',
+      window: { kind: 'bossDefeated', phaseKey: 'Encounter' },
+    }),
+  );
+  expect(transactions).toContainEqual(
+    expect.objectContaining({
+      kind: 'automatic',
+      effect: 'crystalFigurine',
+      rarity: 'Epic',
+      window: { kind: 'bossDefeated', phaseKey: 'Encounter' },
+    }),
+  );
+  const edited = applyProjectHistoryCommand(createProjectHistory(saved), catalog, {
+    kind: 'ReplaceFigurineArcana',
+    figurine,
+    arcanaKeys: [],
+  });
+  const reloaded = reload(edited.present);
+  expect(reloaded).toEqual(edited.present);
+  expect(simulateProjectAssembly(catalog, reloaded).evaluation.findings).toContainEqual({
+    code: 'figurineOutcomeMissing',
+    evidence: { required: 2, selected: 0 },
+    origin: figurine,
+    phase: 'rewardGeneration',
+    severity: 'error',
+  });
   expect(undoProjectHistory(edited).present).toBe(saved);
 });
 

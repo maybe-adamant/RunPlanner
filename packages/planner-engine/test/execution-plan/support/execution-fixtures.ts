@@ -10,6 +10,7 @@ import {
 } from '@run-planner/test-fixtures/underworld';
 import {
   loadUnderworldArachneCocoonsCheckpoint,
+  loadUnderworldAutomaticBossCheckpoint,
   loadUnderworldFGHCheckpoint,
   loadUnderworldFGHICheckpoint,
   loadUnderworldGAnomalyRosterCheckpoint,
@@ -33,7 +34,6 @@ import { assembleExecutionProduct } from '../../../src/execution-plan/assembler'
 import { compileExecutionPlan } from '../../../src/execution-plan/compiler';
 import { encodeExecutionPlan } from '../../../src/execution-plan/codec';
 import { simulateProjectAssembly } from '../../../src/simulation';
-import { bossAutomaticOutcomeProject } from './automatic-fixture';
 import { surfaceQShopCorrelationProject } from './surface-q-shop-correlation-fixture';
 import { npcShoppingProtectionProject } from './npc-shopping-fixture';
 import automaticBossFixture from '../fixtures/automatic-boss.execution.json';
@@ -107,7 +107,11 @@ export const executionFixtures: readonly ExecutionFixture[] = Object.freeze([
     project: loadUnderworldGAnomalyRosterCheckpoint,
     wire: fgAnomalyRosterFixture,
   },
-  { name: 'automatic-boss', project: bossAutomaticOutcomeProject, wire: automaticBossFixture },
+  {
+    name: 'automatic-boss',
+    project: loadUnderworldAutomaticBossCheckpoint,
+    wire: automaticBossFixture,
+  },
   { name: 'surface-n', project: loadSurfaceNProject, wire: surfaceNFixture },
   { name: 'surface-no', project: loadSurfaceNOProject, wire: surfaceNOFixture },
   { name: 'surface-nop', project: loadSurfaceNOPProject, wire: surfaceNOPFixture },

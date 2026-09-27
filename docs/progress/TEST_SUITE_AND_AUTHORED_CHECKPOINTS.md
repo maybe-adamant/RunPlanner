@@ -1,7 +1,8 @@
 # Test-suite cleanup and authored checkpoint coverage
 
 Status: Gates A–C2 implemented and reviewed; review findings resolved.
-C3–D await implementation.
+C3 is partially implemented with its automatic-Boss slice reviewed; D awaits
+implementation.
 Base: `7dea8cfe` (September 26, 2026).
 
 ## Objective
@@ -265,6 +266,18 @@ real scenario/compatibility boundary. Preserve unresolved Chaos as a repair inpu
 
 #### C3 — advanced loadout, traits and Hex
 
+Disposition: the automatic-Boss slice is implemented against `b6dce276`
+(September 26, 2026). It promotes a saved F/G checkpoint with reached Judgment
+and Crystal Figurine outcomes, including central recipe attestation, exact
+execution witnesses, and a Figurine edit/reload/Undo repair witness. Fig Leaf,
+Gorgon, targeted traits, normal and aspect Hex, and Persephone remain planned
+portfolio candidates below; none are claimed by this slice.
+
+Verification passed: 77 focused engine tests (including all 20 execution-fixture
+byte checks), 38 fixture-integrity tests, full typechecking, lint, formatting and
+diff checks. Independent review is complete; its stale private-helper import
+finding was resolved. Execution fixture bytes are unchanged.
+
 Resolve the remaining feature rows into a bounded portfolio before creating files:
 
 - non-base weapon/aspect with explicit positive level/rarity behavior;
@@ -281,6 +294,25 @@ equipped-state injection. The portfolio must explicitly account for the matrix's
 missing major mechanisms. If a row needs materially new modeling or cannot be
 combined legally, report it for plan amendment rather than silently omit it or
 expand production scope. Exhaustive trait/perk variants remain excluded.
+
+Planned portfolio assignment (not yet success claims):
+
+- `underworld-automatic-boss` promotes the existing complete F/G automatic-outcome
+  recipe for reached Judgment and Crystal Figurine. This is the first C3 slice.
+- A separate `underworld-fig-leaf` plan owns one actual legal skip; a separate
+  Gorgon plan owns the Athena starting-keepsake, selected child and rarity. They
+  cannot share the one starting-keepsake slot.
+- A targeted-traits portfolio begins from the Natural Selection frontier only
+  after its child is command-settled. All Together, Concave Stone and Echo each
+  require their own command-reachable chronology; their branch-only test helpers
+  are source evidence, not saved-plan recipes.
+- Normal installed-Hex/Path, Selene aspect-Hex/Path, and Persephone
+  level-bonus scenarios are separate: the latter two use incompatible aspects.
+  The Selene and Persephone plans also provide the non-base loadout witnesses.
+
+Each candidate needs its own static checkpoint, recipe attestation, reached
+consumer/export witness and edit/reload result before the matrix moves to
+Present.
 
 #### Acceptance shared by C1–C3
 

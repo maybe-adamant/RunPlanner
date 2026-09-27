@@ -24,6 +24,7 @@ import {
   loadUnderworldFGHICheckpoint,
   loadUnderworldFPoolCheckpoint,
   loadUnderworldFStygianWellCheckpoint,
+  loadUnderworldAutomaticBossCheckpoint,
   loadUnderworldIxionChaosCheckpoint,
   loadUnderworldWorldShopTravelDealCheckpoint,
   loadUnderworldZagreusContractCheckpoint,
@@ -93,7 +94,6 @@ import {
   mergePlannerTimelineFacts,
   type PlannerTimelineFacts,
 } from '../../src/simulation/timeline-facts';
-import { bossAutomaticOutcomeProject } from './support/automatic-fixture';
 import { surfaceQShopCorrelationProject } from './support/surface-q-shop-correlation-fixture';
 
 function fOnlyProject(project = createCompleteFGProject()) {
@@ -2224,7 +2224,7 @@ describe('engine-owned F/G execution semantic product', () => {
   });
 
   it('copies exact Boss Arcana outcomes and their semantic order into execution', () => {
-    const project = bossAutomaticOutcomeProject();
+    const project = loadUnderworldAutomaticBossCheckpoint();
     const assembly = simulateProjectAssembly(catalog, project);
     if (!assembly.evaluation.route.summary.eligibleForExecutionPlan)
       throw new Error(
