@@ -134,7 +134,7 @@ describe('authored-project checkpoint integrity', () => {
     const chaosRoom = occurrences?.find(
       (occurrence) => occurrence.occurrenceId === 'fixture-chaos-room',
     );
-    expect(checkpointManifest).toHaveLength(49);
+    expect(checkpointManifest).toHaveLength(50);
     expect(chaosRoom?.gameName).toMatch(/^Chaos_/);
     expect(chaosRoom?.state).toMatchObject({
       kind: 'fixed',
