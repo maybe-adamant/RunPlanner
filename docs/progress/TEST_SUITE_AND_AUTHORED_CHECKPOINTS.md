@@ -1,9 +1,7 @@
 # Test-suite cleanup and authored checkpoint coverage
 
-Status: Gates A–C2 implemented and reviewed; review findings resolved.
-C3 is partially implemented with its automatic-Boss, Fig Leaf/Gorgon, and
-ordinary Hex/Path slices reviewed; D awaits
-implementation.
+Status: Gates A–C implemented and reviewed; review findings resolved.
+Gate D closure remains pending.
 Base: `7dea8cfe` (September 26, 2026).
 
 ## Objective
@@ -275,8 +273,7 @@ repair witness. The next Fig Leaf/Gorgon slice is implemented against `f321956c`
 and independently reviewed: separate saved F/G checkpoints reach the legal Fig
 Leaf skip and Epic selected Gorgon Athena child, respectively. Their semantic
 edits reload to the exact addressed Fig Leaf repair and suppressed Gorgon
-interaction, then Undo to the saved checkpoint. Targeted traits, aspect Hex,
-and Persephone remain planned portfolio candidates below. The
+interaction, then Undo to the saved checkpoint. The
 ordinary Hex/Path slice is implemented against `4d932a74` and independently
 reviewed: a complete N/O/P/Q checkpoint installs `SpellPotionTrait` at N and
 reaches a P `TalentDrop` with three invested Lung points; replacing that reward
@@ -311,7 +308,17 @@ fixture-integrity tests, full typechecking, lint, formatting and Git diff checks
 Independent review is complete without findings. Execution fixture bytes remain
 unchanged.
 
-Resolve the remaining feature rows into a bounded portfolio before creating files:
+The final advanced-trait slice promotes `dream-h-artificer-echo`: the supplied
+user-authored H Hera/Artificer prefix reaches All Together's four grants and
+Concave Stone residual, then an actual Echo Last Reward MaxMana replay. Its
+semantic Echo-entry edit reloads to the exact source-unavailable repair and
+Undo restores the saved checkpoint. Execution fixture bytes remain unchanged.
+Verification passed 41 focused execution tests (including all 20 execution-fixture
+byte checks), 44 fixture-integrity tests, full typechecking, lint, formatting and
+diff checks. Independent review completed; its transaction-narrowing and exact
+Echo-repair-evidence findings are resolved. This completes Gate C.
+
+The delivered portfolio covers these feature rows:
 
 - non-base weapon/aspect with explicit positive level/rarity behavior;
 - selected targeted/nested outcomes: representative All Together, Natural
@@ -328,7 +335,7 @@ missing major mechanisms. If a row needs materially new modeling or cannot be
 combined legally, report it for plan amendment rather than silently omit it or
 expand production scope. Exhaustive trait/perk variants remain excluded.
 
-Planned portfolio assignment (not yet success claims):
+Verified portfolio assignment:
 
 - `underworld-automatic-boss` promotes the existing complete F/G automatic-outcome
   recipe for reached Judgment and Crystal Figurine. This reviewed first C3 slice
@@ -345,11 +352,13 @@ Planned portfolio assignment (not yet success claims):
   contribution while Calling Card changes the selected Apollo rarity. It is one
   F/G checkpoint rather than two duplicate recipes.
 - `surface-n-natural-selection` promotes the prior selected-trait frontier by
-  authoring its child from the real candidate domain. All Together, Concave Stone
-  and Echo still require their own command-reachable chronology; branch-only test
-  helpers remain source evidence, not saved-plan recipes.
+  authoring its child from the real candidate domain.
+- `dream-h-artificer-echo` completes the supplied user-authored H prefix through
+  semantic Echo and H-tail commands, retaining its reached All Together and
+  Concave Stone chronology instead of reconstructing a parallel recipe.
 
-Each candidate needs its own static checkpoint, recipe attestation, reached
+Each candidate needs its own static checkpoint, independent provenance
+(command-recipe attestation or canonical user-authored source), reached
 consumer/export witness and edit/reload result before the matrix moves to
 Present.
 

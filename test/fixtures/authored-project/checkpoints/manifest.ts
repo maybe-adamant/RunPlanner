@@ -11,6 +11,18 @@ export interface AuthoredProjectCheckpointManifestEntry {
 
 export const checkpointManifest = Object.freeze([
   {
+    id: 'dream-h-artificer-echo',
+    file: 'dream-h-artificer-echo.runplanner.json',
+    route: 'Dream',
+    configuredBiomePrefix: ['H'],
+    scenario:
+      'Reached H All Together with Concave Stone residual and Echo Last Reward MaxMana replay',
+    schemaVersion: 88,
+    catalogVersion: '0.55.0-anvil-of-fates',
+    provenance:
+      'user-authored Dream H Hera/Artificer prefix, completed through semantic Echo and native H-tail commands',
+  },
+  {
     id: 'dream-mixed-handoff',
     file: 'dream-mixed-handoff.runplanner.json',
     route: 'Dream',
