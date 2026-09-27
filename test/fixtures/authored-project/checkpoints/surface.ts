@@ -6,10 +6,12 @@ import surfaceNRaw from './surface-n.runplanner.json';
 import surfaceEncounterShowcaseRaw from './surface-encounter-showcase.runplanner.json';
 import surfaceAnvilRaw from './surface-anvil.runplanner.json';
 import surfaceOrdinaryHexPathRaw from './surface-ordinary-hex-path.runplanner.json';
+import surfaceSeleneHexPathRaw from './surface-selene-hex-path.runplanner.json';
 import surfaceShrineTravelDealRaw from './surface-shrine-travel-deal.runplanner.json';
 import surfaceScheduledLifecycleRaw from './surface-scheduled-lifecycle.runplanner.json';
 import surfaceNPhialIntermediateFountainRaw from './surface-n-phial-intermediate-fountain.runplanner.json';
 import surfaceNNaturalSelectionRaw from './surface-n-natural-selection-frontier.runplanner.json';
+import surfaceNNaturalSelectionCompleteRaw from './surface-n-natural-selection.runplanner.json';
 import surfaceNQueensRansomRaw from './surface-n-queens-ransom.runplanner.json';
 import surfaceNSteadyGrowthRaw from './surface-n-steady-growth-frontier.runplanner.json';
 import surfaceNQuickBuckRaw from './surface-n-quick-buck.runplanner.json';
@@ -35,10 +37,12 @@ export const surfaceCheckpointArtifacts = Object.freeze({
   'surface-encounter-showcase': checkpointArtifact(surfaceEncounterShowcaseRaw),
   'surface-anvil': checkpointArtifact(surfaceAnvilRaw),
   'surface-ordinary-hex-path': checkpointArtifact(surfaceOrdinaryHexPathRaw),
+  'surface-selene-hex-path': checkpointArtifact(surfaceSeleneHexPathRaw),
   'surface-shrine-travel-deal': checkpointArtifact(surfaceShrineTravelDealRaw),
   'surface-scheduled-lifecycle': checkpointArtifact(surfaceScheduledLifecycleRaw),
   'surface-n-phial-intermediate-fountain': checkpointArtifact(surfaceNPhialIntermediateFountainRaw),
   'surface-n-natural-selection-frontier': checkpointArtifact(surfaceNNaturalSelectionRaw),
+  'surface-n-natural-selection': checkpointArtifact(surfaceNNaturalSelectionCompleteRaw),
   'surface-n-queens-ransom': checkpointArtifact(surfaceNQueensRansomRaw),
   'surface-n-steady-growth-frontier': checkpointArtifact(surfaceNSteadyGrowthRaw),
   'surface-n-quick-buck': checkpointArtifact(surfaceNQuickBuckRaw),
@@ -76,6 +80,10 @@ export function loadSurfaceOrdinaryHexPathCheckpoint(): ProjectDocument {
   return surfaceCheckpointArtifacts['surface-ordinary-hex-path'].load();
 }
 
+export function loadSurfaceSeleneHexPathCheckpoint(): ProjectDocument {
+  return surfaceCheckpointArtifacts['surface-selene-hex-path'].load();
+}
+
 export function loadSurfaceShrineTravelDealCheckpoint(): ProjectDocument {
   return surfaceCheckpointArtifacts['surface-shrine-travel-deal'].load();
 }
@@ -90,6 +98,10 @@ export function loadSurfaceNPhialIntermediateFountainCheckpoint(): ProjectDocume
 
 export function loadSurfaceNNaturalSelectionFrontierCheckpoint(): ProjectDocument {
   return surfaceCheckpointArtifacts['surface-n-natural-selection-frontier'].load();
+}
+
+export function loadSurfaceNNaturalSelectionCheckpoint(): ProjectDocument {
+  return surfaceCheckpointArtifacts['surface-n-natural-selection'].load();
 }
 
 export function loadSurfaceNQueensRansomCheckpoint(): ProjectDocument {

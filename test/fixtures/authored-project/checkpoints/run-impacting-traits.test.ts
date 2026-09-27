@@ -1,6 +1,7 @@
 import { catalog } from '@run-planner/hades2-catalog';
 import {
   applyProjectCommand,
+  applyProjectHistoryCommand,
   resolveRoutePosition,
   assembleRoomActionDomain,
   createAcquisitionEntryAddress,
@@ -10,14 +11,17 @@ import {
   createOccurrenceAddress,
   createRoomActionAddress,
   createIncomingRewardAddress,
+  createProjectHistory,
   createStartingRewardAddress,
   createTraitOfferAddress,
   encodeProjectDocument,
+  decodeProjectDocument,
   SEA_STAR_DUPLICATE_ENTRY_KEY,
   roomActionKey,
   routeStartIncomingReward,
   seaStarDuplicateSiteKey,
   selectedPickupProducers,
+  undoProjectHistory,
 } from '@run-planner/engine/authored-project';
 import {
   blockedOccurrenceRoomForProjectEvaluationAssembly,
@@ -28,6 +32,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   loadSurfaceNNaturalSelectionFrontierCheckpoint,
+  loadSurfaceNNaturalSelectionCheckpoint,
   loadSurfaceNBuriedTreasureCheckpoint,
   loadSurfaceNQuickBuckCheckpoint,
   loadSurfaceNQueensRansomCheckpoint,
@@ -35,18 +40,20 @@ import {
 } from './surface';
 import {
   createSurfaceNNaturalSelectionFrontier,
+  createSurfaceNNaturalSelectionCheckpoint,
   createSurfaceNBuriedTreasureCheckpoint,
   createSurfaceNQuickBuckCheckpoint,
   createSurfaceNQueensRansomCheckpoint,
   createSurfaceNSteadyGrowthFrontier,
 } from '../routes/run-impacting-traits';
-import { nBiome } from '../routes/surface';
+import { nBiome, nOccurrenceId } from '../routes/surface';
 import { nOccurrenceIds } from '../routes/surface';
 
 describe('run-impacting trait checkpoint recipes', () => {
   it('attests each saved checkpoint to its semantic-command recipe', () => {
     for (const [saved, built] of [
       [loadSurfaceNNaturalSelectionFrontierCheckpoint(), createSurfaceNNaturalSelectionFrontier()],
+      [loadSurfaceNNaturalSelectionCheckpoint(), createSurfaceNNaturalSelectionCheckpoint()],
       [loadSurfaceNQuickBuckCheckpoint(), createSurfaceNQuickBuckCheckpoint()],
       [loadSurfaceNBuriedTreasureCheckpoint(), createSurfaceNBuriedTreasureCheckpoint()],
       [loadSurfaceNQueensRansomCheckpoint(), createSurfaceNQueensRansomCheckpoint()],
@@ -252,6 +259,92 @@ describe('run-impacting trait checkpoint recipes', () => {
       optionKey: 'option1',
       trait: { owner: { occurrenceId: 'surface-n-miniBoss01' } },
     });
+  });
+
+  it('settles the selected Natural Selection result from its reached candidate domain', () => {
+    const saved = loadSurfaceNNaturalSelectionCheckpoint();
+    const assembly = simulateProjectAssembly(catalog, saved);
+    expect(assembly.evaluation.findings).toEqual([]);
+    expect(assembly.evaluation.route.summary.eligibleForExecutionPlan).toBe(true);
+    const n = assembly.evaluation.route.biomes.find((candidate) => candidate.biomeKey === 'N');
+    if (n === undefined || !('rewards' in n))
+      throw new Error('Natural Selection N evaluation is missing');
+    expect(n.rewards.selectedTraitOffers).toContainEqual(
+      expect.objectContaining({
+        offer: expect.objectContaining({
+          options: expect.arrayContaining([
+            expect.objectContaining({
+              traitKey: 'GoodStuffBoon',
+              naturalSelectionTargets: [
+                'PoseidonWeaponBoon',
+                'DemeterSpecialBoon',
+                'PoseidonWeaponBoon',
+                'DemeterSpecialBoon',
+                'PoseidonWeaponBoon',
+                'DemeterSpecialBoon',
+                'PoseidonWeaponBoon',
+                'DemeterSpecialBoon',
+              ],
+            }),
+          ]),
+        }),
+      }),
+    );
+    const trait = createTraitOfferAddress(
+      createIncomingRewardAddress(nBiome, nOccurrenceId('miniBoss01')),
+      'source',
+    );
+    const edited = applyProjectHistoryCommand(createProjectHistory(saved), catalog, {
+      kind: 'ReplaceTraitOffer',
+      trait,
+      value: {
+        kind: 'traits',
+        giverKey: 'Demeter',
+        options: [
+          {
+            traitKey: 'GoodStuffBoon',
+            rarity: 'Duo',
+            naturalSelectionTargets: [
+              'PoseidonWeaponBoon',
+              'DemeterSpecialBoon',
+              'PoseidonWeaponBoon',
+              'DemeterSpecialBoon',
+              'PoseidonWeaponBoon',
+              'DemeterSpecialBoon',
+              'PoseidonWeaponBoon',
+            ],
+          },
+          { traitKey: 'DemeterCastBoon', rarity: 'Rare' },
+          { traitKey: 'ReserveManaHitShieldBoon', rarity: 'Rare' },
+        ],
+        selectedOptionKey: 'option1',
+      },
+    });
+    const reloaded = decodeProjectDocument(
+      JSON.parse(encodeProjectDocument(edited.present)),
+      catalog,
+    );
+    expect(reloaded).toEqual(edited.present);
+    expect(simulateProjectAssembly(catalog, reloaded).evaluation.findings).toEqual([
+      {
+        code: 'naturalSelectionResultUnavailable',
+        severity: 'error',
+        phase: 'rewardGeneration',
+        origin: {
+          kind: 'naturalSelectionResult',
+          routeKey: 'Surface',
+          biomeKey: 'N',
+          trait,
+          optionKey: 'option1',
+        },
+        evidence: {
+          lifecyclePoint: 'roomRewardPickup',
+          traitKey: 'GoodStuffBoon',
+          detail: 'incomplete',
+        },
+      },
+    ]);
+    expect(undoProjectHistory(edited).present).toBe(saved);
   });
 
   it("settles Queen's Ransom and continues through the complete N route", () => {
