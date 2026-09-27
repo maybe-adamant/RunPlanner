@@ -5,8 +5,8 @@
 The active strict versioned protocol carries a complete-valid configured
 Underworld or Surface prefix, through `F/G/H/I` or `N/O/P/Q`. The desktop
 publisher writes an execution-only JSON artifact to one of six fixed Plan
-Executor slots in an explicitly selected compatible r2modman profile; the
-browser build has no publication capability. Publishing a slot and selecting
+Executor slots in the established game target; the browser build has no
+publication capability. Publishing a slot and selecting
 the active slot are separate operations. The Executor owns a persistent
 `ActivePlanSlot` selection, reads only that slot at the next run admission, and
 freezes the decoded plan for the live session. Execution normally admits at
@@ -19,28 +19,85 @@ or recovery after a mismatch is supported.
 The transport names the slots `slot-1.runplanner.json` through
 `slot-6.runplanner.json` under the Run Planner game module configuration directory. The
 planner never writes an active-pointer file, activates a slot implicitly, or
-chooses a profile when more than one compatible profile is present. There is no
+chooses a game target on the user's behalf. There is no
 compatibility alias, active-pointer reader, or implicit migration. An empty or
 invalid selected slot therefore remains a bounded admission error, while
 publishing another slot does not disturb a frozen live session.
 
-Desktop discovery matches module identity and the installed
-`execution-compatibility.json` declaration against the application's execution
-format, protocol and catalog versions, not the module release number or authored
-save schema. Publication rechecks against the actual outgoing plan header before
-writing. The module lives in `game-module/`; its tests keep this packaged
-declaration aligned with its decoder and decode the planner-engine execution
-fixtures in place. Missing or incompatible declarations require a module
-update.
+### Distribution and the game target
 
-Manual folder selection complements automatic discovery. The desktop accepts
-a profile folder or its `ReturnOfModding` folder, normalizes it to the profile,
-and remembers the last valid selection in application configuration. Both paths
-use the same module identity and compatibility validation and six-slot atomic
-writer. Remembered locations are revalidated during discovery; every publication
-revalidates against its outgoing header. Manual selection is independent of the
-host's automatic discovery layout, not an override of compatibility or path
-containment checks.
+The game module ships inside the planner. The desktop build assembles
+`game-module/` into the plugin folder that r2modman would produce for a
+Thunderstore package: the `src/` payload and the package files (`manifest.json`,
+`icon.png`, `LICENSE`, `README.md`) flattened into
+`ReturnOfModding/plugins/adamantRunPlanner-Run_Planner/`. The manifest comes from
+`manifest.template.json` stamped with the planner version; the module has no
+version of its own. The Tauri-free `run-planner-game-host` crate
+(`apps/planner/src-tauri/game-host/`) owns this lane over explicit paths; its
+`build.rs` embeds that folder, with per-file SHA-256 hashes, into the binary at
+compile time, so every build carries exactly one
+module and never downloads game packages. The protocol, format and catalog
+triple in `execution-compatibility.json` remains the compatibility contract,
+independent of the release number and authored save schema; the module's tests
+keep that declaration aligned with its decoder and decode the planner-engine
+execution fixtures in place.
+
+The game target is an application setting in the desktop configuration
+directory, never authored state or history. Settings → **Locate Game Module**
+lists the r2modman Hades II profiles under the platform's r2modman data root
+(`%APPDATA%\r2modmanPlus-local\HadesII\profiles` on Windows; other platforms
+currently offer only the folder picker) and also accepts any chosen folder
+that is, or directly contains, a real `ReturnOfModding` folder: an r2modman
+profile or a manual Hell2Modding install. The record keeps whether the target
+was discovered or chosen. Links, files and paths resolving outside the chosen
+folder are rejected; every write stays inside its `ReturnOfModding` folder.
+
+Status is reported by the host and presented by the application:
+
+- the installed module against this build, by file hashes and version;
+- whether r2modman manages the module, read from `mods.yml` (not applicable
+  when the target has no `mods.yml`);
+- ModpackLib, compatible when its version is at or above the module manifest's
+  `adamant-ModpackLib` requirement with the same major version;
+- dependencies named by the module and ModpackLib manifests that have no
+  plugin folder with a manifest; Hell2Modding is present when its `d3d12.dll`
+  sits beside `ReturnOfModding`;
+- a leftover `RunPlanner_Modpack` coordinator, as a non-blocking notice.
+
+The planner reports ModpackLib and dependencies but never installs, updates or
+removes them, and never edits `mods.yml`. Users install ModpackLib through
+r2modman, which brings its dependency chain.
+
+**Install / Update Game Module** operates only on the established target and
+does nothing when the installed files already match this build. A folder the
+planner did not install, or one r2modman manages, is replaced only after
+explicit consent; the r2modman warning explains that disabling or uninstalling
+the package there renames or deletes the planner's files. The new module is
+staged beside `plugins/`, verified against its hashes and swapped in by rename;
+a failure keeps the prior install. The replaced copy is first copied to the
+planner's application data (`game-module-backup/`, latest only), never under
+`plugins/`, which Hell2Modding would load; a failed backup aborts the install.
+If a swap and its restore both fail, status reports the previous install left
+beside `plugins/`; the next successful install backs it up before removing it.
+Stale staging and removal folders are cleared when an install starts. The planner-owned install record,
+`run-planner-install.json` in the module folder, holds the version, source and
+file hashes. **Remove Game Module** deletes only a module whose install record
+identifies a planner install that r2modman does not manage (an unreadable
+`mods.yml` counts as possibly managed), and leaves
+`config/` plan slots and ModpackLib in place. Development builds also offer an
+install assembled at runtime from the local `game-module/` checkout through
+the same flow; such an install is publishable in development builds while its
+files match its record.
+
+### Publication preconditions
+
+Publish to Game uses only the established target and performs no discovery.
+The host rechecks the target when publishing and refuses with the blocking
+reasons, including found and required versions, unless the installed module
+matches this build and ModpackLib is compatible. The planner shows those
+reasons with a link to Settings. The installed `execution-compatibility.json`
+must equal the outgoing plan header before any write. `mods.yml` is never
+edited, and only plan slots are written under `config/`.
 
 The compiler consumes the exact simulation assembly that the planner already
 validated. It does not rerun candidate policy or duplicate validation. The
@@ -524,10 +581,10 @@ the wire, frame zero replaces every closed top-level diagnostic section and
 later sequential frames replace only changed sections. `artificer: null` is an
 explicit replacement that clears prior state.
 
-Publication is profile-scoped transport, not authored or execution semantics.
-The desktop adapter resolves a compatible profile again at write time, maps a
+Publication is target-scoped transport, not authored or execution semantics.
+The desktop adapter revalidates the established target at write time, maps a
 caller-supplied slot number in the closed range 1 through 6 to its fixed
-filename, confines the destination below that profile's Run Planner game module
+filename, confines the destination below that target's Run Planner game module
 configuration tree, rejects links and non-regular files, enforces the existing
 1 MiB bound, and atomically replaces only the selected slot. The Run Planner game module
 persists `ActivePlanSlot` (defaulting to Slot 1), displays the selected slot's

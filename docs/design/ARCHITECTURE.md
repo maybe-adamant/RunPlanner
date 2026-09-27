@@ -220,8 +220,10 @@ by the command.
 ## Hosts, Performance and Maintenance
 
 Vite builds the same React application for browser and desktop. Tauri owns
-native windows, packaging, scoped file transport and the remembered active-file
-reference. Rust does not parse planner semantics. Browser/filesystem effects
+native windows, packaging, scoped file transport, the remembered active-file
+reference and the [game module lane](GAME_INTEGRATION_BOUNDARY.md#distribution-and-the-game-target):
+the compile-time embedded module, the game target setting, install checks and
+plan-slot writes. Rust does not parse planner semantics. Browser/filesystem effects
 stay behind application adapters; desktop integration does not move simulator
 rules into the host. Native file-drop interception remains disabled to retain
 ordinary HTML interaction behavior.

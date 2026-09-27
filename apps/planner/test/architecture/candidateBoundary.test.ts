@@ -38,6 +38,7 @@ describe('candidate application boundary', () => {
       'catalogSummary',
       'dispose',
       'editorNavigation',
+      'gameModule',
       'projectOperations',
       'selectStructuredWorkspace',
       'startupReady',

@@ -8,8 +8,6 @@ import {
   assembleExecutionProduct,
   compileExecutionPlan,
   encodeExecutionPlan,
-  EXECUTION_PLAN_FORMAT,
-  EXECUTION_PROTOCOL_VERSION,
 } from '@run-planner/engine/execution-plan';
 
 import type { AutosaveRecoveryAdapter } from '../persistence/autosaveRecovery';
@@ -17,11 +15,11 @@ import { loadProjectDocument } from '../persistence/projectDocumentLoader';
 import { createInitialProject } from '../composition/projectBootstrap';
 import type { ProfileFileAdapter, ProfileFileReference } from '../persistence/profileFile';
 import type {
-  GamePlanDiscovery,
+  GameModuleStatus,
   GamePlanPublisher,
   GamePlanSlotNumber,
-  GamePlanTarget,
-} from '../persistence/gamePlanPublisher';
+} from '../persistence/gameModuleHost';
+import { describePublicationBlocker } from '../projections/gameModuleSettings';
 import {
   newProjectCreated,
   profileLoadSucceeded,
@@ -56,9 +54,8 @@ export interface ProjectOperations {
   exportAutosaveRecovery(): Promise<ProjectOperationResult>;
   readonly gamePlanAvailable: boolean;
   readonly saveAsAvailable: boolean;
-  discoverGameProfiles(): Promise<GamePlanDiscovery>;
-  chooseGameProfile(): Promise<GamePlanTarget | null>;
-  publishGame(targetId: string, slotNumber: GamePlanSlotNumber): Promise<ProjectOperationResult>;
+  inspectGamePublication(): Promise<GameModuleStatus>;
+  publishGame(slotNumber: GamePlanSlotNumber): Promise<ProjectOperationResult>;
   saveProfile(): Promise<ProjectOperationResult>;
   saveProfileAs(): Promise<ProjectOperationResult>;
   loadProfile(): Promise<ProjectOperationResult>;
@@ -183,42 +180,13 @@ export function createProjectOperations(
         return failure('exportRecovery', error);
       }
     },
-    async chooseGameProfile(): Promise<GamePlanTarget | null> {
+    async inspectGamePublication(): Promise<GameModuleStatus> {
       if (options.gamePlanPublisher === undefined) {
         throw new Error('Publish to Game is available only in the desktop application.');
       }
-      return options.gamePlanPublisher.chooseProfile({
-        format: EXECUTION_PLAN_FORMAT,
-        protocolVersion: EXECUTION_PROTOCOL_VERSION,
-        catalogVersion: options.catalog.version,
-      });
+      return options.gamePlanPublisher.status();
     },
-    async discoverGameProfiles(): Promise<GamePlanDiscovery> {
-      if (options.gamePlanPublisher === undefined) {
-        return Object.freeze({
-          status: 'unavailable',
-          targets: Object.freeze([]),
-          message: 'Publish to Game is available only in the desktop application.',
-        });
-      }
-      try {
-        return await options.gamePlanPublisher.discoverProfiles({
-          format: EXECUTION_PLAN_FORMAT,
-          protocolVersion: EXECUTION_PROTOCOL_VERSION,
-          catalogVersion: options.catalog.version,
-        });
-      } catch (error) {
-        return Object.freeze({
-          status: 'unavailable',
-          targets: Object.freeze([]),
-          message: `Could not inspect game profiles: ${errorDetail(error)}`,
-        });
-      }
-    },
-    async publishGame(
-      targetId: string,
-      slotNumber: GamePlanSlotNumber,
-    ): Promise<ProjectOperationResult> {
+    async publishGame(slotNumber: GamePlanSlotNumber): Promise<ProjectOperationResult> {
       try {
         if (options.gamePlanPublisher === undefined) {
           throw new Error('Publish to Game is unavailable in this environment');
@@ -231,15 +199,17 @@ export function createProjectOperations(
         });
         const plan = compileExecutionPlan({ product });
         const publication = await options.gamePlanPublisher.publish(
-          targetId,
           slotNumber,
           encodeExecutionPlan(plan),
         );
+        if (publication.status === 'published') {
+          return result('publishGame', 'success', `Published to game, Slot ${slotNumber}.`);
+        }
         return result(
           'publishGame',
-          publication.status === 'published' ? 'success' : 'failure',
-          publication.status === 'published'
-            ? `Published to game profile ${targetId}, Slot ${slotNumber}.`
+          'failure',
+          publication.blockers.length > 0
+            ? publication.blockers.map(describePublicationBlocker).join(' ')
             : publication.message,
         );
       } catch (error) {

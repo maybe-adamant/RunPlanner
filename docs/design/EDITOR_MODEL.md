@@ -268,7 +268,17 @@ pointer gestures and floating overlays account for screen versus layout coordina
 ### File operations
 
 The file menu provides New, Load, Save, desktop Save As and Publish to Game.
-Publish opens its own profile/slot dialog and does not change the project file.
+Publish opens its own slot dialog for the established game target and does not
+change the project file. When the host reports blockers, the dialog shows their
+text and links to Settings instead of offering slots.
+
+Settings, beside About, holds the Game Module section. `GameModuleHost` is the
+desktop adapter over the host's target, status, install, remove and publish
+commands; the host persists the game target and owns every compatibility and
+install decision. `projectGameModuleSettings` and
+`projectGamePublicationReadiness` only present the reported facts as rows,
+notices, consent facts, action availability and blocker text. The game target
+is neither authored state nor Redux state and never enters history.
 
 Browser Load uses file input; Save downloads a file. Browser Save As would be
 the same operation and is omitted. Tauri uses native dialogs and a remembered

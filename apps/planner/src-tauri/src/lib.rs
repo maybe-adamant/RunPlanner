@@ -1,5 +1,4 @@
-mod atomic_file;
-mod game_plan_publication;
+mod game_module_commands;
 mod profile_file_session;
 mod release_updates;
 
@@ -7,9 +6,14 @@ mod release_updates;
 pub fn run() {
     tauri::Builder::default()
         .invoke_handler(tauri::generate_handler![
-            game_plan_publication::game_plan_discover_profiles,
-            game_plan_publication::game_plan_choose_profile,
-            game_plan_publication::game_plan_publish,
+            game_module_commands::game_target_discover,
+            game_module_commands::game_target_use_discovered,
+            game_module_commands::game_target_choose,
+            game_module_commands::game_module_status,
+            game_module_commands::game_module_install,
+            game_module_commands::game_module_install_from_checkout,
+            game_module_commands::game_module_remove,
+            game_module_commands::game_plan_publish,
             profile_file_session::profile_file_restore_active,
             profile_file_session::profile_file_activate,
             profile_file_session::profile_file_clear_active,

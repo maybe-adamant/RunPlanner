@@ -131,6 +131,9 @@ Decided:
   version.
   - It is embedded into the application binary at compile time, not as a
     Tauri resource file, so portable and installed builds behave identically.
+  - Packaging, targeting, install and publication live in the Tauri-free
+    `run-planner-game-host` crate, tested by `npm run test:game-host`. The
+    Tauri crate keeps only the command layer.
 - **ModpackLib** is not bundled, and there is no lock file.
 - **Runtime.** The planner never downloads game packages.
 
@@ -303,7 +306,8 @@ platforms.
 
 - Installing ModpackLib or third-party dependencies.
 - Editing r2modman state.
-- Non-r2modman managers beyond the folder picker.
+- Discovery for managers other than r2modman. Manual targets (any folder that
+  is or contains `ReturnOfModding`) are supported through the folder picker.
 - macOS and Linux installers.
 - Code signing (D4).
 - Planner downgrade.
