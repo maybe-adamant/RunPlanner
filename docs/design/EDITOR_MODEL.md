@@ -286,7 +286,10 @@ picker, and `projectGamePlans` summarizes the slots and compares their
 fingerprints with `ProjectOperations.inspectCurrentGamePlan`, which compiles only
 while the Plans section shows. `projectGameIndicator` and `projectGameQuickSend`
 drive the header from the evaluation's execution-plan eligibility and the
-authored project id, without compiling; the header compiles only when sending. Publish failures reuse the step
+authored project id, without compiling; the header compiles only when sending.
+The `gameSendSession` slice holds the loaded project's last sent slot and the
+header's send status as UI-session state, cleared by any document replacement
+and never persisted or placed in history. Publish failures reuse the step
 wording. The game target is neither authored state nor Redux state
 and never enters history.
 

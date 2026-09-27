@@ -124,13 +124,15 @@ existing wire fields: `projectId`, `routeKey`, `extent.biomeKeys` and
 `planFingerprint`. A slot whose `planFingerprint` equals the current project's
 compiled plan is marked as the current plan. **Send here** fills an empty slot
 and **Replace** overwrites an occupied one after confirmation; both are absent
-while the current project cannot compile, which the panel explains. The host
-records the last slot published from this planner with the saved target; it
-survives re-choosing the same folder and is cleared when the target changes or
-is forgotten. The header **Send to game (slot N)** re-sends there only while the
-module is ready, the engine reports the project eligible for an execution plan,
-and that slot is empty or holds the same `projectId`, so it never overwrites
-another project's plan; it compiles only when clicked. The header Game button
+while the current project cannot compile, which the panel explains. The planner
+remembers the last slot sent for the loaded project as UI-session state only: a
+send from the Game panel or the header sets it, and loading, creating or
+replacing the document, or restarting, clears it. The header **Send to game
+(slot N)** re-sends there only while the module is ready, the engine reports the
+project eligible for an execution plan, and that slot is empty or holds the same
+`projectId`, so it never overwrites another project's plan; it compiles only
+when clicked. Its always-present status line reports the outcome with the local
+send time and clears when another project loads. The header Game button
 shows the same overall state as the panel with a distinct symbol and a text
 alternative, including when status could not be read.
 

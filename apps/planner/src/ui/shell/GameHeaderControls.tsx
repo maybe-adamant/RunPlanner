@@ -6,7 +6,8 @@ import type {
   GameStatusSnapshot,
 } from '@planner/persistence/gameModuleHost';
 import { projectGameIndicator, projectGameQuickSend } from '@planner/projections/gamePanel';
-import { useAppSelector, type RootState } from '@planner/state/store';
+import { gameSendFeedbackShown } from '@planner/state/gameSendSessionSlice';
+import { useAppDispatch, useAppSelector, type RootState } from '@planner/state/store';
 import type { ProjectOperations } from '@planner/workspace/projectOperations';
 
 const EMPTY_SNAPSHOT: GameStatusSnapshot = Object.freeze({ status: null, error: null, readAt: 0 });
@@ -22,9 +23,12 @@ function sendableProjectId(state: RootState): string | null {
     : null;
 }
 
-interface QuickSendFeedback {
-  readonly tone: 'success' | 'failure';
-  readonly text: string;
+function sentAt(): string {
+  return new Date().toLocaleTimeString([], {
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+  });
 }
 
 export function GameHeaderControls({
@@ -44,8 +48,10 @@ export function GameHeaderControls({
     NO_SNAPSHOT,
   );
   const projectId = useAppSelector(sendableProjectId);
+  const lastSentSlot = useAppSelector((state) => state.gameSendSession.lastSentSlot);
+  const feedback = useAppSelector((state) => state.gameSendSession.feedback);
+  const dispatch = useAppDispatch();
   const [pending, setPending] = useState(false);
-  const [feedback, setFeedback] = useState<QuickSendFeedback | null>(null);
 
   useEffect(() => {
     if (gameStatus === undefined) return;
@@ -56,33 +62,30 @@ export function GameHeaderControls({
     window.addEventListener('focus', refresh);
     return () => window.removeEventListener('focus', refresh);
   }, [gameStatus]);
-  useEffect(() => {
-    if (feedback?.tone !== 'success') return;
-    const timer = window.setTimeout(() => setFeedback(null), 5000);
-    return () => window.clearTimeout(timer);
-  }, [feedback]);
-
   const indicator = gameStatus === undefined ? null : projectGameIndicator(snapshot);
-  const quickSend = projectGameQuickSend(snapshot.status, projectId);
+  const quickSend = projectGameQuickSend(snapshot.status, projectId, lastSentSlot);
 
   // The plan is compiled only here, by the publish path, when the user asks to send.
   const send = async (slot: GamePlanSlotNumber) => {
     if (pending) return;
     setPending(true);
-    setFeedback(null);
     try {
       const result = await operations.publishGame(slot);
-      setFeedback(
-        result.status === 'success'
-          ? { tone: 'success', text: `Sent to slot ${slot}.` }
-          : { tone: 'failure', text: `${result.message} Open Game to check.` },
+      dispatch(
+        gameSendFeedbackShown(
+          result.status === 'success'
+            ? { tone: 'success', text: `Sent to slot ${slot} · ${sentAt()}` }
+            : { tone: 'failure', text: `${result.message} Open Game to check. · ${sentAt()}` },
+        ),
       );
       await gameStatus?.refresh();
     } catch (error) {
-      setFeedback({
-        tone: 'failure',
-        text: `${error instanceof Error ? error.message : String(error)} Open Game to check.`,
-      });
+      dispatch(
+        gameSendFeedbackShown({
+          tone: 'failure',
+          text: `${error instanceof Error ? error.message : String(error)} Open Game to check. · ${sentAt()}`,
+        }),
+      );
     } finally {
       setPending(false);
     }

@@ -8,6 +8,7 @@ import { type Catalog } from '@run-planner/engine/catalog-schema';
 import { useDispatch, useSelector } from 'react-redux';
 
 import { createEditorSessionReducer } from './editorSessionSlice';
+import { createGameSendSessionReducer } from './gameSendSessionSlice';
 import {
   createInitialProfileSessionState,
   createProfileSessionReducer,
@@ -40,6 +41,7 @@ export function createPlannerStore(options: CreatePlannerStoreOptions) {
       profileSession: createProfileSessionReducer(
         options.initialProfileSession ?? createInitialProfileSessionState(),
       ),
+      gameSendSession: createGameSendSessionReducer(),
     },
   });
 }

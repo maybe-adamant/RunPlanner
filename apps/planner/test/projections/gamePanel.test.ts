@@ -431,10 +431,9 @@ describe('Game panel projection', () => {
     ).toBeNull();
   });
 
-  it('offers the quick send only to an empty or same-project last slot on a ready target', () => {
+  it('offers the quick send only to an empty or same-project session slot on a ready target', () => {
     const inSlot2 = (projectId: string | null, state: 'present' | 'unreadable' = 'present') =>
       gameModuleStatus({
-        lastSlot: 2,
         inspection: {
           planSlots: ([1, 2, 3, 4, 5, 6] as const).map((slot) =>
             slot === 2
@@ -459,23 +458,23 @@ describe('Game panel projection', () => {
           ),
         },
       });
-    expect(projectGameQuickSend(gameModuleStatus({ lastSlot: 2 }), 'run-plan')).toEqual({
+    expect(projectGameQuickSend(gameModuleStatus(), 'run-plan', 2)).toEqual({
       slot: 2,
       label: 'Send to game (slot 2)',
     });
-    expect(projectGameQuickSend(inSlot2('run-plan'), 'run-plan')?.slot).toBe(2);
-    expect(projectGameQuickSend(inSlot2('another-project'), 'run-plan')).toBeNull();
-    expect(projectGameQuickSend(inSlot2(null, 'unreadable'), 'run-plan')).toBeNull();
-    expect(projectGameQuickSend(gameModuleStatus(), 'run-plan')).toBeNull();
-    expect(projectGameQuickSend(gameModuleStatus({ lastSlot: 2 }), null)).toBeNull();
-    expect(projectGameQuickSend(null, 'run-plan')).toBeNull();
+    expect(projectGameQuickSend(inSlot2('run-plan'), 'run-plan', 2)?.slot).toBe(2);
+    expect(projectGameQuickSend(inSlot2('another-project'), 'run-plan', 2)).toBeNull();
+    expect(projectGameQuickSend(inSlot2(null, 'unreadable'), 'run-plan', 2)).toBeNull();
+    expect(projectGameQuickSend(gameModuleStatus(), 'run-plan', null)).toBeNull();
+    expect(projectGameQuickSend(gameModuleStatus(), null, 2)).toBeNull();
+    expect(projectGameQuickSend(null, 'run-plan', 2)).toBeNull();
     expect(
       projectGameQuickSend(
         gameModuleStatus({
-          lastSlot: 2,
           publicationBlockers: [{ code: 'modpackLibMissing', found: null, required: '4.1.0' }],
         }),
         'run-plan',
+        2,
       ),
     ).toBeNull();
   });

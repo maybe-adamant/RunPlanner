@@ -562,18 +562,19 @@ export interface GameQuickSend {
 }
 
 /**
- * The header re-send: a ready target, an engine-eligible project, and a last slot that is
- * empty or already holds this project, so it never overwrites another project's plan.
+ * The header re-send to the slot last sent in this session for the loaded project: a ready
+ * target, an engine-eligible project, and a slot that is empty or already holds this project.
  */
 export function projectGameQuickSend(
   status: GameModuleStatus | null,
   sendableProjectId: string | null,
+  lastSentSlot: GamePlanSlotNumber | null,
 ): GameQuickSend | null {
-  if (status === null || status.lastSlot === null || sendableProjectId === null) return null;
+  if (status === null || lastSentSlot === null || sendableProjectId === null) return null;
   if (!isReady(status)) return null;
-  const slot = status.inspection?.planSlots.find((entry) => entry.slot === status.lastSlot);
+  const slot = status.inspection?.planSlots.find((entry) => entry.slot === lastSentSlot);
   const ownSlot =
     slot?.state === 'empty' || (slot?.state === 'present' && slot.projectId === sendableProjectId);
   if (!ownSlot) return null;
-  return { slot: status.lastSlot, label: `Send to game (slot ${status.lastSlot})` };
+  return { slot: lastSentSlot, label: `Send to game (slot ${lastSentSlot})` };
 }

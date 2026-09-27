@@ -61,13 +61,13 @@ describe('Tauri game module host adapter', () => {
     );
   });
   it('shares the latest host status with every subscriber', async () => {
-    const game = createFakeGameModuleHost(gameModuleStatus({ lastSlot: 3 }));
+    const game = createFakeGameModuleHost(gameModuleStatus({ bundledVersion: '0.3.0' }));
     const controller = createGameStatusController(game.host);
     const listener = vi.fn();
     const unsubscribe = controller.subscribe(listener);
     expect(controller.getSnapshot()).toEqual({ status: null, error: null, readAt: 0 });
-    await expect(controller.refresh()).resolves.toMatchObject({ lastSlot: 3 });
-    expect(controller.getSnapshot().status?.lastSlot).toBe(3);
+    await expect(controller.refresh()).resolves.toMatchObject({ bundledVersion: '0.3.0' });
+    expect(controller.getSnapshot().status?.bundledVersion).toBe('0.3.0');
     expect(controller.getSnapshot().readAt).toBeGreaterThan(0);
     controller.publish(gameModuleStatus());
     expect(listener).toHaveBeenCalledTimes(2);
@@ -84,31 +84,31 @@ describe('Tauri game module host adapter', () => {
     );
     const controller = createGameStatusController(game.host);
     const late = controller.refresh();
-    controller.publish(gameModuleStatus({ lastSlot: 6 }));
-    resolveLate(gameModuleStatus({ lastSlot: 1 }));
+    controller.publish(gameModuleStatus({ bundledVersion: '0.6.0' }));
+    resolveLate(gameModuleStatus({ bundledVersion: '0.1.0' }));
     await late;
-    expect(controller.getSnapshot().status?.lastSlot).toBe(6);
+    expect(controller.getSnapshot().status?.bundledVersion).toBe('0.6.0');
 
     game.host.status.mockImplementationOnce(
       () => new Promise((resolve) => (resolveLate = resolve)),
     );
     const earlier = controller.refresh();
-    game.host.status.mockResolvedValueOnce(gameModuleStatus({ lastSlot: 2 }));
+    game.host.status.mockResolvedValueOnce(gameModuleStatus({ bundledVersion: '0.2.0' }));
     await controller.refresh();
-    resolveLate(gameModuleStatus({ lastSlot: 5 }));
+    resolveLate(gameModuleStatus({ bundledVersion: '0.5.0' }));
     await earlier;
-    expect(controller.getSnapshot().status?.lastSlot).toBe(2);
+    expect(controller.getSnapshot().status?.bundledVersion).toBe('0.2.0');
   });
 
   it('reports a failed refresh without discarding the last status', async () => {
-    const game = createFakeGameModuleHost(gameModuleStatus({ lastSlot: 3 }));
+    const game = createFakeGameModuleHost(gameModuleStatus({ bundledVersion: '0.3.0' }));
     const controller = createGameStatusController(game.host);
     await controller.refresh();
     game.host.status.mockRejectedValueOnce(new Error('host unavailable'));
     await expect(controller.refresh()).rejects.toThrow('host unavailable');
     expect(controller.getSnapshot()).toMatchObject({
       error: 'host unavailable',
-      status: { lastSlot: 3 },
+      status: { bundledVersion: '0.3.0' },
     });
   });
 });
