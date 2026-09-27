@@ -38,6 +38,7 @@ import {
 import {
   loadSurfaceEncounterShowcaseCheckpoint,
   loadSurfaceNPhialIntermediateFountainCheckpoint,
+  loadSurfaceOrdinaryHexPathCheckpoint,
   loadSurfaceScheduledLifecycleCheckpoint,
   loadSurfaceAnvilCheckpoint,
   loadSurfaceShrineTravelDealCheckpoint,
@@ -591,6 +592,53 @@ it('exports the reached Fig Leaf skip and reloads its addressed second-skip repa
       severity: 'error',
     }),
   );
+  expect(undoProjectHistory(edited).present).toBe(saved);
+});
+
+it('exports the installed ordinary Hex and reached P Path allocation, then reloads its reward repair', () => {
+  const saved = loadSurfaceOrdinaryHexPathCheckpoint();
+  const occurrenceId = pOccurrenceId('P_Combat07', 4, 1);
+  const p = simulateProjectAssembly(catalog, saved).evaluation.route.biomes.find(
+    (biome) => biome.biomeKey === 'P',
+  );
+  if (p === undefined || !('rewards' in p)) throw new Error('ordinary Hex P evaluation is missing');
+  expect(p.rewards.branches[0]?.state.hexProgress).toMatchObject({
+    spellTraitKey: 'SpellPotionTrait',
+    tree: {
+      layoutKey: 'Lung',
+      rareTalentKeys: ['DamageBuffTalent', 'ShieldTalent'],
+      epicTalentKeys: ['ClearCastTalent'],
+    },
+    bankedPathPoints: 0,
+    investedPathPoints: 3,
+    talentDropsClosed: false,
+  });
+  expect(
+    plan(saved)
+      .occurrences.find((room) => room.id === occurrenceId)
+      ?.timeline.transactions.find(
+        (transaction) =>
+          transaction.kind === 'acquisition' && transaction.reward.rewardType === 'TalentDrop',
+      ),
+  ).toBeDefined();
+  const reward = createIncomingRewardAddress(pBiome, occurrenceId);
+  const edited = applyProjectHistoryCommand(createProjectHistory(saved), catalog, {
+    kind: 'ReplaceIncomingReward',
+    reward,
+    value: { rewardType: 'MaxManaDrop' },
+  });
+  const reloaded = reload(edited.present);
+  expect(reloaded).toEqual(edited.present);
+  const editedAssembly = simulateProjectAssembly(catalog, reloaded);
+  expect(editedAssembly.evaluation.findings).toEqual([
+    {
+      code: 'rewardBagEntryUnavailable',
+      severity: 'error',
+      phase: 'rewardGeneration',
+      origin: reward,
+      evidence: { rewardType: 'MaxManaDrop', storeKey: 'RunProgress' },
+    },
+  ]);
   expect(undoProjectHistory(edited).present).toBe(saved);
 });
 
