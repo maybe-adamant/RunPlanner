@@ -389,6 +389,18 @@ rows now covered and remaining rows after each commit.
 
 ### Gate D — closure
 
+- Add `fixtures:checkpoints:regenerate` for recipe-backed checkpoints through
+  `encodeProjectDocument`. Share the recipe mapping with equality verification;
+  preserve static-import reachability and prove regeneration is byte-neutral.
+  This does not migrate recipe inputs or reconstruct user-authored checkpoints:
+  migrate saved inputs first when schema changes require it. Keep the existing
+  reward-store repair command separate and explicitly scoped.
+- Remove the hard-coded manifest count; retain exact disk/manifest/registry
+  closure and duplicate-identity checks.
+- Split `execution-plan/authored-checkpoints.test.ts` by domain, preserving every
+  witness. Keep reached simulation assertions with their export workflows rather
+  than duplicating them across lanes. Correct the ownership table: central
+  checkpoint support owns integrity, engine consumers own scenario witnesses.
 - Review the full diff for deleted witnesses, duplicated policy, dead recipes,
   circular construction, changed baseline meanings and fixture-only additions.
 - Every agreed major-feature row is either backed by a reached success witness,
