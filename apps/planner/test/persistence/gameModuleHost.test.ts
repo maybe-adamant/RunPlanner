@@ -1,6 +1,10 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { createTauriGameModuleHost } from '@planner/persistence/gameModuleHost';
+import {
+  createGameStatusController,
+  createTauriGameModuleHost,
+} from '@planner/persistence/gameModuleHost';
+import { createFakeGameModuleHost, gameModuleStatus } from '@planner-test/fixtures/gameModuleHost';
 
 describe('Tauri game module host adapter', () => {
   it('invokes the fixed native target, module and publication commands', async () => {
@@ -55,5 +59,56 @@ describe('Tauri game module host adapter', () => {
     await expect(host.useChosenTarget('/invalid')).rejects.toThrow(
       'No ReturnOfModding folder found.',
     );
+  });
+  it('shares the latest host status with every subscriber', async () => {
+    const game = createFakeGameModuleHost(gameModuleStatus({ lastSlot: 3 }));
+    const controller = createGameStatusController(game.host);
+    const listener = vi.fn();
+    const unsubscribe = controller.subscribe(listener);
+    expect(controller.getSnapshot()).toEqual({ status: null, error: null, readAt: 0 });
+    await expect(controller.refresh()).resolves.toMatchObject({ lastSlot: 3 });
+    expect(controller.getSnapshot().status?.lastSlot).toBe(3);
+    expect(controller.getSnapshot().readAt).toBeGreaterThan(0);
+    controller.publish(gameModuleStatus());
+    expect(listener).toHaveBeenCalledTimes(2);
+    unsubscribe();
+    controller.publish(gameModuleStatus());
+    expect(listener).toHaveBeenCalledTimes(2);
+  });
+
+  it('keeps a newer publish or refresh over a late earlier refresh', async () => {
+    const game = createFakeGameModuleHost();
+    let resolveLate: (status: ReturnType<typeof gameModuleStatus>) => void = () => undefined;
+    game.host.status.mockImplementationOnce(
+      () => new Promise((resolve) => (resolveLate = resolve)),
+    );
+    const controller = createGameStatusController(game.host);
+    const late = controller.refresh();
+    controller.publish(gameModuleStatus({ lastSlot: 6 }));
+    resolveLate(gameModuleStatus({ lastSlot: 1 }));
+    await late;
+    expect(controller.getSnapshot().status?.lastSlot).toBe(6);
+
+    game.host.status.mockImplementationOnce(
+      () => new Promise((resolve) => (resolveLate = resolve)),
+    );
+    const earlier = controller.refresh();
+    game.host.status.mockResolvedValueOnce(gameModuleStatus({ lastSlot: 2 }));
+    await controller.refresh();
+    resolveLate(gameModuleStatus({ lastSlot: 5 }));
+    await earlier;
+    expect(controller.getSnapshot().status?.lastSlot).toBe(2);
+  });
+
+  it('reports a failed refresh without discarding the last status', async () => {
+    const game = createFakeGameModuleHost(gameModuleStatus({ lastSlot: 3 }));
+    const controller = createGameStatusController(game.host);
+    await controller.refresh();
+    game.host.status.mockRejectedValueOnce(new Error('host unavailable'));
+    await expect(controller.refresh()).rejects.toThrow('host unavailable');
+    expect(controller.getSnapshot()).toMatchObject({
+      error: 'host unavailable',
+      status: { lastSlot: 3 },
+    });
   });
 });

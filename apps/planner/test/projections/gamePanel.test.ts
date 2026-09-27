@@ -3,24 +3,32 @@ import { describe, expect, it } from 'vitest';
 import {
   describePublicationBlocker,
   describeRemoveOutcome,
-  projectGameModuleSettings,
+  projectGamePanel,
   projectGameProfileChoices,
-  projectGamePublicationReadiness,
-} from '@planner/projections/gameModuleSettings';
+  projectGameIndicator,
+  projectGamePlans,
+  projectGameQuickSend,
+} from '@planner/projections/gamePanel';
 import { gameModuleStatus } from '@planner-test/fixtures/gameModuleHost';
 
 type StatusOverrides = NonNullable<Parameters<typeof gameModuleStatus>[0]>;
 
+const snapshotOf = (status: ReturnType<typeof gameModuleStatus>) => ({
+  status,
+  error: null,
+  readAt: 1,
+});
+
 const moduleOf = (overrides: StatusOverrides) => {
-  const module = projectGameModuleSettings(gameModuleStatus(overrides)).module;
+  const module = projectGamePanel(gameModuleStatus(overrides)).module;
   if (module === null) throw new Error('module section is hidden');
   return module;
 };
 const stepKeys = (overrides: StatusOverrides) => moduleOf(overrides).steps.map((step) => step.key);
 
-describe('game module settings projection', () => {
+describe('Game panel projection', () => {
   it('collapses a ready target to one location line and one Ready status', () => {
-    const product = projectGameModuleSettings(gameModuleStatus());
+    const product = projectGamePanel(gameModuleStatus());
     expect(product.location).toEqual({
       state: 'set',
       name: 'h2-dev',
@@ -44,15 +52,15 @@ describe('game module settings projection', () => {
       'dependencies',
       'r2modman',
     ]);
-    expect(projectGamePublicationReadiness(gameModuleStatus())).toEqual({
-      ready: true,
-      targetLocation: '/profiles/h2-dev',
-      reasons: [],
+    expect(projectGameIndicator(snapshotOf(gameModuleStatus()))).toEqual({
+      state: 'ready',
+      symbol: '✓',
+      accessibleName: 'Game — ready',
     });
   });
 
   it('hides the module section until a target is set and inspected', () => {
-    const unset = projectGameModuleSettings(
+    const unset = projectGamePanel(
       gameModuleStatus({
         target: null,
         inspection: null,
@@ -61,7 +69,7 @@ describe('game module settings projection', () => {
     );
     expect(unset.location).toMatchObject({ state: 'unset', confirmSwitchAway: false });
     expect(unset.module).toBeNull();
-    const unavailable = projectGameModuleSettings(
+    const unavailable = projectGamePanel(
       gameModuleStatus({ inspection: null, targetProblem: 'That folder is unavailable.' }),
     );
     expect(unavailable.location.problem).toBe('That folder is unavailable.');
@@ -166,17 +174,6 @@ describe('game module settings projection', () => {
       label: 'Thunderstore page',
       accessibleName: 'Open ModpackLib’s Thunderstore page in your browser',
     });
-    expect(
-      projectGamePublicationReadiness(gameModuleStatus(library)).reasons.map((reason) => [
-        reason.text,
-        reason.link?.url,
-      ]),
-    ).toEqual([
-      [
-        'Install ModpackLib 4.1.0+ in r2modman.',
-        'https://thunderstore.io/c/hades-ii/p/adamant/ModpackLib/',
-      ],
-    ]);
     expect(moduleOf(library).steps[0]?.text).toBe('Install ModpackLib 4.1.0+ in r2modman');
 
     // An intact development checkout install is publishable, so it is not an update step.
@@ -232,7 +229,7 @@ describe('game module settings projection', () => {
       ['absent', false],
     ] as const) {
       expect(
-        projectGameModuleSettings(gameModuleStatus({ inspection: { module: { state } } })).location
+        projectGamePanel(gameModuleStatus({ inspection: { module: { state } } })).location
           .confirmSwitchAway,
       ).toBe(expected);
     }
@@ -276,10 +273,10 @@ describe('game module settings projection', () => {
         describePublicationBlocker(blocker as Parameters<typeof describePublicationBlocker>[0]),
       ),
     ).toEqual([
-      'Set the game location in Settings.',
-      'The game location is unavailable. Change it in Settings.',
-      'Install the game module in Settings.',
-      'Update the game module in Settings (found 0.10.0).',
+      'Set the game location in the Game panel.',
+      'The game location is unavailable. Change it in the Game panel.',
+      'Install the game module in the Game panel.',
+      'Update the game module in the Game panel (found 0.10.0).',
       'Install ModpackLib 4.1.0+ in r2modman.',
       'Reinstall or enable ModpackLib 4.1.0+ in r2modman (found unreadable).',
       'Update ModpackLib to 4.1.0+ in r2modman (found 4.0.1).',
@@ -309,7 +306,7 @@ describe('game module settings projection', () => {
 
   it('explains why switching away cannot offer removal', () => {
     const reason = (inspection: NonNullable<StatusOverrides['inspection']>) =>
-      projectGameModuleSettings(gameModuleStatus({ inspection })).location.switchAwayRemoval;
+      projectGamePanel(gameModuleStatus({ inspection })).location.switchAwayRemoval;
     expect(reason({ r2modman: { state: 'managed' }, removable: false })).toEqual({
       available: false,
       reason: 'r2modman manages this module. Remove it in r2modman.',
@@ -317,5 +314,169 @@ describe('game module settings projection', () => {
     expect(reason({ r2modman: { state: 'unreadable' }, removable: false }).reason).toBe(
       'r2modman’s mod list couldn’t be read, so the module was not removed.',
     );
+  });
+  it('derives the header indicator for each status with distinct symbols', () => {
+    expect(projectGameIndicator({ status: null, error: null, readAt: 0 })).toEqual({
+      state: 'checking',
+      symbol: '…',
+      accessibleName: 'Game — checking',
+    });
+    expect(projectGameIndicator({ status: null, error: 'host unavailable', readAt: 0 })).toEqual({
+      state: 'unavailable',
+      symbol: '!',
+      accessibleName: 'Game — status unavailable: host unavailable',
+    });
+    expect(
+      projectGameIndicator(snapshotOf(gameModuleStatus({ target: null, inspection: null }))),
+    ).toMatchObject({ state: 'noLocation', symbol: '○', accessibleName: 'Game — no location' });
+    expect(
+      projectGameIndicator(
+        snapshotOf(
+          gameModuleStatus({
+            inspection: { modpackLib: { state: 'older', found: '4.0.1' } },
+            publicationBlockers: [{ code: 'modpackLibOlder', found: '4.0.1', required: '4.1.0' }],
+          }),
+        ),
+      ),
+    ).toMatchObject({ state: 'needsSetup', symbol: '!', accessibleName: 'Game — needs setup' });
+    expect(
+      projectGameIndicator(
+        snapshotOf(gameModuleStatus({ inspection: null, targetProblem: 'Gone.' })),
+      ).state,
+    ).toBe('needsSetup');
+  });
+
+  it('summarizes plan slots from their wire identity and marks the current plan', () => {
+    const now = Date.UTC(2026, 0, 2, 12);
+    const status = gameModuleStatus({
+      inspection: {
+        planSlots: [
+          {
+            slot: 1,
+            state: 'present',
+            modifiedAtMs: now - 3 * 60_000,
+            routeKey: 'Underworld',
+            biomeKeys: ['F', 'G'],
+            planFingerprint: 'current',
+            projectId: null,
+          },
+          {
+            slot: 2,
+            state: 'present',
+            modifiedAtMs: now - 2 * 86_400_000,
+            routeKey: 'Surface',
+            biomeKeys: ['N'],
+            planFingerprint: 'older',
+            projectId: null,
+          },
+          {
+            slot: 3,
+            state: 'unreadable',
+            modifiedAtMs: now - 30_000,
+            routeKey: null,
+            biomeKeys: [],
+            planFingerprint: null,
+            projectId: null,
+          },
+          ...([4, 5, 6] as const).map((slot) => ({
+            slot,
+            state: 'empty' as const,
+            modifiedAtMs: null,
+            routeKey: null,
+            biomeKeys: [],
+            planFingerprint: null,
+            projectId: null,
+          })),
+        ],
+      },
+    });
+    const plans = projectGamePlans(
+      status,
+      { kind: 'publishable', planFingerprint: 'current' },
+      now,
+    );
+    expect(plans?.unavailableReason).toBeNull();
+    expect(
+      plans?.rows.map((row) => [row.slot, row.summary, row.sent, row.current, row.action]),
+    ).toEqual([
+      [1, 'Underworld · F → G', 'sent 3 min ago', true, { label: 'Replace', confirm: true }],
+      [2, 'Surface · N', 'sent 2 days ago', false, { label: 'Replace', confirm: true }],
+      [3, 'Unreadable', null, false, { label: 'Replace', confirm: true }],
+      [4, 'Empty', null, false, { label: 'Send here', confirm: false }],
+      [5, 'Empty', null, false, { label: 'Send here', confirm: false }],
+      [6, 'Empty', null, false, { label: 'Send here', confirm: false }],
+    ]);
+
+    const blocked = projectGamePlans(
+      status,
+      { kind: 'notPublishable', reason: 'Complete the Erebus opening room first.' },
+      now,
+    );
+    expect(blocked?.unavailableReason).toBe(
+      'This plan can’t be sent yet: Complete the Erebus opening room first.',
+    );
+    expect(blocked?.rows.every((row) => row.action === null && !row.current)).toBe(true);
+    expect(projectGamePlans(status, { kind: 'noProject' }, now)?.unavailableReason).toBe(
+      'Open a project to send it to the game.',
+    );
+    expect(
+      projectGamePlans(
+        gameModuleStatus({
+          inspection: { install: { action: 'install' } },
+          publicationBlockers: [{ code: 'moduleMissing', found: null, required: '0.1.0' }],
+        }),
+        { kind: 'noProject' },
+        now,
+      ),
+    ).toBeNull();
+  });
+
+  it('offers the quick send only to an empty or same-project last slot on a ready target', () => {
+    const inSlot2 = (projectId: string | null, state: 'present' | 'unreadable' = 'present') =>
+      gameModuleStatus({
+        lastSlot: 2,
+        inspection: {
+          planSlots: ([1, 2, 3, 4, 5, 6] as const).map((slot) =>
+            slot === 2
+              ? {
+                  slot,
+                  state,
+                  modifiedAtMs: 1,
+                  routeKey: 'Underworld',
+                  biomeKeys: ['F'],
+                  planFingerprint: 'x',
+                  projectId,
+                }
+              : {
+                  slot,
+                  state: 'empty' as const,
+                  modifiedAtMs: null,
+                  routeKey: null,
+                  biomeKeys: [],
+                  planFingerprint: null,
+                  projectId: null,
+                },
+          ),
+        },
+      });
+    expect(projectGameQuickSend(gameModuleStatus({ lastSlot: 2 }), 'run-plan')).toEqual({
+      slot: 2,
+      label: 'Send to game (slot 2)',
+    });
+    expect(projectGameQuickSend(inSlot2('run-plan'), 'run-plan')?.slot).toBe(2);
+    expect(projectGameQuickSend(inSlot2('another-project'), 'run-plan')).toBeNull();
+    expect(projectGameQuickSend(inSlot2(null, 'unreadable'), 'run-plan')).toBeNull();
+    expect(projectGameQuickSend(gameModuleStatus(), 'run-plan')).toBeNull();
+    expect(projectGameQuickSend(gameModuleStatus({ lastSlot: 2 }), null)).toBeNull();
+    expect(projectGameQuickSend(null, 'run-plan')).toBeNull();
+    expect(
+      projectGameQuickSend(
+        gameModuleStatus({
+          lastSlot: 2,
+          publicationBlockers: [{ code: 'modpackLibMissing', found: null, required: '4.1.0' }],
+        }),
+        'run-plan',
+      ),
+    ).toBeNull();
   });
 });

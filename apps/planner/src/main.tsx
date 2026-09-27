@@ -119,7 +119,7 @@ createRoot(rootElement, devBrowserErrorReporter?.rootOptions).render(
           catalog={application.catalog}
           catalogSummary={application.catalogSummary}
           editorNavigation={application.editorNavigation}
-          {...(application.gameModule === undefined ? {} : { gameModule: application.gameModule })}
+          {...(application.gameStatus === undefined ? {} : { gameStatus: application.gameStatus })}
           projectOperations={application.projectOperations}
           selectStructuredWorkspace={application.selectStructuredWorkspace}
           {...(releaseUpdates === undefined ? {} : { releaseUpdates })}

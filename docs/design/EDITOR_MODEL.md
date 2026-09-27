@@ -267,21 +267,27 @@ pointer gestures and floating overlays account for screen versus layout coordina
 
 ### File operations
 
-The file menu provides New, Load, Save, desktop Save As and Publish to Game.
-Publish opens its own slot dialog for the established game target and does not
-change the project file. When the host reports blockers, the dialog shows their
-text and links to Settings instead of offering slots.
+The file menu provides New, Load, Save and desktop Save As. Sending a plan to
+the game belongs to the Game panel and the header quick send; neither changes
+the project file, authored state or history.
 
-Settings, beside About, holds a Game location section and, once a target is
-set, a Game module section. `GameModuleHost` is the desktop adapter over the
+The Game panel, opened from the Game button beside About, holds a Game location
+section, a Game module section once a target is set, and a Plans in game
+section once the module is ready. `GameStatusController` shares the latest host
+status between the header indicator and the panel and is refreshed at startup
+and after every Game action. `GameModuleHost` is the desktop adapter over the
 host's target, status, install, remove and publish commands; the host persists
 the game target and owns every compatibility and install decision.
-`projectGameModuleSettings` groups the reported facts into the collapsed
+`projectGamePanel` groups the reported facts into the collapsed
 location line, one overall state, ordered steps (each issue once, with the
 planner's Install or Update as the only step action), the Remove availability
 and a collapsed details list; `projectGameProfileChoices` feeds the profile
-picker, and `projectGamePublicationReadiness` reuses the step wording for
-publish blockers. The game target is neither authored state nor Redux state
+picker, and `projectGamePlans` summarizes the slots and compares their
+fingerprints with `ProjectOperations.inspectCurrentGamePlan`, which compiles only
+while the Plans section shows. `projectGameIndicator` and `projectGameQuickSend`
+drive the header from the evaluation's execution-plan eligibility and the
+authored project id, without compiling; the header compiles only when sending. Publish failures reuse the step
+wording. The game target is neither authored state nor Redux state
 and never enters history.
 
 Browser Load uses file input; Save downloads a file. Browser Save As would be

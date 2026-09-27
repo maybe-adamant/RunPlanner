@@ -23,7 +23,7 @@ import type { StructuredWorkspaceProjection } from '@planner/projections/structu
 import type { AppScalePreference } from '@planner/persistence/appScalePreference';
 import type { BuildIdentity } from '@planner/composition/buildIdentity';
 import type { ReleaseUpdateController } from '@planner/persistence/releaseUpdates';
-import type { GameModuleHost } from '@planner/persistence/gameModuleHost';
+import type { GameStatusController } from '@planner/persistence/gameModuleHost';
 import { PomResolutionDialog } from '../editor/rewards/PomResolutionEditor';
 import { TraitOfferDialog } from '../editor/rewards/TraitOfferEditor';
 import { ProjectFileControls } from '../project/ProjectFileControls';
@@ -33,7 +33,8 @@ import { RouteWorkspace } from './RouteWorkspace';
 import { FindingTargetScope } from '../feedback/useFindingTarget';
 import { useAppScale } from './useAppScale';
 import { ReleaseUpdateCheck, ReleaseUpdateNotice } from './ReleaseUpdates';
-import { SettingsPanel } from './SettingsPanel';
+import { GameHeaderControls } from './GameHeaderControls';
+import { GamePanel } from './GamePanel';
 
 interface AppProps {
   readonly appScalePreference?: AppScalePreference;
@@ -41,7 +42,7 @@ interface AppProps {
   readonly catalog: Catalog;
   readonly catalogSummary: CatalogSummary;
   readonly editorNavigation: EditorNavigation;
-  readonly gameModule?: GameModuleHost;
+  readonly gameStatus?: GameStatusController;
   readonly projectOperations: ProjectOperations;
   readonly releaseUpdates?: ReleaseUpdateController;
   readonly selectStructuredWorkspace: (
@@ -55,7 +56,7 @@ export function App({
   catalog,
   catalogSummary,
   editorNavigation,
-  gameModule,
+  gameStatus,
   projectOperations,
   releaseUpdates,
   selectStructuredWorkspace,
@@ -63,8 +64,8 @@ export function App({
   const scalePercent = useAppScale(appScalePreference);
   const project = useAppSelector(selectPresentProject);
   const [entryOpen, setEntryOpen] = useState(project === undefined);
-  const [settingsOpen, setSettingsOpen] = useState(false);
-  const settingsButton = useRef<HTMLButtonElement>(null);
+  const [gameOpen, setGameOpen] = useState(false);
+  const gameButton = useRef<HTMLButtonElement>(null);
   const evaluation = useAppSelector(selectProjectEvaluation);
   const workspace = useAppSelector(selectStructuredWorkspace);
   const traitDialogTarget = useAppSelector(
@@ -114,20 +115,17 @@ export function App({
               hasProject={project !== undefined}
               entryOpen={showEntry}
               onEntryOpenChange={setEntryOpen}
-              onOpenSettings={() => setSettingsOpen(true)}
               operations={projectOperations}
               routes={editorNavigation.routes.values}
             />
             {!showEntry && <ProjectHistoryControls hasProject />}
             <div className="header-about-controls">
-              <button
-                className="quiet-action action-compact"
-                onClick={() => setSettingsOpen(true)}
-                ref={settingsButton}
-                type="button"
-              >
-                Settings
-              </button>
+              <GameHeaderControls
+                buttonRef={gameButton}
+                {...(gameStatus === undefined ? {} : { gameStatus })}
+                onOpen={() => setGameOpen(true)}
+                operations={projectOperations}
+              />
               <Popover.Root>
                 <Popover.Trigger asChild>
                   <button className="quiet-action action-compact" type="button">
@@ -213,13 +211,14 @@ export function App({
 
         {releaseUpdates === undefined ? null : <ReleaseUpdateNotice controller={releaseUpdates} />}
 
-        {settingsOpen && (
-          <SettingsPanel
-            {...(gameModule === undefined ? {} : { gameModule })}
+        {gameOpen && (
+          <GamePanel
+            {...(gameStatus === undefined ? {} : { gameStatus })}
             onClose={() => {
-              setSettingsOpen(false);
-              settingsButton.current?.focus();
+              setGameOpen(false);
+              gameButton.current?.focus();
             }}
+            operations={projectOperations}
           />
         )}
 

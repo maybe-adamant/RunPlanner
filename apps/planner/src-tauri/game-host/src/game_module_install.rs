@@ -14,6 +14,7 @@ use crate::game_target::{
     DiscoveredProfile, GameTargetFacts, ProfileModule, ResolvedTarget, TargetKind,
     PLUGINS_DIRECTORY,
 };
+use crate::plan_slots::{inspect_slots, PlanSlotFacts};
 
 pub const MODULE_DIRECTORY: &str = "adamantRunPlanner-Run_Planner";
 const MODULE_NAMESPACE: &str = "adamantRunPlanner";
@@ -148,6 +149,7 @@ pub struct TargetInspection {
     pub removable: bool,
     /// A previous install left beside `plugins/` after a failed restore.
     pub stranded_install: Option<String>,
+    pub plan_slots: Vec<PlanSlotFacts>,
 }
 
 #[derive(Clone, Debug, Serialize)]
@@ -159,6 +161,8 @@ pub struct GameModuleStatus {
     pub target_problem: Option<String>,
     pub inspection: Option<TargetInspection>,
     pub publication_blockers: Vec<PublicationBlocker>,
+    /// The slot last published from this planner to the saved target.
+    pub last_slot: Option<u8>,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
@@ -597,6 +601,7 @@ pub fn inspect(
             .last()
             .and_then(|folder| folder.file_name())
             .map(|name| name.to_string_lossy().into_owned()),
+        plan_slots: inspect_slots(target),
     })
 }
 
@@ -657,6 +662,7 @@ pub fn status(
         target_problem: None,
         inspection: None,
         publication_blockers: Vec::new(),
+        last_slot: None,
     };
     let unavailable = |status: &mut GameModuleStatus, problem: String| {
         status.target_problem = Some(problem);
@@ -682,6 +688,7 @@ pub fn status(
         }
     };
     status.target = Some(target_facts(&record.path, record.kind));
+    status.last_slot = record.last_slot;
     let resolved = resolve_target(&record.path, record.kind)
         .and_then(|target| inspect(&target, package).map(|inspection| (target, inspection)));
     match resolved {

@@ -5,19 +5,12 @@ use std::path::{Path, PathBuf};
 use crate::atomic_file;
 use crate::game_module_install::{status, PublicationBlocker, MODULE_DIRECTORY};
 use crate::game_module_package::ModulePackage;
-use crate::game_target::{existing_directory, ResolvedTarget, CONFIG_DIRECTORY, PLUGINS_DIRECTORY};
+use crate::game_target::{
+    existing_directory, remember_last_slot, ResolvedTarget, CONFIG_DIRECTORY, PLUGINS_DIRECTORY,
+};
+use crate::plan_slots::{slot_file_name, MAX_PLAN_BYTES, MODULE_CONFIG_DIRECTORY};
 
-const MAX_PLAN_BYTES: usize = 1_048_576;
 const MAX_COMPATIBILITY_BYTES: u64 = 16_384;
-
-const PLAN_SLOT_FILES: [&str; 6] = [
-    "slot-1.runplanner.json",
-    "slot-2.runplanner.json",
-    "slot-3.runplanner.json",
-    "slot-4.runplanner.json",
-    "slot-5.runplanner.json",
-    "slot-6.runplanner.json",
-];
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
@@ -51,13 +44,6 @@ fn native_write(message: String) -> GamePlanPublication {
     }
 }
 
-fn slot_file_name(slot_number: u8) -> Result<&'static str, String> {
-    match slot_number {
-        1..=6 => Ok(PLAN_SLOT_FILES[usize::from(slot_number - 1)]),
-        slot => Err(format!("plan slot must be between 1 and 6 (got {slot})")),
-    }
-}
-
 fn installed_compatibility(target: &ResolvedTarget) -> Option<ExecutionCompatibility> {
     let path = target
         .rom
@@ -80,7 +66,7 @@ fn safe_destination(target: &ResolvedTarget, slot_number: u8) -> Result<PathBuf,
             .map_err(|error| format!("could not create config directory: {error}"))?;
     }
     existing_directory(&config, rom)?;
-    let module_config = config.join(MODULE_DIRECTORY);
+    let module_config = config.join(MODULE_CONFIG_DIRECTORY);
     if !module_config.exists() {
         fs::create_dir(&module_config)
             .map_err(|error| format!("could not create module config directory: {error}"))?;
@@ -162,11 +148,15 @@ pub fn publish(
         }
     };
     match write_plan(&target, slot_number, plan_json) {
-        Ok(()) => GamePlanPublication {
-            status: PublicationStatus::Published,
-            message: format!("Published to Slot {slot_number}."),
-            blockers: Vec::new(),
-        },
+        Ok(()) => {
+            // The quick-send slot is a convenience; failing to record it does not undo publishing.
+            let _ = remember_last_slot(config_dir, &target.root, slot_number);
+            GamePlanPublication {
+                status: PublicationStatus::Published,
+                message: format!("Published to Slot {slot_number}."),
+                blockers: Vec::new(),
+            }
+        }
         Err(message) => native_write(message),
     }
 }
@@ -218,6 +208,39 @@ mod tests {
                 PLAN
             );
         }
+    }
+
+    #[test]
+    fn publishing_records_the_last_slot_until_the_target_changes_or_is_forgotten() {
+        let temporary = TemporaryDirectory::new("last-slot");
+        let config = temporary.0.join("app-config");
+        let (target, package) = ready_target(&temporary.0.join("target"), TargetKind::Manual);
+        remember_target(&config, &target).unwrap();
+        assert_eq!(status(&config, &package).0.last_slot, None);
+        publish(&config, &package, 2, PLAN);
+        assert_eq!(status(&config, &package).0.last_slot, Some(2));
+        publish(&config, &package, 5, PLAN);
+        let (reported, _) = status(&config, &package);
+        assert_eq!(reported.last_slot, Some(5));
+        let slots = reported.inspection.unwrap().plan_slots;
+        assert_eq!(
+            slots[4].plan_fingerprint, None,
+            "PLAN has no fingerprint field"
+        );
+        assert_eq!(
+            publish(&config, &package, 3, "{}").status,
+            PublicationStatus::NativeWrite
+        );
+        assert_eq!(status(&config, &package).0.last_slot, Some(5));
+
+        let (other, _) = ready_target(&temporary.0.join("other"), TargetKind::Manual);
+        remember_target(&config, &other).unwrap();
+        assert_eq!(status(&config, &package).0.last_slot, None);
+        publish(&config, &package, 1, PLAN);
+        assert_eq!(status(&config, &package).0.last_slot, Some(1));
+        crate::game_target::forget_target(&config).unwrap();
+        remember_target(&config, &other).unwrap();
+        assert_eq!(status(&config, &package).0.last_slot, None);
     }
 
     #[test]
@@ -282,11 +305,12 @@ mod tests {
     fn slot_numbers_map_to_the_six_closed_filenames_and_replace_only_that_slot() {
         let temporary = TemporaryDirectory::new("slots");
         let (target, _) = ready_target(&temporary.0.join("target"), TargetKind::Manual);
-        for (slot_number, expected) in (1_u8..=6).zip(PLAN_SLOT_FILES) {
+        for slot_number in 1_u8..=6 {
+            let expected = format!("slot-{slot_number}.runplanner.json");
             let destination = safe_destination(&target, slot_number).unwrap();
             assert_eq!(
                 destination.file_name().and_then(|name| name.to_str()),
-                Some(expected)
+                Some(expected.as_str())
             );
         }
         bounded_atomic_write(&target, 1, b"one").unwrap();

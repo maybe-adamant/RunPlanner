@@ -37,6 +37,15 @@ export function gameModuleStatus(
     install: { action: 'current', consentRequired: false },
     removable: true,
     strandedInstall: null,
+    planSlots: ([1, 2, 3, 4, 5, 6] as const).map((slot) => ({
+      slot,
+      state: 'empty' as const,
+      modifiedAtMs: null,
+      routeKey: null,
+      biomeKeys: [],
+      planFingerprint: null,
+      projectId: null,
+    })),
   };
   const inspection =
     overrides.inspection === null
@@ -65,6 +74,7 @@ export function gameModuleStatus(
     },
     targetProblem: null,
     publicationBlockers: [],
+    lastSlot: null,
     ...overrides,
     inspection,
   };

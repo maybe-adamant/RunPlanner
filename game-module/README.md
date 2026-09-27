@@ -23,19 +23,20 @@ to play it in Hades II. The app carries the mod and installs it for you.
 2. Download Run Planner from the
    [planner releases](https://github.com/maybe-adamant/RunPlanner/releases),
    extract the portable ZIP, and open **RunPlanner.exe**.
-3. Open **Settings**, choose **Find r2modman profiles**, and pick your
+3. Open the **Game** panel, choose **Find r2modman profiles**, and pick your
    profile (or **Choose folder…** for the folder containing `ReturnOfModding`
    in a manual Hell2Modding install). Then follow the Game module steps and
-   choose **Install**. Settings lists anything else to fix first, such as an
+   choose **Install**. The Game panel lists anything else to fix first, such as an
    older ModpackLib.
 4. Create or load a plan in the app, configure your loadout and route, and
    fix any issues shown by the planner.
-5. Open **File → Publish to Game** and pick one of the six plan slots.
+5. In the Game panel's **Plans in game**, choose **Send here** on one of the
+   six plan slots.
 6. Launch the game with that profile. In Run Planner's in-game settings,
    select the published slot as your active plan.
 7. Start a new run with the loadout you planned and follow its choices.
 
-After updating the app, open Settings and choose **Update**; publishing waits
+After updating the app, open the Game panel and choose **Update**; sending waits
 until the installed mod matches the app.
 
 For more about the application and its source, visit the
@@ -68,16 +69,14 @@ Open **Edit Trait** to configure the offered boons and the one you intend to pic
 
 You can leave choices unfinished or conflicting while editing. Before
 publishing, fix the issues the planner points out so the plan passes its
-game-rule checks. Then open **File → Publish to Game**.
+game-rule checks. Then open the **Game** panel.
 
-![File menu with Publish to Game highlighted](docs/images/planner-publish-menu.webp)
-
-Select a plan slot and click **Publish**. The plan goes to the game target
-chosen in Settings. If something is missing, such as an older ModpackLib or a
-game module from another planner version, the dialog says what was found and
-what is required, and links to Settings.
-
-![Publish to game dialog showing plan-slot selection](docs/images/planner-publish-slot.webp)
+Under **Plans in game**, choose **Send here** on an empty slot, or **Replace**
+on an occupied one. Each slot shows its route and when it was sent, and the
+slot holding the plan you have open is marked **current plan**. After the first
+send, the header's **Send to game (slot N)** re-sends to that slot. If
+something is missing, such as an older ModpackLib or a game module from another
+planner version, the Game panel lists what was found and what is required.
 
 ### Inspect before starting
 

@@ -28,7 +28,7 @@ import {
   type ProfileFileAdapter,
   type ProfileFileRestoreResult,
 } from '../persistence/profileFile';
-import type { GameModuleHost } from '../persistence/gameModuleHost';
+import { createGameStatusController, type GameModuleHost } from '../persistence/gameModuleHost';
 import { createPlannerStore } from '../state/store';
 import type { PreparedProjectWorkspace } from '../state/projectWorkspaceSlice';
 import { profileFileErrorReported } from '../state/profileSessionSlice';
@@ -160,7 +160,10 @@ export function createApplication(options: CreateApplicationOptions = {}) {
     catalog,
     catalogSummary: summarizeCatalog(catalog),
     editorNavigation,
-    gameModule: options.gameModuleHost,
+    gameStatus:
+      options.gameModuleHost === undefined
+        ? undefined
+        : createGameStatusController(options.gameModuleHost),
     projectOperations,
     store,
     selectStructuredWorkspace,

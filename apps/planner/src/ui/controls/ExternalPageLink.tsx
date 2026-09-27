@@ -1,4 +1,4 @@
-import type { GameModuleLink } from '@planner/projections/gameModuleSettings';
+import type { GameModuleLink } from '@planner/projections/gamePanel';
 
 /** A host-allowlisted page, opened in the default browser rather than the app window. */
 export function ExternalPageLink({
