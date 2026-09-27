@@ -81,7 +81,8 @@ describe('App', () => {
     expect(markup).toContain('Underworld');
     expect(markup).toContain('Surface');
     expect(markup).toContain('About</button>');
-    expect(markup).not.toContain('Settings');
+    expect(markup).toContain('Settings</button>');
+    expect(markup).not.toContain('<h2 id="settings-dialog-title">');
   });
 
   it('keeps project information out of the route workspace', () => {

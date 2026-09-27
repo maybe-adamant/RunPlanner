@@ -28,7 +28,7 @@ import {
   type ProfileFileAdapter,
   type ProfileFileRestoreResult,
 } from '../persistence/profileFile';
-import type { GamePlanPublisher } from '../persistence/gamePlanPublisher';
+import type { GameModuleHost } from '../persistence/gameModuleHost';
 import { createPlannerStore } from '../state/store';
 import type { PreparedProjectWorkspace } from '../state/projectWorkspaceSlice';
 import { profileFileErrorReported } from '../state/profileSessionSlice';
@@ -42,7 +42,7 @@ export interface CreateApplicationOptions {
   readonly buildIdentity?: BuildIdentity;
   readonly profileFile?: ProfileFileAdapter;
   readonly profileFileRestore?: ProfileFileRestoreResult;
-  readonly gamePlanPublisher?: GamePlanPublisher;
+  readonly gameModuleHost?: GameModuleHost;
   readonly observeEvaluationWork?: (event: ApplicationEvaluationEvent) => void;
 }
 
@@ -128,9 +128,7 @@ export function createApplication(options: CreateApplicationOptions = {}) {
     catalog,
     profileFile,
     prepareProjectWorkspace,
-    ...(options.gamePlanPublisher === undefined
-      ? {}
-      : { gamePlanPublisher: options.gamePlanPublisher }),
+    ...(options.gameModuleHost === undefined ? {} : { gamePlanPublisher: options.gameModuleHost }),
     store,
   });
   const autosaveCoordinator =
@@ -162,6 +160,7 @@ export function createApplication(options: CreateApplicationOptions = {}) {
     catalog,
     catalogSummary: summarizeCatalog(catalog),
     editorNavigation,
+    gameModule: options.gameModuleHost,
     projectOperations,
     store,
     selectStructuredWorkspace,

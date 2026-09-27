@@ -23,6 +23,7 @@ import type { StructuredWorkspaceProjection } from '@planner/projections/structu
 import type { AppScalePreference } from '@planner/persistence/appScalePreference';
 import type { BuildIdentity } from '@planner/composition/buildIdentity';
 import type { ReleaseUpdateController } from '@planner/persistence/releaseUpdates';
+import type { GameModuleHost } from '@planner/persistence/gameModuleHost';
 import { PomResolutionDialog } from '../editor/rewards/PomResolutionEditor';
 import { TraitOfferDialog } from '../editor/rewards/TraitOfferEditor';
 import { ProjectFileControls } from '../project/ProjectFileControls';
@@ -32,6 +33,7 @@ import { RouteWorkspace } from './RouteWorkspace';
 import { FindingTargetScope } from '../feedback/useFindingTarget';
 import { useAppScale } from './useAppScale';
 import { ReleaseUpdateCheck, ReleaseUpdateNotice } from './ReleaseUpdates';
+import { SettingsPanel } from './SettingsPanel';
 
 interface AppProps {
   readonly appScalePreference?: AppScalePreference;
@@ -39,6 +41,7 @@ interface AppProps {
   readonly catalog: Catalog;
   readonly catalogSummary: CatalogSummary;
   readonly editorNavigation: EditorNavigation;
+  readonly gameModule?: GameModuleHost;
   readonly projectOperations: ProjectOperations;
   readonly releaseUpdates?: ReleaseUpdateController;
   readonly selectStructuredWorkspace: (
@@ -52,6 +55,7 @@ export function App({
   catalog,
   catalogSummary,
   editorNavigation,
+  gameModule,
   projectOperations,
   releaseUpdates,
   selectStructuredWorkspace,
@@ -59,6 +63,7 @@ export function App({
   const scalePercent = useAppScale(appScalePreference);
   const project = useAppSelector(selectPresentProject);
   const [entryOpen, setEntryOpen] = useState(project === undefined);
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const evaluation = useAppSelector(selectProjectEvaluation);
   const workspace = useAppSelector(selectStructuredWorkspace);
   const traitDialogTarget = useAppSelector(
@@ -108,11 +113,19 @@ export function App({
               hasProject={project !== undefined}
               entryOpen={showEntry}
               onEntryOpenChange={setEntryOpen}
+              onOpenSettings={() => setSettingsOpen(true)}
               operations={projectOperations}
               routes={editorNavigation.routes.values}
             />
             {!showEntry && <ProjectHistoryControls hasProject />}
             <div className="header-about-controls">
+              <button
+                className="quiet-action action-compact"
+                onClick={() => setSettingsOpen(true)}
+                type="button"
+              >
+                Settings
+              </button>
               <Popover.Root>
                 <Popover.Trigger asChild>
                   <button className="quiet-action action-compact" type="button">
@@ -197,6 +210,13 @@ export function App({
         </header>
 
         {releaseUpdates === undefined ? null : <ReleaseUpdateNotice controller={releaseUpdates} />}
+
+        {settingsOpen && (
+          <SettingsPanel
+            {...(gameModule === undefined ? {} : { gameModule })}
+            onClose={() => setSettingsOpen(false)}
+          />
+        )}
 
         {project !== undefined &&
           !showEntry &&

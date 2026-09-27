@@ -16,19 +16,26 @@ fighting and make the choices you planned.
 ## How to use
 
 You'll use two pieces: the Run Planner app to create your plan, and this mod
-to play it in Hades II.
+to play it in Hades II. The app carries the mod and installs it for you.
 
-1. Download Run Planner from the
+1. Install **adamant-ModpackLib** in your Hades II r2modman profile. r2modman
+   installs its dependencies too.
+2. Download Run Planner from the
    [planner releases](https://github.com/maybe-adamant/RunPlanner/releases),
    extract the portable ZIP, and open **RunPlanner.exe**.
-2. Install this mod in your Hades II mod-manager profile.
-3. Create or load a plan in the app, configure your loadout and route, and
+3. Open **Settings → Game Module**, choose **Locate Game Module**, and pick
+   your r2modman profile (or the folder containing `ReturnOfModding` for a
+   manual Hell2Modding install). Then choose **Install / Update Game Module**.
+   Settings shows whether ModpackLib and the other dependencies were found.
+4. Create or load a plan in the app, configure your loadout and route, and
    fix any issues shown by the planner.
-4. Open **File → Publish to Game**, choose your game profile, and pick one of
-   the six plan slots.
-5. Launch the game with that profile. In Run Planner's in-game settings,
+5. Open **File → Publish to Game** and pick one of the six plan slots.
+6. Launch the game with that profile. In Run Planner's in-game settings,
    select the published slot as your active plan.
-6. Start a new run with the loadout you planned and follow its choices.
+7. Start a new run with the loadout you planned and follow its choices.
+
+After updating the app, open Settings and choose **Install / Update Game
+Module** again; publishing waits until the installed mod matches the app.
 
 For more about the application and its source, visit the
 [planner repository](https://github.com/maybe-adamant/RunPlanner).
@@ -64,11 +71,12 @@ game-rule checks. Then open **File → Publish to Game**.
 
 ![File menu with Publish to Game highlighted](docs/images/planner-publish-menu.webp)
 
-Choose the mod-manager profile containing Run Planner, select a plan slot,
-and click **Publish**. The screenshots use the author's profile, **h2-dev**;
-choose the profile you play with.
+Select a plan slot and click **Publish**. The plan goes to the game target
+chosen in Settings. If something is missing, such as an older ModpackLib or a
+game module from another planner version, the dialog says what was found and
+what is required, and links to Settings.
 
-![Publish to game dialog showing profile and plan-slot selection](docs/images/planner-publish-slot.webp)
+![Publish to game dialog showing plan-slot selection](docs/images/planner-publish-slot.webp)
 
 ### Inspect before starting
 

@@ -19,10 +19,11 @@ import { dreamMixedPrefixProject } from '@run-planner/test-fixtures/dream';
 
 import { createApplication } from '@planner/composition/createApplication';
 import { createInitialProject } from '@planner/composition/projectBootstrap';
-import type {
-  GamePlanCompatibility,
-  GamePlanPublisher,
-} from '@planner/persistence/gamePlanPublisher';
+import {
+  EXECUTION_PLAN_FORMAT,
+  EXECUTION_PROTOCOL_VERSION,
+} from '@run-planner/engine/execution-plan';
+import { createFakeGameModuleHost, gameModuleStatus } from '@planner-test/fixtures/gameModuleHost';
 import type {
   AutosaveRecoveryAdapter,
   AutosaveScheduler,
@@ -213,30 +214,11 @@ describe('project profile operations', () => {
   });
 
   it('publishes a complete F prefix through the separate game capability', async () => {
-    let requestedCompatibility: GamePlanCompatibility | undefined;
-    let chosenCompatibility: GamePlanCompatibility | undefined;
-    const published: { targetId: string; slotNumber: number; json: string }[] = [];
     const profile = createProfileFixture();
     const autosave = createPublicationAutosaveFixture();
-    const gamePlanPublisher: GamePlanPublisher = {
-      chooseProfile: (compatibility) => {
-        chosenCompatibility = compatibility;
-        return Promise.resolve(null);
-      },
-      discoverProfiles: (compatibility) => {
-        requestedCompatibility = compatibility;
-        return Promise.resolve({ status: 'available', targets: [], message: 'Choose a profile.' });
-      },
-      publish: (targetId, slotNumber, json) => {
-        published.push({ targetId, slotNumber, json });
-        return Promise.resolve({
-          status: 'published',
-          message: `Published profile ${targetId} Slot ${slotNumber}.`,
-        });
-      },
-    };
+    const game = createFakeGameModuleHost();
     const application = createApplication({
-      gamePlanPublisher,
+      gameModuleHost: game.host,
       profileFile: profile.adapter,
       autosaveRecovery: autosave.recovery,
       autosaveScheduler: autosave.scheduler,
@@ -259,20 +241,22 @@ describe('project profile operations', () => {
     const beforePendingAutosaves = autosave.scheduler.pendingCount;
     const beforeAutosaveWrites = profile.saves.length;
 
-    await application.projectOperations.discoverGameProfiles();
-    expect(await application.projectOperations.chooseGameProfile()).toBeNull();
-    expect(chosenCompatibility).toEqual(requestedCompatibility);
-    await expect(application.projectOperations.publishGame('profile-a', 3)).resolves.toEqual({
+    await expect(application.projectOperations.inspectGamePublication()).resolves.toMatchObject({
+      publicationBlockers: [],
+    });
+    await expect(application.projectOperations.publishGame(3)).resolves.toEqual({
       operation: 'publishGame',
       status: 'success',
-      message: 'Published to game profile profile-a, Slot 3.',
+      message: 'Published to game, Slot 3.',
     });
-    expect(published).toHaveLength(1);
-    const publication = published[0];
+    expect(game.published).toHaveLength(1);
+    const publication = game.published[0];
     if (publication === undefined) throw new Error('publication was not recorded');
-    if (requestedCompatibility === undefined) throw new Error('discovery was not recorded');
-    expect(JSON.parse(publication.json)).toMatchObject(requestedCompatibility);
+    expect(publication.slotNumber).toBe(3);
     expect(JSON.parse(publication.json)).toMatchObject({
+      format: EXECUTION_PLAN_FORMAT,
+      protocolVersion: EXECUTION_PROTOCOL_VERSION,
+      catalogVersion: application.catalog.version,
       routeKey: 'Underworld',
       extent: { biomeKeys: ['F'] },
     });
@@ -294,55 +278,67 @@ describe('project profile operations', () => {
   });
 
   it('publishes a valid Dream prefix through the game capability', async () => {
-    const published: { targetId: string; slotNumber: number; json: string }[] = [];
     const profile = createProfileFixture();
+    const game = createFakeGameModuleHost();
     const application = createApplication({
-      gamePlanPublisher: {
-        chooseProfile: () => Promise.resolve(null),
-        discoverProfiles: () =>
-          Promise.resolve({ status: 'available', targets: [], message: 'Choose a profile.' }),
-        publish: (targetId, slotNumber, json) => {
-          published.push({ targetId, slotNumber, json });
-          return Promise.resolve({ status: 'published', message: 'published Dream prefix' });
-        },
-      },
+      gameModuleHost: game.host,
       profileFile: profile.adapter,
     });
     application.store.dispatch(authoredProjectReplaced(dreamMixedPrefixProject()));
 
-    await expect(application.projectOperations.publishGame('profile-a', 3)).resolves.toEqual({
+    await expect(application.projectOperations.publishGame(3)).resolves.toEqual({
       operation: 'publishGame',
       status: 'success',
-      message: 'Published to game profile profile-a, Slot 3.',
+      message: 'Published to game, Slot 3.',
     });
-    expect(published).toHaveLength(1);
-    expect(JSON.parse(published[0]!.json)).toMatchObject({
+    expect(game.published).toHaveLength(1);
+    expect(JSON.parse(game.published[0]!.json)).toMatchObject({
       routeKey: 'Dream',
       extent: { biomeKeys: ['Q'] },
       selectedOccurrenceIds: expect.arrayContaining(['dream-q-preboss:postboss']),
     });
   });
 
-  it('rejects an invalid publication before invoking the game writer', async () => {
-    const published: { targetId: string; slotNumber: number; json: string }[] = [];
-    const application = createApplication({
-      gamePlanPublisher: {
-        chooseProfile: () => Promise.resolve(null),
-        discoverProfiles: () =>
-          Promise.resolve({ status: 'available', targets: [], message: 'Choose a profile.' }),
-        publish: (targetId, slotNumber, json) => {
-          published.push({ targetId, slotNumber, json });
-          return Promise.resolve({ status: 'published', message: 'Published.' });
-        },
-      },
+  it('reports the host blockers when the established target is not ready', async () => {
+    const blocked = gameModuleStatus({
+      publicationBlockers: [
+        { code: 'moduleMismatch', found: '0.10.0', required: '0.1.0' },
+        { code: 'modpackLibOlder', found: '4.0.1', required: '4.1.0' },
+      ],
     });
+    const game = createFakeGameModuleHost(blocked, {
+      status: 'blocked',
+      message: 'The game target is not ready for publication.',
+      blockers: blocked.publicationBlockers,
+    });
+    const application = createApplication({ gameModuleHost: game.host });
+    const complete = createCompleteFGProject();
+    application.store.dispatch(
+      authoredProjectReplaced({
+        ...complete,
+        route: { ...complete.route, biomes: complete.route.biomes.slice(0, 1) },
+      }),
+    );
+
+    await expect(application.projectOperations.publishGame(2)).resolves.toEqual({
+      operation: 'publishGame',
+      status: 'failure',
+      message:
+        'The installed game module (0.10.0) does not match this planner (0.1.0). Update it in Settings. ' +
+        'ModpackLib 4.0.1 is older than required (4.1.0 or newer 4.x). Update ModpackLib in r2modman.',
+    });
+  });
+
+  it('rejects an invalid publication before invoking the game writer', async () => {
+    const game = createFakeGameModuleHost();
+    const application = createApplication({ gameModuleHost: game.host });
     await application.projectOperations.createNew('Underworld');
 
-    await expect(application.projectOperations.publishGame('profile-a', 1)).resolves.toMatchObject({
+    await expect(application.projectOperations.publishGame(1)).resolves.toMatchObject({
       operation: 'publishGame',
       status: 'failure',
     });
-    expect(published).toHaveLength(0);
+    expect(game.published).toHaveLength(0);
   });
 
   it('reuses one host file reference until New clears it', async () => {

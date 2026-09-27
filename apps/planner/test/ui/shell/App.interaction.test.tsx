@@ -37,7 +37,7 @@ import type {
   AutosaveScheduler,
 } from '@planner/persistence/autosaveRecovery';
 import type { ProfileFileAdapter, ProfileFileReference } from '@planner/persistence/profileFile';
-import type { GamePlanPublisher } from '@planner/persistence/gamePlanPublisher';
+import { createFakeGameModuleHost, gameModuleStatus } from '@planner-test/fixtures/gameModuleHost';
 import {
   authoredProjectCommandDispatched,
   authoredProjectReplaced,
@@ -663,31 +663,14 @@ describe('planner history interaction', () => {
     expect(screen.getByRole('button', { name: 'Loadout' })).toBeTruthy();
   });
 
-  it('allows manual profile selection after detection fails without losing the popup on errors or cancellation', async () => {
-    let attempt = 0;
-    const target = {
-      id: '/custom/profile',
-      label: 'Custom profile',
-      location: '/custom/profile',
-      moduleVersion: '1',
-    };
-    const publications: string[] = [];
-    const application = createApplication({
-      gamePlanPublisher: {
-        discoverProfiles: () =>
-          Promise.resolve({ status: 'noProfiles', targets: [], message: 'No profiles detected.' }),
-        chooseProfile: () => {
-          attempt += 1;
-          if (attempt === 1) return Promise.reject(new Error('The module is incompatible.'));
-          if (attempt === 2) return Promise.resolve(null);
-          return Promise.resolve(target);
-        },
-        publish: (id) => {
-          publications.push(id);
-          return Promise.resolve({ status: 'published', message: 'Published.' });
-        },
-      },
-    });
+  it('blocks publication with the found and required values and links to Settings', async () => {
+    const game = createFakeGameModuleHost(
+      gameModuleStatus({
+        inspection: { modpackLib: { state: 'older', found: '4.0.1' } },
+        publicationBlockers: [{ code: 'modpackLibOlder', found: '4.0.1', required: '4.1.0' }],
+      }),
+    );
+    const application = createApplication({ gameModuleHost: game.host });
     const project = createCompleteFGProject();
     application.store.dispatch(
       authoredProjectReplaced({
@@ -699,50 +682,24 @@ describe('planner history interaction', () => {
     await user.click(screen.getByRole('button', { name: 'File' }));
     await user.click(screen.getByRole('menuitem', { name: 'Publish to Game…' }));
     const dialog = await screen.findByRole('dialog', { name: 'Publish to game' });
-    expect(within(dialog).getByText('No profiles detected.')).toBeTruthy();
-    expect(within(dialog).getByText(/not the parent profiles folder/)).toBeTruthy();
-    const choose = within(dialog).getByRole('button', { name: 'Choose Profile Folder…' });
-    await user.click(choose);
-    expect(await within(dialog).findByRole('alert')).toHaveProperty(
-      'textContent',
-      'The module is incompatible.',
+    expect(within(dialog).getByText('Target: /profiles/h2-dev')).toBeTruthy();
+    expect(within(dialog).getByRole('alert').textContent).toBe(
+      'ModpackLib 4.0.1 is older than required (4.1.0 or newer 4.x). Update ModpackLib in r2modman.',
     );
-    await user.click(choose);
-    expect((within(dialog).getByLabelText('Profile') as HTMLSelectElement).value).toBe('');
-    await user.click(choose);
-    expect((within(dialog).getByLabelText('Profile') as HTMLSelectElement).value).toBe(target.id);
-    expect(within(dialog).getByRole('button', { name: 'Publish' })).toHaveProperty(
-      'disabled',
-      true,
-    );
-    await user.click(choose);
-    expect(within(dialog).getAllByRole('option', { name: 'Custom profile' })).toHaveLength(1);
-    expect(within(dialog).getByText('/custom/profile', { selector: 'p' })).toBeTruthy();
-    await user.selectOptions(within(dialog).getByLabelText('Slot'), '4');
-    await user.click(within(dialog).getByRole('button', { name: 'Publish' }));
-    expect(publications).toEqual([target.id]);
+    expect(within(dialog).queryByLabelText('Slot')).toBeNull();
+    expect(within(dialog).queryByRole('button', { name: 'Publish' })).toBeNull();
+    await user.click(within(dialog).getByRole('button', { name: 'Open Settings' }));
     expect(screen.queryByRole('dialog', { name: 'Publish to game' })).toBeNull();
+    const settings = await screen.findByRole('dialog', { name: 'Settings' });
+    expect(
+      await within(settings).findByText('Found 4.0.1 · requires 4.1.0 or newer 4.x'),
+    ).toBeTruthy();
+    expect(game.published).toHaveLength(0);
   });
 
-  it('requires an explicit game profile and plan slot before publishing', async () => {
-    const publications: { targetId: string; slotNumber: number; json: string }[] = [];
-    const gamePlanPublisher: GamePlanPublisher = {
-      chooseProfile: () => Promise.resolve(null),
-      discoverProfiles: () =>
-        Promise.resolve({
-          status: 'available',
-          targets: [
-            { id: 'profile-a', label: 'Profile A', moduleVersion: '0.0.1' },
-            { id: 'profile-b', label: 'Profile B', moduleVersion: '0.0.1' },
-          ],
-          message: 'Choose a profile.',
-        }),
-      publish: (targetId, slotNumber, json) => {
-        publications.push({ targetId, slotNumber, json });
-        return Promise.resolve({ status: 'published', message: 'Published.' });
-      },
-    };
-    const application = createApplication({ gamePlanPublisher });
+  it('requires a plan slot and publishes to the established target', async () => {
+    const game = createFakeGameModuleHost();
+    const application = createApplication({ gameModuleHost: game.host });
     const project = createCompleteFGProject();
     application.store.dispatch(
       authoredProjectReplaced({
@@ -755,12 +712,21 @@ describe('planner history interaction', () => {
     await user.click(screen.getByRole('button', { name: 'File' }));
     await user.click(screen.getByRole('menuitem', { name: 'Publish to Game…' }));
     const publicationDialog = await screen.findByRole('dialog', { name: 'Publish to game' });
-    expect(publications).toHaveLength(0);
     expect(document.querySelector('.project-file-actions')?.contains(publicationDialog)).toBe(
       false,
     );
-    expect(within(publicationDialog).getByLabelText('Profile')).toBeTruthy();
-    expect(within(publicationDialog).getByLabelText('Slot')).toBeTruthy();
+    expect(within(publicationDialog).queryByLabelText('Profile')).toBeNull();
+    const slot = within(publicationDialog).getByLabelText('Slot') as HTMLSelectElement;
+    expect(slot.value).toBe('');
+    expect(Array.from(slot.options).map((option) => option.value)).toEqual([
+      '',
+      '1',
+      '2',
+      '3',
+      '4',
+      '5',
+      '6',
+    ]);
     expect(within(publicationDialog).getByRole('button', { name: /^Publish$/ })).toHaveProperty(
       'disabled',
       true,
@@ -769,35 +735,24 @@ describe('planner history interaction', () => {
     await user.click(screen.getByRole('button', { name: /^Cancel$/ }));
     await user.click(screen.getByRole('button', { name: 'File' }));
     await user.click(screen.getByRole('menuitem', { name: 'Publish to Game…' }));
-    expect((screen.getByLabelText('Profile') as HTMLSelectElement).value).toBe('');
     expect((screen.getByLabelText('Slot') as HTMLSelectElement).value).toBe('');
-
-    await user.selectOptions(screen.getByLabelText('Profile'), 'profile-b');
     await user.selectOptions(screen.getByLabelText('Slot'), '3');
     await user.click(screen.getByRole('button', { name: /^Publish$/ }));
 
-    expect(publications).toHaveLength(1);
-    expect(publications[0]).toMatchObject({ targetId: 'profile-b', slotNumber: 3 });
+    expect(game.published).toHaveLength(1);
+    expect(game.published[0]).toMatchObject({ slotNumber: 3 });
+    expect(game.host.discoverTargets).not.toHaveBeenCalled();
+    expect(screen.queryByRole('dialog', { name: 'Publish to game' })).toBeNull();
     expect(screen.getByText('Published to game')).toBeTruthy();
   });
 
-  it('preselects the only compatible profile without selecting a publication slot', async () => {
-    const publications: { targetId: string; slotNumber: number; json: string }[] = [];
-    const application = createApplication({
-      gamePlanPublisher: {
-        chooseProfile: () => Promise.resolve(null),
-        discoverProfiles: () =>
-          Promise.resolve({
-            status: 'available' as const,
-            targets: [{ id: 'profile-a', label: 'Profile A', moduleVersion: '0.0.1' }],
-            message: 'Choose a profile.',
-          }),
-        publish: (targetId, slotNumber, json) => {
-          publications.push({ targetId, slotNumber, json });
-          return Promise.resolve({ status: 'published' as const, message: 'Published.' });
-        },
-      },
+  it('keeps the publish dialog open with the host reason when publication is refused', async () => {
+    const game = createFakeGameModuleHost(gameModuleStatus(), {
+      status: 'blocked',
+      message: 'The game target is not ready for publication.',
+      blockers: [{ code: 'moduleMismatch', found: null, required: '0.1.0' }],
     });
+    const application = createApplication({ gameModuleHost: game.host });
     const project = createCompleteFGProject();
     application.store.dispatch(
       authoredProjectReplaced({
@@ -806,18 +761,17 @@ describe('planner history interaction', () => {
       }),
     );
     const { user } = renderPlannerForInteraction({ application });
-
     await user.click(screen.getByRole('button', { name: 'File' }));
     await user.click(screen.getByRole('menuitem', { name: 'Publish to Game…' }));
-
-    expect((screen.getByLabelText('Profile') as HTMLSelectElement).value).toBe('profile-a');
-    expect((screen.getByLabelText('Slot') as HTMLSelectElement).value).toBe('');
+    const dialog = await screen.findByRole('dialog', { name: 'Publish to game' });
+    await user.selectOptions(within(dialog).getByLabelText('Slot'), '1');
+    await user.click(within(dialog).getByRole('button', { name: 'Publish' }));
     expect(
-      Array.from((screen.getByLabelText('Slot') as HTMLSelectElement).options).map(
-        (option) => option.value,
+      await within(dialog).findByText(
+        'The installed game module (unrecognized) does not match this planner (0.1.0). Update it in Settings.',
       ),
-    ).toEqual(['', '1', '2', '3', '4', '5', '6']);
-    expect(publications).toHaveLength(0);
+    ).toBeTruthy();
+    expect(within(dialog).getByRole('button', { name: 'Open Settings' })).toBeTruthy();
   });
 
   it('binds visible history controls to semantic project history', async () => {

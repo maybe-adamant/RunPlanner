@@ -91,11 +91,12 @@ npm run test:product   # browser product loops
 npm run test:engine    # authored model, simulator, and validation
 npm run test:catalog   # declaration and catalog construction
 npm run test:game-module  # game module Lua syntax, tests, and Luacheck
+npm run test:game-host    # Rust game module package, target, install, and publication
 ```
 
 Individual `typecheck`, `lint`, `format:check`, `build`, and `test:watch`
-scripts are also available. The game module lane, which `check` includes,
-needs Lua 5.2 (`lua` and `luac`) with LuaUnit and Luacheck from LuaRocks on
+scripts are also available. The game host lane needs Rust (`cargo`). The game
+module lane needs Lua 5.2 (`lua` and `luac`) with LuaUnit and Luacheck from LuaRocks on
 `PATH`. Use the narrowest truthful lane while developing; configuration,
 dependency, shared setup, and cross-layer changes require the complete gate.
 
@@ -133,9 +134,22 @@ in About, uploads the archive and checksum to a draft, then publishes it. Each
 published version identifies one build; choose a new version for a new build.
 Run `npm run check` locally on the commit being
 released before dispatching it; packaging does not repeat that repository gate.
-The separate **Desktop host** workflow checks Windows Rust compilation, and the
+The separate **Desktop host** workflow checks Windows Rust compilation and runs
+the game host crate tests on Linux, and the
 **Game module** workflow runs `npm run test:game-module`, on pull requests and
 pushes to `main`.
+
+### Game setup
+
+1. Install `adamant-ModpackLib` in your Hades II r2modman profile. r2modman
+   also installs its dependencies. The planner reports ModpackLib and missing
+   dependencies but never installs them.
+2. In the desktop planner, open **Settings → Game Module**, choose **Locate
+   Game Module** and pick your r2modman profile, or choose the folder that
+   contains `ReturnOfModding` for a manual Hell2Modding install.
+3. Choose **Install / Update Game Module**. The module is built into the
+   planner, so each planner release carries its matching module.
+4. Use **File → Publish to Game** to write a plan slot to that target.
 
 Official desktop releases check for updates without delaying startup. Use About
 to check manually or identify your installed version. Download opens the new

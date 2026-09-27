@@ -696,3 +696,76 @@
   font-weight: 500;
   margin-left: 0.35rem;
 }
+
+.game-publication-reasons,
+.settings-notices {
+  display: grid;
+  gap: 6px;
+  padding-left: 1.1rem;
+  margin: 8px 0;
+  font-size: 0.8rem;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+.game-publication-reasons {
+  color: #f0a3a3;
+}
+
+.settings-dialog {
+  width: min(100%, 36rem);
+}
+
+.settings-section h3 {
+  margin: 12px 0 8px;
+  font-size: 0.95rem;
+}
+
+.settings-status-list {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  font-size: 0.82rem;
+}
+
+.settings-status-list > div {
+  display: grid;
+  grid-template-columns: 8rem minmax(0, 1fr);
+  gap: 8px;
+}
+
+.settings-status-list dt {
+  color: #aaa7af;
+  font-weight: 700;
+}
+
+.settings-status-list dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.settings-status-list [data-tone='warning'] dd,
+.settings-notices [data-tone='warning'] {
+  color: #e8c27a;
+}
+
+.settings-status-list [data-tone='error'] dd,
+.settings-notices [data-tone='error'] {
+  color: #f0a3a3;
+}
+
+.settings-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 12px;
+}
+
+.settings-locate ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 0;
+  margin: 8px 0;
+  list-style: none;
+}

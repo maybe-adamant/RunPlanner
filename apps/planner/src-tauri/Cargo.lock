@@ -2537,6 +2537,7 @@ name = "run-planner"
 version = "0.1.0"
 dependencies = [
  "reqwest",
+ "run-planner-game-host",
  "serde",
  "serde_json",
  "tauri",
@@ -2544,6 +2545,16 @@ dependencies = [
  "tauri-plugin-dialog",
  "tauri-plugin-fs",
  "url",
+ "windows-sys 0.61.2",
+]
+
+[[package]]
+name = "run-planner-game-host"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "serde_json",
+ "sha2",
  "windows-sys 0.61.2",
 ]
 

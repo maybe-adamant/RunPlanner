@@ -11,35 +11,34 @@ import type {
 } from '@planner/workspace/projectOperations';
 import {
   GAME_PLAN_SLOT_NUMBERS,
-  type GamePlanDiscovery,
   type GamePlanSlotNumber,
-} from '@planner/persistence/gamePlanPublisher';
+} from '@planner/persistence/gameModuleHost';
+import {
+  projectGamePublicationReadiness,
+  type GamePublicationReadiness,
+} from '@planner/projections/gameModuleSettings';
 import { selectProfileSession, selectProfileStatus, useAppSelector } from '@planner/state/store';
 import { ActionIcon } from '../controls/ActionIcon';
 import { DreamItineraryDialog } from './DreamItineraryDialog';
 import { ProjectFileFeedback } from './ProjectFileFeedback';
 
 function GamePublicationDialog({
-  discovery,
+  readiness,
   pending,
-  selectedProfile,
   selectedSlot,
   onCancel,
-  onProfileChange,
+  onOpenSettings,
   onPublish,
   onSlotChange,
-  onChooseProfile,
   error,
 }: {
-  readonly discovery: GamePlanDiscovery;
+  readonly readiness: GamePublicationReadiness;
   readonly pending: boolean;
-  readonly selectedProfile: string;
   readonly selectedSlot: GamePlanSlotNumber | '';
   readonly onCancel: () => void;
-  readonly onProfileChange: (profileId: string) => void;
+  readonly onOpenSettings?: (() => void) | undefined;
   readonly onPublish: () => void;
   readonly onSlotChange: (slot: GamePlanSlotNumber | '') => void;
-  readonly onChooseProfile: () => void;
   readonly error: string | null;
 }) {
   const dialogRef = useRef<HTMLDialogElement>(null);
@@ -69,6 +68,8 @@ function GamePublicationDialog({
     return () => dialog.removeEventListener('cancel', cancel);
   }, [onCancel, pending]);
 
+  const blocked = !readiness.ready || error !== null;
+
   return (
     <dialog
       aria-labelledby="game-publication-dialog-title"
@@ -83,71 +84,73 @@ function GamePublicationDialog({
             <h2 id="game-publication-dialog-title">Publish to game</h2>
           </div>
         </header>
-        <p className="game-publication-hint">
-          Choose your named mod-manager profile (for example, h2-dev), or its ReturnOfModding
-          folder—not the parent profiles folder.
+        <p className="game-publication-location">
+          {readiness.targetLocation === null
+            ? 'No game target is set.'
+            : `Target: ${readiness.targetLocation}`}
         </p>
-        <p className="game-publication-message" role={error === null ? 'status' : 'alert'}>
-          {error ?? discovery.message}
-        </p>
-        <button className="quiet-action" disabled={pending} onClick={onChooseProfile} type="button">
-          Choose Profile Folder…
-        </button>
-        <fieldset className="game-publication-selection">
-          <legend className="visually-hidden">Publication target</legend>
-          <label htmlFor="game-profile-target">Profile</label>
-          <select
-            id="game-profile-target"
-            disabled={pending}
-            onChange={(event) => onProfileChange(event.target.value)}
-            value={selectedProfile}
-          >
-            <option value="">Choose profile…</option>
-            {discovery.targets.map((target) => (
-              <option key={target.id} value={target.id} title={target.location}>
-                {target.label}
-              </option>
+        {readiness.ready ? null : (
+          <ul aria-label="Publication blocked" className="game-publication-reasons" role="alert">
+            {readiness.reasons.map((reason) => (
+              <li key={reason}>{reason}</li>
             ))}
-          </select>
-          {discovery.targets.find((target) => target.id === selectedProfile)?.location && (
-            <p className="game-publication-location">
-              {discovery.targets.find((target) => target.id === selectedProfile)!.location}
-            </p>
-          )}
-          <label htmlFor="game-plan-slot">Slot</label>
-          <select
-            id="game-plan-slot"
-            disabled={pending}
-            onChange={(event) => {
-              const value = Number(event.target.value);
-              onSlotChange(
-                GAME_PLAN_SLOT_NUMBERS.includes(value as GamePlanSlotNumber)
-                  ? (value as GamePlanSlotNumber)
-                  : '',
-              );
-            }}
-            value={selectedSlot}
-          >
-            <option value="">Choose slot…</option>
-            {GAME_PLAN_SLOT_NUMBERS.map((slotNumber) => (
-              <option key={slotNumber} value={slotNumber}>
-                Slot {slotNumber}
-              </option>
-            ))}
-          </select>
-        </fieldset>
+          </ul>
+        )}
+        {error === null ? null : (
+          <p className="game-publication-message" role="alert">
+            {error}
+          </p>
+        )}
+        {readiness.ready && (
+          <fieldset className="game-publication-selection">
+            <legend className="visually-hidden">Publication slot</legend>
+            <label htmlFor="game-plan-slot">Slot</label>
+            <select
+              id="game-plan-slot"
+              disabled={pending}
+              onChange={(event) => {
+                const value = Number(event.target.value);
+                onSlotChange(
+                  GAME_PLAN_SLOT_NUMBERS.includes(value as GamePlanSlotNumber)
+                    ? (value as GamePlanSlotNumber)
+                    : '',
+                );
+              }}
+              value={selectedSlot}
+            >
+              <option value="">Choose slot…</option>
+              {GAME_PLAN_SLOT_NUMBERS.map((slotNumber) => (
+                <option key={slotNumber} value={slotNumber}>
+                  Slot {slotNumber}
+                </option>
+              ))}
+            </select>
+          </fieldset>
+        )}
         <footer className="game-publication-actions">
           <button className="quiet-action" disabled={pending} onClick={onCancel} type="button">
             Cancel
           </button>
-          <button
-            className="secondary-action"
-            disabled={pending || selectedProfile.length === 0 || selectedSlot === ''}
-            onClick={onPublish}
-            type="button"
-          >
-            {pending ? 'Please wait…' : 'Publish'}
-          </button>
+          {blocked && onOpenSettings !== undefined && (
+            <button
+              className="quiet-action"
+              disabled={pending}
+              onClick={onOpenSettings}
+              type="button"
+            >
+              Open Settings
+            </button>
+          )}
+          {readiness.ready && (
+            <button
+              className="secondary-action"
+              disabled={pending || selectedSlot === ''}
+              onClick={onPublish}
+              type="button"
+            >
+              {pending ? 'Please wait…' : 'Publish'}
+            </button>
+          )}
         </footer>
       </section>
     </dialog>
@@ -162,6 +165,7 @@ export function ProjectFileControls({
   entryOpen,
   beforeFileMenu,
   onEntryOpenChange,
+  onOpenSettings,
 }: {
   readonly catalog: Catalog;
   readonly operations: ProjectOperations;
@@ -170,16 +174,15 @@ export function ProjectFileControls({
   readonly entryOpen: boolean;
   readonly beforeFileMenu?: ReactNode;
   readonly onEntryOpenChange: (open: boolean) => void;
+  readonly onOpenSettings?: () => void;
 }) {
   const profileSession = useAppSelector(selectProfileSession);
   const profileStatus = useAppSelector(selectProfileStatus);
   const [result, setResult] = useState<ProjectOperationResult | null>(null);
   const [pendingOperation, setPendingOperation] = useState<ProjectOperation | null>(null);
-  const [gameDiscovery, setGameDiscovery] = useState<GamePlanDiscovery | null>(null);
-  const [selectedGameProfile, setSelectedGameProfile] = useState<string>('');
+  const [gameReadiness, setGameReadiness] = useState<GamePublicationReadiness | null>(null);
   const [selectedGameSlot, setSelectedGameSlot] = useState<GamePlanSlotNumber | ''>('');
   const [gamePublicationError, setGamePublicationError] = useState<string | null>(null);
-  const [choosingGameProfile, setChoosingGameProfile] = useState(false);
   const [fileMenuOpen, setFileMenuOpen] = useState(false);
   const [dreamItineraryOpen, setDreamItineraryOpen] = useState(false);
   useEffect(() => {
@@ -188,8 +191,8 @@ export function ProjectFileControls({
     return () => window.clearTimeout(timer);
   }, [result]);
   const closeGamePublication = useCallback(() => {
-    setGameDiscovery(null);
-    setSelectedGameProfile('');
+    setGameReadiness(null);
+    setGamePublicationError(null);
     setSelectedGameSlot('');
   }, []);
   const runProfileOperation = async (
@@ -213,44 +216,35 @@ export function ProjectFileControls({
     }
   };
 
-  const discoverAndPublishGamePlan = async () => {
+  const openGamePublication = async () => {
     setPendingOperation('publishGame');
     setResult(null);
     try {
-      const discovery = await operations.discoverGameProfiles();
-      setGameDiscovery(discovery);
+      let readiness: GamePublicationReadiness;
+      try {
+        readiness = projectGamePublicationReadiness(await operations.inspectGamePublication());
+      } catch (error) {
+        readiness = {
+          ready: false,
+          targetLocation: null,
+          reasons: [
+            `Could not inspect the game target: ${error instanceof Error ? error.message : String(error)}`,
+          ],
+        };
+      }
+      setGameReadiness(readiness);
       setGamePublicationError(null);
-      setSelectedGameProfile(discovery.targets.length === 1 ? discovery.targets[0]!.id : '');
       setSelectedGameSlot('');
     } finally {
       setPendingOperation(null);
     }
   };
 
-  const chooseGameProfile = async () => {
-    setChoosingGameProfile(true);
-    setGamePublicationError(null);
-    try {
-      const target = await operations.chooseGameProfile();
-      if (target === null) return;
-      setGameDiscovery((current) => ({
-        status: 'available',
-        targets: [...(current?.targets ?? []).filter((entry) => entry.id !== target.id), target],
-        message: 'Choose a profile and slot.',
-      }));
-      setSelectedGameProfile(target.id);
-    } catch (error) {
-      setGamePublicationError(error instanceof Error ? error.message : String(error));
-    } finally {
-      setChoosingGameProfile(false);
-    }
-  };
-
   const publishSelectedGamePlan = async () => {
-    if (selectedGameProfile.length === 0 || selectedGameSlot === '') return;
+    if (selectedGameSlot === '') return;
     setGamePublicationError(null);
     const publication = await runProfileOperation('publishGame', () =>
-      operations.publishGame(selectedGameProfile, selectedGameSlot),
+      operations.publishGame(selectedGameSlot),
     );
     if (publication.status === 'success') {
       closeGamePublication();
@@ -453,7 +447,7 @@ export function ProjectFileControls({
                     disabled={pendingOperation !== null || !hasProject}
                     onSelect={() =>
                       queueFileMenuAction(() => {
-                        void discoverAndPublishGamePlan();
+                        void openGamePublication();
                       })
                     }
                   >
@@ -492,17 +486,22 @@ export function ProjectFileControls({
           </>
         )}
       </div>
-      {gameDiscovery !== null && (
+      {gameReadiness !== null && (
         <GamePublicationDialog
-          discovery={gameDiscovery}
+          readiness={gameReadiness}
           onCancel={closeGamePublication}
-          onProfileChange={setSelectedGameProfile}
+          onOpenSettings={
+            onOpenSettings === undefined
+              ? undefined
+              : () => {
+                  closeGamePublication();
+                  onOpenSettings();
+                }
+          }
           onPublish={() => void publishSelectedGamePlan()}
           onSlotChange={setSelectedGameSlot}
-          onChooseProfile={() => void chooseGameProfile()}
           error={gamePublicationError}
-          pending={pendingOperation === 'publishGame' || choosingGameProfile}
-          selectedProfile={selectedGameProfile}
+          pending={pendingOperation === 'publishGame'}
           selectedSlot={selectedGameSlot}
         />
       )}

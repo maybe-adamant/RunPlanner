@@ -8,7 +8,7 @@ import { readTextFile, writeTextFile } from '@tauri-apps/plugin-fs';
 import { installDevBrowserErrorReporter } from './diagnostics/devBrowserErrorReporter';
 import { createBrowserProfileFileAdapter } from './persistence/browserProfileFileAdapter';
 import { createTauriProfileFileAdapter } from './persistence/tauriProfileFileAdapter';
-import { createTauriGamePlanPublisher } from './persistence/gamePlanPublisher';
+import { createTauriGameModuleHost } from './persistence/gameModuleHost';
 import {
   createBrowserAutosaveRecoveryAdapter,
   createBrowserAutosaveScheduler,
@@ -92,7 +92,7 @@ const application = createApplication({
   buildIdentity: __RUN_PLANNER_BUILD_IDENTITY__,
   profileFile,
   profileFileRestore: await profileFile.restoreActive(),
-  ...(tauriHost ? { gamePlanPublisher: createTauriGamePlanPublisher() } : {}),
+  ...(tauriHost ? { gameModuleHost: createTauriGameModuleHost() } : {}),
 });
 
 await application.startupReady;
@@ -119,6 +119,7 @@ createRoot(rootElement, devBrowserErrorReporter?.rootOptions).render(
           catalog={application.catalog}
           catalogSummary={application.catalogSummary}
           editorNavigation={application.editorNavigation}
+          {...(application.gameModule === undefined ? {} : { gameModule: application.gameModule })}
           projectOperations={application.projectOperations}
           selectStructuredWorkspace={application.selectStructuredWorkspace}
           {...(releaseUpdates === undefined ? {} : { releaseUpdates })}

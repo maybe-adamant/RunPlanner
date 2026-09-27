@@ -4,7 +4,7 @@ use std::path::{Path, PathBuf};
 use tauri::Manager;
 use tauri_plugin_fs::FsExt;
 
-use crate::atomic_file;
+use run_planner_game_host::atomic_file;
 
 const ACTIVE_PROFILE_FILE: &str = "active-profile.json";
 

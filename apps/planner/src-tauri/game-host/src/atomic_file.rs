@@ -21,7 +21,7 @@ fn temporary_path(destination: &Path) -> Result<PathBuf, String> {
     )))
 }
 
-pub(crate) fn write(destination: &Path, bytes: &[u8], artifact: &str) -> Result<(), String> {
+pub fn write(destination: &Path, bytes: &[u8], artifact: &str) -> Result<(), String> {
     let temporary = temporary_path(destination)?;
     let result = (|| -> Result<(), String> {
         let mut file = OpenOptions::new()
