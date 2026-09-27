@@ -5,6 +5,7 @@ import { act, fireEvent, screen, waitFor, within } from '@testing-library/react'
 import { describe, expect, it } from 'vitest';
 
 import { createApplication } from '@planner/composition/createApplication';
+import { hubMapFountainAnnotation } from '@planner/ui/room-maps/HubMapAnnotations';
 import {
   authoredProjectRedoRequested,
   authoredProjectUndoRequested,
@@ -71,8 +72,8 @@ describe('HubMapOverview', () => {
     expect(fountain.hasAttribute('data-hub-slot-key')).toBe(false);
     expect(fountain.hasAttribute('data-category')).toBe(false);
     expect(within(fountain).getByText('Fountain')).toBeTruthy();
-    expect(fountain.style.left).toBe(`${(1352 / 2560) * 100}%`);
-    expect(fountain.style.top).toBe(`${(800 / 1440) * 100}%`);
+    expect(fountain.style.left).toBe(`${(hubMapFountainAnnotation.x / 2560) * 100}%`);
+    expect(fountain.style.top).toBe(`${(hubMapFountainAnnotation.y / 1440) * 100}%`);
     expect(within(map).queryByRole('button', { name: /fountain/i })).toBeNull();
     expect(
       within(screen.getByLabelText('Hub room quality legend'))
