@@ -9,6 +9,7 @@ import {
   createIncomingRewardAddress,
   createOccurrenceId,
   createProjectHistory,
+  createShopOfferAddress,
   createSteadyGrowthOutcomeAddress,
   createTraitOfferAddress,
   createOccurrenceAddress,
@@ -24,11 +25,13 @@ import {
   loadUnderworldGAnomalyRosterCheckpoint,
   loadUnderworldGeneratedCompositionCheckpoint,
   loadUnderworldIxionChaosCheckpoint,
+  loadUnderworldTwistScyllaCheckpoint,
 } from '@run-planner/test-fixtures/checkpoints/underworld';
 import {
   loadSurfaceEncounterShowcaseCheckpoint,
   loadSurfaceNPhialIntermediateFountainCheckpoint,
   loadSurfaceScheduledLifecycleCheckpoint,
+  loadSurfaceAnvilCheckpoint,
 } from '@run-planner/test-fixtures/checkpoints/surface';
 import {
   anomalyRosterPhase,
@@ -306,5 +309,94 @@ it('exports the selected F/G Arachne encounters and reloads the F cocoon reset',
     plan(reloaded).occurrences.find((room) => room.id === arachneCocoonPhases.F.owner.occurrenceId)
       ?.overview.encounterPhases,
   ).toEqual([{ slotKey: 'Encounter', encounterKey: 'ArachneCombatF', kind: 'combat' }]);
+  expect(undoProjectHistory(edited).present).toBe(saved);
+});
+
+it('exports the purchased Anvil result and retains its reset through reload and Undo', () => {
+  const saved = loadSurfaceAnvilCheckpoint();
+  const offer = createShopOfferAddress(
+    createBiomeAddress('Surface', 'Q'),
+    createOccurrenceId('surface-q-preboss'),
+    'PremiumProgress',
+  );
+  expect(
+    plan(saved).occurrences.find((room) => room.id === 'surface-q-preboss')?.timeline.transactions,
+  ).toContainEqual(
+    expect.objectContaining({
+      kind: 'transformation',
+      transformation: {
+        kind: 'anvilOfFates',
+        removedTraitKey: 'StaffDoubleAttackTrait',
+        addedTraitKeys: ['StaffLongAttackTrait', 'StaffJumpSpecialTrait'],
+      },
+    }),
+  );
+  const edited = applyProjectHistoryCommand(createProjectHistory(saved), catalog, {
+    kind: 'ReplaceAnvilResult',
+    offer,
+    value: null,
+  });
+  const reloaded = reload(edited.present);
+  expect(reloaded).toEqual(edited.present);
+  expect(simulateProjectAssembly(catalog, reloaded).evaluation.findings).toContainEqual(
+    expect.objectContaining({
+      code: 'rewardMissing',
+      origin: expect.objectContaining({
+        kind: 'acquisitionRole',
+        owner: offer,
+        acquisitionRole: 'self',
+      }),
+    }),
+  );
+  expect(undoProjectHistory(edited).present).toBe(saved);
+});
+
+it('exports the reached Twist and Scylla choice and retains its performer reset through reload and Undo', () => {
+  const saved = loadUnderworldTwistScyllaCheckpoint();
+  const scylla = saved.route.biomes
+    .find((biome) => biome.biomeKey === 'G')
+    ?.topology?.occurrences.find((room) => room.gameName === 'G_Boss02');
+  if (scylla === undefined) throw new Error('saved Twist Scylla checkpoint lost G Boss02');
+  const phase = createEncounterPhaseAddress(
+    goldenGBiome,
+    { kind: 'occurrence', occurrenceId: scylla.occurrenceId },
+    'Encounter',
+  );
+  const published = plan(saved);
+  expect(
+    published.occurrences.find((room) => room.id === 'golden-f-preboss-shop:postboss')?.timeline
+      .transactions,
+  ).toContainEqual(
+    expect.objectContaining({
+      kind: 'transformation',
+      transformation: {
+        kind: 'stygianWellTwist',
+        sourceItemKey: 'RandomStoreItem',
+        resultItemKey: 'TemporaryBoonRarityTrait',
+      },
+    }),
+  );
+  expect(
+    published.occurrences.find((room) => room.id === scylla.occurrenceId)?.overview.encounterPhases,
+  ).toContainEqual(
+    expect.objectContaining({
+      encounterKey: 'BossScylla02',
+      customization: [
+        expect.objectContaining({ decisionKey: 'featuredPerformer', choiceKey: 'charybdis' }),
+      ],
+    }),
+  );
+  const edited = applyProjectHistoryCommand(createProjectHistory(saved), catalog, {
+    kind: 'ReplaceEncounterCustomization',
+    phase,
+    decisionKey: 'featuredPerformer',
+    value: null,
+  });
+  const reloaded = reload(edited.present);
+  expect(reloaded).toEqual(edited.present);
+  expect(
+    plan(reloaded).occurrences.find((room) => room.id === scylla.occurrenceId)?.overview
+      .encounterPhases,
+  ).toEqual([{ slotKey: 'Encounter', encounterKey: 'BossScylla02', kind: 'boss' }]);
   expect(undoProjectHistory(edited).present).toBe(saved);
 });

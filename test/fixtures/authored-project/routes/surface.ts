@@ -103,6 +103,28 @@ export function nLocalOccurrenceId(slotKey: string, localSlotKey: string): Occur
   return createOccurrenceId(`surface-n-${slotKey}-${localSlotKey}`);
 }
 
+/** Purchased Q World Shop Anvil on the complete Surface route. */
+export function surfaceAnvilProject(): ProjectDocument {
+  const anvilShop = createOccurrenceAddress(qBiome, qOccurrenceIds.preboss);
+  const anvilOffer = createShopOfferAddress(qBiome, qOccurrenceIds.preboss, 'PremiumProgress');
+  let project = applyProjectCommand(loadSurfaceNOPQProject(), catalog, {
+    kind: 'ReplaceShopOffer',
+    offer: anvilOffer,
+    value: { rewardType: 'ChaosWeaponUpgrade' },
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceAnvilResult',
+    offer: anvilOffer,
+    value: {
+      kind: 'anvilOfFates',
+      removedTraitKey: 'StaffDoubleAttackTrait',
+      addedTraitKeys: ['StaffLongAttackTrait', 'StaffJumpSpecialTrait'],
+    },
+  });
+  project = replaceTestShopOfferActions(project, catalog, anvilShop, ['PremiumProgress']);
+  return authorLegalTraitOffers(project);
+}
+
 export function nLocalOccurrenceIdsBySlot(slotKey: string): Readonly<Record<string, OccurrenceId>> {
   const hub = catalog.biomeLayouts.byKey.N?.progression;
   const hubSlot =

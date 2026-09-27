@@ -220,15 +220,22 @@ saved documents; the parameterized Anomaly recipe remains for its order-invalid
 matrix. Execution fixture bytes are unchanged.
 
 Still pending in C2: selected Zagreus with return and Contract item; World Shop
-and Shrine Travel Deal; Fateful Twist; Anvil; and an Underworld Hecate or Scylla
-boss customization. The existing Well refill and Pool checkpoint retain their
-ownership. These require separate compatible success recipes and are not claimed
-by the completed detour slice.
+and Shrine Travel Deal. The completed bounded follow-up adds a purchased Q Anvil
+and a reached Fateful Twist with selected rival Scylla performer as separate
+complete checkpoints. The available Contract helper remains a partial frontier,
+and combining the existing Shrine Travel Deal with the complete Q Anvil route
+requires an unavailable delivery placement; neither is claimed as a success
+checkpoint. The existing Well refill and Pool checkpoint retain their ownership.
 
-Verification: fixture integrity (32 tests), focused C2 engine consumers and
+Detour-slice verification: fixture integrity (32 tests), focused C2 engine consumers and
 scenario witnesses (113 tests), and execution-fixture byte checks (20 tests)
 passed. Workspace and fixture typechecks, full ESLint, changed-file Prettier,
-and diff checks passed. Independent review passed without findings.
+and diff checks passed. The Anvil/Twist/Scylla follow-up passed fixture integrity
+(34 tests), its assembler export consumer and checkpoint scenarios (52 tests),
+full typechecking, lint, formatting and diff checks. The Anvil consumer now loads
+the saved checkpoint; smaller Twist baselines remain distinct from the combined
+Scylla scenario. Independent review is complete, with its unused-import finding
+resolved.
 
 Author a coherent Underworld success plan (or separate semantic variants where
 necessary) covering settled Chaos, selected Zagreus/return and Contract item,
