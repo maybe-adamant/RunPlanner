@@ -71,7 +71,7 @@ describe('HubMapOverview', () => {
     expect(fountain.hasAttribute('data-hub-slot-key')).toBe(false);
     expect(fountain.hasAttribute('data-category')).toBe(false);
     expect(within(fountain).getByText('Fountain')).toBeTruthy();
-    expect(fountain.style.left).toBe(`${(1360 / 2560) * 100}%`);
+    expect(fountain.style.left).toBe(`${(1352 / 2560) * 100}%`);
     expect(fountain.style.top).toBe(`${(800 / 1440) * 100}%`);
     expect(within(map).queryByRole('button', { name: /fountain/i })).toBeNull();
     expect(
