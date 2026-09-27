@@ -26,6 +26,7 @@ import {
   loadUnderworldFStygianWellCheckpoint,
   loadUnderworldIxionChaosCheckpoint,
   loadUnderworldWorldShopTravelDealCheckpoint,
+  loadUnderworldZagreusContractCheckpoint,
 } from '@run-planner/test-fixtures/checkpoints/underworld';
 import {
   loadSurfaceAnvilCheckpoint,
@@ -1553,6 +1554,24 @@ describe('engine-owned F/G execution semantic product', () => {
       expect.objectContaining({ sourceOwner: semanticAddressKey(entry) }),
     );
     expect(() => compileExecutionPlan({ product })).not.toThrow();
+  });
+
+  it('publishes the acquired later Contract item after the selected Zagreus return', () => {
+    const shopId = createOccurrenceId('zagreus-contract-preboss-shop');
+    const item = createShopOfferAddress(goldenGBiome, shopId, 'infernalContractReward');
+    const product = productFor(loadUnderworldZagreusContractCheckpoint());
+    const room = product.occurrences.find((occurrence) => occurrence.id === shopId);
+    const transaction = room?.timeline.transactions.find(
+      (
+        candidate,
+      ): candidate is Extract<ExecutionTimelineTransaction, { readonly kind: 'acquisition' }> =>
+        candidate.kind === 'acquisition' && candidate.sourceOwner === semanticAddressKey(item),
+    );
+    expect(transaction).toMatchObject({ reward: { rewardType: 'StackUpgrade' } });
+    expect(room?.overview.shop?.infernalContract).toEqual({
+      sourceOwner: semanticAddressKey(item),
+      rewardType: 'StackUpgrade',
+    });
   });
 
   it('publishes a purchased World Shop Travel Deal replacement as an acquisition outcome', () => {

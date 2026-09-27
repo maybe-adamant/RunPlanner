@@ -29,6 +29,7 @@ import {
   underworldArachneCocoonProject,
   underworldTwistScyllaProject,
   underworldWorldShopTravelDealProject,
+  underworldZagreusContractProject,
 } from '../routes/underworld';
 import {
   surfaceEncounterShowcaseProject,
@@ -127,7 +128,7 @@ describe('authored-project checkpoint integrity', () => {
     const chaosRoom = occurrences?.find(
       (occurrence) => occurrence.occurrenceId === 'fixture-chaos-room',
     );
-    expect(checkpointManifest).toHaveLength(41);
+    expect(checkpointManifest).toHaveLength(42);
     expect(chaosRoom?.gameName).toMatch(/^Chaos_/);
     expect(chaosRoom?.state).toMatchObject({
       kind: 'fixed',
@@ -179,6 +180,7 @@ describe('authored-project checkpoint integrity', () => {
     ['underworld-arachne-cocoons', underworldArachneCocoonProject],
     ['underworld-twist-scylla', underworldTwistScyllaProject],
     ['underworld-world-shop-travel-deal', underworldWorldShopTravelDealProject],
+    ['underworld-zagreus-contract', underworldZagreusContractProject],
     ['surface-anvil', surfaceAnvilProject],
     ['surface-shrine-travel-deal', surfaceShrineTravelDealProject],
     ['surface-encounter-showcase', surfaceEncounterShowcaseProject],
