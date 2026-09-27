@@ -37,6 +37,7 @@ import {
   loadUnderworldFGHCheckpoint,
   loadUnderworldFGHICheckpoint,
   loadUnderworldFMidshopPomFrontierCheckpoint,
+  loadUnderworldIxionChaosCheckpoint,
 } from '../checkpoints/underworld';
 
 export const goldenFBiome = createBiomeAddress('Underworld', 'F');
@@ -344,6 +345,53 @@ export function underworldArachneCocoonProject(): ProjectDocument {
     decisionKey: 'cocoonCount',
     value: { kind: 'cocoonCount', count: 11 },
   });
+}
+
+/** Reached Fateful Twist and rival Scylla choice on the settled F/G Ixion route. */
+export function underworldTwistScyllaProject(): ProjectDocument {
+  const well = createOccurrenceAddress(
+    goldenFBiome,
+    createOccurrenceId('golden-f-preboss-shop:postboss'),
+  );
+  let project = applyProjectCommand(loadUnderworldIxionChaosCheckpoint(), catalog, {
+    kind: 'ReplaceStygianWellOffer',
+    occurrence: well,
+    slotKey: 'secondRight',
+    itemKey: 'RandomStoreItem',
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'SetStygianWellPurchase',
+    occurrence: well,
+    generationKey: 'initial:secondRight',
+    purchased: true,
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceStygianWellTwistResult',
+    occurrence: well,
+    generationKey: 'initial:secondRight',
+    itemKey: 'TemporaryBoonRarityTrait',
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceFearVowRank',
+    route: createRouteAddress('Underworld'),
+    vowKey: 'BossDifficultyShrineUpgrade',
+    rank: 2,
+  });
+  const boss = project.route.biomes
+    .find((biome) => biome.biomeKey === 'G')
+    ?.topology?.occurrences.find((occurrence) => occurrence.gameName === 'G_Boss02');
+  if (boss === undefined) throw new Error('Twist Scylla fixture lacks the rival G Boss');
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceEncounterCustomization',
+    phase: createEncounterPhaseAddress(
+      goldenGBiome,
+      { kind: 'occurrence', occurrenceId: boss.occurrenceId },
+      'Encounter',
+    ),
+    decisionKey: 'featuredPerformer',
+    value: { kind: 'single', choiceKey: 'charybdis' },
+  });
+  return authorLegalTraitOffers(project);
 }
 
 /**

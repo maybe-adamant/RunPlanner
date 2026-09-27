@@ -26,6 +26,7 @@ import {
   loadUnderworldFStygianWellCheckpoint,
   loadUnderworldIxionChaosCheckpoint,
 } from '@run-planner/test-fixtures/checkpoints/underworld';
+import { loadSurfaceAnvilCheckpoint } from '@run-planner/test-fixtures/checkpoints/surface';
 import {
   loadSurfaceNOProject,
   loadSurfaceNOPQProject,
@@ -1860,24 +1861,7 @@ describe('engine-owned F/G execution semantic product', () => {
 
   it('requires and publishes the exact result for a purchased Anvil', () => {
     const shopId = createOccurrenceId('surface-q-preboss');
-    const shop = createOccurrenceAddress(qBiome, shopId);
-    const offer = createShopOfferAddress(qBiome, shopId, 'PremiumProgress');
-    let project = applyProjectCommand(loadSurfaceNOPQProject(), catalog, {
-      kind: 'ReplaceShopOffer',
-      offer,
-      value: { rewardType: 'ChaosWeaponUpgrade' },
-    });
-    project = applyProjectCommand(project, catalog, {
-      kind: 'ReplaceAnvilResult',
-      offer,
-      value: {
-        kind: 'anvilOfFates',
-        removedTraitKey: 'StaffDoubleAttackTrait',
-        addedTraitKeys: ['StaffLongAttackTrait', 'StaffJumpSpecialTrait'],
-      },
-    });
-    project = replaceTestShopOfferActions(project, catalog, shop, ['PremiumProgress']);
-    project = authorLegalTraitOffers(project);
+    const project = loadSurfaceAnvilCheckpoint();
     const assembly = simulateProjectAssembly(catalog, project);
     const biome = assembly.evaluation.route.biomes.find(
       (candidate): candidate is CompleteValidBiomeProjectEvaluation =>

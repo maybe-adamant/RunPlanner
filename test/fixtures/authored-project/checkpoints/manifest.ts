@@ -62,6 +62,16 @@ export const checkpointManifest = Object.freeze([
     provenance: 'semantic-command Arachne cocoon recipe from canonical Underworld F/G',
   },
   {
+    id: 'underworld-twist-scylla',
+    file: 'underworld-twist-scylla.runplanner.json',
+    route: 'Underworld',
+    configuredBiomePrefix: ['F', 'G'],
+    scenario: 'Purchased Fateful Twist with selected rival Scylla performer',
+    schemaVersion: 88,
+    catalogVersion: '0.55.0-anvil-of-fates',
+    provenance: 'semantic-command F/G Ixion route recipe with reached Well and G Boss choices',
+  },
+  {
     id: 'underworld-generated-composition',
     file: 'underworld-generated-composition.runplanner.json',
     route: 'Underworld',
@@ -140,6 +150,16 @@ export const checkpointManifest = Object.freeze([
     schemaVersion: 88,
     catalogVersion: '0.55.0-anvil-of-fates',
     provenance: 'semantic-command combined P/Q encounter recipe from canonical Surface N/O/P/Q',
+  },
+  {
+    id: 'surface-anvil',
+    file: 'surface-anvil.runplanner.json',
+    route: 'Surface',
+    configuredBiomePrefix: ['N', 'O', 'P', 'Q'],
+    scenario: 'Purchased Q World Shop Anvil transformation',
+    schemaVersion: 88,
+    catalogVersion: '0.55.0-anvil-of-fates',
+    provenance: 'semantic-command Q World Shop Anvil recipe from canonical Surface N/O/P/Q',
   },
   {
     id: 'surface-scheduled-lifecycle',
@@ -393,6 +413,7 @@ export const checkpointManifest = Object.freeze([
 /** Explicit schema-50 SpellDrop migration intent; no fixture is mass-filled. */
 export const checkpointSpellDropIntents = Object.freeze([
   ['surface-encounter-showcase', 'surface-n-combat09', 'SpellPotionTrait'],
+  ['surface-anvil', 'surface-n-combat09', 'SpellPotionTrait'],
   ['surface-n-phial-intermediate-fountain', 'surface-n-combat09', 'SpellLaserTrait'],
   ['surface-scheduled-lifecycle', 'surface-n-combat09', 'SpellPotionTrait'],
   ['surface-n-complete-hub-frontier', 'surface-n-combat09', 'SpellPolymorphTrait'],
@@ -415,6 +436,7 @@ export const checkpointSpellDropIntents = Object.freeze([
   ['surface-nopq', 'surface-n-combat09', 'SpellPotionTrait'],
   ['underworld-fg', 'golden-f-b10-e2', 'SpellPolymorphTrait'],
   ['underworld-ixion-chaos', 'golden-f-b10-e2', 'SpellPolymorphTrait'],
+  ['underworld-twist-scylla', 'golden-f-b10-e2', 'SpellPolymorphTrait'],
   ['underworld-g-anomaly-roster', 'golden-f-b10-e2', 'SpellPolymorphTrait'],
   ['underworld-arachne-cocoons', 'golden-f-b10-e2', 'SpellPolymorphTrait'],
   ['underworld-f-pool', 'golden-f-b10-e2', 'SpellPolymorphTrait'],
