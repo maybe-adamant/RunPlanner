@@ -93,8 +93,6 @@ export interface GameModuleStatus {
   readonly targetProblem: string | null;
   readonly inspection: GameTargetInspection | null;
   readonly publicationBlockers: readonly GamePublicationBlocker[];
-  /** The slot last published from this planner to the saved target. */
-  readonly lastSlot: GamePlanSlotNumber | null;
 }
 
 export interface GameModuleInstallResult {

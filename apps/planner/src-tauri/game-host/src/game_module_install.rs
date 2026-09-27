@@ -161,8 +161,6 @@ pub struct GameModuleStatus {
     pub target_problem: Option<String>,
     pub inspection: Option<TargetInspection>,
     pub publication_blockers: Vec<PublicationBlocker>,
-    /// The slot last published from this planner to the saved target.
-    pub last_slot: Option<u8>,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
@@ -662,7 +660,6 @@ pub fn status(
         target_problem: None,
         inspection: None,
         publication_blockers: Vec::new(),
-        last_slot: None,
     };
     let unavailable = |status: &mut GameModuleStatus, problem: String| {
         status.target_problem = Some(problem);
@@ -688,7 +685,6 @@ pub fn status(
         }
     };
     status.target = Some(target_facts(&record.path, record.kind));
-    status.last_slot = record.last_slot;
     let resolved = resolve_target(&record.path, record.kind)
         .and_then(|target| inspect(&target, package).map(|inspection| (target, inspection)));
     match resolved {

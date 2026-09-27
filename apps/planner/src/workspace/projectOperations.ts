@@ -23,6 +23,7 @@ import {
   recoveryDiscarded,
 } from '../state/profileSessionSlice';
 import type { PreparedProjectWorkspace } from '../state/projectWorkspaceSlice';
+import { gamePlanSent } from '../state/gameSendSessionSlice';
 import { assertPublicProjectAdmission } from './project-admission';
 import { selectPresentProject, selectProfileSession, type PlannerStore } from '../state/store';
 
@@ -220,6 +221,7 @@ export function createProjectOperations(
           encodeExecutionPlan(plan),
         );
         if (publication.status === 'published') {
+          options.store.dispatch(gamePlanSent({ slot: slotNumber }));
           return result('publishGame', 'success', `Published to game, Slot ${slotNumber}.`);
         }
         return result(

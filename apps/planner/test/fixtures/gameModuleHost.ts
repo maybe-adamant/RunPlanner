@@ -74,7 +74,6 @@ export function gameModuleStatus(
     },
     targetProblem: null,
     publicationBlockers: [],
-    lastSlot: null,
     ...overrides,
     inspection,
   };

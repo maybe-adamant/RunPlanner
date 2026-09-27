@@ -261,7 +261,9 @@ describe('project profile operations', () => {
       routeKey: 'Underworld',
       extent: { biomeKeys: ['F'] },
     });
-    expect(application.store.getState()).toBe(beforePublication);
+    // Sending records only UI-session state; authored state and history are untouched.
+    expect(application.store.getState().gameSendSession.lastSentSlot).toBe(3);
+    expect(application.store.getState().editorSession).toBe(beforePublication.editorSession);
     expect(application.store.getState().projectWorkspace).toBe(beforeWorkspace);
     expect(presentHistory(application)).toBe(beforeHistory);
     expect(selectExplicitProfileBaselineJson(application.store.getState())).toBe(beforeBaseline);
