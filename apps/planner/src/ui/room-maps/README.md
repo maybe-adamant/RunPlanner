@@ -33,8 +33,14 @@ shared by read-only inspection and both interactive Hub maps, and the fountain
 position shared by both interactive maps. When replacing
 this image, align those coordinates to the new capture rather than baking labels
 into it. Individual main and side rooms keep their own images.
-Main-room side-door annotations are baked into their images: cyan circles identify
+Main-room side-door annotations are baked into their images: yellow circles identify
 the destination side-room number, not door priority or visit order.
+
+Captured map legends include only categories present: Entry (blue), Exit (red),
+Chaos (purple), Cage (cyan), Optional and Side (yellow). P maps distinguish
+Indoor and Outdoor exits with solid and hatched red circles. Circle sizes are
+uniform within each category on a map; numbers retain a consistent font size.
+The Hub uses its own room-quality categories, with an orange fountain marker.
 
 Hub reward icons are separate transparent editor assets, mapped from structured
 reward identity. They are not room-map files and do not participate in room

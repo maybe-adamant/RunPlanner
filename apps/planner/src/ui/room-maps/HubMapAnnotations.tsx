@@ -45,39 +45,39 @@ const annotation = (
  * identity, rather than screen order or a rendered label.
  */
 export const hubMapAnnotations = Object.freeze([
-  annotation('combat12', 2222, 951, 'Perfect'),
-  annotation('combat17', 1329, 82, 'Perfect'),
-  annotation('combat02', 806, 829, 'Good'),
-  annotation('combat04', 333, 526, 'Good'),
-  annotation('combat14', 499, 917, 'Good'),
-  annotation('combat22', 191, 612, 'Good'),
-  annotation('combat05', 1309, 1281, 'Good'),
-  annotation('combat08', 1714, 1270, 'Good'),
-  annotation('combat07', 1734, 1165, 'Good'),
-  annotation('combat06', 1206, 1027, 'Good'),
-  annotation('combat23', 2421, 940, 'Good'),
-  annotation('combat03', 1088, 476, 'Good'),
-  annotation('combat11', 172, 695, 'Bad'),
-  annotation('combat19', 626, 564, 'Bad'),
-  annotation('combat09', 934, 311, 'Bad'),
-  annotation('combat20', 1173, 249, 'Bad'),
-  annotation('combat13', 1557, 145, 'Bad'),
-  annotation('combat10', 1536, 246, 'Bad'),
-  annotation('combat21', 1548, 389, 'Bad'),
-  annotation('combat18', 1996, 644, 'Bad'),
-  annotation('combat15', 2249, 531, 'Bad'),
-  annotation('combat16', 2291, 764, 'Bad'),
-  annotation('combat01', 2421, 1056, 'Bad'),
-  annotation('miniBoss01', 763, 309, 'Special'),
-  annotation('miniBoss02', 2222, 1102, 'Special'),
-  annotation('story', 1752, 985, 'Special'),
+  annotation('combat12', 2214, 952, 'Perfect'),
+  annotation('combat17', 1321, 83, 'Perfect'),
+  annotation('combat02', 798, 830, 'Good'),
+  annotation('combat04', 325, 527, 'Good'),
+  annotation('combat14', 491, 918, 'Good'),
+  annotation('combat22', 183, 613, 'Good'),
+  annotation('combat05', 1301, 1282, 'Good'),
+  annotation('combat08', 1706, 1271, 'Good'),
+  annotation('combat07', 1726, 1166, 'Good'),
+  annotation('combat06', 1198, 1028, 'Good'),
+  annotation('combat23', 2413, 941, 'Good'),
+  annotation('combat03', 1080, 477, 'Good'),
+  annotation('combat11', 164, 696, 'Bad'),
+  annotation('combat19', 618, 565, 'Bad'),
+  annotation('combat09', 926, 312, 'Bad'),
+  annotation('combat20', 1165, 250, 'Bad'),
+  annotation('combat13', 1549, 146, 'Bad'),
+  annotation('combat10', 1528, 247, 'Bad'),
+  annotation('combat21', 1540, 390, 'Bad'),
+  annotation('combat18', 1988, 645, 'Bad'),
+  annotation('combat15', 2241, 532, 'Bad'),
+  annotation('combat16', 2283, 765, 'Bad'),
+  annotation('combat01', 2413, 1057, 'Bad'),
+  annotation('miniBoss01', 755, 310, 'Special'),
+  annotation('miniBoss02', 2214, 1103, 'Special'),
+  annotation('story', 1744, 986, 'Special'),
 ]);
 
 /** The Hub fountain basin between the two braziers; an action site, not a room slot. */
 export const hubMapFountainAnnotation = Object.freeze({
   label: 'Fountain',
-  x: 1360,
-  y: 800,
+  x: 1352,
+  y: 801,
 });
 
 /** Map position in percent of the source image, shared by every interactive Hub marker. */
@@ -89,10 +89,10 @@ export function hubMapPosition(point: { readonly x: number; readonly y: number }
 }
 
 const categoryColors: Record<HubMapAnnotation['category'], string> = {
-  Bad: '#F26868',
-  Good: '#76E69A',
-  Perfect: '#43DDEB',
-  Special: '#FACC45',
+  Bad: '#a32d3b',
+  Good: '#247448',
+  Perfect: '#49c8dc',
+  Special: '#d6b442',
 };
 
 const hubMapQualityCategories = Object.freeze([
@@ -145,7 +145,7 @@ export function HubMapReadOnlyOverlay(): ReactNode {
           width="80"
           height="80"
           rx="10"
-          fill="#6cc4ff"
+          fill="#ed963e"
           stroke="#101923"
           strokeWidth="4"
           transform="rotate(45)"
