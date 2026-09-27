@@ -6,13 +6,15 @@ import { catalog } from '@run-planner/hades2-catalog';
 import type { ProjectDocument } from '@run-planner/engine/authored-project';
 import {
   createCompleteFGAnomalyProject,
-  createCompleteFGIxionChaosProject,
   createCompleteFGProject,
 } from '@run-planner/test-fixtures/underworld';
 import {
+  loadUnderworldArachneCocoonsCheckpoint,
   loadUnderworldFGHCheckpoint,
   loadUnderworldFGHICheckpoint,
+  loadUnderworldGAnomalyRosterCheckpoint,
   loadUnderworldGeneratedCompositionCheckpoint,
+  loadUnderworldIxionChaosCheckpoint,
 } from '@run-planner/test-fixtures/checkpoints/underworld';
 import { loadDreamMixedHandoffCheckpoint } from '@run-planner/test-fixtures/checkpoints/dream';
 import {
@@ -31,8 +33,6 @@ import { assembleExecutionProduct } from '../../../src/execution-plan/assembler'
 import { compileExecutionPlan } from '../../../src/execution-plan/compiler';
 import { encodeExecutionPlan } from '../../../src/execution-plan/codec';
 import { simulateProjectAssembly } from '../../../src/simulation';
-import { anomalyRosterProject } from './anomaly-roster-fixture';
-import { underworldArachneCocoonProject } from './arachne-cocoon-fixture';
 import { bossAutomaticOutcomeProject } from './automatic-fixture';
 import { surfaceQShopCorrelationProject } from './surface-q-shop-correlation-fixture';
 import { npcShoppingProtectionProject } from './npc-shopping-fixture';
@@ -96,11 +96,15 @@ export const executionFixtures: readonly ExecutionFixture[] = Object.freeze([
     project: loadUnderworldFGHICheckpoint,
     wire: underworldFGHIFixture,
   },
-  { name: 'fg-ixion-chaos', project: createCompleteFGIxionChaosProject, wire: fgIxionChaosFixture },
+  {
+    name: 'fg-ixion-chaos',
+    project: loadUnderworldIxionChaosCheckpoint,
+    wire: fgIxionChaosFixture,
+  },
   { name: 'fg-anomaly', project: createCompleteFGAnomalyProject, wire: fgAnomalyFixture },
   {
     name: 'fg-anomaly-roster',
-    project: () => anomalyRosterProject(),
+    project: loadUnderworldGAnomalyRosterCheckpoint,
     wire: fgAnomalyRosterFixture,
   },
   { name: 'automatic-boss', project: bossAutomaticOutcomeProject, wire: automaticBossFixture },
@@ -135,7 +139,7 @@ export const executionFixtures: readonly ExecutionFixture[] = Object.freeze([
   },
   {
     name: 'underworld-arachne-cocoons',
-    project: underworldArachneCocoonProject,
+    project: loadUnderworldArachneCocoonsCheckpoint,
     wire: underworldArachneCocoonsFixture,
   },
   {

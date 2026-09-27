@@ -1,7 +1,7 @@
 # Test-suite cleanup and authored checkpoint coverage
 
 Status: Gates A–B and C1 implemented and reviewed; review findings resolved.
-Gates C2–D await implementation.
+C2 is partially implemented and independently reviewed; C3–D await implementation.
 Base: `7dea8cfe` (September 26, 2026).
 
 ## Objective
@@ -208,6 +208,27 @@ No production route/schema work is needed. Keep existing recipe construction
 witnesses bounded and separate from ordinary consumers.
 
 #### C2 — detours, special encounters and commerce
+
+Disposition: partially implemented against `c15ea73b` (September 26, 2026).
+The completed bounded detour slice adds independent saved checkpoints for the
+settled Spark of Ixion G Chaos route, successful G Anomaly with its ordered
+infinite roster and fixed native return, and selected F/G Arachne encounters
+with the explicit F cocoon count. Each has central recipe attestation, an exact
+reached export witness, and a semantic edit/codec reload/Undo witness. Ordinary
+equivalent engine consumers and their existing wire producers now load these
+saved documents; the parameterized Anomaly recipe remains for its order-invalid
+matrix. Execution fixture bytes are unchanged.
+
+Still pending in C2: selected Zagreus with return and Contract item; World Shop
+and Shrine Travel Deal; Fateful Twist; Anvil; and an Underworld Hecate or Scylla
+boss customization. The existing Well refill and Pool checkpoint retain their
+ownership. These require separate compatible success recipes and are not claimed
+by the completed detour slice.
+
+Verification: fixture integrity (32 tests), focused C2 engine consumers and
+scenario witnesses (113 tests), and execution-fixture byte checks (20 tests)
+passed. Workspace and fixture typechecks, full ESLint, changed-file Prettier,
+and diff checks passed. Independent review passed without findings.
 
 Author a coherent Underworld success plan (or separate semantic variants where
 necessary) covering settled Chaos, selected Zagreus/return and Contract item,

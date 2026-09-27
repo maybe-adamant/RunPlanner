@@ -1,7 +1,11 @@
 import { describe, expect, it } from 'vitest';
 
 import { catalog } from '@run-planner/hades2-catalog';
-import { createCompleteFGProject } from '@run-planner/test-fixtures/underworld';
+import {
+  arachneCocoonPhases,
+  createCompleteFGProject,
+} from '@run-planner/test-fixtures/underworld';
+import { loadUnderworldArachneCocoonsCheckpoint } from '@run-planner/test-fixtures/checkpoints/underworld';
 import {
   applyProjectCommand,
   createBiomeAddress,
@@ -14,10 +18,6 @@ import { simulateProject } from '../../../src/simulation';
 import { createDefaultRoomEncounterState } from '../../../src/authored-project/room-state/encounter-envelope';
 import { reconcileRoomEncounterState } from '../../../src/authored-project/room-state/encounter-reconciliation';
 import { room } from '../support/room-state-codec';
-import {
-  arachneCocoonPhases,
-  underworldArachneCocoonProject,
-} from '../../execution-plan/support/arachne-cocoon-fixture';
 
 const fPhase = arachneCocoonPhases.F;
 
@@ -53,7 +53,7 @@ function cocoonFindings(project: ProjectDocument) {
 
 describe('Arachne combat cocoon count', () => {
   it('persists an exact in-range count, resets to absent Default, and round-trips', () => {
-    const project = underworldArachneCocoonProject();
+    const project = loadUnderworldArachneCocoonsCheckpoint();
     expect(fEncounters(project).customizationByPhase).toEqual({
       Encounter: { cocoonCount: { kind: 'cocoonCount', count: 11 } },
     });
@@ -72,7 +72,7 @@ describe('Arachne combat cocoon count', () => {
   });
 
   it('rejects commands outside the declared range or on a phase without the decision', () => {
-    const project = underworldArachneCocoonProject();
+    const project = loadUnderworldArachneCocoonsCheckpoint();
     for (const count of [7, 15, 10.5])
       expect(() =>
         applyProjectCommand(project, catalog, {
@@ -99,7 +99,7 @@ describe('Arachne combat cocoon count', () => {
   });
 
   it('strictly decodes the persisted shape', () => {
-    const project = underworldArachneCocoonProject();
+    const project = loadUnderworldArachneCocoonsCheckpoint();
     for (const raw of [
       { kind: 'cocoonCount', count: 0 },
       { kind: 'cocoonCount', count: 9.5 },
@@ -112,7 +112,7 @@ describe('Arachne combat cocoon count', () => {
 
   it('retains an out-of-range count as a phase-owned repair finding without clamping', () => {
     const decoded = decodeProjectDocument(
-      withRawFCount(underworldArachneCocoonProject(), { kind: 'cocoonCount', count: 20 }),
+      withRawFCount(loadUnderworldArachneCocoonsCheckpoint(), { kind: 'cocoonCount', count: 20 }),
       catalog,
     );
     expect(fEncounters(decoded).customizationByPhase).toEqual({
@@ -130,7 +130,7 @@ describe('Arachne combat cocoon count', () => {
 
   it('keeps a retained count dormant while another encounter is selected', () => {
     const nativeKey = fEncounters(createCompleteFGProject()).encounterKeyByPhase.Encounter!;
-    const dormant = applyProjectCommand(underworldArachneCocoonProject(), catalog, {
+    const dormant = applyProjectCommand(loadUnderworldArachneCocoonsCheckpoint(), catalog, {
       kind: 'SelectEncounter',
       phase: fPhase,
       encounterKey: nativeKey,

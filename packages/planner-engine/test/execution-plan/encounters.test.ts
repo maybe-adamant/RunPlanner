@@ -23,15 +23,18 @@ import { overview as decodeExecutionOverview } from '../../src/execution-plan/co
 import {
   createCompleteFGAnomalyProject,
   createGoldenFGHIProject,
+  anomalyRosterProject,
 } from '@run-planner/test-fixtures/underworld';
+import {
+  loadUnderworldArachneCocoonsCheckpoint,
+  loadUnderworldGAnomalyRosterCheckpoint,
+} from '@run-planner/test-fixtures/checkpoints/underworld';
 import {
   loadSurfaceNOPQProject,
   pBiome,
   reachedPOutdoorIcarusFixture,
 } from '@run-planner/test-fixtures/surface';
 import { authorLegalTraitOffers } from '@run-planner/test-fixtures/shared';
-import { underworldArachneCocoonProject } from './support/arachne-cocoon-fixture';
-import { anomalyRosterProject } from './support/anomaly-roster-fixture';
 
 describe('resolved execution encounters', () => {
   it.each([
@@ -216,7 +219,7 @@ describe('resolved execution encounters', () => {
   it('publishes an exact Arachne combat cocoon count and omits the native Default', () => {
     const plan = compileExecutionPlan({
       product: assembleExecutionProduct({
-        assembly: simulateProjectAssembly(catalog, underworldArachneCocoonProject()),
+        assembly: simulateProjectAssembly(catalog, loadUnderworldArachneCocoonsCheckpoint()),
         catalog,
       }),
     });
@@ -270,7 +273,7 @@ describe('resolved execution encounters', () => {
         }),
       }).occurrences.find((occurrence) => occurrence.id === 'golden-g-b3-e2')?.overview
         .encounterPhases;
-    expect(anomalyPhases(anomalyRosterProject())).toEqual([
+    expect(anomalyPhases(loadUnderworldGAnomalyRosterCheckpoint())).toEqual([
       {
         slotKey: 'Encounter',
         encounterKey: 'GeneratedAnomalyB',

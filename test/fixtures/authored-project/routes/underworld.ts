@@ -290,6 +290,62 @@ export function createCompleteFGAnomalyProject(success = true): ProjectDocument 
   });
 }
 
+export const anomalyRosterPhase = createEncounterPhaseAddress(
+  goldenGBiome,
+  { kind: 'occurrence', occurrenceId: goldenGOccurrenceId(3, 2) },
+  'Encounter',
+);
+export const anomalyRosterTypeKeys = Object.freeze([
+  'SpreadShotUnit_Elite',
+  'SpreadShotUnit',
+  'BloodlessPitcher',
+]);
+
+/** Successful G Anomaly with its native-realizable ordered infinite roster and return. */
+export function anomalyRosterProject(
+  typeKeys: readonly string[] = anomalyRosterTypeKeys,
+): ProjectDocument {
+  return applyProjectCommand(createCompleteFGAnomalyProject(), catalog, {
+    kind: 'ReplaceEncounterCustomization',
+    phase: anomalyRosterPhase,
+    decisionKey: 'infiniteRoster',
+    value: { kind: 'infiniteRoster', typeKeys },
+  });
+}
+
+export const arachneCocoonPhases = Object.freeze({
+  F: createEncounterPhaseAddress(
+    goldenFBiome,
+    { kind: 'occurrence', occurrenceId: goldenFOccurrenceId(5, 1) },
+    'Encounter',
+  ),
+  G: createEncounterPhaseAddress(
+    goldenGBiome,
+    { kind: 'occurrence', occurrenceId: goldenGOccurrenceId(4, 1) },
+    'Encounter',
+  ),
+});
+
+/** Entered F/G Arachne combats with the explicit F cocoon count. */
+export function underworldArachneCocoonProject(): ProjectDocument {
+  let project = createCompleteFGProject();
+  for (const [biomeKey, encounterKey] of [
+    ['F', 'ArachneCombatF'],
+    ['G', 'ArachneCombatG'],
+  ] as const)
+    project = applyProjectCommand(project, catalog, {
+      kind: 'SelectEncounter',
+      phase: arachneCocoonPhases[biomeKey],
+      encounterKey,
+    });
+  return applyProjectCommand(project, catalog, {
+    kind: 'ReplaceEncounterCustomization',
+    phase: arachneCocoonPhases.F,
+    decisionKey: 'cocoonCount',
+    value: { kind: 'cocoonCount', count: 11 },
+  });
+}
+
 /**
  * Canonical F/G closure witness: the F Postboss Well buys Spark of Ixion, then
  * G takes the generated Chaos sibling and completes its newly-authored G spine.

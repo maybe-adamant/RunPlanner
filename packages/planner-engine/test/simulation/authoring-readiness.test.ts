@@ -51,8 +51,8 @@ import {
   goldenGOccurrenceId,
   createGoldenFGHProject,
   goldenHBiome,
-  createCompleteFGIxionChaosProject,
 } from '@run-planner/test-fixtures/underworld';
+import { loadUnderworldIxionChaosCheckpoint } from '@run-planner/test-fixtures/checkpoints/underworld';
 import { authorLegalTraitOffers, hubVisitActions } from '@run-planner/test-fixtures/shared';
 import { compareOwnerLocations } from '../../src/simulation/progressive/finding-location';
 
@@ -447,7 +447,7 @@ describe('chronological authoring horizon', () => {
   });
 
   it('classifies an active Rejected curse without its blocked boon as incomplete', () => {
-    const base = createCompleteFGIxionChaosProject();
+    const base = loadUnderworldIxionChaosCheckpoint();
     const evaluation = simulateProjectAssembly(catalog, base).evaluation;
     const selected = evaluation.route.biomes
       .flatMap((biome) => ('rewards' in biome ? biome.rewards.selectedTraitOffers : []))

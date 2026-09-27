@@ -4,7 +4,6 @@ import { catalog } from '@run-planner/hades2-catalog';
 import {
   authorTestArtificerReplacement,
   createCompleteFGAnomalyProject,
-  createCompleteFGIxionChaosProject,
   createCompleteFGProject,
   createGoldenFGHProject,
   goldenFBiome,
@@ -25,6 +24,7 @@ import {
   loadUnderworldFGHICheckpoint,
   loadUnderworldFPoolCheckpoint,
   loadUnderworldFStygianWellCheckpoint,
+  loadUnderworldIxionChaosCheckpoint,
 } from '@run-planner/test-fixtures/checkpoints/underworld';
 import {
   loadSurfaceNOProject,
@@ -2043,7 +2043,7 @@ describe('engine-owned F/G execution semantic product', () => {
       goldenFBiome,
       createOccurrenceId('golden-f-preboss-shop:postboss'),
     );
-    let project = createCompleteFGIxionChaosProject();
+    let project = loadUnderworldIxionChaosCheckpoint();
     project = applyProjectCommand(project, catalog, {
       kind: 'ReplaceStygianWellOffer',
       occurrence: well,
@@ -2075,7 +2075,7 @@ describe('engine-owned F/G execution semantic product', () => {
       goldenFBiome,
       createOccurrenceId('golden-f-preboss-shop:postboss'),
     );
-    let project = createCompleteFGIxionChaosProject();
+    let project = loadUnderworldIxionChaosCheckpoint();
     project = applyProjectCommand(project, catalog, {
       kind: 'ReplaceStygianWellOffer',
       occurrence: well,
@@ -2123,7 +2123,7 @@ describe('engine-owned F/G execution semantic product', () => {
       goldenFBiome,
       createOccurrenceId('golden-f-preboss-shop:postboss'),
     );
-    let project = createCompleteFGIxionChaosProject();
+    let project = loadUnderworldIxionChaosCheckpoint();
     project = applyProjectCommand(project, catalog, {
       kind: 'ReplaceStygianWellOffer',
       occurrence: well,
@@ -2654,7 +2654,7 @@ describe('engine-owned F/G execution semantic product', () => {
   });
 
   it('retains Chaos continuations in Overview, not normal Doors', () => {
-    const project = createCompleteFGIxionChaosProject();
+    const project = loadUnderworldIxionChaosCheckpoint();
     const product = productFor(project);
     expect(
       product.occurrences.some((occurrence) => occurrence.overview.additional !== undefined),
