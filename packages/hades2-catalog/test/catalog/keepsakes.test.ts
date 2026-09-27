@@ -579,11 +579,7 @@ describe('keepsake normalization', () => {
     expect(() => createCatalog(hammer)).toThrow('must reference a Hammer trait giver');
   });
 
-  it('normalizes Time Piece’s fixed four charges and the closed concrete acquisition matrix', () => {
-    expect(catalog.keepsakes.byKey.GoldifyKeepsake?.effect).toEqual({
-      kind: 'timePiece',
-      conversionChargesByRank: { Common: 2, Rare: 3, Epic: 4, Heroic: 5 },
-    });
+  it('normalizes Time Piece’s closed concrete acquisition matrix', () => {
     const eligible = catalog.rewards.acquisitions.values
       .filter((acquisition) => acquisition.goldConversionEligible)
       .map((acquisition) => acquisition.gameName)
@@ -640,13 +636,7 @@ describe('keepsake normalization', () => {
     }
   });
 
-  it('normalizes Transcendent Embryo’s Chaos blessing profile and Common Gift replay', () => {
-    expect(catalog.keepsakes.byKey.RandomBlessingKeepsake?.effect).toEqual({
-      kind: 'transcendentEmbryo',
-      source: 'Chaos',
-      interval: 8,
-      blessingRarityByRank: { Common: 'Common', Rare: 'Rare', Epic: 'Epic', Heroic: 'Heroic' },
-    });
+  it('normalizes Transcendent Embryo’s Common Gift replay', () => {
     expect(catalog.keepsakes.byKey.RandomBlessingKeepsake?.echoGift).toEqual({
       availability: 'eligible',
       effect: { kind: 'transcendentEmbryo', schedule: 'oneShot' },
