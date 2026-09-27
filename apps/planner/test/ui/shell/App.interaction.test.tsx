@@ -684,7 +684,7 @@ describe('planner history interaction', () => {
     const dialog = await screen.findByRole('dialog', { name: 'Publish to game' });
     expect(within(dialog).getByText('Target: /profiles/h2-dev')).toBeTruthy();
     expect(within(dialog).getByRole('alert').textContent).toBe(
-      'ModpackLib 4.0.1 is older than required (4.1.0 or newer 4.x). Update ModpackLib in r2modman.',
+      'Update ModpackLib to 4.1.0+ in r2modman (found 4.0.1).',
     );
     expect(within(dialog).queryByLabelText('Slot')).toBeNull();
     expect(within(dialog).queryByRole('button', { name: 'Publish' })).toBeNull();
@@ -692,8 +692,8 @@ describe('planner history interaction', () => {
     expect(screen.queryByRole('dialog', { name: 'Publish to game' })).toBeNull();
     const settings = await screen.findByRole('dialog', { name: 'Settings' });
     expect(
-      await within(settings).findByText('Found 4.0.1 · requires 4.1.0 or newer 4.x'),
-    ).toBeTruthy();
+      (await within(settings).findByRole('list', { name: 'Game module steps' })).textContent,
+    ).toBe('✕Required: Update ModpackLib to 4.1.0+ in r2modman (found 4.0.1)');
     expect(game.published).toHaveLength(0);
   });
 
@@ -767,9 +767,7 @@ describe('planner history interaction', () => {
     await user.selectOptions(within(dialog).getByLabelText('Slot'), '1');
     await user.click(within(dialog).getByRole('button', { name: 'Publish' }));
     expect(
-      await within(dialog).findByText(
-        'The installed game module (unrecognized) does not match this planner (0.1.0). Update it in Settings.',
-      ),
+      await within(dialog).findByText('Update the game module in Settings (found unrecognized).'),
     ).toBeTruthy();
     expect(within(dialog).getByRole('button', { name: 'Open Settings' })).toBeTruthy();
   });

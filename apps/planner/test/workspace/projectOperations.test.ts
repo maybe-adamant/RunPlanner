@@ -324,8 +324,8 @@ describe('project profile operations', () => {
       operation: 'publishGame',
       status: 'failure',
       message:
-        'The installed game module (0.10.0) does not match this planner (0.1.0). Update it in Settings. ' +
-        'ModpackLib 4.0.1 is older than required (4.1.0 or newer 4.x). Update ModpackLib in r2modman.',
+        'Update the game module in Settings (found 0.10.0). ' +
+        'Update ModpackLib to 4.1.0+ in r2modman (found 4.0.1).',
     });
   });
 

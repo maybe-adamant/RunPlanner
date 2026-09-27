@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import * as Popover from '@radix-ui/react-popover';
 
 import {
@@ -64,6 +64,7 @@ export function App({
   const project = useAppSelector(selectPresentProject);
   const [entryOpen, setEntryOpen] = useState(project === undefined);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const settingsButton = useRef<HTMLButtonElement>(null);
   const evaluation = useAppSelector(selectProjectEvaluation);
   const workspace = useAppSelector(selectStructuredWorkspace);
   const traitDialogTarget = useAppSelector(
@@ -122,6 +123,7 @@ export function App({
               <button
                 className="quiet-action action-compact"
                 onClick={() => setSettingsOpen(true)}
+                ref={settingsButton}
                 type="button"
               >
                 Settings
@@ -214,7 +216,10 @@ export function App({
         {settingsOpen && (
           <SettingsPanel
             {...(gameModule === undefined ? {} : { gameModule })}
-            onClose={() => setSettingsOpen(false)}
+            onClose={() => {
+              setSettingsOpen(false);
+              settingsButton.current?.focus();
+            }}
           />
         )}
 

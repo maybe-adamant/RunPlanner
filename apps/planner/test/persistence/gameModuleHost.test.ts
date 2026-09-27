@@ -28,7 +28,7 @@ describe('Tauri game module host adapter', () => {
     ]);
   });
 
-  it('establishes a chosen folder and treats cancellation as a no-op', async () => {
+  it('picks a folder separately from establishing it and forgets without a path', async () => {
     const invoke = vi.fn().mockResolvedValue({ target: { kind: 'manual' } });
     const chooseDirectory = vi
       .fn()
@@ -36,12 +36,22 @@ describe('Tauri game module host adapter', () => {
       .mockResolvedValueOnce('/games/Hades II/Ship');
     const host = createTauriGameModuleHost({ invoke, chooseDirectory });
 
-    expect(await host.chooseTargetFolder()).toBeNull();
+    expect(await host.pickTargetFolder()).toBeNull();
+    expect(await host.pickTargetFolder()).toBe('/games/Hades II/Ship');
     expect(invoke).not.toHaveBeenCalled();
-    expect(await host.chooseTargetFolder()).toEqual({ target: { kind: 'manual' } });
-    expect(invoke).toHaveBeenCalledWith('game_target_choose', { path: '/games/Hades II/Ship' });
+    expect(await host.useChosenTarget('/games/Hades II/Ship')).toEqual({
+      target: { kind: 'manual' },
+    });
+    await host.validateTarget('/games/Hades II/Ship', 'manual');
+    await host.forgetTarget();
+    expect(invoke.mock.calls).toEqual([
+      ['game_target_choose', { path: '/games/Hades II/Ship' }],
+      ['game_target_validate', { path: '/games/Hades II/Ship', kind: 'manual' }],
+      ['game_target_clear'],
+    ]);
     invoke.mockRejectedValueOnce(new Error('No ReturnOfModding folder found.'));
-    chooseDirectory.mockResolvedValueOnce('/invalid');
-    await expect(host.chooseTargetFolder()).rejects.toThrow('No ReturnOfModding folder found.');
+    await expect(host.useChosenTarget('/invalid')).rejects.toThrow(
+      'No ReturnOfModding folder found.',
+    );
   });
 });

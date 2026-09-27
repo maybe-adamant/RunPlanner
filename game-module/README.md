@@ -23,10 +23,11 @@ to play it in Hades II. The app carries the mod and installs it for you.
 2. Download Run Planner from the
    [planner releases](https://github.com/maybe-adamant/RunPlanner/releases),
    extract the portable ZIP, and open **RunPlanner.exe**.
-3. Open **Settings → Game Module**, choose **Locate Game Module**, and pick
-   your r2modman profile (or the folder containing `ReturnOfModding` for a
-   manual Hell2Modding install). Then choose **Install / Update Game Module**.
-   Settings shows whether ModpackLib and the other dependencies were found.
+3. Open **Settings**, choose **Find r2modman profiles**, and pick your
+   profile (or **Choose folder…** for the folder containing `ReturnOfModding`
+   in a manual Hell2Modding install). Then follow the Game module steps and
+   choose **Install**. Settings lists anything else to fix first, such as an
+   older ModpackLib.
 4. Create or load a plan in the app, configure your loadout and route, and
    fix any issues shown by the planner.
 5. Open **File → Publish to Game** and pick one of the six plan slots.
@@ -34,8 +35,8 @@ to play it in Hades II. The app carries the mod and installs it for you.
    select the published slot as your active plan.
 7. Start a new run with the loadout you planned and follow its choices.
 
-After updating the app, open Settings and choose **Install / Update Game
-Module** again; publishing waits until the installed mod matches the app.
+After updating the app, open Settings and choose **Update**; publishing waits
+until the installed mod matches the app.
 
 For more about the application and its source, visit the
 [planner repository](https://github.com/maybe-adamant/RunPlanner).

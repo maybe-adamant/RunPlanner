@@ -744,13 +744,80 @@
   overflow-wrap: anywhere;
 }
 
-.settings-status-list [data-tone='warning'] dd,
-.settings-notices [data-tone='warning'] {
+.settings-location-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 8px;
+  font-size: 0.85rem;
+}
+
+.settings-location-line h3 {
+  margin: 12px 0 8px;
+  color: #aaa7af;
+  font-size: 0.85rem;
+}
+
+.settings-module-status {
+  margin: 0 0 8px;
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.settings-steps {
+  display: grid;
+  gap: 8px;
+  padding-left: 1.2rem;
+  margin: 8px 0;
+  font-size: 0.82rem;
+  line-height: 1.4;
+}
+
+.settings-steps li {
+  overflow-wrap: anywhere;
+}
+
+.settings-steps li button {
+  margin-left: 8px;
+}
+
+.settings-step-icon {
+  display: inline-block;
+  width: 1.1em;
+  margin-right: 4px;
+  font-weight: 700;
+}
+
+.settings-step-found {
+  color: #aaa7af;
+}
+
+.settings-details {
+  margin-top: 12px;
+  font-size: 0.82rem;
+}
+
+.settings-details summary {
+  cursor: pointer;
+  color: #aaa7af;
+  font-weight: 700;
+}
+
+.settings-details .settings-status-list {
+  margin: 8px 0;
+}
+
+.settings-module-status[data-tone='ok'] {
+  color: #9fd6a8;
+}
+
+.settings-module-status[data-tone='warning'],
+.settings-steps [data-tone='warning'] {
   color: #e8c27a;
 }
 
-.settings-status-list [data-tone='error'] dd,
-.settings-notices [data-tone='error'] {
+.settings-module-status[data-tone='error'],
+.settings-steps [data-tone='error'] {
   color: #f0a3a3;
 }
 
@@ -759,13 +826,4 @@
   flex-wrap: wrap;
   gap: 6px;
   margin-top: 12px;
-}
-
-.settings-locate ul {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  padding: 0;
-  margin: 8px 0;
-  list-style: none;
 }
