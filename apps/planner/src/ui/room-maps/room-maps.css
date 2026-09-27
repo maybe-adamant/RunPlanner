@@ -222,19 +222,19 @@
 }
 
 .hub-map-marker[data-category='Perfect'] {
-  --hub-marker-color: #43ddeb;
+  --hub-marker-color: #49c8dc;
 }
 
 .hub-map-marker[data-category='Good'] {
-  --hub-marker-color: #76e69a;
+  --hub-marker-color: #247448;
 }
 
 .hub-map-marker[data-category='Bad'] {
-  --hub-marker-color: #f26868;
+  --hub-marker-color: #a32d3b;
 }
 
 .hub-map-marker[data-category='Special'] {
-  --hub-marker-color: #facc45;
+  --hub-marker-color: #d6b442;
 }
 
 .hub-map-marker[data-open='true'] {
@@ -325,19 +325,19 @@
   border: 2px solid #101923;
   border-radius: 22%;
   color: #0c2233;
-  background: #6cc4ff;
+  background: #ed963e;
   box-shadow: 0 2px 8px rgb(0 0 0 / 48%);
   transform: translate(-50%, -50%) rotate(45deg);
 }
 
 .hub-map-overview .hub-map-marker-layer > .hub-map-fountain-marker:not(button) {
-  background: color-mix(in srgb, #6cc4ff 64%, transparent);
+  background: color-mix(in srgb, #ed963e 64%, transparent);
   pointer-events: none;
 }
 
 .hub-timeline-fountain-marker[data-used='false'] {
   opacity: 80%;
-  background: color-mix(in srgb, #6cc4ff 60%, transparent);
+  background: color-mix(in srgb, #ed963e 60%, transparent);
 }
 
 .hub-timeline-fountain-marker[aria-disabled='true']:not(:disabled) {
@@ -391,23 +391,23 @@
 }
 
 .hub-map-legend span[data-category='Perfect'] {
-  color: #43ddeb;
+  color: #49c8dc;
 }
 
 .hub-map-legend span[data-category='Good'] {
-  color: #76e69a;
+  color: #247448;
 }
 
 .hub-map-legend span[data-category='Bad'] {
-  color: #f26868;
+  color: #a32d3b;
 }
 
 .hub-map-legend span[data-category='Special'] {
-  color: #facc45;
+  color: #d6b442;
 }
 
 .hub-map-legend span[data-category='Fountain'] {
-  color: #6cc4ff;
+  color: #ed963e;
 }
 
 .hub-map-legend span[data-category='Fountain']::before {
