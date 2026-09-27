@@ -11,6 +11,7 @@ import {
   createIncomingRewardAddress,
   createOccurrenceAddress,
   createOccurrenceId,
+  createRouteAddress,
   createRouteStartKeepsakeSelectionAddress,
   createShopOfferAddress,
   createTraitOfferAddress,
@@ -583,6 +584,18 @@ export function reachedPOutdoorIcarusFixture() {
 /** Complete N/O/P/Q route with an installed ordinary Hex and reached P Path grant. */
 export function surfaceOrdinaryHexPathProject(): ProjectDocument {
   return authorLegalTraitOffers(reachedPOutdoorIcarusFixture().project);
+}
+
+/** Complete N/O/P/Q route with Aspect of Selene's installed Hex and reached Path grants. */
+export function surfaceSeleneHexPathProject(): ProjectDocument {
+  return authorLegalTraitOffers(
+    applyProjectCommand(surfaceOrdinaryHexPathProject(), catalog, {
+      kind: 'ReplaceRouteLoadout',
+      route: createRouteAddress('Surface'),
+      weaponKey: 'WeaponSuit',
+      aspectKey: 'SuitHexAspect',
+    }),
+  );
 }
 
 export { authorLegalTraitOffers };

@@ -14,6 +14,7 @@ import underworldArachneCocoonsRaw from './underworld-arachne-cocoons.runplanner
 import underworldAutomaticBossRaw from './underworld-automatic-boss.runplanner.json';
 import underworldFigLeafRaw from './underworld-fig-leaf.runplanner.json';
 import underworldGorgonAthenaRaw from './underworld-gorgon-athena.runplanner.json';
+import underworldPersephoneCallingCardRaw from './underworld-persephone-calling-card.runplanner.json';
 import underworldTwistScyllaRaw from './underworld-twist-scylla.runplanner.json';
 import underworldZagreusContractRaw from './underworld-zagreus-contract.runplanner.json';
 import underworldWorldShopTravelDealRaw from './underworld-world-shop-travel-deal.runplanner.json';
@@ -42,6 +43,7 @@ export const underworldCheckpointArtifacts = Object.freeze({
   'underworld-automatic-boss': checkpointArtifact(underworldAutomaticBossRaw),
   'underworld-fig-leaf': checkpointArtifact(underworldFigLeafRaw),
   'underworld-gorgon-athena': checkpointArtifact(underworldGorgonAthenaRaw),
+  'underworld-persephone-calling-card': checkpointArtifact(underworldPersephoneCallingCardRaw),
   'underworld-twist-scylla': checkpointArtifact(underworldTwistScyllaRaw),
   'underworld-zagreus-contract': checkpointArtifact(underworldZagreusContractRaw),
   'underworld-world-shop-travel-deal': checkpointArtifact(underworldWorldShopTravelDealRaw),
@@ -95,6 +97,10 @@ export function loadUnderworldFigLeafCheckpoint(): ProjectDocument {
 
 export function loadUnderworldGorgonAthenaCheckpoint(): ProjectDocument {
   return underworldCheckpointArtifacts['underworld-gorgon-athena'].load();
+}
+
+export function loadUnderworldPersephoneCallingCardCheckpoint(): ProjectDocument {
+  return underworldCheckpointArtifacts['underworld-persephone-calling-card'].load();
 }
 
 export function loadUnderworldTwistScyllaCheckpoint(): ProjectDocument {

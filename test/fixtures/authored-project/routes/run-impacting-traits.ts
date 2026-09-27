@@ -2,11 +2,16 @@ import { catalog } from '@run-planner/hades2-catalog';
 import {
   applyProjectCommand,
   createIncomingRewardAddress,
+  createNaturalSelectionResultAddress,
   createStartingRewardAddress,
   createTraitOfferAddress,
   type AuthoredTraitOfferTraits,
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
+import {
+  createPreparedProjectCandidateSession,
+  simulateProjectAssembly,
+} from '@run-planner/engine/simulation';
 
 import { loadSurfaceNCheckpoint } from '../checkpoints/surface';
 import { applyRewardStoreRepair, rewardStoreRepairPlans } from '../checkpoints/reward-store-repair';
@@ -168,6 +173,40 @@ const naturalPrerequisiteOffer = traitOffer({
   selectedOptionKey: 'option1' as const,
 });
 
+function naturalSelectionOffer(targets?: readonly string[]): AuthoredTraitOfferTraits {
+  return {
+    kind: 'traits',
+    giverKey: 'Demeter',
+    options: [
+      {
+        traitKey: 'GoodStuffBoon',
+        rarity: 'Duo',
+        ...(targets === undefined ? {} : { naturalSelectionTargets: cycleEight(targets) }),
+      },
+      { traitKey: 'DemeterCastBoon', rarity: 'Rare' },
+      { traitKey: 'ReserveManaHitShieldBoon', rarity: 'Rare' },
+    ],
+    selectedOptionKey: 'option1',
+  };
+}
+
+function cycleEight(
+  traitKeys: readonly string[],
+): readonly [string, string, string, string, string, string, string, string] {
+  const first = traitKeys[0];
+  if (first === undefined) throw new Error('Natural Selection requires a nonempty target domain');
+  return [
+    first,
+    traitKeys[1 % traitKeys.length]!,
+    traitKeys[2 % traitKeys.length]!,
+    traitKeys[3 % traitKeys.length]!,
+    traitKeys[4 % traitKeys.length]!,
+    traitKeys[5 % traitKeys.length]!,
+    traitKeys[6 % traitKeys.length]!,
+    traitKeys[7 % traitKeys.length]!,
+  ];
+}
+
 export function createSurfaceNNaturalSelectionFrontier(): ProjectDocument {
   let project = loadSurfaceNCheckpoint();
   project = replaceBoon(project, nOccurrenceIds.opening, 'PoseidonUpgrade', poseidonCoreOffer);
@@ -186,17 +225,42 @@ export function createSurfaceNNaturalSelectionFrontier(): ProjectDocument {
     'DemeterUpgrade',
     naturalPrerequisiteOffer,
   );
-  project = replaceBoon(project, nOccurrenceId('miniBoss01'), 'DemeterUpgrade', {
-    kind: 'traits',
-    giverKey: 'Demeter',
-    options: [
-      { traitKey: 'GoodStuffBoon', rarity: 'Duo' },
-      { traitKey: 'DemeterCastBoon', rarity: 'Rare' },
-      { traitKey: 'ReserveManaHitShieldBoon', rarity: 'Rare' },
-    ],
-    selectedOptionKey: 'option1',
-  });
+  project = replaceBoon(
+    project,
+    nOccurrenceId('miniBoss01'),
+    'DemeterUpgrade',
+    naturalSelectionOffer(),
+  );
   return project;
+}
+
+/** Completes Natural Selection through the actual candidate domain at the saved N frontier. */
+export function createSurfaceNNaturalSelectionCheckpoint(): ProjectDocument {
+  const frontier = createSurfaceNNaturalSelectionFrontier();
+  const trait = createTraitOfferAddress(
+    createIncomingRewardAddress(nBiome, nOccurrenceId('miniBoss01')),
+    'source',
+  );
+  const result = createNaturalSelectionResultAddress(trait, 'option1');
+  const candidate = createPreparedProjectCandidateSession(
+    catalog,
+    simulateProjectAssembly(catalog, frontier),
+  ).evaluate({
+    kind: 'naturalSelectionResult',
+    result,
+    value: naturalSelectionOffer(),
+    targets: undefined,
+  });
+  if (
+    candidate.kind !== 'naturalSelectionResult' ||
+    candidate.result.nextTargetTraitKeys.length === 0
+  )
+    throw new Error('Natural Selection candidate domain is unavailable');
+  return applyProjectCommand(frontier, catalog, {
+    kind: 'ReplaceTraitOffer',
+    trait,
+    value: naturalSelectionOffer(candidate.result.nextTargetTraitKeys),
+  });
 }
 
 export function createSurfaceNQueensRansomCheckpoint(): ProjectDocument {

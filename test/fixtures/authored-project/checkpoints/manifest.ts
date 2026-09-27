@@ -61,6 +61,17 @@ export const checkpointManifest = Object.freeze([
     provenance: 'semantic-command F/G Gorgon Athena recipe',
   },
   {
+    id: 'underworld-persephone-calling-card',
+    file: 'underworld-persephone-calling-card.runplanner.json',
+    route: 'Underworld',
+    configuredBiomePrefix: ['F', 'G'],
+    scenario:
+      'Complete F/G Aspect of Persephone and Calling Card route with reached positive Apollo effects',
+    schemaVersion: 88,
+    catalogVersion: '0.55.0-anvil-of-fates',
+    provenance: 'semantic-command F/G Aspect of Persephone and Calling Card recipe',
+  },
+  {
     id: 'underworld-ixion-chaos',
     file: 'underworld-ixion-chaos.runplanner.json',
     route: 'Underworld',
@@ -222,6 +233,17 @@ export const checkpointManifest = Object.freeze([
     provenance: 'semantic-command N/O/P/Q ordinary Hex and P Path acquisition recipe',
   },
   {
+    id: 'surface-selene-hex-path',
+    file: 'surface-selene-hex-path.runplanner.json',
+    route: 'Surface',
+    configuredBiomePrefix: ['N', 'O', 'P', 'Q'],
+    scenario:
+      'Aspect of Selene installed Hex with reached N SpellDrop and P TalentDrop Path grants',
+    schemaVersion: 88,
+    catalogVersion: '0.55.0-anvil-of-fates',
+    provenance: 'semantic-command N/O/P/Q Aspect of Selene Hex and Path acquisition recipe',
+  },
+  {
     id: 'surface-shrine-travel-deal',
     file: 'surface-shrine-travel-deal.runplanner.json',
     route: 'Surface',
@@ -261,6 +283,16 @@ export const checkpointManifest = Object.freeze([
     schemaVersion: 88,
     catalogVersion: '0.55.0-anvil-of-fates',
     provenance: 'semantic-command recipe from the canonical Surface N checkpoint',
+  },
+  {
+    id: 'surface-n-natural-selection',
+    file: 'surface-n-natural-selection.runplanner.json',
+    route: 'Surface',
+    configuredBiomePrefix: ['N'],
+    scenario: 'N selected Natural Selection with its reached eight-target result',
+    schemaVersion: 88,
+    catalogVersion: '0.55.0-anvil-of-fates',
+    provenance: 'semantic-command N Natural Selection recipe settled from its candidate domain',
   },
   {
     id: 'surface-n-queens-ransom',
@@ -485,6 +517,7 @@ export const checkpointSpellDropIntents = Object.freeze([
   ['surface-encounter-showcase', 'surface-n-combat09', 'SpellPotionTrait'],
   ['surface-anvil', 'surface-n-combat09', 'SpellPotionTrait'],
   ['surface-ordinary-hex-path', 'surface-n-combat09', 'SpellPotionTrait'],
+  ['surface-selene-hex-path', 'surface-n-combat09', 'SpellPotionTrait'],
   ['surface-n-phial-intermediate-fountain', 'surface-n-combat09', 'SpellLaserTrait'],
   ['surface-scheduled-lifecycle', 'surface-n-combat09', 'SpellPotionTrait'],
   ['surface-n-complete-hub-frontier', 'surface-n-combat09', 'SpellPolymorphTrait'],
@@ -493,6 +526,7 @@ export const checkpointSpellDropIntents = Object.freeze([
   ['surface-n-ten-open-invalid', 'surface-n-combat09', 'SpellLeapTrait'],
   ['surface-n', 'surface-n-combat09', 'SpellLaserTrait'],
   ['surface-n-natural-selection-frontier', 'surface-n-combat09', 'SpellLaserTrait'],
+  ['surface-n-natural-selection', 'surface-n-combat09', 'SpellLaserTrait'],
   ['surface-n-queens-ransom', 'surface-n-combat09', 'SpellLaserTrait'],
   ['surface-n-steady-growth-frontier', 'surface-n-combat09', 'SpellLaserTrait'],
   // The run-scoped ratio leaves combat05's HermesUpgrade unsupported, so the
@@ -507,6 +541,7 @@ export const checkpointSpellDropIntents = Object.freeze([
   ['surface-nopq', 'surface-n-combat09', 'SpellPotionTrait'],
   ['underworld-fg', 'golden-f-b10-e2', 'SpellPolymorphTrait'],
   ['underworld-automatic-boss', 'golden-f-b10-e2', 'SpellPolymorphTrait'],
+  ['underworld-persephone-calling-card', 'golden-f-b10-e2', 'SpellPolymorphTrait'],
   ['underworld-fig-leaf', 'golden-f-b10-e2', 'SpellPolymorphTrait'],
   ['underworld-gorgon-athena', 'golden-f-b10-e2', 'SpellPolymorphTrait'],
   ['underworld-ixion-chaos', 'golden-f-b10-e2', 'SpellPolymorphTrait'],

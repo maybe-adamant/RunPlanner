@@ -30,6 +30,7 @@ import {
   underworldAutomaticBossProject,
   underworldFigLeafSkipProject,
   underworldGorgonAthenaProject,
+  underworldPersephoneCallingCardProject,
   underworldTwistScyllaProject,
   underworldWorldShopTravelDealProject,
   underworldZagreusContractProject,
@@ -39,6 +40,7 @@ import {
   surfaceNPhialIntermediateFountainProject,
   surfaceAnvilProject,
   surfaceOrdinaryHexPathProject,
+  surfaceSeleneHexPathProject,
   surfaceShrineTravelDealProject,
 } from '../routes/surface';
 import { dreamMixedHandoffProject } from '../routes/dream';
@@ -132,7 +134,7 @@ describe('authored-project checkpoint integrity', () => {
     const chaosRoom = occurrences?.find(
       (occurrence) => occurrence.occurrenceId === 'fixture-chaos-room',
     );
-    expect(checkpointManifest).toHaveLength(46);
+    expect(checkpointManifest).toHaveLength(49);
     expect(chaosRoom?.gameName).toMatch(/^Chaos_/);
     expect(chaosRoom?.state).toMatchObject({
       kind: 'fixed',
@@ -185,11 +187,13 @@ describe('authored-project checkpoint integrity', () => {
     ['underworld-automatic-boss', underworldAutomaticBossProject],
     ['underworld-fig-leaf', underworldFigLeafSkipProject],
     ['underworld-gorgon-athena', underworldGorgonAthenaProject],
+    ['underworld-persephone-calling-card', underworldPersephoneCallingCardProject],
     ['underworld-twist-scylla', underworldTwistScyllaProject],
     ['underworld-world-shop-travel-deal', underworldWorldShopTravelDealProject],
     ['underworld-zagreus-contract', underworldZagreusContractProject],
     ['surface-anvil', surfaceAnvilProject],
     ['surface-ordinary-hex-path', surfaceOrdinaryHexPathProject],
+    ['surface-selene-hex-path', surfaceSeleneHexPathProject],
     ['surface-shrine-travel-deal', surfaceShrineTravelDealProject],
     ['surface-encounter-showcase', surfaceEncounterShowcaseProject],
     ['surface-scheduled-lifecycle', surfaceScheduledLifecycleProject],

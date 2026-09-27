@@ -981,6 +981,49 @@ export function underworldGorgonAthenaProject(): ProjectDocument {
   ]);
 }
 
+function withOpeningApolloOffer(
+  project: ProjectDocument,
+  option: { readonly persephoneLevelBonus?: number },
+  rarificationActions: readonly ('option1' | 'option2' | 'option3')[] = [],
+): ProjectDocument {
+  return applyProjectCommand(project, catalog, {
+    kind: 'ReplaceTraitOffer',
+    trait: createTraitOfferAddress(
+      createIncomingRewardAddress(goldenFBiome, goldenFStartId),
+      'source',
+    ),
+    value: {
+      kind: 'traits',
+      giverKey: 'Apollo',
+      options: [
+        { traitKey: 'ApolloWeaponBoon', rarity: 'Common', ...option },
+        { traitKey: 'ApolloSpecialBoon', rarity: 'Common', ...option },
+        { traitKey: 'ApolloCastBoon', rarity: 'Common', ...option },
+      ],
+      selectedOptionKey: 'option1',
+      rarificationActions,
+    },
+  });
+}
+
+/** Complete F/G route with Aspect of Persephone and Calling Card's reached positive effects. */
+export function underworldPersephoneCallingCardProject(): ProjectDocument {
+  let project = applyProjectCommand(createCompleteFGProject(), catalog, {
+    kind: 'ReplaceRouteLoadout',
+    route: createRouteAddress('Underworld'),
+    weaponKey: 'WeaponLob',
+    aspectKey: 'LobImpulseAspect',
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceStartingKeepsake',
+    selection: createRouteStartKeepsakeSelectionAddress('Underworld'),
+    keepsakeKey: 'RarifyKeepsake',
+  });
+  return authorLegalTraitOffers(
+    withOpeningApolloOffer(project, { persephoneLevelBonus: 5 }, ['option1']),
+  );
+}
+
 /** Short F/G witness: the F Postboss Pool sells one of its realized traits. */
 export function createUnderworldFPoolCheckpoint(): ProjectDocument {
   let project = createCompleteFGProject();

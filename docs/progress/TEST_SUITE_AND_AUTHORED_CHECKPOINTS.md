@@ -281,8 +281,20 @@ ordinary Hex/Path slice is implemented against `4d932a74` and independently
 reviewed: a complete N/O/P/Q checkpoint installs `SpellPotionTrait` at N and
 reaches a P `TalentDrop` with three invested Lung points; replacing that reward
 reloads to the exact addressed unavailable-bag repair and Undo restores the
-checkpoint. Selene and Persephone remain pending route-level recipe construction,
-not blocked owner work.
+checkpoint. The next combined slice is implemented against `396291cf` and
+independently reviewed: `surface-selene-hex-path` reaches six
+Lung points with Aspect of Selene's installed Moon Beam; the compatible
+`underworld-persephone-calling-card` combines Aspect of Persephone's positive
+Apollo level contribution with Calling Card's Common-to-Rare increase; and
+`surface-n-natural-selection` settles its selected eight-target child from the
+engine candidate domain. Each has static loading, recipe attestation, reached
+consumer evidence, and an edit/reload/Undo witness. Execution fixture bytes are
+unchanged.
+
+The combined Selene/Persephone/Natural Selection slice passed 18 authored-checkpoint
+tests, 44 fixture-integrity tests, full typechecking, lint, formatting and diff
+checks. Review corrections completed Natural Selection's exact repair witness,
+publication eligibility, and registry bookkeeping.
 
 Verification passed: 77 focused engine tests (including all 20 execution-fixture
 byte checks), 38 fixture-integrity tests, full typechecking, lint, formatting and
@@ -325,17 +337,17 @@ Planned portfolio assignment (not yet success claims):
   own the actual legal F skip and the G first-combat Athena starting-keepsake,
   condition, selected child and Epic rarity. They cannot share the one
   starting-keepsake slot.
-- `surface-ordinary-hex-path` now owns the normal installed SpellPotion/Lung
-  tree and reached P TalentDrop allocation. Selene aspect-Hex/Path and
-  Persephone level-bonus remain separate route-level constructions.
-- A targeted-traits portfolio begins from the Natural Selection frontier only
-  after its child is command-settled. All Together, Concave Stone and Echo each
-  require their own command-reachable chronology; their branch-only test helpers
-  are source evidence, not saved-plan recipes.
-- Normal installed-Hex/Path is now independently saved. Selene aspect-Hex/Path
-  and Persephone level-bonus scenarios remain separate route-level
-  constructions: the latter two use incompatible aspects and also provide the
-  non-base loadout witnesses.
+- `surface-ordinary-hex-path` owns the normal installed SpellPotion/Lung tree;
+  `surface-selene-hex-path` separately owns Aspect of Selene's Moon Beam and
+  reached Path allocation. The loadouts remain intentionally distinct.
+- `underworld-persephone-calling-card` combines compatible loadout and
+  starting-keepsake effects: Aspect of Persephone supplies the positive level
+  contribution while Calling Card changes the selected Apollo rarity. It is one
+  F/G checkpoint rather than two duplicate recipes.
+- `surface-n-natural-selection` promotes the prior selected-trait frontier by
+  authoring its child from the real candidate domain. All Together, Concave Stone
+  and Echo still require their own command-reachable chronology; branch-only test
+  helpers remain source evidence, not saved-plan recipes.
 
 Each candidate needs its own static checkpoint, recipe attestation, reached
 consumer/export witness and edit/reload result before the matrix moves to
