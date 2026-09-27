@@ -827,3 +827,8 @@
   gap: 6px;
   margin-top: 12px;
 }
+
+.external-page-link {
+  color: inherit;
+  text-decoration: underline;
+}

@@ -684,16 +684,24 @@ describe('planner history interaction', () => {
     const dialog = await screen.findByRole('dialog', { name: 'Publish to game' });
     expect(within(dialog).getByText('Target: /profiles/h2-dev')).toBeTruthy();
     expect(within(dialog).getByRole('alert').textContent).toBe(
-      'Update ModpackLib to 4.1.0+ in r2modman (found 4.0.1).',
+      'Update ModpackLib to 4.1.0+ in r2modman (found 4.0.1). — Thunderstore page',
     );
     expect(within(dialog).queryByLabelText('Slot')).toBeNull();
     expect(within(dialog).queryByRole('button', { name: 'Publish' })).toBeNull();
+    await user.click(
+      within(dialog).getByRole('link', {
+        name: 'Open ModpackLib’s Thunderstore page in your browser',
+      }),
+    );
+    expect(game.host.openExternalPage).toHaveBeenCalledWith(
+      'https://thunderstore.io/c/hades-ii/p/adamant/ModpackLib/',
+    );
     await user.click(within(dialog).getByRole('button', { name: 'Open Settings' }));
     expect(screen.queryByRole('dialog', { name: 'Publish to game' })).toBeNull();
     const settings = await screen.findByRole('dialog', { name: 'Settings' });
     expect(
       (await within(settings).findByRole('list', { name: 'Game module steps' })).textContent,
-    ).toBe('✕Required: Update ModpackLib to 4.1.0+ in r2modman (found 4.0.1)');
+    ).toBe('✕Required: Update ModpackLib to 4.1.0+ in r2modman (found 4.0.1) — Thunderstore page');
     expect(game.published).toHaveLength(0);
   });
 

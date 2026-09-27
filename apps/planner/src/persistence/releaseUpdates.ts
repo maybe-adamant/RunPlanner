@@ -63,7 +63,7 @@ export function createTauriReleaseUpdateHost(
 ): ReleaseUpdateHost {
   return Object.freeze({
     checkLatestRelease: () => invoke<ReleaseMetadata>('release_check_latest'),
-    openDownload: (url: string) => invoke<void>('release_open_download', { url }),
+    openDownload: (url: string) => invoke<void>('external_open_url', { url }),
   });
 }
 

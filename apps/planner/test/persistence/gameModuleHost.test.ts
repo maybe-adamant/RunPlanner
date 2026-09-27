@@ -15,6 +15,7 @@ describe('Tauri game module host adapter', () => {
     await host.installFromCheckout(true);
     await host.remove();
     await host.publish(3, '{"format":"run-planner-execution"}');
+    await host.openExternalPage('https://thunderstore.io/c/hades-ii/p/adamant/ModpackLib/');
 
     expect(invoke.mock.calls).toEqual([
       ['game_module_status'],
@@ -25,6 +26,7 @@ describe('Tauri game module host adapter', () => {
       ['game_module_install_from_checkout', { overwriteConsent: true }],
       ['game_module_remove'],
       ['game_plan_publish', { slotNumber: 3, planJson: '{"format":"run-planner-execution"}' }],
+      ['external_open_url', { url: 'https://thunderstore.io/c/hades-ii/p/adamant/ModpackLib/' }],
     ]);
   });
 

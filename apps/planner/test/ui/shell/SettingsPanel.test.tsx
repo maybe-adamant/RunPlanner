@@ -321,6 +321,24 @@ describe('Settings game location and module', () => {
     expect(game.host.useDiscoveredTarget).not.toHaveBeenCalled();
   });
 
+  it('opens ModpackLib’s store page from its step through the host', async () => {
+    const game = createFakeGameModuleHost(
+      gameModuleStatus({
+        inspection: { modpackLib: { state: 'older', found: '4.0.1' } },
+        publicationBlockers: [{ code: 'modpackLibOlder', found: '4.0.1', required: '4.1.0' }],
+      }),
+    );
+    const { dialog, user } = await openSettings(game.host);
+    await user.click(
+      within(dialog).getByRole('link', {
+        name: 'Open ModpackLib’s Thunderstore page in your browser',
+      }),
+    );
+    expect(game.host.openExternalPage).toHaveBeenCalledWith(
+      'https://thunderstore.io/c/hades-ii/p/adamant/ModpackLib/',
+    );
+  });
+
   it('explains that game settings need the desktop application', async () => {
     const { user } = renderPlannerForInteraction({ startWithProject: false });
     await user.click(screen.getByRole('button', { name: 'Settings' }));

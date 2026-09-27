@@ -21,7 +21,7 @@ pub fn run() {
             profile_file_session::profile_file_clear_active,
             profile_file_session::profile_file_write_active,
             release_updates::release_check_latest,
-            release_updates::release_open_download
+            release_updates::external_open_url
         ])
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())

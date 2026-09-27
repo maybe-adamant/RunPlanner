@@ -62,6 +62,8 @@ export interface GameTargetInspection {
     readonly state: ModpackLibState;
     readonly found: string | null;
     readonly required: string;
+    /** ModpackLib's store page, the only page the host opens for it. */
+    readonly pageUrl: string;
   };
   readonly missingDependencies: readonly { readonly name: string; readonly version: string }[];
   readonly coordinator: { readonly present: boolean; readonly managed: boolean };
@@ -103,6 +105,8 @@ export type GamePlanSlotNumber = (typeof GAME_PLAN_SLOT_NUMBERS)[number];
 
 export interface GamePlanPublisher {
   readonly status: () => Promise<GameModuleStatus>;
+  /** Opens a host-allowlisted page in the default browser. */
+  readonly openExternalPage: (url: string) => Promise<void>;
   readonly publish: (
     slotNumber: GamePlanSlotNumber,
     planJson: string,
@@ -142,6 +146,7 @@ export function createTauriGameModuleHost(
 ): GameModuleHost {
   return Object.freeze({
     status: () => environment.invoke<GameModuleStatus>('game_module_status'),
+    openExternalPage: (url: string) => environment.invoke<void>('external_open_url', { url }),
     discoverTargets: () => environment.invoke<GameTargetDiscovery>('game_target_discover'),
     useDiscoveredTarget: (path: string) =>
       environment.invoke<GameModuleStatus>('game_target_use_discovered', { path }),

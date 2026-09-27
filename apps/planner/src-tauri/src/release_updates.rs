@@ -60,28 +60,11 @@ pub async fn release_check_latest() -> Result<ReleaseMetadata, String> {
         .map_err(|error| format!("Release response was malformed: {error}"))
 }
 
+/// Opens an allowlisted page (release downloads or ModpackLib's store page) in the browser.
 #[tauri::command]
-pub fn release_open_download(url: String) -> Result<(), String> {
-    validate_release_url(&url)?;
+pub fn external_open_url(url: String) -> Result<(), String> {
+    run_planner_game_host::external_url::validate_external_url(&url)?;
     open_in_browser(&url)
-}
-
-fn validate_release_url(value: &str) -> Result<(), String> {
-    let url = url::Url::parse(value).map_err(|_| "Release URL is invalid.".to_owned())?;
-    if url.scheme() != "https"
-        || url.host_str() != Some("github.com")
-        || url.port().is_some()
-        || !url.username().is_empty()
-        || url.password().is_some()
-        || url.query().is_some()
-        || url.fragment().is_some()
-        || !url
-            .path()
-            .starts_with("/maybe-adamant/RunPlanner/releases/download/v")
-    {
-        return Err("Release URL is outside the official download location.".into());
-    }
-    Ok(())
 }
 
 #[cfg(target_os = "windows")]
@@ -102,14 +85,14 @@ fn open_in_browser(url: &str) -> Result<(), String> {
         )
     };
     if (result as isize) <= 32 {
-        return Err("Could not open the release download in the default browser.".into());
+        return Err("Could not open the link in the default browser.".into());
     }
     Ok(())
 }
 
 #[cfg(not(target_os = "windows"))]
 fn open_in_browser(_url: &str) -> Result<(), String> {
-    Err("Release downloads are available only in the Windows desktop application.".into())
+    Err("Opening links is available only in the Windows desktop application.".into())
 }
 
 #[cfg(target_os = "windows")]
@@ -119,23 +102,7 @@ fn wide(value: &str) -> Vec<u16> {
 
 #[cfg(test)]
 mod tests {
-    use super::{validate_release_url, ReleaseMetadata};
-
-    #[test]
-    fn accepts_only_official_https_release_downloads() {
-        assert!(validate_release_url(
-            "https://github.com/maybe-adamant/RunPlanner/releases/download/v1.2.3/RunPlanner-1.2.3-windows-x64-portable.zip"
-        )
-        .is_ok());
-        for url in [
-            "http://github.com/maybe-adamant/RunPlanner/releases/download/v1.2.3/archive.zip",
-            "https://example.com/maybe-adamant/RunPlanner/releases/download/v1.2.3/archive.zip",
-            "https://github.com/maybe-adamant/RunPlanner/releases/tag/v1.2.3",
-            "https://github.com/maybe-adamant/RunPlanner/releases/download/v1.2.3/archive.zip?redirect=true",
-        ] {
-            assert!(validate_release_url(url).is_err(), "{url}");
-        }
-    }
+    use super::ReleaseMetadata;
 
     #[test]
     fn decodes_github_release_field_names_and_serializes_frontend_field_names() {
