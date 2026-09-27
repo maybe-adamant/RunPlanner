@@ -126,9 +126,11 @@ Decided:
 
 ### Bundled packages
 
-- **Module.** The release workflow builds `game-module/` into the plugin
-  package (manifest stamped with the planner version) and embeds it as a
-  Tauri resource.
+- **Module.** The build assembles `game-module/` into the plugin package,
+  with the manifest from `manifest.template.json` stamped with the planner
+  version.
+  - It is embedded into the application binary at compile time, not as a
+    Tauri resource file, so portable and installed builds behave identically.
 - **ModpackLib** is not bundled, and there is no lock file.
 - **Runtime.** The planner never downloads game packages.
 
@@ -139,6 +141,9 @@ Decided:
 - **Locate Game Module** discovers r2modman profiles or accepts a chosen
   folder, using the existing containment and symlink rules, and shows the
   path.
+  - The r2modman data root is resolved per platform: `%APPDATA%` on Windows
+    today, behind one platform-root function. Adding a Linux or macOS root
+    later is then a single addition, not a discovery rewrite.
 - **Status** is an application projection of Rust-reported facts:
   - the target path;
   - installed versus bundled module version;
@@ -251,7 +256,12 @@ executor, independent review, one remediation pass, main-session commits.
 - **Docs.** Distribution and publication in `GAME_INTEGRATION_BOUNDARY.md`,
   and the README setup.
 
-### B — Installed application and self-update
+### B — Installed application and self-update (deferred)
+
+Do not start until the owner has used Gate A and decides between managed
+updates and staying portable. Tauri's updater supports Windows NSIS, Linux
+AppImage and macOS `.app` bundles, so choosing B does not preclude other
+platforms.
 
 - Per-user NSIS installer and `tauri-plugin-updater`, with a signed artifact
   and `latest.json`.
