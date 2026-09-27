@@ -1,5 +1,6 @@
 -- luacheck: globals TestRoomGuide
 local lu = require("luaunit")
+local fixtures = require("tests/harness/fixture_loader")
 local guide = require("mods.room.guide")
 local json = require("mods.protocol.json")
 local protocol = require("mods.protocol.decoder")
@@ -247,7 +248,7 @@ function TestRoomGuide.testOPhaseProgressKeepsOneGuideAndTerminalPrefixHasNoFoot
 end
 
 function TestRoomGuide.testRealFieldsSixRowGuideFitsTheCompactWindow()
-    local file = assert(io.open("fixtures/execution-plan/underworld-fgh.execution.json", "rb"))
+    local file = assert(io.open(fixtures.path("underworld-fgh.execution.json"), "rb"))
     local raw = file:read("*a")
     file:close()
     local plan = assert(protocol.decode(assert(json.decode(raw))))

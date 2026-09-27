@@ -1,5 +1,6 @@
 -- luacheck: globals TestRouteRoomSessions
 local lu = require("luaunit")
+local fixtures = require("tests/harness/fixture_loader")
 local room = require("mods.room.session")
 local coordinator = require("mods.room.coordinator")
 local route = require("mods.route.session")
@@ -422,7 +423,7 @@ function TestRouteRoomSessions.testRealFieldsRewardsCanBeCollectedAfterBothCages
     local json = require("mods.protocol.json")
     local protocol = require("mods.protocol.decoder")
     local ordinary = require("mods.room.timeline.acquisitions.traits.ordinary")
-    local file = assert(io.open("fixtures/execution-plan/underworld-fgh.execution.json", "rb"))
+    local file = assert(io.open(fixtures.path("underworld-fgh.execution.json"), "rb"))
     local raw = file:read("*a")
     file:close()
     local plan = assert(protocol.decode(assert(json.decode(raw))))

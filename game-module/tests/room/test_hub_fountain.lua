@@ -1,5 +1,6 @@
 -- luacheck: globals TestHubFountain
 local lu = require("luaunit")
+local fixtures = require("tests/harness/fixture_loader")
 local json = require("mods/protocol/json")
 local protocol = require("mods.protocol.decoder")
 local route = require("mods.route.session")
@@ -16,7 +17,7 @@ local HUB_FOUNTAIN = 664734
 local PHIAL_FIXTURE = "surface-n-phial-intermediate-fountain"
 
 local function loadPlan(name)
-    local file = assert(io.open("fixtures/execution-plan/" .. name .. ".execution.json", "rb"))
+    local file = assert(io.open(fixtures.root .. name .. ".execution.json", "rb"))
     local value = assert(json.decode(file:read("*a")))
     file:close()
     return assert(protocol.decode(value))

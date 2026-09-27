@@ -1,5 +1,6 @@
 -- luacheck: globals TestNpcShopping
 local lu = require("luaunit")
+local fixtures = require("tests/harness/fixture_loader")
 local json = require("mods.protocol.json")
 local protocol = require("mods.protocol.decoder")
 local occurrences = require("mods.protocol.occurrences")
@@ -9,7 +10,7 @@ local shopping = require("mods.room.features.npc_shopping")
 TestNpcShopping = {}
 
 local function fixture()
-    local file = assert(io.open("fixtures/execution-plan/fg-npc-shopping-protection.execution.json", "rb"))
+    local file = assert(io.open(fixtures.path("fg-npc-shopping-protection.execution.json"), "rb"))
     local wire = assert(json.decode(file:read("*a")))
     file:close()
     return wire

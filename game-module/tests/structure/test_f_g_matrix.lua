@@ -3,6 +3,7 @@
 -- that are not present in an F/G execution fixture.
 -- luacheck: globals TestFGStructureMatrix
 local lu = require("luaunit")
+local fixtures = require("tests/harness/fixture_loader")
 local json = require("mods/protocol/json")
 local protocol = require("mods.protocol.decoder")
 local overview = require("mods.room.overview")
@@ -13,7 +14,7 @@ local doors = require("mods.navigation.doors")
 
 TestFGStructureMatrix = {}
 
-local fixtureRoot = "fixtures/execution-plan/"
+local fixtureRoot = fixtures.root
 
 local function fixture(name)
     local file = assert(io.open(fixtureRoot .. name .. ".execution.json", "rb"))
