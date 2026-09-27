@@ -1,7 +1,7 @@
 # Test-suite cleanup and authored checkpoint coverage
 
-Status: Gates A–B and C1 implemented and reviewed; review findings resolved.
-C2 is partially implemented and independently reviewed; C3–D await implementation.
+Status: Gates A–C2 implemented and reviewed; review findings resolved.
+C3–D await implementation.
 Base: `7dea8cfe` (September 26, 2026).
 
 ## Objective
@@ -209,7 +209,8 @@ witnesses bounded and separate from ordinary consumers.
 
 #### C2 — detours, special encounters and commerce
 
-Disposition: partially implemented against `c15ea73b` (September 26, 2026).
+Disposition: completed across bounded C2 slices, culminating in the final
+Contract implementation against `563291ed` (September 26, 2026).
 The completed bounded detour slice adds independent saved checkpoints for the
 settled Spark of Ixion G Chaos route, successful G Anomaly with its ordered
 infinite roster and fixed native return, and selected F/G Arachne encounters
@@ -223,15 +224,21 @@ The completed bounded follow-up adds a purchased Q Anvil; a reached Fateful
 Twist with selected rival Scylla performer; an acquired F World Shop Travel Deal
 replacement; and an N Shrine Travel Deal acquired at its placed O Combat1
 delivery. Each Travel Deal carrier remains an independent complete checkpoint
-because its purchase and delivery chronology differ. The selected Zagreus return
-and Contract item remain pending: the available Contract helper is a partial
-frontier, so it is not claimed as a success checkpoint. The existing Well refill
+because its purchase and delivery chronology differ. It also adds the selected G
+Zagreus Contract, its reached G Miniboss return, and an acquired later G Preboss
+Contract `StackUpgrade` item with the selected Pom target. The partial Contract
+availability helper remains a distinct frontier input. The existing Well refill
 and Pool checkpoint retain their ownership.
 
 Travel Deal follow-up verification passed: fixture integrity (4 files / 36
 tests), focused assembler and authored-checkpoint scenarios (54 tests), workspace
 and fixture typechecks, and full ESLint. The independent review found no remaining
 actionable issue after the consumer cleanup; execution fixture bytes remain unchanged.
+
+The Contract follow-up passed fixture integrity (4 files / 37 tests) and focused
+assembler and authored-checkpoint scenarios (56 tests). Full typechecking, lint,
+formatting and diff checks passed; its independent review found no actionable
+findings. Execution fixture bytes remain unchanged.
 
 Detour-slice verification: fixture integrity (32 tests), focused C2 engine consumers and
 scenario witnesses (113 tests), and execution-fixture byte checks (20 tests)

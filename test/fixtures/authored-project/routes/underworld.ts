@@ -774,6 +774,100 @@ export function createGContractAvailabilityProject(
   return Object.freeze({ project, laterShop });
 }
 
+/** Complete selected G Zagreus return with the later acquired Preboss Contract item. */
+export function underworldZagreusContractProject(): ProjectDocument {
+  const midshop = goldenGOccurrenceId(5, 1);
+  const contract = createOccurrenceId('zagreus-contract-showcase');
+  const returned = createOccurrenceId('zagreus-contract-return');
+  const prebossShop = createOccurrenceId('zagreus-contract-preboss-shop');
+  const prebossPeer = createOccurrenceId('zagreus-contract-preboss-peer');
+  const contractSource = { kind: 'occurrence' as const, occurrenceId: contract };
+  const returnSource = { kind: 'occurrence' as const, occurrenceId: returned };
+  let project = createCompleteFGProject();
+  project = applyProjectCommand(project, catalog, {
+    kind: 'AddZagreusContract',
+    additional: createAdditionalExitAddress(goldenGBiome, midshop, 'zagreusContract'),
+    occurrenceId: contract,
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'SetExitSelection',
+    selection: createExitSelectionAddress(goldenGBiome, {
+      kind: 'occurrence',
+      occurrenceId: midshop,
+    }),
+    value: { kind: 'additional', additionalExitKey: 'zagreusContract' },
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'RemoveExitDecision',
+    decision: createExitDecisionAddress(goldenGBiome, contractSource),
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'CreateBatch',
+    decision: createExitDecisionAddress(goldenGBiome, contractSource),
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceBatchRewardStore',
+    rewardStore: createBatchRewardStoreAddress(goldenGBiome, contractSource),
+    storeKey: 'RunProgress',
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'CreateTarget',
+    target: createTargetAddress(goldenGBiome, contractSource, 'exit1'),
+    occurrenceId: returned,
+    gameName: 'G_MiniBoss03',
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceIncomingReward',
+    reward: createIncomingRewardAddress(goldenGBiome, returned),
+    value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'ApolloUpgrade' } },
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'CreateTakeoverBatch',
+    decision: createExitDecisionAddress(goldenGBiome, returnSource),
+    gameName: 'G_PreBoss01',
+    targetOccurrenceIds: { exit1: prebossShop, exit2: prebossPeer },
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceIncomingReward',
+    reward: createIncomingRewardAddress(goldenGBiome, prebossPeer),
+    value: { rewardType: 'MaxManaDrop' },
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'SetExitSelection',
+    selection: createExitSelectionAddress(goldenGBiome, returnSource),
+    value: { kind: 'normal', exitKey: 'exit1' },
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceBossDoorRewardStore',
+    rewardStore: createBatchRewardStoreAddress(goldenGBiome, {
+      kind: 'occurrence',
+      occurrenceId: prebossShop,
+    }),
+    storeKey: 'RunProgress',
+  });
+  for (const [offerKey, value] of Object.entries({
+    Boon: {
+      rewardType: 'RandomLoot' as const,
+      payload: { kind: 'BoonSource' as const, source: 'ApolloUpgrade' as const },
+    },
+    MajorNonBoon: { rewardType: 'MaxHealthDrop' as const },
+    Minor: { rewardType: 'MaxManaDrop' as const },
+    infernalContractReward: { rewardType: 'StackUpgrade' as const },
+  }))
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceShopOffer',
+      offer: createShopOfferAddress(goldenGBiome, prebossShop, offerKey),
+      value,
+    });
+  project = replaceTestShopOfferActions(
+    project,
+    catalog,
+    createOccurrenceAddress(goldenGBiome, prebossShop),
+    ['infernalContractReward'],
+  );
+  return authorLegalTraitOffers(project);
+}
+
 /** Short F/G witness: the F Postboss Pool sells one of its realized traits. */
 export function createUnderworldFPoolCheckpoint(): ProjectDocument {
   let project = createCompleteFGProject();

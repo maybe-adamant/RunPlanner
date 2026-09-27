@@ -29,6 +29,7 @@ import {
   loadUnderworldIxionChaosCheckpoint,
   loadUnderworldTwistScyllaCheckpoint,
   loadUnderworldWorldShopTravelDealCheckpoint,
+  loadUnderworldZagreusContractCheckpoint,
 } from '@run-planner/test-fixtures/checkpoints/underworld';
 import {
   loadSurfaceEncounterShowcaseCheckpoint,
@@ -220,9 +221,11 @@ it('exports the settled Ixion Chaos acquisition and reloads its edited selection
   });
   const reloaded = reload(edited.present);
   expect(reloaded).toEqual(edited.present);
+  const chaosTransaction = plan(reloaded).occurrences.find(
+    (room) => room.id === 'golden-g-intro:chaos',
+  )?.timeline.transactions[0];
   expect(
-    plan(reloaded).occurrences.find((room) => room.id === 'golden-g-intro:chaos')?.timeline
-      .transactions[0]?.roles[0]?.traitOffer,
+    chaosTransaction?.kind === 'acquisition' ? chaosTransaction.roles[0]?.traitOffer : undefined,
   ).toMatchObject({
     kind: 'chaos',
     selected: 'option1',
@@ -433,6 +436,73 @@ it('exports the acquired Shrine Travel Deal delivery and retains its removal thr
       kind: 'acquisition',
       reward: expect.objectContaining({ rewardType: 'ArmorBoost' }),
       hermesShrineSourceKey: refillSourceKey,
+    }),
+  );
+  expect(undoProjectHistory(edited).present).toBe(saved);
+});
+
+it('exports the selected Zagreus Contract return and acquired Preboss Contract item, then reloads its repair', () => {
+  const saved = loadUnderworldZagreusContractCheckpoint();
+  const contract = createOccurrenceId('zagreus-contract-showcase');
+  const returned = createOccurrenceId('zagreus-contract-return');
+  const prebossShop = createOccurrenceId('zagreus-contract-preboss-shop');
+  const item = createShopOfferAddress(goldenGBiome, prebossShop, 'infernalContractReward');
+  const published = plan(saved);
+  expect(published.occurrences.find((room) => room.id === contract)).toMatchObject({
+    gameName: 'C_Boss01',
+  });
+  expect(published.occurrences.find((room) => room.id === returned)).toMatchObject({
+    gameName: 'G_MiniBoss03',
+  });
+  expect(
+    published.occurrences.find((room) => room.id === contract)?.timeline.transactions,
+  ).toContainEqual(
+    expect.objectContaining({
+      kind: 'acquisition',
+      sourceOwner: semanticAddressKey(createIncomingRewardAddress(goldenGBiome, contract)),
+      reward: expect.objectContaining({ rewardType: 'InfernalContractBoon' }),
+      roles: expect.arrayContaining([
+        expect.objectContaining({ gameName: 'InfernalContractBoon' }),
+      ]),
+    }),
+  );
+  expect(
+    published.occurrences.find((room) => room.id === prebossShop)?.timeline.transactions,
+  ).toContainEqual(
+    expect.objectContaining({
+      kind: 'acquisition',
+      sourceOwner: semanticAddressKey(item),
+      reward: expect.objectContaining({ rewardType: 'StackUpgrade' }),
+      roles: expect.arrayContaining([
+        expect.objectContaining({
+          gameName: 'StackUpgrade',
+          levelResolution: expect.objectContaining({ selectedTarget: 'ApolloWeaponBoon' }),
+        }),
+      ]),
+    }),
+  );
+  const edited = applyProjectHistoryCommand(createProjectHistory(saved), catalog, {
+    kind: 'ReplaceShopOffer',
+    offer: item,
+    value: { rewardType: 'StackUpgradeBig' },
+  });
+  const reloaded = reload(edited.present);
+  expect(reloaded).toEqual(edited.present);
+  expect(simulateProjectAssembly(catalog, reloaded).evaluation.findings).toContainEqual(
+    expect.objectContaining({
+      code: 'missingPomTarget',
+      evidence: {
+        acquisitionRole: 'self',
+        levelCount: 2,
+        lifecyclePoint: 'roomExit',
+      },
+      origin: {
+        kind: 'levelResolution',
+        routeKey: 'Underworld',
+        biomeKey: 'G',
+        owner: item,
+        acquisitionRole: 'self',
+      },
     }),
   );
   expect(undoProjectHistory(edited).present).toBe(saved);
