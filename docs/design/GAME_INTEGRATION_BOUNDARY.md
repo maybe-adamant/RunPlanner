@@ -107,6 +107,10 @@ install assembled at runtime from the local `game-module/` checkout through
 the same flow; such an install is publishable in development builds while its
 files match its record.
 
+A planner update carries a new module, so the installed copy stops matching
+the build: status offers **Update** and sending stays blocked until it runs.
+The planner does not check whether the game is running.
+
 **Create bug report…** (Game panel and About, desktop only) saves one zip
 where the user chooses. The host assembles it from explicit inputs:
 `report.json` (planner facts supplied by the application, including the last
@@ -138,8 +142,8 @@ changes: a clean file sends, a file with unsaved changes offers **Save and
 send**, which saves in place first, and a never-saved project offers **Save and
 send…**, which opens Save As and sends under the chosen name, or sends nothing
 if cancelled. Execution protocol 49 carries the stem as the optional,
-presentation-only `displayName`, which is outside `planFingerprint`; the game module accepts and
-ignores it. Save As from an already-saved file gives the copy a new `projectId`
+presentation-only `displayName`, which is outside `planFingerprint`; the game module accepts it
+and only logs it. Save As from an already-saved file gives the copy a new `projectId`
 (the first save of a never-saved project keeps its own), so earlier sends no
 longer match it.
 
