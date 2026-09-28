@@ -29,6 +29,7 @@ export function normalizeWeapons(
     return Object.freeze({
       key: requireNonEmpty(weapon.key, `${path}.key`),
       label: requireNonEmpty(weapon.label, `${path}.label`),
+      shortLabel: requireNonEmpty(weapon.shortLabel, `${path}.shortLabel`),
       aspectKeys,
       defaultAspectKey,
     });

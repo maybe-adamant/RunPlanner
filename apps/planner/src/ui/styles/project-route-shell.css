@@ -678,12 +678,19 @@
 }
 
 .game-panel-dialog {
-  width: min(100%, 36rem);
+  width: 880px;
+  max-width: min(880px, 92vw);
+}
+
+.game-panel-section {
+  margin-top: 16px;
 }
 
 .game-panel-section h3 {
-  margin: 12px 0 8px;
-  font-size: 0.95rem;
+  margin: 0 0 8px;
+  color: var(--muted, #aaa7af);
+  font-size: 0.85rem;
+  font-weight: 700;
 }
 
 .game-panel-status-list {
@@ -718,15 +725,43 @@
 }
 
 .game-panel-location-line h3 {
-  margin: 12px 0 8px;
-  color: #aaa7af;
-  font-size: 0.85rem;
+  margin: 0;
+}
+
+.game-panel-module-status-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 0 0 8px;
 }
 
 .game-panel-module-status {
-  margin: 0 0 8px;
+  margin: 0;
   font-size: 0.85rem;
   font-weight: 700;
+}
+
+.game-panel-text-action {
+  flex: 0 0 auto;
+  padding: 0;
+  border: 0;
+  color: var(--muted, #aaa7af);
+  background: none;
+  font: inherit;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+
+.game-panel-text-action:hover:not(:disabled),
+.game-panel-text-action:focus-visible {
+  color: #f0a3a3;
+  text-decoration: underline;
+}
+
+.game-panel-text-action:disabled {
+  cursor: default;
+  opacity: 0.6;
 }
 
 .game-panel-steps {
@@ -834,7 +869,26 @@
   border-bottom: 1px solid #363741;
   text-align: left;
   vertical-align: baseline;
-  overflow-wrap: anywhere;
+  white-space: nowrap;
+}
+
+.game-panel-slots .game-panel-slot-wrap {
+  white-space: normal;
+}
+
+.game-panel-slots .game-panel-slot-action {
+  text-align: right;
+}
+
+.game-panel-slot-unnamed {
+  color: var(--muted, #aaa7af);
+  font-style: italic;
+}
+
+/* Empty slots recede; their send action keeps full contrast. */
+.game-panel-slots tr[data-state='empty'] > th,
+.game-panel-slots tr[data-state='empty'] > .game-panel-slot-summary {
+  opacity: 0.6;
 }
 
 .game-panel-slots thead th {
@@ -881,6 +935,11 @@
   .game-panel-slots td {
     padding: 0;
     border: 0;
+    white-space: normal;
+  }
+
+  .game-panel-slots .game-panel-slot-action {
+    text-align: left;
   }
 
   .game-panel-slots td[data-label]::before {

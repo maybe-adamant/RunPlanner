@@ -40,6 +40,31 @@ describe('trait catalog closure', () => {
       }),
     ).toThrow('unknown route MissingRoute');
   });
+
+  it('gives every weapon a short label and requires one', () => {
+    expect(
+      Object.fromEntries(catalog.weapons.values.map((weapon) => [weapon.key, weapon.shortLabel])),
+    ).toEqual({
+      WeaponStaffSwing: 'Staff',
+      WeaponDagger: 'Blades',
+      WeaponAxe: 'Axe',
+      WeaponTorch: 'Flames',
+      WeaponLob: 'Skull',
+      WeaponSuit: 'Coat',
+    });
+    expect(() =>
+      createCatalog({
+        ...declarations,
+        traitCatalog: {
+          ...declarations.traitCatalog,
+          weapons: declarations.traitCatalog.weapons.map((weapon) =>
+            weapon.key === 'WeaponAxe' ? { ...weapon, shortLabel: '' } : weapon,
+          ),
+        } as never,
+      }),
+    ).toThrow(/weapons\[2\]\.shortLabel/);
+  });
+
   it('preserves the compiler boundary failure order across independent malformed inputs', () => {
     const mutate = (patch: Record<string, unknown>) =>
       createCatalog({
