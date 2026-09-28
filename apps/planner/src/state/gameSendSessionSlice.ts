@@ -4,25 +4,35 @@ import type { GamePlanSlotNumber } from '../persistence/gameModuleHost';
 import { newProjectCreated, profileLoadSucceeded } from './profileSessionSlice';
 import { authoredProjectReplaced, projectIdentityMinted } from './projectWorkspaceSlice';
 
+export interface GameSendFailure {
+  readonly message: string;
+  readonly atMs: number;
+}
+
 /** UI-session memory of sends for the loaded project; never persisted or in history. */
 export interface GameSendSessionState {
   readonly lastSentSlot: GamePlanSlotNumber | null;
-  readonly feedback: { readonly tone: 'success' | 'failure'; readonly text: string } | null;
+  /** The latest send's failure, kept until the next send starts. */
+  readonly lastFailure: GameSendFailure | null;
 }
 
+export const gameSendStarted = createAction('gameSend/started');
 export const gamePlanSent = createAction<{ readonly slot: GamePlanSlotNumber }>(
   'gameSend/planSent',
 );
-export const gameSendFeedbackShown =
-  createAction<NonNullable<GameSendSessionState['feedback']>>('gameSend/feedbackShown');
+export const gameSendFailed = createAction<GameSendFailure>('gameSend/failed');
 
-const INITIAL_STATE: GameSendSessionState = Object.freeze({ lastSentSlot: null, feedback: null });
+const INITIAL_STATE: GameSendSessionState = Object.freeze({
+  lastSentSlot: null,
+  lastFailure: null,
+});
 
 export function createGameSendSessionReducer(): Reducer<GameSendSessionState> {
   return createReducer(INITIAL_STATE, (builder) => {
     builder
+      .addCase(gameSendStarted, (state) => ({ ...state, lastFailure: null }))
       .addCase(gamePlanSent, (state, action) => ({ ...state, lastSentSlot: action.payload.slot }))
-      .addCase(gameSendFeedbackShown, (state, action) => ({ ...state, feedback: action.payload }))
+      .addCase(gameSendFailed, (state, action) => ({ ...state, lastFailure: action.payload }))
       // Loading, creating or copying the document starts a fresh send session.
       .addCase(newProjectCreated, () => INITIAL_STATE)
       .addCase(profileLoadSucceeded, () => INITIAL_STATE)

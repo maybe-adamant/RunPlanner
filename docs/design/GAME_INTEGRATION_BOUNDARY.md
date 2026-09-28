@@ -146,18 +146,37 @@ and **older version** otherwise, by plain identity equality. **Send here** fills
 and send forms when a save is needed; all are absent while the current project
 cannot compile, which the panel explains from the compiler's error code: a
 known route, extent or opening code gets its own sentence, and any other failure
-asks to resolve the plan's findings, never showing raw compiler text. The planner
-remembers the last slot sent for the loaded project as UI-session state only: a
-send from the Game panel or the header sets it, and loading, creating or
-replacing the document, or restarting, clears it. The header **Send to game
-(slot N)**, or **Save and send to game (slot N)** with unsaved changes,
-re-sends there only while the module is ready, the engine reports the
-project eligible for an execution plan, and that slot is empty or holds the same
-`projectId`, so it never overwrites another project's plan; it compiles only
-when clicked. Its always-present status line reports the outcome with the local
-send time and clears when another project loads. The header Game button
-shows the same overall state as the panel with a distinct symbol and a text
-alternative, including when status could not be read.
+asks to resolve the plan's findings, never showing raw compiler text. That
+reason shows in a warning callout with a **Show findings** action, present only
+when the evaluation has a next repair, which closes the panel and navigates to
+it exactly as the Next repair banner does. The planner remembers the last slot
+sent for the loaded project as UI-session state only: a send from the Game panel
+or the header sets it, and loading, creating or replacing the document, or
+restarting, clears it.
+
+The header always shows one send button beside the Game button, with a fixed
+minimum width so no state shifts the header, and explains every state in its
+title and accessible description:
+
+| State                                  | Label                         | Clicking                                     |
+| -------------------------------------- | ----------------------------- | -------------------------------------------- |
+| No project open                        | Send to game                  | nothing (Open a plan first)                  |
+| Module not ready                       | Send to game                  | nothing (Set up the game in the Game panel)  |
+| Engine reports the plan ineligible     | Send to game                  | nothing (the Game panel's reason)            |
+| No usable session slot, or never saved | Send to game…                 | opens the Game panel at Plans                |
+| Ready                                  | Send · Slot N                 | sends, saving unsaved changes in place first |
+| Saving, then sending                   | Saving…, Sending…             | nothing                                      |
+| Result, for 3 seconds                  | ✓ Sent · Slot N or ! Not sent | nothing                                      |
+
+It re-sends only to the session slot, and only while it is empty or holds the
+same `projectId`, so it never overwrites another project's plan. It reads the
+engine's execution-plan eligibility without compiling and compiles only when
+clicked. A hidden status region announces each result. A failed send, from
+either place, is kept as UI-session state until the next send or a document
+replacement: the Game panel shows it as a Last send notice and the Game button
+shows **!** ("Game — last send failed"). Otherwise the Game button shows the same
+overall state as the panel with a distinct symbol and a text alternative,
+including when status could not be read.
 
 The compiler consumes the exact simulation assembly that the planner already
 validated. It does not rerun candidate policy or duplicate validation. The

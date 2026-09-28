@@ -4,6 +4,7 @@ import { type AssessmentIssue } from '@run-planner/engine/simulation';
 
 import {
   findingDestinationLabel,
+  nextRepairSelection,
   presentAssessmentIssue,
   type StatusPresentation,
 } from '@planner/projections/evaluationProjection';
@@ -87,22 +88,7 @@ export function ProjectFindings({
         aria-current={selectedKey === issue.regionKey ? 'true' : undefined}
         className="assessment-issue-button"
         data-selected={selectedKey === issue.regionKey}
-        onClick={() =>
-          dispatch(
-            findingSelected({
-              focusAddress: destination?.focusAddress ?? issue.owner,
-              key: issue.regionKey,
-              origin: issue.owner,
-              ...(destination?.presentationPanel === undefined
-                ? {}
-                : { presentationPanel: { kind: destination.presentationPanel } as const }),
-              // Banner selection reaches an existing visible launcher. Dialogs
-              // remain explicit local editing actions, including for trait offers.
-              traitDialogTarget: null,
-              levelResolutionDialogTarget: null,
-            }),
-          )
-        }
+        onClick={() => dispatch(findingSelected(nextRepairSelection(issue, focusByOwner)))}
         type="button"
       >
         <span className="assessment-issue-summary">

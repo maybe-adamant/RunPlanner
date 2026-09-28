@@ -3,6 +3,7 @@ import type { Catalog } from '@run-planner/engine/catalog-schema';
 import type { ExecutionCompilerError } from '@run-planner/engine/execution-plan';
 import type { ProfileStatus } from '@planner/state/store';
 import type { CurrentGamePlan } from '@planner/workspace/projectOperations';
+import type { GameSendFailure } from '@planner/state/gameSendSessionSlice';
 import type {
   GameModuleInstallResult,
   GameModuleRemoveResult,
@@ -448,7 +449,8 @@ export function describeRemoveOutcome(outcome: GameModuleRemoveResult['outcome']
 }
 
 export interface GameIndicator {
-  readonly state: 'ready' | 'needsSetup' | 'noLocation' | 'checking' | 'unavailable';
+  readonly state:
+    'ready' | 'needsSetup' | 'noLocation' | 'checking' | 'unavailable' | 'lastSendFailed';
   readonly symbol: '✓' | '!' | '○' | '…';
   readonly accessibleName: string;
 }
@@ -459,9 +461,22 @@ function isReady(status: GameModuleStatus): boolean {
   );
 }
 
-/** The header indicator: one overall state from the same host facts as the Game panel. */
-export function projectGameIndicator(snapshot: GameStatusSnapshot): GameIndicator {
+/**
+ * The header indicator: one overall state from the same host facts as the Game panel. A failed
+ * last send outranks every state once status is known.
+ */
+export function projectGameIndicator(
+  snapshot: GameStatusSnapshot,
+  lastSendFailed = false,
+): GameIndicator {
   const { status, error } = snapshot;
+  if (lastSendFailed && (status !== null || error !== null)) {
+    return {
+      state: 'lastSendFailed',
+      symbol: '!',
+      accessibleName: 'Game — last send failed',
+    };
+  }
   if (status === null) {
     return error === null
       ? { state: 'checking', symbol: '…', accessibleName: 'Game — checking' }
@@ -618,13 +633,13 @@ function unavailableReason(current: CurrentGamePlan): string | null {
     case 'noProject':
       return 'Open a project to send it to the game.';
     case 'notPublishable':
-      return notPublishableReason(current.code);
+      return describeNotPublishable(current.code);
   }
 }
 
 const RESOLVE_FINDINGS = 'Resolve this plan’s findings before sending it.';
 
-function notPublishableReason(code: ExecutionCompilerError['code'] | null): string {
+export function describeNotPublishable(code: ExecutionCompilerError['code'] | null): string {
   switch (code) {
     case 'unsupportedRoute':
       return 'The game module can’t run this route yet.';
@@ -664,30 +679,117 @@ export function projectGamePlans(
   });
 }
 
-export interface GameQuickSend {
-  readonly slot: GamePlanSlotNumber;
-  readonly label: string;
+export type GameSendActivity =
+  | { readonly kind: 'idle' }
+  | { readonly kind: 'sending' }
+  | { readonly kind: 'sent'; readonly slot: GamePlanSlotNumber; readonly atMs: number }
+  | { readonly kind: 'failed' };
+
+export type GameSendButtonLabel =
+  | 'Send to game'
+  | 'Send to game…'
+  | `Send · Slot ${GamePlanSlotNumber}`
+  | 'Saving…'
+  | 'Sending…'
+  | `✓ Sent · Slot ${GamePlanSlotNumber}`
+  | '! Not sent';
+
+export interface GameSendButton {
+  readonly state:
+    | 'noProject'
+    | 'notReady'
+    | 'notSendable'
+    | 'chooseSlot'
+    | 'ready'
+    | 'saving'
+    | 'sending'
+    | 'sent'
+    | 'failed';
+  readonly label: GameSendButtonLabel;
+  /** Present only while clicking does something. */
+  readonly action:
+    | { readonly kind: 'send'; readonly slot: GamePlanSlotNumber }
+    | { readonly kind: 'openPlans' }
+    | null;
+  readonly description: string | null;
+}
+
+/** The header's open project, with the engine's execution-plan eligibility. */
+export interface GameSendProject {
+  readonly projectId: string;
+  readonly eligible: boolean;
+}
+
+function localTime(ms: number): string {
+  return new Date(ms).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+}
+
+function inactive(
+  state: GameSendButton['state'],
+  label: GameSendButtonLabel,
+  description: string | null,
+): GameSendButton {
+  return { state, label, action: null, description };
 }
 
 /**
- * The header re-send to the slot last sent in this session for the loaded project: a ready
- * target, an engine-eligible project, and a slot that is empty or already holds this project.
- * Unsaved changes are saved in place first.
+ * The always-present header send. It re-sends only to the slot last sent in this session for the
+ * loaded project, while that slot is empty or still holds this project; otherwise it opens the
+ * Game panel's plans. It uses the engine's eligibility without compiling.
  */
-export function projectGameQuickSend(
+export function projectGameSendButton(
   status: GameModuleStatus | null,
-  sendableProjectId: string | null,
+  project: GameSendProject | null,
   lastSentSlot: GamePlanSlotNumber | null,
   saveState: GameSaveState,
-): GameQuickSend | null {
-  if (status === null || lastSentSlot === null || sendableProjectId === null) return null;
-  if (!isReady(status) || saveState === 'unsaved') return null;
+  activity: GameSendActivity,
+): GameSendButton {
+  switch (activity.kind) {
+    case 'sending':
+      return saveState === 'clean'
+        ? inactive('sending', 'Sending…', null)
+        : inactive('saving', 'Saving…', null);
+    case 'sent':
+      return inactive(
+        'sent',
+        `✓ Sent · Slot ${activity.slot}`,
+        `Sent to slot ${activity.slot} at ${localTime(activity.atMs)}`,
+      );
+    case 'failed':
+      return inactive('failed', '! Not sent', 'Details are in the Game panel');
+    case 'idle':
+      break;
+  }
+  if (project === null) return inactive('noProject', 'Send to game', 'Open a plan first');
+  if (status === null || !isReady(status)) {
+    return inactive('notReady', 'Send to game', 'Set up the game in the Game panel');
+  }
+  if (!project.eligible) {
+    return inactive('notSendable', 'Send to game', describeNotPublishable('notEligible'));
+  }
   const slot = status.inspection?.planSlots.find((entry) => entry.slot === lastSentSlot);
   const ownSlot =
-    slot?.state === 'empty' || (slot?.state === 'present' && slot.projectId === sendableProjectId);
-  if (!ownSlot) return null;
+    slot?.state === 'empty' || (slot?.state === 'present' && slot.projectId === project.projectId);
+  if (lastSentSlot === null || !ownSlot || saveState === 'unsaved') {
+    return {
+      state: 'chooseSlot',
+      label: 'Send to game…',
+      action: { kind: 'openPlans' },
+      description: 'Choose a slot in the Game panel',
+    };
+  }
   return {
-    slot: lastSentSlot,
-    label: `${saveState === 'clean' ? 'Send' : 'Save and send'} to game (slot ${lastSentSlot})`,
+    state: 'ready',
+    label: `Send · Slot ${lastSentSlot}`,
+    action: { kind: 'send', slot: lastSentSlot },
+    description:
+      saveState === 'clean'
+        ? `Send this plan to slot ${lastSentSlot}`
+        : `Saves your changes, then sends to slot ${lastSentSlot}`,
   };
+}
+
+/** The Game panel's notice of the latest failed send. */
+export function describeLastSendFailure(failure: GameSendFailure): string {
+  return `Last send failed at ${localTime(failure.atMs)}: ${failure.message}`;
 }

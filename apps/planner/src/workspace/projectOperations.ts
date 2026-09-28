@@ -33,7 +33,7 @@ import {
   projectIdentityMinted,
   type PreparedProjectWorkspace,
 } from '../state/projectWorkspaceSlice';
-import { gamePlanSent } from '../state/gameSendSessionSlice';
+import { gamePlanSent, gameSendFailed, gameSendStarted } from '../state/gameSendSessionSlice';
 import { assertPublicProjectAdmission } from './project-admission';
 import {
   selectPresentProject,
@@ -217,6 +217,62 @@ export function createProjectOperations(
     activeProfileFile === null || selectProfileStatus(options.store.getState()) !== 'Clean'
       ? saveProfile()
       : null;
+  const sendToGame = async (slotNumber: GamePlanSlotNumber): Promise<ProjectOperationResult> => {
+    try {
+      if (options.gamePlanPublisher === undefined) {
+        throw new Error('Publish to Game is unavailable in this environment');
+      }
+      const workspace = options.store.getState().projectWorkspace;
+      if (workspace.kind !== 'openProject') throw new Error('No project is open');
+      // Checked before saving, so an unsendable plan is never saved on the way.
+      assembleExecutionProduct({ assembly: workspace.assembly, catalog: options.catalog });
+      // Sending needs a saved file with no unsaved changes; the file's name names the plan.
+      let saved = false;
+      const pendingSave = saveUnlessClean();
+      if (pendingSave !== null) {
+        const saving = await pendingSave;
+        if (saving.status === 'cancelled') {
+          return result('publishGame', 'cancelled', 'Send to game cancelled; nothing was sent.');
+        }
+        if (saving.status === 'failure') {
+          return result('publishGame', 'failure', `Not saved, so not sent: ${saving.message}`);
+        }
+        saved = true;
+      }
+      const notSent = (message: string) =>
+        result('publishGame', 'failure', saved ? `Saved, but not sent: ${message}` : message);
+      try {
+        // Compile the document as saved, since the save may have re-identified its history.
+        const savedWorkspace = options.store.getState().projectWorkspace;
+        if (savedWorkspace.kind !== 'openProject') throw new Error('No project is open');
+        const fileName = selectProfileSession(options.store.getState()).fileName;
+        const plan = compileExecutionPlan({
+          product: assembleExecutionProduct({
+            assembly: savedWorkspace.assembly,
+            catalog: options.catalog,
+          }),
+          ...(fileName === null ? {} : { displayName: planDisplayName(fileName) }),
+        });
+        const publication = await options.gamePlanPublisher.publish(
+          slotNumber,
+          encodeExecutionPlan(plan),
+        );
+        if (publication.status === 'published') {
+          options.store.dispatch(gamePlanSent({ slot: slotNumber }));
+          return result('publishGame', 'success', `Published to game, Slot ${slotNumber}.`);
+        }
+        return notSent(
+          publication.blockers.length > 0
+            ? publication.blockers.map(describePublicationBlocker).join(' ')
+            : publication.message,
+        );
+      } catch (error) {
+        return notSent(errorDetail(error));
+      }
+    } catch (error) {
+      return failure('publishGame', error);
+    }
+  };
   return Object.freeze({
     saveAsAvailable: options.profileFile.supportsSaveAs === true,
     async createNew(
@@ -313,60 +369,12 @@ export function createProjectOperations(
       return current;
     },
     async publishGame(slotNumber: GamePlanSlotNumber): Promise<ProjectOperationResult> {
-      try {
-        if (options.gamePlanPublisher === undefined) {
-          throw new Error('Publish to Game is unavailable in this environment');
-        }
-        const workspace = options.store.getState().projectWorkspace;
-        if (workspace.kind !== 'openProject') throw new Error('No project is open');
-        // Checked before saving, so an unsendable plan is never saved on the way.
-        assembleExecutionProduct({ assembly: workspace.assembly, catalog: options.catalog });
-        // Sending needs a saved file with no unsaved changes; the file's name names the plan.
-        let saved = false;
-        const pendingSave = saveUnlessClean();
-        if (pendingSave !== null) {
-          const saving = await pendingSave;
-          if (saving.status === 'cancelled') {
-            return result('publishGame', 'cancelled', 'Send to game cancelled; nothing was sent.');
-          }
-          if (saving.status === 'failure') {
-            return result('publishGame', 'failure', `Not saved, so not sent: ${saving.message}`);
-          }
-          saved = true;
-        }
-        const notSent = (message: string) =>
-          result('publishGame', 'failure', saved ? `Saved, but not sent: ${message}` : message);
-        try {
-          // Compile the document as saved, since the save may have re-identified its history.
-          const savedWorkspace = options.store.getState().projectWorkspace;
-          if (savedWorkspace.kind !== 'openProject') throw new Error('No project is open');
-          const fileName = selectProfileSession(options.store.getState()).fileName;
-          const plan = compileExecutionPlan({
-            product: assembleExecutionProduct({
-              assembly: savedWorkspace.assembly,
-              catalog: options.catalog,
-            }),
-            ...(fileName === null ? {} : { displayName: planDisplayName(fileName) }),
-          });
-          const publication = await options.gamePlanPublisher.publish(
-            slotNumber,
-            encodeExecutionPlan(plan),
-          );
-          if (publication.status === 'published') {
-            options.store.dispatch(gamePlanSent({ slot: slotNumber }));
-            return result('publishGame', 'success', `Published to game, Slot ${slotNumber}.`);
-          }
-          return notSent(
-            publication.blockers.length > 0
-              ? publication.blockers.map(describePublicationBlocker).join(' ')
-              : publication.message,
-          );
-        } catch (error) {
-          return notSent(errorDetail(error));
-        }
-      } catch (error) {
-        return failure('publishGame', error);
+      options.store.dispatch(gameSendStarted());
+      const outcome = await sendToGame(slotNumber);
+      if (outcome.status === 'failure') {
+        options.store.dispatch(gameSendFailed({ message: outcome.message, atMs: Date.now() }));
       }
+      return outcome;
     },
     async saveBeforeUpdate(): Promise<ProjectOperationResult> {
       if (options.store.getState().projectWorkspace.kind !== 'openProject') {

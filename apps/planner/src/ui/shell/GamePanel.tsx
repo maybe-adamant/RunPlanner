@@ -17,6 +17,7 @@ import { selectProfileStatus, useAppSelector } from '@planner/state/store';
 import type { ProjectOperations } from '@planner/workspace/projectOperations';
 import {
   describeInstallOutcome,
+  describeLastSendFailure,
   describeRemoveOutcome,
   gameSaveState,
   projectGamePanel,
@@ -57,6 +58,7 @@ function ModalDialog({
     } else if (!dialog.open) {
       dialog.setAttribute('open', '');
     }
+    dialog.querySelector<HTMLElement>('[data-initial-focus]')?.focus();
   }, []);
 
   return (
@@ -423,15 +425,38 @@ function ModuleSection({
   );
 }
 
+function Callout({
+  children,
+  label,
+  tone,
+}: {
+  readonly children: ReactNode;
+  readonly label: string;
+  readonly tone: 'warning' | 'error';
+}) {
+  return (
+    <div aria-label={label} className="game-panel-callout" data-tone={tone} role="group">
+      <span aria-hidden="true" className="game-panel-callout-icon">
+        !
+      </span>
+      {children}
+    </div>
+  );
+}
+
 function PlansSection({
   feedback,
+  focusPlans,
   focusSlot,
   onSend,
+  onShowFindings,
   pending,
   plans,
 }: {
+  readonly focusPlans: boolean;
   readonly focusSlot: { readonly slot: GamePlanSlotNumber; readonly request: number } | null;
   readonly feedback: Feedback | null;
+  readonly onShowFindings: (() => void) | undefined;
   readonly onSend: (slot: GamePlanSlotNumber, confirm: boolean) => void;
   readonly pending: boolean;
   readonly plans: GamePlansProduct;
@@ -448,9 +473,22 @@ function PlansSection({
   }, [focusSlot, pending]);
   return (
     <section aria-labelledby="game-plans-title" className="game-panel-section" ref={sectionRef}>
-      <h3 id="game-plans-title">Plans in game</h3>
+      <h3 {...(focusPlans ? { 'data-initial-focus': '' } : {})} id="game-plans-title" tabIndex={-1}>
+        Plans in game
+      </h3>
       {plans.unavailableReason === null ? null : (
-        <p className="game-publication-hint">{plans.unavailableReason}</p>
+        <Callout label="Can’t send" tone="warning">
+          <p>{plans.unavailableReason}</p>
+          {onShowFindings === undefined ? null : (
+            <button
+              className="secondary-action action-compact"
+              onClick={onShowFindings}
+              type="button"
+            >
+              Show findings
+            </button>
+          )}
+        </Callout>
       )}
       <table aria-labelledby="game-plans-title" className="game-panel-slots">
         <thead>
@@ -535,13 +573,18 @@ function PlansSection({
 
 function GameSection({
   catalog,
+  focusPlans,
   gameStatus,
+  onShowFindings,
   operations,
 }: {
   readonly catalog: Catalog;
+  readonly focusPlans: boolean;
   readonly gameStatus: GameStatusController;
+  readonly onShowFindings: (() => void) | undefined;
   readonly operations: ProjectOperations;
 }) {
+  const lastFailure = useAppSelector((state) => state.gameSendSession.lastFailure);
   const saveState = useAppSelector((state) =>
     gameSaveState(selectProfileStatus(state), state.profileSession.fileName),
   );
@@ -622,10 +665,10 @@ function GameSection({
     setReplaceSlot(null);
     try {
       const result = await operations.publishGame(slot);
-      setPlansFeedback({
-        tone: result.status === 'failure' ? 'alert' : 'status',
-        text: result.message,
-      });
+      // A failure is reported by the Last send notice.
+      setPlansFeedback(
+        result.status === 'failure' ? null : { tone: 'status', text: result.message },
+      );
       await gameStatus.refresh();
     } catch (error) {
       setPlansFeedback({ tone: 'alert', text: errorText(error) });
@@ -784,10 +827,17 @@ function GameSection({
           pending={pending}
         />
       )}
+      {lastFailure === null ? null : (
+        <Callout label="Last send" tone="error">
+          <p>{describeLastSendFailure(lastFailure)}</p>
+        </Callout>
+      )}
       {plans === null ? null : (
         <PlansSection
           feedback={plansFeedback}
+          focusPlans={focusPlans}
           focusSlot={focusSlot}
+          onShowFindings={onShowFindings}
           onSend={(slot, confirm) => {
             if (confirm) setReplaceSlot(slot);
             else void send(slot);
@@ -865,13 +915,19 @@ function GameSection({
 
 export function GamePanel({
   catalog,
+  focusPlans = false,
   gameStatus,
   onClose,
+  onShowFindings,
   operations,
 }: {
   readonly catalog: Catalog;
+  /** Opens with focus on Plans in game when they show. */
+  readonly focusPlans?: boolean;
   readonly gameStatus?: GameStatusController;
   readonly onClose: () => void;
+  /** Present only when the evaluation has a finding to navigate to. */
+  readonly onShowFindings?: () => void;
   readonly operations: ProjectOperations;
 }) {
   return (
@@ -887,7 +943,13 @@ export function GamePanel({
           Game location and game module management are available in the desktop application.
         </p>
       ) : (
-        <GameSection catalog={catalog} gameStatus={gameStatus} operations={operations} />
+        <GameSection
+          catalog={catalog}
+          focusPlans={focusPlans}
+          gameStatus={gameStatus}
+          onShowFindings={onShowFindings}
+          operations={operations}
+        />
       )}
       <footer className="game-publication-actions">
         <button className="quiet-action" onClick={onClose} type="button">
