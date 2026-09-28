@@ -233,14 +233,38 @@ identity. Official CI builds supply one validated release version to Tauri and
 the frontend, together with the source commit. Local builds identify themselves
 as Development. About is available without an open project.
 
-Release discovery is an optional host capability, not a startup dependency.
-Official desktop builds check once asynchronously; application policy compares
-stable versions and requires the matching portable archive and checksum before
-offering a download. Native transport restricts requests and opened URLs to the
-official release source. React presents notifications and manual checks;
-neither checks nor downloads replace the executable or modify the project.
-The publishing workflow uploads assets to a draft before publication and does
-not replace assets on a published release.
+The desktop application ships as a per-user NSIS installer (no administrator
+rights, no code signing). Installed and development builds share one data
+home: Tauri derives the configuration, data and WebView storage directories
+from the bundle identifier, not the executable location, so the installed
+application reads what earlier portable builds of the same identifier wrote
+and needs no import. The uninstaller's optional "delete app data" choice
+removes those directories.
+
+Updates are an optional host capability, not a startup dependency. Official
+desktop builds ask the Tauri updater once asynchronously, and About offers a
+manual check. The updater reads `latest.json` from the latest published
+release, orders versions, and verifies the installer signature against the
+public key committed in `tauri.conf.json`. Application policy owns the notice
+state: a found update is announced, may be dismissed for the session or
+skipped by version, and installs only after the user confirms that the
+planner will close and reopen. An unsaved project is saved first through the
+ordinary save path (Save As when never saved), under the same save facts that
+gate sending to the game; a cancelled or failed save cancels the install. If
+the confirmed version was superseded, the pending one is offered instead.
+Native transport opens no other release URLs. React presents the notice and
+the manual check.
+
+The release workflow validates the version and refuses to build while the
+committed updater key is the placeholder or the signing secret is unset. It
+builds the installer uncached and without the signing key in its
+environment; a separate step with only the key and password signs the staged
+installer. It installs that installer, smoke-tests the installed executable,
+then uploads the installer, its signature and a `latest.json` whose signature
+key must match the committed key to a draft release before publication. It
+does not replace assets on a published release. A dry run stops after the
+launch test, creating no tag, draft or release. Moving both signing secrets
+into a `release` environment restricted to `main` is recommended hardening.
 
 TypeScript checks static contracts; runtime codecs protect external contacts.
 Vitest transformation alone is not a type proof. Correctness and performance

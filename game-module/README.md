@@ -20,9 +20,9 @@ to play it in Hades II. The app carries the mod and installs it for you.
 
 1. Install **adamant-ModpackLib** in your Hades II r2modman profile. r2modman
    installs its dependencies too.
-2. Download Run Planner from the
+2. Download and run the Run Planner installer from the
    [planner releases](https://github.com/maybe-adamant/RunPlanner/releases),
-   extract the portable ZIP, and open **RunPlanner.exe**.
+   then open **Run Planner**.
 3. Open the **Game** panel, choose **Find r2modman profiles**, and pick your
    profile (or **Choose folder…** for the folder containing `ReturnOfModding`
    in a manual Hell2Modding install). Then follow the Game module steps and

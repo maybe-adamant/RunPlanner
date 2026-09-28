@@ -1,7 +1,9 @@
 # Game module ownership, installer and self-update
 
-Status: locked 2026-09-27; implementation not started. All decisions below are
-owner-approved. No push or release until the owner requests one.
+Status: locked 2026-09-27. Gates 0 and A delivered; Gate B implemented and
+awaiting review and the owner's updater key; Gates C and D remain. All
+decisions below are owner-approved. No push or release until the owner
+requests one.
 Base: planner `094746d3`; executor `main` at the time the merge runs.
 
 ## Objective
@@ -78,8 +80,11 @@ Decided:
 - **T1.** ModpackLib is compatible when its version is at or above the
   module's declared requirement, with the same major.
 - **T2.** That requirement is read from the module's own manifest dependency.
-- **T3.** The installed application owns its data. It never silently reads
-  portable data; an explicit one-time import is offered instead.
+- **T3 (owner-approved amendment, Gate B).** The installed application owns
+  its data. Portable and installed builds resolve the same per-user config,
+  data and WebView directories from the bundle identifier, so there is no
+  separate portable data; the owner accepted the shared directories with no
+  import, replacing the original one-time import offer.
 - **T4.** There is no game-running check.
 - **D9.** Merge with `git subtree add --prefix=game-module` without squash,
   keeping executor history under the new path.
@@ -259,12 +264,17 @@ executor, independent review, one remediation pass, main-session commits.
 - **Docs.** Distribution and publication in `GAME_INTEGRATION_BOUNDARY.md`,
   and the README setup.
 
-### B — Installed application and self-update (deferred)
+### B — Installed application and self-update
 
-Do not start until the owner has used Gate A and decides between managed
-updates and staying portable. Tauri's updater supports Windows NSIS, Linux
-AppImage and macOS `.app` bundles, so choosing B does not preclude other
-platforms.
+Status: implemented and reviewed; the owner has set the two signing secrets
+and committed the real public key. The workflow has not been run. The owner's
+first `dry_run` dispatch (build, sign, install and launch test; no tag, draft
+or release) counts as the pre-release dry run. The owner decided that an
+unsaved project turns the update action into Save and install.
+Future hardening, tied to a later Tauri CLI upgrade: `require_signed_version`. D3 was verified against the shipped portable
+discovery: an installer-only newer release makes the startup check silent
+(one request, no notice) and a manual check reports "Update check
+unavailable."; nothing opens a download.
 
 - Per-user NSIS installer and `tauri-plugin-updater`, with a signed artifact
   and `latest.json`.
@@ -273,7 +283,8 @@ platforms.
   handles a release without portable assets quietly, with no error loop or
   broken notice.
 - Updater checks replace portable discovery, with the notification UX kept.
-- Self-contained app data, with the explicit one-time portable import.
+- Self-contained app data (T3: shared identifier-derived directories, no
+  import).
 - Tests: update-state logic and a pre-release dry run.
 - Docs: ARCHITECTURE host section, README, and retirement of
   `PORTABLE_README.txt`.
@@ -299,7 +310,7 @@ platforms.
   - ModpackLib missing or older: reported, with publishing blocked.
   - Each publish-blocking reason.
   - Development install.
-  - First launch of the installed app, with the portable import offer.
+  - First launch of the installed app, carrying portable-build settings.
   - One update cycle carrying the planner and the module together.
 
 ## Exclusions

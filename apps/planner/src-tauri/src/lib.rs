@@ -20,11 +20,14 @@ pub fn run() {
             profile_file_session::profile_file_activate,
             profile_file_session::profile_file_clear_active,
             profile_file_session::profile_file_write_active,
-            release_updates::release_check_latest,
+            release_updates::release_update_check,
+            release_updates::release_update_install,
             release_updates::external_open_url
         ])
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
+        .plugin(tauri_plugin_updater::Builder::new().build())
+        .manage(release_updates::PendingUpdate::default())
         .run(tauri::generate_context!())
         .expect("failed to run Run Planner");
 }

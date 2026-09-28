@@ -100,7 +100,49 @@ module lane needs Lua 5.2 (`lua` and `luac`) with LuaUnit and Luacheck from LuaR
 `PATH`. Use the narrowest truthful lane while developing; configuration,
 dependency, shared setup, and cross-layer changes require the complete gate.
 
-## Desktop preview
+## Desktop application
+
+### Install
+
+1. Download `RunPlanner-<version>-windows-x64-setup.exe` from the
+   [latest release](https://github.com/maybe-adamant/RunPlanner/releases/latest).
+   It needs 64-bit Windows 10 or 11; the installer fetches the Microsoft Edge
+   WebView2 Runtime if it is missing.
+2. Run the installer. It installs for your Windows account only and needs no
+   administrator rights.
+3. The installer is not code signed, so Windows SmartScreen may warn about an
+   unrecognized app. Choose **More info**, then **Run anyway**.
+4. Start **Run Planner** from the Start menu, then follow Game setup below.
+
+Settings, the remembered project file and autosave recovery live in your
+Windows profile, not the install folder, so an earlier portable build's data
+carries over. Project files (`.runplanner.json`) stay wherever you save them.
+
+Official releases check for updates without delaying startup, and About offers
+a manual check. When an update is found, choose **Update**, then
+**Install and restart**: the planner closes, installs the signed update
+and reopens. If there are unsaved changes, the button is **Save and install**
+and saves first; if the save is cancelled or fails, nothing is installed. If
+the installer fails after the planner has closed, reopen Run Planner from the
+Start menu and try again. **Later** hides the notice for this session; **Skip
+this version** hides it until a newer release. Development builds do not check for
+updates. Portable builds from before the installer do not detect installer
+releases; install once manually to start receiving updates.
+
+### Game setup
+
+1. Install `adamant-ModpackLib` in your Hades II r2modman profile. r2modman
+   also installs its dependencies. The planner reports ModpackLib and missing
+   dependencies but never installs them.
+2. In the desktop planner, open the **Game** panel. Under Game location, choose
+   **Find r2modman profiles** and pick your profile, or **Choose folder…** for
+   the folder that contains `ReturnOfModding` in a manual Hell2Modding install.
+3. Follow the Game module steps, ending with **Install**. The module is built
+   into the planner, so each planner release carries its matching module.
+4. Under Plans in game, choose **Send here** on a slot. Later sends can use
+   the header's **Send to game (slot N)**.
+
+### Development
 
 The desktop host wraps the same production Vite build without adding
 Rust-side domain behavior. Its native File menu remembers the last accepted
@@ -116,8 +158,8 @@ npm run desktop:dev
 npm run desktop:build
 ```
 
-To cross-build the portable Windows executable directly from WSL, install the
-Rust target once and run the dedicated build command:
+To cross-build the Windows executable directly from WSL, install the Rust
+target once and run the dedicated build command:
 
 ```bash
 sudo apt install gcc-mingw-w64-x86-64-posix
@@ -128,9 +170,14 @@ npm run desktop:build:windows
 The executable is written to
 `apps/planner/src-tauri/target/x86_64-pc-windows-gnu/release/run-planner.exe`.
 
-The manually dispatched **Windows portable** workflow builds, launch-tests,
-and packages the release. It embeds the release version and source commit shown
-in About, uploads the archive and checksum to a draft, then publishes it. Each
+The manually dispatched **Windows release** workflow builds and signs the
+installer, installs and launch-tests it, and publishes the release. It embeds
+the release version and source commit shown in About, uploads the installer,
+its updater signature and `latest.json` to a draft, then publishes it. It
+needs the `TAURI_SIGNING_PRIVATE_KEY` and `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`
+repository secrets and refuses to build while `plugins.updater.pubkey` in
+`apps/planner/src-tauri/tauri.conf.json` is the placeholder. Its `dry_run`
+input builds, signs and launch-tests without tagging or publishing. Each
 published version identifies one build; choose a new version for a new build.
 Run `npm run check` locally on the commit being
 released before dispatching it; packaging does not repeat that repository gate.
@@ -138,24 +185,6 @@ The separate **Desktop host** workflow checks Windows Rust compilation and runs
 the game host crate tests on Linux, and the
 **Game module** workflow runs `npm run test:game-module`, on pull requests and
 pushes to `main`.
-
-### Game setup
-
-1. Install `adamant-ModpackLib` in your Hades II r2modman profile. r2modman
-   also installs its dependencies. The planner reports ModpackLib and missing
-   dependencies but never installs them.
-2. In the desktop planner, open the **Game** panel. Under Game location, choose
-   **Find r2modman profiles** and pick your profile, or **Choose folder…** for
-   the folder that contains `ReturnOfModding` in a manual Hell2Modding install.
-3. Follow the Game module steps, ending with **Install**. The module is built
-   into the planner, so each planner release carries its matching module.
-4. Under Plans in game, choose **Send here** on a slot. Later sends can use
-   the header's **Send to game (slot N)**.
-
-Official desktop releases check for updates without delaying startup. Use About
-to check manually or identify your installed version. Download opens the new
-portable archive in your browser; the app does not install it automatically.
-Development builds do not check for releases automatically.
 
 The app's compatible-loading baseline is schema 86. Current files open without
 conversion; future approved schema changes must supply explicit migrations and

@@ -2,26 +2,26 @@ import { invoke as tauriInvoke } from '@tauri-apps/api/core';
 
 import type { BuildIdentity } from '../composition/buildIdentity';
 
-const officialRepository = 'maybe-adamant/RunPlanner';
-const portableSuffix = '-windows-x64-portable.zip';
-
-export interface ReleaseAsset {
-  readonly browserDownloadUrl: string;
-  readonly name: string;
-}
-
-export interface ReleaseMetadata {
-  readonly assets: readonly ReleaseAsset[];
-  readonly draft: boolean;
-  readonly htmlUrl: string;
-  readonly prerelease: boolean;
-  readonly tagName: string;
+/** A newer signed release announced by the updater manifest. */
+export interface AvailableUpdate {
+  readonly version: string;
 }
 
 export interface ReleaseUpdateHost {
-  checkLatestRelease(): Promise<ReleaseMetadata>;
-  openDownload(url: string): Promise<void>;
+  /** Resolves `null` when this build is current. */
+  checkForUpdate(): Promise<AvailableUpdate | null>;
+  /**
+   * Downloads, verifies and installs; the application closes and reopens on success.
+   * Resolves only when `version` is no longer the pending update, with the one pending now.
+   */
+  installUpdate(version: string): Promise<AvailableUpdate | null>;
 }
+
+/** Saves the open project if needed before the application closes to update. */
+export type SaveBeforeInstall = () => Promise<{
+  readonly status: 'cancelled' | 'failure' | 'success';
+  readonly message: string;
+}>;
 
 export interface ReleaseSkipPreference {
   read(): string | undefined;
@@ -33,38 +33,40 @@ export type ReleaseUpdateState =
   | { readonly kind: 'checking' }
   | { readonly kind: 'current' }
   | { readonly kind: 'unavailable' }
-  | { readonly kind: 'available'; readonly release: EligibleRelease };
-
-export interface EligibleRelease {
-  readonly archiveUrl: string;
-  readonly checksumUrl: string;
-  readonly version: string;
-}
+  | { readonly kind: 'available'; readonly version: string; readonly message?: string }
+  | { readonly kind: 'confirming'; readonly version: string }
+  | { readonly kind: 'saving'; readonly version: string }
+  | { readonly kind: 'installing'; readonly version: string }
+  | { readonly kind: 'installFailed'; readonly version: string };
 
 export interface ReleaseUpdateController {
   checkAutomatically(): void;
   checkManually(): Promise<void>;
-  download(): Promise<void>;
+  /** Asks the user to confirm installing the available update. */
+  requestInstall(): void;
+  cancelInstall(): void;
+  /** Saves if needed, then installs; only after `requestInstall`, or to retry a failed install. */
+  confirmInstall(): Promise<void>;
   later(): void;
   skip(): void;
   getSnapshot(): ReleaseUpdateState;
   subscribe(listener: () => void): () => void;
 }
 
-interface StableVersion {
-  readonly major: number;
-  readonly minor: number;
-  readonly patch: number;
-  readonly text: string;
-}
+const STABLE_SEMVER = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/;
 
 export function createTauriReleaseUpdateHost(
   invoke: <T>(command: string, args?: Record<string, unknown>) => Promise<T> = tauriInvoke,
 ): ReleaseUpdateHost {
   return Object.freeze({
-    checkLatestRelease: () => invoke<ReleaseMetadata>('release_check_latest'),
-    openDownload: (url: string) => invoke<void>('external_open_url', { url }),
+    checkForUpdate: () => invoke<AvailableUpdate | null>('release_update_check'),
+    installUpdate: (version: string) =>
+      invoke<AvailableUpdate | null>('release_update_install', { version }),
   });
+}
+
+function isStable(update: AvailableUpdate): boolean {
+  return STABLE_SEMVER.test(update.version);
 }
 
 export function createBrowserReleaseSkipPreference(
@@ -75,7 +77,7 @@ export function createBrowserReleaseSkipPreference(
     read: () => {
       try {
         const value = storage().getItem(key);
-        return parseStableVersion(value ?? '')?.text;
+        return value !== null && STABLE_SEMVER.test(value) ? value : undefined;
       } catch {
         return undefined;
       }
@@ -90,13 +92,14 @@ export function createBrowserReleaseSkipPreference(
   });
 }
 
+/** Update checks exist only for stable official builds; the updater owns version ordering. */
 export function createReleaseUpdateController(options: {
   readonly buildIdentity: BuildIdentity;
   readonly host: ReleaseUpdateHost;
+  readonly saveBeforeInstall: SaveBeforeInstall;
   readonly skipPreference: ReleaseSkipPreference;
 }): ReleaseUpdateController | undefined {
-  const currentVersion = parseStableVersion(options.buildIdentity.version);
-  if (currentVersion === undefined) return undefined;
+  if (!STABLE_SEMVER.test(options.buildIdentity.version)) return undefined;
 
   let automaticStarted = false;
   let inFlight: Promise<void> | undefined;
@@ -110,7 +113,11 @@ export function createReleaseUpdateController(options: {
     state = Object.freeze(next);
     for (const listener of listeners) listener();
   };
+  // A confirmation, save or install in progress is never replaced by a check result.
+  const installEngaged = () =>
+    state.kind === 'confirming' || state.kind === 'saving' || state.kind === 'installing';
   const check = (manual: boolean): Promise<void> => {
+    if (installEngaged()) return Promise.resolve();
     if (inFlight !== undefined) {
       if (manual) {
         if (!responseHandled) {
@@ -130,37 +137,43 @@ export function createReleaseUpdateController(options: {
     responseHandled = false;
     if (manual) publish({ kind: 'checking' });
     inFlight = options.host
-      .checkLatestRelease()
-      .then((metadata) => {
+      .checkForUpdate()
+      .then((update) => {
         responseHandled = true;
+        if (installEngaged()) return;
         const manual = manualRequested;
-        const assessment = assessRelease(metadata, currentVersion.text);
-        if (assessment.kind === 'current') {
+        if (update === null) {
           if (manual) publish({ kind: 'current' });
           return;
         }
-        if (assessment.kind === 'unavailable') {
+        if (!isStable(update)) {
           if (manual) publish({ kind: 'unavailable' });
           return;
         }
         if (
           !manual &&
-          (sessionDismissedVersion === assessment.release.version ||
-            options.skipPreference.read() === assessment.release.version)
+          (sessionDismissedVersion === update.version ||
+            options.skipPreference.read() === update.version)
         ) {
           return;
         }
-        publish({ kind: 'available', release: assessment.release });
+        publish({ kind: 'available', version: update.version });
       })
       .catch(() => {
         responseHandled = true;
-        if (manualRequested) publish({ kind: 'unavailable' });
+        if (manualRequested && !installEngaged()) publish({ kind: 'unavailable' });
       })
       .finally(() => {
         inFlight = undefined;
         manualRequested = false;
       });
     return inFlight;
+  };
+  const dismiss = (persist: boolean) => {
+    if (state.kind !== 'available' && state.kind !== 'installFailed') return;
+    sessionDismissedVersion = state.version;
+    if (persist) options.skipPreference.write(state.version);
+    publish({ kind: 'idle' });
   };
 
   return Object.freeze({
@@ -170,114 +183,52 @@ export function createReleaseUpdateController(options: {
       void check(false);
     },
     checkManually: () => check(true),
-    download: async () => {
+    requestInstall: () => {
       if (state.kind !== 'available') return;
+      publish({ kind: 'confirming', version: state.version });
+    },
+    cancelInstall: () => {
+      if (state.kind !== 'confirming') return;
+      publish({ kind: 'available', version: state.version });
+    },
+    confirmInstall: async () => {
+      if (state.kind !== 'confirming' && state.kind !== 'installFailed') return;
+      const version = state.version;
+      publish({ kind: 'saving', version });
+      let saving: Awaited<ReturnType<SaveBeforeInstall>>;
       try {
-        await options.host.openDownload(state.release.archiveUrl);
+        saving = await options.saveBeforeInstall();
+      } catch (error) {
+        saving = {
+          status: 'failure',
+          message: `Not saved, so not updated: ${error instanceof Error ? error.message : String(error)}`,
+        };
+      }
+      if (saving.status !== 'success') {
+        publish({ kind: 'available', version, message: saving.message });
+        return;
+      }
+      publish({ kind: 'installing', version });
+      try {
+        const pending = await options.host.installUpdate(version);
+        // The confirmed version was superseded; offer the one pending now instead.
+        publish(
+          pending === null
+            ? { kind: 'current' }
+            : isStable(pending)
+              ? { kind: 'available', version: pending.version }
+              : { kind: 'unavailable' },
+        );
       } catch {
-        publish({ kind: 'unavailable' });
+        publish({ kind: 'installFailed', version });
       }
     },
-    later: () => {
-      if (state.kind !== 'available') return;
-      sessionDismissedVersion = state.release.version;
-      publish({ kind: 'idle' });
-    },
-    skip: () => {
-      if (state.kind !== 'available') return;
-      sessionDismissedVersion = state.release.version;
-      options.skipPreference.write(state.release.version);
-      publish({ kind: 'idle' });
-    },
+    later: () => dismiss(false),
+    skip: () => dismiss(true),
     getSnapshot: () => state,
     subscribe: (listener: () => void) => {
       listeners.add(listener);
       return () => listeners.delete(listener);
     },
   });
-}
-
-export function compareStableVersions(left: string, right: string): number | undefined {
-  const leftVersion = parseStableVersion(left);
-  const rightVersion = parseStableVersion(right);
-  if (leftVersion === undefined || rightVersion === undefined) return undefined;
-  return (
-    leftVersion.major - rightVersion.major ||
-    leftVersion.minor - rightVersion.minor ||
-    leftVersion.patch - rightVersion.patch
-  );
-}
-
-export function eligibleRelease(
-  metadata: ReleaseMetadata,
-  currentVersion: string,
-): EligibleRelease | undefined {
-  const assessment = assessRelease(metadata, currentVersion);
-  return assessment.kind === 'available' ? assessment.release : undefined;
-}
-
-export function assessRelease(
-  metadata: ReleaseMetadata,
-  currentVersion: string,
-):
-  | { readonly kind: 'current' }
-  | { readonly kind: 'unavailable' }
-  | { readonly kind: 'available'; readonly release: EligibleRelease } {
-  if (metadata.draft || metadata.prerelease) return Object.freeze({ kind: 'unavailable' as const });
-  const version = parseStableVersion(
-    metadata.tagName.startsWith('v') ? metadata.tagName.slice(1) : '',
-  );
-  const comparison =
-    version === undefined ? undefined : compareStableVersions(version.text, currentVersion);
-  if (version === undefined || comparison === undefined) {
-    return Object.freeze({ kind: 'unavailable' as const });
-  }
-  if (comparison <= 0) return Object.freeze({ kind: 'current' as const });
-  const archiveName = `RunPlanner-${version.text}${portableSuffix}`;
-  const archive = metadata.assets.find((asset) => asset.name === archiveName);
-  const checksum = metadata.assets.find((asset) => asset.name === `${archiveName}.sha256`);
-  if (
-    archive === undefined ||
-    checksum === undefined ||
-    !isOfficialReleaseUrl(archive.browserDownloadUrl, metadata.tagName, archiveName) ||
-    !isOfficialReleaseUrl(checksum.browserDownloadUrl, metadata.tagName, checksum.name)
-  ) {
-    return Object.freeze({ kind: 'unavailable' as const });
-  }
-  return Object.freeze({
-    kind: 'available' as const,
-    release: Object.freeze({
-      archiveUrl: archive.browserDownloadUrl,
-      checksumUrl: checksum.browserDownloadUrl,
-      version: version.text,
-    }),
-  });
-}
-
-function parseStableVersion(value: string): StableVersion | undefined {
-  const match = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/.exec(value);
-  if (match === null) return undefined;
-  const major = Number(match[1]);
-  const minor = Number(match[2]);
-  const patch = Number(match[3]);
-  if (![major, minor, patch].every(Number.isSafeInteger)) return undefined;
-  return Object.freeze({ major, minor, patch, text: value });
-}
-
-function isOfficialReleaseUrl(value: string, tag: string, assetName: string): boolean {
-  try {
-    const url = new URL(value);
-    return (
-      url.protocol === 'https:' &&
-      url.hostname === 'github.com' &&
-      url.username === '' &&
-      url.password === '' &&
-      url.port === '' &&
-      url.pathname === `/${officialRepository}/releases/download/${tag}/${assetName}` &&
-      url.search === '' &&
-      url.hash === ''
-    );
-  } catch {
-    return false;
-  }
 }

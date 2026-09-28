@@ -29,8 +29,14 @@
     }
   },
   "bundle": {
-    "active": false,
-    "targets": [],
+    "active": true,
+    "targets": ["nsis"],
+    "createUpdaterArtifacts": true,
+    "windows": {
+      "nsis": {
+        "installMode": "currentUser"
+      }
+    },
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
@@ -44,5 +50,16 @@
       "icons/256x256.png",
       "icons/512x512.png"
     ]
+  },
+  "plugins": {
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEVEOTZDOEExM0I5OUYyN0UKUldSKzhwazdvY2lXN2MzMVNGR1pQQWFGOTV2V1l5dEg5Yis1dzRYTDk2VWFldFdweER3Z3huRjcK",
+      "endpoints": [
+        "https://github.com/maybe-adamant/RunPlanner/releases/latest/download/latest.json"
+      ],
+      "windows": {
+        "installMode": "passive"
+      }
+    }
   }
 }

@@ -1,5 +1,5 @@
-name: Windows portable
-run-name: Windows portable v${{ inputs.version }}
+name: Windows release
+run-name: Windows release v${{ inputs.version }}${{ inputs.dry_run && ' (dry run)' || '' }}
 
 on:
   workflow_dispatch:
@@ -8,6 +8,11 @@ on:
         description: 'Stable release version without the v prefix (for example, 0.1.0)'
         required: true
         type: string
+      dry_run:
+        description: 'Build, sign and launch-test only; create no tag, draft or release'
+        required: false
+        default: false
+        type: boolean
 
 permissions:
   contents: read
@@ -18,7 +23,7 @@ concurrency:
 
 jobs:
   build:
-    name: Build Windows x64 portable archive
+    name: Build signed Windows x64 installer
     runs-on: windows-latest
     timeout-minutes: 60
     outputs:
@@ -84,6 +89,20 @@ jobs:
           "release_sha=$env:GITHUB_SHA" >> $env:GITHUB_OUTPUT
           "tauri_config=$configPath" >> $env:GITHUB_OUTPUT
 
+      - name: Require updater signing configuration
+        shell: pwsh
+        env:
+          # Only whether the secret is set; the key itself reaches the signing step alone.
+          SIGNING_KEY_PRESENT: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY != '' }}
+        run: |
+          node scripts/updater-release.mjs assert-pubkey apps/planner/src-tauri/tauri.conf.json
+          if ($LASTEXITCODE -ne 0) {
+            throw 'Updater public key validation failed. See the diagnostic above.'
+          }
+          if ($env:SIGNING_KEY_PRESENT -ne 'true') {
+            throw 'The TAURI_SIGNING_PRIVATE_KEY repository secret must hold the updater signing key.'
+          }
+
       - name: Set up Node.js
         uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
         with:
@@ -96,12 +115,11 @@ jobs:
       - name: Set up Rust
         uses: dtolnay/rust-toolchain@4cda84d5c5c54efe2404f9d843567869ab1699d4 # stable 2026-08-03
 
-      - name: Cache Rust dependencies
-        uses: Swatinem/rust-cache@49a0bdc70d2e1b713ca9e2869b211fcce03d3c1c # v2
-        with:
-          workspaces: apps/planner/src-tauri -> target
-
-      - name: Build portable desktop executable
+      # The release build runs uncached, and without the signing key: dependency
+      # build scripts never see it. The key and password reach only the signing
+      # step. Moving both secrets into a `release` environment restricted to
+      # main is recommended hardening.
+      - name: Build installer
         shell: pwsh
         env:
           RUN_PLANNER_BUILD_COMMIT: ${{ steps.release.outputs.release_sha }}
@@ -109,13 +127,62 @@ jobs:
           RUN_PLANNER_RELEASE_VERSION: ${{ steps.release.outputs.release_version }}
           TAURI_RELEASE_CONFIG: ${{ steps.release.outputs.tauri_config }}
         run: |
-          npm exec --workspace @run-planner/planner -- tauri build --no-bundle --config "$env:TAURI_RELEASE_CONFIG" -- --locked
+          npm exec --workspace @run-planner/planner -- tauri build --bundles nsis --no-sign --config "$env:TAURI_RELEASE_CONFIG" -- --locked
 
-      - name: Smoke-test desktop launch
+      - name: Stage installer
+        id: package
         shell: pwsh
+        env:
+          RELEASE_VERSION: ${{ steps.release.outputs.release_version }}
         run: |
-          $binary = Resolve-Path "apps/planner/src-tauri/target/release/run-planner.exe"
-          $process = Start-Process $binary -PassThru
+          $bundle = 'apps/planner/src-tauri/target/release/bundle/nsis'
+          $installers = @(Get-ChildItem $bundle -Filter "*_$($env:RELEASE_VERSION)_x64-setup.exe")
+          if ($installers.Count -ne 1) {
+            throw "Expected one $env:RELEASE_VERSION NSIS installer in $bundle, found $($installers.Count)."
+          }
+
+          $artifactName = "RunPlanner-$env:RELEASE_VERSION-windows-x64-setup"
+          $staging = Join-Path $env:RUNNER_TEMP 'release'
+          $installer = Join-Path $staging "$artifactName.exe"
+          New-Item -ItemType Directory -Path $staging | Out-Null
+          Copy-Item $installers[0].FullName $installer
+
+          "artifact_name=$artifactName" >> $env:GITHUB_OUTPUT
+          "installer=$installer" >> $env:GITHUB_OUTPUT
+
+      - name: Sign installer for the updater
+        shell: pwsh
+        env:
+          INSTALLER: ${{ steps.package.outputs.installer }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        run: |
+          if ([string]::IsNullOrEmpty($env:TAURI_SIGNING_PRIVATE_KEY)) {
+            throw 'The TAURI_SIGNING_PRIVATE_KEY repository secret must hold the updater signing key.'
+          }
+          node node_modules/@tauri-apps/cli/tauri.js signer sign "$env:INSTALLER"
+          if ($LASTEXITCODE -ne 0) {
+            throw 'Updater signing failed.'
+          }
+          if (-not (Test-Path "$env:INSTALLER.sig")) {
+            throw "The updater signature $env:INSTALLER.sig was not produced."
+          }
+
+      - name: Install and smoke-test desktop launch
+        shell: pwsh
+        env:
+          INSTALLER: ${{ steps.package.outputs.installer }}
+        run: |
+          $setup = Start-Process $env:INSTALLER -ArgumentList '/S' -Wait -PassThru
+          if ($setup.ExitCode -ne 0) {
+            throw "The installer exited with code $($setup.ExitCode)."
+          }
+          $installDir = Join-Path $env:LOCALAPPDATA 'Run Planner'
+          $binaries = @(Get-ChildItem $installDir -Filter '*.exe' | Where-Object { $_.Name -notlike 'uninstall*' })
+          if ($binaries.Count -ne 1) {
+            throw "Expected one installed application executable in $installDir, found: $($binaries.Name -join ', ')."
+          }
+          $process = Start-Process $binaries[0].FullName -PassThru
           try {
             Start-Sleep -Seconds 8
             if ($process.HasExited) {
@@ -127,42 +194,20 @@ jobs:
             }
           }
 
-      - name: Create portable archive
-        id: package
-        shell: pwsh
-        env:
-          RELEASE_VERSION: ${{ steps.release.outputs.release_version }}
-        run: |
-          $artifactName = "RunPlanner-$env:RELEASE_VERSION-windows-x64-portable"
-          $staging = Join-Path $env:RUNNER_TEMP $artifactName
-          $archive = Join-Path $env:RUNNER_TEMP "$artifactName.zip"
-          $checksum = "$archive.sha256"
-
-          New-Item -ItemType Directory -Path $staging | Out-Null
-          Copy-Item "apps/planner/src-tauri/target/release/run-planner.exe" (Join-Path $staging "RunPlanner-$env:RELEASE_VERSION.exe")
-          Copy-Item "apps/planner/src-tauri/PORTABLE_README.txt" (Join-Path $staging "README.txt")
-          Compress-Archive -Path "$staging/*" -DestinationPath $archive
-
-          $hash = (Get-FileHash -Algorithm SHA256 $archive).Hash.ToLowerInvariant()
-          Set-Content -Path $checksum -Value "$hash  $artifactName.zip"
-
-          "artifact_name=$artifactName" >> $env:GITHUB_OUTPUT
-          "archive=$archive" >> $env:GITHUB_OUTPUT
-          "checksum=$checksum" >> $env:GITHUB_OUTPUT
-
       - name: Upload workflow artifact
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: ${{ steps.package.outputs.artifact_name }}
           path: |
-            ${{ steps.package.outputs.archive }}
-            ${{ steps.package.outputs.checksum }}
+            ${{ steps.package.outputs.installer }}
+            ${{ steps.package.outputs.installer }}.sig
           if-no-files-found: error
           retention-days: 30
 
   release:
     name: Publish tagged release
     needs: build
+    if: ${{ !inputs.dry_run }}
     runs-on: ubuntu-latest
     permissions:
       actions: read
@@ -174,7 +219,7 @@ jobs:
         with:
           fetch-depth: 1
 
-      - name: Download portable artifact
+      - name: Download installer artifact
         uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7
         with:
           name: ${{ needs.build.outputs.artifact_name }}
@@ -217,7 +262,25 @@ jobs:
               --title "Run Planner ${RELEASE_TAG}"
           fi
 
-      - name: Upload portable assets to draft
+      - name: Assemble updater manifest
+        env:
+          GH_REPO: ${{ github.repository }}
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_ARTIFACT: ${{ needs.build.outputs.artifact_name }}
+          RELEASE_TAG: ${{ needs.build.outputs.release_tag }}
+          RELEASE_VERSION: ${{ needs.build.outputs.release_version }}
+        run: |
+          gh release view "${RELEASE_TAG}" --json body --jq .body > release/notes.md
+          node scripts/updater-release.mjs manifest \
+            --config apps/planner/src-tauri/tauri.conf.json \
+            --version "${RELEASE_VERSION}" \
+            --repository "${GITHUB_REPOSITORY}" \
+            --asset "${RELEASE_ARTIFACT}.exe" \
+            --signature "release/${RELEASE_ARTIFACT}.exe.sig" \
+            --notes release/notes.md \
+            --out release/latest.json
+
+      - name: Upload installer assets to draft
         env:
           GH_REPO: ${{ github.repository }}
           GH_TOKEN: ${{ github.token }}
@@ -229,8 +292,9 @@ jobs:
             exit 1
           fi
           gh release upload "${RELEASE_TAG}" \
-            "release/${RELEASE_ARTIFACT}.zip" \
-            "release/${RELEASE_ARTIFACT}.zip.sha256" \
+            "release/${RELEASE_ARTIFACT}.exe" \
+            "release/${RELEASE_ARTIFACT}.exe.sig" \
+            release/latest.json \
             --clobber
 
       - name: Publish complete draft release
@@ -247,7 +311,7 @@ jobs:
             exit 1
           fi
           mapfile -t uploaded_assets < <(gh release view "${RELEASE_TAG}" --json assets --jq '.assets[].name')
-          for asset in "${RELEASE_ARTIFACT}.zip" "${RELEASE_ARTIFACT}.zip.sha256"; do
+          for asset in "${RELEASE_ARTIFACT}.exe" "${RELEASE_ARTIFACT}.exe.sig" latest.json; do
             if ! printf '%s\n' "${uploaded_assets[@]}" | grep -Fqx "${asset}"; then
               echo "Draft release ${RELEASE_TAG} is missing ${asset}." >&2
               exit 1

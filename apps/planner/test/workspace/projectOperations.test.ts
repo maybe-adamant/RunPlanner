@@ -1424,4 +1424,67 @@ describe('project profile operations', () => {
       message: 'Migrated the profile to schema 89.',
     });
   });
+
+  it('saves before an update only when the project is unsaved, through the same save path', async () => {
+    const profile = createProfileFixture();
+    const application = createApplication({ profileFile: profile.adapter });
+    expect(application.store.getState().projectWorkspace.kind).not.toBe('openProject');
+    await expect(application.projectOperations.saveBeforeUpdate()).resolves.toEqual({
+      operation: 'saveBeforeUpdate',
+      status: 'success',
+      message: 'No project is open.',
+    });
+    expect(profile.saveAsCount()).toBe(0);
+
+    configureF(application);
+    profile.setSaveCancelled(true);
+    await expect(application.projectOperations.saveBeforeUpdate()).resolves.toEqual({
+      operation: 'saveBeforeUpdate',
+      status: 'cancelled',
+      message: 'Update cancelled; the project was not saved.',
+    });
+    expect(selectProfileStatus(application.store.getState())).toBe('Unsaved');
+
+    profile.setSaveCancelled(false);
+    await expect(application.projectOperations.saveBeforeUpdate()).resolves.toMatchObject({
+      status: 'success',
+      message: 'Saved the profile.',
+    });
+    expect(profile.saveAsCount()).toBe(2);
+    expect(selectProfileStatus(application.store.getState())).toBe('Clean');
+
+    await expect(application.projectOperations.saveBeforeUpdate()).resolves.toMatchObject({
+      status: 'success',
+      message: 'The project is already saved.',
+    });
+    expect(profile.saves).toHaveLength(1);
+
+    application.store.dispatch(
+      authoredProjectCommandDispatched({
+        kind: 'ConfigureRoutePrefix',
+        route: createRouteAddress('Underworld'),
+        configuredBiomeCount: 2,
+      }),
+    );
+    expect(selectProfileStatus(application.store.getState())).toBe('Dirty');
+    await expect(application.projectOperations.saveBeforeUpdate()).resolves.toMatchObject({
+      status: 'success',
+    });
+    expect(profile.saveAsCount()).toBe(2);
+    expect(profile.saves).toHaveLength(2);
+    expect(selectProfileStatus(application.store.getState())).toBe('Clean');
+  });
+
+  it('reports a failed save before an update', async () => {
+    const application = createApplication({
+      profileFile: profileAdapter({
+        load: () => Promise.resolve(null),
+        saveAs: () => Promise.reject(new Error('disk full')),
+      }),
+    });
+    configureF(application);
+    const saving = await application.projectOperations.saveBeforeUpdate();
+    expect(saving.status).toBe('failure');
+    expect(saving.message).toMatch(/^Not saved, so not updated: Save Profile failed: disk full/);
+  });
 });

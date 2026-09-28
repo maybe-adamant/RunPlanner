@@ -1,66 +1,72 @@
-use std::time::Duration;
+use std::sync::Mutex;
 
-use serde::{Deserialize, Serialize};
+use serde::Serialize;
+use tauri::{AppHandle, State};
+use tauri_plugin_updater::{Update, UpdaterExt};
 
-const LATEST_RELEASE_URL: &str =
-    "https://api.github.com/repos/maybe-adamant/RunPlanner/releases/latest";
-const MAX_RELEASE_RESPONSE_BYTES: usize = 128 * 1024;
+/// The update found by the last check, held until the user confirms installing it.
+#[derive(Default)]
+pub struct PendingUpdate(Mutex<Option<Update>>);
 
-#[derive(Deserialize, Serialize)]
-pub struct ReleaseAsset {
-    #[serde(rename(serialize = "browserDownloadUrl", deserialize = "browser_download_url"))]
-    pub browser_download_url: String,
-    pub name: String,
+#[derive(Serialize)]
+pub struct AvailableUpdate {
+    pub version: String,
 }
 
-#[derive(Deserialize, Serialize)]
-pub struct ReleaseMetadata {
-    pub assets: Vec<ReleaseAsset>,
-    pub draft: bool,
-    #[serde(rename(serialize = "htmlUrl", deserialize = "html_url"))]
-    pub html_url: String,
-    pub prerelease: bool,
-    #[serde(rename(serialize = "tagName", deserialize = "tag_name"))]
-    pub tag_name: String,
-}
-
+/// Checks the signed updater manifest; `None` means this build is current.
 #[tauri::command]
-pub async fn release_check_latest() -> Result<ReleaseMetadata, String> {
-    let client = reqwest::Client::builder()
-        .timeout(Duration::from_secs(8))
-        .user_agent("Run-Planner-release-check")
-        .build()
-        .map_err(|error| format!("Could not create release client: {error}"))?;
-    let mut response = client
-        .get(LATEST_RELEASE_URL)
-        .header(reqwest::header::ACCEPT, "application/vnd.github+json")
-        .send()
+pub async fn release_update_check(
+    app: AppHandle,
+    pending: State<'_, PendingUpdate>,
+) -> Result<Option<AvailableUpdate>, String> {
+    let update = app
+        .updater()
+        .map_err(|error| format!("Could not prepare the updater: {error}"))?
+        .check()
         .await
-        .map_err(|error| format!("Could not check releases: {error}"))?
-        .error_for_status()
-        .map_err(|error| format!("Release check failed: {error}"))?;
-    if response
-        .content_length()
-        .is_some_and(|length| length > MAX_RELEASE_RESPONSE_BYTES as u64)
-    {
-        return Err("Release response is too large.".into());
-    }
-    let mut body = Vec::new();
-    while let Some(chunk) = response
-        .chunk()
-        .await
-        .map_err(|error| format!("Could not read release response: {error}"))?
-    {
-        if body.len() + chunk.len() > MAX_RELEASE_RESPONSE_BYTES {
-            return Err("Release response is too large.".into());
-        }
-        body.extend_from_slice(&chunk);
-    }
-    serde_json::from_slice(&body)
-        .map_err(|error| format!("Release response was malformed: {error}"))
+        .map_err(|error| format!("Could not check for updates: {error}"))?;
+    let available = update.as_ref().map(|update| AvailableUpdate {
+        version: update.version.clone(),
+    });
+    *pending
+        .0
+        .lock()
+        .map_err(|_| "Update state is unavailable.")? = update;
+    Ok(available)
 }
 
-/// Opens an allowlisted page (release downloads or ModpackLib's store page) in the browser.
+/// Downloads, verifies and installs the confirmed update, then restarts; on
+/// Windows the installer closes the planner and reopens it when done. Returns
+/// only when the confirmed version is no longer the pending one, naming the
+/// update pending now.
+#[tauri::command]
+pub async fn release_update_install(
+    app: AppHandle,
+    pending: State<'_, PendingUpdate>,
+    version: String,
+) -> Result<Option<AvailableUpdate>, String> {
+    let update = {
+        let pending = pending
+            .0
+            .lock()
+            .map_err(|_| "Update state is unavailable.")?;
+        match pending.as_ref() {
+            Some(update) if update.version == version => update.clone(),
+            other => {
+                return Ok(other.map(|update| AvailableUpdate {
+                    version: update.version.clone(),
+                }))
+            }
+        }
+    };
+    update
+        .download_and_install(|_, _| {}, || {})
+        .await
+        .map_err(|error| format!("Could not install the update: {error}"))?;
+    app.restart()
+}
+
+/// Opens an allowlisted page (ModpackLib's store page) in the browser.
 #[tauri::command]
 pub fn external_open_url(url: String) -> Result<(), String> {
     run_planner_game_host::external_url::validate_external_url(&url)?;
@@ -98,27 +104,4 @@ fn open_in_browser(_url: &str) -> Result<(), String> {
 #[cfg(target_os = "windows")]
 fn wide(value: &str) -> Vec<u16> {
     value.encode_utf16().chain(std::iter::once(0)).collect()
-}
-
-#[cfg(test)]
-mod tests {
-    use super::ReleaseMetadata;
-
-    #[test]
-    fn decodes_github_release_field_names_and_serializes_frontend_field_names() {
-        let release: ReleaseMetadata = serde_json::from_str(
-            r#"{"assets":[{"browser_download_url":"https://github.com/maybe-adamant/RunPlanner/releases/download/v1.2.3/archive.zip","name":"archive.zip"}],"draft":false,"html_url":"https://github.com/maybe-adamant/RunPlanner/releases/tag/v1.2.3","prerelease":false,"tag_name":"v1.2.3"}"#,
-        )
-        .unwrap();
-        let frontend = serde_json::to_value(release).unwrap();
-        assert_eq!(frontend["tagName"], "v1.2.3");
-        assert_eq!(
-            frontend["htmlUrl"],
-            "https://github.com/maybe-adamant/RunPlanner/releases/tag/v1.2.3"
-        );
-        assert_eq!(
-            frontend["assets"][0]["browserDownloadUrl"],
-            "https://github.com/maybe-adamant/RunPlanner/releases/download/v1.2.3/archive.zip"
-        );
-    }
 }
