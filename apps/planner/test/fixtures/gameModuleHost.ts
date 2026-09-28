@@ -117,6 +117,15 @@ export function createFakeGameModuleHost(
       published.push({ slotNumber, json });
       return Promise.resolve(publication);
     }),
+    createBugReport: vi.fn<GameModuleHost['createBugReport']>((defaultFileName) =>
+      Promise.resolve({
+        kind: 'saved',
+        fileName: defaultFileName,
+        entries: ['report.json'],
+        issuePageUrl: 'https://github.com/maybe-adamant/RunPlanner/issues/new',
+      }),
+    ),
+    revealBugReport: vi.fn<GameModuleHost['revealBugReport']>(() => Promise.resolve()),
   } satisfies GameModuleHost;
   return { host, published };
 }

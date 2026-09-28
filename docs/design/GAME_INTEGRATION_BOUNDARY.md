@@ -84,7 +84,7 @@ Status is reported by the host and presented by the application:
 
 The planner reports ModpackLib and dependencies but never installs, updates or
 removes them, and never edits `mods.yml`. Users install ModpackLib through
-r2modman, which brings its dependency chain. The ModpackLib step links to its Thunderstore page, a URL the host owns and adds as the only non-release entry in its allowlist of pages it opens in the browser.
+r2modman, which brings its dependency chain. The ModpackLib step links to its Thunderstore page. The host owns the allowlist of pages it opens in the browser: that page and the repository's new-issue page.
 
 **Install** or **Update** operates only on the established target and
 does nothing when the installed files already match this build. A folder the
@@ -106,6 +106,19 @@ identifies a planner install that r2modman does not manage (an unreadable
 install assembled at runtime from the local `game-module/` checkout through
 the same flow; such an install is publishable in development builds while its
 files match its record.
+
+**Create bug report…** (Game panel and About, desktop only) saves one zip
+where the user chooses. The host assembles it from explicit inputs:
+`report.json` (planner facts supplied by the application, including the last
+send failure, merged with the host's status of the established target), the
+open plan document when chosen, the six plan slot files, and log tails from
+`ReturnOfModding`: `LogOutput.log` and the newest `backup/*_LogOutput.log`
+(last 2 MiB each) and `lovely.log` (last 1 MiB), each cut forward to a line
+start. Missing or unreadable sources are recorded in `report.json`. Every entry
+replaces the user's profile folder with `%USERPROFILE%` in any separator form,
+and the user name with `%USERNAME%` where it follows the same parent folder
+under another root. **Show in folder** reveals only the report this session
+last wrote.
 
 ### Publication preconditions
 
@@ -610,10 +623,11 @@ weaker outcome into a mismatch merely because they can observe it.
 | Admission rejection | A selected slot is absent, malformed, incompatible, or not a complete execution plan.               | Do not create a synchronized session; report the admission error.                                            |
 | Executor fault      | A required host function is missing or throws, or a decoded-plan/session invariant fails.           | Restore temporary forcing scope, report or propagate the fault, and do not describe it as player divergence. |
 | Incidental contact  | Native code reaches a supported hook but no compatible published owner claims it.                   | Pass through unchanged without completing a transaction or desynchronizing.                                  |
-| Diagnostic          | A bounded actuator could not install or apply its intended steering.                                | Record bounded evidence and continue native behavior without changing synchronization.                       |
+| Diagnostic          | A bounded actuator could not install or apply its intended steering.                                | Record bounded evidence, log it once, and continue native behavior without changing synchronization.         |
 | Execution mismatch  | A standard checkpoint or premature exact-owner action proves the remaining simulated prefix unsafe. | Preserve the first mismatch, stop later realization, and let the native game continue.                       |
 
-The first execution mismatch reports the plan/catalog fingerprints, semantic
+Each admitted session logs its slot, plan identity, protocol and module version
+once. The first execution mismatch reports the plan/catalog fingerprints, semantic
 owner, checkpoint, expected value, observed value, and bounded event context.
 The executor then becomes passive: the game continues natively, and no hooked
 game function returns early merely because the execution session

@@ -27,7 +27,7 @@ pub(crate) struct GameModuleRemoveResult {
     status: GameModuleStatus,
 }
 
-fn config_dir(app: &tauri::AppHandle) -> Result<PathBuf, String> {
+pub(crate) fn config_dir(app: &tauri::AppHandle) -> Result<PathBuf, String> {
     app.path()
         .app_config_dir()
         .map_err(|error| format!("could not resolve application config directory: {error}"))

@@ -1,7 +1,9 @@
 //! Tauri-free desktop host capabilities over explicit paths: the embedded game
-//! module package, the game target, module install and plan-slot publication.
+//! module package, the game target, module install, plan-slot publication and
+//! bug reports.
 
 pub mod atomic_file;
+pub mod bug_report;
 pub mod external_url;
 pub mod game_module_assembly;
 pub mod game_module_install;

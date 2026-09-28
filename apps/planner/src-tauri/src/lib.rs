@@ -1,3 +1,4 @@
+mod bug_report_commands;
 mod game_module_commands;
 mod profile_file_session;
 mod release_updates;
@@ -16,6 +17,8 @@ pub fn run() {
             game_module_commands::game_module_install_from_checkout,
             game_module_commands::game_module_remove,
             game_module_commands::game_plan_publish,
+            bug_report_commands::bug_report_create,
+            bug_report_commands::bug_report_reveal,
             profile_file_session::profile_file_restore_active,
             profile_file_session::profile_file_activate,
             profile_file_session::profile_file_clear_active,
@@ -28,6 +31,7 @@ pub fn run() {
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
         .manage(release_updates::PendingUpdate::default())
+        .manage(bug_report_commands::LastBugReport::default())
         .run(tauri::generate_context!())
         .expect("failed to run Run Planner");
 }

@@ -9,7 +9,10 @@ import { createFakeGameModuleHost, gameModuleStatus } from '@planner-test/fixtur
 describe('Tauri game module host adapter', () => {
   it('invokes the fixed native target, module and publication commands', async () => {
     const invoke = vi.fn().mockResolvedValue({});
-    const host = createTauriGameModuleHost({ invoke, chooseDirectory: vi.fn() });
+    const host = createTauriGameModuleHost({
+      invoke,
+      chooseDirectory: vi.fn(),
+    });
 
     await host.status();
     await host.discoverTargets();
@@ -20,6 +23,14 @@ describe('Tauri game module host adapter', () => {
     await host.remove();
     await host.publish(3, '{"format":"run-planner-execution"}');
     await host.openExternalPage('https://thunderstore.io/c/hades-ii/p/adamant/ModpackLib/');
+    const request = {
+      appFacts: { plannerVersion: '1.0.0' },
+      openPlan: null,
+      includePlanSlots: true,
+      includeLogs: false,
+    };
+    await host.createBugReport('report.zip', request);
+    await host.revealBugReport();
 
     expect(invoke.mock.calls).toEqual([
       ['game_module_status'],
@@ -31,6 +42,8 @@ describe('Tauri game module host adapter', () => {
       ['game_module_remove'],
       ['game_plan_publish', { slotNumber: 3, planJson: '{"format":"run-planner-execution"}' }],
       ['external_open_url', { url: 'https://thunderstore.io/c/hades-ii/p/adamant/ModpackLib/' }],
+      ['bug_report_create', { defaultFileName: 'report.zip', request }],
+      ['bug_report_reveal'],
     ]);
   });
 

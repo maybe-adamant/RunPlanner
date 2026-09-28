@@ -30,53 +30,9 @@ import {
 } from '@planner/projections/gamePanel';
 import { ContextualPicker } from '../controls/ContextualPicker';
 import { ExternalPageLink } from '../controls/ExternalPageLink';
-
-function ModalDialog({
-  children,
-  describedBy,
-  labelledBy,
-  onCancel,
-  pending,
-}: {
-  readonly children: ReactNode;
-  readonly describedBy?: string;
-  readonly labelledBy: string;
-  readonly onCancel: () => void;
-  readonly pending: boolean;
-}) {
-  const dialogRef = useRef<HTMLDialogElement>(null);
-
-  useEffect(() => {
-    const dialog = dialogRef.current;
-    if (dialog === null) return;
-    if (typeof dialog.showModal === 'function' && !dialog.open) {
-      try {
-        dialog.showModal();
-      } catch {
-        dialog.setAttribute('open', '');
-      }
-    } else if (!dialog.open) {
-      dialog.setAttribute('open', '');
-    }
-    dialog.querySelector<HTMLElement>('[data-initial-focus]')?.focus();
-  }, []);
-
-  return (
-    <dialog
-      aria-describedby={describedBy}
-      aria-labelledby={labelledBy}
-      aria-modal="true"
-      className="game-publication-dialog-backdrop"
-      onCancel={(event) => {
-        event.preventDefault();
-        if (!pending) onCancel();
-      }}
-      ref={dialogRef}
-    >
-      <section className="game-publication-dialog game-panel-dialog">{children}</section>
-    </dialog>
-  );
-}
+import type { BugReportOperations } from '@planner/workspace/bugReport';
+import { ModalDialog } from './ModalDialog';
+import { BugReportDialog } from './BugReportDialog';
 
 function ConfirmationDialog({
   children,
@@ -914,6 +870,7 @@ function GameSection({
 }
 
 export function GamePanel({
+  bugReport,
   catalog,
   focusPlans = false,
   gameStatus,
@@ -921,6 +878,8 @@ export function GamePanel({
   onShowFindings,
   operations,
 }: {
+  /** Present only in the desktop application. */
+  readonly bugReport?: BugReportOperations;
   readonly catalog: Catalog;
   /** Opens with focus on Plans in game when they show. */
   readonly focusPlans?: boolean;
@@ -930,6 +889,7 @@ export function GamePanel({
   readonly onShowFindings?: () => void;
   readonly operations: ProjectOperations;
 }) {
+  const [reporting, setReporting] = useState(false);
   return (
     <ModalDialog labelledBy="game-dialog-title" onCancel={onClose} pending={false}>
       <header className="panel-heading">
@@ -952,10 +912,22 @@ export function GamePanel({
         />
       )}
       <footer className="game-publication-actions">
+        {bugReport === undefined ? null : (
+          <button
+            className="quiet-action bug-report-trigger"
+            onClick={() => setReporting(true)}
+            type="button"
+          >
+            Create bug report…
+          </button>
+        )}
         <button className="quiet-action" onClick={onClose} type="button">
           Close
         </button>
       </footer>
+      {reporting && bugReport !== undefined && (
+        <BugReportDialog onClose={() => setReporting(false)} operations={bugReport} />
+      )}
     </ModalDialog>
   );
 }

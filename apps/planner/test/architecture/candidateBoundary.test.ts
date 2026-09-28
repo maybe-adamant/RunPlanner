@@ -33,6 +33,7 @@ describe('candidate application boundary', () => {
     application = createApplication();
 
     expect(Object.keys(application).sort()).toEqual([
+      'bugReport',
       'buildIdentity',
       'catalog',
       'catalogSummary',
