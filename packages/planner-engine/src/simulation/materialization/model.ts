@@ -363,6 +363,7 @@ export interface CanonicalTarget {
  * contract.
  */
 export interface CanonicalAdditionalContinuation {
+  readonly spawnPointIndex?: number;
   readonly origin: AdditionalExitAddress;
   readonly key: 'zagreusContract' | 'chaos';
   readonly chaosOrigin?: import('../../authored-project/model').IxionGeneratedChaosOrigin;

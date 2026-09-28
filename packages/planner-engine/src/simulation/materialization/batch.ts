@@ -357,6 +357,9 @@ export function materializeAdditionalContinuations(
       return Object.freeze({
         origin: createAdditionalExitAddress(biome, sourceOccurrenceId, additional.key),
         key: additional.key,
+        ...(additional.kind === 'chaos' && additional.spawnPointIndex !== undefined
+          ? { spawnPointIndex: additional.spawnPointIndex }
+          : {}),
         ...(additional.kind === 'chaos' && additional.origin === undefined
           ? {}
           : additional.kind === 'chaos'

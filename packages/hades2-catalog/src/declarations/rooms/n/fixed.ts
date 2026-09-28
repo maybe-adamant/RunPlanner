@@ -5,6 +5,7 @@ import { chaosExit } from './shared';
 export const nFixedRouteRooms = [
   {
     gameName: 'N_Opening01',
+    secretPointAnchorCount: 2,
     resourcePointSupport: nResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Opening',
     roomSetKey: 'N',

@@ -462,6 +462,8 @@ export interface IxionGeneratedChaosOrigin {
 export interface ChaosAdditionalExit {
   readonly kind: 'chaos';
   readonly key: 'chaos';
+  /** One-based physical SecretPoint index; omission preserves native placement. */
+  readonly spawnPointIndex?: number;
   readonly occurrenceId: OccurrenceId;
   /** Present only when Ixion inserted this gate; omission means authored. */
   readonly origin?: IxionGeneratedChaosOrigin;
