@@ -220,7 +220,7 @@ function TestProtocol.testConformanceResolverProjectsNamedFactsAndRejectsUnknown
     lu.assertEquals(expected.rewardPriorities, state.rewardPriorities)
     lu.assertEquals(expected.pathOfStars, state.hexProgress)
     lu.assertEquals(expected.forfeit, state.forfeit)
-    lu.assertEquals(expected.stygianWell, { yarnUses = 2 })
+    lu.assertEquals(expected.stygianWell, { sparkUses = 1, yarnUses = 2 })
     lu.assertEquals(state.retainedEffects.stygianWell.sparkUses, 1)
     lu.assertEquals(expected.elementCounts, state.traits.elements)
 

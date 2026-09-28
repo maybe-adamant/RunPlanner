@@ -443,6 +443,61 @@ function TestRoomEntryHooks.testRecoveredOccurrenceIdentitySurvivesThroughNative
     lu.assertEquals(nativeRoom.__runPlannerExecutionRoomId, occurrence.id)
 end
 
+function TestRoomEntryHooks.testPlannedCommercePresenceChecksNativeRequirementsNotChance()
+    local restore = require("tests.harness.native_game").install({
+        RoomData = { BaseRoom = { WellShopRequirements = {}, SurfaceShopRequirements = {} } },
+        IsGameStateEligible = function() return false end,
+    })
+    local module, _, callbacks = capture()
+    local state = { state = "synchronized" }
+    local occurrence = { overview = { stygianWell = {}, hermesShrine = {} } }
+    local diagnostics = {}
+    roomFeatureHooks.attach(module, {
+        diagnostic = function(_, key, details) diagnostics[#diagnostics + 1] = { key, details } end,
+    }, function() return state end, function() end, {
+        occurrence = function() return occurrence end,
+    })
+    for _, spec in ipairs({
+        { "IsWellShopEligible", "WellShopRequirements", "ForceWellShop", "well-placement-ineligible" },
+        { "IsSurfaceShopEligible", "SurfaceShopRequirements", "ForceSurfaceShop", "shrine-placement-ineligible" },
+    }) do
+        local run, room = { BiomeDepthCache = 2 }, {}
+        local permitted, seenRequirements = false, nil
+        _G.IsGameStateEligible = function(actualRoom, requirements)
+            lu.assertIs(actualRoom, room)
+            seenRequirements = requirements
+            return permitted
+        end
+        local nativeCalls = 0
+        local function native()
+            nativeCalls = nativeCalls + 1
+            return false
+        end
+        local invoke = function() return callbacks[spec[1]](nil, {}, native, run, room) end
+        lu.assertFalse(invoke())
+        lu.assertEquals(nativeCalls, 1)
+        lu.assertIs(seenRequirements, _G.RoomData.BaseRoom[spec[2]])
+        lu.assertEquals(diagnostics[#diagnostics], { spec[4], {
+            expected = spec[1] == "IsWellShopEligible" and "native Well placement requirements"
+                or "native Shrine placement requirements",
+            observed = false, biomeDepthCache = 2,
+        } })
+        room[spec[2]] = { roomSpecific = true }
+        permitted, run.BiomeDepthCache = true, 3
+        lu.assertTrue(invoke()) -- Native chance still fails; legal authored presence wins.
+        lu.assertIs(seenRequirements, room[spec[2]])
+        lu.assertEquals(nativeCalls, 1)
+        permitted = false -- A native spacing rejection still prevents forcing at sufficient depth.
+        lu.assertFalse(invoke())
+        room[spec[3]] = true
+        lu.assertTrue(invoke())
+        state.state = "desynchronized"
+        lu.assertFalse(invoke())
+        state.state = "synchronized"
+    end
+    restore()
+end
+
 function TestRoomEntryHooks.testStructuralShopEligibilityFollowsTheResolvedRoomOverview()
     local module, _, callbacks = capture()
     local active = { overview = {} }
@@ -460,7 +515,7 @@ function TestRoomEntryHooks.testStructuralShopEligibilityFollowsTheResolvedRoomO
     lu.assertFalse(callbacks.IsWellShopEligible(nil, {}, function() return true end, {}, {}))
     lu.assertFalse(callbacks.IsSellTraitShopEligible(nil, {}, function() return true end, {}))
     lu.assertFalse(callbacks.IsSurfaceShopEligible(nil, {}, function() return true end, {}, {}))
-    local nativeDestination = { destination = true }
+    local nativeDestination = { destination = true, ForceWellShop = true, ForceSurfaceShop = true }
     lu.assertTrue(callbacks.IsWellShopEligible(nil, {}, function() return false end, {}, nativeDestination))
     lu.assertTrue(callbacks.IsSellTraitShopEligible(nil, {}, function() return false end, nativeDestination))
     lu.assertTrue(callbacks.IsSurfaceShopEligible(nil, {}, function() return false end, {}, nativeDestination))
@@ -479,7 +534,7 @@ function TestRoomEntryHooks.testStructuralPresenceRetainsNativeShopAndFeatureCon
     -- RunShopGeneration runs before HandleSecretSpawns. The predicates only
     -- open the published branches; native creation and bookkeeping remain
     -- the caller's responsibility.
-    local wellRoom = {}
+    local wellRoom = { ForceWellShop = true }
     local wellRun = { CurrentRoom = wellRoom, RunDepthCache = 7 }
     if callbacks.IsWellShopEligible(nil, {}, function() return false end, wellRun, wellRoom) then
         wellRoom.Store = { native = "well" }
@@ -496,7 +551,7 @@ function TestRoomEntryHooks.testStructuralPresenceRetainsNativeShopAndFeatureCon
     lu.assertEquals(wellRun.LastWellShopDepth, 7)
 
     occurrence = { overview = { hermesShrine = { offers = {} } } }
-    local shrineRoom = {}
+    local shrineRoom = { ForceSurfaceShop = true }
     local shrineRun = { CurrentRoom = shrineRoom }
     if callbacks.IsSurfaceShopEligible(nil, {}, function() return false end, shrineRun, shrineRoom) then
         shrineRoom.Store = { native = "shrine" }

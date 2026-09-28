@@ -52,16 +52,6 @@ local function traitInventoryExpected(frames)
     return { present = present, absent = absent }
 end
 
-local function wellExpected(well)
-    if type(well) ~= "table" then return nil end
-    -- Ixion remains diagnostic state; purchases and gate realization own its outcome.
-    return {
-        yarnUses = well.yarnUses, hymnUses = well.hymnUses,
-        discountUses = well.discountUses, emptySlotUses = well.emptySlotUses,
-        extendedUses = well.extendedUses,
-    }
-end
-
 local readers = {
     elementCounts = function(state) return state.traits.elements end,
     steadyGrowth = function(state) return state.retainedEffects.steadyGrowth end,
@@ -70,7 +60,7 @@ local readers = {
     rewardPriorities = function(state) return state.rewardPriorities end,
     pathOfStars = function(state) return state.hexProgress end,
     forfeit = function(state) return state.forfeit end,
-    stygianWell = function(state) return wellExpected(state.retainedEffects.stygianWell) end,
+    stygianWell = function(state) return state.retainedEffects.stygianWell end,
     traitInventory = traitInventoryExpected,
 }
 
@@ -108,7 +98,7 @@ local function admissionStateValue(entry, kind)
     if kind == "pathOfStars" then return entry and entry.hexProgress end
     if kind == "forfeit" then return entry and entry.forfeit end
     if kind == "stygianWell" then
-        return wellExpected(entry and entry.retainedEffects and entry.retainedEffects.stygianWell)
+        return entry and entry.retainedEffects and entry.retainedEffects.stygianWell
     end
     return nil
 end

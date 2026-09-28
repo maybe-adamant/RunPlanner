@@ -46,8 +46,11 @@ requires full inventory authoring even when no offer is purchased.
 
 ### Published presence as a native construction input
 
-The presence adapters deliberately replace the native eligibility result for
-an owned occurrence. They do not recalculate spawn rules or create objects:
+The presence adapters steer the native presence decision for an owned occurrence.
+Well and Shrine requests preserve the native Force flag exception and otherwise
+consult `IsGameStateEligible` with room-specific requirements or the BaseRoom
+fallback, bypassing only the chance result. Rejected requests diagnose and defer
+to native eligibility. The adapters do not recreate spawn rules or create objects:
 
 | Published content     | Native decision                                                 | Native work retained                                                                                              |
 | --------------------- | --------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
@@ -61,6 +64,10 @@ an owned occurrence. They do not recalculate spawn rules or create objects:
 these predicates and owns their resulting mutations. `StoreLogic.lua:RunShopGeneration`
 also calls the Well/Shrine predicates before spawning. Their occurrence-bound
 answers must therefore cover both contacts, not just a spawn-time scope.
+`RoomLogic.lua:5155–5180` owns the Force/requirements/chance ordering. Base
+requirements (`RoomData.lua:573–605`) include biome depth cache >=3 and spacing;
+point availability remains outside that check. Inventory installation remains
+all-or-nothing with diagnostic native fallback, not per-slot partial steering.
 Chaos's Boolean is confined to secret generation; native calls outside that
 scope pass through. Unowned occurrences and passive sessions retain native
 decisions. This is explicit room-content insertion, not a claim that only the
@@ -169,6 +176,16 @@ advances without interpreting which Door was used; the following `StartRoom`
 proves the next published occurrence identity. Named room-exit conformance
 separately checks retained state caused by a feature, such as consumption of an
 Ixion charge.
+
+Native Well state is not uniformly a singleton counter. `StoreLogic.lua:1205–1225`
+normally adds a trait instance; `TraitLogic.lua:AddTraitData` copies and appends it.
+Yarn, Ixion, and Extended Shop each declare `RemainingUses = 1` and do not opt
+into `IncreaseUsesOnStack` (`TraitData_Store.lua:15,282,301`). Their conformance
+quantity is the sum across instances. Hymn instead uses `EventLogic.lua:1779`
+(`AddLimitedSwapTrait`) to accumulate `Uses` on one trait. Yarn contributes every
+held instance to rarity (`RoomLogic.lua:2159`), but consumes one on a qualifying
+screen (`UpgradeChoiceLogic.lua:1127`). Timed Well effects retain independent
+durations, including Extended Shop's boss-clock mode.
 
 The blocking comparison boundary is:
 

@@ -76,7 +76,17 @@ function hooks.attach(module, session, getState, report, room)
         local state = getState(runtime)
         if state == nil or state.state ~= "synchronized" then return base(currentRun, currentRoom) end
         local occurrence = room.occurrence(state, currentRoom)
-        if occurrence ~= nil then return occurrence.overview.stygianWell ~= nil end
+        if occurrence ~= nil then
+            if occurrence.overview.stygianWell == nil then return false end
+            if currentRoom.ForceWellShop then return true end
+            local requirements = currentRoom.WellShopRequirements or _G.RoomData.BaseRoom.WellShopRequirements
+            if _G.IsGameStateEligible(currentRoom, requirements) then return true end
+            session.diagnostic(state, "well-placement-ineligible", {
+                expected = "native Well placement requirements", observed = false,
+                biomeDepthCache = currentRun.BiomeDepthCache,
+            }, occurrence)
+            return base(currentRun, currentRoom)
+        end
         return base(currentRun, currentRoom)
     end)
 
@@ -85,7 +95,17 @@ function hooks.attach(module, session, getState, report, room)
         local state = getState(runtime)
         if state == nil or state.state ~= "synchronized" then return base(currentRun, currentRoom) end
         local occurrence = room.occurrence(state, currentRoom)
-        if occurrence ~= nil then return occurrence.overview.hermesShrine ~= nil end
+        if occurrence ~= nil then
+            if occurrence.overview.hermesShrine == nil then return false end
+            if currentRoom.ForceSurfaceShop then return true end
+            local requirements = currentRoom.SurfaceShopRequirements or _G.RoomData.BaseRoom.SurfaceShopRequirements
+            if _G.IsGameStateEligible(currentRoom, requirements) then return true end
+            session.diagnostic(state, "shrine-placement-ineligible", {
+                expected = "native Shrine placement requirements", observed = false,
+                biomeDepthCache = currentRun.BiomeDepthCache,
+            }, occurrence)
+            return base(currentRun, currentRoom)
+        end
         return base(currentRun, currentRoom)
     end)
 

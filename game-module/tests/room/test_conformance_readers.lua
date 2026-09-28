@@ -99,19 +99,20 @@ function TestConformanceReaders.testPostbossAdmissionAcceptsACompleteEntryMatch(
     lu.assertTrue(ok, errorValue)
 end
 
-function TestConformanceReaders.testIxionChargesDoNotBlockAdmissionOrRoomExitButOtherWellEffectsDo()
+function TestConformanceReaders.testIxionInstancesAreProvedAtAdmissionAndRoomExit()
     local occurrence, startingLoadout, restore = admissionFixture()
     local entry = occurrence.diagnostics.roomEntered
     entry.retainedEffects.stygianWell.sparkUses = 3
+    for _ = 1, 3 do
+        table.insert(_G.CurrentRun.Hero.Traits, { Name = "TemporaryForcedSecretDoorTrait", RemainingUses = 1 })
+    end
     local ok, mismatch = admission.verify(occurrence, startingLoadout)
     lu.assertTrue(ok, mismatch)
     local expected = assert(protocolConformance.resolve(
         assert(json.decode('{"facts":[{"kind":"stygianWell"}]}')), entry, "conformance"))
     local observed = readers.read("stygianWell", _G.CurrentRun)
     lu.assertTrue(proof.compare("stygianWell", expected.stygianWell, observed))
-    _G.CurrentRun.Hero.Traits[#_G.CurrentRun.Hero.Traits + 1] = {
-        Name = "TemporaryBoonRarityTrait", RemainingUses = 1,
-    }
+    table.remove(_G.CurrentRun.Hero.Traits)
     lu.assertNil(proof.compare("stygianWell", expected.stygianWell,
         readers.read("stygianWell", _G.CurrentRun)))
     ok, mismatch = admission.verify(occurrence, startingLoadout)
@@ -391,7 +392,7 @@ function TestConformanceReaders.testReachableReadersProjectNativeState()
     })
     lu.assertEquals(readers.read("forfeit", run), "inactive")
     lu.assertEquals(readers.read("stygianWell", run), {
-        yarnUses = 0, hymnUses = 0, discountUses = {},
+        sparkUses = 0, yarnUses = 0, hymnUses = 0, discountUses = {},
         emptySlotUses = {}, extendedUses = 0,
     })
     lu.assertNil(readers.read("echoShopDuplicate", run))
@@ -544,15 +545,20 @@ function TestConformanceReaders.testPathReaderVisitsSparseNativeTalentPositions(
     })
 end
 
-function TestConformanceReaders.testStygianWellReaderChecksDurationsWithoutIxionCharges()
+function TestConformanceReaders.testStygianWellReaderAggregatesIndependentInstancesAndHymnUses()
     local run = { Hero = { Traits = {
         { Name = "TemporaryForcedSecretDoorTrait", RemainingUses = 1 },
         { Name = "TemporaryForcedSecretDoorTrait", RemainingUses = 1 },
+        { Name = "TemporaryBoonRarityTrait", RemainingUses = 1 },
+        { Name = "TemporaryBoonRarityTrait", RemainingUses = 1 },
+        { Name = "ExtendedShopTrait", RemainingUses = 1 },
+        { Name = "ExtendedShopTrait", RemainingUses = 1 },
+        { Name = "LimitedSwapBonusTrait", Uses = 3 },
         { Name = "TemporaryDiscountTrait", RemainingUses = 4 },
     } } }
     lu.assertEquals(readers.read("stygianWell", run), {
-        yarnUses = 0, hymnUses = 0, discountUses = { 4 },
-        emptySlotUses = {}, extendedUses = 0,
+        sparkUses = 2, yarnUses = 2, hymnUses = 3, discountUses = { 4 },
+        emptySlotUses = {}, extendedUses = 2,
     })
 end
 
@@ -562,7 +568,7 @@ function TestConformanceReaders.testStygianWellReaderDistinguishesEncounterAndBo
         { Name = "TemporaryEmptySlotDamageTrait", RemainingUses = 2, UsesAsBosses = true },
     } } }
     lu.assertEquals(readers.read("stygianWell", run), {
-        yarnUses = 0, hymnUses = 0, discountUses = { 2 },
+        sparkUses = 0, yarnUses = 0, hymnUses = 0, discountUses = { 2 },
         emptySlotUses = { -2 }, extendedUses = 0,
     })
 end
