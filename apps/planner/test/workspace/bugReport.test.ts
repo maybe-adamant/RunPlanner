@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { createApplication } from '@planner/composition/createApplication';
-import { gameSendFailed } from '@planner/state/gameSendSessionSlice';
+import { gameSendFailed, gameSentSlotNotActivated } from '@planner/state/gameSendSessionSlice';
 import { bugReportFileName } from '@planner/workspace/bugReport';
 import { createFakeGameModuleHost } from '@planner-test/fixtures/gameModuleHost';
 
@@ -19,6 +19,7 @@ describe('bug report operations', () => {
       gameModuleHost: game.host,
     });
     application.store.dispatch(gameSendFailed({ message: 'Target unavailable.', atMs: 0 }));
+    application.store.dispatch(gameSentSlotNotActivated({ slot: 2, message: 'Locked.', atMs: 0 }));
 
     await expect(
       application.bugReport!.create({ openPlan: true, plansInGame: false, gameLogs: true }),
@@ -35,6 +36,7 @@ describe('bug report operations', () => {
         catalogVersion: application.catalogSummary.version,
         openPlan: null,
         lastSendFailure: { message: 'Target unavailable.', at: '1970-01-01T00:00:00.000Z' },
+        lastSendNotActivated: { slot: 2, message: 'Locked.', at: '1970-01-01T00:00:00.000Z' },
       },
     });
   });

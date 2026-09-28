@@ -1,6 +1,7 @@
 import { vi } from 'vitest';
 
 import type {
+  GameActiveSlotSetting,
   GamePlanSlot,
   GamePlanSlotNumber,
   GameModuleHost,
@@ -51,6 +52,7 @@ export function gameModuleStatus(
       weaponKey: null,
       aspectKey: null,
     })),
+    activeSlot: { state: 'missing' },
   };
   const inspection =
     overrides.inspection === null
@@ -86,7 +88,13 @@ export function gameModuleStatus(
 
 export function createFakeGameModuleHost(
   status: GameModuleStatus = gameModuleStatus(),
-  publication: GamePlanPublication = { status: 'published', message: 'Published.', blockers: [] },
+  publication: GamePlanPublication = {
+    status: 'published',
+    message: 'Published.',
+    blockers: [],
+    activationProblem: null,
+  },
+  activation: GameActiveSlotSetting = { status: 'activated', message: 'Active.', blockers: [] },
 ) {
   const published: { slotNumber: number; json: string }[] = [];
   const host = {
@@ -113,6 +121,7 @@ export function createFakeGameModuleHost(
       Promise.resolve({ outcome: 'installed', status }),
     ),
     remove: vi.fn<GameModuleHost['remove']>(() => Promise.resolve({ outcome: 'removed', status })),
+    setActiveSlot: vi.fn<GameModuleHost['setActiveSlot']>(() => Promise.resolve(activation)),
     publish: vi.fn<GameModuleHost['publish']>((slotNumber, json) => {
       published.push({ slotNumber, json });
       return Promise.resolve(publication);

@@ -3,8 +3,9 @@ import type { Catalog } from '@run-planner/engine/catalog-schema';
 import type { ExecutionCompilerError } from '@run-planner/engine/execution-plan';
 import type { ProfileStatus } from '@planner/state/store';
 import type { CurrentGamePlan } from '@planner/workspace/projectOperations';
-import type { GameSendFailure } from '@planner/state/gameSendSessionSlice';
+import type { GameActivationFailure, GameSendFailure } from '@planner/state/gameSendSessionSlice';
 import type {
+  GameActiveSlotSetting,
   GameModuleInstallResult,
   GameModuleRemoveResult,
   GameModuleStatus,
@@ -530,6 +531,27 @@ export interface GamePlanSlotRow {
   readonly summary: 'Empty' | 'Unreadable' | null;
   readonly marker: 'current' | 'olderVersion' | null;
   readonly action: { readonly label: GamePlanSlotActionLabel; readonly confirm: boolean } | null;
+  /** This row's Active slot radio; the intent is null while the radio is disabled. */
+  readonly active: { readonly checked: boolean; readonly intent: GameActiveSlotIntent | null };
+}
+
+export interface GameActiveSlotIntent {
+  readonly kind: 'setActiveSlot';
+  readonly slot: GamePlanSlotNumber;
+}
+
+/** A pending or failed Active slot write in the panel. */
+export type GameActivationActivity =
+  | { readonly kind: 'idle' }
+  | { readonly kind: 'pending' }
+  | { readonly kind: 'failed'; readonly message: string };
+
+export interface GameActiveSlotGroup {
+  readonly label: 'Active slot';
+  /** The slot `active-slot.json` names, or null when it is missing or invalid. */
+  readonly selected: GamePlanSlotNumber | null;
+  readonly pending: boolean;
+  readonly notice: string | null;
 }
 
 export interface GamePlanSentTime {
@@ -544,6 +566,7 @@ export interface GamePlansProduct {
   readonly rows: readonly GamePlanSlotRow[];
   /** Why the current project cannot be sent; send actions are absent while set. */
   readonly unavailableReason: string | null;
+  readonly activeSlot: GameActiveSlotGroup;
 }
 
 function sentAgo(modifiedAtMs: number, now: number): string {
@@ -656,18 +679,33 @@ export function describeNotPublishable(code: ExecutionCompilerError['code'] | nu
   }
 }
 
-/** The six plan slots, shown only while the game module is ready. */
+const IDLE_ACTIVATION: GameActivationActivity = Object.freeze({ kind: 'idle' });
+
+/**
+ * The six plan slots, shown only while the game module is ready. The Active slot radios show
+ * the file as last read and enable only slots that hold a plan.
+ */
 export function projectGamePlans(
   status: GameModuleStatus,
   current: CurrentGamePlan,
   saveState: GameSaveState,
   catalog: Catalog,
   now: number,
+  activation: GameActivationActivity = IDLE_ACTIVATION,
 ): GamePlansProduct | null {
   if (!isReady(status) || status.inspection === null) return null;
   const reason = unavailableReason(current);
+  const file = status.inspection.activeSlot;
+  const selected = file.state === 'present' ? file.slot : null;
+  const pending = activation.kind === 'pending';
   return Object.freeze({
     unavailableReason: reason,
+    activeSlot: {
+      label: 'Active slot' as const,
+      selected,
+      pending,
+      notice: activation.kind === 'failed' ? `Not made active: ${activation.message}` : null,
+    },
     rows: status.inspection.planSlots.map((slot): GamePlanSlotRow => ({
       slot: slot.slot,
       state: slot.state,
@@ -675,8 +713,59 @@ export function projectGamePlans(
       summary: slot.state === 'empty' ? 'Empty' : slot.state === 'unreadable' ? 'Unreadable' : null,
       marker: slotMarker(slot, current),
       action: reason === null ? slotAction(slot, saveState) : null,
+      active: {
+        checked: slot.slot === selected,
+        intent:
+          pending || slot.state !== 'present' ? null : { kind: 'setActiveSlot', slot: slot.slot },
+      },
     })),
   });
+}
+
+/** Why an Active slot write did not take effect, or null when it did. */
+export function describeActiveSlotSetting(setting: GameActiveSlotSetting): string | null {
+  switch (setting.status) {
+    case 'activated':
+      return null;
+    case 'blocked':
+      return setting.blockers.length > 0
+        ? setting.blockers.map(describePublicationBlocker).join(' ')
+        : setting.message;
+    case 'invalidSlot':
+    case 'notPresent':
+    case 'nativeWrite':
+      return setting.message;
+  }
+}
+
+// A send's activation failure stands until the file, as last read, names that slot.
+function stillInactive(
+  failure: GameActivationFailure | null,
+  status: GameModuleStatus | null,
+): failure is GameActivationFailure {
+  const file = status?.inspection?.activeSlot;
+  return failure !== null && !(file?.state === 'present' && file.slot === failure.slot);
+}
+
+/** The Game panel's notice of a send whose slot is still not active, or null. */
+export function describeSentNotActivated(
+  failure: GameActivationFailure | null,
+  status: GameModuleStatus | null,
+): string | null {
+  return stillInactive(failure, status)
+    ? `Sent to slot ${failure.slot} at ${localTime(failure.atMs)}, but it isn’t active: ${failure.message}`
+    : null;
+}
+
+/** The header's announcement of a successful send. */
+export function describeSent(
+  slot: GamePlanSlotNumber,
+  failure: GameActivationFailure | null,
+  status: GameModuleStatus | null,
+): string {
+  return stillInactive(failure, status)
+    ? `Sent to slot ${slot}; not made active.`
+    : `Sent to slot ${slot}.`;
 }
 
 export type GameSendActivity =
@@ -733,7 +822,7 @@ function inactive(
 }
 
 /**
- * The always-present header send. It re-sends only to the slot last sent in this session for the
+ * The always-present header send; a send also makes its slot active. It re-sends only to the slot last sent in this session for the
  * loaded project, while that slot is empty or still holds this project; otherwise it opens the
  * Game panel's plans. It uses the engine's eligibility without compiling.
  */
@@ -743,6 +832,7 @@ export function projectGameSendButton(
   lastSentSlot: GamePlanSlotNumber | null,
   saveState: GameSaveState,
   activity: GameSendActivity,
+  activationFailure: GameActivationFailure | null = null,
 ): GameSendButton {
   switch (activity.kind) {
     case 'sending':
@@ -753,7 +843,7 @@ export function projectGameSendButton(
       return inactive(
         'sent',
         `✓ Sent · Slot ${activity.slot}`,
-        `Sent to slot ${activity.slot} at ${localTime(activity.atMs)}`,
+        `Sent to slot ${activity.slot} at ${localTime(activity.atMs)}; ${stillInactive(activationFailure, status) ? 'not made active' : 'now active'}`,
       );
     case 'failed':
       return inactive('failed', '! Not sent', 'Details are in the Game panel');

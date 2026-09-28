@@ -1,10 +1,14 @@
 // @vitest-environment jsdom
 
 import { cleanup, screen, waitFor, within } from '@testing-library/react';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { createApplication } from '@planner/composition/createApplication';
-import type { GameModuleStatus } from '@planner/persistence/gameModuleHost';
+import type {
+  GameActiveSlot,
+  GameModuleStatus,
+  GamePlanSlotNumber,
+} from '@planner/persistence/gameModuleHost';
 import {
   createFakeGameModuleHost,
   gameModuleStatus,
@@ -62,7 +66,10 @@ function firstBiome() {
 }
 
 describe('Game panel', () => {
-  afterEach(cleanup);
+  afterEach(() => {
+    cleanup();
+    vi.unstubAllGlobals();
+  });
 
   it('finds r2modman profiles in a filterable picker whose selection sets the target', async () => {
     const game = createFakeGameModuleHost(unset());
@@ -487,6 +494,141 @@ describe('Game panel', () => {
     await waitFor(() =>
       expect(document.activeElement?.getAttribute('aria-label')).toBe('Replace (slot 1)'),
     );
+  });
+
+  it('makes a slot that holds a plan active and shows the file as re-read', async () => {
+    const present = { state: 'present', routeKey: 'Underworld', biomeKeys: ['F'] } as const;
+    const withActive = (activeSlot: GameActiveSlot) =>
+      gameModuleStatus({
+        inspection: {
+          planSlots: planSlots(
+            planSlot(2, present),
+            planSlot(3, { state: 'unreadable' }),
+            planSlot(5, present),
+          ),
+          activeSlot,
+        },
+      });
+    const game = createFakeGameModuleHost(withActive({ state: 'invalid' }));
+    const { dialog, user } = await openGame(game.host);
+    const group = within(dialog).getByRole('radiogroup', { name: 'Active slot' });
+    const radio = (slot: number) =>
+      within(group).getByRole<HTMLInputElement>('radio', { name: `Slot ${slot}` });
+    const unavailable = (slot: number) => radio(slot).getAttribute('aria-disabled') === 'true';
+    await waitFor(() => expect(unavailable(2)).toBe(false));
+    const radios = within(group).getAllByRole<HTMLInputElement>('radio');
+    expect(radios.map((entry) => entry.checked)).toEqual(Array(6).fill(false));
+    expect(radios.every((entry) => !entry.disabled)).toBe(true);
+    expect([1, 3, 4, 6].every(unavailable)).toBe(true);
+
+    // Choosing a row without a plan writes nothing.
+    await user.click(radio(3));
+    expect(game.host.setActiveSlot).not.toHaveBeenCalled();
+    expect(radio(3).checked).toBe(false);
+
+    let finish: (() => void) | undefined;
+    game.host.setActiveSlot.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          finish = () =>
+            resolve({ status: 'activated', message: 'Slot 2 is active.', blockers: [] });
+        }),
+    );
+    await user.click(radio(2));
+    expect(game.host.setActiveSlot).toHaveBeenCalledWith(2);
+    await waitFor(() => expect(unavailable(5)).toBe(true));
+    expect(group.getAttribute('aria-busy')).toBe('true');
+    expect(radio(2).checked).toBe(false);
+    expect(document.activeElement).toBe(radio(2));
+    await user.click(radio(5));
+    expect(game.host.setActiveSlot).toHaveBeenCalledTimes(1);
+    game.host.status.mockResolvedValue(withActive({ state: 'present', slot: 2 }));
+    finish?.();
+    await waitFor(() => expect(radio(2).checked).toBe(true));
+    expect(document.activeElement).toBe(radio(5));
+
+    // Arrow keys walk the radios natively; jsdom lacks the CSS.escape user-event uses for that.
+    vi.stubGlobal('CSS', { escape: (value: string) => value.replace(/["\\]/g, '\\$&') });
+    radio(2).focus();
+    await waitFor(() => expect(unavailable(5)).toBe(false));
+    game.host.status.mockResolvedValue(withActive({ state: 'present', slot: 5 }));
+    await user.keyboard('{ArrowDown}{ArrowDown}');
+    expect(game.host.setActiveSlot).toHaveBeenCalledTimes(1);
+    expect(radio(2).checked).toBe(true);
+    await user.keyboard('{ArrowDown}');
+    expect(game.host.setActiveSlot).toHaveBeenLastCalledWith(5);
+    await waitFor(() => expect(radio(5).checked).toBe(true));
+    expect(document.activeElement).toBe(radio(5));
+
+    game.host.setActiveSlot.mockResolvedValueOnce({
+      status: 'nativeWrite',
+      message: 'could not replace active slot file.',
+      blockers: [],
+    });
+    await waitFor(() => expect(unavailable(2)).toBe(false));
+    await user.click(radio(2));
+    expect(
+      await within(dialog).findByText('Not made active: could not replace active slot file.'),
+    ).toBeTruthy();
+    expect(radio(5).checked).toBe(true);
+    expect(radio(2).checked).toBe(false);
+  });
+
+  it('keeps the group reachable by Tab when the file names a slot without a plan', async () => {
+    const game = createFakeGameModuleHost(
+      gameModuleStatus({
+        inspection: {
+          planSlots: planSlots(planSlot(2, { state: 'present', biomeKeys: ['F'] })),
+          activeSlot: { state: 'present', slot: 4 },
+        },
+      }),
+    );
+    const { dialog, user } = await openGame(game.host);
+    const group = within(dialog).getByRole('radiogroup', { name: 'Active slot' });
+    const named = within(group).getByRole<HTMLInputElement>('radio', { name: 'Slot 4' });
+    await waitFor(() => expect(named.checked).toBe(true));
+    expect(named.getAttribute('aria-disabled')).toBe('true');
+    within(dialog).getByRole('heading', { name: 'Plans in game' }).focus();
+    await user.tab();
+    expect(document.activeElement).toBe(named);
+  });
+
+  it('moves the Active slot with a send and reports a send it could not activate', async () => {
+    const game = createFakeGameModuleHost();
+    const files = createFakeProfileFiles();
+    const { dialog, user } = await openGame(
+      game.host,
+      (application) => files.openSaved(application, firstBiome(), 'Erebus opener.runplanner.json'),
+      { profileFile: files.adapter },
+    );
+    const group = within(dialog).getByRole('radiogroup', { name: 'Active slot' });
+    const radio = (slot: number) =>
+      within(group).getByRole<HTMLInputElement>('radio', { name: `Slot ${slot}` });
+    const sentTo = (slot: GamePlanSlotNumber) =>
+      gameModuleStatus({
+        inspection: {
+          planSlots: planSlots(planSlot(slot, { state: 'present', biomeKeys: ['F'] })),
+          activeSlot: { state: 'present', slot },
+        },
+      });
+    game.host.status.mockResolvedValue(sentTo(2));
+    await user.click(await within(dialog).findByRole('button', { name: 'Send here (slot 2)' }));
+    await waitFor(() => expect(radio(2).checked).toBe(true));
+    expect(within(dialog).queryByRole('group', { name: 'Last send' })).toBeNull();
+
+    game.host.publish.mockResolvedValueOnce({
+      status: 'published',
+      message: 'Published to Slot 4, but it was not made active.',
+      blockers: [],
+      activationProblem: 'could not replace active slot file.',
+    });
+    await user.click(within(dialog).getByRole('button', { name: 'Send here (slot 4)' }));
+    expect(await within(dialog).findByText('Published to game, Slot 4.')).toBeTruthy();
+    const notice = within(dialog).getByRole('group', { name: 'Last send' });
+    expect(notice.textContent).toMatch(
+      /^!Sent to slot 4 at .+, but it isn’t active: could not replace active slot file\.$/,
+    );
+    expect(radio(2).checked).toBe(true);
   });
 
   it('saves unsaved changes in place before sending', async () => {

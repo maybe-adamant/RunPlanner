@@ -33,7 +33,12 @@ import {
   projectIdentityMinted,
   type PreparedProjectWorkspace,
 } from '../state/projectWorkspaceSlice';
-import { gamePlanSent, gameSendFailed, gameSendStarted } from '../state/gameSendSessionSlice';
+import {
+  gamePlanSent,
+  gameSendFailed,
+  gameSendStarted,
+  gameSentSlotNotActivated,
+} from '../state/gameSendSessionSlice';
 import { assertPublicProjectAdmission } from './project-admission';
 import {
   selectPresentProject,
@@ -259,6 +264,15 @@ export function createProjectOperations(
         );
         if (publication.status === 'published') {
           options.store.dispatch(gamePlanSent({ slot: slotNumber }));
+          if (publication.activationProblem !== null) {
+            options.store.dispatch(
+              gameSentSlotNotActivated({
+                slot: slotNumber,
+                message: publication.activationProblem,
+                atMs: Date.now(),
+              }),
+            );
+          }
           return result('publishGame', 'success', `Published to game, Slot ${slotNumber}.`);
         }
         return notSent(

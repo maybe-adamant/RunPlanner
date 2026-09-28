@@ -1,4 +1,5 @@
 use serde::{Deserialize, Serialize};
+use serde_json::Value;
 use std::fs;
 use std::io::Read;
 use std::path::{Path, PathBuf};
@@ -19,6 +20,11 @@ const PLAN_SLOT_FILES: [&str; 6] = [
     "slot-5.runplanner.json",
     "slot-6.runplanner.json",
 ];
+
+/// The plan slot the game module plays next, written by both the planner and the module.
+pub const ACTIVE_SLOT_FILE: &str = "active-slot.json";
+pub const MAX_ACTIVE_SLOT_BYTES: usize = 1024;
+const ACTIVE_SLOT_FORMAT: &str = "run-planner-active-slot";
 
 pub fn slot_file_name(slot_number: u8) -> Result<&'static str, String> {
     match slot_number {
@@ -97,6 +103,53 @@ fn slot_facts(slot: u8, state: PlanSlotState, modified_at_ms: Option<u64>) -> Pl
     }
 }
 
+/// The active slot as found on disk; a missing or invalid file names no slot.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
+#[serde(tag = "state", rename_all = "camelCase")]
+pub enum ActiveSlotFacts {
+    Present { slot: u8 },
+    Missing,
+    Invalid,
+}
+
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields, rename_all = "camelCase")]
+struct ActiveSlotFile {
+    format: String,
+    format_version: u8,
+    slot: u8,
+}
+
+/// Decodes `active-slot.json` exactly as the game module does: an object with the three
+/// literal keys once each, and integer tokens only, so `3.0` and `3e0` are refused.
+pub fn decode_active_slot(bytes: &[u8]) -> Option<u8> {
+    if bytes.len() > MAX_ACTIVE_SLOT_BYTES {
+        return None;
+    }
+    // The derived visitor also accepts an array, which the module does not.
+    let Ok(Value::Object(_)) = serde_json::from_slice::<Value>(bytes) else {
+        return None;
+    };
+    let file = serde_json::from_slice::<ActiveSlotFile>(bytes).ok()?;
+    // The module matches key tokens as written, so escaped key spellings are refused.
+    let text = std::str::from_utf8(bytes).ok()?;
+    let literal_keys = ["\"format\"", "\"formatVersion\"", "\"slot\""]
+        .iter()
+        .all(|key| text.contains(key));
+    (literal_keys
+        && file.format == ACTIVE_SLOT_FORMAT
+        && file.format_version == 1
+        && (1..=PLAN_SLOT_COUNT).contains(&file.slot))
+    .then_some(file.slot)
+}
+
+pub fn encode_active_slot(slot_number: u8) -> Result<String, String> {
+    slot_file_name(slot_number)?;
+    Ok(format!(
+        r#"{{"format":"{ACTIVE_SLOT_FORMAT}","formatVersion":1,"slot":{slot_number}}}"#
+    ))
+}
+
 /// The module's config folder when present and safe; `Ok(None)` when absent.
 pub fn module_config_dir(target: &ResolvedTarget) -> Result<Option<PathBuf>, String> {
     let config = target.rom.join(CONFIG_DIRECTORY);
@@ -163,6 +216,40 @@ fn read_slot(slot: u8, path: &Path) -> PlanSlotFacts {
             aspect_key: identity.starting_loadout.map(|loadout| loadout.aspect_key),
         },
         _ => unreadable,
+    }
+}
+
+fn read_active_slot(path: &Path) -> ActiveSlotFacts {
+    let metadata = match fs::symlink_metadata(path) {
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
+            return ActiveSlotFacts::Missing
+        }
+        Err(_) => return ActiveSlotFacts::Invalid,
+        Ok(metadata) => metadata,
+    };
+    if metadata.file_type().is_symlink()
+        || !metadata.is_file()
+        || metadata.len() > MAX_ACTIVE_SLOT_BYTES as u64
+    {
+        return ActiveSlotFacts::Invalid;
+    }
+    let mut bytes = Vec::new();
+    let read = fs::File::open(path).and_then(|file| {
+        file.take(MAX_ACTIVE_SLOT_BYTES as u64 + 1)
+            .read_to_end(&mut bytes)
+    });
+    match read.ok().and_then(|_| decode_active_slot(&bytes)) {
+        Some(slot) => ActiveSlotFacts::Present { slot },
+        None => ActiveSlotFacts::Invalid,
+    }
+}
+
+/// Reads `active-slot.json` under the same link and containment rules as the slots.
+pub fn inspect_active_slot(target: &ResolvedTarget) -> ActiveSlotFacts {
+    match module_config_dir(target) {
+        Ok(None) => ActiveSlotFacts::Missing,
+        Err(_) => ActiveSlotFacts::Invalid,
+        Ok(Some(directory)) => read_active_slot(&directory.join(ACTIVE_SLOT_FILE)),
     }
 }
 
@@ -275,6 +362,84 @@ mod tests {
         assert_eq!(slots[5].state, PlanSlotState::Empty);
     }
 
+    #[test]
+    fn active_slot_decodes_only_the_exact_integer_form() {
+        for slot in 1..=6 {
+            let encoded = encode_active_slot(slot).unwrap();
+            assert_eq!(decode_active_slot(encoded.as_bytes()), Some(slot));
+        }
+        assert_eq!(
+            encode_active_slot(3).unwrap(),
+            r#"{"format":"run-planner-active-slot","formatVersion":1,"slot":3}"#
+        );
+        assert!(encode_active_slot(0).is_err());
+        assert!(encode_active_slot(7).is_err());
+        assert_eq!(
+            decode_active_slot(
+                br#" { "slot" : 2, "formatVersion" : 1, "format" : "run-planner-active-slot" } "#
+            ),
+            Some(2)
+        );
+        let padded = format!(
+            r#"{{"format":"run-planner-active-slot","formatVersion":1,"slot":4}}{}"#,
+            " ".repeat(MAX_ACTIVE_SLOT_BYTES)
+        );
+        for rejected in [
+            r#"{"format":"run-planner-active-slot","formatVersion":1,"slot":3.0}"#,
+            r#"{"format":"run-planner-active-slot","formatVersion":1,"slot":3e0}"#,
+            r#"{"format":"run-planner-active-slot","formatVersion":1,"slot":"3"}"#,
+            r#"{"format":"run-planner-active-slot","formatVersion":1,"slot":0}"#,
+            r#"{"format":"run-planner-active-slot","formatVersion":1,"slot":7}"#,
+            r#"{"format":"run-planner-active-slot","formatVersion":1,"slot":-1}"#,
+            r#"{"format":"run-planner-active-slot","formatVersion":1.0,"slot":3}"#,
+            r#"{"format":"run-planner-active-slot","formatVersion":2,"slot":3}"#,
+            r#"{"format":"run-planner-active-slot","formatVersion":1}"#,
+            r#"{"format":"run-planner-active-slot","formatVersion":1,"slot":3,"extra":1}"#,
+            r#"{"format":"run-planner-execution","formatVersion":1,"slot":3}"#,
+            r#"{"formatVersion":1,"slot":3}"#,
+            r#"["run-planner-active-slot",1,3]"#,
+            r#"{"format":"run-planner-active-slot","formatVersion":1,"slot":3,"slot":3}"#,
+            r#"{"format":"run-planner-active-slot","format":"run-planner-active-slot","formatVersion":1,"slot":3}"#,
+            r#"{"format":"run-planner-active-slot","formatVersion":1,"\u0073lot":3}"#,
+            r#"{"\u0066ormat":"run-planner-active-slot","formatVersion":1,"slot":3}"#,
+            "3",
+            "",
+            "{",
+            padded.as_str(),
+        ] {
+            assert_eq!(decode_active_slot(rejected.as_bytes()), None, "{rejected}");
+        }
+    }
+
+    #[test]
+    fn active_slot_reads_present_missing_and_invalid_files() {
+        let temporary = TemporaryDirectory::new("active-slot");
+        let target = make_target(&temporary.0);
+        assert_eq!(inspect_active_slot(&target), ActiveSlotFacts::Missing);
+        let directory = slot_path(&target, 1).parent().unwrap().to_owned();
+        fs::create_dir_all(&directory).unwrap();
+        let path = directory.join(ACTIVE_SLOT_FILE);
+        assert_eq!(inspect_active_slot(&target), ActiveSlotFacts::Missing);
+        fs::write(&path, encode_active_slot(5).unwrap()).unwrap();
+        assert_eq!(
+            inspect_active_slot(&target),
+            ActiveSlotFacts::Present { slot: 5 }
+        );
+        assert_eq!(
+            serde_json::to_value(inspect_active_slot(&target)).unwrap(),
+            serde_json::json!({ "state": "present", "slot": 5 })
+        );
+        fs::write(&path, "slot 5").unwrap();
+        assert_eq!(inspect_active_slot(&target), ActiveSlotFacts::Invalid);
+        assert_eq!(
+            serde_json::to_value(ActiveSlotFacts::Invalid).unwrap(),
+            serde_json::json!({ "state": "invalid" })
+        );
+        fs::remove_file(&path).unwrap();
+        fs::create_dir(&path).unwrap();
+        assert_eq!(inspect_active_slot(&target), ActiveSlotFacts::Invalid);
+    }
+
     #[cfg(unix)]
     #[test]
     fn linked_slots_and_linked_config_folders_are_unreadable() {
@@ -286,6 +451,14 @@ mod tests {
         fs::create_dir_all(slot_path(&target, 1).parent().unwrap()).unwrap();
         symlink(&outside, slot_path(&target, 1)).unwrap();
         assert_eq!(inspect_slots(&target)[0].state, PlanSlotState::Unreadable);
+        let outside_active = temporary.0.join("outside-active.json");
+        fs::write(&outside_active, encode_active_slot(2).unwrap()).unwrap();
+        symlink(
+            &outside_active,
+            slot_path(&target, 1).with_file_name(ACTIVE_SLOT_FILE),
+        )
+        .unwrap();
+        assert_eq!(inspect_active_slot(&target), ActiveSlotFacts::Invalid);
 
         let other = make_target(&temporary.0.join("other"));
         let outside_config = temporary.0.join("outside-config");
@@ -301,5 +474,6 @@ mod tests {
         assert!(inspect_slots(&other)
             .iter()
             .all(|slot| slot.state == PlanSlotState::Unreadable));
+        assert_eq!(inspect_active_slot(&other), ActiveSlotFacts::Invalid);
     }
 }

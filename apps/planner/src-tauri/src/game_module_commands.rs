@@ -6,7 +6,7 @@ use run_planner_game_host::game_module_install::{
     self, GameModuleStatus, InstallOutcome, NativeSwap, RemoveOutcome,
 };
 use run_planner_game_host::game_module_package::ModulePackage;
-use run_planner_game_host::game_plan_publication::{self, GamePlanPublication};
+use run_planner_game_host::game_plan_publication::{self, ActiveSlotSetting, GamePlanPublication};
 use run_planner_game_host::game_target::{
     self, GameTargetDiscovery, GameTargetFacts, ResolvedTarget, TargetKind,
 };
@@ -188,5 +188,17 @@ pub(crate) fn game_plan_publish(
         ModulePackage::bundled(),
         slot_number,
         &plan_json,
+    ))
+}
+
+#[tauri::command]
+pub(crate) fn game_active_slot_set(
+    app: tauri::AppHandle,
+    slot_number: u8,
+) -> Result<ActiveSlotSetting, String> {
+    Ok(game_plan_publication::set_active_slot(
+        &config_dir(&app)?,
+        ModulePackage::bundled(),
+        slot_number,
     ))
 }

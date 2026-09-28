@@ -14,7 +14,7 @@ use crate::game_target::{
     DiscoveredProfile, GameTargetFacts, ProfileModule, ResolvedTarget, TargetKind,
     PLUGINS_DIRECTORY,
 };
-use crate::plan_slots::{inspect_slots, PlanSlotFacts};
+use crate::plan_slots::{inspect_active_slot, inspect_slots, ActiveSlotFacts, PlanSlotFacts};
 
 pub const MODULE_DIRECTORY: &str = "adamantRunPlanner-Run_Planner";
 const MODULE_NAMESPACE: &str = "adamantRunPlanner";
@@ -150,6 +150,7 @@ pub struct TargetInspection {
     /// A previous install left beside `plugins/` after a failed restore.
     pub stranded_install: Option<String>,
     pub plan_slots: Vec<PlanSlotFacts>,
+    pub active_slot: ActiveSlotFacts,
 }
 
 #[derive(Clone, Debug, Serialize)]
@@ -600,6 +601,7 @@ pub fn inspect(
             .and_then(|folder| folder.file_name())
             .map(|name| name.to_string_lossy().into_owned()),
         plan_slots: inspect_slots(target),
+        active_slot: inspect_active_slot(target),
     })
 }
 
