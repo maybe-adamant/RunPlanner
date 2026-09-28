@@ -623,6 +623,16 @@ describe('generated encounter customization workflows', () => {
     act(() => view.application.store.dispatch(authoredProjectUndoRequested()));
     expect(current(view)).toEqual(value);
   });
+  it('hides the shared enemy for one wave without deleting the retained choice', async () => {
+    const view = await open(customize(createCompleteFGProject(), phase, composed));
+    expect(within(view.dialog).getByRole('button', { name: 'Shared Enemy' })).toBeTruthy();
+    await view.user.click(within(view.dialog).getByRole('radio', { name: '1' }));
+    expect(within(view.dialog).queryByRole('button', { name: 'Shared Enemy' })).toBeNull();
+    expect(current(view)).toEqual({ ...composed, waveCount: 1 });
+    await view.user.click(within(view.dialog).getByRole('radio', { name: '3' }));
+    expect(within(view.dialog).getByRole('button', { name: 'Shared Enemy' })).toBeTruthy();
+    expect(current(view)).toEqual(composed);
+  });
   it('warns about declared once-per-run enemies among engine-assessed active members', async () => {
     const owner = createEncounterPhaseAddress(
       goldenHBiome,

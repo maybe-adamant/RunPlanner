@@ -103,6 +103,7 @@ export function priorThreeRoomShopPresence(
 export function assessStygianWellPlacement(
   declaration: RoomDeclaration | undefined,
   priorEnteredWellFlags: readonly boolean[],
+  biomeDepthCache: number,
 ): StygianWellPlacementAssessment {
   const roomShop = declaration?.roomShop;
   const forced = roomShop?.forced === true;
@@ -112,6 +113,7 @@ export function assessStygianWellPlacement(
     eligible:
       forced ||
       (roomShop !== undefined &&
+        biomeDepthCache >= 3 &&
         roomShop.spawnChance > 0 &&
         (declaration?.challengeSwitchAnchorCount ?? 0) > 0 &&
         priorWellCount === 0),
@@ -157,13 +159,14 @@ export function assessStygianWell(
   catalog: Catalog,
   routeKey: string,
   room: RoomDeclaration | undefined,
+  biomeDepthCache: number,
   well: StygianWellState,
   state?: Pick<StygianWellRunState, 'discountUses' | 'emptySlotUses'>,
   traitHistory?: import('../traits').TraitHistoryState,
   priorEnteredWellFlags: readonly boolean[] = Object.freeze([]),
 ): StygianWellAssessment {
   const declaration = room?.roomShop;
-  const placement = assessStygianWellPlacement(room, priorEnteredWellFlags);
+  const placement = assessStygianWellPlacement(room, priorEnteredWellFlags, biomeDepthCache);
   const domains = Object.freeze({
     healing: wellCandidateItemKeys(catalog, routeKey, state, traitHistory, 'healing'),
     secondLeft: wellCandidateItemKeys(catalog, routeKey, state, traitHistory, 'secondLeft'),
