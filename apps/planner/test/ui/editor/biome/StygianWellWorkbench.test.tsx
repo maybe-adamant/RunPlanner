@@ -26,6 +26,7 @@ import { RouteWellsPanel } from '@planner/ui/shell/RouteWellsPanel';
 import {
   createUnderworldFWellCheckpoint,
   goldenFBiome,
+  goldenFOccurrenceId,
   loadUnderworldFGProject,
 } from '@run-planner/test-fixtures/underworld';
 import { loadUnderworldFStygianWellCheckpoint } from '@run-planner/test-fixtures/checkpoints/underworld';
@@ -72,13 +73,7 @@ function openOverview(): void {
 describe('Stygian Well workbench', () => {
   it('authors ordinary presence separately from interaction', async () => {
     const project = loadUnderworldFGProject();
-    const occurrenceId = project.route.biomes
-      .find((biome) => biome.biomeKey === 'F')
-      ?.topology?.occurrences.find((room) => {
-        const host = catalog.rooms.byKey[room.gameName]?.roomShop;
-        return host !== undefined && host.forced !== true;
-      })?.occurrenceId;
-    if (occurrenceId === undefined) throw new Error('ordinary F Well host is missing');
+    const occurrenceId = goldenFOccurrenceId(3, 1);
     const view = renderOccurrenceWorkbench(project, 'Underworld', 'F', (biome) =>
       biome.nodes.find(
         (node): node is WorkspaceOccurrenceWorkbenchNode =>
