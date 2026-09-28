@@ -2,7 +2,7 @@
 -- constructed once here and retained in lexical scope.
 local composition = {}
 
-function composition.bind(root)
+function composition.bind(root, moduleVersion)
     if type(root) ~= "string" or root == "" then error("executor config path is required", 2) end
     local json = import("mods/protocol/json.lua")
     local protocol = import("mods/protocol/decoder.lua")
@@ -162,12 +162,32 @@ function composition.bind(root)
                 .. fieldsList(observed.optionalRewards, fieldsOptional) .. ",nemesis="
                 .. fieldsObject(observed.nemesis) .. "}"
         end
+        -- Control bytes become \ddd escapes so a plan name cannot start a new log line.
+        local function logText(value)
+            local escaped = tostring(value):gsub("[%c\\\"]", function(byte)
+                return string.format("\\%03d", byte:byte())
+            end)
+            return '"' .. escaped .. '"'
+        end
         local function report(runtime)
             local state = getState(runtime)
             if state == nil then return end
             if runtime.status and runtime.status.write then
                 local status = session.status(state)
                 runtime.status.write("ExecutionSessionStatus", status.state .. ": " .. status.reason)
+            end
+            if state.plan and state.loggedSession ~= state.plan then
+                state.loggedSession = state.plan
+                if rom and rom.log and rom.log.info then
+                    local plan = state.plan
+                    rom.log.info("[RunPlanner] session admitted slot=" .. tostring(state.planSlot)
+                        .. " project=" .. tostring(plan.projectId)
+                        .. " name=" .. logText(plan.displayName or "")
+                        .. " fingerprint=" .. tostring(plan.planFingerprint)
+                        .. " route=" .. tostring(plan.routeKey)
+                        .. " protocol=" .. tostring(plan.protocolVersion) .. " catalog="
+                        .. tostring(plan.catalogVersion) .. " module=" .. tostring(moduleVersion))
+                end
             end
             if state.firstMismatch and state.loggedMismatch ~= state.firstMismatch then
                 state.loggedMismatch = state.firstMismatch
@@ -186,9 +206,7 @@ function composition.bind(root)
             end
             for _, diagnostic in ipairs(state.diagnostics or {}) do
                 local fields = diagnostic.checkpoint == "fields-completed-product"
-                local encounter = diagnostic.checkpoint == "encounter-eligibility"
-                    or diagnostic.checkpoint == "encounter-composition"
-                if (fields or encounter) and diagnostic.logged ~= true then
+                if diagnostic.logged ~= true then
                     diagnostic.logged = true
                     if rom and rom.log and rom.log.info then
                         rom.log.info("[RunPlanner] diagnostic occurrence=" .. tostring(diagnostic.occurrenceId)

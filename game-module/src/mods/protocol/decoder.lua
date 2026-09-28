@@ -142,7 +142,7 @@ function protocol.decode(value)
         return p.fail("execution plan has unsupported identity")
     end
     -- The presentation-only plan name is at most 200 code points, so at most 800 UTF-8 bytes;
-    -- it is validated but unused.
+    -- it is validated and only logged.
     if plan.displayName ~= nil and not p.str(plan.displayName, "execution plan.displayName", 800) then
         return p.fail("execution plan has an invalid display name")
     end

@@ -241,7 +241,7 @@ function TestRuntimeComposition.testFirstMismatchLogIncludesFullInventoryAndOccu
 
     freshImport("mods/runtime/composition.lua").bind("/tmp/run-planner-test").attach({})
 
-    lu.assertEquals(#logs, 1)
+    lu.assertEquals(#logs, 2)
     lu.assertStrContains(logs[1], "first-mismatch checkpoint=room-exit-conformance:traitInventory")
     for index = 1, 8 do lu.assertStrContains(logs[1], "traitKey=Trait" .. index) end
     lu.assertStrContains(logs[1], "rarity=Rare")
@@ -250,6 +250,7 @@ function TestRuntimeComposition.testFirstMismatchLogIncludesFullInventoryAndOccu
     lu.assertStrContains(logs[1], "diagnostics=")
     lu.assertStrContains(logs[1], "run-state")
     lu.assertStrContains(logs[1], "damageBonus=1.2000000000000002")
+    lu.assertStrContains(logs[2], "diagnostic occurrence=one run-state {")
     _G.import, _G.rom = priorImport, priorRom
 end
 
@@ -379,6 +380,65 @@ function TestRuntimeComposition.testFieldsDiagnosticLogsItsCompletedSnapshotWith
     lu.assertStrContains(logs[1], "101:FieldsRewardCage#11")
     lu.assertStrContains(logs[1], "201:MaxHealthDrop#21=MaxHealthDrop/nil#21")
     _G.import, _G.rom = priorImport, priorRom
+end
+
+function TestRuntimeComposition.testAdmittedSessionAndEveryDiagnosticAreLoggedOnce()
+    local priorImport, priorRom = _G.import, _G.rom
+    local logs = {}
+    local state = {
+        state = "synchronized", reason = "ready", planSlot = 2,
+        plan = {
+            projectId = "project-1", displayName = "Fast \"Fields\"\n[RunPlanner] forged",
+            planFingerprint = "0a1b2c3d",
+            routeKey = "Underworld", protocolVersion = 49, catalogVersion = "0.55.0",
+        },
+        diagnostics = {
+            { occurrenceId = "opening", checkpoint = "run-state", observed = { gold = 3 } },
+            { occurrenceId = "fight", checkpoint = "encounter-composition", observed = { waves = 2 } },
+        },
+    }
+    local function freshImport(path)
+        if path == "mods/runtime/composition.lua" then return assert(loadfile("src/" .. path))() end
+        if path == "mods/protocol/json.lua" or path == "mods/protocol/decoder.lua" then
+            return { decode = function(value) return value end }
+        end
+        if path == "mods/host/inbox.lua" then return { create = function() return {} end } end
+        if path == "mods/runtime/session.lua" then
+            return { create = function() return state end,
+                status = function() return { state = state.state, reason = state.reason } end }
+        end
+        if path == "mods/room/timeline/encounters/thessaly.lua" then return { create = shipCombatStub } end
+        if path == "mods/room/timeline/encounters/generated.lua" then
+            return { create = generatedEncounterStub }
+        end
+        if path == "mods/guidance/highlights.lua" then return highlightStub() end
+        if path == "mods/room/hooks.lua" then
+            return { attach = function(_, _, _, report)
+                report({})
+                state.diagnostics[#state.diagnostics + 1] = {
+                    occurrenceId = "exit", checkpoint = "room-exit", observed = "F_Next",
+                }
+                report({})
+            end }
+        end
+        return { create = function() return { attach = function() end } end,
+            attach = function() return {} end }
+    end
+    _G.import = freshImport
+    _G.rom = { path = {}, log = { info = function(message) logs[#logs + 1] = message end } }
+    local ok, errorValue = pcall(function()
+        freshImport("mods/runtime/composition.lua").bind("/tmp/run-planner-test", "1.2.3").attach({})
+    end)
+    _G.import, _G.rom = priorImport, priorRom
+
+    lu.assertTrue(ok, errorValue)
+    lu.assertEquals(#logs, 4)
+    lu.assertEquals(logs[1], "[RunPlanner] session admitted slot=2 project=project-1"
+        .. " name=\"Fast \\034Fields\\034\\010[RunPlanner] forged\""
+        .. " fingerprint=0a1b2c3d route=Underworld protocol=49 catalog=0.55.0 module=1.2.3")
+    lu.assertEquals(logs[2], "[RunPlanner] diagnostic occurrence=opening run-state {gold=3}")
+    lu.assertEquals(logs[3], "[RunPlanner] diagnostic occurrence=fight encounter-composition {waves=2}")
+    lu.assertEquals(logs[4], "[RunPlanner] diagnostic occurrence=exit room-exit F_Next")
 end
 
 function TestRuntimeComposition.testAcquisitionCompositionSharesOneSeaStarAcrossEveryCarrier()
