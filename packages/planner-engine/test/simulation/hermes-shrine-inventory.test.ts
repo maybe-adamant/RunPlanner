@@ -301,7 +301,11 @@ describe('Hermes Shrine entry inventory gate', () => {
       createBiomeAddress('Surface', 'O'),
       createOccurrenceId('ordinary-shrine-host'),
     );
-    const placement = assessHermesShrinePlacement(catalog.rooms.byKey.O_Combat02, [false, false]);
+    const placement = assessHermesShrinePlacement(
+      catalog.rooms.byKey.O_Combat02,
+      [false, false],
+      3,
+    );
     const candidate = createHermesShrineCandidateArtifacts(
       new Map([[semanticAddressKey(owner), Object.freeze([Object.freeze({ placement })])]]),
     ).at(owner);
@@ -328,11 +332,12 @@ describe('Hermes Shrine entry inventory gate', () => {
 
   it('uses the prior-two physical window and lets forced Postboss hosts bypass it', () => {
     const ordinary = catalog.rooms.byKey.O_Combat02;
-    expect(assessHermesShrinePlacement(ordinary, [true]).eligible).toBe(false);
-    expect(assessHermesShrinePlacement(ordinary, [true, false]).eligible).toBe(false);
-    expect(assessHermesShrinePlacement(ordinary, [false, false]).eligible).toBe(true);
+    expect(assessHermesShrinePlacement(ordinary, [true], 3).eligible).toBe(false);
+    expect(assessHermesShrinePlacement(ordinary, [true, false], 3).eligible).toBe(false);
+    expect(assessHermesShrinePlacement(ordinary, [false, false], 2).eligible).toBe(false);
+    expect(assessHermesShrinePlacement(ordinary, [false, false], 3).eligible).toBe(true);
     expect(
-      assessHermesShrinePlacement(catalog.rooms.byKey.O_PostBoss01, [true, true]),
+      assessHermesShrinePlacement(catalog.rooms.byKey.O_PostBoss01, [true, true], 0),
     ).toMatchObject({
       forced: true,
       eligible: true,

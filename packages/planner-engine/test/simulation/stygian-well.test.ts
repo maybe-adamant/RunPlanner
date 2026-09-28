@@ -35,6 +35,7 @@ import {
   advanceStygianWellBossUses,
   advanceStygianWellEncounterUses,
   assessStygianWell,
+  assessStygianWellPlacement,
   extendedWellItemKeys,
   twistResultItemKeys,
 } from '../../src/simulation/commerce/stygian-well';
@@ -49,6 +50,34 @@ const empty = () => ({
 });
 
 describe('Stygian Well consequential purchase state', () => {
+  it('requires biome depth three for ordinary Wells while forced hosts bypass depth and spacing', () => {
+    const ordinary = catalog.rooms.byKey.F_Combat01;
+    expect(assessStygianWellPlacement(ordinary, [], 2).eligible).toBe(false);
+    expect(assessStygianWellPlacement(ordinary, [], 3).eligible).toBe(true);
+    expect(assessStygianWellPlacement(ordinary, [true, false, false], 3).eligible).toBe(false);
+    expect(assessStygianWellPlacement(catalog.rooms.byKey.F_PostBoss01, [true], 0)).toMatchObject({
+      forced: true,
+      eligible: true,
+    });
+  });
+
+  it('uses room-entry depth rather than physical room count for F Well candidates', () => {
+    const assembly = simulateProjectAssembly(catalog, createGoldenFGHProject());
+    for (const [decision, eligible] of [
+      [2, false],
+      [3, true],
+    ] as const) {
+      const owner = createOccurrenceAddress(
+        goldenFBiome,
+        createOccurrenceId(`golden-f-b${decision}-e1`),
+      );
+      expect(stygianWellCandidateForProjectEvaluationAssembly(assembly, owner)).toMatchObject({
+        placementEligible: eligible,
+        present: false,
+      });
+    }
+  });
+
   it.each(['Underworld', 'Surface', 'Dream'])(
     'uses %s availability for initial Ixion and Travel refill',
     (routeKey) => {
@@ -60,7 +89,13 @@ describe('Stygian Well consequential purchase state', () => {
           secondRight: 'LimitedSwapTraitDrop',
         },
       } as const;
-      const initial = assessStygianWell(catalog, routeKey, catalog.rooms.byKey.F_PostBoss01, well);
+      const initial = assessStygianWell(
+        catalog,
+        routeKey,
+        catalog.rooms.byKey.F_PostBoss01,
+        3,
+        well,
+      );
       expect(
         initial.candidateItemKeysBySlot.secondLeft.includes('TemporaryForcedSecretDoorTrait'),
       ).toBe(routeKey !== 'Dream');
@@ -998,6 +1033,7 @@ describe('Stygian Well consequential purchase state', () => {
       catalog,
       'Underworld',
       catalog.rooms.byKey.F_Combat01,
+      3,
       {
         interacted: true,
         offerKeyBySlot: {
@@ -1036,6 +1072,7 @@ describe('Stygian Well consequential purchase state', () => {
       catalog,
       'Underworld',
       catalog.rooms.byKey.F_Combat01,
+      3,
       well,
       empty(),
     );

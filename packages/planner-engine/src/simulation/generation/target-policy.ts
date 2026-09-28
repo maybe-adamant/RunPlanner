@@ -288,6 +288,7 @@ function projectRoomGenerationRequirementContext(
       : assessHermesShrine(
           catalog,
           sourceDeclaration,
+          view.ledgers.counters.biomeDepthCache,
           shrine,
           context,
           priorTwoSurfaceShopPresence(view.ledgers.roomAppearances),

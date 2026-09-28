@@ -163,6 +163,7 @@ export function priorTwoSurfaceShopPresence(
 export function assessHermesShrinePlacement(
   declaration: import('../../catalog-schema').RoomDeclaration | undefined,
   priorEnteredShrineFlags: readonly boolean[],
+  biomeDepthCache: number,
 ): HermesShrinePlacementAssessment {
   const surfaceShop = declaration?.surfaceShop;
   const forced = surfaceShop?.forced === true;
@@ -172,6 +173,7 @@ export function assessHermesShrinePlacement(
     eligible:
       forced ||
       (surfaceShop !== undefined &&
+        biomeDepthCache >= 3 &&
         surfaceShop.spawnChance > 0 &&
         (declaration?.challengeSwitchAnchorCount ?? 0) > 0 &&
         priorShrineCount === 0),
@@ -188,11 +190,16 @@ export function assessHermesShrinePlacement(
 export function assessHermesShrine(
   catalog: Catalog,
   declaration: import('../../catalog-schema').RoomDeclaration | undefined,
+  biomeDepthCache: number,
   shrine: HermesShrineState,
   requirements: RequirementEvaluationContext,
   priorEnteredShrineFlags: readonly boolean[],
 ): HermesShrineAssessment {
-  const placement = assessHermesShrinePlacement(declaration, priorEnteredShrineFlags);
+  const placement = assessHermesShrinePlacement(
+    declaration,
+    priorEnteredShrineFlags,
+    biomeDepthCache,
+  );
   const profile = catalog.rewards.shops.byKey.SurfaceShop;
   const candidateRewardTypesBySlot = Object.freeze(
     Object.fromEntries(

@@ -560,7 +560,7 @@ export function GeneratedEncounterCustomizationControl({
             ) : null}
           </div>
         </div>
-        {decision.selection.waveCount.max > 1 || value.highlightKey !== undefined ? (
+        {(value.waveCount ?? (fixedCount ? decision.selection.waveCount.min : 0)) > 1 ? (
           <div
             className="encounter-customization-row encounter-shared-enemy"
             title="Only used with multiple waves"

@@ -137,12 +137,17 @@ describe('progressive selected and blocked products', () => {
   });
 
   it('retains reached Well and Shrine placement capabilities before biome completion', () => {
-    const incompleteF = createFGenerationProject(undefined, { includeTakeover: false });
+    const fHostId = createOccurrenceId('golden-f-b3-e1');
+    const incompleteF = incompleteAtMissingDecision(
+      createCompleteFGProject(),
+      goldenFBiome,
+      fHostId,
+    );
     const fAssembly = simulateProjectAssembly(catalog, incompleteF);
-    const fHost = createOccurrenceAddress(fGenerationBiome, fGenerationOccurrenceId(1, 1));
+    const fHost = createOccurrenceAddress(goldenFBiome, fHostId);
     expect(
       candidateArtifactsForProjectEvaluationAssembly(fAssembly)
-        .biomeAt(fGenerationBiome)
+        .biomeAt(goldenFBiome)
         ?.stygianWells.at(fHost),
     ).toMatchObject({
       placementEligible: true,

@@ -260,14 +260,23 @@ export function applyRoomEnteredTransition(
         next.map((branch) =>
           room.hermesShrine === undefined
             ? Object.freeze({
-                placement: assessHermesShrinePlacement(declaration, priorEnteredShrineFlags),
+                placement: assessHermesShrinePlacement(
+                  declaration,
+                  priorEnteredShrineFlags,
+                  entry.ledgers.counters.biomeDepthCache,
+                ),
                 inventory: undefined,
               })
             : Object.freeze({
-                placement: assessHermesShrinePlacement(declaration, priorEnteredShrineFlags),
+                placement: assessHermesShrinePlacement(
+                  declaration,
+                  priorEnteredShrineFlags,
+                  entry.ledgers.counters.biomeDepthCache,
+                ),
                 inventory: assessHermesShrine(
                   catalog,
                   declaration,
+                  entry.ledgers.counters.biomeDepthCache,
                   room.hermesShrine,
                   createBiomeRewardFacts({
                     catalog,
@@ -355,14 +364,23 @@ export function applyRoomEnteredTransition(
           next.map((branch) =>
             room.stygianWell === undefined
               ? Object.freeze({
-                  placement: assessStygianWellPlacement(declaration, priorEnteredWellFlags),
+                  placement: assessStygianWellPlacement(
+                    declaration,
+                    priorEnteredWellFlags,
+                    entry.ledgers.counters.biomeDepthCache,
+                  ),
                 })
               : Object.freeze({
-                  placement: assessStygianWellPlacement(declaration, priorEnteredWellFlags),
+                  placement: assessStygianWellPlacement(
+                    declaration,
+                    priorEnteredWellFlags,
+                    entry.ledgers.counters.biomeDepthCache,
+                  ),
                   inventory: assessStygianWell(
                     catalog,
                     room.origin.routeKey,
                     declaration,
+                    entry.ledgers.counters.biomeDepthCache,
                     room.stygianWell,
                     branch.state.stygianWell,
                     branch.state.traitHistory,
