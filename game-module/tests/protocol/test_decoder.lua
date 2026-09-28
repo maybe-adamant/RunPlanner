@@ -193,7 +193,7 @@ function TestProtocol.testConformanceResolverProjectsNamedFactsAndRejectsUnknown
         "retainedEffects": {
             "steadyGrowth": [{"traitKey":"Trait"}],
             "keepsakes": {"currentKey":"Keepsake"},
-            "stygianWell": {"sparkUses":1}
+            "stygianWell": {"sparkUses":1,"yarnUses":2}
         },
         "chaos": {"active":[]},
         "rewardPriorities": ["boon"],
@@ -220,7 +220,8 @@ function TestProtocol.testConformanceResolverProjectsNamedFactsAndRejectsUnknown
     lu.assertEquals(expected.rewardPriorities, state.rewardPriorities)
     lu.assertEquals(expected.pathOfStars, state.hexProgress)
     lu.assertEquals(expected.forfeit, state.forfeit)
-    lu.assertEquals(expected.stygianWell, state.retainedEffects.stygianWell)
+    lu.assertEquals(expected.stygianWell, { yarnUses = 2 })
+    lu.assertEquals(state.retainedEffects.stygianWell.sparkUses, 1)
     lu.assertEquals(expected.elementCounts, state.traits.elements)
 
     local unknown = conformance.resolve(assert(json.decode([[{

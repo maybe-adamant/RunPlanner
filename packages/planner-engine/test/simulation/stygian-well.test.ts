@@ -50,6 +50,45 @@ const empty = () => ({
 });
 
 describe('Stygian Well consequential purchase state', () => {
+  it('allows buying Ixion while holding pending Ixion uses and adds one use', () => {
+    const itemKey = 'TemporaryForcedSecretDoorTrait';
+    const well = {
+      interacted: true,
+      offerKeyBySlot: {
+        healing: 'ArmorBoostStore',
+        secondLeft: itemKey,
+        secondRight: 'TemporaryBoonRarityTrait',
+      },
+    } as const;
+    let state = applyStygianWellPurchase(catalog, empty(), itemKey);
+    for (const pending of [1, 2]) {
+      expect(state.sparkUses).toBe(pending);
+      const inventory = assessStygianWell(
+        catalog,
+        'Underworld',
+        catalog.rooms.byKey.F_PostBoss01,
+        3,
+        well,
+        state,
+      );
+      expect(inventory.candidateItemKeysBySlot.secondLeft).toContain(itemKey);
+      expect(inventory.issues).toEqual([]);
+      expect(
+        assessStygianWellPurchase(
+          catalog,
+          'Underworld',
+          well,
+          'initial:secondLeft',
+          state,
+          createTraitHistoryState(),
+          'initial:secondLeft',
+        ).issues,
+      ).toEqual([]);
+      state = applyStygianWellPurchase(catalog, state, itemKey);
+      expect(state.sparkUses).toBe(pending + 1);
+    }
+  });
+
   it('requires biome depth three for ordinary Wells while forced hosts bypass depth and spacing', () => {
     const ordinary = catalog.rooms.byKey.F_Combat01;
     expect(assessStygianWellPlacement(ordinary, [], 2).eligible).toBe(false);
