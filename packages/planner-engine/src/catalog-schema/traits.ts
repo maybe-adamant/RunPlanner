@@ -408,6 +408,8 @@ export type TraitRequirementExpression =
 export interface WeaponDeclaration {
   readonly key: string;
   readonly label: string;
+  /** The weapon's one-word name, used where the full label does not fit. */
+  readonly shortLabel: string;
   readonly aspectKeys: readonly string[];
   readonly defaultAspectKey: string;
 }

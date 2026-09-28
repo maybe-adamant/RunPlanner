@@ -131,19 +131,22 @@ ignores it. Save As from an already-saved file gives the copy a new `projectId`
 longer match it.
 
 Once the module is ready, the Game panel shows the six slots as a table: Slot,
-Plan, Route, Ends at, Aspect and Sent. The host reads each slot under the same
+Plan, Route, Ends, Aspect and Sent. The host reads each slot under the same
 link and containment rules and the 1 MiB bound, and reports it as empty,
 present or unreadable with its modified time and only existing wire fields:
 `projectId`, `displayName`, `routeKey`, `extent.biomeKeys`,
 `startingLoadout.weaponKey` and `startingLoadout.aspectKey`, and
 `planFingerprint`. The application labels the route, final biome, aspect and
-weapon from the catalog; a plan without `displayName` shows "(unnamed plan)" and
-an unreadable slot shows only "Unreadable". A slot with the open project's
+weapon (by its `shortLabel`) from the catalog; a plan without `displayName`
+shows _Unnamed_, Sent is a compact relative time with the exact local time as
+its title and description, and an unreadable slot shows only "Unreadable". A slot with the open project's
 `projectId` is marked **current** when its fingerprint matches the compiled plan
 and **older version** otherwise, by plain identity equality. **Send here** fills an empty slot and
 **Replace** overwrites an occupied one after confirmation, both taking the Save
 and send forms when a save is needed; all are absent while the current project
-cannot compile, which the panel explains. The planner
+cannot compile, which the panel explains from the compiler's error code: a
+known route, extent or opening code gets its own sentence, and any other failure
+asks to resolve the plan's findings, never showing raw compiler text. The planner
 remembers the last slot sent for the loaded project as UI-session state only: a
 send from the Game panel or the header sets it, and loading, creating or
 replacing the document, or restarting, clears it. The header **Send to game

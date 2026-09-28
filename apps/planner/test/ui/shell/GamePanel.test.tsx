@@ -123,7 +123,13 @@ describe('Game panel', () => {
     expect(line.getAttribute('title')).toBe('/profiles/h2-dev');
     const details = dialog.querySelector('details');
     expect(details?.open).toBe(false);
-    expect(within(dialog).getByRole('button', { name: 'Remove game module' })).toBeTruthy();
+    const remove = within(dialog).getByRole('button', { name: 'Remove game module' });
+    expect(remove.textContent).toBe('Remove');
+    expect(remove.parentElement?.textContent).toMatch(/^Ready · module 0\.1\.0 .*Remove$/);
+    await user.click(remove);
+    const confirmRemove = await screen.findByRole('dialog', { name: 'Remove game module?' });
+    await user.click(within(confirmRemove).getByRole('button', { name: 'Cancel' }));
+    expect(game.host.remove).not.toHaveBeenCalled();
 
     await user.click(within(dialog).getByRole('button', { name: 'Change game location' }));
     expect(within(dialog).getByRole('button', { name: 'Find r2modman profiles' })).toBeTruthy();
@@ -385,13 +391,15 @@ describe('Game panel', () => {
       application.projectOperations.createNew('Underworld').then(() => undefined),
     );
     expect(within(dialog).getByRole('heading', { name: 'Plans in game' })).toBeTruthy();
-    expect(within(dialog).getByText(/^This plan can’t be sent yet: /)).toBeTruthy();
+    expect(
+      within(dialog).getByText('Resolve this plan’s findings before sending it.'),
+    ).toBeTruthy();
     const table = within(dialog).getByRole('table', { name: 'Plans in game' });
     expect(
       within(table)
         .getAllByRole('columnheader')
         .map((header) => header.textContent),
-    ).toEqual(['Slot', 'Plan', 'Route', 'Ends at', 'Aspect', 'Sent', 'Action']);
+    ).toEqual(['Slot', 'Plan', 'Route', 'Ends', 'Aspect', 'Sent', 'Action']);
     expect(
       within(table)
         .getAllByRole('rowheader')
@@ -401,6 +409,7 @@ describe('Game panel', () => {
   });
 
   it('sends a clean saved plan under its file name and confirms before replacing', async () => {
+    const fourHoursAgo = Date.now() - 4 * 3_600_000;
     const game = createFakeGameModuleHost(
       gameModuleStatus({
         inspection: {
@@ -416,6 +425,16 @@ describe('Game panel', () => {
               weaponKey: 'WeaponStaffSwing',
               aspectKey: 'BaseStaffAspect',
             }),
+            planSlot(3, {
+              state: 'present',
+              modifiedAtMs: fourHoursAgo,
+              routeKey: 'Underworld',
+              biomeKeys: ['F'],
+              planFingerprint: 'another',
+              projectId: 'another',
+              weaponKey: 'WeaponDagger',
+              aspectKey: 'DaggerBackstabAspect',
+            }),
           ),
         },
       }),
@@ -430,6 +449,19 @@ describe('Game panel', () => {
     const row = within(table).getByRole('row', { name: /Slot 1/ });
     expect(within(row).getByText('Their run')).toBeTruthy();
     expect(within(row).getByText(catalog.biomes.byKey.F!.label)).toBeTruthy();
+    expect(within(row).getByText('Aspect of Melinoë (Staff)')).toBeTruthy();
+    expect(within(row).getByText('just now')).toBeTruthy();
+    const unnamed = within(table).getByRole('row', { name: /Slot 3/ });
+    expect(within(unnamed).getByText('Unnamed')).toBeTruthy();
+    expect(within(unnamed).getByText('Aspect of Melinoë (Blades)')).toBeTruthy();
+    const sent = within(unnamed).getByText('4h ago');
+    const exact = new Date(fourHoursAgo).toLocaleString(undefined, {
+      dateStyle: 'medium',
+      timeStyle: 'short',
+    });
+    expect(sent.getAttribute('title')).toBe(exact);
+    const description = document.getElementById(sent.getAttribute('aria-describedby') ?? '');
+    expect(description?.textContent).toBe(exact);
     await user.click(within(table).getByRole('button', { name: 'Send here (slot 2)' }));
     expect(game.published.map((publication) => publication.slotNumber)).toEqual([2]);
     expect(JSON.parse(game.published[0]!.json)).toMatchObject({ displayName: 'Erebus opener' });

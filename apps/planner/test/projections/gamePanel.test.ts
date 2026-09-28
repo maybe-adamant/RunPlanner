@@ -389,7 +389,8 @@ describe('Game panel projection', () => {
     });
     const current = { kind: 'publishable', projectId: 'mine', planFingerprint: 'current' } as const;
     const plans = projectGamePlans(status, current, 'clean', catalog, now);
-    const aspect = `${catalog.aspects.byKey.BaseStaffAspect!.label} (${catalog.weapons.byKey.WeaponStaffSwing!.label})`;
+    const exact = (ms: number) =>
+      new Date(ms).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' });
     expect(plans?.unavailableReason).toBeNull();
     expect(plans?.rows[0]).toEqual({
       slot: 1,
@@ -398,8 +399,12 @@ describe('Game panel projection', () => {
         plan: 'Surface Phial run',
         route: catalog.routes.byKey.Surface!.label,
         endsAt: catalog.biomes.byKey.Q!.label,
-        aspect,
-        sent: '3 min ago',
+        aspect: 'Aspect of Melinoë (Staff)',
+        sent: {
+          ago: '3m ago',
+          exact: exact(now - 3 * 60_000),
+          iso: new Date(now - 3 * 60_000).toISOString(),
+        },
       },
       summary: null,
       marker: 'current',
@@ -407,11 +412,14 @@ describe('Game panel projection', () => {
     });
     expect(catalog.biomes.byKey.Q!.label).not.toBe('Q');
     expect(plans?.rows[1]).toMatchObject({
-      columns: { plan: '(unnamed plan)', sent: '2 days ago' },
+      columns: { plan: null, sent: { ago: '2d ago', exact: exact(now - 2 * 86_400_000) } },
       marker: 'olderVersion',
     });
     expect(plans?.rows[2]).toMatchObject({ columns: null, summary: 'Unreadable', marker: null });
-    expect(plans?.rows[3]).toMatchObject({ columns: { plan: 'Theirs' }, marker: null });
+    expect(plans?.rows[3]).toMatchObject({
+      columns: { plan: 'Theirs', sent: { ago: 'just now' } },
+      marker: null,
+    });
     expect(plans?.rows[4]).toMatchObject({
       columns: null,
       summary: 'Empty',
@@ -435,15 +443,24 @@ describe('Game panel projection', () => {
 
     const blocked = projectGamePlans(
       status,
-      { kind: 'notPublishable', reason: 'Complete the Erebus opening room first.' },
+      { kind: 'notPublishable', code: 'notEligible' },
       'clean',
       catalog,
       now,
     );
-    expect(blocked?.unavailableReason).toBe(
-      'This plan can’t be sent yet: Complete the Erebus opening room first.',
-    );
+    expect(blocked?.unavailableReason).toBe('Resolve this plan’s findings before sending it.');
     expect(blocked?.rows.every((row) => row.action === null && row.marker === null)).toBe(true);
+    const reasonFor = (
+      code: 'unsupportedRoute' | 'openingMissing' | 'executionCoverageMissing' | null,
+    ) =>
+      projectGamePlans(status, { kind: 'notPublishable', code }, 'clean', catalog, now)
+        ?.unavailableReason;
+    expect(reasonFor('unsupportedRoute')).toBe('The game module can’t run this route yet.');
+    expect(reasonFor('openingMissing')).toBe('Plan the opening room before sending this plan.');
+    expect(reasonFor('executionCoverageMissing')).toBe(
+      'Resolve this plan’s findings before sending it.',
+    );
+    expect(reasonFor(null)).toBe('Resolve this plan’s findings before sending it.');
     expect(
       projectGamePlans(status, { kind: 'noProject' }, 'clean', catalog, now)?.unavailableReason,
     ).toBe('Open a project to send it to the game.');
@@ -488,7 +505,7 @@ describe('Game panel projection', () => {
     expect(rows?.[0]?.columns).toMatchObject({
       route: 'constructor',
       endsAt: 'toString',
-      aspect: 'hasOwnProperty',
+      aspect: 'hasOwnProperty (__proto__)',
     });
     expect(rows?.[1]?.columns?.aspect).toBe('Unknown');
   });

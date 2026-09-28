@@ -47,6 +47,7 @@ export interface RawTraitDeclaration {
 export interface RawWeaponDeclaration {
   readonly key: string;
   readonly label: string;
+  readonly shortLabel: string;
   readonly aspectKeys: readonly string[];
   readonly defaultAspectKey: string;
 }

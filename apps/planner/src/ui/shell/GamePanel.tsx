@@ -345,9 +345,22 @@ function ModuleSection({
   return (
     <section aria-labelledby="game-module-title" className="game-panel-section">
       <h3 id="game-module-title">Game module</h3>
-      <p className="game-panel-module-status" data-tone={module.tone}>
-        {module.summary}
-      </p>
+      <div className="game-panel-module-status-row">
+        <p className="game-panel-module-status" data-tone={module.tone}>
+          {module.summary}
+        </p>
+        {module.removeAvailable && (
+          <button
+            aria-label="Remove game module"
+            className="game-panel-text-action"
+            disabled={pending}
+            onClick={onRemove}
+            type="button"
+          >
+            Remove
+          </button>
+        )}
+      </div>
       {module.steps.length === 0 ? null : (
         <ol aria-label="Game module steps" className="game-panel-steps">
           {module.steps.map((step) => (
@@ -385,16 +398,6 @@ function ModuleSection({
         </ol>
       )}
       <FeedbackLine feedback={feedback} />
-      {module.removeAvailable && (
-        <button
-          className="quiet-action action-compact"
-          disabled={pending}
-          onClick={onRemove}
-          type="button"
-        >
-          Remove game module
-        </button>
-      )}
       <details className="game-panel-details">
         <summary>Details</summary>
         <dl className="game-panel-status-list">
@@ -455,7 +458,7 @@ function PlansSection({
             <th scope="col">Slot</th>
             <th scope="col">Plan</th>
             <th scope="col">Route</th>
-            <th scope="col">Ends at</th>
+            <th scope="col">Ends</th>
             <th scope="col">Aspect</th>
             <th scope="col">Sent</th>
             <th scope="col">
@@ -473,8 +476,8 @@ function PlansSection({
                 </td>
               ) : (
                 <>
-                  <td data-label="Plan">
-                    {row.columns.plan}
+                  <td className="game-panel-slot-wrap" data-label="Plan">
+                    {row.columns.plan ?? <span className="game-panel-slot-unnamed">Unnamed</span>}
                     {row.marker === null ? null : (
                       <span className="game-panel-slot-marker" data-marker={row.marker}>
                         {row.marker === 'current' ? 'current' : 'older version'}
@@ -482,12 +485,31 @@ function PlansSection({
                     )}
                   </td>
                   <td data-label="Route">{row.columns.route}</td>
-                  <td data-label="Ends at">{row.columns.endsAt}</td>
-                  <td data-label="Aspect">{row.columns.aspect}</td>
-                  <td data-label="Sent">{row.columns.sent ?? '—'}</td>
+                  <td data-label="Ends">{row.columns.endsAt}</td>
+                  <td className="game-panel-slot-wrap" data-label="Aspect">
+                    {row.columns.aspect}
+                  </td>
+                  <td data-label="Sent">
+                    {row.columns.sent === null ? (
+                      '—'
+                    ) : (
+                      <>
+                        <time
+                          aria-describedby={`game-plan-sent-${row.slot}`}
+                          dateTime={row.columns.sent.iso}
+                          title={row.columns.sent.exact}
+                        >
+                          {row.columns.sent.ago}
+                        </time>
+                        <span hidden id={`game-plan-sent-${row.slot}`}>
+                          {row.columns.sent.exact}
+                        </span>
+                      </>
+                    )}
+                  </td>
                 </>
               )}
-              <td>
+              <td className="game-panel-slot-action">
                 {row.action === null ? null : (
                   <button
                     aria-haspopup={row.action.label === 'Save and send…' ? 'dialog' : undefined}

@@ -30,6 +30,7 @@ const weapons = [
   {
     key: 'WeaponStaffSwing',
     label: "Witch's Staff",
+    shortLabel: 'Staff',
     aspectKeys: [
       'BaseStaffAspect',
       'StaffClearCastAspect',
@@ -41,6 +42,7 @@ const weapons = [
   {
     key: 'WeaponDagger',
     label: 'Sister Blades',
+    shortLabel: 'Blades',
     aspectKeys: [
       'DaggerBackstabAspect',
       'DaggerHomingThrowAspect',
@@ -52,6 +54,7 @@ const weapons = [
   {
     key: 'WeaponAxe',
     label: 'Moonstone Axe',
+    shortLabel: 'Axe',
     aspectKeys: [
       'AxeRecoveryAspect',
       'AxeArmCastAspect',
@@ -63,6 +66,7 @@ const weapons = [
   {
     key: 'WeaponTorch',
     label: 'Umbral Flames',
+    shortLabel: 'Flames',
     aspectKeys: [
       'TorchSpecialDurationAspect',
       'TorchSprintRecallAspect',
@@ -74,12 +78,14 @@ const weapons = [
   {
     key: 'WeaponLob',
     label: 'Argent Skull',
+    shortLabel: 'Skull',
     aspectKeys: ['LobAmmoBoostAspect', 'LobCloseAttackAspect', 'LobImpulseAspect', 'LobGunAspect'],
     defaultAspectKey: 'LobAmmoBoostAspect',
   },
   {
     key: 'WeaponSuit',
     label: 'Black Coat',
+    shortLabel: 'Coat',
     aspectKeys: ['BaseSuitAspect', 'SuitMarkCritAspect', 'SuitHexAspect', 'SuitComboAspect'],
     defaultAspectKey: 'BaseSuitAspect',
   },

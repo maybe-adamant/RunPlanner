@@ -1,5 +1,6 @@
 import type { ContextualPickerModel } from '@planner/projections/contextual/contextualPicker';
 import type { Catalog } from '@run-planner/engine/catalog-schema';
+import type { ExecutionCompilerError } from '@run-planner/engine/execution-plan';
 import type { ProfileStatus } from '@planner/state/store';
 import type { CurrentGamePlan } from '@planner/workspace/projectOperations';
 import type {
@@ -504,15 +505,24 @@ export interface GamePlanSlotRow {
   readonly state: GamePlanSlot['state'];
   /** Present only for a readable plan. */
   readonly columns: {
-    readonly plan: string;
+    /** The plan's saved name, or null for an unnamed plan. */
+    readonly plan: string | null;
     readonly route: string;
     readonly endsAt: string;
     readonly aspect: string;
-    readonly sent: string | null;
+    readonly sent: GamePlanSentTime | null;
   } | null;
   readonly summary: 'Empty' | 'Unreadable' | null;
   readonly marker: 'current' | 'olderVersion' | null;
   readonly action: { readonly label: GamePlanSlotActionLabel; readonly confirm: boolean } | null;
+}
+
+export interface GamePlanSentTime {
+  /** Compact relative time, such as "4h ago". */
+  readonly ago: string;
+  /** The exact local date and time. */
+  readonly exact: string;
+  readonly iso: string;
 }
 
 export interface GamePlansProduct {
@@ -521,25 +531,38 @@ export interface GamePlansProduct {
   readonly unavailableReason: string | null;
 }
 
-const UNNAMED_PLAN = '(unnamed plan)';
-
 function sentAgo(modifiedAtMs: number, now: number): string {
   const seconds = Math.max(0, Math.round((now - modifiedAtMs) / 1000));
   if (seconds < 60) return 'just now';
   const minutes = Math.round(seconds / 60);
-  if (minutes < 60) return `${minutes} min ago`;
+  if (minutes < 60) return `${minutes}m ago`;
   const hours = Math.round(minutes / 60);
-  if (hours < 24) return `${hours} h ago`;
-  const days = Math.round(hours / 24);
-  return `${days} day${days === 1 ? '' : 's'} ago`;
+  if (hours < 24) return `${hours}h ago`;
+  return `${Math.round(hours / 24)}d ago`;
 }
 
-// Wire keys are untrusted, so only the catalog's own entries give a label.
+function sentTime(modifiedAtMs: number, now: number): GamePlanSentTime {
+  const date = new Date(modifiedAtMs);
+  return {
+    ago: sentAgo(modifiedAtMs, now),
+    exact: date.toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' }),
+    iso: date.toISOString(),
+  };
+}
+
+// Wire keys are untrusted, so only the catalog's own entries are read.
+function ownEntry<Entry>(
+  records: Readonly<Record<string, Entry | undefined>>,
+  key: string | null,
+): Entry | undefined {
+  return key !== null && Object.hasOwn(records, key) ? records[key] : undefined;
+}
+
 function ownLabel(
   records: Readonly<Record<string, { readonly label: string } | undefined>>,
   key: string | null,
 ): string | undefined {
-  return key !== null && Object.hasOwn(records, key) ? records[key]?.label : undefined;
+  return ownEntry(records, key)?.label;
 }
 
 function slotColumns(
@@ -549,18 +572,21 @@ function slotColumns(
 ): GamePlanSlotRow['columns'] {
   if (slot.state !== 'present') return null;
   const endKey = slot.biomeKeys.at(-1);
-  const weapon = ownLabel(catalog.weapons.byKey, slot.weaponKey);
+  const weapon =
+    slot.weaponKey === null
+      ? undefined
+      : (ownEntry(catalog.weapons.byKey, slot.weaponKey)?.shortLabel ?? slot.weaponKey);
   const aspectLabel =
     ownLabel(catalog.aspects.byKey, slot.aspectKey) ?? slot.aspectKey ?? 'Unknown';
   return {
-    plan: slot.displayName ?? UNNAMED_PLAN,
+    plan: slot.displayName,
     route:
       slot.routeKey === null
         ? '—'
         : (ownLabel(catalog.routes.byKey, slot.routeKey) ?? slot.routeKey),
     endsAt: endKey === undefined ? '—' : (ownLabel(catalog.biomes.byKey, endKey) ?? endKey),
     aspect: weapon === undefined ? aspectLabel : `${aspectLabel} (${weapon})`,
-    sent: slot.modifiedAtMs === null ? null : sentAgo(slot.modifiedAtMs, now),
+    sent: slot.modifiedAtMs === null ? null : sentTime(slot.modifiedAtMs, now),
   };
 }
 
@@ -592,7 +618,26 @@ function unavailableReason(current: CurrentGamePlan): string | null {
     case 'noProject':
       return 'Open a project to send it to the game.';
     case 'notPublishable':
-      return `This plan can’t be sent yet: ${current.reason}`;
+      return notPublishableReason(current.code);
+  }
+}
+
+const RESOLVE_FINDINGS = 'Resolve this plan’s findings before sending it.';
+
+function notPublishableReason(code: ExecutionCompilerError['code'] | null): string {
+  switch (code) {
+    case 'unsupportedRoute':
+      return 'The game module can’t run this route yet.';
+    case 'unsupportedExtent':
+      return 'The game module can’t run this route’s selection of biomes yet.';
+    case 'openingMissing':
+      return 'Plan the opening room before sending this plan.';
+    case 'openingSelectionMissing':
+      return 'Choose an exit for every planned room before sending this plan.';
+    case 'notEligible':
+    case 'executionCoverageMissing':
+    case null:
+      return RESOLVE_FINDINGS;
   }
 }
 

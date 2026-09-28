@@ -353,12 +353,12 @@ describe('project profile operations', () => {
     const application = createApplication({ gameModuleHost: game.host });
     expect(application.projectOperations.inspectCurrentGamePlan()).toEqual({ kind: 'noProject' });
     await application.projectOperations.createNew('Underworld');
-    const current = application.projectOperations.inspectCurrentGamePlan();
-    expect(current.kind).toBe('notPublishable');
+    expect(application.projectOperations.inspectCurrentGamePlan()).toEqual({
+      kind: 'notPublishable',
+      code: 'notEligible',
+    });
     const failure = await application.projectOperations.publishGame(1);
-    expect(failure.message).toBe(
-      `Send to game failed: ${current.kind === 'notPublishable' ? current.reason : ''}`,
-    );
+    expect(failure.message).toMatch(/^Send to game failed: /);
 
     await expect(application.projectOperations.publishGame(1)).resolves.toMatchObject({
       operation: 'publishGame',

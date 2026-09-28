@@ -10,6 +10,7 @@ import {
   compileExecutionPlan,
   encodeExecutionPlan,
   EXECUTION_DISPLAY_NAME_MAX,
+  ExecutionCompilerError,
 } from '@run-planner/engine/execution-plan';
 
 import type { AutosaveRecoveryAdapter } from '../persistence/autosaveRecovery';
@@ -53,7 +54,11 @@ export type ProjectOperation =
 
 export type CurrentGamePlan =
   | { readonly kind: 'noProject' }
-  | { readonly kind: 'notPublishable'; readonly reason: string }
+  | {
+      readonly kind: 'notPublishable';
+      /** The compiler's reason, or null when compiling failed for another reason. */
+      readonly code: ExecutionCompilerError['code'] | null;
+    }
   | {
       readonly kind: 'publishable';
       readonly projectId: string;
@@ -299,7 +304,10 @@ export function createProjectOperations(
           planFingerprint: plan.planFingerprint,
         });
       } catch (error) {
-        current = Object.freeze({ kind: 'notPublishable', reason: errorDetail(error) });
+        current = Object.freeze({
+          kind: 'notPublishable',
+          code: error instanceof ExecutionCompilerError ? error.code : null,
+        });
       }
       currentPlans.set(workspace.assembly, current);
       return current;
