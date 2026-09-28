@@ -23,6 +23,7 @@ function TestRuntimeSession.testNewRunResetClearsEveryProcessLocalExecutionRefer
     value.room = { current = { stale = true } }
     value.firstMismatch = { checkpoint = "stale" }
     value.loggedMismatch = value.firstMismatch
+    value.loggedSession = value.plan
     value.firstFault = { checkpoint = "stale-fault" }
     value.loggedFault = value.firstFault
     value.admissionError = { checkpoint = "stale-admission" }
@@ -41,6 +42,7 @@ function TestRuntimeSession.testNewRunResetClearsEveryProcessLocalExecutionRefer
     lu.assertNil(value.room)
     lu.assertNil(value.firstMismatch)
     lu.assertNil(value.loggedMismatch)
+    lu.assertNil(value.loggedSession)
     lu.assertNil(value.firstFault)
     lu.assertNil(value.loggedFault)
     lu.assertNil(value.admissionError)

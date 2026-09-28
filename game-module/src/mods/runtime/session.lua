@@ -93,6 +93,7 @@ local function reset(state, admissionAttempted)
     state.state = "inactive"
     state.plan = nil
     state.planSlot = nil
+    state.loggedSession = nil
     state.route = nil
     state.room = nil
     state.firstMismatch = nil
