@@ -37,7 +37,9 @@ local function slotPath(root, pathApi, slot)
     return pathApi.combine(root, fileName)
 end
 
-local function missing(message)
+-- errno 2 is ENOENT; the message is matched only when no errno is given.
+function inbox.isMissingFileError(message, errno)
+    if errno ~= nil then return errno == 2 end
     local text = string.lower(tostring(message or ""))
     return text:find("no such file", 1, true) ~= nil
         or text:find("cannot find", 1, true) ~= nil
@@ -47,9 +49,9 @@ end
 function inbox.readBinary(root, pathApi, slot)
     local path, slotError, slotMessage = slotPath(root, pathApi, slot)
     if path == nil then return nil, slotError, slotMessage end
-    local file, openError = io.open(path, "rb")
+    local file, openError, openErrno = io.open(path, "rb")
     if not file then
-        if missing(openError) then
+        if inbox.isMissingFileError(openError, openErrno) then
             return nil, "not-published", "published plan slot " .. tostring(slot) .. " is not present"
         end
         return nil, "file-open-failed", tostring(openError or "could not open published plan slot")

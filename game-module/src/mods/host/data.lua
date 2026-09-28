@@ -10,6 +10,7 @@ function data.buildStorage()
             default = 1,
             min = 1,
             max = 6,
+            persist = false,
         },
         {
             type = "bool",

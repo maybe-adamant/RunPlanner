@@ -3,6 +3,7 @@ package.path = "./src/?.lua;./src/?/init.lua;./tests/?.lua;./tests/?/init.lua;./
 require("tests/protocol/test_json")
 require("tests/protocol/test_fingerprint")
 require("tests/host/test_inbox")
+require("tests/host/test_active_slot")
 require("tests/host/test_status_ui")
 require("tests/host/test_bootstrap")
 require("tests/guidance/test_world")

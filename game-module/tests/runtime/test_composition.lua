@@ -15,6 +15,8 @@ local roomSession = require("mods.room.session")
 local routeSession = require("mods.route.session")
 local roomGuide = require("mods.room.guide")
 local support = require("tests.harness.hook_composition")
+local activeSlotModule = require("mods.host.active_slot")
+local lfs = require("lfs")
 local capture, stub = support.capture, support.stub
 local attachFeatureHooks = support.attachFeatureHooks
 local navigationEntryStub = support.navigationEntryStub
@@ -74,6 +76,7 @@ function TestRuntimeComposition.testGuideInspectionProjectsActualRoomCompletionW
         if path == "mods/protocol/json.lua" or path == "mods/protocol/decoder.lua" then
             return { decode = function(value) return value end }
         end
+        if path == "mods/host/active_slot.lua" then return { create = function() return {} end } end
         if path == "mods/host/inbox.lua" then
             return { create = function() return {
                 activeSlot = function() return 1 end, select = function() end, load = function() end,
@@ -145,6 +148,7 @@ function TestRuntimeComposition.testSuccessfulPostbossAdmissionIsLoggedOnce()
         if path == "mods/protocol/json.lua" or path == "mods/protocol/decoder.lua" then
             return { decode = function(value) return value end }
         end
+        if path == "mods/host/active_slot.lua" then return { create = function() return {} end } end
         if path == "mods/host/inbox.lua" then
             return { create = function()
                 return { activeSlot = function() return 1 end, select = function() end,
@@ -211,6 +215,7 @@ function TestRuntimeComposition.testFirstMismatchLogIncludesFullInventoryAndOccu
         if path == "mods/protocol/json.lua" or path == "mods/protocol/decoder.lua" then
             return { decode = function(value) return value end }
         end
+        if path == "mods/host/active_slot.lua" then return { create = function() return {} end } end
         if path == "mods/host/inbox.lua" then
             return { create = function()
                 return { activeSlot = function() return 1 end, select = function() end,
@@ -275,6 +280,7 @@ function TestRuntimeComposition.testFaultLogIncludesBindingContextAndEachStackLi
         if path == "mods/protocol/json.lua" or path == "mods/protocol/decoder.lua" then
             return { decode = function(value) return value end }
         end
+        if path == "mods/host/active_slot.lua" then return { create = function() return {} end } end
         if path == "mods/host/inbox.lua" then return { create = function() return {} end } end
         if path == "mods/runtime/session.lua" then
             return { create = function() return state end,
@@ -341,6 +347,7 @@ function TestRuntimeComposition.testFieldsDiagnosticLogsItsCompletedSnapshotWith
         if path == "mods/protocol/json.lua" or path == "mods/protocol/decoder.lua" then
             return { decode = function(value) return value end }
         end
+        if path == "mods/host/active_slot.lua" then return { create = function() return {} end } end
         if path == "mods/host/inbox.lua" then
             return { create = function()
                 return { activeSlot = function() return 1 end, select = function() end,
@@ -402,6 +409,7 @@ function TestRuntimeComposition.testAdmittedSessionAndEveryDiagnosticAreLoggedOn
         if path == "mods/protocol/json.lua" or path == "mods/protocol/decoder.lua" then
             return { decode = function(value) return value end }
         end
+        if path == "mods/host/active_slot.lua" then return { create = function() return {} end } end
         if path == "mods/host/inbox.lua" then return { create = function() return {} end } end
         if path == "mods/runtime/session.lua" then
             return { create = function() return state end,
@@ -512,6 +520,7 @@ function TestRuntimeComposition.testRuntimeCompositionSharesOneHexTreeAcrossLoad
         if path == "mods/protocol/json.lua" or path == "mods/protocol/decoder.lua" then
             return { decode = function(value) return value end }
         end
+        if path == "mods/host/active_slot.lua" then return { create = function() return {} end } end
         if path == "mods/host/inbox.lua" then
             return { create = function()
                 return {
@@ -592,6 +601,7 @@ function TestRuntimeComposition.testCompositionPassesRouteAndRoomAuthoritiesToHo
         if path == "mods/protocol/json.lua" or path == "mods/protocol/decoder.lua" then
             return { decode = function(value) return value end }
         end
+        if path == "mods/host/active_slot.lua" then return { create = function() return {} end } end
         if path == "mods/host/inbox.lua" then
             return { create = function()
                 return {
@@ -661,6 +671,61 @@ function TestRuntimeComposition.testCompositionPassesRouteAndRoomAuthoritiesToHo
     lu.assertTrue(rawequal(attached.route, route))
     lu.assertTrue(rawequal(attached.room, room))
 
+    _G.import, _G.rom = priorImport, priorRom
+end
+
+function TestRuntimeComposition.testAdmissionLoadoutAndResyncReadTheActiveSlotFileEachTime()
+    local priorImport, priorRom = _G.import, _G.rom
+    local root = os.tmpname()
+    os.remove(root)
+    assert(lfs.mkdir(root))
+    local path = root .. "/" .. activeSlotModule.FILE_NAME
+    local function publish(content)
+        local file = assert(io.open(path, "wb"))
+        file:write(content)
+        file:close()
+    end
+    local loadoutRuntime, admissionRuntime
+    local function freshImport(importPath)
+        if importPath == "mods/runtime/composition.lua" then return assert(loadfile("src/" .. importPath))() end
+        if importPath == "mods/host/active_slot.lua" then return activeSlotModule end
+        if importPath == "mods/protocol/json.lua" or importPath == "mods/protocol/decoder.lua" then
+            return { decode = function(value) return value end }
+        end
+        if importPath == "mods/host/inbox.lua" then
+            return { create = function() return { activeSlot = function() return 1 end } end }
+        end
+        if importPath == "mods/room/timeline/encounters/thessaly.lua" then return { create = shipCombatStub } end
+        if importPath == "mods/room/timeline/encounters/generated.lua" then
+            return { create = generatedEncounterStub }
+        end
+        if importPath == "mods/guidance/highlights.lua" then return highlightStub() end
+        if importPath == "mods/loadout/hooks.lua" then
+            return { attach = function(_, value) loadoutRuntime = value; return {} end }
+        end
+        if importPath == "mods/room/hooks.lua" then
+            return { attach = function(...) admissionRuntime = select(10, ...) end }
+        end
+        return { create = function() return { attach = function() end } end, attach = function() return {} end }
+    end
+    _G.import = freshImport
+    _G.rom = { path = { combine = function(base, name) return base .. "/" .. name end }, log = { info = function() end } }
+    freshImport("mods/runtime/composition.lua").bind(root).attach({})
+
+    local startRead, resyncRead = loadoutRuntime.activePlanSlot, admissionRuntime.activePlanSlot
+    lu.assertEquals({ startRead({}), resyncRead({}) }, { 1, 1 })
+    publish(activeSlotModule.encode(4))
+    lu.assertEquals({ startRead({}), resyncRead({}) }, { 4, 4 })
+    publish('{ "format": "run-planner-active-slot", "formatVersion": 1, "slot": 2 }')
+    lu.assertEquals({ startRead({}), resyncRead({}) }, { 2, 2 })
+    publish('{"slot":9}')
+    lu.assertEquals({ startRead({}), resyncRead({}) }, { 1, 1 })
+    local file = assert(io.open(path, "rb"))
+    lu.assertEquals(file:read("*a"), '{"slot":9}')
+    file:close()
+
+    os.remove(path)
+    lfs.rmdir(root)
     _G.import, _G.rom = priorImport, priorRom
 end
 
