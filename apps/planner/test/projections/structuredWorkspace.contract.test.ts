@@ -1445,6 +1445,16 @@ describe('structured workspace overlay contract', () => {
       value: { kind: 'additional', additionalExitKey: 'chaos' },
     });
     expect(interaction?.removeIntent?.command).toEqual({ kind: 'RemoveChaos', additional });
+    expect(interaction?.positionIntent(2).command).toEqual({
+      kind: 'SetChaosSpawnPoint',
+      additional,
+      spawnPointIndex: 2,
+    });
+    expect(interaction?.positionIntent(null).command).toEqual({
+      kind: 'SetChaosSpawnPoint',
+      additional,
+      spawnPointIndex: null,
+    });
     expect(interaction?.mapIntent(batch.chaos.door.room.gameName).command).toEqual({
       kind: 'ReplaceChaosMap',
       occurrence: createOccurrenceAddress(biome, chaosId),
@@ -1456,6 +1466,7 @@ describe('structured workspace overlay contract', () => {
       rewards: [],
     });
     expect(projected.focusByOwner.get(semanticAddressKey(additional))?.nodeKey).toBe(batch.key);
+    expect(projected.focusByOwner.get(semanticAddressKey(additional))?.roomTab).toBe('doors');
     const chaosWorkbench = workspace?.nodes.find(
       (node) => node.kind === 'occurrenceWorkbench' && node.room.occurrenceId === chaosId,
     );

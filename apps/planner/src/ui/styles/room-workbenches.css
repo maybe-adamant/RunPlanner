@@ -61,6 +61,13 @@
   accent-color: #a98dcc;
 }
 
+.chaos-feature-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
 .room-feature-presence-row:has(input:disabled) {
   color: #88858e;
   opacity: 0.68;
@@ -562,18 +569,22 @@
 }
 
 .encounter-wave-count,
-.encounter-wave-count > label {
+.encounter-wave-count > label,
+.chaos-position-control,
+.chaos-position-control > label {
   display: flex;
   align-items: center;
   gap: 8px;
 }
 
-.encounter-wave-count {
+.encounter-wave-count,
+.chaos-position-control {
   flex-wrap: wrap;
   gap: 16px;
 }
 
-.encounter-wave-count input {
+.encounter-wave-count input,
+.chaos-position-control input {
   margin: 0;
   accent-color: #e2b971;
 }
