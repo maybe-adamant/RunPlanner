@@ -46,6 +46,11 @@ You can keep up to six plans ready to play. Changing the active slot during a
 run only changes which plan will be used for the next run; it does not replace
 the plan already in progress.
 
+The in-game **Plan for next run / resync** picker and the planner share one
+active slot, saved as `active-slot.json` next to the plan slots. Picking a slot
+in either place changes it for both, and the picker shows a change made in the
+planner within a second. If the file is missing or damaged, slot 1 is used.
+
 ### Plan in the app
 
 Create an **Underworld**, **Surface**, or **Dream Dive** project—or load an

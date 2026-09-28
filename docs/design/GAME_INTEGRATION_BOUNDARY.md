@@ -6,10 +6,11 @@ The active strict versioned protocol, execution protocol 50, carries a
 complete-valid configured Underworld or Surface prefix, through `F/G/H/I` or `N/O/P/Q`. The desktop
 publisher writes an execution-only JSON artifact to one of six fixed Plan
 Executor slots in the established game target; the browser build has no
-publication capability. Publishing a slot and selecting
-the active slot are separate operations. The Executor owns a persistent
-`ActivePlanSlot` selection, reads only that slot at the next run admission, and
-freezes the decoded plan for the live session. Execution normally admits at
+publication capability. Sending a plan also makes its slot active. The
+Executor reads the active slot from `active-slot.json` (see
+[Shared configuration folder](#shared-configuration-folder)), reads only that
+plan slot at the next run admission, and freezes the decoded plan for the live
+session. Execution normally admits at
 run start; publication does not hot-swap a live session. One bounded recovery
 path may instead admit a freshly loaded game at the start of an explicitly
 marked Postboss occurrence when its native room, weapon/aspect, and published
@@ -18,9 +19,9 @@ or recovery after a mismatch is supported.
 
 The transport names the slots `slot-1.runplanner.json` through
 `slot-6.runplanner.json` under the Run Planner game module configuration directory. The
-planner never writes an active-pointer file, activates a slot implicitly, or
-chooses a game target on the user's behalf. There is no
-compatibility alias, active-pointer reader, or implicit migration. An empty or
+planner changes the active slot only when the user sends a plan or picks a slot,
+and never chooses a game target on the user's behalf. There is no
+compatibility alias or implicit migration. An empty or
 invalid selected slot therefore remains a bounded admission error, while
 publishing another slot does not disturb a frozen live session.
 
@@ -124,6 +125,45 @@ and the user name with `%USERNAME%` where it follows the same parent folder
 under another root. **Show in folder** reveals only the report this session
 last wrote.
 
+### Shared configuration folder
+
+Anything both the planner and the game module need lives in
+`config/adamantRunPlanner-Run_Planner/`, in a format they own together:
+
+- the six plan slots `slot-N.runplanner.json`, which only the planner writes;
+- `active-slot.json`, the plan slot the module plays next, which both write.
+
+Settings that only the game uses, such as the room guide, highlights and
+`Enabled`, stay in ModpackLib storage. The planner never reads or writes the
+ModpackLib `.cfg`.
+
+`active-slot.json` is the only record of the active slot:
+
+```json
+{ "format": "run-planner-active-slot", "formatVersion": 1, "slot": 3 }
+```
+
+- Both sides decode strictly: exactly these three keys, `slot` an integer
+  from 1 through 6, and at most 1 KiB. The module writes the compact form
+  `{"format":"run-planner-active-slot","formatVersion":1,"slot":3}`.
+- The planner writes it atomically, as it writes plan slots. The module writes
+  a temporary file beside it, removes the old file, then renames (retrying
+  the rename once), because
+  `os.rename` cannot replace a file on Windows. A reader can briefly find the
+  file missing, never partial.
+- A missing or invalid file means slot 1 to the module, which rewrites the file
+  only when the player picks a slot. The planner shows no active slot until
+  one is picked. The module logs one `[RunPlanner] active-slot` line per slot
+  it writes and one per change of invalid content it reads. Because a missing
+  file already shows slot 1, the in-game picker saves slot 1 only after another
+  slot was picked; it shows a hint while no choice is saved.
+- Last writer wins. Neither side keeps a copy: the module reads the file at
+  new-run admission, loadout and Postboss resync, and the planner reads it
+  with the slot facts. A change made during a run takes effect at the next
+  admission.
+- Sending a plan also makes its slot active. The planner makes a slot active
+  only when that slot holds a plan; the in-game picker offers all six.
+
 ### Publication preconditions
 
 Sending a plan uses only the established target and performs no discovery.
@@ -131,8 +171,8 @@ The host rechecks the target when publishing and refuses with the blocking
 reasons, including found and required versions, unless the installed module
 matches this build and ModpackLib is compatible. The installed
 `execution-compatibility.json` must equal the outgoing plan header before any
-write. `mods.yml` is never edited, and only plan slots are written under
-`config/`.
+write. `mods.yml` is never edited, and under `config/` the planner writes only
+the shared folder described above.
 
 A sent plan's identity chain is the saved file, then the document's
 `projectId`, then the compiled `planFingerprint`. Its name is the saved file's
@@ -698,10 +738,11 @@ caller-supplied slot number in the closed range 1 through 6 to its fixed
 filename, confines the destination below that target's Run Planner game module
 configuration tree, rejects links and non-regular files, enforces the existing
 1 MiB bound, and atomically replaces only the selected slot. The Run Planner game module
-persists `ActivePlanSlot` (defaulting to Slot 1), displays the selected slot's
-bounded status, and loads and freezes that one slot only at the next new-run
-or eligible Postboss admission. Changing the setting cannot hot-swap a live
-session. The read-only inspector separates the selected slot's plan preview
+reads the active slot from `active-slot.json` (see
+[Shared configuration folder](#shared-configuration-folder)), displays the
+selected slot's bounded status, and loads and freezes that one slot only at the
+next new-run or eligible Postboss admission. Changing the active slot cannot
+hot-swap a live session. The read-only inspector separates the selected slot's plan preview
 from the frozen session's loadout, room progress, admission, and failure
 information. It reports existing execution status without adding conformance
 checks or revalidating player state during rendering.

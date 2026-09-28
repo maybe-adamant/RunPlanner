@@ -11,6 +11,7 @@ function composition.bind(root, moduleVersion)
         if value == nil then return nil, "malformed-json: " .. tostring(errorMessage) end
         return protocol.decode(value)
     end, rom.path)
+    local activeSlotFile = import("mods/host/active_slot.lua").create(root, rom.path)
     local route = import("mods/route/session.lua")
     local ephyra = import("mods/navigation/ephyra.lua")
     local room = import("mods/room/coordinator.lua")
@@ -30,8 +31,8 @@ function composition.bind(root, moduleVersion)
         inbox = inbox,
         session = session,
         loadout = loadout,
-        activePlanSlot = function(runtime)
-            return runtime.data.read("ActivePlanSlot")
+        activePlanSlot = function()
+            return (activeSlotFile.read())
         end,
     }
 
@@ -42,6 +43,10 @@ function composition.bind(root, moduleVersion)
             load = inbox.load,
             plan = inbox.plan,
             status = inbox.status,
+        },
+        activeSlot = {
+            read = activeSlotFile.read,
+            write = activeSlotFile.write,
         },
     }
 

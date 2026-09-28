@@ -2,6 +2,7 @@ local planSummary = type(import) == "function" and import("mods/host/plan_summar
     or require("mods.host.plan_summary")
 
 local ui = {}
+ui.ACTIVE_SLOT_REFRESH_SECONDS = 1
 
 local SLOT_VALUES = { 1, 2, 3, 4, 5, 6 }
 local SLOT_LABELS = {
@@ -54,12 +55,29 @@ local function drawValues(imgui, label, value, ancestors)
     ancestors[value] = nil
 end
 
-function ui.bind(inbox, inspectSession)
+function ui.bind(inbox, inspectSession, activeSlotFile, clock)
     assert(type(inbox) == "table" and type(inbox.activeSlot) == "function"
         and type(inbox.select) == "function" and type(inbox.load) == "function"
         and type(inbox.status) == "function" and type(inbox.plan) == "function",
         "status UI inbox dependency is required")
     assert(type(inspectSession) == "function", "status UI session inspection is required")
+    assert(type(activeSlotFile) == "table" and type(activeSlotFile.read) == "function"
+        and type(activeSlotFile.write) == "function", "status UI active slot file is required")
+    clock = clock or os.clock
+
+    -- The picker is a view of the active-slot file, reread at most once per
+    -- interval while drawn so a menu opened later shows outside changes.
+    local viewSlot, viewState, refreshedAt, saveFailed = nil, nil, nil, false
+    local function refreshView(force)
+        local now = clock()
+        if not force and refreshedAt ~= nil and now >= refreshedAt
+            and now - refreshedAt < ui.ACTIVE_SLOT_REFRESH_SECONDS then
+            return
+        end
+        viewSlot, viewState = activeSlotFile.read()
+        if viewState == "present" then saveFailed = false end
+        refreshedAt = now
+    end
 
     -- Plans are immutable after decoding. Cache their display-only projection,
     -- not player state, and let replaced slot previews be collected.
@@ -172,12 +190,21 @@ function ui.bind(inbox, inspectSession)
         assert(showGuide ~= nil, "status UI ShowRoomGuide data field is required")
         local highlightChoices = ctx.data.get("HighlightPlannedChoices")
         assert(highlightChoices ~= nil, "status UI HighlightPlannedChoices data field is required")
-        drawApi.widgets.dropdown(field, {
+        refreshView(false)
+        if field:read() ~= viewSlot then field:write(viewSlot) end
+        local picked = drawApi.widgets.dropdown(field, {
             id = "active_plan_slot",
             label = "Plan for next run / resync",
             values = SLOT_VALUES,
             displayValues = SLOT_LABELS,
         })
+        if picked then
+            saveFailed = not activeSlotFile.write(field:read())
+            refreshView(true)
+            field:write(viewSlot)
+        end
+        if saveFailed then imgui.TextWrapped("Could not save the active slot.") end
+        if viewState ~= "present" then imgui.TextWrapped("No saved choice; using Slot 1.") end
         drawApi.widgets.checkbox(showGuide, {
             id = "show_room_guide",
             label = "Show room guide",
@@ -186,7 +213,7 @@ function ui.bind(inbox, inspectSession)
             id = "highlight_planned_choices",
             label = "Highlight planned choices",
         })
-        local selectedSlot = field:read()
+        local selectedSlot = viewSlot
         if inbox.activeSlot() ~= selectedSlot then inbox.select(selectedSlot) end
         if drawApi.widgets.button("Inspect / Reload Selected Plan", { id = "run_planner_inspect" }) then
             inbox.load(selectedSlot)

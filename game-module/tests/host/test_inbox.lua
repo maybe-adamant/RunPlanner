@@ -95,4 +95,11 @@ function TestInbox.testAllSixSlotsUseTheClosedFileMapping()
     lu.assertNil(inbox.slotFileName(1.5))
 end
 
+function TestInbox.testMissingFileUsesErrnoBeforeMessageText()
+    lu.assertTrue(inbox.isMissingFileError("anything", 2))
+    lu.assertFalse(inbox.isMissingFileError("C:/not found/slot-1.runplanner.json: Permission denied", 13))
+    lu.assertTrue(inbox.isMissingFileError("slot-1.runplanner.json: No such file or directory"))
+    lu.assertFalse(inbox.isMissingFileError("Permission denied"))
+end
+
 return TestInbox
