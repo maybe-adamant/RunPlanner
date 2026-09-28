@@ -351,6 +351,14 @@ beside a Midshop's normal lane and declared Chaos beside eligible source
 occurrences. Both remain source-occurrence-owned and are never synthetic
 normal targets or generic cross-room-set escapes.
 
+A Chaos additional exit may carry `spawnPointIndex`, a one-based physical
+point in the source room's declared SecretPoint domain. Omission leaves native
+random placement (shown as Any in the editor). `SetChaosSpawnPoint` edits only
+this leaf, independently of the selected outgoing door and Chaos destination.
+Positive out-of-domain retained indices are finding-backed, not silently reset.
+Surviving manual or Ixion-generated gates retain their position; a newly
+generated gate at another host starts without a selection.
+
 Decision-array order is not reachability authority. Decoding follows semantic
 sources and selected targets to determine the selected spine. An unpicked
 target is a real dead leaf but cannot own a downstream exit decision. Cycles,

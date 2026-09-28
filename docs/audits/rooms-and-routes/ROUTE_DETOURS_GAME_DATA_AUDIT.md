@@ -320,6 +320,16 @@ position. All 15 H combat maps have multiple anchors (2–4 each). The binary
 inventory establishes multiplicity; runtime point enumeration remains a
 separate check of the installed map's active objects and coordinates.
 
+The planner's numbered map annotations use the capture module's one-based
+ordering of numerically sorted `GetIdsByType({ Name = "SecretPoint" })` IDs,
+not spatial order. All 125 supported hosts' declared counts match their capture
+annotation counts. The optional authored `spawnPointIndex` uses this same
+ordering for both natural and Ixion-generated gates; omission preserves native
+random placement. Explicit position is enforced at the SecretDoor spawn contact,
+without changing host eligibility or native gate application. Physical alignment
+between explicit executor choices and the annotated images remains a live-game
+verification requirement.
+
 ### Ixion behavior
 
 This means Spark of Ixion can:

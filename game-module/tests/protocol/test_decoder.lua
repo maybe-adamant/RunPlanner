@@ -10,6 +10,20 @@ local generated = require("mods.protocol.generated_encounter")
 
 TestProtocol = {}
 
+function TestProtocol.testChaosSpawnPointIndexIsStrictAndChaosOnly()
+    local function value(field, kind)
+        return assert(json.decode('{"encounterPhases":[],"requiredObjects":[],"additional":[{"kind":"'
+            .. (kind or "chaos") .. '","owner":"gate","room":{"id":"chaos","biomeKey":"F","gameName":"Chaos_01"}'
+            .. field .. '}]}'))
+    end
+    lu.assertNotNil(overview.decode(value(""), "overview"))
+    lu.assertNotNil(overview.decode(value(',"spawnPointIndex":2'), "overview"))
+    for _, field in ipairs({ 'null', '0', '-1', '1.5', '"2"', 'true', '{}', '[]' }) do
+        lu.assertNil(overview.decode(value(',"spawnPointIndex":' .. field), "overview"))
+    end
+    lu.assertNil(overview.decode(value(',"spawnPointIndex":1', "zagreusContract"), "overview"))
+end
+
 function TestProtocol.testMenaceStrictSourceCoverageAndOmittedZero()
     local function value()
         return assert(json.decode([[{"kind":"generated","decisionKey":"generatedComposition","expectedBudget":40,"waveCount":1,"waves":[{"waveIndex":1,"types":[{"choiceKey":"Guard","nativeId":"Guard","source":"addition"}],"counts":{"Guard":4}}]}]]))
@@ -511,7 +525,7 @@ local function minimalPlan(transactions)
 end
 
 function TestProtocol.testReleasedProtocol48IsRejected()
-    lu.assertEquals(protocol.VERSION, 49)
+    lu.assertEquals(protocol.VERSION, 50)
     local plan = decode("f-opening")
     plan.protocolVersion = 48
     refreshFingerprint(plan)

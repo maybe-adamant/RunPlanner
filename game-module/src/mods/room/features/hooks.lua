@@ -17,20 +17,48 @@ function hooks.attach(module, session, getState, report, room)
 
     module.hooks.wrap("HandleSecretSpawns", "run-planner-room-features", function(_, runtime, base, currentRun)
         local state = getState(runtime)
-        if state == nil or state.state ~= "synchronized" then return base(currentRun) end
-        secretScope = room.additional(state, "chaos") ~= nil
-        local ok, result = pcall(base, currentRun)
+        local synchronized = state ~= nil and state.state == "synchronized"
+        local previous = secretScope
         secretScope = nil
+        if synchronized then
+            local additional = room.additional(state, "chaos")
+            secretScope = { present = additional ~= nil, additional = additional }
+        end
+        local ok, result = pcall(base, currentRun)
+        secretScope = previous
         if not ok then error(result, 0) end
-        report(runtime)
+        if synchronized then report(runtime) end
         return result
+    end)
+
+    module.hooks.wrap("SpawnObstacle", "run-planner-chaos-position", function(_, runtime, base, args)
+        local state = getState(runtime)
+        local scope = secretScope
+        if state == nil or state.state ~= "synchronized" or scope == nil or scope.consumed
+            or scope.additional == nil or scope.additional.spawnPointIndex == nil
+            or type(args) ~= "table" or args.Name ~= "SecretDoor" then return base(args) end
+        scope.consumed = true
+        local points = {}
+        for _, id in ipairs(_G.GetIdsByType({ Name = "SecretPoint" })) do points[#points + 1] = id end
+        table.sort(points)
+        local index = scope.additional.spawnPointIndex
+        local destination = points[index]
+        if destination == nil then
+            session.diagnostic(state, "chaos-position-unavailable", { spawnPointIndex = index,
+                pointCount = #points })
+            return base(args)
+        end
+        local positioned = {}
+        for key, value in pairs(args) do positioned[key] = value end
+        positioned.DestinationId = destination
+        return base(positioned)
     end)
 
     module.hooks.wrap("IsSecretDoorEligible", "run-planner-chaos-eligibility", function(_, runtime, base,
         currentRun, currentRoom)
         local state = getState(runtime)
         if state == nil or state.state ~= "synchronized" then return base(currentRun, currentRoom) end
-        if secretScope ~= nil then return secretScope end
+        if secretScope ~= nil then return secretScope.present end
         return base(currentRun, currentRoom)
     end)
 

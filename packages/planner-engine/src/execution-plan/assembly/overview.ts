@@ -229,6 +229,7 @@ function executionAdditionalExits(
     batch.additional.map((exit) =>
       Object.freeze({
         kind: exit.key,
+        ...(exit.spawnPointIndex === undefined ? {} : { spawnPointIndex: exit.spawnPointIndex }),
         owner: semanticAddressKey(exit.origin),
         room: Object.freeze({
           id: exit.room.occurrenceId,

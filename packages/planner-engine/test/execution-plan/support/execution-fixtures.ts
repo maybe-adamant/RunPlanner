@@ -3,7 +3,13 @@ import { dirname, join } from 'node:path';
 import { format, resolveConfig } from 'prettier';
 
 import { catalog } from '@run-planner/hades2-catalog';
-import type { ProjectDocument } from '@run-planner/engine/authored-project';
+import {
+  applyProjectCommand,
+  createAdditionalExitAddress,
+  createBiomeAddress,
+  createOccurrenceId,
+  type ProjectDocument,
+} from '@run-planner/engine/authored-project';
 import {
   createCompleteFGAnomalyProject,
   createCompleteFGProject,
@@ -59,6 +65,18 @@ import underworldGeneratedCompositionFixture from '../fixtures/underworld-genera
 
 const fixtureDirectory = join(dirname(fileURLToPath(import.meta.url)), '..', 'fixtures');
 
+export function positionedIxionChaosProject(): ProjectDocument {
+  return applyProjectCommand(loadUnderworldIxionChaosCheckpoint(), catalog, {
+    kind: 'SetChaosSpawnPoint',
+    additional: createAdditionalExitAddress(
+      createBiomeAddress('Underworld', 'G'),
+      createOccurrenceId('golden-g-intro'),
+      'chaos',
+    ),
+    spawnPointIndex: 1,
+  });
+}
+
 /** The F-only prefix the compiler suite compiles; it owns no separate builder. */
 function fOnlyProject(): ProjectDocument {
   const project = createCompleteFGProject();
@@ -98,7 +116,7 @@ export const executionFixtures: readonly ExecutionFixture[] = Object.freeze([
   },
   {
     name: 'fg-ixion-chaos',
-    project: loadUnderworldIxionChaosCheckpoint,
+    project: positionedIxionChaosProject,
     wire: fgIxionChaosFixture,
   },
   { name: 'fg-anomaly', project: createCompleteFGAnomalyProject, wire: fgAnomalyFixture },

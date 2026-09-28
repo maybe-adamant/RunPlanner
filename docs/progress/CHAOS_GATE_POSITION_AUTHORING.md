@@ -1,6 +1,7 @@
 # Chaos Gate Position Authoring
 
-Status: approved execution contract; Gates A/B complete, Gate C pending.
+Status: Gates A/B/C implemented, independently reviewed, and automated
+verification complete; live placement acceptance remains pending.
 Base: `dd1cf56b`.
 Plan commit: `eaeb3035`.
 
@@ -76,9 +77,11 @@ the audit and annotated maps but absent from their room declarations.
 
 ### Editor
 
-Render `Chaos Gate` checkbox followed by a `Position` radio group on the same row,
-wrapping naturally at narrow widths. The radios offer Default and the
-declared numbered points, matching purple map markers.
+Render one Chaos feature panel with the checkbox in its first column and a
+`Position` radio group aligned with the resource controls' placement column.
+Column spacing separates the two without a divider. The radios offer Any and the
+declared numbered points, matching purple map markers, and wrap at narrow widths.
+Any is the user-facing label for omitted/default native random placement.
 
 - Gate absent: no position control.
 - Gate present, multiple points: show the control.
@@ -88,7 +91,7 @@ declared numbered points, matching purple map markers.
   position remains editable subject to ordinary authoring readiness.
 - A retained invalid index must remain visible and repairable, including if a
   host now has only one point. In that exceptional state show the position
-  control and finding, with Default as a repair. Hidden controls must not strand
+  control and finding, with Any as a repair. Hidden controls must not strand
   an authored finding.
 
 This is separate from the existing Chaos destination-map picker. Findings use
@@ -235,3 +238,23 @@ catalog/map manifest. Keep existing presence and destination controls.
   position authoring.
 - Invalid position findings route to source Overview; ordinary Chaos destination
   findings retain their Room Doors route.
+
+## Gate C verification
+
+- Execution publication and Lua consumption use protocol 50; authored schema
+  and catalog compatibility remain unchanged.
+- Focused execution-plan coverage passed (236 tests), Lua coverage passed
+  (694 tests), and publication compatibility coverage passed (5 tests).
+- Independent review found no actionable defects. The compact Any/numbered
+  radio polish also passed its 50 focused UI/projection tests.
+- Full `npm run check` stopped at correctness: 3,957 tests passed, one failed.
+  The stale `StygianWellWorkbench.test.tsx` presence witness selected a host
+  before the minimum depth. It now uses the fixture's third decision; all
+  eight tests in that file passed on the focused rerun, with production
+  eligibility unchanged.
+- Remaining full-check stages passed separately after that repair: performance
+  comparison, desktop host (34 tests), game module (695 tests plus syntax and
+  Luacheck), release tests, ESLint, repository formatting, and production build.
+  Typechecking and fixture integrity had already passed in the full run.
+- Native hook installation and multi-point/Ixion physical placement remain
+  pending live-game acceptance.

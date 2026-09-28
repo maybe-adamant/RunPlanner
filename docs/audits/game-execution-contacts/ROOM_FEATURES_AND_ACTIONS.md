@@ -66,6 +66,12 @@ scope pass through. Unowned occurrences and passive sessions retain native
 decisions. This is explicit room-content insertion, not a claim that only the
 random roll was overridden.
 
+Within that same scope, an explicit Chaos position substitutes SecretDoor's
+`SpawnObstacle.DestinationId` using numerically sorted SecretPoint IDs. The
+native random draw still runs; omission leaves its result untouched. Missing
+positions diagnose and preserve the native destination. Other obstacles are
+unaffected.
+
 Resource construction and gathering are separate contacts. Native room leave
 auto-harvest runs after the room session closes, so resource-owned disposition
 must survive until `GrantElementFromTool`. The adapter inserts spawn policy at

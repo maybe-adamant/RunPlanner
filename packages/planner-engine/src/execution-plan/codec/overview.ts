@@ -651,9 +651,16 @@ export function overview(value: unknown, label: string) {
       ? undefined
       : array(record.additional, `${label}.additional`).map((entry, index) => {
           const row = object(entry, `${label}.additional[${index}]`);
-          exact(row, ['kind', 'owner', 'room'], ['ixionOrigin'], `${label}.additional[${index}]`);
+          exact(
+            row,
+            ['kind', 'owner', 'room'],
+            ['ixionOrigin', 'spawnPointIndex'],
+            `${label}.additional[${index}]`,
+          );
           if (row.kind !== 'chaos' && row.kind !== 'zagreusContract')
             fail(`${label}.additional[${index}].kind is unsupported`);
+          if (row.spawnPointIndex !== undefined && row.kind !== 'chaos')
+            fail(`${label}.additional[${index}].spawnPointIndex is Chaos-only`);
           const ixion =
             row.ixionOrigin === undefined
               ? undefined
@@ -667,6 +674,15 @@ export function overview(value: unknown, label: string) {
             );
           return Object.freeze({
             kind: row.kind,
+            ...(row.spawnPointIndex === undefined
+              ? {}
+              : {
+                  spawnPointIndex: integer(
+                    row.spawnPointIndex,
+                    `${label}.additional[${index}].spawnPointIndex`,
+                    1,
+                  ),
+                }),
             owner: stringValue(row.owner, `${label}.additional[${index}].owner`, MAX_OWNER_STRING),
             room: roomReference(row.room, `${label}.additional[${index}].room`),
             ...(ixion === undefined

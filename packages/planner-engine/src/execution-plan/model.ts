@@ -9,7 +9,7 @@ import type {
 
 /** The single room-session execution artifact supported by the app compiler. */
 export const EXECUTION_PLAN_FORMAT = 'run-planner-execution' as const;
-export const EXECUTION_PROTOCOL_VERSION = 49 as const;
+export const EXECUTION_PROTOCOL_VERSION = 50 as const;
 export const EXECUTION_CATALOG_VERSION = '0.55.0-anvil-of-fates' as const;
 export type ExecutionBiomeKey = 'F' | 'G' | 'H' | 'I' | 'N' | 'O' | 'P' | 'Q';
 
@@ -653,6 +653,8 @@ export interface ExecutionOverview {
   /** Chaos gates and Zagreus Contract exits are room features, not normal doors. */
   readonly additional?: readonly {
     readonly kind: 'chaos' | 'zagreusContract';
+    /** Chaos only; one-based index into numerically sorted native SecretPoint IDs. */
+    readonly spawnPointIndex?: number;
     readonly owner: string;
     readonly room: { readonly id: string; readonly biomeKey: string; readonly gameName: string };
     readonly ixionOrigin?: {

@@ -2,7 +2,7 @@
 
 ## Contract
 
-The active strict versioned protocol, execution protocol 49, carries a
+The active strict versioned protocol, execution protocol 50, carries a
 complete-valid configured Underworld or Surface prefix, through `F/G/H/I` or `N/O/P/Q`. The desktop
 publisher writes an execution-only JSON artifact to one of six fixed Plan
 Executor slots in the established game target; the browser build has no
@@ -566,6 +566,13 @@ Ixion and natural generation are not different kinds of Chaos room. The origin
 records only whether Ixion inserted the gate so removing that purchase can
 remove its generated topology. A visible Chaos gate consumes one pending Ixion
 regardless of how the gate originated.
+
+A Chaos entry in `overview.additional` may publish `spawnPointIndex`, a positive
+one-based index into numerically sorted native SecretPoint IDs. Omission leaves
+random placement unchanged. The scoped SecretDoor spawn adapter substitutes
+only its destination, preserving native gate creation, destination-room choice,
+health cost and Ixion consumption. An unavailable point produces a diagnostic
+and leaves the native destination unchanged, not a placement-only mismatch.
 
 Complete Run State snapshots are diagnostic-only at the published room-entered
 and before-room-exit checkpoints. They may expose counters, ranged reward-bag
