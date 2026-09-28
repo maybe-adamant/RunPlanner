@@ -327,6 +327,7 @@ export {
   canRedoProjectHistory,
   canUndoProjectHistory,
   createProjectHistory,
+  reidentifyProjectHistory,
   redoProjectHistory,
   type ProjectHistory,
   undoProjectHistory,

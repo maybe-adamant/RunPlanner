@@ -6,6 +6,7 @@ import {
 import type { Catalog } from '@run-planner/engine/catalog-schema';
 import { migrateProjectDocument as migrate86To87 } from './project-86-to-87.js';
 import { migrateProjectDocument as migrate87To88 } from './project-87-to-88.js';
+import { migrateProjectDocument as migrate88To89 } from './project-88-to-89.js';
 
 export const PROJECT_DOCUMENT_SCHEMA_SUPPORT_FLOOR = 86 as const;
 
@@ -42,6 +43,11 @@ const productionTransitions: readonly ProjectDocumentTransition[] = Object.freez
     source: Object.freeze({ catalogVersion: '0.55.0-anvil-of-fates', schemaVersion: 87 }),
     target: Object.freeze({ catalogVersion: '0.55.0-anvil-of-fates', schemaVersion: 88 }),
     migrate: migrate87To88,
+  }),
+  Object.freeze({
+    source: Object.freeze({ catalogVersion: '0.55.0-anvil-of-fates', schemaVersion: 88 }),
+    target: Object.freeze({ catalogVersion: '0.55.0-anvil-of-fates', schemaVersion: 89 }),
+    migrate: migrate88To89,
   }),
 ]);
 const noMigrations: readonly ProjectMigrationProvenance[] = Object.freeze([]);

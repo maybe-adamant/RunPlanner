@@ -1,6 +1,7 @@
 import {
   assessPublicDreamItinerary,
   encodeProjectDocument,
+  PROJECT_DOCUMENT_SCHEMA_VERSION,
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
 import { type Catalog } from '@run-planner/engine/catalog-schema';
@@ -8,12 +9,17 @@ import {
   assembleExecutionProduct,
   compileExecutionPlan,
   encodeExecutionPlan,
+  EXECUTION_DISPLAY_NAME_MAX,
 } from '@run-planner/engine/execution-plan';
 
 import type { AutosaveRecoveryAdapter } from '../persistence/autosaveRecovery';
 import { loadProjectDocument } from '../persistence/projectDocumentLoader';
 import { createInitialProject } from '../composition/projectBootstrap';
-import type { ProfileFileAdapter, ProfileFileReference } from '../persistence/profileFile';
+import {
+  profileFileStem,
+  type ProfileFileAdapter,
+  type ProfileFileReference,
+} from '../persistence/profileFile';
 import type { GamePlanPublisher, GamePlanSlotNumber } from '../persistence/gameModuleHost';
 import { describePublicationBlocker } from '../projections/gamePanel';
 import {
@@ -22,10 +28,18 @@ import {
   profileSaveSucceeded,
   recoveryDiscarded,
 } from '../state/profileSessionSlice';
-import type { PreparedProjectWorkspace } from '../state/projectWorkspaceSlice';
+import {
+  projectIdentityMinted,
+  type PreparedProjectWorkspace,
+} from '../state/projectWorkspaceSlice';
 import { gamePlanSent } from '../state/gameSendSessionSlice';
 import { assertPublicProjectAdmission } from './project-admission';
-import { selectPresentProject, selectProfileSession, type PlannerStore } from '../state/store';
+import {
+  selectPresentProject,
+  selectProfileSession,
+  selectProfileStatus,
+  type PlannerStore,
+} from '../state/store';
 
 export type ProjectOperation =
   | 'discardRecovery'
@@ -39,7 +53,11 @@ export type ProjectOperation =
 export type CurrentGamePlan =
   | { readonly kind: 'noProject' }
   | { readonly kind: 'notPublishable'; readonly reason: string }
-  | { readonly kind: 'publishable'; readonly planFingerprint: string };
+  | {
+      readonly kind: 'publishable';
+      readonly projectId: string;
+      readonly planFingerprint: string;
+    };
 
 const NO_PROJECT_PLAN: CurrentGamePlan = Object.freeze({ kind: 'noProject' });
 
@@ -72,7 +90,18 @@ interface CreateProjectOperationsOptions {
   readonly profileFile: ProfileFileAdapter;
   readonly prepareProjectWorkspace: (project: ProjectDocument) => PreparedProjectWorkspace;
   readonly gamePlanPublisher?: GamePlanPublisher;
+  /** Mints the identity a saved copy takes; injectable for deterministic tests. */
+  readonly mintProjectId?: () => string;
   readonly store: PlannerStore;
+}
+
+/** The saved file's stem, bounded in code points as the plan's display name. */
+function planDisplayName(fileName: string): string {
+  return Array.from(profileFileStem(fileName)).slice(0, EXECUTION_DISPLAY_NAME_MAX).join('');
+}
+
+function mintRandomProjectId(): string {
+  return `run-plan-${globalThis.crypto.randomUUID()}`;
 }
 
 const operationLabels: Readonly<Record<ProjectOperation, string>> = Object.freeze({
@@ -120,6 +149,60 @@ export function createProjectOperations(
   let activeProfileFile = options.activeProfileFile ?? null;
   const currentPlans = new WeakMap<object, CurrentGamePlan>();
   const currentProject = () => selectPresentProject(options.store.getState());
+  const mintProjectId = options.mintProjectId ?? mintRandomProjectId;
+  // Explicit saves run one at a time, so each reads the identity its predecessor wrote.
+  // An idle save starts at once, reading the snapshot of its invocation; a later one waits.
+  let inFlightSave: Promise<unknown> | null = null;
+  const serializedSave = (
+    task: () => Promise<ProjectOperationResult>,
+  ): Promise<ProjectOperationResult> => {
+    const run = inFlightSave === null ? task() : inFlightSave.then(task, task);
+    const tracked: Promise<unknown> = run.finally(() => {
+      if (inFlightSave === tracked) inFlightSave = null;
+    });
+    inFlightSave = tracked;
+    return run;
+  };
+  const activateSaved = async (file: ProfileFileReference, operation: ProjectOperation) => {
+    try {
+      await file.activate();
+      return null;
+    } catch (error) {
+      return result(
+        operation,
+        'failure',
+        `${operationLabels[operation]} wrote ${file.fileName} but could not make it the active file: ${errorDetail(error)}`,
+      );
+    }
+  };
+  const saveProfileNow = async (): Promise<ProjectOperationResult> => {
+    try {
+      const snapshot = currentProject();
+      if (snapshot === undefined) {
+        throw new Error('No project is open');
+      }
+      const suggestedFileName =
+        selectProfileSession(options.store.getState()).fileName ?? DEFAULT_PROFILE_FILE_NAME;
+      const baselineJson = encodeProjectDocument(snapshot);
+      let savedFile = activeProfileFile;
+      if (savedFile === null) {
+        savedFile = await options.profileFile.saveAs(suggestedFileName, baselineJson);
+        if (savedFile === null) {
+          return result('saveProfile', 'cancelled', 'Save Profile cancelled.');
+        }
+        const activationFailure = await activateSaved(savedFile, 'saveProfile');
+        if (activationFailure !== null) return activationFailure;
+      } else {
+        await savedFile.write(baselineJson);
+      }
+      activeProfileFile = savedFile;
+      options.store.dispatch(profileSaveSucceeded({ baselineJson, fileName: savedFile.fileName }));
+      return result('saveProfile', 'success', 'Saved the profile.');
+    } catch (error) {
+      return failure('saveProfile', error);
+    }
+  };
+  const saveProfile = () => serializedSave(saveProfileNow);
   return Object.freeze({
     saveAsAvailable: options.profileFile.supportsSaveAs === true,
     async createNew(
@@ -141,7 +224,11 @@ export function createProjectOperations(
         } else if (itineraryBiomeKeys !== undefined) {
           throw new Error(`${route.label} uses a fixed route order`);
         }
-        const project = createInitialProject(options.catalog, routeKey, itineraryBiomeKeys);
+        const project = createInitialProject(options.catalog, {
+          projectId: mintProjectId(),
+          routeKey,
+          ...(itineraryBiomeKeys === undefined ? {} : { itineraryBiomeKeys }),
+        });
         assertPublicProjectAdmission(options.catalog, project);
         await options.profileFile.clearActive();
         activeProfileFile = null;
@@ -197,7 +284,11 @@ export function createProjectOperations(
             catalog: options.catalog,
           }),
         });
-        current = Object.freeze({ kind: 'publishable', planFingerprint: plan.planFingerprint });
+        current = Object.freeze({
+          kind: 'publishable',
+          projectId: plan.projectId,
+          planFingerprint: plan.planFingerprint,
+        });
       } catch (error) {
         current = Object.freeze({ kind: 'notPublishable', reason: errorDetail(error) });
       }
@@ -211,81 +302,89 @@ export function createProjectOperations(
         }
         const workspace = options.store.getState().projectWorkspace;
         if (workspace.kind !== 'openProject') throw new Error('No project is open');
-        const product = assembleExecutionProduct({
-          assembly: workspace.assembly,
-          catalog: options.catalog,
-        });
-        const plan = compileExecutionPlan({ product });
-        const publication = await options.gamePlanPublisher.publish(
-          slotNumber,
-          encodeExecutionPlan(plan),
-        );
-        if (publication.status === 'published') {
-          options.store.dispatch(gamePlanSent({ slot: slotNumber }));
-          return result('publishGame', 'success', `Published to game, Slot ${slotNumber}.`);
+        // Checked before saving, so an unsendable plan is never saved on the way.
+        assembleExecutionProduct({ assembly: workspace.assembly, catalog: options.catalog });
+        // Sending needs a saved file with no unsaved changes; the file's name names the plan.
+        let saved = false;
+        if (
+          activeProfileFile === null ||
+          selectProfileStatus(options.store.getState()) !== 'Clean'
+        ) {
+          const saving = await saveProfile();
+          if (saving.status === 'cancelled') {
+            return result('publishGame', 'cancelled', 'Send to game cancelled; nothing was sent.');
+          }
+          if (saving.status === 'failure') {
+            return result('publishGame', 'failure', `Not saved, so not sent: ${saving.message}`);
+          }
+          saved = true;
         }
-        return result(
-          'publishGame',
-          'failure',
-          publication.blockers.length > 0
-            ? publication.blockers.map(describePublicationBlocker).join(' ')
-            : publication.message,
-        );
+        const notSent = (message: string) =>
+          result('publishGame', 'failure', saved ? `Saved, but not sent: ${message}` : message);
+        try {
+          // Compile the document as saved, since the save may have re-identified its history.
+          const savedWorkspace = options.store.getState().projectWorkspace;
+          if (savedWorkspace.kind !== 'openProject') throw new Error('No project is open');
+          const fileName = selectProfileSession(options.store.getState()).fileName;
+          const plan = compileExecutionPlan({
+            product: assembleExecutionProduct({
+              assembly: savedWorkspace.assembly,
+              catalog: options.catalog,
+            }),
+            ...(fileName === null ? {} : { displayName: planDisplayName(fileName) }),
+          });
+          const publication = await options.gamePlanPublisher.publish(
+            slotNumber,
+            encodeExecutionPlan(plan),
+          );
+          if (publication.status === 'published') {
+            options.store.dispatch(gamePlanSent({ slot: slotNumber }));
+            return result('publishGame', 'success', `Published to game, Slot ${slotNumber}.`);
+          }
+          return notSent(
+            publication.blockers.length > 0
+              ? publication.blockers.map(describePublicationBlocker).join(' ')
+              : publication.message,
+          );
+        } catch (error) {
+          return notSent(errorDetail(error));
+        }
       } catch (error) {
         return failure('publishGame', error);
       }
     },
-    async saveProfile(): Promise<ProjectOperationResult> {
-      try {
-        const snapshot = currentProject();
-        if (snapshot === undefined) {
-          throw new Error('No project is open');
-        }
-        const suggestedFileName =
-          selectProfileSession(options.store.getState()).fileName ?? DEFAULT_PROFILE_FILE_NAME;
-        const baselineJson = encodeProjectDocument(snapshot);
-        let savedFile = activeProfileFile;
-        if (savedFile === null) {
-          savedFile = await options.profileFile.saveAs(suggestedFileName, baselineJson);
-          if (savedFile === null) {
-            return result('saveProfile', 'cancelled', 'Save Profile cancelled.');
+    saveProfile,
+    saveProfileAs: () =>
+      serializedSave(async (): Promise<ProjectOperationResult> => {
+        try {
+          const snapshot = currentProject();
+          if (snapshot === undefined) {
+            throw new Error('No project is open');
           }
-          await savedFile.activate();
-        } else {
-          await savedFile.write(baselineJson);
+          const suggestedFileName =
+            selectProfileSession(options.store.getState()).fileName ?? DEFAULT_PROFILE_FILE_NAME;
+          // A copy of an already-saved file is a different plan, so it takes a new identity;
+          // the first save of a never-saved project keeps its own.
+          const projectId = activeProfileFile === null ? snapshot.projectId : mintProjectId();
+          const baselineJson = encodeProjectDocument({ ...snapshot, projectId });
+          const savedFile = await options.profileFile.saveAs(suggestedFileName, baselineJson);
+          if (savedFile === null) {
+            return result('saveProfileAs', 'cancelled', 'Save As cancelled.');
+          }
+          const activationFailure = await activateSaved(savedFile, 'saveProfileAs');
+          if (activationFailure !== null) return activationFailure;
+          activeProfileFile = savedFile;
+          if (projectId !== snapshot.projectId) {
+            options.store.dispatch(projectIdentityMinted(projectId));
+          }
+          options.store.dispatch(
+            profileSaveSucceeded({ baselineJson, fileName: savedFile.fileName }),
+          );
+          return result('saveProfileAs', 'success', 'Saved as a new file.');
+        } catch (error) {
+          return failure('saveProfileAs', error);
         }
-        activeProfileFile = savedFile;
-        options.store.dispatch(
-          profileSaveSucceeded({ baselineJson, fileName: savedFile.fileName }),
-        );
-        return result('saveProfile', 'success', 'Saved the profile.');
-      } catch (error) {
-        return failure('saveProfile', error);
-      }
-    },
-    async saveProfileAs(): Promise<ProjectOperationResult> {
-      try {
-        const snapshot = currentProject();
-        if (snapshot === undefined) {
-          throw new Error('No project is open');
-        }
-        const suggestedFileName =
-          selectProfileSession(options.store.getState()).fileName ?? DEFAULT_PROFILE_FILE_NAME;
-        const baselineJson = encodeProjectDocument(snapshot);
-        const savedFile = await options.profileFile.saveAs(suggestedFileName, baselineJson);
-        if (savedFile === null) {
-          return result('saveProfileAs', 'cancelled', 'Save As cancelled.');
-        }
-        await savedFile.activate();
-        activeProfileFile = savedFile;
-        options.store.dispatch(
-          profileSaveSucceeded({ baselineJson, fileName: savedFile.fileName }),
-        );
-        return result('saveProfileAs', 'success', 'Saved as a new file.');
-      } catch (error) {
-        return failure('saveProfileAs', error);
-      }
-    },
+      }),
     async loadProfile(): Promise<ProjectOperationResult> {
       try {
         const loaded = await options.profileFile.load();
@@ -349,13 +448,16 @@ export function createProjectOperations(
   });
 }
 
-/** Every Hub in a migrated profile received the legacy fountain-first placement. */
+/** Names the repairs a migrated profile may need, by the migrations it went through. */
 function migratedProfileMessage(
   project: ProjectDocument,
   provenance: readonly { readonly sourceSchemaVersion: number }[],
 ): string {
+  // Only the 87 -> 88 step gave Hubs the legacy fountain-first placement.
+  const crossedHubPlacement = provenance.some((migration) => migration.sourceSchemaVersion <= 87);
   const repairs = [
-    ...(project.route.biomes.some((biome) =>
+    ...(crossedHubPlacement &&
+    project.route.biomes.some((biome) =>
       biome.topology?.decisions.some((decision) => decision.kind === 'hub'),
     )
       ? [
@@ -366,7 +468,6 @@ function migratedProfileMessage(
       ? ['retained encounter choices may need missing fields repaired']
       : []),
   ];
-  return repairs.length === 0
-    ? 'Migrated the profile to schema 88.'
-    : `Migrated the profile to schema 88; ${repairs.join(', and ')}.`;
+  const migrated = `Migrated the profile to schema ${PROJECT_DOCUMENT_SCHEMA_VERSION}`;
+  return repairs.length === 0 ? `${migrated}.` : `${migrated}; ${repairs.join(', and ')}.`;
 }

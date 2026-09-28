@@ -58,6 +58,7 @@ import {
   compileExecutionPlan,
   decodeExecutionPlan,
   encodeExecutionPlan,
+  EXECUTION_PROTOCOL_VERSION,
   ExecutionPlanCodecError,
 } from '../../src/execution-plan';
 import { validateExecutionProduct } from '../../src/execution-plan/assembly/validation';
@@ -96,6 +97,7 @@ import { migrateProjectDocument as migrateProject84To85 } from '../../../../sche
 import { migrateProjectDocument as migrateProject85To86 } from '../../../../schema/migrate-project-85-to-86.js';
 import { migrateProjectDocument as migrateProject86To87 } from '../../../../schema/migrate-project-86-to-87.js';
 import { migrateProjectDocument as migrateProject87To88 } from '../../../../schema/migrate-project-87-to-88.js';
+import { migrateProjectDocument as migrateProject88To89 } from '../../../../schema/migrate-project-88-to-89.js';
 
 function fOnlyProject(project = createCompleteFGProject()) {
   return Object.freeze({
@@ -790,6 +792,54 @@ describe('execution-plan compiler and codec', () => {
       });
     }
     expect(decodeExecutionPlan(JSON.parse(encodeExecutionPlan(plan)))).toEqual(plan);
+  });
+
+  it('rejects plans of the released protocol 48', () => {
+    expect(EXECUTION_PROTOCOL_VERSION).toBe(49);
+    expect(() =>
+      decodeExecutionPlan({
+        ...(surfaceQShopCorrelationFixture as Record<string, unknown>),
+        protocolVersion: 48,
+      }),
+    ).toThrow(/protocolVersion is unsupported/);
+  });
+
+  it('carries an optional display name outside the fingerprint', () => {
+    const plan = decodeExecutionPlan(surfaceQShopCorrelationFixture);
+    expect(plan.displayName).toBeUndefined();
+    const named = decodeExecutionPlan({
+      ...(surfaceQShopCorrelationFixture as Record<string, unknown>),
+      displayName: 'Surface Phial run',
+    });
+    expect(named.displayName).toBe('Surface Phial run');
+    expect(named.planFingerprint).toBe(plan.planFingerprint);
+    expect(decodeExecutionPlan(JSON.parse(encodeExecutionPlan(named)))).toEqual(named);
+    // The bound counts code points: 200 four-byte characters fit, 201 do not.
+    expect(
+      decodeExecutionPlan({
+        ...(surfaceQShopCorrelationFixture as Record<string, unknown>),
+        displayName: '🎲'.repeat(200),
+      }).displayName,
+    ).toBe('🎲'.repeat(200));
+    for (const displayName of ['', 7, 'x'.repeat(201), '🎲'.repeat(201)])
+      expect(() =>
+        decodeExecutionPlan({
+          ...(surfaceQShopCorrelationFixture as Record<string, unknown>),
+          displayName,
+        }),
+      ).toThrow(/displayName/);
+    const project = createCompleteFGProject();
+    const product = assembleExecutionProduct({
+      assembly: simulateProjectAssembly(catalog, {
+        ...project,
+        route: { ...project.route, biomes: project.route.biomes.slice(0, 1) },
+      }),
+      catalog,
+    });
+    const compiled = compileExecutionPlan({ product, displayName: 'My run' });
+    expect(compiled.displayName).toBe('My run');
+    expect(compiled.planFingerprint).toBe(compileExecutionPlan({ product }).planFingerprint);
+    expect('displayName' in compileExecutionPlan({ product })).toBe(false);
   });
 
   it('accepts source-owned replacement materialization only for Artificer roles', () => {
@@ -2122,7 +2172,11 @@ describe('execution-plan compiler and codec', () => {
       ),
     );
     const loaded = parseProjectDocument(
-      JSON.stringify(migrateProject87To88(migrateProject86To87(migrateProject85To86(migrated)))),
+      JSON.stringify(
+        migrateProject88To89(
+          migrateProject87To88(migrateProject86To87(migrateProject85To86(migrated))),
+        ),
+      ),
       catalog,
     );
     expect(qSupplyChainSlices(loaded)).toEqual(before);

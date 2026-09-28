@@ -135,7 +135,14 @@ function createSchedulerFixture(): SchedulerFixture {
 
 function configureF(application: ReturnType<typeof createApplication>): void {
   if (selectPresentProject(application.store.getState()) === undefined) {
-    application.store.dispatch(newProjectCreated(createInitialProject(catalog, 'Underworld')));
+    application.store.dispatch(
+      newProjectCreated(
+        createInitialProject(catalog, {
+          projectId: 'autosave-project',
+          routeKey: 'Underworld',
+        }),
+      ),
+    );
   }
   application.store.dispatch(
     authoredProjectCommandDispatched({

@@ -1,5 +1,17 @@
 # Project schema boundary
 
+Schema 89 gives every project a unique identity. Schema 88 created every new
+project with the shared default `projectId` `'run-plan'`.
+
+```bash
+npm run schema:migrate-88-to-89 -- path/to/schema-88-project.runplanner.json
+```
+
+The migration replaces a `projectId` that is exactly `'run-plan'` with a unique
+`run-plan-<uuid>` and changes nothing else; every other id is kept. Because the
+new id is random, the output is not byte-for-byte reproducible. It writes a
+sibling file without overwriting the source.
+
 Schema 88 replaces a Hub decision's room-only `visitOrder` with one ordered
 `actions` list of room visits (`{ kind: 'roomVisit', hubSlotKey }`) and the
 single Hub fountain use (`{ kind: 'useFountain' }`). It adds the Hub-owned
@@ -149,8 +161,8 @@ output. It has no route-selection, in-place, or target-version mode.
 
 The schema-72 splitter's pure transformation is exported from
 `schema/split-project-72-to-73.js` for checkpoint conversion. The source value
-is never mutated. The application migrates schema 86 and 87 documents to schema
-88 when it opens them; older documents need the offline tools above.
+is never mutated. The application migrates schema 86, 87 and 88 documents to schema
+89 when it opens them; older documents need the offline tools above.
 
 Migrate a schema-74 document with:
 

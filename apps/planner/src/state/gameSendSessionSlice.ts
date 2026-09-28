@@ -2,7 +2,7 @@ import { createAction, createReducer, type Reducer } from '@reduxjs/toolkit';
 
 import type { GamePlanSlotNumber } from '../persistence/gameModuleHost';
 import { newProjectCreated, profileLoadSucceeded } from './profileSessionSlice';
-import { authoredProjectReplaced } from './projectWorkspaceSlice';
+import { authoredProjectReplaced, projectIdentityMinted } from './projectWorkspaceSlice';
 
 /** UI-session memory of sends for the loaded project; never persisted or in history. */
 export interface GameSendSessionState {
@@ -23,9 +23,11 @@ export function createGameSendSessionReducer(): Reducer<GameSendSessionState> {
     builder
       .addCase(gamePlanSent, (state, action) => ({ ...state, lastSentSlot: action.payload.slot }))
       .addCase(gameSendFeedbackShown, (state, action) => ({ ...state, feedback: action.payload }))
-      // Loading or creating another document starts a fresh send session.
+      // Loading, creating or copying the document starts a fresh send session.
       .addCase(newProjectCreated, () => INITIAL_STATE)
       .addCase(profileLoadSucceeded, () => INITIAL_STATE)
-      .addCase(authoredProjectReplaced, () => INITIAL_STATE);
+      .addCase(authoredProjectReplaced, () => INITIAL_STATE)
+      // A saved copy is a different plan; earlier sends belong to the original.
+      .addCase(projectIdentityMinted, () => INITIAL_STATE);
   });
 }

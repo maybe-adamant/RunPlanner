@@ -46,6 +46,17 @@ pub struct PlanSlotFacts {
     pub biome_keys: Vec<String>,
     pub plan_fingerprint: Option<String>,
     pub project_id: Option<String>,
+    /// The saved file's name at send time; absent in plans sent before it existed.
+    pub display_name: Option<String>,
+    pub weapon_key: Option<String>,
+    pub aspect_key: Option<String>,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct PlanLoadout {
+    weapon_key: String,
+    aspect_key: String,
 }
 
 #[derive(Deserialize)]
@@ -63,6 +74,10 @@ struct PlanIdentity {
     plan_fingerprint: String,
     route_key: String,
     extent: PlanExtent,
+    #[serde(default)]
+    starting_loadout: Option<PlanLoadout>,
+    #[serde(default)]
+    display_name: Option<String>,
 }
 
 const PLAN_FORMAT: &str = "run-planner-execution";
@@ -76,6 +91,9 @@ fn slot_facts(slot: u8, state: PlanSlotState, modified_at_ms: Option<u64>) -> Pl
         biome_keys: Vec::new(),
         plan_fingerprint: None,
         project_id: None,
+        display_name: None,
+        weapon_key: None,
+        aspect_key: None,
     }
 }
 
@@ -137,6 +155,12 @@ fn read_slot(slot: u8, path: &Path) -> PlanSlotFacts {
             biome_keys: identity.extent.biome_keys,
             plan_fingerprint: Some(identity.plan_fingerprint),
             project_id: Some(identity.project_id),
+            display_name: identity.display_name,
+            weapon_key: identity
+                .starting_loadout
+                .as_ref()
+                .map(|loadout| loadout.weapon_key.clone()),
+            aspect_key: identity.starting_loadout.map(|loadout| loadout.aspect_key),
         },
         _ => unreadable,
     }
@@ -182,7 +206,7 @@ mod tests {
             .join(slot_file_name(slot).unwrap())
     }
 
-    const PLAN: &str = r#"{"format":"run-planner-execution","protocolVersion":42,"catalogVersion":"c","projectId":"p","planFingerprint":"abc123","routeKey":"Underworld","extent":{"kind":"configuredPrefix","biomeKeys":["F","G"],"terminalBiomeKey":"G"}}"#;
+    const PLAN: &str = r#"{"format":"run-planner-execution","protocolVersion":42,"catalogVersion":"c","projectId":"p","planFingerprint":"abc123","displayName":"Surface Phial run","routeKey":"Underworld","startingLoadout":{"weaponKey":"WeaponStaffSwing","aspectKey":"BaseStaffAspect","arcana":[],"fear":{}},"extent":{"kind":"configuredPrefix","biomeKeys":["F","G"],"terminalBiomeKey":"G"}}"#;
 
     #[test]
     fn slots_report_empty_present_and_unreadable_without_failing_the_rest() {
@@ -212,6 +236,9 @@ mod tests {
                 biome_keys: vec!["F".to_owned(), "G".to_owned()],
                 plan_fingerprint: Some("abc123".to_owned()),
                 project_id: Some("p".to_owned()),
+                display_name: Some("Surface Phial run".to_owned()),
+                weapon_key: Some("WeaponStaffSwing".to_owned()),
+                aspect_key: Some("BaseStaffAspect".to_owned()),
             }
         );
         assert!(slots[0].modified_at_ms.is_some());
@@ -224,6 +251,26 @@ mod tests {
             );
             assert!(slots[index].plan_fingerprint.is_none());
         }
+        fs::write(
+            slot_path(&target, 5),
+            PLAN.replace(r#""displayName":"Surface Phial run","#, ""),
+        )
+        .unwrap();
+        let legacy = &inspect_slots(&target)[4];
+        assert_eq!(legacy.state, PlanSlotState::Present);
+        assert_eq!(legacy.display_name, None);
+        assert_eq!(legacy.aspect_key.as_deref(), Some("BaseStaffAspect"));
+        let without_loadout = PLAN.replace(
+            r#""startingLoadout":{"weaponKey":"WeaponStaffSwing","aspectKey":"BaseStaffAspect","arcana":[],"fear":{}},"#,
+            "",
+        );
+        assert!(!without_loadout.contains("startingLoadout"));
+        fs::write(slot_path(&target, 5), without_loadout).unwrap();
+        let unknown = &inspect_slots(&target)[4];
+        assert_eq!(unknown.state, PlanSlotState::Present);
+        assert_eq!(unknown.aspect_key, None);
+        assert_eq!(unknown.weapon_key, None);
+        fs::remove_file(slot_path(&target, 5)).unwrap();
         assert_eq!(slots[4].state, PlanSlotState::Empty);
         assert_eq!(slots[5].state, PlanSlotState::Empty);
     }

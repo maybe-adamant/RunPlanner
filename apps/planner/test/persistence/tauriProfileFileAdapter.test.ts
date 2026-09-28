@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
+import { profileFileStem } from '@planner/persistence/profileFile';
 import {
   createTauriProfileFileAdapter,
   type TauriProfileFileEnvironment,
@@ -118,5 +119,17 @@ describe('Tauri profile-file adapter', () => {
       status: 'failure',
       message: 'Could not restore the active profile: stale path',
     });
+  });
+  it('exposes a saved or loaded file name whose stem names the plan', async () => {
+    const adapter = createTauriProfileFileAdapter(
+      createEnvironment({
+        save: vi.fn(() => Promise.resolve('C:\\Plans\\Surface Phial run.runplanner.json')),
+        open: vi.fn(() => Promise.resolve<string | null>('/plans/Erebus opener.runplanner.json')),
+      }),
+    );
+    const saved = await adapter.saveAs('run-plan.runplanner.json', '{}');
+    expect(profileFileStem(saved!.fileName)).toBe('Surface Phial run');
+    const loaded = await adapter.load();
+    expect(profileFileStem(loaded!.file.fileName)).toBe('Erebus opener');
   });
 });

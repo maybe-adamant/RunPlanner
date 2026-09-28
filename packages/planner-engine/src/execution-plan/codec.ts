@@ -46,6 +46,19 @@ export function encodeExecutionPlan(plan: ExecutionPlan): string {
   return JSON.stringify({ ...plan, occurrences });
 }
 
+/** Bound on the presentation-only plan name, in Unicode code points (at most 800 UTF-8 bytes). */
+export const EXECUTION_DISPLAY_NAME_MAX = 200;
+
+function displayNameValue(value: unknown): string {
+  if (
+    typeof value !== 'string' ||
+    value.length === 0 ||
+    Array.from(value).length > EXECUTION_DISPLAY_NAME_MAX
+  )
+    fail('execution plan.displayName must be a bounded non-empty string');
+  return value;
+}
+
 export function decodeExecutionPlan(value: unknown): ExecutionPlan {
   const record = expandDiagnosticFrames(value);
   exact(
@@ -64,7 +77,7 @@ export function decodeExecutionPlan(value: unknown): ExecutionPlan {
       'resources',
       'occurrences',
     ],
-    [],
+    ['displayName'],
     'execution plan',
   );
   if (record.format !== EXECUTION_PLAN_FORMAT) fail('execution plan.format is unsupported');
@@ -131,6 +144,11 @@ export function decodeExecutionPlan(value: unknown): ExecutionPlan {
     catalogVersion: EXECUTION_CATALOG_VERSION,
     projectId: stringValue(record.projectId, 'execution plan.projectId'),
     planFingerprint: stringValue(record.planFingerprint, 'execution plan.planFingerprint', 64),
+    ...(record.displayName === undefined
+      ? {}
+      : {
+          displayName: displayNameValue(record.displayName),
+        }),
     routeKey: record.routeKey,
     startingLoadout: decodedStartingLoadout,
     startingKeepsake,

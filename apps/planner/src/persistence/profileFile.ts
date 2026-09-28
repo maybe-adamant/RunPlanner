@@ -34,3 +34,14 @@ export function createUnavailableProfileFileAdapter(): ProfileFileAdapter {
     restoreActive: () => Promise.resolve(Object.freeze({ status: 'none' as const })),
   });
 }
+
+const PROFILE_FILE_SUFFIX = '.runplanner.json';
+
+/** A saved file's name without its extension, used as the plan's display name. */
+export function profileFileStem(fileName: string): string {
+  const base = fileName.split(/[\\/]/).at(-1) ?? fileName;
+  const stem = base.toLowerCase().endsWith(PROFILE_FILE_SUFFIX)
+    ? base.slice(0, -PROFILE_FILE_SUFFIX.length)
+    : base.replace(/\.[^.]+$/, '');
+  return stem.trim().length === 0 ? base : stem.trim();
+}

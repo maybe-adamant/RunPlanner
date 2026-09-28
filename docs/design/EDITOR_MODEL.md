@@ -268,8 +268,11 @@ pointer gestures and floating overlays account for screen versus layout coordina
 ### File operations
 
 The file menu provides New, Load, Save and desktop Save As. Sending a plan to
-the game belongs to the Game panel and the header quick send; neither changes
-the project file, authored state or history.
+the game belongs to the Game panel and the header quick send. Both send only a
+saved file with no unsaved changes, saving first (Save As for a never-saved
+project) and naming the plan by the file's stem. Sending adds no authored edit
+or history step, but it may first save, writing the file and, for a never-saved
+project, choosing it through Save As.
 
 The Game panel, opened from the Game button beside About, holds a Game location
 section, a Game module section once a target is set, and a Plans in game
@@ -296,7 +299,9 @@ and never enters history.
 Browser Load uses file input; Save downloads a file. Browser Save As would be
 the same operation and is omitted. Tauri uses native dialogs and a remembered
 accepted file reference. Save writes that file, Save As writes and activates
-another, and New clears the association when creating the replacement project.
+another as a copy with a new `projectId` (minted by the application and applied
+to every history snapshot through `reidentifyProjectHistory`, so Undo keeps it;
+the first save of a never-saved project keeps its identity), and New clears the association when creating the replacement project.
 
 `ProfileFileAdapter` owns explicit file operations and restoring the remembered
 reference. A `ProfileFileReference` supplies its display name, activation and

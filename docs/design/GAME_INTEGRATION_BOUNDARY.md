@@ -2,8 +2,8 @@
 
 ## Contract
 
-The active strict versioned protocol carries a complete-valid configured
-Underworld or Surface prefix, through `F/G/H/I` or `N/O/P/Q`. The desktop
+The active strict versioned protocol, execution protocol 49, carries a
+complete-valid configured Underworld or Surface prefix, through `F/G/H/I` or `N/O/P/Q`. The desktop
 publisher writes an execution-only JSON artifact to one of six fixed Plan
 Executor slots in the established game target; the browser build has no
 publication capability. Publishing a slot and selecting
@@ -117,18 +117,38 @@ matches this build and ModpackLib is compatible. The installed
 write. `mods.yml` is never edited, and only plan slots are written under
 `config/`.
 
-Once the module is ready, the Game panel lists the six slots. The host reads
-each slot under the same link and containment rules and the 1 MiB bound, and
-reports it as empty, present or unreadable with its modified time and only
-existing wire fields: `projectId`, `routeKey`, `extent.biomeKeys` and
-`planFingerprint`. A slot whose `planFingerprint` equals the current project's
-compiled plan is marked as the current plan. **Send here** fills an empty slot
-and **Replace** overwrites an occupied one after confirmation; both are absent
-while the current project cannot compile, which the panel explains. The planner
+A sent plan's identity chain is the saved file, then the document's
+`projectId`, then the compiled `planFingerprint`. Its name is the saved file's
+stem (`Surface Phial run.runplanner.json` names "Surface Phial run"); there is
+no separate authored name. Sending therefore needs a saved file with no unsaved
+changes: a clean file sends, a file with unsaved changes offers **Save and
+send**, which saves in place first, and a never-saved project offers **Save and
+send…**, which opens Save As and sends under the chosen name, or sends nothing
+if cancelled. Execution protocol 49 carries the stem as the optional,
+presentation-only `displayName`, which is outside `planFingerprint`; the game module accepts and
+ignores it. Save As from an already-saved file gives the copy a new `projectId`
+(the first save of a never-saved project keeps its own), so earlier sends no
+longer match it.
+
+Once the module is ready, the Game panel shows the six slots as a table: Slot,
+Plan, Route, Ends at, Aspect and Sent. The host reads each slot under the same
+link and containment rules and the 1 MiB bound, and reports it as empty,
+present or unreadable with its modified time and only existing wire fields:
+`projectId`, `displayName`, `routeKey`, `extent.biomeKeys`,
+`startingLoadout.weaponKey` and `startingLoadout.aspectKey`, and
+`planFingerprint`. The application labels the route, final biome, aspect and
+weapon from the catalog; a plan without `displayName` shows "(unnamed plan)" and
+an unreadable slot shows only "Unreadable". A slot with the open project's
+`projectId` is marked **current** when its fingerprint matches the compiled plan
+and **older version** otherwise, by plain identity equality. **Send here** fills an empty slot and
+**Replace** overwrites an occupied one after confirmation, both taking the Save
+and send forms when a save is needed; all are absent while the current project
+cannot compile, which the panel explains. The planner
 remembers the last slot sent for the loaded project as UI-session state only: a
 send from the Game panel or the header sets it, and loading, creating or
 replacing the document, or restarting, clears it. The header **Send to game
-(slot N)** re-sends there only while the module is ready, the engine reports the
+(slot N)**, or **Save and send to game (slot N)** with unsaved changes,
+re-sends there only while the module is ready, the engine reports the
 project eligible for an execution plan, and that slot is empty or holds the same
 `projectId`, so it never overwrites another project's plan; it compiles only
 when clicked. Its always-present status line reports the outcome with the local

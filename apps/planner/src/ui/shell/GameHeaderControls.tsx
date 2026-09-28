@@ -5,9 +5,18 @@ import type {
   GameStatusController,
   GameStatusSnapshot,
 } from '@planner/persistence/gameModuleHost';
-import { projectGameIndicator, projectGameQuickSend } from '@planner/projections/gamePanel';
+import {
+  gameSaveState,
+  projectGameIndicator,
+  projectGameQuickSend,
+} from '@planner/projections/gamePanel';
 import { gameSendFeedbackShown } from '@planner/state/gameSendSessionSlice';
-import { useAppDispatch, useAppSelector, type RootState } from '@planner/state/store';
+import {
+  selectProfileStatus,
+  useAppDispatch,
+  useAppSelector,
+  type RootState,
+} from '@planner/state/store';
 import type { ProjectOperations } from '@planner/workspace/projectOperations';
 
 const EMPTY_SNAPSHOT: GameStatusSnapshot = Object.freeze({ status: null, error: null, readAt: 0 });
@@ -63,7 +72,10 @@ export function GameHeaderControls({
     return () => window.removeEventListener('focus', refresh);
   }, [gameStatus]);
   const indicator = gameStatus === undefined ? null : projectGameIndicator(snapshot);
-  const quickSend = projectGameQuickSend(snapshot.status, projectId, lastSentSlot);
+  const saveState = useAppSelector((state) =>
+    gameSaveState(selectProfileStatus(state), state.profileSession.fileName),
+  );
+  const quickSend = projectGameQuickSend(snapshot.status, projectId, lastSentSlot, saveState);
 
   // The plan is compiled only here, by the publish path, when the user asks to send.
   const send = async (slot: GamePlanSlotNumber) => {
@@ -75,7 +87,9 @@ export function GameHeaderControls({
         gameSendFeedbackShown(
           result.status === 'success'
             ? { tone: 'success', text: `Sent to slot ${slot} · ${sentAt()}` }
-            : { tone: 'failure', text: `${result.message} Open Game to check. · ${sentAt()}` },
+            : result.status === 'cancelled'
+              ? { tone: 'success', text: `${result.message} · ${sentAt()}` }
+              : { tone: 'failure', text: `${result.message} Open Game to check. · ${sentAt()}` },
         ),
       );
       await gameStatus?.refresh();

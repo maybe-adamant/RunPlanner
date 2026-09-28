@@ -1,7 +1,12 @@
 export { assembleExecutionProduct } from './assembler';
 export { ExecutionCompilerError } from './assembler-errors';
 export { compileExecutionPlan } from './compiler';
-export { decodeExecutionPlan, encodeExecutionPlan, ExecutionPlanCodecError } from './codec';
+export {
+  decodeExecutionPlan,
+  encodeExecutionPlan,
+  EXECUTION_DISPLAY_NAME_MAX,
+  ExecutionPlanCodecError,
+} from './codec';
 export {
   EXECUTION_PLAN_FORMAT,
   EXECUTION_CATALOG_VERSION,

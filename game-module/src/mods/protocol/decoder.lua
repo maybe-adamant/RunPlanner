@@ -13,7 +13,7 @@ local resources = type(import) == "function" and import("mods/protocol/resources
 
 local protocol = {
     FORMAT = "run-planner-execution",
-    VERSION = 48,
+    VERSION = 49,
     CATALOG_VERSION = "0.55.0-anvil-of-fates",
     MAX_ITEMS = p.MAX_ITEMS,
     MAX_STRING = p.MAX_STRING,
@@ -127,7 +127,7 @@ function protocol.decode(value)
             "routeKey", "startingLoadout", "startingKeepsake", "extent", "selectedOccurrenceIds", "resources",
             "occurrences",
         },
-        {},
+        { "displayName" },
         "execution plan"
     )
     if not plan then return nil, errorMessage end
@@ -140,6 +140,11 @@ function protocol.decode(value)
         or not plan.planFingerprint:match("^[0-9a-f]+$")
         or #plan.planFingerprint ~= 8 then
         return p.fail("execution plan has unsupported identity")
+    end
+    -- The presentation-only plan name is at most 200 code points, so at most 800 UTF-8 bytes;
+    -- it is validated but unused.
+    if plan.displayName ~= nil and not p.str(plan.displayName, "execution plan.displayName", 800) then
+        return p.fail("execution plan has an invalid display name")
     end
     local _, extentError = extent(plan.extent)
     if extentError then return nil, extentError end

@@ -5,9 +5,17 @@ import { afterEach, describe, expect, it } from 'vitest';
 
 import { createApplication } from '@planner/composition/createApplication';
 import type { GameModuleStatus } from '@planner/persistence/gameModuleHost';
-import { createFakeGameModuleHost, gameModuleStatus } from '@planner-test/fixtures/gameModuleHost';
+import {
+  createFakeGameModuleHost,
+  gameModuleStatus,
+  planSlot,
+  planSlots,
+} from '@planner-test/fixtures/gameModuleHost';
 import { renderPlannerForInteraction } from '@planner-test/fixtures/renderPlanner';
 import { createCompleteFGProject } from '@run-planner/test-fixtures/underworld';
+import { catalog } from '@run-planner/hades2-catalog';
+import { createFakeProfileFiles } from '@planner-test/fixtures/profileFiles';
+import { profileSaveSucceeded } from '@planner/state/profileSessionSlice';
 import { authoredProjectReplaced } from '@planner/state/projectWorkspaceSlice';
 
 const unset = (): GameModuleStatus =>
@@ -37,14 +45,20 @@ const manualTarget = (): GameModuleStatus =>
 async function openGame(
   host: ReturnType<typeof createFakeGameModuleHost>['host'],
   prepare?: (application: ReturnType<typeof createApplication>) => void | Promise<void>,
+  options: Omit<Parameters<typeof createApplication>[0] & object, 'gameModuleHost'> = {},
 ) {
-  const application = createApplication({ gameModuleHost: host });
+  const application = createApplication({ ...options, gameModuleHost: host });
   await prepare?.(application);
   const rendered = renderPlannerForInteraction({ application, startWithProject: false });
   await rendered.user.click(await screen.findByRole('button', { name: /^Game — / }));
   const dialog = await screen.findByRole('dialog', { name: 'Game' });
   await within(dialog).findByRole('heading', { name: 'Game location' });
   return { ...rendered, dialog };
+}
+
+function firstBiome() {
+  const project = createCompleteFGProject();
+  return { ...project, route: { ...project.route, biomes: project.route.biomes.slice(0, 1) } };
 }
 
 describe('Game panel', () => {
@@ -372,59 +386,63 @@ describe('Game panel', () => {
     );
     expect(within(dialog).getByRole('heading', { name: 'Plans in game' })).toBeTruthy();
     expect(within(dialog).getByText(/^This plan can’t be sent yet: /)).toBeTruthy();
-    const slots = within(dialog).getByRole('list', { name: 'Plan slots' });
-    expect(within(slots).getAllByRole('listitem')).toHaveLength(6);
-    expect(within(slots).queryAllByRole('button')).toEqual([]);
+    const table = within(dialog).getByRole('table', { name: 'Plans in game' });
+    expect(
+      within(table)
+        .getAllByRole('columnheader')
+        .map((header) => header.textContent),
+    ).toEqual(['Slot', 'Plan', 'Route', 'Ends at', 'Aspect', 'Sent', 'Action']);
+    expect(
+      within(table)
+        .getAllByRole('rowheader')
+        .map((header) => header.textContent),
+    ).toEqual(['Slot 1', 'Slot 2', 'Slot 3', 'Slot 4', 'Slot 5', 'Slot 6']);
+    expect(within(table).queryAllByRole('button')).toEqual([]);
   });
 
-  it('sends to an empty slot and confirms before replacing an occupied one', async () => {
-    const occupied = gameModuleStatus({
-      inspection: {
-        planSlots: [
-          {
-            slot: 1,
-            state: 'present',
-            modifiedAtMs: Date.now(),
-            routeKey: 'Underworld',
-            biomeKeys: ['F'],
-            planFingerprint: 'another',
-            projectId: 'another',
-          },
-          ...([2, 3, 4, 5, 6] as const).map((slot) => ({
-            slot,
-            state: 'empty' as const,
-            modifiedAtMs: null,
-            routeKey: null,
-            biomeKeys: [],
-            planFingerprint: null,
-            projectId: null,
-          })),
-        ],
-      },
-    });
-    const game = createFakeGameModuleHost(occupied);
-    const { dialog, user } = await openGame(game.host, (application) => {
-      const project = createCompleteFGProject();
-      application.store.dispatch(
-        authoredProjectReplaced({
-          ...project,
-          route: { ...project.route, biomes: project.route.biomes.slice(0, 1) },
-        }),
-      );
-    });
-    const slots = within(dialog).getByRole('list', { name: 'Plan slots' });
-    expect(within(slots).getByText(/Underworld · F/)).toBeTruthy();
-    await user.click(within(slots).getByRole('button', { name: 'Send here (slot 2)' }));
+  it('sends a clean saved plan under its file name and confirms before replacing', async () => {
+    const game = createFakeGameModuleHost(
+      gameModuleStatus({
+        inspection: {
+          planSlots: planSlots(
+            planSlot(1, {
+              state: 'present',
+              modifiedAtMs: Date.now(),
+              routeKey: 'Underworld',
+              biomeKeys: ['F'],
+              planFingerprint: 'another',
+              projectId: 'another',
+              displayName: 'Their run',
+              weaponKey: 'WeaponStaffSwing',
+              aspectKey: 'BaseStaffAspect',
+            }),
+          ),
+        },
+      }),
+    );
+    const files = createFakeProfileFiles();
+    const { dialog, user } = await openGame(
+      game.host,
+      (application) => files.openSaved(application, firstBiome(), 'Erebus opener.runplanner.json'),
+      { profileFile: files.adapter },
+    );
+    const table = within(dialog).getByRole('table', { name: 'Plans in game' });
+    const row = within(table).getByRole('row', { name: /Slot 1/ });
+    expect(within(row).getByText('Their run')).toBeTruthy();
+    expect(within(row).getByText(catalog.biomes.byKey.F!.label)).toBeTruthy();
+    await user.click(within(table).getByRole('button', { name: 'Send here (slot 2)' }));
     expect(game.published.map((publication) => publication.slotNumber)).toEqual([2]);
+    expect(JSON.parse(game.published[0]!.json)).toMatchObject({ displayName: 'Erebus opener' });
+    expect(files.writes).toHaveLength(0);
     expect(await within(dialog).findByText('Published to game, Slot 2.')).toBeTruthy();
 
-    await user.click(within(slots).getByRole('button', { name: 'Replace (slot 1)' }));
+    await user.click(within(table).getByRole('button', { name: 'Replace (slot 1)' }));
     const confirm = await screen.findByRole('dialog', { name: 'Replace the plan in slot 1?' });
     expect(confirm.getAttribute('aria-describedby')).toBe('game-plan-replace-message');
     await user.click(within(confirm).getByRole('button', { name: 'Cancel' }));
     expect(game.published).toHaveLength(1);
     expect(document.activeElement?.getAttribute('aria-label')).toBe('Replace (slot 1)');
-    await user.click(within(slots).getByRole('button', { name: 'Replace (slot 1)' }));
+    await user.click(within(table).getByRole('button', { name: 'Replace (slot 1)' }));
     await user.click(
       within(await screen.findByRole('dialog', { name: 'Replace the plan in slot 1?' })).getByRole(
         'button',
@@ -435,6 +453,59 @@ describe('Game panel', () => {
     await waitFor(() =>
       expect(document.activeElement?.getAttribute('aria-label')).toBe('Replace (slot 1)'),
     );
+  });
+
+  it('saves unsaved changes in place before sending', async () => {
+    const game = createFakeGameModuleHost();
+    const files = createFakeProfileFiles();
+    const { dialog, user } = await openGame(
+      game.host,
+      async (application) => {
+        await files.openSaved(application, firstBiome(), 'Erebus opener.runplanner.json');
+        // A different saved baseline makes the open document dirty without an authored edit.
+        application.store.dispatch(
+          profileSaveSucceeded({ baselineJson: '{}', fileName: 'Erebus opener.runplanner.json' }),
+        );
+      },
+      { profileFile: files.adapter },
+    );
+    await user.click(await within(dialog).findByRole('button', { name: 'Save and send (slot 3)' }));
+    expect(files.writes.map((write) => write.fileName)).toEqual(['Erebus opener.runplanner.json']);
+    expect(game.published.map((publication) => publication.slotNumber)).toEqual([3]);
+    expect(JSON.parse(game.published[0]!.json)).toMatchObject({ displayName: 'Erebus opener' });
+    expect(await within(dialog).findByRole('button', { name: 'Send here (slot 4)' })).toBeTruthy();
+  });
+
+  it('asks where to save a never-saved plan and sends nothing when cancelled', async () => {
+    const game = createFakeGameModuleHost();
+    const files = createFakeProfileFiles();
+    const { dialog, user } = await openGame(
+      game.host,
+      (application) => {
+        application.store.dispatch(authoredProjectReplaced(firstBiome()));
+      },
+      { profileFile: files.adapter },
+    );
+    files.chooseSaveAs(null);
+    await user.click(
+      await within(dialog).findByRole('button', { name: 'Save and send… (slot 1)' }),
+    );
+    expect(
+      await within(dialog).findByText('Send to game cancelled; nothing was sent.'),
+    ).toBeTruthy();
+    expect(game.published).toHaveLength(0);
+    expect(files.writes).toHaveLength(0);
+
+    files.chooseSaveAs('Surface Phial run.runplanner.json');
+    await user.click(within(dialog).getByRole('button', { name: 'Save and send… (slot 1)' }));
+    expect(files.writes.map((write) => write.fileName)).toEqual([
+      'Surface Phial run.runplanner.json',
+    ]);
+    expect(JSON.parse(game.published[0]!.json)).toMatchObject({
+      displayName: 'Surface Phial run',
+      // The first save of a never-saved project keeps its identity.
+      projectId: firstBiome().projectId,
+    });
   });
 
   it('explains that game management needs the desktop application', async () => {

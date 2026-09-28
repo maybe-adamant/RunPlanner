@@ -821,33 +821,70 @@
 }
 
 .game-panel-slots {
-  display: grid;
-  gap: 6px;
-  padding: 0;
+  width: 100%;
   margin: 8px 0;
-  list-style: none;
-  font-size: 0.82rem;
+  border-collapse: collapse;
+  font-size: 0.8rem;
+  table-layout: auto;
 }
 
-.game-panel-slots li {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: 8px;
+.game-panel-slots th,
+.game-panel-slots td {
+  padding: 4px 6px;
+  border-bottom: 1px solid #363741;
+  text-align: left;
+  vertical-align: baseline;
+  overflow-wrap: anywhere;
 }
 
-.game-panel-slot-number {
-  min-width: 3.5rem;
+.game-panel-slots thead th {
   color: #aaa7af;
   font-weight: 700;
 }
 
-.game-panel-slot-summary {
-  flex: 1 1 12rem;
-  overflow-wrap: anywhere;
+.game-panel-slots tbody th {
+  color: #aaa7af;
+  white-space: nowrap;
 }
 
-.game-panel-slot-current {
+.game-panel-slot-summary {
+  color: #aaa7af;
+}
+
+.game-panel-slot-marker {
+  margin-left: 6px;
   color: #9fd6a8;
   font-weight: 700;
+}
+
+.game-panel-slot-marker[data-marker='olderVersion'] {
+  color: #e8c27a;
+}
+
+@media (max-width: 640px) {
+  .game-panel-slots thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+  }
+
+  .game-panel-slots tr {
+    display: grid;
+    gap: 2px;
+    padding: 6px 0;
+    border-bottom: 1px solid #363741;
+  }
+
+  .game-panel-slots th,
+  .game-panel-slots td {
+    padding: 0;
+    border: 0;
+  }
+
+  .game-panel-slots td[data-label]::before {
+    content: attr(data-label) ': ';
+    color: #aaa7af;
+  }
 }

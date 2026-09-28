@@ -56,7 +56,12 @@ function findingsMarkup(markup: string): string {
 
 function configureF(application: ReturnType<typeof createApplication>): void {
   application.store.dispatch(
-    newProjectCreated(createInitialProject(application.catalog, 'Underworld')),
+    newProjectCreated(
+      createInitialProject(application.catalog, {
+        projectId: 'app-shell-project',
+        routeKey: 'Underworld',
+      }),
+    ),
   );
   application.store.dispatch(
     authoredProjectCommandDispatched({
@@ -99,7 +104,12 @@ describe('App', () => {
   it('limits Findings to the selected route', () => {
     const application = createApplication();
     application.store.dispatch(
-      newProjectCreated(createInitialProject(application.catalog, 'Underworld')),
+      newProjectCreated(
+        createInitialProject(application.catalog, {
+          projectId: 'app-shell-project',
+          routeKey: 'Underworld',
+        }),
+      ),
     );
     application.store.dispatch(
       authoredProjectCommandDispatched({

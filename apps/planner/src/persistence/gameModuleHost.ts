@@ -83,6 +83,10 @@ export interface GamePlanSlot {
   readonly biomeKeys: readonly string[];
   readonly planFingerprint: string | null;
   readonly projectId: string | null;
+  /** The saved file's name at send time; absent in older plans. */
+  readonly displayName: string | null;
+  readonly weaponKey: string | null;
+  readonly aspectKey: string | null;
 }
 
 /** Host-reported facts about the established game target. */

@@ -43,6 +43,7 @@ export interface CreateApplicationOptions {
   readonly profileFile?: ProfileFileAdapter;
   readonly profileFileRestore?: ProfileFileRestoreResult;
   readonly gameModuleHost?: GameModuleHost;
+  readonly mintProjectId?: () => string;
   readonly observeEvaluationWork?: (event: ApplicationEvaluationEvent) => void;
 }
 
@@ -129,6 +130,7 @@ export function createApplication(options: CreateApplicationOptions = {}) {
     profileFile,
     prepareProjectWorkspace,
     ...(options.gameModuleHost === undefined ? {} : { gamePlanPublisher: options.gameModuleHost }),
+    ...(options.mintProjectId === undefined ? {} : { mintProjectId: options.mintProjectId }),
     store,
   });
   const autosaveCoordinator =
