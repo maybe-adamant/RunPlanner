@@ -1042,7 +1042,13 @@ Persistence excludes filenames, Redux state, editor tabs, graph positions,
 candidate sets, findings, simulation output, save baselines, autosave status,
 and an alternate profile wrapper. The application profile session remembers
 the selected file's basename for later saves; it is transport metadata, not
-authored project identity.
+authored project identity. A new project starts with a unique minted
+`projectId`; a save keeps it, and Save As from an already-saved file writes the
+copy under a new one. That change replaces the identity in every history
+snapshot rather than adding a command step, so Undo and Redo never restore the
+old identity. Schema 89 identities are unique: the 88 → 89 migration replaces
+schema 88's shared default `'run-plan'` with a unique identity, and there is no
+runtime rule for it.
 
 ## Undo and Redo
 

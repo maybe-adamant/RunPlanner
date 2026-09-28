@@ -1,6 +1,8 @@
 import { vi } from 'vitest';
 
 import type {
+  GamePlanSlot,
+  GamePlanSlotNumber,
   GameModuleHost,
   GameModuleStatus,
   GamePlanPublication,
@@ -45,6 +47,9 @@ export function gameModuleStatus(
       biomeKeys: [],
       planFingerprint: null,
       projectId: null,
+      displayName: null,
+      weaponKey: null,
+      aspectKey: null,
     })),
   };
   const inspection =
@@ -114,4 +119,31 @@ export function createFakeGameModuleHost(
     }),
   } satisfies GameModuleHost;
   return { host, published };
+}
+
+/** One plan slot as the host reports it; empty unless overridden. */
+export function planSlot(
+  slot: GamePlanSlotNumber,
+  overrides: Partial<GamePlanSlot> = {},
+): GamePlanSlot {
+  return {
+    slot,
+    state: 'empty',
+    modifiedAtMs: null,
+    routeKey: null,
+    biomeKeys: [],
+    planFingerprint: null,
+    projectId: null,
+    displayName: null,
+    weaponKey: null,
+    aspectKey: null,
+    ...overrides,
+  };
+}
+
+/** Six slots with the given ones replaced. */
+export function planSlots(...present: readonly GamePlanSlot[]): readonly GamePlanSlot[] {
+  return ([1, 2, 3, 4, 5, 6] as const).map(
+    (slot) => present.find((entry) => entry.slot === slot) ?? planSlot(slot),
+  );
 }

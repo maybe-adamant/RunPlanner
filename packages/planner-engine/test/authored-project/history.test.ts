@@ -11,6 +11,7 @@ import {
   createProjectHistory,
   createShopOfferAddress,
   redoProjectHistory,
+  reidentifyProjectHistory,
   undoProjectHistory,
 } from '@run-planner/engine/authored-project';
 
@@ -19,6 +20,24 @@ import { fProject, nBiome } from './support/configured-projects';
 import { hubVisitActions } from '@run-planner/test-fixtures/shared';
 
 describe('authored project history', () => {
+  it('reidentifies every snapshot without adding a step, so Undo keeps the new identity', () => {
+    const start = createProjectHistory(fProject());
+    const edited = applyProjectHistoryCommand(start, catalog, {
+      kind: 'ReplaceRouteLoadout',
+      route: createRouteAddress('Underworld'),
+      weaponKey: 'WeaponDagger',
+      aspectKey: 'DaggerBackstabAspect',
+    });
+    expect(edited.past).toHaveLength(1);
+    const renamed = reidentifyProjectHistory(edited, 'copy-2');
+    expect(renamed.past).toHaveLength(1);
+    expect(renamed.present).toEqual({ ...edited.present, projectId: 'copy-2' });
+    const undone = undoProjectHistory(renamed);
+    expect(undone.present.projectId).toBe('copy-2');
+    expect(redoProjectHistory(undone).present.projectId).toBe('copy-2');
+    expect(() => reidentifyProjectHistory(edited, ' ')).toThrow();
+  });
+
   it('records effective semantic edits, preserves no-op identity, and restores exact snapshots', () => {
     const initial = createProjectHistory(fProject());
     const route = createRouteAddress('Underworld');

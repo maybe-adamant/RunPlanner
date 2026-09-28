@@ -24,6 +24,20 @@ export function createProjectHistory(document: ProjectDocument): ProjectHistory 
   return history([], document, []);
 }
 
+/**
+ * Gives every snapshot a new project identity, as a saved copy does. This is not a command:
+ * it adds no history step, so Undo and Redo keep the new identity.
+ */
+export function reidentifyProjectHistory(
+  current: ProjectHistory,
+  projectId: string,
+): ProjectHistory {
+  if (projectId.trim().length === 0) throw new Error('Project identity must be non-blank');
+  const withId = (document: ProjectDocument): ProjectDocument =>
+    Object.freeze({ ...document, projectId });
+  return history(current.past.map(withId), withId(current.present), current.future.map(withId));
+}
+
 export function applyProjectHistoryCommand(
   current: ProjectHistory,
   catalog: Catalog,

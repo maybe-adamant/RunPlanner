@@ -12,10 +12,13 @@ import type {
   GameStatusController,
   GameTargetDiscovery,
 } from '@planner/persistence/gameModuleHost';
+import type { Catalog } from '@run-planner/engine/catalog-schema';
+import { selectProfileStatus, useAppSelector } from '@planner/state/store';
 import type { ProjectOperations } from '@planner/workspace/projectOperations';
 import {
   describeInstallOutcome,
   describeRemoveOutcome,
+  gameSaveState,
   projectGamePanel,
   projectGameIndicator,
   projectGamePlans,
@@ -446,42 +449,80 @@ function PlansSection({
       {plans.unavailableReason === null ? null : (
         <p className="game-publication-hint">{plans.unavailableReason}</p>
       )}
-      <ol aria-label="Plan slots" className="game-panel-slots">
-        {plans.rows.map((row) => (
-          <li data-state={row.state} key={row.slot}>
-            <span className="game-panel-slot-number">Slot {row.slot}</span>
-            <span className="game-panel-slot-summary">
-              {row.summary}
-              {row.sent === null ? null : ` · ${row.sent}`}
-            </span>
-            {row.current && <span className="game-panel-slot-current">current plan</span>}
-            {row.action === null ? null : (
-              <button
-                aria-label={`${row.action.label} (slot ${row.slot})`}
-                className="secondary-action action-compact"
-                data-slot={row.slot}
-                disabled={pending}
-                onClick={() => onSend(row.slot, row.action?.confirm === true)}
-                type="button"
-              >
-                {row.action.label}
-              </button>
-            )}
-          </li>
-        ))}
-      </ol>
+      <table aria-labelledby="game-plans-title" className="game-panel-slots">
+        <thead>
+          <tr>
+            <th scope="col">Slot</th>
+            <th scope="col">Plan</th>
+            <th scope="col">Route</th>
+            <th scope="col">Ends at</th>
+            <th scope="col">Aspect</th>
+            <th scope="col">Sent</th>
+            <th scope="col">
+              <span className="visually-hidden">Action</span>
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          {plans.rows.map((row) => (
+            <tr data-state={row.state} key={row.slot}>
+              <th scope="row">Slot {row.slot}</th>
+              {row.columns === null ? (
+                <td className="game-panel-slot-summary" colSpan={5}>
+                  {row.summary}
+                </td>
+              ) : (
+                <>
+                  <td data-label="Plan">
+                    {row.columns.plan}
+                    {row.marker === null ? null : (
+                      <span className="game-panel-slot-marker" data-marker={row.marker}>
+                        {row.marker === 'current' ? 'current' : 'older version'}
+                      </span>
+                    )}
+                  </td>
+                  <td data-label="Route">{row.columns.route}</td>
+                  <td data-label="Ends at">{row.columns.endsAt}</td>
+                  <td data-label="Aspect">{row.columns.aspect}</td>
+                  <td data-label="Sent">{row.columns.sent ?? '—'}</td>
+                </>
+              )}
+              <td>
+                {row.action === null ? null : (
+                  <button
+                    aria-haspopup={row.action.label === 'Save and send…' ? 'dialog' : undefined}
+                    aria-label={`${row.action.label} (slot ${row.slot})`}
+                    className="secondary-action action-compact"
+                    data-slot={row.slot}
+                    disabled={pending}
+                    onClick={() => onSend(row.slot, row.action?.confirm === true)}
+                    type="button"
+                  >
+                    {row.action.label}
+                  </button>
+                )}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
       <FeedbackLine feedback={feedback} />
     </section>
   );
 }
 
 function GameSection({
+  catalog,
   gameStatus,
   operations,
 }: {
+  readonly catalog: Catalog;
   readonly gameStatus: GameStatusController;
   readonly operations: ProjectOperations;
 }) {
+  const saveState = useAppSelector((state) =>
+    gameSaveState(selectProfileStatus(state), state.profileSession.fileName),
+  );
   const host = gameStatus.host;
   const snapshot = useSyncExternalStore(
     gameStatus.subscribe,
@@ -545,7 +586,13 @@ function GameSection({
   // The current plan is compiled only while the Plans section can show.
   const plans =
     status !== null && projectGameIndicator(snapshot).state === 'ready'
-      ? projectGamePlans(status, operations.inspectCurrentGamePlan(), snapshot.readAt)
+      ? projectGamePlans(
+          status,
+          operations.inspectCurrentGamePlan(),
+          saveState,
+          catalog,
+          snapshot.readAt,
+        )
       : null;
   const send = async (slot: GamePlanSlotNumber) => {
     setPending(true);
@@ -554,7 +601,7 @@ function GameSection({
     try {
       const result = await operations.publishGame(slot);
       setPlansFeedback({
-        tone: result.status === 'success' ? 'status' : 'alert',
+        tone: result.status === 'failure' ? 'alert' : 'status',
         text: result.message,
       });
       await gameStatus.refresh();
@@ -795,10 +842,12 @@ function GameSection({
 }
 
 export function GamePanel({
+  catalog,
   gameStatus,
   onClose,
   operations,
 }: {
+  readonly catalog: Catalog;
   readonly gameStatus?: GameStatusController;
   readonly onClose: () => void;
   readonly operations: ProjectOperations;
@@ -816,7 +865,7 @@ export function GamePanel({
           Game location and game module management are available in the desktop application.
         </p>
       ) : (
-        <GameSection gameStatus={gameStatus} operations={operations} />
+        <GameSection catalog={catalog} gameStatus={gameStatus} operations={operations} />
       )}
       <footer className="game-publication-actions">
         <button className="quiet-action" onClick={onClose} type="button">

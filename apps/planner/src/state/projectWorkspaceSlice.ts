@@ -4,6 +4,7 @@ import {
   applyProjectHistoryCommands,
   applyProjectCommand,
   createProjectHistory,
+  reidentifyProjectHistory,
   projectCommandAuthoringAddresses,
   redoProjectHistory,
   undoProjectHistory,
@@ -47,6 +48,9 @@ export const authoredProjectCommandDispatched = createAction<ProjectCommand>(
 );
 export const authoredProjectUndoRequested = createAction('projectWorkspace/undoRequested');
 export const authoredProjectRedoRequested = createAction('projectWorkspace/redoRequested');
+/** A saved copy's new project identity; replaces every snapshot, adding no history step. */
+export const projectIdentityMinted = createAction<string>('projectWorkspace/projectIdentityMinted');
+
 export const authoredProjectReplaced = createAction<ProjectDocument>(
   'projectWorkspace/projectReplaced',
 );
@@ -147,6 +151,13 @@ export function createProjectWorkspaceReducer(
       return history === state.history
         ? state
         : publishWorkspace(history, assembleProjectEvaluation);
+    }
+    if (projectIdentityMinted.match(action)) {
+      if (state.kind === 'noProject') return state;
+      return publishWorkspace(
+        reidentifyProjectHistory(state.history, action.payload),
+        assembleProjectEvaluation,
+      );
     }
     if (authoredProjectReplaced.match(action)) {
       return publishWorkspace(createProjectHistory(action.payload), assembleProjectEvaluation);

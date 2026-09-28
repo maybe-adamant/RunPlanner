@@ -9,7 +9,7 @@ import type {
 
 /** The single room-session execution artifact supported by the app compiler. */
 export const EXECUTION_PLAN_FORMAT = 'run-planner-execution' as const;
-export const EXECUTION_PROTOCOL_VERSION = 48 as const;
+export const EXECUTION_PROTOCOL_VERSION = 49 as const;
 export const EXECUTION_CATALOG_VERSION = '0.55.0-anvil-of-fates' as const;
 export type ExecutionBiomeKey = 'F' | 'G' | 'H' | 'I' | 'N' | 'O' | 'P' | 'Q';
 
@@ -997,6 +997,8 @@ export interface ExecutionPlan {
   readonly catalogVersion: string;
   readonly projectId: string;
   readonly planFingerprint: string;
+  /** Presentation-only plan name (the saved file's name); outside the fingerprint. */
+  readonly displayName?: string;
   readonly routeKey: ExecutionRouteKey;
   readonly startingLoadout: ExecutionStartingLoadout;
   readonly startingKeepsake: ExecutionStartingKeepsake;
@@ -1029,6 +1031,8 @@ export interface ExecutionAssemblerInput {
 
 export interface ExecutionCompilerInput {
   readonly product: ExecutionSemanticProduct;
+  /** The saved file's name, carried for display only. */
+  readonly displayName?: string;
 }
 
 export interface ExecutionCompilerError extends Error {

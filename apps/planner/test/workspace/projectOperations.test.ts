@@ -20,10 +20,12 @@ import { dreamMixedPrefixProject } from '@run-planner/test-fixtures/dream';
 import { createApplication } from '@planner/composition/createApplication';
 import { createInitialProject } from '@planner/composition/projectBootstrap';
 import {
+  decodeExecutionPlan,
   EXECUTION_PLAN_FORMAT,
   EXECUTION_PROTOCOL_VERSION,
 } from '@run-planner/engine/execution-plan';
 import { createFakeGameModuleHost, gameModuleStatus } from '@planner-test/fixtures/gameModuleHost';
+import { createFakeProfileFiles } from '@planner-test/fixtures/profileFiles';
 import type {
   AutosaveRecoveryAdapter,
   AutosaveScheduler,
@@ -36,16 +38,18 @@ import {
 import type { ProfileFileAdapter, ProfileFileReference } from '@planner/persistence/profileFile';
 import {
   authoredProjectCommandDispatched,
+  authoredProjectRedoRequested,
   authoredProjectReplaced,
   authoredProjectUndoRequested,
 } from '@planner/state/projectWorkspaceSlice';
-import { newProjectCreated } from '@planner/state/profileSessionSlice';
+import { newProjectCreated, profileSaveSucceeded } from '@planner/state/profileSessionSlice';
 import {
   selectExplicitProfileBaselineJson,
   selectPresentProject,
   selectProjectEvaluation,
   selectProjectHistory,
   selectProfileSession,
+  selectProfileStatus,
 } from '@planner/state/store';
 import { loadSurfaceNProject } from '@run-planner/test-fixtures/surface';
 
@@ -111,7 +115,14 @@ function createProfileFixture(): ProfileFixture {
 }
 
 function configureF(application: ReturnType<typeof createApplication>): void {
-  application.store.dispatch(newProjectCreated(createInitialProject(catalog, 'Underworld')));
+  application.store.dispatch(
+    newProjectCreated(
+      createInitialProject(catalog, {
+        projectId: 'configured-f',
+        routeKey: 'Underworld',
+      }),
+    ),
+  );
   application.store.dispatch(
     authoredProjectCommandDispatched({
       kind: 'ConfigureRoutePrefix',
@@ -314,7 +325,11 @@ describe('project profile operations', () => {
       message: 'The game target is not ready for publication.',
       blockers: blocked.publicationBlockers,
     });
-    const application = createApplication({ gameModuleHost: game.host });
+    const profile = createProfileFixture();
+    const application = createApplication({
+      gameModuleHost: game.host,
+      profileFile: profile.adapter,
+    });
     const complete = createCompleteFGProject();
     application.store.dispatch(
       authoredProjectReplaced({
@@ -327,6 +342,7 @@ describe('project profile operations', () => {
       operation: 'publishGame',
       status: 'failure',
       message:
+        'Saved, but not sent: ' +
         'Update the game module in the Game panel (found 0.10.0). ' +
         'Update ModpackLib to 4.1.0+ in r2modman (found 4.0.1).',
     });
@@ -401,6 +417,182 @@ describe('project profile operations', () => {
     });
   });
 
+  it('mints a unique identity for each new project, which saving keeps', async () => {
+    let minted = 0;
+    const profile = createProfileFixture();
+    const application = createApplication({
+      profileFile: profile.adapter,
+      mintProjectId: () => `minted-${++minted}`,
+    });
+    await application.projectOperations.createNew('Underworld');
+    expect(presentProject(application).projectId).toBe('minted-1');
+    await application.projectOperations.createNew('Surface');
+    expect(presentProject(application).projectId).toBe('minted-2');
+    await application.projectOperations.saveProfile();
+    await application.projectOperations.saveProfile();
+    expect(presentProject(application).projectId).toBe('minted-2');
+    expect(
+      profile.saves.map((save) => (JSON.parse(save.json) as { projectId: string }).projectId),
+    ).toEqual(['minted-2', 'minted-2']);
+  });
+
+  it('sends a Save As copy under the identity its save wrote', async () => {
+    const game = createFakeGameModuleHost();
+    const files = createFakeProfileFiles();
+    const application = createApplication({
+      gameModuleHost: game.host,
+      profileFile: files.adapter,
+      mintProjectId: () => 'minted-copy',
+    });
+    const complete = createCompleteFGProject();
+    await files.openSaved(
+      application,
+      {
+        ...complete,
+        projectId: 'original-run',
+        route: { ...complete.route, biomes: complete.route.biomes.slice(0, 1) },
+      },
+      'Original.runplanner.json',
+    );
+    files.chooseSaveAs('Copy run.runplanner.json');
+    await expect(application.projectOperations.saveProfileAs()).resolves.toMatchObject({
+      status: 'success',
+    });
+    application.store.dispatch(
+      profileSaveSucceeded({ baselineJson: '{}', fileName: 'Copy run.runplanner.json' }),
+    );
+    await expect(application.projectOperations.publishGame(2)).resolves.toMatchObject({
+      status: 'success',
+    });
+    const written = JSON.parse(files.writes.at(-1)!.json) as { projectId: string };
+    const sent = decodeExecutionPlan(JSON.parse(game.published[0]!.json));
+    expect(files.writes.at(-1)?.fileName).toBe('Copy run.runplanner.json');
+    expect(written.projectId).toBe('minted-copy');
+    expect(presentProject(application).projectId).toBe('minted-copy');
+    expect(sent.projectId).toBe('minted-copy');
+    expect(sent.displayName).toBe('Copy run');
+    expect(application.projectOperations.inspectCurrentGamePlan()).toMatchObject({
+      projectId: 'minted-copy',
+      planFingerprint: sent.planFingerprint,
+    });
+  });
+
+  it('runs one explicit save at a time, so a later Save writes the file a pending Save As chose', async () => {
+    let resolveSaveAs: ((file: ProfileFileReference) => void) | undefined;
+    const writes: { fileName: string; json: string }[] = [];
+    const reference = (fileName: string): ProfileFileReference => ({
+      activate: () => Promise.resolve(),
+      fileName,
+      write: (json) => {
+        writes.push({ fileName, json });
+        return Promise.resolve();
+      },
+    });
+    const application = createApplication({
+      mintProjectId: () => 'minted-copy',
+      profileFile: {
+        clearActive: () => Promise.resolve(),
+        load: () => Promise.resolve(null),
+        restoreActive: () => Promise.resolve({ status: 'none' }),
+        saveAs: (fileName, json) => {
+          writes.push({ fileName, json });
+          return new Promise((resolve) => {
+            resolveSaveAs = resolve;
+          });
+        },
+        supportsSaveAs: true,
+      },
+    });
+    configureF(application);
+    const firstSave = application.projectOperations.saveProfile();
+    const secondSave = application.projectOperations.saveProfile();
+    await Promise.resolve();
+    expect(writes).toHaveLength(1);
+    resolveSaveAs?.(reference('Chosen.runplanner.json'));
+    await expect(firstSave).resolves.toMatchObject({ status: 'success' });
+    await expect(secondSave).resolves.toMatchObject({ status: 'success' });
+    expect(writes.map((write) => write.fileName)).toEqual([
+      DEFAULT_PROFILE_FILE_NAME,
+      'Chosen.runplanner.json',
+    ]);
+  });
+
+  it('reports a save failure and a publish failure after saving distinctly', async () => {
+    const game = createFakeGameModuleHost();
+    let failWrite = true;
+    const application = createApplication({
+      gameModuleHost: game.host,
+      mintProjectId: () => 'minted-x',
+      profileFile: {
+        clearActive: () => Promise.resolve(),
+        load: () =>
+          Promise.resolve({
+            file: {
+              activate: () => Promise.resolve(),
+              fileName: 'Run.runplanner.json',
+              write: () => (failWrite ? Promise.reject(new Error('disk full')) : Promise.resolve()),
+            },
+            json: encodeProjectDocument({
+              ...createCompleteFGProject(),
+              projectId: 'unique-run',
+              route: {
+                ...createCompleteFGProject().route,
+                biomes: createCompleteFGProject().route.biomes.slice(0, 1),
+              },
+            }),
+          }),
+        restoreActive: () => Promise.resolve({ status: 'none' }),
+        saveAs: () => Promise.resolve(null),
+        supportsSaveAs: true,
+      },
+    });
+    await application.projectOperations.loadProfile();
+    application.store.dispatch(
+      profileSaveSucceeded({ baselineJson: '{}', fileName: 'Run.runplanner.json' }),
+    );
+    const notSaved = await application.projectOperations.publishGame(1);
+    expect(notSaved.status).toBe('failure');
+    expect(notSaved.message).toMatch(/^Not saved, so not sent: Save Profile failed: disk full/);
+    expect(game.published).toHaveLength(0);
+
+    failWrite = false;
+    game.host.publish.mockResolvedValueOnce({
+      status: 'nativeWrite',
+      message: 'could not write plan slot.',
+      blockers: [],
+    });
+    await expect(application.projectOperations.publishGame(1)).resolves.toEqual({
+      operation: 'publishGame',
+      status: 'failure',
+      message: 'Saved, but not sent: could not write plan slot.',
+    });
+  });
+
+  it('reports a Save As that wrote the file but could not activate it', async () => {
+    const application = createApplication({
+      profileFile: {
+        clearActive: () => Promise.resolve(),
+        load: () => Promise.resolve(null),
+        restoreActive: () => Promise.resolve({ status: 'none' }),
+        saveAs: () =>
+          Promise.resolve({
+            activate: () => Promise.reject(new Error('scope denied')),
+            fileName: 'Copy.runplanner.json',
+            write: () => Promise.resolve(),
+          }),
+        supportsSaveAs: true,
+      },
+    });
+    configureF(application);
+    await expect(application.projectOperations.saveProfileAs()).resolves.toEqual({
+      operation: 'saveProfileAs',
+      status: 'failure',
+      message:
+        'Save As wrote Copy.runplanner.json but could not make it the active file: scope denied',
+    });
+    expect(selectProfileStatus(application.store.getState())).toBe('Unsaved');
+  });
+
   it('Save As always chooses a new target and makes later Save write that target', async () => {
     const saveAsCalls: { fileName: string; json: string }[] = [];
     const writes: { fileName: string; json: string }[] = [];
@@ -434,13 +626,16 @@ describe('project profile operations', () => {
       },
       supportsSaveAs: true,
     };
-    const application = createApplication({ profileFile });
+    const application = createApplication({ profileFile, mintProjectId: () => 'copy-b' });
     configureF(application);
     expect(application.projectOperations.saveAsAvailable).toBe(true);
+    const originalId = presentProject(application).projectId;
 
     await expect(application.projectOperations.saveProfile()).resolves.toMatchObject({
       status: 'success',
     });
+    // The first save of a never-saved project keeps its identity.
+    expect(presentProject(application).projectId).toBe(originalId);
     application.store.dispatch(
       authoredProjectCommandDispatched({
         kind: 'ReplaceFearVowRank',
@@ -450,7 +645,8 @@ describe('project profile operations', () => {
       }),
     );
     const saveAsSnapshot = presentProject(application);
-    const saveAsJson = encodeProjectDocument(saveAsSnapshot);
+    // Save As from a saved file mints a new identity for the copy.
+    const saveAsJson = encodeProjectDocument({ ...saveAsSnapshot, projectId: 'copy-b' });
 
     await expect(application.projectOperations.saveProfileAs()).resolves.toEqual({
       operation: 'saveProfileAs',
@@ -465,6 +661,11 @@ describe('project profile operations', () => {
       'route-b.runplanner.json',
     );
     expect(selectExplicitProfileBaselineJson(application.store.getState())).toBe(saveAsJson);
+    expect(presentProject(application).projectId).toBe('copy-b');
+    expect(selectProfileStatus(application.store.getState())).toBe('Clean');
+    application.store.dispatch(authoredProjectUndoRequested());
+    expect(presentProject(application).projectId).toBe('copy-b');
+    application.store.dispatch(authoredProjectRedoRequested());
 
     await application.projectOperations.saveProfile();
     expect(writes).toEqual([{ fileName: 'route-b.runplanner.json', json: saveAsJson }]);
@@ -472,6 +673,8 @@ describe('project profile operations', () => {
     await application.projectOperations.createNew('Surface');
     await application.projectOperations.saveProfile();
     expect(saveAsCalls[2]?.fileName).toBe(DEFAULT_PROFILE_FILE_NAME);
+    // New projects mint their identity at creation, and their first save keeps it.
+    expect(presentProject(application).projectId).toBe('copy-b');
     expect(activations).toEqual([
       'route-a.runplanner.json',
       'route-b.runplanner.json',
@@ -532,7 +735,9 @@ describe('project profile operations', () => {
     await expect(application.projectOperations.saveProfileAs()).resolves.toEqual({
       operation: 'saveProfileAs',
       status: 'failure',
-      message: 'Save As failed: activation denied',
+      message: expect.stringMatching(
+        /^Save As wrote .+ but could not make it the active file: activation denied$/,
+      ),
     });
     expect(application.store.getState()).toBe(stateAfterInitialSave);
     expect(selectExplicitProfileBaselineJson(application.store.getState())).toBe(baseline);
@@ -556,6 +761,7 @@ describe('project profile operations', () => {
       },
     });
     const application = createApplication({
+      mintProjectId: () => 'copy-b',
       profileFile: {
         clearActive: () => Promise.resolve(),
         load: () => Promise.resolve(null),
@@ -580,7 +786,10 @@ describe('project profile operations', () => {
         rank: 1,
       }),
     );
-    const invocationJson = encodeProjectDocument(presentProject(application));
+    const invocationJson = encodeProjectDocument({
+      ...presentProject(application),
+      projectId: 'copy-b',
+    });
 
     const savingAs = application.projectOperations.saveProfileAs();
     application.store.dispatch(
@@ -591,7 +800,10 @@ describe('project profile operations', () => {
         rank: 2,
       }),
     );
-    const laterJson = encodeProjectDocument(presentProject(application));
+    const laterJson = encodeProjectDocument({
+      ...presentProject(application),
+      projectId: 'copy-b',
+    });
     resolvePendingSaveAs?.(referenceFor('route-b.runplanner.json'));
     await expect(savingAs).resolves.toMatchObject({ status: 'success' });
 
@@ -1076,7 +1288,12 @@ describe('project profile operations', () => {
       autosaveScheduler: { schedule: () => () => undefined },
     });
     application.store.dispatch(
-      newProjectCreated(createInitialProject(application.catalog, 'Underworld')),
+      newProjectCreated(
+        createInitialProject(application.catalog, {
+          projectId: 'history-project',
+          routeKey: 'Underworld',
+        }),
+      ),
     );
     const project = presentProject(application);
     const workspace = application.store.getState().projectWorkspace;
@@ -1133,7 +1350,7 @@ describe('project profile operations', () => {
 
     for (const json of [
       JSON.stringify({ ...current, schemaVersion: 8 }),
-      JSON.stringify({ ...current, schemaVersion: 89 }),
+      JSON.stringify({ ...current, schemaVersion: 90 }),
       JSON.stringify({ ...current, catalogVersion: 'stale-catalog-version' }),
     ]) {
       profile.setLoadJson(json);
@@ -1164,14 +1381,14 @@ describe('project profile operations', () => {
       operation: 'loadProfile',
       status: 'success',
       message:
-        'Migrated the profile to schema 88; retained encounter choices may need missing fields repaired.',
+        'Migrated the profile to schema 89; retained encounter choices may need missing fields repaired.',
     });
     legacy.schemaVersion = 87;
     profile.setLoadJson(JSON.stringify(legacy));
     await expect(application.projectOperations.loadProfile()).resolves.toEqual({
       operation: 'loadProfile',
       status: 'success',
-      message: 'Migrated the profile to schema 88.',
+      message: 'Migrated the profile to schema 89.',
     });
     const hubLegacy = JSON.parse(encodeProjectDocument(loadSurfaceNProject())) as {
       schemaVersion: number;
@@ -1191,7 +1408,20 @@ describe('project profile operations', () => {
       operation: 'loadProfile',
       status: 'success',
       message:
-        'Migrated the profile to schema 88; the Hub fountain use is placed before the first visit, so an Aromatic Phial target may need repair.',
+        'Migrated the profile to schema 89; the Hub fountain use is placed before the first visit, so an Aromatic Phial target may need repair.',
+    });
+
+    // A schema-88 Hub already has its authored fountain placement, so no repair is named.
+    const hub88 = JSON.parse(encodeProjectDocument(loadSurfaceNProject())) as Record<
+      string,
+      unknown
+    >;
+    hub88.schemaVersion = 88;
+    profile.setLoadJson(JSON.stringify(hub88));
+    await expect(application.projectOperations.loadProfile()).resolves.toEqual({
+      operation: 'loadProfile',
+      status: 'success',
+      message: 'Migrated the profile to schema 89.',
     });
   });
 });

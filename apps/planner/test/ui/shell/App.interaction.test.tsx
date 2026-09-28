@@ -37,8 +37,15 @@ import type {
   AutosaveScheduler,
 } from '@planner/persistence/autosaveRecovery';
 import type { ProfileFileAdapter, ProfileFileReference } from '@planner/persistence/profileFile';
-import { createFakeGameModuleHost, gameModuleStatus } from '@planner-test/fixtures/gameModuleHost';
+import {
+  createFakeGameModuleHost,
+  gameModuleStatus,
+  planSlot,
+  planSlots,
+} from '@planner-test/fixtures/gameModuleHost';
 import { gamePlanSent } from '@planner/state/gameSendSessionSlice';
+import { profileSaveSucceeded } from '@planner/state/profileSessionSlice';
+import { createFakeProfileFiles } from '@planner-test/fixtures/profileFiles';
 import {
   authoredProjectCommandDispatched,
   authoredProjectReplaced,
@@ -92,7 +99,7 @@ async function expectAboutBuildIdentity(startWithProject: boolean): Promise<void
   const about = await screen.findByLabelText('About Run Planner');
   const summary = about.querySelector('.about-product-summary');
   expect(summary).not.toBeNull();
-  expect(summary!.textContent).toMatch(/^VersionDevelopmentBuildLocal buildSchema88Catalog/);
+  expect(summary!.textContent).toMatch(/^VersionDevelopmentBuildLocal buildSchema89Catalog/);
 }
 
 function profileReference(fileName: string): ProfileFileReference {
@@ -679,14 +686,25 @@ describe('planner history interaction', () => {
     expect(screen.queryByRole('menuitem', { name: /Publish/ })).toBeNull();
   });
 
-  function loadFirstBiome(application: ReturnType<typeof createApplication>) {
+  function firstBiomeProject() {
     const project = createCompleteFGProject();
-    application.store.dispatch(
-      authoredProjectReplaced({
-        ...project,
-        route: { ...project.route, biomes: project.route.biomes.slice(0, 1) },
-      }),
-    );
+    return { ...project, route: { ...project.route, biomes: project.route.biomes.slice(0, 1) } };
+  }
+
+  function loadFirstBiome(application: ReturnType<typeof createApplication>) {
+    application.store.dispatch(authoredProjectReplaced(firstBiomeProject()));
+  }
+
+  /** An application whose open project is a clean saved file, as sending requires. */
+  async function savedApplication(game: ReturnType<typeof createFakeGameModuleHost>) {
+    const files = createFakeProfileFiles();
+    const application = createApplication({
+      gameModuleHost: game.host,
+      profileFile: files.adapter,
+      mintProjectId: () => 'copy-id',
+    });
+    await files.openSaved(application, firstBiomeProject(), 'Erebus opener.runplanner.json');
+    return { application, files };
   }
 
   it('offers the header quick send after a panel send and re-sends there with a timed status', async () => {
@@ -694,8 +712,7 @@ describe('planner history interaction', () => {
     try {
       vi.setSystemTime(new Date(2026, 8, 27, 14, 32, 5));
       const game = createFakeGameModuleHost();
-      const application = createApplication({ gameModuleHost: game.host });
-      loadFirstBiome(application);
+      const { application } = await savedApplication(game);
       const { user } = renderPlannerForInteraction({ application });
       expect(await screen.findByRole('button', { name: 'Game — ready' })).toBeTruthy();
       expect(screen.queryByRole('button', { name: /Send to game/ })).toBeNull();
@@ -744,8 +761,7 @@ describe('planner history interaction', () => {
 
   it('reports a failed quick send with its time and the Game hint', async () => {
     const game = createFakeGameModuleHost();
-    const application = createApplication({ gameModuleHost: game.host });
-    loadFirstBiome(application);
+    const { application } = await savedApplication(game);
     application.store.dispatch(gamePlanSent({ slot: 4 }));
     const { user } = renderPlannerForInteraction({ application });
     game.host.publish.mockResolvedValueOnce({
@@ -761,8 +777,7 @@ describe('planner history interaction', () => {
 
   it('forgets the session slot when another project loads and on restart', async () => {
     const game = createFakeGameModuleHost();
-    const application = createApplication({ gameModuleHost: game.host });
-    loadFirstBiome(application);
+    const { application } = await savedApplication(game);
     application.store.dispatch(gamePlanSent({ slot: 2 }));
     renderPlannerForInteraction({ application });
     expect(await screen.findByRole('button', { name: 'Send to game (slot 2)' })).toBeTruthy();
@@ -777,6 +792,64 @@ describe('planner history interaction', () => {
     renderPlannerForInteraction({ application: restarted });
     expect(await screen.findByRole('button', { name: 'Game — ready' })).toBeTruthy();
     expect(screen.queryByRole('button', { name: /Send to game/ })).toBeNull();
+  });
+
+  it('saves unsaved changes in place when quick sending', async () => {
+    const game = createFakeGameModuleHost();
+    const { application, files } = await savedApplication(game);
+    application.store.dispatch(gamePlanSent({ slot: 5 }));
+    application.store.dispatch(
+      profileSaveSucceeded({ baselineJson: '{}', fileName: 'Erebus opener.runplanner.json' }),
+    );
+    const { user } = renderPlannerForInteraction({ application });
+    await user.click(await screen.findByRole('button', { name: 'Save and send to game (slot 5)' }));
+    expect(files.writes.map((write) => write.fileName)).toEqual(['Erebus opener.runplanner.json']);
+    expect(JSON.parse(game.published[0]!.json)).toMatchObject({ displayName: 'Erebus opener' });
+    expect(await screen.findByRole('button', { name: 'Send to game (slot 5)' })).toBeTruthy();
+  });
+
+  it('gives a Save As copy a new identity, so earlier sends no longer match it', async () => {
+    const game = createFakeGameModuleHost();
+    const { application, files } = await savedApplication(game);
+    const current = application.projectOperations.inspectCurrentGamePlan();
+    if (current.kind !== 'publishable') throw new Error('fixture must be sendable');
+    const inSlot1 = gameModuleStatus({
+      inspection: {
+        planSlots: planSlots(
+          planSlot(1, {
+            state: 'present',
+            modifiedAtMs: Date.now(),
+            routeKey: 'Underworld',
+            biomeKeys: ['F'],
+            planFingerprint: current.planFingerprint,
+            projectId: current.projectId,
+            displayName: 'Erebus opener',
+          }),
+        ),
+      },
+    });
+    game.host.status.mockResolvedValue(inSlot1);
+    application.store.dispatch(gamePlanSent({ slot: 1 }));
+    const { user } = renderPlannerForInteraction({ application });
+    expect(await screen.findByRole('button', { name: 'Send to game (slot 1)' })).toBeTruthy();
+    await user.click(screen.getByRole('button', { name: 'Game — ready' }));
+    const panel = await screen.findByRole('dialog', { name: 'Game' });
+    expect(await within(panel).findByText('current')).toBeTruthy();
+    await user.click(within(panel).getByRole('button', { name: 'Close' }));
+
+    files.chooseSaveAs('Erebus copy.runplanner.json');
+    await act(async () => {
+      await application.projectOperations.saveProfileAs();
+    });
+    expect(application.store.getState().projectWorkspace.history?.present.projectId).toBe(
+      'copy-id',
+    );
+    expect(screen.queryByRole('button', { name: /Send to game/ })).toBeNull();
+    await user.click(screen.getByRole('button', { name: 'Game — ready' }));
+    const reopened = await screen.findByRole('dialog', { name: 'Game' });
+    await within(reopened).findByRole('table', { name: 'Plans in game' });
+    expect(within(reopened).queryByText('current')).toBeNull();
+    expect(within(reopened).queryByText('older version')).toBeNull();
   });
 
   it('hides the header quick send when the module is not ready or the slot holds another project', async () => {

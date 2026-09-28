@@ -278,6 +278,22 @@ function TestProtocol.testEveryMirroredPlannerFixtureDecodes()
     end
 end
 
+function TestProtocol.testDisplayNameIsAcceptedValidatedAndOutsideTheFingerprint()
+    local named = decode("f-opening")
+    named.displayName = "Surface Phial run"
+    local decoded, errorMessage = protocol.decode(named)
+    lu.assertNotNil(decoded, tostring(errorMessage))
+    lu.assertEquals(decoded.displayName, "Surface Phial run")
+    local dice = decode("f-opening")
+    dice.displayName = string.rep("\240\159\142\178", 200)
+    lu.assertNotNil(protocol.decode(dice))
+    for _, invalid in ipairs({ "", 7, string.rep("x", 801) }) do
+        local plan = decode("f-opening")
+        plan.displayName = invalid
+        lu.assertNil(protocol.decode(plan))
+    end
+end
+
 function TestProtocol.testMirroredGeneratedCompositionsCarryExpectedBudgetsAndOutcomes()
     local underworld = generatedDecisions(assert(protocol.decode(decode("underworld-generated-composition"))))
     lu.assertEquals(#underworld, 4)
@@ -492,6 +508,16 @@ local function minimalPlan(transactions)
     })
     refreshFingerprint(plan)
     return plan
+end
+
+function TestProtocol.testReleasedProtocol48IsRejected()
+    lu.assertEquals(protocol.VERSION, 49)
+    local plan = decode("f-opening")
+    plan.protocolVersion = 48
+    refreshFingerprint(plan)
+    local value, err = protocol.decode(plan)
+    lu.assertNil(value)
+    lu.assertStrContains(err, "unsupported identity")
 end
 
 function TestProtocol.testRoomGuideRequiresUniqueKeysAndLocalTransactionOwners()

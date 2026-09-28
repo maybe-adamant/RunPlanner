@@ -1,4 +1,6 @@
 import type { ContextualPickerModel } from '@planner/projections/contextual/contextualPicker';
+import type { Catalog } from '@run-planner/engine/catalog-schema';
+import type { ProfileStatus } from '@planner/state/store';
 import type { CurrentGamePlan } from '@planner/workspace/projectOperations';
 import type {
   GameModuleInstallResult,
@@ -476,13 +478,41 @@ export function projectGameIndicator(snapshot: GameStatusSnapshot): GameIndicato
     : { state: 'needsSetup', symbol: '!', accessibleName: 'Game — needs setup' };
 }
 
+/** Whether sending first needs a save: never saved, unsaved changes, or clean. */
+export type GameSaveState = 'unsaved' | 'dirty' | 'clean';
+
+export function gameSaveState(
+  profileStatus: ProfileStatus,
+  fileName: string | null,
+): GameSaveState {
+  switch (profileStatus) {
+    case 'Clean':
+      return 'clean';
+    case 'Dirty':
+      return 'dirty';
+    case 'Recovered':
+      return fileName === null ? 'unsaved' : 'dirty';
+    case 'Unsaved':
+      return 'unsaved';
+  }
+}
+
+export type GamePlanSlotActionLabel = 'Send here' | 'Replace' | 'Save and send' | 'Save and send…';
+
 export interface GamePlanSlotRow {
   readonly slot: GamePlanSlotNumber;
   readonly state: GamePlanSlot['state'];
-  readonly summary: string;
-  readonly sent: string | null;
-  readonly current: boolean;
-  readonly action: { readonly label: 'Send here' | 'Replace'; readonly confirm: boolean } | null;
+  /** Present only for a readable plan. */
+  readonly columns: {
+    readonly plan: string;
+    readonly route: string;
+    readonly endsAt: string;
+    readonly aspect: string;
+    readonly sent: string | null;
+  } | null;
+  readonly summary: 'Empty' | 'Unreadable' | null;
+  readonly marker: 'current' | 'olderVersion' | null;
+  readonly action: { readonly label: GamePlanSlotActionLabel; readonly confirm: boolean } | null;
 }
 
 export interface GamePlansProduct {
@@ -491,25 +521,67 @@ export interface GamePlansProduct {
   readonly unavailableReason: string | null;
 }
 
+const UNNAMED_PLAN = '(unnamed plan)';
+
 function sentAgo(modifiedAtMs: number, now: number): string {
   const seconds = Math.max(0, Math.round((now - modifiedAtMs) / 1000));
-  if (seconds < 60) return 'sent just now';
+  if (seconds < 60) return 'just now';
   const minutes = Math.round(seconds / 60);
-  if (minutes < 60) return `sent ${minutes} min ago`;
+  if (minutes < 60) return `${minutes} min ago`;
   const hours = Math.round(minutes / 60);
-  if (hours < 24) return `sent ${hours} h ago`;
+  if (hours < 24) return `${hours} h ago`;
   const days = Math.round(hours / 24);
-  return `sent ${days} day${days === 1 ? '' : 's'} ago`;
+  return `${days} day${days === 1 ? '' : 's'} ago`;
 }
 
-function slotSummary(slot: GamePlanSlot): string {
-  switch (slot.state) {
-    case 'empty':
-      return 'Empty';
-    case 'unreadable':
-      return 'Unreadable';
-    case 'present':
-      return `${slot.routeKey ?? 'Unknown route'} · ${slot.biomeKeys.join(' → ')}`;
+// Wire keys are untrusted, so only the catalog's own entries give a label.
+function ownLabel(
+  records: Readonly<Record<string, { readonly label: string } | undefined>>,
+  key: string | null,
+): string | undefined {
+  return key !== null && Object.hasOwn(records, key) ? records[key]?.label : undefined;
+}
+
+function slotColumns(
+  slot: GamePlanSlot,
+  catalog: Catalog,
+  now: number,
+): GamePlanSlotRow['columns'] {
+  if (slot.state !== 'present') return null;
+  const endKey = slot.biomeKeys.at(-1);
+  const weapon = ownLabel(catalog.weapons.byKey, slot.weaponKey);
+  const aspectLabel =
+    ownLabel(catalog.aspects.byKey, slot.aspectKey) ?? slot.aspectKey ?? 'Unknown';
+  return {
+    plan: slot.displayName ?? UNNAMED_PLAN,
+    route:
+      slot.routeKey === null
+        ? '—'
+        : (ownLabel(catalog.routes.byKey, slot.routeKey) ?? slot.routeKey),
+    endsAt: endKey === undefined ? '—' : (ownLabel(catalog.biomes.byKey, endKey) ?? endKey),
+    aspect: weapon === undefined ? aspectLabel : `${aspectLabel} (${weapon})`,
+    sent: slot.modifiedAtMs === null ? null : sentAgo(slot.modifiedAtMs, now),
+  };
+}
+
+function slotMarker(slot: GamePlanSlot, current: CurrentGamePlan): GamePlanSlotRow['marker'] {
+  if (current.kind !== 'publishable' || slot.state !== 'present') return null;
+  if (slot.projectId !== current.projectId) return null;
+  return slot.planFingerprint === current.planFingerprint ? 'current' : 'olderVersion';
+}
+
+function slotAction(
+  slot: GamePlanSlot,
+  saveState: GameSaveState,
+): NonNullable<GamePlanSlotRow['action']> {
+  const confirm = slot.state !== 'empty';
+  switch (saveState) {
+    case 'clean':
+      return { label: confirm ? 'Replace' : 'Send here', confirm };
+    case 'dirty':
+      return { label: 'Save and send', confirm };
+    case 'unsaved':
+      return { label: 'Save and send…', confirm };
   }
 }
 
@@ -528,6 +600,8 @@ function unavailableReason(current: CurrentGamePlan): string | null {
 export function projectGamePlans(
   status: GameModuleStatus,
   current: CurrentGamePlan,
+  saveState: GameSaveState,
+  catalog: Catalog,
   now: number,
 ): GamePlansProduct | null {
   if (!isReady(status) || status.inspection === null) return null;
@@ -537,21 +611,10 @@ export function projectGamePlans(
     rows: status.inspection.planSlots.map((slot): GamePlanSlotRow => ({
       slot: slot.slot,
       state: slot.state,
-      summary: slotSummary(slot),
-      sent:
-        slot.modifiedAtMs === null || slot.state !== 'present'
-          ? null
-          : sentAgo(slot.modifiedAtMs, now),
-      current:
-        current.kind === 'publishable' &&
-        slot.state === 'present' &&
-        slot.planFingerprint === current.planFingerprint,
-      action:
-        reason !== null
-          ? null
-          : slot.state === 'empty'
-            ? { label: 'Send here', confirm: false }
-            : { label: 'Replace', confirm: true },
+      columns: slotColumns(slot, catalog, now),
+      summary: slot.state === 'empty' ? 'Empty' : slot.state === 'unreadable' ? 'Unreadable' : null,
+      marker: slotMarker(slot, current),
+      action: reason === null ? slotAction(slot, saveState) : null,
     })),
   });
 }
@@ -564,17 +627,22 @@ export interface GameQuickSend {
 /**
  * The header re-send to the slot last sent in this session for the loaded project: a ready
  * target, an engine-eligible project, and a slot that is empty or already holds this project.
+ * Unsaved changes are saved in place first.
  */
 export function projectGameQuickSend(
   status: GameModuleStatus | null,
   sendableProjectId: string | null,
   lastSentSlot: GamePlanSlotNumber | null,
+  saveState: GameSaveState,
 ): GameQuickSend | null {
   if (status === null || lastSentSlot === null || sendableProjectId === null) return null;
-  if (!isReady(status)) return null;
+  if (!isReady(status) || saveState === 'unsaved') return null;
   const slot = status.inspection?.planSlots.find((entry) => entry.slot === lastSentSlot);
   const ownSlot =
     slot?.state === 'empty' || (slot?.state === 'present' && slot.projectId === sendableProjectId);
   if (!ownSlot) return null;
-  return { slot: lastSentSlot, label: `Send to game (slot ${lastSentSlot})` };
+  return {
+    slot: lastSentSlot,
+    label: `${saveState === 'clean' ? 'Send' : 'Save and send'} to game (slot ${lastSentSlot})`,
+  };
 }

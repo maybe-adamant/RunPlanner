@@ -3,13 +3,18 @@ import { createProjectDocument, type ProjectDocument } from '@run-planner/engine
 
 export function createInitialProject(
   catalog: Catalog,
-  routeKey: string,
-  itineraryBiomeKeys?: readonly string[],
+  options: {
+    readonly projectId: string;
+    readonly routeKey: string;
+    readonly itineraryBiomeKeys?: readonly string[];
+  },
 ): ProjectDocument {
   return createProjectDocument(catalog, {
-    projectId: 'run-plan',
-    routeKey,
-    ...(itineraryBiomeKeys === undefined ? {} : { itineraryBiomeKeys }),
+    projectId: options.projectId,
+    routeKey: options.routeKey,
+    ...(options.itineraryBiomeKeys === undefined
+      ? {}
+      : { itineraryBiomeKeys: options.itineraryBiomeKeys }),
     configuredBiomeCount: 1,
   });
 }

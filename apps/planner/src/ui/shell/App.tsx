@@ -213,6 +213,7 @@ export function App({
 
         {gameOpen && (
           <GamePanel
+            catalog={catalog}
             {...(gameStatus === undefined ? {} : { gameStatus })}
             onClose={() => {
               setGameOpen(false);

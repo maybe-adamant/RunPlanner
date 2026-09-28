@@ -3,13 +3,15 @@ import { describe, expect, it } from 'vitest';
 import {
   describePublicationBlocker,
   describeRemoveOutcome,
+  gameSaveState,
   projectGamePanel,
   projectGameProfileChoices,
   projectGameIndicator,
   projectGamePlans,
   projectGameQuickSend,
 } from '@planner/projections/gamePanel';
-import { gameModuleStatus } from '@planner-test/fixtures/gameModuleHost';
+import { catalog } from '@run-planner/hades2-catalog';
+import { gameModuleStatus, planSlot, planSlots } from '@planner-test/fixtures/gameModuleHost';
 
 type StatusOverrides = NonNullable<Parameters<typeof gameModuleStatus>[0]>;
 
@@ -346,79 +348,105 @@ describe('Game panel projection', () => {
     ).toBe('needsSetup');
   });
 
-  it('summarizes plan slots from their wire identity and marks the current plan', () => {
+  it('labels slot columns from the catalog and marks current and older versions', () => {
     const now = Date.UTC(2026, 0, 2, 12);
+    const loadout = { weaponKey: 'WeaponStaffSwing', aspectKey: 'BaseStaffAspect' };
     const status = gameModuleStatus({
       inspection: {
-        planSlots: [
-          {
-            slot: 1,
+        planSlots: planSlots(
+          planSlot(1, {
             state: 'present',
             modifiedAtMs: now - 3 * 60_000,
+            routeKey: 'Surface',
+            biomeKeys: ['N', 'O', 'P', 'Q'],
+            planFingerprint: 'current',
+            projectId: 'mine',
+            displayName: 'Surface Phial run',
+            ...loadout,
+          }),
+          planSlot(2, {
+            state: 'present',
+            modifiedAtMs: now - 2 * 86_400_000,
+            routeKey: 'Underworld',
+            biomeKeys: ['F'],
+            planFingerprint: 'older',
+            projectId: 'mine',
+            ...loadout,
+          }),
+          planSlot(3, { state: 'unreadable', modifiedAtMs: now - 30_000 }),
+          planSlot(4, {
+            state: 'present',
+            modifiedAtMs: now,
             routeKey: 'Underworld',
             biomeKeys: ['F', 'G'],
             planFingerprint: 'current',
-            projectId: null,
-          },
-          {
-            slot: 2,
-            state: 'present',
-            modifiedAtMs: now - 2 * 86_400_000,
-            routeKey: 'Surface',
-            biomeKeys: ['N'],
-            planFingerprint: 'older',
-            projectId: null,
-          },
-          {
-            slot: 3,
-            state: 'unreadable',
-            modifiedAtMs: now - 30_000,
-            routeKey: null,
-            biomeKeys: [],
-            planFingerprint: null,
-            projectId: null,
-          },
-          ...([4, 5, 6] as const).map((slot) => ({
-            slot,
-            state: 'empty' as const,
-            modifiedAtMs: null,
-            routeKey: null,
-            biomeKeys: [],
-            planFingerprint: null,
-            projectId: null,
-          })),
-        ],
+            projectId: 'someone-else',
+            displayName: 'Theirs',
+            ...loadout,
+          }),
+        ),
       },
     });
-    const plans = projectGamePlans(
-      status,
-      { kind: 'publishable', planFingerprint: 'current' },
-      now,
-    );
+    const current = { kind: 'publishable', projectId: 'mine', planFingerprint: 'current' } as const;
+    const plans = projectGamePlans(status, current, 'clean', catalog, now);
+    const aspect = `${catalog.aspects.byKey.BaseStaffAspect!.label} (${catalog.weapons.byKey.WeaponStaffSwing!.label})`;
     expect(plans?.unavailableReason).toBeNull();
-    expect(
-      plans?.rows.map((row) => [row.slot, row.summary, row.sent, row.current, row.action]),
-    ).toEqual([
-      [1, 'Underworld · F → G', 'sent 3 min ago', true, { label: 'Replace', confirm: true }],
-      [2, 'Surface · N', 'sent 2 days ago', false, { label: 'Replace', confirm: true }],
-      [3, 'Unreadable', null, false, { label: 'Replace', confirm: true }],
-      [4, 'Empty', null, false, { label: 'Send here', confirm: false }],
-      [5, 'Empty', null, false, { label: 'Send here', confirm: false }],
-      [6, 'Empty', null, false, { label: 'Send here', confirm: false }],
+    expect(plans?.rows[0]).toEqual({
+      slot: 1,
+      state: 'present',
+      columns: {
+        plan: 'Surface Phial run',
+        route: catalog.routes.byKey.Surface!.label,
+        endsAt: catalog.biomes.byKey.Q!.label,
+        aspect,
+        sent: '3 min ago',
+      },
+      summary: null,
+      marker: 'current',
+      action: { label: 'Replace', confirm: true },
+    });
+    expect(catalog.biomes.byKey.Q!.label).not.toBe('Q');
+    expect(plans?.rows[1]).toMatchObject({
+      columns: { plan: '(unnamed plan)', sent: '2 days ago' },
+      marker: 'olderVersion',
+    });
+    expect(plans?.rows[2]).toMatchObject({ columns: null, summary: 'Unreadable', marker: null });
+    expect(plans?.rows[3]).toMatchObject({ columns: { plan: 'Theirs' }, marker: null });
+    expect(plans?.rows[4]).toMatchObject({
+      columns: null,
+      summary: 'Empty',
+      action: { label: 'Send here', confirm: false },
+    });
+
+    const dirty = projectGamePlans(status, current, 'dirty', catalog, now);
+    expect(dirty?.rows.map((row) => row.action?.label)).toEqual([
+      'Save and send',
+      'Save and send',
+      'Save and send',
+      'Save and send',
+      'Save and send',
+      'Save and send',
     ]);
+    expect(dirty?.rows[0]?.action?.confirm).toBe(true);
+    expect(projectGamePlans(status, current, 'unsaved', catalog, now)?.rows[5]?.action).toEqual({
+      label: 'Save and send…',
+      confirm: false,
+    });
 
     const blocked = projectGamePlans(
       status,
       { kind: 'notPublishable', reason: 'Complete the Erebus opening room first.' },
+      'clean',
+      catalog,
       now,
     );
     expect(blocked?.unavailableReason).toBe(
       'This plan can’t be sent yet: Complete the Erebus opening room first.',
     );
-    expect(blocked?.rows.every((row) => row.action === null && !row.current)).toBe(true);
-    expect(projectGamePlans(status, { kind: 'noProject' }, now)?.unavailableReason).toBe(
-      'Open a project to send it to the game.',
-    );
+    expect(blocked?.rows.every((row) => row.action === null && row.marker === null)).toBe(true);
+    expect(
+      projectGamePlans(status, { kind: 'noProject' }, 'clean', catalog, now)?.unavailableReason,
+    ).toBe('Open a project to send it to the game.');
     expect(
       projectGamePlans(
         gameModuleStatus({
@@ -426,55 +454,83 @@ describe('Game panel projection', () => {
           publicationBlockers: [{ code: 'moduleMissing', found: null, required: '0.1.0' }],
         }),
         { kind: 'noProject' },
+        'clean',
+        catalog,
         now,
       ),
     ).toBeNull();
+  });
+
+  it('derives the send save state from the profile status', () => {
+    expect(gameSaveState('Clean', 'a.runplanner.json')).toBe('clean');
+    expect(gameSaveState('Dirty', 'a.runplanner.json')).toBe('dirty');
+    expect(gameSaveState('Unsaved', null)).toBe('unsaved');
+    expect(gameSaveState('Recovered', 'a.runplanner.json')).toBe('dirty');
+    expect(gameSaveState('Recovered', null)).toBe('unsaved');
+  });
+
+  it('falls back to raw keys for labels the catalog does not own', () => {
+    const status = gameModuleStatus({
+      inspection: {
+        planSlots: planSlots(
+          planSlot(1, {
+            state: 'present',
+            routeKey: 'constructor',
+            biomeKeys: ['toString'],
+            weaponKey: '__proto__',
+            aspectKey: 'hasOwnProperty',
+          }),
+          planSlot(2, { state: 'present', routeKey: 'Underworld', biomeKeys: ['F'] }),
+        ),
+      },
+    });
+    const rows = projectGamePlans(status, { kind: 'noProject' }, 'clean', catalog, 0)?.rows;
+    expect(rows?.[0]?.columns).toMatchObject({
+      route: 'constructor',
+      endsAt: 'toString',
+      aspect: 'hasOwnProperty',
+    });
+    expect(rows?.[1]?.columns?.aspect).toBe('Unknown');
   });
 
   it('offers the quick send only to an empty or same-project session slot on a ready target', () => {
     const inSlot2 = (projectId: string | null, state: 'present' | 'unreadable' = 'present') =>
       gameModuleStatus({
         inspection: {
-          planSlots: ([1, 2, 3, 4, 5, 6] as const).map((slot) =>
-            slot === 2
-              ? {
-                  slot,
-                  state,
-                  modifiedAtMs: 1,
-                  routeKey: 'Underworld',
-                  biomeKeys: ['F'],
-                  planFingerprint: 'x',
-                  projectId,
-                }
-              : {
-                  slot,
-                  state: 'empty' as const,
-                  modifiedAtMs: null,
-                  routeKey: null,
-                  biomeKeys: [],
-                  planFingerprint: null,
-                  projectId: null,
-                },
+          planSlots: planSlots(
+            planSlot(2, {
+              state,
+              modifiedAtMs: 1,
+              routeKey: 'Underworld',
+              biomeKeys: ['F'],
+              planFingerprint: 'x',
+              projectId,
+            }),
           ),
         },
       });
-    expect(projectGameQuickSend(gameModuleStatus(), 'run-plan', 2)).toEqual({
+    expect(projectGameQuickSend(gameModuleStatus(), 'my-plan', 2, 'clean')).toEqual({
       slot: 2,
       label: 'Send to game (slot 2)',
     });
-    expect(projectGameQuickSend(inSlot2('run-plan'), 'run-plan', 2)?.slot).toBe(2);
-    expect(projectGameQuickSend(inSlot2('another-project'), 'run-plan', 2)).toBeNull();
-    expect(projectGameQuickSend(inSlot2(null, 'unreadable'), 'run-plan', 2)).toBeNull();
-    expect(projectGameQuickSend(gameModuleStatus(), 'run-plan', null)).toBeNull();
-    expect(projectGameQuickSend(gameModuleStatus(), null, 2)).toBeNull();
-    expect(projectGameQuickSend(null, 'run-plan', 2)).toBeNull();
+    expect(projectGameQuickSend(gameModuleStatus(), 'my-plan', 2, 'unsaved')).toBeNull();
+    expect(projectGameQuickSend(gameModuleStatus(), 'my-plan', 2, 'dirty')?.label).toBe(
+      'Save and send to game (slot 2)',
+    );
+    expect(projectGameQuickSend(inSlot2('my-plan'), 'my-plan', 2, 'clean')?.slot).toBe(2);
+    expect(projectGameQuickSend(inSlot2('another-project'), 'my-plan', 2, 'clean')).toBeNull();
+    expect(projectGameQuickSend(inSlot2(null, 'unreadable'), 'my-plan', 2, 'clean')).toBeNull();
+    expect(projectGameQuickSend(gameModuleStatus(), 'my-plan', null, 'clean')).toBeNull();
+    expect(projectGameQuickSend(gameModuleStatus(), null, 2, 'clean')).toBeNull();
+    expect(projectGameQuickSend(null, 'my-plan', 2, 'clean')).toBeNull();
     expect(
       projectGameQuickSend(
         gameModuleStatus({
           publicationBlockers: [{ code: 'modpackLibMissing', found: null, required: '4.1.0' }],
         }),
-        'run-plan',
+        'my-plan',
         2,
+        'clean',
       ),
     ).toBeNull();
   });
