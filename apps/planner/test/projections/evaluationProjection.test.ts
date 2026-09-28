@@ -98,7 +98,7 @@ describe('evaluation presentation', () => {
     expect(isChaosGatePositionFinding(position)).toBe(true);
     expect(presentFinding(position)).toEqual({
       title: 'Chaos gate position unavailable',
-      description: 'Choose Default or a numbered position on the source room map.',
+      description: 'Choose Any or a numbered position on the source room map.',
     });
     expect(isChaosGatePositionFinding(finding('targetRoomUnavailable', gate))).toBe(false);
     expect(presentFinding(finding('targetRoomUnavailable', gate))).toEqual({

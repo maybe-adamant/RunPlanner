@@ -383,7 +383,7 @@ describe('DecisionWorkbench', () => {
     ).toBe(false);
   });
 
-  it('edits a multi-point Chaos position, clears Default, and restores it with Undo', async () => {
+  it('edits a multi-point Chaos position, resets to Any, and restores it with Undo', async () => {
     const { located, project, source } = authoredNaturalChaosFixture('multiple');
     const view = renderOccurrenceWorkbench(
       project,
@@ -397,7 +397,7 @@ describe('DecisionWorkbench', () => {
       within(position)
         .getAllByRole('radio')
         .map((option) => option.closest('label')?.textContent?.trim()),
-    ).toEqual(['Default', ...points.map(String)]);
+    ).toEqual(['Any', ...points.map(String)]);
     expect(position.closest('label')).toBeNull();
     const before = view.application.store.getState().projectWorkspace.history!.past.length;
     await view.user.click(within(position).getByRole('radio', { name: '2' }));
@@ -405,11 +405,8 @@ describe('DecisionWorkbench', () => {
     expect(view.application.store.getState().projectWorkspace.history!.past).toHaveLength(
       before + 1,
     );
-    await view.user.click(within(position).getByRole('radio', { name: 'Default' }));
-    expect(within(position).getByRole('radio', { name: 'Default' })).toHaveProperty(
-      'checked',
-      true,
-    );
+    await view.user.click(within(position).getByRole('radio', { name: 'Any' }));
+    expect(within(position).getByRole('radio', { name: 'Any' })).toHaveProperty('checked', true);
     act(() => {
       view.application.store.dispatch(authoredProjectUndoRequested());
     });
@@ -483,7 +480,7 @@ describe('DecisionWorkbench', () => {
     expect(within(position).getByText('Position 4 unavailable')).toBeTruthy();
     expect(within(position).queryByRole('radio', { name: '4' })).toBeNull();
     expect(position.getAttribute('aria-invalid')).toBe('true');
-    await view.user.click(within(position).getByRole('radio', { name: 'Default' }));
+    await view.user.click(within(position).getByRole('radio', { name: 'Any' }));
     expect(screen.queryByRole('radiogroup', { name: 'Position' })).toBeNull();
   });
 
@@ -578,12 +575,9 @@ describe('DecisionWorkbench', () => {
     expect(addChaos).toHaveProperty('checked', true);
     expect(addChaos).toHaveProperty('disabled', true);
     const position = screen.getByRole('radiogroup', { name: 'Position' });
-    expect(within(position).getByRole('radio', { name: 'Default' })).toHaveProperty(
-      'disabled',
-      false,
-    );
+    expect(within(position).getByRole('radio', { name: 'Any' })).toHaveProperty('disabled', false);
     expect(position.hasAttribute('inert')).toBe(false);
-    await view.user.click(within(position).getByRole('radio', { name: 'Default' }));
+    await view.user.click(within(position).getByRole('radio', { name: 'Any' }));
     expect(screen.queryByRole('radiogroup', { name: 'Position' })).toBeNull();
     expect(screen.getByRole('checkbox', { name: 'Chaos Gate' })).toHaveProperty('checked', true);
 

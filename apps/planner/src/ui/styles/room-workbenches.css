@@ -61,13 +61,6 @@
   accent-color: #a98dcc;
 }
 
-.chaos-feature-row {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 7px;
-}
-
 .room-feature-presence-row:has(input:disabled) {
   color: #88858e;
   opacity: 0.68;
@@ -84,6 +77,21 @@
   align-items: center;
   gap: 7px;
   min-width: 0;
+}
+
+.chaos-feature-row:has(input:disabled) {
+  color: #e3dde8;
+  opacity: 1;
+}
+
+.chaos-gate-presence:has(input:disabled) {
+  color: #88858e;
+  opacity: 0.68;
+}
+
+.chaos-position-control {
+  min-width: 0;
+  padding-block: 3px;
 }
 
 .resource-placement-disclosure {
