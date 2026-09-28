@@ -191,6 +191,24 @@ function withoutWorkspaceEntry({ entry, ...biome }: WorkspaceBiome): Omit<Worksp
 }
 
 describe('BiomeWorkspace', () => {
+  it('authors the required Tartarus non-goal limit with numbered radios', async () => {
+    const view = renderWorkspace(createGoldenFGHIProject(), 'Underworld', 'I');
+    const group = screen.getByRole('radiogroup', { name: 'Rolled non-goal limit' });
+    expect(group.getAttribute('aria-required')).toBe('true');
+    expect(
+      within(group)
+        .getAllByRole('radio')
+        .map((radio) => radio.parentElement?.textContent),
+    ).toEqual(['3', '4', '5', '6']);
+    await view.user.click(within(group).getByRole('radio', { name: '5' }));
+    expect(within(group).getByRole('radio', { name: '5' })).toHaveProperty('checked', true);
+    expect(
+      workspaceBiome(view.application, 'Underworld', 'I').fields.find(
+        (field) => field.key === 'maxNonGoalRewards',
+      )?.value,
+    ).toBe(5);
+  });
+
   it('repairs an uncommitted Chaos continuation finding through Room Doors to the Hub', async () => {
     const occurrenceId = createOccurrenceId('biome-workspace-hub-chaos');
     const owner = createExitDecisionAddress(nBiome, { kind: 'occurrence', occurrenceId });

@@ -576,8 +576,17 @@
   gap: 8px;
 }
 
+.biome-field-radio-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
 .encounter-wave-count,
 .encounter-wave-count > label,
+.biome-field-radios,
+.biome-field-radios > label,
 .chaos-position-control,
 .chaos-position-control > label {
   display: flex;
@@ -586,12 +595,14 @@
 }
 
 .encounter-wave-count,
+.biome-field-radios,
 .chaos-position-control {
   flex-wrap: wrap;
   gap: 16px;
 }
 
 .encounter-wave-count input,
+.biome-field-radios input,
 .chaos-position-control input {
   margin: 0;
   accent-color: #e2b971;
