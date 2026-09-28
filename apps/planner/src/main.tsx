@@ -117,6 +117,7 @@ createRoot(rootElement, devBrowserErrorReporter?.rootOptions).render(
       <Provider store={application.store}>
         <App
           appScalePreference={appScalePreference}
+          {...(application.bugReport === undefined ? {} : { bugReport: application.bugReport })}
           buildIdentity={application.buildIdentity}
           catalog={application.catalog}
           catalogSummary={application.catalogSummary}

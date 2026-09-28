@@ -262,6 +262,30 @@
   margin-top: 18px;
 }
 
+.game-publication-actions .bug-report-trigger {
+  margin-right: auto;
+}
+
+.bug-report-options {
+  display: grid;
+  gap: 6px;
+  padding: 0;
+  border: 0;
+  margin: 12px 0 0;
+}
+
+.bug-report-options legend {
+  margin-bottom: 4px;
+  color: #aaa7af;
+  font-size: 0.8rem;
+}
+
+.bug-report-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .project-profile-feedback {
   display: flex;
   min-width: 0;

@@ -120,8 +120,9 @@ plan and the game.
 
 If something goes wrong, [report an issue](https://github.com/maybe-adamant/RunPlanner/issues)
 with your plan, the room where it happened, what you expected, and what you
-actually saw. Include `logOutput.log` from your profile's `ReturnOfModding`
-folder when possible.
+actually saw. In the planner, **Create bug report…** in the Game panel saves
+a zip with your plan, plans in game and game logs to attach. Otherwise include
+`logOutput.log` from your profile's `ReturnOfModding` folder when possible.
 
 To find the log when using r2modman:
 

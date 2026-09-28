@@ -19,6 +19,9 @@ sha2 = "0.10"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 sha2 = "0.10"
+zip = { version = "4", default-features = false, features = ["deflate-flate2", "time"] }
+# zip's flate2 needs an explicit pure-Rust deflate backend.
+flate2 = { version = "1", default-features = false, features = ["rust_backend"] }
 
 [target.'cfg(windows)'.dependencies]
 windows-sys = { version = "0.61", features = ["Win32_Storage_FileSystem"] }

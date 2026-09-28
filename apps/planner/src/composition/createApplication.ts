@@ -22,6 +22,7 @@ import { assertPublicProjectAdmission } from '../workspace/project-admission';
 import { createEditorNavigation } from '../projections/editorNavigation';
 import { createEditorSessionReconciliationCoordinator } from '../workspace/editorSessionReconciliation';
 import { createProjectOperations } from '../workspace/projectOperations';
+import { createBugReportOperations } from '../workspace/bugReport';
 import { allocateOccurrenceId, type OccurrenceIdFactory } from '../workspace/occurrenceIds';
 import {
   createUnavailableProfileFileAdapter,
@@ -157,10 +158,23 @@ export function createApplication(options: CreateApplicationOptions = {}) {
       ? structuredWorkspace.project(state.projectWorkspace.assembly)
       : undefined;
 
+  const buildIdentity = options.buildIdentity ?? createDevelopmentBuildIdentity();
+  const catalogSummary = summarizeCatalog(catalog);
+
   return {
-    buildIdentity: options.buildIdentity ?? createDevelopmentBuildIdentity(),
+    buildIdentity,
+    bugReport:
+      options.gameModuleHost === undefined
+        ? undefined
+        : createBugReportOperations({
+            buildIdentity,
+            catalogVersion: catalogSummary.version,
+            host: options.gameModuleHost,
+            inspectCurrentGamePlan: () => projectOperations.inspectCurrentGamePlan(),
+            store,
+          }),
     catalog,
-    catalogSummary: summarizeCatalog(catalog),
+    catalogSummary,
     editorNavigation,
     gameStatus:
       options.gameModuleHost === undefined

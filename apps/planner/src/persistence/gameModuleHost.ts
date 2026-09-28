@@ -116,6 +116,25 @@ export interface GamePlanPublication {
   readonly blockers: readonly GamePublicationBlocker[];
 }
 
+/** What a bug report includes; the host adds its own facts and files. */
+export interface BugReportRequest {
+  readonly appFacts: Readonly<Record<string, unknown>>;
+  /** The open plan document's JSON, when included. */
+  readonly openPlan: string | null;
+  readonly includePlanSlots: boolean;
+  readonly includeLogs: boolean;
+}
+
+export type BugReportCreation =
+  | { readonly kind: 'cancelled' }
+  | {
+      readonly kind: 'saved';
+      readonly fileName: string;
+      readonly entries: readonly string[];
+      /** The host-allowlisted page where the report can be attached. */
+      readonly issuePageUrl: string;
+    };
+
 export const GAME_PLAN_SLOT_NUMBERS = [1, 2, 3, 4, 5, 6] as const;
 export type GamePlanSlotNumber = (typeof GAME_PLAN_SLOT_NUMBERS)[number];
 
@@ -142,6 +161,13 @@ export interface GameModuleHost extends GamePlanPublisher {
   readonly install: (overwriteConsent: boolean) => Promise<GameModuleInstallResult>;
   readonly installFromCheckout: (overwriteConsent: boolean) => Promise<GameModuleInstallResult>;
   readonly remove: () => Promise<GameModuleRemoveResult>;
+  /** Asks where to save through the host's own dialog, then writes the report there. */
+  readonly createBugReport: (
+    defaultFileName: string,
+    request: BugReportRequest,
+  ) => Promise<BugReportCreation>;
+  /** Shows the last report written this session in the system file manager. */
+  readonly revealBugReport: () => Promise<void>;
 }
 
 export interface TauriGameModuleEnvironment {
@@ -181,6 +207,9 @@ export function createTauriGameModuleHost(
     remove: () => environment.invoke<GameModuleRemoveResult>('game_module_remove'),
     publish: (slotNumber: GamePlanSlotNumber, planJson: string) =>
       environment.invoke<GamePlanPublication>('game_plan_publish', { slotNumber, planJson }),
+    createBugReport: (defaultFileName: string, request: BugReportRequest) =>
+      environment.invoke<BugReportCreation>('bug_report_create', { defaultFileName, request }),
+    revealBugReport: () => environment.invoke<void>('bug_report_reveal'),
   });
 }
 

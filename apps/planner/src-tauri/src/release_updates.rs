@@ -66,7 +66,7 @@ pub async fn release_update_install(
     app.restart()
 }
 
-/// Opens an allowlisted page (ModpackLib's store page) in the browser.
+/// Opens an allowlisted page (ModpackLib's store page or the new-issue page) in the browser.
 #[tauri::command]
 pub fn external_open_url(url: String) -> Result<(), String> {
     run_planner_game_host::external_url::validate_external_url(&url)?;

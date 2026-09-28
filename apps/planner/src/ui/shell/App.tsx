@@ -31,6 +31,7 @@ import type { AppScalePreference } from '@planner/persistence/appScalePreference
 import type { BuildIdentity } from '@planner/composition/buildIdentity';
 import type { ReleaseUpdateController } from '@planner/persistence/releaseUpdates';
 import type { GameStatusController } from '@planner/persistence/gameModuleHost';
+import type { BugReportOperations } from '@planner/workspace/bugReport';
 import { PomResolutionDialog } from '../editor/rewards/PomResolutionEditor';
 import { TraitOfferDialog } from '../editor/rewards/TraitOfferEditor';
 import { ProjectFileControls } from '../project/ProjectFileControls';
@@ -42,9 +43,12 @@ import { useAppScale } from './useAppScale';
 import { ReleaseUpdateCheck, ReleaseUpdateNotice } from './ReleaseUpdates';
 import { GameHeaderControls } from './GameHeaderControls';
 import { GamePanel } from './GamePanel';
+import { BugReportDialog } from './BugReportDialog';
 
 interface AppProps {
   readonly appScalePreference?: AppScalePreference;
+  /** Present only in the desktop application. */
+  readonly bugReport?: BugReportOperations;
   readonly buildIdentity: BuildIdentity;
   readonly catalog: Catalog;
   readonly catalogSummary: CatalogSummary;
@@ -59,6 +63,7 @@ interface AppProps {
 
 export function App({
   appScalePreference,
+  bugReport,
   buildIdentity,
   catalog,
   catalogSummary,
@@ -78,6 +83,7 @@ export function App({
     ),
   );
   const [entryOpen, setEntryOpen] = useState(project === undefined);
+  const [aboutReporting, setAboutReporting] = useState(false);
   // Which part of the Game panel opens focused, or null while it is closed.
   const [gameOpen, setGameOpen] = useState<'panel' | 'plans' | null>(null);
   const dispatch = useAppDispatch();
@@ -194,6 +200,19 @@ export function App({
                     {releaseUpdates === undefined ? null : (
                       <ReleaseUpdateCheck controller={releaseUpdates} />
                     )}
+                    {bugReport === undefined ? null : (
+                      <div className="about-support">
+                        <Popover.Close asChild>
+                          <button
+                            className="secondary-action action-compact"
+                            onClick={() => setAboutReporting(true)}
+                            type="button"
+                          >
+                            Create bug report…
+                          </button>
+                        </Popover.Close>
+                      </div>
+                    )}
                     <section className="about-shortcuts" aria-labelledby="about-shortcuts-title">
                       <h2 id="about-shortcuts-title">Keyboard shortcuts</h2>
                       <dl>
@@ -239,8 +258,13 @@ export function App({
           <ReleaseUpdateNotice controller={releaseUpdates} installLabel={installLabel} />
         )}
 
+        {aboutReporting && bugReport !== undefined && (
+          <BugReportDialog onClose={() => setAboutReporting(false)} operations={bugReport} />
+        )}
+
         {gameOpen !== null && (
           <GamePanel
+            {...(bugReport === undefined ? {} : { bugReport })}
             catalog={catalog}
             focusPlans={gameOpen === 'plans'}
             {...(gameStatus === undefined ? {} : { gameStatus })}
