@@ -795,7 +795,7 @@ describe('execution-plan compiler and codec', () => {
   });
 
   it('rejects plans of the released protocol 48', () => {
-    expect(EXECUTION_PROTOCOL_VERSION).toBe(49);
+    expect(EXECUTION_PROTOCOL_VERSION).toBe(50);
     expect(() =>
       decodeExecutionPlan({
         ...(surfaceQShopCorrelationFixture as Record<string, unknown>),

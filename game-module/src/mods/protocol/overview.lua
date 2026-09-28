@@ -305,10 +305,14 @@ local function additional(value, label)
         local row, rowError = p.exact(
             valueRow,
             { "kind", "owner", "room" },
-            { "ixionOrigin" },
+            { "ixionOrigin", "spawnPointIndex" },
             label .. "[" .. index .. "]"
         )
         if not row then return nil, rowError end
+        if row.spawnPointIndex ~= nil and (row.kind ~= "chaos"
+            or not p.int(row.spawnPointIndex, label .. ".spawnPointIndex", 1)) then
+            return p.fail(label .. " has invalid Chaos spawn point index")
+        end
         if not p.one(row.kind, { chaos = true, zagreusContract = true }, label .. ".kind")
             or not p.str(row.owner, label .. ".owner", p.MAX_OWNER_STRING)
             or not p.roomRef(row.room, label .. ".room") then
