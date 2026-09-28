@@ -7,7 +7,10 @@ import {
 } from '@run-planner/engine/authored-project';
 import { type Catalog, type CatalogSummary } from '@run-planner/engine/catalog-schema';
 
-import { projectFeedbackHierarchy } from '@planner/projections/evaluationProjection';
+import {
+  nextRepairSelection,
+  projectFeedbackHierarchy,
+} from '@planner/projections/evaluationProjection';
 import {
   projectRouteNavigation,
   type EditorNavigation,
@@ -18,8 +21,10 @@ import {
   selectProfileStatus,
   selectProjectEvaluation,
   type RootState,
+  useAppDispatch,
   useAppSelector,
 } from '@planner/state/store';
+import { findingSelected } from '@planner/state/editorSessionSlice';
 import type { ProjectOperations } from '@planner/workspace/projectOperations';
 import type { StructuredWorkspaceProjection } from '@planner/projections/structured-workspace';
 import type { AppScalePreference } from '@planner/persistence/appScalePreference';
@@ -73,7 +78,9 @@ export function App({
     ),
   );
   const [entryOpen, setEntryOpen] = useState(project === undefined);
-  const [gameOpen, setGameOpen] = useState(false);
+  // Which part of the Game panel opens focused, or null while it is closed.
+  const [gameOpen, setGameOpen] = useState<'panel' | 'plans' | null>(null);
+  const dispatch = useAppDispatch();
   const gameButton = useRef<HTMLButtonElement>(null);
   const evaluation = useAppSelector(selectProjectEvaluation);
   const workspace = useAppSelector(selectStructuredWorkspace);
@@ -89,6 +96,15 @@ export function App({
   const activeRouteFeedback = feedback?.route;
   const activeWorkspaceRoute = workspace?.route;
   const showEntry = project === undefined || entryOpen;
+  const repairIssue = evaluation?.route.issue;
+  const showFindings =
+    repairIssue === undefined || workspace === undefined
+      ? undefined
+      : () => {
+          setGameOpen(null);
+          setEntryOpen(false);
+          dispatch(findingSelected(nextRepairSelection(repairIssue, workspace.focusByOwner)));
+        };
 
   if (workspace !== undefined && activeRouteNavigation === undefined) {
     throw new Error(`Editor navigation references unavailable route ${workspace.route.routeKey}`);
@@ -132,7 +148,8 @@ export function App({
               <GameHeaderControls
                 buttonRef={gameButton}
                 {...(gameStatus === undefined ? {} : { gameStatus })}
-                onOpen={() => setGameOpen(true)}
+                onOpen={() => setGameOpen('panel')}
+                onOpenPlans={() => setGameOpen('plans')}
                 operations={projectOperations}
               />
               <Popover.Root>
@@ -222,14 +239,16 @@ export function App({
           <ReleaseUpdateNotice controller={releaseUpdates} installLabel={installLabel} />
         )}
 
-        {gameOpen && (
+        {gameOpen !== null && (
           <GamePanel
             catalog={catalog}
+            focusPlans={gameOpen === 'plans'}
             {...(gameStatus === undefined ? {} : { gameStatus })}
             onClose={() => {
-              setGameOpen(false);
+              setGameOpen(null);
               gameButton.current?.focus();
             }}
+            {...(showFindings === undefined ? {} : { onShowFindings: showFindings })}
             operations={projectOperations}
           />
         )}

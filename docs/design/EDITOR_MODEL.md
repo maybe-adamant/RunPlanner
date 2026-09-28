@@ -268,7 +268,7 @@ pointer gestures and floating overlays account for screen versus layout coordina
 ### File operations
 
 The file menu provides New, Load, Save and desktop Save As. Sending a plan to
-the game belongs to the Game panel and the header quick send. Both send only a
+the game belongs to the Game panel and the header send button. Both send only a
 saved file with no unsaved changes, saving first (Save As for a never-saved
 project) and naming the plan by the file's stem. Sending adds no authored edit
 or history step, but it may first save, writing the file and, for a never-saved
@@ -287,12 +287,15 @@ planner's Install or Update as the only step action), the Remove availability
 and a collapsed details list; `projectGameProfileChoices` feeds the profile
 picker, and `projectGamePlans` summarizes the slots and compares their
 fingerprints with `ProjectOperations.inspectCurrentGamePlan`, which compiles only
-while the Plans section shows. `projectGameIndicator` and `projectGameQuickSend`
-drive the header from the evaluation's execution-plan eligibility and the
-authored project id, without compiling; the header compiles only when sending.
-The `gameSendSession` slice holds the loaded project's last sent slot and the
-header's send status as UI-session state, cleared by any document replacement
-and never persisted or placed in history. Publish failures reuse the step
+while the Plans section shows. `projectGameIndicator` and `projectGameSendButton`
+drive the header from the evaluation's execution-plan eligibility, the
+authored project id and the button's local send activity, without compiling;
+the header compiles only when sending. The `gameSendSession` slice holds the
+loaded project's last sent slot and the latest send failure, with its time, as
+UI-session state; `publishGame` clears the failure when a send starts and records
+it when one fails. Both are cleared by any document replacement and never
+persisted or placed in history. The button's transient Saving, Sending and
+three-second result labels are component state. Publish failures reuse the step
 wording. The game target is neither authored state nor Redux state
 and never enters history.
 

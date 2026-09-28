@@ -566,6 +566,11 @@ describe('project profile operations', () => {
       status: 'failure',
       message: 'Saved, but not sent: could not write plan slot.',
     });
+    expect(application.store.getState().gameSendSession.lastFailure).toMatchObject({
+      message: 'Saved, but not sent: could not write plan slot.',
+    });
+    await application.projectOperations.publishGame(1);
+    expect(application.store.getState().gameSendSession.lastFailure).toBeNull();
   });
 
   it('reports a Save As that wrote the file but could not activate it', async () => {

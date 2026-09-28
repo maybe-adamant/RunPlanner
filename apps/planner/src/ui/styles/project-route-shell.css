@@ -846,12 +846,66 @@
   color: #e8c27a;
 }
 
-.game-header-feedback {
-  color: var(--muted);
-  font-size: 0.8rem;
+.game-indicator[data-state='lastSendFailed'] {
+  color: #f0a3a3;
 }
 
-.game-header-feedback[data-tone='failure'] {
+/* Sized to the longest label, so no send state shifts the header. */
+.game-send-button {
+  min-width: calc(15ch + 20px);
+  white-space: nowrap;
+}
+
+.game-send-button[aria-disabled='true'] {
+  cursor: default;
+  opacity: 0.7;
+}
+
+.game-send-button[data-state='sent'],
+.game-send-button[data-state='failed'] {
+  opacity: 1;
+}
+
+.game-send-button[data-state='sent'] {
+  color: #9fd6a8;
+}
+
+.game-send-button[data-state='failed'] {
+  color: #f0a3a3;
+}
+
+.game-panel-callout {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 8px;
+  padding: 8px 10px;
+  margin: 8px 0;
+  border-left: 3px solid #e8c27a;
+  border-radius: 4px;
+  background: rgb(232 194 122 / 10%);
+  font-size: 0.82rem;
+}
+
+.game-panel-callout[data-tone='error'] {
+  border-left-color: #f0a3a3;
+  background: rgb(240 163 163 / 10%);
+}
+
+.game-panel-callout p {
+  flex: 1 1 16rem;
+  margin: 0;
+}
+
+.game-panel-callout-icon {
+  font-weight: 700;
+}
+
+.game-panel-callout[data-tone='warning'] .game-panel-callout-icon {
+  color: #e8c27a;
+}
+
+.game-panel-callout[data-tone='error'] .game-panel-callout-icon {
   color: #f0a3a3;
 }
 

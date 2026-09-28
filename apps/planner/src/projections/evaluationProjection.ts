@@ -8,6 +8,8 @@ import {
   type SemanticFinding,
 } from '@run-planner/engine/simulation';
 
+import type { FindingSelection } from '@planner/state/editorSessionSlice';
+
 export type FindingIndex = ReadonlyMap<string, readonly SemanticFinding[]>;
 
 export interface FindingPresentation {
@@ -714,6 +716,26 @@ export function presentBiomeFeedbackContext(
   return blocker === undefined
     ? 'Finish the earlier biomes before this biome can be evaluated.'
     : `Finish and fix ${blocker.label} before ${biome.label} can be evaluated.`;
+}
+
+/** The navigation intent for the route's next repair, shared by every entry point to it. */
+export function nextRepairSelection(
+  issue: AssessmentIssue,
+  focusByOwner: ReadonlyMap<string, import('./structured-workspace').WorkspaceInspectorDestination>,
+): FindingSelection {
+  const destination = focusByOwner.get(semanticAddressKey(issue.owner));
+  return {
+    focusAddress: destination?.focusAddress ?? issue.owner,
+    key: issue.regionKey,
+    origin: issue.owner,
+    ...(destination?.presentationPanel === undefined
+      ? {}
+      : { presentationPanel: { kind: destination.presentationPanel } as const }),
+    // Selection reaches an existing visible launcher. Dialogs remain explicit
+    // local editing actions, including for trait offers.
+    traitDialogTarget: null,
+    levelResolutionDialogTarget: null,
+  };
 }
 
 export function findingDestinationLabel(

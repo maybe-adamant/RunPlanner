@@ -8,7 +8,8 @@ import {
   projectGameProfileChoices,
   projectGameIndicator,
   projectGamePlans,
-  projectGameQuickSend,
+  projectGameSendButton,
+  describeLastSendFailure,
 } from '@planner/projections/gamePanel';
 import { catalog } from '@run-planner/hades2-catalog';
 import { gameModuleStatus, planSlot, planSlots } from '@planner-test/fixtures/gameModuleHost';
@@ -510,7 +511,7 @@ describe('Game panel projection', () => {
     expect(rows?.[1]?.columns?.aspect).toBe('Unknown');
   });
 
-  it('offers the quick send only to an empty or same-project session slot on a ready target', () => {
+  it('derives every header send state with a short label and its explanation', () => {
     const inSlot2 = (projectId: string | null, state: 'present' | 'unreadable' = 'present') =>
       gameModuleStatus({
         inspection: {
@@ -526,29 +527,151 @@ describe('Game panel projection', () => {
           ),
         },
       });
-    expect(projectGameQuickSend(gameModuleStatus(), 'my-plan', 2, 'clean')).toEqual({
-      slot: 2,
-      label: 'Send to game (slot 2)',
-    });
-    expect(projectGameQuickSend(gameModuleStatus(), 'my-plan', 2, 'unsaved')).toBeNull();
-    expect(projectGameQuickSend(gameModuleStatus(), 'my-plan', 2, 'dirty')?.label).toBe(
-      'Save and send to game (slot 2)',
+    const mine = { projectId: 'my-plan', eligible: true };
+    const idle = { kind: 'idle' } as const;
+    const ready = gameModuleStatus();
+    const sentAt = Date.UTC(2026, 0, 2, 14, 5, 30);
+    const cases = [
+      [
+        projectGameSendButton(ready, null, 2, 'clean', idle),
+        'noProject',
+        'Send to game',
+        null,
+        'Open a plan first',
+      ],
+      [
+        projectGameSendButton(null, mine, 2, 'clean', idle),
+        'notReady',
+        'Send to game',
+        null,
+        'Set up the game in the Game panel',
+      ],
+      [
+        projectGameSendButton(
+          gameModuleStatus({
+            publicationBlockers: [{ code: 'modpackLibMissing', found: null, required: '4.1.0' }],
+          }),
+          mine,
+          2,
+          'clean',
+          idle,
+        ),
+        'notReady',
+        'Send to game',
+        null,
+        'Set up the game in the Game panel',
+      ],
+      [
+        projectGameSendButton(ready, { projectId: 'my-plan', eligible: false }, 2, 'clean', idle),
+        'notSendable',
+        'Send to game',
+        null,
+        'Resolve this plan’s findings before sending it.',
+      ],
+      [
+        projectGameSendButton(ready, mine, null, 'clean', idle),
+        'chooseSlot',
+        'Send to game…',
+        { kind: 'openPlans' },
+        'Choose a slot in the Game panel',
+      ],
+      [
+        projectGameSendButton(ready, mine, 2, 'unsaved', idle),
+        'chooseSlot',
+        'Send to game…',
+        { kind: 'openPlans' },
+        'Choose a slot in the Game panel',
+      ],
+      [
+        projectGameSendButton(inSlot2('another-project'), mine, 2, 'clean', idle),
+        'chooseSlot',
+        'Send to game…',
+        { kind: 'openPlans' },
+        'Choose a slot in the Game panel',
+      ],
+      [
+        projectGameSendButton(inSlot2(null, 'unreadable'), mine, 2, 'clean', idle),
+        'chooseSlot',
+        'Send to game…',
+        { kind: 'openPlans' },
+        'Choose a slot in the Game panel',
+      ],
+      [
+        projectGameSendButton(inSlot2('my-plan'), mine, 2, 'clean', idle),
+        'ready',
+        'Send · Slot 2',
+        { kind: 'send', slot: 2 },
+        'Send this plan to slot 2',
+      ],
+      [
+        projectGameSendButton(ready, mine, 2, 'dirty', idle),
+        'ready',
+        'Send · Slot 2',
+        { kind: 'send', slot: 2 },
+        'Saves your changes, then sends to slot 2',
+      ],
+      [
+        projectGameSendButton(ready, mine, 2, 'dirty', { kind: 'sending' }),
+        'saving',
+        'Saving…',
+        null,
+        null,
+      ],
+      [
+        projectGameSendButton(ready, mine, 2, 'clean', { kind: 'sending' }),
+        'sending',
+        'Sending…',
+        null,
+        null,
+      ],
+      [
+        projectGameSendButton(ready, mine, 2, 'clean', { kind: 'sent', slot: 2, atMs: sentAt }),
+        'sent',
+        '✓ Sent · Slot 2',
+        null,
+        `Sent to slot 2 at ${new Date(sentAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`,
+      ],
+      [
+        projectGameSendButton(ready, mine, 2, 'clean', { kind: 'failed' }),
+        'failed',
+        '! Not sent',
+        null,
+        'Details are in the Game panel',
+      ],
+    ] as const;
+    for (const [button, state, label, action, description] of cases) {
+      expect(button).toEqual({ state, label, action, description });
+      expect(button.label.length).toBeLessThanOrEqual(15);
+    }
+    expect(cases.at(-2)?.[0].description).not.toMatch(/:\d\d:\d\d/);
+    expect(new Set(cases.map(([button]) => button.label.replace(/\d/, 'N')))).toEqual(
+      new Set([
+        'Send to game',
+        'Send to game…',
+        'Send · Slot N',
+        'Saving…',
+        'Sending…',
+        '✓ Sent · Slot N',
+        '! Not sent',
+      ]),
     );
-    expect(projectGameQuickSend(inSlot2('my-plan'), 'my-plan', 2, 'clean')?.slot).toBe(2);
-    expect(projectGameQuickSend(inSlot2('another-project'), 'my-plan', 2, 'clean')).toBeNull();
-    expect(projectGameQuickSend(inSlot2(null, 'unreadable'), 'my-plan', 2, 'clean')).toBeNull();
-    expect(projectGameQuickSend(gameModuleStatus(), 'my-plan', null, 'clean')).toBeNull();
-    expect(projectGameQuickSend(gameModuleStatus(), null, 2, 'clean')).toBeNull();
-    expect(projectGameQuickSend(null, 'my-plan', 2, 'clean')).toBeNull();
     expect(
-      projectGameQuickSend(
-        gameModuleStatus({
-          publicationBlockers: [{ code: 'modpackLibMissing', found: null, required: '4.1.0' }],
-        }),
-        'my-plan',
-        2,
-        'clean',
-      ),
-    ).toBeNull();
+      projectGameSendButton(ready, mine, 6, 'clean', { kind: 'sent', slot: 6, atMs: 0 }).label,
+    ).toBe('✓ Sent · Slot 6');
+  });
+
+  it('marks the indicator and describes a failed last send', () => {
+    expect(projectGameIndicator(snapshotOf(gameModuleStatus()), true)).toEqual({
+      state: 'lastSendFailed',
+      symbol: '!',
+      accessibleName: 'Game — last send failed',
+    });
+    expect(projectGameIndicator({ status: null, error: null, readAt: 0 }, true).state).toBe(
+      'checking',
+    );
+    const atMs = Date.UTC(2026, 0, 2, 14, 5);
+    expect(describeLastSendFailure({ message: 'could not write plan slot.', atMs })).toBe(
+      `Last send failed at ${new Date(atMs).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}: could not write plan slot.`,
+    );
   });
 });

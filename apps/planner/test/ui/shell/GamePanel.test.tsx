@@ -391,9 +391,11 @@ describe('Game panel', () => {
       application.projectOperations.createNew('Underworld').then(() => undefined),
     );
     expect(within(dialog).getByRole('heading', { name: 'Plans in game' })).toBeTruthy();
+    const callout = within(dialog).getByRole('group', { name: 'Can’t send' });
     expect(
-      within(dialog).getByText('Resolve this plan’s findings before sending it.'),
+      within(callout).getByText('Resolve this plan’s findings before sending it.'),
     ).toBeTruthy();
+    expect(within(callout).getByRole('button', { name: 'Show findings' })).toBeTruthy();
     const table = within(dialog).getByRole('table', { name: 'Plans in game' });
     expect(
       within(table)

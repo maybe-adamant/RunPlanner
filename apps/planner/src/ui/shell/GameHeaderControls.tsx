@@ -8,47 +8,45 @@ import type {
 import {
   gameSaveState,
   projectGameIndicator,
-  projectGameQuickSend,
+  projectGameSendButton,
+  type GameSendActivity,
+  type GameSendProject,
 } from '@planner/projections/gamePanel';
-import { gameSendFeedbackShown } from '@planner/state/gameSendSessionSlice';
-import {
-  selectProfileStatus,
-  useAppDispatch,
-  useAppSelector,
-  type RootState,
-} from '@planner/state/store';
+import { selectProfileStatus, useAppSelector, type RootState } from '@planner/state/store';
 import type { ProjectOperations } from '@planner/workspace/projectOperations';
 
 const EMPTY_SNAPSHOT: GameStatusSnapshot = Object.freeze({ status: null, error: null, readAt: 0 });
 const NO_SNAPSHOT = () => EMPTY_SNAPSHOT;
 const NO_SUBSCRIPTION = () => () => undefined;
+const IDLE: GameSendActivity = Object.freeze({ kind: 'idle' });
+/** How long a send's result stays on the button. */
+const GAME_SEND_RESULT_MS = 3000;
 
-// The engine's eligibility, already evaluated, decides sendability without compiling.
-function sendableProjectId(state: RootState): string | null {
+function sendProjectId(state: RootState): string | null {
   const workspace = state.projectWorkspace;
-  return workspace.kind === 'openProject' &&
-    workspace.assembly.evaluation.route.summary.eligibleForExecutionPlan
-    ? workspace.history.present.projectId
-    : null;
+  return workspace.kind === 'openProject' ? workspace.history.present.projectId : null;
 }
 
-function sentAt(): string {
-  return new Date().toLocaleTimeString([], {
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-  });
+// The engine's eligibility, already evaluated, decides sendability without compiling.
+function sendEligible(state: RootState): boolean {
+  const workspace = state.projectWorkspace;
+  return (
+    workspace.kind === 'openProject' &&
+    workspace.assembly.evaluation.route.summary.eligibleForExecutionPlan
+  );
 }
 
 export function GameHeaderControls({
   buttonRef,
   gameStatus,
   onOpen,
+  onOpenPlans,
   operations,
 }: {
   readonly buttonRef: Ref<HTMLButtonElement>;
   readonly gameStatus?: GameStatusController;
   readonly onOpen: () => void;
+  readonly onOpenPlans: () => void;
   readonly operations: ProjectOperations;
 }) {
   const snapshot = useSyncExternalStore(
@@ -56,11 +54,15 @@ export function GameHeaderControls({
     gameStatus?.getSnapshot ?? NO_SNAPSHOT,
     NO_SNAPSHOT,
   );
-  const projectId = useAppSelector(sendableProjectId);
+  const projectId = useAppSelector(sendProjectId);
+  const eligible = useAppSelector(sendEligible);
   const lastSentSlot = useAppSelector((state) => state.gameSendSession.lastSentSlot);
-  const feedback = useAppSelector((state) => state.gameSendSession.feedback);
-  const dispatch = useAppDispatch();
-  const [pending, setPending] = useState(false);
+  const lastSendFailed = useAppSelector((state) => state.gameSendSession.lastFailure !== null);
+  const saveState = useAppSelector((state) =>
+    gameSaveState(selectProfileStatus(state), state.profileSession.fileName),
+  );
+  const [activity, setActivity] = useState<GameSendActivity>(IDLE);
+  const [announcement, setAnnouncement] = useState('');
 
   useEffect(() => {
     if (gameStatus === undefined) return;
@@ -71,57 +73,65 @@ export function GameHeaderControls({
     window.addEventListener('focus', refresh);
     return () => window.removeEventListener('focus', refresh);
   }, [gameStatus]);
-  const indicator = gameStatus === undefined ? null : projectGameIndicator(snapshot);
-  const saveState = useAppSelector((state) =>
-    gameSaveState(selectProfileStatus(state), state.profileSession.fileName),
-  );
-  const quickSend = projectGameQuickSend(snapshot.status, projectId, lastSentSlot, saveState);
+  // A send's result shows for a fixed time, then the button returns to its state.
+  useEffect(() => {
+    if (activity.kind !== 'sent' && activity.kind !== 'failed') return;
+    const timer = window.setTimeout(() => setActivity(IDLE), GAME_SEND_RESULT_MS);
+    return () => window.clearTimeout(timer);
+  }, [activity]);
+
+  const indicator =
+    gameStatus === undefined ? null : projectGameIndicator(snapshot, lastSendFailed);
+  const project: GameSendProject | null = projectId === null ? null : { projectId, eligible };
+  const button = projectGameSendButton(snapshot.status, project, lastSentSlot, saveState, activity);
 
   // The plan is compiled only here, by the publish path, when the user asks to send.
   const send = async (slot: GamePlanSlotNumber) => {
-    if (pending) return;
-    setPending(true);
+    setActivity({ kind: 'sending' });
+    setAnnouncement('');
     try {
       const result = await operations.publishGame(slot);
-      dispatch(
-        gameSendFeedbackShown(
-          result.status === 'success'
-            ? { tone: 'success', text: `Sent to slot ${slot} · ${sentAt()}` }
-            : result.status === 'cancelled'
-              ? { tone: 'success', text: `${result.message} · ${sentAt()}` }
-              : { tone: 'failure', text: `${result.message} Open Game to check. · ${sentAt()}` },
-        ),
-      );
+      if (result.status === 'success') {
+        setActivity({ kind: 'sent', slot, atMs: Date.now() });
+        setAnnouncement(`Sent to slot ${slot}.`);
+      } else if (result.status === 'failure') {
+        setActivity({ kind: 'failed' });
+        setAnnouncement(`Not sent: ${result.message}`);
+      } else {
+        setActivity(IDLE);
+        setAnnouncement(result.message);
+      }
       await gameStatus?.refresh();
     } catch (error) {
-      dispatch(
-        gameSendFeedbackShown({
-          tone: 'failure',
-          text: `${error instanceof Error ? error.message : String(error)} Open Game to check. · ${sentAt()}`,
-        }),
-      );
-    } finally {
-      setPending(false);
+      setActivity({ kind: 'failed' });
+      setAnnouncement(`Not sent: ${error instanceof Error ? error.message : String(error)}`);
     }
   };
 
   return (
     <>
-      {quickSend === null ? null : (
-        <button
-          aria-disabled={pending || undefined}
-          className="secondary-action action-compact"
-          onClick={() => void send(quickSend.slot)}
-          type="button"
-        >
-          {pending ? 'Sending…' : quickSend.label}
-        </button>
-      )}
-      {gameStatus === undefined ? null : (
-        <span className="game-header-feedback" data-tone={feedback?.tone} role="status">
-          {feedback?.text ?? ''}
-        </span>
-      )}
+      <button
+        aria-describedby={button.description === null ? undefined : 'game-send-description'}
+        aria-disabled={button.action === null || undefined}
+        className="secondary-action action-compact game-send-button"
+        data-state={button.state}
+        onClick={() => {
+          const action = button.action;
+          if (action === null) return;
+          if (action.kind === 'openPlans') onOpenPlans();
+          else void send(action.slot);
+        }}
+        title={button.description ?? undefined}
+        type="button"
+      >
+        {button.label}
+      </button>
+      <span hidden id="game-send-description">
+        {button.description}
+      </span>
+      <span className="visually-hidden game-send-status" role="status">
+        {announcement}
+      </span>
       <button
         {...(indicator === null ? {} : { 'aria-label': indicator.accessibleName })}
         className="quiet-action action-compact"
