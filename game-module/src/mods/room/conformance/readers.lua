@@ -178,6 +178,14 @@ local function remaining(run, key)
     return type(trait) == "table" and (trait.RemainingUses or trait.Uses or 1) or 0
 end
 
+local function totalRemaining(run, key)
+    local total = 0
+    for _, trait in pairs(traits(run) or {}) do
+        if traitKey(trait) == key then total = total + (trait.RemainingUses or 0) end
+    end
+    return total
+end
+
 local function durationList(run, key)
     local result = {}
     for _, trait in pairs(traits(run) or {}) do
@@ -195,11 +203,12 @@ end
 local function stygianWell(run)
     local keys = conformanceBindings.stygianWellTraits
     return {
-        yarnUses = remaining(run, keys.yarnUses),
+        sparkUses = totalRemaining(run, keys.sparkUses),
+        yarnUses = totalRemaining(run, keys.yarnUses),
         hymnUses = remaining(run, keys.hymnUses),
         discountUses = durationList(run, keys.discountUses),
         emptySlotUses = durationList(run, keys.emptySlotUses),
-        extendedUses = remaining(run, keys.extendedUses),
+        extendedUses = totalRemaining(run, keys.extendedUses),
     }
 end
 

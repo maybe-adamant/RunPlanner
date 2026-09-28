@@ -498,10 +498,12 @@ keys, identities, booleans, and collection structure remain exact; non-finite
 values fail. A one-unit counter difference or a meaningful fractional difference
 still desynchronizes. Diagnostic logs retain double-precision numeric detail.
 
-Ixion's pending-use count remains in planner simulation and published diagnostics,
-but is excluded from both room-exit Well conformance and Postboss admission.
-Purchase tracking and planned Chaos gate realization remain unchanged; other
-Well charges and durations still participate in conformance.
+Well conformance compares aggregate remaining uses across independent Yarn,
+Ixion, and Extended Shop trait instances, the single accumulated Hymn `Uses`
+counter, and individual timed-effect durations. This applies at room exit and
+Postboss admission: forced downstream offers and Chaos gates cannot independently
+prove that a temporary effect was consumed. These are checkpoint balances, not
+per-consumption provenance checks.
 
 Rewards destroyed by Time Piece retain their generation and placement products,
 but publish no acquisition transaction. This applies equally to incoming rewards,
