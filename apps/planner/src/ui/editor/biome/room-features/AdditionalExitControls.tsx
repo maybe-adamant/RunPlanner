@@ -100,8 +100,8 @@ export function ChaosSpawnWorkbench({
   const owner = feature.action === 'add' ? feature.control.owner : feature.owner;
   const position = feature.action === 'remove' ? feature.position : undefined;
   return (
-    <div className="chaos-feature-row">
-      <label className="room-feature-presence-row">
+    <div className="room-feature-presence-row room-resource-row chaos-feature-row">
+      <label className="room-resource-selection chaos-gate-presence">
         <input
           {...(position === undefined
             ? findingTarget(owner)
@@ -162,7 +162,7 @@ export function ChaosSpawnWorkbench({
                   )
                 }
               />
-              {value ?? 'Default'}
+              {value ?? 'Any'}
             </label>
           ))}
           {position.invalid ? <span>Position {position.value} unavailable</span> : null}

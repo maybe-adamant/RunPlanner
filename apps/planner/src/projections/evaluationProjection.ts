@@ -548,7 +548,7 @@ export function presentFinding(finding: SemanticFinding): FindingPresentation {
   if (isChaosGatePositionFinding(finding)) {
     return Object.freeze({
       title: 'Chaos gate position unavailable',
-      description: 'Choose Default or a numbered position on the source room map.',
+      description: 'Choose Any or a numbered position on the source room map.',
     });
   }
   if (finding.origin.kind === 'keepsakeEquipResult') {
