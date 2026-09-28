@@ -1,5 +1,6 @@
 import { catalog } from '@run-planner/hades2-catalog';
 import {
+  createAdditionalExitAddress,
   createBiomeFieldAddress,
   createBiomeAddress,
   createExitDecisionAddress,
@@ -32,6 +33,7 @@ import {
   type BiomeFeedbackPresentation,
   findingDestinationLabel,
   indexFindingsByOwner,
+  isChaosGatePositionFinding,
   presentBiomeFeedbackContext,
   presentBiomeStatus,
   presentFinding,
@@ -83,6 +85,26 @@ function finding(code: FindingCode, origin: SemanticAddress = biome): SemanticFi
 }
 
 describe('evaluation presentation', () => {
+  it('distinguishes Chaos position repair from other unavailable-room findings', () => {
+    const gate = createAdditionalExitAddress(biome, createOccurrenceId('source'), 'chaos');
+    const position: SemanticFinding = {
+      ...finding('targetRoomUnavailable', gate),
+      evidence: {
+        failedConditions: ['spawnPointIndex'],
+        spawnPointIndex: 4,
+        secretPointAnchorCount: 1,
+      },
+    };
+    expect(isChaosGatePositionFinding(position)).toBe(true);
+    expect(presentFinding(position)).toEqual({
+      title: 'Chaos gate position unavailable',
+      description: 'Choose Default or a numbered position on the source room map.',
+    });
+    expect(isChaosGatePositionFinding(finding('targetRoomUnavailable', gate))).toBe(false);
+    expect(presentFinding(finding('targetRoomUnavailable', gate))).toEqual({
+      title: 'Room unavailable',
+    });
+  });
   it('provides explicit player copy for semantic findings', () => {
     for (const code of allFindingCodes) {
       const presentation = presentFinding(finding(code));

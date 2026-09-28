@@ -1,4 +1,5 @@
 import {
+  chaosGateSpawnPointIndices,
   createAdditionalExitAddress,
   createOccurrenceAddress,
   createRoomFeatureAddress,
@@ -167,6 +168,14 @@ function roomFeatures(
     createAdditionalExitAddress(input.biome, input.occurrence.occurrenceId, key);
   const zagreus = room.additionalExits.find((candidate) => candidate.kind === 'zagreusContract');
   const chaos = room.additionalExits.find((candidate) => candidate.kind === 'chaos');
+  const authoredChaos = input.occurrence.additionalExits?.find((exit) => exit.kind === 'chaos');
+  const positionChoices = chaosGateSpawnPointIndices(room);
+  const positionValue = authoredChaos?.spawnPointIndex ?? null;
+  const invalidPosition = positionValue !== null && !positionChoices.includes(positionValue);
+  const position =
+    authoredChaos !== undefined && (positionChoices.length > 1 || invalidPosition)
+      ? Object.freeze({ value: positionValue, choices: positionChoices, invalid: invalidPosition })
+      : undefined;
   const passive = encounterPhases.find((phase) => phase.nemesisFeature !== undefined);
   const poolOwner = createOccurrenceAddress(input.biome, input.occurrence.occurrenceId);
   const featureAddress = (
@@ -544,6 +553,7 @@ function roomFeatures(
                   : ('optionalPresent' as const),
               }),
               owner: additionalOwner(chaos.key),
+              ...(position === undefined ? {} : { position }),
               marker: input.markerDestinations.marker(additionalOwner(chaos.key)),
             }),
           ]

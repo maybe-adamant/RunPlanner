@@ -1,6 +1,6 @@
 # Chaos Gate Position Authoring
 
-Status: approved execution contract; Gate A complete, Gates B/C pending.
+Status: approved execution contract; Gates A/B complete, Gate C pending.
 Base: `dd1cf56b`.
 Plan commit: `eaeb3035`.
 
@@ -76,8 +76,8 @@ the audit and annotated maps but absent from their room declarations.
 
 ### Editor
 
-Render `Chaos Gate` checkbox followed by `Position [Default]` on the same row,
-wrapping naturally at narrow widths. The dropdown offers Default and the
+Render `Chaos Gate` checkbox followed by a `Position` radio group on the same row,
+wrapping naturally at narrow widths. The radios offer Default and the
 declared numbered points, matching purple map markers.
 
 - Gate absent: no position control.
@@ -159,8 +159,8 @@ Starting neighborhoods:
 - `apps/planner/src/ui/editor/biome/room-features/AdditionalExitControls.tsx`.
 
 Expose the engine product and bind the semantic command. Add the conditional
-dropdown with ordinary control styling and precise finding focus. Do not nest
-the select inside the checkbox's label.
+radio group with the application's existing radio styling and precise finding
+focus. Do not nest the group inside the checkbox's label.
 
 Primary tests: absent/single/multiple-point presentation; Ixion checkbox locked
 but position editable; Default clearing; Undo; invalid retained value repair;
@@ -224,3 +224,14 @@ catalog/map manifest. Keep existing presence and destination controls.
   production reconciliation rewrite was necessary. No authored schema, catalog
   compatibility, or execution protocol version changed in this gate.
 - Full repository closure and live placement verification remain Gate C work.
+
+## Gate B verification
+
+- Position uses the approved compact radio group, not a dropdown.
+- 82 focused application/UI tests passed; planner typechecking, focused ESLint,
+  formatting, and diff checks passed.
+- Independent review: no actionable findings. Authoring readiness is enforced
+  by the existing finding-target inert boundary; forced presence does not lock
+  position authoring.
+- Invalid position findings route to source Overview; ordinary Chaos destination
+  findings retain their Room Doors route.

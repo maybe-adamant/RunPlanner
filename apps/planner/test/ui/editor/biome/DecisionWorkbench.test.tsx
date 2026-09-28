@@ -3,6 +3,7 @@
 import { catalog } from '@run-planner/hades2-catalog';
 import {
   applyProjectCommand,
+  chaosGateSpawnPointIndices,
   createAdditionalExitAddress,
   createBiomeAddress,
   createBatchRewardStoreAddress,
@@ -29,6 +30,11 @@ import {
   createApplication,
   type ApplicationEvaluationEvent,
 } from '@planner/composition/createApplication';
+import {
+  isChaosGatePositionFinding,
+  semanticFindingKey,
+} from '@planner/projections/evaluationProjection';
+import { findingSelected } from '@planner/state/editorSessionSlice';
 import type {
   WorkspaceBiome,
   WorkspaceOccurrenceWorkbenchNode,
@@ -72,6 +78,7 @@ import {
   renderBiomeClearAction,
   renderDecisionWorkbench,
   renderOccurrenceWorkbench,
+  renderWorkspace,
   renderStaticDecisionWorkbench,
   type DecisionWorkbenchNode,
   type DecisionWorkbenchSubject,
@@ -152,12 +159,16 @@ function occurrenceForId(occurrenceId: string) {
     );
 }
 
-function authoredNaturalChaosFixture() {
+function authoredNaturalChaosFixture(pointCount?: 'single' | 'multiple') {
   const base = createGoldenFGHIProject();
   const located = base.route.biomes.flatMap((plan) =>
     (plan.topology?.occurrences ?? []).flatMap((occurrence) => {
       const room = catalog.rooms.byKey[occurrence.gameName];
-      return room?.additionalExits.some((exit) => exit.kind === 'chaos')
+      return room?.additionalExits.some((exit) => exit.kind === 'chaos') &&
+        (pointCount === undefined ||
+          (pointCount === 'single'
+            ? chaosGateSpawnPointIndices(room).length === 1
+            : chaosGateSpawnPointIndices(room).length > 1))
         ? [{ occurrence, plan, route: base.route }]
         : [];
     }),
@@ -372,6 +383,110 @@ describe('DecisionWorkbench', () => {
     ).toBe(false);
   });
 
+  it('edits a multi-point Chaos position, clears Default, and restores it with Undo', async () => {
+    const { located, project, source } = authoredNaturalChaosFixture('multiple');
+    const view = renderOccurrenceWorkbench(
+      project,
+      located.route.routeKey,
+      located.plan.biomeKey,
+      occurrenceForId(source.occurrenceId),
+    );
+    const position = screen.getByRole('radiogroup', { name: 'Position' });
+    const points = chaosGateSpawnPointIndices(catalog.rooms.byKey[located.occurrence.gameName]!);
+    expect(
+      within(position)
+        .getAllByRole('radio')
+        .map((option) => option.closest('label')?.textContent?.trim()),
+    ).toEqual(['Default', ...points.map(String)]);
+    expect(position.closest('label')).toBeNull();
+    const before = view.application.store.getState().projectWorkspace.history!.past.length;
+    await view.user.click(within(position).getByRole('radio', { name: '2' }));
+    expect(within(position).getByRole('radio', { name: '2' })).toHaveProperty('checked', true);
+    expect(view.application.store.getState().projectWorkspace.history!.past).toHaveLength(
+      before + 1,
+    );
+    await view.user.click(within(position).getByRole('radio', { name: 'Default' }));
+    expect(within(position).getByRole('radio', { name: 'Default' })).toHaveProperty(
+      'checked',
+      true,
+    );
+    act(() => {
+      view.application.store.dispatch(authoredProjectUndoRequested());
+    });
+    expect(within(position).getByRole('radio', { name: '2' })).toHaveProperty('checked', true);
+    await view.user.click(screen.getByRole('checkbox', { name: 'Chaos Gate' }));
+    expect(screen.queryByRole('radiogroup', { name: 'Position' })).toBeNull();
+  });
+
+  it('hides routine single-point positioning but retains invalid values for source-room repair', async () => {
+    const { biome, located, project, source } = authoredNaturalChaosFixture('single');
+    renderOccurrenceWorkbench(
+      project,
+      located.route.routeKey,
+      located.plan.biomeKey,
+      occurrenceForId(source.occurrenceId),
+    );
+    expect(screen.queryByRole('radiogroup', { name: 'Position' })).toBeNull();
+    cleanup();
+    const retained = {
+      ...project,
+      route: {
+        ...project.route,
+        biomes: project.route.biomes.map((plan) => ({
+          ...plan,
+          topology:
+            plan.topology === null
+              ? null
+              : {
+                  ...plan.topology,
+                  occurrences: plan.topology.occurrences.map((occurrence) =>
+                    occurrence.occurrenceId !== source.occurrenceId
+                      ? occurrence
+                      : {
+                          ...occurrence,
+                          additionalExits: occurrence.additionalExits?.map((exit) =>
+                            exit.kind === 'chaos' ? { ...exit, spawnPointIndex: 4 } : exit,
+                          ),
+                        },
+                  ),
+                },
+        })),
+      },
+    };
+    const view = renderWorkspace(retained, located.route.routeKey, located.plan.biomeKey);
+    const workspace = view.application.selectStructuredWorkspace(
+      view.application.store.getState(),
+    )!;
+    const owner = createAdditionalExitAddress(biome, source.occurrenceId, 'chaos');
+    const destination = workspace.focusByOwner.get(semanticAddressKey(owner));
+    expect(destination).toMatchObject({
+      roomTab: 'overview',
+      focusAddress: owner,
+      nodeKey: workspace.focusByOwner.get(
+        semanticAddressKey(createOccurrenceAddress(biome, source.occurrenceId)),
+      )!.nodeKey,
+    });
+    const finding = simulateProject(catalog, retained).findings.find(isChaosGatePositionFinding);
+    if (finding === undefined) throw new Error('Missing retained Chaos position finding');
+    act(() =>
+      view.application.store.dispatch(
+        findingSelected({ key: semanticFindingKey(finding), origin: owner }),
+      ),
+    );
+    await waitFor(() =>
+      expect(document.activeElement).toBe(screen.getByRole('radiogroup', { name: 'Position' })),
+    );
+    expect(
+      screen.getByRole('radiogroup', { name: 'Position' }).getAttribute('aria-description'),
+    ).toContain('Chaos gate position unavailable');
+    const position = screen.getByRole('radiogroup', { name: 'Position' });
+    expect(within(position).getByText('Position 4 unavailable')).toBeTruthy();
+    expect(within(position).queryByRole('radio', { name: '4' })).toBeNull();
+    expect(position.getAttribute('aria-invalid')).toBe('true');
+    await view.user.click(within(position).getByRole('radio', { name: 'Default' }));
+    expect(screen.queryByRole('radiogroup', { name: 'Position' })).toBeNull();
+  });
+
   it('keeps Chaos presence editable inside an incomplete source occurrence', async () => {
     const occurrenceId = createOccurrenceId('incomplete-chaos-source');
     let project = createProjectDocument(catalog, {
@@ -413,7 +528,7 @@ describe('DecisionWorkbench', () => {
     );
   });
 
-  it('shows an automatic Spark gate as locked room evidence and an editable outgoing door', () => {
+  it('shows an automatic Spark gate as locked room evidence with editable position repair and outgoing door', async () => {
     const well = createOccurrenceAddress(
       goldenFBiome,
       createOccurrenceId('golden-f-preboss-shop:postboss'),
@@ -423,7 +538,38 @@ describe('DecisionWorkbench', () => {
       occurrence: well,
       itemKey: 'TemporaryForcedSecretDoorTrait',
     });
-    renderOccurrenceWorkbench(project, 'Underworld', 'G', occurrenceForId(goldenGStartId));
+    // A retained out-of-domain value still needs repair on this single-point forced host.
+    const retained: ProjectDocument = {
+      ...project,
+      route: {
+        ...project.route,
+        biomes: project.route.biomes.map((plan) => ({
+          ...plan,
+          topology:
+            plan.topology === null
+              ? null
+              : {
+                  ...plan.topology,
+                  occurrences: plan.topology.occurrences.map((occurrence) =>
+                    occurrence.occurrenceId !== goldenGStartId
+                      ? occurrence
+                      : {
+                          ...occurrence,
+                          additionalExits: occurrence.additionalExits?.map((exit) =>
+                            exit.kind === 'chaos' ? { ...exit, spawnPointIndex: 2 } : exit,
+                          ),
+                        },
+                  ),
+                },
+        })),
+      },
+    };
+    const view = renderOccurrenceWorkbench(
+      retained,
+      'Underworld',
+      'G',
+      occurrenceForId(goldenGStartId),
+    );
 
     fireEvent.click(screen.getByRole('tab', { name: 'Room Overview' }));
     const addChaos = within(screen.getByLabelText('Room features')).getByRole('checkbox', {
@@ -431,6 +577,15 @@ describe('DecisionWorkbench', () => {
     });
     expect(addChaos).toHaveProperty('checked', true);
     expect(addChaos).toHaveProperty('disabled', true);
+    const position = screen.getByRole('radiogroup', { name: 'Position' });
+    expect(within(position).getByRole('radio', { name: 'Default' })).toHaveProperty(
+      'disabled',
+      false,
+    );
+    expect(position.hasAttribute('inert')).toBe(false);
+    await view.user.click(within(position).getByRole('radio', { name: 'Default' }));
+    expect(screen.queryByRole('radiogroup', { name: 'Position' })).toBeNull();
+    expect(screen.getByRole('checkbox', { name: 'Chaos Gate' })).toHaveProperty('checked', true);
 
     cleanup();
     renderDecisionWorkbench(

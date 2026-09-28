@@ -535,7 +535,22 @@ export function indexFindingsByOwner(findings: readonly SemanticFinding[]): Find
   return new Map([...mutable].map(([key, indexed]) => [key, Object.freeze(indexed)] as const));
 }
 
+export function isChaosGatePositionFinding(finding: SemanticFinding): boolean {
+  return (
+    finding.code === 'targetRoomUnavailable' &&
+    finding.origin.kind === 'additionalExit' &&
+    Array.isArray(finding.evidence.failedConditions) &&
+    finding.evidence.failedConditions.includes('spawnPointIndex')
+  );
+}
+
 export function presentFinding(finding: SemanticFinding): FindingPresentation {
+  if (isChaosGatePositionFinding(finding)) {
+    return Object.freeze({
+      title: 'Chaos gate position unavailable',
+      description: 'Choose Default or a numbered position on the source room map.',
+    });
+  }
   if (finding.origin.kind === 'keepsakeEquipResult') {
     if (finding.origin.resultKind === 'experimentalHammer') {
       if (finding.code === 'keepsakeEquipResultMissing') {

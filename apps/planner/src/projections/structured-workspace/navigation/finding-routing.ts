@@ -1,9 +1,11 @@
 import {
   createBiomeAddress,
+  createOccurrenceAddress,
   semanticAddressKey,
   type SemanticAddress,
 } from '@run-planner/engine/authored-project';
 import type { SemanticFinding } from '@run-planner/engine/simulation';
+import { isChaosGatePositionFinding } from '@planner/projections/evaluationProjection';
 
 import { StructuredWorkspaceProjectionContractError } from '../contract';
 import type { WorkspaceInspectorDestination } from '../contracts/navigation';
@@ -140,6 +142,31 @@ export function registerWorkspaceFindingDestinations(
 ): void {
   for (const finding of findings) {
     const key = semanticAddressKey(finding.origin);
+    if (finding.origin.kind === 'additionalExit' && isChaosGatePositionFinding(finding)) {
+      const source = focusByOwner.get(
+        semanticAddressKey(
+          createOccurrenceAddress(
+            createBiomeAddress(finding.origin.routeKey, finding.origin.biomeKey),
+            finding.origin.occurrenceId,
+          ),
+        ),
+      );
+      if (source === undefined) {
+        throw new StructuredWorkspaceProjectionContractError(
+          `${key} has no Chaos source destination`,
+        );
+      }
+      const destination = Object.freeze({
+        ...source,
+        ownerAddress: finding.origin,
+        focusAddress: finding.origin,
+        focusKey: key,
+        roomTab: 'overview' as const,
+      });
+      focusByOwner.set(key, destination);
+      assertFineGrainedFindingDestination(finding.origin, destination, route);
+      continue;
+    }
     const existing = focusByOwner.get(key);
     if (isFineGrainedFindingOwner(finding.origin)) {
       assertFineGrainedFindingDestination(finding.origin, existing, route);

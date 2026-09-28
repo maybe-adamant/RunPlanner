@@ -41,6 +41,11 @@ export type WorkspaceRoomFeature =
       readonly kind: 'chaos';
       readonly action: 'remove';
       readonly marker: WorkspaceMarker;
+      readonly position?: {
+        readonly value: number | null;
+        readonly choices: readonly number[];
+        readonly invalid: boolean;
+      };
       readonly presence:
         | Extract<WorkspaceFeaturePresence, { readonly kind: 'optionalPresent' }>
         | Extract<WorkspaceFeaturePresence, { readonly kind: 'forcedPresent' }>;
@@ -202,6 +207,9 @@ export interface WorkspaceZagreusSpawnInteraction {
 export interface WorkspaceChaosExitInteraction {
   readonly key: string;
   readonly owner: AdditionalExitAddress;
+  readonly positionIntent: (
+    spawnPointIndex: number | null,
+  ) => WorkspaceCommandIntent<Extract<ProjectCommand, { readonly kind: 'SetChaosSpawnPoint' }>>;
   readonly mapIntent: (
     gameName: string,
   ) => WorkspaceCommandIntent<Extract<ProjectCommand, { readonly kind: 'ReplaceChaosMap' }>>;

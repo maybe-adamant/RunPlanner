@@ -87,7 +87,7 @@ export function ZagreusSpawnWorkbench({
   );
 }
 
-/** A selected source exposes only the declared Chaos creation command. */
+/** Presence and physical position belong to the source room's feature row. */
 export function ChaosSpawnWorkbench({
   feature,
   interactions,
@@ -98,35 +98,76 @@ export function ChaosSpawnWorkbench({
   const findingTarget = useFindingTarget();
   const executeIntent = useCommandIntent();
   const owner = feature.action === 'add' ? feature.control.owner : feature.owner;
+  const position = feature.action === 'remove' ? feature.position : undefined;
   return (
-    <label className="room-feature-presence-row">
-      <input
-        {...findingTarget(owner)}
-        checked={feature.action === 'remove'}
-        data-command={feature.action === 'add' ? 'AddChaos' : 'RemoveChaos'}
-        disabled={
-          feature.presence.kind === 'forcedPresent' ||
-          (feature.presence.kind === 'optionalAbsent' && !feature.presence.enabled)
-        }
-        onChange={() => {
-          if (feature.action === 'add') {
-            executeIntent(
-              requireWorkspaceInteraction(
-                interactions.chaosSpawns,
-                workspaceInteractionKey(owner),
-              ).spawnIntent(),
-            );
-            return;
+    <div className="chaos-feature-row">
+      <label className="room-feature-presence-row">
+        <input
+          {...(position === undefined
+            ? findingTarget(owner)
+            : findingTarget(
+                owner,
+                `chaos-presence-${workspaceInteractionKey(owner)}`,
+                owner,
+                () => false,
+              ))}
+          checked={feature.action === 'remove'}
+          data-command={feature.action === 'add' ? 'AddChaos' : 'RemoveChaos'}
+          disabled={
+            feature.presence.kind === 'forcedPresent' ||
+            (feature.presence.kind === 'optionalAbsent' && !feature.presence.enabled)
           }
-          const removeIntent = requireWorkspaceInteraction(
-            interactions.chaosExits,
-            workspaceInteractionKey(owner),
-          ).removeIntent;
-          if (removeIntent !== undefined) executeIntent(removeIntent);
-        }}
-        type="checkbox"
-      />
-      <span>Chaos Gate</span>
-    </label>
+          onChange={() => {
+            if (feature.action === 'add') {
+              executeIntent(
+                requireWorkspaceInteraction(
+                  interactions.chaosSpawns,
+                  workspaceInteractionKey(owner),
+                ).spawnIntent(),
+              );
+              return;
+            }
+            const removeIntent = requireWorkspaceInteraction(
+              interactions.chaosExits,
+              workspaceInteractionKey(owner),
+            ).removeIntent;
+            if (removeIntent !== undefined) executeIntent(removeIntent);
+          }}
+          type="checkbox"
+        />
+        <span>Chaos Gate</span>
+      </label>
+      {position === undefined ? null : (
+        <div
+          {...findingTarget(owner)}
+          aria-label="Position"
+          aria-invalid={position.invalid || undefined}
+          className="chaos-position-control"
+          role="radiogroup"
+          tabIndex={-1}
+        >
+          <span>Position</span>
+          {[null, ...position.choices].map((value) => (
+            <label key={value ?? 'default'}>
+              <input
+                type="radio"
+                name={`chaos-position-${workspaceInteractionKey(owner)}`}
+                checked={position.value === value}
+                onChange={() =>
+                  executeIntent(
+                    requireWorkspaceInteraction(
+                      interactions.chaosExits,
+                      workspaceInteractionKey(owner),
+                    ).positionIntent(value),
+                  )
+                }
+              />
+              {value ?? 'Default'}
+            </label>
+          ))}
+          {position.invalid ? <span>Position {position.value} unavailable</span> : null}
+        </div>
+      )}
+    </div>
   );
 }
