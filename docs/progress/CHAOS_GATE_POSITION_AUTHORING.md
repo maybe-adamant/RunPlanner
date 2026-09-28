@@ -1,7 +1,8 @@
 # Chaos Gate Position Authoring
 
-Status: proposed execution contract; awaiting approval and commit before implementation.
+Status: approved execution contract; Gate A complete, Gates B/C pending.
 Base: `dd1cf56b`.
+Plan commit: `eaeb3035`.
 
 ## Objective
 
@@ -101,7 +102,7 @@ Publish optional `spawnPointIndex` on the Chaos entry in `overview.additional`.
 It is invalid on Zagreus Contract entries. Carry it through materialization
 and execution assembly explicitly, including unpicked Chaos gates.
 
-Proposed execution-only compatibility change: protocol 49 to 50, performed
+Approved execution-only compatibility change: protocol 49 to 50, performed
 atomically on both TypeScript and Lua sides in Gate C, including
 `game-module/src/execution-compatibility.json` and packaging/contact tests.
 Old execution artifacts require re-publication; authored saves do not migrate.
@@ -209,3 +210,17 @@ entry/normal-door placement authoring, map regeneration, resource placement,
 capture-module edits, save migration, or new runtime position-conformance system.
 Extend the existing Chaos path in place; no parallel spawn adapter or duplicate
 catalog/map manifest. Keep existing presence and destination controls.
+
+## Gate A verification
+
+- Catalog: 34 files / 296 tests passed.
+- Engine: 185 files / 2,374 tests passed, including Default encoding, position
+  command/Undo, forced and unpicked validation, and Ixion retention/new-host defaults.
+- Workspace and fixture typechecking passed; focused ESLint and diff checks passed.
+- Independent review: no actionable findings.
+- One-off comparison with the capture annotation metadata: all 125 supported
+  host counts matched. No external screenshot path is required by repository tests.
+- Existing Ixion reconciliation preserves the surviving gate record, so no
+  production reconciliation rewrite was necessary. No authored schema, catalog
+  compatibility, or execution protocol version changed in this gate.
+- Full repository closure and live placement verification remain Gate C work.

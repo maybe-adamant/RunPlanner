@@ -1,4 +1,5 @@
 import type { BiomeLayout, Catalog, RoomDeclaration } from '../../catalog-schema';
+import { chaosGateSpawnPointIndices } from '../../authored-project/chaos-gate-position';
 import { evaluateRequirement } from '../../requirements/evaluator';
 import { semanticAddressKey } from '../../authored-project/addresses';
 import type { ProgressiveRoomHistoryViews } from '../history';
@@ -198,6 +199,23 @@ export function evaluateAdditionalContinuationEntries(
       );
       const host = layout.chaos;
       const failedConditions: string[] = [];
+      if (
+        continuation.spawnPointIndex !== undefined &&
+        (sourceDeclaration === undefined ||
+          !chaosGateSpawnPointIndices(sourceDeclaration).includes(continuation.spawnPointIndex))
+      ) {
+        appendFinding(
+          findings,
+          findingRegions,
+          finding('targetRoomUnavailable', continuation.origin, {
+            kind: 'chaos',
+            sourceGameName: source.gameName,
+            spawnPointIndex: continuation.spawnPointIndex,
+            secretPointAnchorCount: sourceDeclaration?.secretPointAnchorCount ?? 0,
+            failedConditions: Object.freeze(['spawnPointIndex']),
+          }),
+        );
+      }
       if (declaration === undefined) failedConditions.push('sourceCapability');
       if (host === undefined || !host.roomGameNames.includes(continuation.room.gameName)) {
         failedConditions.push('targetDomain');

@@ -410,3 +410,4 @@ export {
   type DerivedRouteLoadout,
   type StartingArcanaGraspAssessment,
 } from './loadout';
+export { chaosGateSpawnPointIndices } from './chaos-gate-position';

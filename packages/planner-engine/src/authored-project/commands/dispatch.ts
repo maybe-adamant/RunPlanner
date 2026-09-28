@@ -219,6 +219,7 @@ function applyUnchecked(
     case 'RemoveZagreusContract':
     case 'AddChaos':
     case 'RemoveChaos':
+    case 'SetChaosSpawnPoint':
     case 'ReplaceChaosMap':
       return applyRouteDetourCommand(
         document,

@@ -698,6 +698,71 @@ describe('route-detour simulation', () => {
     );
   });
 
+  it.each([false, true])(
+    'assesses physical position even for an unpicked or forced gate (picked=%s)',
+    (picked) => {
+      const built = buildNaturalChaosProject();
+      let project = built.project;
+      if (!picked) {
+        project = replaceBatchStore(project, fBiome, built.opening, 'RunProgress');
+        const normal = createOccurrenceId('position-normal-door');
+        project = addTarget(project, fBiome, built.opening, 'exit1', normal, 'F_Combat03');
+        project = replaceIncomingReward(project, fBiome, normal, 'MaxHealthDrop');
+        project = setNormalSelection(project, fBiome, built.opening, 'exit1');
+      }
+      const raw = structuredClone(project);
+      const gate = raw.route.biomes[0]!.topology!.occurrences.find(
+        (room) => room.occurrenceId === built.opening,
+      )!.additionalExits[0]!;
+      Object.assign(gate, { spawnPointIndex: 2 });
+      project = decodeProjectDocument(raw, catalog);
+      const { snapshot, history } = prefix(project, fBiome);
+      const continuations = snapshot.decisions.flatMap((decision) =>
+        decision.kind === 'batch' ? decision.additional : [],
+      );
+      if (snapshot.frontier?.kind === 'exitDecision')
+        continuations.push(...snapshot.frontier.additional);
+      expect(continuations).toContainEqual(
+        expect.objectContaining({
+          origin: built.additional,
+          picked,
+          spawnPointIndex: 2,
+        }),
+      );
+      for (const forced of [
+        new Set<string>(),
+        new Set([semanticAddressKey(createOccurrenceAddress(fBiome, built.opening))]),
+      ]) {
+        expect(
+          evaluateBiomeRoomGeneration(catalog, snapshot, history, 1, undefined, forced).findings,
+        ).toContainEqual(
+          expect.objectContaining({
+            code: 'targetRoomUnavailable',
+            origin: built.additional,
+            evidence: expect.objectContaining({
+              spawnPointIndex: 2,
+              secretPointAnchorCount: 1,
+              failedConditions: ['spawnPointIndex'],
+            }),
+          }),
+        );
+      }
+      const repaired = applyProjectCommand(project, catalog, {
+        kind: 'SetChaosSpawnPoint',
+        additional: built.additional,
+        spawnPointIndex: null,
+      });
+      const repair = prefix(repaired, fBiome);
+      expect(
+        evaluateBiomeRoomGeneration(catalog, repair.snapshot, repair.history, 1).findings,
+      ).not.toContainEqual(
+        expect.objectContaining({
+          evidence: expect.objectContaining({ failedConditions: ['spawnPointIndex'] }),
+        }),
+      );
+    },
+  );
+
   it('takes selected N Chaos directly to the fresh depth-two Hub takeover without PreHub', () => {
     const opening = createOccurrenceId('natural-chaos-n-selected-opening');
     const chaos = createOccurrenceId('natural-chaos-n-selected-room');

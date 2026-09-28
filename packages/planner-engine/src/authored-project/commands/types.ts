@@ -325,6 +325,11 @@ export type RouteDetourCommand =
       readonly additional: AdditionalExitAddress;
     }
   | {
+      readonly kind: 'SetChaosSpawnPoint';
+      readonly additional: AdditionalExitAddress;
+      readonly spawnPointIndex: number | null;
+    }
+  | {
       readonly kind: 'RemoveGeneratedChaos';
       readonly additional: AdditionalExitAddress;
     }

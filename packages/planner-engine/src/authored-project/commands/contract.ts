@@ -101,6 +101,7 @@ function commandContractAddress(
     case 'AddChaos':
     case 'GenerateChaos':
     case 'RemoveChaos':
+    case 'SetChaosSpawnPoint':
     case 'RemoveGeneratedChaos':
       return command.additional;
     case 'RemoveHubDecision':

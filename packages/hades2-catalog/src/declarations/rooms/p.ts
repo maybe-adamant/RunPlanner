@@ -26,6 +26,7 @@ const chaosExit = {
 export const pRooms = [
   {
     gameName: 'P_Intro',
+    secretPointAnchorCount: 1,
     resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Entrance',
     roomSetKey: 'P',
@@ -52,6 +53,7 @@ export const pRooms = [
   },
   {
     gameName: 'P_Combat01',
+    secretPointAnchorCount: 1,
     ...surfaceShopHost(0.13, false, 1),
     resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Combat 01',
@@ -92,6 +94,7 @@ export const pRooms = [
   },
   {
     gameName: 'P_Combat02',
+    secretPointAnchorCount: 2,
     ...surfaceShopHost(0.13, false, 1),
     resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
     label: 'Combat 02',
@@ -127,6 +130,7 @@ export const pRooms = [
   },
   {
     gameName: 'P_Combat03',
+    secretPointAnchorCount: 2,
     ...surfaceShopHost(0.13, false, 1),
     resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Combat 03',
@@ -167,6 +171,7 @@ export const pRooms = [
   },
   {
     gameName: 'P_Combat04',
+    secretPointAnchorCount: 2,
     ...surfaceShopHost(0.13, false, 0),
     resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
     label: 'Combat 04',
@@ -202,6 +207,7 @@ export const pRooms = [
   },
   {
     gameName: 'P_Combat05',
+    secretPointAnchorCount: 1,
     ...surfaceShopHost(0.13, false, 1),
     resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Combat 05',
@@ -237,6 +243,7 @@ export const pRooms = [
   },
   {
     gameName: 'P_Combat06',
+    secretPointAnchorCount: 1,
     ...surfaceShopHost(0.13, false, 1),
     resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Combat 06',
@@ -272,6 +279,7 @@ export const pRooms = [
   },
   {
     gameName: 'P_Combat07',
+    secretPointAnchorCount: 3,
     ...surfaceShopHost(0.13, false, 1),
     resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Combat 07',
@@ -307,6 +315,7 @@ export const pRooms = [
   },
   {
     gameName: 'P_Combat08',
+    secretPointAnchorCount: 2,
     ...surfaceShopHost(0.13, false, 1),
     resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
     label: 'Combat 08',
@@ -342,6 +351,7 @@ export const pRooms = [
   },
   {
     gameName: 'P_Combat09',
+    secretPointAnchorCount: 2,
     ...surfaceShopHost(0.13, false, 1),
     resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Shovel']),
     label: 'Combat 09',
@@ -377,6 +387,7 @@ export const pRooms = [
   },
   {
     gameName: 'P_Combat10',
+    secretPointAnchorCount: 1,
     ...surfaceShopHost(0.13, false, 1),
     resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Combat 10',
@@ -412,6 +423,7 @@ export const pRooms = [
   },
   {
     gameName: 'P_Combat11',
+    secretPointAnchorCount: 2,
     ...surfaceShopHost(0.13, false, 1),
     resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Combat 11',
@@ -447,6 +459,7 @@ export const pRooms = [
   },
   {
     gameName: 'P_Combat12',
+    secretPointAnchorCount: 1,
     ...surfaceShopHost(0.13, false, 1),
     resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
     label: 'Combat 12',
@@ -482,6 +495,7 @@ export const pRooms = [
   },
   {
     gameName: 'P_Combat13',
+    secretPointAnchorCount: 2,
     ...surfaceShopHost(0.13, false, 1),
     resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Combat 13',
@@ -517,6 +531,7 @@ export const pRooms = [
   },
   {
     gameName: 'P_Combat14',
+    secretPointAnchorCount: 1,
     ...surfaceShopHost(0.13, false, 1),
     resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Combat 14',
@@ -552,6 +567,7 @@ export const pRooms = [
   },
   {
     gameName: 'P_Combat15',
+    secretPointAnchorCount: 2,
     ...surfaceShopHost(0.13, false, 1),
     resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Combat 15',
@@ -587,6 +603,7 @@ export const pRooms = [
   },
   {
     gameName: 'P_Combat16',
+    secretPointAnchorCount: 2,
     ...surfaceShopHost(0.13, false, 1),
     resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Combat 16',
@@ -622,6 +639,7 @@ export const pRooms = [
   },
   {
     gameName: 'P_Combat17',
+    secretPointAnchorCount: 3,
     ...surfaceShopHost(0.13, false, 1),
     resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Combat 17',
@@ -662,6 +680,7 @@ export const pRooms = [
   },
   {
     gameName: 'P_Combat18',
+    secretPointAnchorCount: 1,
     ...surfaceShopHost(0.13, false, 1),
     resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
     label: 'Combat 18',
@@ -702,6 +721,7 @@ export const pRooms = [
   },
   {
     gameName: 'P_Combat19',
+    secretPointAnchorCount: 1,
     ...surfaceShopHost(0.13, false, 1),
     resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
     label: 'Combat 19',
@@ -770,6 +790,7 @@ export const pRooms = [
   },
   {
     gameName: 'P_Reprieve01',
+    secretPointAnchorCount: 1,
     ...surfaceShopHost(1, false, 1),
     resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Fountain',
@@ -806,6 +827,7 @@ export const pRooms = [
   },
   {
     gameName: 'P_Shop01',
+    secretPointAnchorCount: 1,
     resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Midshop',
     roomSetKey: 'P',

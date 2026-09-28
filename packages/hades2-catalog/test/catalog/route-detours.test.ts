@@ -504,6 +504,27 @@ describe('route detour catalog declarations', () => {
     );
   });
 
+  it('declares all supported physical point domains, including the audited Surface counts', () => {
+    const catalog = createCatalog(declarations);
+    const hosts = catalog.rooms.values.filter((room) =>
+      room.additionalExits.some((exit) => exit.kind === 'chaos' && exit.canHost),
+    );
+    expect(hosts).toHaveLength(125);
+    expect(hosts.filter((room) => room.secretPointAnchorCount === 1)).toHaveLength(62);
+    expect(hosts.filter((room) => (room.secretPointAnchorCount ?? 0) > 1)).toHaveLength(63);
+    expect(catalog.rooms.byKey.N_Opening01?.secretPointAnchorCount).toBe(2);
+    expect(
+      Array.from(
+        { length: 19 },
+        (_, index) =>
+          catalog.rooms.byKey[`P_Combat${String(index + 1).padStart(2, '0')}`]
+            ?.secretPointAnchorCount,
+      ),
+    ).toEqual([1, 2, 2, 2, 1, 1, 3, 2, 2, 1, 2, 1, 2, 1, 2, 2, 3, 1, 1]);
+    for (const gameName of ['P_Intro', 'P_Reprieve01', 'P_Shop01'])
+      expect(catalog.rooms.byKey[gameName]?.secretPointAnchorCount).toBe(1);
+  });
+
   it('requires the terminal route position to have no Postboss continuation', () => {
     const raw = input();
     const routeIndex = raw.routes.findIndex((route) => route.key === 'Underworld');

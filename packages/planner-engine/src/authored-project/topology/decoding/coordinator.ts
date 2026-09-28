@@ -65,9 +65,15 @@ function decodeAdditionalExits(
     }
     expectExactKeys(
       additional,
-      kind === 'chaos' && additional.origin !== undefined
-        ? ['kind', 'key', 'occurrenceId', 'origin']
-        : ['kind', 'key', 'occurrenceId'],
+      [
+        'kind',
+        'key',
+        'occurrenceId',
+        ...(kind === 'chaos' && additional.origin !== undefined ? ['origin'] : []),
+        ...(kind === 'chaos' && additional.spawnPointIndex !== undefined
+          ? ['spawnPointIndex']
+          : []),
+      ],
       additionalPath,
     );
     const key = expectNonBlankString(additional.key, `${additionalPath}.key`);
@@ -91,6 +97,14 @@ function decodeAdditionalExits(
     }
     if (kind === 'zagreusContract')
       return Object.freeze({ kind, key, occurrenceId: id }) as AuthoredAdditionalExit;
+    const spawnPointIndex = additional.spawnPointIndex;
+    if (
+      spawnPointIndex !== undefined &&
+      (typeof spawnPointIndex !== 'number' ||
+        !Number.isInteger(spawnPointIndex) ||
+        spawnPointIndex < 1)
+    )
+      failProjectDocument(`${additionalPath}.spawnPointIndex`, 'must be a positive integer');
     let origin: IxionGeneratedChaosOrigin | undefined;
     if (additional.origin !== undefined) {
       const rawOrigin = expectRecord(additional.origin, `${additionalPath}.origin`);
@@ -141,6 +155,7 @@ function decodeAdditionalExits(
       key,
       occurrenceId: id,
       ...(origin === undefined ? {} : { origin }),
+      ...(spawnPointIndex === undefined ? {} : { spawnPointIndex }),
     }) as AuthoredAdditionalExit;
   });
   return Object.freeze(additional);

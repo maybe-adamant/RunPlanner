@@ -1,4 +1,5 @@
 import type { Catalog, RoomDeclaration } from '../../catalog-schema';
+import { chaosGateSpawnPointIndices } from '../chaos-gate-position';
 import { createInitialExitDecision } from '../batchState';
 import type {
   AnomalyReplacementProvenance,
@@ -713,6 +714,47 @@ function addChaos(
   );
 }
 
+function setChaosSpawnPoint(
+  document: ProjectDocument,
+  catalog: Catalog,
+  located: LocatedBiome,
+  command: Extract<RouteDetourCommand, { readonly kind: 'SetChaosSpawnPoint' }>,
+): ProjectDocument {
+  const topology = requireTopology(located.plan, command);
+  const { occurrence, room } = requireChaosSource(
+    catalog,
+    located,
+    topology,
+    command.additional.occurrenceId,
+    command,
+  );
+  const gate = occurrence.additionalExits.find(
+    (exit) => exit.kind === 'chaos' && exit.key === command.additional.additionalExitKey,
+  );
+  if (gate?.kind !== 'chaos') failCommand(command, 'Chaos gate is not authored');
+  const value = command.spawnPointIndex;
+  if (value !== null && !chaosGateSpawnPointIndices(room).includes(value))
+    failCommand(command, `${value} is outside the ${room.gameName} SecretPoint domain`);
+  if (gate.spawnPointIndex === (value ?? undefined)) return document;
+  const replacement = { ...gate };
+  if (value === null) delete replacement.spawnPointIndex;
+  else replacement.spawnPointIndex = value;
+  Object.freeze(replacement);
+  return updateTopology(
+    document,
+    located,
+    replaceOccurrence(
+      topology,
+      Object.freeze({
+        ...occurrence,
+        additionalExits: Object.freeze(
+          occurrence.additionalExits.map((exit) => (exit === gate ? replacement : exit)),
+        ),
+      }),
+    ),
+  );
+}
+
 function removeChaos(
   document: ProjectDocument,
   catalog: Catalog,
@@ -861,6 +903,8 @@ export function applyRouteDetourCommand(
     case 'RemoveChaos':
     case 'RemoveGeneratedChaos':
       return removeChaos(document, catalog, located, command);
+    case 'SetChaosSpawnPoint':
+      return setChaosSpawnPoint(document, catalog, located, command);
     case 'ReplaceChaosMap':
       return replaceChaosMap(document, catalog, located, command);
   }
