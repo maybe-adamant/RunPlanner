@@ -47,6 +47,7 @@ export type ProjectOperation =
   | 'loadProfile'
   | 'new'
   | 'publishGame'
+  | 'saveBeforeUpdate'
   | 'saveProfile'
   | 'saveProfileAs';
 
@@ -78,6 +79,8 @@ export interface ProjectOperations {
   /** Whether the current project compiles to an execution plan, and its fingerprint. */
   inspectCurrentGamePlan(): CurrentGamePlan;
   publishGame(slotNumber: GamePlanSlotNumber): Promise<ProjectOperationResult>;
+  /** Saves an unsaved or never-saved project before the planner closes to update. */
+  saveBeforeUpdate(): Promise<ProjectOperationResult>;
   saveProfile(): Promise<ProjectOperationResult>;
   saveProfileAs(): Promise<ProjectOperationResult>;
   loadProfile(): Promise<ProjectOperationResult>;
@@ -110,6 +113,7 @@ const operationLabels: Readonly<Record<ProjectOperation, string>> = Object.freez
   loadProfile: 'Load Profile',
   new: 'New project',
   publishGame: 'Send to game',
+  saveBeforeUpdate: 'Save before update',
   saveProfile: 'Save Profile',
   saveProfileAs: 'Save As',
 });
@@ -203,6 +207,11 @@ export function createProjectOperations(
     }
   };
   const saveProfile = () => serializedSave(saveProfileNow);
+  // A project that is not both saved to a file and clean is saved first (Save As if never saved).
+  const saveUnlessClean = (): Promise<ProjectOperationResult> | null =>
+    activeProfileFile === null || selectProfileStatus(options.store.getState()) !== 'Clean'
+      ? saveProfile()
+      : null;
   return Object.freeze({
     saveAsAvailable: options.profileFile.supportsSaveAs === true,
     async createNew(
@@ -306,11 +315,9 @@ export function createProjectOperations(
         assembleExecutionProduct({ assembly: workspace.assembly, catalog: options.catalog });
         // Sending needs a saved file with no unsaved changes; the file's name names the plan.
         let saved = false;
-        if (
-          activeProfileFile === null ||
-          selectProfileStatus(options.store.getState()) !== 'Clean'
-        ) {
-          const saving = await saveProfile();
+        const pendingSave = saveUnlessClean();
+        if (pendingSave !== null) {
+          const saving = await pendingSave;
           if (saving.status === 'cancelled') {
             return result('publishGame', 'cancelled', 'Send to game cancelled; nothing was sent.');
           }
@@ -352,6 +359,31 @@ export function createProjectOperations(
       } catch (error) {
         return failure('publishGame', error);
       }
+    },
+    async saveBeforeUpdate(): Promise<ProjectOperationResult> {
+      if (options.store.getState().projectWorkspace.kind !== 'openProject') {
+        return result('saveBeforeUpdate', 'success', 'No project is open.');
+      }
+      const pendingSave = saveUnlessClean();
+      if (pendingSave === null) {
+        return result('saveBeforeUpdate', 'success', 'The project is already saved.');
+      }
+      const saving = await pendingSave;
+      if (saving.status === 'cancelled') {
+        return result(
+          'saveBeforeUpdate',
+          'cancelled',
+          'Update cancelled; the project was not saved.',
+        );
+      }
+      if (saving.status === 'failure') {
+        return result(
+          'saveBeforeUpdate',
+          'failure',
+          `Not saved, so not updated: ${saving.message}`,
+        );
+      }
+      return result('saveBeforeUpdate', 'success', 'Saved the profile.');
     },
     saveProfile,
     saveProfileAs: () =>

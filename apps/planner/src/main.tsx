@@ -34,14 +34,6 @@ const appScalePreference = createBrowserAppScalePreference(() => globalThis.loca
 const autosaveRecovery = createBrowserAutosaveRecoveryAdapter({
   storage: () => globalThis.localStorage,
 });
-const releaseUpdates =
-  tauriHost && __RUN_PLANNER_BUILD_IDENTITY__.version !== 'Development'
-    ? createReleaseUpdateController({
-        buildIdentity: __RUN_PLANNER_BUILD_IDENTITY__,
-        host: createTauriReleaseUpdateHost(),
-        skipPreference: createBrowserReleaseSkipPreference(() => globalThis.localStorage),
-      })
-    : undefined;
 const profileFile = tauriHost
   ? createTauriProfileFileAdapter({
       activate: (path) => tauriInvoke('profile_file_activate', { path }),
@@ -96,6 +88,16 @@ const application = createApplication({
 });
 
 await application.startupReady;
+
+const releaseUpdates =
+  tauriHost && __RUN_PLANNER_BUILD_IDENTITY__.version !== 'Development'
+    ? createReleaseUpdateController({
+        buildIdentity: __RUN_PLANNER_BUILD_IDENTITY__,
+        host: createTauriReleaseUpdateHost(),
+        saveBeforeInstall: () => application.projectOperations.saveBeforeUpdate(),
+        skipPreference: createBrowserReleaseSkipPreference(() => globalThis.localStorage),
+      })
+    : undefined;
 
 createRoot(rootElement, devBrowserErrorReporter?.rootOptions).render(
   <StrictMode>

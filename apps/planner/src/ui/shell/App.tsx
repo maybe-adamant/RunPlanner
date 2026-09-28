@@ -12,8 +12,10 @@ import {
   projectRouteNavigation,
   type EditorNavigation,
 } from '@planner/projections/editorNavigation';
+import { updateInstallLabel } from '@planner/projections/releaseUpdate';
 import {
   selectPresentProject,
+  selectProfileStatus,
   selectProjectEvaluation,
   type RootState,
   useAppSelector,
@@ -63,6 +65,13 @@ export function App({
 }: AppProps) {
   const scalePercent = useAppScale(appScalePreference);
   const project = useAppSelector(selectPresentProject);
+  const installLabel = useAppSelector((state) =>
+    updateInstallLabel(
+      state.projectWorkspace.kind === 'openProject',
+      selectProfileStatus(state),
+      state.profileSession.fileName,
+    ),
+  );
   const [entryOpen, setEntryOpen] = useState(project === undefined);
   const [gameOpen, setGameOpen] = useState(false);
   const gameButton = useRef<HTMLButtonElement>(null);
@@ -209,7 +218,9 @@ export function App({
           </div>
         </header>
 
-        {releaseUpdates === undefined ? null : <ReleaseUpdateNotice controller={releaseUpdates} />}
+        {releaseUpdates === undefined ? null : (
+          <ReleaseUpdateNotice controller={releaseUpdates} installLabel={installLabel} />
+        )}
 
         {gameOpen && (
           <GamePanel

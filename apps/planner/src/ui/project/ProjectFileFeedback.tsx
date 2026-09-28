@@ -19,6 +19,7 @@ const failureLabels: Record<ProjectOperation, string> = {
   saveProfile: 'Couldn’t save file',
   saveProfileAs: 'Couldn’t save file',
   publishGame: 'Couldn’t publish to game',
+  saveBeforeUpdate: 'Couldn’t save before updating',
   exportRecovery: 'Couldn’t export autosave',
   discardRecovery: 'Couldn’t discard autosave',
 };
@@ -29,6 +30,7 @@ const successLabels: Record<ProjectOperation, string> = {
   saveProfile: 'File saved',
   saveProfileAs: 'Saved as new file',
   publishGame: 'Published to game',
+  saveBeforeUpdate: 'File saved',
   exportRecovery: 'Autosave exported',
   discardRecovery: 'Autosave discarded',
 };
