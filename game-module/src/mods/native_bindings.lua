@@ -85,7 +85,6 @@ return {
             forfeit = "BoonSkipShrineUpgrade",
         },
         stygianWellTraits = {
-            sparkUses = "TemporaryForcedSecretDoorTrait",
             yarnUses = "TemporaryBoonRarityTrait",
             hymnUses = "LimitedSwapBonusTrait",
             discountUses = "TemporaryDiscountTrait",

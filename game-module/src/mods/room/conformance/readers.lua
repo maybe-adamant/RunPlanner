@@ -195,7 +195,6 @@ end
 local function stygianWell(run)
     local keys = conformanceBindings.stygianWellTraits
     return {
-        sparkUses = remaining(run, keys.sparkUses),
         yarnUses = remaining(run, keys.yarnUses),
         hymnUses = remaining(run, keys.hymnUses),
         discountUses = durationList(run, keys.discountUses),
