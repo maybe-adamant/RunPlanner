@@ -759,7 +759,7 @@ describe('planner history interaction', () => {
         hour: '2-digit',
         minute: '2-digit',
       });
-      expect(button.getAttribute('title')).toBe(`Sent to slot 3 at ${sentTime}`);
+      expect(button.getAttribute('title')).toBe(`Sent to slot 3 at ${sentTime}; now active`);
       expect(status.textContent).toBe('Sent to slot 3.');
       await act(async () => {
         fireEvent.click(button);
@@ -779,6 +779,25 @@ describe('planner history interaction', () => {
     expect(application.store.getState().gameSendSession.lastSentSlot).toBeNull();
   });
 
+  it('announces a send whose slot was not made active as sent, not failed', async () => {
+    const game = createFakeGameModuleHost();
+    const { application } = await savedApplication(game);
+    application.store.dispatch(gamePlanSent({ slot: 4 }));
+    const { user } = renderPlannerForInteraction({ application });
+    game.host.publish.mockResolvedValueOnce({
+      status: 'published',
+      message: 'Published to Slot 4, but it was not made active.',
+      blockers: [],
+      activationProblem: 'could not replace active slot file.',
+    });
+    const button = await screen.findByRole('button', { name: 'Send · Slot 4' });
+    await user.click(button);
+    await waitFor(() => expect(button.textContent).toBe('✓ Sent · Slot 4'));
+    expect(button.getAttribute('title')).toMatch(/; not made active$/);
+    expect(sendStatus().textContent).toBe('Sent to slot 4; not made active.');
+    expect(screen.queryByRole('button', { name: 'Game — last send failed' })).toBeNull();
+  });
+
   it('reports a failed send on the button, in the Game panel and on the indicator', async () => {
     const game = createFakeGameModuleHost();
     const { application } = await savedApplication(game);
@@ -788,6 +807,7 @@ describe('planner history interaction', () => {
       status: 'nativeWrite',
       message: 'could not write plan slot.',
       blockers: [],
+      activationProblem: null,
     });
     const button = await screen.findByRole('button', { name: 'Send · Slot 4' });
     await user.click(button);
@@ -923,7 +943,12 @@ describe('planner history interaction', () => {
         new Promise((resolve) => {
           publish = () => {
             game.published.push({ slotNumber, json });
-            resolve({ status: 'published', message: 'Published.', blockers: [] });
+            resolve({
+              status: 'published',
+              message: 'Published.',
+              blockers: [],
+              activationProblem: null,
+            });
           };
         }),
     );

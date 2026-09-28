@@ -6,6 +6,7 @@ import type {
   GameStatusSnapshot,
 } from '@planner/persistence/gameModuleHost';
 import {
+  describeSent,
   gameSaveState,
   projectGameIndicator,
   projectGameSendButton,
@@ -58,11 +59,15 @@ export function GameHeaderControls({
   const eligible = useAppSelector(sendEligible);
   const lastSentSlot = useAppSelector((state) => state.gameSendSession.lastSentSlot);
   const lastSendFailed = useAppSelector((state) => state.gameSendSession.lastFailure !== null);
+  const activationFailure = useAppSelector((state) => state.gameSendSession.lastActivationFailure);
   const saveState = useAppSelector((state) =>
     gameSaveState(selectProfileStatus(state), state.profileSession.fileName),
   );
   const [activity, setActivity] = useState<GameSendActivity>(IDLE);
-  const [announcement, setAnnouncement] = useState('');
+  // A successful send is announced from state, so it reflects the slot as last read.
+  const [announcement, setAnnouncement] = useState<string | { readonly sent: GamePlanSlotNumber }>(
+    '',
+  );
 
   useEffect(() => {
     if (gameStatus === undefined) return;
@@ -83,7 +88,14 @@ export function GameHeaderControls({
   const indicator =
     gameStatus === undefined ? null : projectGameIndicator(snapshot, lastSendFailed);
   const project: GameSendProject | null = projectId === null ? null : { projectId, eligible };
-  const button = projectGameSendButton(snapshot.status, project, lastSentSlot, saveState, activity);
+  const button = projectGameSendButton(
+    snapshot.status,
+    project,
+    lastSentSlot,
+    saveState,
+    activity,
+    activationFailure,
+  );
 
   // The plan is compiled only here, by the publish path, when the user asks to send.
   const send = async (slot: GamePlanSlotNumber) => {
@@ -93,7 +105,7 @@ export function GameHeaderControls({
       const result = await operations.publishGame(slot);
       if (result.status === 'success') {
         setActivity({ kind: 'sent', slot, atMs: Date.now() });
-        setAnnouncement(`Sent to slot ${slot}.`);
+        setAnnouncement({ sent: slot });
       } else if (result.status === 'failure') {
         setActivity({ kind: 'failed' });
         setAnnouncement(`Not sent: ${result.message}`);
@@ -130,7 +142,9 @@ export function GameHeaderControls({
         {button.description}
       </span>
       <span className="visually-hidden game-send-status" role="status">
-        {announcement}
+        {typeof announcement === 'string'
+          ? announcement
+          : describeSent(announcement.sent, activationFailure, snapshot.status)}
       </span>
       <button
         {...(indicator === null ? {} : { 'aria-label': indicator.accessibleName })}

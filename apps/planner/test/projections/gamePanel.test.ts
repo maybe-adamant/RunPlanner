@@ -9,9 +9,14 @@ import {
   projectGameIndicator,
   projectGamePlans,
   projectGameSendButton,
+  describeActiveSlotSetting,
   describeLastSendFailure,
+  describeSent,
+  describeSentNotActivated,
 } from '@planner/projections/gamePanel';
 import { catalog } from '@run-planner/hades2-catalog';
+import type { GameActiveSlot } from '@planner/persistence/gameModuleHost';
+import type { GameActivationActivity } from '@planner/projections/gamePanel';
 import { gameModuleStatus, planSlot, planSlots } from '@planner-test/fixtures/gameModuleHost';
 
 type StatusOverrides = NonNullable<Parameters<typeof gameModuleStatus>[0]>;
@@ -410,6 +415,7 @@ describe('Game panel projection', () => {
       summary: null,
       marker: 'current',
       action: { label: 'Replace', confirm: true },
+      active: { checked: false, intent: { kind: 'setActiveSlot', slot: 1 } },
     });
     expect(catalog.biomes.byKey.Q!.label).not.toBe('Q');
     expect(plans?.rows[1]).toMatchObject({
@@ -629,7 +635,7 @@ describe('Game panel projection', () => {
         'sent',
         '✓ Sent · Slot 2',
         null,
-        `Sent to slot 2 at ${new Date(sentAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`,
+        `Sent to slot 2 at ${new Date(sentAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}; now active`,
       ],
       [
         projectGameSendButton(ready, mine, 2, 'clean', { kind: 'failed' }),
@@ -658,6 +664,118 @@ describe('Game panel projection', () => {
     expect(
       projectGameSendButton(ready, mine, 6, 'clean', { kind: 'sent', slot: 6, atMs: 0 }).label,
     ).toBe('✓ Sent · Slot 6');
+    const notActive = projectGameSendButton(
+      ready,
+      mine,
+      2,
+      'clean',
+      { kind: 'sent', slot: 2, atMs: sentAt },
+      { slot: 2, message: 'locked.', atMs: sentAt },
+    );
+    expect(notActive.label).toBe('✓ Sent · Slot 2');
+    expect(notActive.description).toMatch(/; not made active$/);
+    // Once the file names the slot, as after a later pick, the failure no longer stands.
+    const nowActive = projectGameSendButton(
+      gameModuleStatus({ inspection: { activeSlot: { state: 'present', slot: 2 } } }),
+      mine,
+      2,
+      'clean',
+      { kind: 'sent', slot: 2, atMs: sentAt },
+      { slot: 2, message: 'locked.', atMs: sentAt },
+    );
+    expect(nowActive.description).toMatch(/; now active$/);
+  });
+
+  it('selects the Active slot from the file and enables only slots that hold a plan', () => {
+    const present = { state: 'present', routeKey: 'Underworld', biomeKeys: ['F'] } as const;
+    const withFile = (activeSlot: GameActiveSlot) =>
+      gameModuleStatus({
+        inspection: {
+          planSlots: planSlots(
+            planSlot(2, present),
+            planSlot(3, { state: 'unreadable' }),
+            planSlot(5, present),
+          ),
+          activeSlot,
+        },
+      });
+    const plans = (activeSlot: GameActiveSlot, activation?: GameActivationActivity) =>
+      projectGamePlans(
+        withFile(activeSlot),
+        { kind: 'noProject' },
+        'clean',
+        catalog,
+        0,
+        activation,
+      );
+
+    const selected = plans({ state: 'present', slot: 5 });
+    expect(selected?.activeSlot).toEqual({
+      label: 'Active slot',
+      selected: 5,
+      pending: false,
+      notice: null,
+    });
+    expect(selected?.rows.map((row) => row.active)).toEqual([
+      { checked: false, intent: null },
+      { checked: false, intent: { kind: 'setActiveSlot', slot: 2 } },
+      { checked: false, intent: null },
+      { checked: false, intent: null },
+      { checked: true, intent: { kind: 'setActiveSlot', slot: 5 } },
+      { checked: false, intent: null },
+    ]);
+    // A file naming an empty slot still shows it; the radio stays disabled.
+    expect(plans({ state: 'present', slot: 1 })?.rows[0]?.active).toEqual({
+      checked: true,
+      intent: null,
+    });
+    for (const file of [{ state: 'missing' }, { state: 'invalid' }] as const) {
+      const none = plans(file);
+      expect(none?.activeSlot.selected).toBeNull();
+      expect(none?.rows.some((row) => row.active.checked)).toBe(false);
+    }
+
+    const pending = plans({ state: 'present', slot: 5 }, { kind: 'pending' });
+    expect(pending?.activeSlot.pending).toBe(true);
+    expect(pending?.rows.every((row) => row.active.intent === null)).toBe(true);
+    expect(pending?.activeSlot.selected).toBe(5);
+
+    const failed = plans({ state: 'present', slot: 5 }, { kind: 'failed', message: 'locked.' });
+    expect(failed?.activeSlot).toMatchObject({ selected: 5, notice: 'Not made active: locked.' });
+    expect(failed?.rows[1]?.active.intent).toEqual({ kind: 'setActiveSlot', slot: 2 });
+  });
+
+  it('describes why an Active slot write did not take effect', () => {
+    expect(
+      describeActiveSlotSetting({
+        status: 'activated',
+        message: 'Slot 2 is active.',
+        blockers: [],
+      }),
+    ).toBeNull();
+    expect(
+      describeActiveSlotSetting({
+        status: 'notPresent',
+        message: 'Slot 3 has no plan to make active.',
+        blockers: [],
+      }),
+    ).toBe('Slot 3 has no plan to make active.');
+    const blocker = { code: 'moduleMismatch', found: '0.0.9', required: '0.1.0' } as const;
+    expect(
+      describeActiveSlotSetting({ status: 'blocked', message: 'Not ready.', blockers: [blocker] }),
+    ).toBe(describePublicationBlocker(blocker));
+    const atMs = Date.UTC(2026, 0, 2, 14, 5);
+    const failure = { slot: 4, message: 'locked.', atMs } as const;
+    const fileNames = (slot: 2 | 4) =>
+      gameModuleStatus({ inspection: { activeSlot: { state: 'present', slot } } });
+    expect(describeSentNotActivated(failure, fileNames(2))).toBe(
+      `Sent to slot 4 at ${new Date(atMs).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}, but it isn’t active: locked.`,
+    );
+    expect(describeSentNotActivated(failure, fileNames(4))).toBeNull();
+    expect(describeSentNotActivated(null, fileNames(2))).toBeNull();
+    expect(describeSent(4, failure, fileNames(2))).toBe('Sent to slot 4; not made active.');
+    expect(describeSent(4, failure, fileNames(4))).toBe('Sent to slot 4.');
+    expect(describeSent(4, null, null)).toBe('Sent to slot 4.');
   });
 
   it('marks the indicator and describes a failed last send', () => {

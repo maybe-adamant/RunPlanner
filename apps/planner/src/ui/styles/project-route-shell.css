@@ -983,6 +983,16 @@
   color: #aaa7af;
 }
 
+.game-panel-active-slot {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.game-panel-active-slot input {
+  margin: 0;
+}
+
 .game-panel-slot-marker {
   margin-left: 6px;
   color: #9fd6a8;

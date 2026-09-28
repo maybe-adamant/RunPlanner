@@ -16,14 +16,18 @@ import type { Catalog } from '@run-planner/engine/catalog-schema';
 import { selectProfileStatus, useAppSelector } from '@planner/state/store';
 import type { ProjectOperations } from '@planner/workspace/projectOperations';
 import {
+  describeActiveSlotSetting,
   describeInstallOutcome,
   describeLastSendFailure,
   describeRemoveOutcome,
+  describeSentNotActivated,
   gameSaveState,
   projectGamePanel,
   projectGameIndicator,
   projectGamePlans,
   projectGameProfileChoices,
+  type GameActivationActivity,
+  type GameActiveSlotIntent,
   type GamePlansProduct,
   type GameLocationProduct,
   type GameModuleSectionProduct,
@@ -81,6 +85,11 @@ type Confirmation = 'install' | 'checkoutInstall' | 'remove';
 interface Feedback {
   readonly tone: 'status' | 'alert';
   readonly text: string;
+}
+
+interface FocusRequest {
+  readonly slot: GamePlanSlotNumber;
+  readonly request: number;
 }
 
 interface TargetRequest {
@@ -381,6 +390,9 @@ function ModuleSection({
   );
 }
 
+const IDLE_ACTIVATION: GameActivationActivity = Object.freeze({ kind: 'idle' });
+const PENDING_ACTIVATION: GameActivationActivity = Object.freeze({ kind: 'pending' });
+
 function Callout({
   children,
   label,
@@ -405,13 +417,15 @@ function PlansSection({
   focusPlans,
   focusSlot,
   onSend,
+  onSetActive,
   onShowFindings,
   pending,
   plans,
 }: {
   readonly focusPlans: boolean;
-  readonly focusSlot: { readonly slot: GamePlanSlotNumber; readonly request: number } | null;
+  readonly focusSlot: FocusRequest | null;
   readonly feedback: Feedback | null;
+  readonly onSetActive: (intent: GameActiveSlotIntent) => void;
   readonly onShowFindings: (() => void) | undefined;
   readonly onSend: (slot: GamePlanSlotNumber, confirm: boolean) => void;
   readonly pending: boolean;
@@ -427,6 +441,7 @@ function PlansSection({
       ?.querySelector<HTMLButtonElement>(`button[data-slot="${focusSlot.slot}"]`)
       ?.focus();
   }, [focusSlot, pending]);
+
   return (
     <section aria-labelledby="game-plans-title" className="game-panel-section" ref={sectionRef}>
       <h3 {...(focusPlans ? { 'data-initial-focus': '' } : {})} id="game-plans-title" tabIndex={-1}>
@@ -446,82 +461,107 @@ function PlansSection({
           )}
         </Callout>
       )}
-      <table aria-labelledby="game-plans-title" className="game-panel-slots">
-        <thead>
-          <tr>
-            <th scope="col">Slot</th>
-            <th scope="col">Plan</th>
-            <th scope="col">Route</th>
-            <th scope="col">Ends</th>
-            <th scope="col">Aspect</th>
-            <th scope="col">Sent</th>
-            <th scope="col">
-              <span className="visually-hidden">Action</span>
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          {plans.rows.map((row) => (
-            <tr data-state={row.state} key={row.slot}>
-              <th scope="row">Slot {row.slot}</th>
-              {row.columns === null ? (
-                <td className="game-panel-slot-summary" colSpan={5}>
-                  {row.summary}
-                </td>
-              ) : (
-                <>
-                  <td className="game-panel-slot-wrap" data-label="Plan">
-                    {row.columns.plan ?? <span className="game-panel-slot-unnamed">Unnamed</span>}
-                    {row.marker === null ? null : (
-                      <span className="game-panel-slot-marker" data-marker={row.marker}>
-                        {row.marker === 'current' ? 'current' : 'older version'}
-                      </span>
-                    )}
-                  </td>
-                  <td data-label="Route">{row.columns.route}</td>
-                  <td data-label="Ends">{row.columns.endsAt}</td>
-                  <td className="game-panel-slot-wrap" data-label="Aspect">
-                    {row.columns.aspect}
-                  </td>
-                  <td data-label="Sent">
-                    {row.columns.sent === null ? (
-                      '—'
-                    ) : (
-                      <>
-                        <time
-                          aria-describedby={`game-plan-sent-${row.slot}`}
-                          dateTime={row.columns.sent.iso}
-                          title={row.columns.sent.exact}
-                        >
-                          {row.columns.sent.ago}
-                        </time>
-                        <span hidden id={`game-plan-sent-${row.slot}`}>
-                          {row.columns.sent.exact}
-                        </span>
-                      </>
-                    )}
-                  </td>
-                </>
-              )}
-              <td className="game-panel-slot-action">
-                {row.action === null ? null : (
-                  <button
-                    aria-haspopup={row.action.label === 'Save and send…' ? 'dialog' : undefined}
-                    aria-label={`${row.action.label} (slot ${row.slot})`}
-                    className="secondary-action action-compact"
-                    data-slot={row.slot}
-                    disabled={pending}
-                    onClick={() => onSend(row.slot, row.action?.confirm === true)}
-                    type="button"
-                  >
-                    {row.action.label}
-                  </button>
-                )}
-              </td>
+      <div
+        aria-busy={plans.activeSlot.pending || undefined}
+        aria-label={plans.activeSlot.label}
+        role="radiogroup"
+      >
+        <table aria-labelledby="game-plans-title" className="game-panel-slots">
+          <thead>
+            <tr>
+              <th scope="col">Slot</th>
+              <th scope="col">Plan</th>
+              <th scope="col">Route</th>
+              <th scope="col">Ends</th>
+              <th scope="col">Aspect</th>
+              <th scope="col">Sent</th>
+              <th scope="col">
+                <span className="visually-hidden">Action</span>
+              </th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {plans.rows.map((row) => (
+              <tr data-state={row.state} key={row.slot}>
+                <th scope="row">
+                  <label className="game-panel-active-slot">
+                    <input
+                      checked={row.active.checked}
+                      data-active-slot={row.slot}
+                      aria-disabled={row.active.intent === null || undefined}
+                      name="game-active-slot"
+                      onChange={() => {
+                        if (row.active.intent !== null) onSetActive(row.active.intent);
+                      }}
+                      type="radio"
+                    />
+                    Slot {row.slot}
+                  </label>
+                </th>
+                {row.columns === null ? (
+                  <td className="game-panel-slot-summary" colSpan={5}>
+                    {row.summary}
+                  </td>
+                ) : (
+                  <>
+                    <td className="game-panel-slot-wrap" data-label="Plan">
+                      {row.columns.plan ?? <span className="game-panel-slot-unnamed">Unnamed</span>}
+                      {row.marker === null ? null : (
+                        <span className="game-panel-slot-marker" data-marker={row.marker}>
+                          {row.marker === 'current' ? 'current' : 'older version'}
+                        </span>
+                      )}
+                    </td>
+                    <td data-label="Route">{row.columns.route}</td>
+                    <td data-label="Ends">{row.columns.endsAt}</td>
+                    <td className="game-panel-slot-wrap" data-label="Aspect">
+                      {row.columns.aspect}
+                    </td>
+                    <td data-label="Sent">
+                      {row.columns.sent === null ? (
+                        '—'
+                      ) : (
+                        <>
+                          <time
+                            aria-describedby={`game-plan-sent-${row.slot}`}
+                            dateTime={row.columns.sent.iso}
+                            title={row.columns.sent.exact}
+                          >
+                            {row.columns.sent.ago}
+                          </time>
+                          <span hidden id={`game-plan-sent-${row.slot}`}>
+                            {row.columns.sent.exact}
+                          </span>
+                        </>
+                      )}
+                    </td>
+                  </>
+                )}
+                <td className="game-panel-slot-action">
+                  {row.action === null ? null : (
+                    <button
+                      aria-haspopup={row.action.label === 'Save and send…' ? 'dialog' : undefined}
+                      aria-label={`${row.action.label} (slot ${row.slot})`}
+                      className="secondary-action action-compact"
+                      data-slot={row.slot}
+                      disabled={pending}
+                      onClick={() => onSend(row.slot, row.action?.confirm === true)}
+                      type="button"
+                    >
+                      {row.action.label}
+                    </button>
+                  )}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      {plans.activeSlot.notice === null ? null : (
+        <p className="game-publication-message" role="alert">
+          {plans.activeSlot.notice}
+        </p>
+      )}
       <FeedbackLine feedback={feedback} />
     </section>
   );
@@ -541,6 +581,9 @@ function GameSection({
   readonly operations: ProjectOperations;
 }) {
   const lastFailure = useAppSelector((state) => state.gameSendSession.lastFailure);
+  const lastActivationFailure = useAppSelector(
+    (state) => state.gameSendSession.lastActivationFailure,
+  );
   const saveState = useAppSelector((state) =>
     gameSaveState(selectProfileStatus(state), state.profileSession.fileName),
   );
@@ -555,12 +598,10 @@ function GameSection({
   const [pending, setPending] = useState(true);
   const [plansFeedback, setPlansFeedback] = useState<Feedback | null>(null);
   const [replaceSlot, setReplaceSlot] = useState<GamePlanSlotNumber | null>(null);
-  const [focusSlot, setFocusSlot] = useState<{
-    readonly slot: GamePlanSlotNumber;
-    readonly request: number;
-  } | null>(null);
+  const [focusSlot, setFocusSlot] = useState<FocusRequest | null>(null);
   const returnFocusTo = (slot: GamePlanSlotNumber) =>
     setFocusSlot((current) => ({ slot, request: (current?.request ?? 0) + 1 }));
+  const [activation, setActivation] = useState<GameActivationActivity>(IDLE_ACTIVATION);
   const [feedback, setFeedback] = useState<Feedback | null>(null);
   const [changing, setChanging] = useState(false);
   const [discovery, setDiscovery] = useState<GameTargetDiscovery | null>(null);
@@ -604,6 +645,7 @@ function GameSection({
   }, [gameStatus]);
 
   const product = status === null ? null : projectGamePanel(status);
+  const notActivated = describeSentNotActivated(lastActivationFailure, status);
   // The current plan is compiled only while the Plans section can show.
   const plans =
     status !== null && projectGameIndicator(snapshot).state === 'ready'
@@ -613,10 +655,33 @@ function GameSection({
           saveState,
           catalog,
           snapshot.readAt,
+          pending ? PENDING_ACTIVATION : activation,
         )
       : null;
+  // The radios show the file as re-read after the write, never the click itself.
+  const setActive = async (intent: GameActiveSlotIntent) => {
+    setPending(true);
+    setActivation(IDLE_ACTIVATION);
+    setPlansFeedback(null);
+    let outcome: GameActivationActivity = IDLE_ACTIVATION;
+    try {
+      const problem = describeActiveSlotSetting(await host.setActiveSlot(intent.slot));
+      if (problem !== null) outcome = { kind: 'failed', message: problem };
+    } catch (error) {
+      outcome = { kind: 'failed', message: errorText(error) };
+    }
+    try {
+      await gameStatus.refresh();
+    } catch {
+      // The header indicator reports a failed status read.
+    } finally {
+      setActivation(outcome);
+      setPending(false);
+    }
+  };
   const send = async (slot: GamePlanSlotNumber) => {
     setPending(true);
+    setActivation(IDLE_ACTIVATION);
     setPlansFeedback(null);
     setReplaceSlot(null);
     try {
@@ -788,11 +853,17 @@ function GameSection({
           <p>{describeLastSendFailure(lastFailure)}</p>
         </Callout>
       )}
+      {notActivated === null ? null : (
+        <Callout label="Last send" tone="warning">
+          <p>{notActivated}</p>
+        </Callout>
+      )}
       {plans === null ? null : (
         <PlansSection
           feedback={plansFeedback}
           focusPlans={focusPlans}
           focusSlot={focusSlot}
+          onSetActive={(intent) => void setActive(intent)}
           onShowFindings={onShowFindings}
           onSend={(slot, confirm) => {
             if (confirm) setReplaceSlot(slot);

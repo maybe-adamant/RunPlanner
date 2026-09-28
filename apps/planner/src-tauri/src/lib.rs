@@ -17,6 +17,7 @@ pub fn run() {
             game_module_commands::game_module_install_from_checkout,
             game_module_commands::game_module_remove,
             game_module_commands::game_plan_publish,
+            game_module_commands::game_active_slot_set,
             bug_report_commands::bug_report_create,
             bug_report_commands::bug_report_reveal,
             profile_file_session::profile_file_restore_active,

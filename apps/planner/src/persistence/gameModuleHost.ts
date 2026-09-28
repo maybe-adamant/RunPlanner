@@ -72,7 +72,14 @@ export interface GameTargetInspection {
   /** A previous install left beside `plugins/` after a failed restore. */
   readonly strandedInstall: string | null;
   readonly planSlots: readonly GamePlanSlot[];
+  /** `active-slot.json`; a missing or invalid file names no slot. */
+  readonly activeSlot: GameActiveSlot;
 }
+
+export type GameActiveSlot =
+  | { readonly state: 'present'; readonly slot: GamePlanSlotNumber }
+  | { readonly state: 'missing' }
+  | { readonly state: 'invalid' };
 
 /** One plan slot, identified only by fields the execution-plan wire already carries. */
 export interface GamePlanSlot {
@@ -112,6 +119,15 @@ export interface GameModuleRemoveResult {
 
 export interface GamePlanPublication {
   readonly status: 'published' | 'blocked' | 'nativeWrite';
+  readonly message: string;
+  readonly blockers: readonly GamePublicationBlocker[];
+  /** Why a published plan's slot was not made active; the plan stays written. */
+  readonly activationProblem: string | null;
+}
+
+export interface GameActiveSlotSetting {
+  /** `notPresent`: the slot holds no readable plan. */
+  readonly status: 'activated' | 'invalidSlot' | 'blocked' | 'notPresent' | 'nativeWrite';
   readonly message: string;
   readonly blockers: readonly GamePublicationBlocker[];
 }
@@ -161,6 +177,8 @@ export interface GameModuleHost extends GamePlanPublisher {
   readonly install: (overwriteConsent: boolean) => Promise<GameModuleInstallResult>;
   readonly installFromCheckout: (overwriteConsent: boolean) => Promise<GameModuleInstallResult>;
   readonly remove: () => Promise<GameModuleRemoveResult>;
+  /** Makes a slot that holds a plan the one the game module plays next. */
+  readonly setActiveSlot: (slotNumber: GamePlanSlotNumber) => Promise<GameActiveSlotSetting>;
   /** Asks where to save through the host's own dialog, then writes the report there. */
   readonly createBugReport: (
     defaultFileName: string,
@@ -207,6 +225,8 @@ export function createTauriGameModuleHost(
     remove: () => environment.invoke<GameModuleRemoveResult>('game_module_remove'),
     publish: (slotNumber: GamePlanSlotNumber, planJson: string) =>
       environment.invoke<GamePlanPublication>('game_plan_publish', { slotNumber, planJson }),
+    setActiveSlot: (slotNumber: GamePlanSlotNumber) =>
+      environment.invoke<GameActiveSlotSetting>('game_active_slot_set', { slotNumber }),
     createBugReport: (defaultFileName: string, request: BugReportRequest) =>
       environment.invoke<BugReportCreation>('bug_report_create', { defaultFileName, request }),
     revealBugReport: () => environment.invoke<void>('bug_report_reveal'),

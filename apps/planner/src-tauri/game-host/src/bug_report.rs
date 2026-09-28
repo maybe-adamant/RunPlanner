@@ -10,7 +10,10 @@ use crate::external_url::ISSUE_PAGE_URL;
 use crate::game_module_install::{self, GameModuleStatus};
 use crate::game_module_package::ModulePackage;
 use crate::game_target::{existing_directory, ResolvedTarget};
-use crate::plan_slots::{module_config_dir, slot_file_name, MAX_PLAN_BYTES, PLAN_SLOT_COUNT};
+use crate::plan_slots::{
+    module_config_dir, slot_file_name, ACTIVE_SLOT_FILE, MAX_ACTIVE_SLOT_BYTES, MAX_PLAN_BYTES,
+    PLAN_SLOT_COUNT,
+};
 
 pub const REPORT_FORMAT: &str = "run-planner-bug-report";
 pub const LOG_OUTPUT_TAIL_BYTES: u64 = 2 * 1024 * 1024;
@@ -433,6 +436,53 @@ fn collect_logs(rom: &Path, entries: &mut Vec<ReportEntry>) -> Vec<FileRecord> {
     files
 }
 
+// One shared-folder file copied whole under `plans-in-game/`, as found.
+fn bounded_entry(
+    directory: &Path,
+    name: &str,
+    cap: usize,
+    entries: &mut Vec<ReportEntry>,
+) -> FileRecord {
+    let path = directory.join(name);
+    match regular_file(&path) {
+        Ok(false) => return record(name.to_owned(), FileState::Missing, None),
+        Err(problem) => return record(name.to_owned(), FileState::Unreadable, Some(problem)),
+        Ok(true) => {}
+    }
+    let mut bytes = Vec::new();
+    let read =
+        fs::File::open(&path).and_then(|file| file.take(cap as u64 + 1).read_to_end(&mut bytes));
+    match read {
+        Ok(_) if bytes.len() <= cap => {
+            let entry = format!("plans-in-game/{name}");
+            let size = bytes.len() as u64;
+            entries.push(ReportEntry {
+                name: entry.clone(),
+                bytes,
+            });
+            FileRecord {
+                source: name.to_owned(),
+                state: FileState::Included,
+                entry: Some(entry),
+                size_bytes: Some(size),
+                included_bytes: Some(size),
+                truncated: false,
+                problem: None,
+            }
+        }
+        Ok(_) => record(
+            name.to_owned(),
+            FileState::Unreadable,
+            Some(format!("larger than the {cap}-byte limit")),
+        ),
+        Err(error) => record(
+            name.to_owned(),
+            FileState::Unreadable,
+            Some(format!("could not read: {error}")),
+        ),
+    }
+}
+
 fn collect_slots(target: &ResolvedTarget, entries: &mut Vec<ReportEntry>) -> SectionRecord {
     let directory = match module_config_dir(target) {
         Ok(Some(directory)) => directory,
@@ -451,51 +501,16 @@ fn collect_slots(target: &ResolvedTarget, entries: &mut Vec<ReportEntry>) -> Sec
             }
         }
     };
-    let files = (1..=PLAN_SLOT_COUNT)
+    let mut files: Vec<FileRecord> = (1..=PLAN_SLOT_COUNT)
         .filter_map(|slot| slot_file_name(slot).ok())
-        .map(|name| {
-            let path = directory.join(name);
-            match regular_file(&path) {
-                Ok(false) => return record(name.to_owned(), FileState::Missing, None),
-                Err(problem) => {
-                    return record(name.to_owned(), FileState::Unreadable, Some(problem))
-                }
-                Ok(true) => {}
-            }
-            let mut bytes = Vec::new();
-            let read = fs::File::open(&path)
-                .and_then(|file| file.take(MAX_PLAN_BYTES as u64 + 1).read_to_end(&mut bytes));
-            match read {
-                Ok(_) if bytes.len() <= MAX_PLAN_BYTES => {
-                    let entry = format!("plans-in-game/{name}");
-                    let size = bytes.len() as u64;
-                    entries.push(ReportEntry {
-                        name: entry.clone(),
-                        bytes,
-                    });
-                    FileRecord {
-                        source: name.to_owned(),
-                        state: FileState::Included,
-                        entry: Some(entry),
-                        size_bytes: Some(size),
-                        included_bytes: Some(size),
-                        truncated: false,
-                        problem: None,
-                    }
-                }
-                Ok(_) => record(
-                    name.to_owned(),
-                    FileState::Unreadable,
-                    Some("larger than a plan slot allows".to_owned()),
-                ),
-                Err(error) => record(
-                    name.to_owned(),
-                    FileState::Unreadable,
-                    Some(format!("could not read: {error}")),
-                ),
-            }
-        })
+        .map(|name| bounded_entry(&directory, name, MAX_PLAN_BYTES, entries))
         .collect();
+    files.push(bounded_entry(
+        &directory,
+        ACTIVE_SLOT_FILE,
+        MAX_ACTIVE_SLOT_BYTES,
+        entries,
+    ));
     SectionRecord {
         requested: true,
         problem: None,
@@ -830,6 +845,12 @@ mod tests {
                 .join("slot-2.runplanner.json"),
             "{}",
         );
+        write(
+            &rom.join(CONFIG_DIRECTORY)
+                .join(MODULE_CONFIG_DIRECTORY)
+                .join(ACTIVE_SLOT_FILE),
+            &format!("invalid {profile_text}"),
+        );
         let destination = temporary.0.join("out").join("report.zip");
         fs::create_dir_all(destination.parent().unwrap()).unwrap();
         let written = create(
@@ -844,6 +865,7 @@ mod tests {
             "report.json",
             "open-plan.runplanner.json",
             "plans-in-game/slot-2.runplanner.json",
+            "plans-in-game/active-slot.json",
             "logs/LogOutput.log",
             "logs/backup/09-27-2026-12-22-27_LogOutput.log",
             "logs/lovely.log",
@@ -873,5 +895,65 @@ mod tests {
             .read_to_string(&mut log)
             .unwrap();
         assert_eq!(log, "loaded %USERPROFILE%/plugins\n");
+        let mut active = String::new();
+        archive
+            .by_name("plans-in-game/active-slot.json")
+            .unwrap()
+            .read_to_string(&mut active)
+            .unwrap();
+        assert_eq!(active, "invalid %USERPROFILE%");
+    }
+
+    #[test]
+    fn a_missing_active_slot_file_is_recorded_with_the_slots() {
+        let temporary = TemporaryDirectory::new("report-active-missing");
+        let config = temporary.0.join("config");
+        let target = target(&temporary.0.join("profile"), TargetKind::Manual);
+        remember_target(&config, &target).unwrap();
+        let folder = target
+            .rom
+            .join(CONFIG_DIRECTORY)
+            .join(MODULE_CONFIG_DIRECTORY);
+        write(&folder.join("slot-1.runplanner.json"), "{}");
+        let (status, resolved) = game_module_install::status(&config, &package("0.1.0", "x"));
+        let files = |entries: &[ReportEntry]| {
+            report_json(entries)["planSlots"]["files"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .map(|file| {
+                    (
+                        file["source"].as_str().unwrap().to_owned(),
+                        file["state"].as_str().unwrap().to_owned(),
+                    )
+                })
+                .collect::<Vec<_>>()
+        };
+        let assemble_now = || {
+            assemble(
+                &request(None, true, false),
+                &status,
+                resolved.as_ref(),
+                &Redaction::for_profile(""),
+                1,
+            )
+            .unwrap()
+        };
+        let entries = assemble_now();
+        let recorded = files(&entries);
+        assert_eq!(recorded.len(), 7);
+        assert_eq!(
+            recorded[6],
+            ("active-slot.json".to_owned(), "missing".to_owned())
+        );
+        write(
+            &folder.join(ACTIVE_SLOT_FILE),
+            &" ".repeat(MAX_ACTIVE_SLOT_BYTES + 1),
+        );
+        let oversized = assemble_now();
+        assert_eq!(files(&oversized)[6].1, "unreadable");
+        assert!(oversized
+            .iter()
+            .all(|entry| entry.name != "plans-in-game/active-slot.json"));
     }
 }

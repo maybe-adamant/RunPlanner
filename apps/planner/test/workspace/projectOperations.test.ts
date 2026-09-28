@@ -324,6 +324,7 @@ describe('project profile operations', () => {
       status: 'blocked',
       message: 'The game target is not ready for publication.',
       blockers: blocked.publicationBlockers,
+      activationProblem: null,
     });
     const profile = createProfileFixture();
     const application = createApplication({
@@ -560,6 +561,7 @@ describe('project profile operations', () => {
       status: 'nativeWrite',
       message: 'could not write plan slot.',
       blockers: [],
+      activationProblem: null,
     });
     await expect(application.projectOperations.publishGame(1)).resolves.toEqual({
       operation: 'publishGame',

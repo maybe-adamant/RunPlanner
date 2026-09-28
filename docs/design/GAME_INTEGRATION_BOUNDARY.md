@@ -115,9 +115,10 @@ The planner does not check whether the game is running.
 **Create bug report…** (Game panel and About, desktop only) saves one zip
 where the user chooses. The host assembles it from explicit inputs:
 `report.json` (planner facts supplied by the application, including the last
-send failure, merged with the host's status of the established target), the
-open plan document when chosen, the six plan slot files, and log tails from
-`ReturnOfModding`: `LogOutput.log` and the newest `backup/*_LogOutput.log`
+send failure or a last send that was not made active, merged with the host's
+status of the established target), the open plan document when chosen, the
+six plan slot files and `active-slot.json` when plans in game are chosen, and
+log tails from `ReturnOfModding`: `LogOutput.log` and the newest `backup/*_LogOutput.log`
 (last 2 MiB each) and `lovely.log` (last 1 MiB), each cut forward to a line
 start. Missing or unreadable sources are recorded in `report.json`. Every entry
 replaces the user's profile folder with `%USERPROFILE%` in any separator form,
@@ -172,7 +173,11 @@ reasons, including found and required versions, unless the installed module
 matches this build and ModpackLib is compatible. The installed
 `execution-compatibility.json` must equal the outgoing plan header before any
 write. `mods.yml` is never edited, and under `config/` the planner writes only
-the shared folder described above.
+the shared folder described above. After writing the plan the host writes
+`active-slot.json`; if only that write fails, the send still succeeds, the plan
+stays, and the result carries the activation problem, which the planner shows
+as a notice rather than a failed send. Making a slot active without sending
+has the same target checks and requires the slot to hold a readable plan.
 
 A sent plan's identity chain is the saved file, then the document's
 `projectId`, then the compiled `planFingerprint`. Its name is the saved file's
@@ -196,9 +201,19 @@ present or unreadable with its modified time and only existing wire fields:
 `planFingerprint`. The application labels the route, final biome, aspect and
 weapon (by its `shortLabel`) from the catalog; a plan without `displayName`
 shows _Unnamed_, Sent is a compact relative time with the exact local time as
-its title and description, and an unreadable slot shows only "Unreadable". A slot with the open project's
-`projectId` is marked **current** when its fingerprint matches the compiled plan
-and **older version** otherwise, by plain identity equality. **Send here** fills an empty slot and
+its title and description, and an unreadable slot shows only "Unreadable".
+
+The Slot column is an **Active slot** radio group, with arrow-key choice, that
+shows `active-slot.json` as last read. No radio is selected while the file is
+missing or invalid; a file naming a slot without a readable plan shows that row
+selected, and such rows cannot be chosen. Picking a slot that holds a plan
+writes the file without resending. The group is unavailable while the write is
+pending, the slots are then re-read, and a failed write leaves a short notice
+and the selection unchanged. A successful send selects its slot.
+
+A slot with the open project's `projectId` is marked **current** when its
+fingerprint matches the compiled plan and **older version** otherwise, by plain
+identity equality. **Send here** fills an empty slot and
 **Replace** overwrites an occupied one after confirmation, both taking the Save
 and send forms when a save is needed; all are absent while the current project
 cannot compile, which the panel explains from the compiler's error code: a

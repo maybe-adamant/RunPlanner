@@ -60,6 +60,7 @@ export function projectBugReportFacts(
   },
 ): Readonly<Record<string, unknown>> {
   const failure = state.gameSendSession.lastFailure;
+  const activationFailure = state.gameSendSession.lastActivationFailure;
   return {
     plannerVersion: options.buildIdentity.version,
     build: options.buildIdentity.build,
@@ -80,6 +81,14 @@ export function projectBugReportFacts(
       failure === null
         ? null
         : { message: failure.message, at: new Date(failure.atMs).toISOString() },
+    lastSendNotActivated:
+      activationFailure === null
+        ? null
+        : {
+            slot: activationFailure.slot,
+            message: activationFailure.message,
+            at: new Date(activationFailure.atMs).toISOString(),
+          },
   };
 }
 
