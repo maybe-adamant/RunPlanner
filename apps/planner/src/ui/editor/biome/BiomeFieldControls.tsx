@@ -41,24 +41,30 @@ function BiomeFieldControl({ field }: { readonly field: WorkspaceBiomeField }) {
       );
     case 'boundedInteger':
       return (
-        <label className="field-control biome-field" htmlFor={id}>
-          <span>{field.label}</span>
-          <select
+        <div className="field-control biome-field biome-field-radio-row">
+          <span id={`${id}-label`}>{field.label}</span>
+          <div
             {...findingTarget(field.marker.address, id)}
             id={id}
-            onChange={(event) => replace(Number(event.target.value))}
-            value={field.value === null ? '' : String(field.value)}
+            aria-labelledby={`${id}-label`}
+            className="biome-field-radios"
+            role="radiogroup"
+            aria-required="true"
+            tabIndex={-1}
           >
-            <option disabled value="">
-              Select value
-            </option>
             {field.values.map((value) => (
-              <option key={value} value={value}>
+              <label key={value}>
+                <input
+                  type="radio"
+                  name={id}
+                  checked={field.value === value}
+                  onChange={() => replace(value)}
+                />
                 {value}
-              </option>
+              </label>
             ))}
-          </select>
-        </label>
+          </div>
+        </div>
       );
     case 'enum':
       return (
