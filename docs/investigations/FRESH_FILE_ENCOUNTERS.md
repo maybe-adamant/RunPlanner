@@ -1,8 +1,10 @@
 # Fresh File — encounters outline
 
 Status: design outline, not a locked delivery plan or schema approval.
-The [viability investigation](FRESH_FILE_PROJECT_VIABILITY.md) owns source
-identities, the fixed/mixed profile matrix and the competing-introduction probe.
+The [introduction resolution matrix](FRESH_FILE_ENEMY_INTRODUCTION_MATRIX.md)
+owns the current source inventory, history sufficiency assessment and bounded
+competition question. The [viability investigation](FRESH_FILE_PROJECT_VIABILITY.md)
+retains the wider feature context.
 
 ## Outcome and model
 
@@ -32,7 +34,8 @@ mixed-wave installation and draft UX are not first-delivery prerequisites.
 1. Customize opens a preliminary local draft: wave count and enemy types,
    including a shared enemy when the profile requires one. No budget editing.
 2. Engine resolution scans the proposed composition using reached introduction
-   history and eligible profiles.
+   occurrence/completion history and eligible profiles. Enemy-seen history alone
+   is not equivalent: an enemy may appear without completing its introduction.
 3. Without an introduction, Customize Combat opens the detailed editor with
    those waves/types inherited.
 4. With an introduction, show its identity and an explicit Continue with
@@ -51,7 +54,10 @@ introductions inherit Generated setup and return on the first qualifying
 candidate, including the fixed-roster H profiles. A genuinely non-generated
 intro could be overwritten by later entries, but that synthetic probe branch
 must not be attributed to the scoped H introductions. Multiple candidates do
-not imply a combined introduction. Actual traversal order remains to be pinned.
+not imply a combined introduction. The local Lua 5.2.4 probe in the
+[resolution matrix](FRESH_FILE_ENEMY_INTRODUCTION_MATRIX.md) consistently selects
+the first eligible numeric wave/type slot. Embedded-game confirmation remains
+open; `pairs` is not an explicit random draw.
 
 These findings preserve the agreed two-stage editor, not a third customization
 surface. The resolved profile determines whether the second stage is read-only,
@@ -109,7 +115,7 @@ enemy eligibility, actual game runtime traversal or a live installation test.
    introductions in opposite proposed spawn orders; log original SpawnWaves,
    resolved identity, and occurrence/completion facts. Include fixed-roster H
    profiles, and a candidate whose introduction requirements fail.
-2. Capture one F mixed profile, G TurtleIntro and one all-fixed H profile:
+2. Capture one F mixed profile, G FishSwarmerIntro and one all-fixed H profile:
    effective declaration, Generated flag, pre-existing waves, total budget,
    per-wave budget, fill contacts and final spawns.
 3. Confirm a later H cage does not change after an earlier cage introduction
@@ -139,7 +145,9 @@ catalog compiler; executor `room/timeline/encounters/generated.lua`.
 
 Engine history supplies initial and reached facts; [rooms](FRESH_FILE_ROOMS.md) supplies legal placements.
 Record occurrence and completion at their distinct native boundaries. H cage
-encounters are prepared together: completing one must not regenerate the rest.
+encounters are prepared sequentially before entry, each recording its resolved
+identity before the next is prepared. Later cages see those records but not
+completions; completing one must not regenerate the rest.
 
 ## Representative acceptance cases
 
