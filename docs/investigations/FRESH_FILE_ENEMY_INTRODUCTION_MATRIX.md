@@ -218,24 +218,25 @@ valid as bounded control-flow evidence. They are not live proof of ordering or
 installation. Replace the proposed Fresh Turtle live case with FishSwarmer;
 Turtle can remain an out-of-profile source fixture, not Fresh acceptance.
 
-## Recommended disposition before implementation planning
+## Disposition (locked 2026-09-29)
 
-- Preserve the staged proposal → resolved profile design, but resolve against
-  exact intro occurrence/completion facts, not inferred enemy-seen booleans.
-- Complete authored mode owns every relevant ordinary generated composition;
-  fixed profiles contribute automatically and mixed profiles own only generated
-  suffixes. Do not require fake controls for fixed waves.
-- Native mode, if retained, must explicitly remain non-predictive about these
-  identities. Existing lifecycle compatibility is not proof of exact intro
-  history. Whether that mode is publishable is a separate product decision.
-- Inventory eligibility consumers of intro completion, including the special H
-  Screamer encounter, alongside replacement itself. Mandatory composition alone
-  does not repair missing declaration requirements.
-- Lock competition behavior only after a bounded traversal/control probe; pin
-  H preparation order against actual cage preparation rather than visit order.
-- No new duplicate history ledger is justified. Extend narrow queries and
-  resolved-roster products from the existing canonical history.
+- Identity is settled in the encounter selector: each reachable introduction is
+  a set member gated on exact completion/occurrence facts from the existing
+  ledgers, not inferred enemy-seen booleans. Customize edits only a settled
+  identity; fixed waves are read-only and mixed profiles own their suffix.
+- The ordinary identity's type domain excludes unfinished-introduction types;
+  an introduction's suffix does the same except its own seed. Competing
+  introductions therefore never occur in authored mode; traversal order is a
+  live diagnostic, not a contract.
+- On `FreshFile` customization is required on every generated phase and mixed
+  suffix, so introduction history is exact for the route; native mode is not
+  publishable there.
+- Eligibility consumers of intro completion (`GeneratedH_Screamer2`) gain the
+  native predicate. H cage members are evaluated in cage-preparation order
+  against recorded identities.
+- The known-encountered-enemy ledger (Gate E) is retired; no duplicate history
+  ledger. Narrow queries extend the canonical ledgers.
 
 This audit performed source/code inspection and the bounded local-function
 probe above, not live game testing. Embedded-runtime ordering confirmation and
-mixed-profile installation acceptance remain explicitly open.
+mixed-profile installation acceptance remain open as live diagnostics.

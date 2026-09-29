@@ -10,7 +10,7 @@ delivery plans or approval to implement/bump a schema:
 2. [Rooms](FRESH_FILE_ROOMS.md): restrictions, opening chronology, bridge and Eris.
 3. [Rewards](FRESH_FILE_REWARDS.md): inventories, source-local rules and unlocks.
 4. [Encounters](FRESH_FILE_ENCOUNTERS.md): introductions, fixed/mixed profiles
-   and two-stage customization.
+   and required customization.
 
 Engine history and resource products expose facts; the outlines own their consumers. Loadout
 and rooms establish the playable start; rewards and encounters consume reached
@@ -45,11 +45,11 @@ feature-to-timeline interaction; bridge Shop; Nectar without levels; disabled
 element placement; god matrix; deterministic first-combat identities.
 
 First delivery is the playable Fresh File spine: project creation, loadout,
-rooms, rewards and deterministic introductory encounter resolution. Ordinary
-encounter customization is disabled for Fresh File. Native generation owns
-enemy-triggered introductions; detailed introduction history, the two-stage
-editor and fixed/mixed-wave installation are deferred until that spine is
-stable. This supersedes the earlier mandatory-full-customization proposal.
+rooms, rewards and deterministic introductory encounter resolution. Enemy
+introductions are settled identities in the encounter selector, gated on the
+route's completion and occurrence history; customization is required on every
+generated phase so that history is exact (see the encounters outline). Native
+uncustomized mode is not publishable on this route.
 
 The integrated design should trace initialization → production/history →
 eligibility → authored actions → execution products, with explicit ownership.
@@ -60,8 +60,8 @@ It must keep these bounded decisions visible:
 - Persisted absence/profile representation, empty shop-group addressing and
   schema/protocol compatibility, with explicit owner approval for migrations.
 
-Competing-introduction traversal, mixed-wave products and two-stage draft
-transitions remain documented follow-up questions, not blockers for this design.
+Competing-introduction traversal cannot arise in authored compositions; it
+and mixed-wave installation remain live diagnostics, not blockers.
 
 Source-function probes establish control flow and budget behavior, not live
 execution acceptance. The design may state those known boundaries now and
@@ -723,41 +723,10 @@ Sources: `EncounterData.lua` (`BaseIntroEncounter`, F introductions,
 
 ### Authoring and resolution
 
-- Retain the familiar Combat authoring identity. Resolve the three mandatory
-  first encounters through the existing context-based Combat resolution
-  pattern, extended for the Fresh File profile and applicable history.
-- Generated encounters require complete authoring in Fresh File. Do not leave
-  native generated outcomes unknown while claiming exact downstream intro
-  history. Fully fixed encounters require no artificial customization; mixed
-  profiles require authoring only their generated portions. Boss/miniboss
-  choices remain governed by their specific profiles.
-- For Fresh File generated combat, clicking Customize first opens a preliminary
-  composition popup before the existing detailed customizer. Select only wave
-  count and enemy types, including any required shared-enemy choice; do not
-  ask for budgets or other detailed customization at this stage.
-- The engine assesses that proposed composition against the reached history
-  at encounter preparation. If no introduction is required, a Customize Combat
-  action opens the existing detailed editor with the selected waves and enemy
-  types inherited from the preliminary popup.
-- If the proposal triggers an eligible unfinished introduction, show the
-  resolved profile and an explicit Continue with [Introduction] action.
-  Explain that the introduction replaces the proposed encounter. Continuing
-  replaces the whole composition, not one enemy's wave: fully fixed content is
-  read-only and mixed profiles expose only their generated portions for
-  customization. Do not silently rewrite an enemy-picker edit.
-- The preliminary proposal is local UI draft state, not a persisted
-  intermediate encounter or a second simulation authority. The engine owns
-  resolution and eligibility; the application presents the result and binds
-  the explicit transition into the resolved encounter editor. Exact commit,
-  close/back and re-edit behavior remains delivery-plan work.
-- Resolution follows native spawn traversal/selection semantics, not the order
-  of UI clicks. Pin competing-introduction precedence and repair behavior in
-  the implementation plan before exposing the switch.
-- Reuse existing occurrence/completion history and room preparation. H already
-  prepares cage phases together before timeline execution; finishing an earlier
-  cage must not regenerate the later cages. Preserve the distinction between
-  occurrence facts recorded during preparation and completion facts reached
-  after combat.
+Settled model: identity is chosen in the encounter selector (introduction
+members gated on exact completion/occurrence facts); Customize edits only the
+settled identity, with fixed waves read-only and unfinished-introduction types
+excluded from the ordinary type domain. No preliminary popup or Continue step.
 
 Sources: `RunLogic.lua:ChooseEncounter/SetupEncounter/GenerateEncounter`;
 `RoomLogic.lua` target/cage encounter preparation; planner

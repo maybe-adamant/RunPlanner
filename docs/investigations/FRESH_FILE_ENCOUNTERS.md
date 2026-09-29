@@ -29,23 +29,34 @@ The sections below preserve research and the proposed future editor for a
 separate follow-up after the Fresh File spine is stable. Competing intro order,
 mixed-wave installation and draft UX are not first-delivery prerequisites.
 
-## Deferred two-stage authoring direction
+## Settled authoring model (2026-09-29)
 
-1. Customize opens a preliminary local draft: wave count and enemy types,
-   including a shared enemy when the profile requires one. No budget editing.
-2. Engine resolution scans the proposed composition using reached introduction
-   occurrence/completion history and eligible profiles. Enemy-seen history alone
-   is not equivalent: an enemy may appear without completing its introduction.
-3. Without an introduction, Customize Combat opens the detailed editor with
-   those waves/types inherited.
-4. With an introduction, show its identity and an explicit Continue with
-   [Introduction] action. Explain that it replaces the whole proposal.
-5. The resolved editor shows fixed waves read-only and customizes only generated
-   portions. Fully fixed results require no fabricated editable allocations.
+Identity is settled in the encounter selector; Customize edits only a settled
+identity, exactly as on mature. There is no preliminary draft, banner, or
+resolution step in the dialog.
 
-The preliminary proposal is not persisted intermediate encounter state.
-Application owns draft/navigation; engine owns resolution, candidates and
-semantic replacement. Pin close/back/re-edit and commit behavior before coding.
+1. Each reachable introduction is a member of its biome set with its native
+   gate as a requirement (route `FreshFile`; not completed on the route; H:
+   not occurred this run; Lycanthrope: the three prerequisite introductions
+   recorded). The picker lists ineligible members with the reason. On mature
+   saves every introduction member is ineligible, so nothing changes there.
+2. Customize on the ordinary identity excludes any enemy type whose
+   introduction is unfinished, naming the introduction to select. An
+   introduction's generated suffix applies the same exclusion except for its
+   own seed (`RequireCompletedIntro` filters added candidates only). Fixed
+   waves render read-only; all-fixed H introductions expose no controls.
+3. Retained states report findings and are never stripped: an unintroduced
+   type under an ordinary identity, or an introduction identity whose gate no
+   longer holds after an upstream edit.
+4. On `FreshFile` every generated combat phase and every mixed introduction's
+   suffix must be customized, so completion and occurrence history is exact
+   for the whole route. Uncustomized phases report a finding and block
+   execution eligibility. Native (uncustomized) mode is not publishable on
+   this route.
+
+Because no authored composition can hold two unfinished introduction types,
+competing introductions never arise in authored mode and native traversal
+order is not a planner contract; it remains a live diagnostic only.
 
 ## Native constraints and open resolution decision
 
@@ -59,15 +70,9 @@ not imply a combined introduction. The local Lua 5.2.4 probe in the
 the first eligible numeric wave/type slot. Embedded-game confirmation remains
 open; `pairs` is not an explicit random draw.
 
-These findings preserve the agreed two-stage editor, not a third customization
-surface. The resolved profile determines whether the second stage is read-only,
-mixed fixed/generated, or ordinary generated composition. Mixed profiles have
-no automatic shared highlight and keep their native generated-suffix shares.
-
-Resolve that ordering/reachability question before claiming one automatic winner
-for competing candidates. Do not use click order, alphabetical order or offer
-arbitrary unfinished introductions. Any choice of resolved profiles must be
-proven reachable. This remains a bounded live/source investigation item.
+Mixed profiles have no automatic shared highlight and keep their native
+generated-suffix shares. Under the settled model the ordering question does not
+reach authored compositions; it stays a live diagnostic for native generation.
 
 ## Required extension and ownership
 
@@ -130,8 +135,8 @@ winner UX from the synthetic function witnesses alone.
 - Engine: encounter resolution and preparation, history, complete generated
   authoring, budget assessment and export. Preserve native full-encounter wave
   shares; do not renormalize because a prefix is fixed.
-- Application: preliminary picker, explicit replacement and fixed/mixed editor
-  presentation consuming engine products.
+- Application: encounter selector with introduction members and their reasons,
+  and fixed/mixed editor presentation consuming engine products; no policy.
 - Executor: resolved identity and bounded mixed-wave installation. Current
   generated admission rejects existing SpawnWaves, so this is not catalog-only.
   Keep native fixed content native; do not persist/export duplicate fixed counts
