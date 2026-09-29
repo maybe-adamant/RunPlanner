@@ -100,6 +100,7 @@ describe('OccurrenceEncounterWorkbench', () => {
       occurrenceById(goldenFStartId),
     );
     openRoomTab('Room Timeline');
+    expect(screen.queryByRole('group', { name: 'Events' })).toBeNull();
     await view.user.click(screen.getByRole('button', { name: 'Customize encounter' }));
     const dialog = await screen.findByRole('dialog', { name: 'Customize' });
     await view.user.click(within(dialog).getByRole('button', { name: 'Edit' }));
@@ -623,10 +624,13 @@ describe('OccurrenceEncounterWorkbench', () => {
     const view = renderOccurrenceWorkbench(project, 'Surface', 'P', occurrenceById(occurrenceId));
     openRoomTab('Room Timeline');
     const condition = screen.getByRole('checkbox', {
-      name: 'Death Defiance condition',
+      name: 'Gorgon Amulet: Death Defiance',
     }) as HTMLInputElement;
     expect(condition.disabled).toBe(false);
-    await view.user.click(condition);
+    expect(within(screen.getByRole('group', { name: 'Events' })).getByRole('checkbox')).toBe(
+      condition,
+    );
+    await view.user.click(screen.getByText('Gorgon Amulet: Death Defiance'));
     await waitFor(() => {
       const launcher = screen.getByRole('button', {
         name: /Choose Trait; trait is not selected/,
@@ -642,7 +646,7 @@ describe('OccurrenceEncounterWorkbench', () => {
     ).toBe(true);
   });
 
-  it('keeps a context-invalid Gorgon child visible as a repair surface', () => {
+  it('keeps a context-invalid Gorgon child visible as a repair surface', async () => {
     const occurrenceId = pOccurrenceId('P_Combat12', 8, 1);
     const phase = createEncounterPhaseAddress(
       pBiome,
@@ -676,10 +680,10 @@ describe('OccurrenceEncounterWorkbench', () => {
       phase,
       encounterKey: 'AthenaCombatP',
     });
-    renderOccurrenceWorkbench(project, 'Surface', 'P', occurrenceById(occurrenceId));
+    const view = renderOccurrenceWorkbench(project, 'Surface', 'P', occurrenceById(occurrenceId));
     openRoomTab('Room Timeline');
     const condition = screen.getByRole('checkbox', {
-      name: 'Death Defiance condition',
+      name: 'Gorgon Amulet: Death Defiance',
     }) as HTMLInputElement;
     expect(condition.checked).toBe(true);
     expect(condition.disabled).toBe(false);
@@ -687,6 +691,16 @@ describe('OccurrenceEncounterWorkbench', () => {
       name: /Edit Trait · Divine Dash; trait configuration has no findings/,
     });
     expect(launcher.getAttribute('data-trait-status')).toBe('valid');
+    await view.user.click(condition);
+    await waitFor(() => {
+      expect(
+        (
+          screen.getByRole('checkbox', {
+            name: 'Gorgon Amulet: Death Defiance',
+          }) as HTMLInputElement
+        ).checked,
+      ).toBe(false);
+    });
   });
 
   it('renders and dispatches the phase-local Fig Leaf checkbox on a supported fixed phase', async () => {
@@ -702,9 +716,11 @@ describe('OccurrenceEncounterWorkbench', () => {
       occurrenceById(nOccurrenceIds.preHub),
     );
     openRoomTab('Room Timeline');
-    const skip = screen.getByRole('checkbox', { name: 'Skip combat with Fig Leaf' });
+    const skip = screen.getByRole('checkbox', { name: 'Skip with Fig Leaf' });
     expect((skip as HTMLInputElement).disabled).toBe(false);
-    await view.user.click(skip);
+    expect(within(screen.getByRole('group', { name: 'Events' })).getByRole('checkbox')).toBe(skip);
+    (skip as HTMLInputElement).focus();
+    await view.user.keyboard(' ');
     await waitFor(() => {
       const occurrence = view.application.store
         .getState()
@@ -713,6 +729,49 @@ describe('OccurrenceEncounterWorkbench', () => {
           (candidate) => candidate.occurrenceId === nOccurrenceIds.preHub,
         );
       expect(occurrence?.encounters.figLeafSkipByPhase).toMatchObject({ Encounter: true });
+    });
+  });
+
+  it('groups retained event selections together so conflicting authoring remains repairable', async () => {
+    const occurrenceId = pOccurrenceId('P_Combat12', 8, 1);
+    const phase = createEncounterPhaseAddress(
+      pBiome,
+      { kind: 'occurrence', occurrenceId },
+      'Combat',
+    );
+    let project = applyProjectCommand(loadSurfaceNOPQProject(), catalog, {
+      kind: 'ReplaceStartingKeepsake',
+      selection: createRouteStartKeepsakeSelectionAddress('Surface'),
+      keepsakeKey: 'AthenaEncounterKeepsake',
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceGorgonDeathDefianceCondition',
+      phase,
+      value: true,
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceFigLeafSkip',
+      phase,
+      value: true,
+    });
+    const view = renderOccurrenceWorkbench(project, 'Surface', 'P', occurrenceById(occurrenceId));
+    openRoomTab('Room Timeline');
+    const events = screen.getByRole('group', { name: 'Events' });
+    expect(
+      within(events)
+        .getAllByRole('checkbox')
+        .map((input) => (input as HTMLInputElement).checked),
+    ).toEqual([true, true]);
+    const skip = within(events).getByRole('checkbox', {
+      name: 'Skip with Fig Leaf',
+    }) as HTMLInputElement;
+    expect(skip.disabled).toBe(false);
+    expect(
+      within(events).getByRole('checkbox', { name: 'Gorgon Amulet: Death Defiance' }),
+    ).toBeTruthy();
+    await view.user.click(skip);
+    await waitFor(() => {
+      expect(screen.queryByRole('checkbox', { name: 'Skip with Fig Leaf' })).toBeNull();
     });
   });
 

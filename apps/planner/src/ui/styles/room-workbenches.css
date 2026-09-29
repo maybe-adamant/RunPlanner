@@ -398,12 +398,24 @@
   flex: 1 1 22rem;
 }
 
-.encounter-phase-settings > .field-control:not(.field-control-inline) {
+.encounter-event-controls {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 20px;
+}
+
+.encounter-event-control {
   display: inline-flex;
   align-items: center;
   flex: 0 0 auto;
   gap: 7px;
   white-space: nowrap;
+}
+
+.encounter-event-control > input {
+  margin: 0;
 }
 
 .trait-offer-dialog.encounter-customization-dialog {
@@ -957,15 +969,6 @@
 
 .nemesis-response-control > input {
   margin: 0;
-}
-
-.encounter-phase-settings > .gorgon-condition-control input {
-  margin: 0;
-}
-
-.encounter-phase-settings > .gorgon-condition-control {
-  justify-content: flex-end;
-  margin-left: auto;
 }
 
 .ship-phase-list {

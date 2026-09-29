@@ -350,14 +350,14 @@ export function EncounterPhaseControl({
       : requireWorkspaceInteraction(interactions.figLeafSkips, phase.figLeaf.interactionKey);
   const figLeafControl =
     figLeafInteraction === undefined ? null : (
-      <label className="field-control fig-leaf-skip-control">
+      <label className="encounter-event-control">
         <input
           checked={figLeafInteraction.selected}
           disabled={!figLeafInteraction.supported && !figLeafInteraction.selected}
           onChange={(event) => executeIntent(figLeafInteraction.intentFor(event.target.checked))}
           type="checkbox"
         />
-        <span>Skip combat with Fig Leaf</span>
+        <span>Skip with Fig Leaf</span>
       </label>
     );
   const gorgonInteraction =
@@ -369,14 +369,14 @@ export function EncounterPhaseControl({
         );
   const gorgonControl =
     gorgonInteraction === undefined ? null : (
-      <label className="field-control gorgon-condition-control">
-        <span>Death Defiance condition</span>
+      <label className="encounter-event-control">
         <input
           checked={gorgonInteraction.selected}
           disabled={!gorgonInteraction.supported && !gorgonInteraction.selected}
           onChange={(event) => executeIntent(gorgonInteraction.intentFor(event.target.checked))}
           type="checkbox"
         />
+        <span>Gorgon Amulet: Death Defiance</span>
       </label>
     );
   const ariaLabel = phase.label.endsWith('encounter')
@@ -426,10 +426,21 @@ export function EncounterPhaseControl({
           </div>
         )}
         {customizationControl}
-        {figLeafControl}
-        {gorgonControl}
         {phase.customizable ? null : nemesisEventSelector}
       </div>
+      {figLeafControl !== null || gorgonControl !== null ? (
+        <div
+          aria-label="Events"
+          className="field-control field-control-inline encounter-events"
+          role="group"
+        >
+          <span>Events</span>
+          <div className="encounter-event-controls">
+            {figLeafControl}
+            {gorgonControl}
+          </div>
+        </div>
+      ) : null}
     </section>
   );
 }
