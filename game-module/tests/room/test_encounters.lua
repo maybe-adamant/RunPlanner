@@ -468,9 +468,19 @@ function TestEncounters.testPublishedStoryCarrierIsForcedProvenAndBound()
     lu.assertEquals(diagnostics, {})
     lu.assertEquals(registry.forNative(selected).phase.slotKey, "Encounter")
     lu.assertTrue(registry.prove(occurrence, { Encounter = selected }))
+    -- Missing declarations cannot prove a different native carrier compatible.
     local result, mismatch = registry.prove(occurrence, { Encounter = { Name = "Empty" } })
     lu.assertNil(result)
-    lu.assertEquals(mismatch, { kind = "encounter", expected = "Story_Chronos_01", observed = "Empty" })
+    lu.assertEquals(mismatch, {
+        kind = "encounter", expected = "Story_Chronos_01", observed = "Empty", conflict = { "declaration" },
+    })
+    -- A presentation-only story and Empty share every compared lifecycle policy.
+    local empty = { Name = "Empty" }
+    lu.assertTrue(registry.prove(occurrence, { Encounter = empty }, {
+        Empty = { Name = "Empty", EncounterType = "NonCombat" },
+        Story_Chronos_01 = { Name = "Story_Chronos_01", EncounterType = "NonCombat" },
+    }))
+    lu.assertEquals(registry.forNative(empty).phase.slotKey, "Encounter")
 end
 
 function TestEncounters.testPublishedFirstTartarusCombatInstallsItsExactIntroDefinition()

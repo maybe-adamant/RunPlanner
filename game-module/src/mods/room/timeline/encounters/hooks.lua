@@ -27,6 +27,8 @@ local thessaly = type(import) == "function" and import("mods/room/timeline/encou
     or require("mods.room.timeline.encounters.thessaly")
 local generated = type(import) == "function" and import("mods/room/timeline/encounters/generated.lua")
     or require("mods.room.timeline.encounters.generated")
+local compatibility = type(import) == "function" and import("mods/room/timeline/encounters/compatibility.lua")
+    or require("mods.room.timeline.encounters.compatibility")
 
 local hooks = {}
 
@@ -69,13 +71,16 @@ function hooks.attach(module, session, getState, report, room, shipCombat, gener
         local state = getState(runtime)
         if state == nil or state.state ~= "synchronized" then return base(currentRun, nativeRoom, args) end
 
-        local phase
+        local phase, role
         if encounterIndex ~= nil then
             encounterIndex = encounterIndex + 1
             phase = room.encounterAt(state, encounterIndex, nativeRoom)
+            role = compatibility.role(encounterIndex, true,
+                type(nativeRoom) == "table" and type(nativeRoom.Encounters) == "table" and nativeRoom.Encounters[1])
         else
             local first = room.encounterAt(state, 1, nativeRoom)
             local second = room.encounterAt(state, 2, nativeRoom)
+            local index = 1
             if second == nil then
                 phase = first
             elseif type(nativeRoom) == "table" then
@@ -86,17 +91,19 @@ function hooks.attach(module, session, getState, report, room, shipCombat, gener
                     directEncounterSequences[nativeRoom] = sequence
                 end
                 if not sequence.done then
+                    index = sequence.index
                     phase = room.encounterAt(state, sequence.index, nativeRoom)
                     sequence.index = sequence.index + 1
                     if phase == nil then sequence.done = true end
                 end
             end
+            role = compatibility.role(index, false, type(nativeRoom) == "table" and nativeRoom.Encounter)
         end
         local declaration
+        local gameValue = _G.game or game
+        local declarations = gameValue and gameValue.EncounterData or nil
         if phase ~= nil then
-            local gameValue = _G.game or game
-            declaration = gameValue and gameValue.EncounterData
-                and gameValue.EncounterData[phase.encounterKey] or nil
+            declaration = declarations and declarations[phase.encounterKey] or nil
         end
         local admitted = declaration ~= nil
         if phase and not declaration and session.diagnostic then
@@ -106,7 +113,6 @@ function hooks.attach(module, session, getState, report, room, shipCombat, gener
             }, room.occurrence(state, nativeRoom))
         end
         do
-            local gameValue = _G.game or game
             local eligible = gameValue and gameValue.IsEncounterEligible or _G.IsEncounterEligible
             if declaration then
                 local ok, verdict = pcall(eligible, currentRun, nativeRoom, declaration, args)
@@ -130,13 +136,18 @@ function hooks.attach(module, session, getState, report, room, shipCombat, gener
         -- so nested native setup cannot inherit an outer same-name override.
         local result = generatedEncounter.withPhase(state, room, admitted and phase or nil, nativeRoom, choose)
         if phase ~= nil and type(result) == "table" then
-            local actual = result.GenusName or result.Name or result.EncounterName
-            if actual == phase.encounterKey then
-                room.bindEncounter(state, result, phase.slotKey, nativeRoom)
-            elseif admitted and session.diagnostic then
-                session.diagnostic(state, "encounter-composition", {
-                    kind = "intro-substitution", phase = phase.slotKey,
-                    encounterKey = phase.encounterKey, observed = actual,
+            local actual = compatibility.nativeName(result)
+            local substituted = actual ~= phase.encounterKey
+            local compatible, conflict = compatibility.compare(declarations, phase.encounterKey, actual, role)
+            -- A later different native choice for an already carried phase is ambient.
+            if substituted and room.encounterBound(state, phase.slotKey, nativeRoom) then
+                return result
+            elseif compatible then
+                room.bindEncounter(state, result, phase.slotKey, nativeRoom, substituted and actual or nil)
+            elseif session.diagnostic then
+                session.diagnostic(state, "encounter-lifecycle", {
+                    kind = "lifecycle-conflict", phase = phase.slotKey,
+                    encounterKey = phase.encounterKey, observed = actual, conflict = conflict,
                 }, room.occurrence(state, nativeRoom))
             end
         end
