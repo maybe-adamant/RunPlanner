@@ -423,6 +423,7 @@ export {
   levelResolutionCandidateForProjectEvaluationAssembly,
   traitOfferCandidateForProjectEvaluationAssembly,
   isShopOfferActiveForProjectEvaluationAssembly,
+  shopOfferAssessmentForProjectEvaluationAssembly,
   purgingPoolCandidateForProjectEvaluationAssembly,
   hermesShrineCandidateForProjectEvaluationAssembly,
   stygianWellCandidateForProjectEvaluationAssembly,

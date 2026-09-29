@@ -145,28 +145,10 @@ ordinal rules and mature reward behavior, unless a concrete discrepancy emerges.
 
 ## Empty shop-group inspection for delivery planning
 
-The current contract is fixed-cardinality end to end:
-
-- Catalog `compiler/rewards/shops.ts` requires positive offerCount, at least
-  that many declared options, and exactly matching declared slots.
-- Engine `reward-kernel/shop.ts` requires authored/partial offers to match
-  profile.slotCount, and assigns groups using fixed offsets. Its indexed and
-  partial candidate witnesses share this assumption.
-- `authored-project/room-state/decoding/shop-codec.ts:decodeShopOffers` requires
-  exact declared slot keys; null is an unresolved authored reward, not a
-  native empty-group result.
-- Execution `assembly/overview.ts` carries slot indices and generation-group
-  mappings. Removing a group must not leave later physical indices uncompressed
-  or silently retarget authored purchases.
-
-Consequently the agreed generic empty-group behavior is a complete vertical
-slice, not changing one rejection into success. Engine generation must return
-an explicit effective inventory shape for the profile and generation context.
-Use that same product for candidates, findings, materialization, UI and export.
-Stable declared slot ownership must remain distinct from compact native item
-position. Absence is derived only when the group's native eligibility domain
-is empty; a user leaving an eligible slot blank must still produce a finding.
-An invalid selected offer must not be erased by treating it as an empty group.
+Delivered in Gate D: the engine's four-state Shop inventory assessment
+(`complete`, `validEmpty`, `incomplete`, `selectedInvalid`) and compact
+execution rows carrying `profileSlotIndex` replace the former fixed-cardinality
+contract; see the Shops section of `docs/design/REWARD_MODEL.md`.
 
 Settled: retain five declared slots and their stable addresses. The fifth slot
 exists but is validly empty when its group has no eligible options; do not

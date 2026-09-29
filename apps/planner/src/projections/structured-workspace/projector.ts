@@ -30,6 +30,7 @@ import {
   acquisitionConversionCandidateForProjectEvaluationAssembly,
   traitOfferCandidateForProjectEvaluationAssembly,
   isShopOfferActiveForProjectEvaluationAssembly,
+  shopOfferAssessmentForProjectEvaluationAssembly,
   type ProjectEvaluation,
   type ProjectEvaluationAssembly,
 } from '@run-planner/engine/simulation';
@@ -340,6 +341,7 @@ export function createStructuredWorkspaceProjection(
           }
         },
         (offer) => isShopOfferActiveForProjectEvaluationAssembly(assembly, offer),
+        (offer) => shopOfferAssessmentForProjectEvaluationAssembly(assembly, offer),
       );
       const routeSource = sources.route;
       const authoredRoute =

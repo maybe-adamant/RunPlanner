@@ -526,7 +526,7 @@ local function minimalPlan(transactions)
 end
 
 function TestProtocol.testReleasedProtocol48IsRejected()
-    lu.assertEquals(protocol.VERSION, 50)
+    lu.assertEquals(protocol.VERSION, 51)
     local plan = decode("f-opening")
     plan.protocolVersion = 48
     refreshFingerprint(plan)
@@ -1151,8 +1151,10 @@ function TestProtocol.testWorldShopOffersAllowUnownedRowsAndRequireUniquePublish
     plan.occurrences[1].overview.shop = tagged({
         profileKey = "WorldShop",
         offers = {
-            { offerKey = "normal", optionKey = "RandomLoot", rewardType = "RandomLoot", transactionOwner = "normal" },
-            { offerKey = "unselected", optionKey = "MaxHealthDrop", rewardType = "MaxHealthDrop" },
+            { offerKey = "normal", profileSlotIndex = 0, optionKey = "RandomLoot", rewardType = "RandomLoot",
+                transactionOwner = "normal" },
+            { offerKey = "unselected", profileSlotIndex = 1, optionKey = "MaxHealthDrop",
+                rewardType = "MaxHealthDrop" },
         },
     })
     refreshFingerprint(plan)
@@ -1161,6 +1163,12 @@ function TestProtocol.testWorldShopOffersAllowUnownedRowsAndRequireUniquePublish
     plan.occurrences[1].overview.shop.offers[1].transactionOwner = "missing"
     refreshFingerprint(plan)
     lu.assertNil(protocol.decode(plan))
+
+    plan.occurrences[1].overview.shop.offers[1].transactionOwner = "normal"
+    plan.occurrences[1].overview.shop.offers[2].profileSlotIndex = 0
+    refreshFingerprint(plan)
+    lu.assertNil(protocol.decode(plan))
+    plan.occurrences[1].overview.shop.offers[2].profileSlotIndex = 1
 
     plan.occurrences[1].overview.shop.offers[1].transactionOwner = "normal"
     plan.occurrences[1].overview.shop.offers[2].transactionOwner = "normal"

@@ -2,7 +2,7 @@
 
 ## Contract
 
-The active strict versioned protocol, execution protocol 50, carries a
+The active strict versioned protocol, execution protocol 51, carries a
 complete-valid configured Underworld or Surface prefix, through `F/G/H/I` or `N/O/P/Q`. The desktop
 publisher writes an execution-only JSON artifact to one of six fixed Plan
 Executor slots in the established game target; the browser build has no
@@ -692,6 +692,13 @@ exception: the wire names its exact refill realization and payload. World
 Shop's dedicated refill callback can report an unexpected refill
 diagnostically; Well and Shrine use generic native contacts and pass through
 when no refill was published.
+
+World Shop Overview rows are the emitted items in native order: a row's index
+is its compact `StoreOptions` position and its `profileSlotIndex` names the
+declared slot it realizes. A validly empty slot publishes no row, so later
+items shift left; the Executor maps rows onto native `GroupsOf` slots by that
+index, omits a group with no rows, and never regenerates inventory itself. The
+Travel Deal replacement's `slotIndex` is the same compact position.
 
 ## Mismatch classification
 

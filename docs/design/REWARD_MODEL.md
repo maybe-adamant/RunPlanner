@@ -750,6 +750,19 @@ repairable migration state, not a second way to author inventory. Simulation
 validates the exact options jointly against eligibility and without-replacement
 selection.
 
+Native `FillInShopOptions` appends a group only when some option is eligible,
+with no replacement or minimum fill. The engine's inventory assessment
+therefore classifies each declared slot in its generation context as
+`complete`, `validEmpty` (its group has zero eligible options and the slot is
+unset), `incomplete` (eligible options exist but nothing is authored) or
+`selectedInvalid` (the authored item is not eligible; it is retained for
+repair). Valid emptiness is derived, never authored: it reuses the nullable
+slot value and keeps the declared slot and its address. An empty slot emits no
+item, offer, spawned pickup or purchase, the editor omits it, and existential
+candidate completion treats an empty group as complete. Generation witnesses keep declared slot
+order with a null option key at each empty slot. Only zero eligible options is
+modeled; a group with fewer eligible options than its `offerCount` is not.
+
 `RandomLoot` and `BoostedRandomLoot` remain distinct shop-option entries. Both
 resolve the same authored `RandomLoot` plus source shape, but only the boosted
 entry carries its sparse item-owned boon-rarity override. The authored option
@@ -825,8 +838,8 @@ reward after losing Infernal Contract does not publish a pedestal. A selected
 stale pickup remains a validation finding and a repairable authored action.
 
 Shop state is entry-materialized rather than door-offer state. Every picked
-shop occurrence must own a complete value for every slot in its declared
-profile. An unpicked shop occurrence may omit that state entirely; if it was
+shop occurrence must own a value for every slot in its declared profile,
+complete except where the slot is validly empty. An unpicked shop occurrence may omit that state entirely; if it was
 previously picked, the authored project may retain its complete value
 dormantly. Selecting an unconfigured shop occurrence as the picked target
 atomically installs the profile's recursive defaults. Materialization ignores

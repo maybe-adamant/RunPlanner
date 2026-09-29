@@ -20,6 +20,8 @@ export interface WorkspaceOccurrenceAssemblyFact {
   readonly authoredAdditionalExitKeys: readonly string[];
   readonly detailsActive: boolean;
   readonly contractOfferActive?: boolean;
+  /** Declared Shop slots whose group had zero eligible options at the reached entry. */
+  readonly validlyEmptyShopOfferKeys?: readonly string[];
   readonly chaosPlacement?: ChaosCandidateCapability;
   readonly chaosGateForced: boolean;
   readonly zagreusContractPlacement?: ZagreusContractCandidateCapability;
@@ -100,6 +102,16 @@ export function createWorkspaceBiomeOccurrenceAssemblyFacts(
           source.isActiveShopOffer(
             createShopOfferAddress(source.biome, occurrence.occurrenceId, 'infernalContractReward'),
           ),
+        validlyEmptyShopOfferKeys: Object.freeze(
+          occurrence.state.kind === 'shop'
+            ? Object.keys(occurrence.state.shop?.offers ?? {}).filter(
+                (offerKey) =>
+                  source.shopOfferAssessment(
+                    createShopOfferAddress(source.biome, occurrence.occurrenceId, offerKey),
+                  ) === 'validEmpty',
+              )
+            : [],
+        ),
         ...(chaosPlacement === undefined ? {} : { chaosPlacement }),
         ...(zagreusContractPlacement === undefined ? {} : { zagreusContractPlacement }),
         chaosGateForced: source.chaosGateForced(occurrenceAddress),

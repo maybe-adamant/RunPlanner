@@ -7,8 +7,9 @@ import type {
   RewardKernelCatalog,
   RewardKernelFacts,
   ShopGenerationWitness,
-  ShopGenerationSupport,
   ShopGenerationConstraints,
+  ShopGroupDeclaration,
+  ShopInventoryAssessment,
   ShopOptionEntry,
   ShopProfileDeclaration,
   ShopPurchaseAcquisition,
@@ -16,6 +17,7 @@ import type {
   ShopPurchaseGateResult,
   ShopPurchaseResult,
   ShopPurchaseSimulation,
+  ShopSlotAssessment,
 } from './model';
 import { isOfferSupportedAtResolutionPoint, locallyValidRewardOffers } from './support';
 
@@ -129,29 +131,57 @@ function assignments(
   });
 }
 
-export function evaluateShopGenerationSupport(
+/** Native `FillInShopOptions` appends a group only when some option is eligible. */
+function groupHasEligibleOption(
+  catalog: RewardKernelCatalog,
+  group: ShopGroupDeclaration,
+  facts: RewardKernelFacts,
+  additionalOptionRequirements: Readonly<Record<string, RequirementExpression>>,
+  constraints: ShopGenerationConstraints,
+): boolean {
+  return group.options.values.some((option) =>
+    locallyValidRewardOffers(catalog, option.rewardType).some((offer) =>
+      optionSupportsOffer(
+        catalog,
+        option,
+        { offer },
+        facts,
+        additionalOptionRequirements,
+        constraints,
+      ),
+    ),
+  );
+}
+
+/**
+ * Classifies every declared slot and finds the joint generations for one
+ * context. Authored slots are in declared order; null is an unset slot.
+ */
+export function assessShopInventory(
   catalog: RewardKernelCatalog,
   profile: ShopProfileDeclaration,
-  authored: readonly AuthoredShopOffer[],
+  authored: readonly (AuthoredShopOffer | null)[],
   facts: RewardKernelFacts,
   additionalOptionRequirements: Readonly<Record<string, RequirementExpression>> = {},
   constraints: ShopGenerationConstraints = {},
-): ShopGenerationSupport {
+): ShopInventoryAssessment {
   if (authored.length !== profile.slotCount) {
     return Object.freeze({
+      slots: Object.freeze([]),
       witnesses: Object.freeze([]),
-      unsupportedSlotIndexes: Object.freeze([]),
       jointlyUnavailable: true,
     });
   }
   let offset = 0;
-  let witnesses: readonly (readonly string[])[] = [[]];
-  const unsupportedSlotIndexes: number[] = [];
+  let witnesses: readonly (readonly (string | null)[])[] = [[]];
+  const slots: ShopSlotAssessment[] = [];
   for (const group of profile.groups.values) {
     const groupAuthored = authored.slice(offset, offset + group.offerCount);
-    groupAuthored.forEach((offer, groupIndex) => {
-      if (
-        !group.options.values.some((option) =>
+    offset += group.offerCount;
+    const supported = groupAuthored.map(
+      (offer) =>
+        offer !== null &&
+        group.options.values.some((option) =>
           optionSupportsOffer(
             catalog,
             option,
@@ -160,20 +190,37 @@ export function evaluateShopGenerationSupport(
             additionalOptionRequirements,
             constraints,
           ),
-        )
-      ) {
-        unsupportedSlotIndexes.push(offset + groupIndex);
-      }
-    });
-    offset += group.offerCount;
-    const groupAssignments = assignments(
-      catalog,
-      group.options.values,
-      groupAuthored,
-      facts,
-      additionalOptionRequirements,
-      constraints,
+        ),
     );
+    const empty =
+      !supported.some(Boolean) &&
+      !groupHasEligibleOption(catalog, group, facts, additionalOptionRequirements, constraints);
+    groupAuthored.forEach((offer, index) => {
+      slots.push(
+        offer === null
+          ? empty
+            ? 'validEmpty'
+            : 'incomplete'
+          : supported[index]
+            ? 'complete'
+            : 'selectedInvalid',
+      );
+    });
+    const concrete = groupAuthored.filter((offer): offer is AuthoredShopOffer => offer !== null);
+    const groupAssignments: readonly (readonly (string | null)[])[] = empty
+      ? concrete.length === 0
+        ? [groupAuthored.map(() => null)]
+        : []
+      : concrete.length === groupAuthored.length
+        ? assignments(
+            catalog,
+            group.options.values,
+            concrete,
+            facts,
+            additionalOptionRequirements,
+            constraints,
+          )
+        : [];
     witnesses = witnesses.flatMap((prefix) =>
       groupAssignments.map((assignment) => [...prefix, ...assignment]),
     );
@@ -182,21 +229,23 @@ export function evaluateShopGenerationSupport(
     witnesses.map((optionKeys) => Object.freeze({ optionKeys: Object.freeze(optionKeys) })),
   );
   return Object.freeze({
+    slots: Object.freeze(slots),
     witnesses: normalizedWitnesses,
-    unsupportedSlotIndexes: Object.freeze(unsupportedSlotIndexes),
-    jointlyUnavailable: normalizedWitnesses.length === 0 && unsupportedSlotIndexes.length === 0,
+    jointlyUnavailable:
+      normalizedWitnesses.length === 0 &&
+      slots.every((slot) => slot === 'complete' || slot === 'validEmpty'),
   });
 }
 
 export function findShopGenerationWitnesses(
   catalog: RewardKernelCatalog,
   profile: ShopProfileDeclaration,
-  authored: readonly AuthoredShopOffer[],
+  authored: readonly (AuthoredShopOffer | null)[],
   facts: RewardKernelFacts,
   additionalOptionRequirements: Readonly<Record<string, RequirementExpression>> = {},
   constraints: ShopGenerationConstraints = {},
 ): readonly ShopGenerationWitness[] {
-  return evaluateShopGenerationSupport(
+  return assessShopInventory(
     catalog,
     profile,
     authored,
@@ -323,17 +372,25 @@ export function findShopPartialAuthoredGenerationWitnesses(
 ): readonly ShopGenerationWitness[] {
   if (fixedOffers.length !== profile.slotCount) return Object.freeze([]);
   let offset = 0;
-  let witnesses: readonly (readonly string[])[] = Object.freeze([Object.freeze([])]);
+  let witnesses: readonly (readonly (string | null)[])[] = Object.freeze([Object.freeze([])]);
   for (const group of profile.groups.values) {
-    const groupAssignments = existentialGroupAssignments(
+    const groupFixed = fixedOffers.slice(offset, offset + group.offerCount);
+    const existential = existentialGroupAssignments(
       catalog,
       group.options.values,
       group.offerCount,
-      fixedOffers.slice(offset, offset + group.offerCount),
+      groupFixed,
       facts,
       additionalOptionRequirements,
       constraints,
     );
+    // A group with zero eligible options completes as validly empty slots.
+    const groupAssignments: readonly (readonly (string | null)[])[] =
+      existential.length === 0 &&
+      groupFixed.every((offer) => offer === null) &&
+      !groupHasEligibleOption(catalog, group, facts, additionalOptionRequirements, constraints)
+        ? [groupFixed.map(() => null)]
+        : existential;
     witnesses = witnesses.flatMap((prefix) =>
       groupAssignments.map((assignment) => Object.freeze([...prefix, ...assignment])),
     );
@@ -353,8 +410,9 @@ export function findShopPartialAuthoredGenerationWitnesses(
 function optionByWitness(
   profile: ShopProfileDeclaration,
   slotIndex: number,
-  optionKey: string,
+  optionKey: string | null,
 ): ShopOptionEntry | undefined {
+  if (optionKey === null) return undefined;
   let offset = 0;
   for (const group of profile.groups.values) {
     if (slotIndex < offset + group.offerCount) {
@@ -368,7 +426,7 @@ function optionByWitness(
 export function evaluateShopPurchases(
   catalog: RewardKernelCatalog,
   profile: ShopProfileDeclaration,
-  authored: readonly AuthoredShopOffer[],
+  authored: readonly (AuthoredShopOffer | null)[],
   witness: ShopGenerationWitness,
   entryOrder: readonly number[],
   initialHistory: RewardHistoryState,
@@ -399,12 +457,17 @@ export function evaluateShopPurchases(
   let possible = true;
   let failedSlotIndex: number | undefined;
   const acquisitions: ShopPurchaseAcquisition[] = [];
-  const remaining = new Set(authored.map((_, index) => index));
+  const remaining = new Set(authored.flatMap((offer, index) => (offer === null ? [] : [index])));
   for (const index of entryOrder) {
     const authoredOffer = authored[index];
     const optionKey = witness.optionKeys[index];
     const option = optionKey === undefined ? undefined : optionByWitness(profile, index, optionKey);
-    if (authoredOffer === undefined || option === undefined || !remaining.has(index)) {
+    if (
+      authoredOffer === undefined ||
+      authoredOffer === null ||
+      option === undefined ||
+      !remaining.has(index)
+    ) {
       possible = false;
       failedSlotIndex = index;
       break;
@@ -512,7 +575,7 @@ export function evaluateShopPurchaseGateAtSlot(
 export function simulateShopPurchases(
   catalog: RewardKernelCatalog,
   profile: ShopProfileDeclaration,
-  authored: readonly AuthoredShopOffer[],
+  authored: readonly (AuthoredShopOffer | null)[],
   witness: ShopGenerationWitness,
   entryOrder: readonly number[],
   initialHistory: RewardHistoryState,

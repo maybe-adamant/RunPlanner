@@ -103,14 +103,21 @@ local function shop(value, label)
     local offers, offersError = p.arr(record.offers, label .. ".offers")
     if not offers then return nil, offersError end
     local seenTransactionOwners = {}
+    local priorSlotIndex = -1
     for index, valueRow in ipairs(offers) do
         local row, rowError = p.exact(
             valueRow,
-            { "offerKey", "optionKey", "rewardType" },
+            { "offerKey", "profileSlotIndex", "optionKey", "rewardType" },
             { "transactionOwner", "source", "spurnedSource" },
             label .. ".offers[" .. index .. "]"
         )
         if not row then return nil, rowError end
+        -- Rows are emitted items in native order; empty declared slots leave gaps.
+        if not p.int(row.profileSlotIndex, label .. ".offers.profileSlotIndex", 0)
+            or row.profileSlotIndex <= priorSlotIndex then
+            return p.fail(label .. " has invalid shop offer profileSlotIndex")
+        end
+        priorSlotIndex = row.profileSlotIndex
         for _, key in ipairs({ "offerKey", "optionKey", "rewardType" }) do
             if not p.str(row[key], label .. ".offers." .. key) then
                 return p.fail(label .. " has invalid shop offer")
