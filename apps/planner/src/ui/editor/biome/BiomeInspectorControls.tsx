@@ -64,6 +64,14 @@ function KeepsakeRackTimelineContent({
           workspaceInteractionKey(selection.equipResult.address),
         );
   if (interaction === undefined) return null;
+  if (interaction.unavailableReason !== undefined)
+    return (
+      <div className="room-keepsake-action">
+        <span className="room-keepsake-unavailable">
+          {interaction.selectedLabel} — no Keepsake Rack on this route
+        </span>
+      </div>
+    );
   return (
     <div className="room-keepsake-action">
       <PostbossKeepsakeControl hideLabel interaction={interaction} />

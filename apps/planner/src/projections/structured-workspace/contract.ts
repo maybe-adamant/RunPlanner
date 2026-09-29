@@ -620,6 +620,8 @@ export interface WorkspaceRoomSummary {
     };
     readonly marker: WorkspaceMarker;
     readonly selectedKeepsakeKey?: string;
+    /** A keepsake retained where the route has no rack; it can only be removed. */
+    readonly unavailableReason?: 'rackUnavailableOnRoute';
   };
 }
 

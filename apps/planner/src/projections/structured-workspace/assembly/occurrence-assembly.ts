@@ -412,8 +412,12 @@ export function assembleWorkspaceOccurrence(
         Object.freeze([]),
     });
   })();
+  const rackOnRoute = routeHasKeepsakeRack(room, input.biome.routeKey);
+  // A keepsake retained where the route lost its rack keeps a removal-only selection.
+  const rackRetainedOffRoute =
+    !rackOnRoute && room.hasKeepsakeRack && occurrence.keepsakeRack !== undefined;
   const keepsakeSelection =
-    !input.facts.detailsActive || !routeHasKeepsakeRack(room, input.biome.routeKey)
+    !input.facts.detailsActive || (!rackOnRoute && !rackRetainedOffRoute)
       ? undefined
       : (() => {
           const address = createPostbossKeepsakeSelectionAddress(
@@ -423,10 +427,11 @@ export function assembleWorkspaceOccurrence(
             occurrence.keepsakeRack === undefined
               ? undefined
               : input.catalog.keepsakes.byKey[occurrence.keepsakeRack.keepsakeKey]?.effect;
-          const resultAddress =
-            effect?.kind === 'jeweledPom' ||
-            effect?.kind === 'experimentalHammer' ||
-            effect?.kind === 'transcendentEmbryo'
+          const resultAddress = rackRetainedOffRoute
+            ? undefined
+            : effect?.kind === 'jeweledPom' ||
+                effect?.kind === 'experimentalHammer' ||
+                effect?.kind === 'transcendentEmbryo'
               ? createKeepsakeEquipResultAddress(address, effect.kind)
               : undefined;
           return Object.freeze({
@@ -443,6 +448,9 @@ export function assembleWorkspaceOccurrence(
             ...(occurrence.keepsakeRack === undefined
               ? {}
               : { selectedKeepsakeKey: occurrence.keepsakeRack.keepsakeKey }),
+            ...(rackRetainedOffRoute
+              ? { unavailableReason: 'rackUnavailableOnRoute' as const }
+              : {}),
           });
         })();
   const featureAssembly = assembleOccurrenceFeatures(

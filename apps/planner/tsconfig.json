@@ -16,6 +16,9 @@
         "../../test/fixtures/authored-project/routes/surface.ts"
       ],
       "@run-planner/test-fixtures/dream": ["../../test/fixtures/authored-project/routes/dream.ts"],
+      "@run-planner/test-fixtures/fresh-file": [
+        "../../test/fixtures/authored-project/routes/fresh-file.ts"
+      ],
       "@run-planner/test-fixtures/checkpoints/manifest": [
         "../../test/fixtures/authored-project/checkpoints/manifest.ts"
       ],

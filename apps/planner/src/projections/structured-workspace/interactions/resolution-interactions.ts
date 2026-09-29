@@ -115,6 +115,7 @@ export function bindResolutionInteractions(input: {
     {
       readonly address: KeepsakeSelectionAddress;
       readonly selectedKeepsakeKey?: string;
+      readonly unavailableReason?: 'rackUnavailableOnRoute';
     }
   >;
   readonly keepsakeEquipResultControls?: ReadonlyMap<
@@ -422,9 +423,14 @@ export function bindResolutionInteractions(input: {
           projectKeepsakeSelectionPicker(
             contextualPicker,
             catalog,
-            candidates.keepsakeSelections(control.address),
+            control.unavailableReason === undefined
+              ? candidates.keepsakeSelections(control.address)
+              : [],
             selectedKey,
           ),
+        ...(control.unavailableReason === undefined
+          ? {}
+          : { unavailableReason: control.unavailableReason }),
         owner: control.address,
         selectedLabel:
           catalog.keepsakes.byKey[selectedKey ?? '']?.label ??

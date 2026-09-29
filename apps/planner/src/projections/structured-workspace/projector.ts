@@ -234,6 +234,7 @@ export function createStructuredWorkspaceProjection(
         {
           readonly address: import('@run-planner/engine/authored-project').KeepsakeSelectionAddress;
           readonly selectedKeepsakeKey?: string;
+          readonly unavailableReason?: 'rackUnavailableOnRoute';
         }
       >();
       const keepsakeEquipResultControls = new Map<
@@ -501,6 +502,9 @@ export function createStructuredWorkspaceProjection(
                 ...(node.room.keepsakeSelection.selectedKeepsakeKey === undefined
                   ? {}
                   : { selectedKeepsakeKey: node.room.keepsakeSelection.selectedKeepsakeKey }),
+                ...(node.room.keepsakeSelection.unavailableReason === undefined
+                  ? {}
+                  : { unavailableReason: node.room.keepsakeSelection.unavailableReason }),
               }),
             );
             const equipResult = node.room.keepsakeSelection.equipResult;
