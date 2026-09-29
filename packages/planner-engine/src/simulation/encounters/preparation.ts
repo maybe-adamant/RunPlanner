@@ -20,6 +20,7 @@ import {
 import { evaluateRequirement, type RequirementEvaluationContext } from '../../requirements';
 import {
   projectBiomeEncounterKeyCounts,
+  projectKnownEncounteredEnemyRecord,
   projectEncounterRecordPreparation,
   projectOfferedExitCount,
   projectEncounterPreparationRoomWindow,
@@ -145,6 +146,7 @@ function requirementContext(
       lootTypeHistory: Object.freeze({}),
       roomsEntered: roomsEntered(view),
       useRecord: Object.freeze({}),
+      knownEncounteredEnemies: projectKnownEncounteredEnemyRecord(view),
     }),
     currentRoomShopOptionNames: new Set<string>(),
     currentRoomRewardType: (() => {

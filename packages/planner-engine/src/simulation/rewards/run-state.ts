@@ -152,6 +152,8 @@ export interface RunStateSnapshot {
   readonly forfeitStatus: 'inactive' | 'available' | 'consumed';
   /** Resources credited by acquisitions settled before this checkpoint, by resource key. */
   readonly resourceGains: SimulationState['rewardHistory']['resourceGains'];
+  /** Native enemy names recorded by exact customized compositions completed before this checkpoint. */
+  readonly knownEncounteredEnemyKeys: readonly string[];
   readonly rewardStoreController: RunStateRewardStoreController;
   readonly bags: readonly DecisionRewardBagState[];
 }
@@ -804,6 +806,7 @@ export function createRunState(context: RunStateContext): RunStateSnapshot | und
         }),
     forfeitStatus: first.forfeitStatus,
     resourceGains: first.resourceGains,
+    knownEncounteredEnemyKeys: firstState.reached.historyView.ledgers.knownEncounteredEnemyKeys,
     rewardStoreController: Object.freeze({
       // No `currentStoreKey`: a checkpoint reports the ledger at its own settled boundary.
       ...enteredRewardStoreTally(firstState.reached.historyView),

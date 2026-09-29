@@ -13,7 +13,7 @@ import {
   requirePositiveInteger,
 } from '../common';
 import { fail } from '../errors';
-import { normalizeRequirement } from '../requirements';
+import { normalizeEncounterDefinitionRequirement } from '../requirements';
 import { normalizeEncounterGeneration, normalizeInfiniteRoster } from './generation';
 
 const encounterPhaseKinds = new Set<EncounterPhaseKind>([
@@ -77,7 +77,7 @@ export function normalizeEncounterDefinitions(
       const requirements =
         raw.requirements === undefined
           ? undefined
-          : normalizeRequirement(raw.requirements, `${path}.requirements`);
+          : normalizeEncounterDefinitionRequirement(raw.requirements, `${path}.requirements`);
       if (raw.sequenceEffect !== undefined && raw.sequenceEffect.kind !== 'terminateSuffix') {
         fail(
           `${path}.sequenceEffect.kind`,

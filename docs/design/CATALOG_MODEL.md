@@ -228,7 +228,10 @@ god's concrete loot acquisition may declare a `lootRequirement` (source LootData
 `GameStateRequirements`); its keys must be ordinary gods, and the save-file god
 records (`lifetimeGodUseRecord`, `lifetimeGodPickupRecord`) are admitted only
 there. The `resourceGains` record is admitted in loot, reward-store and Shop
-requirements, where reward history is evaluated, and rejected elsewhere. A source-bearing payload needs
+requirements, where reward history is evaluated, and rejected elsewhere. The
+`knownEncounteredEnemies` record is admitted only in Encounter Definition
+requirements, and its keys must name an enemy some generated composition can
+request. A source-bearing payload needs
 a compatible policy and resolution point. Blind Box resolves at its
 `hiddenSource` acquisition role; its inventory identity is not an acquired
 god. Producer-specific authoring remains in Reward Model.

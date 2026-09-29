@@ -49,6 +49,7 @@ function requireClosedValue<const Values extends readonly string[]>(
 function normalizeShopOption(
   raw: RawShopOptionEntryDeclaration,
   rewardTypes: CatalogCollection<RewardTypeDeclaration>,
+  resourceKeys: ReadonlySet<string>,
   path: string,
 ): ShopOptionEntry {
   const boonRarityOverride = raw.boonRarityOverride;
@@ -165,6 +166,7 @@ function normalizeShopOption(
           requirement: normalizeAndValidateRequirement(
             raw.requirement,
             rewardTypes,
+            resourceKeys,
             `${path}.requirement`,
           ),
         }),
@@ -174,6 +176,7 @@ function normalizeShopOption(
           purchaseRequirement: normalizeAndValidateRequirement(
             raw.purchaseRequirement,
             rewardTypes,
+            resourceKeys,
             `${path}.purchaseRequirement`,
           ),
         }),
@@ -189,6 +192,7 @@ function normalizeShopOption(
 export function normalizeShops(
   raw: RawRewardKernelInput['shops'],
   rewardTypes: CatalogCollection<RewardTypeDeclaration>,
+  resourceKeys: ReadonlySet<string>,
 ): CatalogCollection<ShopProfileDeclaration> {
   const echoDuplicateKeyPrefix = 'echoDoubleShop:';
   const reservedSupplementalKeys = new Set([
@@ -209,7 +213,12 @@ export function normalizeShops(
             fail(`${groupPath}.offerCount`, 'cannot exceed the number of option entries');
           const options = createCollection(
             group.options.map((option, optionIndex) =>
-              normalizeShopOption(option, rewardTypes, `${groupPath}.options[${optionIndex}]`),
+              normalizeShopOption(
+                option,
+                rewardTypes,
+                resourceKeys,
+                `${groupPath}.options[${optionIndex}]`,
+              ),
             ),
             `${groupPath}.options`,
             (option) => option.key,

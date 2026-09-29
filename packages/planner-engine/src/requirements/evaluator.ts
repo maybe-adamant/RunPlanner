@@ -5,6 +5,7 @@ import type {
   NumericRange,
   RequirementExpression,
   ResourceGainRecord,
+  EncounteredEnemyRecord,
   RoomStructuralTag,
   RunHistoryRecord,
   SaveFileHistoryRecord,
@@ -28,10 +29,18 @@ export interface RequirementEvaluationContext {
   /** Present when a declaration evaluates a route-owned predicate. */
   readonly routeKey?: string;
   readonly counters: Readonly<Record<CounterAxis, number>>;
-  /** Save-file god and resource-gain ledgers exist only where reward history reaches. */
+  /**
+   * Save-file god and resource-gain ledgers exist only where reward history
+   * reaches; known encountered enemies only at encounter preparation.
+   */
   readonly records: Readonly<Record<RunHistoryRecord, Readonly<Record<string, number>>>> &
     Readonly<
-      Partial<Record<SaveFileHistoryRecord | ResourceGainRecord, Readonly<Record<string, number>>>>
+      Partial<
+        Record<
+          SaveFileHistoryRecord | ResourceGainRecord | EncounteredEnemyRecord,
+          Readonly<Record<string, number>>
+        >
+      >
     >;
   readonly currentRoomShopOptionNames: ReadonlySet<string>;
   readonly currentRoomRewardType: string | undefined;
@@ -100,6 +109,17 @@ function requireRecord(
   return value;
 }
 
+/** Summed count for `recordCount`; count of present keys for `distinctRecordKeyCount`. */
+export function recordRequirementCount(
+  requirement: Extract<RequirementExpression, { kind: 'recordCount' | 'distinctRecordKeyCount' }>,
+  context: RequirementEvaluationContext,
+): number {
+  const record = requireRecord(context, requirement.record);
+  return requirement.kind === 'recordCount'
+    ? requirement.keys.reduce((total, key) => total + (record[key] ?? 0), 0)
+    : requirement.keys.filter((key) => (record[key] ?? 0) > 0).length;
+}
+
 function requireRouteKey(context: RequirementEvaluationContext): string {
   if (context.routeKey === undefined) {
     throw new Error('Route-key requirement evaluated without route identity');
@@ -115,16 +135,10 @@ export const requirementEvaluatorRegistry = Object.freeze({
   not: (requirement, context) => !evaluateRequirement(requirement.requirement, context),
   counterRange: (requirement, context) =>
     isInRange(context.counters[requirement.axis], requirement.range),
-  recordCount: (requirement, context) => {
-    const record = requireRecord(context, requirement.record);
-    const count = requirement.keys.reduce((total, key) => total + (record[key] ?? 0), 0);
-    return isInRange(count, requirement.range);
-  },
-  distinctRecordKeyCount: (requirement, context) => {
-    const record = requireRecord(context, requirement.record);
-    const count = requirement.keys.filter((key) => (record[key] ?? 0) > 0).length;
-    return isInRange(count, requirement.range);
-  },
+  recordCount: (requirement, context) =>
+    isInRange(recordRequirementCount(requirement, context), requirement.range),
+  distinctRecordKeyCount: (requirement, context) =>
+    isInRange(recordRequirementCount(requirement, context), requirement.range),
   recentEnvelopeSlotCount: (requirement, context) => {
     const recentRooms = context.recentEncounterEnvelopeSlots.slice(-requirement.roomWindow);
     const count = recentRooms.reduce(

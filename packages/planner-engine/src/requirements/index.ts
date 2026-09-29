@@ -1,6 +1,7 @@
 export {
   evaluateRequirement,
   hasRequirementEvaluator,
+  recordRequirementCount,
   requirementEvaluatorRegistry,
   type ClockworkRequirementFacts,
   type EncounterHistoryRequirementFacts,
@@ -12,6 +13,7 @@ export {
 export type {
   CounterAxis,
   CurrentRunFlag,
+  EncounteredEnemyRecord,
   HistoryRecord,
   NumericRange,
   RequirementExpression,
