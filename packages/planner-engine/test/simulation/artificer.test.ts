@@ -87,10 +87,15 @@ function replacement(
     rewardType === 'Boon'
       ? { rewardType, payload: { kind: 'BoonSource' as const, source: 'ApolloUpgrade' } }
       : { rewardType };
-  const unresolved = createUnresolvedAcquisitionRewardState(catalog, offer, {
-    kind: 'producerLifecycle',
-    key: 'RoomReward',
-  });
+  const unresolved = createUnresolvedAcquisitionRewardState(
+    catalog,
+    offer,
+    {
+      kind: 'producerLifecycle',
+      key: 'RoomReward',
+    },
+    'Underworld',
+  );
   return rewardType === 'Boon'
     ? Object.freeze({
         ...unresolved,
@@ -123,10 +128,15 @@ function settleOrdinaryBoon(
     rewardType: 'Boon' as const,
     payload: { kind: 'BoonSource' as const, source: 'ApolloUpgrade' },
   };
-  const reward = createUnresolvedAcquisitionRewardState(catalog, offer, {
-    kind: 'producerLifecycle',
-    key: 'RoomReward',
-  });
+  const reward = createUnresolvedAcquisitionRewardState(
+    catalog,
+    offer,
+    {
+      kind: 'producerLifecycle',
+      key: 'RoomReward',
+    },
+    'Underworld',
+  );
   const findings = new Map();
   const settled = settleOwnedAcquisitionSite(
     catalog,
@@ -231,6 +241,7 @@ function convert(
     catalog,
     { rewardType: 'GiftDrop' },
     { kind: 'producerLifecycle', key: 'RoomReward' },
+    'Underworld',
   );
   const authored = Object.freeze({
     ...sourceReward,
@@ -435,6 +446,7 @@ describe('The Artificer', () => {
       catalog,
       { rewardType: 'GiftDrop' },
       { kind: 'producerLifecycle', key: 'RoomReward' },
+      'Underworld',
     );
     const product = settlePickupAcquisitionSite(catalog, initialBranches(), {
       siteOwner,
@@ -476,6 +488,7 @@ describe('The Artificer', () => {
       catalog,
       { rewardType: 'TalentDrop' },
       { kind: 'producerLifecycle', key: 'RoomReward' },
+      'Underworld',
     );
     const [initial] = initialBranches();
     const product = settlePickupAcquisitionSite(
@@ -516,6 +529,7 @@ describe('The Artificer', () => {
       catalog,
       { rewardType: 'MetaCurrencyDrop' },
       { kind: 'producerLifecycle', key: 'GeneratedTraitPickup' },
+      'Underworld',
     );
     const product = settlePickupAcquisitionSite(catalog, initialBranches(), {
       siteOwner,
@@ -881,10 +895,15 @@ describe('The Artificer', () => {
         spurnedSource: 'ZeusUpgrade',
       },
     };
-    const reward = createUnresolvedAcquisitionRewardState(catalog, offer, {
-      kind: 'producerLifecycle',
-      key: 'RoomReward',
-    });
+    const reward = createUnresolvedAcquisitionRewardState(
+      catalog,
+      offer,
+      {
+        kind: 'producerLifecycle',
+        key: 'RoomReward',
+      },
+      'Underworld',
+    );
     const findings = new Map();
     const seeded = initialBranches(true).map((branch) =>
       Object.freeze({

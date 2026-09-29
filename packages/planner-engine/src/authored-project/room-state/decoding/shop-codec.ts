@@ -26,6 +26,7 @@ import { rewardSourceResolvesAtAcquisition } from '../../acquisition/reward-stat
 function decodeShopInventoryReward(
   value: unknown,
   catalog: Catalog,
+  routeKey: string,
   path: string,
   profileKey: string,
 ): AuthoredRewardState | null {
@@ -34,10 +35,13 @@ function decodeShopInventoryReward(
   const offer = expectRecord(raw.offer, `${path}.offer`);
   const rewardType = expectString(offer.rewardType, `${path}.offer.rewardType`);
   if (catalog.rewards.rewardTypes.byKey[rewardType]?.sourceResolution?.kind !== 'acquisitionRole')
-    return decodeNullableRewardState(value, catalog, path, {
-      kind: 'shopProfile',
-      key: profileKey,
-    });
+    return decodeNullableRewardState(
+      value,
+      catalog,
+      path,
+      { kind: 'shopProfile', key: profileKey },
+      routeKey,
+    );
 
   expectExactKeys(
     raw,
@@ -103,6 +107,7 @@ function decodeAnvilResult(
 export function decodeShopState(
   value: unknown,
   catalog: Catalog,
+  routeKey: string,
   binding: ShopRewardBinding,
   room: RoomDeclaration,
   path: string,
@@ -117,11 +122,12 @@ export function decodeShopState(
   if (profileKey !== binding.shopProfileKey) {
     failProjectDocument(`${path}.profileKey`, `expected ${binding.shopProfileKey}`);
   }
-  const decoded = decodeShopOffers(shop.offers, catalog, profile, path, room);
+  const decoded = decodeShopOffers(shop.offers, catalog, routeKey, profile, path, room);
   if (shop.travelDealRefill === undefined) return decoded;
   const travelDealRefill = decodeShopOffer(
     shop.travelDealRefill,
     catalog,
+    routeKey,
     profile,
     profile.groups.values.flatMap((group) => group.options.values),
     `${path}.travelDealRefill`,
@@ -133,6 +139,7 @@ export function decodeShopState(
 function decodeShopOffer(
   value: unknown,
   catalog: Catalog,
+  routeKey: string,
   profile: ShopProfileDeclaration,
   options: readonly import('../../../reward-kernel').ShopOptionEntry[],
   path: string,
@@ -141,7 +148,13 @@ function decodeShopOffer(
   expectExactKeys(rawOffer, ['optionKey', 'reward', 'anvilResult'], path);
   const optionKey =
     rawOffer.optionKey === null ? null : expectString(rawOffer.optionKey, `${path}.optionKey`);
-  const reward = decodeShopInventoryReward(rawOffer.reward, catalog, `${path}.reward`, profile.key);
+  const reward = decodeShopInventoryReward(
+    rawOffer.reward,
+    catalog,
+    routeKey,
+    `${path}.reward`,
+    profile.key,
+  );
   if (reward === null) {
     if (optionKey !== null) failProjectDocument(`${path}.optionKey`, 'requires a selected reward');
     if (rawOffer.anvilResult !== undefined)
@@ -178,6 +191,7 @@ function decodeShopOffer(
 function decodeShopOffers(
   value: unknown,
   catalog: Catalog,
+  routeKey: string,
   profile: ShopProfileDeclaration,
   path: string,
   room: RoomDeclaration,
@@ -216,6 +230,7 @@ function decodeShopOffers(
     offers[slot.key] = decodeShopOffer(
       rawOffers[slot.key],
       catalog,
+      routeKey,
       offerProfile,
       group.options.values,
       offerPath,

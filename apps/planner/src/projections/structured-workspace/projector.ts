@@ -9,6 +9,7 @@ import {
   createStartingRewardAddress,
   createDefaultAuthoredHexTree,
   routeInitialProfile,
+  routeRoomDeclaration,
   transitionAuthoredHexTreeLayout,
   semanticAddressKey,
   type SemanticAddress,
@@ -697,7 +698,10 @@ export function createStructuredWorkspaceProjection(
                       locationLabel:
                         entry === undefined
                           ? 'Unavailable room'
-                          : requireWorkspaceRoom(catalog, entry.gameName).label,
+                          : routeRoomDeclaration(
+                              requireWorkspaceRoom(catalog, entry.gameName),
+                              routeSource.routeKey,
+                            ).label,
                     });
                   })();
             return Object.freeze({

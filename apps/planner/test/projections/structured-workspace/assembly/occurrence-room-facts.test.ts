@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { catalogWithEmptyShopGroup, clearTestShopOffer } from '@run-planner/test-fixtures/shared';
+import { catalogWithEmptyShopGroup } from '@run-planner/test-fixtures/shared';
 import { loadUnderworldFGHICheckpoint } from '@run-planner/test-fixtures/checkpoints/underworld';
 import {
   assemble,
@@ -38,8 +38,12 @@ describe('occurrence room facts', () => {
   it('renders a validly empty Shop slot as absent while an eligible unset slot stays editable', () => {
     const iBiome = { kind: 'biome' as const, routeKey: 'Underworld', biomeKey: 'I' };
     const shop = createOccurrenceId('golden-i-preboss');
-    const occurrence = createOccurrenceAddress(iBiome, shop);
     const emptySurvival = catalogWithEmptyShopGroup(catalog, 'I_PreBoss02', 'Survival');
+    const clear = (project: ReturnType<typeof loadUnderworldFGHICheckpoint>, slotKey: string) =>
+      applyProjectCommand(project, catalog, {
+        kind: 'ClearShopOffer',
+        offer: createShopOfferAddress(iBiome, shop, slotKey),
+      });
     const shopRoom = (project: ReturnType<typeof loadUnderworldFGHICheckpoint>) => {
       const room = assemble(
         project,
@@ -65,9 +69,7 @@ describe('occurrence room facts', () => {
       };
     };
 
-    const valid = shopRoom(
-      clearTestShopOffer(loadUnderworldFGHICheckpoint(), occurrence, 'Survival'),
-    );
+    const valid = shopRoom(clear(loadUnderworldFGHICheckpoint(), 'Survival'));
     expect(valid.offerKeys).toEqual([
       'BoostedBoon',
       'MixedProgress',
@@ -77,11 +79,7 @@ describe('occurrence room facts', () => {
     expect(valid.controlKeys).not.toContain('Survival');
 
     const blank = shopRoom(
-      clearTestShopOffer(
-        clearTestShopOffer(loadUnderworldFGHICheckpoint(), occurrence, 'Survival'),
-        occurrence,
-        'MetaProgress',
-      ),
+      clear(clear(loadUnderworldFGHICheckpoint(), 'Survival'), 'MetaProgress'),
     );
     expect(blank.offerKeys).not.toContain('Survival');
     expect(blank.offer('MetaProgress')?.rewardControl.offer).toBeNull();

@@ -551,11 +551,19 @@ labels may repeat in different rooms or phases.
 `prepareRoom` resolves identity and then assesses that definition at the
 post-predecessor-commit checkpoint. Eligibility never selects another identity.
 The identity context distinguishes known reward type, known no-reward, and
-unavailable authorship; a declared first-biome-encounter identity resolves at
-reached encounter depth one before reward context, and a Clockwork goal
-disposition takes precedence over the incoming reward. Missing depth for a
-depth-dependent identity, or missing contextual authorship, does not select
-ordinary Combat.
+unavailable authorship, and carries the route. A declared first-biome identity
+(the route's own key where the choice declares one, else its default) resolves
+at reached biome encounter depth one before reward context, but only while that
+definition has not yet been recorded on the route. For the intro keys this
+mirrors native `AlwaysForce` until completion; the mature Chronos intro is
+natively forced at depth one once `ClockworkIntro` is completed, which is
+equivalent within one route because I occurs once. A non-counting intro such as `FishmanIntro`
+therefore leaves the next combat at depth one resolving ordinary identity. A
+Clockwork goal disposition takes precedence over the incoming reward. Missing
+reached facts for a first-biome identity, or missing contextual authorship,
+does not select ordinary Combat. A value authored for a decision the choice's
+members own but the resolved intro does not is retained removal-only, as for
+an entry-contextual replacement.
 Direct bindings need no reward context. Structural traversal uses the same
 identity resolver without claiming eligibility, and never borrows behavior from
 a choice's namesake or first possible definition. Materialization publishes known

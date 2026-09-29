@@ -1,3 +1,4 @@
+import { routeRoomDeclaration } from '../route-profile';
 import { locateReward, updateRewardState } from './acquisition/reward-source';
 import type { Catalog } from '../../catalog-schema';
 import {
@@ -410,7 +411,10 @@ export function applyTraitOfferCommand(
     const phaseKey = owner.kind === 'gorgonPhase' ? owner.encounter.phaseKey : owner.phaseKey;
     const isGorgon = owner.kind === 'gorgonPhase';
     const currentEncounters = occurrence.encounters;
-    const encounterRoom = catalog.rooms.byKey[occurrence.gameName];
+    const encounterRoom = routeRoomDeclaration(
+      catalog.rooms.byKey[occurrence.gameName],
+      owner.routeKey,
+    );
     if (encounterRoom === undefined) failCommand(command, `unknown encounter room for ${phaseKey}`);
     const phaseGorgon = isGorgon ? currentEncounters.gorgonResultByPhase?.[phaseKey] : undefined;
     const phaseOffersValue = currentEncounters.traitOffersByPhase?.[phaseKey];

@@ -1,3 +1,4 @@
+import { routeRoomDeclaration } from '../../../../authored-project/route-profile';
 import type { Catalog, RoomDeclaration } from '../../../../catalog-schema';
 import { createBiomeAddress, semanticAddressKey } from '../../../../authored-project/addresses';
 import type { RouteLoadout, ShipCombatState } from '../../../../authored-project/model';
@@ -154,7 +155,10 @@ export function wheelLifecycleViews(
   const materializedPhase = room.encounterPhases.find(
     (candidate) => candidate.slotKey === wheel.encounterPhaseKey,
   );
-  const declaration = catalog.rooms.byKey[room.gameName];
+  const declaration = routeRoomDeclaration(
+    catalog.rooms.byKey[room.gameName],
+    room.origin.routeKey,
+  );
   const phase =
     declaration === undefined || materializedPhase === undefined
       ? undefined
@@ -162,7 +166,7 @@ export function wheelLifecycleViews(
           catalog,
           declaration,
           materializedPhase,
-          encounterResolutionContext(room, declaration),
+          encounterResolutionContext(room, declaration, room.origin.routeKey),
         );
   const generation =
     roomView.preOutgoing ?? roomView.offerPoints?.at(-1)?.acquisitionAfter ?? roomView.entry;

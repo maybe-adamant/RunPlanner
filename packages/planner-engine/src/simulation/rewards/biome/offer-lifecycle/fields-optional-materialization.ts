@@ -81,10 +81,15 @@ export function materializeFieldsOptionalOfferPoint(
     base: (typeof unresolvedOptionals)[number],
     offer: ResolvedRewardOffer,
   ): CanonicalFieldsOptionalReward => {
-    const state = createUnresolvedAcquisitionRewardState(catalog, offer, {
-      kind: 'producerLifecycle',
-      key: base.producerLifecycleKey,
-    });
+    const state = createUnresolvedAcquisitionRewardState(
+      catalog,
+      offer,
+      {
+        kind: 'producerLifecycle',
+        key: base.producerLifecycleKey,
+      },
+      room.origin.routeKey,
+    );
     return Object.freeze({
       ...base,
       offer,

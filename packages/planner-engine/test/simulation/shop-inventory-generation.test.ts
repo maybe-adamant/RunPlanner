@@ -40,6 +40,7 @@ describe('Shop trait acquisition processing', () => {
     if (room === undefined) throw new Error('missing F Shop declaration');
     const loadout = { weaponKey: 'WeaponStaff', aspectKey: 'StaffBase' };
     const state = createDefaultRoomState(catalog, room, {
+      routeKey: 'Underworld',
       role: 'ordinary',
       entryActive: true,
       loadout,

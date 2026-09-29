@@ -106,13 +106,22 @@ describe('encounter choice identity context', () => {
     if (fCombat === undefined || iCombat === undefined)
       throw new Error('Combat choices are missing');
     expect(
-      resolveEncounterAuthoringProfile(fCombat, { kind: 'knownReward', rewardType: 'Devotion' }),
+      resolveEncounterAuthoringProfile(fCombat, {
+        kind: 'knownReward',
+        rewardType: 'Devotion',
+        routeKey: 'Underworld',
+      }),
     ).toBe('DevotionTestF');
-    expect(resolveEncounterAuthoringProfile(fCombat, { kind: 'noReward' })).toBe('GeneratedF');
-    expect(resolveEncounterAuthoringProfile(fCombat, { kind: 'unavailable' })).toBeUndefined();
+    expect(
+      resolveEncounterAuthoringProfile(fCombat, { kind: 'noReward', routeKey: 'Underworld' }),
+    ).toBe('GeneratedF');
+    expect(
+      resolveEncounterAuthoringProfile(fCombat, { kind: 'unavailable', routeKey: 'Underworld' }),
+    ).toBeUndefined();
     expect(
       resolveEncounterAuthoringProfile(iCombat, {
-        biomeEncounterDepth: 2,
+        routeKey: 'Underworld',
+        reached: { biomeEncounterDepth: 2, routeEncounterKeyCounts: {} },
         kind: 'knownReward',
         rewardType: 'ClockworkGoal',
       }),
@@ -130,8 +139,12 @@ describe('encounter choice identity context', () => {
       ['Encounter'],
       room.gameName,
     );
-    const context = encounterResolutionContext({ unresolvedIncomingReward: {} }, room);
-    expect(context).toEqual({ kind: 'unavailable' });
+    const context = encounterResolutionContext(
+      { unresolvedIncomingReward: {} },
+      room,
+      'Underworld',
+    );
+    expect(context).toEqual({ kind: 'unavailable', routeKey: 'Underworld' });
     expect(retained).toMatchObject([{ authoredChoiceKey: 'GeneratedF' }]);
     expect(resolveMaterializedEncounterPhase(catalog, room, retained[0]!, context)).toBeUndefined();
   });

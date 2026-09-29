@@ -19,7 +19,7 @@ import {
 import type { CanonicalFixedRoomLink } from '../materialization';
 import { foldHistoryEvents } from './fold';
 import { foldBiomeHistoryPrefixEvents } from './fold';
-import { projectRoomPreparationCheckpoint } from './facts';
+import { projectRoomPreparationCheckpoint, projectRouteEncounterKeyCounts } from './facts';
 import {
   createRoomLifecycleInput,
   lacksEnteredStoreProvenance,
@@ -339,10 +339,11 @@ export function appendRoomLifecycle(
   const encounterPhases =
     encounterPreparation?.validPrefix ??
     (() => {
+      const routeKey = writer.routePosition.routeKey;
       const context =
         room.kind === 'authored'
-          ? encounterResolutionContext(room, declaration)
-          : Object.freeze({ kind: 'noReward' as const });
+          ? encounterResolutionContext(room, declaration, routeKey)
+          : Object.freeze({ kind: 'noReward' as const, routeKey });
       const phases = room.encounterPhases.map((phase) =>
         resolveMaterializedEncounterPhase(catalog, declaration, phase, context),
       );
@@ -350,7 +351,10 @@ export function appendRoomLifecycle(
       if (phases.every((phase) => phase !== undefined)) return Object.freeze(phases);
       return resolveMaterializedEncounterPhases(catalog, declaration, room.encounterPhases, {
         ...context,
-        biomeEncounterDepth: writer.current().ledgers.counters.biomeEncounterDepth,
+        reached: Object.freeze({
+          biomeEncounterDepth: writer.current().ledgers.counters.biomeEncounterDepth,
+          routeEncounterKeyCounts: projectRouteEncounterKeyCounts(writer.current(), routeKey),
+        }),
       });
     })();
   const effectiveEncounterPhases = writer.resolveFigLeafEncounterPhases(room, encounterPhases);

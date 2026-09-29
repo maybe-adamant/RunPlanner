@@ -136,6 +136,7 @@ function reconcileCompletionBosses(
       const previous = catalog.rooms.byKey[occurrence.gameName];
       if (previous?.kind !== 'Boss') return occurrence;
       const replacementState = createDefaultRoomState(catalog, expected, {
+        routeKey: route.routeKey,
         role: 'ordinary',
         entryActive: true,
         loadout: route.loadout,
@@ -206,10 +207,15 @@ export function applyProjectStateCommand(
         command.value === null
           ? undefined
           : (() => {
-              const reward = createUnresolvedAcquisitionRewardState(catalog, command.value, {
-                kind: 'producerLifecycle',
-                key: binding.producerLifecycleKey,
-              });
+              const reward = createUnresolvedAcquisitionRewardState(
+                catalog,
+                command.value,
+                {
+                  kind: 'producerLifecycle',
+                  key: binding.producerLifecycleKey,
+                },
+                route.routeKey,
+              );
               return startingRewardAcquisitionFrom(reward);
             })();
       const biomes: ProjectDocument['route']['biomes'] =

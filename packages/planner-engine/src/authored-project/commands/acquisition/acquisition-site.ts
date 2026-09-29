@@ -61,6 +61,7 @@ function shrineDeliverySource(
 
 function derivedShopEntryValue(
   catalog: Catalog,
+  routeKey: string,
   occurrence: import('../../model').RoomOccurrence,
   sourceOfferKey: string,
   command: AcquisitionSiteCommand,
@@ -75,10 +76,15 @@ function derivedShopEntryValue(
   const duplicateOffer = echoShopDuplicateOffer(catalog, source.offer);
   return duplicateOffer === null
     ? null
-    : createUnresolvedAcquisitionRewardState(catalog, duplicateOffer, {
-        kind: 'shopProfile',
-        key: shop.profileKey,
-      });
+    : createUnresolvedAcquisitionRewardState(
+        catalog,
+        duplicateOffer,
+        {
+          kind: 'shopProfile',
+          key: shop.profileKey,
+        },
+        routeKey,
+      );
 }
 
 /**
@@ -120,6 +126,7 @@ export function applyAcquisitionSiteCommand(
       catalog,
       { rewardType: command.rewardType },
       { kind: 'producerLifecycle', key: command.producerLifecycleKey },
+      located.routePosition.routeKey,
     );
     const nextHostWithoutActions = Object.freeze({
       ...host,
@@ -277,7 +284,11 @@ export function applyAcquisitionSiteCommand(
       retainedReward !== undefined &&
       (retainedReward === null || retainedReward.offer.rewardType === sourceOffer.rewardType)
         ? retainedReward
-        : defaultHermesShrineDeliveryReward(catalog, sourceOffer.rewardType);
+        : defaultHermesShrineDeliveryReward(
+            catalog,
+            sourceOffer.rewardType,
+            located.routePosition.routeKey,
+          );
     const nextHostWithoutActions = Object.freeze({
       ...host,
       acquisitionSites: Object.freeze({
@@ -371,6 +382,7 @@ export function applyAcquisitionSiteCommand(
     const pickupEntries = occurrence.acquisitionSites?.roomExit?.pickupEntries ?? {};
     const derivedValue = derivedShopEntryValue(
       catalog,
+      located.routePosition.routeKey,
       occurrence,
       command.sourceOfferKey,
       command,
@@ -458,10 +470,15 @@ export function applyAcquisitionSiteCommand(
               nextOccurrence,
               site,
               command.entry.entryKey,
-              createUnresolvedAcquisitionRewardState(catalog, command.value, {
-                kind: 'producerLifecycle',
-                key: 'HermesShrineDelivery',
-              }),
+              createUnresolvedAcquisitionRewardState(
+                catalog,
+                command.value,
+                {
+                  kind: 'producerLifecycle',
+                  key: 'HermesShrineDelivery',
+                },
+                located.routePosition.routeKey,
+              ),
             ),
           ),
         );
@@ -493,6 +510,7 @@ export function applyAcquisitionSiteCommand(
                 catalog,
                 command.value,
                 siteProducer.producerLifecycleKey,
+                located.routePosition.routeKey,
               ),
             ),
           ),
@@ -506,10 +524,15 @@ export function applyAcquisitionSiteCommand(
         !runProgress?.entries.some((candidate) => candidate.rewardType === command.value.rewardType)
       )
         failCommand(command, 'must be an Artificer-eligible RunProgress reward');
-      const value = createUnresolvedAcquisitionRewardState(catalog, command.value, {
-        kind: 'producerLifecycle',
-        key: 'RoomReward',
-      });
+      const value = createUnresolvedAcquisitionRewardState(
+        catalog,
+        command.value,
+        {
+          kind: 'producerLifecycle',
+          key: 'RoomReward',
+        },
+        located.routePosition.routeKey,
+      );
       return updateOccurrenceTopology(
         document,
         located,
@@ -587,7 +610,12 @@ export function applyAcquisitionSiteCommand(
             occurrence,
             site,
             command.entry.entryKey,
-            createUnresolvedAcquisitionRewardState(catalog, command.value, effectSource),
+            createUnresolvedAcquisitionRewardState(
+              catalog,
+              command.value,
+              effectSource,
+              located.routePosition.routeKey,
+            ),
           ),
         ),
       );
@@ -611,6 +639,7 @@ export function applyAcquisitionSiteCommand(
                   catalog,
                   command.value,
                   producer.producerLifecycleKey,
+                  located.routePosition.routeKey,
                 ),
               }),
             }),

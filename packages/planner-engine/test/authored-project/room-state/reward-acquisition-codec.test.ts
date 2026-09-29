@@ -66,6 +66,7 @@ describe('reward acquisition decoder', () => {
         catalog,
         '$.reward',
         { kind: 'producerLifecycle', key: 'roomRewardPickup' },
+        'Underworld',
       );
       const option =
         decoded.traitOffersByAcquisitionRole.source?.kind === 'traits'
@@ -80,10 +81,16 @@ describe('reward acquisition decoder', () => {
     'rejects malformed Persephone contribution %s in reward acquisition state',
     (bonus) => {
       expect(() =>
-        decodeRewardState(boonRewardWithPersephoneBonus(bonus), catalog, '$.reward', {
-          kind: 'producerLifecycle',
-          key: 'roomRewardPickup',
-        }),
+        decodeRewardState(
+          boonRewardWithPersephoneBonus(bonus),
+          catalog,
+          '$.reward',
+          {
+            kind: 'producerLifecycle',
+            key: 'roomRewardPickup',
+          },
+          'Underworld',
+        ),
       ).toThrow(/persephoneLevelBonus/);
     },
   );
@@ -111,10 +118,16 @@ describe('reward acquisition decoder', () => {
         },
       },
     };
-    const decoded = decodeRewardState(spellOffer, catalog, '$.reward', {
-      kind: 'producerLifecycle',
-      key: 'roomRewardPickup',
-    });
+    const decoded = decodeRewardState(
+      spellOffer,
+      catalog,
+      '$.reward',
+      {
+        kind: 'producerLifecycle',
+        key: 'roomRewardPickup',
+      },
+      'Underworld',
+    );
     expect(decoded.traitOffersByAcquisitionRole.self).toMatchObject({
       kind: 'traits',
       hexTree: spellOffer.traitOffersByAcquisitionRole.self.hexTree,
@@ -125,10 +138,16 @@ describe('reward acquisition decoder', () => {
     if (missingSelf === undefined) throw new Error('missing SpellDrop test offer');
     delete missingSelf.hexTree;
     expect(() =>
-      decodeRewardState(missing, catalog, '$.reward', {
-        kind: 'producerLifecycle',
-        key: 'roomRewardPickup',
-      }),
+      decodeRewardState(
+        missing,
+        catalog,
+        '$.reward',
+        {
+          kind: 'producerLifecycle',
+          key: 'roomRewardPickup',
+        },
+        'Underworld',
+      ),
     ).toThrow(/hexTree.*required/);
 
     const dormant = JSON.parse(JSON.stringify(spellOffer)) as MutableRewardWithHexOffer;
@@ -138,10 +157,16 @@ describe('reward acquisition decoder', () => {
       throw new Error('missing SpellDrop test option');
     dormantOption.hexTree = spellOffer.traitOffersByAcquisitionRole.self.hexTree;
     expect(() =>
-      decodeRewardState(dormant, catalog, '$.reward', {
-        kind: 'producerLifecycle',
-        key: 'roomRewardPickup',
-      }),
+      decodeRewardState(
+        dormant,
+        catalog,
+        '$.reward',
+        {
+          kind: 'producerLifecycle',
+          key: 'roomRewardPickup',
+        },
+        'Underworld',
+      ),
     ).toThrow(/options\.option1\.hexTree: is not a project document field/);
   });
 
@@ -236,10 +261,16 @@ describe('reward acquisition decoder', () => {
     } satisfies MutableRewardWithHexOffer;
     mutate(offer);
     expect(() =>
-      decodeRewardState(offer, catalog, '$.reward', {
-        kind: 'producerLifecycle',
-        key: 'roomRewardPickup',
-      }),
+      decodeRewardState(
+        offer,
+        catalog,
+        '$.reward',
+        {
+          kind: 'producerLifecycle',
+          key: 'roomRewardPickup',
+        },
+        'Underworld',
+      ),
     ).toThrow(/hexTree|Hex/);
   });
 
@@ -266,10 +297,16 @@ describe('reward acquisition decoder', () => {
         },
       },
     };
-    const decoded = decodeRewardState(offer, catalog, '$.reward', {
-      kind: 'producerLifecycle',
-      key: 'roomRewardPickup',
-    });
+    const decoded = decodeRewardState(
+      offer,
+      catalog,
+      '$.reward',
+      {
+        kind: 'producerLifecycle',
+        key: 'roomRewardPickup',
+      },
+      'Underworld',
+    );
     expect(decoded.traitOffersByAcquisitionRole.self).toMatchObject({
       hexTree: {
         rareTalentKeys: ['PolymorphBossDamageTalent', 'PolymorphDeathExplodeTalent'],
@@ -286,22 +323,39 @@ describe('reward acquisition decoder', () => {
     };
 
     expect(
-      decodeRewardState(value, catalog, '$.reward', {
-        kind: 'producerLifecycle',
-        key: 'roomRewardPickup',
-      }),
+      decodeRewardState(
+        value,
+        catalog,
+        '$.reward',
+        {
+          kind: 'producerLifecycle',
+          key: 'roomRewardPickup',
+        },
+        'Underworld',
+      ),
     ).toMatchObject({ offer: { rewardType: 'Boon' } });
     expect(() =>
-      decodeRewardState({ ...value, unknown: true }, catalog, '$.reward', {
-        kind: 'producerLifecycle',
-        key: 'roomRewardPickup',
-      }),
+      decodeRewardState(
+        { ...value, unknown: true },
+        catalog,
+        '$.reward',
+        {
+          kind: 'producerLifecycle',
+          key: 'roomRewardPickup',
+        },
+        'Underworld',
+      ),
     ).toThrow('$.reward: unexpected key unknown');
   });
 
   it('decodes the declaration-bounded Fields optional inventory', () => {
     const declaration = room('H_Combat02');
-    const context = { role: 'ordinary' as const, entryActive: true, activeCageCount: 2 };
+    const context = {
+      routeKey: 'Underworld',
+      role: 'ordinary' as const,
+      entryActive: true,
+      activeCageCount: 2,
+    };
     const state = mutable(createDefaultRoomState(catalog, declaration, context));
     state.optionalRewardCount = 0;
     expect(decodeRoomState(state, catalog, declaration, context, path)).toMatchObject({
@@ -323,6 +377,7 @@ describe('reward acquisition decoder', () => {
     const declaration = room('F_Combat04');
     const raw = mutable(
       createDefaultRoomState(catalog, declaration, {
+        routeKey: 'Underworld',
         role: 'ordinary',
         entryActive: true,
         resolvedStoreKey: 'RunProgress',
@@ -335,11 +390,23 @@ describe('reward acquisition decoder', () => {
     };
     const reward = raw.reward as Record<string, unknown>;
     expect(() =>
-      decodeRoomState(raw, catalog, declaration, { role: 'ordinary', entryActive: true }, path),
+      decodeRoomState(
+        raw,
+        catalog,
+        declaration,
+        { routeKey: 'Underworld', role: 'ordinary', entryActive: true },
+        path,
+      ),
     ).toThrow('levelResolutionsByAcquisitionRole: is required for this Pom reward');
     reward.levelResolutionsByAcquisitionRole = { self: { kind: 'random', targetTraitKey: null } };
     expect(() =>
-      decodeRoomState(raw, catalog, declaration, { role: 'ordinary', entryActive: true }, path),
+      decodeRoomState(
+        raw,
+        catalog,
+        declaration,
+        { routeKey: 'Underworld', role: 'ordinary', entryActive: true },
+        path,
+      ),
     ).toThrow(
       'levelResolutionsByAcquisitionRole.self.targetTraitKey: is not a project document field',
     );
@@ -348,7 +415,13 @@ describe('reward acquisition decoder', () => {
       extra: { kind: 'choice', offeredTraitKeys: [], selectedTraitKey: null },
     };
     expect(() =>
-      decodeRoomState(raw, catalog, declaration, { role: 'ordinary', entryActive: true }, path),
+      decodeRoomState(
+        raw,
+        catalog,
+        declaration,
+        { routeKey: 'Underworld', role: 'ordinary', entryActive: true },
+        path,
+      ),
     ).toThrow('must contain exactly every Pom acquisition role');
     reward.offer = { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'ApolloUpgrade' } };
     reward.traitOffersByAcquisitionRole = {
@@ -365,7 +438,13 @@ describe('reward acquisition decoder', () => {
     };
     reward.levelResolutionsByAcquisitionRole = {};
     expect(() =>
-      decodeRoomState(raw, catalog, declaration, { role: 'ordinary', entryActive: true }, path),
+      decodeRoomState(
+        raw,
+        catalog,
+        declaration,
+        { routeKey: 'Underworld', role: 'ordinary', entryActive: true },
+        path,
+      ),
     ).toThrow('levelResolutionsByAcquisitionRole: Pom resolutions are not supported');
   });
 });

@@ -1077,7 +1077,11 @@ after an accepted paid source does not roll consumption back.
 Both paths keep acquisition-time choices with the reached concrete entry.
 Blind Box recreation retains the box as the acquisition while resolving a
 fresh hidden source independently; a Gold duplicate of Nectar follows the Shop
-duplicate profile and does not invent the run-progress Pom effect. Missing or
+duplicate profile and does not invent the run-progress Pom effect. The effect is
+route-conditioned: a route whose profile lacks `WorldUpgradeGiftDropRunProgress`
+(Fresh File) gives Nectar no level, so its reward state has no level-resolution
+child and a persisted one is rejected at decode. Commands, decoding and
+settlement evaluate the effect with the route. Missing or
 context-invalid active children remain exact finding-backed repair owners,
 while dormant or not-yet-generated entries publish no acquisition child.
 Recreated and duplicated loot follows the

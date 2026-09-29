@@ -686,6 +686,7 @@ export function decodeRewardState(
   catalog: Catalog,
   path: string,
   source: import('../../../reward-kernel/level-effects').LevelResolutionEffectSource,
+  routeKey: string,
   allowArtificer = true,
 ): AuthoredRewardState {
   const raw = expectRecord(value, path);
@@ -701,7 +702,7 @@ export function decodeRewardState(
       failProjectDocument(path, `unexpected key ${key}`);
   }
   const offer = decodeResolvedRewardOffer(raw.offer, catalog, `${path}.offer`);
-  const requiredLevels = createUnresolvedLevelResolutions(catalog, offer, source);
+  const requiredLevels = createUnresolvedLevelResolutions(catalog, offer, source, routeKey);
   if (requiredLevels === undefined && raw.levelResolutionsByAcquisitionRole !== undefined)
     failProjectDocument(
       `${path}.levelResolutionsByAcquisitionRole`,
@@ -720,6 +721,7 @@ export function decodeRewardState(
           catalog,
           offer,
           source,
+          routeKey,
           `${path}.levelResolutionsByAcquisitionRole`,
         );
   if (raw.dispositionByAcquisitionRole === undefined)
@@ -749,9 +751,12 @@ export function decodeNullableRewardState(
   catalog: Catalog,
   path: string,
   source: import('../../../reward-kernel/level-effects').LevelResolutionEffectSource,
+  routeKey: string,
   allowArtificer = true,
 ): AuthoredRewardState | null {
-  return value === null ? null : decodeRewardState(value, catalog, path, source, allowArtificer);
+  return value === null
+    ? null
+    : decodeRewardState(value, catalog, path, source, routeKey, allowArtificer);
 }
 
 /**
@@ -803,6 +808,7 @@ function decodeLevelResolutions(
   catalog: Catalog,
   offer: ResolvedRewardOffer,
   source: import('../../../reward-kernel/level-effects').LevelResolutionEffectSource,
+  routeKey: string,
   path: string,
 ): Readonly<Record<string, AuthoredLevelResolution>> {
   const raw = expectRecord(value, path);
@@ -810,7 +816,7 @@ function decodeLevelResolutions(
   if (declaration === undefined)
     failProjectDocument(path, `unknown reward type ${offer.rewardType}`);
   const expectedRoles = declaration.acquisitionRoles.values.flatMap((role) =>
-    levelResolutionEffectFor(catalog.rewards, offer, source, role.key) === undefined
+    levelResolutionEffectFor(catalog.rewards, offer, source, role.key, routeKey) === undefined
       ? []
       : [role.key],
   );
@@ -825,7 +831,7 @@ function decodeLevelResolutions(
     failProjectDocument(path, 'must contain exactly every Pom acquisition role');
   const result: Record<string, AuthoredLevelResolution> = {};
   for (const [role, encoded] of Object.entries(raw)) {
-    const effect = levelResolutionEffectFor(catalog.rewards, offer, source, role);
+    const effect = levelResolutionEffectFor(catalog.rewards, offer, source, role, routeKey);
     if (effect === undefined)
       failProjectDocument(`${path}.${role}`, 'has no Pom level-resolution effect');
     const entry = expectRecord(encoded, `${path}.${role}`);

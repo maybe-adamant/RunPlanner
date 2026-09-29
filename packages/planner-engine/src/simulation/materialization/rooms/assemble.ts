@@ -316,7 +316,11 @@ export function materializeAuthoredRoom(
     ...(clockworkReward === undefined ? {} : { clockworkReward }),
   }) as Omit<CanonicalAuthoredRoom, 'roomActionRoster' | 'roomLifecycleTimeline'>;
   const structuralEncounterIdentities = base.encounterPhases.flatMap((phase) => {
-    const resolutionContext = encounterResolutionContext(base, context.room);
+    const resolutionContext = encounterResolutionContext(
+      base,
+      context.room,
+      context.routePosition.routeKey,
+    );
     const resolved = resolveMaterializedEncounterPhase(
       context.catalog,
       context.room,

@@ -1,5 +1,6 @@
 import {
   createOccurrenceAddress,
+  routeRoomDeclaration,
   semanticAddressKey,
   type OccurrenceId,
   type TargetAddress,
@@ -93,7 +94,10 @@ function bindStartInteractions(
               Object.freeze({
                 key: gameName,
                 value: gameName,
-                label: requireWorkspaceRoom(catalog, gameName).label,
+                label: routeRoomDeclaration(
+                  requireWorkspaceRoom(catalog, gameName),
+                  requirement.owner.routeKey,
+                ).label,
                 state: 'possible' as const,
                 selected: false,
                 disabled: false,
@@ -164,7 +168,10 @@ function bindTakeoverBatchInteractions(
                 focus: Object.freeze({ owner: requirement.owner, timing: 'before' as const }),
               }),
             key,
-            label: requireWorkspaceRoom(catalog, requirement.gameName).label,
+            label: routeRoomDeclaration(
+              requireWorkspaceRoom(catalog, requirement.gameName),
+              requirement.owner.routeKey,
+            ).label,
             owner: requirement.owner,
             presentation: 'repair' as const,
           }),
@@ -189,7 +196,10 @@ function bindTakeoverBatchInteractions(
                 focus: Object.freeze({ owner: requirement.owner, timing: 'before' as const }),
               }),
             key,
-            label: requireWorkspaceRoom(catalog, requirement.gameName).label,
+            label: routeRoomDeclaration(
+              requireWorkspaceRoom(catalog, requirement.gameName),
+              requirement.owner.routeKey,
+            ).label,
             owner: requirement.owner,
             presentation: 'completedHubHandoff' as const,
           }),
@@ -342,7 +352,9 @@ export function bindTopologyInteractions(input: {
   for (const [key, control] of roomControls) {
     if (control.kind === 'startRoomPicker') {
       const candidateRooms = Object.freeze(
-        control.candidateGameNames.map((gameName) => requireWorkspaceRoom(catalog, gameName)),
+        control.candidateGameNames.map((gameName) =>
+          routeRoomDeclaration(requireWorkspaceRoom(catalog, gameName), control.address.routeKey),
+        ),
       );
       let model: ContextualPickerModel<RoomDeclaration> | undefined;
       rooms.set(
@@ -374,7 +386,10 @@ export function bindTopologyInteractions(input: {
             return model;
           },
           owner: control.address,
-          selected: requireWorkspaceRoom(catalog, control.selectedGameName),
+          selected: routeRoomDeclaration(
+            requireWorkspaceRoom(catalog, control.selectedGameName),
+            control.address.routeKey,
+          ),
         }),
       );
       continue;
@@ -384,13 +399,18 @@ export function bindTopologyInteractions(input: {
       control.kind === 'decisionEntryRoomPicker'
         ? Object.freeze(
             control.ordinaryTargetGameNames.map((gameName) =>
-              requireWorkspaceRoom(catalog, gameName),
+              routeRoomDeclaration(
+                requireWorkspaceRoom(catalog, gameName),
+                control.address.routeKey,
+              ),
             ),
           )
         : targetCandidateRooms(catalog, project, control.address);
     if (control.kind === 'decisionEntryRoomPicker') {
       const takeoverRooms = Object.freeze(
-        control.takeoverGameNames.map((gameName) => requireWorkspaceRoom(catalog, gameName)),
+        control.takeoverGameNames.map((gameName) =>
+          routeRoomDeclaration(requireWorkspaceRoom(catalog, gameName), control.address.routeKey),
+        ),
       );
       const takeoverGameNames = new Set(takeoverRooms.map((room) => room.gameName));
       const ordinaryGameNames = new Set(ordinaryRooms.map((room) => room.gameName));
@@ -661,7 +681,12 @@ export function bindTopologyInteractions(input: {
         owner: control.address,
         ...(selectedGameName === undefined
           ? {}
-          : { selected: requireWorkspaceRoom(catalog, selectedGameName) }),
+          : {
+              selected: routeRoomDeclaration(
+                requireWorkspaceRoom(catalog, selectedGameName),
+                control.address.routeKey,
+              ),
+            }),
       }),
     );
   }

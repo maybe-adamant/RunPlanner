@@ -3,14 +3,17 @@ import type { ShopOptionSelection } from '@run-planner/engine/reward-kernel';
 import { locallyValidRewardOffers } from '@run-planner/engine/reward-kernel';
 
 import type { CandidateProjectionSession } from '@planner/projections/candidates/candidateProjection';
-import type { ContextualPickerProjectionService } from '@planner/projections/contextual/contextualPicker';
+import type {
+  ContextualPickerModel,
+  ContextualPickerProjectionService,
+} from '@planner/projections/contextual/contextualPicker';
 import type { RewardPickerProjectionService } from '@planner/projections/rewards/rewardPicker';
 
 import type { WorkspaceRewardControl } from '../contracts/rewards';
 import type { WorkspaceShopOfferInteraction } from '../contracts/commerce';
 
-function selectionKey(selection: ShopOptionSelection): string {
-  return JSON.stringify(selection);
+function selectionKey(selection: ShopOptionSelection | null): string {
+  return selection === null ? 'clear' : JSON.stringify(selection);
 }
 
 function sameSelection(left: ShopOptionSelection, right: ShopOptionSelection): boolean {
@@ -31,6 +34,35 @@ function pickerItemLabel(catalog: Catalog, optionLabel: string, selection: ShopO
   const source = catalog.rewards.rewardTypes.byKey[payload.source];
   if (source === undefined) throw new Error(`Shop Boon source ${payload.source} is missing`);
   return source.label;
+}
+
+/** A current item that is no longer possible can be cleared from its own section. */
+function withClearForInvalidSelection(
+  model: ContextualPickerModel<ShopOptionSelection>,
+): ContextualPickerModel<ShopOptionSelection | null> {
+  return Object.freeze({
+    ...model,
+    sections: Object.freeze(
+      model.sections.map((section) =>
+        section.kind !== 'selectedInvalid'
+          ? section
+          : Object.freeze({
+              ...section,
+              items: Object.freeze([
+                ...section.items,
+                Object.freeze({
+                  key: selectionKey(null),
+                  value: null,
+                  label: 'Clear item',
+                  state: 'possible' as const,
+                  selected: false,
+                  disabled: false,
+                }),
+              ]),
+            }),
+      ),
+    ),
+  });
 }
 
 /** Binds exact declaration-owned Shop item identities to one contextual picker. */
@@ -89,17 +121,20 @@ export function bindShopOfferInteractions(input: {
         owner,
         selected,
         summary,
-        intentFor: (value: ShopOptionSelection) =>
+        intentFor: (value: ShopOptionSelection | null) =>
           Object.freeze({
-            command: Object.freeze({
-              kind: 'ReplaceShopOfferOption' as const,
-              offer: owner,
-              value,
-            }),
+            command:
+              value === null
+                ? Object.freeze({ kind: 'ClearShopOffer' as const, offer: owner })
+                : Object.freeze({
+                    kind: 'ReplaceShopOfferOption' as const,
+                    offer: owner,
+                    value,
+                  }),
           }),
         load: async () => {
           const candidates = await input.candidates.shopOfferOptions(owner, values);
-          return input.contextualPicker.project(
+          const model = input.contextualPicker.project(
             candidates,
             (candidate) => {
               const optionLabel =
@@ -113,6 +148,7 @@ export function bindShopOfferInteractions(input: {
             },
             selectionKey,
           );
+          return withClearForInvalidSelection(model);
         },
       }),
     );

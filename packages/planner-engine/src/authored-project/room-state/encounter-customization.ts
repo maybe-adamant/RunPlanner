@@ -47,18 +47,44 @@ export function encounterCustomizationDeclarations(
 }
 
 /**
- * Decisions the route-free binding owns on a slot an entry-contextual rule
- * fixes to another encounter. A value retained for one of them is removal-only.
+ * Decisions a phase's authored owner declares that its resolved identity does
+ * not: the route-free binding under an entry-contextual fixed rule, or the
+ * authored choice's members when a first-biome identity resolved instead. A
+ * value retained for one of them is removal-only.
  */
 export function contextuallyReplacedCustomizationDecisions(
   catalog: Catalog,
   routeFreeRoom: RoomDeclaration,
   contextualRoom: RoomDeclaration,
   slotKey: string,
+  resolved?: { readonly authoredChoiceKey: string; readonly encounterDefinitionKey: string },
 ): readonly EncounterCustomizationDecision[] {
   const contextual = encounterBindingsBySlot(catalog, contextualRoom, contextualRoom.gameName).get(
     slotKey,
   );
+  if (contextual?.kind === 'set') {
+    const profile =
+      resolved === undefined
+        ? undefined
+        : encounterSetForBinding(
+            catalog,
+            contextual,
+            contextualRoom.gameName,
+          ).authoringProfiles.find((candidate) => candidate.key === resolved.authoredChoiceKey);
+    if (profile === undefined) return Object.freeze([]);
+    const owned = (definitionKey: string) =>
+      (catalog.encounterDefinitions.byKey[definitionKey]?.customization ?? []).filter(
+        (decision) =>
+          decision.selection.kind !== 'generated' ||
+          supportsGeneratedEncounterCustomization(contextualRoom),
+      );
+    const active = owned(resolved!.encounterDefinitionKey);
+    const replaced = new Map<string, EncounterCustomizationDecision>();
+    for (const decision of profile.encounterDefinitionKeys.flatMap(owned))
+      if (!customizationDecisionOwned(active, decision.key) && !replaced.has(decision.key))
+        replaced.set(decision.key, decision);
+    return Object.freeze([...replaced.values()]);
+  }
   const routeFree = encounterBindingsBySlot(catalog, routeFreeRoom, routeFreeRoom.gameName).get(
     slotKey,
   );

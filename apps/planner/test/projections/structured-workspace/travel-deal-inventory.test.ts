@@ -128,7 +128,7 @@ it('replaces the Travel Deal placeholder with editable inventory before outgoing
   const picker = await interaction.load();
   const mystery = picker.sections
     .flatMap((section) => section.items)
-    .find((item) => item.value.optionKey === 'BlindBoxLoot');
+    .find((item) => item.value?.optionKey === 'BlindBoxLoot');
   expect(mystery).toMatchObject({
     disabled: false,
     value: { offer: { rewardType: 'BlindBoxLoot' } },

@@ -41,7 +41,7 @@ async function minorSlotPicker(sibling: 'StackUpgrade' | 'SpellDrop') {
     findingCodes: evaluation.findings.map((finding) => finding.code),
     spell: picker.sections
       .flatMap((section) => section.items.map((item) => ({ section: section.kind, item })))
-      .find((entry) => entry.item.value.optionKey === 'SpellDrop'),
+      .find((entry) => entry.item.value?.optionKey === 'SpellDrop'),
   };
 }
 

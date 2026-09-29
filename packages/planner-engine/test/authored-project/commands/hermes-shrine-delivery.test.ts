@@ -559,7 +559,9 @@ describe('Hermes Shrine delivery placement', () => {
       encounterPhases: [shrinePhase('Combat1', 'GeneratedO', 'ShipEncounter')],
       acquisitionSites: {
         hermesShrineDelivery: {
-          entries: { [entryKey]: defaultHermesShrineDeliveryReward(catalog, 'HealBigDrop') },
+          entries: {
+            [entryKey]: defaultHermesShrineDeliveryReward(catalog, 'HealBigDrop', 'Surface'),
+          },
         },
       },
       roomActionRoster: { rows: [] },

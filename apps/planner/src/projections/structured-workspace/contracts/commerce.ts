@@ -81,13 +81,16 @@ export interface WorkspaceShopOfferInteraction {
   readonly key: string;
   readonly owner: ShopOfferAddress;
   readonly selected: import('@run-planner/engine/reward-kernel').ShopOptionSelection | null;
+  /** A null value clears a slot whose current item is no longer possible. */
   readonly load: () => Promise<
-    ContextualPickerModel<import('@run-planner/engine/reward-kernel').ShopOptionSelection>
+    ContextualPickerModel<import('@run-planner/engine/reward-kernel').ShopOptionSelection | null>
   >;
   readonly summary: string;
   readonly intentFor: (
-    value: import('@run-planner/engine/reward-kernel').ShopOptionSelection,
-  ) => WorkspaceCommandIntent<Extract<ProjectCommand, { readonly kind: 'ReplaceShopOfferOption' }>>;
+    value: import('@run-planner/engine/reward-kernel').ShopOptionSelection | null,
+  ) => WorkspaceCommandIntent<
+    Extract<ProjectCommand, { readonly kind: 'ReplaceShopOfferOption' | 'ClearShopOffer' }>
+  >;
 }
 
 /** Complete occurrence command binding for one physical Pool offer slot. */

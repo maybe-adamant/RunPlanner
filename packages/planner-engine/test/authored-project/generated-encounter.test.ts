@@ -119,7 +119,13 @@ describe('sparse generated encounter authorship', () => {
       catalog.rooms.byKey[occurrence.gameName]!,
       phase.owner,
       occurrence.encounters,
-      { resolutionContext: { kind: 'knownReward', rewardType: 'MetaCardPointsCommonDrop' } },
+      {
+        resolutionContext: {
+          kind: 'knownReward',
+          rewardType: 'MetaCardPointsCommonDrop',
+          routeKey: 'Underworld',
+        },
+      },
     );
     expect(domain[0]?.customization?.[0]).toMatchObject({
       value: command.value,
@@ -131,7 +137,9 @@ describe('sparse generated encounter authorship', () => {
       catalog.rooms.byKey[occurrence.gameName]!,
       phase.owner,
       { ...occurrence.encounters, encounterKeyByPhase: { Encounter: 'GeneratedF' } },
-      { resolutionContext: { kind: 'knownReward', rewardType: 'Devotion' } },
+      {
+        resolutionContext: { kind: 'knownReward', rewardType: 'Devotion', routeKey: 'Underworld' },
+      },
     );
     expect(trial[0]).toMatchObject({
       selectedEncounterDefinitionKey: 'DevotionTestF',

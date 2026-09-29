@@ -5,6 +5,7 @@ import type {
   RoomGenerationExclusionEvidence,
   SemanticFinding,
 } from '@run-planner/engine/simulation';
+import { routeRoomDeclaration } from '@run-planner/engine/authored-project';
 import type { Catalog } from '@run-planner/engine/catalog-schema';
 import type { CounterAxis } from '@run-planner/engine/requirements';
 
@@ -102,8 +103,9 @@ function requirementMessage(evidence: RequirementEvaluationEvidence): string {
   }
 }
 
-function roomName(catalog: Catalog, gameName: string): string {
-  const room = catalog.rooms.byKey[gameName];
+/** The room's label as the route realizes it. */
+function roomName(catalog: Catalog, gameName: string, routeKey: string): string {
+  const room = routeRoomDeclaration(catalog.rooms.byKey[gameName], routeKey);
   if (room === undefined) throw new Error(`contextual option references unknown room ${gameName}`);
   return room.label;
 }
@@ -111,6 +113,7 @@ function roomName(catalog: Catalog, gameName: string): string {
 function roomExclusionExplanation(
   catalog: Catalog,
   exclusion: RoomGenerationExclusionEvidence,
+  routeKey: string,
 ): CandidateExplanation {
   switch (exclusion.kind) {
     case 'notCandidate':
@@ -120,7 +123,7 @@ function roomExclusionExplanation(
     case 'exitIncompatible':
       return {
         kind: 'compatibility',
-        message: `${roomName(catalog, exclusion.candidateGameName)} is incompatible with this door.`,
+        message: `${roomName(catalog, exclusion.candidateGameName, routeKey)} is incompatible with this door.`,
       };
     case 'currentRoomRepeat':
       return { kind: 'repeat', message: 'The current room cannot immediately repeat.' };
@@ -147,7 +150,9 @@ function roomExclusionExplanation(
         message: `This room can appear at most ${exclusion.maximum} times in this biome.`,
       };
     case 'forcedPool': {
-      const rooms = exclusion.requiredRoomGameNames.map((name) => roomName(catalog, name));
+      const rooms = exclusion.requiredRoomGameNames.map((name) =>
+        roomName(catalog, name, routeKey),
+      );
       const subject = rooms.length === 1 ? 'This room must' : 'These rooms must';
       return {
         kind: 'force',
@@ -186,7 +191,11 @@ function rewardPeerLabel(catalog: Catalog, value: FindingEvidenceValue | undefin
         ? numberedLabel(origin.slotKey, origin.groupKey === 'cages' ? 'Cage' : 'Side room')
         : 'another offer';
     case 'hubSlot': {
-      if (typeof origin.biomeKey !== 'string' || typeof origin.hubSlotKey !== 'string') {
+      if (
+        typeof origin.routeKey !== 'string' ||
+        typeof origin.biomeKey !== 'string' ||
+        typeof origin.hubSlotKey !== 'string'
+      ) {
         return 'another Hub room';
       }
       const layout = catalog.biomeLayouts.byKey[origin.biomeKey];
@@ -194,7 +203,9 @@ function rewardPeerLabel(catalog: Catalog, value: FindingEvidenceValue | undefin
         layout?.progression.kind === 'hub'
           ? layout.progression.slots.find((candidate) => candidate.slotKey === origin.hubSlotKey)
           : undefined;
-      return slot === undefined ? 'another Hub room' : roomName(catalog, slot.roomGameName);
+      return slot === undefined
+        ? 'another Hub room'
+        : roomName(catalog, slot.roomGameName, origin.routeKey);
     }
     default:
       return 'another offer';
@@ -605,8 +616,10 @@ export function explainCandidateEvaluation(
   }
   if (support !== 'impossible') return undefined;
   if (evaluation.kind === 'roomTarget') {
-    const exclusion = evaluation.result.pressure.selectedExclusions[0];
-    if (exclusion !== undefined) return roomExclusionExplanation(catalog, exclusion);
+    const { pressure } = evaluation.result;
+    const exclusion = pressure.selectedExclusions[0];
+    if (exclusion !== undefined)
+      return roomExclusionExplanation(catalog, exclusion, pressure.targetOrigin.routeKey);
   }
   const finding = activeFinding(evaluation);
   if (finding !== undefined) return findingExplanation(catalog, finding);

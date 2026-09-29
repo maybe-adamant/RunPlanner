@@ -36,6 +36,7 @@ function traitFixture(): {
   const declaration = room('F_Combat04');
   const state = mutable(
     createDefaultRoomState(catalog, declaration, {
+      routeKey: 'Underworld',
       role: 'ordinary',
       entryActive: true,
       resolvedStoreKey: 'RunProgress',
@@ -72,7 +73,7 @@ describe('encounter trait-offer child decoder', () => {
         fixture.state,
         catalog,
         fixture.declaration,
-        { role: 'ordinary', entryActive: true },
+        { routeKey: 'Underworld', role: 'ordinary', entryActive: true },
         path,
       ),
     ).toMatchObject({});
@@ -93,7 +94,7 @@ describe('encounter trait-offer child decoder', () => {
           raw,
           catalog,
           fixture.declaration,
-          { role: 'ordinary', entryActive: true },
+          { routeKey: 'Underworld', role: 'ordinary', entryActive: true },
           path,
         ),
       ).toMatchObject({});
@@ -108,7 +109,7 @@ describe('encounter trait-offer child decoder', () => {
         fallback,
         catalog,
         fixture.declaration,
-        { role: 'ordinary', entryActive: true },
+        { routeKey: 'Underworld', role: 'ordinary', entryActive: true },
         path,
       ),
     ).toMatchObject({});
@@ -118,7 +119,7 @@ describe('encounter trait-offer child decoder', () => {
         fallback,
         catalog,
         fixture.declaration,
-        { role: 'ordinary', entryActive: true },
+        { routeKey: 'Underworld', role: 'ordinary', entryActive: true },
         path,
       ),
     ).toThrow('is not a project document field');
@@ -135,7 +136,7 @@ describe('encounter trait-offer child decoder', () => {
         fixture.state,
         catalog,
         fixture.declaration,
-        { role: 'ordinary', entryActive: true },
+        { routeKey: 'Underworld', role: 'ordinary', entryActive: true },
         path,
       ),
     ).toThrow('is duplicated in the trait offer');
@@ -152,7 +153,7 @@ describe('encounter trait-offer child decoder', () => {
         fixture.state,
         catalog,
         fixture.declaration,
-        { role: 'ordinary', entryActive: true },
+        { routeKey: 'Underworld', role: 'ordinary', entryActive: true },
         path,
       ),
     ).toThrow('does not target another trait on acquisition');

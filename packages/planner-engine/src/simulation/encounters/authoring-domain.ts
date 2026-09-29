@@ -204,7 +204,7 @@ export function encounterPhaseAuthoringDomainForRoom(
         ? selectedEncounterKey
         : resolveEncounterAuthoringProfile(
             profiles.find((candidate) => candidate.key === selectedEncounterKey)!,
-            options.resolutionContext ?? { kind: 'unavailable' },
+            options.resolutionContext ?? { kind: 'unavailable', routeKey: biome.routeKey },
           ));
     const definition =
       selectedEncounterDefinitionKey === undefined
@@ -214,7 +214,18 @@ export function encounterPhaseAuthoringDomainForRoom(
     const retained = (
       routeFreeRoom === undefined
         ? []
-        : contextuallyReplacedCustomizationDecisions(catalog, routeFreeRoom, room, binding.slotKey)
+        : contextuallyReplacedCustomizationDecisions(
+            catalog,
+            routeFreeRoom,
+            room,
+            binding.slotKey,
+            selectedEncounterDefinitionKey === undefined
+              ? undefined
+              : {
+                  authoredChoiceKey: selectedEncounterKey,
+                  encounterDefinitionKey: selectedEncounterDefinitionKey,
+                },
+          )
     ).flatMap((decision) => {
       const value = encounters.customizationByPhase?.[binding.slotKey]?.[decision.key];
       if (value === undefined) return [];

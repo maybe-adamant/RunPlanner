@@ -16,6 +16,7 @@ describe('authored room-state replacement', () => {
   it('retains an admitted counted offer and resets one outside the replacement declaration', () => {
     const previousRoom = room('F_Combat02');
     const previousState = createDefaultRoomState(catalog, previousRoom, {
+      routeKey: 'Underworld',
       role: 'ordinary',
       resolvedStoreKey: 'MetaProgress',
       entryActive: true,
@@ -23,6 +24,7 @@ describe('authored room-state replacement', () => {
 
     const compatibleRoom = room('F_Combat03');
     const compatibleDefault = createDefaultRoomState(catalog, compatibleRoom, {
+      routeKey: 'Underworld',
       role: 'ordinary',
       resolvedStoreKey: 'RunProgress',
       entryActive: true,
@@ -39,6 +41,7 @@ describe('authored room-state replacement', () => {
 
     const forcedRoom = room('F_Combat01');
     const forcedDefault = createDefaultRoomState(catalog, forcedRoom, {
+      routeKey: 'Underworld',
       role: 'ordinary',
       resolvedStoreKey: 'MetaProgress',
       entryActive: true,
@@ -57,6 +60,7 @@ describe('authored room-state replacement', () => {
   it('retains declaration-compatible Fields cages', () => {
     const previousRoom = room('H_Combat01');
     const defaultPreviousState = createDefaultRoomState(catalog, previousRoom, {
+      routeKey: 'Underworld',
       role: 'ordinary',
       entryActive: true,
     });
@@ -64,6 +68,7 @@ describe('authored room-state replacement', () => {
     const previousState = defaultPreviousState;
     const replacementRoom = room('H_Combat02');
     const replacementDefault = createDefaultRoomState(catalog, replacementRoom, {
+      routeKey: 'Underworld',
       role: 'ordinary',
       entryActive: true,
     });
@@ -89,6 +94,7 @@ describe('authored room-state replacement', () => {
   it('retains admitted Ship encounter and wheel leaves', () => {
     const previousRoom = room('O_Combat01');
     const defaultState = createDefaultRoomState(catalog, previousRoom, {
+      routeKey: 'Underworld',
       role: 'ordinary',
       entryActive: true,
     });
@@ -105,6 +111,7 @@ describe('authored room-state replacement', () => {
     });
     const replacementRoom = room('O_Combat02');
     const replacementDefault = createDefaultRoomState(catalog, replacementRoom, {
+      routeKey: 'Underworld',
       role: 'ordinary',
       entryActive: true,
     });
@@ -122,6 +129,7 @@ describe('authored room-state replacement', () => {
   it('uses complete replacement defaults for Shop and Ephyra combat state', () => {
     const shopRoom = room('F_Shop01');
     const shopDefault = createDefaultRoomState(catalog, shopRoom, {
+      routeKey: 'Underworld',
       role: 'ordinary',
       entryActive: true,
     });
@@ -140,6 +148,7 @@ describe('authored room-state replacement', () => {
 
     const ephyraRoom = room('N_Combat02');
     const ephyraDefault = createDefaultRoomState(catalog, ephyraRoom, {
+      routeKey: 'Underworld',
       role: 'ordinary',
       entryActive: true,
     });

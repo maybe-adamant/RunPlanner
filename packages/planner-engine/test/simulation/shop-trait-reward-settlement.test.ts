@@ -47,6 +47,7 @@ describe('Shop trait acquisition processing', () => {
     if (room === undefined) throw new Error('missing F Shop declaration');
     const loadout = { weaponKey: 'WeaponStaff', aspectKey: 'StaffBase' };
     const active = createDefaultRoomState(catalog, room, {
+      routeKey: 'Underworld',
       role: 'ordinary',
       entryActive: true,
       loadout,
@@ -116,6 +117,7 @@ describe('Shop trait acquisition processing', () => {
     if (room === undefined) throw new Error('missing F Shop declaration');
     const loadout = { weaponKey: 'WeaponStaff', aspectKey: 'StaffBase' };
     const active = createDefaultRoomState(catalog, room, {
+      routeKey: 'Underworld',
       role: 'ordinary',
       entryActive: true,
       loadout,
@@ -327,6 +329,7 @@ describe('Shop trait acquisition processing', () => {
     ).toBe(false);
 
     const dormant = createDefaultRoomState(catalog, room, {
+      routeKey: 'Underworld',
       role: 'ordinary',
       entryActive: false,
       loadout,
@@ -339,6 +342,7 @@ describe('Shop trait acquisition processing', () => {
     if (room === undefined) throw new Error('missing F Shop declaration');
     const loadout = { weaponKey: 'WeaponStaff', aspectKey: 'StaffBase' };
     const active = createDefaultRoomState(catalog, room, {
+      routeKey: 'Underworld',
       role: 'ordinary',
       entryActive: true,
       loadout,
@@ -484,6 +488,7 @@ describe('Shop trait acquisition processing', () => {
       if (room === undefined) throw new Error('missing F Shop declaration');
       const loadout = { weaponKey: 'WeaponStaff', aspectKey: 'StaffBase' };
       const active = createDefaultRoomState(catalog, room, {
+        routeKey: 'Underworld',
         role: 'ordinary',
         entryActive: true,
         loadout,
@@ -661,6 +666,7 @@ describe('Shop trait acquisition processing', () => {
       aspectKey: replacementWeapon.defaultAspectKey,
     };
     const state = createDefaultRoomState(catalog, room, {
+      routeKey: 'Underworld',
       role: 'ordinary',
       entryActive: true,
       loadout: oldLoadout,
@@ -682,6 +688,7 @@ describe('Shop trait acquisition processing', () => {
       catalog,
       { rewardType: 'WeaponUpgradeDrop' },
       { kind: 'shopProfile', key: state.shop.profileKey },
+      'Underworld',
     );
     const hammerReward = Object.freeze({
       ...hammerBase,

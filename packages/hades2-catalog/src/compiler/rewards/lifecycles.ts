@@ -89,7 +89,15 @@ export function normalizeAcquisitionLifecycle(
         PRODUCER_LIFECYCLE_POINTS,
         `${bindingPath}.lifecyclePoint`,
       ),
-      ...(effect === undefined ? {} : { levelResolutionEffect: Object.freeze({ ...effect }) }),
+      ...(effect === undefined
+        ? {}
+        : {
+            levelResolutionEffect: Object.freeze(
+              effect.kind === 'randomTargetIfAvailable' && effect.excludedRouteKeys !== undefined
+                ? { ...effect, excludedRouteKeys: Object.freeze([...effect.excludedRouteKeys]) }
+                : { ...effect },
+            ),
+          }),
       ...(binding.blocksArtificerConversion === true
         ? { blocksArtificerConversion: true as const }
         : {}),

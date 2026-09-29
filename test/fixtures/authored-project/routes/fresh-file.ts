@@ -16,7 +16,10 @@ import {
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
 import type { ResolvedRewardOffer } from '@run-planner/engine/reward-kernel';
-import { loadUnderworldGeneratedCompositionCheckpoint } from '../checkpoints/underworld';
+import {
+  loadUnderworldFGHICheckpoint,
+  loadUnderworldGeneratedCompositionCheckpoint,
+} from '../checkpoints/underworld';
 import { authorLegalTraitOffers } from '../shared';
 
 export const freshFileFBiome = createBiomeAddress('FreshFile', 'F');
@@ -293,6 +296,16 @@ export function createMatureCombat01Sequence(): ProjectDocument {
   return authorLegalTraitOffers(project);
 }
 
+/** A fresh profile's Nectar grants no boon level, so its authored child goes. */
+function withoutNectarLevels(value: unknown): void {
+  if (Array.isArray(value)) return value.forEach(withoutNectarLevels);
+  if (value === null || typeof value !== 'object') return;
+  const record = value as Record<string, unknown>;
+  if ((record.offer as { rewardType?: string } | undefined)?.rewardType === 'GiftDrop')
+    delete record.levelResolutionsByAcquisitionRole;
+  Object.values(record).forEach(withoutNectarLevels);
+}
+
 /**
  * The mature generated-composition F prefix, made fresh-legal and continued
  * from the Fresh first sequence; it keeps its retained customization.
@@ -305,6 +318,7 @@ export function createFreshFileGeneratedComposition(): ProjectDocument {
       .replaceAll('"Zeus', '"Poseidon')
       .replaceAll('"Hera', '"Demeter'),
   );
+  withoutNectarLevels(mature);
   const fresh = JSON.parse(encodeProjectDocument(createFreshFileFirstSequence()));
   const [matureF] = mature.route.biomes;
   const [freshF] = fresh.route.biomes;
@@ -347,4 +361,157 @@ export function withRetainedFreshFileIntroCustomization(project: ProjectDocument
     (occurrence: { occurrenceId: string }) => occurrence.occurrenceId === freshFileIntroId,
   ).encounters.customizationByPhase = retained;
   return decodeProjectDocument(raw, catalog);
+}
+
+export const freshFileGBiome = createBiomeAddress('FreshFile', 'G');
+export const freshFileHBiome = createBiomeAddress('FreshFile', 'H');
+export const freshFileIBiome = createBiomeAddress('FreshFile', 'I');
+/** The first G combat, which resolves FishmanIntro. */
+export const freshFileGFirstCombatId = createOccurrenceId('golden-g-b1-e1');
+/** The second G combat, entered after FishmanIntro at the same biome depth. */
+export const freshFileGSecondCombatId = createOccurrenceId('golden-g-b2-e1');
+export const freshFileBridgeId = createOccurrenceId('golden-h-bridge01');
+export const freshFileIFirstCombatId = createOccurrenceId('golden-i-combat01');
+export const freshFileIShopId = createOccurrenceId('golden-i-preboss');
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- decoded JSON edited before strict decoding
+type RawJson = any;
+
+function replaceRaw(target: RawJson, value: RawJson): void {
+  for (const key of Object.keys(target)) delete target[key];
+  Object.assign(target, value);
+}
+
+const boonOffer = (source: string) => ({
+  rewardType: 'Boon',
+  payload: { kind: 'BoonSource', source },
+});
+
+/**
+ * A complete valid Fresh File F→I: the command-built F, then the golden G/H/I
+ * made fresh-legal. G's first combat resolves FishmanIntro and I's
+ * ClockworkIntro; the entered H_Bridge01 is a WorldShop; the I Shop's fifth
+ * slot is cleared through ClearShopOffer.
+ */
+export function createFreshFileRouteProject(): ProjectDocument {
+  const fresh = JSON.parse(encodeProjectDocument(createFreshFileFProject()));
+  const mature = JSON.parse(
+    encodeProjectDocument(loadUnderworldFGHICheckpoint()).replaceAll('Underworld', 'FreshFile'),
+  );
+  const biomes: RawJson[] = mature.route.biomes.slice(1);
+  const [g, h] = biomes;
+  const occurrence = (id: string): RawJson =>
+    biomes
+      .flatMap((biome) => biome.topology.occurrences)
+      .find((candidate) => candidate.occurrenceId === id);
+  const decision = (biome: RawJson, sourceId: string): RawJson =>
+    biome.topology.decisions.find(
+      (candidate: RawJson) => candidate.source.occurrenceId === sourceId,
+    );
+  const recast = (id: string, gameName: string, fromId = id) =>
+    replaceRaw(occurrence(id), {
+      ...structuredClone(occurrence(fromId)),
+      occurrenceId: id,
+      gameName,
+    });
+
+  // G: no Narcissus story or MiniBoss02 on a fresh profile, and FishmanIntro
+  // leaves the third batch at biome encounter depth 2.
+  recast('golden-g-b3-e1', 'G_Combat04', 'golden-g-b3-e2');
+  occurrence('golden-g-b3-e2').gameName = 'G_Combat05';
+  occurrence('golden-g-b3-e3').gameName = 'G_Combat06';
+  const fourth = decision(g, 'golden-g-b3-e1');
+  fourth.normal.targets.push({ exitKey: 'exit2', occurrenceId: 'golden-g-b4-e2' });
+  fourth.selection = { kind: 'normal', exitKey: 'exit1' };
+  g.topology.occurrences.push({
+    ...structuredClone(occurrence('golden-g-b4-e1')),
+    occurrenceId: 'golden-g-b4-e2',
+    gameName: 'G_Combat11',
+  });
+  occurrence('golden-g-b6-e2').gameName = 'G_MiniBoss03';
+  // H: the bridge is entered as a Shop, forcing MiniBoss02 after it.
+  recast('golden-h-bridge01', 'H_Bridge01', 'golden-g-b5-e1');
+  recast('golden-h-combat05', 'H_MiniBoss02', 'golden-h-miniboss01');
+  decision(h, 'golden-h-combat09').selection = { kind: 'normal', exitKey: 'exit2' };
+  decision(h, 'golden-h-miniboss01').source.occurrenceId = 'golden-h-bridge01';
+  // I: no Story and the fresh I_PreBoss01.
+  recast('golden-i-story01', 'I_Combat04', 'golden-i-combat03');
+  occurrence('golden-i-story01').state.reward = {};
+  for (const id of ['golden-g-preboss-shop:postboss', 'golden-h-preboss-shop:postboss']) {
+    delete occurrence(id).stygianWell;
+    delete occurrence(id).purgingPool;
+  }
+  const incoming: Readonly<Record<string, RawJson>> = {
+    'golden-g-b1-e1': { rewardType: 'MetaCardPointsCommonDrop' },
+    'golden-g-b2-e1': { rewardType: 'MetaCardPointsCommonDrop' },
+    'golden-g-b2-e2': { rewardType: 'MetaCurrencyDrop' },
+    'golden-g-b3-e1': { rewardType: 'MetaCardPointsCommonDrop' },
+    'golden-g-b3-e2': { rewardType: 'MetaCurrencyDrop' },
+    'golden-g-b3-e3': { rewardType: 'RoomRewardHealDrop' },
+    'golden-g-b4-e2': { rewardType: 'MaxHealthDrop' },
+    'golden-g-b6-e2': boonOffer('ApolloUpgrade'),
+    'golden-i-story01': { rewardType: 'RoomMoneyTripleDrop' },
+    'golden-i-combat02': { rewardType: 'StackUpgradeTriple' },
+  };
+  const cages: Readonly<Record<string, Readonly<Record<string, RawJson>>>> = {
+    'golden-h-combat09': {
+      cage1: { rewardType: 'RoomMoneyDrop' },
+      cage2: boonOffer('PoseidonUpgrade'),
+      cage3: boonOffer('ApolloUpgrade'),
+    },
+    'golden-h-combat03': { cage2: { rewardType: 'MaxManaDrop' } },
+  };
+  const rewards = [
+    ...Object.entries(incoming).map(([id, offer]) => [occurrence(id).state.reward, offer]),
+    ...Object.entries(cages).flatMap(([id, slots]) =>
+      Object.entries(slots).map(([slot, offer]) => [occurrence(id).state.cages[slot], offer]),
+    ),
+  ];
+  for (const [reward, offer] of rewards) {
+    const role = offer.rewardType === 'Boon' ? 'source' : 'self';
+    reward.offer = offer;
+    reward.traitOffersByAcquisitionRole = role === 'source' ? { source: null } : {};
+    reward.dispositionByAcquisitionRole = { [role]: { kind: 'normal' } };
+    if (offer.rewardType === 'StackUpgradeTriple')
+      reward.levelResolutionsByAcquisitionRole = {
+        self: { kind: 'choice', offeredTraitKeys: [], selectedTraitKey: null },
+      };
+  }
+  // Fresh gods and resource tiers; every trait offer is re-authored below.
+  const legal = JSON.parse(
+    JSON.stringify(biomes)
+      .replaceAll('"HestiaUpgrade"', '"PoseidonUpgrade"')
+      .replaceAll('"ZeusUpgrade"', '"PoseidonUpgrade"')
+      .replaceAll('"I_PreBoss02"', '"I_PreBoss01"')
+      .replaceAll('"MetaCurrencyBigDrop"', '"MetaCardPointsCommonDrop"')
+      .replaceAll('"MetaCardPointsCommonBigDrop"', '"MetaCardPointsCommonDrop"'),
+  );
+  withUnresolvedTraitOffers(legal);
+  let project = decodeProjectDocument(
+    {
+      ...fresh,
+      projectId: 'fresh-route',
+      route: {
+        ...fresh.route,
+        itineraryBiomeKeys: ['F', 'G', 'H', 'I'],
+        biomes: [fresh.route.biomes[0], ...legal],
+      },
+    },
+    catalog,
+  );
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ClearShopOffer',
+    offer: createShopOfferAddress(freshFileIBiome, freshFileIShopId, 'MetaProgress'),
+  });
+  return authorLegalTraitOffers(project);
+}
+
+function withUnresolvedTraitOffers(value: RawJson): void {
+  if (Array.isArray(value)) return value.forEach(withUnresolvedTraitOffers);
+  if (value === null || typeof value !== 'object') return;
+  for (const [key, child] of Object.entries(value as Record<string, RawJson>)) {
+    if (key === 'traitOffersByAcquisitionRole' && child !== null)
+      for (const role of Object.keys(child)) child[role] = null;
+    else withUnresolvedTraitOffers(child);
+  }
 }

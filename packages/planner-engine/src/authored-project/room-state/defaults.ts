@@ -185,7 +185,7 @@ export function createDefaultRoomState(
     source: import('../../reward-kernel/level-effects').LevelResolutionEffectSource,
   ) =>
     catalog.rewards.rewardTypes.byKey[offer.rewardType]?.payloadDomain === undefined
-      ? createUnresolvedAcquisitionRewardState(catalog, offer, source)
+      ? createUnresolvedAcquisitionRewardState(catalog, offer, source, context.routeKey)
       : null;
 
   switch (authoredTemplateKey(room, path)) {

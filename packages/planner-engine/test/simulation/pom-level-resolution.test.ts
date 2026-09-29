@@ -168,14 +168,30 @@ describe('Pom level resolutions', () => {
         { rewardType: 'GiftDrop' },
         { kind: 'producerLifecycle', key: 'RoomReward' },
         'self',
+        'Underworld',
       ),
-    ).toEqual({ kind: 'randomTargetIfAvailable', levelCount: 1 });
+    ).toEqual({
+      kind: 'randomTargetIfAvailable',
+      levelCount: 1,
+      excludedRouteKeys: ['FreshFile'],
+    });
+    // A fresh profile lacks WorldUpgradeGiftDropRunProgress, so its Nectar has no level.
+    expect(
+      levelResolutionEffectFor(
+        catalog.rewards,
+        { rewardType: 'GiftDrop' },
+        { kind: 'producerLifecycle', key: 'RoomReward' },
+        'self',
+        'FreshFile',
+      ),
+    ).toBeUndefined();
     expect(
       levelResolutionEffectFor(
         catalog.rewards,
         { rewardType: 'GiftDrop' },
         { kind: 'shopProfile', key: 'I_WorldShop' },
         'self',
+        'Underworld',
       ),
     ).toBeUndefined();
     expect(
@@ -184,6 +200,7 @@ describe('Pom level resolutions', () => {
         { rewardType: 'StoreRewardRandomStack' },
         { kind: 'shopProfile', key: 'WorldShop' },
         'self',
+        'Underworld',
       ),
     ).toEqual({ kind: 'randomTarget', levelCount: 1 });
 

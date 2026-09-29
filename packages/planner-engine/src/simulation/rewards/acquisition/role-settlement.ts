@@ -136,10 +136,15 @@ export function applyProducerRoleHistory(
     : Object.freeze(
         artificerReplacementRewardTypes.flatMap((rewardType) =>
           locallyValidRewardOffers(catalog.rewards, rewardType).map((offer) =>
-            createUnresolvedAcquisitionRewardState(catalog, offer, {
-              kind: 'producerLifecycle',
-              key: 'RoomReward',
-            }),
+            createUnresolvedAcquisitionRewardState(
+              catalog,
+              offer,
+              {
+                kind: 'producerLifecycle',
+                key: 'RoomReward',
+              },
+              settlement.site.routeKey,
+            ),
           ),
         ),
       );

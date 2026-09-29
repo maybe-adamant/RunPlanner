@@ -187,6 +187,8 @@ export interface RawEncounterSetDeclaration {
       | {
           readonly kind: 'rewardContext';
           readonly firstBiomeEncounterDefinitionKey?: string;
+          /** Route-specific first-biome identity; it wins over the default on that route. */
+          readonly firstBiomeEncounterDefinitionKeyByRoute?: Readonly<Record<string, string>>;
           readonly defaultEncounterDefinitionKey: string;
           readonly encounterDefinitionKeyByRewardType: Readonly<Record<string, string>>;
         };

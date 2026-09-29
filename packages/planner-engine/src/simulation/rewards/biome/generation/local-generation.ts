@@ -29,10 +29,15 @@ function localCandidateForOffer(
   offer: ResolvedRewardOffer,
 ): CanonicalLocalReward {
   if (JSON.stringify(localReward.offer) === JSON.stringify(offer)) return localReward;
-  const state = createUnresolvedAcquisitionRewardState(catalog, offer, {
-    kind: 'producerLifecycle',
-    key: localReward.producerLifecycleKey,
-  });
+  const state = createUnresolvedAcquisitionRewardState(
+    catalog,
+    offer,
+    {
+      kind: 'producerLifecycle',
+      key: localReward.producerLifecycleKey,
+    },
+    localReward.origin.routeKey,
+  );
   return Object.freeze({
     ...localReward,
     ...state,
@@ -227,10 +232,15 @@ export function generateLocalRewards(
             throw new BiomeRewardSimulationContractError(
               'unresolved local reward frontier received a foreign owner',
             );
-          const state = createUnresolvedAcquisitionRewardState(catalog, offer, {
-            kind: 'producerLifecycle',
-            key: unresolved.producerLifecycleKey,
-          });
+          const state = createUnresolvedAcquisitionRewardState(
+            catalog,
+            offer,
+            {
+              kind: 'producerLifecycle',
+              key: unresolved.producerLifecycleKey,
+            },
+            unresolved.origin.routeKey,
+          );
           const candidate = Object.freeze({
             ...unresolved,
             offer,

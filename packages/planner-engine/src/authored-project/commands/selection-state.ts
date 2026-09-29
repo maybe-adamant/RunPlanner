@@ -1,3 +1,4 @@
+import { routeRoomDeclaration } from '../route-profile';
 import type { Catalog, RoomDeclaration } from '../../catalog-schema';
 import type { BiomeTopology, ExitDecision } from '../model';
 import type { RoomOccurrenceRole } from '../room-state/declaration';
@@ -38,7 +39,10 @@ export function reconcileNormalTargetEntryStates(
       (target) => target.occurrenceId === occurrence.occurrenceId,
     );
     if (targetIndex < 0) return occurrence;
-    const room = catalog.rooms.byKey[occurrence.gameName];
+    const room = routeRoomDeclaration(
+      catalog.rooms.byKey[occurrence.gameName],
+      located.routePosition.routeKey,
+    );
     if (room === undefined) failCommand(command, `unknown room ${occurrence.gameName}`);
 
     // A normal G target may be an Anomaly replacement. Its own state does not
@@ -53,6 +57,7 @@ export function reconcileNormalTargetEntryStates(
     const hasInventory = occurrence.state.kind === 'shop' && occurrence.state.shop !== undefined;
     if (hasInventory === entryActive) return occurrence;
     const defaultState = createDefaultRoomState(catalog, room, {
+      routeKey: located.routePosition.routeKey,
       role,
       entryActive,
       loadout: located.loadout,

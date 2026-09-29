@@ -134,6 +134,7 @@ export function applyShipOccurrenceCommand(
               catalog,
               command.value,
               producerLevelEffectSource(descriptor.reward),
+              located.routePosition.routeKey,
             ),
           }),
         });

@@ -123,6 +123,7 @@ describe('focused trait offer candidates', () => {
           kind: 'producerLifecycle',
           key: 'RoomReward',
         },
+        'Underworld',
       ),
     );
     const site = artificerAcquisitionSite(

@@ -15,17 +15,33 @@ describe('Ship and Ephyra room-state decoder', () => {
     ({ gameName, field, requiredKey }) => {
       const declaration = room(gameName);
       const raw = mutable(
-        createDefaultRoomState(catalog, declaration, { role: 'ordinary', entryActive: true }),
+        createDefaultRoomState(catalog, declaration, {
+          routeKey: 'Underworld',
+          role: 'ordinary',
+          entryActive: true,
+        }),
       );
       const keyedValues = raw[field] as Record<string, unknown>;
       keyedValues.unexpected = {};
       expect(() =>
-        decodeRoomState(raw, catalog, declaration, { role: 'ordinary', entryActive: true }, path),
+        decodeRoomState(
+          raw,
+          catalog,
+          declaration,
+          { routeKey: 'Underworld', role: 'ordinary', entryActive: true },
+          path,
+        ),
       ).toThrow(`${path}.${field}.unexpected: is not a project document field`);
       delete keyedValues.unexpected;
       delete keyedValues[requiredKey];
       expect(() =>
-        decodeRoomState(raw, catalog, declaration, { role: 'ordinary', entryActive: true }, path),
+        decodeRoomState(
+          raw,
+          catalog,
+          declaration,
+          { routeKey: 'Underworld', role: 'ordinary', entryActive: true },
+          path,
+        ),
       ).toThrow(`${path}.${field}.${requiredKey}: must be an object`);
     },
   );
@@ -33,12 +49,22 @@ describe('Ship and Ephyra room-state decoder', () => {
   it('rejects a Ship wheel pick beyond its active offer count at the exact leaf path', () => {
     const declaration = room('O_Combat01');
     const raw = mutable(
-      createDefaultRoomState(catalog, declaration, { role: 'ordinary', entryActive: true }),
+      createDefaultRoomState(catalog, declaration, {
+        routeKey: 'Underworld',
+        role: 'ordinary',
+        entryActive: true,
+      }),
     );
     const wheels = raw.wheels as Record<string, Record<string, unknown>>;
     wheels.wheel1!.pickedOfferIndex = 4;
     expect(() =>
-      decodeRoomState(raw, catalog, declaration, { role: 'ordinary', entryActive: true }, path),
+      decodeRoomState(
+        raw,
+        catalog,
+        declaration,
+        { routeKey: 'Underworld', role: 'ordinary', entryActive: true },
+        path,
+      ),
     ).toThrow('$.room.state.wheels.wheel1.pickedOfferIndex: must select an active offer');
   });
 });

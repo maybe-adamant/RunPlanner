@@ -33,7 +33,7 @@ export function ShopOfferEditor({
   );
   const domain = useWorkspaceInteraction(interaction);
   return (
-    <ContextualPicker<ShopOptionSelection>
+    <ContextualPicker<ShopOptionSelection | null>
       cancelLabel="Cancel"
       choiceLabel="Shop item"
       closeOnSelect={true}

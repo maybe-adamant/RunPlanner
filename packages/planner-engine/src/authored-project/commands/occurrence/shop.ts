@@ -37,6 +37,35 @@ export function applyShopOccurrenceCommand(
       ? Object.freeze({ optionKey: null, reward: null })
       : undefined);
   if (offer === undefined) failCommand(command, `unknown shop offer ${command.offer.offerKey}`);
+  if (command.kind === 'ClearShopOffer') {
+    if (command.offer.offerKey === TRAVEL_DEAL_REFILL_ENTRY_KEY)
+      failCommand(command, 'Travel Deal refill is not a declared Shop slot');
+    if (offer.reward === null && offer.optionKey === null) return document;
+    const withoutPurchase = Object.freeze({
+      ...replaceAuthoredShopOffer(
+        occurrence,
+        command.offer.offerKey,
+        Object.freeze({ optionKey: null, reward: null }),
+      ),
+      roomActions: Object.freeze({
+        order: Object.freeze(
+          occurrence.roomActions.order.filter(
+            (reference) =>
+              reference.kind !== 'interactShopOffer' ||
+              reference.offerKey !== command.offer.offerKey,
+          ),
+        ),
+      }),
+    });
+    const nextOccurrence = reconcileAcquisitionResolvedRewardEntry(
+      catalog,
+      withoutPurchase,
+      command.offer.offerKey,
+      false,
+      null,
+    );
+    return updateOccurrenceTopology(document, located, replaceOccurrence(current, nextOccurrence));
+  }
   if (command.kind === 'ReplaceAnvilResult') {
     const reward = offer.reward;
     if (reward === null) failCommand(command, 'acquisition effect result requires a reward');
@@ -114,10 +143,15 @@ export function applyShopOccurrenceCommand(
               traitOffersByAcquisitionRole: Object.freeze({}),
               dispositionByAcquisitionRole: Object.freeze({}),
             })
-          : createUnresolvedAcquisitionRewardState(catalog, selectedOffer, {
-              kind: 'shopProfile',
-              key: profile!.key,
-            });
+          : createUnresolvedAcquisitionRewardState(
+              catalog,
+              selectedOffer,
+              {
+                kind: 'shopProfile',
+                key: profile!.key,
+              },
+              located.routePosition.routeKey,
+            );
         const pickupEffect = resolvesAtAcquisition
           ? undefined
           : pickupEffectForOffer(catalog.rewards, selectedOffer);

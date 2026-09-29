@@ -1,24 +1,26 @@
 import type { Catalog, RoomDeclaration } from '../../catalog-schema';
 import type { RewardProducerBinding } from '../../reward-kernel/bindings';
 import type { ResolvedRoutePosition } from '../route-context';
-import { routeBindsRunStartReward } from '../route-profile';
+import { routeBindsRunStartReward, routeRoomDeclaration } from '../route-profile';
 
 /**
- * Resolves the small contextual entry product at the one route-position
- * authority. Reward ownership is bound separately by the route-start product.
+ * Resolves the room a route position realizes: the route's overlay, then its
+ * contextual encounter rule. Reward ownership is bound separately by the
+ * route-start product.
  */
 export function resolveEntryDeclaration(
   declaration: RoomDeclaration,
   routePosition: ResolvedRoutePosition,
 ): RoomDeclaration {
-  const contextualEncounter = declaration.entryContextualEncounterRules?.find(
+  const routed = routeRoomDeclaration(declaration, routePosition.routeKey);
+  const contextualEncounter = routed.entryContextualEncounterRules?.find(
     (rule) =>
       rule.routeKey === routePosition.routeKey &&
       (rule.position === 'every' || (rule.position === 'first' && routePosition.isFirst)),
   );
-  if (contextualEncounter === undefined) return declaration;
+  if (contextualEncounter === undefined) return routed;
   return Object.freeze({
-    ...declaration,
+    ...routed,
     encounterSlotBindings: Object.freeze([
       Object.freeze({
         slotKey: 'Encounter',

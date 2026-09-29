@@ -25,7 +25,12 @@ export type SaveFileGodHistory = 'closed' | 'mature';
 export type LevelResolutionEffect =
   | { readonly kind: 'visibleChoice'; readonly levelCount: 1 | 2 | 3 }
   | { readonly kind: 'randomTarget'; readonly levelCount: 1 }
-  | { readonly kind: 'randomTargetIfAvailable'; readonly levelCount: 1 };
+  | {
+      readonly kind: 'randomTargetIfAvailable';
+      readonly levelCount: 1;
+      /** Routes whose save profile lacks the upgrade that grants this level. */
+      readonly excludedRouteKeys?: readonly string[];
+    };
 
 /** Source-backed effect applied when a concrete pickup is consumed. */
 export type ConcreteAcquisitionPickupEffect = { readonly kind: 'anvilOfFates' };

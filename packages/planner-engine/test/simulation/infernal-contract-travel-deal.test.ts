@@ -64,10 +64,15 @@ function authoredShopReward(
   offer: ResolvedRewardOffer,
   profileKey: 'WorldShop' | 'I_WorldShop' | 'Q_WorldShop' | 'ZagPedestalOptions' = 'WorldShop',
 ): AuthoredRewardState {
-  const state = createUnresolvedAcquisitionRewardState(catalog, offer, {
-    kind: 'shopProfile',
-    key: profileKey,
-  });
+  const state = createUnresolvedAcquisitionRewardState(
+    catalog,
+    offer,
+    {
+      kind: 'shopProfile',
+      key: profileKey,
+    },
+    'Underworld',
+  );
   const source = offer.payload?.kind === 'BoonSource' ? offer.payload.source : undefined;
   const traitOffer =
     offer.rewardType === 'SpellDrop'
@@ -308,6 +313,7 @@ function settle(options: {
   if (declaration?.infernalContractReward === undefined)
     throw new Error('missing F Preboss Contract declaration');
   const state = createDefaultRoomState(catalog, declaration, {
+    routeKey: 'Underworld',
     role: 'prebossShop',
     entryActive: true,
     loadout,
@@ -383,6 +389,7 @@ function settle(options: {
                           catalog,
                           { rewardType: contractRewardType },
                           { kind: 'shopProfile', key: 'ZagPedestalOptions' },
+                          'Underworld',
                         )
                       : contractRewardType === 'BlindBoxLoot'
                         ? authoredShopReward(
@@ -772,6 +779,7 @@ describe('Infernal Contract and Travel Deal chronology', () => {
         payload: Object.freeze({ kind: 'BoonSource' as const, source: 'ApolloUpgrade' }),
       }),
       { kind: 'shopProfile', key: 'WorldShop' },
+      'Underworld',
     );
     const result = settle({
       order: ['MajorNonBoon', 'travelDealRefill'],
@@ -852,10 +860,15 @@ describe('Infernal Contract and Travel Deal chronology', () => {
     if (source === undefined) throw new Error('missing Major non-boon Shop source');
     const duplicateOffer = echoShopDuplicateOffer(catalog, source.offer);
     if (duplicateOffer === null) throw new Error('ordinary source unexpectedly needs fresh detail');
-    const duplicate = createUnresolvedAcquisitionRewardState(catalog, duplicateOffer, {
-      kind: 'shopProfile',
-      key: 'WorldShop',
-    });
+    const duplicate = createUnresolvedAcquisitionRewardState(
+      catalog,
+      duplicateOffer,
+      {
+        kind: 'shopProfile',
+        key: 'WorldShop',
+      },
+      'Underworld',
+    );
     const settled = settle({
       order: ['Minor', 'MajorNonBoon', 'echoDoubleShopReward', 'travelDealRefill'],
       travel: true,
@@ -885,6 +898,7 @@ describe('Infernal Contract and Travel Deal chronology', () => {
       catalog,
       Object.freeze({ rewardType: 'MaxHealthDrop' as const }),
       { kind: 'shopProfile', key: 'WorldShop' },
+      'Underworld',
     );
     const rejected = settle({
       order: ['Minor', 'travelDealRefill'],
@@ -935,6 +949,7 @@ describe('Infernal Contract and Travel Deal chronology', () => {
       catalog,
       echoShopDuplicateOffer(catalog, refillReward.offer)!,
       { kind: 'shopProfile', key: 'WorldShop' },
+      'Underworld',
     );
     const settled = settle({
       order: ['Minor', 'travelDealRefill', 'echoDoubleShopReward'],
@@ -968,10 +983,15 @@ describe('Infernal Contract and Travel Deal chronology', () => {
     if (source === undefined) throw new Error('missing Minor Shop source');
     const duplicateOffer = echoShopDuplicateOffer(catalog, source.offer);
     if (duplicateOffer === null) throw new Error('ordinary source unexpectedly needs fresh detail');
-    const duplicate = createUnresolvedAcquisitionRewardState(catalog, duplicateOffer, {
-      kind: 'shopProfile',
-      key: 'WorldShop',
-    });
+    const duplicate = createUnresolvedAcquisitionRewardState(
+      catalog,
+      duplicateOffer,
+      {
+        kind: 'shopProfile',
+        key: 'WorldShop',
+      },
+      'Underworld',
+    );
     const settled = settle({
       order: ['Minor', 'echoDoubleShopReward', 'travelDealRefill'],
       travel: true,
@@ -1138,6 +1158,7 @@ describe('Infernal Contract and Travel Deal chronology', () => {
       catalog,
       Object.freeze({ rewardType: 'ShopHermesUpgrade' as const }),
       { kind: 'shopProfile', key: 'WorldShop' },
+      'Underworld',
     );
     const hermesTravel = Object.freeze({
       ...hermesBase,
@@ -1348,11 +1369,13 @@ describe('Infernal Contract and Travel Deal chronology', () => {
       catalog,
       Object.freeze({ rewardType: 'MaxHealthDrop' as const }),
       { kind: 'shopProfile', key: 'Q_WorldShop' },
+      'Underworld',
     );
     const maxMana = createUnresolvedAcquisitionRewardState(
       catalog,
       Object.freeze({ rewardType: 'MaxManaDrop' as const }),
       { kind: 'shopProfile', key: 'Q_WorldShop' },
+      'Underworld',
     );
     const derived = settle({
       order: ['MixedProgress1'],

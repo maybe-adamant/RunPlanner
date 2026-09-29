@@ -38,7 +38,7 @@ export function resolvedEncounterPhaseForDefinition(
     'slotKey' | 'envelopeKey' | 'figLeafSkip' | 'rewardAttachment' | 'customizationByDecision'
   >,
   encounterKey: string,
-  /** Decisions a replaced route-free binding owned; their values are never supported. */
+  /** Decisions a replaced binding or authored choice owned; their values are never supported. */
   replacedDecisions: readonly EncounterCustomizationDecision[] = [],
 ): ResolvedEncounterPhase {
   const definition = catalog.encounterDefinitions.byKey[encounterKey];
@@ -92,7 +92,17 @@ export type EncounterResolutionContext = (
   | { readonly kind: 'knownReward'; readonly rewardType: string }
   | { readonly kind: 'noReward' }
   | { readonly kind: 'unavailable' }
-) & { readonly biomeEncounterDepth?: number };
+) & {
+  readonly routeKey: string;
+  /** Reached facts a first-biome identity needs; structural traversal omits them. */
+  readonly reached?: EncounterResolutionReachedFacts;
+};
+
+/** The preparation checkpoint's biome depth and route encounter identities before this phase. */
+export interface EncounterResolutionReachedFacts {
+  readonly biomeEncounterDepth: number;
+  readonly routeEncounterKeyCounts: Readonly<Record<string, number>>;
+}
 
 /** Narrow retained facts needed to resolve contextual encounter identity. */
 export interface EncounterResolutionRoomFacts {
@@ -104,26 +114,32 @@ export interface EncounterResolutionRoomFacts {
 export function encounterResolutionContext(
   room: EncounterResolutionRoomFacts,
   declaration: RoomDeclaration,
-  biomeEncounterDepth?: number,
+  routeKey: string,
+  reached?: EncounterResolutionReachedFacts,
 ): EncounterResolutionContext {
-  const depth = biomeEncounterDepth === undefined ? {} : { biomeEncounterDepth };
+  const facts = reached === undefined ? { routeKey } : { routeKey, reached };
   if (room.clockworkReward === 'goal') {
-    return Object.freeze({ ...depth, kind: 'knownReward', rewardType: 'ClockworkGoal' });
+    return Object.freeze({ ...facts, kind: 'knownReward', rewardType: 'ClockworkGoal' });
   }
   if (room.incomingReward !== undefined) {
     return Object.freeze({
-      ...depth,
+      ...facts,
       kind: 'knownReward',
       rewardType: room.incomingReward.offer.rewardType,
     });
   }
   if (room.unresolvedIncomingReward !== undefined)
-    return Object.freeze({ ...depth, kind: 'unavailable' });
+    return Object.freeze({ ...facts, kind: 'unavailable' });
   return declaration.incomingReward.kind === 'none'
-    ? Object.freeze({ ...depth, kind: 'noReward' })
-    : Object.freeze({ ...depth, kind: 'unavailable' });
+    ? Object.freeze({ ...facts, kind: 'noReward' })
+    : Object.freeze({ ...facts, kind: 'unavailable' });
 }
 
+/**
+ * A first-biome identity (route-keyed, else default) resolves at biome
+ * encounter depth one while it has not yet occurred on the route: native
+ * AlwaysForce until completed.
+ */
 export function resolveEncounterAuthoringProfile(
   profile: EncounterAuthoringProfile,
   context: EncounterResolutionContext,
@@ -131,10 +147,16 @@ export function resolveEncounterAuthoringProfile(
   if (profile.resolution.kind === 'direct') {
     return profile.resolution.encounterDefinitionKey;
   }
-  if (profile.resolution.firstBiomeEncounterDefinitionKey !== undefined) {
-    if (context.biomeEncounterDepth === undefined) return undefined;
-    if (context.biomeEncounterDepth === 1)
-      return profile.resolution.firstBiomeEncounterDefinitionKey;
+  const firstBiomeKey =
+    profile.resolution.firstBiomeEncounterDefinitionKeyByRoute?.[context.routeKey] ??
+    profile.resolution.firstBiomeEncounterDefinitionKey;
+  if (firstBiomeKey !== undefined) {
+    if (context.reached === undefined) return undefined;
+    if (
+      context.reached.biomeEncounterDepth === 1 &&
+      (context.reached.routeEncounterKeyCounts[firstBiomeKey] ?? 0) === 0
+    )
+      return firstBiomeKey;
   }
   if (context.kind === 'unavailable') return undefined;
   return context.kind === 'knownReward'
@@ -238,7 +260,10 @@ export function resolveMaterializedEncounterPhase(
     definitionKey,
     routeFreeRoom === undefined
       ? []
-      : contextuallyReplacedCustomizationDecisions(catalog, routeFreeRoom, room, phase.slotKey),
+      : contextuallyReplacedCustomizationDecisions(catalog, routeFreeRoom, room, phase.slotKey, {
+          authoredChoiceKey: phase.authoredChoiceKey,
+          encounterDefinitionKey: definitionKey,
+        }),
   );
   if (supportsGeneratedEncounterCustomization(room) || resolved.customization === undefined)
     return resolved;

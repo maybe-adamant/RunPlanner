@@ -92,27 +92,31 @@ describe('Tartarus reached first-combat identity', () => {
         resolveEncounterAuthoringProfile(profile, {
           kind: 'knownReward',
           rewardType: 'ClockworkGoal',
+          routeKey: 'Underworld',
         }),
       ).toBeUndefined();
       expect(
         resolveEncounterAuthoringProfile(profile, {
           kind: 'knownReward',
           rewardType: 'ClockworkGoal',
-          biomeEncounterDepth: 1,
+          routeKey: 'Underworld',
+          reached: { biomeEncounterDepth: 1, routeEncounterKeyCounts: {} },
         }),
       ).toBe(intro);
       expect(
         resolveEncounterAuthoringProfile(profile, {
           kind: 'knownReward',
           rewardType: 'ClockworkGoal',
-          biomeEncounterDepth: 2,
+          routeKey: 'Underworld',
+          reached: { biomeEncounterDepth: 2, routeEncounterKeyCounts: {} },
         }),
       ).toBe(goal);
       expect(
         resolveEncounterAuthoringProfile(profile, {
           kind: 'knownReward',
           rewardType: 'MaxHealthDrop',
-          biomeEncounterDepth: 2,
+          routeKey: 'Underworld',
+          reached: { biomeEncounterDepth: 2, routeEncounterKeyCounts: {} },
         }),
       ).toBe(authored);
     },

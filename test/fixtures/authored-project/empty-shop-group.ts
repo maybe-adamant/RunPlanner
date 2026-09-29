@@ -1,11 +1,6 @@
 import { createCatalog } from '@run-planner/hades2-catalog';
 import { declarations } from '@run-planner/hades2-catalog/test-support';
 import type { Catalog } from '@run-planner/engine/catalog-schema';
-import type {
-  OccurrenceAddress,
-  ProjectDocument,
-  RoomOccurrence,
-} from '@run-planner/engine/authored-project';
 
 /** A requirement no reached route position satisfies. */
 const unreachable = Object.freeze({
@@ -54,58 +49,5 @@ export function catalogWithEmptyShopGroup(
             },
           },
     ),
-  });
-}
-
-/** Leaves one authored Shop slot unset and drops any purchase of it. */
-export function clearTestShopOffer(
-  project: ProjectDocument,
-  occurrence: OccurrenceAddress,
-  slotKey: string,
-): ProjectDocument {
-  const edit = (candidate: RoomOccurrence): RoomOccurrence => {
-    if (candidate.occurrenceId !== occurrence.occurrenceId) return candidate;
-    const state = candidate.state;
-    if (state.kind !== 'shop' || state.shop?.offers[slotKey] === undefined)
-      throw new Error(`${occurrence.occurrenceId} has no Shop slot ${slotKey}`);
-    return Object.freeze({
-      ...candidate,
-      state: Object.freeze({
-        ...state,
-        shop: Object.freeze({
-          ...state.shop,
-          offers: Object.freeze({
-            ...state.shop.offers,
-            [slotKey]: Object.freeze({ optionKey: null, reward: null }),
-          }),
-        }),
-      }),
-      roomActions: Object.freeze({
-        order: Object.freeze(
-          candidate.roomActions.order.filter(
-            (reference) => reference.kind !== 'interactShopOffer' || reference.offerKey !== slotKey,
-          ),
-        ),
-      }),
-    });
-  };
-  return Object.freeze({
-    ...project,
-    route: Object.freeze({
-      ...project.route,
-      biomes: Object.freeze(
-        project.route.biomes.map((biome) =>
-          biome.biomeKey !== occurrence.biomeKey || biome.topology === null
-            ? biome
-            : Object.freeze({
-                ...biome,
-                topology: Object.freeze({
-                  ...biome.topology,
-                  occurrences: Object.freeze(biome.topology.occurrences.map(edit)),
-                }),
-              }),
-        ),
-      ),
-    }),
   });
 }

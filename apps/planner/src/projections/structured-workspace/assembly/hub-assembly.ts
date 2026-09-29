@@ -12,6 +12,7 @@ import {
   createOccurrenceAddress,
   hubFountainPrecedingVisitCount,
   hubVisitSlotKeys,
+  routeRoomDeclaration,
   semanticAddressKey,
   selectedExitTarget,
   type BiomeAddress,
@@ -276,7 +277,10 @@ function projectHubNode(
           enteredOrdinal: enteredOrdinal < 0 ? null : enteredOrdinal + 1,
           gameName: slot.roomGameName,
           key: slot.slotKey,
-          label: requireWorkspaceRoom(catalog, localOccurrence.gameName).label,
+          label: routeRoomDeclaration(
+            requireWorkspaceRoom(catalog, localOccurrence.gameName),
+            address.routeKey,
+          ).label,
           marker: markerDestinations.marker(address),
           occurrenceId: localOccurrence.occurrenceId,
           order: localVisitOrderControl(address, decision.visitOrder, localOccurrence.occurrenceId),
@@ -593,7 +597,10 @@ function projectHubNode(
       : {
           controlsHost: Object.freeze({
             kind: 'room' as const,
-            label: requireWorkspaceRoom(catalog, hostOccurrence.gameName).label,
+            label: routeRoomDeclaration(
+              requireWorkspaceRoom(catalog, hostOccurrence.gameName),
+              biome.routeKey,
+            ).label,
             occurrenceId: hostOccurrence.occurrenceId,
           }),
         }),

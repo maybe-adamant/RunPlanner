@@ -2,6 +2,7 @@ import type {
   CatalogCollection,
   EncounterEnvelope,
   RoomDeclaration,
+  RouteDeclaration,
 } from '@run-planner/engine/catalog-schema';
 import type { RequirementExpression } from '@run-planner/engine/requirements';
 
@@ -127,4 +128,20 @@ export function validateRoomCollectionClosure(
       });
     });
   });
+}
+
+/** Room route overlays name declared routes. */
+export function validateRoomRouteOverlayReferences(
+  rooms: CatalogCollection<RoomDeclaration>,
+  routes: CatalogCollection<RouteDeclaration>,
+): void {
+  rooms.values.forEach((room, roomIndex) =>
+    room.routeOverlays?.forEach((overlay, overlayIndex) => {
+      if (routes.byKey[overlay.routeKey] === undefined)
+        fail(
+          `rooms[${roomIndex}].routeOverlays[${overlayIndex}].routeKey`,
+          `unknown route ${overlay.routeKey}`,
+        );
+    }),
+  );
 }

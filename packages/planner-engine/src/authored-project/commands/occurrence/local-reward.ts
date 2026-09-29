@@ -59,6 +59,7 @@ export function applyLocalRewardCommand(
       catalog,
       command.value,
       levelEffectSource,
+      located.routePosition.routeKey,
     );
     return updateOccurrenceTopology(
       document,

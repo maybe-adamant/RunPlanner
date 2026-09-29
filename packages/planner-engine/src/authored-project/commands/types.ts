@@ -408,6 +408,11 @@ export type ShopOccurrenceCommand =
       readonly value: ResolvedRewardOffer;
     }
   | {
+      /** Empties one declared slot, dropping its purchase and acquisition entry. */
+      readonly kind: 'ClearShopOffer';
+      readonly offer: ShopOfferAddress;
+    }
+  | {
       readonly kind: 'ReplaceShopOfferOption';
       readonly offer: ShopOfferAddress;
       readonly value: ShopOptionSelection;

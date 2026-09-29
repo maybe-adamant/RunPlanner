@@ -4,7 +4,9 @@ import { describe, expect, it } from 'vitest';
 import { catalog } from '@run-planner/hades2-catalog';
 import {
   applyProjectCommand,
+  applyProjectHistoryCommand,
   activeRoomActionReferences,
+  createProjectHistory,
   createAcquisitionEntryAddress,
   createAcquisitionSiteAddress,
   createOccurrenceAddress,
@@ -16,6 +18,7 @@ import {
   createTraitOfferAddress,
   decodeProjectDocument,
   encodeProjectDocument,
+  undoProjectHistory,
 } from '@run-planner/engine/authored-project';
 
 import { createCompleteNProject } from '../support/complete-n-project';
@@ -232,6 +235,52 @@ describe('authored-project Shop occurrence commands', () => {
       purchased: false,
     });
     expect(occurrence()?.acquisitionSites?.roomExit?.pickupEntries?.Boon).toBeUndefined();
+  });
+
+  it('clears a purchased slot with its purchase and acquisition entry as one undoable edit', () => {
+    const shopId = createOccurrenceId('round-trip-n-preboss');
+    const offer = createShopOfferAddress(nBiome, shopId, 'Boon');
+    const purchased = applyProjectCommand(
+      applyProjectCommand(createCompleteNProject(), catalog, {
+        kind: 'ReplaceShopOffer',
+        offer,
+        value: { rewardType: 'BlindBoxLoot' },
+      }),
+      catalog,
+      { kind: 'ReplaceShopPurchaseParticipation', offer, purchased: true },
+    );
+    const history = applyProjectHistoryCommand(createProjectHistory(purchased), catalog, {
+      kind: 'ClearShopOffer',
+      offer,
+    });
+    const shop = (document: typeof purchased) =>
+      document.route.biomes
+        .find((biome) => biome.biomeKey === 'N')
+        ?.topology?.occurrences.find((candidate) => candidate.occurrenceId === shopId);
+    const cleared = shop(history.present)!;
+    expect(cleared.state.kind === 'shop' ? cleared.state.shop?.offers.Boon : undefined).toEqual({
+      optionKey: null,
+      reward: null,
+    });
+    expect(
+      cleared.roomActions.order.some(
+        (reference) => reference.kind === 'interactShopOffer' && reference.offerKey === 'Boon',
+      ),
+    ).toBe(false);
+    expect(cleared.acquisitionSites?.roomExit?.pickupEntries?.Boon).toBeUndefined();
+    expect(
+      decodeProjectDocument(JSON.parse(encodeProjectDocument(history.present)), catalog),
+    ).toEqual(history.present);
+    expect(undoProjectHistory(history).present).toBe(purchased);
+    expect(applyProjectCommand(history.present, catalog, { kind: 'ClearShopOffer', offer })).toBe(
+      history.present,
+    );
+    expect(() =>
+      applyProjectCommand(purchased, catalog, {
+        kind: 'ClearShopOffer',
+        offer: createShopOfferAddress(nBiome, shopId, 'travelDealRefill'),
+      }),
+    ).toThrow(/not a declared Shop slot/);
   });
 
   it('replaces an offer and complete purchase order independently and preserves unchanged identity', () => {

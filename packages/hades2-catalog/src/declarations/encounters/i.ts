@@ -9,6 +9,16 @@ import {
 
 export const iEncounterDefinitions = [
   {
+    // EncounterData_Opening.lua ClockworkIntro: fixed waves (two SatyrLancer;
+    // five TimeElemental; three SatyrLancer and six TimeElemental). AlwaysForce
+    // until completed; counts depth, cannot skip and blocks the Athena keepsake.
+    key: 'ClockworkIntro',
+    label: 'Intro combat',
+    kind: 'combat',
+    countsEncounterDepth: true,
+    blocksGorgon: true,
+  },
+  {
     key: 'GeneratedIChronosIntro',
     customization: [generatedEncounterChoices.GeneratedIChronosIntro],
     label: 'Combat',
@@ -191,6 +201,7 @@ export const iEncounterSets = [
   {
     key: 'IEncountersDefault',
     encounterDefinitionKeys: [
+      'ClockworkIntro',
       'GeneratedIChronosIntro',
       'GeneratedI',
       'GeneratedI_GoalReward',
@@ -207,10 +218,12 @@ export const iEncounterSets = [
           'GeneratedI_GoalReward',
           'DevotionTestI',
           'GeneratedIChronosIntro',
+          'ClockworkIntro',
         ],
         resolution: {
           kind: 'rewardContext',
           firstBiomeEncounterDefinitionKey: 'GeneratedIChronosIntro',
+          firstBiomeEncounterDefinitionKeyByRoute: { FreshFile: 'ClockworkIntro' },
           defaultEncounterDefinitionKey: 'GeneratedI',
           encounterDefinitionKeyByRewardType: {
             ClockworkGoal: 'GeneratedI_GoalReward',
@@ -224,6 +237,7 @@ export const iEncounterSets = [
   {
     key: 'IEncountersSmaller',
     encounterDefinitionKeys: [
+      'ClockworkIntro',
       'GeneratedI_SmallChronosIntro',
       'GeneratedI_Small',
       'GeneratedI_Small_GoalReward',
@@ -239,11 +253,13 @@ export const iEncounterSets = [
           'GeneratedI_Small',
           'GeneratedI_Small_GoalReward',
           'DevotionTestI',
+          'ClockworkIntro',
         ],
         label: 'Combat',
         resolution: {
           kind: 'rewardContext',
           firstBiomeEncounterDefinitionKey: 'GeneratedI_SmallChronosIntro',
+          firstBiomeEncounterDefinitionKeyByRoute: { FreshFile: 'ClockworkIntro' },
           defaultEncounterDefinitionKey: 'GeneratedI_Small',
           encounterDefinitionKeyByRewardType: {
             ClockworkGoal: 'GeneratedI_Small_GoalReward',

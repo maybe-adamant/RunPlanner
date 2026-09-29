@@ -426,6 +426,12 @@ of the `GiftDrop` acquisition identity:
   `true` because the later of its two raw assignments wins, so replayed Nectar
   receives the random `+1` effect as well.
 
+The `RunProgress` override itself is gated on
+`GameState.WorldUpgrades.WorldUpgradeGiftDropRunProgress`
+(`ConsumableData.lua:1852-1863`). A fresh profile has not bought it, so on the
+`FreshFile` route every Nectar, including Fields optional Nectar, is a plain
+resource pickup with no level.
+
 Unlike normal `StoreRewardRandomStack` sources, Nectar is not gated by
 `StackUpgradeLegal`. `AddStackToTraits` accepts an empty eligible set and simply
 performs no mutation. Source-eligible Nectar therefore needs a legal

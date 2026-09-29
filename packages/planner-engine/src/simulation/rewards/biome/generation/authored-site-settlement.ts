@@ -191,6 +191,7 @@ export function settleAuthoredAcquisitionSite(
             catalog,
             { rewardType: 'RoomRewardConsolationPrize' },
             producerLifecycleKey,
+            room.origin.routeKey,
           )
         : duplicateEntry;
       // The duplicate can be placed after other room actions. Its eligibility
@@ -326,10 +327,15 @@ export function settleAuthoredAcquisitionSite(
       );
       if (echoReplay && replayEntryKey !== undefined && agreedReplay !== undefined) {
         const replayAddress = createAcquisitionEntryAddress(selectedSite.address, replayEntryKey);
-        const fixedReward = createUnresolvedAcquisitionRewardState(catalog, agreedReplay.offer, {
-          kind: 'producerLifecycle',
-          key: 'EchoLastReward',
-        });
+        const fixedReward = createUnresolvedAcquisitionRewardState(
+          catalog,
+          agreedReplay.offer,
+          {
+            kind: 'producerLifecycle',
+            key: 'EchoLastReward',
+          },
+          room.origin.routeKey,
+        );
         derivedEntryFrontiers.push(
           ...sourceBranches.map((branch) =>
             Object.freeze({
@@ -465,6 +471,7 @@ export function settleAuthoredAcquisitionSite(
                       catalog,
                       offer,
                       producer.producerLifecycleKey,
+                      room.origin.routeKey,
                     ),
                   }),
                   order: room.roomActions.order.some(

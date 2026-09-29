@@ -1,15 +1,16 @@
 import { catalog } from '@run-planner/hades2-catalog';
 import {
   catalogWithEmptyShopGroup,
-  clearTestShopOffer,
   replaceTestShopOfferActions,
 } from '@run-planner/test-fixtures/shared';
 import { loadUnderworldFGHICheckpoint } from '@run-planner/test-fixtures/checkpoints/underworld';
 import type { Catalog } from '../../../src/catalog-schema';
 import {
+  applyProjectCommand,
   createBiomeAddress,
   createOccurrenceAddress,
   createOccurrenceId,
+  createShopOfferAddress,
   type ProjectDocument,
 } from '../../../src/authored-project';
 
@@ -25,10 +26,25 @@ export function emptyShopGroupCatalog(): Catalog {
   return cachedCatalog;
 }
 
+/** Empties one slot of the I Preboss Shop through the authored command. */
+export function clearEmptyShopGroupOffer(
+  project: ProjectDocument,
+  slotKey: string,
+): ProjectDocument {
+  return applyProjectCommand(project, catalog, {
+    kind: 'ClearShopOffer',
+    offer: createShopOfferAddress(
+      createBiomeAddress('Underworld', 'I'),
+      emptyShopGroupOccurrence.occurrenceId,
+      slotKey,
+    ),
+  });
+}
+
 /** The mature FGHI plan with the empty Survival slot unset and the later Premium item bought. */
 export function emptyShopGroupProject(): ProjectDocument {
   return replaceTestShopOfferActions(
-    clearTestShopOffer(loadUnderworldFGHICheckpoint(), emptyShopGroupOccurrence, 'Survival'),
+    clearEmptyShopGroupOffer(loadUnderworldFGHICheckpoint(), 'Survival'),
     emptyShopGroupCatalog(),
     emptyShopGroupOccurrence,
     ['PremiumProgress'],

@@ -47,7 +47,12 @@ export function applyIncomingRewardCommand(
     }
     state = Object.freeze({
       kind: 'fixed',
-      reward: createUnresolvedAcquisitionRewardState(catalog, command.value, levelEffectSource),
+      reward: createUnresolvedAcquisitionRewardState(
+        catalog,
+        command.value,
+        levelEffectSource,
+        located.routePosition.routeKey,
+      ),
     });
   } else if (
     occurrence.state.kind === 'counted' ||
@@ -57,7 +62,12 @@ export function applyIncomingRewardCommand(
   ) {
     state = Object.freeze({
       ...occurrence.state,
-      reward: createUnresolvedAcquisitionRewardState(catalog, command.value, levelEffectSource),
+      reward: createUnresolvedAcquisitionRewardState(
+        catalog,
+        command.value,
+        levelEffectSource,
+        located.routePosition.routeKey,
+      ),
     });
   } else {
     failCommand(command, `${occurrence.gameName} has no replaceable incoming reward`);

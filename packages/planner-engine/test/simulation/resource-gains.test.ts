@@ -133,10 +133,15 @@ function collectSeaStarDuplicate(branch: RewardBranchState, pickup: ReturnType<t
     siteOwner: pickup.siteOwner,
     site: createAcquisitionSiteAddress(pickup.siteOwner, 'seaStarDuplicate:resource:self'),
     entries: Object.freeze({
-      seaStarDuplicate: createUnresolvedAcquisitionRewardState(catalog, pickup.offer, {
-        kind: 'producerLifecycle',
-        key: pickup.producerLifecycleKey,
-      }),
+      seaStarDuplicate: createUnresolvedAcquisitionRewardState(
+        catalog,
+        pickup.offer,
+        {
+          kind: 'producerLifecycle',
+          key: pickup.producerLifecycleKey,
+        },
+        'Underworld',
+      ),
     }),
     order: Object.freeze(['seaStarDuplicate']),
     presentsMaterializedScreen: false,

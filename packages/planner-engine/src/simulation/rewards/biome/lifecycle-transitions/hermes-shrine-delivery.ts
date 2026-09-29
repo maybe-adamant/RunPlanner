@@ -45,7 +45,11 @@ export function dueHermesShrineDeliveryFrontier(
         room?.kind === 'authored'
           ? room.acquisitionSites?.hermesShrineDelivery?.entries[entryKey]
           : undefined;
-      const fixedReward = defaultHermesShrineDeliveryReward(catalog, delivery.rewardType);
+      const fixedReward = defaultHermesShrineDeliveryReward(
+        catalog,
+        delivery.rewardType,
+        site.routeKey,
+      );
       const hasExactDeliveryAction =
         room?.kind === 'authored' &&
         room.roomActionRoster?.rows.some(

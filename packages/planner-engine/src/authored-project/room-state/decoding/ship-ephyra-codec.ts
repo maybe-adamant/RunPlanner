@@ -32,6 +32,7 @@ function expectedKind(value: unknown, expected: string, path: string): void {
 function decodeRewardWheel(
   value: unknown,
   catalog: Catalog,
+  routeKey: string,
   descriptor: EncounterRewardWheelAttachment,
   path: string,
 ): RewardWheelState {
@@ -60,6 +61,7 @@ function decodeRewardWheel(
         kind: 'producerLifecycle',
         key: descriptor.reward.producerLifecycleKey,
       },
+      routeKey,
     );
     if (reward === null) {
       offers[offerKey] = null;
@@ -90,6 +92,7 @@ function decodeRewardWheel(
 export function decodeShipCombatState(
   value: Record<string, unknown>,
   catalog: Catalog,
+  routeKey: string,
   room: RoomDeclaration,
   path: string,
 ): ShipCombatState {
@@ -111,6 +114,7 @@ export function decodeShipCombatState(
     wheels[descriptor.key] = decodeRewardWheel(
       rawWheels[descriptor.key],
       catalog,
+      routeKey,
       descriptor,
       `${path}.wheels.${descriptor.key}`,
     );
@@ -125,16 +129,23 @@ export function decodeShipCombatState(
 export function decodeEphyraCombatState(
   value: Record<string, unknown>,
   catalog: Catalog,
+  routeKey: string,
   room: RoomDeclaration,
   path: string,
 ): EphyraCombatState {
   expectedKind(value.kind, 'ephyraCombat', path);
   expectExactKeys(value, ['kind', 'reward'], path);
   requireEphyraSideRooms(room, path);
-  const parentReward = decodeNullableRewardState(value.reward, catalog, `${path}.reward`, {
-    kind: 'producerLifecycle',
-    key: requireCountedBinding(room, path).producerLifecycleKey,
-  });
+  const parentReward = decodeNullableRewardState(
+    value.reward,
+    catalog,
+    `${path}.reward`,
+    {
+      kind: 'producerLifecycle',
+      key: requireCountedBinding(room, path).producerLifecycleKey,
+    },
+    routeKey,
+  );
   if (parentReward === null)
     return Object.freeze({
       kind: 'ephyraCombat',

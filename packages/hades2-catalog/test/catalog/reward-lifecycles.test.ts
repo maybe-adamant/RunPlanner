@@ -70,7 +70,13 @@ describe('reward compiler acquisition and producer lifecycle normalizers', () =>
             lifecyclePoint: 'echoReplay',
             blocksArtificerConversion: true,
             ...(rewardType === 'GiftDrop'
-              ? { levelResolutionEffect: { kind: 'randomTargetIfAvailable', levelCount: 1 } }
+              ? {
+                  levelResolutionEffect: {
+                    kind: 'randomTargetIfAvailable',
+                    levelCount: 1,
+                    excludedRouteKeys: ['FreshFile'],
+                  },
+                }
               : {}),
           },
         ],
@@ -233,7 +239,11 @@ describe('reward compiler acquisition and producer lifecycle normalizers', () =>
       {
         role: 'self',
         lifecyclePoint: 'roomRewardPickup',
-        levelResolutionEffect: { kind: 'randomTargetIfAvailable', levelCount: 1 },
+        levelResolutionEffect: {
+          kind: 'randomTargetIfAvailable',
+          levelCount: 1,
+          excludedRouteKeys: ['FreshFile'],
+        },
       },
     ]);
     expect(rewardKernelCatalog.acquisitions.byKey.GiftDrop?.levelResolutionEffect).toBeUndefined();

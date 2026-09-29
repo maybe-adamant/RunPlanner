@@ -10,10 +10,12 @@ describe('Shop room-state decoder', () => {
   it('preserves dormant Shop inventory while requiring inventory for an active entry', () => {
     const declaration = room('F_Shop01');
     const dormant = createDefaultRoomState(catalog, declaration, {
+      routeKey: 'Underworld',
       role: 'ordinary',
       entryActive: false,
     });
     const active = createDefaultRoomState(catalog, declaration, {
+      routeKey: 'Underworld',
       role: 'ordinary',
       entryActive: true,
     });
@@ -22,27 +24,49 @@ describe('Shop room-state decoder', () => {
         dormant,
         catalog,
         declaration,
-        { role: 'ordinary', entryActive: false },
+        { routeKey: 'Underworld', role: 'ordinary', entryActive: false },
         path,
       ),
     ).toEqual(dormant);
     expect(
-      decodeRoomState(active, catalog, declaration, { role: 'ordinary', entryActive: false }, path),
+      decodeRoomState(
+        active,
+        catalog,
+        declaration,
+        { routeKey: 'Underworld', role: 'ordinary', entryActive: false },
+        path,
+      ),
     ).toEqual(active);
     expect(() =>
-      decodeRoomState(dormant, catalog, declaration, { role: 'ordinary', entryActive: true }, path),
+      decodeRoomState(
+        dormant,
+        catalog,
+        declaration,
+        { routeKey: 'Underworld', role: 'ordinary', entryActive: true },
+        path,
+      ),
     ).toThrow('$.room.state.shop: is required for an entered shop occurrence');
   });
 
   it('rejects the superseded Shop-local acquisition chronology field', () => {
     const declaration = room('F_Shop01');
     const raw = mutable(
-      createDefaultRoomState(catalog, declaration, { role: 'ordinary', entryActive: true }),
+      createDefaultRoomState(catalog, declaration, {
+        routeKey: 'Underworld',
+        role: 'ordinary',
+        entryActive: true,
+      }),
     );
     const shop = raw.shop as Record<string, unknown>;
     shop.legacyOrder = ['Unknown'];
     expect(() =>
-      decodeRoomState(raw, catalog, declaration, { role: 'ordinary', entryActive: true }, path),
+      decodeRoomState(
+        raw,
+        catalog,
+        declaration,
+        { routeKey: 'Underworld', role: 'ordinary', entryActive: true },
+        path,
+      ),
     ).toThrow('$.room.state.shop.legacyOrder: is not a project document field');
     delete shop.legacyOrder;
     const offers = shop.offers as Record<string, Record<string, unknown>>;
@@ -53,14 +77,24 @@ describe('Shop room-state decoder', () => {
       purchased: false,
     };
     expect(() =>
-      decodeRoomState(raw, catalog, declaration, { role: 'ordinary', entryActive: true }, path),
+      decodeRoomState(
+        raw,
+        catalog,
+        declaration,
+        { routeKey: 'Underworld', role: 'ordinary', entryActive: true },
+        path,
+      ),
     ).toThrow('$.room.state.shop.offers.Boon.reward: unexpected key purchased');
   });
 
   it('rejects a Pom child on the Shop GiftDrop producer', () => {
     const declaration = room('F_Shop01');
     const raw = mutable(
-      createDefaultRoomState(catalog, declaration, { role: 'ordinary', entryActive: true }),
+      createDefaultRoomState(catalog, declaration, {
+        routeKey: 'Underworld',
+        role: 'ordinary',
+        entryActive: true,
+      }),
     );
     const offers = (raw.shop as Record<string, unknown>).offers as Record<
       string,
@@ -75,14 +109,24 @@ describe('Shop room-state decoder', () => {
       levelResolutionsByAcquisitionRole: { self: { kind: 'random', targetTraitKey: null } },
     };
     expect(() =>
-      decodeRoomState(raw, catalog, declaration, { role: 'ordinary', entryActive: true }, path),
+      decodeRoomState(
+        raw,
+        catalog,
+        declaration,
+        { routeKey: 'Underworld', role: 'ordinary', entryActive: true },
+        path,
+      ),
     ).toThrow('levelResolutionsByAcquisitionRole: Pom resolutions are not supported');
   });
 
   it('accepts only type-only acquisition-resolved Shop inventory', () => {
     const declaration = room('F_Shop01');
     const raw = mutable(
-      createDefaultRoomState(catalog, declaration, { role: 'ordinary', entryActive: true }),
+      createDefaultRoomState(catalog, declaration, {
+        routeKey: 'Underworld',
+        role: 'ordinary',
+        entryActive: true,
+      }),
     );
     const offers = (raw.shop as Record<string, unknown>).offers as Record<
       string,
@@ -94,7 +138,13 @@ describe('Shop room-state decoder', () => {
       traitOffersByAcquisitionRole: {},
     };
     expect(
-      decodeRoomState(raw, catalog, declaration, { role: 'ordinary', entryActive: true }, path),
+      decodeRoomState(
+        raw,
+        catalog,
+        declaration,
+        { routeKey: 'Underworld', role: 'ordinary', entryActive: true },
+        path,
+      ),
     ).toEqual(raw);
 
     (offers.Boon!.reward as Record<string, unknown>).offer = {
@@ -102,7 +152,13 @@ describe('Shop room-state decoder', () => {
       payload: { kind: 'BoonSource', source: 'ApolloUpgrade' },
     };
     expect(() =>
-      decodeRoomState(raw, catalog, declaration, { role: 'ordinary', entryActive: true }, path),
+      decodeRoomState(
+        raw,
+        catalog,
+        declaration,
+        { routeKey: 'Underworld', role: 'ordinary', entryActive: true },
+        path,
+      ),
     ).toThrow(
       '$.room.state.shop.offers.Boon.reward.offer.payload: is not a project document field',
     );
@@ -114,7 +170,7 @@ describe('Shop room-state decoder', () => {
         { kind: 'terminalShop' },
         catalog,
         room('F_PreBoss01'),
-        { role: 'prebossShop', entryActive: false },
+        { routeKey: 'Underworld', role: 'prebossShop', entryActive: false },
         path,
       ),
     ).toThrow('$.room.state.kind: expected shop, received terminalShop');
