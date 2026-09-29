@@ -36,6 +36,7 @@ import {
   type ShopOfferAddress,
 } from '@run-planner/engine/authored-project';
 import type { BiomeLayout, Catalog } from '@run-planner/engine/catalog-schema';
+import type { ShopSlotAssessment } from '@run-planner/engine/reward-kernel';
 import type {
   BiomeCompletenessResult,
   CanonicalAdditionalContinuation,
@@ -122,6 +123,8 @@ export interface WorkspaceBiomeSource {
     owner: import('@run-planner/engine/authored-project').TraitOfferAddress,
   ) => boolean;
   readonly isActiveShopOffer: (owner: ShopOfferAddress) => boolean;
+  /** Engine-owned reached standing of one declared Shop slot. */
+  readonly shopOfferAssessment: (owner: ShopOfferAddress) => ShopSlotAssessment | undefined;
   readonly levelResolutionAssessment: (
     owner: LevelResolutionAddress,
   ) => SelectedLevelResolutionAssessment | undefined;
@@ -688,6 +691,7 @@ function createWorkspaceBiomeSource(
   chaosGateForced: WorkspaceBiomeSource['chaosGateForced'],
   zagreusContractAssessment: WorkspaceBiomeSource['zagreusContractAssessment'],
   isActiveShopOffer: WorkspaceBiomeSource['isActiveShopOffer'],
+  shopOfferAssessment: WorkspaceBiomeSource['shopOfferAssessment'],
   assessmentIssue: AssessmentIssue | undefined,
 ): WorkspaceBiomeSource {
   const biome = createBiomeAddress(routeKey, plan.biomeKey);
@@ -853,6 +857,7 @@ function createWorkspaceBiomeSource(
     isAssessed: coverage.isAssessed,
     isActiveTraitOffer,
     isActiveShopOffer,
+    shopOfferAssessment,
     levelResolutionAssessment: (owner: LevelResolutionAddress) =>
       levelResolutionAssessments.get(semanticAddressKey(owner)),
     acquisitionConversionCandidate,
@@ -930,6 +935,7 @@ export function createWorkspaceProjectSourceIndex(
   chaosAssessment: WorkspaceBiomeSource['chaosAssessment'] = () => undefined,
   zagreusContractAssessment: WorkspaceBiomeSource['zagreusContractAssessment'] = () => undefined,
   isActiveShopOffer: WorkspaceBiomeSource['isActiveShopOffer'] = () => false,
+  shopOfferAssessment: WorkspaceBiomeSource['shopOfferAssessment'] = () => undefined,
 ): WorkspaceProjectSourceIndex {
   const ixionGeneratedChaos = ixionGeneratedChaosOccurrenceKeys(project);
   const route = project.route;
@@ -963,6 +969,7 @@ export function createWorkspaceProjectSourceIndex(
             (owner) => ixionGeneratedChaos.has(semanticAddressKey(owner)),
             zagreusContractAssessment,
             isActiveShopOffer,
+            shopOfferAssessment,
             routeEvaluation?.issue,
           ),
         ),

@@ -8,6 +8,7 @@
   "include": [
     "./index.ts",
     "./shared.ts",
+    "./empty-shop-group.ts",
     "./routes/**/*.ts",
     "./checkpoints/**/*.ts",
     "./checkpoints/check.test.ts",

@@ -795,7 +795,7 @@ describe('execution-plan compiler and codec', () => {
   });
 
   it('rejects plans of the released protocol 48', () => {
-    expect(EXECUTION_PROTOCOL_VERSION).toBe(50);
+    expect(EXECUTION_PROTOCOL_VERSION).toBe(51);
     expect(() =>
       decodeExecutionPlan({
         ...(surfaceQShopCorrelationFixture as Record<string, unknown>),
@@ -941,6 +941,7 @@ describe('execution-plan compiler and codec', () => {
           offers: [
             {
               offerKey: 'Anvil',
+              profileSlotIndex: 4,
               optionKey: 'ChaosWeaponUpgrade',
               rewardType: 'ChaosWeaponUpgrade',
             },
@@ -951,6 +952,7 @@ describe('execution-plan compiler and codec', () => {
     );
     expect(overview.shop?.offers[0]).toEqual({
       offerKey: 'Anvil',
+      profileSlotIndex: 4,
       optionKey: 'ChaosWeaponUpgrade',
       rewardType: 'ChaosWeaponUpgrade',
     });
@@ -962,14 +964,42 @@ describe('execution-plan compiler and codec', () => {
           shop: {
             profileKey: 'Q_WorldShop',
             offers: [
-              { offerKey: 'one', transactionOwner: 'same', optionKey: 'One', rewardType: 'One' },
-              { offerKey: 'two', transactionOwner: 'same', optionKey: 'Two', rewardType: 'Two' },
+              {
+                offerKey: 'one',
+                profileSlotIndex: 0,
+                transactionOwner: 'same',
+                optionKey: 'One',
+                rewardType: 'One',
+              },
+              {
+                offerKey: 'two',
+                profileSlotIndex: 1,
+                transactionOwner: 'same',
+                optionKey: 'Two',
+                rewardType: 'Two',
+              },
             ],
           },
         },
         'overview',
       ),
     ).toThrow(/duplicate transaction owners/);
+    expect(() =>
+      decodeExecutionOverview(
+        {
+          encounterPhases: [],
+          requiredObjects: [],
+          shop: {
+            profileKey: 'I_WorldShop',
+            offers: [
+              { offerKey: 'one', profileSlotIndex: 3, optionKey: 'One', rewardType: 'One' },
+              { offerKey: 'two', profileSlotIndex: 3, optionKey: 'Two', rewardType: 'Two' },
+            ],
+          },
+        },
+        'overview',
+      ),
+    ).toThrow(/profileSlotIndex values must strictly increase/);
   });
 
   it('requires Shrine purchase and delivery source identities to be paired', () => {

@@ -50,32 +50,46 @@ end
 function worldShop.prepare(shop, storeData, args)
     if shop == nil then return nil end
     if type(storeData.GroupsOf) ~= "table" then return nil end
-    local expectedOffers = {}
+    local expectedOffers, expectedBySlot = {}, {}
     for index, rawOffer in ipairs(shop.offers or {}) do
         expectedOffers[index] = primitives.copy(rawOffer)
+        expectedBySlot[rawOffer.profileSlotIndex] = expectedOffers[index]
     end
-    -- Native GroupsOf order and Offers counts define the flattened shop slots.
-    -- Narrow each slot inside its own group; a shop-wide item set lets choices
-    -- bleed between groups (notably Q's mixed and premium boosted boons).
-    local slotGroups = {}
+    -- Native GroupsOf order and Offers counts define declared slots; a row's index is its native position.
+    -- Each slot is narrowed inside its own group so choices cannot bleed between groups.
+    local slotGroups, omittedGroups = {}, {}
+    local declaredSlot = 0
     for _, group in ipairs(storeData.GroupsOf) do
-        for _ = 1, group.Offers do
-            local offer = expectedOffers[#slotGroups + 1]
+        local groupOffers, present = {}, 0
+        for position = 1, group.Offers do
+            groupOffers[position] = expectedBySlot[declaredSlot + position - 1]
+            if groupOffers[position] ~= nil then present = present + 1 end
+        end
+        declaredSlot = declaredSlot + group.Offers
+        -- A group with zero eligible options emits nothing; omit it and keep a copy to probe.
+        if present == 0 then omittedGroups[#omittedGroups + 1] = primitives.copy(group) end
+        if present ~= 0 and present ~= group.Offers then
+            return nil, {
+                checkpoint = "shop-inventory-offer", expected = group.Offers, observed = present,
+            }
+        end
+        for position = 1, present do
+            local offer = groupOffers[position]
             local slotGroup = primitives.copy(group)
             local matches = 0
-            if offer and slotGroup.OptionsData then
+            if slotGroup.OptionsData then
                 local count
                 slotGroup.OptionsData, count = primitives.retainRawOffers(slotGroup.OptionsData, { offer })
                 matches = matches + count
             end
-            if offer and slotGroup.Options then
+            if slotGroup.Options then
                 local count
                 slotGroup.Options, count = primitives.retainRawOffers(slotGroup.Options, { offer })
                 matches = matches + count
             end
             if matches == 0 then
                 return nil, {
-                    checkpoint = "shop-inventory-offer", expected = offer and offer.optionKey,
+                    checkpoint = "shop-inventory-offer", expected = offer.optionKey,
                     observed = "no matching native slot option",
                 }
             end
@@ -90,7 +104,10 @@ function worldShop.prepare(shop, storeData, args)
         }
     end
     storeData.GroupsOf = slotGroups
-    return { kind = "shop", expected = expectedOffers, args = primitives.withStoreData(args, storeData) }
+    return {
+        kind = "shop", expected = expectedOffers, omittedGroups = omittedGroups,
+        args = primitives.withStoreData(args, storeData),
+    }
 end
 
 return worldShop

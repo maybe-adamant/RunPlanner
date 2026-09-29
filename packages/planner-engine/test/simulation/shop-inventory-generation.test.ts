@@ -15,7 +15,7 @@ import {
   initializeTestRewardBranches,
   type RewardKernelFacts,
 } from './shop-trait-purchase-support';
-import { evaluateShopGenerationSupport } from '../../src/reward-kernel';
+import { assessShopInventory } from '../../src/reward-kernel';
 import {
   clearOfferedRewardTypes,
   offeredRewardTypeSet,
@@ -32,6 +32,7 @@ import {
 import { createGoldenFGHProject } from '@run-planner/test-fixtures/underworld';
 import { simulateProject } from '../../src/simulation';
 import { deriveTravelRefill } from '../../src/simulation/rewards/shop/derived-rewards';
+import { cohortSlotAssessment } from '../../src/simulation/rewards/shop/inventory';
 
 describe('Shop trait acquisition processing', () => {
   it('projects only Purchased initial offers and gives them movement without generic membership proposals', () => {
@@ -119,12 +120,12 @@ describe('World Shop transition offered rewards', () => {
     });
 
   const spellSupported = (offeredRewardTypes: readonly string[]) =>
-    evaluateShopGenerationSupport(
+    assessShopInventory(
       catalog.rewards,
       catalog.rewards.shops.byKey.WorldShop!,
       worldShopInventory,
       shopFacts(offeredRewardTypes),
-    ).unsupportedSlotIndexes.includes(2) === false;
+    ).slots[2] !== 'selectedInvalid';
 
   it('rejects the ordinary Shop Spell Drop when the transition into it offered one', () => {
     expect(spellSupported([])).toBe(true);
@@ -304,5 +305,16 @@ describe('World Shop refill reads its own reached contact', () => {
     expect([inventory, entered, outgoing].every((value) => value !== undefined)).toBe(true);
     expect(inventory!).toBeLessThan(entered!);
     expect(entered!).toBeLessThan(outgoing!);
+  });
+});
+
+describe('Shop slot assessment across a branch cohort', () => {
+  it('is validly empty only when every branch agrees and incomplete when any branch has options', () => {
+    expect(cohortSlotAssessment(['validEmpty', 'validEmpty'])).toBe('validEmpty');
+    expect(cohortSlotAssessment(['validEmpty', 'incomplete'])).toBe('incomplete');
+    expect(cohortSlotAssessment(['incomplete', 'validEmpty'])).toBe('incomplete');
+    expect(cohortSlotAssessment(['selectedInvalid', 'complete'])).toBe('complete');
+    expect(cohortSlotAssessment(['selectedInvalid', 'selectedInvalid'])).toBe('selectedInvalid');
+    expect(cohortSlotAssessment([])).not.toBe('validEmpty');
   });
 });

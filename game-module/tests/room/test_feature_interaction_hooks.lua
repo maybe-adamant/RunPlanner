@@ -557,7 +557,7 @@ function TestFeatureInteractionHooks.testPurchasedMysteryBoonCompletesAfterItsTr
     }
     local occurrence = {
         id = "shop",
-        overview = { shop = { offers = { { offerKey = "Boon", optionKey = "BlindBoxLoot" } } } },
+        overview = { shop = { offers = { { offerKey = "Boon", profileSlotIndex = 0, optionKey = "BlindBoxLoot" } } } },
         transactionsByOwner = { mystery = node },
         timeline = { transactions = { node }, dependencies = {}, obligations = {} },
     }
@@ -618,9 +618,9 @@ function TestFeatureInteractionHooks.testDestinationShopInventoryUsesTheNextOccu
     local module, _, callbacks = capture()
     local shop = opaque({
         occurrence = { id = "shop", overview = { shop = { offers = {
-            { offerKey = "Boon", optionKey = "BlindBoxLoot" },
-            { offerKey = "MajorNonBoon", optionKey = "ArmorBoost" },
-            { offerKey = "Minor", optionKey = "MaxManaDrop" },
+            { offerKey = "Boon", profileSlotIndex = 0, optionKey = "BlindBoxLoot" },
+            { offerKey = "MajorNonBoon", profileSlotIndex = 1, optionKey = "ArmorBoost" },
+            { offerKey = "Minor", profileSlotIndex = 2, optionKey = "MaxManaDrop" },
         } } } },
     }, function() return nil end)
     local session = stub()
@@ -677,10 +677,10 @@ function TestFeatureInteractionHooks.testWorldShopHammerEligibilityAliasesPreser
     for _, optionKey in ipairs({ "WeaponUpgradeDropEarly", "WeaponUpgradeDropLate" }) do
         local module, _, callbacks = capture()
         local active = opaque({ occurrence = { id = "N_PreBoss01", overview = { shop = { offers = {
-            { offerKey = "Boon", optionKey = "RandomLoot", source = "ApolloUpgrade" },
-            { offerKey = "MajorNonBoon", optionKey = optionKey, rewardType = "WeaponUpgradeDrop",
+            { offerKey = "Boon", profileSlotIndex = 0, optionKey = "RandomLoot", source = "ApolloUpgrade" },
+            { offerKey = "MajorNonBoon", profileSlotIndex = 1, optionKey = optionKey, rewardType = "WeaponUpgradeDrop",
                 transactionOwner = "planned-hammer" },
-            { offerKey = "Minor", optionKey = "StackUpgrade" },
+            { offerKey = "Minor", profileSlotIndex = 2, optionKey = "StackUpgrade" },
         } } } } }, function() return nil end)
         local session = stub()
         session.current = function() return active end
@@ -790,16 +790,107 @@ end
 
 
 
+-- Drives the generated empty-Survival fixture through FillInShopOptions; `probeResult`
+-- is what native returns when asked about the planned-empty group.
+local function emptyMiddleShop(probeResult)
+    local fixtures = require("tests/harness/fixture_loader")
+    local json = require("mods/protocol/json")
+    local protocol = require("mods.protocol.decoder")
+    local file = assert(io.open(fixtures.path("underworld-fghi-empty-shop-group.execution.json"), "rb"))
+    local plan = assert(protocol.decode(assert(json.decode(file:read("*a")))))
+    file:close()
+    local shop
+    for _, occurrence in ipairs(plan.occurrences) do
+        if occurrence.id == "golden-i-preboss" then shop = occurrence.overview.shop end
+    end
+    lu.assertNotNil(shop)
+    local module, _, callbacks = capture()
+    local active = opaque({ occurrence = { id = "golden-i-preboss", overview = { shop = shop } } },
+        function() return nil end)
+    local session = stub()
+    session.current = function() return active end
+    session.diagnostic = runtimeSession.diagnostic
+    local state = { state = "synchronized", diagnostics = {} }
+    attachFeatureHooks(module, session, function() return state end, function() end, session)
+
+    -- StoreData.I_WorldShop: five native groups; the published plan leaves Survival empty.
+    local probes = 0
+    local generated = callbacks.FillInShopOptions(nil, {}, function(args)
+        local groups = args.StoreData.GroupsOf
+        if groups[1].Offers == math.huge then
+            probes = probes + 1
+            lu.assertEquals(#groups, 1)
+            lu.assertFalse(groups[1].WeightedList)
+            return { StoreOptions = probeResult }
+        end
+        local options = {}
+        for _, group in ipairs(groups) do
+            lu.assertEquals(group.Offers, 1)
+            options[#options + 1] = group.OptionsData[1]
+        end
+        return { StoreOptions = options }
+    end, { StoreData = { GroupsOf = {
+        { Offers = 1, OptionsData = { { Name = "BoostedRandomLoot" }, { Name = "StackUpgradeBig" } } },
+        { Offers = 1, OptionsData = { { Name = "RandomLoot" }, { Name = "MaxHealthDrop" } } },
+        { Offers = 1, WeightedList = true, OptionsData = { { Name = "HealBigDrop" }, { Name = "ArmorBigBoost" } } },
+        { Offers = 1, OptionsData = { { Name = "MaxManaDropBig" }, { Name = "MaxHealthDropBig" } } },
+        { Offers = 1, OptionsData = { { Name = "CardUpgradePointsDrop" }, { Name = "CharonPointsDrop" } } },
+    } } })
+    lu.assertEquals(probes, 1)
+    return generated, shop, state
+end
+
+function TestFeatureInteractionHooks.testEmptyMiddleWorldShopGroupBindsLaterPurchaseToItsCompactNativeItem()
+    local generated, shop, state = emptyMiddleShop({})
+    lu.assertEquals(#generated.StoreOptions, 4)
+    local names = {}
+    for index, option in ipairs(generated.StoreOptions) do names[index] = option.Name end
+    lu.assertEquals(names, { "StackUpgradeBig", "MaxHealthDrop", "MaxHealthDropBig", "CardUpgradePointsDrop" })
+    local bought = generated.StoreOptions[3]
+    lu.assertEquals(bought.__runPlannerOfferKey, "PremiumProgress")
+    lu.assertEquals(bought.__runPlannerTransactionOwner, shop.offers[3].transactionOwner)
+    lu.assertNotNil(bought.__runPlannerTransactionOwner)
+    for index, option in ipairs(generated.StoreOptions) do
+        if index ~= 3 then lu.assertNil(option.__runPlannerTransactionOwner) end
+    end
+    lu.assertEquals(state.diagnostics, {})
+end
+
+function TestFeatureInteractionHooks.testPlannedEmptyShopGroupThatNativeCanFillIsDiagnostic()
+    local generated, _, state = emptyMiddleShop({ { Name = "HealBigDrop" } })
+    lu.assertEquals(#generated.StoreOptions, 4)
+    lu.assertEquals(#state.diagnostics, 1)
+    lu.assertEquals(state.diagnostics[1].checkpoint, "shop-empty-group")
+    lu.assertEquals(state.diagnostics[1].observed, { expected = 0, observed = 1 })
+    lu.assertEquals(state.state, "synchronized")
+end
+
+function TestFeatureInteractionHooks.testWorldShopRejectsAPartiallyPublishedNativeGroup()
+    local module, _, callbacks = capture()
+    local active = opaque({ occurrence = { id = "shop", overview = { shop = { offers = {
+        { offerKey = "MixedProgress1", profileSlotIndex = 0, optionKey = "BlindBoxLoot" },
+    } } } } }, function() return nil end)
+    local session = stub()
+    session.current = function() return active end
+    session.diagnostic = runtimeSession.diagnostic
+    local state = { state = "synchronized", diagnostics = {} }
+    attachFeatureHooks(module, session, function() return state end, function() end, session)
+    callbacks.FillInShopOptions(nil, {}, function() return { StoreOptions = {} } end, { StoreData = { GroupsOf = {
+        { Offers = 2, OptionsData = { { Name = "BlindBoxLoot" }, { Name = "RandomLoot" } } },
+    } } })
+    lu.assertEquals(state.diagnostics[1].checkpoint, "shop-inventory-offer")
+end
+
 function TestFeatureInteractionHooks.testWorldShopInventoryKeepsEachPublishedSlotInsideItsNativeQGroup()
     local module, _, callbacks = capture()
     local expected = {
-        { offerKey = "MixedProgress1", transactionOwner = "shop:boosted", optionKey = "BoostedRandomLoot",
+        { offerKey = "MixedProgress1", profileSlotIndex = 0, transactionOwner = "shop:boosted", optionKey = "BoostedRandomLoot",
             source = "HeraUpgrade" },
-        { offerKey = "MixedProgress2", optionKey = "BlindBoxLoot" },
-        { offerKey = "LargeSurvival", optionKey = "ArmorBigBoost" },
-        { offerKey = "Survival", optionKey = "ArmorBigBoost" },
-        { offerKey = "PremiumProgress", optionKey = "MaxHealthDropBig" },
-        { offerKey = "MetaProgress", optionKey = "CardUpgradePointsDrop" },
+        { offerKey = "MixedProgress2", profileSlotIndex = 1, optionKey = "BlindBoxLoot" },
+        { offerKey = "LargeSurvival", profileSlotIndex = 2, optionKey = "ArmorBigBoost" },
+        { offerKey = "Survival", profileSlotIndex = 3, optionKey = "ArmorBigBoost" },
+        { offerKey = "PremiumProgress", profileSlotIndex = 4, optionKey = "MaxHealthDropBig" },
+        { offerKey = "MetaProgress", profileSlotIndex = 5, optionKey = "CardUpgradePointsDrop" },
     }
     local active = opaque({ occurrence = { overview = { shop = { offers = expected } } } }, function()
         return nil
@@ -876,8 +967,8 @@ function TestFeatureInteractionHooks.testWorldShopWorldItemsBindOnlyTheirStamped
     }
     local genericLookups, nativeCalls = 0, 0
     local active = opaque({ occurrence = { overview = { shop = { offers = {
-        { offerKey = "normal", transactionOwner = normal.owner, optionKey = "RandomLoot" },
-        { offerKey = "boosted", transactionOwner = boosted.owner, optionKey = "BoostedRandomLoot" },
+        { offerKey = "normal", profileSlotIndex = 0, transactionOwner = normal.owner, optionKey = "RandomLoot" },
+        { offerKey = "boosted", profileSlotIndex = 1, transactionOwner = boosted.owner, optionKey = "BoostedRandomLoot" },
     } } } } }, function(contact)
         if contact.kind == "owner" and contact.owner == normal.owner then
             return { transaction = normal }
@@ -971,8 +1062,8 @@ function TestFeatureInteractionHooks.testBlockedStampedWorldShopOwnerReachesNati
     }
     local occurrence = {
         id = "shop", overview = { shop = { offers = {
-            { offerKey = "normal", optionKey = "RandomLoot" },
-            { offerKey = "boosted", optionKey = "BoostedRandomLoot", transactionOwner = boosted.owner },
+            { offerKey = "normal", profileSlotIndex = 0, optionKey = "RandomLoot" },
+            { offerKey = "boosted", profileSlotIndex = 1, optionKey = "BoostedRandomLoot", transactionOwner = boosted.owner },
         } } },
         transactionsByOwner = { normal = normal, boosted = boosted },
         timeline = {

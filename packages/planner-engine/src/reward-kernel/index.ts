@@ -27,7 +27,7 @@ export {
 } from './history';
 export { levelResolutionEffectFor, type LevelResolutionEffectSource } from './level-effects';
 export {
-  evaluateShopGenerationSupport,
+  assessShopInventory,
   evaluateShopPurchases,
   evaluateShopPurchaseGateAtSlot,
   findShopGenerationWitnesses,
@@ -79,7 +79,8 @@ export type {
   RewardTypeDeclaration,
   SaveFileGodHistory,
   ShopGenerationWitness,
-  ShopGenerationSupport,
+  ShopInventoryAssessment,
+  ShopSlotAssessment,
   ShopGenerationConstraints,
   ShopGroupDeclaration,
   ShopOptionEntry,

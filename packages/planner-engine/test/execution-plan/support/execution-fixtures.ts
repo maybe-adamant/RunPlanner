@@ -3,6 +3,7 @@ import { dirname, join } from 'node:path';
 import { format, resolveConfig } from 'prettier';
 
 import { catalog } from '@run-planner/hades2-catalog';
+import type { Catalog } from '@run-planner/engine/catalog-schema';
 import {
   applyProjectCommand,
   createAdditionalExitAddress,
@@ -42,6 +43,7 @@ import { encodeExecutionPlan } from '../../../src/execution-plan/codec';
 import { simulateProjectAssembly } from '../../../src/simulation';
 import { surfaceQShopCorrelationProject } from './surface-q-shop-correlation-fixture';
 import { npcShoppingProtectionProject } from './npc-shopping-fixture';
+import { emptyShopGroupCatalog, emptyShopGroupProject } from './empty-shop-group-fixture';
 import automaticBossFixture from '../fixtures/automatic-boss.execution.json';
 import dreamMixedPrefixFixture from '../fixtures/dream-mixed-prefix.execution.json';
 import fOpeningFixture from '../fixtures/f-opening.execution.json';
@@ -61,6 +63,7 @@ import surfaceScheduledLifecycleFixture from '../fixtures/surface-scheduled-life
 import underworldArachneCocoonsFixture from '../fixtures/underworld-arachne-cocoons.execution.json';
 import underworldFGHFixture from '../fixtures/underworld-fgh.execution.json';
 import underworldFGHIFixture from '../fixtures/underworld-fghi.execution.json';
+import underworldFGHIEmptyShopGroupFixture from '../fixtures/underworld-fghi-empty-shop-group.execution.json';
 import underworldGeneratedCompositionFixture from '../fixtures/underworld-generated-composition.execution.json';
 
 const fixtureDirectory = join(dirname(fileURLToPath(import.meta.url)), '..', 'fixtures');
@@ -98,6 +101,8 @@ interface ExecutionFixture {
   readonly name: string;
   readonly project: () => ProjectDocument;
   readonly wire: unknown;
+  /** A test-only catalog context; production declarations otherwise. */
+  readonly catalog?: () => Catalog;
 }
 
 export const executionFixtures: readonly ExecutionFixture[] = Object.freeze([
@@ -113,6 +118,12 @@ export const executionFixtures: readonly ExecutionFixture[] = Object.freeze([
     name: 'underworld-fghi',
     project: loadUnderworldFGHICheckpoint,
     wire: underworldFGHIFixture,
+  },
+  {
+    name: 'underworld-fghi-empty-shop-group',
+    project: emptyShopGroupProject,
+    wire: underworldFGHIEmptyShopGroupFixture,
+    catalog: emptyShopGroupCatalog,
   },
   {
     name: 'fg-ixion-chaos',
@@ -186,8 +197,11 @@ export async function buildExecutionFixture(
 ): Promise<
   Readonly<{ readonly bytes: string; readonly plan: ReturnType<typeof compileExecutionPlan> }>
 > {
-  const assembly = simulateProjectAssembly(catalog, fixture.project());
-  const plan = compileExecutionPlan({ product: assembleExecutionProduct({ assembly, catalog }) });
+  const fixtureCatalog = fixture.catalog?.() ?? catalog;
+  const assembly = simulateProjectAssembly(fixtureCatalog, fixture.project());
+  const plan = compileExecutionPlan({
+    product: assembleExecutionProduct({ assembly, catalog: fixtureCatalog }),
+  });
   const filepath = executionFixturePath(fixture.name);
   const options = await resolveConfig(filepath);
   const bytes = await format(encodeExecutionPlan(plan), { ...options, filepath });

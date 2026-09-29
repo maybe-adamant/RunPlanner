@@ -9,7 +9,7 @@ import type {
 
 /** The single room-session execution artifact supported by the app compiler. */
 export const EXECUTION_PLAN_FORMAT = 'run-planner-execution' as const;
-export const EXECUTION_PROTOCOL_VERSION = 50 as const;
+export const EXECUTION_PROTOCOL_VERSION = 51 as const;
 export const EXECUTION_CATALOG_VERSION = '0.55.0-anvil-of-fates' as const;
 export type ExecutionBiomeKey = 'F' | 'G' | 'H' | 'I' | 'N' | 'O' | 'P' | 'Q';
 
@@ -211,6 +211,7 @@ export type ExecutionTravelDealRefill =
         readonly offerKey: string;
       };
       readonly replacement: {
+        /** Zero-based native `StoreOptions` position of the replaced item. */
         readonly slotIndex: number;
         readonly groupIndex: number;
         readonly optionKey: string;
@@ -603,8 +604,11 @@ export interface ExecutionOverview {
   readonly requiredObjects: readonly string[];
   readonly shop?: {
     readonly profileKey: string;
+    /** Emitted items in native order; a row's index is its `StoreOptions` position. */
     readonly offers: readonly {
       readonly offerKey: string;
+      /** Zero-based declared profile slot; validly empty slots have no row. */
+      readonly profileSlotIndex: number;
       /** Opaque exact join to this row's participating Timeline transaction. */
       readonly transactionOwner?: string;
       readonly optionKey: string;

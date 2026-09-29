@@ -1,10 +1,10 @@
 import { createShopOfferAddress, semanticAddressKey } from '../../../authored-project/addresses';
 import {
   applyOfferProjection,
-  evaluateShopGenerationSupport,
+  assessShopInventory,
   isPayloadLocallyValid,
   type AuthoredShopOffer,
-  type ShopGenerationSupport,
+  type ShopSlotAssessment,
 } from '../../../reward-kernel';
 import { ownerRegion, type FindingRegionEntry } from '../../finding-regions';
 import { type RewardGenerationFindingCode } from '../../model';
@@ -16,6 +16,23 @@ import { findShopIndexedGenerationWitnesses } from '../../../reward-kernel';
 export interface ShopInventoryProduct {
   readonly branches: readonly RewardBranchState[];
   readonly findingEmissions: readonly FindingRegionEntry[];
+  /** Declared-slot standing across the entering cohort, keyed by slot key. */
+  readonly slotAssessments: ReadonlyMap<string, ShopSlotAssessment>;
+}
+
+/**
+ * Cohort agreement: valid emptiness needs every branch to have an empty group;
+ * one eligible branch leaves an unset slot incomplete; a selection is invalid
+ * only when no branch supports it.
+ */
+export function cohortSlotAssessment(
+  assessments: readonly ShopSlotAssessment[],
+): ShopSlotAssessment {
+  if (assessments.length > 0 && assessments.every((assessment) => assessment === 'validEmpty'))
+    return 'validEmpty';
+  if (assessments.some((assessment) => assessment === 'incomplete')) return 'incomplete';
+  if (assessments.some((assessment) => assessment === 'complete')) return 'complete';
+  return 'selectedInvalid';
 }
 
 export function processShopInventory(
@@ -32,23 +49,75 @@ export function processShopInventory(
     return fail(`unknown shop profile ${entry.profileKey}`);
   }
   const requirements = shopRequirements(declaration, entry.profileKey, fail);
-  const authored: readonly AuthoredShopOffer[] = entry.offers.map((offer) => ({
-    optionKey: offer.optionKey,
-    offer: offer.offer,
-  }));
-  const next: RewardBranchState[] = [];
-  const supportResults: ShopGenerationSupport[] = [];
-  for (const branch of branches) {
-    const support = evaluateShopGenerationSupport(
+  // An unreached cohort proves nothing about any slot.
+  if (branches.length === 0)
+    return Object.freeze({
+      branches: Object.freeze([]),
+      findingEmissions: Object.freeze([]),
+      slotAssessments: new Map(),
+    });
+  const offersByKey = new Map(entry.offers.map((offer) => [offer.offerKey, offer] as const));
+  const unresolvedByKey = new Map(
+    entry.unresolvedOffers.map((offer) => [offer.offerKey, offer] as const),
+  );
+  const slotOrigins = profile.slots.values.map((slot) => {
+    const origin =
+      offersByKey.get(slot.key)?.offerOrigin ?? unresolvedByKey.get(slot.key)?.offerOrigin;
+    if (origin === undefined) return fail(`${room.gameName} shop lost slot ${slot.key}`);
+    return origin;
+  });
+  const authored: readonly (AuthoredShopOffer | null)[] = profile.slots.values.map((slot) => {
+    const offer = offersByKey.get(slot.key);
+    return offer === undefined ? null : { optionKey: offer.optionKey, offer: offer.offer };
+  });
+  const assessments = branches.map((branch) =>
+    assessShopInventory(
       catalog.rewards,
       profile,
       authored,
       context.facts(branch.state, new Set()),
       requirements,
-    );
-    supportResults.push(support);
-    for (const witness of support.witnesses) {
+    ),
+  );
+  const slotAssessments = new Map(
+    profile.slots.values.map(
+      (slot, index) =>
+        [
+          slot.key,
+          cohortSlotAssessment(assessments.map((assessment) => assessment.slots[index]!)),
+        ] as const,
+    ),
+  );
+  const findings = new Map<string, FindingRegionEntry>();
+  const incompleteIndexes = profile.slots.values.flatMap((slot, index) =>
+    slotAssessments.get(slot.key) === 'incomplete' ? [index] : [],
+  );
+  if (incompleteIndexes.length > 0) {
+    for (const index of incompleteIndexes) {
+      addRewardFinding(
+        findings,
+        rewardFinding('rewardMissing', slotOrigins[index]!, {}),
+        ownerRegion(room.origin),
+        context.findingChronology ?? historyChronology(historySequence),
+      );
+    }
+    return Object.freeze({
+      branches: Object.freeze([]),
+      findingEmissions: Object.freeze([...findings.values()]),
+      slotAssessments,
+    });
+  }
+  const next: RewardBranchState[] = [];
+  const slotKeys = Object.freeze(profile.slots.values.map((slot) => slot.key));
+  const slotGroupIndexes = Object.freeze(
+    profile.groups.values.flatMap((group, groupIndex) =>
+      Array.from({ length: group.offerCount }, () => groupIndex),
+    ),
+  );
+  branches.forEach((branch, branchIndex) => {
+    for (const witness of assessments[branchIndex]!.witnesses) {
       let candidate = branch;
+      // Validly empty slots emit no item and therefore no offer.
       for (const offer of entry.offers) {
         const offerFacts = context.facts(candidate.state, new Set());
         const history = applyOfferProjection(
@@ -74,10 +143,9 @@ export function processShopInventory(
         kind: 'shopInventorySupported',
         origin: room.origin,
         profileKey: profile.key,
+        slotKeys,
         optionKeys: witness.optionKeys,
-        slotGroupIndexes: profile.groups.values.flatMap((group, groupIndex) =>
-          Array.from({ length: group.offerCount }, () => groupIndex),
-        ),
+        slotGroupIndexes,
       });
       next.push(
         Object.freeze({
@@ -95,16 +163,13 @@ export function processShopInventory(
         }),
       );
     }
-  }
-  const findings = new Map<string, FindingRegionEntry>();
+  });
   if (next.length === 0) {
-    const unsupportedIndexes = entry.offers.flatMap((_, index) =>
-      supportResults.every((support) => support.unsupportedSlotIndexes.includes(index))
-        ? [index]
-        : [],
+    const unsupportedIndexes = profile.slots.values.flatMap((slot, index) =>
+      slotAssessments.get(slot.key) === 'selectedInvalid' ? [index] : [],
     );
     for (const index of unsupportedIndexes) {
-      const offer = entry.offers[index]!;
+      const offer = offersByKey.get(profile.slots.values[index]!.key)!;
       const rewardType = catalog.rewards.rewardTypes.byKey[offer.offer.rewardType];
       const code: RewardGenerationFindingCode =
         rewardType === undefined ||
@@ -217,5 +282,6 @@ export function processShopInventory(
   return Object.freeze({
     branches: Object.freeze(contractBranches),
     findingEmissions: Object.freeze([...findings.values()]),
+    slotAssessments,
   });
 }

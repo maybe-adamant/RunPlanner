@@ -706,7 +706,9 @@ function roomLocalForOccurrence(
           entry.kind === 'echoDoubleShopReward' || entry.kind === 'echoDoubleShopPlaceholder',
       );
       const slots = [
-        ...profile.slots.values,
+        ...profile.slots.values.filter(
+          (slot) => input.facts.validlyEmptyShopOfferKeys?.includes(slot.key) !== true,
+        ),
         ...(controls.some(
           (control) =>
             control.owner.address.kind === 'shopOffer' &&

@@ -9,7 +9,7 @@ import {
   type AuthoredRewardState,
 } from '@run-planner/engine/authored-project';
 import {
-  evaluateShopGenerationSupport,
+  assessShopInventory,
   findShopIndexedGenerationWitnesses,
   factsWithHistory,
   type AuthoredShopOffer,
@@ -1230,7 +1230,7 @@ describe('Infernal Contract and Travel Deal chronology', () => {
       offer: explicitShopOffers[slot.key]!,
     }));
     const facts = baseFacts();
-    const hammerExcluded = evaluateShopGenerationSupport(
+    const hammerExcluded = assessShopInventory(
       catalog.rewards,
       profile,
       authored,
@@ -1240,13 +1240,14 @@ describe('Infernal Contract and Travel Deal chronology', () => {
     );
     expect(
       hammerExcluded.witnesses.every(
-        (witness) => !witness.optionKeys.some((key) => key.startsWith('WeaponUpgradeDrop')),
+        (witness) =>
+          !witness.optionKeys.some((key) => key?.startsWith('WeaponUpgradeDrop') === true),
       ),
     ).toBe(true);
     const hermesAuthored = authored.map((offer, index) =>
       index === 0 ? Object.freeze({ offer: { rewardType: 'ShopHermesUpgrade' } }) : offer,
     );
-    const hermesExcluded = evaluateShopGenerationSupport(
+    const hermesExcluded = assessShopInventory(
       catalog.rewards,
       profile,
       hermesAuthored,
@@ -1257,7 +1258,7 @@ describe('Infernal Contract and Travel Deal chronology', () => {
     expect(
       hermesExcluded.witnesses.some((witness) => witness.optionKeys.includes('ShopHermesUpgrade')),
     ).toBe(true);
-    const concreteGodExcluded = evaluateShopGenerationSupport(
+    const concreteGodExcluded = assessShopInventory(
       catalog.rewards,
       profile,
       authored,
@@ -1273,7 +1274,7 @@ describe('Infernal Contract and Travel Deal chronology', () => {
     if (majorGroup === undefined) throw new Error('missing World Shop major group');
     const fullyExcluded = new Set(majorGroup.options.values.map((option) => option.rewardType));
     expect(
-      evaluateShopGenerationSupport(
+      assessShopInventory(
         catalog.rewards,
         profile,
         authored,
@@ -1285,7 +1286,7 @@ describe('Infernal Contract and Travel Deal chronology', () => {
       ).witnesses,
     ).toEqual([]);
     expect(
-      evaluateShopGenerationSupport(catalog.rewards, profile, authored, facts).witnesses.length,
+      assessShopInventory(catalog.rewards, profile, authored, facts).witnesses.length,
     ).toBeGreaterThan(0);
   });
 
@@ -1335,7 +1336,7 @@ describe('Infernal Contract and Travel Deal chronology', () => {
       'MixedProgress',
       'MixedProgress',
     ]);
-    const support = evaluateShopGenerationSupport(catalog.rewards, profile, authored, baseFacts());
+    const support = assessShopInventory(catalog.rewards, profile, authored, baseFacts());
     expect(support.witnesses.length).toBeGreaterThan(0);
     expect(
       support.witnesses.every((witness) => witness.optionKeys[0] !== witness.optionKeys[1]),

@@ -161,7 +161,12 @@ export function settleShopAcquisitionSite(
       candidate: branch,
       witness: pending.witness,
       remainingSlotIndexes:
-        pending.remainingSlotIndexes ?? Object.freeze(entry.offers.map((_, index) => index)),
+        pending.remainingSlotIndexes ??
+        Object.freeze(
+          profile.slots.values.flatMap((slot, index) =>
+            entry.offers.some((offer) => offer.offerKey === slot.key) ? [index] : [],
+          ),
+        ),
       travelActiveAtEntry:
         pending.travelActiveAtEntry ??
         branch.state.traitHistory.equippedTraits.RestockBoon !== undefined,
@@ -597,9 +602,10 @@ export function settleShopAcquisitionSite(
         continue;
       }
 
-      const slotIndex = entry.offers.findIndex((offer) => offer.offerKey === entryKey);
-      const inventoryOffer = slotIndex < 0 ? undefined : entry.offers[slotIndex];
-      if (inventoryOffer === undefined)
+      // Declared slot index; validly empty slots emit no inventory offer.
+      const slotIndex = profile.slots.values.findIndex((slot) => slot.key === entryKey);
+      const inventoryOffer = entry.offers.find((offer) => offer.offerKey === entryKey);
+      if (slotIndex < 0 || inventoryOffer === undefined)
         return fail(`${room.gameName} acquisition order has unknown entry ${entryKey}`);
 
       const purchase = evaluateShopPurchaseGateAtSlot(
@@ -627,7 +633,7 @@ export function settleShopAcquisitionSite(
       const bindings = purchase.acquisitionLifecycle;
       const optionKey = execution.witness.optionKeys[slotIndex];
       const shopOption =
-        optionKey === undefined
+        optionKey === undefined || optionKey === null
           ? undefined
           : profile.groups.byKey[profile.slots.values[slotIndex]!.groupKey]?.options.byKey[
               optionKey

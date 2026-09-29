@@ -1,4 +1,6 @@
 import { describe, expect, it } from 'vitest';
+import { catalogWithEmptyShopGroup, clearTestShopOffer } from '@run-planner/test-fixtures/shared';
+import { loadUnderworldFGHICheckpoint } from '@run-planner/test-fixtures/checkpoints/underworld';
 import {
   assemble,
   applyProjectCommand,
@@ -31,6 +33,59 @@ describe('occurrence room facts', () => {
         (control) => semanticAddressKey(control.owner.address) === semanticAddressKey(incoming),
       ),
     ).toBe(true);
+  });
+
+  it('renders a validly empty Shop slot as absent while an eligible unset slot stays editable', () => {
+    const iBiome = { kind: 'biome' as const, routeKey: 'Underworld', biomeKey: 'I' };
+    const shop = createOccurrenceId('golden-i-preboss');
+    const occurrence = createOccurrenceAddress(iBiome, shop);
+    const emptySurvival = catalogWithEmptyShopGroup(catalog, 'I_PreBoss02', 'Survival');
+    const shopRoom = (project: ReturnType<typeof loadUnderworldFGHICheckpoint>) => {
+      const room = assemble(
+        project,
+        'Underworld',
+        'I',
+        shop,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        emptySurvival,
+      ).assembly.node.room;
+      if (room.roomLocal.kind !== 'shop') throw new Error('I Shop is missing');
+      return {
+        offerKeys: room.roomLocal.offers.map((offer) => offer.key),
+        controlKeys: room.rewardControls.flatMap((control) =>
+          control.owner.address.kind === 'shopOffer' ? [control.owner.address.offerKey] : [],
+        ),
+        offer: (key: string) =>
+          room.roomLocal.kind === 'shop'
+            ? room.roomLocal.offers.find((candidate) => candidate.key === key)
+            : undefined,
+      };
+    };
+
+    const valid = shopRoom(
+      clearTestShopOffer(loadUnderworldFGHICheckpoint(), occurrence, 'Survival'),
+    );
+    expect(valid.offerKeys).toEqual([
+      'BoostedBoon',
+      'MixedProgress',
+      'PremiumProgress',
+      'MetaProgress',
+    ]);
+    expect(valid.controlKeys).not.toContain('Survival');
+
+    const blank = shopRoom(
+      clearTestShopOffer(
+        clearTestShopOffer(loadUnderworldFGHICheckpoint(), occurrence, 'Survival'),
+        occurrence,
+        'MetaProgress',
+      ),
+    );
+    expect(blank.offerKeys).not.toContain('Survival');
+    expect(blank.offer('MetaProgress')?.rewardControl.offer).toBeNull();
+    expect(blank.offer('MetaProgress')?.rewardControl.shopOption).toBeDefined();
   });
 
   it('keeps a selected Shop editable and withholds retained unpicked Shop inventory', () => {

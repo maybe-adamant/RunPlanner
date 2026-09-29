@@ -166,6 +166,11 @@ vi.mock('@run-planner/engine/simulation', async (importOriginal) => {
         typeof actual.isShopOfferActiveForProjectEvaluationAssembly
       >
     ) => actual.isShopOfferActiveForProjectEvaluationAssembly(source(assembly), ...args),
+    shopOfferAssessmentForProjectEvaluationAssembly: (
+      ...[assembly, ...args]: Parameters<
+        typeof actual.shopOfferAssessmentForProjectEvaluationAssembly
+      >
+    ) => actual.shopOfferAssessmentForProjectEvaluationAssembly(source(assembly), ...args),
   };
 });
 

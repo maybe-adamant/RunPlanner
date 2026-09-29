@@ -974,11 +974,7 @@ export function executionTimelineTransactions(
       window: windowFor(semanticAddressKey(refill.sourceOwner)),
     });
   }
-  const worldRefill = travelDealRefill(
-    room,
-    biome,
-    room.entryState?.offers.map((offer) => ({ offerKey: offer.offerKey })) ?? [],
-  );
+  const worldRefill = travelDealRefill(room, biome);
   if (worldRefill !== undefined) {
     const sourceWindow = windowFor(worldRefill.refill.source.owner);
     add({

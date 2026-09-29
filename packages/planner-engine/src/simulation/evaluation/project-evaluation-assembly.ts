@@ -14,7 +14,7 @@ import {
 } from '../../authored-project/addresses';
 import { hermesShrineDeliveryEntryKey } from '../../authored-project/hermes-shrine-delivery';
 import type { ProjectCommand } from '../../authored-project/commands/types';
-import type { CountedRewardBinding } from '../../reward-kernel';
+import type { CountedRewardBinding, ShopSlotAssessment } from '../../reward-kernel';
 import type { ProjectDocument } from '../../authored-project/model';
 import { prefixAuthoredRooms } from '../candidates/evaluated-biome';
 import type { ProjectCandidateArtifacts } from './candidate-artifacts';
@@ -222,6 +222,17 @@ export function isShopOfferActiveForProjectEvaluationAssembly(
       .biomeAt(createBiomeAddress(offer.routeKey, offer.biomeKey))
       ?.rewardProducers.at(offer) !== undefined
   );
+}
+
+/** Reached inventory standing of one declared Shop slot; undefined before assessment reaches it. */
+export function shopOfferAssessmentForProjectEvaluationAssembly(
+  assembly: ProjectEvaluationAssembly,
+  offer: ShopOfferAddress,
+): ShopSlotAssessment | undefined {
+  return candidateArtifactsForProjectEvaluationAssembly(assembly)
+    .biomeAt(createBiomeAddress(offer.routeKey, offer.biomeKey))
+    ?.rewardProducers.at(offer)
+    ?.shopSlotAssessment?.(offer);
 }
 
 /** Exact Pool generation capability retained when progressive assessment clamps its reward view. */

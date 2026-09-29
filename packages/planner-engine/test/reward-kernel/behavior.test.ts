@@ -12,11 +12,12 @@ import {
   insertExactPriorityIntoBag,
   oldestSupportedRewardPriority,
   createRewardHistoryState,
-  evaluateShopGenerationSupport,
+  assessShopInventory,
   evaluateShopPurchaseGateAtSlot,
   factsWithHistory,
   findShopIndexedGenerationWitnesses,
   findShopGenerationWitnesses,
+  findShopPartialAuthoredGenerationWitnesses,
   isOfferSupportedAtResolutionPoint,
   locallyValidRewardOffers,
   resolveAcquisitionRole,
@@ -815,14 +816,17 @@ describe('ordered shop transitions', () => {
     });
 
     expect(
-      evaluateShopGenerationSupport(
+      assessShopInventory(
         rewardKernelCatalog,
         profile,
         authored,
         blockedFacts,
         additionalRequirements,
       ),
-    ).toMatchObject({ witnesses: [], unsupportedSlotIndexes: [1] });
+    ).toMatchObject({
+      witnesses: [],
+      slots: ['complete', 'selectedInvalid', 'complete'],
+    });
     expect(
       simulateShopPurchases(
         rewardKernelCatalog,
@@ -1010,8 +1014,11 @@ describe('ordered shop transitions', () => {
       counters: { ...requirementContext().counters, enteredBiomes: 2, upgradableTraitCount: 1 },
     });
     expect(
-      evaluateShopGenerationSupport(rewardKernelCatalog, iProfile, iAuthored, earlyUpgradableFacts),
-    ).toMatchObject({ witnesses: [], unsupportedSlotIndexes: [0, 2, 3] });
+      assessShopInventory(rewardKernelCatalog, iProfile, iAuthored, earlyUpgradableFacts),
+    ).toMatchObject({
+      witnesses: [],
+      slots: ['selectedInvalid', 'complete', 'selectedInvalid', 'selectedInvalid', 'complete'],
+    });
 
     const qProfile = rewardKernelCatalog.shops.byKey.Q_WorldShop!;
     const qAuthored: readonly AuthoredShopOffer[] = [
@@ -1034,15 +1041,9 @@ describe('ordered shop transitions', () => {
       { offer: { rewardType: 'WeaponUpgradeDrop' } },
       { offer: { rewardType: 'WeaponPointsRareDrop' } },
     ];
-    const support = evaluateShopGenerationSupport(
-      rewardKernelCatalog,
-      qProfile,
-      qAuthored,
-      shopFacts(2),
-    );
+    const support = assessShopInventory(rewardKernelCatalog, qProfile, qAuthored, shopFacts(2));
     expect(support).toMatchObject({
       witnesses: [],
-      unsupportedSlotIndexes: [],
       jointlyUnavailable: true,
     });
   });
@@ -1060,7 +1061,7 @@ describe('ordered shop transitions', () => {
       { offer: { rewardType: 'MaxManaDrop' } },
     ];
     const witnesses = [1, 4].map((enteredBiomes) =>
-      evaluateShopGenerationSupport(
+      assessShopInventory(
         rewardKernelCatalog,
         profile,
         authored,
@@ -1123,8 +1124,8 @@ describe('ordered shop transitions', () => {
       });
 
       expect(
-        evaluateShopGenerationSupport(rewardKernelCatalog, profile, authored, factsAtShop),
-      ).toMatchObject({ unsupportedSlotIndexes: [] });
+        assessShopInventory(rewardKernelCatalog, profile, authored, factsAtShop).slots,
+      ).not.toContain('selectedInvalid');
       const witness = findShopGenerationWitnesses(
         rewardKernelCatalog,
         profile,
@@ -1282,15 +1283,10 @@ describe('ordered shop transitions', () => {
       { offer: { rewardType: 'WeaponPointsRareDrop' } },
     ];
 
-    const support = evaluateShopGenerationSupport(
-      rewardKernelCatalog,
-      profile,
-      authored,
-      shopFacts(4),
-    );
+    const support = assessShopInventory(rewardKernelCatalog, profile, authored, shopFacts(4));
 
     expect(support.witnesses).toEqual([]);
-    expect(support.unsupportedSlotIndexes).toEqual([]);
+    expect(support.slots.every((slot) => slot === 'complete')).toBe(true);
     expect(support.jointlyUnavailable).toBe(true);
   });
 
@@ -1413,5 +1409,177 @@ describe('ordered shop transitions', () => {
       HestiaUpgrade: 1,
     });
     expect(results[0]?.history.consumableRecord).toMatchObject({ BlindBoxLoot: 1 });
+  });
+});
+
+describe('Shop inventory assessment with valid emptiness', () => {
+  const profile = rewardKernelCatalog.shops.byKey.I_WorldShop!;
+  const secondHalf = facts([], {
+    counters: { ...requirementContext().counters, enteredBiomes: 4, upgradableTraitCount: 1 },
+  });
+  const mature: readonly AuthoredShopOffer[] = [
+    { optionKey: 'StackUpgradeBig', offer: { rewardType: 'StackUpgradeBig' } },
+    { optionKey: 'MaxHealthDrop', offer: { rewardType: 'MaxHealthDrop' } },
+    { optionKey: 'HealBigDrop', offer: { rewardType: 'HealBigDrop' } },
+    { optionKey: 'MaxHealthDropBig', offer: { rewardType: 'MaxHealthDropBig' } },
+    { optionKey: 'WeaponPointsRareDrop', offer: { rewardType: 'WeaponPointsRareDrop' } },
+  ];
+  /** Closes every option of one group, as a closed first-run profile would. */
+  const closedGroup = (groupKey: string) =>
+    Object.fromEntries(
+      profile.groups.byKey[groupKey]!.options.values.map((option) => [
+        option.key,
+        { kind: 'counterRange' as const, axis: 'biomeDepthCache' as const, range: { min: 999 } },
+      ]),
+    );
+  const withSlot = (index: number, offer: AuthoredShopOffer | null) =>
+    mature.map((candidate, candidateIndex) => (candidateIndex === index ? offer : candidate));
+
+  it('keeps the mature five-item inventory complete with no empty slot', () => {
+    const assessment = assessShopInventory(rewardKernelCatalog, profile, mature, secondHalf);
+    expect(assessment.slots).toEqual(Array(5).fill('complete'));
+    expect(assessment.witnesses).toEqual([
+      {
+        optionKeys: [
+          'StackUpgradeBig',
+          'MaxHealthDrop',
+          'HealBigDrop',
+          'MaxHealthDropBig',
+          'WeaponPointsRareDrop',
+        ],
+      },
+    ]);
+  });
+
+  it('treats an unset slot of a trailing group with zero eligible options as validly empty', () => {
+    const assessment = assessShopInventory(
+      rewardKernelCatalog,
+      profile,
+      withSlot(4, null),
+      secondHalf,
+      closedGroup('MetaProgress'),
+    );
+    expect(assessment.slots).toEqual([
+      'complete',
+      'complete',
+      'complete',
+      'complete',
+      'validEmpty',
+    ]);
+    expect(assessment.witnesses.map((witness) => witness.optionKeys)).toEqual([
+      ['StackUpgradeBig', 'MaxHealthDrop', 'HealBigDrop', 'MaxHealthDropBig', null],
+    ]);
+  });
+
+  it('binds a later purchase to its declared slot past an empty middle group', () => {
+    const history = createRewardHistoryState(rewardKernelCatalog, 'mature');
+    const generationFacts = factsWithHistory(secondHalf, history, new Set());
+    const authored = withSlot(2, null).map((offer, index) =>
+      index === 0
+        ? {
+            optionKey: 'BoostedRandomLoot',
+            offer: {
+              rewardType: 'RandomLoot',
+              payload: { kind: 'BoonSource' as const, source: 'ApolloUpgrade' },
+            },
+          }
+        : offer,
+    );
+    const assessment = assessShopInventory(
+      rewardKernelCatalog,
+      profile,
+      authored,
+      generationFacts,
+      closedGroup('Survival'),
+    );
+    expect(assessment.slots).toEqual([
+      'complete',
+      'complete',
+      'validEmpty',
+      'complete',
+      'complete',
+    ]);
+    const witness = assessment.witnesses[0]!;
+    expect(witness.optionKeys[2]).toBeNull();
+    const purchase = (entryOrder: readonly number[]) =>
+      simulateShopPurchases(
+        rewardKernelCatalog,
+        profile,
+        authored,
+        witness,
+        entryOrder,
+        history,
+        secondHalf,
+        closedGroup('Survival'),
+      );
+    expect(purchase([3])[0]?.acquisitions).toEqual([
+      expect.objectContaining({
+        slotIndex: 3,
+        optionKey: 'MaxHealthDropBig',
+        event: expect.objectContaining({
+          acquisition: { kind: 'consumable', gameName: 'MaxHealthDropBig' },
+        }),
+      }),
+    ]);
+    expect(purchase([2])).toEqual([]);
+  });
+
+  it('keeps an unset slot of an eligible group incomplete', () => {
+    const assessment = assessShopInventory(
+      rewardKernelCatalog,
+      profile,
+      withSlot(4, null),
+      secondHalf,
+    );
+    expect(assessment.slots[4]).toBe('incomplete');
+    expect(assessment.witnesses).toEqual([]);
+    expect(assessment.jointlyUnavailable).toBe(false);
+  });
+
+  it('retains a selected item in an empty group as invalid rather than empty', () => {
+    const assessment = assessShopInventory(
+      rewardKernelCatalog,
+      profile,
+      mature,
+      secondHalf,
+      closedGroup('MetaProgress'),
+    );
+    expect(assessment.slots[4]).toBe('selectedInvalid');
+    expect(assessment.witnesses).toEqual([]);
+    expect(assessment.jointlyUnavailable).toBe(false);
+  });
+
+  it('completes an empty group existentially but still fills an eligible unset slot', () => {
+    const fixed = (index: number) =>
+      withSlot(index, null).map((offer, slot) => (slot === 1 ? null : offer));
+    const emptyGroup = findShopPartialAuthoredGenerationWitnesses(
+      rewardKernelCatalog,
+      profile,
+      fixed(4),
+      secondHalf,
+      closedGroup('MetaProgress'),
+    );
+    expect(emptyGroup.length).toBeGreaterThan(0);
+    expect(emptyGroup.every((witness) => witness.optionKeys[4] === null)).toBe(true);
+    expect(emptyGroup.every((witness) => witness.optionKeys[1] !== null)).toBe(true);
+
+    const eligible = findShopPartialAuthoredGenerationWitnesses(
+      rewardKernelCatalog,
+      profile,
+      fixed(4),
+      secondHalf,
+    );
+    expect(eligible.length).toBeGreaterThan(0);
+    expect(eligible.every((witness) => witness.optionKeys[4] !== null)).toBe(true);
+    expect(
+      findShopIndexedGenerationWitnesses(
+        rewardKernelCatalog,
+        profile,
+        4,
+        { rewardType: 'WeaponPointsRareDrop' },
+        secondHalf,
+        closedGroup('MetaProgress'),
+      ),
+    ).toEqual([]);
   });
 });

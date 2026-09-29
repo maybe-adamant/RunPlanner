@@ -53,6 +53,25 @@ local function nativeOrRethrow(scope, base, args)
     return result
 end
 
+-- Asks native whether planned-empty groups are really empty; the planned inventory is kept either way.
+-- Residual cost: a probed RandomLoot option consumes one native GetRandomValue.
+local function probeOmittedGroups(session, state, scope, base, args, prepared, occurrence)
+    if prepared.kind ~= "shop" or not prepared.omittedGroups or #prepared.omittedGroups == 0 then return end
+    local probes = {}
+    for index, group in ipairs(prepared.omittedGroups) do
+        local probe = primitives.copy(group)
+        probe.WeightedList = false
+        probe.Offers = math.huge
+        probes[index] = probe
+    end
+    local ok, result = callNative(scope, base, primitives.withStoreData(args, { GroupsOf = probes }))
+    local observed = ok and type(result) == "table" and type(result.StoreOptions) == "table"
+        and #result.StoreOptions or 0
+    if observed > 0 then
+        session.diagnostic(state, "shop-empty-group", { expected = 0, observed = observed }, occurrence)
+    end
+end
+
 local function prepareInventory(occurrence, args, refillScope, contractOnly)
     local expected = occurrence and occurrence.overview or {}
     local storeData = primitives.copy(type(args) == "table" and args.StoreData or nil)
@@ -119,6 +138,7 @@ function hooks.attach(module, session, getState, report, room, route, scope)
         result = primitives.order(prepared, result)
         local ok, verifyError = primitives.verify(prepared, result)
         if ok then
+            probeOmittedGroups(session, state, scope, base, args, prepared, active and active.occurrence)
             if activeRefill then activeRefill.installed = true end
             completeRefill(session, state, activeRefill)
             report(runtime)

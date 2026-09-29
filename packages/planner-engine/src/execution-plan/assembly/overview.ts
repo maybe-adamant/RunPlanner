@@ -87,40 +87,70 @@ export function executionRewardFromOffer(
   });
 }
 
-export function shopOptionKeys(
+/** One emitted native World Shop item: its compact position is its index in the list. */
+export interface ExecutionShopInventoryRow {
+  readonly offer: NonNullable<CanonicalAuthoredRoom['entryState']>['offers'][number];
+  readonly profileSlotIndex: number;
+  readonly optionKey: string;
+}
+
+/**
+ * The emitted inventory in native order. Validly empty declared slots emit no
+ * item, so later items shift to compact `StoreOptions` positions.
+ */
+export function shopInventoryRows(
   room: CanonicalAuthoredRoom,
   biome: CompleteValidBiomeProjectEvaluation,
-) {
+): readonly ExecutionShopInventoryRow[] {
+  const entry = room.entryState;
+  if (entry === undefined)
+    throw new CompilerError('executionCoverageMissing', `${room.gameName} lacks Shop inventory`);
   const owner = executionRoomOwnerKey(room);
-  const offerCount = room.entryState?.offers.length ?? 0;
   const rows = biome.rewards.branches.map((branch) =>
-    branch.events
-      .filter(
-        (event): event is Extract<RewardEvent, { readonly kind: 'shopInventorySupported' }> =>
-          event.kind === 'shopInventorySupported' && semanticAddressKey(event.origin) === owner,
-      )
-      .map((event) => event.optionKeys),
+    branch.events.filter(
+      (event): event is Extract<RewardEvent, { readonly kind: 'shopInventorySupported' }> =>
+        event.kind === 'shopInventorySupported' && semanticAddressKey(event.origin) === owner,
+    ),
   );
-  const first = rows[0]?.[0];
-  if (
-    first === undefined ||
-    first.length !== offerCount ||
-    rows.some((row) => row.length !== 1 || row[0]?.length !== offerCount)
-  )
+  if (rows.length === 0 || rows.some((row) => row.length !== 1))
     throw new CompilerError(
       'executionCoverageMissing',
       `${room.gameName} lacks Shop inventory evidence`,
     );
-  return agreement(
-    rows.map((row) => row[0]),
+  const witness = agreement(
+    rows.map((row) =>
+      Object.freeze({ slotKeys: row[0]!.slotKeys, optionKeys: row[0]!.optionKeys }),
+    ),
     `${room.gameName} Shop option order`,
   )!;
+  const offersByKey = new Map(entry.offers.map((offer) => [offer.offerKey, offer] as const));
+  if (
+    witness.slotKeys.length !== witness.optionKeys.length ||
+    entry.offers.some((offer) => !witness.slotKeys.includes(offer.offerKey))
+  )
+    throw new CompilerError(
+      'executionCoverageMissing',
+      `${room.gameName} Shop inventory evidence omits a declared slot`,
+    );
+  return Object.freeze(
+    witness.slotKeys.flatMap((slotKey, profileSlotIndex) => {
+      const optionKey = witness.optionKeys[profileSlotIndex];
+      const offer = offersByKey.get(slotKey);
+      if ((optionKey === null) !== (offer === undefined) || optionKey === undefined)
+        throw new CompilerError(
+          'executionCoverageMissing',
+          `${room.gameName} Shop slot ${slotKey} disagrees with its inventory evidence`,
+        );
+      return offer === undefined || optionKey === null
+        ? []
+        : [Object.freeze({ offer, profileSlotIndex, optionKey })];
+    }),
+  );
 }
 
 export function travelDealRefill(
   room: CanonicalAuthoredRoom,
   biome: CompleteValidBiomeProjectEvaluation,
-  offers: readonly { readonly offerKey: string }[],
 ):
   | {
       readonly owner: string;
@@ -150,11 +180,13 @@ export function travelDealRefill(
     ),
     `${room.gameName} Travel Deal refill`,
   );
-  if (
-    row.sourceOfferKey === undefined ||
-    row.slotIndex === undefined ||
-    !offers.some((offer) => offer.offerKey === row.sourceOfferKey)
-  )
+  // The refill replaces the source item at its compact native position.
+  const nativeIndex = shopInventoryRows(room, biome).findIndex(
+    (candidate) =>
+      candidate.profileSlotIndex === row.slotIndex &&
+      candidate.offer.offerKey === row.sourceOfferKey,
+  );
+  if (row.sourceOfferKey === undefined || row.slotIndex === undefined || nativeIndex < 0)
     throw new CompilerError(
       'executionCoverageMissing',
       `${room.gameName} lacks Travel Deal source`,
@@ -212,7 +244,7 @@ export function travelDealRefill(
         offerKey: row.sourceOfferKey,
       }),
       replacement: Object.freeze({
-        slotIndex: row.slotIndex,
+        slotIndex: nativeIndex,
         groupIndex,
         optionKey,
         reward: executionRewardFromOffer(entry.offer, 'Shop'),
@@ -261,7 +293,7 @@ function executionShop(
   transactions: readonly ExecutionTimelineTransaction[],
 ): ExecutionOverview['shop'] | undefined {
   if (room.entryState === undefined) return undefined;
-  const optionKeys = shopOptionKeys(room, biome);
+  const inventory = shopInventoryRows(room, biome);
   const transactionByOwner = new Map(
     transactions.map((transaction) => [transaction.owner, transaction]),
   );
@@ -273,15 +305,16 @@ function executionShop(
     ),
   );
   const offers = Object.freeze(
-    room.entryState.offers.map((offer, index) =>
+    inventory.map(({ offer, profileSlotIndex, optionKey }) =>
       (() => {
         const actionOwner = transactionOwnerByOffer.get(offer.offerKey);
         const transaction =
           actionOwner === undefined ? undefined : transactionByOwner.get(actionOwner);
         return Object.freeze({
           offerKey: offer.offerKey,
+          profileSlotIndex,
           ...(transaction === undefined ? {} : { transactionOwner: transaction.owner }),
-          optionKey: optionKeys[index]!,
+          optionKey,
           rewardType: offer.offer.rewardType,
           ...(offer.offer.payload?.kind === 'BoonSource'
             ? { source: offer.offer.payload.source }

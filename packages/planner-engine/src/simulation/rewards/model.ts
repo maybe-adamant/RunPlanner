@@ -158,8 +158,11 @@ export type RewardEvent =
   | (RewardEventBase & {
       readonly kind: 'shopInventorySupported';
       readonly profileKey: string;
-      readonly optionKeys: readonly string[];
-      /** Native StoreData group for each flattened emitted slot. */
+      /** Declared profile slot keys, in native flattened group order. */
+      readonly slotKeys: readonly string[];
+      /** Declared slot order; null where the slot's group validly emitted nothing. */
+      readonly optionKeys: readonly (string | null)[];
+      /** Native StoreData group for each declared slot. */
       readonly slotGroupIndexes: readonly number[];
     });
 

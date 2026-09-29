@@ -391,12 +391,16 @@ export function overview(value: unknown, label: string) {
               const row = object(entry, `${label}.shop.offers[${index}]`);
               exact(
                 row,
-                ['offerKey', 'optionKey', 'rewardType'],
+                ['offerKey', 'profileSlotIndex', 'optionKey', 'rewardType'],
                 ['transactionOwner', 'source', 'spurnedSource'],
                 `${label}.shop.offers[${index}]`,
               );
               return Object.freeze({
                 offerKey: stringValue(row.offerKey, `${label}.shop.offers[${index}].offerKey`),
+                profileSlotIndex: integer(
+                  row.profileSlotIndex,
+                  `${label}.shop.offers[${index}].profileSlotIndex`,
+                ),
                 ...(row.transactionOwner === undefined
                   ? {}
                   : {
@@ -449,6 +453,15 @@ export function overview(value: unknown, label: string) {
     ).size !== parsedShop.offers.filter((offer) => offer.transactionOwner !== undefined).length
   )
     fail(`${label}.shop.offers has duplicate transaction owners`);
+  // Native emission preserves declared order; empty slots only leave gaps.
+  if (
+    parsedShop !== undefined &&
+    parsedShop.offers.some(
+      (offer, index) =>
+        index > 0 && offer.profileSlotIndex <= parsedShop.offers[index - 1]!.profileSlotIndex,
+    )
+  )
+    fail(`${label}.shop.offers profileSlotIndex values must strictly increase`);
   const shrine =
     record.hermesShrine === undefined
       ? undefined

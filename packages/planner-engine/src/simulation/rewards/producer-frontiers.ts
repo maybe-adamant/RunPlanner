@@ -8,7 +8,7 @@ import {
   type StartingRewardAddress,
 } from '../../authored-project/addresses';
 import type { ResolvedRewardOffer } from '../../reward-kernel';
-import type { ShopOptionSelection } from '../../reward-kernel';
+import type { ShopOptionSelection, ShopSlotAssessment } from '../../reward-kernel';
 import type { SemanticFinding } from '../model';
 import type { FindingRegionEntry } from '../finding-regions';
 
@@ -52,6 +52,8 @@ export interface RewardProducerCandidateCapability {
     owner: ShopOfferAddress,
     selection: ShopOptionSelection,
   ) => RewardProducerCandidateResult;
+  /** Reached inventory standing of one declared Shop slot. */
+  readonly shopSlotAssessment?: (owner: ShopOfferAddress) => ShopSlotAssessment | undefined;
 }
 
 export interface RewardProducerFrontier extends RewardProducerCandidateCapability {
@@ -99,6 +101,9 @@ export function createRewardProducerCandidateArtifacts(
         ...(frontier.evaluateShopOption === undefined
           ? {}
           : { evaluateShopOption: frontier.evaluateShopOption }),
+        ...(frontier.shopSlotAssessment === undefined
+          ? {}
+          : { shopSlotAssessment: frontier.shopSlotAssessment }),
         ...(frontier.resolvedStoreKey === undefined
           ? {}
           : { resolvedStoreKey: frontier.resolvedStoreKey }),

@@ -3,6 +3,7 @@ import {
   createShopOfferAddress,
   semanticAddressKey,
   type SemanticAddress,
+  type ShopOfferAddress,
 } from '../../../../authored-project/addresses';
 import {
   findShopPartialAuthoredGenerationWitnesses,
@@ -14,10 +15,10 @@ import type {
   CanonicalAuthoredRoom,
   CanonicalResolvedIncomingReward,
 } from '../../../materialization';
-import { ownerRegion, type FindingRegionEntry } from '../../../finding-regions';
+import type { FindingRegionEntry } from '../../../finding-regions';
 import { createBiomeRewardFacts } from '../../facts';
 import { rewardFindingChronologyForRoom } from '../finding-chronology';
-import { addRewardFinding, mergeRewardFindingEmissions, rewardFinding } from '../../findings';
+import { mergeRewardFindingEmissions } from '../../findings';
 import type { BiomeRewardSnapshot } from '../evaluation-contract';
 import { spawnPickups } from '../../../state/pending-resource-pickups';
 import { BiomeRewardSimulationContractError } from '../biome-contract';
@@ -95,6 +96,22 @@ export function applyShopOfferPointMaterialization(
       currentRoomShopOptionNames: shopNames,
       hubBoardLookups: 'consulted',
     });
+
+  const inventory =
+    shopEntry === undefined
+      ? undefined
+      : processShopInventory(branches, {
+          catalog,
+          room,
+          declaration,
+          historySequence: event.sequence,
+          findingChronology,
+          facts,
+          fail: (detail) => {
+            throw new BiomeRewardSimulationContractError(detail);
+          },
+        });
+  if (inventory !== undefined) mergeRewardFindingEmissions(findings, inventory.findingEmissions);
 
   const producerFrontiers: RewardProducerFrontier[] = [];
   if (owners.length > 0) {
@@ -206,25 +223,14 @@ export function applyShopOfferPointMaterialization(
             supported: supportsSelection(owner, selection),
           });
         },
+        shopSlotAssessment: (owner: ShopOfferAddress) =>
+          ownerKeys.has(semanticAddressKey(owner))
+            ? inventory?.slotAssessments.get(owner.offerKey)
+            : undefined,
       }),
     );
   }
 
-  const inventory =
-    (shopEntry?.unresolvedOffers.length ?? 0) > 0
-      ? undefined
-      : processShopInventory(branches, {
-          catalog,
-          room,
-          declaration,
-          historySequence: event.sequence,
-          findingChronology,
-          facts,
-          fail: (detail) => {
-            throw new BiomeRewardSimulationContractError(detail);
-          },
-        });
-  if (inventory !== undefined) mergeRewardFindingEmissions(findings, inventory.findingEmissions);
   // World Shop loot is spawned at room entry with its options built.
   const nextBranches = Object.freeze(
     (inventory?.branches ?? []).map((branch) => {
@@ -246,17 +252,6 @@ export function applyShopOfferPointMaterialization(
       return Object.freeze({ ...branch, state: spawnPickups(catalog, branch.state, spawned) });
     }),
   );
-  if ((shopEntry?.unresolvedOffers.length ?? 0) > 0) {
-    for (const unresolved of shopEntry!.unresolvedOffers) {
-      addRewardFinding(
-        findings,
-        rewardFinding('rewardMissing', unresolved.offerOrigin, {}),
-        ownerRegion(room.origin),
-        findingChronology,
-      );
-    }
-  }
-
   return Object.freeze({
     branches: nextBranches,
     findings: Object.freeze([...findings.values()]),

@@ -1,4 +1,5 @@
 import { catalog } from '@run-planner/hades2-catalog';
+import type { Catalog } from '@run-planner/engine/catalog-schema';
 import {
   applyProjectCommand,
   createAcquisitionEntryAddress,
@@ -37,6 +38,7 @@ import {
   simulateProjectAssembly,
   traitOfferCandidateForProjectEvaluationAssembly,
   isShopOfferActiveForProjectEvaluationAssembly,
+  shopOfferAssessmentForProjectEvaluationAssembly,
   zagreusContractCandidateForProjectEvaluationAssembly,
   type GorgonPhaseCandidateSupport,
 } from '@run-planner/engine/simulation';
@@ -82,10 +84,11 @@ function biomeSource(
   gorgonSupport?: (
     phase: import('@run-planner/engine/authored-project').EncounterPhaseAddress,
   ) => GorgonPhaseCandidateSupport | undefined,
+  sourceCatalog: Catalog = catalog,
 ) {
-  const assembly = simulateProjectAssembly(catalog, project);
+  const assembly = simulateProjectAssembly(sourceCatalog, project);
   const source = createWorkspaceProjectSourceIndex(
-    catalog,
+    sourceCatalog,
     project,
     assembly.evaluation,
     (phase) => encounterPhaseSequenceStatusForProjectEvaluationAssembly(assembly, phase),
@@ -101,6 +104,7 @@ function biomeSource(
     (address) => chaosCandidateForProjectEvaluationAssembly(assembly, address),
     (address) => zagreusContractCandidateForProjectEvaluationAssembly(assembly, address),
     (address) => isShopOfferActiveForProjectEvaluationAssembly(assembly, address),
+    (address) => shopOfferAssessmentForProjectEvaluationAssembly(assembly, address),
   ).route?.biomes.find((biome) => biome.plan.biomeKey === biomeKey);
   if (source === undefined) throw new Error(`${routeKey}/${biomeKey} source is missing`);
   return source;
@@ -109,6 +113,7 @@ function biomeSource(
 function fieldsFactsForOccurrence(
   source: ReturnType<typeof biomeSource>,
   occurrenceId: OccurrenceId,
+  sourceCatalog: Catalog,
 ) {
   const decision = source.exitDecisions.find(
     (candidate) =>
@@ -117,7 +122,7 @@ function fieldsFactsForOccurrence(
   );
   return decision === undefined
     ? undefined
-    : fieldsBatchFacts(catalog, source.layout, source.occurrence, decision);
+    : fieldsBatchFacts(sourceCatalog, source.layout, source.occurrence, decision);
 }
 
 export function assemble(
@@ -135,8 +140,9 @@ export function assemble(
     room: NonNullable<Parameters<typeof assembleWorkspaceOccurrence>[0]['evaluatedRoom']>,
   ) => NonNullable<Parameters<typeof assembleWorkspaceOccurrence>[0]['evaluatedRoom']>,
   steadyGrowthOutcomes?: Parameters<typeof assembleWorkspaceOccurrence>[0]['steadyGrowthOutcomes'],
+  sourceCatalog: Catalog = catalog,
 ) {
-  const source = biomeSource(project, routeKey, biomeKey, gorgonSupport);
+  const source = biomeSource(project, routeKey, biomeKey, gorgonSupport, sourceCatalog);
   const occurrence = source.occurrence(occurrenceId);
   if (occurrence === undefined) throw new Error(`${occurrenceId} occurrence is missing`);
   const evaluatedRoom = (() => {
@@ -156,7 +162,7 @@ export function assemble(
       : evaluatedRoomTransform(evaluatedRoom);
   const facts = createWorkspaceBiomeOccurrenceAssemblyFacts(source).occurrence(occurrenceId);
   if (facts === undefined) throw new Error(`${occurrenceId} facts are missing`);
-  const fieldsFacts = fieldsFactsForOccurrence(source, occurrenceId);
+  const fieldsFacts = fieldsFactsForOccurrence(source, occurrenceId, sourceCatalog);
   const isEntry =
     project.route.biomes.find((biome) => biome.biomeKey === biomeKey)?.topology
       ?.startOccurrenceId === occurrenceId;
@@ -179,7 +185,7 @@ export function assemble(
     configuredRivalsRank: source.configuredRivalsRank,
     routePosition: source.routePosition,
     biome: source.biome,
-    catalog,
+    catalog: sourceCatalog,
     encounterPhaseStatus: source.encounterPhaseStatus,
     ...(gorgonSupport === undefined ? {} : { gorgonSupport }),
     ...(fieldsFacts === undefined ? {} : { fieldsBatchFacts: fieldsFacts }),

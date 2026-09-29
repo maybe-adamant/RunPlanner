@@ -938,6 +938,28 @@ Possibility simulation validates the authored order and hidden source only in
 that order; it retains reward-source branches but never retries another
 permutation. Store rerolls remain deferred.
 
+### Empty groups and bounded unknowns
+
+`FillInShopOptions` appends a group only when its filtered option list is
+nonempty; there is no replacement or minimum fill, and later items shift to
+compact `StoreOptions` positions. Planner disposition: a group with zero
+eligible options is a validly empty slot, and publication maps declared slots
+to compact positions. Three bounded unknowns remain:
+
+- In the `OptionsData` path, `RandomLoot` and `BoostedRandomLoot` still append
+  a copy when `GetEligibleInteractedGod` returns nil (`StoreLogic.lua:183–205`),
+  so such a group is not natively empty even with no eligible god. The
+  Executor's planned-empty-group probe diagnostic is the guard.
+- A `WeightedList` group whose `Offers` exceeds its eligible count loops past
+  100 picks and returns `{}`, emptying the whole shop (`StoreLogic.lua:224–231`;
+  for example Q group 1 with `Offers = 2`). Partial underfill stays
+  `incomplete` and is not modeled.
+- Travel Deal regenerates with `ExclusionNames` and reads
+  `options[replacedIndex]` (`StoreLogic.lua:424–428`). If the exclusion empties
+  the source's group, native shifts later groups left and refills from the next
+  group, while the planner falls back within the same group and the Executor
+  forces the planner's group.
+
 ## Biome Reward Producer Map
 
 | Biome | Modeled producers                                                                                       | Disposition notes                                                                        |

@@ -298,13 +298,22 @@ export interface ShopOptionSelection {
   readonly offer: ResolvedRewardOffer;
 }
 
+/** One generated option key per declared slot; null where the slot's group has no eligible option. */
 export interface ShopGenerationWitness {
-  readonly optionKeys: readonly string[];
+  readonly optionKeys: readonly (string | null)[];
 }
 
-export interface ShopGenerationSupport {
+/**
+ * A declared slot's standing in one generation context. `validEmpty` means its
+ * group has zero eligible options, so native generation emits no item for it.
+ */
+export type ShopSlotAssessment = 'complete' | 'validEmpty' | 'incomplete' | 'selectedInvalid';
+
+export interface ShopInventoryAssessment {
+  /** Declared profile slot order. */
+  readonly slots: readonly ShopSlotAssessment[];
   readonly witnesses: readonly ShopGenerationWitness[];
-  readonly unsupportedSlotIndexes: readonly number[];
+  /** Every slot is locally complete or validly empty, yet no joint generation exists. */
   readonly jointlyUnavailable: boolean;
 }
 

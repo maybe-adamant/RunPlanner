@@ -92,6 +92,7 @@ export interface WorkspaceOccurrenceProjectionFacts {
   readonly authoredAdditionalExitKeys: readonly string[];
   readonly detailsActive: boolean;
   readonly contractOfferActive?: boolean;
+  readonly validlyEmptyShopOfferKeys?: readonly string[];
   readonly chaosPlacement?: ChaosCandidateCapability;
   readonly chaosGateForced: boolean;
   readonly zagreusContractPlacement?: ZagreusContractCandidateCapability;
@@ -657,6 +658,8 @@ export function controlsForOccurrence(
         );
       }
       for (const [offerKey, shopOffer] of Object.entries(occurrence.state.shop.offers)) {
+        // A validly empty slot emits no item and has nothing to author.
+        if (input.facts.validlyEmptyShopOfferKeys?.includes(offerKey) === true) continue;
         if (
           offerKey === 'infernalContractReward' &&
           input.facts.contractOfferActive !== true &&
