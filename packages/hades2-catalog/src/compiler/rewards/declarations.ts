@@ -1,5 +1,4 @@
 import type { CatalogCollection, TraitDeclaration } from '@run-planner/engine/catalog-schema';
-import type { RequirementExpression } from '@run-planner/engine/requirements';
 import type {
   AcquisitionRoleDeclaration,
   AcquisitionRoleResolution,
@@ -18,7 +17,11 @@ import {
   requirePositiveInteger,
 } from '../common';
 import { fail } from '../errors';
-import { normalizeLootRequirement, rejectEncounterHistoryRequirements } from '../requirements';
+import {
+  normalizeLootRequirement,
+  rejectEncounterHistoryRequirements,
+  validateRequirementReferences,
+} from '../requirements';
 import type {
   RawRewardKernelInput,
   RawRewardTypeDeclaration,
@@ -438,38 +441,6 @@ export function validateFixedAcquisitionTraitGrants(
   }
 }
 
-/** Save-file god records hold only ordinary gods. */
-function validateSaveFileRecordKeys(
-  requirement: RequirementExpression,
-  ordinarySources: readonly string[],
-  path: string,
-): void {
-  switch (requirement.kind) {
-    case 'all':
-    case 'any':
-      requirement.requirements.forEach((child, index) =>
-        validateSaveFileRecordKeys(child, ordinarySources, `${path}.requirements[${index}]`),
-      );
-      return;
-    case 'not':
-      validateSaveFileRecordKeys(requirement.requirement, ordinarySources, `${path}.requirement`);
-      return;
-    case 'recordCount':
-    case 'distinctRecordKeyCount':
-      if (
-        requirement.record === 'lifetimeGodUseRecord' ||
-        requirement.record === 'lifetimeGodPickupRecord'
-      )
-        requirement.keys.forEach((key, index) => {
-          if (!ordinarySources.includes(key))
-            fail(`${path}.keys[${index}]`, `${key} is not an ordinary god source`);
-        });
-      return;
-    default:
-      return;
-  }
-}
-
 export function normalizeRewardTypes(
   raw: readonly RawRewardTypeDeclaration[],
   domains: CatalogCollection<PayloadDomainDeclaration>,
@@ -627,12 +598,19 @@ export function normalizeRewardTypes(
   const ordinaryDomainDeclaration = domains.byKey[ordinaryDomain];
   const ordinarySources =
     ordinaryDomainDeclaration?.kind === 'oneOf' ? ordinaryDomainDeclaration.values : [];
+  const resourceKeys = grantedResourceKeys(acquisitions);
   for (const acquisition of acquisitions.values) {
     if (acquisition.lootRequirement === undefined) continue;
     const path = `acquisitions.${acquisition.gameName}.lootRequirement`;
     if (!ordinarySources.includes(acquisition.gameName))
       fail(path, 'loot requirements gate only ordinary god sources');
-    validateSaveFileRecordKeys(acquisition.lootRequirement, ordinarySources, path);
+    validateRequirementReferences(
+      acquisition.lootRequirement,
+      collection,
+      path,
+      resourceKeys,
+      ordinarySources,
+    );
   }
   return collection;
 }

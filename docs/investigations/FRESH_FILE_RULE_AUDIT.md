@@ -85,37 +85,37 @@ owns the rule, or **gap** when none does.
 
 ### Rewards
 
-| Rule                                                                  | Native (fresh)                                                                                           | Planner today                                                                                                                         | Family                         |
-| --------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------ |
-| MetaProgress Bones / big entries                                      | Ashes ≥ 5; big at Ashes ≥ 100 and Bones ≥ 500 (`LootData.lua:1093-1246`)                                 | mature: `smallEnteredBiomes` / `largeEnteredBiomes` only (`rewards/requirements.ts:163-173`); no lifetime totals in `SimulationState` | Rewards, Shared infrastructure |
-| Pickup quantities, Buried Treasure, Double Up                         | per-object rounding, non-compounding (viability follow-up)                                               | absent (payloads carry no amounts)                                                                                                    | Shared infrastructure          |
-| Hammers, Hermes, Devotion, Hex, Talent, Mystery Boon, ordinary Nectar | closed                                                                                                   | mature predicates assume reachability                                                                                                 | Rewards                        |
-| `F_Combat01` Apollo                                                   | fixed Common Nova Strike / Blinding Rush / Lucid Gain (`RoomDataF.lua:1283-1294`, `TraitLogic.lua:1794`) | modeled by ordinary offer rules once the profile restricts                                                                            | Rewards                        |
-| Consumable RunProgress bonuses                                        | Ashes +5 HP, Bones +5 Magick, Nectar Pom level gated by incantations                                     | not simulated (Nectar level: Rewards)                                                                                                 | Rewards (Nectar)               |
-| LastStand items                                                       | ineligible (no DD to lose)                                                                               | `MissingLastStand` predicate                                                                                                          | viability                      |
-| Fields optional pool                                                  | ungated Armor/Nectar/Bones; no MinorTalent                                                               | mature                                                                                                                                | Rewards                        |
-| Zeus/Rain forced opening chain                                        | dead (Vanilla state, empty opening)                                                                      | mature biome-state modeling                                                                                                           | implicit                       |
+| Rule                                                                  | Native (fresh)                                                                                           | Planner today                                                                                                                                                 | Family           |
+| --------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------- |
+| MetaProgress Bones / big entries                                      | Ashes ≥ 5; big at Ashes ≥ 100 and Bones ≥ 500 (`LootData.lua:1093-1246`)                                 | mature: `smallEnteredBiomes` / `largeEnteredBiomes` (`rewards/requirements.ts:163-173`); accumulated `resourceGains` record exists; no threshold declarations | Rewards          |
+| Pickup quantities, Buried Treasure, Double Up                         | per-object rounding, non-compounding (viability follow-up)                                               | modeled: amount resolved at production, credited to `resourceGains` at acquisition                                                                            | implicit         |
+| Hammers, Hermes, Devotion, Hex, Talent, Mystery Boon, ordinary Nectar | closed                                                                                                   | mature predicates assume reachability                                                                                                                         | Rewards          |
+| `F_Combat01` Apollo                                                   | fixed Common Nova Strike / Blinding Rush / Lucid Gain (`RoomDataF.lua:1283-1294`, `TraitLogic.lua:1794`) | modeled by ordinary offer rules once the profile restricts                                                                                                    | Rewards          |
+| Consumable RunProgress bonuses                                        | Ashes +5 HP, Bones +5 Magick, Nectar Pom level gated by incantations                                     | not simulated (Nectar level: Rewards)                                                                                                                         | Rewards (Nectar) |
+| LastStand items                                                       | ineligible (no DD to lose)                                                                               | `MissingLastStand` predicate                                                                                                                                  | viability        |
+| Fields optional pool                                                  | ungated Armor/Nectar/Bones; no MinorTalent                                                               | mature                                                                                                                                                        | Rewards          |
+| Zeus/Rain forced opening chain                                        | dead (Vanilla state, empty opening)                                                                      | mature biome-state modeling                                                                                                                                   | implicit         |
 
 ### Shops
 
-| Rule             | Native (fresh)                                                                                                        | Planner today            | Family                             |
-| ---------------- | --------------------------------------------------------------------------------------------------------------------- | ------------------------ | ---------------------------------- |
-| WorldShop groups | G1 boon from an interacted god; G2 Heal/MaxHP/Ashes/Bones; G3 MaxMana/Pom                                             | mature                   | Rewards                            |
-| I_WorldShop      | four items, G5 empty (`StoreLogic.lua:FillInShopOptions`)                                                             | mature: five fixed slots | Rewards, plan Gate D               |
-| Shop god         | eligible ∩ lifetime `LootPickups`, recorded at selection (`UpgradeChoiceLogic.lua:1046`); empty-intersection fallback | mature: no god history   | Shared infrastructure, plan Gate B |
-| Armor            | needs `RoomCountCache.F_Story01`                                                                                      | mature                   | Rewards                            |
-| Charon cards     | spending accrues, none granted                                                                                        | not modeled              | out of scope                       |
+| Rule             | Native (fresh)                                                                                                        | Planner today                                                   | Family       |
+| ---------------- | --------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------- | ------------ |
+| WorldShop groups | G1 boon from an interacted god; G2 Heal/MaxHP/Ashes/Bones; G3 MaxMana/Pom                                             | mature                                                          | Rewards      |
+| I_WorldShop      | four items, G5 empty (`StoreLogic.lua:FillInShopOptions`)                                                             | `validEmpty` slot: stable five slots, empty group emits no item | Rewards      |
+| Shop god         | eligible ∩ lifetime `LootPickups`, recorded at selection (`UpgradeChoiceLogic.lua:1046`); empty-intersection fallback | derived god-pickup history, empty-intersection fallback         | Rewards      |
+| Armor            | needs `RoomCountCache.F_Story01`                                                                                      | mature                                                          | Rewards      |
+| Charon cards     | spending accrues, none granted                                                                                        | not modeled                                                     | out of scope |
 
 ### Encounters (probe partial)
 
-| Rule                                           | Native (fresh)                                                                             | Planner today                                              | Family                |
-| ---------------------------------------------- | ------------------------------------------------------------------------------------------ | ---------------------------------------------------------- | --------------------- |
-| Fixed firsts                                   | `FIntroFight`, `FishmanIntro`, `ClockworkIntro`                                            | `GeneratedIChronosIntro` modeled; F/G firsts absent        | Encounters            |
-| Enemy-triggered intros                         | `SetupEncounter` post-generation scan; generated intros return first (viability follow-up) | executor `introSubstitution` diagnostic; planner unmodeled | Encounters (deferred) |
-| Fear-driven elites, Fangs, Menace              | none (zero Fear)                                                                           | modeled via vow ranks → naturally zero                     | implicit              |
-| Thorn-Weeper                                   | excluded until `MiniBossFogEmitter` occurs (never)                                         | mature pool                                                | viability             |
-| Hecate interlude / polymorph, Scylla performer | Meteor Shower / Sheep; Keytarist                                                           | mature: full choice domains                                | Encounters            |
-| Cerberus / Chronos summons                     | no first-run restriction found; Chronos first-victory scripting unverified                 | modeled                                                    | open                  |
+| Rule                                           | Native (fresh)                                                                             | Planner today                                                                                 | Family                |
+| ---------------------------------------------- | ------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------- | --------------------- |
+| Fixed firsts                                   | `FIntroFight`, `FishmanIntro`, `ClockworkIntro`                                            | `GeneratedIChronosIntro` modeled; F/G firsts absent                                           | Encounters            |
+| Enemy-triggered intros                         | `SetupEncounter` post-generation scan; generated intros return first (viability follow-up) | executor binds lifecycle-compatible substitutes (`lifecycle-substitution`); planner unmodeled | Encounters (deferred) |
+| Fear-driven elites, Fangs, Menace              | none (zero Fear)                                                                           | modeled via vow ranks → naturally zero                                                        | implicit              |
+| Thorn-Weeper                                   | excluded until `MiniBossFogEmitter` occurs (never)                                         | mature pool                                                                                   | viability             |
+| Hecate interlude / polymorph, Scylla performer | Meteor Shower / Sheep; Keytarist                                                           | mature: full choice domains                                                                   | Encounters            |
+| Cerberus / Chronos summons                     | no first-run restriction found; Chronos first-victory scripting unverified                 | modeled                                                                                       | open                  |
 
 ### Traits and boons (five reachable gods)
 
@@ -221,39 +221,6 @@ editor, one approved schema bump, and a spine-first delivery with ordinary
 encounter customization disabled. Zero Fear is the strongest argument for that
 last choice: Fangs, Menace and Rival variants vanish, so the customization
 machinery has little to steer on a fresh profile.
-
-Points to challenge before locking:
-
-- **Gate A (executor lifecycle-compatibility binding) is the largest general
-  behaviour change in the plan and the least Fresh-File-specific.** It is
-  justified: enemy-triggered introductions replace ordinary combat natively
-  and the planner cannot predict them, so exact-name proof must yield to a
-  property comparison. But it changes every existing project's mismatch
-  policy. Keep it executor-only, keep the lifecycle audit's bounded property
-  set, and land it with its own live acceptance before any Fresh File code;
-  the plan already says so. Note that this is the principled answer to the
-  question the discarded `encounterExecutionPolicy` plan asked.
-- **The "generic resource ledger" should be exactly as generic as its
-  consumers.** Only Ashes and Bones thresholds exist; Psyche has no consumer
-  in F–I. Track declared resource identities, but do not model spending,
-  Gold or every pickup source. The plan's Gate C wording already bounds this;
-  hold it there.
-- **Add the start-path unification and the nullable loadout proof to the
-  execution contract**, not to Gate A. They are Fresh File wire work (Phase
-  II), but the two-start-path fact should be recorded now so Gate A's
-  binding audit does not assume `ChooseStartingRoom` always runs.
-- **Eris is the one gameplay input the profile cannot derive.** Owner
-  confirmed: when she spawns the interaction is mandatory (she blocks the
-  exit), so the checkbox records an observed condition for resource tracking;
-  it neither forces nor skips her. The design matches.
-- **Nothing in the family covers items 1, 2, 3 and 9 above.** Add the rack and
-  resource-point absences to the rooms outline and the exchange gate to the
-  rewards outline (trait-offer legality) before the integrated design.
-- **The investigation set is large but consistent.** Five outlines plus a
-  941-line viability document plus a draft plan is heavy; the plan's own
-  instruction to write one integrated design and retire the outlines is the
-  right next step. Do not add a sixth outline; fold this audit's rows into the
-  owning outlines and delete it.
 
 ## Open items carried from the inventory
 

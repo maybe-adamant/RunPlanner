@@ -327,7 +327,8 @@ alone does not justify an unsupported effect transition.
 
 ## Requirement and Closure Obligations
 
-Requirements are typed current-run expressions. Unknown kinds and missing
+Requirements are typed expressions over run ledgers and, where a scope admits
+them, derived save-file records. Unknown kinds and missing
 evaluators fail construction; a missing required evaluation context is a
 contract failure, not ineligibility. Boolean composition, counters, record
 counts, current options/reward, peer order and Clockwork facts remain explicit

@@ -108,9 +108,9 @@ remaining spawns are runtime progress, not declaration compatibility fields.
 
 ## Executor integration and acceptance
 
-`room/timeline/encounters/hooks.lua` has an exact-name gate after selection.
-`encounters/phases.lua.prove` repeats name proof before binding reconstructed
-room-entry objects. Both must consume one comparator.
+`room/timeline/encounters/hooks.lua` (after ChooseEncounter) and
+`encounters/phases.lua.prove` (room entry and reload) both consume the one
+comparator in `encounters/compatibility.lua`.
 
 Retain same-name acceptance, occurrence ownership, one phase per native object,
 phase count/order and the distinction between modeled and unmodeled carriers.
@@ -126,5 +126,5 @@ probe rather than relying solely on synthetic tables.
 
 The audit establishes the relevant consumers and concrete mutation/callback
 hazards. It does not certify arbitrary future setup callbacks or claim live tests.
-The older noncombat identity audit's exact-name policy should be replaced when
-delivery lands, preserving its source facts. No production behavior changed here.
+The noncombat identity audit records the delivered compatibility binding while
+preserving its source facts.

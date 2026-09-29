@@ -201,8 +201,9 @@ the game marks the boss ignored for that ledger. The normalized `F_PostBoss01`
 binds its native `Story_Chronos_01` carrier, with no modeled reward or store
 contribution, before the route enters `G_Intro`. The carrier inherits `Empty`
 and adds Chronos conversation and taunt events gated on game progression,
-which remain outside the static planner baseline. It is bound by name because
-execution forces and proves the exact native encounter identity.
+which remain outside the static planner baseline. Execution binds it by
+lifecycle compatibility rather than exact native identity: `Empty` and
+`Story_Chronos_01` are compatible.
 
 Both rooms are ordinary Room Declarations referenced by the fixed topology
 links. They are not generated candidates, authored topology choices, or editor

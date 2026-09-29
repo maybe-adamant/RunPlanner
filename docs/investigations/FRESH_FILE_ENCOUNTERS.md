@@ -137,8 +137,7 @@ catalog compiler; executor `room/timeline/encounters/generated.lua`.
 
 ## Chronology and dependencies
 
-[Shared infrastructure](FRESH_FILE_SHARED_INFRASTRUCTURE.md) supplies initial
-and reached history; [rooms](FRESH_FILE_ROOMS.md) supplies legal placements.
+Engine history supplies initial and reached facts; [rooms](FRESH_FILE_ROOMS.md) supplies legal placements.
 Record occurrence and completion at their distinct native boundaries. H cage
 encounters are prepared together: completing one must not regenerate the rest.
 
@@ -161,57 +160,14 @@ then representative UI transitions and producer-to-executor witnesses.
 General save history, arbitrary fixed-wave authoring, simultaneous combined
 introductions, simulated boss presentation, and a second Lua planner.
 
-## First-delivery executor seam inspection
+## Executor encounter binding
 
-`mods/room/timeline/encounters/hooks.lua:ChooseEncounter` currently checks the
-published declaration, forces it through ForceNextEncounterData, and calls
-native setup. Native setup can still replace it with an introduction. The hook
-then binds only an exact identity match; a substitution gets a diagnostic but
-no phase binding. Thus leaving customization empty is not sufficient.
-
-`encounters/phases.lua:prove` separately checks exact names and phase count at
-room entry, then binds canonical native objects (including objects reconstructed
-across save/load). `room/coordinator.lua` obtains start/end/final-phase contacts
-from those bindings. Relaxing only the ChooseEncounter diagnostic would neither
-fix room-entry conformance nor preserve lifecycle behavior.
-
-### First prerequisite: general encounter-binding boundary
-
-Before other Fresh File implementation, audit and correct this boundary for
-all projects. The agreed direction is exclusion-based semantic compatibility:
-bind the actual native encounter to the planned phase at its selection contact,
-unless evidence shows that it does not fulfill that phase's contract. A name
-difference alone is not that evidence. This supersedes a FreshFile-only allowed
-identity list; the feature should inherit the corrected general boundary.
-
-The prerequisite audit must identify meaningful conflicts: encounter-depth
-effects, completion/lifecycle events, suppression or replacement of later
-phases and boss lifecycle effects. NPC acquisitions remain under trait
-conformance and are excluded from compatibility comparison. In particular, compare
-O Heracles with ordinary O precombat rather than assuming all combat-shaped
-encounters are interchangeable. Missing structural evidence or an unrelated
-native selection must not become permission to bind an arbitrary object.
-
-Selection and room-entry/reload proof must share the resulting rule, retain
-phase count/order/occurrence ownership and bind the actual native carrier.
-Separate exact encounter steering from lifecycle compatibility: allowing a
-binding does not authorize substituting an authored boss choice or applying
-customization intended for a different declaration. Do not repurpose
-unmodeledEncounterKeys, which deliberately omit modeled phase binding.
-
-Audit forcing as well: ForceNextEncounterData bypasses native ChooseEncounter's
-candidate/forced selection, although SetupEncounter still checks introductions.
-Preserve native selection where ownership is deferred. Pin the supported facts
-and acceptance evidence before implementation; this is not a blanket removal
-of identity checks. Complete and verify this prerequisite independently before
-building the Fresh File spine. No deferred wave editor is required for it.
-
-Witnesses: compatible introduction binding; incompatible O Heracles/phase
-structure; meaningful counter/boss-effect conflicts; H per-cage binding; room-entry/reload
-rebinding; encounter-end/final afterCombat contacts; retained exact steering
-and customization targeting across existing projects.
-
-The settled implementation is executor-only: compare native declaration lifecycle
-properties in the same phase role, using the bounded start-contact classification
-in the lifecycle audit. No planner equivalence signature or encounter-name-pair
-matrix. Unknown lifecycle paths retain existing different-name mismatch behavior.
+`mods/room/timeline/encounters/hooks.lua:ChooseEncounter` forces the published
+declaration, then binds whatever native encounter setup returns when
+`encounters/compatibility.lua` finds it lifecycle-compatible in the same
+room/phase role; a different name logs `lifecycle-substitution` and installs no
+customization, while an incompatible choice logs `lifecycle-conflict`.
+`encounters/phases.lua:prove` applies the same comparator at room entry and
+reload, retaining phase count, order and occurrence ownership. Native intro
+replacement (for example GeneratedF→GuardIntro) therefore binds without an
+allowed-identity list; leaving customization empty is no longer required.

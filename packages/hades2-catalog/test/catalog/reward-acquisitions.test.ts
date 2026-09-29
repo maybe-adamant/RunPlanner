@@ -105,6 +105,16 @@ describe('reward compiler acquisition, reward-type, and store normalizers', () =
     ).toThrow(/lootRequirement\.keys\[0\].*not an ordinary god source/);
     expect(() =>
       createRewardKernelCatalog(
+        withHestiaRequirement({
+          kind: 'recordCount',
+          record: 'resourceGains',
+          keys: ['NotAResource'],
+          range: { min: 1 },
+        }),
+      ),
+    ).toThrow(/lootRequirement\.keys\[0\].*unknown resource NotAResource/);
+    expect(() =>
+      createRewardKernelCatalog(
         rawInput({
           ...rewardKernelDeclarations,
           stores: rewardKernelDeclarations.stores.map((store, storeIndex) =>

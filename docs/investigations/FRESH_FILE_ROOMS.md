@@ -59,7 +59,7 @@ ownership and executor contacts must be pinned in the delivery plan.
 [Loadout](FRESH_FILE_LOADOUT.md) supplies initialization;
 [rewards](FRESH_FILE_REWARDS.md) owns Apollo and bridge inventory;
 [encounters](FRESH_FILE_ENCOUNTERS.md) owns first-combat identities;
-[infrastructure](FRESH_FILE_SHARED_INFRASTRUCTURE.md) credits Eris resources.
+engine resource gains credit Eris resources.
 
 ## Representative acceptance cases
 

@@ -70,12 +70,18 @@ of that history, not separate Fresh File shop or god-unlock algorithms.
   normal refill/fallback behavior; do not rewrite an existing offered reward
   because resources were subsequently acquired.
 
+Delivered: engine god-use and god-pickup history producers, with mature and
+closed initialization.
+Delivered: the Hestia/Aphrodite lifetime-use requirement and the shop
+god/historical-pickup intersection with its empty-intersection fallback.
+
 ### Inventory shape
 
 Ordinary WorldShop retains three nonempty groups. Fresh I_WorldShop has four
-items: its resource group has no eligible candidate and no replacement major.
-This requires supported absent-group output, not an arbitrary empty purchased
-slot. Poms and other surviving inventory retain their existing conditions.
+items: its resource group has no eligible candidate and no replacement major;
+the engine's shop assessment reports that slot as valid-empty (see the Shops
+section of `docs/design/REWARD_MODEL.md`). Poms and other surviving inventory
+retain their existing conditions.
 
 ## Ownership and seams
 
@@ -84,8 +90,8 @@ with `declarations/rewards/shops.ts` and its compiler. Engine owns bag selection
 god candidates, generation snapshots, inventory assessment and acquisition.
 Application adapts those products; executor receives their resolved inventory.
 
-[Shared infrastructure](FRESH_FILE_SHARED_INFRASTRUCTURE.md) owns history and
-resource quantities. This document owns why/when reward consumers read them.
+Engine history and resource-quantity products supply the facts; this document
+owns why/when reward consumers read them.
 [Rooms](FRESH_FILE_ROOMS.md) supplies bridge and first-combat producers.
 
 ## Settled god matrix
@@ -120,10 +126,10 @@ another god-order design round. No live probe is claimed here.
 
 ## Decisions needed before delivery
 
-- Bind the settled god matrix to exact history producers and generation consumers.
-- Pin source-slot/group addressing for the absent fifth Tartarus group, including
-  findings/export, without disturbing mature five-item inventories.
+- Bind the Fresh File god matrix to its profile's generation consumers.
 - Wire the first Apollo eligibility/rarity conditions into existing machinery.
+- Bound the initial god pool: the Zeus/Hephaestus text-record gates are not
+  declared, so a closed profile yields seven gods where the game allows three.
 - Inventory exact bag/history consumers and compatibility implications.
 
 ## Representative acceptance cases
@@ -142,26 +148,3 @@ owners, with representative shop/first-offer UI and executor witnesses.
 
 Ordinary Pom legality, god cap, duplicate prevention, bag refill/consumption,
 ordinal rules and mature reward behavior, unless a concrete discrepancy emerges.
-
-## Empty shop-group inspection for delivery planning
-
-Delivered in Gate D: the engine's four-state Shop inventory assessment
-(`complete`, `validEmpty`, `incomplete`, `selectedInvalid`) and compact
-execution rows carrying `profileSlotIndex` replace the former fixed-cardinality
-contract; see the Shops section of `docs/design/REWARD_MODEL.md`.
-
-Settled: retain five declared slots and their stable addresses. The fifth slot
-exists but is validly empty when its group has no eligible options; do not
-replace the profile with a four-slot declaration. Assessment distinguishes valid
-emptiness from an unfinished eligible slot. An empty slot emits no native item
-or purchase action; actual inventory remains four items. Pin its representation
-using existing nullable authored slots where sufficient, without silently
-clearing an authored invalid selection or presuming a schema bump. Stable slot count does not remove the need for a
-truthful emitted-item index mapping at the executor boundary.
-
-Required witnesses: eligible-but-unset slot, absent group, unsupported authored
-item, unchanged mature five-item shop, and planner-to-executor compact inventory
-with purchases bound to the correct item. If runtime omission is included,
-cover an empty middle group as well as the actual trailing Fresh File group.
-Prerequisite scope covers groups with zero eligible options; nonzero partial
-underfill of nonweighted groups is explicitly outside this delivery.

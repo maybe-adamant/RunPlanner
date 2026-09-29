@@ -3,18 +3,16 @@
 ## Design outline index
 
 This investigation remains the overview and source-evidence owner. The following
-temporary outlines organize the proposed changes by domain; they are not five
+temporary outlines organize the proposed changes by domain; they are not four
 delivery plans or approval to implement/bump a schema:
 
-1. [Shared infrastructure](FRESH_FILE_SHARED_INFRASTRUCTURE.md): closed initial
-   facts, reached history, production-time resource quantities and gain totals.
-2. [Loadout](FRESH_FILE_LOADOUT.md): project creation and fixed starting state.
-3. [Rooms](FRESH_FILE_ROOMS.md): restrictions, opening chronology, bridge and Eris.
-4. [Rewards](FRESH_FILE_REWARDS.md): inventories, source-local rules and unlocks.
-5. [Encounters](FRESH_FILE_ENCOUNTERS.md): introductions, fixed/mixed profiles
+1. [Loadout](FRESH_FILE_LOADOUT.md): project creation and fixed starting state.
+2. [Rooms](FRESH_FILE_ROOMS.md): restrictions, opening chronology, bridge and Eris.
+3. [Rewards](FRESH_FILE_REWARDS.md): inventories, source-local rules and unlocks.
+4. [Encounters](FRESH_FILE_ENCOUNTERS.md): introductions, fixed/mixed profiles
    and two-stage customization.
 
-Infrastructure exposes facts; the domain outlines own their consumers. Loadout
+Engine history and resource products expose facts; the outlines own their consumers. Loadout
 and rooms establish the playable start; rewards and encounters consume reached
 history throughout the route. Derive one dependency-ordered delivery plan from
 these outlines, with complete testable slices rather than one gate per file.
@@ -479,32 +477,8 @@ allowance; do not invent a replacement guarantee for the missed shop.
 
 ### Resource quantities and timing
 
-`TraitData_Poseidon.lua:RoomRewardBonusBoon` declares resource multipliers with
-base 1.5 and rarity scaling. `TraitLogic.lua` scales the delta above one,
-giving Common/Rare/Epic/Heroic multipliers 1.5/1.75/2/2.25 (availability of
-each rarity remains a separate eligibility question).
-
-`InteractLogic.lua:ApplyConsumableItemResourceMultiplier` modifies each
-`AddResources` amount at object setup, rounding each pickup independently.
-`UtilityLogic.lua:round` is `floor(value + 0.5)` for these positive quantities.
-For a five-Ashes pickup this yields 8/9/10/11; for ten Ashes,
-15/18/20/23. Room rewards, shop spawning and generated-consumable producers
-call this helper; `NPCDrop` bypasses its resource bonuses.
-
-`UseConsumableItem` grants the stored amount through `AddResource`, which
-updates lifetime gains immediately. Its Double Up branch retains the same
-object and disables further duplication: the second acquisition grants the
-same already-rounded quantity. It does not recompute or compound Buried
-Treasure. Thus two Common-boosted five-Ashes acquisitions grant 8 + 8, not
-round(10 × 1.5). Gaining Buried Treasure after an object spawned does not
-retroactively increase that object's stored amount through this path.
-
-Disposition: the new resource ledger must consume resolved pickup amounts
-from their production context, then credit each acquisition separately.
-Existing pickup counts are insufficient. Preserve Eris's separately declared
-non-duplicating NPC gift behavior; do not make every resource gain eligible
-for the modifier. The existing Buried Treasure generated-pickup machinery
-and Double Up acquisition flow remain reusable.
+Source facts and the planner disposition are in the reward audit's
+[Resource quantities](../audits/rewards-and-acquisition/REWARD_GAME_DATA_AUDIT.md#resource-quantities).
 
 ## Remaining probes and implementation pinning
 
