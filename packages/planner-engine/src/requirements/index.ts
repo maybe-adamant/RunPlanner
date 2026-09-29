@@ -16,4 +16,6 @@ export type {
   NumericRange,
   RequirementExpression,
   RoomStructuralTag,
+  RunHistoryRecord,
+  SaveFileHistoryRecord,
 } from './model';

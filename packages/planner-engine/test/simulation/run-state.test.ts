@@ -44,7 +44,11 @@ import {
   oOccurrenceIds,
   qBiome,
 } from '@run-planner/test-fixtures/surface';
-import { createRewardHistoryState, type RewardKernelFacts } from '../../src/reward-kernel';
+import {
+  createRewardHistoryState,
+  factsWithHistory,
+  type RewardKernelFacts,
+} from '../../src/reward-kernel';
 import { deriveRouteLoadout } from '../../src/authored-project/loadout';
 import { EMPTY_RESOURCE_PLACEMENTS } from '../../src/authored-project/defaults';
 import { initializeTestRewardBranches } from '../support/arcana-fear';
@@ -62,6 +66,7 @@ import {
   foldTraitHistoryEvents,
   type TraitOfferEvent,
 } from '../../src/simulation/traits';
+import { matureGodHistoryRecords } from '../support/god-history';
 
 /** Every direct adapter below projects the first Underworld biome. */
 const runStatePosition = ordinaryRoutePosition(catalog, 'Underworld', 'F');
@@ -95,6 +100,7 @@ function requirementFacts(ordinaryLootCount: number): RewardKernelFacts {
         biomeUseRecord: {},
         lootTypeHistory: ordinaryLootCount === 0 ? {} : { ApolloUpgrade: ordinaryLootCount },
         roomsEntered: {},
+        ...matureGodHistoryRecords(),
         useRecord: {},
       },
       currentRoomShopOptionNames: new Set(),
@@ -323,7 +329,7 @@ describe('decision run-state snapshots', () => {
   });
 
   it('keeps facts-derived caches local to one exact checkpoint context', () => {
-    const history = createRewardHistoryState();
+    const history = createRewardHistoryState(catalog.rewards, 'mature');
     const branch = Object.freeze({
       ...initializeTestRewardBranches()[0]!,
       state: Object.freeze({ ...initializeTestRewardBranches()[0]!.state, rewardHistory: history }),
@@ -1183,7 +1189,7 @@ describe('decision run-state snapshots', () => {
 
   it('narrows the God pool at four distinct acquired ordinary sources', () => {
     const history = Object.freeze({
-      ...createRewardHistoryState(),
+      ...createRewardHistoryState(catalog.rewards, 'mature'),
       lootTypeHistory: Object.freeze({
         ApolloUpgrade: 1,
         PoseidonUpgrade: 1,
@@ -1240,6 +1246,54 @@ describe('decision run-state snapshots', () => {
     expect(pool).toMatchObject({ capNarrowed: true });
   });
 
+  it('keeps a closed file out of the run pool and its loot requirements out of the cap', () => {
+    const history = createRewardHistoryState(catalog.rewards, 'closed');
+    const snapshot = createRunState({
+      catalog,
+      layout: fLayout,
+      owner: createExitDecisionAddress(createBiomeAddress('Underworld', 'F'), {
+        kind: 'occurrence',
+        occurrenceId: goldenFStartId,
+      }),
+      states: reachedTestStates(
+        [
+          Object.freeze({
+            ...initializeTestRewardBranches()[0]!,
+            state: Object.freeze({
+              ...initializeTestRewardBranches()[0]!.state,
+              rewardHistory: history,
+            }),
+          }),
+        ],
+        {
+          sequence: 0,
+          ledgers: {
+            roomCreations: [],
+            roomAppearances: [],
+            encounterRecords: [],
+            encounterStarts: [],
+            encounterCompletions: [],
+            enteredRewardStores: [],
+            requiredObjectSpawns: [],
+            requiredObjectCompletions: [],
+            roomRestores: [],
+            counters: {
+              biomeDepthCache: 0,
+              biomeEncounterDepth: 0,
+              routeEncounterDepth: 0,
+              roomHistoryOrdinal: 0,
+            },
+          },
+        },
+      ),
+      rewardFacts: (state) => factsWithHistory(requirementFacts(0), state.rewardHistory, new Set()),
+    });
+    expect(snapshot?.godPool.acquiredSourceKeys).toEqual([]);
+    expect(snapshot?.godPool.effectiveSourceKeys).not.toContain('HestiaUpgrade');
+    expect(snapshot?.godPool.effectiveSourceKeys).not.toContain('AphroditeUpgrade');
+    expect(snapshot?.godPool.capNarrowed).toBe(false);
+  });
+
   it('copies Proper Upbringing elements and rarity floor from the chronological trait fold', () => {
     const owner = createExitDecisionAddress(createBiomeAddress('Underworld', 'F'), {
       kind: 'occurrence',
@@ -1280,7 +1334,10 @@ describe('decision run-state snapshots', () => {
       ...initializeTestRewardBranches()[0]!,
       state: Object.freeze({
         ...initializeTestRewardBranches()[0]!.state,
-        rewardHistory: attachTraitHistory(createRewardHistoryState(), traits),
+        rewardHistory: attachTraitHistory(
+          createRewardHistoryState(catalog.rewards, 'mature'),
+          traits,
+        ),
         traitHistory: traits,
       }),
     });

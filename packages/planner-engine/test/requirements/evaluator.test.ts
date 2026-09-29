@@ -201,6 +201,26 @@ describe('requirement evaluator registry', () => {
     ).toBe(false);
   });
 
+  it('reads save-file god records only where the contact supplies them', () => {
+    const poseidonOrDemeterUsed = {
+      kind: 'recordCount',
+      record: 'lifetimeGodUseRecord',
+      keys: ['PoseidonUpgrade', 'DemeterUpgrade'],
+      range: { min: 1 },
+    } as const;
+    const withRecords = (lifetimeGodUseRecord: Readonly<Record<string, number>>) => ({
+      ...baseContext,
+      records: { ...baseContext.records, lifetimeGodUseRecord, lifetimeGodPickupRecord: {} },
+    });
+    expect(evaluateRequirement(poseidonOrDemeterUsed, withRecords({}))).toBe(false);
+    expect(evaluateRequirement(poseidonOrDemeterUsed, withRecords({ DemeterUpgrade: 1 }))).toBe(
+      true,
+    );
+    expect(() => evaluateRequirement(poseidonOrDemeterUsed, baseContext)).toThrow(
+      /without history record lifetimeGodUseRecord/,
+    );
+  });
+
   it('counts a requested envelope slot at most once per recent room', () => {
     const requirement = {
       kind: 'recentEnvelopeSlotCount',

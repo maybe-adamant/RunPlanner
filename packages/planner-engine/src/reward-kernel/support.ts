@@ -1,3 +1,4 @@
+import { evaluateRequirement } from '../requirements/evaluator';
 import type { RewardTypeDeclaration } from './model';
 import type {
   DevotionPairPayload,
@@ -85,16 +86,40 @@ export function locallyValidRewardOffers(
   );
 }
 
+/** Policies that resolve one source from the shared ordinary god domain. */
+export function isOrdinarySourcePolicy(policy: RewardTypeDeclaration['sourceSupport']): boolean {
+  return (
+    policy === 'ordinaryBoonPeer' || policy === 'ordinaryInteracted' || policy === 'ordinaryNoPeer'
+  );
+}
+
 export function ordinarySourceGameNames(catalog: RewardKernelCatalog): readonly string[] {
-  const ordinaryType = catalog.rewardTypes.values.find(
-    (rewardType) =>
-      rewardType.sourceSupport === 'ordinaryBoonPeer' ||
-      rewardType.sourceSupport === 'ordinaryNoPeer',
+  const ordinaryType = catalog.rewardTypes.values.find((rewardType) =>
+    isOrdinarySourcePolicy(rewardType.sourceSupport),
   );
   if (ordinaryType === undefined) {
     throw new Error('reward kernel has no ordinary-source policy');
   }
   return sourceDomainValues(catalog, ordinaryType);
+}
+
+function sourceRequirementMet(
+  catalog: RewardKernelCatalog,
+  source: string,
+  facts: RewardKernelFacts,
+): boolean {
+  const requirement = catalog.acquisitions.byKey[source]?.lootRequirement;
+  return requirement === undefined || evaluateRequirement(requirement, facts.requirements);
+}
+
+/** Ordinary gods whose declared loot requirement holds, independent of the run's god cap. */
+export function eligibleOrdinarySourceGameNames(
+  catalog: RewardKernelCatalog,
+  facts: RewardKernelFacts,
+): readonly string[] {
+  return ordinarySourceGameNames(catalog).filter((source) =>
+    sourceRequirementMet(catalog, source, facts),
+  );
 }
 
 function ordinaryBaseSupport(
@@ -105,7 +130,10 @@ function ordinaryBaseSupport(
   const ordinarySources = sourceDomainValues(catalog, rewardType);
   const acquired = facts.requirements.records.lootTypeHistory;
   const acquiredSources = new Set(ordinarySources.filter((source) => (acquired[source] ?? 0) > 0));
-  return acquiredSources.size >= ORDINARY_SOURCE_CAP ? acquiredSources : new Set(ordinarySources);
+  const capped =
+    acquiredSources.size >= ORDINARY_SOURCE_CAP ? acquiredSources : new Set(ordinarySources);
+  // `GetEligibleLootNames` applies each god's loot requirement after the cap.
+  return new Set([...capped].filter((source) => sourceRequirementMet(catalog, source, facts)));
 }
 
 function ordinaryPeerSupport(
@@ -129,8 +157,28 @@ function ordinaryPeerSupport(
   const capSources = new Set([...acquiredSources, ...priorSources]);
   const primary =
     capSources.size >= ORDINARY_SOURCE_CAP ? acquiredSources : new Set(ordinarySources);
-  const filtered = new Set([...primary].filter((source) => !priorSources.has(source)));
+  const filtered = new Set(
+    [...primary].filter(
+      (source) => !priorSources.has(source) && sourceRequirementMet(catalog, source, facts),
+    ),
+  );
   return filtered.size > 0 ? filtered : ordinaryBaseSupport(catalog, rewardType, facts);
+}
+
+/**
+ * Shop boon gods (`GetEligibleInteractedGods`): eligible gods already picked up
+ * on this file, or every eligible god when none has been.
+ */
+function interactedOrdinarySupport(
+  catalog: RewardKernelCatalog,
+  rewardType: RewardTypeDeclaration,
+  facts: RewardKernelFacts,
+): ReadonlySet<string> {
+  const eligible = ordinaryBaseSupport(catalog, rewardType, facts);
+  const pickups = facts.requirements.records.lifetimeGodPickupRecord;
+  if (pickups === undefined) throw new Error('shop god support requires the god pickup record');
+  const interacted = new Set([...eligible].filter((source) => (pickups[source] ?? 0) > 0));
+  return interacted.size > 0 ? interacted : eligible;
 }
 
 function devotionSupport(
@@ -168,6 +216,11 @@ export function supportedPayloads(
       }));
     case 'ordinaryNoPeer':
       return [...ordinaryBaseSupport(catalog, rewardType, facts)].map((source) => ({
+        kind: 'BoonSource',
+        source,
+      }));
+    case 'ordinaryInteracted':
+      return [...interactedOrdinarySupport(catalog, rewardType, facts)].map((source) => ({
         kind: 'BoonSource',
         source,
       }));

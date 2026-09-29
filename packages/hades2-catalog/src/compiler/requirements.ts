@@ -54,9 +54,28 @@ function normalizeRoomStructuralTags(
   return normalized as readonly RoomStructuralTag[];
 }
 
+const saveFileRecords = new Set<string>(['lifetimeGodPickupRecord', 'lifetimeGodUseRecord']);
+
+/** Save-file god records are carried only by ordinary-source contacts. */
 export function normalizeRequirement(
   requirement: RequirementExpression,
   path: string,
+): RequirementExpression {
+  return normalizeRequirementWith(requirement, path, false);
+}
+
+/** An ordinary god's loot requirement, which may read save-file god records. */
+export function normalizeLootRequirement(
+  requirement: RequirementExpression,
+  path: string,
+): RequirementExpression {
+  return normalizeRequirementWith(requirement, path, true);
+}
+
+function normalizeRequirementWith(
+  requirement: RequirementExpression,
+  path: string,
+  allowSaveFileRecords: boolean,
 ): RequirementExpression {
   if (!hasRequirementEvaluator(requirement.kind)) {
     fail(`${path}.kind`, `has no current-run evaluator: ${String(requirement.kind)}`);
@@ -72,7 +91,7 @@ export function normalizeRequirement(
         kind: requirement.kind,
         requirements: Object.freeze(
           requirement.requirements.map((child, index) =>
-            normalizeRequirement(child, `${path}.requirements[${index}]`),
+            normalizeRequirementWith(child, `${path}.requirements[${index}]`, allowSaveFileRecords),
           ),
         ),
       });
@@ -80,7 +99,11 @@ export function normalizeRequirement(
     case 'not':
       return Object.freeze({
         kind: 'not',
-        requirement: normalizeRequirement(requirement.requirement, `${path}.requirement`),
+        requirement: normalizeRequirementWith(
+          requirement.requirement,
+          `${path}.requirement`,
+          allowSaveFileRecords,
+        ),
       });
     case 'counterRange':
       return Object.freeze({
@@ -92,6 +115,9 @@ export function normalizeRequirement(
     case 'distinctRecordKeyCount':
       if (requirement.keys.length === 0) {
         fail(`${path}.keys`, 'must not be empty');
+      }
+      if (!allowSaveFileRecords && saveFileRecords.has(requirement.record)) {
+        fail(`${path}.record`, `${requirement.record} is only available to loot requirements`);
       }
       return Object.freeze({
         kind: requirement.kind,

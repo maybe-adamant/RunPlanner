@@ -396,6 +396,7 @@ function requirementEvidence(
       });
     case 'recordCount': {
       const record = context.records[requirement.record];
+      if (record === undefined) throw new Error(`generation context lacks ${requirement.record}`);
       return Object.freeze({
         kind: requirement.kind,
         satisfied,
@@ -407,6 +408,7 @@ function requirementEvidence(
     }
     case 'distinctRecordKeyCount': {
       const record = context.records[requirement.record];
+      if (record === undefined) throw new Error(`generation context lacks ${requirement.record}`);
       return Object.freeze({
         kind: requirement.kind,
         satisfied,

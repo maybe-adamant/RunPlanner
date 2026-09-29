@@ -1,3 +1,5 @@
+import type { RequirementExpression } from '@run-planner/engine/requirements';
+
 import type { RawConcreteAcquisitionDeclaration } from './types';
 
 function lastReward(rewardType: string) {
@@ -55,12 +57,21 @@ const CAN_DUPLICATE = new Set<string>([
   'CharonPointsDrop',
 ]);
 
+/** LootData_Hestia/Aphrodite: `GameState.UseRecord` HasAny Poseidon or Demeter. */
+const poseidonOrDemeterUsed: RequirementExpression = {
+  kind: 'recordCount',
+  record: 'lifetimeGodUseRecord',
+  keys: ['PoseidonUpgrade', 'DemeterUpgrade'],
+  range: { min: 1 },
+};
+
 const rawAcquisitions = [
   {
     gameName: 'AphroditeUpgrade',
     kind: 'loot',
     historyProjection: 'lootAndUse',
     goldConversionEligible: true,
+    lootRequirement: poseidonOrDemeterUsed,
     ...lastReward('AphroditeUpgrade'),
   },
   {
@@ -103,6 +114,7 @@ const rawAcquisitions = [
     kind: 'loot',
     historyProjection: 'lootAndUse',
     goldConversionEligible: true,
+    lootRequirement: poseidonOrDemeterUsed,
     ...lastReward('HestiaUpgrade'),
   },
   {

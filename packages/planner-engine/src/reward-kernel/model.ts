@@ -13,7 +13,14 @@ export type ProducerLifecyclePointKey =
   | 'purchase'
   | 'roomRewardPickup'
   | 'roomExit';
-export type SourceSupportPolicyKey = 'devotionAcquiredPair' | 'ordinaryBoonPeer' | 'ordinaryNoPeer';
+export type SourceSupportPolicyKey =
+  'devotionAcquiredPair' | 'ordinaryBoonPeer' | 'ordinaryInteracted' | 'ordinaryNoPeer';
+
+/**
+ * God history on the save file before this run. A mature file has used and
+ * picked up every ordinary god; a closed first file has done neither.
+ */
+export type SaveFileGodHistory = 'closed' | 'mature';
 
 export type LevelResolutionEffect =
   | { readonly kind: 'visibleChoice'; readonly levelCount: 1 | 2 | 3 }
@@ -82,6 +89,8 @@ export interface ConcreteAcquisitionDeclaration extends ConcreteAcquisitionAddre
   readonly grantedTraitKey?: string;
   /** Full semantic Path selections awarded by this concrete acquisition. */
   readonly pathPointGrant?: 1 | 3 | 5;
+  /** Source LootData `GameStateRequirements` gating this god as an ordinary source. */
+  readonly lootRequirement?: RequirementExpression;
 }
 
 export type AcquisitionRoleResolution =
@@ -240,6 +249,10 @@ export interface RewardHistoryState {
   readonly lootTypeHistory: Readonly<Record<string, number>>;
   readonly lootBiomeRecord: Readonly<Record<string, number>>;
   readonly consumableRecord: Readonly<Record<string, number>>;
+  /** Ordinary gods used on this save file (`GameState.UseRecord`); removal never erases it. */
+  readonly lifetimeGodUseRecord: Readonly<Record<string, number>>;
+  /** Ordinary gods whose screen selection completed on this file (`GameState.LootPickups`). */
+  readonly lifetimeGodPickupRecord: Readonly<Record<string, number>>;
   /** Latest actually-settled source whose effective LastRewardEligible value is true. */
   readonly lastRewardRecreation?: ConcreteAcquisitionDeclaration['lastRewardRecreation'];
   /** Canonical fold of the equipped-trait ledger; never incremented by loot projection. */

@@ -8,7 +8,9 @@ import type {
   RewardKernelFacts,
   ProducerLifecyclePointKey,
   ConcreteAcquisitionPickupEffect,
+  SaveFileGodHistory,
 } from './model';
+import { ordinarySourceGameNames } from './support';
 
 const EMPTY_RECORD = Object.freeze({}) as Readonly<Record<string, number>>;
 
@@ -16,7 +18,27 @@ function assertNever(value: never): never {
   throw new Error(`unknown reward projection ${String(value)}`);
 }
 
-export function createRewardHistoryState(): RewardHistoryState {
+function initialGodRecord(
+  catalog: RewardKernelCatalog,
+  saveFile: SaveFileGodHistory,
+): Readonly<Record<string, number>> {
+  switch (saveFile) {
+    case 'closed':
+      return EMPTY_RECORD;
+    case 'mature':
+      return Object.freeze(
+        Object.fromEntries(ordinarySourceGameNames(catalog).map((source) => [source, 1])),
+      );
+    default:
+      return assertNever(saveFile);
+  }
+}
+
+export function createRewardHistoryState(
+  catalog: RewardKernelCatalog,
+  saveFile: SaveFileGodHistory,
+): RewardHistoryState {
+  const godRecord = initialGodRecord(catalog, saveFile);
   return Object.freeze({
     offerHistory: Object.freeze([]),
     useRecord: EMPTY_RECORD,
@@ -25,6 +47,8 @@ export function createRewardHistoryState(): RewardHistoryState {
     lootTypeHistory: EMPTY_RECORD,
     lootBiomeRecord: EMPTY_RECORD,
     consumableRecord: EMPTY_RECORD,
+    lifetimeGodUseRecord: godRecord,
+    lifetimeGodPickupRecord: godRecord,
     traitFacts: Object.freeze({
       upgradableTraitCount: 0,
       elementCounts: EMPTY_RECORD,
@@ -61,6 +85,22 @@ function increment(
   key: string,
 ): Readonly<Record<string, number>> {
   return Object.freeze({ ...record, [key]: (record[key] ?? 0) + 1 });
+}
+
+/**
+ * Records a completed upgrade-screen selection on an ordinary god's loot
+ * (`GameState.LootPickups`, incremented at selection). Other loot is ignored.
+ */
+export function recordGodLootPickup(
+  catalog: RewardKernelCatalog,
+  history: RewardHistoryState,
+  lootGameName: string,
+): RewardHistoryState {
+  if (!ordinarySourceGameNames(catalog).includes(lootGameName)) return history;
+  return Object.freeze({
+    ...history,
+    lifetimeGodPickupRecord: increment(history.lifetimeGodPickupRecord, lootGameName),
+  });
 }
 
 /** Records one source-resolved direct loot interaction without fabricating a pickup. */
@@ -168,6 +208,12 @@ export function applyConcreteAcquisition(
 
   const common = {
     useRecord: increment(history.useRecord, acquisition.gameName),
+    // `RecordUse` also writes the save-file record when an ordinary god is used.
+    ...(ordinarySourceGameNames(catalog).includes(acquisition.gameName)
+      ? {
+          lifetimeGodUseRecord: increment(history.lifetimeGodUseRecord, acquisition.gameName),
+        }
+      : {}),
     biomeUseRecord: increment(history.biomeUseRecord, acquisition.gameName),
     currentRoomUseRecord: increment(history.currentRoomUseRecord, acquisition.gameName),
     ...(declaration.lastRewardRecreation === undefined
@@ -215,6 +261,8 @@ export function factsWithHistory(
       useRecord: history.useRecord,
       biomeUseRecord: history.biomeUseRecord,
       lootTypeHistory: history.lootTypeHistory,
+      lifetimeGodUseRecord: history.lifetimeGodUseRecord,
+      lifetimeGodPickupRecord: history.lifetimeGodPickupRecord,
     }),
     currentRoomShopOptionNames,
     lastEventRunDepthCaches: Object.freeze({

@@ -10,7 +10,16 @@ export type CounterAxis =
   | 'enteredBiomes'
   | 'upgradableTraitCount';
 
-export type HistoryRecord = 'biomeUseRecord' | 'lootTypeHistory' | 'roomsEntered' | 'useRecord';
+/** Current-run ledgers every requirement contact carries. */
+export type RunHistoryRecord = 'biomeUseRecord' | 'lootTypeHistory' | 'roomsEntered' | 'useRecord';
+
+/**
+ * Save-file god ledgers (`GameState.UseRecord`, `GameState.LootPickups`) over
+ * the ordinary gods; a positive count means at least once on this file.
+ */
+export type SaveFileHistoryRecord = 'lifetimeGodPickupRecord' | 'lifetimeGodUseRecord';
+
+export type HistoryRecord = RunHistoryRecord | SaveFileHistoryRecord;
 
 export type CurrentRunFlag = 'allSpellInvested' | 'pendingSpellDrop';
 

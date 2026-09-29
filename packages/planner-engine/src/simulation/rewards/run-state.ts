@@ -9,6 +9,8 @@ import type { BiomeLayout, Catalog, TraitElement } from '../../catalog-schema';
 import type { RequirementExpression } from '../../requirements/model';
 import { evaluateRequirement } from '../../requirements/evaluator';
 import {
+  eligibleOrdinarySourceGameNames,
+  isOrdinarySourcePolicy,
   ordinarySourceGameNames,
   supportedPayloads,
   type RewardKernelFacts,
@@ -574,9 +576,7 @@ function sourcePool(
 ): DecisionGodPoolState {
   const ordinarySources = ordinarySourceGameNames(catalog.rewards);
   const ordinaryType = catalog.rewards.rewardTypes.values.find(
-    (rewardType: RewardTypeDeclaration) =>
-      rewardType.sourceSupport === 'ordinaryBoonPeer' ||
-      rewardType.sourceSupport === 'ordinaryNoPeer',
+    (rewardType: RewardTypeDeclaration) => isOrdinarySourcePolicy(rewardType.sourceSupport),
   );
   if (ordinaryType === undefined) {
     throw new Error('reward kernel has no ordinary source declaration');
@@ -592,7 +592,9 @@ function sourcePool(
     effectiveSourceKeys: Object.freeze(
       ordinarySources.filter((source) => effectiveSourceKeys.includes(source)),
     ),
-    capNarrowed: effectiveSourceKeys.length < ordinarySources.length,
+    // Declared loot requirements are not the god cap.
+    capNarrowed:
+      effectiveSourceKeys.length < eligibleOrdinarySourceGameNames(catalog.rewards, facts).length,
   });
 }
 

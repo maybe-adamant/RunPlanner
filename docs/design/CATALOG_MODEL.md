@@ -219,7 +219,11 @@ identity. Concrete acquisitions separately declare exact history projection
 (`lootAndUse` or `consumableAndUse`) and base capabilities.
 
 The source-support vocabulary is closed: `ordinaryBoonPeer`,
-`ordinaryNoPeer` and `devotionAcquiredPair`. A source-bearing payload needs
+`ordinaryNoPeer`, `ordinaryInteracted` and `devotionAcquiredPair`. An ordinary
+god's concrete loot acquisition may declare a `lootRequirement` (source LootData
+`GameStateRequirements`); its keys must be ordinary gods, and the save-file god
+records (`lifetimeGodUseRecord`, `lifetimeGodPickupRecord`) are admitted only
+there. A source-bearing payload needs
 a compatible policy and resolution point. Blind Box resolves at its
 `hiddenSource` acquisition role; its inventory identity is not an acquired
 god. Producer-specific authoring remains in Reward Model.

@@ -1,4 +1,5 @@
 import type { CatalogCollection, TraitDeclaration } from '@run-planner/engine/catalog-schema';
+import type { RequirementExpression } from '@run-planner/engine/requirements';
 import type {
   AcquisitionRoleDeclaration,
   AcquisitionRoleResolution,
@@ -8,8 +9,11 @@ import type {
   SourceResolutionPoint,
 } from '@run-planner/engine/reward-kernel';
 
+import { isOrdinarySourcePolicy } from '@run-planner/engine/reward-kernel';
+
 import { createCollection, requireNonEmpty } from '../common';
 import { fail } from '../errors';
+import { normalizeLootRequirement, rejectEncounterHistoryRequirements } from '../requirements';
 import type {
   RawRewardKernelInput,
   RawRewardTypeDeclaration,
@@ -25,8 +29,10 @@ const SOURCE_RESOLUTION_KINDS = ['acquisitionRole', 'offer'] as const;
 const SOURCE_SUPPORT_POLICIES = [
   'devotionAcquiredPair',
   'ordinaryBoonPeer',
+  'ordinaryInteracted',
   'ordinaryNoPeer',
 ] as const;
+
 const PICKUP_EFFECT_KINDS = ['anvilOfFates'] as const;
 
 function requireClosedValue<const Values extends readonly string[]>(
@@ -337,6 +343,16 @@ export function normalizeAcquisitions(
                 `acquisitions[${index}].grantedTraitKey`,
               ),
             }),
+        ...(acquisition.lootRequirement === undefined
+          ? {}
+          : {
+              lootRequirement: (() => {
+                const path = `acquisitions[${index}].lootRequirement`;
+                const requirement = normalizeLootRequirement(acquisition.lootRequirement, path);
+                rejectEncounterHistoryRequirements(requirement, path);
+                return requirement;
+              })(),
+            }),
       }),
     ),
     'acquisitions',
@@ -365,6 +381,38 @@ export function validateFixedAcquisitionTraitGrants(
         'fixed acquisition trait grants are reserved for Infernal Contract',
       );
     }
+  }
+}
+
+/** Save-file god records hold only ordinary gods. */
+function validateSaveFileRecordKeys(
+  requirement: RequirementExpression,
+  ordinarySources: readonly string[],
+  path: string,
+): void {
+  switch (requirement.kind) {
+    case 'all':
+    case 'any':
+      requirement.requirements.forEach((child, index) =>
+        validateSaveFileRecordKeys(child, ordinarySources, `${path}.requirements[${index}]`),
+      );
+      return;
+    case 'not':
+      validateSaveFileRecordKeys(requirement.requirement, ordinarySources, `${path}.requirement`);
+      return;
+    case 'recordCount':
+    case 'distinctRecordKeyCount':
+      if (
+        requirement.record === 'lifetimeGodUseRecord' ||
+        requirement.record === 'lifetimeGodPickupRecord'
+      )
+        requirement.keys.forEach((key, index) => {
+          if (!ordinarySources.includes(key))
+            fail(`${path}.keys[${index}]`, `${key} is not an ordinary god source`);
+        });
+      return;
+    default:
+      return;
   }
 }
 
@@ -458,11 +506,7 @@ export function normalizeRewardTypes(
       fail(`${path}.sourceSupport`, 'is required by a source-bearing payload domain');
     if (rewardType.sourceSupport !== undefined && domain === undefined)
       fail(`${path}.sourceSupport`, 'requires a payload domain');
-    if (
-      (rewardType.sourceSupport === 'ordinaryBoonPeer' ||
-        rewardType.sourceSupport === 'ordinaryNoPeer') &&
-      domain?.kind !== 'oneOf'
-    )
+    if (isOrdinarySourcePolicy(rewardType.sourceSupport) && domain?.kind !== 'oneOf')
       fail(`${path}.sourceSupport`, 'ordinary source policies require a oneOf payload domain');
     if (rewardType.sourceSupport === 'devotionAcquiredPair' && domain?.kind !== 'distinctPair')
       fail(
@@ -504,10 +548,8 @@ export function normalizeRewardTypes(
       }
     }
   }
-  const ordinaryTypes = collection.values.filter(
-    (rewardType) =>
-      rewardType.sourceSupport === 'ordinaryBoonPeer' ||
-      rewardType.sourceSupport === 'ordinaryNoPeer',
+  const ordinaryTypes = collection.values.filter((rewardType) =>
+    isOrdinarySourcePolicy(rewardType.sourceSupport),
   );
   const ordinaryDomain = ordinaryTypes[0]?.payloadDomain;
   if (ordinaryDomain === undefined)
@@ -527,6 +569,16 @@ export function normalizeRewardTypes(
         `rewardTypes.${rewardType.gameName}.payloadDomain`,
         `Devotion source policy must use the ordinary-source domain ${ordinaryDomain}`,
       );
+  }
+  const ordinaryDomainDeclaration = domains.byKey[ordinaryDomain];
+  const ordinarySources =
+    ordinaryDomainDeclaration?.kind === 'oneOf' ? ordinaryDomainDeclaration.values : [];
+  for (const acquisition of acquisitions.values) {
+    if (acquisition.lootRequirement === undefined) continue;
+    const path = `acquisitions.${acquisition.gameName}.lootRequirement`;
+    if (!ordinarySources.includes(acquisition.gameName))
+      fail(path, 'loot requirements gate only ordinary god sources');
+    validateSaveFileRecordKeys(acquisition.lootRequirement, ordinarySources, path);
   }
   return collection;
 }

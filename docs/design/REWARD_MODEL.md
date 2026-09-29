@@ -241,9 +241,15 @@ those exclusions exhaust support.
 `ordinaryNoPeer`
 : Resolve one ordinary source at the declared lifecycle point using current
 ordinary-source eligibility and the four-source cap, with no generated-peer
-exclusion. `RandomLoot` and `BoostedRandomLoot` use it during shop generation.
-`BlindBoxLoot` uses the same support policy at its authored-source acquisition
-role after purchase.
+exclusion. `BlindBoxLoot` uses it at its authored-source acquisition role after
+purchase.
+
+`ordinaryInteracted`
+: Resolve one shop boon source during shop generation. Start from the
+`ordinaryNoPeer` eligible gods (four-source cap, then declared loot
+requirement) and intersect them with the gods picked up on the save file. When
+that intersection is empty, every eligible god remains supported.
+`RandomLoot` and `BoostedRandomLoot` use it.
 
 `devotionAcquiredPair`
 : Resolve two distinct sources from ordinary god loot already acquired in the
@@ -253,10 +259,14 @@ Both ordered realizations of any supported pair are possible. Ordinary
 generated-peer exclusion and the four-source offer cap do not re-filter this
 already-acquired pair.
 
-The fully progressed baseline treats every ordinary god as previously
-interacted with outside the current run. This removes the external interaction
-gate from shop `RandomLoot` support without weakening current-run source caps.
-Hermes remains outside the ordinary source domain.
+Ordinary policies apply each god's declared loot requirement after the
+four-source cap; Hestia and Aphrodite require Poseidon or Demeter to have been
+used on the save file. Save-file god history is derived, never authored: a
+mature file is seeded with every ordinary god used and picked up, while a closed
+file starts empty and accrues use at each real concrete god-loot acquisition and
+pickup at each completed upgrade-screen selection. Offers and trait removal
+change neither, and neither fills the current-run god pool. Hermes remains
+outside the ordinary source domain.
 
 The normalized bindings are:
 
@@ -264,7 +274,7 @@ The normalized bindings are:
 | -------------- | ---------------------- | -------------------------------- |
 | `Boon`         | `ordinaryBoonPeer`     | offer generation                 |
 | `Devotion`     | `devotionAcquiredPair` | offer generation                 |
-| `RandomLoot`   | `ordinaryNoPeer`       | shop offer generation            |
+| `RandomLoot`   | `ordinaryInteracted`   | shop offer generation            |
 | `BlindBoxLoot` | `ordinaryNoPeer`       | authored-source acquisition role |
 
 Catalog normalization rejects a source-bearing payload without both fields, a

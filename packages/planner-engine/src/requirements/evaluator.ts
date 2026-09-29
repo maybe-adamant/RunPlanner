@@ -5,6 +5,8 @@ import type {
   NumericRange,
   RequirementExpression,
   RoomStructuralTag,
+  RunHistoryRecord,
+  SaveFileHistoryRecord,
 } from './model';
 
 export type RequirementKind = RequirementExpression['kind'];
@@ -25,7 +27,9 @@ export interface RequirementEvaluationContext {
   /** Present when a declaration evaluates a route-owned predicate. */
   readonly routeKey?: string;
   readonly counters: Readonly<Record<CounterAxis, number>>;
-  readonly records: Readonly<Record<HistoryRecord, Readonly<Record<string, number>>>>;
+  /** Save-file god ledgers are present only where reward history reaches the contact. */
+  readonly records: Readonly<Record<RunHistoryRecord, Readonly<Record<string, number>>>> &
+    Readonly<Partial<Record<SaveFileHistoryRecord, Readonly<Record<string, number>>>>>;
   readonly currentRoomShopOptionNames: ReadonlySet<string>;
   readonly currentRoomRewardType: string | undefined;
   readonly currentRoomStructuralTags: readonly RoomStructuralTag[];
@@ -82,6 +86,17 @@ function requireEncounterHistory(
   return context.encounterHistory;
 }
 
+function requireRecord(
+  context: RequirementEvaluationContext,
+  record: HistoryRecord,
+): Readonly<Record<string, number>> {
+  const value = context.records[record];
+  if (value === undefined) {
+    throw new Error(`Requirement evaluated without history record ${record}`);
+  }
+  return value;
+}
+
 function requireRouteKey(context: RequirementEvaluationContext): string {
   if (context.routeKey === undefined) {
     throw new Error('Route-key requirement evaluated without route identity');
@@ -98,12 +113,12 @@ export const requirementEvaluatorRegistry = Object.freeze({
   counterRange: (requirement, context) =>
     isInRange(context.counters[requirement.axis], requirement.range),
   recordCount: (requirement, context) => {
-    const record = context.records[requirement.record];
+    const record = requireRecord(context, requirement.record);
     const count = requirement.keys.reduce((total, key) => total + (record[key] ?? 0), 0);
     return isInRange(count, requirement.range);
   },
   distinctRecordKeyCount: (requirement, context) => {
-    const record = context.records[requirement.record];
+    const record = requireRecord(context, requirement.record);
     const count = requirement.keys.filter((key) => (record[key] ?? 0) > 0).length;
     return isInRange(count, requirement.range);
   },

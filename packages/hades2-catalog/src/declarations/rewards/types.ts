@@ -63,6 +63,8 @@ export interface RawConcreteAcquisitionDeclaration {
   >;
   readonly grantedTraitKey?: string;
   readonly pathPointGrant?: 1 | 3 | 5;
+  /** Source LootData `GameStateRequirements` for an ordinary god. */
+  readonly lootRequirement?: RequirementExpression;
 }
 
 export interface RawAcquisitionRoleDeclaration {

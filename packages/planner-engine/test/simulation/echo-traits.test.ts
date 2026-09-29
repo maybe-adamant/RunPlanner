@@ -309,7 +309,12 @@ function ordinaryPoolFor(
   const rewardType = catalog.rewards.rewardTypes.byKey.Boon;
   if (rewardType === undefined) throw new Error('Boon reward type is missing');
   const facts = {
-    requirements: { records: { lootTypeHistory: history.lootTypeHistory } },
+    requirements: {
+      records: {
+        lootTypeHistory: history.lootTypeHistory,
+        lifetimeGodUseRecord: history.lifetimeGodUseRecord,
+      },
+    },
   } as RewardKernelFacts;
   return supportedPayloads(catalog.rewards, rewardType, facts).flatMap((payload) =>
     payload.kind === 'BoonSource' ? [payload.source] : [],

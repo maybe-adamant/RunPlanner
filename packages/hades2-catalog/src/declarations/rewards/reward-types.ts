@@ -115,7 +115,8 @@ export const rewardTypes = [
     gameName: 'RandomLoot',
     label: 'Boon',
     payloadDomain: 'BoonSource',
-    sourceSupport: 'ordinaryNoPeer',
+    // StoreLogic selects World Shop boon gods through `GetEligibleInteractedGod`.
+    sourceSupport: 'ordinaryInteracted',
     sourceResolution: { kind: 'offer' },
     acquisitionRoles: [
       {
