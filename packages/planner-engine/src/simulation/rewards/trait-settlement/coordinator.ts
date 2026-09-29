@@ -438,7 +438,7 @@ function applyTraitOfferForAcquisitionInternal(
     acquisitionIdentity,
     selectedForIdentityDisposition?.kind === 'echo' &&
       selectedForIdentityDisposition.effect === 'repeatKeepsake'
-      ? branch.state.keepsakes.currentKey
+      ? (branch.state.keepsakes.currentKey ?? undefined)
       : undefined,
     acquisitionMode.kind === 'frozenConcaveStoneSecondary' ? 'concaveStoneSecondary' : 'traitOffer',
   );

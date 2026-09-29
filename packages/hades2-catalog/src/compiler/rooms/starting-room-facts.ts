@@ -25,7 +25,8 @@ export function normalizeEntryContextualEncounterRules(
   const seen = new Set<string>();
   const rules = rawRules.map((rule, index): EntryContextualEncounterRule => {
     const rulePath = `${path}.entryContextualEncounterRules[${index}]`;
-    if (rule.routeKey !== 'Dream') fail(`${rulePath}.routeKey`, 'must be Dream');
+    if (rule.routeKey !== 'Dream' && rule.routeKey !== 'FreshFile')
+      fail(`${rulePath}.routeKey`, 'must be Dream or FreshFile');
     if (rule.position !== 'every' && rule.position !== 'first') {
       fail(`${rulePath}.position`, 'must be every or first');
     }

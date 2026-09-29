@@ -161,4 +161,34 @@ describe('RouteOverview', () => {
       'Tartarus',
     ]);
   });
+
+  it('presents the Fresh File loadout as fixed facts without selection controls', () => {
+    const application = createApplication();
+    application.store.dispatch(
+      authoredProjectReplaced(
+        createProjectDocument(application.catalog, {
+          projectId: 'fresh-overview',
+          routeKey: 'FreshFile',
+          configuredBiomeCount: 1,
+        }),
+      ),
+    );
+
+    const markup = routeOverviewMarkup(application);
+    expect(markup).toContain('Fresh File Loadout');
+    expect(markup).toContain('aria-label="Fixed starting loadout"');
+    expect(markup).toContain('Witch&#x27;s Staff, no Aspect');
+    for (const fact of ['Starting Arcana', 'Starting Fear', 'Starting keepsake', 'Starting reward'])
+      expect(markup).toContain(`<dt>${fact}</dt><dd>None</dd>`);
+    expect(markup).toContain('Experimental: Fresh File rules are only partly modeled');
+    expect(markup).not.toContain('aria-label="Edit Arcana"');
+    expect(markup).not.toContain('aria-label="Edit Fear"');
+    expect(markup).not.toContain('>Starting reward</label>');
+    expect([...markup.matchAll(/title="Through ([^"]+)"/g)].map((match) => match[1])).toEqual([
+      'Erebus',
+      'Oceanus',
+      'Fields',
+      'Tartarus',
+    ]);
+  });
 });

@@ -1,5 +1,6 @@
 import type { Catalog } from '../catalog-schema';
 import type { RouteLoadout } from './model';
+import { routeInitialProfile } from './route-profile';
 import { ProjectDocumentContractError } from './validation';
 
 export interface DerivedRouteLoadout {
@@ -55,7 +56,14 @@ export function assessStartingArcanaGrasp(
   });
 }
 
-export function createDefaultRouteLoadout(catalog: Catalog): RouteLoadout {
+/** A mature save's loadout, whose equipment and keepsake are authored selections. */
+export type MatureRouteLoadout = RouteLoadout & {
+  readonly weaponKey: string;
+  readonly aspectKey: string;
+  readonly startingKeepsakeKey: string;
+};
+
+export function createDefaultRouteLoadout(catalog: Catalog): MatureRouteLoadout {
   const weapon = catalog.weapons.values.find((candidate) =>
     candidate.aspectKeys.includes(candidate.defaultAspectKey),
   );
@@ -67,14 +75,33 @@ export function createDefaultRouteLoadout(catalog: Catalog): RouteLoadout {
     aspectKey: weapon.defaultAspectKey,
     startingReward: null,
     manualArcanaKeys: Object.freeze([]),
-    fearRanks: Object.freeze(
-      Object.fromEntries(catalog.fearVows.values.map((vow) => [vow.key, 0])),
-    ),
+    fearRanks: zeroFearRanks(catalog),
     startingKeepsakeKey: catalog.defaultStartingKeepsakeKey,
   });
 }
 
-export function deriveRouteLoadout(catalog: Catalog, loadout: RouteLoadout): DerivedRouteLoadout {
+/** The route's initial loadout; a fresh profile has no selections to default. */
+export function createInitialRouteLoadout(catalog: Catalog, routeKey: string): RouteLoadout {
+  if (routeInitialProfile(catalog, routeKey).kind === 'matureSave')
+    return createDefaultRouteLoadout(catalog);
+  return Object.freeze({
+    weaponKey: null,
+    aspectKey: null,
+    startingReward: null,
+    manualArcanaKeys: Object.freeze([]),
+    fearRanks: zeroFearRanks(catalog),
+    startingKeepsakeKey: null,
+  });
+}
+
+function zeroFearRanks(catalog: Catalog): Readonly<Record<string, number>> {
+  return Object.freeze(Object.fromEntries(catalog.fearVows.values.map((vow) => [vow.key, 0])));
+}
+
+export function deriveRouteLoadout(
+  catalog: Catalog,
+  loadout: Pick<RouteLoadout, 'manualArcanaKeys' | 'fearRanks'>,
+): DerivedRouteLoadout {
   const cards = catalog.arcanaCards.values;
   const manual = new Set(loadout.manualArcanaKeys);
   const active = new Set(manual);

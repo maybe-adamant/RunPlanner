@@ -20,6 +20,7 @@ describe('summarizeCatalog', () => {
         prebossRoomGameNameByBiomeKey: { A: 'A_PreBoss', B: 'B_PreBoss' },
         postbossRoomGameNamesByOrdinal: ['A_PostBoss', null],
       },
+      initialProfile: { kind: 'matureSave' as const },
     };
     const catalog: Catalog = {
       version: 'fixture-1',

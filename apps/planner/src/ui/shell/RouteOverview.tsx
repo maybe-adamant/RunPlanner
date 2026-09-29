@@ -5,6 +5,7 @@ import {
   createRouteStartKeepsakeSelectionAddress,
   createKeepsakeEquipResultAddress,
   deriveRouteLoadout,
+  routeInitialProfile,
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
 import { type Catalog } from '@run-planner/engine/catalog-schema';
@@ -81,8 +82,121 @@ export function RouteOverview({
     project.route.routeKey === workspaceRoute.routeKey ? project.route : undefined;
   if (authoredRoute === undefined)
     throw new Error(`Missing authored route ${workspaceRoute.routeKey}`);
-  const weapon = catalog.weapons.byKey[authoredRoute.loadout.weaponKey];
-  if (weapon === undefined) throw new Error(`Missing weapon ${authoredRoute.loadout.weaponKey}`);
+  const initialProfile = routeInitialProfile(catalog, workspaceRoute.routeKey);
+  return (
+    <section
+      className="route-overview"
+      {...findingTarget(workspaceRoute.marker.address)}
+      tabIndex={-1}
+    >
+      <header className="panel-heading">
+        <h2 className="eyebrow route-loadout-heading">{navigation.label} Loadout</h2>
+        <div className="panel-heading-actions">
+          <StatusBadge status={feedback.status} />
+          <FindingCount count={feedback.findingCount} label={`${label} findings`} />
+          <span className="neutral-status">{routeExtent}</span>
+        </div>
+      </header>
+      <div className="route-scope field-control field-control-inline">
+        <span>Plan up to</span>
+        <div className="route-prefix-options" role="radiogroup" aria-label="Biomes to configure">
+          {navigation.biomePanels.map((biome, index) => (
+            <label key={biome.biomeKey} title={`Through ${biome.label}`}>
+              <input
+                type="radio"
+                name={`${workspaceRoute.routeKey}-configured-prefix`}
+                value={index + 1}
+                checked={configuredBiomeCount === index + 1}
+                onChange={() =>
+                  dispatch(
+                    authoredProjectCommandDispatched({
+                      kind: 'ConfigureRoutePrefix',
+                      route: createRouteAddress(workspaceRoute.routeKey),
+                      configuredBiomeCount: index + 1,
+                    }),
+                  )
+                }
+              />
+              {biome.label}
+            </label>
+          ))}
+        </div>
+      </div>
+      {initialProfile.kind === 'freshFile' ? (
+        <FreshFileLoadout catalog={catalog} fixedWeaponKey={initialProfile.fixedWeaponKey} />
+      ) : (
+        <MatureRouteLoadout
+          authoredRoute={authoredRoute}
+          catalog={catalog}
+          interactions={interactions}
+          workspaceRoute={workspaceRoute}
+        />
+      )}
+    </section>
+  );
+}
+
+/** A fresh profile's fixed starting state; none of it is an authored selection. */
+function FreshFileLoadout({
+  catalog,
+  fixedWeaponKey,
+}: {
+  readonly catalog: Catalog;
+  readonly fixedWeaponKey: string;
+}) {
+  const weapon = catalog.weapons.byKey[fixedWeaponKey];
+  return (
+    <div className="route-loadout-panel route-fixed-loadout">
+      <dl aria-label="Fixed starting loadout" className="route-fixed-loadout-facts">
+        <div>
+          <dt>Weapon</dt>
+          <dd>{weapon?.label ?? fixedWeaponKey}, no Aspect</dd>
+        </div>
+        <div>
+          <dt>Starting Arcana</dt>
+          <dd>None</dd>
+        </div>
+        <div>
+          <dt>Starting Fear</dt>
+          <dd>None</dd>
+        </div>
+        <div>
+          <dt>Starting keepsake</dt>
+          <dd>None</dd>
+        </div>
+        <div>
+          <dt>Starting reward</dt>
+          <dd>None</dd>
+        </div>
+      </dl>
+      <p className="panel-description">
+        Experimental: Fresh File rules are only partly modeled, and it cannot be sent to the game
+        yet.
+      </p>
+    </div>
+  );
+}
+
+function MatureRouteLoadout({
+  authoredRoute,
+  catalog,
+  interactions,
+  workspaceRoute,
+}: {
+  readonly authoredRoute: ProjectDocument['route'];
+  readonly catalog: Catalog;
+  readonly interactions: WorkspaceInteractionCatalog;
+  readonly workspaceRoute: WorkspaceRoute;
+}) {
+  const dispatch = useAppDispatch();
+  const startingReward = workspaceRoute.startingReward;
+  if (startingReward === undefined)
+    throw new Error(`Missing starting reward control for ${workspaceRoute.routeKey}`);
+  const weaponKey = authoredRoute.loadout.weaponKey;
+  const aspectKey = authoredRoute.loadout.aspectKey;
+  const weapon = weaponKey === null ? undefined : catalog.weapons.byKey[weaponKey];
+  if (weapon === undefined || aspectKey === null)
+    throw new Error(`Missing weapon ${String(weaponKey)}`);
   const derivedLoadout = deriveRouteLoadout(catalog, authoredRoute.loadout);
   const arcanaCards = catalog.arcanaCards.values;
   const fearVows = fearVowGridOrder.flatMap((key) => {
@@ -133,51 +247,14 @@ export function RouteOverview({
     | undefined;
   const [dialog, setDialog] = useState<'Arcana' | 'Fear'>();
   return (
-    <section
-      className="route-overview"
-      {...findingTarget(workspaceRoute.marker.address)}
-      tabIndex={-1}
-    >
-      <header className="panel-heading">
-        <h2 className="eyebrow route-loadout-heading">{navigation.label} Loadout</h2>
-        <div className="panel-heading-actions">
-          <StatusBadge status={feedback.status} />
-          <FindingCount count={feedback.findingCount} label={`${label} findings`} />
-          <span className="neutral-status">{routeExtent}</span>
-        </div>
-      </header>
-      <div className="route-scope field-control field-control-inline">
-        <span>Plan up to</span>
-        <div className="route-prefix-options" role="radiogroup" aria-label="Biomes to configure">
-          {navigation.biomePanels.map((biome, index) => (
-            <label key={biome.biomeKey} title={`Through ${biome.label}`}>
-              <input
-                type="radio"
-                name={`${workspaceRoute.routeKey}-configured-prefix`}
-                value={index + 1}
-                checked={configuredBiomeCount === index + 1}
-                onChange={() =>
-                  dispatch(
-                    authoredProjectCommandDispatched({
-                      kind: 'ConfigureRoutePrefix',
-                      route: createRouteAddress(workspaceRoute.routeKey),
-                      configuredBiomeCount: index + 1,
-                    }),
-                  )
-                }
-              />
-              {biome.label}
-            </label>
-          ))}
-        </div>
-      </div>
+    <>
       <div className="route-loadout-panel">
         <div className="route-loadout-controls">
           <RouteWeaponPicker
             catalog={catalog}
             id={`${workspaceRoute.routeKey}-weapon-aspect`}
             weaponKey={weapon.key}
-            aspectKey={authoredRoute.loadout.aspectKey}
+            aspectKey={aspectKey}
             onSelect={(weaponKey, aspectKey) =>
               dispatch(
                 authoredProjectCommandDispatched({
@@ -391,12 +468,12 @@ export function RouteOverview({
       </div>
       <div className="route-configuration">
         <RewardControlEditor
-          control={workspaceRoute.startingReward}
+          control={startingReward}
           idPrefix={`${workspaceRoute.routeKey}-starting-reward`}
           interactions={interactions}
           label="Starting reward"
         />
       </div>
-    </section>
+    </>
   );
 }

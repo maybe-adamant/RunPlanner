@@ -1,3 +1,4 @@
+import { resolveBiomeStart } from '../../route-profile';
 import type { Catalog } from '../../../catalog-schema';
 import { createInitialExitDecision } from '../../batchState';
 import {
@@ -80,12 +81,10 @@ export function createStart(
 ): ProjectDocument {
   if (located.plan.topology !== null)
     failCommand(command, 'topology already has a start occurrence');
-  const gameName =
-    located.layout.start.kind === 'authoredChoice'
-      ? command.gameName
-      : located.layout.start.roomGameName;
-  if (located.layout.start.kind === 'authoredChoice') {
-    if (gameName === undefined || !located.layout.start.roomGameNames.includes(gameName)) {
+  const start = resolveBiomeStart(catalog, located.routeKey, located.layout);
+  const gameName = start.kind === 'authoredChoice' ? command.gameName : start.roomGameName;
+  if (start.kind === 'authoredChoice') {
+    if (gameName === undefined || !start.roomGameNames.includes(gameName)) {
       failCommand(command, 'gameName must select one declared authored start');
     }
   } else if (command.gameName !== undefined) {

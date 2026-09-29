@@ -39,8 +39,10 @@ const fRoomDeclarations: readonly RawRoomDeclaration[] = [
     exits: [{ index: 1, type: 'ErebusExitDoor' }],
     incomingReward: { kind: 'none' },
     enteredRewardStoreHistory: { kind: 'resolvedOffer' },
+    // OpeningEmpty is forced while Apollo is unused, which is always true on a fresh profile.
     entryContextualEncounterRules: [
       { routeKey: 'Dream', position: 'every', encounterDefinitionKey: 'OpeningEmpty' },
+      { routeKey: 'FreshFile', position: 'first', encounterDefinitionKey: 'OpeningEmpty' },
     ],
     encounterEnvelopeKey: 'SingleEncounter',
     encounterSlotBindings: [

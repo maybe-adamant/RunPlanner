@@ -5,7 +5,11 @@ import { resolveRoutePosition } from '../../src/authored-project/route-context';
 import { createArcanaFearState, type ArcanaFearState } from '../../src/simulation/arcana-fear';
 import { createRouteStartHistoryView } from '../../src/simulation/history/fold';
 import type { KeepsakeState } from '../../src/simulation/keepsakes/state';
-import type { RewardHistoryState, SaveFileGodHistory } from '../../src/reward-kernel';
+import {
+  createRewardHistoryState,
+  type RewardHistoryState,
+  type SaveFileGodHistory,
+} from '../../src/reward-kernel';
 import type { StygianWellRunState } from '../../src/simulation/commerce/stygian-well';
 import { createInitialSimulationState } from '../../src/simulation/state/construction';
 import type { SimulationState } from '../../src/simulation/state/model';
@@ -50,7 +54,7 @@ export interface TraitFrontierOverrides {
   readonly itineraryBiomeKeys?: readonly string[];
   /** Reaches the nth itinerary biome, which owns that acquisition ordinal. */
   readonly acquisitionOrdinal?: number;
-  readonly loadout?: { readonly weaponKey: string; readonly aspectKey: string };
+  readonly loadout?: { readonly weaponKey: string | null; readonly aspectKey: string | null };
   readonly startingKeepsakeKey?: string;
   readonly arcanaFear?: ArcanaFearState;
   readonly keepsakes?: KeepsakeState;
@@ -92,12 +96,16 @@ export function traitFrontierState(
       routePosition: resolveRoutePosition(catalog, { routeKey, itineraryBiomeKeys }, biomeKey),
       historyView: createRouteStartHistoryView(),
     }),
-    overrides.saveFileGodHistory ?? 'mature',
   );
   const reached = replaceSimulationTraitHistory(initial, traitHistory);
   return Object.freeze({
     ...reached,
     ...(overrides.keepsakes === undefined ? {} : { keepsakes: overrides.keepsakes }),
+    ...(overrides.saveFileGodHistory === undefined
+      ? {}
+      : {
+          rewardHistory: createRewardHistoryState(catalog.rewards, overrides.saveFileGodHistory),
+        }),
     ...(overrides.rewardHistory === undefined ? {} : { rewardHistory: overrides.rewardHistory }),
     ...(overrides.stygianWell === undefined
       ? {}

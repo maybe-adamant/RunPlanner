@@ -1,3 +1,4 @@
+import { biomeStartRoomGameNames, resolveBiomeStart } from '../route-profile';
 import type { BiomeLayout, Catalog, RoomDeclaration } from '../../catalog-schema';
 import { createOccurrenceId } from '../addresses';
 import type { BiomeTopology, OccurrenceId, RoomOccurrence, RouteLoadout } from '../model';
@@ -118,12 +119,10 @@ export function createDefaultStartTopology(
   routePosition: ResolvedRoutePosition,
   loadout: RouteLoadout,
 ): BiomeTopology | null {
-  const gameName =
-    layout.start.kind === 'fixedAuthored'
-      ? layout.start.roomGameName
-      : layout.start.roomGameNames.length === 1
-        ? layout.start.roomGameNames[0]
-        : undefined;
+  const startNames = biomeStartRoomGameNames(
+    resolveBiomeStart(catalog, routePosition.routeKey, layout),
+  );
+  const gameName = startNames.length === 1 ? startNames[0] : undefined;
   if (gameName === undefined) return null;
   const declaration = catalog.rooms.byKey[gameName];
   if (declaration === undefined) throw new Error(`unknown declared start room ${gameName}`);

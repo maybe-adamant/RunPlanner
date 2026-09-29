@@ -57,9 +57,10 @@ export function settleMoonBeamPathPoints(
   catalog: Catalog,
   branch: RewardBranchState,
   selectedDisposition: TraitSelectedDisposition | undefined,
-  currentKeepsakeKey: string,
+  currentKeepsakeKey: string | null,
 ): RewardBranchState {
   return selectedDisposition?.kind === 'advanceCurrentKeepsake' &&
+    currentKeepsakeKey !== null &&
     catalog.keepsakes.byKey[currentKeepsakeKey]?.effect?.kind === 'moonBeam'
     ? bankPathPoints(branch, 2)
     : branch;

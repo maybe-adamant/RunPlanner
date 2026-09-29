@@ -1,6 +1,7 @@
 import type { Catalog, RoomDeclaration } from '../../catalog-schema';
 import type { RewardProducerBinding } from '../../reward-kernel/bindings';
 import type { ResolvedRoutePosition } from '../route-context';
+import { routeBindsRunStartReward } from '../route-profile';
 
 /**
  * Resolves the small contextual entry product at the one route-position
@@ -31,6 +32,8 @@ export function resolveEntryDeclaration(
 /** Complete declaration-owned entry contract after the route position is known. */
 export interface ResolvedEntryRoom {
   readonly declaration: RoomDeclaration;
+  /** Whether this entry binds the route-owned run-start reward. */
+  readonly runStartReward: boolean;
   readonly incomingRewardBinding: RewardProducerBinding;
   readonly lifecycleProfileKey?: string;
   /** The run-start producer's resolved store; it is not an entered-store history record. */
@@ -50,7 +53,8 @@ export function resolveEntryRoom(
   entry: boolean,
 ): ResolvedEntryRoom {
   const contextualDeclaration = resolveEntryDeclaration(declaration, routePosition);
-  if (!entry || !routePosition.isFirst)
+  const runStartReward = routeBindsRunStartReward(catalog, routePosition.routeKey);
+  if (!entry || !routePosition.isFirst || !runStartReward)
     return Object.freeze({
       declaration:
         entry && contextualDeclaration.enteredRewardStoreHistory.kind !== 'none'
@@ -59,6 +63,7 @@ export function resolveEntryRoom(
               enteredRewardStoreHistory: Object.freeze({ kind: 'none' as const }),
             })
           : contextualDeclaration,
+      runStartReward: false,
       incomingRewardBinding: contextualDeclaration.incomingReward,
       ...(entry
         ? {
@@ -74,6 +79,7 @@ export function resolveEntryRoom(
     throw new Error('run-start reward must declare one counted reward store');
   return Object.freeze({
     declaration: contextualDeclaration,
+    runStartReward: true,
     incomingRewardBinding: binding,
     lifecycleProfileKey:
       contextualDeclaration.encounterEnvelopeKey === 'EmptyEncounter'

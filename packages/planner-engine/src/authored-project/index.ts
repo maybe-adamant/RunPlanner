@@ -20,6 +20,7 @@ export type {
   StygianWellSlotKey,
 } from './model';
 export { resolveRoutePosition, type ResolvedRoutePosition } from './route-context';
+export { routeInitialProfile } from './route-profile';
 export {
   assessPublicDreamItinerary,
   type DreamItineraryAssessment,

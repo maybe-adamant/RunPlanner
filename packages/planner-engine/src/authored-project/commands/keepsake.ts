@@ -245,6 +245,7 @@ export function applyKeepsakeCommand(
       const route = document.route.routeKey === selection.routeKey ? document.route : undefined;
       if (
         route === undefined ||
+        route.loadout.startingKeepsakeKey === null ||
         catalog.keepsakes.byKey[route.loadout.startingKeepsakeKey]?.effect?.kind !==
           'experimentalHammer'
       )

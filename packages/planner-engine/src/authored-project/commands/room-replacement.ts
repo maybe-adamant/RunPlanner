@@ -1,3 +1,4 @@
+import { biomeStartRoomGameNames, resolveBiomeStart } from '../route-profile';
 import type { Catalog, RoomDeclaration } from '../../catalog-schema';
 import type {
   AuthoredAcquisitionSiteState,
@@ -407,10 +408,9 @@ export function applyRoomReplacementCommand(
     );
   }
   if (current.startOccurrenceId === occurrence.occurrenceId) {
-    const allowed =
-      located.layout.start.kind === 'authoredChoice'
-        ? located.layout.start.roomGameNames
-        : [located.layout.start.roomGameName];
+    const allowed = biomeStartRoomGameNames(
+      resolveBiomeStart(catalog, located.routeKey, located.layout),
+    );
     if (!allowed.includes(replacementRoom.gameName)) {
       failCommand(command, `${replacementRoom.gameName} is not a declared start room`);
     }

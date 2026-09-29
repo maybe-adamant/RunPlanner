@@ -239,8 +239,10 @@ export function presentRunState(
     }),
     keepsakes: Object.freeze({
       currentLabel:
-        catalog.keepsakes.byKey[snapshot.keepsakes.currentKey]?.label ??
-        snapshot.keepsakes.currentKey,
+        snapshot.keepsakes.currentKey === null
+          ? 'None'
+          : (catalog.keepsakes.byKey[snapshot.keepsakes.currentKey]?.label ??
+            snapshot.keepsakes.currentKey),
       chronology: Object.freeze(
         snapshot.keepsakes.history.map((entry) =>
           Object.freeze({

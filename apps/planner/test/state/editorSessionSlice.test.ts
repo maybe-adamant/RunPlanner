@@ -44,6 +44,7 @@ describe('editor session navigation', () => {
         prebossRoomGameNameByBiomeKey: { F: 'F_PreBoss01' },
         postbossRoomGameNamesByOrdinal: [null],
       },
+      initialProfile: { kind: 'matureSave' },
     };
     const alternateCatalog: Catalog = {
       ...catalog,

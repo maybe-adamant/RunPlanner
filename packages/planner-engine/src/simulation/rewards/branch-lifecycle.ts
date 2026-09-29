@@ -4,7 +4,7 @@ import {
   createKeepsakeEquipResultAddress,
   createRouteStartKeepsakeSelectionAddress,
 } from '../../authored-project/addresses';
-import type { AuthoredKeepsakeEquipResults } from '../../authored-project/model';
+import type { AuthoredKeepsakeEquipResults, RouteLoadout } from '../../authored-project/model';
 
 import { beginBiomeRewardHistory, beginCurrentRoomRewardHistory } from '../../reward-kernel';
 
@@ -68,25 +68,17 @@ export function initializeRewardBranches(
   initialBranches: readonly RewardBranch[] | undefined,
   initialArcanaFear: ArcanaFearState | undefined,
   catalog: Catalog,
-  startingKeepsakeKey: string,
+  startingKeepsakeKey: string | null,
   startingKeepsakeEquipResults: AuthoredKeepsakeEquipResults | undefined,
   routeKey: string,
-  loadout: {
-    readonly weaponKey: string;
-    readonly aspectKey: string;
-    readonly aspectHexTree?: import('../../authored-project/traits/state').AuthoredHexTreeConfiguration;
-  },
+  loadout: Pick<RouteLoadout, 'weaponKey' | 'aspectKey' | 'aspectHexTree'>,
   reached: {
     readonly routePosition: ResolvedRoutePosition;
     readonly historyView: HistoryStateView;
   },
 ): readonly RewardBranchState[] {
   if (initialBranches === undefined) {
-    if (
-      initialArcanaFear === undefined ||
-      catalog === undefined ||
-      startingKeepsakeKey === undefined
-    )
+    if (initialArcanaFear === undefined || catalog === undefined)
       throw new Error('initial branch state is required');
     const state: SimulationState = createInitialSimulationState(
       catalog,
@@ -94,8 +86,6 @@ export function initializeRewardBranches(
       startingKeepsakeKey,
       initialArcanaFear,
       reached,
-      // Every supported route starts from a mature save file.
-      'mature',
     );
     const branch = Object.freeze({
       state,
@@ -108,52 +98,17 @@ export function initializeRewardBranches(
       loadout.aspectKey === 'SuitHexAspect' && loadout.aspectHexTree !== undefined
         ? installHexTree(catalog, branch, 'SpellMoonBeamTrait', loadout.aspectHexTree)
         : branch;
-    const pressured = applyMoonBeamEquip(
-      catalog,
-      applyOlympianRewardPressureEquip(catalog, initialWithHex, startingKeepsakeKey),
-      startingKeepsakeKey,
-      catalog.keepsakes.byKey[startingKeepsakeKey]?.rank,
-    );
-    const pomApplied = applyJeweledPomEquipResult(
-      catalog,
-      pressured,
-      startingKeepsakeKey,
-      startingKeepsakeEquipResults,
-      createKeepsakeEquipResultAddress(
-        createRouteStartKeepsakeSelectionAddress(routeKey),
-        'jeweledPom',
-      ),
-      0,
-    );
-    const embryoApplied =
-      startingKeepsakeKey === 'RandomBlessingKeepsake' &&
-      startingKeepsakeEquipResults?.transcendentEmbryo !== undefined
-        ? applyTranscendentEmbryoEquipResult(
+    const initialized =
+      startingKeepsakeKey === null
+        ? initialWithHex
+        : applyStartingKeepsakeEquip(
             catalog,
-            pomApplied,
+            initialWithHex,
             startingKeepsakeKey,
-            startingKeepsakeEquipResults.transcendentEmbryo,
-            createKeepsakeEquipResultAddress(
-              createRouteStartKeepsakeSelectionAddress(routeKey),
-              'transcendentEmbryo',
-            ),
-            0,
-            'ordinary',
-            catalog.keepsakes.byKey[startingKeepsakeKey]?.rank ?? 'Epic',
+            startingKeepsakeEquipResults,
+            routeKey,
             loadout,
-          )
-        : pomApplied;
-    const initialized = applyExperimentalHammerEquipResult(
-      catalog,
-      embryoApplied,
-      startingKeepsakeKey,
-      startingKeepsakeEquipResults,
-      createKeepsakeEquipResultAddress(
-        createRouteStartKeepsakeSelectionAddress(routeKey),
-        'experimentalHammer',
-      ),
-      0,
-    );
+          );
     const traitHistory = recordAspectStartingTrait(
       catalog,
       initialized.state.traitHistory,
@@ -201,4 +156,61 @@ export function publicRewardBranch(branch: RewardBranchState): RewardBranch {
     events: branch.events,
     processedThroughHistorySequence: branch.processedThroughHistorySequence,
   });
+}
+
+/** The ordinary route-start keepsake's immediate equip transitions. */
+function applyStartingKeepsakeEquip(
+  catalog: Catalog,
+  branch: RewardBranchState,
+  startingKeepsakeKey: string,
+  startingKeepsakeEquipResults: AuthoredKeepsakeEquipResults | undefined,
+  routeKey: string,
+  loadout: Pick<RouteLoadout, 'aspectKey'>,
+): RewardBranchState {
+  const pressured = applyMoonBeamEquip(
+    catalog,
+    applyOlympianRewardPressureEquip(catalog, branch, startingKeepsakeKey),
+    startingKeepsakeKey,
+    catalog.keepsakes.byKey[startingKeepsakeKey]?.rank,
+  );
+  const pomApplied = applyJeweledPomEquipResult(
+    catalog,
+    pressured,
+    startingKeepsakeKey,
+    startingKeepsakeEquipResults,
+    createKeepsakeEquipResultAddress(
+      createRouteStartKeepsakeSelectionAddress(routeKey),
+      'jeweledPom',
+    ),
+    0,
+  );
+  const embryoApplied =
+    startingKeepsakeKey === 'RandomBlessingKeepsake' &&
+    startingKeepsakeEquipResults?.transcendentEmbryo !== undefined
+      ? applyTranscendentEmbryoEquipResult(
+          catalog,
+          pomApplied,
+          startingKeepsakeKey,
+          startingKeepsakeEquipResults.transcendentEmbryo,
+          createKeepsakeEquipResultAddress(
+            createRouteStartKeepsakeSelectionAddress(routeKey),
+            'transcendentEmbryo',
+          ),
+          0,
+          'ordinary',
+          catalog.keepsakes.byKey[startingKeepsakeKey]?.rank ?? 'Epic',
+          loadout,
+        )
+      : pomApplied;
+  return applyExperimentalHammerEquipResult(
+    catalog,
+    embryoApplied,
+    startingKeepsakeKey,
+    startingKeepsakeEquipResults,
+    createKeepsakeEquipResultAddress(
+      createRouteStartKeepsakeSelectionAddress(routeKey),
+      'experimentalHammer',
+    ),
+    0,
+  );
 }

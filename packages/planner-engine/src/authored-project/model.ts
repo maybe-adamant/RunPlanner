@@ -7,7 +7,7 @@ import type {
   AuthoredTraitOffer,
 } from './traits/state';
 
-export const PROJECT_DOCUMENT_SCHEMA_VERSION = 89 as const;
+export const PROJECT_DOCUMENT_SCHEMA_VERSION = 90 as const;
 export type ResourceFamily = import('../catalog-schema').ResourceFamily;
 /** Route ownership supplies the route key; the selected host is exact and durable. */
 export interface ResourcePlacement {
@@ -54,8 +54,9 @@ export type AuthoredStartingRewardAcquisition = Omit<AuthoredRewardState, 'offer
 
 /** The narrow loadout surface consumed by room/reward materialization. */
 export interface RouteWeaponAspectLoadout {
-  readonly weaponKey: string;
-  readonly aspectKey: string;
+  /** Null only on a fresh profile, whose fixed aspectless Staff is not a selection. */
+  readonly weaponKey: string | null;
+  readonly aspectKey: string | null;
 }
 
 /** Complete persisted route configuration. */
@@ -64,8 +65,8 @@ export interface RouteLoadout extends RouteWeaponAspectLoadout {
   readonly startingReward: ResolvedRewardOffer | null;
   readonly manualArcanaKeys: readonly string[];
   readonly fearRanks: Readonly<Record<string, number>>;
-  /** Mandatory ordinary rack selection established before the route begins. */
-  readonly startingKeepsakeKey: string;
+  /** Mandatory on a mature save; a fresh profile starts without a keepsake. */
+  readonly startingKeepsakeKey: string | null;
   /** Dormant unless the route-start selection equips a supported keepsake. */
   readonly keepsakeEquipResults?: AuthoredKeepsakeEquipResults;
   /** Complete fixed Sky Fall Hex tree, present only for Aspect of Selene. */

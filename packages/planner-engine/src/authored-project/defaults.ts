@@ -7,7 +7,7 @@ import {
   type ResourcePlacements,
 } from './model';
 import { ProjectDocumentContractError } from './validation';
-import { createDefaultRouteLoadout } from './loadout';
+import { createInitialRouteLoadout } from './loadout';
 import { resolveRoutePosition } from './route-context';
 import { createDefaultStartTopology } from './topology/construction';
 
@@ -63,7 +63,7 @@ export function createProjectDocument(
     );
   }
   const routePlan = (() => {
-    const loadout = createDefaultRouteLoadout(catalog);
+    const loadout = createInitialRouteLoadout(catalog, route.key);
     return {
       routeKey: route.key,
       itineraryBiomeKeys: Object.freeze([...itineraryBiomeKeys]),

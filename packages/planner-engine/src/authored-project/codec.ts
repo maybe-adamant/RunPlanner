@@ -169,8 +169,20 @@ function decodeRoutePlan(
     ],
     `${path}.loadout`,
   );
-  const weaponKey = expectString(loadout.weaponKey, `${path}.loadout.weaponKey`);
-  const aspectKey = expectString(loadout.aspectKey, `${path}.loadout.aspectKey`);
+  const freshProfile = route.initialProfile.kind === 'freshFile';
+  // A fresh profile's actual Staff, keepsake absence and zero progression are
+  // fixed profile facts rather than authored selections.
+  const fixedAbsent = (field: string): null => {
+    if (loadout[field] !== null)
+      fail(`${path}.loadout.${field}`, 'must be null for a fresh profile');
+    return null;
+  };
+  const weaponKey = freshProfile
+    ? fixedAbsent('weaponKey')
+    : expectString(loadout.weaponKey, `${path}.loadout.weaponKey`);
+  const aspectKey = freshProfile
+    ? fixedAbsent('aspectKey')
+    : expectString(loadout.aspectKey, `${path}.loadout.aspectKey`);
   const startingReward =
     loadout.startingReward === null
       ? null
@@ -185,16 +197,21 @@ function decodeRoutePlan(
   ) {
     fail(`${path}.loadout.startingReward.rewardType`, 'is not allowed by the run-start binding');
   }
-  const startingKeepsakeKey = expectString(
-    loadout.startingKeepsakeKey,
-    `${path}.loadout.startingKeepsakeKey`,
-  );
-  if (catalog.keepsakes.byKey[startingKeepsakeKey] === undefined)
+  if (freshProfile && startingReward !== null)
+    fail(`${path}.loadout.startingReward`, 'must be null for a fresh profile');
+  const startingKeepsakeKey = freshProfile
+    ? fixedAbsent('startingKeepsakeKey')
+    : expectString(loadout.startingKeepsakeKey, `${path}.loadout.startingKeepsakeKey`);
+  if (startingKeepsakeKey !== null && catalog.keepsakes.byKey[startingKeepsakeKey] === undefined)
     fail(`${path}.loadout.startingKeepsakeKey`, `unknown keepsake ${startingKeepsakeKey}`);
-  const weapon = catalog.weapons.byKey[weaponKey];
-  if (weapon === undefined) fail(`${path}.loadout.weaponKey`, `unknown weapon ${weaponKey}`);
-  if (!weapon.aspectKeys.includes(aspectKey)) {
-    fail(`${path}.loadout.aspectKey`, `${aspectKey} does not belong to ${weaponKey}`);
+  if (freshProfile && loadout.keepsakeEquipResults !== undefined)
+    fail(`${path}.loadout.keepsakeEquipResults`, 'is not supported by a fresh profile');
+  if (weaponKey !== null && aspectKey !== null) {
+    const weapon = catalog.weapons.byKey[weaponKey];
+    if (weapon === undefined) fail(`${path}.loadout.weaponKey`, `unknown weapon ${weaponKey}`);
+    if (!weapon.aspectKeys.includes(aspectKey)) {
+      fail(`${path}.loadout.aspectKey`, `${aspectKey} does not belong to ${weaponKey}`);
+    }
   }
   const manualArcanaKeys = expectArray(
     loadout.manualArcanaKeys,
@@ -234,6 +251,13 @@ function decodeRoutePlan(
       );
     fearRanks[vow.key] = rank;
   }
+  if (freshProfile && canonicalManualArcanaKeys.length > 0)
+    fail(`${path}.loadout.manualArcanaKeys`, 'must be empty for a fresh profile');
+  if (freshProfile) {
+    const ranked = fearVows.values.find((vow) => fearRanks[vow.key] !== 0);
+    if (ranked !== undefined)
+      fail(`${path}.loadout.fearRanks.${ranked.key}`, 'must be 0 for a fresh profile');
+  }
   const grasp = assessStartingArcanaGrasp(catalog, canonicalManualArcanaKeys, fearRanks);
   if (!grasp.legal) {
     fail(
@@ -243,6 +267,7 @@ function decodeRoutePlan(
   }
 
   const isSeleneAspect =
+    aspectKey !== null &&
     catalog.aspects.byKey[aspectKey]?.startingTrait?.traitKey === 'SpellMoonBeamTrait';
   const hasAspectHexTree = 'aspectHexTree' in loadout;
   const aspectHexTree = isSeleneAspect

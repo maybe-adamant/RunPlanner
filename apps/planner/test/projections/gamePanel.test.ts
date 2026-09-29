@@ -471,6 +471,15 @@ describe('Game panel projection', () => {
     expect(
       projectGamePlans(status, { kind: 'noProject' }, 'clean', catalog, now)?.unavailableReason,
     ).toBe('Open a project to send it to the game.');
+    const restricted = projectGamePlans(
+      status,
+      { kind: 'unavailable', reason: 'Not available for this route.' },
+      'clean',
+      catalog,
+      now,
+    );
+    expect(restricted?.unavailableReason).toBe('Not available for this route.');
+    expect(restricted?.rows.every((row) => row.action === null)).toBe(true);
     expect(
       projectGamePlans(
         gameModuleStatus({
@@ -573,6 +582,19 @@ describe('Game panel projection', () => {
         'Send to game',
         null,
         'Resolve this plan’s findings before sending it.',
+      ],
+      [
+        projectGameSendButton(
+          ready,
+          { ...mine, restriction: 'Not available for this route.' },
+          2,
+          'clean',
+          idle,
+        ),
+        'notSendable',
+        'Send to game',
+        null,
+        'Not available for this route.',
       ],
       [
         projectGameSendButton(ready, mine, null, 'clean', idle),

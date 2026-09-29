@@ -140,7 +140,7 @@ export function assessExperimentalHammerEquipResult(
 
 export interface TranscendentEmbryoBlessingContext {
   readonly routeKey?: string;
-  readonly aspectKey?: string;
+  readonly aspectKey?: string | null;
   readonly removedBlessingAcquisitionIdentity?: string;
 }
 

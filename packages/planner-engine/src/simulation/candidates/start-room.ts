@@ -1,3 +1,4 @@
+import { biomeStartRoomGameNames, resolveBiomeStart } from '../../authored-project/route-profile';
 import type { Catalog } from '../../catalog-schema';
 import type { BiomeAddress, OccurrenceAddress } from '../../authored-project/addresses';
 import type { ProjectDocument } from '../../authored-project/model';
@@ -37,10 +38,9 @@ export function evaluateStartRoomCandidate(
   ) {
     throw new CandidateEvaluationContractError('start-room owner is not the topology start');
   }
-  const supportedGameNames =
-    layout.start.kind === 'authoredChoice'
-      ? layout.start.roomGameNames
-      : Object.freeze([layout.start.roomGameName]);
+  const supportedGameNames = Object.freeze(
+    biomeStartRoomGameNames(resolveBiomeStart(catalog, query.owner.routeKey, layout)),
+  );
   return Object.freeze({
     kind: 'startRoom',
     result: Object.freeze({

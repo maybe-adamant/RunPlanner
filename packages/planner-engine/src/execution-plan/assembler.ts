@@ -264,13 +264,16 @@ export function assembleExecutionProduct({
       }),
     ),
   });
+  const startingKeepsakeKey = assembly.project.route.loadout.startingKeepsakeKey;
+  if (startingKeepsakeKey === null)
+    throw new CompilerError('unsupportedRoute', 'execution requires a starting keepsake');
   const product = Object.freeze({
     catalogVersion: evaluation.catalogVersion,
     projectId: evaluation.projectId,
     routeKey,
     startingLoadout,
     startingKeepsake: Object.freeze({
-      keepsakeKey: assembly.project.route.loadout.startingKeepsakeKey,
+      keepsakeKey: startingKeepsakeKey,
       ...(startingEquipResults === undefined ? {} : { equipResults: startingEquipResults }),
     }),
     extent,

@@ -8,6 +8,7 @@ import {
   createRouteStartKeepsakeSelectionAddress,
   createStartingRewardAddress,
   createDefaultAuthoredHexTree,
+  routeInitialProfile,
   transitionAuthoredHexTreeLayout,
   semanticAddressKey,
   type SemanticAddress,
@@ -350,15 +351,21 @@ export function createStructuredWorkspaceProjection(
         throw new Error(`Missing authored route ${routeSource.routeKey}`);
       const routeStartKeepsake = createRouteStartKeepsakeSelectionAddress(routeSource.routeKey);
       const routeStartingReward = createStartingRewardAddress(routeSource.routeKey);
-      keepsakeSelectionControls.set(
-        semanticAddressKey(routeStartKeepsake),
-        Object.freeze({
-          address: routeStartKeepsake,
-          selectedKeepsakeKey: authoredRoute.loadout.startingKeepsakeKey,
-        }),
-      );
+      // A fresh profile's loadout is fixed: no keepsake, equip result or starting-reward control.
+      const startingKeepsakeKey = authoredRoute.loadout.startingKeepsakeKey;
+      const fixedLoadout = routeInitialProfile(catalog, routeSource.routeKey).kind === 'freshFile';
+      if (startingKeepsakeKey !== null)
+        keepsakeSelectionControls.set(
+          semanticAddressKey(routeStartKeepsake),
+          Object.freeze({
+            address: routeStartKeepsake,
+            selectedKeepsakeKey: startingKeepsakeKey,
+          }),
+        );
       const routeStartEffect =
-        catalog.keepsakes.byKey[authoredRoute.loadout.startingKeepsakeKey]?.effect;
+        startingKeepsakeKey === null
+          ? undefined
+          : catalog.keepsakes.byKey[startingKeepsakeKey]?.effect;
       if (
         routeStartEffect?.kind === 'jeweledPom' ||
         routeStartEffect?.kind === 'experimentalHammer' ||
@@ -585,8 +592,11 @@ export function createStructuredWorkspaceProjection(
         retainedSourceMismatch: false,
         rewardTypes: runStartBinding.allowedRewardTypes,
       });
-      appendUniqueRewardControls(rewardControls, [startingReward]);
-      const activeAspect = catalog.aspects.byKey[authoredRoute.loadout.aspectKey];
+      if (!fixedLoadout) appendUniqueRewardControls(rewardControls, [startingReward]);
+      const activeAspect =
+        authoredRoute.loadout.aspectKey === null
+          ? undefined
+          : catalog.aspects.byKey[authoredRoute.loadout.aspectKey];
       const aspectHex = catalog.hexes.byKey['SpellMoonBeamTrait'];
       const aspectHexTree =
         activeAspect?.startingTrait?.traitKey === 'SpellMoonBeamTrait' && aspectHex !== undefined
@@ -643,7 +653,7 @@ export function createStructuredWorkspaceProjection(
         ),
       ]);
       const route = Object.freeze({
-        startingReward,
+        ...(fixedLoadout ? {} : { startingReward }),
         startingArcana: Object.freeze(
           createArcanaFearState(catalog, project.route.loadout).arcana.active.map(
             ({ key, rarity }) => Object.freeze({ key, rarity }),

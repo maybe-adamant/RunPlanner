@@ -394,6 +394,16 @@ authorship rather than masking defects with editor filters.
 | Eris                     | Observed health-condition checkbox in G/H/I intro → required interaction → gift and repeat-prevention state. 20 Ashes/50 Psyche/300 Bones, NPC exemptions. Checkbox is not an independent gift or spawn override; no health simulator.                                                                                                                                                                                                                                                                                             |
 | Bounded additional audit | Disposition RandomStatusBoon's historically unlocked status pool if it affects a modeled consumer; do not add generic dialogue history for combat-only effects.                                                                                                                                                                                                                                                                                                                                                                    |
 
+Route-identity note: Chaos Enshrouded's `routeKey: 'Underworld'` offer
+requirement is false on the `FreshFile` route; Chaos is unreachable on a fresh
+profile, so this stays bounded until the Chaos exclusion lands.
+
+Hammer note: Hammer compatibility is an aspect list, so an aspectless Staff
+fails it though natively legal (`StaffDoubleAttackTrait` only requires
+`IsNone { StaffRaiseDeadAspect }`). `WeaponUpgrade` is not route-gated, so a
+Hammer can be authored on Fresh File today and reports `wrongHammerLoadout`;
+bounded until the Hammer exclusion lands.
+
 ### Execution enablement slice
 
 Plan the bilateral protocol update after the real authored/model shape exists.

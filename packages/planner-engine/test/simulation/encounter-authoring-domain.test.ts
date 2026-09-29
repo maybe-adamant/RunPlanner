@@ -40,6 +40,7 @@ import {
 } from '@run-planner/test-fixtures/underworld';
 import { loadSurfaceNOPQProject, oBiome, oOccurrenceIds } from '@run-planner/test-fixtures/surface';
 import { authorLegalTraitOffers } from '@run-planner/test-fixtures/shared';
+import { loadUnderworldGeneratedCompositionCheckpoint } from '@run-planner/test-fixtures/checkpoints/underworld';
 
 describe('encounter choice identity context', () => {
   it('prepares Erebus fixed identities from effective Shadow after prior Black Night suppression', () => {
@@ -292,5 +293,33 @@ describe('encounter phase authored domains', () => {
     );
 
     expect(phases.map((phase) => phase.slotKey)).toEqual(['Passive', 'Cage01', 'Cage02']);
+  });
+
+  it('hides Fresh File generated customization unless a retained value needs repair', () => {
+    const value = occurrence(
+      loadUnderworldGeneratedCompositionCheckpoint(),
+      'Underworld',
+      'F',
+      'golden-f-b3-e1',
+    );
+    const { customizationByPhase: _retained, ...uncustomized } = value.encounters;
+    void _retained;
+    const generated = (routeKey: string, encounters: RoomOccurrence['encounters']) =>
+      encounterPhaseAuthoringDomainForRoom(
+        catalog,
+        createBiomeAddress(routeKey, 'F'),
+        roomFor(value),
+        { kind: 'occurrence', occurrenceId: value.occurrenceId },
+        encounters,
+        { preparedDefinitionKeysBySlot: { Encounter: 'GeneratedF' } },
+      )[0]?.customization?.find((decision) => decision.selection.kind === 'generated');
+
+    expect(generated('Underworld', uncustomized)).toMatchObject({ valueSupported: true });
+    expect(generated('FreshFile', uncustomized)).toBeUndefined();
+    expect(generated('Underworld', value.encounters)).toMatchObject({ valueSupported: true });
+    expect(generated('FreshFile', value.encounters)).toMatchObject({
+      value: value.encounters.customizationByPhase?.Encounter?.generatedComposition,
+      valueSupported: false,
+    });
   });
 });

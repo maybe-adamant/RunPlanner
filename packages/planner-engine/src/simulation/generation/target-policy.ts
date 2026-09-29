@@ -1,3 +1,4 @@
+import { biomeStartRoomGameNames } from '../../authored-project/route-profile';
 import type {
   BiomeLayout,
   Catalog,
@@ -623,11 +624,8 @@ function normalCandidatePool(
       `catalog does not provide ${layout.biomeKey} normal candidate structure`,
     );
   }
-  const startNames = new Set(
-    layout.start.kind === 'authoredChoice'
-      ? layout.start.roomGameNames
-      : [layout.start.roomGameName],
-  );
+  // Every declared opening is a start room, never a generated door target.
+  const startNames = new Set(biomeStartRoomGameNames(layout.start));
   return Object.freeze(
     catalog.rooms.values.filter(
       (room) =>

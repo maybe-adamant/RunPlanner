@@ -13,6 +13,9 @@ export function executionStartingLoadout(
       'opening room lacks start-loadout evidence',
     );
   const loadout = assembly.project.route.loadout;
+  const { weaponKey, aspectKey } = loadout;
+  if (weaponKey === null || aspectKey === null)
+    throw new CompilerError('unsupportedRoute', 'execution requires an authored weapon and aspect');
   if (openingSnapshot.arcanaFear.arcana.active.some((card) => card.origin === 'temporary'))
     throw new CompilerError(
       'executionCoverageMissing',
@@ -58,8 +61,8 @@ export function executionStartingLoadout(
     });
   }
   return Object.freeze({
-    weaponKey: loadout.weaponKey,
-    aspectKey: loadout.aspectKey,
+    weaponKey,
+    aspectKey,
     arcana: Object.freeze(
       openingSnapshot.arcanaFear.arcana.active
         .filter(

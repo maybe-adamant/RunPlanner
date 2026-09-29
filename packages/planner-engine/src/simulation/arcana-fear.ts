@@ -11,7 +11,7 @@ export type ArcanaActivationOrigin = 'manual' | 'automatic' | 'temporary';
 
 /** F encounter preparation consumes the agreed effective Vow, including prior suppression. */
 export function attestEffectiveShadowRank(
-  loadout: RouteLoadout,
+  loadout: Pick<RouteLoadout, 'fearRanks'>,
   branches?: readonly { readonly state: { readonly arcanaFear: ArcanaFearState } }[],
 ): number {
   if (branches === undefined) return loadout.fearRanks.MinibossCountShrineUpgrade ?? 0;
@@ -358,7 +358,10 @@ function canAppendEvidence(state: ArcanaFearState, evidence: ArcanaFearEvidence)
 }
 
 /** Seeds route-local state exactly once. Temporary activation never re-runs automatic rules. */
-export function createArcanaFearState(catalog: Catalog, loadout: RouteLoadout): ArcanaFearState {
+export function createArcanaFearState(
+  catalog: Catalog,
+  loadout: Pick<RouteLoadout, 'manualArcanaKeys' | 'fearRanks'>,
+): ArcanaFearState {
   const derived = deriveRouteLoadout(catalog, loadout);
   const manual = new Set(loadout.manualArcanaKeys);
   return Object.freeze({

@@ -20,7 +20,8 @@ import type { TraitHistoryState } from '../traits';
 
 export interface SimulationEquipmentState {
   readonly weaponKey: string;
-  readonly aspectKey: string;
+  /** Null for a fresh profile's aspectless Staff. */
+  readonly aspectKey: string | null;
 }
 
 export interface PendingShopTravelRefillState {

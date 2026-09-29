@@ -540,8 +540,11 @@ export interface WorkspaceRouteRailBiome {
 }
 
 export interface WorkspaceRoute {
-  /** The route-owned offer; any acquisition payload remains on the first entry Timeline. */
-  readonly startingReward: WorkspaceRewardControl;
+  /**
+   * The route-owned offer; any acquisition payload remains on the first entry Timeline.
+   * Absent when the route's save profile starts without a reward.
+   */
+  readonly startingReward?: WorkspaceRewardControl;
   readonly startingArcana: readonly { readonly key: string; readonly rarity: string }[];
   readonly aspectHexTree?: WorkspaceAspectHexTreeControl;
   readonly biomes: readonly WorkspaceBiome[];

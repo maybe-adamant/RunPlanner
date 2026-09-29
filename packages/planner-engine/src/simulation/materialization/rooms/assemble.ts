@@ -96,7 +96,7 @@ export function materializeAuthoredRoom(
       : authoredMaterializer(context.room.mode.templateKey, context.room.gameName)(context);
   let routeStartIncoming:
     import('../../../authored-project/model').AuthoredRewardState | null | undefined;
-  if (context.entry === true && context.routePosition.isFirst) {
+  if (context.entry === true && resolvedEntry.runStartReward) {
     if (context.loadout === undefined || !('startingReward' in context.loadout))
       fail(`${context.room.gameName} entry requires a complete route loadout`);
     routeStartIncoming =

@@ -118,8 +118,8 @@ export function resolvedStoreKey(
  * run facts when assessment joins this descriptor.
  *
  * The loadout check is a deliberate reachability precondition, not a read: a
- * materialized reward may only exist where the route declares a weapon and
- * aspect, and an incomplete project must fail here rather than publish a
+ * materialized reward may only exist where the route resolves a loadout
+ * (authored, or fixed by its save profile), and an incomplete project must fail here rather than publish a
  * reward screen built on an unauthored loadout. It stays after the loadout
  * stopped feeding the returned description.
  */
@@ -129,8 +129,8 @@ function traitContextForOffer(
 ): TraitOfferSourceContext {
   if (
     context.loadout === undefined ||
-    context.loadout.weaponKey.length === 0 ||
-    context.loadout.aspectKey.length === 0
+    context.loadout.weaponKey?.length === 0 ||
+    context.loadout.aspectKey?.length === 0
   ) {
     fail(`${context.room.gameName} reward materialization requires a route loadout`);
   }
@@ -181,15 +181,15 @@ export function materializeRouteStartEntry(
     fail(`${context.room.gameName} entry requires a complete route loadout`);
   const loadout = context.loadout;
   const binding = resolvedEntry.incomingRewardBinding;
-  if (context.routePosition.isFirst && binding.kind !== 'countedChoice')
+  if (resolvedEntry.runStartReward && binding.kind !== 'countedChoice')
     fail('run-start reward must be a counted choice');
-  const reward = context.routePosition.isFirst
+  const reward = resolvedEntry.runStartReward
     ? composeStartingReward(loadout.startingReward, context.occurrence.startingRewardAcquisition)
     : null;
   return Object.freeze({
     lifecycleProfileKey:
       resolvedEntry.lifecycleProfileKey ?? fail(`${context.room.gameName} entry has no lifecycle`),
-    ...(context.routePosition.isFirst && binding.kind === 'countedChoice'
+    ...(resolvedEntry.runStartReward && binding.kind === 'countedChoice'
       ? materializedIncomingReward(
           Object.freeze({
             ...context,
@@ -507,7 +507,7 @@ export function materializeShipCombatState(
   occurrence: RoomOccurrence,
   loadout: RouteWeaponAspectLoadout,
 ): MaterializedShipCombatState {
-  if (loadout.weaponKey.length === 0 || loadout.aspectKey.length === 0) {
+  if (loadout.weaponKey?.length === 0 || loadout.aspectKey?.length === 0) {
     fail(`${room.gameName} ShipCombat materialization requires a route loadout`);
   }
   if (occurrence.state.kind !== 'shipCombat') {

@@ -15,7 +15,7 @@ export function assertPublicProjectAdmission(catalog: Catalog, project: ProjectD
     }
     return;
   }
-  if (route.key !== 'Underworld' && route.key !== 'Surface') {
+  if (route.key !== 'Underworld' && route.key !== 'Surface' && route.key !== 'FreshFile') {
     throw new Error(`This application does not support opening ${route.label} projects`);
   }
 }

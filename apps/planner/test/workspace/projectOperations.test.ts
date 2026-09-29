@@ -313,6 +313,52 @@ describe('project profile operations', () => {
     });
   });
 
+  it('creates, saves and loads a Fresh File project but refuses to send it before compiling', async () => {
+    const profile = createProfileFixture();
+    const game = createFakeGameModuleHost();
+    const application = createApplication({
+      gameModuleHost: game.host,
+      profileFile: profile.adapter,
+    });
+    await expect(application.projectOperations.createNew('FreshFile')).resolves.toMatchObject({
+      status: 'success',
+    });
+    const created = selectPresentProject(application.store.getState());
+    expect(created?.route).toMatchObject({
+      routeKey: 'FreshFile',
+      itineraryBiomeKeys: ['F', 'G', 'H', 'I'],
+      loadout: { weaponKey: null, aspectKey: null, startingKeepsakeKey: null },
+    });
+    expect(created?.route.biomes[0]?.topology?.occurrences[0]?.gameName).toBe('F_Opening01');
+
+    const restriction = application.projectOperations.gamePublicationRestriction('FreshFile');
+    expect(restriction).toMatch(/^Fresh File plans can’t be sent to the game yet/);
+    expect(application.projectOperations.gamePublicationRestriction('Underworld')).toBeNull();
+    expect(application.projectOperations.inspectCurrentGamePlan()).toEqual({
+      kind: 'unavailable',
+      reason: restriction,
+    });
+    await expect(application.projectOperations.publishGame(1)).resolves.toEqual({
+      operation: 'publishGame',
+      status: 'failure',
+      message: restriction,
+    });
+    expect(game.published).toHaveLength(0);
+    // Refusing to send saves nothing on the way.
+    expect(profile.saves).toHaveLength(0);
+
+    await expect(application.projectOperations.saveProfile()).resolves.toMatchObject({
+      status: 'success',
+    });
+    const savedJson = profile.saves.at(-1)?.json;
+    expect(savedJson).toBe(encodeProjectDocument(created!));
+    profile.setLoadJson(savedJson!);
+    await expect(application.projectOperations.loadProfile()).resolves.toMatchObject({
+      status: 'success',
+    });
+    expect(selectPresentProject(application.store.getState())).toEqual(created);
+  });
+
   it('reports the host blockers when the established target is not ready', async () => {
     const blocked = gameModuleStatus({
       publicationBlockers: [
@@ -1357,7 +1403,7 @@ describe('project profile operations', () => {
 
     for (const json of [
       JSON.stringify({ ...current, schemaVersion: 8 }),
-      JSON.stringify({ ...current, schemaVersion: 90 }),
+      JSON.stringify({ ...current, schemaVersion: 91 }),
       JSON.stringify({ ...current, catalogVersion: 'stale-catalog-version' }),
     ]) {
       profile.setLoadJson(json);
@@ -1388,14 +1434,14 @@ describe('project profile operations', () => {
       operation: 'loadProfile',
       status: 'success',
       message:
-        'Migrated the profile to schema 89; retained encounter choices may need missing fields repaired.',
+        'Migrated the profile to schema 90; retained encounter choices may need missing fields repaired.',
     });
     legacy.schemaVersion = 87;
     profile.setLoadJson(JSON.stringify(legacy));
     await expect(application.projectOperations.loadProfile()).resolves.toEqual({
       operation: 'loadProfile',
       status: 'success',
-      message: 'Migrated the profile to schema 89.',
+      message: 'Migrated the profile to schema 90.',
     });
     const hubLegacy = JSON.parse(encodeProjectDocument(loadSurfaceNProject())) as {
       schemaVersion: number;
@@ -1415,7 +1461,7 @@ describe('project profile operations', () => {
       operation: 'loadProfile',
       status: 'success',
       message:
-        'Migrated the profile to schema 89; the Hub fountain use is placed before the first visit, so an Aromatic Phial target may need repair.',
+        'Migrated the profile to schema 90; the Hub fountain use is placed before the first visit, so an Aromatic Phial target may need repair.',
     });
 
     // A schema-88 Hub already has its authored fountain placement, so no repair is named.
@@ -1428,7 +1474,7 @@ describe('project profile operations', () => {
     await expect(application.projectOperations.loadProfile()).resolves.toEqual({
       operation: 'loadProfile',
       status: 'success',
-      message: 'Migrated the profile to schema 89.',
+      message: 'Migrated the profile to schema 90.',
     });
   });
 

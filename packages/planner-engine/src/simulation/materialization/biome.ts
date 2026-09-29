@@ -73,14 +73,17 @@ function fail(detail: string): never {
   throw new BiomeMaterializationContractError(detail);
 }
 
+/** A selection is a nonblank key, or null where the route's save profile fixes it. */
+function authoredOrAbsent(value: unknown): boolean {
+  return value === null || (typeof value === 'string' && value.length > 0);
+}
+
 function requireLoadout(context: BiomeMaterializationLoadout): BiomeMaterializationLoadout {
   if (
     context === null ||
     typeof context !== 'object' ||
-    typeof context.weaponKey !== 'string' ||
-    context.weaponKey.length === 0 ||
-    typeof context.aspectKey !== 'string' ||
-    context.aspectKey.length === 0 ||
+    !authoredOrAbsent(context.weaponKey) ||
+    !authoredOrAbsent(context.aspectKey) ||
     context.fearRanks === undefined
   ) {
     fail('public biome materialization requires a route weapon and aspect loadout');

@@ -16,7 +16,7 @@ import type { RawEncounterSlotBinding } from '../encounters/types';
 import type { RawCountedRewardBinding, RawRewardProducerBinding } from '../rewards/types';
 
 export interface RawEntryContextualEncounterRule {
-  readonly routeKey: 'Dream';
+  readonly routeKey: 'Dream' | 'FreshFile';
   readonly position: 'every' | 'first';
   readonly encounterDefinitionKey: string;
 }

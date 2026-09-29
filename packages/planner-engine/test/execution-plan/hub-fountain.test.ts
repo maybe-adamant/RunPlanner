@@ -32,6 +32,7 @@ import { loadSurfaceNPhialIntermediateFountainCheckpoint } from '@run-planner/te
 import phialFountainFixture from './fixtures/surface-n-phial-intermediate-fountain.execution.json';
 import { migrateProjectDocument as migrateProject87To88 } from '../../../../schema/migrate-project-87-to-88.js';
 import { migrateProjectDocument as migrateProject88To89 } from '../../../../schema/migrate-project-88-to-89.js';
+import { migrateProjectDocument as migrateProject89To90 } from '../../../../schema/migrate-project-89-to-90.js';
 
 const hub = createHubDecisionAddress(nBiome, 'hub');
 const fountain = createHubFountainAddress(nBiome, 'hub');
@@ -59,7 +60,7 @@ function migratedPhialProject(): ProjectDocument {
       delete decision.actions;
     }
   return parseProjectDocument(
-    JSON.stringify(migrateProject88To89(migrateProject87To88(legacy))),
+    JSON.stringify(migrateProject89To90(migrateProject88To89(migrateProject87To88(legacy)))),
     catalog,
   );
 }
