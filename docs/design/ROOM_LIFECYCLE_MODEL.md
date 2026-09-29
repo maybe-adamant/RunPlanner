@@ -812,6 +812,25 @@ non-counting. The mandatory-action scheduler reads the Opening declaration's
 exact profile, so a newly created Opening places its incoming pickup before
 `startEncounter` rather than applying the ordinary after-combat reward alias.
 
+### Eris at a Biome Intro
+
+On Fresh File, native `SpawnErisForCurse` places Eris in `G_Intro`, `H_Intro`
+and `I_Intro` as a room-required object while completed runs are at most 1, 4
+and 7, the hero lacks `ErisCurseTrait`, and `ErisCurseHealthThreshold` (no Death
+Defiance and health at most half) is false. Health is not simulated, so the
+spawn is the author's observation. When observed, the talk (`interactEris`)
+is a required action that applies `ErisCurseTrait` as a fixed direct trait
+grant, and her gift is a required pickup that depends on it. Both rank in the
+room's standard window before outgoing generation: exits unlock only after both
+required objects clear and `DoUnlockRoomExits` rolls the doors afterwards, so
+the gift's resources count toward that batch. The curse's combat effect is not
+modeled.
+
+The curse grant is route trait history. A later intro observation whose talk
+finds the curse already equipped applies nothing, drops no gift and reports
+`erisSpawnUnavailable` on that talk; the observation stays authored for repair.
+An intro without the observation derives no action and reports nothing.
+
 ### Ephyra Main Target
 
 ```text

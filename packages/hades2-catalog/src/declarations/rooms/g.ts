@@ -48,6 +48,13 @@ export const gRooms = [
     counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
     force: { kind: 'depthWindow', axis: 'biomeDepthCache', start: 0, deadline: 1 },
+    // RoomDataG.lua G_Intro `SpawnErisForCurse`: while completed runs <= 1.
+    erisHost: {
+      routeKey: 'FreshFile',
+      curseTraitKey: 'ErisCurseTrait',
+      giftRewardType: 'MetaCardPointsCommonDrop',
+      producerLifecycleKey: 'ErisCursePickup',
+    },
   },
   {
     gameName: 'G_Combat01',

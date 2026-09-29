@@ -5,6 +5,7 @@ import type {
   TraitOfferOwnerAddress,
 } from '../addresses';
 import { createAcquisitionSiteAddress, semanticAddressKey } from '../addresses';
+import { ERIS_GIFT_SITE_KEY } from './eris-gift';
 
 /** Collision-safe source-owned identity for the separately acquired replacement. */
 export function artificerReplacementEntryKey(
@@ -50,6 +51,7 @@ export function acquisitionSiteStorageKey(site: AcquisitionSiteAddress): string 
   return site.pointKey === 'roomExit' ||
     site.pointKey.startsWith('traitGenerated:') ||
     site.pointKey.startsWith('nemesisGenerated:') ||
+    site.pointKey === ERIS_GIFT_SITE_KEY ||
     site.pointKey === 'hermesShrineDelivery' ||
     site.pointKey.startsWith('seaStarDuplicate:')
     ? site.pointKey
@@ -66,7 +68,7 @@ export function acquisitionSiteFromStorageKey(
   // this parser only reconstructs the existing acquisition-site address.
   if (storageKey.startsWith('traitGenerated:'))
     return createAcquisitionSiteAddress(occurrence, storageKey);
-  if (storageKey.startsWith('nemesisGenerated:'))
+  if (storageKey.startsWith('nemesisGenerated:') || storageKey === ERIS_GIFT_SITE_KEY)
     return createAcquisitionSiteAddress(occurrence, storageKey);
   if (storageKey === 'hermesShrineDelivery')
     return createAcquisitionSiteAddress(occurrence, storageKey);

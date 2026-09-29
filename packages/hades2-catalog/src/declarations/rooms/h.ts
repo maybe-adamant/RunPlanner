@@ -87,6 +87,13 @@ export const hRooms = [
     counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
     force: { kind: 'depthWindow', axis: 'biomeDepthCache', start: 0, deadline: 1 },
+    // RoomDataH.lua H_Intro `SpawnErisForCurse`: while completed runs <= 4.
+    erisHost: {
+      routeKey: 'FreshFile',
+      curseTraitKey: 'ErisCurseTrait',
+      giftRewardType: 'MemPointsCommonDrop',
+      producerLifecycleKey: 'ErisCursePickup',
+    },
   },
   {
     gameName: 'H_Combat01',

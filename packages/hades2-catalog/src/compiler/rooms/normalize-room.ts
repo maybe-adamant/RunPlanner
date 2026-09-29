@@ -124,6 +124,7 @@ export function normalizeRoom(
       ? {}
       : { boonRarityOverride: features.boonRarityOverride }),
     ...(features.firstRunOffer === undefined ? {} : { firstRunOffer: features.firstRunOffer }),
+    ...(features.erisHost === undefined ? {} : { erisHost: features.erisHost }),
     ...(reward.prebossBatchPolicy === undefined
       ? {}
       : { prebossBatchPolicy: reward.prebossBatchPolicy }),

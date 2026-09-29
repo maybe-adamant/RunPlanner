@@ -1023,6 +1023,14 @@ Psyche, and Bones are independent concrete pickups beside Max Magick, Max
 Health, and Death Defiance; Psyche owns ordinary consumable/use and
 last-reward history but no counted-store membership.
 
+Eris's gift uses the `ErisCursePickup` producer: one required pickup generated
+at the `erisGift` site of a Fresh File intro by her talk. The host declares the
+gift (Ashes in G, Psyche in H, Bones in I); the producer carries the native
+overrides (20 Ashes, 300 Bones; H's native 50 Psyche is untracked and declares
+no amount), `resourceBonusExempt` for `NPCDrop`,
+`duplicationExempt` for `CanDuplicate = false` so Sea Star never duplicates it,
+and Artificer-blocking bindings for `MetaConversionEligible = false`.
+
 Resource quantity is a fact of the produced object, not of its acquisition.
 When a resource pickup spawns — an incoming reward at its encounter's end or
 start, a Ship wheel reward, Fields cages and optionals at entry, World Shop
@@ -1034,14 +1042,16 @@ the resource bonuses equipped then, rounded per object. The branch keeps that
 amount by room until the object is collected or the room is exited. Only
 producers with no earlier native spawn contact resolve at collection: Hermes
 deliveries, Nemesis results, Artificer replacements and Blind Box hidden loot,
-none of which grants Ashes or Bones. Each
+none of which grants a tracked resource. Eris's gift spawns natively through
+`GiveRandomConsumables` when her talk ends, but it is bonus-exempt, so its fixed
+override resolves identically at its collection. Each
 normal acquisition credits the stored amount to the reward history's
 `resourceGains`; a Sea Star-retained object keeps its amount for the duplicate.
 Time Piece and Artificer destroy the object without a credit, nothing debits
 gains, and a mature file starts at zero. Gains reach requirement contexts as
 the summed `resourceGains` record, so outgoing generation sees only
 acquisitions settled before its checkpoint. Only declared grants (Ashes and
-Bones) are tracked.
+Bones) are tracked; Psyche has no declared grant and is untracked, not zero.
 
 Normal acquisition, Time Piece, and Artificer are one mutually exclusive
 disposition on each exact acquisition role. Artificer is supported only for a

@@ -150,6 +150,8 @@ export interface RawRoomDeclaration {
   readonly boonRarityOverride?: import('@run-planner/engine/catalog-schema').BoonRarityOverride;
   /** Source `ForceLootTableFirstRun`/`ForceCommonLootFirstRun` for the route with no completed run. */
   readonly firstRunOffer?: import('@run-planner/engine/catalog-schema').FirstRunTraitOfferRule;
+  /** Source `SpawnErisForCurse` in `StartUnthreadedEvents`, reachable only on this route. */
+  readonly erisHost?: import('@run-planner/engine/catalog-schema').ErisHostDeclaration;
   readonly prebossBatchPolicy?: RawPrebossBatchPolicy;
   readonly forcedRewardStoreKey?: string;
   readonly individualRewardStoreKey?: string;

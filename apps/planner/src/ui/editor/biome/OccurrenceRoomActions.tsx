@@ -416,6 +416,7 @@ export function RoomActionsWorkbench({
                   row={row}
                   showRemoval={
                     row.reference.kind !== 'interactKeepsakeRack' &&
+                    row.reference.kind !== 'interactEris' &&
                     (!row.participationOwnedByOverview || row.stale)
                   }
                 />

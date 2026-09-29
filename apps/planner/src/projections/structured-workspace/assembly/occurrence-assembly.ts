@@ -1,5 +1,6 @@
 import {
   resolveEntryDeclaration,
+  routeErisHost,
   routeHasKeepsakeRack,
   routeRoomDeclaration,
   type ResolvedRoutePosition,
@@ -16,6 +17,7 @@ import {
   semanticAddressKey,
   roomActionKey,
   createPostbossKeepsakeSelectionAddress,
+  createRoomActionAddress,
   type BiomeAddress,
   type AcquisitionSiteAddress,
   type EncounterPhaseAddress,
@@ -454,6 +456,21 @@ export function assembleWorkspaceOccurrence(
               : {}),
           });
         })();
+  const erisObservation =
+    !input.facts.detailsActive || routeErisHost(room, input.biome.routeKey) === undefined
+      ? undefined
+      : (() => {
+          const address = createRoomActionAddress(
+            input.biome,
+            occurrence.occurrenceId,
+            roomActionKey({ kind: 'interactEris' }),
+          );
+          return Object.freeze({
+            address,
+            interactionKey: semanticAddressKey(address),
+            spawned: occurrence.eris !== undefined,
+          });
+        })();
   const featureAssembly = assembleOccurrenceFeatures(
     {
       biome: input.biome,
@@ -535,6 +552,7 @@ export function assembleWorkspaceOccurrence(
     ...(judgment === undefined ? {} : { judgment }),
     ...(figurine === undefined ? {} : { figurine }),
     ...(keepsakeSelection === undefined ? {} : { keepsakeSelection }),
+    ...(erisObservation === undefined ? {} : { erisObservation }),
     encounterPhases,
     entered,
     gameName: occurrence.gameName,

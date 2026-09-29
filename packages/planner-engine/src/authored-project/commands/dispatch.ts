@@ -241,6 +241,7 @@ function applyUnchecked(
     case 'ReplaceAnvilResult':
     case 'SetPurgingPoolInteraction':
     case 'ReplacePurgingPoolSlot':
+    case 'SetErisSpawned':
     case 'AddStygianWell':
     case 'RemoveStygianWell':
     case 'SetStygianWellInteraction':

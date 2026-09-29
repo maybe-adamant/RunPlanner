@@ -2,6 +2,7 @@ import type {
   CatalogCollection,
   RoomDeclaration,
   RouteDeclaration,
+  TraitDeclaration,
   TraitGiverDeclaration,
 } from '@run-planner/engine/catalog-schema';
 import type { RewardKernelCatalog } from '@run-planner/engine/reward-kernel';
@@ -24,6 +25,7 @@ export type RoomFeatureFacts = Pick<
   | 'secretPointAnchorCount'
   | 'boonRarityOverride'
   | 'firstRunOffer'
+  | 'erisHost'
 >;
 
 export type RoomRequiredObjectFacts = Pick<RoomDeclaration, 'requiredObjects'>;
@@ -285,6 +287,65 @@ export function normalizeRoomFeatureFacts(
     ...(secretPointAnchorCount === undefined ? {} : { secretPointAnchorCount }),
     ...(boonRarityOverride === undefined ? {} : { boonRarityOverride }),
     ...(firstRunOffer === undefined ? {} : { firstRunOffer }),
+    ...(room.erisHost === undefined
+      ? {}
+      : {
+          erisHost: Object.freeze({
+            routeKey: requireText(room.erisHost.routeKey, `${path}.erisHost.routeKey`),
+            curseTraitKey: requireText(
+              room.erisHost.curseTraitKey,
+              `${path}.erisHost.curseTraitKey`,
+            ),
+            giftRewardType: requireText(
+              room.erisHost.giftRewardType,
+              `${path}.erisHost.giftRewardType`,
+            ),
+            producerLifecycleKey: requireText(
+              room.erisHost.producerLifecycleKey,
+              `${path}.erisHost.producerLifecycleKey`,
+            ),
+          }),
+        }),
+  });
+}
+
+function requireText(value: string, path: string): string {
+  if (typeof value !== 'string' || value.length === 0) fail(path, 'must be a non-empty string');
+  return value;
+}
+
+/**
+ * Closes each Eris host over its route, its rarityless curse trait, and a gift
+ * its producer lifecycle supports.
+ */
+export function validateErisHosts(
+  rooms: CatalogCollection<RoomDeclaration>,
+  routes: CatalogCollection<RouteDeclaration>,
+  traits: CatalogCollection<TraitDeclaration>,
+  rewards: RewardKernelCatalog,
+): void {
+  rooms.values.forEach((room, index) => {
+    const host = room.erisHost;
+    if (host === undefined) return;
+    const path = `rooms[${index}].erisHost`;
+    if (room.kind !== 'Intro') fail(path, 'requires an Intro room');
+    if (routes.byKey[host.routeKey] === undefined)
+      fail(`${path}.routeKey`, `unknown route ${host.routeKey}`);
+    if (traits.byKey[host.curseTraitKey]?.rarityDomain.kind !== 'none')
+      fail(`${path}.curseTraitKey`, `${host.curseTraitKey} must be a rarityless trait`);
+    const lifecycle = rewards.producerLifecycles.byKey[host.producerLifecycleKey];
+    if (lifecycle === undefined)
+      fail(
+        `${path}.producerLifecycleKey`,
+        `unknown producer lifecycle ${host.producerLifecycleKey}`,
+      );
+    if (lifecycle.rewardTypes.byKey[host.giftRewardType] === undefined)
+      fail(
+        `${path}.giftRewardType`,
+        `${host.producerLifecycleKey} does not produce ${host.giftRewardType}`,
+      );
+    if (rewards.rewardTypes.byKey[host.giftRewardType]?.payloadDomain !== undefined)
+      fail(`${path}.giftRewardType`, 'must be a fixed reward without payload');
   });
 }
 

@@ -84,6 +84,15 @@ export function occurrenceInteractionRequirements(
     room.encounterPhases,
   );
   if (topLevelEncounterRequirement !== undefined) requirements.push(topLevelEncounterRequirement);
+  if (room.erisObservation !== undefined)
+    requirements.push(
+      Object.freeze({
+        kind: 'erisObservation' as const,
+        owner: room.address,
+        interactionKey: room.erisObservation.interactionKey,
+        spawned: room.erisObservation.spawned,
+      }),
+    );
 
   const zagreusPresence = room.workbench.features.find(
     (feature) => feature.kind === 'zagreusContract' && feature.action === 'add',

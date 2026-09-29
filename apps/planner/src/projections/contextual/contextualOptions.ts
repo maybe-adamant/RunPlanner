@@ -388,6 +388,11 @@ function findingExplanation(catalog: Catalog, finding: SemanticFinding): Candida
         kind: 'generic',
         message: 'Choose a keepsake that remains available at this rack frontier.',
       };
+    case 'erisSpawnUnavailable':
+      return {
+        kind: 'generic',
+        message: 'Eris spawns only while her curse is absent; an earlier talk already applied it.',
+      };
     case 'keepsakeEquipResultMissing':
     case 'keepsakeEquipResultUnavailable':
       if (

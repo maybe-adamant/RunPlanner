@@ -21,6 +21,7 @@ export type {
 } from './model';
 export { resolveRoutePosition, type ResolvedRoutePosition } from './route-context';
 export {
+  routeErisHost,
   routeHasKeepsakeRack,
   routeInitialProfile,
   routePurgingPool,

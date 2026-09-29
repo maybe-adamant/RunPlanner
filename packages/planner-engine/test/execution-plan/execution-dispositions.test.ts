@@ -43,6 +43,7 @@ const executionDispositions = {
     interactAcquisitionEntry: 'covered',
     useFountain: 'covered',
     interactKeepsakeRack: 'covered',
+    interactEris: 'deferred-route',
   } satisfies Record<RoomActionKind, ExecutionDisposition>,
   timelineTransactions: {
     chooseRewardWheel: 'covered',

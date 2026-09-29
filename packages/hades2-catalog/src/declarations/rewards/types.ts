@@ -166,6 +166,8 @@ export interface RawProducerLifecycleProfileDeclaration {
   readonly overrides?: readonly RawProducerLifecycleOverrideDeclaration[];
   /** The producer spawns `NPCDrop` objects. */
   readonly resourceBonusExempt?: true;
+  /** The producer overrides `CanDuplicate` to false on its objects. */
+  readonly duplicationExempt?: true;
   /** Producer `AddResources` overrides by concrete acquisition. */
   readonly resourceGrantOverrides?: Readonly<Record<string, Readonly<Record<string, number>>>>;
 }

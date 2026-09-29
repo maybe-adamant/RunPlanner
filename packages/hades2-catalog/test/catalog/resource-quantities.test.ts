@@ -41,11 +41,14 @@ describe('resource quantity declarations', () => {
     });
   });
 
-  it('declares producer resource policy: NPC drops are exempt and Narcissus overrides Ashes', () => {
+  it('declares producer resource policy: NPC drops are exempt, Narcissus and Eris override', () => {
     const profiles = rewardKernelCatalog.producerLifecycles.values;
     expect(
       profiles.filter((profile) => profile.resourceBonusExempt === true).map((p) => p.key),
-    ).toEqual(['NemesisEventPickup']);
+    ).toEqual(['NemesisEventPickup', 'ErisCursePickup']);
+    expect(
+      profiles.filter((profile) => profile.duplicationExempt === true).map((p) => p.key),
+    ).toEqual(['ErisCursePickup']);
     expect(
       Object.fromEntries(
         profiles.flatMap((profile) =>
@@ -54,7 +57,29 @@ describe('resource quantity declarations', () => {
             : [[profile.key, profile.resourceGrantOverrides]],
         ),
       ),
-    ).toEqual({ NarcissusPickup: { MetaCardPointsCommonDrop: { MetaCardPointsCommon: 10 } } });
+    ).toEqual({
+      NarcissusPickup: { MetaCardPointsCommonDrop: { MetaCardPointsCommon: 10 } },
+      ErisCursePickup: {
+        MetaCardPointsCommonDrop: { MetaCardPointsCommon: 20 },
+        MetaCurrencyDrop: { MetaCurrency: 300 },
+      },
+    });
+    const eris = rewardKernelCatalog.producerLifecycles.byKey.ErisCursePickup;
+    expect(
+      eris?.rewardTypes.values.map((reward) => [
+        reward.rewardType,
+        reward.acquisitionLifecycle.map((binding) => [
+          binding.role,
+          binding.lifecyclePoint,
+          binding.blocksArtificerConversion,
+        ]),
+      ]),
+    ).toEqual(
+      ['MetaCardPointsCommonDrop', 'MemPointsCommonDrop', 'MetaCurrencyDrop'].map((rewardType) => [
+        rewardType,
+        [['self', 'roomRewardPickup', true]],
+      ]),
+    );
   });
 
   it('normalizes Buried Treasure to 1.5 scaled on its excess by rarity', () => {

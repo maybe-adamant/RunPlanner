@@ -15,12 +15,14 @@ import {
   echoLastRewardPickupEntryKeys,
   activeSelectedPickupProducers,
   parseClockedTraitGeneratedPickupEntryKey,
+  producerOwnedSiteKey,
 } from '../acquisition/pickup-producers';
 import { seaStarDuplicateSourceIsActive } from '../acquisition/sea-star';
 import { rewardSourceResolvesAtAcquisition } from '../acquisition/reward-state';
 import { authoredShopOffer } from '../shop';
 import type { ResolvedRoutePosition } from '../route-context';
 import { resolveEntryDeclaration } from '../room-state/entry-resolution';
+import { routeErisHost } from '../route-profile';
 export { roomActionKey } from './key';
 import { roomActionKey } from './key';
 
@@ -145,6 +147,8 @@ export function activeRoomActionReferences(
   if (fountain !== undefined) references.push(fountain);
   if (occurrence.keepsakeRack !== undefined)
     references.push(Object.freeze({ kind: 'interactKeepsakeRack' }));
+  if (occurrence.eris !== undefined && routeErisHost(room, biome.routeKey) !== undefined)
+    references.push(Object.freeze({ kind: 'interactEris' }));
   if (occurrence.state.kind === 'shipCombat') {
     const activeWheels =
       scope?.activeRewardWheelKeys !== undefined
@@ -267,7 +271,7 @@ export function activeRoomActionReferences(
       )
         continue;
       if (
-        (siteKey.startsWith('traitGenerated:') || siteKey.startsWith('nemesisGenerated:')) &&
+        producerOwnedSiteKey(siteKey) &&
         !activePickupEntries.has(JSON.stringify([siteKey, entryKey]))
       )
         continue;

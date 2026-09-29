@@ -31,6 +31,8 @@ export interface RawOccurrence {
   readonly hasPurgingPool?: boolean;
   readonly keepsakeRack?: unknown;
   readonly hasKeepsakeRack?: boolean;
+  readonly eris?: unknown;
+  readonly hasEris?: boolean;
   readonly figurineArcanaKeysByPhase?: unknown;
   readonly hasFigurineArcanaKeysByPhase?: boolean;
   readonly path: string;

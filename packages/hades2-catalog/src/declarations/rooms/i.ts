@@ -48,6 +48,13 @@ export const iRooms = [
     counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
     force: { kind: 'depthWindow', axis: 'biomeDepthCache', start: 0, deadline: 1 },
+    // RoomDataI.lua I_Intro `SpawnErisForCurse`: while completed runs <= 7.
+    erisHost: {
+      routeKey: 'FreshFile',
+      curseTraitKey: 'ErisCurseTrait',
+      giftRewardType: 'MetaCurrencyDrop',
+      producerLifecycleKey: 'ErisCursePickup',
+    },
   },
   {
     gameName: 'I_Story01',

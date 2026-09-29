@@ -6,8 +6,10 @@ import {
   createBiomeAddress,
   createExitDecisionAddress,
   createOccurrenceAddress,
+  createRoomActionAddress,
   createRoomFeatureAddress,
 } from '../addresses';
+import { roomActionKey } from '../room-actions/key';
 import type {
   AuthoredBiomePlan,
   BiomeTopology,
@@ -130,6 +132,7 @@ function commandContractAddress(
     case 'ReplaceFieldsOptionalRewardCount':
     case 'SetPurgingPoolInteraction':
     case 'ReplacePurgingPoolSlot':
+    case 'SetErisSpawned':
     case 'AddStygianWell':
     case 'RemoveStygianWell':
     case 'SetStygianWellInteraction':
@@ -248,6 +251,12 @@ export function projectCommandAddress(
         kind: 'hermesShrineOffer',
         generationKey: command.generationKey,
       });
+    case 'SetErisSpawned':
+      return createRoomActionAddress(
+        createBiomeAddress(command.occurrence.routeKey, command.occurrence.biomeKey),
+        command.occurrence.occurrenceId,
+        roomActionKey({ kind: 'interactEris' }),
+      );
   }
   return commandContractAddress(command);
 }

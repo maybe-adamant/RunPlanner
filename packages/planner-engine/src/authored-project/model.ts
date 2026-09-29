@@ -218,7 +218,8 @@ export type RoomActionReference =
       readonly encounterPhaseKey?: string;
     }
   | { readonly kind: 'useFountain' }
-  | { readonly kind: 'interactKeepsakeRack' };
+  | { readonly kind: 'interactKeepsakeRack' }
+  | { readonly kind: 'interactEris' };
 
 export interface RoomActionState {
   readonly order: readonly RoomActionReference[];
@@ -408,6 +409,8 @@ export interface RoomOccurrence {
     readonly keepsakeKey: string;
     readonly equipResults?: AuthoredKeepsakeEquipResults;
   };
+  /** Present only at a route-declared Eris host, as an observation rather than a condition. */
+  readonly eris?: AuthoredErisObservation;
   /** Present only when this exact occurrence owns a realized Phial target. */
   readonly fountainRarityResult?: AuthoredFountainRarityResult;
   /** Present only at declaration-owned F/G/H fixed Postboss Pool hosts. */
@@ -415,6 +418,11 @@ export interface RoomOccurrence {
   /** Present at declaration-owned Shrine hosts; never guarded by a global interaction flag. */
   readonly hermesShrine?: HermesShrineState;
   readonly stygianWell?: StygianWellState;
+}
+
+/** Eris stood in the room on entry; her spawn condition is observed, never simulated. */
+export interface AuthoredErisObservation {
+  readonly spawned: true;
 }
 
 export interface AnomalyReplacementProvenance {

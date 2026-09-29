@@ -24,6 +24,7 @@ export type {
   WorkspaceFieldsOptionalRewardDescriptor,
   WorkspaceFieldsSpatialControl,
   WorkspaceFieldsSpatialPointInteraction,
+  WorkspaceErisObservationInteraction,
   WorkspaceFigLeafInteraction,
   WorkspaceGorgonConditionInteraction,
   WorkspaceLocalVisitDecision,
@@ -89,6 +90,7 @@ import {
   type JudgmentArcanaAddress,
   type KeepsakeEquipResultAddress,
   type KeepsakeSelectionAddress,
+  type RoomActionAddress,
   type LocalVisitSlotAddress,
   type OccurrenceAddress,
   type OccurrenceId,
@@ -139,6 +141,7 @@ import type {
   WorkspaceEncounterPhase,
   WorkspaceFieldsCageOutcomeInteraction,
   WorkspaceFieldsSpatialPointInteraction,
+  WorkspaceErisObservationInteraction,
   WorkspaceFigLeafInteraction,
   WorkspaceGorgonConditionInteraction,
   WorkspaceLocalVisitGenerationInteraction,
@@ -342,6 +345,7 @@ export interface WorkspaceInteractionCatalog {
   readonly nemesisFeatures: ReadonlyMap<string, WorkspaceNemesisFeatureInteraction>;
   readonly figLeafSkips: ReadonlyMap<string, WorkspaceFigLeafInteraction>;
   readonly gorgonConditions: ReadonlyMap<string, WorkspaceGorgonConditionInteraction>;
+  readonly erisObservations: ReadonlyMap<string, WorkspaceErisObservationInteraction>;
   readonly exitSelections: ReadonlyMap<string, WorkspaceExitSelectionInteraction>;
   readonly fieldsCageOutcomes: ReadonlyMap<string, WorkspaceFieldsCageOutcomeInteraction>;
   readonly fieldsSpatialPoints: ReadonlyMap<string, WorkspaceFieldsSpatialPointInteraction>;
@@ -622,6 +626,13 @@ export interface WorkspaceRoomSummary {
     readonly selectedKeepsakeKey?: string;
     /** A keepsake retained where the route has no rack; it can only be removed. */
     readonly unavailableReason?: 'rackUnavailableOnRoute';
+  };
+  /** A declared Eris host on this route; spawning is the author's observation. */
+  readonly erisObservation?: {
+    /** The talk's semantic owner, where its findings are addressed. */
+    readonly address: RoomActionAddress;
+    readonly interactionKey: string;
+    readonly spawned: boolean;
   };
 }
 

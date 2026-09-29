@@ -1,5 +1,5 @@
 import type { BiomeLayout, Catalog } from '../../catalog-schema';
-import { routeRoomShop } from '../route-profile';
+import { routeErisHost, routeRoomShop } from '../route-profile';
 import type {
   HermesShrineState,
   PurgingPoolState,
@@ -30,8 +30,10 @@ import {
   parseTraitGeneratedPickupSiteKey,
   parseNemesisGeneratedPickupSiteKey,
   nemesisGeneratedPickupSiteKey,
+  producerOwnedSiteKey,
   selectedPickupProducers,
 } from '../acquisition/pickup-producers';
+import { ERIS_GIFT_SITE_KEY } from '../acquisition/eris-gift';
 import { parseArtificerReplacementEntryKey } from '../acquisition/artificer';
 import { parseHermesShrineDeliveryEntryKey } from '../hermes-shrine-delivery';
 import { rewardSourceResolvesAtAcquisition } from '../acquisition/reward-state';
@@ -50,6 +52,20 @@ import {
   composeStartingReward,
   startingRewardAcquisitionFrom,
 } from '../room-state/starting-reward';
+
+function decodeErisObservation(
+  value: unknown,
+  room: NonNullable<Catalog['rooms']['byKey'][string]>,
+  routeKey: string,
+  path: string,
+): NonNullable<RoomOccurrence['eris']> {
+  if (routeErisHost(room, routeKey) === undefined)
+    failProjectDocument(path, `${room.gameName} hosts no Eris on route ${routeKey}`);
+  const raw = expectRecord(value, path);
+  expectExactKeys(raw, ['spawned'], path);
+  if (raw.spawned !== true) failProjectDocument(`${path}.spawned`, 'must be true when present');
+  return Object.freeze({ spawned: true });
+}
 
 function decodeKeepsakeRackState(
   value: unknown,
@@ -436,10 +452,26 @@ export function decodeRoomOccurrence(input: {
         `${rawOccurrence.path}.keepsakeRack`,
       )
     : undefined;
+  const eris = rawOccurrence.hasEris
+    ? decodeErisObservation(
+        rawOccurrence.eris,
+        contextualRoom,
+        routeKey,
+        `${rawOccurrence.path}.eris`,
+      )
+    : undefined;
   const roomActions = decodeRoomActionState(
     rawOccurrence.roomActions,
     `${rawOccurrence.path}.roomActions`,
   );
+  if (
+    eris === undefined &&
+    roomActions.order.some((reference) => reference.kind === 'interactEris')
+  )
+    failProjectDocument(
+      `${rawOccurrence.path}.roomActions.order`,
+      'an Eris interaction requires the spawned Eris observation',
+    );
   assertStygianWellPurchaseActionClosure(
     stygianWell,
     roomActions,
@@ -481,6 +513,7 @@ export function decodeRoomOccurrence(input: {
     ...(fountainRarityResult === undefined ? {} : { fountainRarityResult }),
     ...(purgingPool === undefined ? {} : { purgingPool }),
     ...(keepsakeRack === undefined ? {} : { keepsakeRack }),
+    ...(eris === undefined ? {} : { eris }),
     roomActions: Object.freeze({ order: Object.freeze([]) }),
     additionalExits: Object.freeze([]),
   });
@@ -508,17 +541,11 @@ export function decodeRoomOccurrence(input: {
       );
       const ownedGeneratedSiteKeys = new Set(
         preliminaryPickupProducers
-          .filter(
-            (producer) =>
-              producer.siteKey.startsWith('traitGenerated:') ||
-              producer.siteKey.startsWith('nemesisGenerated:'),
-          )
+          .filter((producer) => producerOwnedSiteKey(producer.siteKey))
           .map((producer) => producer.siteKey),
       );
       const includedEntries = Object.entries(rawSites).filter(
-        ([siteKey]) =>
-          (!siteKey.startsWith('traitGenerated:') && !siteKey.startsWith('nemesisGenerated:')) ||
-          ownedGeneratedSiteKeys.has(siteKey),
+        ([siteKey]) => !producerOwnedSiteKey(siteKey) || ownedGeneratedSiteKeys.has(siteKey),
       );
       const includedKeys = includedEntries.map(([siteKey]) => siteKey).sort();
       if (
@@ -566,11 +593,7 @@ export function decodeRoomOccurrence(input: {
     : undefined;
   const producerSiteKeys = new Set(
     pickupProducers
-      .filter(
-        (producer) =>
-          producer.siteKey.startsWith('traitGenerated:') ||
-          producer.siteKey.startsWith('nemesisGenerated:'),
-      )
+      .filter((producer) => producerOwnedSiteKey(producer.siteKey))
       .map((producer) => producer.siteKey),
   );
   const nemesisPolicy = catalog.encounterDefinitions.byKey.NemesisRandomEvent?.nemesisRandomEvent;
@@ -657,6 +680,7 @@ export function decodeRoomOccurrence(input: {
       parseTraitGeneratedPickupSiteKey(siteKey) === undefined &&
       parseNemesisGeneratedPickupSiteKey(siteKey) === undefined &&
       parseSeaStarDuplicateSiteKey(siteKey) === undefined &&
+      siteKey !== ERIS_GIFT_SITE_KEY &&
       siteKey !== 'hermesShrineDelivery' &&
       Object.keys(site.pickupEntries ?? {}).some(
         (entryKey) => parseArtificerReplacementEntryKey(entryKey) === undefined,
@@ -840,6 +864,7 @@ export function decodeRoomOccurrence(input: {
     ...(fountainRarityResult === undefined ? {} : { fountainRarityResult }),
     ...(purgingPool === undefined ? {} : { purgingPool }),
     ...(keepsakeRack === undefined ? {} : { keepsakeRack }),
+    ...(eris === undefined ? {} : { eris }),
     ...(acquisitionSites === undefined ? {} : { acquisitionSites }),
     additionalExits,
   });

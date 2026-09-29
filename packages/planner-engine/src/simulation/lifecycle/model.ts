@@ -45,6 +45,10 @@ export type RoomLifecycleEvent =
       readonly owner: import('../../authored-project/addresses').RoomActionSemanticAddress;
     })
   | (RoomLifecycleEventBase & {
+      readonly kind: 'erisInteracted';
+      readonly owner: import('../../authored-project/addresses').RoomActionSemanticAddress;
+    })
+  | (RoomLifecycleEventBase & {
       readonly kind: 'requiredObjectSpawned';
       readonly objectKey: RequiredRoomObjectDescriptor['key'];
       readonly completionRequirement: RequiredRoomObjectDescriptor['completionRequirement'];

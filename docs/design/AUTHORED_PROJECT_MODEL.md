@@ -588,6 +588,17 @@ authored initial generations. Travel Deal refill state is occurrence-local to
 its Shop, Shrine, or Well carrier. Pending deliveries, temporary effects,
 Spell reservations, and expiry remain derived simulation state.
 
+An intro room the catalog declares as an Eris host on the project's route
+(Fresh File G, H and I) may carry an optional `eris: { spawned: true }` leaf.
+Like Gorgon Amulet's `athenaTriggerConditionMet`, it records an observed game
+condition the planner does not simulate; absence means Eris did not spawn. The
+codec rejects the leaf on any other room or route. `SetErisSpawned` adds it,
+and ordered reconciliation inserts the required `interactEris` action, the
+fixed gift's `erisGift` acquisition site and its required pickup action.
+Clearing it removes the leaf, the talk and, through the same reconciliation,
+the gift site and pickup. Schema 90 admits the leaf additively; no migration
+writes it.
+
 An acquisition site is sparse occurrence-owned payload state for one exact
 authorable lifecycle point. A declaration-produced pickup stores its exact
 reward, trait-offer, and level-resolution children in the site's

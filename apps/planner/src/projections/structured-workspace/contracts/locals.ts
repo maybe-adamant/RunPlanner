@@ -293,6 +293,16 @@ export interface WorkspaceFigLeafInteraction {
   readonly supported: boolean;
 }
 
+/** Records whether Eris stood in a declared host; the engine derives her talk and gift. */
+export interface WorkspaceErisObservationInteraction {
+  readonly intentFor: (
+    spawned: boolean,
+  ) => WorkspaceCommandIntent<Extract<ProjectCommand, { readonly kind: 'SetErisSpawned' }>>;
+  readonly key: string;
+  readonly owner: OccurrenceAddress;
+  readonly spawned: boolean;
+}
+
 export interface WorkspaceGorgonConditionInteraction {
   readonly intentFor: (
     value: boolean,

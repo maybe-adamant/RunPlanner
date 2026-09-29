@@ -435,6 +435,13 @@ export type PurgingPoolCommand =
       readonly traitKey: string | null;
     };
 
+/** Records or clears the observation that Eris stood in a declared host room. */
+export type ErisCommand = {
+  readonly kind: 'SetErisSpawned';
+  readonly occurrence: OccurrenceAddress;
+  readonly spawned: boolean;
+};
+
 export type HermesShrineCommand =
   | {
       readonly kind: 'SetHermesShrinePresence';
@@ -622,6 +629,7 @@ export type OccurrenceLeafCommand =
   | ShipOccurrenceCommand
   | ShopOccurrenceCommand
   | PurgingPoolCommand
+  | ErisCommand
   | StygianWellCommand
   | HermesShrineCommand
   | EncounterOccurrenceCommand;

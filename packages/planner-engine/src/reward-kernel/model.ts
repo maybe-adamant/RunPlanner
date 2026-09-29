@@ -226,6 +226,8 @@ export interface ProducerLifecycleProfileDeclaration {
   readonly rewardTypes: CatalogCollection<ProducerRewardLifecycleDeclaration>;
   /** Source `NPCDrop` objects: `RoomRewardBonus` never scales their resources. */
   readonly resourceBonusExempt?: true;
+  /** Source `CanDuplicate = false` override: Sea Star never duplicates its objects. */
+  readonly duplicationExempt?: true;
   /** Producer-owned `AddResources` overrides, by concrete acquisition game name. */
   readonly resourceGrantOverrides?: Readonly<Record<string, ResourceAmounts>>;
 }

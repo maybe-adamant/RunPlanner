@@ -6,6 +6,7 @@ import {
   createExitDecisionAddress,
   createExitSelectionAddress,
   createIncomingRewardAddress,
+  createOccurrenceAddress,
   createOccurrenceId,
   createProjectDocument,
   createShopOfferAddress,
@@ -373,6 +374,8 @@ export const freshFileGSecondCombatId = createOccurrenceId('golden-g-b2-e1');
 export const freshFileBridgeId = createOccurrenceId('golden-h-bridge01');
 export const freshFileIFirstCombatId = createOccurrenceId('golden-i-combat01');
 export const freshFileIShopId = createOccurrenceId('golden-i-preboss');
+export const freshFileGIntroId = createOccurrenceId('golden-g-intro');
+export const freshFileHIntroId = createOccurrenceId('golden-h-intro');
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any -- decoded JSON edited before strict decoding
 type RawJson = any;
@@ -391,7 +394,7 @@ const boonOffer = (source: string) => ({
  * A complete valid Fresh File F→I: the command-built F, then the golden G/H/I
  * made fresh-legal. G's first combat resolves FishmanIntro and I's
  * ClockworkIntro; the entered H_Bridge01 is a WorldShop; the I Shop's fifth
- * slot is cleared through ClearShopOffer.
+ * slot is cleared through ClearShopOffer; Eris spawns in G_Intro.
  */
 export function createFreshFileRouteProject(): ProjectDocument {
   const fresh = JSON.parse(encodeProjectDocument(createFreshFileFProject()));
@@ -502,6 +505,11 @@ export function createFreshFileRouteProject(): ProjectDocument {
   project = applyProjectCommand(project, catalog, {
     kind: 'ClearShopOffer',
     offer: createShopOfferAddress(freshFileIBiome, freshFileIShopId, 'MetaProgress'),
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'SetErisSpawned',
+    occurrence: createOccurrenceAddress(freshFileGBiome, freshFileGIntroId),
+    spawned: true,
   });
   return authorLegalTraitOffers(project);
 }

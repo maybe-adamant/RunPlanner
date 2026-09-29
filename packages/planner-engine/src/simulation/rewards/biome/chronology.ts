@@ -92,6 +92,7 @@ import {
 import { applyEncounterStartedTransition } from './lifecycle-transitions/encounter-started';
 import { applyEncounterEndEffectsTransition } from './lifecycle-transitions/encounter-end-effects';
 import { applyKeepsakeRackUsedTransition } from './lifecycle-transitions/keepsake-rack-used';
+import { applyErisInteractedTransition } from './lifecycle-transitions/eris-interacted';
 import { applyFountainUsedTransition } from './lifecycle-transitions/fountain-used';
 import { applyRoomEnteredTransition } from './lifecycle-transitions/room-entered';
 import { applyRoomExitedTransition } from './lifecycle-transitions/room-exited';
@@ -1433,6 +1434,19 @@ export function evaluateBiomeRewardChronology(
           );
         for (const candidate of transition.keepsakeEquipResultCandidates)
           keepsakeEquipResultContexts.set(candidate.key, candidate.candidate);
+        for (const finding of transition.findings)
+          addRewardFinding(findings, finding.finding, finding.region, finding.chronology);
+        break;
+      }
+      case 'erisInteracted': {
+        const room = rooms.get(semanticAddressKey(event.origin));
+        const transition = applyErisInteractedTransition(
+          catalog,
+          event,
+          room?.kind === 'authored' ? room : undefined,
+          branches,
+        );
+        branches = transition.branches;
         for (const finding of transition.findings)
           addRewardFinding(findings, finding.finding, finding.region, finding.chronology);
         break;
