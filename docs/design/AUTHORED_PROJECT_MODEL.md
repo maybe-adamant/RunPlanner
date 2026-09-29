@@ -837,6 +837,25 @@ The resolver maps identity independently of eligibility; an unavailable
 selected NPC receives a finding rather than being replaced by Combat. The room lifecycle authority owns the
 resolved product and its exact chronological assessment.
 
+#### Encounter events
+
+`encounters.aetosWaveByPhase[phaseKey]` sparsely owns a requested Aetos wave,
+independently of generated composition. Omission requests no planned appearance;
+there is no persisted checkbox or Native mode. `ReplaceAetosWave` authors or
+removes the value as one semantic edit. Old documents accept omission without
+a schema migration. Composition reset does not remove it. Structural phase
+reconciliation retains compatible ownership and deletes removed owners;
+context-invalid selections remain authored and repairable at the exact event.
+
+The resolved declaration and reached lifecycle assessment own supported waves
+and at-most-one-per-Olympus placement. Native GeneratedP supports requesting
+wave 2 without forcing its variable wave count; native Large supports 2 or 3.
+Customized composition uses its exact assessed wave count. Dormant and unpicked
+choices neither reserve the appearance nor publish a target. Fig Leaf skip
+invalidates a reached appearance; Gorgon alone does not. These event choices
+share an encounter-local presentation without replacing the independent Fig
+Leaf and Gorgon authored contracts.
+
 #### Encounter customization
 
 Concrete Encounter Definitions may declare optional decisions with stable keys,

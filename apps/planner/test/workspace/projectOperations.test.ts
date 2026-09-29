@@ -59,7 +59,7 @@ import {
   pOccurrenceId,
 } from '@run-planner/test-fixtures/surface';
 
-it('blocks explicit Aetos publication before saving or sending until runtime support ships', async () => {
+it('publishes an explicit Aetos biome target', async () => {
   const profile = createProfileFixture();
   const game = createFakeGameModuleHost();
   const application = createApplication({
@@ -79,13 +79,12 @@ it('blocks explicit Aetos publication before saving or sending until runtime sup
       }),
     ),
   );
-  expect(application.projectOperations.inspectCurrentGamePlan().kind).toBe('notPublishable');
+  expect(application.projectOperations.inspectCurrentGamePlan().kind).toBe('publishable');
   await expect(application.projectOperations.publishGame(1)).resolves.toMatchObject({
-    status: 'failure',
-    message: expect.stringContaining('Aetos appearances cannot be published'),
+    status: 'success',
   });
-  expect(game.published).toHaveLength(0);
-  expect(profile.saves).toHaveLength(0);
+  expect(game.published).toHaveLength(1);
+  expect(profile.saves).toHaveLength(1);
 });
 
 it('publishes while retaining an unpicked Aetos choice outside the execution surface', async () => {

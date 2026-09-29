@@ -107,6 +107,7 @@ describe('OccurrenceEncounterWorkbench', () => {
       occurrenceById(occurrenceId),
     );
     openRoomTab('Room Timeline');
+    expect(screen.queryByRole('combobox', { name: 'Aetos wave' })).toBeNull();
     await view.user.click(screen.getByRole('checkbox', { name: 'Aetos appearance' }));
     expect((screen.getByRole('combobox', { name: 'Aetos wave' }) as HTMLSelectElement).value).toBe(
       '2',

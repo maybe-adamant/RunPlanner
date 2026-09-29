@@ -453,7 +453,15 @@ function authorSurfaceGeneratedPreCombat(project: ProjectDocument): ProjectDocum
 
 /** The variable-budget P pre-combat encounter with an authored native base roll. */
 export function surfaceGeneratedPreCombatProject(): ProjectDocument {
-  return authorSurfaceGeneratedPreCombat(loadSurfaceNOPProject());
+  return applyProjectCommand(authorSurfaceGeneratedPreCombat(loadSurfaceNOPProject()), catalog, {
+    kind: 'ReplaceAetosWave',
+    phase: createEncounterPhaseAddress(
+      pBiome,
+      { kind: 'occurrence', occurrenceId: pOccurrenceId('P_Combat03', 1, 1) },
+      'Combat',
+    ),
+    value: 2,
+  });
 }
 
 /** Q Boss egg choices retained as the producer for the existing N/O/P/Q execution wire. */

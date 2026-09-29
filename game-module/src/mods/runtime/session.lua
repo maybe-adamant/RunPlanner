@@ -45,6 +45,7 @@ function runtime.status(state)
 end
 
 function runtime.mismatch(state, checkpoint, expected, observed)
+    state.aetos = nil
     if type(checkpoint) == "table" and checkpoint.outcome == "fault" then
         return runtime.fault(state, checkpoint, expected, observed)
     end
@@ -57,6 +58,7 @@ end
 -- run diverged.  They make enforcement passive just like a mismatch so hooks
 -- can still call native code, but retain a separate reporting product.
 function runtime.fault(state, errorValue, expected, observed)
+    state.aetos = nil
     if state.firstMismatch ~= nil then return nil, state.firstMismatch end
     if state.firstFault == nil then
         state.firstFault = type(errorValue) == "table" and errorValue or {
@@ -92,6 +94,7 @@ local function reset(state, admissionAttempted)
     state.initialized = false
     state.state = "inactive"
     state.plan = nil
+    state.aetos = nil
     state.planSlot = nil
     state.loggedSession = nil
     state.route = nil

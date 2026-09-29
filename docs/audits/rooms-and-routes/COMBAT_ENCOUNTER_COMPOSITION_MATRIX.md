@@ -256,6 +256,35 @@ ChronosForces = 1 }`; main P has `{ Automatons = 1, ChronosForces = 2 }`.
   generated members must remain distinguishable; an empty generic roster would
   discard the encounter's identity.
 
+### Olympus Aetos wave event
+
+`EncounterData_Generated.lua:1123–1145` declares `OlympusEagleSpawn` on
+GeneratedP's `WaveStartUnthreadedEvents`, inherited by GeneratedP_Large. Its
+requirements use `ChanceToPlay = 0.33`, current-room exclusion and
+`SumPrevRooms = 20`. `RequirementsLogic.lua` begins that lookback at zero:
+current room and the preceding 19 history entries, not a once-per-run flag.
+`EventLogic.lua:1792` additionally requires Outdoor and refuses wave 1, sets
+the room flag and reduces the active cap by two; `EnemyAILogic.lua`'s
+`EagleAttackAndFlee` restores that cap adjustment on departure.
+
+GeneratedP_PreCombat and BaseAthenaCombat clear the inherited event array.
+BaseIcarusCombat supplies its own array, masking the inherited one under
+`ProcessDataInheritance`/`DeepInheritData`. HeraclesCombatP requires Indoor.
+The supported outdoor combat maps are P_Combat01, 03, 05, 06, 11, 13–17 and 19;
+the catalog uses room tags, not another runtime whitelist. Gorgon's
+`UniqueEncounterArgs` Athena spawn does not replace the generated phase or
+waves (`TraitData_Keepsake.lua`, `StartEncounterEffects`, `HandleAthenaSpawn`).
+Skipped spawning returns before wave events (`HandleEnemySpawns`), including
+P's propagated precombat Fig Leaf skip.
+
+Planner disposition: at most one explicit appearance per Olympus, with native
+GeneratedP wave 2 permitted despite its 1–2 roll, Large waves 2/3, or the exact
+customized wave domain. This is a deliberate bounded planner policy, not a
+native once-per-biome rule. No event selection requests no appearance. The
+event does not enter composition budgets or ordinary generated enemy counts.
+Live realization remains subject to native nonrandom eligibility and actual
+waves; the integration contact audit owns that execution boundary.
+
 ### Hard-encounter composition overrides
 
 `SetupEncounter` marks `IsHardEncounter` from `room.RewardOverrides.MakeHardEncounter`;

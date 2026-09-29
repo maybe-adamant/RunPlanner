@@ -418,6 +418,21 @@
   margin: 0;
 }
 
+.encounter-event-wave-slot {
+  display: inline-flex;
+  flex: 0 0 7rem;
+  width: 7rem;
+  height: 1.9rem;
+}
+
+.encounter-event-wave-slot > select {
+  min-width: 0;
+  min-height: 0;
+  height: 100%;
+  padding: 2px 22px 2px 7px;
+  font-size: inherit;
+}
+
 .trait-offer-dialog.encounter-customization-dialog {
   max-width: 48rem;
   width: min(100%, 48rem);

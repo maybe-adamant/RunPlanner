@@ -9,7 +9,7 @@ import type {
 
 /** The single room-session execution artifact supported by the app compiler. */
 export const EXECUTION_PLAN_FORMAT = 'run-planner-execution' as const;
-export const EXECUTION_PROTOCOL_VERSION = 50 as const;
+export const EXECUTION_PROTOCOL_VERSION = 51 as const;
 export const EXECUTION_CATALOG_VERSION = '0.55.0-anvil-of-fates' as const;
 export type ExecutionBiomeKey = 'F' | 'G' | 'H' | 'I' | 'N' | 'O' | 'P' | 'Q';
 
@@ -993,6 +993,15 @@ export type ExecutionConfiguredExtent =
       readonly terminalBiomeKey: ExecutionBiomeKey;
     };
 
+export type ExecutionOlympusAetos =
+  | { readonly kind: 'none' }
+  | {
+      readonly kind: 'target';
+      readonly occurrenceId: string;
+      readonly phaseKey: string;
+      readonly wave: number;
+    };
+
 export interface ExecutionPlan {
   readonly format: typeof EXECUTION_PLAN_FORMAT;
   readonly protocolVersion: typeof EXECUTION_PROTOCOL_VERSION;
@@ -1009,6 +1018,8 @@ export interface ExecutionPlan {
   readonly selectedOccurrenceIds: readonly string[];
   /** Engine-owned physical resource-point policy for each selected occurrence. */
   readonly resources: ExecutionResourcePolicy;
+  /** Required exactly when Olympus belongs to the configured extent. */
+  readonly olympusAetos?: ExecutionOlympusAetos;
   readonly occurrences: readonly ExecutionOccurrence[];
 }
 
@@ -1022,6 +1033,7 @@ export interface ExecutionSemanticProduct {
   readonly extent: ExecutionPlan['extent'];
   readonly selectedOccurrenceIds: readonly string[];
   readonly resources: ExecutionResourcePolicy;
+  readonly olympusAetos?: ExecutionOlympusAetos;
   readonly occurrences: readonly ExecutionOccurrence[];
 }
 

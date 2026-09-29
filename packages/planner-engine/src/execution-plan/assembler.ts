@@ -276,6 +276,27 @@ export function assembleExecutionProduct({
     extent,
     selectedOccurrenceIds,
     resources,
+    ...(() => {
+      const olympus = biomes.find((biome) => biome.biomeKey === 'P');
+      if (olympus === undefined) return {};
+      const targets = olympus.history.ledgers.encounterStarts.filter(
+        (entry) => entry.aetosWave !== undefined,
+      );
+      if (targets.length > 1)
+        throw new CompilerError('executionCoverageMissing', 'multiple assessed Aetos targets');
+      const target = targets[0];
+      if (target === undefined) return { olympusAetos: Object.freeze({ kind: 'none' as const }) };
+      if (target.origin.kind !== 'occurrence')
+        throw new CompilerError('executionCoverageMissing', 'Aetos target lacks occurrence');
+      return {
+        olympusAetos: Object.freeze({
+          kind: 'target' as const,
+          occurrenceId: target.origin.occurrenceId,
+          phaseKey: target.slotKey,
+          wave: target.aetosWave!,
+        }),
+      };
+    })(),
     occurrences: Object.freeze(occurrences),
   });
   validateExecutionProduct(product);
