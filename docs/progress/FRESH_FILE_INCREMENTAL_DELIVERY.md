@@ -429,8 +429,11 @@ Locked decisions:
   without drawing the counted bag when native does not draw.
 - The first-run Apollo offer is a declaration-owned rule on `F_Combat01` for
   `FreshFile`: the native fixed allow-list (`ForceLootTableFirstRun`: Weapon,
-  Sprint, Mana) at Common through the existing forced-rarity frontier, not slot
-  exclusion. It is not generalized to mature projects.
+  Sprint, Mana) at Common through the existing forced-rarity frontier. Owner
+  intent: a no-core screen natively offers only the five core boons, so
+  excluding Special and Cast on top of that rule reaches the same trio; the
+  allow-list is the equivalent declared form. It is not generalized to mature
+  projects.
 - A GeneratedF customization retained on Fresh `F_Combat01` decodes, reports
   `encounterCustomizationUnavailable` and is removable, as Slice G retains
   Wells and racks.
