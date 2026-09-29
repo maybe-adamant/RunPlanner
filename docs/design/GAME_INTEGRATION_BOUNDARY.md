@@ -2,7 +2,7 @@
 
 ## Contract
 
-The active strict versioned protocol, execution protocol 50, carries a
+The active strict versioned protocol, execution protocol 51, carries a
 complete-valid configured Underworld or Surface prefix, through `F/G/H/I` or `N/O/P/Q`. The desktop
 publisher writes an execution-only JSON artifact to one of six fixed Plan
 Executor slots in the established game target; the browser build has no
@@ -403,6 +403,27 @@ placement, sizes, contents and reward-cocoon selection still run. Story cocoons
 spawned directly through `SpawnArachneCocoons` stay untouched. A count outside the
 native bounds declines with a diagnostic; a placement shortfall or setup error stays
 native, with a diagnostic.
+
+An extent containing Olympus requires one `olympusAetos` directive: `none`, or
+an exact selected occurrence, phase and wave target. Other extents omit it.
+The assembler copies the valid reached appearance from encounter history; the
+executor neither scans future rooms nor reconstructs planner eligibility.
+Existing authored saves without a selection remain compatible but newly
+published plans explicitly suppress Aetos in Olympus. Older execution artifacts
+require re-export; this does not change the authored schema.
+
+`none` suppresses only the native Aetos wave event. A target suppresses it before
+the requested actual wave, then removes only `ChanceToPlay` from a private
+event-requirements copy passed to the native dispatcher. Native requirements,
+Outdoor checks, spawning, cooldown and cap restoration remain native. A room
+spawn flag confirms success; a missing actual wave, live ineligibility or a
+missed/skipped target produces one diagnostic and releases subsequent encounters
+to native behavior. Failure cannot relocate the appearance to another wave of
+the target encounter. Native one-wave GeneratedP is valid best-effort fallback,
+including when composition admission itself fell back. Target departure closes
+a missed attempt. There is no Aetos transaction or conformance mismatch, and
+runtime uncertainty does not enter planner findings. Scope is session-local and
+retires on biome departure, lost binding or reset; unrelated dispatch is native.
 
 An infinite roster owns only the ordered `FillEnemyTypes` draws of an
 `InfiniteSpawns` encounter. It has no budget, wave or count admission. At the

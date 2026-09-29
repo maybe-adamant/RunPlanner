@@ -409,26 +409,28 @@ export function EncounterPhaseControl({
           />
           <span>Aetos appearance</span>
         </label>
-        {aetosInteraction.selectedWave === undefined ? null : (
-          <select
-            aria-label="Aetos wave"
-            value={aetosInteraction.selectedWave}
-            onChange={(event) =>
-              executeIntent(aetosInteraction.intentFor(Number(event.target.value)))
-            }
-          >
-            {!aetosInteraction.waves.includes(aetosInteraction.selectedWave) ? (
-              <option disabled value={aetosInteraction.selectedWave}>
-                Wave {aetosInteraction.selectedWave} (unavailable)
-              </option>
-            ) : null}
-            {aetosInteraction.waves.map((wave) => (
-              <option key={wave} value={wave}>
-                Wave {wave}
-              </option>
-            ))}
-          </select>
-        )}
+        <span className="encounter-event-wave-slot">
+          {aetosInteraction.selectedWave === undefined ? null : (
+            <select
+              aria-label="Aetos wave"
+              value={aetosInteraction.selectedWave}
+              onChange={(event) =>
+                executeIntent(aetosInteraction.intentFor(Number(event.target.value)))
+              }
+            >
+              {!aetosInteraction.waves.includes(aetosInteraction.selectedWave) ? (
+                <option disabled value={aetosInteraction.selectedWave}>
+                  Wave {aetosInteraction.selectedWave} (unavailable)
+                </option>
+              ) : null}
+              {aetosInteraction.waves.map((wave) => (
+                <option key={wave} value={wave}>
+                  Wave {wave}
+                </option>
+              ))}
+            </select>
+          )}
+        </span>
       </div>
     );
   const ariaLabel = phase.label.endsWith('encounter')

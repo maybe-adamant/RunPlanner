@@ -10,10 +10,12 @@ local loadout = type(import) == "function" and import("mods/protocol/loadout.lua
     or require("mods.protocol.loadout")
 local resources = type(import) == "function" and import("mods/protocol/resources.lua")
     or require("mods.protocol.resources")
+local aetos = type(import) == "function" and import("mods/protocol/aetos.lua")
+    or require("mods.protocol.aetos")
 
 local protocol = {
     FORMAT = "run-planner-execution",
-    VERSION = 50,
+    VERSION = 51,
     CATALOG_VERSION = "0.55.0-anvil-of-fates",
     MAX_ITEMS = p.MAX_ITEMS,
     MAX_STRING = p.MAX_STRING,
@@ -82,6 +84,7 @@ local function fingerprintBody(plan, decodedOccurrences)
         extent = plan.extent,
         selectedOccurrenceIds = plan.selectedOccurrenceIds,
         resources = plan.resources,
+        olympusAetos = plan.olympusAetos,
         occurrences = decodedOccurrences,
     }
 end
@@ -127,7 +130,7 @@ function protocol.decode(value)
             "routeKey", "startingLoadout", "startingKeepsake", "extent", "selectedOccurrenceIds", "resources",
             "occurrences",
         },
-        { "displayName" },
+        { "displayName", "olympusAetos" },
         "execution plan"
     )
     if not plan then return nil, errorMessage end
@@ -189,6 +192,8 @@ function protocol.decode(value)
         resourcePolicy, selected, idsOrError
     )
     if not resourcesValid then return nil, resourcesValidationError end
+    local aetosValid, aetosError = aetos.validate(plan.olympusAetos, keys, selected, idsOrError)
+    if not aetosValid then return nil, aetosError end
     local derived = detachDerived(decoded)
     if p.fingerprint(fingerprintBody(plan, decoded)) ~= plan.planFingerprint then
         return p.fail("execution plan fingerprint does not match contents")

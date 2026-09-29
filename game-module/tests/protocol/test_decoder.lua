@@ -404,6 +404,7 @@ local function refreshFingerprint(plan)
         catalogVersion = plan.catalogVersion, projectId = plan.projectId,
         routeKey = plan.routeKey, startingLoadout = plan.startingLoadout, startingKeepsake = plan.startingKeepsake,
         extent = plan.extent, selectedOccurrenceIds = plan.selectedOccurrenceIds, resources = plan.resources,
+        olympusAetos = plan.olympusAetos,
         occurrences = plan.occurrences,
     })
 end
@@ -526,7 +527,7 @@ local function minimalPlan(transactions)
 end
 
 function TestProtocol.testReleasedProtocol48IsRejected()
-    lu.assertEquals(protocol.VERSION, 50)
+    lu.assertEquals(protocol.VERSION, 51)
     local plan = decode("f-opening")
     plan.protocolVersion = 48
     refreshFingerprint(plan)
@@ -1094,6 +1095,7 @@ function TestProtocol.testProtocolAcceptsClosedOrdinaryPrefixesAndBoundedDreamEx
     plan.routeKey = "Surface"
     plan.occurrences[1].biomeKey = "N"
     plan.extent = tagged({ kind = "configuredPrefix", biomeKeys = { "N", "O", "P", "Q" }, terminalBiomeKey = "Q" }, "extent", false)
+    plan.olympusAetos = tagged({ kind = "none" }, "olympusAetos", false)
     refreshFingerprint(plan)
     lu.assertNotNil(protocol.decode(plan))
 

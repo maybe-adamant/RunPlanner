@@ -21,8 +21,29 @@ it inert. The live obligations below remain open.
 The owner confirms each item from a live run. Delete this file once every item
 is confirmed, or when the owner explicitly waives the remainder.
 
+Aetos delivery closed at the owner's request on 2026-09-29 (execution protocol
+51, authored schema unchanged). The owner accepted the compact Events layout
+and stable wave-selector spacing. In-game Aetos checks below remain pending.
+Independent review passed. Automated verification passed after updating the
+Olympus catalog snapshot: 4,001/4,002 correctness tests initially passed, then
+all eight snapshot tests passed on the focused rerun. Typecheck, fixture
+integrity, performance comparison, 45 host tests, 727 Lua tests with syntax and
+Luacheck, five release tests, lint, formatting and build passed. The final
+spacing change passed both focused Aetos UI tests; build retains its non-failing
+large-chunk warning.
+
 ## Obligations
 
+- [ ] Aetos: no selection suppresses appearances throughout planned Olympus.
+- [ ] Aetos: requested early and late waves force the chance at the selected
+      encounter while native spawn pacing and departure remain intact.
+- [ ] Aetos: an uncustomized GeneratedP target uses its native wave roll; if
+      a one-wave roll is actually observed, it reports fallback without mismatch.
+- [ ] Aetos: where reproducible, native ineligibility or a missed/skipped target
+      diagnoses once and later encounters resume native behavior. Do not
+      fabricate cooldown state or claim random fallback without live evidence.
+- [ ] Aetos: Fig Leaf exclusion/propagation and Gorgon coexistence match the
+      planner's event selection, with no new conformance obligation.
 - [ ] An ordinary customized generated encounter installs its published waves,
       highlight and counts, with a `generated-installed` diagnostic.
 - [ ] A `GeneratedP_PreCombat` customization with a variable base roll admits
