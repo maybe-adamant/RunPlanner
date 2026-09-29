@@ -391,6 +391,49 @@ No execution fixture or mature golden project moved.
 
 ## Phase III — visible rule integration roadmap
 
+### H — First sequence and Apollo offer (locked 2026-09-29)
+
+Owner-locked second slice. Native facts: `F_Combat01` has
+`ForceIfEncounterNotCompleted = "FIntroFight"` with legal
+`{FIntroFight, GeneratedF}`; `FIntroFight` is `AlwaysForce` gated on
+`TextLinesRecord HasNone ApolloFirstPickUp` with fixed waves
+(`EncounterData.lua`); `ForcedRewards` is an Apollo Boon while
+`UseRecord.ApolloUpgrade` is false; `ForceLootTableFirstRun` is
+`{ApolloWeaponBoon, ApolloSprintBoon, ApolloManaBoon}` and
+`ForceCommonLootFirstRun` applies with zero completed runs
+(`RoomDataF.lua` F_Combat01, `TraitLogic.lua:1794`, `RoomLogic.lua:2093`).
+Owner-confirmed: `F_Combat01` is natively the forced second room on a fresh
+profile, and the Apollo contact is only the boon offer at room clear; the
+executor verifies both against source before coding.
+
+Locked decisions:
+
+- `FIntroFight` is a fixed Encounter Definition; `F_Combat01` gains the
+  `FreshFile`/first entry rule for it, the same mechanism as `OpeningEmpty`.
+- `F_Combat01` is forced on `FreshFile` through the existing
+  `RoomForce.kind: 'requirement'`; forcing never bypasses eligibility.
+- Native `ForcedRewards` is a declared forced incoming reward whose
+  requirement is `lifetimeGodUseRecord` Apollo at zero. No route predicate;
+  mature evaluates false and is unchanged. It settles as an Apollo boon offer
+  without drawing the counted bag when native does not draw.
+- The first-run Apollo offer is a declaration-owned rule on `F_Combat01` for
+  `FreshFile`: exclude the Special and Cast core slots and force Common through
+  the existing forced-rarity frontier. It is not generalized to mature projects.
+- No execution or UI work: publication stays unavailable; existing projections
+  present the fixed encounter and the Common trio. Publication must carry
+  `FIntroFight` when execution lands, because the executor's forcing bypasses
+  native `AlwaysForce`.
+- Excluded: Eris, Hestia/Aphrodite ordering, enemy-intro substitutions,
+  second visits to `F_Combat01`, execution support.
+
+Acceptance: catalog definition and rule witnesses; a Fresh opening →
+`F_Combat01` simulation with no findings whose Apollo offer is the Common
+trio; a Special or Cast authored on that screen and a non-`FIntroFight`
+encounter or non-Apollo reward on that room each report the existing
+unavailable finding with the value retained; mature `F_Combat01` unchanged
+(`GeneratedF`, bag draw, no forced Apollo); product loop extended through
+`F_Combat01` and an Apollo pick with undo.
+
 ### G — Blanket disabling pass (locked 2026-09-29)
 
 Owner-locked first slice. Evidence: `docs/investigations/FRESH_FILE_DISABLING_PASS.md`.
