@@ -252,6 +252,8 @@ function findingExplanation(catalog: Catalog, finding: SemanticFinding): Candida
         kind: 'trait',
         message: 'This Pool sale is no longer available at its timeline point.',
       };
+    case 'purgingPoolUnavailable':
+      return { kind: 'generic', message: 'This route has no usable Pool.' };
     case 'hermesShrinePlacementUnavailable':
       return { kind: 'generic', message: 'This ordinary Shrine is outside its placement window.' };
     case 'hermesShrineDeliveryPlacementRequired':

@@ -65,7 +65,7 @@ describe('trait offer context deduplication', () => {
     // eligibility, rarity or level rule consults them.
     const unrelated = Object.freeze({
       ...branch.state,
-      bags: Object.freeze({ RunProgress: createRewardBagState(store) }),
+      bags: Object.freeze({ RunProgress: createRewardBagState(store, 'Underworld') }),
       rewardPriorities: Object.freeze(['Boon']),
     });
     const left = Object.freeze({

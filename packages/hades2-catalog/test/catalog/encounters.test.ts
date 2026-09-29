@@ -1215,13 +1215,19 @@ describe('encounter envelope catalog', () => {
         range: { max: 0 },
       },
     ];
+    const notFreshFile = {
+      kind: 'not',
+      requirement: { kind: 'routeKeyEquals', routeKey: 'FreshFile' },
+    };
     for (const encounterKey of ['NemesisCombatF', 'NemesisCombatG', 'NemesisCombatI']) {
       expect(requirementsFor(encounterKey)).toEqual([
+        notFreshFile,
         { kind: 'counterRange', axis: 'biomeDepthCache', range: { min: 4 } },
         ...nemesisBase,
       ]);
     }
     expect(requirementsFor('NemesisCombatH')).toEqual([
+      notFreshFile,
       { kind: 'counterRange', axis: 'biomeEncounterDepth', range: { min: 1 } },
       ...nemesisBase,
     ]);
@@ -1550,6 +1556,7 @@ describe('encounter envelope catalog', () => {
       requirements: {
         kind: 'all',
         requirements: [
+          { kind: 'not', requirement: { kind: 'routeKeyEquals', routeKey: 'FreshFile' } },
           { kind: 'not', requirement: { kind: 'routeKeyEquals', routeKey: 'Dream' } },
           { kind: 'counterRange', axis: 'biomeDepthCache', range: { min: 4 } },
           {

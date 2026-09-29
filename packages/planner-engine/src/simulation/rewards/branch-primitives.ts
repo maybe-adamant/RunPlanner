@@ -64,7 +64,7 @@ export function withBag(
   if (store === undefined) return undefined;
   const current = branch.state.bags[storeKey];
   if (current !== undefined) return { branch, bag: current };
-  const bag = createRewardBagState(store);
+  const bag = createRewardBagState(store, branch.state.reached.routePosition.routeKey);
   return {
     branch: Object.freeze({
       ...branch,

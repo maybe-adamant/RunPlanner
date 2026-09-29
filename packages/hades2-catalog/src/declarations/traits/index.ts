@@ -244,7 +244,8 @@ export const traitCatalogInput: RawTraitCatalogInput = {
     hermes: { Rare: 0.06, Epic: 0.03, Heroic: 0, Duo: 0, Legendary: 0.01 },
   },
   boonRarityRollOrder: ['Common', 'Rare', 'Epic', 'Duo', 'Legendary'],
-  boonReplacementChance: 0.1,
+  // The native roll needs two completed runs.
+  boonReplacement: { chance: 0.1, excludedRouteKeys: ['FreshFile'] },
   echoLastRunBoon: {
     sources: [
       { giverKey: 'Aphrodite', lootHistorySource: 'AphroditeUpgrade' },

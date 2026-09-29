@@ -59,6 +59,12 @@ export function temporaryBoonRarityUses(
   return source.suppressTemporaryBoonRarity === true ? 0 : state.stygianWell.yarnUses;
 }
 
+/** The ordinary replacement roll's chance, zero on a route its save gate excludes. */
+export function boonReplacementChance(catalog: Catalog, state: SimulationState): number {
+  const { chance, excludedRouteKeys } = catalog.boonReplacement;
+  return excludedRouteKeys.includes(state.reached.routePosition.routeKey) ? 0 : chance;
+}
+
 /** One-use forced replacement state carried by Sacrificial Hymn. */
 export function limitedSwapUses(state: SimulationState): number {
   return state.stygianWell.hymnUses;

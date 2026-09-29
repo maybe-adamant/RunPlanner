@@ -2,7 +2,7 @@ import type { Catalog, TraitRarity } from '../../../catalog-schema';
 import type { AuthoredTraitOffer } from '../../../authored-project/traits/state';
 import type { TraitHistoryState } from '../history/model';
 import type { ResolvedTraitOfferSource } from '../offer-domain';
-import { limitedSwapUses } from '../offer-domain';
+import { boonReplacementChance, limitedSwapUses } from '../offer-domain';
 import type { SimulationState } from '../../state/model';
 import { deriveBoonRarityValues } from '../rarity';
 
@@ -127,7 +127,7 @@ function preparePools(input: InitialOfferInput): InitialOfferPools | undefined {
         ? 1
         : forceCommon
           ? 0
-          : (offerSource.replacementRollChance ?? catalog.boonReplacementChance),
+          : (offerSource.replacementRollChance ?? boonReplacementChance(catalog, state)),
     linked: fresh.filter((traitKey) => catalog.traits.byKey[traitKey]!.optionalLinkedPriority),
     finalRescue: offerSource.finalRarityRescueDisabled !== true,
   };

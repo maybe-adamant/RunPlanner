@@ -77,7 +77,7 @@ describe('trait offer-catalog compiler owner', () => {
       'Epic',
     ]);
     expect(catalog.traitGivers.byKey.Dionysus).not.toHaveProperty('boonRarityRollOrder');
-    expect(catalog.boonReplacementChance).toBe(0.1);
+    expect(catalog.boonReplacement).toEqual({ chance: 0.1, excludedRouteKeys: ['FreshFile'] });
   });
 
   it('rejects malformed default and custom boon rarity roll orders', () => {
@@ -105,19 +105,24 @@ describe('trait offer-catalog compiler owner', () => {
     ).toThrow(/duplicates Heroic/);
   });
 
-  it('rejects an invalid ordinary replacement-roll chance', () => {
-    expect(() =>
+  it('rejects an invalid ordinary replacement-roll chance or excluded route', () => {
+    const withReplacement = (boonReplacement: {
+      readonly chance: number;
+      readonly excludedRouteKeys: readonly string[];
+    }) =>
       createCatalog({
         ...declarations,
-        traitCatalog: { ...declarations.traitCatalog, boonReplacementChance: Number.NaN },
-      }),
-    ).toThrow(/boonReplacementChance/);
-    expect(() =>
-      createCatalog({
-        ...declarations,
-        traitCatalog: { ...declarations.traitCatalog, boonReplacementChance: 1.1 },
-      }),
-    ).toThrow(/boonReplacementChance/);
+        traitCatalog: { ...declarations.traitCatalog, boonReplacement },
+      });
+    expect(() => withReplacement({ chance: Number.NaN, excludedRouteKeys: [] })).toThrow(
+      /boonReplacement\.chance/,
+    );
+    expect(() => withReplacement({ chance: 1.1, excludedRouteKeys: [] })).toThrow(
+      /boonReplacement\.chance/,
+    );
+    expect(() => withReplacement({ chance: 0.1, excludedRouteKeys: ['Elsewhere'] })).toThrow(
+      /unknown route Elsewhere/,
+    );
   });
 
   it('rejects incomplete, extra, and non-finite provider base declarations', () => {

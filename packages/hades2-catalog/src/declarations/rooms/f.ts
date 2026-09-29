@@ -1,21 +1,29 @@
 import type { RawRoomDeclaration } from './types';
-import { normalResourcePointSupport } from '../resources';
+import { underworldResourcePointSupport } from '../resources';
+import { notFreshFileRoute } from '../routes';
 
-const chaosExit = {
+const chaosHostOnlyExit = {
   kind: 'chaos' as const,
   key: 'chaos' as const,
   exitType: 'ChaosExitDoor',
   canHost: true,
-  canSpawn: true,
-};
-const chaosHostOnlyExit = {
-  ...chaosExit,
   canSpawn: false,
+};
+const chaosExit = {
+  ...chaosHostOnlyExit,
+  canSpawn: true,
+  // Native ChaosUnlocked needs a lifetime Hermes use.
+  requirement: notFreshFileRoute,
 };
 
 const wellHost = (challengeSwitchAnchorCount: number) => ({
   challengeSwitchAnchorCount,
-  roomShop: { profileKey: 'RoomShop' as const, spawnChance: 0.25 },
+  roomShop: {
+    profileKey: 'RoomShop' as const,
+    spawnChance: 0.25,
+    // Stygian Wells need their incantation.
+    excludedRouteKeys: ['FreshFile'],
+  },
 });
 
 const fRoomDeclarations: readonly RawRoomDeclaration[] = [
@@ -28,7 +36,12 @@ const fRoomDeclarations: readonly RawRoomDeclaration[] = [
     // the resolved key already records that.
     gameName: 'F_Opening01',
     secretPointAnchorCount: 1,
-    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
+    resourcePointSupport: underworldResourcePointSupport([
+      'Pickaxe',
+      'Exorcism',
+      'Shovel',
+      'Fishing',
+    ]),
     label: 'Opening 01',
     roomSetKey: 'F',
     advancesExperimentalHammerUses: true,
@@ -58,7 +71,12 @@ const fRoomDeclarations: readonly RawRoomDeclaration[] = [
   {
     gameName: 'F_Opening02',
     secretPointAnchorCount: 1,
-    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
+    resourcePointSupport: underworldResourcePointSupport([
+      'Pickaxe',
+      'Exorcism',
+      'Shovel',
+      'Fishing',
+    ]),
     label: 'Opening 02',
     roomSetKey: 'F',
     advancesExperimentalHammerUses: true,
@@ -86,7 +104,12 @@ const fRoomDeclarations: readonly RawRoomDeclaration[] = [
   {
     gameName: 'F_Opening03',
     secretPointAnchorCount: 1,
-    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
+    resourcePointSupport: underworldResourcePointSupport([
+      'Pickaxe',
+      'Exorcism',
+      'Shovel',
+      'Fishing',
+    ]),
     label: 'Opening 03',
     roomSetKey: 'F',
     advancesExperimentalHammerUses: true,
@@ -115,7 +138,12 @@ const fRoomDeclarations: readonly RawRoomDeclaration[] = [
     gameName: 'F_Combat01',
     secretPointAnchorCount: 1,
     ...wellHost(1),
-    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
+    resourcePointSupport: underworldResourcePointSupport([
+      'Pickaxe',
+      'Exorcism',
+      'Shovel',
+      'Fishing',
+    ]),
     label: 'Combat 01',
     roomSetKey: 'F',
     advancesExperimentalHammerUses: true,
@@ -149,7 +177,7 @@ const fRoomDeclarations: readonly RawRoomDeclaration[] = [
     gameName: 'F_Combat02',
     secretPointAnchorCount: 1,
     ...wellHost(1),
-    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
+    resourcePointSupport: underworldResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
     label: 'Combat 02',
     roomSetKey: 'F',
     advancesExperimentalHammerUses: true,
@@ -185,7 +213,7 @@ const fRoomDeclarations: readonly RawRoomDeclaration[] = [
     gameName: 'F_Combat03',
     secretPointAnchorCount: 1,
     ...wellHost(2),
-    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
+    resourcePointSupport: underworldResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
     label: 'Combat 03',
     roomSetKey: 'F',
     advancesExperimentalHammerUses: true,
@@ -221,7 +249,12 @@ const fRoomDeclarations: readonly RawRoomDeclaration[] = [
     gameName: 'F_Combat04',
     secretPointAnchorCount: 1,
     ...wellHost(1),
-    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
+    resourcePointSupport: underworldResourcePointSupport([
+      'Pickaxe',
+      'Exorcism',
+      'Shovel',
+      'Fishing',
+    ]),
     label: 'Combat 04',
     roomSetKey: 'F',
     advancesExperimentalHammerUses: true,
@@ -257,7 +290,12 @@ const fRoomDeclarations: readonly RawRoomDeclaration[] = [
     gameName: 'F_Combat05',
     secretPointAnchorCount: 1,
     ...wellHost(2),
-    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
+    resourcePointSupport: underworldResourcePointSupport([
+      'Pickaxe',
+      'Exorcism',
+      'Shovel',
+      'Fishing',
+    ]),
     label: 'Combat 05',
     roomSetKey: 'F',
     advancesExperimentalHammerUses: true,
@@ -293,7 +331,12 @@ const fRoomDeclarations: readonly RawRoomDeclaration[] = [
     gameName: 'F_Combat06',
     secretPointAnchorCount: 1,
     ...wellHost(2),
-    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
+    resourcePointSupport: underworldResourcePointSupport([
+      'Pickaxe',
+      'Exorcism',
+      'Shovel',
+      'Fishing',
+    ]),
     label: 'Combat 06',
     roomSetKey: 'F',
     advancesExperimentalHammerUses: true,
@@ -324,7 +367,12 @@ const fRoomDeclarations: readonly RawRoomDeclaration[] = [
     gameName: 'F_Combat07',
     secretPointAnchorCount: 1,
     ...wellHost(1),
-    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
+    resourcePointSupport: underworldResourcePointSupport([
+      'Pickaxe',
+      'Exorcism',
+      'Shovel',
+      'Fishing',
+    ]),
     label: 'Combat 07',
     roomSetKey: 'F',
     advancesExperimentalHammerUses: true,
@@ -355,7 +403,12 @@ const fRoomDeclarations: readonly RawRoomDeclaration[] = [
     gameName: 'F_Combat08',
     secretPointAnchorCount: 1,
     ...wellHost(1),
-    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
+    resourcePointSupport: underworldResourcePointSupport([
+      'Pickaxe',
+      'Exorcism',
+      'Shovel',
+      'Fishing',
+    ]),
     label: 'Combat 08',
     roomSetKey: 'F',
     advancesExperimentalHammerUses: true,
@@ -391,7 +444,7 @@ const fRoomDeclarations: readonly RawRoomDeclaration[] = [
     gameName: 'F_Combat09',
     secretPointAnchorCount: 1,
     ...wellHost(1),
-    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
+    resourcePointSupport: underworldResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
     label: 'Combat 09',
     roomSetKey: 'F',
     advancesExperimentalHammerUses: true,
@@ -424,7 +477,12 @@ const fRoomDeclarations: readonly RawRoomDeclaration[] = [
     gameName: 'F_Combat10',
     secretPointAnchorCount: 1,
     ...wellHost(2),
-    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
+    resourcePointSupport: underworldResourcePointSupport([
+      'Pickaxe',
+      'Exorcism',
+      'Shovel',
+      'Fishing',
+    ]),
     label: 'Combat 10',
     roomSetKey: 'F',
     advancesExperimentalHammerUses: true,
@@ -457,7 +515,12 @@ const fRoomDeclarations: readonly RawRoomDeclaration[] = [
     gameName: 'F_Combat11',
     secretPointAnchorCount: 1,
     ...wellHost(2),
-    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
+    resourcePointSupport: underworldResourcePointSupport([
+      'Pickaxe',
+      'Exorcism',
+      'Shovel',
+      'Fishing',
+    ]),
     label: 'Combat 11',
     roomSetKey: 'F',
     advancesExperimentalHammerUses: true,
@@ -493,7 +556,12 @@ const fRoomDeclarations: readonly RawRoomDeclaration[] = [
     gameName: 'F_Combat12',
     secretPointAnchorCount: 1,
     ...wellHost(2),
-    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
+    resourcePointSupport: underworldResourcePointSupport([
+      'Pickaxe',
+      'Exorcism',
+      'Shovel',
+      'Fishing',
+    ]),
     label: 'Combat 12',
     roomSetKey: 'F',
     advancesExperimentalHammerUses: true,
@@ -529,7 +597,12 @@ const fRoomDeclarations: readonly RawRoomDeclaration[] = [
     gameName: 'F_Combat13',
     secretPointAnchorCount: 1,
     ...wellHost(2),
-    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
+    resourcePointSupport: underworldResourcePointSupport([
+      'Pickaxe',
+      'Exorcism',
+      'Shovel',
+      'Fishing',
+    ]),
     label: 'Combat 13',
     roomSetKey: 'F',
     advancesExperimentalHammerUses: true,
@@ -560,7 +633,12 @@ const fRoomDeclarations: readonly RawRoomDeclaration[] = [
     gameName: 'F_Combat14',
     secretPointAnchorCount: 1,
     ...wellHost(2),
-    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
+    resourcePointSupport: underworldResourcePointSupport([
+      'Pickaxe',
+      'Exorcism',
+      'Shovel',
+      'Fishing',
+    ]),
     label: 'Combat 14',
     roomSetKey: 'F',
     advancesExperimentalHammerUses: true,
@@ -596,7 +674,12 @@ const fRoomDeclarations: readonly RawRoomDeclaration[] = [
     gameName: 'F_Combat15',
     secretPointAnchorCount: 1,
     ...wellHost(2),
-    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
+    resourcePointSupport: underworldResourcePointSupport([
+      'Pickaxe',
+      'Exorcism',
+      'Shovel',
+      'Fishing',
+    ]),
     label: 'Combat 15',
     roomSetKey: 'F',
     advancesExperimentalHammerUses: true,
@@ -632,7 +715,12 @@ const fRoomDeclarations: readonly RawRoomDeclaration[] = [
     gameName: 'F_Combat16',
     secretPointAnchorCount: 1,
     ...wellHost(2),
-    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
+    resourcePointSupport: underworldResourcePointSupport([
+      'Pickaxe',
+      'Exorcism',
+      'Shovel',
+      'Fishing',
+    ]),
     label: 'Combat 16',
     roomSetKey: 'F',
     advancesExperimentalHammerUses: true,
@@ -668,7 +756,12 @@ const fRoomDeclarations: readonly RawRoomDeclaration[] = [
     gameName: 'F_Combat17',
     secretPointAnchorCount: 3,
     ...wellHost(1),
-    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
+    resourcePointSupport: underworldResourcePointSupport([
+      'Pickaxe',
+      'Exorcism',
+      'Shovel',
+      'Fishing',
+    ]),
     label: 'Combat 17',
     roomSetKey: 'F',
     advancesExperimentalHammerUses: true,
@@ -704,7 +797,12 @@ const fRoomDeclarations: readonly RawRoomDeclaration[] = [
     gameName: 'F_Combat18',
     secretPointAnchorCount: 2,
     ...wellHost(2),
-    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
+    resourcePointSupport: underworldResourcePointSupport([
+      'Pickaxe',
+      'Exorcism',
+      'Shovel',
+      'Fishing',
+    ]),
     label: 'Combat 18',
     roomSetKey: 'F',
     advancesExperimentalHammerUses: true,
@@ -740,7 +838,12 @@ const fRoomDeclarations: readonly RawRoomDeclaration[] = [
     gameName: 'F_Combat19',
     secretPointAnchorCount: 2,
     ...wellHost(1),
-    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
+    resourcePointSupport: underworldResourcePointSupport([
+      'Pickaxe',
+      'Exorcism',
+      'Shovel',
+      'Fishing',
+    ]),
     label: 'Combat 19',
     roomSetKey: 'F',
     advancesExperimentalHammerUses: true,
@@ -776,7 +879,12 @@ const fRoomDeclarations: readonly RawRoomDeclaration[] = [
     gameName: 'F_Combat20',
     secretPointAnchorCount: 1,
     ...wellHost(1),
-    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
+    resourcePointSupport: underworldResourcePointSupport([
+      'Pickaxe',
+      'Exorcism',
+      'Shovel',
+      'Fishing',
+    ]),
     label: 'Combat 20',
     roomSetKey: 'F',
     advancesExperimentalHammerUses: true,
@@ -812,7 +920,12 @@ const fRoomDeclarations: readonly RawRoomDeclaration[] = [
     gameName: 'F_Combat21',
     secretPointAnchorCount: 2,
     ...wellHost(1),
-    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
+    resourcePointSupport: underworldResourcePointSupport([
+      'Pickaxe',
+      'Exorcism',
+      'Shovel',
+      'Fishing',
+    ]),
     label: 'Combat 21',
     roomSetKey: 'F',
     advancesExperimentalHammerUses: true,
@@ -848,7 +961,7 @@ const fRoomDeclarations: readonly RawRoomDeclaration[] = [
     gameName: 'F_Combat22',
     secretPointAnchorCount: 2,
     ...wellHost(1),
-    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
+    resourcePointSupport: underworldResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
     label: 'Combat 22',
     roomSetKey: 'F',
     advancesExperimentalHammerUses: true,
@@ -883,7 +996,7 @@ const fRoomDeclarations: readonly RawRoomDeclaration[] = [
   {
     gameName: 'F_MiniBoss01',
     secretPointAnchorCount: 1,
-    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
+    resourcePointSupport: underworldResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
     boonRarityOverride: { Rare: 0.9, Epic: 0.07, Legendary: 0.05 },
     label: 'Root-Stalker',
     roomSetKey: 'F',
@@ -930,7 +1043,7 @@ const fRoomDeclarations: readonly RawRoomDeclaration[] = [
   {
     gameName: 'F_MiniBoss02',
     secretPointAnchorCount: 1,
-    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
+    resourcePointSupport: underworldResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
     boonRarityOverride: { Rare: 0.9, Epic: 0.07, Legendary: 0.05 },
     label: 'Shadow-Spiller',
     roomSetKey: 'F',
@@ -963,6 +1076,7 @@ const fRoomDeclarations: readonly RawRoomDeclaration[] = [
     eligibility: {
       kind: 'all',
       requirements: [
+        notFreshFileRoute,
         { kind: 'counterRange', axis: 'biomeDepthCache', range: { min: 4 } },
         {
           kind: 'recordCount',
@@ -977,7 +1091,12 @@ const fRoomDeclarations: readonly RawRoomDeclaration[] = [
   {
     gameName: 'F_MiniBoss03',
     secretPointAnchorCount: 1,
-    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
+    resourcePointSupport: underworldResourcePointSupport([
+      'Pickaxe',
+      'Exorcism',
+      'Shovel',
+      'Fishing',
+    ]),
     boonRarityOverride: { Rare: 0.9, Epic: 0.07, Legendary: 0.05 },
     label: 'Master-Slicer',
     roomSetKey: 'F',
@@ -1005,6 +1124,7 @@ const fRoomDeclarations: readonly RawRoomDeclaration[] = [
     eligibility: {
       kind: 'all',
       requirements: [
+        notFreshFileRoute,
         { kind: 'counterRange', axis: 'biomeDepthCache', range: { min: 4 } },
         {
           kind: 'recordCount',
@@ -1019,9 +1139,12 @@ const fRoomDeclarations: readonly RawRoomDeclaration[] = [
   {
     gameName: 'F_Story01',
     secretPointAnchorCount: 3,
-    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing'], {
-      ignoresBiomeLimit: true,
-    }),
+    resourcePointSupport: underworldResourcePointSupport(
+      ['Pickaxe', 'Exorcism', 'Shovel', 'Fishing'],
+      {
+        ignoresBiomeLimit: true,
+      },
+    ),
     label: 'Arachne',
     roomSetKey: 'F',
     advancesExperimentalHammerUses: true,
@@ -1042,17 +1165,26 @@ const fRoomDeclarations: readonly RawRoomDeclaration[] = [
     counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1, maxCreationsThisRun: 1 },
     eligibility: {
-      kind: 'counterRange',
-      axis: 'biomeDepthCache',
-      range: { min: 4, max: 8 },
+      kind: 'all',
+      requirements: [
+        notFreshFileRoute,
+        {
+          kind: 'counterRange',
+          axis: 'biomeDepthCache',
+          range: { min: 4, max: 8 },
+        },
+      ],
     },
   },
   {
     gameName: 'F_Reprieve01',
     secretPointAnchorCount: 1,
-    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing'], {
-      ignoresBiomeLimit: true,
-    }),
+    resourcePointSupport: underworldResourcePointSupport(
+      ['Pickaxe', 'Exorcism', 'Shovel', 'Fishing'],
+      {
+        ignoresBiomeLimit: true,
+      },
+    ),
     label: 'Fountain',
     hasRequiredFountain: true,
     roomSetKey: 'F',
@@ -1080,15 +1212,26 @@ const fRoomDeclarations: readonly RawRoomDeclaration[] = [
     counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1, maxCreationsThisRun: 1 },
     eligibility: {
-      kind: 'counterRange',
-      axis: 'biomeDepthCache',
-      range: { min: 4, max: 8 },
+      kind: 'all',
+      requirements: [
+        notFreshFileRoute,
+        {
+          kind: 'counterRange',
+          axis: 'biomeDepthCache',
+          range: { min: 4, max: 8 },
+        },
+      ],
     },
   },
   {
     gameName: 'F_Shop01',
     secretPointAnchorCount: 1,
-    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
+    resourcePointSupport: underworldResourcePointSupport([
+      'Pickaxe',
+      'Exorcism',
+      'Shovel',
+      'Fishing',
+    ]),
     label: 'Midshop',
     roomSetKey: 'F',
     advancesExperimentalHammerUses: true,
@@ -1107,6 +1250,8 @@ const fRoomDeclarations: readonly RawRoomDeclaration[] = [
         exitType: 'ZagContract',
         targetRoomGameName: 'C_Boss01',
         maxEnteredThisRoute: 0,
+        // Native InfernalContractUnlocked needs the true ending.
+        requirement: notFreshFileRoute,
       },
     ],
     incomingReward: {
@@ -1133,7 +1278,12 @@ const fRoomDeclarations: readonly RawRoomDeclaration[] = [
   },
   {
     gameName: 'F_PreBoss01',
-    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
+    resourcePointSupport: underworldResourcePointSupport([
+      'Pickaxe',
+      'Exorcism',
+      'Shovel',
+      'Fishing',
+    ]),
     label: 'Preboss',
     roomSetKey: 'F',
     advancesExperimentalHammerUses: true,
@@ -1188,7 +1338,7 @@ const fRoomDeclarations: readonly RawRoomDeclaration[] = [
   },
   {
     gameName: 'F_Boss01',
-    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
+    resourcePointSupport: underworldResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
     label: 'Hecate',
     roomSetKey: 'F',
     advancesExperimentalHammerUses: true,
@@ -1209,7 +1359,12 @@ const fRoomDeclarations: readonly RawRoomDeclaration[] = [
   },
   {
     gameName: 'F_Boss02',
-    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
+    resourcePointSupport: underworldResourcePointSupport([
+      'Pickaxe',
+      'Exorcism',
+      'Shovel',
+      'Fishing',
+    ]),
     label: 'Hecate',
     roomSetKey: 'F',
     advancesExperimentalHammerUses: true,
@@ -1230,13 +1385,20 @@ const fRoomDeclarations: readonly RawRoomDeclaration[] = [
   },
   {
     gameName: 'F_PostBoss01',
-    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
+    resourcePointSupport: underworldResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
     label: 'Postboss',
+    // The Postboss rack, Pool and Well each need their own incantation.
     hasKeepsakeRack: true,
+    keepsakeRackExcludedRouteKeys: ['FreshFile'],
     hasRequiredFountain: true,
-    purgingPool: { slotKeys: ['left', 'middle', 'right'] },
+    purgingPool: { slotKeys: ['left', 'middle', 'right'], excludedRouteKeys: ['FreshFile'] },
     challengeSwitchAnchorCount: 2,
-    roomShop: { profileKey: 'RoomShop', spawnChance: 1, forced: true },
+    roomShop: {
+      profileKey: 'RoomShop',
+      spawnChance: 1,
+      forced: true,
+      excludedRouteKeys: ['FreshFile'],
+    },
     roomSetKey: 'F',
     advancesExperimentalHammerUses: true,
     kind: 'PostBoss',

@@ -152,6 +152,7 @@ function completionChainForSelection(
   const boss = defaultOccurrence(
     catalog,
     bossRoom,
+    located.routeKey,
     bossOccurrenceId,
     'ordinary',
     true,
@@ -164,6 +165,7 @@ function completionChainForSelection(
       : defaultOccurrence(
           catalog,
           postbossRoom,
+          located.routeKey,
           postbossOccurrenceId,
           'ordinary',
           true,
@@ -444,6 +446,7 @@ export function replaceTakeoverBatch(
       : defaultOccurrence(
           catalog,
           room,
+          located.routeKey,
           target.occurrenceId,
           role,
           entryActive,

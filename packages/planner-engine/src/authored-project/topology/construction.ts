@@ -1,4 +1,9 @@
-import { biomeStartRoomGameNames, resolveBiomeStart } from '../route-profile';
+import {
+  biomeStartRoomGameNames,
+  resolveBiomeStart,
+  routePurgingPool,
+  routeRoomShop,
+} from '../route-profile';
 import type { BiomeLayout, Catalog, RoomDeclaration } from '../../catalog-schema';
 import { createOccurrenceId } from '../addresses';
 import type { BiomeTopology, OccurrenceId, RoomOccurrence, RouteLoadout } from '../model';
@@ -14,6 +19,7 @@ import { createUnresolvedAcquisitionRewardState } from '../traits/state';
 export function defaultOccurrence(
   catalog: Catalog,
   room: RoomDeclaration,
+  routeKey: string,
   occurrenceId: OccurrenceId,
   role: RoomOccurrenceRole,
   entryActive: boolean,
@@ -43,7 +49,7 @@ export function defaultOccurrence(
     encounters,
     roomActions: createDefaultRoomActionState(room),
     additionalExits: Object.freeze([]),
-    ...(room.purgingPool === undefined
+    ...(routePurgingPool(room, routeKey) === undefined
       ? {}
       : {
           purgingPool: Object.freeze({
@@ -58,7 +64,7 @@ export function defaultOccurrence(
           }),
         }
       : {}),
-    ...(room.roomShop?.forced === true
+    ...(routeRoomShop(room, routeKey)?.forced === true
       ? {
           stygianWell: Object.freeze({
             interacted: false,
@@ -83,6 +89,7 @@ export function createStartTopology(
   const occurrence = defaultOccurrence(
     catalog,
     room,
+    routePosition.routeKey,
     occurrenceId,
     'ordinary',
     true,

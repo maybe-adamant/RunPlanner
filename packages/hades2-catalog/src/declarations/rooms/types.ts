@@ -78,6 +78,7 @@ export interface RawZagreusContractAdditionalExitDeclaration {
   readonly exitType: string;
   readonly targetRoomGameName: string;
   readonly maxEnteredThisRoute: number;
+  readonly requirement?: RequirementExpression;
 }
 
 export interface RawChaosAdditionalExitDeclaration {
@@ -113,8 +114,12 @@ export interface RawRoomDeclaration {
   /** The game room flag that suppresses Gorgon Amulet in this room. */
   readonly blocksGorgon?: boolean;
   readonly hasKeepsakeRack?: boolean;
+  readonly keepsakeRackExcludedRouteKeys?: readonly string[];
   readonly hasRequiredFountain?: boolean;
-  readonly purgingPool?: { readonly slotKeys: readonly ['left', 'middle', 'right'] };
+  readonly purgingPool?: {
+    readonly slotKeys: readonly ['left', 'middle', 'right'];
+    readonly excludedRouteKeys?: readonly string[];
+  };
   /** Exact installed `ChallengeSwitchBase` anchors available to competing secret spawns. */
   readonly challengeSwitchAnchorCount?: number;
   /** Exact installed `SecretPoint` anchors for forced Chaos gates. */
@@ -129,6 +134,7 @@ export interface RawRoomDeclaration {
     readonly profileKey: 'RoomShop';
     readonly spawnChance: number;
     readonly forced?: true;
+    readonly excludedRouteKeys?: readonly string[];
   };
   readonly boonRarityOverride?: import('@run-planner/engine/catalog-schema').BoonRarityOverride;
   readonly prebossBatchPolicy?: RawPrebossBatchPolicy;

@@ -90,6 +90,7 @@ export interface RawRewardStoreEntryDeclaration {
   readonly rewardType: string;
   readonly allowDuplicates?: boolean;
   readonly requirement?: RequirementExpression;
+  readonly routeKeys?: readonly string[];
 }
 
 export interface RawRewardStoreDeclaration {
@@ -171,4 +172,5 @@ export interface RawRewardKernelInput {
   readonly stores: readonly RawRewardStoreDeclaration[];
   readonly shops: readonly RawShopProfileDeclaration[];
   readonly producerLifecycles: readonly RawProducerLifecycleProfileDeclaration[];
+  readonly countedStoreFallbackRewardType: string;
 }

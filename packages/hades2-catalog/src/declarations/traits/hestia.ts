@@ -213,7 +213,9 @@ export const hestiaTraits = [
     freshOfferRarities: ['Common'],
     equippedRarities: ['Common'],
     linkedBoonRequirements: [],
+    // Infusions need the WorldUpgradeElementalBoons incantation.
     eligibilityRequirements: [
+      { kind: 'routeKeyNot', routeKey: 'FreshFile' },
       {
         kind: 'elementCount',
         element: 'Fire',

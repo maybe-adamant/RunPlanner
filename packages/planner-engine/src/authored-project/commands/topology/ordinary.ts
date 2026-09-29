@@ -351,6 +351,7 @@ export function createTarget(
     defaultOccurrence(
       catalog,
       room,
+      located.routeKey,
       command.occurrenceId,
       role,
       nextSelectedExitKey === command.target.exitKey,
@@ -387,6 +388,7 @@ export function createTarget(
       : defaultOccurrence(
           catalog,
           targetRoom,
+          located.routeKey,
           occurrence.occurrenceId,
           targetRole,
           entryActive,

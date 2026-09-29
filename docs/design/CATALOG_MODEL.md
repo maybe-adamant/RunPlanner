@@ -123,6 +123,17 @@ pre-true-ending `I_PreBoss01`, the aspectless Staff as its fixed weapon and
 `F_Opening01` as its one opening. The engine owns what that profile means for
 loadout authorship, start resolution and initial history.
 
+Content a fresh profile's first attempt can never reach is closed on the
+existing declaration by route availability, never by a separate store, Shop
+profile or room: a `routeKeyEquals` negation in room eligibility, encounter
+requirements, Chaos and Zagreus Contract source requirements, store and Shop
+option requirements and god `lootRequirement`; `routeKeyNot` trait
+eligibility; and `excludedRouteKeys` on resource support, the Anomaly source,
+room features (`roomShop`, `purgingPool`, `keepsakeRackExcludedRouteKeys`),
+single-choice boss customization choices and the ordinary boon replacement
+roll (`boonReplacement`). A counted store entry may name the `routeKeys` whose
+bag holds it. Every listed route key must be a declared route.
+
 The catalog declares one counted run-start reward binding; entry rooms have no
 intrinsic incoming reward. A fresh profile's first entry has no run-start
 reward. Narrow contextual encounter rules express genuine route-mode and
@@ -175,7 +186,9 @@ Physical exit types select explicit source/target constraints. An unconstrained
 type still has a normalized policy; a missing policy is not permissive.
 Room-set identity is not route placement or ordinary candidate eligibility.
 
-Chaos uses one gate kind with distinct `canHost` and `canSpawn` facts.
+Chaos uses one gate kind with distinct `canHost` and `canSpawn` facts. Chaos
+and Zagreus Contract exits may each declare a source-local `requirement`,
+evaluated at the reached source's placement assessment.
 Ixion-generated presence does not add a second Chaos type. Anomaly is a closed
 G replacement; Zagreus Contract is a closed additional exit. Their automatic
 returns, preview behavior and encounter effects are declared independently.

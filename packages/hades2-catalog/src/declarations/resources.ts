@@ -37,6 +37,7 @@ function support(
   profile: ResourceProfile,
   families: readonly ResourceFamily[],
   options: { readonly ignoresBiomeLimit?: boolean } = {},
+  excludedRouteKeys: readonly string[] = ['Dream'],
 ): ResourcePointSupport {
   const rules = Object.freeze(
     Object.fromEntries(
@@ -72,7 +73,7 @@ function support(
   return Object.freeze({
     families: Object.freeze([...families]),
     capacity: profile === 'chaos' ? 'allTools' : 'simpleComplex',
-    excludedRouteKeys: ['Dream'],
+    excludedRouteKeys: Object.freeze([...excludedRouteKeys]),
     rules,
     ...(options.ignoresBiomeLimit ? { ignoresBiomeLimit: true } : {}),
   });
@@ -82,10 +83,17 @@ export const normalResourcePointSupport = (
   families: readonly ResourceFamily[],
   options?: { readonly ignoresBiomeLimit?: boolean },
 ) => support('normal', families, options);
+// Tool resource points need a completed run and the tools incantation.
+const underworldExcludedRouteKeys = ['Dream', 'FreshFile'] as const;
+/** Normal spacing on an F, G or I room, which a fresh profile's first attempt also visits. */
+export const underworldResourcePointSupport = (
+  families: readonly ResourceFamily[],
+  options?: { readonly ignoresBiomeLimit?: boolean },
+) => support('normal', families, options, underworldExcludedRouteKeys);
 export const hResourcePointSupport = (
   families: readonly ResourceFamily[],
   options?: { readonly ignoresBiomeLimit?: boolean },
-) => support('h', families, options);
+) => support('h', families, options, underworldExcludedRouteKeys);
 export const nResourcePointSupport = (
   families: readonly ResourceFamily[],
   options?: { readonly ignoresBiomeLimit?: boolean },

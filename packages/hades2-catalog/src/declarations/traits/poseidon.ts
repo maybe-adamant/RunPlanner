@@ -240,7 +240,9 @@ export const poseidonTraits = [
     freshOfferRarities: ['Common'],
     equippedRarities: ['Common'],
     linkedBoonRequirements: [],
+    // Infusions need the WorldUpgradeElementalBoons incantation.
     eligibilityRequirements: [
+      { kind: 'routeKeyNot', routeKey: 'FreshFile' },
       {
         kind: 'elementCount',
         element: 'Water',

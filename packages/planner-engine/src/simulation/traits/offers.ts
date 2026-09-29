@@ -23,6 +23,7 @@ import type {
 } from './offer-domain';
 import {
   assessTraitOfferComposition,
+  boonReplacementChance,
   limitedSwapUses,
   temporaryBoonRarityUses,
 } from './offer-domain';
@@ -94,7 +95,7 @@ export function offerGenerationAdjustedGiverSource(
       ? 1
       : ordinary
         ? 0
-        : (source.replacementRollChance ?? catalog.boonReplacementChance);
+        : (source.replacementRollChance ?? boonReplacementChance(catalog, state));
   // Native ForceCommon bypasses GetRarityChances entirely. Any facts captured
   // before this source decision therefore describe a different screen and must
   // not cross the forced-rarity frontier.

@@ -149,6 +149,8 @@ export interface RewardStoreEntry {
   readonly rewardType: string;
   readonly allowDuplicates: boolean;
   readonly requirement?: RequirementExpression;
+  /** Routes whose bag holds this entry; absent means every route. */
+  readonly routeKeys?: readonly string[];
 }
 
 export interface RewardStoreDeclaration {
@@ -230,6 +232,8 @@ export interface RewardKernelCatalog {
   readonly stores: CatalogCollection<RewardStoreDeclaration>;
   readonly shops: CatalogCollection<ShopProfileDeclaration>;
   readonly producerLifecycles: CatalogCollection<ProducerLifecycleProfileDeclaration>;
+  /** Native `ChooseRoomReward` final fallback once two appended store copies stay ineligible. */
+  readonly countedStoreFallbackRewardType: string;
 }
 
 export interface RewardKernelFacts {

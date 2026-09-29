@@ -6,7 +6,7 @@ import type {
   RewardKernelCatalog,
 } from '@run-planner/engine/reward-kernel';
 
-import { createCollection, requireNonEmpty } from '../common';
+import { createCollection, freezeUniqueStrings, requireNonEmpty } from '../common';
 import { fail } from '../errors';
 import {
   normalizeRewardHistoryRequirement,
@@ -107,6 +107,9 @@ export function normalizeStores(
           index: entryIndex,
           rewardType: entry.rewardType,
           allowDuplicates: entry.allowDuplicates ?? false,
+          ...(entry.routeKeys === undefined
+            ? {}
+            : { routeKeys: freezeUniqueStrings(entry.routeKeys, `${entryPath}.routeKeys`) }),
           ...(entry.requirement === undefined
             ? {}
             : {
@@ -182,6 +185,13 @@ export function validateRewardRouteRequirementReferences(
 ): void {
   rewards.stores.values.forEach((store) =>
     store.entries.forEach((entry, index) => {
+      entry.routeKeys?.forEach((routeKey, routeIndex) => {
+        if (routes.byKey[routeKey] === undefined)
+          fail(
+            `stores.${store.key}.entries[${index}].routeKeys[${routeIndex}]`,
+            `unknown route ${routeKey}`,
+          );
+      });
       if (entry.requirement !== undefined)
         validateRouteRequirementReferences(
           entry.requirement,

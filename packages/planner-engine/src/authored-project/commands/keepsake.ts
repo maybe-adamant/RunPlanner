@@ -1,4 +1,5 @@
 import type { Catalog } from '../../catalog-schema';
+import { routeHasKeepsakeRack } from '../route-profile';
 import type { AuthoredKeepsakeEquipResults, HubDecision, ProjectDocument } from '../model';
 import { failCommand, locateBiome, requireOccurrence, requireTopology } from './contract';
 import { replaceDecision, updateTopology } from './topology/construction';
@@ -369,6 +370,8 @@ export function applyKeepsakeCommand(
       roomActions: Object.freeze({ order: Object.freeze(nextOrder) }),
     });
   }
+  if (!routeHasKeepsakeRack(room, located.routeKey))
+    failCommand(command, 'this route has no Postboss rack');
   if (catalog.keepsakes.byKey[command.keepsakeKey] === undefined)
     failCommand(command, `unknown keepsake ${command.keepsakeKey}`);
   const rack = Object.freeze({ kind: 'interactKeepsakeRack' as const });

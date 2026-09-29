@@ -3,6 +3,7 @@ import type {
   EncounterDefinition,
   EncounterSet,
   KeepsakeDeclaration,
+  RouteDeclaration,
   TraitCatalog,
 } from '@run-planner/engine/catalog-schema';
 import type { RewardKernelCatalog } from '@run-planner/engine/reward-kernel';
@@ -28,6 +29,28 @@ function recordableEnemyKeys(definitions: CatalogCollection<EncounterDefinition>
       }
     }
   return keys;
+}
+
+/** Customization choice route exclusions name declared routes. */
+export function validateEncounterRouteReferences(
+  definitions: CatalogCollection<EncounterDefinition>,
+  routes: CatalogCollection<RouteDeclaration>,
+): void {
+  definitions.values.forEach((definition, index) =>
+    definition.customization?.forEach((decision, decisionIndex) => {
+      if (decision.selection.kind !== 'single' && decision.selection.kind !== 'orderedPrefix')
+        return;
+      decision.selection.choices.forEach((choice, choiceIndex) =>
+        choice.excludedRouteKeys?.forEach((routeKey, routeIndex) => {
+          if (routes.byKey[routeKey] === undefined)
+            fail(
+              `encounterDefinitions[${index}].customization[${decisionIndex}].selection.choices[${choiceIndex}].excludedRouteKeys[${routeIndex}]`,
+              `unknown route ${routeKey}`,
+            );
+        }),
+      );
+    }),
+  );
 }
 
 export function validateEncounterDefinitionClosure(input: {

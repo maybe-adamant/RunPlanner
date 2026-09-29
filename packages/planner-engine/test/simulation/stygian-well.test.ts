@@ -91,10 +91,14 @@ describe('Stygian Well consequential purchase state', () => {
 
   it('requires biome depth three for ordinary Wells while forced hosts bypass depth and spacing', () => {
     const ordinary = catalog.rooms.byKey.F_Combat01;
-    expect(assessStygianWellPlacement(ordinary, [], 2).eligible).toBe(false);
-    expect(assessStygianWellPlacement(ordinary, [], 3).eligible).toBe(true);
-    expect(assessStygianWellPlacement(ordinary, [true, false, false], 3).eligible).toBe(false);
-    expect(assessStygianWellPlacement(catalog.rooms.byKey.F_PostBoss01, [true], 0)).toMatchObject({
+    expect(assessStygianWellPlacement(ordinary, 'Underworld', [], 2).eligible).toBe(false);
+    expect(assessStygianWellPlacement(ordinary, 'Underworld', [], 3).eligible).toBe(true);
+    expect(
+      assessStygianWellPlacement(ordinary, 'Underworld', [true, false, false], 3).eligible,
+    ).toBe(false);
+    expect(
+      assessStygianWellPlacement(catalog.rooms.byKey.F_PostBoss01, 'Underworld', [true], 0),
+    ).toMatchObject({
       forced: true,
       eligible: true,
     });

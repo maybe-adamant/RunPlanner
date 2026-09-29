@@ -1,4 +1,5 @@
 import { spawnDueHermesDeliveries } from '../offer-lifecycle/spawned-trait-offers';
+import { routeRoomShop } from '../../../../authored-project/route-profile';
 import type { Catalog } from '../../../../catalog-schema';
 import type { ResolvedRoutePosition } from '../../../../authored-project/route-context';
 import {
@@ -354,7 +355,10 @@ export function applyRoomEnteredTransition(
   }
   if (room !== undefined && !alreadyAssessed.stygianWell) {
     const declaration = catalog.rooms.byKey[room.gameName];
-    if (declaration?.roomShop !== undefined || room.stygianWell !== undefined) {
+    if (
+      routeRoomShop(declaration, room.origin.routeKey) !== undefined ||
+      room.stygianWell !== undefined
+    ) {
       const entry = roomView?.entry;
       if (entry === undefined)
         throw new BiomeRewardSimulationContractError(`${room.gameName} has no Well entry frontier`);
@@ -366,6 +370,7 @@ export function applyRoomEnteredTransition(
               ? Object.freeze({
                   placement: assessStygianWellPlacement(
                     declaration,
+                    room.origin.routeKey,
                     priorEnteredWellFlags,
                     entry.ledgers.counters.biomeDepthCache,
                   ),
@@ -373,6 +378,7 @@ export function applyRoomEnteredTransition(
               : Object.freeze({
                   placement: assessStygianWellPlacement(
                     declaration,
+                    room.origin.routeKey,
                     priorEnteredWellFlags,
                     entry.ledgers.counters.biomeDepthCache,
                   ),

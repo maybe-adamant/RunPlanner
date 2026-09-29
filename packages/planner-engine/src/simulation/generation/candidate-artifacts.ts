@@ -42,6 +42,7 @@ export function createEmptyChaosCandidateArtifacts(): ChaosCandidateArtifacts {
 /** Exact reached-source Zagreus Contract entry-cap support. */
 export interface ZagreusContractCandidateCapability {
   readonly placementEligible: boolean;
+  readonly failedConditions: readonly ('enteredContractCap' | 'sourceRequirement')[];
   readonly enteredContractCount: number;
   readonly maximumEnteredThisRoute: number;
 }

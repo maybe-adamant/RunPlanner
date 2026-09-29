@@ -1,4 +1,5 @@
 import { routeSupportsGeneratedEncounterCustomization } from '../../authored-project/route-profile';
+import { customizationValueRouteExcluded } from '../../authored-project/room-state/encounter-customization';
 import type { ResolvedRoutePosition } from '../../authored-project/route-context';
 import { resolveEntryDeclaration } from '../../authored-project/room-state/entry-resolution';
 import type {
@@ -258,6 +259,35 @@ function withoutGeneratedCustomization(phase: ResolvedEncounterPhase): ResolvedE
   });
 }
 
+/** A retained choice its route cannot produce stays authored but unsupported. */
+function withoutRouteExcludedChoices(
+  phase: ResolvedEncounterPhase,
+  routeKey: string,
+): ResolvedEncounterPhase {
+  if (phase.customization === undefined) return phase;
+  if (
+    !phase.customization.some(
+      (decision) =>
+        decision.valueSupported &&
+        decision.value !== undefined &&
+        customizationValueRouteExcluded(decision, decision.value, routeKey),
+    )
+  )
+    return phase;
+  return Object.freeze({
+    ...phase,
+    customization: Object.freeze(
+      phase.customization.map((decision) =>
+        decision.valueSupported &&
+        decision.value !== undefined &&
+        customizationValueRouteExcluded(decision, decision.value, routeKey)
+          ? Object.freeze({ ...decision, valueSupported: false })
+          : decision,
+      ),
+    ),
+  });
+}
+
 function customizationFinding(
   origin: EncounterPhaseAddress,
   beforeSequence: number,
@@ -357,7 +387,11 @@ export function prepareRoomEncounterPhases(
     catalog,
     routePosition.routeKey,
   );
-  const prepareCustomization = (phase: ResolvedEncounterPhase, origin: EncounterPhaseAddress) => {
+  const prepareCustomization = (
+    resolved: ResolvedEncounterPhase,
+    origin: EncounterPhaseAddress,
+  ) => {
+    const phase = withoutRouteExcludedChoices(resolved, routePosition.routeKey);
     const result = generatedCustomizationAvailable
       ? prepareGeneratedEncounter(
           phase,

@@ -1,4 +1,5 @@
 import type { BiomeLayout, Catalog } from '../../catalog-schema';
+import { routeRoomShop } from '../route-profile';
 import type {
   HermesShrineState,
   PurgingPoolState,
@@ -419,7 +420,11 @@ export function decodeRoomOccurrence(input: {
         `${rawOccurrence.path}.purgingPool`,
       )
     : undefined;
-  if (room.roomShop?.forced === true && room.kind === 'PostBoss' && stygianWell === undefined)
+  if (
+    routeRoomShop(room, routeKey)?.forced === true &&
+    room.kind === 'PostBoss' &&
+    stygianWell === undefined
+  )
     failProjectDocument(`${rawOccurrence.path}.stygianWell`, 'must be an object');
   const keepsakeRack = rawOccurrence.hasKeepsakeRack
     ? decodeKeepsakeRackState(

@@ -1,5 +1,6 @@
 import {
   resolveEntryDeclaration,
+  routeHasKeepsakeRack,
   type ResolvedRoutePosition,
 } from '@run-planner/engine/authored-project';
 import {
@@ -412,7 +413,7 @@ export function assembleWorkspaceOccurrence(
     });
   })();
   const keepsakeSelection =
-    !input.facts.detailsActive || room.hasKeepsakeRack !== true
+    !input.facts.detailsActive || !routeHasKeepsakeRack(room, input.biome.routeKey)
       ? undefined
       : (() => {
           const address = createPostbossKeepsakeSelectionAddress(

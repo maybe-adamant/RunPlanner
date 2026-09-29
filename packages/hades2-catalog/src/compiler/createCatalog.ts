@@ -6,6 +6,7 @@ import { normalizeBiomes } from './biomes';
 import { requireNonEmpty } from './common';
 import {
   validateEncounterDefinitionClosure,
+  validateEncounterRouteReferences,
   validateEncounterSetClosure,
   validateNemesisRandomEventContract,
 } from './encounters/closure';
@@ -50,6 +51,8 @@ export function createCatalog(input: RawCatalogInput): Catalog {
     input.runStartReward,
     rewards,
     'runStartReward',
+    // The run-start bag is full and cannot run dry.
+    false,
   );
   if (normalizedRunStartReward.kind !== 'countedChoice')
     fail('runStartReward', 'must declare a counted choice producer');
@@ -120,6 +123,7 @@ export function createCatalog(input: RawCatalogInput): Catalog {
     exitTypes,
   );
   validateRoomLayoutClosure(rooms, biomeLayouts, exitCompatibilityPolicies, routes, rewards.shops);
+  validateEncounterRouteReferences(encounterDefinitions, routes);
   validateRewardAcquisitionRoleTraitGivers(rewards, traitCatalog.givers);
   const traitGiverByAcquisitionGameName = createTraitGiverByAcquisitionGameName(
     input.traitCatalog.traitAcquisitionProviders,
@@ -152,7 +156,7 @@ export function createCatalog(input: RawCatalogInput): Catalog {
     traitGiverByAcquisitionGameName,
     boonRarityBases: traitCatalog.boonRarityBases,
     boonRarityRollOrder: traitCatalog.boonRarityRollOrder,
-    boonReplacementChance: traitCatalog.boonReplacementChance,
+    boonReplacement: traitCatalog.boonReplacement,
     echoLastRunBoon: traitCatalog.echoLastRunBoon,
     hexes: traitCatalog.hexes,
     traitOfferContexts: traitCatalog.offerContexts,

@@ -899,6 +899,17 @@ is active. World Shop and Shrine inventories are always fully authored; neither
 receives that convenience because their visible identities affect outgoing
 generation.
 
+A Well host, Purging Pool or keepsake rack declared with `excludedRouteKeys`
+(the rack's `keepsakeRackExcludedRouteKeys`) is absent on those routes: defaults
+create no forced Well or Pool state, commands refuse to add a Well or equip at
+the rack, and the forced Postboss Well is not required. State retained from
+before such an exclusion still decodes but is context-invalid: a Well reports
+`stygianWellPlacementUnavailable`, a rack equip reports `keepsakeUnavailable`
+without equipping, and an interacted Pool reports `purgingPoolUnavailable` and is
+never assessed, so its sales report `purgingPoolSaleUnavailable`. A Fresh File attempt has none of these
+features; the H Postboss Pool object it shows natively is locked and is not an
+authorable inventory.
+
 Postboss Purging Pool inventory is assessed once immediately after the required
 fountain action and its rarity effects settle, before cleanup sales. Its
 candidates and inventory findings consume that post-fountain state, not room

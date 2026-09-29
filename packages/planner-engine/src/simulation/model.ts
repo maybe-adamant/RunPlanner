@@ -76,6 +76,7 @@ export type RewardGenerationFindingCode =
   | 'nemesisOutcomeMissing'
   | 'nemesisOutcomeUnavailable'
   | 'purgingPoolSaleUnavailable'
+  | 'purgingPoolUnavailable'
   | 'purgingPoolTraitMissing'
   | 'purgingPoolTraitUnavailable'
   | 'purgingPoolTraitDuplicate'

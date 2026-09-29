@@ -8,6 +8,7 @@ import {
   beginBiomeRewardHistory,
   beginCurrentRoomRewardHistory,
   consumeCountedOffer,
+  countedStoreExhausted,
   createRewardBagState,
   insertExactPriorityIntoBag,
   oldestSupportedRewardPriority,
@@ -386,7 +387,7 @@ describe('counted reward bags', () => {
       const next = consumeCountedOffer(
         rewardKernelCatalog,
         runProgress,
-        createRewardBagState(runProgress),
+        createRewardBagState(runProgress, 'Underworld'),
         { rewardType },
         facts(['ApolloUpgrade'], {
           counters: { ...requirementContext().counters, upgradableTraitCount: 1 },
@@ -413,7 +414,7 @@ describe('counted reward bags', () => {
     const next = consumeCountedOffer(
       rewardKernelCatalog,
       futureDistinct,
-      createRewardBagState(futureDistinct),
+      createRewardBagState(futureDistinct, 'Underworld'),
       { rewardType: 'MaxHealthDrop' },
       facts(['ApolloUpgrade']),
     );
@@ -428,7 +429,7 @@ describe('counted reward bags', () => {
     const next = consumeCountedOffer(
       rewardKernelCatalog,
       runProgress,
-      createRewardBagState(runProgress),
+      createRewardBagState(runProgress, 'Underworld'),
       { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'ApolloUpgrade' } },
       facts(),
     );
@@ -437,7 +438,7 @@ describe('counted reward bags', () => {
   });
 
   it('blocks non-duplicate peer reward types while allowing a different-source Boon peer', () => {
-    const initial = createRewardBagState(runProgress);
+    const initial = createRewardBagState(runProgress, 'Underworld');
     expect(
       consumeCountedOffer(
         rewardKernelCatalog,
@@ -492,25 +493,32 @@ describe('counted reward bags', () => {
     expect(next[0]?.remainingEntryCounts.slice(14).reduce((sum, count) => sum + count, 0)).toBe(3);
   });
 
-  it('fails loudly when a supported consumer remains empty after its one refill', () => {
-    expect(() =>
+  it('appends two store copies and then resolves only the Heal fallback when nothing is eligible', () => {
+    const empty = { remainingEntryCounts: runProgress.entries.map(() => 0) };
+    const spellUsed = facts([], {
+      records: {
+        biomeUseRecord: {},
+        lootTypeHistory: {},
+        roomsEntered: {},
+        ...matureGodHistoryRecords(),
+        useRecord: { SpellDrop: 1 },
+      },
+    });
+    const onlySpell = { eligibleRewardTypes: new Set(['SpellDrop']) };
+    const offer = (rewardType: string) =>
       consumeCountedOffer(
         rewardKernelCatalog,
         runProgress,
-        { remainingEntryCounts: runProgress.entries.map(() => 0) },
-        { rewardType: 'SpellDrop' },
-        facts([], {
-          records: {
-            biomeUseRecord: {},
-            lootTypeHistory: {},
-            roomsEntered: {},
-            ...matureGodHistoryRecords(),
-            useRecord: { SpellDrop: 1 },
-          },
-        }),
-        { eligibleRewardTypes: new Set(['SpellDrop']) },
-      ),
-    ).toThrow('one-refill eligibility invariant');
+        empty,
+        { rewardType },
+        spellUsed,
+        onlySpell,
+      );
+    expect(offer('SpellDrop')).toEqual([]);
+    const [fallback] = offer('RoomRewardHealDrop');
+    expect(fallback?.remainingEntryCounts).toEqual(runProgress.entries.map(() => 2));
+    expect(countedStoreExhausted(runProgress, empty, spellUsed, onlySpell)).toBe(true);
+    expect(countedStoreExhausted(runProgress, empty, spellUsed)).toBe(false);
   });
 });
 
@@ -518,11 +526,11 @@ describe('exact reward priorities', () => {
   const runProgress = rewardKernelCatalog.stores.byKey.RunProgress!;
 
   it('preserves leftovers and appends at source time only when the exact name is exhausted', () => {
-    const initial = createRewardBagState(runProgress);
+    const initial = createRewardBagState(runProgress, 'Underworld');
     const boonIndexes = runProgress.entries
       .map((entry, index) => (entry.rewardType === 'Boon' ? index : -1))
       .filter((index) => index >= 0);
-    const withBoonLeft = insertExactPriorityIntoBag(runProgress, initial, 'Boon');
+    const withBoonLeft = insertExactPriorityIntoBag(runProgress, initial, 'Boon', 'Underworld');
     expect(withBoonLeft).toBe(initial);
 
     const exhaustedBoon = {
@@ -530,14 +538,14 @@ describe('exact reward priorities', () => {
         boonIndexes.includes(index) ? 0 : count + 2,
       ),
     };
-    const refilled = insertExactPriorityIntoBag(runProgress, exhaustedBoon, 'Boon');
+    const refilled = insertExactPriorityIntoBag(runProgress, exhaustedBoon, 'Boon', 'Underworld');
     expect(refilled.remainingEntryCounts).toEqual(
       exhaustedBoon.remainingEntryCounts.map((count) => count + 1),
     );
   });
 
   it('selects only the oldest supported exact priority, leaves ineligible names pending, and sees one normal refill', () => {
-    const initial = createRewardBagState(runProgress);
+    const initial = createRewardBagState(runProgress, 'Underworld');
     expect(
       oldestSupportedRewardPriority(runProgress, initial, ['Missing', 'Boon', 'Boon'], facts()),
     ).toBe('Boon');

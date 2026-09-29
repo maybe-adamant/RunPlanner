@@ -380,6 +380,8 @@ A counted store declaration owns:
 - the ordered game bag entries, including multiplicity;
 - entry-level current-run requirements;
 - entry-level `allowDuplicates`, defaulting to `false`;
+- optional entry-level `routeKeys`: the routes whose bag holds the entry, so
+  fill and refill skip it elsewhere;
 - one explicit default reward type and complete offer payload for authoring.
 
 The catalog exposes an immutable option domain from that declaration. The
@@ -401,28 +403,39 @@ tie-breaker for the game's random choice.
 When no entry in the entire bag is eligible, the game appends a complete base
 set without discarding ineligible leftovers. It can do this twice. If no entry
 is eligible after the second refill, the offer falls back to
-`RoomRewardHealDrop`. This is one global picker rule, not repeated store data.
-The complete store-and-consumer proof in `../audits/rewards-and-acquisition/REWARD_GAME_DATA_AUDIT.md` establishes
-that every supported planner call has an eligible entry after the first refill.
-The simulator therefore appends at most one complete set and treats a
-still-empty supported call as an invariant failure. It does not reproduce the
-redundant second append or synthesize the unreachable fallback. An explicit
-`RoomRewardHealDrop` entry in a counted store remains an ordinary reward.
+`RoomRewardHealDrop` without drawing from the bag, which keeps both appended
+sets. This is one global picker rule, not repeated store data: the reward
+kernel declares `countedStoreFallbackRewardType`, and every bag-drawn counted
+binding admits it regardless of its room filters. The simulator reproduces the
+rule for every store and route; an appended set holds only the route's
+entries. The fallback is an ordinary `RoomRewardHealDrop` offer for
+acquisition, Run State and peer duplicate blocking. An offer other than the
+fallback on an exhausted bag reports `rewardBagSupportEmpty`.
 
-### Fully Progressed MetaProgress Projection
+The store-and-consumer proof in
+`../audits/rewards-and-acquisition/REWARD_GAME_DATA_AUDIT.md` establishes that a
+mature-save route always finds an eligible entry after the first refill, so
+mature bags never reach the fallback and its counted-reward domains omit it. A
+fresh profile's MetaProgress bag can exhaust, and its domains list the
+fallback.
 
-The normalized `MetaProgress` store is a coherent 13-entry projection of the
-game's raw 19-entry store:
+### MetaProgress Store
 
-- one unconditional `GiftDrop` under the completed external unlock baseline;
-- two ordinary Bones and four ordinary Ashes while `EnteredBiomes <= 1`;
-- two Big Bones and four Big Ashes while `EnteredBiomes > 1`.
+The normalized `MetaProgress` store is the game's complete 19-entry store with
+its lifetime-resource tiers expressed through `resourceGains`:
 
-The raw later ordinary entries belong to a lower lifetime-resource tier and are
-mutually exclusive with the retained Big variants on a fully progressed save.
-They are omitted rather than made unconditional. This projection is exact for
-the selected profile; production does not carry lifetime-resource predicates or
-union mutually exclusive save tiers.
+- one `GiftDrop`, unavailable on a fresh profile;
+- two Bones and four Ashes while `EnteredBiomes <= 1`, the Bones needing 5
+  Ashes gained;
+- two Bones and four Ashes while `EnteredBiomes > 1` below the high tier
+  (Bones under 500 or Ashes under 100), the Bones again needing 5 Ashes;
+- two Big Bones and four Big Ashes while `EnteredBiomes > 1` at the high tier.
+
+A mature save is past every threshold. The threshold terms therefore hold
+there through a route alternative rather than a fabricated balance, and the
+six low-tier late entries carry `routeKeys: ['FreshFile']`, so a mature bag
+holds the thirteen entries it can draw. A fresh bag holds all nineteen and
+reads its thresholds from the attempt's accumulated gains.
 
 ## Producer Bindings
 

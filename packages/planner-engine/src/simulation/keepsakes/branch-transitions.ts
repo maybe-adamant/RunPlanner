@@ -55,8 +55,9 @@ export function applyExactRewardPriority(
       }),
     });
   const existing = branch.state.bags.RunProgress;
-  const current = existing ?? createRewardBagState(store);
-  const bag = insertExactPriorityIntoBag(store, current, priority);
+  const routeKey = branch.state.reached.routePosition.routeKey;
+  const current = existing ?? createRewardBagState(store, routeKey);
+  const bag = insertExactPriorityIntoBag(store, current, priority, routeKey);
   return Object.freeze({
     ...branch,
     state: Object.freeze({

@@ -89,6 +89,7 @@ function decisionSnapshots(snapshots: readonly RunStateSnapshot[]): readonly Run
 function requirementFacts(ordinaryLootCount: number): RewardKernelFacts {
   return {
     requirements: {
+      routeKey: 'Underworld',
       counters: {
         biomeDepthCache: 0,
         biomeEncounterDepth: 0,
@@ -101,6 +102,7 @@ function requirementFacts(ordinaryLootCount: number): RewardKernelFacts {
         lootTypeHistory: ordinaryLootCount === 0 ? {} : { ApolloUpgrade: ordinaryLootCount },
         roomsEntered: {},
         ...matureGodHistoryRecords(),
+        resourceGains: {},
         useRecord: {},
       },
       currentRoomShopOptionNames: new Set(),

@@ -399,6 +399,10 @@ const findingCopy = {
     title: 'Pool sale unavailable',
     description: 'Remove the sale or restore its eligible trait.',
   },
+  purgingPoolUnavailable: {
+    title: 'Pool unavailable',
+    description: 'This route has no usable Pool; stop interacting with it.',
+  },
   hermesShrinePlacementUnavailable: {
     title: 'Shrine placement unavailable',
     description: 'Remove the Shrine or choose an eligible room.',

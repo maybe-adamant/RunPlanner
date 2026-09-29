@@ -1,3 +1,4 @@
+import { routeInitialProfile } from '../../authored-project/route-profile';
 import {
   semanticAddressKey,
   type IncomingRewardAddress,
@@ -224,5 +225,13 @@ export function resolveCountedRewardTypeDomain(
   if (rewardTypes.length === 0) {
     fail(`reward producer store ${storeKey} has no selectable reward types`);
   }
+  // Mature bags provably never exhaust both appended copies; a fresh profile's can.
+  const fallback = catalog.rewards.countedStoreFallbackRewardType;
+  if (
+    routeInitialProfile(catalog, owner.routeKey).kind === 'freshFile' &&
+    binding.allowedRewardTypes.includes(fallback) &&
+    !seen.has(fallback)
+  )
+    rewardTypes.push(fallback);
   return Object.freeze(rewardTypes);
 }

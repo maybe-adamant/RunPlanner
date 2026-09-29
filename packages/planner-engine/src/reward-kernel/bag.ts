@@ -6,12 +6,26 @@ import type {
   RewardKernelCatalog,
   RewardKernelFacts,
   RewardStoreDeclaration,
+  RewardStoreEntry,
 } from './model';
 import { isOfferSupportedAtResolutionPoint } from './support';
 
-export function createRewardBagState(store: RewardStoreDeclaration): RewardBagState {
+/** Whether the route's bag holds this entry; fill and refill skip the others. */
+export function storeEntryOnRoute(entry: RewardStoreEntry, routeKey: string | undefined): boolean {
+  if (entry.routeKeys === undefined) return true;
+  if (routeKey === undefined)
+    throw new Error(`route-scoped ${entry.rewardType} store entry reached without route identity`);
+  return entry.routeKeys.includes(routeKey);
+}
+
+export function createRewardBagState(
+  store: RewardStoreDeclaration,
+  routeKey: string,
+): RewardBagState {
   return Object.freeze({
-    remainingEntryCounts: Object.freeze(store.entries.map(() => 1)),
+    remainingEntryCounts: Object.freeze(
+      store.entries.map((entry) => (storeEntryOnRoute(entry, routeKey) ? 1 : 0)),
+    ),
   });
 }
 
@@ -20,6 +34,7 @@ export function insertExactPriorityIntoBag(
   store: RewardStoreDeclaration,
   state: RewardBagState,
   rewardType: string,
+  routeKey: string,
 ): RewardBagState {
   if (
     store.entries.some(
@@ -28,9 +43,7 @@ export function insertExactPriorityIntoBag(
     )
   )
     return state;
-  return Object.freeze({
-    remainingEntryCounts: Object.freeze(state.remainingEntryCounts.map((count) => count + 1)),
-  });
+  return refill(store, state, routeKey);
 }
 
 function entryIsEligible(
@@ -85,22 +98,51 @@ export function oldestSupportedRewardPriority(
   options: CountedOfferTransitionOptions = {},
 ): string | undefined {
   if (priorities.length === 0) return undefined;
-  const eligible = eligibleIndexes(store, state, facts, options);
-  // Match the ordinary counted transition: only an exhausted/ineligible bag
-  // reaches its one full refill before an offer is selected.
-  const frontier = eligible.length === 0 ? refill(state) : state;
-  const supported = new Set(
-    eligibleIndexes(store, frontier, facts, options).map(
-      (index) => store.entries[index]!.rewardType,
-    ),
-  );
+  // The final fallback returns before priorities are consulted.
+  const { eligible } = refilledFrontier(store, state, facts, options);
+  const supported = new Set(eligible.map((index) => store.entries[index]!.rewardType));
   return priorities.find((priority) => supported.has(priority));
 }
 
-function refill(state: RewardBagState): RewardBagState {
+/** Native ChooseRoomReward appends a full store copy per empty pass, at most twice. */
+const MAXIMUM_STORE_REFILLS = 2;
+
+function refilledFrontier(
+  store: RewardStoreDeclaration,
+  state: RewardBagState,
+  facts: RewardKernelFacts,
+  options: CountedOfferTransitionOptions,
+): { readonly bag: RewardBagState; readonly eligible: readonly number[] } {
+  let bag = state;
+  let eligible = eligibleIndexes(store, bag, facts, options);
+  for (let refills = 0; eligible.length === 0 && refills < MAXIMUM_STORE_REFILLS; refills += 1) {
+    bag = refill(store, bag, facts.requirements.routeKey);
+    eligible = eligibleIndexes(store, bag, facts, options);
+  }
+  return { bag, eligible };
+}
+
+/** Whether both appended copies stay ineligible, so the offer is the final fallback. */
+export function countedStoreExhausted(
+  store: RewardStoreDeclaration,
+  state: RewardBagState,
+  facts: RewardKernelFacts,
+  options: CountedOfferTransitionOptions = {},
+): boolean {
+  return refilledFrontier(store, state, facts, options).eligible.length === 0;
+}
+
+function refill(
+  store: RewardStoreDeclaration,
+  state: RewardBagState,
+  routeKey: string | undefined,
+): RewardBagState {
   return Object.freeze({
     remainingEntryCounts: Object.freeze(
-      state.remainingEntryCounts.map((remaining) => remaining + 1),
+      state.remainingEntryCounts.map(
+        (remaining, index) =>
+          remaining + (storeEntryOnRoute(store.entries[index]!, routeKey) ? 1 : 0),
+      ),
     ),
   });
 }
@@ -138,14 +180,13 @@ export function consumeCountedOffer(
   facts: RewardKernelFacts,
   options: CountedOfferTransitionOptions = {},
 ): readonly RewardBagState[] {
-  let current = state;
-  let eligible = eligibleIndexes(store, current, facts, options);
+  const { bag: current, eligible } = refilledFrontier(store, state, facts, options);
   if (eligible.length === 0) {
-    current = refill(current);
-    eligible = eligibleIndexes(store, current, facts, options);
-    if (eligible.length === 0) {
-      throw new Error(`${store.key} violated the supported one-refill eligibility invariant`);
-    }
+    // The final fallback offers its reward without drawing from the refilled bag.
+    return offer.rewardType === catalog.countedStoreFallbackRewardType &&
+      isOfferSupportedAtResolutionPoint(catalog, offer, facts, 'offer')
+      ? [current]
+      : [];
   }
 
   if (!isOfferSupportedAtResolutionPoint(catalog, offer, facts, 'offer', options.peers)) {

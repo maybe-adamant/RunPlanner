@@ -1,6 +1,7 @@
 import type { RequirementExpression } from '@run-planner/engine/requirements';
 
 import type { RawConcreteAcquisitionDeclaration } from './types';
+import { notFreshFileRoute } from '../routes';
 
 function lastReward(rewardType: string) {
   return Object.freeze({
@@ -86,6 +87,8 @@ const rawAcquisitions = [
     kind: 'loot',
     historyProjection: 'lootAndUse',
     goldConversionEligible: true,
+    // Ares needs a lifetime AresFirstPickUp line.
+    lootRequirement: notFreshFileRoute,
     ...lastReward('AresUpgrade'),
   },
   {
@@ -100,6 +103,8 @@ const rawAcquisitions = [
     kind: 'loot',
     historyProjection: 'lootAndUse',
     goldConversionEligible: true,
+    // Hephaestus needs a lifetime Zeus use.
+    lootRequirement: notFreshFileRoute,
     ...lastReward('HephaestusUpgrade'),
   },
   {
@@ -107,6 +112,8 @@ const rawAcquisitions = [
     kind: 'loot',
     historyProjection: 'lootAndUse',
     goldConversionEligible: true,
+    // Hera needs a lifetime HeraFirstPickUp line.
+    lootRequirement: notFreshFileRoute,
     ...lastReward('HeraUpgrade'),
   },
   {
@@ -129,6 +136,8 @@ const rawAcquisitions = [
     kind: 'loot',
     historyProjection: 'lootAndUse',
     goldConversionEligible: true,
+    // Zeus needs a lifetime ZeusFirstPickUp line.
+    lootRequirement: notFreshFileRoute,
     ...lastReward('ZeusUpgrade'),
   },
   {

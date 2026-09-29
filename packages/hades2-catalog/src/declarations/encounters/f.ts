@@ -1,4 +1,5 @@
 import { generatedEncounterChoices } from './generated/policies';
+import { notFreshFileRoute } from '../routes';
 import type { RawEncounterDefinitionDeclaration, RawEncounterSetDeclaration } from './types';
 import {
   arachneCombatCocoonCount,
@@ -48,6 +49,7 @@ export const fEncounterDefinitions = [
     requirements: {
       kind: 'all',
       requirements: [
+        notFreshFileRoute,
         { kind: 'counterRange', axis: 'biomeDepthCache', range: { min: 4 } },
         {
           kind: 'currentRoomRewardExcludes',
@@ -79,6 +81,7 @@ export const fEncounterDefinitions = [
     requirements: {
       kind: 'all',
       requirements: [
+        notFreshFileRoute,
         { kind: 'counterRange', axis: 'biomeDepthCache', range: { min: 4, max: 8 } },
         {
           kind: 'currentRoomRewardExcludes',
@@ -105,6 +108,7 @@ export const fEncounterDefinitions = [
     requirements: {
       kind: 'all',
       requirements: [
+        notFreshFileRoute,
         { kind: 'counterRange', axis: 'biomeDepthCache', range: { min: 4 } },
         {
           kind: 'currentRoomRewardExcludes',
@@ -257,6 +261,7 @@ export const fEncounterDefinitions = [
     requirements: {
       kind: 'all',
       requirements: [
+        notFreshFileRoute,
         { kind: 'not', requirement: { kind: 'routeKeyEquals', routeKey: 'Dream' } },
         { kind: 'counterRange', axis: 'biomeDepthCache', range: { min: 4 } },
         { kind: 'currentRoomRewardExcludes', rewardTypes: nemesisIncomingRewardExclusions },
@@ -342,13 +347,39 @@ export const fEncounterDefinitions = [
         label: 'Interlude pattern',
         selection: {
           kind: 'single',
+          // Every alternative to the meteor shower needs an earlier completed Hecate fight.
           choices: [
             { key: 'largeMeteors', label: 'Large meteors', nativeId: 'HecateMeteorShower' },
-            { key: 'smallMeteors', label: 'Small meteors', nativeId: 'HecateMeteorSmallShower' },
-            { key: 'rings', label: 'Expanding Ring', nativeId: 'HecateRangedTorchesRingPhase' },
-            { key: 'spirals', label: 'Torch Orbs', nativeId: 'HecateRangedTorchesSpiralsPhase' },
-            { key: 'laser', label: 'Lunar Ray', nativeId: 'HecateLaser' },
-            { key: 'cones', label: 'Arc Projectiles', nativeId: 'HecateRangedTorchesConePhase' },
+            {
+              key: 'smallMeteors',
+              label: 'Small meteors',
+              nativeId: 'HecateMeteorSmallShower',
+              excludedRouteKeys: ['FreshFile'],
+            },
+            {
+              key: 'rings',
+              label: 'Expanding Ring',
+              nativeId: 'HecateRangedTorchesRingPhase',
+              excludedRouteKeys: ['FreshFile'],
+            },
+            {
+              key: 'spirals',
+              label: 'Torch Orbs',
+              nativeId: 'HecateRangedTorchesSpiralsPhase',
+              excludedRouteKeys: ['FreshFile'],
+            },
+            {
+              key: 'laser',
+              label: 'Lunar Ray',
+              nativeId: 'HecateLaser',
+              excludedRouteKeys: ['FreshFile'],
+            },
+            {
+              key: 'cones',
+              label: 'Arc Projectiles',
+              nativeId: 'HecateRangedTorchesConePhase',
+              excludedRouteKeys: ['FreshFile'],
+            },
           ],
         },
       },

@@ -54,6 +54,7 @@ export function normalizeRewardBinding(
   raw: RawRewardProducerBinding,
   rewards: RewardKernelCatalog,
   path: string,
+  admitsExhaustedFallback = true,
 ): RewardProducerBinding {
   if (raw.kind === 'countedChoice') {
     const storeKeys = freezeUniqueStrings(raw.storeKeys, `${path}.storeKeys`);
@@ -103,6 +104,8 @@ export function normalizeRewardBinding(
       }
       available.delete(rewardType);
     }
+    // The exhausted-store fallback bypasses the room's reward filters.
+    if (admitsExhaustedFallback) available.add(rewards.countedStoreFallbackRewardType);
     const allowedRewardTypes = Object.freeze([...available]);
     if (allowedRewardTypes.length === 0) {
       fail(path, 'filters remove every reward type');

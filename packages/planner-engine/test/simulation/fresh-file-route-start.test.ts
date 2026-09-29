@@ -47,7 +47,13 @@ function routeStartState(project: ProjectDocument) {
 
 /** The mature F prefix re-homed onto the fresh profile, keeping its retained customization. */
 function freshGeneratedComposition(): ProjectDocument {
-  const mature = JSON.parse(encodeProjectDocument(loadUnderworldGeneratedCompositionCheckpoint()));
+  // A fresh bag holds no Bones before the first Ashes pickup, and no Zeus or Hera.
+  const mature = JSON.parse(
+    encodeProjectDocument(loadUnderworldGeneratedCompositionCheckpoint())
+      .replaceAll('"MetaCurrencyDrop"', '"MetaCardPointsCommonDrop"')
+      .replaceAll('"Zeus', '"Poseidon')
+      .replaceAll('"Hera', '"Demeter'),
+  );
   const [f] = mature.route.biomes;
   for (const occurrence of f.topology.occurrences) delete occurrence.startingRewardAcquisition;
   return decodeProjectDocument(

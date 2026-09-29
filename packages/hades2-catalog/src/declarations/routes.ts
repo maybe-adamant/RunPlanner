@@ -1,4 +1,11 @@
 import type { RouteDeclaration } from '@run-planner/engine/catalog-schema';
+import type { RequirementExpression } from '@run-planner/engine/requirements';
+
+/** False only on the first attempt of a brand-new profile. */
+export const notFreshFileRoute = {
+  kind: 'not',
+  requirement: { kind: 'routeKeyEquals', routeKey: 'FreshFile' },
+} as const satisfies RequirementExpression;
 
 export const routes = [
   {

@@ -41,6 +41,9 @@ export function validateTraitRouteReferences(
             `chaos.${group}.${entry.key}.offerRequirements[${index}].routeKey`,
           );
       });
+  catalog.boonReplacement.excludedRouteKeys.forEach((routeKey, index) =>
+    requireRoute(routeKey, `boonReplacement.excludedRouteKeys[${index}]`),
+  );
   for (const route of routes.values) {
     const profile = route.initialProfile;
     if (profile.kind === 'freshFile' && catalog.weapons.byKey[profile.fixedWeaponKey] === undefined)

@@ -52,7 +52,7 @@ describe('reward frontier biome handoff', () => {
     const base = predecessorBranch();
     const store = catalog.rewards.stores.byKey.RunProgress;
     if (store === undefined) throw new Error('RunProgress store is missing');
-    const full = createRewardBagState(store);
+    const full = createRewardBagState(store, 'Underworld');
     const remainingEntryCounts = [...full.remainingEntryCounts];
     remainingEntryCounts[0] = (remainingEntryCounts[0] ?? 0) - 1;
     const depleted = Object.freeze({ remainingEntryCounts: Object.freeze(remainingEntryCounts) });

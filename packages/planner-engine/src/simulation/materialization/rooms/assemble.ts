@@ -1,4 +1,5 @@
 import { createOccurrenceAddress } from '../../../authored-project/addresses';
+import { routeHasKeepsakeRack } from '../../../authored-project/route-profile';
 import type { StygianWellGenerationKey } from '../../../authored-project/model';
 import type { Catalog, RoomDeclaration } from '../../../catalog-schema';
 import {
@@ -238,7 +239,7 @@ export function materializeAuthoredRoom(
     effectNeutralRequiredReward: context.room.effectNeutralRequiredReward,
     ...(enteredRewardStoreKey === undefined ? {} : { enteredRewardStoreKey }),
     roomActions: context.occurrence.roomActions,
-    hasKeepsakeRack: context.room.hasKeepsakeRack,
+    hasKeepsakeRack: routeHasKeepsakeRack(context.room, context.biome.routeKey),
     hasRequiredFountain: context.room.hasRequiredFountain,
     ...(context.occurrence.keepsakeRack === undefined
       ? {}

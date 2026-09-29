@@ -14,4 +14,6 @@ export const rewardKernelDeclarations = {
   stores,
   shops,
   producerLifecycles,
+  // RewardLogic.ChooseRoomReward: after two appended store copies stay ineligible.
+  countedStoreFallbackRewardType: 'RoomRewardHealDrop',
 } satisfies RawRewardKernelInput;

@@ -680,6 +680,48 @@ describe('trait legality and derived facts', () => {
       ).toBe(true);
     },
   );
+  it.each([
+    'ElementalRallyBoon',
+    'ElementalDamageCapBoon',
+    'ElementalBaseDamageBoon',
+    'ElementalDodgeBoon',
+    'ElementalHealthBoon',
+  ])('offers the %s infusion on a mature route and never on Fresh File', (infusionKey) => {
+    const requirement = catalog.traits.byKey[infusionKey]!.eligibilityRequirements.find(
+      (candidate) => candidate.kind === 'elementCount',
+    );
+    if (requirement?.kind !== 'elementCount') throw new Error(`${infusionKey} has no element gate`);
+    const giver = catalog.traitGivers.values.find((candidate) =>
+      candidate.traitKeys.includes(infusionKey),
+    )!;
+    const contributors = giver.traitKeys.filter(
+      (traitKey) =>
+        (catalog.traits.byKey[traitKey]?.elementContributions[requirement.element] ?? 0) > 0,
+    );
+    const history = historyFrom(
+      contributors.map((traitKey) => ({ giverKey: giver.key, traitKey, rarity: 'Common' })),
+    );
+    expect(history.elementCounts[requirement.element]).toBeGreaterThanOrEqual(requirement.minimum);
+    for (const routeKey of ['Underworld', 'FreshFile']) {
+      expect(
+        assessTraitOption(catalog, infusionKey, traitFrontierState(history, { routeKey }), {})
+          .legal,
+      ).toBe(routeKey !== 'FreshFile');
+      expect(
+        traitCandidates(catalog, giver.key, traitFrontierState(history, { routeKey }), {}).find(
+          (candidate) => candidate.traitKey === infusionKey,
+        )?.available ?? false,
+      ).toBe(routeKey !== 'FreshFile');
+    }
+    expect(
+      assessTraitOption(
+        catalog,
+        'PlantHealthBoon',
+        traitFrontierState(createTraitHistoryState(), { routeKey: 'FreshFile' }),
+        {},
+      ).legal,
+    ).toBe(false);
+  });
   const derivedHistory = historyFrom([
     { giverKey: 'Demeter', traitKey: 'DemeterManaBoon', rarity: 'Common' },
     { giverKey: 'Hera', traitKey: 'HeraWeaponBoon', rarity: 'Rare' },

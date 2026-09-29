@@ -140,10 +140,13 @@ describe('selected resource-success catalog facts', () => {
       capacity: 'allTools',
       ignoresBiomeLimit: true,
     });
-    expect(normal?.excludedRouteKeys).toEqual(['Dream']);
-    expect(h?.excludedRouteKeys).toEqual(['Dream']);
+    expect(normal?.excludedRouteKeys).toEqual(['Dream', 'FreshFile']);
+    expect(h?.excludedRouteKeys).toEqual(['Dream', 'FreshFile']);
     expect(n?.excludedRouteKeys).toEqual(['Dream']);
     expect(chaos?.excludedRouteKeys).toEqual(['Dream']);
+    expect(catalog.rooms.byKey.O_Combat01?.resourcePointSupport.excludedRouteKeys).toEqual([
+      'Dream',
+    ]);
   });
 
   it('matches every source-enumerated room support and capacity exception', () => {
@@ -233,7 +236,9 @@ describe('selected resource-success catalog facts', () => {
 
   it('publishes a closed four-family rule record for every room', () => {
     for (const room of catalog.rooms.values) {
-      expect(room.resourcePointSupport.excludedRouteKeys).toEqual(['Dream']);
+      expect(room.resourcePointSupport.excludedRouteKeys).toEqual(
+        ['F', 'G', 'H', 'I'].includes(room.roomSetKey) ? ['Dream', 'FreshFile'] : ['Dream'],
+      );
       expect(Object.keys(room.resourcePointSupport.rules).sort()).toEqual([...families].sort());
       for (const family of families) {
         expect(

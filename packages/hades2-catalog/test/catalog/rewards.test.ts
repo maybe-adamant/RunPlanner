@@ -1,4 +1,4 @@
-import { CatalogContractError } from '@run-planner/hades2-catalog';
+import { catalog, CatalogContractError } from '@run-planner/hades2-catalog';
 import {
   createRewardKernelCatalog,
   rawInput,
@@ -18,10 +18,16 @@ describe('reward-kernel compiler closure', () => {
       'stores',
       'shops',
       'producerLifecycles',
+      'countedStoreFallbackRewardType',
     ]);
+    expect(rewardKernelCatalog.countedStoreFallbackRewardType).toBe('RoomRewardHealDrop');
     for (const product of Object.values(rewardKernelCatalog)) {
-      expect(Object.isFrozen(product)).toBe(true);
+      if (typeof product === 'object') expect(Object.isFrozen(product)).toBe(true);
     }
+    for (const binding of catalog.rooms.values.flatMap((room) =>
+      room.incomingReward.kind === 'countedChoice' ? [room.incomingReward] : [],
+    ))
+      expect(binding.allowedRewardTypes).toContain('RoomRewardHealDrop');
   });
 
   it('rejects every malformed closed semantic family at catalog construction', () => {

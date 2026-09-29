@@ -409,20 +409,26 @@ Locked decisions:
 - Mechanism additions, each the smallest form: `excludedRouteKeys` on room
   features (`roomShop`, `purgingPool`, `hasKeepsakeRack`); optional
   `requirement` on the Zagreus contract door mirroring the Chaos exit;
-  `excludedRouteKeys` per boss customization choice; a declared requirement on
-  the random boon exchange mirroring native `BoonData.GameStateRequirements`.
+  `excludedRouteKeys` per boss customization choice;
+  `boonReplacement.excludedRouteKeys` on the random boon exchange, the route
+  form of native `BoonData.GameStateRequirements`.
 - The forced post-boss Wells in F, G and H are removed on `FreshFile`, not
   made optional.
-- I_WorldShop slot 5 empties through the delivered valid-empty assessment; the
-  production case replaces the test-only empty-group catalog variant behind
-  `underworld-fghi-empty-shop-group`.
+- I_WorldShop slot 5 empties through the delivered valid-empty assessment
+  (engine witness on `FreshFile`). The test-only empty-group catalog variant
+  behind `underworld-fghi-empty-shop-group` stays: execution assembly rejects
+  `FreshFile` with `unsupportedRoute`, so the fixture's production replacement
+  waits for the execution enablement slice.
+- Counted stores reproduce the native `ChooseRoomReward` fallback (owner
+  decision during the slice): two appended route-filtered copies, then
+  `RoomRewardHealDrop`. A fresh MetaProgress bag can exhaust; mature bags never
+  do.
 - Excluded and unchanged: everything in the investigation's conditional list.
 
 Acceptance: each matrix row has one witness at its owning contact (room
 eligibility, detour placement, feature availability, encounter requirement,
 store/shop entry, god `lootRequirement`, trait `routeKeyNot`, exchange
-requirement); mature golden projects and execution fixtures unchanged except
-the empty-shop-group fixture regeneration; Fresh File project simulation shows
+`boonReplacement.excludedRouteKeys`); mature golden projects and execution fixtures unchanged; Fresh File project simulation shows
 no excluded room, feature, encounter, reward, god or trait reachable; the
 MetaProgress tier witnesses cross a threshold mid-run through `resourceGains`.
 

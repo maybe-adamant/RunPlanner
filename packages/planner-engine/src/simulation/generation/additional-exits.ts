@@ -107,10 +107,15 @@ export function assessChaosPlacement(
   });
 }
 
-/** Assess the entry-consumed Contract cap at one reached Midshop source. */
+/** Assess the source requirement and entry-consumed Contract cap at one reached Midshop. */
 export function assessZagreusContractPlacement(
+  catalog: Catalog,
+  source: CanonicalGenerationSource,
   sourceDeclaration: RoomDeclaration,
   parentHistory: ProgressiveRoomHistoryViews | undefined,
+  enteredBiomeCount: number,
+  rewardFacts?: TargetRewardRequirementFacts,
+  initialRewardLookups: Readonly<Record<string, ReadonlySet<string>>> = Object.freeze({}),
 ): ZagreusContractCandidateCapability | undefined {
   if (parentHistory?.entry === undefined) return undefined;
   const declaration = sourceDeclaration.additionalExits.find(
@@ -125,8 +130,30 @@ export function assessZagreusContractPlacement(
   const enteredContractCount = parentHistory.entry.ledgers.roomAppearances.filter(
     (appearance) => appearance.gameName === declaration.targetRoomGameName,
   ).length;
+  const failedConditions: ('enteredContractCap' | 'sourceRequirement')[] = [];
+  if (
+    declaration.requirement !== undefined &&
+    !evaluateRequirement(
+      declaration.requirement,
+      projectRoomGenerationRequirementContext(
+        catalog,
+        source,
+        sourceDeclaration,
+        parentHistory.entry,
+        enteredBiomeCount,
+        rewardFacts?.history,
+        rewardFacts?.pendingSpellDrop,
+        rewardFacts?.allSpellInvested,
+        rewardFacts?.rewardLookups ?? initialRewardLookups,
+      ),
+    )
+  )
+    failedConditions.push('sourceRequirement');
+  if (enteredContractCount > declaration.maxEnteredThisRoute)
+    failedConditions.push('enteredContractCap');
   return Object.freeze({
-    placementEligible: enteredContractCount <= declaration.maxEnteredThisRoute,
+    placementEligible: failedConditions.length === 0,
+    failedConditions: Object.freeze(failedConditions),
     enteredContractCount,
     maximumEnteredThisRoute: declaration.maxEnteredThisRoute,
   });
@@ -275,7 +302,15 @@ export function evaluateAdditionalContinuationEntries(
     // invalid prefix. Its declaration remains structurally valid, but its
     // entry-time cap checkpoint is not yet assessable.
     if (parentHistory?.entry === undefined) continue;
-    const contractCapability = assessZagreusContractPlacement(sourceDeclaration, parentHistory);
+    const contractCapability = assessZagreusContractPlacement(
+      catalog,
+      source,
+      sourceDeclaration,
+      parentHistory,
+      enteredBiomeCount,
+      rewardFactsBySource.get(semanticAddressKey(parentOrigin)),
+      initialRewardLookups,
+    );
     const priorEnteredContractCount = contractCapability?.enteredContractCount ?? 0;
     if (contractCapability?.placementEligible === false) {
       appendFinding(
@@ -287,7 +322,7 @@ export function evaluateAdditionalContinuationEntries(
           contractRoomGameName: continuation.room.gameName,
           priorEnteredContractCount,
           maximumEnteredThisRoute: declaration.maxEnteredThisRoute,
-          failedConditions: Object.freeze(['enteredContractCap']),
+          failedConditions: contractCapability.failedConditions,
         }),
       );
     }
