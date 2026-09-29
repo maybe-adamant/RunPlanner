@@ -1,5 +1,75 @@
 # Fresh File project viability
 
+## Design outline index
+
+This investigation remains the overview and source-evidence owner. The following
+temporary outlines organize the proposed changes by domain; they are not five
+delivery plans or approval to implement/bump a schema:
+
+1. [Shared infrastructure](FRESH_FILE_SHARED_INFRASTRUCTURE.md): closed initial
+   facts, reached history, production-time resource quantities and gain totals.
+2. [Loadout](FRESH_FILE_LOADOUT.md): project creation and fixed starting state.
+3. [Rooms](FRESH_FILE_ROOMS.md): restrictions, opening chronology, bridge and Eris.
+4. [Rewards](FRESH_FILE_REWARDS.md): inventories, source-local rules and unlocks.
+5. [Encounters](FRESH_FILE_ENCOUNTERS.md): introductions, fixed/mixed profiles
+   and two-stage customization.
+
+Infrastructure exposes facts; the domain outlines own their consumers. Loadout
+and rooms establish the playable start; rewards and encounters consume reached
+history throughout the route. Derive one dependency-ordered delivery plan from
+these outlines, with complete testable slices rather than one gate per file.
+Current code seams are investigation starting points, not locked task packets.
+
+### Readiness for one coherent design
+
+Delivery ordering is settled: first audit and correct the general executor
+encounter-binding boundary, moving from name-equality inclusion gating toward
+proven semantic-conflict exclusions while preserving phase/lifecycle ownership.
+This prerequisite serves existing projects and must be verified before other
+Fresh File implementation. See the encounter outline for its audit scope.
+
+Compatibility approval: the owner authorizes one authored schema bump for the
+Fresh File feature, including nullable mandatory selections; consolidate its
+changes and migrate existing saves without altering their intent. Execution
+compatibility remains a separate contract. Shop declarations retain their slot
+count: the fifth Tartarus slot exists but is validly empty in Fresh File.
+
+There is enough settled direction to write a single integrated design precursor,
+but not yet a fully locked delivery plan. The domain outlines supply its inputs;
+the integrated document should own the end-to-end contracts rather than repeat
+five inventories or assign one implementation gate per outline.
+
+Settled: FreshFile tag and fixed itinerary; fixed loadout; shared history and
+numeric gain machinery; separate Fresh File bag/shop profiles; conditional
+F_Combat01 forcing through existing requirements; first Apollo contents through
+Fresh File/no-core-boons-at-all eligibility and Common rarity validation; Eris
+feature-to-timeline interaction; bridge Shop; Nectar without levels; disabled
+element placement; god matrix; deterministic first-combat identities.
+
+First delivery is the playable Fresh File spine: project creation, loadout,
+rooms, rewards and deterministic introductory encounter resolution. Ordinary
+encounter customization is disabled for Fresh File. Native generation owns
+enemy-triggered introductions; detailed introduction history, the two-stage
+editor and fixed/mixed-wave installation are deferred until that spine is
+stable. This supersedes the earlier mandatory-full-customization proposal.
+
+The integrated design should trace initialization → production/history →
+eligibility → authored actions → execution products, with explicit ownership.
+It must keep these bounded decisions visible:
+
+- Bounded executor handling of native introduction substitutions while still
+  enforcing deterministic first encounters and meaningful room lifecycle.
+- Persisted absence/profile representation, empty shop-group addressing and
+  schema/protocol compatibility, with explicit owner approval for migrations.
+
+Competing-introduction traversal, mixed-wave products and two-stage draft
+transitions remain documented follow-up questions, not blockers for this design.
+
+Source-function probes establish control flow and budget behavior, not live
+execution acceptance. The design may state those known boundaries now and
+retain the concrete live probes; it must not present unresolved behavior as a
+finished contract or imply implementation authorization.
+
 ## Question and conclusion
 
 Investigated 2026-09-27. Can the planner support a fourth creation choice,
@@ -336,25 +406,169 @@ items do not themselves unlock Arachne or change completed-run history.
 | Native encounter generation mathematics             | Intro encounters may themselves be Generated; `FishSwarmerIntro` mixes a fixed first wave with a generated template.                                 | Reuse mathematics where the resolved declaration uses it. “Every encounter is fully scripted” is not established.                                                    |
 | Native presentation and combat                      | Sheep presentation and fixed boss selection can stay native.                                                                                         | Do not add authored controls simply because a first-run restriction exists.                                                                                          |
 
+## Follow-up: introduction precedence, pressure and resource arithmetic
+
+Source follow-up on 2026-09-28; no production changes or in-game verification.
+
+### Competing introductions
+
+`RunLogic.lua:SetupEncounter` (1098–1154) generates the proposed encounter,
+runs setup events, then scans its original `SpawnWaves` and each wave's
+`Spawns` using `pairs`. For each unfinished introduction whose requirements
+pass, it replaces the local result with that introduction. A **generated**
+introduction is generated and returned immediately. A **fixed** introduction
+does not return: subsequent entries in the original traversal can replace it
+again. The replacement's waves are not recursively scanned by this loop.
+
+A bounded Lua probe executing the unmodified `SetupEncounter` function with
+stubbed eligibility/generation and synthetic dense spawn arrays produced:
+
+| Original traversal            | Returned introduction |
+| ----------------------------- | --------------------- |
+| Fixed A, Fixed B              | Fixed B               |
+| Fixed B, Fixed A              | Fixed A               |
+| Fixed A, Generated C, Fixed B | Generated C           |
+| Generated C, Fixed A          | Generated C           |
+
+This verifies control flow, not the game's runtime ordering guarantee for
+`pairs`. Native first-selection also has a separate `ChooseEncounter`
+`ForceIntroduction` pass over `EnemySet`; it must not be conflated with this
+post-generation pass.
+
+Consequently, “first new enemy always wins” and “the game admits only one
+unintroduced type in the proposed composition” are not supported rules.
+F Radiator/Screamer and G FishSwarmer/Turtle use generated introductions.
+Correction after tracing inheritance: the fixed-roster H introductions also
+inherit `Generated = true` from `BaseIntroEncounter`/`GeneratedH`, so they
+return immediately too. Fixed roster content must not be confused with the
+non-generated control-flow branch used by the synthetic probe. The planner
+must resolve the resulting whole encounter, not combine introductions or
+record all encountered candidates as completed.
+
+Recommended authoring boundary: identify competing eligible introduction
+profiles and require an explicit switch to a legal resolved profile; do not
+derive priority from picker click order. Before specifying automatic priority,
+verify actual generated spawn ordering in game. The bounded function probe
+does not justify treating Lua `pairs` as a portable ordering contract.
+
+### Room-generation pressure
+
+`RunLogic.lua:ChooseNextRoomData` filters with `IsRoomEligible` **before**
+collecting `IsRoomForced` candidates, then randomly selects from the forced
+list when nonempty. It contains no Fresh File-specific pressure algorithm or
+generic miniboss-over-shop priority.
+
+- `RoomDataF.lua:F_Shop01`: force window 4–6, eligibility through depth 6,
+  at least two offered exits, at most one creation per run.
+- `RoomDataG.lua:G_Shop01`: force window 3–6, but eligibility only through
+  depth 5, the same two-exit requirement and one-creation limit. The force
+  maximum does not override that eligibility cutoff.
+- `RequirementsLogic.lua:RequiredMinExits` counts actual offered exits.
+  On a one-exit boundary the shop is ineligible; this is not evidence of a
+  miniboss winning a priority contest. Fresh File has no Chaos bypass.
+- `RoomDataH.lua:H_Bridge01`: always forced when eligible, after exactly two
+  counted H combat/miniboss rooms and before the third, with one creation per
+  run. Its eligibility is independent of whether its content is Echo or Shop.
+  `ForcedRewards` selects eligible Story first, otherwise Shop;
+  `EncounterData_Unique.lua:BridgeShop` requires the Shop reward.
+
+Disposition: reuse existing room pressure and creation-versus-visit semantics.
+The Fresh File bridge changes its content, not its topology or pressure.
+Offering the bridge and choosing another door still consumes its creation
+allowance; do not invent a replacement guarantee for the missed shop.
+
+### Resource quantities and timing
+
+`TraitData_Poseidon.lua:RoomRewardBonusBoon` declares resource multipliers with
+base 1.5 and rarity scaling. `TraitLogic.lua` scales the delta above one,
+giving Common/Rare/Epic/Heroic multipliers 1.5/1.75/2/2.25 (availability of
+each rarity remains a separate eligibility question).
+
+`InteractLogic.lua:ApplyConsumableItemResourceMultiplier` modifies each
+`AddResources` amount at object setup, rounding each pickup independently.
+`UtilityLogic.lua:round` is `floor(value + 0.5)` for these positive quantities.
+For a five-Ashes pickup this yields 8/9/10/11; for ten Ashes,
+15/18/20/23. Room rewards, shop spawning and generated-consumable producers
+call this helper; `NPCDrop` bypasses its resource bonuses.
+
+`UseConsumableItem` grants the stored amount through `AddResource`, which
+updates lifetime gains immediately. Its Double Up branch retains the same
+object and disables further duplication: the second acquisition grants the
+same already-rounded quantity. It does not recompute or compound Buried
+Treasure. Thus two Common-boosted five-Ashes acquisitions grant 8 + 8, not
+round(10 × 1.5). Gaining Buried Treasure after an object spawned does not
+retroactively increase that object's stored amount through this path.
+
+Disposition: the new resource ledger must consume resolved pickup amounts
+from their production context, then credit each acquisition separately.
+Existing pickup counts are insufficient. Preserve Eris's separately declared
+non-duplicating NPC gift behavior; do not make every resource gain eligible
+for the modifier. The existing Buried Treasure generated-pickup machinery
+and Double Up acquisition flow remain reusable.
+
 ## Remaining probes and implementation pinning
 
-The two principal behavioral probes are:
+### Generous F/G resource witness
+
+A 2026-09-28 bounded probe executed native `RoomLogic.ChooseNextRewardStore`
+with its ratio history and random outcome supplied by a small harness. It
+checked the following selected-store sequence, not a complete authored project
+or full room/offer eligibility. Use the owner's neutral RunProgress opening
+substitute (e.g. a hammer with no resource contribution), then mandatory
+RunProgress Apollo. No Wells, Chaos, story rooms or Reprieve rooms are used.
+
+| Position     | Store / action                                | Ashes gained | Bones gained |
+| ------------ | --------------------------------------------- | -----------: | -----------: |
+| F opening    | Neutral major substitute                      |            0 |            0 |
+| F ordinary 1 | Forced Apollo                                 |            0 |            0 |
+| F ordinary 2 | Minor Ashes                                   |            5 |            0 |
+| F ordinary 3 | Major Poseidon: assume Epic Buried Treasure   |            0 |          100 |
+| F ordinary 4 | Root Stalker forced major: Poseidon, Sea Star |            0 |            0 |
+| F ordinary 5 | Minor Ashes, duplicated                       |           20 |            0 |
+| F ordinary 6 | Midshop, RunProgress store; buy Bones         |            0 |          100 |
+| F ordinary 7 | Minor Ashes, duplicated                       |           20 |            0 |
+| F ordinary 8 | Major, no resource contribution               |            0 |            0 |
+| F ordinary 9 | Minor Ashes, duplicated                       |           20 |            0 |
+| F preboss    | Shop, forced RunProgress; buy Bones           |            0 |          100 |
+| G intro      | Eris Ashes gift                               |           20 |            0 |
+| G ordinary 1 | Minor Ashes, duplicated                       |           20 |            0 |
+| G ordinary 2 | Major, no resource contribution               |            0 |            0 |
+| G ordinary 3 | Minor Bones, duplicated                       |            0 |          200 |
+| Total        | Both thresholds reached                       |          105 |          500 |
+
+At G entry the illustrative ledger is four MetaProgress entries out of eleven.
+G's first three store-selection values are approximately 0.213636, -0.316667,
+and 0.003846: Minor/Major/Minor is supported, although the last is rare.
+Major/Major/Minor/Major can complete the seven-room G body, leaving another
+MetaProgress selection after threshold crossing. F's four Ashes rewards consume
+its four first-biome Ashes copies; G can consume its distinct later-biome copies.
+
+This deliberately grants early Epic Buried Treasure, successful Sea Star rolls,
+shop Bones availability and purchasing power. Shop pickups cannot duplicate;
+Buried Treasure's initial gift is not duplicated because Sea Star is obtained
+later. Ordinary Bones are 50 base, Epic-boosted to 100; duplicated room Bones
+yield 200. Eris's 20 Ashes are not multiplied. No Tartarus Eris resources or
+large MetaProgress items bootstrap the threshold.
+
+Conclusion: minor/major pressure does **not** establish impossibility, even
+without excess shops or detours. This is the requested generous resource/store
+witness, not proof of full Fresh File legality. Before claiming the latter,
+validate exact room candidates/offered-door creation history, early boon offer
+and rarity restrictions, money and the real empty opening's store history.
+Do not retire resource arithmetic on the assumption that 500 Bones is too high.
+
+The remaining live behavioral check is:
 
 - **Competing introductions:** test in game what happens when a proposed
   encounter contains multiple enemies with unfinished introductions. The
-  hypothesis that native generation permits only one new enemy introduction
-  at a time is not established. Pin selection/traversal precedence and the
-  resulting fixed/mixed profile before locking the authoring switch.
-- **Generation pressure:** expect existing room-generation pressure to remain
-  unchanged, but trace midshop/miniboss competition and the Fields bridge's
-  Shop outcome under Fresh File eligibility. Do not invent a new pressure
-  system or assume the exclusions alone prove every collision outcome.
+  source control flow above is established, but actual generated spawn
+  traversal order needs confirmation before promising automatic priority.
+  An explicit legal-profile switch avoids inventing picker-order priority.
 
-The bounded resource follow-up is Buried Treasure's applicable gains and native
-rounding. It is the only obtainable resource multiplier in this scope; no
-general multiplier inventory is needed. Duplication is a separate acquisition
-mechanism, not another multiplier. The existing Double Up evidence should be
-accounted for through that distinction, not silently discarded.
+Pressure and resource arithmetic are source-resolved above. Delivery still
+needs production-context pickup quantities and representative witnesses for
+the two-exit shop gate, bridge creation consumption, per-pickup rounding and
+separate duplicate acquisitions; no general multiplier inventory is needed.
 
 The implementation plan still needs exact declaration/consumer wiring for god
 ordering and shop history, the profile/schema/export representation, and the
@@ -491,7 +705,12 @@ source's candidates; they do not replace its ordinary rules.
 This is the investigation-level foundation for the future reward/shop plan,
 not a claim that the full god-order matrix or implementation seams are closed.
 
-## Agreed encounter and customization shape
+## Encounter research and deferred customization shape
+
+Delivery scope is narrowed as described in the overview and encounter outline:
+only deterministic encounter identity resolution belongs to the first delivery.
+The detailed customization design below is retained for the later encounter
+work, not a requirement to expose Fresh File authoring.
 
 Fresh File needs introduction-aware encounter resolution, not a blanket
 scripted replacement for ordinary combat. Restrict the inventory to encounters
@@ -533,11 +752,25 @@ Sources: `EncounterData.lua` (`BaseIntroEncounter`, F introductions,
   history. Fully fixed encounters require no artificial customization; mixed
   profiles require authoring only their generated portions. Boss/miniboss
   choices remain governed by their specific profiles.
-- Assess the authored enemy composition against reached introduction history
-  at encounter preparation. If it triggers an eligible unfinished intro,
-  report the ordinary composition as invalid and offer an explicit switch to
-  the introduction profile. Switching replaces the whole encounter
-  composition, not one enemy's wave; do not silently rewrite a picker edit.
+- For Fresh File generated combat, clicking Customize first opens a preliminary
+  composition popup before the existing detailed customizer. Select only wave
+  count and enemy types, including any required shared-enemy choice; do not
+  ask for budgets or other detailed customization at this stage.
+- The engine assesses that proposed composition against the reached history
+  at encounter preparation. If no introduction is required, a Customize Combat
+  action opens the existing detailed editor with the selected waves and enemy
+  types inherited from the preliminary popup.
+- If the proposal triggers an eligible unfinished introduction, show the
+  resolved profile and an explicit Continue with [Introduction] action.
+  Explain that the introduction replaces the proposed encounter. Continuing
+  replaces the whole composition, not one enemy's wave: fully fixed content is
+  read-only and mixed profiles expose only their generated portions for
+  customization. Do not silently rewrite an enemy-picker edit.
+- The preliminary proposal is local UI draft state, not a persisted
+  intermediate encounter or a second simulation authority. The engine owns
+  resolution and eligibility; the application presents the result and binds
+  the explicit transition into the resolved encounter editor. Exact commit,
+  close/back and re-edit behavior remains delivery-plan work.
 - Resolution follows native spawn traversal/selection semantics, not the order
   of UI clicks. Pin competing-introduction precedence and repair behavior in
   the implementation plan before exposing the switch.
