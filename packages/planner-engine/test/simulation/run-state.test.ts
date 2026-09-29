@@ -276,7 +276,6 @@ describe('decision run-state snapshots', () => {
         requiredObjectSpawns: [],
         requiredObjectCompletions: [],
         roomRestores: [],
-        knownEncounteredEnemyKeys: [],
         counters: {
           biomeDepthCache: 1,
           biomeEncounterDepth: 0,
@@ -350,7 +349,6 @@ describe('decision run-state snapshots', () => {
         requiredObjectSpawns: [],
         requiredObjectCompletions: [],
         roomRestores: [],
-        knownEncounteredEnemyKeys: [],
         counters: {
           biomeDepthCache: sequence,
           biomeEncounterDepth: 0,
@@ -430,7 +428,6 @@ describe('decision run-state snapshots', () => {
         requiredObjectSpawns: [],
         requiredObjectCompletions: [],
         roomRestores: [],
-        knownEncounteredEnemyKeys: [],
         counters: {
           biomeDepthCache: 1,
           biomeEncounterDepth: 0,
@@ -1225,7 +1222,6 @@ describe('decision run-state snapshots', () => {
           requiredObjectSpawns: [],
           requiredObjectCompletions: [],
           roomRestores: [],
-          knownEncounteredEnemyKeys: [],
           counters: {
             biomeDepthCache: 0,
             biomeEncounterDepth: 0,
@@ -1283,7 +1279,6 @@ describe('decision run-state snapshots', () => {
             requiredObjectSpawns: [],
             requiredObjectCompletions: [],
             roomRestores: [],
-            knownEncounteredEnemyKeys: [],
             counters: {
               biomeDepthCache: 0,
               biomeEncounterDepth: 0,
@@ -1364,7 +1359,6 @@ describe('decision run-state snapshots', () => {
           requiredObjectSpawns: [],
           requiredObjectCompletions: [],
           roomRestores: [],
-          knownEncounteredEnemyKeys: [],
           counters: {
             biomeDepthCache: 0,
             biomeEncounterDepth: 0,

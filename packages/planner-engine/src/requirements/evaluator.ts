@@ -5,7 +5,6 @@ import type {
   NumericRange,
   RequirementExpression,
   ResourceGainRecord,
-  EncounteredEnemyRecord,
   RoomStructuralTag,
   RunHistoryRecord,
   SaveFileHistoryRecord,
@@ -29,18 +28,10 @@ export interface RequirementEvaluationContext {
   /** Present when a declaration evaluates a route-owned predicate. */
   readonly routeKey?: string;
   readonly counters: Readonly<Record<CounterAxis, number>>;
-  /**
-   * Save-file god and resource-gain ledgers exist only where reward history
-   * reaches; known encountered enemies only at encounter preparation.
-   */
+  /** Save-file god and resource-gain ledgers exist only where reward history reaches. */
   readonly records: Readonly<Record<RunHistoryRecord, Readonly<Record<string, number>>>> &
     Readonly<
-      Partial<
-        Record<
-          SaveFileHistoryRecord | ResourceGainRecord | EncounteredEnemyRecord,
-          Readonly<Record<string, number>>
-        >
-      >
+      Partial<Record<SaveFileHistoryRecord | ResourceGainRecord, Readonly<Record<string, number>>>>
     >;
   readonly currentRoomShopOptionNames: ReadonlySet<string>;
   readonly currentRoomRewardType: string | undefined;

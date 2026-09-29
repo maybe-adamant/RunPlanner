@@ -586,20 +586,6 @@ counts and applicable Fangs/Menace outcomes. Initialization and preview consume
 the same exact capability. Combat and native spawn pacing are not simulated. It introduces
 no additional lifecycle operation, reward obligation or conformance checkpoint.
 
-The history fold also keeps a monotonic set of known encountered enemies:
-native enemy names added when a normally executed phase reaches
-`encounterCompleted` with an exact published generated composition. A source
-counts unless Menace converts every request; positive replacements count; elite
-and base names stay distinct. Preparation, Fig Leaf skips, invalid or
-incomplete customization, uncustomized native rosters, infinite rosters and
-summons add nothing, so absence means not recorded. History-time preparation
-judges validity without Fear ranks (Hordes, Fangs and Menace at 0), so a
-composition with a positive authored Menace conversion is left unrecorded, and a
-composition the candidate assessment rejects for a missing Fangs selection can
-still record its keys; identity is unaffected because Fangs and Hordes do not
-change native names. Encounter Definition requirements read the set
-at later preparation; mature routes start empty.
-
 A later slot in the same room evaluates against the preceding recorded prefix.
 It can therefore observe exact earlier encounter identities, while encounter
 counters remain at the post-predecessor snapshot until the matching

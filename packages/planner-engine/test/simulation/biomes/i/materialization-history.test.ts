@@ -286,7 +286,6 @@ function carriedHHistory(): CanonicalBiomeHistory {
     requiredObjectSpawns: Object.freeze([]),
     requiredObjectCompletions: Object.freeze([]),
     roomRestores: Object.freeze([]),
-    knownEncounteredEnemyKeys: Object.freeze([]),
     counters: Object.freeze({
       biomeDepthCache: 0,
       biomeEncounterDepth: 0,

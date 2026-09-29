@@ -31,7 +31,6 @@ interface MutableLedgers {
   requiredObjectSpawns: RequiredObjectHistoryEntry[];
   requiredObjectCompletions: RequiredObjectHistoryEntry[];
   roomRestores: RoomRestoreHistoryEntry[];
-  knownEncounteredEnemyKeys: Set<string>;
   counters: {
     biomeDepthCache: number;
     biomeEncounterDepth: number;
@@ -93,7 +92,6 @@ function frozenLedgers(ledgers: MutableLedgers): HistoryLedgers {
     requiredObjectSpawns: Object.freeze([...ledgers.requiredObjectSpawns]),
     requiredObjectCompletions: Object.freeze([...ledgers.requiredObjectCompletions]),
     roomRestores: Object.freeze([...ledgers.roomRestores]),
-    knownEncounteredEnemyKeys: Object.freeze([...ledgers.knownEncounteredEnemyKeys].sort()),
     counters: frozenCounters(ledgers.counters),
   });
 }
@@ -112,7 +110,6 @@ export function createRouteStartHistoryView(): HistoryStateView {
       requiredObjectSpawns: [],
       requiredObjectCompletions: [],
       roomRestores: [],
-      knownEncounteredEnemyKeys: new Set(),
       counters: {
         biomeDepthCache: 0,
         biomeEncounterDepth: 0,
@@ -285,7 +282,6 @@ function foldHistoryEventStream(
     requiredObjectSpawns: [...(seed?.ledgers.requiredObjectSpawns ?? [])],
     requiredObjectCompletions: [...(seed?.ledgers.requiredObjectCompletions ?? [])],
     roomRestores: [...(seed?.ledgers.roomRestores ?? [])],
-    knownEncounteredEnemyKeys: new Set(seed?.ledgers.knownEncounteredEnemyKeys ?? []),
     counters: {
       ...(seed?.ledgers.counters ?? {
         biomeDepthCache: 0,
@@ -298,7 +294,6 @@ function foldHistoryEventStream(
   const namesByOrigin = new Map<string, string>();
   const encounterEnvelopesByOrigin = new Map<string, string>();
   const recordedEncounters = new Map<string, EncounterHistoryEntry>();
-  const recordedEnemyKeys = new Map<string, readonly string[]>();
   const activeEncounters = new Map<string, EncounterHistoryEntry>();
   const completedEncounters = new Map<
     string,
@@ -539,8 +534,6 @@ function foldHistoryEventStream(
           throw new HistoryFoldContractError(`${event.phaseKey} was recorded more than once`);
         }
         recordedEncounters.set(key, entry);
-        const enemyKeys = event.generatedCustomization?.encounteredEnemyKeys;
-        if (enemyKeys !== undefined) recordedEnemyKeys.set(key, enemyKeys);
         ledgers.encounterRecords.push(entry);
         break;
       }
@@ -681,10 +674,6 @@ function foldHistoryEventStream(
         activeEncounters.delete(key);
         completedEncounters.set(key, event);
         ledgers.encounterCompletions.push(Object.freeze({ ...started, sequence: event.sequence }));
-        // Completion, not preparation, makes a composition known; Fig Leaf skips spawn nothing.
-        if (event.execution === 'normal')
-          for (const enemyKey of recordedEnemyKeys.get(key) ?? [])
-            ledgers.knownEncounteredEnemyKeys.add(enemyKey);
         break;
       }
       case 'encounterEndEffectsApplied': {

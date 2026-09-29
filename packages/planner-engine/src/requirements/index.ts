@@ -13,7 +13,6 @@ export {
 export type {
   CounterAxis,
   CurrentRunFlag,
-  EncounteredEnemyRecord,
   HistoryRecord,
   NumericRange,
   RequirementExpression,
