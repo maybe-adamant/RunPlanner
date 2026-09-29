@@ -81,6 +81,7 @@ export function bindRewardChildInteractions(input: {
     {
       readonly address: KeepsakeSelectionAddress;
       readonly selectedKeepsakeKey?: string;
+      readonly unavailableReason?: 'rackUnavailableOnRoute';
     }
   >;
   readonly keepsakeEquipResultControls?: ReadonlyMap<

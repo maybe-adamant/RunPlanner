@@ -27,6 +27,8 @@ export interface WorkspaceKeepsakeSelectionInteraction {
   readonly removeIntent?: () => WorkspaceCommandIntent<
     Extract<ProjectCommand, { readonly kind: 'RemovePostbossKeepsake' }>
   >;
+  /** The route has no rack: nothing can be chosen and only removal is bound. */
+  readonly unavailableReason?: 'rackUnavailableOnRoute';
 }
 
 /** Closed immediate acquisitions beneath their exact rack selection. */
