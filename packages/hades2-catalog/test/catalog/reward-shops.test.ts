@@ -137,7 +137,12 @@ describe('reward compiler Shop normalizer', () => {
     for (const profileKey of ['I_WorldShop', 'Q_WorldShop'] as const) {
       const survival = rewardKernelCatalog.shops.byKey[profileKey]?.groups.byKey.Survival;
       const option = survival?.options.byKey.LastStandDrop;
-      expect(option?.requirement).toBeUndefined();
+      // A fresh profile has no Death Defiance to refill; Q is never reached on one.
+      expect(option?.requirement).toEqual(
+        profileKey === 'I_WorldShop'
+          ? { kind: 'not', requirement: { kind: 'routeKeyEquals', routeKey: 'FreshFile' } }
+          : undefined,
+      );
       expect(option?.purchaseRequirement).toBeUndefined();
     }
     expect(rewardKernelCatalog.shops.byKey.WorldShop?.groups.byKey.Boon?.rewardTypes).toEqual([
@@ -582,6 +587,7 @@ describe('reward compiler Shop normalizer', () => {
             {
               kind: 'all',
               requirements: [
+                { kind: 'not', requirement: { kind: 'routeKeyEquals', routeKey: 'FreshFile' } },
                 { kind: 'notInCurrentRoomShopOptions', rewardType: 'WeaponUpgradeDrop' },
                 {
                   kind: 'recordCount',

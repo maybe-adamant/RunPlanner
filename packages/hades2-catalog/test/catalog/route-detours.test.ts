@@ -266,7 +266,7 @@ describe('route detour catalog declarations', () => {
         excludedRoomGameNames: ['G_Shop01', 'G_Story01', 'G_PreBoss01', 'C_Boss01'],
         excludedSourceEncounterGameNames: ['ArtemisCombatG', 'NemesisRandomEvent'],
         maxEnteredReplacementsThisRoute: 0,
-        excludedRouteKeys: ['Dream'],
+        excludedRouteKeys: ['Dream', 'FreshFile'],
       },
       replaceableTargetRoomGameNames: anomalyTargets,
       replacementRoomGameNames: anomalyRoomGameNames,
@@ -304,6 +304,14 @@ describe('route detour catalog declarations', () => {
         },
         targetRoomGameName: 'C_Boss01',
         maxEnteredThisRoute: 0,
+        ...(source?.roomSetKey === 'F' || source?.roomSetKey === 'G'
+          ? {
+              requirement: {
+                kind: 'not',
+                requirement: { kind: 'routeKeyEquals', routeKey: 'FreshFile' },
+              },
+            }
+          : {}),
       });
     }
   });

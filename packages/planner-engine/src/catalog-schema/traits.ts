@@ -349,6 +349,14 @@ export interface HexDeclaration {
 
 export type TraitOfferContextKey = 'devotionNoDuo' | 'blockGiftBoons' | 'circeRemovableFearVow';
 
+/** Source `HeroData.BoonData`: the ordinary replacement roll and its save-progress gate. */
+export interface BoonReplacementDeclaration {
+  /** `ReplaceChance`. */
+  readonly chance: number;
+  /** Routes whose save profile fails `GameStateRequirements`; they never roll. */
+  readonly excludedRouteKeys: readonly string[];
+}
+
 export type TraitRequirementExpression =
   | {
       readonly kind: 'all';
@@ -534,8 +542,7 @@ export interface TraitCatalog {
   readonly boonRarityRollOrder: BoonRarityRollOrder;
   /** Complete source base ledgers for the only fresh-roll providers this slice supports. */
   readonly boonRarityBases: Readonly<Record<'olympian' | 'hermes', BoonRarityValues>>;
-  /** Source `HeroData.BoonData.ReplaceChance` for ordinary replacement rolls. */
-  readonly boonReplacementChance: number;
+  readonly boonReplacement: BoonReplacementDeclaration;
   readonly chaos: ChaosTraitCatalog;
   readonly echoLastRunBoon: EchoLastRunBoonCatalog;
   readonly hexes: CatalogCollection<HexDeclaration>;

@@ -210,6 +210,7 @@ describe('structured workspace source index', () => {
     });
     const zagreusContract: ZagreusContractCandidateCapability = Object.freeze({
       enteredContractCount: 0,
+      failedConditions: Object.freeze([]),
       maximumEnteredThisRoute: 0,
       placementEligible: true,
     });

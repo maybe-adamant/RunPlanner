@@ -10,7 +10,7 @@ import { normalizeGivers } from './givers';
 import {
   normalizeBoonRarityBases,
   normalizeBoonRarityRollOrder,
-  normalizeBoonReplacementChance,
+  normalizeBoonReplacement,
   normalizeEchoLastRunBoon,
   normalizeContexts,
 } from './offer-catalog';
@@ -45,7 +45,7 @@ export function createTraitCatalog(input: RawTraitCatalogInput): TraitCatalog {
   const hexes = normalizeHexes(input.hexes);
   const boonRarityBases = normalizeBoonRarityBases(input.boonRarityBases);
   const boonRarityRollOrder = normalizeBoonRarityRollOrder(input.boonRarityRollOrder);
-  const boonReplacementChance = normalizeBoonReplacementChance(input.boonReplacementChance);
+  const boonReplacement = normalizeBoonReplacement(input.boonReplacement);
   validateAspectStartingTraits({ aspects, traits, givers });
   validateAspectTraitOfferLevelBonuses({ aspects, traits });
   validateTraitCatalogClosure({ traits, givers });
@@ -63,7 +63,7 @@ export function createTraitCatalog(input: RawTraitCatalogInput): TraitCatalog {
     givers,
     boonRarityBases,
     boonRarityRollOrder,
-    boonReplacementChance,
+    boonReplacement,
     echoLastRunBoon,
     hexes,
     chaos,

@@ -103,6 +103,9 @@ export function normalizeRoom(
     offerRewardBinding: reward.offerRewardBinding,
     blockGiftBoons: identity.blockGiftBoons,
     hasKeepsakeRack: features.hasKeepsakeRack,
+    ...(features.keepsakeRackExcludedRouteKeys === undefined
+      ? {}
+      : { keepsakeRackExcludedRouteKeys: features.keepsakeRackExcludedRouteKeys }),
     hasRequiredFountain: features.hasRequiredFountain,
     ...(features.challengeSwitchAnchorCount === undefined
       ? {}

@@ -38,6 +38,7 @@ const origin = createBiomeAddress('Underworld', 'F');
 function factsFor(history: RewardHistoryState): RewardKernelFacts {
   return {
     requirements: {
+      routeKey: 'Underworld',
       counters: {
         biomeDepthCache: 4,
         biomeEncounterDepth: 2,

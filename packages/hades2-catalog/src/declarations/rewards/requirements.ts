@@ -1,6 +1,7 @@
 import type { RequirementExpression } from '@run-planner/engine/requirements';
 
 import { ordinarySources } from './payloads';
+import { notFreshFileRoute } from '../routes';
 
 const devotionEligibilitySources = Object.freeze([
   'AphroditeUpgrade',
@@ -26,9 +27,11 @@ export const stackLegal: RequirementExpression = {
   range: { min: 1 },
 };
 
+/** Native HammerLootRequirements needs four non-Apollo gods; a first attempt reaches three. */
 export const hammerEarly: RequirementExpression = {
   kind: 'all',
   requirements: [
+    notFreshFileRoute,
     { kind: 'notInCurrentRoomShopOptions', rewardType: 'WeaponUpgradeDrop' },
     { kind: 'recordCount', record: 'lootTypeHistory', keys: ['WeaponUpgrade'], range: { max: 0 } },
   ],
@@ -48,6 +51,7 @@ export const hubWeaponUpgradeExcludes: RequirementExpression = {
 export const hammerLate: RequirementExpression = {
   kind: 'all',
   requirements: [
+    notFreshFileRoute,
     { kind: 'notInCurrentRoomShopOptions', rewardType: 'WeaponUpgradeDrop' },
     { kind: 'counterRange', axis: 'enteredBiomes', range: { min: 3 } },
     {
@@ -59,9 +63,11 @@ export const hammerLate: RequirementExpression = {
   ],
 };
 
+/** Hermes needs a lifetime HermesFirstPickUp line. */
 export const shopHermesLegal: RequirementExpression = {
   kind: 'all',
   requirements: [
+    notFreshFileRoute,
     {
       kind: 'recordCount',
       record: 'biomeUseRecord',
@@ -85,9 +91,11 @@ export const hermesLootLegal: RequirementExpression = {
   ],
 };
 
+/** Devotion needs the lifetime PoseidonDevotionIntro01 line. */
 export const devotionLegal: RequirementExpression = {
   kind: 'all',
   requirements: [
+    notFreshFileRoute,
     {
       kind: 'recordCount',
       record: 'lootTypeHistory',
@@ -108,9 +116,11 @@ export const runDevotionLegal: RequirementExpression = {
   ],
 };
 
+/** Selene needs lifetime ArtemisFirstMeeting and SeleneFirstPickUp lines. */
 export const spellLegal: RequirementExpression = {
   kind: 'all',
   requirements: [
+    notFreshFileRoute,
     { kind: 'notInCurrentRoomShopOptions', rewardType: 'SpellDrop' },
     { kind: 'currentRoomRewardExcludes', rewardTypes: ['SpellDrop'] },
     { kind: 'recordCount', record: 'useRecord', keys: ['SpellDrop'], range: { max: 0 } },

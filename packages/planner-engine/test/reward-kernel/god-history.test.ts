@@ -153,7 +153,7 @@ describe('Hestia and Aphrodite loot requirement', () => {
       payload: { kind: 'BoonSource' as const, source: 'HestiaUpgrade' },
     };
     const closed = createRewardHistoryState(rewards, 'closed');
-    const bag = createRewardBagState(runProgress);
+    const bag = createRewardBagState(runProgress, 'Underworld');
     expect(consumeCountedOffer(rewards, runProgress, bag, hestiaDoor, factsFor(closed))).toEqual(
       [],
     );

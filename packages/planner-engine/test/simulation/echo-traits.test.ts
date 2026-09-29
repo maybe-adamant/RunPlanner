@@ -310,6 +310,7 @@ function ordinaryPoolFor(
   if (rewardType === undefined) throw new Error('Boon reward type is missing');
   const facts = {
     requirements: {
+      routeKey: 'Underworld',
       records: {
         lootTypeHistory: history.lootTypeHistory,
         lifetimeGodUseRecord: history.lifetimeGodUseRecord,

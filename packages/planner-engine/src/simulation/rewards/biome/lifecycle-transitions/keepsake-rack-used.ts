@@ -1,4 +1,5 @@
 import { replaceSimulationTraitHistory } from '../../../state/transitions';
+import { routeHasKeepsakeRack } from '../../../../authored-project/route-profile';
 import type { Catalog } from '../../../../catalog-schema';
 import {
   createKeepsakeEquipResultAddress,
@@ -80,6 +81,29 @@ export function applyKeepsakeRackUsedTransition(
   const rack = room.keepsakeRack;
   const keepsakeKey = rack.keepsakeKey;
   const selection = createPostbossKeepsakeSelectionAddress(event.origin);
+  // A rack retained on a route without one equips nothing.
+  if (!routeHasKeepsakeRack(catalog.rooms.byKey[room.gameName], event.origin.routeKey)) {
+    findings.push(
+      Object.freeze({
+        finding: rewardFinding('keepsakeUnavailable', selection, {
+          key: keepsakeKey,
+          reason: 'rackUnavailableOnRoute',
+        }),
+        region: ownerRegion(selection),
+        chronology: Object.freeze({
+          kind: 'history' as const,
+          sequence: event.sequence,
+          boundary: 'at' as const,
+        }),
+      }),
+    );
+    return Object.freeze({
+      branches,
+      keepsakeEquipResultCandidates: Object.freeze(keepsakeEquipResultCandidates),
+      findings: Object.freeze(findings),
+      timelineFacts: noTimelineFacts,
+    });
+  }
   const encounterBlockedKeepsakeKeys = Object.freeze([
     ...new Set(
       historyAtRack?.ledgers.encounterRecords.flatMap(

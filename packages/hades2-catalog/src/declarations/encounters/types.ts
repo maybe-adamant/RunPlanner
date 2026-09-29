@@ -128,6 +128,7 @@ export interface RawEncounterCustomizationChoice {
   readonly label: string;
   /** The native result identity consumed by the downstream Boss adapter. */
   readonly nativeId: string;
+  readonly excludedRouteKeys?: readonly string[];
 }
 
 export type RawEncounterCustomizationDecisionDeclaration =

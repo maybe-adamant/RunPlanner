@@ -105,6 +105,8 @@ export const demeterTraits = [
     linkedBoonRequirements: [],
     eligibilityRequirements: [
       { kind: 'routeKeyNot', routeKey: 'Dream' },
+      // Needs the Shovel unlock.
+      { kind: 'routeKeyNot', routeKey: 'FreshFile' },
       {
         kind: 'offerContext',
         context: 'blockGiftBoons',
@@ -243,7 +245,9 @@ export const demeterTraits = [
     freshOfferRarities: ['Common', 'Rare', 'Epic'],
     equippedRarities: ['Common', 'Rare', 'Epic'],
     linkedBoonRequirements: [],
+    // Infusions need the WorldUpgradeElementalBoons incantation.
     eligibilityRequirements: [
+      { kind: 'routeKeyNot', routeKey: 'FreshFile' },
       {
         kind: 'elementCount',
         element: 'Water',

@@ -1,4 +1,9 @@
-import type { BiomeLayout, Catalog, RouteInitialProfileDeclaration } from '../catalog-schema';
+import type {
+  BiomeLayout,
+  Catalog,
+  RoomDeclaration,
+  RouteInitialProfileDeclaration,
+} from '../catalog-schema';
 import type { SaveFileGodHistory } from '../reward-kernel/model';
 import type { RouteWeaponAspectLoadout } from './model';
 
@@ -65,4 +70,32 @@ export function routeSupportsGeneratedEncounterCustomization(
   routeKey: string,
 ): boolean {
   return routeInitialProfile(catalog, routeKey).kind === 'matureSave';
+}
+
+/** The room's Stygian Well host on this route; absent where the route's profile lacks it. */
+export function routeRoomShop(
+  room: RoomDeclaration | undefined,
+  routeKey: string,
+): RoomDeclaration['roomShop'] {
+  return room?.roomShop?.excludedRouteKeys?.includes(routeKey) === true
+    ? undefined
+    : room?.roomShop;
+}
+
+/** The room's usable Purging Pool on this route. */
+export function routePurgingPool(
+  room: RoomDeclaration | undefined,
+  routeKey: string,
+): RoomDeclaration['purgingPool'] {
+  return room?.purgingPool?.excludedRouteKeys?.includes(routeKey) === true
+    ? undefined
+    : room?.purgingPool;
+}
+
+/** Whether the room offers its keepsake rack on this route. */
+export function routeHasKeepsakeRack(room: RoomDeclaration | undefined, routeKey: string): boolean {
+  return (
+    room?.hasKeepsakeRack === true &&
+    room.keepsakeRackExcludedRouteKeys?.includes(routeKey) !== true
+  );
 }

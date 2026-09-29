@@ -1,4 +1,5 @@
 import type { Catalog } from '../../../catalog-schema';
+import { routeRoomShop } from '../../route-profile';
 import type { ProjectDocument } from '../../model';
 
 import type { LocatedBiome } from '../contract';
@@ -334,7 +335,7 @@ export function applyOccurrenceCommand(
     case 'AddStygianWell': {
       const occurrence = requireOccurrence(located.plan, command.occurrence.occurrenceId, command);
       const room = catalog.rooms.byKey[occurrence.gameName];
-      const roomShop = room?.roomShop;
+      const roomShop = routeRoomShop(room, located.routeKey);
       if (
         roomShop === undefined ||
         roomShop.forced ||
@@ -358,7 +359,7 @@ export function applyOccurrenceCommand(
     case 'RemoveStygianWell': {
       const occurrence = requireOccurrence(located.plan, command.occurrence.occurrenceId, command);
       const room = catalog.rooms.byKey[occurrence.gameName];
-      if (room?.roomShop?.forced === true)
+      if (routeRoomShop(room, located.routeKey)?.forced === true)
         failCommand(command, 'forced Postboss Stygian Well cannot be removed');
       if (occurrence.stygianWell === undefined) return document;
       const withoutWell = { ...occurrence };

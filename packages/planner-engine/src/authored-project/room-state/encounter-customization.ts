@@ -53,6 +53,42 @@ export function customizationDecisionOwned(
   return declarations.some((decision) => decision.key === decisionKey);
 }
 
+/** Whether a single or ordered-prefix value names a choice its route excludes. */
+export function customizationValueRouteExcluded(
+  decision: EncounterCustomizationDecision,
+  value: AuthoredEncounterCustomization,
+  routeKey: string,
+): boolean {
+  if (decision.selection.kind !== 'single' && decision.selection.kind !== 'orderedPrefix')
+    return false;
+  const keys =
+    value.kind === 'single'
+      ? [value.choiceKey]
+      : value.kind === 'orderedPrefix'
+        ? value.choiceKeys
+        : [];
+  return decision.selection.choices.some(
+    (choice) => keys.includes(choice.key) && choice.excludedRouteKeys?.includes(routeKey) === true,
+  );
+}
+
+/** The decision restricted to the choices its route can produce. */
+export function customizationDecisionOnRoute<Decision extends EncounterCustomizationDecision>(
+  decision: Decision,
+  routeKey: string,
+): Decision {
+  if (decision.selection.kind !== 'single' && decision.selection.kind !== 'orderedPrefix')
+    return decision;
+  const choices = decision.selection.choices.filter(
+    (choice) => choice.excludedRouteKeys?.includes(routeKey) !== true,
+  );
+  if (choices.length === decision.selection.choices.length) return decision;
+  return Object.freeze({
+    ...decision,
+    selection: Object.freeze({ ...decision.selection, choices: Object.freeze(choices) }),
+  }) as Decision;
+}
+
 export function customizationValueKnown(
   declarations: readonly EncounterCustomizationDecision[],
   decisionKey: string,

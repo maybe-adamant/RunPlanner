@@ -5,6 +5,7 @@ import { semanticAddressKey, type SemanticAddress } from '../../authored-project
 import {
   applyOfferProjection,
   consumeCountedOffer,
+  countedStoreExhausted,
   oldestSupportedRewardPriority,
   isOfferSupportedAtResolutionPoint,
   isPayloadLocallyValid,
@@ -189,7 +190,7 @@ export function processRewardOffer(
 
   const next: RewardBranchState[] = [];
   let sawSourceFailure = false;
-  let sawBagInvariantFailure = false;
+  let sawBagSupportEmpty = false;
   let sawSiblingFailure = false;
   const siblingConflicts = new Map<string, OfferProcessingPeer>();
   const recordSiblingConflict = (peer: OfferProcessingPeer) => {
@@ -259,13 +260,13 @@ export function processRewardOffer(
 
     const storeKey = reward.resolvedStoreKey;
     if (storeKey === undefined || !context.binding.storeKeys.includes(storeKey)) {
-      sawBagInvariantFailure = true;
+      sawBagSupportEmpty = true;
       continue;
     }
     const prepared = withBag(catalog, originalBranch, storeKey);
     const store = catalog.rewards.stores.byKey[storeKey];
     if (prepared === undefined || store === undefined) {
-      sawBagInvariantFailure = true;
+      sawBagSupportEmpty = true;
       continue;
     }
     const bagOptions = {
@@ -285,7 +286,7 @@ export function processRewardOffer(
       bagOptions,
     );
     if (requiredPriority !== undefined && effectiveOffer.rewardType !== requiredPriority) {
-      sawBagInvariantFailure = true;
+      sawBagSupportEmpty = true;
       continue;
     }
     if (
@@ -299,22 +300,17 @@ export function processRewardOffer(
         .filter((peer) => peer.offer.rewardType === effectiveOffer.rewardType)
         .forEach(recordSiblingConflict);
     }
-    let transitions: readonly RewardBagState[];
-    try {
-      transitions = consumeCountedOffer(
-        catalog.rewards,
-        store,
-        prepared.bag,
-        effectiveOffer,
-        facts,
-        bagOptions,
-      );
-    } catch (error) {
-      if (error instanceof Error && error.message.includes('one-refill eligibility invariant')) {
-        sawBagInvariantFailure = true;
-        continue;
-      }
-      throw error;
+    const transitions: readonly RewardBagState[] = consumeCountedOffer(
+      catalog.rewards,
+      store,
+      prepared.bag,
+      effectiveOffer,
+      facts,
+      bagOptions,
+    );
+    if (transitions.length === 0 && countedStoreExhausted(store, prepared.bag, facts, bagOptions)) {
+      sawBagSupportEmpty = true;
+      continue;
     }
     for (const bag of transitions) {
       const history = applyOfferProjection(
@@ -354,7 +350,7 @@ export function processRewardOffer(
   if (next.length === 0) {
     const code: RewardGenerationFindingCode = sawSourceFailure
       ? 'rewardSourceUnavailable'
-      : sawBagInvariantFailure
+      : sawBagSupportEmpty
         ? 'rewardBagSupportEmpty'
         : 'rewardBagEntryUnavailable';
     addRewardFinding(

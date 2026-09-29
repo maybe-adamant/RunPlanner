@@ -215,6 +215,7 @@ export function updateHub(
       defaultOccurrence(
         catalog,
         room,
+        located.routeKey,
         command.occurrenceId,
         'ordinary',
         false,
@@ -244,6 +245,7 @@ export function updateHub(
           defaultOccurrence(
             catalog,
             localRoom,
+            located.routeKey,
             localOccurrenceId,
             'ordinary',
             false,

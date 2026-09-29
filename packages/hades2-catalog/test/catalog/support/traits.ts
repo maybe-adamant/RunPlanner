@@ -863,7 +863,8 @@ export const expectedOfferRequirements: Readonly<Record<string, string>> = {
     '[{"kind":"anyEquippedTrait","traitKeys":["AphroditeCastBoon","AphroditeSprintBoon","AphroditeManaBoon"]}]',
   WeakVulnerabilityBoon:
     '[{"kind":"anyEquippedTrait","traitKeys":["AphroditeCastBoon","AphroditeSprintBoon","AphroditeManaBoon"]}]',
-  ElementalDodgeBoon: '[{"kind":"elementCount","element":"Air","minimum":2}]',
+  ElementalDodgeBoon:
+    '[{"kind":"routeKeyNot","routeKey":"FreshFile"},{"kind":"elementCount","element":"Air","minimum":2}]',
   RandomStatusBoon:
     '[{"kind":"all","requirements":[{"kind":"anyEquippedTrait","traitKeys":["AphroditeCastBoon","AphroditeSprintBoon","AphroditeManaBoon"]},{"kind":"anyEquippedTrait","traitKeys":["AphroditeWeaponBoon","AphroditeSpecialBoon"]},{"kind":"anyEquippedTrait","traitKeys":["WeakPotencyBoon","WeakVulnerabilityBoon","HighHealthOffenseBoon","FocusRawDamageBoon"]}]}]',
   SprintEchoBoon:
@@ -892,7 +893,8 @@ export const expectedOfferRequirements: Readonly<Record<string, string>> = {
   SorceryCritBoon:
     '[{"kind":"anyEquippedTrait","traitKeys":["SpellLaserTrait","SpellLeapTrait","SpellSummonTrait","SpellMeteorTrait","SpellTransformTrait","SpellMoonBeamTrait","SpellPolymorphTrait"]}]',
   OlympianSpellCountBoon: '[{"kind":"settledSpellDrop"}]',
-  ElementalRallyBoon: '[{"kind":"elementCount","element":"Fire","minimum":2}]',
+  ElementalRallyBoon:
+    '[{"kind":"routeKeyNot","routeKey":"FreshFile"},{"kind":"elementCount","element":"Fire","minimum":2}]',
   DoubleExManaBoon:
     '[{"kind":"all","requirements":[{"kind":"anyEquippedTrait","traitKeys":["ApolloWeaponBoon","ApolloSpecialBoon"]},{"kind":"anyEquippedTrait","traitKeys":["ApolloCastBoon","ApolloSprintBoon","ApolloManaBoon"]},{"kind":"anyEquippedTrait","traitKeys":["DoubleStrikeChanceBoon","ApolloCastAreaBoon","ApolloBlindBoon","ApolloExCastBoon"]}]}]',
   ApolloSecondStageCastBoon:
@@ -933,7 +935,7 @@ export const expectedOfferRequirements: Readonly<Record<string, string>> = {
   FireballRendBoon:
     '[{"kind":"all","requirements":[{"kind":"anyEquippedTrait","traitKeys":["AresWeaponBoon","AresSpecialBoon","AresCastBoon","AresSprintBoon","AresManaBoon"]},{"kind":"anyEquippedTrait","traitKeys":["FireballManaSpecialBoon","CastProjectileBoon"]}]}]',
   PlantHealthBoon:
-    '[{"kind":"routeKeyNot","routeKey":"Dream"},{"kind":"offerContext","context":"blockGiftBoons","required":false}]',
+    '[{"kind":"routeKeyNot","routeKey":"Dream"},{"kind":"routeKeyNot","routeKey":"FreshFile"},{"kind":"offerContext","context":"blockGiftBoons","required":false}]',
   BoonGrowthBoon: '[{"kind":"rarifiableTrait"}]',
   SlowExAttackBoon:
     '[{"kind":"anyEquippedTrait","traitKeys":["AphroditeWeaponBoon","ApolloWeaponBoon","DemeterWeaponBoon","HephaestusWeaponBoon","HeraWeaponBoon","HestiaWeaponBoon","PoseidonWeaponBoon","ZeusWeaponBoon","AresWeaponBoon"]}]',
@@ -941,7 +943,8 @@ export const expectedOfferRequirements: Readonly<Record<string, string>> = {
     '[{"kind":"anyEquippedTrait","traitKeys":["AphroditeCastBoon","ApolloCastBoon","DemeterCastBoon","HephaestusCastBoon","HeraCastBoon","HestiaCastBoon","PoseidonCastBoon","ZeusCastBoon","AresCastBoon"]}]',
   RootDurationBoon:
     '[{"kind":"anyEquippedTrait","traitKeys":["DemeterWeaponBoon","DemeterSpecialBoon","DemeterCastBoon"]}]',
-  ElementalDamageCapBoon: '[{"kind":"elementCount","element":"Water","minimum":4}]',
+  ElementalDamageCapBoon:
+    '[{"kind":"routeKeyNot","routeKey":"FreshFile"},{"kind":"elementCount","element":"Water","minimum":4}]',
   InstantRootKill:
     '[{"kind":"all","requirements":[{"kind":"anyEquippedTrait","traitKeys":["DemeterWeaponBoon","DemeterSpecialBoon","DemeterCastBoon"]},{"kind":"anyEquippedTrait","traitKeys":["PlantHealthBoon","ReserveManaHitShieldBoon","BoonGrowthBoon"]},{"kind":"anyEquippedTrait","traitKeys":["SlowExAttackBoon","RootDurationBoon","CastAttachBoon"]}]}]',
   RootStrikeBoon:
@@ -993,7 +996,8 @@ export const expectedOfferRequirements: Readonly<Record<string, string>> = {
     '[{"kind":"anyEquippedTrait","traitKeys":["HestiaWeaponBoon","HestiaSpecialBoon","HestiaCastBoon"]}]',
   BurnStackBoon:
     '[{"kind":"anyEquippedTrait","traitKeys":["HestiaWeaponBoon","HestiaSpecialBoon","HestiaCastBoon"]}]',
-  ElementalBaseDamageBoon: '[{"kind":"elementCount","element":"Fire","minimum":2}]',
+  ElementalBaseDamageBoon:
+    '[{"kind":"routeKeyNot","routeKey":"FreshFile"},{"kind":"elementCount","element":"Fire","minimum":2}]',
   BurnSprintBoon:
     '[{"kind":"all","requirements":[{"kind":"anyEquippedTrait","traitKeys":["HestiaWeaponBoon","HestiaSpecialBoon","HestiaCastBoon"]},{"kind":"anyEquippedTrait","traitKeys":["BurnExplodeBoon","BurnArmorBoon","BurnStackBoon","OmegaZeroBurnBoon"]},{"kind":"anyEquippedTrait","traitKeys":["CastProjectileBoon","FireballManaSpecialBoon"]}]}]',
   EchoBurnBoon:
@@ -1005,7 +1009,8 @@ export const expectedOfferRequirements: Readonly<Record<string, string>> = {
     '[{"kind":"anyEquippedTrait","traitKeys":["PoseidonWeaponBoon","PoseidonSpecialBoon"]}]',
   PoseidonExCastBoon:
     '[{"kind":"anyEquippedTrait","traitKeys":["AphroditeCastBoon","ApolloCastBoon","DemeterCastBoon","HephaestusCastBoon","HeraCastBoon","HestiaCastBoon","PoseidonCastBoon","ZeusCastBoon","AresCastBoon"]}]',
-  ElementalHealthBoon: '[{"kind":"elementCount","element":"Water","minimum":2}]',
+  ElementalHealthBoon:
+    '[{"kind":"routeKeyNot","routeKey":"FreshFile"},{"kind":"elementCount","element":"Water","minimum":2}]',
   AmplifyConeBoon:
     '[{"kind":"all","requirements":[{"kind":"anyEquippedTrait","traitKeys":["PoseidonWeaponBoon","PoseidonSpecialBoon"]},{"kind":"anyEquippedTrait","traitKeys":["PoseidonSprintBoon","PoseidonManaBoon","PoseidonExCastBoon"]},{"kind":"anyEquippedTrait","traitKeys":["EncounterStartOffenseBuffBoon","OmegaPoseidonProjectileBoon","PoseidonStatusBoon","FocusDamageShaveBoon"]}]}]',
   LightningVulnerabilityBoon:

@@ -44,6 +44,14 @@ function normalizeAdditionalExits(
       const exitType = exitTypes.byKey[exitTypeKey];
       if (exitType === undefined)
         fail(`${exitPath}.exitType`, `unknown physical exit type ${exitTypeKey}`);
+      const requirement =
+        raw.requirement === undefined
+          ? undefined
+          : normalizeRequirement(raw.requirement, `${exitPath}.requirement`);
+      if (requirement !== undefined) {
+        validateRequirementReferences(requirement, rewards.rewardTypes, `${exitPath}.requirement`);
+        rejectEncounterHistoryRequirements(requirement, `${exitPath}.requirement`);
+      }
       if (raw.kind === 'chaos') {
         if (key !== 'chaos') fail(`${exitPath}.key`, 'chaos exit key must be chaos');
         if (exitType.key !== 'ChaosExitDoor')
@@ -58,18 +66,6 @@ function normalizeAdditionalExits(
         if (typeof raw.canSpawn !== 'boolean') fail(`${exitPath}.canSpawn`, 'must be a boolean');
         if (raw.canSpawn && !raw.canHost)
           fail(`${exitPath}.canSpawn`, 'cannot be true when canHost is false');
-        const requirement =
-          raw.requirement === undefined
-            ? undefined
-            : normalizeRequirement(raw.requirement, `${exitPath}.requirement`);
-        if (requirement !== undefined) {
-          validateRequirementReferences(
-            requirement,
-            rewards.rewardTypes,
-            `${exitPath}.requirement`,
-          );
-          rejectEncounterHistoryRequirements(requirement, `${exitPath}.requirement`);
-        }
         return Object.freeze({
           kind: 'chaos',
           key: 'chaos',
@@ -114,6 +110,7 @@ function normalizeAdditionalExits(
           `${exitPath}.targetRoomGameName`,
         ),
         maxEnteredThisRoute,
+        ...(requirement === undefined ? {} : { requirement }),
       });
     }),
   );

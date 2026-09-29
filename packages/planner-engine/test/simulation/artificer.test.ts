@@ -54,6 +54,7 @@ const artificerLoadout = Object.freeze({
 function facts(enteredBiomes = 3): RewardKernelFacts {
   return {
     requirements: {
+      routeKey: 'Underworld',
       counters: {
         biomeDepthCache: 1,
         biomeEncounterDepth: 1,

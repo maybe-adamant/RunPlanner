@@ -13,6 +13,48 @@ import {
   talentLegal,
 } from './requirements';
 import type { RawRewardKernelInput } from './types';
+import type { RequirementExpression } from '@run-planner/engine/requirements';
+import { notFreshFileRoute } from '../routes';
+
+const gained = (resourceKey: string, range: { readonly min?: number; readonly max?: number }) =>
+  ({
+    kind: 'recordCount',
+    record: 'resourceGains',
+    keys: [resourceKey],
+    range,
+  }) as const satisfies RequirementExpression;
+
+// Lifetime gains a fresh profile accumulates; a mature save is past every threshold.
+const bonesUnlocked = gained('MetaCardPointsCommon', { min: 5 });
+const highTierReached: RequirementExpression = {
+  kind: 'all',
+  requirements: [
+    gained('MetaCurrency', { min: 500 }),
+    gained('MetaCardPointsCommon', { min: 100 }),
+  ],
+};
+const earlyBones: RequirementExpression = {
+  kind: 'all',
+  requirements: [
+    smallEnteredBiomes,
+    { kind: 'any', requirements: [notFreshFileRoute, bonesUnlocked] },
+  ],
+};
+const lateLowTier: RequirementExpression = {
+  kind: 'all',
+  requirements: [largeEnteredBiomes, { kind: 'not', requirement: highTierReached }],
+};
+const lateLowTierBones: RequirementExpression = {
+  kind: 'all',
+  requirements: [bonesUnlocked, lateLowTier],
+};
+const lateHighTier: RequirementExpression = {
+  kind: 'all',
+  requirements: [
+    largeEnteredBiomes,
+    { kind: 'any', requirements: [notFreshFileRoute, highTierReached] },
+  ],
+};
 
 const runProgressEntries = [
   { rewardType: 'MaxHealthDrop' },
@@ -45,21 +87,45 @@ export const stores = [
     interchangeableRewardTypes: ['MaxHealthDrop', 'MaxManaDrop', 'RoomMoneyDrop', 'StackUpgrade'],
   },
   {
+    // The native store with its lifetime-resource tiers. A mature save is past
+    // every tier, so the low tier's late entries sit only in a fresh bag.
     key: 'MetaProgress',
     entries: [
-      { rewardType: 'GiftDrop' },
-      { rewardType: 'MetaCurrencyDrop', requirement: smallEnteredBiomes },
-      { rewardType: 'MetaCurrencyDrop', requirement: smallEnteredBiomes },
+      { rewardType: 'GiftDrop', requirement: notFreshFileRoute },
+      { rewardType: 'MetaCurrencyDrop', requirement: earlyBones },
+      { rewardType: 'MetaCurrencyDrop', requirement: earlyBones },
       { rewardType: 'MetaCardPointsCommonDrop', requirement: smallEnteredBiomes },
       { rewardType: 'MetaCardPointsCommonDrop', requirement: smallEnteredBiomes },
       { rewardType: 'MetaCardPointsCommonDrop', requirement: smallEnteredBiomes },
       { rewardType: 'MetaCardPointsCommonDrop', requirement: smallEnteredBiomes },
-      { rewardType: 'MetaCurrencyBigDrop', requirement: largeEnteredBiomes },
-      { rewardType: 'MetaCurrencyBigDrop', requirement: largeEnteredBiomes },
-      { rewardType: 'MetaCardPointsCommonBigDrop', requirement: largeEnteredBiomes },
-      { rewardType: 'MetaCardPointsCommonBigDrop', requirement: largeEnteredBiomes },
-      { rewardType: 'MetaCardPointsCommonBigDrop', requirement: largeEnteredBiomes },
-      { rewardType: 'MetaCardPointsCommonBigDrop', requirement: largeEnteredBiomes },
+      { rewardType: 'MetaCurrencyDrop', requirement: lateLowTierBones, routeKeys: ['FreshFile'] },
+      { rewardType: 'MetaCurrencyDrop', requirement: lateLowTierBones, routeKeys: ['FreshFile'] },
+      {
+        rewardType: 'MetaCardPointsCommonDrop',
+        requirement: lateLowTier,
+        routeKeys: ['FreshFile'],
+      },
+      {
+        rewardType: 'MetaCardPointsCommonDrop',
+        requirement: lateLowTier,
+        routeKeys: ['FreshFile'],
+      },
+      {
+        rewardType: 'MetaCardPointsCommonDrop',
+        requirement: lateLowTier,
+        routeKeys: ['FreshFile'],
+      },
+      {
+        rewardType: 'MetaCardPointsCommonDrop',
+        requirement: lateLowTier,
+        routeKeys: ['FreshFile'],
+      },
+      { rewardType: 'MetaCurrencyBigDrop', requirement: lateHighTier },
+      { rewardType: 'MetaCurrencyBigDrop', requirement: lateHighTier },
+      { rewardType: 'MetaCardPointsCommonBigDrop', requirement: lateHighTier },
+      { rewardType: 'MetaCardPointsCommonBigDrop', requirement: lateHighTier },
+      { rewardType: 'MetaCardPointsCommonBigDrop', requirement: lateHighTier },
+      { rewardType: 'MetaCardPointsCommonBigDrop', requirement: lateHighTier },
     ],
   },
   {

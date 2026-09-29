@@ -77,7 +77,7 @@ rather than unioning every externally gated entry.
 | Offer-time fact projection  | Devotion setup records `LastDevotionDepth` when the offer is materialized, including for an unpicked target                                                                 | Exact                         | Add a reward-type `devotionSpacing` offer projection; never infer it from acquisition                                                                                           |
 | Same-batch duplicates       | Entry-level `AllowDuplicates`; otherwise an earlier peer with the same duplicate key blocks the later peer                                                                  | Exact                         | Normalize `allowDuplicates`, default false                                                                                                                                      |
 | Entry selection             | The game randomly removes one eligible concrete entry                                                                                                                       | Exact support, not RNG replay | Retain exact states internally; diagnostics aggregate only proven-equivalent semantic states.                                                                                   |
-| Refill                      | When no entry in the whole bag is eligible, append a complete base set while retaining leftovers; repeat once more; after two refills fall back to `RoomRewardHealDrop`     | Exact raw picker behavior     | Supported planner consumers require at most one refill; see the reachability proof below                                                                                        |
+| Refill                      | When no entry in the whole bag is eligible, append a complete base set while retaining leftovers; repeat once more; after two refills fall back to `RoomRewardHealDrop`     | Exact raw picker behavior     | Exact for every store and route; mature consumers never exhaust one refill, see the reachability proof below                                                                    |
 | Reward priority queue       | Keepsakes can prioritize an otherwise eligible reward                                                                                                                       | Excluded                      | Neutral equipment baseline contains no priority queue                                                                                                                           |
 | Bounty overrides            | Active bounties can replace store declarations and forced rewards                                                                                                           | Excluded                      | No bounty predicates or alternate bags                                                                                                                                          |
 | Generated base-store ratio  | Entered-room store history influences RunProgress versus MetaProgress support                                                                                               | Simplified                    | Preserve possible/forced support, not probability or RNG state                                                                                                                  |
@@ -329,7 +329,7 @@ independent native guards:
 | Store                   | Projected entries | Live use                                                                  | Disposition and notes                                                                                              |
 | ----------------------- | ----------------: | ------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
 | `RunProgress`           |                18 | Ordinary generated rewards, F/G/P free preboss rewards, O wheels, H cages | Exact target. Four Boon entries allow duplicates; all other entries do not                                         |
-| `MetaProgress`          |                13 | Ordinary generated rewards and O wheels                                   | Exact fully progressed projection from the raw 19-entry store; see below                                           |
+| `MetaProgress`          |                19 | Ordinary generated rewards and O wheels                                   | Exact native store; a mature bag holds 13 route-filtered entries, see below                                        |
 | `HubRewards`            |                10 | N initial combat-room offers                                              | Exact target. Five Boon entries allow duplicates                                                                   |
 | `SubRoomRewards`        |                23 | N ordinary side-room offers                                               | Exact current-run target; external elemental unlock is excluded                                                    |
 | `SubRoomRewardsHard`    |                 8 | N hard side-room offers                                                   | Exact target                                                                                                       |
@@ -367,30 +367,32 @@ committed delivery retains its separately audited settlement path.
 
 ### MetaProgress
 
-The raw 19-entry store combines early ordinary resources, later ordinary
-resources for low lifetime-resource tiers, and later large resources for high
-lifetime-resource tiers. The two later tiers are mutually exclusive for one
-concrete save.
+The raw 19-entry store (`LootData.lua` `RewardStoreData.MetaProgress`) combines
+early resources, late resources for the low lifetime-resource tier, and late
+large resources for the high tier:
 
-The planner's fully progressed baseline selects one coherent 13-entry
-projection:
+| Entries                                                       | Raw requirement                                                                           |
+| ------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| one `GiftDrop`                                                | `GiftDropLootRequirements` (a completed run)                                              |
+| two `MetaCurrencyDrop`                                        | `EnteredBiomes <= 1`; lifetime Ashes `>= 5`                                               |
+| four `MetaCardPointsCommonDrop`                               | `EnteredBiomes <= 1`                                                                      |
+| two `MetaCurrencyDrop`                                        | `EnteredBiomes > 1`; lifetime Ashes `>= 5`; lifetime Bones `< 500` or Ashes `< 100`       |
+| four `MetaCardPointsCommonDrop`                               | `EnteredBiomes > 1`; lifetime Bones `< 500` or Ashes `< 100`                              |
+| two `MetaCurrencyBigDrop`, four `MetaCardPointsCommonBigDrop` | `EnteredBiomes > 1`; lifetime Bones `>= 500` and Ashes `>= 100` (Bones also Ashes `>= 5`) |
 
-| Route phase          | Projected entries                                             | Retained requirement                               |
-| -------------------- | ------------------------------------------------------------- | -------------------------------------------------- |
-| All phases           | one `GiftDrop`                                                | none; the external Gift unlock is assumed complete |
-| `EnteredBiomes <= 1` | two `MetaCurrencyDrop`, four `MetaCardPointsCommonDrop`       | early-half range only                              |
-| `EnteredBiomes > 1`  | two `MetaCurrencyBigDrop`, four `MetaCardPointsCommonBigDrop` | late-half range only                               |
+The planner declares all nineteen entries with these thresholds over
+`resourceGains`. A mature save is past every threshold, so the threshold terms
+hold there through a route alternative and the six low-tier late entries carry
+`routeKeys: ['FreshFile']`. A mature bag is therefore a route-filtered view of
+the native store: its thirteen entries have exactly the eligibility of the
+fully progressed save. A fresh profile's bag holds all nineteen, reading the
+thresholds from gains accumulated during the attempt, and its Nectar entry is
+unavailable.
 
-The two late ordinary Bones entries and four late ordinary Ash entries are
-omitted because their raw `LifetimeResourcesGained` alternatives represent the
-lower-progression tier. Their high-tier counterparts remain. Early ordinary
-resources remain because the game continues to use them on a fully progressed
-save during the first two biomes.
-
-This is `Exact` within the declared fully progressed baseline. If save
-progression later becomes a project input, it should select another coherent
-store projection rather than adding external GameState predicates to the
-generic current-run requirement DSL.
+A fresh bag can exhaust: before 5 Ashes only the four early Ashes entries are
+eligible, and below the high tier only the low-tier Bones and Ashes are. The
+planner reproduces the native two-append Heal fallback there; see
+[Planner consequence](#planner-consequence).
 
 ### Nectar run-progress upgrade
 
@@ -466,8 +468,8 @@ base set therefore has exactly the same eligibility support as the first. It
 cannot make an entry eligible when the first complete set contained no eligible
 entry; in raw game code it only delays the final Heal fallback.
 
-The planner can consequently use one refill exactly when every reachable
-supported call satisfies this invariant:
+A call consequently never reaches the second append exactly when every
+reachable supported call satisfies this invariant:
 
 ```text
 if the current bag has no eligible entry,
@@ -480,16 +482,16 @@ keys in a shared peer list, and the widest reachable peer scope.
 
 ### Supported-store results
 
-| Store                   | Fresh-set eligibility witness                                                                                                                                                                                                                                                       | Consumer pressure                                                                                                                                                                                                                                                                | Result                        |
-| ----------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------- |
-| `RunProgress`           | Four unconditional `Boon` entries set `AllowDuplicates = true`. Every supported RunProgress producer admits Boon; Boon-only miniboss filters strengthen rather than weaken this witness. Boon source setup separately retries with weaker exclusions and finally no peer exclusion. | H can generate six RunProgress cages in one two-target batch; width is irrelevant because the witness permits duplicate reward types.                                                                                                                                            | First refill always succeeds. |
-| `MetaProgress`          | The fully progressed projection has exactly three eligible identities in either phase: Gift/Bones/Ashes early or Gift/Big Bones/Big Ashes late.                                                                                                                                     | G is the maximum with three Meta offers in one peer list. Before the third offer at most two of those identities are blocked. F and P have at most two; an O wheel has at most two and owns a fresh peer list. Supported mixed-store peers do not use a colliding duplicate key. | First refill always succeeds. |
-| `HubRewards`            | Five unconditional `Boon` entries set `AllowDuplicates = true`. The easy-room exclusions for Hammer, Hermes, and the concrete Hephaestus source do not exclude the generic Boon reward entries.                                                                                     | N materializes nine or ten persistent hub offers in one peer list. Width is irrelevant because the witness permits duplicate reward types.                                                                                                                                       | First refill always succeeds. |
-| `SubRoomRewards`        | Even without conditional Stack/Talent entries, ten distinct identities are unconditional: small mana, small health, empty small health, tiny money, Gift, Bones, Ashes, ordinary health, ordinary mana, and ordinary money.                                                         | At most three generated side-room siblings share a peer list, possibly mixing ordinary and hard stores. At most two earlier peers can block two of these identities.                                                                                                             | First refill always succeeds. |
-| `SubRoomRewardsHard`    | Ordinary health, ordinary mana, and ordinary money are three distinct unconditional identities; Stack is additional conditional support.                                                                                                                                            | At most three generated siblings share the mixed side-room peer list. Before the third hard-store offer, at most two earlier peers can block two of the three unconditional identities.                                                                                          | First refill always succeeds. |
-| `FieldsOptionalRewards` | Small mana, small health, tiny money, Heal, Armor, Gift, Bones, and Ashes all have unconditional entries; only Minor Talent is conditional.                                                                                                                                         | Each optional pickup calls the picker without `previouslyChosenRewards`, so optional peers do not duplicate-block one another. The bag persists across calls and the implemented H producer consumes it sequentially at room entry.                                              | First refill always succeeds. |
-| `TartarusRewards`       | Ordinary I combat excludes Boon but retains unconditional triple money. Reprieve also retains triple money. I minibosses admit only the three unconditional duplicate-capable Boon entries.                                                                                         | A two-exit I batch produces at most one Tartarus non-goal peer after its Goal or generated Preboss offer. The witness is valid independently of that bound.                                                                                                                      | First refill always succeeds. |
-| `TyphonBossRewards`     | Two unconditional `Boon` entries set `AllowDuplicates = true`.                                                                                                                                                                                                                      | Q resolves two independently generated miniboss peers in one batch.                                                                                                                                                                                                              | First refill always succeeds. |
+| Store                   | Fresh-set eligibility witness                                                                                                                                                                                                                                                       | Consumer pressure                                                                                                                                                                                                                                                                | Result                                                                                  |
+| ----------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------- |
+| `RunProgress`           | Four unconditional `Boon` entries set `AllowDuplicates = true`. Every supported RunProgress producer admits Boon; Boon-only miniboss filters strengthen rather than weaken this witness. Boon source setup separately retries with weaker exclusions and finally no peer exclusion. | H can generate six RunProgress cages in one two-target batch; width is irrelevant because the witness permits duplicate reward types.                                                                                                                                            | First refill always succeeds.                                                           |
+| `MetaProgress`          | A mature bag has exactly three eligible identities in either phase: Gift/Bones/Ashes early or Gift/Big Bones/Big Ashes late. A fresh bag can have one (Ashes) or two, so it can exhaust.                                                                                            | G is the maximum with three Meta offers in one peer list. Before the third offer at most two of those identities are blocked. F and P have at most two; an O wheel has at most two and owns a fresh peer list. Supported mixed-store peers do not use a colliding duplicate key. | First refill always succeeds on a mature save; a fresh bag can reach the Heal fallback. |
+| `HubRewards`            | Five unconditional `Boon` entries set `AllowDuplicates = true`. The easy-room exclusions for Hammer, Hermes, and the concrete Hephaestus source do not exclude the generic Boon reward entries.                                                                                     | N materializes nine or ten persistent hub offers in one peer list. Width is irrelevant because the witness permits duplicate reward types.                                                                                                                                       | First refill always succeeds.                                                           |
+| `SubRoomRewards`        | Even without conditional Stack/Talent entries, ten distinct identities are unconditional: small mana, small health, empty small health, tiny money, Gift, Bones, Ashes, ordinary health, ordinary mana, and ordinary money.                                                         | At most three generated side-room siblings share a peer list, possibly mixing ordinary and hard stores. At most two earlier peers can block two of these identities.                                                                                                             | First refill always succeeds.                                                           |
+| `SubRoomRewardsHard`    | Ordinary health, ordinary mana, and ordinary money are three distinct unconditional identities; Stack is additional conditional support.                                                                                                                                            | At most three generated siblings share the mixed side-room peer list. Before the third hard-store offer, at most two earlier peers can block two of the three unconditional identities.                                                                                          | First refill always succeeds.                                                           |
+| `FieldsOptionalRewards` | Small mana, small health, tiny money, Heal, Armor, Gift, Bones, and Ashes all have unconditional entries; only Minor Talent is conditional.                                                                                                                                         | Each optional pickup calls the picker without `previouslyChosenRewards`, so optional peers do not duplicate-block one another. The bag persists across calls and the implemented H producer consumes it sequentially at room entry.                                              | First refill always succeeds.                                                           |
+| `TartarusRewards`       | Ordinary I combat excludes Boon but retains unconditional triple money. Reprieve also retains triple money. I minibosses admit only the three unconditional duplicate-capable Boon entries.                                                                                         | A two-exit I batch produces at most one Tartarus non-goal peer after its Goal or generated Preboss offer. The witness is valid independently of that bound.                                                                                                                      | First refill always succeeds.                                                           |
+| `TyphonBossRewards`     | Two unconditional `Boon` entries set `AllowDuplicates = true`.                                                                                                                                                                                                                      | Q resolves two independently generated miniboss peers in one batch.                                                                                                                                                                                                              | First refill always succeeds.                                                           |
 
 The MetaProgress count refers only to calls that consume the `MetaProgress`
 bag. H optional pickups use `FieldsOptionalRewards`, and N side rooms use
@@ -510,12 +512,13 @@ the counted-store refill path.
 
 ### Planner consequence
 
-Every reachable counted-store call in the selected planner baseline is proven
-to resolve after zero or one refill. The simulator therefore preserves the
-exact first-refill behavior—append one complete base set without discarding
-leftovers—but does not model a second identical append or synthesize the raw
-Heal fallback. If a supported call remains empty after the first refill, that
-is a declaration, consumer, or baseline drift invariant failure.
+The simulator reproduces `ChooseRoomReward` exactly for every store and route:
+up to two appended route-filtered base sets without discarding leftovers, then
+the `RoomRewardHealDrop` fallback, which keeps both appended sets and draws no
+entry. On a mature save every reachable call resolves after zero or one
+refill, so the second append and the fallback never occur and mature bags,
+picks and domains are unchanged. A fresh profile's MetaProgress bag can reach
+the fallback.
 
 This does not remove `RoomRewardHealDrop` as a normal reward identity.
 `FieldsOptionalRewards` contains an explicit Heal entry. It is ordinary

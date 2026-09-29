@@ -1,4 +1,5 @@
 import { generatedEncounterChoices } from './generated/policies';
+import { notFreshFileRoute } from '../routes';
 import type { RawEncounterDefinitionDeclaration, RawEncounterSetDeclaration } from './types';
 import {
   nemesisEncounterKeys,
@@ -86,6 +87,7 @@ export const hEncounterDefinitions = [
     requirements: {
       kind: 'all',
       requirements: [
+        notFreshFileRoute,
         { kind: 'counterRange', axis: 'biomeEncounterDepth', range: { min: 1 } },
         {
           kind: 'currentRoomRewardExcludes',

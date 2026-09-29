@@ -236,20 +236,14 @@ export function generateArtificerReplacement(
     runProgress !== undefined &&
     prepared !== undefined
   ) {
-    let bags: readonly RewardBagState[] = Object.freeze([]);
-    try {
-      bags = consumeCountedOffer(
-        catalog.rewards,
-        runProgress,
-        prepared.bag,
-        artificerReplacement.offer,
-        facts(prepared.branch.state),
-        { ineligibleRewardTypes: new Set(['Devotion', 'SpellDrop']) },
-      );
-    } catch (error) {
-      if (!(error instanceof Error && error.message.includes('one-refill eligibility invariant')))
-        throw error;
-    }
+    const bags: readonly RewardBagState[] = consumeCountedOffer(
+      catalog.rewards,
+      runProgress,
+      prepared.bag,
+      artificerReplacement.offer,
+      facts(prepared.branch.state),
+      { ineligibleRewardTypes: new Set(['Devotion', 'SpellDrop']) },
+    );
     for (const bag of bags) {
       const arcanaFear = consumeArtificerUse(catalog, branch.state.arcanaFear, {
         owner: incoming.origin,

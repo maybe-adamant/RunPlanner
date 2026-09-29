@@ -14,6 +14,7 @@ import {
   talentLegal,
 } from './requirements';
 import type { RequirementExpression } from '@run-planner/engine/requirements';
+import { notFreshFileRoute } from '../routes';
 
 import type { RawRewardKernelInput, RawShopOptionEntryDeclaration } from './types';
 
@@ -67,6 +68,13 @@ function ordinaryRouteOption(
   return routeOption({ kind: 'not', requirement: dreamRoute }, declaration);
 }
 
+/** An item whose native gate needs progression a fresh profile's first attempt cannot reach. */
+function matureSaveOption(
+  declaration: RawShopOptionEntryDeclaration,
+): RawShopOptionEntryDeclaration {
+  return routeOption(notFreshFileRoute, declaration);
+}
+
 const worldGroups = [
   {
     key: 'Boon',
@@ -77,7 +85,7 @@ const worldGroups = [
         rewardType: 'RandomLoot',
         purchaseInteraction: { kind: 'resolvedOfferSource' },
       }),
-      option({
+      matureSaveOption({
         key: 'BlindBoxLoot',
         rewardType: 'BlindBoxLoot',
         acquisitionLifecycle: [
@@ -117,7 +125,7 @@ const worldGroups = [
         key: 'MaxHealthDrop',
         rewardType: 'MaxHealthDrop',
       }),
-      option({
+      matureSaveOption({
         key: 'ArmorBoost',
         rewardType: 'ArmorBoost',
       }),
@@ -129,10 +137,12 @@ const worldGroups = [
         key: 'MetaCurrencyDrop',
         rewardType: 'MetaCurrencyDrop',
       }),
-      ordinaryRouteOption({
-        key: 'GiftDrop',
-        rewardType: 'GiftDrop',
-      }),
+      matureSaveOption(
+        ordinaryRouteOption({
+          key: 'GiftDrop',
+          rewardType: 'GiftDrop',
+        }),
+      ),
       dreamOption({ key: 'FireBoost', rewardType: 'FireBoost' }),
       dreamOption({ key: 'AirBoost', rewardType: 'AirBoost' }),
       dreamOption({ key: 'EarthBoost', rewardType: 'EarthBoost' }),
@@ -175,18 +185,25 @@ const worldGroups = [
 ] as const;
 
 const lateResourceOptions = [
-  ordinaryRouteOption({
-    key: 'WeaponPointsRareDrop',
-    rewardType: 'WeaponPointsRareDrop',
-  }),
-  ordinaryRouteOption({
-    key: 'CardUpgradePointsDrop',
-    rewardType: 'CardUpgradePointsDrop',
-  }),
-  ordinaryRouteOption({
-    key: 'CharonPointsDrop',
-    rewardType: 'CharonPointsDrop',
-  }),
+  // Each needs a lifetime gain of its resource, which F–I never provide on a fresh profile.
+  matureSaveOption(
+    ordinaryRouteOption({
+      key: 'WeaponPointsRareDrop',
+      rewardType: 'WeaponPointsRareDrop',
+    }),
+  ),
+  matureSaveOption(
+    ordinaryRouteOption({
+      key: 'CardUpgradePointsDrop',
+      rewardType: 'CardUpgradePointsDrop',
+    }),
+  ),
+  matureSaveOption(
+    ordinaryRouteOption({
+      key: 'CharonPointsDrop',
+      rewardType: 'CharonPointsDrop',
+    }),
+  ),
   dreamOption({ key: 'ElementalBoost', rewardType: 'ElementalBoost' }),
 ];
 
@@ -428,7 +445,7 @@ export const shops = [
             rewardType: 'RandomLoot',
             purchaseInteraction: { kind: 'resolvedOfferSource' },
           }),
-          option({
+          matureSaveOption({
             key: 'BlindBoxLoot',
             rewardType: 'BlindBoxLoot',
             acquisitionLifecycle: [
@@ -469,13 +486,22 @@ export const shops = [
             key: 'RoomRewardHealDrop',
             rewardType: 'RoomRewardHealDrop',
           }),
-          phaseOption(inRunFirstHalf, { key: 'ArmorBoost', rewardType: 'ArmorBoost' }),
+          phaseOption(inRunFirstHalf, {
+            key: 'ArmorBoost',
+            rewardType: 'ArmorBoost',
+            requirement: notFreshFileRoute,
+          }),
           phaseOption(inRunSecondHalf, {
             key: 'HealBigDrop',
             rewardType: 'HealBigDrop',
           }),
-          phaseOption(inRunSecondHalf, { key: 'ArmorBigBoost', rewardType: 'ArmorBigBoost' }),
-          option({ key: 'LastStandDrop', rewardType: 'LastStandDrop' }),
+          phaseOption(inRunSecondHalf, {
+            key: 'ArmorBigBoost',
+            rewardType: 'ArmorBigBoost',
+            requirement: notFreshFileRoute,
+          }),
+          // A fresh profile has no Death Defiance to refill.
+          matureSaveOption({ key: 'LastStandDrop', rewardType: 'LastStandDrop' }),
         ],
       },
       {
@@ -495,6 +521,7 @@ export const shops = [
           }),
           phaseOption(inRunFirstHalf, {
             key: 'BlindBoxLoot',
+            requirement: notFreshFileRoute,
             rewardType: 'BlindBoxLoot',
             acquisitionLifecycle: [
               { role: 'box', lifecyclePoint: 'purchase' },

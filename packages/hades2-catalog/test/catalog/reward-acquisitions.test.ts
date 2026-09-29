@@ -46,7 +46,7 @@ describe('reward compiler acquisition, reward-type, and store normalizers', () =
     ).toThrow(/pathPointGrant.*must equal 3/);
   });
 
-  it('gates exactly Hestia and Aphrodite on save-file Poseidon or Demeter use', () => {
+  it('gates Hestia and Aphrodite on save-file Poseidon or Demeter use and four gods off a fresh profile', () => {
     const gated = rewardKernelCatalog.acquisitions.values.flatMap((acquisition) =>
       acquisition.lootRequirement === undefined
         ? []
@@ -58,7 +58,18 @@ describe('reward compiler acquisition, reward-type, and store normalizers', () =
       keys: ['PoseidonUpgrade', 'DemeterUpgrade'],
       range: { min: 1 },
     };
-    expect(Object.fromEntries(gated)).toEqual({ AphroditeUpgrade: used, HestiaUpgrade: used });
+    const notFreshFile = {
+      kind: 'not',
+      requirement: { kind: 'routeKeyEquals', routeKey: 'FreshFile' },
+    };
+    expect(Object.fromEntries(gated)).toEqual({
+      AphroditeUpgrade: used,
+      AresUpgrade: notFreshFile,
+      HephaestusUpgrade: notFreshFile,
+      HeraUpgrade: notFreshFile,
+      HestiaUpgrade: used,
+      ZeusUpgrade: notFreshFile,
+    });
     expect(() =>
       createRewardKernelCatalog(
         rawInput({
@@ -233,14 +244,14 @@ describe('reward compiler acquisition, reward-type, and store normalizers', () =
     expect(rewardKernelCatalog.acquisitions.byKey.MemPointsBigDrop).toBeUndefined();
   });
 
-  it('normalizes the complete counted-store inventory and exact progressed MetaProgress bag', () => {
+  it('normalizes the complete counted-store inventory and the native MetaProgress store', () => {
     expect(
       Object.fromEntries(
         rewardKernelCatalog.stores.values.map((store) => [store.key, store.entries.length]),
       ),
     ).toEqual({
       RunProgress: 18,
-      MetaProgress: 13,
+      MetaProgress: 19,
       HubRewards: 10,
       SubRoomRewards: 23,
       SubRoomRewardsHard: 8,
@@ -260,6 +271,12 @@ describe('reward compiler acquisition, reward-type, and store normalizers', () =
       'MetaCardPointsCommonDrop',
       'MetaCardPointsCommonDrop',
       'MetaCardPointsCommonDrop',
+      'MetaCurrencyDrop',
+      'MetaCurrencyDrop',
+      'MetaCardPointsCommonDrop',
+      'MetaCardPointsCommonDrop',
+      'MetaCardPointsCommonDrop',
+      'MetaCardPointsCommonDrop',
       'MetaCurrencyBigDrop',
       'MetaCurrencyBigDrop',
       'MetaCardPointsCommonBigDrop',
@@ -267,6 +284,19 @@ describe('reward compiler acquisition, reward-type, and store normalizers', () =
       'MetaCardPointsCommonBigDrop',
       'MetaCardPointsCommonBigDrop',
     ]);
+    // The low tier's late entries fill only a fresh profile's bag.
+    expect(
+      rewardKernelCatalog.stores.byKey.MetaProgress?.entries.flatMap((entry) =>
+        entry.routeKeys === undefined ? [] : [[entry.index, entry.routeKeys]],
+      ),
+    ).toEqual([7, 8, 9, 10, 11, 12].map((index) => [index, ['FreshFile']]));
+    expect(
+      rewardKernelCatalog.stores.values.flatMap((store) =>
+        store.key === 'MetaProgress'
+          ? []
+          : store.entries.filter((entry) => entry.routeKeys !== undefined),
+      ),
+    ).toEqual([]);
     expect(
       rewardKernelCatalog.stores.byKey.RunProgress?.entries.filter(
         (entry) => entry.allowDuplicates,

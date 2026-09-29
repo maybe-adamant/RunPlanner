@@ -1,6 +1,8 @@
 export {
   consumeCountedOffer,
+  countedStoreExhausted,
   createRewardBagState,
+  storeEntryOnRoute,
   insertExactPriorityIntoBag,
   oldestSupportedRewardPriority,
 } from './bag';

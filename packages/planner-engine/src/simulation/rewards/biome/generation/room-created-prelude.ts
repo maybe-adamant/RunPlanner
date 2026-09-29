@@ -1,4 +1,5 @@
 import type { Catalog } from '../../../../catalog-schema';
+import { routeHasKeepsakeRack } from '../../../../authored-project/route-profile';
 import {
   createPostbossKeepsakeSelectionAddress,
   semanticAddressKey,
@@ -56,7 +57,7 @@ export function prepareRoomCreatedPrelude(
   const room = rooms.get(semanticAddressKey(event.origin));
   const keepsakeSelectionCandidate =
     room?.kind === 'authored' &&
-    catalog.rooms.byKey[room.gameName]?.hasKeepsakeRack === true &&
+    routeHasKeepsakeRack(catalog.rooms.byKey[room.gameName], event.origin.routeKey) &&
     event.origin.kind === 'occurrence'
       ? (() => {
           const selection = createPostbossKeepsakeSelectionAddress(event.origin);

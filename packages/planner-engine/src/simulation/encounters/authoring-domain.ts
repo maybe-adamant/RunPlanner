@@ -18,7 +18,9 @@ import {
   fixedEncounterDefinitionKey,
 } from '../../authored-project/room-state/encounter-envelope';
 import {
+  customizationDecisionOnRoute,
   customizationValueKnown,
+  customizationValueRouteExcluded,
   supportsGeneratedEncounterCustomization,
 } from '../../authored-project/room-state/encounter-customization';
 import { resolveEncounterAuthoringProfile, type EncounterResolutionContext } from './resolve';
@@ -189,7 +191,8 @@ export function encounterPhaseAuthoringDomainForRoom(
                 const valueSupported =
                   value === undefined ||
                   ((decision.selection.kind !== 'generated' || generatedCustomizationAvailable) &&
-                    customizationValueKnown([decision], decision.key, value));
+                    customizationValueKnown([decision], decision.key, value) &&
+                    !customizationValueRouteExcluded(decision, value, biome.routeKey));
                 const retainedChoiceLabels =
                   value === undefined || value.kind === 'cocoonCount'
                     ? []
@@ -206,11 +209,14 @@ export function encounterPhaseAuthoringDomainForRoom(
                       ).flatMap((choiceKey) => {
                         const choice = catalog.encounterDefinitions.values
                           .flatMap((candidate) => candidate.customization ?? [])
-                          .flatMap((candidate) =>
-                            candidate.key === decision.key &&
-                            candidate.selection.kind !== 'cocoonCount'
-                              ? candidate.selection.choices
-                              : [],
+                          .flatMap(
+                            (
+                              candidate,
+                            ): readonly { readonly key: string; readonly label: string }[] =>
+                              candidate.key === decision.key &&
+                              candidate.selection.kind !== 'cocoonCount'
+                                ? candidate.selection.choices
+                                : [],
                           )
                           .find((candidate) => candidate.key === choiceKey);
                         return choice === undefined
@@ -218,7 +224,7 @@ export function encounterPhaseAuthoringDomainForRoom(
                           : [Object.freeze({ key: choiceKey, label: choice.label })];
                       });
                 return Object.freeze({
-                  ...decision,
+                  ...customizationDecisionOnRoute(decision, biome.routeKey),
                   valueSupported,
                   ...(value === undefined ? {} : { value }),
                   ...(retainedChoiceLabels.length === 0 ? {} : { retainedChoiceLabels }),

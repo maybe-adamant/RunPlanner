@@ -10,6 +10,7 @@ import { type RoomRewardFacts } from './reward-facts';
 export type RoomFeatureFacts = Pick<
   RoomDeclaration,
   | 'hasKeepsakeRack'
+  | 'keepsakeRackExcludedRouteKeys'
   | 'hasRequiredFountain'
   | 'challengeSwitchAnchorCount'
   | 'purgingPool'
@@ -121,6 +122,15 @@ export function normalizeRoomInfernalContractFacts(
   });
 }
 
+function excludedRoutes(
+  routeKeys: readonly string[] | undefined,
+  path: string,
+): { readonly excludedRouteKeys?: readonly string[] } {
+  return routeKeys === undefined
+    ? {}
+    : { excludedRouteKeys: freezeUniqueStrings(routeKeys, `${path}.excludedRouteKeys`) };
+}
+
 /** Normalizes resources, Shops, anchors, fountain, Pool, and rarity facts. */
 export function normalizeRoomFeatureFacts(
   room: RawRoomDeclaration,
@@ -145,6 +155,7 @@ export function normalizeRoomFeatureFacts(
           }
           return Object.freeze({
             slotKeys: Object.freeze([...slotKeys]) as readonly ['left', 'middle', 'right'],
+            ...excludedRoutes(room.purgingPool.excludedRouteKeys, `${path}.purgingPool`),
           });
         })();
   const challengeSwitchAnchorCount = room.challengeSwitchAnchorCount;
@@ -197,10 +208,21 @@ export function normalizeRoomFeatureFacts(
             profileKey: 'RoomShop' as const,
             spawnChance: room.roomShop.spawnChance,
             forced: room.roomShop.forced === true,
+            ...excludedRoutes(room.roomShop.excludedRouteKeys, `${path}.roomShop`),
           });
         })();
+  if (room.keepsakeRackExcludedRouteKeys !== undefined && room.hasKeepsakeRack !== true)
+    fail(`${path}.keepsakeRackExcludedRouteKeys`, 'requires a keepsake rack');
   return Object.freeze({
     hasKeepsakeRack: room.hasKeepsakeRack ?? false,
+    ...(room.keepsakeRackExcludedRouteKeys === undefined
+      ? {}
+      : {
+          keepsakeRackExcludedRouteKeys: freezeUniqueStrings(
+            room.keepsakeRackExcludedRouteKeys,
+            `${path}.keepsakeRackExcludedRouteKeys`,
+          ),
+        }),
     hasRequiredFountain: room.hasRequiredFountain ?? false,
     ...(challengeSwitchAnchorCount === undefined ? {} : { challengeSwitchAnchorCount }),
     ...(purgingPool === undefined ? {} : { purgingPool }),

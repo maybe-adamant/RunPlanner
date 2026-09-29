@@ -9,9 +9,11 @@ import type { BiomeLayout, Catalog, TraitElement } from '../../catalog-schema';
 import type { RequirementExpression } from '../../requirements/model';
 import { evaluateRequirement } from '../../requirements/evaluator';
 import {
+  createRewardBagState,
   eligibleOrdinarySourceGameNames,
   isOrdinarySourcePolicy,
   ordinarySourceGameNames,
+  storeEntryOnRoute,
   supportedPayloads,
   type RewardKernelFacts,
   type RewardStoreDeclaration,
@@ -297,22 +299,34 @@ export function aggregateDecisionRewardBag(
     total: number;
     readonly conditions: Map<string, BranchCondition>;
   };
-  const entryDescriptors = store.entries.map((entry) => ({
-    entry,
-    conditionKey: JSON.stringify(entry.requirement),
-    eligibleKey: JSON.stringify([entry.rewardType, 'eligible']),
-    ineligibleKey: JSON.stringify([entry.rewardType, 'ineligible']),
-  }));
+  // Entries outside the route's bag are never filled and never projected.
+  const routeKey = factsByBranch[0]?.requirements.routeKey;
+  if (routeKey === undefined) throw new Error(`run-state store ${store.key} has no route identity`);
+  const initialCounts = createRewardBagState(store, routeKey).remainingEntryCounts;
+  const entryDescriptors = store.entries.flatMap((entry, entryIndex) =>
+    storeEntryOnRoute(entry, routeKey)
+      ? [
+          {
+            entry,
+            entryIndex,
+            conditionKey: JSON.stringify(entry.requirement),
+            eligibleKey: JSON.stringify([entry.rewardType, 'eligible']),
+            ineligibleKey: JSON.stringify([entry.rewardType, 'ineligible']),
+          },
+        ]
+      : [],
+  );
   if (states.length === 1) {
     const state = states[0];
     const facts = factsByBranch[0];
     if (state === undefined || facts === undefined) {
       throw new Error(`run-state store ${store.key} has no branch facts`);
     }
-    const counts = state.bags[store.key]?.remainingEntryCounts ?? store.entries.map(() => 1);
+    const counts = state.bags[store.key]?.remainingEntryCounts ?? initialCounts;
     const groups = new Map<string, BranchGroup>();
     let storeTotal = 0;
-    for (const [entryIndex, descriptor] of entryDescriptors.entries()) {
+    for (const descriptor of entryDescriptors) {
+      const { entryIndex } = descriptor;
       const { entry } = descriptor;
       const requirement = entry.requirement;
       const eligibility =
@@ -389,8 +403,9 @@ export function aggregateDecisionRewardBag(
       throw new Error(`run-state store ${store.key} has no facts for branch ${branchIndex}`);
     }
     const bag = state.bags[store.key];
-    const counts = bag?.remainingEntryCounts ?? store.entries.map(() => 1);
-    for (const [entryIndex, descriptor] of entryDescriptors.entries()) {
+    const counts = bag?.remainingEntryCounts ?? initialCounts;
+    for (const descriptor of entryDescriptors) {
+      const { entryIndex } = descriptor;
       const { entry } = descriptor;
       const requirement = entry.requirement;
       const eligibility =

@@ -1,6 +1,7 @@
 import type {
   CatalogCollection,
   BoonRarityRollOrder,
+  BoonReplacementDeclaration,
   EchoLastRunBoonCatalog,
   TraitCatalog,
   TraitDeclaration,
@@ -79,10 +80,19 @@ export function normalizeBoonRarityRollOrder(
   return Object.freeze(order);
 }
 
-export function normalizeBoonReplacementChance(raw: unknown): number {
-  if (typeof raw !== 'number' || !Number.isFinite(raw) || raw < 0 || raw > 1)
-    fail('boonReplacementChance', 'must be a finite probability from 0 through 1');
-  return raw;
+export function normalizeBoonReplacement(
+  raw: RawTraitCatalogInput['boonReplacement'],
+): BoonReplacementDeclaration {
+  const { chance } = raw;
+  if (typeof chance !== 'number' || !Number.isFinite(chance) || chance < 0 || chance > 1)
+    fail('boonReplacement.chance', 'must be a finite probability from 0 through 1');
+  return Object.freeze({
+    chance,
+    excludedRouteKeys: freezeUniqueStrings(
+      raw.excludedRouteKeys,
+      'boonReplacement.excludedRouteKeys',
+    ),
+  });
 }
 
 export function normalizeContexts(

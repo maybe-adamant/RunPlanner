@@ -234,7 +234,9 @@ export const apolloTraits = [
     freshOfferRarities: ['Common', 'Rare', 'Epic'],
     equippedRarities: ['Common', 'Rare', 'Epic'],
     linkedBoonRequirements: [],
+    // Infusions need the WorldUpgradeElementalBoons incantation.
     eligibilityRequirements: [
+      { kind: 'routeKeyNot', routeKey: 'FreshFile' },
       {
         kind: 'elementCount',
         element: 'Fire',

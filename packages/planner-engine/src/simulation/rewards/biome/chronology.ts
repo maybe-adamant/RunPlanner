@@ -1,4 +1,5 @@
 import type { Catalog } from '../../../catalog-schema';
+import { routePurgingPool } from '../../../authored-project/route-profile';
 import type { ResolvedRoutePosition } from '../../../authored-project/route-context';
 import type { PurgingPoolAssessment } from '../../commerce/purging-pool';
 import type { HermesShrineCandidateContext } from '../../commerce/hermes-shrine';
@@ -1454,7 +1455,29 @@ export function evaluateBiomeRewardChronology(
           addRewardFinding(findings, finding.finding, finding.region, finding.chronology);
         // The fountain unlocks Postboss facilities. Capture the pool only after
         // its rarity effects settle, never from entry or an unresolved Phial.
-        if (room?.kind === 'authored' && room.purgingPool?.interacted && branches.length > 0) {
+        // A retained Pool on a route without one is never assessed, so its sales stay unavailable.
+        if (
+          room?.kind === 'authored' &&
+          room.purgingPool?.interacted &&
+          routePurgingPool(catalog.rooms.byKey[room.gameName], room.origin.routeKey) === undefined
+        )
+          addRewardFinding(
+            findings,
+            rewardFinding(
+              'purgingPoolUnavailable',
+              createRoomFeatureAddress(room.origin, { kind: 'purgingPoolInventory' }),
+              { routeKey: room.origin.routeKey },
+            ),
+            ownerRegion(room.origin),
+            Object.freeze({ kind: 'history', sequence: event.sequence, boundary: 'after' }),
+          );
+        if (
+          room?.kind === 'authored' &&
+          room.purgingPool?.interacted &&
+          routePurgingPool(catalog.rooms.byKey[room.gameName], room.origin.routeKey) !==
+            undefined &&
+          branches.length > 0
+        ) {
           const assessments = Object.freeze(
             branches.map((branch) =>
               assessPurgingPool(

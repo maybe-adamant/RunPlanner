@@ -22,6 +22,7 @@ export type {
   BoonRarityOverride,
   BoonRarityRollOrder,
   BoonRarityValues,
+  BoonReplacementDeclaration,
   HammerCompatibility,
   TraitCatalog,
   ChaosTraitCatalog,
@@ -484,6 +485,8 @@ export interface EncounterCustomizationChoice {
   readonly key: string;
   readonly label: string;
   readonly nativeId: string;
+  /** Routes whose save profile can never produce this native result. */
+  readonly excludedRouteKeys?: readonly string[];
 }
 
 export type EncounterCustomizationDecision =
@@ -730,6 +733,8 @@ export interface ZagreusContractAdditionalExitDeclaration {
   readonly physicalExit: Omit<RoomExit, 'index'>;
   readonly targetRoomGameName: string;
   readonly maxEnteredThisRoute: number;
+  /** A source-local prerequisite for offering the contract door. */
+  readonly requirement?: RequirementExpression;
 }
 
 export interface ChaosAdditionalExitDeclaration {
@@ -841,10 +846,16 @@ export interface RoomDeclaration {
   readonly blocksGorgon: boolean;
   /** Exact physical Postboss rack presence, independent of route position. */
   readonly hasKeepsakeRack: boolean;
+  /** Routes whose save profile lacks the rack. */
+  readonly keepsakeRackExcludedRouteKeys?: readonly string[];
   /** Exact physical fountain requirement for this room. */
   readonly hasRequiredFountain: boolean;
   /** Declaration-owned stable physical Pool slots at this exact host. */
-  readonly purgingPool?: { readonly slotKeys: readonly ['left', 'middle', 'right'] };
+  readonly purgingPool?: {
+    readonly slotKeys: readonly ['left', 'middle', 'right'];
+    /** Routes whose save profile lacks a usable Pool. */
+    readonly excludedRouteKeys?: readonly string[];
+  };
   /** Exact installed `ChallengeSwitchBase` anchors available to competing secret spawns. */
   readonly challengeSwitchAnchorCount?: number;
   /** Exact installed `SecretPoint` anchors for forced Chaos gates. */
@@ -860,6 +871,8 @@ export interface RoomDeclaration {
     readonly profileKey: 'RoomShop';
     readonly spawnChance: number;
     readonly forced: boolean;
+    /** Routes whose save profile lacks this Well upgrade. */
+    readonly excludedRouteKeys?: readonly string[];
   };
   readonly boonRarityOverride?: import('./traits').BoonRarityOverride;
   readonly prebossBatchPolicy?: PrebossBatchPolicy;
@@ -1218,7 +1231,7 @@ export interface Catalog {
     Record<'olympian' | 'hermes', import('./traits').BoonRarityValues>
   >;
   readonly boonRarityRollOrder: import('./traits').BoonRarityRollOrder;
-  readonly boonReplacementChance: number;
+  readonly boonReplacement: import('./traits').BoonReplacementDeclaration;
   readonly echoLastRunBoon: import('./traits').EchoLastRunBoonCatalog;
   /** Complete normalized frozen Hex layout declarations. */
   readonly hexes: CatalogCollection<import('./traits').HexDeclaration>;

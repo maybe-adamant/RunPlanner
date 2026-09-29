@@ -1,9 +1,15 @@
 import type { RawRoomDeclaration } from './types';
-import { normalResourcePointSupport } from '../resources';
+import { underworldResourcePointSupport } from '../resources';
+import { notFreshFileRoute } from '../routes';
 
 const wellHost = (challengeSwitchAnchorCount: number) => ({
   challengeSwitchAnchorCount,
-  roomShop: { profileKey: 'RoomShop' as const, spawnChance: 0.3 },
+  roomShop: {
+    profileKey: 'RoomShop' as const,
+    spawnChance: 0.3,
+    // Stygian Wells need their incantation.
+    excludedRouteKeys: ['FreshFile'],
+  },
 });
 
 const chaosExit = {
@@ -12,13 +18,20 @@ const chaosExit = {
   exitType: 'ChaosExitDoor',
   canHost: true,
   canSpawn: true,
+  // Native ChaosUnlocked needs a lifetime Hermes use.
+  requirement: notFreshFileRoute,
 };
 
 export const gRooms = [
   {
     gameName: 'G_Intro',
     secretPointAnchorCount: 1,
-    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
+    resourcePointSupport: underworldResourcePointSupport([
+      'Pickaxe',
+      'Exorcism',
+      'Shovel',
+      'Fishing',
+    ]),
     label: 'Entrance',
     roomSetKey: 'G',
     advancesExperimentalHammerUses: true,
@@ -40,7 +53,12 @@ export const gRooms = [
     gameName: 'G_Combat01',
     secretPointAnchorCount: 2,
     ...wellHost(1),
-    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
+    resourcePointSupport: underworldResourcePointSupport([
+      'Pickaxe',
+      'Exorcism',
+      'Shovel',
+      'Fishing',
+    ]),
     label: 'Combat 01',
     roomSetKey: 'G',
     advancesExperimentalHammerUses: true,
@@ -76,7 +94,12 @@ export const gRooms = [
     gameName: 'G_Combat02',
     secretPointAnchorCount: 4,
     ...wellHost(2),
-    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
+    resourcePointSupport: underworldResourcePointSupport([
+      'Pickaxe',
+      'Exorcism',
+      'Shovel',
+      'Fishing',
+    ]),
     label: 'Combat 02',
     roomSetKey: 'G',
     advancesExperimentalHammerUses: true,
@@ -108,7 +131,12 @@ export const gRooms = [
     gameName: 'G_Combat03',
     secretPointAnchorCount: 2,
     ...wellHost(2),
-    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
+    resourcePointSupport: underworldResourcePointSupport([
+      'Pickaxe',
+      'Exorcism',
+      'Shovel',
+      'Fishing',
+    ]),
     label: 'Combat 03',
     roomSetKey: 'G',
     advancesExperimentalHammerUses: true,
@@ -144,7 +172,12 @@ export const gRooms = [
   {
     gameName: 'G_Combat04',
     secretPointAnchorCount: 2,
-    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
+    resourcePointSupport: underworldResourcePointSupport([
+      'Pickaxe',
+      'Exorcism',
+      'Shovel',
+      'Fishing',
+    ]),
     label: 'Combat 04',
     roomSetKey: 'G',
     advancesExperimentalHammerUses: true,
@@ -179,7 +212,12 @@ export const gRooms = [
   {
     gameName: 'G_Combat05',
     secretPointAnchorCount: 1,
-    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
+    resourcePointSupport: underworldResourcePointSupport([
+      'Pickaxe',
+      'Exorcism',
+      'Shovel',
+      'Fishing',
+    ]),
     label: 'Combat 05',
     roomSetKey: 'G',
     advancesExperimentalHammerUses: true,
@@ -215,7 +253,12 @@ export const gRooms = [
   {
     gameName: 'G_Combat06',
     secretPointAnchorCount: 2,
-    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
+    resourcePointSupport: underworldResourcePointSupport([
+      'Pickaxe',
+      'Exorcism',
+      'Shovel',
+      'Fishing',
+    ]),
     label: 'Combat 06',
     roomSetKey: 'G',
     advancesExperimentalHammerUses: true,
@@ -251,7 +294,12 @@ export const gRooms = [
     gameName: 'G_Combat07',
     secretPointAnchorCount: 1,
     ...wellHost(1),
-    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
+    resourcePointSupport: underworldResourcePointSupport([
+      'Pickaxe',
+      'Exorcism',
+      'Shovel',
+      'Fishing',
+    ]),
     label: 'Combat 07',
     roomSetKey: 'G',
     advancesExperimentalHammerUses: true,
@@ -287,7 +335,12 @@ export const gRooms = [
     gameName: 'G_Combat08',
     secretPointAnchorCount: 1,
     ...wellHost(1),
-    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
+    resourcePointSupport: underworldResourcePointSupport([
+      'Pickaxe',
+      'Exorcism',
+      'Shovel',
+      'Fishing',
+    ]),
     label: 'Combat 08',
     roomSetKey: 'G',
     advancesExperimentalHammerUses: true,
@@ -323,7 +376,12 @@ export const gRooms = [
     gameName: 'G_Combat09',
     secretPointAnchorCount: 2,
     ...wellHost(2),
-    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
+    resourcePointSupport: underworldResourcePointSupport([
+      'Pickaxe',
+      'Exorcism',
+      'Shovel',
+      'Fishing',
+    ]),
     label: 'Combat 09',
     roomSetKey: 'G',
     advancesExperimentalHammerUses: true,
@@ -360,7 +418,12 @@ export const gRooms = [
     gameName: 'G_Combat10',
     secretPointAnchorCount: 1,
     ...wellHost(2),
-    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
+    resourcePointSupport: underworldResourcePointSupport([
+      'Pickaxe',
+      'Exorcism',
+      'Shovel',
+      'Fishing',
+    ]),
     label: 'Combat 10',
     roomSetKey: 'G',
     advancesExperimentalHammerUses: true,
@@ -396,7 +459,12 @@ export const gRooms = [
     gameName: 'G_Combat11',
     secretPointAnchorCount: 1,
     ...wellHost(2),
-    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
+    resourcePointSupport: underworldResourcePointSupport([
+      'Pickaxe',
+      'Exorcism',
+      'Shovel',
+      'Fishing',
+    ]),
     label: 'Combat 11',
     roomSetKey: 'G',
     advancesExperimentalHammerUses: true,
@@ -432,7 +500,12 @@ export const gRooms = [
     gameName: 'G_Combat12',
     secretPointAnchorCount: 1,
     ...wellHost(2),
-    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
+    resourcePointSupport: underworldResourcePointSupport([
+      'Pickaxe',
+      'Exorcism',
+      'Shovel',
+      'Fishing',
+    ]),
     label: 'Combat 12',
     roomSetKey: 'G',
     advancesExperimentalHammerUses: true,
@@ -468,7 +541,12 @@ export const gRooms = [
     gameName: 'G_Combat13',
     secretPointAnchorCount: 1,
     ...wellHost(1),
-    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
+    resourcePointSupport: underworldResourcePointSupport([
+      'Pickaxe',
+      'Exorcism',
+      'Shovel',
+      'Fishing',
+    ]),
     label: 'Combat 13',
     roomSetKey: 'G',
     advancesExperimentalHammerUses: true,
@@ -504,7 +582,12 @@ export const gRooms = [
     gameName: 'G_Combat14',
     secretPointAnchorCount: 2,
     ...wellHost(1),
-    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
+    resourcePointSupport: underworldResourcePointSupport([
+      'Pickaxe',
+      'Exorcism',
+      'Shovel',
+      'Fishing',
+    ]),
     label: 'Combat 14',
     roomSetKey: 'G',
     advancesExperimentalHammerUses: true,
@@ -541,7 +624,12 @@ export const gRooms = [
     gameName: 'G_Combat15',
     secretPointAnchorCount: 3,
     ...wellHost(1),
-    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
+    resourcePointSupport: underworldResourcePointSupport([
+      'Pickaxe',
+      'Exorcism',
+      'Shovel',
+      'Fishing',
+    ]),
     label: 'Combat 15',
     roomSetKey: 'G',
     advancesExperimentalHammerUses: true,
@@ -578,7 +666,12 @@ export const gRooms = [
     gameName: 'G_Combat16',
     secretPointAnchorCount: 1,
     ...wellHost(1),
-    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
+    resourcePointSupport: underworldResourcePointSupport([
+      'Pickaxe',
+      'Exorcism',
+      'Shovel',
+      'Fishing',
+    ]),
     label: 'Combat 16',
     roomSetKey: 'G',
     advancesExperimentalHammerUses: true,
@@ -614,7 +707,12 @@ export const gRooms = [
     gameName: 'G_Combat17',
     secretPointAnchorCount: 2,
     ...wellHost(2),
-    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
+    resourcePointSupport: underworldResourcePointSupport([
+      'Pickaxe',
+      'Exorcism',
+      'Shovel',
+      'Fishing',
+    ]),
     label: 'Combat 17',
     roomSetKey: 'G',
     advancesExperimentalHammerUses: true,
@@ -651,7 +749,12 @@ export const gRooms = [
     gameName: 'G_Combat18',
     secretPointAnchorCount: 2,
     ...wellHost(1),
-    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
+    resourcePointSupport: underworldResourcePointSupport([
+      'Pickaxe',
+      'Exorcism',
+      'Shovel',
+      'Fishing',
+    ]),
     label: 'Combat 18',
     roomSetKey: 'G',
     advancesExperimentalHammerUses: true,
@@ -690,7 +793,12 @@ export const gRooms = [
     gameName: 'G_Combat19',
     secretPointAnchorCount: 1,
     ...wellHost(1),
-    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
+    resourcePointSupport: underworldResourcePointSupport([
+      'Pickaxe',
+      'Exorcism',
+      'Shovel',
+      'Fishing',
+    ]),
     label: 'Combat 19',
     roomSetKey: 'G',
     advancesExperimentalHammerUses: true,
@@ -726,7 +834,12 @@ export const gRooms = [
     gameName: 'G_Combat20',
     secretPointAnchorCount: 1,
     ...wellHost(1),
-    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
+    resourcePointSupport: underworldResourcePointSupport([
+      'Pickaxe',
+      'Exorcism',
+      'Shovel',
+      'Fishing',
+    ]),
     label: 'Combat 20',
     roomSetKey: 'G',
     advancesExperimentalHammerUses: true,
@@ -762,7 +875,12 @@ export const gRooms = [
   {
     gameName: 'G_MiniBoss01',
     secretPointAnchorCount: 2,
-    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
+    resourcePointSupport: underworldResourcePointSupport([
+      'Pickaxe',
+      'Exorcism',
+      'Shovel',
+      'Fishing',
+    ]),
     boonRarityOverride: { Rare: 0.9, Epic: 0.1, Legendary: 0.05 },
     label: 'Deep Serpent',
     roomSetKey: 'G',
@@ -807,7 +925,12 @@ export const gRooms = [
   {
     gameName: 'G_MiniBoss02',
     secretPointAnchorCount: 1,
-    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
+    resourcePointSupport: underworldResourcePointSupport([
+      'Pickaxe',
+      'Exorcism',
+      'Shovel',
+      'Fishing',
+    ]),
     boonRarityOverride: { Rare: 0.9, Epic: 0.1, Legendary: 0.05 },
     label: 'King Vermin',
     roomSetKey: 'G',
@@ -835,6 +958,7 @@ export const gRooms = [
     eligibility: {
       kind: 'all',
       requirements: [
+        notFreshFileRoute,
         { kind: 'counterRange', axis: 'biomeDepthCache', range: { min: 4 } },
         {
           kind: 'recordCount',
@@ -849,7 +973,12 @@ export const gRooms = [
   {
     gameName: 'G_MiniBoss03',
     secretPointAnchorCount: 2,
-    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
+    resourcePointSupport: underworldResourcePointSupport([
+      'Pickaxe',
+      'Exorcism',
+      'Shovel',
+      'Fishing',
+    ]),
     boonRarityOverride: { Rare: 0.9, Epic: 0.1, Legendary: 0.05 },
     label: 'Hellifish',
     roomSetKey: 'G',
@@ -894,9 +1023,12 @@ export const gRooms = [
   {
     gameName: 'G_Story01',
     secretPointAnchorCount: 1,
-    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing'], {
-      ignoresBiomeLimit: true,
-    }),
+    resourcePointSupport: underworldResourcePointSupport(
+      ['Pickaxe', 'Exorcism', 'Shovel', 'Fishing'],
+      {
+        ignoresBiomeLimit: true,
+      },
+    ),
     label: 'Narcissus',
     roomSetKey: 'G',
     advancesExperimentalHammerUses: true,
@@ -915,17 +1047,26 @@ export const gRooms = [
     counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1, maxCreationsThisRun: 1 },
     eligibility: {
-      kind: 'counterRange',
-      axis: 'biomeDepthCache',
-      range: { min: 3, max: 6 },
+      kind: 'all',
+      requirements: [
+        notFreshFileRoute,
+        {
+          kind: 'counterRange',
+          axis: 'biomeDepthCache',
+          range: { min: 3, max: 6 },
+        },
+      ],
     },
   },
   {
     gameName: 'G_Reprieve01',
     secretPointAnchorCount: 1,
-    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing'], {
-      ignoresBiomeLimit: true,
-    }),
+    resourcePointSupport: underworldResourcePointSupport(
+      ['Pickaxe', 'Exorcism', 'Shovel', 'Fishing'],
+      {
+        ignoresBiomeLimit: true,
+      },
+    ),
     label: 'Fountain',
     hasRequiredFountain: true,
     roomSetKey: 'G',
@@ -953,15 +1094,26 @@ export const gRooms = [
     counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1, maxCreationsThisRun: 1 },
     eligibility: {
-      kind: 'counterRange',
-      axis: 'biomeDepthCache',
-      range: { min: 4, max: 6 },
+      kind: 'all',
+      requirements: [
+        notFreshFileRoute,
+        {
+          kind: 'counterRange',
+          axis: 'biomeDepthCache',
+          range: { min: 4, max: 6 },
+        },
+      ],
     },
   },
   {
     gameName: 'G_Shop01',
     secretPointAnchorCount: 1,
-    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
+    resourcePointSupport: underworldResourcePointSupport([
+      'Pickaxe',
+      'Exorcism',
+      'Shovel',
+      'Fishing',
+    ]),
     label: 'Midshop',
     roomSetKey: 'G',
     advancesExperimentalHammerUses: true,
@@ -980,6 +1132,8 @@ export const gRooms = [
         exitType: 'ZagContract',
         targetRoomGameName: 'C_Boss01',
         maxEnteredThisRoute: 0,
+        // Native InfernalContractUnlocked needs the true ending.
+        requirement: notFreshFileRoute,
       },
     ],
     incomingReward: {
@@ -1006,7 +1160,12 @@ export const gRooms = [
   },
   {
     gameName: 'G_PreBoss01',
-    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
+    resourcePointSupport: underworldResourcePointSupport([
+      'Pickaxe',
+      'Exorcism',
+      'Shovel',
+      'Fishing',
+    ]),
     label: 'Preboss',
     roomSetKey: 'G',
     advancesExperimentalHammerUses: true,
@@ -1061,7 +1220,7 @@ export const gRooms = [
   },
   {
     gameName: 'G_Boss01',
-    resourcePointSupport: normalResourcePointSupport([]),
+    resourcePointSupport: underworldResourcePointSupport([]),
     label: 'Scylla and the Sirens',
     roomSetKey: 'G',
     advancesExperimentalHammerUses: true,
@@ -1082,7 +1241,7 @@ export const gRooms = [
   },
   {
     gameName: 'G_Boss02',
-    resourcePointSupport: normalResourcePointSupport([]),
+    resourcePointSupport: underworldResourcePointSupport([]),
     label: 'Scylla and the Sirens',
     roomSetKey: 'G',
     advancesExperimentalHammerUses: true,
@@ -1103,13 +1262,25 @@ export const gRooms = [
   },
   {
     gameName: 'G_PostBoss01',
-    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
+    resourcePointSupport: underworldResourcePointSupport([
+      'Pickaxe',
+      'Exorcism',
+      'Shovel',
+      'Fishing',
+    ]),
     label: 'Postboss',
+    // The Postboss rack, Pool and Well each need their own incantation.
     hasKeepsakeRack: true,
+    keepsakeRackExcludedRouteKeys: ['FreshFile'],
     hasRequiredFountain: true,
-    purgingPool: { slotKeys: ['left', 'middle', 'right'] },
+    purgingPool: { slotKeys: ['left', 'middle', 'right'], excludedRouteKeys: ['FreshFile'] },
     challengeSwitchAnchorCount: 2,
-    roomShop: { profileKey: 'RoomShop', spawnChance: 1, forced: true },
+    roomShop: {
+      profileKey: 'RoomShop',
+      spawnChance: 1,
+      forced: true,
+      excludedRouteKeys: ['FreshFile'],
+    },
     roomSetKey: 'G',
     advancesExperimentalHammerUses: true,
     kind: 'PostBoss',

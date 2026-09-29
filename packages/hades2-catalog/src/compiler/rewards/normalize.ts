@@ -107,6 +107,12 @@ export function createRewardKernelCatalog(input: RawRewardKernelInput): RewardKe
       );
     }
   }
+  const countedStoreFallbackRewardType = input.countedStoreFallbackRewardType;
+  if (rewardTypes.byKey[countedStoreFallbackRewardType] === undefined)
+    fail(
+      'countedStoreFallbackRewardType',
+      `unknown reward type ${String(countedStoreFallbackRewardType)}`,
+    );
   return Object.freeze({
     payloadDomains,
     acquisitions,
@@ -114,5 +120,6 @@ export function createRewardKernelCatalog(input: RawRewardKernelInput): RewardKe
     stores,
     shops,
     producerLifecycles,
+    countedStoreFallbackRewardType,
   });
 }

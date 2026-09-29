@@ -12,6 +12,7 @@ describe('room feature declarations', () => {
     for (const gameName of ['F_PostBoss01', 'G_PostBoss01', 'H_PostBoss01']) {
       expect(catalog.rooms.byKey[gameName]?.purgingPool).toEqual({
         slotKeys: ['left', 'middle', 'right'],
+        excludedRouteKeys: ['FreshFile'],
       });
     }
   });

@@ -155,7 +155,15 @@ export function evaluateBiomeRoomGenerationAssemblyInternal(
       }
     }
     if (sourceDeclaration.additionalExits.some((exit) => exit.kind === 'zagreusContract')) {
-      const capability = assessZagreusContractPlacement(sourceDeclaration, parentHistory);
+      const capability = assessZagreusContractPlacement(
+        catalog,
+        source,
+        sourceDeclaration,
+        parentHistory,
+        enteredBiomeCount,
+        rewardFactsBySource.get(semanticAddressKey(source.origin)),
+        initialRewardLookups,
+      );
       if (capability !== undefined) {
         zagreusContractCapabilities.set(semanticAddressKey(source.origin), capability);
       }

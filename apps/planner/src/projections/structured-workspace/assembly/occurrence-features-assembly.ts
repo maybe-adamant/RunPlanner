@@ -3,6 +3,7 @@ import {
   createAdditionalExitAddress,
   createOccurrenceAddress,
   createRoomFeatureAddress,
+  routeRoomShop,
   semanticAddressKey,
   type BiomeAddress,
   type RoomOccurrence,
@@ -193,11 +194,15 @@ function roomFeatures(
   const poolSlotLabel = (slotKey: 'left' | 'middle' | 'right'): string =>
     slotKey === 'left' ? 'Offer 1' : slotKey === 'middle' ? 'Offer 2' : 'Offer 3';
   return Object.freeze([
-    ...(room.roomShop === undefined && well === undefined && wellAssessment === undefined
+    ...(routeRoomShop(room, input.biome.routeKey) === undefined &&
+    well === undefined &&
+    wellAssessment === undefined
       ? []
       : [
           (() => {
-            const wellForced = room.roomShop?.forced === true || wellAssessment?.required === true;
+            const wellForced =
+              routeRoomShop(room, input.biome.routeKey)?.forced === true ||
+              wellAssessment?.required === true;
             const wellPresence =
               well === undefined
                 ? wellForced

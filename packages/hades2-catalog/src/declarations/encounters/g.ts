@@ -1,4 +1,5 @@
 import { generatedEncounterChoices } from './generated/policies';
+import { notFreshFileRoute } from '../routes';
 import type { RawEncounterDefinitionDeclaration, RawEncounterSetDeclaration } from './types';
 import {
   arachneCombatCocoonCount,
@@ -41,6 +42,7 @@ export const gEncounterDefinitions = [
     requirements: {
       kind: 'all',
       requirements: [
+        notFreshFileRoute,
         { kind: 'counterRange', axis: 'biomeDepthCache', range: { min: 4 } },
         {
           kind: 'currentRoomRewardExcludes',
@@ -72,6 +74,7 @@ export const gEncounterDefinitions = [
     requirements: {
       kind: 'all',
       requirements: [
+        notFreshFileRoute,
         {
           kind: 'currentRoomRewardExcludes',
           rewardTypes: arachneIncomingRewardExclusions,
@@ -103,6 +106,7 @@ export const gEncounterDefinitions = [
     requirements: {
       kind: 'all',
       requirements: [
+        notFreshFileRoute,
         { kind: 'counterRange', axis: 'biomeDepthCache', range: { min: 4 } },
         {
           kind: 'currentRoomRewardExcludes',
@@ -166,9 +170,15 @@ export const gEncounterDefinitions = [
         label: 'Featured performer',
         selection: {
           kind: 'single',
+          // The first Scylla fight always features Jetty.
           choices: [
-            { key: 'scylla', label: 'Scylla', nativeId: 'Scylla' },
-            { key: 'roxy', label: 'Roxy', nativeId: 'Drummer' },
+            {
+              key: 'scylla',
+              label: 'Scylla',
+              nativeId: 'Scylla',
+              excludedRouteKeys: ['FreshFile'],
+            },
+            { key: 'roxy', label: 'Roxy', nativeId: 'Drummer', excludedRouteKeys: ['FreshFile'] },
             { key: 'jetty', label: 'Jetty', nativeId: 'Keytarist' },
           ],
         },

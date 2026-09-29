@@ -135,6 +135,7 @@ export function normalizeEncounterDefinitions(
                     readonly key: string;
                     readonly label: string;
                     readonly nativeId: string;
+                    readonly excludedRouteKeys?: readonly string[];
                   }[],
                   field: string,
                 ) =>
@@ -145,6 +146,14 @@ export function normalizeEncounterDefinitions(
                         key: requireNonEmpty(choice.key, `${choicePath}.key`),
                         label: requireNonEmpty(choice.label, `${choicePath}.label`),
                         nativeId: requireNonEmpty(choice.nativeId, `${choicePath}.nativeId`),
+                        ...(choice.excludedRouteKeys === undefined
+                          ? {}
+                          : {
+                              excludedRouteKeys: freezeUniqueStrings(
+                                choice.excludedRouteKeys,
+                                `${choicePath}.excludedRouteKeys`,
+                              ),
+                            }),
                       });
                     }),
                   );

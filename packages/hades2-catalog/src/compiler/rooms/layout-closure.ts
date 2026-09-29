@@ -222,13 +222,28 @@ function validateRouteAvailabilityOwnership(
   layouts: CatalogCollection<BiomeLayout>,
   routes: CatalogCollection<RouteDeclaration>,
 ): void {
-  rooms.values.forEach((room, index) =>
+  rooms.values.forEach((room, index) => {
     validateExcludedRouteKeys(
       room.resourcePointSupport.excludedRouteKeys,
       routes,
       `rooms[${index}].resourcePointSupport.excludedRouteKeys`,
-    ),
-  );
+    );
+    validateExcludedRouteKeys(
+      room.roomShop?.excludedRouteKeys,
+      routes,
+      `rooms[${index}].roomShop.excludedRouteKeys`,
+    );
+    validateExcludedRouteKeys(
+      room.purgingPool?.excludedRouteKeys,
+      routes,
+      `rooms[${index}].purgingPool.excludedRouteKeys`,
+    );
+    validateExcludedRouteKeys(
+      room.keepsakeRackExcludedRouteKeys,
+      routes,
+      `rooms[${index}].keepsakeRackExcludedRouteKeys`,
+    );
+  });
   layouts.values.forEach((layout, index) => {
     if (layout.progression.kind !== 'generated') return;
     validateExcludedRouteKeys(

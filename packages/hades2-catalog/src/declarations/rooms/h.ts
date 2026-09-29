@@ -23,7 +23,12 @@ const fieldsOfferRewardGroup = {
 
 const wellHost = (challengeSwitchAnchorCount: number) => ({
   challengeSwitchAnchorCount,
-  roomShop: { profileKey: 'RoomShop' as const, spawnChance: 0.35 },
+  roomShop: {
+    profileKey: 'RoomShop' as const,
+    spawnChance: 0.35,
+    // Stygian Wells need their incantation.
+    excludedRouteKeys: ['FreshFile'],
+  },
 });
 
 const fieldsOptionalRewardCapacities = {
@@ -1099,11 +1104,18 @@ export const hRooms = [
     gameName: 'H_PostBoss01',
     resourcePointSupport: hResourcePointSupport([]),
     label: 'Postboss',
+    // The Postboss rack, Pool and Well each need their own incantation.
     hasKeepsakeRack: true,
+    keepsakeRackExcludedRouteKeys: ['FreshFile'],
     hasRequiredFountain: true,
-    purgingPool: { slotKeys: ['left', 'middle', 'right'] },
+    purgingPool: { slotKeys: ['left', 'middle', 'right'], excludedRouteKeys: ['FreshFile'] },
     challengeSwitchAnchorCount: 2,
-    roomShop: { profileKey: 'RoomShop', spawnChance: 1, forced: true },
+    roomShop: {
+      profileKey: 'RoomShop',
+      spawnChance: 1,
+      forced: true,
+      excludedRouteKeys: ['FreshFile'],
+    },
     roomSetKey: 'H',
     advancesExperimentalHammerUses: true,
     kind: 'PostBoss',

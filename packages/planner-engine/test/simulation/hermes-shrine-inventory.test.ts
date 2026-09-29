@@ -127,6 +127,7 @@ function branchesWithTravelDeal() {
 function rewardFacts(history: RewardHistoryState): RewardKernelFacts {
   return {
     requirements: {
+      routeKey: 'Underworld',
       counters: {
         biomeDepthCache: 4,
         biomeEncounterDepth: 2,

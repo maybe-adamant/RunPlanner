@@ -1,4 +1,5 @@
 import { semanticAddressKey, type OccurrenceAddress } from '../../authored-project/addresses';
+import { routeRoomShop } from '../../authored-project/route-profile';
 import type { StygianWellState } from '../../authored-project/model';
 import type { Catalog, RoomDeclaration } from '../../catalog-schema';
 
@@ -102,10 +103,11 @@ export function priorThreeRoomShopPresence(
 
 export function assessStygianWellPlacement(
   declaration: RoomDeclaration | undefined,
+  routeKey: string,
   priorEnteredWellFlags: readonly boolean[],
   biomeDepthCache: number,
 ): StygianWellPlacementAssessment {
-  const roomShop = declaration?.roomShop;
+  const roomShop = routeRoomShop(declaration, routeKey);
   const forced = roomShop?.forced === true;
   const priorWellCount = priorEnteredWellFlags.filter(Boolean).length;
   return Object.freeze({
@@ -165,8 +167,13 @@ export function assessStygianWell(
   traitHistory?: import('../traits').TraitHistoryState,
   priorEnteredWellFlags: readonly boolean[] = Object.freeze([]),
 ): StygianWellAssessment {
-  const declaration = room?.roomShop;
-  const placement = assessStygianWellPlacement(room, priorEnteredWellFlags, biomeDepthCache);
+  const declaration = routeRoomShop(room, routeKey);
+  const placement = assessStygianWellPlacement(
+    room,
+    routeKey,
+    priorEnteredWellFlags,
+    biomeDepthCache,
+  );
   const domains = Object.freeze({
     healing: wellCandidateItemKeys(catalog, routeKey, state, traitHistory, 'healing'),
     secondLeft: wellCandidateItemKeys(catalog, routeKey, state, traitHistory, 'secondLeft'),
