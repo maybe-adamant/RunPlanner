@@ -625,6 +625,7 @@ export const pEncounterDefinitions = [
   },
   {
     key: 'GeneratedP',
+    aetosWaves: [2],
     customization: [generatedEncounterChoices.GeneratedP],
     label: 'Combat',
     kind: 'combat',
@@ -635,6 +636,7 @@ export const pEncounterDefinitions = [
   },
   {
     key: 'GeneratedP_Large',
+    aetosWaves: [2, 3],
     customization: [generatedEncounterChoices.GeneratedP_Large],
     label: 'Large combat',
     kind: 'combat',

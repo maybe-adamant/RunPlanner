@@ -293,6 +293,19 @@ export interface WorkspaceFigLeafInteraction {
   readonly supported: boolean;
 }
 
+export interface WorkspaceAetosInteraction {
+  readonly enableIntent?: WorkspaceCommandIntent<
+    Extract<ProjectCommand, { readonly kind: 'ReplaceAetosWave' }>
+  >;
+  readonly intentFor: (
+    value: number | null,
+  ) => WorkspaceCommandIntent<Extract<ProjectCommand, { readonly kind: 'ReplaceAetosWave' }>>;
+  readonly key: string;
+  readonly owner: EncounterPhaseAddress;
+  readonly selectedWave?: number;
+  readonly waves: readonly number[];
+}
+
 export interface WorkspaceGorgonConditionInteraction {
   readonly intentFor: (
     value: boolean,
@@ -407,6 +420,11 @@ export interface WorkspaceEncounterPhase {
     readonly interactionKey: string;
     readonly selected: boolean;
     readonly supported: boolean;
+  };
+  readonly aetos?: {
+    readonly interactionKey: string;
+    readonly selectedWave?: number;
+    readonly waves: readonly number[];
   };
   /** Selected encounter-local trait offer, when this phase owns one. */
   readonly traitOffer?: WorkspaceTraitOfferControl;

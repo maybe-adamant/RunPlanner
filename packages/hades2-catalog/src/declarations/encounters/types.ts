@@ -51,6 +51,7 @@ export interface RawEncounterDefinitionDeclaration {
   readonly blocksFigLeaf?: boolean;
   readonly blocksGorgon?: boolean;
   readonly hostsGorgon?: boolean;
+  readonly aetosWaves?: readonly number[];
   readonly skipEndEncounterEffects?: boolean;
   readonly blocksKeepsakeSelectionKeys?: readonly string[];
   readonly requirements?: RequirementExpression;

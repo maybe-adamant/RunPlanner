@@ -179,6 +179,8 @@ export interface RoomAppearanceHistoryEntry {
 }
 
 export interface EncounterHistoryEntry {
+  /** A valid reached planned appearance, not an observed native spawn. */
+  readonly aetosWave?: number;
   readonly sequence: number;
   readonly origin: RoomHistoryOrigin;
   readonly gameName: string;

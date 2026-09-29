@@ -77,6 +77,70 @@ const pCombatPhase = createEncounterPhaseAddress(
   'Combat',
 );
 
+describe('Aetos authored choice', () => {
+  it('accepts old omission, round trips sparse choices, and preserves them across independent encounter edits and Undo', () => {
+    const initial = loadSurfaceNOPProject();
+    expect(
+      occurrence(
+        decodeProjectDocument(JSON.parse(encodeProjectDocument(initial)), catalog),
+        'P',
+        pCombatId,
+      ).encounters.aetosWaveByPhase,
+    ).toBeUndefined();
+    const history = applyProjectHistoryCommand(createProjectHistory(initial), catalog, {
+      kind: 'ReplaceAetosWave',
+      phase: pCombatPhase,
+      value: 3,
+    });
+    const decoded = decodeProjectDocument(
+      JSON.parse(encodeProjectDocument(history.present)),
+      catalog,
+    );
+    expect(occurrence(decoded, 'P', pCombatId).encounters.aetosWaveByPhase).toEqual({ Combat: 3 });
+    const changed = applyProjectCommand(decoded, catalog, {
+      kind: 'SelectEncounter',
+      phase: pCombatPhase,
+      encounterKey: 'AthenaCombatP',
+    });
+    const reset = applyProjectCommand(changed, catalog, {
+      kind: 'ReplaceEncounterCustomization',
+      phase: pCombatPhase,
+      decisionKey: 'generatedComposition',
+      value: null,
+    });
+    expect(occurrence(reset, 'P', pCombatId).encounters.aetosWaveByPhase).toEqual({ Combat: 3 });
+    expect(undoProjectHistory(history).present).toBe(initial);
+    expect(redoProjectHistory(undoProjectHistory(history)).present).toBe(history.present);
+    const compatible = applyProjectCommand(decoded, catalog, {
+      kind: 'ReplaceOccurrenceRoom',
+      occurrence: createOccurrenceAddress(pBiome, pCombatId),
+      gameName: 'P_Combat05',
+    });
+    expect(occurrence(compatible, 'P', pCombatId).encounters.aetosWaveByPhase).toEqual({
+      Combat: 3,
+    });
+    const replaced = applyProjectCommand(compatible, catalog, {
+      kind: 'ReplaceOccurrenceRoom',
+      occurrence: createOccurrenceAddress(pBiome, pCombatId),
+      gameName: 'P_MiniBoss01',
+    });
+    expect(occurrence(replaced, 'P', pCombatId).encounters.aetosWaveByPhase).toBeUndefined();
+    const removed = applyProjectCommand(reset, catalog, {
+      kind: 'ReplaceAetosWave',
+      phase: pCombatPhase,
+      value: null,
+    });
+    expect(occurrence(removed, 'P', pCombatId).encounters.aetosWaveByPhase).toBeUndefined();
+    expect(() =>
+      applyProjectCommand(initial, catalog, {
+        kind: 'ReplaceAetosWave',
+        phase: pCombatPhase,
+        value: 1.5,
+      }),
+    ).toThrow();
+  });
+});
+
 function withAssembly(project: ProjectDocument) {
   return simulateProjectAssembly(catalog, project);
 }

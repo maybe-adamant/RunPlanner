@@ -181,6 +181,11 @@ function encounterEntry(
     slotKey: event.phaseKey,
     encounterKey: event.encounterKey,
     phaseKind: event.phaseKind,
+    ...(event.kind === 'encounterStarted' &&
+    event.aetos?.selectedWave !== undefined &&
+    event.aetos.reason === undefined
+      ? { aetosWave: event.aetos.selectedWave }
+      : {}),
     ...(event.kind !== 'encounterRecorded' || event.generatedCustomization === undefined
       ? {}
       : { knownEnemyBlacklistAdditions: event.generatedCustomization.knownRunBlacklistAdditions }),

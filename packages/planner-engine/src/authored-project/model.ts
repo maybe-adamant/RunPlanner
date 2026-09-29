@@ -312,6 +312,8 @@ export type SideRoomGeneration = 'generated' | 'notGenerated';
  * publishes one.
  */
 export interface RoomEncounterState {
+  /** Sparse explicit Aetos placement, independent of encounter composition. */
+  readonly aetosWaveByPhase?: Readonly<Record<string, number>>;
   readonly encounterKeyByPhase: Readonly<Record<string, string>>;
   /** Complete declaration-owned phase-local Fig Leaf dispositions, including fixed slots. */
   readonly figLeafSkipByPhase: Readonly<Record<string, boolean>>;

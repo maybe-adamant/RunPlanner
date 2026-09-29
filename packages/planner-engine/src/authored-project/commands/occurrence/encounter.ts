@@ -163,6 +163,7 @@ function updatedSelections(
 ): RoomEncounterState {
   if (
     command.kind === 'ReplaceFigLeafSkip' ||
+    command.kind === 'ReplaceAetosWave' ||
     command.kind === 'ReplaceEncounterCustomization' ||
     command.kind === 'ReplaceNemesisRandomEventInteraction' ||
     command.kind === 'ReplaceGorgonDeathDefianceCondition'
@@ -239,6 +240,9 @@ function updatedSelections(
       [phase.phaseKey]: encounterKey,
     }),
     figLeafSkipByPhase: current.figLeafSkipByPhase,
+    ...(current.aetosWaveByPhase === undefined
+      ? {}
+      : { aetosWaveByPhase: current.aetosWaveByPhase }),
     gorgonResultByPhase: Object.freeze(gorgonResultByPhase),
     ...(traitOffersByPhase === undefined ? {} : { traitOffersByPhase }),
     ...(nemesisRandomEventByPhase === undefined ? {} : { nemesisRandomEventByPhase }),
@@ -385,6 +389,29 @@ function updatedFigLeafSkip(
   });
 }
 
+function updatedAetosWave(
+  catalog: Catalog,
+  room: RoomDeclaration,
+  current: RoomEncounterState,
+  phase: EncounterPhaseAddress,
+  command: EncounterOccurrenceCommand,
+): RoomEncounterState {
+  if (command.kind !== 'ReplaceAetosWave') return current;
+  if (!encounterBindingsBySlot(catalog, room, room.gameName).has(phase.phaseKey))
+    failCommand(command, 'unknown encounter phase');
+  if (command.value !== null && (!Number.isInteger(command.value) || command.value <= 0))
+    failCommand(command, 'Aetos wave must be a positive integer');
+  const next = { ...current.aetosWaveByPhase };
+  if (command.value === null) delete next[phase.phaseKey];
+  else next[phase.phaseKey] = command.value;
+  const { aetosWaveByPhase: _previous, ...rest } = current;
+  void _previous;
+  return Object.freeze({
+    ...rest,
+    ...(Object.keys(next).length === 0 ? {} : { aetosWaveByPhase: Object.freeze(next) }),
+  });
+}
+
 function updatedCustomization(
   catalog: Catalog,
   room: RoomDeclaration,
@@ -457,7 +484,8 @@ function replaceTopLevel(
       : requireAnomalyRoom(catalog, occurrence.gameName, command);
   const encounters = updatedSelections(catalog, room, occurrence.encounters, phase, command);
   const withFigLeaf = updatedFigLeafSkip(catalog, room, encounters, phase, command);
-  const withCustomization = updatedCustomization(catalog, room, withFigLeaf, phase, command);
+  const withAetos = updatedAetosWave(catalog, room, withFigLeaf, phase, command);
+  const withCustomization = updatedCustomization(catalog, room, withAetos, phase, command);
   const withGorgon = updatedGorgonResult(catalog, room, withCustomization, phase, command);
   const withNemesis = updatedNemesisRandomEvent(catalog, room, withGorgon, phase, command);
   if (withNemesis === occurrence.encounters) return document;

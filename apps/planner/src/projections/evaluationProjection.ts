@@ -338,6 +338,11 @@ const findingCopy = {
   figLeafSkipUnavailable: {
     title: 'Fig Leaf skip unavailable',
   },
+  aetosAppearanceUnavailable: {
+    title: 'Aetos appearance unavailable',
+    description:
+      'Choose a supported wave in an eligible encounter, or remove this appearance. Only one appearance may be planned in Olympus.',
+  },
   naturalSelectionResultMissing: {
     title: 'Choose Natural Selection targets',
   },

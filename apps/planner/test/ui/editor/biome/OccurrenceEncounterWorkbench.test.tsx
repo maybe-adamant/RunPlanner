@@ -54,6 +54,7 @@ import {
   loadSurfaceNProject,
   loadSurfaceNStoryBoardProject,
   loadSurfaceNOPQProject,
+  reachedPOutdoorIcarusFixture,
   nBiome,
   nOccurrenceId,
   nOccurrenceIds,
@@ -92,6 +93,110 @@ afterEach(() => {
 });
 
 describe('OccurrenceEncounterWorkbench', () => {
+  it('authors a native Aetos wave in Events, retains an unavailable choice, and repairs it directly', async () => {
+    const occurrenceId = pOccurrenceId('P_Combat03', 1, 1);
+    const phase = createEncounterPhaseAddress(
+      pBiome,
+      { kind: 'occurrence', occurrenceId },
+      'Combat',
+    );
+    const view = renderOccurrenceWorkbench(
+      loadSurfaceNOPQProject(),
+      'Surface',
+      'P',
+      occurrenceById(occurrenceId),
+    );
+    openRoomTab('Room Timeline');
+    await view.user.click(screen.getByRole('checkbox', { name: 'Aetos appearance' }));
+    expect((screen.getByRole('combobox', { name: 'Aetos wave' }) as HTMLSelectElement).value).toBe(
+      '2',
+    );
+    const selected = view.application.store.getState().projectWorkspace.history!.present;
+    expect(
+      selected.route.biomes
+        .find((biome) => biome.biomeKey === 'P')
+        ?.topology?.occurrences.find((room) => room.occurrenceId === occurrenceId)?.encounters,
+    ).toMatchObject({ aetosWaveByPhase: { Combat: 2 } });
+    act(() => {
+      view.application.store.dispatch(
+        authoredProjectCommandDispatched({ kind: 'ReplaceAetosWave', phase, value: 3 }),
+      );
+    });
+    expect((screen.getByRole('combobox', { name: 'Aetos wave' }) as HTMLSelectElement).value).toBe(
+      '3',
+    );
+    expect(screen.getByRole('option', { name: 'Wave 3 (unavailable)' })).toBeDefined();
+    await view.user.selectOptions(screen.getByRole('combobox', { name: 'Aetos wave' }), '2');
+    await view.user.click(screen.getByRole('checkbox', { name: 'Aetos appearance' }));
+    expect(screen.queryByRole('combobox', { name: 'Aetos wave' })).toBeNull();
+    act(() => {
+      view.application.store.dispatch(authoredProjectUndoRequested());
+    });
+    expect((screen.getByRole('combobox', { name: 'Aetos wave' }) as HTMLSelectElement).value).toBe(
+      '2',
+    );
+    act(() => {
+      view.application.store.dispatch(
+        authoredProjectCommandDispatched({
+          kind: 'SelectEncounter',
+          phase,
+          encounterKey: 'GeneratedP_Large',
+        }),
+      );
+    });
+    expect(
+      (screen.getByRole('checkbox', { name: 'Aetos appearance' }) as HTMLInputElement).checked,
+    ).toBe(true);
+    await view.user.click(screen.getByRole('checkbox', { name: 'Aetos appearance' }));
+    expect(screen.queryByRole('checkbox', { name: 'Aetos appearance' })).toBeNull();
+  });
+
+  it('hides later unselected Aetos controls but focuses a retained duplicate for repair', async () => {
+    const fixture = reachedPOutdoorIcarusFixture();
+    const earlier = createEncounterPhaseAddress(
+      pBiome,
+      { kind: 'occurrence', occurrenceId: pOccurrenceId('P_Combat03', 1, 1) },
+      'Combat',
+    );
+    let project = applyProjectCommand(fixture.project, catalog, {
+      kind: 'ReplaceAetosWave',
+      phase: earlier,
+      value: 2,
+    });
+    const view = renderOccurrenceWorkbench(
+      project,
+      'Surface',
+      'P',
+      occurrenceById(fixture.occurrenceId),
+    );
+    openRoomTab('Room Timeline');
+    expect(screen.queryByRole('checkbox', { name: 'Aetos appearance' })).toBeNull();
+    act(() => {
+      view.application.store.dispatch(
+        authoredProjectCommandDispatched({
+          kind: 'ReplaceAetosWave',
+          phase: fixture.encounter,
+          value: 2,
+        }),
+      );
+    });
+    project = view.application.store.getState().projectWorkspace.history!.present;
+    const finding = simulateProject(catalog, project).findings.find(
+      (entry) => entry.code === 'aetosAppearanceUnavailable',
+    );
+    if (finding === undefined) throw new Error('duplicate finding missing');
+    act(() => {
+      view.application.store.dispatch(
+        findingSelected({ key: semanticFindingKey(finding), origin: finding.origin }),
+      );
+    });
+    const checkbox = screen.getByRole('checkbox', { name: 'Aetos appearance' });
+    expect((checkbox as HTMLInputElement).checked).toBe(true);
+    await waitFor(() => expect(document.activeElement).toBe(checkbox));
+    await view.user.click(checkbox);
+    expect(screen.queryByRole('checkbox', { name: 'Aetos appearance' })).toBeNull();
+  });
+
   it('exposes generated customization on a fixed opening encounter', async () => {
     const view = renderOccurrenceWorkbench(
       createCompleteFGProject(),

@@ -52,6 +52,7 @@ export function decodeRoomEncounterState(
       'encounterKeyByPhase',
       'figLeafSkipByPhase',
       'gorgonResultByPhase',
+      ...(state.aetosWaveByPhase === undefined ? [] : ['aetosWaveByPhase']),
       ...(state.traitOffersByPhase === undefined ? [] : ['traitOffersByPhase']),
       ...(state.nemesisRandomEventByPhase === undefined ? [] : ['nemesisRandomEventByPhase']),
       ...(state.customizationByPhase === undefined ? [] : ['customizationByPhase']),
@@ -97,6 +98,19 @@ export function decodeRoomEncounterState(
     );
   }
   const steadyGrowthTargetByPhase: Record<string, string> = {};
+  const aetosWaveByPhase: Record<string, number> = {};
+  if (state.aetosWaveByPhase !== undefined) {
+    for (const [phaseKey, wave] of Object.entries(
+      expectRecord(state.aetosWaveByPhase, `${path}.aetosWaveByPhase`),
+    )) {
+      if (!bindings.has(phaseKey))
+        failProjectDocument(`${path}.aetosWaveByPhase.${phaseKey}`, 'unknown encounter phase');
+      aetosWaveByPhase[phaseKey] = expectPositiveInteger(
+        wave,
+        `${path}.aetosWaveByPhase.${phaseKey}`,
+      );
+    }
+  }
   if (state.steadyGrowthTargetByPhase !== undefined) {
     const rawTargets = expectRecord(
       state.steadyGrowthTargetByPhase,
@@ -475,6 +489,9 @@ export function decodeRoomEncounterState(
   return Object.freeze({
     encounterKeyByPhase: Object.freeze(encounterKeyByPhase),
     figLeafSkipByPhase: Object.freeze(figLeafSkipByPhase),
+    ...(Object.keys(aetosWaveByPhase).length === 0
+      ? {}
+      : { aetosWaveByPhase: Object.freeze(aetosWaveByPhase) }),
     ...(Object.keys(steadyGrowthTargetByPhase).length === 0
       ? {}
       : { steadyGrowthTargetByPhase: Object.freeze(steadyGrowthTargetByPhase) }),

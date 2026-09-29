@@ -92,6 +92,10 @@ export interface WorkspaceOccurrenceLocalInteractionCatalog {
   >;
   readonly nemesisFeatures: ReadonlyMap<string, WorkspaceNemesisFeatureInteraction>;
   readonly figLeafSkips: ReadonlyMap<string, WorkspaceFigLeafInteraction>;
+  readonly aetosAppearances: ReadonlyMap<
+    string,
+    import('../contracts/locals').WorkspaceAetosInteraction
+  >;
   readonly gorgonConditions: ReadonlyMap<
     string,
     import('../contract').WorkspaceGorgonConditionInteraction
@@ -235,6 +239,10 @@ export function bindOccurrenceLocalInteractions(
   const nemesisEvents = new Map<string, import('../contract').WorkspaceNemesisEventInteraction>();
   const nemesisFeatures = new Map<string, WorkspaceNemesisFeatureInteraction>();
   const figLeafSkips = new Map<string, WorkspaceFigLeafInteraction>();
+  const aetosAppearances = new Map<
+    string,
+    import('../contracts/locals').WorkspaceAetosInteraction
+  >();
   const gorgonConditions = new Map<
     string,
     import('../contract').WorkspaceGorgonConditionInteraction
@@ -665,6 +673,35 @@ export function bindOccurrenceLocalInteractions(
                 owner: phase.owner,
                 selected: phase.figLeaf.selected,
                 supported: phase.figLeaf.supported,
+              }),
+            );
+          }
+          if (phase.aetos !== undefined) {
+            aetosAppearances.set(
+              key,
+              Object.freeze({
+                key,
+                owner: phase.owner,
+                ...phase.aetos,
+                ...(phase.aetos.waves[0] === undefined
+                  ? {}
+                  : {
+                      enableIntent: Object.freeze({
+                        command: Object.freeze({
+                          kind: 'ReplaceAetosWave' as const,
+                          phase: phase.owner,
+                          value: phase.aetos.waves[0],
+                        }),
+                      }),
+                    }),
+                intentFor: (value: number | null) =>
+                  Object.freeze({
+                    command: Object.freeze({
+                      kind: 'ReplaceAetosWave' as const,
+                      phase: phase.owner,
+                      value,
+                    }),
+                  }),
               }),
             );
           }
@@ -1319,6 +1356,7 @@ export function bindOccurrenceLocalInteractions(
     nemesisFeatures,
     roomActions,
     figLeafSkips,
+    aetosAppearances,
     gorgonConditions,
     rewardWheelOfferCounts,
     rewardWheelPicks,

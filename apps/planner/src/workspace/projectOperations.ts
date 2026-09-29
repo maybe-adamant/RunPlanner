@@ -1,5 +1,7 @@
 import {
   assessPublicDreamItinerary,
+  createBiomeAddress,
+  createEncounterPhaseAddress,
   encodeProjectDocument,
   PROJECT_DOCUMENT_SCHEMA_VERSION,
   type ProjectDocument,
@@ -12,6 +14,10 @@ import {
   EXECUTION_DISPLAY_NAME_MAX,
   ExecutionCompilerError,
 } from '@run-planner/engine/execution-plan';
+import {
+  encounterPhaseSequenceStatusForProjectEvaluationAssembly,
+  type ProjectEvaluationAssembly,
+} from '@run-planner/engine/simulation';
 
 import type { AutosaveRecoveryAdapter } from '../persistence/autosaveRecovery';
 import { loadProjectDocument } from '../persistence/projectDocumentLoader';
@@ -71,6 +77,34 @@ export type CurrentGamePlan =
     };
 
 const NO_PROJECT_PLAN: CurrentGamePlan = Object.freeze({ kind: 'noProject' });
+
+function requireAetosPublicationSupport(
+  document: ProjectDocument | undefined,
+  assembly: ProjectEvaluationAssembly,
+): void {
+  if (document === undefined) throw new Error('No project is open');
+  if (
+    document.route.biomes.some((biome) =>
+      biome.topology?.occurrences.some((occurrence) =>
+        Object.keys(occurrence.encounters.aetosWaveByPhase ?? {}).some(
+          (phaseKey) =>
+            encounterPhaseSequenceStatusForProjectEvaluationAssembly(
+              assembly,
+              createEncounterPhaseAddress(
+                createBiomeAddress(document.route.routeKey, biome.biomeKey),
+                { kind: 'occurrence', occurrenceId: occurrence.occurrenceId },
+                phaseKey,
+              ),
+            )?.kind === 'active',
+        ),
+      ),
+    )
+  ) {
+    throw new Error(
+      'Aetos appearances cannot be published until the game module supports their execution. Remove the Aetos selection to publish this plan.',
+    );
+  }
+}
 
 export type ProjectOperationResult = {
   readonly operation: ProjectOperation;
@@ -230,6 +264,10 @@ export function createProjectOperations(
       const workspace = options.store.getState().projectWorkspace;
       if (workspace.kind !== 'openProject') throw new Error('No project is open');
       // Checked before saving, so an unsendable plan is never saved on the way.
+      requireAetosPublicationSupport(
+        selectPresentProject(options.store.getState()),
+        workspace.assembly,
+      );
       assembleExecutionProduct({ assembly: workspace.assembly, catalog: options.catalog });
       // Sending needs a saved file with no unsaved changes; the file's name names the plan.
       let saved = false;
@@ -250,6 +288,10 @@ export function createProjectOperations(
         // Compile the document as saved, since the save may have re-identified its history.
         const savedWorkspace = options.store.getState().projectWorkspace;
         if (savedWorkspace.kind !== 'openProject') throw new Error('No project is open');
+        requireAetosPublicationSupport(
+          selectPresentProject(options.store.getState()),
+          savedWorkspace.assembly,
+        );
         const fileName = selectProfileSession(options.store.getState()).fileName;
         const plan = compileExecutionPlan({
           product: assembleExecutionProduct({
@@ -362,6 +404,10 @@ export function createProjectOperations(
       if (cached !== undefined) return cached;
       let current: CurrentGamePlan;
       try {
+        requireAetosPublicationSupport(
+          selectPresentProject(options.store.getState()),
+          workspace.assembly,
+        );
         const plan = compileExecutionPlan({
           product: assembleExecutionProduct({
             assembly: workspace.assembly,
