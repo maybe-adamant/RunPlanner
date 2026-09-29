@@ -44,6 +44,23 @@ local function fault(state, checkpoint, expected, observed)
     })
 end
 
+local function nativeEncounterDeclarations()
+    local gameValue = _G.game or game
+    return gameValue and gameValue.EncounterData or nil
+end
+
+-- One diagnostic per substituted phase, whichever contact binds it first.
+local function reportSubstitution(state, occurrence, phase, observed)
+    local roomState = stateOf(state)
+    if not encounterPhases(state).noteSubstitution(occurrence, phase.slotKey, observed) then return end
+    if roomState and type(roomState.diagnostic) == "function" then
+        roomState.diagnostic("encounter-lifecycle", {
+            kind = "lifecycle-substitution", phase = phase.slotKey,
+            encounterKey = phase.encounterKey, observed = observed,
+        }, occurrence)
+    end
+end
+
 function coordinator.new(plan, onMismatch, capabilities)
     capabilities = capabilities or {}
     return {
@@ -53,6 +70,7 @@ function coordinator.new(plan, onMismatch, capabilities)
         readConformance = capabilities.readConformance,
         onMismatch = onMismatch,
         onFault = capabilities.onFault,
+        diagnostic = capabilities.diagnostic,
     }
 end
 
@@ -157,8 +175,11 @@ end
 function coordinator.bindEntryEncounters(state, nativeRoom)
     local active = coordinator.current(state)
     if active == nil then return nil end
-    local ok, errorValue = encounterPhases(state).prove(active.occurrence, nativeRoom)
-    if not ok then return fail(state, errorValue) end
+    local ok, result = encounterPhases(state).prove(active.occurrence, nativeRoom, nativeEncounterDeclarations())
+    if not ok then return fail(state, result) end
+    for _, substitution in ipairs(result) do
+        reportSubstitution(state, active.occurrence, substitution.phase, substitution.observed)
+    end
     return true
 end
 
@@ -191,15 +212,22 @@ function coordinator.encounterAt(state, index, nativeRoom)
     return occurrence and encounterPhases(state).at(occurrence, index) or nil
 end
 
-function coordinator.bindEncounter(state, nativeEncounter, slotKey, nativeRoom)
+-- observed names a lifecycle-compatible native substituted for the phase.
+function coordinator.bindEncounter(state, nativeEncounter, slotKey, nativeRoom, observed)
     local occurrence = occurrenceForNative(state, nativeRoom)
     if occurrence == nil then return nil end
-    local phase, errorValue = encounterPhases(state).bind(occurrence, nativeEncounter, slotKey)
+    local phase, errorValue = encounterPhases(state).bind(occurrence, nativeEncounter, slotKey, observed ~= nil)
     if phase == nil then
         return fault(state, errorValue and errorValue.checkpoint or "encounter-binding",
             errorValue and errorValue.expected, errorValue and errorValue.observed)
     end
+    if observed ~= nil then reportSubstitution(state, occurrence, phase, observed) end
     return phase
+end
+
+function coordinator.encounterBound(state, slotKey, nativeRoom)
+    local occurrence = occurrenceForNative(state, nativeRoom)
+    return occurrence ~= nil and encounterPhases(state).isBound(occurrence, slotKey)
 end
 
 function coordinator.encounterPhase(state, nativeEncounter)

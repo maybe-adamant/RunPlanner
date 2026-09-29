@@ -89,9 +89,12 @@ persisted encounter authorship and simulation history unchanged.
 The execution plan publishes modeled phases in `overview.encounterPhases` and
 only publishes `overview.unmodeledEncounterKeys` when native carriers were
 deliberately omitted from that phase list. The executor compares exactly one of
-those two lists to native state by order, cardinality, and concrete encounter
-key. It has no room-name aliases, inherited Encounter aliases, or special
-`Empty` normalization. Timeline hooks continue to bind only the modeled phase
+those two lists to native state by order and cardinality. Unmodeled carriers
+compare by concrete encounter key. A modeled phase also accepts a differently
+named native encounter whose inherited lifecycle policy matches in the same
+role (for example `Story_Chronos_01` and `Empty`); see the
+[integration boundary](../../design/GAME_INTEGRATION_BOUNDARY.md#prefer-the-published-answer).
+There are no room-name aliases or special `Empty` normalization. Timeline hooks continue to bind only the modeled phase
 list, so an unmodeled carrier cannot create a fake lifecycle window or
 transaction.
 
@@ -101,5 +104,5 @@ Native encounter identity is declaration data. Simulation relevance is
 lifecycle data. Keeping the execution carrier list distinct from modeled
 phases lets the planner publish exact `Empty`, `Shop`, `TyphonShop`,
 `HealthRestore`, Story, and other identities without inventing timeline effects
-for sim-neutral native work. The executor remains a literal parser and exact
-comparer rather than owning a normalization table.
+for sim-neutral native work. The executor owns no normalization table; its
+lifecycle comparison reads native declarations rather than name pairs.

@@ -420,6 +420,20 @@ forcing it. Rejection delegates selection to the game with a diagnostic and with
 applying the rejected variant's customization. Existing conformance checks resulting
 state, including NPC traits; this admission adds no mismatch boundary.
 
+A native encounter whose name differs from its published phase, such as an enemy
+introduction or native fallback after a rejected force, binds to that phase only
+when the inherited native declarations share lifecycle policy in the same room and
+phase role. The executor-owned comparator covers encounter depth, ordinary and boss
+end/start effects, spawn-dependent uses, Fig Leaf and Gorgon policy, skip
+propagation, classified start contacts and envelope termination, applying the
+later-phase start and skip overrides of multiple-encounter assembly. Selection and
+room-entry proof use the same comparator; a compatible substitution logs one
+diagnostic naming both keys and never installs the published variant's
+customization. An unclassified start path, setup callback, missing declaration or
+policy difference keeps the existing encounter mismatch, naming the differing facts.
+Unmodeled carriers remain exact; a different native choice for an already carried
+phase is left unclaimed.
+
 Generated composition is native or fully owned. The resolved export contains every
 wave's enemy identities, source provenance and counts, including fixed/template
 seeds, plus applicable Fangs and Menace outcomes, an optional variable base roll

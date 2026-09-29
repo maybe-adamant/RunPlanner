@@ -190,6 +190,9 @@ function runtime.attemptPostbossAdmission(state, inbox, activeSlot, nativeRoom)
         onFault = function(errorValue, expected, observed)
             return runtime.fault(state, errorValue, expected, observed)
         end,
+        diagnostic = function(checkpoint, observed, owner)
+            return runtime.diagnostic(state, checkpoint, observed, owner)
+        end,
         readConformance = function(kind, currentRun, gameState, expected)
             return conformance.read(kind, currentRun, gameState, expected)
         end,
@@ -234,6 +237,9 @@ function runtime.start(state, inbox, phase, activeSlot)
     end, {
         onFault = function(errorValue, expected, observed)
             return runtime.fault(state, errorValue, expected, observed)
+        end,
+        diagnostic = function(checkpoint, observed, owner)
+            return runtime.diagnostic(state, checkpoint, observed, owner)
         end,
         readConformance = function(kind, currentRun, gameState, expected)
             return conformance.read(kind, currentRun, gameState, expected)
