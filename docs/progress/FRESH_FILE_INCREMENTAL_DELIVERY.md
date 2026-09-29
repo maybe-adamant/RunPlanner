@@ -403,6 +403,12 @@ F–I route witnesses). Full `npm run check` at `42fe5ecf` (2026-09-29): exit 0;
 Rust 45, ESLint clean. Performance compare against `27b28768`: PASS, all
 metrics within threshold. No execution fixture or mature golden project moved.
 
+Slice J committed on `codex/fresh-file`: `939ac7e1` (Eris observation, talk
+and gift on the Fresh intros; Psyche untracked). Full `npm run check` at
+`939ac7e1` (2026-09-29): exit 0; 395 Vitest files / 4161 tests, 732 Lua tests,
+Luacheck 0 warnings / 0 errors, Rust 45, ESLint clean. Performance compare
+against `42fe5ecf`: PASS. No execution fixture or mature golden project moved.
+
 ## Phase III — visible rule integration roadmap
 
 ### J — Eris (locked 2026-09-29)
