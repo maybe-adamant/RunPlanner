@@ -57,7 +57,7 @@ then the relevant authority sections:
 - `CATALOG_MODEL.md`: modeled inputs and declaration normalization.
 - `GAME_INTEGRATION_BOUNDARY.md`: selection, binding, conformance and publication.
 
-Evidence inputs under `docs/investigations/`: Fresh File viability, five domain
+Evidence inputs under `docs/investigations/`: Fresh File viability, four domain
 outlines, `FRESH_FILE_RULE_AUDIT.md`, and `ENCOUNTER_LIFECYCLE_EQUIVALENCE.md`.
 This plan overrides earlier fixed-offer machinery, broad NPC equivalence and
 late-only editor exposure proposals in those inputs. Native first-offer facts
@@ -268,6 +268,69 @@ tests stabilize, and document pending live acceptance. Confirm no stale exact-na
 path, second ledger, invented native roster, duplicate policy or broken mature
 behavior. Then land the visible-authoring gate; do not require all later rule
 details to be settled before the owner can inspect the editor.
+
+### Phase I status
+
+Gates committed on `codex/fresh-file`: A `2a52c837`, B `bda074c3`, C `1999cb0d`,
+D `75a0b778`, E `47b0d1fb`.
+
+Checkpoint gate at `47b0d1fb` (2026-09-29): `npm run check` exit 0; 375 Vitest
+files / 4042 tests, 732 Lua tests, Luacheck 0 warnings / 0 errors, Rust 45,
+ESLint clean. Performance compare against `fcd8d556`: PASS, all eight metrics
+within threshold (largest: Surface full rebuild +5.46%, +3.99 ms).
+
+Accepted bounded limitations:
+
+- E: history-time encounter preparation has no Fear ranks; positive Menace
+  conversions are not recorded.
+- A: the executor's Athena start check is stricter than native; it can report
+  false conflicts only, never false bindings.
+
+Gate F obligations:
+
+- The save-file god-history route-start value is constructed twice
+  (`packages/planner-engine/src/simulation/evaluation/project.ts:161`,
+  `packages/planner-engine/src/simulation/rewards/branch-lifecycle.ts:98`).
+  Derive it once from the project profile and feed both.
+- `knownEncounteredEnemies` and `resourceGains` requirement records, and the
+  encounter-picker message case for them, have no production declaration
+  reading them yet. Fresh File consumers are their intended readers.
+
+### Pending live acceptance
+
+- [ ] Gate A, mature save (executor build, protocol 51):
+  - Republish mature F–I and N–Q plans; no new `encounter-lifecycle`
+    diagnostics or mismatches.
+  - Save/quit/reload inside an H cage room, a multi-encounter P room and an O
+    wheel room: re-prove succeeds, reloaded carriers bind, at most one
+    substitution diagnostic per phase.
+  - Fig Leaf skip, then reload: the skip holds.
+  - A forced encounter the game rejects on eligibility binds with
+    `lifecycle-substitution` (both names logged, no customization installed)
+    or yields `lifecycle-conflict` plus a mismatch naming the property.
+  - F_PostBoss01 native Empty against published `Story_Chronos_01` binds as a
+    substitution when it occurs.
+- [ ] Gate A, fresh profile:
+  - GeneratedF→GuardIntro and GeneratedG→FishSwarmerIntro bind and log; the
+    customized composition is not installed on the substitute.
+  - A later-phase override, and a cage room with an intro.
+- [ ] Gate D, now:
+  - A mature shop per biome with purchases and a Travel Deal refill lands on the
+    right items and compact position.
+  - A protocol-50 plan is rejected cleanly.
+- [ ] Gate D, Fresh File I_WorldShop:
+  - A trailing empty group gives 4 items and purchases bind; no
+    `shop-empty-group` diagnostic; observe the probe's random-number effect
+    afterwards.
+  - A Travel Deal whose exclusion empties the source group: native shifts to
+    the next group while planner and executor keep the group (reward audit
+    ~:790–800).
+  - An OptionsData RandomLoot group with no eligible god is not natively
+    empty; the probe diagnostic is the guard.
+- [ ] Gates B/C/E, optional source confirmations:
+  - Common Buried Treasure then a 5-Ashes drop gives 8; Double Up gives 8+8.
+  - Narcissus Ashes 10 with the NPCDrop exemption.
+  - A mature-save shop boon god may be any eligible god.
 
 ## Phase II — visible Fresh File authoring
 

@@ -275,11 +275,13 @@ export function validateResourceGainKeys(
   });
 }
 
+/** Save-file god records are checked against `lifetimeGodKeys`, supplied only for loot requirements. */
 export function validateRequirementReferences(
   requirement: RequirementExpression,
   rewardTypes: CatalogCollection<RewardTypeDeclaration>,
   path: string,
   resourceKeys?: ReadonlySet<string>,
+  lifetimeGodKeys?: readonly string[],
 ): void {
   switch (requirement.kind) {
     case 'all':
@@ -290,6 +292,7 @@ export function validateRequirementReferences(
           rewardTypes,
           `${path}.requirements[${index}]`,
           resourceKeys,
+          lifetimeGodKeys,
         ),
       );
       return;
@@ -299,6 +302,7 @@ export function validateRequirementReferences(
         rewardTypes,
         `${path}.requirement`,
         resourceKeys,
+        lifetimeGodKeys,
       );
       return;
     case 'notInCurrentRoomShopOptions':
@@ -349,10 +353,15 @@ export function validateRequirementReferences(
           return;
         case 'lifetimeGodUseRecord':
         case 'lifetimeGodPickupRecord':
-          return fail(
-            `${path}.record`,
-            `${requirement.record} is only available to loot requirements`,
-          );
+          if (lifetimeGodKeys === undefined) {
+            fail(`${path}.record`, `${requirement.record} is only available to loot requirements`);
+          }
+          requirement.keys.forEach((key, index) => {
+            if (!lifetimeGodKeys.includes(key)) {
+              fail(`${path}.keys[${index}]`, `${key} is not an ordinary god source`);
+            }
+          });
+          return;
       }
       return;
     case 'encounterKeyCount':

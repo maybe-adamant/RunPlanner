@@ -2,8 +2,7 @@
 
 Status: design outline, not a locked delivery plan or schema approval.
 Evidence: [viability investigation](FRESH_FILE_PROJECT_VIABILITY.md), loadout
-agreement and current planner seams. Foundation:
-[shared infrastructure](FRESH_FILE_SHARED_INFRASTRUCTURE.md).
+agreement and current planner seams.
 
 ## User-visible outcome
 

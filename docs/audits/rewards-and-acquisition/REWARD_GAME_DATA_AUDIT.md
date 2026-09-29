@@ -538,9 +538,9 @@ Several ordinary gods carry LootData `GameStateRequirements`:
 - Hephaestus requires `UseRecord` Zeus and `CurrentRun.TextLinesRecord` lacking
   `ZeusFirstPickUp` (`LootData_Hephaestus.lua:7-23`).
 
-The Zeus and Hephaestus text-record gates are not yet declared. A mature file
+The Zeus and Hephaestus text-record gates are not declared. A mature file
 satisfies them; a closed profile therefore yields a seven-god initial pool where
-the game allows three. Declaring them is Phase III work. The Mystery Boon
+the game allows three. The Mystery Boon
 requirement (`BlindBoxLootRequirements`, `RequirementsData.lua:1218-1232`:
 lifetime use of Zeus, Poseidon, Apollo, Demeter, Aphrodite, Hephaestus and
 Hestia) is a later consumer of `lifetimeGodUseRecord`.
@@ -693,8 +693,8 @@ LootData and remains a `loot` acquisition, its custom spell-screen flow calls
 `RecordConsumableItem` and does not pass through `HandleLootPickup`; therefore
 it does not write loot histories. Resource pickups use the consumable history
 path while retaining `resource` kind. Quantities follow
-[Resource quantities](#resource-quantities); affordability remains deferred. Persistent `GameState.UseRecord` is deliberately
-outside the project boundary; the table is exact for current-run history.
+[Resource quantities](#resource-quantities); affordability remains deferred. Persistent `GameState.UseRecord` is derived
+only as lifetime use for ordinary gods; the table is exact for current-run history.
 
 The role registry composes those concrete identities as follows:
 
