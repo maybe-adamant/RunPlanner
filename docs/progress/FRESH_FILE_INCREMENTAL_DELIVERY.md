@@ -411,6 +411,74 @@ against `42fe5ecf`: PASS. No execution fixture or mature golden project moved.
 
 ## Phase III — visible rule integration roadmap
 
+### K — Enemy introductions and Gate E retirement (locked 2026-09-29)
+
+Owner-locked fifth slice. Evidence: `docs/investigations/FRESH_FILE_ENEMY_INTRODUCTION_MATRIX.md`
+(native pipeline, scoped F/G/H/I matrix, history sufficiency, local ordering
+probe). Native selection asks whether an introduction encounter completed
+(`HasEncounterBeenCompleted`, run and lifetime caches) and, for H, whether it
+occurred (`EncountersOccurredCache`); it never asks whether an enemy was seen.
+
+Locked decisions:
+
+- Gate E is retired. The known-encountered-enemy ledger, snapshot field,
+  `knownEncounteredEnemies` requirement record and `'encounter'` scope, evidence
+  arm, picker message case, tests and design paragraphs are removed. The
+  existing `encounterCompletions` and `encounterRecords` ledgers are the
+  introduction authorities; narrow completion and occurrence queries are added
+  there. No new ledger.
+- Identity is settled in the encounter selector; Customize edits only a
+  settled identity, as on mature. Each reachable introduction is a member of
+  its biome set with its native gate as a requirement: route `FreshFile`;
+  not completed on the route; H: not occurred this run; Lycanthrope: Mourner,
+  Lovesick and Lamia introductions recorded on the route. Members:
+  `RadiatorIntro`, `ScreamerIntro` (F; fixed first wave, generated second),
+  `FishSwarmerIntro` (G; same shape), `MournerIntro`, `LamiaIntro`,
+  `LovesickIntro`, `LycanthropeIntro` (H; three fixed waves). Guard has no
+  introduction; Turtle is unreachable on a single G entry; Vampire and
+  LycanSwarmer are outside scope. `GeneratedH_Screamer2` gains its native
+  ScreamerIntro-completed predicate. On mature saves every introduction member
+  is ineligible, so mature pickers and customization are unchanged.
+- Customization on the ordinary identity excludes any enemy type whose
+  introduction is unfinished, with the reason naming the introduction to
+  select. An introduction's generated suffix applies the same exclusion except
+  for its own seed (native `RequireCompletedIntro` filters added candidates
+  only). Native enemy admission (`MinDepthBeforeIntros`,
+  `IneligibleIfUncompletedIntroEncounter`) is modeled in the type domain with
+  native depth kept separate from biome encounter depth. Two competing
+  introductions therefore never exist in an authored composition, and native
+  traversal order is not a planner contract.
+- Retained states are reported, never stripped: an unintroduced type retained
+  under an ordinary identity, or an introduction identity whose gate no longer
+  holds after an upstream edit, each report a finding with the repair named.
+- On `FreshFile`, every generated combat phase and every mixed introduction's
+  suffix must be customized; an uncustomized phase reports
+  `encounterCustomizationRequired` and blocks execution eligibility. Fixed
+  identities need no customization. Generated customization is enabled for the
+  route (Gate F disabled it); Fear controls stay hidden at zero Fear. Native
+  (uncustomized) mode is not publishable on `FreshFile`; the executor's
+  lifecycle substitution becomes a diagnostic case there.
+- H cage members are evaluated in cage-preparation order against recorded
+  identities, not completions; a prepared cage never changes when another
+  cage completes.
+- Pending live acceptance corrections: F triggers are `RadiatorIntro` and
+  `ScreamerIntro`, G is `FishSwarmerIntro`; the GuardIntro item is withdrawn.
+  Embedded-game confirmation of native traversal order is a Gate L diagnostic,
+  not a contract.
+- Excluded: draft or banner UX, a third customization surface, Menace-based
+  introduction paths, execution enablement.
+
+Delivery order: Gate E retirement as the first commit, then introductions.
+
+Acceptance: Gate E symbols absent from production and tests; introduction
+members with gates and evidence in the picker on Fresh, ineligible on mature;
+type-domain exclusion and reasons; retained-state findings; customization
+required finding and execution eligibility; H cage sequence witness
+(Mourner recorded in cage 1 suppresses cage 2; Lycanthrope eligible only after
+the three prerequisites); `GeneratedH_Screamer2` predicate; the Fresh F–I
+fixture fully customized with one F introduction, `FishSwarmerIntro` and an H
+cage sequence, valid with zero findings; mature byte-identical.
+
 ### J — Eris (locked 2026-09-29)
 
 Owner-locked fourth slice. Native: Eris spawns at the start of `G_Intro`,
@@ -674,19 +742,12 @@ Promote durable facts to existing audits/design/biome authorities; retire this
 plan and completed investigation material. Keep only narrowly identified deferred
 encounter questions. Remove temporary development availability and copy when ready.
 
-## Phase V — separate encounter-customization pass
+## Phase V — introduction acceptance and residual encounter questions
 
-Write its plan after the spine is stable. Reuse Gate E's known-enemy history;
-do not replace it with a second history store. That pass owns enemy→introduction
-mapping (including elite/base/shared intros), whether known completion suffices
-for the native introduction predicate, competing introduction selection, fixed/
-mixed profiles, draft selection and exact execution admission.
-
-An uncustomized native encounter contributed no known enemy roster. The later
-plan must explicitly settle how this interacts with exact introduction authoring;
-never interpret missing history as proof of absence. Mature initial introduction
-availability remains distinct from recorded in-project enemy facts. Do not pull
-this uncertainty back into an otherwise usable native-generation spine.
+Slice K settles enemy introductions on the existing completion and occurrence
+ledgers. What remains after it is live acceptance (embedded-game traversal
+order as a diagnostic, mixed-profile installation) and any residual question
+the live run surfaces. No second history store; extend narrow queries only.
 
 ## Orchestration, tests and expected retirement
 
