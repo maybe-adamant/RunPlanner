@@ -389,6 +389,13 @@ MetaProgress native-complete, counted-store Heal fallback). Full
 tests, 732 Lua tests, Luacheck 0 warnings / 0 errors, Rust 45, ESLint clean.
 No execution fixture or mature golden project moved.
 
+Slice H committed on `codex/fresh-file`: `dce79ddc` (FIntroFight entry rule and
+force, forced Apollo reward, first-run Apollo allow-list, retained
+customization on replaced bindings). Full `npm run check` at `dce79ddc`
+(2026-09-29): exit 0; 387 Vitest files / 4117 tests, 732 Lua tests, Luacheck 0
+warnings / 0 errors, Rust 45, ESLint clean. No
+execution fixture or mature golden project moved.
+
 ## Phase III — visible rule integration roadmap
 
 ### H — First sequence and Apollo offer (locked 2026-09-29)
