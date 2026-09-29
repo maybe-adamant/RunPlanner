@@ -298,6 +298,11 @@ Gate F obligations:
 
 ### Pending live acceptance
 
+Owner result (2026-09-29, executor build from `c49ee950`, protocol 51):
+several mature-save runs completed with no observed change in behaviour; the
+Phase I gates are impact-neutral on mature files. The itemised mature-save
+checks below remain open only where not exercised by those runs.
+
 - [ ] Gate A, mature save (executor build, protocol 51):
   - Republish mature F–I and N–Q plans; no new `encounter-lifecycle`
     diagnostics or mismatches.
