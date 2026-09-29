@@ -385,6 +385,47 @@ inspection of the visible Fresh File project before Phase III slices lock.
 
 ## Phase III — visible rule integration roadmap
 
+### G — Blanket disabling pass (locked 2026-09-29)
+
+Owner-locked first slice. Evidence: `docs/investigations/FRESH_FILE_DISABLING_PASS.md`.
+Scope is run-invariant exclusions only; in-run conditionals (Hestia/Aphrodite
+order, Apollo first offer, intro forcing, thresholds other than the
+MetaProgress tiers, shop-god conditions) stay in their own rows.
+
+Locked decisions:
+
+- One declaration per store and shop profile. Blanket exclusions are route
+  availability on the existing entry (`excludedRouteKeys`, `routeKeyEquals`
+  negation, or the existing optional `requirement`), the same mechanism that
+  excludes Dream today. No separate Fresh stores or profiles.
+- MetaProgress becomes native-complete in this slice: the six low-tier late
+  Bones/Ash entries are declared with `FreshFile` availability and
+  `resourceGains` thresholds (Bones need Ashes ≥ 5; small late entries while
+  Bones < 500 or Ashes < 100; Big once both are reached). Mature bags keep
+  their thirteen entries: the engine drops route-unavailable entries at bag
+  fill and refill, so mature fixtures do not move.
+- Features the game leaves present but locked on a fresh profile (H post-boss
+  Pool) are absent to the planner; the game owns them.
+- Mechanism additions, each the smallest form: `excludedRouteKeys` on room
+  features (`roomShop`, `purgingPool`, `hasKeepsakeRack`); optional
+  `requirement` on the Zagreus contract door mirroring the Chaos exit;
+  `excludedRouteKeys` per boss customization choice; a declared requirement on
+  the random boon exchange mirroring native `BoonData.GameStateRequirements`.
+- The forced post-boss Wells in F, G and H are removed on `FreshFile`, not
+  made optional.
+- I_WorldShop slot 5 empties through the delivered valid-empty assessment; the
+  production case replaces the test-only empty-group catalog variant behind
+  `underworld-fghi-empty-shop-group`.
+- Excluded and unchanged: everything in the investigation's conditional list.
+
+Acceptance: each matrix row has one witness at its owning contact (room
+eligibility, detour placement, feature availability, encounter requirement,
+store/shop entry, god `lootRequirement`, trait `routeKeyNot`, exchange
+requirement); mature golden projects and execution fixtures unchanged except
+the empty-shop-group fixture regeneration; Fresh File project simulation shows
+no excluded room, feature, encounter, reward, god or trait reachable; the
+MetaProgress tier witnesses cross a threshold mid-run through `resourceGains`.
+
 This checklist is detailed scope guidance, not authorization to implement every
 row as one change. For each slice name its catalog fact, engine consumer, UI
 projection, export impact and narrow tests before starting. Preserve incomplete
@@ -397,7 +438,7 @@ authorship rather than masking defects with editor filters.
 | Room exclusions          | Reprieves, unavailable stories/minibosses and Chaos/Anomaly/Zagreus unavailable through engine eligibility. Vanilla biome state.                                                                                                                                                                                                                                                                                                                                                                                                   |
 | Features                 | No Wells, usable Pools, postboss racks or resource points. Postboss fountains remain. H's locked Pool object is not an unexpected usable inventory.                                                                                                                                                                                                                                                                                                                                                                                |
 | Bridge                   | H_Bridge01 resolves to Shop, keeping native force window/creation limit and optional visitation pressure; no Echo action.                                                                                                                                                                                                                                                                                                                                                                                                          |
-| God/reward profiles      | Separate Fresh MetaProgress/RunProgress/shop profiles; Apollo/Poseidon/Demeter plus Hestia/Aphrodite unlocked by qualifying use. Shop pickup-history intersection and fallback remain shared.                                                                                                                                                                                                                                                                                                                                      |
+| God/reward profiles      | Shared stores and shop profiles: route availability on entries a fresh profile can never reach, `resourceGains` thresholds on the tiered MetaProgress entries; Apollo/Poseidon/Demeter plus Hestia/Aphrodite unlocked by qualifying use. Shop pickup-history intersection and fallback remain shared.                                                                                                                                                                                                                              |
 | Numeric unlocks          | Bones threshold 5 Ashes; later small/large switch requires both 100 Ashes and 500 Bones plus ordinal rules. Read generation-time totals; preserve ineligible bag copies and offered history.                                                                                                                                                                                                                                                                                                                                       |
 | Shop slots               | Correct ordinary and Tartarus inventories, no shop Armor; five stable I slots with empty fifth. Do not ban Fields optional Armor/Nectar/Bones by source confusion. A clear-selected-item command is a prerequisite for visible Fresh File shop authoring, so a `selectedInvalid` item in an empty group can be repaired.                                                                                                                                                                                                           |
 | Trait/reward exclusions  | Hammers, Hermes, Mystery, Devotion, Hex/Path, infusions and unavailable gods; Plant Health's missing shovel unlock. Apply source-specific exclusions, not global reward-name bans.                                                                                                                                                                                                                                                                                                                                                 |
