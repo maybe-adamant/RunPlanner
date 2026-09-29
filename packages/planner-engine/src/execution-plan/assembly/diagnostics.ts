@@ -12,6 +12,7 @@ import type {
   ExecutionRunStateDiagnostic,
 } from '../model';
 import { pendingKeepsakeEffects } from '../../simulation/rewards/run-state-conformance';
+import { ExecutionCompilerError as CompilerError } from '../assembler-errors';
 
 function executionCount(value: ExecutionRunStateCount): ExecutionRunStateCount {
   return value.kind === 'exact'
@@ -124,7 +125,7 @@ function assembleRunStateDiagnostic(
       ),
     }),
     keepsakes: Object.freeze({
-      currentKey: snapshot.keepsakes.currentKey,
+      currentKey: requireCurrentKeepsake(snapshot.keepsakes.currentKey),
       usedKeys: Object.freeze(snapshot.keepsakes.history.map((entry) => entry.key)),
       blockedKeys: Object.freeze([...snapshot.keepsakes.removedKeys]),
       fatedStatus: snapshot.keepsakes.fatedStatus,
@@ -201,4 +202,10 @@ export function assembleOccurrenceDiagnostics(
     ...(roomEntered === undefined ? {} : { roomEntered }),
     ...(beforeRoomExit === undefined ? {} : { beforeRoomExit }),
   });
+}
+
+function requireCurrentKeepsake(key: string | null): string {
+  if (key === null)
+    throw new CompilerError('unsupportedRoute', 'execution requires an equipped keepsake');
+  return key;
 }

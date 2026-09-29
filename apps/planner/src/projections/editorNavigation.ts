@@ -41,7 +41,11 @@ export function projectRouteNavigation(
 export function createEditorNavigation(catalog: Catalog): EditorNavigation {
   const routes = catalog.routes.values
     .filter(
-      (route) => route.key === 'Underworld' || route.key === 'Surface' || route.key === 'Dream',
+      (route) =>
+        route.key === 'Underworld' ||
+        route.key === 'Surface' ||
+        route.key === 'Dream' ||
+        route.key === 'FreshFile',
     )
     .map((route) =>
       projectRouteNavigation(catalog, {

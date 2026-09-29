@@ -116,12 +116,20 @@ behavior. Route declarations map completion rooms by biome and ordinal; the
 engine applies those mappings to the authored full itinerary, independently of
 its configured prefix. A physical room family is not its route position.
 
+Every route also declares the save profile its run starts from. Underworld,
+Surface and Dream start from a mature save. `FreshFile` is the first
+Underworld attempt on a brand-new profile: a fixed F → G → H → I route with the
+pre-true-ending `I_PreBoss01`, the aspectless Staff as its fixed weapon and
+`F_Opening01` as its one opening. The engine owns what that profile means for
+loadout authorship, start resolution and initial history.
+
 The catalog declares one counted run-start reward binding; entry rooms have no
-intrinsic incoming reward. Narrow contextual encounter rules express genuine
-route-mode and first-position differences without replacing the whole room
-declaration. The engine resolves these facts with itinerary position into one
-entry product: reward binding, lifecycle and declaration-owned entered-store
-participation. Editor visibility is not an alternate room declaration.
+intrinsic incoming reward. A fresh profile's first entry has no run-start
+reward. Narrow contextual encounter rules express genuine route-mode and
+first-position differences without replacing the whole room declaration. The
+engine resolves these facts with itinerary position into one entry product:
+reward binding, lifecycle and declaration-owned entered-store participation.
+Editor visibility is not an alternate room declaration.
 
 N's fixed Hub mapping, open-set rules and visit order are separate from ordinary
 room pools. Side-slot availability rank describes physical generation pressure;

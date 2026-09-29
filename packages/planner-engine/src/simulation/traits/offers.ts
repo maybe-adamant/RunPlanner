@@ -962,9 +962,9 @@ export function recordAspectStartingTrait(
   catalog: Catalog,
   before: TraitHistoryState,
   owner: SemanticAddress,
-  loadout: { readonly aspectKey: string },
+  loadout: { readonly aspectKey: string | null },
 ): TraitHistoryState {
-  const aspect = catalog.aspects.byKey[loadout.aspectKey];
+  const aspect = loadout.aspectKey === null ? undefined : catalog.aspects.byKey[loadout.aspectKey];
   const starting = aspect?.startingTrait;
   if (starting === undefined) return before;
   return foldTraitHistoryEvents(catalog, [
@@ -983,9 +983,13 @@ export function recordAspectStartingTrait(
 }
 
 /** Whether a concrete SpellDrop is routed to the Aspect-owned talent frontier. */
-export function isAspectSpellDropDormant(catalog: Catalog, aspectKey: string | undefined): boolean {
+export function isAspectSpellDropDormant(
+  catalog: Catalog,
+  aspectKey: string | null | undefined,
+): boolean {
   return (
     aspectKey !== undefined &&
+    aspectKey !== null &&
     catalog.aspects.byKey[aspectKey]?.startingTrait?.giverKey === 'SpellDrop'
   );
 }

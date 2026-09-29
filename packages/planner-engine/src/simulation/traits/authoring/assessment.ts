@@ -261,6 +261,7 @@ export function assessTraitOptionAgainstRarityDomain(
   if (
     trait.hammerCompatibility !== undefined &&
     (state.equipment.weaponKey !== trait.hammerCompatibility.weaponKey ||
+      state.equipment.aspectKey === null ||
       !trait.hammerCompatibility.aspectKeys.includes(state.equipment.aspectKey))
   )
     findings.push({ code: 'wrongHammerLoadout', traitKey });
@@ -280,7 +281,8 @@ export function assessTraitOptionAgainstRarityDomain(
   if (
     trait.selectedDisposition.kind === 'echo' &&
     trait.selectedDisposition.effect === 'repeatKeepsake' &&
-    (state.keepsakes.currentKey.length === 0 ||
+    (state.keepsakes.currentKey === null ||
+      state.keepsakes.currentKey.length === 0 ||
       trait.selectedDisposition.excludedKeepsakeKeys.includes(state.keepsakes.currentKey))
   )
     findings.push({ code: 'offerContext', traitKey, detail: 'echoKeepsakeExcluded' });

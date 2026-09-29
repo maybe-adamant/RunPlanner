@@ -239,11 +239,6 @@ export function createUnresolvedLevelResolutions(
   return Object.keys(result).length === 0 ? undefined : Object.freeze(result);
 }
 
-export interface TraitOfferLoadoutContext {
-  readonly weaponKey: string;
-  readonly aspectKey: string;
-}
-
 export function optionIndex(key: TraitOptionKey): 0 | 1 | 2 {
   return key === 'option1' ? 0 : key === 'option2' ? 1 : 2;
 }

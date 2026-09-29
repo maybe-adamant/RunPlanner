@@ -1,6 +1,6 @@
 import { catalog } from '@run-planner/hades2-catalog';
 import type { Catalog } from '../../src/catalog-schema';
-import type { AuthoredKeepsakeEquipResults } from '../../src/authored-project/model';
+import type { AuthoredKeepsakeEquipResults, RouteLoadout } from '../../src/authored-project/model';
 import { createDefaultRouteLoadout } from '../../src/authored-project/loadout';
 import { resolveRoutePosition } from '../../src/authored-project/route-context';
 import { createArcanaFearState, type ArcanaFearState } from '../../src/simulation/arcana-fear';
@@ -37,10 +37,10 @@ export function initializeTestRewardBranchesForRoute(
   initialBranches: readonly RewardBranch[] | undefined = undefined,
   initialArcanaFear: ArcanaFearState | undefined = undefined,
   testCatalog: Catalog = catalog,
-  startingKeepsakeKey: string | undefined = undefined,
+  startingKeepsakeKey: string | null | undefined = undefined,
   startingKeepsakeEquipResults: AuthoredKeepsakeEquipResults | undefined = undefined,
   routeKey: string | undefined = undefined,
-  loadout: ReturnType<typeof createDefaultRouteLoadout> | undefined = undefined,
+  loadout: RouteLoadout | undefined = undefined,
   reached?: Parameters<typeof initializeRewardBranches>[7],
 ) {
   const predecessor = initialBranches?.[0];
@@ -71,7 +71,9 @@ export function initializeTestRewardBranchesForRoute(
     initialBranches,
     resolvedArcanaFear,
     testCatalog,
-    startingKeepsakeKey ?? testCatalog.defaultStartingKeepsakeKey,
+    startingKeepsakeKey === undefined
+      ? testCatalog.defaultStartingKeepsakeKey
+      : startingKeepsakeKey,
     startingKeepsakeEquipResults,
     resolvedRouteKey,
     resolvedLoadout,

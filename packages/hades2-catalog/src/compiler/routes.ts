@@ -69,6 +69,30 @@ function normalizeDreamItinerary(
   });
 }
 
+function normalizeInitialProfile(
+  route: RouteDeclaration,
+  routePath: string,
+  biomeKeys: readonly string[],
+  rooms: CatalogCollection<RoomDeclaration>,
+): RouteDeclaration['initialProfile'] {
+  const profile = route.initialProfile;
+  if (profile.kind === 'matureSave') return Object.freeze({ kind: 'matureSave' });
+  if (profile.kind !== 'freshFile') fail(`${routePath}.initialProfile.kind`, 'is unknown');
+  if (route.dreamItinerary !== undefined)
+    fail(`${routePath}.initialProfile`, 'a fresh profile has a fixed itinerary');
+  requireNonEmpty(profile.fixedWeaponKey, `${routePath}.initialProfile.fixedWeaponKey`);
+  const openingPath = `${routePath}.initialProfile.openingRoomGameName`;
+  const opening = rooms.byKey[profile.openingRoomGameName];
+  if (opening === undefined) fail(openingPath, `unknown room ${profile.openingRoomGameName}`);
+  if (opening.kind !== 'Opening' || opening.roomSetKey !== biomeKeys[0])
+    fail(openingPath, `must be an opening of route biome ${String(biomeKeys[0])}`);
+  return Object.freeze({
+    kind: 'freshFile',
+    fixedWeaponKey: profile.fixedWeaponKey,
+    openingRoomGameName: opening.gameName,
+  });
+}
+
 export function normalizeRoutes(
   rawRoutes: readonly RouteDeclaration[],
   biomes: CatalogCollection<BiomeDeclaration>,
@@ -93,6 +117,7 @@ export function normalizeRoutes(
       return biomeKey;
     });
     const dreamItinerary = normalizeDreamItinerary(route, routePath, biomes);
+    const initialProfile = normalizeInitialProfile(route, routePath, biomeKeys, rooms);
 
     const prebossEntries = Object.entries(route.completion.prebossRoomGameNameByBiomeKey);
     if (prebossEntries.length === 0) {
@@ -170,6 +195,7 @@ export function normalizeRoutes(
         postbossRoomGameNamesByOrdinal: Object.freeze(normalizedPostbossRoomGameNamesByOrdinal),
       }),
       ...(dreamItinerary === undefined ? {} : { dreamItinerary }),
+      initialProfile,
     });
   });
 

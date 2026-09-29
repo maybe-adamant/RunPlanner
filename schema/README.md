@@ -1,5 +1,16 @@
 # Project schema boundary
 
+Schema 90 admits the Fresh File route, whose loadout stores `null` weapon,
+aspect and starting keepsake selections. Every schema-89 document is a mature
+save with its selections already written.
+
+```bash
+npm run schema:migrate-89-to-90 -- path/to/schema-89-project.runplanner.json
+```
+
+The migration changes only the schema version and writes a sibling file
+without overwriting the source.
+
 Schema 89 gives every project a unique identity. Schema 88 created every new
 project with the shared default `projectId` `'run-plan'`.
 
@@ -161,8 +172,8 @@ output. It has no route-selection, in-place, or target-version mode.
 
 The schema-72 splitter's pure transformation is exported from
 `schema/split-project-72-to-73.js` for checkpoint conversion. The source value
-is never mutated. The application migrates schema 86, 87 and 88 documents to schema
-89 when it opens them; older documents need the offline tools above.
+is never mutated. The application migrates schema 86, 87, 88 and 89 documents to
+schema 90 when it opens them; older documents need the offline tools above.
 
 Migrate a schema-74 document with:
 

@@ -336,7 +336,7 @@ export function materializeHubDecision(
   occurrences: ReadonlyMap<OccurrenceId, RoomOccurrence>,
   loadout: RouteWeaponAspectLoadout,
 ): CanonicalHubDecision {
-  if (loadout.weaponKey.length === 0 || loadout.aspectKey.length === 0) {
+  if (loadout.weaponKey?.length === 0 || loadout.aspectKey?.length === 0) {
     fail(`${descriptor.hubKey} Hub materialization requires a route loadout`);
   }
   if (decision.hubKey !== descriptor.hubKey) {

@@ -101,7 +101,22 @@ export interface RouteDeclaration {
   };
   /** Present only for the native Dream route, whose itinerary is authored at project creation. */
   readonly dreamItinerary?: DreamItineraryDeclaration;
+  /** The save profile the route's run starts from. */
+  readonly initialProfile: RouteInitialProfileDeclaration;
 }
+
+/**
+ * A mature save supplies authored equipment and progression. A brand-new
+ * profile's first attempt starts with the aspectless Staff, no keepsake,
+ * Arcana, Fear or starting reward, from one fixed opening.
+ */
+export type RouteInitialProfileDeclaration =
+  | { readonly kind: 'matureSave' }
+  | {
+      readonly kind: 'freshFile';
+      readonly fixedWeaponKey: string;
+      readonly openingRoomGameName: string;
+    };
 
 /** The one declaration-owned reward domain offered before a route chooses an entry room. */
 export interface RunStartRewardDeclaration {
@@ -789,7 +804,7 @@ export type RoomOfferRewardBinding =
 
 /** A narrow declaration-owned encounter replacement for a contextual route entry. */
 export interface EntryContextualEncounterRule {
-  readonly routeKey: 'Dream';
+  readonly routeKey: 'Dream' | 'FreshFile';
   readonly position: 'every' | 'first';
   readonly encounterDefinitionKey: string;
 }

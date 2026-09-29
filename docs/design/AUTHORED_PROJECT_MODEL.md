@@ -155,8 +155,8 @@ not a second chronology. UI state owns no domain topology.
 ## Route Scope
 
 One document persists one route identity, its complete `itineraryBiomeKeys`,
-and a contiguous configured prefix of that itinerary. Underworld and Surface
-use their catalog presets. Dream creation selects four distinct biomes once in
+and a contiguous configured prefix of that itinerary. Underworld, Surface and
+Fresh File use their catalog presets. Dream creation selects four distinct biomes once in
 a transient draft. Engine-owned public admission enforces the catalog start
 pool and directional successor exclusions for creation, import and restoration.
 Structural decoding remains separate from public admission so internal model
@@ -169,6 +169,7 @@ document; it does not switch a hidden sibling route inside the current one.
 
 ```text
 Underworld: [] -> [F] -> [F, G] -> [F, G, H] -> [F, G, H, I]
+Fresh File: [] -> [F] -> [F, G] -> [F, G, H] -> [F, G, H, I]
 Surface:    [] -> [N] -> [N, O] -> [N, O, P] -> [N, O, P, Q]
 Dream:      configured prefixes of the immutable four-biome order chosen at creation
 ```
@@ -180,18 +181,32 @@ completion identities from the full itinerary. Chronological consumers share
 that product rather than infer placement from a biome name. Itinerary order is
 not editable inside an existing project.
 
+The route's catalog-declared save profile is part of its identity, not a
+separate persisted field. Fresh File's profile resolves its F start to the one
+`F_Opening01` opening, which configuring F creates directly; the start codec,
+start commands and start candidates share that resolved start pool.
+
 ### Route Loadout
 
-Each route persists its weapon/aspect choice, mandatory starting keepsake, an
-unordered canonical selection of manually active Arcana cards, and one
-declaration-bounded rank for every Fear Vow. The catalog owns card order,
-ordinary automatic-activation rules, Vow maxima, and Fear increments. The
-authored model owns only the player's starting selections; derived automatic
-cards and the configured Fear total are not persisted independently.
+Each route persists its weapon/aspect choice, starting keepsake, an unordered
+canonical selection of manually active Arcana cards, and one declaration-bounded
+rank for every Fear Vow. A mature-save route requires the weapon, aspect and
+keepsake keys. A Fresh File route stores all three as `null`, no manual Arcana,
+every Vow at rank 0, no starting reward and no keepsake equip result; the codec
+rejects any other value and every loadout command fails, because none of these
+is a choice on a brand-new profile. The engine resolves the run's actual
+equipment from the profile, the aspectless Staff, so weapon-dependent rules see
+the Staff while aspect-dependent rules see no aspect. Automatic Arcana derive
+from the empty selection as none. The catalog owns card order, ordinary
+automatic-activation rules, Vow maxima, and Fear increments. The authored model
+owns only the player's starting selections; derived automatic cards and the
+configured Fear total are not persisted independently.
 
-Loadout also owns the nullable starting reward offer. It can be selected before
-an entry-room variant exists and is retained when topology is cleared or no
-biomes are configured. The first entry occurrence owns only its acquisition
+Loadout also owns the nullable starting reward offer. A mature route reports a
+missing offer once any biome is configured; a Fresh File entry binds no
+run-start reward, so its null offer is complete. The offer can be selected
+before an entry-room variant exists and is retained when topology is cleared or
+no biomes are configured. The first entry occurrence owns only its acquisition
 payload and actions; composing these with the route offer does not persist a
 second copy of the offer. Recreating the entry initializes fresh acquisition
 payload, while replacing its variant preserves compatible authored outcomes.
@@ -221,13 +236,14 @@ not a synthetic reward or topology edge.
 
 ### Keepsake Authorship
 
-The route loadout owns one exact starting keepsake. Resolved Postboss room
-declarations expose physical racks; an occurrence owns a sparse
-`keepsakeRack` leaf with one catalog keepsake key only when the player authors
-a replacement. Absence means no interaction and carries the current keepsake.
-The occurrence and its local controls are active for every supported
-nonterminal route position. The ordinary terminal I and Q positions have no
-Postboss occurrence; physical biome identity alone does not determine finality.
+The route loadout owns one exact starting keepsake, or none on a Fresh File
+route. Resolved Postboss room declarations expose physical racks; an occurrence
+owns a sparse `keepsakeRack` leaf with one catalog keepsake key only when the
+player authors a replacement. Absence means no interaction and carries the
+current keepsake. The occurrence and its local controls are active for every
+supported nonterminal route position. The ordinary terminal I and Q positions
+have no Postboss occurrence; physical biome identity alone does not determine
+finality.
 
 Every structural Postboss state defaults to a `useFountain` action. Adding a
 replacement atomically adds the required `interactKeepsakeRack` action. Changing
@@ -1056,7 +1072,9 @@ copy under a new one. That change replaces the identity in every history
 snapshot rather than adding a command step, so Undo and Redo never restore the
 old identity. Schema 89 identities are unique: the 88 → 89 migration replaces
 schema 88's shared default `'run-plan'` with a unique identity, and there is no
-runtime rule for it.
+runtime rule for it. Schema 90 admits the Fresh File route's null equipment
+and keepsake selections; the 89 → 90 migration changes only the version, since
+every schema-89 route is a mature save whose selections stay as written.
 
 ## Undo and Redo
 

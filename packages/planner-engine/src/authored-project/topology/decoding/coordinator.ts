@@ -1,3 +1,4 @@
+import { biomeStartRoomGameNames, resolveBiomeStart } from '../../route-profile';
 import type { BiomeLayout, Catalog, RoomDeclaration } from '../../../catalog-schema';
 import type { ResolvedRoutePosition } from '../../route-context';
 import type {
@@ -779,10 +780,9 @@ export function decodeTopologyStructure(
   if (start === undefined)
     failProjectDocument(`${path}.startOccurrenceId`, `unknown occurrence ${startOccurrenceId}`);
   const startRoom = requireHostRoom(start, catalog, layout.biomeKey);
-  const validStartNames =
-    layout.start.kind === 'authoredChoice'
-      ? layout.start.roomGameNames
-      : [layout.start.roomGameName];
+  const validStartNames = biomeStartRoomGameNames(
+    resolveBiomeStart(catalog, routePosition.routeKey, layout),
+  );
   if (!validStartNames.includes(startRoom.gameName)) {
     failProjectDocument(
       `${start.path}.gameName`,

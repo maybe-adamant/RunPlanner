@@ -14,6 +14,7 @@ export const routes = [
       },
       postbossRoomGameNamesByOrdinal: ['F_PostBoss01', 'G_PostBoss01', 'H_PostBoss01', null],
     },
+    initialProfile: { kind: 'matureSave' },
   },
   {
     key: 'Surface',
@@ -28,6 +29,7 @@ export const routes = [
       },
       postbossRoomGameNamesByOrdinal: ['N_PostBoss01', 'O_PostBoss01', 'P_PostBoss01', null],
     },
+    initialProfile: { kind: 'matureSave' },
   },
   {
     key: 'Dream',
@@ -63,6 +65,28 @@ export const routes = [
         'Dream_PostBoss03',
         null,
       ],
+    },
+    initialProfile: { kind: 'matureSave' },
+  },
+  {
+    // StartNewGame begins the first attempt with StartNewRun(nil, { RoomName = "F_Opening01" })
+    // and the aspectless DummyWeaponStaff; I_PreBoss01 is the pre-true-ending Tartarus Preboss.
+    key: 'FreshFile',
+    label: 'Fresh File',
+    biomeKeys: ['F', 'G', 'H', 'I'],
+    completion: {
+      prebossRoomGameNameByBiomeKey: {
+        F: 'F_PreBoss01',
+        G: 'G_PreBoss01',
+        H: 'H_PreBoss01',
+        I: 'I_PreBoss01',
+      },
+      postbossRoomGameNamesByOrdinal: ['F_PostBoss01', 'G_PostBoss01', 'H_PostBoss01', null],
+    },
+    initialProfile: {
+      kind: 'freshFile',
+      fixedWeaponKey: 'WeaponStaffSwing',
+      openingRoomGameName: 'F_Opening01',
     },
   },
 ] as const satisfies readonly RouteDeclaration[];

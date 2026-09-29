@@ -28,7 +28,7 @@ const project = createProjectDocument(catalog, {
 });
 
 describe('project document loader', () => {
-  it('loads a current schema-89 document through the strict parser without migration provenance', () => {
+  it('loads a current schema-90 document through the strict parser without migration provenance', () => {
     const json = encodeProjectDocument(project);
 
     expect(loadProjectDocument(json, catalog)).toEqual({
@@ -51,11 +51,11 @@ describe('project document loader', () => {
         delete decision.actions;
       }
     expect(() =>
-      parseProjectDocument(JSON.stringify({ ...legacy, schemaVersion: 89 }), catalog),
+      parseProjectDocument(JSON.stringify({ ...legacy, schemaVersion: 90 }), catalog),
     ).toThrow(/visitOrder/);
 
     const loaded = loadProjectDocument(JSON.stringify(legacy), catalog);
-    expect(loaded.migrationProvenance).toHaveLength(2);
+    expect(loaded.migrationProvenance).toHaveLength(3);
     expect(loaded.project).toEqual(
       applyProjectCommand(current, catalog, {
         kind: 'ReplaceHubActionOrder',
@@ -65,7 +65,7 @@ describe('project document loader', () => {
     );
   });
 
-  it('chains a schema-87 document without a Hub through 88 to 89 by version only', () => {
+  it('chains a schema-87 document without a Hub through 88 and 89 to 90 by version only', () => {
     const legacy = JSON.parse(encodeProjectDocument(project)) as Record<string, unknown>;
     legacy.schemaVersion = 87;
 
@@ -83,6 +83,12 @@ describe('project document loader', () => {
           targetCatalogVersion: catalog.version,
           targetSchemaVersion: 89,
         },
+        {
+          sourceCatalogVersion: catalog.version,
+          sourceSchemaVersion: 89,
+          targetCatalogVersion: catalog.version,
+          targetSchemaVersion: 90,
+        },
       ],
       project,
     });
@@ -94,7 +100,7 @@ describe('project document loader', () => {
     legacy.projectId = 'run-plan';
     const first = loadProjectDocument(JSON.stringify(legacy), catalog);
     const second = loadProjectDocument(JSON.stringify(legacy), catalog).project;
-    expect(first.migrationProvenance.map((step) => step.sourceSchemaVersion)).toEqual([88]);
+    expect(first.migrationProvenance.map((step) => step.sourceSchemaVersion)).toEqual([88, 89]);
     expect(first.project.projectId).toMatch(/^run-plan-[0-9a-f-]{36}$/);
     expect(second.projectId).not.toBe(first.project.projectId);
     expect({ ...first.project, projectId: project.projectId }).toEqual(project);
@@ -104,13 +110,37 @@ describe('project document loader', () => {
       /^run-plan-[0-9a-f-]{36}$/,
     );
 
-    // Schema 89 documents are current and load exactly as written.
-    const current = { ...legacy, schemaVersion: 89 };
-    expect(loadProjectDocument(JSON.stringify(current), catalog)).toEqual({
-      migrationProvenance: [],
-      project: { ...project, projectId: 'run-plan' },
+    // Schema 89 identities are already unique; they keep the shared-looking one as written.
+    const unique = { ...legacy, schemaVersion: 89 };
+    expect(loadProjectDocument(JSON.stringify(unique), catalog).project).toEqual({
+      ...project,
+      projectId: 'run-plan',
     });
   });
+
+  it.each([
+    ['Underworld', () => createGoldenFGHIProject()],
+    ['Surface', () => loadSurfaceNProject()],
+  ])(
+    'migrates a mature schema-89 %s document to schema 90 without reinterpreting it',
+    (_route, current) => {
+      const expected = current();
+      const legacy = { ...JSON.parse(encodeProjectDocument(expected)), schemaVersion: 89 };
+      const loaded = loadProjectDocument(JSON.stringify(legacy), catalog);
+      expect(loaded.migrationProvenance).toEqual([
+        {
+          sourceCatalogVersion: catalog.version,
+          sourceSchemaVersion: 89,
+          targetCatalogVersion: catalog.version,
+          targetSchemaVersion: 90,
+        },
+      ]);
+      expect(loaded.project).toEqual(expected);
+      expect(encodeProjectDocument(loaded.project)).toBe(
+        JSON.stringify({ ...legacy, schemaVersion: 90 }, null, 2) + '\n',
+      );
+    },
+  );
 
   it('migrates schema-86 generated weights before strict decoding', () => {
     const occurrenceId = goldenFOccurrenceId(5, 1);
@@ -167,7 +197,7 @@ describe('project document loader', () => {
       },
     };
     expect(() =>
-      parseProjectDocument(JSON.stringify({ ...legacy, schemaVersion: 89 }), catalog),
+      parseProjectDocument(JSON.stringify({ ...legacy, schemaVersion: 90 }), catalog),
     ).toThrow(/weights/);
     const loaded = loadProjectDocument(JSON.stringify(legacy), catalog);
 
@@ -191,6 +221,12 @@ describe('project document loader', () => {
           targetCatalogVersion: catalog.version,
           targetSchemaVersion: 89,
         },
+        {
+          sourceCatalogVersion: catalog.version,
+          sourceSchemaVersion: 89,
+          targetCatalogVersion: catalog.version,
+          targetSchemaVersion: 90,
+        },
       ],
       project: expected,
     });
@@ -205,8 +241,8 @@ describe('project document loader', () => {
     ],
     [
       'future schema',
-      JSON.stringify({ ...project, schemaVersion: 90 }),
-      /newer than supported schema 89/,
+      JSON.stringify({ ...project, schemaVersion: 91 }),
+      /newer than supported schema 90/,
     ],
     [
       'mismatched current catalog',
@@ -223,7 +259,7 @@ describe('project document loader', () => {
       catalogVersion: 'catalog-85-normalized',
       schemaVersion: 85,
     } as const;
-    const currentIdentity = { catalogVersion: catalog.version, schemaVersion: 89 } as const;
+    const currentIdentity = { catalogVersion: catalog.version, schemaVersion: 90 } as const;
     const oldDocument = { ...project, ...oldIdentity };
 
     const migrated = applyProjectDocumentTransitions({
@@ -262,7 +298,7 @@ describe('project document loader', () => {
         sourceCatalogVersion: 'catalog-85-normalized',
         sourceSchemaVersion: 85,
         targetCatalogVersion: catalog.version,
-        targetSchemaVersion: 89,
+        targetSchemaVersion: 90,
       },
     ]);
     expect(parseProjectDocument(JSON.stringify(migrated.document), catalog)).toEqual(project);
@@ -270,7 +306,7 @@ describe('project document loader', () => {
 
   it('rejects a transition that does not reach its declared target identity', () => {
     const oldIdentity = { catalogVersion: 'catalog-85', schemaVersion: 85 } as const;
-    const currentIdentity = { catalogVersion: catalog.version, schemaVersion: 89 } as const;
+    const currentIdentity = { catalogVersion: catalog.version, schemaVersion: 90 } as const;
 
     expect(() =>
       applyProjectDocumentTransitions({

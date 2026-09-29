@@ -1,3 +1,4 @@
+import { routeSupportsGeneratedEncounterCustomization } from '../../authored-project/route-profile';
 import type { ResolvedRoutePosition } from '../../authored-project/route-context';
 import { resolveEntryDeclaration } from '../../authored-project/room-state/entry-resolution';
 import type {
@@ -240,6 +241,23 @@ function slotActivationFinding(
   });
 }
 
+/** A retained generated value stays authored but unsupported; nothing else is generated. */
+function withoutGeneratedCustomization(phase: ResolvedEncounterPhase): ResolvedEncounterPhase {
+  if (phase.customization === undefined) return phase;
+  return Object.freeze({
+    ...phase,
+    customization: Object.freeze(
+      phase.customization.flatMap((decision) =>
+        decision.selection.kind !== 'generated'
+          ? [decision]
+          : decision.value === undefined
+            ? []
+            : [Object.freeze({ ...decision, valueSupported: false })],
+      ),
+    ),
+  });
+}
+
 function customizationFinding(
   origin: EncounterPhaseAddress,
   beforeSequence: number,
@@ -335,16 +353,22 @@ export function prepareRoomEncounterPhases(
   let prefixValid = true;
   let suffixTerminated = false;
 
+  const generatedCustomizationAvailable = routeSupportsGeneratedEncounterCustomization(
+    catalog,
+    routePosition.routeKey,
+  );
   const prepareCustomization = (phase: ResolvedEncounterPhase, origin: EncounterPhaseAddress) => {
-    const result = prepareGeneratedEncounter(
-      phase,
-      origin,
-      preparation,
-      runState.rewardGeneration,
-      runState.hordesRankAt,
-      runState.fangsRankAt,
-      runState.menaceRankAt,
-    );
+    const result = generatedCustomizationAvailable
+      ? prepareGeneratedEncounter(
+          phase,
+          origin,
+          preparation,
+          runState.rewardGeneration,
+          runState.hordesRankAt,
+          runState.fangsRankAt,
+          runState.menaceRankAt,
+        )
+      : { phase: withoutGeneratedCustomization(phase) };
     if (result.capability !== undefined) generation.push(result.capability);
     const roster = prepareInfiniteRoster(result.phase, origin, preparation);
     if (roster.capability !== undefined) rosters.push(roster.capability);

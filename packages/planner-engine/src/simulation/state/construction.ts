@@ -1,6 +1,11 @@
 import type { Catalog } from '../../catalog-schema';
 import type { ResolvedRoutePosition } from '../../authored-project/route-context';
-import { createRewardHistoryState, type SaveFileGodHistory } from '../../reward-kernel';
+import { createRewardHistoryState } from '../../reward-kernel';
+import type { RouteWeaponAspectLoadout } from '../../authored-project/model';
+import {
+  resolveRouteEquipment,
+  routeSaveFileGodHistory,
+} from '../../authored-project/route-profile';
 import type { ArcanaFearState } from '../arcana-fear';
 import type { HistoryStateView } from '../history';
 import { createKeepsakeState } from '../keepsakes/state';
@@ -16,25 +21,25 @@ import { createEmptyRewardLookups, type SimulationState } from './model';
  */
 export function createInitialSimulationState(
   catalog: Catalog,
-  loadout: { readonly weaponKey: string; readonly aspectKey: string },
-  startingKeepsakeKey: string,
+  loadout: RouteWeaponAspectLoadout,
+  startingKeepsakeKey: string | null,
   arcanaFear: ArcanaFearState,
   reached: {
     readonly routePosition: ResolvedRoutePosition;
     readonly historyView: HistoryStateView;
   },
-  saveFileGodHistory: SaveFileGodHistory,
 ): SimulationState {
+  const routeKey = reached.routePosition.routeKey;
   return Object.freeze({
-    equipment: Object.freeze({
-      weaponKey: loadout.weaponKey,
-      aspectKey: loadout.aspectKey,
-    }),
+    equipment: resolveRouteEquipment(catalog, routeKey, loadout),
     reached: Object.freeze(reached),
     bags: Object.freeze({}),
     rewardPriorities: Object.freeze([]),
     hexProgress: Object.freeze({ bankedPathPoints: 0, investedPathPoints: 0 }),
-    rewardHistory: createRewardHistoryState(catalog.rewards, saveFileGodHistory),
+    rewardHistory: createRewardHistoryState(
+      catalog.rewards,
+      routeSaveFileGodHistory(catalog, routeKey),
+    ),
     traitHistory: createTraitHistoryState(),
     arcanaFear,
     keepsakes: createKeepsakeState(catalog, startingKeepsakeKey, arcanaFear),

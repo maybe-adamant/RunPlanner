@@ -10,7 +10,8 @@ export interface KeepsakeHistoryEntry {
   readonly biomeNumber: number;
 }
 export interface KeepsakeState {
-  readonly currentKey: string;
+  /** Null when the run starts without a keepsake and none has been equipped since. */
+  readonly currentKey: string | null;
   readonly history: readonly KeepsakeHistoryEntry[];
   readonly removedKeys: readonly string[];
   readonly fatedStatus: FatedStatus;
@@ -142,7 +143,8 @@ export function advanceCurrentKeepsake(
   state: KeepsakeState,
   rankBonus: 1,
 ): KeepsakeState {
-  const keepsake = catalog.keepsakes.byKey[state.currentKey];
+  const keepsake =
+    state.currentKey === null ? undefined : catalog.keepsakes.byKey[state.currentKey];
   const effect = keepsake?.effect;
   if (keepsake === undefined || effect === undefined) return state;
   const advancedRank: KeepsakeRank =
@@ -341,8 +343,11 @@ export function deriveFatedStatus(
  * state. Unlike the Calling Card and Time Piece charges, these uses are not
  * zeroed while Unfated, so the rule takes no Arcana input.
  */
-export function initialFigLeafState(catalog: Catalog, key: string): KeepsakeState['figLeaf'] {
-  const keepsake = catalog.keepsakes.byKey[key];
+export function initialFigLeafState(
+  catalog: Catalog,
+  key: string | null,
+): KeepsakeState['figLeaf'] {
+  const keepsake = key === null ? undefined : catalog.keepsakes.byKey[key];
   const effect = keepsake?.effect;
   return effect?.kind === 'figLeaf' && keepsake !== undefined
     ? Object.freeze({
@@ -354,21 +359,21 @@ export function initialFigLeafState(catalog: Catalog, key: string): KeepsakeStat
 
 export function createKeepsakeState(
   catalog: Catalog,
-  key: string,
+  key: string | null,
   arcanaFear?: ArcanaFearState,
   biomeNumber = 1,
 ): KeepsakeState {
-  const keepsake = catalog.keepsakes.byKey[key];
+  const keepsake = key === null ? undefined : catalog.keepsakes.byKey[key];
   const effect = keepsake?.effect;
   const figLeaf = initialFigLeafState(catalog, key);
   const fatedStatus = deriveFatedStatus(
     catalog,
-    [key],
+    key === null ? [] : [key],
     arcanaFear?.arcana.active.map((card) => card.key),
   );
   return Object.freeze({
     currentKey: key,
-    history: Object.freeze([{ key, kind: 'start' as const, biomeNumber }]),
+    history: Object.freeze(key === null ? [] : [{ key, kind: 'start' as const, biomeNumber }]),
     removedKeys: Object.freeze([]),
     fatedStatus,
     experimentalHammers: Object.freeze([]),
@@ -376,7 +381,7 @@ export function createKeepsakeState(
       effect?.kind === 'olympianRewardPressure'
         ? Object.freeze([
             Object.freeze({
-              keepsakeKey: key,
+              keepsakeKey: keepsake!.key,
               providerKey: effect.providerKey,
               origin: 'ordinary' as const,
               acquisitionOrder: 0,
@@ -496,7 +501,9 @@ export function applyKeepsakeReplacement(
     ...withoutOrdinaryOlympian,
     currentKey: keepsakeKey,
     history,
-    removedKeys: Object.freeze([...state.removedKeys, state.currentKey]),
+    removedKeys: Object.freeze(
+      state.currentKey === null ? state.removedKeys : [...state.removedKeys, state.currentKey],
+    ),
     fatedStatus,
     ...(state.gorgon?.status === 'pending'
       ? { gorgon: Object.freeze({ status: 'expired' as const }) }

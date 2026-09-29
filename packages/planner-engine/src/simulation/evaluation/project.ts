@@ -10,6 +10,7 @@ import {
 } from '../../authored-project/addresses';
 import type { AuthoredRoutePlan, ProjectDocument } from '../../authored-project/model';
 import { resolveRoutePosition } from '../../authored-project/route-context';
+import { routeBindsRunStartReward } from '../../authored-project/route-profile';
 import { forcedChaosOccurrenceKeysForRoute } from '../../authored-project/chaos-gate-reconciliation';
 import {
   createProjectCandidateArtifacts,
@@ -127,6 +128,7 @@ function evaluateRouteAssembly(
   const resourceFindings = resourcePlacementFindings(route.routeKey, resourceAuthoring);
   const startingReward = createStartingRewardAddress(route.routeKey);
   const routeStart = createRouteStartKeepsakeSelectionAddress(route.routeKey);
+  const runStartReward = routeBindsRunStartReward(catalog, route.routeKey);
   routeStartKeepsakes.set(
     semanticAddressKey(routeStart),
     Object.freeze({
@@ -138,8 +140,13 @@ function evaluateRouteAssembly(
       encounterBlockedKeepsakeKeys: Object.freeze([]),
     }),
   );
-  const routeStartEffect = catalog.keepsakes.byKey[route.loadout.startingKeepsakeKey]?.effect;
+  const routeStartKeepsake =
+    route.loadout.startingKeepsakeKey === null
+      ? undefined
+      : catalog.keepsakes.byKey[route.loadout.startingKeepsakeKey];
+  const routeStartEffect = routeStartKeepsake?.effect;
   if (
+    routeStartKeepsake !== undefined &&
     routeStartEffect !== undefined &&
     (routeStartEffect.kind === 'jeweledPom' ||
       routeStartEffect.kind === 'experimentalHammer' ||
@@ -152,13 +159,12 @@ function evaluateRouteAssembly(
     const routeStartState = createInitialSimulationState(
       catalog,
       route.loadout,
-      route.loadout.startingKeepsakeKey,
+      routeStartKeepsake.key,
       startArcanaFear,
       Object.freeze({
         routePosition: resolveRoutePosition(catalog, route, route.itineraryBiomeKeys[0]!),
         historyView: createRouteStartHistoryView(),
       }),
-      'mature',
     );
     const authoredResult = route.loadout.keepsakeEquipResults?.[routeStartEffect.kind];
     if (authoredResult === undefined) {
@@ -175,7 +181,7 @@ function evaluateRouteAssembly(
           severity: 'error',
           phase: 'rewardGeneration',
           origin: result,
-          evidence: Object.freeze({ keepsakeKey: route.loadout.startingKeepsakeKey }),
+          evidence: Object.freeze({ keepsakeKey: routeStartKeepsake.key }),
         }),
       );
     } else if (
@@ -196,9 +202,7 @@ function evaluateRouteAssembly(
               catalog,
               route.loadout.keepsakeEquipResults!.transcendentEmbryo!,
               routeStartState.traitHistory,
-              routeStartEffect.blessingRarityByRank[
-                catalog.keepsakes.byKey[route.loadout.startingKeepsakeKey]?.rank ?? 'Epic'
-              ],
+              routeStartEffect.blessingRarityByRank[routeStartKeepsake.rank],
               {
                 aspectKey: routeStartState.equipment.aspectKey,
                 routeKey: routeStartState.reached.routePosition.routeKey,
@@ -212,7 +216,7 @@ function evaluateRouteAssembly(
           severity: 'error',
           phase: 'rewardGeneration',
           origin: result,
-          evidence: Object.freeze({ keepsakeKey: route.loadout.startingKeepsakeKey }),
+          evidence: Object.freeze({ keepsakeKey: routeStartKeepsake.key }),
         }),
       );
     }
@@ -227,9 +231,7 @@ function evaluateRouteAssembly(
             ...(routeStartEffect.kind === 'transcendentEmbryo'
               ? {
                   transcendentEmbryoRarity:
-                    routeStartEffect.blessingRarityByRank[
-                      catalog.keepsakes.byKey[route.loadout.startingKeepsakeKey]?.rank ?? 'Epic'
-                    ],
+                    routeStartEffect.blessingRarityByRank[routeStartKeepsake.rank],
                 }
               : {}),
           }),
@@ -237,7 +239,7 @@ function evaluateRouteAssembly(
       }),
     );
   }
-  if (routeStartBlock === null) {
+  if (runStartReward && routeStartBlock === null) {
     routeStartRewards.set(
       semanticAddressKey(startingReward),
       createStartingRewardCandidateCapability(
@@ -249,7 +251,7 @@ function evaluateRouteAssembly(
       ),
     );
   }
-  if (route.biomes.length > 0 && route.loadout.startingReward === null) {
+  if (runStartReward && route.biomes.length > 0 && route.loadout.startingReward === null) {
     findings.push(
       Object.freeze({
         code: 'rewardMissing',

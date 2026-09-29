@@ -8,8 +8,8 @@ import type {
 } from '../../catalog-schema';
 import type { CountedRewardBinding, ShopRewardBinding } from '../../reward-kernel/bindings';
 import { encounterEnvelopeSlots } from './encounter-envelope';
+import type { RouteWeaponAspectLoadout } from '../model';
 import { failProjectDocument } from '../validation';
-import type { TraitOfferLoadoutContext } from '../traits/state';
 
 export type RoomOccurrenceRole = 'ordinary' | 'prebossFreeReward' | 'prebossShop';
 
@@ -17,7 +17,7 @@ export interface RoomStateContext {
   readonly role: RoomOccurrenceRole;
   readonly resolvedStoreKey?: string;
   readonly entryActive: boolean;
-  readonly loadout: TraitOfferLoadoutContext;
+  readonly loadout: RouteWeaponAspectLoadout;
   /** Required only while constructing a Fields occurrence inside its selected batch. */
   readonly activeCageCount?: number;
   /**

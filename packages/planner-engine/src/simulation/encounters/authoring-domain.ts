@@ -1,3 +1,4 @@
+import { routeSupportsGeneratedEncounterCustomization } from '../../authored-project/route-profile';
 import type { ResolvedRoutePosition } from '../../authored-project/route-context';
 import type { Catalog, EncounterEnvelopeSlot, RoomDeclaration } from '../../catalog-schema';
 import type {
@@ -125,6 +126,11 @@ export function encounterPhaseAuthoringDomainForRoom(
     encounterEnvelopeSlots(catalog, room, room.gameName).map((slot) => [slot.key, slot]),
   );
   const domains: EncounterPhaseAuthoringDomain[] = [];
+  // A retained generated value on a profile without generated customization stays for repair.
+  const generatedCustomizationAvailable = routeSupportsGeneratedEncounterCustomization(
+    catalog,
+    biome.routeKey,
+  );
   for (const binding of bindings.values()) {
     if (
       binding.kind === 'fixed' &&
@@ -173,12 +179,17 @@ export function encounterPhaseAuthoringDomainForRoom(
               .filter(
                 (decision) =>
                   decision.selection.kind !== 'generated' ||
-                  supportsGeneratedEncounterCustomization(room),
+                  (supportsGeneratedEncounterCustomization(room) &&
+                    (generatedCustomizationAvailable ||
+                      encounters.customizationByPhase?.[binding.slotKey]?.[decision.key] !==
+                        undefined)),
               )
               .map((decision) => {
                 const value = encounters.customizationByPhase?.[binding.slotKey]?.[decision.key];
                 const valueSupported =
-                  value === undefined || customizationValueKnown([decision], decision.key, value);
+                  value === undefined ||
+                  ((decision.selection.kind !== 'generated' || generatedCustomizationAvailable) &&
+                    customizationValueKnown([decision], decision.key, value));
                 const retainedChoiceLabels =
                   value === undefined || value.kind === 'cocoonCount'
                     ? []

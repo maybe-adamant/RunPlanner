@@ -1,4 +1,5 @@
 import { resolveRoutePosition } from '../route-context';
+import { routeInitialProfile } from '../route-profile';
 import type { Catalog } from '../../catalog-schema';
 import { createInitialBiomeState, replaceBiomeStateField } from '../biomeState';
 import { assessStartingArcanaGrasp } from '../loadout';
@@ -19,6 +20,7 @@ import type { ProjectStateCommand } from './types';
 
 function routeForCommand(
   document: ProjectDocument,
+  catalog: Catalog,
   command: Extract<
     ProjectStateCommand,
     | { readonly kind: 'ReplaceStartingReward' }
@@ -37,11 +39,17 @@ function routeForCommand(
         : command.route.routeKey;
   if (document.route.routeKey !== routeKey)
     failCommand(command, `project is missing route ${routeKey}`);
+  // A fresh profile's starting loadout is fixed; it has no authored selections.
+  if (routeInitialProfile(catalog, routeKey).kind === 'freshFile')
+    failCommand(command, 'the Fresh File starting loadout is fixed');
   return { route: document.route };
 }
 
-function isSeleneAspect(catalog: Catalog, aspectKey: string): boolean {
-  return catalog.aspects.byKey[aspectKey]?.startingTrait?.traitKey === 'SpellMoonBeamTrait';
+function isSeleneAspect(catalog: Catalog, aspectKey: string | null): boolean {
+  return (
+    aspectKey !== null &&
+    catalog.aspects.byKey[aspectKey]?.startingTrait?.traitKey === 'SpellMoonBeamTrait'
+  );
 }
 
 function configureRoutePrefix(
@@ -179,7 +187,7 @@ export function applyProjectStateCommand(
 ): ProjectDocument {
   switch (command.kind) {
     case 'ReplaceStartingReward': {
-      const { route } = routeForCommand(document, command);
+      const { route } = routeForCommand(document, catalog, command);
       const binding = catalog.runStartReward.incomingReward;
       if (
         command.value !== null &&
@@ -250,7 +258,7 @@ export function applyProjectStateCommand(
     case 'ConfigureRoutePrefix':
       return configureRoutePrefix(document, catalog, command);
     case 'ReplaceRouteLoadout': {
-      const { route } = routeForCommand(document, command);
+      const { route } = routeForCommand(document, catalog, command);
       const weapon = catalog.weapons.byKey[command.weaponKey];
       if (weapon === undefined) failCommand(command, `unknown weapon ${command.weaponKey}`);
       if (!weapon.aspectKeys.includes(command.aspectKey)) {
@@ -283,7 +291,7 @@ export function applyProjectStateCommand(
       };
     }
     case 'ReplaceAspectHexTree': {
-      const { route } = routeForCommand(document, command);
+      const { route } = routeForCommand(document, catalog, command);
       if (!isSeleneAspect(catalog, route.loadout.aspectKey))
         failCommand(command, 'Aspect Hex trees are supported only by Aspect of Selene');
       let value;
@@ -299,7 +307,7 @@ export function applyProjectStateCommand(
       };
     }
     case 'ReplaceStartingKeepsake': {
-      const { route } = routeForCommand(document, command);
+      const { route } = routeForCommand(document, catalog, command);
       if (catalog.keepsakes.byKey[command.keepsakeKey] === undefined)
         failCommand(command, `unknown keepsake ${command.keepsakeKey}`);
       if (route.loadout.startingKeepsakeKey === command.keepsakeKey) return document;
@@ -312,7 +320,7 @@ export function applyProjectStateCommand(
       };
     }
     case 'ReplaceManualArcanaSelection': {
-      const { route } = routeForCommand(document, command);
+      const { route } = routeForCommand(document, catalog, command);
       const seen = new Set<string>();
       for (const key of command.arcanaKeys) {
         const card = catalog.arcanaCards.byKey[key];
@@ -342,7 +350,7 @@ export function applyProjectStateCommand(
       };
     }
     case 'ReplaceFearVowRank': {
-      const { route } = routeForCommand(document, command);
+      const { route } = routeForCommand(document, catalog, command);
       const vow = catalog.fearVows.byKey[command.vowKey];
       if (
         vow === undefined ||

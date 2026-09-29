@@ -251,7 +251,7 @@ function saturatedGiftHammerHistory(): TraitHistoryState {
   const compatible = catalog.traits.values.filter(
     (trait) =>
       trait.hammerCompatibility?.weaponKey === value.loadout.weaponKey &&
-      trait.hammerCompatibility.aspectKeys.includes(value.loadout.aspectKey),
+      trait.hammerCompatibility.aspectKeys.includes(value.loadout.aspectKey ?? ''),
   );
   return giftHistory(
     'TempHammerKeepsake',

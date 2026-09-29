@@ -70,7 +70,10 @@ export function resolveTraitOfferOptionLevel(
   if (!isLevelBearingTrait(catalog, option.traitKey))
     return Object.freeze({ findings: Object.freeze([]) });
 
-  const aspectEffect = catalog.aspects.byKey[state.equipment.aspectKey]?.traitOfferLevelBonus;
+  const aspectEffect =
+    state.equipment.aspectKey === null
+      ? undefined
+      : catalog.aspects.byKey[state.equipment.aspectKey]?.traitOfferLevelBonus;
   const pomLevels =
     source.stackBoostsSuppressed === true
       ? 0

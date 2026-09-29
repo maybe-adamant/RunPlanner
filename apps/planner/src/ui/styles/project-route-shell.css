@@ -589,6 +589,28 @@
   margin-top: 0.75rem;
 }
 
+.route-fixed-loadout-facts {
+  display: grid;
+  gap: 0.5rem;
+  max-width: 32rem;
+  margin: 0 0 0.75rem;
+}
+
+.route-fixed-loadout-facts > div {
+  display: grid;
+  grid-template-columns: 10rem minmax(0, 1fr);
+  gap: 0.75rem;
+}
+
+.route-fixed-loadout-facts dt {
+  white-space: nowrap;
+}
+
+.route-fixed-loadout-facts dd {
+  margin: 0;
+  color: #d9d4dc;
+}
+
 .route-loadout-controls > .contextual-picker > label,
 .route-loadout-controls > .loadout-dialog-launcher > label,
 .route-keepsake-controls > .contextual-picker > label,

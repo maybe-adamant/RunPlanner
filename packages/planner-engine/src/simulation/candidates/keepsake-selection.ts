@@ -26,7 +26,7 @@ export interface KeepsakeSelectionCandidateOption {
 export interface EvaluatedKeepsakeSelectionCandidate {
   readonly kind: 'keepsakeSelection';
   readonly result: {
-    readonly currentKey: string;
+    readonly currentKey: string | null;
     readonly options: readonly KeepsakeSelectionCandidateOption[];
     /** The selected authored value remains assessable even when invalid. */
     readonly selectedPossible: boolean;
