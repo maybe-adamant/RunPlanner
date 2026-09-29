@@ -1,4 +1,9 @@
-import type { Catalog, EncounterAuthoringProfile, RoomDeclaration } from '../../catalog-schema';
+import type {
+  Catalog,
+  EncounterAuthoringProfile,
+  EncounterCustomizationDecision,
+  RoomDeclaration,
+} from '../../catalog-schema';
 import type { RoomEncounterState } from '../../authored-project/model';
 import type { ResolvedRoutePosition } from '../../authored-project/route-context';
 import {
@@ -10,6 +15,7 @@ import {
 } from '../../authored-project/room-state/encounter-envelope';
 import type { MaterializedEncounterPhase, ResolvedEncounterPhase } from './model';
 import {
+  contextuallyReplacedCustomizationDecisions,
   customizationValueKnown,
   supportsGeneratedEncounterCustomization,
 } from '../../authored-project/room-state/encounter-customization';
@@ -32,9 +38,17 @@ export function resolvedEncounterPhaseForDefinition(
     'slotKey' | 'envelopeKey' | 'figLeafSkip' | 'rewardAttachment' | 'customizationByDecision'
   >,
   encounterKey: string,
+  /** Decisions a replaced route-free binding owned; their values are never supported. */
+  replacedDecisions: readonly EncounterCustomizationDecision[] = [],
 ): ResolvedEncounterPhase {
   const definition = catalog.encounterDefinitions.byKey[encounterKey];
   if (definition === undefined) return fail(`lost encounter ${encounterKey}`);
+  const retained = replacedDecisions.flatMap((decision) => {
+    const value = phase.customizationByDecision?.[decision.key];
+    return value === undefined
+      ? []
+      : [Object.freeze({ ...decision, valueSupported: false, value, replaced: true as const })];
+  });
   return Object.freeze({
     slotKey: phase.slotKey,
     envelopeKey: phase.envelopeKey,
@@ -49,11 +63,11 @@ export function resolvedEncounterPhaseForDefinition(
     hostsGorgon: definition.hostsGorgon === true,
     skipEndEncounterEffects: definition.skipEndEncounterEffects === true,
     figLeafSkip: phase.figLeafSkip,
-    ...(definition.customization === undefined
+    ...(definition.customization === undefined && retained.length === 0
       ? {}
       : {
-          customization: Object.freeze(
-            definition.customization.map((decision) => {
+          customization: Object.freeze([
+            ...(definition.customization ?? []).map((decision) => {
               const value = phase.customizationByDecision?.[decision.key];
               const valueSupported =
                 value === undefined || customizationValueKnown([decision], decision.key, value);
@@ -63,7 +77,8 @@ export function resolvedEncounterPhaseForDefinition(
                 ...(value === undefined ? {} : { value }),
               });
             }),
-          ),
+            ...retained,
+          ]),
         }),
     ...(phase.rewardAttachment === undefined ? {} : { rewardAttachment: phase.rewardAttachment }),
     ...(definition.sequenceEffect === undefined
@@ -216,7 +231,15 @@ export function resolveMaterializedEncounterPhase(
           return resolveEncounterAuthoringProfile(profile, context);
         })();
   if (definitionKey === undefined) return undefined;
-  const resolved = resolvedEncounterPhaseForDefinition(catalog, phase, definitionKey);
+  const routeFreeRoom = catalog.rooms.byKey[room.gameName];
+  const resolved = resolvedEncounterPhaseForDefinition(
+    catalog,
+    phase,
+    definitionKey,
+    routeFreeRoom === undefined
+      ? []
+      : contextuallyReplacedCustomizationDecisions(catalog, routeFreeRoom, room, phase.slotKey),
+  );
   if (supportsGeneratedEncounterCustomization(room) || resolved.customization === undefined)
     return resolved;
   return Object.freeze({

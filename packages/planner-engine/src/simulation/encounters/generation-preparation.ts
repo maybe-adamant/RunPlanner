@@ -55,7 +55,9 @@ export function prepareGeneratedEncounter(
   readonly phase: ResolvedEncounterPhase;
   readonly capability?: GeneratedEncounterCandidateCapability;
 } {
-  const decision = phase.customization?.find((entry) => entry.selection.kind === 'generated');
+  const decision = phase.customization?.find(
+    (entry) => entry.selection.kind === 'generated' && entry.replaced !== true,
+  );
   if (decision?.selection.kind !== 'generated') return { phase };
   const policy = decision.selection;
   const before = policy.preparation === 'rewardGeneration' ? rewardGeneration : preparation;

@@ -158,9 +158,31 @@ const fRoomDeclarations: readonly RawRoomDeclaration[] = [
       eligibleRewardTypes: [],
       ineligibleRewardTypes: ['Devotion'],
       producerLifecycleKey: 'RoomReward',
+      forcedRewards: [
+        {
+          offer: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'ApolloUpgrade' } },
+          // `GameState.UseRecord.ApolloUpgrade` is false.
+          requirement: {
+            kind: 'recordCount',
+            record: 'lifetimeGodUseRecord',
+            keys: ['ApolloUpgrade'],
+            range: { max: 0 },
+          },
+        },
+      ],
     },
     forcedRewardStoreKey: 'RunProgress',
+    // ForceLootTableFirstRun and ForceCommonLootFirstRun.
+    firstRunOffer: {
+      routeKey: 'FreshFile',
+      traitKeys: ['ApolloWeaponBoon', 'ApolloSprintBoon', 'ApolloManaBoon'],
+      rarity: 'Common',
+    },
     enteredRewardStoreHistory: { kind: 'resolvedOffer' },
+    // ForceIfEncounterNotCompleted = "FIntroFight": only a fresh profile has not completed it.
+    entryContextualEncounterRules: [
+      { routeKey: 'FreshFile', position: 'first', encounterDefinitionKey: 'FIntroFight' },
+    ],
     encounterEnvelopeKey: 'SingleEncounter',
     encounterSlotBindings: [
       { slotKey: 'Encounter', kind: 'fixed', encounterDefinitionKey: 'GeneratedF' },
@@ -172,6 +194,7 @@ const fRoomDeclarations: readonly RawRoomDeclaration[] = [
       axis: 'biomeEncounterDepth',
       range: { max: 5 },
     },
+    force: { kind: 'requirement', requirement: { kind: 'routeKeyEquals', routeKey: 'FreshFile' } },
   },
   {
     gameName: 'F_Combat02',

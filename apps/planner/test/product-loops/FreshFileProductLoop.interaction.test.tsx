@@ -14,7 +14,7 @@ afterEach(() => {
 });
 
 describe('Fresh File product loop', () => {
-  it('creates a Fresh File, shows its fixed loadout and edits onward from the empty opening', async () => {
+  it('creates a Fresh File and edits from the empty opening through the forced Apollo offer', async () => {
     const { application, user } = renderPlannerForInteraction({ startWithProject: false });
     const project = () => application.store.getState().projectWorkspace.history!.present;
 
@@ -44,7 +44,7 @@ describe('Fresh File product loop', () => {
     await user.click(within(screen.getByRole('listbox')).getAllByRole('option')[0]!);
     const occurrences = () => project().route.biomes[0]!.topology!.occurrences;
     expect(occurrences()).toHaveLength(2);
-    expect(occurrences()[1]?.gameName).toMatch(/^F_/);
+    expect(occurrences()[1]?.gameName).toBe('F_Combat01');
 
     application.store.dispatch(authoredProjectUndoRequested());
     expect(occurrences()).toHaveLength(1);
@@ -54,6 +54,45 @@ describe('Fresh File product loop', () => {
     application.store.dispatch(authoredProjectRedoRequested());
     application.store.dispatch(authoredProjectRedoRequested());
     expect(occurrences()).toHaveLength(2);
+
+    // The forced Apollo boon is the only reward, and its screen is the Common trio.
+    await user.click(screen.getByLabelText('Reward'));
+    const rewards = within(await screen.findByRole('listbox')).getAllByRole('option');
+    expect(rewards.map((option) => option.textContent)).toEqual(['Boon']);
+    await user.click(rewards[0]!);
+    const gods = within(screen.getByRole('listbox')).getAllByRole('option');
+    expect(gods.map((option) => option.textContent)).toEqual(['✓Apollo']);
+    await user.click(gods[0]!);
+    await user.click(screen.getByRole('button', { name: 'Open next room' }));
+    await user.click(screen.getByRole('tab', { name: 'Room Timeline' }));
+    expect(screen.getByRole('region', { name: 'Room Timeline' }).textContent).toContain(
+      'Intro combat',
+    );
+    await user.click(screen.getByRole('button', { name: /Choose Trait/ }));
+    const dialog = await screen.findByRole('dialog');
+    expect(dialog.textContent).toContain('Fresh rarity: Fixed Common');
+    await user.click(within(dialog).getByRole('button', { name: 'option1 trait' }));
+    const traits = within(await screen.findByRole('listbox')).getAllByRole('option');
+    expect(traits.map((option) => option.textContent)).toEqual(['✓Nova Strike']);
+    await user.keyboard('{Escape}');
+    await user.click(within(dialog).getByRole('button', { name: 'Save trait offer' }));
+    const apolloOffer = () => {
+      const state = occurrences()[1]?.state;
+      return state?.kind === 'counted' ? state.reward?.traitOffersByAcquisitionRole.source : null;
+    };
+    expect(apolloOffer()).toMatchObject({
+      giverKey: 'Apollo',
+      options: [
+        { traitKey: 'ApolloWeaponBoon', rarity: 'Common' },
+        { traitKey: 'ApolloSprintBoon', rarity: 'Common' },
+        { traitKey: 'ApolloManaBoon', rarity: 'Common' },
+      ],
+      selectedOptionKey: 'option1',
+    });
+    application.store.dispatch(authoredProjectUndoRequested());
+    expect(apolloOffer()).toBeNull();
+    application.store.dispatch(authoredProjectRedoRequested());
+    expect(apolloOffer()).toMatchObject({ selectedOptionKey: 'option1' });
 
     expect(application.projectOperations.inspectCurrentGamePlan()).toMatchObject({
       kind: 'unavailable',

@@ -1,6 +1,11 @@
 import { routeSupportsGeneratedEncounterCustomization } from '../../authored-project/route-profile';
 import type { ResolvedRoutePosition } from '../../authored-project/route-context';
-import type { Catalog, EncounterEnvelopeSlot, RoomDeclaration } from '../../catalog-schema';
+import type {
+  Catalog,
+  EncounterCustomizationDecision,
+  EncounterEnvelopeSlot,
+  RoomDeclaration,
+} from '../../catalog-schema';
 import type {
   AuthoredEncounterCustomization,
   RoomEncounterState,
@@ -18,6 +23,7 @@ import {
   fixedEncounterDefinitionKey,
 } from '../../authored-project/room-state/encounter-envelope';
 import {
+  contextuallyReplacedCustomizationDecisions,
   customizationDecisionOnRoute,
   customizationValueKnown,
   customizationValueRouteExcluded,
@@ -110,6 +116,37 @@ function templateSlotActive(
   throw new Error(`${room.gameName}.${slot.key} has unsupported template-controlled activation`);
 }
 
+/** Labels for authored choice keys, including ones the current domain no longer offers. */
+function retainedChoiceLabelsFor(
+  catalog: Catalog,
+  decision: EncounterCustomizationDecision,
+  value: AuthoredEncounterCustomization | undefined,
+): readonly { readonly key: string; readonly label: string }[] {
+  return value === undefined || value.kind === 'cocoonCount'
+    ? []
+    : (value.kind === 'single'
+        ? [value.choiceKey]
+        : value.kind === 'orderedPrefix'
+          ? value.choiceKeys
+          : value.kind === 'infiniteRoster'
+            ? value.typeKeys
+            : [
+                ...(value.highlightKey === undefined ? [] : [value.highlightKey]),
+                ...(value.waves ?? []).flatMap((wave) => wave.typeKeys),
+              ]
+      ).flatMap((choiceKey) => {
+        const choice = catalog.encounterDefinitions.values
+          .flatMap((candidate) => candidate.customization ?? [])
+          .flatMap((candidate): readonly { readonly key: string; readonly label: string }[] =>
+            candidate.key === decision.key && candidate.selection.kind !== 'cocoonCount'
+              ? candidate.selection.choices
+              : [],
+          )
+          .find((candidate) => candidate.key === choiceKey);
+        return choice === undefined ? [] : [Object.freeze({ key: choiceKey, label: choice.label })];
+      });
+}
+
 /**
  * Resolves the authored encounter controls for one room occurrence or local
  * child. It consults only catalog membership, the persisted selection, and
@@ -173,7 +210,25 @@ export function encounterPhaseAuthoringDomainForRoom(
       selectedEncounterDefinitionKey === undefined
         ? undefined
         : catalog.encounterDefinitions.byKey[selectedEncounterDefinitionKey];
-    const customization =
+    const routeFreeRoom = catalog.rooms.byKey[room.gameName];
+    const retained = (
+      routeFreeRoom === undefined
+        ? []
+        : contextuallyReplacedCustomizationDecisions(catalog, routeFreeRoom, room, binding.slotKey)
+    ).flatMap((decision) => {
+      const value = encounters.customizationByPhase?.[binding.slotKey]?.[decision.key];
+      if (value === undefined) return [];
+      const retainedChoiceLabels = retainedChoiceLabelsFor(catalog, decision, value);
+      return [
+        Object.freeze({
+          ...customizationDecisionOnRoute(decision, biome.routeKey),
+          valueSupported: false,
+          value,
+          ...(retainedChoiceLabels.length === 0 ? {} : { retainedChoiceLabels }),
+        }),
+      ];
+    });
+    const declaredCustomization =
       definition?.customization === undefined
         ? undefined
         : Object.freeze(
@@ -193,36 +248,7 @@ export function encounterPhaseAuthoringDomainForRoom(
                   ((decision.selection.kind !== 'generated' || generatedCustomizationAvailable) &&
                     customizationValueKnown([decision], decision.key, value) &&
                     !customizationValueRouteExcluded(decision, value, biome.routeKey));
-                const retainedChoiceLabels =
-                  value === undefined || value.kind === 'cocoonCount'
-                    ? []
-                    : (value.kind === 'single'
-                        ? [value.choiceKey]
-                        : value.kind === 'orderedPrefix'
-                          ? value.choiceKeys
-                          : value.kind === 'infiniteRoster'
-                            ? value.typeKeys
-                            : [
-                                ...(value.highlightKey === undefined ? [] : [value.highlightKey]),
-                                ...(value.waves ?? []).flatMap((wave) => wave.typeKeys),
-                              ]
-                      ).flatMap((choiceKey) => {
-                        const choice = catalog.encounterDefinitions.values
-                          .flatMap((candidate) => candidate.customization ?? [])
-                          .flatMap(
-                            (
-                              candidate,
-                            ): readonly { readonly key: string; readonly label: string }[] =>
-                              candidate.key === decision.key &&
-                              candidate.selection.kind !== 'cocoonCount'
-                                ? candidate.selection.choices
-                                : [],
-                          )
-                          .find((candidate) => candidate.key === choiceKey);
-                        return choice === undefined
-                          ? []
-                          : [Object.freeze({ key: choiceKey, label: choice.label })];
-                      });
+                const retainedChoiceLabels = retainedChoiceLabelsFor(catalog, decision, value);
                 return Object.freeze({
                   ...customizationDecisionOnRoute(decision, biome.routeKey),
                   valueSupported,
@@ -231,6 +257,10 @@ export function encounterPhaseAuthoringDomainForRoom(
                 });
               }),
           );
+    const customization =
+      retained.length === 0
+        ? declaredCustomization
+        : Object.freeze([...(declaredCustomization ?? []), ...retained]);
     domains.push(
       Object.freeze({
         origin: createEncounterPhaseAddress(biome, owner, binding.slotKey),

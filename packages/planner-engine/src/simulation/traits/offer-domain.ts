@@ -32,6 +32,18 @@ export interface TraitOfferSourceContext {
   readonly boonRarityItemOverride?: import('../../catalog-schema').BoonRarityOverride;
   /** Source-local `IgnoreTempRarityBonus`; permanent contributions remain active. */
   readonly suppressTemporaryBoonRarity?: boolean;
+  /** A room's first-run forced loot table; no other trait may be offered. */
+  readonly firstRunTraitKeys?: readonly string[];
+}
+
+/** The room's first-run offer rule as source policy on the route it names. */
+export function firstRunOfferSource(
+  room: Pick<import('../../catalog-schema').RoomDeclaration, 'firstRunOffer'>,
+  routeKey: string,
+): Pick<TraitOfferSourceContext, 'firstRunTraitKeys' | 'freshRarityOverride'> {
+  const rule = room.firstRunOffer;
+  if (rule === undefined || rule.routeKey !== routeKey) return Object.freeze({});
+  return Object.freeze({ firstRunTraitKeys: rule.traitKeys, freshRarityOverride: rule.rarity });
 }
 
 /**

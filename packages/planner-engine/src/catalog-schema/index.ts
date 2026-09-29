@@ -814,6 +814,17 @@ export interface EntryContextualEncounterRule {
   readonly encounterDefinitionKey: string;
 }
 
+/**
+ * Source `ForceLootTableFirstRun` and `ForceCommonLootFirstRun`, which apply
+ * while the save has no completed run: the route owning that profile.
+ */
+export interface FirstRunTraitOfferRule {
+  readonly routeKey: string;
+  /** The forced loot table: the only traits such a screen may offer. */
+  readonly traitKeys: readonly string[];
+  readonly rarity: 'Common';
+}
+
 export type PrebossBatchPolicy =
   | {
       readonly kind: 'takeOverNormalDoors';
@@ -875,6 +886,8 @@ export interface RoomDeclaration {
     readonly excludedRouteKeys?: readonly string[];
   };
   readonly boonRarityOverride?: import('./traits').BoonRarityOverride;
+  /** Trait-offer policy for loot opened in this room on the first run. */
+  readonly firstRunOffer?: FirstRunTraitOfferRule;
   readonly prebossBatchPolicy?: PrebossBatchPolicy;
   readonly forcedRewardStoreKey?: string;
   readonly individualRewardStoreKey?: string;

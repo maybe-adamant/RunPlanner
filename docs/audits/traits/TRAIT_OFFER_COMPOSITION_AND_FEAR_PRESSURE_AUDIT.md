@@ -76,6 +76,23 @@ H is not a generic “a core slot is occupied” flag. An ineligible provider
 identity cannot set it merely because its slot is occupied. Hermes has no
 priority or weapon list (`LootData_Hermes.lua:57–58`).
 
+### First-run forced loot table
+
+With zero completed runs, a room's `ForceLootTableFirstRun` replaces option
+construction with `GetPriorityTraits` over that table
+(`TraitLogic.lua:1794–1795`), and `ForceCommonLootFirstRun` forces Common
+(`RoomLogic.lua:2093–2095`). Only `F_Combat01` declares them: Apollo's Attack,
+Dash and Gain boons. The planner declares both as that room's `firstRunOffer`
+on `FreshFile`; an identity outside the table fails row eligibility, including
+prerequisite-free non-core Apollo boons.
+
+The strict allow-list is a bounded qualification of the native rule:
+`GetPriorityTraits` returns one random option when a table trait is already
+held or its slot occupied (`UpgradeChoiceLogic.lua:767,773`), and ordinary
+upgrades fill a screen the table leaves short (`TraitLogic.lua:1859`). Neither
+case occurs at Fresh `F_Combat01`, where all three are eligible and unheld, so
+the allow-list is exact there.
+
 ### Linked-priority support
 
 | Identity             | Linked prerequisites                 | Source              |

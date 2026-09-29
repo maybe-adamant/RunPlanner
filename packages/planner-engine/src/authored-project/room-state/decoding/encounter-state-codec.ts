@@ -26,6 +26,7 @@ import {
   encounterSetForBinding,
 } from '../encounter-envelope';
 import {
+  contextuallyReplacedCustomizationDecisions,
   customizationDecisionOwned,
   customizationValueKnown,
   customizationValueRepresentable,
@@ -44,6 +45,8 @@ export function decodeRoomEncounterState(
   catalog: Catalog,
   room: RoomDeclaration,
   path: string,
+  /** The route-free declaration when an entry-contextual rule replaced it. */
+  replacedRoom?: RoomDeclaration,
 ): RoomEncounterState {
   const state = expectRecord(value, path);
   expectExactKeys(
@@ -363,11 +366,20 @@ export function decodeRoomEncounterState(
       if (binding === undefined)
         failProjectDocument(`${path}.customizationByPhase.${phaseKey}`, 'unknown encounter phase');
       const declarations = encounterCustomizationDeclarations(catalog, room, binding);
+      const retainable = contextuallyReplacedCustomizationDecisions(
+        catalog,
+        replacedRoom ?? room,
+        room,
+        phaseKey,
+      );
       const decisions: Record<string, AuthoredEncounterCustomization> = {};
       for (const [decisionKey, rawValue] of Object.entries(
         expectRecord(rawDecisions, `${path}.customizationByPhase.${phaseKey}`),
       )) {
-        if (!customizationDecisionOwned(declarations.active, decisionKey))
+        if (
+          !customizationDecisionOwned(declarations.active, decisionKey) &&
+          !customizationDecisionOwned(retainable, decisionKey)
+        )
           failProjectDocument(
             `${path}.customizationByPhase.${phaseKey}.${decisionKey}`,
             'is not declared for this encounter phase',

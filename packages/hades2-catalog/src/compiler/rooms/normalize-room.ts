@@ -120,6 +120,7 @@ export function normalizeRoom(
     ...(features.boonRarityOverride === undefined
       ? {}
       : { boonRarityOverride: features.boonRarityOverride }),
+    ...(features.firstRunOffer === undefined ? {} : { firstRunOffer: features.firstRunOffer }),
     ...(reward.prebossBatchPolicy === undefined
       ? {}
       : { prebossBatchPolicy: reward.prebossBatchPolicy }),

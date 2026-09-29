@@ -93,7 +93,9 @@ export function prepareInfiniteRoster(
   readonly phase: ResolvedEncounterPhase;
   readonly capability?: InfiniteRosterCandidateCapability;
 } {
-  const decision = phase.customization?.find((entry) => entry.selection.kind === 'infiniteRoster');
+  const decision = phase.customization?.find(
+    (entry) => entry.selection.kind === 'infiniteRoster' && entry.replaced !== true,
+  );
   if (decision?.selection.kind !== 'infiniteRoster') return { phase };
   const selection = decision.selection;
   const context = Object.freeze({

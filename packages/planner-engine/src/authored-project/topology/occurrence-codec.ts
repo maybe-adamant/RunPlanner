@@ -390,6 +390,7 @@ export function decodeRoomOccurrence(input: {
     catalog,
     contextualRoom,
     `${rawOccurrence.path}.encounters`,
+    contextualRoom === room ? undefined : room,
   );
   const hermesShrine = rawOccurrence.hasHermesShrine
     ? decodeOrdinaryHermesShrineState(

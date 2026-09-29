@@ -10,6 +10,7 @@ export type {
   CountedRewardBinding,
   EnteredRewardStoreHistoryPolicy,
   FixedRewardBinding,
+  ForcedCountedReward,
   NoneRewardBinding,
   RewardProducerBinding,
   ShopRewardBinding,

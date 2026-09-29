@@ -3,9 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { catalog } from '@run-planner/hades2-catalog';
 import {
   createProjectDocument,
-  decodeProjectDocument,
   deriveRouteLoadout,
-  encodeProjectDocument,
   resolveRoutePosition,
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
@@ -20,6 +18,7 @@ import {
   simulateProjectAssembly,
 } from '@run-planner/engine/simulation';
 import { loadUnderworldGeneratedCompositionCheckpoint } from '@run-planner/test-fixtures/checkpoints/underworld';
+import { createFreshFileGeneratedComposition } from '@run-planner/test-fixtures/fresh-file';
 import { createRouteStartHistoryView } from '../../src/simulation/history/fold';
 import { createInitialSimulationState } from '../../src/simulation/state/construction';
 
@@ -42,32 +41,6 @@ function routeStartState(project: ProjectDocument) {
       routePosition: resolveRoutePosition(catalog, route, route.itineraryBiomeKeys[0]!),
       historyView: createRouteStartHistoryView(),
     },
-  );
-}
-
-/** The mature F prefix re-homed onto the fresh profile, keeping its retained customization. */
-function freshGeneratedComposition(): ProjectDocument {
-  // A fresh bag holds no Bones before the first Ashes pickup, and no Zeus or Hera.
-  const mature = JSON.parse(
-    encodeProjectDocument(loadUnderworldGeneratedCompositionCheckpoint())
-      .replaceAll('"MetaCurrencyDrop"', '"MetaCardPointsCommonDrop"')
-      .replaceAll('"Zeus', '"Poseidon')
-      .replaceAll('"Hera', '"Demeter'),
-  );
-  const [f] = mature.route.biomes;
-  for (const occurrence of f.topology.occurrences) delete occurrence.startingRewardAcquisition;
-  return decodeProjectDocument(
-    {
-      ...mature,
-      route: {
-        ...mature.route,
-        routeKey: 'FreshFile',
-        loadout: freshProject().route.loadout,
-        resourcePlacements: freshProject().route.resourcePlacements,
-        biomes: [f],
-      },
-    },
-    catalog,
   );
 }
 
@@ -108,7 +81,7 @@ describe('Fresh File route start', () => {
   });
 
   it('reports a retained generated customization instead of generating from it', () => {
-    const project = freshGeneratedComposition();
+    const project = createFreshFileGeneratedComposition();
     const customized = project.route.biomes[0]!.topology!.occurrences.find(
       (occurrence) => occurrence.encounters.customizationByPhase !== undefined,
     )!;

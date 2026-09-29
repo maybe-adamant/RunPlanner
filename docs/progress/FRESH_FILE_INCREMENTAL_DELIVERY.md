@@ -412,13 +412,21 @@ Locked decisions:
   `FreshFile`/first entry rule for it, the same mechanism as `OpeningEmpty`.
 - `F_Combat01` is forced on `FreshFile` through the existing
   `RoomForce.kind: 'requirement'`; forcing never bypasses eligibility.
+  The native force axis is encounter-completion history, which reduces to
+  route identity on our two profiles.
+- `FIntroFight` does not count encounter depth (`RoomLogic.lua:1900`), so
+  later Fresh encounter depths are one lower than after `GeneratedF`.
 - Native `ForcedRewards` is a declared forced incoming reward whose
   requirement is `lifetimeGodUseRecord` Apollo at zero. No route predicate;
   mature evaluates false and is unchanged. It settles as an Apollo boon offer
   without drawing the counted bag when native does not draw.
 - The first-run Apollo offer is a declaration-owned rule on `F_Combat01` for
-  `FreshFile`: exclude the Special and Cast core slots and force Common through
-  the existing forced-rarity frontier. It is not generalized to mature projects.
+  `FreshFile`: the native fixed allow-list (`ForceLootTableFirstRun`: Weapon,
+  Sprint, Mana) at Common through the existing forced-rarity frontier, not slot
+  exclusion. It is not generalized to mature projects.
+- A GeneratedF customization retained on Fresh `F_Combat01` decodes, reports
+  `encounterCustomizationUnavailable` and is removable, as Slice G retains
+  Wells and racks.
 - No execution or UI work: publication stays unavailable; existing projections
   present the fixed encounter and the Common trio. Publication must carry
   `FIntroFight` when execution lands, because the executor's forcing bypasses
@@ -489,7 +497,7 @@ authorship rather than masking defects with editor filters.
 | Area                     | Required result / important witness                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
 | ------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | First sequence           | Only F_Opening01, OpeningEmpty, then forced F_Combat01/FIntroFight and Apollo after combat. No reward moved into loadout. The executor's `ForceNextEncounterData` bypasses native `AlwaysForce`, `ForceIfEncounterNotCompleted`, `ForceIfRoomReward` and the EnemySet `ForceIntroduction` swap (`RunLogic.lua:1027-1091`); forced-candidate priority is planner policy, so the catalog must resolve `FIntroFight` and any other native forced identity in this profile before publication, never relying on the executor to yield. |
-| Apollo offer             | The first Apollo offer under `FreshFile` with no core boon held: exclude Apollo Special/Cast and use ordinary Common rarity machinery, reproducing `ForceLootTableFirstRun`. It is the only no-core screen reachable in this profile; do not generalize the condition to mature projects. Normal editor, other core-offer rules and later acquisition unchanged.                                                                                                                                                                   |
+| Apollo offer             | The first Apollo offer under `FreshFile` with no core boon held: the native fixed allow-list (Weapon/Sprint/Mana) at Common through ordinary rarity machinery, reproducing `ForceLootTableFirstRun`. It is the only no-core screen reachable in this profile; do not generalize the condition to mature projects. Normal editor, other core-offer rules and later acquisition unchanged.                                                                                                                                           |
 | Room exclusions          | Reprieves, unavailable stories/minibosses and Chaos/Anomaly/Zagreus unavailable through engine eligibility. Vanilla biome state.                                                                                                                                                                                                                                                                                                                                                                                                   |
 | Features                 | No Wells, usable Pools, postboss racks or resource points. Postboss fountains remain. H's locked Pool object is not an unexpected usable inventory.                                                                                                                                                                                                                                                                                                                                                                                |
 | Bridge                   | H_Bridge01 resolves to Shop, keeping native force window/creation limit and optional visitation pressure; no Echo action.                                                                                                                                                                                                                                                                                                                                                                                                          |

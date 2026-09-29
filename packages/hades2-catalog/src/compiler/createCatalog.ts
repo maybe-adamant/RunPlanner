@@ -22,6 +22,7 @@ import {
 } from './keepsakes';
 import { normalizeBiomeLayouts } from './layouts/normalize';
 import { normalizeRoomLifecycleProfiles, validateLifecycleBindings } from './lifecycles';
+import { validateFirstRunOfferRules } from './rooms/feature-facts';
 import { validateRoomLayoutClosure } from './rooms/layout-closure';
 import { normalizeRooms } from './rooms/normalize';
 import {
@@ -129,6 +130,7 @@ export function createCatalog(input: RawCatalogInput): Catalog {
     input.traitCatalog.traitAcquisitionProviders,
     traitCatalog.givers,
   );
+  validateFirstRunOfferRules(rooms, routes, traitCatalog.givers, traitGiverByAcquisitionGameName);
 
   return Object.freeze({
     version: input.version,

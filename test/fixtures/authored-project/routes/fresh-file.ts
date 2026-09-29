@@ -9,12 +9,14 @@ import {
   createOccurrenceId,
   createProjectDocument,
   createShopOfferAddress,
+  createStartingRewardAddress,
   createTargetAddress,
   decodeProjectDocument,
   encodeProjectDocument,
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
 import type { ResolvedRewardOffer } from '@run-planner/engine/reward-kernel';
+import { loadUnderworldGeneratedCompositionCheckpoint } from '../checkpoints/underworld';
 import { authorLegalTraitOffers } from '../shared';
 
 export const freshFileFBiome = createBiomeAddress('FreshFile', 'F');
@@ -34,7 +36,7 @@ const freshF: readonly {
   readonly storeKey: 'RunProgress' | 'MetaProgress';
   readonly targets: readonly (readonly [string, ResolvedRewardOffer | null])[];
 }[] = [
-  { storeKey: 'RunProgress', targets: [['F_Combat01', { rewardType: 'MaxHealthDrop' }]] },
+  { storeKey: 'RunProgress', targets: [['F_Combat01', boon('ApolloUpgrade')]] },
   {
     storeKey: 'MetaProgress',
     targets: [['F_Combat02', { rewardType: 'MetaCardPointsCommonDrop' }]],
@@ -56,7 +58,7 @@ const freshF: readonly {
   {
     storeKey: 'RunProgress',
     targets: [
-      ['F_Combat05', { rewardType: 'MaxHealthDrop' }],
+      ['F_Combat19', { rewardType: 'MaxHealthDrop' }],
       ['F_Combat08', { rewardType: 'MaxManaDrop' }],
     ],
   },
@@ -85,7 +87,7 @@ const freshF: readonly {
     storeKey: 'RunProgress',
     targets: [
       ['F_Combat15', { rewardType: 'StackUpgrade' }],
-      ['F_Combat16', { rewardType: 'MaxManaDrop' }],
+      ['F_Combat16', { rewardType: 'MaxHealthDrop' }],
     ],
   },
   {
@@ -167,7 +169,7 @@ export function createFreshFileFProject(): ProjectDocument {
   project = applyProjectCommand(project, catalog, {
     kind: 'ReplaceIncomingReward',
     reward: createIncomingRewardAddress(biome, createOccurrenceId('fresh-preboss-free')),
-    value: boon('ApolloUpgrade'),
+    value: { rewardType: 'StackUpgrade' },
   });
   selectFirst(decision);
   return authorLegalTraitOffers(authorShop(project, prebossShop));
@@ -209,4 +211,140 @@ export function withRetainedFreshFilePostboss(
   }
   raw.roomActions = { order };
   return decodeProjectDocument(encoded, catalog);
+}
+
+export const freshFileIntroId = createOccurrenceId('fresh-intro');
+
+/** A Fresh File opening followed by the forced F_Combat01 and its Apollo boon. */
+export function createFreshFileFirstSequence(projectId = 'fresh-first-sequence'): ProjectDocument {
+  let project = createProjectDocument(catalog, {
+    projectId,
+    routeKey: 'FreshFile',
+    configuredBiomeCount: 1,
+  });
+  const decision = createExitDecisionAddress(biome, {
+    kind: 'occurrence',
+    occurrenceId: project.route.biomes[0]!.topology!.startOccurrenceId,
+  });
+  project = applyProjectCommand(project, catalog, { kind: 'CreateBatch', decision });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceBatchRewardStore',
+    rewardStore: createBatchRewardStoreAddress(biome, decision.source),
+    storeKey: 'RunProgress',
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'CreateTarget',
+    target: createTargetAddress(biome, decision.source, 'exit1'),
+    occurrenceId: freshFileIntroId,
+    gameName: 'F_Combat01',
+  });
+  return applyProjectCommand(project, catalog, {
+    kind: 'ReplaceIncomingReward',
+    reward: createIncomingRewardAddress(biome, freshFileIntroId),
+    value: boon('ApolloUpgrade'),
+  });
+}
+
+export const matureCombat01Biome = createBiomeAddress('Underworld', 'F');
+export const matureCombat01StartId = createOccurrenceId('mature-start');
+export const matureCombat01Id = createOccurrenceId('mature-combat01');
+
+/** The mature counterpart: F_Combat01 after the opening, carrying a counted Apollo boon. */
+export function createMatureCombat01Sequence(): ProjectDocument {
+  const mature = matureCombat01Biome;
+  let project = createProjectDocument(catalog, {
+    projectId: 'mature-combat01',
+    routeKey: 'Underworld',
+    configuredBiomeCount: 1,
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceStartingReward',
+    reward: createStartingRewardAddress('Underworld'),
+    value: boon('PoseidonUpgrade'),
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'CreateStart',
+    biome: mature,
+    occurrenceId: matureCombat01StartId,
+    gameName: 'F_Opening01',
+  });
+  const decision = createExitDecisionAddress(mature, {
+    kind: 'occurrence',
+    occurrenceId: matureCombat01StartId,
+  });
+  project = applyProjectCommand(project, catalog, { kind: 'CreateBatch', decision });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceBatchRewardStore',
+    rewardStore: createBatchRewardStoreAddress(mature, decision.source),
+    // F_Combat01's ForcedRewardStore still resolves its reward from RunProgress.
+    storeKey: 'MetaProgress',
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'CreateTarget',
+    target: createTargetAddress(mature, decision.source, 'exit1'),
+    occurrenceId: matureCombat01Id,
+    gameName: 'F_Combat01',
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceIncomingReward',
+    reward: createIncomingRewardAddress(mature, matureCombat01Id),
+    value: boon('ApolloUpgrade'),
+  });
+  return authorLegalTraitOffers(project);
+}
+
+/**
+ * The mature generated-composition F prefix, made fresh-legal and continued
+ * from the Fresh first sequence; it keeps its retained customization.
+ */
+export function createFreshFileGeneratedComposition(): ProjectDocument {
+  // A fresh bag holds no Bones before the first Ashes pickup, and no Zeus or Hera.
+  const mature = JSON.parse(
+    encodeProjectDocument(loadUnderworldGeneratedCompositionCheckpoint())
+      .replaceAll('"MetaCurrencyDrop"', '"MetaCardPointsCommonDrop"')
+      .replaceAll('"Zeus', '"Poseidon')
+      .replaceAll('"Hera', '"Demeter'),
+  );
+  const fresh = JSON.parse(encodeProjectDocument(createFreshFileFirstSequence()));
+  const [matureF] = mature.route.biomes;
+  const [freshF] = fresh.route.biomes;
+  const matureStart: string = matureF.topology.startOccurrenceId;
+  const occurrences = matureF.topology.occurrences.filter(
+    (occurrence: { occurrenceId: string }) => occurrence.occurrenceId !== matureStart,
+  );
+  for (const occurrence of occurrences) delete occurrence.startingRewardAcquisition;
+  const decisions = matureF.topology.decisions.map(
+    (decision: { source: { kind: string; occurrenceId?: string } }) =>
+      decision.source.occurrenceId === matureStart
+        ? { ...decision, source: { kind: 'occurrence', occurrenceId: freshFileIntroId } }
+        : decision,
+  );
+  const topology = {
+    ...matureF.topology,
+    startOccurrenceId: freshF.topology.startOccurrenceId,
+    occurrences: [...freshF.topology.occurrences, ...occurrences],
+    decisions: [...freshF.topology.decisions, ...decisions],
+  };
+  return authorLegalTraitOffers(
+    decodeProjectDocument(
+      { ...mature, route: { ...fresh.route, biomes: [{ ...matureF, topology }] } },
+      catalog,
+    ),
+  );
+}
+
+/**
+ * A save carrying a GeneratedF customization on Fresh F_Combat01, which the
+ * route's FIntroFight rule has since replaced.
+ */
+export function withRetainedFreshFileIntroCustomization(project: ProjectDocument): ProjectDocument {
+  const retained =
+    loadUnderworldGeneratedCompositionCheckpoint().route.biomes[0]!.topology!.occurrences.find(
+      (occurrence) => occurrence.encounters.customizationByPhase?.Encounter !== undefined,
+    )!.encounters.customizationByPhase!;
+  const raw = JSON.parse(encodeProjectDocument(project));
+  raw.route.biomes[0].topology.occurrences.find(
+    (occurrence: { occurrenceId: string }) => occurrence.occurrenceId === freshFileIntroId,
+  ).encounters.customizationByPhase = retained;
+  return decodeProjectDocument(raw, catalog);
 }

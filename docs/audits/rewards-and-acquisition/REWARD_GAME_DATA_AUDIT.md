@@ -105,6 +105,18 @@ current-run fact merely by being offered. Devotion's global encounter record is
 presentation/progression evidence with no supported downstream planner
 consumer and remains outside the canonical projection.
 
+### Forced room rewards
+
+`RewardLogic.lua:ChooseRoomReward` returns the first room `ForcedRewards`
+entry whose `GameStateRequirements` hold (lines 124–135) before the bag
+eligibility scan, refills and `RewardPriorities` (line 163), setting
+`ForceLootName` so `SetupRoomReward` skips `ChooseLoot` and keepsake
+`ForceBoonName` (line 228). No bag entry is withdrawn. `F_Combat01` is the only
+supported room declaring one: an Apollo Boon while `GameState.UseRecord.ApolloUpgrade`
+is false (`RoomDataF.lua:F_Combat01`). The planner declares it on the room's
+counted producer with a `lifetimeGodUseRecord` requirement, so it applies on
+`FreshFile` and never on a mature save.
+
 ### Latent Bag State
 
 Multiplicity entries are not interchangeable merely because they share a

@@ -5,7 +5,7 @@ import type {
   RoomDeclaration,
 } from '../../catalog-schema';
 import type { AuthoredEncounterCustomization } from '../model';
-import { encounterSetForBinding } from './encounter-envelope';
+import { encounterBindingsBySlot, encounterSetForBinding } from './encounter-envelope';
 import { decodeGeneratedEncounterCustomization } from './decoding/generated-encounter-codec';
 
 export function supportsGeneratedEncounterCustomization(room: RoomDeclaration): boolean {
@@ -44,6 +44,37 @@ export function encounterCustomizationDeclarations(
       catalog.encounterDefinitions.values.flatMap((definition) => definition.customization ?? []),
     ),
   });
+}
+
+/**
+ * Decisions the route-free binding owns on a slot an entry-contextual rule
+ * fixes to another encounter. A value retained for one of them is removal-only.
+ */
+export function contextuallyReplacedCustomizationDecisions(
+  catalog: Catalog,
+  routeFreeRoom: RoomDeclaration,
+  contextualRoom: RoomDeclaration,
+  slotKey: string,
+): readonly EncounterCustomizationDecision[] {
+  const contextual = encounterBindingsBySlot(catalog, contextualRoom, contextualRoom.gameName).get(
+    slotKey,
+  );
+  const routeFree = encounterBindingsBySlot(catalog, routeFreeRoom, routeFreeRoom.gameName).get(
+    slotKey,
+  );
+  if (
+    contextual?.kind !== 'fixed' ||
+    routeFree === undefined ||
+    (routeFree.kind === 'fixed' &&
+      routeFree.encounterDefinitionKey === contextual.encounterDefinitionKey)
+  )
+    return Object.freeze([]);
+  const active = encounterCustomizationDeclarations(catalog, contextualRoom, contextual).active;
+  return Object.freeze(
+    encounterCustomizationDeclarations(catalog, routeFreeRoom, routeFree).active.filter(
+      (decision) => !customizationDecisionOwned(active, decision.key),
+    ),
+  );
 }
 
 export function customizationDecisionOwned(
