@@ -19,21 +19,6 @@ export function projectRoomEncounterRecords(
   );
 }
 
-const knownEnemyRecords = new WeakMap<readonly string[], Readonly<Record<string, number>>>();
-
-/** The `knownEncounteredEnemies` requirement record: one per known native enemy name. */
-export function projectKnownEncounteredEnemyRecord(
-  view: HistoryStateView,
-): Readonly<Record<string, number>> {
-  const keys = view.ledgers.knownEncounteredEnemyKeys;
-  let record = knownEnemyRecords.get(keys);
-  if (record === undefined) {
-    record = Object.freeze(Object.fromEntries(keys.map((key) => [key, 1])));
-    knownEnemyRecords.set(keys, record);
-  }
-  return record;
-}
-
 /** Offered doors include created additional exits, without widening the normal batch. */
 export function projectOfferedExitCount(
   view: HistoryStateView,

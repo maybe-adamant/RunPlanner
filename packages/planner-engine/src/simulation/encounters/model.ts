@@ -47,8 +47,6 @@ export interface ResolvedEncounterPhase {
   readonly generatedCustomization?: {
     readonly decisionKey: string;
     readonly operands?: import('./generation').GeneratedEncounterOperands;
-    /** Effective native enemy names, present only when this checkpoint makes them exact. */
-    readonly encounteredEnemyKeys?: readonly string[];
     readonly knownRunBlacklistAdditions: readonly string[];
   };
   readonly sequenceEffect?: { readonly kind: 'terminateSuffix' };

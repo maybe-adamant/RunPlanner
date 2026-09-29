@@ -58,25 +58,16 @@ const saveFileRecords = new Set<string>(['lifetimeGodPickupRecord', 'lifetimeGod
 
 /**
  * Which derived records a contact carries: every contact has the run ledgers,
- * Encounter Definitions add known encountered enemies, reward-history contacts
- * add resource gains, and ordinary-god loot requirements also add the
- * save-file god records.
+ * reward-history contacts add resource gains, and ordinary-god loot
+ * requirements also add the save-file god records.
  */
-type RecordScope = 'run' | 'encounter' | 'rewardHistory' | 'loot';
+type RecordScope = 'run' | 'rewardHistory' | 'loot';
 
 export function normalizeRequirement(
   requirement: RequirementExpression,
   path: string,
 ): RequirementExpression {
   return normalizeRequirementWith(requirement, path, 'run');
-}
-
-/** An Encounter Definition requirement, evaluated at encounter preparation. */
-export function normalizeEncounterDefinitionRequirement(
-  requirement: RequirementExpression,
-  path: string,
-): RequirementExpression {
-  return normalizeRequirementWith(requirement, path, 'encounter');
 }
 
 /** A reward-store or Shop requirement, evaluated with the branch's reward history. */
@@ -142,14 +133,8 @@ function normalizeRequirementWith(
       if (scope !== 'loot' && saveFileRecords.has(requirement.record)) {
         fail(`${path}.record`, `${requirement.record} is only available to loot requirements`);
       }
-      if ((scope === 'run' || scope === 'encounter') && requirement.record === 'resourceGains') {
+      if (scope === 'run' && requirement.record === 'resourceGains') {
         fail(`${path}.record`, 'resourceGains is only available where reward history is evaluated');
-      }
-      if (scope !== 'encounter' && requirement.record === 'knownEncounteredEnemies') {
-        fail(
-          `${path}.record`,
-          'knownEncounteredEnemies is only available to encounter definitions',
-        );
       }
       return Object.freeze({
         kind: requirement.kind,
@@ -330,9 +315,6 @@ export function validateRequirementReferences(
       switch (requirement.record) {
         case 'roomsEntered':
           return;
-        case 'knownEncounteredEnemies':
-          // Encounter closure validates enemy names.
-          return;
         case 'resourceGains':
           if (resourceKeys === undefined) {
             fail(
@@ -398,42 +380,6 @@ function visitEncounterHistoryRequirementKeys(
     case 'encounterKeyCount':
     case 'previousRoomEncounterKeyCount':
       visit(requirement.encounterKeys, `${path}.encounterKeys`);
-      return;
-    default:
-      return;
-  }
-}
-
-/** Known encountered enemy keys must name an enemy some generated composition can record. */
-export function validateKnownEnemyRequirementReferences(
-  requirement: RequirementExpression,
-  recordableEnemyKeys: ReadonlySet<string>,
-  path: string,
-): void {
-  switch (requirement.kind) {
-    case 'all':
-    case 'any':
-      requirement.requirements.forEach((child, index) =>
-        validateKnownEnemyRequirementReferences(
-          child,
-          recordableEnemyKeys,
-          `${path}.requirements[${index}]`,
-        ),
-      );
-      return;
-    case 'not':
-      validateKnownEnemyRequirementReferences(
-        requirement.requirement,
-        recordableEnemyKeys,
-        `${path}.requirement`,
-      );
-      return;
-    case 'recordCount':
-    case 'distinctRecordKeyCount':
-      if (requirement.record !== 'knownEncounteredEnemies') return;
-      requirement.keys.forEach((key, index) => {
-        if (!recordableEnemyKeys.has(key)) fail(`${path}.keys[${index}]`, `unknown enemy ${key}`);
-      });
       return;
     default:
       return;

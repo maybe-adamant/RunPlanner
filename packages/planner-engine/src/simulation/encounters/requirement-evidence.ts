@@ -1,8 +1,6 @@
 import {
   evaluateRequirement,
-  recordRequirementCount,
   type CounterAxis,
-  type HistoryRecord,
   type NumericRange,
   type RequirementEvaluationContext,
   type RequirementExpression,
@@ -20,13 +18,6 @@ export type EncounterRequirementEvidence = { readonly satisfied: boolean } & (
   | {
       readonly kind: 'counterRange';
       readonly axis: CounterAxis;
-      readonly actual: number;
-      readonly expected: NumericRange;
-    }
-  | {
-      readonly kind: 'recordCount' | 'distinctRecordKeyCount';
-      readonly record: HistoryRecord;
-      readonly keys: readonly string[];
       readonly actual: number;
       readonly expected: NumericRange;
     }
@@ -106,16 +97,6 @@ export function encounterRequirementEvidence(
         satisfied,
         expected: requirement.routeKey,
         actual: context.routeKey,
-      });
-    case 'recordCount':
-    case 'distinctRecordKeyCount':
-      return Object.freeze({
-        kind: requirement.kind,
-        satisfied,
-        record: requirement.record,
-        keys: requirement.keys,
-        actual: recordRequirementCount(requirement, context),
-        expected: requirement.range,
       });
     case 'encounterKeyCount': {
       if (context.encounterHistory === undefined) throw new Error('Missing encounter history');

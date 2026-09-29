@@ -1410,53 +1410,6 @@ describe('encounter envelope catalog', () => {
     );
   });
 
-  it('scopes the known encountered enemy record to Encounter Definitions', () => {
-    const known = {
-      kind: 'recordCount',
-      record: 'knownEncounteredEnemies',
-      keys: ['Guard'],
-      range: { min: 1 },
-    } as const;
-    const withDefinitionRequirement = (requirement: unknown) => {
-      const value = input();
-      const index = value.encounterDefinitions.findIndex(
-        (definition) => definition.key === 'GeneratedF',
-      );
-      (value.encounterDefinitions[index] as { requirements: unknown }).requirements = requirement;
-      return { value, index };
-    };
-    expect(
-      createCatalog(withDefinitionRequirement(known).value).encounterDefinitions.byKey.GeneratedF
-        ?.requirements,
-    ).toEqual(known);
-
-    const unknown = withDefinitionRequirement({ ...known, keys: ['Guard', 'MissingEnemy'] });
-    expect(() => createCatalog(unknown.value)).toThrow(
-      new CatalogContractError(
-        `encounterDefinitions[${unknown.index}].requirements.keys[1]`,
-        'unknown enemy MissingEnemy',
-      ),
-    );
-
-    const gains = withDefinitionRequirement({ ...known, record: 'resourceGains' });
-    expect(() => createCatalog(gains.value)).toThrow(
-      new CatalogContractError(
-        `encounterDefinitions[${gains.index}].requirements.record`,
-        'resourceGains is only available where reward history is evaluated',
-      ),
-    );
-
-    const room = input();
-    const roomIndex = room.rooms.findIndex((entry) => entry.gameName === 'F_Combat02');
-    (room.rooms[roomIndex] as { eligibility: unknown }).eligibility = known;
-    expect(() => createCatalog(room)).toThrow(
-      new CatalogContractError(
-        `rooms[${roomIndex}].eligibility.record`,
-        'knownEncounteredEnemies is only available to encounter definitions',
-      ),
-    );
-  });
-
   it('rejects unknown structural tags in declaration-owned requirements', () => {
     const malformed = input();
     const definitionIndex = malformed.encounterDefinitions.findIndex(
