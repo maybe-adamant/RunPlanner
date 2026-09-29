@@ -1,5 +1,7 @@
 import type { ResolvedRoutePosition } from '../../authored-project/route-context';
 import {
+  createBiomeAddress,
+  createEncounterPhaseAddress,
   createRoomRunStateCheckpointAddress,
   semanticAddressKey,
   type EncounterPhaseAddress,
@@ -351,6 +353,42 @@ export function evaluateEncounterCandidatesInternal(
     });
   }
   const privateEntries = new Map(entries);
+  for (const event of historyEvents) {
+    if (
+      event.kind !== 'encounterStarted' ||
+      event.aetos === undefined ||
+      event.origin.kind !== 'occurrence'
+    )
+      continue;
+    const origin = createEncounterPhaseAddress(
+      createBiomeAddress(event.origin.routeKey, event.origin.biomeKey),
+      { kind: 'occurrence', occurrenceId: event.origin.occurrenceId },
+      event.phaseKey,
+    );
+    const key = semanticAddressKey(origin);
+    const status = statuses.get(key);
+    if (status?.kind === 'active')
+      statuses.set(key, Object.freeze({ ...status, aetos: event.aetos }));
+    if (event.aetos.selectedWave !== undefined && event.aetos.reason !== undefined) {
+      findings.push(
+        Object.freeze({
+          code: 'aetosAppearanceUnavailable',
+          severity: 'error',
+          phase: 'encounterResolution',
+          origin,
+          evidence: Object.freeze({
+            event: 'aetos',
+            reason: event.aetos.reason,
+            wave: event.aetos.selectedWave,
+          }),
+        }),
+      );
+      findingChronologies.set(
+        key,
+        Object.freeze({ kind: 'history', sequence: event.sequence, boundary: 'at' }),
+      );
+    }
+  }
   const privateStatuses = new Map(statuses);
   const privateRooms = new Map(roomsByOwner);
   const privateFigLeaf = new Map(

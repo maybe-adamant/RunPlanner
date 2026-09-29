@@ -424,6 +424,8 @@ function findingExplanation(catalog: Catalog, finding: SemanticFinding): Candida
         kind: 'encounter',
         message: 'Fig Leaf cannot skip another combat in this biome or has no uses left.',
       };
+    case 'aetosAppearanceUnavailable':
+      return { kind: 'encounter', message: 'Repair or remove this Aetos appearance in Events.' };
     case 'fieldsCageOutcomeUnavailable':
       return { kind: 'fields', message: 'This Fields door outcome cannot occur at this point.' };
     case 'hubOpenSlotUnavailable':

@@ -391,6 +391,8 @@ export interface EncounterDefinition {
   /** Source-declared active-encounter blocker for Gorgon Amulet. */
   readonly blocksGorgon: boolean;
   readonly hostsGorgon: boolean;
+  /** Native Aetos callback support; waves are best-effort native targets. */
+  readonly aetosWaves?: readonly number[];
   /** A successful skip suppresses the remainder of this room envelope. */
   readonly skipEndEncounterEffects: boolean;
   /** Keepsakes whose ordinary rack selection is unavailable after this encounter. */

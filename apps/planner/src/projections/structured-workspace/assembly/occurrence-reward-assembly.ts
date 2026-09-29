@@ -826,6 +826,8 @@ export function activeEncounterPhasesForOwner(
     const phaseStatus = input.encounterPhaseStatus(address);
     if (phaseStatus?.kind === 'dormantSuffix') continue;
     const figLeafSupport = input.figLeafSupport?.(address);
+    const aetosSupport = phaseStatus?.kind === 'active' ? phaseStatus.aetos : undefined;
+    const aetosWave = encounters.aetosWaveByPhase?.[domain.slotKey];
     const gorgonSupport = input.gorgonSupport?.(address);
     const gorgonSupported = gorgonSupport?.supported === true;
     const authoredFigLeafSkip = encounters.figLeafSkipByPhase?.[domain.slotKey] === true;
@@ -1204,6 +1206,15 @@ export function activeEncounterPhasesForOwner(
             !isCombatBearingEncounterPhaseKind(selectedDefinition.kind))
             ? 'roomEntered'
             : 'encounterStart',
+        ...(aetosWave !== undefined || (aetosSupport?.waves.length ?? 0) > 0
+          ? {
+              aetos: Object.freeze({
+                interactionKey: semanticAddressKey(address),
+                waves: aetosSupport?.waves ?? Object.freeze([]),
+                ...(aetosWave === undefined ? {} : { selectedWave: aetosWave }),
+              }),
+            }
+          : {}),
         ...(figLeafSupport !== undefined || authoredFigLeafSkip
           ? {
               figLeaf: Object.freeze({

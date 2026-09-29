@@ -59,6 +59,7 @@ export type RoomLifecycleEvent =
     })
   | (RoomLifecycleEventBase & {
       readonly kind: 'encounterStarted';
+      readonly aetos?: import('../encounters/aetos').AetosPhaseSupport;
       readonly phaseKey: string;
       readonly encounterEnvelopeKey: string;
       readonly encounterKey: string;

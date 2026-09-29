@@ -12,6 +12,7 @@ export interface MaterializedEncounterPhase {
   readonly envelopeKey: string;
   readonly authoredChoiceKey: string;
   readonly figLeafSkip: boolean;
+  readonly aetosWave?: number;
   readonly customizationByDecision?: Readonly<Record<string, AuthoredEncounterCustomization>>;
   readonly rewardAttachment?: EncounterSlotRewardAttachment;
 }
@@ -33,6 +34,8 @@ export interface ResolvedEncounterPhase {
   readonly blocksFigLeaf: boolean;
   readonly blocksGorgon: boolean;
   readonly hostsGorgon: boolean;
+  readonly aetosWaves?: readonly number[];
+  readonly aetosWave?: number;
   readonly skipEndEncounterEffects: boolean;
   /** Persisted phase-local positive disposition, when authored. */
   readonly figLeafSkip: boolean;

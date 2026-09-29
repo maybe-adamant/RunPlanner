@@ -1,7 +1,7 @@
 # Encounter Events and Aetos Placement
 
-Status: implementation authorized; Gate A implemented and independently reviewed,
-with browser visual acceptance pending. Gates B and C not started.
+Status: Gates A and B implemented and independently reviewed; browser visual
+acceptance pending. Gate A committed; Gate B uncommitted. Gate C not started.
 Base: `fcd8d55680ad30abd7599122a4abcad8ad04bde7`.
 
 ## Outcome and scope
@@ -21,7 +21,18 @@ Fresh File work in the separate worktree is outside scope.
   and eligibility unchanged. Independent review found no actionable issues.
   `npm run test:ui` passed 56 files / 579 tests; `git diff --check` passed.
   Wide/narrow/scaled browser inspection remains pending; DOM tests do not attest
-  rendered layout. Gate A is accepted for commit; visual inspection remains pending.
+  rendered layout. Gate A committed as `214ba0b9`; visual inspection remains pending.
+- Gate B: sparse phase-local wave authorship, declaration capability, reached
+  assessment/history, retained repair, Events control and temporary publication
+  guard implemented. Independent review's unpicked-retention guard finding was
+  corrected, with exact blocker/history-cutoff and withheld-suffix witnesses added.
+  Final five focused files passed 124 tests. The broader related correctness run
+  passed 332 files and failed two newly edited witness files (three test-setup
+  failures); both complete files passed in the final focused run after correction.
+  Final repository typecheck, lint, changed performance witness (two tests), and
+  diff whitespace check passed. No authored schema or execution wire changes,
+  generated fixture churn, or game-module changes. Full phase checks and live
+  acceptance belong to Gate C.
 
 ## Locked authoring shape
 

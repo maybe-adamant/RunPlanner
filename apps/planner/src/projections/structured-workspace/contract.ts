@@ -341,6 +341,10 @@ export interface WorkspaceInteractionCatalog {
   readonly nemesisEvents: ReadonlyMap<string, WorkspaceNemesisEventInteraction>;
   readonly nemesisFeatures: ReadonlyMap<string, WorkspaceNemesisFeatureInteraction>;
   readonly figLeafSkips: ReadonlyMap<string, WorkspaceFigLeafInteraction>;
+  readonly aetosAppearances: ReadonlyMap<
+    string,
+    import('./contracts/locals').WorkspaceAetosInteraction
+  >;
   readonly gorgonConditions: ReadonlyMap<string, WorkspaceGorgonConditionInteraction>;
   readonly exitSelections: ReadonlyMap<string, WorkspaceExitSelectionInteraction>;
   readonly fieldsCageOutcomes: ReadonlyMap<string, WorkspaceFieldsCageOutcomeInteraction>;

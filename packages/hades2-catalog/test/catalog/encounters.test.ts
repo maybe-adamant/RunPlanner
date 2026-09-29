@@ -10,6 +10,20 @@ import { describe, expect, it } from 'vitest';
 
 const input = cloneCatalogInput;
 
+it('declares only native GeneratedP Aetos callbacks and Outdoor room contact', () => {
+  const catalog = createCatalog(declarations);
+  expect(
+    catalog.encounterDefinitions.values
+      .filter((definition) => definition.aetosWaves !== undefined)
+      .map((definition) => [definition.key, definition.aetosWaves]),
+  ).toEqual([
+    ['GeneratedP', [2]],
+    ['GeneratedP_Large', [2, 3]],
+  ]);
+  expect(catalog.rooms.byKey.P_Combat03?.structuralTags).toContain('Outdoor');
+  expect(catalog.rooms.byKey.P_Combat02?.structuralTags).not.toContain('Outdoor');
+});
+
 function visibleChoiceKeys(
   profiles: readonly EncounterAuthoringProfile[],
   context: EncounterResolutionContext,

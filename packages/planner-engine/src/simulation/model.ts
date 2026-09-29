@@ -33,7 +33,8 @@ export type EncounterResolutionFindingCode =
   | 'encounterSlotActivationUnavailable'
   | 'encounterUnavailable'
   | 'encounterCustomizationUnavailable'
-  | 'figLeafSkipUnavailable';
+  | 'figLeafSkipUnavailable'
+  | 'aetosAppearanceUnavailable';
 
 export type RewardGenerationFindingCode =
   | 'baseRewardStoreUnavailable'

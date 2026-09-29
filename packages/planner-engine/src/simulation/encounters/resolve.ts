@@ -29,7 +29,12 @@ export function resolvedEncounterPhaseForDefinition(
   catalog: Catalog,
   phase: Pick<
     MaterializedEncounterPhase,
-    'slotKey' | 'envelopeKey' | 'figLeafSkip' | 'rewardAttachment' | 'customizationByDecision'
+    | 'slotKey'
+    | 'envelopeKey'
+    | 'figLeafSkip'
+    | 'rewardAttachment'
+    | 'customizationByDecision'
+    | 'aetosWave'
   >,
   encounterKey: string,
 ): ResolvedEncounterPhase {
@@ -49,6 +54,8 @@ export function resolvedEncounterPhaseForDefinition(
     hostsGorgon: definition.hostsGorgon === true,
     skipEndEncounterEffects: definition.skipEndEncounterEffects === true,
     figLeafSkip: phase.figLeafSkip,
+    ...(phase.aetosWave === undefined ? {} : { aetosWave: phase.aetosWave }),
+    ...(definition.aetosWaves === undefined ? {} : { aetosWaves: definition.aetosWaves }),
     ...(definition.customization === undefined
       ? {}
       : {
@@ -176,6 +183,9 @@ export function materializeEncounterPhases(
         envelopeKey: room.encounterEnvelopeKey,
         authoredChoiceKey: encounterKey,
         figLeafSkip: encounters.figLeafSkipByPhase[slotKey] === true,
+        ...(encounters.aetosWaveByPhase?.[slotKey] === undefined
+          ? {}
+          : { aetosWave: encounters.aetosWaveByPhase[slotKey] }),
         ...(encounters.customizationByPhase?.[slotKey] === undefined
           ? {}
           : { customizationByDecision: encounters.customizationByPhase[slotKey] }),

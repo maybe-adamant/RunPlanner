@@ -57,6 +57,19 @@ export function normalizeEncounterDefinitions(
         fail(`${path}.hostsGorgon`, 'must be boolean');
       }
       if (
+        raw.aetosWaves !== undefined &&
+        (!Array.isArray(raw.aetosWaves) ||
+          raw.aetosWaves.length === 0 ||
+          raw.aetosWaves.some(
+            (wave, index) =>
+              !Number.isInteger(wave) ||
+              wave < 2 ||
+              (index > 0 && wave <= raw.aetosWaves![index - 1]!),
+          ))
+      ) {
+        fail(`${path}.aetosWaves`, 'must be increasing non-first native wave targets');
+      }
+      if (
         raw.skipEndEncounterEffects !== undefined &&
         typeof raw.skipEndEncounterEffects !== 'boolean'
       ) {
@@ -486,6 +499,7 @@ export function normalizeEncounterDefinitions(
         blocksFigLeaf: raw.blocksFigLeaf ?? false,
         blocksGorgon: raw.blocksGorgon ?? false,
         hostsGorgon: raw.hostsGorgon ?? false,
+        ...(raw.aetosWaves === undefined ? {} : { aetosWaves: Object.freeze([...raw.aetosWaves]) }),
         skipEndEncounterEffects: raw.skipEndEncounterEffects ?? false,
         requiresInteraction: raw.requiresInteraction ?? false,
         suppressesIncomingReward: raw.suppressesIncomingReward ?? false,
