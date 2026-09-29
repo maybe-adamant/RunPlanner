@@ -19,7 +19,7 @@ import { createBiomeRewardFacts } from '../../facts';
 import { rewardFindingChronologyForRoom } from '../finding-chronology';
 import { addRewardFinding, mergeRewardFindingEmissions, rewardFinding } from '../../findings';
 import type { BiomeRewardSnapshot } from '../evaluation-contract';
-import { spawnTraitOffers } from './spawned-trait-offers';
+import { spawnPickups } from '../../../state/pending-resource-pickups';
 import { BiomeRewardSimulationContractError } from '../biome-contract';
 import type { RewardBranchState } from '../../branch-primitives';
 import type { RewardProducerFrontier } from '../../producer-frontiers';
@@ -230,18 +230,20 @@ export function applyShopOfferPointMaterialization(
     (inventory?.branches ?? []).map((branch) => {
       const contract =
         branch.state.pendingShops[semanticAddressKey(room.origin)]?.infernalContractOffer;
-      return spawnTraitOffers(
-        catalog,
-        branch,
-        [...(shopEntry?.offers ?? []), ...(contract === undefined ? [] : [contract])].map((offer) =>
-          Object.freeze({
-            origin: offer.offerOrigin,
-            offer: offer.offer,
-            traitOffersByAcquisitionRole: offer.traitOffersByAcquisitionRole,
-            levelResolutionsByAcquisitionRole: offer.levelResolutionsByAcquisitionRole,
-          }),
-        ),
+      // Store items store their resources as they spawn; the Shop profile is their producer.
+      const spawned = [
+        ...(shopEntry?.offers ?? []),
+        ...(contract === undefined ? [] : [contract]),
+      ].map((offer) =>
+        Object.freeze({
+          origin: offer.offerOrigin,
+          offer: offer.offer,
+          producerLifecycleKey: shopEntry!.profileKey,
+          traitOffersByAcquisitionRole: offer.traitOffersByAcquisitionRole,
+          levelResolutionsByAcquisitionRole: offer.levelResolutionsByAcquisitionRole,
+        }),
       );
+      return Object.freeze({ ...branch, state: spawnPickups(catalog, branch.state, spawned) });
     }),
   );
   if ((shopEntry?.unresolvedOffers.length ?? 0) > 0) {

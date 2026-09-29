@@ -16,6 +16,7 @@ import {
   type TraitOfferContextTransition,
 } from '../../../state/pending-trait-offers';
 import type { RewardBranchState } from '../../branch-primitives';
+import { spawnPickups, type SpawnedPickup } from '../../../state/pending-resource-pickups';
 
 function withState(
   branch: RewardBranchState,
@@ -70,11 +71,12 @@ function spawnIncomingReward(
   const reward = room.incomingReward;
   if (reward === undefined) return branch;
   const settled = settledRoles(branch, reward.origin);
-  const roles = [
-    ...Object.keys(reward.traitOffersByAcquisitionRole ?? {}),
-    ...Object.keys(reward.levelResolutionsByAcquisitionRole ?? {}),
-  ].filter((role) => !settled.includes(role));
-  return roles.length === 0 ? branch : spawnTraitOffers(catalog, branch, [reward], roles);
+  const unsettled = (
+    catalog.rewards.rewardTypes.byKey[reward.offer.rewardType]?.acquisitionRoles.values ?? []
+  )
+    .map((role) => role.key)
+    .filter((role) => !settled.includes(role));
+  return withState(branch, spawnPickups(catalog, branch.state, [reward], unsettled));
 }
 
 /** Whether one of the room's encounters spawns its incoming reward before combat. */
@@ -126,8 +128,14 @@ export function spawnWheelRewardAtEncounterCompletion(
 ): RewardBranchState {
   const picked = (room.rewardWheels ?? [])
     .filter((wheel) => wheel.encounterPhaseKey === phaseKey)
-    .flatMap((wheel) => wheel.offers.filter((offer) => offer.picked));
-  return picked.length === 0 ? branch : spawnTraitOffers(catalog, branch, picked);
+    .flatMap((wheel) =>
+      wheel.offers
+        .filter((offer) => offer.picked)
+        .map((offer) => ({ ...offer, producerLifecycleKey: wheel.producerLifecycleKey })),
+    );
+  return picked.length === 0
+    ? branch
+    : withState(branch, spawnPickups(catalog, branch.state, picked));
 }
 
 /** Loot authored at an acquisition site, spawned when its native creation contact runs. */
@@ -154,7 +162,32 @@ export function siteEntryTraitOffers(
   );
 }
 
-/** Pickups a completed screen creates (Echo's last reward) spawn at that screen's close. */
+/** The generated pickups one completed screen creates, from its selected producers. */
+export function screenProducedPickups(
+  room: CanonicalAuthoredRoom,
+  screenOwner: TraitOfferOwnerAddress,
+  acquisitionRole: string,
+): readonly SpawnedPickup[] {
+  const source = semanticAddressKey(createTraitOfferAddress(screenOwner, acquisitionRole));
+  return Object.freeze(
+    (room.pickupProducers ?? []).flatMap((producer) =>
+      producer.sourceNormal && semanticAddressKey(producer.source) === source
+        ? siteEntryTraitOffers(
+            room,
+            producer.siteKey,
+            producer.pickups.map((pickup) => pickup.key),
+          ).map((pickup) =>
+            Object.freeze({ ...pickup, producerLifecycleKey: producer.producerLifecycleKey }),
+          )
+        : [],
+    ),
+  );
+}
+
+/**
+ * Pickups a completed screen creates (Buried Treasure's gift, Echo's last
+ * reward) spawn at that screen's close, after its selection is equipped.
+ */
 export function spawnScreenProducedPickups(
   catalog: Catalog,
   room: CanonicalAuthoredRoom,
@@ -162,17 +195,10 @@ export function spawnScreenProducedPickups(
   acquisitionRole: string,
   branch: RewardBranchState,
 ): RewardBranchState {
-  const source = semanticAddressKey(createTraitOfferAddress(screenOwner, acquisitionRole));
-  const spawned = (room.pickupProducers ?? []).flatMap((producer) =>
-    producer.sourceNormal && semanticAddressKey(producer.source) === source
-      ? siteEntryTraitOffers(
-          room,
-          producer.siteKey,
-          producer.pickups.map((pickup) => pickup.key),
-        )
-      : [],
-  );
-  return spawned.length === 0 ? branch : spawnTraitOffers(catalog, branch, spawned);
+  const spawned = screenProducedPickups(room, screenOwner, acquisitionRole);
+  return spawned.length === 0
+    ? branch
+    : withState(branch, spawnPickups(catalog, branch.state, spawned));
 }
 
 /** A Hermes delivery spawns when it falls due at its host room. */

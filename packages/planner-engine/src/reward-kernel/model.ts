@@ -91,7 +91,12 @@ export interface ConcreteAcquisitionDeclaration extends ConcreteAcquisitionAddre
   readonly pathPointGrant?: 1 | 3 | 5;
   /** Source LootData `GameStateRequirements` gating this god as an ordinary source. */
   readonly lootRequirement?: RequirementExpression;
+  /** Source `AddResources`: base quantities this pickup grants, by resource key. */
+  readonly resourceGrant?: ResourceAmounts;
 }
+
+/** Whole resource quantities by source resource key (for example `MetaCardPointsCommon`). */
+export type ResourceAmounts = Readonly<Record<string, number>>;
 
 export type AcquisitionRoleResolution =
   | {
@@ -212,6 +217,10 @@ export interface ProducerRewardLifecycleDeclaration {
 export interface ProducerLifecycleProfileDeclaration {
   readonly key: string;
   readonly rewardTypes: CatalogCollection<ProducerRewardLifecycleDeclaration>;
+  /** Source `NPCDrop` objects: `RoomRewardBonus` never scales their resources. */
+  readonly resourceBonusExempt?: true;
+  /** Producer-owned `AddResources` overrides, by concrete acquisition game name. */
+  readonly resourceGrantOverrides?: Readonly<Record<string, ResourceAmounts>>;
 }
 
 export interface RewardKernelCatalog {
@@ -253,6 +262,11 @@ export interface RewardHistoryState {
   readonly lifetimeGodUseRecord: Readonly<Record<string, number>>;
   /** Ordinary gods whose screen selection completed on this file (`GameState.LootPickups`). */
   readonly lifetimeGodPickupRecord: Readonly<Record<string, number>>;
+  /**
+   * Resources credited by settled acquisitions since the project start (each
+   * `AddResource` also adds to `LifetimeResourcesGained`). Spending never reduces it.
+   */
+  readonly resourceGains: ResourceAmounts;
   /** Latest actually-settled source whose effective LastRewardEligible value is true. */
   readonly lastRewardRecreation?: ConcreteAcquisitionDeclaration['lastRewardRecreation'];
   /** Canonical fold of the equipped-trait ledger; never incremented by loot projection. */

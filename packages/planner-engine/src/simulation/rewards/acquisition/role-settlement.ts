@@ -15,6 +15,7 @@ import type { Catalog } from '../../../catalog-schema';
 import {
   applyConcreteAcquisition,
   consumeCountedOffer,
+  creditResourceGains,
   isOfferSupportedAtResolutionPoint,
   locallyValidRewardOffers,
   recordGodLootPickup,
@@ -72,6 +73,7 @@ import {
   spawnPendingTraitOffers,
   traitOfferRoomOccurrence,
 } from '../../state/pending-trait-offers';
+import { collectPendingResourcePickup, spawnPickups } from '../../state/pending-resource-pickups';
 import {
   SEA_STAR_DUPLICATE_ENTRY_KEY,
   seaStarDuplicateAcquisitionSite,
@@ -451,11 +453,30 @@ export function applyProducerRoleHistory(
         }
       }
     }
-    const history = applyConcreteAcquisition(
+    // `UseConsumableItem` grants the object's stored amount; a Sea Star-retained
+    // object is collected again with that same amount.
+    const duplicateSource =
+      incoming.producer?.kind === 'seaStarDuplicate' ? incoming.producer : undefined;
+    const collected = collectPendingResourcePickup(
+      catalog,
+      materializedBranch.state,
+      {
+        owner: duplicateSource?.sourceOwner ?? incoming.origin,
+        role: duplicateSource?.sourceRole ?? resolution.role,
+        acquisitionGameName: acquisition.acquisition.gameName,
+        producerLifecycleKey: incoming.producerLifecycleKey,
+      },
+      seaStarResult?.kind === 'proc',
+    );
+    const acquiredHistory = applyConcreteAcquisition(
       catalog.rewards,
       branch.state.rewardHistory,
       acquisition.acquisition,
     );
+    const history =
+      collected.amounts === undefined
+        ? acquiredHistory
+        : creditResourceGains(acquiredHistory, collected.amounts);
     let acquisitionTraitHistory = materializedBranch.state.traitHistory;
     if (pickupEffect?.kind === 'anvilOfFates' && authoredAnvilResult?.kind === 'anvilOfFates') {
       acquisitionTraitHistory = foldTraitHistoryEvents(
@@ -479,7 +500,7 @@ export function applyProducerRoleHistory(
     let acquisitionBranch: RewardBranchState = Object.freeze({
       ...materializedBranch,
       state: replaceSimulationTraitHistory(
-        Object.freeze({ ...materializedBranch.state, rewardHistory: history }),
+        Object.freeze({ ...collected.state, rewardHistory: history }),
         acquisitionTraitHistory,
       ),
     });
@@ -600,7 +621,19 @@ export function applyProducerRoleHistory(
               ...withEvent,
               state: Object.freeze({ ...withEvent.state, rewardHistory: pickupHistory }),
             });
-      const completed = publishTraitOfferScreenCompletion(pickedUp, traitSettlement.completion);
+      const closed = publishTraitOfferScreenCompletion(pickedUp, traitSettlement.completion);
+      // The screen's generated pickups spawn after its selection is equipped.
+      const screenPickups =
+        traitSettlement.completion === undefined
+          ? undefined
+          : incoming.screenProducedPickupsByAcquisitionRole?.[resolution.role];
+      const completed =
+        screenPickups === undefined
+          ? closed
+          : Object.freeze({
+              ...closed,
+              state: spawnPickups(catalog, closed.state, screenPickups),
+            });
       next.push(
         seaStarResult?.kind === 'proc' && traitSettlement.completion !== undefined
           ? spawnSeaStarDuplicate(catalog, completed, incoming, resolution.role)

@@ -15,6 +15,7 @@ export type {
   HistoryRecord,
   NumericRange,
   RequirementExpression,
+  ResourceGainRecord,
   RoomStructuralTag,
   RunHistoryRecord,
   SaveFileHistoryRecord,

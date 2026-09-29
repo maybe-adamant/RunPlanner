@@ -205,6 +205,7 @@ describe('Run State presentation', () => {
         investedPathPoints: 5,
       },
       forfeitStatus: 'consumed',
+      resourceGains: {},
       rewardStoreController: {
         enteredStoreCount: 7,
         enteredMetaStoreCount: 2,

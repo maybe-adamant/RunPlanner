@@ -13,6 +13,7 @@ import {
   type ReachedTraitOfferEvaluation,
 } from '../traits';
 import type { SimulationState } from '../state/model';
+import { pendingResourcePickupsProjection } from '../state/pending-resource-pickups';
 import { pendingTraitOffersProjection } from '../state/pending-trait-offers';
 
 export interface PendingShopTravelRefillCapability {
@@ -107,6 +108,7 @@ function equivalentBranchStateKey(branch: RewardBranchState): string {
         consumableRecord: orderedRecord(history.consumableRecord),
         lifetimeGodUseRecord: orderedRecord(history.lifetimeGodUseRecord),
         lifetimeGodPickupRecord: orderedRecord(history.lifetimeGodPickupRecord),
+        resourceGains: orderedRecord(history.resourceGains),
         lastRewardRecreation: history.lastRewardRecreation,
         traitFacts: history.traitFacts,
         lastDevotionDepth: history.lastDevotionDepth,
@@ -120,6 +122,7 @@ function equivalentBranchStateKey(branch: RewardBranchState): string {
       rewardLookups: orderedRecord(state.rewardLookups),
       offeredRewardTypes: state.offeredRewardTypes,
       pendingTraitOffers: pendingTraitOffersProjection(state),
+      pendingResourcePickups: pendingResourcePickupsProjection(state),
     },
     rewardForfeited: branch.events
       .filter((event) => event.kind === 'rewardForfeited')

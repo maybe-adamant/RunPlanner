@@ -40,7 +40,7 @@ import {
   settleArtificerReplacementAcquisition,
   settleOwnedAcquisitionSite,
   settlePickupAcquisitionSite,
-  withStoredArtificerReplacements,
+  withRoomStoredSourceProducts,
 } from '../../acquisition/site-settlement';
 import type { AcquisitionRoleFrontier } from '../../acquisition/contracts';
 import { BiomeRewardSimulationContractError } from '../biome-contract';
@@ -373,7 +373,8 @@ export function applyAcquisitionPointReachedTransition(
         siteOwner: localReward.origin,
         pointKey: event.point,
         entryKey: localReward.slotKey,
-        source: withStoredArtificerReplacements(
+        source: withRoomStoredSourceProducts(
+          catalog,
           room,
           Object.freeze({
             ...localReward,

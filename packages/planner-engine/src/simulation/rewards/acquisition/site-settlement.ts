@@ -49,9 +49,12 @@ import type {
 } from './contracts';
 import { hasArtificerUse } from './conversions';
 import { applyProducerRoleHistory } from './role-settlement';
+import { screenProducedPickups } from '../biome/offer-lifecycle/spawned-trait-offers';
 import type { AcquisitionSource } from './source';
 
-export function withStoredArtificerReplacements(
+/** Attaches the room-stored products a source's roles create: Artificer replacements and screen pickups. */
+export function withRoomStoredSourceProducts(
+  catalog: Catalog,
   room: CanonicalRewardRoom,
   source: AcquisitionSource,
 ): AcquisitionSource {
@@ -67,8 +70,19 @@ export function withStoredArtificerReplacements(
       ),
     ),
   );
+  const screenProduced = Object.fromEntries(
+    (
+      catalog.rewards.rewardTypes.byKey[source.offer.rewardType]?.acquisitionRoles.values ?? []
+    ).flatMap((role) => {
+      const pickups = screenProducedPickups(room, source.origin, role.key);
+      return pickups.length === 0 ? [] : [[role.key, pickups] as const];
+    }),
+  );
   return Object.freeze({
     ...source,
+    ...(Object.keys(screenProduced).length === 0
+      ? {}
+      : { screenProducedPickupsByAcquisitionRole: Object.freeze(screenProduced) }),
     artificerReplacementByAcquisitionRole: replacements,
     artificerReplacementSiteByAcquisitionRole: Object.freeze(
       Object.fromEntries(Object.keys(replacements).map((role) => [role, site])),
@@ -99,7 +113,8 @@ export function settleProducerAcquisitionSite(
   }
   const incomingSource = Object.freeze({
     // A room's materialized incoming reward is the screen the player acts on.
-    ...withStoredArtificerReplacements(
+    ...withRoomStoredSourceProducts(
+      catalog,
       room,
       Object.freeze({ ...incoming, presentsMaterializedScreen: true }),
     ),

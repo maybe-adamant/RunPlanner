@@ -22,7 +22,11 @@ export function createRewardKernelCatalog(input: RawRewardKernelInput): RewardKe
   const rewardTypes = normalizeRewardTypes(input.rewardTypes, payloadDomains, acquisitions);
   const stores = normalizeStores(input.stores, rewardTypes);
   const shops = normalizeShops(input.shops, rewardTypes);
-  const producerLifecycles = normalizeProducerLifecycles(input.producerLifecycles, rewardTypes);
+  const producerLifecycles = normalizeProducerLifecycles(
+    input.producerLifecycles,
+    rewardTypes,
+    acquisitions,
+  );
 
   const echoLastRewardProfile = producerLifecycles.byKey.EchoLastReward;
   const recreationRewardTypes = acquisitions.values.flatMap((acquisition) =>

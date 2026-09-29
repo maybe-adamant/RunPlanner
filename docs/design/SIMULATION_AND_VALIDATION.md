@@ -229,9 +229,9 @@ candidate support and workspace consumers.
 `SimulationState` is the immutable, branch-local authority for live equipment,
 trait history, Arcana/Fear, keepsakes, Hex progression, Well effects, reward
 bags/history/priorities, persistent offered-reward lookups, the transient
-per-map transition-offered reward types, pending Shop or Shrine work and
-pending trait offers. It also carries the reached route position and history
-view.
+per-map transition-offered reward types, pending Shop or Shrine work,
+pending trait offers and uncollected resource objects' stored amounts. It also
+carries the reached route position and history view.
 
 `pendingTraitOffers` (`simulation/state/pending-trait-offers.ts`) records each
 spawned, unopened trait-bearing loot by room: a reference to the substates its
@@ -468,7 +468,8 @@ individual/forced pin a `resolvedOffer` room carries. H banks only
 `RunProgress`, I only `TartarusRewards`, and N banks nothing.
 
 Snapshots include trait/element history, god-pool state, Arcana/Fear,
-keepsakes and their retained effects. Configured Fear and effective suppression
+keepsakes and their retained effects, and the resources gained by acquisitions
+settled before the checkpoint. Configured Fear and effective suppression
 remain distinct; spent effects are not restored by later suppression.
 Acquisition identities distinguish repeated temporary effects. Snapshots
 observe those engine products instead of reconstructing clocks, charges or

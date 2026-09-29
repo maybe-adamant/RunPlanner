@@ -692,8 +692,8 @@ generic interaction path and `ManualRecordUse` split decide who calls
 LootData and remains a `loot` acquisition, its custom spell-screen flow calls
 `RecordConsumableItem` and does not pass through `HandleLootPickup`; therefore
 it does not write loot histories. Resource pickups use the consumable history
-path while retaining `resource` kind. Exact resource quantities and
-affordability remain deferred. Persistent `GameState.UseRecord` is deliberately
+path while retaining `resource` kind. Quantities follow
+[Resource quantities](#resource-quantities); affordability remains deferred. Persistent `GameState.UseRecord` is deliberately
 outside the project boundary; the table is exact for current-run history.
 
 The role registry composes those concrete identities as follows:
@@ -729,6 +729,42 @@ also omits `ElementalBoost`, whose I/Q shop entry is Dream-only. The four
 individual elemental boosts remain supported through N side-room rewards even
 though their ordinary World Shop entries are also Dream-only. The commented
 Devotion block inside `HubRewards` is not a live store entry.
+
+### Resource quantities
+
+`ConsumableData.lua` declares `AddResources`: `MetaCardPointsCommonDrop` 5 and
+`MetaCardPointsCommonBigDrop` 10 Ashes (`MetaCardPointsCommon`);
+`MetaCurrencyDrop` 50 and `MetaCurrencyBigDrop` 100 Bones (`MetaCurrency`).
+Narcissus's Ashes drop overrides it to 10 (`TraitData_Narcissus.lua`).
+
+`InteractLogic.lua:ApplyConsumableItemResourceMultiplier` scales each amount
+when the object is created: equipped `RoomRewardBonus` values add their excess
+over one, and each object rounds once with `UtilityLogic.round`
+(`floor(v + 0.5)`). Room rewards (`SpawnRoomReward`), Fields cages and
+optionals (spawned at room setup), World Shop items and Gold duplicates
+(`StoreLogic.lua`), Echo's replay and `GiveRandomConsumables` producers call
+it. `NPCDrop` objects skip the bonus. `NPCRewardDrop` consumables (Nemesis
+events), Stygian Well trades (`TradeLogic.lua:215`) and Eris's gifts set it:
+G 20 Ashes (`RoomDataG.lua`), H 50 Psyche (`RoomDataH.lua:573-581`) and I 300
+Bones (`RoomDataI.lua:527-535`), each also not duplicable.
+
+Buried Treasure (`TraitData_Poseidon.lua:RoomRewardBonusBoon`) declares base
+1.5 for Ashes, Psyche and Bones with `SourceIsMultiplier`; its rarity
+multipliers 1/1.5/2/2.5 scale the excess, giving 1.5/1.75/2/2.25. Five Ashes
+become 8/9/10/11 and ten become 15/18/20/23. Its own Bones gift spawns after
+the trait is equipped and is scaled.
+
+`UseConsumableItem` grants the stored amount through `AddResource`, which adds
+to `LifetimeResourcesGained` at once. A Double Up proc retains the same object,
+so the second pickup grants the same rounded amount (8 + 8, never
+round(10 × 1.5)); a bonus gained after the object spawned never changes it.
+Spending leaves lifetime gains untouched.
+
+Planner disposition: concrete acquisitions declare `resourceGrant`, producer
+lifecycles declare `resourceBonusExempt` and `resourceGrantOverrides`, and the
+trait declares a rarity-resolved `resourceRewardBonus`. Only Ashes and Bones
+are tracked. Stygian Well resource items grant a random range and are not
+credited. Eris's gifts have no declared producer yet.
 
 ## Shops
 

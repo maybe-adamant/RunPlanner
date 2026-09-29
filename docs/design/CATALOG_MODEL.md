@@ -216,14 +216,19 @@ A reward type owns its identity, payload shape, complete offer default,
 optional offer projection, source-support policy/resolution point and named
 acquisition roles. Each role resolves self, fixed or typed-payload-source
 identity. Concrete acquisitions separately declare exact history projection
-(`lootAndUse` or `consumableAndUse`) and base capabilities.
+(`lootAndUse` or `consumableAndUse`) and base capabilities, including a
+`resourceGrant` of whole resource amounts by resource key. A producer lifecycle
+may declare `resourceBonusExempt` (source `NPCDrop`) or per-acquisition
+`resourceGrantOverrides`; a trait may declare a rarity-resolved
+`resourceRewardBonus` whose resources some pickup must grant.
 
 The source-support vocabulary is closed: `ordinaryBoonPeer`,
 `ordinaryNoPeer`, `ordinaryInteracted` and `devotionAcquiredPair`. An ordinary
 god's concrete loot acquisition may declare a `lootRequirement` (source LootData
 `GameStateRequirements`); its keys must be ordinary gods, and the save-file god
 records (`lifetimeGodUseRecord`, `lifetimeGodPickupRecord`) are admitted only
-there. A source-bearing payload needs
+there. The `resourceGains` record is admitted in loot, reward-store and Shop
+requirements, where reward history is evaluated, and rejected elsewhere. A source-bearing payload needs
 a compatible policy and resolution point. Blind Box resolves at its
 `hiddenSource` acquisition role; its inventory identity is not an acquired
 god. Producer-specific authoring remains in Reward Model.

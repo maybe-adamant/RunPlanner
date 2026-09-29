@@ -23,7 +23,10 @@ import { normalizeBiomeLayouts } from './layouts/normalize';
 import { normalizeRoomLifecycleProfiles, validateLifecycleBindings } from './lifecycles';
 import { validateRoomLayoutClosure } from './rooms/layout-closure';
 import { normalizeRooms } from './rooms/normalize';
-import { validateFixedAcquisitionTraitGrants } from './rewards/declarations';
+import {
+  validateFixedAcquisitionTraitGrants,
+  validateResourceRewardBonuses,
+} from './rewards/declarations';
 import { createRewardKernelCatalog } from './rewards/normalize';
 import { normalizeRewardBinding } from './rewards/bindings';
 import { fail } from './errors';
@@ -55,6 +58,7 @@ export function createCatalog(input: RawCatalogInput): Catalog {
   const runStartReward = Object.freeze({ incomingReward: normalizedRunStartReward });
   const traitCatalog = createTraitCatalog(input.traitCatalog);
   validateFixedAcquisitionTraitGrants(rewards.acquisitions, traitCatalog.traits);
+  validateResourceRewardBonuses(rewards.acquisitions, traitCatalog.traits);
   const arcanaCards = normalizeArcanaCards(input.arcanaCards, traitCatalog.traits);
   const fearVows = normalizeFearVows(input.fearVows);
   const keepsakes = normalizeKeepsakes(input.keepsakes);

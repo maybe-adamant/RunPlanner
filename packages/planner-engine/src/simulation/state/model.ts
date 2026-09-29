@@ -7,6 +7,7 @@ import type {
   RewardBagState,
   RewardHistoryState,
   RewardKernelFacts,
+  ResourceAmounts,
   ShopGenerationWitness,
 } from '../../reward-kernel';
 import type { CanonicalShopOffer } from '../materialization';
@@ -109,6 +110,10 @@ export interface SimulationState {
   /** Unopened trait-bearing loot by room, then by trait-offer or Pom address. */
   readonly pendingTraitOffers: Readonly<
     Record<string, Readonly<Record<string, PendingTraitOfferRecord>>>
+  >;
+  /** Uncollected resource objects' stored amounts by room, then by object role. */
+  readonly pendingResourcePickups: Readonly<
+    Record<string, Readonly<Record<string, ResourceAmounts>>>
   >;
 }
 

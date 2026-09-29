@@ -39,6 +39,10 @@ export interface AcquisitionSource {
   readonly artificerReplacementSiteByAcquisitionRole?: Readonly<
     Record<string, AcquisitionSiteAddress>
   >;
+  /** Room-stored pickups this role's completed screen creates (Buried Treasure, Echo). */
+  readonly screenProducedPickupsByAcquisitionRole?: Readonly<
+    Record<string, readonly import('../../state/pending-resource-pickups').SpawnedPickup[]>
+  >;
   readonly traitContext?: CanonicalResolvedIncomingReward['traitContext'];
   /** Native source forbids duplication (store objects and Sea Star duplicates). */
   readonly blocksSeaStarDuplication?: true;

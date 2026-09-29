@@ -11,7 +11,12 @@ import type {
 
 import { isOrdinarySourcePolicy } from '@run-planner/engine/reward-kernel';
 
-import { createCollection, requireNonEmpty } from '../common';
+import {
+  createCollection,
+  requireNonEmpty,
+  requireObject,
+  requirePositiveInteger,
+} from '../common';
 import { fail } from '../errors';
 import { normalizeLootRequirement, rejectEncounterHistoryRequirements } from '../requirements';
 import type {
@@ -34,6 +39,23 @@ const SOURCE_SUPPORT_POLICIES = [
 ] as const;
 
 const PICKUP_EFFECT_KINDS = ['anvilOfFates'] as const;
+
+/** Whole positive resource quantities keyed by source resource name. */
+export function normalizeResourceAmounts(
+  raw: Readonly<Record<string, number>>,
+  path: string,
+): Readonly<Record<string, number>> {
+  const entries = Object.entries(requireObject(raw, path));
+  if (entries.length === 0) fail(path, 'must grant at least one resource');
+  return Object.freeze(
+    Object.fromEntries(
+      entries.map(([key, amount]) => [
+        requireNonEmpty(key, `${path} key`),
+        requirePositiveInteger(amount as number, `${path}.${key}`),
+      ]),
+    ),
+  );
+}
 
 function requireClosedValue<const Values extends readonly string[]>(
   value: unknown,
@@ -343,6 +365,14 @@ export function normalizeAcquisitions(
                 `acquisitions[${index}].grantedTraitKey`,
               ),
             }),
+        ...(acquisition.resourceGrant === undefined
+          ? {}
+          : {
+              resourceGrant: normalizeResourceAmounts(
+                acquisition.resourceGrant,
+                `acquisitions[${index}].resourceGrant`,
+              ),
+            }),
         ...(acquisition.lootRequirement === undefined
           ? {}
           : {
@@ -359,6 +389,23 @@ export function normalizeAcquisitions(
     (acquisition) => acquisition.gameName,
     'gameName',
   );
+}
+
+/** A trait's resource bonus must scale a resource some declared pickup grants. */
+export function validateResourceRewardBonuses(
+  acquisitions: CatalogCollection<ConcreteAcquisitionDeclaration>,
+  traits: CatalogCollection<TraitDeclaration>,
+): void {
+  const granted = new Set(
+    acquisitions.values.flatMap((acquisition) => Object.keys(acquisition.resourceGrant ?? {})),
+  );
+  for (const trait of traits.values)
+    for (const resource of Object.keys(trait.resourceRewardBonus ?? {}))
+      if (!granted.has(resource))
+        fail(
+          `traits.${trait.key}.resourceRewardBonus.${resource}`,
+          'no declared pickup grants this resource',
+        );
 }
 
 export function validateFixedAcquisitionTraitGrants(
