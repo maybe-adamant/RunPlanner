@@ -1,6 +1,7 @@
 # Encounter Events and Aetos Placement
 
-Status: proposed execution contract; implementation not started.
+Status: implementation authorized; Gate A implemented and independently reviewed,
+with browser visual acceptance pending. Gates B and C not started.
 Base: `fcd8d55680ad30abd7599122a4abcad8ad04bde7`.
 
 ## Outcome and scope
@@ -12,6 +13,15 @@ customization, changing combat budgets, or manufacturing a native spawn.
 Three delivery gates: existing event presentation; Aetos planner authoring;
 bilateral execution integration and closure. Commit this plan before execution.
 Fresh File work in the separate worktree is outside scope.
+
+### Delivery evidence
+
+- Plan committed as `ce6b3b43` before implementation.
+- Gate A: horizontal Events row delivered with existing Fig Leaf/Gorgon intents
+  and eligibility unchanged. Independent review found no actionable issues.
+  `npm run test:ui` passed 56 files / 579 tests; `git diff --check` passed.
+  Wide/narrow/scaled browser inspection remains pending; DOM tests do not attest
+  rendered layout. Gate A is accepted for commit; visual inspection remains pending.
 
 ## Locked authoring shape
 
