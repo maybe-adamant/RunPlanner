@@ -405,6 +405,48 @@ metrics within threshold. No execution fixture or mature golden project moved.
 
 ## Phase III — visible rule integration roadmap
 
+### J — Eris (locked 2026-09-29)
+
+Owner-locked fourth slice. Native: Eris spawns at the start of `G_Intro`,
+`H_Intro` and `I_Intro` while completed runs are at most 1/4/7, the hero lacks
+`ErisCurseTrait`, and `ErisCurseHealthThreshold` (no Death Defiance and health
+at most half) is false; she is a required object, exits wait for her, talking
+applies the curse and drops a required gift (20 Ashes / 50 Psyche / 300 Bones,
+NPC override: bonus-exempt, no duplication, not Meta-conversion eligible); door
+rewards roll after the gift (`RoomDataG.lua:1350-1394`, `RoomDataH.lua:557-601`,
+`RoomDataI.lua:511-555`, `RequirementsData.lua:151-163`, `NPCData_Eris.lua:5948`,
+`ShrineLogic.lua:755-765`, `RoomLogic.lua:3080-3106`, `ConsumableData.lua:1546`).
+
+Locked decisions:
+
+- Eris is an authored observation, never an enforced condition, on the Gorgon
+  Amulet precedent (`athenaTriggerConditionMet`): an optional occurrence-level
+  field on the three intro occurrences, absent meaning no, worded neutrally
+  ("Eris has spawned"), presented as a timeline row like the keepsake-rack
+  interaction rather than a room feature. Additive within unreleased schema 90;
+  no bump. The codec admits it only on rooms the catalog declares as Eris hosts
+  on `FreshFile`.
+- Catalog declares the host rooms with their gift, a new `ErisCursePickup`
+  producer profile carrying the NPC override, and a `resourceGrant` for
+  `MemPointsCommonDrop` so Psyche credits through accumulated gains.
+- When spawned, the engine derives a required interaction and a required gift
+  pickup on the intro; the gift settles as a resource acquisition before the
+  room's outgoing generation. Once cursed on the route, a later intro's
+  observation is retained and reported as a finding; no second gift. The curse
+  effect is not modeled. An unspawned Fresh intro derives nothing and reports
+  nothing.
+- Execution does not enforce the spawn: publication carries the observation and
+  conformance proves the outcome (curse trait, gift acquired), diagnostic-only
+  when marked but absent. Executor decoding of the entry belongs to execution
+  enablement; publication stays unavailable in this slice.
+- Excluded: health simulation, curse effects, executor decoding.
+
+Acceptance: codec admits the field on Fresh intros and rejects it elsewhere;
+command with undo; chronology witness that the G gift precedes the doors and
+flips Bones eligibility; repeat-prevention finding; the Fresh F–I fixture gains
+G Eris and stays clean; product loop step; catalog producer and grant
+witnesses; mature byte-identical.
+
 ### I — Remaining Fresh File rules (locked 2026-09-29)
 
 Owner-locked third slice; no new authored state, no schema change. Evidence:
