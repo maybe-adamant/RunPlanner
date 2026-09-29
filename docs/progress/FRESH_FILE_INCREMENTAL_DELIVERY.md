@@ -396,6 +396,13 @@ customization on replaced bindings). Full `npm run check` at `dce79ddc`
 warnings / 0 errors, Rust 45, ESLint clean. No
 execution fixture or mature golden project moved.
 
+Slice I committed on `codex/fresh-file`: `42fe5ecf` (forced biome intros,
+H_Bridge01 Shop overlay, Fresh Nectar without level, `ClearShopOffer`, Fresh
+F–I route witnesses). Full `npm run check` at `42fe5ecf` (2026-09-29): exit 0;
+391 Vitest files / 4140 tests, 732 Lua tests, Luacheck 0 warnings / 0 errors,
+Rust 45, ESLint clean. Performance compare against `27b28768`: PASS, all
+metrics within threshold. No execution fixture or mature golden project moved.
+
 ## Phase III — visible rule integration roadmap
 
 ### I — Remaining Fresh File rules (locked 2026-09-29)
