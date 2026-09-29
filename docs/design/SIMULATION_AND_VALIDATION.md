@@ -468,9 +468,10 @@ individual/forced pin a `resolvedOffer` room carries. H banks only
 `RunProgress`, I only `TartarusRewards`, and N banks nothing.
 
 Snapshots include trait/element history, god-pool state, Arcana/Fear,
-keepsakes and their retained effects, and the resources gained by acquisitions
-settled before the checkpoint. Configured Fear and effective suppression
-remain distinct; spent effects are not restored by later suppression.
+keepsakes and their retained effects, the resources gained by acquisitions
+settled before the checkpoint, and the history's known encountered enemies.
+Configured Fear and effective suppression remain distinct; spent effects are
+not restored by later suppression.
 Acquisition identities distinguish repeated temporary effects. Snapshots
 observe those engine products instead of reconstructing clocks, charges or
 rarity state from the current selected key.

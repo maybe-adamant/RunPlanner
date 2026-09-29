@@ -235,6 +235,11 @@ export interface HistoryLedgers {
   readonly requiredObjectSpawns: readonly RequiredObjectHistoryEntry[];
   readonly requiredObjectCompletions: readonly RequiredObjectHistoryEntry[];
   readonly roomRestores: readonly RoomRestoreHistoryEntry[];
+  /**
+   * Sorted native enemy names from normally completed compositions whose
+   * identities were exact. Absence means not recorded, never proof unseen.
+   */
+  readonly knownEncounteredEnemyKeys: readonly string[];
   readonly counters: HistoryCounters;
 }
 

@@ -11,25 +11,33 @@ import { fail } from '../errors';
 import {
   normalizeRewardHistoryRequirement,
   rejectEncounterHistoryRequirements,
+  validateResourceGainKeys,
 } from '../requirements';
 import type { RawRewardKernelInput } from '../../declarations/rewards/types';
 
 function validateRequirementRewardReferences(
   requirement: RequirementExpression,
   rewardTypes: CatalogCollection<RewardTypeDeclaration>,
+  resourceKeys: ReadonlySet<string>,
   path: string,
 ): void {
   switch (requirement.kind) {
     case 'all':
     case 'any':
       requirement.requirements.forEach((child, index) =>
-        validateRequirementRewardReferences(child, rewardTypes, `${path}.requirements[${index}]`),
+        validateRequirementRewardReferences(
+          child,
+          rewardTypes,
+          resourceKeys,
+          `${path}.requirements[${index}]`,
+        ),
       );
       return;
     case 'not':
       validateRequirementRewardReferences(
         requirement.requirement,
         rewardTypes,
+        resourceKeys,
         `${path}.requirement`,
       );
       return;
@@ -48,6 +56,10 @@ function validateRequirementRewardReferences(
     }
     case 'recordCount':
     case 'distinctRecordKeyCount':
+      if (requirement.record === 'resourceGains') {
+        validateResourceGainKeys(requirement.keys, resourceKeys, path);
+      }
+      return;
     case 'counterRange':
     case 'clockworkGoalsRemaining':
     case 'clockworkNonGoalCapacity':
@@ -65,10 +77,11 @@ function validateRequirementRewardReferences(
 function normalizeAndValidateRequirement(
   requirement: RequirementExpression,
   rewardTypes: CatalogCollection<RewardTypeDeclaration>,
+  resourceKeys: ReadonlySet<string>,
   path: string,
 ): RequirementExpression {
   const normalized = normalizeRewardHistoryRequirement(requirement, path);
-  validateRequirementRewardReferences(normalized, rewardTypes, path);
+  validateRequirementRewardReferences(normalized, rewardTypes, resourceKeys, path);
   rejectEncounterHistoryRequirements(normalized, path);
   return normalized;
 }
@@ -76,6 +89,7 @@ function normalizeAndValidateRequirement(
 export function normalizeStores(
   raw: RawRewardKernelInput['stores'],
   rewardTypes: CatalogCollection<RewardTypeDeclaration>,
+  resourceKeys: ReadonlySet<string>,
 ): CatalogCollection<RewardStoreDeclaration> {
   return createCollection(
     raw.map((store, storeIndex): RewardStoreDeclaration => {
@@ -99,6 +113,7 @@ export function normalizeStores(
                 requirement: normalizeAndValidateRequirement(
                   entry.requirement,
                   rewardTypes,
+                  resourceKeys,
                   `${entryPath}.requirement`,
                 ),
               }),

@@ -6,6 +6,7 @@ import type { RoomHistoryOrigin } from '../lifecycle';
 import type { ResolvedEncounterPhase } from './model';
 import {
   assessGeneratedEncounter,
+  encounteredEnemyKeys,
   initializeGeneratedEncounter,
   type GeneratedEncounterAssessment,
 } from './generation';
@@ -106,6 +107,13 @@ export function prepareGeneratedEncounter(
   if (decision.value?.kind !== 'generated') return { phase, capability };
   const assessment = assess(decision.value);
   const operands = assessment.operands;
+  // Without an attested Menace rank, authored positive conversions leave the
+  // effective identities unknown; absent conversions resolve to none.
+  const identitiesExact =
+    menaceRankAt !== undefined ||
+    !(decision.value.menace ?? []).some((wave) =>
+      Object.values(wave.conversions).some((conversion) => conversion.count > 0),
+    );
   return {
     capability,
     phase: Object.freeze({
@@ -120,6 +128,9 @@ export function prepareGeneratedEncounter(
       generatedCustomization: Object.freeze({
         decisionKey: decision.key,
         ...(operands === undefined ? {} : { operands }),
+        ...(operands === undefined || !identitiesExact
+          ? {}
+          : { encounteredEnemyKeys: encounteredEnemyKeys(policy, operands) }),
         knownRunBlacklistAdditions: assessment.knownRunBlacklistAdditions,
       }),
     }),

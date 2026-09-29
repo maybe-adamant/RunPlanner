@@ -756,6 +756,37 @@ export function assessGeneratedEncounter(
   });
 }
 
+/**
+ * Native enemy names a published composition requests with a positive count:
+ * a source survives unless Menace converts all of its requests, and each
+ * positive conversion adds its replacement. Elite and base names stay distinct.
+ */
+export function encounteredEnemyKeys(
+  policy: GeneratedEncounterSelection,
+  operands: GeneratedEncounterOperands,
+): readonly string[] {
+  const nativeIds = new Map(
+    [...policy.fixedEnemies, ...policy.choices].map((choice) => [choice.key, choice.nativeId]),
+  );
+  const keys = new Set<string>();
+  for (const wave of operands.waves) {
+    const conversions =
+      operands.menace.find((entry) => entry.waveIndex === wave.waveIndex)?.conversions ?? [];
+    for (const key of wave.typeKeys) {
+      const converted = conversions
+        .filter((conversion) => conversion.sourceKey === key)
+        .reduce((total, conversion) => total + conversion.count, 0);
+      const nativeId = nativeIds.get(key);
+      if (nativeId === undefined) throw new Error(`generated composition lost enemy ${key}`);
+      if ((wave.counts[key] ?? 0) - converted > 0) keys.add(nativeId);
+    }
+    for (const conversion of conversions)
+      if (conversion.count > 0 && conversion.targetNativeId !== undefined)
+        keys.add(conversion.targetNativeId);
+  }
+  return Object.freeze([...keys].sort());
+}
+
 /** Construct only on explicit Customize, using the same ordered candidate domains
  * and final validator as authoring. The finite wave/slot tree backtracks when a
  * locally legal prefix strands a later wave. */

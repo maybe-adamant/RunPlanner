@@ -3,6 +3,7 @@ import type { RewardKernelCatalog } from '@run-planner/engine/reward-kernel';
 import { fail } from '../errors';
 import type { RawRewardKernelInput } from '../../declarations/rewards/types';
 import {
+  grantedResourceKeys,
   normalizeAcquisitions,
   normalizePayloadDomains,
   normalizeRewardTypes,
@@ -20,8 +21,9 @@ export function createRewardKernelCatalog(input: RawRewardKernelInput): RewardKe
   const payloadDomains = normalizePayloadDomains(input.payloadDomains);
   const acquisitions = normalizeAcquisitions(input.acquisitions);
   const rewardTypes = normalizeRewardTypes(input.rewardTypes, payloadDomains, acquisitions);
-  const stores = normalizeStores(input.stores, rewardTypes);
-  const shops = normalizeShops(input.shops, rewardTypes);
+  const resourceKeys = grantedResourceKeys(acquisitions);
+  const stores = normalizeStores(input.stores, rewardTypes, resourceKeys);
+  const shops = normalizeShops(input.shops, rewardTypes, resourceKeys);
   const producerLifecycles = normalizeProducerLifecycles(
     input.producerLifecycles,
     rewardTypes,

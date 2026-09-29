@@ -10,8 +10,25 @@ import type { RewardKernelCatalog } from '@run-planner/engine/reward-kernel';
 import { CatalogContractError, fail } from '../errors';
 import {
   validateEncounterRequirementReferences,
+  validateKnownEnemyRequirementReferences,
   validateRequirementReferences,
 } from '../requirements';
+
+/** Native enemy names a generated composition can request, including Menace replacements. */
+function recordableEnemyKeys(definitions: CatalogCollection<EncounterDefinition>): Set<string> {
+  const keys = new Set<string>();
+  for (const definition of definitions.values)
+    for (const decision of definition.customization ?? []) {
+      if (decision.selection.kind !== 'generated') continue;
+      for (const enemy of [...decision.selection.fixedEnemies, ...decision.selection.choices]) {
+        keys.add(enemy.nativeId);
+        if (enemy.menace?.kind === 'mapped') keys.add(enemy.menace.targetNativeId);
+        if (enemy.menace?.kind === 'random')
+          enemy.menace.targetNativeIds.forEach((target) => keys.add(target));
+      }
+    }
+  return keys;
+}
 
 export function validateEncounterDefinitionClosure(input: {
   readonly definitions: CatalogCollection<EncounterDefinition>;
@@ -19,6 +36,7 @@ export function validateEncounterDefinitionClosure(input: {
   readonly traits: TraitCatalog;
   readonly keepsakes: CatalogCollection<KeepsakeDeclaration>;
 }): void {
+  const enemyKeys = recordableEnemyKeys(input.definitions);
   input.definitions.values.forEach((definition, index) => {
     const path = `encounterDefinitions[${index}]`;
     for (const keepsakeKey of definition.blocksKeepsakeSelectionKeys ?? []) {
@@ -34,6 +52,11 @@ export function validateEncounterDefinitionClosure(input: {
       validateEncounterRequirementReferences(
         definition.requirements,
         input.definitions,
+        `${path}.requirements`,
+      );
+      validateKnownEnemyRequirementReferences(
+        definition.requirements,
+        enemyKeys,
         `${path}.requirements`,
       );
     }

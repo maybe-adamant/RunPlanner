@@ -22,7 +22,11 @@ export type SaveFileHistoryRecord = 'lifetimeGodPickupRecord' | 'lifetimeGodUseR
 /** Resources credited by settled acquisitions, by resource key; the total is summed. */
 export type ResourceGainRecord = 'resourceGains';
 
-export type HistoryRecord = RunHistoryRecord | SaveFileHistoryRecord | ResourceGainRecord;
+/** Native enemy names recorded by completed customized encounters; each known name counts 1. */
+export type EncounteredEnemyRecord = 'knownEncounteredEnemies';
+
+export type HistoryRecord =
+  RunHistoryRecord | SaveFileHistoryRecord | ResourceGainRecord | EncounteredEnemyRecord;
 
 export type CurrentRunFlag = 'allSpellInvested' | 'pendingSpellDrop';
 

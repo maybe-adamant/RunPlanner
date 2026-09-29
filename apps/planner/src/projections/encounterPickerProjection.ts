@@ -66,6 +66,16 @@ function requirementMessages(
       return [
         `Requires ${counterLabels[evidence.axis]} ${expected ? '' : 'outside '}${rangeLabel(evidence.expected)}; currently ${evidence.actual}.`,
       ];
+    case 'recordCount':
+    case 'distinctRecordKeyCount': {
+      const subject =
+        evidence.record === 'knownEncounteredEnemies'
+          ? `known encountered enemies among ${evidence.keys.join(' / ')}`
+          : `${evidence.record} entries for ${evidence.keys.join(' / ')}`;
+      return [
+        `Requires ${expected ? '' : 'a count outside '}${rangeLabel(evidence.expected)} ${subject}; currently ${evidence.actual}.`,
+      ];
+    }
     case 'encounterKeyCount': {
       const scope = evidence.scope === 'route' ? 'run' : 'biome';
       const names = encounterNames(catalog, evidence.encounterKeys);

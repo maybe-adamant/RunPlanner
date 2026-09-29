@@ -206,6 +206,7 @@ describe('Run State presentation', () => {
       },
       forfeitStatus: 'consumed',
       resourceGains: {},
+      knownEncounteredEnemyKeys: [],
       rewardStoreController: {
         enteredStoreCount: 7,
         enteredMetaStoreCount: 2,

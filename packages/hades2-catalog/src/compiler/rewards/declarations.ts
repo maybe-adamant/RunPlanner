@@ -391,14 +391,21 @@ export function normalizeAcquisitions(
   );
 }
 
+/** Resources some declared pickup grants. */
+export function grantedResourceKeys(
+  acquisitions: CatalogCollection<ConcreteAcquisitionDeclaration>,
+): ReadonlySet<string> {
+  return new Set(
+    acquisitions.values.flatMap((acquisition) => Object.keys(acquisition.resourceGrant ?? {})),
+  );
+}
+
 /** A trait's resource bonus must scale a resource some declared pickup grants. */
 export function validateResourceRewardBonuses(
   acquisitions: CatalogCollection<ConcreteAcquisitionDeclaration>,
   traits: CatalogCollection<TraitDeclaration>,
 ): void {
-  const granted = new Set(
-    acquisitions.values.flatMap((acquisition) => Object.keys(acquisition.resourceGrant ?? {})),
-  );
+  const granted = grantedResourceKeys(acquisitions);
   for (const trait of traits.values)
     for (const resource of Object.keys(trait.resourceRewardBonus ?? {}))
       if (!granted.has(resource))

@@ -18,6 +18,7 @@ import {
   rejectEncounterHistoryRequirements,
   validateRequirementReferences,
 } from '../requirements';
+import { grantedResourceKeys } from './declarations';
 
 function requireProducerLifecycle(
   rewards: RewardKernelCatalog,
@@ -176,7 +177,12 @@ export function normalizeRewardBinding(
     }
     const requirementPath = `${path}.additionalOptionRequirements.${optionKey}`;
     const requirement = normalizeRewardHistoryRequirement(rawRequirement, requirementPath);
-    validateRequirementReferences(requirement, rewards.rewardTypes, requirementPath);
+    validateRequirementReferences(
+      requirement,
+      rewards.rewardTypes,
+      requirementPath,
+      grantedResourceKeys(rewards.acquisitions),
+    );
     rejectEncounterHistoryRequirements(requirement, requirementPath);
     additionalOptionRequirements[optionKey] = requirement;
   }

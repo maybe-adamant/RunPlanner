@@ -147,4 +147,73 @@ describe('resource quantity declarations', () => {
       }),
     ).toThrow(/resourceGains is only available where reward history is evaluated/);
   });
+
+  it('checks Shop option resource-gain thresholds against granted resources', () => {
+    const shopRoomIndex = declarations.rooms.findIndex(
+      (room) => room.incomingReward.kind === 'shop',
+    );
+    const optionKey =
+      catalog.rewards.shops.byKey.WorldShop?.groups.values[0]?.options.values[0]?.key;
+    if (shopRoomIndex < 0 || optionKey === undefined) throw new Error('no Shop room option');
+    const withOptionThreshold = (resource: string) =>
+      createCatalog({
+        ...declarations,
+        rooms: declarations.rooms.map((room, index) =>
+          index === shopRoomIndex && room.incomingReward.kind === 'shop'
+            ? {
+                ...room,
+                incomingReward: {
+                  ...room.incomingReward,
+                  additionalOptionRequirements: {
+                    [optionKey]: {
+                      kind: 'recordCount',
+                      record: 'resourceGains',
+                      keys: [resource],
+                      range: { min: 5 },
+                    },
+                  },
+                },
+              }
+            : room,
+        ),
+      });
+    expect(() => withOptionThreshold('MetaCardPointsCommon')).not.toThrow();
+    expect(() => withOptionThreshold('MissingResource')).toThrow(
+      new RegExp(
+        `additionalOptionRequirements\\.${optionKey}\\.keys\\[0\\]: unknown resource MissingResource`,
+      ),
+    );
+  });
+
+  it('rejects store-entry resource-gain thresholds on ungranted resources', () => {
+    expect(() =>
+      createRewardKernelCatalog(
+        rawInput({
+          ...rewardKernelDeclarations,
+          stores: rewardKernelDeclarations.stores.map((store, storeIndex) =>
+            storeIndex === 0
+              ? {
+                  ...store,
+                  entries: store.entries.map((entry, entryIndex) =>
+                    entryIndex === 0
+                      ? {
+                          ...entry,
+                          requirement: {
+                            kind: 'recordCount',
+                            record: 'resourceGains',
+                            keys: ['MissingResource'],
+                            range: { min: 5 },
+                          },
+                        }
+                      : entry,
+                  ),
+                }
+              : store,
+          ),
+        }),
+      ),
+    ).toThrow(
+      /stores\[0\]\.entries\[0\]\.requirement\.keys\[0\]: unknown resource MissingResource/,
+    );
+  });
 });
