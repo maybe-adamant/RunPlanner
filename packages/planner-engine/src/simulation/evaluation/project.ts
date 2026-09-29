@@ -158,6 +158,7 @@ function evaluateRouteAssembly(
         routePosition: resolveRoutePosition(catalog, route, route.itineraryBiomeKeys[0]!),
         historyView: createRouteStartHistoryView(),
       }),
+      'mature',
     );
     const authoredResult = route.loadout.keepsakeEquipResults?.[routeStartEffect.kind];
     if (authoredResult === undefined) {

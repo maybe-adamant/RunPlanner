@@ -50,6 +50,8 @@ function factsFor(history: RewardHistoryState): RewardKernelFacts {
         lootTypeHistory: history.lootTypeHistory,
         roomsEntered: {},
         useRecord: history.useRecord,
+        lifetimeGodUseRecord: history.lifetimeGodUseRecord,
+        lifetimeGodPickupRecord: history.lifetimeGodPickupRecord,
       },
       currentRoomShopOptionNames: new Set(),
       currentRoomRewardType: undefined,

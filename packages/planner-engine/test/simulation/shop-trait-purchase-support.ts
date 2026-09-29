@@ -61,6 +61,7 @@ import {
   pBiome,
   pOccurrenceIds,
 } from '@run-planner/test-fixtures/surface';
+import { matureGodHistoryRecords } from '../support/god-history';
 export {
   catalog,
   acquisitionSiteStorageKey,
@@ -167,6 +168,7 @@ export function baseFacts(): RewardKernelFacts {
         biomeUseRecord: {},
         lootTypeHistory: {},
         roomsEntered: {},
+        ...matureGodHistoryRecords(),
         useRecord: {},
       },
       currentRoomShopOptionNames: new Set(),

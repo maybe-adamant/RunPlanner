@@ -94,6 +94,8 @@ export function initializeRewardBranches(
       startingKeepsakeKey,
       initialArcanaFear,
       reached,
+      // Every supported route starts from a mature save file.
+      'mature',
     );
     const branch = Object.freeze({
       state,

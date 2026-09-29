@@ -20,6 +20,7 @@ export {
   createRewardHistoryState,
   factsWithHistory,
   resolveAcquisitionRole,
+  recordGodLootPickup,
   recordLootTypeHistorySource,
   pickupEffectForOffer,
 } from './history';
@@ -38,6 +39,8 @@ export {
 export {
   isOfferSupportedAtResolutionPoint,
   isPayloadLocallyValid,
+  eligibleOrdinarySourceGameNames,
+  isOrdinarySourcePolicy,
   locallyValidRewardOffers,
   ordinarySourceGameNames,
   supportedPayloads,
@@ -72,6 +75,7 @@ export type {
   RewardStoreDeclaration,
   RewardStoreEntry,
   RewardTypeDeclaration,
+  SaveFileGodHistory,
   ShopGenerationWitness,
   ShopGenerationSupport,
   ShopGenerationConstraints,

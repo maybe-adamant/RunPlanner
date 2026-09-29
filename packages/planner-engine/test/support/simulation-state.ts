@@ -5,7 +5,7 @@ import { resolveRoutePosition } from '../../src/authored-project/route-context';
 import { createArcanaFearState, type ArcanaFearState } from '../../src/simulation/arcana-fear';
 import { createRouteStartHistoryView } from '../../src/simulation/history/fold';
 import type { KeepsakeState } from '../../src/simulation/keepsakes/state';
-import type { RewardHistoryState } from '../../src/reward-kernel';
+import type { RewardHistoryState, SaveFileGodHistory } from '../../src/reward-kernel';
 import type { StygianWellRunState } from '../../src/simulation/commerce/stygian-well';
 import { createInitialSimulationState } from '../../src/simulation/state/construction';
 import type { SimulationState } from '../../src/simulation/state/model';
@@ -56,6 +56,7 @@ export interface TraitFrontierOverrides {
   readonly keepsakes?: KeepsakeState;
   readonly rewardHistory?: RewardHistoryState;
   readonly stygianWell?: Partial<StygianWellRunState>;
+  readonly saveFileGodHistory?: SaveFileGodHistory;
 }
 
 /**
@@ -91,6 +92,7 @@ export function traitFrontierState(
       routePosition: resolveRoutePosition(catalog, { routeKey, itineraryBiomeKeys }, biomeKey),
       historyView: createRouteStartHistoryView(),
     }),
+    overrides.saveFileGodHistory ?? 'mature',
   );
   const reached = replaceSimulationTraitHistory(initial, traitHistory);
   return Object.freeze({

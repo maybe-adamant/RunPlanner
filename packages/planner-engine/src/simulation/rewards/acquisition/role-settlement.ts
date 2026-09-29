@@ -17,6 +17,7 @@ import {
   consumeCountedOffer,
   isOfferSupportedAtResolutionPoint,
   locallyValidRewardOffers,
+  recordGodLootPickup,
   resolveAcquisitionRole,
   type ConcreteAcquisitionEvent,
   type ResolvedRewardOffer,
@@ -583,7 +584,23 @@ export function applyProducerRoleHistory(
         Object.freeze({ ...traitSettlement.blockedChild, branch: withEvent }),
       );
     } else {
-      const completed = publishTraitOfferScreenCompletion(withEvent, traitSettlement.completion);
+      // A completed selection screen records its loot in `GameState.LootPickups`.
+      const pickupHistory =
+        traitSettlement.completion === undefined
+          ? withEvent.state.rewardHistory
+          : recordGodLootPickup(
+              catalog.rewards,
+              withEvent.state.rewardHistory,
+              acquisition.acquisition.gameName,
+            );
+      const pickedUp =
+        pickupHistory === withEvent.state.rewardHistory
+          ? withEvent
+          : Object.freeze({
+              ...withEvent,
+              state: Object.freeze({ ...withEvent.state, rewardHistory: pickupHistory }),
+            });
+      const completed = publishTraitOfferScreenCompletion(pickedUp, traitSettlement.completion);
       next.push(
         seaStarResult?.kind === 'proc' && traitSettlement.completion !== undefined
           ? spawnSeaStarDuplicate(catalog, completed, incoming, resolution.role)

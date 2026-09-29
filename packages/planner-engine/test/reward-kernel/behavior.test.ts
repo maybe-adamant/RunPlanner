@@ -29,6 +29,7 @@ import {
 import { describe, expect, it } from 'vitest';
 
 import { catalog } from '@run-planner/hades2-catalog';
+import { matureGodHistoryRecords } from '../support/god-history';
 
 const rewardKernelCatalog = catalog.rewards;
 
@@ -48,6 +49,7 @@ function requirementContext(
       biomeUseRecord: {},
       lootTypeHistory: {},
       roomsEntered: {},
+      ...matureGodHistoryRecords(),
       useRecord: {},
     },
     currentRoomShopOptionNames: new Set(),
@@ -75,6 +77,7 @@ function facts(
     biomeUseRecord: {},
     lootTypeHistory: Object.fromEntries(acquiredSources.map((source) => [source, 1])),
     roomsEntered: {},
+    ...matureGodHistoryRecords(),
     useRecord: {},
   };
   return {
@@ -91,7 +94,7 @@ function shopFacts(enteredBiomes: number, routeKey = 'Underworld'): RewardKernel
 
 function historyFromSources(sources: readonly string[]): RewardHistoryState {
   const counts = Object.freeze(Object.fromEntries(sources.map((source) => [source, 1])));
-  const baseline = createRewardHistoryState();
+  const baseline = createRewardHistoryState(rewardKernelCatalog, 'mature');
   return Object.freeze({
     ...baseline,
     offerHistory: [],
@@ -220,10 +223,14 @@ describe('source support', () => {
 
 describe('Echo last-reward acquisition history', () => {
   it('retains the latest eligible exact source while ignoring nonparticipating pickups and Blind Box identity', () => {
-    let history = applyConcreteAcquisition(rewardKernelCatalog, createRewardHistoryState(), {
-      kind: 'resource',
-      gameName: 'GiftDrop',
-    });
+    let history = applyConcreteAcquisition(
+      rewardKernelCatalog,
+      createRewardHistoryState(rewardKernelCatalog, 'mature'),
+      {
+        kind: 'resource',
+        gameName: 'GiftDrop',
+      },
+    );
     expect(history.lastRewardRecreation).toEqual({
       offer: { rewardType: 'GiftDrop' },
       producerLifecycleKey: 'EchoLastReward',
@@ -255,10 +262,14 @@ describe('Echo last-reward acquisition history', () => {
   });
 
   it('records producer-owned Psyche as the exact latest Echo recreation without store membership', () => {
-    const history = applyConcreteAcquisition(rewardKernelCatalog, createRewardHistoryState(), {
-      kind: 'resource',
-      gameName: 'MemPointsCommonDrop',
-    });
+    const history = applyConcreteAcquisition(
+      rewardKernelCatalog,
+      createRewardHistoryState(rewardKernelCatalog, 'mature'),
+      {
+        kind: 'resource',
+        gameName: 'MemPointsCommonDrop',
+      },
+    );
     expect(history.consumableRecord.MemPointsCommonDrop).toBe(1);
     expect(history.lastRewardRecreation).toEqual({
       offer: { rewardType: 'MemPointsCommonDrop' },
@@ -470,6 +481,7 @@ describe('counted reward bags', () => {
           biomeUseRecord: {},
           lootTypeHistory: {},
           roomsEntered: {},
+          ...matureGodHistoryRecords(),
           useRecord: { SpellDrop: 1 },
         },
       }),
@@ -491,6 +503,7 @@ describe('counted reward bags', () => {
             biomeUseRecord: {},
             lootTypeHistory: {},
             roomsEntered: {},
+            ...matureGodHistoryRecords(),
             useRecord: { SpellDrop: 1 },
           },
         }),
@@ -553,7 +566,7 @@ describe('offer and acquisition projections', () => {
   it('records every generic offer without pretending it was acquired', () => {
     const history = applyOfferProjection(
       rewardKernelCatalog,
-      createRewardHistoryState(),
+      createRewardHistoryState(rewardKernelCatalog, 'mature'),
       { rewardType: 'MaxHealthDrop' },
       facts([], { runDepthCache: 3 }),
     );
@@ -572,7 +585,7 @@ describe('offer and acquisition projections', () => {
     };
     let history = applyOfferProjection(
       rewardKernelCatalog,
-      createRewardHistoryState(),
+      createRewardHistoryState(rewardKernelCatalog, 'mature'),
       offer,
       facts([], { runDepthCache: 12 }),
     );
@@ -605,7 +618,7 @@ describe('offer and acquisition projections', () => {
     const requirement = { kind: 'minRoomsSinceEvent', event: 'Devotion', count: 15 } as const;
     const history = applyOfferProjection(
       rewardKernelCatalog,
-      createRewardHistoryState(),
+      createRewardHistoryState(rewardKernelCatalog, 'mature'),
       {
         rewardType: 'Devotion',
         payload: {
@@ -625,20 +638,28 @@ describe('offer and acquisition projections', () => {
   });
 
   it('projects Spell as consumable history despite its loot acquisition kind', () => {
-    const history = applyConcreteAcquisition(rewardKernelCatalog, createRewardHistoryState(), {
-      kind: 'loot',
-      gameName: 'SpellDrop',
-    });
+    const history = applyConcreteAcquisition(
+      rewardKernelCatalog,
+      createRewardHistoryState(rewardKernelCatalog, 'mature'),
+      {
+        kind: 'loot',
+        gameName: 'SpellDrop',
+      },
+    );
     expect(history.useRecord).toEqual({ SpellDrop: 1 });
     expect(history.consumableRecord).toEqual({ SpellDrop: 1 });
     expect(history.lootTypeHistory).toEqual({});
   });
 
   it('starts a new current-room use record without clearing route or biome history', () => {
-    const acquired = applyConcreteAcquisition(rewardKernelCatalog, createRewardHistoryState(), {
-      kind: 'consumable',
-      gameName: 'MaxHealthDrop',
-    });
+    const acquired = applyConcreteAcquisition(
+      rewardKernelCatalog,
+      createRewardHistoryState(rewardKernelCatalog, 'mature'),
+      {
+        kind: 'consumable',
+        gameName: 'MaxHealthDrop',
+      },
+    );
     const nextRoom = beginCurrentRoomRewardHistory(acquired);
 
     expect(nextRoom.currentRoomUseRecord).toEqual({});
@@ -648,10 +669,14 @@ describe('offer and acquisition projections', () => {
   });
 
   it('starts a new biome without clearing route-wide reward history', () => {
-    const acquired = applyConcreteAcquisition(rewardKernelCatalog, createRewardHistoryState(), {
-      kind: 'loot',
-      gameName: 'ApolloUpgrade',
-    });
+    const acquired = applyConcreteAcquisition(
+      rewardKernelCatalog,
+      createRewardHistoryState(rewardKernelCatalog, 'mature'),
+      {
+        kind: 'loot',
+        gameName: 'ApolloUpgrade',
+      },
+    );
     const nextBiome = beginBiomeRewardHistory(acquired);
 
     expect(nextBiome.currentRoomUseRecord).toEqual({});
@@ -805,7 +830,7 @@ describe('ordered shop transitions', () => {
         authored,
         witness,
         [],
-        createRewardHistoryState(),
+        createRewardHistoryState(rewardKernelCatalog, 'mature'),
         blockedFacts,
         additionalRequirements,
       ),
@@ -816,7 +841,7 @@ describe('ordered shop transitions', () => {
         witness,
         1,
         [0, 1, 2],
-        createRewardHistoryState(),
+        createRewardHistoryState(rewardKernelCatalog, 'mature'),
         blockedFacts,
         additionalRequirements,
       ),
@@ -827,7 +852,7 @@ describe('ordered shop transitions', () => {
         witness,
         1,
         [0, 1, 2],
-        createRewardHistoryState(),
+        createRewardHistoryState(rewardKernelCatalog, 'mature'),
         supportedFacts,
         additionalRequirements,
       ),
@@ -1114,7 +1139,7 @@ describe('ordered shop transitions', () => {
           authored,
           witness,
           [lastStandSlot],
-          createRewardHistoryState(),
+          createRewardHistoryState(rewardKernelCatalog, 'mature'),
           factsAtShop,
         ),
       ).toHaveLength(1);
@@ -1125,7 +1150,7 @@ describe('ordered shop transitions', () => {
           authored,
           witness,
           [lastStandSlot],
-          createRewardHistoryState(),
+          createRewardHistoryState(rewardKernelCatalog, 'mature'),
           factsAtShop,
         ),
       ).toHaveLength(1);
@@ -1160,7 +1185,7 @@ describe('ordered shop transitions', () => {
         mismatched,
         witness,
         [],
-        createRewardHistoryState(),
+        createRewardHistoryState(rewardKernelCatalog, 'mature'),
         facts(),
       ),
     ).toEqual([]);
@@ -1295,7 +1320,7 @@ describe('ordered shop transitions', () => {
       authored,
       witness,
       [0, 1],
-      createRewardHistoryState(),
+      createRewardHistoryState(rewardKernelCatalog, 'mature'),
       baseFacts,
     );
     expect(results).toHaveLength(1);

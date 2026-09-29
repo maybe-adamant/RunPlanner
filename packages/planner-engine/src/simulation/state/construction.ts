@@ -1,6 +1,6 @@
 import type { Catalog } from '../../catalog-schema';
 import type { ResolvedRoutePosition } from '../../authored-project/route-context';
-import { createRewardHistoryState } from '../../reward-kernel';
+import { createRewardHistoryState, type SaveFileGodHistory } from '../../reward-kernel';
 import type { ArcanaFearState } from '../arcana-fear';
 import type { HistoryStateView } from '../history';
 import { createKeepsakeState } from '../keepsakes/state';
@@ -9,7 +9,8 @@ import { createEmptyRewardLookups, type SimulationState } from './model';
 
 /**
  * The exact run-start snapshot: declared loadout identity, the configured
- * Arcana/Fear and keepsake frontier, and empty run history. Loadout equip
+ * Arcana/Fear and keepsake frontier, the save file's god history and empty
+ * run history. Loadout equip
  * results and the Aspect starting trait are applied by their own transitions
  * over this state.
  */
@@ -22,6 +23,7 @@ export function createInitialSimulationState(
     readonly routePosition: ResolvedRoutePosition;
     readonly historyView: HistoryStateView;
   },
+  saveFileGodHistory: SaveFileGodHistory,
 ): SimulationState {
   return Object.freeze({
     equipment: Object.freeze({
@@ -32,7 +34,7 @@ export function createInitialSimulationState(
     bags: Object.freeze({}),
     rewardPriorities: Object.freeze([]),
     hexProgress: Object.freeze({ bankedPathPoints: 0, investedPathPoints: 0 }),
-    rewardHistory: createRewardHistoryState(),
+    rewardHistory: createRewardHistoryState(catalog.rewards, saveFileGodHistory),
     traitHistory: createTraitHistoryState(),
     arcanaFear,
     keepsakes: createKeepsakeState(catalog, startingKeepsakeKey, arcanaFear),

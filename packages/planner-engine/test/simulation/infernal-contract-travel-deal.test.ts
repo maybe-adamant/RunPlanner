@@ -38,6 +38,7 @@ import { createKeepsakeState } from '../../src/simulation/keepsakes/state';
 import { createDerivedAcquisitionEntryCandidateArtifacts } from '../../src/simulation/rewards/acquisition/artifacts';
 import { initializeTestRewardBranches } from '../support/arcana-fear';
 import { installHexTree } from '../../src/simulation/hex-progress';
+import { matureGodHistoryRecords } from '../support/god-history';
 
 const biome = createBiomeAddress('Underworld', 'F');
 const loadout = { weaponKey: 'WeaponStaff', aspectKey: 'StaffBase' } as const;
@@ -172,7 +173,13 @@ function baseFacts(enteredBiomes = 4, routeKey = 'Underworld'): RewardKernelFact
         enteredBiomes,
         upgradableTraitCount: 1,
       },
-      records: { biomeUseRecord: {}, lootTypeHistory: {}, roomsEntered: {}, useRecord: {} },
+      records: {
+        biomeUseRecord: {},
+        lootTypeHistory: {},
+        roomsEntered: {},
+        useRecord: {},
+        ...matureGodHistoryRecords(),
+      },
       currentRoomShopOptionNames: new Set(),
       currentRoomRewardType: undefined,
       currentRoomStructuralTags: [],

@@ -527,6 +527,24 @@ The progressed baseline ordinary source domain contains Aphrodite, Apollo,
 Ares, Demeter, Hephaestus, Hera, Hestia, Poseidon, and Zeus. Hermes is a
 separate reward and does not count toward the ordinary four-source cap.
 
+Several ordinary gods carry LootData `GameStateRequirements`:
+
+- Hestia and Aphrodite require lifetime `GameState.UseRecord` HasAny Poseidon or
+  Demeter (`LootData_Hestia.lua`, `LootData_Aphrodite.lua`). Planner
+  disposition: declared as each acquisition's `lootRequirement` over the
+  derived `lifetimeGodUseRecord`.
+- Zeus requires `GameState.TextLinesRecord` `ZeusFirstPickUp`
+  (`LootData_Zeus.lua:7-14`).
+- Hephaestus requires `UseRecord` Zeus and `CurrentRun.TextLinesRecord` lacking
+  `ZeusFirstPickUp` (`LootData_Hephaestus.lua:7-23`).
+
+The Zeus and Hephaestus text-record gates are not yet declared. A mature file
+satisfies them; a closed profile therefore yields a seven-god initial pool where
+the game allows three. Declaring them is Phase III work. The Mystery Boon
+requirement (`BlindBoxLootRequirements`, `RequirementsData.lua:1218-1232`:
+lifetime use of Zeus, Poseidon, Apollo, Demeter, Aphrodite, Hephaestus and
+Hestia) is a later consumer of `lifetimeGodUseRecord`.
+
 ### Source-support policies
 
 Source support is not payload validation. The `BoonSource` domain only proves
@@ -565,12 +583,15 @@ though the ordinary source cap is four.
 #### Shop RandomLoot and Blind Box
 
 `RandomLoot` and `BoostedRandomLoot` call `GetEligibleInteractedGod` while shop
-inventory is generated. Under the fully progressed baseline, every ordinary
-god satisfies the persistent interaction side of that function. Current-run
-support therefore follows ordinary source eligibility and the four-source cap
-without generated-peer exclusion. Both shop entries normalize to
-`ordinaryNoPeer` at offer generation; their option-entry identities remain
-distinct for without-replacement selection.
+inventory is generated. It intersects ordinary eligible gods with lifetime
+`GameState.LootPickups` and falls back to every eligible god when the
+intersection is empty (`RunLogic.lua:1799-1813`). `LootPickups` is incremented
+when an upgrade-screen selection is made (`UpgradeChoiceLogic.lua:1046`), not
+when a door is offered. Planner disposition: both shop entries normalize to
+`ordinaryInteracted` at offer generation, reading the derived save-file pickup
+record; a mature file holds every ordinary god, so its support equals ordinary
+eligibility. Their option-entry identities remain distinct for
+without-replacement selection.
 
 `BlindBoxLoot` does not resolve its source during shop generation. Purchasing
 the box records the box use and then calls ordinary `ChooseLoot` with no peer

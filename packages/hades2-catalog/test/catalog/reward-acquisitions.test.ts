@@ -46,6 +46,92 @@ describe('reward compiler acquisition, reward-type, and store normalizers', () =
     ).toThrow(/pathPointGrant.*must equal 3/);
   });
 
+  it('gates exactly Hestia and Aphrodite on save-file Poseidon or Demeter use', () => {
+    const gated = rewardKernelCatalog.acquisitions.values.flatMap((acquisition) =>
+      acquisition.lootRequirement === undefined
+        ? []
+        : [[acquisition.gameName, acquisition.lootRequirement] as const],
+    );
+    const used = {
+      kind: 'recordCount',
+      record: 'lifetimeGodUseRecord',
+      keys: ['PoseidonUpgrade', 'DemeterUpgrade'],
+      range: { min: 1 },
+    };
+    expect(Object.fromEntries(gated)).toEqual({ AphroditeUpgrade: used, HestiaUpgrade: used });
+    expect(() =>
+      createRewardKernelCatalog(
+        rawInput({
+          ...rewardKernelDeclarations,
+          acquisitions: rewardKernelDeclarations.acquisitions.map((acquisition) =>
+            acquisition.gameName === 'HermesUpgrade'
+              ? ({ ...acquisition, lootRequirement: used } as never)
+              : acquisition,
+          ),
+        }),
+      ),
+    ).toThrow(/lootRequirement.*ordinary god sources/);
+  });
+
+  it('rejects malformed loot requirements and save-file records elsewhere', () => {
+    const withHestiaRequirement = (lootRequirement: unknown) =>
+      rawInput({
+        ...rewardKernelDeclarations,
+        acquisitions: rewardKernelDeclarations.acquisitions.map((acquisition) =>
+          acquisition.gameName === 'HestiaUpgrade'
+            ? ({ ...acquisition, lootRequirement } as never)
+            : acquisition,
+        ),
+      });
+    expect(() =>
+      createRewardKernelCatalog(
+        withHestiaRequirement({
+          kind: 'encounterKeyCount',
+          scope: 'route',
+          encounterKeys: ['GeneratedF'],
+          range: { min: 1 },
+        }),
+      ),
+    ).toThrow(/lootRequirement.*encounter-history requirements/);
+    expect(() =>
+      createRewardKernelCatalog(
+        withHestiaRequirement({
+          kind: 'recordCount',
+          record: 'lifetimeGodUseRecord',
+          keys: ['HermesUpgrade'],
+          range: { min: 1 },
+        }),
+      ),
+    ).toThrow(/lootRequirement\.keys\[0\].*not an ordinary god source/);
+    expect(() =>
+      createRewardKernelCatalog(
+        rawInput({
+          ...rewardKernelDeclarations,
+          stores: rewardKernelDeclarations.stores.map((store, storeIndex) =>
+            storeIndex === 0
+              ? ({
+                  ...store,
+                  entries: store.entries.map((entry, entryIndex) =>
+                    entryIndex === 0
+                      ? {
+                          ...entry,
+                          requirement: {
+                            kind: 'recordCount',
+                            record: 'lifetimeGodPickupRecord',
+                            keys: ['ApolloUpgrade'],
+                            range: { min: 1 },
+                          },
+                        }
+                      : entry,
+                  ),
+                } as never)
+              : store,
+          ),
+        }),
+      ),
+    ).toThrow(/lifetimeGodPickupRecord is only available to loot requirements/);
+  });
+
   it('normalizes declaration-owned Sea Star capability without reward-kind inference', () => {
     expect(
       rewardKernelCatalog.acquisitions.values
@@ -471,7 +557,7 @@ describe('reward compiler acquisition, reward-type, and store normalizers', () =
       {
         gameName: 'RandomLoot',
         payloadDomain: 'BoonSource',
-        sourceSupport: 'ordinaryNoPeer',
+        sourceSupport: 'ordinaryInteracted',
         sourceResolution: { kind: 'offer' },
         offerProjection: 'none',
         acquisitionRoles: [
