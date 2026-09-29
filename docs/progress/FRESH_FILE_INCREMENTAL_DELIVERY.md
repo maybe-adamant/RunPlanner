@@ -398,6 +398,49 @@ execution fixture or mature golden project moved.
 
 ## Phase III — visible rule integration roadmap
 
+### I — Remaining Fresh File rules (locked 2026-09-29)
+
+Owner-locked third slice; no new authored state, no schema change. Evidence:
+the remaining-rules inventory of 2026-09-29 (a Fresh F→I route validates
+clean today, so every gap below is silent).
+
+Locked decisions:
+
+- Forced biome intros use the existing first-biome mechanism. `FishmanIntro`
+  (G; no encounter-depth count, no skip) and `ClockworkIntro` (I; counts
+  depth, no skip) are fixed definitions. Set resolution gains a route-keyed
+  first-biome key beside the existing default, and the first-biome key applies
+  only while it has not resolved earlier on the route (native
+  `AlwaysForce` until completed). Mature I keeps `GeneratedIChronosIntro`;
+  Fresh I resolves `ClockworkIntro`, so the Chronos intro never occurs there.
+  Publication carries the keys because the executor bypasses native forcing.
+- `H_Bridge01` is a Shop on `FreshFile` (native Story/Echo needs lifetime
+  `H_Boss01` entered): `resolveEntryDeclaration` widens from an encounter-only
+  rule to a route overlay {Shop kind and template, WorldShop binding, no Story
+  lifecycle, `BridgeShop`}. Force window and cap unchanged. Direct room
+  declaration reads that bypass the resolver are routed through it.
+- Fresh Nectar grants no level (native `WorldUpgradeGiftDropRunProgress`):
+  a route condition on the GiftDrop level-resolution effect where acquisition
+  role state is created; export follows. Fields optional Nectar stays reachable.
+- `ClearShopOffer` command clears a slot's item and dependents; the picker
+  exposes it in the `selectedInvalid` section. The test-only clear helper is
+  retired where the command replaces it.
+- Already-closed rules gain Fresh project witnesses: Hestia/Aphrodite lifetime
+  use gating, shop-god intersection with fallback, elements unreachable on
+  F–I, exchange off, no Death Defiance source.
+- No decode conversion: no Fresh File saves exist beyond development fixtures,
+  so a Fresh bridge Story state or Nectar level resolution rejects at decode.
+- Excluded: Eris (Slice J), enemy-triggered introductions, execution
+  enablement.
+
+Acceptance: mature byte-identical (no fixture or golden movement, mature I
+first-biome resolution unchanged); a Fresh F→I fixture builder validates with
+zero findings and is execution-eligible; Fresh G and I first combats resolve
+the intros and the second G combat does not re-force; Fresh `H_Bridge01` is a
+Shop with WorldShop inventory and no Echo action; Fresh Nectar acquisition has
+no level resolution; `ClearShopOffer` clears I_WorldShop slot 5 through the
+picker; Hestia and shop-god witnesses pass.
+
 ### H — First sequence and Apollo offer (locked 2026-09-29)
 
 Owner-locked second slice. Native facts: `F_Combat01` has
