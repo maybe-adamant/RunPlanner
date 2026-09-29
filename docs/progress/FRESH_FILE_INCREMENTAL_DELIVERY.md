@@ -383,6 +383,12 @@ route, fixed loadout, publication unavailable). Full `npm run check` at
 Luacheck 0 warnings / 0 errors, Rust 45, ESLint clean. Awaiting owner
 inspection of the visible Fresh File project before Phase III slices lock.
 
+Slice G committed on `codex/fresh-file`: `cf20d7af` (blanket disabling pass,
+MetaProgress native-complete, counted-store Heal fallback). Full
+`npm run check` at `cf20d7af` (2026-09-29): exit 0; 381 Vitest files / 4095
+tests, 732 Lua tests, Luacheck 0 warnings / 0 errors, Rust 45, ESLint clean.
+No execution fixture or mature golden project moved.
+
 ## Phase III — visible rule integration roadmap
 
 ### G — Blanket disabling pass (locked 2026-09-29)
