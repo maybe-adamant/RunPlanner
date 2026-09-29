@@ -211,6 +211,8 @@ export const producerLifecycles = [
   },
   {
     key: 'NarcissusPickup',
+    // TraitData_Narcissus overrides its Ashes drop's `AddResources` to 10.
+    resourceGrantOverrides: { MetaCardPointsCommonDrop: { MetaCardPointsCommon: 10 } },
     rewardTypes: [
       'StoreRewardRandomStack',
       'MaxManaDrop',
@@ -260,6 +262,8 @@ export const producerLifecycles = [
   },
   {
     key: 'NemesisEventPickup',
+    // `NPCRewardDrop` marks each dropped consumable `NPCDrop`.
+    resourceBonusExempt: true,
     rewardTypes: nemesisEventRewardTypes,
     defaultLifecyclePoint: 'roomRewardPickup',
     overrides: [

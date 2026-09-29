@@ -19,7 +19,10 @@ export type RunHistoryRecord = 'biomeUseRecord' | 'lootTypeHistory' | 'roomsEnte
  */
 export type SaveFileHistoryRecord = 'lifetimeGodPickupRecord' | 'lifetimeGodUseRecord';
 
-export type HistoryRecord = RunHistoryRecord | SaveFileHistoryRecord;
+/** Resources credited by settled acquisitions, by resource key; the total is summed. */
+export type ResourceGainRecord = 'resourceGains';
+
+export type HistoryRecord = RunHistoryRecord | SaveFileHistoryRecord | ResourceGainRecord;
 
 export type CurrentRunFlag = 'allSpellInvested' | 'pendingSpellDrop';
 

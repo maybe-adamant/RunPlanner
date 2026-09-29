@@ -20,7 +20,7 @@ import type { RewardLifecycleReferences } from '../prepared-inputs';
 import { processRewardOffer } from '../../offer-generation';
 import type { RewardProducerFrontier } from '../../producer-frontiers';
 import { localRewardBinding } from '../room-reward-bindings';
-import { spawnTraitOffers } from './spawned-trait-offers';
+import { spawnPickups } from '../../../state/pending-resource-pickups';
 import type { SimulationState } from '../../../state/model';
 
 export interface FieldsOptionalOfferPointMaterialization {
@@ -286,7 +286,11 @@ export function materializeFieldsOptionalOfferPoint(
   // `SpawnRewardCages` builds every cage reward and optional reward at this point.
   const spawned = [...(room.localRewards ?? []), ...optionalRewards];
   return Object.freeze({
-    branches: Object.freeze(branches.map((branch) => spawnTraitOffers(catalog, branch, spawned))),
+    branches: Object.freeze(
+      branches.map((branch) =>
+        Object.freeze({ ...branch, state: spawnPickups(catalog, branch.state, spawned) }),
+      ),
+    ),
     findings: Object.freeze([...findings.values()]),
     producerFrontiers: Object.freeze(producerFrontiers),
   });

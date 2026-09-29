@@ -56,12 +56,26 @@ function normalizeRoomStructuralTags(
 
 const saveFileRecords = new Set<string>(['lifetimeGodPickupRecord', 'lifetimeGodUseRecord']);
 
-/** Save-file god records are carried only by ordinary-source contacts. */
+/**
+ * Which derived records a contact carries: every contact has the run ledgers,
+ * reward-history contacts add resource gains, and ordinary-god loot
+ * requirements also add the save-file god records.
+ */
+type RecordScope = 'run' | 'rewardHistory' | 'loot';
+
 export function normalizeRequirement(
   requirement: RequirementExpression,
   path: string,
 ): RequirementExpression {
-  return normalizeRequirementWith(requirement, path, false);
+  return normalizeRequirementWith(requirement, path, 'run');
+}
+
+/** A reward-store or Shop requirement, evaluated with the branch's reward history. */
+export function normalizeRewardHistoryRequirement(
+  requirement: RequirementExpression,
+  path: string,
+): RequirementExpression {
+  return normalizeRequirementWith(requirement, path, 'rewardHistory');
 }
 
 /** An ordinary god's loot requirement, which may read save-file god records. */
@@ -69,13 +83,13 @@ export function normalizeLootRequirement(
   requirement: RequirementExpression,
   path: string,
 ): RequirementExpression {
-  return normalizeRequirementWith(requirement, path, true);
+  return normalizeRequirementWith(requirement, path, 'loot');
 }
 
 function normalizeRequirementWith(
   requirement: RequirementExpression,
   path: string,
-  allowSaveFileRecords: boolean,
+  scope: RecordScope,
 ): RequirementExpression {
   if (!hasRequirementEvaluator(requirement.kind)) {
     fail(`${path}.kind`, `has no current-run evaluator: ${String(requirement.kind)}`);
@@ -91,7 +105,7 @@ function normalizeRequirementWith(
         kind: requirement.kind,
         requirements: Object.freeze(
           requirement.requirements.map((child, index) =>
-            normalizeRequirementWith(child, `${path}.requirements[${index}]`, allowSaveFileRecords),
+            normalizeRequirementWith(child, `${path}.requirements[${index}]`, scope),
           ),
         ),
       });
@@ -102,7 +116,7 @@ function normalizeRequirementWith(
         requirement: normalizeRequirementWith(
           requirement.requirement,
           `${path}.requirement`,
-          allowSaveFileRecords,
+          scope,
         ),
       });
     case 'counterRange':
@@ -116,8 +130,11 @@ function normalizeRequirementWith(
       if (requirement.keys.length === 0) {
         fail(`${path}.keys`, 'must not be empty');
       }
-      if (!allowSaveFileRecords && saveFileRecords.has(requirement.record)) {
+      if (scope !== 'loot' && saveFileRecords.has(requirement.record)) {
         fail(`${path}.record`, `${requirement.record} is only available to loot requirements`);
+      }
+      if (scope === 'run' && requirement.record === 'resourceGains') {
+        fail(`${path}.record`, 'resourceGains is only available where reward history is evaluated');
       }
       return Object.freeze({
         kind: requirement.kind,

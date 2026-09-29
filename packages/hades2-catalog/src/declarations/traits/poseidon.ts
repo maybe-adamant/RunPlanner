@@ -118,6 +118,12 @@ export const poseidonTraits = [
     blockOfferIfPreviouslyPicked: true,
     blockInRunRarify: false,
     excludeFromRarityCount: false,
+    // Psyche (`MemPointsCommon`) is also scaled natively; no consumer reads it.
+    resourceRewardBonus: {
+      resources: ['MetaCardPointsCommon', 'MetaCurrency'],
+      baseValue: 1.5,
+      rarityMultipliers: { Common: 1, Rare: 1.5, Epic: 2, Heroic: 2.5 },
+    },
     selectedDisposition: {
       kind: 'producePickups',
       producerLifecycleKey: 'GeneratedTraitPickup',

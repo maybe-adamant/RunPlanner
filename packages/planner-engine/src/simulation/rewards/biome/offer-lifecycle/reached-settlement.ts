@@ -12,7 +12,7 @@ import type { RewardBranchState } from '../../branch-primitives';
 import {
   settleOwnedAcquisitionSite,
   settleProducerAcquisitionSite,
-  withStoredArtificerReplacements,
+  withRoomStoredSourceProducts,
 } from '../../acquisition/site-settlement';
 import type { AcquisitionRoleFrontier } from '../../acquisition/contracts';
 import { preparedAcquisitionSiteOwner } from '../prepared-inputs';
@@ -98,7 +98,11 @@ export function applyReachedOfferSettlement(
         siteOwner: wheel.origin,
         pointKey: wheel.wheelKey,
         entryKey: 'picked',
-        source: withStoredArtificerReplacements(room, shipWheelRoomRewardSource(wheel, picked)),
+        source: withRoomStoredSourceProducts(
+          catalog,
+          room,
+          shipWheelRoomRewardSource(wheel, picked),
+        ),
         ...(timelineOwner === undefined ? {} : { timelineOwner }),
         historySequence: event.sequence,
         deferArtificerReplacement: true,

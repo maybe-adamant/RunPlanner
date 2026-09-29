@@ -988,6 +988,26 @@ Psyche, and Bones are independent concrete pickups beside Max Magick, Max
 Health, and Death Defiance; Psyche owns ordinary consumable/use and
 last-reward history but no counted-store membership.
 
+Resource quantity is a fact of the produced object, not of its acquisition.
+When a resource pickup spawns — an incoming reward at its encounter's end or
+start, a Ship wheel reward, Fields cages and optionals at entry, World Shop
+items at entry, a Gold Gold Gold duplicate or Travel Deal restock, or the
+generated pickups of a completed screen (Buried Treasure's gift, Echo's last
+reward), after that screen's selection is equipped — its amount is resolved
+from the declared grant, the producer's override or `NPCDrop` exemption, and
+the resource bonuses equipped then, rounded per object. The branch keeps that
+amount by room until the object is collected or the room is exited. Only
+producers with no earlier native spawn contact resolve at collection: Hermes
+deliveries, Nemesis results, Artificer replacements and Blind Box hidden loot,
+none of which grants Ashes or Bones. Each
+normal acquisition credits the stored amount to the reward history's
+`resourceGains`; a Sea Star-retained object keeps its amount for the duplicate.
+Time Piece and Artificer destroy the object without a credit, nothing debits
+gains, and a mature file starts at zero. Gains reach requirement contexts as
+the summed `resourceGains` record, so outgoing generation sees only
+acquisitions settled before its checkpoint. Only declared grants (Ashes and
+Bones) are tracked.
+
 Normal acquisition, Time Piece, and Artificer are one mutually exclusive
 disposition on each exact acquisition role. Artificer is supported only for a
 free eligible concrete instance. A successful conversion consumes one use and

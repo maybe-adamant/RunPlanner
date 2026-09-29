@@ -51,5 +51,6 @@ export function createInitialSimulationState(
     rewardLookups: createEmptyRewardLookups(catalog),
     offeredRewardTypes: Object.freeze([]),
     pendingTraitOffers: Object.freeze({}),
+    pendingResourcePickups: Object.freeze({}),
   });
 }

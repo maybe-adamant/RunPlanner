@@ -1,4 +1,4 @@
-import { spawnPendingTraitOffers } from '../../state/pending-trait-offers';
+import { spawnPickups } from '../../state/pending-resource-pickups';
 import {
   createAcquisitionEntryAddress,
   createAcquisitionSiteAddress,
@@ -44,7 +44,7 @@ import {
 import { EMPTY_PLANNER_TIMELINE_FACTS } from '../../timeline-facts';
 
 import {
-  withStoredArtificerReplacements,
+  withRoomStoredSourceProducts,
   settleAcquisitionResolvedReward,
   settleOwnedAcquisitionSite,
 } from '../acquisition/site-settlement';
@@ -214,7 +214,8 @@ export function settleShopAcquisitionSite(
     agreementBranches: readonly RewardBranchState[],
   ): boolean => {
     const purchaseActionOwner = actionOwnerForOffer(offer.offerKey);
-    const source: AcquisitionSource = withStoredArtificerReplacements(
+    const source: AcquisitionSource = withRoomStoredSourceProducts(
+      catalog,
       room,
       Object.freeze({
         origin: offer.offerOrigin,
@@ -550,7 +551,8 @@ export function settleShopAcquisitionSite(
             siteOwner: room.origin,
             pointKey: 'roomExit',
             entryKey,
-            source: withStoredArtificerReplacements(
+            source: withRoomStoredSourceProducts(
+              catalog,
               room,
               Object.freeze({
                 origin: createAcquisitionEntryAddress(site, entryKey),
@@ -699,10 +701,12 @@ export function settleShopAcquisitionSite(
             if (refill !== undefined && refill !== null)
               execution.candidate = Object.freeze({
                 ...execution.candidate,
-                state: spawnPendingTraitOffers(catalog, execution.candidate.state, [
+                // `StoreLogic` scales the restocked item's resources as it spawns.
+                state: spawnPickups(catalog, execution.candidate.state, [
                   Object.freeze({
                     origin: refill.offerOrigin,
                     offer: refill.offer,
+                    producerLifecycleKey: profile.key,
                     traitOffersByAcquisitionRole: refill.traitOffersByAcquisitionRole,
                     levelResolutionsByAcquisitionRole: refill.levelResolutionsByAcquisitionRole,
                   }),

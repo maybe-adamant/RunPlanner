@@ -8,7 +8,10 @@ import type {
 
 import { createCollection, requireNonEmpty } from '../common';
 import { fail } from '../errors';
-import { normalizeRequirement, rejectEncounterHistoryRequirements } from '../requirements';
+import {
+  normalizeRewardHistoryRequirement,
+  rejectEncounterHistoryRequirements,
+} from '../requirements';
 import type { RawRewardKernelInput } from '../../declarations/rewards/types';
 
 function validateRequirementRewardReferences(
@@ -64,7 +67,7 @@ function normalizeAndValidateRequirement(
   rewardTypes: CatalogCollection<RewardTypeDeclaration>,
   path: string,
 ): RequirementExpression {
-  const normalized = normalizeRequirement(requirement, path);
+  const normalized = normalizeRewardHistoryRequirement(requirement, path);
   validateRequirementRewardReferences(normalized, rewardTypes, path);
   rejectEncounterHistoryRequirements(normalized, path);
   return normalized;

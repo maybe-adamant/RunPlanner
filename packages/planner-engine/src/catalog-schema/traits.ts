@@ -466,6 +466,13 @@ export interface TraitDeclaration {
   readonly selectedDisposition: TraitSelectedDisposition;
   readonly selfExclusion?: string;
   readonly hammerCompatibility?: HammerCompatibility;
+  /**
+   * Source `RoomRewardBonus`: the multiplier this equipped trait applies to a
+   * produced pickup's resources, by resource key and equipped rarity.
+   */
+  readonly resourceRewardBonus?: Readonly<
+    Record<string, Readonly<Record<InRunTraitRarity, number>>>
+  >;
 }
 
 /** The rarity controls a giver exposes while authoring a fresh offer. */

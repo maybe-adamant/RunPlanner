@@ -14,7 +14,7 @@ import type { RawRewardProducerBinding } from '../../declarations/index';
 import { freezeUniqueStrings, requireNonEmpty } from '../common';
 import { fail } from '../errors';
 import {
-  normalizeRequirement,
+  normalizeRewardHistoryRequirement,
   rejectEncounterHistoryRequirements,
   validateRequirementReferences,
 } from '../requirements';
@@ -166,13 +166,16 @@ export function normalizeRewardBinding(
   const optionKeys = new Set(
     shopProfile.groups.values.flatMap((group) => group.options.values.map((option) => option.key)),
   );
-  const additionalOptionRequirements: Record<string, ReturnType<typeof normalizeRequirement>> = {};
+  const additionalOptionRequirements: Record<
+    string,
+    ReturnType<typeof normalizeRewardHistoryRequirement>
+  > = {};
   for (const [optionKey, rawRequirement] of Object.entries(rawRequirements)) {
     if (!optionKeys.has(optionKey)) {
       fail(`${path}.additionalOptionRequirements.${optionKey}`, 'unknown shop option');
     }
     const requirementPath = `${path}.additionalOptionRequirements.${optionKey}`;
-    const requirement = normalizeRequirement(rawRequirement, requirementPath);
+    const requirement = normalizeRewardHistoryRequirement(rawRequirement, requirementPath);
     validateRequirementReferences(requirement, rewards.rewardTypes, requirementPath);
     rejectEncounterHistoryRequirements(requirement, requirementPath);
     additionalOptionRequirements[optionKey] = requirement;

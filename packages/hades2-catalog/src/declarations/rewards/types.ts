@@ -65,6 +65,8 @@ export interface RawConcreteAcquisitionDeclaration {
   readonly pathPointGrant?: 1 | 3 | 5;
   /** Source LootData `GameStateRequirements` for an ordinary god. */
   readonly lootRequirement?: RequirementExpression;
+  /** Source ConsumableData `AddResources`. */
+  readonly resourceGrant?: Readonly<Record<string, number>>;
 }
 
 export interface RawAcquisitionRoleDeclaration {
@@ -156,6 +158,10 @@ export interface RawProducerLifecycleProfileDeclaration {
   readonly rewardTypes: readonly string[];
   readonly defaultLifecyclePoint: ProducerLifecyclePointKey;
   readonly overrides?: readonly RawProducerLifecycleOverrideDeclaration[];
+  /** The producer spawns `NPCDrop` objects. */
+  readonly resourceBonusExempt?: true;
+  /** Producer `AddResources` overrides by concrete acquisition. */
+  readonly resourceGrantOverrides?: Readonly<Record<string, Readonly<Record<string, number>>>>;
 }
 
 export interface RawRewardKernelInput {

@@ -371,6 +371,7 @@ const rawAcquisitions = [
     historyProjection: 'consumableAndUse',
     goldConversionEligible: true,
     artificerConversionEligible: true,
+    resourceGrant: { MetaCurrency: 50 },
     ...lastReward('MetaCurrencyDrop'),
   },
   {
@@ -379,6 +380,7 @@ const rawAcquisitions = [
     historyProjection: 'consumableAndUse',
     goldConversionEligible: true,
     artificerConversionEligible: true,
+    resourceGrant: { MetaCurrency: 100 },
     ...lastReward('MetaCurrencyBigDrop'),
   },
   {
@@ -387,6 +389,7 @@ const rawAcquisitions = [
     historyProjection: 'consumableAndUse',
     goldConversionEligible: true,
     artificerConversionEligible: true,
+    resourceGrant: { MetaCardPointsCommon: 5 },
     ...lastReward('MetaCardPointsCommonDrop'),
   },
   {
@@ -395,6 +398,7 @@ const rawAcquisitions = [
     historyProjection: 'consumableAndUse',
     goldConversionEligible: true,
     artificerConversionEligible: true,
+    resourceGrant: { MetaCardPointsCommon: 10 },
     ...lastReward('MetaCardPointsCommonBigDrop'),
   },
   {

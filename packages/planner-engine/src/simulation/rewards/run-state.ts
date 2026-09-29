@@ -150,6 +150,8 @@ export interface RunStateSnapshot {
     readonly remainingCount: number;
   };
   readonly forfeitStatus: 'inactive' | 'available' | 'consumed';
+  /** Resources credited by acquisitions settled before this checkpoint, by resource key. */
+  readonly resourceGains: SimulationState['rewardHistory']['resourceGains'];
   readonly rewardStoreController: RunStateRewardStoreController;
   readonly bags: readonly DecisionRewardBagState[];
 }
@@ -217,6 +219,7 @@ interface RunStateDerivationCache {
       readonly stygianWell: SimulationState['stygianWell'];
       readonly hexProgress: SimulationState['hexProgress'];
       readonly forfeitStatus: 'inactive' | 'available' | 'consumed';
+      readonly resourceGains: SimulationState['rewardHistory']['resourceGains'];
     }
   >;
   nextObjectId: number;
@@ -685,6 +688,7 @@ export function createRunState(context: RunStateContext): RunStateSnapshot | und
         stygianWell: state.stygianWell,
         hexProgress: state.hexProgress,
         forfeitStatus: forfeitStatus(state.arcanaFear),
+        resourceGains: state.rewardHistory.resourceGains,
       });
       if (identityKey !== undefined) {
         cache?.branchStateByIdentity.set(identityKey, derived);
@@ -799,6 +803,7 @@ export function createRunState(context: RunStateContext): RunStateSnapshot | und
           }),
         }),
     forfeitStatus: first.forfeitStatus,
+    resourceGains: first.resourceGains,
     rewardStoreController: Object.freeze({
       // No `currentStoreKey`: a checkpoint reports the ledger at its own settled boundary.
       ...enteredRewardStoreTally(firstState.reached.historyView),

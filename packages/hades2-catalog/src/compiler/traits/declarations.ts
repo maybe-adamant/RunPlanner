@@ -34,6 +34,34 @@ const BLOCK_OFFER_IF_PREVIOUSLY_PICKED_TRAITS = new Set([
   'KeepsakeLevelBoon',
   'RoomRewardBonusBoon',
 ]);
+/** Resolves `1 + (base - 1) * rarity multiplier` for every equipped rarity. */
+function normalizeResourceRewardBonus(
+  raw: NonNullable<RawTraitDeclaration['resourceRewardBonus']>,
+  equippedRarities: readonly TraitRarity[],
+  path: string,
+): NonNullable<TraitDeclaration['resourceRewardBonus']> {
+  const resources = freezeUniqueStrings(raw.resources, `${path}.resources`);
+  if (resources.length === 0) fail(`${path}.resources`, 'must not be empty');
+  if (typeof raw.baseValue !== 'number' || !(raw.baseValue > 1))
+    fail(`${path}.baseValue`, 'must be a multiplier above 1');
+  const scales = requireObject(raw.rarityMultipliers, `${path}.rarityMultipliers`);
+  const rarities = IN_RUN_RARITIES.filter((rarity) => equippedRarities.includes(rarity));
+  if (
+    rarities.length !== equippedRarities.length ||
+    Object.keys(scales).length !== rarities.length ||
+    rarities.some(
+      (rarity) => typeof scales[rarity] !== 'number' || !((scales[rarity] as number) > 0),
+    )
+  )
+    fail(`${path}.rarityMultipliers`, 'must scale exactly this trait equipped ranked rarities');
+  const byRarity = Object.freeze(
+    Object.fromEntries(
+      rarities.map((rarity) => [rarity, 1 + (raw.baseValue - 1) * (scales[rarity] as number)]),
+    ),
+  ) as Readonly<Record<(typeof IN_RUN_RARITIES)[number], number>>;
+  return Object.freeze(Object.fromEntries(resources.map((resource) => [resource, byRarity])));
+}
+
 const FRESH_RARITIES = ['Common', 'Rare', 'Epic', 'Legendary', 'Duo'] as const;
 const ELEMENTS = ['Aether', 'Earth', 'Air', 'Fire', 'Water'] as const;
 const EQUIPMENT_SLOTS = ['Melee', 'Secondary', 'Ranged', 'Rush', 'Mana', 'Spell'] as const;
@@ -462,6 +490,14 @@ export function normalizeTraits(
     ) {
       fail(`${path}.selectedDisposition.clock`, 'is reserved for Supply Chain');
     }
+    const resourceRewardBonus =
+      trait.resourceRewardBonus === undefined
+        ? undefined
+        : normalizeResourceRewardBonus(
+            trait.resourceRewardBonus,
+            equippedRarities,
+            `${path}.resourceRewardBonus`,
+          );
     return Object.freeze({
       key: requireNonEmpty(trait.key, `${path}.key`),
       label: requireNonEmpty(trait.label, `${path}.label`),
@@ -513,6 +549,7 @@ export function normalizeTraits(
         ? {}
         : { selfExclusion: requireNonEmpty(trait.selfExclusion, `${path}.selfExclusion`) }),
       ...(hammerCompatibility === undefined ? {} : { hammerCompatibility }),
+      ...(resourceRewardBonus === undefined ? {} : { resourceRewardBonus }),
       selectedDisposition,
     });
   });

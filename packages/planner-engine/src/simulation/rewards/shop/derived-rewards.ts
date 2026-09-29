@@ -18,7 +18,7 @@ import {
   type ShopProfileDeclaration,
 } from '../../../reward-kernel';
 import { foldTraitHistoryEvents } from '../../traits';
-import { spawnPendingTraitOffers } from '../../state/pending-trait-offers';
+import { spawnPickups } from '../../state/pending-resource-pickups';
 import type {
   PendingShopGoldMaterialization,
   PendingShopPaidOffer,
@@ -213,10 +213,12 @@ export function materializeShopGold(input: {
     state:
       authoredEntry === undefined || !input.pickupPlaced
         ? consumedState
-        : spawnPendingTraitOffers(catalog, consumedState, [
+        : // `StoreLogic` scales a duplicate's resources as it spawns.
+          spawnPickups(catalog, consumedState, [
             Object.freeze({
               origin: address,
               offer: authoredEntry.offer,
+              producerLifecycleKey: profile.key,
               ...(authoredEntry.traitOffersByAcquisitionRole === undefined
                 ? {}
                 : { traitOffersByAcquisitionRole: authoredEntry.traitOffersByAcquisitionRole }),

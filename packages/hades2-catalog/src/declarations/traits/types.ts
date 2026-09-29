@@ -42,6 +42,17 @@ export interface RawTraitDeclaration {
     NonNullable<TraitDeclaration['hammerCompatibility']>,
     'supportsRankII'
   >;
+  /**
+   * Source `RoomRewardBonus` with `SourceIsMultiplier`: each rarity scales the
+   * base's excess over one by that rarity's `RarityLevels` multiplier.
+   */
+  readonly resourceRewardBonus?: {
+    readonly resources: readonly string[];
+    readonly baseValue: number;
+    readonly rarityMultipliers: Readonly<
+      Record<Extract<TraitRarity, 'Common' | 'Rare' | 'Epic' | 'Heroic'>, number>
+    >;
+  };
 }
 
 export interface RawWeaponDeclaration {

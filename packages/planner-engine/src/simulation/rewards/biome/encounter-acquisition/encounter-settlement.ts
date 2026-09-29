@@ -52,7 +52,7 @@ import { advanceRewardBranches } from '../../branch-lifecycle';
 import { consumeOlympianProviderForReachedOffer } from '../../offer-generation';
 import {
   settleOwnedAcquisitionSite,
-  withStoredArtificerReplacements,
+  withRoomStoredSourceProducts,
 } from '../../acquisition/site-settlement';
 import type { AcquisitionRoleFrontier } from '../../acquisition/contracts';
 import {
@@ -731,7 +731,8 @@ export function applyEncounterSettlementTransition(inputs: {
         siteOwner: rewards[0].origin,
         pointKey: event.phaseKey,
         entryKey: rewards[0].slotKey,
-        source: withStoredArtificerReplacements(
+        source: withRoomStoredSourceProducts(
+          catalog,
           room,
           Object.freeze({
             ...rewards[0],

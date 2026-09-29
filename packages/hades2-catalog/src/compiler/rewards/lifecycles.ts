@@ -1,6 +1,7 @@
 import type { CatalogCollection } from '@run-planner/engine/catalog-schema';
 import type {
   AcquisitionLifecycleBinding,
+  ConcreteAcquisitionDeclaration,
   ProducerLifecyclePointKey,
   ProducerLifecycleProfileDeclaration,
   ProducerRewardLifecycleDeclaration,
@@ -10,6 +11,7 @@ import type {
 import { createCollection, requireNonEmpty } from '../common';
 import { fail } from '../errors';
 import type { RawRewardKernelInput } from '../../declarations/rewards/types';
+import { normalizeResourceAmounts } from './declarations';
 
 const PRODUCER_LIFECYCLE_POINTS = [
   'afterCombat',
@@ -99,9 +101,34 @@ export function normalizeAcquisitionLifecycle(
   return Object.freeze(acquisitionLifecycle);
 }
 
+/** An override replaces a supported pickup's declared grant resource-for-resource. */
+function normalizeResourceGrantOverrides(
+  raw: Readonly<Record<string, Readonly<Record<string, number>>>>,
+  supportedNames: ReadonlySet<string>,
+  acquisitions: CatalogCollection<ConcreteAcquisitionDeclaration>,
+  path: string,
+): Readonly<Record<string, Readonly<Record<string, number>>>> {
+  return Object.freeze(
+    Object.fromEntries(
+      Object.entries(raw).map(([gameName, amounts]) => {
+        const overridePath = `${path}.${gameName}`;
+        const grant = acquisitions.byKey[gameName]?.resourceGrant;
+        if (!supportedNames.has(gameName) || grant === undefined)
+          fail(overridePath, 'must override a supported resource pickup');
+        const normalized = normalizeResourceAmounts(amounts, overridePath);
+        const keys = Object.keys(normalized).sort().join(',');
+        if (keys !== Object.keys(grant).sort().join(','))
+          fail(overridePath, 'must override exactly the declared resources');
+        return [gameName, normalized];
+      }),
+    ),
+  );
+}
+
 export function normalizeProducerLifecycles(
   raw: RawRewardKernelInput['producerLifecycles'],
   rewardTypes: CatalogCollection<RewardTypeDeclaration>,
+  acquisitions: CatalogCollection<ConcreteAcquisitionDeclaration>,
 ): CatalogCollection<ProducerLifecycleProfileDeclaration> {
   return createCollection(
     raw.map((profile, profileIndex): ProducerLifecycleProfileDeclaration => {
@@ -173,7 +200,23 @@ export function normalizeProducerLifecycles(
         (rewardType) => rewardType.rewardType,
         'rewardType',
       );
-      return Object.freeze({ key, rewardTypes: normalizedRewardTypes });
+      if (profile.resourceBonusExempt !== undefined && profile.resourceBonusExempt !== true)
+        fail(`${path}.resourceBonusExempt`, 'must be true when declared');
+      return Object.freeze({
+        key,
+        rewardTypes: normalizedRewardTypes,
+        ...(profile.resourceBonusExempt === true ? { resourceBonusExempt: true as const } : {}),
+        ...(profile.resourceGrantOverrides === undefined
+          ? {}
+          : {
+              resourceGrantOverrides: normalizeResourceGrantOverrides(
+                profile.resourceGrantOverrides,
+                supportedNames,
+                acquisitions,
+                `${path}.resourceGrantOverrides`,
+              ),
+            }),
+      });
     }),
     'producerLifecycles',
     (profile) => profile.key,

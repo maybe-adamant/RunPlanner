@@ -8,6 +8,7 @@ import type {
   RewardKernelFacts,
   ProducerLifecyclePointKey,
   ConcreteAcquisitionPickupEffect,
+  ResourceAmounts,
   SaveFileGodHistory,
 } from './model';
 import { ordinarySourceGameNames } from './support';
@@ -49,6 +50,7 @@ export function createRewardHistoryState(
     consumableRecord: EMPTY_RECORD,
     lifetimeGodUseRecord: godRecord,
     lifetimeGodPickupRecord: godRecord,
+    resourceGains: EMPTY_RECORD,
     traitFacts: Object.freeze({
       upgradableTraitCount: 0,
       elementCounts: EMPTY_RECORD,
@@ -101,6 +103,18 @@ export function recordGodLootPickup(
     ...history,
     lifetimeGodPickupRecord: increment(history.lifetimeGodPickupRecord, lootGameName),
   });
+}
+
+/** Credits one collected object's stored resource amounts; nothing ever debits them. */
+export function creditResourceGains(
+  history: RewardHistoryState,
+  amounts: ResourceAmounts,
+): RewardHistoryState {
+  const keys = Object.keys(amounts);
+  if (keys.length === 0) return history;
+  const gains: Record<string, number> = { ...history.resourceGains };
+  for (const key of keys) gains[key] = (gains[key] ?? 0) + amounts[key]!;
+  return Object.freeze({ ...history, resourceGains: Object.freeze(gains) });
 }
 
 /** Records one source-resolved direct loot interaction without fabricating a pickup. */
@@ -263,6 +277,7 @@ export function factsWithHistory(
       lootTypeHistory: history.lootTypeHistory,
       lifetimeGodUseRecord: history.lifetimeGodUseRecord,
       lifetimeGodPickupRecord: history.lifetimeGodPickupRecord,
+      resourceGains: history.resourceGains,
     }),
     currentRoomShopOptionNames,
     lastEventRunDepthCaches: Object.freeze({
