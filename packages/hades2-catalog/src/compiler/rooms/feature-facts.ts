@@ -1,4 +1,9 @@
-import type { RoomDeclaration } from '@run-planner/engine/catalog-schema';
+import type {
+  CatalogCollection,
+  RoomDeclaration,
+  RouteDeclaration,
+  TraitGiverDeclaration,
+} from '@run-planner/engine/catalog-schema';
 import type { RewardKernelCatalog } from '@run-planner/engine/reward-kernel';
 
 import type { RawRoomDeclaration } from '../../declarations/index';
@@ -18,6 +23,7 @@ export type RoomFeatureFacts = Pick<
   | 'roomShop'
   | 'secretPointAnchorCount'
   | 'boonRarityOverride'
+  | 'firstRunOffer'
 >;
 
 export type RoomRequiredObjectFacts = Pick<RoomDeclaration, 'requiredObjects'>;
@@ -38,6 +44,53 @@ function normalizeBoonRarityOverride(
     }
   }
   return Object.freeze({ ...raw });
+}
+
+function normalizeFirstRunOffer(
+  raw: RawRoomDeclaration['firstRunOffer'],
+  path: string,
+): RoomDeclaration['firstRunOffer'] {
+  if (raw === undefined) return undefined;
+  if (raw.rarity !== 'Common') fail(`${path}.rarity`, 'must be Common');
+  const traitKeys = freezeUniqueStrings(raw.traitKeys, `${path}.traitKeys`);
+  if (traitKeys.length === 0) fail(`${path}.traitKeys`, 'must not be empty');
+  return Object.freeze({ routeKey: raw.routeKey, traitKeys, rarity: 'Common' });
+}
+
+/**
+ * Closes a first-run offer rule over its route and the forced loot it shapes:
+ * each table trait must belong to every forced Boon's giver.
+ */
+export function validateFirstRunOfferRules(
+  rooms: CatalogCollection<RoomDeclaration>,
+  routes: CatalogCollection<RouteDeclaration>,
+  traitGivers: CatalogCollection<TraitGiverDeclaration>,
+  giverByAcquisitionGameName: Readonly<Record<string, string>>,
+): void {
+  rooms.values.forEach((room, index) => {
+    const rule = room.firstRunOffer;
+    if (rule === undefined) return;
+    const path = `rooms[${index}].firstRunOffer`;
+    if (routes.byKey[rule.routeKey] === undefined)
+      fail(`${path}.routeKey`, `unknown route ${rule.routeKey}`);
+    const forced =
+      room.incomingReward.kind === 'countedChoice' ? room.incomingReward.forcedRewards : undefined;
+    const sources = (forced ?? []).flatMap(({ offer }) =>
+      offer.payload?.kind === 'BoonSource' ? [offer.payload.source] : [],
+    );
+    if (sources.length === 0) fail(path, 'requires a forced Boon incoming reward');
+    for (const source of sources) {
+      const giver = traitGivers.byKey[giverByAcquisitionGameName[source] ?? ''];
+      if (giver === undefined) fail(path, `${source} has no trait giver`);
+      rule.traitKeys.forEach((traitKey, index) => {
+        if (!giver.traitKeys.includes(traitKey))
+          fail(`${path}.traitKeys[${index}]`, `${giver.key} does not give ${traitKey}`);
+        // Native GetPriorityTraits draws the table as priority traits.
+        if (!giver.priorityTraitKeys.includes(traitKey))
+          fail(`${path}.traitKeys[${index}]`, `${traitKey} is not a ${giver.key} priority trait`);
+      });
+    }
+  });
 }
 
 /** Normalizes required room objects at their original validation boundary. */
@@ -140,6 +193,7 @@ export function normalizeRoomFeatureFacts(
     room.boonRarityOverride,
     `${path}.boonRarityOverride`,
   );
+  const firstRunOffer = normalizeFirstRunOffer(room.firstRunOffer, `${path}.firstRunOffer`);
   const purgingPool =
     room.purgingPool === undefined
       ? undefined
@@ -230,6 +284,7 @@ export function normalizeRoomFeatureFacts(
     ...(roomShop === undefined ? {} : { roomShop }),
     ...(secretPointAnchorCount === undefined ? {} : { secretPointAnchorCount }),
     ...(boonRarityOverride === undefined ? {} : { boonRarityOverride }),
+    ...(firstRunOffer === undefined ? {} : { firstRunOffer }),
   });
 }
 

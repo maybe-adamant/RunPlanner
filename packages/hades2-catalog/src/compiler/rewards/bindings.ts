@@ -1,8 +1,11 @@
 import type { CatalogCollection } from '@run-planner/engine/catalog-schema';
-import type {
-  FixedRewardBinding,
-  NoneRewardBinding,
-  RewardProducerBinding,
+import {
+  isPayloadLocallyValid,
+  ordinarySourceGameNames,
+  type FixedRewardBinding,
+  type ForcedCountedReward,
+  type NoneRewardBinding,
+  type RewardProducerBinding,
 } from '@run-planner/engine/reward-kernel';
 import type {
   ProducerLifecycleProfileDeclaration,
@@ -14,6 +17,7 @@ import type { RawRewardProducerBinding } from '../../declarations/index';
 import { freezeUniqueStrings, requireNonEmpty } from '../common';
 import { fail } from '../errors';
 import {
+  normalizeLootRequirement,
   normalizeRewardHistoryRequirement,
   rejectEncounterHistoryRequirements,
   validateRequirementReferences,
@@ -116,6 +120,34 @@ export function normalizeRewardBinding(
       allowedRewardTypes,
       `${path}.producerLifecycleKey`,
     );
+    const forcedRewards = raw.forcedRewards?.map((forced, index): ForcedCountedReward => {
+      const forcedPath = `${path}.forcedRewards[${index}]`;
+      const rewardType = rewards.rewardTypes.byKey[forced.offer.rewardType];
+      if (rewardType === undefined || !allowedRewardTypes.includes(forced.offer.rewardType))
+        fail(`${forcedPath}.offer.rewardType`, `${forced.offer.rewardType} is not allowed here`);
+      if (!isPayloadLocallyValid(rewards, rewardType, forced.offer.payload))
+        fail(`${forcedPath}.offer.payload`, 'is not a valid payload for its reward type');
+      const offer = Object.freeze({
+        rewardType: forced.offer.rewardType,
+        ...(forced.offer.payload === undefined
+          ? {}
+          : { payload: Object.freeze({ ...forced.offer.payload }) }),
+      });
+      if (forced.requirement === undefined) return Object.freeze({ offer });
+      const requirementPath = `${forcedPath}.requirement`;
+      // Evaluated against the same reward facts as a god's loot requirement.
+      const requirement = normalizeLootRequirement(forced.requirement, requirementPath);
+      validateRequirementReferences(
+        requirement,
+        rewards.rewardTypes,
+        requirementPath,
+        grantedResourceKeys(rewards.acquisitions),
+        ordinarySourceGameNames(rewards),
+      );
+      rejectEncounterHistoryRequirements(requirement, requirementPath);
+      return Object.freeze({ offer, requirement });
+    });
+    if (forcedRewards?.length === 0) fail(`${path}.forcedRewards`, 'must not be empty');
     return Object.freeze({
       kind: 'countedChoice',
       storeKeys,
@@ -123,6 +155,7 @@ export function normalizeRewardBinding(
       ineligibleRewardTypes,
       allowedRewardTypes,
       producerLifecycleKey: raw.producerLifecycleKey,
+      ...(forcedRewards === undefined ? {} : { forcedRewards: Object.freeze(forcedRewards) }),
     });
   }
   if (raw.kind === 'fixed') {

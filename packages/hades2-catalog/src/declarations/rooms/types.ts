@@ -137,6 +137,8 @@ export interface RawRoomDeclaration {
     readonly excludedRouteKeys?: readonly string[];
   };
   readonly boonRarityOverride?: import('@run-planner/engine/catalog-schema').BoonRarityOverride;
+  /** Source `ForceLootTableFirstRun`/`ForceCommonLootFirstRun` for the route with no completed run. */
+  readonly firstRunOffer?: import('@run-planner/engine/catalog-schema').FirstRunTraitOfferRule;
   readonly prebossBatchPolicy?: RawPrebossBatchPolicy;
   readonly forcedRewardStoreKey?: string;
   readonly individualRewardStoreKey?: string;

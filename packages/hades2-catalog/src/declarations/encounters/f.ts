@@ -30,6 +30,16 @@ export const fEncounterDefinitions = [
     canEncounterSkip: true,
   },
   {
+    // EncounterData.lua FIntroFight: fixed waves (Brawler; four Guards; three
+    // Mages; Brawler, three Guards and a Mage). It inherits no base, so it does
+    // not count encounter depth and cannot be skipped.
+    key: 'FIntroFight',
+    label: 'Intro combat',
+    kind: 'combat',
+    countsEncounterDepth: false,
+    hostsGorgon: true,
+  },
+  {
     key: 'DevotionTestF',
     customization: [generatedEncounterChoices.DevotionTestF],
     label: 'Devotion combat',

@@ -134,6 +134,15 @@ single-choice boss customization choices and the ordinary boon replacement
 roll (`boonReplacement`). A counted store entry may name the `routeKeys` whose
 bag holds it. Every listed route key must be a declared route.
 
+First-attempt content a fresh profile does reach uses the same ordinary
+facts. `F_Combat01` is forced on `FreshFile` by a `routeKeyEquals` force (its
+native `ForceIfEncounterNotCompleted = "FIntroFight"` holds only before that
+encounter's first completion) and resolves `FIntroFight` through a
+first-position contextual encounter rule. Its counted producer declares the
+native `ForcedRewards` Apollo boon under a save-file Apollo use requirement,
+and its `firstRunOffer` names the `ForceLootTableFirstRun` table and
+`ForceCommonLootFirstRun` rarity on that route.
+
 The catalog declares one counted run-start reward binding; entry rooms have no
 intrinsic incoming reward. A fresh profile's first entry has no run-start
 reward. Narrow contextual encounter rules express genuine route-mode and

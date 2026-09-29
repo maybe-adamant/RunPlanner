@@ -215,6 +215,8 @@ export function assessTraitDeclarationEligibility(
   if (history.bannedTraitKeys.includes(traitKey)) findings.push({ code: 'bannedTrait', traitKey });
   if (trait.blockOfferIfPreviouslyPicked && history.previouslyPickedTraitKeys.includes(traitKey))
     findings.push({ code: 'previouslyPicked', traitKey });
+  if (source.firstRunTraitKeys !== undefined && !source.firstRunTraitKeys.includes(traitKey))
+    findings.push({ code: 'offerContext', traitKey, detail: 'firstRunOffer' });
   for (const requirement of trait.eligibilityRequirements) {
     const failure = checkRequirement(catalog, requirement, trait, state, source);
     if (failure !== undefined) findings.push({ ...failure, traitKey });

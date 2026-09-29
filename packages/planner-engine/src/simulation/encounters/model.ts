@@ -40,6 +40,8 @@ export interface ResolvedEncounterPhase {
   readonly customization?: readonly (EncounterCustomizationDecision & {
     readonly value?: AuthoredEncounterCustomization;
     readonly valueSupported: boolean;
+    /** Retained from a binding an entry-contextual rule replaced; removal-only. */
+    readonly replaced?: true;
   })[];
   /** Evaluated generation operands, owned by the concrete preparation checkpoint. */
   readonly generatedCustomization?: {

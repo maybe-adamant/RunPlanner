@@ -13,6 +13,7 @@ import {
   type ResolvedRewardOffer,
 } from '../../reward-kernel';
 import type { CountedRewardBinding } from '../../reward-kernel/bindings';
+import { evaluateRequirement } from '../../requirements/evaluator';
 
 import type { CanonicalResolvedIncomingReward } from '../materialization';
 import type { FindingEvidence, RewardGenerationFindingCode } from '../model';
@@ -197,6 +198,17 @@ export function processRewardOffer(
     siblingConflicts.set(semanticAddressKey(peer.origin), peer);
   };
   for (const originalBranch of branches) {
+    // ChooseRoomReward returns a qualifying ForcedRewards entry before the bag,
+    // reward priorities, ChooseLoot and ForceBoonName are consulted.
+    const forced = forcedRewardFor(context, originalBranch);
+    if (forced !== undefined) {
+      if (!sameOffer(forced.offer, reward.offer)) {
+        if (forced.offer.rewardType === reward.offer.rewardType) sawSourceFailure = true;
+        continue;
+      }
+      next.push(recordCanonicalOffer(originalBranch, context));
+      continue;
+    }
     // ForceBoonName participates only in counted room-reward setup. Fixed
     // rewards, direct pickups, and inventory offers retain their own provider.
     const requiredProvider =
@@ -372,6 +384,32 @@ export function processRewardOffer(
     );
   }
   return Object.freeze(next);
+}
+
+function forcedRewardFor(
+  context: OfferProcessingContext,
+  branch: RewardBranchState,
+): import('../../reward-kernel').ForcedCountedReward | undefined {
+  const forcedRewards = context.binding?.forcedRewards;
+  if (forcedRewards === undefined) return undefined;
+  const facts = context.facts(branch.state);
+  return forcedRewards.find(
+    ({ requirement }) =>
+      requirement === undefined || evaluateRequirement(requirement, facts.requirements),
+  );
+}
+
+function sameOffer(left: ResolvedRewardOffer, right: ResolvedRewardOffer): boolean {
+  if (left.rewardType !== right.rewardType) return false;
+  const a = left.payload;
+  const b = right.payload;
+  if (a === undefined || b === undefined) return a === b;
+  if (a.kind === 'BoonSource') return b.kind === 'BoonSource' && a.source === b.source;
+  return (
+    b.kind === 'DevotionPair' &&
+    a.chosenSource === b.chosenSource &&
+    a.spurnedSource === b.spurnedSource
+  );
 }
 
 /**

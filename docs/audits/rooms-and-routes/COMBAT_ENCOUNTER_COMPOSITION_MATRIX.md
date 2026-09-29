@@ -139,7 +139,7 @@ every choice is simultaneously eligible.
 | Rooms / phase                           | Supported resolved identities                                                                             |
 | --------------------------------------- | --------------------------------------------------------------------------------------------------------- |
 | F Opening01–03                          | `OpeningGeneratedF` (Dream routes: `OpeningEmpty`)                                                        |
-| F Combat01                              | `GeneratedF`                                                                                              |
+| F Combat01                              | `GeneratedF` (first Fresh File biome: `FIntroFight`)                                                      |
 | F Combat02–22                           | `GeneratedF`, `DevotionTestF`, `ArtemisCombatF`, `ArachneCombatF`, `NemesisCombatF`, `NemesisRandomEvent` |
 | G Combat01–20                           | `GeneratedG`, `DevotionTestG`, `ArtemisCombatG`, `ArachneCombatG`, `NemesisCombatG`, `NemesisRandomEvent` |
 | H passive: 01,03–08,10–12               | `GeneratedH_Passive`, `NemesisRandomEvent`                                                                |

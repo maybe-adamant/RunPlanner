@@ -2,17 +2,8 @@ import { describe, expect, it } from 'vitest';
 
 import { catalog } from '@run-planner/hades2-catalog';
 import {
-  applyProjectCommand,
-  createBatchRewardStoreAddress,
-  createExitDecisionAddress,
-  createExitSelectionAddress,
-  createIncomingRewardAddress,
-  createTargetAddress,
-  semanticAddressKey,
   createBiomeAddress,
   createProjectDocument,
-  decodeProjectDocument,
-  encodeProjectDocument,
   resolveRoutePosition,
   routeHasKeepsakeRack,
   routePurgingPool,
@@ -42,7 +33,7 @@ import {
   simulateProject,
   type RunStateSnapshot,
 } from '@run-planner/engine/simulation';
-import { loadUnderworldGeneratedCompositionCheckpoint } from '@run-planner/test-fixtures/checkpoints/underworld';
+import { createFreshFileGeneratedComposition } from '@run-planner/test-fixtures/fresh-file';
 import { customizationValueRouteExcluded } from '../../src/authored-project/room-state/encounter-customization';
 import { createDefaultRoomEncounterState } from '../../src/authored-project/room-state/encounter-envelope';
 import { defaultOccurrence } from '../../src/authored-project/topology/construction';
@@ -398,33 +389,7 @@ describe('Fresh File blanket exclusions', () => {
   });
 
   it('keeps every excluded god, store entry and tier out of a simulated fresh prefix', () => {
-    // The mature F prefix re-homed onto the fresh profile, with its content made fresh-legal.
-    const mature = JSON.parse(
-      encodeProjectDocument(loadUnderworldGeneratedCompositionCheckpoint())
-        .replaceAll('"MetaCurrencyDrop"', '"MetaCardPointsCommonDrop"')
-        .replaceAll('"Zeus', '"Poseidon')
-        .replaceAll('"Hera', '"Demeter'),
-    );
-    const [f] = mature.route.biomes;
-    for (const occurrence of f.topology.occurrences) delete occurrence.startingRewardAcquisition;
-    const freshDefaults = createProjectDocument(catalog, {
-      projectId: 'fresh',
-      routeKey: 'FreshFile',
-      configuredBiomeCount: 1,
-    });
-    const project = decodeProjectDocument(
-      {
-        ...mature,
-        route: {
-          ...mature.route,
-          routeKey: 'FreshFile',
-          loadout: freshDefaults.route.loadout,
-          resourcePlacements: freshDefaults.route.resourcePlacements,
-          biomes: [f],
-        },
-      },
-      catalog,
-    );
+    const project = createFreshFileGeneratedComposition();
     const biome = simulateProject(catalog, project).route.biomes[0]!;
     const snapshots: readonly RunStateSnapshot[] =
       'rewards' in biome ? (biome.rewards?.runStateSnapshots ?? []) : [];
@@ -457,77 +422,19 @@ describe('Fresh File blanket exclusions', () => {
 });
 
 describe('exhausted counted-store fallback', () => {
-  function freshMetaBatch(secondOffer: string) {
-    const biome = createBiomeAddress('FreshFile', 'F');
-    let project = createProjectDocument(catalog, {
-      projectId: 'fresh-fallback',
-      routeKey: 'FreshFile',
-      configuredBiomeCount: 1,
-    });
-    const batch = (
-      parent: ReturnType<typeof createOccurrenceId>,
-      storeKey: string,
-      targets: readonly (readonly [string, string, string])[],
-    ) => {
-      const decision = createExitDecisionAddress(biome, {
-        kind: 'occurrence',
-        occurrenceId: parent,
-      });
-      project = applyProjectCommand(project, catalog, { kind: 'CreateBatch', decision });
-      project = applyProjectCommand(project, catalog, {
-        kind: 'ReplaceBatchRewardStore',
-        rewardStore: createBatchRewardStoreAddress(biome, decision.source),
-        storeKey,
-      });
-      targets.forEach(([id, gameName, rewardType], index) => {
-        project = applyProjectCommand(project, catalog, {
-          kind: 'CreateTarget',
-          target: createTargetAddress(biome, decision.source, `exit${index + 1}`),
-          occurrenceId: createOccurrenceId(id),
-          gameName,
-        });
-        project = applyProjectCommand(project, catalog, {
-          kind: 'ReplaceIncomingReward',
-          reward: createIncomingRewardAddress(biome, createOccurrenceId(id)),
-          value: { rewardType },
-        });
-      });
-      if (targets.length > 1)
-        project = applyProjectCommand(project, catalog, {
-          kind: 'SetExitSelection',
-          selection: createExitSelectionAddress(biome, decision.source),
-          value: { kind: 'normal', exitKey: 'exit1' },
-        });
-    };
-    batch(project.route.biomes[0]!.topology!.startOccurrenceId, 'RunProgress', [
-      ['fresh-c1', 'F_Combat02', 'MaxHealthDrop'],
+  it('resolves an early Fresh MetaProgress peer to Heal after two appended copies', () => {
+    // Before 5 Ashes the only early entry is Ashes, which a sibling already holds.
+    const store = catalog.rewards.stores.byKey.MetaProgress!;
+    const facts = rewardFacts('FreshFile', createRewardHistoryState(catalog.rewards, 'closed'));
+    const peers = { priorOffers: [{ rewardType: 'MetaCardPointsCommonDrop' }] };
+    const bag = createRewardBagState(store, 'FreshFile');
+    expect(countedStoreExhausted(store, bag, facts, { peers })).toBe(true);
+    const offer = (rewardType: string) =>
+      consumeCountedOffer(catalog.rewards, store, bag, { rewardType }, facts, { peers });
+    expect(offer('MetaCurrencyDrop')).toEqual([]);
+    expect(offer('RoomRewardHealDrop')).toEqual([
+      { remainingEntryCounts: store.entries.map(() => 3) },
     ]);
-    batch(createOccurrenceId('fresh-c1'), 'MetaProgress', [
-      ['fresh-m1', 'F_Combat03', 'MetaCardPointsCommonDrop'],
-      ['fresh-m2', 'F_Combat04', secondOffer],
-    ]);
-    return simulateProject(catalog, project);
-  }
-
-  it('resolves the second early Fresh MetaProgress door to Heal after two appended copies', () => {
-    const evaluation = freshMetaBatch('RoomRewardHealDrop');
-    expect(evaluation.findings.map((finding) => finding.code)).toEqual(['continuationMissing']);
-    const biome = evaluation.route.biomes[0]!;
-    const snapshots: readonly RunStateSnapshot[] =
-      'rewards' in biome ? (biome.rewards?.runStateSnapshots ?? []) : [];
-    const metaTotal = (ownerKey: string) => {
-      const snapshot = snapshots.find((candidate) =>
-        semanticAddressKey(candidate.owner).includes(ownerKey),
-      );
-      const remaining = snapshot?.bags.find((bag) => bag.storeKey === 'MetaProgress')?.remaining;
-      return remaining?.kind === 'exact' ? remaining.count : undefined;
-    };
-    // 19 filled, one Ashes drawn, then two nineteen-entry copies appended.
-    expect(metaTotal('"fresh-c1","roomEntered"')).toBe(19);
-    expect(metaTotal('"fresh-m1","roomEntered"')).toBe(19 - 1 + 2 * 19);
-
-    const other = freshMetaBatch('MetaCurrencyDrop');
-    expect(other.findings.map((finding) => finding.code)).toContain('rewardBagSupportEmpty');
   });
 
   it('falls back on the third late Fresh MetaProgress peer below the high tier', () => {

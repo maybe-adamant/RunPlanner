@@ -463,6 +463,15 @@ Filters apply to reward type names, not Boon source names. Positive and
 negative filters cannot overlap. Every referenced reward must exist and every
 positive member must be produced by at least one referenced store.
 
+A counted binding may also declare the room's source `ForcedRewards`: complete
+offers, each with an optional requirement over the offer contact's reward
+facts, including save-file god records. At offer time the first entry whose
+requirement holds is the only supported offer; it records offer history
+without drawing the bag or consuming a reward priority, as native
+`ChooseRoomReward` returns it first. Another authored offer reports the
+ordinary unavailable-offer finding. When no entry holds, the counted draw is
+unchanged. Each forced offer must be an allowed, locally valid offer.
+
 Filtered bindings do not create named surface types. There is no
 `RunProgressNoDevotion`, `TartarusBoonOnly`, or similar public taxonomy.
 `countedChoice` is the behavior; stores and filters configure it.
@@ -1301,6 +1310,13 @@ decides core seeding, not a persisted first-offer flag or a generic occupied
 slot count. Present-zero and absent rarity chances remain distinct for rescue.
 The [construction audit](../audits/traits/TRAIT_OFFER_COMPOSITION_AND_FEAR_PRESSURE_AUDIT.md)
 owns the full source sequence and Trial inheritance exception matrix.
+
+A room's `firstRunOffer` rule is source policy for trait screens opened in that
+room on its route: identities outside its forced loot table fail row
+eligibility (`offerContext`), and its Common rarity is the source's forced
+rarity, so no rarity facts cross the screen. It reproduces native
+`ForceLootTableFirstRun`/`ForceCommonLootFirstRun` for the first Apollo offer
+on `FreshFile`; mature routes never carry it.
 
 Replacement carries exact old identity, slot, promoted rarity and transferred
 level; it waives occupied-slot failure, not other eligibility. Its explicit

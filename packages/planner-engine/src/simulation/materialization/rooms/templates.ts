@@ -28,7 +28,7 @@ import type {
   CanonicalShopEntryState,
   BiomeMaterializationLoadout,
 } from '../model';
-import type { TraitOfferSourceContext } from '../../traits/offer-domain';
+import { firstRunOfferSource, type TraitOfferSourceContext } from '../../traits/offer-domain';
 import type { ResolvedRewardOffer } from '../../../reward-kernel/model';
 import type { ResolvedRoutePosition } from '../../../authored-project/route-context';
 import { composeStartingReward } from '../../../authored-project/room-state/starting-reward';
@@ -140,6 +140,7 @@ function traitContextForOffer(
       ? {}
       : { boonRarityRoomOverride: context.room.boonRarityOverride }),
     devotionNoDuo: offer.rewardType === 'Devotion',
+    ...firstRunOfferSource(context.room, context.routePosition.routeKey),
   });
 }
 

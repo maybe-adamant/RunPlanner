@@ -21,6 +21,11 @@ export interface RawCountedRewardBinding {
   readonly eligibleRewardTypes: readonly string[];
   readonly ineligibleRewardTypes: readonly string[];
   readonly producerLifecycleKey: string;
+  /** Source room `ForcedRewards`, tried in order before the bag is drawn. */
+  readonly forcedRewards?: readonly {
+    readonly offer: import('@run-planner/engine/reward-kernel').ResolvedRewardOffer;
+    readonly requirement?: RequirementExpression;
+  }[];
 }
 
 export interface RawFixedRewardBinding {

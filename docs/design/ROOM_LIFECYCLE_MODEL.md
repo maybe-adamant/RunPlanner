@@ -908,7 +908,11 @@ before such an exclusion still decodes but is context-invalid: a Well reports
 without equipping, and an interacted Pool reports `purgingPoolUnavailable` and is
 never assessed, so its sales report `purgingPoolSaleUnavailable`. A Fresh File attempt has none of these
 features; the H Postboss Pool object it shows natively is locked and is not an
-authorable inventory.
+authorable inventory. Likewise, a customization the route-free binding owned on
+a phase a contextual entry rule fixes on this route (a GeneratedF
+customization on Fresh File `F_Combat01`) decodes, reports
+`encounterCustomizationUnavailable` without generating from it, and can only be
+removed.
 
 Postboss Purging Pool inventory is assessed once immediately after the required
 fountain action and its rarity effects settle, before cleanup sales. Its

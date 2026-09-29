@@ -734,6 +734,7 @@ describe('encounter envelope catalog', () => {
       F_Opening01: ['OpeningEmpty', 'OpeningGeneratedF', 'FCastTutorialFight'], // RoomDataF.lua:374
       F_Opening02: ['OpeningEmpty', 'OpeningGeneratedF', 'FCastTutorialFight'], // RoomDataF.lua:894
       F_Opening03: ['OpeningEmpty', 'OpeningGeneratedF', 'FCastTutorialFight'], // RoomDataF.lua:965
+      F_Combat01: ['FIntroFight', 'GeneratedF'], // RoomDataF.lua:1279
       N_Opening01: ['OpeningEmpty', 'OpeningGeneratedN'], // RoomDataN.lua:434
       P_Intro: ['PIntroDreamRunEmpty'], // RoomDataP.lua:426, alongside the P intro combats
     };

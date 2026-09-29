@@ -14,6 +14,7 @@ import {
   encounterSetForBinding,
 } from '../../room-state/encounter-envelope';
 import {
+  contextuallyReplacedCustomizationDecisions,
   customizationDecisionOwned,
   customizationValueKnown,
   encounterCustomizationDeclarations,
@@ -32,6 +33,7 @@ import { nemesisGeneratedPickupSiteKey } from '../../acquisition/pickup-producer
 import { sameOccurrenceValue } from './leaf-value';
 import type { EncounterOccurrenceCommand, NemesisRandomEventInteraction } from '../types';
 import { decodeGeneratedEncounterCustomization } from '../../room-state/decoding/generated-encounter-codec';
+import { resolveEntryDeclaration } from '../../room-state/entry-resolution';
 
 function validateNemesisInteraction(
   catalog: Catalog,
@@ -388,6 +390,7 @@ function updatedFigLeafSkip(
 function updatedCustomization(
   catalog: Catalog,
   room: RoomDeclaration,
+  contextualRoom: RoomDeclaration,
   current: RoomEncounterState,
   phase: EncounterPhaseAddress,
   command: EncounterOccurrenceCommand,
@@ -402,6 +405,15 @@ function updatedCustomization(
       command,
       `${phase.phaseKey}.${command.decisionKey} is not a declared customization`,
     );
+  // A value retained from a contextually replaced binding may only be removed.
+  if (
+    command.value !== null &&
+    customizationDecisionOwned(
+      contextuallyReplacedCustomizationDecisions(catalog, room, contextualRoom, phase.phaseKey),
+      command.decisionKey,
+    )
+  )
+    failCommand(command, `${phase.phaseKey}.${command.decisionKey} is not declared on this route`);
   const value = command.value;
   if (
     value !== null &&
@@ -457,7 +469,18 @@ function replaceTopLevel(
       : requireAnomalyRoom(catalog, occurrence.gameName, command);
   const encounters = updatedSelections(catalog, room, occurrence.encounters, phase, command);
   const withFigLeaf = updatedFigLeafSkip(catalog, room, encounters, phase, command);
-  const withCustomization = updatedCustomization(catalog, room, withFigLeaf, phase, command);
+  const contextualRoom =
+    occurrence.anomalyReplacement === undefined
+      ? resolveEntryDeclaration(room, located.routePosition)
+      : room;
+  const withCustomization = updatedCustomization(
+    catalog,
+    room,
+    contextualRoom,
+    withFigLeaf,
+    phase,
+    command,
+  );
   const withGorgon = updatedGorgonResult(catalog, room, withCustomization, phase, command);
   const withNemesis = updatedNemesisRandomEvent(catalog, room, withGorgon, phase, command);
   if (withNemesis === occurrence.encounters) return document;

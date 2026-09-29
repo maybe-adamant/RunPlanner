@@ -1,4 +1,11 @@
 import type { RequirementExpression } from '../requirements/model';
+import type { ResolvedRewardOffer } from './model';
+
+/** Source `ForcedRewards` entry: the first whose requirement holds replaces the bag draw. */
+export interface ForcedCountedReward {
+  readonly offer: ResolvedRewardOffer;
+  readonly requirement?: RequirementExpression;
+}
 
 export interface CountedRewardBinding {
   readonly kind: 'countedChoice';
@@ -7,6 +14,7 @@ export interface CountedRewardBinding {
   readonly ineligibleRewardTypes: readonly string[];
   readonly allowedRewardTypes: readonly string[];
   readonly producerLifecycleKey: string;
+  readonly forcedRewards?: readonly ForcedCountedReward[];
 }
 
 export interface FixedRewardBinding {
