@@ -21,6 +21,7 @@ import { weaponUpgradeGiver, weaponUpgradeTraits } from './weapon-upgrade/index'
 import { arcanaTraits } from './arcana';
 import { circeGiver, circeTraits } from './circe';
 import { echoGiver, echoTraits } from './echo';
+import { erisTraits } from './eris';
 import { infernalContractTraits } from './infernal-contract';
 import { seleneGiver, seleneTraits } from './selene';
 import { hexes } from './hexes';
@@ -135,6 +136,7 @@ const traits = [
   ...circeTraits,
   ...echoTraits,
   ...infernalContractTraits,
+  ...erisTraits,
   ...seleneTraits,
   ...aphroditeTraits,
   ...arachneTraits,

@@ -1,5 +1,6 @@
 import type { Catalog } from '../../../catalog-schema';
-import { routeRoomShop } from '../../route-profile';
+import { routeErisHost, routeRoomShop } from '../../route-profile';
+import { resolveEntryDeclaration } from '../../room-state/entry-resolution';
 import type { ProjectDocument } from '../../model';
 
 import type { LocatedBiome } from '../contract';
@@ -305,6 +306,42 @@ export function applyOccurrenceCommand(
           roomActions,
           purgingPool: Object.freeze({ ...occurrence.purgingPool, interacted: command.interacted }),
         }),
+      );
+    }
+    case 'SetErisSpawned': {
+      const occurrence = requireOccurrence(located.plan, command.occurrence.occurrenceId, command);
+      if (!command.spawned) {
+        if (occurrence.eris === undefined) return document;
+        const { eris: _removed, ...withoutEris } = occurrence;
+        void _removed;
+        return updateOccurrence(
+          document,
+          located,
+          Object.freeze({
+            ...withoutEris,
+            roomActions: Object.freeze({
+              ...occurrence.roomActions,
+              order: Object.freeze(
+                occurrence.roomActions.order.filter(
+                  (reference) => reference.kind !== 'interactEris',
+                ),
+              ),
+            }),
+          }),
+        );
+      }
+      const room = catalog.rooms.byKey[occurrence.gameName];
+      if (
+        room === undefined ||
+        routeErisHost(resolveEntryDeclaration(room, located.routePosition), located.routeKey) ===
+          undefined
+      )
+        failCommand(command, `${occurrence.gameName} hosts no Eris on this route`);
+      if (occurrence.eris !== undefined) return document;
+      return updateOccurrence(
+        document,
+        located,
+        Object.freeze({ ...occurrence, eris: Object.freeze({ spawned: true as const }) }),
       );
     }
     case 'ReplacePurgingPoolSlot': {

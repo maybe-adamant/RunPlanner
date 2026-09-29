@@ -737,6 +737,11 @@ function createRoomActionSchedule(context: ExecutionContext): RoomActionSchedule
           kind: 'keepsakeRackUsed',
           owner: row.owner as import('../../authored-project/addresses').RoomActionSemanticAddress,
         });
+      case 'interactEris':
+        return appendEvent(state, operationContext, {
+          kind: 'erisInteracted',
+          owner: row.owner as import('../../authored-project/addresses').RoomActionSemanticAddress,
+        });
       case 'completeFieldsCage':
       case 'chooseRewardWheel':
         throw new LifecycleExecutionContractError(

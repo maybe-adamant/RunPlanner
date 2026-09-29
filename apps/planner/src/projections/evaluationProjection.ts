@@ -244,6 +244,10 @@ const findingCopy = {
   keepsakeUnavailable: {
     title: 'Keepsake unavailable',
   },
+  erisSpawnUnavailable: {
+    title: 'Eris cannot spawn again',
+    description: 'Her curse is already on this run; clear “Eris has spawned”.',
+  },
   keepsakeEquipResultMissing: {
     title: 'Choose Jeweled Pom result',
     description: 'Choose the granted Hades trait.',

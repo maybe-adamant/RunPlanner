@@ -833,6 +833,17 @@ export interface FirstRunTraitOfferRule {
   readonly rarity: 'Common';
 }
 
+/**
+ * Source `SpawnErisForCurse`: on this route Eris may stand in the room; talking
+ * applies her curse trait and drops one required gift.
+ */
+export interface ErisHostDeclaration {
+  readonly routeKey: string;
+  readonly curseTraitKey: string;
+  readonly giftRewardType: string;
+  readonly producerLifecycleKey: string;
+}
+
 export type PrebossBatchPolicy =
   | {
       readonly kind: 'takeOverNormalDoors';
@@ -913,6 +924,7 @@ export interface RoomDeclaration {
   readonly boonRarityOverride?: import('./traits').BoonRarityOverride;
   /** Trait-offer policy for loot opened in this room on the first run. */
   readonly firstRunOffer?: FirstRunTraitOfferRule;
+  readonly erisHost?: ErisHostDeclaration;
   readonly prebossBatchPolicy?: PrebossBatchPolicy;
   readonly forcedRewardStoreKey?: string;
   readonly individualRewardStoreKey?: string;

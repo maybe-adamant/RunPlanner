@@ -25,6 +25,7 @@ export function roomActionKey(reference: RoomActionReference): string {
     case 'collectRequiredReward':
     case 'useFountain':
     case 'interactKeepsakeRack':
+    case 'interactEris':
       return JSON.stringify([reference.kind]);
   }
 }

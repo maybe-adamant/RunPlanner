@@ -442,8 +442,11 @@ Locked decisions:
 - Excluded: health simulation, curse effects, executor decoding.
 
 Acceptance: codec admits the field on Fresh intros and rejects it elsewhere;
-command with undo; chronology witness that the G gift precedes the doors and
-flips Bones eligibility; repeat-prevention finding; the Fresh F–I fixture gains
+command with undo; chronology witness that `G_Intro` orders talk → gift
+acquisition → outgoing checkpoint with 20 more Ashes before exit, plus a unit
+witness that the gift alone crosses the 5-Ashes Bones threshold (the flip is
+unreachable on a valid route: F's forced second MetaProgress batch yields 5
+Ashes first); repeat-prevention finding; the Fresh F–I fixture gains
 G Eris and stays clean; product loop step; catalog producer and grant
 witnesses; mature byte-identical.
 
@@ -610,7 +613,7 @@ authorship rather than masking defects with editor filters.
 | Other progression        | Delivered (Slice I): Nectar gives no level on `FreshFile` (route-excluded GiftDrop level effect). Elements: no F–I store or reachable shop option offers one, so no placement rule is needed. Exchange chance 0 with the too-few-options fallback retained; no DD source reachable.                                                                                                                                                                                                                                                |
 | Deterministic encounters | Delivered: `FIntroFight` (Slice H); `FishmanIntro`/`ClockworkIntro` as route-keyed first-biome identities guarded by prior route resolution (Slice I), so Chronos intros never resolve on Fresh. Enemy generation and introductions remain native.                                                                                                                                                                                                                                                                                 |
 | Boss choices             | Profile restrictions for Hecate/Scylla; retain ordinary Cerberus/Chronos behavior under zero Fear. Pin native choice keys rather than relying on prose move names.                                                                                                                                                                                                                                                                                                                                                                 |
-| Eris                     | Observed health-condition checkbox in G/H/I intro → required interaction → gift and repeat-prevention state. 20 Ashes/50 Psyche/300 Bones, NPC exemptions. Checkbox is not an independent gift or spawn override; no health simulator.                                                                                                                                                                                                                                                                                             |
+| Eris                     | Delivered (Slice J): `eris: { spawned: true }` observation on Fresh G/H/I intros → required `interactEris` (grants `ErisCurseTrait`) → required `ErisCursePickup` gift before the doors (20 Ashes/300 Bones credited; H's 50 Psyche untracked; bonus-exempt, no Sea Star, no Artificer). A later observation once cursed reports `erisSpawnUnavailable`, no second gift. No health or curse-effect simulation.                                                                                                                     |
 | Bounded additional audit | Disposition (Slice I): `RandomStatusBoon` stays a declared Aphrodite trait; its historically unlocked status pool is a combat effect with no modeled consumer, so no dialogue or status history is added.                                                                                                                                                                                                                                                                                                                          |
 
 Route-identity note: Chaos Enshrouded's `routeKey: 'Underworld'` offer
@@ -636,6 +639,13 @@ inert H Pool, absent racks/resources and room conformance. Generate a real Fresh
 File execution fixture through planner builders; format it normally. No manually
 fabricated protocol witness. Only remove the publication restriction after the
 required rule coverage and executor contacts are ready for controlled live testing.
+
+Eris publication: the gift already reaches the timeline as an ordinary
+`interactAcquisitionEntry` acquisition, but the talk has no transaction kind,
+so assembly reports `executionCoverageMissing` for it. Publish the observation
+flag, the talk as an interaction and the gift as a required pickup on the
+intro occurrence; conformance proves `ErisCurseTrait` present and the gift
+acquired, diagnostic-only when marked but Eris is absent.
 
 Unentered Fresh G door targets resolve no structural encounter identity in
 materialization (no reached facts there), matching mature I; this slice must

@@ -126,6 +126,14 @@ export function routePurgingPool(
     : room?.purgingPool;
 }
 
+/** The room's Eris host on this route, if Eris can spawn there. */
+export function routeErisHost(
+  room: RoomDeclaration | undefined,
+  routeKey: string,
+): RoomDeclaration['erisHost'] {
+  return room?.erisHost?.routeKey === routeKey ? room.erisHost : undefined;
+}
+
 /** Whether the room offers its keepsake rack on this route. */
 export function routeHasKeepsakeRack(room: RoomDeclaration | undefined, routeKey: string): boolean {
   return (

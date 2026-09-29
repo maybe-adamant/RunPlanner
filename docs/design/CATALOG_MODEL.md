@@ -157,6 +157,12 @@ including eligibility, force and caps, is unchanged. The GiftDrop producer
 bindings exclude `FreshFile` from their random boon level, which needs the
 `WorldUpgradeGiftDropRunProgress` upgrade.
 
+`G_Intro`, `H_Intro` and `I_Intro` declare a `FreshFile` `erisHost`: the curse
+trait (`ErisCurseTrait`, rarityless and offered by no giver), the gift reward
+type and its `ErisCursePickup` producer lifecycle. Normalization requires an
+Intro room, a declared route, a rarityless curse, and a payload-free gift the
+producer supports.
+
 The catalog declares one counted run-start reward binding; entry rooms have no
 intrinsic incoming reward. A fresh profile's first entry has no run-start
 reward. Narrow contextual encounter rules express genuine route-mode and
@@ -265,8 +271,8 @@ acquisition roles. Each role resolves self, fixed or typed-payload-source
 identity. Concrete acquisitions separately declare exact history projection
 (`lootAndUse` or `consumableAndUse`) and base capabilities, including a
 `resourceGrant` of whole resource amounts by resource key. A producer lifecycle
-may declare `resourceBonusExempt` (source `NPCDrop`) or per-acquisition
-`resourceGrantOverrides`; a trait may declare a rarity-resolved
+may declare `resourceBonusExempt` (source `NPCDrop`), `duplicationExempt`
+(source `CanDuplicate = false`) or per-acquisition `resourceGrantOverrides`; a trait may declare a rarity-resolved
 `resourceRewardBonus` whose resources some pickup must grant.
 
 The source-support vocabulary is closed: `ordinaryBoonPeer`,

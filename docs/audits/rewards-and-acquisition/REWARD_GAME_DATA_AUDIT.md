@@ -755,7 +755,8 @@ Devotion block inside `HubRewards` is not a live store entry.
 
 `ConsumableData.lua` declares `AddResources`: `MetaCardPointsCommonDrop` 5 and
 `MetaCardPointsCommonBigDrop` 10 Ashes (`MetaCardPointsCommon`);
-`MetaCurrencyDrop` 50 and `MetaCurrencyBigDrop` 100 Bones (`MetaCurrency`).
+`MetaCurrencyDrop` 50 and `MetaCurrencyBigDrop` 100 Bones (`MetaCurrency`);
+`MemPointsCommonDrop` 10 Psyche (`MemPointsCommon`, `ConsumableData.lua:1621`).
 Narcissus's Ashes drop overrides it to 10 (`TraitData_Narcissus.lua`).
 
 `InteractLogic.lua:ApplyConsumableItemResourceMultiplier` scales each amount
@@ -766,8 +767,11 @@ optionals (spawned at room setup), World Shop items and Gold duplicates
 (`StoreLogic.lua`), Echo's replay and `GiveRandomConsumables` producers call
 it. `NPCDrop` objects skip the bonus. `NPCRewardDrop` consumables (Nemesis
 events), Stygian Well trades (`TradeLogic.lua:215`) and Eris's gifts set it:
-G 20 Ashes (`RoomDataG.lua`), H 50 Psyche (`RoomDataH.lua:573-581`) and I 300
-Bones (`RoomDataI.lua:527-535`), each also not duplicable.
+G 20 Ashes (`RoomDataG.lua:1365-1375`), H 50 Psyche (`RoomDataH.lua:573-581`)
+and I 300 Bones (`RoomDataI.lua:527-535`), each also `CanDuplicate = false` and
+`MetaConversionEligible = false`. `ShrinePresentation.lua:600-608` drops the
+gift when her curse applies; it is a room-required pickup because
+`NotRequiredPickup` stays commented out (`RoomLogic.lua:1983`).
 
 Buried Treasure (`TraitData_Poseidon.lua:RoomRewardBonusBoon`) declares base
 1.5 for Ashes, Psyche and Bones with `SourceIsMultiplier`; its rarity
@@ -784,8 +788,11 @@ Spending leaves lifetime gains untouched.
 Planner disposition: concrete acquisitions declare `resourceGrant`, producer
 lifecycles declare `resourceBonusExempt` and `resourceGrantOverrides`, and the
 trait declares a rarity-resolved `resourceRewardBonus`. Only Ashes and Bones
-are tracked. Stygian Well resource items grant a random range and are not
-credited. Eris's gifts have no declared producer yet.
+are tracked; Psyche has no consumer and is untracked, not zero. Stygian Well
+resource items grant a random range and are not credited. Eris's gifts use
+the `ErisCursePickup` producer: bonus-exempt, its `duplicationExempt` blocks
+Sea Star, and its bindings block Artificer; H's Psyche gift is a required
+pickup that declares no amount.
 
 ## Shops
 

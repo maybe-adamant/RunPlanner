@@ -3,10 +3,16 @@
 import { cleanup, screen, within } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
 
+import { createApplication } from '@planner/composition/createApplication';
 import {
   authoredProjectRedoRequested,
+  authoredProjectReplaced,
   authoredProjectUndoRequested,
 } from '@planner/state/projectWorkspaceSlice';
+import {
+  createFreshFileRouteProject,
+  freshFileGIntroId,
+} from '@run-planner/test-fixtures/fresh-file';
 import { renderPlannerForInteraction } from '../fixtures/renderPlanner';
 
 afterEach(() => {
@@ -97,5 +103,39 @@ describe('Fresh File product loop', () => {
     expect(application.projectOperations.inspectCurrentGamePlan()).toMatchObject({
       kind: 'unavailable',
     });
+  });
+
+  it('observes Eris in the G intro timeline and undoes the observation', async () => {
+    const application = createApplication();
+    application.store.dispatch(authoredProjectReplaced(createFreshFileRouteProject()));
+    const { user } = renderPlannerForInteraction({ application });
+    const workspace = () => {
+      const state = application.store.getState().projectWorkspace;
+      if (state.kind !== 'openProject') throw new Error('expected an open project');
+      return state;
+    };
+    const intro = () =>
+      workspace().history.present.route.biomes[1]!.topology!.occurrences.find(
+        (occurrence) => occurrence.occurrenceId === freshFileGIntroId,
+      )!;
+    expect(workspace().assembly.evaluation.findings).toEqual([]);
+
+    await user.click(screen.getByRole('button', { name: 'Oceanus' }));
+    await user.click(screen.getByRole('button', { name: /^Entrance/ }));
+    await user.click(screen.getByRole('tab', { name: 'Room Timeline' }));
+    const timeline = () => screen.getByRole('region', { name: 'Room Timeline' });
+    expect(within(timeline()).getByText('Talk to Eris')).toBeTruthy();
+    await user.click(within(timeline()).getByRole('checkbox', { name: 'Eris has spawned' }));
+    expect(intro().eris).toBeUndefined();
+    expect(within(timeline()).queryByText('Talk to Eris')).toBeNull();
+
+    application.store.dispatch(authoredProjectUndoRequested());
+    expect(intro().roomActions.order.map((reference) => reference.kind)).toEqual([
+      'interactEris',
+      'interactAcquisitionEntry',
+    ]);
+    application.store.dispatch(authoredProjectRedoRequested());
+    expect(intro().eris).toBeUndefined();
+    application.dispose();
   });
 });

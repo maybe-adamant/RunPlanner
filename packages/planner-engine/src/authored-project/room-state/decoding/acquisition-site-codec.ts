@@ -12,6 +12,7 @@ import {
 import { shopSlotProfile } from '../../shop';
 import { decodeNullableRewardState } from './reward-acquisition-codec';
 import { expectExactKeys, expectRecord, failProjectDocument } from '../../validation';
+import { ERIS_GIFT_SITE_KEY } from '../../acquisition/eris-gift';
 
 export interface AcquisitionSiteOccurrenceContext {
   readonly path: string;
@@ -68,6 +69,7 @@ export function decodeAcquisitionSites(
       hermesShrineDeliverySite && parseArtificerReplacementEntryKey(entryKey) !== undefined;
     const artificerSite =
       pointKey !== 'roomExit' &&
+      pointKey !== ERIS_GIFT_SITE_KEY &&
       !generatedTraitSite &&
       !generatedNemesisSite &&
       !seaStarDuplicateSite &&

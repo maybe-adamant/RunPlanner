@@ -107,6 +107,10 @@ export interface WorkspaceOccurrenceLocalInteractionCatalog {
   >;
   readonly purgingPoolInteractions: ReadonlyMap<string, WorkspacePurgingPoolInteraction>;
   readonly purgingPoolSlots: ReadonlyMap<string, WorkspacePurgingPoolSlotInteraction>;
+  readonly erisObservations: ReadonlyMap<
+    string,
+    import('../contract').WorkspaceErisObservationInteraction
+  >;
   readonly hermesShrineOffers: ReadonlyMap<string, WorkspaceHermesShrineOfferInteraction>;
   readonly hermesShrinePurchases: ReadonlyMap<string, WorkspaceHermesShrinePurchaseInteraction>;
   readonly hermesShrinePresences: ReadonlyMap<string, WorkspaceHermesShrinePresenceInteraction>;
@@ -249,6 +253,10 @@ export function bindOccurrenceLocalInteractions(
     WorkspaceShopPurchaseParticipationInteraction
   >();
   const purgingPoolInteractions = new Map<string, WorkspacePurgingPoolInteraction>();
+  const erisObservations = new Map<
+    string,
+    import('../contract').WorkspaceErisObservationInteraction
+  >();
   const purgingPoolSlots = new Map<string, WorkspacePurgingPoolSlotInteraction>();
   const hermesShrineOffers = new Map<string, WorkspaceHermesShrineOfferInteraction>();
   const hermesShrinePurchases = new Map<string, WorkspaceHermesShrinePurchaseInteraction>();
@@ -910,6 +918,30 @@ export function bindOccurrenceLocalInteractions(
         }
         break;
       }
+      case 'erisObservation': {
+        if (erisObservations.has(requirement.interactionKey)) {
+          throw new StructuredWorkspaceProjectionContractError(
+            `${requirement.interactionKey} has multiple bound Eris observations`,
+          );
+        }
+        erisObservations.set(
+          requirement.interactionKey,
+          Object.freeze({
+            intentFor: (spawned: boolean) =>
+              Object.freeze({
+                command: Object.freeze({
+                  kind: 'SetErisSpawned' as const,
+                  occurrence: requirement.owner,
+                  spawned,
+                }),
+              }),
+            key: requirement.interactionKey,
+            owner: requirement.owner,
+            spawned: requirement.spawned,
+          }),
+        );
+        break;
+      }
       case 'purgingPoolInteraction': {
         if (purgingPoolInteractions.has(requirement.interactionKey)) {
           throw new StructuredWorkspaceProjectionContractError(
@@ -1327,6 +1359,7 @@ export function bindOccurrenceLocalInteractions(
     shopPurchaseParticipations,
     purgingPoolInteractions,
     purgingPoolSlots,
+    erisObservations,
     hermesShrineOffers,
     hermesShrinePurchases,
     hermesShrinePresences,

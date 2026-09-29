@@ -196,6 +196,18 @@ describe('resource quantity production', () => {
     });
     expect(amount('MaxHealthDrop', 'Common')).toBeUndefined();
   });
+
+  it('fixes each Eris gift at its override, exempt from resource bonuses', () => {
+    expect(amount('MetaCardPointsCommonDrop', 'Heroic', 'ErisCursePickup')).toEqual({
+      MetaCardPointsCommon: 20,
+    });
+    // Psyche is untracked: the H gift carries no amount.
+    expect(amount('MemPointsCommonDrop', 'Heroic', 'ErisCursePickup')).toBeUndefined();
+    expect(amount('MetaCurrencyDrop', 'Heroic', 'ErisCursePickup')).toEqual({
+      MetaCurrency: 300,
+    });
+    expect(amount('MemPointsCommonDrop')).toBeUndefined();
+  });
 });
 
 describe('resource gains at acquisition', () => {
@@ -259,6 +271,29 @@ describe('resource gains at acquisition', () => {
     expect(evaluateRequirement(threshold, facts(gained!.state).requirements)).toBe(true);
     const [bones] = collect(branch, roomPickup('threshold-bones', 'MetaCurrencyDrop'));
     expect(evaluateRequirement(threshold, facts(bones!.state).requirements)).toBe(false);
+    const [gift] = collect(
+      branch,
+      roomPickup('threshold-eris', 'MetaCardPointsCommonDrop', 'ErisCursePickup'),
+    );
+    expect(gift!.state.rewardHistory.resourceGains).toEqual({ MetaCardPointsCommon: 20 });
+    expect(evaluateRequirement(threshold, facts(gift!.state).requirements)).toBe(true);
+  });
+
+  it('never lets Sea Star duplicate an Eris gift', () => {
+    const gift = roomPickup('eris-sea-star', 'MetaCardPointsCommonDrop', 'ErisCursePickup');
+    const [collected] = collect(branchWith(traitsWith(seaStar)), gift, true);
+    const role = semanticAddressKey(createAcquisitionRoleAddress(gift.origin, 'self'));
+    expect(collected!.seaStarDuplicateEligibilityBySource?.[role]).toMatchObject({
+      supported: false,
+      evidence: { seaStarActive: true, canDuplicate: true, blocksSeaStarDuplication: true },
+    });
+    const ashes = roomPickup('ashes-sea-star', 'MetaCardPointsCommonDrop');
+    const [ordinary] = collect(branchWith(traitsWith(seaStar)), ashes, true);
+    expect(
+      ordinary!.seaStarDuplicateEligibilityBySource?.[
+        semanticAddressKey(createAcquisitionRoleAddress(ashes.origin, 'self'))
+      ]?.supported,
+    ).toBe(true);
   });
 });
 

@@ -268,6 +268,7 @@ function baseContribution(
         'required',
         frozen({ kind: 'standard', phase: 'afterCombat' }),
       );
+    case 'interactEris':
     case 'interactKeepsakeRack':
       return contribution(
         biome,

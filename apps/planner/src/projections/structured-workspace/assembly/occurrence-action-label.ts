@@ -232,5 +232,7 @@ export function occurrenceActionLabel(
       return 'Interact Fountain';
     case 'interactKeepsakeRack':
       return 'Interact Keepsake Rack';
+    case 'interactEris':
+      return 'Talk to Eris';
   }
 }

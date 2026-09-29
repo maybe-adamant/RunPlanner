@@ -33,6 +33,7 @@ import type { RewardProducerFrontier } from '../../producer-frontiers';
 import { createBiomeRewardFacts } from '../../facts';
 import { BiomeRewardSimulationContractError } from '../biome-contract';
 import { canonicalArtificerSource } from '../reward-sources';
+import { erisGiftDropped } from '../lifecycle-transitions/eris-interacted';
 import { rewardFindingChronologyForRoom } from '../finding-chronology';
 import {
   createAuthoredSiteSettlementEmissions,
@@ -284,6 +285,12 @@ export function settleAuthoredAcquisitionSite(
       // becomes live only for that exact normal participating acquisition;
       // Time Piece, Artificer, and an unpicked optional source do not create it.
       if (!sourceWasNormallyAcquired) return sourceBranches;
+      if (
+        producer.sourceAction.kind === 'interactEris' &&
+        producer.source.kind === 'roomAction' &&
+        !erisGiftDropped(catalog, room, producer.source, sourceBranches)
+      )
+        return sourceBranches;
       const requiredEntryKeys = new Set(
         producer.pickups.filter((pickup) => pickup.required).map((pickup) => pickup.key),
       );

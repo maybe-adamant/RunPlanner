@@ -148,7 +148,7 @@ describe('trait catalog closure', () => {
     expect(traits).toBeDefined();
     expect(traits?.weapons.values).toHaveLength(6);
     expect(traits?.aspects.values).toHaveLength(24);
-    expect(traits?.traits.values).toHaveLength(419);
+    expect(traits?.traits.values).toHaveLength(420);
     expect(traits?.givers.values.map((giver) => [giver.key, giver.traitKeys.length])).toEqual([
       ['Aphrodite', 22],
       ['Arachne', 8],

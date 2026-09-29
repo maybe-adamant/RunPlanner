@@ -52,6 +52,7 @@ export type RewardGenerationFindingCode =
   | 'figurineOutcomeWrongCardinality'
   | 'figurineOutcomeTargetUnavailable'
   | 'keepsakeUnavailable'
+  | 'erisSpawnUnavailable'
   | 'timePieceConversionUnavailable'
   | 'artificerConversionUnavailable'
   | 'seaStarDuplicationUnavailable'

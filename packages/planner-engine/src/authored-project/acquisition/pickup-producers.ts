@@ -22,19 +22,23 @@ import {
   createLocalRewardAddress,
   createOccurrenceAddress,
   createRewardWheelOfferAddress,
+  createRoomActionAddress,
   createShopOfferAddress,
   createTraitOfferAddress,
   semanticAddressKey,
   type BiomeAddress,
   type NemesisRandomEventAddress,
+  type RoomActionAddress,
   type TraitOfferAddress,
   type TraitOfferOwnerAddress,
 } from '../addresses';
 import { acquisitionSiteFromStorageKey } from './artificer';
 import { roomActionKey } from '../room-actions/key';
+import { ERIS_GIFT_ENTRY_KEY, ERIS_GIFT_SITE_KEY } from './eris-gift';
 import { directEncounterDefinitionKeyForSlot } from '../room-state/encounter-envelope';
 import { resolveRoutePosition } from '../route-context';
 import { resolveEntryDeclaration } from '../room-state/entry-resolution';
+import { routeErisHost } from '../route-profile';
 import {
   createSelectedPickupEntries,
   materializeGorgonAthenaOffer,
@@ -154,8 +158,8 @@ export interface SelectedPickupProducer {
   readonly producerLifecycleKey: string;
   /** Whether this instance follows its source action or the room-exit placement declared by its lifecycle. */
   readonly placement: 'afterSource' | 'roomExit';
-  /** Exact trait acquisition that creates this producer instance. */
-  readonly source: TraitOfferAddress | NemesisRandomEventAddress;
+  /** Exact trait acquisition, event, or interaction that creates this producer instance. */
+  readonly source: TraitOfferAddress | NemesisRandomEventAddress | RoomActionAddress;
   readonly sourceAction: RoomActionReference;
   /** The exact source is a normal participating acquisition, not a conversion or dormant optional. */
   readonly sourceNormal: boolean;
@@ -167,6 +171,15 @@ export interface SelectedPickupProducer {
     readonly rewardType?: string;
     readonly required: boolean;
   }[];
+}
+
+/** Sites that exist only while a selected producer owns them. */
+export function producerOwnedSiteKey(siteKey: string): boolean {
+  return (
+    siteKey.startsWith('traitGenerated:') ||
+    siteKey.startsWith('nemesisGenerated:') ||
+    siteKey === ERIS_GIFT_SITE_KEY
+  );
 }
 
 export function nemesisGeneratedPickupSiteKey(phaseKey: string): string {
@@ -601,6 +614,37 @@ export function selectedPickupProducers(
       },
     ),
     ...nemesisPickupProducers(catalog, biome, occurrence, declaration),
+    ...erisPickupProducers(biome, occurrence, declaration),
+  ]);
+}
+
+/** Talking to a spawned Eris drops the host's one required gift. */
+function erisPickupProducers(
+  biome: BiomeAddress,
+  occurrence: RoomOccurrence,
+  declaration: RoomDeclaration,
+): readonly SelectedPickupProducer[] {
+  const host = routeErisHost(declaration, biome.routeKey);
+  if (host === undefined || occurrence.eris === undefined) return Object.freeze([]);
+  const sourceAction = Object.freeze({ kind: 'interactEris' as const });
+  return Object.freeze([
+    Object.freeze({
+      producerLifecycleKey: host.producerLifecycleKey,
+      placement: 'afterSource' as const,
+      source: createRoomActionAddress(biome, occurrence.occurrenceId, roomActionKey(sourceAction)),
+      sourceAction,
+      sourceNormal: occurrence.roomActions.order.some(
+        (reference) => reference.kind === 'interactEris',
+      ),
+      siteKey: ERIS_GIFT_SITE_KEY,
+      pickups: Object.freeze([
+        Object.freeze({
+          key: ERIS_GIFT_ENTRY_KEY,
+          rewardType: host.giftRewardType,
+          required: true,
+        }),
+      ]),
+    }),
   ]);
 }
 
@@ -765,11 +809,7 @@ export function reconcileSelectedPickupProducerState(
     else nextSites.roomExit = Object.freeze({ pickupEntries: Object.freeze(retained) });
   }
   for (const siteKey of Object.keys(nextSites))
-    if (
-      (siteKey.startsWith('traitGenerated:') || siteKey.startsWith('nemesisGenerated:')) &&
-      !selectedSiteKeys.has(siteKey)
-    )
-      delete nextSites[siteKey];
+    if (producerOwnedSiteKey(siteKey) && !selectedSiteKeys.has(siteKey)) delete nextSites[siteKey];
   for (const producer of producers) {
     const current = nextSites[producer.siteKey];
     const existing = current?.pickupEntries ?? {};
@@ -802,11 +842,7 @@ export function reconcileSelectedPickupProducerState(
   const nextActions = occurrence.roomActions.order.filter((reference) => {
     if (reference.kind !== 'interactAcquisitionEntry') return true;
     const key = `${reference.siteKey}\u0000${reference.entryKey}`;
-    if (
-      reference.siteKey.startsWith('traitGenerated:') ||
-      reference.siteKey.startsWith('nemesisGenerated:')
-    )
-      return structuralEntries.has(key);
+    if (producerOwnedSiteKey(reference.siteKey)) return structuralEntries.has(key);
     if (reference.siteKey === 'roomExit' && echoKeys.has(reference.entryKey))
       return structuralEntries.has(key) || echoKeys.has(reference.entryKey);
     return true;

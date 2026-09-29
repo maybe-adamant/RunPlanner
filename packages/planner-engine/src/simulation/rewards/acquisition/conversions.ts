@@ -67,6 +67,9 @@ export function assessSeaStarDuplication(
       resolution.lifecyclePoint,
     );
   const acquisition = catalog.rewards.acquisitions.byKey[resolved.acquisition.gameName];
+  const producerBlocksDuplication =
+    catalog.rewards.producerLifecycles.byKey[source.producerLifecycleKey]?.duplicationExempt ===
+    true;
   const seaStarActive = branch.state.traitHistory.equippedTraits.DoubleRewardBoon !== undefined;
   const evidence = Object.freeze({
     ...offerEvidence(source.offer),
@@ -78,7 +81,7 @@ export function assessSeaStarDuplication(
     normalDisposition:
       source.dispositionByAcquisitionRole?.[resolution.role]?.kind !== 'timePiece' &&
       source.dispositionByAcquisitionRole?.[resolution.role]?.kind !== 'artificer',
-    blocksSeaStarDuplication: source.blocksSeaStarDuplication === true,
+    blocksSeaStarDuplication: source.blocksSeaStarDuplication === true || producerBlocksDuplication,
   });
   return Object.freeze({
     supported:
@@ -86,6 +89,7 @@ export function assessSeaStarDuplication(
       acquisition?.canDuplicate === true &&
       source.instanceProvenance === 'free' &&
       source.blocksSeaStarDuplication !== true &&
+      !producerBlocksDuplication &&
       source.dispositionByAcquisitionRole?.[resolution.role]?.kind !== 'timePiece' &&
       source.dispositionByAcquisitionRole?.[resolution.role]?.kind !== 'artificer',
     evidence,

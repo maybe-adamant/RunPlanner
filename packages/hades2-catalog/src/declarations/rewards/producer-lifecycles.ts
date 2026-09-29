@@ -288,6 +288,32 @@ export const producerLifecycles = [
     ],
   },
   {
+    key: 'ErisCursePickup',
+    // RoomData{G,H,I} `SpawnErisForCurse` gift overrides: `NPCDrop`,
+    // `CanDuplicate = false`, `MetaConversionEligible = false`, fixed `AddResources`.
+    // H's fixed 50 Psyche (`MemPointsCommon`) is untracked, so it declares no amount.
+    resourceBonusExempt: true,
+    duplicationExempt: true,
+    resourceGrantOverrides: {
+      MetaCardPointsCommonDrop: { MetaCardPointsCommon: 20 },
+      MetaCurrencyDrop: { MetaCurrency: 300 },
+    },
+    rewardTypes: ['MetaCardPointsCommonDrop', 'MemPointsCommonDrop', 'MetaCurrencyDrop'],
+    defaultLifecyclePoint: 'roomRewardPickup',
+    overrides: (
+      ['MetaCardPointsCommonDrop', 'MemPointsCommonDrop', 'MetaCurrencyDrop'] as const
+    ).map((rewardType) => ({
+      rewardType,
+      acquisitionLifecycle: [
+        {
+          role: 'self',
+          lifecyclePoint: 'roomRewardPickup' as const,
+          blocksArtificerConversion: true as const,
+        },
+      ],
+    })),
+  },
+  {
     key: 'ZagPedestal',
     rewardTypes: ['BlindBoxLoot', 'StackUpgradeBig', 'StackUpgrade', 'TalentBigDrop', 'TalentDrop'],
     defaultLifecyclePoint: 'roomExit',

@@ -129,6 +129,12 @@ export type WorkspaceOccurrenceInteractionRequirement =
       readonly interacted: boolean;
     }
   | {
+      readonly kind: 'erisObservation';
+      readonly owner: OccurrenceAddress;
+      readonly interactionKey: string;
+      readonly spawned: boolean;
+    }
+  | {
       readonly assessment: WorkspaceFeatureAssessment;
       readonly kind: 'purgingPoolSlots';
       readonly owner: OccurrenceAddress;
