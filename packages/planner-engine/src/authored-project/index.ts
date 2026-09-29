@@ -24,6 +24,7 @@ export {
   routeHasKeepsakeRack,
   routeInitialProfile,
   routePurgingPool,
+  routeRoomDeclaration,
   routeRoomShop,
 } from './route-profile';
 export {

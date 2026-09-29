@@ -36,7 +36,7 @@ describe('encounter envelope catalog', () => {
         .filter((row) => row.hostsNpcShoppingEvents)
         .map((row) => row.key)
         .sort(),
-    ).toEqual(['Shop', 'TyphonShop']);
+    ).toEqual(['BridgeShop', 'Shop', 'TyphonShop']);
     expect(
       built.encounterDefinitions.values
         .filter((row) => row.npcShoppingProtection !== undefined)
@@ -108,7 +108,7 @@ describe('encounter envelope catalog', () => {
 
   it('resolves every bound authored choice once per room slot and reward context', () => {
     const built = createCatalog(declarations);
-    const noReward = { kind: 'noReward' } as const;
+    const noReward = { kind: 'noReward', routeKey: 'Underworld' } as const;
     const profilesFor = (setKey: string) => built.encounterSets.byKey[setKey]!.authoringProfiles;
     const choiceFor = (setKey: string, choiceKey: string) => {
       const profile = profilesFor(setKey).find((candidate) => candidate.key === choiceKey);
@@ -123,31 +123,36 @@ describe('encounter envelope catalog', () => {
       resolveEncounterAuthoringProfile(choiceFor('FEncountersDefault', 'GeneratedF'), {
         kind: 'knownReward',
         rewardType: 'Devotion',
+        routeKey: 'Underworld',
       }),
     ).toBe('DevotionTestF');
     expect(
       resolveEncounterAuthoringProfile(choiceFor('GEncountersDefault', 'GeneratedG'), {
         kind: 'knownReward',
         rewardType: 'Devotion',
+        routeKey: 'Underworld',
       }),
     ).toBe('DevotionTestG');
     expect(
       resolveEncounterAuthoringProfile(choiceFor('IEncountersDefault', 'GeneratedI'), {
-        biomeEncounterDepth: 2,
+        routeKey: 'Underworld',
+        reached: { biomeEncounterDepth: 2, routeEncounterKeyCounts: {} },
         kind: 'knownReward',
         rewardType: 'ClockworkGoal',
       }),
     ).toBe('GeneratedI_GoalReward');
     expect(
       resolveEncounterAuthoringProfile(choiceFor('IEncountersSmaller', 'GeneratedI_Small'), {
-        biomeEncounterDepth: 2,
+        routeKey: 'Underworld',
+        reached: { biomeEncounterDepth: 2, routeEncounterKeyCounts: {} },
         kind: 'knownReward',
         rewardType: 'ClockworkGoal',
       }),
     ).toBe('GeneratedI_Small_GoalReward');
     expect(
       resolveEncounterAuthoringProfile(choiceFor('IEncountersDefault', 'GeneratedI'), {
-        biomeEncounterDepth: 2,
+        routeKey: 'Underworld',
+        reached: { biomeEncounterDepth: 2, routeEncounterKeyCounts: {} },
         kind: 'knownReward',
         rewardType: 'Devotion',
       }),
@@ -167,9 +172,15 @@ describe('encounter envelope catalog', () => {
           }
         }
         const contexts: readonly EncounterResolutionContext[] = [
-          { ...noReward, biomeEncounterDepth: 2 },
+          { ...noReward, reached: { biomeEncounterDepth: 2, routeEncounterKeyCounts: {} } },
           ...[...rewardTypes].map(
-            (rewardType) => ({ kind: 'knownReward', rewardType, biomeEncounterDepth: 2 }) as const,
+            (rewardType) =>
+              ({
+                kind: 'knownReward',
+                rewardType,
+                routeKey: 'Underworld',
+                reached: { biomeEncounterDepth: 2, routeEncounterKeyCounts: {} },
+              }) as const,
           ),
         ];
         for (const context of contexts) {
@@ -405,6 +416,7 @@ describe('encounter envelope catalog', () => {
     const definitions = built.encounterDefinitions.byKey;
     const positiveKeys = [
       'GeneratedF',
+      'FishmanIntro',
       'GeneratedG',
       'GeneratedH_Passive',
       'GeneratedH_PassiveSmall',
@@ -435,6 +447,7 @@ describe('encounter envelope catalog', () => {
     }
 
     const explicitBlockers = [
+      'ClockworkIntro',
       'MiniBossTreant_Shrine',
       'MiniBossFogEmitter_Shrine',
       'OpeningGeneratedF',
@@ -829,6 +842,7 @@ describe('encounter envelope catalog', () => {
     );
     expect(catalog.encounterSets.byKey.IEncountersDefault).toMatchObject({
       encounterDefinitionKeys: [
+        'ClockworkIntro',
         'GeneratedIChronosIntro',
         'GeneratedI',
         'GeneratedI_GoalReward',
@@ -844,6 +858,7 @@ describe('encounter envelope catalog', () => {
             'GeneratedI_GoalReward',
             'DevotionTestI',
             'GeneratedIChronosIntro',
+            'ClockworkIntro',
           ],
         },
         { key: 'NemesisCombatI', encounterDefinitionKeys: ['NemesisCombatI'] },
@@ -872,6 +887,7 @@ describe('encounter envelope catalog', () => {
       'NemesisRandomEvent',
     ]);
     expect(catalog.encounterSets.byKey.GEncountersDefault?.encounterDefinitionKeys).toEqual([
+      'FishmanIntro',
       'GeneratedG',
       'DevotionTestG',
       'ArtemisCombatG',

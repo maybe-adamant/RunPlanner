@@ -517,6 +517,7 @@ function addZagreusContract(
     occurrenceId: command.occurrenceId,
     gameName: contractRoom.gameName,
     state: createDefaultRoomState(catalog, contractRoom, {
+      routeKey: located.routePosition.routeKey,
       role: 'ordinary',
       entryActive: false,
       loadout: located.loadout,
@@ -685,6 +686,7 @@ function addChaos(
     occurrenceId: command.occurrenceId,
     gameName: chaosRoom.gameName,
     state: createDefaultRoomState(catalog, chaosRoom, {
+      routeKey: located.routePosition.routeKey,
       role: 'ordinary',
       entryActive: false,
       loadout: located.loadout,
@@ -864,6 +866,7 @@ function replaceChaosMap(
         ...occurrence,
         gameName: room.gameName,
         state: createDefaultRoomState(catalog, room, {
+          routeKey: located.routePosition.routeKey,
           role: 'ordinary',
           entryActive: false,
           loadout: located.loadout,

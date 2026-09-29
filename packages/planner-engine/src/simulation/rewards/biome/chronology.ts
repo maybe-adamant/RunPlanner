@@ -1,5 +1,5 @@
 import type { Catalog } from '../../../catalog-schema';
-import { routePurgingPool } from '../../../authored-project/route-profile';
+import { routePurgingPool, routeRoomDeclaration } from '../../../authored-project/route-profile';
 import type { ResolvedRoutePosition } from '../../../authored-project/route-context';
 import type { PurgingPoolAssessment } from '../../commerce/purging-pool';
 import type { HermesShrineCandidateContext } from '../../commerce/hermes-shrine';
@@ -1079,7 +1079,10 @@ export function evaluateBiomeRewardChronology(
     source: CanonicalRewardSource,
     view: HistoryStateView,
   ) {
-    const declaration = catalog.rooms.byKey[source.gameName];
+    const declaration = routeRoomDeclaration(
+      catalog.rooms.byKey[source.gameName],
+      source.origin.routeKey,
+    );
     if (declaration === undefined) {
       throw new BiomeRewardSimulationContractError(
         `${source.gameName} has no declaration for run-state snapshot`,
@@ -1183,7 +1186,10 @@ export function evaluateBiomeRewardChronology(
       return;
     }
     const source = rooms.get(semanticAddressKey(frontier.parent.origin));
-    const declaration = source === undefined ? undefined : catalog.rooms.byKey[source.gameName];
+    const declaration =
+      source === undefined
+        ? undefined
+        : routeRoomDeclaration(catalog.rooms.byKey[source.gameName], source.origin.routeKey);
     if (source === undefined || declaration === undefined) {
       throw new BiomeRewardSimulationContractError(
         `${semanticAddressKey(frontier.origin)} has no reward-history frontier source`,
@@ -1616,7 +1622,10 @@ export function evaluateBiomeRewardChronology(
         const ownerKey = semanticAddressKey(event.origin);
         const source = rooms.get(ownerKey);
         const sourceViews = views.get(ownerKey);
-        const declaration = source === undefined ? undefined : catalog.rooms.byKey[source.gameName];
+        const declaration =
+          source === undefined
+            ? undefined
+            : routeRoomDeclaration(catalog.rooms.byKey[source.gameName], source.origin.routeKey);
         const batch = batchesByParent.get(ownerKey);
         const hubDecisionOwner = hubDecisionsBySource.get(ownerKey)?.origin;
         const frontierOwner =
@@ -1855,7 +1864,10 @@ export function evaluateBiomeRewardChronology(
           snapshot,
           event,
           room,
-          declaration: room === undefined ? undefined : catalog.rooms.byKey[room.gameName],
+          declaration:
+            room === undefined
+              ? undefined
+              : routeRoomDeclaration(catalog.rooms.byKey[room.gameName], room.origin.routeKey),
           roomView: views.get(semanticAddressKey(event.origin)),
           sourceBranches: branches,
           authoredSeaStarDuplicateSiteKeys: Object.freeze([...authoredSeaStarDuplicateSiteKeys]),
@@ -1925,7 +1937,10 @@ export function evaluateBiomeRewardChronology(
           snapshot,
           event,
           room,
-          declaration: room === undefined ? undefined : catalog.rooms.byKey[room.gameName],
+          declaration:
+            room === undefined
+              ? undefined
+              : routeRoomDeclaration(catalog.rooms.byKey[room.gameName], room.origin.routeKey),
           roomView: views.get(semanticAddressKey(event.origin)),
           sourceBranches: branches,
           authoredSeaStarDuplicateSiteKeys: Object.freeze([...authoredSeaStarDuplicateSiteKeys]),

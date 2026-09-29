@@ -1,3 +1,4 @@
+import { routeRoomDeclaration } from '../../../../authored-project/route-profile';
 import type { Catalog } from '../../../../catalog-schema';
 import { semanticAddressKey } from '../../../../authored-project/addresses';
 import type { RouteLoadout } from '../../../../authored-project/model';
@@ -39,7 +40,10 @@ export function applyOfferPointMaterializedTransition(
   inputs: OfferPointMaterializedTransitionInputs,
 ): OfferPointMaterializedTransition {
   const room = inputs.rooms.get(semanticAddressKey(inputs.event.origin));
-  const declaration = room === undefined ? undefined : inputs.catalog.rooms.byKey[room.gameName];
+  const declaration =
+    room === undefined
+      ? undefined
+      : routeRoomDeclaration(inputs.catalog.rooms.byKey[room.gameName], room.origin.routeKey);
   const roomView = inputs.views.get(semanticAddressKey(inputs.event.origin));
   if (
     room === undefined ||

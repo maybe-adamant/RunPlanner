@@ -31,11 +31,25 @@ function recordableEnemyKeys(definitions: CatalogCollection<EncounterDefinition>
   return keys;
 }
 
-/** Customization choice route exclusions name declared routes. */
+/** Customization route exclusions and route-keyed first-biome identities name declared routes. */
 export function validateEncounterRouteReferences(
   definitions: CatalogCollection<EncounterDefinition>,
+  sets: CatalogCollection<EncounterSet>,
   routes: CatalogCollection<RouteDeclaration>,
 ): void {
+  sets.values.forEach((set, setIndex) =>
+    set.authoringProfiles.forEach((profile, profileIndex) => {
+      if (profile.resolution.kind !== 'rewardContext') return;
+      for (const routeKey of Object.keys(
+        profile.resolution.firstBiomeEncounterDefinitionKeyByRoute ?? {},
+      ))
+        if (routes.byKey[routeKey] === undefined)
+          fail(
+            `encounterSets[${setIndex}].authoringProfiles[${profileIndex}].resolution.firstBiomeEncounterDefinitionKeyByRoute`,
+            `unknown route ${routeKey}`,
+          );
+    }),
+  );
   definitions.values.forEach((definition, index) =>
     definition.customization?.forEach((decision, decisionIndex) => {
       if (decision.selection.kind !== 'single' && decision.selection.kind !== 'orderedPrefix')

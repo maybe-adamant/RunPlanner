@@ -232,6 +232,7 @@ export function applyAcquisitionPointReachedTransition(
                 catalog,
                 offer,
                 'HermesShrineDelivery',
+                input.address.routeKey,
               ),
             }),
             order: Object.freeze([input.address.entryKey]),

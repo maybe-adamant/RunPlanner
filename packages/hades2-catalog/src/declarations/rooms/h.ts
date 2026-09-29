@@ -946,6 +946,25 @@ export const hRooms = [
     encounterSlotBindings: [
       { slotKey: 'Encounter', kind: 'fixed', encounterDefinitionKey: 'Story_Echo_01' },
     ],
+    // RoomDataH.lua ForcedRewards: Story needs lifetime RoomsEntered.H_Boss01,
+    // else Shop (WorldShop, StoreLogic.lua) with the BridgeShop encounter.
+    routeOverlays: [
+      {
+        routeKey: 'FreshFile',
+        label: 'Shop',
+        kind: 'Shop',
+        mode: { kind: 'authored', templateKey: 'Shop' },
+        incomingReward: {
+          kind: 'shop',
+          rewardType: 'Shop',
+          shopProfileKey: 'WorldShop',
+          producerLifecycleKey: 'RoomReward',
+        },
+        encounterSlotBindings: [
+          { slotKey: 'Encounter', kind: 'fixed', encounterDefinitionKey: 'BridgeShop' },
+        ],
+      },
+    ],
     counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1, maxCreationsThisRun: 1 },
     eligibility: {

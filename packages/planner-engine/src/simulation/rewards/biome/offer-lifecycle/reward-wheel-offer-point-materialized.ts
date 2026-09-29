@@ -104,10 +104,15 @@ export function applyRewardWheelOfferPointMaterialization(
     base: (typeof wheel.unresolvedOffers)[number],
     offer: ResolvedRewardOffer,
   ): CanonicalRewardWheel['offers'][number] => {
-    const state = createUnresolvedAcquisitionRewardState(catalog, offer, {
-      kind: 'producerLifecycle',
-      key: wheel.producerLifecycleKey,
-    });
+    const state = createUnresolvedAcquisitionRewardState(
+      catalog,
+      offer,
+      {
+        kind: 'producerLifecycle',
+        key: wheel.producerLifecycleKey,
+      },
+      wheel.origin.routeKey,
+    );
     return Object.freeze({
       ...base,
       offer,

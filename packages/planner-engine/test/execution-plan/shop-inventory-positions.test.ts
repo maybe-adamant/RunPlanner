@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { catalog } from '@run-planner/hades2-catalog';
-import { catalogWithEmptyShopGroup, clearTestShopOffer } from '@run-planner/test-fixtures/shared';
+import { catalogWithEmptyShopGroup } from '@run-planner/test-fixtures/shared';
 import { loadUnderworldFGHICheckpoint } from '@run-planner/test-fixtures/checkpoints/underworld';
 import {
   createShopOfferAddress,
@@ -16,6 +16,7 @@ import {
 import { assembleExecutionProduct } from '../../src/execution-plan/assembler';
 import { compileExecutionPlan } from '../../src/execution-plan/compiler';
 import {
+  clearEmptyShopGroupOffer,
   emptyShopGroupCatalog,
   emptyShopGroupOccurrence,
   emptyShopGroupProject,
@@ -69,11 +70,7 @@ describe('Shop inventory with validly empty groups', () => {
 
   it('keeps five declared slots but emits four items when the trailing group is empty', () => {
     const testCatalog = catalogWithEmptyShopGroup(catalog, 'I_PreBoss02', 'MetaProgress');
-    const project = clearTestShopOffer(
-      loadUnderworldFGHICheckpoint(),
-      emptyShopGroupOccurrence,
-      'MetaProgress',
-    );
+    const project = clearEmptyShopGroupOffer(loadUnderworldFGHICheckpoint(), 'MetaProgress');
     const result = evaluate(testCatalog, project);
     expect(result.status).toBe('valid');
     expect(result.assessment('MetaProgress')).toBe('validEmpty');
@@ -107,11 +104,7 @@ describe('Shop inventory with validly empty groups', () => {
   });
 
   it('keeps an unset slot of an eligible group incomplete beside a validly empty one', () => {
-    const project = clearTestShopOffer(
-      emptyShopGroupProject(),
-      emptyShopGroupOccurrence,
-      'MetaProgress',
-    );
+    const project = clearEmptyShopGroupOffer(emptyShopGroupProject(), 'MetaProgress');
     const result = evaluate(emptyShopGroupCatalog(), project);
     expect(result.status).toBe('incomplete');
     expect(result.assessment('Survival')).toBe('validEmpty');

@@ -251,10 +251,15 @@ export function allTogetherReward() {
     rewardType: 'RandomLoot' as const,
     payload: Object.freeze({ kind: 'BoonSource' as const, source: 'HeraUpgrade' }),
   });
-  const base = createUnresolvedAcquisitionRewardState(catalog, offer, {
-    kind: 'shopProfile',
-    key: 'WorldShop',
-  });
+  const base = createUnresolvedAcquisitionRewardState(
+    catalog,
+    offer,
+    {
+      kind: 'shopProfile',
+      key: 'WorldShop',
+    },
+    'Underworld',
+  );
   return Object.freeze({
     ...base,
     traitOffersByAcquisitionRole: Object.freeze({ source: allTogetherOffer() }),
@@ -263,10 +268,15 @@ export function allTogetherReward() {
 
 export function shopPomReward(targetTraitKey: string) {
   const offer = Object.freeze({ rewardType: 'StackUpgrade' as const });
-  const base = createUnresolvedAcquisitionRewardState(catalog, offer, {
-    kind: 'shopProfile',
-    key: 'WorldShop',
-  });
+  const base = createUnresolvedAcquisitionRewardState(
+    catalog,
+    offer,
+    {
+      kind: 'shopProfile',
+      key: 'WorldShop',
+    },
+    'Underworld',
+  );
   return Object.freeze({
     ...base,
     traitOffersByAcquisitionRole: Object.freeze({}),
@@ -293,10 +303,15 @@ export function shopBoonReward(source: string, traitKey: string) {
     rewardType: 'RandomLoot' as const,
     payload: Object.freeze({ kind: 'BoonSource' as const, source }),
   });
-  const base = createUnresolvedAcquisitionRewardState(catalog, offer, {
-    kind: 'shopProfile',
-    key: 'WorldShop',
-  });
+  const base = createUnresolvedAcquisitionRewardState(
+    catalog,
+    offer,
+    {
+      kind: 'shopProfile',
+      key: 'WorldShop',
+    },
+    'Underworld',
+  );
   return Object.freeze({
     ...base,
     traitOffersByAcquisitionRole: Object.freeze({
@@ -323,10 +338,15 @@ export function blindBoxReward(
     rewardType: 'BlindBoxLoot' as const,
     payload: Object.freeze({ kind: 'BoonSource' as const, source }),
   });
-  const base = createUnresolvedAcquisitionRewardState(catalog, offer, {
-    kind: 'shopProfile',
-    key: 'WorldShop',
-  });
+  const base = createUnresolvedAcquisitionRewardState(
+    catalog,
+    offer,
+    {
+      kind: 'shopProfile',
+      key: 'WorldShop',
+    },
+    'Underworld',
+  );
   return Object.freeze({
     ...base,
     traitOffersByAcquisitionRole: Object.freeze({
@@ -351,10 +371,15 @@ export function completeShopFixtureReward(
     const giverKey = offer.payload.source.replace('Upgrade', '');
     return shopBoonReward(offer.payload.source, `${giverKey}WeaponBoon`);
   }
-  const base = createUnresolvedAcquisitionRewardState(catalog, offer, {
-    kind: 'shopProfile',
-    key: profileKey,
-  });
+  const base = createUnresolvedAcquisitionRewardState(
+    catalog,
+    offer,
+    {
+      kind: 'shopProfile',
+      key: profileKey,
+    },
+    'Underworld',
+  );
   return Object.freeze({
     ...base,
     ...(offer.rewardType !== 'SpellDrop'
@@ -487,6 +512,7 @@ export function echoGoldShop(
   const roomBiome = room.gameName === 'I_PreBoss02' ? createBiomeAddress('Underworld', 'I') : biome;
   const loadout = { weaponKey: 'WeaponStaff', aspectKey: 'StaffBase' };
   const baseState = createDefaultRoomState(catalog, room, {
+    routeKey: roomBiome.routeKey,
     role: room.gameName === 'I_PreBoss02' ? 'prebossShop' : 'ordinary',
     entryActive: true,
     loadout,
@@ -638,6 +664,7 @@ export function echoGoldShop(
     catalog,
     { rewardType: 'MaxHealthDrop' },
     { kind: 'producerLifecycle', key: 'RoomReward' },
+    'Underworld',
   );
   const authoredOrder =
     options.includeDuplicate !== true || duplicateKey === undefined || order.includes(duplicateKey)

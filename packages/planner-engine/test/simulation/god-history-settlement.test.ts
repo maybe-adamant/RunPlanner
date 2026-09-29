@@ -133,6 +133,7 @@ describe('World Shop inventory generation reads god pickups', () => {
     const room = catalog.rooms.byKey.F_Shop01!;
     const loadout = createDefaultRouteLoadout(catalog);
     const state = createDefaultRoomState(catalog, room, {
+      routeKey: 'Underworld',
       role: 'ordinary',
       entryActive: true,
       loadout,

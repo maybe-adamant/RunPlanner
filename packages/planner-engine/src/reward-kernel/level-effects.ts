@@ -5,8 +5,25 @@ export type LevelResolutionEffectSource =
   | { readonly kind: 'producerLifecycle'; readonly key: string }
   | { readonly kind: 'shopProfile'; readonly key: string };
 
-/** Resolves a universal acquisition effect plus any exact producer-local override. */
+/**
+ * Resolves a universal acquisition effect plus any exact producer-local
+ * override, absent on a route the effect excludes.
+ */
 export function levelResolutionEffectFor(
+  catalog: RewardKernelCatalog,
+  offer: ResolvedRewardOffer,
+  source: LevelResolutionEffectSource,
+  role: string,
+  routeKey: string,
+): LevelResolutionEffect | undefined {
+  const effect = declaredLevelResolutionEffect(catalog, offer, source, role);
+  return effect?.kind === 'randomTargetIfAvailable' &&
+    effect.excludedRouteKeys?.includes(routeKey) === true
+    ? undefined
+    : effect;
+}
+
+function declaredLevelResolutionEffect(
   catalog: RewardKernelCatalog,
   offer: ResolvedRewardOffer,
   source: LevelResolutionEffectSource,

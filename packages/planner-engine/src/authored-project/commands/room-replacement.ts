@@ -264,11 +264,13 @@ function occurrenceContext(
 }
 
 function asRoomStateContext(
+  routeKey: string,
   context: OccurrenceContext,
   loadout: LocatedBiome['loadout'],
   activeCageCount?: number,
 ): RoomStateContext {
   return Object.freeze({
+    routeKey,
     role: context.role,
     entryActive: context.entryActive,
     loadout,
@@ -462,6 +464,7 @@ export function applyRoomReplacementCommand(
     catalog,
     replacementRoom,
     asRoomStateContext(
+      located.routePosition.routeKey,
       context,
       located.loadout,
       context.owner === undefined

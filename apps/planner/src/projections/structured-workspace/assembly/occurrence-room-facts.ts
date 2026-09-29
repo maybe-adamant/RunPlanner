@@ -106,6 +106,7 @@ export function assembleOccurrenceRewardLocal(
             resolutionContext: encounterResolutionContext(
               encounterResolutionFacts(input, roomLocal),
               room,
+              input.routePosition.routeKey,
             ),
             ...(input.occurrence.state.kind === 'shipCombat'
               ? { shipEncounterCount: input.occurrence.state.encounterCount }
@@ -337,7 +338,12 @@ export function assembleOccurrenceRewardLocal(
           const reward =
             input.occurrence.acquisitionSites?.hermesShrineDelivery?.pickupEntries?.[
               entry.entryKey
-            ] ?? defaultHermesShrineDeliveryReward(input.catalog, inventoryOffer.rewardType);
+            ] ??
+            defaultHermesShrineDeliveryReward(
+              input.catalog,
+              inventoryOffer.rewardType,
+              input.routePosition.routeKey,
+            );
           return [
             rewardControl(
               input,

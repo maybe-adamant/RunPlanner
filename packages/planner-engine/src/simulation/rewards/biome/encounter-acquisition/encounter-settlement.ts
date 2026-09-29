@@ -1,3 +1,4 @@
+import { routeRoomDeclaration } from '../../../../authored-project/route-profile';
 import type { ResolvedRoutePosition } from '../../../../authored-project/route-context';
 import { replaceSimulationTraitHistory } from '../../../state/transitions';
 import type { Catalog } from '../../../../catalog-schema';
@@ -163,7 +164,10 @@ export function applyEncounterSettlementTransition(inputs: {
 }): EncounterSettlementTransition {
   const { catalog, event, snapshot } = inputs;
   const room = inputs.room;
-  const declaration = room === undefined ? undefined : catalog.rooms.byKey[room.gameName];
+  const declaration =
+    room === undefined
+      ? undefined
+      : routeRoomDeclaration(catalog.rooms.byKey[room.gameName], room.origin.routeKey);
   const findings = new Map<string, FindingRegionEntry>();
   const mergeTraitFindings = (entries: readonly FindingRegionEntry[]) => {
     for (const entry of entries)

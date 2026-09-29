@@ -241,7 +241,12 @@ export function materializeShopGold(input: {
   const fixedReward =
     duplicateOffer === null
       ? undefined
-      : createUnresolvedShopAcquisitionRewardState(catalog, duplicateOffer, profile.key);
+      : createUnresolvedShopAcquisitionRewardState(
+          catalog,
+          duplicateOffer,
+          profile.key,
+          address.routeKey,
+        );
   return Object.freeze({
     branch: updatedBranch,
     materialization,

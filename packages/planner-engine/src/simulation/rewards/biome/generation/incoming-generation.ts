@@ -37,10 +37,15 @@ function incomingCandidateForOffer(
   offer: ResolvedRewardOffer,
 ): CanonicalResolvedIncomingReward {
   if (JSON.stringify(incoming.offer) === JSON.stringify(offer)) return incoming;
-  const state = createUnresolvedAcquisitionRewardState(catalog, offer, {
-    kind: 'producerLifecycle',
-    key: incoming.producerLifecycleKey,
-  });
+  const state = createUnresolvedAcquisitionRewardState(
+    catalog,
+    offer,
+    {
+      kind: 'producerLifecycle',
+      key: incoming.producerLifecycleKey,
+    },
+    incoming.origin.routeKey,
+  );
   return Object.freeze({
     ...incoming,
     ...state,
@@ -208,10 +213,15 @@ export function generateIncomingReward(
     const unresolved = context.unresolvedIncoming;
     const offerOrigin = unresolved.offerOrigin ?? unresolved.origin;
     const candidateFor = (offer: ResolvedRewardOffer): CanonicalResolvedIncomingReward => {
-      const state = createUnresolvedAcquisitionRewardState(catalog, offer, {
-        kind: 'producerLifecycle',
-        key: unresolved.producerLifecycleKey,
-      });
+      const state = createUnresolvedAcquisitionRewardState(
+        catalog,
+        offer,
+        {
+          kind: 'producerLifecycle',
+          key: unresolved.producerLifecycleKey,
+        },
+        unresolved.origin.routeKey,
+      );
       return Object.freeze({
         ...unresolved,
         kind: 'resolved' as const,

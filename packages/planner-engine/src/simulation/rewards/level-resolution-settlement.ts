@@ -67,6 +67,7 @@ export function settleReachedLevelResolution(
       key: reward.producerLifecycleKey,
     },
     role,
+    branch.state.reached.routePosition.routeKey,
   );
   if (effect === undefined) return undefined;
   if (owner === undefined) return Object.freeze({ branch, findingEntries: Object.freeze([]) });

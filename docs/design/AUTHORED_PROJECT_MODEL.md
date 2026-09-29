@@ -420,10 +420,13 @@ then restores its sole default entry or leaves a multi-choice entry unset.
 These are atomic history edits. Automatically created entry IDs are stable and
 biome-scoped; imported occurrence IDs are not rewritten.
 
-Entry declarations are intrinsically rewardless. Shared entry resolution binds
-the route-owned reward only at the first itinerary entry, applies narrow
+Entry declarations are intrinsically rewardless. Shared entry resolution first
+applies the room's route overlay, if its declaration names the route, then
+binds the route-owned reward only at the first itinerary entry, applies narrow
 contextual encounter rules, and selects the lifecycle and entered-store
-participation consumed by defaults, decoding and simulation. Later entries
+participation consumed by defaults, decoding and simulation. An overlaid room
+is decoded and constructed as its realized room: a Fresh File `H_Bridge01`
+holds Shop state, and its Story state is rejected rather than converted. Later entries
 remain rewardless. Multi-choice entry identity belongs to biome Overview at
 every ordinal; the starting offer belongs to Loadout, and its acquisition
 dispositions and outcomes belong to the first room's Timeline.
@@ -620,6 +623,10 @@ undo step. A retained result that becomes inactive remains authored for repair
 but has no active child action. The persisted entry is ordinary
 `AuthoredRewardState`, so no reward-copy tree or second timeline is needed.
 
+`ClearShopOffer` empties one declared inventory slot, removing its
+`interactShopOffer` reference and any acquisition-resolved entry in the same
+undo step; it is how a slot whose group has become empty is repaired, and it
+is a no-op on an empty slot. The Travel refill is not a declared slot.
 `ReplaceShopPurchaseParticipation` inserts or removes one exact base-Shop
 `interactShopOffer` reference. Generic Room Action insertion/removal rejects
 that reference family so Overview's Purchased marker is the sole membership

@@ -1,6 +1,7 @@
 import {
   resolveEntryDeclaration,
   routeHasKeepsakeRack,
+  routeRoomDeclaration,
   type ResolvedRoutePosition,
 } from '@run-planner/engine/authored-project';
 import {
@@ -624,7 +625,10 @@ export function assembleWorkspaceOccurrence(
                         locationLabel:
                           entry === undefined
                             ? 'Unavailable room'
-                            : requireRoom(input.catalog, entry.gameName).label,
+                            : routeRoomDeclaration(
+                                requireRoom(input.catalog, entry.gameName),
+                                input.biome.routeKey,
+                              ).label,
                       });
                     })()
                   : undefined;

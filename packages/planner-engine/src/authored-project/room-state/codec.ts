@@ -39,12 +39,12 @@ export function decodeRoomState(
   room: RoomDeclaration,
   context: Pick<
     RoomStateContext,
-    'role' | 'entryActive' | 'rememberedCountedBinding' | 'activeCageCount'
+    'routeKey' | 'role' | 'entryActive' | 'rememberedCountedBinding' | 'activeCageCount'
   >,
   path: string,
 ): AuthoredRoomState {
   const state = expectRecord(value, path);
-  const { role, entryActive, rememberedCountedBinding } = context;
+  const { routeKey, role, entryActive, rememberedCountedBinding } = context;
   switch (authoredTemplateKey(room, path)) {
     case 'FixedIntro':
     case 'Boss':
@@ -75,6 +75,7 @@ export function decodeRoomState(
             kind: 'producerLifecycle',
             key: descriptor.reward.producerLifecycleKey,
           },
+          routeKey,
         );
         if (reward === null) {
           cages[slotKey] = null;
@@ -110,6 +111,7 @@ export function decodeRoomState(
           catalog,
           `${path}.optionalRewards.${slotKey}`,
           { kind: 'producerLifecycle', key: optionalDescriptor.reward.producerLifecycleKey },
+          routeKey,
         );
         if (reward === null) {
           optionalRewards[slotKey] = null;
@@ -133,10 +135,10 @@ export function decodeRoomState(
     }
     case 'ShipCombat':
       requireOrdinaryRole(role, room, path);
-      return decodeShipCombatState(state, catalog, room, path);
+      return decodeShipCombatState(state, catalog, routeKey, room, path);
     case 'EphyraCombat':
       requireOrdinaryRole(role, room, path);
-      return decodeEphyraCombatState(state, catalog, room, path);
+      return decodeEphyraCombatState(state, catalog, routeKey, room, path);
     case 'FixedOpening':
       requireOrdinaryRole(role, room, path);
       if (room.incomingReward.kind === 'none') {
@@ -147,10 +149,16 @@ export function decodeRoomState(
       expectedKind(state.kind, 'counted', path);
       expectExactKeys(state, ['kind', 'reward'], path);
       {
-        const reward = decodeNullableRewardState(state.reward, catalog, `${path}.reward`, {
-          kind: 'producerLifecycle',
-          key: requireCountedBinding(room, path).producerLifecycleKey,
-        });
+        const reward = decodeNullableRewardState(
+          state.reward,
+          catalog,
+          `${path}.reward`,
+          {
+            kind: 'producerLifecycle',
+            key: requireCountedBinding(room, path).producerLifecycleKey,
+          },
+          routeKey,
+        );
         if (reward === null) return Object.freeze({ kind: 'counted', reward: null });
         const offer = decodeCountedOffer(
           reward.offer,
@@ -172,10 +180,16 @@ export function decodeRoomState(
       requireOrdinaryRole(role, room, path);
       expectedKind(state.kind, 'counted', path);
       expectExactKeys(state, ['kind', 'reward'], path);
-      const reward = decodeNullableRewardState(state.reward, catalog, `${path}.reward`, {
-        kind: 'producerLifecycle',
-        key: requireCountedBinding(room, path).producerLifecycleKey,
-      });
+      const reward = decodeNullableRewardState(
+        state.reward,
+        catalog,
+        `${path}.reward`,
+        {
+          kind: 'producerLifecycle',
+          key: requireCountedBinding(room, path).producerLifecycleKey,
+        },
+        routeKey,
+      );
       if (reward === null) return Object.freeze({ kind: 'counted', reward: null });
       const offer = decodeCountedOffer(
         reward.offer,
@@ -195,10 +209,16 @@ export function decodeRoomState(
       if (rememberedCountedBinding === undefined) {
         failProjectDocument(path, 'Anomaly requires its remembered counted reward binding');
       }
-      const reward = decodeNullableRewardState(state.reward, catalog, `${path}.reward`, {
-        kind: 'producerLifecycle',
-        key: rememberedCountedBinding.producerLifecycleKey,
-      });
+      const reward = decodeNullableRewardState(
+        state.reward,
+        catalog,
+        `${path}.reward`,
+        {
+          kind: 'producerLifecycle',
+          key: rememberedCountedBinding.producerLifecycleKey,
+        },
+        routeKey,
+      );
       if (reward === null)
         return Object.freeze({
           kind: 'anomaly',
@@ -241,10 +261,16 @@ export function decodeRoomState(
           failProjectDocument(`${path}.reward`, 'fixed payload-free reward cannot be unresolved');
         return Object.freeze({ kind: 'fixed', reward: null });
       }
-      const reward = decodeRewardState(state.reward, catalog, `${path}.reward`, {
-        kind: 'producerLifecycle',
-        key: room.incomingReward.producerLifecycleKey,
-      });
+      const reward = decodeRewardState(
+        state.reward,
+        catalog,
+        `${path}.reward`,
+        {
+          kind: 'producerLifecycle',
+          key: room.incomingReward.producerLifecycleKey,
+        },
+        routeKey,
+      );
       const payload = decodePayload(
         reward.offer.payload,
         rewardType,
@@ -267,13 +293,13 @@ export function decodeRoomState(
     }
     case 'Shop':
       requireOrdinaryRole(role, room, path);
-      return decodeShopRoomState(state, catalog, room, entryActive, path);
+      return decodeShopRoomState(state, catalog, routeKey, room, entryActive, path);
     case 'Preboss': {
       if (role === 'ordinary') {
         failProjectDocument(path, 'Preboss requires a declaration-derived offer role');
       }
       if (role === 'prebossShop') {
-        return decodeShopRoomState(state, catalog, room, entryActive, path);
+        return decodeShopRoomState(state, catalog, routeKey, room, entryActive, path);
       }
       expectedKind(state.kind, 'freeReward', path);
       expectExactKeys(state, ['kind', 'reward'], path);
@@ -283,10 +309,16 @@ export function decodeRoomState(
       ) {
         failProjectDocument(path, 'Preboss has no counted remaining-offer policy');
       }
-      const reward = decodeNullableRewardState(state.reward, catalog, `${path}.reward`, {
-        kind: 'producerLifecycle',
-        key: room.prebossBatchPolicy.remainingOffers.reward.producerLifecycleKey,
-      });
+      const reward = decodeNullableRewardState(
+        state.reward,
+        catalog,
+        `${path}.reward`,
+        {
+          kind: 'producerLifecycle',
+          key: room.prebossBatchPolicy.remainingOffers.reward.producerLifecycleKey,
+        },
+        routeKey,
+      );
       if (reward === null) return Object.freeze({ kind: 'freeReward', reward: null });
       const offer = decodeCountedOffer(
         reward.offer,
@@ -305,6 +337,7 @@ export function decodeRoomState(
 function decodeShopRoomState(
   state: Record<string, unknown>,
   catalog: Catalog,
+  routeKey: string,
   room: RoomDeclaration,
   entryActive: boolean,
   path: string,
@@ -322,6 +355,7 @@ function decodeShopRoomState(
     shop: decodeShopState(
       state.shop,
       catalog,
+      routeKey,
       requireShopBinding(room, path),
       room,
       `${path}.shop`,

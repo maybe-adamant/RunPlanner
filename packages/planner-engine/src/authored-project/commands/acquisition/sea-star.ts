@@ -74,6 +74,7 @@ export function applySeaStarResultCommand(
       catalog,
       reward,
       command.acquisition.acquisitionRole,
+      command.acquisition.routeKey,
     );
     sites[siteKey] = Object.freeze({
       pickupEntries: Object.freeze({ [SEA_STAR_DUPLICATE_ENTRY_KEY]: duplicate }),

@@ -88,10 +88,15 @@ describe('Gold Gold Gold duplicate production', () => {
       payload: Object.freeze({ kind: 'BoonSource' as const, source: 'PoseidonUpgrade' }),
     });
     const boon = Object.freeze({
-      ...createUnresolvedAcquisitionRewardState(catalog, boonOffer, {
-        kind: 'shopProfile',
-        key: 'WorldShop',
-      }),
+      ...createUnresolvedAcquisitionRewardState(
+        catalog,
+        boonOffer,
+        {
+          kind: 'shopProfile',
+          key: 'WorldShop',
+        },
+        'Underworld',
+      ),
       traitOffersByAcquisitionRole: Object.freeze({
         source: poseidonOffer(
           ['RoomRewardBonusBoon', 'PoseidonCastBoon', 'PoseidonSprintBoon'],

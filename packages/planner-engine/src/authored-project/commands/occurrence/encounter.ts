@@ -1,3 +1,4 @@
+import { routeRoomDeclaration } from '../../route-profile';
 import type { Catalog, EncounterSlotBinding, RoomDeclaration } from '../../../catalog-schema';
 import type { EncounterPhaseAddress } from '../../addresses';
 import type {
@@ -465,7 +466,10 @@ function replaceTopLevel(
   // A declared Anomaly replacement runs its own room's encounter inside the host biome.
   const room =
     occurrence.anomalyReplacement === undefined
-      ? requireRoom(catalog, occurrence.gameName, located.layout.biomeKey, command)
+      ? routeRoomDeclaration(
+          requireRoom(catalog, occurrence.gameName, located.layout.biomeKey, command),
+          located.routeKey,
+        )
       : requireAnomalyRoom(catalog, occurrence.gameName, command);
   const encounters = updatedSelections(catalog, room, occurrence.encounters, phase, command);
   const withFigLeaf = updatedFigLeafSkip(catalog, room, encounters, phase, command);
@@ -504,7 +508,12 @@ function replaceTopLevel(
             rewardOffer !== null
               ? sameOffer
                 ? prior
-                : createUnresolvedPickupRewardState(catalog, rewardOffer, 'NemesisEventPickup')
+                : createUnresolvedPickupRewardState(
+                    catalog,
+                    rewardOffer,
+                    'NemesisEventPickup',
+                    located.routePosition.routeKey,
+                  )
               : null;
           const pickupActive =
             outcome !== undefined &&

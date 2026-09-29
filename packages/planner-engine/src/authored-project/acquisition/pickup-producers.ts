@@ -773,7 +773,7 @@ export function reconcileSelectedPickupProducerState(
   for (const producer of producers) {
     const current = nextSites[producer.siteKey];
     const existing = current?.pickupEntries ?? {};
-    const defaults = createSelectedPickupEntries(catalog, producer);
+    const defaults = createSelectedPickupEntries(catalog, producer, biome.routeKey);
     const preserved =
       producer.siteKey === 'roomExit'
         ? Object.entries(existing).filter(([key]) => echoKeys.has(key))

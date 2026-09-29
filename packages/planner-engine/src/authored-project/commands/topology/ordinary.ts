@@ -1,4 +1,4 @@
-import { resolveBiomeStart } from '../../route-profile';
+import { resolveBiomeStart, routeRoomDeclaration } from '../../route-profile';
 import type { Catalog } from '../../../catalog-schema';
 import { createInitialExitDecision } from '../../batchState';
 import {
@@ -372,7 +372,10 @@ export function createTarget(
       (target) => target.occurrenceId === occurrence.occurrenceId,
     );
     if (targetIndex < 0) return occurrence;
-    const targetRoom = requireRoom(catalog, occurrence.gameName, located.layout.biomeKey, command);
+    const targetRoom = routeRoomDeclaration(
+      requireRoom(catalog, occurrence.gameName, located.layout.biomeKey, command),
+      located.routeKey,
+    );
     if (targetRoom.kind !== 'Preboss' && targetRoom.kind !== 'Shop') return occurrence;
     const targetRole: RoomOccurrenceRole =
       targetRoom.kind === 'Preboss' && targetRoom.prebossBatchPolicy?.kind === 'takeOverNormalDoors'

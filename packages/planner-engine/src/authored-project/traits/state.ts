@@ -223,12 +223,13 @@ export function createUnresolvedLevelResolutions(
   catalog: Catalog,
   offer: ResolvedRewardOffer,
   source: LevelResolutionEffectSource,
+  routeKey: string,
 ): Readonly<Record<string, AuthoredLevelResolution>> | undefined {
   const declaration = catalog.rewards.rewardTypes.byKey[offer.rewardType];
   if (declaration === undefined) throw new Error(`unknown reward type ${offer.rewardType}`);
   const result: Record<string, AuthoredLevelResolution> = {};
   for (const role of declaration.acquisitionRoles.values) {
-    const effect = levelResolutionEffectFor(catalog.rewards, offer, source, role.key);
+    const effect = levelResolutionEffectFor(catalog.rewards, offer, source, role.key, routeKey);
     if (effect === undefined) continue;
     result[role.key] = Object.freeze(
       effect.kind === 'visibleChoice'
@@ -576,6 +577,7 @@ export function materializeGorgonAthenaOffer(
 export function createSelectedPickupEntries(
   catalog: Catalog,
   producer: SelectedPickupProducer,
+  routeKey: string,
 ): Readonly<Record<string, import('../model').AuthoredRewardState | null>> {
   const entries: Record<string, import('../model').AuthoredRewardState | null> = {};
   for (const pickup of producer.pickups) {
@@ -591,6 +593,7 @@ export function createSelectedPickupEntries(
             catalog,
             Object.freeze({ rewardType: pickup.rewardType }),
             producer.producerLifecycleKey,
+            routeKey,
           )
         : null;
   }
@@ -602,11 +605,14 @@ export function createUnresolvedPickupRewardState(
   catalog: Catalog,
   offer: ResolvedRewardOffer,
   producerLifecycleKey: string,
+  routeKey: string,
 ): import('../model').AuthoredRewardState {
-  return createUnresolvedAcquisitionRewardState(catalog, offer, {
-    kind: 'producerLifecycle',
-    key: producerLifecycleKey,
-  });
+  return createUnresolvedAcquisitionRewardState(
+    catalog,
+    offer,
+    { kind: 'producerLifecycle', key: producerLifecycleKey },
+    routeKey,
+  );
 }
 
 /** One command-complete reward state for a reached concrete acquisition source. */
@@ -614,8 +620,14 @@ export function createUnresolvedAcquisitionRewardState(
   catalog: Catalog,
   offer: ResolvedRewardOffer,
   levelEffectSource: LevelResolutionEffectSource,
+  routeKey: string,
 ): import('../model').AuthoredRewardState {
-  return createUnresolvedAcquisitionRewardStateForEffect(catalog, offer, levelEffectSource);
+  return createUnresolvedAcquisitionRewardStateForEffect(
+    catalog,
+    offer,
+    levelEffectSource,
+    routeKey,
+  );
 }
 
 /** Exact unresolved child state for an engine-derived World Shop acquisition. */
@@ -623,19 +635,23 @@ export function createUnresolvedShopAcquisitionRewardState(
   catalog: Catalog,
   offer: ResolvedRewardOffer,
   shopProfileKey: string,
+  routeKey: string,
 ): import('../model').AuthoredRewardState {
-  return createUnresolvedAcquisitionRewardStateForEffect(catalog, offer, {
-    kind: 'shopProfile',
-    key: shopProfileKey,
-  });
+  return createUnresolvedAcquisitionRewardStateForEffect(
+    catalog,
+    offer,
+    { kind: 'shopProfile', key: shopProfileKey },
+    routeKey,
+  );
 }
 
 function createUnresolvedAcquisitionRewardStateForEffect(
   catalog: Catalog,
   offer: ResolvedRewardOffer,
   levelEffectSource: LevelResolutionEffectSource,
+  routeKey: string,
 ): import('../model').AuthoredRewardState {
-  const levels = createUnresolvedLevelResolutions(catalog, offer, levelEffectSource);
+  const levels = createUnresolvedLevelResolutions(catalog, offer, levelEffectSource, routeKey);
   return Object.freeze({
     offer,
     dispositionByAcquisitionRole: createNormalDispositionByAcquisitionRole(catalog, offer),

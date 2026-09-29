@@ -137,6 +137,14 @@ export const hEncounterDefinitions = [
     traitOfferProducer: { kind: 'traitOffer', giverKey: 'Echo' },
   },
   {
+    // EncounterData_Unique.lua BridgeShop: inherits Shop; RequireRoomReward Shop.
+    key: 'BridgeShop',
+    label: 'Shop',
+    kind: 'nonCombat',
+    countsEncounterDepth: false,
+    hostsNpcShoppingEvents: true,
+  },
+  {
     key: 'BossInfestedCerberus01',
     label: 'Cerberus',
     kind: 'boss',

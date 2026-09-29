@@ -10,6 +10,7 @@ import {
   createEchoKeepsakeReplayAddress,
   createOccurrenceAddress,
   normalDecisionProgressionForLayout,
+  routeRoomDeclaration,
   semanticAddressKey,
   type AuthoredBiomePlan,
   type BiomeAddress,
@@ -883,7 +884,7 @@ export function assembleWorkspaceBiomeSemantics(
               );
               return target === undefined
                 ? 'Continue to fixed room.'
-                : `Continue to ${requireWorkspaceRoom(catalog, target.gameName).label}.`;
+                : `Continue to ${routeRoomDeclaration(requireWorkspaceRoom(catalog, target.gameName), biome.routeKey).label}.`;
             }
             case 'nextBiomeIntro':
               return `Continue to ${

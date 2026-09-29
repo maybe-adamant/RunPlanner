@@ -204,7 +204,7 @@ per-room source-line table.
 | `Shop`, `TyphonShop`, `HealthRestore`                     | Shops, prebosses, reprieves; `Q_PreBoss01` uses `TyphonShop`              | Fixed slot binds the native key.                                                |
 | `Empty_Chaos`                                             | `Chaos_01..06` through `BaseChaos`                                        | Fixed slot binds `Empty_Chaos`.                                                 |
 | `Empty` (no modeled phase)                                | `G/H/I/O/Q_Intro`, `N_Hub`                                                | Zero-slot envelope; `unmodeledEncounterKeys` publishes `Empty` for exact proof. |
-| `Story_Echo_01`, `BridgeShop`, `BridgeNemesisRandomEvent` | `H_Bridge01`                                                              | Multi-carrier; the catalog models and forces the Echo alternative.              |
+| `Story_Echo_01`, `BridgeShop`, `BridgeNemesisRandomEvent` | `H_Bridge01`                                                              | Multi-carrier; forces Echo, or `BridgeShop` on Fresh File.                      |
 | `OpeningEmpty` beside combat openings                     | `F_Opening01..03`, `N_Opening01`; `P_Intro` (`PIntroDreamRunEmpty`)       | Route-contextual entry rule selects the noncombat member on Dream routes.       |
 
 ### Boss decisions

@@ -93,6 +93,16 @@ export interface RawChaosAdditionalExitDeclaration {
 export type RawAdditionalExitDeclaration =
   RawZagreusContractAdditionalExitDeclaration | RawChaosAdditionalExitDeclaration;
 
+/** The room a route's save profile realizes instead; it has no lifecycle profile. */
+export interface RawRoomRouteOverlay {
+  readonly routeKey: 'FreshFile';
+  readonly label: string;
+  readonly kind: RoomKind;
+  readonly mode: RoomMode;
+  readonly incomingReward: RawRewardProducerBinding;
+  readonly encounterSlotBindings: readonly RawEncounterSlotBinding[];
+}
+
 export interface RawRoomDeclaration {
   readonly gameName: string;
   readonly label: string;
@@ -105,6 +115,7 @@ export interface RawRoomDeclaration {
   readonly additionalExits?: readonly RawAdditionalExitDeclaration[];
   readonly incomingReward: RawRewardProducerBinding;
   readonly entryContextualEncounterRules?: readonly RawEntryContextualEncounterRule[];
+  readonly routeOverlays?: readonly RawRoomRouteOverlay[];
   /** A real required pickup whose payload is intentionally outside simulated state. */
   readonly effectNeutralRequiredReward?: boolean;
   /** Optional override for a bounded local reward group exposed by this room. */

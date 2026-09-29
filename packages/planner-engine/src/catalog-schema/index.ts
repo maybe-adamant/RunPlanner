@@ -533,8 +533,16 @@ export type EncounterChoiceResolution =
   | { readonly kind: 'direct'; readonly encounterDefinitionKey: string }
   | {
       readonly kind: 'rewardContext';
-      /** Overrides reward resolution only at reached biome encounter depth one. */
+      /**
+       * Overrides reward resolution at reached biome encounter depth one until
+       * that identity has occurred on the route. For an intro this mirrors
+       * native AlwaysForce-until-completed; the mature Chronos intro is natively
+       * forced at depth one once ClockworkIntro is completed, equivalent within
+       * one route.
+       */
       readonly firstBiomeEncounterDefinitionKey?: string;
+      /** Route-specific first-biome identity; it replaces the default on that route. */
+      readonly firstBiomeEncounterDefinitionKeyByRoute?: Readonly<Record<string, string>>;
       readonly defaultEncounterDefinitionKey: string;
       readonly encounterDefinitionKeyByRewardType: Readonly<Record<string, string>>;
     };
@@ -832,6 +840,21 @@ export type PrebossBatchPolicy =
     }
   | { readonly kind: 'retainNormalPeers' };
 
+/**
+ * The room a route's save profile realizes in place of the declared one: its
+ * kind, template, reward binding and encounter, with no declared lifecycle
+ * profile. Eligibility, force, caps and exits stay the declaration's.
+ */
+export interface RoomRouteOverlay {
+  readonly routeKey: string;
+  readonly label: string;
+  readonly kind: RoomKind;
+  readonly mode: RoomMode;
+  readonly incomingReward: RewardProducerBinding;
+  readonly offerRewardBinding: RoomOfferRewardBinding;
+  readonly encounterSlotBindings: readonly EncounterSlotBinding[];
+}
+
 export interface RoomDeclaration {
   readonly gameName: string;
   readonly label: string;
@@ -847,6 +870,8 @@ export interface RoomDeclaration {
   readonly incomingReward: RewardProducerBinding;
   /** Entry-only contextual encounter differences; reward ownership remains route-start owned. */
   readonly entryContextualEncounterRules?: readonly EntryContextualEncounterRule[];
+  /** Route overlays resolved with the route position, like the contextual encounter rules. */
+  readonly routeOverlays?: readonly RoomRouteOverlay[];
   /** A real required pickup whose payload is intentionally outside simulated state. */
   readonly effectNeutralRequiredReward: boolean;
   /** Declaration-owned binding for the reward surface exposed by this room. */

@@ -2,6 +2,7 @@ import {
   biomeStartRoomGameNames,
   resolveBiomeStart,
   routePurgingPool,
+  routeRoomDeclaration,
   routeRoomShop,
 } from '../route-profile';
 import type { BiomeLayout, Catalog, RoomDeclaration } from '../../catalog-schema';
@@ -18,7 +19,7 @@ import { createUnresolvedAcquisitionRewardState } from '../traits/state';
 
 export function defaultOccurrence(
   catalog: Catalog,
-  room: RoomDeclaration,
+  declaredRoom: RoomDeclaration,
   routeKey: string,
   occurrenceId: OccurrenceId,
   role: RoomOccurrenceRole,
@@ -27,7 +28,9 @@ export function defaultOccurrence(
   loadout: RouteLoadout,
   activeCageCount?: number,
 ): RoomOccurrence {
+  const room = routeRoomDeclaration(declaredRoom, routeKey);
   const state = createDefaultRoomState(catalog, room, {
+    routeKey,
     role,
     entryActive,
     ...(resolvedStoreKey === undefined ? {} : { resolvedStoreKey }),
@@ -101,10 +104,15 @@ export function createStartTopology(
       ? (() => {
           const binding = catalog.runStartReward.incomingReward;
           return startingRewardAcquisitionFrom(
-            createUnresolvedAcquisitionRewardState(catalog, loadout.startingReward, {
-              kind: 'producerLifecycle',
-              key: binding.producerLifecycleKey,
-            }),
+            createUnresolvedAcquisitionRewardState(
+              catalog,
+              loadout.startingReward,
+              {
+                kind: 'producerLifecycle',
+                key: binding.producerLifecycleKey,
+              },
+              routePosition.routeKey,
+            ),
           );
         })()
       : undefined;

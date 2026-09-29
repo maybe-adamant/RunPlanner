@@ -161,7 +161,12 @@ export function locateReward(
         }
         case 'anomaly':
         case 'freeReward': {
-          const levelEffectSource = incomingLevelEffectSource(catalog, occurrence);
+          const rawRoom = catalog.rooms.byKey[occurrence.gameName];
+          const levelEffectSource = incomingLevelEffectSource(
+            catalog,
+            occurrence,
+            rawRoom === undefined ? undefined : resolveEntryDeclaration(rawRoom, routePosition),
+          );
           if (levelEffectSource === undefined)
             failCommand(command, `${occurrence.gameName} has no declared incoming reward binding`);
           return Object.freeze({

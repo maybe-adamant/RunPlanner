@@ -14,6 +14,7 @@ import { failProjectDocument } from '../validation';
 export type RoomOccurrenceRole = 'ordinary' | 'prebossFreeReward' | 'prebossShop';
 
 export interface RoomStateContext {
+  readonly routeKey: string;
   readonly role: RoomOccurrenceRole;
   readonly resolvedStoreKey?: string;
   readonly entryActive: boolean;

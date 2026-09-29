@@ -576,6 +576,7 @@ export function applyEncounterEndEffectsTransition(
             catalog,
             { rewardType: pickup.rewardType },
             { kind: 'producerLifecycle', key: maturity.producerLifecycleKey },
+            site.routeKey,
           );
           derivedAcquisitionEntryFrontiers.push(
             Object.freeze({

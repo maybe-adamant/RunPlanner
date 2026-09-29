@@ -20,4 +20,4 @@ export {
   replaceTestShopOfferActions,
 } from './room-actions';
 export { hubVisitActions } from './hub-actions';
-export { catalogWithEmptyShopGroup, clearTestShopOffer } from './empty-shop-group';
+export { catalogWithEmptyShopGroup } from './empty-shop-group';

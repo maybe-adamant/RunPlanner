@@ -213,7 +213,11 @@ doors, declaration-owned entry/cage/optional point sets, exact occurrence
 assignments, cage bounds, optional-pickup capacities and persistent bag, the
 mixed room chronology, forced windows, normal reward support, the bridge, the
 WorldShop, and completion counters. `H_Bridge01` includes its fixed
-`Story_Echo_01` encounter and supported Echo trait offer. The model does not
+`Story_Echo_01` encounter and supported Echo trait offer. Its native
+`ForcedRewards` Story entry needs lifetime `RoomsEntered.H_Boss01`
+(`RoomDataH.lua:800-817`), so on Fresh File the same forced room, with its
+window and creation limit, is a WorldShop with the `BridgeShop` encounter and
+no Echo action. The model does not
 cover optional-pickup chance weights, visual map coordinates or pathfinding,
 pickup interaction during an active wave, weighted room-set replay, other
 NPC/random-event or unmodeled Shop interactions, combat-wave composition,

@@ -27,13 +27,16 @@ export const HERMES_SHRINE_DELIVERY_SITE_KEY = 'hermesShrineDelivery' as const;
 export function defaultHermesShrineDeliveryReward(
   catalog: Catalog,
   rewardType: string,
+  routeKey: string,
 ): AuthoredRewardState | null {
   const offers = locallyValidRewardOffers(catalog.rewards, rewardType);
   if (offers.length !== 1) return null;
-  return createUnresolvedAcquisitionRewardState(catalog, offers[0]!, {
-    kind: 'producerLifecycle',
-    key: 'HermesShrineDelivery',
-  });
+  return createUnresolvedAcquisitionRewardState(
+    catalog,
+    offers[0]!,
+    { kind: 'producerLifecycle', key: 'HermesShrineDelivery' },
+    routeKey,
+  );
 }
 
 /** Stable source identity for a host-owned Shrine delivery entry. */

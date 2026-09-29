@@ -14,6 +14,16 @@ import {
 
 export const gEncounterDefinitions = [
   {
+    // EncounterData_Intro.lua FishmanIntro: fixed waves (one FishmanMelee; two
+    // FishmanMelee and a FishmanRanged; three of each). AlwaysForce until
+    // completed; it inherits no base, so it neither counts depth nor skips.
+    key: 'FishmanIntro',
+    label: 'Intro combat',
+    kind: 'combat',
+    countsEncounterDepth: false,
+    hostsGorgon: true,
+  },
+  {
     key: 'GeneratedG',
     customization: [generatedEncounterChoices.GeneratedG],
     label: 'Combat',
@@ -213,6 +223,7 @@ export const gEncounterSets = [
   {
     key: 'GEncountersDefault',
     encounterDefinitionKeys: [
+      'FishmanIntro',
       'GeneratedG',
       'DevotionTestG',
       'ArtemisCombatG',
@@ -225,9 +236,10 @@ export const gEncounterSets = [
       {
         key: 'GeneratedG',
         label: 'Combat',
-        encounterDefinitionKeys: ['GeneratedG', 'DevotionTestG'],
+        encounterDefinitionKeys: ['GeneratedG', 'DevotionTestG', 'FishmanIntro'],
         resolution: {
           kind: 'rewardContext',
+          firstBiomeEncounterDefinitionKeyByRoute: { FreshFile: 'FishmanIntro' },
           defaultEncounterDefinitionKey: 'GeneratedG',
           encounterDefinitionKeyByRewardType: { Devotion: 'DevotionTestG' },
         },

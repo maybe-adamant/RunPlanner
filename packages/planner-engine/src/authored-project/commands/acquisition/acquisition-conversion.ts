@@ -156,7 +156,11 @@ export function applyAcquisitionDispositionCommand(
           : undefined;
       const entry =
         retainedEntry === undefined && rushedSource !== undefined && rushedSource !== null
-          ? defaultHermesShrineDeliveryReward(catalog, rushedSource.rewardType)
+          ? defaultHermesShrineDeliveryReward(
+              catalog,
+              rushedSource.rewardType,
+              located.routePosition.routeKey,
+            )
           : retainedEntry;
       if (entry === undefined || entry === null)
         failCommand(command, 'missing or unresolved pickup entry');

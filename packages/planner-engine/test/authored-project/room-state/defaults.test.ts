@@ -24,6 +24,7 @@ describe('authored room-state defaults', () => {
         catalog,
         { rewardType: 'GiftDrop' },
         producerLevelEffectSource(standard.incomingReward),
+        'Underworld',
       ),
     ).toEqual({ self: { kind: 'random', targetTraitKey: null } });
 
@@ -37,6 +38,7 @@ describe('authored room-state defaults', () => {
           kind: 'shopProfile',
           key: shop.incomingReward.shopProfileKey,
         },
+        'Underworld',
       ),
     ).toBeUndefined();
   });
@@ -44,6 +46,7 @@ describe('authored room-state defaults', () => {
   it('constructs declaration-owned structure with unresolved authorable rewards', () => {
     expect(
       createDefaultRoomState(catalog, room('H_Combat02'), {
+        routeKey: 'Underworld',
         role: 'ordinary',
         entryActive: true,
       }),
@@ -64,6 +67,7 @@ describe('authored room-state defaults', () => {
 
     expect(
       createDefaultRoomState(catalog, room('H_Combat02'), {
+        routeKey: 'Underworld',
         role: 'ordinary',
         entryActive: true,
         activeCageCount: 3,
@@ -75,6 +79,7 @@ describe('authored room-state defaults', () => {
 
     expect(
       createDefaultRoomState(catalog, room('O_Combat01'), {
+        routeKey: 'Underworld',
         role: 'ordinary',
         entryActive: true,
       }),
@@ -89,6 +94,7 @@ describe('authored room-state defaults', () => {
 
     expect(
       createDefaultRoomState(catalog, room('N_Combat02'), {
+        routeKey: 'Underworld',
         role: 'ordinary',
         entryActive: true,
       }),
@@ -105,6 +111,7 @@ describe('authored room-state defaults', () => {
     }
     expect(
       createDefaultRoomState(catalog, declaration, {
+        routeKey: 'Underworld',
         role: 'ordinary',
         resolvedStoreKey: 'MetaProgress',
         entryActive: true,
@@ -119,12 +126,14 @@ describe('authored room-state defaults', () => {
     const declaration = room('F_Shop01');
     expect(
       createDefaultRoomState(catalog, declaration, {
+        routeKey: 'Underworld',
         role: 'ordinary',
         entryActive: false,
       }),
     ).toEqual({ kind: 'shop' });
     expect(
       createDefaultRoomState(catalog, declaration, {
+        routeKey: 'Underworld',
         role: 'ordinary',
         entryActive: true,
       }),
@@ -151,6 +160,7 @@ describe('authored room-state defaults', () => {
       }
       expect(
         createDefaultRoomState(catalog, declaration, {
+          routeKey: 'Underworld',
           role: 'prebossFreeReward',
           resolvedStoreKey: 'MetaProgress',
           entryActive: false,
@@ -170,18 +180,21 @@ describe('authored room-state defaults', () => {
     }
     expect(
       createDefaultRoomState(catalog, declaration, {
+        routeKey: 'Underworld',
         role: 'prebossShop',
         entryActive: false,
       }),
     ).toEqual({ kind: 'shop' });
     expect(
       createDefaultRoomState(catalog, declaration, {
+        routeKey: 'Underworld',
         role: 'prebossShop',
         entryActive: true,
       }),
     ).toMatchObject({ kind: 'shop', shop: { profileKey: 'WorldShop' } });
     expect(
       createDefaultRoomState(catalog, declaration, {
+        routeKey: 'Underworld',
         role: 'prebossFreeReward',
         entryActive: false,
       }),
@@ -194,6 +207,7 @@ describe('authored room-state defaults', () => {
   it('rejects a Preboss without its declaration-derived offer role at the default path', () => {
     expect(() =>
       createDefaultRoomState(catalog, room('H_PreBoss01'), {
+        routeKey: 'Underworld',
         role: 'ordinary',
         entryActive: false,
       }),

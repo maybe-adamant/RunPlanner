@@ -200,6 +200,21 @@ export function validateRewardRouteRequirementReferences(
         );
     }),
   );
+  rewards.producerLifecycles.values.forEach((producer) =>
+    producer.rewardTypes.values.forEach((entry) =>
+      entry.acquisitionLifecycle.forEach((binding) => {
+        const effect = binding.levelResolutionEffect;
+        if (effect?.kind !== 'randomTargetIfAvailable') return;
+        effect.excludedRouteKeys?.forEach((routeKey, index) => {
+          if (routes.byKey[routeKey] === undefined)
+            fail(
+              `producerLifecycles.${producer.key}.${entry.rewardType}.${binding.role}.levelResolutionEffect.excludedRouteKeys[${index}]`,
+              `unknown route ${routeKey}`,
+            );
+        });
+      }),
+    ),
+  );
   rewards.shops.values.forEach((shop) =>
     shop.groups.values.forEach((group) =>
       group.options.values.forEach((option) => {

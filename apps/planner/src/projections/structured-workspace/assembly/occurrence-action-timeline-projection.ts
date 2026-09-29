@@ -1,4 +1,5 @@
 import {
+  routeRoomDeclaration,
   createOccurrenceAddress,
   createRoomRunStateCheckpointAddress,
   roomActionKey,
@@ -66,7 +67,12 @@ function projectRoomLifecycleTimeline(
       return runStateLauncher(
         input,
         createRoomRunStateCheckpointAddress(occurrence, { kind: 'roomEntered' }),
-        `the first action in ${requireRoom(input.catalog, input.occurrence.gameName).label}`,
+        `the first action in ${
+          routeRoomDeclaration(
+            requireRoom(input.catalog, input.occurrence.gameName),
+            input.biome.routeKey,
+          ).label
+        }`,
       );
     }
     if (boundary.kind === 'encounterStart' && roomLocal.kind === 'ship') {

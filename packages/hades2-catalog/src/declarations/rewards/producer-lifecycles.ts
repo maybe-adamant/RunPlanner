@@ -18,6 +18,14 @@ const nemesisEventRewardTypes = [
   'RoomRewardConsolationPrize',
 ] as const;
 
+// ConsumableData.lua GiftDrop.RunProgress: the random boon level needs
+// WorldUpgradeGiftDropRunProgress, which a fresh profile has not bought.
+const giftDropRunProgressLevel = {
+  kind: 'randomTargetIfAvailable',
+  levelCount: 1,
+  excludedRouteKeys: ['FreshFile'],
+} as const;
+
 export const producerLifecycles = [
   {
     key: 'RoomReward',
@@ -75,7 +83,7 @@ export const producerLifecycles = [
           {
             role: 'self',
             lifecyclePoint: 'roomRewardPickup',
-            levelResolutionEffect: { kind: 'randomTargetIfAvailable', levelCount: 1 },
+            levelResolutionEffect: giftDropRunProgressLevel,
           },
         ],
       },
@@ -109,7 +117,7 @@ export const producerLifecycles = [
           {
             role: 'self',
             lifecyclePoint: 'roomRewardPickup',
-            levelResolutionEffect: { kind: 'randomTargetIfAvailable', levelCount: 1 },
+            levelResolutionEffect: giftDropRunProgressLevel,
           },
         ],
       },
@@ -202,7 +210,7 @@ export const producerLifecycles = [
           {
             role: 'self',
             lifecyclePoint: 'echoReplay',
-            levelResolutionEffect: { kind: 'randomTargetIfAvailable', levelCount: 1 },
+            levelResolutionEffect: giftDropRunProgressLevel,
             blocksArtificerConversion: true,
           },
         ],

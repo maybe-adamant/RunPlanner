@@ -42,12 +42,15 @@ export function createSeaStarDuplicateRewardState(
   catalog: Catalog,
   source: AuthoredRewardState,
   acquisitionRole: string,
+  routeKey: string,
 ): AuthoredRewardState {
   if (seaStarDuplicateUsesFreshObject(catalog, source, acquisitionRole))
-    return createUnresolvedAcquisitionRewardState(catalog, source.offer, {
-      kind: 'producerLifecycle',
-      key: 'RoomReward',
-    });
+    return createUnresolvedAcquisitionRewardState(
+      catalog,
+      source.offer,
+      { kind: 'producerLifecycle', key: 'RoomReward' },
+      routeKey,
+    );
   return Object.freeze({
     ...source,
     ...(source.levelResolutionsByAcquisitionRole === undefined

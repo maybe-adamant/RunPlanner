@@ -32,7 +32,7 @@ function withRushedHermesDelivery(
   const reward =
     current !== undefined && current !== null && current.offer.rewardType === rewardType
       ? current
-      : defaultHermesShrineDeliveryReward(catalog, rewardType);
+      : defaultHermesShrineDeliveryReward(catalog, rewardType, origin.routeKey);
   return Object.freeze({
     ...occurrence,
     acquisitionSites: Object.freeze({
@@ -625,6 +625,7 @@ export function applyOccurrenceCommand(
     case 'ReplaceRewardWheelPicked':
       return applyShipOccurrenceCommand(document, catalog, located, command);
     case 'ReplaceShopOffer':
+    case 'ClearShopOffer':
     case 'ReplaceShopOfferOption':
     case 'ReplaceAnvilResult':
       return applyShopOccurrenceCommand(document, catalog, located, command);

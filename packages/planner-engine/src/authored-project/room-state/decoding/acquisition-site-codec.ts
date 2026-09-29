@@ -16,6 +16,7 @@ import { expectExactKeys, expectRecord, failProjectDocument } from '../../valida
 export interface AcquisitionSiteOccurrenceContext {
   readonly path: string;
   readonly gameName: string;
+  readonly routeKey: string;
 }
 
 export function decodeAcquisitionSites(
@@ -146,6 +147,7 @@ export function decodeAcquisitionSites(
                               shopSlotProfile(catalog, occurrence.gameName, shopProfileKey, key)
                                 ?.key ?? '',
                           },
+                occurrence.routeKey,
                 artificerSite ||
                   seaStarDuplicateSite ||
                   hermesDeliveryEntry(key) ||

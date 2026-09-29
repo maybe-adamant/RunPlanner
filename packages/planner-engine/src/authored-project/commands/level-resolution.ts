@@ -101,6 +101,7 @@ export function applyLevelResolutionCommand(
     locatedReward.reward.offer,
     locatedReward.levelEffectSource,
     command.levelResolution.acquisitionRole,
+    located.routePosition.routeKey,
   );
   if (effect === undefined)
     failCommand(

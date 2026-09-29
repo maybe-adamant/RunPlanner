@@ -24,6 +24,7 @@ import { normalizeBiomeLayouts } from './layouts/normalize';
 import { normalizeRoomLifecycleProfiles, validateLifecycleBindings } from './lifecycles';
 import { validateFirstRunOfferRules } from './rooms/feature-facts';
 import { validateRoomLayoutClosure } from './rooms/layout-closure';
+import { validateRoomRouteOverlayReferences } from './rooms/collection-closure';
 import { normalizeRooms } from './rooms/normalize';
 import {
   validateFixedAcquisitionTraitGrants,
@@ -124,7 +125,8 @@ export function createCatalog(input: RawCatalogInput): Catalog {
     exitTypes,
   );
   validateRoomLayoutClosure(rooms, biomeLayouts, exitCompatibilityPolicies, routes, rewards.shops);
-  validateEncounterRouteReferences(encounterDefinitions, routes);
+  validateEncounterRouteReferences(encounterDefinitions, encounterSets, routes);
+  validateRoomRouteOverlayReferences(rooms, routes);
   validateRewardAcquisitionRoleTraitGivers(rewards, traitCatalog.givers);
   const traitGiverByAcquisitionGameName = createTraitGiverByAcquisitionGameName(
     input.traitCatalog.traitAcquisitionProviders,

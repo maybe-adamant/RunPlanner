@@ -1,5 +1,9 @@
 import type { Catalog, RoomDeclaration, RoomKind } from '@run-planner/engine/catalog-schema';
-import type { ProjectDocument, TargetAddress } from '@run-planner/engine/authored-project';
+import {
+  routeRoomDeclaration,
+  type ProjectDocument,
+  type TargetAddress,
+} from '@run-planner/engine/authored-project';
 
 export const ordinaryRoomCategories = [
   'Combat',
@@ -101,19 +105,20 @@ export function roomPickerCandidateLabel(biomeKey: string, room: RoomDeclaration
   return `${room.label} (${doorCount} ${doorCount === 1 ? 'Door' : 'Doors'})`;
 }
 
+/** The route's realized rooms: a route overlay can change a room's category. */
 export function selectRoomsForCategory(
   catalog: Catalog,
+  routeKey: string,
   biomeKey: string,
   category: RoomSelectorCategory,
 ): readonly RoomDeclaration[] {
-  return catalog.rooms.values.filter((room) => {
-    if (room.roomSetKey !== biomeKey) {
-      return false;
-    }
-    if (room.mode.kind !== 'authored') {
-      return false;
-    }
-    return roomCategoryForKind(room.kind) === category;
+  return catalog.rooms.values.flatMap((declared) => {
+    const room = routeRoomDeclaration(declared, routeKey);
+    return room.roomSetKey === biomeKey &&
+      room.mode.kind === 'authored' &&
+      roomCategoryForKind(room.kind) === category
+      ? [room]
+      : [];
   });
 }
 
@@ -127,5 +132,5 @@ export function selectRoomsForTargetCategory(
   // spine, not to the persisted decision-array position.  The picker presents
   // the declaration-owned category domain and lets the candidate session own
   // stage, eligibility, cap, and physical-exit validation.
-  return selectRoomsForCategory(catalog, target.biomeKey, category);
+  return selectRoomsForCategory(catalog, target.routeKey, target.biomeKey, category);
 }

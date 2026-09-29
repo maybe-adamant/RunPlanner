@@ -692,6 +692,7 @@ describe('screen completion inside one Shop room', () => {
         catalog,
         { rewardType: 'StoreRewardRandomStack' },
         { kind: 'shopProfile', key: 'WorldShop' },
+        'Underworld',
       ),
       traitOffersByAcquisitionRole: Object.freeze({}),
       levelResolutionsByAcquisitionRole: Object.freeze({

@@ -72,6 +72,40 @@ export function routeSupportsGeneratedEncounterCustomization(
   return routeInitialProfile(catalog, routeKey).kind === 'matureSave';
 }
 
+const routeOverlaidRooms = new WeakMap<RoomDeclaration, Map<string, RoomDeclaration>>();
+
+/**
+ * The room this route's save profile realizes: the declaration with its route
+ * overlay's kind, template, reward binding and encounter, and no lifecycle
+ * profile. Every consumer of those facts reads them through this lookup.
+ */
+export function routeRoomDeclaration<Room extends RoomDeclaration | undefined>(
+  room: Room,
+  routeKey: string,
+): Room {
+  const overlay = room?.routeOverlays?.find((candidate) => candidate.routeKey === routeKey);
+  if (room === undefined || overlay === undefined) return room;
+  const cached = routeOverlaidRooms.get(room as RoomDeclaration)?.get(routeKey);
+  if (cached !== undefined) return cached as Room;
+  const declared: RoomDeclaration = room;
+  const { lifecycleProfileKey: _lifecycle, routeOverlays: _overlays, ...base } = declared;
+  void _lifecycle;
+  void _overlays;
+  const routed: RoomDeclaration = Object.freeze({
+    ...base,
+    label: overlay.label,
+    kind: overlay.kind,
+    mode: overlay.mode,
+    incomingReward: overlay.incomingReward,
+    offerRewardBinding: overlay.offerRewardBinding,
+    encounterSlotBindings: overlay.encounterSlotBindings,
+  });
+  const byRoute = routeOverlaidRooms.get(declared) ?? new Map<string, RoomDeclaration>();
+  byRoute.set(routeKey, routed);
+  routeOverlaidRooms.set(declared, byRoute);
+  return routed as Room;
+}
+
 /** The room's Stygian Well host on this route; absent where the route's profile lacks it. */
 export function routeRoomShop(
   room: RoomDeclaration | undefined,

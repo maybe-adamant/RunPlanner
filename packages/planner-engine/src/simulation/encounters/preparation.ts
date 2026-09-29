@@ -152,7 +152,7 @@ function requirementContext(
     }),
     currentRoomShopOptionNames: new Set<string>(),
     currentRoomRewardType: (() => {
-      const resolution = encounterResolutionContext(room, declaration);
+      const resolution = encounterResolutionContext(room, declaration, routePosition.routeKey);
       return resolution.kind === 'knownReward' ? resolution.rewardType : undefined;
     })(),
     currentRoomStructuralTags: declaration.structuralTags,
@@ -437,11 +437,24 @@ export function prepareRoomEncounterPhases(
       pendingSpellDrop,
       allSpellInvested,
     );
-    const resolution = encounterResolutionContext(
-      room,
-      declaration,
-      preparation.ledgers.counters.biomeEncounterDepth,
-    );
+    // Route encounter counts only feed a first-biome identity's completion guard.
+    const guardsFirstBiome =
+      binding.kind === 'set' &&
+      encounterAuthoringProfiles(
+        encounterSetForBinding(catalog, binding, declaration.gameName),
+      ).some(
+        (profile) =>
+          profile.resolution.kind === 'rewardContext' &&
+          (profile.resolution.firstBiomeEncounterDefinitionKey !== undefined ||
+            profile.resolution.firstBiomeEncounterDefinitionKeyByRoute?.[routePosition.routeKey] !==
+              undefined),
+      );
+    const resolution = encounterResolutionContext(room, declaration, routePosition.routeKey, {
+      biomeEncounterDepth: preparation.ledgers.counters.biomeEncounterDepth,
+      routeEncounterKeyCounts: guardsFirstBiome
+        ? projectRouteEncounterKeyCounts(preparation, routePosition.routeKey)
+        : {},
+    });
     if (binding.kind === 'fixed') {
       const preparedPhase =
         binding.shadowEncounterDefinitionKey === undefined

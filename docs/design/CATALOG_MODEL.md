@@ -143,11 +143,28 @@ native `ForcedRewards` Apollo boon under a save-file Apollo use requirement,
 and its `firstRunOffer` names the `ForceLootTableFirstRun` table and
 `ForceCommonLootFirstRun` rarity on that route.
 
+The G and I combat choices name `FishmanIntro` and `ClockworkIntro` as their
+`FreshFile` first-biome identity (`firstBiomeEncounterDefinitionKeyByRoute`,
+beside I's mature `GeneratedIChronosIntro` default), so the route resolves the
+native `AlwaysForce` intros instead of the Chronos variant that needs
+`ClockworkIntro` completed. Each key must be a member of its choice and each
+route a declared route. `H_Bridge01` declares a `FreshFile` route overlay: its
+native Story reward needs lifetime `RoomsEntered.H_Boss01`, so a fresh profile
+realizes the Shop fallback (Shop kind and template, WorldShop binding,
+`BridgeShop`, no lifecycle profile). Normalization builds the overlaid room as
+a complete declaration and accepts it only when every other normalized fact,
+including eligibility, force and caps, is unchanged. The GiftDrop producer
+bindings exclude `FreshFile` from their random boon level, which needs the
+`WorldUpgradeGiftDropRunProgress` upgrade.
+
 The catalog declares one counted run-start reward binding; entry rooms have no
 intrinsic incoming reward. A fresh profile's first entry has no run-start
 reward. Narrow contextual encounter rules express genuine route-mode and
-first-position differences without replacing the whole room declaration. The
-engine resolves these facts with itinerary position into one entry product:
+first-position differences without replacing the whole room declaration; a
+route overlay replaces only kind, template, label, reward binding and encounter,
+and every consumer of kind, template, label, reward, encounter and lifecycle
+facts reads it through the route's room lookup. The engine
+resolves these facts with itinerary position into one entry product:
 reward binding, lifecycle and declaration-owned entered-store participation.
 Editor visibility is not an alternate room declaration.
 

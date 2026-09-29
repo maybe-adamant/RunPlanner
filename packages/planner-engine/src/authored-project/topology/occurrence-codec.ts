@@ -331,7 +331,7 @@ export function decodeRoomOccurrence(input: {
     rawOccurrence.state,
     catalog,
     contextualRoom,
-    owner,
+    { ...owner, routeKey },
     `${rawOccurrence.path}.state`,
   );
   const startingRewardAcquisition = rawOccurrence.hasStartingRewardAcquisition
@@ -377,6 +377,7 @@ export function decodeRoomOccurrence(input: {
             const binding = catalog.runStartReward.incomingReward;
             return { kind: 'producerLifecycle' as const, key: binding.producerLifecycleKey };
           })(),
+          routeKey,
         );
         return startingRewardAcquisitionFrom(reward);
       })()
@@ -531,7 +532,7 @@ export function decodeRoomOccurrence(input: {
           ? undefined
           : decodeAcquisitionSites(
               Object.fromEntries(includedEntries),
-              rawOccurrence,
+              { path: rawOccurrence.path, gameName: rawOccurrence.gameName, routeKey },
               catalog,
               preliminaryPickupProducers,
               echoEntryKeys,
@@ -556,7 +557,7 @@ export function decodeRoomOccurrence(input: {
   const acquisitionSites = rawOccurrence.hasAcquisitionSites
     ? decodeAcquisitionSites(
         rawOccurrence.acquisitionSites,
-        rawOccurrence,
+        { path: rawOccurrence.path, gameName: rawOccurrence.gameName, routeKey },
         catalog,
         pickupProducers,
         echoEntryKeys,
@@ -898,6 +899,7 @@ export function decodeRoomOccurrence(input: {
       catalog,
       source.reward,
       seaStar.acquisitionRole,
+      biomeAddress.routeKey,
     );
     // The generated identity is closed, but a fresh full Pom is its own
     // acquisition: its disposition and unresolved level child can be edited
