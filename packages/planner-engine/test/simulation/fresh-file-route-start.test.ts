@@ -80,30 +80,24 @@ describe('Fresh File route start', () => {
     expect(state.rewardHistory).toEqual(createRewardHistoryState(catalog.rewards, 'mature'));
   });
 
-  it('reports a retained generated customization instead of generating from it', () => {
+  it('assesses a composition carried from a mature save like any authored one', () => {
+    const retained =
+      loadUnderworldGeneratedCompositionCheckpoint().route.biomes[0]!.topology!.occurrences.find(
+        (occurrence) => occurrence.occurrenceId === 'golden-f-b3-e1',
+      )!.encounters.customizationByPhase;
     const project = createFreshFileGeneratedComposition();
-    const customized = project.route.biomes[0]!.topology!.occurrences.find(
-      (occurrence) => occurrence.encounters.customizationByPhase !== undefined,
-    )!;
-    const evaluation = simulateProject(catalog, project);
-    expect(evaluation.findings).toEqual([
-      expect.objectContaining({
-        code: 'encounterCustomizationUnavailable',
-        origin: expect.objectContaining({
-          kind: 'encounterPhase',
-          owner: { kind: 'occurrence', occurrenceId: customized.occurrenceId },
-        }),
-      }),
-    ]);
     expect(
       project.route.biomes[0]!.topology!.occurrences.find(
-        (occurrence) => occurrence.occurrenceId === customized.occurrenceId,
+        (occurrence) => occurrence.occurrenceId === 'golden-f-b3-e1',
       )?.encounters.customizationByPhase,
-    ).toEqual(customized.encounters.customizationByPhase);
-    const mature = simulateProject(catalog, loadUnderworldGeneratedCompositionCheckpoint());
-    expect(mature.findings.map((finding) => finding.code)).not.toContain(
+    ).toEqual(retained);
+    const codes = simulateProject(catalog, project).findings.map((finding) => finding.code);
+    for (const code of [
       'encounterCustomizationUnavailable',
-    );
+      'encounterCustomizationRequired',
+      'encounterIntroductionRequired',
+    ] as const)
+      expect(codes).not.toContain(code);
   });
 
   it('refuses to assemble a Fresh File execution product', () => {

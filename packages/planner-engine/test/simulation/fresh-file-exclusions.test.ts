@@ -78,6 +78,7 @@ function context(
     recentEncounterEnvelopeSlots: [],
     encounterHistory: {
       routeEncounterKeyCounts: {},
+      routeEncounterCompletionCounts: {},
       biomeEncounterKeyCounts: {},
       previousRoomEncounterKeys: [],
     },

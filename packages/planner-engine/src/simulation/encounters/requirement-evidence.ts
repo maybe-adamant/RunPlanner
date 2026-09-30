@@ -29,6 +29,12 @@ export type EncounterRequirementEvidence = { readonly satisfied: boolean } & (
       readonly expected: NumericRange;
     }
   | {
+      readonly kind: 'encounterCompletionCount';
+      readonly encounterKeys: readonly string[];
+      readonly actual: number;
+      readonly expected: NumericRange;
+    }
+  | {
       readonly kind: 'previousRoomEncounterKeyCount';
       readonly encounterKeys: readonly string[];
       readonly matchingEncounterKeys: readonly string[];
@@ -57,6 +63,13 @@ export type EncounterCandidateExclusion =
         readonly encounterDefinitionKey: string;
         readonly evaluation: EncounterRequirementEvidence;
       }[];
+    }
+  | {
+      /** The gate passes, but no eligible ordinary encounter here can draw a trigger enemy. */
+      readonly encounterKey: string;
+      readonly kind: 'introductionUnreachable';
+      readonly encounterDefinitionKey: string;
+      readonly triggerEnemyKeys: readonly string[];
     }
   | { readonly encounterKey: string; readonly kind: 'gorgonConsumed' }
   | { readonly encounterKey: string; readonly kind: 'resolutionUnavailable' };
@@ -108,6 +121,17 @@ export function encounterRequirementEvidence(
         kind: requirement.kind,
         satisfied,
         scope: requirement.scope,
+        encounterKeys: requirement.encounterKeys,
+        actual: requirement.encounterKeys.reduce((total, key) => total + (counts[key] ?? 0), 0),
+        expected: requirement.range,
+      });
+    }
+    case 'encounterCompletionCount': {
+      if (context.encounterHistory === undefined) throw new Error('Missing encounter history');
+      const counts = context.encounterHistory.routeEncounterCompletionCounts;
+      return Object.freeze({
+        kind: requirement.kind,
+        satisfied,
         encounterKeys: requirement.encounterKeys,
         actual: requirement.encounterKeys.reduce((total, key) => total + (counts[key] ?? 0), 0),
         expected: requirement.range,

@@ -78,6 +78,8 @@ export type { RoomStructuralTag } from '../requirements/model';
 export interface BiomeDeclaration {
   readonly key: string;
   readonly label: string;
+  /** Native room MinDepthBeforeIntros: below this biome depth generation admits only introduced enemies. */
+  readonly minDepthBeforeIntros: number;
 }
 
 /** Native Dream-route choice facts. The engine applies the public itinerary policy. */
@@ -412,6 +414,12 @@ export interface EncounterDefinition {
   /** Keepsakes whose ordinary rack selection is unavailable after this encounter. */
   readonly blocksKeepsakeSelectionKeys?: readonly string[];
   readonly requirements?: RequirementExpression;
+  /**
+   * Native reaches this identity only by replacing a drawn encounter whose spawns
+   * include an enemy it introduces (RunLogic SetupEncounter). As an authored
+   * member it is eligible only where its gate passes and a trigger enemy is admissible.
+   */
+  readonly enemyTriggeredIntroduction?: true;
   readonly sequenceEffect?: { readonly kind: 'terminateSuffix' };
   /** Presentation-only grouping for the later read-only NPC route index. */
   readonly npcPresentationKey?: string;
@@ -555,6 +563,8 @@ export interface EncounterAuthoringProfile {
   readonly kind: EncounterPhaseKind;
   readonly encounterDefinitionKeys: readonly string[];
   readonly resolution: EncounterChoiceResolution;
+  /** The only routes whose save profile can offer this choice; absent means every route. */
+  readonly routeKeys?: readonly string[];
 }
 
 /** Exact game support plus the smaller authored choice domain for one selectable slot. */

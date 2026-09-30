@@ -7,19 +7,20 @@ only the default Combat choice, plus `O_Devotion01`. Field-NPC combats are
 first-class entries. The unit is the resolved encounter identity at its phase:
 H passive/cage phases, O Intro/Combat1/Combat2, and P Intro/Combat remain separate.
 
-The Combat-room inventory exposes 155 scoped rooms and 94 distinct resolved encounter
-identities: 39 generator-family identities (including 13 field-NPC combats and
-four Devotion identities), 52 prescribed P precombat vignettes, two Arachne
-cocoon encounters, and one shared Nemesis random event. These are not 94 picker
+The Combat-room inventory exposes 155 scoped rooms and 102 distinct resolved encounter
+identities: 43 generator-family identities (including 13 field-NPC combats, four
+Devotion identities and four mixed Fresh File introductions), 52 prescribed P
+precombat vignettes, four all-fixed Fresh File H introductions, two Arachne
+cocoon encounters, and one shared Nemesis random event. These are not 102 picker
 choices: ordinary Combat profiles also resolve reward-dependent Trial/Goal
 identities.
 
-The Combat-room customization candidates are the **39 generator-family identities**,
-including H's two mixed fixed/generated templates. The other 55 identities
-remain in this inventory to explain their exclusion from wave/type
-customization: P's prescribed rosters stay fixed, Arachne keeps its cocoon
-mechanism with only an optional exact count, and Nemesis's noncombat event has
-no roster. Native-only variants
+The Combat-room customization candidates are the **43 generator-family identities**,
+including H's two mixed fixed/generated templates and the four mixed
+introductions. The other 59 identities remain in this inventory to explain
+their exclusion from wave/type customization: P's prescribed rosters and the H
+introductions' three fixed waves stay fixed, Arachne keeps its cocoon mechanism
+with only an optional exact count, and Nemesis's noncombat event has no roster. Native-only variants
 are summarized as intentional exclusions, not additional implementation scope.
 
 Source inspection: 2026-09-18, installed Steam build `24556151`. The 125 local
@@ -136,36 +137,36 @@ Ranges below refer to native room-name suffixes. Each identity listed is subject
 to its existing placement/reward requirements; membership is not a claim that
 every choice is simultaneously eligible.
 
-| Rooms / phase                           | Supported resolved identities                                                                             |
-| --------------------------------------- | --------------------------------------------------------------------------------------------------------- |
-| F Opening01–03                          | `OpeningGeneratedF` (Dream routes: `OpeningEmpty`)                                                        |
-| F Combat01                              | `GeneratedF` (first Fresh File biome: `FIntroFight`)                                                      |
-| F Combat02–22                           | `GeneratedF`, `DevotionTestF`, `ArtemisCombatF`, `ArachneCombatF`, `NemesisCombatF`, `NemesisRandomEvent` |
-| G Combat01–20                           | `GeneratedG`, `DevotionTestG`, `ArtemisCombatG`, `ArachneCombatG`, `NemesisCombatG`, `NemesisRandomEvent` |
-| H passive: 01,03–08,10–12               | `GeneratedH_Passive`, `NemesisRandomEvent`                                                                |
-| H passive: 02,09,13–15                  | `GeneratedH_PassiveSmall`, `NemesisRandomEvent`                                                           |
-| Every active H cage                     | `GeneratedH`, `GeneratedH_Treant2`, `GeneratedH_Screamer2`, `NemesisCombatH`                              |
-| I Combat01,06–19,21,24                  | `GeneratedI`, `GeneratedI_GoalReward`, `DevotionTestI`, `NemesisCombatI`                                  |
-| I Combat02–05,20,22,23                  | `GeneratedI_Small`, `GeneratedI_Small_GoalReward`, `DevotionTestI`, `NemesisCombatI`                      |
-| N Opening01                             | `OpeningGeneratedN` (Dream routes: `OpeningEmpty`)                                                        |
-| N PreHub01                              | `PreHubGeneratedN`                                                                                        |
-| N Sub01–08,12,13,15                     | `GeneratedNSubRoom`, `GeneratedNSubRoom_Bigger`                                                           |
-| N Sub09–11,14                           | `GeneratedNSubRoom_Bigger`                                                                                |
-| N Combat02–08,14,22,23                  | `GeneratedN`, `ArtemisCombatN`, `HeraclesCombatN`                                                         |
-| N Combat12,17                           | `GeneratedN_Smaller`, `ArtemisCombatN`, `HeraclesCombatN`                                                 |
-| N Combat01,09–11,13,15,16,18–21         | `GeneratedN_Bigger`, `ArtemisCombatN`, `HeraclesCombatN`                                                  |
-| O Combat01–15, Intro                    | `GeneratedO_Intro01`, `HeraclesCombatO`                                                                   |
-| O Combat01–15, Combat1 / active Combat2 | `GeneratedO`, `IcarusCombatO`                                                                             |
-| O_Devotion01                            | `DevotionTestO`                                                                                           |
-| P Combat01–19, Intro                    | `GeneratedP_PreCombat`, `HeraclesCombatP`, plus the room-local vignette identities below for rooms 01–16  |
-| P Combat01–19, Combat                   | `GeneratedP`, `GeneratedP_Large`, `AthenaCombatP`, `IcarusCombatP`                                        |
-| Q Combat01,02,04,06–09,12–16            | `GeneratedQ`                                                                                              |
-| Q Combat03,05                           | `GeneratedQ_Islands`                                                                                      |
-| Q Combat10,11                           | `GeneratedQ_Large`                                                                                        |
+| Rooms / phase                           | Supported resolved identities                                                                                                                               |
+| --------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| F Opening01–03                          | `OpeningGeneratedF` (Dream routes: `OpeningEmpty`)                                                                                                          |
+| F Combat01                              | `GeneratedF` (first Fresh File biome: `FIntroFight`)                                                                                                        |
+| F Combat02–22                           | `GeneratedF`, `DevotionTestF`, `ArtemisCombatF`, `ArachneCombatF`, `NemesisCombatF`, `NemesisRandomEvent`; Fresh File: `RadiatorIntro`, `ScreamerIntro`     |
+| G Combat01–20                           | `GeneratedG`, `DevotionTestG`, `ArtemisCombatG`, `ArachneCombatG`, `NemesisCombatG`, `NemesisRandomEvent`; Fresh File: `FishSwarmerIntro`, `TurtleIntro`    |
+| H passive: 01,03–08,10–12               | `GeneratedH_Passive`, `NemesisRandomEvent`                                                                                                                  |
+| H passive: 02,09,13–15                  | `GeneratedH_PassiveSmall`, `NemesisRandomEvent`                                                                                                             |
+| Every active H cage                     | `GeneratedH`, `GeneratedH_Treant2`, `GeneratedH_Screamer2`, `NemesisCombatH`; Fresh File: `MournerIntro`, `LamiaIntro`, `LovesickIntro`, `LycanthropeIntro` |
+| I Combat01,06–19,21,24                  | `GeneratedI`, `GeneratedI_GoalReward`, `DevotionTestI`, `NemesisCombatI`                                                                                    |
+| I Combat02–05,20,22,23                  | `GeneratedI_Small`, `GeneratedI_Small_GoalReward`, `DevotionTestI`, `NemesisCombatI`                                                                        |
+| N Opening01                             | `OpeningGeneratedN` (Dream routes: `OpeningEmpty`)                                                                                                          |
+| N PreHub01                              | `PreHubGeneratedN`                                                                                                                                          |
+| N Sub01–08,12,13,15                     | `GeneratedNSubRoom`, `GeneratedNSubRoom_Bigger`                                                                                                             |
+| N Sub09–11,14                           | `GeneratedNSubRoom_Bigger`                                                                                                                                  |
+| N Combat02–08,14,22,23                  | `GeneratedN`, `ArtemisCombatN`, `HeraclesCombatN`                                                                                                           |
+| N Combat12,17                           | `GeneratedN_Smaller`, `ArtemisCombatN`, `HeraclesCombatN`                                                                                                   |
+| N Combat01,09–11,13,15,16,18–21         | `GeneratedN_Bigger`, `ArtemisCombatN`, `HeraclesCombatN`                                                                                                    |
+| O Combat01–15, Intro                    | `GeneratedO_Intro01`, `HeraclesCombatO`                                                                                                                     |
+| O Combat01–15, Combat1 / active Combat2 | `GeneratedO`, `IcarusCombatO`                                                                                                                               |
+| O_Devotion01                            | `DevotionTestO`                                                                                                                                             |
+| P Combat01–19, Intro                    | `GeneratedP_PreCombat`, `HeraclesCombatP`, plus the room-local vignette identities below for rooms 01–16                                                    |
+| P Combat01–19, Combat                   | `GeneratedP`, `GeneratedP_Large`, `AthenaCombatP`, `IcarusCombatP`                                                                                          |
+| Q Combat01,02,04,06–09,12–16            | `GeneratedQ`                                                                                                                                                |
+| Q Combat03,05                           | `GeneratedQ_Islands`                                                                                                                                        |
+| Q Combat10,11                           | `GeneratedQ_Large`                                                                                                                                          |
 
-The biome-local identity counts are F 6, G 6, H 7, I 6, N 5, O 5, P 58 and
-Q 3. Their sum is 96; `NemesisRandomEvent` shared across F/G/H reduces the
-distinct union to 94. The room counts are 22/20/15/24/23/16/19/16 respectively.
+The biome-local identity counts are F 8, G 8, H 11, I 6, N 5, O 5, P 58 and
+Q 3. Their sum is 104; `NemesisRandomEvent` shared across F/G/H reduces the
+distinct union to 102. The room counts are 22/20/15/24/23/16/19/16 respectively.
 
 Catalog contacts: `packages/hades2-catalog/src/declarations/encounters/`
 `f.ts`, `g.ts`, `h.ts`, `i.ts`, `n.ts`, `o.ts`, `p_definitions.ts`, `p_sets.ts`,
@@ -504,6 +505,47 @@ enemy's requirements. For example `WaterUnit_Elite`, `Turtle_Elite` and
 `Brute_Elite` do not simply append every normal-variant profile restriction.
 Use resolved source requirements, not an invented union of ancestor conditions.
 
+Enemy-triggered introductions are generated identities: `BaseIntroEncounter`
+(`EncounterData.lua:257-275`) precedes the biome generator in `InheritFrom`, so
+its two waves (Turtle: three), two-type cap and `DifficultyMultiplier = 2.0`
+apply, with each introduction's own `DifficultyModifier` (Radiator 25, Screamer
+20, FishSwarmer 45, Turtle 65).
+
+| Introduction       | Declaration                   | Fixed waves                                                                                 | Generated suffix                                                  |
+| ------------------ | ----------------------------- | ------------------------------------------------------------------------------------------- | ----------------------------------------------------------------- |
+| `RadiatorIntro`    | `EncounterData.lua:311`       | W1 Radiator ×5                                                                              | W2 (50%): `Radiator` seed + one addition, `RequireCompletedIntro` |
+| `ScreamerIntro`    | `EncounterData.lua:355`       | W1 Screamer ×2                                                                              | W2 (50%): `Screamer` seed + one addition, `RequireCompletedIntro` |
+| `FishSwarmerIntro` | `EncounterData_Intro.lua:78`  | W1 FishSwarmerSquad ×4 (the squad identity, not its spawned units)                          | W2 (50%): squad seed + one addition, `RequireCompletedIntro`      |
+| `TurtleIntro`      | `EncounterData_Intro.lua:127` | W1 Turtle ×2                                                                                | W2 (15%), W3 (55%): `Turtle` seed + one addition each             |
+| `MournerIntro`     | `EncounterData_Intro.lua:372` | Mourner ×2; Mourner ×4 + BrokenHearted ×2; Mourner_Elite ×1                                 | None                                                              |
+| `LamiaIntro`       | `EncounterData_Intro.lua:448` | Lamia ×1 + BrokenHearted ×4; Lamia ×4 + BrokenHearted ×6; Lamia_Elite ×1 + BrokenHearted ×4 | None                                                              |
+| `LovesickIntro`    | `EncounterData_Intro.lua:534` | Lovesick ×2; Lovesick ×4 + BrokenHearted ×5; Lovesick_Elite ×2                              | None                                                              |
+| `LycanthropeIntro` | `EncounterData_Intro.lua:289` | Lycanthrope ×1; Lycanthrope ×3; Lycanthrope_Elite ×1                                        | None                                                              |
+
+Admission is separate from replacement: `GenerateEncounter` requires completed
+introductions below `MinDepthBeforeIntros` (`RoomData.lua:648` BaseRoom 3,
+`RoomDataH.lua:334` BaseH 0) and wherever the encounter or wave requires them
+(`RunLogic.lua:1263-1271`, `IsEnemyEligible` 1576-1586). Devotion, Artemis,
+Nemesis and `OpeningGeneratedF` require completed introductions; Devotion also
+skips the replacement scan.
+
+`Turtle_Elite` inherits `{ "Elite", "Turtle" }` (`EnemyData_Turtle.lua:100-102`).
+`DeepInheritData` fills only missing keys, first parent first
+(`RunData.lua:1363`), so `Elite`'s depth gate (`EnemyData.lua:253`) replaces
+Turtle's two-`G_Intro`-visit gate while `IntroEncounterName = TurtleIntro`
+survives: native reaches `TurtleIntro` through `Turtle_Elite` at G depth 3 or
+more on a single G entry, while the ordinary Turtle is never drawn there.
+
+Fresh File planner disposition of the profile gates: they read `GameState`
+caches that update live at occurrence and completion (`RoomLogic.lua:1926,4456`),
+so an earlier encounter on the route satisfies them. `WaterUnit` admission
+requires a completed `MiniBossWaterUnit` on the route, both `SiegeVine`
+variants an earlier `MiniBossFogEmitter` record, and the ordinary `Turtle` is
+excluded on Fresh File (two `G_Intro` visits are unreachable). Mature saves
+satisfy all three. `IneligibleIfUncompletedIntroEncounter` (only both
+`HarpyDropper` variants, P) is not modeled: no Fresh File pool reaches it and
+mature saves have completed `OlympusIntro`.
+
 ## Prescribed and non-generator encounters in the same rooms
 
 These entries are included because room scope is broader than generation
@@ -643,7 +685,11 @@ acceptance. The implementation preserves the following boundaries:
    while the planner identity belongs to the stamped destination.
 2. Profile/introduction assumptions remain distinct from enemy candidates.
    Existing boss-choice progression overrides do not automatically authorize
-   bypassing enemy intros, room packages or native intro replacement.
+   bypassing enemy intros, room packages or native intro replacement. On Fresh
+   File the scoped F/G/H introductions are authored set members; the
+   [introduction model](../../design/ROOM_LIFECYCLE_MODEL.md#enemy-introductions)
+   owns their gates, reachability and type-domain exclusion. Mixed-suffix
+   installation and native traversal order remain live acceptance items.
 3. Ordered type-choice possibility, including highlight/placeholder seeding,
    P group gates, run blacklists and declaration-owned hard context. A blanket
    independent-per-wave or final-set validator would misstate native support.

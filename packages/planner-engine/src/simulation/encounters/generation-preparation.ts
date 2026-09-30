@@ -7,6 +7,7 @@ import type { ResolvedEncounterPhase } from './model';
 import {
   assessGeneratedEncounter,
   initializeGeneratedEncounter,
+  type EncounterGenerationContext,
   type GeneratedEncounterAssessment,
 } from './generation';
 
@@ -39,6 +40,31 @@ export function targetRewardGeneration(
     .find((generation) => semanticAddressKey(generation.roomOrigin) === key);
 }
 
+/** Room-owned admission facts a generated contact consumes beyond its history view. */
+export type GenerationAdmissionFacts = Pick<
+  EncounterGenerationContext,
+  'introductions' | 'inadmissibleEnemyKeys'
+>;
+
+/** Enemy-admission facts at one generation checkpoint: depths, known blacklist and admission. */
+export function generationAdmissionContext(
+  before: HistoryStateView,
+  facts: GenerationAdmissionFacts,
+): EncounterGenerationContext {
+  return Object.freeze({
+    biomeDepthCache: before.ledgers.counters.biomeDepthCache,
+    biomeEncounterDepth: before.ledgers.counters.biomeEncounterDepth,
+    knownRunBlacklist: Object.freeze([
+      ...new Set(
+        before.ledgers.encounterRecords.flatMap(
+          (record) => record.knownEnemyBlacklistAdditions ?? [],
+        ),
+      ),
+    ]),
+    ...facts,
+  });
+}
+
 export function prepareGeneratedEncounter(
   phase: ResolvedEncounterPhase,
   origin: EncounterPhaseAddress,
@@ -50,6 +76,10 @@ export function prepareGeneratedEncounter(
   ) => number | undefined,
   fangsRankAt?: (origin: EncounterPhaseAddress) => number | undefined,
   menaceRankAt?: (origin: EncounterPhaseAddress) => number | undefined,
+  admissionAt?: (
+    selection: GeneratedEncounterSelection,
+    before: HistoryStateView,
+  ) => GenerationAdmissionFacts,
 ): {
   readonly phase: ResolvedEncounterPhase;
   readonly capability?: GeneratedEncounterCandidateCapability;
@@ -80,15 +110,7 @@ export function prepareGeneratedEncounter(
   const exactMenaceRank = menaceRankAt?.(origin);
   if (menaceRankAt !== undefined && exactMenaceRank === undefined) return { phase };
   const context = Object.freeze({
-    biomeDepthCache: before.ledgers.counters.biomeDepthCache,
-    biomeEncounterDepth: before.ledgers.counters.biomeEncounterDepth,
-    knownRunBlacklist: Object.freeze([
-      ...new Set(
-        before.ledgers.encounterRecords.flatMap(
-          (record) => record.knownEnemyBlacklistAdditions ?? [],
-        ),
-      ),
-    ]),
+    ...generationAdmissionContext(before, admissionAt?.(policy, before) ?? {}),
     // RewardLogic forwards declared reward Overrides; the complete modeled
     // reward domain contains no MakeHardEncounter producer.
     hard: false,
@@ -108,6 +130,17 @@ export function prepareGeneratedEncounter(
   if (decision.value?.kind !== 'generated') return { phase, capability };
   const assessment = assess(decision.value);
   const operands = assessment.operands;
+  const introductionRequirements = assessment.issues.flatMap((issue) =>
+    issue.reason === 'introductionRequired'
+      ? [
+          Object.freeze({
+            enemyKey: issue.key,
+            introductionEncounterKey: issue.introductionEncounterKey,
+            admitted: issue.admitted,
+          }),
+        ]
+      : [],
+  );
   return {
     capability,
     phase: Object.freeze({
@@ -122,6 +155,12 @@ export function prepareGeneratedEncounter(
       generatedCustomization: Object.freeze({
         decisionKey: decision.key,
         ...(operands === undefined ? {} : { operands }),
+        ...(introductionRequirements.length === 0
+          ? {}
+          : {
+              introductionRequirements: Object.freeze(introductionRequirements),
+              onlyIntroductionIssues: introductionRequirements.length === assessment.issues.length,
+            }),
         knownRunBlacklistAdditions: assessment.knownRunBlacklistAdditions,
       }),
     }),

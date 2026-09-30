@@ -112,6 +112,15 @@ const findingCopy = {
     title: 'Encounter customization unavailable',
     description: 'Repair this encounter customization or reset customization.',
   },
+  encounterCustomizationRequired: {
+    title: 'Customize this encounter',
+    description:
+      'A Fresh File plan authors every generated enemy composition; evaluation stops here until it is customized.',
+  },
+  encounterIntroductionRequired: {
+    title: 'Enemy not introduced',
+    description: 'Select its introduction encounter or remove the enemy.',
+  },
   encounterSlotActivationUnavailable: {
     title: 'Encounter phase inactive',
     description: 'The room setup does not activate this phase.',

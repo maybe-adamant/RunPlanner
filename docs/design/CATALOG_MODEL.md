@@ -254,7 +254,18 @@ wave/budget bounds, shared-highlight rules, fixed seeds, native enemy costs/caps
 ordered type exclusions, Fangs pools/filters and Menace mappings/replacement pools.
 Normalization preserves family-specific depth/hard
 context and fixed-template rules; it does not turn every Combat-room encounter
-into a generic generator. The
+into a generic generator. A mixed profile declares its fixed leading waves
+(spawns with fixed counts), its named generated seeds and native
+`RequireCompletedIntro`; the wave bounds are an exact total that exceeds the
+fixed waves. An enemy choice may name its native introduction, which must be a
+declared definition; a definition marked as an enemy-triggered introduction must
+be named by some enemy. An enemy choice may also declare an admission
+requirement for its native profile gate. An authoring profile may name the only
+routes that offer it (`routeKeys`); other routes' domains omit it and reject
+selecting it. Each biome declares its `MinDepthBeforeIntros`.
+Introduction gates use `encounterCompletionCount` (route completions) beside
+`encounterKeyCount` (route or biome records); both are admitted only in
+Encounter Definition requirements and enemy `admission` requirements. The
 [composition matrix](../audits/rooms-and-routes/COMBAT_ENCOUNTER_COMPOSITION_MATRIX.md)
 owns the supported inventory. Engine assessment, not catalog declarations,
 determines whether an authored composition is possible in its exact context.

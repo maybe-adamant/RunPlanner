@@ -109,11 +109,17 @@ export function normalizeEncounterSets(
               'must share one structural encounter kind',
             );
           }
+          const routeKeys =
+            'routeKeys' in rawProfile && rawProfile.routeKeys !== undefined
+              ? freezeUniqueStrings(rawProfile.routeKeys, `${profilePath}.routeKeys`)
+              : undefined;
+          if (routeKeys?.length === 0) fail(`${profilePath}.routeKeys`, 'must not be empty');
           return Object.freeze({
             key: profileKey,
             label,
             kind: definitions.byKey[profileDefinitionKeys[0]!]!.kind,
             encounterDefinitionKeys: profileDefinitionKeys,
+            ...(routeKeys === undefined ? {} : { routeKeys }),
             resolution: Object.freeze(
               resolution.kind === 'direct'
                 ? {

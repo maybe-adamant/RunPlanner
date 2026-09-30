@@ -1,4 +1,3 @@
-import { routeSupportsGeneratedEncounterCustomization } from '../../authored-project/route-profile';
 import type { ResolvedRoutePosition } from '../../authored-project/route-context';
 import type {
   Catalog,
@@ -16,6 +15,7 @@ import {
   type BiomeAddress,
 } from '../../authored-project/addresses';
 import {
+  encounterAuthoringProfileOnRoute,
   encounterAuthoringProfiles,
   encounterBindingsBySlot,
   encounterEnvelopeSlots,
@@ -165,11 +165,6 @@ export function encounterPhaseAuthoringDomainForRoom(
     encounterEnvelopeSlots(catalog, room, room.gameName).map((slot) => [slot.key, slot]),
   );
   const domains: EncounterPhaseAuthoringDomain[] = [];
-  // A retained generated value on a profile without generated customization stays for repair.
-  const generatedCustomizationAvailable = routeSupportsGeneratedEncounterCustomization(
-    catalog,
-    biome.routeKey,
-  );
   for (const binding of bindings.values()) {
     if (
       binding.kind === 'fixed' &&
@@ -247,17 +242,13 @@ export function encounterPhaseAuthoringDomainForRoom(
               .filter(
                 (decision) =>
                   decision.selection.kind !== 'generated' ||
-                  (supportsGeneratedEncounterCustomization(room) &&
-                    (generatedCustomizationAvailable ||
-                      encounters.customizationByPhase?.[binding.slotKey]?.[decision.key] !==
-                        undefined)),
+                  supportsGeneratedEncounterCustomization(room),
               )
               .map((decision) => {
                 const value = encounters.customizationByPhase?.[binding.slotKey]?.[decision.key];
                 const valueSupported =
                   value === undefined ||
-                  ((decision.selection.kind !== 'generated' || generatedCustomizationAvailable) &&
-                    customizationValueKnown([decision], decision.key, value) &&
+                  (customizationValueKnown([decision], decision.key, value) &&
                     !customizationValueRouteExcluded(decision, value, biome.routeKey));
                 const retainedChoiceLabels = retainedChoiceLabelsFor(catalog, decision, value);
                 return Object.freeze({
@@ -292,15 +283,21 @@ export function encounterPhaseAuthoringDomainForRoom(
                   directEncounterDefinitionKey: selectedEncounterKey,
                 }),
               ]
-            : profiles.map((profile) =>
-                Object.freeze({
-                  key: profile.key,
-                  label: profile.label,
-                  ...(profile.resolution.kind === 'direct'
-                    ? { directEncounterDefinitionKey: profile.resolution.encounterDefinitionKey }
-                    : {}),
-                }),
-              ),
+            : profiles
+                .filter(
+                  (profile) =>
+                    profile.key === selectedEncounterKey ||
+                    encounterAuthoringProfileOnRoute(profile, biome.routeKey),
+                )
+                .map((profile) =>
+                  Object.freeze({
+                    key: profile.key,
+                    label: profile.label,
+                    ...(profile.resolution.kind === 'direct'
+                      ? { directEncounterDefinitionKey: profile.resolution.encounterDefinitionKey }
+                      : {}),
+                  }),
+                ),
         ),
         defaultEncounterKey:
           binding.kind === 'fixed'

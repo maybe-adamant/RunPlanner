@@ -13,6 +13,18 @@ export interface EncounterGenerationContext {
   readonly fangsRank?: number;
   readonly menaceRank?: number;
   readonly roomSetKey?: string;
+  /**
+   * Present on a profile that starts with every enemy introduction unfinished:
+   * introductions completed earlier on the route, those whose gate passes at
+   * this room (a drawn enemy would trigger them), and the native admission depth.
+   */
+  readonly introductions?: {
+    readonly completedEncounterKeys: readonly string[];
+    readonly triggeredEncounterKeys: readonly string[];
+    readonly minDepthBeforeIntros: number;
+  };
+  /** Enemies whose declared admission requirement fails at this contact. */
+  readonly inadmissibleEnemyKeys?: readonly string[];
 }
 
 export interface GeneratedEncounterOperands {
@@ -48,6 +60,15 @@ export interface GeneratedEncounterAssessment {
   readonly effectiveWaveCount?: number;
   readonly composition: 'active' | 'missingWaveCount' | 'missingHighlight';
   readonly eligibleHighlightKeys: readonly string[];
+  /**
+   * Enemies native generation could draw here but whose introduction would then
+   * replace the whole encounter, each with that introduction.
+   */
+  readonly introductions?: {
+    readonly encounterKeyByEnemyKey: Readonly<Record<string, string>>;
+    /** Highlight candidates whose introduction would trigger here. */
+    readonly excludedHighlightKeys: readonly string[];
+  };
   readonly fangs?: {
     readonly rank: number;
     readonly active: boolean;
@@ -71,13 +92,18 @@ export interface GeneratedEncounterAssessment {
     readonly typeCount: { readonly min: number; readonly max: number };
     /** Editable generated additions after the declaration-owned seeds. */
     readonly additionalTypeCount: { readonly min: number; readonly max: number };
-    readonly seeds: readonly { readonly key: string; readonly kind: 'fixed' | 'highlight' }[];
+    readonly seeds: readonly {
+      readonly key: string;
+      readonly kind: 'fixed' | 'template' | 'highlight';
+    }[];
     /** Seeds and eligible authored additions in native order, up to the first unavailable entry. */
     readonly activeMemberKeys: readonly string[];
     /** A legal native roster can stop below the declared minimum when its pool is exhausted. */
     readonly exhausted: boolean;
     /** One domain per legal editable position; never includes a trailing dead slot. */
     readonly eligibleKeysByPosition: readonly (readonly string[])[];
+    /** Per position, otherwise-eligible enemies whose introduction would trigger here. */
+    readonly introductionExcludedKeysByPosition?: readonly (readonly string[])[];
     /** Equal remaining-budget samples for an explicit authoring action. */
     readonly equalAllocations?: Readonly<Record<string, number>>;
     /** Generated members that use a sampled budget rather than the native remainder. */
@@ -125,6 +151,19 @@ export type GeneratedEncounterIssue =
       readonly key: string;
     }
   | {
+      /**
+       * A retained enemy with an unfinished introduction: `admitted` when native
+       * would draw it and trigger that introduction, otherwise never drawn here.
+       * The highlight has no wave.
+       */
+      readonly reason: 'introductionRequired';
+      readonly key: string;
+      readonly introductionEncounterKey: string;
+      readonly admitted: boolean;
+      readonly waveIndex?: number;
+      readonly position?: number;
+    }
+  | {
       readonly reason: 'typeCount';
       readonly waveIndex: number;
       readonly actual: number;
@@ -155,6 +194,61 @@ const wavePatterns: Readonly<Record<number, readonly number[]>> = Object.freeze(
   4: [0.3, 0.1, 0.2, 0.4],
 });
 
+function enemyAdmitted(choice: EncounterEnemyChoice, context: EncounterGenerationContext) {
+  return (
+    (choice.minimumDepth === undefined ||
+      context[choice.minimumDepth.axis] >= choice.minimumDepth.value) &&
+    context.inadmissibleEnemyKeys?.includes(choice.key) !== true
+  );
+}
+
+/** Why an enemy with an unfinished introduction is withheld at this contact, if it is. */
+function introductionBlock(
+  policy: GeneratedEncounterSelection,
+  context: EncounterGenerationContext,
+  choice: EncounterEnemyChoice,
+): { readonly introductionEncounterKey: string; readonly admitted: boolean } | undefined {
+  const introductions = context.introductions;
+  const key = choice.introductionEncounterKey;
+  if (
+    introductions === undefined ||
+    key === undefined ||
+    introductions.completedEncounterKeys.includes(key)
+  )
+    return undefined;
+  // RunLogic GenerateEncounter/IsEnemyEligible: RequireCompletedIntro, also forced
+  // below MinDepthBeforeIntros, never draws an enemy whose introduction is unfinished.
+  if (
+    policy.requireCompletedIntro === true ||
+    context.biomeDepthCache < introductions.minDepthBeforeIntros
+  )
+    return { introductionEncounterKey: key, admitted: false };
+  // SetupEncounter would replace the whole encounter with a qualifying introduction.
+  return introductions.triggeredEncounterKeys.includes(key)
+    ? { introductionEncounterKey: key, admitted: true }
+    : undefined;
+}
+
+/**
+ * Enemies native generation may draw at this contact before composition
+ * constraints; an enemy whose introduction would trigger remains admissible.
+ */
+export function admissibleEnemyKeys(
+  policy: GeneratedEncounterSelection,
+  context: EncounterGenerationContext,
+): readonly string[] {
+  return Object.freeze(
+    policy.choices
+      .filter(
+        (choice) =>
+          !context.knownRunBlacklist.includes(choice.key) &&
+          enemyAdmitted(choice, context) &&
+          introductionBlock(policy, context, choice)?.admitted !== false,
+      )
+      .map((choice) => choice.key),
+  );
+}
+
 function totalBudget(
   policy: GeneratedEncounterSelection,
   context: EncounterGenerationContext,
@@ -171,8 +265,9 @@ function totalBudget(
   return Math.max(policy.budget.minimum, rating * hordes);
 }
 
-/** All scoped generators use the native multi-wave highlight branch. Fixed
- * templates have one wave; no scoped identity blocks highlight globally. */
+/** Scoped generators without fixed waves use the native multi-wave highlight
+ * branch; declared fixed waves take the family branch over the generated suffix.
+ * Fixed templates have one wave; no scoped identity blocks highlight globally. */
 export function assessGeneratedEncounter(
   policy: GeneratedEncounterSelection,
   authored: AuthoredGeneratedEncounterCustomization,
@@ -187,7 +282,10 @@ export function assessGeneratedEncounter(
     (waveCount < policy.waveCount.min || waveCount > policy.waveCount.max)
   )
     issues.push({ reason: 'waveCount', actual: waveCount, allowed: policy.waveCount });
-  const possibleHighlight = policy.waveCount.max > 1;
+  // Pre-existing waves suppress the shared highlight (RunLogic GenerateEncounter).
+  const fixedWaveCount = policy.fixedWaves?.length ?? 0;
+  const generatedSeeds = policy.generatedSeeds ?? [];
+  const possibleHighlight = policy.waveCount.max > 1 && fixedWaveCount === 0;
   const selectedBase = authored.baseRoll;
   const base = policy.budget.base;
   const sampledBudgetKeys = (generated: readonly string[]) =>
@@ -316,12 +414,26 @@ export function assessGeneratedEncounter(
     }
     return Object.freeze(result.map((entry) => Object.freeze(entry)));
   };
-  const usesHighlight = waveCount !== undefined && waveCount > 1;
-  const choices = new Map(policy.choices.map((choice) => [choice.key, choice]));
+  const usesHighlight = waveCount !== undefined && waveCount > 1 && fixedWaveCount === 0;
+  const choices = new Map(
+    [...policy.choices, ...generatedSeeds].map((choice) => [choice.key, choice]),
+  );
   const runBlacklist = new Set(context.knownRunBlacklist);
   const encounterBlacklist = new Set<string>();
   const knownAdditions = new Set<string>();
-  const eligible = (
+  const block = (choice: EncounterEnemyChoice) => introductionBlock(policy, context, choice);
+  const introduced = (choice: EncounterEnemyChoice) => block(choice) === undefined;
+  const triggers = (choice: EncounterEnemyChoice) => block(choice)?.admitted === true;
+  const introductionIssue = (
+    choice: EncounterEnemyChoice,
+    at: { readonly waveIndex?: number; readonly position?: number } = {},
+  ): GeneratedEncounterIssue => ({
+    reason: 'introductionRequired',
+    key: choice.key,
+    ...block(choice)!,
+    ...at,
+  });
+  const candidate = (
     choice: EncounterEnemyChoice,
     spawns: readonly EncounterEnemyChoice[],
     count: number,
@@ -331,13 +443,13 @@ export function assessGeneratedEncounter(
     !encounterBlacklist.has(choice.key) &&
     !(blockElites && choice.elite) &&
     !(count === 1 && choice.blockSolo) &&
-    (choice.minimumDepth === undefined ||
-      context[choice.minimumDepth.axis] >= choice.minimumDepth.value) &&
+    enemyAdmitted(choice, context) &&
     !spawns.some((spawn) => spawn.key === choice.key || spawn.excludes.includes(choice.key)) &&
     (!choice.elite || spawns.filter((spawn) => spawn.elite).length < policy.maxEliteTypes);
-  const eligibleHighlights = possibleHighlight
-    ? policy.choices.filter((choice) => eligible(choice, [], 1, policy.blockHighlightElites))
+  const highlightCandidates = possibleHighlight
+    ? policy.choices.filter((choice) => candidate(choice, [], 1, policy.blockHighlightElites))
     : [];
+  const eligibleHighlights = highlightCandidates.filter(introduced);
   const highlight =
     authored.highlightKey === undefined ? undefined : choices.get(authored.highlightKey);
   // A retained highlight has no native contact in a known one-wave result.
@@ -345,8 +457,16 @@ export function assessGeneratedEncounter(
     ((waveCount === undefined && possibleHighlight) || usesHighlight) &&
     authored.highlightKey !== undefined &&
     !eligibleHighlights.some((choice) => choice.key === authored.highlightKey)
-  )
-    issues.push({ reason: 'highlight', key: authored.highlightKey });
+  ) {
+    const unintroduced = highlightCandidates.find(
+      (choice) => choice.key === authored.highlightKey && !introduced(choice),
+    );
+    issues.push(
+      unintroduced === undefined
+        ? { reason: 'highlight', key: authored.highlightKey }
+        : introductionIssue(unintroduced),
+    );
+  }
   const composition =
     waveCount === undefined
       ? 'missingWaveCount'
@@ -357,11 +477,17 @@ export function assessGeneratedEncounter(
     waveIndex: number;
     typeCount: { min: number; max: number };
     additionalTypeCount: { min: number; max: number };
-    seeds: readonly { readonly key: string; readonly kind: 'fixed' | 'highlight' }[];
+    seeds: readonly { readonly key: string; readonly kind: 'fixed' | 'template' | 'highlight' }[];
     activeMemberKeys: readonly string[];
     exhausted: boolean;
     eligibleKeysByPosition: readonly (readonly string[])[];
+    introductionExcludedKeysByPosition?: readonly (readonly string[])[];
   }[] = [];
+  const generatedKeys = (typeKeys: readonly string[]) => [
+    ...generatedSeeds.map((seed) => seed.key),
+    ...(usesHighlight && highlight !== undefined ? [highlight.key] : []),
+    ...typeKeys,
+  ];
   const waves: {
     readonly waveIndex: number;
     readonly typeKeys: readonly string[];
@@ -373,7 +499,7 @@ export function assessGeneratedEncounter(
     (!usesHighlight || highlight !== undefined)
   ) {
     if (usesHighlight && highlight !== undefined) encounterBlacklist.add(highlight.key);
-    for (let waveIndex = 1; waveIndex <= waveCount; waveIndex++) {
+    for (let waveIndex = fixedWaveCount + 1; waveIndex <= waveCount; waveIndex++) {
       const row = authored.waves?.find((wave) => wave.waveIndex === waveIndex);
       const max = Math.floor(
         policy.types.max + policy.types.depthRamp * context[policy.types.depthAxis],
@@ -387,6 +513,7 @@ export function assessGeneratedEncounter(
       const maxCount = Math.min(target ?? max, policy.types.cap);
       const seeds = [
         ...policy.fixedEnemies,
+        ...generatedSeeds,
         ...(usesHighlight && highlight !== undefined ? [highlight] : []),
       ];
       const exactSize = seeds.length + (row?.typeKeys.length ?? 0);
@@ -396,8 +523,10 @@ export function assessGeneratedEncounter(
         target === undefined ? Math.max(minCount, Math.min(exactSize, maxCount)) : minCount;
       const blockElites = usesHighlight && waveIndex === 1 && policy.blockHighlightElites;
       const positions: (readonly string[])[] = [];
+      const introductionPositions: (readonly string[])[] = [];
+      // Candidates ignoring introductions; an unintroduced one is reported, never authored.
       let pool = policy.choices.filter((choice) =>
-        eligible(choice, seeds, selectedCount, blockElites),
+        candidate(choice, seeds, selectedCount, blockElites),
       );
       const spawns = [...seeds];
       // Fixed templates retain their native seed and author exactly one generated companion.
@@ -409,26 +538,29 @@ export function assessGeneratedEncounter(
       let exhausted = false;
       for (let index = 0; index < additionalMax; index++) {
         const key = selectedKeys[index];
-        const domain = Object.freeze(pool.map((choice) => choice.key));
+        const domain = Object.freeze(pool.filter(introduced).map((choice) => choice.key));
         positions.push(domain);
+        introductionPositions.push(
+          Object.freeze(pool.filter(triggers).map((choice) => choice.key)),
+        );
         if (key === undefined) {
           exhausted = domain.length === 0;
           // Only the first open slot is reachable. Later slots depend on a choice here.
           break;
         }
         const selected = pool.find((choice) => choice.key === key);
-        if (selected === undefined) {
-          issues.push({
-            reason: 'enemyUnavailable',
-            waveIndex,
-            position: seeds.length + index + 1,
-            key,
-          });
+        if (selected === undefined || !introduced(selected)) {
+          const position = seeds.length + index + 1;
+          issues.push(
+            selected === undefined
+              ? { reason: 'enemyUnavailable', waveIndex, position, key }
+              : introductionIssue(selected, { waveIndex, position }),
+          );
           break;
         }
         spawns.push(selected);
         pool = pool.filter(
-          (choice) => choice.key !== key && eligible(choice, spawns, selectedCount, blockElites),
+          (choice) => choice.key !== key && candidate(choice, spawns, selectedCount, blockElites),
         );
         if (policy.fixedEnemies.length === 0) {
           if (selected.blacklistAfterAppearance) {
@@ -452,6 +584,7 @@ export function assessGeneratedEncounter(
         additionalTypeCount: { min: additionalMin, max: additionalMax },
         seeds: Object.freeze([
           ...policy.fixedEnemies.map((enemy) => ({ key: enemy.key, kind: 'fixed' as const })),
+          ...generatedSeeds.map((enemy) => ({ key: enemy.key, kind: 'template' as const })),
           ...(usesHighlight && highlight !== undefined
             ? [{ key: highlight.key, kind: 'highlight' as const }]
             : []),
@@ -459,14 +592,12 @@ export function assessGeneratedEncounter(
         activeMemberKeys: Object.freeze(spawns.map((spawn) => spawn.key)),
         exhausted,
         eligibleKeysByPosition: Object.freeze(positions),
+        ...(context.introductions === undefined
+          ? {}
+          : { introductionExcludedKeysByPosition: Object.freeze(introductionPositions) }),
         ...(row === undefined
           ? {}
-          : {
-              countPreview: previewFor(waveIndex, [
-                ...(usesHighlight && highlight !== undefined ? [highlight.key] : []),
-                ...row.typeKeys,
-              ]),
-            }),
+          : { countPreview: previewFor(waveIndex, generatedKeys(row.typeKeys)) }),
       });
       if (row === undefined) continue; // Native rosters never become fabricated blacklist facts.
       if (policy.fixedEnemies.length !== 0) {
@@ -477,17 +608,14 @@ export function assessGeneratedEncounter(
             actual: row.typeKeys.length,
             allowed: 1,
           });
-      } else if (exactSize > maxCount || (exactSize < minCount && pool.length > 0))
+      } else if (exactSize > maxCount || (exactSize < minCount && pool.some(introduced)))
         issues.push({
           reason: 'typeCount',
           waveIndex,
           actual: exactSize,
           allowed: { min: minCount, max: maxCount },
         });
-      const generated = [
-        ...(usesHighlight && highlight !== undefined ? [highlight.key] : []),
-        ...row.typeKeys,
-      ];
+      const generated = generatedKeys(row.typeKeys);
       let allocations: Readonly<Record<string, number>> | undefined;
       if (row.allocations !== undefined) {
         const keys = Object.keys(row.allocations);
@@ -532,10 +660,7 @@ export function assessGeneratedEncounter(
     if (row === undefined)
       issues.push({ reason: 'required', field: 'wave', waveIndex: wave.waveIndex });
     else {
-      const keys = [
-        ...(usesHighlight && highlight !== undefined ? [highlight.key] : []),
-        ...row.typeKeys,
-      ];
+      const keys = generatedKeys(row.typeKeys);
       if (sampledBudgetKeys(keys).some((key) => row.allocations?.[key] === undefined))
         issues.push({ reason: 'required', field: 'allocations', waveIndex: wave.waveIndex });
     }
@@ -572,7 +697,8 @@ export function assessGeneratedEncounter(
                   ? 'fixed'
                   : usesHighlight && entry.key === highlight?.key
                     ? 'highlight'
-                    : policy.fixedEnemies.length > 0
+                    : policy.fixedEnemies.length > 0 ||
+                        generatedSeeds.some((seed) => seed.key === entry.key)
                       ? 'template'
                       : 'addition',
               ] as const,
@@ -646,6 +772,7 @@ export function assessGeneratedEncounter(
       })
     : [];
   const supported = issues.length === 0;
+  const introductionKeys = policy.choices.filter(triggers);
   // Fangs and Menace are retained leaf children. Their stale values keep the
   // composition editable and do not erase exact count/domain products.
   const compositionSupported = issues.every(
@@ -655,7 +782,7 @@ export function assessGeneratedEncounter(
     supported &&
     expectedBudget !== undefined &&
     waveCount !== undefined &&
-    completeCounts.length === waveCount &&
+    completeCounts.length === waveCount - fixedWaveCount &&
     completeCounts.every((wave) => wave !== undefined);
   const operands: GeneratedEncounterOperands | undefined = !publishable
     ? undefined
@@ -686,6 +813,20 @@ export function assessGeneratedEncounter(
     ...(waveCount === undefined ? {} : { effectiveWaveCount: waveCount }),
     composition,
     eligibleHighlightKeys: Object.freeze(eligibleHighlights.map((choice) => choice.key)),
+    ...(introductionKeys.length === 0
+      ? {}
+      : {
+          introductions: Object.freeze({
+            encounterKeyByEnemyKey: Object.freeze(
+              Object.fromEntries(
+                introductionKeys.map((choice) => [choice.key, choice.introductionEncounterKey!]),
+              ),
+            ),
+            excludedHighlightKeys: Object.freeze(
+              highlightCandidates.filter(triggers).map((choice) => choice.key),
+            ),
+          }),
+        }),
     fangs,
     menace,
     waves: Object.freeze(
@@ -837,14 +978,15 @@ export function initializeGeneratedEncounter(
     }
     return undefined;
   };
+  const fixedWaveCount = policy.fixedWaves?.length ?? 0;
   for (let waveCount = policy.waveCount.min; waveCount <= policy.waveCount.max; waveCount++) {
     const base: AuthoredGeneratedEncounterCustomization = {
       kind: 'generated',
       waveCount,
       ...(typeof policy.budget.base === 'number' ? {} : { baseRoll: policy.budget.base.min }),
     };
-    if (waveCount === 1) {
-      const result = visit(base, 1);
+    if (waveCount === 1 || fixedWaveCount > 0) {
+      const result = visit(base, fixedWaveCount + 1);
       if (result !== undefined) return result;
     } else {
       for (const highlightKey of assess(base).eligibleHighlightKeys) {

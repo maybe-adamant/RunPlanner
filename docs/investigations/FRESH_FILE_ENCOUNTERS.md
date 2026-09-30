@@ -8,26 +8,18 @@ retains the wider feature context.
 
 ## Outcome and model
 
-First delivery enables the Fresh File route without ordinary encounter
-composition customization. Native generation owns enemies, waves and
-enemy-triggered introduction replacements. Do not require fully authored
-generated outcomes or claim exact downstream enemy-introduction history.
+Every generated combat on Fresh File is authored, so the route's introduction
+history is exact; an uncustomized phase reports a finding and blocks
+evaluation and execution. Enemy-triggered introductions are authored set
+members offered only on this route; deterministic first-combat identities
+(`FIntroFight`, `FishmanIntro`, `ClockworkIntro`) keep the contextual
+resolution pattern. Unavailable NPC and cocoon encounters are excluded, and
+boss support follows the agreed first-run restrictions.
 
-Deterministic first-combat identities use the existing contextual encounter
-resolution pattern, not a new composition editor. Pin the proven identities
-per biome; do not classify enemy-triggered H introductions as deterministic
-first-room substitutions. Exclude unavailable NPC/cocoon encounters. Existing
-boss support remains separately governed by the agreed first-run restrictions.
-
-The executor must preserve legitimate native introduction replacements in this
-profile: neither force ordinary Combat over them nor treat them as an unexpected
-identity mismatch. This is a bounded delivery contact to audit, not permission
-to disable encounter checks globally or admit unrelated encounter families.
-Planner preparation/lifecycle and reward chronology remain modeled.
-
-The sections below preserve research and the proposed future editor for a
-separate follow-up after the Fresh File spine is stable. Competing intro order,
-mixed-wave installation and draft UX are not first-delivery prerequisites.
+The executor must bind a published introduction identity and install only its
+generated suffix; native fixed waves stay native. Native replacement of an
+ordinary published identity is a diagnostic, not an allowed substitution on
+this route. Planner preparation, lifecycle and reward chronology remain modeled.
 
 ## Settled authoring model (2026-09-29)
 
@@ -40,11 +32,17 @@ resolution step in the dialog.
    not occurred this run; Lycanthrope: the three prerequisite introductions
    recorded). The picker lists ineligible members with the reason. On mature
    saves every introduction member is ineligible, so nothing changes there.
-2. Customize on the ordinary identity excludes any enemy type whose
-   introduction is unfinished, naming the introduction to select. An
-   introduction's generated suffix applies the same exclusion except for its
-   own seed (`RequireCompletedIntro` filters added candidates only). Fixed
+2. Customize on the ordinary identity excludes an enemy type only where its
+   introduction would trigger at this room (its gate passes here), naming the
+   introduction to select. A type whose introduction is unfinished but whose
+   gate fails here stays admissible, as natively; native admission
+   (`MinDepthBeforeIntros`, `RequireCompletedIntro`) applies independently. An
+   introduction's suffix follows the same rules; its own seed is exempt. Fixed
    waves render read-only; all-fixed H introductions expose no controls.
+   A member is eligible only where its gate passes and a trigger enemy is
+   admissible to an eligible ordinary identity there; the picker names which
+   fails. This preserves the set of native-legal outcomes, not native order or
+   probabilities.
 3. Retained states report findings and are never stripped: an unintroduced
    type under an ordinary identity, or an introduction identity whose gate no
    longer holds after an upstream edit.
@@ -157,11 +155,14 @@ completions; completing one must not regenerate the rest.
 ## Representative acceptance cases
 
 - Mandatory first F/G/I profiles resolve without ordinary composition editing.
-- Preliminary ordinary composition survives entry into the detailed editor.
-- Intro replacement discards the proposal explicitly; no accidental history
-  is credited to discarded enemies or losing intro candidates.
+- An introduction member is offered only where its gate passes and a trigger
+  enemy is admissible; an unreachable member names its trigger enemies.
+- An ordinary composition excludes an enemy only where its introduction would
+  trigger; Lycanthrope before its prerequisites and Mourner after an earlier
+  cage recorded `MournerIntro` stay admissible.
 - Mixed profiles preserve fixed content and native generated-wave shares.
-- Completed introductions change later candidates, not already-prepared cages.
+- Recorded introductions change later cage candidates; completions do not
+  re-prepare an already-prepared cage.
 - Fixed Hecate/Scylla domains are enforced while mature choices remain unchanged.
 - Native fixed and generated/mixed execution paths receive appropriate products.
 

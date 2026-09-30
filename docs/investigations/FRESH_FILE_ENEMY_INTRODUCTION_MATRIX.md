@@ -68,19 +68,19 @@ Base/elite variants inherit the same intro link unless a declaration overrides
 it. Their ordinary eligibility constraints still apply independently. Counts
 below describe native fixed spawn descriptors, not general configurable budgets.
 
-| Region / trigger                | Resolved identity  | Additional introduction gate                                                                                        | Resolved wave content                                                                                | Fresh File disposition                                                                                                                                 |
-| ------------------------------- | ------------------ | ------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Forced second room `F_Combat01` | `FIntroFight`      | Native first-Apollo progression/forced-room conditions                                                              | Four fixed waves: Brawler ×1; Guard ×4; Mage ×3; Brawler ×1 + Guard ×3 + Mage ×1                     | Deterministic first sequence, already Slice H.                                                                                                         |
-| F Radiator / Radiator_Elite     | `RadiatorIntro`    | No local intro requirement beyond unfinished completion and upstream enemy admission                                | W1 Radiator ×5; W2 generated with Radiator seed                                                      | Reachable enemy-triggered introduction.                                                                                                                |
-| F Screamer / Screamer_Elite     | `ScreamerIntro`    | Same                                                                                                                | W1 Screamer ×2; W2 generated with Screamer seed                                                      | Reachable enemy-triggered introduction.                                                                                                                |
-| First eligible G combat         | `FishmanIntro`     | `AlwaysForce`; lifetime completion absent                                                                           | W1 FishmanMelee ×1; W2 FishmanMelee ×2 + FishmanRanged ×1; W3 both ×3                                | Deterministic first G sequence, owned by Slice I. Guard2/Radiator2 also link to this identity, not separate introductions.                             |
-| G FishSwarmerSquad / elite      | `FishSwarmerIntro` | No local intro requirement beyond unfinished completion and upstream enemy admission                                | W1 FishSwarmerSquad ×4; W2 generated with squad seed                                                 | Reachable enemy-triggered introduction. Record native identities deliberately; a squad descriptor is not interchangeable with its spawned child units. |
-| G Turtle / Turtle_Elite         | `TurtleIntro`      | Enemy requires lifetime `RoomCountCache.G_Intro >= 2`                                                               | W1 Turtle ×2; W2/W3 generated with Turtle seed                                                       | **Not reachable on Fresh File's single G entry.** Earlier outline incorrectly included this in the Fresh File inventory.                               |
-| H Mourner / elite               | `MournerIntro`     | No prior current-run occurrence of `MournerIntro`                                                                   | W1 Mourner ×2; W2 Mourner ×4 + BrokenHearted ×2; W3 Mourner_Elite ×1                                 | Reachable; all three waves fixed.                                                                                                                      |
-| H Lamia / elite                 | `LamiaIntro`       | No prior current-run occurrence of `LamiaIntro`                                                                     | W1 Lamia ×1 + BrokenHearted ×4; W2 Lamia ×4 + BrokenHearted ×6; W3 Lamia_Elite ×1 + BrokenHearted ×4 | Reachable; all three waves fixed.                                                                                                                      |
-| H Lovesick / elite              | `LovesickIntro`    | No prior current-run occurrence of `LovesickIntro`                                                                  | W1 Lovesick ×2; W2 Lovesick ×4 + BrokenHearted ×5; W3 Lovesick_Elite ×2                              | Reachable; all three waves fixed.                                                                                                                      |
-| H Lycanthrope / elite           | `LycanthropeIntro` | No prior current-run occurrence; lifetime **occurrences** of MournerIntro, LovesickIntro and LamiaIntro all present | W1 Lycanthrope ×1; W2 Lycanthrope ×3; W3 Lycanthrope_Elite ×1                                        | Reachable only after prerequisite records. The ordinary base enemy can appear before those prerequisites; that does not complete its intro.            |
-| First eligible I combat         | `ClockworkIntro`   | `AlwaysForce`; lifetime completion absent                                                                           | Three fixed waves                                                                                    | Deterministic first I sequence, owned by Slice I. No additional intro links in ordinary BiomeI/BiomeIOptional pools.                                   |
+| Region / trigger                | Resolved identity  | Additional introduction gate                                                                                        | Resolved wave content                                                                                | Fresh File disposition                                                                                                                                                        |
+| ------------------------------- | ------------------ | ------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Forced second room `F_Combat01` | `FIntroFight`      | Native first-Apollo progression/forced-room conditions                                                              | Four fixed waves: Brawler ×1; Guard ×4; Mage ×3; Brawler ×1 + Guard ×3 + Mage ×1                     | Deterministic first sequence, already Slice H.                                                                                                                                |
+| F Radiator / Radiator_Elite     | `RadiatorIntro`    | No local intro requirement beyond unfinished completion and upstream enemy admission                                | W1 Radiator ×5; W2 generated with Radiator seed                                                      | Reachable enemy-triggered introduction.                                                                                                                                       |
+| F Screamer / Screamer_Elite     | `ScreamerIntro`    | Same                                                                                                                | W1 Screamer ×2; W2 generated with Screamer seed                                                      | Reachable enemy-triggered introduction.                                                                                                                                       |
+| First eligible G combat         | `FishmanIntro`     | `AlwaysForce`; lifetime completion absent                                                                           | W1 FishmanMelee ×1; W2 FishmanMelee ×2 + FishmanRanged ×1; W3 both ×3                                | Deterministic first G sequence, owned by Slice I. Guard2/Radiator2 also link to this identity, not separate introductions.                                                    |
+| G FishSwarmerSquad / elite      | `FishSwarmerIntro` | No local intro requirement beyond unfinished completion and upstream enemy admission                                | W1 FishSwarmerSquad ×4; W2 generated with squad seed                                                 | Reachable enemy-triggered introduction. Record native identities deliberately; a squad descriptor is not interchangeable with its spawned child units.                        |
+| G Turtle / Turtle_Elite         | `TurtleIntro`      | Ordinary Turtle requires lifetime `RoomCountCache.G_Intro >= 2`; `Turtle_Elite` takes `Elite`'s depth gate instead  | W1 Turtle ×2; W2/W3 generated with Turtle seed                                                       | **Reachable via `Turtle_Elite` at G depth ≥3** (`EnemyData_Turtle.lua:100-102`, `EnemyData.lua:253`, `RunData.lua:1363`); ordinary Turtle is never drawn on a single G entry. |
+| H Mourner / elite               | `MournerIntro`     | No prior current-run occurrence of `MournerIntro`                                                                   | W1 Mourner ×2; W2 Mourner ×4 + BrokenHearted ×2; W3 Mourner_Elite ×1                                 | Reachable; all three waves fixed.                                                                                                                                             |
+| H Lamia / elite                 | `LamiaIntro`       | No prior current-run occurrence of `LamiaIntro`                                                                     | W1 Lamia ×1 + BrokenHearted ×4; W2 Lamia ×4 + BrokenHearted ×6; W3 Lamia_Elite ×1 + BrokenHearted ×4 | Reachable; all three waves fixed.                                                                                                                                             |
+| H Lovesick / elite              | `LovesickIntro`    | No prior current-run occurrence of `LovesickIntro`                                                                  | W1 Lovesick ×2; W2 Lovesick ×4 + BrokenHearted ×5; W3 Lovesick_Elite ×2                              | Reachable; all three waves fixed.                                                                                                                                             |
+| H Lycanthrope / elite           | `LycanthropeIntro` | No prior current-run occurrence; lifetime **occurrences** of MournerIntro, LovesickIntro and LamiaIntro all present | W1 Lycanthrope ×1; W2 Lycanthrope ×3; W3 Lycanthrope_Elite ×1                                        | Reachable only after prerequisite records. The ordinary base enemy can appear before those prerequisites; that does not complete its intro.                                   |
+| First eligible I combat         | `ClockworkIntro`   | `AlwaysForce`; lifetime completion absent                                                                           | Three fixed waves                                                                                    | Deterministic first I sequence, owned by Slice I. No additional intro links in ordinary BiomeI/BiomeIOptional pools.                                                          |
 
 Declaration evidence: `EncounterData.lua:257–388` and `FIntroFight`;
 `EncounterData_Intro.lua:8–168,289–608`;
@@ -107,31 +107,26 @@ Declaration evidence: `EncounterData.lua:257–388` and `FIntroFight`;
   unfinished replacement through that seed. Added H types can still trigger H
   intros. `GeneratedH_Treant2` likewise has added H types; do not scope replacement
   only to the default `GeneratedH` identity.
-- The current catalog's `GeneratedH_Screamer2` requirements omit that lifetime
-  completion predicate because mature projects satisfy it. Fresh File needs the
-  exact intro-completion condition; `knownEncounteredEnemies.Screamer` is not an
-  equivalent substitute. This is a follow-up modeling item, not changed here.
+- Delivered: `GeneratedH_Screamer2` requires ScreamerIntro completed on Fresh
+  File through `encounterCompletionCount`; mature saves satisfy it.
 - Fresh File excludes vows, NPC combat events and cocoons. No Menace-based
   introduction path needs to be invented for this profile.
 
 ## Is current history enough?
 
-| Required fact                                                 | Existing planner product                                                        | Assessment                                                                                                                                                                   |
-| ------------------------------------------------------------- | ------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| A resolved intro has been recorded                            | `HistoryLedgers.encounterRecords`; `projectRouteEncounterKeyCounts`             | Exists, with preparation ordering. Fresh lifetime occurrences can use reached route records because initial history is empty.                                                |
-| A resolved intro has completed                                | `HistoryLedgers.encounterCompletions`                                           | Ledger exists. Expose/use a completion-specific query; the occurrence-count helper is not sufficient. Mature satisfaction is a profile fact, not an invented run completion. |
-| Exact known enemy types from a completed authored composition | `knownEncounteredEnemyKeys`                                                     | Exists, but is positive knowledge only: absence means unrecorded, not unseen. This is not the native intro-completion authority.                                             |
-| Fixed intro roster contributes enemy evidence                 | Currently recorded keys come from `generatedCustomization.encounteredEnemyKeys` | Not covered by the current generated-only producer. Extend from resolved fixed/mixed declarations if enemy-history completeness is promised.                                 |
-| Unknown native ordinary roster                                | No exact enemy keys or native replacement identity                              | Cannot support exact downstream intro predictions. Full authored mode cannot mix arbitrary native gaps with claimed complete introduction history.                           |
-| H later cage sees earlier prepared intro                      | Sequential `encounterRecorded` prefix                                           | Correct architecture already exists. Must consume records at preparation, not promote them to completions.                                                                   |
-| Prepared cage changes after another cage completes            | Existing frozen preparation product                                             | It must **not** change. Only later preparation sees the new completion.                                                                                                      |
+| Required fact                                      | Existing planner product                                            | Assessment                                                                                                                                                                   |
+| -------------------------------------------------- | ------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| A resolved intro has been recorded                 | `HistoryLedgers.encounterRecords`; `projectRouteEncounterKeyCounts` | Exists, with preparation ordering. Fresh lifetime occurrences can use reached route records because initial history is empty.                                                |
+| A resolved intro has completed                     | `HistoryLedgers.encounterCompletions`                               | Ledger exists. Expose/use a completion-specific query; the occurrence-count helper is not sufficient. Mature satisfaction is a profile fact, not an invented run completion. |
+| Unknown native ordinary roster                     | No exact enemy keys or native replacement identity                  | Cannot support exact downstream intro predictions. Full authored mode cannot mix arbitrary native gaps with claimed complete introduction history.                           |
+| H later cage sees earlier prepared intro           | Sequential `encounterRecorded` prefix                               | Correct architecture already exists. Must consume records at preparation, not promote them to completions.                                                                   |
+| Prepared cage changes after another cage completes | Existing frozen preparation product                                 | It must **not** change. Only later preparation sees the new completion.                                                                                                      |
 
 Code evidence: `simulation/history/model.ts` (`HistoryLedgers`),
 `history/facts.ts` (`projectRouteEncounterKeyCounts`,
-`projectKnownEncounteredEnemyRecord`), `history/fold.ts`
+`projectRouteEncounterCompletionCounts`), `history/fold.ts`
 (`encounterRecorded`, `encounterCompleted`),
-`encounters/generation-preparation.ts`, and
-`encounters/generation.ts:encounteredEnemyKeys`, under
+`encounters/generation-preparation.ts`, and `encounters/generation.ts`, under
 `packages/planner-engine/src/`. Existing lifecycle authority:
 `docs/design/ROOM_LIFECYCLE_MODEL.md`, encounter preparation/history section.
 
@@ -215,8 +210,8 @@ generated suffix despite `Generated = true`.
 
 Existing mixed-generation function probes in `FRESH_FILE_ENCOUNTERS.md` remain
 valid as bounded control-flow evidence. They are not live proof of ordering or
-installation. Replace the proposed Fresh Turtle live case with FishSwarmer;
-Turtle can remain an out-of-profile source fixture, not Fresh acceptance.
+installation. FishSwarmer is the primary G live case; `TurtleIntro` (through
+`Turtle_Elite`) is a second, three-wave mixed profile.
 
 ## Disposition (locked 2026-09-29)
 
@@ -224,8 +219,11 @@ Turtle can remain an out-of-profile source fixture, not Fresh acceptance.
   a set member gated on exact completion/occurrence facts from the existing
   ledgers, not inferred enemy-seen booleans. Customize edits only a settled
   identity; fixed waves are read-only and mixed profiles own their suffix.
-- The ordinary identity's type domain excludes unfinished-introduction types;
-  an introduction's suffix does the same except its own seed. Competing
+- The ordinary identity's type domain excludes a type only where its
+  introduction would trigger here (its gate passes at this room); native
+  admission applies independently, and an introduction's suffix follows the
+  same rules except its own seed. A member needs its gate and an admissible
+  trigger enemy. Competing
   introductions therefore never occur in authored mode; traversal order is a
   live diagnostic, not a contract.
 - On `FreshFile` customization is required on every generated phase and mixed

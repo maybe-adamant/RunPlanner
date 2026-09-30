@@ -2,6 +2,7 @@ import type {
   EncounterEnemyChoice,
   InfiniteRosterEnemyChoice,
 } from '@run-planner/engine/catalog-schema';
+import { notFreshFileRoute } from '../../routes';
 
 type EnemyFacts = Partial<
   Omit<EncounterEnemyChoice, 'key' | 'label' | 'nativeId' | 'difficultyRating'>
@@ -372,6 +373,36 @@ const encounterDepth = (value: number): EnemyFacts => ({
   minimumDepth: { axis: 'biomeEncounterDepth', value },
 });
 const soloBlocked = { blockSolo: true } as const;
+// Native IntroEncounterName, which the elite inherits (EnemyData_<Enemy>.lua).
+const introducedBy = (introductionEncounterKey: string): EnemyFacts => ({
+  introductionEncounterKey,
+});
+// Profile gates read the save's live caches (RoomLogic.lua:1926, 4456), so an
+// earlier encounter on a fresh route can satisfy them; every mature save does.
+// EnemyData_SiegeVine.lua:62,123: an earlier MiniBossFogEmitter occurrence.
+const fogEmitterOccurred = {
+  kind: 'any',
+  requirements: [
+    notFreshFileRoute,
+    {
+      kind: 'encounterKeyCount',
+      scope: 'route',
+      encounterKeys: ['MiniBossFogEmitter'],
+      range: { min: 1 },
+    },
+  ],
+} as const satisfies EnemyFacts['admission'];
+// EnemyData_WaterUnit.lua:9-14: a completed MiniBossWaterUnit.
+const waterUnitCompleted = {
+  kind: 'any',
+  requirements: [
+    notFreshFileRoute,
+    { kind: 'encounterCompletionCount', encounterKeys: ['MiniBossWaterUnit'], range: { min: 1 } },
+  ],
+} as const satisfies EnemyFacts['admission'];
+// EnemyData_Turtle.lua:9-15: two lifetime G_Intro visits, which a fresh
+// profile's single G entry cannot reach.
+const turtleVisits = notFreshFileRoute satisfies EnemyFacts['admission'];
 const automatons = { group: 'Automatons' } as const;
 const chronosForces = { group: 'ChronosForces' } as const;
 
@@ -380,19 +411,41 @@ const chronosForces = { group: 'ChronosForces' } as const;
 const f = [
   ...pair('Guard', 'Whisper'),
   ...pair('Brawler', 'Wastrel'),
-  ...pair('Radiator', 'Spindle'),
-  ...pair('Screamer', 'Wailer'),
+  ...pair('Radiator', 'Spindle', introducedBy('RadiatorIntro'), introducedBy('RadiatorIntro')),
+  ...pair('Screamer', 'Wailer', introducedBy('ScreamerIntro'), introducedBy('ScreamerIntro')),
   ...pair('Mage', 'Casket'),
-  ...pair('SiegeVine', 'Thorn-Weeper', soloBlocked, soloBlocked),
+  ...pair(
+    'SiegeVine',
+    'Thorn-Weeper',
+    { ...soloBlocked, admission: fogEmitterOccurred },
+    { ...soloBlocked, admission: fogEmitterOccurred },
+  ),
 ];
 const g = [
   ...pair('FishmanMelee', 'Lurker'),
   ...pair('FishmanRanged', 'Hippo'),
-  ...pair('FishSwarmerSquad', 'Pinhead'),
-  ...pair('Turtle', 'Shellback'),
-  ...pair('WaterUnit', 'Sea-Serpent'),
-  ...pair('Guard2', 'Wet-Whisper'),
-  ...pair('Radiator2', 'Sop-Spindle', soloBlocked, soloBlocked),
+  ...pair(
+    'FishSwarmerSquad',
+    'Pinhead',
+    introducedBy('FishSwarmerIntro'),
+    introducedBy('FishSwarmerIntro'),
+  ),
+  // The elite's Elite gate replaces Turtle's own, but it keeps the introduction.
+  ...pair(
+    'Turtle',
+    'Shellback',
+    { ...introducedBy('TurtleIntro'), admission: turtleVisits },
+    introducedBy('TurtleIntro'),
+  ),
+  // Only the ordinary Sea-Serpent carries the gate; its elite takes Elite's.
+  ...pair('WaterUnit', 'Sea-Serpent', { admission: waterUnitCompleted }),
+  ...pair('Guard2', 'Wet-Whisper', introducedBy('FishmanIntro'), introducedBy('FishmanIntro')),
+  ...pair(
+    'Radiator2',
+    'Sop-Spindle',
+    { ...soloBlocked, ...introducedBy('FishmanIntro') },
+    { ...soloBlocked, ...introducedBy('FishmanIntro') },
+  ),
 ];
 const hPassive = [
   enemy('DespairElemental_Elite', 'Bawlder (Elite)', {
@@ -406,16 +459,28 @@ const hPassive = [
 ];
 const h = [
   ...pair('BrokenHearted', 'Smacker', {}, encounterDepth(2)),
-  ...pair('Lovesick', 'Holeheart', {}, encounterDepth(2)),
-  ...pair('Lycanthrope', 'Lycaon'),
-  ...pair('Mourner', 'Mourner', {}, encounterDepth(2)),
+  ...pair('Lovesick', 'Holeheart', introducedBy('LovesickIntro'), {
+    ...encounterDepth(2),
+    ...introducedBy('LovesickIntro'),
+  }),
+  ...pair(
+    'Lycanthrope',
+    'Lycaon',
+    introducedBy('LycanthropeIntro'),
+    introducedBy('LycanthropeIntro'),
+  ),
+  ...pair('Mourner', 'Mourner', introducedBy('MournerIntro'), {
+    ...encounterDepth(2),
+    ...introducedBy('MournerIntro'),
+  }),
   ...pair(
     'Lamia',
     'Lamia',
-    { excludes: ['Lamia_Elite', 'Lamia_Miniboss'] },
+    { excludes: ['Lamia_Elite', 'Lamia_Miniboss'], ...introducedBy('LamiaIntro') },
     {
       ...encounterDepth(2),
       excludes: ['Lamia', 'Lamia_Miniboss'],
+      ...introducedBy('LamiaIntro'),
     },
   ),
   enemy('FogEmitter2', 'Sorrow-Spiller', {
@@ -549,6 +614,26 @@ export const infiniteRosterEnemyPools = {
     ...rosterPair('BloodlessPitcher', 'Burn-Flinger'),
   ],
 } as const satisfies Record<string, readonly InfiniteRosterEnemyChoice[]>;
+
+/** A declaration-owned fixed spawn: the pool identity with its native fixed count. */
+export function fixedSpawn(
+  pool: readonly EncounterEnemyChoice[],
+  key: string,
+  fixedCount: number,
+): EncounterEnemyChoice {
+  const choice = pool.find((entry) => entry.key === key);
+  if (choice === undefined) throw new Error(`Missing fixed spawn identity ${key}`);
+  return { ...choice, fixedCount };
+}
+
+export function poolEnemy(
+  pool: readonly EncounterEnemyChoice[],
+  key: string,
+): EncounterEnemyChoice {
+  const choice = pool.find((entry) => entry.key === key);
+  if (choice === undefined) throw new Error(`Missing pool identity ${key}`);
+  return choice;
+}
 
 export const fixedFieldsEnemies = {
   treant: enemy('Treant2', 'Brush-Stalker', { elite: true, fixedCount: 1 }),

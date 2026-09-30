@@ -492,6 +492,8 @@ export function bindOccurrenceLocalInteractions(
                     ...generatedSelection.fixedEnemies,
                     ...(generatedDecision?.retainedChoiceLabels ?? []),
                   ];
+            const introductionLabel = (encounterKey: string) =>
+              catalog.encounterDefinitions.byKey[encounterKey]?.label ?? encounterKey;
             const generatedEngineAssessment =
               generatedDecision === undefined ||
               generatedSelection === undefined ||
@@ -504,6 +506,7 @@ export function bindOccurrenceLocalInteractions(
                 : projectGeneratedEncounterAssessment(
                     generatedEngineAssessment,
                     generatedLabels,
+                    introductionLabel,
                     generatedValue,
                   );
             const generatedHighlightPicker =
@@ -514,6 +517,7 @@ export function bindOccurrenceLocalInteractions(
                     generatedValue.highlightKey,
                     generatedLabels,
                     generatedSelection.choices.map((choice) => choice.key),
+                    introductionLabel,
                   );
             const generatedWaveDraftFor =
               generatedDecision === undefined ||
@@ -551,6 +555,7 @@ export function bindOccurrenceLocalInteractions(
                       confirmedSeedCount,
                       typeKeys,
                       generatedLabels,
+                      introductionLabel,
                     );
                   };
             const generatedFangsDraftFor =

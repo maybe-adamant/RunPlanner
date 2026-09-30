@@ -1,3 +1,4 @@
+import type { RequirementExpression } from '@run-planner/engine/requirements';
 import type {
   RawEncounterDefinitionDeclaration,
   RawEncounterEnvelopeDeclaration,
@@ -172,3 +173,22 @@ export const arachneCombatCocoonCount = {
   label: 'Cocoons',
   selection: { kind: 'cocoonCount', minimum: 8, maximum: 14 },
 } as const;
+
+/**
+ * The native gate of an enemy-triggered introduction on a fresh profile. Native
+ * SetupEncounter replaces the drawn encounter only while the introduction is
+ * uncompleted (RunLogic.lua:1125-1148); mature saves have completed every one.
+ */
+export function introductionGate(
+  encounterKey: string,
+  requirements: readonly RequirementExpression[],
+): RequirementExpression {
+  return {
+    kind: 'all',
+    requirements: [
+      { kind: 'routeKeyEquals', routeKey: 'FreshFile' },
+      { kind: 'encounterCompletionCount', encounterKeys: [encounterKey], range: { max: 0 } },
+      ...requirements,
+    ],
+  };
+}

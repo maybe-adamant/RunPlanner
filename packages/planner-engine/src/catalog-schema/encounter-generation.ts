@@ -1,3 +1,5 @@
+import type { RequirementExpression } from '../requirements/model';
+
 /** Native generator facts, independent of authored rosters and combat simulation. */
 export interface EncounterEnemyChoice {
   readonly key: string;
@@ -35,6 +37,10 @@ export interface EncounterEnemyChoice {
     readonly axis: 'biomeDepthCache' | 'biomeEncounterDepth';
     readonly value: number;
   };
+  /** Native IntroEncounterName, inherited by the elite: the encounter that introduces this enemy. */
+  readonly introductionEncounterKey?: string;
+  /** Native enemy GameStateRequirements beyond depth, evaluated at encounter preparation. */
+  readonly admission?: RequirementExpression;
 }
 
 export interface GeneratedEncounterSelection {
@@ -62,6 +68,16 @@ export interface GeneratedEncounterSelection {
   readonly maxTypesPerGroup: Readonly<Partial<Record<'Automatons' | 'ChronosForces', number>>>;
   /** Named fixed spawns precede generated placeholder entries, not ordinary additions. */
   readonly fixedEnemies: readonly EncounterEnemyChoice[];
+  /**
+   * Declaration-owned leading SpawnWaves, each spawn with its fixed count. They
+   * count toward the wave total and its budget shares, suppress the shared
+   * highlight, and are never regenerated.
+   */
+  readonly fixedWaves?: readonly (readonly EncounterEnemyChoice[])[];
+  /** Named Generated WaveTemplate spawns that open every generated wave; generation sizes them. */
+  readonly generatedSeeds?: readonly EncounterEnemyChoice[];
+  /** Native RequireCompletedIntro: generated additions exclude every unintroduced enemy. */
+  readonly requireCompletedIntro?: boolean;
   readonly fangs?: {
     readonly perks: Readonly<
       Record<

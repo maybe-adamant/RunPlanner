@@ -54,6 +54,7 @@ export interface RawEncounterDefinitionDeclaration {
   readonly skipEndEncounterEffects?: boolean;
   readonly blocksKeepsakeSelectionKeys?: readonly string[];
   readonly requirements?: RequirementExpression;
+  readonly enemyTriggeredIntroduction?: boolean;
   readonly sequenceEffect?: { readonly kind: 'terminateSuffix' };
   readonly npcPresentationKey?: string;
   readonly npcShoppingProtection?: NpcShoppingProtection;
@@ -182,6 +183,7 @@ export interface RawEncounterSetDeclaration {
     readonly key: string;
     readonly encounterDefinitionKeys: readonly string[];
     readonly label?: string;
+    readonly routeKeys?: readonly string[];
     readonly resolution?:
       | { readonly kind: 'direct'; readonly encounterDefinitionKey: string }
       | {

@@ -246,6 +246,11 @@ export function normalizeEncounterDefinitions(
         typeof raw.createsIncomingRewardAtStart !== 'boolean'
       )
         fail(`${path}.createsIncomingRewardAtStart`, 'must be boolean');
+      if (
+        raw.enemyTriggeredIntroduction !== undefined &&
+        typeof raw.enemyTriggeredIntroduction !== 'boolean'
+      )
+        fail(`${path}.enemyTriggeredIntroduction`, 'must be boolean');
       const nemesisRandomEvent =
         raw.nemesisRandomEvent === undefined
           ? undefined
@@ -498,6 +503,9 @@ export function normalizeEncounterDefinitions(
         skipEndEncounterEffects: raw.skipEndEncounterEffects ?? false,
         requiresInteraction: raw.requiresInteraction ?? false,
         suppressesIncomingReward: raw.suppressesIncomingReward ?? false,
+        ...(raw.enemyTriggeredIntroduction === true
+          ? { enemyTriggeredIntroduction: true as const }
+          : {}),
         ...(raw.createsIncomingRewardAtStart === true
           ? { createsIncomingRewardAtStart: true as const }
           : {}),

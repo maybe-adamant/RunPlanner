@@ -71,6 +71,8 @@ function requirementExplanation(requirement: RequirementExpression): string {
       return `Requires ${requirement.envelopeKey}/${requirement.slotKey} within the last ${requirement.roomWindow} rooms to be ${rangeText(requirement.range)}.`;
     case 'encounterKeyCount':
       return `Requires ${requirement.scope} encounter count for ${requirement.encounterKeys.join(', ')} to be ${rangeText(requirement.range)}.`;
+    case 'encounterCompletionCount':
+      return `Requires route completion count for ${requirement.encounterKeys.join(', ')} to be ${rangeText(requirement.range)}.`;
     case 'previousRoomEncounterKeyCount':
       return `Requires ${requirement.encounterKeys.join(', ')} in the previous ${requirement.roomWindow} rooms to be ${rangeText(requirement.range)}.`;
     case 'notInCurrentRoomShopOptions':

@@ -1,11 +1,42 @@
 import { generatedEncounterChoices } from './generated/policies';
 import { notFreshFileRoute } from '../routes';
+import type { RequirementExpression } from '@run-planner/engine/requirements';
 import type { RawEncounterDefinitionDeclaration, RawEncounterSetDeclaration } from './types';
 import {
+  introductionGate,
   nemesisEncounterKeys,
   nemesisIncomingRewardExclusions,
   supportedFieldNpcEncounterKeys,
 } from './shared';
+
+/** H introductions also require no earlier occurrence this run (EncounterData_Intro.lua). */
+const notOccurred = (encounterKey: string): RequirementExpression => ({
+  kind: 'encounterKeyCount',
+  scope: 'route',
+  encounterKeys: [encounterKey],
+  range: { max: 0 },
+});
+const occurred = (encounterKey: string): RequirementExpression => ({
+  kind: 'encounterKeyCount',
+  scope: 'route',
+  encounterKeys: [encounterKey],
+  range: { min: 1 },
+});
+
+// Each H introduction inherits GeneratedH's flags; its three waves are fixed, so
+// it has no generated suffix and no customization.
+function hIntroduction(key: string, label: string, requirements: readonly RequirementExpression[]) {
+  return {
+    key,
+    label,
+    kind: 'combat',
+    countsEncounterDepth: true,
+    hostsGorgon: true,
+    canEncounterSkip: true,
+    enemyTriggeredIntroduction: true,
+    requirements: introductionGate(key, [notOccurred(key), ...requirements]),
+  } as const satisfies RawEncounterDefinitionDeclaration;
+}
 
 export const hEncounterDefinitions = [
   {
@@ -66,6 +97,18 @@ export const hEncounterDefinitions = [
           encounterKeys: ['GeneratedH_Screamer2'],
           range: { max: 0 },
         },
+        // EncounterData_Generated.lua:384; every mature save has completed ScreamerIntro.
+        {
+          kind: 'any',
+          requirements: [
+            notFreshFileRoute,
+            {
+              kind: 'encounterCompletionCount',
+              encounterKeys: ['ScreamerIntro'],
+              range: { min: 1 },
+            },
+          ],
+        },
       ],
     },
     customization: [generatedEncounterChoices.GeneratedH_Screamer2],
@@ -75,6 +118,19 @@ export const hEncounterDefinitions = [
     hostsGorgon: true,
     canEncounterSkip: true,
   },
+  // EncounterData_Intro.lua:372: Mourner ×2; Mourner ×4 + BrokenHearted ×2; Mourner_Elite ×1.
+  hIntroduction('MournerIntro', 'Mourner introduction', []),
+  // :448: Lamia ×1 + BrokenHearted ×4; Lamia ×4 + BrokenHearted ×6; Lamia_Elite ×1 + BrokenHearted ×4.
+  hIntroduction('LamiaIntro', 'Lamia introduction', []),
+  // :534: Lovesick ×2; Lovesick ×4 + BrokenHearted ×5; Lovesick_Elite ×2.
+  hIntroduction('LovesickIntro', 'Holeheart introduction', []),
+  // :289: Lycanthrope ×1; Lycanthrope ×3; Lycanthrope_Elite ×1. Needs the three
+  // other introductions to have occurred on the save (this route, on a fresh one).
+  hIntroduction('LycanthropeIntro', 'Lycaon introduction', [
+    occurred('MournerIntro'),
+    occurred('LovesickIntro'),
+    occurred('LamiaIntro'),
+  ]),
   {
     key: 'NemesisCombatH',
     customization: [generatedEncounterChoices.NemesisCombatH],
@@ -254,9 +310,24 @@ export const hEncounterSets = [
       'GeneratedH',
       'GeneratedH_Treant2',
       'GeneratedH_Screamer2',
+      'MournerIntro',
+      'LamiaIntro',
+      'LovesickIntro',
+      'LycanthropeIntro',
       'NemesisCombatH',
     ],
     defaultAuthoringProfileKey: 'GeneratedH',
+    authoringProfiles: [
+      { key: 'GeneratedH', encounterDefinitionKeys: ['GeneratedH'] },
+      { key: 'GeneratedH_Treant2', encounterDefinitionKeys: ['GeneratedH_Treant2'] },
+      { key: 'GeneratedH_Screamer2', encounterDefinitionKeys: ['GeneratedH_Screamer2'] },
+      ...['MournerIntro', 'LamiaIntro', 'LovesickIntro', 'LycanthropeIntro'].map((key) => ({
+        key,
+        encounterDefinitionKeys: [key],
+        routeKeys: ['FreshFile'],
+      })),
+      { key: 'NemesisCombatH', encounterDefinitionKeys: ['NemesisCombatH'] },
+    ],
   },
   {
     key: 'HEncountersPassive',

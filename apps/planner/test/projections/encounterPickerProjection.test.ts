@@ -13,8 +13,20 @@ import {
   goldenFBiome,
   goldenFOccurrenceId,
 } from '@run-planner/test-fixtures/underworld';
-import { createEncounterPhaseAddress } from '@run-planner/engine/authored-project';
 import {
+  createFreshFileRouteProject,
+  freshFileFBiome,
+} from '@run-planner/test-fixtures/fresh-file';
+import {
+  createEncounterPhaseAddress,
+  createOccurrenceId,
+  decodeProjectDocument,
+  encodeProjectDocument,
+  type BiomeAddress,
+  type ProjectDocument,
+} from '@run-planner/engine/authored-project';
+import {
+  encounterPhaseAuthoringDomainForRoom,
   simulateProjectAssembly,
   type EncounterRequirementEvidence,
 } from '@run-planner/engine/simulation';
@@ -193,6 +205,110 @@ describe('encounter picker projection', () => {
     expect(artemis).toMatchObject({
       disabled: true,
       explanation: expect.stringContaining('Requires biome depth at least 4; currently 1.'),
+    });
+  });
+
+  it('lists introduction members with their gate or reachability evidence', () => {
+    const items = (project: ProjectDocument, biome: BiomeAddress, occurrenceId: string) => {
+      const assembly = simulateProjectAssembly(catalog, project);
+      const phase = createEncounterPhaseAddress(
+        biome,
+        { kind: 'occurrence', occurrenceId: createOccurrenceId(occurrenceId) },
+        'Encounter',
+      );
+      const keys = ['GeneratedF', 'RadiatorIntro', 'ScreamerIntro'];
+      return projectEncounterPicker(
+        catalog,
+        createContextualPickerProjection(createContextualOptionResolver(catalog)),
+        keys.map((key) => ({ value: key, label: catalog.encounterDefinitions.byKey[key]!.label })),
+        'GeneratedF',
+        createCandidateSessionFactory(catalog).bind(assembly).encounterPhases(phase, keys),
+      ).sections.flatMap((section) => section.items);
+    };
+    const fresh = createFreshFileRouteProject();
+    expect(items(fresh, freshFileFBiome, 'fresh-2-0')).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ value: 'RadiatorIntro', disabled: false }),
+        expect.objectContaining({ value: 'ScreamerIntro', disabled: false }),
+      ]),
+    );
+    expect(items(fresh, freshFileFBiome, 'fresh-1-0')).toContainEqual(
+      expect.objectContaining({
+        value: 'RadiatorIntro',
+        disabled: true,
+        explanation:
+          'No encounter here can include Spindle / Spindle (Elite), so this introduction cannot occur.',
+      }),
+    );
+    expect(items(fresh, freshFileFBiome, 'fresh-3-0')).toContainEqual(
+      expect.objectContaining({
+        value: 'RadiatorIntro',
+        disabled: true,
+        explanation: 'Spindle introduction was already completed this run.',
+      }),
+    );
+    // The mature domain omits every introduction, so its rows are unchanged.
+    const mature = createCompleteFGProject();
+    const occurrence = mature.route.biomes[0]!.topology!.occurrences.find(
+      (entry) => entry.occurrenceId === goldenFOccurrenceId(5, 1),
+    )!;
+    const matureKeys = encounterPhaseAuthoringDomainForRoom(
+      catalog,
+      goldenFBiome,
+      catalog.rooms.byKey[occurrence.gameName]!,
+      { kind: 'occurrence', occurrenceId: occurrence.occurrenceId },
+      occurrence.encounters,
+    )[0]!.choices.map((choice) => choice.key);
+    expect(matureKeys).toEqual([
+      'GeneratedF',
+      'ArtemisCombatF',
+      'ArachneCombatF',
+      'NemesisCombatF',
+      'NemesisRandomEvent',
+    ]);
+  });
+
+  it('renders a retained off-route introduction as a disabled row with its route evidence', () => {
+    const raw = JSON.parse(encodeProjectDocument(createCompleteFGProject()));
+    const retained = raw.route.biomes[0].topology.occurrences.find(
+      (entry: { occurrenceId: string }) => entry.occurrenceId === goldenFOccurrenceId(5, 1),
+    );
+    retained.encounters.encounterKeyByPhase.Encounter = 'RadiatorIntro';
+    const project = decodeProjectDocument(raw, catalog);
+    const occurrence = project.route.biomes[0]!.topology!.occurrences.find(
+      (entry) => entry.occurrenceId === goldenFOccurrenceId(5, 1),
+    )!;
+    const keys = encounterPhaseAuthoringDomainForRoom(
+      catalog,
+      goldenFBiome,
+      catalog.rooms.byKey[occurrence.gameName]!,
+      { kind: 'occurrence', occurrenceId: occurrence.occurrenceId },
+      occurrence.encounters,
+    )[0]!.choices.map((choice) => choice.key);
+    expect(keys).toContain('RadiatorIntro');
+    const phase = createEncounterPhaseAddress(
+      goldenFBiome,
+      { kind: 'occurrence', occurrenceId: occurrence.occurrenceId },
+      'Encounter',
+    );
+    const model = projectEncounterPicker(
+      catalog,
+      createContextualPickerProjection(createContextualOptionResolver(catalog)),
+      keys.map((key) => ({
+        value: key,
+        label: catalog.encounterDefinitions.byKey[key]?.label ?? key,
+      })),
+      'RadiatorIntro',
+      createCandidateSessionFactory(catalog)
+        .bind(simulateProjectAssembly(catalog, project))
+        .encounterPhases(phase, keys),
+    );
+    expect(model.selected).toMatchObject({
+      value: 'RadiatorIntro',
+      state: 'impossible',
+      explanation: expect.stringContaining(
+        `Requires the ${catalog.routes.byKey.FreshFile!.label} route.`,
+      ),
     });
   });
 

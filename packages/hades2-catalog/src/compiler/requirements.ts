@@ -163,6 +163,15 @@ function normalizeRequirementWith(
         encounterKeys: freezeUniqueStrings(requirement.encounterKeys, `${path}.encounterKeys`),
         range: normalizeRange(requirement.range, `${path}.range`),
       });
+    case 'encounterCompletionCount':
+      if (requirement.encounterKeys.length === 0) {
+        fail(`${path}.encounterKeys`, 'must not be empty');
+      }
+      return Object.freeze({
+        kind: 'encounterCompletionCount',
+        encounterKeys: freezeUniqueStrings(requirement.encounterKeys, `${path}.encounterKeys`),
+        range: normalizeRange(requirement.range, `${path}.range`),
+      });
     case 'previousRoomEncounterKeyCount':
       if (requirement.encounterKeys.length === 0) {
         fail(`${path}.encounterKeys`, 'must not be empty');
@@ -347,6 +356,7 @@ export function validateRequirementReferences(
       }
       return;
     case 'encounterKeyCount':
+    case 'encounterCompletionCount':
     case 'previousRoomEncounterKeyCount':
     case 'counterRange':
     case 'clockworkGoalsRemaining':
@@ -378,6 +388,7 @@ function visitEncounterHistoryRequirementKeys(
       visitEncounterHistoryRequirementKeys(requirement.requirement, visit, `${path}.requirement`);
       return;
     case 'encounterKeyCount':
+    case 'encounterCompletionCount':
     case 'previousRoomEncounterKeyCount':
       visit(requirement.encounterKeys, `${path}.encounterKeys`);
       return;

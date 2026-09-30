@@ -293,6 +293,7 @@ describe('bound generated encounter edits', () => {
   const assessment: WorkspaceGeneratedEncounterAssessment = {
     issues: [],
     composition: 'active',
+    sharedEnemy: true,
     warnings: [],
     waves: [
       {

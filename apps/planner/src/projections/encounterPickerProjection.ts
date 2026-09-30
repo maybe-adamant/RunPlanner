@@ -37,6 +37,15 @@ function encounterNames(catalog: Catalog, keys: readonly string[]): string {
   );
 }
 
+function generatedEnemyNames(catalog: Catalog, keys: readonly string[]): string {
+  const labels = new Map<string, string>();
+  for (const definition of catalog.encounterDefinitions.values)
+    for (const decision of definition.customization ?? [])
+      if (decision.selection.kind === 'generated')
+        for (const choice of decision.selection.choices) labels.set(choice.key, choice.label);
+  return keys.length === 0 ? 'its enemy' : keys.map((key) => labels.get(key) ?? key).join(' / ');
+}
+
 function requirementMessages(
   catalog: Catalog,
   evidence: EncounterRequirementEvidence,
@@ -73,6 +82,16 @@ function requirementMessages(
         expected && evidence.expected.max === 0
           ? `${names} already occurred this ${scope}.`
           : `Requires ${expected ? '' : 'a count outside '}${rangeLabel(evidence.expected)} occurrences of ${names} this ${scope}; currently ${evidence.actual}.`,
+      ];
+    }
+    case 'encounterCompletionCount': {
+      const names = encounterNames(catalog, evidence.encounterKeys);
+      return [
+        expected && evidence.expected.max === 0
+          ? `${names} was already completed this run.`
+          : expected && evidence.expected.min === 1 && evidence.expected.max === undefined
+            ? `Requires ${names} to be completed earlier this run.`
+            : `Requires ${expected ? '' : 'a count outside '}${rangeLabel(evidence.expected)} completions of ${names} this run; currently ${evidence.actual}.`,
       ];
     }
     case 'previousRoomEncounterKeyCount': {
@@ -123,6 +142,8 @@ export function encounterCandidateExplanation(
           return 'Athena has already appeared through Gorgon Amulet.';
         if (exclusion.kind === 'resolutionUnavailable')
           return 'The room reward must be authored before this encounter can resolve.';
+        if (exclusion.kind === 'introductionUnreachable')
+          return `No encounter here can include ${generatedEnemyNames(catalog, exclusion.triggerEnemyKeys)}, so this introduction cannot occur.`;
         const alternatives = [
           ...new Set(
             exclusion.definitions.map((definition) =>
