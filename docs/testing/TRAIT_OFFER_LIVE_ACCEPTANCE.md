@@ -1,11 +1,8 @@
 # Trait offer generation-time live acceptance
 
-## Status
-
-Pending live acceptance, 2026-09-25. Automated closure of generation-time
-trait offer evaluation and the Rejected three-option rule preceded in-game
-verification. Source reading and engine tests do not establish these
-obligations; do not record an in-game pass from a source probe.
+Pending in-game checks only; implementation is complete. Source reading and
+engine tests do not establish these obligations; do not record an in-game pass
+from a source probe.
 
 The owner confirms each item from a live run in which no published plan
 installs the observed screen, so the native offer is what appears, and

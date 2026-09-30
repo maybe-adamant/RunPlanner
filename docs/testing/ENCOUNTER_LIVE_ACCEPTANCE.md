@@ -1,58 +1,12 @@
-# Encounter admission live acceptance
+# Encounter live acceptance
 
-## Status
-
-Pending live acceptance, 2026-09-25. Automated closure of the encounter budget
-correction, one-time native admission, Arachne cocoon count, Anomaly roster and
-Hub fountain deliveries (execution protocol 47, authored schema 88) preceded
-in-game verification. Native-source probes and
-executor tests do not establish these obligations; do not record an in-game
-pass from a source probe.
-
-Tartarus entry identity and NPC shopping protection are also implemented and
-independently reviewed (execution protocol 48, authored schema still 88).
-Planner verification passed after refreshing eight catalog snapshot hashes:
-3,831 correctness tests across the full run and focused snapshot rerun, plus
-typecheck, fixture integrity, performance, lint, formatting and build. The
-executor passed 687 tests and lint; all 20 fixture mirrors match byte-for-byte.
-Inherited Q shopping callback coverage is retained; native eligibility keeps
-it inert. The live obligations below remain open.
-
-The owner confirms each item from a live run. Delete this file once every item
-is confirmed, or when the owner explicitly waives the remainder.
-
-Aetos delivery closed at the owner's request on 2026-09-29 (execution protocol
-51, authored schema unchanged). The owner accepted the compact Events layout
-and stable wave-selector spacing. In-game Aetos checks below remain pending.
-Independent review passed. Automated verification passed after updating the
-Olympus catalog snapshot: 4,001/4,002 correctness tests initially passed, then
-all eight snapshot tests passed on the focused rerun. Typecheck, fixture
-integrity, performance comparison, 45 host tests, 727 Lua tests with syntax and
-Luacheck, five release tests, lint, formatting and build passed. The final
-spacing change passed both focused Aetos UI tests; build retains its non-failing
-large-chunk warning.
-
-Cocoon reward-position delivery completed automated closure on 2026-09-29
-(execution protocol 52 at closure, superseded by 53 after the Fresh File merge; authored schema and catalog compatibility unchanged). Run the pending in-game checks on a protocol-53 build.
-Independent review found no blocking defects. The full correctness run passed
-4,015 of 4,018 tests; three older tests assumed the enriched cocoon checkpoint
-had no position. Their inputs now explicitly represent count-only/old-save
-state, and all ten tests in the two affected files passed on rerun. Typechecks,
-55 fixture-integrity tests, performance comparison, 45 host tests, 732 Lua
-tests with syntax and Luacheck, five release tests, lint, formatting and build
-passed. Build retains its non-failing large-chunk warning. The temporary
-delivery plan is retired; physical placement checks remain below.
+Pending in-game checks only; implementation is complete. Use a current matching
+planner and game-module build. Native-source probes and automated tests do not
+establish a live pass. The owner confirms results or explicitly waives checks;
+retire this file when none remain.
 
 ## Obligations
 
-- [ ] Cocoon reward position: choose two different points in both F and G,
-      break the selected cocoon and observe the room reward. Cover native count
-      with explicit position, explicit count with position, and Any placement.
-- [ ] Cocoon reward position: verify a reflected room if reachable. Captured
-      maps are unflipped; automated tests do not prove physical alignment.
-- [ ] Where safely reproducible, an unavailable cocoon point diagnoses and
-      falls back to native placement without discarding a valid count or
-      producing a placement-only mismatch.
 - [ ] Aetos: no selection suppresses appearances throughout planned Olympus.
 - [ ] Aetos: requested early and late waves force the chance at the selected
       encounter while native spawn pacing and departure remain intact.

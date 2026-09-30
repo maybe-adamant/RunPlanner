@@ -57,6 +57,8 @@ For a specific contract, go directly to its specialist authority:
   and workbenches; [contextual UX](docs/design/CONTEXTUAL_EDITOR_UX.md) owns
   picker and draft presentation.
 - [Biome rules](docs/biomes/) contain the route authorities.
+- [In-game testing](docs/testing/) tracks pending live acceptance checks separately
+  from implementation plans.
 - [Game integration](docs/design/GAME_INTEGRATION_BOUNDARY.md) defines the
   compiler/executor contract; [biome execution navigation](docs/design/BIOME_EXECUTION_NAVIGATION.md)
   defines only the biome-specific execution work beyond the shared F/G
