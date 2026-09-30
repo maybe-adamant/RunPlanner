@@ -1,6 +1,6 @@
 # Cocoon reward position authoring
 
-Status: Gate A implemented and independently reviewed; Gate B next.
+Status: Gates A/B implemented and independently reviewed; Gate C next.
 Base: `2918b1f1` in `RunPlanner-main`.
 
 ## Objective and bounds
@@ -239,3 +239,25 @@ expected. Raw originals remain external and recoverable.
 - Explicit positions intentionally cannot publish until Gate C replaces the
   temporary execution coverage guard. The clickable map remains Gate B work.
   Full repository closure and physical in-game acceptance remain outstanding.
+
+## Gate B verification
+
+- Imported 41 quality-90 tagged WebPs in a separate cocoon asset directory,
+  plus native-ID-keyed final marker display coordinates. Ordinary room-map
+  discovery and assets remain unchanged. Raw screenshots remain external.
+- Map markers and the numbered selector dispatch the same bound intent; Any
+  clears only position. Selection rings preserve the baked numbers. Shared
+  viewport Fit/zoom/pan behavior remains unchanged.
+- Map/editor batch: 5 files / 65 tests passed, covering catalog/asset identity,
+  F/G selection, keyboard activation, Undo, invalid-point repair/finding focus,
+  zoom/pan and drag suppression. Application contracts/architecture: 9 files /
+  73 tests passed. Planner typecheck and focused ESLint/formatting passed.
+- Independent review found no blocking defects and separately passed 6 focused
+  asset/cocoon witnesses. Main-session browser checks used the real cocoon
+  checkpoint: F_Combat06 and G_Combat10 selection matched their map rings at
+  desktop size. A 480px horizontal overflow was fixed and visually rechecked;
+  800px and 1440px layouts were also checked. Real pointer panning at 125% zoom
+  moved the viewport without changing the selected cocoon.
+- Gate C still owns removal of the publication guard, protocol delivery,
+  native enforcement and full phase closure. No live-game placement claim is
+  made by these editor checks.

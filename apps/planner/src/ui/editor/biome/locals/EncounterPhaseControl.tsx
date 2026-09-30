@@ -15,6 +15,7 @@ import { useWorkspaceInteraction } from '@planner/ui/controls/useWorkspaceIntera
 import { NemesisEventSelector } from '../NemesisEventEditor';
 import { GeneratedEncounterCustomizationControl } from './GeneratedEncounterCustomizationControl';
 import { CocoonCountControl } from './CocoonCountControl';
+import { CocoonRewardPointControl } from './CocoonRewardPointControl';
 import { InfiniteRosterControl } from './InfiniteRosterControl';
 
 const emptyEncounterPicker: import('@planner/projections/contextual/contextualPicker').ContextualPickerModel<string> =
@@ -137,42 +138,13 @@ function EncounterCustomizationControl({
                   );
                 }
                 if (decision.selection.kind === 'cocoonRewardPoint') {
-                  const selected = value?.kind === 'cocoonRewardPoint' ? value.spawnPointId : '';
                   return (
-                    <label className="encounter-customization-row" key={decision.key}>
-                      <span>{decision.label}</span>
-                      <select
-                        aria-label={decision.label}
-                        id={`encounter-customization-${customizationId}-${decision.key}`}
-                        value={selected}
-                        onChange={(event) =>
-                          executeIntent(
-                            interaction.intentFor(
-                              decision.key,
-                              event.target.value === ''
-                                ? null
-                                : {
-                                    kind: 'cocoonRewardPoint',
-                                    spawnPointId: Number(event.target.value),
-                                  },
-                            ),
-                          )
-                        }
-                      >
-                        <option value="">Any</option>
-                        {selected !== '' && !decision.selection.spawnPointIds.includes(selected) ? (
-                          <option disabled value={selected}>{`${selected} (unavailable)`}</option>
-                        ) : null}
-                        {decision.selection.spawnPointIds.map((id, index) => (
-                          <option key={id} value={id}>
-                            {index + 1}
-                          </option>
-                        ))}
-                      </select>
-                      {!decision.valueSupported && value !== undefined ? (
-                        <span className="encounter-customization-repair">Needs repair</span>
-                      ) : null}
-                    </label>
+                    <CocoonRewardPointControl
+                      key={decision.key}
+                      decision={{ ...decision, selection: decision.selection }}
+                      id={`encounter-customization-${customizationId}-${decision.key}`}
+                      interaction={interaction}
+                    />
                   );
                 }
                 if (decision.selection.kind === 'infiniteRoster') {

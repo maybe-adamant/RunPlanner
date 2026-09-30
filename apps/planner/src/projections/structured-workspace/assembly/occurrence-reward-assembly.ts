@@ -979,6 +979,7 @@ export function activeEncounterPhasesForOwner(
                   ...common,
                   selection: Object.freeze({
                     kind: 'cocoonRewardPoint' as const,
+                    gameName: room.gameName,
                     spawnPointIds: decision.cocoonRewardPointIds ?? Object.freeze([]),
                   }),
                 });
