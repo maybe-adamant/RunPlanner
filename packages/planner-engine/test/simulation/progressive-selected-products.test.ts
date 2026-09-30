@@ -15,6 +15,7 @@ import {
 } from '@run-planner/engine/authored-project';
 import { authoringReadinessAt } from '@run-planner/engine/simulation';
 import { loadSurfacePSteadyGrowthShrineFrontierCheckpoint } from '@run-planner/test-fixtures/checkpoints/surface';
+import { phaseTakesEffectBeforeBlock } from '../../src/simulation/progressive/selected-products';
 
 const {
   EMPTY_RESOURCE_PLACEMENTS,
@@ -66,6 +67,37 @@ const {
   source,
   traitGiverForAcquisitionRole,
 } = fixture;
+
+describe('earlier encounter phases retained at a room-local stop', () => {
+  const at = (sequence: number, boundary: 'before' | 'at' | 'after') =>
+    Object.freeze({ kind: 'history' as const, sequence, boundary });
+  const stop = { historySequence: 463, historyBoundary: 'before' as const };
+
+  it('retains a phase that takes effect before the stop', () => {
+    expect(phaseTakesEffectBeforeBlock(at(458, 'before'), stop)).toBe(true);
+    // Room entry precedes a same-sequence stop only by its boundary.
+    expect(
+      phaseTakesEffectBeforeBlock(at(456, 'at'), {
+        historySequence: 456,
+        historyBoundary: 'after',
+      }),
+    ).toBe(true);
+  });
+
+  it('retains nothing for a phase taking effect exactly at or after the stop', () => {
+    expect(phaseTakesEffectBeforeBlock(at(463, 'before'), stop)).toBe(false);
+    expect(phaseTakesEffectBeforeBlock(at(468, 'before'), stop)).toBe(false);
+  });
+
+  it('retains nothing extra for a stop without a history position', () => {
+    expect(phaseTakesEffectBeforeBlock(at(458, 'before'), {})).toBe(false);
+  });
+
+  it('retains nothing for a declared-start phase whose start the prefix never reached', () => {
+    // A Ship phase beyond the stop has neither its start nor its pre-encounter snapshot.
+    expect(phaseTakesEffectBeforeBlock(undefined, stop)).toBe(false);
+  });
+});
 
 describe('progressive selected and blocked products', () => {
   it('publishes a repair leaf for a lifecycle block the assessment prefix never reaches', () => {

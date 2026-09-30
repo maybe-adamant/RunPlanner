@@ -158,6 +158,7 @@ export function bindResolutionInteractions(input: {
           Object.freeze({ command: levelResolutionCommandFor(control.address, value) }),
         key,
         levelCount: control.levelCount,
+        contextReached: candidates.levelResolutionReached(control.address),
         load: (value = control.value) => candidates.levelResolution(control.address, value),
         owner: control.address,
         traitLabel: (traitKey: string) => catalog.traits.byKey[traitKey]?.label ?? traitKey,

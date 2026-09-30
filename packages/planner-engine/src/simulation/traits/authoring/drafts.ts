@@ -81,7 +81,10 @@ function fixedTraitOfferStartingDraft(
   return undefined;
 }
 
-/** Valid initial outcome, including the native empty terminal Gold branch. */
+/**
+ * The initial outcome of a reached offer: a valid one, including the native
+ * empty terminal Gold branch, when it exists; otherwise its repairable draft.
+ */
 export function traitOfferStartingOutcome(
   catalog: Catalog,
   giverKey: string,
@@ -89,11 +92,43 @@ export function traitOfferStartingOutcome(
   source: ResolvedTraitOfferSource,
 ): AuthoredTraitOffer | undefined {
   const giver = catalog.traitGivers.byKey[giverKey];
-  if (giver?.providerKind === 'olympian' || giver?.providerKind === 'hermes')
-    return ordinaryStartingOutcome(catalog, giverKey, state, source);
-  const traits = fixedTraitOfferStartingDraft(catalog, giverKey, state, source);
-  if (traits !== undefined) return traits;
-  return undefined;
+  if (giver === undefined) return undefined;
+  // A Chaos outcome starts from its own envelope draft, not trait rows.
+  if (giver.providerKind === 'chaos')
+    return fixedTraitOfferStartingDraft(catalog, giverKey, state, source);
+  const valid =
+    giver.providerKind === 'olympian' || giver.providerKind === 'hermes'
+      ? ordinaryStartingOutcome(catalog, giverKey, state, source)
+      : fixedTraitOfferStartingDraft(catalog, giverKey, state, source);
+  return valid ?? repairableStartingDraft(catalog, giverKey, state, source);
+}
+
+/**
+ * Without a valid start, the available rows (up to three, an actionable row
+ * first) are a repairable draft; with none, the empty Gold outcome.
+ */
+function repairableStartingDraft(
+  catalog: Catalog,
+  giverKey: string,
+  state: SimulationState,
+  source: ResolvedTraitOfferSource,
+): AuthoredTraitOffer {
+  const variants = automaticDraftCandidates(
+    traitCandidates(catalog, giverKey, state, source).filter((candidate) => candidate.available),
+  );
+  const first =
+    selfContainedDraftCandidates(catalog, variants, state.traitHistory)[0] ?? variants[0];
+  if (first === undefined) return Object.freeze({ kind: 'fallbackGold' as const, giverKey });
+  const draft = traitDraft(giverKey, [
+    first,
+    ...variants.filter((candidate) => candidate.traitKey !== first.traitKey).slice(0, 2),
+  ]);
+  return catalog.traitGivers.byKey[giverKey]?.providerKind === 'spell'
+    ? Object.freeze({
+        ...draft,
+        hexTree: createDefaultAuthoredHexTree(catalog, draft.options[0]!.traitKey),
+      })
+    : draft;
 }
 
 /** Returns one exact supported draft with the next materialized option appended. */

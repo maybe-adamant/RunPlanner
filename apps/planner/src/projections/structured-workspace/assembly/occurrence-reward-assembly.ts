@@ -233,6 +233,7 @@ function traitOfferControls(
           offer: null,
           children: Object.freeze([]),
           feedback: Object.freeze([]),
+          contextReached: input.isActiveTraitOffer(address),
           rewardOwner: owner.address,
           status: traitOfferStatus(marker, null),
         }),
@@ -254,6 +255,7 @@ function traitOfferControls(
         offer,
         children: traitCarrierChildren(input.catalog, address, offer, input.markerDestinations),
         feedback: Object.freeze([]),
+        contextReached: input.isActiveTraitOffer(address),
         rewardOwner: owner.address,
         status: traitOfferStatus(marker, offer),
       }),
@@ -1095,6 +1097,7 @@ export function activeEncounterPhasesForOwner(
                   ),
             feedback: Object.freeze([]),
             rarityEditable: false,
+            contextReached: input.isActiveTraitOffer(gorgonTraitAddress),
             rewardOwner: gorgonPhaseAddress,
             status: traitOfferStatus(
               gorgonTraitMarker,
@@ -1120,6 +1123,7 @@ export function activeEncounterPhasesForOwner(
                 offer: null,
                 children: Object.freeze([]),
                 feedback: Object.freeze([]),
+                contextReached: input.isActiveTraitOffer(traitAddress),
                 rewardOwner: address,
                 status: traitOfferStatus(marker, null),
               });
@@ -1198,6 +1202,7 @@ export function activeEncounterPhasesForOwner(
                   ? []
                   : [{ kind: 'echoLastReward' as const, control: echoLastReward }],
               ),
+              contextReached: input.isActiveTraitOffer(traitAddress),
               rewardOwner: address,
               status: traitOfferStatus(marker, authoredTraitOffer),
             });

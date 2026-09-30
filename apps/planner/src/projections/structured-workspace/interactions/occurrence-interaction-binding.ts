@@ -538,7 +538,9 @@ export function bindOccurrenceLocalInteractions(
                 ? undefined
                 : projectEncounterComposition(generatedCompositionView);
             const generatedHighlightPicker =
-              generatedDecision === undefined || generatedSelection === undefined
+              generatedDecision === undefined ||
+              generatedSelection === undefined ||
+              generatedEngineAssessment === undefined
                 ? undefined
                 : projectGeneratedEncounterHighlightPicker(
                     generatedEngineAssessment,
@@ -651,7 +653,7 @@ export function bindOccurrenceLocalInteractions(
                 }),
               });
             const generatedEdits =
-              generatedDecision === undefined
+              generatedDecision === undefined || generatedAssessment === undefined
                 ? undefined
                 : bindGeneratedEncounterEdits(generatedValue, generatedAssessment, (value) =>
                     customizationIntentFor(generatedDecision.key, value),
@@ -814,6 +816,11 @@ export function bindOccurrenceLocalInteractions(
                       value,
                     }),
                   }),
+                contextReached:
+                  nemesisRandomEventCandidateSupportForProjectEvaluationAssembly(
+                    assembly,
+                    event.owner,
+                  ) !== undefined,
                 load: () =>
                   event.value === null
                     ? undefined

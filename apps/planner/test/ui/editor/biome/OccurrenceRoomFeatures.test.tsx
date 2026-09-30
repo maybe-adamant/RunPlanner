@@ -6,6 +6,7 @@ import {
   createBiomeAddress,
   createIncomingRewardAddress,
   createEncounterPhaseAddress,
+  createFieldsSpatialAddress,
   createNemesisRandomEventAddress,
   createOccurrenceAddress,
   createRoomActionAddress,
@@ -60,6 +61,32 @@ async function chooseNemesisEvent(
 }
 
 describe('OccurrenceRoomFeatures', () => {
+  it('disables Nemesis detail pickers while the event context is unreached', async () => {
+    const occurrenceId = createOccurrenceId('golden-h-combat05');
+    const reached = renderOccurrenceWorkbench(
+      loadNemesisFieldsCheckpoint(),
+      'Underworld',
+      'H',
+      occurrenceById(occurrenceId),
+    );
+    openRoomTab('Room Timeline');
+    const enabled = screen.getByRole('button', { name: 'Reward' }) as HTMLButtonElement;
+    expect(enabled.disabled).toBe(false);
+    reached.unmount();
+    const project = applyProjectCommand(loadNemesisFieldsCheckpoint(), catalog, {
+      kind: 'ReplaceFieldsSpatialPoint',
+      spatial: createFieldsSpatialAddress(createOccurrenceAddress(goldenHBiome, occurrenceId), {
+        kind: 'entry',
+      }),
+      pointId: null,
+    });
+    renderOccurrenceWorkbench(project, 'Underworld', 'H', occurrenceById(occurrenceId));
+    openRoomTab('Room Timeline');
+    const waiting = screen.getByRole('button', { name: 'Reward' }) as HTMLButtonElement;
+    expect(waiting.disabled).toBe(true);
+    expect(waiting.title).toBe('Waits on an earlier choice');
+  });
+
   it('splits Anomaly room outcome from door map and revert controls as exact commands', async () => {
     const { occurrenceId, project } = authoredAnomalyProject();
     const application = createApplication();

@@ -37,7 +37,11 @@ import { type DerivedAcquisitionEntryCandidateArtifacts } from '../rewards/acqui
 import type { SteadyGrowthCandidateArtifacts } from '../candidates/steady-growth';
 import type { TraitOfferCandidateArtifacts } from '../candidates/trait-offer/capability';
 import type { TraitChildSettlementCheckpoints } from '../rewards/biome';
-import { findingIdentityKey, type FindingRegionEntry } from '../finding-regions';
+import {
+  findingIdentityKey,
+  type FindingRegionEntry,
+  type HistoryFindingChronology,
+} from '../finding-regions';
 import type { BiomeRewardSimulation } from '../rewards';
 import type { EncounterCandidateArtifacts } from '../encounters/candidates';
 import type { MaterializedBiomePrefix } from '../materialization';
@@ -79,6 +83,29 @@ function nemesisEventAtInteractionAction(
   } catch {
     return undefined;
   }
+}
+
+const boundaryRank = { before: 0, at: 1, after: 2 } as const;
+
+/**
+ * Whether a phase takes effect strictly before a located stop, so its candidate
+ * context reads nothing at or after it. An unplaced phase or stop retains nothing.
+ */
+export function phaseTakesEffectBeforeBlock(
+  position: HistoryFindingChronology | undefined,
+  block: Pick<LocatedFinding, 'historySequence' | 'historyBoundary'>,
+): boolean {
+  if (
+    position === undefined ||
+    block.historySequence === undefined ||
+    block.historyBoundary === undefined
+  )
+    return false;
+  return (
+    position.sequence < block.historySequence ||
+    (position.sequence === block.historySequence &&
+      boundaryRank[position.boundary] < boundaryRank[block.historyBoundary])
+  );
 }
 
 export function retainBlockedRegionProducts(
@@ -597,6 +624,19 @@ export function retainBlockedRegionProducts(
               ? shipCapability
               : retainedArtifacts.roomLifecycles.shipAt(owner),
         });
+  // An earlier phase of the blocked room keeps its full-evaluation support.
+  const earlierBlockedRoomPhase = (
+    address: import('../../authored-project/addresses').EncounterPhaseAddress,
+  ): boolean =>
+    occurrenceOwner !== undefined &&
+    address.owner.kind === 'occurrence' &&
+    semanticAddressKey(
+      createOccurrenceAddress(
+        createBiomeAddress(address.routeKey, address.biomeKey),
+        address.owner.occurrenceId,
+      ),
+    ) === semanticAddressKey(occurrenceOwner) &&
+    phaseTakesEffectBeforeBlock(selectedArtifacts.encounters.positionAt(address), block);
   const encounterBase: EncounterCandidateArtifacts =
     encounterCapability === undefined
       ? retainedArtifacts.encounters
@@ -608,16 +648,21 @@ export function retainBlockedRegionProducts(
             semanticAddressKey(address) === semanticAddressKey(blockedAt)
               ? (selectedArtifacts.encounters.generationAt(address) ??
                 blockedArtifacts.encounters.generationAt(address))
-              : retainedArtifacts.encounters.generationAt(address),
+              : earlierBlockedRoomPhase(address)
+                ? selectedArtifacts.encounters.generationAt(address)
+                : retainedArtifacts.encounters.generationAt(address),
           rosterAt: (address: import('../../authored-project/addresses').EncounterPhaseAddress) =>
             blockedAt.kind === 'encounterPhase' &&
             semanticAddressKey(address) === semanticAddressKey(blockedAt)
               ? (selectedArtifacts.encounters.rosterAt(address) ??
                 blockedArtifacts.encounters.rosterAt(address))
-              : retainedArtifacts.encounters.rosterAt(address),
+              : earlierBlockedRoomPhase(address)
+                ? selectedArtifacts.encounters.rosterAt(address)
+                : retainedArtifacts.encounters.rosterAt(address),
           at: (address: import('../../authored-project/addresses').EncounterPhaseAddress) =>
-            blockedAt.kind === 'encounterPhase' &&
-            semanticAddressKey(address) === semanticAddressKey(blockedAt)
+            (blockedAt.kind === 'encounterPhase' &&
+              semanticAddressKey(address) === semanticAddressKey(blockedAt)) ||
+            earlierBlockedRoomPhase(address)
               ? selectedArtifacts.encounters.at(address)
               : retainedArtifacts.encounters.at(address),
           statusAt: (address: import('../../authored-project/addresses').EncounterPhaseAddress) => {
@@ -649,6 +694,12 @@ export function retainBlockedRegionProducts(
             semanticAddressKey(owner) === semanticAddressKey(occurrenceOwner)
               ? encounterCapability
               : retainedArtifacts.encounters.roomAt(owner),
+          positionAt: (
+            address: import('../../authored-project/addresses').EncounterPhaseAddress,
+          ) =>
+            earlierBlockedRoomPhase(address)
+              ? selectedArtifacts.encounters.positionAt(address)
+              : retainedArtifacts.encounters.positionAt(address),
         });
   const blockedNemesisCapability =
     blockedNemesisAt === undefined

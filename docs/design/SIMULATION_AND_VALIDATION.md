@@ -206,9 +206,13 @@ boundary, while an unpicked generated host retains its structural repair.
 Invalid Fig Leaf choices remain repairable but cannot publish a normally
 executed encounter as assessed continuation.
 
-The blocking owner retains its repair capability when reached. Later history
-effects, findings and capabilities do not become true merely because their
-authored controls still exist. No candidate-only evaluation or UI fallback may
+The blocking owner retains its repair capability when reached. Each encounter
+phase of the blocked room that takes effect strictly before the stop, at its
+declared start or at room entry when its lifecycle declares none, also retains
+its generation, roster and candidate support, since that context reads nothing
+later; its status, Fig Leaf and Gorgon products are not retained. Later
+history effects, findings and capabilities do not become true merely because
+their authored controls still exist. No candidate-only evaluation or UI fallback may
 restore withheld semantic facts.
 
 ### Generated-batch retention
@@ -429,8 +433,9 @@ generic purchase failure.
 Encounter preparation owns two Fresh File findings on the exact phase:
 `encounterCustomizationRequired` for a reached generated composition that is
 not authored, and `encounterIntroductionRequired` for a retained enemy whose
-introduction is unfinished. Both are errors located at room preparation, so
-they stop assessment there and withhold execution; the
+introduction is unfinished. Both are errors that withhold execution. The
+introduction stops assessment at room preparation; a missing composition stops
+it at its phase's start, or at preparation for a phase without one; the
 [introduction model](ROOM_LIFECYCLE_MODEL.md#enemy-introductions) owns the rules.
 
 Participation and position are also different: toggling a participant changes

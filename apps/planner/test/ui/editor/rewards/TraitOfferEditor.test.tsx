@@ -53,6 +53,7 @@ import {
   goldenFStartId,
   goldenHBiome,
 } from '@run-planner/test-fixtures/underworld';
+import { createFreshFileFProject, freshFileFBiome } from '@run-planner/test-fixtures/fresh-file';
 import {
   loadSurfaceNQueensRansomProject,
   nBiome,
@@ -90,6 +91,54 @@ function findTraitOfferControl(
 }
 
 describe('trait offer editor entry and dialog', () => {
+  it('disables the launcher and opens no editor while the offer context is unreached', () => {
+    const application = createApplication();
+    const raw = JSON.parse(encodeProjectDocument(createFreshFileFProject()));
+    const first = raw.route.biomes[0].topology.occurrences.find(
+      (occurrence: { occurrenceId: string }) => occurrence.occurrenceId === 'fresh-0-0',
+    );
+    first.state.reward.traitOffersByAcquisitionRole.source = null;
+    application.store.dispatch(
+      authoredProjectReplaced(decodeProjectDocument(raw, application.catalog)),
+    );
+    const workspace = application.selectStructuredWorkspace(application.store.getState())!;
+    const offer = (occurrenceId: string) =>
+      createTraitOfferAddress(
+        createIncomingRewardAddress(freshFileFBiome, createOccurrenceId(occurrenceId)),
+        'source',
+      );
+    const launcher = (occurrenceId: string) => {
+      render(
+        <Provider store={application.store}>
+          <FindingTargetScope findings={workspace.findingsByRepairTarget}>
+            <TraitOfferLauncher
+              control={findTraitOfferControl(workspace, offer(occurrenceId))}
+              interactions={workspace.interactions}
+            />
+          </FindingTargetScope>
+        </Provider>,
+      );
+      const button = document.getElementById(
+        `trait-launcher-${semanticAddressKey(offer(occurrenceId))}`,
+      ) as HTMLButtonElement;
+      cleanup();
+      return button;
+    };
+    const frontier = launcher('fresh-0-0');
+    expect(frontier.disabled).toBe(false);
+    expect(frontier.title).toBe('');
+    const later = launcher('fresh-3-0');
+    expect(later.disabled).toBe(true);
+    expect(later.title).toBe('Waits on an earlier choice');
+    render(
+      <Provider store={application.store}>
+        <TraitOfferDialog interactions={workspace.interactions} target={offer('fresh-3-0')} />
+      </Provider>,
+    );
+    expect(screen.queryByRole('dialog')).toBeNull();
+    application.dispose();
+  });
+
   it.each(['noProc', 'proc'] as const)(
     'saves an initial Stone %s decision with the complete offer',
     async (kind) => {

@@ -7,6 +7,7 @@ import {
   createExitDecisionAddress,
   createExitSelectionAddress,
   createIncomingRewardAddress,
+  createLocalRewardAddress,
   createOccurrenceAddress,
   createOccurrenceId,
   createProjectDocument,
@@ -16,9 +17,11 @@ import {
   decodeProjectDocument,
   encodeProjectDocument,
   type EncounterPhaseAddress,
+  type FieldsSpatialAddress,
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
 import {
+  createPreparedProjectCandidateSession,
   generatedEncounterSupportForProjectEvaluationAssembly,
   simulateProjectAssembly,
 } from '@run-planner/engine/simulation';
@@ -611,4 +614,138 @@ function withUnresolvedTraitOffers(value: RawJson): void {
       for (const role of Object.keys(child)) child[role] = null;
     else withUnresolvedTraitOffers(child);
   }
+}
+
+/**
+ * Authors each published issue up to the room's continuation with a reached
+ * value, recording the issue owners so a caller observes the engine's chronology.
+ */
+export function authorFreshFileRoomIssues(
+  project: ProjectDocument,
+  biomeKey: string,
+  roomId: string,
+  observe?: (assembly: ReturnType<typeof simulateProjectAssembly>) => string,
+): { readonly labels: readonly string[]; readonly project: ProjectDocument } {
+  const labels: string[] = [];
+  let current = project;
+  for (let pass = 0; pass < 32; pass += 1) {
+    const assembly = simulateProjectAssembly(catalog, current);
+    const issue = assembly.evaluation.route.biomes.find(
+      (biome) => biome.biomeKey === biomeKey,
+    )?.issue;
+    if (issue === undefined) throw new Error(`${biomeKey} published no issue`);
+    const owner = issue.owner;
+    const codes = issue.reasons.map((reason) => reason.code);
+    const observed = observe === undefined ? '' : ` ${observe(assembly)}`;
+    let label: string;
+    if (owner.kind === 'encounterPhase' && codes.includes('encounterCustomizationRequired')) {
+      label = `composition:${owner.phaseKey}`;
+      const required = issue.reasons.find(
+        (reason) => reason.code === 'encounterCustomizationRequired',
+      )!;
+      const value = generatedEncounterSupportForProjectEvaluationAssembly(
+        assembly,
+        owner as EncounterPhaseAddress,
+      )?.initialize();
+      if (value === undefined) throw new Error(`${owner.phaseKey} cannot initialize`);
+      current = applyProjectCommand(current, catalog, {
+        kind: 'ReplaceEncounterCustomization',
+        phase: owner as EncounterPhaseAddress,
+        decisionKey: String(required.evidence.decisionKey),
+        value,
+      });
+    } else if (owner.kind === 'localReward' && owner.groupKey === 'optionalRewards') {
+      label = 'optionalReward';
+      current = applyProjectCommand(current, catalog, {
+        kind: 'ReplaceLocalReward',
+        reward: owner,
+        value: { rewardType: 'RoomMoneyTinyDrop' },
+      });
+    } else if (owner.kind === 'fieldsSpatial') {
+      label = 'spatial';
+      const session = createPreparedProjectCandidateSession(catalog, assembly);
+      const used = new Set<number>();
+      for (const reason of issue.reasons) {
+        const spatial = reason.origin as FieldsSpatialAddress;
+        const result = session.evaluate({ kind: 'fieldsSpatialPoint', spatial, pointId: null });
+        if (result.kind !== 'fieldsSpatialPoint') throw new Error('no spatial candidate');
+        const pointId = result.result.supportPointIds.find((id) => !used.has(id));
+        if (pointId === undefined) throw new Error('no free spatial point');
+        used.add(pointId);
+        current = applyProjectCommand(current, catalog, {
+          kind: 'ReplaceFieldsSpatialPoint',
+          spatial,
+          pointId,
+        });
+      }
+    } else if (owner.kind === 'traitOffer') {
+      label = `trait:${owner.owner.kind === 'localReward' ? owner.owner.slotKey : owner.owner.kind}`;
+      current = authorLegalTraitOffers(current);
+    } else if (
+      owner.kind === 'exitDecision' &&
+      owner.source.kind === 'occurrence' &&
+      owner.source.occurrenceId === roomId
+    ) {
+      labels.push(`continuation${observed}`);
+      return { labels, project: current };
+    } else {
+      throw new Error(`unexpected issue ${JSON.stringify(owner)} ${codes.join(',')}`);
+    }
+    if (labels.at(-1) !== label + observed) labels.push(label + observed);
+  }
+  throw new Error('issue walk did not reach the continuation');
+}
+
+/** The selected H_Combat04 {@link withNewHFieldsRoom} creates. */
+export const newHFieldsRoomId = createOccurrenceId('new-h-combat04');
+
+/**
+ * Replaces the H batch after golden-h-combat02 with H_Combat04 and an
+ * H_Combat05 sibling, carrying the replaced rooms' reached cage offers.
+ */
+export function withNewHFieldsRoom(
+  project: ProjectDocument,
+  routeKey: string,
+  cageOutcome: 'min' | 'max',
+): ProjectDocument {
+  const biome = createBiomeAddress(routeKey, 'H');
+  const raw = JSON.parse(encodeProjectDocument(project));
+  const occurrences = raw.route.biomes.find((entry: { biomeKey: string }) => entry.biomeKey === 'H')
+    .topology.occurrences as { occurrenceId: string; state: { cages: Record<string, unknown> } }[];
+  const cagesOf = (id: string) =>
+    Object.entries(occurrences.find((occurrence) => occurrence.occurrenceId === id)!.state.cages);
+  const source = {
+    kind: 'occurrence',
+    occurrenceId: createOccurrenceId('golden-h-combat02'),
+  } as const;
+  const decision = createExitDecisionAddress(biome, source);
+  let current = applyProjectCommand(project, catalog, { kind: 'RemoveExitDecision', decision });
+  current = applyProjectCommand(current, catalog, { kind: 'CreateBatch', decision });
+  current = applyProjectCommand(current, catalog, {
+    kind: 'ReplaceFieldsCageOutcome',
+    decision,
+    cageOutcome,
+  });
+  for (const [exitKey, id, gameName, from] of [
+    ['exit1', newHFieldsRoomId, 'H_Combat04', 'golden-h-combat09'],
+    ['exit2', 'new-h-combat05', 'H_Combat05', 'golden-h-combat03'],
+  ] as const) {
+    current = applyProjectCommand(current, catalog, {
+      kind: 'CreateTarget',
+      target: createTargetAddress(biome, source, exitKey),
+      occurrenceId: createOccurrenceId(id),
+      gameName,
+    });
+    for (const [slotKey, cage] of cagesOf(from))
+      current = applyProjectCommand(current, catalog, {
+        kind: 'ReplaceLocalReward',
+        reward: createLocalRewardAddress(biome, createOccurrenceId(id), 'cages', slotKey),
+        value: (cage as { offer: never }).offer,
+      });
+  }
+  return applyProjectCommand(current, catalog, {
+    kind: 'SetExitSelection',
+    selection: createExitSelectionAddress(biome, source),
+    value: { kind: 'normal', exitKey: 'exit1' },
+  });
 }

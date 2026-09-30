@@ -16,6 +16,8 @@ interface ContextualPickerProps<T> {
   readonly choiceLabel?: string;
   readonly closeOnSelect?: boolean;
   readonly disabled?: boolean;
+  /** Disables the picker with this title while still showing its current value. */
+  readonly disabledTitle?: string;
   readonly id: string;
   readonly label: string;
   readonly layout?: 'inline' | 'stacked';
@@ -177,6 +179,7 @@ export function ContextualPicker<T>({
   choiceLabel,
   closeOnSelect = true,
   disabled = false,
+  disabledTitle,
   id,
   label,
   layout = 'stacked',
@@ -203,7 +206,7 @@ export function ContextualPicker<T>({
   const selectedExplanationId = showSelectedExplanation ? `${id}-selected-explanation` : undefined;
   const choicesLabel = choiceLabel ?? label;
   const authoringLocked = findingTarget?.['data-authoring-locked'] === true;
-  const interactionDisabled = disabled || authoringLocked;
+  const interactionDisabled = disabled || disabledTitle !== undefined || authoringLocked;
 
   function updateOpen(nextOpen: boolean): void {
     if (nextOpen && interactionDisabled) return;
@@ -240,6 +243,7 @@ export function ContextualPicker<T>({
             className="contextual-picker-trigger"
             data-candidate-state={selected?.state ?? 'unspecified'}
             disabled={interactionDisabled}
+            {...(disabledTitle === undefined ? {} : { title: disabledTitle })}
             {...findingTarget}
             id={id}
             ref={(node) => {

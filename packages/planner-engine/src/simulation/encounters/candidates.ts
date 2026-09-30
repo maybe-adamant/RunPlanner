@@ -62,6 +62,11 @@ export interface EncounterCandidateArtifacts {
    */
   readonly roomAt: (origin: OccurrenceAddress) => EncounterRoomCandidateCapability | undefined;
   readonly figLeafAt: (origin: EncounterPhaseAddress) => FigLeafPhaseCandidateSupport | undefined;
+  /**
+   * Where a reached phase takes effect: its start, or room entry for a phase
+   * whose lifecycle declares no start. Its candidate context reads nothing later.
+   */
+  readonly positionAt: (origin: EncounterPhaseAddress) => HistoryFindingChronology | undefined;
 }
 
 export function createEmptyEncounterCandidateArtifacts(): EncounterCandidateArtifacts {
@@ -74,6 +79,7 @@ export function createEmptyEncounterCandidateArtifacts(): EncounterCandidateArti
     nemesisAt: () => undefined,
     roomAt: () => undefined,
     figLeafAt: () => undefined,
+    positionAt: () => undefined,
   });
 }
 
@@ -163,6 +169,7 @@ export function evaluateEncounterCandidatesInternal(
   const rosters = new Map<string, InfiniteRosterCandidateCapability>();
   const resolvedGenerated: EncounterCandidateEvaluation['resolvedGenerated'][number][] = [];
   const statuses = new Map<string, EncounterPhaseSequenceStatus>();
+  const positions = new Map<string, HistoryFindingChronology>();
   const roomsByOwner = new Map<string, EncounterRoomCandidateCapability>();
   const findings: SemanticFinding[] = [];
   const findingChronologies = new Map<string, HistoryFindingChronology>();
@@ -326,6 +333,11 @@ export function evaluateEncounterCandidatesInternal(
           Object.freeze({ origin: capability.origin, customization: phase.generatedCustomization }),
         );
     }
+    const entered = historyEvents.find(
+      (event) =>
+        event.kind === 'roomEntered' &&
+        semanticAddressKey(event.origin) === semanticAddressKey(room.origin),
+    );
     for (const entry of prepared.statuses) {
       const key = semanticAddressKey(entry.origin);
       if (statuses.has(key)) throw new Error(`duplicate encounter phase status ${key}`);
@@ -335,6 +347,20 @@ export function evaluateEncounterCandidatesInternal(
           semanticAddressKey(event.origin) === semanticAddressKey(room.origin) &&
           event.phaseKey === entry.origin.phaseKey,
       );
+      // A phase without a declared start takes effect at room entry.
+      const declaresStart = room.roomActionRoster.lifecycleStructure.phases.some(
+        (phase) => phase.phaseKey === entry.origin.phaseKey,
+      );
+      const takesEffect = declaresStart ? started : entered;
+      if (entry.status.kind === 'active' && takesEffect !== undefined)
+        positions.set(
+          key,
+          Object.freeze({
+            kind: 'history',
+            sequence: takesEffect.sequence,
+            boundary: declaresStart ? 'before' : 'at',
+          }),
+        );
       statuses.set(
         key,
         entry.status.kind === 'active' && started?.kind === 'encounterStarted'
@@ -447,6 +473,7 @@ export function evaluateEncounterCandidatesInternal(
         privateNemesis.get(semanticAddressKey(origin)),
       roomAt: (origin: OccurrenceAddress) => privateRooms.get(semanticAddressKey(origin)),
       figLeafAt: (origin: EncounterPhaseAddress) => privateFigLeaf.get(semanticAddressKey(origin)),
+      positionAt: (origin: EncounterPhaseAddress) => positions.get(semanticAddressKey(origin)),
     }),
     findings: Object.freeze(findings),
     resolvedGenerated: Object.freeze(resolvedGenerated),

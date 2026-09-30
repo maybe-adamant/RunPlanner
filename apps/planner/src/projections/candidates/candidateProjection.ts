@@ -294,6 +294,8 @@ export interface CandidateProjectionSession {
     owner: LevelResolutionAddress,
     value: AuthoredLevelResolution,
   ) => LevelResolutionCandidateProjection | undefined;
+  /** Whether the engine reached this Pom's exact candidate context. */
+  readonly levelResolutionReached: (owner: LevelResolutionAddress) => boolean;
   /** One atomic exact Judgment selection, assessed against its pre-effect domain. */
   readonly judgmentArcana: (
     owner: JudgmentArcanaAddress,

@@ -67,6 +67,7 @@ export type TraitCandidateAdapters = Pick<
   | 'transcendentEmbryoOutcome'
   | 'fountainRarityOutcome'
   | 'levelResolution'
+  | 'levelResolutionReached'
   | 'judgmentArcana'
   | 'figurineArcana'
   | 'keepsakeSelections'
@@ -145,6 +146,8 @@ export function createTraitCandidateAdapters(
       }) as
         | import('@run-planner/engine/simulation').EvaluatedFountainRarityOutcomeCandidate
         | CandidateContextUnavailable,
+    levelResolutionReached: (owner) =>
+      levelResolutionCandidateForProjectEvaluationAssembly(core.assembly, owner) !== undefined,
     levelResolution: (owner, value) => {
       const capability = levelResolutionCandidateForProjectEvaluationAssembly(core.assembly, owner);
       if (capability === undefined) return undefined;
