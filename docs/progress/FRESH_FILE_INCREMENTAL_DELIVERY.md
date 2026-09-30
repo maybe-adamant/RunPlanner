@@ -441,6 +441,13 @@ metric, with the untouched Surface metrics swinging ±5% alongside, so the
 box's noise floor is about ±5% and no gain was demonstrable; the change was
 discarded. No execution fixture or mature golden project moved.
 
+Gate L committed on `codex/fresh-file`: `db06b47d` (execution enablement,
+protocol 52 on this branch, Fresh F–I execution fixture, publication guard
+removed). Full `npm run check` at `db06b47d` (2026-09-29): exit 0; 395 Vitest
+files / 4175 tests, 743 Lua tests, Luacheck 0 warnings / 0 errors, Rust 45,
+ESLint clean. Performance compare against `65584ce5`: PASS. Mature execution
+fixtures changed only `protocolVersion` and `planFingerprint`.
+
 ## Phase III — visible rule integration roadmap
 
 ### K — Enemy introductions and Gate E retirement (locked 2026-09-29)
