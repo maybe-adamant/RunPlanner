@@ -3,6 +3,7 @@ import { notFreshFileRoute } from '../routes';
 import type { RawEncounterDefinitionDeclaration, RawEncounterSetDeclaration } from './types';
 import {
   arachneCombatCocoonCount,
+  arachneCombatCocoonRewardPoint,
   arachneIncomingRewardExclusions,
   artemisEncounterKeys,
   introductionGate,
@@ -108,7 +109,7 @@ export const fEncounterDefinitions = [
   },
   {
     key: 'ArachneCombatF',
-    customization: [arachneCombatCocoonCount],
+    customization: [arachneCombatCocoonCount, arachneCombatCocoonRewardPoint],
     label: 'Arachne cocoon',
     kind: 'combat',
     countsEncounterDepth: false,

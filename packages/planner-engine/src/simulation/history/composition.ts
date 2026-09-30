@@ -36,6 +36,7 @@ import type { ResolvedEncounterPhase } from '../encounters/model';
 import { assessFigLeafSkip } from '../encounters/fig-leaf';
 import { targetRewardGenerationCheckpoint } from '../encounters/generation-preparation';
 import { resolveEntryRoom } from '../../authored-project/room-state/entry-resolution';
+import { assessAetosAppearance } from '../encounters/aetos';
 
 export interface FigLeafLifecycleState {
   readonly remainingUses: number;
@@ -377,7 +378,33 @@ export function appendRoomLifecycle(
   options.prepare?.(fragment.events);
   let projectedOutgoing = false;
   let reachedOutgoing = false;
-  for (const event of fragment.events) {
+  for (const sourceEvent of fragment.events) {
+    const event =
+      sourceEvent.kind === 'encounterStarted'
+        ? (() => {
+            const phase = effectiveEncounterPhases.find(
+              (candidate) => candidate.slotKey === sourceEvent.phaseKey,
+            )!;
+            if (phase.aetosWaves === undefined && phase.aetosWave === undefined) return sourceEvent;
+            const prior = writer
+              .current()
+              .ledgers.encounterStarts.some(
+                (entry) =>
+                  entry.origin.routeKey === room.origin.routeKey &&
+                  entry.origin.biomeKey === room.origin.biomeKey &&
+                  entry.aetosWave !== undefined,
+              );
+            return Object.freeze({
+              ...sourceEvent,
+              aetos: assessAetosAppearance(
+                phase,
+                declaration.structuralTags.includes('Outdoor'),
+                sourceEvent.execution === 'skippedByFigLeaf',
+                prior,
+              ),
+            });
+          })()
+        : sourceEvent;
     if (
       options.stopAfterOutgoing &&
       options.continueThroughPostOutgoingActions === true &&

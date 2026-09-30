@@ -1280,7 +1280,14 @@
             "slotKey": "Encounter",
             "encounterKey": "ArachneCombatF",
             "kind": "combat",
-            "customization": [{ "decisionKey": "cocoonCount", "kind": "cocoonCount", "count": 11 }]
+            "customization": [
+              { "decisionKey": "cocoonCount", "kind": "cocoonCount", "count": 11 },
+              {
+                "decisionKey": "cocoonRewardPoint",
+                "kind": "cocoonRewardPoint",
+                "spawnPointId": 40191
+              }
+            ]
           }
         ],
         "requiredObjects": []
@@ -3004,7 +3011,18 @@
           "resolvedStoreKey": "RunProgress"
         },
         "encounterPhases": [
-          { "slotKey": "Encounter", "encounterKey": "ArachneCombatG", "kind": "combat" }
+          {
+            "slotKey": "Encounter",
+            "encounterKey": "ArachneCombatG",
+            "kind": "combat",
+            "customization": [
+              {
+                "decisionKey": "cocoonRewardPoint",
+                "kind": "cocoonRewardPoint",
+                "spawnPointId": 560737
+              }
+            ]
+          }
         ],
         "requiredObjects": []
       },
@@ -3875,5 +3893,5 @@
       }
     }
   ],
-  "planFingerprint": "ebe9daa8"
+  "planFingerprint": "cc72c7d4"
 }

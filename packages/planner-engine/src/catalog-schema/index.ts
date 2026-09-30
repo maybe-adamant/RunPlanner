@@ -409,6 +409,8 @@ export interface EncounterDefinition {
   /** Source-declared active-encounter blocker for Gorgon Amulet. */
   readonly blocksGorgon: boolean;
   readonly hostsGorgon: boolean;
+  /** Native Aetos callback support; waves are best-effort native targets. */
+  readonly aetosWaves?: readonly number[];
   /** A successful skip suppresses the remainder of this room envelope. */
   readonly skipEndEncounterEffects: boolean;
   /** Keepsakes whose ordinary rack selection is unavailable after this encounter. */
@@ -534,6 +536,11 @@ export type EncounterCustomizationDecision =
       readonly key: string;
       readonly label: string;
       readonly selection: InfiniteRosterSelection;
+    }
+  | {
+      readonly key: string;
+      readonly label: string;
+      readonly selection: { readonly kind: 'cocoonRewardPoint' };
     };
 
 /** Closed concrete identity mapping for one persisted authored encounter choice. */
@@ -877,6 +884,8 @@ export interface RoomRouteOverlay {
 }
 
 export interface RoomDeclaration {
+  /** Native cocoon anchors in numbered capture order. */
+  readonly cocoonRewardPointIds?: readonly number[];
   readonly gameName: string;
   readonly label: string;
   /** Exact game RoomSet identity; authored topology supplies the host route biome. */

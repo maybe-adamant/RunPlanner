@@ -1,4 +1,5 @@
 import type { ResolvedRoutePosition } from '../../authored-project/route-context';
+import { cocoonRewardPointSupported } from './cocoon-reward-point';
 import type {
   Catalog,
   EncounterCustomizationDecision,
@@ -58,6 +59,7 @@ export interface EncounterPhaseAuthoringDomain {
     readonly selection: import('../../catalog-schema').EncounterCustomizationDecision['selection'];
     readonly value?: AuthoredEncounterCustomization;
     readonly valueSupported: boolean;
+    readonly cocoonRewardPointIds?: readonly number[];
     readonly retainedChoiceLabels?: readonly { readonly key: string; readonly label: string }[];
   }[];
 }
@@ -122,7 +124,7 @@ function retainedChoiceLabelsFor(
   decision: EncounterCustomizationDecision,
   value: AuthoredEncounterCustomization | undefined,
 ): readonly { readonly key: string; readonly label: string }[] {
-  return value === undefined || value.kind === 'cocoonCount'
+  return value === undefined || value.kind === 'cocoonCount' || value.kind === 'cocoonRewardPoint'
     ? []
     : (value.kind === 'single'
         ? [value.choiceKey]
@@ -138,7 +140,9 @@ function retainedChoiceLabelsFor(
         const choice = catalog.encounterDefinitions.values
           .flatMap((candidate) => candidate.customization ?? [])
           .flatMap((candidate): readonly { readonly key: string; readonly label: string }[] =>
-            candidate.key === decision.key && candidate.selection.kind !== 'cocoonCount'
+            candidate.key === decision.key &&
+            candidate.selection.kind !== 'cocoonCount' &&
+            candidate.selection.kind !== 'cocoonRewardPoint'
               ? candidate.selection.choices
               : [],
           )
@@ -249,10 +253,14 @@ export function encounterPhaseAuthoringDomainForRoom(
                 const valueSupported =
                   value === undefined ||
                   (customizationValueKnown([decision], decision.key, value) &&
-                    !customizationValueRouteExcluded(decision, value, biome.routeKey));
+                    !customizationValueRouteExcluded(decision, value, biome.routeKey) &&
+                    cocoonRewardPointSupported(room, value));
                 const retainedChoiceLabels = retainedChoiceLabelsFor(catalog, decision, value);
                 return Object.freeze({
                   ...customizationDecisionOnRoute(decision, biome.routeKey),
+                  ...(decision.selection.kind === 'cocoonRewardPoint'
+                    ? { cocoonRewardPointIds: room.cocoonRewardPointIds ?? Object.freeze([]) }
+                    : {}),
                   valueSupported,
                   ...(value === undefined ? {} : { value }),
                   ...(retainedChoiceLabels.length === 0 ? {} : { retainedChoiceLabels }),

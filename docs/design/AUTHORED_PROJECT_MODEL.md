@@ -871,12 +871,31 @@ The resolver maps identity independently of eligibility; an unavailable
 selected NPC receives a finding rather than being replaced by Combat. The room lifecycle authority owns the
 resolved product and its exact chronological assessment.
 
+#### Encounter events
+
+`encounters.aetosWaveByPhase[phaseKey]` sparsely owns a requested Aetos wave,
+independently of generated composition. Omission requests no planned appearance;
+there is no persisted checkbox or Native mode. `ReplaceAetosWave` authors or
+removes the value as one semantic edit. Old documents accept omission without
+a schema migration. Composition reset does not remove it. Structural phase
+reconciliation retains compatible ownership and deletes removed owners;
+context-invalid selections remain authored and repairable at the exact event.
+
+The resolved declaration and reached lifecycle assessment own supported waves
+and at-most-one-per-Olympus placement. Native GeneratedP supports requesting
+wave 2 without forcing its variable wave count; native Large supports 2 or 3.
+Customized composition uses its exact assessed wave count. Dormant and unpicked
+choices neither reserve the appearance nor publish a target. Fig Leaf skip
+invalidates a reached appearance; Gorgon alone does not. These event choices
+share an encounter-local presentation without replacing the independent Fig
+Leaf and Gorgon authored contracts.
+
 #### Encounter customization
 
 Concrete Encounter Definitions may declare optional decisions with stable keys,
 display labels, native operands and a single-choice, bounded distinct
 ordered-prefix, generated-composition, infinite-roster, or inclusive integer
-cocoon-count domain.
+cocoon-count domain, or room-specific cocoon reward-point domain.
 The resolved definition owns the active domain, including normal/Rival
 differences; customization does not independently calculate Rivals.
 
@@ -886,6 +905,12 @@ does not prevent customization. Commands enforce structural shape and
 declaration-known values, including a cocoon count's declared range. Decoding
 and room reconciliation enforce the same values, except that they retain a
 structurally valid out-of-range cocoon count for a preparation finding.
+The independent `cocoonRewardPoint` value stores a positive integral native
+`spawnPointId`; omission is Any. Its legal domain is the host room's ordered
+catalog anchors, while a structurally valid ID outside that domain remains
+finding-backed and repairable. Count and point resets remove only their own
+decision. Execution publication carries the native ID, never its displayed
+map number or coordinates.
 Preparation assesses support against the resolved encounter. Same-family values
 made unavailable by an upstream edit remain repairable rather than silently changing. Dormant phases emit no active settings
 or findings, and structural replacement reconciles compatible phase ownership.

@@ -870,6 +870,41 @@ function TestRoomEntryHooks.testLeaveRoomProvesDoorsBeforeClosingTheRoomSession(
     lu.assertTrue(nativeCalled)
 end
 
+function TestRoomEntryHooks.testComposedAetosMissedTargetReleasesBeforeRealRoomClose()
+    local module, _, callbacks = capture()
+    local state = hookedRuntimeState()
+    local occurrence = state.plan.occurrences[1]
+    occurrence.biomeKey, occurrence.gameName = "P", "P_Combat03"
+    state.plan.olympusAetos = {
+        kind = "target", occurrenceId = occurrence.id, phaseKey = "Combat", wave = 2,
+    }
+    assert(routeSessionModule.enter(state.route, occurrence.id, occurrence.gameName))
+    assert(roomCoordinatorModule.enter(state, occurrence))
+    local reportedWhileBound = false
+    local function report()
+        if state.aetos and state.aetos.released and roomCoordinatorModule.current(state) ~= nil then
+            reportedWhileBound = true
+        end
+    end
+    -- Same attachment order as runtime/composition: room lifecycle then encounters.
+    roomHooks.attach(module, runtimeSessionModule, function() return state end, report,
+        routeSessionModule, roomCoordinatorModule, nil, navigationEntryStub, unusedLoadoutScope)
+    encounterHooks.attach(module, runtimeSessionModule, function() return state end, report,
+        roomCoordinatorModule)
+    local nativeCalls = 0
+    callbacks.LeaveRoom(nil, {}, function()
+        nativeCalls = nativeCalls + 1
+        lu.assertTrue(reportedWhileBound)
+        lu.assertNil(roomCoordinatorModule.current(state))
+        lu.assertTrue(state.aetos.released)
+    end, { CurrentRoom = { Name = occurrence.gameName, __runPlannerExecutionRoomId = occurrence.id } })
+    lu.assertEquals(nativeCalls, 1)
+    lu.assertEquals(state.state, "synchronized")
+    lu.assertNil(state.firstMismatch)
+    lu.assertEquals(#state.diagnostics, 1)
+    lu.assertEquals(state.diagnostics[1].observed.reason, "target-exited-without-appearance")
+end
+
 function TestRoomEntryHooks.testLeaveRoomContinuesNativeAfterRoomCloseMismatch()
     local module, _, callbacks = capture()
     local state = { state = "synchronized", route = {} }

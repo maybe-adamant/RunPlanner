@@ -1065,6 +1065,16 @@ effects, while the terminal declaration completes and emits
 execution across the prepared prefix without deleting either completion or the
 terminal end-effect event.
 
+Aetos assessment consumes each reached phase's resolved declaration, Outdoor
+room tag, skip disposition, exact wave domain and earlier reached valid Aetos
+selection. A valid requested wave is recorded on that phase's `encounterStarted`
+history entry. This reserves at most one appearance per Olympus biome without
+claiming a native spawn occurred. Dormant phases and unassessed suffixes create
+no reservation or event findings; a selected invalid phase retains its exact
+repair owner. Aetos creates no wave, enemy budget, reward, counter advancement
+or automatic end effect. Native runtime outcome is best-effort and is not
+folded back into planner history.
+
 ### Mourning Fields Combat Room
 
 ```text

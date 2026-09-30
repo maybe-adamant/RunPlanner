@@ -400,12 +400,44 @@ Explicit decisions steer reached behavior without adding required attacks,
 transactions or conformance facts. The [encounter audit](../audits/game-execution-contacts/NPCS_ENCOUNTERS_AND_AUTOMATICS.md#boss-decisions)
 owns the supported native contacts and narrowly agreed progression overrides.
 
-A cocoon count applies only to Arachne combat setup. `SetupArachneCombatEncounter`
-receives a private argument copy with equal count bounds, so native `RandomInt`,
-placement, sizes, contents and reward-cocoon selection still run. Story cocoons
-spawned directly through `SpawnArachneCocoons` stay untouched. A count outside the
-native bounds declines with a diagnostic; a placement shortfall or setup error stays
-native, with a diagnostic.
+A cocoon count and reward point are independent optional Arachne combat
+decisions. `SetupArachneCombatEncounter` receives a private argument copy with
+equal count bounds only when a count is selected; native `RandomInt` still runs.
+The reward point is a native anchor ID, not a map label or coordinate. Before
+steering, the adapter checks the actual required/preferred point pool (including
+F's fallback pool) and live `IsSpawnPointEligible` occupancy. It substitutes that
+anchor for the first native cocoon placement, one of the native count, then
+selects its actual object only at the reward draw over the exact `CoocoonIds`
+table. Native setup retains occupancy, sizes, contents and all reward callbacks.
+
+The interception is scoped to the bound setup and its spawn call, isolated by
+Lua thread and nested contact, and cleaned up on return or error. Story/direct
+spawning, omitted decisions and unbound contacts remain native. An unavailable
+point or count outside native bounds declines independently with a diagnostic.
+A missing placed target falls back to native reward selection; placement
+shortfall remains diagnostic and setup errors are rethrown. Neither placement
+choice creates a transaction or new desynchronization condition.
+
+An extent containing Olympus requires one `olympusAetos` directive: `none`, or
+an exact selected occurrence, phase and wave target. Other extents omit it.
+The assembler copies the valid reached appearance from encounter history; the
+executor neither scans future rooms nor reconstructs planner eligibility.
+Existing authored saves without a selection remain compatible but newly
+published plans explicitly suppress Aetos in Olympus. Older execution artifacts
+require re-export; this does not change the authored schema.
+
+`none` suppresses only the native Aetos wave event. A target suppresses it before
+the requested actual wave, then removes only `ChanceToPlay` from a private
+event-requirements copy passed to the native dispatcher. Native requirements,
+Outdoor checks, spawning, cooldown and cap restoration remain native. A room
+spawn flag confirms success; a missing actual wave, live ineligibility or a
+missed/skipped target produces one diagnostic and releases subsequent encounters
+to native behavior. Failure cannot relocate the appearance to another wave of
+the target encounter. Native one-wave GeneratedP is valid best-effort fallback,
+including when composition admission itself fell back. Target departure closes
+a missed attempt. There is no Aetos transaction or conformance mismatch, and
+runtime uncertainty does not enter planner findings. Scope is session-local and
+retires on biome departure, lost binding or reset; unrelated dispatch is native.
 
 An infinite roster owns only the ordered `FillEnemyTypes` draws of an
 `InfiniteSpawns` encounter. It has no budget, wave or count admission. At the

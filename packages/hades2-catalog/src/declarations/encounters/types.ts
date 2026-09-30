@@ -51,6 +51,7 @@ export interface RawEncounterDefinitionDeclaration {
   readonly blocksFigLeaf?: boolean;
   readonly blocksGorgon?: boolean;
   readonly hostsGorgon?: boolean;
+  readonly aetosWaves?: readonly number[];
   readonly skipEndEncounterEffects?: boolean;
   readonly blocksKeepsakeSelectionKeys?: readonly string[];
   readonly requirements?: RequirementExpression;
@@ -169,6 +170,11 @@ export type RawEncounterCustomizationDecisionDeclaration =
       readonly key: string;
       readonly label: string;
       readonly selection: InfiniteRosterSelection;
+    }
+  | {
+      readonly key: string;
+      readonly label: string;
+      readonly selection: { readonly kind: 'cocoonRewardPoint' };
     };
 
 export interface RawEncounterSetDeclaration {

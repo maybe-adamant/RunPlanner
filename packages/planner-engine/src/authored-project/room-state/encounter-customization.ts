@@ -195,6 +195,12 @@ export function customizationValueKnown(
     if (decision.key !== decisionKey) return false;
     const selection = decision.selection;
     switch (value.kind) {
+      case 'cocoonRewardPoint':
+        return (
+          selection.kind === 'cocoonRewardPoint' &&
+          Number.isInteger(value.spawnPointId) &&
+          value.spawnPointId > 0
+        );
       case 'single':
         return (
           selection.kind === 'single' &&

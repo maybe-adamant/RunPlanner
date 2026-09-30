@@ -630,6 +630,7 @@ export function retainBlockedRegionProducts(
             return status?.kind === 'active'
               ? Object.freeze({
                   kind: 'active' as const,
+                  ...(status.aetos === undefined ? {} : { aetos: status.aetos }),
                   ...(status.encounterDefinitionKey === undefined
                     ? {}
                     : { encounterDefinitionKey: status.encounterDefinitionKey }),

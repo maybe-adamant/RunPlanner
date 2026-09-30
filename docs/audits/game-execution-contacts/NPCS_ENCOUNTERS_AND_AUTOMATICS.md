@@ -216,6 +216,32 @@ per-room source-line table.
 | `Story_Echo_01`, `BridgeShop`, `BridgeNemesisRandomEvent` | `H_Bridge01`                                                              | Multi-carrier; forces Echo, or `BridgeShop` on Fresh File.                      |
 | `OpeningEmpty` beside combat openings                     | `F_Opening01..03`, `N_Opening01`; `P_Intro` (`PIntroDreamRunEmpty`)       | Route-contextual entry rule selects the noncombat member on Dream routes.       |
 
+### Aetos dispatch
+
+`HandleEnemySpawns` (`EncounterLogic.lua:500,555`) reads wave-start events from
+`EncounterData[encounter.Name]`, not the generated instance's installed waves.
+`RunEventsGeneric` (`EventLogic.lua:21–59`) checks `GameStateRequirements`
+before invoking the function: wrapping only `OlympusEagleSpawn` cannot bypass
+the 33% chance. The adapter recognizes the exact declaration event-array and
+bound native phase, copies that array and only the Aetos event/requirements,
+and removes `ChanceToPlay` only at the published target wave. Sibling events,
+all nonrandom requirements and the global declaration remain unchanged.
+
+`OlympusEagleSpawn` sets the current-room flag before yielding for its spawn
+presentation. Private dispatch copies need no thread-global forcing scope;
+native errors propagate after recording the attempted failure. The flag, not
+mere invocation, establishes success. Missing waves or failed eligibility
+release later encounters to native events, while the failed encounter cannot
+retry at a different wave. LeaveRoom releases a missed/skipped target even
+when no wave callback ran. The scope is outside native saves and uses the
+frozen plan/session identity. No direct Eagle spawn, cap override, cooldown
+solver, acquisition transaction or conformance boundary is introduced.
+
+The [composition matrix](../rooms-and-routes/COMBAT_ENCOUNTER_COMPOSITION_MATRIX.md#olympus-aetos-wave-event)
+owns declaration support, cooldown evidence and the bounded planner policy.
+Automated dispatch and planner-produced JSON witnesses do not establish live
+in-game acceptance.
+
 ### Boss decisions
 
 Room and encounter identity are distinct. `RoomDataI.lua` and `RoomDataP.lua`

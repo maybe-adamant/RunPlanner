@@ -55,6 +55,7 @@ export function decodeRoomEncounterState(
       'encounterKeyByPhase',
       'figLeafSkipByPhase',
       'gorgonResultByPhase',
+      ...(state.aetosWaveByPhase === undefined ? [] : ['aetosWaveByPhase']),
       ...(state.traitOffersByPhase === undefined ? [] : ['traitOffersByPhase']),
       ...(state.nemesisRandomEventByPhase === undefined ? [] : ['nemesisRandomEventByPhase']),
       ...(state.customizationByPhase === undefined ? [] : ['customizationByPhase']),
@@ -100,6 +101,19 @@ export function decodeRoomEncounterState(
     );
   }
   const steadyGrowthTargetByPhase: Record<string, string> = {};
+  const aetosWaveByPhase: Record<string, number> = {};
+  if (state.aetosWaveByPhase !== undefined) {
+    for (const [phaseKey, wave] of Object.entries(
+      expectRecord(state.aetosWaveByPhase, `${path}.aetosWaveByPhase`),
+    )) {
+      if (!bindings.has(phaseKey))
+        failProjectDocument(`${path}.aetosWaveByPhase.${phaseKey}`, 'unknown encounter phase');
+      aetosWaveByPhase[phaseKey] = expectPositiveInteger(
+        wave,
+        `${path}.aetosWaveByPhase.${phaseKey}`,
+      );
+    }
+  }
   if (state.steadyGrowthTargetByPhase !== undefined) {
     const rawTargets = expectRecord(
       state.steadyGrowthTargetByPhase,
@@ -445,6 +459,16 @@ export function decodeRoomEncounterState(
             kind: 'orderedPrefix',
             choiceKeys: Object.freeze(choiceKeys),
           });
+        } else if (kind === 'cocoonRewardPoint') {
+          const label = `${path}.customizationByPhase.${phaseKey}.${decisionKey}`;
+          expectExactKeys(value, ['kind', 'spawnPointId'], label);
+          const parsed = Object.freeze({
+            kind: 'cocoonRewardPoint' as const,
+            spawnPointId: expectPositiveInteger(value.spawnPointId, `${label}.spawnPointId`),
+          });
+          if (!customizationValueRepresentable(declarations.structural, decisionKey, parsed))
+            failProjectDocument(label, 'is not a declared cocoon reward point');
+          decisions[decisionKey] = parsed;
         } else if (kind === 'cocoonCount') {
           const label = `${path}.customizationByPhase.${phaseKey}.${decisionKey}`;
           expectExactKeys(value, ['kind', 'count'], label);
@@ -487,6 +511,9 @@ export function decodeRoomEncounterState(
   return Object.freeze({
     encounterKeyByPhase: Object.freeze(encounterKeyByPhase),
     figLeafSkipByPhase: Object.freeze(figLeafSkipByPhase),
+    ...(Object.keys(aetosWaveByPhase).length === 0
+      ? {}
+      : { aetosWaveByPhase: Object.freeze(aetosWaveByPhase) }),
     ...(Object.keys(steadyGrowthTargetByPhase).length === 0
       ? {}
       : { steadyGrowthTargetByPhase: Object.freeze(steadyGrowthTargetByPhase) }),

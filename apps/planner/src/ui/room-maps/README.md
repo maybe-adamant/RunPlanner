@@ -46,6 +46,15 @@ Hub reward icons are separate transparent editor assets, mapped from structured
 reward identity. They are not room-map files and do not participate in room
 asset discovery or declaration coverage.
 
+Cocoon reward selection uses its own tagged maps under `cocoons/assets/{F,G}`,
+outside ordinary room-map discovery. `cocoons/cocoonMapAnnotations.ts` stores
+native-ID-keyed screen positions and marker radii from the final tagged overlays,
+including small display offsets at crowded points. These coordinates are only
+presentation; the engine supplies the room's legal IDs and numbered order.
+When replacing a cocoon map, update its visual metadata together. The asset
+integrity test checks coverage and ID correspondence with the catalog. Raw
+captures and processing review sheets remain outside the repository.
+
 After a swap, run the asset test and check the viewer:
 
 ```sh

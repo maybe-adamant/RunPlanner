@@ -90,6 +90,10 @@ export type WorkspaceOccurrenceInteractionRequirement =
           readonly selected: boolean;
           readonly supported: boolean;
         };
+        readonly aetos?: {
+          readonly selectedWave?: number;
+          readonly waves: readonly number[];
+        };
         readonly gorgonCondition?: {
           readonly selected: boolean;
           readonly supported: boolean;

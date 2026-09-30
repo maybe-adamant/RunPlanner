@@ -308,6 +308,19 @@ export interface WorkspaceErisObservationInteraction {
   readonly spawned: boolean;
 }
 
+export interface WorkspaceAetosInteraction {
+  readonly enableIntent?: WorkspaceCommandIntent<
+    Extract<ProjectCommand, { readonly kind: 'ReplaceAetosWave' }>
+  >;
+  readonly intentFor: (
+    value: number | null,
+  ) => WorkspaceCommandIntent<Extract<ProjectCommand, { readonly kind: 'ReplaceAetosWave' }>>;
+  readonly key: string;
+  readonly owner: EncounterPhaseAddress;
+  readonly selectedWave?: number;
+  readonly waves: readonly number[];
+}
+
 export interface WorkspaceGorgonConditionInteraction {
   readonly intentFor: (
     value: boolean,
@@ -423,6 +436,11 @@ export interface WorkspaceEncounterPhase {
     readonly selected: boolean;
     readonly supported: boolean;
   };
+  readonly aetos?: {
+    readonly interactionKey: string;
+    readonly selectedWave?: number;
+    readonly waves: readonly number[];
+  };
   /** Selected encounter-local trait offer, when this phase owns one. */
   readonly traitOffer?: WorkspaceTraitOfferControl;
   readonly gorgonCondition?: {
@@ -454,6 +472,13 @@ type WorkspaceEncounterCustomizationDecisionBase = {
 };
 
 export type WorkspaceEncounterCustomizationDecision =
+  | (WorkspaceEncounterCustomizationDecisionBase & {
+      readonly selection: {
+        readonly kind: 'cocoonRewardPoint';
+        readonly gameName: string;
+        readonly spawnPointIds: readonly number[];
+      };
+    })
   | (WorkspaceEncounterCustomizationDecisionBase & {
       readonly selection: {
         readonly kind: 'single';

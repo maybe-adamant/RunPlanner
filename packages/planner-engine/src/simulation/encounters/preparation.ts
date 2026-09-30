@@ -80,6 +80,7 @@ export interface EncounterPhaseCandidateSupport {
 export type EncounterPhaseSequenceStatus =
   | {
       readonly kind: 'active';
+      readonly aetos?: import('./aetos').AetosPhaseSupport;
       /** Exact selected identity resolved at preparation, before recording or execution. */
       readonly encounterDefinitionKey?: string;
       /** Present only after this phase actually starts; preparation alone is not execution. */

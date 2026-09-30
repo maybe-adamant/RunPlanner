@@ -21,6 +21,15 @@ import { room } from '../support/room-state-codec';
 
 const fPhase = arachneCocoonPhases.F;
 
+function fCountOnlyProject() {
+  return applyProjectCommand(loadUnderworldArachneCocoonsCheckpoint(), catalog, {
+    kind: 'ReplaceEncounterCustomization',
+    phase: fPhase,
+    decisionKey: 'cocoonRewardPoint',
+    value: null,
+  });
+}
+
 function fEncounters(project: ProjectDocument) {
   return project.route.biomes
     .find((biome) => biome.biomeKey === 'F')!
@@ -53,7 +62,7 @@ function cocoonFindings(project: ProjectDocument) {
 
 describe('Arachne combat cocoon count', () => {
   it('persists an exact in-range count, resets to absent Default, and round-trips', () => {
-    const project = loadUnderworldArachneCocoonsCheckpoint();
+    const project = fCountOnlyProject();
     expect(fEncounters(project).customizationByPhase).toEqual({
       Encounter: { cocoonCount: { kind: 'cocoonCount', count: 11 } },
     });
@@ -130,7 +139,7 @@ describe('Arachne combat cocoon count', () => {
 
   it('keeps a retained count dormant while another encounter is selected', () => {
     const nativeKey = fEncounters(createCompleteFGProject()).encounterKeyByPhase.Encounter!;
-    const dormant = applyProjectCommand(loadUnderworldArachneCocoonsCheckpoint(), catalog, {
+    const dormant = applyProjectCommand(fCountOnlyProject(), catalog, {
       kind: 'SelectEncounter',
       phase: fPhase,
       encounterKey: nativeKey,

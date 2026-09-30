@@ -2,6 +2,7 @@ import { catalog } from '@run-planner/hades2-catalog';
 import {
   applyProjectCommand,
   createOccurrenceAddress,
+  createEncounterPhaseAddress,
   createRouteAddress,
   createProjectDocument,
   encodeProjectDocument,
@@ -52,7 +53,71 @@ import {
   selectProfileSession,
   selectProfileStatus,
 } from '@planner/state/store';
-import { loadSurfaceNProject } from '@run-planner/test-fixtures/surface';
+import {
+  loadSurfaceNProject,
+  loadSurfaceNOPProject,
+  pBiome,
+  pOccurrenceId,
+} from '@run-planner/test-fixtures/surface';
+
+it('publishes an explicit Aetos biome target', async () => {
+  const profile = createProfileFixture();
+  const game = createFakeGameModuleHost();
+  const application = createApplication({
+    gameModuleHost: game.host,
+    profileFile: profile.adapter,
+  });
+  application.store.dispatch(
+    authoredProjectReplaced(
+      applyProjectCommand(loadSurfaceNOPProject(), catalog, {
+        kind: 'ReplaceAetosWave',
+        phase: createEncounterPhaseAddress(
+          pBiome,
+          { kind: 'occurrence', occurrenceId: pOccurrenceId('P_Combat03', 1, 1) },
+          'Combat',
+        ),
+        value: 2,
+      }),
+    ),
+  );
+  expect(application.projectOperations.inspectCurrentGamePlan().kind).toBe('publishable');
+  await expect(application.projectOperations.publishGame(1)).resolves.toMatchObject({
+    status: 'success',
+  });
+  expect(game.published).toHaveLength(1);
+  expect(profile.saves).toHaveLength(1);
+});
+
+it('publishes while retaining an unpicked Aetos choice outside the execution surface', async () => {
+  const profile = createProfileFixture();
+  const game = createFakeGameModuleHost();
+  const application = createApplication({
+    gameModuleHost: game.host,
+    profileFile: profile.adapter,
+  });
+  const phase = createEncounterPhaseAddress(
+    pBiome,
+    { kind: 'occurrence', occurrenceId: pOccurrenceId('P_Combat06', 2, 2) },
+    'Combat',
+  );
+  const project = applyProjectCommand(loadSurfaceNOPProject(), catalog, {
+    kind: 'ReplaceAetosWave',
+    phase,
+    value: 2,
+  });
+  application.store.dispatch(authoredProjectReplaced(project));
+  expect(application.projectOperations.inspectCurrentGamePlan().kind).toBe('publishable');
+  await expect(application.projectOperations.publishGame(1)).resolves.toMatchObject({
+    status: 'success',
+  });
+  expect(game.published).toHaveLength(1);
+  expect(
+    selectPresentProject(application.store.getState())
+      ?.route.biomes.find((biome) => biome.biomeKey === 'P')
+      ?.topology?.occurrences.find((room) => room.occurrenceId === phase.owner.occurrenceId)
+      ?.encounters.aetosWaveByPhase,
+  ).toEqual({ Combat: 2 });
+});
 
 interface ProfileFixture {
   readonly adapter: ProfileFileAdapter;

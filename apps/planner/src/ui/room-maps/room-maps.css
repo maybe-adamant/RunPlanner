@@ -10,6 +10,57 @@
   box-shadow: 0 24px 80px rgb(0 0 0 / 62%);
 }
 
+.encounter-cocoon-position {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  min-width: 0;
+  gap: 10px;
+}
+
+.encounter-cocoon-position > .room-map-viewport {
+  min-width: 0;
+  width: 100%;
+}
+
+.encounter-cocoon-position .room-map-scroll {
+  height: min(26rem, calc(48 * var(--app-vh)));
+  min-height: 12rem;
+  min-width: 0;
+}
+
+.cocoon-map-markers {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.cocoon-map-marker {
+  position: absolute;
+  aspect-ratio: 1;
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  transform: translate(-50%, -50%);
+  pointer-events: auto;
+  cursor: pointer;
+}
+
+.cocoon-map-marker:hover,
+.cocoon-map-marker[aria-pressed='true'] {
+  background: transparent;
+  outline: 3px solid #ffe8a0;
+  outline-offset: 2px;
+  box-shadow: 0 0 0 2px #101116;
+}
+
+.cocoon-map-marker:focus-visible {
+  outline: 3px dashed white;
+  outline-offset: 5px;
+  z-index: 1;
+}
+
 .room-map-dialog-backdrop::backdrop {
   background: rgb(0 0 0 / 62%);
 }
