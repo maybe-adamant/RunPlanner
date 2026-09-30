@@ -627,6 +627,52 @@ Planner disposition: an optional exact cocoon count within the declared range,
 applied at combat setup. Placement, sizes, contents and the reward cocoon stay
 native.
 
+#### Cocoon host maps and placement anchors
+
+The combat host inventory is **41 maps**: `F_Combat02`–`F_Combat22`
+(21 maps) and `G_Combat01`–`G_Combat20` (20 maps). F combat rooms inherit
+`BaseF_Combat` → `BaseF.LegalEncounters = FEncountersDefault`; G inherits
+`BaseG_Combat` → `BaseG.LegalEncounters = GEncountersDefault`.
+Those sets include `ArachneCombatF` and `ArachneCombatG`, respectively.
+`F_Combat01` explicitly replaces that set with `FIntroFight` / `GeneratedF`.
+Openings, intros, minibosses, shops, bosses, postbosses, reprieves and story
+rooms have other encounter sets. Arachne's story-room cocoons are not combat
+reward-holder candidates. Sources: `RoomDataF.lua:278,1266–1920`,
+`RoomDataG.lua:305,2092–2441`, `EncounterSets.lua:28–29,79`.
+
+This is potential map membership, not unconditional encounter eligibility:
+the F encounter still requires inclusive biome depth 4–8, both reject the
+listed incompatible reward types, and occurrence/progression requirements
+remain as documented in the encounter selection audit.
+
+`SpawnArachneCocoons` selects the point **before** choosing the cocoon size.
+Its `SelectSpawnPoint` call supplies `PreferredSpawnPoint = EnemyPoint`, no
+combat encounter constraints (an empty encounter), and no additional filter
+arguments. F supplies no required type: the selector first shuffles EnemyPoint
+IDs, then falls back to `MapState.SpawnPoints` when the preferred pool is
+exhausted. That fallback is the map's `SpawnPoints` group (`RoomLogic.lua:352`),
+not every map object. G explicitly supplies `RequiredSpawnPointType = EnemyPoint`
+(`EncounterData_Arachne.lua:251–255`), so it never admits fallback-only anchors.
+Exhausting its required pool ends spawning even if the requested count is higher.
+
+For this call, `IsSpawnPointEligible` rejects an already-used anchor;
+distance, line-of-sight and spacing filters are not enabled. `SetupObstacle`
+reserves the exact `OccupyingSpawnPointId` in `SessionMapState.SpawnPointsUsed`
+(`RunLogic.lua:2326–2328`). Size/content setup does not reserve adjacent points
+or impose a separate Lua placement constraint. Sources:
+`EncounterLogic.lua:1071–1317,2734–2755`, `ObstacleData.lua:435–635`.
+
+The internal capture inventory follows the native setup's required type:
+F labels the sorted union of these two pools; G labels only EnemyPoint IDs,
+recording native IDs, coordinates, preferred/fallback membership and current
+occupancy separately. These captures are evidence for a future spatial editor;
+they do not prove every point is available in every live room setup. Completed
+unflipped captures cover 525 F anchors and 476 G anchors, with screen coordinates
+and native IDs verified against the capture labels. Native world coordinates
+were unavailable; reflected-room placement remains a live verification item.
+Planner reward-location authoring and executor placement steering are not yet
+implemented.
+
 ## Intentional native-only exclusions
 
 These declarations are not current planner encounter choices and do not expand
