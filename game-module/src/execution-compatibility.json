@@ -1,5 +1,5 @@
 {
   "format": "run-planner-execution",
-  "protocolVersion": 52,
+  "protocolVersion": 53,
   "catalogVersion": "0.55.0-anvil-of-fates"
 }

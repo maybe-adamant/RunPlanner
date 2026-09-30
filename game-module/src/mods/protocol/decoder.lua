@@ -15,7 +15,7 @@ local aetos = type(import) == "function" and import("mods/protocol/aetos.lua")
 
 local protocol = {
     FORMAT = "run-planner-execution",
-    VERSION = 52,
+    VERSION = 53,
     CATALOG_VERSION = "0.55.0-anvil-of-fates",
     MAX_ITEMS = p.MAX_ITEMS,
     MAX_STRING = p.MAX_STRING,
