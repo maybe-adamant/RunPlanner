@@ -27,6 +27,10 @@ import {
   pBiome,
   pOccurrenceId,
 } from '@run-planner/test-fixtures/surface';
+import {
+  createFreshFileRouteProject,
+  freshFileFBiome,
+} from '@run-planner/test-fixtures/fresh-file';
 import { projectStructuredWorkspaceFixture } from '@planner-test/fixtures/structuredWorkspace';
 import { renderOccurrenceWorkbench } from '@planner-test/support/biome-workbench';
 import { occurrenceById, openRoomTab } from '@planner-test/support/occurrence-workbench';
@@ -632,6 +636,21 @@ describe('generated encounter customization workflows', () => {
     await view.user.click(within(view.dialog).getByRole('radio', { name: '3' }));
     expect(within(view.dialog).getByRole('button', { name: 'Shared Enemy' })).toBeTruthy();
     expect(current(view)).toEqual(composed);
+  });
+  it('shows a mixed introduction fixed wave read-only beside its generated suffix', async () => {
+    const owner = createEncounterPhaseAddress(
+      freshFileFBiome,
+      { kind: 'occurrence', occurrenceId: createOccurrenceId('fresh-2-0') },
+      'Encounter',
+    );
+    const view = await open(createFreshFileRouteProject(), owner);
+    expect(within(view.dialog).getByText('Wave 1 (fixed): Spindle ×5')).toBeTruthy();
+    expect(within(view.dialog).queryByRole('button', { name: 'Shared Enemy' })).toBeNull();
+    expect(within(view.dialog).getByRole('tab', { name: /^Wave 2/ })).toBeTruthy();
+    expect(within(view.dialog).queryByRole('tab', { name: /^Wave 1/ })).toBeNull();
+    // A fresh profile has no Fear, so neither Fangs nor Menace controls appear.
+    expect(within(view.dialog).queryByRole('rowheader', { name: /Menace/ })).toBeNull();
+    expect(within(view.dialog).queryByRole('button', { name: /Fangs/ })).toBeNull();
   });
   it('warns about declared once-per-run enemies among engine-assessed active members', async () => {
     const owner = createEncounterPhaseAddress(

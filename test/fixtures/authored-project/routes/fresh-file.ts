@@ -3,6 +3,7 @@ import {
   applyProjectCommand,
   createBatchRewardStoreAddress,
   createBiomeAddress,
+  createEncounterPhaseAddress,
   createExitDecisionAddress,
   createExitSelectionAddress,
   createIncomingRewardAddress,
@@ -14,14 +15,56 @@ import {
   createTargetAddress,
   decodeProjectDocument,
   encodeProjectDocument,
+  type EncounterPhaseAddress,
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
+import {
+  generatedEncounterSupportForProjectEvaluationAssembly,
+  simulateProjectAssembly,
+} from '@run-planner/engine/simulation';
 import type { ResolvedRewardOffer } from '@run-planner/engine/reward-kernel';
 import {
   loadUnderworldFGHICheckpoint,
   loadUnderworldGeneratedCompositionCheckpoint,
 } from '../checkpoints/underworld';
 import { authorLegalTraitOffers } from '../shared';
+
+/**
+ * Authors, in chronological order, each reached generated composition a fresh
+ * profile requires (its deterministic initial value) and each missing trait offer.
+ */
+export function authorFreshFileFrontier(project: ProjectDocument): ProjectDocument {
+  let current = project;
+  for (let pass = 0; pass < 256; pass += 1) {
+    const assembly = simulateProjectAssembly(catalog, current);
+    const required = assembly.evaluation.findings.find(
+      (finding) => finding.code === 'encounterCustomizationRequired',
+    );
+    const phase = required?.origin as EncounterPhaseAddress | undefined;
+    // A composition's generation contact needs the reward frontier before it.
+    const value =
+      phase === undefined
+        ? undefined
+        : generatedEncounterSupportForProjectEvaluationAssembly(assembly, phase)?.initialize();
+    if (phase !== undefined && value !== undefined) {
+      current = applyProjectCommand(current, catalog, {
+        kind: 'ReplaceEncounterCustomization',
+        phase,
+        decisionKey: String(required!.evidence.decisionKey),
+        value,
+      });
+      continue;
+    }
+    const authored = authorLegalTraitOffers(current);
+    if (authored === current) {
+      if (phase !== undefined)
+        throw new Error(`fresh fixture cannot compose ${JSON.stringify(phase)}`);
+      return current;
+    }
+    current = authored;
+  }
+  throw new Error('fresh fixture frontier did not settle');
+}
 
 export const freshFileFBiome = createBiomeAddress('FreshFile', 'F');
 const biome = freshFileFBiome;
@@ -123,6 +166,14 @@ function authorShop(
 
 /** A complete valid Fresh File F ending in its automatic Boss and Postboss. */
 export function createFreshFileFProject(): ProjectDocument {
+  freshFileF ??= authorFreshFileFrontier(freshFileFTopology());
+  return freshFileF;
+}
+
+let freshFileF: ProjectDocument | undefined;
+
+/** The F topology, rewards and Shops, before compositions and trait offers. */
+function freshFileFTopology(): ProjectDocument {
   let project = createProjectDocument(catalog, {
     projectId: 'fresh-f',
     routeKey: 'FreshFile',
@@ -176,7 +227,7 @@ export function createFreshFileFProject(): ProjectDocument {
     value: { rewardType: 'StackUpgrade' },
   });
   selectFirst(decision);
-  return authorLegalTraitOffers(authorShop(project, prebossShop));
+  return authorShop(project, prebossShop);
 }
 
 /**
@@ -340,7 +391,7 @@ export function createFreshFileGeneratedComposition(): ProjectDocument {
     occurrences: [...freshF.topology.occurrences, ...occurrences],
     decisions: [...freshF.topology.decisions, ...decisions],
   };
-  return authorLegalTraitOffers(
+  return authorFreshFileFrontier(
     decodeProjectDocument(
       { ...mature, route: { ...fresh.route, biomes: [{ ...matureF, topology }] } },
       catalog,
@@ -397,7 +448,14 @@ const boonOffer = (source: string) => ({
  * slot is cleared through ClearShopOffer; Eris spawns in G_Intro.
  */
 export function createFreshFileRouteProject(): ProjectDocument {
-  const fresh = JSON.parse(encodeProjectDocument(createFreshFileFProject()));
+  freshFileRoute ??= freshFileRouteProject();
+  return freshFileRoute;
+}
+
+let freshFileRoute: ProjectDocument | undefined;
+
+function freshFileRouteProject(): ProjectDocument {
+  const fresh = JSON.parse(encodeProjectDocument(freshFileFTopology()));
   const mature = JSON.parse(
     encodeProjectDocument(loadUnderworldFGHICheckpoint()).replaceAll('Underworld', 'FreshFile'),
   );
@@ -511,8 +569,39 @@ export function createFreshFileRouteProject(): ProjectDocument {
     occurrence: createOccurrenceAddress(freshFileGBiome, freshFileGIntroId),
     spawned: true,
   });
-  return authorLegalTraitOffers(project);
+  for (const [phase, encounterKey] of freshFileIntroductions)
+    project = applyProjectCommand(project, catalog, {
+      kind: 'SelectEncounter',
+      phase,
+      encounterKey,
+    });
+  return authorFreshFileFrontier(project);
 }
+
+const introductionPhase = (
+  biomeAddress: ReturnType<typeof createBiomeAddress>,
+  occurrenceId: string,
+  phaseKey: string,
+) =>
+  createEncounterPhaseAddress(
+    biomeAddress,
+    { kind: 'occurrence', occurrenceId: createOccurrenceId(occurrenceId) },
+    phaseKey,
+  );
+
+/**
+ * The route's introductions: one F mixed introduction, FishSwarmerIntro in G,
+ * and H cages recording Mourner and Lamia, then Lovesick before Lycanthrope.
+ */
+export const freshFileIntroductions = Object.freeze([
+  [introductionPhase(freshFileFBiome, 'fresh-2-0', 'Encounter'), 'RadiatorIntro'],
+  [introductionPhase(freshFileGBiome, 'golden-g-b3-e1', 'Encounter'), 'FishSwarmerIntro'],
+  [introductionPhase(freshFileHBiome, 'golden-h-combat02', 'Cage01'), 'MournerIntro'],
+  [introductionPhase(freshFileHBiome, 'golden-h-combat02', 'Cage02'), 'LamiaIntro'],
+  // Cage 2 sees Lovesick recorded in cage 1 of the same room, not yet completed.
+  [introductionPhase(freshFileHBiome, 'golden-h-combat09', 'Cage01'), 'LovesickIntro'],
+  [introductionPhase(freshFileHBiome, 'golden-h-combat09', 'Cage02'), 'LycanthropeIntro'],
+] as const);
 
 function withUnresolvedTraitOffers(value: RawJson): void {
   if (Array.isArray(value)) return value.forEach(withUnresolvedTraitOffers);

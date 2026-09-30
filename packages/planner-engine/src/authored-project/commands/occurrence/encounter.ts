@@ -9,6 +9,7 @@ import type {
   RoomEncounterState,
 } from '../../model';
 import {
+  encounterAuthoringProfileOnRoute,
   encounterAuthoringProfiles,
   encounterBindingsBySlot,
   directEncounterDefinitionKeyForSlot,
@@ -188,9 +189,14 @@ function updatedSelections(
             return profile.key;
           })()
         : command.encounterKey;
-  if (!encounterAuthoringProfiles(set).some((profile) => profile.key === encounterKey)) {
+  const profile = encounterAuthoringProfiles(set).find(
+    (candidate) => candidate.key === encounterKey,
+  );
+  if (profile === undefined) {
     failCommand(command, `${encounterKey} is not available from ${set.key}`);
   }
+  if (!encounterAuthoringProfileOnRoute(profile, phase.routeKey))
+    failCommand(command, `${encounterKey} is not offered on route ${phase.routeKey}`);
   const selectionUnchanged = current.encounterKeyByPhase[phase.phaseKey] === encounterKey;
   const priorOffers = current.traitOffersByPhase ?? {};
   const phaseOffers = { ...(priorOffers[phase.phaseKey] ?? {}) };

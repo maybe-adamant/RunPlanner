@@ -49,6 +49,7 @@ describe('requirement evaluator registry', () => {
       'distinctRecordKeyCount',
       'recentEnvelopeSlotCount',
       'encounterKeyCount',
+      'encounterCompletionCount',
       'previousRoomEncounterKeyCount',
       'notInCurrentRoomShopOptions',
       'rewardLookupExcludes',
@@ -246,6 +247,7 @@ describe('requirement evaluator registry', () => {
       ...baseContext,
       encounterHistory: {
         routeEncounterKeyCounts: { ArtemisCombatF: 1, ArtemisCombatG: 1 },
+        routeEncounterCompletionCounts: { ArtemisCombatF: 1 },
         biomeEncounterKeyCounts: { ArtemisCombatG: 1 },
         previousRoomEncounterKeys: [['ArtemisCombatF'], [], ['ArtemisCombatG', 'GeneratedG']],
       },
@@ -273,6 +275,23 @@ describe('requirement evaluator registry', () => {
         context,
       ),
     ).toBe(true);
+    // Completion is a separate ledger: ArtemisCombatG was recorded but not completed.
+    expect(
+      evaluateRequirement(
+        {
+          kind: 'encounterCompletionCount',
+          encounterKeys: ['ArtemisCombatF', 'ArtemisCombatG'],
+          range: { min: 1, max: 1 },
+        },
+        context,
+      ),
+    ).toBe(true);
+    expect(
+      evaluateRequirement(
+        { kind: 'encounterCompletionCount', encounterKeys: ['ArtemisCombatG'], range: { min: 1 } },
+        context,
+      ),
+    ).toBe(false);
     expect(
       evaluateRequirement(
         {

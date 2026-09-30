@@ -5,6 +5,7 @@ import type {
 } from '@run-planner/engine/catalog-schema';
 import { requireNonEmpty } from '../common';
 import { fail } from '../errors';
+import { normalizeRequirement } from '../requirements';
 
 export function normalizeEncounterGeneration(
   raw: GeneratedEncounterSelection,
@@ -128,6 +129,17 @@ export function normalizeEncounterGeneration(
             value.excludes.map((excluded) => requireNonEmpty(excluded, `${label}.excludes`)),
           ),
           ...(value.group === undefined ? {} : { group: value.group }),
+          ...(value.admission === undefined
+            ? {}
+            : { admission: normalizeRequirement(value.admission, `${label}.admission`) }),
+          ...(value.introductionEncounterKey === undefined
+            ? {}
+            : {
+                introductionEncounterKey: requireNonEmpty(
+                  value.introductionEncounterKey,
+                  `${label}.introductionEncounterKey`,
+                ),
+              }),
           ...(value.minimumDepth === undefined
             ? {}
             : {
@@ -161,6 +173,18 @@ export function normalizeEncounterGeneration(
   const max = integer(raw.waveCount.max, 'waveCount.max', 1, 4);
   if (min > max || (fixedEnemies.length !== 0 && (min !== 1 || max !== 1)))
     fail(path, 'has incompatible wave bounds/template');
+  const fixedWaves = (raw.fixedWaves ?? []).map((wave, index) => {
+    const spawns = enemies(wave, `fixedWaves[${index}]`);
+    if (spawns.length === 0 || spawns.some((spawn) => spawn.fixedCount === undefined))
+      fail(`${path}.fixedWaves[${index}]`, 'must list spawns with fixed counts');
+    return spawns;
+  });
+  const generatedSeeds = enemies(raw.generatedSeeds ?? [], 'generatedSeeds');
+  // Fixed waves precede a generated suffix: the wave total is exact and exceeds them.
+  if (fixedWaves.length !== 0 && (min !== max || fixedWaves.length >= min))
+    fail(`${path}.fixedWaves`, 'must precede a generated suffix of exact length');
+  if (generatedSeeds.length !== 0 && fixedEnemies.length !== 0)
+    fail(`${path}.generatedSeeds`, 'cannot combine with a fixed template member');
   if (!Number.isFinite(raw.types.depthRamp) || raw.types.depthRamp < 0 || raw.types.depthRamp > 1)
     fail(`${path}.types.depthRamp`, 'must be finite in 0..1');
   if (!['biomeDepthCache', 'biomeEncounterDepth'].includes(raw.types.depthAxis))
@@ -193,6 +217,11 @@ export function normalizeEncounterGeneration(
     preparation: raw.preparation,
     choices,
     fixedEnemies,
+    ...(fixedWaves.length === 0 ? {} : { fixedWaves: Object.freeze(fixedWaves) }),
+    ...(generatedSeeds.length === 0 ? {} : { generatedSeeds }),
+    ...(raw.requireCompletedIntro === undefined
+      ? {}
+      : { requireCompletedIntro: boolean(raw.requireCompletedIntro, 'requireCompletedIntro') }),
     ...(raw.fangs === undefined
       ? {}
       : {

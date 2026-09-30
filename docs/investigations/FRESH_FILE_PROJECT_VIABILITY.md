@@ -699,14 +699,15 @@ reachable through legal F/G/H/I rooms and their actual enemy pools.
 | Eligible ordinary F combat | `RadiatorIntro`, `ScreamerIntro`                                  | Fixed first wave, generated second wave.                                                           |
 | First G combat             | `FishmanIntro`                                                    | Three fixed waves.                                                                                 |
 | Eligible later G combat    | `FishSwarmerIntro`                                                | Fixed first wave, generated second wave.                                                           |
-| Outside Fresh File         | `TurtleIntro`                                                     | Fixed first wave, two generated waves; Turtle requires two lifetime G_Intro entries.               |
+| Eligible later G combat    | `TurtleIntro`                                                     | Fixed first wave, two generated waves; reached only through `Turtle_Elite` at G depth ≥3.          |
 | Eligible H cage encounters | `MournerIntro`, `LamiaIntro`, `LovesickIntro`, `LycanthropeIntro` | Three fixed waves each.                                                                            |
 | First I combat             | `ClockworkIntro`                                                  | Three fixed waves; distinct from mature `GeneratedIChronosIntro` / `GeneratedI_SmallChronosIntro`. |
 
 The [introduction resolution matrix](FRESH_FILE_ENEMY_INTRODUCTION_MATRIX.md)
 owns the detailed history and competition audit. In particular, enemy-seen
-history does not prove introduction completion, and TurtleIntro is not a
-reachable Fresh File profile.
+history does not prove introduction completion. TurtleIntro is reachable
+through `Turtle_Elite`, whose `Elite` gate replaces the ordinary Turtle's
+two-visit gate.
 
 Do not import every declaration ending in Intro. Guard has no active
 `GuardIntro` link; SiegeVine and WaterUnit links are commented out.

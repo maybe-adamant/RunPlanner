@@ -285,7 +285,7 @@ function GeneratedEncounterWaveDraftPicker({
   readonly selection: readonly {
     readonly key: string;
     readonly label: string;
-    readonly kind?: 'fixed' | 'highlight';
+    readonly kind?: 'fixed' | 'template' | 'highlight';
   }[];
   readonly wave: WorkspaceGeneratedEncounterAssessment['waves'][number];
 }) {
@@ -560,7 +560,8 @@ export function GeneratedEncounterCustomizationControl({
             ) : null}
           </div>
         </div>
-        {(value.waveCount ?? (fixedCount ? decision.selection.waveCount.min : 0)) > 1 ? (
+        {assessment?.sharedEnemy !== false &&
+        (value.waveCount ?? (fixedCount ? decision.selection.waveCount.min : 0)) > 1 ? (
           <div
             className="encounter-customization-row encounter-shared-enemy"
             title="Only used with multiple waves"
@@ -579,6 +580,12 @@ export function GeneratedEncounterCustomizationControl({
           </div>
         ) : null}
       </div>
+      {decision.selection.fixedWaves?.map((wave) => (
+        <p className="encounter-generated-context" key={`fixed-wave-${wave.waveIndex}`}>
+          Wave {wave.waveIndex} (fixed):{' '}
+          {wave.spawns.map((spawn) => `${spawn.label} ×${spawn.count}`).join(' · ')}
+        </p>
+      ))}
       {assessment === undefined ? (
         <p className="encounter-customization-repair">
           Complete earlier choices to evaluate this encounter.

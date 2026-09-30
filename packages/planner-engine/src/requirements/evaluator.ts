@@ -20,6 +20,7 @@ export interface ClockworkRequirementFacts {
 
 export interface EncounterHistoryRequirementFacts {
   readonly routeEncounterKeyCounts: Readonly<Record<string, number>>;
+  readonly routeEncounterCompletionCounts: Readonly<Record<string, number>>;
   readonly biomeEncounterKeyCounts: Readonly<Record<string, number>>;
   readonly previousRoomEncounterKeys: readonly (readonly string[])[];
 }
@@ -151,6 +152,11 @@ export const requirementEvaluatorRegistry = Object.freeze({
     const count = requirement.encounterKeys.reduce((total, key) => total + (counts[key] ?? 0), 0);
     return isInRange(count, requirement.range);
   },
+  encounterCompletionCount: (requirement, context) => {
+    const counts = requireEncounterHistory(context).routeEncounterCompletionCounts;
+    const count = requirement.encounterKeys.reduce((total, key) => total + (counts[key] ?? 0), 0);
+    return isInRange(count, requirement.range);
+  },
   previousRoomEncounterKeyCount: (requirement, context) => {
     const previousRooms = requireEncounterHistory(context).previousRoomEncounterKeys.slice(
       -requirement.roomWindow,
@@ -230,6 +236,8 @@ export function evaluateRequirement(
       return requirementEvaluatorRegistry.recentEnvelopeSlotCount(requirement, context);
     case 'encounterKeyCount':
       return requirementEvaluatorRegistry.encounterKeyCount(requirement, context);
+    case 'encounterCompletionCount':
+      return requirementEvaluatorRegistry.encounterCompletionCount(requirement, context);
     case 'previousRoomEncounterKeyCount':
       return requirementEvaluatorRegistry.previousRoomEncounterKeyCount(requirement, context);
     case 'notInCurrentRoomShopOptions':

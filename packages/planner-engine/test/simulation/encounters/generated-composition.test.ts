@@ -86,7 +86,7 @@ describe('native generated composition possibility', () => {
             : [],
         ),
     );
-    expect(profiles).toHaveLength(46);
+    expect(profiles).toHaveLength(50);
     for (const { definitionKey, policy: profile } of profiles) {
       const context = {
         biomeDepthCache: 8,
@@ -97,7 +97,10 @@ describe('native generated composition possibility', () => {
       expect(value, definitionKey).toBeDefined();
       const assessment = assessGeneratedEncounter(profile, value!, context);
       expect(assessment.operands, definitionKey).toBeDefined();
-      expect(assessment.operands!.waves).toHaveLength(assessment.operands!.waveCount);
+      // Declared fixed waves are not generated or published.
+      expect(assessment.operands!.waves).toHaveLength(
+        assessment.operands!.waveCount - (profile.fixedWaves?.length ?? 0),
+      );
       expect(
         assessment.operands!.waves.every(
           (wave) => Object.keys(wave.counts).length === wave.typeKeys.length,

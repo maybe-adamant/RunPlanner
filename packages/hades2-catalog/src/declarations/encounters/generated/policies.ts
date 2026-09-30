@@ -5,7 +5,9 @@ import type {
 import {
   fangsPerks,
   fixedFieldsEnemies,
+  fixedSpawn,
   generatedEnemyPools as pools,
+  poolEnemy,
   withMenaceLabels,
 } from './enemies';
 
@@ -25,6 +27,9 @@ interface GenerationDeclaration {
   readonly blockFangsAttributes?: boolean;
   readonly blockMenace?: boolean;
   readonly fixedEnemies?: readonly EncounterEnemyChoice[];
+  readonly fixedWaves?: readonly (readonly EncounterEnemyChoice[])[];
+  readonly generatedSeeds?: readonly EncounterEnemyChoice[];
+  readonly requireCompletedIntro?: boolean;
   readonly groups?: GeneratedEncounterSelection['maxTypesPerGroup'];
 }
 
@@ -82,11 +87,47 @@ const budgetByEncounter: Readonly<
     multiplier: 1,
     hardDepthRamp: 30,
   },
+  // BaseIntroEncounter (EncounterData.lua:257) precedes GeneratedF in InheritFrom,
+  // so its DifficultyMultiplier 2.0 applies; each introduction sets its own modifier.
+  RadiatorIntro: {
+    base: 55,
+    depthRamp: 15,
+    depthAxis: 'biomeDepthCache',
+    modifier: 25,
+    multiplier: 2,
+    hardDepthRamp: 30,
+  },
+  ScreamerIntro: {
+    base: 55,
+    depthRamp: 15,
+    depthAxis: 'biomeDepthCache',
+    modifier: 20,
+    multiplier: 2,
+    hardDepthRamp: 30,
+  },
   GeneratedG: {
     base: 140,
     depthRamp: 40,
     depthAxis: 'biomeDepthCache',
     multiplier: 1,
+    hardDepthRamp: 30,
+  },
+  // EncounterData_Intro.lua:78
+  FishSwarmerIntro: {
+    base: 140,
+    depthRamp: 40,
+    depthAxis: 'biomeDepthCache',
+    modifier: 45,
+    multiplier: 2,
+    hardDepthRamp: 30,
+  },
+  // EncounterData_Intro.lua:130
+  TurtleIntro: {
+    base: 140,
+    depthRamp: 40,
+    depthAxis: 'biomeDepthCache',
+    modifier: 65,
+    multiplier: 2,
     hardDepthRamp: 30,
   },
   DevotionTestG: {
@@ -345,6 +386,13 @@ function generation(data: GenerationDeclaration) {
       ...(data.blockMenace ? { blockMenace: true } : {}),
       blockTypesAcrossWaves: true,
       fixedEnemies: (data.fixedEnemies ?? []).map(withMenaceLabels),
+      ...(data.fixedWaves === undefined
+        ? {}
+        : { fixedWaves: data.fixedWaves.map((wave) => wave.map(withMenaceLabels)) }),
+      ...(data.generatedSeeds === undefined
+        ? {}
+        : { generatedSeeds: data.generatedSeeds.map(withMenaceLabels) }),
+      ...(data.requireCompletedIntro === true ? { requireCompletedIntro: true } : {}),
       fangs: { perks: fangsPerks },
       budget: {
         base: 0,
@@ -359,8 +407,35 @@ function generation(data: GenerationDeclaration) {
   } as const;
 }
 
+// BaseIntroEncounter: two waves (unless overridden) of exactly two types (cap 2). The first wave is
+// the declared fixed roster; the second is generated from the WaveTemplate's
+// named Generated seed plus one addition, with RequireCompletedIntro.
+function introduction(data: {
+  readonly pool: readonly EncounterEnemyChoice[];
+  readonly seedKey: string;
+  readonly firstWaveCount: number;
+  readonly ramp: number;
+  readonly eliteTypes: number;
+  readonly waves?: number;
+}) {
+  return generation({
+    pool: data.pool,
+    waves: [data.waves ?? 2, data.waves ?? 2],
+    minTypes: 2,
+    maxTypes: 2,
+    ramp: data.ramp,
+    cap: 2,
+    eliteTypes: data.eliteTypes,
+    hardCap: 4,
+    fixedWaves: [[fixedSpawn(data.pool, data.seedKey, data.firstWaveCount)]],
+    generatedSeeds: [poolEnemy(data.pool, data.seedKey)],
+    requireCompletedIntro: true,
+  });
+}
+
 const unbudgetedGeneratedEncounterChoices = {
   OpeningGeneratedF: generation({
+    requireCompletedIntro: true,
     pool: pools.f,
     waves: [1, 1],
     minTypes: 2,
@@ -380,7 +455,24 @@ const unbudgetedGeneratedEncounterChoices = {
     eliteTypes: 1,
     hardCap: 4,
   }),
+  // EncounterData.lua:311
+  RadiatorIntro: introduction({
+    pool: pools.f,
+    seedKey: 'Radiator',
+    firstWaveCount: 5,
+    ramp: 0.2,
+    eliteTypes: 1,
+  }),
+  // EncounterData.lua:355
+  ScreamerIntro: introduction({
+    pool: pools.f,
+    seedKey: 'Screamer',
+    firstWaveCount: 2,
+    ramp: 0.2,
+    eliteTypes: 1,
+  }),
   DevotionTestF: generation({
+    requireCompletedIntro: true,
     preparation: 'rewardGeneration',
     pool: pools.f,
     waves: [2, 3],
@@ -391,6 +483,7 @@ const unbudgetedGeneratedEncounterChoices = {
     hardCap: 4,
   }),
   ArtemisCombatF: generation({
+    requireCompletedIntro: true,
     pool: pools.f,
     waves: [4, 4],
     minTypes: 2,
@@ -401,6 +494,7 @@ const unbudgetedGeneratedEncounterChoices = {
     blockHighlightElites: true,
   }),
   NemesisCombatF: generation({
+    requireCompletedIntro: true,
     pool: pools.f,
     waves: [4, 4],
     minTypes: 2,
@@ -420,7 +514,25 @@ const unbudgetedGeneratedEncounterChoices = {
     eliteTypes: 2,
     hardCap: 4,
   }),
+  // EncounterData_Intro.lua:78. The seed is the native squad identity, not its spawned units.
+  FishSwarmerIntro: introduction({
+    pool: pools.g,
+    seedKey: 'FishSwarmerSquad',
+    firstWaveCount: 4,
+    ramp: 0.1,
+    eliteTypes: 2,
+  }),
+  // EncounterData_Intro.lua:127: three waves, so two seeded generated waves (15% and 55%).
+  TurtleIntro: introduction({
+    pool: pools.g,
+    seedKey: 'Turtle',
+    firstWaveCount: 2,
+    ramp: 0.1,
+    eliteTypes: 2,
+    waves: 3,
+  }),
   DevotionTestG: generation({
+    requireCompletedIntro: true,
     preparation: 'rewardGeneration',
     pool: pools.g,
     waves: [2, 3],
@@ -431,6 +543,7 @@ const unbudgetedGeneratedEncounterChoices = {
     hardCap: 4,
   }),
   ArtemisCombatG: generation({
+    requireCompletedIntro: true,
     pool: pools.g,
     waves: [4, 4],
     minTypes: 1,
@@ -441,6 +554,7 @@ const unbudgetedGeneratedEncounterChoices = {
     blockHighlightElites: true,
   }),
   NemesisCombatG: generation({
+    requireCompletedIntro: true,
     pool: pools.g,
     waves: [4, 4],
     minTypes: 1,
@@ -506,6 +620,7 @@ const unbudgetedGeneratedEncounterChoices = {
     fixedEnemies: [fixedFieldsEnemies.screamer],
   }),
   NemesisCombatH: generation({
+    requireCompletedIntro: true,
     pool: pools.h,
     waves: [4, 4],
     minTypes: 2,
@@ -577,6 +692,7 @@ const unbudgetedGeneratedEncounterChoices = {
     hardCap: 4,
   }),
   DevotionTestI: generation({
+    requireCompletedIntro: true,
     preparation: 'rewardGeneration',
     pool: pools.iOptional,
     waves: [2, 3],
@@ -587,6 +703,7 @@ const unbudgetedGeneratedEncounterChoices = {
     hardCap: 4,
   }),
   NemesisCombatI: generation({
+    requireCompletedIntro: true,
     pool: pools.i,
     waves: [4, 4],
     minTypes: 2,

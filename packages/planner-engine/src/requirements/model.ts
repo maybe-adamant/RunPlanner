@@ -74,6 +74,12 @@ export type RequirementExpression =
       readonly range: NumericRange;
     }
   | {
+      /** Counts exact Encounter Definition completions earlier on the route. */
+      readonly kind: 'encounterCompletionCount';
+      readonly encounterKeys: readonly string[];
+      readonly range: NumericRange;
+    }
+  | {
       /**
        * Counts exact Encounter Definition records in the preceding committed
        * room appearances, deliberately excluding the room being prepared.

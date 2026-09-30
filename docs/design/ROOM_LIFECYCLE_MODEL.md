@@ -586,6 +586,63 @@ counts and applicable Fangs/Menace outcomes. Initialization and preview consume
 the same exact capability. Combat and native spawn pacing are not simulated. It introduces
 no additional lifecycle operation, reward obligation or conformance checkpoint.
 
+A declaration may fix leading waves. They count toward the wave total and its
+native budget shares (a two-wave profile generates only its 50% suffix), take no
+shared highlight and are never regenerated or published; the suffix keeps its
+native wave indices. A named WaveTemplate seed opens every generated wave and
+receives a sampled budget like any generated member.
+
+#### Enemy introductions
+
+A fresh profile starts with every enemy introduction unfinished; a mature save
+has completed them all. Native `SetupEncounter` replaces a drawn encounter with
+the introduction of an unintroduced enemy it contains. The planner models this
+as resolved identity: each reachable enemy-triggered introduction is a member of
+its biome set, and the author selects the identity native would resolve. The
+model preserves the set of native-legal outcomes, not native selection order or
+probabilities.
+
+- **Member gate.** A declared requirement: route `FreshFile`, not completed on
+  the route, in H not recorded this run, and for Lycanthrope the Mourner,
+  Lovesick and Lamia introductions recorded on the route. The choices are
+  route-scoped to `FreshFile`, so mature pickers keep their rows and cannot
+  select them; the route clause still rejects a retained selection.
+- **Reachability.** A member whose gate passes is still ineligible unless an
+  eligible ordinary identity in the same slot could draw one of its trigger
+  enemies at that checkpoint. The exclusion names those trigger enemies.
+- **Admission.** An enemy whose introduction is unfinished is never drawn where
+  the encounter requires completed introductions or where biome depth (the
+  native depth cache, not encounter depth) is below the biome's
+  `MinDepthBeforeIntros` (3; H 0). An enemy's declared profile gate is also
+  admission, evaluated at preparation: WaterUnit after a completed
+  `MiniBossWaterUnit`, SiegeVine after an earlier `MiniBossFogEmitter`, and never
+  the ordinary Turtle on a fresh profile. `TurtleIntro` is therefore reached only
+  through `Turtle_Elite`.
+- **Trigger exclusion.** An admissible enemy whose introduction's gate passes at
+  this checkpoint would trigger it, so the ordinary identity excludes it, naming
+  that introduction. Where the gate fails (Lycanthrope before its prerequisites,
+  Mourner in a cage after an earlier cage recorded `MournerIntro`) the enemy
+  stays admissible, as natively. An introduction's own suffix applies the same
+  rules; its seed is declared, not drawn.
+
+A retained enemy whose introduction is unfinished and that is inadmissible or
+would now trigger reports `encounterIntroductionRequired`, naming the
+introduction and whether selecting it is the repair; a profile-gate failure
+(WaterUnit, SiegeVine, the ordinary Turtle) reports
+`encounterCustomizationUnavailable`. Either value is retained. A selected introduction whose gate or
+reachability lapses after an upstream edit reports `encounterUnavailable`.
+
+H cage members are evaluated in cage-preparation order against the records of
+earlier cages, not their completions. A prepared cage is never re-prepared when
+an earlier cage completes; only later preparation sees that completion.
+
+On a fresh profile every reached generated phase, including an introduction's
+suffix, needs an authored composition so the route's introduction history is
+exact; an uncustomized one reports `encounterCustomizationRequired`. Fixed
+identities and all-fixed H introductions have none, and a contextually replaced
+decision stays removal-only. Fangs and Menace controls follow effective Fear,
+so they stay hidden on a fresh profile.
+
 A later slot in the same room evaluates against the preceding recorded prefix.
 It can therefore observe exact earlier encounter identities, while encounter
 counters remain at the post-predecessor snapshot until the matching

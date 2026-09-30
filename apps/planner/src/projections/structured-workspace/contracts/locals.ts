@@ -197,6 +197,8 @@ export interface WorkspaceGeneratedEncounterAssessment {
     readonly field?: 'baseRoll' | 'waveCount' | 'highlight' | 'fangs' | 'enemies';
   }[];
   readonly composition: 'active' | 'missingWaveCount' | 'missingHighlight';
+  /** The engine offers, withholds or retains a shared enemy at this contact. */
+  readonly sharedEnemy: boolean;
   /** Declared once-per-run enemies among the engine-assessed active members. */
   readonly warnings: readonly string[];
   readonly budgetDomain?: {
@@ -222,7 +224,10 @@ export interface WorkspaceGeneratedEncounterAssessment {
       >
     >;
     readonly additionalTypeCount: { readonly min: number; readonly max: number };
-    readonly seeds: readonly { readonly key: string; readonly kind: 'fixed' | 'highlight' }[];
+    readonly seeds: readonly {
+      readonly key: string;
+      readonly kind: 'fixed' | 'template' | 'highlight';
+    }[];
     readonly sampledBudgetKeys: readonly string[];
     readonly countPreview?: readonly {
       readonly key: string;
@@ -499,6 +504,11 @@ export type WorkspaceEncounterCustomizationDecision =
           readonly menace?: import('@run-planner/engine/catalog-schema').EncounterEnemyChoice['menace'];
         }[];
         readonly waveCount: { readonly min: number; readonly max: number };
+        /** Declaration-owned leading waves, rendered read-only. */
+        readonly fixedWaves?: readonly {
+          readonly waveIndex: number;
+          readonly spawns: readonly { readonly label: string; readonly count: number }[];
+        }[];
         readonly fangs?: {
           readonly perks: Readonly<
             Record<string, { readonly label: string; readonly maxPerRoom?: number }>

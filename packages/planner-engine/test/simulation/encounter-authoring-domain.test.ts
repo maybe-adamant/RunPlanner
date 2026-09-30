@@ -308,7 +308,41 @@ describe('encounter phase authored domains', () => {
     expect(phases.map((phase) => phase.slotKey)).toEqual(['Passive', 'Cage01', 'Cage02']);
   });
 
-  it('hides Fresh File generated customization unless a retained value needs repair', () => {
+  it('offers route-scoped introduction choices only on Fresh File', () => {
+    const value = occurrence(
+      loadUnderworldGeneratedCompositionCheckpoint(),
+      'Underworld',
+      'F',
+      'golden-f-b3-e1',
+    );
+    const choices = (routeKey: string) =>
+      encounterPhaseAuthoringDomainForRoom(
+        catalog,
+        createBiomeAddress(routeKey, 'F'),
+        roomFor(value),
+        { kind: 'occurrence', occurrenceId: value.occurrenceId },
+        value.encounters,
+      )[0]!.choices.map((choice) => choice.key);
+    // The mature domain is exactly its pre-introduction choice list.
+    expect(choices('Underworld')).toEqual([
+      'GeneratedF',
+      'ArtemisCombatF',
+      'ArachneCombatF',
+      'NemesisCombatF',
+      'NemesisRandomEvent',
+    ]);
+    expect(choices('FreshFile')).toEqual([
+      'GeneratedF',
+      'RadiatorIntro',
+      'ScreamerIntro',
+      'ArtemisCombatF',
+      'ArachneCombatF',
+      'NemesisCombatF',
+      'NemesisRandomEvent',
+    ]);
+  });
+
+  it('exposes generated customization on Fresh File as on a mature route', () => {
     const value = occurrence(
       loadUnderworldGeneratedCompositionCheckpoint(),
       'Underworld',
@@ -327,12 +361,12 @@ describe('encounter phase authored domains', () => {
         { preparedDefinitionKeysBySlot: { Encounter: 'GeneratedF' } },
       )[0]?.customization?.find((decision) => decision.selection.kind === 'generated');
 
-    expect(generated('Underworld', uncustomized)).toMatchObject({ valueSupported: true });
-    expect(generated('FreshFile', uncustomized)).toBeUndefined();
-    expect(generated('Underworld', value.encounters)).toMatchObject({ valueSupported: true });
-    expect(generated('FreshFile', value.encounters)).toMatchObject({
-      value: value.encounters.customizationByPhase?.Encounter?.generatedComposition,
-      valueSupported: false,
-    });
+    for (const routeKey of ['Underworld', 'FreshFile']) {
+      expect(generated(routeKey, uncustomized)).toMatchObject({ valueSupported: true });
+      expect(generated(routeKey, value.encounters)).toMatchObject({
+        value: value.encounters.customizationByPhase?.Encounter?.generatedComposition,
+        valueSupported: true,
+      });
+    }
   });
 });

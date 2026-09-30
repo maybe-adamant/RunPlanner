@@ -7,6 +7,7 @@ import {
   arachneIncomingRewardExclusions,
   artemisEncounterKeys,
   artemisIncomingRewardExclusions,
+  introductionGate,
   nemesisEncounterKeys,
   nemesisIncomingRewardExclusions,
   supportedFieldNpcEncounterKeys,
@@ -31,6 +32,32 @@ export const gEncounterDefinitions = [
     countsEncounterDepth: true,
     hostsGorgon: true,
     canEncounterSkip: true,
+  },
+  {
+    // FishSwarmerSquad and its elite introduce through FishSwarmerIntro
+    // (EnemyData_FishSwarmer.lua:157): four fixed squads, then a squad-seeded wave.
+    key: 'FishSwarmerIntro',
+    customization: [generatedEncounterChoices.FishSwarmerIntro],
+    label: 'Pinhead introduction',
+    kind: 'combat',
+    countsEncounterDepth: true,
+    hostsGorgon: true,
+    canEncounterSkip: true,
+    enemyTriggeredIntroduction: true,
+    requirements: introductionGate('FishSwarmerIntro', []),
+  },
+  {
+    // Turtle_Elite triggers TurtleIntro (EnemyData_Turtle.lua:100-102): two
+    // fixed Turtles, then two Turtle-seeded generated waves.
+    key: 'TurtleIntro',
+    customization: [generatedEncounterChoices.TurtleIntro],
+    label: 'Shellback introduction',
+    kind: 'combat',
+    countsEncounterDepth: true,
+    hostsGorgon: true,
+    canEncounterSkip: true,
+    enemyTriggeredIntroduction: true,
+    requirements: introductionGate('TurtleIntro', []),
   },
   {
     key: 'DevotionTestG',
@@ -226,6 +253,8 @@ export const gEncounterSets = [
       'FishmanIntro',
       'GeneratedG',
       'DevotionTestG',
+      'FishSwarmerIntro',
+      'TurtleIntro',
       'ArtemisCombatG',
       'ArachneCombatG',
       'NemesisCombatG',
@@ -244,6 +273,12 @@ export const gEncounterSets = [
           encounterDefinitionKeyByRewardType: { Devotion: 'DevotionTestG' },
         },
       },
+      {
+        key: 'FishSwarmerIntro',
+        encounterDefinitionKeys: ['FishSwarmerIntro'],
+        routeKeys: ['FreshFile'],
+      },
+      { key: 'TurtleIntro', encounterDefinitionKeys: ['TurtleIntro'], routeKeys: ['FreshFile'] },
       { key: 'ArtemisCombatG', encounterDefinitionKeys: ['ArtemisCombatG'] },
       { key: 'ArachneCombatG', encounterDefinitionKeys: ['ArachneCombatG'] },
       { key: 'NemesisCombatG', encounterDefinitionKeys: ['NemesisCombatG'] },

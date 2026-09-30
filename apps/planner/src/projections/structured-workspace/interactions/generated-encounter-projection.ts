@@ -43,15 +43,56 @@ export function projectGeneratedMenace(
   return fact;
 }
 
+/** Resolves an introduction encounter key to its player-facing label. */
+export type IntroductionLabel = (encounterKey: string) => string;
+
+/** Why an unintroduced enemy is excluded, naming its repair. */
+export function introductionExclusionMessage(
+  enemyLabel: string,
+  introductionLabel: string,
+  admitted: boolean,
+): string {
+  return admitted
+    ? `${enemyLabel} is not introduced yet: select ${introductionLabel} for this encounter, or remove ${enemyLabel}.`
+    : `${enemyLabel} is not introduced yet and cannot appear here until ${introductionLabel} is completed; remove it.`;
+}
+
+function introductionExclusionItems<T>(
+  assessment: GeneratedEncounterAssessment,
+  keys: readonly string[],
+  labelFor: (key: string) => string,
+  introductionLabel: IntroductionLabel,
+  valueFor: (key: string) => T,
+) {
+  const introductions = assessment.introductions;
+  if (introductions === undefined) return [];
+  return keys.map((key) =>
+    Object.freeze({
+      disabled: true,
+      key: `introduction:${key}`,
+      label: labelFor(key),
+      selected: false,
+      state: 'impossible' as const,
+      value: valueFor(key),
+      explanation: introductionExclusionMessage(
+        labelFor(key),
+        introductionLabel(introductions.encounterKeyByEnemyKey[key]!),
+        true,
+      ),
+    }),
+  );
+}
+
 export function projectGeneratedEncounterHighlightPicker(
   assessment: GeneratedEncounterAssessment | undefined,
   selected: string | undefined,
   labels: readonly ChoiceLabel[],
   declarationKeys: readonly string[],
+  introductionLabel: IntroductionLabel,
 ): ContextualPickerModel<string> {
   const labelFor = (key: string) =>
     generatedEnemyLabel(labels.find((choice) => choice.key === key)?.label ?? 'Unavailable enemy');
-  return projectStableIdentityPicker({
+  const picker = projectStableIdentityPicker({
     assessment: assessment === undefined ? 'unassessed' : 'assessed',
     choices: [
       ...(assessment?.eligibleHighlightKeys ?? declarationKeys).map((key) => ({
@@ -62,6 +103,31 @@ export function projectGeneratedEncounterHighlightPicker(
     selected,
     selectedLabel: selected === undefined ? undefined : labelFor(selected),
   });
+  const excluded =
+    assessment === undefined
+      ? []
+      : introductionExclusionItems(
+          assessment,
+          assessment.introductions?.excludedHighlightKeys ?? [],
+          labelFor,
+          introductionLabel,
+          (key) => key,
+        );
+  return excluded.length === 0
+    ? picker
+    : Object.freeze({
+        ...picker,
+        sections: Object.freeze([
+          ...picker.sections,
+          Object.freeze({
+            collapsible: false,
+            items: Object.freeze(excluded),
+            key: 'introduction',
+            kind: 'category' as const,
+            label: 'Needs introduction',
+          }),
+        ]),
+      });
 }
 
 function draftItem(
@@ -92,6 +158,7 @@ function issueMessage(
   issue: GeneratedEncounterAssessment['issues'][number],
   assessment: GeneratedEncounterAssessment,
   labelFor: (key: string) => string,
+  introductionLabel: IntroductionLabel,
 ): string {
   const waveIndex = issueWaveIndex(issue);
   switch (issue.reason) {
@@ -113,6 +180,12 @@ function issueMessage(
       return `Shared enemy ${labelFor(issue.key)} is not available in this encounter context.`;
     case 'enemyUnavailable':
       return `Enemy ${issue.position} (${labelFor(issue.key)}) is not available.`;
+    case 'introductionRequired':
+      return introductionExclusionMessage(
+        labelFor(issue.key),
+        introductionLabel(issue.introductionEncounterKey),
+        issue.admitted,
+      );
     case 'typeCount': {
       const seeds = assessment.waves.find((entry) => entry.waveIndex === waveIndex)?.seeds ?? [];
       const excess = Math.max(0, issue.actual - issue.allowed.max);
@@ -150,6 +223,7 @@ function issueMessage(
 export function projectGeneratedEncounterAssessment(
   assessment: GeneratedEncounterAssessment,
   labels: readonly ChoiceLabel[],
+  introductionLabel: IntroductionLabel,
   authored?: AuthoredGeneratedEncounterCustomization,
 ): WorkspaceGeneratedEncounterAssessment {
   const labelFor = (key: string) =>
@@ -159,9 +233,10 @@ export function projectGeneratedEncounterAssessment(
       assessment.issues.map((issue) => {
         const waveIndex = issueWaveIndex(issue);
         return Object.freeze({
-          message: issueMessage(issue, assessment, labelFor),
+          message: issueMessage(issue, assessment, labelFor, introductionLabel),
           ...(waveIndex === undefined ? {} : { waveIndex }),
           ...(issue.reason === 'enemyUnavailable' ||
+          (issue.reason === 'introductionRequired' && waveIndex !== undefined) ||
           issue.reason === 'typeCount' ||
           issue.reason === 'placeholderCount' ||
           (issue.reason === 'required' && issue.field === 'wave')
@@ -177,10 +252,17 @@ export function projectGeneratedEncounterAssessment(
           issue.reason === 'fangs'
             ? { field: issue.reason }
             : {}),
+          ...(issue.reason === 'introductionRequired' && waveIndex === undefined
+            ? { field: 'highlight' as const }
+            : {}),
         });
       }),
     ),
     composition: assessment.composition,
+    sharedEnemy:
+      assessment.eligibleHighlightKeys.length > 0 ||
+      (assessment.introductions?.excludedHighlightKeys.length ?? 0) > 0 ||
+      authored?.highlightKey !== undefined,
     warnings: Object.freeze(
       [...new Set(assessment.waves.flatMap((wave) => wave.activeMemberKeys))]
         .filter(
@@ -265,6 +347,7 @@ export function projectGeneratedEncounterWaveDraft(
   confirmedSeedCount: number,
   typeKeys: readonly string[],
   labels: readonly ChoiceLabel[],
+  introductionLabel: IntroductionLabel,
 ): WorkspaceGeneratedWaveDraft {
   const labelFor = (key: string) =>
     generatedEnemyLabel(labels.find((choice) => choice.key === key)?.label ?? 'Unavailable enemy');
@@ -315,7 +398,7 @@ export function projectGeneratedEncounterWaveDraft(
           ]),
           key: `seed:${confirmedSeedCount}`,
           kind: 'required',
-          label: `Enemy ${confirmedSeedCount + 1} (${seed.kind === 'highlight' ? 'shared enemy' : 'fixed'})`,
+          label: `Enemy ${confirmedSeedCount + 1} (${seed.kind === 'highlight' ? 'shared enemy' : seed.kind === 'template' ? 'introduced enemy' : 'fixed'})`,
         }),
       );
     }
@@ -338,6 +421,23 @@ export function projectGeneratedEncounterWaveDraft(
         }),
       );
     }
+    const excluded = introductionExclusionItems(
+      assessment,
+      wave.introductionExcludedKeysByPosition?.[position] ?? [],
+      labelFor,
+      introductionLabel,
+      (key): WorkspaceGeneratedWaveDraftChoice => ({ kind: 'enemy', key }),
+    );
+    if (excluded.length > 0)
+      sections.push(
+        Object.freeze({
+          collapsible: false,
+          items: Object.freeze(excluded),
+          key: `introduction:${position}`,
+          kind: 'category',
+          label: 'Needs introduction',
+        }),
+      );
   }
   const blockingIssue = waveIssues[0];
   const hasFurtherCandidates =
@@ -352,7 +452,7 @@ export function projectGeneratedEncounterWaveDraft(
         ? `Choose Enemy ${wave.seeds.length + typeKeys.length + 1}`
         : blockingIssue === undefined
           ? 'No further enemy choices'
-          : issueMessage(blockingIssue, assessment, labelFor);
+          : issueMessage(blockingIssue, assessment, labelFor, introductionLabel);
   return Object.freeze({
     picker: Object.freeze({ sections: Object.freeze(sections) }),
     stepLabel,

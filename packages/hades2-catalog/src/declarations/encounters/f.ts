@@ -5,6 +5,7 @@ import {
   arachneCombatCocoonCount,
   arachneIncomingRewardExclusions,
   artemisEncounterKeys,
+  introductionGate,
   artemisIncomingRewardExclusions,
   nemesisEncounterKeys,
   nemesisIncomingRewardExclusions,
@@ -38,6 +39,31 @@ export const fEncounterDefinitions = [
     kind: 'combat',
     countsEncounterDepth: false,
     hostsGorgon: true,
+  },
+  {
+    // Radiator and its elite introduce through RadiatorIntro (EnemyData_Radiator.lua:6):
+    // a fixed wave of five Radiators, then a generated wave seeded with Radiator.
+    key: 'RadiatorIntro',
+    customization: [generatedEncounterChoices.RadiatorIntro],
+    label: 'Spindle introduction',
+    kind: 'combat',
+    countsEncounterDepth: true,
+    hostsGorgon: true,
+    canEncounterSkip: true,
+    enemyTriggeredIntroduction: true,
+    requirements: introductionGate('RadiatorIntro', []),
+  },
+  {
+    // EnemyData_Screamer.lua:7; two fixed Screamers, then a Screamer-seeded wave.
+    key: 'ScreamerIntro',
+    customization: [generatedEncounterChoices.ScreamerIntro],
+    label: 'Wailer introduction',
+    kind: 'combat',
+    countsEncounterDepth: true,
+    hostsGorgon: true,
+    canEncounterSkip: true,
+    enemyTriggeredIntroduction: true,
+    requirements: introductionGate('ScreamerIntro', []),
   },
   {
     key: 'DevotionTestF',
@@ -427,6 +453,8 @@ export const fEncounterSets = [
     encounterDefinitionKeys: [
       'GeneratedF',
       'DevotionTestF',
+      'RadiatorIntro',
+      'ScreamerIntro',
       'ArtemisCombatF',
       'ArachneCombatF',
       'NemesisCombatF',
@@ -443,6 +471,16 @@ export const fEncounterSets = [
           defaultEncounterDefinitionKey: 'GeneratedF',
           encounterDefinitionKeyByRewardType: { Devotion: 'DevotionTestF' },
         },
+      },
+      {
+        key: 'RadiatorIntro',
+        encounterDefinitionKeys: ['RadiatorIntro'],
+        routeKeys: ['FreshFile'],
+      },
+      {
+        key: 'ScreamerIntro',
+        encounterDefinitionKeys: ['ScreamerIntro'],
+        routeKeys: ['FreshFile'],
       },
       { key: 'ArtemisCombatF', encounterDefinitionKeys: ['ArtemisCombatF'] },
       { key: 'ArachneCombatF', encounterDefinitionKeys: ['ArachneCombatF'] },

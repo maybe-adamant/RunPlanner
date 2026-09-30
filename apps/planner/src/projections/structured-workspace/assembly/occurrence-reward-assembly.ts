@@ -916,6 +916,25 @@ export function activeEncounterPhasesForOwner(
                       ),
                     ),
                     waveCount: Object.freeze({ ...decision.selection.waveCount }),
+                    ...(decision.selection.fixedWaves === undefined
+                      ? {}
+                      : {
+                          fixedWaves: Object.freeze(
+                            decision.selection.fixedWaves.map((spawns, index) =>
+                              Object.freeze({
+                                waveIndex: index + 1,
+                                spawns: Object.freeze(
+                                  spawns.map((spawn) =>
+                                    Object.freeze({
+                                      label: generatedEnemyLabel(spawn.label),
+                                      count: spawn.fixedCount!,
+                                    }),
+                                  ),
+                                ),
+                              }),
+                            ),
+                          ),
+                        }),
                     ...(decision.selection.fangs === undefined
                       ? {}
                       : {

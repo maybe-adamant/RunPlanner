@@ -47,6 +47,14 @@ export interface ResolvedEncounterPhase {
   readonly generatedCustomization?: {
     readonly decisionKey: string;
     readonly operands?: import('./generation').GeneratedEncounterOperands;
+    /** Retained enemies whose introduction is unfinished at this checkpoint. */
+    readonly introductionRequirements?: readonly {
+      readonly enemyKey: string;
+      readonly introductionEncounterKey: string;
+      readonly admitted: boolean;
+    }[];
+    /** Every assessment issue is an unfinished introduction. */
+    readonly onlyIntroductionIssues?: boolean;
     readonly knownRunBlacklistAdditions: readonly string[];
   };
   readonly sequenceEffect?: { readonly kind: 'terminateSuffix' };

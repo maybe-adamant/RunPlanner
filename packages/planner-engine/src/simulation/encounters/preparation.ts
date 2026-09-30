@@ -1,4 +1,4 @@
-import { routeSupportsGeneratedEncounterCustomization } from '../../authored-project/route-profile';
+import { routeStartsWithUnfinishedIntroductions } from '../../authored-project/route-profile';
 import { customizationValueRouteExcluded } from '../../authored-project/room-state/encounter-customization';
 import type { ResolvedRoutePosition } from '../../authored-project/route-context';
 import { resolveEntryDeclaration } from '../../authored-project/room-state/entry-resolution';
@@ -14,18 +14,24 @@ import {
   type EncounterPhaseAddress,
 } from '../../authored-project/addresses';
 import {
+  encounterAuthoringProfileOnRoute,
   encounterAuthoringProfiles,
   encounterBindingsBySlot,
   encounterEnvelopeSlots,
   encounterSetForBinding,
 } from '../../authored-project/room-state/encounter-envelope';
-import { evaluateRequirement, type RequirementEvaluationContext } from '../../requirements';
+import {
+  evaluateRequirement,
+  type RequirementEvaluationContext,
+  type RequirementExpression,
+} from '../../requirements';
 import {
   projectBiomeEncounterKeyCounts,
   projectEncounterRecordPreparation,
   projectOfferedExitCount,
   projectEncounterPreparationRoomWindow,
   projectRecentEncounterEnvelopeSlots,
+  projectRouteEncounterCompletionCounts,
   projectRouteEncounterKeyCounts,
 } from '../history/facts';
 import type { HistoryStateView } from '../history/model';
@@ -33,9 +39,12 @@ import type { CanonicalAuthoredRoom } from '../materialization';
 import type { SemanticFinding } from '../model';
 import type { ResolvedEncounterPhase } from './model';
 import {
+  generationAdmissionContext,
   prepareGeneratedEncounter,
   type GeneratedEncounterCandidateCapability,
+  type GenerationAdmissionFacts,
 } from './generation-preparation';
+import { admissibleEnemyKeys, type EncounterGenerationContext } from './generation';
 import { prepareInfiniteRoster, type InfiniteRosterCandidateCapability } from './infinite-roster';
 import {
   encounterResolutionContext,
@@ -163,6 +172,10 @@ function requirementContext(
     recentEncounterEnvelopeSlots: projectRecentEncounterEnvelopeSlots(view),
     encounterHistory: Object.freeze({
       routeEncounterKeyCounts: projectRouteEncounterKeyCounts(view, room.origin.routeKey),
+      routeEncounterCompletionCounts: projectRouteEncounterCompletionCounts(
+        view,
+        room.origin.routeKey,
+      ),
       biomeEncounterKeyCounts: projectBiomeEncounterKeyCounts(
         view,
         room.origin.routeKey,
@@ -240,23 +253,6 @@ function slotActivationFinding(
   });
 }
 
-/** A retained generated value stays authored but unsupported; nothing else is generated. */
-function withoutGeneratedCustomization(phase: ResolvedEncounterPhase): ResolvedEncounterPhase {
-  if (phase.customization === undefined) return phase;
-  return Object.freeze({
-    ...phase,
-    customization: Object.freeze(
-      phase.customization.flatMap((decision) =>
-        decision.selection.kind !== 'generated'
-          ? [decision]
-          : decision.value === undefined
-            ? []
-            : [Object.freeze({ ...decision, valueSupported: false })],
-      ),
-    ),
-  });
-}
-
 /** A retained choice its route cannot produce stays authored but unsupported. */
 function withoutRouteExcludedChoices(
   phase: ResolvedEncounterPhase,
@@ -305,10 +301,41 @@ function appendCustomizationFindings(
   phase: ResolvedEncounterPhase,
   origin: EncounterPhaseAddress,
   beforeSequence: number,
+  customizationRequired: boolean,
 ): void {
   for (const decision of phase.customization ?? []) {
-    if (!decision.valueSupported)
+    const generated =
+      phase.generatedCustomization?.decisionKey === decision.key
+        ? phase.generatedCustomization
+        : undefined;
+    for (const requirement of generated?.introductionRequirements ?? [])
+      findings.push(
+        Object.freeze({
+          code: 'encounterIntroductionRequired',
+          severity: 'error',
+          phase: 'encounterResolution',
+          origin,
+          evidence: Object.freeze({ beforeSequence, decisionKey: decision.key, ...requirement }),
+        }),
+      );
+    if (!decision.valueSupported && generated?.onlyIntroductionIssues !== true)
       findings.push(customizationFinding(origin, beforeSequence, decision.key));
+    // Only an authored composition keeps the route's introduction history exact.
+    if (
+      customizationRequired &&
+      decision.selection.kind === 'generated' &&
+      decision.replaced !== true &&
+      decision.value === undefined
+    )
+      findings.push(
+        Object.freeze({
+          code: 'encounterCustomizationRequired',
+          severity: 'error',
+          phase: 'encounterResolution',
+          origin,
+          evidence: Object.freeze({ beforeSequence, decisionKey: decision.key }),
+        }),
+      );
   }
 }
 
@@ -337,6 +364,49 @@ function slotActivationSatisfied(
       ),
     )
   );
+}
+
+/** Every generated enemy the catalog links to this introduction, in declaration order. */
+function introductionTriggerEnemyKeys(catalog: Catalog, definitionKey: string): readonly string[] {
+  const keys = new Set<string>();
+  for (const definition of catalog.encounterDefinitions.values)
+    for (const decision of definition.customization ?? [])
+      if (decision.selection.kind === 'generated')
+        for (const choice of decision.selection.choices)
+          if (choice.introductionEncounterKey === definitionKey) keys.add(choice.key);
+  return Object.freeze([...keys]);
+}
+
+/**
+ * An enemy-triggered introduction whose gate passes is still unreachable unless
+ * an eligible ordinary identity here could draw one of its trigger enemies.
+ * Returns each unreachable member with the trigger enemies it would need.
+ */
+function unreachableIntroductionTriggers(
+  catalog: Catalog,
+  gated: readonly { readonly profileKey: string; readonly definitionKey: string }[],
+  admissionContext: (policy: GeneratedEncounterSelection) => EncounterGenerationContext,
+): ReadonlyMap<string, readonly string[]> {
+  const policies = gated.flatMap(({ definitionKey }) => {
+    const definition = catalog.encounterDefinitions.byKey[definitionKey]!;
+    if (definition.enemyTriggeredIntroduction === true) return [];
+    const decision = definition.customization?.find(
+      (entry) => entry.selection.kind === 'generated',
+    );
+    return decision?.selection.kind === 'generated' ? [decision.selection] : [];
+  });
+  const unreachable = new Map<string, readonly string[]>();
+  for (const { profileKey, definitionKey } of gated) {
+    if (catalog.encounterDefinitions.byKey[definitionKey]!.enemyTriggeredIntroduction !== true)
+      continue;
+    const triggers = introductionTriggerEnemyKeys(catalog, definitionKey);
+    const reachable = policies.some((policy) => {
+      const admissible = admissibleEnemyKeys(policy, admissionContext(policy));
+      return triggers.some((key) => admissible.includes(key));
+    });
+    if (!reachable) unreachable.set(profileKey, triggers);
+  }
+  return unreachable;
 }
 
 /**
@@ -381,26 +451,78 @@ export function prepareRoomEncounterPhases(
   let prefixValid = true;
   let suffixTerminated = false;
 
-  const generatedCustomizationAvailable = routeSupportsGeneratedEncounterCustomization(
+  const unfinishedIntroductions = routeStartsWithUnfinishedIntroductions(
     catalog,
     routePosition.routeKey,
   );
+  const minDepthBeforeIntros = unfinishedIntroductions
+    ? catalog.biomes.byKey[room.origin.biomeKey]?.minDepthBeforeIntros
+    : undefined;
+  if (unfinishedIntroductions && minDepthBeforeIntros === undefined)
+    throw new Error(`encounter preparation lost biome ${room.origin.biomeKey}`);
+  // Room-owned admission facts at the current preparation checkpoint: enemies
+  // whose declared admission fails, and on a fresh profile the introductions
+  // completed on the route and those whose native gate passes here.
+  const admissionAt = (
+    policy: GeneratedEncounterSelection,
+    before: HistoryStateView,
+  ): GenerationAdmissionFacts => {
+    let gateContext: RequirementEvaluationContext | undefined;
+    const passes = (requirement: RequirementExpression) =>
+      evaluateRequirement(
+        requirement,
+        (gateContext ??= requirementContext(
+          catalog,
+          room,
+          routePosition,
+          declaration,
+          before,
+          pendingSpellDrop,
+          allSpellInvested,
+        )),
+      );
+    const inadmissible = policy.choices.flatMap((choice) =>
+      choice.admission === undefined || passes(choice.admission) ? [] : [choice.key],
+    );
+    const facts =
+      inadmissible.length === 0 ? {} : { inadmissibleEnemyKeys: Object.freeze(inadmissible) };
+    if (minDepthBeforeIntros === undefined) return facts;
+    const completed = projectRouteEncounterCompletionCounts(before, routePosition.routeKey);
+    const linked = new Set(
+      policy.choices.flatMap((choice) =>
+        choice.introductionEncounterKey === undefined ? [] : [choice.introductionEncounterKey],
+      ),
+    );
+    return Object.freeze({
+      ...facts,
+      introductions: Object.freeze({
+        completedEncounterKeys: Object.freeze(Object.keys(completed)),
+        triggeredEncounterKeys: Object.freeze(
+          [...linked].filter((key) => {
+            if (completed[key] !== undefined) return false;
+            const gate = catalog.encounterDefinitions.byKey[key]?.requirements;
+            return gate === undefined || passes(gate);
+          }),
+        ),
+        minDepthBeforeIntros,
+      }),
+    });
+  };
   const prepareCustomization = (
     resolved: ResolvedEncounterPhase,
     origin: EncounterPhaseAddress,
   ) => {
     const phase = withoutRouteExcludedChoices(resolved, routePosition.routeKey);
-    const result = generatedCustomizationAvailable
-      ? prepareGeneratedEncounter(
-          phase,
-          origin,
-          preparation,
-          runState.rewardGeneration,
-          runState.hordesRankAt,
-          runState.fangsRankAt,
-          runState.menaceRankAt,
-        )
-      : { phase: withoutGeneratedCustomization(phase) };
+    const result = prepareGeneratedEncounter(
+      phase,
+      origin,
+      preparation,
+      runState.rewardGeneration,
+      runState.hordesRankAt,
+      runState.fangsRankAt,
+      runState.menaceRankAt,
+      admissionAt,
+    );
     if (result.capability !== undefined) generation.push(result.capability);
     const roster = prepareInfiniteRoster(result.phase, origin, preparation);
     if (roster.capability !== undefined) rosters.push(roster.capability);
@@ -488,7 +610,13 @@ export function prepareRoomEncounterPhases(
       }
       if (prefixValid) {
         resolvedPhase = prepareCustomization(resolvedPhase, origin);
-        appendCustomizationFindings(findings, resolvedPhase, origin, preparation.sequence);
+        appendCustomizationFindings(
+          findings,
+          resolvedPhase,
+          origin,
+          preparation.sequence,
+          unfinishedIntroductions,
+        );
         validPrefix.push(resolvedPhase);
         preparation = projectEncounterRecordPreparation(
           preparation,
@@ -525,31 +653,54 @@ export function prepareRoomEncounterPhases(
         status: Object.freeze({ kind: 'active', encounterDefinitionKey: selectedDefinitionKey }),
       });
     }
+    const gatedEncounterKeys = profiles
+      .filter((profile) => {
+        if (!encounterAuthoringProfileOnRoute(profile, routePosition.routeKey)) return false;
+        const key = resolvedDefinitionsByProfile.get(profile.key);
+        const definition = key === undefined ? undefined : catalog.encounterDefinitions.byKey[key];
+        if (key !== undefined && definition === undefined)
+          throw new Error(`${set.key} lost encounter ${key}`);
+        return (
+          definition !== undefined &&
+          (definition.requirements === undefined ||
+            evaluateRequirement(definition.requirements, context))
+        );
+      })
+      .map((profile) => profile.key);
+    const unreachableIntroductions = unreachableIntroductionTriggers(
+      catalog,
+      gatedEncounterKeys.flatMap((key) => {
+        const definitionKey = resolvedDefinitionsByProfile.get(key);
+        return definitionKey === undefined ? [] : [{ profileKey: key, definitionKey }];
+      }),
+      (policy) => generationAdmissionContext(preparation, admissionAt(policy, preparation)),
+    );
     const candidateEncounterKeys = Object.freeze(
-      profiles
-        .filter((profile) => {
-          const key = resolvedDefinitionsByProfile.get(profile.key);
-          const definition =
-            key === undefined ? undefined : catalog.encounterDefinitions.byKey[key];
-          if (key !== undefined && definition === undefined)
-            throw new Error(`${set.key} lost encounter ${key}`);
-          return (
-            definition !== undefined &&
-            (definition.requirements === undefined ||
-              evaluateRequirement(definition.requirements, context))
-          );
-        })
-        .map((profile) => profile.key),
+      gatedEncounterKeys.filter((key) => !unreachableIntroductions.has(key)),
     );
     const exclusions: readonly EncounterCandidateExclusion[] = Object.freeze(
       profiles
-        .filter((profile) => !candidateEncounterKeys.includes(profile.key))
+        .filter(
+          (profile) =>
+            !candidateEncounterKeys.includes(profile.key) &&
+            // A retained off-route selection keeps its evidence for repair.
+            (encounterAuthoringProfileOnRoute(profile, routePosition.routeKey) ||
+              profile.key === phase.authoredChoiceKey),
+        )
         .map((profile) => {
           const key = resolvedDefinitionsByProfile.get(profile.key);
           if (key === undefined)
             return Object.freeze({
               encounterKey: profile.key,
               kind: 'resolutionUnavailable' as const,
+            });
+          const triggerEnemyKeys = unreachableIntroductions.get(profile.key);
+          if (triggerEnemyKeys !== undefined)
+            return Object.freeze({
+              encounterKey: profile.key,
+              kind: 'introductionUnreachable' as const,
+              encounterDefinitionKey: key,
+              triggerEnemyKeys,
             });
           const requirement = catalog.encounterDefinitions.byKey[key]?.requirements;
           if (requirement === undefined) throw new Error(`${key} excluded without requirements`);
@@ -601,7 +752,13 @@ export function prepareRoomEncounterPhases(
       if (resolvedPhase === undefined)
         throw new Error(`${set.key}.${phase.authoredChoiceKey} lacks resolution`);
       resolvedPhase = prepareCustomization(resolvedPhase, origin);
-      appendCustomizationFindings(findings, resolvedPhase, origin, preparation.sequence);
+      appendCustomizationFindings(
+        findings,
+        resolvedPhase,
+        origin,
+        preparation.sequence,
+        unfinishedIntroductions,
+      );
       validPrefix.push(resolvedPhase);
       preparation = projectEncounterRecordPreparation(
         preparation,

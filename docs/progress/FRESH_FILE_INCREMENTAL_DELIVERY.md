@@ -292,9 +292,9 @@ Gate F obligations:
   (`packages/planner-engine/src/simulation/evaluation/project.ts:161`,
   `packages/planner-engine/src/simulation/rewards/branch-lifecycle.ts:98`).
   Derive it once from the project profile and feed both.
-- `knownEncounteredEnemies` and `resourceGains` requirement records, and the
-  encounter-picker message case for them, have no production declaration
-  reading them yet. Fresh File consumers are their intended readers.
+- The `resourceGains` requirement record has no production declaration reading
+  it yet; Fresh File consumers are its intended readers. (The
+  known-encountered-enemy record was retired with Gate E in Slice K.)
 
 ### Pending live acceptance
 
@@ -316,9 +316,12 @@ checks below remain open only where not exercised by those runs.
   - F_PostBoss01 native Empty against published `Story_Chronos_01` binds as a
     substitution when it occurs.
 - [ ] Gate A, fresh profile:
-  - GeneratedF→GuardIntro and GeneratedG→FishSwarmerIntro bind and log; the
-    customized composition is not installed on the substitute.
+  - Published `RadiatorIntro`/`ScreamerIntro` (F) and `FishSwarmerIntro` (G)
+    bind with their fixed first wave native and the generated suffix installed
+    at its native wave index; the GuardIntro item is withdrawn (Guard has no
+    active introduction).
   - A later-phase override, and a cage room with an intro.
+  - Native traversal order of competing introductions is a diagnostic only.
 - [ ] Gate D, now:
   - A mature shop per biome with purchases and a Travel Deal refill lands on the
     right items and compact position.
@@ -433,21 +436,38 @@ Locked decisions:
   not completed on the route; H: not occurred this run; Lycanthrope: Mourner,
   Lovesick and Lamia introductions recorded on the route. Members:
   `RadiatorIntro`, `ScreamerIntro` (F; fixed first wave, generated second),
-  `FishSwarmerIntro` (G; same shape), `MournerIntro`, `LamiaIntro`,
-  `LovesickIntro`, `LycanthropeIntro` (H; three fixed waves). Guard has no
-  introduction; Turtle is unreachable on a single G entry; Vampire and
-  LycanSwarmer are outside scope. `GeneratedH_Screamer2` gains its native
+  `FishSwarmerIntro` (G; same shape), `TurtleIntro` (G; fixed first wave, two
+  generated, triggered only by `Turtle_Elite` at depth ≥3, since the ordinary
+  Turtle's two-visit gate is unreachable on one G entry), `MournerIntro`,
+  `LamiaIntro`, `LovesickIntro`, `LycanthropeIntro` (H; three fixed waves).
+  Guard has no introduction; Vampire and LycanSwarmer are outside scope.
+  Introduction choices are offered only on `FreshFile`, so mature pickers keep
+  their rows. Enemy profile gates are admission: WaterUnit (completed
+  `MiniBossWaterUnit`) and SiegeVine (earlier `MiniBossFogEmitter`) read live
+  save caches that an earlier encounter on the route satisfies; the ordinary
+  Turtle is route-excluded. (Amended 2026-09-29.) `GeneratedH_Screamer2` gains its native
   ScreamerIntro-completed predicate. On mature saves every introduction member
   is ineligible, so mature pickers and customization are unchanged.
-- Customization on the ordinary identity excludes any enemy type whose
-  introduction is unfinished, with the reason naming the introduction to
-  select. An introduction's generated suffix applies the same exclusion except
-  for its own seed (native `RequireCompletedIntro` filters added candidates
-  only). Native enemy admission (`MinDepthBeforeIntros`,
-  `IneligibleIfUncompletedIntroEncounter`) is modeled in the type domain with
-  native depth kept separate from biome encounter depth. Two competing
+- Customization on the ordinary identity excludes an enemy type only where its
+  linked introduction would trigger at this room: the introduction's gate
+  passes here (unfinished on the route; H not occurred this run; Lycanthrope's
+  prerequisites recorded). The reason names the introduction to select. A type
+  whose introduction is unfinished but whose gate fails here (Lycanthrope
+  before its prerequisites; Mourner in cage 2 after cage 1 recorded
+  `MournerIntro`) stays admissible, as natively. Native enemy admission
+  (`MinDepthBeforeIntros`, `RequireCompletedIntro`) applies independently, with
+  native depth kept separate from biome encounter depth. An introduction's
+  suffix follows the same rules; its own seed is exempt. Two competing
   introductions therefore never exist in an authored composition, and native
-  traversal order is not a planner contract.
+  traversal order is not a planner contract. (Refined 2026-09-29; supersedes
+  the unconditional unfinished-introduction exclusion.)
+- An introduction member is eligible only where its gate passes and a trigger
+  enemy is admissible to an eligible ordinary identity in the same slot at that
+  room, computed without the trigger exclusion; no source composition is
+  generated. The picker names the failing condition: gate evidence, or the
+  unreachable trigger enemies. This is a resolved-identity authoring model: it
+  preserves the set of native-legal outcomes, not native selection order or
+  probabilities. (Refined 2026-09-29.)
 - Retained states are reported, never stripped: an unintroduced type retained
   under an ordinary identity, or an introduction identity whose gate no longer
   holds after an upstream edit, each report a finding with the repair named.
@@ -467,6 +487,8 @@ Locked decisions:
   not a contract.
 - Excluded: draft or banner UX, a third customization surface, Menace-based
   introduction paths, execution enablement.
+- Follow-up outside this slice: the encounter customization command does not
+  freeze the inner `customizationByPhase[phase]` records (pre-existing).
 
 Delivery order: Gate E retirement as the first commit, then introductions.
 
@@ -477,7 +499,11 @@ required finding and execution eligibility; H cage sequence witness
 (Mourner recorded in cage 1 suppresses cage 2; Lycanthrope eligible only after
 the three prerequisites); `GeneratedH_Screamer2` predicate; the Fresh F–I
 fixture fully customized with one F introduction, `FishSwarmerIntro` and an H
-cage sequence, valid with zero findings; mature byte-identical.
+cage sequence, valid with zero findings; mature byte-identical. Refinement
+witnesses: Lycanthrope admissible before its prerequisites; Mourner admissible
+in cage 2 after cage 1 recorded its introduction; an introduction whose trigger
+enemy is inadmissible at the room (depth) is ineligible with the reachability
+reason.
 
 ### J — Eris (locked 2026-09-29)
 
@@ -685,7 +711,7 @@ authorship rather than masking defects with editor filters.
 | Shop slots               | Correct ordinary and Tartarus inventories, no shop Armor; five stable I slots with empty fifth. Fields optional Armor/Nectar/Bones stay reachable. Delivered (Slice I): `ClearShopOffer` clears a slot, its purchase and entry; the picker offers it beside a `selectedInvalid` item.                                                                                                                                                                                                                                              |
 | Trait/reward exclusions  | Hammers, Hermes, Mystery, Devotion, Hex/Path, infusions and unavailable gods; Plant Health's missing shovel unlock. Apply source-specific exclusions, not global reward-name bans.                                                                                                                                                                                                                                                                                                                                                 |
 | Other progression        | Delivered (Slice I): Nectar gives no level on `FreshFile` (route-excluded GiftDrop level effect). Elements: no F–I store or reachable shop option offers one, so no placement rule is needed. Exchange chance 0 with the too-few-options fallback retained; no DD source reachable.                                                                                                                                                                                                                                                |
-| Deterministic encounters | Delivered: `FIntroFight` (Slice H); `FishmanIntro`/`ClockworkIntro` as route-keyed first-biome identities guarded by prior route resolution (Slice I), so Chronos intros never resolve on Fresh. Enemy generation and introductions remain native.                                                                                                                                                                                                                                                                                 |
+| Deterministic encounters | Delivered: `FIntroFight` (Slice H); `FishmanIntro`/`ClockworkIntro` as route-keyed first-biome identities guarded by prior route resolution (Slice I), so Chronos intros never resolve on Fresh. Delivered (Slice K): enemy-triggered introductions are authored set members with gates, reachability and type-domain exclusion; every generated composition is authored on Fresh File.                                                                                                                                            |
 | Boss choices             | Profile restrictions for Hecate/Scylla; retain ordinary Cerberus/Chronos behavior under zero Fear. Pin native choice keys rather than relying on prose move names.                                                                                                                                                                                                                                                                                                                                                                 |
 | Eris                     | Delivered (Slice J): `eris: { spawned: true }` observation on Fresh G/H/I intros → required `interactEris` (grants `ErisCurseTrait`) → required `ErisCursePickup` gift before the doors (20 Ashes/300 Bones credited; H's 50 Psyche untracked; bonus-exempt, no Sea Star, no Artificer). A later observation once cursed reports `erisSpawnUnavailable`, no second gift. No health or curse-effect simulation.                                                                                                                     |
 | Bounded additional audit | Disposition (Slice I): `RandomStatusBoon` stays a declared Aphrodite trait; its historically unlocked status pool is a combat effect with no modeled consumer, so no dialogue or status history is added.                                                                                                                                                                                                                                                                                                                          |
@@ -744,10 +770,11 @@ encounter questions. Remove temporary development availability and copy when rea
 
 ## Phase V — introduction acceptance and residual encounter questions
 
-Slice K settles enemy introductions on the existing completion and occurrence
-ledgers. What remains after it is live acceptance (embedded-game traversal
-order as a diagnostic, mixed-profile installation) and any residual question
-the live run surfaces. No second history store; extend narrow queries only.
+Slice K delivered enemy introductions on the existing completion and occurrence
+ledgers (`encounterCompletionCount` beside `encounterKeyCount`). What remains is
+live acceptance (embedded-game traversal order as a diagnostic, mixed-suffix
+installation) and any residual question the live run surfaces. No second
+history store; extend narrow queries only.
 
 ## Orchestration, tests and expected retirement
 

@@ -881,6 +881,8 @@ describe('encounter envelope catalog', () => {
     expect(catalog.encounterSets.byKey.FEncountersDefault?.encounterDefinitionKeys).toEqual([
       'GeneratedF',
       'DevotionTestF',
+      'RadiatorIntro',
+      'ScreamerIntro',
       'ArtemisCombatF',
       'ArachneCombatF',
       'NemesisCombatF',
@@ -890,6 +892,8 @@ describe('encounter envelope catalog', () => {
       'FishmanIntro',
       'GeneratedG',
       'DevotionTestG',
+      'FishSwarmerIntro',
+      'TurtleIntro',
       'ArtemisCombatG',
       'ArachneCombatG',
       'NemesisCombatG',
@@ -899,6 +903,10 @@ describe('encounter envelope catalog', () => {
       'GeneratedH',
       'GeneratedH_Treant2',
       'GeneratedH_Screamer2',
+      'MournerIntro',
+      'LamiaIntro',
+      'LovesickIntro',
+      'LycanthropeIntro',
       'NemesisCombatH',
     ]);
     expect(catalog.encounterSets.byKey.HEncountersPassive?.encounterDefinitionKeys).not.toContain(
@@ -1406,6 +1414,67 @@ describe('encounter envelope catalog', () => {
       new CatalogContractError(
         `rooms[${roomIndex}].eligibility.encounterKeys`,
         'encounter-history requirements are only supported by encounter definitions',
+      ),
+    );
+  });
+
+  it('offers introduction choices only on Fresh File and rejects unknown profile routes', () => {
+    const catalog = createCatalog(input());
+    const routes = (setKey: string) =>
+      Object.fromEntries(
+        catalog.encounterSets.byKey[setKey]!.authoringProfiles.flatMap((profile) =>
+          profile.routeKeys === undefined ? [] : [[profile.key, profile.routeKeys]],
+        ),
+      );
+    expect(routes('FEncountersDefault')).toEqual({
+      RadiatorIntro: ['FreshFile'],
+      ScreamerIntro: ['FreshFile'],
+    });
+    expect(routes('GEncountersDefault')).toEqual({
+      FishSwarmerIntro: ['FreshFile'],
+      TurtleIntro: ['FreshFile'],
+    });
+    expect(Object.keys(routes('HEncountersDefault'))).toEqual([
+      'MournerIntro',
+      'LamiaIntro',
+      'LovesickIntro',
+      'LycanthropeIntro',
+    ]);
+    const unknown = input();
+    const setIndex = unknown.encounterSets.findIndex((set) => set.key === 'FEncountersDefault');
+    const profiles = unknown.encounterSets[setIndex]!.authoringProfiles as unknown as {
+      routeKeys?: readonly string[];
+    }[];
+    const profileIndex = profiles.findIndex((profile) => profile.routeKeys !== undefined);
+    profiles[profileIndex] = { ...profiles[profileIndex]!, routeKeys: ['Nowhere'] };
+    expect(() => createCatalog(unknown)).toThrow(
+      new CatalogContractError(
+        `encounterSets[${setIndex}].authoringProfiles[${profileIndex}].routeKeys`,
+        'unknown route Nowhere',
+      ),
+    );
+  });
+
+  it('closes enemy introduction links over declared encounter definitions', () => {
+    const definitionIndex = (value: ReturnType<typeof input>, key: string) =>
+      value.encounterDefinitions.findIndex((definition) => definition.key === key);
+    const unknownLink = input();
+    const generated = unknownLink.encounterDefinitions[definitionIndex(unknownLink, 'GeneratedF')]!
+      .customization![0]!.selection as unknown as {
+      choices: { introductionEncounterKey?: string }[];
+    };
+    generated.choices[0] = { ...generated.choices[0]!, introductionEncounterKey: 'MissingIntro' };
+    expect(() => createCatalog(unknownLink)).toThrow(/names unknown introduction MissingIntro/);
+
+    const untriggered = input();
+    const index = definitionIndex(untriggered, 'GeneratedF');
+    (
+      untriggered.encounterDefinitions[index] as { enemyTriggeredIntroduction?: boolean }
+    ).enemyTriggeredIntroduction = true;
+    expect(() => createCatalog(untriggered)).toThrow(
+      new CatalogContractError(
+        `encounterDefinitions[${index}].enemyTriggeredIntroduction`,
+        'names no trigger enemy',
       ),
     );
   });

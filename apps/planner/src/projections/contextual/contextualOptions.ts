@@ -239,6 +239,24 @@ function findingExplanation(catalog: Catalog, finding: SemanticFinding): Candida
         kind: 'generic',
         message: 'Repair this encounter customization or reset customization.',
       };
+    case 'encounterCustomizationRequired':
+      return {
+        kind: 'generic',
+        message:
+          'Customize this encounter: a Fresh File plan authors every generated composition. Evaluation stops here until it is customized.',
+      };
+    case 'encounterIntroductionRequired': {
+      const introductionKey = String(finding.evidence.introductionEncounterKey);
+      const introduction =
+        catalog.encounterDefinitions.byKey[introductionKey]?.label ?? introductionKey;
+      return {
+        kind: 'generic',
+        message:
+          finding.evidence.admitted === true
+            ? `An enemy here is not introduced yet: select ${introduction} for this encounter, or remove the enemy.`
+            : `An enemy here is not introduced yet and cannot appear until ${introduction} is completed; remove it.`,
+      };
+    }
     case 'fieldsSpatialPointMissing':
       return { kind: 'generic', message: 'Choose a physical point for this active Fields item.' };
     case 'fieldsSpatialPointUnavailable':

@@ -108,6 +108,14 @@ export function encounterAuthoringProfiles(
   return set.authoringProfiles;
 }
 
+/** Whether the route's save profile can offer this authored choice at all. */
+export function encounterAuthoringProfileOnRoute(
+  profile: EncounterAuthoringProfile,
+  routeKey: string,
+): boolean {
+  return profile.routeKeys === undefined || profile.routeKeys.includes(routeKey);
+}
+
 export function encounterDefinitionForKey(
   catalog: Catalog,
   encounterKey: string,

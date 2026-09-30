@@ -38,6 +38,13 @@ const budgetEvidence: readonly BudgetRow[] = [
   ['GeneratedNSubRoom_Bigger', 40, 5, 'biomeEncounterDepth', 0, 1, undefined],
   // EncounterData.lua:199-200, hard :248
   ['GeneratedF', 55, 15, 'biomeDepthCache', 0, 1, 30],
+  // BaseIntroEncounter (EncounterData.lua:257-275) precedes GeneratedF/G: multiplier 2.0;
+  // own modifiers at EncounterData.lua:314,358 and EncounterData_Intro.lua:81.
+  ['RadiatorIntro', 55, 15, 'biomeDepthCache', 25, 2, 30],
+  ['ScreamerIntro', 55, 15, 'biomeDepthCache', 20, 2, 30],
+  ['FishSwarmerIntro', 140, 40, 'biomeDepthCache', 45, 2, 30],
+  // EncounterData_Intro.lua:130
+  ['TurtleIntro', 140, 40, 'biomeDepthCache', 65, 2, 30],
   // BaseDevotion EncounterData_Devotion.lua:6-7, own base :157
   ['DevotionTestF', 150, 0, 'biomeDepthCache', 0, 1, 30],
   // GeneratedF plus BaseArtemisCombat modifier EncounterData_Artemis.lua:55
@@ -280,15 +287,119 @@ describe('source-declared generated encounter policies', () => {
   });
 
   it('retains Fields special encounter admission independently of composition', () => {
-    for (const key of ['GeneratedH_Treant2', 'GeneratedH_Screamer2']) {
-      expect(catalog.encounterDefinitions.byKey[key]?.requirements).toEqual({
-        kind: 'all',
+    const admission = (key: string) => [
+      { kind: 'counterRange', axis: 'biomeDepthCache', range: { min: 4 } },
+      { kind: 'encounterKeyCount', scope: 'route', encounterKeys: [key], range: { max: 0 } },
+    ];
+    expect(catalog.encounterDefinitions.byKey.GeneratedH_Treant2?.requirements).toEqual({
+      kind: 'all',
+      requirements: admission('GeneratedH_Treant2'),
+    });
+    // EncounterData_Generated.lua:384: a completed ScreamerIntro, which every mature save has.
+    expect(catalog.encounterDefinitions.byKey.GeneratedH_Screamer2?.requirements).toEqual({
+      kind: 'all',
+      requirements: [
+        ...admission('GeneratedH_Screamer2'),
+        {
+          kind: 'any',
+          requirements: [
+            { kind: 'not', requirement: { kind: 'routeKeyEquals', routeKey: 'FreshFile' } },
+            {
+              kind: 'encounterCompletionCount',
+              encounterKeys: ['ScreamerIntro'],
+              range: { min: 1 },
+            },
+          ],
+        },
+      ],
+    });
+  });
+
+  it('declares each mixed introduction as a fixed first wave and a seeded generated suffix', () => {
+    for (const [key, seed, count, waves] of [
+      ['RadiatorIntro', 'Radiator', 5, 2],
+      ['ScreamerIntro', 'Screamer', 2, 2],
+      ['FishSwarmerIntro', 'FishSwarmerSquad', 4, 2],
+      ['TurtleIntro', 'Turtle', 2, 3],
+    ] as const) {
+      const policy = selection(key);
+      expect(policy, key).toMatchObject({
+        waveCount: { min: waves, max: waves },
+        types: { min: 2, max: 2, cap: 2 },
+        fixedEnemies: [],
+        requireCompletedIntro: true,
+      });
+      expect(
+        policy.fixedWaves?.map((wave) => wave.map((spawn) => [spawn.key, spawn.fixedCount])),
+      ).toEqual([[[seed, count]]]);
+      expect(policy.generatedSeeds?.map((enemy) => enemy.key)).toEqual([seed]);
+      // The introduction's own enemy and its elite share the native link.
+      for (const enemy of [seed, `${seed}_Elite`])
+        expect(
+          policy.choices.find((choice) => choice.key === enemy)?.introductionEncounterKey,
+        ).toBe(key);
+    }
+    // Guard2 and Radiator2 name FishmanIntro; Guard has no active introduction.
+    const g = selection('GeneratedG').choices;
+    for (const enemy of ['Guard2', 'Guard2_Elite', 'Radiator2', 'Radiator2_Elite'])
+      expect(g.find((choice) => choice.key === enemy)?.introductionEncounterKey).toBe(
+        'FishmanIntro',
+      );
+    expect(
+      selection('GeneratedF').choices.find((choice) => choice.key === 'Guard')
+        ?.introductionEncounterKey,
+    ).toBeUndefined();
+    for (const [enemy, introduction] of [
+      ['Mourner_Elite', 'MournerIntro'],
+      ['Lamia', 'LamiaIntro'],
+      ['Lovesick_Elite', 'LovesickIntro'],
+      ['Lycanthrope', 'LycanthropeIntro'],
+    ] as const)
+      expect(
+        selection('GeneratedH').choices.find((choice) => choice.key === enemy)
+          ?.introductionEncounterKey,
+      ).toBe(introduction);
+    // Profile gates read live save caches, so an earlier encounter on a fresh route
+    // can satisfy them; the ordinary Turtle's two G_Intro visits cannot be reached.
+    const admission = (key: string) =>
+      [...selection('GeneratedG').choices, ...selection('GeneratedF').choices].find(
+        (choice) => choice.key === key,
+      )?.admission;
+    const notFresh = {
+      kind: 'not',
+      requirement: { kind: 'routeKeyEquals', routeKey: 'FreshFile' },
+    };
+    expect(admission('Turtle')).toEqual(notFresh);
+    expect(admission('Turtle_Elite')).toBeUndefined();
+    expect(admission('WaterUnit')).toEqual({
+      kind: 'any',
+      requirements: [
+        notFresh,
+        {
+          kind: 'encounterCompletionCount',
+          encounterKeys: ['MiniBossWaterUnit'],
+          range: { min: 1 },
+        },
+      ],
+    });
+    expect(admission('WaterUnit_Elite')).toBeUndefined();
+    for (const key of ['SiegeVine', 'SiegeVine_Elite'])
+      expect(admission(key)).toEqual({
+        kind: 'any',
         requirements: [
-          { kind: 'counterRange', axis: 'biomeDepthCache', range: { min: 4 } },
-          { kind: 'encounterKeyCount', scope: 'route', encounterKeys: [key], range: { max: 0 } },
+          notFresh,
+          {
+            kind: 'encounterKeyCount',
+            scope: 'route',
+            encounterKeys: ['MiniBossFogEmitter'],
+            range: { min: 1 },
+          },
         ],
       });
-    }
+    // Encounters with native RequireCompletedIntro never draw an unintroduced enemy.
+    for (const key of ['OpeningGeneratedF', 'DevotionTestF', 'NemesisCombatH'])
+      expect(selection(key).requireCompletedIntro, key).toBe(true);
+    expect(selection('GeneratedF').requireCompletedIntro).toBeUndefined();
   });
 
   it('excludes Nemesis random events from Dream without excluding her combat encounters', () => {
@@ -305,8 +416,8 @@ describe('source-declared generated encounter policies', () => {
     }
   });
 
-  it('covers the audited 46 concrete identities without boss/prescribed vignettes', () => {
-    expect(definitions).toHaveLength(46);
+  it('covers the audited 50 concrete identities without boss/prescribed vignettes', () => {
+    expect(definitions).toHaveLength(50);
     expect(definitions.every((definition) => definition.kind === 'combat')).toBe(true);
     expect(
       definitions
@@ -495,5 +606,22 @@ describe('source-declared generated encounter policies', () => {
         'test',
       ),
     ).toThrow();
+    const intro = selection('RadiatorIntro');
+    expect(normalizeEncounterGeneration(intro, 'test')).toEqual(intro);
+    // Fixed waves need an exact total that leaves a generated suffix.
+    expect(() =>
+      normalizeEncounterGeneration({ ...intro, waveCount: { min: 1, max: 2 } }, 'test'),
+    ).toThrow(/fixedWaves/);
+    expect(() =>
+      normalizeEncounterGeneration({ ...intro, waveCount: { min: 1, max: 1 } }, 'test'),
+    ).toThrow(/fixedWaves/);
+    const uncounted: Record<string, unknown> = { ...intro.fixedWaves![0]![0]! };
+    delete uncounted.fixedCount;
+    expect(() =>
+      normalizeEncounterGeneration(
+        { ...intro, fixedWaves: [[uncounted as unknown as (typeof intro.choices)[number]]] },
+        'test',
+      ),
+    ).toThrow(/fixedWaves\[0\]/);
   });
 });

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   projectGeneratedEncounterAssessment,
   projectGeneratedEncounterHighlightPicker,
+  projectGeneratedEncounterWaveDraft,
   projectGeneratedFangsDraft,
 } from '@planner/projections/structured-workspace/interactions/generated-encounter-projection';
 import type { GeneratedEncounterAssessment } from '@run-planner/engine/simulation';
@@ -20,6 +21,7 @@ const baseAssessment = {
   waves: [],
   knownRunBlacklistAdditions: [],
 } as const satisfies GeneratedEncounterAssessment;
+const introductionLabel = (key: string) => (key === 'RadiatorIntro' ? 'Spindle introduction' : key);
 const items = (picker: ReturnType<typeof projectGeneratedEncounterHighlightPicker>) =>
   picker.sections.flatMap((section) => section.items);
 
@@ -28,10 +30,11 @@ describe('generated enemy presentation', () => {
     const wave = (activeMemberKeys: readonly string[]) =>
       ({ activeMemberKeys }) as unknown as GeneratedEncounterAssessment['waves'][number];
     const projected = (waves: GeneratedEncounterAssessment['waves']) =>
-      projectGeneratedEncounterAssessment({ ...baseAssessment, waves }, [
-        ...labels,
-        { key: 'Once', label: 'One-time enemy', blacklistAfterAppearance: true },
-      ]).warnings;
+      projectGeneratedEncounterAssessment(
+        { ...baseAssessment, waves },
+        [...labels, { key: 'Once', label: 'One-time enemy', blacklistAfterAppearance: true }],
+        introductionLabel,
+      ).warnings;
     expect(projected([wave(['Guard', 'Once']), wave(['Guard', 'Once'])])).toEqual([
       'One-time enemy can appear only once per run. An earlier uncustomized encounter may already include it.',
     ]);
@@ -48,6 +51,7 @@ describe('generated enemy presentation', () => {
         ],
       },
       labels,
+      introductionLabel,
     ).issues;
     expect(messages).toEqual([
       {
@@ -68,6 +72,7 @@ describe('generated enemy presentation', () => {
       undefined,
       labels,
       labels.map((choice) => choice.key),
+      introductionLabel,
     );
     expect(items(picker).map((item) => item.label)).toEqual([
       'Whisper',
@@ -83,11 +88,70 @@ describe('generated enemy presentation', () => {
         undefined,
         labels,
         labels.map((choice) => choice.key),
+        introductionLabel,
       );
       expect(picker.selected).toBeUndefined();
       expect(picker.sections.some((section) => section.kind === 'selectedInvalid')).toBe(false);
       expect(items(picker).every((item) => item.value !== '' && !item.selected)).toBe(true);
     }
+  });
+  it('lists unintroduced enemies as disabled options naming their introduction', () => {
+    const introductionLabels = [...labels, { key: 'Radiator', label: 'Spindle' }];
+    const assessment = {
+      ...baseAssessment,
+      issues: [
+        {
+          reason: 'introductionRequired',
+          key: 'Radiator',
+          introductionEncounterKey: 'RadiatorIntro',
+          admitted: true,
+          waveIndex: 1,
+          position: 2,
+        },
+      ],
+      introductions: {
+        encounterKeyByEnemyKey: { Radiator: 'RadiatorIntro' },
+        excludedHighlightKeys: ['Radiator'],
+      },
+      waves: [
+        {
+          waveIndex: 1,
+          typeCount: { min: 2, max: 2 },
+          additionalTypeCount: { min: 1, max: 1 },
+          seeds: [],
+          activeMemberKeys: ['Guard'],
+          exhausted: false,
+          eligibleKeysByPosition: [['Guard']],
+          introductionExcludedKeysByPosition: [['Radiator']],
+          sampledBudgetKeys: [],
+        },
+      ],
+    } as const satisfies GeneratedEncounterAssessment;
+    const repair =
+      'Spindle is not introduced yet: select Spindle introduction for this encounter, or remove Spindle.';
+    expect(
+      projectGeneratedEncounterAssessment(assessment, introductionLabels, introductionLabel).issues,
+    ).toEqual([{ message: repair, waveIndex: 1, field: 'enemies' }]);
+    const excluded = { label: 'Spindle', disabled: true, explanation: repair };
+    expect(
+      projectGeneratedEncounterHighlightPicker(
+        assessment,
+        undefined,
+        introductionLabels,
+        [],
+        introductionLabel,
+      ).sections.at(-1),
+    ).toMatchObject({ label: 'Needs introduction', items: [excluded] });
+    expect(
+      projectGeneratedEncounterWaveDraft(
+        { ...assessment, issues: [] },
+        1,
+        0,
+        [],
+        introductionLabels,
+        introductionLabel,
+      ).picker.sections.at(-1),
+    ).toMatchObject({ label: 'Needs introduction', items: [excluded] });
   });
   it('retains a selected shared enemy and marks it stale only when assessed unavailable', () => {
     const retained = projectGeneratedEncounterHighlightPicker(
@@ -95,6 +159,7 @@ describe('generated enemy presentation', () => {
       'Brawler',
       labels,
       [],
+      introductionLabel,
     );
     expect(retained.selected).toMatchObject({
       value: 'Brawler',
@@ -106,15 +171,20 @@ describe('generated enemy presentation', () => {
       'Guard_Elite',
       labels,
       [],
+      introductionLabel,
     );
     expect(stale.selected).toMatchObject({
       value: 'Guard_Elite',
       label: 'Elite Whisper',
       state: 'impossible',
     });
-    const unassessed = projectGeneratedEncounterHighlightPicker(undefined, 'Guard_Elite', labels, [
-      'Guard',
-    ]);
+    const unassessed = projectGeneratedEncounterHighlightPicker(
+      undefined,
+      'Guard_Elite',
+      labels,
+      ['Guard'],
+      introductionLabel,
+    );
     expect(unassessed.selected).toMatchObject({ value: 'Guard_Elite', state: 'unassessed' });
   });
 });

@@ -33,6 +33,8 @@ export type EncounterResolutionFindingCode =
   | 'encounterSlotActivationUnavailable'
   | 'encounterUnavailable'
   | 'encounterCustomizationUnavailable'
+  | 'encounterCustomizationRequired'
+  | 'encounterIntroductionRequired'
   | 'figLeafSkipUnavailable';
 
 export type RewardGenerationFindingCode =
@@ -202,6 +204,7 @@ export function isRequiredMissingInputFinding(
     case 'pickedTargetMissing':
     case 'roomActionPlacementRequired':
     case 'targetMissing':
+    case 'encounterCustomizationRequired':
     case 'fieldsSpatialPointMissing':
     case 'chaosRejectedBlockMissing':
     case 'hermesShrineDeliveryPlacementRequired':

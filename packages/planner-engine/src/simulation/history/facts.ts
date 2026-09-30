@@ -56,6 +56,16 @@ export function projectRouteEncounterKeyCounts(
   );
 }
 
+/** Exact Encounter Definition completion counts across the available route prefix. */
+export function projectRouteEncounterCompletionCounts(
+  view: HistoryStateView,
+  routeKey: string,
+): Readonly<Record<string, number>> {
+  return encounterKeyCounts(
+    view.ledgers.encounterCompletions.filter((encounter) => encounter.origin.routeKey === routeKey),
+  );
+}
+
 /** Exact Encounter Definition occurrence counts for one biome in the available route prefix. */
 export function projectBiomeEncounterKeyCounts(
   view: HistoryStateView,

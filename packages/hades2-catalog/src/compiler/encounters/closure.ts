@@ -22,6 +22,13 @@ export function validateEncounterRouteReferences(
 ): void {
   sets.values.forEach((set, setIndex) =>
     set.authoringProfiles.forEach((profile, profileIndex) => {
+      profile.routeKeys?.forEach((routeKey) => {
+        if (routes.byKey[routeKey] === undefined)
+          fail(
+            `encounterSets[${setIndex}].authoringProfiles[${profileIndex}].routeKeys`,
+            `unknown route ${routeKey}`,
+          );
+      });
       if (profile.resolution.kind !== 'rewardContext') return;
       for (const routeKey of Object.keys(
         profile.resolution.firstBiomeEncounterDefinitionKeyByRoute ?? {},
@@ -56,8 +63,39 @@ export function validateEncounterDefinitionClosure(input: {
   readonly traits: TraitCatalog;
   readonly keepsakes: CatalogCollection<KeepsakeDeclaration>;
 }): void {
+  const linkedIntroductions = new Set(
+    input.definitions.values.flatMap((definition) =>
+      (definition.customization ?? []).flatMap((decision) =>
+        decision.selection.kind === 'generated'
+          ? decision.selection.choices.flatMap((enemy) =>
+              enemy.introductionEncounterKey === undefined ? [] : [enemy.introductionEncounterKey],
+            )
+          : [],
+      ),
+    ),
+  );
   input.definitions.values.forEach((definition, index) => {
+    if (definition.enemyTriggeredIntroduction === true && !linkedIntroductions.has(definition.key))
+      fail(`encounterDefinitions[${index}].enemyTriggeredIntroduction`, 'names no trigger enemy');
     const path = `encounterDefinitions[${index}]`;
+    definition.customization?.forEach((decision, decisionIndex) => {
+      if (decision.selection.kind !== 'generated') return;
+      const selection = decision.selection;
+      [...selection.choices, ...(selection.generatedSeeds ?? [])].forEach((enemy) => {
+        if (enemy.admission !== undefined)
+          validateEncounterRequirementReferences(
+            enemy.admission,
+            input.definitions,
+            `${path}.customization[${decisionIndex}].selection.${enemy.key}.admission`,
+          );
+        const key = enemy.introductionEncounterKey;
+        if (key !== undefined && input.definitions.byKey[key] === undefined)
+          fail(
+            `${path}.customization[${decisionIndex}].selection`,
+            `${enemy.key} names unknown introduction ${key}`,
+          );
+      });
+    });
     for (const keepsakeKey of definition.blocksKeepsakeSelectionKeys ?? []) {
       if (input.keepsakes.byKey[keepsakeKey] === undefined)
         fail(`${path}.blocksKeepsakeSelectionKeys`, `unknown keepsake ${keepsakeKey}`);

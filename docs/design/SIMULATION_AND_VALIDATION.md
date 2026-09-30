@@ -426,6 +426,13 @@ failure belongs to chronology, not every supported sibling. Missing trait or
 target authorship retains the exact child finding rather than an additional
 generic purchase failure.
 
+Encounter preparation owns two Fresh File findings on the exact phase:
+`encounterCustomizationRequired` for a reached generated composition that is
+not authored, and `encounterIntroductionRequired` for a retained enemy whose
+introduction is unfinished. Both are errors located at room preparation, so
+they stop assessment there and withhold execution; the
+[introduction model](ROOM_LIFECYCLE_MODEL.md#enemy-introductions) owns the rules.
+
 Participation and position are also different: toggling a participant changes
 membership without replaying chronological candidate legality. Move controls
 assess positions through the simulator. Otherwise an unresolved earlier item
