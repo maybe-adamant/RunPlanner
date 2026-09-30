@@ -739,30 +739,66 @@ fails it though natively legal (`StaffDoubleAttackTrait` only requires
 Hammer can be authored on Fresh File today and reports `wrongHammerLoadout`;
 bounded until the Hammer exclusion lands.
 
-### Execution enablement slice
+### L — Execution enablement (locked 2026-09-29)
 
-Plan the bilateral protocol update after the real authored/model shape exists.
-Add FreshFile route/loadout decoding and null-aspect/keepsake proof while retaining
-actual Staff identity. Account for `StartNewGame → StartNewRun(RoomName)` bypassing
-ChooseStartingRoom; ensure opening realization and binding occur through a coherent
-contact without synchronizing an unproven loadout. No save conversion/reset.
+Owner-locked sixth slice. Premise: the executor gains code only for what is
+unique to Fresh File; everything else reuses existing contacts. Evidence: the
+executor delta inspection of 2026-09-29 (file:line in the packet).
 
-Verify bridge Shop, empty inventory positions, Eris interaction, native intros,
-inert H Pool, absent racks/resources and room conformance. Generate a real Fresh
-File execution fixture through planner builders; format it normally. No manually
-fabricated protocol witness. Only remove the publication restriction after the
-required rule coverage and executor contacts are ready for controlled live testing.
+Locked decisions:
 
-Eris publication: the gift already reaches the timeline as an ordinary
-`interactAcquisitionEntry` acquisition, but the talk has no transaction kind,
-so assembly reports `executionCoverageMissing` for it. Publish the observation
-flag, the talk as an interaction and the gift as a required pickup on the
-intro occurrence; conformance proves `ErisCurseTrait` present and the gift
-acquired, diagnostic-only when marked but Eris is absent.
+- Protocol 51→52 (mechanical bump, all fixtures regenerated). `FreshFile`
+  joins the execution route key with Underworld's extent rule. A missing
+  aspect, starting keepsake or current keepsake is an omitted wire key, never
+  JSON null; the loadout resolves through `resolveRouteEquipment`. Rust plan
+  slots read the aspect as optional; the in-game summary guards a nil label
+  ("None").
+- Mixed introductions publish their declared fixed prefix waves as `fixed`
+  operands with exact counts; the executor verifies the native prefix by name
+  and count, marks it installed, and admits and fills only the suffix. The
+  `preexisting-waves` refusal becomes prefix-aware admission.
+- The opening is realized inside the `CreateRoom` wrapper when nested in
+  `StartNewRun` with `args.RoomName` equal to the expected opening: native
+  `StartNewGame → StartNewRun(nil, {RoomName})` bypasses `ChooseStartingRoom`
+  and would otherwise roll an unmodeled reward. Loadout timing is unchanged.
+- One shared no-aspect predicate: an absent expected aspect requires the
+  observed aspect to be nil, at run start and at Postboss admission (which
+  no longer short-circuits on nil/nil).
+- A native field locked by `BlockedByRequirements` (the H post-boss Pool)
+  counts as absent in feature conformance, matching native usability.
+- Eris: `interactEris` is a skipped timeline transaction (with
+  `collectRequiredReward`); the gift is the existing direct-pickup contact;
+  the curse trait is already a `G/H/I_Intro` room-exit `traitInventory` fact,
+  so an Eris marked but absent, or present but unmarked, is a hard mismatch
+  at that room. This is deliberate: the gift changes accumulated Ashes and
+  every later bag's legality, and the first-boundary check stops the plan
+  before any divergent draw is trusted. The observation flag is not on the
+  wire; the executor never steers her spawn.
+- Publication guard deleted with its panel, header and loadout copy.
+- Included: guide footer names the Bridge Shop, an Eris guide row, the "None"
+  aspect label, a Lua trailing-empty-slot shop test.
+- Not needed and not built: a talk transaction kind, gift proof, Death
+  Defiance proof, a `DummyWeaponStaff` predicate, absence assertions for racks
+  and resource points, Bridge Shop code, overview changes for unentered door
+  targets (native forces only the traversed room), Gate A changes, retiring
+  the synthetic empty-shop-group fixture (it covers a middle group; Fresh
+  covers the trailing one).
 
-Unentered Fresh G door targets resolve no structural encounter identity in
-materialization (no reached facts there), matching mature I; this slice must
-decide how the overview publishes those phases.
+Fixture: one `fresh-file-fghi` execution fixture generated from
+`createFreshFileRouteProject` through the fixture table and Prettier; it
+exercises the route key, missing aspect and keepsake, the two mixed intros,
+Eris, the empty I shop slot and the Bridge Shop. Refusal witnesses flip to
+assembly success. Lua cases: missing aspect/keepsake at run start and Postboss
+admission, the `RoomName` start path, prefix admission, the locked Pool.
+
+Acceptance: the Fresh F–I project publishes; every execution fixture decodes
+in Lua; mature fixtures churn only `protocolVersion` and `planFingerprint`;
+full `npm run check` green. Live acceptance on a brand-new profile: opening
+binds under `StartNewGame`, FIntroFight and the Apollo trio, Radiator and
+FishSwarmer introductions with prefix install, Eris talk and gift at G_Intro,
+Bridge Shop, I_WorldShop with four items and no `shop-empty-group`
+diagnostic, `ErisCurseTrait` rarity/level matching the trait row, H Pool
+absent, and the fifteen native introduction witness rosters as diagnostics.
 
 ## Phase IV — production readiness and spine closure
 
