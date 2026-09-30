@@ -565,7 +565,7 @@ function TestProtocol.testFreshFileOmitsAbsentLoadoutKeys()
 end
 
 function TestProtocol.testReleasedProtocol48IsRejected()
-    lu.assertEquals(protocol.VERSION, 52)
+    lu.assertEquals(protocol.VERSION, 53)
     local plan = decode("f-opening")
     plan.protocolVersion = 48
     refreshFingerprint(plan)

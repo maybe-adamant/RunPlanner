@@ -2,7 +2,7 @@
 
 ## Contract
 
-The active strict versioned protocol, execution protocol 52, carries a
+The active strict versioned protocol, execution protocol 53, carries a
 complete-valid configured Underworld, Fresh File or Surface prefix, through
 `F/G/H/I` (both Underworld profiles) or `N/O/P/Q`, or a public Dream prefix. The desktop
 publisher writes an execution-only JSON artifact to one of six fixed Plan
