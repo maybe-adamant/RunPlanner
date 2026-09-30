@@ -460,6 +460,7 @@ export type WorkspaceEncounterCustomizationDecision =
   | (WorkspaceEncounterCustomizationDecisionBase & {
       readonly selection: {
         readonly kind: 'cocoonRewardPoint';
+        readonly gameName: string;
         readonly spawnPointIds: readonly number[];
       };
     })

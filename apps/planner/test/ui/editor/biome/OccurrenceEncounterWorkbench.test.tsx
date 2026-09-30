@@ -23,6 +23,8 @@ import {
 } from '@run-planner/engine/authored-project';
 import { assembleExecutionProduct, compileExecutionPlan } from '@run-planner/engine/execution-plan';
 import { simulateProject } from '@run-planner/engine/simulation';
+import { loadUnderworldArachneCocoonsCheckpoint } from '@run-planner/test-fixtures/checkpoints/underworld';
+import { arachneCocoonPhases } from '@run-planner/test-fixtures/underworld';
 import { act, cleanup, fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
@@ -403,6 +405,116 @@ describe('OccurrenceEncounterWorkbench', () => {
     });
   });
 
+  it.each(['F', 'G'] as const)(
+    'binds %s cocoon map and selector to the same independent position with Undo',
+    async (biomeKey) => {
+      vi.spyOn(HTMLElement.prototype, 'clientWidth', 'get').mockReturnValue(500);
+      vi.spyOn(HTMLElement.prototype, 'clientHeight', 'get').mockReturnValue(280);
+      vi.spyOn(HTMLElement.prototype, 'offsetWidth', 'get').mockReturnValue(500);
+      vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockReturnValue(
+        new DOMRect(0, 0, 500, 280),
+      );
+      const project = loadUnderworldArachneCocoonsCheckpoint();
+      const phase = arachneCocoonPhases[biomeKey];
+      const occurrenceId = phase.owner.occurrenceId;
+      const host = project.route.biomes
+        .find((biome) => biome.biomeKey === biomeKey)!
+        .topology!.occurrences.find((entry) => entry.occurrenceId === occurrenceId)!;
+      const ids = catalog.rooms.byKey[host.gameName]!.cocoonRewardPointIds!;
+      const view = renderOccurrenceWorkbench(
+        project,
+        'Underworld',
+        biomeKey,
+        occurrenceById(occurrenceId),
+      );
+      const values = () =>
+        view.application.store
+          .getState()
+          .projectWorkspace.history!.present.route.biomes.find(
+            (biome) => biome.biomeKey === biomeKey,
+          )!
+          .topology!.occurrences.find((entry) => entry.occurrenceId === occurrenceId)!.encounters
+          .customizationByPhase?.Encounter;
+      const priorCount = values()?.cocoonCount;
+      openRoomTab('Room Timeline');
+      await view.user.click(screen.getByRole('button', { name: 'Customize encounter' }));
+      const dialog = await screen.findByRole('dialog', { name: 'Customize' });
+      const marker = within(dialog).getByRole('button', { name: 'Reward cocoon 1' });
+      expect(
+        within(dialog)
+          .getByRole('img', { name: `Map of ${host.gameName} cocoons` })
+          .getAttribute('src'),
+      ).toContain('/cocoons/assets/');
+      await view.user.click(marker);
+      await waitFor(() =>
+        expect(values()?.cocoonRewardPoint).toEqual({
+          kind: 'cocoonRewardPoint',
+          spawnPointId: ids[0],
+        }),
+      );
+      expect(marker.getAttribute('aria-pressed')).toBe('true');
+      expect(values()?.cocoonCount).toEqual(priorCount);
+      const selector = within(dialog).getByRole('combobox', { name: 'Reward position' });
+      expect((selector as HTMLSelectElement).value).toBe(String(ids[0]));
+      await view.user.selectOptions(selector, String(ids[1]));
+      expect(
+        within(dialog)
+          .getByRole('button', { name: 'Reward cocoon 2' })
+          .getAttribute('aria-pressed'),
+      ).toBe('true');
+      act(() => view.application.store.dispatch(authoredProjectUndoRequested()));
+      await waitFor(() =>
+        expect(values()?.cocoonRewardPoint).toEqual({
+          kind: 'cocoonRewardPoint',
+          spawnPointId: ids[0],
+        }),
+      );
+      const second = within(dialog).getByRole('button', { name: 'Reward cocoon 2' });
+      second.focus();
+      await view.user.keyboard('{Enter}');
+      await waitFor(() =>
+        expect(values()?.cocoonRewardPoint).toEqual({
+          kind: 'cocoonRewardPoint',
+          spawnPointId: ids[1],
+        }),
+      );
+      await view.user.selectOptions(selector, '');
+      await waitFor(() => expect(values()?.cocoonRewardPoint).toBeUndefined());
+      expect(values()?.cocoonCount).toEqual(priorCount);
+      expect(
+        within(dialog)
+          .getAllByRole('button', { name: /Reward cocoon/ })
+          .every((button) => button.getAttribute('aria-pressed') === 'false'),
+      ).toBe(true);
+      const image = within(dialog).getByRole('img', { name: `Map of ${host.gameName} cocoons` });
+      Object.defineProperties(image, {
+        naturalWidth: { value: 2560 },
+        naturalHeight: { value: 1440 },
+      });
+      fireEvent.load(image);
+      const stage = image.parentElement!.parentElement!;
+      const scroll = within(dialog).getByRole('region', {
+        name: `Pan map of ${host.gameName} cocoons`,
+      });
+      fireEvent.click(within(dialog).getByRole('button', { name: 'Zoom in' }));
+      expect(within(dialog).getByText('125%')).toBeTruthy();
+      const beforePan = scroll.scrollLeft;
+      const pointer = { pointerId: 1, pointerType: 'mouse', button: 0, clientX: 200, clientY: 100 };
+      fireEvent.pointerDown(stage, pointer);
+      fireEvent.pointerMove(stage, { ...pointer, clientX: 160 });
+      fireEvent.pointerUp(stage, pointer);
+      expect(scroll.scrollLeft).toBeGreaterThan(beforePan);
+      fireEvent.pointerDown(marker, pointer);
+      fireEvent.pointerMove(marker, { ...pointer, clientX: 240 });
+      fireEvent.pointerUp(marker, { ...pointer, clientX: 240 });
+      fireEvent.click(marker, { detail: 1 });
+      expect(values()?.cocoonRewardPoint).toBeUndefined();
+      fireEvent.click(within(dialog).getByRole('button', { name: 'Fit' }));
+      expect(scroll.scrollLeft).toBe(0);
+      expect(within(dialog).getByText('100%')).toBeTruthy();
+    },
+  );
+
   it('slides an Arachne cocoon count from Default and resets it to Default', async () => {
     const occurrenceId = goldenFOccurrenceId(5, 1);
     const phase = createEncounterPhaseAddress(
@@ -581,6 +693,11 @@ describe('OccurrenceEncounterWorkbench', () => {
       decisionKey: 'cocoonRewardPoint',
       value: { kind: 'cocoonRewardPoint', spawnPointId: 1 },
     });
+    const finding = simulateProject(catalog, project).findings.find(
+      (candidate) =>
+        candidate.code === 'encounterCustomizationUnavailable' &&
+        semanticAddressKey(candidate.origin) === semanticAddressKey(phase),
+    )!;
     const view = renderOccurrenceWorkbench(
       project,
       'Underworld',
@@ -588,9 +705,18 @@ describe('OccurrenceEncounterWorkbench', () => {
       occurrenceById(occurrenceId),
     );
     openRoomTab('Room Timeline');
-    await view.user.click(screen.getByRole('button', { name: 'Customize encounter' }));
+    const trigger = screen.getByRole('button', { name: 'Customize encounter' });
+    act(() =>
+      view.application.store.dispatch(
+        findingSelected({ key: semanticFindingKey(finding), origin: finding.origin }),
+      ),
+    );
+    await waitFor(() => expect(document.activeElement).toBe(trigger));
+    expect(screen.queryByRole('dialog', { name: 'Customize' })).toBeNull();
+    await view.user.click(trigger);
     const dialog = await screen.findByRole('dialog', { name: 'Customize' });
     const selector = within(dialog).getByRole('combobox', { name: 'Reward position' });
+    expect(finding.origin).toEqual(phase);
     expect((selector as HTMLSelectElement).value).toBe('1');
     expect(within(selector).getByRole('option', { name: '1 (unavailable)' })).toBeTruthy();
     expect(within(dialog).getByText('Needs repair')).toBeTruthy();
