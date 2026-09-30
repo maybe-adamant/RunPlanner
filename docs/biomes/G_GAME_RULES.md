@@ -273,10 +273,12 @@ though its automatic drops are outside the reward model. Unlike F's bosses,
 
 ## Progressed-Save Boundary
 
-`FishmanIntro`'s first-completion force, the early-run Eris event in `G_Intro`,
-`G_MiniBoss02` lifetime encounter-completion gates, Narcissus prior-run force,
-progression and bounty gates, and the Fountain world-upgrade gate are excluded.
-Their current-run room, counter, cap, force, and reward rules remain exact.
+On mature routes `FishmanIntro`'s first-completion force, the early-run Eris
+event in `G_Intro`, `G_MiniBoss02` lifetime encounter-completion gates,
+Narcissus prior-run force, progression and bounty gates, and the Fountain
+world-upgrade gate are excluded. Their current-run room, counter, cap, force,
+and reward rules remain exact. The Fresh File route models the first two; see
+[Fresh File](#fresh-file).
 
 ### Concrete encounter selection
 
@@ -296,6 +298,27 @@ events, and enemy-wave detail remain audit or future-feature concerns rather
 than production authored state. When `ArtemisCombatG` is selected and entered,
 its exact phase owns Artemis's three-choice trait offer and folds the selected
 trait at encounter completion.
+
+## Fresh File
+
+The first G combat resolves `FishmanIntro`: native `AlwaysForce` holds until
+its first completion, and its three fixed waves (FishmanMelee ×1; ×2 plus
+FishmanRanged ×1; ×3 each) neither count encounter depth nor skip. Later
+combats may resolve `FishSwarmerIntro` (FishSwarmerSquad ×4, then an authored
+generated wave) or `TurtleIntro` (Turtle ×2, then two authored generated waves).
+`TurtleIntro` is reached only through `Turtle_Elite` at G depth 3 or more,
+because the ordinary Turtle needs two lifetime `G_Intro` visits
+([composition matrix](../audits/rooms-and-routes/COMBAT_ENCOUNTER_COMPOSITION_MATRIX.md)).
+WaterUnit is admissible only after a completed `MiniBossWaterUnit` on the
+route. Every generated G combat is customized on this route.
+
+`G_Intro` hosts Eris when the author observes her spawn: talking applies
+`ErisCurseTrait` and drops a required 20-Ashes gift, exempt from resource
+bonuses and duplication, before the doors roll
+([room action order](../audits/rooms-and-routes/ROOM_ACTION_ORDER_GAME_DATA_AUDIT.md#eris-is-a-required-object-at-a-young-profiles-biome-intro)).
+Narcissus's story room, Uh Oh, Chaos, the Anomaly, Zagreus Contract, Reprieve,
+field-NPC combats and cocoons, Wells, the Postboss Pool and keepsake rack are
+absent; Hellifish and Serpent remain. Scylla's featured performer is Jetty.
 
 ## Current Product Boundary
 

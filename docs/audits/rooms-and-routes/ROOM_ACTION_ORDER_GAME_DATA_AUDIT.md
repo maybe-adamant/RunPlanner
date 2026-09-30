@@ -247,6 +247,30 @@ is false, Athena is unavailable and the ordinary hosted encounter domain
 remains. This forced Gorgon contact is distinct from the ordinary selectable P
 Athena encounter.
 
+### Eris is a required object at a young profile's biome intro
+
+`G_Intro`, `H_Intro` and `I_Intro` run `SpawnErisForCurse` on entry while
+`CompletedRunsCache` is at most 1, 4 and 7, the hero lacks `ErisCurseTrait`,
+and `ErisCurseHealthThreshold` is false (`RoomDataG.lua:1350-1394`,
+`RoomDataH.lua:557-601`, `RoomDataI.lua:511-555`). That named requirement holds
+with no Death Defiance and health at most half (`RequirementsData.lua:151-163`).
+`ShrineLogic.lua:755-765` spawns her as a `RoomRequiredObjects` entry; talking
+applies the curse and drops one required gift (`NotRequiredPickup` stays
+commented out): 20 Ashes in G, 50 Psyche in H, 300 Bones in I, each an
+`NPCDrop` that cannot duplicate or Meta-convert
+([reward audit](../rewards-and-acquisition/REWARD_GAME_DATA_AUDIT.md#resource-quantities)).
+Exits wait on both required objects (`CheckRoomExitsReady`,
+`RoomLogic.lua:3080-3108`), so the doors roll after the gift and its resources
+count toward that outgoing batch. Once cursed, no later intro spawns her.
+
+Planner disposition: health is not simulated, so the spawn is an authored
+observation on the `FreshFile` intros; the talk and gift follow as required
+actions before outgoing generation, and a repeat observation after the curse
+is reported rather than granted
+([lifecycle model](../../design/ROOM_LIFECYCLE_MODEL.md#eris-at-a-biome-intro)).
+The curse's combat effect is not modeled. Live acceptance on a brand-new
+profile (2026-09-30) confirmed the G talk, gift and curse trait.
+
 ### Fields creates one physical room with several interleavable actions
 
 `SpawnRewardCages` creates every cage and its already-selected reward on room

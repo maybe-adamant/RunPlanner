@@ -403,6 +403,9 @@ unavailable.
 
 A fresh bag can exhaust: before 5 Ashes only the four early Ashes entries are
 eligible, and below the high tier only the low-tier Bones and Ashes are. The
+high tier is reachable within one attempt: a bounded `ChooseNextRewardStore`
+probe with generous Buried Treasure, Sea Star and shop Bones choices crossed
+100 Ashes and 500 Bones by G's third room. The
 planner reproduces the native two-append Heal fallback there; see
 [Planner consequence](#planner-consequence).
 
@@ -972,7 +975,10 @@ permutation. Store rerolls remain deferred.
 nonempty; there is no replacement or minimum fill, and later items shift to
 compact `StoreOptions` positions. Planner disposition: a group with zero
 eligible options is a validly empty slot, and publication maps declared slots
-to compact positions. Three bounded unknowns remain:
+to compact positions. The reachable case is a fresh profile's `I_WorldShop`
+resource group: a bounded probe of the unmodified `FillInShopOptions` returned
+no item with empty lifetime resources, and a brand-new profile run
+(2026-09-30) showed four items with every purchase bound. Three bounded unknowns remain:
 
 - In the `OptionsData` path, `RandomLoot` and `BoostedRandomLoot` still append
   a copy when `GetEligibleInteractedGod` returns nil (`StoreLogic.lua:183–205`),

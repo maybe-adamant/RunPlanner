@@ -523,9 +523,17 @@ encounter with their intro afterward:
 `Screamer2` is not a pool member: it is `GeneratedH_Screamer2`'s fixed seed and
 inherits `Screamer`'s intro identity (`EnemyData_Screamer.lua:7,130-132`). Fixed
 seeds bypass the ordinary intro filter, so the post-generation scan
-(`RunLogic.lua:1125-1143`) is their only intro contact.
+(`RunLogic.lua:1124-1145`) is their only intro contact; `GeneratedH_Screamer2`
+itself requires `ScreamerIntro` completed, beside biome depth ≥4 and no earlier
+occurrence this run (`EncounterData_Generated.lua:373-394`), so its seed never
+triggers a replacement. The planner reads that completion from the route's
+ledger on Fresh File; mature saves satisfy it.
 I and H passive pool members have no intro identity. Unlisted families in the
-listed pools also have none. These statements do not cover scripted-only
+listed pools also have none: base `Guard` has no active link (only `Guard2`
+names `FishmanIntro`, `EnemyData_Guard.lua:127`), and the `SiegeVine` and
+`WaterUnit` links are commented out (`EnemyData_SiegeVine.lua:7`,
+`EnemyData_WaterUnit.lua:7`). `LycanSwarmer` links to `LycanthropeIntro` but is
+outside `EnemySets.BiomeH`. These statements do not cover scripted-only
 enemies outside those pools.
 
 Native inheritance is significant: `Elite` is the first parent of many elite
@@ -550,6 +558,15 @@ apply, with each introduction's own `DifficultyModifier` (Radiator 25, Screamer
 | `LamiaIntro`       | `EncounterData_Intro.lua:448` | Lamia ×1 + BrokenHearted ×4; Lamia ×4 + BrokenHearted ×6; Lamia_Elite ×1 + BrokenHearted ×4 | None                                                              |
 | `LovesickIntro`    | `EncounterData_Intro.lua:534` | Lovesick ×2; Lovesick ×4 + BrokenHearted ×5; Lovesick_Elite ×2                              | None                                                              |
 | `LycanthropeIntro` | `EncounterData_Intro.lua:289` | Lycanthrope ×1; Lycanthrope ×3; Lycanthrope_Elite ×1                                        | None                                                              |
+
+The F and G introductions have no `GameStateRequirements` beyond the unfinished
+completion the scan checks. Each H introduction requires no occurrence of
+itself in the current run, and `LycanthropeIntro` also requires lifetime
+occurrences of `MournerIntro`, `LovesickIntro` and `LamiaIntro`
+(`EncounterData_Intro.lua:289-310,372-380`). H cages are chosen and recorded one
+at a time during `LeaveRoom` preparation (`RoomLogic.lua:4376-4388,4453-4462`),
+so a later cage sees an earlier cage's recorded introduction before any
+completion (`RoomLogic.lua:1921-1927`).
 
 Admission is separate from replacement: `GenerateEncounter` requires completed
 introductions below `MinDepthBeforeIntros` (`RoomData.lua:648` BaseRoom 3,
@@ -769,8 +786,11 @@ acceptance. The implementation preserves the following boundaries:
    bypassing enemy intros, room packages or native intro replacement. On Fresh
    File the scoped F/G/H introductions are authored set members; the
    [introduction model](../../design/ROOM_LIFECYCLE_MODEL.md#enemy-introductions)
-   owns their gates, reachability and type-domain exclusion. Mixed-suffix
-   installation and native traversal order remain live acceptance items.
+   owns their gates, reachability and type-domain exclusion. A brand-new
+   profile run (2026-09-30) confirmed `RadiatorIntro` and `FishSwarmerIntro`
+   with their native fixed first wave and installed suffix; native traversal
+   order is a diagnostic, not a contract
+   ([formation audit](ENEMY_FORMATION_AND_FEAR_VOW_GAME_DATA_AUDIT.md#introduction-replacement-occurs-after-initial-generation)).
 3. Ordered type-choice possibility, including highlight/placeholder seeding,
    P group gates, run blacklists and declaration-owned hard context. A blanket
    independent-per-wave or final-set validator would misstate native support.

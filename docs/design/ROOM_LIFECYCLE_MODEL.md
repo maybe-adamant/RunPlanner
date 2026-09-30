@@ -872,7 +872,9 @@ exact profile, so a newly created Opening places its incoming pickup before
 On Fresh File, native `SpawnErisForCurse` places Eris in `G_Intro`, `H_Intro`
 and `I_Intro` as a room-required object while completed runs are at most 1, 4
 and 7, the hero lacks `ErisCurseTrait`, and `ErisCurseHealthThreshold` (no Death
-Defiance and health at most half) is false. Health is not simulated, so the
+Defiance and health at most half) is false
+([source audit](../audits/rooms-and-routes/ROOM_ACTION_ORDER_GAME_DATA_AUDIT.md#eris-is-a-required-object-at-a-young-profiles-biome-intro)).
+Health is not simulated, so the
 spawn is the author's observation. When observed, the talk (`interactEris`)
 is a required action that applies `ErisCurseTrait` as a fixed direct trait
 grant, and her gift is a required pickup that depends on it. Both rank in the

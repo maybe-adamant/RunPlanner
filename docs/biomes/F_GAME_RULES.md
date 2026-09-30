@@ -37,7 +37,7 @@ implementation coverage is recorded directly in this map and its focused tests.
 | -------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------- | ---------------------------------------------------------- |
 | Generated decisions                          | F uses sequential physical doors, forced pools, and repeatable unpicked room creations                                    | **Exact:** standard generated batches with distinct Room Occurrences                                                                                                  | implemented           | --                                                         |
 | Opening baseline                             | `F_Opening01..03` use counting `OpeningGeneratedF` and forced RunProgress in the progressed-save route                    | **Exact:** one counting opening encounter and its resolved reward offer                                                                                               | implemented           | --                                                         |
-| Progression encounter variants               | `OpeningEmpty`, `FCastTutorialFight`, and `FIntroFight` depend on persistent progression                                  | **Excluded:** absent from the progressed-save baseline                                                                                                                | documented boundary   | Save-profile state becomes a project input                 |
+| Progression encounter variants               | `OpeningEmpty`, `FCastTutorialFight`, and `FIntroFight` depend on persistent progression                                  | **Exact on Fresh File:** `OpeningEmpty` and `FIntroFight` form its first sequence; mature routes keep the progressed baseline; `FCastTutorialFight` is excluded       | implemented           | --                                                         |
 | Ordinary combat identity                     | Maps choose internal enemy waves while each supported combat has its relevant room and counter effects                    | **Simplified:** preserve concrete room identity and encounter-depth effect, not enemy-wave composition                                                                | implemented           | Combat composition becomes an authored or validated output |
 | Room eligibility and force                   | Concrete current-run counters, caps, predecessor-exit requirements, mutual exclusion, and force windows govern candidates | **Exact:** declaration-owned predicates evaluated from history                                                                                                        | implemented           | --                                                         |
 | Reward-store selection                       | F targets MetaProgress ratio `0.315` with adjustment speed `10`                                                           | **Simplified:** preserve only possible and forced RunProgress/MetaProgress support                                                                                    | implemented           | Probability analysis or exact RNG replay is introduced     |
@@ -45,7 +45,7 @@ implementation coverage is recorded directly in this map and its focused tests.
 | Natural Chaos                                | Declared F sources may expose one optional Chaos sibling beside normal doors                                              | **Exact:** map domain/default, preceding-ten offer spacing, fixed Chaos room, fresh ordinary return                                                                   | implemented           | --                                                         |
 | Takeover Preboss                             | `F_PreBoss01` takes over every physical predecessor exit; exit 1 is Shop and a later exit, when present, is a free reward | **Exact:** one declaration-owned takeover batch with one occurrence per physical exit                                                                                 | implemented           | --                                                         |
 | Fixed boss and postboss rooms                | `F_PreBoss01` leads through one mutually exclusive Hecate variant and then `F_PostBoss01`                                 | **Exact:** selecting the Preboss creates ordinary `F_Boss01` then route-position `F_PostBoss01` occurrences through fixed links under the neutral difficulty baseline | implemented           | User-selected difficulty becomes a project input           |
-| Story, Fountain, and other progression gates | Dialogue, world upgrades, and persistent progression alter availability                                                   | **Excluded:** progressed-save baseline retains current-run rules only                                                                                                 | documented boundary   | Save-profile state becomes a project input                 |
+| Story, Fountain, and other progression gates | Dialogue, world upgrades, and persistent progression alter availability                                                   | **Exact per profile:** mature routes retain current-run rules only; Fresh File closes first-attempt-unreachable content by route availability                         | implemented           | --                                                         |
 
 ## Layout
 
@@ -70,12 +70,11 @@ takeover result.
 
 ## Progressed-Save Encounter Projection
 
-The game has progression-controlled opening alternatives. The supported
-baseline uses counting `OpeningGeneratedF` for all three opening maps.
-`OpeningEmpty` and `FCastTutorialFight` are excluded save-profile variants.
-`F_Combat01` likewise uses its ordinary `GeneratedF` encounter rather than the
-progression-controlled `FIntroFight`. None of these variants are production
-choices or production `unsupported` predicates.
+The game has progression-controlled opening alternatives. The mature baseline
+uses counting `OpeningGeneratedF` for all three opening maps, and `F_Combat01`
+uses its ordinary `GeneratedF` encounter. `FCastTutorialFight` is an excluded
+save-profile variant. The Fresh File route resolves `OpeningEmpty` and
+`FIntroFight` instead; see [Fresh File](#fresh-file).
 
 The opening begins with `biomeDepthCache = 0` and
 `biomeEncounterDepth = 1`. Its counting encounter increments encounter depth
@@ -208,6 +207,30 @@ lifecycle compatibility rather than exact native identity: `Empty` and
 Both rooms are ordinary Room Declarations referenced by the fixed topology
 links. They are not generated candidates, authored topology choices, or editor
 controls.
+
+## Fresh File
+
+A brand-new profile starts directly in `F_Opening01` with `OpeningEmpty`, no
+reward and no Arcana, keepsake or aspect; the other openings are unreachable
+([route-position audit](../audits/rooms-and-routes/ROUTE_POSITION_GAME_DATA_AUDIT.md#fresh-profile-first-attempt)).
+`F_Combat01` is the forced second room: its native
+`ForceIfEncounterNotCompleted = "FIntroFight"` holds on this route, and it
+resolves the fixed four-wave `FIntroFight`, which does not count encounter
+depth, so later F encounter depths are one lower than after `GeneratedF`. Its
+reward is the native `ForcedRewards` Apollo boon, offered at room clear from
+the `ForceLootTableFirstRun` table (Attack, Sprint and Magick boons) at the
+`ForceCommonLootFirstRun` Common rarity
+([trait offer audit](../audits/traits/TRAIT_OFFER_COMPOSITION_AND_FEAR_PRESSURE_AUDIT.md#first-run-forced-loot-table)).
+
+Later F combats may resolve `RadiatorIntro` or `ScreamerIntro` where the
+introduction's trigger enemy is admissible: a fixed first wave (Radiator ×5 or
+Screamer ×2) and an authored generated second wave
+([composition matrix](../audits/rooms-and-routes/COMBAT_ENCOUNTER_COMPOSITION_MATRIX.md)).
+Every generated F combat is customized on this route. No field-NPC combat,
+cocoon or Nemesis event occurs. Root Stalker is the only
+miniboss; Reprieve, Arachne's story room, Chaos, Zagreus Contract, Wells, the
+Postboss Pool and keepsake rack are absent, while the Postboss fountain stays.
+Hecate's interlude is Meteor Shower only.
 
 ## Current Product Boundary
 
