@@ -136,7 +136,7 @@ export function RouteOverview({
   );
 }
 
-/** A fresh profile's fixed starting state; none of it is an authored selection. */
+/** A fresh profile's fixed weapon; Arcana, Fear, keepsake and starting reward do not exist there. */
 function FreshFileLoadout({
   catalog,
   fixedWeaponKey,
@@ -151,22 +151,6 @@ function FreshFileLoadout({
         <div>
           <dt>Weapon</dt>
           <dd>{weapon?.label ?? fixedWeaponKey}, no Aspect</dd>
-        </div>
-        <div>
-          <dt>Starting Arcana</dt>
-          <dd>None</dd>
-        </div>
-        <div>
-          <dt>Starting Fear</dt>
-          <dd>None</dd>
-        </div>
-        <div>
-          <dt>Starting keepsake</dt>
-          <dd>None</dd>
-        </div>
-        <div>
-          <dt>Starting reward</dt>
-          <dd>None</dd>
         </div>
       </dl>
       <p className="panel-description">Experimental: Fresh File rules are only partly modeled.</p>
