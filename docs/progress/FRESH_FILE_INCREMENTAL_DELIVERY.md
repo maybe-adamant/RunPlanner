@@ -335,7 +335,7 @@ checks below remain open only where not exercised by those runs.
     ~:790–800).
   - An OptionsData RandomLoot group with no eligible god is not natively
     empty; the probe diagnostic is the guard.
-- [ ] Gate L, brand-new profile (executor build, protocol 52), publishing the
+- [ ] Gate L, brand-new profile (executor build, protocol 53), publishing the
       Fresh F–I plan:
   - The opening binds under `StartNewGame` (the `CreateRoom` `RoomName`
     path) with no rolled reward; FIntroFight and the Apollo trio follow.
