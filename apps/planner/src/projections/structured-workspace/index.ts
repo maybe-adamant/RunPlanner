@@ -51,6 +51,7 @@ export type {
 } from './contracts/structure';
 export type {
   WorkspaceCandidateInteraction,
+  WorkspaceNativeCandidateInteraction,
   WorkspacePickerCandidateInteraction,
   WorkspaceCompletedHubHandoffInteraction,
   WorkspaceCommandIntent,

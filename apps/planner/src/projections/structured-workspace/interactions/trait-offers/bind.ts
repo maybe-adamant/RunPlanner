@@ -128,7 +128,11 @@ export function bindTraitOfferInteractions(input: {
             }),
           }),
         value: control.offer,
-        contextReached: control.contextReached,
+        // A reached offer with no authored value also needs a representable start.
+        contextReached:
+          control.contextReached &&
+          (control.offer !== null ||
+            (chaosInteraction?.startingDraft() ?? startingOutcome()) !== undefined),
         traitOfferStartingOutcome: startingOutcome,
         appendTraitOfferDraft: (value: AuthoredTraitOffer) =>
           candidates.appendTraitOfferDraft(control.address, value),

@@ -93,6 +93,7 @@ export type WorkspaceOccurrenceInteractionRequirement =
           readonly supported: boolean;
         };
         readonly aetos?: {
+          readonly contextReached: boolean;
           readonly selectedWave?: number;
           readonly waves: readonly number[];
         };

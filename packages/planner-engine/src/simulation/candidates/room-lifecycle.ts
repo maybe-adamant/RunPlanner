@@ -1,6 +1,7 @@
 import type { Catalog } from '../../catalog-schema';
 import {
   createBiomeAddress,
+  createOccurrenceAddress,
   semanticAddressKey,
   type OccurrenceAddress,
   type RewardWheelAddress,
@@ -417,4 +418,37 @@ export function evaluateRewardWheelLifecycleCandidate(
         }),
       });
   }
+}
+
+/**
+ * Whether an exact Ship lifecycle context is retained for this reward wheel:
+ * the room's retained lifecycle capability with the wheel active. Reads
+ * retained products only.
+ */
+export function rewardWheelContextReached(
+  evaluation: ProjectEvaluation,
+  selectedArtifacts: RoomLifecycleCandidateArtifacts | undefined,
+  wheel: RewardWheelAddress,
+): boolean {
+  const source = lifecycleSourceForOwner(evaluation, selectedArtifacts, wheel);
+  const context = source?.artifacts?.shipAt(
+    createOccurrenceAddress(createBiomeAddress(wheel.routeKey, wheel.biomeKey), wheel.occurrenceId),
+  );
+  return context !== undefined && context.activeWheelKeys.includes(wheel.wheelKey);
+}
+
+/** Whether the Ship room's retained encounter preparation exists for its phase count. */
+export function shipEncounterCountContextReached(
+  evaluation: ProjectEvaluation,
+  selectedArtifacts: RoomLifecycleCandidateArtifacts | undefined,
+  selectedEncounterArtifacts: EncounterCandidateArtifacts | undefined,
+  occurrence: OccurrenceAddress,
+): boolean {
+  const source = lifecycleSourceForOwner(
+    evaluation,
+    selectedArtifacts,
+    occurrence,
+    selectedEncounterArtifacts,
+  );
+  return source?.encounters?.roomAt(occurrence) !== undefined;
 }

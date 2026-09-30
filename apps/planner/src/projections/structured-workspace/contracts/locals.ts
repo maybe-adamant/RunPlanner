@@ -26,7 +26,7 @@ import type { WorkspaceTraitOfferControl } from './traits';
 import type { WorkspaceCountedRewardControl, WorkspaceExplicitRewardControl } from './rewards';
 import type { WorkspaceShopOfferDescriptor, WorkspaceShopSupplementalDescriptor } from './commerce';
 import type {
-  WorkspaceCandidateInteraction,
+  WorkspaceNativeCandidateInteraction,
   WorkspaceCommandIntent,
   WorkspacePickerCandidateInteraction,
   WorkspaceInteractionChoice,
@@ -47,7 +47,7 @@ export interface WorkspaceFieldsCageOutcomeInteraction extends WorkspacePickerCa
   >;
 }
 
-export interface WorkspaceLocalVisitGenerationInteraction extends WorkspaceCandidateInteraction<SideRoomGeneration> {
+export interface WorkspaceLocalVisitGenerationInteraction extends WorkspaceNativeCandidateInteraction<SideRoomGeneration> {
   readonly disabledReason?: string;
   readonly intentFor: (
     generation: SideRoomGeneration,
@@ -57,7 +57,7 @@ export interface WorkspaceLocalVisitGenerationInteraction extends WorkspaceCandi
   readonly owner: LocalVisitSlotAddress;
 }
 
-export interface WorkspaceLocalVisitOrderInteraction extends WorkspaceCandidateInteraction<
+export interface WorkspaceLocalVisitOrderInteraction extends WorkspaceNativeCandidateInteraction<
   readonly OccurrenceId[]
 > {
   readonly intentFor: (
@@ -331,6 +331,8 @@ export interface WorkspaceErisObservationInteraction {
 }
 
 export interface WorkspaceAetosInteraction {
+  /** Whether the phase's Aetos context is reached; a retained wave otherwise waits. */
+  readonly contextReached: boolean;
   readonly enableIntent?: WorkspaceCommandIntent<
     Extract<ProjectCommand, { readonly kind: 'ReplaceAetosWave' }>
   >;
@@ -381,6 +383,8 @@ export interface WorkspaceFieldsSpatialControl {
 }
 
 export interface WorkspaceFieldsSpatialPointInteraction {
+  /** Read from retained products; the positions wait on an earlier choice when false. */
+  readonly contextReached: boolean;
   readonly key: string;
   readonly owner: FieldsSpatialAddress;
   readonly selected: number | null;
@@ -462,6 +466,7 @@ export interface WorkspaceEncounterPhase {
   };
   readonly aetos?: {
     readonly interactionKey: string;
+    readonly contextReached: boolean;
     readonly selectedWave?: number;
     readonly waves: readonly number[];
   };

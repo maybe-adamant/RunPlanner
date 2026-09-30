@@ -10,7 +10,11 @@ import {
   type WorkspaceLocalVisitDecision,
 } from '@planner/projections/structured-workspace';
 import { useFindingTarget } from '@planner/ui/feedback/useFindingTarget';
-import { candidateMayBeAuthored } from '@planner/ui/feedback/candidatePresentation';
+import {
+  candidateMayBeAuthored,
+  candidateWaitingTitle,
+  candidateWaits,
+} from '@planner/ui/feedback/candidatePresentation';
 import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
 import { useWorkspaceInteraction } from '@planner/ui/controls/useWorkspaceInteraction';
 import { RoomMapLauncher } from '@planner/ui/room-maps/RoomMapDialog';
@@ -32,6 +36,8 @@ function LocalVisitGenerationCheckbox({
   const candidates = useWorkspaceInteraction(interaction);
   const nextGeneration = slot.generation === 'generated' ? 'notGenerated' : 'generated';
   const candidate = candidates.result?.find((option) => option.value === slot.generation);
+  const next = candidates.result?.find((option) => option.value === nextGeneration);
+  const waiting = !interaction.contextReached || candidateWaits(next);
   const disabled = interaction.disabledReason !== undefined;
   const [hintOpen, setHintOpen] = useState(false);
   const hintId = `local-${slot.marker.focusKey}-generation-hint`;
@@ -68,12 +74,18 @@ function LocalVisitGenerationCheckbox({
           aria-label={`${slot.label} generation`}
           checked={slot.generation === 'generated'}
           data-candidate-support={candidateSupport(candidate)}
-          disabled={disabled}
+          disabled={disabled || waiting}
           onChange={() => {
-            if (!disabled) executeIntent(interaction.intentFor(nextGeneration));
+            if (disabled) return;
+            // Generation edits may be invalid (their findings repair them), never unevaluated.
+            const proposed = (candidates.result ?? candidates.activate())?.find(
+              (option) => option.value === nextGeneration,
+            );
+            if (!candidateWaits(proposed)) executeIntent(interaction.intentFor(nextGeneration));
           }}
           onFocus={candidates.activate}
           onPointerDown={candidates.activate}
+          title={waiting ? candidateWaitingTitle : undefined}
           type="checkbox"
         />
         <span aria-hidden="true" className="ephyra-side-compact-label">
@@ -107,6 +119,11 @@ function LocalVisitOrderSelect({
   );
   if (selectedIndex < 0) throw new Error(`${slot.label} has no selected local-visit position`);
   const selectedCandidate = candidates.result?.[selectedIndex];
+  const orderWaits =
+    !interaction.contextReached ||
+    (candidates.result !== undefined &&
+      candidates.result.length > 0 &&
+      candidates.result.every(candidateWaits));
   const replace = (key: string): void => {
     const optionIndex = slot.order.options.findIndex((option) => option.key === key);
     const option = slot.order.options[optionIndex];
@@ -124,10 +141,11 @@ function LocalVisitOrderSelect({
       <select
         aria-busy={candidates.pending || undefined}
         data-candidate-support={candidateSupport(selectedCandidate)}
-        disabled={slot.generation !== 'generated'}
+        disabled={slot.generation !== 'generated' || orderWaits}
         onChange={(event) => replace(event.target.value)}
         onFocus={candidates.activate}
         onPointerDown={candidates.activate}
+        title={orderWaits ? candidateWaitingTitle : undefined}
         value={slot.order.selectedKey}
       >
         {slot.order.options.map((option, index) => {

@@ -171,7 +171,13 @@ their coverage or upstream evidence. The editor must not color or filter a
 stable declaration domain as though it had been evaluated when the simulator
 could not reach that owner. An authoring launcher whose context is unreached is
 disabled and carries no explanation beyond "Waits on an earlier choice"; the
-frontier finding owns the explanation.
+frontier finding owns the explanation. An unevaluated candidate is not
+authorable in a native select, radio or checkbox: an unreached setting is
+disabled on render with that hover hint while its retained value stays
+visible, and its candidates still load only on interaction. Decision-entry
+pickers keep their own rule: an ordinary target or an uncommitted Hub stays
+authorable before evaluation, while a takeover or a persisted Hub envelope
+requires evaluated support.
 
 ### Selected-Value Invariant
 

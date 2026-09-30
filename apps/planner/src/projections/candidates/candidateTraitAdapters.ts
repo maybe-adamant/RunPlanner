@@ -204,7 +204,13 @@ export function createTraitCandidateAdapters(
         kind: 'keepsakeSelection',
         selection: owner,
       });
-      if (evaluation.kind === 'unavailable') return Object.freeze([]);
+      // Without a reached context the declared keepsakes stay listed, unevaluated.
+      if (evaluation.kind === 'unavailable')
+        return Object.freeze(
+          core.catalog.keepsakes.values.map((declaration) =>
+            Object.freeze({ value: declaration.key, evaluation }),
+          ),
+        );
       if (evaluation.kind !== 'keepsakeSelection') {
         throw new Error(
           `Keepsake candidate ${semanticAddressKey(owner)} returned ${evaluation.kind}`,

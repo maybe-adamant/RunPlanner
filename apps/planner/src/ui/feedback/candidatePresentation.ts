@@ -12,16 +12,29 @@ export function candidateSelectState(
   return { 'data-candidate-support': candidateSupport(option) };
 }
 
+/** Hover hint of a native control whose candidate context is unreached. */
+export const candidateWaitingTitle = 'Waits on an earlier choice';
+
+/** Whether this evaluated candidate's context is unreached. */
+export function candidateWaits(
+  option: CandidateOptionProjection<unknown, CandidateProjectionEvaluation> | undefined,
+): boolean {
+  return option?.evaluation.kind === 'unavailable';
+}
+
 /**
- * UI controls retain an invalid selected value for repair, but cannot introduce
- * a new declaration-impossible value. Layout permits engine-approved conflict
- * edits without treating the conflicting placement as valid. Context-unavailable
- * values remain visible: their explanation belongs to the picker rather than
- * this generic affordance rule.
+ * UI controls retain an invalid or unevaluated selected value, but cannot
+ * introduce a declaration-impossible or unevaluated one. Layout permits
+ * engine-approved conflict edits without treating the conflicting placement
+ * as valid.
  */
 export function candidateMayBeAuthored(
   option: CandidateOptionProjection<unknown, CandidateProjectionEvaluation> | undefined,
 ): boolean {
   if (option?.evaluation.kind === 'fieldsSpatialPoint') return option.evaluation.result.assignable;
-  return option !== undefined && candidateSupport(option) !== 'impossible';
+  return (
+    option !== undefined &&
+    candidateSupport(option) !== 'impossible' &&
+    candidateSupport(option) !== 'unavailable'
+  );
 }

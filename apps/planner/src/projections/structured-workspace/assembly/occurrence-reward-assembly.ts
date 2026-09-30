@@ -1237,6 +1237,7 @@ export function activeEncounterPhasesForOwner(
           ? {
               aetos: Object.freeze({
                 interactionKey: semanticAddressKey(address),
+                contextReached: aetosSupport !== undefined,
                 waves: aetosSupport?.waves ?? Object.freeze([]),
                 ...(aetosWave === undefined ? {} : { selectedWave: aetosWave }),
               }),

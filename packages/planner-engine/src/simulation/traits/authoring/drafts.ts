@@ -4,7 +4,11 @@ import type {
   AuthoredTraitOfferTraits,
   AuthoredTraitOption,
 } from '../../../authored-project/traits/state';
-import { optionIndex, TRAIT_OPTION_KEYS } from '../../../authored-project/traits/state';
+import {
+  optionIndex,
+  TRAIT_OPTION_KEYS,
+  traitOfferSupportsExhaustion,
+} from '../../../authored-project/traits/state';
 import { createDefaultAuthoredHexTree } from '../../../authored-project/traits/hex-tree';
 import { targetedAcquisitionTargetKeys } from '../level-effects';
 import { assessTraitOffer, traitCandidates, traitOfferGenerationInput } from './assessment';
@@ -104,26 +108,48 @@ export function traitOfferStartingOutcome(
 }
 
 /**
- * Without a valid start, the available rows (up to three, an actionable row
- * first) are a repairable draft; with none, the empty Gold outcome.
+ * Without a valid start, a repairable draft. A giver that may exhaust keeps its
+ * available rows (up to three, an actionable row first) or the empty Gold
+ * outcome. Any other giver always offers three rows: its available rows, then
+ * unavailable declared ones to repair; with fewer than three declared rows it
+ * has no representable offer.
  */
 function repairableStartingDraft(
   catalog: Catalog,
   giverKey: string,
   state: SimulationState,
   source: ResolvedTraitOfferSource,
-): AuthoredTraitOffer {
-  const variants = automaticDraftCandidates(
-    traitCandidates(catalog, giverKey, state, source).filter((candidate) => candidate.available),
-  );
+): AuthoredTraitOffer | undefined {
+  const giver = catalog.traitGivers.byKey[giverKey];
+  if (giver === undefined) return undefined;
+  const candidates = traitCandidates(catalog, giverKey, state, source);
+  const declared = automaticDraftCandidates(candidates);
+  const available = automaticDraftCandidates(candidates.filter((candidate) => candidate.available));
   const first =
-    selfContainedDraftCandidates(catalog, variants, state.traitHistory)[0] ?? variants[0];
-  if (first === undefined) return Object.freeze({ kind: 'fallbackGold' as const, giverKey });
-  const draft = traitDraft(giverKey, [
+    selfContainedDraftCandidates(catalog, available, state.traitHistory)[0] ??
+    available[0] ??
+    declared[0];
+  if (traitOfferSupportsExhaustion(giver)) {
+    if (first === undefined || available.length === 0)
+      return Object.freeze({ kind: 'fallbackGold' as const, giverKey });
+    return traitDraft(giverKey, [
+      first,
+      ...available.filter((candidate) => candidate.traitKey !== first.traitKey).slice(0, 2),
+    ]);
+  }
+  if (first === undefined) return undefined;
+  const rows = [
     first,
-    ...variants.filter((candidate) => candidate.traitKey !== first.traitKey).slice(0, 2),
-  ]);
-  return catalog.traitGivers.byKey[giverKey]?.providerKind === 'spell'
+    ...available.filter((candidate) => candidate.traitKey !== first.traitKey),
+    ...declared.filter(
+      (candidate) =>
+        candidate.traitKey !== first.traitKey &&
+        !available.some((entry) => entry.traitKey === candidate.traitKey),
+    ),
+  ].slice(0, 3);
+  if (rows.length !== 3) return undefined;
+  const draft = traitDraft(giverKey, rows);
+  return giver.providerKind === 'spell'
     ? Object.freeze({
         ...draft,
         hexTree: createDefaultAuthoredHexTree(catalog, draft.options[0]!.traitKey),

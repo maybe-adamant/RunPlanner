@@ -212,7 +212,11 @@ declared start or at room entry when its lifecycle declares none, also retains
 its generation, roster and candidate support, since that context reads nothing
 later; its status, Fig Leaf and Gorgon products are not retained. Later
 history effects, findings and capabilities do not become true merely because
-their authored controls still exist. No candidate-only evaluation or UI fallback may
+their authored controls still exist. The candidate session answers whether an
+exact context exists for a native setting's owner (Ship phase count, reward
+wheel, Hub slot and action order, side-room generation and order, Fields point)
+by reading retained products or authored structure only; it evaluates no
+candidate and replays nothing. No candidate-only evaluation or UI fallback may
 restore withheld semantic facts.
 
 ### Generated-batch retention

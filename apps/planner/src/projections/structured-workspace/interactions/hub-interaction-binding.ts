@@ -55,6 +55,7 @@ export function bindHubInteractions(
         );
       }
       const values = Object.freeze(slot.choices.map((choice) => choice.value));
+      const contextReached = candidates.contextReached({ kind: 'hubSlot', slot: slot.owner });
       if (!slot.selected) {
         hubSlots.set(
           key,
@@ -93,6 +94,7 @@ export function bindHubInteractions(
                 selected: false,
               });
             },
+            contextReached,
             key,
             owner: slot.owner,
             selected: false as const,
@@ -131,6 +133,7 @@ export function bindHubInteractions(
         key,
         Object.freeze({
           ...(close === undefined ? {} : { close }),
+          contextReached,
           key,
           owner: slot.owner,
           selected: true as const,
@@ -157,6 +160,10 @@ export function bindHubInteractions(
     hubActionOrders.set(
       key,
       Object.freeze({
+        contextReached: candidates.contextReached({
+          kind: 'hubActionOrder',
+          hub: requirement.owner,
+        }),
         key,
         owner: requirement.owner,
         proposalFor: (actions: readonly HubAction[]) => {

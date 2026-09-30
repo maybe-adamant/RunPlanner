@@ -1,9 +1,11 @@
 import { presentCandidateLabel } from '@planner/projections/candidates/candidateProjection';
-import type { WorkspaceCandidateInteraction } from '@planner/projections/structured-workspace';
+import type { WorkspaceNativeCandidateInteraction } from '@planner/projections/structured-workspace';
 import { useWorkspaceInteraction } from '@planner/ui/controls/useWorkspaceInteraction';
 import {
   candidateMayBeAuthored,
   candidateSelectState,
+  candidateWaitingTitle,
+  candidateWaits,
 } from '@planner/ui/feedback/candidatePresentation';
 import { useFindingTarget } from '@planner/ui/feedback/useFindingTarget';
 
@@ -12,7 +14,7 @@ type SelectValue = number | string | null;
 interface CandidateSelectProps<T extends SelectValue> {
   readonly bindFindingTarget?: boolean;
   readonly id: string;
-  readonly interaction: WorkspaceCandidateInteraction<T>;
+  readonly interaction: WorkspaceNativeCandidateInteraction<T>;
   readonly label: string;
   readonly onReplace: (value: T) => void;
   readonly placeholder?: string;
@@ -34,6 +36,12 @@ export function CandidateSelect<T extends SelectValue>({
   const candidates = useWorkspaceInteraction(interaction);
   const selected = candidates.result?.find((option) => option.value === interaction.selected);
   const value = interaction.selected == null ? '' : String(interaction.selected);
+  // An unreached context disables the whole setting on render; loaded candidates back it up.
+  const waiting =
+    !interaction.contextReached ||
+    (candidates.result !== undefined &&
+      candidates.result.length > 0 &&
+      candidates.result.every(candidateWaits));
 
   const replace = (raw: string): void => {
     const choice = interaction.choices.find((candidate) =>
@@ -50,10 +58,12 @@ export function CandidateSelect<T extends SelectValue>({
         {...(bindFindingTarget ? findingTarget(interaction.owner, id) : {})}
         {...candidateSelectState(selected)}
         aria-busy={candidates.pending || undefined}
+        disabled={waiting || undefined}
         id={id}
         onChange={(event) => replace(event.target.value)}
         onFocus={candidates.activate}
         onPointerDown={candidates.activate}
+        title={waiting ? candidateWaitingTitle : undefined}
         value={value}
       >
         {placeholder === undefined ? null : (
