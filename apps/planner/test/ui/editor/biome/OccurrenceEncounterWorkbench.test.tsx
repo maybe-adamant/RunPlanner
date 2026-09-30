@@ -434,6 +434,23 @@ describe('OccurrenceEncounterWorkbench', () => {
     expect(slider.getAttribute('aria-valuetext')).toBe('Default');
     expect(slider.getAttribute('min')).toBe('0');
     expect(slider.getAttribute('max')).toBe('7');
+    const pointSelector = within(dialog).getByRole('combobox', { name: 'Reward position' });
+    const firstPoint = within(pointSelector)
+      .getByRole('option', { name: '1' })
+      .getAttribute('value')!;
+    await view.user.selectOptions(pointSelector, firstPoint);
+    const point = () =>
+      view.application.store
+        .getState()
+        .projectWorkspace.history!.present.route.biomes.find((b) => b.biomeKey === 'F')!
+        .topology!.occurrences.find((o) => o.occurrenceId === occurrenceId)!.encounters
+        .customizationByPhase?.Encounter?.cocoonRewardPoint;
+    await waitFor(() =>
+      expect(point()).toEqual({ kind: 'cocoonRewardPoint', spawnPointId: Number(firstPoint) }),
+    );
+    expect(cocoonCount(view)).toBeUndefined();
+    await view.user.selectOptions(pointSelector, '');
+    await waitFor(() => expect(point()).toBeUndefined());
     expect(within(dialog).getByRole('button', { name: 'Reset' }).hasAttribute('disabled')).toBe(
       true,
     );
@@ -544,6 +561,53 @@ describe('OccurrenceEncounterWorkbench', () => {
         ?.topology?.occurrences.find((candidate) => candidate.occurrenceId === occurrenceId)
         ?.encounters.customizationByPhase?.Encounter?.infiniteRoster,
     ).toEqual(invalid);
+  });
+
+  it('shows and repairs a retained unavailable cocoon reward point', async () => {
+    const occurrenceId = goldenFOccurrenceId(5, 1);
+    const phase = createEncounterPhaseAddress(
+      goldenFBiome,
+      { kind: 'occurrence', occurrenceId },
+      'Encounter',
+    );
+    const selected = applyProjectCommand(createCompleteFGProject(), catalog, {
+      kind: 'SelectEncounter',
+      phase,
+      encounterKey: 'ArachneCombatF',
+    });
+    const project = applyProjectCommand(selected, catalog, {
+      kind: 'ReplaceEncounterCustomization',
+      phase,
+      decisionKey: 'cocoonRewardPoint',
+      value: { kind: 'cocoonRewardPoint', spawnPointId: 1 },
+    });
+    const view = renderOccurrenceWorkbench(
+      project,
+      'Underworld',
+      'F',
+      occurrenceById(occurrenceId),
+    );
+    openRoomTab('Room Timeline');
+    await view.user.click(screen.getByRole('button', { name: 'Customize encounter' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Customize' });
+    const selector = within(dialog).getByRole('combobox', { name: 'Reward position' });
+    expect((selector as HTMLSelectElement).value).toBe('1');
+    expect(within(selector).getByRole('option', { name: '1 (unavailable)' })).toBeTruthy();
+    expect(within(dialog).getByText('Needs repair')).toBeTruthy();
+    const point = () =>
+      view.application.store
+        .getState()
+        .projectWorkspace.history!.present.route.biomes.find((biome) => biome.biomeKey === 'F')!
+        .topology!.occurrences.find((entry) => entry.occurrenceId === occurrenceId)!.encounters
+        .customizationByPhase?.Encounter?.cocoonRewardPoint;
+    expect(point()).toEqual({ kind: 'cocoonRewardPoint', spawnPointId: 1 });
+    const validId = within(selector).getByRole('option', { name: '1' }).getAttribute('value')!;
+    await view.user.selectOptions(selector, validId);
+    await waitFor(() =>
+      expect(point()).toEqual({ kind: 'cocoonRewardPoint', spawnPointId: Number(validId) }),
+    );
+    expect(within(dialog).queryByText('Needs repair')).toBeNull();
+    expect(within(selector).queryByRole('option', { name: '1 (unavailable)' })).toBeNull();
   });
 
   it('repairs a retained out-of-range cocoon count by choosing its clamped stop', async () => {

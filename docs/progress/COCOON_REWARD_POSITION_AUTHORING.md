@@ -1,6 +1,6 @@
 # Cocoon reward position authoring
 
-Status: locked for implementation; Gate A in progress.
+Status: Gate A implemented and independently reviewed; Gate B next.
 Base: `2918b1f1` in `RunPlanner-main`.
 
 ## Objective and bounds
@@ -218,3 +218,24 @@ At closure update only the owning encounter audit and integration/model
 contract where changed, retire temporary plan after delivery acceptance, and
 leave unrelated investigations/plans untouched. No capture-module changes are
 expected. Raw originals remain external and recoverable.
+
+## Gate A verification
+
+- Imported all 41 room inventories: 525 F and 476 G native IDs. Independent
+  comparison confirmed exact correspondence with capture numbering. Every
+  currently captured anchor is preferred; no fallback-only capture witness
+  was invented.
+- Catalog lane: 35 files / 303 tests passed. Engine lane: 189 files / 2,404
+  tests passed before the final focused domain/replacement refinements.
+- Final focused point tests passed, including native-count position authoring,
+  independent resets, strict decoding, retained invalidity, exact host domains,
+  actual room replacement from F_Combat06 to F_Combat07 and Undo.
+- UI suite: 44 tests passed, including set/clear and retained-invalid repair.
+  All workspace/fixture typechecks and focused ESLint passed. Default execution
+  fixture byte checks passed within the engine lane; no fixtures changed.
+- Independent review found no blocking production defect. Its two coverage
+  suggestions were addressed with the real room-replacement and invalid-selector
+  witnesses. No schema, catalog compatibility or protocol version changed.
+- Explicit positions intentionally cannot publish until Gate C replaces the
+  temporary execution coverage guard. The clickable map remains Gate B work.
+  Full repository closure and physical in-game acceptance remain outstanding.

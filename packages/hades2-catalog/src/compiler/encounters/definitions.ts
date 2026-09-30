@@ -207,6 +207,12 @@ export function normalizeEncounterDefinitions(
                         maximumLength: 2 as const,
                       }),
                     });
+                  case 'cocoonRewardPoint':
+                    return Object.freeze({
+                      key,
+                      label,
+                      selection: Object.freeze({ kind: 'cocoonRewardPoint' as const }),
+                    });
                   case 'cocoonCount': {
                     const { minimum, maximum } = decision.selection;
                     if (!Number.isInteger(minimum) || minimum < 1)

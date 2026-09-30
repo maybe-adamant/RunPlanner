@@ -1,4 +1,5 @@
 import type { ResolvedRoutePosition } from '../../authored-project/route-context';
+import { cocoonRewardPointSupported } from './cocoon-reward-point';
 import type { Catalog, EncounterEnvelopeSlot, RoomDeclaration } from '../../catalog-schema';
 import type {
   AuthoredEncounterCustomization,
@@ -49,6 +50,7 @@ export interface EncounterPhaseAuthoringDomain {
     readonly selection: import('../../catalog-schema').EncounterCustomizationDecision['selection'];
     readonly value?: AuthoredEncounterCustomization;
     readonly valueSupported: boolean;
+    readonly cocoonRewardPointIds?: readonly number[];
     readonly retainedChoiceLabels?: readonly { readonly key: string; readonly label: string }[];
   }[];
 }
@@ -178,9 +180,13 @@ export function encounterPhaseAuthoringDomainForRoom(
               .map((decision) => {
                 const value = encounters.customizationByPhase?.[binding.slotKey]?.[decision.key];
                 const valueSupported =
-                  value === undefined || customizationValueKnown([decision], decision.key, value);
+                  value === undefined ||
+                  (customizationValueKnown([decision], decision.key, value) &&
+                    cocoonRewardPointSupported(room, value));
                 const retainedChoiceLabels =
-                  value === undefined || value.kind === 'cocoonCount'
+                  value === undefined ||
+                  value.kind === 'cocoonCount' ||
+                  value.kind === 'cocoonRewardPoint'
                     ? []
                     : (value.kind === 'single'
                         ? [value.choiceKey]
@@ -197,7 +203,8 @@ export function encounterPhaseAuthoringDomainForRoom(
                           .flatMap((candidate) => candidate.customization ?? [])
                           .flatMap((candidate) =>
                             candidate.key === decision.key &&
-                            candidate.selection.kind !== 'cocoonCount'
+                            candidate.selection.kind !== 'cocoonCount' &&
+                            candidate.selection.kind !== 'cocoonRewardPoint'
                               ? candidate.selection.choices
                               : [],
                           )
@@ -208,6 +215,9 @@ export function encounterPhaseAuthoringDomainForRoom(
                       });
                 return Object.freeze({
                   ...decision,
+                  ...(decision.selection.kind === 'cocoonRewardPoint'
+                    ? { cocoonRewardPointIds: room.cocoonRewardPointIds ?? Object.freeze([]) }
+                    : {}),
                   valueSupported,
                   ...(value === undefined ? {} : { value }),
                   ...(retainedChoiceLabels.length === 0 ? {} : { retainedChoiceLabels }),

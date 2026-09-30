@@ -172,3 +172,9 @@ export const arachneCombatCocoonCount = {
   label: 'Cocoons',
   selection: { kind: 'cocoonCount', minimum: 8, maximum: 14 },
 } as const;
+
+export const arachneCombatCocoonRewardPoint = {
+  key: 'cocoonRewardPoint',
+  label: 'Reward position',
+  selection: { kind: 'cocoonRewardPoint' },
+} as const;

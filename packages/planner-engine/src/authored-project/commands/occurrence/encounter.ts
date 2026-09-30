@@ -445,14 +445,16 @@ function updatedCustomization(
     phaseValues[command.decisionKey] =
       value.kind === 'generated'
         ? decodeGeneratedEncounterCustomization(value, command.decisionKey)
-        : value.kind === 'cocoonCount'
-          ? Object.freeze({ kind: 'cocoonCount', count: value.count })
-          : value.kind === 'infiniteRoster'
-            ? Object.freeze({
-                kind: 'infiniteRoster',
-                typeKeys: Object.freeze([...value.typeKeys]),
-              })
-            : (Object.freeze(value) as AuthoredEncounterCustomization);
+        : value.kind === 'cocoonRewardPoint'
+          ? Object.freeze({ kind: 'cocoonRewardPoint', spawnPointId: value.spawnPointId })
+          : value.kind === 'cocoonCount'
+            ? Object.freeze({ kind: 'cocoonCount', count: value.count })
+            : value.kind === 'infiniteRoster'
+              ? Object.freeze({
+                  kind: 'infiniteRoster',
+                  typeKeys: Object.freeze([...value.typeKeys]),
+                })
+              : (Object.freeze(value) as AuthoredEncounterCustomization);
   const next = { ...prior };
   if (Object.keys(phaseValues).length === 0) delete next[phase.phaseKey];
   else next[phase.phaseKey] = Object.freeze(phaseValues);

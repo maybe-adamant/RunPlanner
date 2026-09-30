@@ -275,6 +275,7 @@ export type AuthoredEncounterCustomization =
   | { readonly kind: 'orderedPrefix'; readonly choiceKeys: readonly string[] }
   /** Exact cocoon count; the declared native range is assessed during preparation. */
   | { readonly kind: 'cocoonCount'; readonly count: number }
+  | { readonly kind: 'cocoonRewardPoint'; readonly spawnPointId: number }
   /** Ordered native FillEnemyTypes draws; exact eligibility is assessed during preparation. */
   | { readonly kind: 'infiniteRoster'; readonly typeKeys: readonly string[] };
 

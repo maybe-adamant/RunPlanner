@@ -974,6 +974,15 @@ export function activeEncounterPhasesForOwner(
                   }),
                 });
               }
+              if (decision.selection.kind === 'cocoonRewardPoint') {
+                return Object.freeze({
+                  ...common,
+                  selection: Object.freeze({
+                    kind: 'cocoonRewardPoint' as const,
+                    spawnPointIds: decision.cocoonRewardPointIds ?? Object.freeze([]),
+                  }),
+                });
+              }
               if (decision.selection.kind === 'single') {
                 return Object.freeze({
                   ...common,

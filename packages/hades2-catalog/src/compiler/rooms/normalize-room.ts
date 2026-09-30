@@ -87,6 +87,9 @@ export function normalizeRoom(
 
   return Object.freeze({
     gameName: identity.gameName,
+    ...(encounter.cocoonRewardPointIds === undefined
+      ? {}
+      : { cocoonRewardPointIds: encounter.cocoonRewardPointIds }),
     label: identity.label,
     roomSetKey: identity.roomSetKey,
     kind: identity.kind,
