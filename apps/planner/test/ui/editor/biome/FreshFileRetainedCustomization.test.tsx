@@ -38,7 +38,7 @@ describe('Fresh File retained encounter customization', () => {
       .getAllByRole('button', { name: 'Customize encounter' })
       .find((button) => button.dataset.semanticOwner === semanticAddressKey(phase))!;
     await view.user.click(trigger);
-    const dialog = await screen.findByRole('dialog', { name: 'Customize' });
+    const dialog = await screen.findByRole('dialog', { name: 'Intro combat (FIntroFight)' });
     // The replacing identity's fixed waves stay visible with their controls disabled.
     expect(within(dialog).getByText('This encounter is fixed')).toBeTruthy();
     expect(

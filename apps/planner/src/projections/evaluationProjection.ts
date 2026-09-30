@@ -114,8 +114,7 @@ const findingCopy = {
   },
   encounterCustomizationRequired: {
     title: 'Customize this encounter',
-    description:
-      'A Fresh File plan authors every generated enemy composition; evaluation stops here until it is customized.',
+    description: 'Fresh File plans require customized encounters.',
   },
   encounterIntroductionRequired: {
     title: 'Enemy not introduced',

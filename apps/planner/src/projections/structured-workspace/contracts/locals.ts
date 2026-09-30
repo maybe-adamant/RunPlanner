@@ -242,6 +242,7 @@ export interface WorkspaceEncounterComposition {
   readonly label: string;
   readonly dispositionLabel: string;
   readonly editable: boolean;
+  readonly customizationRequired: boolean;
   readonly waveCount: { readonly min: number; readonly max: number; readonly value?: number };
   readonly waves: readonly {
     readonly waveIndex: number;

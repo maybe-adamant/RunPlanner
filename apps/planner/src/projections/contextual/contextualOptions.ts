@@ -242,8 +242,7 @@ function findingExplanation(catalog: Catalog, finding: SemanticFinding): Candida
     case 'encounterCustomizationRequired':
       return {
         kind: 'generic',
-        message:
-          'Customize this encounter: a Fresh File plan authors every generated composition. Evaluation stops here until it is customized.',
+        message: 'Fresh File plans require customized encounters.',
       };
     case 'encounterIntroductionRequired': {
       const introductionKey = String(finding.evidence.introductionEncounterKey);

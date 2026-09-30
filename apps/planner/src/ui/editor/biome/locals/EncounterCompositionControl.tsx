@@ -352,37 +352,43 @@ function GeneratedEncounterWaveDraftPicker({
 
 type CompositionWave = WorkspaceEncounterComposition['waves'][number];
 
-/** A declaration-owned or native wave: the same row, with its controls disabled. */
+/** A declaration-owned or native wave in the same label/value layout as the editor. */
 function ReadOnlyWavePanel({
   idKey,
   wave,
+  customizationRequired,
 }: {
   readonly idKey: string;
   readonly wave: CompositionWave;
+  readonly customizationRequired: boolean;
 }) {
   const summary =
     wave.spawns.length === 0
-      ? 'Native generation'
+      ? customizationRequired
+        ? 'Not customized'
+        : 'Native generation'
       : wave.spawns.map((spawn) => spawn.label).join(' · ');
   return (
     <>
       <div className="encounter-wave-picker">
         <div className="encounter-generated-wave-heading">
-          <ContextualPicker<WorkspaceGeneratedWaveDraftChoice>
-            ariaLabel={`Wave ${wave.waveIndex} enemies`}
-            disabled
-            id={`generated-wave-${idKey}-${wave.waveIndex}`}
-            label={`Wave ${wave.waveIndex}`}
-            layout="inline"
-            model={emptyDraftPicker}
-            onSelect={() => undefined}
-            placeholder={summary}
-            triggerLabel={summary}
-          />
+          <div className="field-control field-control-inline encounter-wave-readonly">
+            <span className="encounter-wave-label">Wave {wave.waveIndex}</span>
+            <span
+              className="encounter-wave-readonly-value"
+              id={`generated-wave-${idKey}-${wave.waveIndex}`}
+            >
+              {wave.spawns.length === 0 ? summary : 'Fixed enemies'}
+            </span>
+          </div>
         </div>
       </div>
       {wave.spawns.length === 0 ? (
-        <p className="encounter-generated-context">The game generates this wave’s enemies.</p>
+        <p className="encounter-generated-context">
+          {customizationRequired
+            ? 'Select Edit to configure this wave.'
+            : 'The game generates this wave’s enemies.'}
+        </p>
       ) : (
         <div className="encounter-budget-table-scroll">
           <table className="encounter-budget-table" aria-label={`Wave ${wave.waveIndex} enemies`}>
@@ -418,13 +424,13 @@ function ReadOnlyWavePanel({
 export function EncounterCompositionControl({
   composition,
   decision,
-  encounterKey,
   idKey,
   interaction,
+  requiredFindings = [],
 }: {
+  readonly requiredFindings?: readonly string[];
   readonly composition: WorkspaceEncounterComposition;
   readonly decision?: Decision;
-  readonly encounterKey: string;
   readonly idKey: string;
   readonly interaction?: WorkspaceEncounterCustomizationInteraction;
 }) {
@@ -437,6 +443,12 @@ export function EncounterCompositionControl({
   const assessment = value === undefined ? undefined : interaction?.generatedAssessment;
   // A retained removal-only value on a non-editable composition authors nothing.
   const authorable = value !== undefined && composition.editable;
+  const contextUnavailable =
+    (authorable && assessment === undefined) ||
+    (value === undefined &&
+      decision !== undefined &&
+      interaction !== undefined &&
+      interaction.initializeGenerated === undefined);
   // Authored rows have content only in an active assessed composition.
   const rows = composition.waves.filter(
     (wave) => wave.source !== 'authored' || assessment?.composition === 'active',
@@ -480,7 +492,10 @@ export function EncounterCompositionControl({
       execute(interaction.intentFor(decision.key, next));
   };
   const retainedWaves = (value?.waves ?? []).filter(
-    (row) => !assessment?.waves.some((wave) => wave.waveIndex === row.waveIndex),
+    (row) =>
+      !composition.waves.some(
+        (wave) => wave.source === 'fixed' && wave.waveIndex === row.waveIndex,
+      ) && !assessment?.waves.some((wave) => wave.waveIndex === row.waveIndex),
   );
   const issuesAt = (waveIndex: number) =>
     assessment?.issues.some((issue) => issue.waveIndex === waveIndex) === true;
@@ -743,7 +758,11 @@ export function EncounterCompositionControl({
           id={`wave-budget-panel-${idKey}-${row.waveIndex}`}
           aria-labelledby={`wave-budget-tab-${idKey}-${row.waveIndex}`}
         >
-          <ReadOnlyWavePanel idKey={idKey} wave={row} />
+          <ReadOnlyWavePanel
+            idKey={idKey}
+            wave={row}
+            customizationRequired={composition.customizationRequired}
+          />
         </section>
       );
     const wave =
@@ -757,12 +776,14 @@ export function EncounterCompositionControl({
   return (
     <section className="encounter-generated-customization">
       <div className="encounter-generated-heading">
-        <h3>Encounter Composition</h3>
-        <span className="encounter-generated-context">{encounterKey}</span>
+        <span className="encounter-generated-context encounter-composition-status">
+          {composition.dispositionLabel}
+        </span>
         {value === undefined ? (
           decision === undefined || interaction === undefined ? null : (
             <button
               className="secondary-action action-compact encounter-composition-edit"
+              data-has-findings={requiredFindings.length > 0}
               disabled={interaction.initializeGenerated === undefined}
               title={
                 interaction.initializeGenerated === undefined
@@ -807,17 +828,10 @@ export function EncounterCompositionControl({
       {value === undefined && decision !== undefined && interaction !== undefined ? (
         <>
           <p className="encounter-customization-explanation">
-            The game currently controls this encounter’s enemies. Select Edit to customize them.
+            {composition.customizationRequired
+              ? 'Select Edit to choose this encounter’s enemies.'
+              : 'The game chooses these enemies unless you select Edit.'}
           </p>
-          {initializationFailure ? (
-            <p className="encounter-customization-repair">
-              This encounter has no complete supported composition in the current context.
-            </p>
-          ) : interaction.initializeGenerated === undefined ? (
-            <p className="encounter-customization-repair">
-              Complete earlier choices to evaluate this encounter.
-            </p>
-          ) : null}
         </>
       ) : null}
       {helpOpen ? (
@@ -827,47 +841,70 @@ export function EncounterCompositionControl({
           aria-label="Encounter composition help"
         >
           <h4>Waves and enemies</h4>
-          <p>
-            Choose the number of waves. The shared enemy appears in every wave; each wave’s picker
-            selects the remaining enemy types.
-          </p>
+          <p>Choose the number of waves and use each wave’s picker to select its enemies.</p>
+          {composition.waves.some((wave) => wave.source === 'fixed') ? (
+            <p>Fixed waves cannot be edited. Customize the remaining waves.</p>
+          ) : null}
+          {composition.sharedEnemy ? (
+            <p>The shared enemy appears in every generated wave.</p>
+          ) : null}
           <h4>Budgets</h4>
           <p>Allocate a budget to each enemy type. The last type uses what remains.</p>
           <p>
             Counts round up, with at least one of each selected type, so the resulting cost can
             exceed the allocation.
           </p>
-          <h4>Fangs</h4>
-          <p>Choose one elite enemy type and its perks. This selection applies across all waves.</p>
-          <h4>Menace</h4>
-          <p>
-            Set how many enemies to replace. Some replacement types are fixed; others can be
-            selected. For grouped enemies, each conversion replaces one whole group.
-          </p>
-          <p>
-            The table’s counts and costs describe the original enemies. Menace does not recalculate
-            them.
-          </p>
-          <p>
-            Replacements do not inherit the original enemy’s Fangs perks. If every instance of the
-            Fangs target is replaced, those perks go unused.
-          </p>
+          {composition.fangs ? (
+            <>
+              <h4>Fangs</h4>
+              <p>
+                Choose one elite enemy type and its perks. This selection applies across all waves.
+              </p>
+            </>
+          ) : null}
+          {composition.menace ? (
+            <>
+              <h4>Menace</h4>
+              <p>
+                Set how many enemies to replace. Some replacement types are fixed; others can be
+                selected. For grouped enemies, each conversion replaces one whole group.
+              </p>
+              <p>
+                The table’s counts and costs describe the original enemies. Menace does not
+                recalculate them.
+              </p>
+              {composition.fangs ? (
+                <p>
+                  Replacements do not inherit the original enemy’s Fangs perks. If every instance of
+                  the Fangs target is replaced, those perks go unused.
+                </p>
+              ) : null}
+            </>
+          ) : null}
           <h4>Editing</h4>
           <p>
-            Changes apply immediately. Undo reverses edits. Reset removes the customization and
-            returns the encounter to game control.
+            Changes apply immediately. Undo reverses edits.{' '}
+            {composition.customizationRequired
+              ? 'Reset clears the customization. You must customize this encounter again before continuing.'
+              : 'Reset removes the customization and returns the encounter to game control.'}
           </p>
         </section>
       ) : null}
       <div className="encounter-summary-controls">
         {authorable && budgetDomain === undefined ? (
-          <div className="encounter-budget-control">
+          <div
+            className="encounter-budget-control"
+            data-has-issues={assessment?.issues.some((issue) => issue.field === 'baseRoll')}
+          >
             <span>Budget</span>
             <span>{encounterBudget}</span>
           </div>
         ) : null}
         {authorable && budgetDomain !== undefined ? (
-          <div className="encounter-budget-control">
+          <div
+            className="encounter-budget-control"
+            data-has-issues={assessment?.issues.some((issue) => issue.field === 'baseRoll')}
+          >
             <label htmlFor={`generated-base-roll-${idKey}`}>Budget</label>
             <span>{budgetNumber.format(budgetDomain.total.min)}</span>
             <EncounterBudgetSlider
@@ -880,7 +917,10 @@ export function EncounterCompositionControl({
             <span>{budgetNumber.format(budgetDomain.total.max)}</span>
           </div>
         ) : null}
-        <div className="encounter-customization-row encounter-waves-control">
+        <div
+          className="encounter-customization-row encounter-waves-control"
+          data-has-issues={assessment?.issues.some((issue) => issue.field === 'waveCount')}
+        >
           <span>Waves</span>
           <div className="encounter-wave-count" role="radiogroup" aria-label="Waves">
             {Array.from(
@@ -910,6 +950,7 @@ export function EncounterCompositionControl({
         {composition.sharedEnemy ? (
           <div
             className="encounter-customization-row encounter-shared-enemy"
+            data-has-issues={assessment?.issues.some((issue) => issue.field === 'highlight')}
             title="Only used with multiple waves"
           >
             <ContextualPicker
@@ -926,17 +967,6 @@ export function EncounterCompositionControl({
           </div>
         ) : null}
       </div>
-      {!authorable ? null : assessment === undefined ? (
-        <p className="encounter-customization-repair">
-          Complete earlier choices to evaluate this encounter.
-        </p>
-      ) : assessment.composition === 'missingWaveCount' ? (
-        <p className="encounter-customization-explanation">Choose Waves to customize enemies.</p>
-      ) : assessment.composition === 'missingHighlight' ? (
-        <p className="encounter-customization-explanation">
-          Choose a shared enemy to customize enemies.
-        </p>
-      ) : null}
       {rows.length === 0 ? null : (
         <div className="encounter-generated-waves">
           {assessment?.composition === 'active'
@@ -1018,10 +1048,27 @@ export function EncounterCompositionControl({
           </p>
         </section>
       ))}
-      {assessment && assessment.issues.length > 0 ? (
+      {requiredFindings.length > 0 ||
+      initializationFailure ||
+      contextUnavailable ||
+      (assessment && assessment.issues.length > 0) ? (
         <section className="encounter-composition-findings" aria-label="Customization findings">
           <h4>Findings</h4>
-          {assessment.issues.map((issue, index) => (
+          {initializationFailure ? (
+            <p className="encounter-customization-repair">
+              No supported composition is available here.
+            </p>
+          ) : contextUnavailable ? (
+            <p className="encounter-customization-repair">
+              Complete earlier choices to evaluate this encounter.
+            </p>
+          ) : null}
+          {requiredFindings.map((message) => (
+            <p className="encounter-customization-repair" key={message}>
+              {message}
+            </p>
+          ))}
+          {assessment?.issues.map((issue, index) => (
             <p className="encounter-customization-repair" key={index}>
               {issue.waveIndex === undefined
                 ? issue.field === undefined

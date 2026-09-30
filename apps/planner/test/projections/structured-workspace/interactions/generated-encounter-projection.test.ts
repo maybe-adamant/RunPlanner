@@ -301,7 +301,7 @@ describe('encounter composition presentation', () => {
       { enemyKey: 'Mourner_Elite', label: 'Elite Mourner', count: 1 },
     ]);
     expect(view('RadiatorIntro').dispositionLabel).toBe('This encounter’s first wave is fixed');
-    expect(view('GeneratedF').dispositionLabel).toBe('Native generation, not customized');
+    expect(view('GeneratedF').dispositionLabel).toBe('Not customized');
     expect(encounterCompositionView(catalog, { selectedEncounterDefinitionKey: 'Shop' })).toBe(
       undefined,
     );
