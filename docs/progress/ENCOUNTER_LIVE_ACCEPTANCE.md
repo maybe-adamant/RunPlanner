@@ -33,7 +33,7 @@ spacing change passed both focused Aetos UI tests; build retains its non-failing
 large-chunk warning.
 
 Cocoon reward-position delivery completed automated closure on 2026-09-29
-(execution protocol 52; authored schema and catalog compatibility unchanged).
+(execution protocol 52 at closure, superseded by 53 after the Fresh File merge; authored schema and catalog compatibility unchanged). Run the pending in-game checks on a protocol-53 build.
 Independent review found no blocking defects. The full correctness run passed
 4,015 of 4,018 tests; three older tests assumed the enriched cocoon checkpoint
 had no position. Their inputs now explicitly represent count-only/old-save
