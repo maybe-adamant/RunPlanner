@@ -13,7 +13,8 @@ focused navigation packet. Before changing architecture or domain behavior,
 read the exact relevant authority sections under `docs/`; do not read the whole
 README or broad document sets by default. Stable cross-cutting design lives in
 `docs/design/`, biome rules live in `docs/biomes/`, source evidence lives in
-`docs/audits/`, and temporary implementation plans live in `docs/progress/`.
+`docs/audits/`, temporary implementation plans live in `docs/progress/`, and
+pending in-game acceptance checklists live in `docs/testing/`.
 
 ## Dependency Direction
 
@@ -381,6 +382,23 @@ unknowns to `docs/audits/`, accepted cross-cutting policy to `docs/design/`,
 and accepted biome behavior to `docs/biomes/`. An investigation may remain only
 while it owns a concrete unresolved question or pending probe; it must not
 survive merely as implementation history.
+
+Implementation closure and live acceptance are separate. Do not retain a
+completed plan or investigation solely because in-game verification remains.
+Move those remaining checks to `docs/testing/` and retire the completed delivery
+documents. This does not establish a live pass or waive an explicit release
+acceptance requirement.
+
+Use `docs/testing/` only for pending in-game acceptance: setup, actions, expected
+observations, and any necessary build or protocol constraints. Reuse the relevant
+checklist rather than creating one per delivery gate. Do not carry implementation
+plans, automated test counts, commit histories, or completed delivery narratives
+into these files. Automated tests and source probes are not live verification;
+confirm checks from actual in-game evidence or the owner's confirmation, or
+record an explicit owner waiver. Retire confirmed or waived items and delete
+empty trackers. Promote newly established game facts to the owning audits,
+design documents, or biome rules. The root documentation map may link to the
+`docs/testing/` index; stable authorities must not depend on pending checklists.
 
 Use `docs/audits/` for durable evidence. A source audit records game facts,
 source locations, uncertainties, discrepancies, and the final planner
