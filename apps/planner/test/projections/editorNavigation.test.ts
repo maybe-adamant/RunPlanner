@@ -17,6 +17,12 @@ describe('route navigation', () => {
     expect(
       projectRouteNavigation(catalog, project.route).biomePanels.map((panel) => panel.biomeKey),
     ).toEqual(['Q', 'F', 'N', 'H']);
+    expect(createEditorNavigation(catalog).routes.values.map((route) => route.routeKey)).toEqual([
+      'Underworld',
+      'Surface',
+      'FreshFile',
+      'Dream',
+    ]);
     expect(createEditorNavigation(catalog).routes.values).toEqual(
       expect.arrayContaining([
         expect.objectContaining({

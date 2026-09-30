@@ -38,15 +38,15 @@ export function projectRouteNavigation(
   });
 }
 
+/** Creation order: mature routes first, then the fresh profile beside Dream Dive. */
+const creationRouteKeys = ['Underworld', 'Surface', 'FreshFile', 'Dream'] as const;
+
 export function createEditorNavigation(catalog: Catalog): EditorNavigation {
-  const routes = catalog.routes.values
-    .filter(
-      (route) =>
-        route.key === 'Underworld' ||
-        route.key === 'Surface' ||
-        route.key === 'Dream' ||
-        route.key === 'FreshFile',
-    )
+  const routes = creationRouteKeys
+    .flatMap((routeKey) => {
+      const route = catalog.routes.byKey[routeKey];
+      return route === undefined ? [] : [route];
+    })
     .map((route) =>
       projectRouteNavigation(catalog, {
         routeKey: route.key,

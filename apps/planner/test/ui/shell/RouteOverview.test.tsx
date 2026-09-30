@@ -179,7 +179,7 @@ describe('RouteOverview', () => {
     expect(markup).toContain('aria-label="Fixed starting loadout"');
     expect(markup).toContain('Witch&#x27;s Staff, no Aspect');
     for (const fact of ['Starting Arcana', 'Starting Fear', 'Starting keepsake', 'Starting reward'])
-      expect(markup).toContain(`<dt>${fact}</dt><dd>None</dd>`);
+      expect(markup).not.toContain(`<dt>${fact}</dt>`);
     expect(markup).toContain('Experimental: Fresh File rules are only partly modeled');
     expect(markup).not.toContain('sent to the game');
     expect(markup).not.toContain('aria-label="Edit Arcana"');
