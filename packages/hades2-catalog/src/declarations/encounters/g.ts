@@ -2,6 +2,7 @@ import { generatedEncounterChoices } from './generated/policies';
 import type { RawEncounterDefinitionDeclaration, RawEncounterSetDeclaration } from './types';
 import {
   arachneCombatCocoonCount,
+  arachneCombatCocoonRewardPoint,
   arachneEncounterKeys,
   arachneIncomingRewardExclusions,
   artemisEncounterKeys,
@@ -63,7 +64,7 @@ export const gEncounterDefinitions = [
   },
   {
     key: 'ArachneCombatG',
-    customization: [arachneCombatCocoonCount],
+    customization: [arachneCombatCocoonCount, arachneCombatCocoonRewardPoint],
     label: 'Arachne cocoon',
     kind: 'combat',
     countsEncounterDepth: false,

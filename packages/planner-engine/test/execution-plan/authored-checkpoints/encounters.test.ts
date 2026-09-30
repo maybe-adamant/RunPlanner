@@ -152,6 +152,23 @@ it('exports the reached G Anomaly roster and native return, then reloads its ros
 
 it('exports the selected F/G Arachne encounters and reloads the F cocoon reset', () => {
   const saved = loadUnderworldArachneCocoonsCheckpoint();
+  const host = saved.route.biomes
+    .find((biome) => biome.biomeKey === 'F')!
+    .topology!.occurrences.find(
+      (room) => room.occurrenceId === arachneCocoonPhases.F.owner.occurrenceId,
+    )!;
+  const explicitPoint = applyProjectHistoryCommand(createProjectHistory(saved), catalog, {
+    kind: 'ReplaceEncounterCustomization',
+    phase: arachneCocoonPhases.F,
+    decisionKey: 'cocoonRewardPoint',
+    value: {
+      kind: 'cocoonRewardPoint',
+      spawnPointId: catalog.rooms.byKey[host.gameName]!.cocoonRewardPointIds![0]!,
+    },
+  });
+  expect(() => compileEligibleProject(explicitPoint.present)).toThrow(
+    /no execution protocol support/,
+  );
   const published = compileEligibleProject(saved);
   expect(
     published.occurrences.find((room) => room.id === arachneCocoonPhases.F.owner.occurrenceId)

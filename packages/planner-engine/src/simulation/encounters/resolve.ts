@@ -1,4 +1,5 @@
 import type { Catalog, EncounterAuthoringProfile, RoomDeclaration } from '../../catalog-schema';
+import { cocoonRewardPointSupported } from './cocoon-reward-point';
 import type { RoomEncounterState } from '../../authored-project/model';
 import type { ResolvedRoutePosition } from '../../authored-project/route-context';
 import {
@@ -227,12 +228,23 @@ export function resolveMaterializedEncounterPhase(
         })();
   if (definitionKey === undefined) return undefined;
   const resolved = resolvedEncounterPhaseForDefinition(catalog, phase, definitionKey);
-  if (supportsGeneratedEncounterCustomization(room) || resolved.customization === undefined)
-    return resolved;
+  if (resolved.customization === undefined) return resolved;
   return Object.freeze({
     ...resolved,
     customization: Object.freeze(
-      resolved.customization.filter((decision) => decision.selection.kind !== 'generated'),
+      resolved.customization
+        .filter(
+          (decision) =>
+            decision.selection.kind !== 'generated' ||
+            supportsGeneratedEncounterCustomization(room),
+        )
+        .map((decision) =>
+          Object.freeze({
+            ...decision,
+            valueSupported:
+              decision.valueSupported && cocoonRewardPointSupported(room, decision.value),
+          }),
+        ),
     ),
   });
 }

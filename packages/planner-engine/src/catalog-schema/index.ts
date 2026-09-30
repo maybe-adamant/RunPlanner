@@ -510,6 +510,11 @@ export type EncounterCustomizationDecision =
       readonly key: string;
       readonly label: string;
       readonly selection: InfiniteRosterSelection;
+    }
+  | {
+      readonly key: string;
+      readonly label: string;
+      readonly selection: { readonly kind: 'cocoonRewardPoint' };
     };
 
 /** Closed concrete identity mapping for one persisted authored encounter choice. */
@@ -804,6 +809,8 @@ export type PrebossBatchPolicy =
   | { readonly kind: 'retainNormalPeers' };
 
 export interface RoomDeclaration {
+  /** Native cocoon anchors in numbered capture order. */
+  readonly cocoonRewardPointIds?: readonly number[];
   readonly gameName: string;
   readonly label: string;
   /** Exact game RoomSet identity; authored topology supplies the host route biome. */

@@ -93,6 +93,7 @@ export type RawAdditionalExitDeclaration =
   RawZagreusContractAdditionalExitDeclaration | RawChaosAdditionalExitDeclaration;
 
 export interface RawRoomDeclaration {
+  readonly cocoonRewardPointIds?: readonly number[];
   readonly gameName: string;
   readonly label: string;
   readonly roomSetKey: string;

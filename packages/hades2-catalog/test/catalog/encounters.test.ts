@@ -330,6 +330,11 @@ describe('encounter envelope catalog', () => {
         label: 'Cocoons',
         selection: { kind: 'cocoonCount', minimum: 8, maximum: 14 },
       },
+      {
+        key: 'cocoonRewardPoint',
+        label: 'Reward position',
+        selection: { kind: 'cocoonRewardPoint' },
+      },
     ];
     expect(definitions.ArachneCombatF?.customization).toEqual(expected);
     expect(definitions.ArachneCombatG?.customization).toEqual(expected);

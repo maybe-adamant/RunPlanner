@@ -447,6 +447,16 @@ export function decodeRoomEncounterState(
             kind: 'orderedPrefix',
             choiceKeys: Object.freeze(choiceKeys),
           });
+        } else if (kind === 'cocoonRewardPoint') {
+          const label = `${path}.customizationByPhase.${phaseKey}.${decisionKey}`;
+          expectExactKeys(value, ['kind', 'spawnPointId'], label);
+          const parsed = Object.freeze({
+            kind: 'cocoonRewardPoint' as const,
+            spawnPointId: expectPositiveInteger(value.spawnPointId, `${label}.spawnPointId`),
+          });
+          if (!customizationValueRepresentable(declarations.structural, decisionKey, parsed))
+            failProjectDocument(label, 'is not a declared cocoon reward point');
+          decisions[decisionKey] = parsed;
         } else if (kind === 'cocoonCount') {
           const label = `${path}.customizationByPhase.${phaseKey}.${decisionKey}`;
           expectExactKeys(value, ['kind', 'count'], label);

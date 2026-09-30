@@ -168,6 +168,11 @@ export type RawEncounterCustomizationDecisionDeclaration =
       readonly key: string;
       readonly label: string;
       readonly selection: InfiniteRosterSelection;
+    }
+  | {
+      readonly key: string;
+      readonly label: string;
+      readonly selection: { readonly kind: 'cocoonRewardPoint' };
     };
 
 export interface RawEncounterSetDeclaration {
