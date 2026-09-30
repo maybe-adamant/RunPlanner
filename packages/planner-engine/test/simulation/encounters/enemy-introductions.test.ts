@@ -82,6 +82,11 @@ describe('enemy introductions in generated compositions', () => {
       waveCount: 2,
       waves: [
         {
+          waveIndex: 1,
+          typeKeys: ['Radiator'],
+          sources: { Radiator: 'fixed' },
+        },
+        {
           waveIndex: 2,
           typeKeys: ['Radiator', 'Guard'],
           sources: { Radiator: 'template', Guard: 'addition' },

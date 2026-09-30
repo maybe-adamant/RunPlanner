@@ -21,7 +21,7 @@ local capture, stub = support.capture, support.stub
 local attachFeatureHooks = support.attachFeatureHooks
 local navigationEntryStub = support.navigationEntryStub
 local unusedLoadoutScope = {
-    synchronizeStartingRoom = function()
+    startingRun = function() return false end, synchronizeStartingRoom = function()
         error("starting-room loadout synchronization is outside this test")
     end,
 }

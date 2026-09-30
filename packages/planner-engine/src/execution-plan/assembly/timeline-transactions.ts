@@ -617,9 +617,11 @@ export function executionTimelineTransactions(
     // Pool sales remain planner-owned room actions.  Native Pool sale code
     // removes the selected traits, and the sparse room-exit delta verifies the
     // result; no executor transaction is published for the sale itself.
+    // Eris's talk is native; her curse is a room-exit trait fact.
     if (
       timeline.action.reference.kind === 'collectRequiredReward' ||
       timeline.action.reference.kind === 'sellPurgingPoolTrait' ||
+      timeline.action.reference.kind === 'interactEris' ||
       // Fields cage completion is represented by the ordered encounter phases;
       // native ChooseEncounter is the only steering contact.  The room action
       // itself has no separate executable callback or transaction.

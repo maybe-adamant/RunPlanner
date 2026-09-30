@@ -21,6 +21,7 @@ import { executionOccurrence } from './assembly/occurrence';
 import { validateExecutionProduct } from './assembly/validation';
 import { executionTimelineTransactions } from './assembly/timeline-transactions';
 import { executionStartingLoadout } from './assembly/loadout';
+import { assembleRoomExitConformance } from './assembly/diagnostics';
 import { semanticAddressKey } from '../authored-project/addresses';
 import { assessPublicDreamItinerary } from '../authored-project/dream-itinerary';
 import {
@@ -39,10 +40,15 @@ export function assembleExecutionProduct({
     throw new CompilerError('unsupportedExtent', 'execution catalog version is unsupported');
   }
   const routeKey = evaluation.route.routeKey;
-  if (routeKey !== 'Underworld' && routeKey !== 'Surface' && routeKey !== 'Dream')
+  if (
+    routeKey !== 'Underworld' &&
+    routeKey !== 'FreshFile' &&
+    routeKey !== 'Surface' &&
+    routeKey !== 'Dream'
+  )
     throw new CompilerError(
       'unsupportedRoute',
-      'execution supports only Underworld, Surface, or Dream routes',
+      'execution supports only Underworld, Fresh File, Surface, or Dream routes',
     );
   const keys = evaluation.route.configuredBiomeKeys;
   const invalidUnderworldPrefix =
@@ -73,13 +79,13 @@ export function assembleExecutionProduct({
       keys.length > 4 ||
       assessPublicDreamItinerary(catalog, keys).issues.length > 0);
   if (
-    (routeKey === 'Underworld' && invalidUnderworldPrefix) ||
+    ((routeKey === 'Underworld' || routeKey === 'FreshFile') && invalidUnderworldPrefix) ||
     (routeKey === 'Surface' && invalidSurfacePrefix) ||
     invalidDreamPrefix
   ) {
     throw new CompilerError(
       'unsupportedExtent',
-      'execution supports only configured Underworld, Surface, or public Dream prefixes',
+      'execution supports only configured Underworld, Fresh File, Surface, or public Dream prefixes',
     );
   }
   const biomes = completeExecutionBiomes(assembly);
@@ -203,7 +209,13 @@ export function assembleExecutionProduct({
       biome,
       transactions,
       facts,
-      roomExitConformance.get(room.occurrenceId),
+      assembleRoomExitConformance(
+        catalog,
+        routeKey,
+        room,
+        roomExitConformance.get(room.occurrenceId),
+        snapshots,
+      ),
       hubsBySource.get(executionRoomOwnerKey(room)),
       hubExitsBySource.get(executionRoomOwnerKey(room)),
       localSlotsByParent.get(room.occurrenceId),
@@ -233,7 +245,7 @@ export function assembleExecutionProduct({
   // Route-start state is the first captured snapshot, before any selected
   // room's rewards can mutate the loadout-derived ledgers.
   const openingSnapshot = biomes[0]!.rewards.runStateSnapshots[0];
-  const startingLoadout = executionStartingLoadout(assembly, openingSnapshot);
+  const startingLoadout = executionStartingLoadout(catalog, assembly, openingSnapshot);
   // Route-excluded resource rooms have no candidates. Their wire rows remain
   // cursor-aligned and passive; any other missing policy is a contract failure.
   const resourceByOccurrenceId = new Map(
@@ -265,17 +277,21 @@ export function assembleExecutionProduct({
     ),
   });
   const startingKeepsakeKey = assembly.project.route.loadout.startingKeepsakeKey;
-  if (startingKeepsakeKey === null)
-    throw new CompilerError('unsupportedRoute', 'execution requires a starting keepsake');
+  if (startingKeepsakeKey === null && startingEquipResults !== undefined)
+    throw new CompilerError('executionCoverageMissing', 'keepsake equip results lack a keepsake');
   const product = Object.freeze({
     catalogVersion: evaluation.catalogVersion,
     projectId: evaluation.projectId,
     routeKey,
     startingLoadout,
-    startingKeepsake: Object.freeze({
-      keepsakeKey: startingKeepsakeKey,
-      ...(startingEquipResults === undefined ? {} : { equipResults: startingEquipResults }),
-    }),
+    startingKeepsake: Object.freeze(
+      startingKeepsakeKey === null
+        ? {}
+        : {
+            keepsakeKey: startingKeepsakeKey,
+            ...(startingEquipResults === undefined ? {} : { equipResults: startingEquipResults }),
+          },
+    ),
     extent,
     selectedOccurrenceIds,
     resources,

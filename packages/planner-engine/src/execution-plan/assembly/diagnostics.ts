@@ -4,15 +4,19 @@ import {
 } from '../../authored-project/addresses';
 import type { CanonicalAuthoredRoom } from '../../simulation/materialization';
 import type { RunStateSnapshot } from '../../simulation/rewards/run-state';
-import type { TraitRarity } from '../../catalog-schema';
+import type { Catalog, TraitRarity } from '../../catalog-schema';
+import { routeErisHost } from '../../authored-project/route-profile';
 import type { GorgonRarityLevel } from '../../simulation/keepsakes/state';
 import type {
   ExecutionOccurrence,
+  ExecutionRoomExitConformance,
   ExecutionRunStateCount,
   ExecutionRunStateDiagnostic,
 } from '../model';
-import { pendingKeepsakeEffects } from '../../simulation/rewards/run-state-conformance';
-import { ExecutionCompilerError as CompilerError } from '../assembler-errors';
+import {
+  pendingKeepsakeEffects,
+  type RoomExitConformanceDelta,
+} from '../../simulation/rewards/run-state-conformance';
 
 function executionCount(value: ExecutionRunStateCount): ExecutionRunStateCount {
   return value.kind === 'exact'
@@ -125,7 +129,9 @@ function assembleRunStateDiagnostic(
       ),
     }),
     keepsakes: Object.freeze({
-      currentKey: requireCurrentKeepsake(snapshot.keepsakes.currentKey),
+      ...(snapshot.keepsakes.currentKey === null
+        ? {}
+        : { currentKey: snapshot.keepsakes.currentKey }),
       usedKeys: Object.freeze(snapshot.keepsakes.history.map((entry) => entry.key)),
       blockedKeys: Object.freeze([...snapshot.keepsakes.removedKeys]),
       fatedStatus: snapshot.keepsakes.fatedStatus,
@@ -204,8 +210,36 @@ export function assembleOccurrenceDiagnostics(
   });
 }
 
-function requireCurrentKeepsake(key: string | null): string {
-  if (key === null)
-    throw new CompilerError('unsupportedRoute', 'execution requires an equipped keepsake');
-  return key;
+/**
+ * The published room-exit facts. An Eris host on the route whose curse is not
+ * held at exit asserts it absent, so Eris present but unplanned mismatches here.
+ */
+export function assembleRoomExitConformance(
+  catalog: Catalog,
+  routeKey: string,
+  room: CanonicalAuthoredRoom,
+  delta: RoomExitConformanceDelta | undefined,
+  snapshots: ReadonlyMap<string, RunStateSnapshot>,
+): ExecutionRoomExitConformance | undefined {
+  if (delta === undefined) return undefined;
+  const host = routeErisHost(catalog.rooms.byKey[room.gameName], routeKey);
+  const exit = snapshots.get(
+    semanticAddressKey(
+      createRoomRunStateCheckpointAddress(room.origin, { kind: 'beforeRoomExit' }),
+    ),
+  );
+  const absent =
+    host !== undefined &&
+    exit !== undefined &&
+    !Object.values(exit.traits.equippedTraits).some(
+      (trait) => trait.traitKey === host.curseTraitKey,
+    );
+  if (!absent) return Object.freeze({ facts: Object.freeze([...delta.facts]) });
+  const absentTraitKeys = Object.freeze([host.curseTraitKey]);
+  const facts = delta.facts.some((fact) => fact.kind === 'traitInventory')
+    ? delta.facts.map((fact) =>
+        fact.kind === 'traitInventory' ? Object.freeze({ kind: fact.kind, absentTraitKeys }) : fact,
+      )
+    : [...delta.facts, Object.freeze({ kind: 'traitInventory' as const, absentTraitKeys })];
+  return Object.freeze({ facts: Object.freeze(facts) });
 }

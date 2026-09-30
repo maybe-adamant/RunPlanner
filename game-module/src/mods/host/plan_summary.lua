@@ -3,13 +3,15 @@ local summary = {}
 local ARCANA_RANKS = { Common = 1, Rare = 2, Epic = 3, Heroic = 4 }
 
 function summary.build(plan, displayName)
+    -- A fresh profile may start with no aspect or keepsake.
+    local function optionalName(key) return key == nil and "None" or displayName(key) end
     local loadout = plan.startingLoadout
     local result = {
         route = plan.routeKey .. " | " .. table.concat(plan.extent.biomeKeys, " / ")
             .. " | " .. #plan.selectedOccurrenceIds .. " planned rooms",
         weapon = displayName(loadout.weaponKey),
-        aspect = displayName(loadout.aspectKey),
-        keepsake = displayName(plan.startingKeepsake.keepsakeKey),
+        aspect = optionalName(loadout.aspectKey),
+        keepsake = optionalName(plan.startingKeepsake.keepsakeKey),
         keepsakeChanges = {},
         arcana = {},
         fear = {},

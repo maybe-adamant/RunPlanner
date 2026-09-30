@@ -103,6 +103,38 @@ function TestLoadoutSession.testCreateNewHeroInitializesProcessLocalSession()
     lu.assertEquals(state.state, "synchronized")
 end
 
+function TestLoadoutSession.testRunWithoutAspectOrKeepsakeRequiresNeitherObserved()
+    local priorGame, priorRun, priorWeapon, priorRarity, priorCards = _G.GameState, _G.CurrentRun,
+        _G.GetEquippedWeapon, _G.TraitRarityData, _G.MetaUpgradeCardData
+    local function start(recordedAspect)
+        _G.GameState = {
+            LastWeaponUpgradeName = { WeaponStaffSwing = recordedAspect }, ShrineUpgrades = {}, MetaUpgradeState = {},
+        }
+        _G.CurrentRun = nil
+        _G.GetEquippedWeapon = function() return "WeaponStaffSwing" end
+        _G.TraitRarityData, _G.MetaUpgradeCardData = { RarityUpgradeOrder = { "Common", "Rare", "Epic" } }, {}
+        local plan = expected(nil)
+        plan.startingLoadout.aspectKey = nil
+        plan.startingLoadout.arcana = {}
+        plan.startingLoadout.fear = { configuredRanks = {}, effectiveRanks = {} }
+        plan.startingKeepsake = {}
+        local state = { plan = plan, initialized = false, state = "inactive" }
+        local callbacks = captureLoadoutHooks(state)
+        callbacks.StartNewRun(nil, {}, function()
+            _G.CurrentRun = { Hero = { TraitDictionary = {} } }
+            callbacks.CreateNewHero(nil, {}, function() return {} end, nil, {})
+            return {}
+        end, nil, {})
+        return state
+    end
+    local fresh = start(nil)
+    local recorded = start("BaseStaffAspect")
+    _G.GameState, _G.CurrentRun, _G.GetEquippedWeapon, _G.TraitRarityData, _G.MetaUpgradeCardData =
+        priorGame, priorRun, priorWeapon, priorRarity, priorCards
+    lu.assertEquals(fresh.state, "synchronized")
+    lu.assertEquals(recorded.firstMismatch, { checkpoint = "starting-aspect", observed = "BaseStaffAspect" })
+end
+
 function TestLoadoutSession.testCompletedLoadoutCanSynchronizeBeforeNativeStartingRoomCreation()
     local priorGame, priorRun, priorWeapon, priorRarity, priorCards = _G.GameState, _G.CurrentRun,
         _G.GetEquippedWeapon, _G.TraitRarityData, _G.MetaUpgradeCardData
@@ -423,7 +455,7 @@ function TestLoadoutSession.testStartingRoomIsOptimisticallyRealizedDuringLoadou
             realizeIncomingReward = function(_, nativeRoom) return nativeRoom end,
             proveIncomingReward = function() return true end,
         }, {
-            synchronizeStartingRoom = function()
+            startingRun = function() return false end, synchronizeStartingRoom = function()
                 state.state = "synchronized"
                 return true
             end,

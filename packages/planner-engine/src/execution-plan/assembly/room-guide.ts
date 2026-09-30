@@ -147,8 +147,7 @@ function descriptionFor(
         ...(transaction?.kind === 'keepsakeChange' ? { keepsakeKey: transaction.keepsakeKey } : {}),
       });
     case 'interactEris':
-      // Only Fresh File hosts Eris, and no Fresh File plan is published.
-      throw new Error('room guide cannot publish an Eris interaction');
+      return Object.freeze({ kind: reference.kind });
   }
 }
 

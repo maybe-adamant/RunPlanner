@@ -15,7 +15,8 @@ end
 function hooks.attach(module, session, getState, report, route, room, featureScope, navigation, loadoutScope,
     admissionRuntime)
     assert(type(loadoutScope) == "table"
-        and type(loadoutScope.synchronizeStartingRoom) == "function",
+        and type(loadoutScope.synchronizeStartingRoom) == "function"
+        and type(loadoutScope.startingRun) == "function",
         "starting-room loadout scope is required")
     if admissionRuntime ~= nil then
         assert(type(admissionRuntime.inbox) == "table"
@@ -68,10 +69,26 @@ function hooks.attach(module, session, getState, report, route, room, featureSco
 
     module.hooks.wrap("CreateRoom", "run-planner-create-room", function(_, runtime, base, roomData, args)
         local state = getState(runtime)
+        -- StartNewGame's StartNewRun(nil, { RoomName }) creates the opening
+        -- directly, bypassing ChooseStartingRoom.
+        local opening
+        if state ~= nil and state.state == "starting" and loadoutScope.startingRun()
+            and type(args) == "table" and args.RoomName ~= nil then
+            local expected = route.expected(state.route)
+            if expected ~= nil and args.RoomName == expected.gameName then
+                if not loadoutScope.synchronizeStartingRoom(runtime, args)
+                    or room.prepare(state, expected) == nil or state.state ~= "synchronized" then
+                    report(runtime)
+                    return base(roomData, args)
+                end
+                opening = expected
+            end
+        end
         if state == nil or state.state ~= "synchronized" then return base(roomData, args) end
         local additional = featureScope and featureScope.currentAdditional()
         local id = type(roomData) == "table" and roomData.__runPlannerExecutionRoomId or nil
-        local occurrence = id and state.plan.occurrencesById[id]
+        local occurrence = opening
+            or id and state.plan.occurrencesById[id]
             or additional and additional.occurrence
             or navigation.resolveNativeRoom and navigation.resolveNativeRoom(state, roomData)
         if occurrence ~= nil then

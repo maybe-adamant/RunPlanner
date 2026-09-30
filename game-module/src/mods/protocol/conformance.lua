@@ -130,12 +130,9 @@ function conformance.resolve(value, state, label)
     local exitState = state and state.beforeRoomExit or state
     local expected = {}
     for index, factValue in ipairs(facts) do
-        local fact, factError = p.exact(
-            factValue,
-            { "kind" },
-            {},
-            label .. ".facts[" .. index .. "]"
-        )
+        local factLabel = label .. ".facts[" .. index .. "]"
+        local inventory = type(factValue) == "table" and factValue.kind == "traitInventory"
+        local fact, factError = p.exact(factValue, { "kind" }, inventory and { "absentTraitKeys" } or {}, factLabel)
         if not fact then return nil, factError end
         local read = readers[fact.kind]
         if not read or expected[fact.kind] ~= nil then
@@ -143,7 +140,21 @@ function conformance.resolve(value, state, label)
         end
         expected[fact.kind] = read(fact.kind == "traitInventory" and state or exitState)
         if expected[fact.kind] == nil then
-            return p.fail(label .. ".facts[" .. index .. "] requires complete diagnostic frames")
+            return p.fail(factLabel .. " requires complete diagnostic frames")
+        end
+        if fact.absentTraitKeys ~= nil then
+            -- Traits asserted absent beyond the frames join the proved absences.
+            local keys, keysError = p.strings(fact.absentTraitKeys, factLabel .. ".absentTraitKeys")
+            if not keys then return nil, keysError end
+            if #keys == 0 then return p.fail(factLabel .. ".absentTraitKeys must be nonempty") end
+            local absent, framed, seen = expected.traitInventory.absent, {}, {}
+            for _, key in ipairs(absent) do framed[key] = true end
+            for _, key in ipairs(keys) do
+                if seen[key] then return p.fail(factLabel .. ".absentTraitKeys must be distinct") end
+                seen[key] = true
+                if not framed[key] then absent[#absent + 1] = key end
+            end
+            table.sort(absent)
         end
     end
     return expected

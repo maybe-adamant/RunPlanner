@@ -181,6 +181,7 @@ describe('RouteOverview', () => {
     for (const fact of ['Starting Arcana', 'Starting Fear', 'Starting keepsake', 'Starting reward'])
       expect(markup).toContain(`<dt>${fact}</dt><dd>None</dd>`);
     expect(markup).toContain('Experimental: Fresh File rules are only partly modeled');
+    expect(markup).not.toContain('sent to the game');
     expect(markup).not.toContain('aria-label="Edit Arcana"');
     expect(markup).not.toContain('aria-label="Edit Fear"');
     expect(markup).not.toContain('>Starting reward</label>');

@@ -2,8 +2,9 @@
 
 ## Contract
 
-The active strict versioned protocol, execution protocol 51, carries a
-complete-valid configured Underworld or Surface prefix, through `F/G/H/I` or `N/O/P/Q`. The desktop
+The active strict versioned protocol, execution protocol 52, carries a
+complete-valid configured Underworld, Fresh File or Surface prefix, through
+`F/G/H/I` (both Underworld profiles) or `N/O/P/Q`, or a public Dream prefix. The desktop
 publisher writes an execution-only JSON artifact to one of six fixed Plan
 Executor slots in the established game target; the browser build has no
 publication capability. Sending a plan also makes its slot active. The
@@ -199,8 +200,8 @@ present or unreadable with its modified time and only existing wire fields:
 `projectId`, `displayName`, `routeKey`, `extent.biomeKeys`,
 `startingLoadout.weaponKey` and `startingLoadout.aspectKey`, and
 `planFingerprint`. The application labels the route, final biome, aspect and
-weapon (by its `shortLabel`) from the catalog; a plan without `displayName`
-shows _Unnamed_, Sent is a compact relative time with the exact local time as
+weapon (by its `shortLabel`) from the catalog; a loadout without an aspect
+shows "None", and a plan without `displayName` shows _Unnamed_, Sent is a compact relative time with the exact local time as
 its title and description, and an unreadable slot shows only "Unreadable".
 
 The Slot column is an **Active slot** radio group, with arrow-key choice, that
@@ -284,6 +285,8 @@ add transactions nor participate in Timeline dependencies, obligations, or
 conformance; unavailable or desynchronized room state hides the presentation.
 
 Feature presence and feature interaction remain distinct facts on the wire.
+A native room field locked by `BlockedByRequirements`, such as the H Postboss
+Pool on a fresh profile, is unusable natively and counts as absent.
 A present uninteracted Stygian Well or Pool of Purging is emitted with
 `interacted: false` and no fabricated inventory. A present interacted feature
 is emitted with `interacted: true` and its exact engine-owned inventory. The
@@ -444,6 +447,17 @@ every generated customization. Incompatible published plans are re-exported
 from their authored projects; execution-only protocol changes do not require
 an authored-project migration.
 
+An introduction's declared fixed first waves are published as `fixed` waves with
+their exact counts, so every generated customization covers all its waves. Native
+`GenerateEncounter` keeps declared `SpawnWaves` as pre-existing waves and never
+fills them. Admission verifies each such wave by name and equal
+`CountMin`/`CountMax`, treats it as installed, and admits and fills only the
+generated suffix; any other pre-existing wave declines. A named generated seed
+keeps its declared name and is never sampled. Native `SetupEncounter` replaces an
+introduction containing its own unfinished enemy with a regenerated copy of
+itself and does not rescan that replacement, so the first generation declines as
+an introduction substitution and the replacement is admitted.
+
 The exact phase scopes synchronous native preparation, with a stamped destination
 handoff for reward-owned Devotion. Uncustomized encounters delegate unchanged. A
 supplied base roll is validated against the effective native range, including hard
@@ -600,7 +614,11 @@ second offer-legality policy before forcing them.
 
 The route-start keepsake is a pre-room realization, not a room Timeline step.
 The wire carries its exact selected key and any already-authored immediate
-equip result. Inside `StartNewRun`, the Executor admits and freezes the plan
+equip result. A run that starts without a keepsake or aspect, as on a fresh
+profile, omits `startingKeepsake.keepsakeKey` and `startingLoadout.aspectKey`
+(never JSON null), and its Run State diagnostics omit the current keepsake. An
+absent aspect requires no recorded aspect for the weapon, at run start and at
+Postboss admission; admission still proves every published family. Inside `StartNewRun`, the Executor admits and freezes the plan
 before native `CreateNewHero` construction, making the starting Hex available
 to aspect construction. The nested `EquipKeepsake` contact arms its immediate
 result and lets the matching native acquire callback consume it. Later rack
@@ -608,6 +626,14 @@ changes use the same callback adapter
 from their ordinary Timeline trace. Only the opening presentation is delayed;
 Jeweled Pom, Experimental Hammer, and Transcendent Embryo acquire their result
 when the keepsake is equipped.
+
+The opening is realized where native creates it. Normally that is
+`ChooseStartingRoom`. A brand-new game instead runs
+`StartNewGame → StartNewRun(nil, { RoomName })`, which calls `CreateRoom`
+directly; when that call is nested in `StartNewRun` and names the expected
+opening, the `CreateRoom` contact completes loadout verification and prepares
+and realizes the opening the same way, so native does not roll an unplanned
+reward. Loadout timing is unchanged.
 
 ## Supported fixed-route surface
 
@@ -676,6 +702,19 @@ room. Only a mismatch in one of those named conformance facts, a required
 Timeline obligation, or another explicit structural/transaction comparison
 stops further planner enforcement. The native contact still completes and the
 Executor never chooses a substitute room, reward, or action.
+
+Eris is the same kind of boundary. Her talk is a guide row, not a transaction,
+and the planner's observation that she spawned is not on the wire; the executor
+never steers her spawn. Her gift is an ordinary direct pickup. Her curse is
+proved at the intro room's exit in both directions, before any later bag that
+her gift's Ashes would change is trusted. Where she is planned, the curse is in
+the room's `traitInventory` frames, so its absence is a mismatch. At a route
+Eris host whose curse is not held at exit, the `traitInventory` fact carries
+`absentTraitKeys: ["ErisCurseTrait"]`, added to the fact when the room has no
+other trait change; the executor proves those keys absent like the frames'
+removed traits, so an unplanned curse is a mismatch. A route already cursed at
+that room asserts nothing, and mature routes, which host no Eris, publish no
+`absentTraitKeys`.
 
 A Pool of Purging sale illustrates the boundary. The authored sale does not
 become an execution Timeline transaction: Overview constrains the visible Pool

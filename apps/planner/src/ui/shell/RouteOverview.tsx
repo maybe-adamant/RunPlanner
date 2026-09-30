@@ -169,10 +169,7 @@ function FreshFileLoadout({
           <dd>None</dd>
         </div>
       </dl>
-      <p className="panel-description">
-        Experimental: Fresh File rules are only partly modeled, and it cannot be sent to the game
-        yet.
-      </p>
+      <p className="panel-description">Experimental: Fresh File rules are only partly modeled.</p>
     </div>
   );
 }

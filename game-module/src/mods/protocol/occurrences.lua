@@ -277,6 +277,7 @@ local function guideDescription(value, label)
         end
         return row
     end
+    if kind == "interactEris" then return p.exact(record, { "kind" }, {}, label) end
     return p.fail(label .. ".kind is unsupported")
 end
 

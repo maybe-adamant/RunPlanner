@@ -44,6 +44,7 @@ export interface GeneratedEncounterOperands {
       readonly targetNativeId?: string;
     }[];
   }[];
+  /** Every wave, including a declared fixed prefix with its exact counts. */
   readonly waves: readonly {
     readonly waveIndex: number;
     /** Complete native roster, including fixed template entries. */
@@ -803,9 +804,22 @@ export function assessGeneratedEncounter(
           ? {}
           : { fangs: authored.fangs }),
         menace: Object.freeze(menaceOperands),
-        waves: Object.freeze(
-          completeCounts.filter((wave): wave is NonNullable<typeof wave> => wave !== undefined),
-        ),
+        // The declared fixed prefix precedes the generated suffix, so every wave is published.
+        waves: Object.freeze([
+          ...(policy.fixedWaves ?? []).map((spawns, index) =>
+            Object.freeze({
+              waveIndex: index + 1,
+              typeKeys: Object.freeze(spawns.map((spawn) => spawn.key)),
+              sources: Object.freeze(
+                Object.fromEntries(spawns.map((spawn) => [spawn.key, 'fixed' as const])),
+              ),
+              counts: Object.freeze(
+                Object.fromEntries(spawns.map((spawn) => [spawn.key, spawn.fixedCount!])),
+              ),
+            }),
+          ),
+          ...completeCounts.filter((wave): wave is NonNullable<typeof wave> => wave !== undefined),
+        ]),
       });
   return Object.freeze({
     supported,

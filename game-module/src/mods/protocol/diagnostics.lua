@@ -265,12 +265,12 @@ end
 local function validateKeepsakes(value, label)
     local record, errorMessage = p.exact(
         value,
-        { "currentKey", "usedKeys", "blockedKeys", "fatedStatus" },
-        {},
+        { "usedKeys", "blockedKeys", "fatedStatus" },
+        { "currentKey" },
         label
     )
     if not record then return nil, errorMessage end
-    if not p.str(record.currentKey, label .. ".currentKey")
+    if (record.currentKey ~= nil and not p.str(record.currentKey, label .. ".currentKey"))
         or not p.one(record.fatedStatus, { Unknown = true, Fated = true, Unfated = true }, label) then
         return p.fail(label .. " has invalid Keepsake state")
     end

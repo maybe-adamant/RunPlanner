@@ -31,12 +31,15 @@ export function startingLoadout(value: unknown): ExecutionStartingLoadout {
   const record = object(value, 'execution plan.startingLoadout');
   exact(
     record,
-    ['weaponKey', 'aspectKey', 'arcana', 'fear'],
-    ['startingHex'],
+    ['weaponKey', 'arcana', 'fear'],
+    ['aspectKey', 'startingHex'],
     'execution plan.startingLoadout',
   );
   const weaponKey = stringValue(record.weaponKey, 'execution plan.startingLoadout.weaponKey');
-  const aspectKey = stringValue(record.aspectKey, 'execution plan.startingLoadout.aspectKey');
+  const aspectKey =
+    record.aspectKey === undefined
+      ? undefined
+      : stringValue(record.aspectKey, 'execution plan.startingLoadout.aspectKey');
   if (aspectKey === 'SuitHexAspect' && record.startingHex === undefined)
     fail('execution plan.startingHex is required for SuitHexAspect');
   const seenArcana = new Set<string>();
@@ -136,7 +139,7 @@ export function startingLoadout(value: unknown): ExecutionStartingLoadout {
   }
   return Object.freeze({
     weaponKey,
-    aspectKey,
+    ...(aspectKey === undefined ? {} : { aspectKey }),
     arcana: Object.freeze(arcana),
     fear: Object.freeze({
       configuredRanks: ranks(

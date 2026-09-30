@@ -10,8 +10,7 @@ import type { PlannerTimelineFacts } from '../../simulation/timeline-facts';
 import { assembleOccurrenceDiagnostics } from './diagnostics';
 import { assembleExecutionDoors } from './doors';
 import { assembleGAnomalyReplacement } from './g-anomaly';
-import type { ExecutionOccurrence } from '../model';
-import type { RoomExitConformanceDelta } from '../../simulation/rewards/run-state-conformance';
+import type { ExecutionOccurrence, ExecutionRoomExitConformance } from '../model';
 import type {
   CanonicalHubDecision,
   CanonicalLocalVisitRoom,
@@ -30,7 +29,7 @@ export function executionOccurrence(
   biome: CompleteValidBiomeProjectEvaluation,
   transactions: ReturnType<typeof executionTimelineTransactions>,
   timelineFacts: PlannerTimelineFacts,
-  roomExitConformance: RoomExitConformanceDelta | undefined,
+  roomExitConformance: ExecutionRoomExitConformance | undefined,
   hub: CanonicalHubDecision | undefined,
   hubExit: CanonicalBatch | undefined,
   localSlots: readonly CanonicalLocalVisitRoom[] | undefined,
@@ -69,9 +68,7 @@ export function executionOccurrence(
     ...(roomExitConformance === undefined
       ? {}
       : {
-          roomExitConformance: Object.freeze({
-            facts: Object.freeze([...roomExitConformance.facts]),
-          }),
+          roomExitConformance,
         }),
     ...(diagnostics === undefined ? {} : { diagnostics }),
   });

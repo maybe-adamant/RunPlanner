@@ -427,6 +427,9 @@ function TestRoomGuide.testFooterNamesStoryAndRewardlessDestinationsAndShortensC
         lu.assertEquals(footer(name, { rewardType = "Story" }), "Next: " .. npc)
         lu.assertEquals(footer(name), "Next: " .. npc)
     end
+    lu.assertEquals(guide.project({ kind = "navigation", nativeRoomName = "H_Combat02",
+        navigation = { kind = "next", occurrence = { gameName = "H_Bridge01", overview = { shop = {} } } } }).footer,
+        "Next: Shop")
     lu.assertEquals(footer("I_Combat05", { rewardType = "ClockworkGoal" }), "Next: Tartarus · Combat 05")
     lu.assertEquals(footer("O_Combat04"), "Next: Thessaly · Combat 04")
     lu.assertEquals(footer("Q_Combat11"), "Next: Summit · Combat 11")

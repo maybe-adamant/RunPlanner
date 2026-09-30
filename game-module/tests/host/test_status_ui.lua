@@ -66,6 +66,19 @@ function TestStatusUi:tearDown()
     self.restore()
 end
 
+function TestStatusUi.testSummaryNamesAnAbsentAspectAndKeepsakeNone()
+    local json = require("mods/protocol/json")
+    local protocol = require("mods.protocol.decoder")
+    local file = assert(io.open(fixtures.path("fresh-file-fghi.execution.json"), "rb"))
+    local plan = assert(protocol.decode(assert(json.decode(file:read("*a")))))
+    file:close()
+    local summary = require("mods.host.plan_summary").build(plan, function(key)
+        assert(key ~= nil, "display names are only looked up for present keys")
+        return key
+    end)
+    lu.assertEquals({ summary.weapon, summary.aspect, summary.keepsake }, { "WeaponStaffSwing", "None", "None" })
+end
+
 function TestStatusUi.testStorageIncludesIndependentDefaultDisabledGuidanceSettings()
     local storage = hostData.buildStorage()
     lu.assertEquals(#storage, 3)

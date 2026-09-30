@@ -62,7 +62,9 @@ pub struct PlanSlotFacts {
 #[serde(rename_all = "camelCase")]
 struct PlanLoadout {
     weapon_key: String,
-    aspect_key: String,
+    /// Omitted when the run starts with no aspect.
+    #[serde(default)]
+    aspect_key: Option<String>,
 }
 
 #[derive(Deserialize)]
@@ -213,7 +215,9 @@ fn read_slot(slot: u8, path: &Path) -> PlanSlotFacts {
                 .starting_loadout
                 .as_ref()
                 .map(|loadout| loadout.weapon_key.clone()),
-            aspect_key: identity.starting_loadout.map(|loadout| loadout.aspect_key),
+            aspect_key: identity
+                .starting_loadout
+                .and_then(|loadout| loadout.aspect_key),
         },
         _ => unreadable,
     }
@@ -352,6 +356,18 @@ mod tests {
             "",
         );
         assert!(!without_loadout.contains("startingLoadout"));
+        fs::write(
+            slot_path(&target, 5),
+            PLAN.replace(r#""aspectKey":"BaseStaffAspect","#, ""),
+        )
+        .unwrap();
+        let without_aspect = &inspect_slots(&target)[4];
+        assert_eq!(without_aspect.state, PlanSlotState::Present);
+        assert_eq!(without_aspect.aspect_key, None);
+        assert_eq!(
+            without_aspect.weapon_key.as_deref(),
+            Some("WeaponStaffSwing")
+        );
         fs::write(slot_path(&target, 5), without_loadout).unwrap();
         let unknown = &inspect_slots(&target)[4];
         assert_eq!(unknown.state, PlanSlotState::Present);

@@ -335,6 +335,22 @@ checks below remain open only where not exercised by those runs.
     ~:790–800).
   - An OptionsData RandomLoot group with no eligible god is not natively
     empty; the probe diagnostic is the guard.
+- [ ] Gate L, brand-new profile (executor build, protocol 52), publishing the
+      Fresh F–I plan:
+  - The opening binds under `StartNewGame` (the `CreateRoom` `RoomName`
+    path) with no rolled reward; FIntroFight and the Apollo trio follow.
+  - `RadiatorIntro` and `FishSwarmerIntro` bind with the native fixed first
+    wave verified and the suffix installed; the first generation logs one
+    `intro-substitution` decline and the self-replacement logs
+    `generated-installed`.
+  - Eris talk and gift at G_Intro; `ErisCurseTrait` matches the trait row at
+    room exit. Both directions mismatch at the room: Eris marked but not
+    talked to (curse missing), and, with G unmarked, Eris talked to (curse
+    held against `absentTraitKeys`).
+  - Bridge Shop footer and inventory; I_WorldShop shows four items with no
+    `shop-empty-group` diagnostic; the H Postboss Pool is absent.
+  - The fifteen native introduction witness rosters appear only as
+    diagnostics.
 - [ ] Gates B/C/E, optional source confirmations:
   - Common Buried Treasure then a 5-Ashes drop gives 8; Double Up gives 8+8.
   - Narcissus Ashes 10 with the NPCDrop exemption.
@@ -768,10 +784,12 @@ Locked decisions:
   counts as absent in feature conformance, matching native usability.
 - Eris: `interactEris` is a skipped timeline transaction (with
   `collectRequiredReward`); the gift is the existing direct-pickup contact;
-  the curse trait is already a `G/H/I_Intro` room-exit `traitInventory` fact,
-  so an Eris marked but absent, or present but unmarked, is a hard mismatch
-  at that room. This is deliberate: the gift changes accumulated Ashes and
-  every later bag's legality, and the first-boundary check stops the plan
+  the curse trait is a `G/H/I_Intro` room-exit `traitInventory` fact when
+  marked (absent ⇒ mismatch), and an unmarked host on an uncursed route
+  publishes `absentTraitKeys: ["ErisCurseTrait"]` on that fact (present ⇒
+  mismatch). Both directions are hard mismatches at that room. This is
+  deliberate: the gift changes accumulated Ashes and every later bag's
+  legality, and the first-boundary check stops the plan
   before any divergent draw is trusted. The observation flag is not on the
   wire; the executor never steers her spawn.
 - Publication guard deleted with its panel, header and loadout copy.

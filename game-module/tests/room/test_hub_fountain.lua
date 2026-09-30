@@ -328,7 +328,7 @@ local function leaveHub(state)
     local navigation = navigationHooks.attach(module, session, function() return state end, function() end,
         route, {})
     roomHooks.attach(module, session, function() return state end, function() end, route, {}, nil,
-        navigation, { synchronizeStartingRoom = function() return true end })
+        navigation, { startingRun = function() return false end, synchronizeStartingRoom = function() return true end })
     state.route.transparentNativeRoom = "N_Hub"
     local priorCount = _G.GetTraitCount
     _G.GetTraitCount = function(hero, args)
