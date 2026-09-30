@@ -6,6 +6,7 @@ import {
   introductionGate,
   nemesisEncounterKeys,
   nemesisIncomingRewardExclusions,
+  spawn,
   supportedFieldNpcEncounterKeys,
 } from './shared';
 
@@ -25,10 +26,16 @@ const occurred = (encounterKey: string): RequirementExpression => ({
 
 // Each H introduction inherits GeneratedH's flags; its three waves are fixed, so
 // it has no generated suffix and no customization.
-function hIntroduction(key: string, label: string, requirements: readonly RequirementExpression[]) {
+function hIntroduction(
+  key: string,
+  label: string,
+  fixedRoster: NonNullable<RawEncounterDefinitionDeclaration['fixedRoster']>,
+  requirements: readonly RequirementExpression[],
+) {
   return {
     key,
     label,
+    fixedRoster,
     kind: 'combat',
     countsEncounterDepth: true,
     hostsGorgon: true,
@@ -118,19 +125,47 @@ export const hEncounterDefinitions = [
     hostsGorgon: true,
     canEncounterSkip: true,
   },
-  // EncounterData_Intro.lua:372: Mourner ×2; Mourner ×4 + BrokenHearted ×2; Mourner_Elite ×1.
-  hIntroduction('MournerIntro', 'Mourner introduction', []),
-  // :448: Lamia ×1 + BrokenHearted ×4; Lamia ×4 + BrokenHearted ×6; Lamia_Elite ×1 + BrokenHearted ×4.
-  hIntroduction('LamiaIntro', 'Lamia introduction', []),
-  // :534: Lovesick ×2; Lovesick ×4 + BrokenHearted ×5; Lovesick_Elite ×2.
-  hIntroduction('LovesickIntro', 'Holeheart introduction', []),
-  // :289: Lycanthrope ×1; Lycanthrope ×3; Lycanthrope_Elite ×1. Needs the three
-  // other introductions to have occurred on the save (this route, on a fresh one).
-  hIntroduction('LycanthropeIntro', 'Lycaon introduction', [
-    occurred('MournerIntro'),
-    occurred('LovesickIntro'),
-    occurred('LamiaIntro'),
-  ]),
+  // EncounterData_Intro.lua:372.
+  hIntroduction(
+    'MournerIntro',
+    'Mourner introduction',
+    [
+      [spawn('Mourner', 2)],
+      [spawn('Mourner', 4), spawn('BrokenHearted', 2)],
+      [spawn('Mourner_Elite', 1)],
+    ],
+    [],
+  ),
+  // EncounterData_Intro.lua:448.
+  hIntroduction(
+    'LamiaIntro',
+    'Lamia introduction',
+    [
+      [spawn('Lamia', 1), spawn('BrokenHearted', 4)],
+      [spawn('Lamia', 4), spawn('BrokenHearted', 6)],
+      [spawn('Lamia_Elite', 1), spawn('BrokenHearted', 4)],
+    ],
+    [],
+  ),
+  // EncounterData_Intro.lua:534.
+  hIntroduction(
+    'LovesickIntro',
+    'Holeheart introduction',
+    [
+      [spawn('Lovesick', 2)],
+      [spawn('Lovesick', 4), spawn('BrokenHearted', 5)],
+      [spawn('Lovesick_Elite', 2)],
+    ],
+    [],
+  ),
+  // EncounterData_Intro.lua:289. Needs the three other introductions to have
+  // occurred on the save (this route, on a fresh one).
+  hIntroduction(
+    'LycanthropeIntro',
+    'Lycaon introduction',
+    [[spawn('Lycanthrope', 1)], [spawn('Lycanthrope', 3)], [spawn('Lycanthrope_Elite', 1)]],
+    [occurred('MournerIntro'), occurred('LovesickIntro'), occurred('LamiaIntro')],
+  ),
   {
     key: 'NemesisCombatH',
     customization: [generatedEncounterChoices.NemesisCombatH],

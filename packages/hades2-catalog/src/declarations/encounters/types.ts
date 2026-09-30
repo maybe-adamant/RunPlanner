@@ -123,6 +123,14 @@ export interface RawEncounterDefinitionDeclaration {
   };
   /** Closed native encounter-customization domains. Absence means no planner control. */
   readonly customization?: readonly RawEncounterCustomizationDecisionDeclaration[];
+  /** Native SpawnWaves of an all-fixed combat identity, in wave order. */
+  readonly fixedRoster?: readonly (readonly RawEncounterFixedSpawn[])[];
+}
+
+/** One native fixed spawn: an enemy identity declared by a generated pool and its count. */
+export interface RawEncounterFixedSpawn {
+  readonly enemyKey: string;
+  readonly count: number;
 }
 
 export interface RawEncounterCustomizationChoice {

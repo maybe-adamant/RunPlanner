@@ -637,20 +637,120 @@ describe('generated encounter customization workflows', () => {
     expect(within(view.dialog).getByRole('button', { name: 'Shared Enemy' })).toBeTruthy();
     expect(current(view)).toEqual(composed);
   });
-  it('shows a mixed introduction fixed wave read-only beside its generated suffix', async () => {
+  it('shows a mixed introduction fixed first wave as a disabled row beside its suffix', async () => {
     const owner = createEncounterPhaseAddress(
       freshFileFBiome,
       { kind: 'occurrence', occurrenceId: createOccurrenceId('fresh-2-0') },
       'Encounter',
     );
     const view = await open(createFreshFileRouteProject(), owner);
-    expect(within(view.dialog).getByText('Wave 1 (fixed): Spindle ×5')).toBeTruthy();
+    expect(within(view.dialog).getByText('Spindle introduction')).toBeTruthy();
+    expect(within(view.dialog).getByText('This encounter’s first wave is fixed')).toBeTruthy();
     expect(within(view.dialog).queryByRole('button', { name: 'Shared Enemy' })).toBeNull();
-    expect(within(view.dialog).getByRole('tab', { name: /^Wave 2/ })).toBeTruthy();
-    expect(within(view.dialog).queryByRole('tab', { name: /^Wave 1/ })).toBeNull();
+    // The editable suffix opens first; the fixed wave keeps its own row.
+    expect(
+      within(view.dialog)
+        .getByRole('tab', { name: /^Wave 2/ })
+        .getAttribute('aria-selected'),
+    ).toBe('true');
+    expect(
+      (within(view.dialog).getByRole('button', { name: 'Wave 2 enemies' }) as HTMLButtonElement)
+        .disabled,
+    ).toBe(false);
+    await selectBudgetWave(view, 1);
+    const picker = within(view.dialog).getByRole('button', { name: 'Wave 1 enemies' });
+    expect((picker as HTMLButtonElement).disabled).toBe(true);
+    expect(picker.textContent).toContain('Spindle');
+    const table = within(view.dialog).getByRole('table', { name: 'Wave 1 enemies' });
+    expect(within(table).getByRole('row', { name: /^Count/ }).textContent).toBe('Count5');
+    expect(within(table).queryByRole('row', { name: /^Budget/ })).toBeNull();
     // A fresh profile has no Fear, so neither Fangs nor Menace controls appear.
     expect(within(view.dialog).queryByRole('rowheader', { name: /Menace/ })).toBeNull();
     expect(within(view.dialog).queryByRole('button', { name: /Fangs/ })).toBeNull();
+  });
+  it('opens a fixed identity read-only with every wave and no Reset', async () => {
+    const owner = createEncounterPhaseAddress(
+      freshFileFBiome,
+      { kind: 'occurrence', occurrenceId: createOccurrenceId('fresh-0-0') },
+      'Encounter',
+    );
+    const view = renderOccurrenceWorkbench(
+      createFreshFileRouteProject(),
+      owner.routeKey,
+      owner.biomeKey,
+      occurrenceById(owner.owner.occurrenceId),
+    );
+    openRoomTab('Room Timeline');
+    expect(screen.queryByRole('button', { name: 'Customize encounter' })).toBeNull();
+    await view.user.click(screen.getByRole('button', { name: 'Inspect encounter' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Inspect' });
+    expect(within(dialog).getByText('Intro combat')).toBeTruthy();
+    expect(within(dialog).getByText('This encounter is fixed')).toBeTruthy();
+    expect(within(dialog).queryByRole('button', { name: 'Reset' })).toBeNull();
+    expect(within(dialog).queryByRole('button', { name: 'Edit' })).toBeNull();
+    const four = within(dialog).getByRole('radio', { name: '4' }) as HTMLInputElement;
+    expect([four.checked, four.disabled]).toEqual([true, true]);
+    expect(
+      within(dialog)
+        .getAllByRole('tab')
+        .map((tab) => tab.textContent),
+    ).toEqual(['Wave 1', 'Wave 2', 'Wave 3', 'Wave 4']);
+    await view.user.click(within(dialog).getByRole('tab', { name: 'Wave 4' }));
+    const table = within(dialog).getByRole('table', { name: 'Wave 4 enemies' });
+    expect(
+      within(table)
+        .getAllByRole('columnheader')
+        .map((cell) => cell.textContent),
+    ).toEqual(['Fixed', 'Wastrel', 'Whisper', 'Casket']);
+    expect(within(table).getByRole('row', { name: /^Count/ }).textContent).toBe('Count131');
+    expect(within(table).queryByRole('row', { name: /^Budget/ })).toBeNull();
+    expect(
+      (within(dialog).getByRole('button', { name: 'Wave 4 enemies' }) as HTMLButtonElement)
+        .disabled,
+    ).toBe(true);
+  });
+  it('shows native placeholders and the required finding on an uncustomized fresh phase', async () => {
+    const owner = createEncounterPhaseAddress(
+      freshFileFBiome,
+      { kind: 'occurrence', occurrenceId: createOccurrenceId('fresh-2-0') },
+      'Encounter',
+    );
+    const cleared = applyProjectCommand(createFreshFileRouteProject(), catalog, {
+      kind: 'ReplaceEncounterCustomization',
+      phase: owner,
+      decisionKey: 'generatedComposition',
+      value: null,
+    });
+    const view = await open(cleared, owner);
+    expect(within(view.dialog).getByText(/Customize this encounter/)).toBeTruthy();
+    expect(within(view.dialog).queryByRole('button', { name: 'Reset' })).toBeNull();
+    expect(within(view.dialog).getByRole('button', { name: 'Edit' })).toBeTruthy();
+    expect(
+      (within(view.dialog).getByRole('button', { name: 'Wave 2 enemies' }) as HTMLButtonElement)
+        .disabled,
+    ).toBe(true);
+    expect(within(view.dialog).getByText('The game generates this wave’s enemies.')).toBeTruthy();
+    expect(
+      (within(view.dialog).getByRole('radio', { name: '2' }) as HTMLInputElement).disabled,
+    ).toBe(true);
+  });
+  it('lists no authored wave tabs until the composition is active', async () => {
+    const view = await open(
+      customize(createCompleteFGProject(), phase, { kind: 'generated', waveCount: 3 }),
+    );
+    expect(
+      within(view.dialog).getByText('Choose a shared enemy to customize enemies.'),
+    ).toBeTruthy();
+    expect(within(view.dialog).queryByRole('tab')).toBeNull();
+    expect(within(view.dialog).queryByRole('tabpanel')).toBeNull();
+  });
+  it('labels a mature native phase and an authored one by disposition', async () => {
+    const native = await open(createCompleteFGProject());
+    expect(within(native.dialog).getByText('Native generation, not customized')).toBeTruthy();
+    expect(within(native.dialog).queryByRole('tab')).toBeNull();
+    await initialize(native);
+    expect(within(native.dialog).getByText('This encounter is generated')).toBeTruthy();
+    expect(within(native.dialog).getByRole('button', { name: 'Reset' })).toBeTruthy();
   });
   it('warns about declared once-per-run enemies among engine-assessed active members', async () => {
     const owner = createEncounterPhaseAddress(

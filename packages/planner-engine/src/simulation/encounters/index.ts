@@ -53,6 +53,14 @@ export {
   type EncounterPhaseAuthoringRoomOptions,
 } from './authoring-domain';
 export {
+  encounterCompositionView,
+  type EncounterCompositionDisposition,
+  type EncounterCompositionPhase,
+  type EncounterCompositionSpawn,
+  type EncounterCompositionView,
+  type EncounterCompositionWave,
+} from './composition-view';
+export {
   structurallyActiveEncounterRooms,
   type EncounterStructuralRoom,
   type EncounterStructuralSnapshot,

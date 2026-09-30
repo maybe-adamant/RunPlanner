@@ -30,6 +30,9 @@ function encounterPhaseInteractionRequirement(
           candidateChoices: phase.candidateChoices,
           owner: phase.address,
           selectedEncounterKey: phase.selectedEncounter.key,
+          ...(phase.selectedEncounter.nativeEncounterDefinitionKey === undefined
+            ? {}
+            : { encounterDefinitionKey: phase.selectedEncounter.nativeEncounterDefinitionKey }),
           ...(phase.aetos === undefined ? {} : { aetos: phase.aetos }),
           selectionEnabled: phase.customizable,
           ...(phase.customization === undefined ? {} : { customization: phase.customization }),

@@ -2,6 +2,7 @@ import { useRef, useState } from 'react';
 import type { AuthoredGeneratedEncounterCustomization } from '@run-planner/engine/authored-project';
 import type {
   WorkspaceCommandIntent,
+  WorkspaceEncounterComposition,
   WorkspaceEncounterCustomizationInteraction,
   WorkspaceEncounterPhase,
   WorkspaceGeneratedEncounterAssessment,
@@ -16,10 +17,10 @@ import { NavigationStatusMarker } from '@planner/ui/feedback/EvaluationFeedback'
 type GeneratedEdits = NonNullable<WorkspaceEncounterCustomizationInteraction['generatedEdits']>;
 
 /** Dispatches one bound generated-composition edit when the interaction publishes them. */
-function useGeneratedEdit(interaction: WorkspaceEncounterCustomizationInteraction) {
+function useGeneratedEdit(interaction: WorkspaceEncounterCustomizationInteraction | undefined) {
   const execute = useCommandIntent();
   return (build: (edits: GeneratedEdits) => WorkspaceCommandIntent) => {
-    if (interaction.generatedEdits !== undefined) execute(build(interaction.generatedEdits));
+    if (interaction?.generatedEdits !== undefined) execute(build(interaction.generatedEdits));
   };
 }
 
@@ -349,68 +350,100 @@ function GeneratedEncounterWaveDraftPicker({
   );
 }
 
-export function GeneratedEncounterCustomizationControl({
+type CompositionWave = WorkspaceEncounterComposition['waves'][number];
+
+/** A declaration-owned or native wave: the same row, with its controls disabled. */
+function ReadOnlyWavePanel({
+  idKey,
+  wave,
+}: {
+  readonly idKey: string;
+  readonly wave: CompositionWave;
+}) {
+  const summary =
+    wave.spawns.length === 0
+      ? 'Native generation'
+      : wave.spawns.map((spawn) => spawn.label).join(' · ');
+  return (
+    <>
+      <div className="encounter-wave-picker">
+        <div className="encounter-generated-wave-heading">
+          <ContextualPicker<WorkspaceGeneratedWaveDraftChoice>
+            ariaLabel={`Wave ${wave.waveIndex} enemies`}
+            disabled
+            id={`generated-wave-${idKey}-${wave.waveIndex}`}
+            label={`Wave ${wave.waveIndex}`}
+            layout="inline"
+            model={emptyDraftPicker}
+            onSelect={() => undefined}
+            placeholder={summary}
+            triggerLabel={summary}
+          />
+        </div>
+      </div>
+      {wave.spawns.length === 0 ? (
+        <p className="encounter-generated-context">The game generates this wave’s enemies.</p>
+      ) : (
+        <div className="encounter-budget-table-scroll">
+          <table className="encounter-budget-table" aria-label={`Wave ${wave.waveIndex} enemies`}>
+            <thead>
+              <tr>
+                <th scope="col">{wave.source === 'fixed' ? 'Fixed' : 'Native'}</th>
+                {wave.spawns.map((spawn, index) => (
+                  <th scope="col" key={`${index}-${spawn.enemyKey}`}>
+                    {spawn.label}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <th scope="row">Count</th>
+                {wave.spawns.map((spawn, index) => (
+                  <td key={`${index}-${spawn.enemyKey}`}>{spawn.count ?? 'NA'}</td>
+                ))}
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      )}
+    </>
+  );
+}
+
+/**
+ * One stable composition editor for every combat phase: the engine view owns
+ * each wave's source and editability; generated edits bind only authored waves.
+ */
+export function EncounterCompositionControl({
+  composition,
   decision,
   encounterKey,
+  idKey,
   interaction,
 }: {
-  readonly decision: Decision;
+  readonly composition: WorkspaceEncounterComposition;
+  readonly decision?: Decision;
   readonly encounterKey: string;
-  readonly interaction: WorkspaceEncounterCustomizationInteraction;
+  readonly idKey: string;
+  readonly interaction?: WorkspaceEncounterCustomizationInteraction;
 }) {
   const execute = useCommandIntent();
   const edit = useGeneratedEdit(interaction);
-  const [selectedWave, setSelectedWave] = useState(1);
+  const [selectedWave, setSelectedWave] = useState<number>();
   const [initializationFailure, setInitializationFailure] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
-  if (decision.value === undefined) {
-    return (
-      <section className="encounter-generated-customization">
-        <div className="encounter-generated-heading">
-          <h3>Encounter Composition</h3>
-          <span className="encounter-generated-context">{encounterKey}</span>
-          <button
-            className="secondary-action action-compact encounter-composition-edit"
-            disabled={interaction.initializeGenerated === undefined}
-            title={
-              interaction.initializeGenerated === undefined
-                ? 'Complete earlier choices to evaluate this encounter.'
-                : undefined
-            }
-            onClick={() => {
-              const initial = interaction.initializeGenerated?.();
-              if (initial === undefined) {
-                setInitializationFailure(true);
-                return;
-              }
-              setInitializationFailure(false);
-              execute(interaction.intentFor(decision.key, initial));
-            }}
-            type="button"
-          >
-            Edit
-          </button>
-        </div>
-        <p className="encounter-customization-explanation">
-          The game currently controls this encounter’s enemies. Select Edit to customize them.
-        </p>
-        {initializationFailure ? (
-          <p className="encounter-customization-repair">
-            This encounter has no complete supported composition in the current context.
-          </p>
-        ) : interaction.initializeGenerated === undefined ? (
-          <p className="encounter-customization-repair">
-            Complete earlier choices to evaluate this encounter.
-          </p>
-        ) : null}
-      </section>
-    );
-  }
-  const value = authored(decision);
-  const assessment = interaction.generatedAssessment;
-  const activeWave =
-    assessment?.waves.find((wave) => wave.waveIndex === selectedWave)?.waveIndex ??
-    assessment?.waves[0]?.waveIndex;
+  const value = decision?.value === undefined ? undefined : authored(decision);
+  const assessment = value === undefined ? undefined : interaction?.generatedAssessment;
+  // A retained removal-only value on a non-editable composition authors nothing.
+  const authorable = value !== undefined && composition.editable;
+  // Authored rows have content only in an active assessed composition.
+  const rows = composition.waves.filter(
+    (wave) => wave.source !== 'authored' || assessment?.composition === 'active',
+  );
+  const activeWave = rows.some((wave) => wave.waveIndex === selectedWave)
+    ? selectedWave
+    : (rows.find((wave) => wave.editable)?.waveIndex ?? rows[0]?.waveIndex);
   const budgets = assessment?.budget;
   const budgetDomain = assessment?.budgetDomain;
   const encounterBudget =
@@ -430,47 +463,366 @@ export function GeneratedEncounterCustomizationControl({
         : `${budgetNumber.format(budget.min)}–${budgetNumber.format(budget.max)}`;
   };
   const label = (key: string) =>
-    decision.selection.choices.find((choice) => choice.key === key)?.label ??
-    decision.selection.fixedEnemies.find((choice) => choice.key === key)?.label ??
-    decision.retainedChoiceLabels?.find((choice) => choice.key === key)?.label ??
+    decision?.selection.choices.find((choice) => choice.key === key)?.label ??
+    decision?.selection.fixedEnemies.find((choice) => choice.key === key)?.label ??
+    decision?.retainedChoiceLabels?.find((choice) => choice.key === key)?.label ??
+    composition.waves.flatMap((wave) => wave.spawns).find((spawn) => spawn.enemyKey === key)
+      ?.label ??
     'Unavailable enemy';
   const cost = (key: string) =>
-    decision.selection.choices.find((choice) => choice.key === key)?.difficultyRating ??
-    decision.selection.fixedEnemies.find((choice) => choice.key === key)?.difficultyRating;
+    decision?.selection.choices.find((choice) => choice.key === key)?.difficultyRating ??
+    decision?.selection.fixedEnemies.find((choice) => choice.key === key)?.difficultyRating;
   const groupSize = (key: string) =>
-    decision.selection.choices.find((choice) => choice.key === key)?.unitGroupSize ??
-    decision.selection.fixedEnemies.find((choice) => choice.key === key)?.unitGroupSize;
-  const replace = (next: AuthoredGeneratedEncounterCustomization | null) =>
-    execute(interaction.intentFor(decision.key, next));
-  const fixedCount = decision.selection.waveCount.min === decision.selection.waveCount.max;
-  const retainedWaves = (value.waves ?? []).filter(
+    decision?.selection.choices.find((choice) => choice.key === key)?.unitGroupSize ??
+    decision?.selection.fixedEnemies.find((choice) => choice.key === key)?.unitGroupSize;
+  const replace = (next: AuthoredGeneratedEncounterCustomization | null) => {
+    if (decision !== undefined && interaction !== undefined)
+      execute(interaction.intentFor(decision.key, next));
+  };
+  const retainedWaves = (value?.waves ?? []).filter(
     (row) => !assessment?.waves.some((wave) => wave.waveIndex === row.waveIndex),
   );
+  const issuesAt = (waveIndex: number) =>
+    assessment?.issues.some((issue) => issue.waveIndex === waveIndex) === true;
+  const authoredPanel = (
+    wave: WorkspaceGeneratedEncounterAssessment['waves'][number],
+    active: WorkspaceGeneratedEncounterAssessment,
+    bound: WorkspaceEncounterCustomizationInteraction,
+  ) => {
+    const current = value?.waves?.find((entry) => entry.waveIndex === wave.waveIndex);
+    const selected = current?.typeKeys ?? [];
+    const tableKeys = [
+      ...wave.seeds.map((seed) => seed.key),
+      ...selected.slice(0, wave.additionalTypeCount.max),
+    ];
+    const allocationsFor = (key: string, position: number) => {
+      const enabled = wave.sampledBudgetKeys.includes(key);
+      const allocation = current?.allocations?.[key];
+      const name = label(key);
+      const preview = wave.countPreview?.find((entry) => entry.key === key);
+      const remainder = preview?.remainder;
+      const unitCost = cost(key);
+      const finalCost =
+        preview?.count === undefined || unitCost === undefined
+          ? 'NA'
+          : budgetNumber.format(preview.count * unitCost);
+      if (!enabled)
+        return (
+          <span className="encounter-budget-input encounter-generated-context">
+            <span className="encounter-budget-value">
+              {wave.seeds.some((seed) => seed.key === key && seed.kind === 'fixed')
+                ? 'Fixed'
+                : remainder === undefined
+                  ? 'NA'
+                  : budgetNumber.format(remainder)}
+            </span>
+            <span
+              className="encounter-budget-result"
+              title="Resulting cost after rounding and minimum counts."
+            >
+              → {finalCost}
+            </span>
+          </span>
+        );
+      return (
+        <label className="encounter-budget-input" key={`allocation-${position}`}>
+          <EnemyBudgetInput
+            label={`Wave ${wave.waveIndex} ${name} budget`}
+            onCommit={(next) => edit((edits) => edits.setAllocation(wave.waveIndex, key, next))}
+            value={allocation}
+          />
+          <span
+            className="encounter-budget-result encounter-generated-context"
+            title="Resulting cost after rounding and minimum counts."
+          >
+            → {finalCost}
+          </span>
+        </label>
+      );
+    };
+    return (
+      <section
+        className="encounter-customization-group encounter-generated-wave"
+        key={wave.waveIndex}
+        role="tabpanel"
+        id={`wave-budget-panel-${idKey}-${wave.waveIndex}`}
+        aria-labelledby={`wave-budget-tab-${idKey}-${wave.waveIndex}`}
+      >
+        <GeneratedEncounterWaveDraftPicker
+          hasIssues={active.issues.some(
+            (issue) => issue.waveIndex === wave.waveIndex && issue.field === 'enemies',
+          )}
+          hasAuthoredEnemies={current !== undefined}
+          interaction={bound}
+          selection={[
+            ...wave.seeds.map((seed) => ({
+              key: seed.key,
+              label: label(seed.key),
+              kind: seed.kind,
+            })),
+            ...(current?.typeKeys ?? []).map((key) => ({ key, label: label(key) })),
+          ]}
+          wave={wave}
+        />
+        {current === undefined && wave.seeds.length === 0 ? (
+          <p className="encounter-generated-context">Select enemies to edit their budgets.</p>
+        ) : (
+          <div className="encounter-budget-table-scroll">
+            <table
+              className="encounter-budget-table"
+              aria-label={`Wave ${wave.waveIndex} enemy budgets`}
+            >
+              <thead>
+                <tr>
+                  <th
+                    scope="col"
+                    title="Wave budget / total encounter budget."
+                    aria-label={`Wave budget ${waveBudget(wave.waveIndex)} / encounter budget ${encounterBudget}`}
+                  >
+                    Budget
+                    <br />
+                    <span className="encounter-wave-budget-ratio">
+                      {waveBudget(wave.waveIndex)} / {encounterBudget}
+                    </span>
+                  </th>
+                  {tableKeys.map((key, index) => (
+                    <th
+                      scope="col"
+                      key={`${index}-${key}`}
+                      title={
+                        cost(key) === undefined
+                          ? undefined
+                          : `Cost: ${budgetNumber.format(cost(key)!)} per ${groupSize(key) === undefined ? 'enemy' : `group of ${groupSize(key)} enemies`}.`
+                      }
+                    >
+                      {label(key)}
+                      {cost(key) === undefined ? null : (
+                        <>
+                          <br /> ({budgetNumber.format(cost(key)!)})
+                        </>
+                      )}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <th scope="row">Budget</th>
+                  {tableKeys.map((key, index) => (
+                    <td key={`${index}-${key}`}>{allocationsFor(key, index)}</td>
+                  ))}
+                </tr>
+                <tr>
+                  <th scope="row">Count</th>
+                  {tableKeys.map((key, index) => {
+                    const count = wave.countPreview?.find((entry) => entry.key === key)?.count;
+                    const size = groupSize(key);
+                    return (
+                      <td key={`${index}-${key}`}>
+                        {count === undefined ? (
+                          'NA'
+                        ) : size === undefined ? (
+                          count
+                        ) : (
+                          <span
+                            title={`${count} ${count === 1 ? 'group' : 'groups'} · ${count * size} individual enemies.`}
+                          >
+                            {count} ({count * size})
+                          </span>
+                        )}
+                      </td>
+                    );
+                  })}
+                </tr>
+                {composition.menace ? (
+                  <>
+                    <tr>
+                      <th scope="row">
+                        Menace <br />
+                        Target
+                      </th>
+                      {tableKeys.map((key, index) => {
+                        const cell = wave.menaceCells?.[key];
+                        if (cell === undefined) return <td key={`${index}-${key}`}>NA</td>;
+                        return (
+                          <td key={`${index}-${key}`}>
+                            <div
+                              className="encounter-menace-replacement"
+                              title={cell.replacementLabel}
+                            >
+                              {cell.picker === undefined ? (
+                                <span>{cell.replacementLabel}</span>
+                              ) : (
+                                <ContextualPicker
+                                  ariaLabel={`Wave ${wave.waveIndex} ${label(key)} replacement`}
+                                  choiceLabel="Menace replacement"
+                                  id={`generated-menace-${idKey}-${wave.waveIndex}-${key}`}
+                                  label="Replacement"
+                                  layout="inline"
+                                  model={cell.picker}
+                                  onSelect={(target) =>
+                                    edit((edits) =>
+                                      edits.setMenaceTarget(wave.waveIndex, key, target),
+                                    )
+                                  }
+                                  placeholder="Select replacement"
+                                  triggerLabel={cell.replacementLabel}
+                                />
+                              )}
+                            </div>
+                          </td>
+                        );
+                      })}
+                    </tr>
+                    <tr>
+                      <th scope="row">
+                        Menace <br />
+                        Count
+                      </th>
+                      {tableKeys.map((key, index) => {
+                        const cell = wave.menaceCells?.[key];
+                        const currentMenace = value?.menace?.find(
+                          (entry) => entry.waveIndex === wave.waveIndex,
+                        )?.conversions[key];
+                        if (cell === undefined) return <td key={`${index}-${key}`}>NA</td>;
+                        return (
+                          <td key={`${index}-${key}`}>
+                            <ConvertedInput
+                              label={`Wave ${wave.waveIndex} ${label(key)} converted`}
+                              value={currentMenace?.count ?? 0}
+                              onCommit={(count) =>
+                                edit((edits) => edits.setMenaceCount(wave.waveIndex, key, count))
+                              }
+                            />
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  </>
+                ) : null}
+              </tbody>
+            </table>
+          </div>
+        )}
+        {selected.length > wave.additionalTypeCount.max ? (
+          <div className="encounter-generated-retained">
+            <span>Extra enemies</span>
+            <p className="encounter-generated-context">Remove extra enemies from the end.</p>
+            {selected.slice(wave.additionalTypeCount.max).map((key, index) => {
+              const position = wave.additionalTypeCount.max + index;
+              return (
+                <div key={`${position}-${key}`}>
+                  <span>
+                    Enemy {wave.seeds.length + position + 1}: {label(key)}
+                  </span>
+                  {position === selected.length - 1 ? (
+                    <button
+                      aria-label={`Remove Wave ${wave.waveIndex} Enemy ${wave.seeds.length + position + 1}`}
+                      className="quiet-action"
+                      onClick={() => edit((edits) => edits.removeLastEnemy(wave.waveIndex))}
+                      type="button"
+                    >
+                      Remove
+                    </button>
+                  ) : null}
+                </div>
+              );
+            })}
+          </div>
+        ) : null}
+      </section>
+    );
+  };
+  const panelFor = (row: CompositionWave) => {
+    if (row.source !== 'authored')
+      return (
+        <section
+          className="encounter-customization-group encounter-generated-wave"
+          key={row.waveIndex}
+          role="tabpanel"
+          id={`wave-budget-panel-${idKey}-${row.waveIndex}`}
+          aria-labelledby={`wave-budget-tab-${idKey}-${row.waveIndex}`}
+        >
+          <ReadOnlyWavePanel idKey={idKey} wave={row} />
+        </section>
+      );
+    const wave =
+      assessment?.composition === 'active'
+        ? assessment.waves.find((entry) => entry.waveIndex === row.waveIndex)
+        : undefined;
+    return wave === undefined || assessment === undefined || interaction === undefined
+      ? null
+      : authoredPanel(wave, assessment, interaction);
+  };
   return (
     <section className="encounter-generated-customization">
       <div className="encounter-generated-heading">
         <h3>Encounter Composition</h3>
         <span className="encounter-generated-context">{encounterKey}</span>
-        <button
-          className="secondary-action action-compact"
-          type="button"
-          aria-expanded={helpOpen}
-          aria-controls={`encounter-help-${interaction.key}`}
-          onClick={() => setHelpOpen(!helpOpen)}
-        >
-          Help
-        </button>
-        <button
-          className="danger-action action-compact"
-          onClick={() => replace(null)}
-          type="button"
-        >
-          Reset
-        </button>
+        {value === undefined ? (
+          decision === undefined || interaction === undefined ? null : (
+            <button
+              className="secondary-action action-compact encounter-composition-edit"
+              disabled={interaction.initializeGenerated === undefined}
+              title={
+                interaction.initializeGenerated === undefined
+                  ? 'Complete earlier choices to evaluate this encounter.'
+                  : undefined
+              }
+              onClick={() => {
+                const initial = interaction.initializeGenerated?.();
+                if (initial === undefined) {
+                  setInitializationFailure(true);
+                  return;
+                }
+                setInitializationFailure(false);
+                execute(interaction.intentFor(decision.key, initial));
+              }}
+              type="button"
+            >
+              Edit
+            </button>
+          )
+        ) : (
+          <>
+            <button
+              className="secondary-action action-compact"
+              type="button"
+              aria-expanded={helpOpen}
+              aria-controls={`encounter-help-${idKey}`}
+              onClick={() => setHelpOpen(!helpOpen)}
+            >
+              Help
+            </button>
+            <button
+              className="danger-action action-compact"
+              onClick={() => replace(null)}
+              type="button"
+            >
+              Reset
+            </button>
+          </>
+        )}
       </div>
+      {value === undefined && decision !== undefined && interaction !== undefined ? (
+        <>
+          <p className="encounter-customization-explanation">
+            The game currently controls this encounter’s enemies. Select Edit to customize them.
+          </p>
+          {initializationFailure ? (
+            <p className="encounter-customization-repair">
+              This encounter has no complete supported composition in the current context.
+            </p>
+          ) : interaction.initializeGenerated === undefined ? (
+            <p className="encounter-customization-repair">
+              Complete earlier choices to evaluate this encounter.
+            </p>
+          ) : null}
+        </>
+      ) : null}
       {helpOpen ? (
         <section
-          id={`encounter-help-${interaction.key}`}
+          id={`encounter-help-${idKey}`}
           className="encounter-composition-help"
           aria-label="Encounter composition help"
         >
@@ -508,18 +860,18 @@ export function GeneratedEncounterCustomizationControl({
         </section>
       ) : null}
       <div className="encounter-summary-controls">
-        {budgetDomain === undefined ? (
+        {authorable && budgetDomain === undefined ? (
           <div className="encounter-budget-control">
             <span>Budget</span>
             <span>{encounterBudget}</span>
           </div>
         ) : null}
-        {budgetDomain !== undefined ? (
+        {authorable && budgetDomain !== undefined ? (
           <div className="encounter-budget-control">
-            <label htmlFor={`generated-base-roll-${interaction.key}`}>Budget</label>
+            <label htmlFor={`generated-base-roll-${idKey}`}>Budget</label>
             <span>{budgetNumber.format(budgetDomain.total.min)}</span>
             <EncounterBudgetSlider
-              id={`generated-base-roll-${interaction.key}`}
+              id={`generated-base-roll-${idKey}`}
               min={budgetDomain.baseRoll.min}
               max={budgetDomain.baseRoll.max}
               value={value.baseRoll}
@@ -531,37 +883,31 @@ export function GeneratedEncounterCustomizationControl({
         <div className="encounter-customization-row encounter-waves-control">
           <span>Waves</span>
           <div className="encounter-wave-count" role="radiogroup" aria-label="Waves">
-            {[
-              ...Array.from(
-                { length: decision.selection.waveCount.max - decision.selection.waveCount.min + 1 },
-                (_, index) => decision.selection.waveCount.min + index,
-              ),
-            ].map((count) => (
+            {Array.from(
+              { length: composition.waveCount.max - composition.waveCount.min + 1 },
+              (_, index) => composition.waveCount.min + index,
+            ).map((count) => (
               <label key={count}>
                 <input
                   type="radio"
-                  name={`generated-wave-count-${interaction.key}`}
-                  checked={
-                    (fixedCount
-                      ? (value.waveCount ?? decision.selection.waveCount.min)
-                      : value.waveCount) === count
-                  }
+                  name={`generated-wave-count-${idKey}`}
+                  checked={composition.waveCount.value === count}
+                  disabled={!authorable}
                   onChange={() => edit((edits) => edits.setWaveCount(count))}
                 />
                 {count}
               </label>
             ))}
-            {value.waveCount !== undefined &&
-            (value.waveCount < decision.selection.waveCount.min ||
-              value.waveCount > decision.selection.waveCount.max) ? (
+            {value?.waveCount !== undefined &&
+            (value.waveCount < composition.waveCount.min ||
+              value.waveCount > composition.waveCount.max) ? (
               <span className="encounter-customization-repair">
                 {value.waveCount} (unavailable)
               </span>
             ) : null}
           </div>
         </div>
-        {assessment?.sharedEnemy !== false &&
-        (value.waveCount ?? (fixedCount ? decision.selection.waveCount.min : 0)) > 1 ? (
+        {composition.sharedEnemy ? (
           <div
             className="encounter-customization-row encounter-shared-enemy"
             title="Only used with multiple waves"
@@ -569,24 +915,18 @@ export function GeneratedEncounterCustomizationControl({
             <ContextualPicker
               ariaLabel="Shared Enemy"
               choiceLabel="Shared Enemy"
-              disabled={interaction.generatedHighlightPicker === undefined}
-              id={`generated-highlight-${interaction.key}`}
+              disabled={interaction?.generatedHighlightPicker === undefined}
+              id={`generated-highlight-${idKey}`}
               label="Shared Enemy"
               layout="inline"
-              model={interaction.generatedHighlightPicker ?? emptyHighlightPicker}
+              model={interaction?.generatedHighlightPicker ?? emptyHighlightPicker}
               onSelect={(highlightKey) => edit((edits) => edits.setSharedEnemy(highlightKey))}
               placeholder="Select shared enemy"
             />
           </div>
         ) : null}
       </div>
-      {decision.selection.fixedWaves?.map((wave) => (
-        <p className="encounter-generated-context" key={`fixed-wave-${wave.waveIndex}`}>
-          Wave {wave.waveIndex} (fixed):{' '}
-          {wave.spawns.map((spawn) => `${spawn.label} ×${spawn.count}`).join(' · ')}
-        </p>
-      ))}
-      {assessment === undefined ? (
+      {!authorable ? null : assessment === undefined ? (
         <p className="encounter-customization-repair">
           Complete earlier choices to evaluate this encounter.
         </p>
@@ -596,41 +936,44 @@ export function GeneratedEncounterCustomizationControl({
         <p className="encounter-customization-explanation">
           Choose a shared enemy to customize enemies.
         </p>
-      ) : (
+      ) : null}
+      {rows.length === 0 ? null : (
         <div className="encounter-generated-waves">
-          {assessment.warnings.map((warning) => (
-            <p className="encounter-composition-warning" key={warning}>
-              {warning}
-            </p>
-          ))}
+          {assessment?.composition === 'active'
+            ? assessment.warnings.map((warning) => (
+                <p className="encounter-composition-warning" key={warning}>
+                  {warning}
+                </p>
+              ))
+            : null}
           <div className="encounter-budget-tabs-header">
             <nav className="run-state-tabs" aria-label="Wave budgets" role="tablist">
-              {assessment.waves.map((wave, index) => (
+              {rows.map((wave, index) => (
                 <button
                   className="run-state-tab"
                   key={wave.waveIndex}
-                  id={`wave-budget-tab-${interaction.key}-${wave.waveIndex}`}
-                  aria-controls={`wave-budget-panel-${interaction.key}-${wave.waveIndex}`}
+                  id={`wave-budget-tab-${idKey}-${wave.waveIndex}`}
+                  aria-controls={`wave-budget-panel-${idKey}-${wave.waveIndex}`}
                   aria-selected={activeWave === wave.waveIndex}
                   tabIndex={activeWave === wave.waveIndex ? 0 : -1}
                   role="tab"
-                  aria-label={`Wave ${wave.waveIndex}${assessment.issues.some((issue) => issue.waveIndex === wave.waveIndex) ? ', needs attention' : ''}`}
+                  aria-label={`Wave ${wave.waveIndex}${issuesAt(wave.waveIndex) ? ', needs attention' : ''}`}
                   type="button"
                   onClick={() => setSelectedWave(wave.waveIndex)}
                   onKeyDown={(event) => {
                     const nextIndex =
                       event.key === 'ArrowRight'
-                        ? (index + 1) % assessment.waves.length
+                        ? (index + 1) % rows.length
                         : event.key === 'ArrowLeft'
-                          ? (index + assessment.waves.length - 1) % assessment.waves.length
+                          ? (index + rows.length - 1) % rows.length
                           : event.key === 'Home'
                             ? 0
                             : event.key === 'End'
-                              ? assessment.waves.length - 1
+                              ? rows.length - 1
                               : undefined;
                     if (nextIndex === undefined) return;
                     event.preventDefault();
-                    setSelectedWave(assessment.waves[nextIndex]!.waveIndex);
+                    setSelectedWave(rows[nextIndex]!.waveIndex);
                     const tabs =
                       event.currentTarget.parentElement?.querySelectorAll<HTMLButtonElement>(
                         '[role="tab"]',
@@ -639,7 +982,7 @@ export function GeneratedEncounterCustomizationControl({
                   }}
                 >
                   Wave {wave.waveIndex}
-                  {assessment.issues.some((issue) => issue.waveIndex === wave.waveIndex) ? (
+                  {issuesAt(wave.waveIndex) ? (
                     <NavigationStatusMarker
                       status={{ tone: 'invalid', label: 'Needs attention' }}
                     />
@@ -648,270 +991,13 @@ export function GeneratedEncounterCustomizationControl({
               ))}
             </nav>
           </div>
-          {assessment.waves
-            .filter((wave) => wave.waveIndex === activeWave)
-            .map((wave) => {
-              const current = value.waves?.find((entry) => entry.waveIndex === wave.waveIndex);
-              const selected = current?.typeKeys ?? [];
-              const tableKeys = [
-                ...wave.seeds.map((seed) => seed.key),
-                ...selected.slice(0, wave.additionalTypeCount.max),
-              ];
-              const allocationsFor = (key: string, position: number) => {
-                const enabled = wave.sampledBudgetKeys.includes(key);
-                const allocation = current?.allocations?.[key];
-                const name = label(key);
-                const preview = wave.countPreview?.find((entry) => entry.key === key);
-                const remainder = preview?.remainder;
-                const unitCost = cost(key);
-                const finalCost =
-                  preview?.count === undefined || unitCost === undefined
-                    ? 'NA'
-                    : budgetNumber.format(preview.count * unitCost);
-                if (!enabled)
-                  return (
-                    <span className="encounter-budget-input encounter-generated-context">
-                      <span className="encounter-budget-value">
-                        {wave.seeds.some((seed) => seed.key === key && seed.kind === 'fixed')
-                          ? 'Fixed'
-                          : remainder === undefined
-                            ? 'NA'
-                            : budgetNumber.format(remainder)}
-                      </span>
-                      <span
-                        className="encounter-budget-result"
-                        title="Resulting cost after rounding and minimum counts."
-                      >
-                        → {finalCost}
-                      </span>
-                    </span>
-                  );
-                return (
-                  <label className="encounter-budget-input" key={`allocation-${position}`}>
-                    <EnemyBudgetInput
-                      label={`Wave ${wave.waveIndex} ${name} budget`}
-                      onCommit={(next) =>
-                        edit((edits) => edits.setAllocation(wave.waveIndex, key, next))
-                      }
-                      value={allocation}
-                    />
-                    <span
-                      className="encounter-budget-result encounter-generated-context"
-                      title="Resulting cost after rounding and minimum counts."
-                    >
-                      → {finalCost}
-                    </span>
-                  </label>
-                );
-              };
-              return (
-                <section
-                  className="encounter-customization-group encounter-generated-wave"
-                  key={wave.waveIndex}
-                  role="tabpanel"
-                  id={`wave-budget-panel-${interaction.key}-${wave.waveIndex}`}
-                  aria-labelledby={`wave-budget-tab-${interaction.key}-${wave.waveIndex}`}
-                >
-                  <GeneratedEncounterWaveDraftPicker
-                    hasIssues={assessment.issues.some(
-                      (issue) => issue.waveIndex === wave.waveIndex && issue.field === 'enemies',
-                    )}
-                    hasAuthoredEnemies={current !== undefined}
-                    interaction={interaction}
-                    selection={[
-                      ...wave.seeds.map((seed) => ({
-                        key: seed.key,
-                        label: label(seed.key),
-                        kind: seed.kind,
-                      })),
-                      ...(current?.typeKeys ?? []).map((key) => ({ key, label: label(key) })),
-                    ]}
-                    wave={wave}
-                  />
-                  {current === undefined && wave.seeds.length === 0 ? (
-                    <p className="encounter-generated-context">
-                      Select enemies to edit their budgets.
-                    </p>
-                  ) : (
-                    <div className="encounter-budget-table-scroll">
-                      <table
-                        className="encounter-budget-table"
-                        aria-label={`Wave ${wave.waveIndex} enemy budgets`}
-                      >
-                        <thead>
-                          <tr>
-                            <th
-                              scope="col"
-                              title="Wave budget / total encounter budget."
-                              aria-label={`Wave budget ${waveBudget(wave.waveIndex)} / encounter budget ${encounterBudget}`}
-                            >
-                              Budget
-                              <br />
-                              <span className="encounter-wave-budget-ratio">
-                                {waveBudget(wave.waveIndex)} / {encounterBudget}
-                              </span>
-                            </th>
-                            {tableKeys.map((key, index) => (
-                              <th
-                                scope="col"
-                                key={`${index}-${key}`}
-                                title={
-                                  cost(key) === undefined
-                                    ? undefined
-                                    : `Cost: ${budgetNumber.format(cost(key)!)} per ${groupSize(key) === undefined ? 'enemy' : `group of ${groupSize(key)} enemies`}.`
-                                }
-                              >
-                                {label(key)}
-                                {cost(key) === undefined ? null : (
-                                  <>
-                                    <br /> ({budgetNumber.format(cost(key)!)})
-                                  </>
-                                )}
-                              </th>
-                            ))}
-                          </tr>
-                        </thead>
-                        <tbody>
-                          <tr>
-                            <th scope="row">Budget</th>
-                            {tableKeys.map((key, index) => (
-                              <td key={`${index}-${key}`}>{allocationsFor(key, index)}</td>
-                            ))}
-                          </tr>
-                          <tr>
-                            <th scope="row">Count</th>
-                            {tableKeys.map((key, index) => {
-                              const count = wave.countPreview?.find(
-                                (entry) => entry.key === key,
-                              )?.count;
-                              const size = groupSize(key);
-                              return (
-                                <td key={`${index}-${key}`}>
-                                  {count === undefined ? (
-                                    'NA'
-                                  ) : size === undefined ? (
-                                    count
-                                  ) : (
-                                    <span
-                                      title={`${count} ${count === 1 ? 'group' : 'groups'} · ${count * size} individual enemies.`}
-                                    >
-                                      {count} ({count * size})
-                                    </span>
-                                  )}
-                                </td>
-                              );
-                            })}
-                          </tr>
-                          {assessment.menace?.active ? (
-                            <>
-                              <tr>
-                                <th scope="row">
-                                  Menace <br />
-                                  Target
-                                </th>
-                                {tableKeys.map((key, index) => {
-                                  const cell = wave.menaceCells?.[key];
-                                  if (cell === undefined)
-                                    return <td key={`${index}-${key}`}>NA</td>;
-                                  return (
-                                    <td key={`${index}-${key}`}>
-                                      <div
-                                        className="encounter-menace-replacement"
-                                        title={cell.replacementLabel}
-                                      >
-                                        {cell.picker === undefined ? (
-                                          <span>{cell.replacementLabel}</span>
-                                        ) : (
-                                          <ContextualPicker
-                                            ariaLabel={`Wave ${wave.waveIndex} ${label(key)} replacement`}
-                                            choiceLabel="Menace replacement"
-                                            id={`generated-menace-${interaction.key}-${wave.waveIndex}-${key}`}
-                                            label="Replacement"
-                                            layout="inline"
-                                            model={cell.picker}
-                                            onSelect={(target) =>
-                                              edit((edits) =>
-                                                edits.setMenaceTarget(wave.waveIndex, key, target),
-                                              )
-                                            }
-                                            placeholder="Select replacement"
-                                            triggerLabel={cell.replacementLabel}
-                                          />
-                                        )}
-                                      </div>
-                                    </td>
-                                  );
-                                })}
-                              </tr>
-                              <tr>
-                                <th scope="row">
-                                  Menace <br />
-                                  Count
-                                </th>
-                                {tableKeys.map((key, index) => {
-                                  const cell = wave.menaceCells?.[key];
-                                  const currentMenace = value.menace?.find(
-                                    (entry) => entry.waveIndex === wave.waveIndex,
-                                  )?.conversions[key];
-                                  if (cell === undefined)
-                                    return <td key={`${index}-${key}`}>NA</td>;
-                                  return (
-                                    <td key={`${index}-${key}`}>
-                                      <ConvertedInput
-                                        label={`Wave ${wave.waveIndex} ${label(key)} converted`}
-                                        value={currentMenace?.count ?? 0}
-                                        onCommit={(count) =>
-                                          edit((edits) =>
-                                            edits.setMenaceCount(wave.waveIndex, key, count),
-                                          )
-                                        }
-                                      />
-                                    </td>
-                                  );
-                                })}
-                              </tr>
-                            </>
-                          ) : null}
-                        </tbody>
-                      </table>
-                    </div>
-                  )}
-                  {selected.length > wave.additionalTypeCount.max ? (
-                    <div className="encounter-generated-retained">
-                      <span>Extra enemies</span>
-                      <p className="encounter-generated-context">
-                        Remove extra enemies from the end.
-                      </p>
-                      {selected.slice(wave.additionalTypeCount.max).map((key, index) => {
-                        const position = wave.additionalTypeCount.max + index;
-                        return (
-                          <div key={`${position}-${key}`}>
-                            <span>
-                              Enemy {wave.seeds.length + position + 1}: {label(key)}
-                            </span>
-                            {position === selected.length - 1 ? (
-                              <button
-                                aria-label={`Remove Wave ${wave.waveIndex} Enemy ${wave.seeds.length + position + 1}`}
-                                className="quiet-action"
-                                onClick={() =>
-                                  edit((edits) => edits.removeLastEnemy(wave.waveIndex))
-                                }
-                                type="button"
-                              >
-                                Remove
-                              </button>
-                            ) : null}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  ) : null}
-                </section>
-              );
-            })}
+          {rows.filter((wave) => wave.waveIndex === activeWave).map((wave) => panelFor(wave))}
         </div>
       )}
-      {assessment?.fangs?.active ? (
+      {composition.fangs &&
+      value !== undefined &&
+      interaction !== undefined &&
+      decision !== undefined ? (
         <GeneratedFangsPicker
           interaction={interaction}
           presentation={{

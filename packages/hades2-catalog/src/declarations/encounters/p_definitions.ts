@@ -6,11 +6,13 @@ import {
   heraclesEncounterKeys,
   heraclesIncomingRewardExclusions,
   icarusEncounterKeys,
+  spawn,
   supportedFieldNpcEncounterKeys,
 } from './shared';
 
 export const pEncounterDefinitions = [
   {
+    // EncounterData_Opening.lua:982.
     key: 'PIntroCombat01',
     label: 'Opening combat 01',
     kind: 'combat',
@@ -18,8 +20,10 @@ export const pEncounterDefinitions = [
     canEncounterSkip: false,
     skipEndEncounterEffects: false,
     blocksGorgon: false,
+    fixedRoster: [[spawn('SentryBot', 3), spawn('ZombieOlympus', 1)]],
   },
   {
+    // EncounterData_Opening.lua:1011.
     key: 'PIntroCombat02',
     label: 'Opening combat 02',
     kind: 'combat',
@@ -27,8 +31,10 @@ export const pEncounterDefinitions = [
     canEncounterSkip: false,
     skipEndEncounterEffects: false,
     blocksGorgon: false,
+    fixedRoster: [[spawn('SentryBot', 3), spawn('SatyrLancer2', 2)]],
   },
   {
+    // EncounterData_Opening.lua:1035.
     key: 'PIntroCombat03',
     label: 'Opening combat 03',
     kind: 'combat',
@@ -36,8 +42,10 @@ export const pEncounterDefinitions = [
     canEncounterSkip: false,
     skipEndEncounterEffects: false,
     blocksGorgon: false,
+    fixedRoster: [[spawn('AutomatonEnforcer', 1), spawn('SatyrCrossbow2', 1)]],
   },
   {
+    // EncounterData_Opening.lua:1064.
     key: 'PIntroCombat04',
     label: 'Opening combat 04',
     kind: 'combat',
@@ -45,8 +53,10 @@ export const pEncounterDefinitions = [
     canEncounterSkip: false,
     skipEndEncounterEffects: false,
     blocksGorgon: false,
+    fixedRoster: [[spawn('AutomatonBeamer', 1), spawn('ZombieOlympus', 7)]],
   },
   {
+    // EncounterData_Opening.lua:1093.
     key: 'PIntroCombat05',
     label: 'Opening combat 05',
     kind: 'combat',
@@ -54,8 +64,10 @@ export const pEncounterDefinitions = [
     canEncounterSkip: false,
     skipEndEncounterEffects: false,
     blocksGorgon: false,
+    fixedRoster: [[spawn('AutomatonEnforcer', 2), spawn('HarpyDropper', 3)]],
   },
   {
+    // EncounterData_Opening.lua:1122.
     key: 'PIntroCombat06',
     label: 'Opening combat 06',
     kind: 'combat',
@@ -63,8 +75,10 @@ export const pEncounterDefinitions = [
     canEncounterSkip: false,
     skipEndEncounterEffects: false,
     blocksGorgon: false,
+    fixedRoster: [[spawn('Dragon_Elite', 1), spawn('SentryBot', 5)]],
   },
   {
+    // EncounterData_Opening.lua:1152.
     key: 'PIntroCombat07',
     label: 'Opening combat 07',
     kind: 'combat',
@@ -72,8 +86,10 @@ export const pEncounterDefinitions = [
     canEncounterSkip: false,
     skipEndEncounterEffects: false,
     blocksGorgon: false,
+    fixedRoster: [[spawn('AutomatonBeamer_Elite', 1), spawn('SatyrLancer2', 3)]],
   },
   {
+    // EncounterData_Opening.lua:1181.
     key: 'PIntroCombat08',
     label: 'Opening combat 08',
     kind: 'combat',
@@ -81,8 +97,10 @@ export const pEncounterDefinitions = [
     canEncounterSkip: false,
     skipEndEncounterEffects: false,
     blocksGorgon: false,
+    fixedRoster: [[spawn('SatyrCrossbow2_Elite', 1), spawn('AutomatonEnforcer_Elite', 1)]],
   },
   {
+    // EncounterData_Opening.lua:1204.
     key: 'PIntroCombat09',
     label: 'Opening combat 09',
     kind: 'combat',
@@ -90,8 +108,17 @@ export const pEncounterDefinitions = [
     canEncounterSkip: false,
     skipEndEncounterEffects: false,
     blocksGorgon: false,
+    fixedRoster: [
+      [
+        spawn('SatyrSapper', 1),
+        spawn('SatyrLancer2', 2),
+        spawn('AutomatonBeamer', 1),
+        spawn('SentryBot', 2),
+      ],
+    ],
   },
   {
+    // EncounterData_Opening.lua:1287.
     key: 'PIntroCombat_DragonQuad',
     label: 'Opening dragon combat',
     kind: 'combat',
@@ -99,8 +126,10 @@ export const pEncounterDefinitions = [
     canEncounterSkip: false,
     skipEndEncounterEffects: false,
     blocksGorgon: false,
+    fixedRoster: [[spawn('Dragon', 2)]],
   },
   {
+    // EncounterData_Opening.lua:1243.
     key: 'PIntroCombat_ZombieFishing',
     label: 'Opening fishing combat',
     kind: 'combat',
@@ -108,8 +137,10 @@ export const pEncounterDefinitions = [
     canEncounterSkip: false,
     skipEndEncounterEffects: false,
     blocksGorgon: false,
+    fixedRoster: [[spawn('ZombieOlympus', 1)]],
   },
   {
+    // EncounterData_Opening.lua:1265.
     key: 'PIntroCombat_ZombieQuad',
     label: 'Opening zombie combat',
     kind: 'combat',
@@ -117,8 +148,10 @@ export const pEncounterDefinitions = [
     canEncounterSkip: false,
     skipEndEncounterEffects: false,
     blocksGorgon: false,
+    fixedRoster: [[spawn('ZombieOlympus', 5)]],
   },
   {
+    // EncounterData_Opening.lua:1349.
     key: 'PIntroCombat_SapperGate',
     label: 'Opening sapper gate combat',
     kind: 'combat',
@@ -126,8 +159,10 @@ export const pEncounterDefinitions = [
     canEncounterSkip: false,
     skipEndEncounterEffects: false,
     blocksGorgon: false,
+    fixedRoster: [[spawn('SatyrSapper', 3)]],
   },
   {
+    // EncounterData_Opening.lua:1383.
     key: 'PIntroCombat_CrossbowStatues',
     label: 'Opening crossbow statues combat',
     kind: 'combat',
@@ -135,8 +170,10 @@ export const pEncounterDefinitions = [
     canEncounterSkip: false,
     skipEndEncounterEffects: false,
     blocksGorgon: false,
+    fixedRoster: [[spawn('SatyrCrossbow2', 3)]],
   },
   {
+    // EncounterData_Opening.lua:1420.
     key: 'PIntroCombat_SapperOverlook',
     label: 'Opening sapper overlook combat',
     kind: 'combat',
@@ -144,6 +181,7 @@ export const pEncounterDefinitions = [
     canEncounterSkip: false,
     skipEndEncounterEffects: false,
     blocksGorgon: false,
+    fixedRoster: [[spawn('SatyrSapper', 3)]],
   },
   {
     key: 'GeneratedP_PreCombat',
@@ -155,7 +193,11 @@ export const pEncounterDefinitions = [
     skipEndEncounterEffects: true,
     blocksGorgon: true,
   },
+  // Each vignette inherits GeneratedP_PreCombat (P_BaseVignette,
+  // EncounterData_Opening.lua:1517); its one fixed wave fills MinWaves = MaxWaves = 1
+  // (EncounterData_Generated.lua:1199-1200).
   {
+    // EncounterData_Opening.lua:1527.
     key: 'P_Combat01_PreCombat01',
     label: 'Combat 01 pre-combat 01',
     kind: 'combat',
@@ -163,8 +205,10 @@ export const pEncounterDefinitions = [
     canEncounterSkip: true,
     skipEndEncounterEffects: true,
     blocksGorgon: true,
+    fixedRoster: [[spawn('SatyrSapper', 1), spawn('ZombieOlympus', 4)]],
   },
   {
+    // EncounterData_Opening.lua:1559.
     key: 'P_Combat01_PreCombat02',
     label: 'Combat 01 pre-combat 02',
     kind: 'combat',
@@ -172,8 +216,10 @@ export const pEncounterDefinitions = [
     canEncounterSkip: true,
     skipEndEncounterEffects: true,
     blocksGorgon: true,
+    fixedRoster: [[spawn('SatyrLancer2', 3)]],
   },
   {
+    // EncounterData_Opening.lua:1606.
     key: 'P_Combat01_PreCombat03',
     label: 'Combat 01 pre-combat 03',
     kind: 'combat',
@@ -181,8 +227,10 @@ export const pEncounterDefinitions = [
     canEncounterSkip: true,
     skipEndEncounterEffects: true,
     blocksGorgon: true,
+    fixedRoster: [[spawn('SentryBot', 8), spawn('ZombieOlympus', 8)]],
   },
   {
+    // EncounterData_Opening.lua:1630.
     key: 'P_Combat01_PreCombat04',
     label: 'Combat 01 pre-combat 04',
     kind: 'combat',
@@ -190,8 +238,10 @@ export const pEncounterDefinitions = [
     canEncounterSkip: true,
     skipEndEncounterEffects: true,
     blocksGorgon: true,
+    fixedRoster: [[spawn('HarpyDropper', 3), spawn('AutomatonBeamer_Elite', 1)]],
   },
   {
+    // EncounterData_Opening.lua:1654.
     key: 'P_Combat02_PreCombat01',
     label: 'Combat 02 pre-combat 01',
     kind: 'combat',
@@ -199,8 +249,10 @@ export const pEncounterDefinitions = [
     canEncounterSkip: true,
     skipEndEncounterEffects: true,
     blocksGorgon: true,
+    fixedRoster: [[spawn('SentryBot', 6), spawn('SatyrLancer2', 2)]],
   },
   {
+    // EncounterData_Opening.lua:1678.
     key: 'P_Combat02_PreCombat02',
     label: 'Combat 02 pre-combat 02',
     kind: 'combat',
@@ -208,8 +260,10 @@ export const pEncounterDefinitions = [
     canEncounterSkip: true,
     skipEndEncounterEffects: true,
     blocksGorgon: true,
+    fixedRoster: [[spawn('SatyrSapper', 2), spawn('SatyrLancer2', 2)]],
   },
   {
+    // EncounterData_Opening.lua:1710.
     key: 'P_Combat02_PreCombat03',
     label: 'Combat 02 pre-combat 03',
     kind: 'combat',
@@ -217,8 +271,10 @@ export const pEncounterDefinitions = [
     canEncounterSkip: true,
     skipEndEncounterEffects: true,
     blocksGorgon: true,
+    fixedRoster: [[spawn('AutomatonBeamer_Elite', 1), spawn('SatyrCrossbow2', 3)]],
   },
   {
+    // EncounterData_Opening.lua:1734.
     key: 'P_Combat03_PreCombat01',
     label: 'Combat 03 pre-combat 01',
     kind: 'combat',
@@ -226,8 +282,10 @@ export const pEncounterDefinitions = [
     canEncounterSkip: true,
     skipEndEncounterEffects: true,
     blocksGorgon: true,
+    fixedRoster: [[spawn('SatyrSapper', 3), spawn('SentryBot', 9)]],
   },
   {
+    // EncounterData_Opening.lua:1764.
     key: 'P_Combat03_PreCombat02',
     label: 'Combat 03 pre-combat 02',
     kind: 'combat',
@@ -235,8 +293,10 @@ export const pEncounterDefinitions = [
     canEncounterSkip: true,
     skipEndEncounterEffects: true,
     blocksGorgon: true,
+    fixedRoster: [[spawn('SatyrCrossbow2', 3)]],
   },
   {
+    // EncounterData_Opening.lua:1793.
     key: 'P_Combat03_PreCombat03',
     label: 'Combat 03 pre-combat 03',
     kind: 'combat',
@@ -244,8 +304,10 @@ export const pEncounterDefinitions = [
     canEncounterSkip: true,
     skipEndEncounterEffects: true,
     blocksGorgon: true,
+    fixedRoster: [[spawn('SatyrLancer2_Elite', 3)]],
   },
   {
+    // EncounterData_Opening.lua:1822.
     key: 'P_Combat04_PreCombat01',
     label: 'Combat 04 pre-combat 01',
     kind: 'combat',
@@ -253,8 +315,10 @@ export const pEncounterDefinitions = [
     canEncounterSkip: true,
     skipEndEncounterEffects: true,
     blocksGorgon: true,
+    fixedRoster: [[spawn('SatyrSapper', 3)]],
   },
   {
+    // EncounterData_Opening.lua:1846.
     key: 'P_Combat04_PreCombat02',
     label: 'Combat 04 pre-combat 02',
     kind: 'combat',
@@ -262,8 +326,10 @@ export const pEncounterDefinitions = [
     canEncounterSkip: true,
     skipEndEncounterEffects: true,
     blocksGorgon: true,
+    fixedRoster: [[spawn('AutomatonEnforcer', 3), spawn('ZombieOlympus_Elite', 8)]],
   },
   {
+    // EncounterData_Opening.lua:1872.
     key: 'P_Combat04_PreCombat03',
     label: 'Combat 04 pre-combat 03',
     kind: 'combat',
@@ -271,8 +337,10 @@ export const pEncounterDefinitions = [
     canEncounterSkip: true,
     skipEndEncounterEffects: true,
     blocksGorgon: true,
+    fixedRoster: [[spawn('SentryBot', 4), spawn('HarpyDropper', 2)]],
   },
   {
+    // EncounterData_Opening.lua:1898.
     key: 'P_Combat05_PreCombat01',
     label: 'Combat 05 pre-combat 01',
     kind: 'combat',
@@ -280,8 +348,10 @@ export const pEncounterDefinitions = [
     canEncounterSkip: true,
     skipEndEncounterEffects: true,
     blocksGorgon: true,
+    fixedRoster: [[spawn('SatyrCrossbow2', 3)]],
   },
   {
+    // EncounterData_Opening.lua:1928.
     key: 'P_Combat05_PreCombat02',
     label: 'Combat 05 pre-combat 02',
     kind: 'combat',
@@ -289,8 +359,10 @@ export const pEncounterDefinitions = [
     canEncounterSkip: true,
     skipEndEncounterEffects: true,
     blocksGorgon: true,
+    fixedRoster: [[spawn('Dragon', 1)]],
   },
   {
+    // EncounterData_Opening.lua:1958.
     key: 'P_Combat05_PreCombat03',
     label: 'Combat 05 pre-combat 03',
     kind: 'combat',
@@ -298,8 +370,10 @@ export const pEncounterDefinitions = [
     canEncounterSkip: true,
     skipEndEncounterEffects: true,
     blocksGorgon: true,
+    fixedRoster: [[spawn('AutomatonBeamer', 2), spawn('SatyrLancer2', 3), spawn('SatyrSapper', 1)]],
   },
   {
+    // EncounterData_Opening.lua:1994.
     key: 'P_Combat06_PreCombat01',
     label: 'Combat 06 pre-combat 01',
     kind: 'combat',
@@ -307,8 +381,10 @@ export const pEncounterDefinitions = [
     canEncounterSkip: true,
     skipEndEncounterEffects: true,
     blocksGorgon: true,
+    fixedRoster: [[spawn('AutomatonBeamer', 3), spawn('SatyrLancer2', 6)]],
   },
   {
+    // EncounterData_Opening.lua:2018.
     key: 'P_Combat06_PreCombat02',
     label: 'Combat 06 pre-combat 02',
     kind: 'combat',
@@ -316,8 +392,10 @@ export const pEncounterDefinitions = [
     canEncounterSkip: true,
     skipEndEncounterEffects: true,
     blocksGorgon: true,
+    fixedRoster: [[spawn('HarpyDropper', 6)]],
   },
   {
+    // EncounterData_Opening.lua:2041.
     key: 'P_Combat06_PreCombat03',
     label: 'Combat 06 pre-combat 03',
     kind: 'combat',
@@ -325,8 +403,10 @@ export const pEncounterDefinitions = [
     canEncounterSkip: true,
     skipEndEncounterEffects: true,
     blocksGorgon: true,
+    fixedRoster: [[spawn('Dragon_Elite', 1), spawn('SentryBot', 1)]],
   },
   {
+    // EncounterData_Opening.lua:2072.
     key: 'P_Combat06_PreCombat04',
     label: 'Combat 06 pre-combat 04',
     kind: 'combat',
@@ -334,8 +414,10 @@ export const pEncounterDefinitions = [
     canEncounterSkip: true,
     skipEndEncounterEffects: true,
     blocksGorgon: true,
+    fixedRoster: [[spawn('AutomatonEnforcer_Elite', 2), spawn('SatyrLancer2', 3)]],
   },
   {
+    // EncounterData_Opening.lua:2096.
     key: 'P_Combat07_PreCombat01',
     label: 'Combat 07 pre-combat 01',
     kind: 'combat',
@@ -343,8 +425,12 @@ export const pEncounterDefinitions = [
     canEncounterSkip: true,
     skipEndEncounterEffects: true,
     blocksGorgon: true,
+    fixedRoster: [
+      [spawn('SatyrSapper', 1), spawn('SatyrLancer2', 2), spawn('AutomatonEnforcer_Elite', 1)],
+    ],
   },
   {
+    // EncounterData_Opening.lua:2125.
     key: 'P_Combat07_PreCombat02',
     label: 'Combat 07 pre-combat 02',
     kind: 'combat',
@@ -352,8 +438,10 @@ export const pEncounterDefinitions = [
     canEncounterSkip: true,
     skipEndEncounterEffects: true,
     blocksGorgon: true,
+    fixedRoster: [[spawn('AutomatonBeamer', 2), spawn('ZombieOlympus_Elite', 8)]],
   },
   {
+    // EncounterData_Opening.lua:2149.
     key: 'P_Combat07_PreCombat03',
     label: 'Combat 07 pre-combat 03',
     kind: 'combat',
@@ -361,8 +449,10 @@ export const pEncounterDefinitions = [
     canEncounterSkip: true,
     skipEndEncounterEffects: true,
     blocksGorgon: true,
+    fixedRoster: [[spawn('SatyrSapper', 3)]],
   },
   {
+    // EncounterData_Opening.lua:2172.
     key: 'P_Combat08_PreCombat01',
     label: 'Combat 08 pre-combat 01',
     kind: 'combat',
@@ -370,8 +460,10 @@ export const pEncounterDefinitions = [
     canEncounterSkip: true,
     skipEndEncounterEffects: true,
     blocksGorgon: true,
+    fixedRoster: [[spawn('ZombieOlympus', 10)]],
   },
   {
+    // EncounterData_Opening.lua:2195.
     key: 'P_Combat08_PreCombat02',
     label: 'Combat 08 pre-combat 02',
     kind: 'combat',
@@ -379,8 +471,10 @@ export const pEncounterDefinitions = [
     canEncounterSkip: true,
     skipEndEncounterEffects: true,
     blocksGorgon: true,
+    fixedRoster: [[spawn('HarpyDropper', 3)]],
   },
   {
+    // EncounterData_Opening.lua:2218.
     key: 'P_Combat08_PreCombat03',
     label: 'Combat 08 pre-combat 03',
     kind: 'combat',
@@ -388,8 +482,10 @@ export const pEncounterDefinitions = [
     canEncounterSkip: true,
     skipEndEncounterEffects: true,
     blocksGorgon: true,
+    fixedRoster: [[spawn('AutomatonEnforcer_Elite', 1), spawn('SatyrLancer2', 4)]],
   },
   {
+    // EncounterData_Opening.lua:2242.
     key: 'P_Combat09_PreCombat01',
     label: 'Combat 09 pre-combat 01',
     kind: 'combat',
@@ -397,8 +493,10 @@ export const pEncounterDefinitions = [
     canEncounterSkip: true,
     skipEndEncounterEffects: true,
     blocksGorgon: true,
+    fixedRoster: [[spawn('AutomatonEnforcer_Elite', 1), spawn('SatyrLancer2', 3)]],
   },
   {
+    // EncounterData_Opening.lua:2266.
     key: 'P_Combat09_PreCombat02',
     label: 'Combat 09 pre-combat 02',
     kind: 'combat',
@@ -406,8 +504,10 @@ export const pEncounterDefinitions = [
     canEncounterSkip: true,
     skipEndEncounterEffects: true,
     blocksGorgon: true,
+    fixedRoster: [[spawn('SatyrSapper_Elite', 2)]],
   },
   {
+    // EncounterData_Opening.lua:2289.
     key: 'P_Combat09_PreCombat03',
     label: 'Combat 09 pre-combat 03',
     kind: 'combat',
@@ -415,8 +515,10 @@ export const pEncounterDefinitions = [
     canEncounterSkip: true,
     skipEndEncounterEffects: true,
     blocksGorgon: true,
+    fixedRoster: [[spawn('SatyrCrossbow2', 3)]],
   },
   {
+    // EncounterData_Opening.lua:2312.
     key: 'P_Combat10_PreCombat01',
     label: 'Combat 10 pre-combat 01',
     kind: 'combat',
@@ -424,8 +526,10 @@ export const pEncounterDefinitions = [
     canEncounterSkip: true,
     skipEndEncounterEffects: true,
     blocksGorgon: true,
+    fixedRoster: [[spawn('HarpyDropper', 2), spawn('SatyrSapper', 1)]],
   },
   {
+    // EncounterData_Opening.lua:2344.
     key: 'P_Combat10_PreCombat02',
     label: 'Combat 10 pre-combat 02',
     kind: 'combat',
@@ -433,8 +537,10 @@ export const pEncounterDefinitions = [
     canEncounterSkip: true,
     skipEndEncounterEffects: true,
     blocksGorgon: true,
+    fixedRoster: [[spawn('AutomatonEnforcer', 3), spawn('ZombieOlympus', 7)]],
   },
   {
+    // EncounterData_Opening.lua:2368.
     key: 'P_Combat10_PreCombat03',
     label: 'Combat 10 pre-combat 03',
     kind: 'combat',
@@ -442,8 +548,10 @@ export const pEncounterDefinitions = [
     canEncounterSkip: true,
     skipEndEncounterEffects: true,
     blocksGorgon: true,
+    fixedRoster: [[spawn('SatyrSapper', 2), spawn('SentryBot_Elite', 7)]],
   },
   {
+    // EncounterData_Opening.lua:2392.
     key: 'P_Combat11_PreCombat01',
     label: 'Combat 11 pre-combat 01',
     kind: 'combat',
@@ -451,8 +559,10 @@ export const pEncounterDefinitions = [
     canEncounterSkip: true,
     skipEndEncounterEffects: true,
     blocksGorgon: true,
+    fixedRoster: [[spawn('Dragon_Elite', 1)]],
   },
   {
+    // EncounterData_Opening.lua:2422.
     key: 'P_Combat11_PreCombat02',
     label: 'Combat 11 pre-combat 02',
     kind: 'combat',
@@ -460,8 +570,10 @@ export const pEncounterDefinitions = [
     canEncounterSkip: true,
     skipEndEncounterEffects: true,
     blocksGorgon: true,
+    fixedRoster: [[spawn('SatyrSapper', 1)]],
   },
   {
+    // EncounterData_Opening.lua:2445.
     key: 'P_Combat11_PreCombat03',
     label: 'Combat 11 pre-combat 03',
     kind: 'combat',
@@ -469,8 +581,12 @@ export const pEncounterDefinitions = [
     canEncounterSkip: true,
     skipEndEncounterEffects: true,
     blocksGorgon: true,
+    fixedRoster: [
+      [spawn('AutomatonBeamer', 1), spawn('SentryBot_Elite', 3), spawn('SatyrLancer2', 3)],
+    ],
   },
   {
+    // EncounterData_Opening.lua:2474.
     key: 'P_Combat11_PreCombat04',
     label: 'Combat 11 pre-combat 04',
     kind: 'combat',
@@ -478,8 +594,10 @@ export const pEncounterDefinitions = [
     canEncounterSkip: true,
     skipEndEncounterEffects: true,
     blocksGorgon: true,
+    fixedRoster: [[spawn('Dragon_Elite', 1), spawn('SentryBot', 6)]],
   },
   {
+    // EncounterData_Opening.lua:2505.
     key: 'P_Combat12_PreCombat01',
     label: 'Combat 12 pre-combat 01',
     kind: 'combat',
@@ -487,8 +605,10 @@ export const pEncounterDefinitions = [
     canEncounterSkip: true,
     skipEndEncounterEffects: true,
     blocksGorgon: true,
+    fixedRoster: [[spawn('SentryBot', 6), spawn('ZombieOlympus', 10)]],
   },
   {
+    // EncounterData_Opening.lua:2529.
     key: 'P_Combat12_PreCombat02',
     label: 'Combat 12 pre-combat 02',
     kind: 'combat',
@@ -496,8 +616,10 @@ export const pEncounterDefinitions = [
     canEncounterSkip: true,
     skipEndEncounterEffects: true,
     blocksGorgon: true,
+    fixedRoster: [[spawn('ZombieOlympus', 10)]],
   },
   {
+    // EncounterData_Opening.lua:2577.
     key: 'P_Combat12_PreCombat03',
     label: 'Combat 12 pre-combat 03',
     kind: 'combat',
@@ -505,8 +627,10 @@ export const pEncounterDefinitions = [
     canEncounterSkip: true,
     skipEndEncounterEffects: true,
     blocksGorgon: true,
+    fixedRoster: [[spawn('AutomatonEnforcer', 2), spawn('SatyrLancer2_Elite', 3)]],
   },
   {
+    // EncounterData_Opening.lua:2601.
     key: 'P_Combat13_PreCombat01',
     label: 'Combat 13 pre-combat 01',
     kind: 'combat',
@@ -514,8 +638,12 @@ export const pEncounterDefinitions = [
     canEncounterSkip: true,
     skipEndEncounterEffects: true,
     blocksGorgon: true,
+    fixedRoster: [
+      [spawn('AutomatonBeamer', 2), spawn('AutomatonEnforcer', 2), spawn('SatyrCrossbow2', 3)],
+    ],
   },
   {
+    // EncounterData_Opening.lua:2630.
     key: 'P_Combat13_PreCombat02',
     label: 'Combat 13 pre-combat 02',
     kind: 'combat',
@@ -523,8 +651,10 @@ export const pEncounterDefinitions = [
     canEncounterSkip: true,
     skipEndEncounterEffects: true,
     blocksGorgon: true,
+    fixedRoster: [[spawn('Dragon', 2)]],
   },
   {
+    // EncounterData_Opening.lua:2660.
     key: 'P_Combat13_PreCombat03',
     label: 'Combat 13 pre-combat 03',
     kind: 'combat',
@@ -532,8 +662,10 @@ export const pEncounterDefinitions = [
     canEncounterSkip: true,
     skipEndEncounterEffects: true,
     blocksGorgon: true,
+    fixedRoster: [[spawn('SatyrCrossbow2', 2)]],
   },
   {
+    // EncounterData_Opening.lua:2706.
     key: 'P_Combat14_PreCombat01',
     label: 'Combat 14 pre-combat 01',
     kind: 'combat',
@@ -541,8 +673,12 @@ export const pEncounterDefinitions = [
     canEncounterSkip: true,
     skipEndEncounterEffects: true,
     blocksGorgon: true,
+    fixedRoster: [
+      [spawn('SentryBot', 6), spawn('AutomatonEnforcer', 1), spawn('ZombieOlympus_Elite', 8)],
+    ],
   },
   {
+    // EncounterData_Opening.lua:2735.
     key: 'P_Combat14_PreCombat02',
     label: 'Combat 14 pre-combat 02',
     kind: 'combat',
@@ -550,8 +686,10 @@ export const pEncounterDefinitions = [
     canEncounterSkip: true,
     skipEndEncounterEffects: true,
     blocksGorgon: true,
+    fixedRoster: [[spawn('Dragon_Elite', 1)]],
   },
   {
+    // EncounterData_Opening.lua:2765.
     key: 'P_Combat14_PreCombat03',
     label: 'Combat 14 pre-combat 03',
     kind: 'combat',
@@ -559,8 +697,12 @@ export const pEncounterDefinitions = [
     canEncounterSkip: true,
     skipEndEncounterEffects: true,
     blocksGorgon: true,
+    fixedRoster: [
+      [spawn('AutomatonEnforcer_Elite', 1), spawn('SentryBot', 4), spawn('HarpyDropper_Elite', 3)],
+    ],
   },
   {
+    // EncounterData_Opening.lua:2794.
     key: 'P_Combat15_PreCombat01',
     label: 'Combat 15 pre-combat 01',
     kind: 'combat',
@@ -568,8 +710,10 @@ export const pEncounterDefinitions = [
     canEncounterSkip: true,
     skipEndEncounterEffects: true,
     blocksGorgon: true,
+    fixedRoster: [[spawn('Dragon', 1)]],
   },
   {
+    // EncounterData_Opening.lua:2824.
     key: 'P_Combat15_PreCombat02',
     label: 'Combat 15 pre-combat 02',
     kind: 'combat',
@@ -577,8 +721,10 @@ export const pEncounterDefinitions = [
     canEncounterSkip: true,
     skipEndEncounterEffects: true,
     blocksGorgon: true,
+    fixedRoster: [[spawn('SatyrCrossbow2', 1)]],
   },
   {
+    // EncounterData_Opening.lua:2847.
     key: 'P_Combat15_PreCombat03',
     label: 'Combat 15 pre-combat 03',
     kind: 'combat',
@@ -586,8 +732,10 @@ export const pEncounterDefinitions = [
     canEncounterSkip: true,
     skipEndEncounterEffects: true,
     blocksGorgon: true,
+    fixedRoster: [[spawn('ZombieOlympus', 8), spawn('AutomatonEnforcer', 2)]],
   },
   {
+    // EncounterData_Opening.lua:2871.
     key: 'P_Combat15_PreCombat04',
     label: 'Combat 15 pre-combat 04',
     kind: 'combat',
@@ -595,8 +743,10 @@ export const pEncounterDefinitions = [
     canEncounterSkip: true,
     skipEndEncounterEffects: true,
     blocksGorgon: true,
+    fixedRoster: [[spawn('SatyrSapper', 3), spawn('SentryBot_Elite', 5)]],
   },
   {
+    // EncounterData_Opening.lua:2895.
     key: 'P_Combat16_PreCombat01',
     label: 'Combat 16 pre-combat 01',
     kind: 'combat',
@@ -604,8 +754,10 @@ export const pEncounterDefinitions = [
     canEncounterSkip: true,
     skipEndEncounterEffects: true,
     blocksGorgon: true,
+    fixedRoster: [[spawn('SatyrCrossbow2', 2), spawn('SatyrSapper_Elite', 2)]],
   },
   {
+    // EncounterData_Opening.lua:2927.
     key: 'P_Combat16_PreCombat02',
     label: 'Combat 16 pre-combat 02',
     kind: 'combat',
@@ -613,8 +765,10 @@ export const pEncounterDefinitions = [
     canEncounterSkip: true,
     skipEndEncounterEffects: true,
     blocksGorgon: true,
+    fixedRoster: [[spawn('AutomatonBeamer', 2), spawn('SatyrLancer2', 4)]],
   },
   {
+    // EncounterData_Opening.lua:2951.
     key: 'P_Combat16_PreCombat03',
     label: 'Combat 16 pre-combat 03',
     kind: 'combat',
@@ -622,6 +776,7 @@ export const pEncounterDefinitions = [
     canEncounterSkip: true,
     skipEndEncounterEffects: true,
     blocksGorgon: true,
+    fixedRoster: [[spawn('Dragon', 2), spawn('SentryBot', 6)]],
   },
   {
     key: 'GeneratedP',

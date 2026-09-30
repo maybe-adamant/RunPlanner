@@ -4,19 +4,24 @@ import type { RawEncounterDefinitionDeclaration, RawEncounterSetDeclaration } fr
 import {
   nemesisEncounterKeys,
   nemesisIncomingRewardExclusions,
+  spawn,
   supportedFieldNpcEncounterKeys,
 } from './shared';
 
 export const iEncounterDefinitions = [
   {
-    // EncounterData_Opening.lua ClockworkIntro: fixed waves (two SatyrLancer;
-    // five TimeElemental; three SatyrLancer and six TimeElemental). AlwaysForce
-    // until completed; counts depth, cannot skip and blocks the Athena keepsake.
+    // EncounterData_Opening.lua:111 ClockworkIntro. AlwaysForce until completed;
+    // counts depth, cannot skip and blocks the Athena keepsake.
     key: 'ClockworkIntro',
     label: 'Intro combat',
     kind: 'combat',
     countsEncounterDepth: true,
     blocksGorgon: true,
+    fixedRoster: [
+      [spawn('SatyrLancer', 2)],
+      [spawn('TimeElemental', 5)],
+      [spawn('SatyrLancer', 3), spawn('TimeElemental', 6)],
+    ],
   },
   {
     key: 'GeneratedIChronosIntro',

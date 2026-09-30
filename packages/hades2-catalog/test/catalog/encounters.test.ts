@@ -430,6 +430,96 @@ describe('encounter envelope catalog', () => {
     }
   });
 
+  it('declares native fixed rosters for every all-fixed combat identity', () => {
+    const catalog = createCatalog(declarations);
+    const roster = (key: string) =>
+      catalog.encounterDefinitions.byKey[key]?.fixedRoster?.map((wave) =>
+        wave.map((spawn) => `${spawn.enemyKey}×${spawn.count}`),
+      );
+    // EncounterData.lua:515, EncounterData_Intro.lua:8/289/372/448/534, EncounterData_Opening.lua:111.
+    expect(roster('FIntroFight')).toEqual([
+      ['Brawler×1'],
+      ['Guard×4'],
+      ['Mage×3'],
+      ['Brawler×1', 'Guard×3', 'Mage×1'],
+    ]);
+    expect(roster('FishmanIntro')).toEqual([
+      ['FishmanMelee×1'],
+      ['FishmanMelee×2', 'FishmanRanged×1'],
+      ['FishmanMelee×3', 'FishmanRanged×3'],
+    ]);
+    expect(roster('ClockworkIntro')).toEqual([
+      ['SatyrLancer×2'],
+      ['TimeElemental×5'],
+      ['SatyrLancer×3', 'TimeElemental×6'],
+    ]);
+    expect(roster('MournerIntro')).toEqual([
+      ['Mourner×2'],
+      ['Mourner×4', 'BrokenHearted×2'],
+      ['Mourner_Elite×1'],
+    ]);
+    expect(roster('LamiaIntro')).toEqual([
+      ['Lamia×1', 'BrokenHearted×4'],
+      ['Lamia×4', 'BrokenHearted×6'],
+      ['Lamia_Elite×1', 'BrokenHearted×4'],
+    ]);
+    expect(roster('LovesickIntro')).toEqual([
+      ['Lovesick×2'],
+      ['Lovesick×4', 'BrokenHearted×5'],
+      ['Lovesick_Elite×2'],
+    ]);
+    expect(roster('LycanthropeIntro')).toEqual([
+      ['Lycanthrope×1'],
+      ['Lycanthrope×3'],
+      ['Lycanthrope_Elite×1'],
+    ]);
+    // EncounterData_Opening.lua:982 and :1527 (P_BaseVignette's single fixed wave).
+    expect(roster('PIntroCombat01')).toEqual([['SentryBot×3', 'ZombieOlympus×1']]);
+    expect(roster('P_Combat01_PreCombat01')).toEqual([['SatyrSapper×1', 'ZombieOlympus×4']]);
+    expect(catalog.encounterDefinitions.byKey.FIntroFight?.fixedRoster?.[0]?.[0]?.label).toBe(
+      'Wastrel',
+    );
+    // Every combat identity either generates, customizes otherwise, or declares its roster.
+    expect(
+      catalog.encounterDefinitions.values
+        .filter(
+          (definition) =>
+            definition.kind === 'combat' &&
+            definition.customization === undefined &&
+            definition.fixedRoster === undefined,
+        )
+        .map((definition) => definition.key),
+    ).toEqual([]);
+    expect(
+      catalog.encounterDefinitions.values.filter(
+        (definition) => definition.kind !== 'combat' && definition.fixedRoster !== undefined,
+      ),
+    ).toEqual([]);
+
+    for (const change of [
+      { fixedRoster: [[{ enemyKey: 'Unknown', count: 1 }]] },
+      { fixedRoster: [[{ enemyKey: 'Brawler', count: 0 }]] },
+      { fixedRoster: [[]] },
+      { fixedRoster: [] },
+      { kind: 'nonCombat' },
+    ]) {
+      const malformed = input();
+      const intro = malformed.encounterDefinitions.find(
+        (definition) => definition.key === 'FIntroFight',
+      );
+      if (intro === undefined) throw new Error('missing FIntroFight declaration');
+      Object.assign(intro, change);
+      expect(() => createCatalog(malformed)).toThrow(CatalogContractError);
+    }
+    const mixed = input();
+    const radiator = mixed.encounterDefinitions.find(
+      (definition) => definition.key === 'RadiatorIntro',
+    );
+    if (radiator === undefined) throw new Error('missing RadiatorIntro declaration');
+    Object.assign(radiator, { fixedRoster: [[{ enemyKey: 'Radiator', count: 5 }]] });
+    expect(() => createCatalog(mixed)).toThrow(CatalogContractError);
+  });
+
   it('publishes the complete declaration-owned Gorgon matrix', () => {
     const built = createCatalog(declarations);
     const definitions = built.encounterDefinitions.byKey;

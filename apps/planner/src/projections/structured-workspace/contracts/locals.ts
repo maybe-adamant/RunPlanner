@@ -101,6 +101,8 @@ export interface WorkspaceEncounterCustomizationInteraction {
    * intent and authored choices. Absent only when context is genuinely unavailable.
    */
   readonly generatedAssessment?: WorkspaceGeneratedEncounterAssessment;
+  /** The phase composition with this exact assessment's counts and control applicability. */
+  readonly generatedComposition?: WorkspaceEncounterComposition;
   /** Lazily requests the engine-built complete Customize result for this exact reached phase. */
   readonly initializeGenerated?: () => AuthoredGeneratedEncounterCustomization | undefined;
   /** Complete generated-composition edits built from the current authored value. */
@@ -197,8 +199,6 @@ export interface WorkspaceGeneratedEncounterAssessment {
     readonly field?: 'baseRoll' | 'waveCount' | 'highlight' | 'fangs' | 'enemies';
   }[];
   readonly composition: 'active' | 'missingWaveCount' | 'missingHighlight';
-  /** The engine offers, withholds or retains a shared enemy at this contact. */
-  readonly sharedEnemy: boolean;
   /** Declared once-per-run enemies among the engine-assessed active members. */
   readonly warnings: readonly string[];
   readonly budgetDomain?: {
@@ -210,8 +210,6 @@ export interface WorkspaceGeneratedEncounterAssessment {
     readonly waveBudgets:
       readonly number[] | readonly { readonly min: number; readonly max: number }[];
   };
-  readonly fangs?: { readonly active: boolean };
-  readonly menace?: { readonly active: boolean };
   readonly waves: readonly {
     readonly waveIndex: number;
     readonly menaceCells?: Readonly<
@@ -237,6 +235,27 @@ export interface WorkspaceGeneratedEncounterAssessment {
       readonly count?: number;
     }[];
   }[];
+}
+
+/** Render-ready engine composition view of one combat phase. */
+export interface WorkspaceEncounterComposition {
+  readonly label: string;
+  readonly dispositionLabel: string;
+  readonly editable: boolean;
+  readonly waveCount: { readonly min: number; readonly max: number; readonly value?: number };
+  readonly waves: readonly {
+    readonly waveIndex: number;
+    readonly editable: boolean;
+    readonly source: 'fixed' | 'authored' | 'native';
+    readonly spawns: readonly {
+      readonly enemyKey: string;
+      readonly label: string;
+      readonly count?: number;
+    }[];
+  }[];
+  readonly sharedEnemy: boolean;
+  readonly fangs: boolean;
+  readonly menace: boolean;
 }
 
 export interface WorkspaceNemesisEventSelection {
@@ -422,6 +441,8 @@ export interface WorkspaceEncounterPhase {
   readonly customizable: boolean;
   /** Concrete encounter-owned behavior decisions; absent means no customization capability. */
   readonly customization?: readonly WorkspaceEncounterCustomizationDecision[];
+  /** Per-wave composition of a combat identity, before any generated assessment. */
+  readonly composition?: WorkspaceEncounterComposition;
   /** H Passive selection is presented by the room-feature control, not a second picker. */
   readonly nemesisFeature?: {
     readonly encounterKey: string;
@@ -529,11 +550,6 @@ export type WorkspaceEncounterCustomizationDecision =
           readonly menace?: import('@run-planner/engine/catalog-schema').EncounterEnemyChoice['menace'];
         }[];
         readonly waveCount: { readonly min: number; readonly max: number };
-        /** Declaration-owned leading waves, rendered read-only. */
-        readonly fixedWaves?: readonly {
-          readonly waveIndex: number;
-          readonly spawns: readonly { readonly label: string; readonly count: number }[];
-        }[];
         readonly fangs?: {
           readonly perks: Readonly<
             Record<string, { readonly label: string; readonly maxPerRoom?: number }>

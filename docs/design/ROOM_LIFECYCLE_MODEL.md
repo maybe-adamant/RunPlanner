@@ -590,7 +590,19 @@ A declaration may fix leading waves. They count toward the wave total and its
 native budget shares (a two-wave profile generates only its 50% suffix), take no
 shared highlight and are never regenerated or published; the suffix keeps its
 native wave indices. A named WaveTemplate seed opens every generated wave and
-receives a sampled budget like any generated member.
+receives a sampled budget like any generated member. An all-fixed combat
+identity instead declares its complete native roster.
+
+The engine's encounter composition view presents one resolved combat phase
+from its identity, authored decisions and, when available, the exact generated
+assessment. It names a disposition—`fixed`, `fixedWavePrefix` with the prefix
+length, `generated` (authored) or `nativeGenerated` (not authored)—the declared
+wave bounds and known count, and one row per wave with its source (`fixed`,
+`authored` or `native`) and editability. Fixed rows carry declared counts;
+authored rows carry their seeds and additions with assessed counts; native
+rows exist only up to an exact declared wave count. Shared-enemy and Fear
+applicability follow the same assessment. The view is authoring presentation:
+it adds no lifecycle operation, finding or execution content.
 
 #### Enemy introductions
 

@@ -2,8 +2,14 @@ import type { RequirementExpression } from '@run-planner/engine/requirements';
 import type {
   RawEncounterDefinitionDeclaration,
   RawEncounterEnvelopeDeclaration,
+  RawEncounterFixedSpawn,
   RawEncounterSetDeclaration,
 } from './types';
+
+/** One native fixed spawn in an all-fixed roster. */
+export function spawn(enemyKey: string, count: number): RawEncounterFixedSpawn {
+  return { enemyKey, count };
+}
 
 const roomReward = {
   kind: 'countedChoice',
