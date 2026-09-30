@@ -32,9 +32,13 @@ it('packages exactly one separate cocoon map and matching visual inventory for a
   }
 });
 
-it('retains final marker display adjustments rather than raw annotation anchors', () => {
-  expect(cocoonMapAnnotations.F_Combat04!.points[6]!.slice(1)).toEqual([
-    1217.0976229319567, 520.3918527117813,
-  ]);
-  expect(cocoonMapAnnotations.F_Combat04!.radius).toBe(37);
+it('keeps numbered marker hit targets separate on every map', () => {
+  for (const { radius, points } of Object.values(cocoonMapAnnotations)) {
+    for (let index = 0; index < points.length; index++) {
+      const [, x, y] = points[index]!;
+      for (const [, otherX, otherY] of points.slice(index + 1)) {
+        expect(Math.hypot(x - otherX, y - otherY)).toBeGreaterThan(2 * radius);
+      }
+    }
+  }
 });

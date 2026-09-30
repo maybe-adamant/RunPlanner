@@ -105,13 +105,10 @@ export function CocoonRewardPointControl({
           <span className="encounter-customization-repair">Needs repair</span>
         ) : null}
       </label>
-      <p className="cocoon-map-hint">
-        Choose a numbered cocoon, or Any for native placement. Zoom to inspect; drag the background
-        to pan.
-      </p>
       <RoomMapViewport
         key={decision.selection.gameName}
         asset={map?.asset}
+        controlsPlacement="collapsible-overlay"
         title={`${decision.selection.gameName} cocoons`}
         overlay={
           map === undefined ? undefined : (

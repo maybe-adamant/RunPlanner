@@ -48,6 +48,11 @@ local function customization(value, label)
                 end
                 seenChoices[choice.choiceKey] = true
             end
+        elseif kind == "cocoonRewardPoint" then
+            row, rowError = p.exact(raw, { "decisionKey", "kind", "spawnPointId" }, {}, decisionLabel)
+            if not row then return nil, rowError end
+            local _, pointError = p.int(row.spawnPointId, decisionLabel .. ".spawnPointId", 1)
+            if pointError then return nil, pointError end
         elseif kind == "cocoonCount" then
             row, rowError = p.exact(raw, { "decisionKey", "kind", "count" }, {}, decisionLabel)
             if not row then return nil, rowError end

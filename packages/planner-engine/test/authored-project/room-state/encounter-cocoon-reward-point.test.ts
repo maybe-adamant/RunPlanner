@@ -76,7 +76,16 @@ describe('cocoon reward point authorship', () => {
   });
 
   it('keeps independent count/point resets and exact Undo snapshots with old-save round trip', () => {
-    const saved = loadUnderworldArachneCocoonsCheckpoint();
+    let saved = loadUnderworldArachneCocoonsCheckpoint();
+    for (const oldPhase of Object.values(arachneCocoonPhases)) {
+      saved = applyProjectCommand(saved, catalog, {
+        kind: 'ReplaceEncounterCustomization',
+        phase: oldPhase,
+        decisionKey: 'cocoonRewardPoint',
+        value: null,
+      });
+    }
+    expect(values(saved)).toEqual({ cocoonCount: { kind: 'cocoonCount', count: 11 } });
     expect(decodeProjectDocument(JSON.parse(encodeProjectDocument(saved)), catalog)).toEqual(saved);
     const id = catalog.rooms.byKey[occurrence(saved).gameName]!.cocoonRewardPointIds![0]!;
     const history = applyProjectHistoryCommand(createProjectHistory(saved), catalog, {

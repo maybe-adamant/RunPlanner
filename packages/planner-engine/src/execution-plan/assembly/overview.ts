@@ -787,11 +787,16 @@ function executionEncounterCustomization(
       );
       continue;
     }
-    if (value.kind === 'cocoonRewardPoint')
-      throw new CompilerError(
-        'executionCoverageMissing',
-        `${room.gameName}.${slotKey}.${decision.key} has no execution protocol support`,
+    if (value.kind === 'cocoonRewardPoint') {
+      published.push(
+        Object.freeze({
+          decisionKey: decision.key,
+          kind: 'cocoonRewardPoint',
+          spawnPointId: value.spawnPointId,
+        }),
       );
+      continue;
+    }
     if (value.kind === 'infiniteRoster') {
       const rosterSelection = decision.selection;
       if (rosterSelection.kind !== 'infiniteRoster')

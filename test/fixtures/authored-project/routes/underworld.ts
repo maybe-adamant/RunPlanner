@@ -366,7 +366,7 @@ export const arachneCocoonPhases = Object.freeze({
   ),
 });
 
-/** Entered F/G Arachne combats with the explicit F cocoon count. */
+/** Entered F/G Arachne combats: both choices in F, native count with a point in G. */
 export function underworldArachneCocoonProject(): ProjectDocument {
   let project = createCompleteFGProject();
   for (const [biomeKey, encounterKey] of [
@@ -378,12 +378,28 @@ export function underworldArachneCocoonProject(): ProjectDocument {
       phase: arachneCocoonPhases[biomeKey],
       encounterKey,
     });
-  return applyProjectCommand(project, catalog, {
+  project = applyProjectCommand(project, catalog, {
     kind: 'ReplaceEncounterCustomization',
     phase: arachneCocoonPhases.F,
     decisionKey: 'cocoonCount',
     value: { kind: 'cocoonCount', count: 11 },
   });
+  for (const biomeKey of ['F', 'G'] as const) {
+    const phase = arachneCocoonPhases[biomeKey];
+    const host = project.route.biomes
+      .find((biome) => biome.biomeKey === biomeKey)!
+      .topology!.occurrences.find((room) => room.occurrenceId === phase.owner.occurrenceId)!;
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceEncounterCustomization',
+      phase,
+      decisionKey: 'cocoonRewardPoint',
+      value: {
+        kind: 'cocoonRewardPoint',
+        spawnPointId: catalog.rooms.byKey[host.gameName]!.cocoonRewardPointIds![0]!,
+      },
+    });
+  }
+  return project;
 }
 
 /** Reached Fateful Twist and rival Scylla choice on the settled F/G Ixion route. */

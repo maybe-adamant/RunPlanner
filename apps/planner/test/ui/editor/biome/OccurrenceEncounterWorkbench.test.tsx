@@ -496,6 +496,7 @@ describe('OccurrenceEncounterWorkbench', () => {
       const scroll = within(dialog).getByRole('region', {
         name: `Pan map of ${host.gameName} cocoons`,
       });
+      await view.user.click(within(dialog).getByRole('button', { name: 'Map controls' }));
       fireEvent.click(within(dialog).getByRole('button', { name: 'Zoom in' }));
       expect(within(dialog).getByText('125%')).toBeTruthy();
       const beforePan = scroll.scrollLeft;

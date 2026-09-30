@@ -9,7 +9,7 @@ import type {
 
 /** The single room-session execution artifact supported by the app compiler. */
 export const EXECUTION_PLAN_FORMAT = 'run-planner-execution' as const;
-export const EXECUTION_PROTOCOL_VERSION = 51 as const;
+export const EXECUTION_PROTOCOL_VERSION = 52 as const;
 export const EXECUTION_CATALOG_VERSION = '0.55.0-anvil-of-fates' as const;
 export type ExecutionBiomeKey = 'F' | 'G' | 'H' | 'I' | 'N' | 'O' | 'P' | 'Q';
 
@@ -576,6 +576,11 @@ export interface ExecutionOverview {
           /** Combat cocoon setup draws exactly this count; placement stays native. */
           readonly kind: 'cocoonCount';
           readonly count: number;
+        }
+      | {
+          readonly decisionKey: string;
+          readonly kind: 'cocoonRewardPoint';
+          readonly spawnPointId: number;
         }
       | {
           readonly decisionKey: string;
