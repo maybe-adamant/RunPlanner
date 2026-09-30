@@ -1,5 +1,19 @@
 import { describe, expect, it } from 'vitest';
+import { catalog } from '@run-planner/hades2-catalog';
 import {
+  applyProjectCommand,
+  createEncounterPhaseAddress,
+  semanticAddressKey,
+} from '@run-planner/engine/authored-project';
+import { encounterCompositionView } from '@run-planner/engine/simulation';
+import {
+  createCompleteFGProject,
+  goldenFBiome,
+  goldenFOccurrenceId,
+} from '@run-planner/test-fixtures/underworld';
+import { projectStructuredWorkspaceFixture } from '@planner-test/fixtures/structuredWorkspace';
+import {
+  projectEncounterComposition,
   projectGeneratedEncounterAssessment,
   projectGeneratedEncounterHighlightPicker,
   projectGeneratedEncounterWaveDraft,
@@ -271,5 +285,54 @@ describe('Fangs target and perk presentation', () => {
     expect(
       stale.picker.sections.flatMap((section) => section.items.map((item) => item.value.kind)),
     ).toContain('perkPrefix');
+  });
+});
+
+describe('encounter composition presentation', () => {
+  const view = (key: string) => {
+    const value = encounterCompositionView(catalog, { selectedEncounterDefinitionKey: key });
+    if (value === undefined) throw new Error(`${key} has no composition`);
+    return projectEncounterComposition(value);
+  };
+  it('names each disposition and presents elite spawns', () => {
+    const mourner = view('MournerIntro');
+    expect(mourner.dispositionLabel).toBe('This encounter is fixed');
+    expect(mourner.waves.at(-1)?.spawns).toEqual([
+      { enemyKey: 'Mourner_Elite', label: 'Elite Mourner', count: 1 },
+    ]);
+    expect(view('RadiatorIntro').dispositionLabel).toBe('This encounter’s first wave is fixed');
+    expect(view('GeneratedF').dispositionLabel).toBe('Native generation, not customized');
+    expect(encounterCompositionView(catalog, { selectedEncounterDefinitionKey: 'Shop' })).toBe(
+      undefined,
+    );
+  });
+  it('publishes the assessed shared-enemy applicability on the bound interaction', () => {
+    const phase = createEncounterPhaseAddress(
+      goldenFBiome,
+      { kind: 'occurrence', occurrenceId: goldenFOccurrenceId(5, 1) },
+      'Encounter',
+    );
+    const composed = (waveCount: number) =>
+      projectStructuredWorkspaceFixture(
+        applyProjectCommand(createCompleteFGProject(), catalog, {
+          kind: 'ReplaceEncounterCustomization',
+          phase,
+          decisionKey: 'generatedComposition',
+          value: { kind: 'generated', waveCount, highlightKey: 'Guard' },
+        }),
+      ).workspace.interactions.encounterCustomizations.get(semanticAddressKey(phase))
+        ?.generatedComposition;
+    expect(composed(3)).toMatchObject({
+      dispositionLabel: 'This encounter is generated',
+      editable: true,
+      sharedEnemy: true,
+      waveCount: { value: 3 },
+    });
+    expect(composed(3)?.waves.map((wave) => wave.source)).toEqual([
+      'authored',
+      'authored',
+      'authored',
+    ]);
+    expect(composed(1)?.sharedEnemy).toBe(false);
   });
 });

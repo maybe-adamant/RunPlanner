@@ -75,6 +75,8 @@ export type WorkspaceOccurrenceInteractionRequirement =
         readonly candidateChoices: WorkspaceEncounterPhase['candidateChoices'];
         readonly owner: EncounterPhaseAddress;
         readonly selectedEncounterKey: string;
+        /** Resolved declaration identity, when known. */
+        readonly encounterDefinitionKey?: string;
         readonly selectionEnabled: boolean;
         readonly customization?: WorkspaceEncounterPhase['customization'];
         readonly nemesisFeature?: {

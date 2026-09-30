@@ -11,19 +11,24 @@ import {
   introductionGate,
   nemesisEncounterKeys,
   nemesisIncomingRewardExclusions,
+  spawn,
   supportedFieldNpcEncounterKeys,
 } from './shared';
 
 export const gEncounterDefinitions = [
   {
-    // EncounterData_Intro.lua FishmanIntro: fixed waves (one FishmanMelee; two
-    // FishmanMelee and a FishmanRanged; three of each). AlwaysForce until
-    // completed; it inherits no base, so it neither counts depth nor skips.
+    // EncounterData_Intro.lua:8 FishmanIntro. AlwaysForce until completed; it
+    // inherits no base, so it neither counts depth nor skips.
     key: 'FishmanIntro',
     label: 'Intro combat',
     kind: 'combat',
     countsEncounterDepth: false,
     hostsGorgon: true,
+    fixedRoster: [
+      [spawn('FishmanMelee', 1)],
+      [spawn('FishmanMelee', 2), spawn('FishmanRanged', 1)],
+      [spawn('FishmanMelee', 3), spawn('FishmanRanged', 3)],
+    ],
   },
   {
     key: 'GeneratedG',

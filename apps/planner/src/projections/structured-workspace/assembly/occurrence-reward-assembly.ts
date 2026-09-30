@@ -1,6 +1,7 @@
 import type { ResolvedRoutePosition } from '@run-planner/engine/authored-project';
 import {
   generatedEnemyLabel,
+  projectEncounterComposition,
   projectGeneratedMenace,
 } from '../interactions/generated-encounter-projection';
 import type {
@@ -61,6 +62,7 @@ import type {
   SelectedLevelResolutionAssessment,
 } from '@run-planner/engine/simulation';
 import {
+  encounterCompositionView,
   encounterPhaseAuthoringDomainForRoom,
   type EncounterPhaseAuthoringRoomOptions,
 } from '@run-planner/engine/simulation';
@@ -918,25 +920,6 @@ export function activeEncounterPhasesForOwner(
                       ),
                     ),
                     waveCount: Object.freeze({ ...decision.selection.waveCount }),
-                    ...(decision.selection.fixedWaves === undefined
-                      ? {}
-                      : {
-                          fixedWaves: Object.freeze(
-                            decision.selection.fixedWaves.map((spawns, index) =>
-                              Object.freeze({
-                                waveIndex: index + 1,
-                                spawns: Object.freeze(
-                                  spawns.map((spawn) =>
-                                    Object.freeze({
-                                      label: generatedEnemyLabel(spawn.label),
-                                      count: spawn.fixedCount!,
-                                    }),
-                                  ),
-                                ),
-                              }),
-                            ),
-                          ),
-                        }),
                     ...(decision.selection.fangs === undefined
                       ? {}
                       : {
@@ -1033,6 +1016,7 @@ export function activeEncounterPhasesForOwner(
               });
             }),
           );
+    const compositionView = encounterCompositionView(input.catalog, domain);
     const candidateChoices = Object.freeze(
       domain.choices.map((choice) =>
         Object.freeze({
@@ -1222,6 +1206,9 @@ export function activeEncounterPhasesForOwner(
         candidateChoices,
         customizable,
         ...(customization === undefined ? {} : { customization }),
+        ...(compositionView === undefined
+          ? {}
+          : { composition: projectEncounterComposition(compositionView) }),
         label:
           room.encounterEnvelopeKey === 'PEncounter'
             ? domain.slotKey === 'Intro'

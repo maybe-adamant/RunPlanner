@@ -57,6 +57,7 @@ export type {
   WorkspaceEncounterInteraction,
   WorkspaceEncounterCustomizationInteraction,
   WorkspaceGeneratedEncounterAssessment,
+  WorkspaceEncounterComposition,
   WorkspaceGeneratedWaveDraftChoice,
   WorkspaceGeneratedFangsDraftChoice,
   WorkspaceInfiniteRosterDraftChoice,

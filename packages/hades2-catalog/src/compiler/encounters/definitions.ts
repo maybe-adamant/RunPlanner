@@ -27,6 +27,18 @@ const encounterPhaseKinds = new Set<EncounterPhaseKind>([
 export function normalizeEncounterDefinitions(
   rawDefinitions: readonly RawEncounterDefinitionDeclaration[],
 ): CatalogCollection<EncounterDefinition> {
+  // Enemy identities are owned by generated pools; a fixed roster names them.
+  const enemyLabels = new Map<string, string>();
+  for (const raw of rawDefinitions)
+    for (const decision of raw.customization ?? [])
+      if (decision.selection.kind === 'generated')
+        for (const enemy of [
+          ...decision.selection.choices,
+          ...decision.selection.fixedEnemies,
+          ...(decision.selection.fixedWaves ?? []).flat(),
+          ...(decision.selection.generatedSeeds ?? []),
+        ])
+          if (!enemyLabels.has(enemy.key)) enemyLabels.set(enemy.key, enemy.label);
   const definitions = createCollection(
     rawDefinitions.map((raw, definitionIndex): EncounterDefinition => {
       const path = `encounterDefinitions[${definitionIndex}]`;
@@ -508,6 +520,35 @@ export function normalizeEncounterDefinitions(
                 hOptionalCapacityReservation: 1 as const,
               });
             })();
+      const fixedRoster =
+        raw.fixedRoster === undefined
+          ? undefined
+          : (() => {
+              if (raw.kind !== 'combat')
+                fail(`${path}.fixedRoster`, 'belongs only to a combat identity');
+              if (raw.customization?.some((decision) => decision.selection.kind === 'generated'))
+                fail(`${path}.fixedRoster`, 'excludes generated composition; use fixedWaves');
+              if (raw.fixedRoster.length === 0) fail(`${path}.fixedRoster`, 'must list waves');
+              return Object.freeze(
+                raw.fixedRoster.map((wave, waveIndex) => {
+                  const wavePath = `${path}.fixedRoster[${waveIndex}]`;
+                  if (wave.length === 0) fail(wavePath, 'must list spawns');
+                  return Object.freeze(
+                    wave.map((spawn, spawnIndex) => {
+                      const spawnPath = `${wavePath}[${spawnIndex}]`;
+                      const enemyLabel = enemyLabels.get(spawn.enemyKey);
+                      if (enemyLabel === undefined)
+                        fail(`${spawnPath}.enemyKey`, `unknown enemy ${spawn.enemyKey}`);
+                      return Object.freeze({
+                        enemyKey: spawn.enemyKey,
+                        label: enemyLabel,
+                        count: requirePositiveInteger(spawn.count, `${spawnPath}.count`),
+                      });
+                    }),
+                  );
+                }),
+              );
+            })();
       return Object.freeze({
         key,
         label,
@@ -541,6 +582,7 @@ export function normalizeEncounterDefinitions(
           : { npcShoppingProtection: Object.freeze({ ...npcShoppingProtection }) }),
         ...(traitOfferProducer === undefined ? {} : { traitOfferProducer }),
         ...(customization === undefined ? {} : { customization }),
+        ...(fixedRoster === undefined ? {} : { fixedRoster }),
         ...(nemesisRandomEvent === undefined ? {} : { nemesisRandomEvent }),
       });
     }),

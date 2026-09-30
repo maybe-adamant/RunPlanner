@@ -39,11 +39,22 @@ describe('Fresh File retained encounter customization', () => {
       .find((button) => button.dataset.semanticOwner === semanticAddressKey(phase))!;
     await view.user.click(trigger);
     const dialog = await screen.findByRole('dialog', { name: 'Customize' });
+    // The replacing identity's fixed waves stay visible with their controls disabled.
+    expect(within(dialog).getByText('This encounter is fixed')).toBeTruthy();
     expect(
       within(dialog)
         .getAllByRole('button')
+        .filter((button) => !(button as HTMLButtonElement).disabled)
         .map((button) => button.textContent),
     ).toEqual(['Close', 'Help', 'Reset']);
+    // Removal-only: the fixed wave count and no budget controls are offered.
+    expect((within(dialog).getByRole('radio', { name: '4' }) as HTMLInputElement).disabled).toBe(
+      true,
+    );
+    expect(within(dialog).queryByText('Budget')).toBeNull();
+    expect(
+      within(dialog).queryByText('Complete earlier choices to evaluate this encounter.'),
+    ).toBeNull();
     const before = view.application.store.getState().projectWorkspace.history!.past.length;
     await view.user.click(within(dialog).getByRole('button', { name: 'Reset' }));
     expect(view.application.store.getState().projectWorkspace.history!.past).toHaveLength(

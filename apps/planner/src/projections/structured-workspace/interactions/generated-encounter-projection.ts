@@ -1,4 +1,5 @@
 import type {
+  WorkspaceEncounterComposition,
   WorkspaceGeneratedEncounterAssessment,
   WorkspaceGeneratedWaveDraft,
   WorkspaceGeneratedWaveDraftChoice,
@@ -6,7 +7,10 @@ import type {
   WorkspaceGeneratedFangsDraftChoice,
 } from '../contracts/locals';
 import type { ContextualPickerModel } from '@planner/projections/contextual/contextualPicker';
-import type { GeneratedEncounterAssessment } from '@run-planner/engine/simulation';
+import type {
+  EncounterCompositionView,
+  GeneratedEncounterAssessment,
+} from '@run-planner/engine/simulation';
 import type { AuthoredGeneratedEncounterCustomization } from '@run-planner/engine/authored-project';
 
 import { projectStableIdentityPicker } from './room-feature-picker-model';
@@ -219,6 +223,50 @@ function issueMessage(
   }
 }
 
+function dispositionLabel(disposition: EncounterCompositionView['disposition']): string {
+  switch (disposition.key) {
+    case 'fixed':
+      return 'This encounter is fixed';
+    case 'fixedWavePrefix':
+      return disposition.fixedWaveCount === 1
+        ? 'This encounter’s first wave is fixed'
+        : `This encounter’s first ${disposition.fixedWaveCount} waves are fixed`;
+    case 'generated':
+      return 'This encounter is generated';
+    case 'nativeGenerated':
+      return 'Native generation, not customized';
+  }
+}
+
+/** Adapts the engine composition view with player-facing enemy and disposition labels. */
+export function projectEncounterComposition(
+  view: EncounterCompositionView,
+): WorkspaceEncounterComposition {
+  return Object.freeze({
+    label: view.label,
+    dispositionLabel: dispositionLabel(view.disposition),
+    editable: view.editable,
+    waveCount: view.waveCount,
+    waves: Object.freeze(
+      view.waves.map((wave) =>
+        Object.freeze({
+          waveIndex: wave.waveIndex,
+          editable: wave.editable,
+          source: wave.source,
+          spawns: Object.freeze(
+            wave.spawns.map((spawn) =>
+              Object.freeze({ ...spawn, label: generatedEnemyLabel(spawn.label) }),
+            ),
+          ),
+        }),
+      ),
+    ),
+    sharedEnemy: view.sharedEnemy,
+    fangs: view.fangs,
+    menace: view.menace,
+  });
+}
+
 /** Adapts the engine assessment into the only generated-composition product React receives. */
 export function projectGeneratedEncounterAssessment(
   assessment: GeneratedEncounterAssessment,
@@ -259,10 +307,6 @@ export function projectGeneratedEncounterAssessment(
       }),
     ),
     composition: assessment.composition,
-    sharedEnemy:
-      assessment.eligibleHighlightKeys.length > 0 ||
-      (assessment.introductions?.excludedHighlightKeys.length ?? 0) > 0 ||
-      authored?.highlightKey !== undefined,
     warnings: Object.freeze(
       [...new Set(assessment.waves.flatMap((wave) => wave.activeMemberKeys))]
         .filter(
@@ -275,12 +319,6 @@ export function projectGeneratedEncounterAssessment(
     ),
     ...(assessment.budgetDomain === undefined ? {} : { budgetDomain: assessment.budgetDomain }),
     ...(assessment.budget === undefined ? {} : { budget: assessment.budget }),
-    ...(assessment.fangs === undefined
-      ? {}
-      : { fangs: Object.freeze({ active: assessment.fangs.active }) }),
-    ...(assessment.menace === undefined
-      ? {}
-      : { menace: Object.freeze({ active: assessment.menace.active }) }),
     waves: Object.freeze(
       assessment.waves.map((wave) => {
         return Object.freeze({

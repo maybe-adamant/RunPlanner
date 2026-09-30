@@ -10,6 +10,7 @@ import {
   artemisIncomingRewardExclusions,
   nemesisEncounterKeys,
   nemesisIncomingRewardExclusions,
+  spawn,
   supportedFieldNpcEncounterKeys,
 } from './shared';
 
@@ -32,14 +33,19 @@ export const fEncounterDefinitions = [
     canEncounterSkip: true,
   },
   {
-    // EncounterData.lua FIntroFight: fixed waves (Brawler; four Guards; three
-    // Mages; Brawler, three Guards and a Mage). It inherits no base, so it does
-    // not count encounter depth and cannot be skipped.
+    // EncounterData.lua:515 FIntroFight. It inherits no base, so it does not
+    // count encounter depth and cannot be skipped.
     key: 'FIntroFight',
     label: 'Intro combat',
     kind: 'combat',
     countsEncounterDepth: false,
     hostsGorgon: true,
+    fixedRoster: [
+      [spawn('Brawler', 1)],
+      [spawn('Guard', 4)],
+      [spawn('Mage', 3)],
+      [spawn('Brawler', 1), spawn('Guard', 3), spawn('Mage', 1)],
+    ],
   },
   {
     // Radiator and its elite introduce through RadiatorIntro (EnemyData_Radiator.lua:6):

@@ -7,13 +7,13 @@ import {
   type WorkspaceEncounterPhase,
   type WorkspaceInteractionCatalog,
 } from '@planner/projections/structured-workspace';
-import { useFindingTarget } from '@planner/ui/feedback/useFindingTarget';
+import { useFindingExplanations, useFindingTarget } from '@planner/ui/feedback/useFindingTarget';
 import { semanticOwnerControlElementId } from '@planner/ui/feedback/semanticOwner';
 import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
 import { ContextualPicker } from '@planner/ui/controls/ContextualPicker';
 import { useWorkspaceInteraction } from '@planner/ui/controls/useWorkspaceInteraction';
 import { NemesisEventSelector } from '../NemesisEventEditor';
-import { GeneratedEncounterCustomizationControl } from './GeneratedEncounterCustomizationControl';
+import { EncounterCompositionControl } from './EncounterCompositionControl';
 import { CocoonCountControl } from './CocoonCountControl';
 import { CocoonRewardPointControl } from './CocoonRewardPointControl';
 import { InfiniteRosterControl } from './InfiniteRosterControl';
@@ -40,20 +40,33 @@ function EncounterCustomizationControl({
   const executeIntent = useCommandIntent();
   const [manualOpen, setManualOpen] = useState(false);
   const dialogRef = useRef<HTMLDialogElement>(null);
-  const interaction = requireWorkspaceInteraction(
-    interactions.encounterCustomizations,
-    workspaceInteractionKey(phase.address),
-  );
+  const interactionKey = workspaceInteractionKey(phase.address);
+  const interaction =
+    phase.customization === undefined
+      ? undefined
+      : requireWorkspaceInteraction(interactions.encounterCustomizations, interactionKey);
+  const composition = interaction?.generatedComposition ?? phase.composition;
+  // A retained removal-only decision on a fixed identity is still an edit.
+  const editable = composition?.editable === true || phase.customization !== undefined;
   const findingTarget = useFindingTarget();
-  const customizationId = phase.customizable
-    ? `encounter-customization-${semanticOwnerControlElementId(phase.address)}`
-    : semanticOwnerControlElementId(phase.address);
-  const triggerTarget = findingTarget(
+  const required = useFindingExplanations(
     phase.address,
-    customizationId,
-    phase.address,
-    (finding) => finding.code === 'encounterCustomizationUnavailable',
+    (finding) => finding.code === 'encounterCustomizationRequired',
   );
+  const customizationId =
+    phase.customizable || interaction === undefined
+      ? `encounter-customization-${semanticOwnerControlElementId(phase.address)}`
+      : semanticOwnerControlElementId(phase.address);
+  const triggerTarget =
+    interaction === undefined
+      ? { id: customizationId }
+      : findingTarget(
+          phase.address,
+          customizationId,
+          phase.address,
+          (finding) => finding.code === 'encounterCustomizationUnavailable',
+        );
+  const generatedDecision = phase.customization?.find(isGeneratedEncounterDecision);
   useEffect(() => {
     const dialog = dialogRef.current;
     if (dialog === null) return;
@@ -82,11 +95,11 @@ function EncounterCustomizationControl({
       <button
         {...triggerTarget}
         className="quiet-action"
-        disabled={triggerTarget['aria-disabled']}
+        disabled={'aria-disabled' in triggerTarget ? triggerTarget['aria-disabled'] : undefined}
         onClick={() => setManualOpen(true)}
         type="button"
       >
-        Customize encounter
+        {editable ? 'Customize encounter' : 'Inspect encounter'}
       </button>
       {manualOpen ? (
         <dialog
@@ -101,7 +114,22 @@ function EncounterCustomizationControl({
         >
           <div className="trait-offer-dialog encounter-customization-dialog">
             <header className="encounter-customization-header">
-              <h2 id={`encounter-customization-title-${customizationId}`}>Customize</h2>
+              <h2 id={`encounter-customization-title-${customizationId}`}>
+                {editable ? 'Customize' : 'Inspect'}
+              </h2>
+              {composition === undefined ? null : (
+                <div className="encounter-composition-identity">
+                  <span>{composition.label}</span>
+                  <span className="encounter-generated-context">
+                    {composition.dispositionLabel}
+                  </span>
+                  {required.map((explanation) => (
+                    <span className="encounter-customization-repair" key={explanation}>
+                      {explanation}
+                    </span>
+                  ))}
+                </div>
+              )}
               <button
                 aria-label="Close encounter customization"
                 className="quiet-action"
@@ -112,21 +140,40 @@ function EncounterCustomizationControl({
               </button>
             </header>
             <div className="encounter-customization-fields">
+              {composition === undefined ? (
+                generatedDecision?.value === undefined || interaction === undefined ? null : (
+                  <section className="encounter-generated-customization">
+                    <div className="encounter-generated-heading">
+                      <h3>Encounter Composition</h3>
+                      <button
+                        className="danger-action action-compact"
+                        onClick={() =>
+                          executeIntent(interaction.intentFor(generatedDecision.key, null))
+                        }
+                        type="button"
+                      >
+                        Reset
+                      </button>
+                    </div>
+                    <p className="encounter-customization-repair">Needs repair</p>
+                  </section>
+                )
+              ) : (
+                <EncounterCompositionControl
+                  composition={composition}
+                  {...(generatedDecision === undefined ? {} : { decision: generatedDecision })}
+                  encounterKey={
+                    phase.selectedEncounter.nativeEncounterDefinitionKey ??
+                    phase.selectedEncounter.key
+                  }
+                  idKey={interactionKey}
+                  {...(interaction === undefined ? {} : { interaction })}
+                />
+              )}
               {phase.customization?.map((decision) => {
                 const value = decision.value;
-                if (isGeneratedEncounterDecision(decision)) {
-                  return (
-                    <GeneratedEncounterCustomizationControl
-                      decision={decision}
-                      encounterKey={
-                        phase.selectedEncounter.nativeEncounterDefinitionKey ??
-                        phase.selectedEncounter.key
-                      }
-                      interaction={interaction}
-                      key={decision.key}
-                    />
-                  );
-                }
+                if (interaction === undefined || isGeneratedEncounterDecision(decision))
+                  return null;
                 if (decision.selection.kind === 'cocoonCount') {
                   return (
                     <CocoonCountControl
@@ -459,13 +506,13 @@ export function EncounterPhaseControl({
           );
         })();
   const customizationControl =
-    phase.customization === undefined ? null : (
+    phase.customization === undefined && phase.composition === undefined ? null : (
       <EncounterCustomizationControl interactions={interactions} phase={phase} />
     );
   return (
     <section
       {...(!phase.customizable &&
-      customizationControl === null &&
+      phase.customization === undefined &&
       phase.nemesisFeature === undefined
         ? {
             ...findingTarget(

@@ -257,7 +257,12 @@ context and fixed-template rules; it does not turn every Combat-room encounter
 into a generic generator. A mixed profile declares its fixed leading waves
 (spawns with fixed counts), its named generated seeds and native
 `RequireCompletedIntro`; the wave bounds are an exact total that exceeds the
-fixed waves. An enemy choice may name its native introduction, which must be a
+fixed waves. An all-fixed combat identity declares `fixedRoster` instead: its
+native SpawnWaves in order, each spawn an enemy identity some generated pool
+declares, with a positive count. It excludes generated composition, belongs
+only to combat identities and is not execution input; every combat identity
+declares generated composition, another customization or a fixed roster.
+An enemy choice may name its native introduction, which must be a
 declared definition; a definition marked as an enemy-triggered introduction must
 be named by some enemy. An enemy choice may also declare an admission
 requirement for its native profile gate. An authoring profile may name the only

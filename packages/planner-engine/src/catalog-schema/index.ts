@@ -489,6 +489,15 @@ export interface EncounterDefinition {
   };
   /** Closed native encounter-customization domain for this concrete encounter. */
   readonly customization?: readonly EncounterCustomizationDecision[];
+  /** Native SpawnWaves of an all-fixed combat identity, in wave order. */
+  readonly fixedRoster?: readonly (readonly EncounterFixedSpawn[])[];
+}
+
+/** One declaration-owned fixed spawn with its native count. */
+export interface EncounterFixedSpawn {
+  readonly enemyKey: string;
+  readonly label: string;
+  readonly count: number;
 }
 
 export interface EncounterCustomizationChoice {

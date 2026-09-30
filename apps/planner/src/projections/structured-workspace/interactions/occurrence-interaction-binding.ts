@@ -15,6 +15,7 @@ import type { Catalog } from '@run-planner/engine/catalog-schema';
 import type { ResolvedRewardOffer } from '@run-planner/engine/reward-kernel';
 import {
   generatedEncounterSupportForProjectEvaluationAssembly,
+  encounterCompositionView,
   infiniteRosterSupportForProjectEvaluationAssembly,
   nemesisRandomEventCandidateSupportForProjectEvaluationAssembly,
   type NemesisRandomEventCandidateSupport,
@@ -70,6 +71,7 @@ import type {
 import type { WorkspaceOccurrenceInteractionRequirement } from './interaction-requirements';
 import { candidateInteraction } from './interaction-binding-primitives';
 import {
+  projectEncounterComposition,
   projectGeneratedEncounterAssessment,
   projectGeneratedEncounterHighlightPicker,
   projectGeneratedEncounterWaveDraft,
@@ -517,6 +519,23 @@ export function bindOccurrenceLocalInteractions(
                     introductionLabel,
                     generatedValue,
                   );
+            const generatedCompositionView =
+              generatedDecision === undefined
+                ? undefined
+                : encounterCompositionView(
+                    catalog,
+                    {
+                      ...(phase.encounterDefinitionKey === undefined
+                        ? {}
+                        : { selectedEncounterDefinitionKey: phase.encounterDefinitionKey }),
+                      customization: phase.customization,
+                    },
+                    generatedEngineAssessment,
+                  );
+            const generatedComposition =
+              generatedCompositionView === undefined
+                ? undefined
+                : projectEncounterComposition(generatedCompositionView);
             const generatedHighlightPicker =
               generatedDecision === undefined || generatedSelection === undefined
                 ? undefined
@@ -660,6 +679,7 @@ export function bindOccurrenceLocalInteractions(
                     }),
                 intentFor: customizationIntentFor,
                 ...(generatedAssessment === undefined ? {} : { generatedAssessment }),
+                ...(generatedComposition === undefined ? {} : { generatedComposition }),
                 ...(generatedEdits === undefined ? {} : { generatedEdits }),
                 ...(generatedDecision?.value === undefined && generatedCapability !== undefined
                   ? { initializeGenerated: generatedCapability.initialize }

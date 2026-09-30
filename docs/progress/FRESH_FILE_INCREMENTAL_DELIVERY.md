@@ -762,7 +762,7 @@ fails it though natively legal (`StaffDoubleAttackTrait` only requires
 Hammer can be authored on Fresh File today and reports `wrongHammerLoadout`;
 bounded until the Hammer exclusion lands.
 
-### M — Encounter composition dialog (locked 2026-09-29)
+### M — Encounter composition dialog (delivered 2026-09-29)
 
 Owner-locked polish slice on `main` after the merge. One dialog for every
 combat phase with a stable layout; editability is a per-row property, never a
@@ -798,6 +798,15 @@ citations; engine view witnesses for fixed, mixed, generated and native
 phases on mature and Fresh; UI tests for the disabled fixed rows, the
 Inspect/Customize label rule, wave 1 visible on a mixed introduction, no
 Reset on read-only; mature golden projects and execution fixtures unchanged.
+
+Delivered: `fixedRoster` on the seven named identities and on the 67 P
+entrance and vignette combats (each vignette's single fixed wave fills
+`GeneratedP_PreCombat`'s one-wave total); the engine `encounterCompositionView`;
+one `EncounterCompositionControl` for every combat phase. Wave rows reuse the
+existing wave tabs, one tab per wave including fixed ones; the dialog opens on
+the first editable wave. A retained removal-only customization on a fixed
+identity keeps "Customize encounter" and its Reset. No schema, protocol,
+execution fixture or mature golden project change.
 
 ### L — Execution enablement (locked 2026-09-29)
 
