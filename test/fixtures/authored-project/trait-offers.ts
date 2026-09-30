@@ -214,7 +214,14 @@ export function authorLegalTraitOffers(project: ProjectDocument): ProjectDocumen
         invalid.address,
         invalid.offer.giverKey,
       );
+      // Only a supported start repairs; a repairable draft would not.
       if (replacement === undefined) continue;
+      const assessed = session.evaluate({
+        kind: 'traitOffer',
+        trait: invalid.address,
+        value: replacement,
+      });
+      if (assessed.kind !== 'traitOffer' || !assessed.result.supported) continue;
       current = applyProjectCommand(current, catalog, {
         kind: 'ReplaceTraitOffer',
         trait: invalid.address,

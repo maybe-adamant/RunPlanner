@@ -277,6 +277,8 @@ export interface WorkspaceNemesisEventInteraction extends WorkspaceNemesisEventS
   ) => WorkspaceCommandIntent<
     Extract<ProjectCommand, { readonly kind: 'ReplaceNemesisRandomEventInteraction' }>
   >;
+  /** Whether the event's candidate context is reached; only then can its details be chosen. */
+  readonly contextReached: boolean;
   readonly key: string;
   readonly load: () => WorkspaceNemesisEventDomain | undefined;
   readonly reward: ResolvedRewardOffer | null;

@@ -202,6 +202,36 @@ export function projectEncounterPicker(
     },
     (encounterKey) => encounterKey,
   );
+  // Without a reached phase context the members are the declared domain only:
+  // list them once, claiming no availability.
+  if (
+    model.sections.length > 0 &&
+    model.sections.every((section) => section.kind === 'unassessed')
+  ) {
+    const declared = (item: ContextualPickerModel<string>['sections'][number]['items'][number]) =>
+      Object.freeze({
+        key: item.key,
+        value: item.value,
+        label: item.label,
+        state: item.state,
+        selected: item.selected,
+        disabled: item.disabled,
+      });
+    const items = model.sections.flatMap((section) => section.items).map(declared);
+    const selected = items.find((item) => item.selected);
+    return Object.freeze({
+      ...(selected === undefined ? {} : { selected }),
+      sections: Object.freeze([
+        Object.freeze({
+          key: 'unassessed:declared',
+          kind: 'unassessed' as const,
+          label: 'Declared encounters · evaluated after earlier choices',
+          collapsible: false,
+          items: Object.freeze(items),
+        }),
+      ]),
+    });
+  }
   if (selectedEncounterKey !== 'NemesisRandomEvent' || model.selected?.disabled !== true)
     return model;
   // Reopening this selected branch edits its family; it does not select an

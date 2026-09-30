@@ -8,12 +8,15 @@ const {
   catalog,
   applyProjectCommand,
   createBiomeAddress,
+  createCompleteFGProject,
   createEncounterPhaseAddress,
   createOccurrenceAddress,
   createOccurrenceId,
   createRewardWheelAddress,
   createShopOfferAddress,
   createRouteStartKeepsakeSelectionAddress,
+  goldenFBiome,
+  goldenFOccurrenceId,
   semanticAddressKey,
   loadSurfaceNOPQProject,
   loadSurfaceNOPProject,
@@ -24,6 +27,40 @@ const {
 } = support;
 
 describe('structured workspace interaction binding', () => {
+  it('offers no generated edits or pickers for a generated phase without its context', () => {
+    const phase = createEncounterPhaseAddress(
+      goldenFBiome,
+      { kind: 'occurrence', occurrenceId: goldenFOccurrenceId(5, 1) },
+      'Encounter',
+    );
+    const reached = bind(createCompleteFGProject(), 'Underworld', 'F').interactions;
+    const reachedPhase = reached.encounterCustomizations.get(semanticAddressKey(phase));
+    expect(reachedPhase?.generatedAssessment).toBeDefined();
+    expect(reachedPhase?.generatedEdits).toBeDefined();
+    const project = applyProjectCommand(createCompleteFGProject(), catalog, {
+      kind: 'SelectEncounter',
+      phase: createEncounterPhaseAddress(
+        goldenFBiome,
+        { kind: 'occurrence', occurrenceId: goldenFOccurrenceId(1, 1) },
+        'Encounter',
+      ),
+      encounterKey: 'ArtemisCombatF',
+    });
+    const withheld = bind(project, 'Underworld', 'F').interactions.encounterCustomizations.get(
+      semanticAddressKey(phase),
+    );
+    expect(withheld?.generatedComposition?.editable).toBe(true);
+    for (const key of [
+      'generatedAssessment',
+      'generatedEdits',
+      'generatedHighlightPicker',
+      'initializeGenerated',
+      'generatedWaveDraftFor',
+      'generatedFangsDraftFor',
+    ])
+      expect(withheld).not.toHaveProperty(key);
+  });
+
   it('binds the exact Gorgon condition replacement command', () => {
     const project = applyProjectCommand(loadSurfaceNOPProject(), catalog, {
       kind: 'ReplaceStartingKeepsake',

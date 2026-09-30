@@ -24,7 +24,10 @@ import type {
   LevelResolutionCandidateGroup,
   LevelResolutionCandidateProjection,
 } from '@planner/projections/candidates/candidateProjection';
-import type { WorkspaceLevelResolutionInteraction } from '@planner/projections/structured-workspace';
+import type {
+  WorkspaceInteractionCatalog,
+  WorkspaceLevelResolutionInteraction,
+} from '@planner/projections/structured-workspace';
 import { createGoldenFGHIProject, goldenFBiome } from '@run-planner/test-fixtures/underworld';
 
 import {
@@ -204,9 +207,11 @@ describe('Pom resolution editor', () => {
     readonly load: (
       value: AuthoredLevelResolution,
     ) => LevelResolutionCandidateProjection | undefined;
+    readonly contextReached?: boolean;
   }): WorkspaceLevelResolutionInteraction {
     return Object.freeze({
       acquisitionRoleLabel: 'Selected',
+      contextReached: input.contextReached ?? true,
       intentFor: () => {
         throw new Error('editor boundary test does not dispatch intents');
       },
@@ -218,6 +223,49 @@ describe('Pom resolution editor', () => {
       value: input.value,
     });
   }
+
+  it('disables an unreached Pom launcher and opens no editor for it or a stale target', () => {
+    const application = createApplication();
+    const value: AuthoredLevelResolution = {
+      kind: 'choice',
+      offeredTraitKeys: [],
+      selectedTraitKey: null,
+    };
+    const unreached = interaction({ value, load: () => undefined, contextReached: false });
+    const interactions = {
+      levelResolutions: new Map([[unreached.key, unreached]]),
+    } as unknown as WorkspaceInteractionCatalog;
+    render(
+      <Provider store={application.store}>
+        <PomResolutionLauncher
+          control={{
+            acquisitionRoleLabel: 'Selected',
+            address,
+            levelCount: 1,
+            settledEmptyNoOp: false,
+            marker: undefined as never,
+            rewardOwner: address.owner,
+            status: 'unspecified',
+            value,
+          }}
+          interactions={interactions}
+        />
+        <PomResolutionDialog interactions={interactions} target={address} />
+        <PomResolutionDialog
+          interactions={interactions}
+          target={createLevelResolutionAddress(
+            createIncomingRewardAddress(goldenFBiome, createOccurrenceId('pom-stale')),
+            'selected',
+          )}
+        />
+      </Provider>,
+    );
+    const launcher = screen.getByRole('button', { name: /Edit Pom/ }) as HTMLButtonElement;
+    expect(launcher.disabled).toBe(true);
+    expect(launcher.title).toBe('Waits on an earlier choice');
+    expect(screen.queryByRole('dialog')).toBeNull();
+    application.dispose();
+  });
 
   it('authors a complete visible Pom offer while preventing duplicate targets', async () => {
     const user = userEvent.setup();

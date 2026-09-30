@@ -128,6 +128,7 @@ export function bindTraitOfferInteractions(input: {
             }),
           }),
         value: control.offer,
+        contextReached: control.contextReached,
         traitOfferStartingOutcome: startingOutcome,
         appendTraitOfferDraft: (value: AuthoredTraitOffer) =>
           candidates.appendTraitOfferDraft(control.address, value),

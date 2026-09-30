@@ -51,6 +51,7 @@ export function NemesisInteractionEditor({
     executeIntent(interaction.detailIntentFor({ ...next, reward }));
   const fixedResultLabel = interaction.fixedResultLabel;
   const picker = candidates.result?.rewardPicker ?? emptyPicker;
+  const waiting = interaction.contextReached ? {} : { disabledTitle: 'Waits on an earlier choice' };
   const traitPicker = candidates.result?.traitPicker ?? emptyPicker;
   return (
     <div className="nemesis-interaction-controls">
@@ -74,6 +75,7 @@ export function NemesisInteractionEditor({
           id={`nemesis-trait-${interaction.key}`}
           label="Boon offered"
           layout="inline"
+          {...waiting}
           loading={candidates.pending}
           model={traitPicker}
           onOpenChange={(open) => {
@@ -92,6 +94,7 @@ export function NemesisInteractionEditor({
           id={`nemesis-reward-${interaction.key}`}
           label="Reward"
           layout="inline"
+          {...waiting}
           loading={candidates.pending}
           model={picker}
           onOpenChange={(open) => {

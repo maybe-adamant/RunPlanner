@@ -443,12 +443,6 @@ export function EncounterCompositionControl({
   const assessment = value === undefined ? undefined : interaction?.generatedAssessment;
   // A retained removal-only value on a non-editable composition authors nothing.
   const authorable = value !== undefined && composition.editable;
-  const contextUnavailable =
-    (authorable && assessment === undefined) ||
-    (value === undefined &&
-      decision !== undefined &&
-      interaction !== undefined &&
-      interaction.initializeGenerated === undefined);
   // Authored rows have content only in an active assessed composition.
   const rows = composition.waves.filter(
     (wave) => wave.source !== 'authored' || assessment?.composition === 'active',
@@ -785,11 +779,6 @@ export function EncounterCompositionControl({
               className="secondary-action action-compact encounter-composition-edit"
               data-has-findings={requiredFindings.length > 0}
               disabled={interaction.initializeGenerated === undefined}
-              title={
-                interaction.initializeGenerated === undefined
-                  ? 'Complete earlier choices to evaluate this encounter.'
-                  : undefined
-              }
               onClick={() => {
                 const initial = interaction.initializeGenerated?.();
                 if (initial === undefined) {
@@ -1050,17 +1039,12 @@ export function EncounterCompositionControl({
       ))}
       {requiredFindings.length > 0 ||
       initializationFailure ||
-      contextUnavailable ||
       (assessment && assessment.issues.length > 0) ? (
         <section className="encounter-composition-findings" aria-label="Customization findings">
           <h4>Findings</h4>
           {initializationFailure ? (
             <p className="encounter-customization-repair">
               No supported composition is available here.
-            </p>
-          ) : contextUnavailable ? (
-            <p className="encounter-customization-repair">
-              Complete earlier choices to evaluate this encounter.
             </p>
           ) : null}
           {requiredFindings.map((message) => (

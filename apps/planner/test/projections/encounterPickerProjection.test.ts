@@ -181,6 +181,43 @@ describe('encounter picker projection', () => {
     });
   });
 
+  it('lists a context-less phase as its declared encounters without availability claims', () => {
+    const picker = createContextualPickerProjection(createContextualOptionResolver(catalog));
+    const model = projectEncounterPicker(
+      catalog,
+      picker,
+      Object.freeze([
+        Object.freeze({ label: 'Default combat', value: 'default' }),
+        Object.freeze({ label: 'Later combat', value: 'later' }),
+      ]),
+      'default',
+      Object.freeze([
+        candidate(
+          'default',
+          'unavailable',
+          Object.freeze({ kind: 'coverageUnavailable' as const }),
+        ),
+        candidate('later', 'unavailable', Object.freeze({ kind: 'coverageUnavailable' as const })),
+      ]),
+    );
+    expect(model.sections).toEqual([
+      {
+        key: 'unassessed:declared',
+        kind: 'unassessed',
+        label: 'Declared encounters · evaluated after earlier choices',
+        collapsible: false,
+        items: [
+          expect.objectContaining({ label: 'Default combat', selected: true, disabled: false }),
+          expect.objectContaining({ label: 'Later combat', selected: false, disabled: false }),
+        ],
+      },
+    ]);
+    for (const item of model.sections[0]!.items) {
+      expect(item).not.toHaveProperty('status');
+      expect(item).not.toHaveProperty('explanation');
+    }
+  });
+
   it('carries real encounter preparation failures through the candidate session to the picker', () => {
     const assembly = simulateProjectAssembly(catalog, createCompleteFGProject());
     const phase = createEncounterPhaseAddress(

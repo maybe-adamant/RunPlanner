@@ -4,6 +4,7 @@ import { act, cleanup, fireEvent, screen, waitFor, within } from '@testing-libra
 import { catalog } from '@run-planner/hades2-catalog';
 import {
   applyProjectCommand,
+  createBiomeAddress,
   createEncounterPhaseAddress,
   createOccurrenceId,
   semanticAddressKey,
@@ -28,8 +29,11 @@ import {
   pOccurrenceId,
 } from '@run-planner/test-fixtures/surface';
 import {
+  authorFreshFileRoomIssues,
   createFreshFileRouteProject,
   freshFileFBiome,
+  newHFieldsRoomId,
+  withNewHFieldsRoom,
 } from '@run-planner/test-fixtures/fresh-file';
 import { projectStructuredWorkspaceFixture } from '@planner-test/fixtures/structuredWorkspace';
 import { renderOccurrenceWorkbench } from '@planner-test/support/biome-workbench';
@@ -83,6 +87,20 @@ async function open(project: ProjectDocument, owner = phase) {
     .find((button) => button.dataset.semanticOwner === semanticAddressKey(owner))!;
   await view.user.click(trigger);
   return { ...view, dialog: await screen.findByRole('dialog', { name: /\(.+\)$/ }) };
+}
+function customizeTrigger(project: ProjectDocument, owner = phase): HTMLButtonElement {
+  renderOccurrenceWorkbench(
+    project,
+    owner.routeKey,
+    owner.biomeKey,
+    occurrenceById(owner.owner.occurrenceId),
+  );
+  openRoomTab('Room Timeline');
+  return screen
+    .getAllByRole('button', { name: 'Customize encounter' })
+    .find(
+      (button) => button.dataset.semanticOwner === semanticAddressKey(owner),
+    )! as HTMLButtonElement;
 }
 async function initialize(view: Awaited<ReturnType<typeof open>>) {
   await view.user.click(within(view.dialog).getByRole('button', { name: 'Edit' }));
@@ -524,7 +542,7 @@ describe('generated encounter customization workflows', () => {
     await waitFor(() => expect(document.activeElement).toBe(trigger));
     expect(screen.queryByRole('dialog')).toBeNull();
   });
-  it('keeps retained customization editable when invalid context has no generated candidates', async () => {
+  it('disables Customize for a retained composition whose context is unreached', async () => {
     let project = customize(createCompleteFGProject(), phase, composed);
     project = applyProjectCommand(project, catalog, {
       kind: 'SelectEncounter',
@@ -535,15 +553,71 @@ describe('generated encounter customization workflows', () => {
       ),
       encounterKey: 'ArtemisCombatF',
     });
-    const projection = projectStructuredWorkspaceFixture(project);
-    expect(
-      projection.workspace.interactions.encounterCustomizations.get(semanticAddressKey(phase))
-        ?.generatedAssessment,
-    ).toBeUndefined();
-    const view = await open(project);
-    expect(within(view.dialog).getByRole('heading', { name: 'Wave 3' })).toBeTruthy();
+    const interaction = projectStructuredWorkspaceFixture(
+      project,
+    ).workspace.interactions.encounterCustomizations.get(semanticAddressKey(phase));
+    expect(interaction?.generatedAssessment).toBeUndefined();
+    const button = customizeTrigger(project);
+    expect(button.disabled).toBe(true);
+    expect(button.title).toBe('Waits on an earlier choice');
   });
-  it('explains why Customize is disabled before its candidate context is available', async () => {
+  it('keeps an earlier authored phase editable while a later phase in its room is the issue', async () => {
+    const room = (phaseKey: string) =>
+      createEncounterPhaseAddress(
+        createBiomeAddress('FreshFile', 'H'),
+        { kind: 'occurrence', occurrenceId: newHFieldsRoomId },
+        phaseKey,
+      );
+    const authored = authorFreshFileRoomIssues(
+      withNewHFieldsRoom(createFreshFileRouteProject(), 'FreshFile', 'max'),
+      'H',
+      newHFieldsRoomId,
+    ).project;
+    const project = applyProjectCommand(authored, catalog, {
+      kind: 'ReplaceEncounterCustomization',
+      phase: room('Cage02'),
+      decisionKey: 'generatedComposition',
+      value: null,
+    });
+    const earlier = await open(project, room('Cage01'));
+    expect(within(earlier.dialog).queryByRole('tab', { name: /^Wave 1/ })).toBeTruthy();
+    expect(
+      (within(earlier.dialog).getByRole('button', { name: 'Wave 1 enemies' }) as HTMLButtonElement)
+        .disabled,
+    ).toBe(false);
+    cleanup();
+    const later = customizeTrigger(project, room('Cage03'));
+    expect(later.disabled).toBe(true);
+    expect(later.title).toBe('Waits on an earlier choice');
+  });
+  it('lists a context-less phase selector as declared encounters without availability claims', async () => {
+    const project = applyProjectCommand(createCompleteFGProject(), catalog, {
+      kind: 'SelectEncounter',
+      phase: createEncounterPhaseAddress(
+        goldenFBiome,
+        { kind: 'occurrence', occurrenceId: goldenFOccurrenceId(1, 1) },
+        'Encounter',
+      ),
+      encounterKey: 'ArtemisCombatF',
+    });
+    const view = renderOccurrenceWorkbench(
+      project,
+      phase.routeKey,
+      phase.biomeKey,
+      occurrenceById(phase.owner.occurrenceId),
+    );
+    openRoomTab('Room Timeline');
+    await view.user.click(screen.getByRole('button', { name: 'Encounter' }));
+    const listbox = await screen.findByRole('listbox');
+    expect(listbox.textContent).toContain('Declared encounters · evaluated after earlier choices');
+    const options = within(listbox).getAllByRole('option');
+    expect(options.length).toBeGreaterThan(1);
+    for (const option of options) {
+      expect(option.textContent).not.toMatch(/Not evaluated|Unavailable|has not been evaluated/);
+      expect(option.getAttribute('aria-disabled')).not.toBe('true');
+    }
+  });
+  it('disables Customize with a static title while the phase context is unreached', async () => {
     const owner = createEncounterPhaseAddress(
       goldenHBiome,
       { kind: 'occurrence', occurrenceId: createOccurrenceId('golden-h-combat09') },
@@ -554,15 +628,27 @@ describe('generated encounter customization workflows', () => {
       phase: owner,
       encounterKey: 'GeneratedH_Treant2',
     });
-    const view = await open(project, owner);
-    const button = within(view.dialog).getByRole('button', { name: 'Edit' });
-    expect((button as HTMLButtonElement).disabled).toBe(true);
-    expect(button.title).toBe('Complete earlier choices to evaluate this encounter.');
-    expect(
-      within(view.dialog).getByText('Complete earlier choices to evaluate this encounter.'),
-    ).toBeTruthy();
+    const button = customizeTrigger(project, owner);
+    expect(button.disabled).toBe(true);
+    expect(button.title).toBe('Waits on an earlier choice');
   });
-  it('selects a shared enemy from assessed and unassessed pickers without a blank choice', async () => {
+  it('selects a shared enemy from the assessed picker and withholds a context-less phase', async () => {
+    const view = await open(
+      customize(createCompleteFGProject(), phase, { kind: 'generated', waveCount: 3 }),
+    );
+    const trigger = within(view.dialog).getByRole('button', { name: 'Shared Enemy' });
+    expect(trigger.textContent).toContain('Select shared enemy');
+    expect(trigger.getAttribute('aria-invalid')).not.toBe('true');
+    await view.user.click(trigger);
+    const options = within(await screen.findByRole('listbox')).getAllByRole('option');
+    expect(options.map((option) => option.textContent)).not.toContainEqual(
+      expect.stringMatching(/Select shared enemy|no longer available/),
+    );
+    expect(screen.queryByText('This current choice is no longer available here.')).toBeNull();
+    await view.user.click(await screen.findByRole('option', { name: 'Whisper' }));
+    expect(current(view)).toMatchObject({ waveCount: 3, highlightKey: 'Guard' });
+    expect(screen.getByRole('dialog', { name: /\(.+\)$/ })).toBeTruthy();
+    cleanup();
     const unassessed = applyProjectCommand(
       customize(createCompleteFGProject(), phase, { kind: 'generated', waveCount: 3 }),
       catalog,
@@ -576,25 +662,9 @@ describe('generated encounter customization workflows', () => {
         encounterKey: 'ArtemisCombatF',
       },
     );
-    for (const project of [
-      customize(createCompleteFGProject(), phase, { kind: 'generated', waveCount: 3 }),
-      unassessed,
-    ]) {
-      const view = await open(project);
-      const trigger = within(view.dialog).getByRole('button', { name: 'Shared Enemy' });
-      expect(trigger.textContent).toContain('Select shared enemy');
-      expect(trigger.getAttribute('aria-invalid')).not.toBe('true');
-      await view.user.click(trigger);
-      const options = within(await screen.findByRole('listbox')).getAllByRole('option');
-      expect(options.map((option) => option.textContent)).not.toContainEqual(
-        expect.stringMatching(/Select shared enemy|no longer available/),
-      );
-      expect(screen.queryByText('This current choice is no longer available here.')).toBeNull();
-      await view.user.click(await screen.findByRole('option', { name: 'Whisper' }));
-      expect(current(view)).toMatchObject({ waveCount: 3, highlightKey: 'Guard' });
-      expect(screen.getByRole('dialog', { name: /\(.+\)$/ })).toBeTruthy();
-      cleanup();
-    }
+    const withheld = customizeTrigger(unassessed);
+    expect(withheld.disabled).toBe(true);
+    expect(withheld.title).toBe('Waits on an earlier choice');
   });
   it('shows engine allocation findings for the affected wave', async () => {
     const view = await open(

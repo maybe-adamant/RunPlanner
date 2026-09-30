@@ -200,8 +200,10 @@ export function PomResolutionLauncher({
       aria-label={`${label}; ${statusLabel}`}
       className="trait-offer-launcher quiet-action action-compact"
       data-trait-status={control.status}
+      disabled={!interaction.contextReached || undefined}
       id={launcherId(control.address)}
       onClick={() => dispatch(levelResolutionDialogOpened(control.address))}
+      title={interaction.contextReached ? undefined : 'Waits on an earlier choice'}
       type="button"
     >
       {label}
@@ -485,10 +487,8 @@ export function PomResolutionDialog({
   const executeIntent = useCommandIntent();
   const dialogRef = useRef<HTMLDialogElement>(null);
   const previousFocusRef = useRef<HTMLElement | null>(null);
-  const interaction = requireWorkspaceInteraction(
-    interactions.levelResolutions,
-    workspaceInteractionKey(target),
-  );
+  // A stale target from navigation or a finding may name an unprojected Pom.
+  const interaction = interactions.levelResolutions.get(workspaceInteractionKey(target));
   const close = useCallback(() => {
     dispatch(levelResolutionDialogClosed());
     (document.getElementById(launcherId(target)) ?? previousFocusRef.current)?.focus();
@@ -512,6 +512,7 @@ export function PomResolutionDialog({
     dialog.addEventListener('cancel', onCancel);
     return () => dialog.removeEventListener('cancel', onCancel);
   }, [close]);
+  if (interaction === undefined || !interaction.contextReached) return null;
   const eyebrow = interaction.value.kind === 'random' ? 'Random Pom' : 'Pom choice';
   const dialogTitleId = `pom-dialog-title-${pomDomKey(target)}`;
   return (

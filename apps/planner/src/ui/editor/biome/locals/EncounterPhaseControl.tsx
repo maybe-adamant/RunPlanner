@@ -67,6 +67,16 @@ function EncounterCustomizationControl({
       ? { id: customizationId }
       : findingTarget(phase.address, customizationId, phase.address, isCompositionFinding);
   const generatedDecision = phase.customization?.find(isGeneratedEncounterDecision);
+  // A decision whose candidate support is unreached waits on an earlier choice: a
+  // generating composition without its assessment, or a roster without its drafts.
+  // A fixed identity's retained value stays removable; the other decisions are static.
+  const contextUnreached =
+    (generatedDecision !== undefined &&
+      interaction?.generatedComposition?.editable === true &&
+      interaction.generatedAssessment === undefined) ||
+    (phase.customization?.some((decision) => decision.selection.kind === 'infiniteRoster') ===
+      true &&
+      interaction?.infiniteRosterDraftFor === undefined);
   useEffect(() => {
     const dialog = dialogRef.current;
     if (dialog === null) return;
@@ -95,8 +105,13 @@ function EncounterCustomizationControl({
       <button
         {...triggerTarget}
         className="quiet-action"
-        disabled={'aria-disabled' in triggerTarget ? triggerTarget['aria-disabled'] : undefined}
+        disabled={
+          ('aria-disabled' in triggerTarget ? triggerTarget['aria-disabled'] : undefined) ||
+          contextUnreached ||
+          undefined
+        }
         onClick={() => setManualOpen(true)}
+        title={contextUnreached ? 'Waits on an earlier choice' : undefined}
         type="button"
       >
         {editable ? 'Customize encounter' : 'Inspect encounter'}

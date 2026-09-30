@@ -2272,7 +2272,7 @@ describe('planner history interaction', () => {
     expect(application.store.getState().editorSession.traitDialogTarget).toEqual(target);
   });
 
-  it('edits ordinary, room Hammer, and acquired Shop Hammer offers through shared controls', async () => {
+  it('edits ordinary and room Hammer offers through shared controls and opens no unreached Shop Hammer', async () => {
     const application = createApplication();
     let project = loadSurfaceNOPQProject();
     project = applyProjectCommand(project, application.catalog, {
@@ -2336,10 +2336,11 @@ describe('planner history interaction', () => {
       within(roomHammerDialog).getByRole('button', { name: 'Close trait offer' }),
     );
 
+    // The acquired Shop Hammer lies beyond the reached context: navigation opens no editor.
     const shopHammer = visibleLauncher('hammer', 'shopOffer', false);
+    expect(shopHammer.contextReached).toBe(false);
     application.store.dispatch(semanticOwnerNavigated(shopHammer.owner));
-    const shopHammerDialog = await screen.findByRole('dialog');
-    expect(within(shopHammerDialog).queryByLabelText('option1 rarity')).toBeNull();
+    expect(screen.queryByRole('dialog')).toBeNull();
   });
 
   it('edits a reached Hermes offer with the shared rarity-aware editor', async () => {

@@ -860,3 +860,52 @@ describe('Boon Growth and Boon Decay target predicates', () => {
     expect(assessment.transition).not.toHaveProperty('levelChange');
   });
 });
+
+describe('reached trait offer starting outcome', () => {
+  /** Icarus after owning the first `count` of the traits still offered to it. */
+  function icarusAfterOwning(count: number) {
+    const giver = catalog.traitGivers.byKey.Icarus!;
+    const owned = [
+      'OmegaExplodeBoon',
+      'CastHazardBoon',
+      'BreakInvincibleArmorBoon',
+      'BreakExplosiveArmorBoon',
+      'SupplyDropBoon',
+    ].slice(0, count);
+    return traitFrontierState(
+      foldTraitHistoryEvents(
+        catalog,
+        owned.map((traitKey, index) => ({
+          kind: 'traitOffer' as const,
+          owner,
+          acquisitionRole: `test${index + 1}`,
+          sequence: index + 1,
+          giverKey: 'Icarus',
+          options: Object.freeze([
+            { traitKey },
+            { traitKey: giver.traitKeys[0]! },
+            { traitKey: giver.traitKeys[1]! },
+          ]) as unknown as TraitOfferEvent['options'],
+          selectedOptionKey: 'option1' as const,
+          acquisitionPoint: 'test',
+        })),
+      ),
+    );
+  }
+
+  it('starts a fixed giver with fewer than three eligible traits from its repairable rows', () => {
+    expect(traitOfferStartingOutcome(catalog, 'Icarus', icarusAfterOwning(3), {})).toMatchObject({
+      kind: 'traits',
+      giverKey: 'Icarus',
+      options: [{ traitKey: 'BreakExplosiveArmorBoon' }, { traitKey: 'SupplyDropBoon' }],
+      selectedOptionKey: 'option1',
+    });
+  });
+
+  it('starts a fixed giver with no eligible trait from its empty Gold outcome', () => {
+    expect(traitOfferStartingOutcome(catalog, 'Icarus', icarusAfterOwning(5), {})).toEqual({
+      kind: 'fallbackGold',
+      giverKey: 'Icarus',
+    });
+  });
+});

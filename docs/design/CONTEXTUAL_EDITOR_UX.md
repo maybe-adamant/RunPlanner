@@ -169,7 +169,9 @@ Unavailable context is not candidate invalidity. A missing authored
 prerequisite names its exact semantic owner; other unavailable states retain
 their coverage or upstream evidence. The editor must not color or filter a
 stable declaration domain as though it had been evaluated when the simulator
-could not reach that owner.
+could not reach that owner. An authoring launcher whose context is unreached is
+disabled and carries no explanation beyond "Waits on an earlier choice"; the
+frontier finding owns the explanation.
 
 ### Selected-Value Invariant
 

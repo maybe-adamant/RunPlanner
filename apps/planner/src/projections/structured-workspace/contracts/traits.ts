@@ -80,6 +80,8 @@ export interface WorkspaceTraitOfferControl {
   readonly giver: TraitGiverDeclaration;
   readonly marker: WorkspaceMarker;
   readonly offer: AuthoredTraitOffer | null;
+  /** Whether the engine reached this offer's exact candidate context. */
+  readonly contextReached: boolean;
   /** Projection-owned compact state for the trait launcher presentation. */
   readonly status: WorkspaceTraitOfferStatus;
   /** False for a declaration/chronology-resolved rarity such as Gorgon Athena. */
@@ -490,6 +492,8 @@ export interface WorkspaceTraitOfferInteraction {
     >
   >;
   readonly value: AuthoredTraitOffer | null;
+  /** Whether the offer's candidate context is reached; only then can its editor open. */
+  readonly contextReached: boolean;
   /** Exact engine-backed native traits-or-Gold initial outcome. */
   readonly traitOfferStartingOutcome?: () => AuthoredTraitOffer | undefined;
   readonly appendTraitOfferDraft?: (
@@ -554,6 +558,8 @@ export interface WorkspaceChaosOfferInteraction {
 
 export interface WorkspaceLevelResolutionInteraction {
   readonly acquisitionRoleLabel: string;
+  /** Whether the Pom's candidate context is reached; only then can its editor open. */
+  readonly contextReached: boolean;
   readonly intentFor: (
     value: AuthoredLevelResolution,
   ) => WorkspacePayloadEditIntent<

@@ -84,8 +84,10 @@ export function TraitOfferLauncher({
       aria-label={`${label}; ${statusLabel}`}
       className="trait-offer-launcher quiet-action action-compact"
       data-trait-status={status}
+      disabled={!interaction.contextReached || undefined}
       id={launcherId(control.address)}
       onClick={() => dispatch(traitOfferDialogOpened(control.address))}
+      title={interaction.contextReached ? undefined : 'Waits on an earlier choice'}
       type="button"
     >
       {label}
@@ -116,13 +118,8 @@ export function TraitOfferEditor({
     interaction.value ??
     interaction.chaos?.startingDraft() ??
     interaction.traitOfferStartingOutcome?.();
-  if (initialValue === undefined) {
-    return (
-      <div className="trait-offer-editor" role="status">
-        This trait offer is not available at the current route frontier.
-      </div>
-    );
-  }
+  if (initialValue === undefined)
+    throw new Error(`${workspaceInteractionKey(address)} opened before its context was reached`);
   return (
     <TraitOfferEditorShell
       initialValue={initialValue}
@@ -225,6 +222,8 @@ export function TraitOfferDialog({
       if (dialog.open && typeof dialog.close === 'function') dialog.close();
     };
   }, [close, focusedSemanticOwner, target]);
+  // Every entry point shares this guard: an unreached offer has no editor.
+  if (!interaction.contextReached) return null;
   return (
     <dialog
       aria-labelledby={`trait-offer-dialog-title-${semanticAddressKey(target)}`}

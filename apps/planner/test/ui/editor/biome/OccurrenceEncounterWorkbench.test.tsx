@@ -590,6 +590,26 @@ describe('OccurrenceEncounterWorkbench', () => {
     await waitFor(() => expect(cocoonCount(view)).toBeUndefined());
   });
 
+  it('disables Customize for an Anomaly roster whose context is unreached', async () => {
+    const occurrenceId = 'golden-g-b3-e2';
+    const project = applyProjectCommand(createCompleteFGAnomalyProject(), catalog, {
+      kind: 'SelectEncounter',
+      phase: createEncounterPhaseAddress(
+        goldenFBiome,
+        { kind: 'occurrence', occurrenceId: goldenFOccurrenceId(1, 1) },
+        'Encounter',
+      ),
+      encounterKey: 'ArtemisCombatF',
+    });
+    renderOccurrenceWorkbench(project, 'Underworld', 'G', occurrenceById(occurrenceId));
+    openRoomTab('Room Timeline');
+    const trigger = screen.getByRole('button', {
+      name: 'Customize encounter',
+    }) as HTMLButtonElement;
+    expect(trigger.disabled).toBe(true);
+    expect(trigger.title).toBe('Waits on an earlier choice');
+  });
+
   it('stages an ordered Anomaly roster from engine candidates and resets it to Default', async () => {
     const occurrenceId = 'golden-g-b3-e2';
     const roster = (view: ReturnType<typeof renderOccurrenceWorkbench>) =>
