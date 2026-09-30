@@ -97,6 +97,8 @@ function EncounterCustomizationControl({
   const close = (): void => {
     setManualOpen(false);
   };
+  // The system closes the dialog when its context is lost; a later reach needs a reopen.
+  if (contextUnreached && manualOpen) setManualOpen(false);
   const retainedLabel = (decision: NonNullable<typeof phase.customization>[number], key: string) =>
     decision.retainedChoiceLabels?.find((choice) => choice.key === key)?.label ??
     'Unavailable choice';
@@ -471,6 +473,8 @@ export function EncounterPhaseControl({
           {aetosInteraction.selectedWave === undefined ? null : (
             <select
               aria-label="Aetos wave"
+              disabled={!aetosInteraction.contextReached || undefined}
+              title={aetosInteraction.contextReached ? undefined : 'Waits on an earlier choice'}
               value={aetosInteraction.selectedWave}
               onChange={(event) =>
                 executeIntent(aetosInteraction.intentFor(Number(event.target.value)))
@@ -478,7 +482,9 @@ export function EncounterPhaseControl({
             >
               {!aetosInteraction.waves.includes(aetosInteraction.selectedWave) ? (
                 <option disabled value={aetosInteraction.selectedWave}>
-                  Wave {aetosInteraction.selectedWave} (unavailable)
+                  {aetosInteraction.contextReached
+                    ? `Wave ${aetosInteraction.selectedWave} (unavailable)`
+                    : `Wave ${aetosInteraction.selectedWave}`}
                 </option>
               ) : null}
               {aetosInteraction.waves.map((wave) => (

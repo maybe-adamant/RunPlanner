@@ -3,6 +3,7 @@
 import { catalog } from '@run-planner/hades2-catalog';
 import {
   applyProjectCommand,
+  createBiomeAddress,
   createAcquisitionEntryAddress,
   createAcquisitionRoleAddress,
   createAcquisitionSiteAddress,
@@ -95,6 +96,32 @@ afterEach(() => {
 });
 
 describe('OccurrenceEncounterWorkbench', () => {
+  it('shows a retained Aetos wave as waiting while its phase context is unreached', () => {
+    const occurrenceId = pOccurrenceId('P_Combat03', 1, 1);
+    let project = applyProjectCommand(loadSurfaceNOPQProject(), catalog, {
+      kind: 'ReplaceAetosWave',
+      phase: createEncounterPhaseAddress(pBiome, { kind: 'occurrence', occurrenceId }, 'Combat'),
+      value: 2,
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'SelectEncounter',
+      phase: createEncounterPhaseAddress(
+        createBiomeAddress('Surface', 'N'),
+        { kind: 'occurrence', occurrenceId: createOccurrenceId('surface-n-combat05') },
+        'Encounter',
+      ),
+      encounterKey: 'ArtemisCombatN',
+    });
+    renderOccurrenceWorkbench(project, 'Surface', 'P', occurrenceById(occurrenceId));
+    openRoomTab('Room Timeline');
+    const wave = screen.getByRole('combobox', { name: 'Aetos wave' }) as HTMLSelectElement;
+    expect(wave.value).toBe('2');
+    expect(wave.disabled).toBe(true);
+    expect(wave.title).toBe('Waits on an earlier choice');
+    expect(within(wave).getByRole('option', { name: 'Wave 2' })).toBeDefined();
+    expect(within(wave).queryByRole('option', { name: /unavailable/ })).toBeNull();
+  });
+
   it('authors a native Aetos wave in Events, retains an unavailable choice, and repairs it directly', async () => {
     const occurrenceId = pOccurrenceId('P_Combat03', 1, 1);
     const phase = createEncounterPhaseAddress(

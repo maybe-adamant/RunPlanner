@@ -294,6 +294,13 @@ export interface CandidateProjectionSession {
     owner: LevelResolutionAddress,
     value: AuthoredLevelResolution,
   ) => LevelResolutionCandidateProjection | undefined;
+  /**
+   * Whether an exact candidate context exists for a native setting's owner, read
+   * from retained products without loading its candidates.
+   */
+  readonly contextReached: (
+    owner: import('@run-planner/engine/simulation').CandidateContextOwner,
+  ) => boolean;
   /** Whether the engine reached this Pom's exact candidate context. */
   readonly levelResolutionReached: (owner: LevelResolutionAddress) => boolean;
   /** One atomic exact Judgment selection, assessed against its pre-effect domain. */
@@ -378,6 +385,7 @@ export function createCandidateSessionFactory(
       project: assembly.project,
       evaluation: assembly.evaluation,
       anvilResult: core.anvilResult,
+      contextReached: core.contextReached,
       fieldsSpatialPoint: (spatial: FieldsSpatialAddress, pointId: number | null) =>
         Object.freeze({
           value: pointId,

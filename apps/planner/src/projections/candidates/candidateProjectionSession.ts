@@ -24,6 +24,7 @@ export interface CandidateProjectionCore {
   readonly catalog: Catalog;
   readonly assembly: ProjectEvaluationAssembly;
   readonly evaluate: ProjectCandidateSession['evaluate'];
+  readonly contextReached: ProjectCandidateSession['contextReached'];
   readonly traitOfferStartingOutcome: ProjectCandidateCoreTraitDrafts['traitOfferStartingOutcome'];
   readonly appendTraitOfferDraft: ProjectCandidateCoreTraitDrafts['appendTraitOfferDraft'];
   readonly removeTraitOfferDraft: ProjectCandidateCoreTraitDrafts['removeTraitOfferDraft'];
@@ -185,6 +186,7 @@ export function createCandidateProjectionCore(
         catalog,
         assembly,
         evaluate: evaluator.evaluate,
+        contextReached: evaluator.contextReached,
         traitOfferStartingOutcome: evaluator.traitOfferStartingOutcome,
         appendTraitOfferDraft: evaluator.appendTraitOfferDraft,
         removeTraitOfferDraft: evaluator.removeTraitOfferDraft,

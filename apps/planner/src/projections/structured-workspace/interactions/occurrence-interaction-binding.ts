@@ -37,6 +37,7 @@ import {
 } from '../contract';
 import type {
   WorkspaceCandidateInteraction,
+  WorkspaceNativeCandidateInteraction,
   WorkspacePickerCandidateInteraction,
 } from '../contract';
 import type {
@@ -102,10 +103,10 @@ export interface WorkspaceOccurrenceLocalInteractionCatalog {
     string,
     import('../contract').WorkspaceGorgonConditionInteraction
   >;
-  readonly rewardWheelOfferCounts: ReadonlyMap<string, WorkspaceCandidateInteraction<number>>;
-  readonly rewardWheelPicks: ReadonlyMap<string, WorkspaceCandidateInteraction<number>>;
+  readonly rewardWheelOfferCounts: ReadonlyMap<string, WorkspaceNativeCandidateInteraction<number>>;
+  readonly rewardWheelPicks: ReadonlyMap<string, WorkspaceNativeCandidateInteraction<number>>;
   readonly rewardWheelStores: ReadonlyMap<string, WorkspacePickerCandidateInteraction<string>>;
-  readonly shipCombatPhaseCounts: ReadonlyMap<string, WorkspaceCandidateInteraction<2 | 3>>;
+  readonly shipCombatPhaseCounts: ReadonlyMap<string, WorkspaceNativeCandidateInteraction<2 | 3>>;
   readonly roomActions: ReadonlyMap<string, WorkspaceRoomActionInteraction>;
   readonly shopPurchaseParticipations: ReadonlyMap<
     string,
@@ -231,6 +232,21 @@ function projectNemesisEventDomain(
   }
 }
 
+/** Whether the engine reached this Nemesis event; a non-exact assembly reaches nothing. */
+function nemesisEventReached(
+  assembly: ProjectEvaluationAssembly,
+  event: import('@run-planner/engine/authored-project').NemesisRandomEventAddress,
+): boolean {
+  try {
+    return (
+      nemesisRandomEventCandidateSupportForProjectEvaluationAssembly(assembly, event) !== undefined
+    );
+  } catch (error) {
+    if (error instanceof Error && error.name === 'ProjectSimulationContractError') return false;
+    throw error;
+  }
+}
+
 export function bindOccurrenceLocalInteractions(
   catalog: Catalog,
   allocateOccurrenceId: OccurrenceIdFactory,
@@ -253,10 +269,10 @@ export function bindOccurrenceLocalInteractions(
     string,
     import('../contract').WorkspaceGorgonConditionInteraction
   >();
-  const rewardWheelOfferCounts = new Map<string, WorkspaceCandidateInteraction<number>>();
-  const rewardWheelPicks = new Map<string, WorkspaceCandidateInteraction<number>>();
+  const rewardWheelOfferCounts = new Map<string, WorkspaceNativeCandidateInteraction<number>>();
+  const rewardWheelPicks = new Map<string, WorkspaceNativeCandidateInteraction<number>>();
   const rewardWheelStores = new Map<string, WorkspacePickerCandidateInteraction<string>>();
-  const shipCombatPhaseCounts = new Map<string, WorkspaceCandidateInteraction<2 | 3>>();
+  const shipCombatPhaseCounts = new Map<string, WorkspaceNativeCandidateInteraction<2 | 3>>();
   const roomActions = new Map<string, WorkspaceRoomActionInteraction>();
   const shopPurchaseParticipations = new Map<
     string,
@@ -312,6 +328,10 @@ export function bindOccurrenceLocalInteractions(
             control.interactionKey,
             Object.freeze({
               choices: control.pointChoices,
+              contextReached: candidates.contextReached({
+                kind: 'fieldsSpatialPoint',
+                spatial: control.address,
+              }),
               intentFor: (pointId: number | null) =>
                 Object.freeze({
                   command: Object.freeze({
@@ -429,6 +449,13 @@ export function bindOccurrenceLocalInteractions(
                   encounterKey: nemesisChoice.value,
                   owner: createNemesisRandomEventAddress(phase.owner),
                   familyPicker: projectStableIdentityPicker({
+                    // The declared families claim nothing until the event's context is reached.
+                    assessment: nemesisEventReached(
+                      assembly,
+                      createNemesisRandomEventAddress(phase.owner),
+                    )
+                      ? 'assessed'
+                      : 'unassessed',
                     choices: NEMESIS_RANDOM_EVENT_FAMILIES.map((family) => ({
                       label: nemesisFamilyLabel(family),
                       value: family,
@@ -816,11 +843,7 @@ export function bindOccurrenceLocalInteractions(
                       value,
                     }),
                   }),
-                contextReached:
-                  nemesisRandomEventCandidateSupportForProjectEvaluationAssembly(
-                    assembly,
-                    event.owner,
-                  ) !== undefined,
+                contextReached: nemesisEventReached(assembly, event.owner),
                 load: () =>
                   event.value === null
                     ? undefined
@@ -1292,6 +1315,10 @@ export function bindOccurrenceLocalInteractions(
               ...(slot.entered
                 ? { disabledReason: 'Set Visit to “Not visited” before disabling generation.' }
                 : {}),
+              contextReached: candidates.contextReached({
+                kind: 'sideRoomGeneration',
+                sideRoom: slot.address,
+              }),
               intentFor: (generation: SideRoomGeneration) =>
                 Object.freeze({
                   command: Object.freeze({
@@ -1331,6 +1358,10 @@ export function bindOccurrenceLocalInteractions(
                 () => candidates.localVisitOrders(requirement.order, proposals),
                 slot.order.interactionKey,
               ),
+              contextReached: candidates.contextReached({
+                kind: 'sideRoomEntryOrder',
+                group: requirement.order,
+              }),
               intentFor: (occurrenceIds: readonly OccurrenceId[]) =>
                 Object.freeze({
                   command: Object.freeze({
@@ -1353,25 +1384,41 @@ export function bindOccurrenceLocalInteractions(
         set(
           shipCombatPhaseCounts,
           semanticAddressKey(requirement.owner),
-          candidateInteraction(
-            requirement.owner,
-            requirement.combatPhaseCountChoices,
-            requirement.combatPhaseCount,
-            () => candidates.shipCombatPhaseCounts(requirement.owner, combatPhaseCountValues),
-          ),
+          Object.freeze({
+            ...candidateInteraction(
+              requirement.owner,
+              requirement.combatPhaseCountChoices,
+              requirement.combatPhaseCount,
+              () => candidates.shipCombatPhaseCounts(requirement.owner, combatPhaseCountValues),
+            ),
+            contextReached: candidates.contextReached({
+              kind: 'shipEncounterCount',
+              occurrence: requirement.owner,
+            }),
+          }),
           'Ship combat-phase count',
         );
         for (const wheel of requirement.wheels) {
           const key = semanticAddressKey(wheel.address);
+          const wheelReached = candidates.contextReached({
+            kind: 'rewardWheel',
+            wheel: wheel.address,
+          });
           const offerCountValues = Object.freeze(
             wheel.offerCountChoices.map((choice) => choice.value),
           );
           set(
             rewardWheelOfferCounts,
             key,
-            candidateInteraction(wheel.address, wheel.offerCountChoices, wheel.offerCount, () =>
-              candidates.rewardWheelOfferCounts(wheel.address, offerCountValues),
-            ),
+            Object.freeze({
+              ...candidateInteraction(
+                wheel.address,
+                wheel.offerCountChoices,
+                wheel.offerCount,
+                () => candidates.rewardWheelOfferCounts(wheel.address, offerCountValues),
+              ),
+              contextReached: wheelReached,
+            }),
             'reward-wheel offer-count',
           );
           const storeValues = Object.freeze(wheel.storeChoices.map((choice) => choice.value));
@@ -1403,9 +1450,15 @@ export function bindOccurrenceLocalInteractions(
           set(
             rewardWheelPicks,
             key,
-            candidateInteraction(wheel.address, wheel.pickChoices, wheel.pickedOfferIndex, () =>
-              candidates.rewardWheelPicks(wheel.address, pickValues),
-            ),
+            Object.freeze({
+              ...candidateInteraction(
+                wheel.address,
+                wheel.pickChoices,
+                wheel.pickedOfferIndex,
+                () => candidates.rewardWheelPicks(wheel.address, pickValues),
+              ),
+              contextReached: wheelReached,
+            }),
             'reward-wheel pick',
           );
         }

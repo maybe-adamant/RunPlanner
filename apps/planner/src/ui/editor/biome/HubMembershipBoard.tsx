@@ -13,7 +13,11 @@ import {
 } from '@planner/projections/structured-workspace';
 import { candidateSupport } from '@planner/projections/candidates/candidateProjection';
 import { useFindingTarget } from '@planner/ui/feedback/useFindingTarget';
-import { candidateMayBeAuthored } from '@planner/ui/feedback/candidatePresentation';
+import {
+  candidateMayBeAuthored,
+  candidateWaitingTitle,
+  candidateWaits,
+} from '@planner/ui/feedback/candidatePresentation';
 import { useWorkspaceInteractionController } from '@planner/ui/controls/useWorkspaceInteraction';
 import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
 import { RoomMapLauncher } from '@planner/ui/room-maps/RoomMapDialog';
@@ -130,7 +134,9 @@ export function useHubSlotMembership({
   const proposedOpen = !slot.open;
   const candidate = candidateState.result?.find((option) => option.value === proposedOpen);
   const structurallyDisabled = slot.open ? !slot.canClose : !slot.canOpen;
+  const waiting = !interaction.contextReached || candidateWaits(candidate);
   const disabled =
+    !interaction.contextReached ||
     structurallyDisabled ||
     (interaction.selected && interaction.close === undefined) ||
     (candidate !== undefined && !candidateMayBeAuthored(candidate));
@@ -173,6 +179,7 @@ export function useHubSlotMembership({
     cancelAttempt,
     candidateSupport: candidateSupport(candidate),
     disabled: disabled || target.inert,
+    waiting,
     openingAttemptActive: activeAttempt !== undefined,
     pending: candidateState.pending,
     prepare,
@@ -208,6 +215,7 @@ function HubSlotMembership({
           aria-label={`${slot.label} open`}
           checked={slot.open}
           disabled={membership.disabled}
+          title={membership.waiting ? candidateWaitingTitle : undefined}
           onBlur={() => {
             if (!slot.open) membership.cancelAttempt();
           }}

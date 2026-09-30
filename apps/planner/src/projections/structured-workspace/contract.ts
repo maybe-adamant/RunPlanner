@@ -258,6 +258,12 @@ export interface WorkspaceCandidateInteraction<T> {
   readonly selected?: T;
 }
 
+/** A native setting that knows, before loading candidates, whether its context is reached. */
+export interface WorkspaceNativeCandidateInteraction<T> extends WorkspaceCandidateInteraction<T> {
+  /** Read from retained products; the setting waits on an earlier choice when false. */
+  readonly contextReached: boolean;
+}
+
 /**
  * A scalar setting whose support rests on route-wide math. Beside the raw
  * candidate domain it publishes the contextual-picker model, so its control
@@ -369,12 +375,12 @@ export interface WorkspaceInteractionCatalog {
   readonly figurineArcana: ReadonlyMap<string, WorkspaceFigurineArcanaInteraction>;
   readonly keepsakeSelections: ReadonlyMap<string, WorkspaceKeepsakeSelectionInteraction>;
   readonly keepsakeEquipResults: ReadonlyMap<string, WorkspaceKeepsakeEquipResultInteraction>;
-  readonly rewardWheelOfferCounts: ReadonlyMap<string, WorkspaceCandidateInteraction<number>>;
-  readonly rewardWheelPicks: ReadonlyMap<string, WorkspaceCandidateInteraction<number>>;
+  readonly rewardWheelOfferCounts: ReadonlyMap<string, WorkspaceNativeCandidateInteraction<number>>;
+  readonly rewardWheelPicks: ReadonlyMap<string, WorkspaceNativeCandidateInteraction<number>>;
   readonly rewardWheelStores: ReadonlyMap<string, WorkspacePickerCandidateInteraction<string>>;
   readonly rooms: ReadonlyMap<string, WorkspaceRoomInteraction>;
   /** O-specific authored structure: whether the optional third Ship phase is active. */
-  readonly shipCombatPhaseCounts: ReadonlyMap<string, WorkspaceCandidateInteraction<2 | 3>>;
+  readonly shipCombatPhaseCounts: ReadonlyMap<string, WorkspaceNativeCandidateInteraction<2 | 3>>;
   readonly shopPurchaseParticipations: ReadonlyMap<
     string,
     WorkspaceShopPurchaseParticipationInteraction

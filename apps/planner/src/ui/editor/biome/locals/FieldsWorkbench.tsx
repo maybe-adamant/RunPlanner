@@ -11,7 +11,11 @@ import { useFindingTarget } from '@planner/ui/feedback/useFindingTarget';
 import { semanticOwnerControlElementId } from '@planner/ui/feedback/semanticOwner';
 import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
 import { useWorkspaceInteraction } from '@planner/ui/controls/useWorkspaceInteraction';
-import { candidateMayBeAuthored } from '@planner/ui/feedback/candidatePresentation';
+import {
+  candidateMayBeAuthored,
+  candidateWaitingTitle,
+  candidateWaits,
+} from '@planner/ui/feedback/candidatePresentation';
 import { RewardControlEditor } from '@planner/ui/editor/rewards/RewardControlEditor';
 import { RoomMapReferencePane } from '@planner/ui/room-maps/RoomMapReferencePane';
 
@@ -120,7 +124,15 @@ function FieldsSpatialRow({
                 <input
                   aria-label={choice.label}
                   checked={interaction.selected === choice.value}
-                  disabled={option !== undefined && !candidateMayBeAuthored(option)}
+                  disabled={
+                    !interaction.contextReached ||
+                    (option !== undefined && !candidateMayBeAuthored(option))
+                  }
+                  title={
+                    !interaction.contextReached || candidateWaits(option)
+                      ? candidateWaitingTitle
+                      : undefined
+                  }
                   name={id}
                   onChange={() => {
                     const assessed = candidates

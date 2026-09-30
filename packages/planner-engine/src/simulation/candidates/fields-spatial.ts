@@ -77,13 +77,22 @@ function snapshotRooms(snapshot: CanonicalBiome): readonly CanonicalAuthoredRoom
   );
 }
 
+/** Memoizes each immutable biome product's rooms by occurrence key. */
+const roomIndexes = new WeakMap<
+  CandidateBiomeEvaluation,
+  ReadonlyMap<string, CanonicalAuthoredRoom>
+>();
+
 function roomFor(
   biome: CandidateBiomeEvaluation,
   occurrence: OccurrenceAddress,
 ): CanonicalAuthoredRoom | undefined {
-  return canonicalRooms(biome).find(
-    (room) => semanticAddressKey(room.origin) === semanticAddressKey(occurrence),
-  );
+  let index = roomIndexes.get(biome);
+  if (index === undefined) {
+    index = new Map(canonicalRooms(biome).map((room) => [semanticAddressKey(room.origin), room]));
+    roomIndexes.set(biome, index);
+  }
+  return index.get(semanticAddressKey(occurrence));
 }
 
 export function evaluateFieldsSpatialPointCandidate(
@@ -126,4 +135,27 @@ export function evaluateFieldsSpatialPointCandidate(
       findings: assessment.findings,
     }),
   });
+}
+
+/** Whether the room is materialized in its retained biome product with this spatial target. */
+export function fieldsSpatialPointContextReached(
+  catalog: Catalog,
+  evaluation: ProjectEvaluation,
+  spatial: FieldsSpatialAddress,
+): boolean {
+  const biome = candidateBiome(evaluation, spatial.routeKey, spatial.biomeKey);
+  if (biome === undefined) return false;
+  const room = roomFor(
+    biome,
+    Object.freeze({
+      kind: 'occurrence',
+      routeKey: spatial.routeKey,
+      biomeKey: spatial.biomeKey,
+      occurrenceId: spatial.occurrenceId,
+    }),
+  );
+  return (
+    room !== undefined &&
+    assessFieldsSpatialPoint(catalog, room, spatial.target, null) !== undefined
+  );
 }

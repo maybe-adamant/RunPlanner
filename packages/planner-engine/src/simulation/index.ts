@@ -116,6 +116,7 @@ export {
   type EvaluatedTakeoverPrebossBatchCandidate,
   type ProjectCandidateEvaluation,
   type ProjectCandidateQuery,
+  type CandidateContextOwner,
   type ProjectCandidateSession,
   type ProjectCandidateSessionEvaluation,
   type ProjectCandidateSessionQuery,

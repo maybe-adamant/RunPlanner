@@ -512,7 +512,12 @@ export function PomResolutionDialog({
     dialog.addEventListener('cancel', onCancel);
     return () => dialog.removeEventListener('cancel', onCancel);
   }, [close]);
-  if (interaction === undefined || !interaction.contextReached) return null;
+  // The system closes a dialog whose context is lost; a later reach needs an explicit reopen.
+  const unavailable = interaction === undefined || !interaction.contextReached;
+  useEffect(() => {
+    if (unavailable) dispatch(levelResolutionDialogClosed());
+  }, [dispatch, unavailable]);
+  if (interaction === undefined || unavailable) return null;
   const eyebrow = interaction.value.kind === 'random' ? 'Random Pom' : 'Pom choice';
   const dialogTitleId = `pom-dialog-title-${pomDomKey(target)}`;
   return (

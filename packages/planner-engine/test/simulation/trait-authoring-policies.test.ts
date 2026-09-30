@@ -1,6 +1,8 @@
 import { catalog } from '@run-planner/hades2-catalog';
 import {
+  applyProjectCommand,
   createBiomeAddress,
+  createEncounterPhaseAddress,
   createIncomingRewardAddress,
   createNaturalSelectionResultAddress,
   createOccurrenceAddress,
@@ -29,6 +31,7 @@ import {
   type TraitLevelMutationEvent,
 } from '@run-planner/engine/simulation';
 import { describe, expect, it } from 'vitest';
+import { loadSurfaceNOPQProject } from '@run-planner/test-fixtures/surface';
 import { createTraitOfferCandidateArtifacts } from '../../src/simulation/candidates/trait-offer/capability';
 import { createSteadyGrowthCandidateArtifacts } from '../../src/simulation/candidates/steady-growth';
 import { evaluateNaturalSelectionResultCandidate } from '../../src/simulation/candidates/trait-offer/query';
@@ -893,19 +896,65 @@ describe('reached trait offer starting outcome', () => {
     );
   }
 
-  it('starts a fixed giver with fewer than three eligible traits from its repairable rows', () => {
-    expect(traitOfferStartingOutcome(catalog, 'Icarus', icarusAfterOwning(3), {})).toMatchObject({
+  /** The Icarus selection offer an O combat phase owns once IcarusCombatO is selected. */
+  function icarusOfferAccepts(value: AuthoredTraitOffer): void {
+    const oBiome = createBiomeAddress('Surface', 'O');
+    const combat1 = createEncounterPhaseAddress(
+      oBiome,
+      { kind: 'occurrence', occurrenceId: createOccurrenceId('surface-o-combat01') },
+      'Combat1',
+    );
+    let project = applyProjectCommand(loadSurfaceNOPQProject(), catalog, {
+      kind: 'ReplaceShipEncounterCount',
+      occurrence: createOccurrenceAddress(oBiome, createOccurrenceId('surface-o-combat01')),
+      encounterCount: 3,
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'SelectEncounter',
+      phase: combat1,
+      encounterKey: 'IcarusCombatO',
+    });
+    expect(() =>
+      applyProjectCommand(project, catalog, {
+        kind: 'ReplaceTraitOffer',
+        trait: createTraitOfferAddress(combat1, 'selection'),
+        value,
+      }),
+    ).not.toThrow();
+  }
+
+  it('fills a fixed giver short of three eligible traits with unavailable rows to repair', () => {
+    const draft = traitOfferStartingOutcome(catalog, 'Icarus', icarusAfterOwning(3), {});
+    expect(draft).toMatchObject({
       kind: 'traits',
       giverKey: 'Icarus',
-      options: [{ traitKey: 'BreakExplosiveArmorBoon' }, { traitKey: 'SupplyDropBoon' }],
       selectedOptionKey: 'option1',
     });
+    if (draft?.kind !== 'traits') throw new Error('missing Icarus repairable draft');
+    expect(draft.options).toHaveLength(3);
+    expect(draft.options.slice(0, 2).map((option) => option.traitKey)).toEqual([
+      'BreakExplosiveArmorBoon',
+      'SupplyDropBoon',
+    ]);
+    icarusOfferAccepts(draft);
   });
 
-  it('starts a fixed giver with no eligible trait from its empty Gold outcome', () => {
-    expect(traitOfferStartingOutcome(catalog, 'Icarus', icarusAfterOwning(5), {})).toEqual({
-      kind: 'fallbackGold',
-      giverKey: 'Icarus',
-    });
+  it('starts an exhausted fixed giver from three unavailable rows, never Gold', () => {
+    const draft = traitOfferStartingOutcome(catalog, 'Icarus', icarusAfterOwning(5), {});
+    if (draft?.kind !== 'traits') throw new Error('an exhausted fixed giver must keep three rows');
+    expect(draft.options).toHaveLength(3);
+    expect(new Set(draft.options.map((option) => option.traitKey)).size).toBe(3);
+    icarusOfferAccepts(draft);
+  });
+
+  it('keeps an exhaustion giver on its native start', () => {
+    const draft = traitOfferStartingOutcome(
+      catalog,
+      'Apollo',
+      traitFrontierState(createTraitHistoryState()),
+      {},
+    );
+    expect(draft?.kind).toBe('traits');
+    if (draft?.kind === 'traits') expect(draft.options).toHaveLength(3);
   });
 });

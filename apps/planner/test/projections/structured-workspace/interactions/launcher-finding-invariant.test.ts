@@ -6,6 +6,8 @@ import {
   createBiomeAddress,
   createEncounterPhaseAddress,
   createExitSelectionAddress,
+  createFieldsSpatialAddress,
+  createOccurrenceAddress,
   createNemesisRandomEventAddress,
   createOccurrenceId,
   createShopOfferAddress,
@@ -46,8 +48,30 @@ import {
 import { createStructuredWorkspaceTestServices } from '@planner-test/fixtures/structuredWorkspace';
 
 const services = createStructuredWorkspaceTestServices();
+
+/** The projected side-room decision of one Surface N room. */
+function workspaceLocalVisit(project: ProjectDocument, occurrenceId: string) {
+  const biome = services.structuredWorkspace
+    .project(simulateProjectAssembly(catalog, project))
+    .route.biomes.find((candidate) => candidate.biomeKey === 'N')!;
+  for (const node of biome.nodes)
+    if (node.kind === 'occurrenceWorkbench' && node.room.address.occurrenceId === occurrenceId)
+      if (node.localVisit !== undefined) return node.localVisit;
+  throw new Error(`${occurrenceId} has no projected side rooms`);
+}
 /** Launchers the walk actually checked, so the invariant is never vacuous. */
-const checked = { trait: 0, encounter: 0, pom: 0, nemesis: 0, roster: 0 };
+const checked = {
+  trait: 0,
+  encounter: 0,
+  pom: 0,
+  nemesis: 0,
+  roster: 0,
+  wheel: 0,
+  ship: 0,
+  localVisit: 0,
+  hubSlot: 0,
+  fieldsSpatial: 0,
+};
 const compositionFindingCodes = new Set([
   'encounterCustomizationUnavailable',
   'encounterCustomizationRequired',
@@ -122,7 +146,52 @@ function disabledRepairLaunchers(assembly: ProjectEvaluationAssembly): readonly 
         disabled.push(`nemesis ${finding.code} ${semanticAddressKey(owner)}`);
     }
   }
+  for (const finding of owners)
+    disabled.push(...blockedNativeSettings(interactions, finding.origin));
   return disabled;
+}
+
+/** Hub visits and the fountain use are repaired through their Hub's action order. */
+function hubOrderKey(owner: SemanticAddress): string | undefined {
+  return owner.kind === 'hubVisit' || owner.kind === 'hubFountain'
+    ? semanticAddressKey({
+        kind: 'hubDecision',
+        routeKey: owner.routeKey,
+        biomeKey: owner.biomeKey,
+        hubKey: owner.hubKey,
+      })
+    : undefined;
+}
+
+/** Native settings owned by this finding owner whose engine context is unreached. */
+function blockedNativeSettings(
+  interactions: ReturnType<typeof services.structuredWorkspace.project>['interactions'],
+  owner: SemanticAddress,
+): readonly string[] {
+  const key = semanticAddressKey(owner);
+  const result: string[] = [];
+  const settings = [
+    ['wheel', interactions.rewardWheelOfferCounts.get(key)],
+    ['wheel', interactions.rewardWheelPicks.get(key)],
+    ['ship', interactions.shipCombatPhaseCounts.get(key)],
+    ['localVisit', interactions.localVisitGenerations.get(key)],
+    ['localVisit', interactions.localVisitOrders.get(`${key}:visit-order`)],
+    ['fieldsSpatial', interactions.fieldsSpatialPoints.get(key)],
+    ['hubSlot', interactions.hubSlots.get(key)],
+    ['hubSlot', interactions.hubActionOrders.get(hubOrderKey(owner) ?? key)],
+  ] as const;
+  for (const [family, interaction] of settings) {
+    if (interaction === undefined) continue;
+    checked[family] += 1;
+    if (!interaction.contextReached) result.push(`${family} ${key}`);
+  }
+  if (owner.kind === 'hubOpenSet')
+    for (const slot of interactions.hubSlots.values())
+      if (slot.owner.hubKey === owner.hubKey && slot.owner.biomeKey === owner.biomeKey) {
+        checked.hubSlot += 1;
+        if (!slot.contextReached) result.push(`hubSlot ${semanticAddressKey(slot.owner)}`);
+      }
+  return result;
 }
 
 function check(project: ProjectDocument): readonly string[] {
@@ -226,8 +295,26 @@ describe('a finding never disables the launcher that repairs it', () => {
       offer: createShopOfferAddress(pBiome, pOccurrenceIds.prebossShop, 'MajorNonBoon'),
       purchased: true,
     });
+    // A fixed-giver offer (Icarus) with no authored value owns its missing-offer finding.
+    const oBiome = createBiomeAddress('Surface', 'O');
+    const icarusPhase = createEncounterPhaseAddress(
+      oBiome,
+      { kind: 'occurrence', occurrenceId: createOccurrenceId('surface-o-combat01') },
+      'Combat1',
+    );
+    let icarus = applyProjectCommand(loadSurfaceNOPQProject(), catalog, {
+      kind: 'ReplaceShipEncounterCount',
+      occurrence: createOccurrenceAddress(oBiome, createOccurrenceId('surface-o-combat01')),
+      encounterCount: 3,
+    });
+    icarus = applyProjectCommand(icarus, catalog, {
+      kind: 'SelectEncounter',
+      phase: icarusPhase,
+      encounterKey: 'IcarusCombatO',
+    });
     const golden = createGoldenFGHIProject();
     for (const project of [
+      icarus,
       upstreamInvalid,
       withClearedTraitOffer(golden, 'F', 2),
       withClearedTraitOffer(golden, 'G', 1),
@@ -282,5 +369,58 @@ describe('a finding never disables the launcher that repairs it', () => {
     expect(checked.pom).toBeGreaterThan(0);
     expect(checked.roster).toBeGreaterThan(0);
     expect(checked.nemesis).toBeGreaterThan(0);
+  });
+
+  it('holds for wheel, ship-phase, side-room, Hub-slot and Fields-spatial owners', () => {
+    const base = loadSurfaceNOPQProject();
+    const combat05 = workspaceLocalVisit(base, 'surface-n-combat05');
+    let sideRooms = applyProjectCommand(base, catalog, {
+      kind: 'ReplaceLocalVisitOrder',
+      order: combat05.order,
+      occurrenceIds: [],
+    });
+    for (const slot of combat05.slots)
+      sideRooms = applyProjectCommand(sideRooms, catalog, {
+        kind: 'SetLocalVisitGeneration',
+        slot: slot.address,
+        generation: 'notGenerated',
+      });
+    const fieldsSpatial = applyProjectCommand(createGoldenFGHIProject(), catalog, {
+      kind: 'ReplaceFieldsSpatialPoint',
+      spatial: createFieldsSpatialAddress(
+        createOccurrenceAddress(goldenHBiome, createOccurrenceId('golden-h-combat02')),
+        { kind: 'entry' },
+      ),
+      pointId: null,
+    });
+    const wheelStore = applyProjectCommand(base, catalog, {
+      kind: 'ReplaceRewardWheelStore',
+      wheel: {
+        kind: 'rewardWheel',
+        routeKey: 'Surface',
+        biomeKey: 'O',
+        occurrenceId: createOccurrenceId('surface-o-combat01'),
+        wheelKey: 'wheel1',
+      },
+      storeKey: 'MetaProgress',
+    });
+    // An incomplete open set is repaired by opening a slot of its Hub.
+    const hubOpenSet = applyProjectCommand(base, catalog, {
+      kind: 'CloseHubSlot',
+      slot: {
+        kind: 'hubSlot',
+        routeKey: 'Surface',
+        biomeKey: 'N',
+        hubKey: 'hub',
+        hubSlotKey: 'combat10',
+      },
+    });
+    // Ship phase count owns no producible finding: its topology value stays authorable.
+    for (const project of [sideRooms, fieldsSpatial, wheelStore, hubOpenSet])
+      expect(check(project)).toEqual([]);
+    expect(checked.localVisit).toBeGreaterThan(0);
+    expect(checked.fieldsSpatial).toBeGreaterThan(0);
+    expect(checked.wheel).toBeGreaterThan(0);
+    expect(checked.hubSlot).toBeGreaterThan(0);
   });
 });

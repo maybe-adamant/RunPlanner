@@ -8,7 +8,11 @@ import {
 import { authoredProjectCommandDispatched } from '@planner/state/projectWorkspaceSlice';
 import { useAppDispatch } from '@planner/state/store';
 import { useFindingTarget } from '@planner/ui/feedback/useFindingTarget';
-import { candidateMayBeAuthored } from '@planner/ui/feedback/candidatePresentation';
+import {
+  candidateMayBeAuthored,
+  candidateWaitingTitle,
+  candidateWaits,
+} from '@planner/ui/feedback/candidatePresentation';
 import { useWorkspaceInteraction } from '@planner/ui/controls/useWorkspaceInteraction';
 import { RewardControlEditor } from '@planner/ui/editor/rewards/RewardControlEditor';
 import { CandidatePicker } from '../CandidatePicker';
@@ -102,6 +106,9 @@ export function RewardWheelWorkbench({
           .map((offer, index) => {
             const offerIndex = index + 1;
             const picked = offerIndex === wheel.pickedOfferIndex;
+            const pickWaits =
+              !pick.contextReached ||
+              candidateWaits(pickCandidates.result?.find((option) => option.value === offerIndex));
             return (
               <section
                 aria-label={offer.label}
@@ -118,8 +125,12 @@ export function RewardWheelWorkbench({
                     <input
                       aria-label={`Pick ${offer.label} from ${wheel.label}`}
                       checked={picked}
+                      disabled={pickWaits || undefined}
                       name={`${idPrefix}-picked-offer`}
                       onChange={() => replacePick(offerIndex)}
+                      onFocus={pickCandidates.activate}
+                      onPointerDown={pickCandidates.activate}
+                      title={pickWaits ? candidateWaitingTitle : undefined}
                       type="radio"
                     />
                   </label>

@@ -910,3 +910,94 @@ export function evaluateSideRoomEntryOrderCandidate(
     }),
   });
 }
+
+/** Whether the authored Hub decision that owns this slot exists; slot support is structural. */
+export function hubSlotContextReached(
+  catalog: Catalog,
+  project: ProjectDocument,
+  slot: HubSlotAddress,
+): boolean {
+  return (
+    candidateHubState(catalog, project, slot.routeKey, slot.biomeKey, slot.hubKey) !== undefined
+  );
+}
+
+/** Whether the Hub decision exists and its biome has a retained evaluation. */
+export function hubActionOrderContextReached(
+  catalog: Catalog,
+  project: ProjectDocument,
+  evaluation: ProjectEvaluation,
+  hub: HubDecisionAddress,
+): boolean {
+  return (
+    candidateHubState(catalog, project, hub.routeKey, hub.biomeKey, hub.hubKey) !== undefined &&
+    candidateBiome(evaluation, hub.routeKey, hub.biomeKey) !== undefined
+  );
+}
+
+/** Whether the retained Hub side-generation support exists for this side room. */
+export function sideRoomGenerationContextReached(
+  project: ProjectDocument,
+  evaluation: ProjectEvaluation,
+  sideRoom: LocalVisitSlotAddress,
+): boolean {
+  const biome = candidateBiome(evaluation, sideRoom.routeKey, sideRoom.biomeKey);
+  return (
+    hubSideSupport(sideRoom, biome) !== undefined &&
+    localVisitDecisionFor(project, sideRoom.routeKey, sideRoom.biomeKey, sideRoom) !== undefined
+  );
+}
+
+/**
+ * Whether the local group lies inside the retained Hub prefix and its source
+ * occurrence is a planned visit.
+ */
+export function sideRoomEntryOrderContextReached(
+  catalog: Catalog,
+  project: ProjectDocument,
+  evaluation: ProjectEvaluation,
+  group: LocalVisitOrderAddress,
+): boolean {
+  const biome = candidateBiome(evaluation, group.routeKey, group.biomeKey);
+  if (!progressiveHubLocalGroupReached(group, biome)) return false;
+  if (localVisitDecisionFor(project, group.routeKey, group.biomeKey, group) === undefined)
+    return false;
+  const plan = planFor(project, group.routeKey, group.biomeKey);
+  if (
+    !plan.topology?.occurrences.some(
+      (occurrence) => occurrence.occurrenceId === group.sourceOccurrenceId,
+    )
+  )
+    return false;
+  const descriptor = catalog.biomeLayouts.byKey[plan.biomeKey]?.progression;
+  if (descriptor?.kind !== 'hub') return false;
+  const hub = candidateHubState(
+    catalog,
+    project,
+    group.routeKey,
+    group.biomeKey,
+    descriptor.hubKey,
+  );
+  const hubSlotKey = hub?.decision.openTargets.find(
+    (target) => target.occurrenceId === group.sourceOccurrenceId,
+  )?.hubSlotKey;
+  return (
+    hub !== undefined &&
+    hubSlotKey !== undefined &&
+    hubVisitSlotKeys(hub.decision).indexOf(hubSlotKey) >= 0
+  );
+}
+
+function localVisitDecisionFor(
+  project: ProjectDocument,
+  routeKey: string,
+  biomeKey: string,
+  owner: { readonly sourceOccurrenceId: string; readonly groupKey: string },
+): LocalVisitDecision | undefined {
+  return planFor(project, routeKey, biomeKey).topology?.decisions.find(
+    (candidate): candidate is LocalVisitDecision =>
+      candidate.kind === 'localVisit' &&
+      candidate.sourceOccurrenceId === owner.sourceOccurrenceId &&
+      candidate.groupKey === owner.groupKey,
+  );
+}

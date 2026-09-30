@@ -492,7 +492,10 @@ export interface WorkspaceTraitOfferInteraction {
     >
   >;
   readonly value: AuthoredTraitOffer | null;
-  /** Whether the offer's candidate context is reached; only then can its editor open. */
+  /**
+   * Whether the offer's candidate context is reached with an authored value or a
+   * representable start; only then can its editor open.
+   */
   readonly contextReached: boolean;
   /** Exact engine-backed native traits-or-Gold initial outcome. */
   readonly traitOfferStartingOutcome?: () => AuthoredTraitOffer | undefined;

@@ -1,5 +1,15 @@
 import type { Catalog } from '../../catalog-schema';
-import { createBiomeAddress, type TraitOfferAddress } from '../../authored-project/addresses';
+import {
+  createBiomeAddress,
+  type FieldsSpatialAddress,
+  type HubDecisionAddress,
+  type HubSlotAddress,
+  type LocalVisitOrderAddress,
+  type LocalVisitSlotAddress,
+  type OccurrenceAddress,
+  type RewardWheelAddress,
+  type TraitOfferAddress,
+} from '../../authored-project/addresses';
 import type {
   AuthoredTraitOffer,
   AuthoredTraitOfferTraits,
@@ -22,6 +32,10 @@ import {
   type FieldsCageOutcomeCandidateQuery,
 } from './fields-cage-outcome';
 import {
+  hubActionOrderContextReached,
+  hubSlotContextReached,
+  sideRoomEntryOrderContextReached,
+  sideRoomGenerationContextReached,
   evaluateHubSlotCandidate,
   evaluateHubActionOrderCandidate,
   evaluateSideRoomEntryOrderCandidate,
@@ -52,6 +66,8 @@ import {
   type ShopOfferOptionCandidateQuery,
 } from './reward-producer';
 import {
+  rewardWheelContextReached,
+  shipEncounterCountContextReached,
   evaluateRewardWheelLifecycleCandidate,
   evaluateShipEncounterCountCandidate,
   type EvaluatedRewardWheelOfferCountCandidate,
@@ -167,6 +183,7 @@ import {
   type TranscendentEmbryoOutcomeCandidateQuery,
 } from './transcendent-embryo';
 import {
+  fieldsSpatialPointContextReached,
   evaluateFieldsSpatialPointCandidate,
   type EvaluatedFieldsSpatialPointCandidate,
   type FieldsSpatialPointCandidateQuery,
@@ -280,7 +297,22 @@ export interface ProjectCandidateSessionOptions {
   readonly observe?: (event: CandidateEvaluationEvent) => void;
 }
 
+/** An owner whose exact candidate context a native control reads before loading candidates. */
+export type CandidateContextOwner =
+  | { readonly kind: 'rewardWheel'; readonly wheel: RewardWheelAddress }
+  | { readonly kind: 'shipEncounterCount'; readonly occurrence: OccurrenceAddress }
+  | { readonly kind: 'hubSlot'; readonly slot: HubSlotAddress }
+  | { readonly kind: 'hubActionOrder'; readonly hub: HubDecisionAddress }
+  | { readonly kind: 'sideRoomGeneration'; readonly sideRoom: LocalVisitSlotAddress }
+  | { readonly kind: 'sideRoomEntryOrder'; readonly group: LocalVisitOrderAddress }
+  | { readonly kind: 'fieldsSpatialPoint'; readonly spatial: FieldsSpatialAddress };
+
 export interface ProjectCandidateSession {
+  /**
+   * Whether an exact candidate context exists for this owner at its checkpoint.
+   * Reads retained products only: it evaluates no candidate and replays nothing.
+   */
+  readonly contextReached: (owner: CandidateContextOwner) => boolean;
   readonly project: ProjectDocument;
   readonly evaluation: ProjectEvaluation;
   readonly evaluate: {
@@ -725,10 +757,43 @@ export function createPreparedProjectCandidateSession(
     candidateArtifacts
       .biomeAt(createBiomeAddress(owner.routeKey, owner.biomeKey))
       ?.traitOffers.at(owner);
+  const contextReached = (owner: CandidateContextOwner): boolean => {
+    switch (owner.kind) {
+      case 'rewardWheel':
+        return rewardWheelContextReached(
+          evaluation,
+          candidateArtifacts.biomeAt(createBiomeAddress(owner.wheel.routeKey, owner.wheel.biomeKey))
+            ?.roomLifecycles,
+          owner.wheel,
+        );
+      case 'shipEncounterCount': {
+        const biome = candidateArtifacts.biomeAt(
+          createBiomeAddress(owner.occurrence.routeKey, owner.occurrence.biomeKey),
+        );
+        return shipEncounterCountContextReached(
+          evaluation,
+          biome?.roomLifecycles,
+          biome?.encounters,
+          owner.occurrence,
+        );
+      }
+      case 'hubSlot':
+        return hubSlotContextReached(catalog, project, owner.slot);
+      case 'hubActionOrder':
+        return hubActionOrderContextReached(catalog, project, evaluation, owner.hub);
+      case 'sideRoomGeneration':
+        return sideRoomGenerationContextReached(project, evaluation, owner.sideRoom);
+      case 'sideRoomEntryOrder':
+        return sideRoomEntryOrderContextReached(catalog, project, evaluation, owner.group);
+      case 'fieldsSpatialPoint':
+        return fieldsSpatialPointContextReached(catalog, evaluation, owner.spatial);
+    }
+  };
   return Object.freeze({
     project,
     evaluation,
     evaluate,
+    contextReached,
     traitOfferStartingOutcome: (owner: TraitOfferAddress, giverKey: string) =>
       traitCapability(owner)?.traitOfferStartingOutcome(giverKey),
     appendTraitOfferDraft: (owner: TraitOfferAddress, value: AuthoredTraitOffer) =>

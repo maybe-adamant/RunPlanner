@@ -660,12 +660,14 @@ export interface WorkspaceHubSlotCloseInteraction extends WorkspaceCandidateInte
 export type WorkspaceHubSlotInteraction =
   | {
       readonly beginOpeningAttempt: () => WorkspaceHubSlotOpeningAttempt;
+      readonly contextReached: boolean;
       readonly key: string;
       readonly owner: HubSlotAddress;
       readonly selected: false;
     }
   | {
       readonly close?: WorkspaceHubSlotCloseInteraction;
+      readonly contextReached: boolean;
       readonly key: string;
       readonly owner: HubSlotAddress;
       readonly selected: true;
@@ -686,6 +688,8 @@ export interface WorkspaceHubActionOrderProposal extends WorkspaceCandidateInter
  * become command owners. Room visits are a derived view of the same order.
  */
 export interface WorkspaceHubActionOrderInteraction {
+  /** Read from retained products; appends and resets wait on an earlier choice when false. */
+  readonly contextReached: boolean;
   readonly key: string;
   readonly owner: HubDecisionAddress;
   readonly proposalFor: (actions: readonly HubAction[]) => WorkspaceHubActionOrderProposal;

@@ -146,10 +146,9 @@ export function TraitOfferDialog({
   const focusedSemanticOwner = useAppSelector((state) => state.editorSession.focusedSemanticOwner);
   const dialogRef = useRef<HTMLDialogElement>(null);
   const previousFocusRef = useRef<HTMLElement | null>(null);
-  const interaction = requireWorkspaceInteraction(
-    interactions.traitOffers,
-    workspaceInteractionKey(target),
-  );
+  // A stale target may name an offer that is no longer projected.
+  const interaction = interactions.traitOffers.get(workspaceInteractionKey(target));
+  const unavailable = interaction === undefined || !interaction.contextReached;
   const close = useCallback((): void => {
     dispatch(traitOfferDialogClosed());
     const launcher = document.getElementById(launcherId(target));
@@ -223,7 +222,11 @@ export function TraitOfferDialog({
     };
   }, [close, focusedSemanticOwner, target]);
   // Every entry point shares this guard: an unreached offer has no editor.
-  if (!interaction.contextReached) return null;
+  // The system closes a dialog whose context is lost; a later reach needs an explicit reopen.
+  useEffect(() => {
+    if (unavailable) dispatch(traitOfferDialogClosed());
+  }, [dispatch, unavailable]);
+  if (unavailable) return null;
   return (
     <dialog
       aria-labelledby={`trait-offer-dialog-title-${semanticAddressKey(target)}`}

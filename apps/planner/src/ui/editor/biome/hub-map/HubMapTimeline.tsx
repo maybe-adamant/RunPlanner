@@ -19,7 +19,10 @@ import {
   type WorkspaceInteractionCatalog,
   type WorkspaceMarker,
 } from '@planner/projections/structured-workspace';
-import { candidateMayBeAuthored } from '@planner/ui/feedback/candidatePresentation';
+import {
+  candidateMayBeAuthored,
+  candidateWaitingTitle,
+} from '@planner/ui/feedback/candidatePresentation';
 import { useWorkspaceInteractionController } from '@planner/ui/controls/useWorkspaceInteraction';
 import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
 import { semanticOwnerFocused } from '@planner/state/editorSessionSlice';
@@ -149,7 +152,9 @@ function TimelineMapMarker({
   slot,
   visitMarker,
   visitPosition,
+  waiting,
 }: {
+  readonly waiting: boolean;
   readonly actionPosition: number | undefined;
   readonly annotation: HubMapAnnotation;
   readonly atCapacity: boolean;
@@ -173,10 +178,11 @@ function TimelineMapMarker({
   const reward = hubMapReward(slot);
   const canAppend = !isVisited && !atCapacity;
   const canOpen = isVisited && complete && slot.room !== undefined;
+  const appendWaits = canAppend && waiting && !locked;
   const markerDisabled = canAppend && locked;
   const position = hubMapPosition(annotation);
   const pointer = useDragSuppressedActivation(() => {
-    if (canAppend && !locked) onAppend(slot);
+    if (canAppend && !locked && !waiting) onAppend(slot);
     else if (canOpen) setOpen(true);
   });
   const markerLabel = isVisited
@@ -216,11 +222,11 @@ function TimelineMapMarker({
             .join(' ')}
           aria-disabled={(!canAppend && !canOpen) || (canAppend && locked) || undefined}
           data-authoring-locked={markerDisabled || undefined}
-          disabled={markerDisabled}
+          disabled={markerDisabled || appendWaits}
           inert={markerDisabled}
           {...pointer}
           style={position}
-          title={`${slot.label}: ${reward.summary}`}
+          title={appendWaits ? candidateWaitingTitle : `${slot.label}: ${reward.summary}`}
           type="button"
         >
           <HubMapMarkerContent label={annotation.mapLabel} open reward={reward} />
@@ -242,7 +248,9 @@ function TimelineFountainMarker({
   complete,
   onAppend,
   readinessOwner,
+  waiting,
 }: {
+  readonly waiting: boolean;
   readonly fountain: WorkspaceHubFountain;
   readonly locked: boolean;
   readonly complete: boolean;
@@ -257,10 +265,11 @@ function TimelineFountainMarker({
   const appendActions = fountain.appendActions;
   const canAppend = appendActions !== undefined;
   const canOpen = !canAppend && complete;
+  const appendWaits = canAppend && waiting && !locked;
   const markerDisabled = canAppend && locked;
   const position = hubMapPosition(hubMapFountainAnnotation);
   const pointer = useDragSuppressedActivation(() => {
-    if (appendActions !== undefined && !locked) onAppend(appendActions);
+    if (appendActions !== undefined && !locked && !waiting) onAppend(appendActions);
     else if (canOpen) setOpen(true);
   });
   return (
@@ -295,11 +304,11 @@ function TimelineFountainMarker({
           data-hub-fountain
           data-room-map-overlay-control
           data-used={fountain.actionPosition !== undefined}
-          disabled={markerDisabled}
+          disabled={markerDisabled || appendWaits}
           inert={markerDisabled}
           {...pointer}
           style={position}
-          title="Hub fountain"
+          title={appendWaits ? candidateWaitingTitle : 'Hub fountain'}
           type="button"
         >
           <HubMapFountainContent />
@@ -337,6 +346,7 @@ export function HubMapTimeline({
   // Capacity counts room visits only; the fountain use never occupies a visit.
   const atCapacity = visitOrder.length === node.requiredVisitCount;
   const complete = atCapacity && node.fountain.actionPosition !== undefined;
+  const waiting = !interaction.contextReached;
   const replaceActions = (actions: readonly HubAction[]): void => {
     const proposal = interaction.proposalFor(actions);
     const options = candidates.activate(proposal);
@@ -387,6 +397,7 @@ export function HubMapTimeline({
                   key={annotation.hubSlotKey}
                   locked={locked}
                   onAppend={appendVisit}
+                  waiting={waiting}
                   readinessOwner={node.owner}
                   slot={slot}
                   visitMarker={visitMarker}
@@ -400,6 +411,7 @@ export function HubMapTimeline({
               locked={locked}
               onAppend={replaceActions}
               readinessOwner={node.owner}
+              waiting={waiting}
             />
           </div>
         }
