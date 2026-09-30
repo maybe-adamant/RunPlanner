@@ -412,6 +412,16 @@ and gift on the Fresh intros; Psyche untracked). Full `npm run check` at
 Luacheck 0 warnings / 0 errors, Rust 45, ESLint clean. Performance compare
 against `42fe5ecf`: PASS. No execution fixture or mature golden project moved.
 
+Gate K committed on `codex/fresh-file`: `936e02bc` (Gate E retired) and
+`56ff620c` (enemy introductions settled in the encounter selector; required
+customization; native admission; Turtle, WaterUnit and SiegeVine gates). Full
+`npm run check` at `56ff620c` (2026-09-29): exit 0; 395 Vitest files / 4171
+tests, 732 Lua tests, Luacheck 0 warnings / 0 errors, Rust 45, ESLint clean.
+Performance compare against `3f8015db`: PASS (largest Underworld
+representative edit +10.06%, +5.17 ms; Underworld full rebuild +8.62%,
++9.05 ms; both within threshold and reflect admission evaluation on mature
+generated preparation). No execution fixture or mature golden project moved.
+
 ## Phase III — visible rule integration roadmap
 
 ### K — Enemy introductions and Gate E retirement (locked 2026-09-29)
