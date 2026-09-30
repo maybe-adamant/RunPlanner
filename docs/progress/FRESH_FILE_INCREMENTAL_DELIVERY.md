@@ -419,8 +419,11 @@ customization; native admission; Turtle, WaterUnit and SiegeVine gates). Full
 tests, 732 Lua tests, Luacheck 0 warnings / 0 errors, Rust 45, ESLint clean.
 Performance compare against `3f8015db`: PASS (largest Underworld
 representative edit +10.06%, +5.17 ms; Underworld full rebuild +8.62%,
-+9.05 ms; both within threshold and reflect admission evaluation on mature
-generated preparation). No execution fixture or mature golden project moved.
++9.05 ms). A route-constant admission short-circuit was implemented and
+measured twice against `56ff620c`: deltas of −4.8% and +7.8% on the same
+metric, with the untouched Surface metrics swinging ±5% alongside, so the
+box's noise floor is about ±5% and no gain was demonstrable; the change was
+discarded. No execution fixture or mature golden project moved.
 
 ## Phase III — visible rule integration roadmap
 
