@@ -15,6 +15,7 @@ import { useWorkspaceInteraction } from '@planner/ui/controls/useWorkspaceIntera
 import { NemesisEventSelector } from '../NemesisEventEditor';
 import { GeneratedEncounterCustomizationControl } from './GeneratedEncounterCustomizationControl';
 import { CocoonCountControl } from './CocoonCountControl';
+import { CocoonRewardPointControl } from './CocoonRewardPointControl';
 import { InfiniteRosterControl } from './InfiniteRosterControl';
 
 const emptyEncounterPicker: import('@planner/projections/contextual/contextualPicker').ContextualPickerModel<string> =
@@ -133,6 +134,16 @@ function EncounterCustomizationControl({
                       id={`encounter-customization-${customizationId}-${decision.key}`}
                       interaction={interaction}
                       key={decision.key}
+                    />
+                  );
+                }
+                if (decision.selection.kind === 'cocoonRewardPoint') {
+                  return (
+                    <CocoonRewardPointControl
+                      key={decision.key}
+                      decision={{ ...decision, selection: decision.selection }}
+                      id={`encounter-customization-${customizationId}-${decision.key}`}
+                      interaction={interaction}
                     />
                   );
                 }
@@ -293,7 +304,9 @@ export function CustomizableEncounterPhaseControl({
         phase.address,
         semanticOwnerControlElementId(phase.address),
         phase.address,
-        (finding) => finding.code !== 'encounterCustomizationUnavailable',
+        (finding) =>
+          finding.code !== 'encounterCustomizationUnavailable' &&
+          finding.code !== 'aetosAppearanceUnavailable',
       )}
       id={semanticOwnerControlElementId(phase.address)}
       label="Encounter"
@@ -350,14 +363,14 @@ export function EncounterPhaseControl({
       : requireWorkspaceInteraction(interactions.figLeafSkips, phase.figLeaf.interactionKey);
   const figLeafControl =
     figLeafInteraction === undefined ? null : (
-      <label className="field-control fig-leaf-skip-control">
+      <label className="encounter-event-control">
         <input
           checked={figLeafInteraction.selected}
           disabled={!figLeafInteraction.supported && !figLeafInteraction.selected}
           onChange={(event) => executeIntent(figLeafInteraction.intentFor(event.target.checked))}
           type="checkbox"
         />
-        <span>Skip combat with Fig Leaf</span>
+        <span>Skip with Fig Leaf</span>
       </label>
     );
   const gorgonInteraction =
@@ -369,15 +382,67 @@ export function EncounterPhaseControl({
         );
   const gorgonControl =
     gorgonInteraction === undefined ? null : (
-      <label className="field-control gorgon-condition-control">
-        <span>Death Defiance condition</span>
+      <label className="encounter-event-control">
         <input
           checked={gorgonInteraction.selected}
           disabled={!gorgonInteraction.supported && !gorgonInteraction.selected}
           onChange={(event) => executeIntent(gorgonInteraction.intentFor(event.target.checked))}
           type="checkbox"
         />
+        <span>Gorgon Amulet: Death Defiance</span>
       </label>
+    );
+  const aetosInteraction =
+    phase.aetos === undefined
+      ? undefined
+      : requireWorkspaceInteraction(interactions.aetosAppearances, phase.aetos.interactionKey);
+  const aetosControl =
+    aetosInteraction === undefined ? null : (
+      <div className="encounter-event-control">
+        <label className="encounter-event-control">
+          <input
+            {...findingTarget(
+              phase.address,
+              `aetos-${semanticOwnerControlElementId(phase.address)}`,
+              phase.address,
+              (finding) => finding.code === 'aetosAppearanceUnavailable',
+            )}
+            checked={aetosInteraction.selectedWave !== undefined}
+            disabled={
+              aetosInteraction.selectedWave === undefined && aetosInteraction.waves.length === 0
+            }
+            onChange={(event) => {
+              if (!event.target.checked) executeIntent(aetosInteraction.intentFor(null));
+              else if (aetosInteraction.enableIntent !== undefined)
+                executeIntent(aetosInteraction.enableIntent);
+            }}
+            type="checkbox"
+          />
+          <span>Aetos appearance</span>
+        </label>
+        <span className="encounter-event-wave-slot">
+          {aetosInteraction.selectedWave === undefined ? null : (
+            <select
+              aria-label="Aetos wave"
+              value={aetosInteraction.selectedWave}
+              onChange={(event) =>
+                executeIntent(aetosInteraction.intentFor(Number(event.target.value)))
+              }
+            >
+              {!aetosInteraction.waves.includes(aetosInteraction.selectedWave) ? (
+                <option disabled value={aetosInteraction.selectedWave}>
+                  Wave {aetosInteraction.selectedWave} (unavailable)
+                </option>
+              ) : null}
+              {aetosInteraction.waves.map((wave) => (
+                <option key={wave} value={wave}>
+                  Wave {wave}
+                </option>
+              ))}
+            </select>
+          )}
+        </span>
+      </div>
     );
   const ariaLabel = phase.label.endsWith('encounter')
     ? `${phase.label} phase`
@@ -402,7 +467,15 @@ export function EncounterPhaseControl({
       {...(!phase.customizable &&
       customizationControl === null &&
       phase.nemesisFeature === undefined
-        ? { ...findingTarget(phase.address), tabIndex: -1 }
+        ? {
+            ...findingTarget(
+              phase.address,
+              undefined,
+              phase.address,
+              (finding) => finding.code !== 'aetosAppearanceUnavailable',
+            ),
+            tabIndex: -1,
+          }
         : {})}
       aria-label={ariaLabel}
       className="encounter-phase-control"
@@ -426,10 +499,22 @@ export function EncounterPhaseControl({
           </div>
         )}
         {customizationControl}
-        {figLeafControl}
-        {gorgonControl}
         {phase.customizable ? null : nemesisEventSelector}
       </div>
+      {figLeafControl !== null || gorgonControl !== null || aetosControl !== null ? (
+        <div
+          aria-label="Events"
+          className="field-control field-control-inline encounter-events"
+          role="group"
+        >
+          <span>Events</span>
+          <div className="encounter-event-controls">
+            {figLeafControl}
+            {gorgonControl}
+            {aetosControl}
+          </div>
+        </div>
+      ) : null}
     </section>
   );
 }

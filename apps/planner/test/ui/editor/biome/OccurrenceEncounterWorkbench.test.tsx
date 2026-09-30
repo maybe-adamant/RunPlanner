@@ -23,6 +23,8 @@ import {
 } from '@run-planner/engine/authored-project';
 import { assembleExecutionProduct, compileExecutionPlan } from '@run-planner/engine/execution-plan';
 import { simulateProject } from '@run-planner/engine/simulation';
+import { loadUnderworldArachneCocoonsCheckpoint } from '@run-planner/test-fixtures/checkpoints/underworld';
+import { arachneCocoonPhases } from '@run-planner/test-fixtures/underworld';
 import { act, cleanup, fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
@@ -54,6 +56,7 @@ import {
   loadSurfaceNProject,
   loadSurfaceNStoryBoardProject,
   loadSurfaceNOPQProject,
+  reachedPOutdoorIcarusFixture,
   nBiome,
   nOccurrenceId,
   nOccurrenceIds,
@@ -92,6 +95,111 @@ afterEach(() => {
 });
 
 describe('OccurrenceEncounterWorkbench', () => {
+  it('authors a native Aetos wave in Events, retains an unavailable choice, and repairs it directly', async () => {
+    const occurrenceId = pOccurrenceId('P_Combat03', 1, 1);
+    const phase = createEncounterPhaseAddress(
+      pBiome,
+      { kind: 'occurrence', occurrenceId },
+      'Combat',
+    );
+    const view = renderOccurrenceWorkbench(
+      loadSurfaceNOPQProject(),
+      'Surface',
+      'P',
+      occurrenceById(occurrenceId),
+    );
+    openRoomTab('Room Timeline');
+    expect(screen.queryByRole('combobox', { name: 'Aetos wave' })).toBeNull();
+    await view.user.click(screen.getByRole('checkbox', { name: 'Aetos appearance' }));
+    expect((screen.getByRole('combobox', { name: 'Aetos wave' }) as HTMLSelectElement).value).toBe(
+      '2',
+    );
+    const selected = view.application.store.getState().projectWorkspace.history!.present;
+    expect(
+      selected.route.biomes
+        .find((biome) => biome.biomeKey === 'P')
+        ?.topology?.occurrences.find((room) => room.occurrenceId === occurrenceId)?.encounters,
+    ).toMatchObject({ aetosWaveByPhase: { Combat: 2 } });
+    act(() => {
+      view.application.store.dispatch(
+        authoredProjectCommandDispatched({ kind: 'ReplaceAetosWave', phase, value: 3 }),
+      );
+    });
+    expect((screen.getByRole('combobox', { name: 'Aetos wave' }) as HTMLSelectElement).value).toBe(
+      '3',
+    );
+    expect(screen.getByRole('option', { name: 'Wave 3 (unavailable)' })).toBeDefined();
+    await view.user.selectOptions(screen.getByRole('combobox', { name: 'Aetos wave' }), '2');
+    await view.user.click(screen.getByRole('checkbox', { name: 'Aetos appearance' }));
+    expect(screen.queryByRole('combobox', { name: 'Aetos wave' })).toBeNull();
+    act(() => {
+      view.application.store.dispatch(authoredProjectUndoRequested());
+    });
+    expect((screen.getByRole('combobox', { name: 'Aetos wave' }) as HTMLSelectElement).value).toBe(
+      '2',
+    );
+    act(() => {
+      view.application.store.dispatch(
+        authoredProjectCommandDispatched({
+          kind: 'SelectEncounter',
+          phase,
+          encounterKey: 'GeneratedP_Large',
+        }),
+      );
+    });
+    expect(
+      (screen.getByRole('checkbox', { name: 'Aetos appearance' }) as HTMLInputElement).checked,
+    ).toBe(true);
+    await view.user.click(screen.getByRole('checkbox', { name: 'Aetos appearance' }));
+    expect(screen.queryByRole('checkbox', { name: 'Aetos appearance' })).toBeNull();
+  });
+
+  it('hides later unselected Aetos controls but focuses a retained duplicate for repair', async () => {
+    const fixture = reachedPOutdoorIcarusFixture();
+    const earlier = createEncounterPhaseAddress(
+      pBiome,
+      { kind: 'occurrence', occurrenceId: pOccurrenceId('P_Combat03', 1, 1) },
+      'Combat',
+    );
+    let project = applyProjectCommand(fixture.project, catalog, {
+      kind: 'ReplaceAetosWave',
+      phase: earlier,
+      value: 2,
+    });
+    const view = renderOccurrenceWorkbench(
+      project,
+      'Surface',
+      'P',
+      occurrenceById(fixture.occurrenceId),
+    );
+    openRoomTab('Room Timeline');
+    expect(screen.queryByRole('checkbox', { name: 'Aetos appearance' })).toBeNull();
+    act(() => {
+      view.application.store.dispatch(
+        authoredProjectCommandDispatched({
+          kind: 'ReplaceAetosWave',
+          phase: fixture.encounter,
+          value: 2,
+        }),
+      );
+    });
+    project = view.application.store.getState().projectWorkspace.history!.present;
+    const finding = simulateProject(catalog, project).findings.find(
+      (entry) => entry.code === 'aetosAppearanceUnavailable',
+    );
+    if (finding === undefined) throw new Error('duplicate finding missing');
+    act(() => {
+      view.application.store.dispatch(
+        findingSelected({ key: semanticFindingKey(finding), origin: finding.origin }),
+      );
+    });
+    const checkbox = screen.getByRole('checkbox', { name: 'Aetos appearance' });
+    expect((checkbox as HTMLInputElement).checked).toBe(true);
+    await waitFor(() => expect(document.activeElement).toBe(checkbox));
+    await view.user.click(checkbox);
+    expect(screen.queryByRole('checkbox', { name: 'Aetos appearance' })).toBeNull();
+  });
+
   it('exposes generated customization on a fixed opening encounter', async () => {
     const view = renderOccurrenceWorkbench(
       createCompleteFGProject(),
@@ -100,6 +208,7 @@ describe('OccurrenceEncounterWorkbench', () => {
       occurrenceById(goldenFStartId),
     );
     openRoomTab('Room Timeline');
+    expect(screen.queryByRole('group', { name: 'Events' })).toBeNull();
     await view.user.click(screen.getByRole('button', { name: 'Customize encounter' }));
     const dialog = await screen.findByRole('dialog', { name: 'Customize' });
     await view.user.click(within(dialog).getByRole('button', { name: 'Edit' }));
@@ -296,6 +405,117 @@ describe('OccurrenceEncounterWorkbench', () => {
     });
   });
 
+  it.each(['F', 'G'] as const)(
+    'binds %s cocoon map and selector to the same independent position with Undo',
+    async (biomeKey) => {
+      vi.spyOn(HTMLElement.prototype, 'clientWidth', 'get').mockReturnValue(500);
+      vi.spyOn(HTMLElement.prototype, 'clientHeight', 'get').mockReturnValue(280);
+      vi.spyOn(HTMLElement.prototype, 'offsetWidth', 'get').mockReturnValue(500);
+      vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockReturnValue(
+        new DOMRect(0, 0, 500, 280),
+      );
+      const project = loadUnderworldArachneCocoonsCheckpoint();
+      const phase = arachneCocoonPhases[biomeKey];
+      const occurrenceId = phase.owner.occurrenceId;
+      const host = project.route.biomes
+        .find((biome) => biome.biomeKey === biomeKey)!
+        .topology!.occurrences.find((entry) => entry.occurrenceId === occurrenceId)!;
+      const ids = catalog.rooms.byKey[host.gameName]!.cocoonRewardPointIds!;
+      const view = renderOccurrenceWorkbench(
+        project,
+        'Underworld',
+        biomeKey,
+        occurrenceById(occurrenceId),
+      );
+      const values = () =>
+        view.application.store
+          .getState()
+          .projectWorkspace.history!.present.route.biomes.find(
+            (biome) => biome.biomeKey === biomeKey,
+          )!
+          .topology!.occurrences.find((entry) => entry.occurrenceId === occurrenceId)!.encounters
+          .customizationByPhase?.Encounter;
+      const priorCount = values()?.cocoonCount;
+      openRoomTab('Room Timeline');
+      await view.user.click(screen.getByRole('button', { name: 'Customize encounter' }));
+      const dialog = await screen.findByRole('dialog', { name: 'Customize' });
+      const marker = within(dialog).getByRole('button', { name: 'Reward cocoon 1' });
+      expect(
+        within(dialog)
+          .getByRole('img', { name: `Map of ${host.gameName} cocoons` })
+          .getAttribute('src'),
+      ).toContain('/cocoons/assets/');
+      await view.user.click(marker);
+      await waitFor(() =>
+        expect(values()?.cocoonRewardPoint).toEqual({
+          kind: 'cocoonRewardPoint',
+          spawnPointId: ids[0],
+        }),
+      );
+      expect(marker.getAttribute('aria-pressed')).toBe('true');
+      expect(values()?.cocoonCount).toEqual(priorCount);
+      const selector = within(dialog).getByRole('combobox', { name: 'Reward position' });
+      expect((selector as HTMLSelectElement).value).toBe(String(ids[0]));
+      await view.user.selectOptions(selector, String(ids[1]));
+      expect(
+        within(dialog)
+          .getByRole('button', { name: 'Reward cocoon 2' })
+          .getAttribute('aria-pressed'),
+      ).toBe('true');
+      act(() => view.application.store.dispatch(authoredProjectUndoRequested()));
+      await waitFor(() =>
+        expect(values()?.cocoonRewardPoint).toEqual({
+          kind: 'cocoonRewardPoint',
+          spawnPointId: ids[0],
+        }),
+      );
+      const second = within(dialog).getByRole('button', { name: 'Reward cocoon 2' });
+      second.focus();
+      await view.user.keyboard('{Enter}');
+      await waitFor(() =>
+        expect(values()?.cocoonRewardPoint).toEqual({
+          kind: 'cocoonRewardPoint',
+          spawnPointId: ids[1],
+        }),
+      );
+      await view.user.selectOptions(selector, '');
+      await waitFor(() => expect(values()?.cocoonRewardPoint).toBeUndefined());
+      expect(values()?.cocoonCount).toEqual(priorCount);
+      expect(
+        within(dialog)
+          .getAllByRole('button', { name: /Reward cocoon/ })
+          .every((button) => button.getAttribute('aria-pressed') === 'false'),
+      ).toBe(true);
+      const image = within(dialog).getByRole('img', { name: `Map of ${host.gameName} cocoons` });
+      Object.defineProperties(image, {
+        naturalWidth: { value: 2560 },
+        naturalHeight: { value: 1440 },
+      });
+      fireEvent.load(image);
+      const stage = image.parentElement!.parentElement!;
+      const scroll = within(dialog).getByRole('region', {
+        name: `Pan map of ${host.gameName} cocoons`,
+      });
+      await view.user.click(within(dialog).getByRole('button', { name: 'Map controls' }));
+      fireEvent.click(within(dialog).getByRole('button', { name: 'Zoom in' }));
+      expect(within(dialog).getByText('125%')).toBeTruthy();
+      const beforePan = scroll.scrollLeft;
+      const pointer = { pointerId: 1, pointerType: 'mouse', button: 0, clientX: 200, clientY: 100 };
+      fireEvent.pointerDown(stage, pointer);
+      fireEvent.pointerMove(stage, { ...pointer, clientX: 160 });
+      fireEvent.pointerUp(stage, pointer);
+      expect(scroll.scrollLeft).toBeGreaterThan(beforePan);
+      fireEvent.pointerDown(marker, pointer);
+      fireEvent.pointerMove(marker, { ...pointer, clientX: 240 });
+      fireEvent.pointerUp(marker, { ...pointer, clientX: 240 });
+      fireEvent.click(marker, { detail: 1 });
+      expect(values()?.cocoonRewardPoint).toBeUndefined();
+      fireEvent.click(within(dialog).getByRole('button', { name: 'Fit' }));
+      expect(scroll.scrollLeft).toBe(0);
+      expect(within(dialog).getByText('100%')).toBeTruthy();
+    },
+  );
+
   it('slides an Arachne cocoon count from Default and resets it to Default', async () => {
     const occurrenceId = goldenFOccurrenceId(5, 1);
     const phase = createEncounterPhaseAddress(
@@ -327,6 +547,23 @@ describe('OccurrenceEncounterWorkbench', () => {
     expect(slider.getAttribute('aria-valuetext')).toBe('Default');
     expect(slider.getAttribute('min')).toBe('0');
     expect(slider.getAttribute('max')).toBe('7');
+    const pointSelector = within(dialog).getByRole('combobox', { name: 'Reward position' });
+    const firstPoint = within(pointSelector)
+      .getByRole('option', { name: '1' })
+      .getAttribute('value')!;
+    await view.user.selectOptions(pointSelector, firstPoint);
+    const point = () =>
+      view.application.store
+        .getState()
+        .projectWorkspace.history!.present.route.biomes.find((b) => b.biomeKey === 'F')!
+        .topology!.occurrences.find((o) => o.occurrenceId === occurrenceId)!.encounters
+        .customizationByPhase?.Encounter?.cocoonRewardPoint;
+    await waitFor(() =>
+      expect(point()).toEqual({ kind: 'cocoonRewardPoint', spawnPointId: Number(firstPoint) }),
+    );
+    expect(cocoonCount(view)).toBeUndefined();
+    await view.user.selectOptions(pointSelector, '');
+    await waitFor(() => expect(point()).toBeUndefined());
     expect(within(dialog).getByRole('button', { name: 'Reset' }).hasAttribute('disabled')).toBe(
       true,
     );
@@ -437,6 +674,67 @@ describe('OccurrenceEncounterWorkbench', () => {
         ?.topology?.occurrences.find((candidate) => candidate.occurrenceId === occurrenceId)
         ?.encounters.customizationByPhase?.Encounter?.infiniteRoster,
     ).toEqual(invalid);
+  });
+
+  it('shows and repairs a retained unavailable cocoon reward point', async () => {
+    const occurrenceId = goldenFOccurrenceId(5, 1);
+    const phase = createEncounterPhaseAddress(
+      goldenFBiome,
+      { kind: 'occurrence', occurrenceId },
+      'Encounter',
+    );
+    const selected = applyProjectCommand(createCompleteFGProject(), catalog, {
+      kind: 'SelectEncounter',
+      phase,
+      encounterKey: 'ArachneCombatF',
+    });
+    const project = applyProjectCommand(selected, catalog, {
+      kind: 'ReplaceEncounterCustomization',
+      phase,
+      decisionKey: 'cocoonRewardPoint',
+      value: { kind: 'cocoonRewardPoint', spawnPointId: 1 },
+    });
+    const finding = simulateProject(catalog, project).findings.find(
+      (candidate) =>
+        candidate.code === 'encounterCustomizationUnavailable' &&
+        semanticAddressKey(candidate.origin) === semanticAddressKey(phase),
+    )!;
+    const view = renderOccurrenceWorkbench(
+      project,
+      'Underworld',
+      'F',
+      occurrenceById(occurrenceId),
+    );
+    openRoomTab('Room Timeline');
+    const trigger = screen.getByRole('button', { name: 'Customize encounter' });
+    act(() =>
+      view.application.store.dispatch(
+        findingSelected({ key: semanticFindingKey(finding), origin: finding.origin }),
+      ),
+    );
+    await waitFor(() => expect(document.activeElement).toBe(trigger));
+    expect(screen.queryByRole('dialog', { name: 'Customize' })).toBeNull();
+    await view.user.click(trigger);
+    const dialog = await screen.findByRole('dialog', { name: 'Customize' });
+    const selector = within(dialog).getByRole('combobox', { name: 'Reward position' });
+    expect(finding.origin).toEqual(phase);
+    expect((selector as HTMLSelectElement).value).toBe('1');
+    expect(within(selector).getByRole('option', { name: '1 (unavailable)' })).toBeTruthy();
+    expect(within(dialog).getByText('Needs repair')).toBeTruthy();
+    const point = () =>
+      view.application.store
+        .getState()
+        .projectWorkspace.history!.present.route.biomes.find((biome) => biome.biomeKey === 'F')!
+        .topology!.occurrences.find((entry) => entry.occurrenceId === occurrenceId)!.encounters
+        .customizationByPhase?.Encounter?.cocoonRewardPoint;
+    expect(point()).toEqual({ kind: 'cocoonRewardPoint', spawnPointId: 1 });
+    const validId = within(selector).getByRole('option', { name: '1' }).getAttribute('value')!;
+    await view.user.selectOptions(selector, validId);
+    await waitFor(() =>
+      expect(point()).toEqual({ kind: 'cocoonRewardPoint', spawnPointId: Number(validId) }),
+    );
+    expect(within(dialog).queryByText('Needs repair')).toBeNull();
+    expect(within(selector).queryByRole('option', { name: '1 (unavailable)' })).toBeNull();
   });
 
   it('repairs a retained out-of-range cocoon count by choosing its clamped stop', async () => {
@@ -623,10 +921,13 @@ describe('OccurrenceEncounterWorkbench', () => {
     const view = renderOccurrenceWorkbench(project, 'Surface', 'P', occurrenceById(occurrenceId));
     openRoomTab('Room Timeline');
     const condition = screen.getByRole('checkbox', {
-      name: 'Death Defiance condition',
+      name: 'Gorgon Amulet: Death Defiance',
     }) as HTMLInputElement;
     expect(condition.disabled).toBe(false);
-    await view.user.click(condition);
+    expect(within(screen.getByRole('group', { name: 'Events' })).getByRole('checkbox')).toBe(
+      condition,
+    );
+    await view.user.click(screen.getByText('Gorgon Amulet: Death Defiance'));
     await waitFor(() => {
       const launcher = screen.getByRole('button', {
         name: /Choose Trait; trait is not selected/,
@@ -642,7 +943,7 @@ describe('OccurrenceEncounterWorkbench', () => {
     ).toBe(true);
   });
 
-  it('keeps a context-invalid Gorgon child visible as a repair surface', () => {
+  it('keeps a context-invalid Gorgon child visible as a repair surface', async () => {
     const occurrenceId = pOccurrenceId('P_Combat12', 8, 1);
     const phase = createEncounterPhaseAddress(
       pBiome,
@@ -676,10 +977,10 @@ describe('OccurrenceEncounterWorkbench', () => {
       phase,
       encounterKey: 'AthenaCombatP',
     });
-    renderOccurrenceWorkbench(project, 'Surface', 'P', occurrenceById(occurrenceId));
+    const view = renderOccurrenceWorkbench(project, 'Surface', 'P', occurrenceById(occurrenceId));
     openRoomTab('Room Timeline');
     const condition = screen.getByRole('checkbox', {
-      name: 'Death Defiance condition',
+      name: 'Gorgon Amulet: Death Defiance',
     }) as HTMLInputElement;
     expect(condition.checked).toBe(true);
     expect(condition.disabled).toBe(false);
@@ -687,6 +988,16 @@ describe('OccurrenceEncounterWorkbench', () => {
       name: /Edit Trait · Divine Dash; trait configuration has no findings/,
     });
     expect(launcher.getAttribute('data-trait-status')).toBe('valid');
+    await view.user.click(condition);
+    await waitFor(() => {
+      expect(
+        (
+          screen.getByRole('checkbox', {
+            name: 'Gorgon Amulet: Death Defiance',
+          }) as HTMLInputElement
+        ).checked,
+      ).toBe(false);
+    });
   });
 
   it('renders and dispatches the phase-local Fig Leaf checkbox on a supported fixed phase', async () => {
@@ -702,9 +1013,11 @@ describe('OccurrenceEncounterWorkbench', () => {
       occurrenceById(nOccurrenceIds.preHub),
     );
     openRoomTab('Room Timeline');
-    const skip = screen.getByRole('checkbox', { name: 'Skip combat with Fig Leaf' });
+    const skip = screen.getByRole('checkbox', { name: 'Skip with Fig Leaf' });
     expect((skip as HTMLInputElement).disabled).toBe(false);
-    await view.user.click(skip);
+    expect(within(screen.getByRole('group', { name: 'Events' })).getByRole('checkbox')).toBe(skip);
+    (skip as HTMLInputElement).focus();
+    await view.user.keyboard(' ');
     await waitFor(() => {
       const occurrence = view.application.store
         .getState()
@@ -713,6 +1026,49 @@ describe('OccurrenceEncounterWorkbench', () => {
           (candidate) => candidate.occurrenceId === nOccurrenceIds.preHub,
         );
       expect(occurrence?.encounters.figLeafSkipByPhase).toMatchObject({ Encounter: true });
+    });
+  });
+
+  it('groups retained event selections together so conflicting authoring remains repairable', async () => {
+    const occurrenceId = pOccurrenceId('P_Combat12', 8, 1);
+    const phase = createEncounterPhaseAddress(
+      pBiome,
+      { kind: 'occurrence', occurrenceId },
+      'Combat',
+    );
+    let project = applyProjectCommand(loadSurfaceNOPQProject(), catalog, {
+      kind: 'ReplaceStartingKeepsake',
+      selection: createRouteStartKeepsakeSelectionAddress('Surface'),
+      keepsakeKey: 'AthenaEncounterKeepsake',
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceGorgonDeathDefianceCondition',
+      phase,
+      value: true,
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceFigLeafSkip',
+      phase,
+      value: true,
+    });
+    const view = renderOccurrenceWorkbench(project, 'Surface', 'P', occurrenceById(occurrenceId));
+    openRoomTab('Room Timeline');
+    const events = screen.getByRole('group', { name: 'Events' });
+    expect(
+      within(events)
+        .getAllByRole('checkbox')
+        .map((input) => (input as HTMLInputElement).checked),
+    ).toEqual([true, true]);
+    const skip = within(events).getByRole('checkbox', {
+      name: 'Skip with Fig Leaf',
+    }) as HTMLInputElement;
+    expect(skip.disabled).toBe(false);
+    expect(
+      within(events).getByRole('checkbox', { name: 'Gorgon Amulet: Death Defiance' }),
+    ).toBeTruthy();
+    await view.user.click(skip);
+    await waitFor(() => {
+      expect(screen.queryByRole('checkbox', { name: 'Skip with Fig Leaf' })).toBeNull();
     });
   });
 

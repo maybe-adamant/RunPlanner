@@ -22,6 +22,7 @@ import { validateExecutionReferences } from './codec/references';
 import { startingLoadout } from './codec/loadout';
 import { resources } from './codec/resources';
 import { fingerprint } from './fingerprint';
+import { olympusAetos } from './codec/aetos';
 
 export { ExecutionPlanCodecError };
 
@@ -77,7 +78,7 @@ export function decodeExecutionPlan(value: unknown): ExecutionPlan {
       'resources',
       'occurrences',
     ],
-    ['displayName'],
+    ['displayName', 'olympusAetos'],
     'execution plan',
   );
   if (record.format !== EXECUTION_PLAN_FORMAT) fail('execution plan.format is unsupported');
@@ -149,6 +150,10 @@ export function decodeExecutionPlan(value: unknown): ExecutionPlan {
   );
   if (occurrences.some((entry) => !biomeKeys.includes(entry.biomeKey)))
     fail('execution plan.occurrences contains a biome outside extent');
+  const selectedOccurrenceIds = Object.freeze(
+    stringArray(record.selectedOccurrenceIds, 'execution plan.selectedOccurrenceIds'),
+  );
+  const aetos = olympusAetos(record.olympusAetos, biomeKeys, selectedOccurrenceIds, occurrences);
   const plan = Object.freeze({
     format: EXECUTION_PLAN_FORMAT,
     protocolVersion: EXECUTION_PROTOCOL_VERSION,
@@ -168,9 +173,8 @@ export function decodeExecutionPlan(value: unknown): ExecutionPlan {
       biomeKeys: Object.freeze(biomeKeys),
       terminalBiomeKey: biomeKeys[biomeKeys.length - 1],
     }) as ExecutionPlan['extent'],
-    selectedOccurrenceIds: Object.freeze(
-      stringArray(record.selectedOccurrenceIds, 'execution plan.selectedOccurrenceIds'),
-    ),
+    selectedOccurrenceIds,
+    ...(aetos === undefined ? {} : { olympusAetos: aetos }),
     resources: resources(record.resources, 'execution plan.resources'),
     occurrences,
   });
@@ -186,6 +190,7 @@ export function decodeExecutionPlan(value: unknown): ExecutionPlan {
     extent: plan.extent,
     selectedOccurrenceIds: plan.selectedOccurrenceIds,
     resources: plan.resources,
+    ...(plan.olympusAetos === undefined ? {} : { olympusAetos: plan.olympusAetos }),
     occurrences: plan.occurrences,
   });
   if (fingerprint(body) !== plan.planFingerprint)

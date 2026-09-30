@@ -152,6 +152,17 @@ it('exports the reached G Anomaly roster and native return, then reloads its ros
 
 it('exports the selected F/G Arachne encounters and reloads the F cocoon reset', () => {
   const saved = loadUnderworldArachneCocoonsCheckpoint();
+  const countOnly = applyProjectHistoryCommand(createProjectHistory(saved), catalog, {
+    kind: 'ReplaceEncounterCustomization',
+    phase: arachneCocoonPhases.F,
+    decisionKey: 'cocoonRewardPoint',
+    value: null,
+  });
+  expect(
+    compileEligibleProject(countOnly.present).occurrences.find(
+      (room) => room.id === arachneCocoonPhases.F.owner.occurrenceId,
+    )?.overview.encounterPhases[0]?.customization,
+  ).toEqual([{ decisionKey: 'cocoonCount', kind: 'cocoonCount', count: 11 }]);
   const published = compileEligibleProject(saved);
   expect(
     published.occurrences.find((room) => room.id === arachneCocoonPhases.F.owner.occurrenceId)
@@ -161,13 +172,25 @@ it('exports the selected F/G Arachne encounters and reloads the F cocoon reset',
       slotKey: 'Encounter',
       encounterKey: 'ArachneCombatF',
       kind: 'combat',
-      customization: [{ decisionKey: 'cocoonCount', kind: 'cocoonCount', count: 11 }],
+      customization: [
+        { decisionKey: 'cocoonCount', kind: 'cocoonCount', count: 11 },
+        { decisionKey: 'cocoonRewardPoint', kind: 'cocoonRewardPoint', spawnPointId: 40191 },
+      ],
     },
   ]);
   expect(
     published.occurrences.find((room) => room.id === arachneCocoonPhases.G.owner.occurrenceId)
       ?.overview.encounterPhases,
-  ).toEqual([{ slotKey: 'Encounter', encounterKey: 'ArachneCombatG', kind: 'combat' }]);
+  ).toEqual([
+    {
+      slotKey: 'Encounter',
+      encounterKey: 'ArachneCombatG',
+      kind: 'combat',
+      customization: [
+        { decisionKey: 'cocoonRewardPoint', kind: 'cocoonRewardPoint', spawnPointId: 560737 },
+      ],
+    },
+  ]);
   const edited = applyProjectHistoryCommand(createProjectHistory(saved), catalog, {
     kind: 'ReplaceEncounterCustomization',
     phase: arachneCocoonPhases.F,
@@ -178,6 +201,26 @@ it('exports the selected F/G Arachne encounters and reloads the F cocoon reset',
   expect(reloaded).toEqual(edited.present);
   expect(
     compileEligibleProject(reloaded).occurrences.find(
+      (room) => room.id === arachneCocoonPhases.F.owner.occurrenceId,
+    )?.overview.encounterPhases,
+  ).toEqual([
+    {
+      slotKey: 'Encounter',
+      encounterKey: 'ArachneCombatF',
+      kind: 'combat',
+      customization: [
+        { decisionKey: 'cocoonRewardPoint', kind: 'cocoonRewardPoint', spawnPointId: 40191 },
+      ],
+    },
+  ]);
+  const any = applyProjectHistoryCommand(edited, catalog, {
+    kind: 'ReplaceEncounterCustomization',
+    phase: arachneCocoonPhases.F,
+    decisionKey: 'cocoonRewardPoint',
+    value: null,
+  });
+  expect(
+    compileEligibleProject(any.present).occurrences.find(
       (room) => room.id === arachneCocoonPhases.F.owner.occurrenceId,
     )?.overview.encounterPhases,
   ).toEqual([{ slotKey: 'Encounter', encounterKey: 'ArachneCombatF', kind: 'combat' }]);

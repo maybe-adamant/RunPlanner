@@ -398,12 +398,39 @@
   flex: 1 1 22rem;
 }
 
-.encounter-phase-settings > .field-control:not(.field-control-inline) {
+.encounter-event-controls {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 20px;
+}
+
+.encounter-event-control {
   display: inline-flex;
   align-items: center;
   flex: 0 0 auto;
   gap: 7px;
   white-space: nowrap;
+}
+
+.encounter-event-control > input {
+  margin: 0;
+}
+
+.encounter-event-wave-slot {
+  display: inline-flex;
+  flex: 0 0 7rem;
+  width: 7rem;
+  height: 1.9rem;
+}
+
+.encounter-event-wave-slot > select {
+  min-width: 0;
+  min-height: 0;
+  height: 100%;
+  padding: 2px 22px 2px 7px;
+  font-size: inherit;
 }
 
 .trait-offer-dialog.encounter-customization-dialog {
@@ -957,15 +984,6 @@
 
 .nemesis-response-control > input {
   margin: 0;
-}
-
-.encounter-phase-settings > .gorgon-condition-control input {
-  margin: 0;
-}
-
-.encounter-phase-settings > .gorgon-condition-control {
-  justify-content: flex-end;
-  margin-left: auto;
 }
 
 .ship-phase-list {

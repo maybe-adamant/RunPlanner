@@ -198,6 +198,10 @@ const fRoomDeclarations: readonly RawRoomDeclaration[] = [
   },
   {
     gameName: 'F_Combat02',
+    cocoonRewardPointIds: [
+      40191, 510184, 510185, 510189, 510190, 510192, 557321, 557322, 557323, 557324, 557325, 557326,
+      557327, 557328, 557875, 557876, 557877, 557878, 557879,
+    ],
     secretPointAnchorCount: 1,
     ...wellHost(1),
     resourcePointSupport: underworldResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
@@ -234,6 +238,10 @@ const fRoomDeclarations: readonly RawRoomDeclaration[] = [
   },
   {
     gameName: 'F_Combat03',
+    cocoonRewardPointIds: [
+      40191, 510184, 510185, 510189, 510190, 510191, 510192, 510342, 510343, 510345, 510346, 557879,
+      557880, 557881, 557882, 557883, 557884, 557885, 557886, 557887, 566424,
+    ],
     secretPointAnchorCount: 1,
     ...wellHost(2),
     resourcePointSupport: underworldResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
@@ -270,6 +278,10 @@ const fRoomDeclarations: readonly RawRoomDeclaration[] = [
   },
   {
     gameName: 'F_Combat04',
+    cocoonRewardPointIds: [
+      40191, 510184, 510185, 510186, 510187, 510188, 510189, 510190, 510191, 557749, 557750, 566390,
+      566391, 566392, 566393, 566394, 566395, 566396, 566397, 566398, 566399, 566400,
+    ],
     secretPointAnchorCount: 1,
     ...wellHost(1),
     resourcePointSupport: underworldResourcePointSupport([
@@ -311,6 +323,11 @@ const fRoomDeclarations: readonly RawRoomDeclaration[] = [
   },
   {
     gameName: 'F_Combat05',
+    cocoonRewardPointIds: [
+      40191, 510184, 510185, 510186, 510187, 510188, 510189, 510190, 510191, 510192, 557574, 557575,
+      557576, 557577, 557883, 557884, 557885, 557886, 557887, 557888, 557889, 557890, 557891,
+      557892, 566395,
+    ],
     secretPointAnchorCount: 1,
     ...wellHost(2),
     resourcePointSupport: underworldResourcePointSupport([
@@ -352,6 +369,10 @@ const fRoomDeclarations: readonly RawRoomDeclaration[] = [
   },
   {
     gameName: 'F_Combat06',
+    cocoonRewardPointIds: [
+      40191, 510184, 510185, 510189, 510190, 510191, 510192, 557678, 557679, 557680, 557681, 557682,
+      557683, 557778, 557779, 557780, 557781, 557782, 557783, 578496,
+    ],
     secretPointAnchorCount: 1,
     ...wellHost(2),
     resourcePointSupport: underworldResourcePointSupport([
@@ -388,6 +409,10 @@ const fRoomDeclarations: readonly RawRoomDeclaration[] = [
   },
   {
     gameName: 'F_Combat07',
+    cocoonRewardPointIds: [
+      40191, 557364, 557365, 557366, 557367, 557368, 557369, 557370, 557371, 557372, 557373, 557374,
+      557375, 557945, 557946, 557947, 557948, 557949, 574912,
+    ],
     secretPointAnchorCount: 1,
     ...wellHost(1),
     resourcePointSupport: underworldResourcePointSupport([
@@ -424,6 +449,10 @@ const fRoomDeclarations: readonly RawRoomDeclaration[] = [
   },
   {
     gameName: 'F_Combat08',
+    cocoonRewardPointIds: [
+      557365, 557366, 557367, 557368, 557369, 557370, 557371, 557372, 557373, 557374, 557375,
+      557376, 557377, 557378, 557407, 557947, 557948, 557949, 557950,
+    ],
     secretPointAnchorCount: 1,
     ...wellHost(1),
     resourcePointSupport: underworldResourcePointSupport([
@@ -465,6 +494,10 @@ const fRoomDeclarations: readonly RawRoomDeclaration[] = [
   },
   {
     gameName: 'F_Combat09',
+    cocoonRewardPointIds: [
+      40191, 561393, 561394, 561395, 561396, 561397, 561398, 561399, 566422, 566423, 566424, 566425,
+      566426, 566427, 566428, 566429, 566430, 566431,
+    ],
     secretPointAnchorCount: 1,
     ...wellHost(1),
     resourcePointSupport: underworldResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
@@ -498,6 +531,10 @@ const fRoomDeclarations: readonly RawRoomDeclaration[] = [
   },
   {
     gameName: 'F_Combat10',
+    cocoonRewardPointIds: [
+      40191, 561452, 561453, 561454, 561455, 561456, 561457, 566439, 566440, 566441, 566442, 566448,
+      566449, 566450, 566451, 566452, 566474, 566475,
+    ],
     secretPointAnchorCount: 1,
     ...wellHost(2),
     resourcePointSupport: underworldResourcePointSupport([
@@ -536,6 +573,10 @@ const fRoomDeclarations: readonly RawRoomDeclaration[] = [
   },
   {
     gameName: 'F_Combat11',
+    cocoonRewardPointIds: [
+      560887, 560888, 560889, 560890, 560891, 560892, 560893, 560894, 560895, 560896, 560897,
+      560898, 560899, 560900, 560901, 560902, 560903, 560904, 560905, 560906,
+    ],
     secretPointAnchorCount: 1,
     ...wellHost(2),
     resourcePointSupport: underworldResourcePointSupport([
@@ -577,6 +618,11 @@ const fRoomDeclarations: readonly RawRoomDeclaration[] = [
   },
   {
     gameName: 'F_Combat12',
+    cocoonRewardPointIds: [
+      561144, 561145, 561146, 561147, 561148, 561149, 561150, 561151, 561152, 561153, 561154,
+      561155, 561156, 561157, 561158, 561159, 561207, 566298, 566299, 566300, 566301, 566302,
+      566430, 566431, 566432,
+    ],
     secretPointAnchorCount: 1,
     ...wellHost(2),
     resourcePointSupport: underworldResourcePointSupport([
@@ -618,6 +664,11 @@ const fRoomDeclarations: readonly RawRoomDeclaration[] = [
   },
   {
     gameName: 'F_Combat13',
+    cocoonRewardPointIds: [
+      561151, 561152, 561153, 561155, 561156, 561157, 561158, 561159, 566442, 566443, 566444,
+      566445, 566446, 566447, 566448, 566449, 566450, 566451, 566452, 566453, 566454, 566455,
+      587616, 587617, 587618, 587619, 587620, 587621,
+    ],
     secretPointAnchorCount: 1,
     ...wellHost(2),
     resourcePointSupport: underworldResourcePointSupport([
@@ -654,6 +705,10 @@ const fRoomDeclarations: readonly RawRoomDeclaration[] = [
   },
   {
     gameName: 'F_Combat14',
+    cocoonRewardPointIds: [
+      561154, 566434, 566435, 566436, 566437, 566438, 566439, 566440, 566441, 566442, 566443,
+      566444, 566445, 566446, 566447, 578961, 578962,
+    ],
     secretPointAnchorCount: 1,
     ...wellHost(2),
     resourcePointSupport: underworldResourcePointSupport([
@@ -695,6 +750,10 @@ const fRoomDeclarations: readonly RawRoomDeclaration[] = [
   },
   {
     gameName: 'F_Combat15',
+    cocoonRewardPointIds: [
+      561150, 566459, 566460, 566461, 566462, 566463, 566464, 566465, 566466, 566467, 566468,
+      566469, 566470, 566471, 566472, 566473,
+    ],
     secretPointAnchorCount: 1,
     ...wellHost(2),
     resourcePointSupport: underworldResourcePointSupport([
@@ -736,6 +795,11 @@ const fRoomDeclarations: readonly RawRoomDeclaration[] = [
   },
   {
     gameName: 'F_Combat16',
+    cocoonRewardPointIds: [
+      566886, 566887, 566888, 566889, 566890, 566891, 566892, 566893, 566894, 566895, 566896,
+      566897, 566898, 566899, 566900, 566901, 566902, 566903, 566904, 566905, 566906, 566907,
+      580841, 580842, 580843, 580844, 580845, 580846, 580847,
+    ],
     secretPointAnchorCount: 1,
     ...wellHost(2),
     resourcePointSupport: underworldResourcePointSupport([
@@ -777,6 +841,12 @@ const fRoomDeclarations: readonly RawRoomDeclaration[] = [
   },
   {
     gameName: 'F_Combat17',
+    cocoonRewardPointIds: [
+      571041, 571042, 571043, 571044, 571045, 571046, 571047, 571048, 571049, 571050, 571051,
+      571052, 571053, 571054, 571055, 571056, 571057, 571058, 571059, 571060, 571061, 571062,
+      571063, 571064, 571066, 571067, 593692, 593693, 593694, 593695, 593696, 593697, 593698,
+      593699,
+    ],
     secretPointAnchorCount: 3,
     ...wellHost(1),
     resourcePointSupport: underworldResourcePointSupport([
@@ -818,6 +888,11 @@ const fRoomDeclarations: readonly RawRoomDeclaration[] = [
   },
   {
     gameName: 'F_Combat18',
+    cocoonRewardPointIds: [
+      571566, 571567, 571568, 571569, 571570, 571571, 571572, 571573, 571574, 571575, 571576,
+      571577, 571578, 571579, 571580, 571581, 571582, 571583, 571584, 571585, 571586, 571587,
+      571588, 571589, 571590, 571591,
+    ],
     secretPointAnchorCount: 2,
     ...wellHost(2),
     resourcePointSupport: underworldResourcePointSupport([
@@ -859,6 +934,12 @@ const fRoomDeclarations: readonly RawRoomDeclaration[] = [
   },
   {
     gameName: 'F_Combat19',
+    cocoonRewardPointIds: [
+      590699, 590700, 590701, 590702, 590703, 590704, 590705, 590706, 590707, 590708, 590709,
+      590710, 590712, 590713, 590737, 590869, 590876, 590878, 590891, 590892, 590931, 590932,
+      591000, 591001, 591002, 591003, 615359, 615360, 615361, 615362, 615363, 615364, 615365,
+      615366, 615367, 615368, 615369, 615370,
+    ],
     secretPointAnchorCount: 2,
     ...wellHost(1),
     resourcePointSupport: underworldResourcePointSupport([
@@ -900,6 +981,12 @@ const fRoomDeclarations: readonly RawRoomDeclaration[] = [
   },
   {
     gameName: 'F_Combat20',
+    cocoonRewardPointIds: [
+      40191, 593207, 593209, 593211, 593213, 593214, 593215, 593217, 593218, 593219, 593221, 593224,
+      593226, 593231, 593232, 593233, 593238, 593344, 593345, 593432, 593433, 593525, 593555,
+      593557, 593558, 593711, 593712, 593713, 593714, 593715, 593718, 593719, 593720, 593721,
+      593989, 593990, 593991, 593992, 593993, 757754, 757755, 757756, 757757, 757758,
+    ],
     secretPointAnchorCount: 1,
     ...wellHost(1),
     resourcePointSupport: underworldResourcePointSupport([
@@ -941,6 +1028,11 @@ const fRoomDeclarations: readonly RawRoomDeclaration[] = [
   },
   {
     gameName: 'F_Combat21',
+    cocoonRewardPointIds: [
+      40191, 699406, 699409, 699412, 699414, 699415, 699416, 699417, 699421, 699422, 699460, 699493,
+      699494, 699507, 699534, 758961, 758962, 759011, 759012, 759013, 760792, 760793, 760794,
+      760795,
+    ],
     secretPointAnchorCount: 2,
     ...wellHost(1),
     resourcePointSupport: underworldResourcePointSupport([
@@ -982,6 +1074,12 @@ const fRoomDeclarations: readonly RawRoomDeclaration[] = [
   },
   {
     gameName: 'F_Combat22',
+    cocoonRewardPointIds: [
+      787011, 802086, 802087, 802088, 802089, 802090, 802091, 802092, 802093, 802094, 802095,
+      802096, 802097, 802098, 802099, 802100, 802101, 802102, 802103, 802104, 802105, 802106,
+      802107, 802108, 802109, 802110, 802111, 802112, 802113, 802114, 802115, 802116, 802117,
+      802118, 802119, 802120, 802121, 802122, 802123, 802124, 802125, 802126, 802127,
+    ],
     secretPointAnchorCount: 2,
     ...wellHost(1),
     resourcePointSupport: underworldResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),

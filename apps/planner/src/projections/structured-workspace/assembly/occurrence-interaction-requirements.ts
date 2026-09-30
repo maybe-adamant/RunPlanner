@@ -16,6 +16,7 @@ function encounterPhaseInteractionRequirement(
       phase.nemesisFeature !== undefined ||
       phase.nemesisEvent !== undefined ||
       phase.figLeaf !== undefined ||
+      phase.aetos !== undefined ||
       phase.gorgonCondition !== undefined ||
       phase.customization !== undefined,
   );
@@ -29,6 +30,7 @@ function encounterPhaseInteractionRequirement(
           candidateChoices: phase.candidateChoices,
           owner: phase.address,
           selectedEncounterKey: phase.selectedEncounter.key,
+          ...(phase.aetos === undefined ? {} : { aetos: phase.aetos }),
           selectionEnabled: phase.customizable,
           ...(phase.customization === undefined ? {} : { customization: phase.customization }),
           ...(phase.nemesisFeature === undefined ? {} : { nemesisFeature: phase.nemesisFeature }),

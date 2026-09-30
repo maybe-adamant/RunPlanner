@@ -27,6 +27,8 @@ local thessaly = type(import) == "function" and import("mods/room/timeline/encou
     or require("mods.room.timeline.encounters.thessaly")
 local generated = type(import) == "function" and import("mods/room/timeline/encounters/generated.lua")
     or require("mods.room.timeline.encounters.generated")
+local aetos = type(import) == "function" and import("mods/room/timeline/encounters/aetos.lua")
+    or require("mods.room.timeline.encounters.aetos")
 local compatibility = type(import) == "function" and import("mods/room/timeline/encounters/compatibility.lua")
     or require("mods.room.timeline.encounters.compatibility")
 
@@ -49,6 +51,7 @@ function hooks.attach(module, session, getState, report, room, shipCombat, gener
     shipCombat = shipCombat or thessaly.create()
     generatedEncounter = generatedEncounter or generated.create()
     generatedEncounter.attach(module, session, getState, room)
+    aetos.attach(module, session, getState, report, room)
     local encounterIndex
     local directEncounterSequences = setmetatable({}, { __mode = "k" })
 

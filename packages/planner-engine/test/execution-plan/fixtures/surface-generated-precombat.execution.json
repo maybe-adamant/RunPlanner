@@ -427,6 +427,12 @@
       }
     ]
   },
+  "olympusAetos": {
+    "kind": "target",
+    "occurrenceId": "surface-p-1-1-p_combat03",
+    "phaseKey": "Combat",
+    "wave": 2
+  },
   "occurrences": [
     {
       "id": "surface-n-opening",
@@ -5719,5 +5725,5 @@
       }
     }
   ],
-  "planFingerprint": "115e6885"
+  "planFingerprint": "22db0d51"
 }

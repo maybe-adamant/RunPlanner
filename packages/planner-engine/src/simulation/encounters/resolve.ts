@@ -4,6 +4,7 @@ import type {
   EncounterCustomizationDecision,
   RoomDeclaration,
 } from '../../catalog-schema';
+import { cocoonRewardPointSupported } from './cocoon-reward-point';
 import type { RoomEncounterState } from '../../authored-project/model';
 import type { ResolvedRoutePosition } from '../../authored-project/route-context';
 import {
@@ -35,7 +36,12 @@ export function resolvedEncounterPhaseForDefinition(
   catalog: Catalog,
   phase: Pick<
     MaterializedEncounterPhase,
-    'slotKey' | 'envelopeKey' | 'figLeafSkip' | 'rewardAttachment' | 'customizationByDecision'
+    | 'slotKey'
+    | 'envelopeKey'
+    | 'figLeafSkip'
+    | 'rewardAttachment'
+    | 'customizationByDecision'
+    | 'aetosWave'
   >,
   encounterKey: string,
   /** Decisions a replaced binding or authored choice owned; their values are never supported. */
@@ -63,6 +69,8 @@ export function resolvedEncounterPhaseForDefinition(
     hostsGorgon: definition.hostsGorgon === true,
     skipEndEncounterEffects: definition.skipEndEncounterEffects === true,
     figLeafSkip: phase.figLeafSkip,
+    ...(phase.aetosWave === undefined ? {} : { aetosWave: phase.aetosWave }),
+    ...(definition.aetosWaves === undefined ? {} : { aetosWaves: definition.aetosWaves }),
     ...(definition.customization === undefined && retained.length === 0
       ? {}
       : {
@@ -213,6 +221,9 @@ export function materializeEncounterPhases(
         envelopeKey: room.encounterEnvelopeKey,
         authoredChoiceKey: encounterKey,
         figLeafSkip: encounters.figLeafSkipByPhase[slotKey] === true,
+        ...(encounters.aetosWaveByPhase?.[slotKey] === undefined
+          ? {}
+          : { aetosWave: encounters.aetosWaveByPhase[slotKey] }),
         ...(encounters.customizationByPhase?.[slotKey] === undefined
           ? {}
           : { customizationByDecision: encounters.customizationByPhase[slotKey] }),
@@ -265,12 +276,23 @@ export function resolveMaterializedEncounterPhase(
           encounterDefinitionKey: definitionKey,
         }),
   );
-  if (supportsGeneratedEncounterCustomization(room) || resolved.customization === undefined)
-    return resolved;
+  if (resolved.customization === undefined) return resolved;
   return Object.freeze({
     ...resolved,
     customization: Object.freeze(
-      resolved.customization.filter((decision) => decision.selection.kind !== 'generated'),
+      resolved.customization
+        .filter(
+          (decision) =>
+            decision.selection.kind !== 'generated' ||
+            supportsGeneratedEncounterCustomization(room),
+        )
+        .map((decision) =>
+          Object.freeze({
+            ...decision,
+            valueSupported:
+              decision.valueSupported && cocoonRewardPointSupported(room, decision.value),
+          }),
+        ),
     ),
   });
 }

@@ -33,9 +33,13 @@ export function reconcileRoomEncounterState(
   );
   const selections: Record<string, string> = {};
   const figLeafSkipByPhase: Record<string, boolean> = {};
+  const aetosWaveByPhase: Record<string, number> = {};
   const gorgonResultByPhase: Record<string, import('../model').AuthoredGorgonPhaseResult> = {};
   for (const binding of replacementBindings.values()) {
     figLeafSkipByPhase[binding.slotKey] = previous.figLeafSkipByPhase[binding.slotKey] === true;
+    const aetosWave = previous.aetosWaveByPhase?.[binding.slotKey];
+    if (previousBindings.has(binding.slotKey) && aetosWave !== undefined)
+      aetosWaveByPhase[binding.slotKey] = aetosWave;
     if (binding.kind !== 'set') continue;
     const fallback = replacement.encounterKeyByPhase[binding.slotKey];
     if (fallback === undefined) {
@@ -146,6 +150,9 @@ export function reconcileRoomEncounterState(
   return Object.freeze({
     encounterKeyByPhase: Object.freeze(selections),
     figLeafSkipByPhase: Object.freeze(figLeafSkipByPhase),
+    ...(Object.keys(aetosWaveByPhase).length === 0
+      ? {}
+      : { aetosWaveByPhase: Object.freeze(aetosWaveByPhase) }),
     gorgonResultByPhase: Object.freeze(gorgonResultByPhase),
     ...(Object.keys(traitOffersByPhase).length === 0
       ? {}

@@ -13,7 +13,10 @@ import { fail } from '../errors';
 
 export type RoomEncounterFacts = Pick<
   RoomDeclaration,
-  'encounterEnvelopeKey' | 'unmodeledEncounterKeys' | 'encounterSlotBindings'
+  | 'encounterEnvelopeKey'
+  | 'unmodeledEncounterKeys'
+  | 'encounterSlotBindings'
+  | 'cocoonRewardPointIds'
 >;
 
 function normalizeEncounterSlotBindings(
@@ -132,8 +135,21 @@ export function normalizeRoomEncounterFacts(
   if (new Set(unmodeledEncounterKeys).size !== unmodeledEncounterKeys.length) {
     fail(`${path}.unmodeledEncounterKeys`, 'must not contain duplicate encounter keys');
   }
+  const cocoonRewardPointIds = room.cocoonRewardPointIds;
+  if (
+    cocoonRewardPointIds !== undefined &&
+    (cocoonRewardPointIds.length === 0 ||
+      cocoonRewardPointIds.some(
+        (id, index) =>
+          !Number.isInteger(id) || id <= 0 || (index > 0 && id <= cocoonRewardPointIds[index - 1]!),
+      ))
+  )
+    fail(`${path}.cocoonRewardPointIds`, 'must be nonempty ascending positive native IDs');
   return Object.freeze({
     encounterEnvelopeKey,
+    ...(cocoonRewardPointIds === undefined
+      ? {}
+      : { cocoonRewardPointIds: Object.freeze([...cocoonRewardPointIds]) }),
     ...(unmodeledEncounterKeys.length === 0
       ? {}
       : { unmodeledEncounterKeys: Object.freeze(unmodeledEncounterKeys) }),

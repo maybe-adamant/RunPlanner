@@ -331,7 +331,21 @@ function TestProtocol.testMirroredGeneratedCompositionsCarryExpectedBudgetsAndOu
     lu.assertEquals({ precombat[1].baseRoll, precombat[1].expectedBudget }, { 412, 412 })
 end
 
-function TestProtocol.testMirroredArachneFixtureCarriesOnlyTheAuthoredCocoonCount()
+function TestProtocol.testCocoonPointWireShapeIsStrict()
+    local function value(fields)
+        return assert(json.decode('{"encounterPhases":[{"slotKey":"Encounter","encounterKey":"ArachneCombatG",'
+            .. '"kind":"combat","customization":[{"decisionKey":"cocoonRewardPoint","kind":"cocoonRewardPoint"'
+            .. fields .. '}]}],"requiredObjects":[]}'))
+    end
+    lu.assertNotNil(overview.decode(value(',"spawnPointId":560737'), "overview"))
+    for _, field in ipairs({ '0', '-1', '1.5', '"1"', 'null', 'true', '{}', '[]' }) do
+        lu.assertNil(overview.decode(value(',"spawnPointId":' .. field), "overview"))
+    end
+    lu.assertNil(overview.decode(value(''), "overview"))
+    lu.assertNil(overview.decode(value(',"spawnPointId":1,"count":8'), "overview"))
+end
+
+function TestProtocol.testMirroredArachneFixtureCarriesBothAndPositionOnlyChoices()
     local plan = assert(protocol.decode(decode("underworld-arachne-cocoons")))
     local arachne = {}
     for _, occurrence in ipairs(plan.occurrences) do
@@ -343,8 +357,11 @@ function TestProtocol.testMirroredArachneFixtureCarriesOnlyTheAuthoredCocoonCoun
     end
     lu.assertEquals(arachne.ArachneCombatF, {
         { decisionKey = "cocoonCount", kind = "cocoonCount", count = 11 },
+        { decisionKey = "cocoonRewardPoint", kind = "cocoonRewardPoint", spawnPointId = 40191 },
     })
-    lu.assertEquals(arachne.ArachneCombatG, false)
+    lu.assertEquals(arachne.ArachneCombatG, {
+        { decisionKey = "cocoonRewardPoint", kind = "cocoonRewardPoint", spawnPointId = 560737 },
+    })
 end
 
 local function anomalyCustomization(name)
@@ -404,6 +421,7 @@ local function refreshFingerprint(plan)
         catalogVersion = plan.catalogVersion, projectId = plan.projectId,
         routeKey = plan.routeKey, startingLoadout = plan.startingLoadout, startingKeepsake = plan.startingKeepsake,
         extent = plan.extent, selectedOccurrenceIds = plan.selectedOccurrenceIds, resources = plan.resources,
+        olympusAetos = plan.olympusAetos,
         occurrences = plan.occurrences,
     })
 end
@@ -1115,6 +1133,7 @@ function TestProtocol.testProtocolAcceptsClosedOrdinaryPrefixesAndBoundedDreamEx
     plan.routeKey = "Surface"
     plan.occurrences[1].biomeKey = "N"
     plan.extent = tagged({ kind = "configuredPrefix", biomeKeys = { "N", "O", "P", "Q" }, terminalBiomeKey = "Q" }, "extent", false)
+    plan.olympusAetos = tagged({ kind = "none" }, "olympusAetos", false)
     refreshFingerprint(plan)
     lu.assertNotNil(protocol.decode(plan))
 

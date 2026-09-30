@@ -233,6 +233,33 @@ describe('resolved execution encounters', () => {
     expect(() => decode({ count: 8, minimum: 8 })).toThrow(/unknown field minimum/);
   });
 
+  it('strictly decodes an independent cocoon reward point', () => {
+    const decode = (decision: Record<string, unknown>) =>
+      decodeExecutionOverview(
+        {
+          encounterPhases: [
+            {
+              slotKey: 'Encounter',
+              encounterKey: 'ArachneCombatG',
+              kind: 'combat',
+              customization: [
+                { decisionKey: 'cocoonRewardPoint', kind: 'cocoonRewardPoint', ...decision },
+              ],
+            },
+          ],
+          requiredObjects: [],
+        },
+        'overview',
+      );
+    expect(decode({ spawnPointId: 560737 }).encounterPhases[0]?.customization).toEqual([
+      { decisionKey: 'cocoonRewardPoint', kind: 'cocoonRewardPoint', spawnPointId: 560737 },
+    ]);
+    for (const spawnPointId of [0, -1, 1.5, '1', null, true])
+      expect(() => decode({ spawnPointId })).toThrow();
+    expect(() => decode({})).toThrow();
+    expect(() => decode({ spawnPointId: 1, count: 8 })).toThrow(/unknown field count/);
+  });
+
   it('strictly decodes the infinite roster wire shape', () => {
     const decode = (decision: Record<string, unknown>) =>
       decodeExecutionOverview(

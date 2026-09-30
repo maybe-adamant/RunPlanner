@@ -590,6 +590,11 @@ export interface ExecutionOverview {
         }
       | {
           readonly decisionKey: string;
+          readonly kind: 'cocoonRewardPoint';
+          readonly spawnPointId: number;
+        }
+      | {
+          readonly decisionKey: string;
           /** Ordered FillEnemyTypes roster; native FillEnemyCounts marks it infinite. */
           readonly kind: 'infiniteRoster';
           readonly types: readonly { readonly choiceKey: string; readonly nativeId: string }[];
@@ -1008,6 +1013,15 @@ export type ExecutionConfiguredExtent =
       readonly terminalBiomeKey: ExecutionBiomeKey;
     };
 
+export type ExecutionOlympusAetos =
+  | { readonly kind: 'none' }
+  | {
+      readonly kind: 'target';
+      readonly occurrenceId: string;
+      readonly phaseKey: string;
+      readonly wave: number;
+    };
+
 export interface ExecutionPlan {
   readonly format: typeof EXECUTION_PLAN_FORMAT;
   readonly protocolVersion: typeof EXECUTION_PROTOCOL_VERSION;
@@ -1024,6 +1038,8 @@ export interface ExecutionPlan {
   readonly selectedOccurrenceIds: readonly string[];
   /** Engine-owned physical resource-point policy for each selected occurrence. */
   readonly resources: ExecutionResourcePolicy;
+  /** Required exactly when Olympus belongs to the configured extent. */
+  readonly olympusAetos?: ExecutionOlympusAetos;
   readonly occurrences: readonly ExecutionOccurrence[];
 }
 
@@ -1037,6 +1053,7 @@ export interface ExecutionSemanticProduct {
   readonly extent: ExecutionPlan['extent'];
   readonly selectedOccurrenceIds: readonly string[];
   readonly resources: ExecutionResourcePolicy;
+  readonly olympusAetos?: ExecutionOlympusAetos;
   readonly occurrences: readonly ExecutionOccurrence[];
 }
 

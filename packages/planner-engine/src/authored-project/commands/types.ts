@@ -556,6 +556,11 @@ export type EncounterOccurrenceCommand =
       readonly value: boolean;
     }
   | {
+      readonly kind: 'ReplaceAetosWave';
+      readonly phase: EncounterPhaseAddress;
+      readonly value: number | null;
+    }
+  | {
       /** Null restores the native Default by removing this sparse decision. */
       readonly kind: 'ReplaceEncounterCustomization';
       readonly phase: EncounterPhaseAddress;

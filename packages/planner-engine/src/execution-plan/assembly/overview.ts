@@ -820,6 +820,16 @@ function executionEncounterCustomization(
       );
       continue;
     }
+    if (value.kind === 'cocoonRewardPoint') {
+      published.push(
+        Object.freeze({
+          decisionKey: decision.key,
+          kind: 'cocoonRewardPoint',
+          spawnPointId: value.spawnPointId,
+        }),
+      );
+      continue;
+    }
     if (value.kind === 'infiniteRoster') {
       const rosterSelection = decision.selection;
       if (rosterSelection.kind !== 'infiniteRoster')
@@ -845,7 +855,11 @@ function executionEncounterCustomization(
       );
       continue;
     }
-    if (decision.selection.kind === 'cocoonCount' || decision.selection.kind === 'infiniteRoster')
+    if (
+      decision.selection.kind === 'cocoonCount' ||
+      decision.selection.kind === 'infiniteRoster' ||
+      decision.selection.kind === 'cocoonRewardPoint'
+    )
       throw new CompilerError(
         'executionCoverageMissing',
         `${room.gameName}.${slotKey}.${decision.key} lost its declared selection shape`,

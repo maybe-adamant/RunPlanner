@@ -257,6 +257,35 @@ ChronosForces = 1 }`; main P has `{ Automatons = 1, ChronosForces = 2 }`.
   generated members must remain distinguishable; an empty generic roster would
   discard the encounter's identity.
 
+### Olympus Aetos wave event
+
+`EncounterData_Generated.lua:1123–1145` declares `OlympusEagleSpawn` on
+GeneratedP's `WaveStartUnthreadedEvents`, inherited by GeneratedP_Large. Its
+requirements use `ChanceToPlay = 0.33`, current-room exclusion and
+`SumPrevRooms = 20`. `RequirementsLogic.lua` begins that lookback at zero:
+current room and the preceding 19 history entries, not a once-per-run flag.
+`EventLogic.lua:1792` additionally requires Outdoor and refuses wave 1, sets
+the room flag and reduces the active cap by two; `EnemyAILogic.lua`'s
+`EagleAttackAndFlee` restores that cap adjustment on departure.
+
+GeneratedP_PreCombat and BaseAthenaCombat clear the inherited event array.
+BaseIcarusCombat supplies its own array, masking the inherited one under
+`ProcessDataInheritance`/`DeepInheritData`. HeraclesCombatP requires Indoor.
+The supported outdoor combat maps are P_Combat01, 03, 05, 06, 11, 13–17 and 19;
+the catalog uses room tags, not another runtime whitelist. Gorgon's
+`UniqueEncounterArgs` Athena spawn does not replace the generated phase or
+waves (`TraitData_Keepsake.lua`, `StartEncounterEffects`, `HandleAthenaSpawn`).
+Skipped spawning returns before wave events (`HandleEnemySpawns`), including
+P's propagated precombat Fig Leaf skip.
+
+Planner disposition: at most one explicit appearance per Olympus, with native
+GeneratedP wave 2 permitted despite its 1–2 roll, Large waves 2/3, or the exact
+customized wave domain. This is a deliberate bounded planner policy, not a
+native once-per-biome rule. No event selection requests no appearance. The
+event does not enter composition budgets or ordinary generated enemy counts.
+Live realization remains subject to native nonrandom eligibility and actual
+waves; the integration contact audit owns that execution boundary.
+
 ### Hard-encounter composition overrides
 
 `SetupEncounter` marks `IsHardEncounter` from `room.RewardOverrides.MakeHardEncounter`;
@@ -636,9 +665,61 @@ Both `BaseArachneCombat` and G's own setup override request 8–14 cocoons
 - Story cocoons call `SpawnArachneCocoons` directly with their own 0–3 range
   (`EncounterData_Story.lua:39`) and never pass through combat setup.
 
-Planner disposition: an optional exact cocoon count within the declared range,
-applied at combat setup. Placement, sizes, contents and the reward cocoon stay
-native.
+Planner disposition: independent optional exact cocoon count and reward-anchor
+ID, applied at combat setup. A selected anchor is validated against live native
+pools and occupancy, used for the first of the native N placements, then its
+actual object is selected at the exact reward draw. Remaining placements,
+sizes, contents, occupancy and reward callbacks stay native. Unavailable
+placement declines diagnostically without discarding a valid count or creating
+a conformance mismatch.
+
+#### Cocoon host maps and placement anchors
+
+The combat host inventory is **41 maps**: `F_Combat02`–`F_Combat22`
+(21 maps) and `G_Combat01`–`G_Combat20` (20 maps). F combat rooms inherit
+`BaseF_Combat` → `BaseF.LegalEncounters = FEncountersDefault`; G inherits
+`BaseG_Combat` → `BaseG.LegalEncounters = GEncountersDefault`.
+Those sets include `ArachneCombatF` and `ArachneCombatG`, respectively.
+`F_Combat01` explicitly replaces that set with `FIntroFight` / `GeneratedF`.
+Openings, intros, minibosses, shops, bosses, postbosses, reprieves and story
+rooms have other encounter sets. Arachne's story-room cocoons are not combat
+reward-holder candidates. Sources: `RoomDataF.lua:278,1266–1920`,
+`RoomDataG.lua:305,2092–2441`, `EncounterSets.lua:28–29,79`.
+
+This is potential map membership, not unconditional encounter eligibility:
+the F encounter still requires inclusive biome depth 4–8, both reject the
+listed incompatible reward types, and occurrence/progression requirements
+remain as documented in the encounter selection audit.
+
+`SpawnArachneCocoons` selects the point **before** choosing the cocoon size.
+Its `SelectSpawnPoint` call supplies `PreferredSpawnPoint = EnemyPoint`, no
+combat encounter constraints (an empty encounter), and no additional filter
+arguments. F supplies no required type: the selector first shuffles EnemyPoint
+IDs, then falls back to `MapState.SpawnPoints` when the preferred pool is
+exhausted. That fallback is the map's `SpawnPoints` group (`RoomLogic.lua:352`),
+not every map object. G explicitly supplies `RequiredSpawnPointType = EnemyPoint`
+(`EncounterData_Arachne.lua:251–255`), so it never admits fallback-only anchors.
+Exhausting its required pool ends spawning even if the requested count is higher.
+
+For this call, `IsSpawnPointEligible` rejects an already-used anchor;
+distance, line-of-sight and spacing filters are not enabled. `SetupObstacle`
+reserves the exact `OccupyingSpawnPointId` in `SessionMapState.SpawnPointsUsed`
+(`RunLogic.lua:2326–2328`). Size/content setup does not reserve adjacent points
+or impose a separate Lua placement constraint. Sources:
+`EncounterLogic.lua:1071–1317,2734–2755`, `ObstacleData.lua:435–635`.
+
+The internal capture inventory follows the native setup's required type:
+F labels the sorted union of these two pools; G labels only EnemyPoint IDs,
+recording native IDs, coordinates, preferred/fallback membership and current
+occupancy separately. These captures support the cocoon reward-position editor;
+they do not prove every point is available in every live room setup. Completed
+unflipped captures cover 525 F anchors and 476 G anchors, with screen coordinates
+and native IDs verified against the capture labels. Native world coordinates
+were unavailable; reflected-room placement remains a live verification item.
+The catalog owns ordered legal native IDs; application assets own image
+coordinates and numbering. Reward-location authoring and best-effort executor
+placement steering consume those separate products. Physical reward delivery
+and reflected-room placement still require live acceptance.
 
 ## Intentional native-only exclusions
 

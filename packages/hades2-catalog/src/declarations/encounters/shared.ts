@@ -174,6 +174,12 @@ export const arachneCombatCocoonCount = {
   selection: { kind: 'cocoonCount', minimum: 8, maximum: 14 },
 } as const;
 
+export const arachneCombatCocoonRewardPoint = {
+  key: 'cocoonRewardPoint',
+  label: 'Reward position',
+  selection: { kind: 'cocoonRewardPoint' },
+} as const;
+
 /**
  * The native gate of an enemy-triggered introduction on a fresh profile. Native
  * SetupEncounter replaces the drawn encounter only while the introduction is

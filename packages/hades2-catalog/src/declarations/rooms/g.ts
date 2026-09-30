@@ -58,6 +58,9 @@ export const gRooms = [
   },
   {
     gameName: 'G_Combat01',
+    cocoonRewardPointIds: [
+      40191, 558000, 558001, 558002, 558003, 558004, 558005, 558006, 558007, 563056, 568411,
+    ],
     secretPointAnchorCount: 2,
     ...wellHost(1),
     resourcePointSupport: underworldResourcePointSupport([
@@ -99,6 +102,10 @@ export const gRooms = [
   },
   {
     gameName: 'G_Combat02',
+    cocoonRewardPointIds: [
+      40191, 557999, 558000, 558001, 558002, 558003, 558004, 558005, 558006, 558007, 560650, 568540,
+      568541, 568542, 568543, 568544, 568549, 568561, 568562, 609234,
+    ],
     secretPointAnchorCount: 4,
     ...wellHost(2),
     resourcePointSupport: underworldResourcePointSupport([
@@ -136,6 +143,11 @@ export const gRooms = [
   },
   {
     gameName: 'G_Combat03',
+    cocoonRewardPointIds: [
+      557999, 558000, 558001, 558002, 558003, 558004, 558006, 558218, 558230, 568508, 568715,
+      587256, 587257, 587258, 587259, 605980, 605981, 605982, 605983, 605984, 605985, 605986,
+      605987,
+    ],
     secretPointAnchorCount: 2,
     ...wellHost(2),
     resourcePointSupport: underworldResourcePointSupport([
@@ -178,6 +190,10 @@ export const gRooms = [
   },
   {
     gameName: 'G_Combat04',
+    cocoonRewardPointIds: [
+      558001, 558003, 558004, 558230, 558299, 558300, 560737, 568555, 568577, 568578, 595571,
+      595572, 595573, 595574, 595575, 595576,
+    ],
     secretPointAnchorCount: 2,
     resourcePointSupport: underworldResourcePointSupport([
       'Pickaxe',
@@ -218,6 +234,10 @@ export const gRooms = [
   },
   {
     gameName: 'G_Combat05',
+    cocoonRewardPointIds: [
+      558001, 568800, 568801, 568802, 568803, 568804, 568806, 568807, 568808, 568810, 568812,
+      568813, 568814, 605400, 776254, 776255,
+    ],
     secretPointAnchorCount: 1,
     resourcePointSupport: underworldResourcePointSupport([
       'Pickaxe',
@@ -259,6 +279,11 @@ export const gRooms = [
   },
   {
     gameName: 'G_Combat06',
+    cocoonRewardPointIds: [
+      40191, 558450, 558451, 558452, 558453, 558454, 558455, 560683, 560699, 568800, 568801, 568802,
+      568803, 568804, 568805, 568806, 594758, 594759, 594760, 594761, 594762, 594763, 594764,
+      594765, 594766, 594767, 594768, 594769, 594770,
+    ],
     secretPointAnchorCount: 2,
     resourcePointSupport: underworldResourcePointSupport([
       'Pickaxe',
@@ -299,6 +324,10 @@ export const gRooms = [
   },
   {
     gameName: 'G_Combat07',
+    cocoonRewardPointIds: [
+      558001, 558003, 558007, 558299, 558300, 560815, 560816, 568958, 568959, 568963, 568964,
+      568965, 568966, 598258, 598259, 598260, 598261, 598262, 598263, 623263, 623264,
+    ],
     secretPointAnchorCount: 1,
     ...wellHost(1),
     resourcePointSupport: underworldResourcePointSupport([
@@ -340,6 +369,10 @@ export const gRooms = [
   },
   {
     gameName: 'G_Combat08',
+    cocoonRewardPointIds: [
+      558001, 558003, 558004, 558007, 558230, 558299, 558300, 560737, 560834, 560835, 560836,
+      608987, 608988, 608989, 608990, 608991, 608992, 608993, 608994, 608995, 608997,
+    ],
     secretPointAnchorCount: 1,
     ...wellHost(1),
     resourcePointSupport: underworldResourcePointSupport([
@@ -381,6 +414,11 @@ export const gRooms = [
   },
   {
     gameName: 'G_Combat09',
+    cocoonRewardPointIds: [
+      563244, 563245, 563252, 563253, 563254, 563255, 563256, 563257, 563258, 563259, 563260,
+      563261, 563262, 563263, 563264, 563265, 563266, 563267, 563268, 563269, 563270, 563271,
+      563272, 569278, 569279, 626629, 626630,
+    ],
     secretPointAnchorCount: 2,
     ...wellHost(2),
     resourcePointSupport: underworldResourcePointSupport([
@@ -423,6 +461,10 @@ export const gRooms = [
   },
   {
     gameName: 'G_Combat10',
+    cocoonRewardPointIds: [
+      560737, 563188, 563189, 563190, 563191, 563192, 563193, 563194, 563195, 563196, 563197,
+      563198, 563199, 563200, 563201, 563203, 563204, 626205, 626206, 626207,
+    ],
     secretPointAnchorCount: 1,
     ...wellHost(2),
     resourcePointSupport: underworldResourcePointSupport([
@@ -464,6 +506,11 @@ export const gRooms = [
   },
   {
     gameName: 'G_Combat11',
+    cocoonRewardPointIds: [
+      563203, 566422, 566423, 566424, 566425, 566427, 566428, 566429, 566430, 566431, 566432,
+      566433, 566434, 566435, 566437, 566438, 566439, 566440, 566441, 566442, 566452, 623259,
+      623260,
+    ],
     secretPointAnchorCount: 1,
     ...wellHost(2),
     resourcePointSupport: underworldResourcePointSupport([
@@ -505,6 +552,10 @@ export const gRooms = [
   },
   {
     gameName: 'G_Combat12',
+    cocoonRewardPointIds: [
+      609085, 609378, 609379, 609380, 609381, 609382, 609383, 609384, 609385, 609386, 609387,
+      609388, 609389, 609390, 609391, 609392, 609393, 631722, 631723, 631724, 631725, 631726,
+    ],
     secretPointAnchorCount: 1,
     ...wellHost(2),
     resourcePointSupport: underworldResourcePointSupport([
@@ -546,6 +597,10 @@ export const gRooms = [
   },
   {
     gameName: 'G_Combat13',
+    cocoonRewardPointIds: [
+      609080, 609244, 609245, 609246, 609247, 609248, 609249, 609250, 609251, 632700, 632701,
+      632702, 632703, 632704, 632705, 632706,
+    ],
     secretPointAnchorCount: 1,
     ...wellHost(1),
     resourcePointSupport: underworldResourcePointSupport([
@@ -587,6 +642,12 @@ export const gRooms = [
   },
   {
     gameName: 'G_Combat14',
+    cocoonRewardPointIds: [
+      609601, 609602, 609603, 609604, 609605, 609606, 609607, 609608, 609609, 609610, 609611,
+      609612, 609613, 609614, 609615, 609616, 609617, 609618, 609619, 609620, 609621, 609622,
+      609623, 609624, 609625, 609626, 609627, 609628, 609629, 609630, 636313, 636314, 636315,
+      636316, 636317, 636318, 636319,
+    ],
     secretPointAnchorCount: 2,
     ...wellHost(1),
     resourcePointSupport: underworldResourcePointSupport([
@@ -629,6 +690,12 @@ export const gRooms = [
   },
   {
     gameName: 'G_Combat15',
+    cocoonRewardPointIds: [
+      40191, 609701, 609702, 609703, 609704, 609705, 609706, 609707, 609708, 609709, 609710, 609711,
+      609712, 609713, 609714, 609715, 609716, 609717, 609718, 609719, 609720, 609721, 609722,
+      609723, 609724, 609725, 609726, 609727, 609728, 609729, 609730, 609731, 636258, 636259,
+      636260, 636261, 636262, 636263,
+    ],
     secretPointAnchorCount: 3,
     ...wellHost(1),
     resourcePointSupport: underworldResourcePointSupport([
@@ -671,6 +738,12 @@ export const gRooms = [
   },
   {
     gameName: 'G_Combat16',
+    cocoonRewardPointIds: [
+      737088, 737089, 737090, 737091, 737092, 737093, 737094, 737095, 737096, 737097, 737098,
+      737099, 737100, 737101, 737102, 737103, 737104, 737105, 737106, 737107, 737108, 737109,
+      737110, 737111, 737112, 737113, 737127, 737128, 776325, 776326, 776327, 776328, 776329,
+      776330,
+    ],
     secretPointAnchorCount: 1,
     ...wellHost(1),
     resourcePointSupport: underworldResourcePointSupport([
@@ -712,6 +785,11 @@ export const gRooms = [
   },
   {
     gameName: 'G_Combat17',
+    cocoonRewardPointIds: [
+      40191, 631953, 631954, 631955, 631959, 631961, 631992, 631995, 631996, 631997, 632001, 632002,
+      632003, 632004, 632006, 632007, 632008, 632011, 632061, 632062, 632063, 632064, 632099,
+      736836, 737060, 737061, 737062, 737229, 737393, 737395, 760623, 760629, 760630, 760631,
+    ],
     secretPointAnchorCount: 2,
     ...wellHost(2),
     resourcePointSupport: underworldResourcePointSupport([
@@ -754,6 +832,10 @@ export const gRooms = [
   },
   {
     gameName: 'G_Combat18',
+    cocoonRewardPointIds: [
+      776317, 776337, 776339, 776340, 776346, 776347, 776354, 776358, 776366, 776392, 776431,
+      776432, 776570, 781936, 781937, 781938, 781939, 781940,
+    ],
     secretPointAnchorCount: 2,
     ...wellHost(1),
     resourcePointSupport: underworldResourcePointSupport([
@@ -798,6 +880,10 @@ export const gRooms = [
   },
   {
     gameName: 'G_Combat19',
+    cocoonRewardPointIds: [
+      776879, 796302, 796303, 796304, 796305, 796306, 796307, 796308, 796309, 796310, 796311,
+      796312, 796313, 796314, 796315, 796316, 796317, 796318,
+    ],
     secretPointAnchorCount: 1,
     ...wellHost(1),
     resourcePointSupport: underworldResourcePointSupport([
@@ -839,6 +925,11 @@ export const gRooms = [
   },
   {
     gameName: 'G_Combat20',
+    cocoonRewardPointIds: [
+      776962, 796679, 796680, 796681, 796682, 796683, 796684, 796685, 796686, 796687, 796688,
+      796689, 796690, 796691, 796692, 796693, 796694, 796695, 796696, 796697, 796698, 796699,
+      796700, 796701, 796702, 796703, 796704, 796705, 796706, 796707, 796765, 796766,
+    ],
     secretPointAnchorCount: 1,
     ...wellHost(1),
     resourcePointSupport: underworldResourcePointSupport([

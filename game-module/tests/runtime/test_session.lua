@@ -19,6 +19,7 @@ function TestRuntimeSession.testNewRunResetClearsEveryProcessLocalExecutionRefer
     value.state = "desynchronized"
     value.reason = "first-mismatch"
     value.plan = { stale = true }
+    value.aetos = { released = true, plan = value.plan }
     value.route = { stale = true }
     value.room = { current = { stale = true } }
     value.firstMismatch = { checkpoint = "stale" }
@@ -38,6 +39,7 @@ function TestRuntimeSession.testNewRunResetClearsEveryProcessLocalExecutionRefer
     lu.assertEquals(value.state, "inactive")
     lu.assertEquals(value.reason, "not-started")
     lu.assertNil(value.plan)
+    lu.assertNil(value.aetos)
     lu.assertNil(value.route)
     lu.assertNil(value.room)
     lu.assertNil(value.firstMismatch)

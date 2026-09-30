@@ -62,14 +62,6 @@ local function withRoom(callback)
     return result
 end
 
-function TestArachne.testOnlyCombatSetupIsWrapped()
-    local callbacks = attach(combatPhase(11), {}, { state = "synchronized" })
-    local names = {}
-    for name in pairs(callbacks) do names[#names + 1] = name end
-    -- Story cocoons call SpawnArachneCocoons directly and never reach this setup.
-    lu.assertEquals(names, { "SetupArachneCombatEncounter" })
-end
-
 function TestArachne.testRequestedCountDrawsWithEqualBoundsFromAPrivateCopy()
     withRoom(function()
         local encounter = {}
@@ -162,4 +154,237 @@ function TestArachne.testZeroPlacementKeepsNativeErrorAfterDiagnostic()
             },
         } })
     end)
+end
+
+local function withPlacement(callback)
+    local priorRun, priorMap, priorEligible, priorIds = _G.CurrentRun, _G.MapState,
+        _G.IsSpawnPointEligible, _G.GetIdsByType
+    local world = { used = {}, draws = {}, random = {}, nextId = 1000 }
+    _G.CurrentRun = { CurrentRoom = { SpawnPoints = { EnemyPoint = { 1, 2, 3, 4, 5, 6, 7, 8,
+        9, 10, 11, 12, 13, 14, 40191, 560737 } } } }
+    _G.MapState = { SpawnPoints = { 99 }, ActiveObstacles = {} }
+    _G.IsSpawnPointEligible = function(id, encounter, nativeRoom, args)
+        lu.assertEquals(encounter, {})
+        lu.assertIs(nativeRoom, _G.CurrentRun.CurrentRoom)
+        lu.assertEquals(args, {})
+        return not world.used[id]
+    end
+    _G.GetIdsByType = function() return { 40191, 560737 } end
+    local ok, result = pcall(callback, world)
+    _G.CurrentRun, _G.MapState, _G.IsSpawnPointEligible, _G.GetIdsByType =
+        priorRun, priorMap, priorEligible, priorIds
+    if not ok then error(result, 0) end
+end
+
+-- Native contact witness: no adapter policy lives here. The supplied points
+-- form the available native draw order; obstacle setup reserves each point.
+local function placementSetup(callbacks, world, options)
+    options = options or {}
+    local function random(values)
+        world.random[#world.random + 1] = values
+        return values[#values]
+    end
+    local function draw(values)
+        return callbacks.GetRandomValue(nil, {}, random, values)
+    end
+    local function spawn(source, args)
+        local count = args.CocoonCountMax or source.CocoonCountMax
+        world.draws[#world.draws + 1] = { args.CocoonCountMin or source.CocoonCountMin, count }
+        local ids = {}
+        for _ = 1, count do
+            local point = callbacks.SelectSpawnPoint(nil, {}, function()
+                for _, id in ipairs(options.points or _G.CurrentRun.CurrentRoom.SpawnPoints.EnemyPoint) do
+                    if not world.used[id] then return id end
+                end
+            end, _G.CurrentRun.CurrentRoom,
+                { PreferredSpawnPoint = "EnemyPoint", RequiredSpawnPoint = args.RequiredSpawnPointType }, {})
+            if not point then return end
+            draw(args.CocoonOptions)
+            draw({ "money", "enemy" })
+            world.nextId = world.nextId + 1
+            local id = world.nextId
+            local object = { ObjectId = id, OccupyingSpawnPointId = point, SpawnUnitOnDeath = "enemy",
+                MoneyDropOnDeath = 5 }
+            world.used[point] = (world.used[point] or 0) + 1
+            _G.MapState.ActiveObstacles[id] = object
+            ids[#ids + 1] = id
+            _G.CurrentRun.CurrentRoom.CoocoonIds = ids
+            if options.afterObject then options.afterObject(object) end
+        end
+    end
+    return function(source, args)
+        if options.beforeSpawn then options.beforeSpawn() end
+        callbacks.SpawnArachneCocoons(nil, {}, spawn, source, args)
+        if options.afterSpawn then options.afterSpawn() end
+        local reward = _G.MapState.ActiveObstacles[draw(_G.CurrentRun.CurrentRoom.CoocoonIds)]
+        reward.OnDeathFunctionName = "SpawnRoomReward"
+        reward.OnDeathFunctionArgs = { NofifyWaitersName = "ArachneRewardFound" }
+        reward.SpawnUnitOnDeath = nil
+        _G.CurrentRun.CurrentRoom.SpawnRewardOnId = reward.ObjectId
+        return reward
+    end
+end
+
+local function positionPhase(count, point)
+    local phase = combatPhase(count)
+    phase.customization = phase.customization or {}
+    phase.customization[#phase.customization + 1] =
+        { decisionKey = "cocoonRewardPoint", kind = "cocoonRewardPoint", spawnPointId = point }
+    return phase
+end
+
+function TestArachne.testProducerCorpusSteersBothAndPositionOnlyWithoutExtraCocoons()
+    local fixtures = require("tests.harness.fixture_loader")
+    local protocol = require("mods.protocol.decoder")
+    local json = require("mods.protocol.json")
+    local file = assert(io.open(fixtures.path("underworld-arachne-cocoons.execution.json"), "rb"))
+    local wire = file:read("*a")
+    file:close()
+    local plan = assert(protocol.decode(assert(json.decode(wire))))
+    local visited = 0
+    for _, occurrence in ipairs(plan.occurrences) do
+        for _, phase in ipairs(occurrence.overview.encounterPhases) do
+            if phase.encounterKey == "ArachneCombatF" or phase.encounterKey == "ArachneCombatG" then
+                visited = visited + 1
+                withPlacement(function(world)
+                    local isF = phase.encounterKey == "ArachneCombatF"
+                    local source, args = {}, nativeArgs()
+                    if isF then args.RequiredSpawnPointType = nil end
+                    local callbacks, diagnostics = attach(phase, source, { state = "synchronized" })
+                    local reward = callbacks.SetupArachneCombatEncounter(nil, {},
+                        placementSetup(callbacks, world), source, args)
+                    local count, point = isF and 11 or 14, isF and 40191 or 560737
+                    lu.assertEquals(world.draws, { { isF and 11 or 8, count } })
+                    lu.assertEquals(#_G.CurrentRun.CurrentRoom.CoocoonIds, count)
+                    lu.assertEquals(world.used[point], 1)
+                    lu.assertEquals(reward.OccupyingSpawnPointId, point)
+                    lu.assertEquals(reward.OnDeathFunctionName, "SpawnRoomReward")
+                    lu.assertEquals(reward.OnDeathFunctionArgs, { NofifyWaitersName = "ArachneRewardFound" })
+                    lu.assertNil(reward.SpawnUnitOnDeath)
+                    lu.assertEquals(reward.MoneyDropOnDeath, 5)
+                    lu.assertEquals(#world.random, count * 2)
+                    lu.assertEquals(diagnostics, {})
+                end)
+            end
+        end
+    end
+    lu.assertEquals(visited, 2)
+end
+
+function TestArachne.testPositionAdmissionAndCountAreIndependent()
+    for _, case in ipairs({
+        { point = 99, required = false, accepted = true, count = 11 },
+        { point = 99, required = true, accepted = false, count = 11 },
+        { point = 999, accepted = false, count = 11 },
+        { point = 40191, occupied = true, accepted = false, count = 11 },
+        { point = 40191, accepted = true, count = 15 },
+    }) do
+        withPlacement(function(world)
+            local source, args = {}, nativeArgs()
+            if not case.required then args.RequiredSpawnPointType = nil end
+            if case.occupied then world.used[case.point] = 1 end
+            local callbacks, diagnostics = attach(positionPhase(case.count, case.point), source,
+                { state = "synchronized" })
+            local reward = callbacks.SetupArachneCombatEncounter(nil, {},
+                placementSetup(callbacks, world), source, args)
+            lu.assertEquals(reward.OccupyingSpawnPointId == case.point, case.accepted)
+            lu.assertEquals(world.draws, { case.count == 15 and { 8, 14 } or { 11, 11 } })
+            lu.assertEquals(#diagnostics, case.accepted and case.count ~= 15 and 0 or 1)
+        end)
+    end
+end
+
+function TestArachne.testMissingSpawnedObjectFallsBackAndShortfallIsDiagnostic()
+    withPlacement(function(world)
+        local source = {}
+        local callbacks, diagnostics = attach(positionPhase(11, 40191), source, { state = "synchronized" })
+        local reward = callbacks.SetupArachneCombatEncounter(nil, {}, placementSetup(callbacks, world, {
+            points = { 1, 2 },
+            afterObject = function(object)
+                if object.OccupyingSpawnPointId == 40191 then object.OccupyingSpawnPointId = nil end
+            end,
+        }), source, nativeArgs())
+        lu.assertEquals(reward.OccupyingSpawnPointId, 2)
+        lu.assertEquals(#_G.CurrentRun.CurrentRoom.CoocoonIds, 3)
+        lu.assertEquals(diagnostics[1].observed.reason, "target-not-spawned")
+        lu.assertEquals(diagnostics[2].observed.reason, "placement-shortfall")
+    end)
+end
+
+function TestArachne.testScopesMaskNestedContactsAndRetireOnErrors()
+    withPlacement(function(world)
+        local source = {}
+        local callbacks, diagnostics = attach(positionPhase(nil, 40191), source, { state = "synchronized" })
+        local function nativePoint() return 99 end
+        local function point()
+            return callbacks.SelectSpawnPoint(nil, {}, nativePoint, _G.CurrentRun.CurrentRoom,
+                { PreferredSpawnPoint = "EnemyPoint", RequiredSpawnPoint = "EnemyPoint" }, {})
+        end
+        local function random() return 99 end
+        local reward = callbacks.SetupArachneCombatEncounter(nil, {}, placementSetup(callbacks, world, {
+            beforeSpawn = function()
+                -- Unbound nested setup must not inherit the outer position.
+                callbacks.SetupArachneCombatEncounter(nil, {}, function()
+                    lu.assertEquals(point(), 99)
+                end, {}, nativeArgs())
+                -- A failing nested preflight leaves the caller's setup intact.
+                local eligible = _G.IsSpawnPointEligible
+                _G.IsSpawnPointEligible = function() error("preflight") end
+                lu.assertFalse(pcall(callbacks.SetupArachneCombatEncounter, nil, {}, function() end,
+                    source, nativeArgs()))
+                _G.IsSpawnPointEligible = eligible
+            end,
+            afterObject = function()
+                callbacks.SpawnArachneCocoons(nil, {}, function() lu.assertEquals(point(), 99) end,
+                    {}, nativeArgs())
+                local thread = coroutine.create(function() lu.assertEquals(point(), 99) end)
+                lu.assertTrue(coroutine.resume(thread))
+            end,
+            afterSpawn = function()
+                local duplicate = {}
+                for i, id in ipairs(_G.CurrentRun.CurrentRoom.CoocoonIds) do duplicate[i] = id end
+                lu.assertEquals(callbacks.GetRandomValue(nil, {}, random, duplicate), 99)
+                callbacks.SpawnArachneCocoons(nil, {}, function()
+                    lu.assertEquals(callbacks.GetRandomValue(nil, {}, random,
+                        _G.CurrentRun.CurrentRoom.CoocoonIds), 99)
+                end, {}, nativeArgs())
+            end,
+        }), source, nativeArgs())
+        lu.assertEquals(reward.OccupyingSpawnPointId, 40191)
+        lu.assertEquals(diagnostics, {})
+        lu.assertEquals(point(), 99)
+        world.used[40191] = nil
+        local ok = pcall(callbacks.SetupArachneCombatEncounter, nil, {}, function(s, a)
+            callbacks.SpawnArachneCocoons(nil, {}, function() error("spawn failed", 0) end, s, a)
+        end, source, nativeArgs())
+        lu.assertFalse(ok)
+        lu.assertEquals(point(), 99)
+        callbacks.SpawnArachneCocoons(nil, {}, function() lu.assertEquals(point(), 99) end, {}, nativeArgs())
+    end)
+end
+
+function TestArachne.testPositionStaysNativeForUnboundUnsynchronizedAndStoryContacts()
+    for _, mode in ipairs({ "unbound", "unsynchronized", "story" }) do
+        withPlacement(function(world)
+            local source = {}
+            local callbacks, diagnostics = attach(positionPhase(nil, 40191),
+                mode == "unbound" and {} or source,
+                { state = mode == "unsynchronized" and "desynchronized" or "synchronized" })
+            if mode == "story" then
+                callbacks.SpawnArachneCocoons(nil, {}, function()
+                    lu.assertEquals(callbacks.SelectSpawnPoint(nil, {}, function() return 99 end,
+                        _G.CurrentRun.CurrentRoom, { PreferredSpawnPoint = "EnemyPoint" }, {}), 99)
+                    local ids = { 1, 2 }
+                    _G.CurrentRun.CurrentRoom.CoocoonIds = ids
+                    lu.assertEquals(callbacks.GetRandomValue(nil, {}, function() return 2 end, ids), 2)
+                end, source, nativeArgs())
+            else
+                local reward = callbacks.SetupArachneCombatEncounter(nil, {},
+                    placementSetup(callbacks, world), source, nativeArgs())
+                lu.assertEquals(reward.OccupyingSpawnPointId, 14)
+                lu.assertEquals(world.draws, { { 8, 14 } })
+            end
+            lu.assertEquals(diagnostics, {})
+        end)
+    end
 end

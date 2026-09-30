@@ -104,6 +104,7 @@ export interface RawRoomRouteOverlay {
 }
 
 export interface RawRoomDeclaration {
+  readonly cocoonRewardPointIds?: readonly number[];
   readonly gameName: string;
   readonly label: string;
   readonly roomSetKey: string;
