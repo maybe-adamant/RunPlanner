@@ -1,6 +1,6 @@
 # Cocoon reward position authoring
 
-Status: locked for implementation; Gate A next.
+Status: locked for implementation; Gate A in progress.
 Base: `2918b1f1` in `RunPlanner-main`.
 
 ## Objective and bounds
@@ -160,10 +160,21 @@ customization union/codecs/commands, and `simulation/encounters/authoring-domain
 Deliver verified anchor declarations, independent optional position decision,
 exact host assessment/candidates, set/reset/Undo and finding ownership.
 
+The new closed-union member also requires its consumers to remain truthful in
+this intermediate commit. Include minimal workspace projection and a compact
+Any/numbered selector with retained-invalid repair here, advancing that portion
+of B. Explicit reward positions temporarily reject execution publication with
+`executionCoverageMissing` until C implements the wire contract; existing plans
+and count-only customization continue to publish unchanged. C replaces this
+guard, rather than leaving a second publication path. Do not silently omit a
+selected position or send it to a consumer that cannot enforce it.
+
 Primary tests: all 41 inventories and F/G pool evidence; old-save round trip;
 malformed versus retained-invalid ID; native count plus explicit point; count
 reset retaining position and position reset retaining count; owner replacement
-and Undo. Preserve existing default fixture bytes. Run catalog/engine lanes.
+and Undo; explicit-position publication rejection and a representative selector
+binding witness. Preserve existing default fixture bytes. Run catalog/engine
+and affected application lanes.
 
 ### B — Map assets and bound editor
 
