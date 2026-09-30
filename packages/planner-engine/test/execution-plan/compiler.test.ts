@@ -79,6 +79,7 @@ import underworldFGHFixture from './fixtures/underworld-fgh.execution.json';
 import underworldFGHIFixture from './fixtures/underworld-fghi.execution.json';
 import surfaceNFixture from './fixtures/surface-n.execution.json';
 import surfaceNOFixture from './fixtures/surface-no.execution.json';
+import freshFileFGHIFixture from './fixtures/fresh-file-fghi.execution.json';
 import surfaceQShopCorrelationFixture from './fixtures/surface-q-shop-correlation.execution.json';
 import { surfaceScheduledLifecycleWithQSupplyChainSlicesProject } from '@run-planner/test-fixtures/scheduled-lifecycle';
 import { dreamMixedPrefixProject } from '@run-planner/test-fixtures/dream';
@@ -795,8 +796,35 @@ describe('execution-plan compiler and codec', () => {
     expect(decodeExecutionPlan(JSON.parse(encodeExecutionPlan(plan)))).toEqual(plan);
   });
 
+  it('decodes omitted Fresh File loadout keys and rejects other shapes', () => {
+    const fresh = freshFileFGHIFixture as Record<string, unknown> & {
+      startingLoadout: Record<string, unknown>;
+      occurrences: Record<string, unknown>[];
+    };
+    const plan = decodeExecutionPlan(fresh);
+    expect(plan.routeKey).toBe('FreshFile');
+    expect(plan.startingLoadout).not.toHaveProperty('aspectKey');
+    expect(plan.startingKeepsake).toEqual({});
+    const rejects = (patch: Record<string, unknown>, message: RegExp) =>
+      expect(() => decodeExecutionPlan({ ...fresh, ...patch })).toThrow(message);
+    rejects({ startingKeepsake: { equipResults: {} } }, /equipResults requires keepsakeKey/);
+    rejects({ startingKeepsake: { keepsakeKey: null } }, /startingKeepsake\.keepsakeKey/);
+    rejects(
+      { startingLoadout: { ...fresh.startingLoadout, aspectKey: null } },
+      /startingLoadout\.aspectKey/,
+    );
+    rejects(
+      { extent: { kind: 'configuredPrefix', biomeKeys: ['N'], terminalBiomeKey: 'N' } },
+      /routeKey disagrees with extent/,
+    );
+    const misplaced = structuredClone(fresh);
+    const facts = (misplaced.occurrences[0]!.roomExitConformance as { facts: object[] }).facts;
+    facts[0] = { ...facts[0], absentTraitKeys: ['ErisCurseTrait'] };
+    expect(() => decodeExecutionPlan(misplaced)).toThrow(/facts\[0\]/);
+  });
+
   it('rejects plans of the released protocol 48', () => {
-    expect(EXECUTION_PROTOCOL_VERSION).toBe(51);
+    expect(EXECUTION_PROTOCOL_VERSION).toBe(52);
     expect(() =>
       decodeExecutionPlan({
         ...(surfaceQShopCorrelationFixture as Record<string, unknown>),

@@ -6,6 +6,7 @@ import {
   applyProjectCommand,
   createEncounterPhaseAddress,
   createLocalRewardAddress,
+  createOccurrenceAddress,
   createOccurrenceId,
   createShopOfferAddress,
   decodeProjectDocument,
@@ -21,10 +22,7 @@ import {
   simulateProjectAssembly,
   type RunStateSnapshot,
 } from '@run-planner/engine/simulation';
-import {
-  assembleExecutionProduct,
-  ExecutionCompilerError,
-} from '@run-planner/engine/execution-plan';
+import { assembleExecutionProduct } from '@run-planner/engine/execution-plan';
 import { loadUnderworldFGHICheckpoint } from '@run-planner/test-fixtures/checkpoints/underworld';
 import {
   createFreshFileRouteProject,
@@ -33,9 +31,11 @@ import {
   freshFileFMidshopId,
   freshFileGBiome,
   freshFileGFirstCombatId,
+  freshFileGIntroId,
   freshFileGSecondCombatId,
   freshFileHBiome,
   freshFileIFirstCombatId,
+  freshFileIShopId,
 } from '@run-planner/test-fixtures/fresh-file';
 import { createRouteStartHistoryView } from '../../src/simulation/history/fold';
 import { createInitialSimulationState } from '../../src/simulation/state/construction';
@@ -113,25 +113,100 @@ function editOccurrence(
 }
 
 describe('Fresh File F→I route', () => {
-  it('validates with zero findings; only the route gate withholds publication', () => {
+  it('validates with zero findings and assembles its execution product', () => {
     const evaluation = simulateProject(catalog, freshRoute());
     expect(evaluation.status).toBe('valid');
     expect(evaluation.findings).toEqual([]);
     expect(evaluation.route.biomes.map((biome) => biome.biomeKey)).toEqual(['F', 'G', 'H', 'I']);
-    let refusal: unknown;
-    try {
-      assembleExecutionProduct({
-        assembly: simulateProjectAssembly(catalog, freshRoute()),
-        catalog,
-      });
-    } catch (error) {
-      refusal = error;
-    }
-    expect(refusal).toBeInstanceOf(ExecutionCompilerError);
-    expect((refusal as ExecutionCompilerError).code).toBe('unsupportedRoute');
-    expect((refusal as ExecutionCompilerError).message).toMatch(
-      /supports only Underworld, Surface, or Dream/,
+    const product = assembleExecutionProduct({
+      assembly: simulateProjectAssembly(catalog, freshRoute()),
+      catalog,
+    });
+    expect(product.routeKey).toBe('FreshFile');
+    expect(product.startingLoadout).not.toHaveProperty('aspectKey');
+    expect(product.startingKeepsake).toEqual({});
+    const occurrence = (id: string) => product.occurrences.find((entry) => entry.id === id)!;
+    // Mixed introductions publish their declared fixed prefix before the generated suffix.
+    const prefixed = product.occurrences.flatMap((entry) =>
+      entry.overview.encounterPhases.flatMap((phase) =>
+        (phase.customization ?? []).flatMap((decision) =>
+          decision.kind === 'generated' && decision.waves[0]?.types[0]?.source === 'fixed'
+            ? [{ encounterKey: phase.encounterKey, decision }]
+            : [],
+        ),
+      ),
     );
+    expect(prefixed.map((entry) => entry.encounterKey)).toEqual([
+      'RadiatorIntro',
+      'FishSwarmerIntro',
+    ]);
+    for (const { decision } of prefixed) {
+      expect(decision.waves).toHaveLength(decision.waveCount);
+      expect(decision.waves.map((wave) => wave.waveIndex)).toEqual([1, 2]);
+    }
+    expect(prefixed[0]!.decision.waves[0]).toEqual({
+      waveIndex: 1,
+      types: [{ choiceKey: 'Radiator', nativeId: 'Radiator', source: 'fixed' }],
+      counts: { Radiator: 5 },
+    });
+    // Eris: the talk is guide-only; the gift is a direct pickup; the curse is a trait fact.
+    const gIntro = occurrence(freshFileGIntroId);
+    expect(gIntro.roomGuide.map((row) => row.description.kind)).toContain('interactEris');
+    expect(gIntro.timeline.transactions).toEqual([
+      expect.objectContaining({
+        kind: 'acquisition',
+        reward: expect.objectContaining({ producerLifecycleKey: 'ErisCursePickup' }),
+      }),
+    ]);
+    expect(gIntro.timeline.dependencies).toEqual([]);
+    expect(gIntro.roomExitConformance?.facts).toContainEqual({ kind: 'traitInventory' });
+    expect(
+      gIntro.diagnostics?.beforeRoomExit?.traits.equipped.map((row) => row.traitKey),
+    ).toContain('ErisCurseTrait');
+    expect(occurrence(freshFileBridgeId).overview.shop).toBeDefined();
+    // The trailing MetaProgress slot is validly empty and publishes no row.
+    expect(
+      occurrence(freshFileIShopId).overview.shop?.offers.map((offer) => offer.profileSlotIndex),
+    ).toEqual([0, 1, 2, 3]);
+  });
+});
+
+describe('Fresh File Eris absence', () => {
+  const absentKeys = (project: ProjectDocument) =>
+    assembleExecutionProduct({ assembly: simulateProjectAssembly(catalog, project), catalog })
+      .occurrences.filter((entry) => /^[GHI]_Intro$/.test(entry.gameName))
+      .map((entry) => [
+        entry.gameName,
+        entry.roomExitConformance?.facts.find((fact) => fact.kind === 'traitInventory'),
+      ]);
+
+  it('asserts the curse absent only at unspawned hosts on an uncursed route', () => {
+    // Spawned at G: G proves the curse present and the cursed H and I assert nothing.
+    expect(absentKeys(freshRoute())).toEqual([
+      ['G_Intro', { kind: 'traitInventory' }],
+      ['H_Intro', undefined],
+      ['I_Intro', undefined],
+    ]);
+    const unspawned = applyProjectCommand(freshRoute(), catalog, {
+      kind: 'SetErisSpawned',
+      occurrence: createOccurrenceAddress(freshFileGBiome, freshFileGIntroId),
+      spawned: false,
+    });
+    expect(simulateProject(catalog, unspawned).status).toBe('valid');
+    const absent = { kind: 'traitInventory', absentTraitKeys: ['ErisCurseTrait'] };
+    expect(absentKeys(unspawned)).toEqual([
+      ['G_Intro', absent],
+      ['H_Intro', absent],
+      ['I_Intro', absent],
+    ]);
+  });
+
+  it('publishes no absence on a mature route', () => {
+    const facts = assembleExecutionProduct({
+      assembly: simulateProjectAssembly(catalog, loadUnderworldFGHICheckpoint()),
+      catalog,
+    }).occurrences.flatMap((entry) => entry.roomExitConformance?.facts ?? []);
+    expect(facts.some((fact) => 'absentTraitKeys' in fact)).toBe(false);
   });
 });
 

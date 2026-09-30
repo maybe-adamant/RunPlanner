@@ -286,7 +286,7 @@ end
 
 function TestProtocol.testEveryMirroredPlannerFixtureDecodes()
     local names = mirroredFixtureNames()
-    lu.assertTrue(#names >= 19)
+    lu.assertTrue(#names >= 22)
     for _, name in ipairs(names) do
         local decoded, errorMessage = protocol.decode(decode(name))
         lu.assertNotNil(decoded, name .. ": " .. tostring(errorMessage))
@@ -525,8 +525,29 @@ local function minimalPlan(transactions)
     return plan
 end
 
+function TestProtocol.testFreshFileOmitsAbsentLoadoutKeys()
+    local decoded = assert(protocol.decode(decode("fresh-file-fghi")))
+    lu.assertEquals(decoded.routeKey, "FreshFile")
+    lu.assertEquals(decoded.startingLoadout.weaponKey, "WeaponStaffSwing")
+    lu.assertNil(decoded.startingLoadout.aspectKey)
+    lu.assertEquals(decoded.startingKeepsake, {})
+    local orphan = decode("fresh-file-fghi")
+    orphan.startingKeepsake.equipResults = {}
+    refreshFingerprint(orphan)
+    local value, err = protocol.decode(orphan)
+    lu.assertNil(value)
+    lu.assertStrContains(err, "equipResults requires keepsakeKey")
+    local mixed = decode("fresh-file-fghi")
+    mixed.routeKey = "FreshFile"
+    mixed.extent = assert(json.decode('{"kind":"configuredPrefix","biomeKeys":["N"],"terminalBiomeKey":"N"}'))
+    refreshFingerprint(mixed)
+    local value, err = protocol.decode(mixed)
+    lu.assertNil(value)
+    lu.assertStrContains(err, "routeKey disagrees with extent")
+end
+
 function TestProtocol.testReleasedProtocol48IsRejected()
-    lu.assertEquals(protocol.VERSION, 51)
+    lu.assertEquals(protocol.VERSION, 52)
     local plan = decode("f-opening")
     plan.protocolVersion = 48
     refreshFingerprint(plan)

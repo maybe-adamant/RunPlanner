@@ -97,10 +97,8 @@ describe('native generated composition possibility', () => {
       expect(value, definitionKey).toBeDefined();
       const assessment = assessGeneratedEncounter(profile, value!, context);
       expect(assessment.operands, definitionKey).toBeDefined();
-      // Declared fixed waves are not generated or published.
-      expect(assessment.operands!.waves).toHaveLength(
-        assessment.operands!.waveCount - (profile.fixedWaves?.length ?? 0),
-      );
+      // Declared fixed waves precede the generated suffix; every wave is published.
+      expect(assessment.operands!.waves).toHaveLength(assessment.operands!.waveCount);
       expect(
         assessment.operands!.waves.every(
           (wave) => Object.keys(wave.counts).length === wave.typeKeys.length,

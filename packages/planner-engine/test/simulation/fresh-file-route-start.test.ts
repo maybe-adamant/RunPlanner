@@ -8,17 +8,17 @@ import {
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
 import { createRewardHistoryState } from '@run-planner/engine/reward-kernel';
-import {
-  assembleExecutionProduct,
-  ExecutionCompilerError,
-} from '@run-planner/engine/execution-plan';
+import { assembleExecutionProduct } from '@run-planner/engine/execution-plan';
 import {
   createArcanaFearState,
   simulateProject,
   simulateProjectAssembly,
 } from '@run-planner/engine/simulation';
 import { loadUnderworldGeneratedCompositionCheckpoint } from '@run-planner/test-fixtures/checkpoints/underworld';
-import { createFreshFileGeneratedComposition } from '@run-planner/test-fixtures/fresh-file';
+import {
+  createFreshFileGeneratedComposition,
+  createFreshFileRouteProject,
+} from '@run-planner/test-fixtures/fresh-file';
 import { createRouteStartHistoryView } from '../../src/simulation/history/fold';
 import { createInitialSimulationState } from '../../src/simulation/state/construction';
 
@@ -100,15 +100,16 @@ describe('Fresh File route start', () => {
       expect(codes).not.toContain(code);
   });
 
-  it('refuses to assemble a Fresh File execution product', () => {
-    const assembly = simulateProjectAssembly(catalog, freshProject());
-    let error: unknown;
-    try {
-      assembleExecutionProduct({ assembly, catalog });
-    } catch (caught) {
-      error = caught;
-    }
-    expect(error).toBeInstanceOf(ExecutionCompilerError);
-    expect(error).toMatchObject({ code: 'unsupportedRoute' });
+  it('publishes the aspectless Staff start with no keepsake', () => {
+    const product = assembleExecutionProduct({
+      assembly: simulateProjectAssembly(catalog, createFreshFileRouteProject()),
+      catalog,
+    });
+    expect(product.startingLoadout).toMatchObject({ weaponKey: 'WeaponStaffSwing', arcana: [] });
+    expect(product.startingLoadout).not.toHaveProperty('aspectKey');
+    expect(product.startingKeepsake).toEqual({});
+    expect(product.occurrences[0]!.diagnostics?.roomEntered?.keepsakes).not.toHaveProperty(
+      'currentKey',
+    );
   });
 });

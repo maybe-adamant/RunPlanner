@@ -146,8 +146,8 @@ export function runState(value: unknown, label: string): ExecutionRunStateDiagno
   const keepsakes = object(record.keepsakes, `${label}.keepsakes`);
   exact(
     keepsakes,
-    ['currentKey', 'usedKeys', 'blockedKeys', 'fatedStatus'],
-    [],
+    ['usedKeys', 'blockedKeys', 'fatedStatus'],
+    ['currentKey'],
     `${label}.keepsakes`,
   );
   if (!['Unknown', 'Fated', 'Unfated'].includes(keepsakes.fatedStatus as string))
@@ -522,7 +522,9 @@ export function runState(value: unknown, label: string): ExecutionRunStateDiagno
     })(),
     chaos: Object.freeze({ active: Object.freeze(activeChaos), matured: Object.freeze(matured) }),
     keepsakes: Object.freeze({
-      currentKey: stringValue(keepsakes.currentKey, `${label}.keepsakes.currentKey`),
+      ...(keepsakes.currentKey === undefined
+        ? {}
+        : { currentKey: stringValue(keepsakes.currentKey, `${label}.keepsakes.currentKey`) }),
       usedKeys: Object.freeze(stringArray(keepsakes.usedKeys, `${label}.keepsakes.usedKeys`)),
       blockedKeys: Object.freeze(
         stringArray(keepsakes.blockedKeys, `${label}.keepsakes.blockedKeys`),

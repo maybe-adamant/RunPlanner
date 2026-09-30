@@ -170,6 +170,15 @@ at the generation-scoped `CalculateActiveEnemyCap` call (`RunLogic.lua:1215`)
 after `DifficultyRating` is final and before the wave-count draw; spawning caps
 and pacing remain in `EncounterLogic.lua`.
 
+Declared `SpawnWaves`, such as an introduction's fixed first wave, are
+pre-existing: `GenerateEncounter` keeps them, disables the highlight path and
+fills only later waves (`RunLogic.lua:1230–1310`). `FillEnemyTypes` samples only
+`Generated` seeds without a `Name`; a named generated seed keeps its name
+(`RunLogic.lua:1378`). `SetupEncounter` replaces an encounter when a spawned
+enemy's introduction is unfinished and eligible, generates the replacement and
+returns without rescanning it (`RunLogic.lua:1125–1148`); an introduction that
+spawns its own enemy is therefore regenerated once as itself.
+
 Consequently, an encounter name is a declaration identity, not a selected
 phase identity. Two phases may legitimately contain separate native tables
 with the same `Name`. The execution boundary can bind each returned table to

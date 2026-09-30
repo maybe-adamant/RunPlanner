@@ -51,6 +51,13 @@ function native.hasTrait(key)
     return traits[key] ~= nil
 end
 
+-- An absent expected aspect requires no recorded aspect; a present one must be
+-- the recorded aspect and held by the hero.
+function native.aspectAgrees(expectedKey, recordedKey)
+    if expectedKey == nil then return recordedKey == nil end
+    return recordedKey == expectedKey and native.hasTrait(expectedKey)
+end
+
 function native.treeTalentKeys()
     local talents = _G.CurrentRun and _G.CurrentRun.Hero and _G.CurrentRun.Hero.SlottedSpell
         and _G.CurrentRun.Hero.SlottedSpell.Talents or {}

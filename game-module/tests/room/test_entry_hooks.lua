@@ -14,7 +14,7 @@ local capture, stub = support.capture, support.stub
 local attachRewardHooks = support.attachRewardHooks
 local navigationEntryStub = support.navigationEntryStub
 local unusedLoadoutScope = {
-    synchronizeStartingRoom = function()
+    startingRun = function() return false end, synchronizeStartingRoom = function()
         error("starting-room loadout synchronization is outside this test")
     end,
 }
@@ -147,7 +147,7 @@ function TestRoomEntryHooks.testFreshPostbossStartRoomAdmissionAdoptsTheRestored
     local synchronizedRoom, startingSyncCalled = false, false
     roomHooks.attach(module, session, function() return state end, function() end,
         routeSessionModule, roomCoordinatorModule, nil, navigationEntry,
-        { synchronizeStartingRoom = function()
+        { startingRun = function() return false end, synchronizeStartingRoom = function()
             startingSyncCalled = true
             return false
         end }, {
@@ -211,7 +211,7 @@ function TestRoomEntryHooks.testOpeningFinalizesLoadoutBeforeForcingNativeCreati
         state.state = "desynchronized"
     end
     local loadoutScope = {
-        synchronizeStartingRoom = function()
+        startingRun = function() return false end, synchronizeStartingRoom = function()
             state.state = "synchronized"
             return true
         end,
@@ -275,6 +275,90 @@ function TestRoomEntryHooks.testOpeningFinalizesLoadoutBeforeForcingNativeCreati
     _G.game, _G.ForceNextEncounter = priorGame, priorForce
 end
 
+function TestRoomEntryHooks.testStartNewGameRoomNameRealizesTheOpeningWithoutARolledReward()
+    local module, _, callbacks = capture()
+    local occurrence = {
+        id = "opening", gameName = "F_Opening01", biomeKey = "F",
+        overview = {
+            encounterPhases = { { slotKey = "Encounter", encounterKey = "FIntroFight" } },
+            requiredObjects = {}, additional = {},
+        },
+        transactionsByOwner = {}, timeline = { transactions = {}, dependencies = {}, obligations = {} },
+        doors = { kind = "terminal" }, roomExitConformance = { facts = {} }, conformanceExpected = {},
+    }
+    local plan = {
+        occurrences = { occurrence }, occurrencesById = { opening = occurrence },
+        selectedOccurrenceIds = { "opening" },
+    }
+    local state = { state = "starting", plan = plan, route = routeSessionModule.new(plan), diagnostics = {} }
+    state.room = roomCoordinatorModule.new(plan, function(errorValue)
+        state.firstMismatch = errorValue
+        state.state = "desynchronized"
+    end)
+    local session = stub()
+    session.mismatch = function(_, errorValue)
+        state.firstMismatch = errorValue
+        state.state = "desynchronized"
+    end
+    local insideStartNewRun, synchronized = false, 0
+    local loadoutScope = {
+        startingRun = function() return insideStartNewRun end,
+        synchronizeStartingRoom = function()
+            synchronized = synchronized + 1
+            state.state = "synchronized"
+            return true
+        end,
+    }
+    local navigationEntry = navigation.attach(module, session, function() return state end, function() end,
+        routeSessionModule, roomCoordinatorModule)
+    roomHooks.attach(module, session, function() return state end, function() end,
+        routeSessionModule, roomCoordinatorModule, nil, navigationEntry, loadoutScope)
+    encounterHooks.attach(module, session, function() return state end, function() end,
+        roomCoordinatorModule)
+
+    local priorGame = _G.game
+    local currentRun = { RewardPriorities = {}, RewardStores = { RunProgress = { { Name = "Boon" } } } }
+    _G.game = {
+        IsEncounterEligible = function() return true end,
+        RoomData = { F_Opening01 = { Name = "F_Opening01" } },
+        EncounterData = { FIntroFight = { Name = "FIntroFight" } },
+    }
+    local rolled = false
+    local function nativeCreateRoom(created, args)
+        created.ChosenRewardType = callbacks.ChooseRoomReward(nil, {}, function()
+            rolled = true
+            return "Boon"
+        end, currentRun, created, "RunProgress", {}, {})
+        created.Encounter = callbacks.ChooseEncounter(nil, {}, function(run)
+            return { Name = run.ForceNextEncounterData and run.ForceNextEncounterData.Name or "Wrong" }
+        end, currentRun, created, args)
+        return created
+    end
+    local args = { RoomName = "F_Opening01", StartingBiome = "F" }
+
+    -- Outside StartNewRun the starting session is left untouched.
+    local outside = callbacks.CreateRoom(nil, {}, function(created) return created end,
+        { Name = "F_Opening01" }, args)
+    lu.assertEquals(state.state, "starting")
+    lu.assertEquals(synchronized, 0)
+    lu.assertNil(outside.__runPlannerExecutionRoomId)
+
+    insideStartNewRun = true
+    local result = callbacks.CreateRoom(nil, {}, nativeCreateRoom, { Name = "F_Opening01" }, args)
+    insideStartNewRun = false
+    lu.assertEquals(synchronized, 1)
+    lu.assertEquals(state.state, "synchronized")
+    lu.assertEquals(result.Name, "F_Opening01")
+    lu.assertEquals(result.__runPlannerExecutionRoomId, "opening")
+    lu.assertFalse(rolled)
+    lu.assertNil(result.ChosenRewardType)
+    lu.assertEquals(result.Encounter.Name, "FIntroFight")
+    callbacks.StartRoom(nil, {}, function() return true end, currentRun, result)
+    lu.assertNotNil(roomCoordinatorModule.current(state))
+    lu.assertNil(state.firstMismatch)
+    _G.game = priorGame
+end
+
 function TestRoomEntryHooks.testOpeningLoadoutMismatchReturnsToUnblockedNativeSelection()
     local module, _, callbacks = capture()
     local state = { state = "starting" }
@@ -282,7 +366,7 @@ function TestRoomEntryHooks.testOpeningLoadoutMismatchReturnsToUnblockedNativeSe
     roomHooks.attach(module, stub(), function() return state end, function() end,
         { expected = function() error("route must remain untouched") end }, {}, nil,
         navigationEntryStub, {
-            synchronizeStartingRoom = function()
+            startingRun = function() return false end, synchronizeStartingRoom = function()
                 state.state = "desynchronized"
                 return false
             end,
@@ -329,7 +413,7 @@ function TestRoomEntryHooks.testLaterDreamStartingRoomForcesTheCursorSuccessorBe
         }, room, nil, {
             realizeIncomingReward = function(_, data) return data end,
         }, {
-            synchronizeStartingRoom = function()
+            startingRun = function() return false end, synchronizeStartingRoom = function()
                 error("later Dream entry must not re-run startup synchronization")
             end,
         })

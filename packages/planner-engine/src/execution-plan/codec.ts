@@ -87,6 +87,7 @@ export function decodeExecutionPlan(value: unknown): ExecutionPlan {
     fail('execution plan.catalogVersion is unsupported');
   if (
     record.routeKey !== 'Underworld' &&
+    record.routeKey !== 'FreshFile' &&
     record.routeKey !== 'Surface' &&
     record.routeKey !== 'Dream'
   )
@@ -110,7 +111,8 @@ export function decodeExecutionPlan(value: unknown): ExecutionPlan {
     equalBiomePrefix,
   );
   if (
-    (record.routeKey === 'Underworld' && !validUnderworldPrefix) ||
+    ((record.routeKey === 'Underworld' || record.routeKey === 'FreshFile') &&
+      !validUnderworldPrefix) ||
     (record.routeKey === 'Surface' && !validSurfacePrefix) ||
     (record.routeKey === 'Dream' && !boundedDreamExtent)
   )
@@ -119,18 +121,27 @@ export function decodeExecutionPlan(value: unknown): ExecutionPlan {
     fail('execution plan.extent.terminalBiomeKey disagrees with biomeKeys');
   const decodedStartingLoadout = startingLoadout(record.startingLoadout);
   const starting = object(record.startingKeepsake, 'execution plan.startingKeepsake');
-  exact(starting, ['keepsakeKey'], ['equipResults'], 'execution plan.startingKeepsake');
-  const startingKeepsake: ExecutionStartingKeepsake = Object.freeze({
-    keepsakeKey: stringValue(starting.keepsakeKey, 'execution plan.startingKeepsake.keepsakeKey'),
-    ...(starting.equipResults === undefined
+  exact(starting, [], ['keepsakeKey', 'equipResults'], 'execution plan.startingKeepsake');
+  if (starting.keepsakeKey === undefined && starting.equipResults !== undefined)
+    fail('execution plan.startingKeepsake.equipResults requires keepsakeKey');
+  const startingKeepsake: ExecutionStartingKeepsake = Object.freeze(
+    starting.keepsakeKey === undefined
       ? {}
       : {
-          equipResults: equipResults(
-            starting.equipResults,
-            'execution plan.startingKeepsake.equipResults',
+          keepsakeKey: stringValue(
+            starting.keepsakeKey,
+            'execution plan.startingKeepsake.keepsakeKey',
           ),
-        }),
-  });
+          ...(starting.equipResults === undefined
+            ? {}
+            : {
+                equipResults: equipResults(
+                  starting.equipResults,
+                  'execution plan.startingKeepsake.equipResults',
+                ),
+              }),
+        },
+  );
   const occurrences = Object.freeze(
     array(record.occurrences, 'execution plan.occurrences').map((entry, index) =>
       occurrence(entry, index),

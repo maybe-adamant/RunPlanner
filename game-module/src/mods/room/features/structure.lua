@@ -13,7 +13,11 @@ local function hasObstacle(context, functionName)
 end
 
 local function featurePresent(binding, room, context)
-    if binding.carrier == "roomField" then return room[binding.key] ~= nil end
+    -- A field locked by BlockedByRequirements is unusable natively, so absent.
+    if binding.carrier == "roomField" then
+        local value = room[binding.key]
+        return value ~= nil and not (type(value) == "table" and value.BlockedByRequirements == true)
+    end
     if binding.carrier == "obstacleUseFunction" then return hasObstacle(context, binding.key) end
     return false
 end

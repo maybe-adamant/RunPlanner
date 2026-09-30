@@ -100,8 +100,9 @@ describe('Fresh File product loop', () => {
     application.store.dispatch(authoredProjectRedoRequested());
     expect(apolloOffer()).toMatchObject({ selectedOptionKey: 'option1' });
 
+    // Incomplete, so not yet publishable; the complete route publishes normally.
     expect(application.projectOperations.inspectCurrentGamePlan()).toMatchObject({
-      kind: 'unavailable',
+      kind: 'notPublishable',
     });
   });
 
@@ -119,6 +120,9 @@ describe('Fresh File product loop', () => {
         (occurrence) => occurrence.occurrenceId === freshFileGIntroId,
       )!;
     expect(workspace().assembly.evaluation.findings).toEqual([]);
+    expect(application.projectOperations.inspectCurrentGamePlan()).toMatchObject({
+      kind: 'publishable',
+    });
 
     await user.click(screen.getByRole('button', { name: 'Oceanus' }));
     await user.click(screen.getByRole('button', { name: /^Entrance/ }));

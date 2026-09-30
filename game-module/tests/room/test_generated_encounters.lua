@@ -244,7 +244,7 @@ function TestGeneratedEncounters.testUnsupportedEffectiveDeclarationsDecline()
         { overrides = { WaveTemplate = { Spawns = { { Name = "Unowned", TotalCount = 1 } } } }, reason = "unowned-template-entry" },
         { overrides = { WaveTemplate = { Spawns = { { Name = "Elite", TotalCount = 4 } } } }, source = "fixed",
             reason = "fixed-template-changed" },
-        { overrides = { WaveTemplate = { Spawns = { { Name = "Elite", Generated = true } } } }, source = "template",
+        { overrides = { WaveTemplate = { Spawns = { { Name = "Other", Generated = true } } } }, source = "template",
             reason = "unsupported-placeholder" },
     }) do
         local game = eligibleGame()
@@ -384,6 +384,109 @@ function TestGeneratedEncounters.testIntroductionSubstitutionHonorsNativeConditi
             end
         end)
     end
+end
+
+-- An introduction: a declared fixed first wave, then a suffix of its named
+-- generated seed and one addition.
+local function prefixedDecision()
+    return { kind = "generated", decisionKey = "generatedComposition", expectedBudget = 42, waveCount = 2, baseRoll = 42,
+        menace = {}, waves = {
+            { waveIndex = 1, types = { { choiceKey = "Radiator", nativeId = "Radiator", source = "fixed" } },
+                counts = { Radiator = 5 } },
+            { waveIndex = 2, types = {
+                { choiceKey = "Radiator", nativeId = "Radiator", source = "template" },
+                { choiceKey = "Cinder", nativeId = "Cinder", source = "addition" },
+            }, counts = { Radiator = 10, Cinder = 3 } },
+        } }
+end
+
+local function prefixedEncounter(prefixCount)
+    return encounterData({ MinWaves = 2, MaxWaves = 2, EnemySet = { "Radiator", "Cinder" },
+        SpawnWaves = { { Spawns = { { Name = "Radiator", CountMin = prefixCount or 5, CountMax = prefixCount or 5 } } } },
+        WaveTemplate = { Spawns = { { Name = "Radiator", Generated = true } } } })
+end
+
+-- Scripted native generation over a declared prefix: pre-existing waves are kept
+-- and never filled. Each generation receives a fresh copy, as a replacement does.
+local function generatePrefixed(context, prefixCount, generations)
+    local callbacks, instance, state, room, phase = table.unpack(context)
+    local fills, result = {}, nil
+    instance.withPhase(state, room, phase, {}, function()
+        callbacks.SetupEncounter(nil, {}, function(_, nativeRoom)
+            for _ = 1, generations or 1 do
+                result = callbacks.GenerateEncounter(nil, {}, function(currentRun, generationRoom, generated)
+                    generated.DifficultyRating = generated.BaseDifficultyMin
+                    callbacks.CalculateActiveEnemyCap(nil, {}, function() return 7 end, currentRun, generationRoom, generated)
+                    generated.Blacklist = generated.Blacklist or {}
+                    for index = 1, generated.MinWaves do
+                        if generated.SpawnWaves[index] == nil then
+                            local wave = { WaveIndex = index, Spawns = { { Name = "Radiator", Generated = true } } }
+                            generated.SpawnWaves[index] = wave
+                            callbacks.FillEnemyTypes(nil, {}, function() fills[#fills + 1] = index end,
+                                generated, wave, generationRoom)
+                        end
+                    end
+                    return generated
+                end, { Blacklist = {} }, nativeRoom, prefixedEncounter(prefixCount))
+            end
+            return result
+        end, prefixedEncounter(prefixCount), {})
+    end)
+    return fills, result
+end
+
+local function introGame(introName)
+    local game = eligibleGame({
+        -- The named seed is never sampled, so its own eligibility is never asked.
+        IsEnemyEligible = function(name, encounter) return name ~= "Radiator" and not encounter.Blacklist[name] end,
+        HasEncounterBeenCompleted = function() return false end,
+        IsGameStateEligible = function() return true end,
+        EncounterData = { Generated = {} },
+    })
+    game.EnemyData.Radiator = { IntroEncounterName = introName, GeneratorData = { DifficultyRating = 3 } }
+    return game
+end
+
+function TestGeneratedEncounters.testVerifiedNativePrefixIsKeptAndOnlyTheSuffixIsFilled()
+    withGame(introGame(), function()
+        local context = { fixture(prefixedDecision()) }
+        local fills, encounter = generatePrefixed(context)
+        lu.assertEquals(fills, {})
+        lu.assertEquals(encounter.SpawnWaves[1].Spawns, { { Name = "Radiator", CountMin = 5, CountMax = 5 } })
+        lu.assertEquals(encounter.SpawnWaves[2].Spawns, {
+            { Name = "Radiator", Generated = true, TotalCount = 10 },
+            { Name = "Cinder", Generated = true, TotalCount = 3 },
+        })
+        lu.assertEquals(context[6], { { kind = "generated-installed", phase = "Combat", encounterKey = "Generated",
+            waveCount = 2, waves = {
+                { wave = 1, spawns = { { name = "Radiator", count = 5 } } },
+                { wave = 2, spawns = { { name = "Radiator", count = 10 }, { name = "Cinder", count = 3 } } },
+            } } })
+    end)
+end
+
+function TestGeneratedEncounters.testChangedNativePrefixDeclines()
+    withGame(introGame(), function()
+        local context = { fixture(prefixedDecision()) }
+        local fills = generatePrefixed(context, 4)
+        lu.assertEquals(fills, { 2 })
+        lu.assertEquals(context[6], { { kind = "generated-admission", reason = "fixed-prefix-changed",
+            wave = 1, enemy = "Radiator", observed = "Radiator" } })
+    end)
+end
+
+function TestGeneratedEncounters.testIntroductionReplacesItselfAndItsReplacementIsInstalled()
+    withGame(introGame("Generated"), function()
+        local context = { fixture(prefixedDecision()) }
+        local fills, encounter = generatePrefixed(context, nil, 2)
+        -- The first generation is replaced natively; the unscanned replacement installs.
+        lu.assertEquals(fills, { 2 })
+        lu.assertEquals(context[6][1], { kind = "generated-admission", reason = "intro-substitution",
+            wave = 1, enemy = "Radiator", observed = "Generated" })
+        lu.assertEquals(context[6][2].kind, "generated-installed")
+        lu.assertEquals(#context[6], 2)
+        lu.assertEquals(encounter.SpawnWaves[2].Spawns[2], { Name = "Cinder", Generated = true, TotalCount = 3 })
+    end)
 end
 
 function TestGeneratedEncounters.testMissingContactsAreReportedAsRealizationFailures()

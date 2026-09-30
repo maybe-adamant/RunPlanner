@@ -9,7 +9,7 @@ import type {
 
 /** The single room-session execution artifact supported by the app compiler. */
 export const EXECUTION_PLAN_FORMAT = 'run-planner-execution' as const;
-export const EXECUTION_PROTOCOL_VERSION = 51 as const;
+export const EXECUTION_PROTOCOL_VERSION = 52 as const;
 export const EXECUTION_CATALOG_VERSION = '0.55.0-anvil-of-fates' as const;
 export type ExecutionBiomeKey = 'F' | 'G' | 'H' | 'I' | 'N' | 'O' | 'P' | 'Q';
 
@@ -106,7 +106,8 @@ export interface ExecutionRunStateDiagnostic {
     readonly matured: readonly { readonly blessingKey: string; readonly rarity: string }[];
   };
   readonly keepsakes: {
-    readonly currentKey: string;
+    /** Omitted when no keepsake is equipped. */
+    readonly currentKey?: string;
     readonly usedKeys: readonly string[];
     readonly blockedKeys: readonly string[];
     readonly fatedStatus: 'Unknown' | 'Fated' | 'Unfated';
@@ -157,8 +158,16 @@ export interface ExecutionRoomExitConformance {
    * Each kind selects the corresponding expected value from the occurrence's
    * beforeRoomExit Run State frame. Values are not duplicated on the wire.
    */
-  readonly facts: readonly { readonly kind: ExecutionRoomExitConformanceFactKind }[];
+  readonly facts: readonly ExecutionRoomExitConformanceFact[];
 }
+
+export type ExecutionRoomExitConformanceFact =
+  | { readonly kind: Exclude<ExecutionRoomExitConformanceFactKind, 'traitInventory'> }
+  | {
+      readonly kind: 'traitInventory';
+      /** Traits the planner asserts are not held at room exit, beyond the frames. */
+      readonly absentTraitKeys?: readonly string[];
+    };
 
 export interface ExecutionReward {
   readonly rewardType: string;
@@ -434,15 +443,16 @@ export type ExecutionVolatileKeepsakeEquipResults =
       readonly transcendentEmbryo: ExecutionTranscendentEmbryoEquipResult;
     };
 
-export interface ExecutionStartingKeepsake {
-  readonly keepsakeKey: string;
-  readonly equipResults?: ExecutionKeepsakeEquipResults;
-}
+/** A run without a starting keepsake omits the key and any equip result. */
+export type ExecutionStartingKeepsake =
+  | { readonly keepsakeKey?: never; readonly equipResults?: never }
+  | { readonly keepsakeKey: string; readonly equipResults?: ExecutionKeepsakeEquipResults };
 
 /** Exact player-selected configuration checked before the first room session arms. */
 export interface ExecutionStartingLoadout {
   readonly weaponKey: string;
-  readonly aspectKey: string;
+  /** Omitted when the run starts with no aspect (a fresh profile's Staff). */
+  readonly aspectKey?: string;
   readonly arcana: readonly {
     readonly key: string;
     readonly origin: 'manual' | 'automatic';
@@ -882,7 +892,8 @@ export type ExecutionRoomGuideDescription =
       readonly conversion?: 'timePiece' | 'anvilOfFates';
     }
   | { readonly kind: 'useFountain'; readonly aromaticPhialTarget?: string }
-  | { readonly kind: 'interactKeepsakeRack'; readonly keepsakeKey?: string };
+  | { readonly kind: 'interactKeepsakeRack'; readonly keepsakeKey?: string }
+  | { readonly kind: 'interactEris' };
 
 /** One display-ordered authored action, optionally joined to its exact transaction. */
 export interface ExecutionRoomGuideRow {
@@ -947,7 +958,7 @@ export interface ExecutionOccurrence {
   };
 }
 
-export type ExecutionRouteKey = 'Underworld' | 'Surface' | 'Dream';
+export type ExecutionRouteKey = 'Underworld' | 'FreshFile' | 'Surface' | 'Dream';
 
 export type ExecutionConfiguredExtent =
   | {

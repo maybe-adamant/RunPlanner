@@ -16,6 +16,7 @@ import {
 import { surfaceCheckpointArtifacts } from '@run-planner/test-fixtures/checkpoints/surface';
 import { describe, expect, it } from 'vitest';
 import { dreamMixedPrefixProject } from '@run-planner/test-fixtures/dream';
+import { createFreshFileRouteProject } from '@run-planner/test-fixtures/fresh-file';
 
 import { createApplication } from '@planner/composition/createApplication';
 import { createInitialProject } from '@planner/composition/projectBootstrap';
@@ -313,7 +314,7 @@ describe('project profile operations', () => {
     });
   });
 
-  it('creates, saves and loads a Fresh File project but refuses to send it before compiling', async () => {
+  it('creates, saves and loads a Fresh File project and sends it only once it compiles', async () => {
     const profile = createProfileFixture();
     const game = createFakeGameModuleHost();
     const application = createApplication({
@@ -331,17 +332,13 @@ describe('project profile operations', () => {
     });
     expect(created?.route.biomes[0]?.topology?.occurrences[0]?.gameName).toBe('F_Opening01');
 
-    const restriction = application.projectOperations.gamePublicationRestriction('FreshFile');
-    expect(restriction).toMatch(/^Fresh File plans can’t be sent to the game yet/);
-    expect(application.projectOperations.gamePublicationRestriction('Underworld')).toBeNull();
-    expect(application.projectOperations.inspectCurrentGamePlan()).toEqual({
-      kind: 'unavailable',
-      reason: restriction,
+    // A new Fresh File project is incomplete, so it does not compile yet.
+    expect(application.projectOperations.inspectCurrentGamePlan()).toMatchObject({
+      kind: 'notPublishable',
     });
-    await expect(application.projectOperations.publishGame(1)).resolves.toEqual({
+    await expect(application.projectOperations.publishGame(1)).resolves.toMatchObject({
       operation: 'publishGame',
       status: 'failure',
-      message: restriction,
     });
     expect(game.published).toHaveLength(0);
     // Refusing to send saves nothing on the way.
@@ -357,6 +354,14 @@ describe('project profile operations', () => {
       status: 'success',
     });
     expect(selectPresentProject(application.store.getState())).toEqual(created);
+
+    application.store.dispatch(authoredProjectReplaced(createFreshFileRouteProject()));
+    await expect(application.projectOperations.publishGame(2)).resolves.toMatchObject({
+      status: 'success',
+    });
+    const published = JSON.parse(game.published.at(-1)!.json);
+    expect(published).toMatchObject({ routeKey: 'FreshFile', startingKeepsake: {} });
+    expect(published.startingLoadout).not.toHaveProperty('aspectKey');
   });
 
   it('reports the host blockers when the established target is not ready', async () => {

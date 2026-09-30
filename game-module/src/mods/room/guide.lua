@@ -160,6 +160,7 @@ local function instruction(description, occurrence, transaction)
         return "Sell " .. displayName(description.traitKey, "trait")
     end
     if kind == "interactGorgon" then return "Talk to Athena" end
+    if kind == "interactEris" then return "Talk to Eris" end
     if kind == "interactEncounter" then
         local resolution = transaction and transaction.resolution
         local giver = resolution and resolution.offer and resolution.offer.giver
@@ -211,6 +212,8 @@ local function navigationFooter(navigation)
     local overview = nextOccurrence.overview
     local reward = navigation.reward
     if roomOccupants[gameName] and (gameName:match("_Story%d+$") or gameName == "H_Bridge01") then
+        -- A fresh profile's Bridge holds a shop rather than its story occupant.
+        if overview and overview.shop then return "Next: Shop" end
         return "Next: " .. roomOccupants[gameName]
     end
     if reward and reward.rewardType == "ClockworkGoal" then reward = nil end

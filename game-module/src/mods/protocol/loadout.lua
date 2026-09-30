@@ -17,11 +17,12 @@ end
 
 function protocol.decode(value)
     local record, errorMessage = p.exact(value,
-        { "weaponKey", "aspectKey", "arcana", "fear" }, { "startingHex" },
+        { "weaponKey", "arcana", "fear" }, { "aspectKey", "startingHex" },
         "execution plan.startingLoadout")
     if not record then return nil, errorMessage end
     if not p.str(record.weaponKey, "execution plan.startingLoadout.weaponKey")
-        or not p.str(record.aspectKey, "execution plan.startingLoadout.aspectKey") then
+        or (record.aspectKey ~= nil
+            and not p.str(record.aspectKey, "execution plan.startingLoadout.aspectKey")) then
         return p.fail("execution plan has invalid starting loadout")
     end
     if record.aspectKey == "SuitHexAspect" and record.startingHex == nil then

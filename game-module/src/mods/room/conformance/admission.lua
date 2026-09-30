@@ -29,14 +29,14 @@ function admission.verify(occurrence, startingLoadout)
             observedLoadout.weaponKey
         )
     end
-    local aspectPresent = native.hasTrait(startingLoadout.aspectKey)
-    if observedLoadout.aspectKey ~= startingLoadout.aspectKey or not aspectPresent then
-        local observedAspect = aspectPresent and observedLoadout.aspectKey or nil
-        return proof.compare(
-            "postboss-admission:aspect",
-            startingLoadout.aspectKey,
-            observedAspect
-        )
+    if not native.aspectAgrees(startingLoadout.aspectKey, observedLoadout.aspectKey) then
+        return nil, {
+            checkpoint = "postboss-admission:aspect",
+            expected = startingLoadout.aspectKey,
+            -- An expected aspect that is recorded but not held is observed as none.
+            observed = (startingLoadout.aspectKey == nil or native.hasTrait(observedLoadout.aspectKey))
+                and observedLoadout.aspectKey or nil,
+        }
     end
 
     local currentRun, gameState = _G.CurrentRun, _G.GameState

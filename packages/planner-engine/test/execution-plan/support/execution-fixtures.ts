@@ -25,6 +25,7 @@ import {
   loadUnderworldIxionChaosCheckpoint,
 } from '@run-planner/test-fixtures/checkpoints/underworld';
 import { loadDreamMixedHandoffCheckpoint } from '@run-planner/test-fixtures/checkpoints/dream';
+import { createFreshFileRouteProject } from '@run-planner/test-fixtures/fresh-file';
 import {
   loadSurfaceNPhialIntermediateFountainCheckpoint,
   loadSurfaceScheduledLifecycleCheckpoint,
@@ -52,6 +53,7 @@ import fgAnomalyFixture from '../fixtures/fg-anomaly.execution.json';
 import fgAnomalyRosterFixture from '../fixtures/fg-anomaly-roster.execution.json';
 import fgIxionChaosFixture from '../fixtures/fg-ixion-chaos.execution.json';
 import fgNpcShoppingProtectionFixture from '../fixtures/fg-npc-shopping-protection.execution.json';
+import freshFileFGHIFixture from '../fixtures/fresh-file-fghi.execution.json';
 import surfaceGeneratedPrecombatFixture from '../fixtures/surface-generated-precombat.execution.json';
 import surfaceNPhialIntermediateFountainFixture from '../fixtures/surface-n-phial-intermediate-fountain.execution.json';
 import surfaceNFixture from '../fixtures/surface-n.execution.json';
@@ -124,6 +126,11 @@ export const executionFixtures: readonly ExecutionFixture[] = Object.freeze([
     project: emptyShopGroupProject,
     wire: underworldFGHIEmptyShopGroupFixture,
     catalog: emptyShopGroupCatalog,
+  },
+  {
+    name: 'fresh-file-fghi',
+    project: createFreshFileRouteProject,
+    wire: freshFileFGHIFixture,
   },
   {
     name: 'fg-ixion-chaos',

@@ -37,7 +37,7 @@ function session.verifyCompleted(state, mismatch)
     if observedLoadout.weaponKey ~= expected.weaponKey then
         return mismatch(state, "starting-weapon", expected.weaponKey, observedLoadout.weaponKey)
     end
-    if observedLoadout.aspectKey ~= expected.aspectKey or not native.hasTrait(expected.aspectKey) then
+    if not native.aspectAgrees(expected.aspectKey, observedLoadout.aspectKey) then
         return mismatch(state, "starting-aspect", expected.aspectKey, observedLoadout.aspectKey)
     end
     local observedArcana = native.activeArcana()

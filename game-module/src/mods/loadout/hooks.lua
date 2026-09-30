@@ -124,7 +124,11 @@ function hooks.attach(module, loadoutRuntime, getState, report, room, hexTree)
         return result
     end)
 
-    return { synchronizeStartingRoom = synchronizeStartingRoom }
+    return {
+        synchronizeStartingRoom = synchronizeStartingRoom,
+        -- Whether native StartNewRun is on the stack.
+        startingRun = function() return startDepth > 0 end,
+    }
 end
 
 return hooks

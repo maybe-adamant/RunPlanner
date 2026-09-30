@@ -40,7 +40,6 @@ import {
   gameSentSlotNotActivated,
 } from '../state/gameSendSessionSlice';
 import { assertPublicProjectAdmission } from './project-admission';
-import { gamePublicationRestriction } from './game-publication-availability';
 import {
   selectPresentProject,
   selectProfileSession,
@@ -60,8 +59,6 @@ export type ProjectOperation =
 
 export type CurrentGamePlan =
   | { readonly kind: 'noProject' }
-  /** Sending is unavailable for this route while its game-module support is in development. */
-  | { readonly kind: 'unavailable'; readonly reason: string }
   | {
       readonly kind: 'notPublishable';
       /** The compiler's reason, or null when compiling failed for another reason. */
@@ -91,8 +88,6 @@ export interface ProjectOperations {
   readonly saveAsAvailable: boolean;
   /** Whether the current project compiles to an execution plan, and its fingerprint. */
   inspectCurrentGamePlan(): CurrentGamePlan;
-  /** Why a route's plans can't be sent to the game, or null when they can. */
-  gamePublicationRestriction(routeKey: string): string | null;
   publishGame(slotNumber: GamePlanSlotNumber): Promise<ProjectOperationResult>;
   /** Saves an unsaved or never-saved project before the planner closes to update. */
   saveBeforeUpdate(): Promise<ProjectOperationResult>;
@@ -234,11 +229,6 @@ export function createProjectOperations(
       }
       const workspace = options.store.getState().projectWorkspace;
       if (workspace.kind !== 'openProject') throw new Error('No project is open');
-      const restriction = gamePublicationRestriction(
-        options.catalog,
-        workspace.history.present.route.routeKey,
-      );
-      if (restriction !== null) return result('publishGame', 'failure', restriction);
       // Checked before saving, so an unsendable plan is never saved on the way.
       assembleExecutionProduct({ assembly: workspace.assembly, catalog: options.catalog });
       // Sending needs a saved file with no unsaved changes; the file's name names the plan.
@@ -368,17 +358,9 @@ export function createProjectOperations(
         return failure('exportRecovery', error);
       }
     },
-    gamePublicationRestriction(routeKey: string): string | null {
-      return gamePublicationRestriction(options.catalog, routeKey);
-    },
     inspectCurrentGamePlan(): CurrentGamePlan {
       const workspace = options.store.getState().projectWorkspace;
       if (workspace.kind !== 'openProject') return NO_PROJECT_PLAN;
-      const restriction = gamePublicationRestriction(
-        options.catalog,
-        workspace.history.present.route.routeKey,
-      );
-      if (restriction !== null) return Object.freeze({ kind: 'unavailable', reason: restriction });
       const cached = currentPlans.get(workspace.assembly);
       if (cached !== undefined) return cached;
       let current: CurrentGamePlan;

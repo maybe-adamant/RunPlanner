@@ -213,8 +213,84 @@ function TestConformanceReaders.testPostbossAdmissionRejectsWeaponAndAspectIdent
     _G.CurrentRun.Hero.TraitDictionary.BaseStaffAspect = nil
     ok, mismatch = admission.verify(occurrence, startingLoadout)
     lu.assertNil(ok)
-    lu.assertEquals(mismatch.checkpoint, "postboss-admission:aspect")
+    lu.assertEquals(mismatch, {
+        checkpoint = "postboss-admission:aspect", expected = "BaseStaffAspect", observed = nil,
+    })
     restore()
+end
+
+function TestConformanceReaders.testPostbossAdmissionWithoutAnAspectStillChecksEveryFamily()
+    local occurrence, startingLoadout, restore = admissionFixture()
+    startingLoadout.aspectKey = nil
+    _G.GameState.LastWeaponUpgradeName.WeaponStaffSwing = nil
+    _G.CurrentRun.Hero.TraitDictionary.BaseStaffAspect = nil
+    local ok, mismatch = admission.verify(occurrence, startingLoadout)
+    lu.assertTrue(ok, mismatch)
+    -- No nil/nil short-circuit: the entry families are still proved.
+    _G.CurrentRun.Hero.Traits = {}
+    ok, mismatch = admission.verify(occurrence, startingLoadout)
+    lu.assertNil(ok)
+    lu.assertEquals(mismatch.checkpoint, "postboss-admission:traitInventory")
+    restore()
+
+    occurrence, startingLoadout, restore = admissionFixture()
+    startingLoadout.aspectKey = nil
+    ok, mismatch = admission.verify(occurrence, startingLoadout)
+    restore()
+    lu.assertNil(ok)
+    lu.assertEquals(mismatch, { checkpoint = "postboss-admission:aspect", observed = "BaseStaffAspect" })
+end
+
+local function freshIntro(gameName)
+    local fixtures = require("tests/harness/fixture_loader")
+    local decoder = require("mods.protocol.decoder")
+    local file = assert(io.open(fixtures.path("fresh-file-fghi.execution.json"), "rb"))
+    local plan = assert(decoder.decode(assert(json.decode(file:read("*a")))))
+    file:close()
+    for _, occurrence in ipairs(plan.occurrences) do
+        if occurrence.gameName == gameName then return occurrence end
+    end
+end
+
+-- Only the traitInventory fact (JSON text), with the hero holding exactly the published exit rows.
+local function proveInventory(occurrence, fact, extraTrait, dropTrait)
+    local record = assert(json.decode('{"facts":[' .. fact .. ']}'))
+    local expected = assert(protocolConformance.resolve(record, occurrence.diagnostics, "conformance"))
+    local levels, heroTraits = {}, {}
+    for _, row in ipairs(occurrence.diagnostics.beforeRoomExit.traits.equipped) do
+        if row.traitKey ~= dropTrait then
+            heroTraits[#heroTraits + 1] = { Name = row.traitKey, Rarity = row.rarity }
+            levels[row.traitKey] = row.level
+        end
+    end
+    if extraTrait then heroTraits[#heroTraits + 1] = { Name = extraTrait } end
+    local priorRun, priorCount = _G.CurrentRun, _G.GetTraitCount
+    _G.CurrentRun = { Hero = { Traits = heroTraits } }
+    _G.GetTraitCount = function(_, args) return levels[args.Name] or 1 end
+    local ok, mismatch = proof.prove({ roomExitConformance = record, conformanceExpected = expected },
+        function(kind, factExpected) return readers.read(kind, _G.CurrentRun, nil, factExpected) end)
+    _G.CurrentRun, _G.GetTraitCount = priorRun, priorCount
+    return ok, mismatch
+end
+
+function TestConformanceReaders.testErisCurseIsProvedInBothDirectionsAtRoomExit()
+    local gIntro = freshIntro("G_Intro")
+    local marked = '{"kind":"traitInventory"}'
+    lu.assertTrue(proveInventory(gIntro, marked))
+    -- Eris marked but absent.
+    local ok, mismatch = proveInventory(gIntro, marked, nil, "ErisCurseTrait")
+    lu.assertNil(ok)
+    lu.assertEquals(mismatch.checkpoint, "room-exit-conformance:traitInventory")
+    -- Eris present but unmarked at a host that asserts her curse absent.
+    local hIntro = freshIntro("H_Intro")
+    local unmarked = '{"kind":"traitInventory","absentTraitKeys":["ErisCurseTrait"]}'
+    hIntro.diagnostics.beforeRoomExit.traits.equipped = {}
+    hIntro.diagnostics.roomEntered.traits.equipped = {}
+    lu.assertTrue(proveInventory(hIntro, unmarked))
+    ok, mismatch = proveInventory(hIntro, unmarked, "ErisCurseTrait")
+    lu.assertNil(ok)
+    lu.assertEquals(mismatch.checkpoint, "room-exit-conformance:traitInventory")
+    lu.assertEquals(mismatch.expected.absent, { "ErisCurseTrait" })
 end
 
 function TestConformanceReaders.testPostbossAdmissionDispatchesEveryNamedFamilyToTheOrdinaryReader()

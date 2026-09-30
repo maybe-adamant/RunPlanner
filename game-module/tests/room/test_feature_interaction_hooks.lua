@@ -792,11 +792,12 @@ end
 
 -- Drives the generated empty-Survival fixture through FillInShopOptions; `probeResult`
 -- is what native returns when asked about the planned-empty group.
-local function emptyMiddleShop(probeResult)
+local function emptyGroupShop(probeResult, fixtureName)
     local fixtures = require("tests/harness/fixture_loader")
     local json = require("mods/protocol/json")
     local protocol = require("mods.protocol.decoder")
-    local file = assert(io.open(fixtures.path("underworld-fghi-empty-shop-group.execution.json"), "rb"))
+    local file = assert(io.open(fixtures.path((fixtureName or "underworld-fghi-empty-shop-group")
+        .. ".execution.json"), "rb"))
     local plan = assert(protocol.decode(assert(json.decode(file:read("*a")))))
     file:close()
     local shop
@@ -813,7 +814,7 @@ local function emptyMiddleShop(probeResult)
     local state = { state = "synchronized", diagnostics = {} }
     attachFeatureHooks(module, session, function() return state end, function() end, session)
 
-    -- StoreData.I_WorldShop: five native groups; the published plan leaves Survival empty.
+    -- StoreData.I_WorldShop: five native groups; the published plan leaves one empty.
     local probes = 0
     local generated = callbacks.FillInShopOptions(nil, {}, function(args)
         local groups = args.StoreData.GroupsOf
@@ -841,7 +842,7 @@ local function emptyMiddleShop(probeResult)
 end
 
 function TestFeatureInteractionHooks.testEmptyMiddleWorldShopGroupBindsLaterPurchaseToItsCompactNativeItem()
-    local generated, shop, state = emptyMiddleShop({})
+    local generated, shop, state = emptyGroupShop({})
     lu.assertEquals(#generated.StoreOptions, 4)
     local names = {}
     for index, option in ipairs(generated.StoreOptions) do names[index] = option.Name end
@@ -856,8 +857,18 @@ function TestFeatureInteractionHooks.testEmptyMiddleWorldShopGroupBindsLaterPurc
     lu.assertEquals(state.diagnostics, {})
 end
 
+function TestFeatureInteractionHooks.testFreshTrailingEmptyWorldShopGroupLeavesFourItems()
+    local generated, shop, state = emptyGroupShop({}, "fresh-file-fghi")
+    lu.assertEquals(#shop.offers, 4)
+    lu.assertEquals(shop.offers[4].profileSlotIndex, 3)
+    local names = {}
+    for index, option in ipairs(generated.StoreOptions) do names[index] = option.Name end
+    lu.assertEquals(names, { "StackUpgradeBig", "MaxHealthDrop", "HealBigDrop", "MaxHealthDropBig" })
+    lu.assertEquals(state.diagnostics, {})
+end
+
 function TestFeatureInteractionHooks.testPlannedEmptyShopGroupThatNativeCanFillIsDiagnostic()
-    local generated, _, state = emptyMiddleShop({ { Name = "HealBigDrop" } })
+    local generated, _, state = emptyGroupShop({ { Name = "HealBigDrop" } })
     lu.assertEquals(#generated.StoreOptions, 4)
     lu.assertEquals(#state.diagnostics, 1)
     lu.assertEquals(state.diagnostics[1].checkpoint, "shop-empty-group")

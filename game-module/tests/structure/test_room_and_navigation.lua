@@ -105,6 +105,18 @@ function TestRoomNavigationStructure.testUnplannedHermesShrineFailsRoomFeaturePr
     })
 end
 
+function TestRoomNavigationStructure.testLockedPurgingPoolCountsAsAbsent()
+    local item = occurrence()
+    item.overview.purgingPool = nil
+    local native = room()
+    native.SellTraitShop = { BlockedByRequirements = true }
+    lu.assertTrue(features.prove(item, native, context()))
+    item.overview.purgingPool = { interacted = false }
+    local ok, errorValue = features.prove(item, native, context())
+    lu.assertNil(ok)
+    lu.assertEquals(errorValue, { kind = "feature", expected = "purgingPool", observed = false })
+end
+
 function TestRoomNavigationStructure.testRoomRealizationReplacesRandomInputsButKeepsNativeFields()
     local item = occurrence()
     local game = { RoomData = { F_Test = { NativeOnly = "keep" } } }

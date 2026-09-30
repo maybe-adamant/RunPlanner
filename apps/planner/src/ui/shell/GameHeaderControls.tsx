@@ -28,11 +28,6 @@ function sendProjectId(state: RootState): string | null {
   return workspace.kind === 'openProject' ? workspace.history.present.projectId : null;
 }
 
-function sendRouteKey(state: RootState): string | null {
-  const workspace = state.projectWorkspace;
-  return workspace.kind === 'openProject' ? workspace.history.present.route.routeKey : null;
-}
-
 // The engine's eligibility, already evaluated, decides sendability without compiling.
 function sendEligible(state: RootState): boolean {
   const workspace = state.projectWorkspace;
@@ -62,7 +57,6 @@ export function GameHeaderControls({
   );
   const projectId = useAppSelector(sendProjectId);
   const eligible = useAppSelector(sendEligible);
-  const routeKey = useAppSelector(sendRouteKey);
   const lastSentSlot = useAppSelector((state) => state.gameSendSession.lastSentSlot);
   const lastSendFailed = useAppSelector((state) => state.gameSendSession.lastFailure !== null);
   const activationFailure = useAppSelector((state) => state.gameSendSession.lastActivationFailure);
@@ -93,11 +87,7 @@ export function GameHeaderControls({
 
   const indicator =
     gameStatus === undefined ? null : projectGameIndicator(snapshot, lastSendFailed);
-  const restriction = routeKey === null ? null : operations.gamePublicationRestriction(routeKey);
-  const project: GameSendProject | null =
-    projectId === null
-      ? null
-      : { projectId, eligible, ...(restriction === null ? {} : { restriction }) };
+  const project: GameSendProject | null = projectId === null ? null : { projectId, eligible };
   const button = projectGameSendButton(
     snapshot.status,
     project,

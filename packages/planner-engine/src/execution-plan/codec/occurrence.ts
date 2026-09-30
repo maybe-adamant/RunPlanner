@@ -11,6 +11,7 @@ import {
   exact,
   fail,
   object,
+  stringArray,
   stringValue,
 } from './primitives';
 import type { ExecutionFieldsLayout } from '../model';
@@ -352,6 +353,9 @@ function roomGuideDescription(value: unknown, label: string) {
           ? {}
           : { keepsakeKey: stringValue(record.keepsakeKey, `${label}.keepsakeKey`) }),
       });
+    case 'interactEris':
+      exact(record, ['kind'], [], label);
+      return Object.freeze({ kind });
     default:
       fail(`${label}.kind is unsupported`);
   }
@@ -454,15 +458,26 @@ export function occurrence(value: unknown, index: number): ExecutionOccurrence {
     conformance === undefined
       ? undefined
       : array(conformance.facts, `${label}.roomExitConformance.facts`).map((value, factIndex) => {
-          const fact = object(value, `${label}.roomExitConformance.facts[${factIndex}]`);
-          exact(fact, ['kind'], [], `${label}.roomExitConformance.facts[${factIndex}]`);
+          const factLabel = `${label}.roomExitConformance.facts[${factIndex}]`;
+          const fact = object(value, factLabel);
           const kind = stringValue(
             fact.kind,
-            `${label}.roomExitConformance.facts[${factIndex}].kind`,
+            `${factLabel}.kind`,
           ) as ExecutionRoomExitConformanceFactKind;
-          if (!allowedConformanceKinds.has(kind))
-            fail(`${label}.roomExitConformance.facts[${factIndex}].kind is unsupported`);
-          return Object.freeze({ kind });
+          if (!allowedConformanceKinds.has(kind)) fail(`${factLabel}.kind is unsupported`);
+          if (kind !== 'traitInventory') {
+            exact(fact, ['kind'], [], factLabel);
+            return Object.freeze({ kind });
+          }
+          exact(fact, ['kind'], ['absentTraitKeys'], factLabel);
+          if (fact.absentTraitKeys === undefined) return Object.freeze({ kind });
+          const absentTraitKeys = stringArray(fact.absentTraitKeys, `${factLabel}.absentTraitKeys`);
+          if (
+            absentTraitKeys.length === 0 ||
+            new Set(absentTraitKeys).size !== absentTraitKeys.length
+          )
+            fail(`${factLabel}.absentTraitKeys must be nonempty and distinct`);
+          return Object.freeze({ kind, absentTraitKeys: Object.freeze([...absentTraitKeys]) });
         });
   const parsedOverview = overview(record.overview, `${label}.overview`);
   const hasFieldsLayout = parsedOverview.fields !== undefined;

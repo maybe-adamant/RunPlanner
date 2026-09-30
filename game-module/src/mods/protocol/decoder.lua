@@ -13,7 +13,7 @@ local resources = type(import) == "function" and import("mods/protocol/resources
 
 local protocol = {
     FORMAT = "run-planner-execution",
-    VERSION = 51,
+    VERSION = 52,
     CATALOG_VERSION = "0.55.0-anvil-of-fates",
     MAX_ITEMS = p.MAX_ITEMS,
     MAX_STRING = p.MAX_STRING,
@@ -52,11 +52,17 @@ end
 local function startingKeepsake(value)
     local record, errorMessage = p.exact(
         value,
-        { "keepsakeKey" },
-        { "equipResults" },
+        {},
+        { "keepsakeKey", "equipResults" },
         "execution plan.startingKeepsake"
     )
     if not record then return nil, errorMessage end
+    if record.keepsakeKey == nil then
+        if record.equipResults ~= nil then
+            return p.fail("execution plan.startingKeepsake.equipResults requires keepsakeKey")
+        end
+        return record
+    end
     if not p.str(record.keepsakeKey, "execution plan.startingKeepsake.keepsakeKey") then
         return p.fail("execution plan has invalid starting keepsake")
     end
@@ -134,7 +140,8 @@ function protocol.decode(value)
     if plan.format ~= protocol.FORMAT
         or plan.protocolVersion ~= protocol.VERSION
         or plan.catalogVersion ~= protocol.CATALOG_VERSION
-        or (plan.routeKey ~= "Underworld" and plan.routeKey ~= "Surface" and plan.routeKey ~= "Dream")
+        or (plan.routeKey ~= "Underworld" and plan.routeKey ~= "FreshFile"
+            and plan.routeKey ~= "Surface" and plan.routeKey ~= "Dream")
         or not p.str(plan.projectId, "execution plan.projectId")
         or type(plan.planFingerprint) ~= "string"
         or not plan.planFingerprint:match("^[0-9a-f]+$")
@@ -157,7 +164,7 @@ function protocol.decode(value)
         or (#keys == 2 and keys[1] == "N" and keys[2] == "O")
         or (#keys == 3 and keys[1] == "N" and keys[2] == "O" and keys[3] == "P")
         or (#keys == 4 and keys[1] == "N" and keys[2] == "O" and keys[3] == "P" and keys[4] == "Q")
-    if (plan.routeKey == "Underworld" and not underworld)
+    if ((plan.routeKey == "Underworld" or plan.routeKey == "FreshFile") and not underworld)
         or (plan.routeKey == "Surface" and not surface) then
         return p.fail("execution plan.routeKey disagrees with extent")
     end

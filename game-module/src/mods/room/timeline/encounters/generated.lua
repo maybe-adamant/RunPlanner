@@ -94,18 +94,42 @@ local function supplyBaseRoll(encounter, roll)
     end
 end
 
+-- Declared native SpawnWaves precede generation and are never filled. Each must
+-- match its published fixed wave by name and exact CountMin/CountMax.
+local function nativePrefix(decision, encounter)
+    local waves = encounter.SpawnWaves or {}
+    local prefix = #waves
+    if (prefix == 0 and next(waves) ~= nil) or prefix >= decision.waveCount then return nil, "preexisting-waves" end
+    for index = 1, prefix do
+        local spawns, published = type(waves[index]) == "table" and waves[index].Spawns or {}, decision.waves[index]
+        if #spawns ~= #published.types then return nil, "fixed-prefix-changed", { wave = index } end
+        for position, entry in ipairs(published.types) do
+            local spawn, count = spawns[position], published.counts[entry.nativeId]
+            if entry.source ~= "fixed" or type(spawn) ~= "table" or spawn.Name ~= entry.nativeId
+                or spawn.CountMin ~= count or spawn.CountMax ~= count then
+                return nil, "fixed-prefix-changed", { wave = index, enemy = entry.nativeId, observed = spawn and spawn.Name }
+            end
+        end
+    end
+    return prefix
+end
+
 -- Live declaration facts the installer relies on, read from the effective encounter.
-local function installable(decision, encounter, enemies)
+local function installable(decision, encounter, enemies, prefix)
     if encounter.InfiniteSpawns then return "unsupported-infinite-spawns" end
-    if encounter.SpawnWaves ~= nil and next(encounter.SpawnWaves) ~= nil then return "preexisting-waves" end
     if encounter.BuildCustomEnemySet ~= nil then return "unsupported-custom-enemy-set" end
     for index, wave in ipairs(decision.waves) do
+        for _, entry in ipairs(wave.types) do
+            if enemies[entry.nativeId] == nil then return "missing-enemy", { wave = index, enemy = entry.nativeId } end
+        end
+    end
+    for index = prefix + 1, #decision.waves do
+        local wave = decision.waves[index]
         local template = templateFor(encounter, index, decision.waveCount)
         if type(template) ~= "table" or type(template.Spawns) ~= "table" then return "unsupported-template", { wave = index } end
         local templateIndex = 1
         for _, entry in ipairs(wave.types) do
             local name, source = entry.nativeId, entry.source
-            if enemies[name] == nil then return "missing-enemy", { wave = index, enemy = name } end
             if source == "fixed" or source == "template" then
                 local seed = template.Spawns[templateIndex]
                 if seed == nil then return "missing-template-entry", { wave = index, enemy = name } end
@@ -113,7 +137,8 @@ local function installable(decision, encounter, enemies)
                     if seed.Name ~= name or seed.Generated or seed.TotalCount ~= wave.counts[name] then
                         return "fixed-template-changed", { wave = index, enemy = name, observed = seed.Name }
                     end
-                elseif seed.Name ~= nil or not seed.Generated then
+                elseif not seed.Generated or (seed.Name ~= nil and seed.Name ~= name) then
+                    -- A generated seed is a placeholder or keeps its declared name.
                     return "unsupported-placeholder", { wave = index, enemy = name }
                 end
                 templateIndex = templateIndex + 1
@@ -147,7 +172,7 @@ end
 -- carry only prospective exclusions in the detached encounter view instead.
 -- Ordinary candidates are sampled before placeholders/additions in each wave;
 -- fixed seeds and replicated highlight seeds are never sampled again.
-local function eligibleComposition(decision, encounter, nativeRoom, currentRun, gameValue)
+local function eligibleComposition(decision, encounter, nativeRoom, currentRun, gameValue, prefix)
     local eligible = nativeValue(gameValue, "IsEnemyEligible")
     if type(eligible) ~= "function" then return "missing-enemy-eligibility" end
     local view = eligibilityView(encounter, currentRun)
@@ -181,15 +206,17 @@ local function eligibleComposition(decision, encounter, nativeRoom, currentRun, 
         if reason then return reason, evidence end
         view.Blacklist[highlight] = true
     end
-    for index, published in ipairs(decision.waves) do
-        local wave = waveView(index)
+    for index = prefix + 1, #decision.waves do
+        local published, wave = decision.waves[index], waveView(index)
         if highlight then wave.Spawns[#wave.Spawns + 1] = { Name = highlight } end
         -- These selections come from the one ordinary pool sampled before any
         -- placeholder gets a name. Unique placeholder pools are sampled later.
         local templateIndex = 1
         for _, entry in ipairs(published.types) do
             local seed = wave.Spawns[templateIndex]
-            if entry.source == "addition" or (entry.source == "template" and not seed.EnemySet) then
+            -- A named generated seed is never sampled.
+            if entry.source == "addition"
+                or (entry.source == "template" and not seed.EnemySet and seed.Name == nil) then
                 local reason, evidence = check(entry.nativeId, index, wave)
                 if reason then return reason, evidence end
             end
@@ -289,8 +316,9 @@ end
 
 -- SetupEncounter replaces a generated encounter afterwards when a spawned enemy's
 -- introduction is incomplete and eligible, unless SkipIntroEncounterCheck is set.
-local function introSubstitution(waves, encounter, gameValue)
-    if encounter.SkipIntroEncounterCheck then return nil end
+-- The replacement it generates is not scanned again.
+local function introSubstitution(waves, encounter, gameValue, replacement)
+    if encounter.SkipIntroEncounterCheck or replacement then return nil end
     local enemies, encounters = gameValue.EnemyData or {}, nativeValue(gameValue, "EncounterData") or {}
     local completed, eligible = nativeValue(gameValue, "HasEncounterBeenCompleted"), nativeValue(gameValue, "IsGameStateEligible")
     for index, wave in ipairs(waves) do
@@ -308,7 +336,7 @@ end
 
 -- One whole-encounter decision after native DifficultyRating and before wave
 -- construction; nothing live is mutated here.
-local function admission(decision, encounter, nativeRoom, currentRun, gameValue)
+local function admission(decision, encounter, nativeRoom, currentRun, gameValue, replacement)
     local enemies = gameValue.EnemyData or {}
     local _, budget = proof.compare("encounterBudget", decision.expectedBudget, encounter.DifficultyRating)
     if budget then return "budget-mismatch", { expected = budget.expected, observed = budget.observed } end
@@ -316,15 +344,17 @@ local function admission(decision, encounter, nativeRoom, currentRun, gameValue)
     if decision.waveCount < minimum or decision.waveCount > maximum then
         return "wave-count-out-of-range", { expected = { min = minimum, max = maximum }, observed = decision.waveCount }
     end
-    local reason, evidence = installable(decision, encounter, enemies)
+    local prefix, reason, evidence = nativePrefix(decision, encounter)
     if reason then return reason, evidence end
-    reason, evidence = eligibleComposition(decision, encounter, nativeRoom, currentRun, gameValue)
+    reason, evidence = installable(decision, encounter, enemies, prefix)
+    if reason then return reason, evidence end
+    reason, evidence = eligibleComposition(decision, encounter, nativeRoom, currentRun, gameValue, prefix)
     if reason then return reason, evidence end
     reason, evidence = fangs.admit(decision, encounter, enemies, nativeValue(gameValue, "IsEliteAttributeEligible"))
     if reason then return reason, evidence end
     reason, evidence = menaceAdmissible(decision, encounter, nativeRoom, gameValue)
     if reason then return reason, evidence end
-    return introSubstitution(decision.waves, encounter, gameValue)
+    return introSubstitution(decision.waves, encounter, gameValue, replacement)
 end
 
 -- FillEnemyTypes draw count for the one roster wave: MinTypes..MaxTypes capped by
@@ -346,7 +376,7 @@ end
 -- One roster decision at the pre-wave cap contact; nothing live is mutated. Each
 -- draw is checked against the wave already holding the earlier draws, so native
 -- IsEnemyEligible applies duplicates, earlier BlockEnemyTypes and the elite cap in order.
-local function rosterAdmission(decision, encounter, nativeRoom, currentRun, gameValue)
+local function rosterAdmission(decision, encounter, nativeRoom, currentRun, gameValue, replacement)
     local enemies = gameValue.EnemyData or {}
     if not encounter.InfiniteSpawns then return "unsupported-finite-spawns" end
     local minimum, maximum = encounter.MinWaves or 1, encounter.MaxWaves or 1
@@ -387,7 +417,7 @@ local function rosterAdmission(decision, encounter, nativeRoom, currentRun, game
         if not verdict then return "native-enemy-ineligible", { position = position, enemy = name } end
         wave.Spawns[#wave.Spawns + 1] = { Name = name }
     end
-    return introSubstitution({ { types = decision.types } }, encounter, gameValue)
+    return introSubstitution({ { types = decision.types } }, encounter, gameValue, replacement)
 end
 
 -- Native FillEnemyTypes side effects of one ordinary draw.
@@ -478,6 +508,9 @@ function generated.create()
             end
             local owner, gameValue = parent.owner, _G.game or game or _G
             local decision = owner.decision
+            -- A second generation in one setup is its introduction replacement.
+            local replacement = parent.generated == true
+            parent.generated = true
             -- A new owned preparation supersedes any restored realization. A
             -- failed attempt must fall back natively rather than leave a stale
             -- marker for Fangs or zero-Menace spawn interception.
@@ -494,7 +527,7 @@ function generated.create()
                 end
             end
             local scope = { kind = "generate", owner = owner, encounter = encounter, run = currentRun,
-                gameValue = gameValue, enemies = gameValue.EnemyData or {}, installed = {} }
+                gameValue = gameValue, enemies = gameValue.EnemyData or {}, installed = {}, replacement = replacement }
             local ok, result = pcall(function()
                 return scoped(stack, scope, function() return base(currentRun, nativeRoom, encounter) end)
             end)
@@ -547,7 +580,7 @@ function generated.create()
             for index, wave in ipairs(encounter.SpawnWaves) do
                 local spawns = {}
                 for _, spawn in ipairs(wave.Spawns) do
-                    spawns[#spawns + 1] = { name = spawn.Name, count = spawn.TotalCount }
+                    spawns[#spawns + 1] = { name = spawn.Name, count = spawn.TotalCount or spawn.CountMin }
                 end
                 waves[index] = { wave = index, spawns = spawns }
             end
@@ -565,8 +598,9 @@ function generated.create()
                 return result
             end
             local decision = scope.owner.decision
+            local prefix = #(encounter.SpawnWaves or {})
             local ok, reason, evidence = pcall(isRoster(decision) and rosterAdmission or admission, decision, encounter,
-                nativeRoom or currentRun.CurrentRoom or {}, currentRun, scope.gameValue)
+                nativeRoom or currentRun.CurrentRoom or {}, currentRun, scope.gameValue, scope.replacement)
             if not ok then reason, evidence = "admission-check-error", { observed = tostring(reason) } end
             if reason then
                 scope.admission = reason
@@ -575,6 +609,8 @@ function generated.create()
             end
             scope.admission, scope.admitted = "accepted", true
             if isRoster(decision) then return result end
+            -- The verified native prefix is already installed.
+            for index = 1, prefix do scope.installed[index] = true end
             scope.priorWaves = { encounter.MinWaves, encounter.MaxWaves }
             encounter.MinWaves, encounter.MaxWaves = decision.waveCount, decision.waveCount
             scope.priorHighlight, encounter.BlockHighlightEncounter = encounter.BlockHighlightEncounter, true

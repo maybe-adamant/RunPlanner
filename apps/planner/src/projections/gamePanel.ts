@@ -614,8 +614,11 @@ function slotColumns(
     slot.weaponKey === null
       ? undefined
       : (ownEntry(catalog.weapons.byKey, slot.weaponKey)?.shortLabel ?? slot.weaponKey);
+  // A plan with a loadout but no aspect starts without one.
   const aspectLabel =
-    ownLabel(catalog.aspects.byKey, slot.aspectKey) ?? slot.aspectKey ?? 'Unknown';
+    ownLabel(catalog.aspects.byKey, slot.aspectKey) ??
+    slot.aspectKey ??
+    (slot.weaponKey === null ? 'Unknown' : 'None');
   return {
     plan: slot.displayName,
     route:
@@ -655,8 +658,6 @@ function unavailableReason(current: CurrentGamePlan): string | null {
       return null;
     case 'noProject':
       return 'Open a project to send it to the game.';
-    case 'unavailable':
-      return current.reason;
     case 'notPublishable':
       return describeNotPublishable(current.code);
   }
@@ -809,8 +810,6 @@ export interface GameSendButton {
 export interface GameSendProject {
   readonly projectId: string;
   readonly eligible: boolean;
-  /** Why this route's plans can't be sent at all, independent of its findings. */
-  readonly restriction?: string;
 }
 
 function localTime(ms: number): string {
@@ -858,8 +857,6 @@ export function projectGameSendButton(
   if (status === null || !isReady(status)) {
     return inactive('notReady', 'Send to game', 'Set up the game in the Game panel');
   }
-  if (project.restriction !== undefined)
-    return inactive('notSendable', 'Send to game', project.restriction);
   if (!project.eligible) {
     return inactive('notSendable', 'Send to game', describeNotPublishable('notEligible'));
   }

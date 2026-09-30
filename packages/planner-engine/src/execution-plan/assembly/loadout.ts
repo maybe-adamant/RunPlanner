@@ -1,9 +1,11 @@
 import type { ExecutionAssemblerInput, ExecutionStartingLoadout } from '../model';
 import { ExecutionCompilerError as CompilerError } from '../assembler-errors';
 import type { RunStateSnapshot } from '../../simulation/rewards/run-state';
+import { resolveRouteEquipment } from '../../authored-project/route-profile';
 
 /** Assemble the one immutable run-start contract from the evaluated opening. */
 export function executionStartingLoadout(
+  catalog: ExecutionAssemblerInput['catalog'],
   assembly: ExecutionAssemblerInput['assembly'],
   openingSnapshot: RunStateSnapshot | undefined,
 ): ExecutionStartingLoadout {
@@ -13,9 +15,11 @@ export function executionStartingLoadout(
       'opening room lacks start-loadout evidence',
     );
   const loadout = assembly.project.route.loadout;
-  const { weaponKey, aspectKey } = loadout;
-  if (weaponKey === null || aspectKey === null)
-    throw new CompilerError('unsupportedRoute', 'execution requires an authored weapon and aspect');
+  const { weaponKey, aspectKey } = resolveRouteEquipment(
+    catalog,
+    assembly.project.route.routeKey,
+    loadout,
+  );
   if (openingSnapshot.arcanaFear.arcana.active.some((card) => card.origin === 'temporary'))
     throw new CompilerError(
       'executionCoverageMissing',
@@ -23,7 +27,7 @@ export function executionStartingLoadout(
     );
   const hex = openingSnapshot.hexProgress;
   let startingHex: ExecutionStartingLoadout['startingHex'];
-  if (loadout.aspectKey === 'SuitHexAspect') {
+  if (aspectKey === 'SuitHexAspect') {
     if (
       loadout.aspectHexTree === undefined ||
       hex.spellTraitKey !== 'SpellMoonBeamTrait' ||
@@ -62,7 +66,7 @@ export function executionStartingLoadout(
   }
   return Object.freeze({
     weaponKey,
-    aspectKey,
+    ...(aspectKey === null ? {} : { aspectKey }),
     arcana: Object.freeze(
       openingSnapshot.arcanaFear.arcana.active
         .filter(
