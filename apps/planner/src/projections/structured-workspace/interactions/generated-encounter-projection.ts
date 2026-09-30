@@ -234,7 +234,7 @@ function dispositionLabel(disposition: EncounterCompositionView['disposition']):
     case 'generated':
       return 'This encounter is generated';
     case 'nativeGenerated':
-      return 'Native generation, not customized';
+      return 'Not customized';
   }
 }
 
@@ -246,6 +246,7 @@ export function projectEncounterComposition(
     label: view.label,
     dispositionLabel: dispositionLabel(view.disposition),
     editable: view.editable,
+    customizationRequired: view.customizationRequired,
     waveCount: view.waveCount,
     waves: Object.freeze(
       view.waves.map((wave) =>

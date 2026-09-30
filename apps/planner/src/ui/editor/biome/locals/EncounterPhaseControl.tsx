@@ -21,6 +21,11 @@ import { InfiniteRosterControl } from './InfiniteRosterControl';
 const emptyEncounterPicker: import('@planner/projections/contextual/contextualPicker').ContextualPickerModel<string> =
   Object.freeze({ sections: Object.freeze([]) });
 
+const isCompositionFinding = (finding: { readonly code: string }): boolean =>
+  finding.code === 'encounterCustomizationUnavailable' ||
+  finding.code === 'encounterCustomizationRequired' ||
+  finding.code === 'encounterIntroductionRequired';
+
 function isGeneratedEncounterDecision(
   decision: NonNullable<WorkspaceEncounterPhase['customization']>[number],
 ): decision is Extract<
@@ -60,12 +65,7 @@ function EncounterCustomizationControl({
   const triggerTarget =
     interaction === undefined
       ? { id: customizationId }
-      : findingTarget(
-          phase.address,
-          customizationId,
-          phase.address,
-          (finding) => finding.code === 'encounterCustomizationUnavailable',
-        );
+      : findingTarget(phase.address, customizationId, phase.address, isCompositionFinding);
   const generatedDecision = phase.customization?.find(isGeneratedEncounterDecision);
   useEffect(() => {
     const dialog = dialogRef.current;
@@ -115,21 +115,10 @@ function EncounterCustomizationControl({
           <div className="trait-offer-dialog encounter-customization-dialog">
             <header className="encounter-customization-header">
               <h2 id={`encounter-customization-title-${customizationId}`}>
-                {editable ? 'Customize' : 'Inspect'}
+                {composition === undefined
+                  ? 'Customize'
+                  : `${composition.label} (${phase.selectedEncounter.nativeEncounterDefinitionKey ?? phase.selectedEncounter.key})`}
               </h2>
-              {composition === undefined ? null : (
-                <div className="encounter-composition-identity">
-                  <span>{composition.label}</span>
-                  <span className="encounter-generated-context">
-                    {composition.dispositionLabel}
-                  </span>
-                  {required.map((explanation) => (
-                    <span className="encounter-customization-repair" key={explanation}>
-                      {explanation}
-                    </span>
-                  ))}
-                </div>
-              )}
               <button
                 aria-label="Close encounter customization"
                 className="quiet-action"
@@ -160,12 +149,9 @@ function EncounterCustomizationControl({
                 )
               ) : (
                 <EncounterCompositionControl
+                  requiredFindings={required}
                   composition={composition}
                   {...(generatedDecision === undefined ? {} : { decision: generatedDecision })}
-                  encounterKey={
-                    phase.selectedEncounter.nativeEncounterDefinitionKey ??
-                    phase.selectedEncounter.key
-                  }
                   idKey={interactionKey}
                   {...(interaction === undefined ? {} : { interaction })}
                 />
@@ -352,8 +338,7 @@ export function CustomizableEncounterPhaseControl({
         semanticOwnerControlElementId(phase.address),
         phase.address,
         (finding) =>
-          finding.code !== 'encounterCustomizationUnavailable' &&
-          finding.code !== 'aetosAppearanceUnavailable',
+          !isCompositionFinding(finding) && finding.code !== 'aetosAppearanceUnavailable',
       )}
       id={semanticOwnerControlElementId(phase.address)}
       label="Encounter"
@@ -519,7 +504,8 @@ export function EncounterPhaseControl({
               phase.address,
               undefined,
               phase.address,
-              (finding) => finding.code !== 'aetosAppearanceUnavailable',
+              (finding) =>
+                !isCompositionFinding(finding) && finding.code !== 'aetosAppearanceUnavailable',
             ),
             tabIndex: -1,
           }

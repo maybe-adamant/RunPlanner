@@ -1016,7 +1016,10 @@ export function activeEncounterPhasesForOwner(
               });
             }),
           );
-    const compositionView = encounterCompositionView(input.catalog, domain);
+    const compositionView = encounterCompositionView(input.catalog, {
+      ...domain,
+      routeKey: input.biome.routeKey,
+    });
     const candidateChoices = Object.freeze(
       domain.choices.map((choice) =>
         Object.freeze({

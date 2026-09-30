@@ -528,6 +528,7 @@ export function bindOccurrenceLocalInteractions(
                       ...(phase.encounterDefinitionKey === undefined
                         ? {}
                         : { selectedEncounterDefinitionKey: phase.encounterDefinitionKey }),
+                      routeKey: phase.owner.routeKey,
                       customization: phase.customization,
                     },
                     generatedEngineAssessment,

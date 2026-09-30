@@ -210,7 +210,7 @@ describe('OccurrenceEncounterWorkbench', () => {
     openRoomTab('Room Timeline');
     expect(screen.queryByRole('group', { name: 'Events' })).toBeNull();
     await view.user.click(screen.getByRole('button', { name: 'Customize encounter' }));
-    const dialog = await screen.findByRole('dialog', { name: 'Customize' });
+    const dialog = await screen.findByRole('dialog', { name: /\(.+\)$/ });
     await view.user.click(within(dialog).getByRole('button', { name: 'Edit' }));
     expect(within(dialog).getByRole('radio', { name: '1' })).toBeDefined();
     expect(within(dialog).queryByRole('radio', { name: '2' })).toBeNull();
@@ -235,14 +235,14 @@ describe('OccurrenceEncounterWorkbench', () => {
     openRoomTab('Room Timeline');
     const launcher = screen.getByRole('button', { name: 'Customize encounter' });
     await view.user.click(launcher);
-    await screen.findByRole('dialog', { name: 'Customize' });
+    await screen.findByRole('dialog', { name: /\(.+\)$/ });
     await view.user.click(screen.getByRole('button', { name: 'Close encounter customization' }));
     expect(screen.queryByRole('dialog')).toBeNull();
     expect(
       encodeProjectDocument(view.application.store.getState().projectWorkspace.history!.present),
     ).toBe(canonical);
     await view.user.click(launcher);
-    const dialog = await screen.findByRole('dialog', { name: 'Customize' });
+    const dialog = await screen.findByRole('dialog', { name: /\(.+\)$/ });
     await view.user.click(within(dialog).getByRole('button', { name: 'Edit' }));
     await view.user.click(within(dialog).getByRole('radio', { name: '3' }));
     await waitFor(() =>

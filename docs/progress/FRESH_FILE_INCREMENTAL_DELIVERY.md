@@ -781,7 +781,7 @@ Locked decisions:
 
 - The dialog always shows the identity, a one-line engine disposition ("This
   encounter is fixed", "This encounter's first wave is fixed", "This encounter
-  is generated", "Native generation, not customized"), the wave count, and one
+  is generated", "Not customized"), the wave count, and one
   row per wave 1..n with enemy pickers, per-enemy counts and the base-roll
   slider, plus shared-enemy and Fear rows where applicable. Fixed waves render
   in the same rows with controls disabled and counts shown; no wave is hidden
