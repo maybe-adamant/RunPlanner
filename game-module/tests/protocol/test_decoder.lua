@@ -331,7 +331,21 @@ function TestProtocol.testMirroredGeneratedCompositionsCarryExpectedBudgetsAndOu
     lu.assertEquals({ precombat[1].baseRoll, precombat[1].expectedBudget }, { 412, 412 })
 end
 
-function TestProtocol.testMirroredArachneFixtureCarriesOnlyTheAuthoredCocoonCount()
+function TestProtocol.testCocoonPointWireShapeIsStrict()
+    local function value(fields)
+        return assert(json.decode('{"encounterPhases":[{"slotKey":"Encounter","encounterKey":"ArachneCombatG",'
+            .. '"kind":"combat","customization":[{"decisionKey":"cocoonRewardPoint","kind":"cocoonRewardPoint"'
+            .. fields .. '}]}],"requiredObjects":[]}'))
+    end
+    lu.assertNotNil(overview.decode(value(',"spawnPointId":560737'), "overview"))
+    for _, field in ipairs({ '0', '-1', '1.5', '"1"', 'null', 'true', '{}', '[]' }) do
+        lu.assertNil(overview.decode(value(',"spawnPointId":' .. field), "overview"))
+    end
+    lu.assertNil(overview.decode(value(''), "overview"))
+    lu.assertNil(overview.decode(value(',"spawnPointId":1,"count":8'), "overview"))
+end
+
+function TestProtocol.testMirroredArachneFixtureCarriesBothAndPositionOnlyChoices()
     local plan = assert(protocol.decode(decode("underworld-arachne-cocoons")))
     local arachne = {}
     for _, occurrence in ipairs(plan.occurrences) do
@@ -343,8 +357,11 @@ function TestProtocol.testMirroredArachneFixtureCarriesOnlyTheAuthoredCocoonCoun
     end
     lu.assertEquals(arachne.ArachneCombatF, {
         { decisionKey = "cocoonCount", kind = "cocoonCount", count = 11 },
+        { decisionKey = "cocoonRewardPoint", kind = "cocoonRewardPoint", spawnPointId = 40191 },
     })
-    lu.assertEquals(arachne.ArachneCombatG, false)
+    lu.assertEquals(arachne.ArachneCombatG, {
+        { decisionKey = "cocoonRewardPoint", kind = "cocoonRewardPoint", spawnPointId = 560737 },
+    })
 end
 
 local function anomalyCustomization(name)
@@ -527,7 +544,7 @@ local function minimalPlan(transactions)
 end
 
 function TestProtocol.testReleasedProtocol48IsRejected()
-    lu.assertEquals(protocol.VERSION, 51)
+    lu.assertEquals(protocol.VERSION, 52)
     local plan = decode("f-opening")
     plan.protocolVersion = 48
     refreshFingerprint(plan)

@@ -32,8 +32,27 @@ Luacheck, five release tests, lint, formatting and build passed. The final
 spacing change passed both focused Aetos UI tests; build retains its non-failing
 large-chunk warning.
 
+Cocoon reward-position delivery completed automated closure on 2026-09-29
+(execution protocol 52; authored schema and catalog compatibility unchanged).
+Independent review found no blocking defects. The full correctness run passed
+4,015 of 4,018 tests; three older tests assumed the enriched cocoon checkpoint
+had no position. Their inputs now explicitly represent count-only/old-save
+state, and all ten tests in the two affected files passed on rerun. Typechecks,
+55 fixture-integrity tests, performance comparison, 45 host tests, 732 Lua
+tests with syntax and Luacheck, five release tests, lint, formatting and build
+passed. Build retains its non-failing large-chunk warning. The temporary
+delivery plan is retired; physical placement checks remain below.
+
 ## Obligations
 
+- [ ] Cocoon reward position: choose two different points in both F and G,
+      break the selected cocoon and observe the room reward. Cover native count
+      with explicit position, explicit count with position, and Any placement.
+- [ ] Cocoon reward position: verify a reflected room if reachable. Captured
+      maps are unflipped; automated tests do not prove physical alignment.
+- [ ] Where safely reproducible, an unavailable cocoon point diagnoses and
+      falls back to native placement without discarding a valid count or
+      producing a placement-only mismatch.
 - [ ] Aetos: no selection suppresses appearances throughout planned Olympus.
 - [ ] Aetos: requested early and late waves force the chance at the selected
       encounter while native spawn pacing and departure remain intact.

@@ -464,6 +464,10 @@
                     "cocoonCount": {
                       "kind": "cocoonCount",
                       "count": 11
+                    },
+                    "cocoonRewardPoint": {
+                      "kind": "cocoonRewardPoint",
+                      "spawnPointId": 40191
                     }
                   }
                 }
@@ -1801,6 +1805,14 @@
                 "gorgonResultByPhase": {
                   "Encounter": {
                     "athenaTriggerConditionMet": false
+                  }
+                },
+                "customizationByPhase": {
+                  "Encounter": {
+                    "cocoonRewardPoint": {
+                      "kind": "cocoonRewardPoint",
+                      "spawnPointId": 560737
+                    }
                   }
                 }
               },

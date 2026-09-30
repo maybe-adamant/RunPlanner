@@ -56,6 +56,14 @@ function encounterCustomization(value: unknown, label: string) {
         choices: Object.freeze(choices),
       });
     }
+    if (kind === 'cocoonRewardPoint') {
+      exact(row, ['decisionKey', 'kind', 'spawnPointId'], [], decisionLabel);
+      return Object.freeze({
+        decisionKey: stringValue(row.decisionKey, `${decisionLabel}.decisionKey`),
+        kind: 'cocoonRewardPoint' as const,
+        spawnPointId: integer(row.spawnPointId, `${decisionLabel}.spawnPointId`, 1),
+      });
+    }
     if (kind === 'cocoonCount') {
       exact(row, ['decisionKey', 'kind', 'count'], [], decisionLabel);
       return Object.freeze({

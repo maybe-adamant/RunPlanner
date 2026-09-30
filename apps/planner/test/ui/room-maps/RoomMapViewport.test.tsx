@@ -22,7 +22,7 @@ afterEach(() => {
 function renderMap(
   width = 1000,
   height = 800,
-  controlsPlacement: 'toolbar' | 'overlay' = 'toolbar',
+  controlsPlacement: 'toolbar' | 'overlay' | 'collapsible-overlay' = 'toolbar',
 ) {
   render(
     <RoomMapViewport
@@ -56,6 +56,27 @@ function renderMap(
 const pointer = { pointerId: 1, pointerType: 'mouse', button: 0, clientX: 300, clientY: 260 };
 
 describe('RoomMapViewport', () => {
+  it('collapses map controls without resetting zoom or pan', () => {
+    const { scroll, image, capture } = renderMap(1000, 800, 'collapsible-overlay');
+    const toggle = screen.getByRole('button', { name: 'Map controls' });
+    expect(toggle.getAttribute('aria-expanded')).toBe('false');
+    expect(screen.queryByRole('button', { name: 'Fit' })).toBeNull();
+    fireEvent.click(toggle);
+    fireEvent.click(screen.getByRole('button', { name: 'Zoom in' }));
+    scroll.scrollLeft = 80;
+    scroll.scrollTop = 60;
+    fireEvent.click(toggle);
+    expect(screen.queryByRole('button', { name: 'Zoom in' })).toBeNull();
+    expect(image.parentElement?.style.width).toBe('625px');
+    expect([scroll.scrollLeft, scroll.scrollTop]).toEqual([80, 60]);
+    fireEvent.pointerDown(toggle, pointer);
+    expect(capture).not.toHaveBeenCalled();
+    fireEvent.click(toggle);
+    expect(toggle.getAttribute('aria-expanded')).toBe('true');
+    expect(screen.getByText('125%')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Fit' }));
+    expect(image.parentElement?.style.width).toBe('500px');
+  });
   it.each([0.5, 2])('keeps map dragging aligned at %s app scale', (scale) => {
     const { scroll, stage } = renderMap();
     vi.spyOn(scroll, 'getBoundingClientRect').mockReturnValue(

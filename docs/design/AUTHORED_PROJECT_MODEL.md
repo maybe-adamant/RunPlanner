@@ -861,7 +861,7 @@ Leaf and Gorgon authored contracts.
 Concrete Encounter Definitions may declare optional decisions with stable keys,
 display labels, native operands and a single-choice, bounded distinct
 ordered-prefix, generated-composition, infinite-roster, or inclusive integer
-cocoon-count domain.
+cocoon-count domain, or room-specific cocoon reward-point domain.
 The resolved definition owns the active domain, including normal/Rival
 differences; customization does not independently calculate Rivals.
 
@@ -871,6 +871,12 @@ does not prevent customization. Commands enforce structural shape and
 declaration-known values, including a cocoon count's declared range. Decoding
 and room reconciliation enforce the same values, except that they retain a
 structurally valid out-of-range cocoon count for a preparation finding.
+The independent `cocoonRewardPoint` value stores a positive integral native
+`spawnPointId`; omission is Any. Its legal domain is the host room's ordered
+catalog anchors, while a structurally valid ID outside that domain remains
+finding-backed and repairable. Count and point resets remove only their own
+decision. Execution publication carries the native ID, never its displayed
+map number or coordinates.
 Preparation assesses support against the resolved encounter. Same-family values
 made unavailable by an upstream edit remain repairable rather than silently changing. Dormant phases emit no active settings
 or findings, and structural replacement reconciles compatible phase ownership.

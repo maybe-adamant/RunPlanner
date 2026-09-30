@@ -30,7 +30,7 @@ export function RoomMapViewport({
   readonly toolbarTitle?: string;
   readonly toolbarActions?: ReactNode;
   readonly toolbarEnd?: ReactNode;
-  readonly controlsPlacement?: 'toolbar' | 'overlay';
+  readonly controlsPlacement?: 'toolbar' | 'overlay' | 'collapsible-overlay';
   /** Fixed beside overlaid controls, outside the image's pan/zoom space. */
   readonly viewportOverlay?: ReactNode;
 }) {
@@ -54,6 +54,7 @@ export function RoomMapViewport({
     readonly width: number;
   }>();
   const [zoom, setZoom] = useState(100);
+  const [controlsExpanded, setControlsExpanded] = useState(false);
 
   useEffect(() => {
     const scroll = scrollRef.current;
@@ -188,31 +189,58 @@ export function RoomMapViewport({
 
   const controls = (
     <div className="room-map-controls">
-      <button className="quiet-action action-compact" onClick={fit} type="button">
-        Fit
-      </button>
-      <button
-        aria-label="Zoom out"
-        className="quiet-action action-compact"
-        disabled={zoom <= minimumZoom}
-        onClick={() => changeZoom(Math.max(minimumZoom, zoom - zoomStep))}
-        type="button"
-      >
-        −
-      </button>
-      <output aria-live="polite" className="room-map-zoom">
-        {zoom}%
-      </output>
-      <button
-        aria-label="Zoom in"
-        className="quiet-action action-compact"
-        disabled={zoom >= maximumZoom}
-        onClick={() => changeZoom(Math.min(maximumZoom, zoom + zoomStep))}
-        type="button"
-      >
-        +
-      </button>
-      {toolbarActions}
+      {controlsPlacement === 'collapsible-overlay' ? (
+        <button
+          aria-label="Map controls"
+          aria-expanded={controlsExpanded}
+          className="quiet-action action-compact"
+          title={controlsExpanded ? 'Hide map controls' : 'Show map controls'}
+          onClick={() => setControlsExpanded((expanded) => !expanded)}
+          type="button"
+        >
+          <svg
+            aria-hidden="true"
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+          >
+            <circle cx="10" cy="10" r="6" />
+            <path d="m15 15 6 6" />
+          </svg>
+        </button>
+      ) : null}
+      {controlsPlacement !== 'collapsible-overlay' || controlsExpanded ? (
+        <>
+          <button className="quiet-action action-compact" onClick={fit} type="button">
+            Fit
+          </button>
+          <button
+            aria-label="Zoom out"
+            className="quiet-action action-compact"
+            disabled={zoom <= minimumZoom}
+            onClick={() => changeZoom(Math.max(minimumZoom, zoom - zoomStep))}
+            type="button"
+          >
+            −
+          </button>
+          <output aria-live="polite" className="room-map-zoom">
+            {zoom}%
+          </output>
+          <button
+            aria-label="Zoom in"
+            className="quiet-action action-compact"
+            disabled={zoom >= maximumZoom}
+            onClick={() => changeZoom(Math.min(maximumZoom, zoom + zoomStep))}
+            type="button"
+          >
+            +
+          </button>
+          {toolbarActions}
+        </>
+      ) : null}
     </div>
   );
   const map = (
@@ -265,7 +293,7 @@ export function RoomMapViewport({
           {toolbarEnd}
         </header>
       ) : null}
-      {controlsPlacement === 'overlay' ? (
+      {controlsPlacement !== 'toolbar' ? (
         <div className="room-map-canvas">
           <div className="room-map-viewport-overlay">
             {controls}

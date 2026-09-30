@@ -397,12 +397,23 @@ Explicit decisions steer reached behavior without adding required attacks,
 transactions or conformance facts. The [encounter audit](../audits/game-execution-contacts/NPCS_ENCOUNTERS_AND_AUTOMATICS.md#boss-decisions)
 owns the supported native contacts and narrowly agreed progression overrides.
 
-A cocoon count applies only to Arachne combat setup. `SetupArachneCombatEncounter`
-receives a private argument copy with equal count bounds, so native `RandomInt`,
-placement, sizes, contents and reward-cocoon selection still run. Story cocoons
-spawned directly through `SpawnArachneCocoons` stay untouched. A count outside the
-native bounds declines with a diagnostic; a placement shortfall or setup error stays
-native, with a diagnostic.
+A cocoon count and reward point are independent optional Arachne combat
+decisions. `SetupArachneCombatEncounter` receives a private argument copy with
+equal count bounds only when a count is selected; native `RandomInt` still runs.
+The reward point is a native anchor ID, not a map label or coordinate. Before
+steering, the adapter checks the actual required/preferred point pool (including
+F's fallback pool) and live `IsSpawnPointEligible` occupancy. It substitutes that
+anchor for the first native cocoon placement, one of the native count, then
+selects its actual object only at the reward draw over the exact `CoocoonIds`
+table. Native setup retains occupancy, sizes, contents and all reward callbacks.
+
+The interception is scoped to the bound setup and its spawn call, isolated by
+Lua thread and nested contact, and cleaned up on return or error. Story/direct
+spawning, omitted decisions and unbound contacts remain native. An unavailable
+point or count outside native bounds declines independently with a diagnostic.
+A missing placed target falls back to native reward selection; placement
+shortfall remains diagnostic and setup errors are rethrown. Neither placement
+choice creates a transaction or new desynchronization condition.
 
 An extent containing Olympus requires one `olympusAetos` directive: `none`, or
 an exact selected occurrence, phase and wave target. Other extents omit it.

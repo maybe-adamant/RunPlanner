@@ -623,9 +623,13 @@ Both `BaseArachneCombat` and G's own setup override request 8–14 cocoons
 - Story cocoons call `SpawnArachneCocoons` directly with their own 0–3 range
   (`EncounterData_Story.lua:39`) and never pass through combat setup.
 
-Planner disposition: an optional exact cocoon count within the declared range,
-applied at combat setup. Placement, sizes, contents and the reward cocoon stay
-native.
+Planner disposition: independent optional exact cocoon count and reward-anchor
+ID, applied at combat setup. A selected anchor is validated against live native
+pools and occupancy, used for the first of the native N placements, then its
+actual object is selected at the exact reward draw. Remaining placements,
+sizes, contents, occupancy and reward callbacks stay native. Unavailable
+placement declines diagnostically without discarding a valid count or creating
+a conformance mismatch.
 
 #### Cocoon host maps and placement anchors
 
@@ -665,13 +669,15 @@ or impose a separate Lua placement constraint. Sources:
 The internal capture inventory follows the native setup's required type:
 F labels the sorted union of these two pools; G labels only EnemyPoint IDs,
 recording native IDs, coordinates, preferred/fallback membership and current
-occupancy separately. These captures are evidence for a future spatial editor;
+occupancy separately. These captures support the cocoon reward-position editor;
 they do not prove every point is available in every live room setup. Completed
 unflipped captures cover 525 F anchors and 476 G anchors, with screen coordinates
 and native IDs verified against the capture labels. Native world coordinates
 were unavailable; reflected-room placement remains a live verification item.
-Planner reward-location authoring and executor placement steering are not yet
-implemented.
+The catalog owns ordered legal native IDs; application assets own image
+coordinates and numbering. Reward-location authoring and best-effort executor
+placement steering consume those separate products. Physical reward delivery
+and reflected-room placement still require live acceptance.
 
 ## Intentional native-only exclusions
 
