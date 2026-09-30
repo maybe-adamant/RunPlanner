@@ -298,6 +298,12 @@ Gate F obligations:
 
 ### Pending live acceptance
 
+Owner result (2026-09-30, game module built from `main` at protocol 53): the
+Fresh File brand-new-profile packet below ran end to end with no mismatches
+and no diagnostics beyond the expected mixed-introduction decline/install
+pair. The mature-save checks recorded earlier remain impact-neutral. All
+items below are closed.
+
 Owner result (2026-09-29, executor build from `c49ee950`, protocol 51):
 several mature-save runs completed with no observed change in behaviour; the
 Phase I gates are impact-neutral on mature files. The itemised mature-save
