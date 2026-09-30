@@ -145,7 +145,8 @@ export function reconcileRoomEncounterState(
       )
         retained[decisionKey] = value;
     }
-    if (Object.keys(retained).length > 0) customizationByPhase[binding.slotKey] = retained;
+    if (Object.keys(retained).length > 0)
+      customizationByPhase[binding.slotKey] = Object.freeze(retained);
   }
   return Object.freeze({
     encounterKeyByPhase: Object.freeze(selections),
