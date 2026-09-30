@@ -2,8 +2,9 @@
 
 This audit owns source-backed starting-room, completion-room and NPC effect
 profiles whose meaning depends on itinerary position rather than physical
-biome identity, and route-mode content restrictions. Sources are the installed
-Hades II scripts; source inspection does not constitute live Dream Dive verification.
+biome identity, route-mode content restrictions, and the fresh-profile first
+attempt. Sources are the installed Hades II scripts; source inspection does not
+constitute live Dream Dive verification.
 
 ## Biome order
 
@@ -131,6 +132,91 @@ needed. Hades' Dream conditions change presentation rather than eligibility.
 Timed-drop deferral and terminal delivery are owned by the
 [scheduled-effects audit](SCHEDULED_AND_AUTOMATIC_TIMELINE_OUTCOMES_AUDIT.md)
 and [Shrine audit](../room-features/ROOM_FEATURES_GAME_DATA_AUDIT.md#purchase-delivery-and-travel-deal-facts).
+
+## Fresh-profile first attempt
+
+### Initial state and start
+
+A brand-new profile has no `GameState`: `RoomLogic.lua:150` calls
+`StartNewGame` (`RunLogic.lua:312-324`), whose `GameStateInit` (`:134-310`)
+leaves every progression table empty, then
+`StartNewRun(nil, { RoomName = "F_Opening01", StartingBiome = "F" })`. The
+`args.RoomName` branch calls `CreateRoom` directly (`RunLogic.lua:505-508`), so
+this start never reaches `ChooseStartingRoom` and never visits `Hub_PreRun`.
+`F_Opening01` is the `GameStart` room (`RoomDataF.lua:372`); `F_Opening02/03`
+need `RoomCountCache.F_Opening01 >= 2` (`RoomDataF.lua:910-913,981-990`), and
+`OpeningEmpty` is forced while Apollo is unused, spawning no reward
+(`EncounterData.lua:435-450`). `CompletedRunsCache` is nil, read as 0
+(`RequirementsLogic.lua:633`), until `EndRun` (`RunLogic.lua:1848-1850`).
+
+Fixed for the whole attempt: the Staff with the no-effect `DummyWeaponStaff`
+aspect trait (`WeaponUpgradeLogic.lua:428-441`, `TraitData.lua:1342`), no
+keepsake (`RunLogic.lua:481`; `EquipKeepsake` returns early for nil,
+`KeepsakeLogic.lua:106-111`), no familiar, zero Arcana (no active
+`StartEquipped` card, `MetaUpgradeLogic.lua:2-27`), zero Fear
+(`ShrineLogic.lua:503-507`), zero Death Defiance (`RunLogic.lua:45-56` adds only
+Arcana stands; the in-run `IncreaseMax` sources, Athena and Chaos, are
+unreachable), 30 Health, 50 Magick and 0 Gold (`HeroData.lua:6,8`,
+`RunLogic.lua:41`), and the Vanilla biome state (`BiomeStateData.lua:13-29`
+needs `ZeusFirstPickUp` or three completed runs). `UseRecord`,
+`TextLinesRecord`, `LootPickups`, the encounter completion and occurrence
+caches, `RoomsEntered`/`RoomCountCache`, `LifetimeResourcesGained`,
+`BiomeVisits` and `TraitsTaken` start empty and fill during the attempt.
+
+Planner disposition: the `FreshFile` route stores no weapon aspect, starting
+keepsake or Arcana, starts with empty god-use, god-pickup and resource-gain
+history, and has no run-start reward. The Executor realizes the opening at the
+nested `CreateRoom` contact
+([integration boundary](../../design/GAME_INTEGRATION_BOUNDARY.md)). A
+brand-new profile run on 2026-09-30 (protocol 53) bound the opening under
+`StartNewGame` and completed the published F–I plan with no mismatch.
+
+### Unreachable content
+
+These gates need a `WorldUpgrade*`, a completed run or lifetime history that
+the first attempt cannot supply, or a structural impossibility. The catalog
+closes each on its existing declaration by route availability
+([catalog model](../../design/CATALOG_MODEL.md)).
+
+| Content                                   | Native gate                                                                                                                                                                                                                                                                                                            |
+| ----------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `F_Story01`, `G_Story01`, `I_Story01`     | Lifetime `RoomsEntered.F_Boss01` + `ArtemisFirstMeeting`; `RoomsEntered.G_Boss01`; `RoomsEntered.I_Intro > 1` (`RoomDataF.lua:3163-3170`, `RoomDataG.lua:2559`, `RoomDataI.lua:3122`)                                                                                                                                  |
+| Reprieves and `I_Combat24`                | `WorldUpgradeErebus/Oceanus/TartarusReprieve` (`RoomDataF.lua:3063`, `RoomDataG.lua:2482`, `RoomDataI.lua:2403,2814`)                                                                                                                                                                                                  |
+| `F_MiniBoss02/03`, `G_MiniBoss02` (Uh Oh) | Two lifetime `MiniBossTreant` completions (one Treant room per run); both `MiniBossWaterUnit` and `MiniBossJellyfish`, alternatives in one G (`RoomDataF.lua:1117,1193-1203`, `RoomDataG.lua:1965-1968`)                                                                                                               |
+| Chaos gates                               | `ChaosUnlocked`: lifetime Hermes use, excluding the run of `HermesFirstPickUp` (`RoomData.lua:513`, `RequirementsData.lua:1400-1412`)                                                                                                                                                                                  |
+| Zagreus Contract door                     | `InfernalContractUnlocked`: true ending and later dialogue (`StoreData.lua:4-11`, `RequirementsData.lua:2795-2808`)                                                                                                                                                                                                    |
+| Oceanus Anomaly                           | `AnomalyDoorRequirements`: lifetime Chronos meeting (`RoomData.lua:609-636`)                                                                                                                                                                                                                                           |
+| Stygian Wells, forced Postboss Wells      | `WorldUpgradeWellShops`, `WorldUpgradePostBossWellShops` (`RoomData.lua:576`, `RoomDataF.lua:2572,2625`, `RoomDataG.lua:1065,1120`, `RoomDataH.lua:1911,1983`)                                                                                                                                                         |
+| Postboss Pools of Purging                 | F/G: `WorldUpgradePostBossSellTraitShops` (`RoomDataF.lua:2580,2637`, `RoomDataG.lua:1072,1108`). H: the object spawns but `BlockedByRequirements` locks it (`RoomDataH.lua:2006-2007`, `ObstacleData.lua:3331-3350`)                                                                                                  |
+| Postboss keepsake racks                   | `WorldUpgradePostBossGiftRack` (`RoomDataF.lua:2606-2617`, `RoomDataG.lua:1092-1097`, `RoomDataH.lua:1960-1974`)                                                                                                                                                                                                       |
+| Tool and fishing resource points          | `CompletedRunsCache >= 1` plus `WorldUpgradeToolsShop` per family (`RoomDataF.lua:46-230`, same in G/H/I)                                                                                                                                                                                                              |
+| Artemis, Arachne cocoon, Nemesis family   | `ArtemisCombatIntro` needs a completed run; `ArachneCombatF` a completed run, `ArachneCombatG` a completed `ArachneCombatF`; `NemesisCombatIntro` seven (`EncounterData_Artemis.lua:9,121-124`, `EncounterData_Arachne.lua:15,234-238`, `EncounterData_Nemesis.lua:8-11,232-236`, `EncounterData_Story.lua:1929,2048`) |
+| Hammers, shop hammers, Anvil              | ≥4 of six non-Apollo `FirstPickUp` lines under `MaxGodsPerRun = 4` with Apollo forced; shop hammers also lifetime `UseRecord.WeaponUpgrade` (`RequirementsData.lua:1233-1250`, `HeroData.lua:168`, `StoreData.lua:232-251`, `ConsumableData.lua:1074`)                                                                 |
+| Hermes, Selene Hex, Path of Stars         | `HermesFirstPickUp` (bootstrap needs two `G_Intro` visits and Zeus use); `ArtemisFirstMeeting` + `SeleneFirstPickUp`; four lifetime `SpellDrop` uses (`RequirementsData.lua:1304-1361`, `RoomDataF.lua:555-610`, `ConsumableData.lua:1187`)                                                                            |
+| Devotion                                  | `PoseidonDevotionIntro01`, itself behind `DevotionTestUnlocked` (`LootData.lua:1641,1927`, `RequirementsData.lua:436-470`)                                                                                                                                                                                             |
+| Mystery Boon                              | `BlindBoxLootRequirements`: use of seven gods including Zeus and Hephaestus (`RequirementsData.lua:1218-1231`)                                                                                                                                                                                                         |
+| Room-reward and shop Nectar               | `GiftDropLootRequirements`: a completed run (`RequirementsData.lua:1205-1216`, `StoreData.lua:262`); Fields optional Nectar is ungated                                                                                                                                                                                 |
+| Shop Armor, Death Defiance refill         | `RoomCountCache.F_Story01` (`ConsumableData.lua:939`); `MissingLastStand` with no charge to restore (`ConsumableData.lua:840`)                                                                                                                                                                                         |
+| I_WorldShop resource group                | Lifetime `WeaponPointsRare`, `CardUpgradePoints` or `CharonPoints` gains (`StoreData.lua:409-445`)                                                                                                                                                                                                                     |
+| Zeus, Hera, Ares, Hephaestus              | First-pickup text records whose bootstraps need Rain, the Surface cure, `Q_Boss01` or the true ending; Hephaestus needs lifetime Zeus use (`LootData_Zeus.lua:10-11`, `LootData_Hera.lua:10-11`, `LootData_Ares.lua:10-11`, `LootData_Hephaestus.lua:9-16`, `RequirementsData.lua:102-141`)                            |
+| Infusions, Plentiful Forage               | `WorldUpgradeElementalBoons` through `IsElementalTrait` (`RunLogic.lua:114`, `TraitData.lua:723-730`); `WeaponsUnlocked.ToolShovel` (`TraitData_Demeter.lua:1820`)                                                                                                                                                     |
+| Random boon exchange roll                 | `HeroData.BoonData.GameStateRequirements`: two completed runs (`HeroData.lua:170-189`, `TraitLogic.lua:1801`); the too-few-options exchange fill still applies                                                                                                                                                         |
+
+Available throughout: Apollo, Poseidon and Demeter have no top-level gate;
+Hestia and Aphrodite need lifetime `UseRecord` of Poseidon or Demeter
+(`LootData_Hestia.lua:7-11`, `LootData_Aphrodite.lua:7-12`). H minibosses and
+I minibosses 01/02 carry only run-local gates. Postboss fountains, Fields
+optional Armor, Nectar and Bones, herb points (unmodeled) and ordinary Pom
+legality are unchanged.
+
+In-attempt rules have their own owners: the forced first combat and Apollo
+offer ([trait offers](../traits/TRAIT_OFFER_COMPOSITION_AND_FEAR_PRESSURE_AUDIT.md#first-run-forced-loot-table),
+[forced room rewards](../rewards-and-acquisition/REWARD_GAME_DATA_AUDIT.md#forced-room-rewards)),
+MetaProgress thresholds and Nectar levels ([reward audit](../rewards-and-acquisition/REWARD_GAME_DATA_AUDIT.md)),
+Eris ([room action order](ROOM_ACTION_ORDER_GAME_DATA_AUDIT.md#eris-is-a-required-object-at-a-young-profiles-biome-intro)),
+enemy introductions ([composition matrix](COMBAT_ENCOUNTER_COMPOSITION_MATRIX.md)),
+boss choices ([boss decisions](../game-execution-contacts/NPCS_ENCOUNTERS_AND_AUTOMATICS.md#boss-decisions))
+and the Fields bridge ([H rules](../../biomes/H_GAME_RULES.md)).
 
 ## Coverage boundary
 

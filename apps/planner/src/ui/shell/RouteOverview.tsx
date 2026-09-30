@@ -153,7 +153,6 @@ function FreshFileLoadout({
           <dd>{weapon?.label ?? fixedWeaponKey}, no Aspect</dd>
         </div>
       </dl>
-      <p className="panel-description">Experimental: Fresh File rules are only partly modeled.</p>
     </div>
   );
 }

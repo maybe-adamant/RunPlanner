@@ -143,3 +143,25 @@ physical exit constraints. `I_Boss01` is an ordinary declaration created in
 topology through the fixed Preboss link. The physical `I_PostBoss01` ending
 sequence is outside the supported topology; automatic boss drops and
 persistent-save variants remain out of the canonical modeled reward surface.
+
+## Fresh File
+
+The route ends through the pre-true-ending `I_PreBoss01` and `BossChronos01`
+at zero Fear: two phases and no Rival variant
+([route-position audit](../audits/rooms-and-routes/ROUTE_POSITION_GAME_DATA_AUDIT.md#fresh-profile-first-attempt)).
+The first I combat resolves the fixed three-wave `ClockworkIntro` (native
+`AlwaysForce` until its first completion; it counts encounter depth and cannot
+skip) instead of `GeneratedIChronosIntro`, which needs `ClockworkIntro`
+completed, so the Chronos intro variants never occur on this route. Ordinary I
+pools carry no enemy introduction, and every other generated I combat is
+customized on this route.
+
+`I_Intro` hosts Eris when observed and not yet cursed on the route; her
+required gift is 300 Bones
+([room action order](../audits/rooms-and-routes/ROOM_ACTION_ORDER_GAME_DATA_AUDIT.md#eris-is-a-required-object-at-a-young-profiles-biome-intro)).
+`I_WorldShop` keeps five stable slots: its resource group has no eligible
+option (no lifetime Moondust, Nightmare or Charon card gains), so that trailing
+slot is validly empty and the shop shows four items
+([reward audit](../audits/rewards-and-acquisition/REWARD_GAME_DATA_AUDIT.md#empty-groups-and-bounded-unknowns)).
+Its Armor, Death Defiance refill, Mystery Boon, Hermes, Hex and Path of Stars
+options are unavailable. `I_Story01`, the Reprieve and `I_Combat24` are absent.

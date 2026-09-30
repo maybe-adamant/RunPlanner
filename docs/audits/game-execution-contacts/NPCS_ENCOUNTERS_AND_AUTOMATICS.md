@@ -179,6 +179,31 @@ enemy's introduction is unfinished and eligible, generates the replacement and
 returns without rescanning it (`RunLogic.lua:1125–1148`); an introduction that
 spawns its own enemy is therefore regenerated once as itself.
 
+Lifecycle policy is a bounded set of inherited declaration properties and
+their native consumers:
+
+| Policy               | Native properties                                                                                                                    | Consumer                                                                                                                                                                                                                                         |
+| -------------------- | ------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Depth                | `CountsForRoomEncounterDepth`                                                                                                        | `StartEncounter` advances room, biome and run encounter depth together                                                                                                                                                                           |
+| End effects and uses | NonCombat role, `SkipEndEncounterEffects`, `BlockSpawnMultipliers`                                                                   | `EndEncounterEffects` early return; `UsesRequireSpawnMultiplier` traits                                                                                                                                                                          |
+| Boss effects         | Boss role, `SkipBossTraits`                                                                                                          | Boss start/end effects, independent of depth                                                                                                                                                                                                     |
+| Fig Leaf and skip    | `CanEncounterSkip`, `CanEncounterSkipIfNotFirst`, `BlockDionysusEncounterKeepsake`, `PreSpawnEnemies` with `SkipEndEncounterEffects` | `HandleEncounterPreSpawns`, `HandleEnemySpawns`, `CanDionysusSkip`; a successful pre-spawn skip marks the rest of the array skipped                                                                                                              |
+| Gorgon               | `BlockAthenaEncounterKeepsake`, `CheckAthenaEncounterKeepsakeOnSkipEncounterStart`                                                   | `HandleAthenaSpawn`, `StartEncounter`                                                                                                                                                                                                            |
+| Start effects        | `SkipEncounterStart`, `ForceEncounterStart`, `DelayedStart`, start callback                                                          | `StartEncounter`/`StartEncounterEffects`; `Begin{Arachne,Artemis,Icarus,Heracles,Nemesis,Crawler,PerfectClear}Encounter` call start effects, `BeginAthenaEncounter` only in a single-encounter room, `ShipsEncounterSetup` after wheel selection |
+| Envelope termination | `BlockMultipleEncounters`                                                                                                            | `SetupRoomMultipleEncountersData` stops phase assembly                                                                                                                                                                                           |
+
+Native nil and false are the same policy. Runtime progress is not policy:
+`HandleEncounterPreSpawns` clears `CanEncounterSkip` after a failed roll,
+`SetupRoomMultipleEncountersData` sets later phases' `SkipEncounterStart` and
+applies `CanEncounterSkipIfNotFirst` after `ChooseEncounter` returns, and
+`Completed`, `InProgress`, generated waves and remaining spawns are progress.
+Representative results: `GeneratedO_Intro01` does not count depth while
+`HeraclesCombatO` does; P precombat differs from ordinary combat in depth, end
+effects and envelope-wide Fig Leaf propagation; `Story_Chronos_01` and `Empty`
+share policy. Mature-save runs and the brand-new profile run (2026-09-30,
+protocol 53) showed no new lifecycle mismatch; the only substitution was the
+expected introduction decline and regenerated install.
+
 Consequently, an encounter name is a declaration identity, not a selected
 phase identity. Two phases may legitimately contain separate native tables
 with the same `Name`. The execution boundary can bind each returned table to
@@ -277,6 +302,12 @@ not planner choices.
 
 Explicit Hecate/Scylla choices intentionally override those save-progression
 selection restrictions; Default preserves them. No save clear count is edited.
+A fresh profile's first fight has one native outcome for each: only
+`HecateMeteorShower` lacks a lifetime `BossHecate01` clear requirement (1, 2
+or 10 for the others, `WeaponData_Hecate.lua:202,313,534,626,741`), polymorph
+is Sheep only, and the first `BossScylla01` forces Jetty (`Keytarist`,
+`EncounterLogic.lua:2810-2813`). The `FreshFile` route excludes the other
+choices.
 All decisions are conditional on native gameplay reaching the move. Fast
 combat may skip an optional howl or summon without creating an unmet obligation.
 

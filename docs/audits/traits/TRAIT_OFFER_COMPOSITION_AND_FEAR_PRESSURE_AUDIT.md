@@ -93,6 +93,15 @@ upgrades fill a screen the table leaves short (`TraitLogic.lua:1859`). Neither
 case occurs at Fresh `F_Combat01`, where all three are eligible and unheld, so
 the allow-list is exact there.
 
+No other first-attempt offer is forced. Poseidon's legacy Buried Treasure
+dialogue ranks after `PoseidonFirstPickUp` in
+`NarrativeData.lua:PoseidonUpgrade.InteractTextLinePriorities`, and
+`GetRandomEligibleTextLines` returns the first eligible line; after that first
+interaction the legacy line's no-current-run-Poseidon-use requirement fails.
+Aphrodite's `RandomStatusBoon` draws only statuses of gods whose `FirstPickUp`
+line is recorded (`TraitData_Aphrodite.lua:2064-2140`); that pool is a combat
+effect with no modeled consumer.
+
 ### Linked-priority support
 
 | Identity             | Linked prerequisites                 | Source              |

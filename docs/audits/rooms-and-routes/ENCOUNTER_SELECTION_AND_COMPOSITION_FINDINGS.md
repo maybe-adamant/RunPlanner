@@ -574,8 +574,13 @@ standard family requirements:
 | Icarus `O2/P2`     | no Icarus-family occurrence in the previous 4 runs and no Shrine interaction in the previous run; P2 is not a live set member   |
 | `AthenaCombatP02`  | at most two Athena NPC spawns in the previous 4 runs and no Shrine interaction in the previous run                              |
 
-These progression facts change eligibility or source weighting. The audit
-records them without selecting a production disposition.
+These progression facts change eligibility or source weighting. Planner
+disposition: mature routes treat them as satisfied save-progression
+assumptions and author the primary identity directly; the Fresh File route
+closes the NPC families whose introductions need completed runs
+([route-position audit](ROUTE_POSITION_GAME_DATA_AUDIT.md#unreachable-content)).
+Bounty runs and Echo's `MutePermanent` story suppression are outside supported
+project modes, not missing player-state inputs.
 
 ## Nemesis Random Events and Adjacent Behavior
 

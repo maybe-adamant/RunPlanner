@@ -249,6 +249,32 @@ other unsupported NPC interactions, and unmodeled Shop interaction variants
 remain outside the planner's modeled surface; the fixed Echo Bridge offer is
 supported.
 
+## Fresh File
+
+`H_Bridge01` keeps its forced window and one-creation limit, but its Story
+reward needs lifetime `RoomsEntered.H_Boss01`, so it is the `BridgeShop`
+WorldShop with no Echo action (see [Baseline boundaries](#baseline-boundaries)).
+Choosing another offered door still consumes the bridge's creation.
+
+A cage may resolve `MournerIntro`, `LamiaIntro`, `LovesickIntro` or
+`LycanthropeIntro`, each three fixed waves with no authored composition. Each
+requires that it has not occurred this run, and `LycanthropeIntro` also needs
+the other three recorded on the route; `MinDepthBeforeIntros` is 0 in H. Cages
+are prepared in order before entry, so a later cage sees an earlier cage's
+recorded introduction, not its completion: a Mourner in cage 2 stays an
+ordinary enemy once cage 1 recorded `MournerIntro`, and a prepared cage never
+changes when an earlier cage completes. `GeneratedH_Screamer2` needs
+`ScreamerIntro` completed on the route
+([composition matrix](../audits/rooms-and-routes/COMBAT_ENCOUNTER_COMPOSITION_MATRIX.md)).
+Every generated cage is customized on this route.
+
+`H_Intro` hosts Eris when observed and not yet cursed on the route; her
+required gift is 50 Psyche, which the planner does not track
+([room action order](../audits/rooms-and-routes/ROOM_ACTION_ORDER_GAME_DATA_AUDIT.md#eris-is-a-required-object-at-a-young-profiles-biome-intro)).
+The Postboss Pool of Purging spawns but is locked by `BlockedByRequirements`,
+so the planner has no Pool there; the Postboss Well and keepsake rack are
+absent and the fountain stays.
+
 ## Product boundary
 
 The canonical product owns H catalog facts, authored Fields state, concrete

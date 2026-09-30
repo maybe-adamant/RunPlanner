@@ -264,15 +264,34 @@ belong to admitted source selections, not discarded draws or replacement names.
 ### Introduction replacement occurs after initial generation
 
 After generation and setup events, `SetupEncounter` scans the produced waves
-for an eligible unseen introduction (`RunLogic.lua:1125-1143`): a spawn whose
-`IntroEncounterName` is incomplete and whose introduction's own
-`GameStateRequirements` pass. It can discard the generated encounter
-and deep-copy the introduction encounter; when that replacement declaration is
-itself generated, the game runs generation again for the replacement.
+for an eligible unseen introduction (`RunLogic.lua:1124-1145`): a spawn whose
+`IntroEncounterName` is not completed and whose introduction's own
+`GameStateRequirements` pass. `HasEncounterBeenCompleted` reads both the
+current-run and lifetime completion caches (`RunLogic.lua:1741-1752`). The scan
+discards the generated encounter and deep-copies the introduction; every scoped
+F/G/H introduction inherits `Generated = true`, so the game generates the
+replacement once and returns it without rescanning. Exactly one introduction
+wins; the discarded proposal's other types gain no occurrence or completion.
+
+The scan nests two `pairs` loops over `SpawnWaves` and `wave.Spawns`, so the
+winner is the first qualifying spawn in actual traversal, not a random draw.
+A local PUC Lua 5.2.4 probe (2026-09-29) ran the unmodified `SetupEncounter`,
+`HasEncounterBeenCompleted` and `AddToSpawnTable` over the real F and H
+introduction and enemy declarations, with generation stubbed to preserve the
+supplied proposal: across 10,000 runs, alternating append and reverse insertion
+into the same dense numeric slots, the first qualifying wave/type slot always
+won (Radiator before Screamer gives `RadiatorIntro`; a recorded `MournerIntro`
+passes to `LamiaIntro`; Lycanthrope without its prerequisites passes to
+`MournerIntro` or keeps the original), and swapping slot contents swapped the
+winner. This is stability on one runtime, not a language guarantee. The
+planner never relies on it: an authored composition cannot contain two
+triggering introductions, so embedded traversal order is an Executor diagnostic
+only, and a brand-new profile run (2026-09-30) produced no mismatch.
 
 Ordinary generated combat can therefore change concrete encounter identity
 after its first roster was formed. Devotion sets `SkipIntroEncounterCheck =
-true` and does not take this replacement path.
+true` and does not take this replacement path; neither does
+`MiniBossVampire` (`EncounterData_MiniBoss.lua:260-288`).
 
 ## Devotion Uses the Same Generator
 
