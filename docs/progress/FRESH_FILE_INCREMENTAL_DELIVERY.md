@@ -762,6 +762,43 @@ fails it though natively legal (`StaffDoubleAttackTrait` only requires
 Hammer can be authored on Fresh File today and reports `wrongHammerLoadout`;
 bounded until the Hammer exclusion lands.
 
+### M — Encounter composition dialog (locked 2026-09-29)
+
+Owner-locked polish slice on `main` after the merge. One dialog for every
+combat phase with a stable layout; editability is a per-row property, never a
+different screen.
+
+Locked decisions:
+
+- The dialog always shows the identity, a one-line engine disposition ("This
+  encounter is fixed", "This encounter's first wave is fixed", "This encounter
+  is generated", "Native generation, not customized"), the wave count, and one
+  row per wave 1..n with enemy pickers, per-enemy counts and the base-roll
+  slider, plus shared-enemy and Fear rows where applicable. Fixed waves render
+  in the same rows with controls disabled and counts shown; no wave is hidden
+  because it is fixed. Budgets are shown only where a value exists; a fixed
+  wave with only counts shows no budget.
+- All-fixed identities (`FIntroFight`, `FishmanIntro`, `ClockworkIntro`, the
+  four H introductions, and any other fixed combat) declare their native
+  roster in the catalog so the dialog has content. Non-combat identities
+  declare no enemies.
+- The trigger reads "Inspect encounter" when nothing is editable and
+  "Customize encounter" when any row is editable (ordinary generated and mixed
+  introductions). Read-only dialogs have no Reset.
+- Uncustomized generated phases show native placeholders per wave (count from
+  policy when fixed); on `FreshFile` the customization-required finding sits in
+  the dialog header.
+- Engine owns the composition view (per-wave `editable`, content, disposition
+  key); the app renders one component with disabled states. Mature projects
+  keep the same editor and gain the disposition line and inspectable fixed
+  identities.
+
+Acceptance: catalog rosters for every all-fixed combat identity with native
+citations; engine view witnesses for fixed, mixed, generated and native
+phases on mature and Fresh; UI tests for the disabled fixed rows, the
+Inspect/Customize label rule, wave 1 visible on a mixed introduction, no
+Reset on read-only; mature golden projects and execution fixtures unchanged.
+
 ### L — Execution enablement (locked 2026-09-29)
 
 Owner-locked sixth slice. Premise: the executor gains code only for what is
