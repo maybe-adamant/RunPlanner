@@ -166,6 +166,7 @@ export function evaluateEncounterCandidatesInternal(
   const roomsByOwner = new Map<string, EncounterRoomCandidateCapability>();
   const findings: SemanticFinding[] = [];
   const findingChronologies = new Map<string, HistoryFindingChronology>();
+  const phaseStartChronologies = new Map<SemanticFinding, HistoryFindingChronology>();
   const runStateByOwner = new Map(
     runStateSnapshots.map((snapshot) => [semanticAddressKey(snapshot.owner), snapshot]),
   );
@@ -350,6 +351,25 @@ export function evaluateEncounterCandidatesInternal(
         semanticAddressKey(finding.origin),
         Object.freeze({ kind: 'history', sequence: context.sequence, boundary: 'at' }),
       );
+      // A missing composition is repaired where its phase starts; room-entry
+      // inputs before that start do not read it.
+      if (
+        finding.code !== 'encounterCustomizationRequired' ||
+        finding.origin.kind !== 'encounterPhase'
+      )
+        return;
+      const phaseKey = finding.origin.phaseKey;
+      const started = historyEvents.find(
+        (event) =>
+          event.kind === 'encounterStarted' &&
+          semanticAddressKey(event.origin) === semanticAddressKey(room.origin) &&
+          event.phaseKey === phaseKey,
+      );
+      if (started !== undefined)
+        phaseStartChronologies.set(
+          finding,
+          Object.freeze({ kind: 'history', sequence: started.sequence, boundary: 'before' }),
+        );
     });
   }
   const privateEntries = new Map(entries);
@@ -432,7 +452,9 @@ export function evaluateEncounterCandidatesInternal(
     resolvedGenerated: Object.freeze(resolvedGenerated),
     findingRegions: Object.freeze(
       findings.map((finding) => {
-        const chronology = findingChronologies.get(semanticAddressKey(finding.origin));
+        const chronology =
+          phaseStartChronologies.get(finding) ??
+          findingChronologies.get(semanticAddressKey(finding.origin));
         return findingRegion(finding, undefined, chronology, 'encounter');
       }),
     ),

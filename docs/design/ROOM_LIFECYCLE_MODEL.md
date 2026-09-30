@@ -583,7 +583,10 @@ exclusions and known prior explicit selections; native rosters do not become
 invented blacklist facts. Assessment returns typed repair evidence and a complete
 resolved composition: budgets, ordered source entries, generated/effective request
 counts and applicable Fangs/Menace outcomes. Initialization and preview consume
-the same exact capability. Combat and native spawn pacing are not simulated. It introduces
+the same exact capability. A missing required composition is located for repair
+at its phase's start boundary, falling back to preparation for a phase with no
+start event such as Fields Passive, while its assessment context remains
+preparation. Combat and native spawn pacing are not simulated. It introduces
 no additional lifecycle operation, reward obligation or conformance checkpoint.
 
 A declaration may fix leading waves. They count toward the wave total and its
