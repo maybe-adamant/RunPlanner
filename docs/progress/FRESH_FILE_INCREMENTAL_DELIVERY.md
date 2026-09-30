@@ -448,6 +448,15 @@ files / 4175 tests, 743 Lua tests, Luacheck 0 warnings / 0 errors, Rust 45,
 ESLint clean. Performance compare against `65584ce5`: PASS. Mature execution
 fixtures changed only `protocolVersion` and `planFingerprint`.
 
+Merged into `main` (fast-forward) at `c73b8780` after `abce9567` (merge of
+main) and `0d65c432` (protocol 53); the `codex/fresh-file` branch and its
+worktree are removed. Post-merge polish on `main`: `6f38bb48` (two-by-two
+route chooser, weapon-only Fresh loadout), `3f721981` (Slice M encounter
+composition dialog). Full check chain at `3f721981` (2026-09-29, four vitest
+workers): exit 0; 401 Vitest files / 4233 tests, 760 Lua tests, Luacheck 0
+warnings / 0 errors, Rust 45, ESLint clean, build ok. No execution fixture or
+mature golden project moved.
+
 ## Phase III — visible rule integration roadmap
 
 ### K — Enemy introductions and Gate E retirement (locked 2026-09-29)
