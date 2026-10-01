@@ -815,11 +815,14 @@ describe('OccurrenceRoomFeatures', () => {
       ).disabled,
     ).toBe(false);
     const orderBeforeMove = authoredFields()?.roomActions.order;
-    const move = within(optionalRow)
-      .getAllByRole('button', { name: /Move .* (earlier|later)/ })
-      .find((button) => !(button as HTMLButtonElement).disabled);
+    const move = within(optionalRow).getByRole('button', { name: /^Move / });
     if (move === undefined) throw new Error('optional Nemesis result has no legal move');
     await view.user.click(move);
+    await view.user.click(
+      within(screen.getByRole('listbox'))
+        .getAllByRole('option')
+        .find((option) => option.getAttribute('aria-disabled') !== 'true')!,
+    );
     await waitFor(() => expect(authoredFields()?.roomActions.order).not.toEqual(orderBeforeMove));
     act(() => view.application.store.dispatch(authoredProjectUndoRequested()));
     await waitFor(() => expect(authoredFields()?.roomActions.order).toEqual(orderBeforeMove));

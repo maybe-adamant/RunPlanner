@@ -1,6 +1,7 @@
 import { type OccurrenceAddress } from '@run-planner/engine/authored-project';
 import {
   Fragment,
+  useEffect,
   useRef,
   useState,
   type PointerEvent as ReactPointerEvent,
@@ -30,6 +31,7 @@ import { LifecycleBoundaryRow } from './RoomLifecycleBoundaryRow';
 import { RoomActionAcquisitionRow } from './RoomActionAcquisitionRow';
 import { RoomActionInlineEditors } from './RoomActionInlineEditors';
 import { RoomActionOrderingControls } from './RoomActionOrderingControls';
+import { roomActionDestinationLabel } from './room-action-placement';
 import { NemesisInteractionEditor } from './NemesisEventEditor';
 interface PendingRoomActionPointerDrag {
   readonly actionKey: string;
@@ -130,6 +132,60 @@ export function RoomActionsWorkbench({
   const activePointerDrag = useRef<RoomActionPointerDrag | undefined>(undefined);
   const [pointerDrag, setPointerDrag] = useState<RoomActionPointerDrag | undefined>(undefined);
   const [announcement, setAnnouncement] = useState('');
+  const [placementRequest, setPlacementRequest] = useState<{ owner: string; actionKey: string }>();
+  const placementTrigger = useRef<HTMLButtonElement | null>(null);
+  const pendingPlacementFocus = useRef<{ owner: string; actionKey: string } | undefined>(undefined);
+  const placementOwner =
+    actions === undefined
+      ? ''
+      : `${workspaceInteractionKey(actions.owner)}:${ship?.phaseKey ?? ''}`;
+  const placingRow =
+    placementRequest?.owner === placementOwner
+      ? actions?.rows.find(
+          (row) => row.key === placementRequest.actionKey && row.rank === null && !row.stale,
+        )
+      : undefined;
+  useEffect(() => {
+    const pending = pendingPlacementFocus.current;
+    if (pending === undefined) return;
+    if (pending.owner !== placementOwner) {
+      pendingPlacementFocus.current = undefined;
+      return;
+    }
+    const placed = Array.from(
+      board.current?.querySelectorAll<HTMLElement>(
+        '[data-room-action-key][data-in-order="true"]',
+      ) ?? [],
+    ).find((element) => element.dataset.roomActionKey === pending.actionKey);
+    if (placed === undefined) return;
+    pendingPlacementFocus.current = undefined;
+    placed.focus({ preventScroll: true });
+    placed.scrollIntoView?.({ block: 'center' });
+  }, [actions, placementOwner]);
+  const cancelPlacement = (): void => {
+    setPlacementRequest(undefined);
+    placementTrigger.current?.focus({ preventScroll: true });
+  };
+  useEffect(() => {
+    if (placingRow === undefined) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape' || event.defaultPrevented) return;
+      const overlaySelector =
+        '[role="dialog"], [role="alertdialog"], [role="listbox"], .run-state-sheet';
+      if (
+        event
+          .composedPath()
+          .some((target) => target instanceof Element && target.matches(overlaySelector)) ||
+        document.querySelector(overlaySelector) !== null
+      )
+        return;
+      event.preventDefault();
+      setPlacementRequest(undefined);
+      placementTrigger.current?.focus({ preventScroll: true });
+    };
+    document.addEventListener('keydown', onKeyDown);
+    return () => document.removeEventListener('keydown', onKeyDown);
+  }, [placingRow]);
   const hasOptionalChildren = optionalChildren !== undefined && optionalChildren !== null;
   if (actions === undefined && ship === undefined) {
     if (encounterPhases === undefined || idPrefix === undefined) return null;
@@ -238,7 +294,13 @@ export function RoomActionsWorkbench({
     clearPointerDrag(event.pointerId);
     if (target === undefined) return;
     const proposal = proposalForDrop(active.actionKey, target);
-    if (proposal?.structurallyAuthorable !== true) return;
+    if (proposal === undefined) return;
+    if (!proposal.structurallyAuthorable) {
+      setAnnouncement(
+        'Action not moved. This location conflicts with the required action order or timing.',
+      );
+      return;
+    }
     const row = actions?.rows.find((candidate) => candidate.key === active.actionKey);
     setAnnouncement(
       `${row?.label ?? active.actionKey} moved to position ${(proposal.toIndex ?? 0) + 1}.`,
@@ -279,9 +341,61 @@ export function RoomActionsWorkbench({
   };
   const dropState = (target: RoomActionDropTarget) => {
     if (!sameRoomActionDropTarget(pointerDrag?.target, target)) return undefined;
-    return proposalForDrop(pointerDrag!.actionKey, target)?.structurallyAuthorable === true
-      ? 'available'
-      : 'unavailable';
+    const proposal = proposalForDrop(pointerDrag!.actionKey, target);
+    if (proposal === undefined) return undefined;
+    return proposal.structurallyAuthorable ? 'available' : 'unavailable';
+  };
+  const renderedInsertions = new Set<string>();
+  const visibleTimeline =
+    ship === undefined
+      ? (actions?.timeline.entries ?? [])
+      : ship.phases
+          .filter((phase) => ship.phaseKey === undefined || phase.key === ship.phaseKey)
+          .flatMap((phase) => phase.timeline);
+  // A shared action-order position belongs below its Doors open boundary.
+  const doorsOpenInsertion = visibleTimeline.find(
+    (entry) => entry.kind === 'boundary' && entry.boundary.kind === 'cleanup',
+  );
+  const renderInsertion = (toIndex: number, key: string): ReactNode => {
+    if (placingRow === undefined) return null;
+    if (
+      doorsOpenInsertion?.kind === 'boundary' &&
+      doorsOpenInsertion.dropIndex === toIndex &&
+      doorsOpenInsertion.boundary.key !== key
+    )
+      return null;
+    const proposal = actions?.proposals.find(
+      (candidate) =>
+        candidate.kind === 'insert' &&
+        candidate.toIndex === toIndex &&
+        placingRow.proposalKeys.includes(candidate.key),
+    );
+    if (proposal === undefined || renderedInsertions.has(proposal.key)) return null;
+    renderedInsertions.add(proposal.key);
+    return (
+      <li className="room-action-insertion" key={`insert:${key}`}>
+        <button
+          aria-label={`Add ${placingRow.label} here: ${roomActionDestinationLabel(actions?.rows ?? [], toIndex)}`}
+          aria-disabled={!proposal.structurallyAuthorable}
+          className="contextual-picker-trigger room-action-insertion-button"
+          title={
+            proposal.structurallyAuthorable
+              ? undefined
+              : 'Conflicts with the required action order or timing.'
+          }
+          onClick={() => {
+            if (!proposal.structurallyAuthorable) return;
+            pendingPlacementFocus.current = { owner: placementOwner, actionKey: placingRow.key };
+            apply(proposal.key);
+            setPlacementRequest(undefined);
+            setAnnouncement(`${placingRow.label} added to the timeline.`);
+          }}
+          type="button"
+        >
+          {proposal.structurallyAuthorable ? '+ Add action here' : 'Unavailable here'}
+        </button>
+      </li>
+    );
   };
   const renderBoundary = (
     entry: Extract<WorkspaceRoomLifecycleTimelineEntry, { readonly kind: 'boundary' }>,
@@ -304,6 +418,9 @@ export function RoomActionsWorkbench({
         />
         {renderSupplement(entry.supplement)}
         {renderBoundaryContent?.(entry.boundary)}
+        {entry.boundary.kind === 'encounterStart'
+          ? null
+          : renderInsertion(entry.dropIndex, entry.boundary.key)}
       </Fragment>
     );
   };
@@ -379,6 +496,7 @@ export function RoomActionsWorkbench({
             row.rank === null ? undefined : dropState({ kind: 'beforeSlot', slotKey: row.key })
           }
           data-in-order={row.rank === null ? 'false' : 'true'}
+          data-placing={placingRow?.key === row.key || undefined}
           data-inline-layout={
             nemesisInteraction !== undefined
               ? 'sentence'
@@ -432,8 +550,14 @@ export function RoomActionsWorkbench({
                 <RoomActionOrderingControls
                   onApply={apply}
                   onRemove={removeRow}
+                  onBeginAdd={(button) => {
+                    placementTrigger.current = button;
+                    setPlacementRequest({ owner: placementOwner, actionKey: row.key });
+                    setAnnouncement(`Choose where to add ${row.label}.`);
+                  }}
                   proposals={proposals}
                   row={row}
+                  rows={actions.rows}
                   showRemoval={
                     row.reference.kind !== 'interactKeepsakeRack' &&
                     row.reference.kind !== 'interactEris' &&
@@ -470,6 +594,7 @@ export function RoomActionsWorkbench({
           />
         </li>
         {row.rank === null ? null : checkpointRows(row.rank, checkpoints)}
+        {row.rank === null ? null : renderInsertion(row.rank, row.key)}
       </Fragment>
     );
   };
@@ -480,6 +605,10 @@ export function RoomActionsWorkbench({
     onPointerMove: updatePointerDrag,
     onPointerUp: completePointerDrag,
   };
+  const hoveredProposal =
+    pointerDrag?.target === undefined
+      ? undefined
+      : proposalForDrop(pointerDrag.actionKey, pointerDrag.target);
   const dragPreview =
     pointerDrag === undefined ? null : (
       <div
@@ -491,6 +620,24 @@ export function RoomActionsWorkbench({
       >
         <span>⠿</span>
         {actions?.rows.find((row) => row.key === pointerDrag.actionKey)?.label ?? 'Room action'}
+        {hoveredProposal === undefined ? null : (
+          <span className="room-action-drag-feedback">
+            {hoveredProposal.structurallyAuthorable
+              ? 'Drop here'
+              : 'Unavailable: required action order or timing'}
+          </span>
+        )}
+      </div>
+    );
+  const placementNotice =
+    placingRow === undefined ? null : (
+      <div className="room-action-placement-notice" role="status">
+        <span>
+          Placing: <strong>{placingRow.label}</strong>
+        </span>
+        <button className="quiet-action action-compact" onClick={cancelPlacement} type="button">
+          Cancel
+        </button>
       </div>
     );
   if (ship !== undefined) {
@@ -634,6 +781,7 @@ export function RoomActionsWorkbench({
             )}
           </div>
           {dragPreview}
+          {placementNotice}
         </section>
       </section>
     );
@@ -728,6 +876,7 @@ export function RoomActionsWorkbench({
         </section>
       )}
       {dragPreview}
+      {placementNotice}
     </section>
   );
 }

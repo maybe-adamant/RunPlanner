@@ -706,9 +706,7 @@ describe('Biome inspector controls', () => {
         )?.keepsakeRack,
     ).toEqual({ keepsakeKey: 'BossPreDamageKeepsake' });
     await waitFor(() =>
-      expect(
-        within(timeline).getByRole('button', { name: 'Move Change Keepsake earlier' }),
-      ).toBeTruthy(),
+      expect(within(timeline).getByRole('button', { name: 'Move Change Keepsake' })).toBeTruthy(),
     );
     expect(
       within(timeline).getByText('Change Keepsake').closest('[data-in-order="true"]'),
@@ -802,9 +800,8 @@ describe('Biome inspector controls', () => {
       ).toBe('possible'),
     );
     fireEvent.click(within(keepsakes).getByText('Aromatic Phial'));
-    fireEvent.click(
-      await within(timeline).findByRole('button', { name: 'Move Change Keepsake earlier' }),
-    );
+    fireEvent.click(await within(timeline).findByRole('button', { name: 'Move Change Keepsake' }));
+    fireEvent.click(await screen.findByRole('option', { name: /Before Use Fountain/ }));
 
     const phialTarget = await within(timeline).findByLabelText('Phial Target');
     fireEvent.click(phialTarget);
