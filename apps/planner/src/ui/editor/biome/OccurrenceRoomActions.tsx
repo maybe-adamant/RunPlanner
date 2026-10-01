@@ -353,6 +353,24 @@ export function RoomActionsWorkbench({
       <Fragment key={row.key}>
         <li
           className="hub-open-room-card room-action-row"
+          data-action-accent={
+            row.stale
+              ? undefined
+              : row.participation === 'optional'
+                ? 'optional'
+                : row.requiredScope
+          }
+          title={
+            row.stale
+              ? undefined
+              : row.participation === 'optional'
+                ? 'Optional action'
+                : row.requiredScope === 'phase'
+                  ? 'Required in this timeline section, not necessarily as the next action.'
+                  : row.requiredScope === 'room'
+                    ? 'Required before leaving the room.'
+                    : undefined
+          }
           data-dragging={pointerDrag?.actionKey === row.key || undefined}
           data-drop-after={
             row.rank === null ? undefined : dropState({ kind: 'afterSlot', slotKey: row.key })
@@ -669,11 +687,6 @@ export function RoomActionsWorkbench({
       {...findingTarget(actions.owner)}
       tabIndex={-1}
     >
-      <header className="local-reward-heading">
-        <div className="owner-markers">
-          <h4>Room Timeline</h4>
-        </div>
-      </header>
       <p aria-live="polite" className="visually-hidden">
         {announcement}
       </p>

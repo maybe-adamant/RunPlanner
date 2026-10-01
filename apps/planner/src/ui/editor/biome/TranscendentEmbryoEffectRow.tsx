@@ -70,11 +70,12 @@ export function TranscendentEmbryoEffectRow({
   return (
     <li
       aria-label="Transcendent Embryo"
+      aria-description="Automatic effect"
+      data-action-accent="automatic"
       className="room-action-row room-timeline-effect-row"
       data-transcendent-embryo={control.address.phaseKey}
     >
       <div className="owner-markers room-action-identity scheduled-trait-effect-identity">
-        <span className="room-automatic-label">Automatic</span>
         <strong>Transcendent Embryo</strong>
         {domain?.emptyNoOp === true && outcome === undefined ? (
           <span>No eligible blessing</span>

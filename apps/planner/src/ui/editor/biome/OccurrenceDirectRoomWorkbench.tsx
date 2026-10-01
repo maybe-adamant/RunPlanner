@@ -324,27 +324,22 @@ export function DirectRoomWorkbench({
   }
 }
 
-export function IncomingRewardOverview({
+export function IncomingRewardSummary({
   incomingDoor,
 }: {
   readonly incomingDoor: WorkspaceDoorContract | undefined;
 }) {
   if (incomingDoor === undefined) return null;
   const preview = incomingDoor.offerRewardSurface;
-  const label =
-    preview.visibility === 'visible' && preview.rewards.length > 1
-      ? 'Incoming Rewards'
-      : 'Incoming Reward';
+  if (preview.visibility === 'visible' && preview.rewards.length === 0) return null;
   const summary =
     preview.visibility === 'hidden'
       ? 'Hidden'
-      : preview.rewards.length === 0
-        ? 'None'
-        : preview.rewards.map((reward) => reward.summary).join(', ');
+      : preview.rewards.map((reward) => reward.summary).join(', ');
   return (
-    <section aria-label="Incoming reward" className="room-overview-incoming-reward">
-      <span className="room-overview-incoming-label">{label}</span>
-      <strong>{summary}</strong>
+    <section aria-label="Incoming reward" className="room-heading-incoming-reward">
+      <span aria-hidden="true">·</span>
+      <span>{summary}</span>
     </section>
   );
 }

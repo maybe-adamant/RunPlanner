@@ -15,7 +15,7 @@ import { RoomMapLauncher } from '@planner/ui/room-maps/RoomMapDialog';
 import { RunStateLauncher } from './RunStateSheet';
 import { AnomalyClearedControl } from './room-features/AnomalyControls';
 import { RoomActionsWorkbench } from './OccurrenceRoomActions';
-import { DirectRoomWorkbench, IncomingRewardOverview } from './OccurrenceDirectRoomWorkbench';
+import { DirectRoomWorkbench, IncomingRewardSummary } from './OccurrenceDirectRoomWorkbench';
 import { FieldsLayoutWorkbench } from './locals/FieldsWorkbench';
 
 interface OccurrenceWorkbenchProps {
@@ -144,6 +144,11 @@ export function OccurrenceWorkbench({
   );
   const heading = room.label;
   const tabRunState = room.runStateByTab[activeTab];
+  const showTimelineLegend =
+    activeTab === 'actions' ||
+    activeTab === 'shipIntroActions' ||
+    activeTab === 'shipCombat1Actions' ||
+    activeTab === 'shipCombat2Actions';
   const renderDirectRoomWorkbench = (
     view: 'overview' | 'actions',
     shipPhaseKey?: string,
@@ -173,7 +178,10 @@ export function OccurrenceWorkbench({
       tabIndex={-1}
     >
       <header className="room-card-heading">
-        <h3 aria-label={heading}>{heading}</h3>
+        <div className="room-heading-identity">
+          <h3 aria-label={heading}>{heading}</h3>
+          <IncomingRewardSummary incomingDoor={incomingDoor} />
+        </div>
         <div className="owner-markers">
           {headerActions}
           <RoomMapLauncher gameName={room.gameName} hostId={roomIdentity} title={room.label} />
@@ -200,9 +208,24 @@ export function OccurrenceWorkbench({
             : null}
           {tabButton('doors', 'Room Doors')}
         </nav>
-        {tabRunState === undefined ? null : (
+        {!showTimelineLegend && tabRunState === undefined ? null : (
           <div className="room-workbench-tab-utility">
-            <RunStateLauncher launcher={tabRunState} />
+            {showTimelineLegend ? (
+              <ul aria-label="Timeline legend" className="room-timeline-legend">
+                <li data-action-accent="optional">Optional</li>
+                <li
+                  data-action-accent="phase"
+                  title="Required in this timeline section, not necessarily as the next action."
+                >
+                  Required now
+                </li>
+                <li data-action-accent="room" title="Required before leaving the room.">
+                  Before leaving
+                </li>
+                <li data-action-accent="automatic">Automatic</li>
+              </ul>
+            ) : null}
+            {tabRunState === undefined ? null : <RunStateLauncher launcher={tabRunState} />}
           </div>
         )}
       </div>
@@ -216,7 +239,6 @@ export function OccurrenceWorkbench({
         {activeTab === 'overview' ? (
           <div className="room-overview-workbench">
             {entryIdentity}
-            <IncomingRewardOverview incomingDoor={incomingDoor} />
             <AnomalyClearedControl room={room} />
             {renderDirectRoomWorkbench('overview')}
           </div>

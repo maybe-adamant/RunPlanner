@@ -358,6 +358,7 @@ function roomActionsForOccurrence(
           input.evaluatedRoom?.pickupProducers,
         ),
         marker: input.markerDestinations.marker(address),
+        ...(row.requiredScope === undefined ? {} : { requiredScope: row.requiredScope }),
         proposalKeys: Object.freeze(proposalKeysByAction.get(row.key) ?? []),
         reference: row.reference,
         participation: isGoldPickup(row.reference)

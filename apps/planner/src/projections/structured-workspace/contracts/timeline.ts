@@ -66,6 +66,7 @@ export interface WorkspaceRoomActionRow {
   readonly proposalKeys: readonly string[];
   readonly reference: RoomActionReference;
   readonly participation: 'required' | 'optional';
+  readonly requiredScope?: import('@run-planner/engine/simulation').RoomActionRow['requiredScope'];
   /** Participation is authored by a room Overview control; Timeline owns ordering only. */
   readonly participationOwnedByOverview: boolean;
   /** Engine-published exact materialization command for one derived acquisition entry. */
