@@ -277,17 +277,17 @@ describe('boss-door reward pool row selection', () => {
     expect(f.map((row) => row.gameName)).toEqual(['F_PreBoss01']);
     expect(f[0]?.control).toEqual({
       kind: 'ignored',
-      summary: 'Reward Pool is ignored for this boss.',
+      summary: 'Ignored for this boss',
     });
 
     // H and I pin their entered store at spawn, so the row reports it.
     expect(byBiome.get('H')?.[0]?.control).toEqual({
       kind: 'fixed',
-      summary: 'Reward Pool is fixed as Major Reward for this boss.',
+      summary: 'Major Reward · Fixed',
     });
     expect(byBiome.get('I')?.[0]?.control).toEqual({
       kind: 'fixed',
-      summary: 'Reward Pool is fixed as Tartarus Reward for this boss.',
+      summary: 'Tartarus Reward · Fixed',
     });
 
     // G resolves its entered store from the chosen offer, so it stays editable.

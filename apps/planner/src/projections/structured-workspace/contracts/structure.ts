@@ -400,7 +400,10 @@ export type WorkspaceOccurrenceStageOutgoing =
   | {
       /** Engine-declared fixed completion continuation, rendered as a fixed exit. */
       readonly kind: 'fixedRoom';
-      readonly label: string;
+      readonly destination:
+        | { readonly kind: 'room'; readonly label: string; readonly gameName?: string }
+        | { readonly kind: 'biome'; readonly label: string }
+        | { readonly kind: 'complete'; readonly message: string };
       readonly marker: WorkspaceMarker;
     };
 

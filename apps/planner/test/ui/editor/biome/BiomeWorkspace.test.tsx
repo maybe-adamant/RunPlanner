@@ -1337,7 +1337,7 @@ describe('BiomeWorkspace', () => {
     outgoing = within(screen.getByRole('complementary', { name: 'Details' })).getByRole('region', {
       name: 'Outgoing doors',
     });
-    expect(within(outgoing).getByText('Continue to Polyphemus.')).toBeTruthy();
+    expect(within(outgoing).getByRole('heading', { name: 'Polyphemus', level: 4 })).toBeTruthy();
 
     // A mid-route Postboss continues to the next biome's display name, never
     // its internal key.
@@ -1354,7 +1354,7 @@ describe('BiomeWorkspace', () => {
     outgoing = within(screen.getByRole('complementary', { name: 'Details' })).getByRole('region', {
       name: 'Outgoing doors',
     });
-    expect(within(outgoing).getByText('Continue to Thessaly.')).toBeTruthy();
+    expect(within(outgoing).getByRole('heading', { name: 'Thessaly', level: 4 })).toBeTruthy();
   });
 
   it('celebrates the completed run beyond the final biome boss chain', async () => {
@@ -1943,17 +1943,15 @@ describe('boss-door reward pool in the outgoing-door section', () => {
     return { section: screen.getByRole('region', { name: 'Outgoing doors' }), user: view.user };
   }
 
-  it('authors a rolling boss pool between the door heading and its destination', async () => {
+  it('authors a rolling boss pool inside its fixed destination card', async () => {
     const { section } = await openBossDoors(loadSurfaceNOPQProject(), 'Surface', 'O');
-    // The boss door reads as an ordinary outgoing door with a fixed
-    // destination: heading, pool control, then where it goes.
-    const heading = within(section).getByRole('heading', { level: 3, name: 'Outgoing doors' });
+    const heading = within(section).getByRole('heading', { level: 3, name: 'Door offer' });
     const picker = within(section).getByRole('button', { name: 'Reward Pool' });
-    const destination = within(section).getByText(/^Continue to /);
+    const destination = within(section).getByRole('heading', { level: 4 });
     expect(within(section).getByText('Reward Pool')).toBeTruthy();
     expect(picker.textContent).not.toContain('Select pool');
-    expectBefore(heading, picker);
-    expectBefore(picker, destination);
+    expectBefore(heading, destination);
+    expectBefore(destination, picker);
   });
 
   it('explains a saturated boss pool with the ledger that forced it', async () => {
@@ -1974,16 +1972,16 @@ describe('boss-door reward pool in the outgoing-door section', () => {
     const { section } = await openBossDoors(createGoldenFGHIProject(), 'Underworld', 'H');
     // H's boss pins its entered store at spawn.
     expect(within(section).queryByRole('button', { name: 'Reward Pool' })).toBeNull();
-    const line = within(section).getByText('Reward Pool is fixed as Major Reward for this boss.');
-    expectBefore(within(section).getByRole('heading', { level: 3, name: 'Outgoing doors' }), line);
-    expectBefore(line, within(section).getByText(/^Continue to /));
+    const line = within(section).getByText('Major Reward · Fixed');
+    expectBefore(within(section).getByRole('heading', { level: 3, name: 'Door offer' }), line);
+    expectBefore(within(section).getByRole('heading', { level: 4 }), line);
   });
 
   it('reports a store-ignoring boss pool in the same place', async () => {
     const { section } = await openBossDoors(createCompleteFGProject(), 'Underworld', 'F');
     expect(within(section).queryByRole('button', { name: 'Reward Pool' })).toBeNull();
-    const line = within(section).getByText('Reward Pool is ignored for this boss.');
-    expectBefore(within(section).getByRole('heading', { level: 3, name: 'Outgoing doors' }), line);
-    expectBefore(line, within(section).getByText(/^Continue to /));
+    const line = within(section).getByText('Ignored for this boss');
+    expectBefore(within(section).getByRole('heading', { level: 3, name: 'Door offer' }), line);
+    expectBefore(within(section).getByRole('heading', { level: 4 }), line);
   });
 });

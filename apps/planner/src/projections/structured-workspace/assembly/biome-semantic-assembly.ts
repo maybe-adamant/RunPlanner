@@ -876,29 +876,41 @@ export function assembleWorkspaceBiomeSemantics(
         break;
       case 'fixedRoom': {
         const targetStatus = status.target;
-        const label = (() => {
+        const destination = (() => {
           switch (targetStatus.kind) {
             case 'fixedOccurrence': {
               const target = plan.topology?.occurrences.find(
                 (candidate) => candidate.occurrenceId === targetStatus.occurrenceId,
               );
-              return target === undefined
-                ? 'Continue to fixed room.'
-                : `Continue to ${routeRoomDeclaration(requireWorkspaceRoom(catalog, target.gameName), biome.routeKey).label}.`;
+              return Object.freeze({
+                kind: 'room' as const,
+                label:
+                  target === undefined
+                    ? 'Fixed room'
+                    : routeRoomDeclaration(
+                        requireWorkspaceRoom(catalog, target.gameName),
+                        biome.routeKey,
+                      ).label,
+                ...(target === undefined ? {} : { gameName: target.gameName }),
+              });
             }
             case 'nextBiomeIntro':
-              return `Continue to ${
-                catalog.biomes.byKey[targetStatus.biomeKey]?.label ?? targetStatus.biomeKey
-              }.`;
+              return Object.freeze({
+                kind: 'biome' as const,
+                label: catalog.biomes.byKey[targetStatus.biomeKey]?.label ?? targetStatus.biomeKey,
+              });
             case 'routeBoundary':
-              return 'The run is complete — congratulations.';
+              return Object.freeze({
+                kind: 'complete' as const,
+                message: 'The run is complete — congratulations.',
+              });
           }
         })();
         occurrenceOutgoing.set(
           occurrence.occurrenceId,
           Object.freeze({
             kind: 'fixedRoom' as const,
-            label,
+            destination,
             marker: markerDestinations.marker(status.owner),
           }),
         );

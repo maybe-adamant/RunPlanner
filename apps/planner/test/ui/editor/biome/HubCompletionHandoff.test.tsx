@@ -20,10 +20,7 @@ describe('HubCompletionHandoff', () => {
     const door = screen.getByRole('article', { name: 'Preboss room offer' });
     expect(door.dataset.available).toBe('false');
     expect(within(door).getByText('Locked')).toBeTruthy();
-    expect(within(door).getByRole('button', { name: 'Open next room' })).toHaveProperty(
-      'disabled',
-      true,
-    );
+    expect(screen.getByRole('button', { name: 'Open next room' })).toHaveProperty('disabled', true);
     expect(within(door).queryByRole('button', { name: /Configure Room Offers/i })).toBeNull();
   });
 
@@ -34,7 +31,7 @@ describe('HubCompletionHandoff', () => {
     const handoff = document.querySelector<HTMLElement>('[data-hub-exit-door="true"]');
     if (handoff === null) throw new Error('completed Hub handoff control is missing');
     const historyBefore = view.application.store.getState().projectWorkspace.history!.past.length;
-    await view.user.click(within(handoff).getByRole('button'));
+    await view.user.click(screen.getByRole('button', { name: 'Open next room' }));
     const owner = createExitDecisionAddress(nBiome, {
       decisionKey: 'hub',
       kind: 'hubDecision',
@@ -59,7 +56,7 @@ describe('HubCompletionHandoff', () => {
     expect(within(openedDoor).getByText('Opened')).toBeTruthy();
     const historyAfterCreation =
       view.application.store.getState().projectWorkspace.history!.past.length;
-    await view.user.click(within(openedDoor).getByRole('button', { name: 'Open next room' }));
+    await view.user.click(screen.getByRole('button', { name: 'Open next room' }));
     expect(view.application.store.getState().projectWorkspace.history!.past).toHaveLength(
       historyAfterCreation,
     );
