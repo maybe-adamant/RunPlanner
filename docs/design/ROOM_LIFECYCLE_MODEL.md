@@ -260,6 +260,14 @@ prerequisite does not reject the edit or become silently repaired. Missing
 required authorship remains a supported incomplete state with one canonical
 late restore position.
 
+Active required roster rows also expose `requiredScope`: `phase` when their
+fixed window or dependency chain constrains them to encounter progression,
+otherwise `room`. Optional and stale rows have no required scope. This derived
+classification does not change participation, legal order, or authored state.
+Fields cage rewards remain room-scoped despite their source phase; a contact
+that blocks a later cage inherits a phase obligation. Scope is recomputed when
+the active lifecycle is narrowed and is independent of an action's placed rank.
+
 ### Lifecycle structure and derived authoring timeline
 
 The authored lifecycle-structure module constructs one closed
