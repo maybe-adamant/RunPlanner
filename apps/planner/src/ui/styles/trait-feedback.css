@@ -368,10 +368,6 @@
   gap: 0.4rem;
 }
 
-.trait-stone-activation input {
-  margin: 0;
-}
-
 .trait-stone-target-outcome {
   display: grid;
   gap: 0.55rem;

@@ -121,6 +121,59 @@ select:focus-visible {
   outline-offset: 3px;
 }
 
+input[type='checkbox'] {
+  appearance: none;
+  flex: 0 0 16px;
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  padding: 0;
+  border: 1px solid #77717e;
+  border-radius: 4px;
+  background: #191a20;
+  vertical-align: middle;
+  cursor: pointer;
+}
+
+input[type='checkbox']:checked {
+  border-color: #e2b971;
+  background-color: #e2b971;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='m3.5 8 3 3 6-6' fill='none' stroke='%231c1d23' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: 14px 14px;
+}
+
+input[type='checkbox']:hover:not(:disabled) {
+  border-color: #e2b971;
+}
+
+input[type='checkbox']:focus-visible {
+  outline: 2px solid #e2b971;
+  outline-offset: 3px;
+}
+
+input[type='checkbox']:disabled {
+  border-color: #4d4b55;
+  background-color: #23242b;
+  cursor: not-allowed;
+}
+
+input[type='checkbox']:checked:disabled {
+  border-color: #8b795b;
+  background-color: #8b795b;
+}
+
+@media (forced-colors: active) {
+  input[type='checkbox'] {
+    appearance: auto;
+  }
+
+  input[type='checkbox']:checked {
+    background-image: none;
+  }
+}
+
 .app-shell {
   display: flex;
   width: min(1800px, calc(100% - 24px));

@@ -107,11 +107,6 @@
   color: #e3dde8;
 }
 
-.room-feature-presence-row input {
-  margin: 0;
-  accent-color: #a98dcc;
-}
-
 .room-feature-presence-row:has(input:disabled) {
   color: #88858e;
   opacity: 0.68;
@@ -460,10 +455,6 @@
   flex: 0 0 auto;
   gap: 7px;
   white-space: nowrap;
-}
-
-.encounter-event-control > input {
-  margin: 0;
 }
 
 .encounter-event-wave-slot {
@@ -1043,10 +1034,6 @@
   gap: 7px;
   margin-inline-start: 16px;
   white-space: nowrap;
-}
-
-.nemesis-response-control > input {
-  margin: 0;
 }
 
 .ship-phase-list {
@@ -1913,10 +1900,6 @@
   font-size: 0.78rem;
 }
 
-.hub-membership-control input {
-  accent-color: #e2b971;
-}
-
 .hub-membership-control:focus-within {
   border-color: #e2b971;
 }
@@ -2105,11 +2088,6 @@
   font-size: 0.8rem;
 }
 
-.ephyra-side-generation-control input {
-  margin: 0;
-  accent-color: #a98dcc;
-}
-
 .ephyra-side-priority {
   grid-area: priority;
   display: grid;
@@ -2218,10 +2196,6 @@
   gap: 7px;
   color: #aaa7af;
   font-size: 0.8rem;
-}
-
-.purchase-control input {
-  accent-color: #e2b971;
 }
 
 .frontier-actions {

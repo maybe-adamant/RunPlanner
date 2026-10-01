@@ -11,7 +11,7 @@
   border-radius: 4px;
 }
 
-/* Native checkboxes need an outer stroke; their native fill can hide inset shadows. */
+/* Keep checkbox findings outside the control so the checked mark stays legible. */
 input[type='checkbox'][data-semantic-owner][data-has-findings='true'] {
   box-shadow: none;
   outline: 2px solid #da7373;
