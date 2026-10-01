@@ -382,7 +382,7 @@ export function rewardControl(
   authoredReward: AuthoredRewardState | null,
   explicitRewardTypes: readonly string[] = Object.freeze(offer === null ? [] : [offer.rewardType]),
   retainedSourceMismatch = false,
-  fixedOfferEdit?: WorkspaceRewardControl['fixedOfferEdit'],
+  derivedReplaySeed?: WorkspaceRewardControl['derivedReplaySeed'],
   suppressOfferPicker = false,
 ): WorkspaceRewardControl {
   const payloadDeferred =
@@ -427,18 +427,15 @@ export function rewardControl(
         marker: input.markerDestinations.marker(owner.address),
         offer,
         ...(offerEditStartStep === undefined ? {} : { offerEditStartStep }),
-        offerEditVisibility:
-          fixedOfferEdit !== undefined
+        offerEditVisibility: suppressOfferPicker
+          ? ('hidden' as const)
+          : offer === null ||
+              offer.payload !== undefined ||
+              payloadDeferred ||
+              retainedSourceMismatch
             ? ('visible' as const)
-            : suppressOfferPicker
-              ? ('hidden' as const)
-              : offer === null ||
-                  offer.payload !== undefined ||
-                  payloadDeferred ||
-                  retainedSourceMismatch
-                ? ('visible' as const)
-                : ('hidden' as const),
-        ...(fixedOfferEdit === undefined ? {} : { fixedOfferEdit }),
+            : ('hidden' as const),
+        ...(derivedReplaySeed === undefined ? {} : { derivedReplaySeed }),
         owner,
         retainedSourceMismatch,
         traitOffers:

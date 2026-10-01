@@ -174,6 +174,8 @@ function commandContractAddress(
       return command.entry;
     case 'ReplaceAcquisitionEntryOffer':
       return command.entry;
+    case 'EditEchoReplay':
+      return command.entry;
     case 'SelectEncounter':
     case 'ResetEncounter':
     case 'ReplaceFigLeafSkip':

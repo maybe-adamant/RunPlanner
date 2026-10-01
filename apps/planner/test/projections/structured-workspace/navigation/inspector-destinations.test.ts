@@ -825,21 +825,18 @@ describe('workspace inspector destinations', () => {
     ).toBe(true);
   });
 
-  it('routes a missing generated Echo pickup to its exact Room Action row', () => {
+  it('routes a derived Echo replay to its exact Room Action row', () => {
     const configured = echoReplayProject();
     const assembled = assembly(configured.document);
-    const finding = assembled.evaluation.findings.find(
-      (candidate) =>
-        candidate.code === 'rewardMissing' &&
-        semanticAddressKey(candidate.origin) === semanticAddressKey(configured.entry),
+    expect(assembled.evaluation.findings).not.toContainEqual(
+      expect.objectContaining({ code: 'rewardMissing', origin: configured.entry }),
     );
-    expect(finding?.origin).toEqual(configured.entry);
 
     const workspace = structuredWorkspace.project(assembled);
     const replayDestination = destination(workspace, configured.entry);
     expect(replayDestination).toMatchObject({
       ownerAddress: configured.entry,
-      focusAddress: configured.entry,
+      focusAddress: { kind: 'roomAction' },
       inspectorSubject: { kind: 'node', nodeKey: replayDestination.nodeKey },
     });
     expect(replayDestination).not.toHaveProperty('traitDialogTarget');

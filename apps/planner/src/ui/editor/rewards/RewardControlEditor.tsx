@@ -5,7 +5,6 @@ import {
   type WorkspaceRewardControl,
 } from '@planner/projections/structured-workspace';
 import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
-import { useFindingTarget } from '@planner/ui/feedback/useFindingTarget';
 import { CountedRewardEditor, RewardValueEditor } from './RewardEditors';
 import { TraitOfferLauncher } from './TraitOfferEditor';
 import { PomResolutionLauncher } from './PomResolutionEditor';
@@ -43,7 +42,6 @@ export function RewardControlEditor({
   readonly offerSummaryMode?: 'offer' | 'source';
 }) {
   const executeIntent = useCommandIntent();
-  const findingTarget = useFindingTarget();
   const interaction =
     control.shopOption === undefined
       ? requireWorkspaceInteraction(
@@ -59,15 +57,6 @@ export function RewardControlEditor({
     <>
       {!showOffer ? null : control.shopOption !== undefined ? (
         <ShopOfferEditor control={control} interactions={interactions} label={label} />
-      ) : control.fixedOfferEdit !== undefined ? (
-        <button
-          className="quiet-action action-compact"
-          {...findingTarget(control.owner.address)}
-          onClick={() => onReplace(control.fixedOfferEdit!.offer)}
-          type="button"
-        >
-          {control.fixedOfferEdit.actionLabel}
-        </button>
       ) : control.kind === 'countedReward' ? (
         <CountedRewardEditor
           candidateOwner={control.owner}

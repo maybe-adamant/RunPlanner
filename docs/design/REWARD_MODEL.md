@@ -1072,8 +1072,14 @@ reads the latest successfully settled acquisition whose concrete declaration
 opts into last-reward replay, then creates one mandatory Echo-room acquisition
 from that exact recreation descriptor. A loot source owns a fresh offer and a
 consumable reuses its ordinary pickup path; replay does not synthesize a
-generic Boon, Pom, or consumable alias. Gold Gold Gold instead observes the
-equipped one-use Echo trait while folding a World Shop's authored order. Once
+generic Boon, Pom, or consumable alias. That fixed replay identity is effective
+without a separate authored confirmation. If earlier history changes it, the
+new identity replaces a retained stale payload in evaluation; its children
+start unresolved rather than carrying choices from a different reward. The
+first child edit atomically saves the current identity and its outcome. Only a
+replay source that cannot be agreed across branches blocks at this contact.
+Gold Gold Gold instead observes the equipped one-use Echo trait while folding
+a World Shop's authored order. Once
 the Shop kernel accepts the first paid non-`SpellDrop` source, Gold consumes
 the exact Echo acquisition and materializes the singleton free duplicate
 before that paid entry's acquisition roles run.

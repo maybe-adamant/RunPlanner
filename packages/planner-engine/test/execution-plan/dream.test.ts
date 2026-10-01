@@ -163,7 +163,7 @@ it('publishes the user-authored H Hera results and actual Echo Last Reward repla
   );
 });
 
-it('repairs a reloaded Echo replay entry and preserves Undo for the saved H route', () => {
+it('derives a reloaded stale Echo replay entry and preserves Undo for the saved H route', () => {
   const saved = loadDreamHeraArtificerEchoCheckpoint();
   const h = createBiomeAddress('Dream', 'H');
   const bridge = createOccurrenceAddress(
@@ -184,12 +184,8 @@ it('repairs a reloaded Echo replay entry and preserves Undo for the saved H rout
     catalog,
   );
   expect(reloaded).toEqual(edited.present);
-  expect(simulateProjectAssembly(catalog, reloaded).evaluation.findings).toContainEqual({
-    code: 'rewardSourceUnavailable',
-    severity: 'error',
-    phase: 'rewardGeneration',
-    origin: entry,
-    evidence: { reason: 'retainedSourceMismatch', rewardType: 'MaxManaDrop' },
-  });
+  expect(simulateProjectAssembly(catalog, reloaded).evaluation.findings).not.toContainEqual(
+    expect.objectContaining({ code: 'rewardSourceUnavailable', origin: entry }),
+  );
   expect(undoProjectHistory(edited).present).toBe(saved);
 });

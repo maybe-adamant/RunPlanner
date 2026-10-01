@@ -1,6 +1,8 @@
 import { catalog } from '@run-planner/hades2-catalog';
 import {
   applyProjectCommand,
+  parseEchoLastRewardPickupEntryKey,
+  semanticAddressKey,
   type ProjectDocument,
   type AuthoredTraitOffer,
   type AuthoredTraitOfferTraits,
@@ -10,6 +12,7 @@ import {
   simulateProjectAssembly,
   createPreparedProjectCandidateSession,
   levelResolutionCandidateForProjectEvaluationAssembly,
+  derivedAcquisitionEntriesForProjectEvaluationAssembly,
   type TraitAssessment,
   type SelectedTraitOfferAssessment,
 } from '@run-planner/engine/simulation';
@@ -177,11 +180,28 @@ export function authorLegalTraitOffers(project: ProjectDocument): ProjectDocumen
         const draft = session.traitOfferStartingOutcome(missing.origin, giver.key);
         if (draft === undefined) continue;
         try {
-          authored = applyProjectCommand(current, catalog, {
-            kind: 'ReplaceTraitOffer',
-            trait: missing.origin,
-            value: draft,
-          });
+          const owner = missing.origin.owner;
+          const replay =
+            owner.kind === 'acquisitionEntry' &&
+            parseEchoLastRewardPickupEntryKey(owner.entryKey) !== undefined
+              ? derivedAcquisitionEntriesForProjectEvaluationAssembly(assembly, owner.site).find(
+                  (entry) =>
+                    entry.kind === 'echoLastReward' &&
+                    semanticAddressKey(entry.address) === semanticAddressKey(owner),
+                )
+              : undefined;
+          authored = applyProjectCommand(
+            current,
+            catalog,
+            replay?.fixedReward === undefined || owner.kind !== 'acquisitionEntry'
+              ? { kind: 'ReplaceTraitOffer', trait: missing.origin, value: draft }
+              : {
+                  kind: 'EditEchoReplay',
+                  entry: owner,
+                  sourceOffer: replay.fixedReward.offer,
+                  edit: { kind: 'ReplaceTraitOffer', trait: missing.origin, value: draft },
+                },
+          );
           break;
         } catch {
           // The command is the authority for the one provider bound to this

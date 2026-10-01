@@ -193,14 +193,13 @@ export function assembleOccurrenceRewardLocal(
                 const echoCapability =
                   capability?.kind === 'echoLastReward' ? capability : undefined;
                 const fixedEchoOffer = echoCapability?.fixedReward?.offer;
-                const fixedOfferEdit =
-                  fixedEchoOffer === undefined ||
-                  (reward !== null && echoCapability?.retainedSourceMismatch !== true)
-                    ? undefined
-                    : Object.freeze({
-                        actionLabel: `${reward === null ? 'Set' : 'Update'} replay reward · ${summarizeRewardOffer(input.catalog, fixedEchoOffer)}`,
-                        offer: fixedEchoOffer,
-                      });
+                const derivedReplaySeed =
+                  fixedEchoOffer !== undefined &&
+                  (reward === null || echoCapability?.retainedSourceMismatch === true)
+                    ? fixedEchoOffer
+                    : undefined;
+                const effectiveReward =
+                  derivedReplaySeed === undefined ? reward : (echoCapability?.fixedReward ?? null);
                 const rewardTypes =
                   capability?.rewardTypes ??
                   (shopInventoryReward === null || shopInventoryReward === undefined
@@ -224,11 +223,11 @@ export function assembleOccurrenceRewardLocal(
                     input,
                     { kind: 'acquisitionEntry' as const, address: entry },
                     undefined,
-                    dormantPickup ? null : (reward?.offer ?? null),
-                    dormantPickup ? null : reward,
+                    dormantPickup ? null : (effectiveReward?.offer ?? null),
+                    dormantPickup ? null : effectiveReward,
                     rewardTypes,
-                    capability?.retainedSourceMismatch === true,
-                    fixedOfferEdit,
+                    capability?.retainedSourceMismatch === true && derivedReplaySeed === undefined,
+                    derivedReplaySeed,
                     structuralEchoKeys.has(key) || dormantPickup,
                   ) as WorkspaceExplicitRewardControl,
                 ];

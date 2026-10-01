@@ -20,6 +20,8 @@ import { applyKeepsakeCommand } from './keepsake';
 import { applyResourcePlacementCommand } from './resources';
 import type { ProjectCommand } from './types';
 import { createBiomeAddress } from '../addresses';
+import { semanticAddressKey } from '../addresses';
+import { parseEchoLastRewardPickupEntryKey } from '../acquisition/pickup-producers';
 import { resolveRoutePosition } from '../route-context';
 import { resolveEntryDeclaration } from '../room-state/entry-resolution';
 import { routeStartIncomingReward } from '../room-state/starting-reward';
@@ -139,6 +141,39 @@ function applyUnchecked(
   command: ProjectCommand,
 ): ProjectDocument {
   switch (command.kind) {
+    case 'EditEchoReplay': {
+      if (
+        command.entry.site.pointKey !== 'roomExit' ||
+        parseEchoLastRewardPickupEntryKey(command.entry.entryKey) === undefined
+      )
+        throw new ProjectCommandContractError(
+          command.kind,
+          command.entry,
+          'requires an Echo replay pickup entry',
+        );
+      const editOwner =
+        command.edit.kind === 'ReplaceLevelResolution'
+          ? command.edit.levelResolution.owner
+          : command.edit.kind === 'ReplaceAcquisitionDisposition' ||
+              command.edit.kind === 'ReplaceSeaStarResult'
+            ? command.edit.acquisition.owner
+            : command.edit.trait.owner;
+      if (
+        editOwner.kind !== 'acquisitionEntry' ||
+        semanticAddressKey(editOwner) !== semanticAddressKey(command.entry)
+      )
+        throw new ProjectCommandContractError(
+          command.kind,
+          command.entry,
+          'edit must belong to the same Echo replay entry',
+        );
+      const seeded = applyUnchecked(document, catalog, {
+        kind: 'ReplaceAcquisitionEntryOffer',
+        entry: command.entry,
+        value: command.sourceOffer,
+      });
+      return applyUnchecked(seeded, catalog, command.edit);
+    }
     case 'ReplaceResourcePlacement':
       return applyResourcePlacementCommand(document, catalog, command);
     case 'ReplaceFieldsSpatialPoint':

@@ -60,6 +60,8 @@ export interface AuthoredSiteSettlementInputs {
   readonly onlyEntry?: { readonly siteKey: string; readonly entryKey: string };
   readonly completeShopAfterOrder?: boolean;
   readonly activationOnly?: boolean;
+  /** Exact spawned replay identity carried to its later pickup contact. */
+  readonly derivedAcquisitionEntryCapability?: import('../../acquisition/artifacts').DerivedAcquisitionEntryCandidateCapability;
 }
 
 function contractFail(detail: string): never {
@@ -302,7 +304,7 @@ export function settleAuthoredAcquisitionSite(
         ? sourceBranches.map((branch) => branch.state.rewardHistory.lastRewardRecreation)
         : Object.freeze([]);
       const firstReplay = replaySources[0];
-      const agreedReplay =
+      const agreedReplayFromHistory =
         firstReplay !== undefined &&
         replaySources.length === sourceBranches.length &&
         replaySources.every(
@@ -310,12 +312,31 @@ export function settleAuthoredAcquisitionSite(
         )
           ? firstReplay
           : undefined;
-      const replaySourceMismatch =
-        echoReplay &&
-        (agreedReplay === undefined ||
-          (replayEntry !== undefined &&
-            replayEntry !== null &&
-            JSON.stringify(replayEntry.offer) !== JSON.stringify(agreedReplay.offer)));
+      const derivedReplayOffer =
+        inputs.derivedAcquisitionEntryCapability?.kind === 'echoLastReward'
+          ? inputs.derivedAcquisitionEntryCapability.fixedReward?.offer
+          : undefined;
+      const agreedReplay =
+        derivedReplayOffer === undefined
+          ? agreedReplayFromHistory
+          : Object.freeze({ offer: derivedReplayOffer });
+      const replaySourceMismatch = echoReplay && agreedReplay === undefined;
+      const retainedReplayMatches =
+        agreedReplay !== undefined &&
+        replayEntry !== undefined &&
+        replayEntry !== null &&
+        JSON.stringify(replayEntry.offer) === JSON.stringify(agreedReplay.offer);
+      // Echo's source is fixed by settled history. A missing or stale authored
+      // payload cannot change that source; its replacement starts unresolved.
+      const effectiveReplayEntry =
+        agreedReplay === undefined || retainedReplayMatches
+          ? replayEntry
+          : createUnresolvedAcquisitionRewardState(
+              catalog,
+              agreedReplay.offer,
+              { kind: 'producerLifecycle', key: 'EchoLastReward' },
+              room.origin.routeKey,
+            );
       const pickupFacts = (state: SimulationState) =>
         createBiomeRewardFacts({
           catalog,
@@ -337,10 +358,7 @@ export function settleAuthoredAcquisitionSite(
         const fixedReward = createUnresolvedAcquisitionRewardState(
           catalog,
           agreedReplay.offer,
-          {
-            kind: 'producerLifecycle',
-            key: 'EchoLastReward',
-          },
+          { kind: 'producerLifecycle', key: 'EchoLastReward' },
           room.origin.routeKey,
         );
         derivedEntryFrontiers.push(
@@ -365,14 +383,13 @@ export function settleAuthoredAcquisitionSite(
         addRewardFinding(
           targetFindings,
           rewardFinding('rewardSourceUnavailable', replayAddress, {
-            reason: agreedReplay === undefined ? 'branchDivergence' : 'retainedSourceMismatch',
-            ...(agreedReplay === undefined ? {} : { rewardType: agreedReplay.offer.rewardType }),
+            reason: 'branchDivergence',
           }),
           ownerRegion(replayAddress),
           findingChronology,
         );
       }
-      const pickupEntries = activationOnly
+      const authoredPickupEntries = activationOnly
         ? Object.freeze(
             Object.fromEntries(
               Object.entries(selectedSite.entries).filter(([key]) => requiredEntryKeys.has(key)),
@@ -383,6 +400,10 @@ export function settleAuthoredAcquisitionSite(
           : Object.freeze({
               [onlyEntry.entryKey]: selectedSite.entries[onlyEntry.entryKey] ?? null,
             });
+      const pickupEntries =
+        replayEntryKey === undefined || effectiveReplayEntry === undefined
+          ? authoredPickupEntries
+          : Object.freeze({ ...authoredPickupEntries, [replayEntryKey]: effectiveReplayEntry });
       const settled = settlePickupAcquisitionSite(catalog, sourceBranches, {
         siteOwner: room.origin,
         site: selectedSite.address,

@@ -31,11 +31,8 @@ interface WorkspaceRewardControlBase {
   readonly offerEditStartStep?: RewardPickerStep;
   /** Application-owned presentation fact; React does not infer identity authoring from offer shape. */
   readonly offerEditVisibility: 'hidden' | 'visible';
-  /** One exact engine-derived offer repair that replaces a misleading open-ended picker. */
-  readonly fixedOfferEdit?: {
-    readonly actionLabel: string;
-    readonly offer: ResolvedRewardOffer;
-  };
+  /** Echo's history-derived offer, seeded atomically with its first authored child edit. */
+  readonly derivedReplaySeed?: ResolvedRewardOffer;
   /** Engine-attested retained identity disagreement requiring a visible repair path. */
   readonly retainedSourceMismatch: boolean;
   /** Exact declaration-owned item identity for a materialized World Shop slot. */
