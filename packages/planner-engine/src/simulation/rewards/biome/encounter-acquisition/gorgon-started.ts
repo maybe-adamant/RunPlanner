@@ -14,6 +14,7 @@ import {
   gorgonSourceRarityOverride,
 } from '../../../keepsakes/encounter-effects';
 import { deriveBoonRarityLedger } from '../../../traits/rarity';
+import { ownerRegion } from '../../../finding-regions';
 import {
   boonRarityFactsForOffer,
   offerGenerationAdjustedGiverSource,
@@ -21,12 +22,14 @@ import {
 
 import type { RewardBranchState } from '../../branch-primitives';
 import type { GorgonPhaseCandidateSupport } from '../../model';
+import type { LifecycleFinding } from '../lifecycle-transitions/types';
 
 export interface GorgonStartedTransition {
   readonly branches: readonly RewardBranchState[];
   readonly candidate:
     { readonly key: string; readonly value: GorgonPhaseCandidateSupport } | undefined;
   readonly eligiblePhaseKey: string | undefined;
+  readonly findings: readonly LifecycleFinding[];
 }
 
 export function resolveGorgonCandidateRarity(inputs: {
@@ -84,6 +87,7 @@ export function applyGorgonStartedTransition(inputs: {
       branches: inputs.branches,
       candidate: undefined,
       eligiblePhaseKey: undefined,
+      findings: Object.freeze([]),
     });
   const status = attestGorgonBranchState(inputs.branches);
   const rarityLevel = attestPendingGorgonRarityLevel(inputs.branches);
@@ -130,11 +134,33 @@ export function applyGorgonStartedTransition(inputs: {
         : {}),
     }),
   });
-  if (
+  const naturalAthena =
     status === 'pending' &&
     effect?.kind === 'gorgonAmulet' &&
-    event.encounterKey === effect.naturalEncounterKey
-  )
+    event.encounterKey === effect.naturalEncounterKey;
+  const selected = room.encounters.gorgonResultByPhase?.[event.phaseKey]?.athenaTriggerConditionMet;
+  const findings: readonly LifecycleFinding[] =
+    // Native Athena expires the pending keepsake through its own encounter path.
+    selected === true && !supported && !naturalAthena && !inputs.evaluationBlocked
+      ? Object.freeze([
+          Object.freeze({
+            finding: Object.freeze({
+              code: 'gorgonConditionUnavailable' as const,
+              severity: 'error' as const,
+              phase: 'encounterResolution' as const,
+              origin,
+              evidence: Object.freeze({}),
+            }),
+            region: ownerRegion(origin),
+            chronology: Object.freeze({
+              kind: 'history' as const,
+              sequence: event.sequence,
+              boundary: 'at' as const,
+            }),
+          }),
+        ])
+      : Object.freeze([]);
+  if (naturalAthena)
     return Object.freeze({
       branches: Object.freeze(
         inputs.branches.map((branch) =>
@@ -149,6 +175,7 @@ export function applyGorgonStartedTransition(inputs: {
       ),
       candidate,
       eligiblePhaseKey: undefined,
+      findings,
     });
   const eligible = assessGorgonEligibility({
     status,
@@ -164,6 +191,7 @@ export function applyGorgonStartedTransition(inputs: {
   return Object.freeze({
     branches: inputs.branches,
     candidate,
+    findings,
     eligiblePhaseKey:
       eligible && !inputs.evaluationBlocked
         ? `${semanticAddressKey(event.origin)}::${event.phaseKey}`

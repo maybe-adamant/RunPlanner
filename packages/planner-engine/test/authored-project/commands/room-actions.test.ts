@@ -918,6 +918,15 @@ describe('room-action commands', () => {
     expect(gorgonHistory.past).toHaveLength(1);
     expect(combatOccurrence(gorgonHistory.present).roomActions.order).toContainEqual(gorgon);
     expect(undoProjectHistory(gorgonHistory).present).toBe(combat);
+    const clearedGorgon = applyProjectCommand(gorgonHistory.present, catalog, {
+      kind: 'ReplaceGorgonDeathDefianceCondition',
+      phase,
+      value: false,
+    });
+    expect(combatOccurrence(clearedGorgon).roomActions.order).not.toContainEqual(gorgon);
+    expect(combatOccurrence(clearedGorgon).encounters.gorgonResultByPhase?.Encounter).toMatchObject(
+      { athenaTriggerConditionMet: false },
+    );
   });
 
   it('keeps optional non-Shop and stale rows explicitly removable', () => {

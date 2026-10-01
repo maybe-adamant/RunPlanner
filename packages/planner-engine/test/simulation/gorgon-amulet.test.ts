@@ -969,6 +969,19 @@ describe('Gorgon Amulet lifecycle', () => {
     expect(
       encounterPhaseGorgonSupportForProjectEvaluationAssembly(noGorgon, phase)?.supported,
     ).toBe(false);
+    const unsupported = assembled(
+      applyProjectCommand(createCompleteRepresentativeNOPProject(), catalog, {
+        kind: 'ReplaceGorgonDeathDefianceCondition',
+        phase,
+        value: true,
+      }),
+    );
+    const unsupportedP = unsupported.evaluation.route.biomes.find(
+      (biome) => biome.biomeKey === 'P',
+    );
+    expect(unsupportedP?.findings).toContainEqual(
+      expect.objectContaining({ code: 'gorgonConditionUnavailable', origin: phase }),
+    );
 
     let pendingProject = applyProjectCommand(createCompleteRepresentativeNOPProject(), catalog, {
       kind: 'ReplaceStartingKeepsake',

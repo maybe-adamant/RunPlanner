@@ -843,8 +843,7 @@ export function activeEncounterPhasesForOwner(
       authoredGorgonResult === undefined && gorgonSupported
         ? { athenaTriggerConditionMet: false as const }
         : authoredGorgonResult;
-    const retainedGorgon =
-      gorgonResult?.athenaTriggerConditionMet === true || gorgonResult?.athenaOffer !== undefined;
+    const retainedGorgon = gorgonResult?.athenaTriggerConditionMet === true;
     const fieldsPassive =
       room.mode.kind === 'authored' &&
       room.mode.templateKey === 'FieldsCombat' &&

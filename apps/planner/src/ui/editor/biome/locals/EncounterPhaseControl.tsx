@@ -355,7 +355,10 @@ export function CustomizableEncounterPhaseControl({
         semanticOwnerControlElementId(phase.address),
         phase.address,
         (finding) =>
-          !isCompositionFinding(finding) && finding.code !== 'aetosAppearanceUnavailable',
+          !isCompositionFinding(finding) &&
+          finding.code !== 'aetosAppearanceUnavailable' &&
+          finding.code !== 'figLeafSkipUnavailable' &&
+          finding.code !== 'gorgonConditionUnavailable',
       )}
       id={semanticOwnerControlElementId(phase.address)}
       label="Encounter"
@@ -414,6 +417,12 @@ export function EncounterPhaseControl({
     figLeafInteraction === undefined ? null : (
       <label className="encounter-event-control">
         <input
+          {...findingTarget(
+            phase.address,
+            `fig-leaf-${semanticOwnerControlElementId(phase.address)}`,
+            phase.address,
+            (finding) => finding.code === 'figLeafSkipUnavailable',
+          )}
           checked={figLeafInteraction.selected}
           disabled={!figLeafInteraction.supported && !figLeafInteraction.selected}
           onChange={(event) => executeIntent(figLeafInteraction.intentFor(event.target.checked))}
@@ -433,6 +442,12 @@ export function EncounterPhaseControl({
     gorgonInteraction === undefined ? null : (
       <label className="encounter-event-control">
         <input
+          {...findingTarget(
+            phase.address,
+            `gorgon-${semanticOwnerControlElementId(phase.address)}`,
+            phase.address,
+            (finding) => finding.code === 'gorgonConditionUnavailable',
+          )}
           checked={gorgonInteraction.selected}
           disabled={!gorgonInteraction.supported && !gorgonInteraction.selected}
           onChange={(event) => executeIntent(gorgonInteraction.intentFor(event.target.checked))}
@@ -526,7 +541,10 @@ export function EncounterPhaseControl({
               undefined,
               phase.address,
               (finding) =>
-                !isCompositionFinding(finding) && finding.code !== 'aetosAppearanceUnavailable',
+                !isCompositionFinding(finding) &&
+                finding.code !== 'aetosAppearanceUnavailable' &&
+                finding.code !== 'figLeafSkipUnavailable' &&
+                finding.code !== 'gorgonConditionUnavailable',
             ),
             tabIndex: -1,
           }

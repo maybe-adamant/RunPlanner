@@ -350,6 +350,10 @@ const findingCopy = {
   figLeafSkipUnavailable: {
     title: 'Fig Leaf skip unavailable',
   },
+  gorgonConditionUnavailable: {
+    title: 'Gorgon cannot trigger',
+    description: 'Change the setup or clear this condition.',
+  },
   aetosAppearanceUnavailable: {
     title: 'Aetos appearance unavailable',
     description:
