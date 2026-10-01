@@ -1226,13 +1226,15 @@ export function activeEncounterPhasesForOwner(
                 : domain.slotKey
             : domain.slotKey,
         marker: input.markerDestinations.marker(address),
-        timelineAnchor:
-          fieldsPassive ||
-          (customizable &&
-            selectedDefinition !== undefined &&
-            !isCombatBearingEncounterPhaseKind(selectedDefinition.kind))
-            ? 'roomEntered'
-            : 'encounterStart',
+        editorAnchor:
+          fieldsPassive && nemesisEvent === undefined
+            ? 'overview'
+            : fieldsPassive ||
+                (customizable &&
+                  selectedDefinition !== undefined &&
+                  !isCombatBearingEncounterPhaseKind(selectedDefinition.kind))
+              ? 'roomEntered'
+              : 'encounterStart',
         ...(aetosWave !== undefined || (aetosSupport?.waves.length ?? 0) > 0
           ? {
               aetos: Object.freeze({

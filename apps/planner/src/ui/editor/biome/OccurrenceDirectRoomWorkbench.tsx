@@ -211,10 +211,21 @@ export function DirectRoomWorkbench({
       if (view === 'overview') {
         return (
           <>
+            {renderEncounterStructure(
+              workbench.encounterPhases
+                .filter((phase) => phase.editorAnchor === 'overview')
+                .map((phase) => (
+                  <EncounterPhaseControl
+                    key={phase.address.phaseKey}
+                    idPrefix={idPrefix}
+                    interactions={interactions}
+                    phase={phase}
+                  />
+                )),
+            )}
             {renderFeatures()}
             {renderSideRooms()}
             <FieldsWorkbench interactions={interactions} room={workbench.fields} />
-            {renderEncounterStructure()}
           </>
         );
       }

@@ -722,10 +722,11 @@ export function assembleWorkspaceOccurrence(
       input.markerDestinations.redirectTo(phase.nemesisEvent.marker, phase.marker, node.key);
     }
     const phaseTab = roomTabForPhase(roomLocal, phase.address.phaseKey);
-    // An uncustomized Fields Passive selection is repaired by its Overview room-feature control.
+    // Passive combat is configured in Overview; Nemesis selection retains its checkbox there.
     input.markerDestinations.setRoomTab(
       [phase.marker],
-      phase.nemesisFeature !== undefined && phase.customization === undefined
+      phase.editorAnchor === 'overview' ||
+        (phase.nemesisFeature !== undefined && phase.customization === undefined)
         ? 'overview'
         : phaseTab,
     );
