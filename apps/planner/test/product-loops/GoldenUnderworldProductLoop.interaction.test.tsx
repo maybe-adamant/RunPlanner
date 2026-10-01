@@ -239,7 +239,7 @@ describe('underworld product loop', () => {
     expect(document.body.textContent).not.toContain('Linear topology');
   });
 
-  it('repairs the selected stale Echo replay issue and advances to the next repair', async () => {
+  it('shows the current Echo replay without replacing a retained stale outcome', async () => {
     const application = createApplication();
     const bridgeId = createOccurrenceId('golden-h-bridge01');
     const combat09 = createOccurrenceId('golden-h-combat09');
@@ -311,60 +311,72 @@ describe('underworld product loop', () => {
         finding.code === 'rewardSourceUnavailable' &&
         semanticAddressKey(finding.origin) === semanticAddressKey(replayEntry),
     );
-    if (staleFinding === undefined) throw new Error('stale Echo replay finding is missing');
-    const issue = currentEvaluation(application).issue;
-    if (
-      issue === undefined ||
-      semanticAddressKey(issue.owner) !== semanticAddressKey(replayEntry)
-    ) {
-      throw new Error('stale Echo replay must be the selected assessment issue');
-    }
+    expect(staleFinding).toBeUndefined();
     const rewardInteraction = application
       .selectStructuredWorkspace(application.store.getState())!
       .interactions.rewards.get(semanticAddressKey(replayEntry));
     if (rewardInteraction === undefined) throw new Error('Echo replay interaction is missing');
-    expect(rewardInteraction).toMatchObject({ selected: { rewardType: 'WeaponUpgrade' } });
     const repairRewardType = rewardInteraction.authoredRewardTypes[0];
     if (repairRewardType === undefined) throw new Error('Echo replay has no repair reward');
+    expect(rewardInteraction).toMatchObject({ selected: { rewardType: repairRewardType } });
+    const destination = application
+      .selectStructuredWorkspace(application.store.getState())!
+      .focusByOwner.get(semanticAddressKey(replayEntry));
+    expect(destination).toBeDefined();
     const view = renderPlannerForInteraction({ application });
-    const repair = screen.getByRole('heading', { name: 'Next repair' }).closest('section');
-    if (repair === null) throw new Error('selected repair banner is missing');
-    await view.user.click(within(repair).getByRole('button'));
-
-    expect(application.store.getState().editorSession.selectedFinding).toMatchObject({
-      key: issue.regionKey,
-      origin: issue.owner,
+    act(() => {
+      application.store.dispatch(
+        routePanelSelected({ routeKey: 'Underworld', panel: { kind: 'biome', biomeKey: 'H' } }),
+      );
+      application.store.dispatch(semanticOwnerFocused(replayEntry));
     });
-    expect(application.store.getState().editorSession.focusedSemanticOwner).toEqual(replayEntry);
-    expect(application.store.getState().editorSession.activePanel).toEqual({
-      kind: 'biome',
-      biomeKey: 'H',
+    await view.user.click(await screen.findByRole('tab', { name: 'Room Timeline' }));
+    const replayRow = await waitFor(() => {
+      const row = document.getElementById(semanticOwnerControlElementId(replayEntry));
+      expect(row).toBeTruthy();
+      return row;
     });
-    const replayRow = document.getElementById(semanticOwnerControlElementId(replayEntry));
     if (!(replayRow instanceof HTMLElement))
       throw new Error('focused Echo Room Action row is missing');
-    expect(replayRow.textContent).toBe(
-      `Update replay reward · ${rewardInteraction.summary({ rewardType: repairRewardType })}`,
+    const actionRow = replayRow.closest('[data-room-action-key]');
+    expect(actionRow?.textContent).toContain(
+      rewardInteraction.summary({ rewardType: repairRewardType }),
     );
-    await view.user.click(replayRow);
+    expect(actionRow?.textContent).not.toMatch(/Set replay reward|Update replay reward/);
 
     const authoredOccurrence = () =>
       currentProject(application)
         .route.biomes.find((biome) => biome.biomeKey === 'H')
         ?.topology?.occurrences.find((occurrence) => occurrence.occurrenceId === bridgeId);
-    await waitFor(() => {
-      expect(authoredOccurrence()?.roomActions.order).toEqual(roomActionOrderBefore);
-      expect(authoredOccurrence()?.acquisitionSites?.roomExit).toMatchObject({
-        pickupEntries: { [replayKey]: { offer: { rewardType: repairRewardType } } },
-      });
+    expect(authoredOccurrence()?.roomActions.order).toEqual(roomActionOrderBefore);
+    expect(authoredOccurrence()?.acquisitionSites?.roomExit).toMatchObject({
+      pickupEntries: { [replayKey]: { offer: { rewardType: 'WeaponUpgrade' } } },
     });
     expect(
       currentEvaluation(application).findings.some(
         (finding) => semanticAddressKey(finding.origin) === semanticAddressKey(replayEntry),
       ),
     ).toBe(false);
-    expect(currentEvaluation(application).issue?.regionKey).not.toBe(issue.regionKey);
-
+    const replayTrait = createTraitOfferAddress(replayEntry, 'self');
+    const traitInteraction = application
+      .selectStructuredWorkspace(application.store.getState())!
+      .interactions.traitOffers.get(semanticAddressKey(replayTrait));
+    const draft = traitInteraction?.traitOfferStartingOutcome?.();
+    if (traitInteraction === undefined || draft === undefined)
+      throw new Error('derived Echo replay trait editor is missing');
+    const firstEdit = traitInteraction.intentFor(draft);
+    expect(firstEdit.command.kind).toBe('EditEchoReplay');
+    const historyBefore = currentWorkspace(application).history.past.length;
+    act(() => application.store.dispatch(authoredProjectCommandDispatched(firstEdit.command)));
+    expect(currentWorkspace(application).history.past).toHaveLength(historyBefore + 1);
+    expect(authoredOccurrence()?.acquisitionSites?.roomExit).toMatchObject({
+      pickupEntries: {
+        [replayKey]: {
+          offer: { rewardType: repairRewardType },
+          traitOffersByAcquisitionRole: { self: draft },
+        },
+      },
+    });
     act(() => application.store.dispatch(authoredProjectUndoRequested()));
     expect(authoredOccurrence()?.acquisitionSites?.roomExit).toMatchObject({
       pickupEntries: { [replayKey]: { offer: { rewardType: 'WeaponUpgrade' } } },

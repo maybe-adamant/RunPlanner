@@ -765,6 +765,9 @@ export function applyAcquisitionPointReachedTransition(
     authoredSeaStarDuplicateSiteKeys,
     ...(onlyEntry === undefined ? {} : { onlyEntry }),
     completeShopAfterOrder,
+    ...(inputs.derivedAcquisitionEntryCapability === undefined
+      ? {}
+      : { derivedAcquisitionEntryCapability: inputs.derivedAcquisitionEntryCapability }),
   });
   return transitionResult({
     branches: authoredSiteSettlement.branches,

@@ -60,11 +60,13 @@ export interface WorkspaceAcquisitionConversionInteraction {
   readonly intentFor: (
     value: import('@run-planner/engine/authored-project').AcquisitionDisposition,
   ) => WorkspacePayloadEditIntent<
-    Extract<ProjectCommand, { readonly kind: 'ReplaceAcquisitionDisposition' }>
+    Extract<ProjectCommand, { readonly kind: 'ReplaceAcquisitionDisposition' | 'EditEchoReplay' }>
   >;
   readonly seaStarIntentFor: (
     procced: boolean,
-  ) => WorkspaceCommandIntent<Extract<ProjectCommand, { readonly kind: 'ReplaceSeaStarResult' }>>;
+  ) => WorkspaceCommandIntent<
+    Extract<ProjectCommand, { readonly kind: 'ReplaceSeaStarResult' | 'EditEchoReplay' }>
+  >;
   readonly key: string;
   readonly owner: AcquisitionRoleAddress;
   readonly value: import('@run-planner/engine/authored-project').AcquisitionDisposition;
@@ -457,7 +459,10 @@ export interface WorkspaceTraitOfferInteraction {
       ProjectCommand,
       {
         readonly kind:
-          'ReplaceTraitOffer' | 'ReplaceGorgonAthenaOffer' | 'ReplaceAcquisitionDisposition';
+          | 'ReplaceTraitOffer'
+          | 'ReplaceGorgonAthenaOffer'
+          | 'ReplaceAcquisitionDisposition'
+          | 'EditEchoReplay';
       }
     >
   >;
@@ -488,7 +493,9 @@ export interface WorkspaceTraitOfferInteraction {
   ) => WorkspacePayloadEditIntent<
     Extract<
       ProjectCommand,
-      { readonly kind: 'ReplaceTraitSelection' | 'ReplaceAcquisitionDisposition' }
+      {
+        readonly kind: 'ReplaceTraitSelection' | 'ReplaceAcquisitionDisposition' | 'EditEchoReplay';
+      }
     >
   >;
   readonly value: AuthoredTraitOffer | null;
@@ -563,12 +570,13 @@ export interface WorkspaceLevelResolutionInteraction {
   readonly acquisitionRoleLabel: string;
   /** Whether the Pom's candidate context is reached; only then can its editor open. */
   readonly contextReached: boolean;
-  readonly intentFor: (
-    value: AuthoredLevelResolution,
-  ) => WorkspacePayloadEditIntent<
+  readonly intentFor: (value: AuthoredLevelResolution) => WorkspacePayloadEditIntent<
     Extract<
       ProjectCommand,
-      { readonly kind: 'ReplaceLevelResolution' | 'ReplaceAcquisitionDisposition' }
+      {
+        readonly kind:
+          'ReplaceLevelResolution' | 'ReplaceAcquisitionDisposition' | 'EditEchoReplay';
+      }
     >
   >;
   readonly key: string;

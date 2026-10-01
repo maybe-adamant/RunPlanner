@@ -5,6 +5,7 @@ import {
   type WorkspaceRoomActionRow,
 } from '@planner/projections/structured-workspace';
 import { RewardControlEditor } from '../rewards/RewardControlEditor';
+import { useFindingTarget } from '@planner/ui/feedback/useFindingTarget';
 
 /** Acquisition, conversion, and Artificer-output presentation for one action. */
 export function RoomActionAcquisitionRow({
@@ -16,6 +17,7 @@ export function RoomActionAcquisitionRow({
   readonly row: WorkspaceRoomActionRow;
   readonly interactions: WorkspaceInteractionCatalog;
 }) {
+  const findingTarget = useFindingTarget();
   const payload = row.rewardPayload;
   if (payload === undefined) return null;
   const showOffer = payload.showOffer && !hideOffer;
@@ -31,7 +33,15 @@ export function RoomActionAcquisitionRow({
     ) ||
     row.artificerOutput !== undefined;
   return (
-    <div className="acquisition-entry-resolution" data-empty={!visible || undefined}>
+    <div
+      className="acquisition-entry-resolution"
+      data-empty={!visible || undefined}
+      {...(payload.control.owner.kind === 'acquisitionEntry' &&
+      payload.control.offerEditVisibility === 'hidden'
+        ? findingTarget(payload.control.owner.address)
+        : {})}
+      tabIndex={-1}
+    >
       <div className="room-action-outcome-controls">
         <RewardControlEditor
           control={payload.control}

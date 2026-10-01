@@ -7,6 +7,8 @@ import type {
 } from '../contracts/traits';
 import {
   semanticAddressKey,
+  type AcquisitionEntryAddress,
+  type ProjectCommand,
   type JudgmentArcanaAddress,
   type FigurineArcanaAddress,
   type KeepsakeSelectionAddress,
@@ -24,6 +26,7 @@ import { bindResolutionInteractions } from './resolution-interactions';
 import { bindShopOfferInteractions } from './shop-offer-interactions';
 
 import { workspaceInteractionKey } from '../contract';
+import type { WorkspaceCommandIntent } from '../contract';
 import type {
   WorkspaceKeepsakeSelectionInteraction,
   WorkspaceKeepsakeEquipResultInteraction,
@@ -55,6 +58,47 @@ export interface WorkspaceRewardChildInteractionCatalog {
   readonly figurineArcana: ReadonlyMap<string, WorkspaceFigurineArcanaInteraction>;
   readonly keepsakeSelections: ReadonlyMap<string, WorkspaceKeepsakeSelectionInteraction>;
   readonly keepsakeEquipResults: ReadonlyMap<string, WorkspaceKeepsakeEquipResultInteraction>;
+}
+
+type EchoChildEdit = Extract<
+  ProjectCommand,
+  {
+    readonly kind:
+      | 'ReplaceTraitOffer'
+      | 'ResetEncounterTraitOffer'
+      | 'ReplaceGorgonAthenaOffer'
+      | 'ReplaceTraitSelection'
+      | 'ReplaceConcaveStoneResult'
+      | 'ReplaceLevelResolution'
+      | 'ReplaceAcquisitionDisposition'
+      | 'ReplaceSeaStarResult';
+  }
+>;
+
+function withDerivedEchoSeed<
+  Edit extends EchoChildEdit | Extract<ProjectCommand, { readonly kind: 'EditEchoReplay' }>,
+>(
+  intent: WorkspaceCommandIntent<Edit>,
+  owner: AcquisitionEntryAddress | undefined,
+  replaySeeds: ReadonlyMap<
+    string,
+    {
+      readonly entry: AcquisitionEntryAddress;
+      readonly offer: import('@run-planner/engine/reward-kernel').ResolvedRewardOffer;
+    }
+  >,
+): WorkspaceCommandIntent<Edit | Extract<ProjectCommand, { readonly kind: 'EditEchoReplay' }>> {
+  const seed = owner === undefined ? undefined : replaySeeds.get(semanticAddressKey(owner));
+  if (seed === undefined || intent.command.kind === 'EditEchoReplay') return intent;
+  return Object.freeze({
+    ...intent,
+    command: Object.freeze({
+      kind: 'EditEchoReplay' as const,
+      entry: seed.entry,
+      sourceOffer: seed.offer,
+      edit: intent.command as EchoChildEdit,
+    }),
+  });
 }
 
 export function bindRewardChildInteractions(input: {
@@ -139,7 +183,19 @@ export function bindRewardChildInteractions(input: {
   const effectiveSteadyGrowthControls = new Map(steadyGrowthControls ?? []);
   const effectiveTranscendentEmbryoControls = new Map(transcendentEmbryoControls ?? []);
   const effectiveFountainRarityControls = new Map(fountainRarityControls ?? []);
+  const replaySeeds = new Map<
+    string,
+    {
+      readonly entry: AcquisitionEntryAddress;
+      readonly offer: import('@run-planner/engine/reward-kernel').ResolvedRewardOffer;
+    }
+  >();
   for (const control of rewardControls.values()) {
+    if (control.owner.kind === 'acquisitionEntry' && control.derivedReplaySeed !== undefined)
+      replaySeeds.set(
+        semanticAddressKey(control.owner.address),
+        Object.freeze({ entry: control.owner.address, offer: control.derivedReplaySeed }),
+      );
     for (const trait of control.traitOffers ?? [])
       effectiveTraitControls.set(workspaceInteractionKey(trait.address), trait);
     for (const level of control.levelResolutions ?? [])
@@ -161,7 +217,7 @@ export function bindRewardChildInteractions(input: {
     rewardControls,
   });
 
-  const acquisitionConversions = bindAcquisitionConversionInteractions({
+  const baseAcquisitionConversions = bindAcquisitionConversionInteractions({
     catalog,
     candidates,
     project,
@@ -169,7 +225,7 @@ export function bindRewardChildInteractions(input: {
     evaluatedConversions,
   });
 
-  const traitOffers = bindTraitOfferInteractions({
+  const baseTraitOffers = bindTraitOfferInteractions({
     catalog,
     candidates,
     showPersephoneBonus:
@@ -179,7 +235,7 @@ export function bindRewardChildInteractions(input: {
     traitDomain,
   });
   const {
-    levelResolutions,
+    levelResolutions: baseLevelResolutions,
     steadyGrowth,
     transcendentEmbryo,
     fountainRarity,
@@ -200,6 +256,53 @@ export function bindRewardChildInteractions(input: {
     ...(keepsakeSelectionControls === undefined ? {} : { keepsakeSelectionControls }),
     ...(keepsakeEquipResultControls === undefined ? {} : { keepsakeEquipResultControls }),
   });
+
+  const acquisitionConversions = new Map(
+    [...baseAcquisitionConversions].map(([key, interaction]) => {
+      const owner = interaction.owner.owner;
+      const entry = owner.kind === 'acquisitionEntry' ? owner : undefined;
+      return [
+        key,
+        Object.freeze({
+          ...interaction,
+          intentFor: (value: Parameters<typeof interaction.intentFor>[0]) =>
+            withDerivedEchoSeed(interaction.intentFor(value), entry, replaySeeds),
+          seaStarIntentFor: (procced: boolean) =>
+            withDerivedEchoSeed(interaction.seaStarIntentFor(procced), entry, replaySeeds),
+        }),
+      ] as const;
+    }),
+  );
+  const traitOffers = new Map(
+    [...baseTraitOffers].map(([key, interaction]) => {
+      const owner = interaction.owner.owner;
+      const entry = owner.kind === 'acquisitionEntry' ? owner : undefined;
+      return [
+        key,
+        Object.freeze({
+          ...interaction,
+          intentFor: (value: Parameters<typeof interaction.intentFor>[0]) =>
+            withDerivedEchoSeed(interaction.intentFor(value), entry, replaySeeds),
+          selectedIntent: (optionKey: Parameters<typeof interaction.selectedIntent>[0]) =>
+            withDerivedEchoSeed(interaction.selectedIntent(optionKey), entry, replaySeeds),
+        }),
+      ] as const;
+    }),
+  );
+  const levelResolutions = new Map(
+    [...baseLevelResolutions].map(([key, interaction]) => {
+      const owner = interaction.owner.owner;
+      const entry = owner.kind === 'acquisitionEntry' ? owner : undefined;
+      return [
+        key,
+        Object.freeze({
+          ...interaction,
+          intentFor: (value: Parameters<typeof interaction.intentFor>[0]) =>
+            withDerivedEchoSeed(interaction.intentFor(value), entry, replaySeeds),
+        }),
+      ] as const;
+    }),
+  );
 
   return Object.freeze({
     rewards,

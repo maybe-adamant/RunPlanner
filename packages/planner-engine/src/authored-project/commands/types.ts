@@ -626,6 +626,18 @@ export type SeaStarResultCommand = {
   readonly procced: boolean;
 };
 
+/** One first Echo outcome edit, atomically replacing a missing or stale replay payload. */
+export type EditEchoReplayCommand = {
+  readonly kind: 'EditEchoReplay';
+  readonly entry: AcquisitionEntryAddress;
+  readonly sourceOffer: ResolvedRewardOffer;
+  readonly edit:
+    | TraitOfferCommand
+    | LevelResolutionCommand
+    | AcquisitionDispositionCommand
+    | SeaStarResultCommand;
+};
+
 /** One payload edit whose acquisition-entry default may not be persisted yet. */
 export type OccurrenceLeafCommand =
   | IncomingRewardCommand
@@ -662,7 +674,8 @@ export type ProjectCommand =
   | TraitOfferCommand
   | LevelResolutionCommand
   | AcquisitionDispositionCommand
-  | SeaStarResultCommand;
+  | SeaStarResultCommand
+  | EditEchoReplayCommand;
 
 export type BiomeOwnedProjectCommand = Exclude<
   ProjectCommand,

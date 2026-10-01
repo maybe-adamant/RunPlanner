@@ -2534,7 +2534,7 @@ describe('Echo Gate C Reward Reward Reward', () => {
     );
   });
 
-  it('retains a stale generated pickup at its exact entry and repairs changed history', () => {
+  it('projects changed Echo history over a retained stale pickup', () => {
     let project = selectGoldenBridge();
     project = applyProjectCommand(project, catalog, {
       kind: 'ReplaceTraitOffer',
@@ -2552,9 +2552,16 @@ describe('Echo Gate C Reward Reward Reward', () => {
     const h = stale.evaluation.route!.biomes.find((biome) => biome.biomeKey === 'H')!;
     if (!('rewards' in h)) throw new Error('H must be evaluated');
     const replayEntry = echoReplayEntry();
-    expect(h.findings).toContainEqual(
+    expect(h.findings).not.toContainEqual(
       expect.objectContaining({ code: 'rewardSourceUnavailable', origin: replayEntry }),
     );
+    const authoredBridge = project.route.biomes
+      .find((biome) => biome.biomeKey === 'H')
+      ?.topology?.occurrences.find((occurrence) => occurrence.occurrenceId === bridgeId);
+    expect(
+      authoredBridge?.acquisitionSites?.roomExit?.pickupEntries?.[replayEntry.entryKey]?.offer
+        ?.rewardType,
+    ).toBe('WeaponUpgrade');
     expect(
       derivedAcquisitionEntriesForProjectEvaluationAssembly(stale, replayEntry.site),
     ).toContainEqual(
@@ -2565,21 +2572,6 @@ describe('Echo Gate C Reward Reward Reward', () => {
         rewardTypes: [replacement.rewardType],
       }),
     );
-    const staleSession = createPreparedProjectCandidateSession(catalog, stale);
-    expect(
-      staleSession.evaluate({
-        kind: 'acquisitionEntryOffer',
-        entry: replayEntry,
-        value: { rewardType: replacement.rewardType },
-      }),
-    ).toMatchObject({ kind: 'acquisitionEntryOffer', result: { supported: true } });
-    expect(
-      staleSession.evaluate({
-        kind: 'acquisitionEntryOffer',
-        entry: replayEntry,
-        value: { rewardType: 'WeaponUpgrade' },
-      }),
-    ).toMatchObject({ kind: 'acquisitionEntryOffer', result: { supported: false } });
     project = applyProjectCommand(project, catalog, {
       kind: 'ReplaceAcquisitionEntryOffer',
       entry: replayEntry,
@@ -2895,31 +2887,39 @@ describe('Echo Gate C Reward Reward Reward', () => {
     });
     project = placeCombat09Cage2Last(project);
     project = makeBridgeOutgoingEligible(project);
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceAcquisitionEntryOffer',
+      entry: echoReplayEntry(),
+      value: { rewardType: 'MaxHealthDrop' },
+    });
     const incomplete = simulateProjectAssembly(catalog, project);
     const incompleteH = incomplete.evaluation.route!.biomes.find(
       (biome) => biome.biomeKey === 'H',
     )!;
     if (!('rewards' in incompleteH)) throw new Error('H must be evaluated');
     const replayEntry = echoReplayEntry();
-    expect(incompleteH.findings).toContainEqual(
+    expect(incompleteH.findings).not.toContainEqual(
       expect.objectContaining({ code: 'rewardMissing', origin: replayEntry }),
     );
-
-    project = applyProjectCommand(project, catalog, {
-      kind: 'ReplaceAcquisitionEntryOffer',
-      entry: replayEntry,
-      value: { rewardType: 'WeaponUpgrade' },
-    });
     const replayTrait = createTraitOfferAddress(replayEntry, 'self');
+    expect(
+      derivedAcquisitionEntriesForProjectEvaluationAssembly(incomplete, replayEntry.site).find(
+        (entry) => entry.kind === 'echoLastReward',
+      )?.fixedReward?.offer.rewardType,
+    ).toBe('WeaponUpgrade');
+    expect(incompleteH.findings).toContainEqual(
+      expect.objectContaining({ code: 'traitOfferMissing', origin: replayTrait }),
+    );
     const replayDraft = createPreparedProjectCandidateSession(
       catalog,
       simulateProjectAssembly(catalog, project),
     ).traitOfferStartingOutcome(replayTrait, 'WeaponUpgrade');
     if (replayDraft === undefined) throw new Error('Fresh Hammer replay offer is missing');
     project = applyProjectCommand(project, catalog, {
-      kind: 'ReplaceTraitOffer',
-      trait: replayTrait,
-      value: replayDraft,
+      kind: 'EditEchoReplay',
+      entry: replayEntry,
+      sourceOffer: { rewardType: 'WeaponUpgrade' },
+      edit: { kind: 'ReplaceTraitOffer', trait: replayTrait, value: replayDraft },
     });
     const decoded = decodeProjectDocument(JSON.parse(encodeProjectDocument(project)), catalog);
     expect(decoded).toEqual(project);
