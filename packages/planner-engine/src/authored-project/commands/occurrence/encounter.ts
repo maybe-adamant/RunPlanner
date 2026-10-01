@@ -600,15 +600,22 @@ function replaceTopLevel(
   // lifecycle entirely. Remove the now-stale interaction from persisted room
   // chronology; selecting another encounter lets normal action reconciliation
   // restore any declaration-required incoming action.
-  const roomActions = suppressesIncomingReward
-    ? Object.freeze({
-        order: Object.freeze(
-          withEventSite.roomActions.order.filter(
-            (reference) => reference.kind !== 'interactIncomingReward',
+  const retractGorgonAction =
+    command.kind === 'ReplaceGorgonDeathDefianceCondition' && command.value === false;
+  const roomActions =
+    suppressesIncomingReward || retractGorgonAction
+      ? Object.freeze({
+          order: Object.freeze(
+            withEventSite.roomActions.order.filter(
+              (reference) =>
+                (!suppressesIncomingReward || reference.kind !== 'interactIncomingReward') &&
+                (!retractGorgonAction ||
+                  reference.kind !== 'interactGorgon' ||
+                  reference.phaseKey !== phase.phaseKey),
+            ),
           ),
-        ),
-      })
-    : withEventSite.roomActions;
+        })
+      : withEventSite.roomActions;
   return updateOccurrenceTopology(
     document,
     located,

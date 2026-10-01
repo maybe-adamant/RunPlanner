@@ -459,6 +459,8 @@ function findingExplanation(catalog: Catalog, finding: SemanticFinding): Candida
         kind: 'encounter',
         message: 'Fig Leaf cannot skip another combat in this biome or has no uses left.',
       };
+    case 'gorgonConditionUnavailable':
+      return { kind: 'encounter', message: 'Gorgon cannot trigger in this encounter.' };
     case 'aetosAppearanceUnavailable':
       return { kind: 'encounter', message: 'Repair or remove this Aetos appearance in Events.' };
     case 'fieldsCageOutcomeUnavailable':

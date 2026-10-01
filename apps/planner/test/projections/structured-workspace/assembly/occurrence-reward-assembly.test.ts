@@ -289,6 +289,24 @@ describe('structured workspace reward assembly', () => {
     expect(retained.gorgonAthena.offer.options.every((option) => option.rarity === undefined)).toBe(
       true,
     );
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceGorgonDeathDefianceCondition',
+      phase,
+      value: false,
+    });
+    engineAssembly = simulateProjectAssembly(catalog, project);
+    const cleared = assemble(
+      project,
+      'Surface',
+      'P',
+      pOccurrenceId('P_Combat12', 8, 1),
+      (candidate) =>
+        encounterPhaseGorgonSupportForProjectEvaluationAssembly(engineAssembly, candidate),
+    ).assembly.node.room.encounterPhases.find(
+      (candidate) => candidate.address.phaseKey === 'Combat',
+    );
+    expect(cleared?.gorgonCondition).toBeUndefined();
+    expect(cleared?.gorgonAthena).toBeUndefined();
   });
 
   it('publishes authored encounter choices without candidate support', () => {

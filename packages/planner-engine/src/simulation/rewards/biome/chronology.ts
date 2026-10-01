@@ -1337,6 +1337,8 @@ export function evaluateBiomeRewardChronology(
         branches = gorgon.branches;
         if (gorgon.candidate !== undefined)
           gorgonPhaseCandidates.set(gorgon.candidate.key, gorgon.candidate.value);
+        for (const entry of gorgon.findings)
+          addRewardFinding(findings, entry.finding, entry.region, entry.chronology);
         if (gorgon.eligiblePhaseKey !== undefined)
           eligibleGorgonPhases.add(gorgon.eligiblePhaseKey);
         break;

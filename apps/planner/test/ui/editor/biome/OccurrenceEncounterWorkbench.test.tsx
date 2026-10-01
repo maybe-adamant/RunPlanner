@@ -1038,13 +1038,49 @@ describe('OccurrenceEncounterWorkbench', () => {
     expect(launcher.getAttribute('data-trait-status')).toBe('valid');
     await view.user.click(condition);
     await waitFor(() => {
-      expect(
-        (
-          screen.getByRole('checkbox', {
-            name: 'Gorgon Amulet: Death Defiance',
-          }) as HTMLInputElement
-        ).checked,
-      ).toBe(false);
+      expect(screen.queryByRole('checkbox', { name: 'Gorgon Amulet: Death Defiance' })).toBeNull();
+    });
+    const updatedOccurrence = view.application.store
+      .getState()
+      .projectWorkspace.history!.present.route.biomes.find((biome) => biome.biomeKey === 'P')
+      ?.topology?.occurrences.find((candidate) => candidate.occurrenceId === occurrenceId);
+    expect(updatedOccurrence?.roomActions.order).not.toContainEqual({
+      kind: 'interactGorgon',
+      phaseKey: 'Combat',
+    });
+  });
+
+  it('targets an unavailable Gorgon condition on its checkbox and clears its action', async () => {
+    const occurrenceId = pOccurrenceId('P_Combat12', 8, 1);
+    const phase = createEncounterPhaseAddress(
+      pBiome,
+      { kind: 'occurrence', occurrenceId },
+      'Combat',
+    );
+    const project = applyProjectCommand(loadSurfaceNOPQProject(), catalog, {
+      kind: 'ReplaceGorgonDeathDefianceCondition',
+      phase,
+      value: true,
+    });
+    const view = renderOccurrenceWorkbench(project, 'Surface', 'P', occurrenceById(occurrenceId));
+    openRoomTab('Room Timeline');
+    const condition = screen.getByRole('checkbox', {
+      name: 'Gorgon Amulet: Death Defiance',
+    });
+    expect(condition.getAttribute('data-has-findings')).toBe('true');
+    expect(condition.getAttribute('aria-description')).toContain('Gorgon cannot trigger');
+    await view.user.click(condition);
+    await waitFor(() => {
+      expect(screen.queryByRole('checkbox', { name: 'Gorgon Amulet: Death Defiance' })).toBeNull();
+    });
+    expect(screen.queryByText('Talk to Athena')).toBeNull();
+    const updatedOccurrence = view.application.store
+      .getState()
+      .projectWorkspace.history!.present.route.biomes.find((biome) => biome.biomeKey === 'P')
+      ?.topology?.occurrences.find((candidate) => candidate.occurrenceId === occurrenceId);
+    expect(updatedOccurrence?.roomActions.order).not.toContainEqual({
+      kind: 'interactGorgon',
+      phaseKey: 'Combat',
     });
   });
 
