@@ -291,7 +291,14 @@ describe('Hermes Shrine workbench', () => {
     expect(within(inlineEditors).getByRole('button', { name: /Trait/ })).toBeTruthy();
     const ordering = resolvedDeliveryRow.querySelector('.room-action-ordering');
     expect(ordering).not.toBeNull();
-    expect(within(ordering as HTMLElement).getAllByRole('button')).toHaveLength(3);
+    expect(
+      within(ordering as HTMLElement).getByRole('button', { name: /^Move Collect Mystery Boon/ }),
+    ).toBeTruthy();
+    expect(
+      within(ordering as HTMLElement).getByRole('button', {
+        name: /^Remove Collect Mystery Boon.* from timeline$/,
+      }),
+    ).toBeTruthy();
     expect(ordering?.contains(sourcePicker)).toBe(false);
     expect(
       resolvedDeliveryRow

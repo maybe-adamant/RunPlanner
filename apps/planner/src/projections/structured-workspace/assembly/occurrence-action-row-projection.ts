@@ -149,26 +149,191 @@ function roomActionsForOccurrence(
       !skippedInteractionKeys.has(row.key) && (!goldNeedsPlacement || !isGoldPickup(row.reference)),
   );
   const presentedActionKeys = new Set(presentedRows.map((row) => row.key));
-  const proposals = roster.proposals
+  const actionLabel = (reference: RoomActionReference): string =>
+    allProjectedRows.find((row) => row.key === roomActionKey(reference))?.label ??
+    occurrenceActionLabel(
+      input.catalog,
+      reference,
+      roomLocal,
+      encounterPhases,
+      undefined,
+      input.occurrence,
+      input.occurrence.purgingPool?.traitKeyBySlot,
+      input.evaluatedRoom?.pickupProducers,
+    );
+  const phaseLabel = (key: string) =>
+    (roomLocal.kind === 'ship'
+      ? roomLocal.phases.find((phase) => phase.key === key)?.label
+      : undefined) ??
+    encounterPhases.find((phase) => phase.address.phaseKey === key)?.label ??
+    key;
+  const wheelPhaseLabel = (key: string) =>
+    phaseLabel(
+      roster.lifecycleStructure.phases.find((phase) => phase.rewardWheelKey === key)?.phaseKey ??
+        key,
+    );
+  const checkpointLabel = (key: string): string => {
+    if (key.startsWith('combat:')) return `${phaseLabel(key.slice('combat:'.length))} complete`;
+    if (key.startsWith('nextPhaseUsable:'))
+      return `${wheelPhaseLabel(key.slice('nextPhaseUsable:'.length))} is ready to advance`;
+    if (key === 'outgoingGeneration') return 'the next rooms are generated';
+    if (key === 'exitUsable') return 'the doors can be used';
+    return roster.checkpoints.find((entry) => entry.checkpointKey === key)?.label ?? key;
+  };
+  const windowLabel = (
+    window: import('@run-planner/engine/simulation').RoomActionWindow,
+  ): string => {
+    switch (window.kind) {
+      case 'standard':
+        return window.phase === 'beforeCombat' ? 'before combat' : 'after combat';
+      case 'encounterEnd':
+        return `after ${phaseLabel(window.phaseKey)} ends`;
+      case 'postOutgoing':
+        return 'after the next rooms are generated';
+      case 'fields':
+        return 'during the Fields room';
+      case 'shipPreCombat':
+        return `before ${wheelPhaseLabel(window.wheelKey)}`;
+      case 'shipPostCombat':
+        return `after ${wheelPhaseLabel(window.wheelKey)}`;
+    }
+  };
+  const proposalEntries = roster.proposals
     .filter((proposal) => presentedActionKeys.has(roomActionKey(proposal.reference)))
-    .map((proposal, index) =>
+    .map((proposal, index) => ({
+      proposal,
+      key: `${proposal.kind}:${index}:${roomActionKey(proposal.reference)}`,
+    }));
+  const proposalKeysByAction = new Map<string, string[]>();
+  for (const entry of proposalEntries) {
+    const key = roomActionKey(entry.proposal.reference);
+    proposalKeysByAction.set(key, [...(proposalKeysByAction.get(key) ?? []), entry.key]);
+  }
+  type Blocker = import('@run-planner/engine/simulation').RoomActionProposal['blockers'][number];
+  const windowIdentity = (window: import('@run-planner/engine/simulation').RoomActionWindow) => [
+    window.kind,
+    'phase' in window ? window.phase : null,
+    'phaseKey' in window ? window.phaseKey : null,
+    'wheelKey' in window ? window.wheelKey : null,
+  ];
+  const blockerIdentity = (blocker: Blocker): string =>
+    JSON.stringify(
+      blocker.kind === 'window'
+        ? [
+            blocker.kind,
+            roomActionKey(blocker.reference),
+            roomActionKey(blocker.precedingAction),
+            windowIdentity(blocker.window),
+            windowIdentity(blocker.precedingWindow),
+          ]
+        : [
+            blocker.kind,
+            roomActionKey(blocker.reference),
+            blocker.dependency.kind,
+            blocker.dependency.kind === 'afterAction'
+              ? roomActionKey(blocker.dependency.action)
+              : blocker.dependency.checkpointKey,
+            blocker.checkpointUnavailable === true,
+          ],
+    );
+  const existingBlockers = new Set(
+    roster.issues.flatMap((issue) =>
+      issue.kind === 'dependency' || issue.kind === 'window' ? [blockerIdentity(issue)] : [],
+    ),
+  );
+  const explanationFor = (
+    proposal: import('@run-planner/engine/simulation').RoomActionProposal,
+  ): readonly string[] => {
+    if (proposal.blockers.length === 0) return Object.freeze([]);
+    const proposedKey = roomActionKey(proposal.reference);
+    const introduced = proposal.blockers.filter(
+      (blocker) => !existingBlockers.has(blockerIdentity(blocker)),
+    );
+    const candidates = introduced.length > 0 ? introduced : proposal.blockers;
+    const concernsProposal = (blocker: Blocker) =>
+      roomActionKey(blocker.reference) === proposedKey ||
+      (blocker.kind === 'window'
+        ? roomActionKey(blocker.precedingAction) === proposedKey
+        : blocker.dependency.kind === 'afterAction' &&
+          roomActionKey(blocker.dependency.action) === proposedKey);
+    const blocker =
+      candidates.find((entry) => entry.kind === 'dependency' && concernsProposal(entry)) ??
+      candidates.find(concernsProposal) ??
+      candidates.find((entry) => entry.kind === 'dependency') ??
+      candidates[0]!;
+    const label = actionLabel(blocker.reference);
+    let explanation: string;
+    if (blocker.kind === 'window') {
+      const movedPreceding = roomActionKey(blocker.precedingAction) === proposedKey;
+      explanation = `${movedPreceding ? actionLabel(blocker.precedingAction) : label} belongs ${windowLabel(movedPreceding ? blocker.precedingWindow : blocker.window)}.`;
+    } else if (blocker.dependency.kind === 'afterAction') {
+      const prerequisite = blocker.dependency.action;
+      const movingDependent = roomActionKey(blocker.reference) === proposedKey;
+      const movingPrerequisite = roomActionKey(prerequisite) === proposedKey;
+      const artificerEntry =
+        blocker.reference.kind === 'interactAcquisitionEntry'
+          ? parseArtificerReplacementEntryKey(blocker.reference.entryKey)
+          : undefined;
+      const prerequisiteControl = allProjectedRows.find(
+        (row) => row.key === roomActionKey(prerequisite),
+      )?.rewardPayload?.control;
+      const artificer =
+        artificerEntry !== undefined &&
+        prerequisiteControl !== undefined &&
+        semanticAddressKey(prerequisiteControl.owner.address) === artificerEntry.sourceKey;
+      const cageReward =
+        blocker.reference.kind === 'interactLocalReward' &&
+        prerequisite.kind === 'completeFieldsCage';
+      const cageInteraction =
+        (blocker.reference.kind === 'interactEncounter' ||
+          blocker.reference.kind === 'interactGorgon') &&
+        prerequisite.kind === 'completeFieldsCage';
+      const nextCage =
+        blocker.reference.kind === 'completeFieldsCage' &&
+        (prerequisite.kind === 'interactEncounter' || prerequisite.kind === 'interactGorgon');
+      const wheelReward =
+        blocker.reference.kind === 'interactWheelReward' &&
+        prerequisite.kind === 'chooseRewardWheel';
+      if (artificer)
+        explanation = `${actionLabel(prerequisite)} first to create ${movingDependent ? 'this reward' : label}.`;
+      else if (cageReward)
+        explanation = `${actionLabel(prerequisite)} to unlock ${movingDependent ? 'this reward' : label}.`;
+      else if (cageInteraction)
+        explanation =
+          blocker.reference.kind === 'interactGorgon'
+            ? `${actionLabel(prerequisite)} to make Athena available.`
+            : `${actionLabel(prerequisite)}, then ${label}.`;
+      else if (nextCage)
+        explanation = `${actionLabel(prerequisite)} before clearing ${blocker.reference.phaseKey}.`;
+      else if (wheelReward)
+        explanation = `${actionLabel(prerequisite)} before collecting its reward.`;
+      else if (movingDependent) explanation = `Requires: ${actionLabel(prerequisite)}.`;
+      else if (movingPrerequisite) explanation = `${label} requires this action first.`;
+      else explanation = `${label} requires ${actionLabel(prerequisite)} first.`;
+    } else if (blocker.checkpointUnavailable === true) {
+      explanation = `${label} requires unavailable checkpoint ${blocker.dependency.checkpointKey}.`;
+    } else {
+      explanation = `${label} must come ${blocker.dependency.kind === 'afterCheckpoint' ? 'after' : 'before'} ${checkpointLabel(blocker.dependency.checkpointKey)}.`;
+    }
+    return Object.freeze([
+      `${introduced.length === 0 ? 'Existing timeline issue: ' : ''}${explanation}`,
+    ]);
+  };
+  const projectProposals = () =>
+    proposalEntries.map(({ proposal, key }) =>
       Object.freeze({
         kind: proposal.kind,
-        key: `${proposal.kind}:${index}:${roomActionKey(proposal.reference)}`,
+        key,
         label:
           proposal.kind === 'remove'
             ? 'Remove from timeline'
             : `${proposal.kind === 'insert' ? 'Insert' : 'Move'} to position ${(proposal.toIndex ?? 0) + 1}`,
         reference: proposal.reference,
         structurallyAuthorable: proposal.structurallyAuthorable,
+        explanations: explanationFor(proposal),
         ...(proposal.toIndex === undefined ? {} : { toIndex: proposal.toIndex }),
       }),
     );
-  const proposalKeysByAction = new Map<string, string[]>();
-  for (const proposal of proposals) {
-    const key = roomActionKey(proposal.reference);
-    proposalKeysByAction.set(key, [...(proposalKeysByAction.get(key) ?? []), proposal.key]);
-  }
   const controlAt = (address: SemanticAddress): WorkspaceRewardControl | undefined =>
     controls.find(
       (control) => semanticAddressKey(control.owner.address) === semanticAddressKey(address),
@@ -628,7 +793,7 @@ function roomActionsForOccurrence(
           ];
         })()
       : [];
-  const allProjectedRows = Object.freeze([
+  const allProjectedRows: WorkspaceRoomActions['rows'] = Object.freeze([
     ...projectedRows,
     ...dueShrineRows,
     ...clockedTraitPickupRows,
@@ -751,6 +916,7 @@ function roomActionsForOccurrence(
       ];
     }),
   );
+  const proposals = projectProposals();
   const projectedTimeline = projectRoomLifecycleTimeline(
     input,
     activeLifecycleTimeline,

@@ -131,6 +131,52 @@ export function RoomActionsWorkbench({
   const pendingPointerDrag = useRef<PendingRoomActionPointerDrag | undefined>(undefined);
   const activePointerDrag = useRef<RoomActionPointerDrag | undefined>(undefined);
   const [pointerDrag, setPointerDrag] = useState<RoomActionPointerDrag | undefined>(undefined);
+  const dragging = pointerDrag !== undefined;
+  useEffect(() => {
+    if (!dragging) return;
+    const root = board.current?.closest<HTMLElement>('.room-actions-workbench');
+    if (root === null || root === undefined) return;
+    const titles = new Map<HTMLElement, string>();
+    const retainTitleChanges = (records: readonly MutationRecord[]) => {
+      for (const record of records) {
+        if (record.type !== 'attributes' || !(record.target instanceof HTMLElement)) continue;
+        const title = record.target.getAttribute('title');
+        if (title === null) titles.delete(record.target);
+        else titles.set(record.target, title);
+      }
+    };
+    const suppressTitles = () => {
+      for (const element of root.querySelectorAll<HTMLElement>('[title]')) {
+        const title = element.getAttribute('title')!;
+        if (title === '') continue;
+        titles.set(element, title);
+        // Keep an empty attribute so a later React removal remains observable.
+        element.setAttribute('title', '');
+      }
+    };
+    const observation = {
+      subtree: true,
+      childList: true,
+      attributes: true,
+      attributeFilter: ['title'],
+    };
+    const observer = new MutationObserver((records) => {
+      retainTitleChanges(records);
+      // Our suppression writes must not replace the application-owned title.
+      observer.disconnect();
+      suppressTitles();
+      observer.observe(root, observation);
+    });
+    suppressTitles();
+    observer.observe(root, observation);
+    return () => {
+      retainTitleChanges(observer.takeRecords());
+      observer.disconnect();
+      for (const [element, title] of titles) {
+        if (element.getAttribute('title') === '') element.setAttribute('title', title);
+      }
+    };
+  }, [dragging]);
   const [announcement, setAnnouncement] = useState('');
   const [placementRequest, setPlacementRequest] = useState<{ owner: string; actionKey: string }>();
   const placementTrigger = useRef<HTMLButtonElement | null>(null);
@@ -296,9 +342,7 @@ export function RoomActionsWorkbench({
     const proposal = proposalForDrop(active.actionKey, target);
     if (proposal === undefined) return;
     if (!proposal.structurallyAuthorable) {
-      setAnnouncement(
-        'Action not moved. This location conflicts with the required action order or timing.',
-      );
+      setAnnouncement(`Action not moved. ${proposal.explanations.join(' ')}`);
       return;
     }
     const row = actions?.rows.find((candidate) => candidate.key === active.actionKey);
@@ -377,12 +421,9 @@ export function RoomActionsWorkbench({
         <button
           aria-label={`Add ${placingRow.label} here: ${roomActionDestinationLabel(actions?.rows ?? [], toIndex)}`}
           aria-disabled={!proposal.structurallyAuthorable}
+          aria-description={proposal.explanations.join(' ') || undefined}
           className="contextual-picker-trigger room-action-insertion-button"
-          title={
-            proposal.structurallyAuthorable
-              ? undefined
-              : 'Conflicts with the required action order or timing.'
-          }
+          title={proposal.structurallyAuthorable ? undefined : proposal.explanations.join(' ')}
           onClick={() => {
             if (!proposal.structurallyAuthorable) return;
             pendingPlacementFocus.current = { owner: placementOwner, actionKey: placingRow.key };
@@ -613,18 +654,22 @@ export function RoomActionsWorkbench({
     pointerDrag === undefined ? null : (
       <div
         aria-hidden="true"
-        className="hub-roster-drag-preview"
+        className="room-action-drag-preview"
         style={{
           transform: `translate3d(calc(${pointerDrag.x + 14}px / var(--app-scale, 1)), calc(${pointerDrag.y + 14}px / var(--app-scale, 1)), 0)`,
         }}
       >
-        <span>⠿</span>
-        {actions?.rows.find((row) => row.key === pointerDrag.actionKey)?.label ?? 'Room action'}
+        <div className="room-action-drag-header">
+          <span aria-hidden="true">⠿</span>
+          <strong>
+            {actions?.rows.find((row) => row.key === pointerDrag.actionKey)?.label ?? 'Room action'}
+          </strong>
+        </div>
         {hoveredProposal === undefined ? null : (
           <span className="room-action-drag-feedback">
             {hoveredProposal.structurallyAuthorable
               ? 'Drop here'
-              : 'Unavailable: required action order or timing'}
+              : `Unavailable: ${hoveredProposal.explanations.join(' ')}`}
           </span>
         )}
       </div>

@@ -30,8 +30,17 @@ export type RoomActionRosterIssue =
       readonly kind: 'dependency';
       readonly reference: RoomActionReference;
       readonly detail: string;
+      readonly dependency: RoomActionDependency;
+      readonly checkpointUnavailable?: true;
     }
-  | { readonly kind: 'window'; readonly reference: RoomActionReference; readonly detail: string };
+  | {
+      readonly kind: 'window';
+      readonly reference: RoomActionReference;
+      readonly detail: string;
+      readonly window: RoomActionWindow;
+      readonly precedingAction: RoomActionReference;
+      readonly precedingWindow: RoomActionWindow;
+    };
 
 export interface RoomActionRow {
   readonly reference: RoomActionReference;
@@ -54,6 +63,7 @@ export interface RoomActionProposal {
   readonly toIndex?: number;
   readonly order: readonly RoomActionReference[];
   readonly structurallyAuthorable: boolean;
+  readonly blockers: readonly Extract<RoomActionRosterIssue, { kind: 'dependency' | 'window' }>[];
 }
 
 export interface RoomActionCheckpoint {

@@ -1432,8 +1432,39 @@
 
 .room-action-drag-feedback {
   display: block;
-  margin-left: 8px;
   font-size: 0.75rem;
+}
+
+.room-action-drag-preview {
+  display: grid;
+  position: fixed;
+  z-index: 20;
+  top: 0;
+  left: 0;
+  width: max-content;
+  max-width: min(24rem, calc(100 * var(--app-vw) - 28px));
+  gap: 6px;
+  padding: 10px 12px;
+  border: 1px solid #e2b971;
+  border-radius: 8px;
+  color: #f3ede4;
+  background: #23232a;
+  box-shadow: 0 8px 24px rgb(0 0 0 / 35%);
+  font-size: 0.84rem;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+  pointer-events: none;
+}
+
+.room-action-drag-header {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.room-action-drag-header > span {
+  color: #e2b971;
+  flex: 0 0 auto;
 }
 
 .room-action-row[data-drop-before]::after,

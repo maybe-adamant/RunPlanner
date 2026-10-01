@@ -5,6 +5,7 @@ interface RoomActionPlacementChoice {
   readonly key: string;
   readonly label: string;
   readonly structurallyAuthorable: boolean;
+  readonly explanations: readonly string[];
 }
 
 export function RoomActionPlacementPicker({
@@ -45,9 +46,7 @@ export function RoomActionPlacementPicker({
                       selected: false,
                       disabled: !available,
                       state: available ? ('possible' as const) : ('impossible' as const),
-                      ...(!available
-                        ? { explanation: 'Conflicts with the required action order or timing.' }
-                        : {}),
+                      ...(!available ? { explanation: choice.explanations.join(' ') } : {}),
                     })),
                   },
                 ];

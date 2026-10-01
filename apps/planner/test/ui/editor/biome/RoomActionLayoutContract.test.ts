@@ -15,9 +15,15 @@ const rewardStyles = readFileSync(
 );
 
 function block(styles: string, selector: string): string {
-  const start = styles.indexOf(`${selector} {`);
-  if (start < 0) throw new Error(`Missing style for ${selector}`);
-  return styles.slice(styles.indexOf('{', start) + 1, styles.indexOf('}', start));
+  const blocks: string[] = [];
+  let start = styles.indexOf(`${selector} {`);
+  while (start >= 0) {
+    const end = styles.indexOf('}', start);
+    blocks.push(styles.slice(styles.indexOf('{', start) + 1, end));
+    start = styles.indexOf(`${selector} {`, end + 1);
+  }
+  if (blocks.length === 0) throw new Error(`Missing style for ${selector}`);
+  return blocks.join('\n');
 }
 
 describe('Room action layout', () => {
@@ -25,9 +31,9 @@ describe('Room action layout', () => {
     expect(block(timelineStyles, '.room-action-row')).toContain(
       'container: room-action / inline-size;',
     );
-    expect(
-      block(timelineStyles, ".room-action-lifecycle-boundary[data-fields-cage-slot='true']"),
-    ).toContain('container: room-action / inline-size;');
+    expect(block(timelineStyles, '.room-action-lifecycle-boundary')).toContain(
+      'container: room-action / inline-size;',
+    );
     const compound = timelineStyles.slice(
       timelineStyles.indexOf('@container room-action (max-width: 50rem)'),
     );
@@ -41,7 +47,7 @@ describe('Room action layout', () => {
       'grid-column: 1 / -1;',
     );
     expect(narrow).toMatch(
-      /@container room-action \(max-width: 34rem\) \{\s*\.fields-cage-slot-control \{\s*width: 100%;\s*grid-column: 2 \/ -1;/,
+      /@container room-action \(max-width: 34rem\) \{\s*\.fields-cage-slot-control \{\s*width: 100%;\s*margin-left: 0;/,
     );
   });
 

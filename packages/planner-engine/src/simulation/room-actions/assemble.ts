@@ -66,6 +66,7 @@ function assessOrder(
             kind: 'dependency',
             reference,
             detail: `must follow ${roomActionKey(dependency.action)}`,
+            dependency,
           }),
         );
         continue;
@@ -77,6 +78,8 @@ function assessOrder(
             kind: 'dependency',
             reference,
             detail: `has unknown checkpoint ${dependency.checkpointKey}`,
+            dependency,
+            checkpointUnavailable: true,
           }),
         );
         continue;
@@ -97,6 +100,7 @@ function assessOrder(
             kind: 'dependency',
             reference,
             detail: `${dependency.kind} ${dependency.checkpointKey}`,
+            dependency,
           }),
         );
       }
@@ -123,6 +127,9 @@ function assessOrder(
           kind: 'window',
           reference: right.reference,
           detail: 'crosses a fixed lifecycle window',
+          window: right.window,
+          precedingAction: left.reference,
+          precedingWindow: left.window,
         }),
       );
     }
@@ -232,6 +239,7 @@ export function assembleRoomActionRoster(options: {
           fromIndex,
           order: frozen(options.order.filter((_, index) => index !== fromIndex)),
           structurallyAuthorable: true,
+          blockers: frozen([]),
         }),
       );
       continue;
@@ -246,6 +254,7 @@ export function assembleRoomActionRoster(options: {
           fromIndex,
           order: frozen(options.order.filter((_, index) => index !== fromIndex)),
           structurallyAuthorable: true,
+          blockers: frozen([]),
         }),
       );
     }
@@ -266,6 +275,7 @@ export function assembleRoomActionRoster(options: {
             toIndex: canonicalRequired.toIndex,
             order: frozen(order),
             structurallyAuthorable: true,
+            blockers: frozen([]),
           }),
         );
         continue;
@@ -273,18 +283,19 @@ export function assembleRoomActionRoster(options: {
       for (let toIndex = 0; toIndex <= options.order.length; toIndex += 1) {
         const order = [...options.order];
         order.splice(toIndex, 0, row.reference);
+        const blockers = frozen(
+          assessOrder(order, active, checkpointContributions, options.lifecycleStructure).filter(
+            (issue) => issue.kind === 'dependency' || issue.kind === 'window',
+          ),
+        );
         proposals.push(
           frozen({
             kind: 'insert',
             reference: row.reference,
             toIndex,
             order: frozen(order),
-            structurallyAuthorable: !assessOrder(
-              order,
-              active,
-              checkpointContributions,
-              options.lifecycleStructure,
-            ).some((issue) => issue.kind === 'dependency' || issue.kind === 'window'),
+            structurallyAuthorable: blockers.length === 0,
+            blockers,
           }),
         );
       }
@@ -298,6 +309,11 @@ export function assembleRoomActionRoster(options: {
       const order = [...options.order];
       order.splice(fromIndex, 1);
       order.splice(toIndex, 0, reference);
+      const blockers = frozen(
+        assessOrder(order, active, checkpointContributions, options.lifecycleStructure).filter(
+          (issue) => issue.kind === 'dependency' || issue.kind === 'window',
+        ),
+      );
       proposals.push(
         frozen({
           kind: 'move',
@@ -305,12 +321,8 @@ export function assembleRoomActionRoster(options: {
           fromIndex,
           toIndex,
           order: frozen(order),
-          structurallyAuthorable: !assessOrder(
-            order,
-            active,
-            checkpointContributions,
-            options.lifecycleStructure,
-          ).some((issue) => issue.kind === 'dependency' || issue.kind === 'window'),
+          structurallyAuthorable: blockers.length === 0,
+          blockers,
         }),
       );
     }

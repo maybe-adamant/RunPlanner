@@ -22,6 +22,7 @@ import {
 
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { Provider } from 'react-redux';
+import { createPortal } from 'react-dom';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { createOpenTestApplication } from '@planner-test/fixtures/renderPlanner';
@@ -52,7 +53,10 @@ import {
   oBiome,
   oOccurrenceIds,
 } from '@run-planner/test-fixtures/surface';
-import { authorLegalTraitOffers } from '@run-planner/test-fixtures/shared';
+import {
+  authorLegalTraitOffers,
+  replaceTestRoomActionOrder,
+} from '@run-planner/test-fixtures/shared';
 import {
   renderOccurrenceWorkbench,
   workspaceProjection,
@@ -526,6 +530,84 @@ describe('OccurrenceRoomActions', () => {
       (proposal) => proposal.key === cageTwoChoice?.proposalKey,
     );
     expect(genericProposal).toMatchObject({ kind: 'move', structurallyAuthorable: false });
+    expect(genericProposal?.explanations).toEqual(['Talk to Athena before clearing Cage02.']);
+
+    const athena = roomActions?.rows.find((row) => row.reference.kind === 'interactGorgon');
+    const blockedMove = roomActions?.proposals.find(
+      (proposal) =>
+        proposal.kind === 'move' &&
+        proposal.toIndex === 0 &&
+        athena?.proposalKeys.includes(proposal.key),
+    );
+    expect(blockedMove?.explanations).toEqual(['Clear Cage01 to make Athena available.']);
+    const actions = screen.getByRole('region', { name: 'Room Timeline' });
+    const board = within(actions).getByRole('list', { name: 'Room timeline' });
+    const handle = within(actions)
+      .getByText('Talk to Athena', { selector: 'strong' })
+      .closest<HTMLElement>('[data-room-action-key]')
+      ?.querySelector<HTMLElement>('[data-room-action-drag-handle]');
+    if (!handle) throw new Error('Athena drag handle missing');
+    const titled = [...actions.querySelectorAll<HTMLElement>('[title]')].map((element) => ({
+      element,
+      title: element.title,
+    }));
+    expect(titled.length).toBeGreaterThan(0);
+    Object.defineProperty(document, 'elementFromPoint', {
+      configurable: true,
+      value: () => within(actions).getByLabelText('Room entered'),
+    });
+    fireEvent.pointerDown(handle, {
+      button: 0,
+      clientX: 12,
+      clientY: 12,
+      isPrimary: true,
+      pointerId: 92,
+    });
+    fireEvent.pointerMove(board, { clientX: 24, clientY: 80, isPrimary: true, pointerId: 92 });
+    expect(screen.getByText(`Unavailable: ${blockedMove!.explanations.join(' ')}`)).toBeTruthy();
+    expect(actions.querySelectorAll('[title]:not([title=""])')).toHaveLength(0);
+    const preview = actions.querySelector('.room-action-drag-preview');
+    expect(preview?.querySelector('.room-action-drag-header strong')?.textContent).toBe(
+      'Talk to Athena',
+    );
+    expect(preview?.querySelector(':scope > .room-action-drag-feedback')).toBeTruthy();
+    expect(preview?.classList.contains('hub-roster-drag-preview')).toBe(false);
+    fireEvent.pointerUp(board, { clientX: 24, clientY: 80, isPrimary: true, pointerId: 92 });
+    expect(
+      screen.getByText(`Action not moved. ${blockedMove!.explanations.join(' ')}`),
+    ).toBeTruthy();
+    for (const { element, title } of titled) expect(element.title).toBe(title);
+    const childTitles = (removed: boolean, changed: boolean) =>
+      createPortal(
+        <>
+          <span
+            data-testid="removed-drag-title"
+            title={removed ? undefined : 'Old blocked reason'}
+          />
+          <span data-testid="changed-drag-title" title={changed ? 'New reason' : 'Old reason'} />
+        </>,
+        actions,
+      );
+    const childView = render(childTitles(false, false));
+    fireEvent.pointerDown(handle, {
+      button: 0,
+      clientX: 12,
+      clientY: 12,
+      isPrimary: true,
+      pointerId: 93,
+    });
+    fireEvent.pointerMove(board, { clientX: 24, clientY: 80, isPrimary: true, pointerId: 93 });
+    expect(actions.querySelectorAll('[title]:not([title=""])')).toHaveLength(0);
+    childView.rerender(childTitles(false, true));
+    await waitFor(() =>
+      expect(screen.getByTestId('changed-drag-title').getAttribute('title')).toBe(''),
+    );
+    childView.rerender(childTitles(true, true));
+    fireEvent.pointerCancel(board, { pointerId: 93 });
+    for (const { element, title } of titled) expect(element.title).toBe(title);
+    expect(screen.getByTestId('removed-drag-title').hasAttribute('title')).toBe(false);
+    expect(screen.getByTestId('changed-drag-title').getAttribute('title')).toBe('New reason');
+    childView.unmount();
 
     const historyBefore = view.application.store.getState().projectWorkspace.history!.past.length;
     await view.user.selectOptions(selector, 'Cage02');
@@ -559,6 +641,55 @@ describe('OccurrenceRoomActions', () => {
       (row) => row.reference.kind === 'interactGorgon' && row.reference.phaseKey === 'Cage01',
     );
     expect(gorgon).toMatchObject({ executable: true, issues: [], stale: false });
+  });
+
+  it('distinguishes a retained blocker from new placement dependencies', () => {
+    const occurrenceId = createOccurrenceId('golden-h-combat02');
+    const initial = fieldsGorgonBarrierProject();
+    const order = [...occurrenceRoomActionOrder(initial, 'Underworld', 'H', occurrenceId)!];
+    const athenaIndex = order.findIndex((reference) => reference.kind === 'interactGorgon');
+    const [athena] = order.splice(athenaIndex, 1);
+    order.unshift(athena!);
+    const project = replaceTestRoomActionOrder(initial, catalog, goldenHBiome, occurrenceId, order);
+    const view = renderOccurrenceWorkbench(
+      project,
+      'Underworld',
+      'H',
+      occurrenceById(occurrenceId),
+    );
+    const projected = workspaceProjection(view.application)
+      .route?.biomes.find((biome) => biome.biomeKey === 'H')
+      ?.nodes.find(
+        (node) => node.kind === 'occurrenceWorkbench' && node.room.occurrenceId === occurrenceId,
+      );
+    if (projected?.kind !== 'occurrenceWorkbench') throw new Error('Fields workbench missing');
+    const actions = projected.room.roomActions!;
+    const unrelated = actions.proposals.find(
+      (proposal) =>
+        proposal.kind === 'move' &&
+        proposal.toIndex === order.length - 1 &&
+        proposal.reference.kind === 'interactLocalReward' &&
+        proposal.reference.slotKey === 'optional1',
+    );
+    expect(unrelated?.explanations).toEqual([
+      'Existing timeline issue: Clear Cage01 to make Athena available.',
+    ]);
+    const newConflict = actions.proposals.find(
+      (proposal) =>
+        proposal.kind === 'move' &&
+        proposal.toIndex === 0 &&
+        proposal.reference.kind === 'completeFieldsCage' &&
+        proposal.reference.phaseKey === 'Cage02',
+    );
+    expect(newConflict?.explanations).toEqual(['Talk to Athena before clearing Cage02.']);
+    const cageReward = actions.proposals.find(
+      (proposal) =>
+        proposal.kind === 'move' &&
+        proposal.toIndex === 0 &&
+        proposal.reference.kind === 'interactLocalReward' &&
+        proposal.reference.slotKey === 'cage1',
+    );
+    expect(cageReward?.explanations).toEqual(['Clear Cage01 to unlock this reward.']);
   });
 
   // This three-cage route is repairable-invalid under the run-scoped ledger,
@@ -970,6 +1101,23 @@ describe('OccurrenceRoomActions', () => {
     if (sourceAction === null || replacementAction === null)
       throw new Error('Artificer source/replacement actions are missing');
     expectBefore(sourceAction, replacementAction);
+    const projected = workspaceProjection(view.application)
+      .route?.biomes.find((biome) => biome.biomeKey === 'F')
+      ?.nodes.find(
+        (node) => node.kind === 'occurrenceWorkbench' && node.room.occurrenceId === occurrenceId,
+      );
+    if (projected?.kind !== 'occurrenceWorkbench') throw new Error('Artificer workbench missing');
+    const roomActions = projected.room.roomActions!;
+    const replacementRow = roomActions.rows.find(
+      (row) => row.key === replacementAction.dataset.roomActionKey,
+    )!;
+    const blocked = roomActions.proposals.find(
+      (proposal) =>
+        proposal.kind === 'move' &&
+        proposal.toIndex === 0 &&
+        replacementRow.proposalKeys.includes(proposal.key),
+    );
+    expect(blocked?.explanations).toEqual(['Use Artificer on Bones first to create this reward.']);
     expect(
       within(sourceAction).getByRole('combobox', { name: /^Pickup outcome for / }),
     ).toBeTruthy();
@@ -1155,6 +1303,33 @@ describe('OccurrenceRoomActions', () => {
     project = authorLegalTraitOffers(project);
 
     const view = renderOccurrenceWorkbench(project, 'Surface', 'O', occurrenceById(occurrenceId));
+    const projected = workspaceProjection(view.application)
+      .route?.biomes.find((biome) => biome.biomeKey === 'O')
+      ?.nodes.find(
+        (node) => node.kind === 'occurrenceWorkbench' && node.room.occurrenceId === occurrenceId,
+      );
+    if (projected?.kind !== 'occurrenceWorkbench') throw new Error('Ship workbench missing');
+    const reasons = projected.room.roomActions!.proposals.flatMap(
+      (proposal) => proposal.explanations,
+    );
+    expect(reasons).toContain(
+      'Choose Combat 2 wheel must come after Combat 1 is ready to advance.',
+    );
+    expect(reasons).toContain('Choose Combat 1 wheel before collecting its reward.');
+    expect(reasons.some((reason) => reason.includes('wheel1 next phase usable'))).toBe(false);
+    const timingProposals = projected.room.roomActions!.proposals.filter((proposal) =>
+      proposal.explanations[0]?.includes(' belongs '),
+    );
+    expect(timingProposals.length).toBeGreaterThan(0);
+    for (const proposal of timingProposals) {
+      const row = projected.room.roomActions!.rows.find(
+        (candidate) => roomActionKey(candidate.reference) === roomActionKey(proposal.reference),
+      )!;
+      expect(proposal.explanations).toHaveLength(1);
+      expect(proposal.explanations[0]).toMatch(
+        new RegExp(`^${row.label} belongs (before|after) Combat [123]\\.$`),
+      );
+    }
     openRoomTab('Combat 1 Timeline');
     const actions = screen.getByRole('region', { name: 'Room Timeline' });
     const combatOne = screen.getByLabelText('Combat 1 ship phase');
@@ -1385,7 +1560,7 @@ describe('OccurrenceRoomActions', () => {
       pointerType: 'mouse',
     });
     expect(major.dataset.dragging).toBe('true');
-    expect(document.querySelector('.hub-roster-drag-preview')).not.toBeNull();
+    expect(document.querySelector('.room-action-drag-preview')).not.toBeNull();
     fireEvent.pointerUp(board, {
       clientX: 24,
       clientY: 150,
@@ -1407,7 +1582,7 @@ describe('OccurrenceRoomActions', () => {
         { kind: 'interactShopOffer', offerKey: 'MajorNonBoon' },
       ]),
     );
-    expect(document.querySelector('.hub-roster-drag-preview')).toBeNull();
+    expect(document.querySelector('.room-action-drag-preview')).toBeNull();
   });
 
   it('removes a Shop purchase atomically when its occurrence is no longer a Shop', () => {

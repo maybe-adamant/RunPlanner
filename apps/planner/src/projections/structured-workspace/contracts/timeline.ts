@@ -53,6 +53,8 @@ export interface WorkspaceRoomActionProposal {
   readonly label: string;
   readonly reference: RoomActionReference;
   readonly structurallyAuthorable: boolean;
+  /** One relevant placement explanation, or none for an authorable proposal. */
+  readonly explanations: readonly string[];
   readonly toIndex?: number;
 }
 
