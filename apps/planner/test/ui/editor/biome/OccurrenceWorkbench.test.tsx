@@ -151,7 +151,7 @@ describe('OccurrenceWorkbench', () => {
     const standardActions = screen.getByRole('region', { name: 'Room Timeline' });
     const standardStart = within(standardActions).getByLabelText('Start encounter');
     const standardEncounter = within(standardActions).getByLabelText('Encounter encounter phase');
-    const standardEnd = within(standardActions).getByLabelText('End encounter');
+    const standardEnd = within(standardActions).getByLabelText('Encounter ended');
     const roomEntered = within(standardActions).getByLabelText('Room entered');
     const entryRunState = screen.getByRole('button', { name: 'Run State' });
     expect(entryRunState.getAttribute('data-run-state-launcher')).toBe(entryOwner);
@@ -402,14 +402,14 @@ describe('OccurrenceWorkbench', () => {
     ['F', () => createGoldenFGHIProject(), 'Underworld', 'F', goldenFStartId],
     ['N', () => loadSurfaceNProject(), 'Surface', 'N', nOccurrenceIds.opening],
   ] as const)(
-    'renders the %s Opening pickup before Start encounter and End encounter',
+    'renders the %s Opening pickup before Start encounter and Encounter ended',
     (_name, project, routeKey, biomeKey, occurrenceId) => {
       renderStaticOccurrenceWorkbench(project(), routeKey, biomeKey, occurrenceById(occurrenceId));
       openRoomTab('Room Timeline');
       const actions = screen.getByRole('region', { name: 'Room Timeline' });
       const pickup = within(actions).getByText(/^Collect /);
       const start = within(actions).getByLabelText('Start encounter');
-      const end = within(actions).getByLabelText('End encounter');
+      const end = within(actions).getByLabelText('Encounter ended');
       expectBefore(pickup, start);
       expectBefore(start, end);
       expect(within(actions).queryByText('Outgoing generation')).toBeNull();

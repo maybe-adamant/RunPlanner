@@ -29,13 +29,13 @@ function lifecycleBoundaryLabel(boundary: WorkspaceRoomLifecycleBoundary): strin
     case 'encounterStart':
       return 'Start encounter';
     case 'encounterEnd':
-      return 'End encounter';
+      return 'Encounter ended';
     case 'bossDefeated':
       return 'Boss defeated';
     case 'nextPhase':
-      return 'Start next phase';
+      return 'Next encounter available';
     case 'cleanup':
-      return 'Cleanup · Doors open';
+      return 'Doors open';
   }
 }
 

@@ -529,7 +529,7 @@ describe('Biome inspector controls', () => {
     expect(within(inspector).queryByRole('dialog', { name: 'Judgment editor' })).toBeNull();
     expect(within(inspector).getByText('Start encounter')).toBeTruthy();
     expect(within(inspector).getByText('Boss defeated')).toBeTruthy();
-    expect(within(inspector).getByText('End encounter')).toBeTruthy();
+    expect(within(inspector).getByText('Encounter ended')).toBeTruthy();
     const timeline = within(inspector).getByRole('region', { name: 'Room Timeline' });
     expect(timeline.classList.contains('room-actions-workbench')).toBe(true);
     expect(
@@ -541,7 +541,7 @@ describe('Biome inspector controls', () => {
     expect(
       timelineEntries.findIndex((entry) => entry.getAttribute('aria-label') === 'Boss defeated'),
     ).toBeLessThan(
-      timelineEntries.findIndex((entry) => entry.getAttribute('aria-label') === 'End encounter'),
+      timelineEntries.findIndex((entry) => entry.getAttribute('aria-label') === 'Encounter ended'),
     );
     act(() => judgmentLauncher.click());
     const optionList = inspector.querySelector('.room-judgment-options');
