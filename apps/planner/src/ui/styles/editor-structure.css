@@ -1007,6 +1007,10 @@ select {
   line-height: 1.4;
 }
 
+.fields-door-preview-note {
+  color: #e2b971;
+}
+
 .local-reward-editor {
   display: grid;
   gap: 8px;
