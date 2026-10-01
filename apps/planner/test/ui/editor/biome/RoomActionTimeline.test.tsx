@@ -1215,7 +1215,7 @@ describe('OccurrenceRoomActions', () => {
 
     openRoomTab('Room Timeline');
     const actions = screen.getByRole('region', { name: 'Room Timeline' });
-    expect(within(actions).getByText('Cleanup · Doors open')).toBeTruthy();
+    expect(within(actions).getByText('Doors open')).toBeTruthy();
     expect(within(actions).queryByText('Outgoing generation')).toBeNull();
     expect(within(actions).queryByText('Exit usable')).toBeNull();
     expect(within(actions).queryByText('Buy Zeus boon · Slot 1')).toBeNull();

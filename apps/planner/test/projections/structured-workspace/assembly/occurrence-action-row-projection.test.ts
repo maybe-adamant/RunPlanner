@@ -491,8 +491,8 @@ describe('structured workspace actions assembly', () => {
       window: { kind: 'standard', phase: 'afterCombat' },
     });
     if (collect === undefined) throw new Error('expected the Boss reward action');
-    expect(entryKeys.indexOf('End encounter')).toBeLessThan(entryKeys.indexOf(collect.key));
-    expect(entryKeys.indexOf(collect.key)).toBeLessThan(entryKeys.indexOf('Cleanup · Doors open'));
+    expect(entryKeys.indexOf('Encounter ended')).toBeLessThan(entryKeys.indexOf(collect.key));
+    expect(entryKeys.indexOf(collect.key)).toBeLessThan(entryKeys.indexOf('Doors open'));
   });
 
   it('labels a stale Shrine delivery without exposing its persisted entry key', () => {
@@ -573,7 +573,7 @@ describe('structured workspace actions assembly', () => {
     expect(steadyIndex).toBe(pickupIndex + 1);
     expect(encounterEnd).toMatchObject({
       checkpointKey: 'combat:Combat1',
-      label: 'End encounter',
+      label: 'Encounter ended',
     });
     expect(assembled.assembly.node.room.roomActions?.steadyGrowth).toEqual([
       expect.objectContaining({ address: outcome, targetTraitKey: 'ApolloWeaponBoon' }),

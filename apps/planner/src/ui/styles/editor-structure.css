@@ -556,17 +556,6 @@ select {
   min-width: 0;
 }
 
-.room-action-lifecycle-boundary {
-  align-items: center;
-  background: rgb(255 255 255 / 3%);
-  border-block: 1px solid #353640;
-  color: #aaa7af;
-  display: flex;
-  gap: 0.5rem;
-  min-height: 2rem;
-  padding: 0.35rem 0.6rem;
-}
-
 .room-overview-incoming-reward {
   align-items: center;
   background: rgb(255 255 255 / 3%);

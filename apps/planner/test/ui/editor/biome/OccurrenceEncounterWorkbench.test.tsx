@@ -1915,15 +1915,13 @@ describe('OccurrenceEncounterWorkbench', () => {
     expect(
       within(screen.getByLabelText('Intro ship phase')).getByLabelText('Combat 1 reward'),
     ).toBeTruthy();
-    expect(
-      within(screen.getByLabelText('Intro ship phase')).queryByText('Cleanup · Doors open'),
-    ).toBeNull();
+    expect(within(screen.getByLabelText('Intro ship phase')).queryByText('Doors open')).toBeNull();
     openRoomTab('Combat 1 Timeline');
     const combatOne = screen.getByLabelText('Combat 1 ship phase');
     expect(combatOne).toBeTruthy();
     expect(within(combatOne).queryByLabelText('Combat 1 reward')).toBeNull();
     expect(screen.queryByRole('tab', { name: 'Combat 2 Timeline' })).toBeNull();
-    expect(within(combatOne).getByText('Cleanup · Doors open')).toBeTruthy();
+    expect(within(combatOne).getByText('Doors open')).toBeTruthy();
     expect(within(combatOne).queryByText('Outgoing generation')).toBeNull();
     act(() =>
       view.application.store.dispatch(
@@ -2081,7 +2079,7 @@ describe('OccurrenceEncounterWorkbench', () => {
     openRoomTab('Combat 2 Timeline');
     const combatTwo = screen.getByLabelText('Combat 2 ship phase');
     expect(within(combatTwo).getByText(/^Collect .+ · Combat 2 reward/)).toBeTruthy();
-    expect(within(combatTwo).getByText('Cleanup · Doors open')).toBeTruthy();
+    expect(within(combatTwo).getByText('Doors open')).toBeTruthy();
     expect(within(combatTwo).queryByText('Outgoing generation')).toBeNull();
 
     act(() =>

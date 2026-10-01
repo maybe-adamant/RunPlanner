@@ -60,14 +60,14 @@ classifications. This document owns their normalized meaning:
 | Encounter ended                 | `encounterEndEffectsApplied`; editor `encounterEnd` boundary      | **Distinct effect checkpoint and visible boundary.** The boundary starts the post-combat interval. End effects then apply at the profile's declared point, after required rewards in O ship phases. Suppressed phases retain the boundary without the effect event. |
 | Required-object barrier cleared | Room Action dependencies and fixed roster checkpoints             | **Derived.** There is no authored clear-barrier action. Required object and encounter completion change the inputs until the fixed next transition becomes available.                                                                                               |
 | Outgoing batch generated        | `generateOutgoingBatch`; internal `outgoingGeneration` checkpoint | **Exact internal checkpoint.** Target identities and incoming rewards are frozen. It remains simulation/history authority but is not a player-facing row.                                                                                                           |
-| Cleanup · Doors open            | editor `cleanup` interval anchored to roster `exitUsable`         | **Derived player-facing interval.** It begins when required work is resolved and a door or equivalent continuation is usable. Eligible optional actions may occur on either side; using the continuation ends the interval.                                         |
+| Doors open            | editor `cleanup` interval anchored to roster `exitUsable`         | **Derived player-facing interval.** It begins when required work is resolved and a door or equivalent continuation is usable. Eligible optional actions may occur on either side; using the continuation ends the interval.                                         |
 | Exit usable                     | roster `exitUsable` capability/checkpoint                         | **Exact capability anchoring Cleanup.** Profiles with a continuation retain this predicate without rendering another row. Required actions cannot follow it, and later optional actions do not mutate the frozen outgoing batch.                                    |
 | Room committed                  | `commitRoom`                                                      | **Exact.** Commit follows outgoing generation and supported remaining local work. It is distinct from the earlier moment when exits become usable.                                                                                                                  |
 | Room exited                     | `exitRoom`                                                        | **Grouped transfer.** The source fragment closes and hands the already-generated target to preparation and entry. The transfer does not choose or regenerate that target.                                                                                           |
 
 The editor boundary order describes semantic visibility, not a literal call
 stack. `cleanup` is the one player-facing final-room interval and is labeled
-**Cleanup · Doors open**. Outgoing generation and `exitUsable` remain distinct
+**Doors open**. Outgoing generation and `exitUsable` remain distinct
 engine facts because candidate history and required-object validation need
 their exact positions, but neither is a separate rendered row. The timeline
 must not imply that an optional cleanup action is required before leaving.
@@ -83,7 +83,7 @@ The game exposes no unrelated room feature, door, or free room action between
 the required first choice and combat activation. The player-facing Start
 encounter boundary therefore groups that closed mandatory sequence without
 moving the two producer roles: chosen remains before combat and spurned remains
-after End encounter.
+after Encounter ended.
 
 #### Noncombat and Story encounters
 
@@ -91,24 +91,24 @@ The game still records and runs a Story encounter through `StartEncounter`,
 but its `EncounterType = NonCombat` skips combat start/end effects. The planner
 therefore preserves the encounter identity, history, NPC interaction, trait
 offer, and any exact pickup timing while omitting player-facing Start encounter
-and End encounter boundaries. This same rule applies to all `nonCombat` phase
+and Encounter ended boundaries. This same rule applies to all `nonCombat` phase
 kinds. Only `combat`, `miniboss`, and `boss` phase kinds render a combat spine.
 
 #### Boss/Postboss occurrences and Judgment
 
 The fixed Boss occurrence has the `BossRoom` lifecycle. Its player-facing
-timeline is `Room entered -> Start encounter -> Boss defeated -> End encounter
--> Cleanup · Doors open`. `Boss defeated` is an exact lifecycle seam before
+timeline is `Room entered -> Start encounter -> Boss defeated -> Encounter ended
+-> Doors open`. `Boss defeated` is an exact lifecycle seam before
 generic encounter-end effects. When Judgment is active, it is one engine-owned
 fixed effect at that seam, not a Room Action or persisted ordering value. The
 occurrence-plus-phase Judgment Arcana address owns the editor, candidate
-frontier, finding, and semantic command. End encounter remains the later seam
+frontier, finding, and semantic command. Encounter ended remains the later seam
 for post-encounter delivery. A reached Steady Growth threshold then settles
-after End encounter and before Cleanup.
+after Encounter ended and before Cleanup.
 
 The fixed Postboss occurrence uses the same timeline presentation without a
 combat interval. Its active shape is `Room entered -> ranked actions
--> Cleanup · Doors open`: `Use fountain` is required and a replacement's
+-> Doors open`: `Use fountain` is required and a replacement's
 `Choose keepsake` rack action is required when a replacement is selected. The rack may be ordered before or
 after the fountain; Cleanup follows the last required action. The occurrence
 lifecycle still runs its noncombat entry sequence after `roomEntered`
@@ -297,7 +297,7 @@ timeline keeps the authored action order for repair and moves the later
 semantic boundary forward to the earliest compatible slot. It never sorts
 Start and End by display priority or permits End to precede its matching Start.
 
-The player-facing timeline renders one final **Cleanup · Doors open** at the
+The player-facing timeline renders one final **Doors open** at the
 `exitUsable` rank and renders neither `outgoingGeneration` nor `exitUsable` as
 a peer row. Encounterless and Shop profiles omit
 invented encounter seams. Fields Passive is Room Entered setup, while every
@@ -1107,14 +1107,14 @@ for each active cage in authored order:
 resolve every remaining required cage/dependent pickup
 generate outgoing batch
 publish exit usability and room features
-enter Cleanup · Doors open
+enter Doors open
 run any remaining eligible optional actions
 commit and exit when chosen
 ```
 
 The Fields action sequence is the room's only chronology, but it is not an
 unconstrained list. The active cage count creates a fixed sequence of ordinal
-Start/End encounter pairs, and the ordered cage references assign cage
+Encounter start/end pairs, and the ordered cage references assign cage
 identities to those pairs. Flexible actions occupy the room-entry,
 between-encounter, pre-door, and post-door Cleanup intervals according to
 their engine-owned availability. One cage action atomically
