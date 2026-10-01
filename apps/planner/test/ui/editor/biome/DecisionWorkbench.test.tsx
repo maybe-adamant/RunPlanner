@@ -797,6 +797,35 @@ describe('DecisionWorkbench', () => {
     );
   });
 
+  it('replaces an authored door before its sibling is authored or a door is picked', async () => {
+    const { owner, project } = fTwoDoorBatchProject();
+    const occurrenceId = createOccurrenceId('partial-door-replacement');
+    const withRoom = applyProjectCommand(project, catalog, {
+      kind: 'CreateTarget',
+      target: createTargetAddress(goldenFBiome, owner.source, 'exit1'),
+      occurrenceId,
+      gameName: 'F_Combat01',
+    });
+    const withReward = applyProjectCommand(withRoom, catalog, {
+      kind: 'ReplaceIncomingReward',
+      reward: createIncomingRewardAddress(goldenFBiome, occurrenceId),
+      value: { rewardType: 'MaxHealthDrop' },
+    });
+    const view = renderDecisionWorkbench(withReward, 'Underworld', 'F', subjectForOwner(owner));
+    const card = screen.getByRole('article', { name: 'Combat 01 room offer' });
+    await view.user.click(within(card).getByRole('button', { name: /room/i }));
+    await view.user.click(
+      within(screen.getByRole('listbox')).getByRole('option', {
+        name: 'Combat 03 (2 Doors)',
+      }),
+    );
+    expect(await screen.findByRole('article', { name: 'Combat 03 room offer' })).toBeTruthy();
+    expect(screen.getByRole('article', { name: 'Door 2 unspecified room offer' })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Open next room' })).toBeNull();
+    act(() => view.application.store.dispatch(authoredProjectUndoRequested()));
+    expect(await screen.findByRole('article', { name: 'Combat 01 room offer' })).toBeTruthy();
+  });
+
   it('authors only the next physical target and links to its occurrence workbench', async () => {
     const { owner, project } = fTwoDoorBatchProject();
     const view = renderDecisionWorkbench(project, 'Underworld', 'F', subjectForOwner(owner));

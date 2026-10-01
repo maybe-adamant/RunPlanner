@@ -6,6 +6,7 @@ import {
   createAdditionalExitAddress,
   createExitSelectionAddress,
   createExitDecisionAddress,
+  createBatchRewardStoreAddress,
   createKeepsakeEquipResultAddress,
   createHubDecisionAddress,
   createHubOpenSetAddress,
@@ -27,6 +28,7 @@ import {
   createOccurrenceId,
   hermesShrineDeliveryEntryKey,
   roomActionKey,
+  projectCommandAuthoringAddresses,
 } from '@run-planner/engine/authored-project';
 import { authoringReadinessAt, simulateProjectAssembly } from '@run-planner/engine/simulation';
 import {
@@ -67,6 +69,60 @@ import {
 } from './support/f-takeover-project';
 
 describe('chronological authoring horizon', () => {
+  it('owns offered-room replacement at the door while keeping its interior locked', () => {
+    const decision = createExitDecisionAddress(goldenFBiome, {
+      kind: 'occurrence',
+      occurrenceId: goldenFOccurrenceId(1, 1),
+    });
+    let project = applyProjectCommand(authorLegalTraitOffers(createCompleteFGProject()), catalog, {
+      kind: 'RemoveExitDecision',
+      decision,
+    });
+    project = applyProjectCommand(project, catalog, { kind: 'CreateBatch', decision });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceBatchRewardStore',
+      rewardStore: createBatchRewardStoreAddress(goldenFBiome, decision.source),
+      storeKey: 'RunProgress',
+    });
+    const target = createTargetAddress(goldenFBiome, decision.source, 'exit1');
+    const occurrence = createOccurrenceAddress(goldenFBiome, createOccurrenceId('partial-door'));
+    project = applyProjectCommand(project, catalog, {
+      kind: 'CreateTarget',
+      target,
+      occurrenceId: occurrence.occurrenceId,
+      gameName: 'F_Combat01',
+    });
+    const owners = projectCommandAuthoringAddresses(
+      {
+        kind: 'ReplaceOccurrenceRoom',
+        occurrence,
+        gameName: 'F_Combat03',
+      },
+      project,
+    );
+    expect(owners).toEqual([target]);
+    const assembly = simulateProjectAssembly(catalog, project);
+    expect(authoringReadinessAt(assembly, owners[0]!)).toBe('editable');
+    expect(authoringReadinessAt(assembly, occurrence)).toBe('locked');
+    // A room-local command still belongs to the destination interior.
+    const [wellOwner] = projectCommandAuthoringAddresses(
+      { kind: 'AddStygianWell', occurrence },
+      project,
+    );
+    expect(authoringReadinessAt(assembly, wellOwner!)).toBe('locked');
+    // A start room has no incoming normal target and keeps its own boundary.
+    const start = createOccurrenceAddress(
+      goldenFBiome,
+      project.route.biomes[0]!.topology!.startOccurrenceId!,
+    );
+    expect(
+      projectCommandAuthoringAddresses(
+        { kind: 'ReplaceOccurrenceRoom', occurrence: start, gameName: 'F_Opening01' },
+        project,
+      ),
+    ).toEqual([start]);
+  });
+
   it('keeps reached rooms editable when a selected additional room has no outgoing decision', () => {
     const contractId = createOccurrenceId('readiness-contract');
     const shopId = goldenGOccurrenceId(5, 1);
