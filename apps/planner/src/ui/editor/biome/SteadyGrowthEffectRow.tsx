@@ -56,11 +56,12 @@ export function SteadyGrowthEffectRow({
   return (
     <li
       aria-label="Steady Growth"
+      aria-description="Automatic effect"
+      data-action-accent="automatic"
       className="room-action-row room-timeline-effect-row"
       data-steady-growth={control.address.phaseKey}
     >
       <div className="owner-markers room-action-identity scheduled-trait-effect-identity">
-        <span className="room-automatic-label">Automatic</span>
         <strong>Steady Growth</strong>
         {domain?.emptyNoOp === true && control.targetTraitKey === undefined ? (
           <span>No eligible trait</span>

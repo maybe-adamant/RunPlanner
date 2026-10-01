@@ -259,7 +259,9 @@ describe('OccurrenceRoomActions', () => {
       </Provider>,
     );
     expect(await screen.findByLabelText('Steady Growth target')).toBeTruthy();
-    expect(within(screen.getByLabelText('Steady Growth')).getByText('Automatic')).toBeTruthy();
+    expect(screen.getByLabelText('Steady Growth').getAttribute('data-action-accent')).toBe(
+      'automatic',
+    );
     expect(screen.queryByText('No eligible trait')).toBeNull();
     await screen.findByRole('button', { name: 'Clear recorded target' }).then((button) =>
       act(() => {
@@ -278,6 +280,7 @@ describe('OccurrenceRoomActions', () => {
       occurrenceById(createOccurrenceId('golden-h-combat02')),
     );
     openRoomTab('Room Overview');
+    expect(screen.queryByRole('list', { name: 'Timeline legend' })).toBeNull();
     const fieldsSetup = screen.getByLabelText('Optional Rewards');
     const passiveEncounter = screen.getByLabelText('Passive encounter phase');
     expectBefore(passiveEncounter, fieldsSetup);
@@ -291,6 +294,10 @@ describe('OccurrenceRoomActions', () => {
     expect(within(fieldsSetup).getByLabelText('Optional 1')).toBeTruthy();
     openRoomTab('Room Timeline');
     const fieldsActions = screen.getByRole('region', { name: 'Room Timeline' });
+    expect(screen.getByRole('list', { name: 'Timeline legend' }).textContent).toBe(
+      'OptionalRequired nowBefore leavingAutomatic',
+    );
+    expect(within(fieldsActions).queryByRole('heading', { name: 'Room Timeline' })).toBeNull();
     expect(within(fieldsActions).getByLabelText('Room entered')).toBeTruthy();
     expect(within(fieldsActions).queryByLabelText('Passive encounter phase')).toBeNull();
     expect(
@@ -305,6 +312,13 @@ describe('OccurrenceRoomActions', () => {
       .getByText(/^Collect .+ · Optional 1/)
       .closest('li');
     if (optionalAction === null) throw new Error('Optional reward action is missing');
+    expect(optionalAction.getAttribute('data-action-accent')).toBe('optional');
+    expect(
+      within(timeline)
+        .getByText(/^Collect .+ · Cage 1/)
+        .closest('li')
+        ?.getAttribute('data-action-accent'),
+    ).toBe('room');
     expect(within(optionalAction).queryByLabelText('Optional 1')).toBeNull();
     expect(within(optionalAction).queryByRole('button', { name: 'Reward' })).toBeNull();
     expect(fieldsActions).toBeTruthy();
@@ -1116,6 +1130,7 @@ describe('OccurrenceRoomActions', () => {
       .find((button) => !(button as HTMLButtonElement).disabled);
     if (legalArrow === undefined) throw new Error('Icarus has no legal same-window arrow move');
     const wheelTwoChoice = rowFor('Choose Combat 2 wheel');
+    expect(wheelTwoChoice.getAttribute('data-action-accent')).toBe('phase');
     expect(
       within(wheelTwoChoice)
         .getAllByRole('button', { name: /Move Choose Combat 2 wheel (earlier|later)/ })

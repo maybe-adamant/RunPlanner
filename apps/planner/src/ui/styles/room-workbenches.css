@@ -1399,9 +1399,7 @@
   margin-left: 24px;
   padding: 7px 10px;
   border: 0;
-  border-left: 2px solid #719b9b;
   border-radius: 0 6px 6px 0;
-  background: rgb(113 155 155 / 9%);
   box-shadow: none;
 }
 
@@ -1409,10 +1407,51 @@
   content: none;
 }
 
-.room-automatic-label {
-  color: #a5cccc;
+.room-timeline-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  color: #aaa7af;
   font-size: 0.72rem;
-  font-weight: 600;
+}
+
+[data-action-accent='optional'] {
+  --timeline-accent: #83b98d;
+}
+
+[data-action-accent='phase'] {
+  --timeline-accent: #c98787;
+}
+
+[data-action-accent='room'] {
+  --timeline-accent: #caa35e;
+}
+
+[data-action-accent='automatic'] {
+  --timeline-accent: #719b9b;
+}
+
+.room-action-row[data-action-accent] {
+  border-left: 3px solid var(--timeline-accent);
+  background: color-mix(in srgb, var(--timeline-accent) 9%, transparent);
+}
+
+.room-timeline-legend > li {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.room-timeline-legend > li::before {
+  width: 8px;
+  flex-shrink: 0;
+  height: 0.85rem;
+  border-radius: 2px;
+  background: var(--timeline-accent);
+  content: '';
 }
 
 .room-timeline-effect-row > .room-action-identity {

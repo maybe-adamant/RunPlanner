@@ -1553,7 +1553,7 @@ describe('OccurrenceEncounterWorkbench', () => {
     });
   });
 
-  it('summarizes a Hub room main reward in Overview without another editor', () => {
+  it('keeps the incoming reward in the room banner across tabs without another editor', () => {
     const view = renderOccurrenceWorkbench(
       loadSurfaceNOPQProject(),
       'Surface',
@@ -1565,6 +1565,13 @@ describe('OccurrenceEncounterWorkbench', () => {
     expect(screen.getByRole('region', { name: 'Incoming reward' }).textContent).toContain(
       'Big Max Magick',
     );
+    expect(
+      screen.getByRole('region', { name: 'Incoming reward' }).closest('header'),
+    ).not.toBeNull();
+    openRoomTab('Room Timeline');
+    expect(screen.getByRole('region', { name: 'Incoming reward' }).textContent).toContain(
+      'Big Max Magick',
+    );
     expect(screen.queryByLabelText('Hub reward')).toBeNull();
     expect(screen.queryByRole('button', { name: 'Edit Hub reward' })).toBeNull();
     expect(view.application.store.getState().projectWorkspace.history!.past).toHaveLength(
@@ -1572,7 +1579,7 @@ describe('OccurrenceEncounterWorkbench', () => {
     );
   });
 
-  it('summarizes a fixed Hub reward in Overview', () => {
+  it('summarizes a fixed Hub reward in the room banner', () => {
     const project = loadSurfaceNStoryBoardProject();
     renderStaticOccurrenceWorkbench(
       project,
