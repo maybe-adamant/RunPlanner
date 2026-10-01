@@ -793,6 +793,7 @@ describe('OccurrenceRoomActions', () => {
     const orderedOptional = within(actions)
       .getByText(/^Collect .+ · Optional 1/, { selector: 'strong' })
       .closest<HTMLElement>('[data-room-action-key]');
+    expect(orderedOptional?.getAttribute('data-action-accent')).toBe('optional');
     const roomEntered = within(actions).getByLabelText('Room entered');
     expect(document.activeElement).toBe(orderedOptional);
     const board = within(actions).getByRole('list', { name: 'Room timeline' });
@@ -938,6 +939,8 @@ describe('OccurrenceRoomActions', () => {
     );
 
     openRoomTab('Room Timeline');
+    const soldRow = screen.getByText(`Sell ${leftTraitLabel}`).closest('li');
+    expect(soldRow?.getAttribute('data-action-accent')).toBe('room');
     await view.user.click(screen.getByRole('button', { name: `Move Sell ${leftTraitLabel}` }));
     await view.user.click(
       within(screen.getByRole('listbox'))
@@ -1470,6 +1473,8 @@ describe('OccurrenceRoomActions', () => {
 
     const minor = within(actions).getByText('Buy Max Magick · Slot 3').closest('li');
     if (minor === null) throw new Error('Minor Shop action is missing');
+    expect(minor.getAttribute('data-action-accent')).toBe('room');
+    expect(minor.getAttribute('title')).toBe('Required before leaving the room.');
     expect(
       within(minor).queryByRole('button', {
         name: 'Remove Buy Max Magick · Slot 3 from timeline',

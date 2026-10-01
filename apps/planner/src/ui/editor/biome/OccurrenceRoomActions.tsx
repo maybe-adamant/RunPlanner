@@ -492,6 +492,13 @@ export function RoomActionsWorkbench({
       row.rewardPayload?.showOffer === true &&
       (row.rewardPayload.control.offer?.rewardType ??
         row.rewardPayload.control.authoringSeed?.rewardType) === 'BlindBoxLoot';
+    const actionAccent = row.stale
+      ? undefined
+      : row.participation === 'optional'
+        ? row.participationOwnedByOverview && row.rank !== null
+          ? 'room'
+          : 'optional'
+        : row.requiredScope;
     const removeRow = (): void => {
       const removable = proposals.find((proposal) => proposal.kind === 'remove');
       if (removable?.structurallyAuthorable === true) {
@@ -511,23 +518,15 @@ export function RoomActionsWorkbench({
       <Fragment key={row.key}>
         <li
           className="hub-open-room-card room-action-row"
-          data-action-accent={
-            row.stale
-              ? undefined
-              : row.participation === 'optional'
-                ? 'optional'
-                : row.requiredScope
-          }
+          data-action-accent={actionAccent}
           title={
-            row.stale
-              ? undefined
-              : row.participation === 'optional'
-                ? 'Optional action'
-                : row.requiredScope === 'phase'
-                  ? 'Required in this timeline section, not necessarily as the next action.'
-                  : row.requiredScope === 'room'
-                    ? 'Required before leaving the room.'
-                    : undefined
+            actionAccent === 'optional'
+              ? 'Optional action'
+              : actionAccent === 'phase'
+                ? 'Required in this timeline section, not necessarily as the next action.'
+                : actionAccent === 'room'
+                  ? 'Required before leaving the room.'
+                  : undefined
           }
           data-dragging={pointerDrag?.actionKey === row.key || undefined}
           data-drop-after={
