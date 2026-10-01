@@ -2,6 +2,7 @@ import type { AuthoredChaosTraitOffer, TraitOptionKey } from '@run-planner/engin
 import type { ChaosNumericOperand, TraitRarity } from '@run-planner/engine/catalog-schema';
 import type { WorkspaceChaosOfferInteraction } from '@planner/projections/structured-workspace';
 import type { ContextualPickerModel } from '@planner/projections/contextual/contextualPicker';
+import { declaredChoicesPicker } from '@planner/projections/contextual/contextualPicker';
 import { ContextualPicker } from '@planner/ui/controls/ContextualPicker';
 import { ChaosBlessingValueFields } from './ChaosBlessingValueFields';
 import { ChaosValueSlider } from './ChaosValueSlider';
@@ -218,26 +219,22 @@ export function ChaosTraitOfferEditor({
               placeholder="Choose a blessing"
               triggerLabel={interaction.blessingLabel(value.blessingKey)}
             />
-            <label className="field-control">
-              <span>Rarity</span>
-              <select
-                aria-label="Chaos blessing rarity"
-                onChange={(event) =>
-                  changeRarity(event.currentTarget.value as Exclude<TraitRarity, 'Duo'>)
-                }
-                value={value.rarity}
-              >
-                {rarityOptions.map((rarity) => (
-                  <option
-                    disabled={rarity === value.rarity && !domain.rarities.includes(rarity)}
-                    key={rarity}
-                    value={rarity}
-                  >
-                    {rarity}
-                  </option>
-                ))}
-              </select>
-            </label>
+            <ContextualPicker
+              id="chaos-blessing-rarity"
+              label="Rarity"
+              placeholder="Choose a rarity"
+              model={declaredChoicesPicker(
+                rarityOptions.map((rarity) => ({
+                  key: rarity,
+                  value: rarity,
+                  label: rarity,
+                  disabled: !domain.rarities.includes(rarity),
+                })),
+                value.rarity,
+              )}
+              ariaLabel="Chaos blessing rarity"
+              onSelect={changeRarity}
+            />
             <ChaosBlessingValueFields
               onChange={(blessingValues) => onUpdate(Object.freeze({ ...value, blessingValues }))}
               operands={blessingOperands}

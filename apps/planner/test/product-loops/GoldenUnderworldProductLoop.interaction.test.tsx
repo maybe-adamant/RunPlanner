@@ -532,11 +532,13 @@ describe('underworld product loop', () => {
     );
 
     const gate = await screen.findByRole('article', { name: 'Chaos gate exit' });
-    await view.user.selectOptions(within(gate).getByLabelText('Map'), 'Chaos_06');
-    expect((within(gate).getByLabelText('Map') as HTMLSelectElement).value).toBe('Chaos_06');
+    await view.user.click(within(gate).getByRole('button', { name: 'Map' }));
+    await view.user.click(screen.getByRole('option', { name: 'Chaos 06' }));
+    expect(within(gate).getByLabelText('Map').textContent).toContain('Chaos 06');
     await view.user.click(screen.getByRole('button', { name: 'Undo' }));
-    expect((within(gate).getByLabelText('Map') as HTMLSelectElement).value).toBe('Chaos_01');
-    await view.user.selectOptions(within(gate).getByLabelText('Map'), 'Chaos_06');
+    expect(within(gate).getByLabelText('Map').textContent).toContain('Chaos 01');
+    await view.user.click(within(gate).getByRole('button', { name: 'Map' }));
+    await view.user.click(screen.getByRole('option', { name: 'Chaos 06' }));
     await view.user.click(within(gate).getByLabelText('Take Chaos gate'));
     await view.user.click(screen.getByRole('button', { name: 'Open next room' }));
     const enteredChaos = screen.getByRole('complementary', { name: 'Details' });

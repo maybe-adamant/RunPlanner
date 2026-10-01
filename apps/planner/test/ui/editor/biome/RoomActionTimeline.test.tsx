@@ -96,15 +96,16 @@ describe('OccurrenceRoomActions', () => {
     );
     openRoomTab('Room Timeline');
     const actions = screen.getByRole('region', { name: 'Room Timeline' });
-    const outcome = within(actions).getByRole('combobox', {
+    const outcome = within(actions).getByRole('button', {
       name: /^Pickup outcome for /,
     });
-    const timePiece = within(outcome).getByRole('option', {
+    await view.user.click(outcome);
+    const timePiece = screen.getByRole('option', {
       name: 'Time Piece · convert to Gold',
     });
 
-    expect((timePiece as HTMLOptionElement).disabled).toBe(false);
-    await view.user.selectOptions(outcome, 'timePiece');
+    expect(timePiece.getAttribute('aria-disabled')).not.toBe('true');
+    await view.user.click(timePiece);
     const authoredChaos = view.application.store
       .getState()
       .projectWorkspace.history!.present.route?.biomes.find((biome) => biome.biomeKey === 'F')
@@ -1027,21 +1028,14 @@ describe('OccurrenceRoomActions', () => {
       occurrenceById(goldenFOccurrenceId(1, 1)),
     );
     openRoomTab('Room Timeline');
-    const disposition = screen.getByRole('combobox', {
+    const disposition = screen.getByRole('button', {
       name: /^Pickup outcome for /,
     });
-    const outcomeControl = disposition.closest('label');
+    const outcomeControl = disposition.closest<HTMLElement>('.pickup-outcome-control');
     if (outcomeControl === null) throw new Error('Pickup outcome control is missing');
     expect(outcomeControl.classList.contains('pickup-outcome-control')).toBe(true);
     expect(within(outcomeControl).getByText('Pickup outcome')).toBeTruthy();
-    expect(within(disposition).getByRole('option', { name: 'Pick up reward' })).toBeTruthy();
-    expect(
-      (
-        within(disposition).getByRole('option', {
-          name: 'Artificer · replace reward',
-        }) as HTMLOptionElement
-      ).disabled,
-    ).toBe(false);
+    expect(disposition.textContent).toContain('Pick up reward');
     expect(
       within(outcomeControl).queryByRole('button', {
         name: 'Edit Pom: No eligible traits',
@@ -1059,7 +1053,8 @@ describe('OccurrenceRoomActions', () => {
         ?.contains(pomLauncher),
     ).toBe(true);
 
-    await view.user.selectOptions(disposition, 'artificer');
+    await view.user.click(disposition);
+    await view.user.click(screen.getByRole('option', { name: 'Artificer · replace reward' }));
     await waitFor(() => {
       const sourceAction = screen
         .getByText(/^(Collect Nectar|Use Artificer on Nectar)$/)
@@ -1121,12 +1116,10 @@ describe('OccurrenceRoomActions', () => {
         replacementRow.proposalKeys.includes(proposal.key),
     );
     expect(blocked?.explanations).toEqual(['Use Artificer on Bones first to create this reward.']);
-    expect(
-      within(sourceAction).getByRole('combobox', { name: /^Pickup outcome for / }),
-    ).toBeTruthy();
+    expect(within(sourceAction).getByRole('button', { name: /^Pickup outcome for / })).toBeTruthy();
     expect(within(sourceAction).getByRole('button', { name: 'Artificer item' })).toBeTruthy();
     expect(
-      within(replacementAction).queryByRole('combobox', { name: /^Pickup outcome for / }),
+      within(replacementAction).queryByRole('button', { name: /^Pickup outcome for / }),
     ).toBeNull();
     expect(within(replacementAction).queryByRole('button', { name: 'Artificer item' })).toBeNull();
 

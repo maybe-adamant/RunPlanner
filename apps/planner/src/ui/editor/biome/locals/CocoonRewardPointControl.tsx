@@ -6,6 +6,8 @@ import type {
 import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
 import { RoomMapViewport } from '@planner/ui/room-maps/RoomMapViewport';
 import { cocoonMapFor } from '@planner/ui/room-maps/cocoons/cocoonMapAssets';
+import { ContextualPicker } from '@planner/ui/controls/ContextualPicker';
+import { declaredChoicesPicker } from '@planner/projections/contextual/contextualPicker';
 
 type Decision = Extract<
   NonNullable<WorkspaceEncounterPhase['customization']>[number],
@@ -81,30 +83,40 @@ export function CocoonRewardPointControl({
   const map = cocoonMapFor(decision.selection.gameName);
   return (
     <section className="encounter-cocoon-position" aria-label="Cocoon reward position">
-      <label className="encounter-customization-row" htmlFor={id}>
-        <span>{decision.label}</span>
-        <select
-          aria-label={decision.label}
+      <div>
+        <ContextualPicker<number | null>
+          ariaLabel={decision.label}
+          label={decision.label}
+          layout="inline"
           id={id}
-          value={selected}
-          onChange={(event) =>
-            select(event.target.value === '' ? null : Number(event.target.value))
-          }
-        >
-          <option value="">Any</option>
-          {selected !== '' && !decision.selection.spawnPointIds.includes(selected) ? (
-            <option disabled value={selected}>{`${selected} (unavailable)`}</option>
-          ) : null}
-          {decision.selection.spawnPointIds.map((nativeId, index) => (
-            <option key={nativeId} value={nativeId}>
-              {index + 1}
-            </option>
-          ))}
-        </select>
+          placeholder="Any"
+          model={declaredChoicesPicker(
+            [
+              { key: 'any', value: null, label: 'Any' },
+              ...(selected !== '' && !decision.selection.spawnPointIds.includes(selected)
+                ? [
+                    {
+                      key: String(selected),
+                      value: selected,
+                      label: `${selected} (unavailable)`,
+                      disabled: true,
+                    },
+                  ]
+                : []),
+              ...decision.selection.spawnPointIds.map((nativeId, index) => ({
+                key: String(nativeId),
+                value: nativeId,
+                label: String(index + 1),
+              })),
+            ],
+            selected === '' ? null : selected,
+          )}
+          onSelect={select}
+        />
         {!decision.valueSupported && decision.value !== undefined ? (
           <span className="encounter-customization-repair">Needs repair</span>
         ) : null}
-      </label>
+      </div>
       <RoomMapViewport
         key={decision.selection.gameName}
         asset={map?.asset}

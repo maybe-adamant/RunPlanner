@@ -63,7 +63,9 @@ describe('Room action layout', () => {
     ]) {
       expect(block(timelineStyles, selector)).toContain('min-width: min(100%, 13rem);');
     }
-    expect(block(rewardStyles, '.pickup-outcome-control > select')).toContain('max-width: 100%;');
+    expect(block(rewardStyles, '.pickup-outcome-control > .contextual-picker')).toContain(
+      'max-width: 100%;',
+    );
     expect(block(timelineStyles, '.room-action-inline-editors:empty')).toContain('display: none;');
   });
 

@@ -344,7 +344,7 @@ describe('DecisionWorkbench', () => {
     expect(within(normalDoor).queryByText('Door 1 room', { selector: 'label' })).toBeNull();
     expect(gate.dataset.picked).toBe('false');
     expect(within(gate).getByRole('heading', { level: 4, name: 'Chaos gate' })).toBeTruthy();
-    expect((within(gate).getByLabelText('Map') as HTMLSelectElement).value).toBe('Chaos_01');
+    expect(within(gate).getByLabelText('Map').textContent).toContain('Chaos 01');
     expect(within(gate).queryByRole('button', { name: /^Open .* room$/ })).toBeNull();
     expect(screen.getByRole('button', { name: 'Open next room' })).toHaveProperty(
       'disabled',

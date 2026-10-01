@@ -8,6 +8,8 @@ import {
 import { useFindingTarget } from '@planner/ui/feedback/useFindingTarget';
 import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
 import { RoomMapLauncher } from '@planner/ui/room-maps/RoomMapDialog';
+import { ContextualPicker } from '@planner/ui/controls/ContextualPicker';
+import { declaredChoicesPicker } from '@planner/projections/contextual/contextualPicker';
 
 export function ChaosMapWorkbench({
   control,
@@ -23,23 +25,17 @@ export function ChaosMapWorkbench({
   );
   return (
     <div className="additional-exit-map-control">
-      <label
-        className="field-control field-control-inline"
-        htmlFor={`chaos-map-${control.door.room.occurrenceId}`}
-      >
-        <span>Map</span>
-        <select
-          id={`chaos-map-${control.door.room.occurrenceId}`}
-          onChange={(event) => executeIntent(interaction.mapIntent(event.target.value))}
-          value={control.door.room.gameName}
-        >
-          {control.mapChoices.map((choice) => (
-            <option key={choice.value} value={choice.value}>
-              {choice.label}
-            </option>
-          ))}
-        </select>
-      </label>
+      <ContextualPicker
+        id={`chaos-map-${control.door.room.occurrenceId}`}
+        label="Map"
+        layout="inline"
+        model={declaredChoicesPicker(
+          control.mapChoices.map((choice) => ({ ...choice, key: choice.value })),
+          control.door.room.gameName,
+        )}
+        onSelect={(gameName) => executeIntent(interaction.mapIntent(gameName))}
+        placeholder="Choose a map"
+      />
       <RoomMapLauncher
         gameName={control.door.room.gameName}
         hostId={workspaceInteractionKey(control.owner)}

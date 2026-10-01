@@ -596,10 +596,6 @@
   margin-top: 0;
 }
 
-.biome-candidate-select select {
-  min-width: 0;
-}
-
 .takeover-action {
   display: grid;
   gap: 8px;

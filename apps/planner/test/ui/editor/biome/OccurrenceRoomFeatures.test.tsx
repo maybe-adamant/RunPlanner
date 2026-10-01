@@ -118,9 +118,10 @@ describe('OccurrenceRoomFeatures', () => {
     expect(screen.getByLabelText('Reward')).toBeTruthy();
     const map = screen.getByLabelText('Room');
     const restore = screen.getByRole('button', { name: 'Restore Combat 01' });
-    expect((map as HTMLSelectElement).value).toBe('B_Combat01');
+    expect(map.textContent).toContain('Anomaly 01');
     expect(screen.queryByRole('checkbox', { name: 'Cleared' })).toBeNull();
-    await door.user.selectOptions(map, 'B_Combat05');
+    await door.user.click(map);
+    await door.user.click(screen.getByRole('option', { name: 'Anomaly 05' }));
     await door.user.click(restore);
     expect(
       dispatch.mock.calls
