@@ -640,13 +640,6 @@ select {
   letter-spacing: 0.05em;
 }
 
-.anomaly-outcome-control input {
-  width: 16px;
-  height: 16px;
-  margin: 0;
-  accent-color: #e2b971;
-}
-
 .anomaly-revert-action {
   margin: 0;
 }
