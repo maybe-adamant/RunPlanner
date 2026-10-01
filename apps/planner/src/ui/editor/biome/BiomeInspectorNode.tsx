@@ -17,6 +17,7 @@ import { HubDecisionWorkbench } from './HubDecisionWorkbench';
 import { HubFountainControls } from './HubFountainControls';
 import { OccurrenceWorkbench } from './OccurrenceWorkbench';
 import { BossDoorRewardPoolRow } from './OccurrenceDirectRoomWorkbench';
+import { RoomMapLauncher } from '@planner/ui/room-maps/RoomMapDialog';
 import {
   inspectorLifecycleBoundaryContent,
   inspectorRoomActionContent,
@@ -65,10 +66,61 @@ function OccurrenceOutgoing({
           <AuthoringFrontier frontier={outgoing.frontier} interactions={interactions} />
         </section>
       );
+    case 'fixedRoom': {
+      const destination = outgoing.destination;
+      if (destination.kind === 'complete')
+        return (
+          <section aria-label="Outgoing doors" className="outgoing-occurrence-state">
+            <h3>Outgoing doors</h3>
+            <p className="fixed-room-state">{destination.message}</p>
+          </section>
+        );
+      return (
+        <section aria-label="Outgoing doors" className="decision-card outgoing-occurrence-state">
+          <header className="decision-heading">
+            <div>
+              <p className="card-kicker">Outgoing doors</p>
+              <h3>Door offer</h3>
+            </div>
+          </header>
+          <div className="exit-list">
+            <article aria-label={`${destination.label} room offer`} className="exit-row">
+              <div className="exit-marker" aria-hidden="true" />
+              <div className="exit-content">
+                <div className="exit-heading">
+                  <div>
+                    <p className="card-kicker">Door 1</p>
+                    <h4>{destination.label}</h4>
+                  </div>
+                  <div className="owner-markers">
+                    <span className="neutral-status">Fixed</span>
+                    {destination.kind === 'room' && destination.gameName !== undefined ? (
+                      <RoomMapLauncher
+                        gameName={destination.gameName}
+                        hostId={outgoing.marker.focusKey}
+                        title={destination.label}
+                      />
+                    ) : null}
+                  </div>
+                </div>
+                {bossDoorRewardStore === undefined ? null : (
+                  <div className="door-reward-slot">
+                    <BossDoorRewardPoolRow
+                      idPrefix={idPrefix}
+                      interactions={interactions}
+                      store={bossDoorRewardStore}
+                    />
+                  </div>
+                )}
+              </div>
+            </article>
+          </div>
+        </section>
+      );
+    }
     case 'blockedOrUnentered':
     case 'topologyOwned':
     case 'terminal':
-    case 'fixedRoom':
       return (
         <section aria-label="Outgoing doors" className="outgoing-occurrence-state">
           <div className="owner-markers">

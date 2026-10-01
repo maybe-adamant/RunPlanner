@@ -524,12 +524,12 @@ export function assembleWorkspaceOccurrence(
       case 'ignored':
         return Object.freeze({
           kind: 'ignored' as const,
-          summary: 'Reward Pool is ignored for this boss.',
+          summary: 'Ignored for this boss',
         });
       case 'fixed':
         return Object.freeze({
           kind: 'fixed' as const,
-          summary: `Reward Pool is fixed as ${workspaceRewardStoreLabel(admitted.storeKey)} for this boss.`,
+          summary: `${workspaceRewardStoreLabel(admitted.storeKey)} · Fixed`,
         });
       case 'editor':
         return Object.freeze({

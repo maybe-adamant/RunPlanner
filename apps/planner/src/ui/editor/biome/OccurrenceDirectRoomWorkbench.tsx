@@ -115,11 +115,14 @@ export function BossDoorRewardPoolRow({
   readonly store: WorkspaceBossDoorRewardStoreControl;
 }) {
   return (
-    <div className="batch-controls">
+    <div className="door-reward-list">
       {store.kind === 'editor' ? (
         <BossDoorRewardStoreEditor idPrefix={idPrefix} interactions={interactions} store={store} />
       ) : (
-        <p className="boss-door-store-declared">{store.summary}</p>
+        <div className="field-control field-control-inline door-fixed-reward">
+          <span>Reward Pool</span>
+          <span className="fixed-room-state">{store.summary}</span>
+        </div>
       )}
     </div>
   );
