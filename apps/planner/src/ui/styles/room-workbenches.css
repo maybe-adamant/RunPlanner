@@ -1305,17 +1305,6 @@
   margin: 0;
 }
 
-.room-action-position-control {
-  grid-template-columns: auto minmax(8rem, 1fr);
-}
-
-.hub-rank-action {
-  min-height: 30px;
-  min-width: 30px;
-  padding: 4px;
-  font-size: 0.95rem;
-}
-
 .room-overview-workbench,
 .room-actions-workbench {
   display: grid;
@@ -1382,6 +1371,95 @@
   flex-wrap: wrap;
 }
 
+.room-action-placement-picker .contextual-picker > label {
+  display: none;
+}
+
+.room-action-placement-picker .contextual-picker-trigger,
+.room-action-insertion-button {
+  min-height: 26px;
+  width: auto;
+  padding: 3px 8px;
+  font-size: 0.75rem;
+}
+
+.room-action-insertion {
+  margin-left: 24px;
+  list-style: none;
+}
+
+.room-action-insertion-button {
+  opacity: 0.45;
+  transition: opacity 120ms;
+}
+
+.room-action-insertion:hover .room-action-insertion-button,
+.room-action-insertion-button:focus-visible {
+  opacity: 1;
+}
+
+@media (hover: none) {
+  .room-action-insertion-button {
+    opacity: 1;
+  }
+}
+
+.room-action-insertion button[aria-disabled='true'] {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.room-action-row[data-placing='true'] {
+  outline: 1px solid #c6c3cd;
+  outline-offset: 2px;
+}
+
+.room-action-placement-notice {
+  position: sticky;
+  bottom: 8px;
+  z-index: 2;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 12px;
+  border: 1px solid #777580;
+  border-radius: 8px;
+  background: #25252d;
+  font-size: 0.8rem;
+}
+
+.room-action-drag-feedback {
+  display: block;
+  margin-left: 8px;
+  font-size: 0.75rem;
+}
+
+.room-action-row[data-drop-before]::after,
+.room-action-row[data-drop-after]::after {
+  position: absolute;
+  inset-inline: 0;
+  height: 3px;
+  border-radius: 3px;
+  pointer-events: none;
+  content: '';
+  background: #c98787;
+}
+
+.room-action-row[data-drop-before]::after {
+  top: -5px;
+}
+
+.room-action-row[data-drop-after]::after {
+  bottom: -5px;
+}
+
+.room-action-row[data-drop-before='available']::after,
+.room-action-row[data-drop-after='available']::after {
+  background: #83b98d;
+}
+
 .room-action-row[data-inline-layout='sentence'] {
   grid-template-columns: minmax(0, 1fr) auto;
 }
@@ -1419,11 +1497,11 @@
 }
 
 [data-action-accent='optional'] {
-  --timeline-accent: #83b98d;
+  --timeline-accent: #72a7ee;
 }
 
 [data-action-accent='phase'] {
-  --timeline-accent: #c98787;
+  --timeline-accent: #db8fd1;
 }
 
 [data-action-accent='room'] {

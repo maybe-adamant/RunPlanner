@@ -366,7 +366,7 @@ describe('OccurrenceRoomActions', () => {
     }
     expect(within(timeline).queryByText(/^Clear Cage\d+/)).toBeNull();
     for (const row of timeline.querySelectorAll('[data-in-order="true"]')) {
-      expect(row.querySelectorAll('.hub-rank-action')).toHaveLength(2);
+      expect(within(row as HTMLElement).getByRole('button', { name: /^Move / })).toBeTruthy();
     }
 
     const dropTargetSelector =
@@ -395,10 +395,13 @@ describe('OccurrenceRoomActions', () => {
     expectBefore(ends[0]!, cagePickup);
     expect(cagePickup.querySelector('[data-room-action-drag-handle]')).not.toBeNull();
     const movePickupEarlier = within(cagePickup).getByRole('button', {
-      name: /^Move Collect .* · Cage 1 earlier$/,
+      name: /^Move Collect .* · Cage 1$/,
     }) as HTMLButtonElement;
     expect(movePickupEarlier.disabled).toBe(false);
     await view.user.click(movePickupEarlier);
+    await view.user.click(
+      within(screen.getByRole('listbox')).getByRole('option', { name: 'Before Clear Cage03' }),
+    );
     await waitFor(() => {
       const order = occurrenceRoomActionOrder(
         view.application.store.getState().projectWorkspace.history!.present,
@@ -622,25 +625,70 @@ describe('OccurrenceRoomActions', () => {
       .getByText(/^Collect .+ · Optional 1/)
       .closest<HTMLElement>('[data-room-action-key]');
     if (initialOptional === null) throw new Error('Optional 1 action is missing');
-    const insertion = within(initialOptional).getByRole('combobox', {
-      name: /^Insert Collect .+ · Optional 1/,
-    }) as HTMLSelectElement;
-    expect(insertion.closest('label')?.classList.contains('field-control-inline')).toBe(true);
-    const lastAvailable = Array.from(insertion.options).findLast(
-      (option) => option.value !== '' && !option.disabled,
+    expect(within(actions).queryByRole('button', { name: / here:/ })).toBeNull();
+    const add = within(initialOptional).getByRole('button', { name: /^Add Collect / });
+    const historyLength = view.application.store.getState().projectWorkspace.history!.past.length;
+    await view.user.click(add);
+    expect(initialOptional.getAttribute('data-placing')).toBe('true');
+    const insertionLabels = within(actions)
+      .getAllByRole('button', { name: / here:/ })
+      .map((button) => button.getAttribute('aria-label'));
+    expect(new Set(insertionLabels).size).toBe(insertionLabels.length);
+    await view.user.click(within(actions).getAllByRole('button', { name: /^Move / })[0]!);
+    expect(screen.getByRole('listbox')).toBeTruthy();
+    await view.user.keyboard('{Escape}');
+    expect(screen.queryByRole('listbox')).toBeNull();
+    expect(initialOptional.getAttribute('data-placing')).toBe('true');
+    await view.user.keyboard('{Escape}');
+    expect(within(actions).queryByRole('button', { name: / here:/ })).toBeNull();
+    expect(document.activeElement).toBe(add);
+    expect(view.application.store.getState().projectWorkspace.history!.past).toHaveLength(
+      historyLength,
     );
-    if (lastAvailable === undefined) throw new Error('Optional 1 has no insertion proposal');
-    await view.user.selectOptions(insertion, lastAvailable.value);
+    await view.user.click(add);
+    await view.user.click(screen.getByRole('button', { name: 'Cancel' }));
+    expect(within(actions).queryByRole('button', { name: / here:/ })).toBeNull();
+    await view.user.click(add);
+    const addHere = within(actions)
+      .getAllByRole('button', { name: /^Add Collect .+ · Optional 1 here:/ })
+      .filter((button) => button.getAttribute('aria-disabled') !== 'true')
+      .at(-1);
+    if (addHere === undefined) throw new Error('Timeline has no insertion point');
+    expectBefore(within(actions).getByLabelText('Doors open'), addHere);
+    await view.user.click(addHere);
+    expect(within(actions).queryByRole('button', { name: / here:/ })).toBeNull();
 
     expect(within(optionalPool).queryByText(/^Collect .+ · Optional 1/)).toBeNull();
     const orderedOptional = within(actions)
-      .getByText(/^Collect .+ · Optional 1/)
+      .getByText(/^Collect .+ · Optional 1/, { selector: 'strong' })
       .closest<HTMLElement>('[data-room-action-key]');
     const roomEntered = within(actions).getByLabelText('Room entered');
+    expect(document.activeElement).toBe(orderedOptional);
     const board = within(actions).getByRole('list', { name: 'Room timeline' });
     const handle = orderedOptional?.querySelector<HTMLElement>('[data-room-action-drag-handle]');
     if (orderedOptional === null || handle === null || handle === undefined)
       throw new Error('Ordered Optional 1 drag handle is missing');
+    const historyBeforeNoOp =
+      view.application.store.getState().projectWorkspace.history!.past.length;
+    Object.defineProperty(document, 'elementFromPoint', {
+      configurable: true,
+      value: () => orderedOptional,
+    });
+    fireEvent.pointerDown(handle, {
+      button: 0,
+      clientX: 12,
+      clientY: 12,
+      isPrimary: true,
+      pointerId: 90,
+    });
+    fireEvent.pointerMove(board, { clientX: 24, clientY: 80, isPrimary: true, pointerId: 90 });
+    expect(screen.queryByText('Unavailable: required action order or timing')).toBeNull();
+    expect(orderedOptional.dataset.dropAfter).toBeUndefined();
+    fireEvent.pointerUp(board, { clientX: 24, clientY: 80, isPrimary: true, pointerId: 90 });
+    expect(view.application.store.getState().projectWorkspace.history!.past).toHaveLength(
+      historyBeforeNoOp,
+    );
+    expect(screen.queryByText(/^Action not moved/)).toBeNull();
     Object.defineProperty(document, 'elementFromPoint', {
       configurable: true,
       value: () => roomEntered,
@@ -759,8 +807,11 @@ describe('OccurrenceRoomActions', () => {
     );
 
     openRoomTab('Room Timeline');
+    await view.user.click(screen.getByRole('button', { name: `Move Sell ${leftTraitLabel}` }));
     await view.user.click(
-      screen.getByRole('button', { name: `Move Sell ${leftTraitLabel} earlier` }),
+      within(screen.getByRole('listbox'))
+        .getAllByRole('option')
+        .find((option) => option.getAttribute('aria-disabled') !== 'true')!,
     );
     const poolActionOrder = () =>
       view.application.store
@@ -1088,7 +1139,7 @@ describe('OccurrenceRoomActions', () => {
     ).toBe(false);
   });
 
-  it('keeps Ship arrow, pointer, fixed-window, and Undo behavior on one global action order', async () => {
+  it('keeps Ship menu, pointer, fixed-window, and Undo behavior on one global action order', async () => {
     const occurrenceId = oOccurrenceIds.combat01;
     const occurrence = createOccurrenceAddress(oBiome, occurrenceId);
     let project = applyProjectCommand(loadSurfaceNOPQProject(), catalog, {
@@ -1125,20 +1176,27 @@ describe('OccurrenceRoomActions', () => {
     };
 
     const icarus = rowFor('Talk to Icarus');
-    const legalArrow = within(icarus)
-      .getAllByRole('button', { name: /Move Talk to Icarus (earlier|later)/ })
-      .find((button) => !(button as HTMLButtonElement).disabled);
-    if (legalArrow === undefined) throw new Error('Icarus has no legal same-window arrow move');
+    const moveIcarus = within(icarus).getByRole('button', { name: 'Move Talk to Icarus' });
     const wheelTwoChoice = rowFor('Choose Combat 2 wheel');
     expect(wheelTwoChoice.getAttribute('data-action-accent')).toBe('phase');
+    await view.user.click(
+      within(wheelTwoChoice).getByRole('button', { name: 'Move Choose Combat 2 wheel' }),
+    );
+    await view.user.click(screen.getByRole('button', { name: /Unavailable/ }));
     expect(
-      within(wheelTwoChoice)
-        .getAllByRole('button', { name: /Move Choose Combat 2 wheel (earlier|later)/ })
-        .some((button) => (button as HTMLButtonElement).disabled),
+      within(screen.getByRole('listbox'))
+        .getAllByRole('option')
+        .some((option) => option.getAttribute('aria-disabled') === 'true'),
     ).toBe(true);
+    await view.user.keyboard('{Escape}');
 
     const initialOrder = actionOrder();
-    await view.user.click(legalArrow);
+    await view.user.click(moveIcarus);
+    await view.user.click(
+      within(screen.getByRole('listbox'))
+        .getAllByRole('option')
+        .find((option) => option.getAttribute('aria-disabled') !== 'true')!,
+    );
     expect(actionOrder()).not.toEqual(initialOrder);
     act(() => view.application.store.dispatch(authoredProjectUndoRequested()));
     expect(actionOrder()).toEqual(initialOrder);
@@ -1244,8 +1302,13 @@ describe('OccurrenceRoomActions', () => {
     ).toBeNull();
     await view.user.click(
       within(minor).getByRole('button', {
-        name: 'Move Buy Max Magick · Slot 3 earlier',
+        name: 'Move Buy Max Magick · Slot 3',
       }),
+    );
+    await view.user.click(
+      within(screen.getByRole('listbox'))
+        .getAllByRole('option')
+        .find((option) => option.getAttribute('aria-disabled') !== 'true')!,
     );
     expect(
       occurrenceRoomActionOrder(

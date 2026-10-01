@@ -1203,15 +1203,18 @@ describe('OccurrenceEncounterWorkbench', () => {
     expect(
       authoredOccurrence()?.acquisitionSites?.[narcissusSite]?.pickupEntries?.mysteryBoon,
     ).toBeNull();
-    const insert = within(actionRow).getByRole('combobox', {
-      name: 'Insert Collect Mystery Boon · Mixed Blessings',
+    const insert = within(actionRow).getByRole('button', {
+      name: 'Add Collect Mystery Boon · Mixed Blessings',
     });
-    const insertion = Array.from((insert as HTMLSelectElement).options).find(
-      (option) => option.value !== '' && !option.disabled,
-    );
+    await view.user.click(insert);
+    const insertion = screen
+      .getAllByRole('button', { name: /^Add Collect Mystery Boon · Mixed Blessings here:/ })
+      .find((button) => button.getAttribute('aria-disabled') !== 'true');
     if (insertion === undefined) throw new Error('Narcissus pickup has no legal insertion');
-    await view.user.selectOptions(insert, insertion.value);
-    const placedRow = screen.getByText(/^Collect Mystery Boon/).closest('li');
+    await view.user.click(insertion);
+    const placedRow = screen
+      .getByText(/^Collect Mystery Boon/, { selector: 'strong' })
+      .closest('li');
     if (placedRow === null) throw new Error('Narcissus pickup action is missing');
     await view.user.click(within(placedRow).getByRole('button', { name: 'Reward' }));
     await view.user.click(await within(await screen.findByRole('listbox')).findByText('Hestia'));
@@ -1268,7 +1271,9 @@ describe('OccurrenceEncounterWorkbench', () => {
       { kind: 'interactEncounter', phaseKey: 'Encounter' },
     ]);
     expect(hasAcquiredMysteryBoon()).toBe(false);
-    const optionalRow = screen.getByText(/^Collect Mystery Boon/).closest('li');
+    const optionalRow = screen
+      .getByText(/^Collect Mystery Boon/, { selector: 'strong' })
+      .closest('li');
     if (optionalRow === null) throw new Error('Narcissus optional pickup is missing');
     expect(within(optionalRow).queryByRole('button', { name: 'Reward' })).toBeNull();
     expect(
@@ -1330,14 +1335,15 @@ describe('OccurrenceEncounterWorkbench', () => {
       return row;
     };
     expect(within(pickupRow()).queryByRole('button', { name: /^Edit Pom:/ })).toBeNull();
-    const insert = within(pickupRow()).getByRole('combobox', {
-      name: 'Insert Collect Pom Slice · Verdure Sampler',
+    const insert = within(pickupRow()).getByRole('button', {
+      name: 'Add Collect Pom Slice · Verdure Sampler',
     });
-    const position = Array.from((insert as HTMLSelectElement).options).find(
-      (option) => option.value !== '' && !option.disabled,
-    );
+    await view.user.click(insert);
+    const position = screen
+      .getAllByRole('button', { name: /^Add Collect Pom Slice · Verdure Sampler here:/ })
+      .find((button) => button.getAttribute('aria-disabled') !== 'true');
     if (position === undefined) throw new Error('Narcissus Pom has no insertion point');
-    await view.user.selectOptions(insert, position.value);
+    await view.user.click(position);
     await view.user.click(
       within(pickupRow()).getByRole('button', { name: /^Edit Pom: Choose target/ }),
     );
@@ -1426,20 +1432,23 @@ describe('OccurrenceEncounterWorkbench', () => {
     if (!(psycheRow instanceof HTMLElement)) throw new Error('Psyche acquisition row is missing');
     expect(within(psycheRow).queryByRole('button', { name: 'Reward' })).toBeNull();
     expect(within(psycheRow).queryByLabelText(/Pickup outcome/)).toBeNull();
-    const insert = within(psycheRow).getByRole('combobox', {
-      name: /^Insert Collect Psyche/,
+    const insert = within(psycheRow).getByRole('button', {
+      name: /^Add Collect Psyche/,
     });
-    const insertion = Array.from((insert as HTMLSelectElement).options).find(
-      (option) => option.value !== '' && !option.disabled,
-    );
+    await view.user.click(insert);
+    const insertion = screen
+      .getAllByRole('button', { name: /^Add Collect Psyche.* here:/ })
+      .find((button) => button.getAttribute('aria-disabled') !== 'true');
     if (insertion === undefined) throw new Error('Psyche has no legal insertion');
-    await view.user.selectOptions(insert, insertion.value);
+    await view.user.click(insertion);
     expect(authoredOccurrence()?.roomActions.order.at(-1)).toEqual({
       kind: 'interactAcquisitionEntry',
       siteKey: narcissusSite,
       entryKey: 'psyche',
     });
-    const orderedPsycheRow = screen.getByText(/^Collect Psyche/).closest('li');
+    const orderedPsycheRow = screen
+      .getByText(/^Collect Psyche/, { selector: 'strong' })
+      .closest('li');
     if (!(orderedPsycheRow instanceof HTMLElement))
       throw new Error('Ordered Psyche acquisition row is missing');
     expect(within(orderedPsycheRow).queryByRole('button', { name: 'Reward' })).toBeNull();
@@ -1529,14 +1538,15 @@ describe('OccurrenceEncounterWorkbench', () => {
     openRoomTab('Room Timeline');
     const maxManaRow = screen.getByText(/^Collect Max Magick/).closest('li');
     if (maxManaRow === null) throw new Error('Max Magick action row is missing');
-    const maxMana = within(maxManaRow).getByRole('combobox', {
-      name: /^Insert Collect Max Magick/,
+    const maxMana = within(maxManaRow).getByRole('button', {
+      name: /^Add Collect Max Magick/,
     });
-    const insertion = Array.from((maxMana as HTMLSelectElement).options).find(
-      (option) => option.textContent === 'Insert to position 3' && !option.disabled,
-    );
+    await view.user.click(maxMana);
+    const insertion = screen
+      .getAllByRole('button', { name: /^Add Collect Max Magick.* here:/ })
+      .findLast((button) => button.getAttribute('aria-disabled') !== 'true');
     if (insertion === undefined) throw new Error('Max Magick has no legal insertion');
-    await view.user.selectOptions(maxMana, insertion.value);
+    await view.user.click(insertion);
 
     expect(
       view.application.store

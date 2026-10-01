@@ -3,29 +3,29 @@ import type {
   WorkspaceRoomActionRow,
 } from '@planner/projections/structured-workspace';
 import { TimelineActionDeleteButton } from './TimelineActionDeleteButton';
+import { RoomActionPlacementPicker } from './RoomActionPlacementPicker';
+import { roomActionDestinationLabel } from './room-action-placement';
 
 /** Timeline-only ordering and removal controls for one already-projected action. */
 export function RoomActionOrderingControls({
   row,
+  rows,
   proposals,
   onApply,
   onRemove,
+  onBeginAdd,
   showRemoval = true,
 }: {
   readonly row: WorkspaceRoomActionRow;
+  readonly rows: readonly WorkspaceRoomActionRow[];
   readonly proposals: readonly WorkspaceRoomActionProposal[];
   readonly onApply: (proposalKey: string) => void;
   readonly onRemove: () => void;
+  readonly onBeginAdd: (button: HTMLButtonElement) => void;
   readonly showRemoval?: boolean;
 }) {
   const removable = proposals.find((proposal) => proposal.kind === 'remove');
-  const moveEarlier = proposals.find(
-    (proposal) =>
-      proposal.kind === 'move' && row.rank !== null && proposal.toIndex === row.rank - 2,
-  );
-  const moveLater = proposals.find(
-    (proposal) => proposal.kind === 'move' && row.rank !== null && proposal.toIndex === row.rank,
-  );
+  const moves = proposals.filter((proposal) => proposal.kind === 'move');
   const insertions = proposals.filter((proposal) => proposal.kind === 'insert');
   const removalEnabled =
     removable?.structurallyAuthorable === true || row.shopParticipation !== undefined;
@@ -50,48 +50,25 @@ export function RoomActionOrderingControls({
           Restore required action
         </button>
       ) : row.rank === null ? (
-        <label className="field-control field-control-inline room-action-position-control">
-          <span>Position</span>
-          <select
-            aria-label={`Insert ${row.label}`}
-            onChange={(event) => {
-              onApply(event.target.value);
-              event.target.value = '';
-            }}
-            value=""
-          >
-            <option disabled value="">
-              Choose
-            </option>
-            {insertions.map((proposal) => (
-              <option
-                disabled={!proposal.structurallyAuthorable}
-                key={proposal.key}
-                value={proposal.key}
-              >
-                {proposal.label}
-              </option>
-            ))}
-          </select>
-        </label>
+        <button
+          aria-label={`Add ${row.label}`}
+          className="secondary-action action-compact"
+          disabled={insertions.length === 0}
+          onClick={(event) => onBeginAdd(event.currentTarget)}
+          type="button"
+        >
+          Add…
+        </button>
       ) : (
-        <>
-          {[
-            { direction: 'earlier' as const, glyph: '↑', proposal: moveEarlier },
-            { direction: 'later' as const, glyph: '↓', proposal: moveLater },
-          ].map(({ direction, glyph, proposal }) => (
-            <button
-              aria-label={`Move ${row.label} ${direction}`}
-              className="quiet-action hub-rank-action"
-              disabled={proposal?.structurallyAuthorable !== true}
-              key={direction}
-              onClick={() => proposal === undefined || onApply(proposal.key)}
-              type="button"
-            >
-              <span aria-hidden="true">{glyph}</span>
-            </button>
-          ))}
-        </>
+        <RoomActionPlacementPicker
+          label={`Move ${row.label}`}
+          trigger="Move…"
+          choices={moves.map((proposal) => ({
+            ...proposal,
+            label: roomActionDestinationLabel(rows, proposal.toIndex ?? 0, row),
+          }))}
+          onApply={onApply}
+        />
       )}
       {showRemoval ? (
         <TimelineActionDeleteButton
