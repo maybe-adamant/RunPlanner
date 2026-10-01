@@ -561,6 +561,51 @@ describe('generated encounter customization workflows', () => {
     expect(button.disabled).toBe(true);
     expect(button.title).toBe('Waits on an earlier choice');
   });
+  it('repairs required Fields passive composition from Overview without opening its dialog automatically', async () => {
+    const owner = createEncounterPhaseAddress(
+      createBiomeAddress('FreshFile', 'H'),
+      { kind: 'occurrence', occurrenceId: newHFieldsRoomId },
+      'Passive',
+    );
+    const authored = authorFreshFileRoomIssues(
+      withNewHFieldsRoom(createFreshFileRouteProject(), 'FreshFile', 'max'),
+      'H',
+      newHFieldsRoomId,
+    ).project;
+    const project = applyProjectCommand(authored, catalog, {
+      kind: 'ReplaceEncounterCustomization',
+      phase: owner,
+      decisionKey: 'generatedComposition',
+      value: null,
+    });
+    const view = renderOccurrenceWorkbench(
+      project,
+      'FreshFile',
+      'H',
+      occurrenceById(newHFieldsRoomId),
+    );
+    openRoomTab('Room Timeline');
+    expect(screen.queryByLabelText('Passive encounter phase')).toBeNull();
+    openRoomTab('Room Overview');
+    const finding = simulateProject(catalog, project).findings.find(
+      (entry) => entry.code === 'encounterCustomizationRequired',
+    )!;
+    expect(finding.origin).toEqual(owner);
+    act(() =>
+      view.application.store.dispatch(
+        findingSelected({ key: semanticFindingKey(finding), origin: finding.origin }),
+      ),
+    );
+    const trigger = within(screen.getByLabelText('Passive encounter phase')).getByRole('button', {
+      name: 'Customize encounter',
+    });
+    await waitFor(() => expect(document.activeElement).toBe(trigger));
+    expect(screen.queryByRole('dialog')).toBeNull();
+    await view.user.click(trigger);
+    const dialog = await screen.findByRole('dialog', { name: /\(.+\)$/ });
+    await view.user.click(within(dialog).getByRole('button', { name: 'Edit' }));
+    expect(current(view, owner)).toBeDefined();
+  });
   it('keeps an earlier authored phase editable while a later phase in its room is the issue', async () => {
     const room = (phaseKey: string) =>
       createEncounterPhaseAddress(

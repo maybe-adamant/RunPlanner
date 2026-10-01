@@ -135,11 +135,13 @@ export function RoomActionsWorkbench({
     if (encounterPhases === undefined || idPrefix === undefined) return null;
     return (
       <section aria-label="Room Timeline" className="room-actions-workbench">
-        {encounterPhases.map((phase) => (
-          <Fragment key={workspaceInteractionKey(phase.address)}>
-            {renderEncounterPhase?.(phase)}
-          </Fragment>
-        ))}
+        {encounterPhases
+          .filter((phase) => phase.editorAnchor !== 'overview')
+          .map((phase) => (
+            <Fragment key={workspaceInteractionKey(phase.address)}>
+              {renderEncounterPhase?.(phase)}
+            </Fragment>
+          ))}
       </section>
     );
   }

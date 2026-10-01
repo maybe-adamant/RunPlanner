@@ -457,8 +457,8 @@ export interface WorkspaceEncounterPhase {
   };
   readonly label: string;
   readonly marker: WorkspaceMarker;
-  /** Application-owned placement for the phase editor in the room timeline. */
-  readonly timelineAnchor: 'roomEntered' | 'encounterStart';
+  /** Application-owned placement for the phase editor, independent of encounter timing. */
+  readonly editorAnchor: 'overview' | 'roomEntered' | 'encounterStart';
   readonly figLeaf?: {
     readonly interactionKey: string;
     readonly selected: boolean;

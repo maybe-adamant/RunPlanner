@@ -122,7 +122,7 @@ describe('structured workspace composer assembly', () => {
     ).toBe(replacement.value);
   });
 
-  it('routes the H Passive phase to its Overview checkbox only without a customization', () => {
+  it('routes H Passive selection and combat customization to Overview', () => {
     const occurrenceId = createOccurrenceId('golden-h-combat05');
     const passiveTab = (project: Parameters<typeof assemble>[0]) => {
       const result = assemble(project, 'Underworld', 'H', occurrenceId);
@@ -132,7 +132,7 @@ describe('structured workspace composer assembly', () => {
       return result.markers.destinations().get(passive.marker.focusKey)?.roomTab;
     };
     expect(passiveTab(loadNemesisFieldsCheckpoint())).toBe('overview');
-    expect(passiveTab(createGoldenFGHIProject())).toBe('actions');
+    expect(passiveTab(createGoldenFGHIProject())).toBe('overview');
   });
 
   it('publishes an active Nemesis placement on Layout and hides it when dormant', () => {

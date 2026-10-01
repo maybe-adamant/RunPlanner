@@ -278,6 +278,11 @@ describe('OccurrenceRoomActions', () => {
     );
     openRoomTab('Room Overview');
     const fieldsSetup = screen.getByLabelText('Fields setup');
+    const passiveEncounter = screen.getByLabelText('Passive encounter phase');
+    expectBefore(passiveEncounter, fieldsSetup);
+    expect(
+      within(passiveEncounter).getByRole('button', { name: 'Customize encounter' }),
+    ).toBeTruthy();
     expect(fieldsSetup).toBeTruthy();
     expect(within(fieldsSetup).queryByText('Cage reward identities')).toBeNull();
     expect(within(fieldsSetup).queryByLabelText('Cage 1')).toBeNull();
@@ -285,9 +290,8 @@ describe('OccurrenceRoomActions', () => {
     expect(within(fieldsSetup).getByLabelText('Optional 1')).toBeTruthy();
     openRoomTab('Room Timeline');
     const fieldsActions = screen.getByRole('region', { name: 'Room Timeline' });
-    const fieldsEntered = within(fieldsActions).getByLabelText('Room entered');
-    const passiveEncounter = within(fieldsActions).getByLabelText('Passive encounter phase');
-    expectBefore(fieldsEntered, passiveEncounter);
+    expect(within(fieldsActions).getByLabelText('Room entered')).toBeTruthy();
+    expect(within(fieldsActions).queryByLabelText('Passive encounter phase')).toBeNull();
     expect(
       fieldsActions.querySelector('[data-lifecycle-boundary="encounterStart:Passive"]'),
     ).toBeNull();
