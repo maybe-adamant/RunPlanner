@@ -38,6 +38,8 @@ export interface RoomActionRow {
   readonly key: string;
   readonly owner: SemanticAddress;
   readonly participation: RoomActionParticipation;
+  /** Active mandatory work constrained to encounter progression or only room completion. */
+  readonly requiredScope?: 'phase' | 'room';
   readonly window: RoomActionWindow;
   readonly dependencies: readonly RoomActionDependency[];
   readonly rank: number | null;

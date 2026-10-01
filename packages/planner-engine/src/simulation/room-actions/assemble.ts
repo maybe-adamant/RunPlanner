@@ -21,6 +21,7 @@ import type {
   RoomActionRow,
 } from './model';
 import type { PlannerTimelineDependency, PlannerTimelineNode } from '../timeline-facts';
+import { withRequiredScopes } from './required-scope';
 
 function frozen<T>(value: T): T {
   return Object.freeze(value);
@@ -389,7 +390,7 @@ export function assembleRoomActionRoster(options: {
   }
   return frozen({
     lifecycleStructure: options.lifecycleStructure,
-    rows: frozen(rows),
+    rows: withRequiredScopes(rows, options.lifecycleStructure),
     checkpoints: frozen(checkpoints),
     issues,
     proposals: frozen(proposals),
@@ -415,12 +416,13 @@ export function scopeRoomActionRoster(
   return frozen({
     ...roster,
     lifecycleStructure,
-    rows: frozen(
+    rows: withRequiredScopes(
       roster.rows.map((row) =>
         'phaseKey' in row.reference && !active.has(row.reference.phaseKey)
           ? frozen({ ...row, stale: true, executable: false })
           : row,
       ),
+      lifecycleStructure,
     ),
   });
 }
