@@ -60,7 +60,7 @@ classifications. This document owns their normalized meaning:
 | Encounter ended                 | `encounterEndEffectsApplied`; editor `encounterEnd` boundary      | **Distinct effect checkpoint and visible boundary.** The boundary starts the post-combat interval. End effects then apply at the profile's declared point, after required rewards in O ship phases. Suppressed phases retain the boundary without the effect event. |
 | Required-object barrier cleared | Room Action dependencies and fixed roster checkpoints             | **Derived.** There is no authored clear-barrier action. Required object and encounter completion change the inputs until the fixed next transition becomes available.                                                                                               |
 | Outgoing batch generated        | `generateOutgoingBatch`; internal `outgoingGeneration` checkpoint | **Exact internal checkpoint.** Target identities and incoming rewards are frozen. It remains simulation/history authority but is not a player-facing row.                                                                                                           |
-| Doors open            | editor `cleanup` interval anchored to roster `exitUsable`         | **Derived player-facing interval.** It begins when required work is resolved and a door or equivalent continuation is usable. Eligible optional actions may occur on either side; using the continuation ends the interval.                                         |
+| Doors open                      | editor `cleanup` interval anchored to roster `exitUsable`         | **Derived player-facing interval.** It begins when required work is resolved and a door or equivalent continuation is usable. Eligible optional actions may occur on either side; using the continuation ends the interval.                                         |
 | Exit usable                     | roster `exitUsable` capability/checkpoint                         | **Exact capability anchoring Cleanup.** Profiles with a continuation retain this predicate without rendering another row. Required actions cannot follow it, and later optional actions do not mutate the frozen outgoing batch.                                    |
 | Room committed                  | `commitRoom`                                                      | **Exact.** Commit follows outgoing generation and supported remaining local work. It is distinct from the earlier moment when exits become usable.                                                                                                                  |
 | Room exited                     | `exitRoom`                                                        | **Grouped transfer.** The source fragment closes and hands the already-generated target to preparation and entry. The transfer does not choose or regenerate that target.                                                                                           |
@@ -249,6 +249,13 @@ longer active remain stale repair rows. Invalid or incomplete authorship is
 therefore retained for correction rather than dropped or silently reordered.
 There is no parallel Fields, Shop, Acquisitions, or presentation-owned action
 assembler and no second order authority.
+
+Insert and move proposals retain all typed dependency and fixed-window blockers
+from their existing order assessment, including the affected action and its
+prerequisite or conflicting action windows. The application labels this evidence
+for placement explanations; it neither infers legality nor attributes an existing
+blocker to the proposed action. Authorable proposals, canonical required restores,
+and removals carry no blocker evidence.
 
 The same pure structural action domain also classifies required participation
 for semantic commands. When a command newly activates required actions, the
