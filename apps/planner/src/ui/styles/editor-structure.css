@@ -999,13 +999,9 @@ select {
 .fields-batch-note {
   grid-column: 1 / -1;
   margin: 0;
-  color: #aaa5af;
+  color: #e2b971;
   font-size: 0.78rem;
   line-height: 1.4;
-}
-
-.fields-door-preview-note {
-  color: #e2b971;
 }
 
 .local-reward-editor {

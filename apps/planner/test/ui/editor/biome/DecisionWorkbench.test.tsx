@@ -1283,6 +1283,7 @@ describe('DecisionWorkbench', () => {
     );
 
     expect(screen.getByText('Cage rewards appear bottom to top on the door')).toBeTruthy();
+    expect(screen.queryByText(/No offered room uses the Fields multi-cage count/)).toBeNull();
 
     for (const roomLabel of ['Combat 05', 'Combat 04']) {
       const card = screen.getByRole('article', { name: `${roomLabel} room offer` });
@@ -1293,6 +1294,27 @@ describe('DecisionWorkbench', () => {
       expect(offers.querySelectorAll('.field-control-inline')).toHaveLength(3);
       expect(within(card).queryByText(/Optional \d/)).toBeNull();
     }
+  });
+
+  it('shows the Fields roll note instead of the cage-order note when no offered room uses cages', () => {
+    renderStaticDecisionWorkbench(createGoldenFGHIProject(), 'Underworld', 'H', (biome) => {
+      const node = biome.nodes.find(
+        (candidate): candidate is DecisionWorkbenchNode =>
+          (candidate.kind === 'ordinaryBatch' ||
+            candidate.kind === 'mixedBatch' ||
+            candidate.kind === 'takeoverBatch') &&
+          candidate.fields?.cageTargetCount === 0,
+      );
+      return node === undefined ? undefined : { kind: 'node', node };
+    });
+
+    expect(
+      screen.getByText(
+        'No offered room uses the Fields multi-cage count; Max still affects later Fields rolls.',
+      ),
+    ).toBeTruthy();
+    expect(screen.queryByText('Cage rewards appear bottom to top on the door')).toBeNull();
+    expect(document.querySelectorAll('.fields-batch-note')).toHaveLength(1);
   });
 
   it('authors multi-door G and P Prebosses through their required Door 1 choices', async () => {

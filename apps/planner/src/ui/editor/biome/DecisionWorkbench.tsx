@@ -607,17 +607,13 @@ function BatchSettings({
                   </dd>
                 </div>
               </dl>
-              {node.fields.cageTargetCount === 0 ? (
-                <p className="fields-batch-note">
-                  No offered room uses the Fields multi-cage count; Max still affects later Fields
-                  rolls.
-                </p>
-              ) : null}
+              <p className="fields-batch-note">
+                {node.fields.cageTargetCount === 0
+                  ? 'No offered room uses the Fields multi-cage count; Max still affects later Fields rolls.'
+                  : 'Cage rewards appear bottom to top on the door'}
+              </p>
             </>
           )}
-          <p className="fields-batch-note fields-door-preview-note">
-            Cage rewards appear bottom to top on the door
-          </p>
         </div>
       )}
     </>
