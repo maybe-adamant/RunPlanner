@@ -615,6 +615,9 @@ function BatchSettings({
               ) : null}
             </>
           )}
+          <p className="fields-batch-note fields-door-preview-note">
+            Cage rewards appear bottom to top on the door
+          </p>
         </div>
       )}
     </>

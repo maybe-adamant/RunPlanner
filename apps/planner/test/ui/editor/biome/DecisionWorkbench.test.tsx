@@ -1253,6 +1253,8 @@ describe('DecisionWorkbench', () => {
       subjectForOwner(owner),
     );
 
+    expect(screen.getByText('Cage rewards appear bottom to top on the door')).toBeTruthy();
+
     for (const roomLabel of ['Combat 05', 'Combat 04']) {
       const card = screen.getByRole('article', { name: `${roomLabel} room offer` });
       const offers = within(card).getByLabelText(`${roomLabel} door rewards`);
