@@ -407,7 +407,7 @@ describe('OccurrenceWorkbench', () => {
       renderStaticOccurrenceWorkbench(project(), routeKey, biomeKey, occurrenceById(occurrenceId));
       openRoomTab('Room Timeline');
       const actions = screen.getByRole('region', { name: 'Room Timeline' });
-      const pickup = within(actions).getByText(/^Interact /);
+      const pickup = within(actions).getByText(/^Collect /);
       const start = within(actions).getByLabelText('Start encounter');
       const end = within(actions).getByLabelText('End encounter');
       expectBefore(pickup, start);
@@ -656,7 +656,7 @@ describe('OccurrenceWorkbench', () => {
   it('composes Shop inventory and Features in Overview while keeping actions in Timeline', () => {
     const shop = enteredShopProject();
     renderStaticOccurrenceWorkbench(shop.project, 'Underworld', 'F', occurrenceById(shop.shopId));
-    const inventory = screen.getByLabelText('Shop inventory and conditions');
+    const inventory = screen.getByLabelText('Shop inventory');
     expect(inventory).toBeTruthy();
     const shopFeatures = screen.getByLabelText('Room features');
     expect(shopFeatures).toBeTruthy();
@@ -664,7 +664,7 @@ describe('OccurrenceWorkbench', () => {
     openRoomTab('Room Timeline');
     const shopActions = screen.getByRole('region', { name: 'Room Timeline' });
     expect(shopActions).toBeTruthy();
-    expect(screen.queryByLabelText('Shop inventory and conditions')).toBeNull();
+    expect(screen.queryByLabelText('Shop inventory')).toBeNull();
     expect(screen.queryByLabelText('Room features')).toBeNull();
   });
 });

@@ -74,12 +74,10 @@ export function TranscendentEmbryoEffectRow({
       data-transcendent-embryo={control.address.phaseKey}
     >
       <div className="owner-markers room-action-identity scheduled-trait-effect-identity">
-        <span aria-hidden="true" className="hub-roster-rank">
-          ·
-        </span>
+        <span className="room-automatic-label">Automatic</span>
         <strong>Transcendent Embryo</strong>
         {domain?.emptyNoOp === true && outcome === undefined ? (
-          <span>No eligible blessing (no-op)</span>
+          <span>No eligible blessing</span>
         ) : (
           <div className="transcendent-embryo-outcome-row">
             <RandomTraitTargetPicker

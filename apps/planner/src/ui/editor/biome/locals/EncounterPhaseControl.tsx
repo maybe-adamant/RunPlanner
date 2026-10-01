@@ -534,9 +534,6 @@ export function EncounterPhaseControl({
       aria-label={ariaLabel}
       className="encounter-phase-control"
     >
-      <div className="local-reward-heading">
-        <h4>{phase.label}</h4>
-      </div>
       <div className="encounter-phase-settings">
         {phase.customizable ? (
           <CustomizableEncounterPhaseControl
@@ -548,7 +545,7 @@ export function EncounterPhaseControl({
           />
         ) : (
           <div className="field-control field-control-inline">
-            <span>Encounter</span>
+            <span>{phase.editorAnchor === 'overview' ? 'Passive Encounter' : 'Encounter'}</span>
             <div className="encounter-fixed-value">{phase.selectedEncounter.label}</div>
           </div>
         )}

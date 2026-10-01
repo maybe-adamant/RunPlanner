@@ -176,8 +176,8 @@ describe('Stygian Well workbench', () => {
   });
 
   it.each([
-    ['initial:secondLeft', 'Purchase Slot 2 Offer'],
-    ['travelDealRefill', 'Purchase Travel Deal Offer'],
+    ['initial:secondLeft', 'Slot 2'],
+    ['travelDealRefill', 'Travel Deal Offer'],
   ] as const)(
     'shows and retains the %s Twist result on its Timeline action',
     async (generationKey, label) => {
@@ -211,7 +211,7 @@ describe('Stygian Well workbench', () => {
         screen.queryByRole('button', { name: 'Stygian Well Offer 2 Twist result' }),
       ).toBeNull();
       const picker = screen.getByRole('button', {
-        name: `${label} · Fateful Twist Twist result`,
+        name: `Buy Fateful Twist · ${label} Twist result`,
       });
       await view.user.click(picker);
       const result = screen

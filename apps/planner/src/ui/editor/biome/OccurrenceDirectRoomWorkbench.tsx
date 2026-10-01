@@ -216,8 +216,8 @@ export function DirectRoomWorkbench({
                 .filter((phase) => phase.editorAnchor === 'overview')
                 .map((phase) => (
                   <EncounterPhaseControl
-                    key={phase.address.phaseKey}
                     idPrefix={idPrefix}
+                    key={phase.address.phaseKey}
                     interactions={interactions}
                     phase={phase}
                   />

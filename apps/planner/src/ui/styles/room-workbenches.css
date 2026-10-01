@@ -32,7 +32,58 @@
   text-transform: none;
 }
 
-.room-features-workbench > .room-feature-category-heading:first-child {
+.room-overview-section {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+}
+
+.room-overview-panel {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+  padding: 10px;
+  border: 1px solid #3a3b45;
+  border-radius: 9px;
+  background: rgb(126 101 154 / 5%);
+}
+
+.room-overview-panel .room-feature-presence-row,
+.room-overview-panel > .room-purging-pool,
+.room-overview-panel > .encounter-phase-control {
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
+}
+
+.fields-reward-identities {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 10px 16px;
+}
+
+.shop-editor:has(> .room-feature-category-heading) {
+  display: grid;
+  gap: 10px;
+}
+
+.fields-reward-identity {
+  min-width: 0;
+}
+
+.fields-room-editor {
+  container-type: inline-size;
+}
+
+@container (min-width: 46rem) {
+  .fields-reward-identities {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.room-features-workbench > .room-feature-category-heading:first-child,
+.room-structure-workbench > .room-feature-category-heading:first-child {
   margin-top: 0;
 }
 
@@ -269,6 +320,7 @@
 
 .room-overview-workbench > .room-features-workbench,
 .room-overview-workbench > .room-structure-workbench,
+.room-overview-workbench > .shop-editor,
 .room-overview-workbench > .fields-room-editor,
 .room-overview-workbench > .ephyra-side-editor {
   margin-top: 0;
@@ -377,11 +429,7 @@
   background: rgb(126 101 154 / 5%);
 }
 
-.encounter-phase-control > .local-reward-heading {
-  margin-bottom: 0;
-}
-
-.encounter-phase-control > .quiet-action {
+.room-structure-workbench > .quiet-action {
   justify-self: start;
 }
 
@@ -1346,6 +1394,26 @@
 .room-action-identity > strong {
   min-width: 0;
   overflow-wrap: anywhere;
+}
+
+.room-timeline-effect-row {
+  margin-left: 24px;
+  padding: 7px 10px;
+  border: 0;
+  border-left: 2px solid #719b9b;
+  border-radius: 0 6px 6px 0;
+  background: rgb(113 155 155 / 9%);
+  box-shadow: none;
+}
+
+.room-timeline-effect-row::before {
+  content: none;
+}
+
+.room-automatic-label {
+  color: #a5cccc;
+  font-size: 0.72rem;
+  font-weight: 600;
 }
 
 .room-timeline-effect-row > .room-action-identity {

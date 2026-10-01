@@ -775,11 +775,12 @@ describe('OccurrenceRoomFeatures', () => {
     expect((nemesis as HTMLInputElement).checked).toBe(true);
     expect(screen.queryByRole('combobox', { name: /Passive encounter/i })).toBeNull();
     openRoomTab('Room Overview');
-    const count = screen.getByRole('combobox', { name: 'Optional pickups' });
-    expect((count as HTMLSelectElement).value).toBe('4');
-    expect(within(count).getByRole('option', { name: '4' })).toBeTruthy();
+    const count = screen.getByRole('radiogroup', { name: 'Optional pickups' });
+    expect((within(count).getByRole('radio', { name: '4' }) as HTMLInputElement).checked).toBe(
+      true,
+    );
 
-    await view.user.selectOptions(count, '3');
+    await view.user.click(within(count).getByRole('radio', { name: '3' }));
     await waitFor(() => expect(authoredFields()?.state).toMatchObject({ optionalRewardCount: 3 }));
     openRoomTab('Room Timeline');
     const beforeEvent = view.application.store.getState().projectWorkspace.history!.present;

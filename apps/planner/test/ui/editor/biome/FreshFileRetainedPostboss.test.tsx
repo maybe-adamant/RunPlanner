@@ -53,7 +53,7 @@ describe('Fresh File retained Postboss controls', () => {
     expect(within(timeline).queryByRole('button', { name: 'Choose Keepsake' })).toBeNull();
     fireEvent.click(
       within(timeline).getByRole('button', {
-        name: 'Remove Interact Keepsake Rack from timeline',
+        name: 'Remove Change Keepsake from timeline',
       }),
     );
     expect(postbossOccurrence(view.application)?.keepsakeRack).toBeUndefined();

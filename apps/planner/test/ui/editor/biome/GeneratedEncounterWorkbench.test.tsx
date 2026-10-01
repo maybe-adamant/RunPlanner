@@ -596,7 +596,10 @@ describe('generated encounter customization workflows', () => {
         findingSelected({ key: semanticFindingKey(finding), origin: finding.origin }),
       ),
     );
-    const trigger = within(screen.getByLabelText('Passive encounter phase')).getByRole('button', {
+    const encounters = screen.getByRole('region', { name: 'Encounter structure' });
+    expect(within(encounters).getByRole('heading', { name: 'Encounters' })).toBeTruthy();
+    expect(within(encounters).getByText('Passive Encounter')).toBeTruthy();
+    const trigger = within(encounters).getByRole('button', {
       name: 'Customize encounter',
     });
     await waitFor(() => expect(document.activeElement).toBe(trigger));

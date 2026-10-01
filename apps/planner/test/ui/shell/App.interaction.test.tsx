@@ -1508,7 +1508,7 @@ describe('planner history interaction', () => {
     expect(childRow?.getAttribute('data-room-action-key')).toBe(
       childDestination.focusAddress.actionKey,
     );
-    expect(childRow?.textContent).toContain('Interact Gold');
+    expect(childRow?.textContent).toContain('Collect Gold');
     expect(
       application.store
         .getState()
