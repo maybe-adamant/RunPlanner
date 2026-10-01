@@ -344,7 +344,8 @@ describe('Pom resolution editor', () => {
 
     render(<PomResolutionEditor interaction={editorInteraction} onCommit={vi.fn()} />);
     await screen.findByLabelText('Route state');
-    await user.selectOptions(screen.getByLabelText('Route state'), 'branch-2');
+    await user.click(screen.getByRole('button', { name: 'Route state' }));
+    await user.click(screen.getByRole('option', { name: 'Route state 2' }));
     await user.click(screen.getByRole('button', { name: 'Pom target 1' }));
     expect(screen.getByRole('option', { name: 'Trait B' })).not.toBeNull();
     expect(screen.queryByRole('option', { name: 'Trait A' })).toBeNull();

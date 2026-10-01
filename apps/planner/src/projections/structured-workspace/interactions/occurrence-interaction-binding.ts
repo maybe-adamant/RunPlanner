@@ -27,7 +27,10 @@ import {
   encounterCandidateExplanation,
   projectEncounterPicker,
 } from '@planner/projections/encounterPickerProjection';
-import { projectRewardWheelStorePicker } from '@planner/projections/choicePickerProjection';
+import {
+  projectRewardWheelStorePicker,
+  projectShipCombatPhaseCountPicker,
+} from '@planner/projections/choicePickerProjection';
 import type { OccurrenceIdFactory } from '@planner/workspace/occurrenceIds';
 
 import {
@@ -106,7 +109,7 @@ export interface WorkspaceOccurrenceLocalInteractionCatalog {
   readonly rewardWheelOfferCounts: ReadonlyMap<string, WorkspaceNativeCandidateInteraction<number>>;
   readonly rewardWheelPicks: ReadonlyMap<string, WorkspaceNativeCandidateInteraction<number>>;
   readonly rewardWheelStores: ReadonlyMap<string, WorkspacePickerCandidateInteraction<string>>;
-  readonly shipCombatPhaseCounts: ReadonlyMap<string, WorkspaceNativeCandidateInteraction<2 | 3>>;
+  readonly shipCombatPhaseCounts: ReadonlyMap<string, WorkspacePickerCandidateInteraction<2 | 3>>;
   readonly roomActions: ReadonlyMap<string, WorkspaceRoomActionInteraction>;
   readonly shopPurchaseParticipations: ReadonlyMap<
     string,
@@ -272,7 +275,7 @@ export function bindOccurrenceLocalInteractions(
   const rewardWheelOfferCounts = new Map<string, WorkspaceNativeCandidateInteraction<number>>();
   const rewardWheelPicks = new Map<string, WorkspaceNativeCandidateInteraction<number>>();
   const rewardWheelStores = new Map<string, WorkspacePickerCandidateInteraction<string>>();
-  const shipCombatPhaseCounts = new Map<string, WorkspaceNativeCandidateInteraction<2 | 3>>();
+  const shipCombatPhaseCounts = new Map<string, WorkspacePickerCandidateInteraction<2 | 3>>();
   const roomActions = new Map<string, WorkspaceRoomActionInteraction>();
   const shopPurchaseParticipations = new Map<
     string,
@@ -1381,16 +1384,27 @@ export function bindOccurrenceLocalInteractions(
         const combatPhaseCountValues = Object.freeze(
           requirement.combatPhaseCountChoices.map((choice) => choice.value),
         );
+        const phaseCandidates = candidateInteraction(
+          requirement.owner,
+          requirement.combatPhaseCountChoices,
+          requirement.combatPhaseCount,
+          () => candidates.shipCombatPhaseCounts(requirement.owner, combatPhaseCountValues),
+        );
+        let phasePicker: ContextualPickerModel<2 | 3> | undefined;
         set(
           shipCombatPhaseCounts,
           semanticAddressKey(requirement.owner),
           Object.freeze({
-            ...candidateInteraction(
-              requirement.owner,
-              requirement.combatPhaseCountChoices,
-              requirement.combatPhaseCount,
-              () => candidates.shipCombatPhaseCounts(requirement.owner, combatPhaseCountValues),
-            ),
+            ...phaseCandidates,
+            picker: Object.freeze({
+              load: () =>
+                (phasePicker ??= projectShipCombatPhaseCountPicker(
+                  contextualPicker,
+                  requirement.combatPhaseCountChoices,
+                  requirement.combatPhaseCount,
+                  phaseCandidates.load(),
+                )),
+            }),
             contextReached: candidates.contextReached({
               kind: 'shipEncounterCount',
               occurrence: requirement.owner,

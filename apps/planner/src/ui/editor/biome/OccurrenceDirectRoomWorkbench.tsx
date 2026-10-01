@@ -19,7 +19,6 @@ import { LocalVisitWorkbench } from './locals/LocalVisitWorkbench';
 import { RewardWheelWorkbench } from './locals/RewardWheelWorkbench';
 import { ShopWorkbench } from './commerce/ShopWorkbench';
 import { CandidatePicker } from './CandidatePicker';
-import { CandidateSelect } from './CandidateSelect';
 import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
 import { authoredProjectCommandDispatched } from '@planner/state/projectWorkspaceSlice';
 import { useAppDispatch } from '@planner/state/store';
@@ -49,10 +48,11 @@ export function ShipCombatPhaseCountWorkbench({
           <h4>Combat phases</h4>
         </div>
       )}
-      <CandidateSelect
+      <CandidatePicker
         id={`room-${occurrence.occurrenceId}-combat-phase-count`}
         interaction={interaction}
         label="Combat phases"
+        placeholder="Choose combat phases"
         onReplace={(encounterCount) =>
           dispatch(
             authoredProjectCommandDispatched({

@@ -271,6 +271,8 @@ export interface WorkspaceNativeCandidateInteraction<T> extends WorkspaceCandida
  * separately and just as lazily as the domain it projects.
  */
 export interface WorkspacePickerCandidateInteraction<T> extends WorkspaceCandidateInteraction<T> {
+  /** A setting can wait on an earlier choice before its picker loads. */
+  readonly contextReached?: boolean;
   readonly picker: { readonly load: () => ContextualPickerModel<T> };
 }
 
@@ -380,7 +382,7 @@ export interface WorkspaceInteractionCatalog {
   readonly rewardWheelStores: ReadonlyMap<string, WorkspacePickerCandidateInteraction<string>>;
   readonly rooms: ReadonlyMap<string, WorkspaceRoomInteraction>;
   /** O-specific authored structure: whether the optional third Ship phase is active. */
-  readonly shipCombatPhaseCounts: ReadonlyMap<string, WorkspaceNativeCandidateInteraction<2 | 3>>;
+  readonly shipCombatPhaseCounts: ReadonlyMap<string, WorkspacePickerCandidateInteraction<2 | 3>>;
   readonly shopPurchaseParticipations: ReadonlyMap<
     string,
     WorkspaceShopPurchaseParticipationInteraction

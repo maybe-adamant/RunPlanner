@@ -10,13 +10,13 @@ import { useAppDispatch } from '@planner/state/store';
 import { useFindingTarget } from '@planner/ui/feedback/useFindingTarget';
 import {
   candidateMayBeAuthored,
+  candidateSelectState,
   candidateWaitingTitle,
   candidateWaits,
 } from '@planner/ui/feedback/candidatePresentation';
 import { useWorkspaceInteraction } from '@planner/ui/controls/useWorkspaceInteraction';
 import { RewardControlEditor } from '@planner/ui/editor/rewards/RewardControlEditor';
 import { CandidatePicker } from '../CandidatePicker';
-import { CandidateSelect } from '../CandidateSelect';
 
 export function RewardWheelWorkbench({
   interactions,
@@ -42,6 +42,7 @@ export function RewardWheelWorkbench({
     workspaceInteractionKey(wheel.address),
   );
   const pickCandidates = useWorkspaceInteraction(pick);
+  const countCandidates = useWorkspaceInteraction(count);
   const idPrefix = `room-${occurrence.occurrenceId}-${wheel.key}`;
   const replacePick = (pickedOfferIndex: number): void => {
     const candidateResults = pickCandidates.result ?? pickCandidates.activate();
@@ -84,21 +85,55 @@ export function RewardWheelWorkbench({
             )
           }
         />
-        <CandidateSelect
-          bindFindingTarget={false}
-          id={`${idPrefix}-count`}
-          interaction={count}
-          label="Offers"
-          onReplace={(offerCount) =>
-            dispatch(
-              authoredProjectCommandDispatched({
-                kind: 'ReplaceRewardWheelOfferCount',
-                wheel: wheel.address,
-                offerCount,
-              }),
-            )
-          }
-        />
+        <div className="field-control field-control-inline">
+          <span id={`${idPrefix}-count-label`}>Offers</span>
+          <div
+            className="biome-field-radios"
+            role="radiogroup"
+            aria-labelledby={`${idPrefix}-count-label`}
+          >
+            {count.choices.map((choice) => {
+              const candidate = countCandidates.result?.find(
+                (option) => option.value === choice.value,
+              );
+              const waiting = !count.contextReached || candidateWaits(candidate);
+              const unavailable = candidate !== undefined && !candidateMayBeAuthored(candidate);
+              return (
+                <label key={choice.value}>
+                  <input
+                    {...candidateSelectState(candidate)}
+                    type="radio"
+                    name={`${idPrefix}-count`}
+                    checked={count.selected === choice.value}
+                    disabled={waiting || unavailable}
+                    title={
+                      waiting
+                        ? candidateWaitingTitle
+                        : unavailable
+                          ? 'This offer count is unavailable.'
+                          : undefined
+                    }
+                    onFocus={countCandidates.activate}
+                    onPointerDown={countCandidates.activate}
+                    onChange={() => {
+                      const results = countCandidates.result ?? countCandidates.activate();
+                      const option = results?.find((entry) => entry.value === choice.value);
+                      if (results === undefined || !candidateMayBeAuthored(option)) return;
+                      dispatch(
+                        authoredProjectCommandDispatched({
+                          kind: 'ReplaceRewardWheelOfferCount',
+                          wheel: wheel.address,
+                          offerCount: choice.value,
+                        }),
+                      );
+                    }}
+                  />
+                  {choice.value}
+                </label>
+              );
+            })}
+          </div>
+        </div>
       </div>
       <div className="reward-wheel-offers" data-active-offer-count={wheel.offerCount}>
         {wheel.offers

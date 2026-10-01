@@ -37,6 +37,55 @@ export interface ContextualPickerModel<T> {
   readonly sections: readonly ContextualPickerSection<T>[];
 }
 
+/** Present an already-declared choice domain without inventing candidate evaluation. */
+export function declaredChoicesPicker<T>(
+  choices: readonly {
+    readonly key: string;
+    readonly value: T;
+    readonly label: string;
+    readonly disabled?: boolean;
+    readonly explanation?: string;
+  }[],
+  selected: T,
+): ContextualPickerModel<T> {
+  const items: ContextualPickerItem<T>[] = choices.map((choice) =>
+    Object.freeze({
+      ...choice,
+      selected: choice.value === selected,
+      disabled: choice.disabled === true,
+      state: choice.disabled === true ? 'impossible' : 'possible',
+    }),
+  );
+  const groups = [
+    {
+      key: 'selected-invalid',
+      kind: 'selectedInvalid' as const,
+      label: 'Current selection',
+      collapsible: false,
+      items: items.filter((item) => item.disabled && item.selected),
+    },
+    {
+      key: 'available',
+      kind: 'category' as const,
+      label: 'Available',
+      collapsible: false,
+      items: items.filter((item) => !item.disabled),
+    },
+    {
+      key: 'unavailable',
+      kind: 'unavailable' as const,
+      label: 'Unavailable',
+      collapsible: true,
+      items: items.filter((item) => item.disabled && !item.selected),
+    },
+  ];
+  const current = items.find((item) => item.selected);
+  return Object.freeze({
+    ...(current === undefined ? {} : { selected: current }),
+    sections: Object.freeze(groups.filter((group) => group.items.length > 0).map(freezeSection)),
+  });
+}
+
 export interface ContextualPickerProjectionService {
   readonly project: <T>(
     options: readonly CandidateOptionProjection<T, CandidateProjectionEvaluation>[],

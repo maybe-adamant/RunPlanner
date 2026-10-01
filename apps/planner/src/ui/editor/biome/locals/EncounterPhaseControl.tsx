@@ -11,6 +11,7 @@ import { useFindingExplanations, useFindingTarget } from '@planner/ui/feedback/u
 import { semanticOwnerControlElementId } from '@planner/ui/feedback/semanticOwner';
 import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
 import { ContextualPicker } from '@planner/ui/controls/ContextualPicker';
+import { declaredChoicesPicker } from '@planner/projections/contextual/contextualPicker';
 import { useWorkspaceInteraction } from '@planner/ui/controls/useWorkspaceInteraction';
 import { NemesisEventSelector } from '../NemesisEventEditor';
 import { EncounterCompositionControl } from './EncounterCompositionControl';
@@ -210,41 +211,48 @@ function EncounterCustomizationControl({
                 if (decision.selection.kind === 'single') {
                   const selected = value?.kind === 'single' ? value.choiceKey : '';
                   return (
-                    <label className="encounter-customization-row" key={decision.key}>
-                      <span>{decision.label}</span>
-                      <select
-                        aria-label={decision.label}
+                    <div key={decision.key}>
+                      <ContextualPicker
+                        label={decision.label}
+                        layout="inline"
+                        ariaLabel={decision.label}
+                        placeholder="Default"
+                        model={declaredChoicesPicker(
+                          [
+                            { key: 'default', value: '', label: 'Default' },
+                            ...(!decision.valueSupported &&
+                            selected !== '' &&
+                            !decision.selection.choices.some((choice) => choice.key === selected)
+                              ? [
+                                  {
+                                    key: selected,
+                                    value: selected,
+                                    label: `${retainedLabel(decision, selected)} (unavailable)`,
+                                    disabled: true,
+                                  },
+                                ]
+                              : []),
+                            ...decision.selection.choices.map((choice) => ({
+                              ...choice,
+                              value: choice.key,
+                            })),
+                          ],
+                          selected,
+                        )}
                         id={`encounter-customization-${customizationId}-${decision.key}`}
-                        onChange={(event) =>
+                        onSelect={(choiceKey) =>
                           executeIntent(
                             interaction.intentFor(
                               decision.key,
-                              event.target.value === ''
-                                ? null
-                                : { kind: 'single', choiceKey: event.target.value },
+                              choiceKey === '' ? null : { kind: 'single', choiceKey },
                             ),
                           )
                         }
-                        value={selected}
-                      >
-                        <option value="">Default</option>
-                        {!decision.valueSupported &&
-                        selected !== '' &&
-                        !decision.selection.choices.some((choice) => choice.key === selected) ? (
-                          <option disabled value={selected}>
-                            {`${retainedLabel(decision, selected)} (unavailable)`}
-                          </option>
-                        ) : null}
-                        {decision.selection.choices.map((choice) => (
-                          <option key={choice.key} value={choice.key}>
-                            {choice.label}
-                          </option>
-                        ))}
-                      </select>
+                      />
                       {!decision.valueSupported && value !== undefined ? (
                         <span className="encounter-customization-repair">Needs repair</span>
                       ) : null}
-                    </label>
+                    </div>
                   );
                 }
                 const prefixSelection = decision.selection;
@@ -275,43 +283,52 @@ function EncounterCustomizationControl({
                       {decision.label}
                     </h3>
                     {Array.from({ length: prefixSelection.maximumLength }, (_, index) => (
-                      <label className="encounter-customization-row" key={index}>
-                        <span>Use {index + 1}</span>
-                        <select
-                          aria-label={`${decision.label} use ${index + 1}`}
-                          disabled={index > 0 && selected[0] === undefined}
-                          {...(index === 0
-                            ? {
-                                id: `encounter-customization-${customizationId}-${decision.key}`,
-                              }
-                            : {})}
-                          onChange={(event) => replace(index, event.target.value)}
-                          value={selected[index] ?? ''}
-                        >
-                          <option value="">Default</option>
-                          {!decision.valueSupported &&
-                          selected[index] !== undefined &&
-                          !prefixSelection.choices.some(
-                            (choice) => choice.key === selected[index],
-                          ) ? (
-                            <option disabled value={selected[index]}>
-                              {`${retainedLabel(decision, selected[index]!)} (unavailable)`}
-                            </option>
-                          ) : null}
-                          {prefixSelection.choices.map((choice) => (
-                            <option
-                              disabled={selected.some(
+                      <ContextualPicker
+                        key={index}
+                        id={`encounter-customization-${customizationId}-${decision.key}${index === 0 ? '' : `-${index}`}`}
+                        label={`Use ${index + 1}`}
+                        layout="inline"
+                        ariaLabel={`${decision.label} use ${index + 1}`}
+                        {...(index > 0 && selected[0] === undefined
+                          ? { disabledTitle: 'Choose the first summon first' }
+                          : {})}
+                        placeholder="Default"
+                        model={declaredChoicesPicker(
+                          [
+                            { key: 'default', value: '', label: 'Default' },
+                            ...(!decision.valueSupported &&
+                            selected[index] !== undefined &&
+                            !prefixSelection.choices.some(
+                              (choice) => choice.key === selected[index],
+                            )
+                              ? [
+                                  {
+                                    key: selected[index]!,
+                                    value: selected[index]!,
+                                    label: `${retainedLabel(decision, selected[index]!)} (unavailable)`,
+                                    disabled: true,
+                                  },
+                                ]
+                              : []),
+                            ...prefixSelection.choices.map((choice) => {
+                              const alreadyUsed = selected.some(
                                 (selectedKey, selectedIndex) =>
                                   selectedIndex !== index && selectedKey === choice.key,
-                              )}
-                              key={choice.key}
-                              value={choice.key}
-                            >
-                              {choice.label}
-                            </option>
-                          ))}
-                        </select>
-                      </label>
+                              );
+                              return {
+                                ...choice,
+                                value: choice.key,
+                                disabled: alreadyUsed,
+                                ...(alreadyUsed
+                                  ? { explanation: 'Already chosen for another use' }
+                                  : {}),
+                              };
+                            }),
+                          ],
+                          selected[index] ?? '',
+                        )}
+                        onSelect={(choiceKey) => replace(index, choiceKey)}
+                      />
                     ))}
                     {!decision.valueSupported && value !== undefined ? (
                       <p className="encounter-customization-repair">Needs repair</p>

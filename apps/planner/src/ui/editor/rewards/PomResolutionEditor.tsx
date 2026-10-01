@@ -7,6 +7,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 
 import type { LevelResolutionCandidateGroup } from '@planner/projections/candidates/candidateProjection';
 import type { ContextualPickerModel } from '@planner/projections/contextual/contextualPicker';
+import { declaredChoicesPicker } from '@planner/projections/contextual/contextualPicker';
 import {
   requireWorkspaceInteraction,
   workspaceInteractionKey,
@@ -372,21 +373,20 @@ export function PomResolutionEditor({
   return (
     <div className="trait-offer-editor pom-resolution-editor">
       {groups.length <= 1 ? null : (
-        <label className="field-control" htmlFor={`${domKey}-pom-branch`}>
-          <span>Route state</span>
-          <select
-            id={`${domKey}-pom-branch`}
-            onChange={(event) => selectGroup(event.target.value)}
-            value={activeGroup?.key ?? ''}
-          >
-            {groups.map((group, index) => (
-              <option key={group.key} value={group.key}>
-                Route state {index + 1}
-                {group.branchIndices.length > 1 ? ` (${group.branchIndices.length} branches)` : ''}
-              </option>
-            ))}
-          </select>
-        </label>
+        <ContextualPicker
+          label="Route state"
+          placeholder="Choose a route state"
+          model={declaredChoicesPicker(
+            groups.map((group, index) => ({
+              key: group.key,
+              value: group.key,
+              label: `Route state ${index + 1}${group.branchIndices.length > 1 ? ` (${group.branchIndices.length} branches)` : ''}`,
+            })),
+            activeGroup?.key ?? '',
+          )}
+          id={`${domKey}-pom-branch`}
+          onSelect={selectGroup}
+        />
       )}
       {interaction.value.kind === 'choice' ? (
         <div className="trait-offer-options">

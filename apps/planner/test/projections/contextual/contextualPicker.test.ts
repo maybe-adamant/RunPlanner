@@ -5,7 +5,10 @@ import { describe, expect, it } from 'vitest';
 
 import type { CandidateOptionProjection } from '@planner/projections/candidates/candidateProjection';
 import { createContextualOptionResolver } from '@planner/projections/contextual/contextualOptions';
-import { createContextualPickerProjection } from '@planner/projections/contextual/contextualPicker';
+import {
+  createContextualPickerProjection,
+  declaredChoicesPicker,
+} from '@planner/projections/contextual/contextualPicker';
 
 const biome = createBiomeAddress('Underworld', 'F');
 
@@ -22,6 +25,34 @@ function start(value: string, supported: readonly string[]): CandidateOptionProj
 }
 
 describe('contextual picker projection', () => {
+  it('presents declared choices with retained invalid selection and unavailable choices separated', () => {
+    const choices = [
+      { key: 'default', value: '', label: 'Default' },
+      { key: 'retained', value: 'retained', label: 'Saved choice', disabled: true },
+      {
+        key: 'other',
+        value: 'other',
+        label: 'Other',
+        disabled: true,
+        explanation: 'Already chosen',
+      },
+    ];
+    const model = declaredChoicesPicker(choices, 'retained');
+    expect(model.selected).toMatchObject({ value: 'retained', disabled: true });
+    expect(
+      model.sections.map((section) => [
+        section.kind,
+        section.collapsible,
+        section.items.map((item) => item.value),
+      ]),
+    ).toEqual([
+      ['selectedInvalid', false, ['retained']],
+      ['category', false, ['']],
+      ['unavailable', true, ['other']],
+    ]);
+    expect(model.sections[2]!.items[0]!.explanation).toBe('Already chosen');
+    expect(declaredChoicesPicker(choices.slice(0, 1), '').sections).toHaveLength(1);
+  });
   it('orders required, selected-invalid, possible, unassessed, and unavailable sections from engine evidence', () => {
     const options = Object.freeze([
       start('required', ['required']),

@@ -20,17 +20,7 @@
   max-width: 100%;
 }
 
-.pickup-outcome-control > span {
-  flex: 0 0 auto;
-  color: #aaa7af;
-  font-size: 0.78rem;
-  font-weight: 600;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-}
-
-.pickup-outcome-control > select {
-  width: auto;
+.pickup-outcome-control > .contextual-picker {
   min-width: min(100%, 13rem);
   max-width: 100%;
 }

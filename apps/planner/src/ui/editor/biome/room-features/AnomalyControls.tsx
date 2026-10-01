@@ -1,6 +1,8 @@
 import type { WorkspaceRoomSummary } from '@planner/projections/structured-workspace';
 import { authoredProjectCommandDispatched } from '@planner/state/projectWorkspaceSlice';
 import { useAppDispatch } from '@planner/state/store';
+import { ContextualPicker } from '@planner/ui/controls/ContextualPicker';
+import { declaredChoicesPicker } from '@planner/projections/contextual/contextualPicker';
 
 /**
  * The workspace has already established this is an authored Anomaly and has
@@ -12,31 +14,25 @@ export function AnomalyRoomControl({ room }: { readonly room: WorkspaceRoomSumma
   const anomaly = room.anomaly;
   if (anomaly === undefined) return null;
   return (
-    <label
-      className="field-control field-control-inline"
-      htmlFor={`anomaly-map-${room.occurrenceId}`}
-    >
-      <span>Room</span>
-      <select
-        id={`anomaly-map-${room.occurrenceId}`}
-        onChange={(event) =>
-          dispatch(
-            authoredProjectCommandDispatched({
-              gameName: event.target.value,
-              kind: 'ReplaceAnomalyMap',
-              occurrence: room.address,
-            }),
-          )
-        }
-        value={room.gameName}
-      >
-        {anomaly.mapChoices.map((choice) => (
-          <option key={choice.value} value={choice.value}>
-            {choice.label}
-          </option>
-        ))}
-      </select>
-    </label>
+    <ContextualPicker
+      label="Room"
+      layout="inline"
+      placeholder="Choose a room"
+      model={declaredChoicesPicker(
+        anomaly.mapChoices.map((choice) => ({ ...choice, key: choice.value })),
+        room.gameName,
+      )}
+      id={`anomaly-map-${room.occurrenceId}`}
+      onSelect={(gameName) =>
+        dispatch(
+          authoredProjectCommandDispatched({
+            gameName,
+            kind: 'ReplaceAnomalyMap',
+            occurrence: room.address,
+          }),
+        )
+      }
+    />
   );
 }
 

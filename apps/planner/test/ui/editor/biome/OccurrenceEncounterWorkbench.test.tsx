@@ -343,10 +343,8 @@ describe('OccurrenceEncounterWorkbench', () => {
     await view.user.click(within(control).getByRole('button', { name: 'Customize encounter' }));
     const dialog = await screen.findByRole('dialog', { name: 'Customize' });
     expect(within(dialog).getByRole('heading', { level: 2, name: 'Customize' })).toBeTruthy();
-    await view.user.selectOptions(
-      within(dialog).getByRole('combobox', { name: 'Featured performer' }),
-      'charybdis',
-    );
+    await view.user.click(within(dialog).getByRole('button', { name: 'Featured performer' }));
+    await view.user.click(screen.getByRole('option', { name: 'Charybdis' }));
     await waitFor(() => {
       const occurrence = view.application.store
         .getState()
@@ -385,8 +383,9 @@ describe('OccurrenceEncounterWorkbench', () => {
     openRoomTab('Room Timeline');
     await view.user.click(screen.getByRole('button', { name: 'Customize encounter' }));
     const dialog = await screen.findByRole('dialog', { name: 'Customize' });
-    const firstEggWave = within(dialog).getByRole('combobox', { name: 'First egg wave' });
-    await view.user.selectOptions(firstEggWave, 'eidolons');
+    const firstEggWave = within(dialog).getByRole('button', { name: 'First egg wave' });
+    await view.user.click(firstEggWave);
+    await view.user.click(screen.getByRole('option', { name: '3 Eidolon eggs' }));
     await waitFor(() => {
       const occurrence = view.application.store
         .getState()
@@ -412,7 +411,8 @@ describe('OccurrenceEncounterWorkbench', () => {
       choiceKey: 'eidolons',
       nativeId: 'TyphonHeadCastSummon03',
     });
-    await view.user.selectOptions(firstEggWave, '');
+    await view.user.click(firstEggWave);
+    await view.user.click(screen.getByRole('option', { name: 'Default' }));
     await waitFor(() => {
       const occurrence = view.application.store
         .getState()
@@ -482,9 +482,10 @@ describe('OccurrenceEncounterWorkbench', () => {
       );
       expect(marker.getAttribute('aria-pressed')).toBe('true');
       expect(values()?.cocoonCount).toEqual(priorCount);
-      const selector = within(dialog).getByRole('combobox', { name: 'Reward position' });
-      expect((selector as HTMLSelectElement).value).toBe(String(ids[0]));
-      await view.user.selectOptions(selector, String(ids[1]));
+      const selector = within(dialog).getByRole('button', { name: 'Reward position' });
+      expect(selector.textContent).toContain('1');
+      await view.user.click(selector);
+      await view.user.click(screen.getByRole('option', { name: '2' }));
       expect(
         within(dialog)
           .getByRole('button', { name: 'Reward cocoon 2' })
@@ -506,7 +507,8 @@ describe('OccurrenceEncounterWorkbench', () => {
           spawnPointId: ids[1],
         }),
       );
-      await view.user.selectOptions(selector, '');
+      await view.user.click(selector);
+      await view.user.click(screen.getByRole('option', { name: 'Any' }));
       await waitFor(() => expect(values()?.cocoonRewardPoint).toBeUndefined());
       expect(values()?.cocoonCount).toEqual(priorCount);
       expect(
@@ -575,11 +577,15 @@ describe('OccurrenceEncounterWorkbench', () => {
     expect(slider.getAttribute('aria-valuetext')).toBe('Default');
     expect(slider.getAttribute('min')).toBe('0');
     expect(slider.getAttribute('max')).toBe('7');
-    const pointSelector = within(dialog).getByRole('combobox', { name: 'Reward position' });
-    const firstPoint = within(pointSelector)
-      .getByRole('option', { name: '1' })
-      .getAttribute('value')!;
-    await view.user.selectOptions(pointSelector, firstPoint);
+    const pointSelector = within(dialog).getByRole('button', { name: 'Reward position' });
+    const firstPoint =
+      catalog.rooms.byKey[
+        project.route.biomes[0]!.topology!.occurrences.find(
+          (entry) => entry.occurrenceId === occurrenceId,
+        )!.gameName
+      ]!.cocoonRewardPointIds![0]!;
+    await view.user.click(pointSelector);
+    await view.user.click(screen.getByRole('option', { name: '1' }));
     const point = () =>
       view.application.store
         .getState()
@@ -590,7 +596,8 @@ describe('OccurrenceEncounterWorkbench', () => {
       expect(point()).toEqual({ kind: 'cocoonRewardPoint', spawnPointId: Number(firstPoint) }),
     );
     expect(cocoonCount(view)).toBeUndefined();
-    await view.user.selectOptions(pointSelector, '');
+    await view.user.click(pointSelector);
+    await view.user.click(screen.getByRole('option', { name: 'Any' }));
     await waitFor(() => expect(point()).toBeUndefined());
     expect(within(dialog).getByRole('button', { name: 'Reset' }).hasAttribute('disabled')).toBe(
       true,
@@ -764,10 +771,13 @@ describe('OccurrenceEncounterWorkbench', () => {
     expect(screen.queryByRole('dialog', { name: 'Customize' })).toBeNull();
     await view.user.click(trigger);
     const dialog = await screen.findByRole('dialog', { name: 'Customize' });
-    const selector = within(dialog).getByRole('combobox', { name: 'Reward position' });
+    const selector = within(dialog).getByRole('button', { name: 'Reward position' });
     expect(finding.origin).toEqual(phase);
-    expect((selector as HTMLSelectElement).value).toBe('1');
-    expect(within(selector).getByRole('option', { name: '1 (unavailable)' })).toBeTruthy();
+    expect(selector.textContent).toContain('1 (unavailable)');
+    await view.user.click(selector);
+    expect(
+      screen.getByRole('option', { name: '1 (unavailable)' }).getAttribute('aria-disabled'),
+    ).toBe('true');
     expect(within(dialog).getByText('Needs repair')).toBeTruthy();
     const point = () =>
       view.application.store
@@ -776,13 +786,20 @@ describe('OccurrenceEncounterWorkbench', () => {
         .topology!.occurrences.find((entry) => entry.occurrenceId === occurrenceId)!.encounters
         .customizationByPhase?.Encounter?.cocoonRewardPoint;
     expect(point()).toEqual({ kind: 'cocoonRewardPoint', spawnPointId: 1 });
-    const validId = within(selector).getByRole('option', { name: '1' }).getAttribute('value')!;
-    await view.user.selectOptions(selector, validId);
+    const validId =
+      catalog.rooms.byKey[
+        project.route.biomes[0]!.topology!.occurrences.find(
+          (entry) => entry.occurrenceId === occurrenceId,
+        )!.gameName
+      ]!.cocoonRewardPointIds![0]!;
+    await view.user.click(screen.getByRole('option', { name: '1' }));
     await waitFor(() =>
       expect(point()).toEqual({ kind: 'cocoonRewardPoint', spawnPointId: Number(validId) }),
     );
     expect(within(dialog).queryByText('Needs repair')).toBeNull();
-    expect(within(selector).queryByRole('option', { name: '1 (unavailable)' })).toBeNull();
+    await view.user.click(selector);
+    expect(screen.queryByRole('option', { name: '1 (unavailable)' })).toBeNull();
+    await view.user.keyboard('{Escape}');
   });
 
   it('repairs a retained out-of-range cocoon count by choosing its clamped stop', async () => {
@@ -892,15 +909,12 @@ describe('OccurrenceEncounterWorkbench', () => {
     expect(document.querySelector('dialog.trait-offer-dialog-backdrop')).toBeNull();
     await view.user.click(trigger);
     const dialog = await screen.findByRole('dialog', { name: 'Customize' });
-    const performer = within(dialog).getByRole('combobox', { name: 'Featured performer' });
+    const performer = within(dialog).getByRole('button', { name: 'Featured performer' });
+    await view.user.click(performer);
     expect(
-      (
-        within(performer).getByRole('option', {
-          name: 'Charybdis (unavailable)',
-        }) as HTMLOptionElement
-      ).disabled,
-    ).toBe(true);
-    await view.user.selectOptions(performer, '');
+      screen.getByRole('option', { name: 'Charybdis (unavailable)' }).getAttribute('aria-disabled'),
+    ).toBe('true');
+    await view.user.click(screen.getByRole('option', { name: 'Default' }));
     await waitFor(() => {
       const occurrence = view.application.store
         .getState()
@@ -933,20 +947,21 @@ describe('OccurrenceEncounterWorkbench', () => {
     for (const name of ['Early summons', 'Late summons']) {
       const group = within(dialog).getByRole('region', { name });
       expect(within(group).getByRole('heading', { level: 3, name })).toBeTruthy();
-      expect(within(group).getAllByRole('combobox')).toHaveLength(2);
+      expect(within(group).getAllByRole('button')).toHaveLength(2);
     }
-    await view.user.selectOptions(
-      within(dialog).getByRole('combobox', { name: 'Early summons use 1' }),
-      'harpy',
-    );
-    await view.user.selectOptions(
-      within(dialog).getByRole('combobox', { name: 'Early summons use 2' }),
-      'swab',
-    );
-    await view.user.selectOptions(
-      within(dialog).getByRole('combobox', { name: 'Early summons use 1' }),
-      'jellyfish',
-    );
+    expect(
+      within(dialog).getByRole('button', { name: 'Early summons use 2' }).hasAttribute('disabled'),
+    ).toBe(true);
+    await view.user.click(within(dialog).getByRole('button', { name: 'Early summons use 1' }));
+    await view.user.click(screen.getByRole('option', { name: 'Elite Harpy Talon' }));
+    await view.user.click(within(dialog).getByRole('button', { name: 'Early summons use 2' }));
+    await view.user.click(screen.getByRole('button', { name: /^Unavailable/ }));
+    expect(
+      screen.getByRole('option', { name: /^Elite Harpy Talon/ }).getAttribute('aria-disabled'),
+    ).toBe('true');
+    await view.user.click(screen.getByRole('option', { name: 'Elite Anchor' }));
+    await view.user.click(within(dialog).getByRole('button', { name: 'Early summons use 1' }));
+    await view.user.click(screen.getByRole('option', { name: 'Hellifishie' }));
     await waitFor(() => {
       const occurrence = view.application.store
         .getState()
@@ -1488,10 +1503,8 @@ describe('OccurrenceEncounterWorkbench', () => {
     if (!(orderedPsycheRow instanceof HTMLElement))
       throw new Error('Ordered Psyche acquisition row is missing');
     expect(within(orderedPsycheRow).queryByRole('button', { name: 'Reward' })).toBeNull();
-    await view.user.selectOptions(
-      within(orderedPsycheRow).getByLabelText(/Pickup outcome/),
-      'timePiece',
-    );
+    await view.user.click(within(orderedPsycheRow).getByRole('button', { name: /Pickup outcome/ }));
+    await view.user.click(screen.getByRole('option', { name: 'Time Piece · convert to Gold' }));
     expect(
       authoredOccurrence()?.acquisitionSites?.[narcissusSite]?.pickupEntries?.psyche
         ?.dispositionByAcquisitionRole.self,
@@ -1873,9 +1886,10 @@ describe('OccurrenceEncounterWorkbench', () => {
       occurrenceById(oOccurrenceIds.combat04),
     );
     openRoomTab('Room Overview');
-    const count = screen.getByRole('combobox', { name: /Combat phases/ }) as HTMLSelectElement;
+    const count = screen.getByRole('button', { name: 'Combat phases' });
     await view.user.click(count);
-    await waitFor(() => expect(count.dataset.candidateSupport).toBe('impossible'));
+    await waitFor(() => expect(count.dataset.candidateState).toBe('impossible'));
+    await view.user.keyboard('{Escape}');
     openRoomTab('Combat 2 Timeline');
     const phase = screen.getByLabelText('Combat2 encounter phase');
     const phaseAddress = createEncounterPhaseAddress(
@@ -1952,16 +1966,20 @@ describe('OccurrenceEncounterWorkbench', () => {
       occurrenceById(oOccurrenceIds.combat04),
     );
     openRoomTab('Room Overview');
-    const count = screen.getByRole('combobox', { name: /Combat phases/ }) as HTMLSelectElement;
+    const count = screen.getByRole('button', { name: 'Combat phases' });
     await view.user.click(count);
     await waitFor(() => {
-      expect(count.dataset.candidateSupport).toBe('forced');
-      expect(Array.from(count.options).map((option) => option.value)).toEqual(['2', '3']);
-      expect(count.options[1]).toMatchObject({
-        disabled: true,
-        textContent: 'Intro + 2 combats — unavailable',
-      });
+      expect(count.dataset.candidateState).toBe('forced');
+      expect(screen.getByRole('option', { name: /^Intro \+ 1 combat/ })).toBeTruthy();
     });
+    await view.user.click(screen.getByRole('button', { name: /^Unavailable/ }));
+    expect(
+      screen.getByRole('option', { name: /^Intro \+ 2 combats/ }).getAttribute('aria-disabled'),
+    ).toBe('true');
+    expect(
+      screen.getByText('Intro + 2 combats is unavailable at this point in the route.'),
+    ).toBeTruthy();
+    await view.user.keyboard('{Escape}');
     expect(screen.getByRole('tab', { name: 'Room Overview' })).toBeTruthy();
     openRoomTab('Intro Timeline');
     expect(screen.getByLabelText('Intro ship phase')).toBeTruthy();
@@ -2127,8 +2145,13 @@ describe('OccurrenceEncounterWorkbench', () => {
       within(restoredWheel).getByRole('button', { name: 'Reward pool' }).textContent,
     ).toContain('Major Reward');
     expect(
-      (within(restoredWheel).getByRole('combobox', { name: 'Offers' }) as HTMLSelectElement).value,
-    ).toBe('2');
+      (
+        within(within(restoredWheel).getByRole('radiogroup', { name: 'Offers' })).getByRole(
+          'radio',
+          { name: '2' },
+        ) as HTMLInputElement
+      ).checked,
+    ).toBe(true);
     openRoomTab('Combat 2 Timeline');
     const combatTwo = screen.getByLabelText('Combat 2 ship phase');
     expect(within(combatTwo).getByText(/^Collect .+ · Combat 2 reward/)).toBeTruthy();
@@ -2276,16 +2299,21 @@ describe('OccurrenceEncounterWorkbench', () => {
       occurrenceById(oOccurrenceIds.combat07),
     );
     openRoomTab('Room Overview');
-    const count = screen.getByRole('combobox', { name: /Combat phases/ }) as HTMLSelectElement;
+    const count = screen.getByRole('button', { name: 'Combat phases' });
 
     await view.user.click(count);
     await waitFor(() => {
-      expect(Array.from(count.options).map((option) => option.value)).toEqual(['2', '3']);
-      expect(count.options[1]?.disabled).toBe(false);
-      expect(count.options[1]?.dataset.candidateSupport).toBe('possible');
+      expect(
+        screen.getByRole('option', { name: 'Intro + 2 combats' }).getAttribute('aria-disabled'),
+      ).not.toBe('true');
+      expect(
+        screen
+          .getByRole('option', { name: 'Intro + 2 combats' })
+          .getAttribute('data-candidate-state'),
+      ).toBe('possible');
     });
 
-    await view.user.selectOptions(count, '3');
+    await view.user.click(screen.getByRole('option', { name: 'Intro + 2 combats' }));
     openRoomTab('Combat 2 Timeline');
     await waitFor(() => expect(screen.getByLabelText('Combat 2 ship phase')).toBeTruthy());
     expect(
@@ -2344,7 +2372,7 @@ describe('OccurrenceEncounterWorkbench', () => {
     expect(offerGrid.getAttribute('data-active-offer-count')).toBe('1');
     expect(offerGrid.children).toHaveLength(1);
     expect(offerGrid.firstElementChild?.getAttribute('data-picked')).toBe('true');
-    expect(within(rewardWheel).queryByRole('radio')).toBeNull();
+    expect(within(offerGrid).queryByRole('radio')).toBeNull();
     expect(within(rewardWheel).queryByLabelText('Offer 2')).toBeNull();
 
     act(() =>
@@ -2360,7 +2388,7 @@ describe('OccurrenceEncounterWorkbench', () => {
     expect(offerGrid.getAttribute('data-active-offer-count')).toBe('2');
     expect(offerGrid.children).toHaveLength(2);
     expect(offerGrid.lastElementChild?.getAttribute('data-picked')).toBeNull();
-    expect(within(rewardWheel).getAllByRole('radio')).toHaveLength(2);
+    expect(within(offerGrid).getAllByRole('radio')).toHaveLength(2);
 
     act(() =>
       view.application.store.dispatch(
@@ -2428,7 +2456,7 @@ describe('OccurrenceEncounterWorkbench', () => {
         name: 'Picked offer',
       }),
     ).toBeNull();
-    expect(within(rewardWheel).getAllByRole('radio')).toHaveLength(2);
+    expect(within(rewardWheel).getAllByRole('radio', { name: /Pick Offer/ })).toHaveLength(2);
   });
 
   it('authors an active O wheel through pool, count, offers, and picked offer controls', async () => {
@@ -2462,11 +2490,10 @@ describe('OccurrenceEncounterWorkbench', () => {
         .storeKey,
     ).toBe('MetaProgress');
 
-    const count = within(wheel).getByRole('combobox', { name: 'Offers' }) as HTMLSelectElement;
-    await view.user.click(count);
-    await waitFor(() => expect(count.options[1]?.dataset.candidateSupport).toBe('possible'));
-    await view.user.selectOptions(count, '2');
-    await waitFor(() => expect(count.value).toBe('2'));
+    const count = within(wheel).getByRole('radiogroup', { name: 'Offers' });
+    const twoOffers = within(count).getByRole('radio', { name: '2' }) as HTMLInputElement;
+    await view.user.click(twoOffers);
+    await waitFor(() => expect(twoOffers.checked).toBe(true));
     expect(
       shipWheel(view.application.store.getState().projectWorkspace.history!.present, 'wheel1')
         .offerCount,

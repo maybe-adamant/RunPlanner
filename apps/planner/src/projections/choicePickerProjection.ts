@@ -182,3 +182,25 @@ export function projectFieldsCageOutcomePicker(
     fieldsCageOutcomeExplanation,
   );
 }
+
+export function projectShipCombatPhaseCountPicker(
+  contextualPicker: ContextualPickerProjectionService,
+  choices: readonly ChoicePickerChoice<2 | 3>[],
+  selected: 2 | 3,
+  candidates: readonly CandidateOptionProjection<2 | 3, CandidateProjectionEvaluation>[],
+): ContextualPickerModel<2 | 3> {
+  return projectChoicePicker(
+    contextualPicker,
+    choices,
+    selected,
+    candidates,
+    (evaluation, value, labelFor) => {
+      if (evaluation.kind !== 'shipEncounterCount' || evaluation.result.selectedPossible)
+        return undefined;
+      return {
+        kind: 'ship',
+        message: `${labelFor(String(value))} is unavailable at this point in the route.`,
+      };
+    },
+  );
+}

@@ -11,6 +11,8 @@ import { PomResolutionLauncher } from './PomResolutionEditor';
 import { ShopOfferEditor } from './ShopOfferEditor';
 import type { RewardPickerStep } from '@planner/projections/rewards/rewardPicker';
 import type { ResolvedRewardOffer } from '@run-planner/engine/reward-kernel';
+import { ContextualPicker } from '@planner/ui/controls/ContextualPicker';
+import { declaredChoicesPicker } from '@planner/projections/contextual/contextualPicker';
 
 /** Complete intent-bound editor for every authored reward leaf. */
 export function RewardControlEditor({
@@ -125,17 +127,39 @@ export function RewardControlEditor({
                 className="reward-acquisition-conversion"
                 key={workspaceInteractionKey(conversion.address)}
               >
-                <label className="pickup-outcome-control">
-                  <span>
-                    Pickup outcome
-                    {control.realizedAcquisition === undefined
-                      ? ''
-                      : ` · ${control.realizedAcquisition.label}`}
-                  </span>
-                  <select
-                    aria-label={`Pickup outcome for ${conversion.acquisitionRoleLabel}`}
-                    onChange={(event) => {
-                      const kind = event.target.value;
+                <div className="pickup-outcome-control">
+                  <ContextualPicker
+                    id={`${idPrefix}-pickup-outcome-${workspaceInteractionKey(conversion.address)}`}
+                    label={`Pickup outcome${control.realizedAcquisition === undefined ? '' : ` · ${control.realizedAcquisition.label}`}`}
+                    ariaLabel={`Pickup outcome for ${conversion.acquisitionRoleLabel}`}
+                    placeholder="Choose a pickup outcome"
+                    model={declaredChoicesPicker(
+                      [
+                        {
+                          key: 'normal',
+                          value: 'normal',
+                          label: `Pick up ${control.realizedAcquisition?.label ?? 'reward'}`,
+                        },
+                        {
+                          key: 'timePiece',
+                          value: 'timePiece',
+                          label: 'Time Piece · convert to Gold',
+                          disabled:
+                            !interaction.timePieceSupported &&
+                            conversion.value.kind !== 'timePiece',
+                        },
+                        {
+                          key: 'artificer',
+                          value: 'artificer',
+                          label: 'Artificer · replace reward',
+                          disabled:
+                            !interaction.artificerSupported &&
+                            conversion.value.kind !== 'artificer',
+                        },
+                      ],
+                      conversion.value.kind,
+                    )}
+                    onSelect={(kind) => {
                       if (kind === 'normal' || kind === 'timePiece') {
                         executeIntent(interaction.intentFor(Object.freeze({ kind })));
                         return;
@@ -143,29 +167,8 @@ export function RewardControlEditor({
                       if (kind === 'artificer')
                         executeIntent(interaction.intentFor(Object.freeze({ kind: 'artificer' })));
                     }}
-                    value={conversion.value.kind}
-                  >
-                    <option value="normal">
-                      Pick up {control.realizedAcquisition?.label ?? 'reward'}
-                    </option>
-                    <option
-                      disabled={
-                        !interaction.timePieceSupported && conversion.value.kind !== 'timePiece'
-                      }
-                      value="timePiece"
-                    >
-                      Time Piece · convert to Gold
-                    </option>
-                    <option
-                      disabled={
-                        !interaction.artificerSupported && conversion.value.kind !== 'artificer'
-                      }
-                      value="artificer"
-                    >
-                      Artificer · replace reward
-                    </option>
-                  </select>
-                </label>
+                  />
+                </div>
                 {!interaction.seaStarSupported && !interaction.seaStarProcced ? null : (
                   <label className="pickup-outcome-control">
                     <input

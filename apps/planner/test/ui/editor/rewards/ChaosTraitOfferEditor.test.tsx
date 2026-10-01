@@ -251,10 +251,8 @@ describe('ChaosTraitOfferEditor', () => {
     await user.click(screen.getByRole('button', { name: 'option2 curse' }));
     await user.click(screen.getByRole('option', { name: 'ChaosDamageCurse' }));
     expect(current.selectedCurseValues).toEqual({ damageTaken: 0.35 });
-    await user.selectOptions(
-      screen.getByRole('combobox', { name: 'Chaos blessing rarity' }),
-      'Rare',
-    );
+    await user.click(screen.getByRole('button', { name: 'Chaos blessing rarity' }));
+    await user.click(screen.getByRole('option', { name: 'Rare' }));
     expect(current.blessingValues).toEqual({ damageBonus: 0.35 });
     expect(updates.length).toBeGreaterThan(0);
   });
@@ -275,15 +273,14 @@ describe('ChaosTraitOfferEditor', () => {
         value={value}
       />,
     );
-    const select = screen.getByRole('combobox', { name: 'Chaos blessing rarity' });
-    expect((select as HTMLSelectElement).value).toBe('Common');
-    expect(Array.from((select as HTMLSelectElement).options, (option) => option.value)).toEqual([
-      'Common',
-      'Rare',
-      'Epic',
-    ]);
-    expect((select as HTMLSelectElement).options[0]?.disabled).toBe(true);
-    await user.selectOptions(select, 'Rare');
+    const select = screen.getByRole('button', { name: 'Chaos blessing rarity' });
+    expect(select.textContent).toContain('Common');
+    await user.click(select);
+    expect(screen.getByRole('option', { name: 'Common' }).getAttribute('aria-disabled')).toBe(
+      'true',
+    );
+    expect(screen.getByRole('option', { name: 'Epic' })).toBeTruthy();
+    await user.click(screen.getByRole('option', { name: 'Rare' }));
     expect(updates.at(-1)?.rarity).toBe('Rare');
   });
 });

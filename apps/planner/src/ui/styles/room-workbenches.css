@@ -513,10 +513,6 @@
   color: var(--muted);
 }
 
-.encounter-customization-row > select {
-  min-width: 0;
-}
-
 .encounter-cocoon-count {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto auto;
