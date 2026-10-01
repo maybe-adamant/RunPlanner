@@ -36,7 +36,7 @@ const gold = createAcquisitionEntryAddress(site, 'echoDoubleShopReward');
 const shopOffer = createShopOfferAddress(biome, shopId, 'Boon');
 
 function goldRow() {
-  const row = screen.getByText(/^Interact Gold Gold Gold/).closest('li');
+  const row = screen.getByText(/^Collect .*Gold Gold Gold/).closest('li');
   if (row === null) throw new Error('Gold pickup row missing');
   return within(row);
 }
@@ -65,7 +65,7 @@ it('keeps a stale Gold pickup removable after its triggering purchase is cleared
   ).toMatchObject({ focusAddress: { kind: 'roomAction' } });
   openRoomTab('Room Timeline');
   await view.user.click(goldRow().getByRole('button', { name: /Remove .* from timeline/ }));
-  expect(screen.queryByText(/^Interact Gold Gold Gold/)).toBeNull();
+  expect(screen.queryByText(/^Collect .*Gold Gold Gold/)).toBeNull();
   expect(
     view.application.store
       .getState()
@@ -165,7 +165,7 @@ it('leaves a Gold Mystery Boon optional and authors its hidden source only after
     await view.user.click(option);
   };
   openRoomTab('Room Timeline');
-  const purchase = screen.getByText('Purchase Slot 1 Offer · Mystery Boon').closest('li');
+  const purchase = screen.getByText('Buy Mystery Boon · Slot 1').closest('li');
   if (purchase === null) throw new Error('Mystery purchase missing');
   await selectGod(within(purchase));
   settleTrait('Boon');

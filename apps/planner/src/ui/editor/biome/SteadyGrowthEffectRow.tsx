@@ -60,12 +60,10 @@ export function SteadyGrowthEffectRow({
       data-steady-growth={control.address.phaseKey}
     >
       <div className="owner-markers room-action-identity scheduled-trait-effect-identity">
-        <span aria-hidden="true" className="hub-roster-rank">
-          ·
-        </span>
+        <span className="room-automatic-label">Automatic</span>
         <strong>Steady Growth</strong>
         {domain?.emptyNoOp === true && control.targetTraitKey === undefined ? (
-          <span>No eligible trait (no-op)</span>
+          <span>No eligible trait</span>
         ) : (
           <RandomTraitTargetPicker
             findingTarget={findingTarget(control.address)}

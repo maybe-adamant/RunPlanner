@@ -40,20 +40,18 @@ export function ShopWorkbench({
   };
   if (!room.materialized) {
     return (
-      <section aria-label="Shop inventory and conditions" className="shop-editor">
-        <div className="local-reward-heading">
-          <h4>Shop inventory and conditions</h4>
+      <section aria-label="Shop inventory" className="shop-editor">
+        <h5 className="room-feature-category-heading">Shop inventory</h5>
+        <div className="room-overview-panel">
+          <p className="fixed-room-state">Shop inventory appears when you select this room.</p>
         </div>
-        <p className="fixed-room-state">Shop inventory appears when you select this room.</p>
       </section>
     );
   }
   return (
-    <section aria-label="Shop inventory and conditions" className="shop-editor">
-      <div className="local-reward-heading">
-        <h4>Shop inventory and conditions</h4>
-      </div>
-      <div className="shop-family-offer-list">
+    <section aria-label="Shop inventory" className="shop-editor">
+      <h5 className="room-feature-category-heading">Shop inventory</h5>
+      <div className="room-overview-panel shop-family-offer-list">
         {room.offers.map((offer) => (
           <div className="shop-family-offer-row" key={offer.key}>
             <div className="shop-family-item-control">

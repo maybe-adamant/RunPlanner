@@ -31,50 +31,52 @@ export function FieldsWorkbench({
   const findingTarget = useFindingTarget();
   const dispatch = useAppDispatch();
   return (
-    <section aria-label="Fields setup" className="fields-room-editor">
-      {nested ? null : (
-        <div className="local-reward-heading">
-          <h4>Fields setup</h4>
-        </div>
-      )}
-      <label className="field-control field-control-inline">
-        <span>Optional pickups</span>
-        <select
-          {...findingTarget(room.optionalRewardCountAddress)}
-          aria-label="Optional pickups"
-          onChange={(event) =>
-            dispatch(
-              authoredProjectCommandDispatched({
-                kind: 'ReplaceFieldsOptionalRewardCount',
-                occurrence: room.owner,
-                optionalRewardCount: Number(event.target.value),
-              }),
-            )
-          }
-          value={room.optionalRewardCount}
-        >
-          {room.optionalRewardCountValues.map((value) => (
-            <option key={value} value={value}>
-              {value}
-            </option>
-          ))}
-        </select>
-      </label>
-      <div className="fields-reward-identities">
-        <div className="local-reward-heading">
-          <h5>Optional reward identities</h5>
-        </div>
-        {room.optionalRewards.map((reward) => (
-          <div className="fields-reward-identity" key={reward.key}>
-            <RewardControlEditor
-              control={reward.control}
-              idPrefix={`fields-${room.owner.occurrenceId}-optional-${reward.key}`}
-              interactions={interactions}
-              label={reward.label}
-              showAcquisitionChildren={false}
-            />
+    <section aria-label="Optional Rewards" className="fields-room-editor">
+      {nested ? null : <h5 className="room-feature-category-heading">Optional Rewards</h5>}
+      <div className="room-overview-panel">
+        <div className="field-control field-control-inline">
+          <span>Optional pickups</span>
+          <div
+            {...findingTarget(room.optionalRewardCountAddress)}
+            aria-label="Optional pickups"
+            role="radiogroup"
+            tabIndex={-1}
+            className="biome-field-radios"
+          >
+            {room.optionalRewardCountValues.map((value) => (
+              <label key={value}>
+                <input
+                  type="radio"
+                  name={`optional-count-${room.owner.occurrenceId}`}
+                  checked={room.optionalRewardCount === value}
+                  onChange={() =>
+                    dispatch(
+                      authoredProjectCommandDispatched({
+                        kind: 'ReplaceFieldsOptionalRewardCount',
+                        occurrence: room.owner,
+                        optionalRewardCount: value,
+                      }),
+                    )
+                  }
+                />
+                <span>{value}</span>
+              </label>
+            ))}
           </div>
-        ))}
+        </div>
+        <div className="fields-reward-identities">
+          {room.optionalRewards.map((reward) => (
+            <div className="fields-reward-identity" key={reward.key}>
+              <RewardControlEditor
+                control={reward.control}
+                idPrefix={`fields-${room.owner.occurrenceId}-optional-${reward.key}`}
+                interactions={interactions}
+                label={reward.label}
+                showAcquisitionChildren={false}
+              />
+            </div>
+          ))}
+        </div>
       </div>
     </section>
   );
