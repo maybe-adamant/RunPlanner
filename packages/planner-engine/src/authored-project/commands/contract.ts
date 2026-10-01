@@ -8,6 +8,7 @@ import {
   createOccurrenceAddress,
   createRoomActionAddress,
   createRoomFeatureAddress,
+  createTargetAddress,
 } from '../addresses';
 import { roomActionKey } from '../room-actions/key';
 import type {
@@ -267,6 +268,29 @@ export function projectCommandAuthoringAddresses(
   command: ProjectCommand,
   project: ProjectDocument,
 ): readonly SemanticAddress[] {
+  if (command.kind === 'ReplaceOccurrenceRoom') {
+    const plan = project.route.biomes.find(
+      (biome) =>
+        biome.biomeKey === command.occurrence.biomeKey &&
+        project.route.routeKey === command.occurrence.routeKey,
+    );
+    for (const decision of plan?.topology?.decisions ?? []) {
+      if (decision.kind !== 'exit' || decision.normal.kind !== 'batch') continue;
+      const target = decision.normal.targets.find(
+        (candidate) => candidate.occurrenceId === command.occurrence.occurrenceId,
+      );
+      if (target !== undefined) {
+        // Replacing an offered room edits its door, not the destination's interior.
+        return [
+          createTargetAddress(
+            createBiomeAddress(command.occurrence.routeKey, command.occurrence.biomeKey),
+            decision.source,
+            target.exitKey,
+          ),
+        ];
+      }
+    }
+  }
   if (command.kind === 'ReplaceChaosMap') {
     const plan = project.route.biomes.find(
       (biome) =>
