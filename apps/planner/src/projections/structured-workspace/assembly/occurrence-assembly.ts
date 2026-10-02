@@ -869,6 +869,21 @@ export function assembleWorkspaceOccurrence(
         [wheel.marker, ...wheel.offers.flatMap((offer) => [offer.control.marker])],
         tab,
       );
+      const choice = roomActions?.rows.find(
+        (row) => row.reference.kind === 'chooseRewardWheel' && row.reference.wheelKey === wheel.key,
+      );
+      if (
+        choice !== undefined &&
+        roomActions?.timeline.entries.some(
+          (entry) =>
+            entry.kind === 'action' &&
+            entry.actionKey === choice.key &&
+            entry.presentation === 'rewardWheelAnchor',
+        )
+      ) {
+        input.markerDestinations.redirectToContext(choice.marker, wheel.marker, node.key);
+        input.markerDestinations.setRoomTab([choice.marker], tab);
+      }
     }
   }
   const localInteractionRequirements = occurrenceInteractionRequirements(

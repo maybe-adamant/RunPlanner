@@ -352,7 +352,13 @@
 }
 
 .hermes-shrine-slot {
-  grid-template-columns: minmax(18rem, 1fr) auto auto;
+  display: flex;
+  flex-wrap: wrap;
+}
+
+.hermes-shrine-slot > .field-control {
+  flex: 1 1 18rem;
+  max-width: 100%;
 }
 
 .hermes-shrine-purchase-details,
@@ -364,7 +370,11 @@
 }
 
 .hermes-shrine-purchase-details {
-  gap: 12px;
+  flex-wrap: wrap;
+  min-width: 0;
+  max-width: 100%;
+  gap: 8px 12px;
+  white-space: normal;
 }
 
 .hermes-shrine-purchase-details:has(select:disabled) {
@@ -1055,10 +1065,6 @@
   background: rgb(153 76 87 / 8%);
 }
 
-.ship-phase-actions-heading {
-  margin: 2px 0 0;
-}
-
 .reward-wheel {
   container-type: inline-size;
   padding: 10px;
@@ -1068,10 +1074,22 @@
 }
 
 .reward-wheel-settings {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 8px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 24px;
   margin-bottom: 8px;
+}
+
+.reward-wheel-settings > .field-control-inline {
+  grid-template-columns: max-content minmax(0, 1fr);
+  column-gap: 10px;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.reward-wheel-settings > .contextual-picker {
+  flex: 0 1 22rem;
 }
 
 .reward-wheel-offers {

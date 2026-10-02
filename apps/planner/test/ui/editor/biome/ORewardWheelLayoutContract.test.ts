@@ -14,6 +14,15 @@ function standaloneCssBlock(selector: string): string {
 }
 
 describe('O reward wheel layout contract', () => {
+  it('separates the settings while giving both labels the same control spacing', () => {
+    const settings = standaloneCssBlock('\\.reward-wheel-settings');
+    expect(settings).toContain('flex-wrap: wrap;');
+    expect(settings).toContain('gap: 8px 24px;');
+    const controls = standaloneCssBlock('\\.reward-wheel-settings > \\.field-control-inline');
+    expect(controls).toContain('grid-template-columns: max-content minmax(0, 1fr);');
+    expect(controls).toContain('column-gap: 10px;');
+  });
+
   it('keeps two offer cards beside each other until their wheel container becomes narrow', () => {
     expect(standaloneCssBlock('\\.reward-wheel')).toContain('container-type: inline-size;');
     expect(standaloneCssBlock("\\.reward-wheel-offers\\[data-active-offer-count='2'\\]")).toContain(

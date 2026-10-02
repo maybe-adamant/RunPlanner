@@ -241,8 +241,10 @@ and room-local ordering are owned by
 The editor renders Room Overview, Intro Timeline, Combat 1 Timeline, optional
 Combat 2 Timeline, and Room Doors. Overview owns encounter count and room
 features. Wheel 1 is configured at Intro's next-phase boundary and Wheel 2 at
-Combat 1's; choice and pickup actions remain at their engine timeline
-positions. A retained inactive Combat 2 action appears once in the repair
+Combat 1's. The wheel panel represents its choice action without a separate
+timeline row; choice and pickup keep their engine timeline positions. Invalid,
+missing, or retained inactive choice actions remain visible for repair.
+A retained inactive Combat 2 action appears once in the repair
 surface. The phase tabs are views over one global `roomActions.order`, and only
 the final active phase reaches room-level **Cleanup · Doors open**.
 

@@ -282,11 +282,11 @@ describe('OccurrenceEncounterWorkbench', () => {
       ).toMatchObject({ kind: 'generated', waveCount: 3 }),
     );
     await view.user.click(within(dialog).getByRole('button', { name: 'Shared Enemy' }));
-    await view.user.click(await screen.findByRole('option', { name: 'Whisper' }));
+    await view.user.click(await screen.findByRole('option', { name: 'Whisper (5)' }));
     await view.user.click(within(dialog).getByRole('tab', { name: /^Wave 2/ }));
     await view.user.click(within(dialog).getByRole('button', { name: 'Wave 2 enemies' }));
-    await view.user.click(await screen.findByRole('option', { name: 'Whisper' }));
-    await view.user.click(await screen.findByRole('option', { name: 'Wastrel' }));
+    await view.user.click(await screen.findByRole('option', { name: 'Whisper (5)' }));
+    await view.user.click(await screen.findByRole('option', { name: 'Wastrel (18)' }));
     await view.user.click(await screen.findByRole('option', { name: 'Finish Wave' }));
     await waitFor(() =>
       expect(
@@ -1984,12 +1984,26 @@ describe('OccurrenceEncounterWorkbench', () => {
     openRoomTab('Intro Timeline');
     expect(screen.getByLabelText('Intro ship phase')).toBeTruthy();
     expect(
+      within(screen.getByLabelText('Intro ship phase')).queryByRole('heading', { name: 'Intro' }),
+    ).toBeNull();
+    expect(
+      within(screen.getByLabelText('Intro ship phase')).queryByRole('heading', {
+        name: 'Timeline',
+      }),
+    ).toBeNull();
+    expect(
+      within(screen.getByLabelText('Intro ship phase')).getByText('Room entered'),
+    ).toBeTruthy();
+    expect(
       within(screen.getByLabelText('Intro ship phase')).getByLabelText('Combat 1 reward'),
     ).toBeTruthy();
     expect(within(screen.getByLabelText('Intro ship phase')).queryByText('Doors open')).toBeNull();
     openRoomTab('Combat 1 Timeline');
     const combatOne = screen.getByLabelText('Combat 1 ship phase');
     expect(combatOne).toBeTruthy();
+    expect(within(combatOne).queryByRole('heading', { name: 'Combat 1' })).toBeNull();
+    expect(within(combatOne).queryByRole('heading', { name: 'Timeline' })).toBeNull();
+    expect(within(combatOne).getByText('Start encounter')).toBeTruthy();
     expect(within(combatOne).queryByLabelText('Combat 1 reward')).toBeNull();
     expect(screen.queryByRole('tab', { name: 'Combat 2 Timeline' })).toBeNull();
     expect(within(combatOne).getByText('Doors open')).toBeTruthy();
@@ -2050,17 +2064,13 @@ describe('OccurrenceEncounterWorkbench', () => {
     const wheel2 = createRewardWheelAddress(oBiome, oOccurrenceIds.combat07, 'wheel2');
     expect(focusByOwner.get(semanticAddressKey(wheel))?.roomTab).toBe('shipIntroActions');
     expect(focusByOwner.get(semanticAddressKey(wheel2))?.roomTab).toBe('shipCombat1Actions');
-    expect(
-      focusByOwner.get(
-        semanticAddressKey(
-          createRoomActionAddress(
-            oBiome,
-            oOccurrenceIds.combat07,
-            roomActionKey({ kind: 'chooseRewardWheel', wheelKey: 'wheel1' }),
-          ),
-        ),
-      )?.roomTab,
-    ).toBe('shipIntroActions');
+    const choiceAddress = createRoomActionAddress(
+      oBiome,
+      oOccurrenceIds.combat07,
+      roomActionKey({ kind: 'chooseRewardWheel', wheelKey: 'wheel1' }),
+    );
+    expect(focusByOwner.get(semanticAddressKey(choiceAddress))?.roomTab).toBe('shipIntroActions');
+    expect(focusByOwner.get(semanticAddressKey(choiceAddress))?.focusAddress).toEqual(wheel);
     expect(
       focusByOwner.get(
         semanticAddressKey(
@@ -2074,6 +2084,15 @@ describe('OccurrenceEncounterWorkbench', () => {
     ).toBe('shipCombat1Actions');
     openRoomTab('Intro Timeline');
     const ship = screen.getByLabelText('Ship combat structure');
+    expect(within(ship).queryByText('Choose Combat 1 wheel')).toBeNull();
+    expect(
+      occurrenceRoomActionOrder(
+        view.application.store.getState().projectWorkspace.history!.present,
+        'Surface',
+        'O',
+        oOccurrenceIds.combat07,
+      )?.some((action) => action.kind === 'chooseRewardWheel' && action.wheelKey === 'wheel1'),
+    ).toBe(true);
 
     expect(within(ship).getAllByRole('button', { name: 'Reward' }).length).toBeGreaterThan(0);
     expect(
@@ -2139,7 +2158,7 @@ describe('OccurrenceEncounterWorkbench', () => {
     openRoomTab('Combat 1 Timeline');
     const combatOne = screen.getByLabelText('Combat 1 ship phase');
     expect(within(combatOne).getByLabelText('Combat 2 reward')).toBeTruthy();
-    expect(within(combatOne).getByText('Choose Combat 2 wheel')).toBeTruthy();
+    expect(within(combatOne).queryByText('Choose Combat 2 wheel')).toBeNull();
     const restoredWheel = within(combatOne).getByLabelText('Combat 2 reward');
     expect(
       within(restoredWheel).getByRole('button', { name: 'Reward pool' }).textContent,
@@ -2154,6 +2173,9 @@ describe('OccurrenceEncounterWorkbench', () => {
     ).toBe(true);
     openRoomTab('Combat 2 Timeline');
     const combatTwo = screen.getByLabelText('Combat 2 ship phase');
+    expect(within(combatTwo).queryByRole('heading', { name: 'Combat 2' })).toBeNull();
+    expect(within(combatTwo).queryByRole('heading', { name: 'Timeline' })).toBeNull();
+    expect(within(combatTwo).getByText('Start encounter')).toBeTruthy();
     expect(within(combatTwo).getByText(/^Collect .+ · Combat 2 reward/)).toBeTruthy();
     expect(within(combatTwo).getByText('Doors open')).toBeTruthy();
     expect(within(combatTwo).queryByText('Outgoing generation')).toBeNull();

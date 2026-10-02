@@ -736,6 +736,7 @@ export function RoomActionsWorkbench({
                           />,
                         ];
                   }
+                  if (entry.presentation !== 'row') return [];
                   const row = actions?.rows.find((candidate) => candidate.key === entry.actionKey);
                   return row === undefined
                     ? []
@@ -757,32 +758,24 @@ export function RoomActionsWorkbench({
                     className="ship-phase"
                     key={phase.key}
                   >
-                    <div className="local-reward-heading">
-                      <h4>{phase.label}</h4>
-                    </div>
                     {phase.actionRows.length === 0 &&
                     phase.checkpoints.length === 0 &&
                     phase.timeline.length === 0 ? null : (
-                      <>
-                        <div className="local-reward-heading ship-phase-actions-heading">
-                          <h5>Timeline</h5>
-                        </div>
-                        <ol aria-label={`${phase.label} timeline`} className="room-action-list">
-                          {checkpointRows(0, phase.checkpoints)}
-                          {phase.timeline.flatMap(renderPhaseTimelineEntry)}
-                          {trailingCheckpoints.map((checkpoint) => (
-                            <li
-                              className="room-action-checkpoint"
-                              key={`checkpoint:${checkpoint.key}`}
-                            >
-                              <span aria-hidden="true" className="hub-roster-rank">
-                                ·
-                              </span>
-                              <strong>{checkpoint.label}</strong>
-                            </li>
-                          ))}
-                        </ol>
-                      </>
+                      <ol aria-label={`${phase.label} timeline`} className="room-action-list">
+                        {checkpointRows(0, phase.checkpoints)}
+                        {phase.timeline.flatMap(renderPhaseTimelineEntry)}
+                        {trailingCheckpoints.map((checkpoint) => (
+                          <li
+                            className="room-action-checkpoint"
+                            key={`checkpoint:${checkpoint.key}`}
+                          >
+                            <span aria-hidden="true" className="hub-roster-rank">
+                              ·
+                            </span>
+                            <strong>{checkpoint.label}</strong>
+                          </li>
+                        ))}
+                      </ol>
                     )}
                     {phase.optionalRows.length === 0 ? null : (
                       <section aria-label="Optional actions" className="room-action-optional-pool">
@@ -857,7 +850,7 @@ export function RoomActionsWorkbench({
             />,
           ];
     }
-    if (entry.presentation === 'fieldsCageAnchor') return [];
+    if (entry.presentation !== 'row') return [];
     const row = actionByKey.get(entry.actionKey);
     return row === undefined
       ? []

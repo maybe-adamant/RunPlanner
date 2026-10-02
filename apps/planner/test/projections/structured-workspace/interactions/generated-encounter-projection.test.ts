@@ -40,6 +40,60 @@ const items = (picker: ReturnType<typeof projectGeneratedEncounterHighlightPicke
   picker.sections.flatMap((section) => section.items);
 
 describe('generated enemy presentation', () => {
+  it('shows costs for shared, seeded, and additional enemy choices without changing identity', () => {
+    const costedLabels = labels.map((choice, index) => ({
+      ...choice,
+      difficultyRating: [5, 12, 18, 28][index]!,
+    }));
+    const shared = projectGeneratedEncounterHighlightPicker(
+      undefined,
+      'Guard_Elite',
+      costedLabels,
+      costedLabels.map((choice) => choice.key),
+      introductionLabel,
+    );
+    expect(items(shared).map((item) => [item.value, item.label])).toEqual([
+      ['Guard', 'Whisper (5)'],
+      ['Guard_Elite', 'Elite Whisper (12)'],
+      ['Brawler', 'Wastrel (18)'],
+      ['Brawler_Elite', 'Elite Wastrel (28)'],
+    ]);
+    expect(shared.selected?.label).toBe('Elite Whisper (12)');
+    const assessment = {
+      ...baseAssessment,
+      waves: [
+        {
+          waveIndex: 1,
+          typeCount: { min: 2, max: 2 },
+          additionalTypeCount: { min: 1, max: 1 },
+          seeds: [{ kind: 'highlight', key: 'Guard' }],
+          activeMemberKeys: ['Guard'],
+          exhausted: false,
+          eligibleKeysByPosition: [['Brawler']],
+          sampledBudgetKeys: [],
+        },
+      ],
+    } as const satisfies GeneratedEncounterAssessment;
+    const draft = (confirmedSeedCount: number) =>
+      projectGeneratedEncounterWaveDraft(
+        assessment,
+        1,
+        confirmedSeedCount,
+        [],
+        costedLabels,
+        introductionLabel,
+      ).picker.sections.flatMap((section) => section.items);
+    expect(draft(0)).toEqual([
+      expect.objectContaining({
+        label: 'Whisper (5)',
+        value: { kind: 'confirmSeed', key: 'Guard' },
+      }),
+    ]);
+    expect(draft(1)).toContainEqual(
+      expect.objectContaining({ label: 'Wastrel (18)', value: { kind: 'enemy', key: 'Brawler' } }),
+    );
+  });
+
   it('warns for declared once-per-run enemies among assessed active members', () => {
     const wave = (activeMemberKeys: readonly string[]) =>
       ({ activeMemberKeys }) as unknown as GeneratedEncounterAssessment['waves'][number];

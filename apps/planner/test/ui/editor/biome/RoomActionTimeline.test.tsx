@@ -1350,11 +1350,8 @@ describe('OccurrenceRoomActions', () => {
 
     const icarus = rowFor('Talk to Icarus');
     const moveIcarus = within(icarus).getByRole('button', { name: 'Move Talk to Icarus' });
-    const wheelTwoChoice = rowFor('Choose Combat 2 wheel');
-    expect(wheelTwoChoice.getAttribute('data-action-accent')).toBe('phase');
-    await view.user.click(
-      within(wheelTwoChoice).getByRole('button', { name: 'Move Choose Combat 2 wheel' }),
-    );
+    expect(within(combatOne).queryByText('Choose Combat 2 wheel')).toBeNull();
+    await view.user.click(moveIcarus);
     await view.user.click(screen.getByRole('button', { name: /Unavailable/ }));
     expect(
       within(screen.getByRole('listbox'))
