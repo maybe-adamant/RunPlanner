@@ -186,6 +186,7 @@ function applyUnchecked(
     case 'ReplaceRouteLoadout':
     case 'ReplaceStartingReward':
     case 'ReplaceAspectHexTree':
+    case 'ReplaceRunModifiers':
     case 'ReplaceManualArcanaSelection':
     case 'ReplaceFearVowRank':
     case 'ReplaceStartingKeepsake':

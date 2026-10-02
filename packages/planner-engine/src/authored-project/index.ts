@@ -361,6 +361,7 @@ export {
   type ResourcePlacement,
   type ResourcePlacements,
   type RouteLoadout,
+  type RunModifiers,
   type AuthoredKeepsakeEquipResults,
   type AuthoredFountainRarityResult,
   type AuthoredExperimentalHammerEquipResult,
@@ -420,3 +421,5 @@ export {
   type StartingArcanaGraspAssessment,
 } from './loadout';
 export { chaosGateSpawnPointIndices } from './chaos-gate-position';
+
+export { NATIVE_RUN_MODIFIERS, routeRunModifiers, decodeRunModifiers } from './run-modifiers';

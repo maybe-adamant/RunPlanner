@@ -59,8 +59,16 @@ export interface RouteWeaponAspectLoadout {
   readonly aspectKey: string | null;
 }
 
+/** Optional run-wide execution settings; absence preserves native behavior. */
+export interface RunModifiers {
+  readonly guaranteeEligibleCrits: boolean;
+  readonly guaranteeEligibleDoubleDamage: boolean;
+  readonly enemyGoldDropChanceMultiplier: number;
+}
+
 /** Complete persisted route configuration. */
 export interface RouteLoadout extends RouteWeaponAspectLoadout {
+  readonly runModifiers?: RunModifiers;
   /** Route-owned offer selected before an entry room exists. */
   readonly startingReward: ResolvedRewardOffer | null;
   readonly manualArcanaKeys: readonly string[];

@@ -1,6 +1,7 @@
 import type { Catalog, RouteDeclaration } from '../catalog-schema';
 import { decodeBiomeState } from './biomeState';
 import { assessStartingArcanaGrasp } from './loadout';
+import { decodeRunModifiers } from './run-modifiers';
 import { normalizeAuthoredHexTree } from './traits/hex-tree';
 import { decodeBiomeTopology } from './topology/codec';
 import { decodeKeepsakeEquipResults } from './keepsake-equip-codec';
@@ -166,6 +167,7 @@ function decodeRoutePlan(
       'startingKeepsakeKey',
       'keepsakeEquipResults',
       ...(loadout.aspectHexTree === undefined ? [] : ['aspectHexTree']),
+      ...('runModifiers' in loadout ? ['runModifiers'] : []),
     ],
     `${path}.loadout`,
   );
@@ -345,6 +347,9 @@ function decodeRoutePlan(
       manualArcanaKeys: Object.freeze(canonicalManualArcanaKeys),
       fearRanks: Object.freeze(fearRanks),
       startingKeepsakeKey,
+      ...('runModifiers' in loadout
+        ? { runModifiers: decodeRunModifiers(loadout.runModifiers, `${path}.loadout.runModifiers`) }
+        : {}),
       ...(loadout.keepsakeEquipResults === undefined
         ? {}
         : {

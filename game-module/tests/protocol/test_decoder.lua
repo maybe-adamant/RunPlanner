@@ -251,6 +251,61 @@ local function decode(name)
     return value
 end
 
+function TestProtocol.testRunModifiersProducerFixtureAndFingerprint()
+    local value = decode("run-modifiers")
+    local plan, errorMessage = protocol.decode(value)
+    lu.assertNil(errorMessage)
+    lu.assertEquals(plan.runModifiers, {
+        guaranteeEligibleCrits = true,
+        guaranteeEligibleDoubleDamage = true,
+        enemyGoldDropChanceMultiplier = 2.5,
+    })
+    lu.assertNil(plan.startingLoadout.runModifiers)
+    local native = decode("f-opening")
+    lu.assertNotNil(protocol.decode(native))
+    lu.assertNil(native.runModifiers)
+    for _, mutate in ipairs({
+        function(row) row.guaranteeEligibleCrits = false end,
+        function(row) row.guaranteeEligibleDoubleDamage = false end,
+        function(row) row.enemyGoldDropChanceMultiplier = 2.75 end,
+    }) do
+        value = decode("run-modifiers")
+        mutate(value.runModifiers)
+        local rejected, reason = protocol.decode(value)
+        lu.assertNil(rejected)
+        lu.assertStrContains(reason, "fingerprint")
+    end
+end
+
+function TestProtocol.testRunModifiersStrictCompleteWireDomain()
+    for _, mutate in ipairs({
+        function(row) row.guaranteeEligibleCrits = nil end,
+        function(row) row.guaranteeEligibleDoubleDamage = nil end,
+        function(row) row.enemyGoldDropChanceMultiplier = nil end,
+        function(row) row.extra = true end,
+        function(row) row.guaranteeEligibleCrits = 1 end,
+        function(row) row.guaranteeEligibleDoubleDamage = "false" end,
+        function(row) row.enemyGoldDropChanceMultiplier = "2" end,
+        function(row) row.enemyGoldDropChanceMultiplier = 0.99 end,
+        function(row) row.enemyGoldDropChanceMultiplier = 0 / 0 end,
+        function(row) row.enemyGoldDropChanceMultiplier = math.huge end,
+        function(row) row.enemyGoldDropChanceMultiplier = -math.huge end,
+    }) do
+        local value = decode("run-modifiers")
+        mutate(value.runModifiers)
+        local plan, reason = protocol.decode(value)
+        lu.assertNil(plan)
+        lu.assertStrContains(reason, "runModifiers")
+    end
+    for _, malformed in ipairs({ json.null, true, 1, "modifiers", assert(json.decode("[]")) }) do
+        local value = decode("run-modifiers")
+        value.runModifiers = malformed
+        local plan, reason = protocol.decode(value)
+        lu.assertNil(plan)
+        lu.assertStrContains(reason, "runModifiers")
+    end
+end
+
 local function decodeWithIndependentJsonModule(name)
     local independentJson = assert(loadfile("src/mods/protocol/json.lua"))()
     local file = assert(io.open(root .. name .. ".execution.json", "rb"))

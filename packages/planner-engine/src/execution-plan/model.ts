@@ -1,5 +1,6 @@
 import type { ProjectEvaluationAssembly } from '../simulation/evaluation/evaluation-products';
 import type { Catalog } from '../catalog-schema';
+import type { RunModifiers } from '../authored-project/model';
 import type { ResourceExecutionPolicy, ResourcePointDisposition } from '../simulation/resources';
 import type { TraitElement, TraitRarity } from '../catalog-schema';
 import type {
@@ -1029,6 +1030,7 @@ export interface ExecutionPlan {
   /** Presentation-only plan name (the saved file's name); outside the fingerprint. */
   readonly displayName?: string;
   readonly routeKey: ExecutionRouteKey;
+  readonly runModifiers?: RunModifiers;
   readonly startingLoadout: ExecutionStartingLoadout;
   readonly startingKeepsake: ExecutionStartingKeepsake;
   readonly extent: ExecutionConfiguredExtent;
@@ -1046,6 +1048,7 @@ export interface ExecutionSemanticProduct {
   readonly catalogVersion: string;
   readonly projectId: string;
   readonly routeKey: ExecutionRouteKey;
+  readonly runModifiers?: RunModifiers;
   readonly startingLoadout: ExecutionStartingLoadout;
   readonly startingKeepsake: ExecutionStartingKeepsake;
   readonly extent: ExecutionPlan['extent'];

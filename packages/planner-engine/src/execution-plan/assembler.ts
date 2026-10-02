@@ -1,3 +1,4 @@
+import { isNativeRunModifiers, routeRunModifiers } from '../authored-project/run-modifiers';
 import { assertExactProjectEvaluationAssembly } from '../simulation/evaluation/project-evaluation-assembly';
 import type { RunStateSnapshot } from '../simulation/rewards/run-state';
 import {
@@ -284,6 +285,9 @@ export function assembleExecutionProduct({
     projectId: evaluation.projectId,
     routeKey,
     startingLoadout,
+    ...(isNativeRunModifiers(routeRunModifiers(assembly.project.route.loadout))
+      ? {}
+      : { runModifiers: routeRunModifiers(assembly.project.route.loadout) }),
     startingKeepsake: Object.freeze(
       startingKeepsakeKey === null
         ? {}

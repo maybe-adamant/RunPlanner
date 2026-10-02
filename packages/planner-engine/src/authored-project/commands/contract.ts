@@ -50,6 +50,7 @@ function commandContractAddress(
     case 'ConfigureRoutePrefix':
     case 'ReplaceRouteLoadout':
     case 'ReplaceAspectHexTree':
+    case 'ReplaceRunModifiers':
     case 'ReplaceManualArcanaSelection':
     case 'ReplaceFearVowRank':
       return command.route;

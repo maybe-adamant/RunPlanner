@@ -8,6 +8,7 @@ import {
   applyProjectCommand,
   createAdditionalExitAddress,
   createBiomeAddress,
+  createRouteAddress,
   createOccurrenceId,
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
@@ -48,6 +49,7 @@ import { emptyShopGroupCatalog, emptyShopGroupProject } from './empty-shop-group
 import automaticBossFixture from '../fixtures/automatic-boss.execution.json';
 import dreamMixedPrefixFixture from '../fixtures/dream-mixed-prefix.execution.json';
 import fOpeningFixture from '../fixtures/f-opening.execution.json';
+import runModifiersFixture from '../fixtures/run-modifiers.execution.json';
 import fgFixture from '../fixtures/fg.execution.json';
 import fgAnomalyFixture from '../fixtures/fg-anomaly.execution.json';
 import fgAnomalyRosterFixture from '../fixtures/fg-anomaly-roster.execution.json';
@@ -107,7 +109,20 @@ interface ExecutionFixture {
   readonly catalog?: () => Catalog;
 }
 
+export function runModifiersProject(): ProjectDocument {
+  return applyProjectCommand(fOnlyProject(), catalog, {
+    kind: 'ReplaceRunModifiers',
+    route: createRouteAddress('Underworld'),
+    value: {
+      guaranteeEligibleCrits: true,
+      guaranteeEligibleDoubleDamage: true,
+      enemyGoldDropChanceMultiplier: 2.5,
+    },
+  });
+}
+
 export const executionFixtures: readonly ExecutionFixture[] = Object.freeze([
+  { name: 'run-modifiers', project: runModifiersProject, wire: runModifiersFixture },
   { name: 'f-opening', project: fOnlyProject, wire: fOpeningFixture },
   { name: 'fg', project: createCompleteFGProject, wire: fgFixture },
   {

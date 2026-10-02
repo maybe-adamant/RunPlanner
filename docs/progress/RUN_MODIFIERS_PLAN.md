@@ -1,7 +1,7 @@
 # Optional run modifiers delivery plan
 
 Status: locked delivery contract; independent pre-execution review found no
-blocking conflicts. Gate A is next.
+blocking conflicts. Gate A is implemented and independently reviewed; Gate B is next.
 
 Base: `b8c1af9bef8e1c2fb3ebbc8d550dc267f2f399af`.
 
