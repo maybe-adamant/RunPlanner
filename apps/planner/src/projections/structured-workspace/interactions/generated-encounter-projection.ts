@@ -18,6 +18,7 @@ import { projectStableIdentityPicker } from './room-feature-picker-model';
 type ChoiceLabel = {
   readonly key: string;
   readonly label: string;
+  readonly difficultyRating?: number;
   readonly fangsCaveat?: 'squad';
   readonly blacklistAfterAppearance?: true;
   readonly menace?: import('@run-planner/engine/catalog-schema').EncounterEnemyChoice['menace'];
@@ -25,6 +26,19 @@ type ChoiceLabel = {
 
 export function generatedEnemyLabel(label: string): string {
   return label.endsWith(' (Elite)') ? `Elite ${label.slice(0, -8)}` : label;
+}
+
+const enemyCostNumber = new Intl.NumberFormat('en-US', {
+  maximumFractionDigits: 2,
+  useGrouping: false,
+});
+
+function enemyPickerLabel(key: string, labels: readonly ChoiceLabel[]): string {
+  const choice = labels.find((entry) => entry.key === key);
+  const name = generatedEnemyLabel(choice?.label ?? 'Unavailable enemy');
+  return choice?.difficultyRating === undefined
+    ? name
+    : `${name} (${enemyCostNumber.format(choice.difficultyRating)})`;
 }
 
 export function projectGeneratedMenace(
@@ -100,12 +114,12 @@ export function projectGeneratedEncounterHighlightPicker(
     assessment: assessment === undefined ? 'unassessed' : 'assessed',
     choices: [
       ...(assessment?.eligibleHighlightKeys ?? declarationKeys).map((key) => ({
-        label: labelFor(key),
+        label: enemyPickerLabel(key, labels),
         value: key,
       })),
     ],
     selected,
-    selectedLabel: selected === undefined ? undefined : labelFor(selected),
+    selectedLabel: selected === undefined ? undefined : enemyPickerLabel(selected, labels),
   });
   const excluded =
     assessment === undefined
@@ -116,7 +130,7 @@ export function projectGeneratedEncounterHighlightPicker(
           labelFor,
           introductionLabel,
           (key) => key,
-        );
+        ).map((item) => Object.freeze({ ...item, label: enemyPickerLabel(item.value, labels) }));
   return excluded.length === 0
     ? picker
     : Object.freeze({
@@ -430,7 +444,7 @@ export function projectGeneratedEncounterWaveDraft(
           items: Object.freeze([
             draftItem(
               `seed:${seed.key}`,
-              labelFor(seed.key),
+              enemyPickerLabel(seed.key, labels),
               { kind: 'confirmSeed', key: seed.key },
               'forced',
             ),
@@ -451,7 +465,12 @@ export function projectGeneratedEncounterWaveDraft(
           collapsible: false,
           items: Object.freeze(
             eligible.map((key) =>
-              draftItem(`enemy:${key}`, labelFor(key), { kind: 'enemy', key }, 'possible'),
+              draftItem(
+                `enemy:${key}`,
+                enemyPickerLabel(key, labels),
+                { kind: 'enemy', key },
+                'possible',
+              ),
             ),
           ),
           key: `enemy:${position}`,
@@ -465,8 +484,8 @@ export function projectGeneratedEncounterWaveDraft(
       wave.introductionExcludedKeysByPosition?.[position] ?? [],
       labelFor,
       introductionLabel,
-      (key): WorkspaceGeneratedWaveDraftChoice => ({ kind: 'enemy', key }),
-    );
+      (key) => ({ kind: 'enemy' as const, key }),
+    ).map((item) => Object.freeze({ ...item, label: enemyPickerLabel(item.value.key, labels) }));
     if (excluded.length > 0)
       sections.push(
         Object.freeze({

@@ -904,6 +904,13 @@ describe('structured workspace actions assembly', () => {
     expect(ship.node.room.workbench.phases[1]?.wheel).toBeUndefined();
     const shipActions = ship.node.room.roomActions;
     if (shipActions === undefined) throw new Error('Ship room actions are withheld');
+    expect(
+      shipActions.timeline.entries.filter(
+        (entry) =>
+          entry.kind === 'action' &&
+          entry.actionKey === roomActionKey({ kind: 'chooseRewardWheel', wheelKey: 'wheel1' }),
+      ),
+    ).toEqual([expect.objectContaining({ kind: 'action', presentation: 'rewardWheelAnchor' })]);
     expect(shipActions.checkpoints.map((checkpoint) => checkpoint.key)).not.toContain(
       'outgoingGeneration',
     );

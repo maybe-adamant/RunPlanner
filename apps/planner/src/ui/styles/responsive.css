@@ -194,8 +194,7 @@
 
   .room-selector,
   .fields-batch-editor,
-  .fields-batch-summary,
-  .reward-wheel-settings {
+  .fields-batch-summary {
     grid-template-columns: 1fr;
   }
 

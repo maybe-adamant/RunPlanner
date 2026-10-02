@@ -9,6 +9,10 @@ const feedback = readFileSync(
   new URL('../../../../src/ui/styles/trait-feedback.css', import.meta.url),
   'utf8',
 );
+const workbenches = readFileSync(
+  new URL('../../../../src/ui/styles/room-workbenches.css', import.meta.url),
+  'utf8',
+);
 
 function cssBlock(styles: string, selector: string): string {
   const declaration = `${selector} {`;
@@ -18,6 +22,19 @@ function cssBlock(styles: string, selector: string): string {
 }
 
 describe('Reward row layout', () => {
+  it('wraps Hermes purchase controls within the available inventory width', () => {
+    const row = cssBlock(workbenches, '.hermes-shrine-slot');
+    expect(row).toContain('display: flex;');
+    expect(row).toContain('flex-wrap: wrap;');
+    const picker = cssBlock(workbenches, '.hermes-shrine-slot > .field-control');
+    expect(picker).toContain('flex: 1 1 18rem;');
+    expect(picker).toContain('max-width: 100%;');
+    const details = cssBlock(workbenches, '.hermes-shrine-purchase-details');
+    expect(details).toContain('flex-wrap: wrap;');
+    expect(details).toContain('min-width: 0;');
+    expect(details).toContain('max-width: 100%;');
+  });
+
   it('gives all door and intro reward states the same gap from their room control', () => {
     const spacing = cssBlock(structure, '.door-reward-slot,\n.start-room-entry-reward');
     expect(spacing).toContain('margin-top: 12px;');

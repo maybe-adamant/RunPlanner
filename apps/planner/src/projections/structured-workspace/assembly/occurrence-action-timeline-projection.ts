@@ -176,6 +176,11 @@ function projectRoomLifecycleTimeline(
       : Object.freeze({ kind: 'nemesisInteraction' as const, owner: phase.nemesisEvent.owner });
   };
   const entries: WorkspaceRoomLifecycleTimelineEntry[] = [];
+  const activeWheelKeys = new Set(
+    roomLocal.kind === 'ship'
+      ? roomLocal.wheels.filter((wheel) => wheel.active).map((wheel) => wheel.key)
+      : [],
+  );
   for (const entry of timeline.entries) {
     if (entry.kind === 'boundary') {
       const runState = launcherForBoundary(entry.boundary);
@@ -250,7 +255,12 @@ function projectRoomLifecycleTimeline(
           entry.action.reference.kind === 'completeFieldsCage' &&
           representedCagePhases.has(entry.action.reference.phaseKey)
             ? ('fieldsCageAnchor' as const)
-            : ('row' as const),
+            : entry.action.reference.kind === 'chooseRewardWheel' &&
+                roomLocal.kind === 'ship' &&
+                rows.find((row) => row.key === entry.action.key)?.issues.length === 0 &&
+                activeWheelKeys.has(entry.action.reference.wheelKey)
+              ? ('rewardWheelAnchor' as const)
+              : ('row' as const),
         rank: entry.rank,
         ...(entry.phaseKey === undefined ? {} : { phaseKey: entry.phaseKey }),
         ...(supplement === undefined ? {} : { supplement }),

@@ -176,7 +176,7 @@ export type WorkspaceRoomLifecycleTimelineEntry =
       readonly actionKey: string;
       readonly rank: number;
       /** Closed application presentation for rows represented by a lifecycle-boundary control. */
-      readonly presentation: 'row' | 'fieldsCageAnchor';
+      readonly presentation: 'row' | 'fieldsCageAnchor' | 'rewardWheelAnchor';
       /** Engine-owned phase grouping for multi-encounter room workbenches. */
       readonly phaseKey?: string;
       /** Exact family-specific Nemesis interaction placed on its required action row. */

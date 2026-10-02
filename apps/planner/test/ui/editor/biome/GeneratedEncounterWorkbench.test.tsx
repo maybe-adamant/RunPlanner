@@ -258,8 +258,8 @@ describe('generated encounter customization workflows', () => {
     expect(invalidTab.textContent).toContain('!');
     expect(invalidTab.textContent).not.toContain('Needs attention');
     await view.user.click(within(view.dialog).getByRole('button', { name: 'Wave 1 enemies' }));
-    await view.user.click(await screen.findByRole('option', { name: 'Whisper' }));
-    await view.user.click(await screen.findByRole('option', { name: 'Wastrel' }));
+    await view.user.click(await screen.findByRole('option', { name: 'Whisper (5)' }));
+    await view.user.click(await screen.findByRole('option', { name: 'Wastrel (18)' }));
     await finishWave(view);
     expect(current(view)).toMatchObject({ menace: [{ conversions: { Guard: { count: 14 } } }] });
     expect(view.dialog.textContent).toContain('Converted Whisper requests exceed');
@@ -484,9 +484,9 @@ describe('generated encounter customization workflows', () => {
     const view = await open(customize(createCompleteFGProject(), phase, composed));
     await selectBudgetWave(view, 3);
     await view.user.click(within(view.dialog).getByRole('button', { name: 'Wave 3 enemies' }));
-    await view.user.click(await screen.findByRole('option', { name: 'Whisper' }));
-    await view.user.click(await screen.findByRole('option', { name: 'Spindle' }));
-    await view.user.click(await screen.findByRole('option', { name: 'Casket' }));
+    await view.user.click(await screen.findByRole('option', { name: 'Whisper (5)' }));
+    await view.user.click(await screen.findByRole('option', { name: 'Spindle (7)' }));
+    await view.user.click(await screen.findByRole('option', { name: 'Casket (12)' }));
     await finishWave(view);
     expect(current(view)).toMatchObject({ waves: [{ allocations: { Guard: 2, Radiator: 3 } }] });
   });
@@ -693,7 +693,7 @@ describe('generated encounter customization workflows', () => {
       expect.stringMatching(/Select shared enemy|no longer available/),
     );
     expect(screen.queryByText('This current choice is no longer available here.')).toBeNull();
-    await view.user.click(await screen.findByRole('option', { name: 'Whisper' }));
+    await view.user.click(await screen.findByRole('option', { name: 'Whisper (5)' }));
     expect(current(view)).toMatchObject({ waveCount: 3, highlightKey: 'Guard' });
     expect(screen.getByRole('dialog', { name: /\(.+\)$/ })).toBeTruthy();
     cleanup();
