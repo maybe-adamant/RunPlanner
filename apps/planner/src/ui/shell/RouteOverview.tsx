@@ -469,7 +469,6 @@ function RunModifiersEditor({ workspaceRoute }: { readonly workspaceRoute: Works
   const dispatch = useAppDispatch();
   const control = workspaceRoute.runModifiers;
   const multiplier = control.value.enemyGoldDropChanceMultiplier;
-  const [showHelp, setShowHelp] = useState(false);
   const [draft, setDraft] = useState<{
     readonly source: number;
     readonly text: string;
@@ -498,38 +497,16 @@ function RunModifiersEditor({ workspaceRoute }: { readonly workspaceRoute: Works
         <h2 id={`${prefix}-heading`} className="eyebrow route-loadout-heading">
           Modifiers
         </h2>
-        <div
-          className="route-run-modifier-help"
-          onMouseEnter={() => setShowHelp(true)}
-          onMouseLeave={() => setShowHelp(false)}
-        >
-          <button
-            type="button"
-            className="route-run-modifier-help-trigger"
-            aria-label="About run modifiers"
-            aria-describedby={showHelp ? `${prefix}-help` : undefined}
-            onFocus={() => setShowHelp(true)}
-            onBlur={() => setShowHelp(false)}
-            onKeyDown={(event) => {
-              if (event.key === 'Escape') setShowHelp(false);
-            }}
-          >
-            ⓘ
-          </button>
-          {showHelp ? (
-            <div id={`${prefix}-help`} role="tooltip">
-              Crits and double damage require a positive native chance and retain their
-              prerequisites and blockers. Gold-drop chances are multiplied, capped at 100%; zero
-              chances stay zero and room gold limits still apply.
-            </div>
-          ) : null}
-        </div>
       </header>
       <div className="route-run-modifier-controls">
-        <label className="route-run-modifier-toggle">
-          Guarantee eligible crits
+        <label
+          className="route-run-modifier-toggle"
+          title="Guarantees crits when their native chance is positive and prerequisites are met."
+        >
+          <span>Guaranteed crits</span>
           <input
             type="checkbox"
+            aria-description="Guarantees crits when their native chance is positive and prerequisites are met."
             checked={control.value.guaranteeEligibleCrits}
             onChange={(event) =>
               dispatch(
@@ -538,10 +515,14 @@ function RunModifiersEditor({ workspaceRoute }: { readonly workspaceRoute: Works
             }
           />
         </label>
-        <label className="route-run-modifier-toggle">
-          Guarantee eligible double damage
+        <label
+          className="route-run-modifier-toggle"
+          title="Guarantees double damage when its native chance is positive and prerequisites are met."
+        >
+          <span>Guaranteed double damage</span>
           <input
             type="checkbox"
+            aria-description="Guarantees double damage when its native chance is positive and prerequisites are met."
             checked={control.value.guaranteeEligibleDoubleDamage}
             onChange={(event) =>
               dispatch(
@@ -552,11 +533,15 @@ function RunModifiersEditor({ workspaceRoute }: { readonly workspaceRoute: Works
             }
           />
         </label>
-        <div className="field-control route-run-modifier-gold">
-          <label htmlFor={`${prefix}-gold`}>Enemy gold-drop chance multiplier</label>
+        <div
+          className="route-run-modifier-gold"
+          title="Multiplies eligible gold-drop chances up to 100%; room gold limits still apply."
+        >
+          <label htmlFor={`${prefix}-gold`}>Enemy gold chance</label>
           <div className="route-run-modifier-multiplier">
             <input
               id={`${prefix}-gold`}
+              aria-description="Multiplies eligible gold-drop chances up to 100%; room gold limits still apply."
               type="range"
               min={1}
               max={5}

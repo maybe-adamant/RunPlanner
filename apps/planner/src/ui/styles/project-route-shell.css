@@ -1074,61 +1074,57 @@
 
 .route-run-modifier-controls {
   display: grid;
-  justify-items: start;
-  gap: 0.75rem 1.25rem;
+  gap: 0.75rem;
+  width: 100%;
+  max-width: 32rem;
   min-width: 0;
 }
 
 .route-run-modifier-toggle,
-.route-run-modifier-multiplier {
-  display: flex;
+.route-run-modifier-gold {
+  display: grid;
+  grid-template-columns: 10rem minmax(0, 1fr);
   align-items: center;
-  gap: 0.5rem;
+  column-gap: 10px;
+  min-height: 2.5rem;
   min-width: 0;
 }
 
 .route-run-modifier-toggle input {
-  flex-shrink: 0;
+  justify-self: start;
+  margin: 0;
 }
 
-.route-run-modifier-gold {
-  max-width: 100%;
+.route-run-modifier-multiplier {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 6rem;
+  align-items: center;
+  gap: 0.75rem;
+  min-width: 0;
 }
 
 .route-run-modifier-multiplier input {
-  width: 16rem;
+  width: 100%;
   min-width: 0;
-  max-width: 100%;
+  margin: 0;
+  accent-color: #e2b971;
+}
+
+.route-run-modifier-multiplier output {
+  white-space: nowrap;
+  font-size: 0.85rem;
+  font-variant-numeric: tabular-nums;
 }
 
 .route-run-modifier-gold [role='alert'] {
+  grid-column: 1 / -1;
   margin: 0;
   color: #e7a1a1;
 }
 
-.route-run-modifier-help {
-  position: relative;
-}
-.route-run-modifier-help-trigger {
-  background: transparent;
-  border: 0;
-  color: inherit;
-  cursor: help;
-}
-.route-run-modifier-help [role='tooltip'] {
-  position: absolute;
-  right: 0;
-  top: 100%;
-  z-index: 10;
-  width: min(22rem, 75vw);
-  padding: 0.75rem;
-  background: #24252d;
-  border: 1px solid #555661;
-  border-radius: 0.4rem;
-  box-shadow: 0 4px 12px #0006;
-  font-size: 0.85rem;
-  line-height: 1.5;
-}
-.route-run-modifier-multiplier output {
-  white-space: nowrap;
+@container app-viewport (max-width: 700px) {
+  .route-run-modifier-toggle,
+  .route-run-modifier-gold {
+    grid-template-columns: minmax(6.5rem, 7.5rem) minmax(0, 1fr);
+  }
 }
