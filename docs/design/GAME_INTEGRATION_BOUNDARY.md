@@ -343,6 +343,39 @@ history flags or shopping thread. Other callbacks, unbound rooms and
 desynchronized execution remain native. Suppression is diagnostic, not a new
 transaction or mismatch obligation.
 
+### Run modifiers
+
+The optional top-level `runModifiers` execution product carries the complete
+normal-crit guarantee, double-damage guarantee, and enemy gold-drop chance
+multiplier authored in Loadout. It is separate from `startingLoadout` and native
+equipment conformance. Native settings are omitted by the producer, preserving
+default document fingerprints. Both decoders validate present groups strictly;
+fingerprint verification uses their actual presence without inserting defaults.
+
+The module binds settings to the admitted plan and native `CurrentRun` identity.
+They become active only after starting-loadout verification or supported
+Postboss entry admission. Changing the selected slot does not change them.
+Only these run-wide modifiers continue after `configured-prefix-complete`;
+ordinary room steering remains passive. Rejection, mismatch, executor fault,
+death, Crossroads presence, and a different native run prevent their application.
+Activation and temporary scopes are process-local, never native-save-backed.
+
+Normal crit and double damage independently guarantee only their positive final
+outgoing-player damage rolls, invoking the original RNG once with unchanged
+arguments before overriding the result. Native prerequisites, blockers, and
+damage application remain authoritative. Enemy gold changes only the positive
+chance input for capped hostile-enemy death drops; native amounts, `BlockMoney`,
+and encounter-store accounting remain authoritative. Reaction, breakable and
+uncapped drops are outside this setting. Gold-urn generation is unchanged.
+The [run-modifier source audit](../audits/loadout-and-progression/RUN_MODIFIERS_GAME_DATA_AUDIT.md)
+owns exact native contacts and exclusions.
+
+Temporary scopes are coroutine-local, nesting-safe, and restored on return or
+error. Missing required native functions and escaping host errors fault execution;
+recognized unsupported contacts pass through with bounded diagnostics. Modifier
+diagnostics may continue after prefix completion without enabling other adapters.
+There are no crit-count, double-damage-count, or gold-total conformance obligations.
+
 ### Content fingerprint
 
 The compiler and execution decoders verify the expanded execution product with

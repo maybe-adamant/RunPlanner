@@ -5,6 +5,7 @@ plans in `docs/progress/`. These files track observations still needed, not
 unfinished implementation. Automated verification and delivery history belong in
 commits, not these checklists.
 
+- [Run modifiers](RUN_MODIFIERS_LIVE_ACCEPTANCE.md)
 - [Encounters and room features](ENCOUNTER_LIVE_ACCEPTANCE.md)
 - [Trait offer generation](TRAIT_OFFER_LIVE_ACCEPTANCE.md)
 

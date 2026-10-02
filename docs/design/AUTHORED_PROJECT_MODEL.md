@@ -193,7 +193,7 @@ canonical selection of manually active Arcana cards, and one declaration-bounded
 rank for every Fear Vow. A mature-save route requires the weapon, aspect and
 keepsake keys. A Fresh File route stores all three as `null`, no manual Arcana,
 every Vow at rank 0, no starting reward and no keepsake equip result; the codec
-rejects any other value and every loadout command fails, because none of these
+rejects any other value and native-equipment loadout commands fail, because none of these
 is a choice on a brand-new profile. The engine resolves the run's actual
 equipment from the profile, the aspectless Staff, so weapon-dependent rules see
 the Staff while aspect-dependent rules see no aspect. Automatic Arcana derive
@@ -201,6 +201,21 @@ from the empty selection as none. The catalog owns card order, ordinary
 automatic-activation rules, Vow maxima, and Fear increments. The authored model
 owns only the player's starting selections; derived automatic cards and the
 configured Fear total are not persisted independently.
+
+Loadout optionally owns a complete `runModifiers` group:
+`guaranteeEligibleCrits`, `guaranteeEligibleDoubleDamage`, and
+`enemyGoldDropChanceMultiplier`. Absence means `false`, `false`, and `1`;
+a present group requires all three fields and rejects unknown fields. The gold
+multiplier is finite and at least one, with fractions supported and no authored
+upper bound. These execution options are editable in Fresh File without making
+its fixed equipment editable. They do not change simulation, candidates, or
+encounter eligibility.
+
+`ReplaceRunModifiers` replaces the complete group as one route-owned history
+edit, preserves identity for no-ops, and removes the group when reset to native
+values. Decoding preserves omission or explicit presence rather than inserting
+defaults into older saves. Execution assembly publishes only non-native settings,
+separately from starting equipment.
 
 Loadout also owns the nullable starting reward offer. A mature route reports a
 missing offer once any biome is configured; a Fresh File entry binds no
