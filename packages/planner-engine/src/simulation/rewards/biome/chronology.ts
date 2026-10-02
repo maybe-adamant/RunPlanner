@@ -5,7 +5,6 @@ import type { PurgingPoolAssessment } from '../../commerce/purging-pool';
 import type { HermesShrineCandidateContext } from '../../commerce/hermes-shrine';
 import {
   createAcquisitionEntryAddress,
-  createTravelDealRefillRealizationAddress,
   createEncounterPhaseAddress,
   createBiomeAddress,
   createHubDecisionAddress,
@@ -18,7 +17,6 @@ import {
 } from '../../../authored-project/addresses';
 import type { ResourcePlacements, RouteLoadout } from '../../../authored-project/model';
 import { EMPTY_RESOURCE_PLACEMENTS } from '../../../authored-project/defaults';
-import type { StygianWellCandidateContext } from '../../commerce/stygian-well';
 import { parseSeaStarDuplicateSiteKey } from '../../../authored-project/acquisition/sea-star';
 import { parseHermesShrineDeliveryEntryKey } from '../../../authored-project/hermes-shrine-delivery';
 import type { HistoryStateView } from '../../history';
@@ -69,12 +67,8 @@ import {
   publishOfferedRewardTypes,
 } from '../../state/offered-rewards';
 import { applyEncounterStartedTransition } from './lifecycle-transitions/encounter-started';
-import { applyEncounterEndEffectsTransition } from './lifecycle-transitions/encounter-end-effects';
-import { applyKeepsakeRackUsedTransition } from './lifecycle-transitions/keepsake-rack-used';
-import { applyErisInteractedTransition } from './lifecycle-transitions/eris-interacted';
 import { applyFountainUsedTransition } from './lifecycle-transitions/fountain-used';
 import { applyRoomEnteredTransition } from './lifecycle-transitions/room-entered';
-import { applyRoomExitedTransition } from './lifecycle-transitions/room-exited';
 import { applyRoomPreparedTransition } from './lifecycle-transitions/room-prepared';
 import { applyEchoKeepsakeReplayTransition } from './lifecycle-transitions/echo-keepsake-replay';
 import {
@@ -87,6 +81,14 @@ import {
   type ChronologyEmission,
 } from './chronology-accumulator';
 import {
+  chronologySeamHandlers,
+  createChronologyWalkState,
+  withBranches,
+  type ChronologySeamStep,
+  type ChronologyWalkContext,
+  type ChronologyWalkState,
+} from './chronology-seams';
+import {
   applyTargetGenerationCompletedTransition,
   type TargetGenerationFrontier,
 } from './generation/target-generation-completed';
@@ -95,7 +97,6 @@ import { flushHubBoard } from './generation/hub-board';
 import { applyOutgoingGenerationTransition } from './generation/outgoing-generation';
 import { applyOfferPointMaterializedTransition } from './offer-lifecycle/offer-point-materialized';
 import { applyReachedOfferSettlement } from './offer-lifecycle/reached-settlement';
-import { applyWellPurchaseTransition } from './encounter-acquisition/well-purchase';
 import { applyGorgonStartedTransition } from './encounter-acquisition/gorgon-started';
 import { applyEncounterSettlementTransition } from './encounter-acquisition/encounter-settlement';
 import {
@@ -122,7 +123,6 @@ import { resourcePlacementFindingRegions } from '../../resources';
 import { mergeEquivalentRewardBranches, type RewardBranchState } from '../branch-primitives';
 import { rewardFinding } from '../findings';
 import { assessAuthoredBossDoorRewardStore } from './reward-store-support';
-import type { WellRefillRealization } from '../model';
 import { createArcanaFearState } from '../../arcana-fear';
 import { createJudgmentArcanaCandidateArtifacts } from '../../arcana-fear';
 import {
@@ -228,7 +228,6 @@ export function evaluateBiomeRewardChronology(
       : undefined;
   const expectedStores = new Map<string, string | undefined>();
   const targetGenerationByParent = new Map<string, TargetGenerationFrontier>();
-  const wellRefillRealizations = new Map<string, WellRefillRealization>();
   const purgingPoolAssessments = new Map<
     string,
     {
@@ -241,13 +240,6 @@ export function evaluateBiomeRewardChronology(
     {
       readonly origin: import('../../../authored-project/addresses').OccurrenceAddress;
       readonly assessments: readonly HermesShrineCandidateContext[];
-    }
-  >();
-  const stygianWellAssessments = new Map<
-    string,
-    {
-      readonly origin: import('../../../authored-project/addresses').OccurrenceAddress;
-      readonly assessments: readonly StygianWellCandidateContext[];
     }
   >();
   const hermesShrineTravelDealRefills = new Map<
@@ -269,25 +261,37 @@ export function evaluateBiomeRewardChronology(
       .map((decision) => [semanticAddressKey(decision.source.origin), decision]),
   );
   let peers: readonly OfferProcessingPeer[] = Object.freeze([]);
-  let branches: readonly RewardBranchState[] = initializeRewardBranches(
-    initialBranches,
-    initialBranches === undefined ? createArcanaFearState(catalog, routeLoadout) : undefined,
-    catalog,
-    routeLoadout.startingKeepsakeKey,
-    routeLoadout.keepsakeEquipResults,
-    snapshot.routeKey,
-    routeLoadout,
-    { routePosition, historyView: history.biomeStart },
+  let walk: ChronologyWalkState = createChronologyWalkState(
+    initializeRewardBranches(
+      initialBranches,
+      initialBranches === undefined ? createArcanaFearState(catalog, routeLoadout) : undefined,
+      catalog,
+      routeLoadout.startingKeepsakeKey,
+      routeLoadout.keepsakeEquipResults,
+      snapshot.routeKey,
+      routeLoadout,
+      { routePosition, historyView: history.biomeStart },
+    ),
   );
+  const walkContext: ChronologyWalkContext = Object.freeze({
+    catalog,
+    snapshot,
+    rooms,
+    views,
+    routeLoadout,
+    enteredBiomeCount,
+    resourcePlacements,
+    resourceFindings,
+  });
   const echoReplay = applyEchoKeepsakeReplayTransition(
     catalog,
     snapshot,
     routePosition,
     routeLoadout,
-    branches,
+    walk.branches,
     history.events[0]?.sequence ?? 0,
   );
-  branches = echoReplay.branches;
+  walk = withBranches(walk, echoReplay.branches);
   accumulator.mergeEmissions([
     {
       kind: 'keepsakeEquipResultCandidates',
@@ -302,12 +306,12 @@ export function evaluateBiomeRewardChronology(
   const recordHubDeparture = (origin: HubRoomAddress, sequence: number, replace: boolean) => {
     const room = rooms.get(semanticAddressKey(origin));
     const view = history.viewsBySequence[sequence];
-    if (room?.kind !== 'hub' || view === undefined || branches.length === 0) return;
+    if (room?.kind !== 'hub' || view === undefined || walk.branches.length === 0) return;
     const hub = createHubDecisionAddress(
       createBiomeAddress(origin.routeKey, origin.biomeKey),
       origin.hubKey,
     );
-    const departure = runStateAt(hub, room, view)(branches);
+    const departure = runStateAt(hub, room, view)(walk.branches);
     if (departure === undefined) return;
     accumulator.mergeEmissions([
       { kind: 'hubDeparture', hub, hubGameName: room.gameName, departure, replace },
@@ -370,10 +374,10 @@ export function evaluateBiomeRewardChronology(
     owner: RunStateSnapshot['owner'],
     source: CanonicalRewardSource,
     view: HistoryStateView,
-    checkpointBranches: readonly RewardBranchState[] = branches,
+    checkpointBranches: readonly RewardBranchState[] = walk.branches,
   ): void {
     const ownerKey = semanticAddressKey(owner);
-    if (accumulator.hasRunStateSnapshot(ownerKey) || branches.length === 0) return;
+    if (accumulator.hasRunStateSnapshot(ownerKey) || walk.branches.length === 0) return;
     const snapshotFor = runStateAt(owner, source, view);
     const snapshot = snapshotFor(checkpointBranches);
     if (snapshot !== undefined)
@@ -399,7 +403,7 @@ export function evaluateBiomeRewardChronology(
   function targetSlotHistory(
     origin: TargetAddress,
     historySequence: number,
-    checkpointBranches: readonly RewardBranchState[] = branches,
+    checkpointBranches: readonly RewardBranchState[] = walk.branches,
   ): readonly ChronologyEmission[] {
     if (checkpointBranches.length === 0) {
       return [];
@@ -477,20 +481,23 @@ export function evaluateBiomeRewardChronology(
       flushed.branches.length > 0
     ) {
       const lookupKey = layout.progression.rewardLookup.key;
-      branches = Object.freeze(
-        flushed.branches.map((branch) =>
-          Object.freeze({
-            ...branch,
-            state: addHubBoardRewardLookup(
-              branch.state,
-              lookupKey,
-              flushed.peers.map((peer) => peer.offer.rewardType),
-            ),
-          }),
+      walk = withBranches(
+        walk,
+        Object.freeze(
+          flushed.branches.map((branch) =>
+            Object.freeze({
+              ...branch,
+              state: addHubBoardRewardLookup(
+                branch.state,
+                lookupKey,
+                flushed.peers.map((peer) => peer.offer.rewardType),
+              ),
+            }),
+          ),
         ),
       );
     } else {
-      branches = flushed.branches;
+      walk = withBranches(walk, flushed.branches);
     }
     peers = flushed.peers;
     accumulator.mergeEmissions([
@@ -505,18 +512,32 @@ export function evaluateBiomeRewardChronology(
     if (view === undefined) {
       throw new BiomeRewardSimulationContractError(`No history view for event ${sequence}`);
     }
-    branches = Object.freeze(
-      branches.map((branch) =>
-        Object.freeze({
-          ...branch,
-          state: reachSimulationHistory(branch.state, routePosition, view),
-        }),
+    walk = withBranches(
+      walk,
+      Object.freeze(
+        walk.branches.map((branch) =>
+          Object.freeze({
+            ...branch,
+            state: reachSimulationHistory(branch.state, routePosition, view),
+          }),
+        ),
       ),
     );
   }
 
+  function applySeamStep(step: ChronologySeamStep): void {
+    if (step.runStateCheckpoint !== undefined)
+      captureRunState(
+        step.runStateCheckpoint.owner,
+        step.runStateCheckpoint.room,
+        step.runStateCheckpoint.view,
+      );
+    walk = step.state;
+    accumulator.mergeEmissions(step.emissions);
+  }
+
   historyEvents: for (const event of history.events) {
-    if (branches.length === 0) {
+    if (walk.branches.length === 0) {
       break;
     }
     switch (event.kind) {
@@ -545,9 +566,9 @@ export function evaluateBiomeRewardChronology(
           snapshot,
           event,
           room?.kind === 'authored' ? room : undefined,
-          branches,
+          walk.branches,
         );
-        branches = figLeafTransition.branches;
+        walk = withBranches(walk, figLeafTransition.branches);
         accumulator.mergeEmissions([
           { kind: 'figLeafPhaseCandidates', candidates: figLeafTransition.figLeafCandidates },
           lifecycleFindings(figLeafTransition.findings),
@@ -557,10 +578,10 @@ export function evaluateBiomeRewardChronology(
           event,
           room: room?.kind === 'authored' ? room : undefined,
           view: room === undefined ? undefined : views.get(semanticAddressKey(room.origin)),
-          branches,
+          branches: walk.branches,
           evaluationBlocked: gorgonEvaluationBlocked,
         });
-        branches = gorgon.branches;
+        walk = withBranches(walk, gorgon.branches);
         accumulator.mergeEmissions([
           ...(gorgon.candidate === undefined
             ? []
@@ -586,7 +607,7 @@ export function evaluateBiomeRewardChronology(
           views.get(semanticAddressKey(event.origin)),
           chaosGateSourceOccurrenceIds,
           ixionGeneratedChaosSourceOccurrenceIds,
-          branches,
+          walk.branches,
           rewardFindingChronologyForRoom(
             snapshot,
             event.origin as CanonicalAuthoredRoom['origin'],
@@ -600,10 +621,10 @@ export function evaluateBiomeRewardChronology(
               hermesShrineAssessments.has(semanticAddressKey(room.origin)),
             stygianWell:
               room?.kind === 'authored' &&
-              stygianWellAssessments.has(semanticAddressKey(room.origin)),
+              walk.stygianWellAssessments.has(semanticAddressKey(room.origin)),
           }),
         );
-        branches = entered.branches;
+        walk = withBranches(walk, entered.branches);
         accumulator.mergeEmissions([
           lifecycleFindings(entered.findings),
           {
@@ -617,10 +638,13 @@ export function evaluateBiomeRewardChronology(
             entered.hermesShrineAssessment,
           );
         if (entered.stygianWellAssessment !== undefined)
-          stygianWellAssessments.set(
-            semanticAddressKey(entered.stygianWellAssessment.origin),
-            entered.stygianWellAssessment,
-          );
+          walk = Object.freeze({
+            ...walk,
+            stygianWellAssessments: new Map(walk.stygianWellAssessments).set(
+              semanticAddressKey(entered.stygianWellAssessment.origin),
+              entered.stygianWellAssessment,
+            ),
+          });
         if (entered.runStateCheckpoint !== undefined) {
           const { owner, room: checkpointRoom, view } = entered.runStateCheckpoint;
           if (view === undefined) {
@@ -643,55 +667,18 @@ export function evaluateBiomeRewardChronology(
           snapshot,
           event,
           room?.kind === 'authored' ? room : undefined,
-          branches,
+          walk.branches,
         );
         accumulator.mergeEmissions([lifecycleFindings(transition.findings)]);
-        branches = transition.branches;
+        walk = withBranches(walk, transition.branches);
         break;
       }
-      case 'keepsakeRackUsed': {
-        const room = rooms.get(semanticAddressKey(event.origin));
-        const transition = applyKeepsakeRackUsedTransition(
-          catalog,
-          event,
-          room?.kind === 'authored' ? room : undefined,
-          views.get(semanticAddressKey(event.origin))?.entry,
-          routeLoadout,
-          branches,
-          enteredBiomeCount + 1,
-        );
-        branches = transition.branches;
-        accumulator.mergeEmissions([
-          { kind: 'timelineFacts', facts: transition.timelineFacts },
-          ...(transition.keepsakeSelectionCandidate === undefined
-            ? []
-            : [
-                {
-                  kind: 'keepsakeSelectionCandidate' as const,
-                  key: transition.keepsakeSelectionCandidate.key,
-                  candidate: transition.keepsakeSelectionCandidate.candidate,
-                },
-              ]),
-          {
-            kind: 'keepsakeEquipResultCandidates',
-            candidates: transition.keepsakeEquipResultCandidates,
-          },
-          lifecycleFindings(transition.findings),
-        ]);
+      case 'keepsakeRackUsed':
+        applySeamStep(chronologySeamHandlers.keepsakeRackUsed(walkContext, walk, event));
         break;
-      }
-      case 'erisInteracted': {
-        const room = rooms.get(semanticAddressKey(event.origin));
-        const transition = applyErisInteractedTransition(
-          catalog,
-          event,
-          room?.kind === 'authored' ? room : undefined,
-          branches,
-        );
-        branches = transition.branches;
-        accumulator.mergeEmissions([lifecycleFindings(transition.findings)]);
+      case 'erisInteracted':
+        applySeamStep(chronologySeamHandlers.erisInteracted(walkContext, walk, event));
         break;
-      }
       case 'fountainUsed': {
         const room = rooms.get(semanticAddressKey(event.origin));
         const owner = event.owner;
@@ -706,10 +693,10 @@ export function evaluateBiomeRewardChronology(
             : room?.kind === 'authored'
               ? room.fountainRarityResult
               : undefined,
-          branches,
+          walk.branches,
           room?.kind === 'authored' ? room : undefined,
         );
-        branches = transition.branches;
+        walk = withBranches(walk, transition.branches);
         if (transition.purgingPoolAssessment !== undefined)
           purgingPoolAssessments.set(
             transition.purgingPoolAssessment.key,
@@ -747,7 +734,7 @@ export function evaluateBiomeRewardChronology(
           hermesShrineAssessments,
           batchesByParent,
           ...('current' in history ? { historyCurrent: history.current } : {}),
-          branches,
+          branches: walk.branches,
           peers,
           ...(pendingHubBoard === undefined ? {} : { pendingHubBoard }),
           lifecycle,
@@ -772,7 +759,7 @@ export function evaluateBiomeRewardChronology(
           generationFindings(transition.findings),
           { kind: 'producerFrontiers', frontiers: transition.producerFrontiers },
         ]);
-        branches = transition.branches;
+        walk = withBranches(walk, transition.branches);
         peers = transition.peers;
         pendingHubBoard = transition.pendingHubBoard;
         break;
@@ -793,7 +780,7 @@ export function evaluateBiomeRewardChronology(
           accumulator.mergeEmissions(
             targetSlotHistory(transition.nextTargetHistory, event.sequence),
           );
-        branches = advanceRewardBranches(branches, event.sequence);
+        walk = withBranches(walk, advanceRewardBranches(walk.branches, event.sequence));
         // The game rebuilds its offered-reward set once, when the whole batch
         // has rooms and its exits unlock. The completed batch's own generated
         // offers are that set, so nothing reconstructs the rule here: the last
@@ -820,12 +807,15 @@ export function evaluateBiomeRewardChronology(
           const offeredRewardTypes = normalizeOfferedRewardTypes(
             peers.map((peer) => peer.offer.rewardType),
           );
-          branches = Object.freeze(
-            branches.map((branch) =>
-              Object.freeze({
-                ...branch,
-                state: publishOfferedRewardTypes(branch.state, offeredRewardTypes),
-              }),
+          walk = withBranches(
+            walk,
+            Object.freeze(
+              walk.branches.map((branch) =>
+                Object.freeze({
+                  ...branch,
+                  state: publishOfferedRewardTypes(branch.state, offeredRewardTypes),
+                }),
+              ),
             ),
           );
         }
@@ -861,7 +851,7 @@ export function evaluateBiomeRewardChronology(
           emptyOutgoing: lifecycle.emptyOutgoingOwnerKeys.has(ownerKey),
           hubTakeover: hubTakeoverSources.has(ownerKey),
           hubRestoring: hubRestoringSources.has(ownerKey),
-          branches,
+          branches: walk.branches,
           authoredSeaStarDuplicateSiteKeys,
         });
         for (const settlement of transition.siteSettlements)
@@ -894,7 +884,7 @@ export function evaluateBiomeRewardChronology(
           { kind: 'storeSupport', entries: transition.storeSupportEntries },
           generationFindings(transition.findings),
         ]);
-        branches = transition.branches;
+        walk = withBranches(walk, transition.branches);
         peers = transition.peers;
         break;
       }
@@ -907,7 +897,7 @@ export function evaluateBiomeRewardChronology(
           rooms,
           views,
           lifecycle,
-          branches,
+          branches: walk.branches,
           routeLoadout,
           authoredSeaStarDuplicateSiteKeys,
           shipLifecycleCandidateAlreadyPublished: shipLifecycleContexts.has(roomKey),
@@ -918,7 +908,7 @@ export function evaluateBiomeRewardChronology(
         ]);
         if (transition.shipLifecycleCandidate !== undefined)
           shipLifecycleContexts.set(roomKey, transition.shipLifecycleCandidate);
-        branches = transition.branches;
+        walk = withBranches(walk, transition.branches);
         break;
       }
       case 'offerPointAcquired':
@@ -929,7 +919,7 @@ export function evaluateBiomeRewardChronology(
           event,
           rooms,
           views,
-          branches,
+          branches: walk.branches,
           priorFindings: accumulator.findingEntries(),
           authoredSeaStarDuplicateSiteKeys,
         });
@@ -942,7 +932,7 @@ export function evaluateBiomeRewardChronology(
             occurrenceOwner: settlement.traitChildOccurrenceOwner,
           },
         ]);
-        branches = settlement.branches;
+        walk = withBranches(walk, settlement.branches);
         break;
       }
       case 'bossDefeated':
@@ -969,7 +959,7 @@ export function evaluateBiomeRewardChronology(
           event,
           room,
           view: views.get(semanticAddressKey(event.origin)),
-          branches,
+          branches: walk.branches,
           enteredBiomeCount,
           fullRunBiomeCount,
           authoredSeaStarDuplicateSiteKeys,
@@ -978,7 +968,7 @@ export function evaluateBiomeRewardChronology(
           gorgonPhaseBlocked: blockedGorgonPhases.has(gorgonPhaseKey),
           gorgonEvaluationBlocked,
         });
-        branches = transition.branches;
+        walk = withBranches(walk, transition.branches);
         accumulator.mergeEmissions([
           settledFindings(transition.findings),
           { kind: 'acquisitionRoleFrontiers', frontiers: transition.roleFrontiers },
@@ -1037,39 +1027,13 @@ export function evaluateBiomeRewardChronology(
         gorgonEvaluationBlocked = transition.gorgonEvaluationBlocked;
         break;
       }
-      case 'encounterEndEffectsApplied': {
-        const room = rooms.get(semanticAddressKey(event.origin));
-        const transition = applyEncounterEndEffectsTransition(
-          catalog,
-          event,
-          room?.kind === 'authored' ? room : undefined,
-          branches,
-        );
-        branches = transition.branches;
-        accumulator.mergeEmissions([
-          { kind: 'timelineFacts', facts: transition.timelineFacts },
-          {
-            kind: 'derivedAcquisitionEntryFrontiers',
-            frontiers: transition.derivedAcquisitionEntryFrontiers,
-          },
-          { kind: 'steadyGrowthThresholds', thresholds: transition.steadyGrowthThresholds },
-          {
-            kind: 'transcendentEmbryoThresholds',
-            thresholds: transition.transcendentEmbryoThresholds,
-          },
-          {
-            kind: 'traitChildSettlements',
-            checkpoints: transition.traitChildSettlements,
-            occurrenceOwner: event.origin,
-          },
-          lifecycleFindings(transition.findings),
-        ]);
-        if (transition.hermesShrineDeliveryPlacementRequired) {
+      case 'encounterEndEffectsApplied':
+        applySeamStep(chronologySeamHandlers.encounterEndEffectsApplied(walkContext, walk, event));
+        if (walk.halted) {
           reachHistorySequence(event.sequence);
           break historyEvents;
         }
         break;
-      }
       case 'hermesShrineDeliveriesScheduled': {
         const sourceRoom = rooms.get(semanticAddressKey(event.origin));
         const room = sourceRoom?.kind === 'authored' ? sourceRoom : undefined;
@@ -1083,12 +1047,12 @@ export function evaluateBiomeRewardChronology(
               ? undefined
               : routeRoomDeclaration(catalog.rooms.byKey[room.gameName], room.origin.routeKey),
           roomView: views.get(semanticAddressKey(event.origin)),
-          sourceBranches: branches,
+          sourceBranches: walk.branches,
           authoredSeaStarDuplicateSiteKeys: Object.freeze([...authoredSeaStarDuplicateSiteKeys]),
           purgingPoolAssessment: undefined,
           hermesShrineRefillState: undefined,
         });
-        branches = transition.branches;
+        walk = withBranches(walk, transition.branches);
         accumulator.mergeEmissions([
           settledFindings(transition.findings),
           { kind: 'producerFrontiers', frontiers: transition.producerFrontiers },
@@ -1169,7 +1133,7 @@ export function evaluateBiomeRewardChronology(
               ? undefined
               : routeRoomDeclaration(catalog.rooms.byKey[room.gameName], room.origin.routeKey),
           roomView: views.get(semanticAddressKey(event.origin)),
-          sourceBranches: branches,
+          sourceBranches: walk.branches,
           authoredSeaStarDuplicateSiteKeys: Object.freeze([...authoredSeaStarDuplicateSiteKeys]),
           purgingPoolAssessment: purgingPoolAssessments.get(shrineKey),
           hermesShrineRefillState: refillState,
@@ -1177,7 +1141,7 @@ export function evaluateBiomeRewardChronology(
             ? {}
             : { derivedAcquisitionEntryCapability: derivedCapability }),
         });
-        branches = transition.branches;
+        walk = withBranches(walk, transition.branches);
         accumulator.mergeEmissions([
           settledFindings(transition.findings),
           { kind: 'producerFrontiers', frontiers: transition.producerFrontiers },
@@ -1210,75 +1174,14 @@ export function evaluateBiomeRewardChronology(
         }
         break;
       }
-      case 'wellPurchase': {
-        const wellRoom = rooms.get(semanticAddressKey(event.origin));
-        const wellOrigin = wellRoom?.kind === 'authored' ? wellRoom.origin : undefined;
-        const transition = applyWellPurchaseTransition({
-          catalog,
-          snapshot,
-          event,
-          room: wellRoom,
-          branches,
-          refillGenerationSupported:
-            wellOrigin !== undefined &&
-            wellRefillRealizations.has(
-              semanticAddressKey(
-                createTravelDealRefillRealizationAddress(
-                  createBiomeAddress(wellOrigin.routeKey, wellOrigin.biomeKey),
-                  wellOrigin.occurrenceId,
-                ),
-              ),
-            ),
-        });
-        branches = transition.branches;
-        accumulator.mergeEmissions([
-          settledFindings(transition.findings),
-          { kind: 'timelineFacts', facts: transition.timelineFacts },
-        ]);
-        if (transition.candidateContexts.length > 0 && wellRoom?.kind === 'authored') {
-          const key = semanticAddressKey(event.origin);
-          const existing = stygianWellAssessments.get(key);
-          stygianWellAssessments.set(
-            key,
-            Object.freeze({
-              origin: wellRoom.origin,
-              assessments: Object.freeze([
-                ...(existing?.assessments ?? []),
-                ...transition.candidateContexts,
-              ]),
-            }),
-          );
-        }
-        if (transition.refillRealization !== undefined)
-          wellRefillRealizations.set(
-            semanticAddressKey(transition.refillRealization.owner),
-            transition.refillRealization,
-          );
+      case 'wellPurchase':
+        applySeamStep(chronologySeamHandlers.wellPurchase(walkContext, walk, event));
         break;
-      }
-      case 'roomExited': {
-        const room = rooms.get(semanticAddressKey(event.origin));
-        const exited = applyRoomExitedTransition(
-          catalog,
-          event,
-          room?.kind === 'authored' ? room : undefined,
-          views.get(semanticAddressKey(event.origin)),
-          resourcePlacements,
-          branches,
-          resourceFindings,
-        );
-        if (exited.runStateCheckpoint !== undefined)
-          captureRunState(
-            exited.runStateCheckpoint.owner,
-            exited.runStateCheckpoint.room,
-            exited.runStateCheckpoint.view,
-          );
-        branches = exited.branches;
-        accumulator.mergeEmissions([mergedFindings(exited.findingRegions)]);
+      case 'roomExited':
+        applySeamStep(chronologySeamHandlers.roomExited(walkContext, walk, event));
         break;
-      }
       default:
-        branches = advanceRewardBranches(branches, event.sequence);
+        walk = withBranches(walk, advanceRewardBranches(walk.branches, event.sequence));
         break;
     }
     if (event.origin?.kind === 'hubRoom') {
@@ -1378,7 +1281,7 @@ export function evaluateBiomeRewardChronology(
   const immutableFindingRegions = accumulation.findingRegions;
   const immutableFindings = Object.freeze(immutableFindingRegions.map((entry) => entry.finding));
   const traitProducts = selectedTraitOfferProducts(
-    branches,
+    walk.branches,
     immutableFindingRegions.flatMap((entry) =>
       entry.levelResolutionEvaluations === undefined ? [] : entry.levelResolutionEvaluations,
     ),
@@ -1446,26 +1349,26 @@ export function evaluateBiomeRewardChronology(
   );
   const simulation: BiomeRewardSimulation = Object.freeze({
     biomeKey: snapshot.biomeKey,
-    validity: immutableFindings.length === 0 && branches.length > 0 ? 'valid' : 'invalid',
+    validity: immutableFindings.length === 0 && walk.branches.length > 0 ? 'valid' : 'invalid',
     ...(accumulation.echoKeepsakeReplayOutcome === undefined
       ? {}
       : { volatileEchoKeepsakeReplay: accumulation.echoKeepsakeReplayOutcome }),
     timelineFacts: accumulation.timelineFacts,
-    wellRefillRealizations: Object.freeze([...wellRefillRealizations.values()]),
+    wellRefillRealizations: Object.freeze([...walk.wellRefillRealizations.values()]),
     bossArcanaOutcomes: accumulation.bossArcanaOutcomes,
     storeSupport: accumulation.storeSupport,
     targetHistory: accumulation.targetHistory,
-    branches: Object.freeze(branches.map(publicRewardBranch)),
+    branches: Object.freeze(walk.branches.map(publicRewardBranch)),
     findings: immutableFindings,
     runStateSnapshots: runStatePublication.snapshots,
     runStateAvailability: runStatePublication.availability,
     hubDepartures: accumulation.hubDepartures,
     purgingPoolAssessments: Object.freeze([...purgingPoolAssessments.values()]),
     hermesShrineAssessments: publishedHermesShrineAssessments,
-    stygianWellAssessments: Object.freeze([...stygianWellAssessments.values()]),
+    stygianWellAssessments: Object.freeze([...walk.stygianWellAssessments.values()]),
     hermesShrineDeliveries: Object.freeze([
       ...new Map(
-        branches
+        walk.branches
           .flatMap((branch) => Object.values(branch.state.pendingHermesShrineDeliveries))
           .map(
             (delivery) =>
@@ -1604,7 +1507,7 @@ export function evaluateBiomeRewardChronology(
     ),
     stygianWellArtifacts: createStygianWellCandidateArtifacts(
       new Map(
-        [...stygianWellAssessments.values()].map(({ origin, assessments }) => [
+        [...walk.stygianWellAssessments.values()].map(({ origin, assessments }) => [
           semanticAddressKey(origin),
           assessments,
         ]),
