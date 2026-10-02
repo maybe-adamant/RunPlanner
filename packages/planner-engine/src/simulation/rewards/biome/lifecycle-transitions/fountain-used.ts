@@ -53,7 +53,7 @@ export function applyFountainUsedTransition(
   event: FountainUsedEvent,
   result: AuthoredFountainRarityResult | undefined,
   branches: readonly RewardBranchState[],
-  room?: CanonicalAuthoredRoom,
+  room: CanonicalAuthoredRoom | undefined,
 ): FountainUsedTransition {
   const used = resolveFountainUse(catalog, event, result, branches);
   // The fountain unlocks Postboss facilities. Capture the pool only after
