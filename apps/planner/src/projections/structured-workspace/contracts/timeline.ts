@@ -168,8 +168,8 @@ export type WorkspaceRoomLifecycleTimelineEntry =
       readonly supplement?:
         | { readonly kind: 'encounter'; readonly phase: WorkspaceEncounterPhase }
         | { readonly kind: 'rewardWheel'; readonly wheel: WorkspaceRewardWheelDescriptor };
-      /** Fields-only assignment of one hidden cage-completion anchor to this rigid cycle. */
-      readonly fieldsCageSlot?: WorkspaceFieldsCageSlotControl;
+      /** Read-only identity of the cage assigned to this encounter cycle. */
+      readonly fieldsCage?: WorkspaceFieldsCageLabel;
     }
   | {
       readonly kind: 'action';
@@ -276,20 +276,19 @@ export interface WorkspaceFountainRarityInteraction {
   readonly traitLabel: (traitKey: string) => string;
 }
 
-export interface WorkspaceFieldsCageSlotControl {
-  readonly choices: readonly {
-    readonly label: string;
-    /** Absent for the selected no-op choice. */
-    readonly proposalKey?: string;
-    readonly value: string;
-  }[];
-  readonly marker: WorkspaceMarker;
+export interface WorkspaceFieldsCageLabel {
+  readonly label: string;
   readonly owner: RoomActionAddress;
-  readonly selected: string;
-  readonly slotOrdinal: number;
+}
+
+export interface WorkspaceFieldsCageOrderControl {
+  readonly choices: readonly { readonly phaseKey: string; readonly label: string }[];
+  readonly phaseKeys: readonly string[];
+  readonly unavailableReason?: string;
 }
 
 export interface WorkspaceRoomLifecycleTimeline {
+  readonly fieldsCageOrder?: WorkspaceFieldsCageOrderControl;
   readonly entries: readonly WorkspaceRoomLifecycleTimelineEntry[];
   readonly boundaries: readonly WorkspaceRoomLifecycleBoundary[];
   /** Checkpoints represented by lifecycle boundary rows rather than duplicate list items. */
@@ -297,6 +296,9 @@ export interface WorkspaceRoomLifecycleTimeline {
 }
 
 export interface WorkspaceRoomActionInteraction {
+  readonly fieldsCageOrderIntentFor?: (
+    phaseKeys: readonly string[],
+  ) => WorkspaceCommandIntent<Extract<ProjectCommand, { readonly kind: 'ReplaceFieldsCageOrder' }>>;
   readonly intentFor: (
     proposalKey: string,
   ) => WorkspaceCommandIntent<

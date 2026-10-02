@@ -822,20 +822,26 @@ describe('structured workspace actions assembly', () => {
     ]);
     expect(
       roomActions.timeline.entries.flatMap((entry) =>
-        entry.kind === 'boundary' && entry.fieldsCageSlot !== undefined
+        entry.kind === 'boundary' && entry.fieldsCage !== undefined
           ? [
               {
-                selected: entry.fieldsCageSlot.selected,
-                slotOrdinal: entry.fieldsCageSlot.slotOrdinal,
-                values: entry.fieldsCageSlot.choices.map((choice) => choice.value),
+                phaseKey: entry.boundary.kind === 'encounterStart' ? entry.boundary.phaseKey : '',
+                label: entry.fieldsCage.label,
               },
             ]
           : [],
       ),
     ).toEqual([
-      { selected: 'Cage02', slotOrdinal: 1, values: ['Cage01', 'Cage02'] },
-      { selected: 'Cage01', slotOrdinal: 2, values: ['Cage01', 'Cage02'] },
+      { phaseKey: 'Cage02', label: expect.stringMatching(/^Cage 2 \(/) },
+      { phaseKey: 'Cage01', label: expect.stringMatching(/^Cage 1 \(/) },
     ]);
+    expect(roomActions.timeline.fieldsCageOrder).toEqual({
+      phaseKeys: ['Cage02', 'Cage01'],
+      choices: [
+        { phaseKey: 'Cage01', label: expect.stringMatching(/^Cage 1 \(/) },
+        { phaseKey: 'Cage02', label: expect.stringMatching(/^Cage 2 \(/) },
+      ],
+    });
     expect(fields.node.room.localDetailMarkers).toContain(roomActions.rows[0]?.marker);
     const fieldsEntry = roomActions.timeline.entries.find(
       (entry) => entry.kind === 'boundary' && entry.boundary.kind === 'roomEntered',

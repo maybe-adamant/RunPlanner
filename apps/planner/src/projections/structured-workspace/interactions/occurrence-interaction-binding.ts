@@ -904,6 +904,18 @@ export function bindOccurrenceLocalInteractions(
         roomActions.set(
           key,
           Object.freeze({
+            ...(requirement.fieldsCageOrder === undefined
+              ? {}
+              : {
+                  fieldsCageOrderIntentFor: (phaseKeys: readonly string[]) =>
+                    Object.freeze({
+                      command: Object.freeze({
+                        kind: 'ReplaceFieldsCageOrder' as const,
+                        occurrence: requirement.owner,
+                        phaseKeys: Object.freeze([...phaseKeys]),
+                      }),
+                    }),
+                }),
             intentFor(proposalKey: string) {
               const proposal = proposals.find((candidate) => candidate.key === proposalKey);
               if (proposal === undefined) {

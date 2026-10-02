@@ -129,6 +129,7 @@ function commandContractAddress(
     case 'ReplaceFieldsSpatialPoint':
       return command.spatial;
     case 'ReplaceOccurrenceRoom':
+    case 'ReplaceFieldsCageOrder':
     case 'ReplaceShipEncounterCount':
     case 'ReplaceFieldsOptionalRewardCount':
     case 'SetPurgingPoolInteraction':

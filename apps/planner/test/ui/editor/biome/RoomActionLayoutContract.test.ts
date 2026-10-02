@@ -27,7 +27,7 @@ function block(styles: string, selector: string): string {
 }
 
 describe('Room action layout', () => {
-  it('moves compound controls and cage selectors using their own row width', () => {
+  it('moves compound controls using their own row width', () => {
     expect(block(timelineStyles, '.room-action-row')).toContain(
       'container: room-action / inline-size;',
     );
@@ -45,9 +45,6 @@ describe('Room action layout', () => {
     );
     expect(block(narrow, '.room-action-row > .room-action-controls')).toContain(
       'grid-column: 1 / -1;',
-    );
-    expect(narrow).toMatch(
-      /@container room-action \(max-width: 34rem\) \{\s*\.fields-cage-slot-control \{\s*width: 100%;\s*margin-left: 0;/,
     );
   });
 

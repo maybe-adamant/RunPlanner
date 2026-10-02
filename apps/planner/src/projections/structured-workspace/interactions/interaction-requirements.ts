@@ -123,6 +123,7 @@ export type WorkspaceOccurrenceInteractionRequirement =
       readonly kind: 'roomActions';
       readonly owner: OccurrenceAddress;
       readonly proposals: readonly WorkspaceRoomActionProposal[];
+      readonly fieldsCageOrder?: true;
     }
   | {
       readonly kind: 'shopPurchaseParticipation';

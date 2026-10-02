@@ -681,7 +681,13 @@ adding a duplicate.
 A Fields combat occurrence owns three related but non-duplicated products:
 declaration-bounded cage reward values, a complete retained optional inventory
 plus active count, and one mixed room-action order. That order alone owns cage
-completion and pickup chronology. Cage interactions are required after their
+completion and pickup chronology. `ReplaceFieldsCageOrder` accepts an exact
+permutation of the active cage identities. It resolves that permutation
+left-to-right with insertion-style moves of the existing completion references,
+retaining all other actions' relative sequence and each cage's leaves. The
+complete order is reconciled once; intermediate permutations are not published.
+Context-invalid retained interactions remain repairable through findings.
+Cage interactions are required after their
 matching completion; optional interactions are membership-controlled; and a
 source selecting Artificer may add one later source-owned replacement action.
 Commands and decoding use stable phase, slot, and acquisition-role identities,

@@ -35,11 +35,17 @@ export function applyRoomActionCommand(
   const occurrenceId =
     command.kind === 'ReplaceShopPurchaseParticipation'
       ? command.offer.occurrenceId
-      : (command.action as import('../addresses').RoomActionAddress).occurrenceId;
+      : command.kind === 'ReplaceFieldsCageOrder'
+        ? command.occurrence.occurrenceId
+        : (command.action as import('../addresses').RoomActionAddress).occurrenceId;
   const occurrence = requireOccurrence(located.plan, occurrenceId, command);
   const occurrenceIsActive = structurallyActiveOccurrenceIds(topology).has(occurrenceId);
   const commandAddress =
-    command.kind === 'ReplaceShopPurchaseParticipation' ? command.offer : command.action;
+    command.kind === 'ReplaceShopPurchaseParticipation'
+      ? command.offer
+      : command.kind === 'ReplaceFieldsCageOrder'
+        ? command.occurrence
+        : command.action;
   const domain = roomActionDomainForOccurrence(
     document,
     catalog,
@@ -47,6 +53,55 @@ export function applyRoomActionCommand(
     occurrenceId,
   )?.domain;
   const order = occurrence.roomActions.order;
+  if (command.kind === 'ReplaceFieldsCageOrder') {
+    if (domain?.lifecycleProfileKey !== 'FieldsCombatRoom') {
+      failCommand(command, 'occurrence does not own Fields cage order');
+    }
+    const activePhases = new Set(
+      domain.activeReferences.flatMap((reference) =>
+        reference.kind === 'completeFieldsCage' ? [reference.phaseKey] : [],
+      ),
+    );
+    if (
+      activePhases.size === 0 ||
+      command.phaseKeys.length !== activePhases.size ||
+      new Set(command.phaseKeys).size !== activePhases.size ||
+      command.phaseKeys.some((phaseKey) => !activePhases.has(phaseKey))
+    ) {
+      failCommand(command, 'phaseKeys must contain each active Fields cage exactly once');
+    }
+    const activeCagePositions = (references: readonly RoomActionReference[]) =>
+      references.flatMap((reference, index) =>
+        reference.kind === 'completeFieldsCage' && activePhases.has(reference.phaseKey)
+          ? [{ index, phaseKey: reference.phaseKey }]
+          : [],
+      );
+    const positions = activeCagePositions(order);
+    if (positions.length !== activePhases.size) {
+      failCommand(command, 'restore missing cage actions before changing their order');
+    }
+    if (positions.every((position, index) => position.phaseKey === command.phaseKeys[index]))
+      return document;
+    const nextOrder = [...order];
+    // Resolve the prefix with ordinary insertion moves, without publishing or
+    // reconciling an intermediate permutation. Other actions retain their sequence.
+    for (let slot = 0; slot < command.phaseKeys.length - 1; slot += 1) {
+      const current = activeCagePositions(nextOrder);
+      const target = current[slot]!;
+      const source = current.find((position) => position.phaseKey === command.phaseKeys[slot])!;
+      if (source.index === target.index) continue;
+      const [reference] = nextOrder.splice(source.index, 1);
+      nextOrder.splice(target.index, 0, reference!);
+    }
+    return updateOccurrence(
+      document,
+      located,
+      Object.freeze({
+        ...occurrence,
+        roomActions: Object.freeze({ order: Object.freeze(nextOrder) }),
+      }),
+    );
+  }
   if (command.kind === 'ReplaceShopPurchaseParticipation') {
     if (command.offer.offerKey === TRAVEL_DEAL_REFILL_ENTRY_KEY)
       failCommand(command, 'Travel Deal uses its roomExit acquisition entry participation');

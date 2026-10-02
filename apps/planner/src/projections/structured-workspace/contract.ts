@@ -63,7 +63,8 @@ export type {
   WorkspaceTopologyRemovalInteraction,
 } from './contracts/structure';
 export type {
-  WorkspaceFieldsCageSlotControl,
+  WorkspaceFieldsCageLabel,
+  WorkspaceFieldsCageOrderControl,
   WorkspaceFigurineArcanaInteraction,
   WorkspaceFountainRarityControl,
   WorkspaceFountainRarityDomain,

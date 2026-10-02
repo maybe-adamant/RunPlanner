@@ -329,7 +329,7 @@ describe('OccurrenceRoomActions', () => {
     expect(fieldsActions).toBeTruthy();
   });
 
-  it('projects three fixed Fields cycles with cage selectors and movable pickups', async () => {
+  it('projects three fixed Fields cycles with read-only cage labels and movable pickups', async () => {
     const occurrenceId = createOccurrenceId('golden-h-combat02');
     const view = renderOccurrenceWorkbench(
       threeCageFieldsProject(),
@@ -347,28 +347,12 @@ describe('OccurrenceRoomActions', () => {
       timeline.querySelectorAll<HTMLElement>('[data-lifecycle-boundary^="encounterEnd:"]'),
     );
     expect(ends).toHaveLength(3);
-    expect(
-      [1, 2, 3].map(
-        (ordinal) =>
-          (
-            within(starts[ordinal - 1]!).getByRole('combobox', {
-              name: `Cage for encounter ${ordinal}`,
-            }) as HTMLSelectElement
-          ).value,
-      ),
-    ).toEqual(['Cage01', 'Cage02', 'Cage03']);
-    for (const [index, start] of starts.entries()) {
-      const selector = within(start).getByRole('combobox', {
-        name: `Cage for encounter ${index + 1}`,
-      });
-      const options = within(selector).getAllByRole('option') as HTMLOptionElement[];
-      expect(options.find((option) => option.value === `Cage0${index + 1}`)?.disabled).toBe(true);
-      expect(
-        options
-          .filter((option) => option.value !== `Cage0${index + 1}`)
-          .every((option) => !option.disabled),
-      ).toBe(true);
-    }
+    for (const [index, start] of starts.entries())
+      expect(start.querySelector('.fields-cage-label')?.textContent).toMatch(
+        new RegExp(`^Cage ${index + 1} \\(`),
+      );
+    const cageOrder = within(actions).getByRole('button', { name: 'Combat Order' });
+    expectBefore(cageOrder, within(timeline).getByLabelText('Room entered'));
     expect(within(timeline).queryByText(/^Clear Cage\d+/)).toBeNull();
     for (const row of timeline.querySelectorAll('[data-in-order="true"]')) {
       expect(within(row as HTMLElement).getByRole('button', { name: /^Move / })).toBeTruthy();
@@ -432,12 +416,12 @@ describe('OccurrenceRoomActions', () => {
       occurrenceId,
       roomActionKey({ kind: 'completeFieldsCage', phaseKey: 'Cage01' }),
     );
-    expect(starts[0]?.querySelector('select')?.getAttribute('id')).toBe(
+    expect(starts[0]?.querySelector('.fields-cage-label')?.getAttribute('id')).toBe(
       semanticOwnerControlElementId(cageOneAction),
     );
   });
 
-  it('moves a selected Fields cage into its fixed cycle as one undoable history step', async () => {
+  it('stages the complete cage order, cancels without editing, and commits two moves in one undo step', async () => {
     const occurrenceId = createOccurrenceId('golden-h-combat02');
     const view = renderOccurrenceWorkbench(
       threeCageFieldsProject(),
@@ -446,18 +430,33 @@ describe('OccurrenceRoomActions', () => {
       occurrenceById(occurrenceId),
     );
     openRoomTab('Room Timeline');
+    const initial = view.application.store.getState().projectWorkspace.history!.present;
     const historyBefore = view.application.store.getState().projectWorkspace.history!.past.length;
-    await view.user.selectOptions(
-      screen.getByRole('combobox', { name: 'Cage for encounter 1' }),
-      'Cage01',
-    );
+    const choose = async (number: number) =>
+      view.user.click(
+        within(screen.getByRole('listbox')).getByRole('option', {
+          name: new RegExp(`^Cage ${number} \\(`),
+        }),
+      );
+    await view.user.click(screen.getByRole('button', { name: 'Combat Order' }));
+    expect(within(screen.getByRole('listbox')).getAllByRole('option')).toHaveLength(3);
+    await choose(3);
+    expect(within(screen.getByRole('listbox')).getAllByRole('option')).toHaveLength(2);
+    expect(view.application.store.getState().projectWorkspace.history!.present).toBe(initial);
+    await view.user.click(screen.getByRole('button', { name: 'Cancel' }));
+    expect(view.application.store.getState().projectWorkspace.history!.present).toBe(initial);
+
+    await view.user.click(screen.getByRole('button', { name: 'Combat Order' }));
+    for (const number of [1, 2, 3]) await choose(number);
     expect(view.application.store.getState().projectWorkspace.history!.past).toHaveLength(
       historyBefore,
     );
-    await view.user.selectOptions(
-      screen.getByRole('combobox', { name: 'Cage for encounter 1' }),
-      'Cage03',
-    );
+    await view.user.click(screen.getByRole('button', { name: 'Combat Order' }));
+    await choose(3);
+    await choose(2);
+    expect(view.application.store.getState().projectWorkspace.history!.present).toBe(initial);
+    expect(within(screen.getByRole('listbox')).getAllByRole('option')).toHaveLength(1);
+    await choose(1);
 
     const cagePermutation = () =>
       occurrenceRoomActionOrder(
@@ -468,30 +467,23 @@ describe('OccurrenceRoomActions', () => {
       )?.flatMap((reference) =>
         reference.kind === 'completeFieldsCage' ? [reference.phaseKey] : [],
       );
-    await waitFor(() => expect(cagePermutation()).toEqual(['Cage03', 'Cage01', 'Cage02']));
+    await waitFor(() => expect(cagePermutation()).toEqual(['Cage03', 'Cage02', 'Cage01']));
     expect(view.application.store.getState().projectWorkspace.history!.past).toHaveLength(
       historyBefore + 1,
     );
-    expect(
-      [1, 2, 3].map(
-        (ordinal) =>
-          (
-            screen.getByRole('combobox', {
-              name: `Cage for encounter ${ordinal}`,
-            }) as HTMLSelectElement
-          ).value,
-      ),
-    ).toEqual(['Cage03', 'Cage01', 'Cage02']);
+    for (const [index, number] of [3, 2, 1].entries())
+      expect(screen.getByLabelText(`Start encounter ${index + 1}`).textContent).toContain(
+        `Cage ${number} (`,
+      );
+    expect(screen.getByRole('button', { name: 'Combat Order' }).textContent).toMatch(
+      /Cage 3 \(.+\) \/ Cage 2 \(.+\) \/ Cage 1 \(.+\)/,
+    );
 
     act(() => view.application.store.dispatch(authoredProjectUndoRequested()));
     await waitFor(() => expect(cagePermutation()).toEqual(['Cage01', 'Cage02', 'Cage03']));
-    expect(
-      (
-        screen.getByRole('combobox', {
-          name: 'Cage for encounter 1',
-        }) as HTMLSelectElement
-      ).value,
-    ).toBe('Cage01');
+    expect(screen.getByLabelText('Start encounter 1').textContent).toContain('Cage 1 (');
+    act(() => view.application.store.dispatch(authoredProjectRedoRequested()));
+    await waitFor(() => expect(cagePermutation()).toEqual(['Cage03', 'Cage02', 'Cage01']));
   });
 
   it('keeps a cage selectable across a retained cage-local Gorgon barrier', async () => {
@@ -503,13 +495,12 @@ describe('OccurrenceRoomActions', () => {
       occurrenceById(occurrenceId),
     );
     openRoomTab('Room Timeline');
-    const selector = screen.getByRole('combobox', {
-      name: 'Cage for encounter 1',
-    }) as HTMLSelectElement;
-    const cageTwoOption = within(selector).getByRole('option', {
-      name: 'Cage02',
-    }) as HTMLOptionElement;
-    expect(cageTwoOption.disabled).toBe(false);
+    await view.user.click(screen.getByRole('button', { name: 'Combat Order' }));
+    const cageTwoOption = within(screen.getByRole('listbox')).getByRole('option', {
+      name: /^Cage 2 \(/,
+    });
+    expect(cageTwoOption.getAttribute('aria-disabled')).not.toBe('true');
+    await view.user.click(screen.getByRole('button', { name: 'Cancel' }));
 
     const projected = workspaceProjection(view.application)
       .route?.biomes.find((biome) => biome.biomeKey === 'H')
@@ -520,15 +511,15 @@ describe('OccurrenceRoomActions', () => {
       throw new Error('Fields Gorgon occurrence workbench is missing');
     }
     const roomActions = projected.room.roomActions;
-    const slot = roomActions?.timeline.entries.find(
-      (entry) => entry.kind === 'boundary' && entry.fieldsCageSlot?.slotOrdinal === 1,
+    const firstCage = roomActions?.rows.find(
+      (row) => row.reference.kind === 'completeFieldsCage' && row.reference.phaseKey === 'Cage01',
     );
-    const cageTwoChoice =
-      slot?.kind === 'boundary'
-        ? slot.fieldsCageSlot?.choices.find((choice) => choice.value === 'Cage02')
-        : undefined;
     const genericProposal = roomActions?.proposals.find(
-      (proposal) => proposal.key === cageTwoChoice?.proposalKey,
+      (proposal) =>
+        proposal.kind === 'move' &&
+        proposal.reference.kind === 'completeFieldsCage' &&
+        proposal.reference.phaseKey === 'Cage02' &&
+        proposal.toIndex === firstCage!.rank! - 1,
     );
     expect(genericProposal).toMatchObject({ kind: 'move', structurallyAuthorable: false });
     expect(genericProposal?.explanations).toEqual(['Talk to Athena before clearing Cage02.']);
@@ -611,7 +602,13 @@ describe('OccurrenceRoomActions', () => {
     childView.unmount();
 
     const historyBefore = view.application.store.getState().projectWorkspace.history!.past.length;
-    await view.user.selectOptions(selector, 'Cage02');
+    await view.user.click(screen.getByRole('button', { name: 'Combat Order' }));
+    await view.user.click(
+      within(screen.getByRole('listbox')).getByRole('option', { name: /^Cage 2 \(/ }),
+    );
+    await view.user.click(
+      within(screen.getByRole('listbox')).getByRole('option', { name: /^Cage 1 \(/ }),
+    );
     await waitFor(() => {
       const order = occurrenceRoomActionOrder(
         view.application.store.getState().projectWorkspace.history!.present,
@@ -740,6 +737,11 @@ describe('OccurrenceRoomActions', () => {
     expect(within(timeline).queryByText('Clear Cage03')).toBeNull();
     expect(within(repairs).getByText('Clear Cage03')).toBeTruthy();
     expect(within(repairs).getByText('This required action has not been placed.')).toBeTruthy();
+    const cageOrder = within(actions).getByRole('button', {
+      name: 'Combat Order',
+    }) as HTMLButtonElement;
+    expect(cageOrder.disabled).toBe(true);
+    expect(cageOrder.title).toBe('Restore missing cage actions before changing their order.');
   });
 
   it('accepts a Fields optional reward directly on the Room entered checkpoint', async () => {

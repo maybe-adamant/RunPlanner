@@ -923,7 +923,6 @@ function roomActionsForOccurrence(
     roomLocal,
     encounterPhases,
     allProjectedRows,
-    proposals,
     steadyGrowth,
     transcendentEmbryo,
   );

@@ -255,6 +255,11 @@ export type RoomReplacementCommand = {
 /** Explicit edits to the sole persisted chronology owned by one occurrence. */
 export type RoomActionCommand =
   | {
+      readonly kind: 'ReplaceFieldsCageOrder';
+      readonly occurrence: OccurrenceAddress;
+      readonly phaseKeys: readonly string[];
+    }
+  | {
       readonly kind: 'InsertRoomAction';
       readonly action: RoomActionSemanticAddress;
       readonly reference: RoomActionReference;
