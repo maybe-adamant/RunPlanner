@@ -1,4 +1,9 @@
-import { semanticAddressKey, type SemanticAddress } from '@run-planner/engine/authored-project';
+import {
+  createTraitOfferAddress,
+  semanticAddressKey,
+  type SemanticAddress,
+  type TraitOfferOwnerAddress,
+} from '@run-planner/engine/authored-project';
 
 import type { BiomeRewardEvaluationAssembly } from '../../src/simulation/rewards/biome/publication';
 
@@ -19,6 +24,19 @@ function addressesIn(product: unknown): readonly SemanticAddress[] {
   const walk = (value: unknown) => {
     if (value === null || typeof value !== 'object' || seen.has(value)) return;
     seen.add(value);
+    // A trait history record names its offer by owner and acquisition role.
+    const { owner, acquisitionRole } = value as {
+      readonly owner?: unknown;
+      readonly acquisitionRole?: unknown;
+    };
+    if (typeof owner === 'object' && owner !== null && typeof acquisitionRole === 'string') {
+      try {
+        const address = createTraitOfferAddress(owner as TraitOfferOwnerAddress, acquisitionRole);
+        found.set(semanticAddressKey(address), address);
+      } catch {
+        // Not every owner/role record belongs to a trait offer.
+      }
+    }
     if (
       typeof (value as { readonly kind?: unknown }).kind === 'string' &&
       'routeKey' in value &&
@@ -31,7 +49,13 @@ function addressesIn(product: unknown): readonly SemanticAddress[] {
         // A product record that only resembles an address carries no checkpoint.
       }
     }
-    for (const child of Object.values(value)) walk(child);
+    const children =
+      value instanceof Map
+        ? [...value.keys(), ...value.values()]
+        : value instanceof Set
+          ? [...value]
+          : Object.values(value);
+    for (const child of children) walk(child);
   };
   walk(product);
   return [...found.entries()].sort(([left], [right]) => (left < right ? -1 : 1)).map(([, a]) => a);
@@ -40,12 +64,18 @@ function addressesIn(product: unknown): readonly SemanticAddress[] {
 /**
  * The trait-child settlement checkpoints of every recorded chronology call:
  * per settled child, its branch count and the owners of its attached Run
- * State snapshots in attachment order.
+ * State snapshots in attachment order. Children are looked up by every
+ * address in the recorded products and the project evaluation.
  */
-export function traitChildSettlementRecords(): readonly unknown[] {
+export function traitChildSettlementRecords(evaluation: unknown): readonly unknown[] {
+  const evaluationAddresses = addressesIn(evaluation);
   return recorded.map((assembly) => ({
     biomeKey: assembly.simulation.biomeKey,
-    children: addressesIn(assembly.simulation).flatMap((address) => {
+    children: addressesIn([
+      assembly.simulation,
+      assembly.findingRegions,
+      evaluationAddresses,
+    ]).flatMap((address) => {
       const settlement = assembly.traitChildSettlementCheckpoints.at(address);
       return settlement === undefined
         ? []

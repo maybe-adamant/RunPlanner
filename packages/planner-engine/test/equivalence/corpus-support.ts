@@ -37,11 +37,11 @@ const goldenFBiome = createBiomeAddress('Underworld', 'F');
 const goldenHBiome = createBiomeAddress('Underworld', 'H');
 
 /**
- * Echo captures Experimental Hammer in H and the Postboss rack unequips it,
- * so I starts with an unauthored Hammer replay result.
+ * Golden FGHI starting with Experimental Hammer and routed through the H
+ * Bridge. Its unresolved Echo encounter child attaches to the Bridge's later
+ * exit-decision Run State capture.
  */
-export function createEchoHammerReplayMissingProject(): ProjectDocument {
-  const forcedTargetId = createOccurrenceId('golden-h-combat05');
+export function createHammerBridgeRouteProject(): ProjectDocument {
   let project = applyProjectCommand(createGoldenFGHIProject(), catalog, {
     kind: 'ReplaceStartingKeepsake',
     selection: createRouteStartKeepsakeSelectionAddress('Underworld'),
@@ -55,7 +55,7 @@ export function createEchoHammerReplayMissingProject(): ProjectDocument {
     ),
     value: { kind: 'selected', traitKey: 'StaffJumpSpecialTrait' },
   });
-  project = applyProjectCommand(project, catalog, {
+  return applyProjectCommand(project, catalog, {
     kind: 'SetExitSelection',
     selection: createExitSelectionAddress(goldenHBiome, {
       kind: 'occurrence',
@@ -63,6 +63,15 @@ export function createEchoHammerReplayMissingProject(): ProjectDocument {
     }),
     value: { kind: 'normal', exitKey: 'exit2' },
   });
+}
+
+/**
+ * Echo captures Experimental Hammer in H and the Postboss rack unequips it,
+ * so I starts with an unauthored Hammer replay result.
+ */
+export function createEchoHammerReplayMissingProject(): ProjectDocument {
+  const forcedTargetId = createOccurrenceId('golden-h-combat05');
+  let project = createHammerBridgeRouteProject();
   const reachedH = simulateProject(catalog, project).route?.biomes.find(
     (biome) => biome.biomeKey === 'H',
   );
@@ -173,11 +182,7 @@ export function freshFileHFieldsIssueSteps(): readonly ProjectDocument[] {
   return steps;
 }
 
-/**
- * Echo Last Reward replays a Hammer at the H Bridge exit with its trait offer
- * unresolved. The Echo encounter's trait child attaches to the Bridge's later
- * exit-decision Run State capture.
- */
+/** Echo Last Reward replays a Hammer at the H Bridge exit with its trait offer unresolved. */
 export function createEchoReplayUnresolvedHammerProject(): ProjectDocument {
   const bridge = createOccurrenceId('golden-h-bridge01');
   const echo = createTraitOfferAddress(
