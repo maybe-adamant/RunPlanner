@@ -70,7 +70,6 @@ function TestProtocol.testPublishedCompatibilityMatchesDecoder()
     file:close()
     lu.assertEquals(assert(json.decode(contents)), {
         format = protocol.FORMAT,
-        protocolVersion = protocol.VERSION,
         catalogVersion = protocol.CATALOG_VERSION,
     })
 end
@@ -417,8 +416,7 @@ end
 
 local function refreshFingerprint(plan)
     plan.planFingerprint = protocol.fingerprint({
-        format = plan.format, protocolVersion = plan.protocolVersion,
-        catalogVersion = plan.catalogVersion, projectId = plan.projectId,
+        format = plan.format, catalogVersion = plan.catalogVersion, projectId = plan.projectId,
         routeKey = plan.routeKey, startingLoadout = plan.startingLoadout, startingKeepsake = plan.startingKeepsake,
         extent = plan.extent, selectedOccurrenceIds = plan.selectedOccurrenceIds, resources = plan.resources,
         olympusAetos = plan.olympusAetos,
@@ -507,7 +505,6 @@ local function minimalPlan(transactions)
     end
     local plan = tagged({
         format = "run-planner-execution",
-        protocolVersion = protocol.VERSION,
         catalogVersion = "0.55.0-anvil-of-fates",
         projectId = "test-project",
         planFingerprint = "00000000",
@@ -562,16 +559,6 @@ function TestProtocol.testFreshFileOmitsAbsentLoadoutKeys()
     local value, err = protocol.decode(mixed)
     lu.assertNil(value)
     lu.assertStrContains(err, "routeKey disagrees with extent")
-end
-
-function TestProtocol.testReleasedProtocol48IsRejected()
-    lu.assertEquals(protocol.VERSION, 53)
-    local plan = decode("f-opening")
-    plan.protocolVersion = 48
-    refreshFingerprint(plan)
-    local value, err = protocol.decode(plan)
-    lu.assertNil(value)
-    lu.assertStrContains(err, "unsupported identity")
 end
 
 function TestProtocol.testRoomGuideRequiresUniqueKeysAndLocalTransactionOwners()
@@ -967,7 +954,6 @@ end
 function TestProtocol.testLegacyProtocolVectorsAreRejected()
     for _, name in ipairs({ "f-opening", "fg", "fg-ixion-chaos", "fg-anomaly", "automatic-boss" }) do
         local plan = decode(name)
-        plan.protocolVersion = 24
         plan.resources = nil
         refreshFingerprint(plan)
         lu.assertNil(protocol.decode(plan))
@@ -976,7 +962,6 @@ end
 
 function TestProtocol.testProtocolRejectsLegacyVectorsFromAnIndependentDecoderModule()
     local plan = decodeWithIndependentJsonModule("f-opening")
-    plan.protocolVersion = 24
     plan.resources = nil
     refreshFingerprint(plan)
     lu.assertNil(protocol.decode(plan))

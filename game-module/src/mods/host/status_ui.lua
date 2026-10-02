@@ -125,7 +125,7 @@ function ui.bind(inbox, inspectSession, activeSlotFile, clock)
         if imgui.BeginTabItem("Technical details") then
             imgui.TextWrapped("Project: " .. plan.projectId)
             imgui.TextWrapped("Fingerprint: " .. tostring(plan.planFingerprint))
-            imgui.TextWrapped("Protocol: " .. plan.protocolVersion .. " | Catalog: " .. plan.catalogVersion)
+            imgui.TextWrapped("Catalog: " .. plan.catalogVersion)
             imgui.EndTabItem()
         end
         imgui.EndTabBar()

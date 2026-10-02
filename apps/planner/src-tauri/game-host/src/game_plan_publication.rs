@@ -17,7 +17,6 @@ const MAX_COMPATIBILITY_BYTES: u64 = 16_384;
 #[serde(rename_all = "camelCase")]
 struct ExecutionCompatibility {
     format: String,
-    protocol_version: u32,
     catalog_version: String,
 }
 
@@ -264,7 +263,7 @@ mod tests {
     use crate::game_target::{remember_target, TargetKind};
     use crate::plan_slots::{inspect_active_slot, ActiveSlotFacts};
 
-    const PLAN: &str = r#"{"format":"run-planner-execution","protocolVersion":42,"catalogVersion":"test-catalog"}"#;
+    const PLAN: &str = r#"{"format":"run-planner-execution","catalogVersion":"test-catalog"}"#;
 
     fn ready_target(root: &Path, kind: TargetKind) -> (ResolvedTarget, ModulePackage) {
         let target = target(root, kind);
@@ -316,7 +315,7 @@ mod tests {
             .with_file_name(ACTIVE_SLOT_FILE)
     }
 
-    const PRESENT_PLAN: &str = r#"{"format":"run-planner-execution","protocolVersion":42,"catalogVersion":"test-catalog","projectId":"p","planFingerprint":"f","routeKey":"Underworld","extent":{"biomeKeys":["F"]}}"#;
+    const PRESENT_PLAN: &str = r#"{"format":"run-planner-execution","catalogVersion":"test-catalog","projectId":"p","planFingerprint":"f","routeKey":"Underworld","extent":{"biomeKeys":["F"]}}"#;
 
     #[test]
     fn active_slot_is_set_only_on_a_ready_target_for_a_present_slot() {
@@ -414,15 +413,14 @@ mod tests {
     }
 
     #[test]
-    fn publication_keeps_the_protocol_guard_and_size_bound() {
+    fn publication_keeps_the_compatibility_guard_and_size_bound() {
         let temporary = TemporaryDirectory::new("publish-guard");
         let config = temporary.0.join("app-config");
         let (target, package) = ready_target(&temporary.0.join("target"), TargetKind::Manual);
         remember_target(&config, &target).unwrap();
         publish(&config, &package, 4, PLAN);
         for plan in [
-            r#"{"format":"run-planner-execution","protocolVersion":43,"catalogVersion":"test-catalog"}"#,
-            r#"{"format":"run-planner-execution","protocolVersion":42,"catalogVersion":"other"}"#,
+            r#"{"format":"run-planner-execution","catalogVersion":"other"}"#,
             "{}",
         ] {
             assert_eq!(

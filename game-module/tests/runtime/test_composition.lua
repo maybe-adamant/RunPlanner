@@ -397,7 +397,7 @@ function TestRuntimeComposition.testAdmittedSessionAndEveryDiagnosticAreLoggedOn
         plan = {
             projectId = "project-1", displayName = "Fast \"Fields\"\n[RunPlanner] forged",
             planFingerprint = "0a1b2c3d",
-            routeKey = "Underworld", protocolVersion = 49, catalogVersion = "0.55.0",
+            routeKey = "Underworld", catalogVersion = "0.55.0",
         },
         diagnostics = {
             { occurrenceId = "opening", checkpoint = "run-state", observed = { gold = 3 } },
@@ -443,7 +443,7 @@ function TestRuntimeComposition.testAdmittedSessionAndEveryDiagnosticAreLoggedOn
     lu.assertEquals(#logs, 4)
     lu.assertEquals(logs[1], "[RunPlanner] session admitted slot=2 project=project-1"
         .. " name=\"Fast \\034Fields\\034\\010[RunPlanner] forged\""
-        .. " fingerprint=0a1b2c3d route=Underworld protocol=49 catalog=0.55.0 module=1.2.3")
+        .. " fingerprint=0a1b2c3d route=Underworld catalog=0.55.0 module=1.2.3")
     lu.assertEquals(logs[2], "[RunPlanner] diagnostic occurrence=opening run-state {gold=3}")
     lu.assertEquals(logs[3], "[RunPlanner] diagnostic occurrence=fight encounter-composition {waves=2}")
     lu.assertEquals(logs[4], "[RunPlanner] diagnostic occurrence=exit room-exit F_Next")

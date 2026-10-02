@@ -145,6 +145,5 @@ describe('published NPC shopping protection', () => {
       expect(() => decodeExecutionPlan(changed(value))).not.toThrow();
     for (const value of [null, 'Nemesis', ['Artemis'], ['Nemesis', 'Nemesis'], [1]])
       expect(() => decodeExecutionPlan(changed(value))).toThrow();
-    expect(() => decodeExecutionPlan({ ...plan, protocolVersion: 47 })).toThrow('protocolVersion');
   });
 });
