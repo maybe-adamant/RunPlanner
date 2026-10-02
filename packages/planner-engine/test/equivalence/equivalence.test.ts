@@ -3,7 +3,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { gunzipSync, gzipSync } from 'node:zlib';
 import { format, resolveConfig } from 'prettier';
-import { afterAll, describe, expect, it } from 'vitest';
+import { afterAll, describe, expect, it, vi } from 'vitest';
 
 import { firstDifference, parseDigest, serializeDigest, type CanonicalDigest } from './canonical';
 import { equivalenceCorpus } from './corpus';
@@ -14,6 +14,23 @@ import {
   parseEntryDigest,
   type EquivalenceProducts,
 } from './digest';
+
+// Observes every biome chronology product so the digest sees trait-child settlement checkpoints.
+vi.mock('../../src/simulation/rewards/biome/chronology', async (importOriginal) => {
+  const original =
+    await importOriginal<typeof import('../../src/simulation/rewards/biome/chronology')>();
+  const { recordChronology } = await import('./trait-child-probe');
+  return {
+    ...original,
+    evaluateBiomeRewardChronology: (
+      ...args: Parameters<typeof original.evaluateBiomeRewardChronology>
+    ) => {
+      const assembly = original.evaluateBiomeRewardChronology(...args);
+      recordChronology(assembly);
+      return assembly;
+    },
+  };
+});
 
 const here = dirname(fileURLToPath(import.meta.url));
 const baselinePath = join(here, 'baseline.json');

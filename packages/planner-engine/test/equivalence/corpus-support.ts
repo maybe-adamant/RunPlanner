@@ -9,11 +9,15 @@ import {
   createOccurrenceId,
   createPostbossKeepsakeSelectionAddress,
   createRouteStartKeepsakeSelectionAddress,
+  createAcquisitionEntryAddress,
+  createAcquisitionSiteAddress,
   createKeepsakeEquipResultAddress,
   createTraitOfferAddress,
+  echoLastRewardPickupEntryKey,
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
 import { simulateProject } from '@run-planner/engine/simulation';
+import { authorLegalTraitOffers, editTestRoomActionOrder } from '@run-planner/test-fixtures/shared';
 import {
   authorFreshFileRoomIssues,
   createFreshFileRouteProject,
@@ -21,6 +25,7 @@ import {
   withNewHFieldsRoom,
 } from '@run-planner/test-fixtures/fresh-file';
 import {
+  createGoldenFGHProject,
   createGoldenFGHIProject,
   createUnderworldFPoolCheckpoint,
 } from '@run-planner/test-fixtures/underworld';
@@ -166,4 +171,85 @@ export function freshFileHFieldsIssueSteps(): readonly ProjectDocument[] {
     },
   );
   return steps;
+}
+
+/**
+ * Echo Last Reward replays a Hammer at the H Bridge exit with its trait offer
+ * unresolved, so the outgoing settlement blocks a trait child before the
+ * batch's Run State checkpoint attaches to it.
+ */
+export function createEchoReplayUnresolvedHammerProject(): ProjectDocument {
+  const bridge = createOccurrenceId('golden-h-bridge01');
+  const echo = createTraitOfferAddress(
+    createEncounterPhaseAddress(
+      goldenHBiome,
+      { kind: 'occurrence', occurrenceId: bridge },
+      'Encounter',
+    ),
+    'selection',
+  );
+  const echoOffer = (
+    options: readonly { readonly traitKey: string; readonly echoPomTarget?: null }[],
+  ) => ({
+    kind: 'traits' as const,
+    giverKey: 'Echo',
+    options: options as unknown as readonly [{ readonly traitKey: string }],
+    selectedOptionKey: 'option1' as const,
+    rarificationActions: [],
+  });
+  let project = authorLegalTraitOffers(
+    applyProjectCommand(authorLegalTraitOffers(createGoldenFGHProject()), catalog, {
+      kind: 'SetExitSelection',
+      selection: createExitSelectionAddress(goldenHBiome, {
+        kind: 'occurrence',
+        occurrenceId: createOccurrenceId('golden-h-combat09'),
+      }),
+      value: { kind: 'normal', exitKey: 'exit2' },
+    }),
+  );
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceTraitOffer',
+    trait: echo,
+    value: echoOffer([
+      { traitKey: 'EchoLastReward' },
+      { traitKey: 'DiminishingDodgeBoon' },
+      { traitKey: 'EchoDoubleLevelBoon', echoPomTarget: null },
+    ]),
+  });
+  project = editTestRoomActionOrder(
+    project,
+    catalog,
+    createOccurrenceAddress(goldenHBiome, createOccurrenceId('golden-h-combat09')),
+    (order) => {
+      const cage2 = order.find(
+        (reference) =>
+          reference.kind === 'interactLocalReward' &&
+          reference.groupKey === 'cages' &&
+          reference.slotKey === 'cage2',
+      );
+      if (cage2 === undefined) throw new Error('Combat09 Cage 2 action is missing');
+      return [...order.filter((reference) => reference !== cage2), cage2];
+    },
+  );
+  const forced = createOccurrenceId('golden-h-combat05');
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceOccurrenceRoom',
+    occurrence: createOccurrenceAddress(goldenHBiome, forced),
+    gameName: 'H_MiniBoss02',
+  });
+  project = authorLegalTraitOffers(
+    applyProjectCommand(project, catalog, {
+      kind: 'ReplaceIncomingReward',
+      reward: createIncomingRewardAddress(goldenHBiome, forced),
+      value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'ApolloUpgrade' } },
+    }),
+  );
+  return applyProjectCommand(project, catalog, {
+    kind: 'ReplaceAcquisitionEntryOffer',
+    entry: createAcquisitionEntryAddress(
+      createAcquisitionSiteAddress(createOccurrenceAddress(goldenHBiome, bridge), 'roomExit'),
+      echoLastRewardPickupEntryKey('Encounter', 'Story_Echo_01', 'option1'),
+    ),
+    value: { rewardType: 'MaxHealthDrop' },
+  });
 }
