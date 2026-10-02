@@ -606,6 +606,94 @@ function TestEncounters.testGeneratedCompositionUsesTheExistingExactPhaseCarrier
     lu.assertEquals(state.state, "synchronized")
 end
 
+function TestEncounters.testEnemyIntroductionAdmissionUsesNativeReplacementGateAfterSelectionRejects()
+    local cases = {
+        { name = "ScreamerIntro", linked = true, admitted = true },
+        { name = "EnemyDebut", linked = true, admitted = true },
+        { name = "ScreamerIntro", linked = true, requirements = true, admitted = true },
+        { name = "ScreamerIntro", linked = true, completed = true },
+        { name = "ScreamerIntro", linked = true, requirements = true, blocked = true },
+        { name = "ArtemisCombatIntro" },
+        { name = "ScreamerIntro", linked = true, checkError = true },
+        { name = "ScreamerIntro", linked = true, completionError = true },
+        { name = "ScreamerIntro", linked = true, requirements = true, requirementsError = true },
+        { name = "ScreamerIntro", linked = true, direct = true, completed = true, admitted = true },
+    }
+    for _, case in ipairs(cases) do
+        local module, callbacks = capture()
+        local phase = { slotKey = "Encounter", encounterKey = case.name, customization = {
+            { kind = "generated", decisionKey = "generatedComposition", waveCount = 2 },
+        } }
+        local occurrence = { id = "wailer-room", overview = { encounterPhases = { phase } } }
+        local nativeRoom = { Name = "F_Combat03", LegalEncountersDictionary = { GeneratedF = true } }
+        local state, diagnostics, scopedPhase = { state = "synchronized" }, {}, nil
+        local bound
+        local room = {
+            occurrence = function() return occurrence end,
+            encounterAt = function(_, index) if index == 1 then return phase end end,
+            bindEncounter = function(_, native) bound = native; return true end,
+        }
+        local generated = {
+            attach = function() end,
+            withPhase = function(_, _, scoped, _, action) scopedPhase = scoped; return action() end,
+        }
+        encounterHooks.attach(module, { diagnostic = function(_, checkpoint, observed)
+            diagnostics[#diagnostics + 1] = { checkpoint = checkpoint, observed = observed }
+        end }, function() return state end, function() end, room, nil, generated)
+        local declaration = { Name = case.name }
+        if case.requirements then declaration.GameStateRequirements = { { Path = { "IntroAllowed" } } } end
+        local priorGame, checks = _G.game, {}
+        _G.game = {
+            EncounterData = { [case.name] = declaration },
+            EnemyData = { Screamer = { IntroEncounterName = case.linked and case.name or nil } },
+            IsEncounterEligible = function(_, destination, candidate)
+                checks[#checks + 1] = "selection"
+                lu.assertIs(destination, nativeRoom)
+                lu.assertIs(candidate, declaration)
+                if case.checkError then error("selection error") end
+                return case.direct or destination.LegalEncountersDictionary[candidate.Name] == true
+            end,
+            HasEncounterBeenCompleted = function(name)
+                checks[#checks + 1] = "completion"
+                lu.assertEquals(name, case.name)
+                if case.completionError then error("completion error") end
+                return case.completed == true
+            end,
+            IsGameStateEligible = function(candidate, requirements)
+                checks[#checks + 1] = "requirements"
+                lu.assertIs(candidate, declaration)
+                lu.assertIs(requirements, declaration.GameStateRequirements)
+                if case.requirementsError then error("requirements error") end
+                return not case.blocked
+            end,
+        }
+        local run = {}
+        local selected = callbacks.ChooseEncounter(nil, {}, function(currentRun)
+            lu.assertEquals(currentRun.ForceNextEncounterData, case.admitted and declaration or nil)
+            return { Name = declaration.Name }
+        end, run, nativeRoom, {})
+        _G.game = priorGame
+        lu.assertIs(bound, selected)
+        lu.assertNil(run.ForceNextEncounterData)
+        lu.assertEquals(scopedPhase, case.admitted and phase or nil)
+        if case.admitted then
+            lu.assertEquals(diagnostics, {})
+        else
+            lu.assertEquals(#diagnostics, 1)
+            lu.assertEquals(diagnostics[1].checkpoint, "encounter-eligibility")
+            local checkError = case.checkError or case.completionError or case.requirementsError
+            lu.assertEquals(diagnostics[1].observed.reason, checkError and "native-check-error" or "native-ineligible")
+        end
+        if case.direct or case.checkError or not case.linked then
+            lu.assertEquals(checks, { "selection" })
+        elseif case.requirements and not case.completed then
+            lu.assertEquals(checks, { "selection", "completion", "requirements" })
+        else
+            lu.assertEquals(checks, { "selection", "completion" })
+        end
+    end
+end
+
 function TestEncounters.testPEncounterSequenceLeavesHeraclesNativeSuffixTerminationIntact()
     local module, callbacks = capture()
     local occurrence = {
