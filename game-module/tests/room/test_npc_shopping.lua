@@ -81,7 +81,7 @@ function TestNpcShopping.testRealProducerProtectionSuppressesOnlyMatchingBoundCa
     _G.CurrentRun = saved
 end
 
-function TestNpcShopping.testStrictOptionalUniqueFamilyArrayAndProtocolBoundary()
+function TestNpcShopping.testStrictOptionalUniqueFamilyArray()
     for _, spelling in ipairs({ '[]', '["Nemesis"]', '["Heracles"]', '["Nemesis","Heracles"]' }) do
         local wire = fixture()
         wire.occurrences[1].suppressedNpcShopping = assert(json.decode(spelling))
@@ -92,9 +92,4 @@ function TestNpcShopping.testStrictOptionalUniqueFamilyArrayAndProtocolBoundary(
         wire.occurrences[1].suppressedNpcShopping = assert(json.decode(spelling))
         lu.assertNil(occurrences.decode(wire.occurrences, wire.selectedOccurrenceIds, "occurrences"))
     end
-    local wire = fixture()
-    wire.protocolVersion = 47
-    local value, err = protocol.decode(wire)
-    lu.assertNil(value)
-    lu.assertStrContains(err, "unsupported identity")
 end

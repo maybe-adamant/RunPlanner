@@ -15,7 +15,6 @@ local aetos = type(import) == "function" and import("mods/protocol/aetos.lua")
 
 local protocol = {
     FORMAT = "run-planner-execution",
-    VERSION = 53,
     CATALOG_VERSION = "0.55.0-anvil-of-fates",
     MAX_ITEMS = p.MAX_ITEMS,
     MAX_STRING = p.MAX_STRING,
@@ -81,7 +80,6 @@ end
 local function fingerprintBody(plan, decodedOccurrences)
     return {
         format = plan.format,
-        protocolVersion = plan.protocolVersion,
         catalogVersion = plan.catalogVersion,
         projectId = plan.projectId,
         routeKey = plan.routeKey,
@@ -132,7 +130,7 @@ function protocol.decode(value)
     local plan, errorMessage = p.exact(
         value,
         {
-            "format", "protocolVersion", "catalogVersion", "projectId", "planFingerprint",
+            "format", "catalogVersion", "projectId", "planFingerprint",
             "routeKey", "startingLoadout", "startingKeepsake", "extent", "selectedOccurrenceIds", "resources",
             "occurrences",
         },
@@ -141,7 +139,6 @@ function protocol.decode(value)
     )
     if not plan then return nil, errorMessage end
     if plan.format ~= protocol.FORMAT
-        or plan.protocolVersion ~= protocol.VERSION
         or plan.catalogVersion ~= protocol.CATALOG_VERSION
         or (plan.routeKey ~= "Underworld" and plan.routeKey ~= "FreshFile"
             and plan.routeKey ~= "Surface" and plan.routeKey ~= "Dream")

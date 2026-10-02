@@ -10,7 +10,6 @@ export {
 export {
   EXECUTION_PLAN_FORMAT,
   EXECUTION_CATALOG_VERSION,
-  EXECUTION_PROTOCOL_VERSION,
   type ExecutionAssemblerInput,
   type ExecutionCompilerInput,
   type ExecutionPlan,

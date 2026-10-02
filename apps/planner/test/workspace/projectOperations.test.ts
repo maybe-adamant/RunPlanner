@@ -21,11 +21,7 @@ import { createFreshFileRouteProject } from '@run-planner/test-fixtures/fresh-fi
 
 import { createApplication } from '@planner/composition/createApplication';
 import { createInitialProject } from '@planner/composition/projectBootstrap';
-import {
-  decodeExecutionPlan,
-  EXECUTION_PLAN_FORMAT,
-  EXECUTION_PROTOCOL_VERSION,
-} from '@run-planner/engine/execution-plan';
+import { decodeExecutionPlan, EXECUTION_PLAN_FORMAT } from '@run-planner/engine/execution-plan';
 import { createFakeGameModuleHost, gameModuleStatus } from '@planner-test/fixtures/gameModuleHost';
 import { createFakeProfileFiles } from '@planner-test/fixtures/profileFiles';
 import type {
@@ -333,7 +329,6 @@ describe('project profile operations', () => {
     expect(JSON.parse(publication.json)).toMatchObject({
       planFingerprint: current.kind === 'publishable' ? current.planFingerprint : null,
       format: EXECUTION_PLAN_FORMAT,
-      protocolVersion: EXECUTION_PROTOCOL_VERSION,
       catalogVersion: application.catalog.version,
       routeKey: 'Underworld',
       extent: { biomeKeys: ['F'] },

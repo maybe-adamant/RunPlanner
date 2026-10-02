@@ -42,7 +42,8 @@ describe('Bug report dialog', () => {
     expect(JSON.parse(request.openPlan ?? 'null')).toMatchObject({
       route: { routeKey: 'Underworld' },
     });
-    expect(request.appFacts).toMatchObject({ protocolVersion: expect.any(Number) });
+    expect(request.appFacts).toMatchObject({ catalogVersion: expect.any(String) });
+    expect(request.appFacts).not.toHaveProperty('protocolVersion');
 
     await user.click(within(dialog).getByRole('button', { name: 'Show in folder' }));
     expect(game.host.revealBugReport).toHaveBeenCalledOnce();

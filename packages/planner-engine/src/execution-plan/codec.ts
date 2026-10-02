@@ -1,7 +1,6 @@
 import {
   EXECUTION_CATALOG_VERSION,
   EXECUTION_PLAN_FORMAT,
-  EXECUTION_PROTOCOL_VERSION,
   type ExecutionPlan,
   type ExecutionStartingKeepsake,
 } from './model';
@@ -66,7 +65,6 @@ export function decodeExecutionPlan(value: unknown): ExecutionPlan {
     record,
     [
       'format',
-      'protocolVersion',
       'catalogVersion',
       'projectId',
       'planFingerprint',
@@ -82,8 +80,6 @@ export function decodeExecutionPlan(value: unknown): ExecutionPlan {
     'execution plan',
   );
   if (record.format !== EXECUTION_PLAN_FORMAT) fail('execution plan.format is unsupported');
-  if (record.protocolVersion !== EXECUTION_PROTOCOL_VERSION)
-    fail('execution plan.protocolVersion is unsupported');
   if (record.catalogVersion !== EXECUTION_CATALOG_VERSION)
     fail('execution plan.catalogVersion is unsupported');
   if (
@@ -156,7 +152,6 @@ export function decodeExecutionPlan(value: unknown): ExecutionPlan {
   const aetos = olympusAetos(record.olympusAetos, biomeKeys, selectedOccurrenceIds, occurrences);
   const plan = Object.freeze({
     format: EXECUTION_PLAN_FORMAT,
-    protocolVersion: EXECUTION_PROTOCOL_VERSION,
     catalogVersion: EXECUTION_CATALOG_VERSION,
     projectId: stringValue(record.projectId, 'execution plan.projectId'),
     planFingerprint: stringValue(record.planFingerprint, 'execution plan.planFingerprint', 64),
@@ -181,7 +176,6 @@ export function decodeExecutionPlan(value: unknown): ExecutionPlan {
   validateExecutionReferences(plan);
   const body = Object.freeze({
     format: plan.format,
-    protocolVersion: plan.protocolVersion,
     catalogVersion: plan.catalogVersion,
     projectId: plan.projectId,
     routeKey: plan.routeKey,

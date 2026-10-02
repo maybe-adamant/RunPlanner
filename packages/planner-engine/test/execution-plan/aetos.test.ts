@@ -59,12 +59,9 @@ describe('Aetos biome execution directive', () => {
     expect(() => decodeExecutionPlan({ ...selectedFixture, olympusAetos })).toThrow(/olympusAetos/);
   });
 
-  it('rejects policy outside P and rejects old execution versions', () => {
+  it('rejects policy outside P', () => {
     expect(() =>
       decodeExecutionPlan({ ...underworldFixture, olympusAetos: { kind: 'none' } }),
     ).toThrow(/outside extent/);
-    expect(() => decodeExecutionPlan({ ...noneFixture, protocolVersion: 50 })).toThrow(
-      /protocolVersion/,
-    );
   });
 });

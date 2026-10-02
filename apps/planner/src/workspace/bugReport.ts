@@ -2,7 +2,6 @@ import {
   encodeProjectDocument,
   PROJECT_DOCUMENT_SCHEMA_VERSION,
 } from '@run-planner/engine/authored-project';
-import { EXECUTION_PROTOCOL_VERSION } from '@run-planner/engine/execution-plan';
 
 import type { BuildIdentity } from '../composition/buildIdentity';
 import type { GameModuleHost } from '../persistence/gameModuleHost';
@@ -66,7 +65,6 @@ export function projectBugReportFacts(
     build: options.buildIdentity.build,
     commit: options.buildIdentity.commit ?? null,
     schemaVersion: PROJECT_DOCUMENT_SCHEMA_VERSION,
-    protocolVersion: EXECUTION_PROTOCOL_VERSION,
     catalogVersion: options.catalogVersion,
     openPlan:
       selectPresentProject(state) === undefined

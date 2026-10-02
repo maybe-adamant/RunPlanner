@@ -190,7 +190,7 @@ function composition.bind(root, moduleVersion)
                         .. " name=" .. logText(plan.displayName or "")
                         .. " fingerprint=" .. tostring(plan.planFingerprint)
                         .. " route=" .. tostring(plan.routeKey)
-                        .. " protocol=" .. tostring(plan.protocolVersion) .. " catalog="
+                        .. " catalog="
                         .. tostring(plan.catalogVersion) .. " module=" .. tostring(moduleVersion))
                 end
             end

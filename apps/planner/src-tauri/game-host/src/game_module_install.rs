@@ -929,7 +929,10 @@ pub mod test_support {
             r#"{{"namespace":"adamantRunPlanner","name":"Run_Planner","version_number":"{version}","dependencies":["Hell2Modding-Hell2Modding-1.0.78","SGG_Modding-ModUtil-4.0.1","adamant-ModpackLib-4.1.0"],"FullName":"adamantRunPlanner-Run_Planner"}}"#
         );
         let files = [
-            ("execution-compatibility.json", r#"{"format":"run-planner-execution","protocolVersion":42,"catalogVersion":"test-catalog"}"#.to_owned()),
+            (
+                "execution-compatibility.json",
+                r#"{"format":"run-planner-execution","catalogVersion":"test-catalog"}"#.to_owned(),
+            ),
             ("main.lua", main.to_owned()),
             ("manifest.json", manifest),
             ("mods/runtime.lua", "return {}".to_owned()),

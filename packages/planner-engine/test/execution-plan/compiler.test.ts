@@ -58,7 +58,6 @@ import {
   compileExecutionPlan,
   decodeExecutionPlan,
   encodeExecutionPlan,
-  EXECUTION_PROTOCOL_VERSION,
   ExecutionPlanCodecError,
 } from '../../src/execution-plan';
 import { validateExecutionProduct } from '../../src/execution-plan/assembly/validation';
@@ -526,7 +525,6 @@ function refreshWireFingerprint(wire: Record<string, unknown>): void {
   const expanded = expandDiagnosticFrames(wire);
   wire.planFingerprint = fingerprint({
     format: expanded.format,
-    protocolVersion: expanded.protocolVersion,
     catalogVersion: expanded.catalogVersion,
     projectId: expanded.projectId,
     routeKey: expanded.routeKey,
@@ -821,16 +819,6 @@ describe('execution-plan compiler and codec', () => {
     const facts = (misplaced.occurrences[0]!.roomExitConformance as { facts: object[] }).facts;
     facts[0] = { ...facts[0], absentTraitKeys: ['ErisCurseTrait'] };
     expect(() => decodeExecutionPlan(misplaced)).toThrow(/facts\[0\]/);
-  });
-
-  it('rejects plans of the released protocol 48', () => {
-    expect(EXECUTION_PROTOCOL_VERSION).toBe(53);
-    expect(() =>
-      decodeExecutionPlan({
-        ...(surfaceQShopCorrelationFixture as Record<string, unknown>),
-        protocolVersion: 48,
-      }),
-    ).toThrow(/protocolVersion is unsupported/);
   });
 
   it('carries an optional display name outside the fingerprint', () => {
@@ -2856,10 +2844,7 @@ describe('execution-plan compiler and codec', () => {
     );
   });
 
-  it('rejects protocol-v9 trace products and malformed v10 unions', () => {
-    expect(() => decodeExecutionPlan({ ...fOpeningFixture, protocolVersion: 9 })).toThrow(
-      ExecutionPlanCodecError,
-    );
+  it('rejects trace-shaped products and malformed unions', () => {
     expect(() =>
       decodeExecutionPlan({
         ...fOpeningFixture,

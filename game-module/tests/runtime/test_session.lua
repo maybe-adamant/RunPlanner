@@ -58,7 +58,6 @@ end
 local function fingerprintBody(plan)
     return {
         format = plan.format,
-        protocolVersion = plan.protocolVersion,
         catalogVersion = plan.catalogVersion,
         projectId = plan.projectId,
         routeKey = plan.routeKey,

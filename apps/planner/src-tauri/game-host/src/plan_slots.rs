@@ -297,7 +297,7 @@ mod tests {
             .join(slot_file_name(slot).unwrap())
     }
 
-    const PLAN: &str = r#"{"format":"run-planner-execution","protocolVersion":42,"catalogVersion":"c","projectId":"p","planFingerprint":"abc123","displayName":"Surface Phial run","routeKey":"Underworld","startingLoadout":{"weaponKey":"WeaponStaffSwing","aspectKey":"BaseStaffAspect","arcana":[],"fear":{}},"extent":{"kind":"configuredPrefix","biomeKeys":["F","G"],"terminalBiomeKey":"G"}}"#;
+    const PLAN: &str = r#"{"format":"run-planner-execution","catalogVersion":"c","projectId":"p","planFingerprint":"abc123","displayName":"Surface Phial run","routeKey":"Underworld","startingLoadout":{"weaponKey":"WeaponStaffSwing","aspectKey":"BaseStaffAspect","arcana":[],"fear":{}},"extent":{"kind":"configuredPrefix","biomeKeys":["F","G"],"terminalBiomeKey":"G"}}"#;
 
     #[test]
     fn slots_report_empty_present_and_unreadable_without_failing_the_rest() {

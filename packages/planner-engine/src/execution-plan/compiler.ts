@@ -1,9 +1,4 @@
-import {
-  EXECUTION_PLAN_FORMAT,
-  EXECUTION_PROTOCOL_VERSION,
-  type ExecutionCompilerInput,
-  type ExecutionPlan,
-} from './model';
+import { EXECUTION_PLAN_FORMAT, type ExecutionCompilerInput, type ExecutionPlan } from './model';
 
 import { fingerprint } from './fingerprint';
 
@@ -14,7 +9,6 @@ export function compileExecutionPlan({
 }: ExecutionCompilerInput): ExecutionPlan {
   const body = Object.freeze({
     format: EXECUTION_PLAN_FORMAT,
-    protocolVersion: EXECUTION_PROTOCOL_VERSION,
     ...product,
   });
   // The display name is presentation metadata, so it never changes the fingerprint.
