@@ -94,6 +94,8 @@ local function reset(state, admissionAttempted)
     state.initialized = false
     state.state = "inactive"
     state.plan = nil
+    state.admittedNativeRun = nil
+    state.modifierDiagnostics = nil
     state.aetos = nil
     state.planSlot = nil
     state.loggedSession = nil
@@ -185,6 +187,7 @@ function runtime.attemptPostbossAdmission(state, inbox, activeSlot, nativeRoom)
         return runtime.fault(state, routeError)
     end
     state.plan = plan
+    state.admittedNativeRun = _G.CurrentRun
     state.planSlot = activeSlot
     state.route = routeState
     state.room = room.new(plan, function(errorValue, expected, observed)
@@ -233,6 +236,7 @@ function runtime.start(state, inbox, phase, activeSlot)
         end
     end
     state.plan = plan
+    state.admittedNativeRun = _G.CurrentRun
     state.planSlot = activeSlot
     state.route = route.new(plan)
     state.room = room.new(plan, function(errorValue, expected, observed)
@@ -279,6 +283,18 @@ function runtime.diagnostic(state, checkpoint, observed, occurrence)
         occurrenceId = occurrence.id, checkpoint = checkpoint,
         expected = expected, observed = observed,
     }
+    return true
+end
+
+-- Run-wide diagnostics alone remain available after the configured prefix.
+function runtime.modifierDiagnostic(state, checkpoint, observed)
+    if state == nil then return true end
+    state.modifierDiagnostics = state.modifierDiagnostics or {}
+    if state.modifierDiagnostics[checkpoint] then return true end
+    state.modifierDiagnostics[checkpoint] = true
+    local diagnostics = state.diagnostics
+    if #diagnostics >= maxDiagnostics then table.remove(diagnostics, 1) end
+    diagnostics[#diagnostics + 1] = { checkpoint = checkpoint, observed = observed }
     return true
 end
 

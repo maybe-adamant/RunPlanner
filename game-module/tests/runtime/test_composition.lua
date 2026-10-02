@@ -72,6 +72,7 @@ function TestRuntimeComposition.testGuideInspectionProjectsActualRoomCompletionW
         return value
     end
     local function freshImport(path)
+        if path == "mods/run_modifiers/hooks.lua" then return { attach = function() return { verifyNative = function() end } end } end
         if path == "mods/runtime/composition.lua" then return assert(loadfile("src/" .. path))() end
         if path == "mods/protocol/json.lua" or path == "mods/protocol/decoder.lua" then
             return { decode = function(value) return value end }
@@ -144,6 +145,7 @@ function TestRuntimeComposition.testSuccessfulPostbossAdmissionIsLoggedOnce()
         diagnostics = {},
     }
     local function freshImport(path)
+        if path == "mods/run_modifiers/hooks.lua" then return { attach = function() return { verifyNative = function() end } end } end
         if path == "mods/runtime/composition.lua" then return assert(loadfile("src/" .. path))() end
         if path == "mods/protocol/json.lua" or path == "mods/protocol/decoder.lua" then
             return { decode = function(value) return value end }
@@ -211,6 +213,7 @@ function TestRuntimeComposition.testFirstMismatchLogIncludesFullInventoryAndOccu
         state.firstMismatch.observed.present[index] = { traitKey = "Trait" .. index, rarity = "Common", level = 4 }
     end
     local function freshImport(path)
+        if path == "mods/run_modifiers/hooks.lua" then return { attach = function() return { verifyNative = function() end } end } end
         if path == "mods/runtime/composition.lua" then return assert(loadfile("src/" .. path))() end
         if path == "mods/protocol/json.lua" or path == "mods/protocol/decoder.lua" then
             return { decode = function(value) return value end }
@@ -276,6 +279,7 @@ function TestRuntimeComposition.testFaultLogIncludesBindingContextAndEachStackLi
         },
     }
     local function freshImport(path)
+        if path == "mods/run_modifiers/hooks.lua" then return { attach = function() return { verifyNative = function() end } end } end
         if path == "mods/runtime/composition.lua" then return assert(loadfile("src/" .. path))() end
         if path == "mods/protocol/json.lua" or path == "mods/protocol/decoder.lua" then
             return { decode = function(value) return value end }
@@ -343,6 +347,7 @@ function TestRuntimeComposition.testFieldsDiagnosticLogsItsCompletedSnapshotWith
         } },
     }
     local function freshImport(path)
+        if path == "mods/run_modifiers/hooks.lua" then return { attach = function() return { verifyNative = function() end } end } end
         if path == "mods/runtime/composition.lua" then return assert(loadfile("src/" .. path))() end
         if path == "mods/protocol/json.lua" or path == "mods/protocol/decoder.lua" then
             return { decode = function(value) return value end }
@@ -405,6 +410,7 @@ function TestRuntimeComposition.testAdmittedSessionAndEveryDiagnosticAreLoggedOn
         },
     }
     local function freshImport(path)
+        if path == "mods/run_modifiers/hooks.lua" then return { attach = function() return { verifyNative = function() end } end } end
         if path == "mods/runtime/composition.lua" then return assert(loadfile("src/" .. path))() end
         if path == "mods/protocol/json.lua" or path == "mods/protocol/decoder.lua" then
             return { decode = function(value) return value end }
@@ -462,6 +468,7 @@ function TestRuntimeComposition.testAcquisitionCompositionSharesOneSeaStarAcross
         ["mods/room/timeline/acquisitions/pickups/hooks.lua"] = true,
     }
     local function freshImport(path)
+        if path == "mods/run_modifiers/hooks.lua" then return { attach = function() return { verifyNative = function() end } end } end
         if path == "mods/room/timeline/acquisitions/sea_star.lua" then
             return assert(loadfile("src/" .. path))()
         end
@@ -519,6 +526,7 @@ function TestRuntimeComposition.testRuntimeCompositionSharesOneHexTreeAcrossLoad
     end }
     local loadoutTree, acquisitionTree
     local function freshImport(path)
+        if path == "mods/run_modifiers/hooks.lua" then return { attach = function() return { verifyNative = function() end } end } end
         if path == "mods/protocol/json.lua" or path == "mods/protocol/decoder.lua" then
             return { decode = function(value) return value end }
         end
@@ -597,6 +605,7 @@ function TestRuntimeComposition.testCompositionPassesRouteAndRoomAuthoritiesToHo
     }
     local attached
     local function freshImport(path)
+        if path == "mods/run_modifiers/hooks.lua" then return { attach = function() return { verifyNative = function() end } end } end
         if path == "mods/runtime/composition.lua" then
             return assert(loadfile("src/" .. path))()
         end
@@ -689,6 +698,7 @@ function TestRuntimeComposition.testAdmissionLoadoutAndResyncReadTheActiveSlotFi
     end
     local loadoutRuntime, admissionRuntime
     local function freshImport(importPath)
+        if importPath == "mods/run_modifiers/hooks.lua" then return { attach = function() return { verifyNative = function() end } end } end
         if importPath == "mods/runtime/composition.lua" then return assert(loadfile("src/" .. importPath))() end
         if importPath == "mods/host/active_slot.lua" then return activeSlotModule end
         if importPath == "mods/protocol/json.lua" or importPath == "mods/protocol/decoder.lua" then
@@ -862,4 +872,65 @@ function TestRuntimeComposition.testRoomAfterConfiguredPrefixHandsControlBackToN
     lu.assertFalse(enteredRoom)
     lu.assertEquals(state.state, "inactive")
     lu.assertEquals(state.reason, "configured-prefix-complete")
+end
+
+function TestRuntimeComposition.testAdmittedModifierCompositionUsesFrozenRunAndPlanAfterPrefix()
+    local runtimeSession = require('mods.runtime.session')
+    local modifierHooks = require('mods.run_modifiers.hooks')
+    local admitted = { Hero = { ObjectId = 1 } }
+    local state = runtimeSession.create()
+    local plan = { kind = 'ready', occurrences = {}, selectedOccurrenceIds = {}, occurrencesById = {},
+        runModifiers = { guaranteeEligibleCrits = true, guaranteeEligibleDoubleDamage = false, enemyGoldDropChanceMultiplier = 1 } }
+    local preview = plan
+    local module, _, callbacks = capture()
+    local restore = nativeGame.install({ CurrentRun = admitted, CurrentHubRoom = false, SessionMapState = {},
+        Damage = function() end, CalculateCritChance = function() end, CalculateDoubleDamageChance = function() end,
+        GetTotalHeroTraitValue = function() end, RandomChance = function() end, rom = { path = {}, log = { info = function() end } } })
+    local priorImport = _G.import
+    _G.import = function(path)
+        if path == 'mods/runtime/session.lua' then
+            return setmetatable({ create = function() return state end }, { __index = runtimeSession })
+        end
+        if path == 'mods/run_modifiers/hooks.lua' then return modifierHooks end
+        if path == 'mods/host/active_slot.lua' then return { create = function() return { read = function() return 1 end } end } end
+        if path == 'mods/host/inbox.lua' then return { create = function() return {
+            load = function() return true, preview end, plan = function() return preview end,
+            status = function() return {} end,
+        } end } end
+        if path == 'mods/spells/hex_tree.lua' then return { create = function() return { attach = function() end } end } end
+        if path == 'mods/room/timeline/encounters/thessaly.lua' then return { create = shipCombatStub } end
+        if path == 'mods/room/timeline/encounters/generated.lua' then return { create = generatedEncounterStub } end
+        if path == 'mods/guidance/highlights.lua' then return highlightStub() end
+        if path == 'mods/loadout/hooks.lua' then return { attach = function(_, _, _, report)
+            assert(runtimeSession.start(state, { load = function() return true, plan end }, 'starting', 1))
+            report({})
+            -- The loadout owner publishes this transition after native verification.
+            state.state, state.reason = 'synchronized', 'ready'
+            report({})
+            return {}
+        end } end
+        return { attach = function() return {} end }
+    end
+    local bound = assert(loadfile('src/mods/runtime/composition.lua'))().bind('/tmp/run-planner-modifiers-test')
+    bound.attach(module)
+    lu.assertIs(state.admittedNativeRun, admitted)
+    preview = { runModifiers = { guaranteeEligibleCrits = false } }
+    lu.assertIs(bound.sessionInspection().plan, plan)
+    state.state, state.reason = 'inactive', 'configured-prefix-complete'
+    local victim, args = {}, { AttackerTable = admitted.Hero }
+    local result = callbacks.Damage(nil, {}, function()
+        callbacks.CalculateCritChance(nil, {}, function() return 0.2 end, admitted.Hero, victim, nil, args)
+        callbacks.CalculateDoubleDamageChance(nil, {}, function() return 0.2 end, admitted.Hero, victim, nil, args)
+        callbacks.GetTotalHeroTraitValue(nil, {}, function() return 1 end, 'LuckMultiplier', { IsMultiplier = true })
+        callbacks.GetTotalHeroTraitValue(nil, {}, function() return 0 end, 'OutgoingUnmodifiedCritBonus')
+        local crit = callbacks.RandomChance(nil, {}, function() return false end, 0.2)
+        local double = callbacks.RandomChance(nil, {}, function() return false end, 0.2)
+        return { crit, double }
+    end, victim, args)
+    lu.assertEquals(result, { true, false })
+    runtimeSession.beginNewRun(state)
+    lu.assertNil(state.admittedNativeRun)
+    lu.assertEquals(callbacks.Damage(nil, {}, function() return 'native-new-run' end, victim, args), 'native-new-run')
+    _G.import = priorImport
+    restore()
 end
