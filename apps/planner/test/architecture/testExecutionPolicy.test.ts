@@ -198,11 +198,40 @@ describe('repository test execution policy', () => {
       'utf8',
     );
     const fixtureConfig = readFileSync(`${repositoryRoot}/vitest.fixtures.config.ts`, 'utf8');
+    const equivalenceConfig = readFileSync(
+      `${repositoryRoot}/vitest.equivalence.config.ts`,
+      'utf8',
+    );
+    const equivalenceFile = "'packages/planner-engine/test/equivalence/equivalence.test.ts'";
 
     expect(correctnessConfig).toContain("'packages/*/test/**/*.test.ts'");
     expect(correctnessConfig).toContain("'apps/*/test/**/*.test.{ts,tsx}'");
-    expect(correctnessConfig).toContain('exclude: [performanceTestFile]');
+    expect(correctnessConfig).toContain(`equivalenceTestFile = ${equivalenceFile}`);
+    expect(correctnessConfig.match(/exclude: \[[^\]]*\]/g)).toEqual([
+      'exclude: [performanceTestFile, equivalenceTestFile]',
+    ]);
     expect(performanceConfig).toContain('include: [performanceTestFile]');
+    expect(equivalenceConfig).toContain(`equivalenceTestFile = ${equivalenceFile}`);
+    expect(equivalenceConfig.match(/include: \[[^\]]*\]/g)).toEqual([
+      'include: [equivalenceTestFile]',
+    ]);
+    // The equivalence lane is opt-in: no script reachable from `check` runs it.
+    const scripts = (
+      JSON.parse(readFileSync(`${repositoryRoot}/package.json`, 'utf8')) as {
+        readonly scripts: Readonly<Record<string, string>>;
+      }
+    ).scripts;
+    const reachable = new Set<string>();
+    const visit = (name: string) => {
+      if (reachable.has(name) || scripts[name] === undefined) return;
+      reachable.add(name);
+      for (const [, child] of scripts[name].matchAll(/npm run ([\w:-]+)/g)) visit(child!);
+    };
+    visit('check');
+    expect(reachable).not.toContain('test:equivalence');
+    expect([...reachable].map((name) => scripts[name])).not.toContainEqual(
+      expect.stringContaining('vitest.equivalence.config'),
+    );
     expect(performanceConfig).toContain('maxWorkers: 1');
     expect(fixtureConfig).toContain('maxWorkers: 1');
 
