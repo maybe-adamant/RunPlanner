@@ -53,6 +53,7 @@ export function applyFountainUsedTransition(
   event: FountainUsedEvent,
   result: AuthoredFountainRarityResult | undefined,
   branches: readonly RewardBranchState[],
+  /** Undefined for a Hub-owned or non-authored fountain. */
   room: CanonicalAuthoredRoom | undefined,
 ): FountainUsedTransition {
   const used = resolveFountainUse(catalog, event, result, branches);

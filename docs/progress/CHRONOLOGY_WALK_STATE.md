@@ -23,9 +23,11 @@ mutating a shared map. No product changes.
   separate commit after the refactor, never inside it.
 - Code-versus-documentation mismatches are recorded, not repaired (see
   "Recorded mismatches").
-- Exported module signatures stay fixed: the lifecycle-transition modules
-  (tests import them directly), `applyTraitOfferForAcquisition`, and the
-  positional `settleEncounterTraitOffer`.
+- Exported module signatures stay fixed for the lifecycle-transition modules
+  that tests import directly, `applyTraitOfferForAcquisition`, and the
+  positional `settleEncounterTraitOffer`. A transition whose deliverable moves a
+  seam into it may change its signature: A2 (`room-prepared`, no importers) and
+  A4 (`fountain-used`, which now requires the authored `room`).
 - No per-event copying of biome accumulators: the walk is O(events).
 
 ## Gate 0 — equivalence lane (permanent)
