@@ -1063,3 +1063,46 @@
     color: #aaa7af;
   }
 }
+
+.route-run-modifiers {
+  display: grid;
+  gap: 0.75rem;
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid #3a3b45;
+}
+
+.route-run-modifier-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: start;
+  gap: 0.75rem 1.25rem;
+  min-width: 0;
+}
+
+.route-run-modifier-toggle,
+.route-run-modifier-multiplier {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.route-run-modifier-toggle input {
+  flex-shrink: 0;
+}
+
+.route-run-modifier-gold {
+  max-width: 100%;
+}
+
+.route-run-modifier-multiplier input {
+  width: 7rem;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.route-run-modifier-gold [role='alert'] {
+  margin: 0;
+  color: #e7a1a1;
+}

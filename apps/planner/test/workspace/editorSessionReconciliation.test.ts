@@ -64,6 +64,7 @@ function session(options: {
     activeSection: 'route',
     activePanel: { kind: 'biome', biomeKey: 'F' },
     semanticNavigationRevision: 1,
+    workspaceReplacementRevision: 0,
     focusedSemanticOwner: options.focusedSemanticOwner ?? null,
     selectedFinding: options.selectedFinding ?? null,
     ...(options.levelResolutionDialogTarget === undefined

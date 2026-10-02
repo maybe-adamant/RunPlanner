@@ -49,6 +49,8 @@ export interface RoutePanelSelection {
 }
 
 export interface EditorSessionState {
+  /** Advances only when an accepted document replaces the workspace, clearing local drafts. */
+  readonly workspaceReplacementRevision: number;
   /** Whether the shell is showing the selected route or application settings. */
   readonly activeSection: 'route' | 'settings';
   readonly activePanel: RoutePanel;
@@ -67,6 +69,7 @@ export interface EditorSessionState {
 const routeOverviewPanel: RoutePanel = Object.freeze({ kind: 'overview' });
 
 const emptyState: EditorSessionState = {
+  workspaceReplacementRevision: 0,
   activeSection: 'route',
   activePanel: routeOverviewPanel,
   focusedSemanticOwner: null,
@@ -273,6 +276,7 @@ export function createEditorSessionReducer(catalog: Catalog): Reducer<EditorSess
         levelResolutionDialogTarget: null,
         runStateTarget: null,
         semanticNavigationRevision: state.semanticNavigationRevision,
+        workspaceReplacementRevision: state.workspaceReplacementRevision + 1,
       };
     }
     if (routeSelected.match(action)) {
