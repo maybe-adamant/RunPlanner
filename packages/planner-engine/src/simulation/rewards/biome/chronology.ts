@@ -1367,27 +1367,7 @@ export function evaluateBiomeRewardChronology(
         branches = transition.branches;
         break;
       }
-      case 'offerPointAcquired': {
-        const settlement = applyReachedOfferSettlement({
-          catalog,
-          snapshot,
-          event,
-          rooms,
-          views,
-          branches,
-          priorFindings: Object.freeze([...findings.values()]),
-          authoredSeaStarDuplicateSiteKeys,
-        });
-        for (const entry of settlement.findings)
-          findings.set(findingIdentityKey(entry.finding), entry);
-        recordAcquisitionRoleFrontiers(settlement.roleFrontiers);
-        recordTraitChildSettlements(
-          settlement.traitChildSettlements,
-          settlement.traitChildOccurrenceOwner,
-        );
-        branches = settlement.branches;
-        break;
-      }
+      case 'offerPointAcquired':
       case 'producerRoleAdvanced': {
         const settlement = applyReachedOfferSettlement({
           catalog,
