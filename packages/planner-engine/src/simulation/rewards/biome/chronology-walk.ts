@@ -69,7 +69,7 @@ export interface PurgingPoolRoomAssessment {
   readonly assessments: readonly PurgingPoolAssessment[];
 }
 
-export interface StygianWellAssessment {
+export interface StygianWellRoomAssessment {
   readonly origin: OccurrenceAddress;
   readonly assessments: readonly StygianWellCandidateContext[];
 }
@@ -79,7 +79,7 @@ export interface ChronologyWalkState {
   readonly branches: readonly RewardBranchState[];
   /** A seam stopped the walk at its own sequence. */
   readonly halted: boolean;
-  readonly stygianWellAssessments: ReadonlyMap<string, StygianWellAssessment>;
+  readonly stygianWellAssessments: ReadonlyMap<string, StygianWellRoomAssessment>;
   readonly wellRefillRealizations: ReadonlyMap<string, WellRefillRealization>;
   readonly purgingPoolAssessments: ReadonlyMap<string, PurgingPoolRoomAssessment>;
   /** Shrine-keyed Travel Deal refill frontier carried between its deliveries. */

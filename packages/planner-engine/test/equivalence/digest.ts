@@ -12,6 +12,7 @@ import {
 import { canonicalDigest, sha256, type CanonicalDigest } from './canonical';
 import { probeCandidates } from './candidate-probe';
 import type { EquivalenceEntry } from './corpus';
+import { resetChronologyRecording, traitChildSettlementRecords } from './trait-child-probe';
 
 export const equivalenceSections = ['simulation', 'plan', 'candidates'] as const;
 export type EquivalenceSection = (typeof equivalenceSections)[number];
@@ -42,12 +43,17 @@ function planSection(
 
 export function equivalenceProducts(entry: EquivalenceEntry): EquivalenceProducts {
   const project = entry.project();
+  resetChronologyRecording();
   const assembly = simulateProjectAssembly(entry.catalog, project);
+  const traitChildSettlements = traitChildSettlementRecords();
   // `simulateProject` publishes exactly this assembly's evaluation.
   const simulation = canonicalDigest(assembly.evaluation);
   const plan = planSection(entry.catalog, assembly);
   const session = createPreparedProjectCandidateSession(entry.catalog, assembly);
-  const candidates = canonicalDigest(probeCandidates(entry.catalog, project, session));
+  const candidates = canonicalDigest([
+    ...probeCandidates(entry.catalog, project, session),
+    { probe: 'traitChildSettlements', input: null, outcome: traitChildSettlements },
+  ]);
   return Object.freeze({
     simulation: { digest: simulation.root, canonical: simulation },
     plan,

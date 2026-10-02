@@ -44,6 +44,7 @@ import { authorLegalTraitOffers } from '@run-planner/test-fixtures/shared';
 import { executionFixtures } from '../execution-plan/support/execution-fixtures';
 import {
   createEchoHammerReplayMissingProject,
+  createEchoReplayUnresolvedHammerProject,
   createFPoolSaleClearedProject,
   freshFileHFieldsIssueSteps,
 } from './corpus-support';
@@ -112,6 +113,7 @@ export function equivalenceCorpus(): readonly EquivalenceEntry[] {
     ),
     entry('underworld/echoHammerReplayMissing', createEchoHammerReplayMissingProject),
     entry('underworld/fPoolSaleCleared', createFPoolSaleClearedProject),
+    entry('underworld/echoReplayUnresolvedHammer', createEchoReplayUnresolvedHammerProject),
     entry('surface/loadSurfaceNOPQProject', loadSurfaceNOPQProject),
     entry('surface/surfaceAnvilProject', surfaceAnvilProject),
     entry('surface/createSurfaceNOHermesShrineDeliveryCheckpoint', () =>

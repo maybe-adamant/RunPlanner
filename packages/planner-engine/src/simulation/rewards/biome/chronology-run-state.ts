@@ -21,7 +21,7 @@ import type {
 } from './chronology-walk';
 
 /** The Run State snapshot builder for one owner, source room and reached view. */
-export function runStateAt(
+function runStateAt(
   context: ChronologyWalkContext,
   state: ChronologyWalkState,
   owner: RunStateSnapshot['owner'],

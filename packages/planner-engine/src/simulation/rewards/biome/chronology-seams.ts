@@ -1017,7 +1017,7 @@ interface ChronologySeam<K extends HistoryEvent['kind']> {
 }
 
 /** Every history event kind and the seam that applies it. */
-export const chronologySeamTable: { readonly [K in HistoryEvent['kind']]: ChronologySeam<K> } =
+const chronologySeamTable: { readonly [K in HistoryEvent['kind']]: ChronologySeam<K> } =
   Object.freeze({
     biomeStarted: { step: advanceOnly },
     biomeCompleted: { step: advanceOnly },
@@ -1059,7 +1059,7 @@ export const chronologySeamTable: { readonly [K in HistoryEvent['kind']]: Chrono
   });
 
 /** Brings every branch to the reached history view at this sequence. */
-export function reachHistorySequence(
+function reachHistorySequence(
   context: ChronologyWalkContext,
   state: ChronologyWalkState,
   sequence: number,
