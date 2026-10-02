@@ -6,8 +6,13 @@ import { replaceSimulationTraitHistory } from '../../../state/transitions';
 import type { Catalog } from '../../../../catalog-schema';
 import {
   createFountainRarityOutcomeAddress,
+  createRoomFeatureAddress,
   semanticAddressKey,
+  type OccurrenceAddress,
 } from '../../../../authored-project/addresses';
+import { routePurgingPool } from '../../../../authored-project/route-profile';
+import type { CanonicalAuthoredRoom } from '../../../materialization';
+import { assessPurgingPool, type PurgingPoolAssessment } from '../../../commerce/purging-pool';
 import { ownerRegion } from '../../../finding-regions';
 import type { AuthoredFountainRarityResult } from '../../../../authored-project/model';
 import { assessPhialTraitTargets, consumePhial } from '../../../keepsakes/trait-effects';
@@ -27,12 +32,97 @@ export interface FountainUsedTransition {
   };
   readonly findings: readonly LifecycleFinding[];
   readonly timelineFacts: PlannerTimelineFacts;
+  /** The Purging Pool frontier this fountain unlocked, keyed by its room. */
+  readonly purgingPoolAssessment?: {
+    readonly key: string;
+    readonly value: {
+      readonly origin: OccurrenceAddress;
+      readonly assessments: readonly PurgingPoolAssessment[];
+    };
+  };
 }
+
+type FountainUsedEvent = Extract<
+  import('../../../history').HistoryEvent,
+  { readonly kind: 'fountainUsed' }
+>;
 
 /** Resolves one occurrence- or Hub-owned fountain use, immediately before later actions. */
 export function applyFountainUsedTransition(
   catalog: Catalog,
-  event: Extract<import('../../../history').HistoryEvent, { readonly kind: 'fountainUsed' }>,
+  event: FountainUsedEvent,
+  result: AuthoredFountainRarityResult | undefined,
+  branches: readonly RewardBranchState[],
+  room?: CanonicalAuthoredRoom,
+): FountainUsedTransition {
+  const used = resolveFountainUse(catalog, event, result, branches);
+  // The fountain unlocks Postboss facilities. Capture the pool only after
+  // its rarity effects settle, never from entry or an unresolved Phial.
+  // A retained Pool on a route without one is never assessed, so its sales stay unavailable.
+  if (room?.purgingPool?.interacted !== true) return used;
+  const findings = [...used.findings];
+  const chronology = () =>
+    Object.freeze({
+      kind: 'history' as const,
+      sequence: event.sequence,
+      boundary: 'after' as const,
+    });
+  if (routePurgingPool(catalog.rooms.byKey[room.gameName], room.origin.routeKey) === undefined) {
+    findings.push(
+      Object.freeze({
+        finding: rewardFinding(
+          'purgingPoolUnavailable',
+          createRoomFeatureAddress(room.origin, { kind: 'purgingPoolInventory' }),
+          { routeKey: room.origin.routeKey },
+        ),
+        region: ownerRegion(room.origin),
+        chronology: chronology(),
+      }),
+    );
+    return Object.freeze({ ...used, findings: Object.freeze(findings) });
+  }
+  if (used.branches.length === 0) return used;
+  const pool = room.purgingPool;
+  const assessments = Object.freeze(
+    used.branches.map((branch) =>
+      assessPurgingPool(catalog, pool, branch.state.traitHistory.equippedTraits),
+    ),
+  );
+  for (const assessment of assessments) {
+    for (const finding of assessment.findings)
+      findings.push(
+        Object.freeze({
+          finding: rewardFinding(
+            finding.code,
+            createRoomFeatureAddress(
+              room.origin,
+              finding.slotKey === undefined
+                ? { kind: 'purgingPoolInventory' }
+                : { kind: 'purgingPoolOffer', slotKey: finding.slotKey },
+            ),
+            {
+              ...finding.evidence,
+              ...(finding.slotKey === undefined ? {} : { slotKey: finding.slotKey }),
+            },
+          ),
+          region: ownerRegion(room.origin),
+          chronology: chronology(),
+        }),
+      );
+  }
+  return Object.freeze({
+    ...used,
+    findings: Object.freeze(findings),
+    purgingPoolAssessment: Object.freeze({
+      key: semanticAddressKey(room.origin),
+      value: Object.freeze({ origin: room.origin, assessments }),
+    }),
+  });
+}
+
+function resolveFountainUse(
+  catalog: Catalog,
+  event: FountainUsedEvent,
   result: AuthoredFountainRarityResult | undefined,
   branches: readonly RewardBranchState[],
 ): FountainUsedTransition {
