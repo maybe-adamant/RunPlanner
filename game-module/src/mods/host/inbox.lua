@@ -1,9 +1,15 @@
 -- The module inbox owns transport for the six fixed published plan slots. It
 -- reads one bounded file only when the session explicitly asks for a new-run
--- plan or an inspection.
+-- plan or an inspection, and admits only a slot written for this module build.
+local json = type(import) == "function" and import("mods/protocol/json.lua") or require("mods.protocol.json")
+local buildIdentity = type(import) == "function" and import("mods/host/build_identity.lua")
+    or require("mods.host.build_identity")
 
 local inbox = {}
 inbox.MAX_BYTES = 1048576
+inbox.SLOT_FORMAT = "run-planner-slot"
+local PLAN_FORMAT = "run-planner-execution"
+local ENVELOPE_KEYS = { format = true, buildId = true, plan = true }
 inbox.SLOT_COUNT = 6
 inbox.SLOT_FILES = {
     "slot-1.runplanner.json",
@@ -65,8 +71,35 @@ function inbox.readBinary(root, pathApi, slot)
     return content
 end
 
-function inbox.create(root, decode, pathApi)
+-- The plan inside an exact slot envelope naming this build, or a status code and reason.
+function inbox.unwrap(raw, buildId)
+    local value, decodeError = json.decode(raw)
+    if value == nil then return nil, "malformed-plan", "malformed-json: " .. tostring(decodeError) end
+    if json.isObject(value) and value.format == PLAN_FORMAT then
+        return nil, "stale-slot", "plan was sent before slots named a module build; send it again"
+    end
+    if not json.isObject(value) or value.format ~= inbox.SLOT_FORMAT then
+        return nil, "malformed-plan", "slot must be a run-planner-slot envelope"
+    end
+    for key in pairs(value) do
+        if not ENVELOPE_KEYS[key] then return nil, "malformed-plan", "unexpected slot key " .. tostring(key) end
+    end
+    if type(value.buildId) ~= "string" or not json.isObject(value.plan) then
+        return nil, "malformed-plan", "slot envelope must carry a buildId and a plan"
+    end
+    if buildId == nil then
+        return nil, "module-build-unknown",
+            "the installed module has no build identity; install it from the planner's Game panel"
+    end
+    if value.buildId ~= buildId then
+        return nil, "stale-slot", "plan was sent for another module build; send it again"
+    end
+    return value.plan
+end
+
+function inbox.create(root, decode, pathApi, buildId)
     if type(decode) ~= "function" then error("inbox decoder must be a function", 2) end
+    local build = buildIdentity.short(buildId)
     local state = {
         plan = nil,
         selectedSlot = 1,
@@ -75,7 +108,7 @@ function inbox.create(root, decode, pathApi)
             file = "not-inspected",
             inspection = "not-inspected",
             load = "idle",
-            protocol = "unknown",
+            build = build,
             catalog = "unknown",
             fingerprint = nil,
             error = nil,
@@ -87,7 +120,6 @@ function inbox.create(root, decode, pathApi)
         state.status.file = "not-inspected"
         state.status.inspection = "not-inspected"
         state.status.load = "idle"
-        state.status.protocol = "unknown"
         state.status.catalog = "unknown"
         state.status.fingerprint = nil
         state.status.error = nil
@@ -127,7 +159,6 @@ function inbox.create(root, decode, pathApi)
         state.plan = nil
         state.status.slot, state.status.file = state.selectedSlot, "reading"
         state.status.inspection, state.status.load = "reading", "loading"
-        state.status.protocol = "unknown"
         state.status.catalog, state.status.fingerprint, state.status.error = "unknown", nil, nil
         local raw, code, message = inbox.readBinary(root, pathApi, state.selectedSlot)
         if raw == nil then
@@ -136,16 +167,19 @@ function inbox.create(root, decode, pathApi)
             state.status.error = { code = code, message = message }
             return false, code
         end
-        local decoded, decodeError = decode(raw)
-        if decoded == nil then
-            state.status.inspection, state.status.load, state.status.protocol = "failed", "error", "error"
+        local function rejected(rejectCode, rejectMessage)
+            state.status.inspection, state.status.load = "failed", "error"
             state.status.file = "present"
-            state.status.error = { code = "malformed-plan", message = decodeError }
-            return false, "malformed-plan"
+            state.status.error = { code = rejectCode, message = rejectMessage }
+            return false, rejectCode
         end
+        local wire, unwrapCode, unwrapMessage = inbox.unwrap(raw, buildId)
+        if wire == nil then return rejected(unwrapCode, unwrapMessage) end
+        local decoded, decodeError = decode(wire)
+        if decoded == nil then return rejected("malformed-plan", decodeError) end
         state.plan = decoded
         state.status.file, state.status.inspection, state.status.load = "present", "inspected", "ready"
-        state.status.protocol, state.status.catalog = decoded.protocolVersion, decoded.catalogVersion
+        state.status.catalog = decoded.catalogVersion
         state.status.fingerprint = decoded.planFingerprint
         return true, decoded
     end

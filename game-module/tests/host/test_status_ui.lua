@@ -106,7 +106,7 @@ function TestStatusUi.testInspectionUsesTheBoundInboxCapabilityDirectly()
         plan = function() end,
         status = function()
             statusReads = statusReads + 1
-            return { file = "present", inspection = "inspected", protocol = 10 }
+            return { file = "present", inspection = "inspected", build = "0123456789ab", catalog = "c" }
         end,
     }
     local ui = statusUi.bind(inbox, inactive, slotFile(1))
@@ -133,7 +133,7 @@ function TestStatusUi.testInspectionUsesTheBoundInboxCapabilityDirectly()
     lu.assertEquals(selections, {})
     lu.assertEquals(checkbox.target, guideField)
     lu.assertEquals(checkbox.opts, { id = "show_room_guide", label = "Show room guide" })
-    lu.assertStrContains(table.concat(drawn, "\n"), "File: present | Protocol: 10")
+    lu.assertStrContains(table.concat(drawn, "\n"), "File: present | Build: 0123456789ab | Catalog: c")
 end
 
 function TestStatusUi.testPickerShowsTheActiveSlotFileAndSelectsItWithoutWriting()
@@ -143,7 +143,7 @@ function TestStatusUi.testPickerShowsTheActiveSlotFileAndSelectsItWithoutWriting
         select = function(slot) selected = slot end,
         load = function(slot) loaded = slot end,
         plan = function() end,
-        status = function() return { file = "not-inspected", protocol = "unknown" } end,
+        status = function() return { file = "not-inspected", build = "unknown" } end,
     }
     local field, file = viewField(1), slotFile(4)
     local ui = statusUi.bind(inbox, inactive, file, function() return 0 end)
@@ -177,7 +177,7 @@ local function pickerHarness(file, clock)
         select = function(slot) active = slot; selections[#selections + 1] = slot end,
         load = function() end,
         plan = function() end,
-        status = function() return { file = "not-inspected", protocol = "unknown" } end,
+        status = function() return { file = "not-inspected", build = "unknown" } end,
     }
     local field, lines = viewField(1), {}
     local ui = statusUi.bind(inbox, inactive, file, clock)
@@ -291,7 +291,7 @@ local function inspect(plan, snapshot, tab, detailTab)
         select = function() error("unexpected slot selection") end,
         load = function() error("unexpected file read") end,
         plan = function() return plan end,
-        status = function() return { file = "present", protocol = 37 } end,
+        status = function() return { file = "present", build = "0123456789ab" } end,
     }, function() return snapshot end, slotFile(6), function() return 0 end)
     local ctx = {
         data = { get = function() return viewField(6) end },
@@ -390,7 +390,7 @@ function TestStatusUi.testBadPreviewReportsDecoderReasonWithoutChangingRunStatus
         load = function() return false end,
         plan = function() end,
         status = function() return {
-            file = "present", protocol = "error", error = { code = "malformed-plan", message = "Invalid contract" },
+            file = "present", error = { code = "malformed-plan", message = "Invalid contract" },
         } end,
     }
     local snapshot = { state = "synchronized", reason = "ready" }

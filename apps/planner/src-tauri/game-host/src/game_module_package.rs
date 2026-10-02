@@ -3,7 +3,7 @@ use std::borrow::Cow;
 use std::collections::BTreeMap;
 use std::sync::OnceLock;
 
-use crate::game_module_assembly::{AssembledFile, MANIFEST_FILE};
+use crate::game_module_assembly::{AssembledFile, COMPATIBILITY_FILE, MANIFEST_FILE};
 
 pub struct BundledFile {
     path: &'static str,
@@ -32,6 +32,18 @@ pub struct ModulePackage {
     pub source: PackageSource,
     pub files: Vec<PackageFile>,
     pub dependencies: Vec<String>,
+    /// The assembled payload's identity, stamped into its compatibility file.
+    pub build_id: String,
+}
+
+/// The packaged `execution-compatibility.json`: the plan header the module accepts and
+/// the module build that a plan slot must name.
+#[derive(Clone, Debug, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct ExecutionCompatibility {
+    pub format: String,
+    pub catalog_version: String,
+    pub build_id: String,
 }
 
 #[derive(Deserialize)]
@@ -52,11 +64,20 @@ impl ModulePackage {
         if manifest.version_number != version {
             return Err("the game module manifest is not stamped with the planner version".into());
         }
+        let compatibility = files
+            .iter()
+            .find(|file| file.path == COMPATIBILITY_FILE)
+            .ok_or("the game module package has no compatibility file")?;
+        let compatibility: ExecutionCompatibility = serde_json::from_slice(&compatibility.bytes)
+            .map_err(|error| {
+                format!("the game module compatibility file is not build-stamped: {error}")
+            })?;
         Ok(Self {
             version: version.to_owned(),
             source,
             files,
             dependencies: manifest.dependencies,
+            build_id: compatibility.build_id,
         })
     }
 
@@ -134,7 +155,20 @@ mod tests {
         }
         write(&root.join("src/main.lua"), b"return true\n");
         write(&root.join("src/mods/a.lua"), b"return 1\n");
-        write(&root.join("src/execution-compatibility.json"), b"{}");
+        write(
+            &root.join("src/execution-compatibility.json"),
+            br#"{"format":"run-planner-execution","catalogVersion":"c"}"#,
+        );
+    }
+
+    fn build_id(root: &Path, version: &str) -> String {
+        ModulePackage::from_assembly(
+            version,
+            PackageSource::Checkout,
+            game_module_assembly::assemble(root, version).unwrap(),
+        )
+        .unwrap()
+        .build_id
     }
 
     #[test]
@@ -165,8 +199,52 @@ mod tests {
         let package =
             ModulePackage::from_assembly("2.3.4", PackageSource::Checkout, first).unwrap();
         assert_eq!(package.dependencies, ["adamant-ModpackLib-4.1.0"]);
+        let compatibility = package
+            .files
+            .iter()
+            .find(|file| file.path == "execution-compatibility.json")
+            .unwrap();
+        assert_eq!(
+            serde_json::from_slice::<serde_json::Value>(&compatibility.bytes).unwrap(),
+            serde_json::json!({
+                "format": "run-planner-execution",
+                "catalogVersion": "c",
+                "buildId": package.build_id,
+            })
+        );
         assert!(game_module_assembly::assemble(&root, "2.3").is_err());
         write(&root.join("src/LICENSE"), b"collision");
+        assert!(game_module_assembly::assemble(&root, "2.3.4").is_err());
+        fs::remove_dir_all(&root).unwrap();
+    }
+
+    #[test]
+    fn the_build_id_covers_exactly_the_checked_in_payload() {
+        let root =
+            std::env::temp_dir().join(format!("run-planner-build-id-{}", std::process::id()));
+        let _ = fs::remove_dir_all(&root);
+        module_checkout(&root);
+        let original = build_id(&root, "2.3.4");
+        assert_eq!(original.len(), 64);
+        assert_eq!(build_id(&root, "2.3.4"), original);
+        assert_eq!(build_id(&root, "9.0.0"), original);
+        write(&root.join("README.md"), b"edited");
+        write(&root.join("icon.png"), b"edited");
+        assert_eq!(build_id(&root, "2.3.4"), original);
+        write(&root.join("src/mods/a.lua"), b"return 2\n");
+        let edited = build_id(&root, "2.3.4");
+        assert_ne!(edited, original);
+        write(&root.join("src/mods/b.lua"), b"");
+        assert_ne!(build_id(&root, "2.3.4"), edited);
+        write(
+            &root.join("src/execution-compatibility.json"),
+            br#"{"format":"run-planner-execution","catalogVersion":"c","buildId":"x"}"#,
+        );
+        assert!(game_module_assembly::assemble(&root, "2.3.4")
+            .err()
+            .unwrap()
+            .contains("must not carry a buildId"));
+        fs::remove_file(root.join("src/execution-compatibility.json")).unwrap();
         assert!(game_module_assembly::assemble(&root, "2.3.4").is_err());
         fs::remove_dir_all(&root).unwrap();
     }
@@ -209,5 +287,8 @@ mod tests {
             .dependencies
             .iter()
             .any(|dependency| dependency.starts_with("adamant-ModpackLib-")));
+        assert_eq!(package.build_id.len(), 64);
+        #[cfg(debug_assertions)]
+        assert_eq!(checkout_package().unwrap().build_id, package.build_id);
     }
 }

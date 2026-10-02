@@ -2,15 +2,11 @@
 -- constructed once here and retained in lexical scope.
 local composition = {}
 
-function composition.bind(root, moduleVersion)
+function composition.bind(root, moduleVersion, buildId)
     if type(root) ~= "string" or root == "" then error("executor config path is required", 2) end
-    local json = import("mods/protocol/json.lua")
     local protocol = import("mods/protocol/decoder.lua")
-    local inbox = import("mods/host/inbox.lua").create(root, function(raw)
-        local value, errorMessage = json.decode(raw)
-        if value == nil then return nil, "malformed-json: " .. tostring(errorMessage) end
-        return protocol.decode(value)
-    end, rom.path)
+    local inbox = import("mods/host/inbox.lua").create(root, protocol.decode, rom.path, buildId)
+    local build = type(buildId) == "string" and buildId:sub(1, 12) or "unknown"
     local activeSlotFile = import("mods/host/active_slot.lua").create(root, rom.path)
     local route = import("mods/route/session.lua")
     local ephyra = import("mods/navigation/ephyra.lua")
@@ -190,7 +186,7 @@ function composition.bind(root, moduleVersion)
                         .. " name=" .. logText(plan.displayName or "")
                         .. " fingerprint=" .. tostring(plan.planFingerprint)
                         .. " route=" .. tostring(plan.routeKey)
-                        .. " catalog="
+                        .. " build=" .. build .. " catalog="
                         .. tostring(plan.catalogVersion) .. " module=" .. tostring(moduleVersion))
                 end
             end

@@ -4,7 +4,7 @@ local lu = require("luaunit")
 TestHostBootstrap = {}
 
 function TestHostBootstrap.testInspectorAttachesStandaloneGuiBeforeActivation()
-    local registered = {}
+    local registered = { pathApi = {} }
     local bridge = { renderWindow = function() end, addMenuBar = function() end }
     local module = {
         data = { define = function() end },
@@ -28,7 +28,15 @@ function TestHostBootstrap.testInspectorAttachesStandaloneGuiBeforeActivation()
     }
     local imports = {
         ["mods/host/data.lua"] = { buildStorage = function() return {} end, buildStatus = function() return {} end },
-        ["mods/runtime/composition.lua"] = { bind = function() return runtime end },
+        ["mods/host/build_identity.lua"] = { read = function(pluginRoot, pathApi)
+            lu.assertEquals(pluginRoot, "plugin-folder")
+            lu.assertIs(pathApi, registered.pathApi)
+            return "installed-build"
+        end },
+        ["mods/runtime/composition.lua"] = { bind = function(root, version, buildId)
+            lu.assertEquals({ root, version, buildId }, { "unused", "1.2.3", "installed-build" })
+            return runtime
+        end },
         ["mods/host/status_ui.lua"] = { bind = function() return { drawTab = function() end, drawQuickContent = function() end } end },
         ["mods/room/guide.lua"] = { attach = function(target, inspection)
             lu.assertIs(target, module)
@@ -36,11 +44,15 @@ function TestHostBootstrap.testInspectorAttachesStandaloneGuiBeforeActivation()
         end },
     }
     local environment = setmetatable({
-        _PLUGIN = { guid = "adamantRunPlanner-Run_Planner", config_mod_folder_path = "unused" },
+        _PLUGIN = {
+            guid = "adamantRunPlanner-Run_Planner", version = "1.2.3",
+            config_mod_folder_path = "unused", plugins_mod_folder_path = "plugin-folder",
+        },
         import_as_fallback = function() end,
         import = function(path) return assert(imports[path], path) end,
         rom = {
             game = {},
+            path = registered.pathApi,
             gui = {
                 add_imgui = function(callback) registered.window = callback end,
                 add_to_menu_bar = function(callback) registered.menu = callback end,

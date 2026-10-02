@@ -38,16 +38,20 @@ pub fn slot_file_name(slot_number: u8) -> Result<&'static str, String> {
 pub enum PlanSlotState {
     Empty,
     Present,
+    /// A readable plan written for another module build, or before slots named one.
+    Stale,
     Unreadable,
 }
 
-/// One plan slot as found on disk, identified only by execution-plan wire fields.
+/// One plan slot as found on disk, identified by its envelope and execution-plan wire fields.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PlanSlotFacts {
     pub slot: u8,
     pub state: PlanSlotState,
     pub modified_at_ms: Option<u64>,
+    /// The module build the slot was written for; absent for a bare pre-envelope plan.
+    pub build_id: Option<String>,
     pub route_key: Option<String>,
     pub biome_keys: Vec<String>,
     pub plan_fingerprint: Option<String>,
@@ -89,12 +93,56 @@ struct PlanIdentity {
 }
 
 const PLAN_FORMAT: &str = "run-planner-execution";
+pub const SLOT_FORMAT: &str = "run-planner-slot";
+
+#[derive(Deserialize)]
+struct SlotFormat {
+    format: String,
+}
+
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields, rename_all = "camelCase")]
+struct SlotEnvelope {
+    format: String,
+    build_id: String,
+    plan: PlanIdentity,
+}
+
+/// The slot file the host writes: the module build it targets, then the plan bytes unchanged.
+pub fn encode_slot(build_id: &str, plan_json: &str) -> String {
+    format!(
+        r#"{{"format":"{SLOT_FORMAT}","buildId":{},"plan":{plan_json}}}"#,
+        json_string(build_id)
+    )
+}
+
+fn json_string(value: &str) -> String {
+    serde_json::Value::String(value.to_owned()).to_string()
+}
+
+// A bare plan predates the envelope; it names no build.
+fn decode_slot(bytes: &[u8]) -> Option<(Option<String>, PlanIdentity)> {
+    match serde_json::from_slice::<SlotFormat>(bytes)
+        .ok()?
+        .format
+        .as_str()
+    {
+        SLOT_FORMAT => {
+            let envelope = serde_json::from_slice::<SlotEnvelope>(bytes).ok()?;
+            (envelope.format == SLOT_FORMAT && envelope.plan.format == PLAN_FORMAT)
+                .then_some((Some(envelope.build_id), envelope.plan))
+        }
+        PLAN_FORMAT => Some((None, serde_json::from_slice::<PlanIdentity>(bytes).ok()?)),
+        _ => None,
+    }
+}
 
 fn slot_facts(slot: u8, state: PlanSlotState, modified_at_ms: Option<u64>) -> PlanSlotFacts {
     PlanSlotFacts {
         slot,
         state,
         modified_at_ms,
+        build_id: None,
         route_key: None,
         biome_keys: Vec::new(),
         plan_fingerprint: None,
@@ -175,7 +223,7 @@ fn present(path: &Path) -> Result<bool, String> {
     }
 }
 
-fn read_slot(slot: u8, path: &Path) -> PlanSlotFacts {
+fn read_slot(slot: u8, path: &Path, installed_build_id: Option<&str>) -> PlanSlotFacts {
     let metadata = match fs::symlink_metadata(path) {
         Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
             return slot_facts(slot, PlanSlotState::Empty, None)
@@ -201,11 +249,16 @@ fn read_slot(slot: u8, path: &Path) -> PlanSlotFacts {
     if read.is_err() || bytes.len() > MAX_PLAN_BYTES {
         return unreadable;
     }
-    match serde_json::from_slice::<PlanIdentity>(&bytes) {
-        Ok(identity) if identity.format == PLAN_FORMAT => PlanSlotFacts {
+    match decode_slot(&bytes) {
+        Some((build_id, identity)) => PlanSlotFacts {
             slot,
-            state: PlanSlotState::Present,
+            state: if build_id.is_some() && build_id.as_deref() == installed_build_id {
+                PlanSlotState::Present
+            } else {
+                PlanSlotState::Stale
+            },
             modified_at_ms,
+            build_id,
             route_key: Some(identity.route_key),
             biome_keys: identity.extent.biome_keys,
             plan_fingerprint: Some(identity.plan_fingerprint),
@@ -219,7 +272,7 @@ fn read_slot(slot: u8, path: &Path) -> PlanSlotFacts {
                 .starting_loadout
                 .and_then(|loadout| loadout.aspect_key),
         },
-        _ => unreadable,
+        None => unreadable,
     }
 }
 
@@ -257,8 +310,12 @@ pub fn inspect_active_slot(target: &ResolvedTarget) -> ActiveSlotFacts {
     }
 }
 
-/// Reads all six plan slots; an unsafe config folder makes every slot unreadable.
-pub fn inspect_slots(target: &ResolvedTarget) -> Vec<PlanSlotFacts> {
+/// Reads all six plan slots against the installed module build; an unsafe config folder
+/// makes every slot unreadable.
+pub fn inspect_slots(
+    target: &ResolvedTarget,
+    installed_build_id: Option<&str>,
+) -> Vec<PlanSlotFacts> {
     let slots = 1..=PLAN_SLOT_COUNT;
     match module_config_dir(target) {
         Ok(None) => slots
@@ -272,6 +329,7 @@ pub fn inspect_slots(target: &ResolvedTarget) -> Vec<PlanSlotFacts> {
                 read_slot(
                     slot,
                     &directory.join(PLAN_SLOT_FILES[usize::from(slot - 1)]),
+                    installed_build_id,
                 )
             })
             .collect(),
@@ -297,25 +355,30 @@ mod tests {
             .join(slot_file_name(slot).unwrap())
     }
 
+    const BUILD: &str = "build-1";
+
     const PLAN: &str = r#"{"format":"run-planner-execution","catalogVersion":"c","projectId":"p","planFingerprint":"abc123","displayName":"Surface Phial run","routeKey":"Underworld","startingLoadout":{"weaponKey":"WeaponStaffSwing","aspectKey":"BaseStaffAspect","arcana":[],"fear":{}},"extent":{"kind":"configuredPrefix","biomeKeys":["F","G"],"terminalBiomeKey":"G"}}"#;
 
     #[test]
     fn slots_report_empty_present_and_unreadable_without_failing_the_rest() {
         let temporary = TemporaryDirectory::new("slots");
         let target = make_target(&temporary.0);
-        assert!(inspect_slots(&target)
+        assert!(inspect_slots(&target, Some(BUILD))
             .iter()
             .all(|slot| slot.state == PlanSlotState::Empty));
         fs::create_dir_all(slot_path(&target, 1).parent().unwrap()).unwrap();
-        fs::write(slot_path(&target, 1), PLAN).unwrap();
+        fs::write(slot_path(&target, 1), encode_slot(BUILD, PLAN)).unwrap();
         fs::write(slot_path(&target, 2), "not json").unwrap();
         fs::write(
             slot_path(&target, 3),
-            PLAN.replace("run-planner-execution", "authored-project"),
+            encode_slot(
+                BUILD,
+                &PLAN.replace("run-planner-execution", "authored-project"),
+            ),
         )
         .unwrap();
         fs::write(slot_path(&target, 4), vec![b' '; MAX_PLAN_BYTES + 1]).unwrap();
-        let slots = inspect_slots(&target);
+        let slots = inspect_slots(&target, Some(BUILD));
         assert_eq!(slots.len(), 6);
         assert_eq!(
             slots[0],
@@ -323,6 +386,7 @@ mod tests {
                 slot: 1,
                 state: PlanSlotState::Present,
                 modified_at_ms: slots[0].modified_at_ms,
+                build_id: Some(BUILD.to_owned()),
                 route_key: Some("Underworld".to_owned()),
                 biome_keys: vec!["F".to_owned(), "G".to_owned()],
                 plan_fingerprint: Some("abc123".to_owned()),
@@ -344,10 +408,13 @@ mod tests {
         }
         fs::write(
             slot_path(&target, 5),
-            PLAN.replace(r#""displayName":"Surface Phial run","#, ""),
+            encode_slot(
+                BUILD,
+                &PLAN.replace(r#""displayName":"Surface Phial run","#, ""),
+            ),
         )
         .unwrap();
-        let legacy = &inspect_slots(&target)[4];
+        let legacy = &inspect_slots(&target, Some(BUILD))[4];
         assert_eq!(legacy.state, PlanSlotState::Present);
         assert_eq!(legacy.display_name, None);
         assert_eq!(legacy.aspect_key.as_deref(), Some("BaseStaffAspect"));
@@ -358,24 +425,54 @@ mod tests {
         assert!(!without_loadout.contains("startingLoadout"));
         fs::write(
             slot_path(&target, 5),
-            PLAN.replace(r#""aspectKey":"BaseStaffAspect","#, ""),
+            encode_slot(
+                BUILD,
+                &PLAN.replace(r#""aspectKey":"BaseStaffAspect","#, ""),
+            ),
         )
         .unwrap();
-        let without_aspect = &inspect_slots(&target)[4];
+        let without_aspect = &inspect_slots(&target, Some(BUILD))[4];
         assert_eq!(without_aspect.state, PlanSlotState::Present);
         assert_eq!(without_aspect.aspect_key, None);
         assert_eq!(
             without_aspect.weapon_key.as_deref(),
             Some("WeaponStaffSwing")
         );
-        fs::write(slot_path(&target, 5), without_loadout).unwrap();
-        let unknown = &inspect_slots(&target)[4];
+        fs::write(slot_path(&target, 5), encode_slot(BUILD, &without_loadout)).unwrap();
+        let unknown = &inspect_slots(&target, Some(BUILD))[4];
         assert_eq!(unknown.state, PlanSlotState::Present);
         assert_eq!(unknown.aspect_key, None);
         assert_eq!(unknown.weapon_key, None);
         fs::remove_file(slot_path(&target, 5)).unwrap();
         assert_eq!(slots[4].state, PlanSlotState::Empty);
         assert_eq!(slots[5].state, PlanSlotState::Empty);
+    }
+
+    #[test]
+    fn slots_for_another_build_or_without_an_envelope_are_stale() {
+        let temporary = TemporaryDirectory::new("stale-slots");
+        let target = make_target(&temporary.0);
+        fs::create_dir_all(slot_path(&target, 1).parent().unwrap()).unwrap();
+        fs::write(slot_path(&target, 1), encode_slot(BUILD, PLAN)).unwrap();
+        fs::write(slot_path(&target, 2), encode_slot("build-0", PLAN)).unwrap();
+        fs::write(slot_path(&target, 3), PLAN).unwrap();
+        let extra = encode_slot(BUILD, PLAN).replacen('{', r#"{"extra":1,"#, 1);
+        fs::write(slot_path(&target, 4), extra).unwrap();
+        let slots = inspect_slots(&target, Some(BUILD));
+        assert_eq!(slots[0].state, PlanSlotState::Present);
+        assert_eq!(slots[1].state, PlanSlotState::Stale);
+        assert_eq!(slots[1].build_id.as_deref(), Some("build-0"));
+        assert_eq!(slots[1].plan_fingerprint.as_deref(), Some("abc123"));
+        assert_eq!(slots[2].state, PlanSlotState::Stale);
+        assert_eq!(slots[2].build_id, None);
+        assert_eq!(slots[3].state, PlanSlotState::Unreadable);
+        assert!(inspect_slots(&target, None)[..3]
+            .iter()
+            .all(|slot| slot.state == PlanSlotState::Stale));
+        assert_eq!(
+            encode_slot(BUILD, "{}"),
+            r#"{"format":"run-planner-slot","buildId":"build-1","plan":{}}"#
+        );
     }
 
     #[test]
@@ -466,7 +563,10 @@ mod tests {
         fs::write(&outside, PLAN).unwrap();
         fs::create_dir_all(slot_path(&target, 1).parent().unwrap()).unwrap();
         symlink(&outside, slot_path(&target, 1)).unwrap();
-        assert_eq!(inspect_slots(&target)[0].state, PlanSlotState::Unreadable);
+        assert_eq!(
+            inspect_slots(&target, Some(BUILD))[0].state,
+            PlanSlotState::Unreadable
+        );
         let outside_active = temporary.0.join("outside-active.json");
         fs::write(&outside_active, encode_active_slot(2).unwrap()).unwrap();
         symlink(
@@ -487,7 +587,7 @@ mod tests {
         )
         .unwrap();
         symlink(&outside_config, other.rom.join(CONFIG_DIRECTORY)).unwrap();
-        assert!(inspect_slots(&other)
+        assert!(inspect_slots(&other, Some(BUILD))
             .iter()
             .all(|slot| slot.state == PlanSlotState::Unreadable));
         assert_eq!(inspect_active_slot(&other), ActiveSlotFacts::Invalid);
