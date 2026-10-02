@@ -15,7 +15,9 @@ lib = mods["adamant-ModpackLib"]
 local function initialize()
     import_as_fallback(rom.game)
     local data = import("mods/host/data.lua")
-    local runtime = import("mods/runtime/composition.lua").bind(_PLUGIN.config_mod_folder_path, _PLUGIN.version)
+    local buildId = import("mods/host/build_identity.lua").read(_PLUGIN.plugins_mod_folder_path, rom.path)
+    local runtime = import("mods/runtime/composition.lua").bind(_PLUGIN.config_mod_folder_path, _PLUGIN.version,
+        buildId)
     local ui = import("mods/host/status_ui.lua").bind(runtime.inboxInspection, runtime.sessionInspection,
         runtime.activeSlot)
     local guide = import("mods/room/guide.lua")

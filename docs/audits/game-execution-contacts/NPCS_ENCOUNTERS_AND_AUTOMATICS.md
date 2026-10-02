@@ -205,7 +205,7 @@ Representative results: `GeneratedO_Intro01` does not count depth while
 `HeraclesCombatO` does; P precombat differs from ordinary combat in depth, end
 effects and envelope-wide Fig Leaf propagation; `Story_Chronos_01` and `Empty`
 share policy. Mature-save runs and the brand-new profile run (2026-09-30,
-protocol 53) showed no new lifecycle mismatch; the only substitution was the
+build from `0bc1971a`) showed no new lifecycle mismatch; the only substitution was the
 expected introduction decline and regenerated install.
 
 Consequently, an encounter name is a declaration identity, not a selected

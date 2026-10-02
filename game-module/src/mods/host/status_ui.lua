@@ -222,7 +222,8 @@ function ui.bind(inbox, inspectSession, activeSlotFile, clock)
         local inboxStatus = inbox.status()
         drawApi.widgets.text(
             "File: " .. tostring(inboxStatus.file)
-                .. " | Protocol: " .. tostring(inboxStatus.protocol))
+                .. " | Build: " .. tostring(inboxStatus.build)
+                .. " | Catalog: " .. tostring(inboxStatus.catalog))
         if inboxStatus.error then
             drawApi.widgets.text("Error: " .. tostring(inboxStatus.error.code))
             if inboxStatus.error.message then

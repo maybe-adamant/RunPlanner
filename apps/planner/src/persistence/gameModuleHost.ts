@@ -84,8 +84,11 @@ export type GameActiveSlot =
 /** One plan slot, identified only by fields the execution-plan wire already carries. */
 export interface GamePlanSlot {
   readonly slot: GamePlanSlotNumber;
-  readonly state: 'empty' | 'present' | 'unreadable';
+  /** `stale`: a readable plan sent for another game module build. */
+  readonly state: 'empty' | 'present' | 'stale' | 'unreadable';
   readonly modifiedAtMs: number | null;
+  /** The module build the slot was sent for; null for a plan sent before slots named one. */
+  readonly buildId?: string | null;
   readonly routeKey: string | null;
   readonly biomeKeys: readonly string[];
   readonly planFingerprint: string | null;

@@ -435,7 +435,8 @@ function TestRuntimeComposition.testAdmittedSessionAndEveryDiagnosticAreLoggedOn
     _G.import = freshImport
     _G.rom = { path = {}, log = { info = function(message) logs[#logs + 1] = message end } }
     local ok, errorValue = pcall(function()
-        freshImport("mods/runtime/composition.lua").bind("/tmp/run-planner-test", "1.2.3").attach({})
+        freshImport("mods/runtime/composition.lua").bind("/tmp/run-planner-test", "1.2.3",
+            "0123456789abcdef").attach({})
     end)
     _G.import, _G.rom = priorImport, priorRom
 
@@ -443,7 +444,8 @@ function TestRuntimeComposition.testAdmittedSessionAndEveryDiagnosticAreLoggedOn
     lu.assertEquals(#logs, 4)
     lu.assertEquals(logs[1], "[RunPlanner] session admitted slot=2 project=project-1"
         .. " name=\"Fast \\034Fields\\034\\010[RunPlanner] forged\""
-        .. " fingerprint=0a1b2c3d route=Underworld catalog=0.55.0 module=1.2.3")
+        .. " fingerprint=0a1b2c3d route=Underworld build=0123456789ab"
+        .. " catalog=0.55.0 module=1.2.3")
     lu.assertEquals(logs[2], "[RunPlanner] diagnostic occurrence=opening run-state {gold=3}")
     lu.assertEquals(logs[3], "[RunPlanner] diagnostic occurrence=fight encounter-composition {waves=2}")
     lu.assertEquals(logs[4], "[RunPlanner] diagnostic occurrence=exit room-exit F_Next")

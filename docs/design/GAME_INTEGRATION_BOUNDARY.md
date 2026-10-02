@@ -2,7 +2,7 @@
 
 ## Contract
 
-The active strict versioned protocol, execution protocol 53, carries a
+The strict execution protocol carries a
 complete-valid configured Underworld, Fresh File or Surface prefix, through
 `F/G/H/I` (both Underworld profiles) or `N/O/P/Q`, or a public Dream prefix. The desktop
 publisher writes an execution-only JSON artifact to one of six fixed Plan
@@ -38,11 +38,24 @@ version of its own. The Tauri-free `run-planner-game-host` crate
 (`apps/planner/src-tauri/game-host/`) owns this lane over explicit paths; its
 `build.rs` embeds that folder, with per-file SHA-256 hashes, into the binary at
 compile time, so every build carries exactly one
-module and never downloads game packages. The protocol, format and catalog
-triple in `execution-compatibility.json` remains the compatibility contract,
-independent of the release number and authored save schema; the module's tests
-keep that declaration aligned with its decoder and decode the planner-engine
-execution fixtures in place.
+module and never downloads game packages.
+
+Compatibility has two parts, both independent of the release number and the
+authored save schema:
+
+- The plan header's `format` and `catalogVersion` must equal the module's
+  checked-in `execution-compatibility.json`, `{format, catalogVersion}`. The
+  module's tests keep that declaration aligned with its decoder and decode the
+  planner-engine execution fixtures in place.
+- The module **build identity** (`buildId`) is SHA-256 over the sorted
+  `path NUL sha256 LF` lines of the checked-in `src/` payload; the manifest,
+  icon, license and readme, and the engine source, are outside it. A wire change
+  always changes the strict Lua decoder, so it changes the build, while the
+  fixture-decode lane catches engine/module drift. Assembly (shared by the
+  embedded package and the development checkout install) computes it and
+  stamps the packaged `execution-compatibility.json` as
+  `{format, catalogVersion, buildId}`; a checked-in `buildId` is refused. The
+  plan wire and the execution fixtures never carry a build identity.
 
 The game target is an application setting in the desktop configuration
 directory, never authored state or history. The Game panel's Game location offers
@@ -132,7 +145,10 @@ last wrote.
 Anything both the planner and the game module need lives in
 `config/adamantRunPlanner-Run_Planner/`, in a format they own together:
 
-- the six plan slots `slot-N.runplanner.json`, which only the planner writes;
+- the six plan slots `slot-N.runplanner.json`, which only the planner writes,
+  each the envelope
+  `{"format":"run-planner-slot","buildId":"…","plan":<plan>}` with the plan
+  bytes unchanged and the whole file within 1 MiB;
 - `active-slot.json`, the plan slot the module plays next, which both write.
 
 Settings that only the game uses, such as the room guide, highlights and
@@ -171,9 +187,13 @@ ModpackLib `.cfg`.
 Sending a plan uses only the established target and performs no discovery.
 The host rechecks the target when publishing and refuses with the blocking
 reasons, including found and required versions, unless the installed module
-matches this build and ModpackLib is compatible. The installed
-`execution-compatibility.json` must equal the outgoing plan header before any
-write. `mods.yml` is never edited, and under `config/` the planner writes only
+matches this build and ModpackLib is compatible. Before any write, the installed
+`execution-compatibility.json` must match the outgoing plan header's `format`
+and `catalogVersion`, and its `buildId` must equal the reference build: the
+embedded package, or, in a development build whose install record names a
+checkout install, the checkout freshly assembled at send time (a mismatch asks
+to **Install from checkout** again). The slot is then written as an envelope
+naming that build. `mods.yml` is never edited, and under `config/` the planner writes only
 the shared folder described above. After writing the plan the host writes
 `active-slot.json`; if only that write fails, the send still succeeds, the plan
 stays, and the result carries the activation problem, which the planner shows
@@ -187,7 +207,7 @@ no separate authored name. Sending therefore needs a saved file with no unsaved
 changes: a clean file sends, a file with unsaved changes offers **Save and
 send**, which saves in place first, and a never-saved project offers **Save and
 send…**, which opens Save As and sends under the chosen name, or sends nothing
-if cancelled. Execution protocol 49 carries the stem as the optional,
+if cancelled. The plan carries the stem as the optional,
 presentation-only `displayName`, which is outside `planFingerprint`; the game module accepts it
 and only logs it. Save As from an already-saved file gives the copy a new `projectId`
 (the first save of a never-saved project keeps its own), so earlier sends no
@@ -196,13 +216,18 @@ longer match it.
 Once the module is ready, the Game panel shows the six slots as a table: Slot,
 Plan, Route, Ends, Aspect and Sent. The host reads each slot under the same
 link and containment rules and the 1 MiB bound, and reports it as empty,
-present or unreadable with its modified time and only existing wire fields:
-`projectId`, `displayName`, `routeKey`, `extent.biomeKeys`,
+present, stale or unreadable with its modified time, the envelope's `buildId`,
+and only existing wire fields: `projectId`, `displayName`, `routeKey`, `extent.biomeKeys`,
 `startingLoadout.weaponKey` and `startingLoadout.aspectKey`, and
 `planFingerprint`. The application labels the route, final biome, aspect and
 weapon (by its `shortLabel`) from the catalog; a loadout without an aspect
 shows "None", and a plan without `displayName` shows _Unnamed_, Sent is a compact relative time with the exact local time as
-its title and description, and an unreadable slot shows only "Unreadable".
+its title and description, and an unreadable slot shows only "Unreadable". A
+slot whose envelope names another build than the installed module, or a bare
+plan written before slots carried an envelope, is stale and shows only "Sent by
+another build — send again"; it cannot be made active, and the header's quick
+send treats the open project's own stale slot like its present one. Host status
+also carries the bundled and installed `buildId` into bug reports.
 
 The Slot column is an **Active slot** radio group, with arrow-key choice, that
 shows `active-slot.json` as last read. No radio is selected while the file is
@@ -337,7 +362,7 @@ The canonical input is independent of JSON formatting and host locale:
 - Objects concatenate key-string tokens and value tokens between `{` and `}`,
   sorted by the keys' UTF-8 byte sequence. There are no extra separators.
 
-Canonicalization changes require an execution-protocol change and republishing;
+Canonicalization changes require a decoder change and republishing;
 decoders do not try alternate fingerprints for older publications.
 
 ## Execution ownership
@@ -483,9 +508,9 @@ seeds, plus applicable Fangs and Menace outcomes, an optional variable base roll
 and a required `expectedBudget`. That budget is the engine's exact final encounter
 budget from the same preparation assessment that derived the counts; neither the
 compiler nor the runtime recomputes it. The execution protocol requires it on
-every generated customization. Incompatible published plans are re-exported
-from their authored projects; execution-only protocol changes do not require
-an authored-project migration.
+every generated customization. Plans published for another module build are
+sent again from their authored projects; execution-only wire changes do not
+require an authored-project migration.
 
 An introduction's declared fixed first waves are published as `fixed` waves with
 their exact counts, so every generated customization covers all its waves. Native
@@ -792,8 +817,8 @@ weaker outcome into a mismatch merely because they can observe it.
 | Diagnostic          | A bounded actuator could not install or apply its intended steering.                                | Record bounded evidence, log it once, and continue native behavior without changing synchronization.         |
 | Execution mismatch  | A standard checkpoint or premature exact-owner action proves the remaining simulated prefix unsafe. | Preserve the first mismatch, stop later realization, and let the native game continue.                       |
 
-Each admitted session logs its slot, plan identity, protocol and module version
-once. The first execution mismatch reports the plan/catalog fingerprints, semantic
+Each admitted session logs its slot, plan identity, the first 12 characters of
+the module build, catalog and module version once. The first execution mismatch reports the plan/catalog fingerprints, semantic
 owner, checkpoint, expected value, observed value, and bounded event context.
 The executor then becomes passive: the game continues natively, and no hooked
 game function returns early merely because the execution session
@@ -837,8 +862,8 @@ gameplay behavior.
 
 ## Compatibility, transport, and security
 
-The transport is canonical data-only JSON with a strict versioned decoder,
-exact catalog compatibility, bounded collections, closed unions, and no silent
+The transport is canonical data-only JSON with a strict decoder, exact module
+build and catalog compatibility, bounded collections, closed unions, and no silent
 coercion. It permits no dynamic evaluation, executable expressions, arbitrary
 paths or commands, or class reconstruction from untrusted names. Compression
 or an outer checksum is unnecessary unless later transport evidence justifies
@@ -873,8 +898,13 @@ and room coordinators at that occurrence. A mismatch makes execution passive;
 the executor does not search another slot, retry at later rooms, replay loadout
 effects, or reconstruct earlier Timeline progress.
 
-The Run Planner game module verifies protocol and catalog identity before opening a
-session. Runtime identifier existence and checkpoint contact are conformance
+The Run Planner game module reads its own `buildId` from its installed
+`execution-compatibility.json` at load. Before decoding, the inbox requires
+the exact slot envelope naming that build: another build or a bare plan is
+`stale-slot` (send the plan again), and a module without a readable build
+identity is `module-build-unknown` (install it from the Game panel). The
+decoder then verifies the plan's `format` and `catalogVersion` before a
+session opens. Runtime identifier existence and checkpoint contact are conformance
 checks, not permission to reproduce planner eligibility policy. Exact source
 binding and published prerequisite readiness are execution coordination, not
 eligibility inference.

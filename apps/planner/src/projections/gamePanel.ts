@@ -514,6 +514,15 @@ export function gameSaveState(
   }
 }
 
+export type GamePlanSlotSummary = 'Empty' | 'Sent by another build — send again' | 'Unreadable';
+
+const SLOT_SUMMARIES: Readonly<Record<GamePlanSlot['state'], GamePlanSlotSummary | null>> = {
+  empty: 'Empty',
+  present: null,
+  stale: 'Sent by another build — send again',
+  unreadable: 'Unreadable',
+};
+
 export type GamePlanSlotActionLabel = 'Send here' | 'Replace' | 'Save and send' | 'Save and send…';
 
 export interface GamePlanSlotRow {
@@ -528,7 +537,7 @@ export interface GamePlanSlotRow {
     readonly aspect: string;
     readonly sent: GamePlanSentTime | null;
   } | null;
-  readonly summary: 'Empty' | 'Unreadable' | null;
+  readonly summary: GamePlanSlotSummary | null;
   readonly marker: 'current' | 'olderVersion' | null;
   readonly action: { readonly label: GamePlanSlotActionLabel; readonly confirm: boolean } | null;
   /** This row's Active slot radio; the intent is null while the radio is disabled. */
@@ -713,7 +722,7 @@ export function projectGamePlans(
       slot: slot.slot,
       state: slot.state,
       columns: slotColumns(slot, catalog, now),
-      summary: slot.state === 'empty' ? 'Empty' : slot.state === 'unreadable' ? 'Unreadable' : null,
+      summary: SLOT_SUMMARIES[slot.state],
       marker: slotMarker(slot, current),
       action: reason === null ? slotAction(slot, saveState) : null,
       active: {
@@ -862,7 +871,9 @@ export function projectGameSendButton(
   }
   const slot = status.inspection?.planSlots.find((entry) => entry.slot === lastSentSlot);
   const ownSlot =
-    slot?.state === 'empty' || (slot?.state === 'present' && slot.projectId === project.projectId);
+    slot?.state === 'empty' ||
+    ((slot?.state === 'present' || slot?.state === 'stale') &&
+      slot.projectId === project.projectId);
   if (lastSentSlot === null || !ownSlot || saveState === 'unsaved') {
     return {
       state: 'chooseSlot',

@@ -7,8 +7,10 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use crate::external_url::MODPACKLIB_PAGE_URL;
-use crate::game_module_assembly::{parse_version, sha256_hex, INSTALL_RECORD_FILE, MANIFEST_FILE};
-use crate::game_module_package::{ModulePackage, PackageSource};
+use crate::game_module_assembly::{
+    parse_version, sha256_hex, COMPATIBILITY_FILE, INSTALL_RECORD_FILE, MANIFEST_FILE,
+};
+use crate::game_module_package::{ExecutionCompatibility, ModulePackage, PackageSource};
 use crate::game_target::{
     discover_profiles, existing_directory, remembered_target, resolve_target, target_facts,
     DiscoveredProfile, GameTargetFacts, ProfileModule, ResolvedTarget, TargetKind,
@@ -49,6 +51,8 @@ pub struct InstalledModule {
     pub source: Option<PackageSource>,
     pub matches_bundled: bool,
     pub modified: bool,
+    /// From the installed compatibility file; absent when unreadable or unstamped.
+    pub build_id: Option<String>,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
@@ -157,6 +161,7 @@ pub struct TargetInspection {
 #[serde(rename_all = "camelCase")]
 pub struct GameModuleStatus {
     pub bundled_version: String,
+    pub bundled_build_id: String,
     pub development_install_available: bool,
     pub target: Option<GameTargetFacts>,
     pub target_problem: Option<String>,
@@ -295,6 +300,16 @@ fn read_record(module: &Path) -> Option<InstallRecord> {
         .filter(|record| record.format == INSTALL_RECORD_FORMAT)
 }
 
+fn read_compatibility(module: &Path) -> Option<ExecutionCompatibility> {
+    read_json::<ExecutionCompatibility>(&module.join(COMPATIBILITY_FILE))
+}
+
+/// The installed module's stamped compatibility file, when present and readable.
+pub fn installed_compatibility(target: &ResolvedTarget) -> Option<ExecutionCompatibility> {
+    let plugins = plugins_dir(target).ok()??;
+    read_compatibility(&module_dir(&plugins, &target.rom).ok()??)
+}
+
 fn inspect_module(module: Option<&Path>, package: &ModulePackage) -> InstalledModule {
     let Some(module) = module else {
         return InstalledModule {
@@ -303,8 +318,10 @@ fn inspect_module(module: Option<&Path>, package: &ModulePackage) -> InstalledMo
             source: None,
             matches_bundled: false,
             modified: false,
+            build_id: None,
         };
     };
+    let build_id = read_compatibility(module).map(|compatibility| compatibility.build_id);
     let hashes = installed_hashes(module);
     let matches_bundled = hashes.as_ref() == Some(&package.hashes());
     match read_record(module) {
@@ -314,6 +331,7 @@ fn inspect_module(module: Option<&Path>, package: &ModulePackage) -> InstalledMo
             version: Some(record.version),
             source: Some(record.source),
             matches_bundled,
+            build_id,
         },
         None => InstalledModule {
             state: ModuleState::Unrecognized,
@@ -325,6 +343,7 @@ fn inspect_module(module: Option<&Path>, package: &ModulePackage) -> InstalledMo
             source: None,
             matches_bundled,
             modified: false,
+            build_id,
         },
     }
 }
@@ -588,6 +607,7 @@ pub fn inspect(
         consent_required: consent_required(&module, &r2modman),
     };
     let removable = planner_owns(module.state, r2modman.state);
+    let plan_slots = inspect_slots(target, module.build_id.as_deref());
     Ok(TargetInspection {
         module,
         r2modman,
@@ -600,7 +620,7 @@ pub fn inspect(
             .last()
             .and_then(|folder| folder.file_name())
             .map(|name| name.to_string_lossy().into_owned()),
-        plan_slots: inspect_slots(target),
+        plan_slots,
         active_slot: inspect_active_slot(target),
     })
 }
@@ -657,6 +677,7 @@ pub fn status(
 ) -> (GameModuleStatus, Option<ResolvedTarget>) {
     let mut status = GameModuleStatus {
         bundled_version: package.version.clone(),
+        bundled_build_id: package.build_id.clone(),
         development_install_available: cfg!(debug_assertions),
         target: None,
         target_problem: None,
@@ -925,13 +946,20 @@ pub mod test_support {
     use crate::game_target::{TargetKind, RETURN_OF_MODDING_DIRECTORY};
 
     pub fn package(version: &str, main: &str) -> ModulePackage {
+        package_from(version, main, PackageSource::Bundled)
+    }
+
+    pub fn package_from(version: &str, main: &str, source: PackageSource) -> ModulePackage {
         let manifest = format!(
             r#"{{"namespace":"adamantRunPlanner","name":"Run_Planner","version_number":"{version}","dependencies":["Hell2Modding-Hell2Modding-1.0.78","SGG_Modding-ModUtil-4.0.1","adamant-ModpackLib-4.1.0"],"FullName":"adamantRunPlanner-Run_Planner"}}"#
         );
         let files = [
             (
-                "execution-compatibility.json",
-                r#"{"format":"run-planner-execution","catalogVersion":"test-catalog"}"#.to_owned(),
+                COMPATIBILITY_FILE,
+                format!(
+                    r#"{{"format":"run-planner-execution","catalogVersion":"test-catalog","buildId":"{}"}}"#,
+                    sha256_hex(main.as_bytes())
+                ),
             ),
             ("main.lua", main.to_owned()),
             ("manifest.json", manifest),
@@ -944,7 +972,7 @@ pub mod test_support {
             bytes: text.into_bytes(),
         })
         .collect();
-        ModulePackage::from_assembly(version, PackageSource::Bundled, files).unwrap()
+        ModulePackage::from_assembly(version, source, files).unwrap()
     }
 
     pub fn write(path: &Path, text: &str) {

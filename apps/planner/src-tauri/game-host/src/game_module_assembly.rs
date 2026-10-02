@@ -9,6 +9,7 @@ use std::path::Path;
 
 pub const MANIFEST_FILE: &str = "manifest.json";
 pub const INSTALL_RECORD_FILE: &str = "run-planner-install.json";
+pub const COMPATIBILITY_FILE: &str = "execution-compatibility.json";
 const MANIFEST_TEMPLATE_FILE: &str = "manifest.template.json";
 const PAYLOAD_DIRECTORY: &str = "src";
 // r2modman flattens a Thunderstore package's root files and its `plugins/`
@@ -43,6 +44,21 @@ struct StampedManifest<'a> {
     website_url: &'a str,
     #[serde(rename = "FullName")]
     full_name: &'a str,
+}
+
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields, rename_all = "camelCase")]
+struct CheckedInCompatibility {
+    format: String,
+    catalog_version: String,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct StampedCompatibility<'a> {
+    format: &'a str,
+    catalog_version: &'a str,
+    build_id: &'a str,
 }
 
 pub fn sha256_hex(bytes: &[u8]) -> String {
@@ -100,6 +116,39 @@ fn stamped_manifest(module_dir: &Path, version: &str) -> Result<Vec<u8>, String>
     Ok(manifest)
 }
 
+/// The module build identity: SHA-256 over the sorted `path NUL sha256 LF` lines of the
+/// checked-in `src/` payload.
+fn payload_build_id(payload: &BTreeMap<String, Vec<u8>>) -> String {
+    let mut lines = Vec::new();
+    for (path, bytes) in payload {
+        lines.extend_from_slice(path.as_bytes());
+        lines.push(0);
+        lines.extend_from_slice(sha256_hex(bytes).as_bytes());
+        lines.push(b'\n');
+    }
+    sha256_hex(&lines)
+}
+
+fn stamped_compatibility(checked_in: &[u8], build_id: &str) -> Result<Vec<u8>, String> {
+    let value: serde_json::Value = serde_json::from_slice(checked_in)
+        .map_err(|error| format!("{COMPATIBILITY_FILE} is malformed: {error}"))?;
+    if value.get("buildId").is_some() {
+        return Err(format!(
+            "{COMPATIBILITY_FILE} must not carry a buildId; assembly stamps it"
+        ));
+    }
+    let compatibility: CheckedInCompatibility = serde_json::from_value(value)
+        .map_err(|error| format!("{COMPATIBILITY_FILE} is malformed: {error}"))?;
+    let mut stamped = serde_json::to_vec_pretty(&StampedCompatibility {
+        format: &compatibility.format,
+        catalog_version: &compatibility.catalog_version,
+        build_id,
+    })
+    .map_err(|error| format!("could not encode {COMPATIBILITY_FILE}: {error}"))?;
+    stamped.push(b'\n');
+    Ok(stamped)
+}
+
 fn collect_payload(
     directory: &Path,
     prefix: &str,
@@ -129,7 +178,7 @@ fn collect_payload(
             collect_payload(&entry.path(), &format!("{path}/"), files)?;
             continue;
         }
-        if path == INSTALL_RECORD_FILE || files.contains_key(&path) {
+        if path == INSTALL_RECORD_FILE {
             return Err(format!("payload {path} collides with a package file"));
         }
         files.insert(path, read(&entry.path())?);
@@ -152,9 +201,20 @@ pub fn assemble(module_dir: &Path, version: &str) -> Result<Vec<AssembledFile>, 
     for name in PACKAGE_ROOT_FILES {
         files.insert(name.to_owned(), read(&module_dir.join(name))?);
     }
-    collect_payload(&module_dir.join(PAYLOAD_DIRECTORY), "", &mut files)?;
-    if !files.contains_key("main.lua") {
+    let mut payload = BTreeMap::new();
+    collect_payload(&module_dir.join(PAYLOAD_DIRECTORY), "", &mut payload)?;
+    if !payload.contains_key("main.lua") {
         return Err("the game module payload has no main.lua".to_owned());
+    }
+    let build_id = payload_build_id(&payload);
+    let compatibility = payload.get_mut(COMPATIBILITY_FILE).ok_or(format!(
+        "the game module payload has no {COMPATIBILITY_FILE}"
+    ))?;
+    *compatibility = stamped_compatibility(compatibility, &build_id)?;
+    for (path, bytes) in payload {
+        if files.insert(path.clone(), bytes).is_some() {
+            return Err(format!("payload {path} collides with a package file"));
+        }
     }
     Ok(files
         .into_iter()

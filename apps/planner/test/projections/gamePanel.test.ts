@@ -524,6 +524,39 @@ describe('Game panel projection', () => {
     expect(rows?.[2]?.columns?.aspect).toMatch(/^None \(/);
   });
 
+  it('asks for a slot sent by another module build to be sent again', () => {
+    const status = gameModuleStatus({
+      inspection: {
+        planSlots: planSlots(
+          planSlot(2, {
+            state: 'stale',
+            buildId: 'another-build',
+            modifiedAtMs: 1,
+            routeKey: 'Underworld',
+            biomeKeys: ['F'],
+            planFingerprint: 'current',
+            projectId: 'mine',
+          }),
+        ),
+      },
+    });
+    const current = { kind: 'publishable', projectId: 'mine', planFingerprint: 'current' } as const;
+    expect(projectGamePlans(status, current, 'clean', catalog, 0)?.rows[1]).toEqual({
+      slot: 2,
+      state: 'stale',
+      columns: null,
+      summary: 'Sent by another build — send again',
+      marker: null,
+      action: { label: 'Replace', confirm: true },
+      active: { checked: false, intent: null },
+    });
+    expect(
+      projectGameSendButton(status, { projectId: 'mine', eligible: true }, 2, 'clean', {
+        kind: 'idle',
+      }),
+    ).toMatchObject({ state: 'ready', action: { kind: 'send', slot: 2 } });
+  });
+
   it('derives every header send state with a short label and its explanation', () => {
     const inSlot2 = (projectId: string | null, state: 'present' | 'unreadable' = 'present') =>
       gameModuleStatus({
