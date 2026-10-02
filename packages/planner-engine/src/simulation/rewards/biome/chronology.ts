@@ -1,10 +1,8 @@
 import type { Catalog } from '../../../catalog-schema';
 import { routeRoomDeclaration } from '../../../authored-project/route-profile';
 import type { ResolvedRoutePosition } from '../../../authored-project/route-context';
-import type { PurgingPoolAssessment } from '../../commerce/purging-pool';
 import type { HermesShrineCandidateContext } from '../../commerce/hermes-shrine';
 import {
-  createAcquisitionEntryAddress,
   createEncounterPhaseAddress,
   createBiomeAddress,
   createHubDecisionAddress,
@@ -18,7 +16,6 @@ import {
 import type { ResourcePlacements, RouteLoadout } from '../../../authored-project/model';
 import { EMPTY_RESOURCE_PLACEMENTS } from '../../../authored-project/defaults';
 import { parseSeaStarDuplicateSiteKey } from '../../../authored-project/acquisition/sea-star';
-import { parseHermesShrineDeliveryEntryKey } from '../../../authored-project/hermes-shrine-delivery';
 import type { HistoryStateView } from '../../history';
 import type {
   CanonicalAuthoredRoom,
@@ -84,6 +81,7 @@ import {
   chronologySeamHandlers,
   createChronologyWalkState,
   withBranches,
+  withKeyed,
   type ChronologySeamStep,
   type ChronologyWalkContext,
   type ChronologyWalkState,
@@ -99,10 +97,6 @@ import { applyOfferPointMaterializedTransition } from './offer-lifecycle/offer-p
 import { applyReachedOfferSettlement } from './offer-lifecycle/reached-settlement';
 import { applyGorgonStartedTransition } from './encounter-acquisition/gorgon-started';
 import { applyEncounterSettlementTransition } from './encounter-acquisition/encounter-settlement';
-import {
-  applyAcquisitionPointReachedTransition,
-  type HermesShrineRefillState,
-} from './encounter-acquisition/acquisition-point-reached';
 import { rewardFindingChronologyForRoom } from './finding-chronology';
 import type { PendingHubBoardGeneration as GenerationPendingHubBoardGeneration } from './generation/emissions';
 import type { BiomeRewardHistory, BiomeRewardSnapshot } from './evaluation-contract';
@@ -228,13 +222,6 @@ export function evaluateBiomeRewardChronology(
       : undefined;
   const expectedStores = new Map<string, string | undefined>();
   const targetGenerationByParent = new Map<string, TargetGenerationFrontier>();
-  const purgingPoolAssessments = new Map<
-    string,
-    {
-      readonly origin: import('../../../authored-project/addresses').OccurrenceAddress;
-      readonly assessments: readonly PurgingPoolAssessment[];
-    }
-  >();
   const hermesShrineAssessments = new Map<
     string,
     {
@@ -242,15 +229,6 @@ export function evaluateBiomeRewardChronology(
       readonly assessments: readonly HermesShrineCandidateContext[];
     }
   >();
-  const hermesShrineTravelDealRefills = new Map<
-    string,
-    readonly import('../../commerce/hermes-shrine').HermesShrineTravelDealRefillAssessment[]
-  >();
-  const hermesShrineTravelDealRefillValid = new Map<string, boolean>();
-  // The handler's FirstSpeedUpPurchase guard belongs to the Shrine room, not
-  // to a branch.  We still require Travel Deal to agree across every branch
-  // at that first action prefix before publishing a refill generation.
-  const firstRushedInitialGenerationByShrine = new Set<string>();
   const shipLifecycleContexts = new Map<string, ShipLifecycleCandidateContext>();
   const hubDecisionsBySource = new Map(
     snapshot.decisions
@@ -282,6 +260,8 @@ export function evaluateBiomeRewardChronology(
     enteredBiomeCount,
     resourcePlacements,
     resourceFindings,
+    authoredSeaStarDuplicateSiteKeys,
+    accumulated: accumulator,
   });
   const echoReplay = applyEchoKeepsakeReplayTransition(
     catalog,
@@ -698,10 +678,14 @@ export function evaluateBiomeRewardChronology(
         );
         walk = withBranches(walk, transition.branches);
         if (transition.purgingPoolAssessment !== undefined)
-          purgingPoolAssessments.set(
-            transition.purgingPoolAssessment.key,
-            transition.purgingPoolAssessment.value,
-          );
+          walk = Object.freeze({
+            ...walk,
+            purgingPoolAssessments: withKeyed(
+              walk.purgingPoolAssessments,
+              transition.purgingPoolAssessment.key,
+              transition.purgingPoolAssessment.value,
+            ),
+          });
         accumulator.mergeEmissions([
           { kind: 'timelineFacts', facts: transition.timelineFacts },
           ...(transition.candidate === undefined
@@ -1034,146 +1018,14 @@ export function evaluateBiomeRewardChronology(
           break historyEvents;
         }
         break;
-      case 'hermesShrineDeliveriesScheduled': {
-        const sourceRoom = rooms.get(semanticAddressKey(event.origin));
-        const room = sourceRoom?.kind === 'authored' ? sourceRoom : undefined;
-        const transition = applyAcquisitionPointReachedTransition({
-          catalog,
-          snapshot,
-          event,
-          room,
-          declaration:
-            room === undefined
-              ? undefined
-              : routeRoomDeclaration(catalog.rooms.byKey[room.gameName], room.origin.routeKey),
-          roomView: views.get(semanticAddressKey(event.origin)),
-          sourceBranches: walk.branches,
-          authoredSeaStarDuplicateSiteKeys: Object.freeze([...authoredSeaStarDuplicateSiteKeys]),
-          purgingPoolAssessment: undefined,
-          hermesShrineRefillState: undefined,
-        });
-        walk = withBranches(walk, transition.branches);
-        accumulator.mergeEmissions([
-          settledFindings(transition.findings),
-          { kind: 'producerFrontiers', frontiers: transition.producerFrontiers },
-          { kind: 'acquisitionRoleFrontiers', frontiers: transition.roleFrontiers },
-          { kind: 'timelineFacts', facts: transition.timelineFacts },
-          ...(room === undefined
-            ? []
-            : [
-                {
-                  kind: 'traitChildSettlements' as const,
-                  checkpoints: transition.traitChildSettlements,
-                  occurrenceOwner: room.origin,
-                },
-              ]),
-        ]);
+      case 'hermesShrineDeliveriesScheduled':
+        applySeamStep(
+          chronologySeamHandlers.hermesShrineDeliveriesScheduled(walkContext, walk, event),
+        );
         break;
-      }
-      case 'acquisitionPointReached': {
-        const sourceRoom = rooms.get(semanticAddressKey(event.origin));
-        const room = sourceRoom?.kind === 'authored' ? sourceRoom : undefined;
-        if (room !== undefined && event.point.startsWith('purgingPool:')) {
-          const poolSlot = event.point.slice('purgingPool:'.length);
-          const poolRow = room.roomActionRoster.rows.find(
-            (row) =>
-              !row.stale &&
-              row.rank !== null &&
-              row.reference.kind === 'sellPurgingPoolTrait' &&
-              row.reference.slotKey === poolSlot,
-          );
-          if (poolRow !== undefined)
-            accumulator.mergeEmissions([
-              {
-                kind: 'timelineFacts',
-                facts: { nodes: [{ owner: poolRow.owner, included: true }] },
-              },
-            ]);
-        }
-        const deliverySource =
-          event.siteKey === 'hermesShrineDelivery' && event.entryKey !== undefined
-            ? parseHermesShrineDeliveryEntryKey(event.entryKey)
-            : undefined;
-        const shrineKey =
-          deliverySource === undefined
-            ? semanticAddressKey(event.origin)
-            : semanticAddressKey({
-                kind: 'occurrence' as const,
-                routeKey: deliverySource.routeKey,
-                biomeKey: deliverySource.biomeKey,
-                occurrenceId: deliverySource.sourceOccurrenceId,
-              });
-        const refillState: HermesShrineRefillState | undefined =
-          deliverySource === undefined
-            ? undefined
-            : Object.freeze({
-                firstRushedInitialGeneration: firstRushedInitialGenerationByShrine.has(shrineKey),
-                refillAssessments: hermesShrineTravelDealRefills.get(shrineKey),
-                refillSupported: hermesShrineTravelDealRefillValid.get(shrineKey),
-              });
-        const derivedSite =
-          event.siteKey === undefined || room === undefined
-            ? undefined
-            : room.acquisitionSites[event.siteKey]?.address;
-        const derivedCapability =
-          derivedSite === undefined || event.entryKey === undefined
-            ? undefined
-            : attestDerivedAcquisitionEntryCandidateCapability(
-                accumulator.derivedAcquisitionEntryFrontiers(
-                  semanticAddressKey(createAcquisitionEntryAddress(derivedSite, event.entryKey)),
-                ),
-              );
-        const transition = applyAcquisitionPointReachedTransition({
-          catalog,
-          snapshot,
-          event,
-          room,
-          declaration:
-            room === undefined
-              ? undefined
-              : routeRoomDeclaration(catalog.rooms.byKey[room.gameName], room.origin.routeKey),
-          roomView: views.get(semanticAddressKey(event.origin)),
-          sourceBranches: walk.branches,
-          authoredSeaStarDuplicateSiteKeys: Object.freeze([...authoredSeaStarDuplicateSiteKeys]),
-          purgingPoolAssessment: purgingPoolAssessments.get(shrineKey),
-          hermesShrineRefillState: refillState,
-          ...(derivedCapability === undefined
-            ? {}
-            : { derivedAcquisitionEntryCapability: derivedCapability }),
-        });
-        walk = withBranches(walk, transition.branches);
-        accumulator.mergeEmissions([
-          settledFindings(transition.findings),
-          { kind: 'producerFrontiers', frontiers: transition.producerFrontiers },
-          { kind: 'acquisitionRoleFrontiers', frontiers: transition.roleFrontiers },
-          { kind: 'timelineFacts', facts: transition.timelineFacts },
-          ...(room === undefined
-            ? []
-            : [
-                {
-                  kind: 'traitChildSettlements' as const,
-                  checkpoints: transition.traitChildSettlements,
-                  occurrenceOwner: room.origin,
-                },
-              ]),
-        ]);
-        if (transition.authoredSiteSettlement !== undefined && room !== undefined)
-          accumulator.mergeEmissions(
-            siteSettlementEmissions(transition.authoredSiteSettlement, room.origin),
-          );
-        if (transition.hermesShrineRefillState !== undefined) {
-          const next = transition.hermesShrineRefillState;
-          if (next.firstRushedInitialGeneration)
-            firstRushedInitialGenerationByShrine.add(shrineKey);
-          else firstRushedInitialGenerationByShrine.delete(shrineKey);
-          if (next.refillAssessments === undefined) hermesShrineTravelDealRefills.delete(shrineKey);
-          else hermesShrineTravelDealRefills.set(shrineKey, next.refillAssessments);
-          if (next.refillSupported === undefined)
-            hermesShrineTravelDealRefillValid.delete(shrineKey);
-          else hermesShrineTravelDealRefillValid.set(shrineKey, next.refillSupported);
-        }
+      case 'acquisitionPointReached':
+        applySeamStep(chronologySeamHandlers.acquisitionPointReached(walkContext, walk, event));
         break;
-      }
       case 'wellPurchase':
         applySeamStep(chronologySeamHandlers.wellPurchase(walkContext, walk, event));
         break;
@@ -1334,7 +1186,7 @@ export function evaluateBiomeRewardChronology(
   });
   const publishedHermesShrineAssessments = Object.freeze(
     [...hermesShrineAssessments.values()].map(({ origin, assessments }) => {
-      const travelDealRefills = hermesShrineTravelDealRefills.get(semanticAddressKey(origin));
+      const travelDealRefills = walk.hermesShrineTravelDealRefills.get(semanticAddressKey(origin));
       return Object.freeze({
         origin,
         assessments: Object.freeze(
@@ -1363,7 +1215,7 @@ export function evaluateBiomeRewardChronology(
     runStateSnapshots: runStatePublication.snapshots,
     runStateAvailability: runStatePublication.availability,
     hubDepartures: accumulation.hubDepartures,
-    purgingPoolAssessments: Object.freeze([...purgingPoolAssessments.values()]),
+    purgingPoolAssessments: Object.freeze([...walk.purgingPoolAssessments.values()]),
     hermesShrineAssessments: publishedHermesShrineAssessments,
     stygianWellAssessments: Object.freeze([...walk.stygianWellAssessments.values()]),
     hermesShrineDeliveries: Object.freeze([
@@ -1491,7 +1343,7 @@ export function evaluateBiomeRewardChronology(
     ),
     purgingPoolArtifacts: createPurgingPoolCandidateArtifacts(
       new Map(
-        [...purgingPoolAssessments.values()].map(({ origin, assessments }) => [
+        [...walk.purgingPoolAssessments.values()].map(({ origin, assessments }) => [
           semanticAddressKey(origin),
           assessments,
         ]),
