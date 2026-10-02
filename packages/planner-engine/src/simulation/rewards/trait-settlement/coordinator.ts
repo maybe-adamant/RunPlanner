@@ -195,7 +195,7 @@ function regionEntryEmission(entry: FindingRegionEntry): TraitFindingEmission {
   });
 }
 
-/** A merged entry re-emitted once per retained evaluation, or once when it has none. */
+/** A merged entry once per retained evaluation, or once when it has none. */
 function entryEmissions(entries: readonly FindingRegionEntry[]): readonly TraitFindingEmission[] {
   return entries.flatMap((entry) =>
     (entry.levelResolutionEvaluations ?? [undefined]).map((evaluation) =>
@@ -209,7 +209,6 @@ function entryEmissions(entries: readonly FindingRegionEntry[]): readonly TraitF
   );
 }
 
-/** The settlement fields a caller publishes, without the emission and trace products. */
 function settlementOf(
   product: TraitOfferSettlementProduct,
 ): Omit<TraitOfferSettlementProduct, 'findingEmissions' | 'evaluation'> {
@@ -397,7 +396,7 @@ function applyCallingCard(
   return { callingCard, effectiveAuthored: callingCard?.offer ?? authored, effectiveBranch };
 }
 
-/** A level-resolution role settles from the opened branch, ignoring any Calling Card spend. */
+/** A level-resolution role settles from the opened branch. */
 function settleLevelResolution(
   inputs: TraitAcquisitionInputs,
   branch: RewardBranchState,
@@ -443,10 +442,7 @@ function settleLevelResolution(
   };
 }
 
-/**
- * Evaluates the effective offer against the opened branch, records it into
- * trait history and appends its trace, with every offer-frontier finding.
- */
+/** Evaluates and records the effective offer, with its offer-frontier findings. */
 function evaluateAuthoredOffer(
   inputs: TraitAcquisitionInputs,
   branch: RewardBranchState,
@@ -651,13 +647,7 @@ function evaluateAuthoredOffer(
 
 type EvaluatedAuthoredOffer = ReturnType<typeof evaluateAuthoredOffer>;
 
-/**
- * A reached offer remains in the evaluation trace even when one or more
- * alternatives are context-invalid. Only a valid offer folds its selected
- * trait into canonical equipped state; the reward/use ledger still records
- * the concrete acquisition. A Calling Card row action settles at the offer
- * frontier, so an invalid base offer leaves `effectiveBranch` unchanged.
- */
+/** An offer without a selected trait event keeps its trace and any Calling Card spend. */
 function settleUnappliedOffer(
   inputs: TraitAcquisitionInputs,
   branch: RewardBranchState,
@@ -712,11 +702,7 @@ interface BlockedChildChoice {
   readonly candidateContext: ReachedTraitChildCheckpoint['candidateContext'];
 }
 
-/**
- * Installs the selected row with its children, Hex tree, God Sent and Moon
- * Beam points. The settled branch keeps the opened branch's reward history
- * and the effective branch's keepsakes.
- */
+/** Installs the selected row with its children, Hex tree, God Sent and Moon Beam points. */
 function settleSelectedOffer(
   inputs: TraitAcquisitionInputs,
   branch: RewardBranchState,
@@ -824,11 +810,7 @@ function settleSelectedOffer(
   };
 }
 
-/**
- * Concave Stone's residual settles as a frozen secondary acquisition of the
- * same screen. A blocked child already chosen keeps precedence over the
- * Stone's and the residual's.
- */
+/** Concave Stone's residual settles as a frozen secondary acquisition of the same screen. */
 function settleConcaveStoneSecondary(
   inputs: TraitAcquisitionInputs,
   generation: SimulationState,
@@ -1280,6 +1262,17 @@ interface EncounterChildResult {
   readonly blockedChild: ReachedTraitChildCheckpoint | undefined;
 }
 
+function acceptApplied(
+  selection: AppliedEncounterSelection,
+  branch: RewardBranchState = selection.applied,
+): EncounterChildResult {
+  return {
+    branch,
+    findingEmissions: selection.appliedEmissions,
+    blockedChild: selection.appliedBlockedChild,
+  };
+}
+
 function rejectEncounterChild(
   selection: AppliedEncounterSelection,
   address: SemanticAddress,
@@ -1307,23 +1300,14 @@ function rejectEncounterChild(
   };
 }
 
-/**
- * Circe's ordinary offer findings stay provisional until its authored child
- * is valid, so the child remains the first blocking repair owner; a rejected
- * child drops them.
- */
+/** Circe's offer findings stay provisional until its child is valid; a rejection drops them. */
 function settleCirce(
   selection: AppliedEncounterSelection,
   disposition: Extract<TraitSelectedDisposition, { readonly kind: 'circe' }>,
   selected: NonNullable<AppliedEncounterSelection['selected']>,
 ): EncounterChildResult {
-  const { catalog, branch, offer, owner, sequence, applied, appliedEmissions } = selection;
-  const accepted = {
-    findingEmissions: appliedEmissions,
-    blockedChild: selection.appliedBlockedChild,
-  };
-  if (applied.state.traitHistory === branch.state.traitHistory)
-    return { ...accepted, branch: applied };
+  const { catalog, branch, offer, owner, sequence, applied } = selection;
+  if (applied.state.traitHistory === branch.state.traitHistory) return acceptApplied(selection);
   const resolution = selected.circeResolution;
   const acquisitionOrdinal = branch.state.reached.routePosition.ordinal;
   const rejection = assessCirceChild(catalog, branch, disposition, resolution, acquisitionOrdinal);
@@ -1336,9 +1320,9 @@ function settleCirce(
       selected.traitKey,
       rejection.detail,
     );
-  return {
-    ...accepted,
-    branch: settleValidatedCirceChild(
+  return acceptApplied(
+    selection,
+    settleValidatedCirceChild(
       catalog,
       applied,
       disposition,
@@ -1347,7 +1331,7 @@ function settleCirce(
       sequence,
       acquisitionOrdinal,
     ),
-  };
+  );
 }
 
 /** Echo's Boon Boon Boon settles its nested last-run offer through the Echo choice owner. */
@@ -1440,11 +1424,7 @@ function settleEchoPom(
   if (!('echoPomTarget' in selected)) return reject('echoPomTargetMissing');
   if (target === null)
     return domain.length === 0
-      ? {
-          branch: applied,
-          findingEmissions: selection.appliedEmissions,
-          blockedChild: selection.appliedBlockedChild,
-        }
+      ? acceptApplied(selection)
       : reject('echoPomNoTargetUnavailable', domain.join(','));
   if (target === undefined || !domain.includes(target))
     return reject('echoPomTargetUnavailable', target);
@@ -1462,11 +1442,7 @@ function settleEchoPom(
   );
   return settled === undefined
     ? reject('echoPomTargetUnavailable', target)
-    : {
-        branch: settled,
-        findingEmissions: selection.appliedEmissions,
-        blockedChild: selection.appliedBlockedChild,
-      };
+    : acceptApplied(selection, settled);
 }
 
 /** Applies a selected trait row, then settles the child its disposition authors. */
@@ -1534,11 +1510,7 @@ function settleTraitsEncounterOffer(
             selected !== undefined &&
             choiceApplied
           ? settleEchoPom(selection, selected, applied.state.traitHistory)
-          : {
-              branch: applied,
-              findingEmissions: selection.appliedEmissions,
-              blockedChild: selection.appliedBlockedChild,
-            };
+          : acceptApplied(selection);
   return {
     ...child,
     candidateContact: appliedSettlement.candidateContact,

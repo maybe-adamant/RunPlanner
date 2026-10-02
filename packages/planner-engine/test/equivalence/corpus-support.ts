@@ -175,8 +175,8 @@ export function freshFileHFieldsIssueSteps(): readonly ProjectDocument[] {
 
 /**
  * Echo Last Reward replays a Hammer at the H Bridge exit with its trait offer
- * unresolved, so the outgoing settlement blocks a trait child before the
- * batch's Run State checkpoint attaches to it.
+ * unresolved. The Echo encounter's trait child attaches to the Bridge's later
+ * exit-decision Run State capture.
  */
 export function createEchoReplayUnresolvedHammerProject(): ProjectDocument {
   const bridge = createOccurrenceId('golden-h-bridge01');
