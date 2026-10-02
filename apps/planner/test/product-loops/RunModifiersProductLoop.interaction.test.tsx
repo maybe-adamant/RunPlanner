@@ -22,8 +22,6 @@ it('restores authored modifiers through history, saved reload and published exec
   await files.openSaved(application, loadSurfaceNProject(), 'modifiers.runplanner.json');
   const { user } = renderPlannerForInteraction({ application });
   await user.click(screen.getByRole('button', { name: 'Loadout' }));
-  await user.click(screen.getByRole('checkbox', { name: 'Guaranteed crits' }));
-  await user.click(screen.getByRole('checkbox', { name: 'Guaranteed double damage' }));
   const gold = () => screen.getByRole('slider', { name: 'Enemy gold chance' }) as HTMLInputElement;
   fireEvent.change(gold(), { target: { value: '1.7' } });
   fireEvent.keyDown(gold(), { key: 'Enter' });
@@ -32,8 +30,8 @@ it('restores authored modifiers through history, saved reload and published exec
   act(() => application.store.dispatch(authoredProjectRedoRequested()));
   expect(gold().value).toBe('1.7');
   const expected = {
-    guaranteeEligibleCrits: true,
-    guaranteeEligibleDoubleDamage: true,
+    guaranteeEligibleCrits: false,
+    guaranteeEligibleDoubleDamage: false,
     enemyGoldDropChanceMultiplier: 1.7,
   };
   await act(async () => {

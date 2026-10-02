@@ -15,8 +15,6 @@ import {
 
 afterEach(cleanup);
 const gold = () => screen.getByRole('slider', { name: 'Enemy gold chance' }) as HTMLInputElement;
-const crits = () => screen.getByRole('checkbox', { name: 'Guaranteed crits' });
-const doubles = () => screen.getByRole('checkbox', { name: 'Guaranteed double damage' });
 
 function open(routeKey = 'Underworld') {
   const view = renderPlannerForInteraction({ application: createOpenTestApplication(routeKey) });
@@ -25,36 +23,41 @@ function open(routeKey = 'Underworld') {
 }
 
 describe('Run modifier authoring', () => {
-  it('edits the independent toggles, commits fractions on Enter and blur, and resets native values', async () => {
+  it('commits fractions on Enter and blur and resets native values', () => {
     const view = open();
-    expect(crits()).toHaveProperty('checked', false);
-    expect(doubles()).toHaveProperty('checked', false);
     expect(gold().value).toBe('1');
-    await view.user.click(crits());
-    expect(view.modifiers()).toMatchObject({
-      guaranteeEligibleCrits: true,
-      guaranteeEligibleDoubleDamage: false,
-    });
-    await view.user.click(crits());
-    await view.user.click(doubles());
-    expect(view.modifiers()).toMatchObject({
-      guaranteeEligibleCrits: false,
-      guaranteeEligibleDoubleDamage: true,
-    });
-    await view.user.click(crits());
     fireEvent.change(gold(), { target: { value: '1.2' } });
     expect(view.modifiers().enemyGoldDropChanceMultiplier).toBe(1);
     fireEvent.keyDown(gold(), { key: 'Enter' });
-    expect(view.modifiers()).toMatchObject({
-      guaranteeEligibleCrits: true,
-      guaranteeEligibleDoubleDamage: true,
+    expect(view.modifiers()).toEqual({
+      guaranteeEligibleCrits: false,
+      guaranteeEligibleDoubleDamage: false,
       enemyGoldDropChanceMultiplier: 1.2,
     });
     fireEvent.change(gold(), { target: { value: '1' } });
     fireEvent.blur(gold());
-    await view.user.click(crits());
-    await view.user.click(doubles());
     expect(view.project().route.loadout.runModifiers).toBeUndefined();
+  });
+
+  it('keeps the guarantee toggles out of the editor while their authored values persist', () => {
+    const view = open();
+    expect(screen.queryByRole('checkbox', { name: 'Guaranteed crits' })).toBeNull();
+    expect(screen.queryByRole('checkbox', { name: 'Guaranteed double damage' })).toBeNull();
+    act(() =>
+      view.application.store.dispatch(
+        authoredProjectCommandDispatched({
+          kind: 'ReplaceRunModifiers',
+          route: createRouteAddress('Underworld'),
+          value: { ...view.modifiers(), guaranteeEligibleCrits: true },
+        }),
+      ),
+    );
+    fireEvent.change(gold(), { target: { value: '1.5' } });
+    fireEvent.blur(gold());
+    expect(view.modifiers()).toMatchObject({
+      guaranteeEligibleCrits: true,
+      enemyGoldDropChanceMultiplier: 1.5,
+    });
   });
 
   it('puts concise hover help on each option without an extra button', () => {
@@ -62,8 +65,6 @@ describe('Run modifier authoring', () => {
     expect(screen.getByRole('heading', { name: 'Loadout' })).toBeTruthy();
     expect(screen.getByRole('heading', { name: 'Modifiers' })).toBeTruthy();
     expect(screen.queryByRole('button', { name: 'About run modifiers' })).toBeNull();
-    expect(crits().closest('label')?.title).toContain('native chance is positive');
-    expect(doubles().closest('label')?.title).toContain('native chance is positive');
     expect(gold().getAttribute('aria-description')).toContain('room gold limits');
   });
 
@@ -106,20 +107,18 @@ describe('Run modifier authoring', () => {
     expect(view.modifiers().enemyGoldDropChanceMultiplier).toBe(8);
   });
 
-  it('allows modifiers on Fresh File while preserving fixed native equipment', async () => {
+  it('allows modifiers on Fresh File while preserving fixed native equipment', () => {
     const view = open('FreshFile');
     expect(screen.getByLabelText('Fixed starting loadout').textContent).toContain(
       "Witch's Staff, no Aspect",
     );
     expect(screen.queryByRole('button', { name: 'Edit Arcana' })).toBeNull();
     expect(screen.queryByLabelText('Starting reward')).toBeNull();
-    await view.user.click(crits());
-    await view.user.click(doubles());
     fireEvent.change(gold(), { target: { value: '1.5' } });
     fireEvent.blur(gold());
     expect(view.modifiers()).toEqual({
-      guaranteeEligibleCrits: true,
-      guaranteeEligibleDoubleDamage: true,
+      guaranteeEligibleCrits: false,
+      guaranteeEligibleDoubleDamage: false,
       enemyGoldDropChanceMultiplier: 1.5,
     });
     expect(view.project().route.loadout).toMatchObject({
