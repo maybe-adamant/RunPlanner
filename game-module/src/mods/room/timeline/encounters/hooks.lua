@@ -34,6 +34,22 @@ local compatibility = type(import) == "function" and import("mods/room/timeline/
 
 local hooks = {}
 
+local function isEnemyIntroductionEligible(gameValue, declaration)
+    local enemies = gameValue and gameValue.EnemyData or _G.EnemyData or {}
+    for _, enemy in pairs(enemies) do
+        if enemy.IntroEncounterName == declaration.Name then
+            -- RunLogic.SetupEncounter admits enemy introductions after generation,
+            -- outside the room's initial LegalEncounters selection list.
+            local completed = gameValue and gameValue.HasEncounterBeenCompleted or _G.HasEncounterBeenCompleted
+            if completed(declaration.Name) then return false end
+            if declaration.GameStateRequirements == nil then return true end
+            local eligible = gameValue and gameValue.IsGameStateEligible or _G.IsGameStateEligible
+            return eligible(declaration, declaration.GameStateRequirements)
+        end
+    end
+    return false
+end
+
 local function chooseForcedEncounter(base, currentRun, nativeRoom, args, declaration)
     if type(currentRun) ~= "table" or declaration == nil then return nil end
     local priorRunForce = currentRun.ForceNextEncounterData
@@ -119,6 +135,9 @@ function hooks.attach(module, session, getState, report, room, shipCombat, gener
             local eligible = gameValue and gameValue.IsEncounterEligible or _G.IsEncounterEligible
             if declaration then
                 local ok, verdict = pcall(eligible, currentRun, nativeRoom, declaration, args)
+                if ok and not verdict then
+                    ok, verdict = pcall(isEnemyIntroductionEligible, gameValue, declaration)
+                end
                 if not ok or not verdict then
                     admitted = false
                     if session.diagnostic then session.diagnostic(state, "encounter-eligibility", {

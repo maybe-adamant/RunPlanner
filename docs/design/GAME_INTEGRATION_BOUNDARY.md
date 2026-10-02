@@ -451,7 +451,12 @@ infinite; Fangs and Menace remain native. Decline, realization failure and
 diagnostics follow the finite contract.
 
 Encounter selection checks the requested variant through native eligibility before
-forcing it. Rejection delegates selection to the game with a diagnostic and without
+forcing it. A false verdict for an enemy introduction identified by native
+`EnemyData.IntroEncounterName` also tries `SetupEncounter`'s replacement gate:
+the introduction is unfinished and its `GameStateRequirements`, if any, pass
+native `IsGameStateEligible`. These replacements need not belong to the room's
+initial selection list. Native check errors still decline ownership.
+Rejection delegates selection to the game with a diagnostic and without
 applying the rejected variant's customization. Existing conformance checks resulting
 state, including NPC traits; this admission adds no mismatch boundary.
 
