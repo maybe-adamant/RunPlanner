@@ -3,22 +3,13 @@ import { routeRoomDeclaration } from '../../../authored-project/route-profile';
 import type { ResolvedRoutePosition } from '../../../authored-project/route-context';
 import {
   createBiomeAddress,
-  createHubDecisionAddress,
   createTargetAddress,
   semanticAddressKey,
-  type HubRoomAddress,
   type SemanticAddress,
-  type TargetAddress,
 } from '../../../authored-project/addresses';
 import type { ResourcePlacements, RouteLoadout } from '../../../authored-project/model';
 import { EMPTY_RESOURCE_PLACEMENTS } from '../../../authored-project/defaults';
 import { parseSeaStarDuplicateSiteKey } from '../../../authored-project/acquisition/sea-star';
-import type { HistoryStateView } from '../../history';
-import type {
-  CanonicalAuthoredRoom,
-  CanonicalHubDecision,
-  CanonicalHubRoom,
-} from '../../materialization';
 import type { CanonicalDecision } from '../../materialization/model';
 import { ownerRegion } from '../../finding-regions';
 import { bossDoorRewardStoreMissingFinding } from '../../completeness';
@@ -40,44 +31,25 @@ import {
   createLevelResolutionCandidateArtifacts,
   createTraitOfferCandidateArtifacts,
 } from '../../candidates/trait-offer/capability';
-import {
-  createRunState,
-  createRunStateDerivationCache,
-  publishRunStateThroughCoverage,
-  type RunStateSnapshot,
-} from '../run-state';
-import { createBiomeRewardFacts, visibleStoreOptionNames } from '../facts';
-import {
-  createRoomLifecycleCandidateArtifacts,
-  type ShipLifecycleCandidateContext,
-} from '../lifecycle-artifacts';
+import { createRunStateDerivationCache, publishRunStateThroughCoverage } from '../run-state';
+import { createRoomLifecycleCandidateArtifacts } from '../lifecycle-artifacts';
 import { BiomeRewardSimulationContractError } from './biome-contract';
 import { selectedTraitOfferProducts } from './selected-trait-products';
 import { prepareRewardEvaluationInputs } from './prepared-inputs';
-import { reachSimulationHistory } from '../../state/transitions';
-import { applyFountainUsedTransition } from './lifecycle-transitions/fountain-used';
-import { applyRoomEnteredTransition } from './lifecycle-transitions/room-entered';
-import { applyRoomPreparedTransition } from './lifecycle-transitions/room-prepared';
 import { applyEchoKeepsakeReplayTransition } from './lifecycle-transitions/echo-keepsake-replay';
 import {
   createChronologyAccumulator,
-  generationFindings,
   lifecycleFindings,
-  settledFindings,
   type ChronologyEmission,
 } from './chronology-accumulator';
+import { walkHistoryEvent } from './chronology-seams';
+import { captureRunState, targetSlotHistory } from './chronology-run-state';
 import {
-  chronologySeamHandlers,
   createChronologyWalkState,
   withBranches,
-  withKeyed,
-  type ChronologySeamStep,
   type ChronologyWalkContext,
   type ChronologyWalkState,
-} from './chronology-seams';
-import { applyOfferPointMaterializedTransition } from './offer-lifecycle/offer-point-materialized';
-import { applyReachedOfferSettlement } from './offer-lifecycle/reached-settlement';
-import { rewardFindingChronologyForRoom } from './finding-chronology';
+} from './chronology-walk';
 import type { BiomeRewardHistory, BiomeRewardSnapshot } from './evaluation-contract';
 import {
   publishBiomeRewardEvaluationAssembly,
@@ -86,12 +58,8 @@ import {
 } from './publication';
 
 import { createRewardProducerCandidateArtifacts } from '../producer-frontiers';
-import {
-  advanceRewardBranches,
-  initializeRewardBranches,
-  publicRewardBranch,
-} from '../branch-lifecycle';
-import { mergeEquivalentRewardBranches, type RewardBranchState } from '../branch-primitives';
+import { initializeRewardBranches, publicRewardBranch } from '../branch-lifecycle';
+import { mergeEquivalentRewardBranches } from '../branch-primitives';
 import { rewardFinding } from '../findings';
 import { assessAuthoredBossDoorRewardStore } from './reward-store-support';
 import { createArcanaFearState } from '../../arcana-fear';
@@ -101,11 +69,6 @@ import {
   createKeepsakeSelectionCandidateArtifacts,
   createKeepsakeEquipResultCandidateArtifacts,
 } from '../../keepsakes/candidate-artifacts';
-
-type CanonicalRewardRoom = CanonicalAuthoredRoom;
-type CanonicalRewardSource = CanonicalRewardRoom | CanonicalHubRoom;
-
-const rewardFacts = createBiomeRewardFacts;
 
 export function evaluateBiomeRewardChronology(
   catalog: Catalog,
@@ -185,7 +148,6 @@ export function evaluateBiomeRewardChronology(
     snapshot.kind === 'biomePrefix' && snapshot.frontier?.kind === 'exitDecision'
       ? semanticAddressKey(snapshot.frontier.parent.origin)
       : undefined;
-  const shipLifecycleContexts = new Map<string, ShipLifecycleCandidateContext>();
   const hubDecisionOwnerBySource = new Map(
     snapshot.decisions
       .filter(
@@ -224,6 +186,9 @@ export function evaluateBiomeRewardChronology(
     hubRestoringSources,
     hubDecisionOwnerBySource,
     frontierSource,
+    chaosGateSourceOccurrenceIds,
+    ixionGeneratedChaosSourceOccurrenceIds,
+    runStateDerivationCache: createRunStateDerivationCache(),
     accumulated: accumulator,
   });
   const echoReplay = applyEchoKeepsakeReplayTransition(
@@ -244,134 +209,6 @@ export function evaluateBiomeRewardChronology(
     { kind: 'timelineFacts', facts: echoReplay.timelineFacts },
     { kind: 'echoKeepsakeReplayOutcome', outcome: echoReplay.outcome },
   ]);
-  // A Hub interval ends at its departure: Hub exit or a visit's return, then any fountain use.
-  const recordHubDeparture = (origin: HubRoomAddress, sequence: number, replace: boolean) => {
-    const room = rooms.get(semanticAddressKey(origin));
-    const view = history.viewsBySequence[sequence];
-    if (room?.kind !== 'hub' || view === undefined || walk.branches.length === 0) return;
-    const hub = createHubDecisionAddress(
-      createBiomeAddress(origin.routeKey, origin.biomeKey),
-      origin.hubKey,
-    );
-    const departure = runStateAt(hub, room, view)(walk.branches);
-    if (departure === undefined) return;
-    accumulator.mergeEmissions([
-      { kind: 'hubDeparture', hub, hubGameName: room.gameName, departure, replace },
-    ]);
-  };
-  const runStateDerivationCache = createRunStateDerivationCache();
-
-  function runStateAt(
-    owner: RunStateSnapshot['owner'],
-    source: CanonicalRewardSource,
-    view: HistoryStateView,
-  ) {
-    const declaration = routeRoomDeclaration(
-      catalog.rooms.byKey[source.gameName],
-      source.origin.routeKey,
-    );
-    if (declaration === undefined) {
-      throw new BiomeRewardSimulationContractError(
-        `${source.gameName} has no declaration for run-state snapshot`,
-      );
-    }
-    const currentShopNames = visibleStoreOptionNames(
-      source,
-      walk.hermesShrineAssessments.get(semanticAddressKey(source.origin))?.assessments,
-    );
-    // One token represents this exact rewardFacts closure: current/source room,
-    // declaration, immutable view, shop names and peer context. Branch-varying
-    // facts have separate cache identities, and the reached route position
-    // travels inside each snapshot. This token cannot alias a later checkpoint
-    // even when it retains the same history.
-    const factsContextToken = Object.freeze({});
-    const snapshotFor = (checkpointBranches: readonly RewardBranchState[]) =>
-      createRunState({
-        catalog,
-        layout,
-        owner,
-        states: checkpointBranches.map((branch) =>
-          reachSimulationHistory(branch.state, routePosition, view),
-        ),
-        derivationCache: runStateDerivationCache,
-        factsContextToken,
-        rewardFacts: (state) =>
-          rewardFacts({
-            catalog,
-            state,
-            source,
-            currentRoom: source,
-            sourceDeclaration: declaration,
-            view,
-            currentRoomShopOptionNames: currentShopNames,
-            peerParentOrigin: source.origin,
-            peerCreationSource: 'generatedTarget',
-            hubBoardLookups: 'consulted',
-          }),
-      });
-    return snapshotFor;
-  }
-
-  function captureRunState(
-    owner: RunStateSnapshot['owner'],
-    source: CanonicalRewardSource,
-    view: HistoryStateView,
-    checkpointBranches: readonly RewardBranchState[] = walk.branches,
-  ): void {
-    const ownerKey = semanticAddressKey(owner);
-    if (accumulator.hasRunStateSnapshot(ownerKey) || walk.branches.length === 0) return;
-    const snapshotFor = runStateAt(owner, source, view);
-    const snapshot = snapshotFor(checkpointBranches);
-    if (snapshot !== undefined)
-      accumulator.mergeEmissions([{ kind: 'runStateSnapshot', ownerKey, snapshot }]);
-    // Trait-child candidate checkpoints retain only generation snapshots. Room
-    // lifecycle diagnostics are occurrence-local and never become a later
-    // candidate-generation authority.
-    if (owner.kind === 'roomRunStateCheckpoint') return;
-    for (const checkpoint of accumulator.traitChildCheckpointsAwaiting(source.origin, ownerKey)) {
-      const checkpointSnapshot = snapshotFor(checkpoint.branches);
-      if (checkpointSnapshot !== undefined)
-        accumulator.mergeEmissions([
-          {
-            kind: 'traitChildRunStateSnapshot',
-            childKey: checkpoint.key,
-            ownerKey,
-            snapshot: checkpointSnapshot,
-          },
-        ]);
-    }
-  }
-
-  function targetSlotHistory(
-    origin: TargetAddress,
-    historySequence: number,
-    checkpointBranches: readonly RewardBranchState[] = walk.branches,
-  ): readonly ChronologyEmission[] {
-    if (checkpointBranches.length === 0) {
-      return [];
-    }
-    const view = history.viewsBySequence[historySequence];
-    if (view === undefined) {
-      throw new BiomeRewardSimulationContractError(
-        `No history view for target checkpoint ${historySequence}`,
-      );
-    }
-    return [
-      {
-        kind: 'targetHistory',
-        checkpoint: Object.freeze({
-          origin,
-          historySequence,
-          states: Object.freeze(
-            checkpointBranches.map((branch) =>
-              reachSimulationHistory(branch.state, routePosition, view),
-            ),
-          ),
-        }),
-      },
-    ];
-  }
-
   function blankFrontierTargetHistory(): readonly ChronologyEmission[] {
     const frontier = snapshot.kind === 'biomePrefix' ? snapshot.frontier : undefined;
     if (frontier?.kind !== 'exitDecision' || frontier.parent.origin.kind !== 'occurrence') {
@@ -410,282 +247,13 @@ export function evaluateBiomeRewardChronology(
     );
     return accumulator.hasTargetHistory(semanticAddressKey(origin))
       ? []
-      : targetSlotHistory(origin, historySequence);
+      : targetSlotHistory(walkContext, origin, historySequence, walk.branches);
   }
 
-  function reachHistorySequence(sequence: number): void {
-    const view = history.viewsBySequence[sequence];
-    if (view === undefined) {
-      throw new BiomeRewardSimulationContractError(`No history view for event ${sequence}`);
-    }
-    walk = withBranches(
-      walk,
-      Object.freeze(
-        walk.branches.map((branch) =>
-          Object.freeze({
-            ...branch,
-            state: reachSimulationHistory(branch.state, routePosition, view),
-          }),
-        ),
-      ),
-    );
-  }
-
-  function applySeamStep(step: ChronologySeamStep): void {
-    if (step.leadingEmissions !== undefined) accumulator.mergeEmissions(step.leadingEmissions);
-    const checkpoint = step.runStateCheckpoint;
-    if (checkpoint !== undefined)
-      captureRunState(
-        checkpoint.owner,
-        checkpoint.room,
-        checkpoint.view,
-        checkpoint.branches ?? walk.branches,
-      );
-    const target = step.targetHistoryCheckpoint;
-    if (target !== undefined)
-      accumulator.mergeEmissions(
-        targetSlotHistory(target.origin, target.historySequence, target.branches),
-      );
-    walk = step.state;
-    accumulator.mergeEmissions(step.emissions);
-  }
-
-  historyEvents: for (const event of history.events) {
-    if (walk.branches.length === 0) {
-      break;
-    }
-    switch (event.kind) {
-      case 'encounterStarted':
-        applySeamStep(chronologySeamHandlers.encounterStarted(walkContext, walk, event));
-        break;
-      case 'roomEntered': {
-        const room = rooms.get(semanticAddressKey(event.origin));
-        const entered = applyRoomEnteredTransition(
-          catalog,
-          event,
-          room?.kind === 'authored' ? room : undefined,
-          views.get(semanticAddressKey(event.origin)),
-          chaosGateSourceOccurrenceIds,
-          ixionGeneratedChaosSourceOccurrenceIds,
-          walk.branches,
-          rewardFindingChronologyForRoom(
-            snapshot,
-            event.origin as CanonicalAuthoredRoom['origin'],
-            event.sequence,
-            'localRoomLifecycle',
-          ),
-          routePosition,
-          Object.freeze({
-            hermesShrine:
-              room?.kind === 'authored' &&
-              walk.hermesShrineAssessments.has(semanticAddressKey(room.origin)),
-            stygianWell:
-              room?.kind === 'authored' &&
-              walk.stygianWellAssessments.has(semanticAddressKey(room.origin)),
-          }),
-        );
-        walk = withBranches(walk, entered.branches);
-        accumulator.mergeEmissions([
-          lifecycleFindings(entered.findings),
-          {
-            kind: 'derivedAcquisitionEntryFrontiers',
-            frontiers: entered.derivedAcquisitionEntryFrontiers,
-          },
-        ]);
-        if (entered.hermesShrineAssessment !== undefined)
-          walk = Object.freeze({
-            ...walk,
-            hermesShrineAssessments: new Map(walk.hermesShrineAssessments).set(
-              semanticAddressKey(entered.hermesShrineAssessment.origin),
-              entered.hermesShrineAssessment,
-            ),
-          });
-        if (entered.stygianWellAssessment !== undefined)
-          walk = Object.freeze({
-            ...walk,
-            stygianWellAssessments: new Map(walk.stygianWellAssessments).set(
-              semanticAddressKey(entered.stygianWellAssessment.origin),
-              entered.stygianWellAssessment,
-            ),
-          });
-        if (entered.runStateCheckpoint !== undefined) {
-          const { owner, room: checkpointRoom, view } = entered.runStateCheckpoint;
-          if (view === undefined) {
-            throw new BiomeRewardSimulationContractError(
-              `${checkpointRoom.gameName} has no room-entry Run State view`,
-            );
-          }
-          captureRunState(owner, checkpointRoom, view);
-        }
-        if (entered.hermesShrineDeliveryPlacementRequired) {
-          reachHistorySequence(event.sequence);
-          break historyEvents;
-        }
-        break;
-      }
-      case 'roomPrepared': {
-        const room = rooms.get(semanticAddressKey(event.origin));
-        const transition = applyRoomPreparedTransition(
-          catalog,
-          snapshot,
-          event,
-          room?.kind === 'authored' ? room : undefined,
-          walk.branches,
-        );
-        accumulator.mergeEmissions([lifecycleFindings(transition.findings)]);
-        walk = withBranches(walk, transition.branches);
-        break;
-      }
-      case 'keepsakeRackUsed':
-        applySeamStep(chronologySeamHandlers.keepsakeRackUsed(walkContext, walk, event));
-        break;
-      case 'erisInteracted':
-        applySeamStep(chronologySeamHandlers.erisInteracted(walkContext, walk, event));
-        break;
-      case 'fountainUsed': {
-        const room = rooms.get(semanticAddressKey(event.origin));
-        const owner = event.owner;
-        const transition = applyFountainUsedTransition(
-          catalog,
-          event,
-          owner.kind === 'hubFountain'
-            ? snapshot.decisions.find(
-                (decision): decision is CanonicalHubDecision =>
-                  decision.kind === 'hub' && decision.origin.hubKey === owner.hubKey,
-              )?.fountain?.fountainRarityResult
-            : room?.kind === 'authored'
-              ? room.fountainRarityResult
-              : undefined,
-          walk.branches,
-          room?.kind === 'authored' ? room : undefined,
-        );
-        walk = withBranches(walk, transition.branches);
-        if (transition.purgingPoolAssessment !== undefined)
-          walk = Object.freeze({
-            ...walk,
-            purgingPoolAssessments: withKeyed(
-              walk.purgingPoolAssessments,
-              transition.purgingPoolAssessment.key,
-              transition.purgingPoolAssessment.value,
-            ),
-          });
-        accumulator.mergeEmissions([
-          { kind: 'timelineFacts', facts: transition.timelineFacts },
-          ...(transition.candidate === undefined
-            ? []
-            : [
-                {
-                  kind: 'fountainRarityCandidate' as const,
-                  key: transition.candidate.key,
-                  candidate: transition.candidate.value,
-                },
-              ]),
-          lifecycleFindings(transition.findings),
-        ]);
-        break;
-      }
-      case 'roomCreated':
-        applySeamStep(chronologySeamHandlers.roomCreated(walkContext, walk, event));
-        break;
-      case 'targetGenerationCompleted':
-        applySeamStep(chronologySeamHandlers.targetGenerationCompleted(walkContext, walk, event));
-        break;
-      case 'outgoingGenerationCheckpoint':
-        applySeamStep(
-          chronologySeamHandlers.outgoingGenerationCheckpoint(walkContext, walk, event),
-        );
-        break;
-      case 'offerPointMaterialized': {
-        const roomKey = semanticAddressKey(event.origin);
-        const transition = applyOfferPointMaterializedTransition({
-          catalog,
-          snapshot,
-          event,
-          rooms,
-          views,
-          lifecycle: prepared.lifecycle,
-          branches: walk.branches,
-          routeLoadout,
-          authoredSeaStarDuplicateSiteKeys,
-          shipLifecycleCandidateAlreadyPublished: shipLifecycleContexts.has(roomKey),
-        });
-        accumulator.mergeEmissions([
-          generationFindings(transition.findings),
-          { kind: 'producerFrontiers', frontiers: transition.producerFrontiers },
-        ]);
-        if (transition.shipLifecycleCandidate !== undefined)
-          shipLifecycleContexts.set(roomKey, transition.shipLifecycleCandidate);
-        walk = withBranches(walk, transition.branches);
-        break;
-      }
-      case 'offerPointAcquired':
-      case 'producerRoleAdvanced': {
-        const settlement = applyReachedOfferSettlement({
-          catalog,
-          snapshot,
-          event,
-          rooms,
-          views,
-          branches: walk.branches,
-          priorFindings: accumulator.findingEntries(),
-          authoredSeaStarDuplicateSiteKeys,
-        });
-        accumulator.mergeEmissions([
-          settledFindings(settlement.findings),
-          { kind: 'acquisitionRoleFrontiers', frontiers: settlement.roleFrontiers },
-          {
-            kind: 'traitChildSettlements',
-            checkpoints: settlement.traitChildSettlements,
-            occurrenceOwner: settlement.traitChildOccurrenceOwner,
-          },
-        ]);
-        walk = withBranches(walk, settlement.branches);
-        break;
-      }
-      case 'bossDefeated':
-        applySeamStep(chronologySeamHandlers.bossDefeated(walkContext, walk, event));
-        break;
-      case 'encounterInteractionReached':
-        applySeamStep(chronologySeamHandlers.encounterInteractionReached(walkContext, walk, event));
-        break;
-      case 'encounterCompleted':
-        applySeamStep(chronologySeamHandlers.encounterCompleted(walkContext, walk, event));
-        break;
-      case 'encounterEndEffectsApplied':
-        applySeamStep(chronologySeamHandlers.encounterEndEffectsApplied(walkContext, walk, event));
-        if (walk.halted) {
-          reachHistorySequence(event.sequence);
-          break historyEvents;
-        }
-        break;
-      case 'hermesShrineDeliveriesScheduled':
-        applySeamStep(
-          chronologySeamHandlers.hermesShrineDeliveriesScheduled(walkContext, walk, event),
-        );
-        break;
-      case 'acquisitionPointReached':
-        applySeamStep(chronologySeamHandlers.acquisitionPointReached(walkContext, walk, event));
-        break;
-      case 'wellPurchase':
-        applySeamStep(chronologySeamHandlers.wellPurchase(walkContext, walk, event));
-        break;
-      case 'roomExited':
-        applySeamStep(chronologySeamHandlers.roomExited(walkContext, walk, event));
-        break;
-      default:
-        walk = withBranches(walk, advanceRewardBranches(walk.branches, event.sequence));
-        break;
-    }
-    if (event.origin?.kind === 'hubRoom') {
-      if (
-        event.kind === 'roomExited' ||
-        (event.kind === 'roomRestored' && event.restoreKind === 'hub')
-      )
-        recordHubDeparture(event.origin, event.sequence, false);
-      else if (event.kind === 'fountainUsed')
-        recordHubDeparture(event.origin, event.sequence, true);
-    }
-    reachHistorySequence(event.sequence);
+  for (const event of history.events) {
+    if (walk.branches.length === 0) break;
+    walk = walkHistoryEvent(walkContext, accumulator, walk, event);
+    if (walk.halted) break;
   }
 
   if (
@@ -696,7 +264,11 @@ export function evaluateBiomeRewardChronology(
     const source = rooms.get(semanticAddressKey(snapshot.frontier.parent.origin));
     if (source?.kind === 'hub') {
       const current = 'current' in history ? history.current : history.afterTransition;
-      captureRunState(snapshot.frontier.origin, source, current);
+      captureRunState(walkContext, walk, accumulator, {
+        owner: snapshot.frontier.origin,
+        room: source,
+        view: current,
+      });
     }
   }
 
@@ -945,7 +517,7 @@ export function evaluateBiomeRewardChronology(
   return publishBiomeRewardEvaluationAssembly({
     simulation,
     producerArtifacts: createRewardProducerCandidateArtifacts(accumulation.producerFrontiers),
-    lifecycleArtifacts: createRoomLifecycleCandidateArtifacts(shipLifecycleContexts),
+    lifecycleArtifacts: createRoomLifecycleCandidateArtifacts(walk.shipLifecycleContexts),
     traitOfferArtifacts: createTraitOfferCandidateArtifacts(catalog, traitCandidateContexts),
     levelResolutionArtifacts: createLevelResolutionCandidateArtifacts(
       catalog,
