@@ -170,9 +170,11 @@ function composition.bind(root, moduleVersion, buildId)
             end)
             return '"' .. escaped .. '"'
         end
+        local runModifiers
         local function report(runtime)
             local state = getState(runtime)
             if state == nil then return end
+            if runModifiers then runModifiers.verifyNative(state) end
             if runtime.status and runtime.status.write then
                 local status = session.status(state)
                 runtime.status.write("ExecutionSessionStatus", status.state .. ": " .. status.reason)
@@ -255,6 +257,7 @@ function composition.bind(root, moduleVersion, buildId)
             highlights.refresh(runtime, state)
         end
 
+        runModifiers = import("mods/run_modifiers/hooks.lua").attach(module, session, getState, report)
         hexTree.attach(module)
         local loadoutScope = loadoutHooks.attach(module, loadoutRuntime, getState, report, room, hexTree)
 

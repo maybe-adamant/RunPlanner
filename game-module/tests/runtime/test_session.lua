@@ -486,3 +486,28 @@ function TestRuntimeSession.testStrictDecodeTransactionOrderDoesNotChangeRuntime
         lu.assertEquals(first.obligations, second.obligations)
     end
 end
+
+function TestRuntimeSession.testAdmissionBindsNativeIdentityBeforeAnyDamageAndPostbossRebinds()
+    local priorRun, priorVerify = _G.CurrentRun, admission.verify
+    local first = { Hero = {} }
+    _G.CurrentRun = first
+    local row = occurrence()
+    row.id, row.gameName, row.resumeBoundary = 'postboss-identity', 'F_PostBoss01', 'postbossEntry'
+    local plan = { kind = 'ready', occurrences = { row }, occurrencesById = { [row.id] = row }, selectedOccurrenceIds = { row.id } }
+    local inbox = { load = function() return true, plan end }
+    local state = runtime.create()
+    assert(runtime.start(state, inbox, 'starting', 2))
+    lu.assertIs(state.admittedNativeRun, first)
+    runtime.beginNewRun(state)
+    lu.assertNil(state.admittedNativeRun)
+    state = runtime.create()
+    local restored = { Hero = {}, CurrentRoom = { Name = row.gameName } }
+    _G.CurrentRun = restored
+    admission.verify = function() return true end
+    lu.assertNotNil(runtime.attemptPostbossAdmission(state, inbox, 3, restored.CurrentRoom))
+    lu.assertIs(state.admittedNativeRun, restored)
+    local later = { Hero = {} }
+    _G.CurrentRun = later
+    lu.assertIs(state.admittedNativeRun, restored)
+    _G.CurrentRun, admission.verify = priorRun, priorVerify
+end
