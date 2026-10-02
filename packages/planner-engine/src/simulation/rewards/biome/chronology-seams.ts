@@ -142,7 +142,13 @@ export interface ChronologyWalkState {
    * independently from the later six-room visit chronology.
    */
   readonly pendingHubBoard: PendingHubBoardGeneration | undefined;
-  readonly targetGenerationByParent: ReadonlyMap<string, TargetGenerationFrontier>;
+  /**
+   * The latest outgoing checkpoint's target generation and per-target stores.
+   * A batch's targets are all generated before the next outgoing checkpoint,
+   * so each checkpoint replaces them.
+   */
+  readonly batchTargetGeneration:
+    { readonly parentKey: string; readonly frontier: TargetGenerationFrontier } | undefined;
   readonly expectedStores: ReadonlyMap<string, string | undefined>;
   readonly hermesShrineAssessments: ReadonlyMap<string, HermesShrineRoomAssessment>;
 }
@@ -164,7 +170,7 @@ export function createChronologyWalkState(
     gorgonEvaluationBlocked: false,
     peers: Object.freeze([]),
     pendingHubBoard: undefined,
-    targetGenerationByParent: new Map(),
+    batchTargetGeneration: undefined,
     expectedStores: new Map(),
     hermesShrineAssessments: new Map(),
   });
@@ -825,9 +831,10 @@ const targetGenerationCompleted: ChronologySeamHandler<'targetGenerationComplete
       ? flushPendingHubBoard(context, state)
       : { state, emissions: [] };
   const current = flushed.state;
+  const batch = current.batchTargetGeneration;
   const targetGeneration =
-    event.origin.kind === 'target'
-      ? current.targetGenerationByParent.get(semanticAddressKey(event.parentOrigin))
+    event.origin.kind === 'target' && batch?.parentKey === semanticAddressKey(event.parentOrigin)
+      ? batch.frontier
       : undefined;
   const transition = applyTargetGenerationCompletedTransition(event, targetGeneration);
   let branches = advanceRewardBranches(current.branches, event.sequence);
@@ -921,12 +928,6 @@ const outgoingGenerationCheckpoint: ChronologySeamHandler<'outgoingGenerationChe
   });
   const checkpoint = transition.runStateCheckpoint;
   const generation = transition.targetGeneration;
-  let expectedStores = state.expectedStores;
-  if (transition.expectedStores.length > 0) {
-    const next = new Map(expectedStores);
-    for (const entry of transition.expectedStores) next.set(entry.targetKey, entry.storeKey);
-    expectedStores = next;
-  }
   return {
     leadingEmissions: transition.siteSettlements.flatMap((settlement) =>
       siteSettlementEmissions(settlement, source?.origin ?? event.origin),
@@ -948,11 +949,10 @@ const outgoingGenerationCheckpoint: ChronologySeamHandler<'outgoingGenerationChe
       ...state,
       branches: transition.branches,
       peers: transition.peers,
-      targetGenerationByParent:
-        generation === undefined
-          ? state.targetGenerationByParent
-          : new Map(state.targetGenerationByParent).set(generation.parentKey, generation.frontier),
-      expectedStores,
+      batchTargetGeneration: generation,
+      expectedStores: new Map(
+        transition.expectedStores.map((entry) => [entry.targetKey, entry.storeKey] as const),
+      ),
     }),
     emissions: [
       { kind: 'storeSupport', entries: transition.storeSupportEntries },
