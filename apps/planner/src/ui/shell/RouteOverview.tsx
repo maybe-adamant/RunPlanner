@@ -93,7 +93,7 @@ export function RouteOverview({
       tabIndex={-1}
     >
       <header className="panel-heading">
-        <h2 className="eyebrow route-loadout-heading">{navigation.label} Loadout</h2>
+        <h2 className="eyebrow route-loadout-heading">Loadout</h2>
         <div className="panel-heading-actions">
           <StatusBadge status={feedback.status} />
           <FindingCount count={feedback.findingCount} label={`${label} findings`} />
@@ -469,6 +469,7 @@ function RunModifiersEditor({ workspaceRoute }: { readonly workspaceRoute: Works
   const dispatch = useAppDispatch();
   const control = workspaceRoute.runModifiers;
   const multiplier = control.value.enemyGoldDropChanceMultiplier;
+  const [showHelp, setShowHelp] = useState(false);
   const [draft, setDraft] = useState<{
     readonly source: number;
     readonly text: string;
@@ -493,11 +494,40 @@ function RunModifiersEditor({ workspaceRoute }: { readonly workspaceRoute: Works
       className="route-run-modifiers route-loadout-section"
       aria-labelledby={`${prefix}-heading`}
     >
-      <h3 id={`${prefix}-heading`} className="route-loadout-summary">
-        Run modifiers
-      </h3>
+      <header className="panel-heading">
+        <h2 id={`${prefix}-heading`} className="eyebrow route-loadout-heading">
+          Modifiers
+        </h2>
+        <div
+          className="route-run-modifier-help"
+          onMouseEnter={() => setShowHelp(true)}
+          onMouseLeave={() => setShowHelp(false)}
+        >
+          <button
+            type="button"
+            className="route-run-modifier-help-trigger"
+            aria-label="About run modifiers"
+            aria-describedby={showHelp ? `${prefix}-help` : undefined}
+            onFocus={() => setShowHelp(true)}
+            onBlur={() => setShowHelp(false)}
+            onKeyDown={(event) => {
+              if (event.key === 'Escape') setShowHelp(false);
+            }}
+          >
+            ⓘ
+          </button>
+          {showHelp ? (
+            <div id={`${prefix}-help`} role="tooltip">
+              Crits and double damage require a positive native chance and retain their
+              prerequisites and blockers. Gold-drop chances are multiplied, capped at 100%; zero
+              chances stay zero and room gold limits still apply.
+            </div>
+          ) : null}
+        </div>
+      </header>
       <div className="route-run-modifier-controls">
         <label className="route-run-modifier-toggle">
+          Guarantee eligible crits
           <input
             type="checkbox"
             checked={control.value.guaranteeEligibleCrits}
@@ -507,9 +537,9 @@ function RunModifiersEditor({ workspaceRoute }: { readonly workspaceRoute: Works
               )
             }
           />
-          Guarantee eligible crits
         </label>
         <label className="route-run-modifier-toggle">
+          Guarantee eligible double damage
           <input
             type="checkbox"
             checked={control.value.guaranteeEligibleDoubleDamage}
@@ -521,19 +551,35 @@ function RunModifiersEditor({ workspaceRoute }: { readonly workspaceRoute: Works
               )
             }
           />
-          Guarantee eligible double damage
         </label>
         <div className="field-control route-run-modifier-gold">
-          <label htmlFor={`${prefix}-gold`}>Enemy gold-drop chance</label>
+          <label htmlFor={`${prefix}-gold`}>Enemy gold-drop chance multiplier</label>
           <div className="route-run-modifier-multiplier">
             <input
               id={`${prefix}-gold`}
-              type="text"
-              inputMode="decimal"
+              type="range"
+              min={1}
+              max={5}
+              step={0.1}
               value={currentDraft?.text ?? String(multiplier)}
-              aria-invalid={currentDraft?.error === undefined ? undefined : true}
-              aria-describedby={`${prefix}-help${currentDraft?.error === undefined ? '' : ` ${prefix}-error`}`}
+              aria-valuetext={`${currentDraft?.text ?? multiplier}×${multiplier === 1 && currentDraft === undefined ? ' (Vanilla)' : ''}`}
               onChange={(event) => setDraft({ source: multiplier, text: event.target.value })}
+              onPointerUp={commit}
+              onKeyUp={(event) => {
+                if (
+                  [
+                    'ArrowLeft',
+                    'ArrowRight',
+                    'ArrowUp',
+                    'ArrowDown',
+                    'Home',
+                    'End',
+                    'PageUp',
+                    'PageDown',
+                  ].includes(event.key)
+                )
+                  commit();
+              }}
               onBlur={commit}
               onKeyDown={(event) => {
                 if (event.key === 'Enter') {
@@ -545,7 +591,10 @@ function RunModifiersEditor({ workspaceRoute }: { readonly workspaceRoute: Works
                 }
               }}
             />
-            <span aria-hidden="true">×</span>
+            <output htmlFor={`${prefix}-gold`}>
+              {currentDraft?.text ?? multiplier}×
+              {Number(currentDraft?.text ?? multiplier) === 1 ? ' (Vanilla)' : ''}
+            </output>
           </div>
           {currentDraft?.error === undefined ? null : (
             <p id={`${prefix}-error`} role="alert">
@@ -554,11 +603,6 @@ function RunModifiersEditor({ workspaceRoute }: { readonly workspaceRoute: Works
           )}
         </div>
       </div>
-      <p id={`${prefix}-help`} className="panel-description">
-        Crits and double damage each require a positive contextual native chance and retain their
-        prerequisites and blockers. Only capped enemy gold-drop chances increase; the native
-        encounter money store still applies.
-      </p>
     </section>
   );
 }

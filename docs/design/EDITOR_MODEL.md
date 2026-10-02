@@ -169,8 +169,11 @@ React neither constructs engine queries nor recomputes legality.
 Loadout exposes independent eligible-crit and eligible-double-damage checkboxes
 and an enemy gold-drop chance multiplier, including in Fresh File. Application
 binding reads engine-owned defaults and validates a complete replacement through
-the engine before dispatch. Numeric text remains a local draft until blur or
-Enter; invalid text stays visible with an accessible error. Sibling and unrelated
+the engine before dispatch. The gold slider offers 1×–5× in 0.1× steps, with 1× labeled Vanilla.
+Slider adjustments remain local until pointer release, navigation-key release,
+blur or Enter, producing one history edit per gesture. Existing authored values
+outside the slider range remain intact until edited. Explanatory text appears
+on help-icon hover or focus. Sibling and unrelated
 edits retain that draft, and committing it uses the current authored siblings.
 An authored multiplier change refreshes it; accepted document replacement clears
 it even when the loaded project has the same persisted ID and multiplier.

@@ -72,7 +72,7 @@ describe('RouteWorkspace', () => {
     expect(markup).not.toContain('>Wells</button>');
     expect(markup).not.toContain('class="panel-navigation-separator"');
     expect(markup).toContain('data-editor-layout="overview"');
-    expect(markup).toContain('Underworld Loadout');
+    expect(markup).toContain('Loadout');
   });
 
   it('orders configured biomes before the non-empty route indexes', () => {
