@@ -30,6 +30,12 @@ export const sharedVitestConfig = defineConfig({
         ),
       },
       {
+        find: '@run-planner/test-fixtures/checkpoints/registry',
+        replacement: fileURLToPath(
+          new URL('./test/fixtures/authored-project/checkpoints/registry.ts', import.meta.url),
+        ),
+      },
+      {
         find: '@run-planner/test-fixtures/checkpoints/surface',
         replacement: fileURLToPath(
           new URL('./test/fixtures/authored-project/checkpoints/surface.ts', import.meta.url),

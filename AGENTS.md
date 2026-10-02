@@ -265,7 +265,13 @@ broad phase-closure verification:
 - `npm run test:product` for cross-layer browser workflows;
 - `npm run test:engine` or `npm run test:catalog` for their owning packages;
 - `npm run test:game-module` for the game module's Lua syntax, tests, and
-  Luacheck.
+  Luacheck;
+- `npm run test:equivalence` before and after engine refactors and any
+  chronology or settlement change. It compares digests of the
+  `simulateProject` product, the encoded execution plan and a candidate-session
+  probe for every fixture builder and checkpoint with the committed
+  `packages/planner-engine/test/equivalence/baseline.json`; `EQUIVALENCE_WRITE=1`
+  rewrites the baseline, only for an intended product change.
 
 `npm run test` and `npm run check` remain the complete phase, push, and release
 gates. Run the complete gate for test/configuration changes, shared package
@@ -274,15 +280,16 @@ changes with broad downstream impact, and before declaring a phase closed.
 ### Shared test execution policy
 
 All package and application Vitest files run through the single
-`npm run test:correctness` lane; the performance witness is its only excluded
-file. The repository uses the calibrated eight-worker setting, 120-second
-test and hook watchdogs, a 30-second teardown watchdog, and zero retries.
-These values detect probable hangs; they are not correctness performance
-budgets. Fixture integrity intentionally remains a one-worker command, and
-all correctness tests use the shared watchdogs. Do not add local timeout or
-retry overrides. Testing Library asynchronous queries use the shared
-ten-second functional wait. The progress reporter's heartbeat and slowest-file
-output are diagnostic and never determine pass/fail.
+`npm run test:correctness` lane; the performance witness and the opt-in
+equivalence lane are its only excluded files. The repository uses the
+calibrated eight-worker setting, 120-second test and hook watchdogs, a
+30-second teardown watchdog, and zero retries. These values detect probable
+hangs; they are not correctness performance budgets. Fixture integrity
+intentionally remains a one-worker command, and all correctness tests use the
+shared watchdogs. Do not add local timeout or retry overrides. Testing
+Library asynchronous queries use the shared ten-second functional wait. The
+progress reporter's heartbeat and slowest-file output are diagnostic and never
+determine pass/fail.
 
 Performance is measured separately with
 `npm run test:performance:snapshot` and judged by

@@ -49,6 +49,7 @@
     "test:performance:watch": "vitest --config vitest.performance.config.ts",
     "test:changed": "vitest run --changed --passWithNoTests && npm run test:performance:changed",
     "test:fixtures:check": "vitest run --config vitest.fixtures.config.ts",
+    "test:equivalence": "vitest run --config vitest.equivalence.config.ts",
     "fixtures:execution": "node scripts/regenerate-execution-fixtures.mjs",
     "fixtures:checkpoints:regenerate": "node scripts/regenerate-authored-checkpoints.mjs",
     "fixtures:checkpoints": "node scripts/repair-reward-store-checkpoints.mjs",
