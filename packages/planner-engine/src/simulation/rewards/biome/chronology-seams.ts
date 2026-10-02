@@ -1,4 +1,3 @@
-import type { Catalog } from '../../../catalog-schema';
 import {
   createAcquisitionEntryAddress,
   createBiomeAddress,
@@ -6,237 +5,64 @@ import {
   createRoomRunStateCheckpointAddress,
   createTravelDealRefillRealizationAddress,
   semanticAddressKey,
-  type OccurrenceAddress,
   type SemanticAddress,
 } from '../../../authored-project/addresses';
-import type { ResourcePlacements, RouteLoadout } from '../../../authored-project/model';
 import { parseHermesShrineDeliveryEntryKey } from '../../../authored-project/hermes-shrine-delivery';
 import { routeRoomDeclaration } from '../../../authored-project/route-profile';
-import type { ResolvedRoutePosition } from '../../../authored-project/route-context';
-import type {
-  HermesShrineCandidateContext,
-  HermesShrineTravelDealRefillAssessment,
-} from '../../commerce/hermes-shrine';
-import type { PurgingPoolAssessment } from '../../commerce/purging-pool';
-import type { StygianWellCandidateContext } from '../../commerce/stygian-well';
-import type { HistoryEvent, HistoryStateView, ProgressiveRoomHistoryViews } from '../../history';
-import type { CanonicalAuthoredRoom, CanonicalHubRoom } from '../../materialization';
-import type { SemanticFinding } from '../../model';
-import { attestDerivedAcquisitionEntryCandidateCapability } from '../acquisition/artifacts';
-import type { RewardBranchState } from '../branch-primitives';
-import { advanceRewardBranches } from '../branch-lifecycle';
-import type { OfferProcessingPeer } from '../offer-generation';
+import type { HistoryEvent } from '../../history';
+import type { CanonicalAuthoredRoom, CanonicalHubDecision } from '../../materialization';
 import { resourcePlacementFindingRegions } from '../../resources';
 import { addHubBoardRewardLookup } from '../../state/reward-lookups';
 import {
   normalizeOfferedRewardTypes,
   publishOfferedRewardTypes,
 } from '../../state/offered-rewards';
-import type { HubDecisionAddress } from '../../../authored-project/addresses';
-import type { WellRefillRealization } from '../model';
-import type { RunStateSnapshot } from '../run-state';
+import { reachSimulationHistory } from '../../state/transitions';
+import { attestDerivedAcquisitionEntryCandidateCapability } from '../acquisition/artifacts';
+import { advanceRewardBranches } from '../branch-lifecycle';
+import { BiomeRewardSimulationContractError } from './biome-contract';
 import {
+  generationFindings,
   lifecycleFindings,
   mergedFindings,
-  generationFindings,
   settledFindings,
   siteSettlementEmissions,
   type ChronologyAccumulator,
   type ChronologyEmission,
 } from './chronology-accumulator';
+import { captureRunState, hubDepartureEmissions, targetSlotHistory } from './chronology-run-state';
+import {
+  withBranches,
+  withKeyed,
+  withMember,
+  type ChronologySeamHandler,
+  type ChronologySeamStep,
+  type ChronologyWalkContext,
+  type ChronologyWalkState,
+  type SeamEvent,
+} from './chronology-walk';
 import {
   applyAcquisitionPointReachedTransition,
   type HermesShrineRefillState,
 } from './encounter-acquisition/acquisition-point-reached';
-import { applyWellPurchaseTransition } from './encounter-acquisition/well-purchase';
-import { applyGorgonStartedTransition } from './encounter-acquisition/gorgon-started';
 import { applyEncounterSettlementTransition } from './encounter-acquisition/encounter-settlement';
-import { applyEncounterStartedTransition } from './lifecycle-transitions/encounter-started';
-import { BiomeRewardSimulationContractError } from './biome-contract';
-import type { BiomeRewardHistory, BiomeRewardSnapshot } from './evaluation-contract';
-import type { PendingHubBoardGeneration } from './generation/emissions';
+import { applyGorgonStartedTransition } from './encounter-acquisition/gorgon-started';
+import { applyWellPurchaseTransition } from './encounter-acquisition/well-purchase';
+import { rewardFindingChronologyForRoom } from './finding-chronology';
 import { flushHubBoard } from './generation/hub-board';
 import { applyOutgoingGenerationTransition } from './generation/outgoing-generation';
 import { applyRoomCreatedTransition } from './generation/room-created';
-import {
-  applyTargetGenerationCompletedTransition,
-  type TargetGenerationFrontier,
-} from './generation/target-generation-completed';
-import type { PreparedRewardEvaluationInputs } from './prepared-inputs';
+import { applyTargetGenerationCompletedTransition } from './generation/target-generation-completed';
 import { applyEncounterEndEffectsTransition } from './lifecycle-transitions/encounter-end-effects';
+import { applyEncounterStartedTransition } from './lifecycle-transitions/encounter-started';
 import { applyErisInteractedTransition } from './lifecycle-transitions/eris-interacted';
+import { applyFountainUsedTransition } from './lifecycle-transitions/fountain-used';
 import { applyKeepsakeRackUsedTransition } from './lifecycle-transitions/keepsake-rack-used';
+import { applyRoomEnteredTransition } from './lifecycle-transitions/room-entered';
 import { applyRoomExitedTransition } from './lifecycle-transitions/room-exited';
-
-/** The fixed inputs every seam handler of one biome walk reads. */
-export interface ChronologyWalkContext {
-  readonly catalog: Catalog;
-  readonly snapshot: BiomeRewardSnapshot;
-  readonly rooms: ReadonlyMap<string, CanonicalAuthoredRoom | CanonicalHubRoom>;
-  readonly views: ReadonlyMap<string, ProgressiveRoomHistoryViews>;
-  readonly routeLoadout: RouteLoadout;
-  readonly enteredBiomeCount: number;
-  readonly fullRunBiomeCount: number;
-  readonly routePosition: ResolvedRoutePosition;
-  readonly resourcePlacements: ResourcePlacements;
-  readonly resourceFindings: readonly SemanticFinding[];
-  readonly authoredSeaStarDuplicateSiteKeys: ReadonlySet<string>;
-  readonly history: BiomeRewardHistory;
-  readonly prepared: PreparedRewardEvaluationInputs;
-  /** Sources whose outgoing checkpoint creates a Hub instead of a reward batch. */
-  readonly hubTakeoverSources: ReadonlySet<string>;
-  /** Hub visit targets and entered local rooms that restore to an existing parent. */
-  readonly hubRestoringSources: ReadonlySet<string>;
-  readonly hubDecisionOwnerBySource: ReadonlyMap<string, HubDecisionAddress>;
-  /** The source of a prefix's blank exit-decision frontier. */
-  readonly frontierSource: string | undefined;
-  /** Ordered reads of what earlier seams accumulated. */
-  readonly accumulated: Pick<
-    ChronologyAccumulator,
-    'derivedAcquisitionEntryFrontiers' | 'gorgonPhaseCandidate'
-  >;
-}
-
-export interface HermesShrineRoomAssessment {
-  readonly origin: OccurrenceAddress;
-  readonly assessments: readonly HermesShrineCandidateContext[];
-}
-
-export interface PurgingPoolRoomAssessment {
-  readonly origin: OccurrenceAddress;
-  readonly assessments: readonly PurgingPoolAssessment[];
-}
-
-export interface StygianWellAssessment {
-  readonly origin: OccurrenceAddress;
-  readonly assessments: readonly StygianWellCandidateContext[];
-}
-
-/** The walk state carried between seams; replaced, never mutated. */
-export interface ChronologyWalkState {
-  readonly branches: readonly RewardBranchState[];
-  /** A seam stopped the walk at its own sequence. */
-  readonly halted: boolean;
-  readonly stygianWellAssessments: ReadonlyMap<string, StygianWellAssessment>;
-  readonly wellRefillRealizations: ReadonlyMap<string, WellRefillRealization>;
-  readonly purgingPoolAssessments: ReadonlyMap<string, PurgingPoolRoomAssessment>;
-  /** Shrine-keyed Travel Deal refill frontier carried between its deliveries. */
-  readonly hermesShrineTravelDealRefills: ReadonlyMap<
-    string,
-    readonly HermesShrineTravelDealRefillAssessment[]
-  >;
-  readonly hermesShrineTravelDealRefillValid: ReadonlyMap<string, boolean>;
-  // The handler's FirstSpeedUpPurchase guard belongs to the Shrine room, not
-  // to a branch.  We still require Travel Deal to agree across every branch
-  // at that first action prefix before publishing a refill generation.
-  readonly firstRushedInitialGenerationByShrine: ReadonlySet<string>;
-  /** Gorgon phases keyed `occurrence::phase`, shared by encounter start and settlement. */
-  readonly eligibleGorgonPhases: ReadonlySet<string>;
-  readonly blockedGorgonPhases: ReadonlySet<string>;
-  readonly gorgonEvaluationBlocked: boolean;
-  /** Offers the current batch generated, until the next batch replaces them. */
-  readonly peers: readonly OfferProcessingPeer[];
-  /**
-   * One persistent Ephyra board-generation region. It starts from the
-   * post-Hub-entry reward branches and contains every open physical door,
-   * independently from the later six-room visit chronology.
-   */
-  readonly pendingHubBoard: PendingHubBoardGeneration | undefined;
-  /**
-   * The latest outgoing checkpoint's target generation and per-target stores.
-   * A batch's targets are all generated before the next outgoing checkpoint,
-   * so each checkpoint replaces them.
-   */
-  readonly batchTargetGeneration:
-    { readonly parentKey: string; readonly frontier: TargetGenerationFrontier } | undefined;
-  readonly expectedStores: ReadonlyMap<string, string | undefined>;
-  readonly hermesShrineAssessments: ReadonlyMap<string, HermesShrineRoomAssessment>;
-}
-
-export function createChronologyWalkState(
-  branches: readonly RewardBranchState[],
-): ChronologyWalkState {
-  return Object.freeze({
-    branches,
-    halted: false,
-    stygianWellAssessments: new Map(),
-    wellRefillRealizations: new Map(),
-    purgingPoolAssessments: new Map(),
-    hermesShrineTravelDealRefills: new Map(),
-    hermesShrineTravelDealRefillValid: new Map(),
-    firstRushedInitialGenerationByShrine: new Set<string>(),
-    eligibleGorgonPhases: new Set<string>(),
-    blockedGorgonPhases: new Set<string>(),
-    gorgonEvaluationBlocked: false,
-    peers: Object.freeze([]),
-    pendingHubBoard: undefined,
-    batchTargetGeneration: undefined,
-    expectedStores: new Map(),
-    hermesShrineAssessments: new Map(),
-  });
-}
-
-/** Copies a keyed scratch map only when the key's value changes; undefined removes it. */
-export function withKeyed<V>(
-  map: ReadonlyMap<string, V>,
-  key: string,
-  value: V | undefined,
-): ReadonlyMap<string, V> {
-  if (value === undefined) {
-    if (!map.has(key)) return map;
-    const next = new Map(map);
-    next.delete(key);
-    return next;
-  }
-  if (map.has(key) && map.get(key) === value) return map;
-  return new Map(map).set(key, value);
-}
-
-function withMember(set: ReadonlySet<string>, key: string, member: boolean): ReadonlySet<string> {
-  if (set.has(key) === member) return set;
-  const next = new Set(set);
-  if (member) next.add(key);
-  else next.delete(key);
-  return next;
-}
-
-export function withBranches(
-  state: ChronologyWalkState,
-  branches: readonly RewardBranchState[],
-): ChronologyWalkState {
-  return Object.freeze({ ...state, branches });
-}
-
-/**
- * One seam's result, applied in order: leading emissions, the Run State
- * capture (against the state the seam received), the target-slot history,
- * the next state, then the remaining emissions.
- */
-export interface ChronologySeamStep {
-  readonly leadingEmissions?: readonly ChronologyEmission[];
-  readonly runStateCheckpoint?: {
-    readonly owner: RunStateSnapshot['owner'];
-    readonly room: CanonicalAuthoredRoom | CanonicalHubRoom;
-    readonly view: HistoryStateView;
-    /** Defaults to the branches the seam received. */
-    readonly branches?: readonly RewardBranchState[];
-  };
-  readonly targetHistoryCheckpoint?: {
-    readonly origin: import('../../../authored-project/addresses').TargetAddress;
-    readonly historySequence: number;
-    readonly branches: readonly RewardBranchState[];
-  };
-  readonly state: ChronologyWalkState;
-  readonly emissions: readonly ChronologyEmission[];
-}
-
-type SeamEvent<K extends HistoryEvent['kind']> = Extract<HistoryEvent, { readonly kind: K }>;
-
-export type ChronologySeamHandler<K extends HistoryEvent['kind']> = (
-  context: ChronologyWalkContext,
-  state: ChronologyWalkState,
-  event: SeamEvent<K>,
-) => ChronologySeamStep;
+import { applyRoomPreparedTransition } from './lifecycle-transitions/room-prepared';
+import { applyOfferPointMaterializedTransition } from './offer-lifecycle/offer-point-materialized';
+import { applyReachedOfferSettlement } from './offer-lifecycle/reached-settlement';
 
 function authoredRoom(
   context: ChronologyWalkContext,
@@ -306,7 +132,7 @@ const roomExited: ChronologySeamHandler<'roomExited'> = (context, state, event) 
     emissions: [mergedFindings(exited.findingRegions)],
     ...(exited.runStateCheckpoint === undefined
       ? {}
-      : { runStateCheckpoint: exited.runStateCheckpoint }),
+      : { runStateCheckpoint: { ...exited.runStateCheckpoint, against: 'received' as const } }),
   };
 };
 
@@ -573,6 +399,7 @@ const encounterStarted: ChronologySeamHandler<'encounterStarted'> = (context, st
       );
     }
     runStateCheckpoint = {
+      against: 'received',
       owner: createRoomRunStateCheckpointAddress(room.origin, {
         kind: 'beforeEncounterStart',
         phaseKey: event.phaseKey,
@@ -766,6 +593,7 @@ const roomCreated: ChronologySeamHandler<'roomCreated'> = (context, state, event
       ? {}
       : {
           runStateCheckpoint: {
+            against: 'received' as const,
             owner: checkpoint.owner,
             room: checkpoint.source,
             view: checkpoint.view,
@@ -936,6 +764,7 @@ const outgoingGenerationCheckpoint: ChronologySeamHandler<'outgoingGenerationChe
       ? {}
       : {
           runStateCheckpoint: {
+            against: 'received' as const,
             owner: checkpoint.owner,
             room: checkpoint.source,
             view: checkpoint.view,
@@ -961,20 +790,331 @@ const outgoingGenerationCheckpoint: ChronologySeamHandler<'outgoingGenerationChe
   };
 };
 
-/** Seams whose handler is a thin adapter over its unchanged transition module. */
-export const chronologySeamHandlers = Object.freeze({
-  erisInteracted,
-  keepsakeRackUsed,
-  roomExited,
-  encounterEndEffectsApplied,
-  wellPurchase,
-  hermesShrineDeliveriesScheduled,
-  acquisitionPointReached,
-  encounterStarted,
-  bossDefeated: encounterSettled,
-  encounterInteractionReached: encounterSettled,
-  encounterCompleted: encounterSettled,
-  roomCreated,
-  targetGenerationCompleted,
-  outgoingGenerationCheckpoint,
+/** Room entry captures its Run State after its own features; a pending Shrine delivery halts here. */
+const roomEntered: ChronologySeamHandler<'roomEntered'> = (context, state, event) => {
+  const room = authoredRoom(context, event.origin);
+  const entered = applyRoomEnteredTransition(
+    context.catalog,
+    event,
+    room,
+    context.views.get(semanticAddressKey(event.origin)),
+    context.chaosGateSourceOccurrenceIds,
+    context.ixionGeneratedChaosSourceOccurrenceIds,
+    state.branches,
+    rewardFindingChronologyForRoom(
+      context.snapshot,
+      event.origin as CanonicalAuthoredRoom['origin'],
+      event.sequence,
+      'localRoomLifecycle',
+    ),
+    context.routePosition,
+    Object.freeze({
+      hermesShrine:
+        room !== undefined && state.hermesShrineAssessments.has(semanticAddressKey(room.origin)),
+      stygianWell:
+        room !== undefined && state.stygianWellAssessments.has(semanticAddressKey(room.origin)),
+    }),
+  );
+  const shrine = entered.hermesShrineAssessment;
+  const well = entered.stygianWellAssessment;
+  const checkpoint = entered.runStateCheckpoint;
+  if (checkpoint !== undefined && checkpoint.view === undefined)
+    throw new BiomeRewardSimulationContractError(
+      `${checkpoint.room.gameName} has no room-entry Run State view`,
+    );
+  return {
+    leadingEmissions: [
+      lifecycleFindings(entered.findings),
+      {
+        kind: 'derivedAcquisitionEntryFrontiers',
+        frontiers: entered.derivedAcquisitionEntryFrontiers,
+      },
+    ],
+    state: Object.freeze({
+      ...state,
+      branches: entered.branches,
+      halted: entered.hermesShrineDeliveryPlacementRequired,
+      hermesShrineAssessments:
+        shrine === undefined
+          ? state.hermesShrineAssessments
+          : new Map(state.hermesShrineAssessments).set(semanticAddressKey(shrine.origin), shrine),
+      stygianWellAssessments:
+        well === undefined
+          ? state.stygianWellAssessments
+          : new Map(state.stygianWellAssessments).set(semanticAddressKey(well.origin), well),
+    }),
+    ...(checkpoint?.view === undefined
+      ? {}
+      : {
+          runStateCheckpoint: {
+            against: 'next' as const,
+            owner: checkpoint.owner,
+            room: checkpoint.room,
+            view: checkpoint.view,
+          },
+        }),
+    emissions: [],
+  };
+};
+
+const roomPrepared: ChronologySeamHandler<'roomPrepared'> = (context, state, event) => {
+  const transition = applyRoomPreparedTransition(
+    context.catalog,
+    context.snapshot,
+    event,
+    authoredRoom(context, event.origin),
+    state.branches,
+  );
+  return {
+    state: withBranches(state, transition.branches),
+    emissions: [lifecycleFindings(transition.findings)],
+  };
+};
+
+const fountainUsed: ChronologySeamHandler<'fountainUsed'> = (context, state, event) => {
+  const room = authoredRoom(context, event.origin);
+  const owner = event.owner;
+  const transition = applyFountainUsedTransition(
+    context.catalog,
+    event,
+    owner.kind === 'hubFountain'
+      ? context.snapshot.decisions.find(
+          (decision): decision is CanonicalHubDecision =>
+            decision.kind === 'hub' && decision.origin.hubKey === owner.hubKey,
+        )?.fountain?.fountainRarityResult
+      : room?.fountainRarityResult,
+    state.branches,
+    room,
+  );
+  const pool = transition.purgingPoolAssessment;
+  return {
+    state: Object.freeze({
+      ...state,
+      branches: transition.branches,
+      purgingPoolAssessments:
+        pool === undefined
+          ? state.purgingPoolAssessments
+          : withKeyed(state.purgingPoolAssessments, pool.key, pool.value),
+    }),
+    emissions: [
+      { kind: 'timelineFacts', facts: transition.timelineFacts },
+      ...(transition.candidate === undefined
+        ? []
+        : [
+            {
+              kind: 'fountainRarityCandidate' as const,
+              key: transition.candidate.key,
+              candidate: transition.candidate.value,
+            },
+          ]),
+      lifecycleFindings(transition.findings),
+    ],
+  };
+};
+
+const offerPointMaterialized: ChronologySeamHandler<'offerPointMaterialized'> = (
+  context,
+  state,
+  event,
+) => {
+  const roomKey = semanticAddressKey(event.origin);
+  const transition = applyOfferPointMaterializedTransition({
+    catalog: context.catalog,
+    snapshot: context.snapshot,
+    event,
+    rooms: context.rooms,
+    views: context.views,
+    lifecycle: context.prepared.lifecycle,
+    branches: state.branches,
+    routeLoadout: context.routeLoadout,
+    authoredSeaStarDuplicateSiteKeys: context.authoredSeaStarDuplicateSiteKeys,
+    shipLifecycleCandidateAlreadyPublished: state.shipLifecycleContexts.has(roomKey),
+  });
+  return {
+    state: Object.freeze({
+      ...state,
+      branches: transition.branches,
+      shipLifecycleContexts:
+        transition.shipLifecycleCandidate === undefined
+          ? state.shipLifecycleContexts
+          : withKeyed(state.shipLifecycleContexts, roomKey, transition.shipLifecycleCandidate),
+    }),
+    emissions: [
+      generationFindings(transition.findings),
+      { kind: 'producerFrontiers', frontiers: transition.producerFrontiers },
+    ],
+  };
+};
+
+/** A reached offer point and an advanced producer role settle through the same transition. */
+const reachedOfferSettled: ChronologySeamHandler<'offerPointAcquired' | 'producerRoleAdvanced'> = (
+  context,
+  state,
+  event,
+) => {
+  const settlement = applyReachedOfferSettlement({
+    catalog: context.catalog,
+    snapshot: context.snapshot,
+    event,
+    rooms: context.rooms,
+    views: context.views,
+    branches: state.branches,
+    priorFindings: context.accumulated.findingEntries(),
+    authoredSeaStarDuplicateSiteKeys: context.authoredSeaStarDuplicateSiteKeys,
+  });
+  return {
+    state: withBranches(state, settlement.branches),
+    emissions: [
+      settledFindings(settlement.findings),
+      { kind: 'acquisitionRoleFrontiers', frontiers: settlement.roleFrontiers },
+      {
+        kind: 'traitChildSettlements',
+        checkpoints: settlement.traitChildSettlements,
+        occurrenceOwner: settlement.traitChildOccurrenceOwner,
+      },
+    ],
+  };
+};
+
+/** Events with no reward seam only advance the branch cohort to their sequence. */
+const advanceOnly: ChronologySeamHandler<HistoryEvent['kind']> = (_context, state, event) => ({
+  state: withBranches(state, advanceRewardBranches(state.branches, event.sequence)),
+  emissions: [],
 });
+
+type PostStepHook<K extends HistoryEvent['kind']> = (
+  context: ChronologyWalkContext,
+  state: ChronologyWalkState,
+  event: SeamEvent<K>,
+) => readonly ChronologyEmission[];
+
+/**
+ * A second dispatch after the seam: a Hub exit or a visit's return records a
+ * departure, and a later fountain use replaces it.
+ */
+function hubDeparture(
+  replace: boolean,
+): PostStepHook<'roomExited' | 'roomRestored' | 'fountainUsed'> {
+  return (context, state, event) =>
+    event.origin?.kind === 'hubRoom' &&
+    (event.kind !== 'roomRestored' || event.restoreKind === 'hub')
+      ? hubDepartureEmissions(context, state, event.origin, event.sequence, replace)
+      : [];
+}
+
+/** A seam's handler and its optional post-step hook for events of kind `K`. */
+interface ChronologySeam<K extends HistoryEvent['kind']> {
+  step(
+    context: ChronologyWalkContext,
+    state: ChronologyWalkState,
+    event: SeamEvent<K>,
+  ): ChronologySeamStep;
+  afterStep?(
+    context: ChronologyWalkContext,
+    state: ChronologyWalkState,
+    event: SeamEvent<K>,
+  ): readonly ChronologyEmission[];
+}
+
+/** Every history event kind and the seam that applies it. */
+export const chronologySeamTable: { readonly [K in HistoryEvent['kind']]: ChronologySeam<K> } =
+  Object.freeze({
+    biomeStarted: { step: advanceOnly },
+    biomeCompleted: { step: advanceOnly },
+    biomeCounterReset: { step: advanceOnly },
+    roomCreated: { step: roomCreated },
+    fieldsBatchOutcomeRecorded: { step: advanceOnly },
+    clockworkBatchStateRecorded: { step: advanceOnly },
+    clockworkGoalAcquired: { step: advanceOnly },
+    clockworkNonGoalRewardSpawned: { step: advanceOnly },
+    targetGenerationCompleted: { step: targetGenerationCompleted },
+    emptyOutgoingGenerationCompleted: { step: advanceOnly },
+    roomRestored: { step: advanceOnly, afterStep: hubDeparture(false) },
+    roomPrepared: { step: roomPrepared },
+    offerPointMaterialized: { step: offerPointMaterialized },
+    offerPointAcquired: { step: reachedOfferSettled },
+    roomEntered: { step: roomEntered },
+    fountainUsed: { step: fountainUsed, afterStep: hubDeparture(true) },
+    keepsakeRackUsed: { step: keepsakeRackUsed },
+    erisInteracted: { step: erisInteracted },
+    requiredObjectSpawned: { step: advanceOnly },
+    encounterRecorded: { step: advanceOnly },
+    encounterStarted: { step: encounterStarted },
+    encounterDepthAdvanced: { step: advanceOnly },
+    encounterCompleted: { step: encounterSettled },
+    encounterEndEffectsApplied: { step: encounterEndEffectsApplied },
+    bossDefeated: { step: encounterSettled },
+    encounterInteractionReached: { step: encounterSettled },
+    requiredObjectCompleted: { step: advanceOnly },
+    producerPointReached: { step: advanceOnly },
+    producerRoleAdvanced: { step: reachedOfferSettled },
+    outgoingGenerationCheckpoint: { step: outgoingGenerationCheckpoint },
+    hermesShrineDeliveriesScheduled: { step: hermesShrineDeliveriesScheduled },
+    acquisitionPointReached: { step: acquisitionPointReached },
+    wellPurchase: { step: wellPurchase },
+    roomCommitted: { step: advanceOnly },
+    roomCountersAdvanced: { step: advanceOnly },
+    enteredRewardStoreRecorded: { step: advanceOnly },
+    roomExited: { step: roomExited, afterStep: hubDeparture(false) },
+  });
+
+/** Brings every branch to the reached history view at this sequence. */
+export function reachHistorySequence(
+  context: ChronologyWalkContext,
+  state: ChronologyWalkState,
+  sequence: number,
+): ChronologyWalkState {
+  const view = context.history.viewsBySequence[sequence];
+  if (view === undefined) {
+    throw new BiomeRewardSimulationContractError(`No history view for event ${sequence}`);
+  }
+  return withBranches(
+    state,
+    Object.freeze(
+      state.branches.map((branch) =>
+        Object.freeze({
+          ...branch,
+          state: reachSimulationHistory(branch.state, context.routePosition, view),
+        }),
+      ),
+    ),
+  );
+}
+
+function applySeamStep(
+  context: ChronologyWalkContext,
+  accumulator: ChronologyAccumulator,
+  received: ChronologyWalkState,
+  step: ChronologySeamStep,
+): ChronologyWalkState {
+  if (step.leadingEmissions !== undefined) accumulator.mergeEmissions(step.leadingEmissions);
+  const checkpoint = step.runStateCheckpoint;
+  if (checkpoint?.against === 'received')
+    captureRunState(context, received, accumulator, checkpoint);
+  const target = step.targetHistoryCheckpoint;
+  if (target !== undefined)
+    accumulator.mergeEmissions(
+      targetSlotHistory(context, target.origin, target.historySequence, target.branches),
+    );
+  if (checkpoint?.against === 'next') captureRunState(context, step.state, accumulator, checkpoint);
+  accumulator.mergeEmissions(step.emissions);
+  return step.state;
+}
+
+/**
+ * Applies one history event: its seam, then (unless the seam halted the walk)
+ * the post-step hook, and finally reaches the event's history view.
+ */
+export function walkHistoryEvent(
+  context: ChronologyWalkContext,
+  accumulator: ChronologyAccumulator,
+  state: ChronologyWalkState,
+  event: HistoryEvent,
+): ChronologyWalkState {
+  // The table pairs each kind with its own handler; the union call is sound.
+  const entry = chronologySeamTable[event.kind] as ChronologySeam<HistoryEvent['kind']>;
+  const next = applySeamStep(context, accumulator, state, entry.step(context, state, event));
+  if (!next.halted && entry.afterStep !== undefined)
+    accumulator.mergeEmissions(entry.afterStep(context, next, event));
+  return reachHistorySequence(context, next, event.sequence);
+}
