@@ -31,7 +31,7 @@ describe('Fresh File product loop', () => {
     });
 
     await user.click(screen.getByRole('button', { name: 'Loadout' }));
-    expect(screen.getByRole('heading', { name: 'Fresh File Loadout' })).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'Loadout' })).toBeTruthy();
     const facts = screen.getByLabelText('Fixed starting loadout');
     expect(within(facts).getByText("Witch's Staff, no Aspect")).toBeTruthy();
     expect(screen.queryByRole('button', { name: 'Edit Arcana' })).toBeNull();

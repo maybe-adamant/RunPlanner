@@ -1073,9 +1073,8 @@
 }
 
 .route-run-modifier-controls {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: start;
+  display: grid;
+  justify-items: start;
   gap: 0.75rem 1.25rem;
   min-width: 0;
 }
@@ -1097,7 +1096,7 @@
 }
 
 .route-run-modifier-multiplier input {
-  width: 7rem;
+  width: 16rem;
   min-width: 0;
   max-width: 100%;
 }
@@ -1105,4 +1104,31 @@
 .route-run-modifier-gold [role='alert'] {
   margin: 0;
   color: #e7a1a1;
+}
+
+.route-run-modifier-help {
+  position: relative;
+}
+.route-run-modifier-help-trigger {
+  background: transparent;
+  border: 0;
+  color: inherit;
+  cursor: help;
+}
+.route-run-modifier-help [role='tooltip'] {
+  position: absolute;
+  right: 0;
+  top: 100%;
+  z-index: 10;
+  width: min(22rem, 75vw);
+  padding: 0.75rem;
+  background: #24252d;
+  border: 1px solid #555661;
+  border-radius: 0.4rem;
+  box-shadow: 0 4px 12px #0006;
+  font-size: 0.85rem;
+  line-height: 1.5;
+}
+.route-run-modifier-multiplier output {
+  white-space: nowrap;
 }

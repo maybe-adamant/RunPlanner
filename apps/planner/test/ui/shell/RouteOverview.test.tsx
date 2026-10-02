@@ -141,7 +141,7 @@ describe('RouteOverview', () => {
     );
 
     const markup = routeOverviewMarkup(application);
-    expect(markup).toContain('Dream Dive Loadout');
+    expect(markup).toContain('Loadout');
     expect([...markup.matchAll(/title="Through ([^"]+)"/g)].map((match) => match[1])).toEqual([
       'Summit',
       'Erebus',
@@ -153,7 +153,7 @@ describe('RouteOverview', () => {
 
   it('shows the ordinary route order in the same Loadout summary', () => {
     const markup = routeOverviewMarkup(createOpenTestApplication('Underworld'));
-    expect(markup).toContain('Underworld Loadout');
+    expect(markup).toContain('Loadout');
     expect([...markup.matchAll(/title="Through ([^"]+)"/g)].map((match) => match[1])).toEqual([
       'Erebus',
       'Oceanus',
@@ -175,7 +175,7 @@ describe('RouteOverview', () => {
     );
 
     const markup = routeOverviewMarkup(application);
-    expect(markup).toContain('Fresh File Loadout');
+    expect(markup).toContain('Loadout');
     expect(markup).toContain('aria-label="Fixed starting loadout"');
     expect(markup).toContain('Witch&#x27;s Staff, no Aspect');
     for (const fact of ['Starting Arcana', 'Starting Fear', 'Starting keepsake', 'Starting reward'])

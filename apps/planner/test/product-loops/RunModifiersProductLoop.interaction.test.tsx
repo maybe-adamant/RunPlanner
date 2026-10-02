@@ -25,17 +25,17 @@ it('restores authored modifiers through history, saved reload and published exec
   await user.click(screen.getByRole('checkbox', { name: 'Guarantee eligible crits' }));
   await user.click(screen.getByRole('checkbox', { name: 'Guarantee eligible double damage' }));
   const gold = () =>
-    screen.getByRole('textbox', { name: 'Enemy gold-drop chance' }) as HTMLInputElement;
-  fireEvent.change(gold(), { target: { value: '1.75' } });
+    screen.getByRole('slider', { name: 'Enemy gold-drop chance multiplier' }) as HTMLInputElement;
+  fireEvent.change(gold(), { target: { value: '1.7' } });
   fireEvent.keyDown(gold(), { key: 'Enter' });
   act(() => application.store.dispatch(authoredProjectUndoRequested()));
   expect(gold().value).toBe('1');
   act(() => application.store.dispatch(authoredProjectRedoRequested()));
-  expect(gold().value).toBe('1.75');
+  expect(gold().value).toBe('1.7');
   const expected = {
     guaranteeEligibleCrits: true,
     guaranteeEligibleDoubleDamage: true,
-    enemyGoldDropChanceMultiplier: 1.75,
+    enemyGoldDropChanceMultiplier: 1.7,
   };
   await act(async () => {
     expect((await application.projectOperations.saveProfile()).status).toBe('success');
@@ -45,7 +45,7 @@ it('restores authored modifiers through history, saved reload and published exec
   await act(async () => {
     await files.openSaved(application, saved, 'modifiers.runplanner.json');
   });
-  expect(gold().value).toBe('1.75');
+  expect(gold().value).toBe('1.7');
   await act(async () => {
     expect((await application.projectOperations.publishGame(1)).status).toBe('success');
   });

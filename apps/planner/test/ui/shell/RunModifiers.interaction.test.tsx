@@ -1,11 +1,7 @@
 // @vitest-environment jsdom
 import { act, cleanup, fireEvent, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
-import {
-  createProjectDocument,
-  createRouteAddress,
-  routeRunModifiers,
-} from '@run-planner/engine/authored-project';
+import { createRouteAddress, routeRunModifiers } from '@run-planner/engine/authored-project';
 import {
   authoredProjectCommandDispatched,
   authoredProjectReplaced,
@@ -17,12 +13,9 @@ import {
   renderPlannerForInteraction,
 } from '@planner-test/fixtures/renderPlanner';
 
-import { createApplication } from '@planner/composition/createApplication';
-import { createFakeProfileFiles } from '@planner-test/fixtures/profileFiles';
-
 afterEach(cleanup);
 const gold = () =>
-  screen.getByRole('textbox', { name: 'Enemy gold-drop chance' }) as HTMLInputElement;
+  screen.getByRole('slider', { name: 'Enemy gold-drop chance multiplier' }) as HTMLInputElement;
 const crits = () => screen.getByRole('checkbox', { name: 'Guarantee eligible crits' });
 const doubles = () => screen.getByRole('checkbox', { name: 'Guarantee eligible double damage' });
 
@@ -50,13 +43,13 @@ describe('Run modifier authoring', () => {
       guaranteeEligibleDoubleDamage: true,
     });
     await view.user.click(crits());
-    fireEvent.change(gold(), { target: { value: '1.25' } });
+    fireEvent.change(gold(), { target: { value: '1.2' } });
     expect(view.modifiers().enemyGoldDropChanceMultiplier).toBe(1);
     fireEvent.keyDown(gold(), { key: 'Enter' });
     expect(view.modifiers()).toMatchObject({
       guaranteeEligibleCrits: true,
       guaranteeEligibleDoubleDamage: true,
-      enemyGoldDropChanceMultiplier: 1.25,
+      enemyGoldDropChanceMultiplier: 1.2,
     });
     fireEvent.change(gold(), { target: { value: '1' } });
     fireEvent.blur(gold());
@@ -65,113 +58,55 @@ describe('Run modifier authoring', () => {
     expect(view.project().route.loadout.runModifiers).toBeUndefined();
   });
 
-  it('commits on the actual blur before a checkbox click without losing either edit', async () => {
-    const view = open();
-    await view.user.click(gold());
-    await view.user.clear(gold());
-    await view.user.type(gold(), '2.75');
-    await view.user.click(crits());
-    expect(view.modifiers()).toEqual({
-      guaranteeEligibleCrits: true,
-      guaranteeEligibleDoubleDamage: false,
-      enemyGoldDropChanceMultiplier: 2.75,
-    });
-    expect(gold().value).toBe('2.75');
+  it('shows help on focus and dismisses it with Escape', () => {
+    open();
+    expect(screen.getByRole('heading', { name: 'Loadout' })).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'Modifiers' })).toBeTruthy();
+    expect(screen.queryByRole('tooltip')).toBeNull();
+    const help = screen.getByRole('button', { name: 'About run modifiers' });
+    fireEvent.focus(help);
+    expect(screen.getByRole('tooltip').textContent).toContain('room gold limits');
+    fireEvent.keyDown(help, { key: 'Escape' });
+    expect(screen.queryByRole('tooltip')).toBeNull();
   });
 
-  it.each(['', '-', '1e', 'NaN', 'Infinity', '0.5', '1e309'])(
-    'keeps invalid draft %j visible with an accessible error',
-    (text) => {
-      const view = open();
-      fireEvent.change(gold(), { target: { value: text } });
-      fireEvent.blur(gold());
-      expect(gold().value).toBe(text);
-      expect(gold().getAttribute('aria-invalid')).toBe('true');
-      expect(screen.getByRole('alert').textContent).toBe(
-        'Enter a finite multiplier of at least 1.',
-      );
-      expect(gold().getAttribute('aria-describedby')).toContain(screen.getByRole('alert').id);
-      expect(view.project().route.loadout.runModifiers).toBeUndefined();
-      fireEvent.keyDown(gold(), { key: 'Escape' });
-      expect(gold().value).toBe('1');
-      expect(screen.queryByRole('alert')).toBeNull();
-    },
-  );
-
-  it('retains a partial draft across sibling and unrelated edits and commits with current siblings', async () => {
+  it('commits a slider gesture once and restores it through history and replacement', () => {
     const view = open();
-    await view.user.click(gold());
-    fireEvent.change(gold(), { target: { value: '2e' } });
-    await view.user.click(crits());
-    expect(gold().value).toBe('2e');
-    await view.user.click(doubles());
+    expect(gold().min).toBe('1');
+    expect(gold().max).toBe('5');
+    expect(gold().step).toBe('0.1');
+    fireEvent.change(gold(), { target: { value: '2.1' } });
+    fireEvent.change(gold(), { target: { value: '5' } });
+    expect(view.modifiers().enemyGoldDropChanceMultiplier).toBe(1);
+    fireEvent.pointerUp(gold());
+    expect(view.modifiers().enemyGoldDropChanceMultiplier).toBe(5);
+    act(() => view.application.store.dispatch(authoredProjectUndoRequested()));
+    expect(gold().value).toBe('1');
+    act(() => view.application.store.dispatch(authoredProjectRedoRequested()));
+    expect(gold().value).toBe('5');
+    fireEvent.change(gold(), { target: { value: '3' } });
+    const saved = view.project();
+    act(() => view.application.store.dispatch(authoredProjectReplaced(saved)));
+    expect(gold().value).toBe('5');
+    fireEvent.change(gold(), { target: { value: '2.5' } });
+    fireEvent.keyUp(gold(), { key: 'ArrowLeft' });
+    expect(view.modifiers().enemyGoldDropChanceMultiplier).toBe(2.5);
+  });
+
+  it('preserves an existing multiplier above the slider range until edited', () => {
+    const view = open();
     act(() =>
       view.application.store.dispatch(
         authoredProjectCommandDispatched({
-          kind: 'ConfigureRoutePrefix',
+          kind: 'ReplaceRunModifiers',
           route: createRouteAddress('Underworld'),
-          configuredBiomeCount: 1,
+          value: { ...view.modifiers(), enemyGoldDropChanceMultiplier: 8 },
         }),
       ),
     );
-    expect(gold().value).toBe('2e');
-    fireEvent.change(gold(), { target: { value: '2.5' } });
-    fireEvent.keyDown(gold(), { key: 'Enter' });
-    expect(view.modifiers()).toEqual({
-      guaranteeEligibleCrits: true,
-      guaranteeEligibleDoubleDamage: true,
-      enemyGoldDropChanceMultiplier: 2.5,
-    });
-    act(() => view.application.store.dispatch(authoredProjectUndoRequested()));
-    expect(gold().value).toBe('1');
-    fireEvent.change(gold(), { target: { value: '3e' } });
-    act(() => view.application.store.dispatch(authoredProjectRedoRequested()));
-    expect(gold().value).toBe('2.5');
-    expect(screen.queryByRole('alert')).toBeNull();
-    fireEvent.change(gold(), { target: { value: '4e' } });
-    act(() =>
-      view.application.store.dispatch(
-        authoredProjectReplaced(
-          createProjectDocument(view.application.catalog, {
-            projectId: 'different',
-            routeKey: 'Underworld',
-            configuredBiomeCount: 0,
-          }),
-        ),
-      ),
-    );
-    expect(gold().value).toBe('1');
-  });
-
-  it('clears a pending error when the same saved document is reopened', async () => {
-    const files = createFakeProfileFiles();
-    const application = createApplication({ profileFile: files.adapter });
-    const saved = createProjectDocument(application.catalog, {
-      projectId: 'same-id',
-      routeKey: 'Underworld',
-      configuredBiomeCount: 0,
-    });
-    await files.openSaved(application, saved, 'same.runplanner.json');
-    renderPlannerForInteraction({ application });
-    fireEvent.change(gold(), { target: { value: '2e' } });
+    expect(screen.getByText('8×')).toBeTruthy();
     fireEvent.blur(gold());
-    expect(screen.getByRole('alert')).toBeTruthy();
-    await act(async () => {
-      await files.openSaved(application, saved, 'same.runplanner.json');
-    });
-    expect(gold().value).toBe('1');
-    expect(screen.queryByRole('alert')).toBeNull();
-    fireEvent.keyDown(gold(), { key: 'Enter' });
-    expect(
-      application.store.getState().projectWorkspace.history!.present.route.loadout.runModifiers,
-    ).toBeUndefined();
-    expect(application.store.getState().projectWorkspace.history!.past).toHaveLength(0);
-
-    fireEvent.change(gold(), { target: { value: '3e' } });
-    fireEvent.blur(gold());
-    act(() => application.store.dispatch(authoredProjectReplaced(saved)));
-    expect(gold().value).toBe('1');
-    expect(screen.queryByRole('alert')).toBeNull();
+    expect(view.modifiers().enemyGoldDropChanceMultiplier).toBe(8);
   });
 
   it('allows modifiers on Fresh File while preserving fixed native equipment', async () => {
