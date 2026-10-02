@@ -234,9 +234,11 @@ semantic focus, adds history or requires complete authoring. The route rail
 remains the navigation to room details.
 
 One image viewport serves inspection dialogs and inline editing references.
-Fields Layout keeps placement controls on the left and a larger reference on
-the right. Individual main/side-room dialogs remain independent of the Hub
-editor, and side-room tables retain their full editing width. Inline references
+Fields Layout and Ephyra Side Rooms keep controls on the left and a larger
+reference on the right. Individual main/side-room dialogs remain independent of
+the Hub editor. Side Rooms uses an illustrative parent map with declared local
+slot status; generation and traversal are edited in the left controls. Its map
+fits a 16:9 viewport, with scrolling reserved for zoomed inspection. Inline references
 are sticky only beside controls and stack above them in normal flow when space
 is narrow. Images fit a bounded viewport with zoom and dragging to pan;
 Close/Escape returns focus to the invoking control when it still exists.
@@ -317,8 +319,9 @@ or child ownership moves to a composite editor.
 The application publishes one closed occurrence-presentation union rather than
 a generic room-details disclosure. Standard, Fields, and Shop occurrences
 render Room Overview, Room Timeline, and Room Doors. Overview contains read-only
-incoming context and meaningful room-local setup: optional N Side rooms,
-Fields identities, Shop inventory and Purchased markers, and Room features.
+incoming context and meaningful room-local setup: Fields identities, Shop
+inventory and Purchased markers, and Room features. Ephyra parents with declared
+side-room groups add a dedicated Side Rooms workbench.
 Room Timeline consumes the engine lifecycle timeline plus the one
 occurrence-owned chronology. Doors consumes the unchanged total outgoing-stage
 product. A
@@ -637,8 +640,9 @@ Exact Hub inspector destinations also carry their presentation tab: Hub,
 slot-set, and main incoming-reward-identity owners open Hub Overview; main
 visit and ordering owners open Hub Timeline; entered main-room occurrences and
 their incoming-reward acquisition children open the main occurrence Timeline;
-parent-owned side generation, entry order, and side reward identity open the
-parent main occurrence Overview; entered side occurrences and their acquisition
+parent-owned side generation and side reward identity open the parent main
+occurrence Side Rooms Doors view, while side entry order opens Side Rooms Visits;
+entered side occurrences and their acquisition
 children open the side occurrence Timeline; the uncommitted completed-Hub
 handoff opens Exit; Hub fountain placement opens Hub Timeline; and its Phial
 outcome opens the room entered after the use, or Hub Timeline until that room
@@ -707,11 +711,11 @@ board remains the sole editable main-reward surface.
 
 Entered side occurrences extend the N rail as nested children of their owning
 main visit. The rail includes only side occurrences in the authored local
-`visitOrder`; generated but unentered side rows stay on the parent Overview and
-do not receive rail entries. Side children retain side-entry order, select the
+`visitOrder`; generated but unentered side rows stay in the parent Side Rooms
+workbench and do not receive rail entries. Side children retain side-entry order, select the
 side occurrence's Timeline, and do not contribute to the six-main-visit count.
 Parent-owned side generation, entry order, and reward-identity markers select
-the parent main visit and its Overview. The rail uses the complete marker
+the parent main visit and its Side Rooms workbench. The rail uses the complete marker
 family supplied by each owner, including acquisition children, rather than a
 rendered-position or partial-marker heuristic.
 

@@ -238,6 +238,39 @@
   inset: 0;
 }
 
+.ephyra-side-map-marker-layer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+/* The capture paints destination numbers; the overlay only describes authored state. */
+.ephyra-side-map-marker {
+  position: absolute;
+  z-index: 1;
+  width: 6.1%;
+  min-height: 0;
+  aspect-ratio: 1;
+  transform: translate(-50%, -50%);
+}
+
+.ephyra-side-map-visit-badge {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 50%;
+  min-width: max-content;
+  padding: 2px 4px;
+  border: 1px solid #80d1b5;
+  border-radius: 999px;
+  color: #eafff6;
+  background: rgb(20 29 38 / 92%);
+  font-size: 0.68rem;
+  font-weight: 700;
+  line-height: 1;
+  pointer-events: none;
+  transform: translateX(-50%);
+}
+
 .hub-map-marker,
 .hub-map-visit-badge-anchor {
   position: absolute;

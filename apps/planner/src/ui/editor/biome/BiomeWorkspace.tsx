@@ -538,6 +538,12 @@ export function BiomeWorkspace({
             {...(explicitDestination?.roomTab === undefined
               ? {}
               : { roomTab: explicitDestination.roomTab })}
+            {...(explicitDestination?.sideRoomsTab === undefined
+              ? {}
+              : { sideRoomsTab: explicitDestination.sideRoomsTab })}
+            {...(explicitDestination?.sideRoomSlotKey === undefined
+              ? {}
+              : { sideRoomSlotKey: explicitDestination.sideRoomSlotKey })}
             {...(findingOrigin === undefined
               ? {}
               : { findingNavigationRevision: semanticNavigationRevision })}

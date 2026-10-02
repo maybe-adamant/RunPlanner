@@ -17,6 +17,7 @@ import {
   createHubVisitAddress,
   createIncomingRewardAddress,
   createLocalVisitSlotAddress,
+  createLocalVisitOrderAddress,
   createOccurrenceId,
   createOccurrenceAddress,
   createRoomActionAddress,
@@ -1274,7 +1275,20 @@ describe('workspace inspector destinations', () => {
     );
     if (sideParentVisit === undefined) throw new Error('N Combat 05 Hub visit is missing');
     expect(destination(complete, sideRoom)).toMatchObject({
-      roomTab: 'overview',
+      roomTab: 'sideRooms',
+      sideRoomsTab: 'doors',
+      sideRoomSlotKey: 'sideDoor1',
+      inspectorSubject: { kind: 'node', nodeKey: sideParentVisit.node.key },
+      selectedRailKey: sideParentVisit.marker.focusKey,
+    });
+    expect(
+      destination(
+        complete,
+        createLocalVisitOrderAddress(nBiome, nOccurrenceId('combat05'), 'sideRooms'),
+      ),
+    ).toMatchObject({
+      roomTab: 'sideRooms',
+      sideRoomsTab: 'visits',
       inspectorSubject: { kind: 'node', nodeKey: sideParentVisit.node.key },
       selectedRailKey: sideParentVisit.marker.focusKey,
     });
@@ -1288,6 +1302,13 @@ describe('workspace inspector destinations', () => {
       nBiome,
       nLocalOccurrenceId('combat05', 'sideDoor1'),
     );
+    expect(destination(complete, sideReward)).toMatchObject({
+      roomTab: 'sideRooms',
+      sideRoomsTab: 'doors',
+      sideRoomSlotKey: 'sideDoor1',
+      inspectorSubject: { kind: 'node', nodeKey: sideParentVisit.node.key },
+      selectedRailKey: sideParentVisit.marker.focusKey,
+    });
     const sideProject = applyProjectCommand(loadSurfaceNOPQProject(), catalog, {
       kind: 'ReplaceIncomingReward',
       reward: sideReward,

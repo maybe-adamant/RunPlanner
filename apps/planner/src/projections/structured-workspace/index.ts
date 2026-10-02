@@ -15,6 +15,7 @@ export type {
   WorkspaceInspectorDestination,
   WorkspaceMarker,
   WorkspaceRoomTab,
+  WorkspaceSideRoomsTab,
 } from './contracts/navigation';
 export type {
   WorkspaceRunStateBagSection,

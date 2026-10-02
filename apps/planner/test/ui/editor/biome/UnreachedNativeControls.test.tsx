@@ -85,6 +85,7 @@ describe('native settings whose candidate context is unreached, on first render'
         'N',
         occurrenceById(createOccurrenceId('surface-n-combat02')),
       );
+      openRoomTab('Side Rooms');
       return screen.getAllByRole('checkbox', { name: /generation$/ })[0] as HTMLInputElement;
     };
     const reached = generation(loadSurfaceNOPQProject());
