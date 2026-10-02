@@ -3,11 +3,9 @@ import { routeRoomDeclaration } from '../../../authored-project/route-profile';
 import type { ResolvedRoutePosition } from '../../../authored-project/route-context';
 import type { HermesShrineCandidateContext } from '../../commerce/hermes-shrine';
 import {
-  createEncounterPhaseAddress,
   createBiomeAddress,
   createHubDecisionAddress,
   createTargetAddress,
-  createRoomRunStateCheckpointAddress,
   semanticAddressKey,
   type HubRoomAddress,
   type SemanticAddress,
@@ -63,7 +61,6 @@ import {
   normalizeOfferedRewardTypes,
   publishOfferedRewardTypes,
 } from '../../state/offered-rewards';
-import { applyEncounterStartedTransition } from './lifecycle-transitions/encounter-started';
 import { applyFountainUsedTransition } from './lifecycle-transitions/fountain-used';
 import { applyRoomEnteredTransition } from './lifecycle-transitions/room-entered';
 import { applyRoomPreparedTransition } from './lifecycle-transitions/room-prepared';
@@ -95,8 +92,6 @@ import { flushHubBoard } from './generation/hub-board';
 import { applyOutgoingGenerationTransition } from './generation/outgoing-generation';
 import { applyOfferPointMaterializedTransition } from './offer-lifecycle/offer-point-materialized';
 import { applyReachedOfferSettlement } from './offer-lifecycle/reached-settlement';
-import { applyGorgonStartedTransition } from './encounter-acquisition/gorgon-started';
-import { applyEncounterSettlementTransition } from './encounter-acquisition/encounter-settlement';
 import { rewardFindingChronologyForRoom } from './finding-chronology';
 import type { PendingHubBoardGeneration as GenerationPendingHubBoardGeneration } from './generation/emissions';
 import type { BiomeRewardHistory, BiomeRewardSnapshot } from './evaluation-contract';
@@ -178,9 +173,6 @@ export function evaluateBiomeRewardChronology(
   );
   const batchesByParent = prepared.batchesByParent;
   const accumulator = createChronologyAccumulator(rooms);
-  const blockedGorgonPhases = new Set<string>();
-  let gorgonEvaluationBlocked = false;
-  const eligibleGorgonPhases = new Set<string>();
 
   // A Hub replaces its source's zero-target terminal envelope. Its source
   // still reaches an outgoing lifecycle checkpoint, but that checkpoint
@@ -258,6 +250,8 @@ export function evaluateBiomeRewardChronology(
     views,
     routeLoadout,
     enteredBiomeCount,
+    fullRunBiomeCount,
+    routePosition,
     resourcePlacements,
     resourceFindings,
     authoredSeaStarDuplicateSiteKeys,
@@ -521,63 +515,9 @@ export function evaluateBiomeRewardChronology(
       break;
     }
     switch (event.kind) {
-      case 'encounterStarted': {
-        const room = rooms.get(semanticAddressKey(event.origin));
-        if (room?.kind === 'authored' && room.lifecycleProfileKey === 'ShipCombatRoom') {
-          const view = views
-            .get(semanticAddressKey(event.origin))
-            ?.encounterStarts.find((candidate) => candidate.phaseKey === event.phaseKey)?.before;
-          if (view === undefined) {
-            throw new BiomeRewardSimulationContractError(
-              `${room.gameName} ${event.phaseKey} has no pre-encounter Run State view`,
-            );
-          }
-          captureRunState(
-            createRoomRunStateCheckpointAddress(room.origin, {
-              kind: 'beforeEncounterStart',
-              phaseKey: event.phaseKey,
-            }),
-            room,
-            view,
-          );
-        }
-        const figLeafTransition = applyEncounterStartedTransition(
-          catalog,
-          snapshot,
-          event,
-          room?.kind === 'authored' ? room : undefined,
-          walk.branches,
-        );
-        walk = withBranches(walk, figLeafTransition.branches);
-        accumulator.mergeEmissions([
-          { kind: 'figLeafPhaseCandidates', candidates: figLeafTransition.figLeafCandidates },
-          lifecycleFindings(figLeafTransition.findings),
-        ]);
-        const gorgon = applyGorgonStartedTransition({
-          catalog,
-          event,
-          room: room?.kind === 'authored' ? room : undefined,
-          view: room === undefined ? undefined : views.get(semanticAddressKey(room.origin)),
-          branches: walk.branches,
-          evaluationBlocked: gorgonEvaluationBlocked,
-        });
-        walk = withBranches(walk, gorgon.branches);
-        accumulator.mergeEmissions([
-          ...(gorgon.candidate === undefined
-            ? []
-            : [
-                {
-                  kind: 'gorgonPhaseCandidate' as const,
-                  key: gorgon.candidate.key,
-                  candidate: gorgon.candidate.value,
-                },
-              ]),
-          lifecycleFindings(gorgon.findings),
-        ]);
-        if (gorgon.eligiblePhaseKey !== undefined)
-          eligibleGorgonPhases.add(gorgon.eligiblePhaseKey);
+      case 'encounterStarted':
+        applySeamStep(chronologySeamHandlers.encounterStarted(walkContext, walk, event));
         break;
-      }
       case 'roomEntered': {
         const room = rooms.get(semanticAddressKey(event.origin));
         const entered = applyRoomEnteredTransition(
@@ -920,97 +860,14 @@ export function evaluateBiomeRewardChronology(
         break;
       }
       case 'bossDefeated':
-      case 'encounterInteractionReached':
-      case 'encounterCompleted': {
-        const room = rooms.get(semanticAddressKey(event.origin));
-        const gorgonPhaseKey = `${semanticAddressKey(event.origin)}::${event.phaseKey}`;
-        const gorgonCandidate =
-          room?.kind === 'authored'
-            ? accumulator.gorgonPhaseCandidate(
-                semanticAddressKey(
-                  createEncounterPhaseAddress(
-                    createBiomeAddress(room.origin.routeKey, room.origin.biomeKey),
-                    { kind: 'occurrence', occurrenceId: room.occurrenceId },
-                    event.phaseKey,
-                  ),
-                ),
-              )
-            : undefined;
-        const transition = applyEncounterSettlementTransition({
-          catalog,
-          snapshot,
-          routePosition,
-          event,
-          room,
-          view: views.get(semanticAddressKey(event.origin)),
-          branches: walk.branches,
-          enteredBiomeCount,
-          fullRunBiomeCount,
-          authoredSeaStarDuplicateSiteKeys,
-          gorgonEligible: eligibleGorgonPhases.has(gorgonPhaseKey),
-          gorgonCandidate,
-          gorgonPhaseBlocked: blockedGorgonPhases.has(gorgonPhaseKey),
-          gorgonEvaluationBlocked,
-        });
-        walk = withBranches(walk, transition.branches);
-        accumulator.mergeEmissions([
-          settledFindings(transition.findings),
-          { kind: 'acquisitionRoleFrontiers', frontiers: transition.roleFrontiers },
-          {
-            kind: 'traitOfferCandidateContacts',
-            contacts: transition.traitOfferCandidateContacts,
-          },
-          ...transition.traitChildSettlements.map((settlement) => ({
-            kind: 'traitChildSettlements' as const,
-            checkpoints: Object.freeze([settlement.checkpoint]),
-            occurrenceOwner: settlement.occurrenceOwner,
-          })),
-          ...(transition.judgmentCandidate === undefined
-            ? []
-            : [
-                {
-                  kind: 'judgmentArcanaCandidate' as const,
-                  key: transition.judgmentCandidate.key,
-                  candidate: Object.freeze({
-                    activeArcanaKeys: transition.judgmentCandidate.activeArcanaKeys,
-                    activeArcana: transition.judgmentCandidate.activeArcana,
-                    inactiveArcanaKeys: transition.judgmentCandidate.inactiveArcanaKeys,
-                    requiredCount: transition.judgmentCandidate.requiredCount,
-                  }),
-                },
-              ]),
-          ...(transition.figurineCandidate === undefined
-            ? []
-            : [
-                {
-                  kind: 'figurineArcanaCandidate' as const,
-                  key: transition.figurineCandidate.key,
-                  candidate: Object.freeze({
-                    activeArcanaKeys: transition.figurineCandidate.activeArcanaKeys,
-                    activeArcana: transition.figurineCandidate.activeArcana,
-                    inactiveArcanaKeys: transition.figurineCandidate.inactiveArcanaKeys,
-                    requiredCount: transition.figurineCandidate.requiredCount,
-                    rarity: transition.figurineCandidate.rarity,
-                  }),
-                },
-              ]),
-          ...(transition.nemesisCandidate === undefined
-            ? []
-            : [
-                {
-                  kind: 'nemesisRandomEventCandidate' as const,
-                  key: transition.nemesisCandidate.key,
-                  candidate: transition.nemesisCandidate.value,
-                },
-              ]),
-          { kind: 'bossArcanaOutcomes', outcomes: transition.bossArcanaOutcomes ?? [] },
-          { kind: 'timelineFacts', facts: transition.timelineFacts },
-        ]);
-        if (transition.blockGorgonPhaseKey !== undefined)
-          blockedGorgonPhases.add(transition.blockGorgonPhaseKey);
-        gorgonEvaluationBlocked = transition.gorgonEvaluationBlocked;
+        applySeamStep(chronologySeamHandlers.bossDefeated(walkContext, walk, event));
         break;
-      }
+      case 'encounterInteractionReached':
+        applySeamStep(chronologySeamHandlers.encounterInteractionReached(walkContext, walk, event));
+        break;
+      case 'encounterCompleted':
+        applySeamStep(chronologySeamHandlers.encounterCompleted(walkContext, walk, event));
+        break;
       case 'encounterEndEffectsApplied':
         applySeamStep(chronologySeamHandlers.encounterEndEffectsApplied(walkContext, walk, event));
         if (walk.halted) {

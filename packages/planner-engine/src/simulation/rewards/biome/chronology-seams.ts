@@ -2,6 +2,8 @@ import type { Catalog } from '../../../catalog-schema';
 import {
   createAcquisitionEntryAddress,
   createBiomeAddress,
+  createEncounterPhaseAddress,
+  createRoomRunStateCheckpointAddress,
   createTravelDealRefillRealizationAddress,
   semanticAddressKey,
   type OccurrenceAddress,
@@ -10,6 +12,7 @@ import {
 import type { ResourcePlacements, RouteLoadout } from '../../../authored-project/model';
 import { parseHermesShrineDeliveryEntryKey } from '../../../authored-project/hermes-shrine-delivery';
 import { routeRoomDeclaration } from '../../../authored-project/route-profile';
+import type { ResolvedRoutePosition } from '../../../authored-project/route-context';
 import type { HermesShrineTravelDealRefillAssessment } from '../../commerce/hermes-shrine';
 import type { PurgingPoolAssessment } from '../../commerce/purging-pool';
 import type { StygianWellCandidateContext } from '../../commerce/stygian-well';
@@ -33,6 +36,10 @@ import {
   type HermesShrineRefillState,
 } from './encounter-acquisition/acquisition-point-reached';
 import { applyWellPurchaseTransition } from './encounter-acquisition/well-purchase';
+import { applyGorgonStartedTransition } from './encounter-acquisition/gorgon-started';
+import { applyEncounterSettlementTransition } from './encounter-acquisition/encounter-settlement';
+import { applyEncounterStartedTransition } from './lifecycle-transitions/encounter-started';
+import { BiomeRewardSimulationContractError } from './biome-contract';
 import type { BiomeRewardSnapshot } from './evaluation-contract';
 import { applyEncounterEndEffectsTransition } from './lifecycle-transitions/encounter-end-effects';
 import { applyErisInteractedTransition } from './lifecycle-transitions/eris-interacted';
@@ -47,11 +54,16 @@ export interface ChronologyWalkContext {
   readonly views: ReadonlyMap<string, ProgressiveRoomHistoryViews>;
   readonly routeLoadout: RouteLoadout;
   readonly enteredBiomeCount: number;
+  readonly fullRunBiomeCount: number;
+  readonly routePosition: ResolvedRoutePosition;
   readonly resourcePlacements: ResourcePlacements;
   readonly resourceFindings: readonly SemanticFinding[];
   readonly authoredSeaStarDuplicateSiteKeys: ReadonlySet<string>;
   /** Ordered reads of what earlier seams accumulated. */
-  readonly accumulated: Pick<ChronologyAccumulator, 'derivedAcquisitionEntryFrontiers'>;
+  readonly accumulated: Pick<
+    ChronologyAccumulator,
+    'derivedAcquisitionEntryFrontiers' | 'gorgonPhaseCandidate'
+  >;
 }
 
 export interface PurgingPoolRoomAssessment {
@@ -82,6 +94,10 @@ export interface ChronologyWalkState {
   // to a branch.  We still require Travel Deal to agree across every branch
   // at that first action prefix before publishing a refill generation.
   readonly firstRushedInitialGenerationByShrine: ReadonlySet<string>;
+  /** Gorgon phases keyed `occurrence::phase`, shared by encounter start and settlement. */
+  readonly eligibleGorgonPhases: ReadonlySet<string>;
+  readonly blockedGorgonPhases: ReadonlySet<string>;
+  readonly gorgonEvaluationBlocked: boolean;
 }
 
 export function createChronologyWalkState(
@@ -96,6 +112,9 @@ export function createChronologyWalkState(
     hermesShrineTravelDealRefills: new Map(),
     hermesShrineTravelDealRefillValid: new Map(),
     firstRushedInitialGenerationByShrine: new Set<string>(),
+    eligibleGorgonPhases: new Set<string>(),
+    blockedGorgonPhases: new Set<string>(),
+    gorgonEvaluationBlocked: false,
   });
 }
 
@@ -470,6 +489,174 @@ const acquisitionPointReached: ChronologySeamHandler<'acquisitionPointReached'> 
   };
 };
 
+/** A Ship room captures its Run State before each encounter starts. */
+const encounterStarted: ChronologySeamHandler<'encounterStarted'> = (context, state, event) => {
+  const sourceRoom = context.rooms.get(semanticAddressKey(event.origin));
+  const room = sourceRoom?.kind === 'authored' ? sourceRoom : undefined;
+  let runStateCheckpoint: ChronologySeamStep['runStateCheckpoint'];
+  if (room !== undefined && room.lifecycleProfileKey === 'ShipCombatRoom') {
+    const view = context.views
+      .get(semanticAddressKey(event.origin))
+      ?.encounterStarts.find((candidate) => candidate.phaseKey === event.phaseKey)?.before;
+    if (view === undefined) {
+      throw new BiomeRewardSimulationContractError(
+        `${room.gameName} ${event.phaseKey} has no pre-encounter Run State view`,
+      );
+    }
+    runStateCheckpoint = {
+      owner: createRoomRunStateCheckpointAddress(room.origin, {
+        kind: 'beforeEncounterStart',
+        phaseKey: event.phaseKey,
+      }),
+      room,
+      view,
+    };
+  }
+  const figLeaf = applyEncounterStartedTransition(
+    context.catalog,
+    context.snapshot,
+    event,
+    room,
+    state.branches,
+  );
+  const gorgon = applyGorgonStartedTransition({
+    catalog: context.catalog,
+    event,
+    room,
+    view:
+      sourceRoom === undefined
+        ? undefined
+        : context.views.get(semanticAddressKey(sourceRoom.origin)),
+    branches: figLeaf.branches,
+    evaluationBlocked: state.gorgonEvaluationBlocked,
+  });
+  return {
+    state: Object.freeze({
+      ...state,
+      branches: gorgon.branches,
+      eligibleGorgonPhases:
+        gorgon.eligiblePhaseKey === undefined
+          ? state.eligibleGorgonPhases
+          : withMember(state.eligibleGorgonPhases, gorgon.eligiblePhaseKey, true),
+    }),
+    emissions: [
+      { kind: 'figLeafPhaseCandidates', candidates: figLeaf.figLeafCandidates },
+      lifecycleFindings(figLeaf.findings),
+      ...(gorgon.candidate === undefined
+        ? []
+        : [
+            {
+              kind: 'gorgonPhaseCandidate' as const,
+              key: gorgon.candidate.key,
+              candidate: gorgon.candidate.value,
+            },
+          ]),
+      lifecycleFindings(gorgon.findings),
+    ],
+    ...(runStateCheckpoint === undefined ? {} : { runStateCheckpoint }),
+  };
+};
+
+/** Encounter completion and its cleanup-window Room Actions settle through one transition. */
+const encounterSettled: ChronologySeamHandler<
+  'bossDefeated' | 'encounterInteractionReached' | 'encounterCompleted'
+> = (context, state, event) => {
+  const room = context.rooms.get(semanticAddressKey(event.origin));
+  const gorgonPhaseKey = `${semanticAddressKey(event.origin)}::${event.phaseKey}`;
+  const gorgonCandidate =
+    room?.kind === 'authored'
+      ? context.accumulated.gorgonPhaseCandidate(
+          semanticAddressKey(
+            createEncounterPhaseAddress(
+              createBiomeAddress(room.origin.routeKey, room.origin.biomeKey),
+              { kind: 'occurrence', occurrenceId: room.occurrenceId },
+              event.phaseKey,
+            ),
+          ),
+        )
+      : undefined;
+  const transition = applyEncounterSettlementTransition({
+    catalog: context.catalog,
+    snapshot: context.snapshot,
+    routePosition: context.routePosition,
+    event,
+    room,
+    view: context.views.get(semanticAddressKey(event.origin)),
+    branches: state.branches,
+    enteredBiomeCount: context.enteredBiomeCount,
+    fullRunBiomeCount: context.fullRunBiomeCount,
+    authoredSeaStarDuplicateSiteKeys: context.authoredSeaStarDuplicateSiteKeys,
+    gorgonEligible: state.eligibleGorgonPhases.has(gorgonPhaseKey),
+    gorgonCandidate,
+    gorgonPhaseBlocked: state.blockedGorgonPhases.has(gorgonPhaseKey),
+    gorgonEvaluationBlocked: state.gorgonEvaluationBlocked,
+  });
+  return {
+    state: Object.freeze({
+      ...state,
+      branches: transition.branches,
+      blockedGorgonPhases:
+        transition.blockGorgonPhaseKey === undefined
+          ? state.blockedGorgonPhases
+          : withMember(state.blockedGorgonPhases, transition.blockGorgonPhaseKey, true),
+      gorgonEvaluationBlocked: transition.gorgonEvaluationBlocked,
+    }),
+    emissions: [
+      settledFindings(transition.findings),
+      { kind: 'acquisitionRoleFrontiers', frontiers: transition.roleFrontiers },
+      {
+        kind: 'traitOfferCandidateContacts',
+        contacts: transition.traitOfferCandidateContacts,
+      },
+      ...transition.traitChildSettlements.map((settlement) => ({
+        kind: 'traitChildSettlements' as const,
+        checkpoints: Object.freeze([settlement.checkpoint]),
+        occurrenceOwner: settlement.occurrenceOwner,
+      })),
+      ...(transition.judgmentCandidate === undefined
+        ? []
+        : [
+            {
+              kind: 'judgmentArcanaCandidate' as const,
+              key: transition.judgmentCandidate.key,
+              candidate: Object.freeze({
+                activeArcanaKeys: transition.judgmentCandidate.activeArcanaKeys,
+                activeArcana: transition.judgmentCandidate.activeArcana,
+                inactiveArcanaKeys: transition.judgmentCandidate.inactiveArcanaKeys,
+                requiredCount: transition.judgmentCandidate.requiredCount,
+              }),
+            },
+          ]),
+      ...(transition.figurineCandidate === undefined
+        ? []
+        : [
+            {
+              kind: 'figurineArcanaCandidate' as const,
+              key: transition.figurineCandidate.key,
+              candidate: Object.freeze({
+                activeArcanaKeys: transition.figurineCandidate.activeArcanaKeys,
+                activeArcana: transition.figurineCandidate.activeArcana,
+                inactiveArcanaKeys: transition.figurineCandidate.inactiveArcanaKeys,
+                requiredCount: transition.figurineCandidate.requiredCount,
+                rarity: transition.figurineCandidate.rarity,
+              }),
+            },
+          ]),
+      ...(transition.nemesisCandidate === undefined
+        ? []
+        : [
+            {
+              kind: 'nemesisRandomEventCandidate' as const,
+              key: transition.nemesisCandidate.key,
+              candidate: transition.nemesisCandidate.value,
+            },
+          ]),
+      { kind: 'bossArcanaOutcomes', outcomes: transition.bossArcanaOutcomes ?? [] },
+      { kind: 'timelineFacts', facts: transition.timelineFacts },
+    ],
+  };
+};
+
 /** Seams whose handler is a thin adapter over its unchanged transition module. */
 export const chronologySeamHandlers = Object.freeze({
   erisInteracted,
@@ -479,4 +666,8 @@ export const chronologySeamHandlers = Object.freeze({
   wellPurchase,
   hermesShrineDeliveriesScheduled,
   acquisitionPointReached,
+  encounterStarted,
+  bossDefeated: encounterSettled,
+  encounterInteractionReached: encounterSettled,
+  encounterCompleted: encounterSettled,
 });
