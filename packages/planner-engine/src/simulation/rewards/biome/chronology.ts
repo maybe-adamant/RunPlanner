@@ -1,5 +1,5 @@
 import type { Catalog } from '../../../catalog-schema';
-import { routePurgingPool, routeRoomDeclaration } from '../../../authored-project/route-profile';
+import { routeRoomDeclaration } from '../../../authored-project/route-profile';
 import type { ResolvedRoutePosition } from '../../../authored-project/route-context';
 import type { PurgingPoolAssessment } from '../../commerce/purging-pool';
 import type { HermesShrineCandidateContext } from '../../commerce/hermes-shrine';
@@ -12,7 +12,6 @@ import {
   createHubDecisionAddress,
   createTargetAddress,
   createRoomRunStateCheckpointAddress,
-  createRoomFeatureAddress,
   semanticAddressKey,
   type HubRoomAddress,
   type SemanticAddress,
@@ -52,10 +51,7 @@ import {
   createTranscendentEmbryoCandidateArtifacts,
   createFountainRarityCandidateArtifacts,
 } from '../../keepsakes/candidate-artifacts';
-import {
-  assessPurgingPool,
-  createPurgingPoolCandidateArtifacts,
-} from '../../commerce/purging-pool';
+import { createPurgingPoolCandidateArtifacts } from '../../commerce/purging-pool';
 import { createHermesShrineCandidateArtifacts } from '../../commerce/hermes-shrine';
 import { createStygianWellCandidateArtifacts } from '../../commerce/stygian-well';
 import {
@@ -1116,73 +1112,19 @@ export function evaluateBiomeRewardChronology(
               ? room.fountainRarityResult
               : undefined,
           branches,
+          room?.kind === 'authored' ? room : undefined,
         );
         branches = transition.branches;
         recordTimelineFacts(transition.timelineFacts);
         if (transition.candidate !== undefined)
           fountainRarityCandidateContexts.set(transition.candidate.key, transition.candidate.value);
+        if (transition.purgingPoolAssessment !== undefined)
+          purgingPoolAssessments.set(
+            transition.purgingPoolAssessment.key,
+            transition.purgingPoolAssessment.value,
+          );
         for (const finding of transition.findings)
           addRewardFinding(findings, finding.finding, finding.region, finding.chronology);
-        // The fountain unlocks Postboss facilities. Capture the pool only after
-        // its rarity effects settle, never from entry or an unresolved Phial.
-        // A retained Pool on a route without one is never assessed, so its sales stay unavailable.
-        if (
-          room?.kind === 'authored' &&
-          room.purgingPool?.interacted &&
-          routePurgingPool(catalog.rooms.byKey[room.gameName], room.origin.routeKey) === undefined
-        )
-          addRewardFinding(
-            findings,
-            rewardFinding(
-              'purgingPoolUnavailable',
-              createRoomFeatureAddress(room.origin, { kind: 'purgingPoolInventory' }),
-              { routeKey: room.origin.routeKey },
-            ),
-            ownerRegion(room.origin),
-            Object.freeze({ kind: 'history', sequence: event.sequence, boundary: 'after' }),
-          );
-        if (
-          room?.kind === 'authored' &&
-          room.purgingPool?.interacted &&
-          routePurgingPool(catalog.rooms.byKey[room.gameName], room.origin.routeKey) !==
-            undefined &&
-          branches.length > 0
-        ) {
-          const assessments = Object.freeze(
-            branches.map((branch) =>
-              assessPurgingPool(
-                catalog,
-                room.purgingPool!,
-                branch.state.traitHistory.equippedTraits,
-              ),
-            ),
-          );
-          purgingPoolAssessments.set(
-            semanticAddressKey(room.origin),
-            Object.freeze({ origin: room.origin, assessments }),
-          );
-          for (const assessment of assessments) {
-            for (const finding of assessment.findings)
-              addRewardFinding(
-                findings,
-                rewardFinding(
-                  finding.code,
-                  createRoomFeatureAddress(
-                    room.origin,
-                    finding.slotKey === undefined
-                      ? { kind: 'purgingPoolInventory' }
-                      : { kind: 'purgingPoolOffer', slotKey: finding.slotKey },
-                  ),
-                  {
-                    ...finding.evidence,
-                    ...(finding.slotKey === undefined ? {} : { slotKey: finding.slotKey }),
-                  },
-                ),
-                ownerRegion(room.origin),
-                Object.freeze({ kind: 'history', sequence: event.sequence, boundary: 'after' }),
-              );
-          }
-        }
         break;
       }
       case 'roomCreated': {
