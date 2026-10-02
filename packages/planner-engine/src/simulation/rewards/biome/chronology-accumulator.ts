@@ -57,6 +57,7 @@ import type {
   ReachedTraitOfferCandidateContact,
 } from '../trait-settlement/coordinator';
 import { BiomeRewardSimulationContractError } from './biome-contract';
+import type { AuthoredSiteSettlementResult } from './generation/authored-site-settlement';
 
 function fail(detail: string): never {
   throw new BiomeRewardSimulationContractError(detail);
@@ -641,22 +642,38 @@ export function createChronologyAccumulator(
     );
   }
 
+  function mergeFindings(
+    emission: Extract<ChronologyEmission, { readonly kind: 'findings' }>,
+  ): void {
+    switch (emission.rule) {
+      case 'add':
+        for (const entry of emission.entries)
+          addRewardFinding(
+            findings,
+            entry.finding,
+            entry.atomicRegion,
+            entry.chronology,
+            entry.levelResolutionEvaluation,
+          );
+        return;
+      case 'set':
+        for (const entry of emission.entries)
+          findings.set(findingIdentityKey(entry.finding), entry);
+        return;
+      case 'merge':
+        mergeRewardFindingEmissions(findings, emission.entries);
+        return;
+      default: {
+        const unreachable: never = emission;
+        return unreachable;
+      }
+    }
+  }
+
   function mergeEmission(emission: ChronologyEmission): void {
     switch (emission.kind) {
       case 'findings':
-        if (emission.rule === 'add')
-          for (const entry of emission.entries)
-            addRewardFinding(
-              findings,
-              entry.finding,
-              entry.atomicRegion,
-              entry.chronology,
-              entry.levelResolutionEvaluation,
-            );
-        else if (emission.rule === 'set')
-          for (const entry of emission.entries)
-            findings.set(findingIdentityKey(entry.finding), entry);
-        else mergeRewardFindingEmissions(findings, emission.entries);
+        mergeFindings(emission);
         return;
       case 'acquisitionRoleFrontiers':
         recordAcquisitionRoleFrontiers(emission.frontiers);
@@ -867,4 +884,40 @@ export function settledFindings(entries: readonly FindingRegionEntry[]): Chronol
 /** Region emissions merged with each retained level-resolution evaluation. */
 export function mergedFindings(entries: readonly FindingRegionEntry[]): ChronologyEmission {
   return Object.freeze({ kind: 'findings' as const, rule: 'merge' as const, entries });
+}
+
+/** Ordered accumulator writes for one authored-site settlement. */
+export function siteSettlementEmissions(
+  result: AuthoredSiteSettlementResult,
+  occurrenceOwner: SemanticAddress,
+): readonly ChronologyEmission[] {
+  return [
+    {
+      kind: 'findings',
+      rule: 'add',
+      entries: result.emissions.findings.flatMap((entry) => {
+        const evaluations = entry.levelResolutionEvaluations ?? [];
+        const added = {
+          finding: entry.finding,
+          atomicRegion: entry.atomicRegion,
+          chronology: entry.chronology,
+        };
+        return evaluations.length === 0
+          ? [added]
+          : evaluations.map((evaluation) => ({ ...added, levelResolutionEvaluation: evaluation }));
+      }),
+    },
+    { kind: 'acquisitionRoleFrontiers', frontiers: result.emissions.acquisitionRoleFrontiers },
+    { kind: 'timelineFacts', facts: result.emissions.timelineFacts },
+    {
+      kind: 'derivedAcquisitionEntryFrontiers',
+      frontiers: result.emissions.derivedEntryFrontiers,
+    },
+    {
+      kind: 'traitChildSettlements',
+      checkpoints: result.emissions.traitChildSettlements,
+      occurrenceOwner,
+    },
+    { kind: 'producerFrontiers', frontiers: result.producerFrontiers },
+  ];
 }
