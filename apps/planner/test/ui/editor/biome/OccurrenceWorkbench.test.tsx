@@ -496,27 +496,47 @@ describe('OccurrenceWorkbench', () => {
     );
   });
 
-  it('keeps N side-room generation and destination inspection separate from the main room map', async () => {
+  it('moves N side-room generation and rewards into Side Rooms Doors without authoring from its parent map', async () => {
     const view = renderOccurrenceWorkbench(
       loadSurfaceNOPQProject(),
       'Surface',
       'N',
       occurrenceById(nOccurrenceId('combat05')),
     );
-    const sideRooms = screen.getByLabelText('Ephyra side rooms');
-    expect(sideRooms).toBeTruthy();
-    expect(screen.queryByRole('tab', { name: 'Side Rooms' })).toBeNull();
-    await view.user.click(screen.getByRole('button', { name: 'View map for Combat 05' }));
+    expect(screen.getByRole('tab', { name: 'Side Rooms' })).toBeTruthy();
+    expect(screen.queryByRole('checkbox', { name: 'Side Room 03 generation' })).toBeNull();
+    openRoomTab('Side Rooms');
+    let sideRooms = screen.getByRole('region', { name: 'Side Rooms' });
+    expect(within(sideRooms).getByRole('tab', { name: 'Doors' })).toBeTruthy();
     const parentMap = screen.getByRole('img', { name: 'Map of Combat 05' });
     expect(parentMap.getAttribute('src')).toBe(roomMapAssetFor('N_Combat05')?.src);
-    expect(screen.getByText('N_Combat05')).toBeTruthy();
-    await view.user.click(screen.getByRole('button', { name: 'Close map' }));
-    const generation = screen.getByRole('checkbox', { name: 'Side Room 03 generation' });
+    let generation = screen.getByRole('checkbox', { name: 'Side Room 03 generation' });
     expect((generation as HTMLInputElement).checked).toBe(true);
+    const historyBefore = view.application.store.getState().projectWorkspace.history!.past.length;
+    const mapStatus = screen.getByLabelText('Side-room map status');
+    expect(within(mapStatus).getByLabelText('Side Room 03: Generated, not visited')).toBeTruthy();
+    expect(within(mapStatus).queryByRole('button')).toBeNull();
+    await view.user.click(parentMap);
+    expect(view.application.store.getState().projectWorkspace.history!.past).toHaveLength(
+      historyBefore,
+    );
+    const doorsTab = within(sideRooms).getByRole('tab', { name: 'Doors' });
+    const visitsTab = within(sideRooms).getByRole('tab', { name: 'Visits' });
+    fireEvent.keyDown(doorsTab, { key: 'ArrowRight' });
+    expect(visitsTab.getAttribute('aria-selected')).toBe('true');
+    expect(document.activeElement).toBe(visitsTab);
+    openRoomTab('Room Overview');
+    openRoomTab('Side Rooms');
+    sideRooms = screen.getByRole('region', { name: 'Side Rooms' });
+    expect(
+      within(sideRooms).getByRole('tab', { name: 'Visits' }).getAttribute('aria-selected'),
+    ).toBe('true');
     const sideOrder = (): HTMLSelectElement =>
       screen.getByRole('combobox', { name: 'Side Room 03 visit order' });
     expect(sideOrder().disabled).toBe(false);
-    const historyBefore = view.application.store.getState().projectWorkspace.history!.past.length;
+
+    await view.user.click(within(sideRooms).getByRole('tab', { name: 'Doors' }));
+    generation = screen.getByRole('checkbox', { name: 'Side Room 03 generation' });
 
     await view.user.click(generation);
     await waitFor(() =>
@@ -524,17 +544,16 @@ describe('OccurrenceWorkbench', () => {
         false,
       ),
     );
-    expect(sideOrder().disabled).toBe(true);
-    const sideRow = generation.closest('tr');
+    const sideRow = generation.closest('li');
     if (sideRow === null) throw new Error('Side Room 03 row is missing');
-    expect(within(sideRow).getByText('Not generated')).toBeTruthy();
+    expect(within(sideRow).getByText('No reward until this door is generated.')).toBeTruthy();
     expect(within(sideRow).queryByRole('button', { name: 'Reward' })).toBeNull();
     expect(view.application.store.getState().projectWorkspace.history!.past).toHaveLength(
       historyBefore + 1,
     );
-    await view.user.click(screen.getByRole('button', { name: 'View map for Side Room 03' }));
-    expect(screen.getByText('N_Sub03')).toBeTruthy();
-    await view.user.click(screen.getByRole('button', { name: 'Close map' }));
+    await view.user.click(within(sideRooms).getByRole('tab', { name: 'Visits' }));
+    expect(sideOrder().disabled).toBe(true);
+    await view.user.click(within(sideRooms).getByRole('tab', { name: 'Doors' }));
     expect(view.application.store.getState().projectWorkspace.history!.past).toHaveLength(
       historyBefore + 1,
     );
@@ -545,8 +564,14 @@ describe('OccurrenceWorkbench', () => {
         true,
       ),
     );
+    await view.user.click(within(sideRooms).getByRole('tab', { name: 'Visits' }));
     expect(sideOrder().disabled).toBe(false);
-    expect(within(sideRow).getByRole('button', { name: 'Reward' })).toBeTruthy();
+    await view.user.click(within(sideRooms).getByRole('tab', { name: 'Doors' }));
+    expect(
+      within(
+        screen.getByRole('checkbox', { name: 'Side Room 03 generation' }).closest('li')!,
+      ).getByRole('button', { name: 'Reward' }),
+    ).toBeTruthy();
     expect(view.application.store.getState().projectWorkspace.history!.past).toHaveLength(
       historyBefore + 2,
     );
@@ -577,6 +602,7 @@ describe('OccurrenceWorkbench', () => {
     const slot = localVisit?.slots[0];
     if (localVisit === undefined || slot === undefined)
       throw new Error('Combat 05 side-room slot is missing');
+    openRoomTab('Side Rooms');
     act(() =>
       view.application.store.dispatch(
         authoredProjectCommandDispatched({
@@ -618,6 +644,67 @@ describe('OccurrenceWorkbench', () => {
     expect(checkbox.getAttribute('data-has-findings')).toBe('true');
   });
 
+  it('keeps manual Side Rooms tab focus and honors later finding focus requests', async () => {
+    const view = renderOccurrenceWorkbench(
+      loadSurfaceNOPQProject(),
+      'Surface',
+      'N',
+      occurrenceById(nOccurrenceId('combat05')),
+    );
+    const node = occurrenceById(nOccurrenceId('combat05'))(
+      workspaceBiome(view.application, 'Surface', 'N'),
+    );
+    const localVisit = node?.localVisit;
+    const slot = localVisit?.slots[0];
+    if (localVisit === undefined || slot === undefined)
+      throw new Error('Combat 05 side-room slot is missing');
+
+    openRoomTab('Side Rooms');
+    act(() =>
+      view.application.store.dispatch(
+        authoredProjectCommandDispatched({
+          kind: 'ReplaceLocalVisitOrder',
+          order: localVisit.order,
+          occurrenceIds: [],
+        }),
+      ),
+    );
+    for (const side of localVisit.slots) {
+      await view.user.click(screen.getByRole('checkbox', { name: `${side.label} generation` }));
+    }
+    const generation = screen.getByRole('checkbox', { name: `${slot.label} generation` });
+    expect(generation.getAttribute('data-has-findings')).toBe('true');
+
+    view.rerenderOccurrence({
+      findingNavigationRevision: 1,
+      initialSideRoomsTab: 'doors',
+      initialSideRoomSlotKey: slot.key,
+      initialTab: 'sideRooms',
+    });
+    expect(document.activeElement).toBe(
+      screen.getByRole('checkbox', { name: `${slot.label} generation` }),
+    );
+    const doors = screen.getByRole('tab', { name: 'Doors' });
+    const visits = screen.getByRole('tab', { name: 'Visits' });
+    fireEvent.keyDown(doors, { key: 'ArrowRight' });
+    expect(document.activeElement).toBe(visits);
+    expect(visits.getAttribute('aria-selected')).toBe('true');
+
+    await view.user.click(doors);
+    expect(screen.getByLabelText(`${slot.label}: Not generated`)).toBeTruthy();
+
+    view.rerenderOccurrence({
+      findingNavigationRevision: 2,
+      initialSideRoomsTab: 'doors',
+      initialSideRoomSlotKey: slot.key,
+      initialTab: 'sideRooms',
+    });
+    expect(screen.getByRole('tab', { name: 'Doors' }).getAttribute('aria-selected')).toBe('true');
+    expect(document.activeElement).toBe(
+      screen.getByRole('checkbox', { name: `${slot.label} generation` }),
+    );
+  });
+
   it('explains the visited-room generation restriction on hover and keyboard focus without changing authored state', async () => {
     const view = renderOccurrenceWorkbench(
       loadSurfaceNOPQProject(),
@@ -625,6 +712,7 @@ describe('OccurrenceWorkbench', () => {
       'N',
       occurrenceById(nOccurrenceId('combat05')),
     );
+    openRoomTab('Side Rooms');
     const checkbox = screen.getByRole('checkbox', { name: 'Side Room 02 generation' });
     const control = screen.getByRole('group', { name: 'Side Room 02 generation control' });
     const before = view.application.store.getState().projectWorkspace.history!.present;
@@ -643,13 +731,17 @@ describe('OccurrenceWorkbench', () => {
     await view.user.keyboard(' ');
     await view.user.click(checkbox);
     expect(view.application.store.getState().projectWorkspace.history!.present).toBe(before);
+    await view.user.click(screen.getByRole('tab', { name: 'Visits' }));
     await view.user.selectOptions(
       screen.getByRole('combobox', { name: 'Side Room 02 visit order' }),
       'notEntered',
     );
-    expect((checkbox as HTMLInputElement).disabled).toBe(false);
-    expect(control.getAttribute('tabindex')).toBeNull();
-    expect(control.getAttribute('aria-describedby')).toBeNull();
+    await view.user.click(screen.getByRole('tab', { name: 'Doors' }));
+    const repairedCheckbox = screen.getByRole('checkbox', { name: 'Side Room 02 generation' });
+    const repairedControl = screen.getByRole('group', { name: 'Side Room 02 generation control' });
+    expect((repairedCheckbox as HTMLInputElement).disabled).toBe(false);
+    expect(repairedControl.getAttribute('tabindex')).toBeNull();
+    expect(repairedControl.getAttribute('aria-describedby')).toBeNull();
     expect(screen.queryByRole('tooltip')).toBeNull();
   });
 

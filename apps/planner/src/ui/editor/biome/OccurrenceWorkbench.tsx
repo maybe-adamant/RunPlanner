@@ -1,4 +1,10 @@
-import { useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type ReactNode } from 'react';
+import {
+  useCallback,
+  useRef,
+  useState,
+  type KeyboardEvent as ReactKeyboardEvent,
+  type ReactNode,
+} from 'react';
 import {
   workspaceInteractionKey,
   type WorkspaceDoorContract,
@@ -8,6 +14,7 @@ import {
   type WorkspaceRoomActions,
   type WorkspaceRoomLifecycleBoundary,
   type WorkspaceRoomTab,
+  type WorkspaceSideRoomsTab,
   type WorkspaceRunStateLauncher,
 } from '@planner/projections/structured-workspace';
 import { useFindingTarget } from '@planner/ui/feedback/useFindingTarget';
@@ -17,6 +24,7 @@ import { AnomalyClearedControl } from './room-features/AnomalyControls';
 import { RoomActionsWorkbench } from './OccurrenceRoomActions';
 import { DirectRoomWorkbench, IncomingRewardSummary } from './OccurrenceDirectRoomWorkbench';
 import { FieldsLayoutWorkbench } from './locals/FieldsWorkbench';
+import { LocalVisitWorkbench } from './locals/LocalVisitWorkbench';
 
 interface OccurrenceWorkbenchProps {
   readonly headerActions?: ReactNode;
@@ -25,6 +33,8 @@ interface OccurrenceWorkbenchProps {
   readonly incomingDoor?: WorkspaceDoorContract;
   readonly interactions: WorkspaceInteractionCatalog;
   readonly localVisit?: WorkspaceLocalVisitDecision;
+  readonly initialSideRoomsTab?: WorkspaceSideRoomsTab;
+  readonly initialSideRoomSlotKey?: string;
   readonly room: WorkspaceRoomSummary;
   readonly runState?: WorkspaceRunStateLauncher;
   readonly initialTab?: WorkspaceRoomTab;
@@ -52,6 +62,8 @@ export function OccurrenceWorkbench({
   findingNavigationRevision,
   interactions,
   localVisit,
+  initialSideRoomsTab,
+  initialSideRoomSlotKey,
   room,
   renderRoomActionRowContent,
   renderRoomActionRowTrailingContent,
@@ -62,6 +74,48 @@ export function OccurrenceWorkbench({
   const findingTarget = useFindingTarget();
   const requestedTab = initialTab ?? 'overview';
   const roomIdentity = workspaceInteractionKey(room.address);
+  const [sideRoomsSession, setSideRoomsSession] = useState<{
+    readonly findingNavigationRevision: number | undefined;
+    readonly roomIdentity: string;
+    readonly slotKey: string | undefined;
+    readonly view: WorkspaceSideRoomsTab;
+  }>({
+    findingNavigationRevision: undefined,
+    roomIdentity: '',
+    slotKey: undefined,
+    view: 'doors',
+  });
+  const rememberedSideRooms =
+    sideRoomsSession.roomIdentity === roomIdentity
+      ? sideRoomsSession
+      : {
+          findingNavigationRevision: undefined,
+          roomIdentity,
+          slotKey: initialSideRoomSlotKey,
+          view: initialSideRoomsTab ?? ('doors' as const),
+        };
+  const hasNewSideRoomsFinding =
+    findingNavigationRevision !== undefined &&
+    sideRoomsSession.roomIdentity === roomIdentity &&
+    sideRoomsSession.findingNavigationRevision !== findingNavigationRevision;
+  const activeSideRooms = hasNewSideRoomsFinding
+    ? {
+        findingNavigationRevision,
+        roomIdentity,
+        slotKey: initialSideRoomSlotKey,
+        view: initialSideRoomsTab ?? ('doors' as const),
+      }
+    : rememberedSideRooms;
+  const rememberSideRooms = useCallback(
+    (session: { readonly slotKey: string | undefined; readonly view: WorkspaceSideRoomsTab }) =>
+      setSideRoomsSession({
+        findingNavigationRevision,
+        roomIdentity,
+        slotKey: session.slotKey,
+        view: session.view,
+      }),
+    [findingNavigationRevision, roomIdentity],
+  );
   const [tabState, setTabState] = useState({
     active: requestedTab,
     findingNavigationRevision,
@@ -82,6 +136,7 @@ export function OccurrenceWorkbench({
   const tabRefs = useRef<Partial<Record<WorkspaceRoomTab, HTMLButtonElement | null>>>({});
   const tabOrder: WorkspaceRoomTab[] = [
     'overview',
+    ...(localVisit === undefined ? [] : (['sideRooms'] as const)),
     ...(room.workbench.kind === 'fields' ? (['layout'] as const) : []),
     ...(room.workbench.kind === 'ship'
       ? room.workbench.phases.map((_phase, index) =>
@@ -156,7 +211,6 @@ export function OccurrenceWorkbench({
     <DirectRoomWorkbench
       idPrefix={idPrefix}
       interactions={interactions}
-      {...(localVisit === undefined ? {} : { localVisit })}
       room={room}
       {...(renderRoomActionRowContent === undefined ? {} : { renderRoomActionRowContent })}
       {...(renderRoomActionRowTrailingContent === undefined
@@ -191,6 +245,7 @@ export function OccurrenceWorkbench({
       <div className="room-workbench-tab-row">
         <nav aria-label="Room workbench" className="room-workbench-tabs" role="tablist">
           {tabButton('overview', 'Room Overview')}
+          {localVisit === undefined ? null : tabButton('sideRooms', 'Side Rooms')}
           {room.workbench.kind === 'fields' ? tabButton('layout', 'Room Layout') : null}
           {room.workbench.kind === 'ship'
             ? room.workbench.phases.map((phase, index) => {
@@ -242,6 +297,17 @@ export function OccurrenceWorkbench({
             <AnomalyClearedControl room={room} />
             {renderDirectRoomWorkbench('overview')}
           </div>
+        ) : activeTab === 'sideRooms' && localVisit !== undefined ? (
+          <LocalVisitWorkbench
+            interactions={interactions}
+            localVisit={localVisit}
+            onSessionChange={rememberSideRooms}
+            parentGameName={room.gameName}
+            selectedSlotKey={activeSideRooms.slotKey}
+            title={room.label}
+            view={activeSideRooms.view}
+            {...(findingNavigationRevision === undefined ? {} : { findingNavigationRevision })}
+          />
         ) : activeTab === 'layout' && room.workbench.kind === 'fields' ? (
           <FieldsLayoutWorkbench
             gameName={room.gameName}

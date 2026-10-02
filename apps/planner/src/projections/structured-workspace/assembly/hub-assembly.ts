@@ -661,16 +661,26 @@ function projectHubNode(
         `${semanticAddressKey(slot.room.address)} has no Hub room workbench for local visits`,
       );
     }
-    const localVisitMarkers = [
+    const doorsMarkers = [
       slot.localVisit.marker,
-      slot.localVisit.orderMarker,
       ...slot.localVisit.slots.flatMap((local) => {
         if (local.generation !== 'generated') return [local.marker];
         return [local.marker, ...workspaceHubMainRewardMarkers(local.room)];
       }),
     ];
-    markerDestinations.redirect(localVisitMarkers, parentWorkbench.key);
-    markerDestinations.setRoomTab(localVisitMarkers, 'overview');
+    markerDestinations.redirect(
+      [...doorsMarkers, slot.localVisit.orderMarker],
+      parentWorkbench.key,
+    );
+    markerDestinations.setSideRoomsDestination([slot.localVisit.marker], 'doors');
+    markerDestinations.setSideRoomsDestination([slot.localVisit.orderMarker], 'visits');
+    for (const local of slot.localVisit.slots) {
+      const markers =
+        local.generation === 'generated'
+          ? [local.marker, ...workspaceHubMainRewardMarkers(local.room)]
+          : [local.marker];
+      markerDestinations.setSideRoomsDestination(markers, 'doors', local.key);
+    }
   }
   markerDestinations.setHubTab(
     Object.freeze([node.marker, node.openSet, ...node.slots.map((slot) => slot.marker)]),

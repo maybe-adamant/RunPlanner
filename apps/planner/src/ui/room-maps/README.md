@@ -36,6 +36,15 @@ into it. Individual main and side rooms keep their own images.
 Main-room side-door annotations are baked into their images: yellow circles identify
 the destination side-room number, not door priority or visit order.
 
+`EphyraSideRoomAnnotations.ts` owns the illustrative status-label geometry for those
+painted circles on the 16 Ephyra parent maps. Its values are normalized from the
+640 × 360 capture annotation inventory into the packaged 2560 × 1440 image space
+and bind declaration slot keys, not painted destination numbers or visit positions.
+The Side Rooms editor adds non-interactive status labels only; it must
+not duplicate the baked numbers or read the external capture directory at runtime.
+Its integrity test checks the complete, unique correspondence with declared local
+slots.
+
 Captured map legends include only categories present: Entry (blue), Exit (red),
 Chaos (purple), Cage (cyan), Optional and Side (yellow). P maps distinguish
 Indoor and Outdoor exits with solid and hatched red circles. Circle sizes are

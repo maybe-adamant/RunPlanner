@@ -523,6 +523,7 @@ select {
   align-items: center;
   gap: 4px;
   min-width: 0;
+  min-height: 36px;
   margin: 0 -4px 12px;
   border-bottom: 1px solid #353640;
   background: #1c1c24;

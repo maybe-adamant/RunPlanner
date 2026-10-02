@@ -1,20 +1,35 @@
 # Ephyra side-room editor
 
-Status: locked; owner approved implementation. Gate A is next.
+Status: locked; Gate A implemented and independently reviewed. Gate B is next.
 Base: `c1571c72dbefba39bad0758fd351f9b55927ee81`.
+
+## Delivery progress
+
+Gate A replaces the Overview controls with Side Rooms → Doors/Visits and a
+illustrative parent map. All 29 status labels are bound to declared slot identity.
+Visits retains the position controls until Gate B. Independent review findings
+were addressed in one bounded remediation pass, including retained-finding
+keyboard focus and the previous Overview-based workflow tests. Owner-requested
+polish makes the map illustrative, fits it to 16:9, puts Generated beside the
+room name, and reuses the ordinary tab styling. Map-selection wiring is removed.
+
+Verification: `npm run test:planner` passed 155 files / 1,345 tests;
+the existing Golden Surface product-loop witness passed 10 tests;
+`npm run lint`, application TypeScript, changed-file formatting, and diff
+checks passed. Full phase closure and interactive layout acceptance remain
+Gate C work.
 
 ## Objective
 
 Give Ephyra side-room generation and traversal a deliberate, coherent authoring
 home. Replace the compact Overview table with a **Side Rooms** room tab containing
 **Doors** and **Visits** views. Both use the Fields Room Layout proportions:
-controls on the left and the clickable parent-room map on the right, stacking
+controls on the left and the illustrative parent-room map on the right, stacking
 at narrow widths.
 
 The left editor remains the primary explanation of order and the reliable
-keyboard/repair surface. The map identifies physical doors and selects the
-same editor target; clicking it does not silently generate, close, visit, or
-reorder a room.
+keyboard/repair surface. The map identifies physical doors and shows their
+generation/visit state; it does not select controls or author edits.
 
 ## Established facts and preserved policy
 
@@ -48,7 +63,7 @@ This delivery changes presentation, not any of these policies.
 ## Scope and non-goals
 
 Included: side-room tab/navigation, Doors and Visits presentation, map-marker
-geometry, selection binding, explicit visit movement, finding destinations,
+geometry, illustrative status labels, explicit visit movement, finding destinations,
 responsive layout, accessibility, and focused regression coverage.
 
 Excluded:
@@ -64,8 +79,8 @@ Excluded:
   authoring after entry.
 
 Edits continue to dispatch the existing semantic commands immediately and
-participate in Undo/redo. The map and list share transient selection, not an
-additional authored ordering model.
+participate in Undo/redo. The map reflects the same derived state as the list,
+not an additional authored ordering model.
 
 ## Product decisions
 
@@ -85,7 +100,7 @@ additional authored ordering model.
 - Show every declared side slot, including ungenerated slots, in immutable
   availability-priority order. Name this order **Generation priority**.
 - Each row identifies the destination side room, generation state, and its
-  existing reward editor when generated. A row/map selection exposes or focuses
+  existing reward editor when generated. Finding navigation focuses
   those controls without changing authored state.
 - Retain engine candidate support, waiting states, invalid-state repair, and
   generation findings. Do not turn an authored invalid generation into a
@@ -113,20 +128,18 @@ additional authored ordering model.
 - Side-room encounter, acquisition, and local timeline editors stay in their
   current occurrence workbenches; this view authors traversal only.
 
-### Map and selection
+### Illustrative map
 
 - Both views use the parent map, not the selected destination's map.
 - Retain destination-room numbers on markers. Display visit ordinals separately
   from that identity; never relabel Side Room 03 as Room 1 when it is visited first.
-- Selection synchronizes map and left editor using the parent's declared slot
-  identity. Priority, array index, visit ordinal, and painted labels are not keys.
-- Doors markers reflect generation state; Visits markers reflect visit state.
-  Selected/invalid/waiting states must remain distinguishable without relying
-  solely on color, and must not reuse Hub room-quality categories.
-- Preserve zoom/pan alignment, drag-versus-click suppression, keyboard marker
-  activation, and useful focus after closing any selected-row popover.
-- Reuse the Fields layout and `RoomMapViewport` behaviour. Adapt the Hub's
-  interaction patterns rather than importing Hub membership or visit policy.
+- Status labels use the parent's declared slot identity. Priority, array index,
+  visit ordinal, and painted labels are not keys.
+- Doors labels show generation state; Visits labels show visit state. The map
+  has no clickable markers, selection rings, or separate state legend.
+- Fit uses a 16:9 viewport; zoomed inspection retains pan/scroll alignment.
+- Reuse the Fields layout and `RoomMapViewport` behaviour without importing
+  Hub membership or visit policy.
 
 ## Map evidence and ownership
 
@@ -142,7 +155,7 @@ geometry explicitly and verify against the final packaged image.
 
 The existing WebPs bake in yellow destination-room markers. Import only the
 needed side-marker geometry into application-owned room-map metadata. Initially
-overlay hit targets and state/selection decoration on those markers; do not
+overlay non-interactive status labels on those markers; do not
 duplicate painted numbers or require recapture/re-encoding. Inspect all maps
 for alignment before locking the metadata. Original images remain untouched.
 
@@ -159,7 +172,7 @@ unique correspondence. Production must not read the external capture directory.
 | Complete side-room descriptors and bound intents        | `structured-workspace/contracts/locals.ts`, `assembly/hub-assembly.ts`, `interactions/occurrence-interaction-binding.ts` |
 | Outer/inner view destinations and exact finding routing | `structured-workspace/contracts/navigation.ts`, existing marker-destination assembly and navigation bindings             |
 | Room-tab composition                                    | `OccurrenceWorkbench.tsx`, `OccurrenceDirectRoomWorkbench.tsx`                                                           |
-| Doors/Visits editor and transient selection             | Existing `locals/LocalVisitWorkbench.tsx` neighborhood                                                                   |
+| Doors/Visits editor and finding focus                   | Existing `locals/LocalVisitWorkbench.tsx` neighborhood                                                                   |
 | Parent-map geometry and viewport                        | `ui/room-maps/`; patterns in `HubMapOverview.tsx`, `HubMapTimeline.tsx`, and `locals/FieldsWorkbench.tsx`                |
 | Styling                                                 | Existing room-workbench and room-map CSS neighborhoods                                                                   |
 
@@ -174,14 +187,14 @@ action findings continue to belong to that occurrence's own workbench.
 ### Gate A — Side Rooms home and Doors
 
 Deliver the outer tab, both inner-view destinations, left/right layout, packaged
-geometry, shared selection, and the Doors editor. Initially retain the existing
+geometry, illustrative status labels, and the Doors editor. Initially retain the existing
 visit-position controls in Visits, so the landed gate is complete and usable.
 Remove the old Overview editor in the same slice and move findings to their
 new exact home. Keep declaration priority and all existing candidate bindings.
 
 Primary tests: room-tab/editor workflows, map geometry integrity, and finding
 routing. Representative witnesses cover generation/reward edits from the new
-home, waiting/invalid repair, visited-door close restriction, and map selection
+home, waiting/invalid repair, visited-door close restriction, and map inspection
 without authored-history mutation.
 
 Commit boundary: a usable replacement home with no duplicate Overview controls.
@@ -223,12 +236,12 @@ presentation preference; report any demonstrated contract gap separately.
 - Disabling/re-enabling generation and removing/re-adding visits preserve the
   same occurrence identity and room-local contents.
 - Moving one visit shifts the sequence visibly and produces one semantic Undo
-  step; navigation, map selection, and zoom produce none.
+  step; navigation, map inspection, and zoom produce none.
 - Findings open the correct outer/inner view and exact slot or order control,
   including repeated navigation to the same owner.
 - Invalid generation remains repairable; pre-context controls stay waiting;
   visited generation cannot be disabled until its visit is removed.
-- Map drags never edit or select accidentally; keyboard access can perform all
+- Map drags never edit; keyboard access can perform all
   authoring without the map. Narrow layouts stack without losing controls.
 - Ordinary map inspection, Hub editing, main-room timelines, side-room
   workbenches, and executor exports retain their previous contracts.
@@ -248,7 +261,7 @@ behavioural witnesses under the new editor rather than deleting their policy
 coverage. Keep the per-position engine/application proposals still consumed by
 Move; deletion is based on actual callers, not the old widget's name.
 
-Update `ui/room-maps/README.md` for interactive side-marker metadata and its
+Update `ui/room-maps/README.md` for illustrative side-marker metadata and its
 integrity ownership. Update durable presentation documentation only where the
 new tab/navigation changes an existing documented contract. No biome rule
 rewrite is needed because generation and traversal policy are unchanged.

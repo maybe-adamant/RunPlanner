@@ -4,7 +4,6 @@ import type {
   WorkspaceEncounterPhase,
   WorkspaceDoorContract,
   WorkspaceInteractionCatalog,
-  WorkspaceLocalVisitDecision,
   WorkspaceRoomActions,
   WorkspaceRoomLifecycleBoundary,
   WorkspaceRoomSummary,
@@ -15,7 +14,6 @@ import { RoomFeaturesWorkbench } from './room-features/RoomFeaturesWorkbench';
 import { RoomEncounterStructureWorkbench } from './locals/RoomEncounterStructureWorkbench';
 import { EncounterPhaseControl } from './locals/EncounterPhaseControl';
 import { FieldsWorkbench } from './locals/FieldsWorkbench';
-import { LocalVisitWorkbench } from './locals/LocalVisitWorkbench';
 import { RewardWheelWorkbench } from './locals/RewardWheelWorkbench';
 import { ShopWorkbench } from './commerce/ShopWorkbench';
 import { CandidatePicker } from './CandidatePicker';
@@ -131,7 +129,6 @@ export function BossDoorRewardPoolRow({
 export function DirectRoomWorkbench({
   idPrefix,
   interactions,
-  localVisit,
   room,
   view,
   shipPhaseKey,
@@ -142,7 +139,6 @@ export function DirectRoomWorkbench({
 }: {
   readonly idPrefix: string;
   readonly interactions: WorkspaceInteractionCatalog;
-  readonly localVisit?: WorkspaceLocalVisitDecision;
   readonly room: WorkspaceRoomSummary;
   readonly view: 'overview' | 'actions';
   readonly shipPhaseKey?: string;
@@ -170,10 +166,6 @@ export function DirectRoomWorkbench({
       {...(workbench.roomActions === undefined ? {} : { roomActions: workbench.roomActions })}
     />
   );
-  const renderSideRooms = (): ReactNode =>
-    localVisit === undefined ? null : (
-      <LocalVisitWorkbench interactions={interactions} localVisit={localVisit} />
-    );
   const renderEncounterStructure = (children?: ReactNode): ReactNode => (
     <RoomEncounterStructureWorkbench features={workbench.features} interactions={interactions}>
       {children}
@@ -185,7 +177,6 @@ export function DirectRoomWorkbench({
         return (
           <>
             {renderFeatures()}
-            {renderSideRooms()}
             {renderEncounterStructure()}
           </>
         );
@@ -227,7 +218,6 @@ export function DirectRoomWorkbench({
                 )),
             )}
             {renderFeatures()}
-            {renderSideRooms()}
             <FieldsWorkbench interactions={interactions} room={workbench.fields} />
           </>
         );
@@ -261,7 +251,6 @@ export function DirectRoomWorkbench({
               room={workbench.shop}
             />
             {renderFeatures()}
-            {renderSideRooms()}
             {renderEncounterStructure()}
           </>
         );

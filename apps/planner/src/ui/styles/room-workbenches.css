@@ -1968,99 +1968,122 @@
 
 .ephyra-side-editor {
   container: ephyra-side / inline-size;
+  display: grid;
+  gap: 12px;
   min-width: 0;
-  padding-top: 12px;
-  border-top: 1px solid #353640;
 }
 
-.ephyra-side-room-identity {
+.ephyra-side-heading {
   display: flex;
-  min-width: 0;
   align-items: center;
-  flex-wrap: wrap;
-  gap: 6px;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #353640;
 }
 
-.ephyra-side-room-identity > span {
-  min-width: 0;
-  overflow-wrap: anywhere;
+.ephyra-side-heading h4,
+.ephyra-side-heading p {
+  margin: 0;
 }
 
-.ephyra-side-room-identity .room-map-launcher {
-  flex: 0 0 auto;
-  white-space: nowrap;
-}
-
-.ephyra-side-grid {
-  display: block;
-  width: 100%;
-  min-width: 0;
-}
-
-.ephyra-side-grid thead {
-  display: block;
-  margin-bottom: 6px;
-}
-
-.ephyra-side-grid tbody {
-  display: grid;
-  gap: 7px;
-}
-
-.ephyra-side-grid tr {
-  display: grid;
-  grid-template-columns: 3.8rem minmax(9rem, 1fr) 5.5rem minmax(0, 1.3fr) 9rem;
-  grid-template-areas: 'priority room generated reward visit';
-  align-items: center;
-  gap: 10px;
-  padding: 6px 8px;
-}
-
-.ephyra-side-grid thead th {
-  min-width: 0;
-  padding: 0;
-  color: #aaa7af;
-  font-size: 0.72rem;
-  font-weight: 700;
-  letter-spacing: 0.05em;
-  text-align: left;
+.ephyra-side-heading h4 {
+  color: #c8b8d8;
+  font-size: 0.82rem;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
 }
 
-.ephyra-side-grid-row {
+.ephyra-side-heading p,
+.ephyra-side-order-note,
+.ephyra-side-visit-heading > span:last-child {
+  color: #99939f;
+  font-size: 0.78rem;
+}
+
+.ephyra-side-tabs {
+  display: flex;
+  gap: 4px;
+}
+
+.ephyra-side-tabs button:focus-visible {
+  outline: 2px solid #fff4c7;
+  outline-offset: 2px;
+}
+
+.ephyra-side-reference-layout {
+  display: grid;
+  grid-template-columns: minmax(18rem, 3fr) minmax(0, 7fr);
+  gap: 12px;
+  min-width: 0;
+}
+
+.ephyra-side-controls,
+.ephyra-side-map-reference {
+  min-width: 0;
+}
+
+.ephyra-side-controls {
+  display: grid;
+  align-content: start;
+  gap: 8px;
+}
+
+.ephyra-side-order-note {
+  margin: 0;
+}
+
+.ephyra-side-door-list,
+.ephyra-side-visit-list {
+  display: grid;
+  gap: 8px;
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+.ephyra-side-door-list > li,
+.ephyra-side-visit-list > li {
+  display: grid;
+  gap: 8px;
+  padding: 9px;
   border: 1px solid #34353e;
   border-radius: 8px;
   background: rgb(255 255 255 / 2%);
 }
 
-.ephyra-side-grid tbody th,
-.ephyra-side-grid tbody td {
-  min-width: 0;
-  padding: 0;
+.ephyra-side-visit-heading {
+  display: grid;
+  gap: 2px;
 }
 
-.ephyra-side-room {
-  grid-area: room;
-  text-align: left;
+.ephyra-side-door-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 6px 10px;
 }
 
-.ephyra-side-generation {
-  grid-area: generated;
+.ephyra-side-priority,
+.ephyra-side-visit-heading > span:first-child {
+  color: #d5c897;
+  font-size: 0.72rem;
+  font-variant-numeric: tabular-nums;
+  text-transform: uppercase;
 }
 
 .ephyra-side-generation-control {
   position: relative;
   display: flex;
+  min-height: 28px;
   align-items: center;
-  justify-content: center;
-  gap: 6px;
-  min-height: 32px;
 }
 
 .ephyra-side-generation-control > label {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 7px;
 }
 
 .ephyra-side-generation-control[aria-disabled='true'] > label {
@@ -2084,105 +2107,37 @@
   font-size: 0.8rem;
 }
 
-.ephyra-side-priority {
-  grid-area: priority;
-  display: grid;
-  color: #d5c897;
-  font-variant-numeric: tabular-nums;
-  font-weight: 700;
-  text-align: center;
-}
-
-.ephyra-side-grid thead th:first-child,
-.ephyra-side-grid thead th:nth-child(3) {
-  text-align: center;
-}
-
-.ephyra-side-visit-order {
-  grid-area: visit;
-}
-
-.ephyra-side-reward-cell {
-  grid-area: reward;
-}
-
-.ephyra-side-grid .ephyra-side-compact-label {
-  display: none;
-  color: #aaa7af;
-  font-size: 0.72rem;
-  font-weight: 400;
-  letter-spacing: 0;
-  text-transform: none;
-}
-
 .ephyra-side-unavailable {
   display: flex;
-  min-height: 32px;
   align-items: center;
   color: #88858e;
   font-size: 0.8rem;
+  margin: 0;
 }
 
-.ephyra-side-grid .field-control,
-.ephyra-side-grid .field-control select {
+.ephyra-side-entry-order,
+.ephyra-side-entry-order select {
   width: 100%;
   min-width: 0;
 }
 
-.ephyra-side-grid .field-control select:disabled {
+.ephyra-side-entry-order select:disabled {
   opacity: 0.6;
 }
 
-.ephyra-side-entry-order select {
-  padding-right: 9px;
+.ephyra-side-map-reference > .room-map-viewport > .room-map-scroll {
+  height: auto;
+  min-height: 0;
+  aspect-ratio: 16 / 9;
 }
 
-.ephyra-side-reward-cell .field-control-inline {
-  grid-template-columns: minmax(0, 1fr);
-}
-
-.ephyra-side-reward-cell .contextual-picker > label,
-.ephyra-side-reward-cell .door-fixed-reward > span:first-child {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  padding: 0;
-  border: 0;
-  margin: -1px;
-  clip: rect(0, 0, 0, 0);
-  overflow: hidden;
-  white-space: nowrap;
-}
-
-@container ephyra-side (max-width: 680px) {
-  .ephyra-side-grid thead {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    overflow: hidden;
-    clip-path: inset(50%);
+@container ephyra-side (max-width: 64rem) {
+  .ephyra-side-reference-layout {
+    grid-template-columns: minmax(0, 1fr);
   }
 
-  .ephyra-side-grid tr {
-    grid-template-columns: 3.8rem minmax(0, 1fr) 9rem;
-    grid-template-areas:
-      'priority room generated'
-      'reward reward visit';
-    row-gap: 8px;
-    padding: 8px;
-  }
-
-  .ephyra-side-grid .ephyra-side-compact-label {
-    display: block;
-  }
-
-  .ephyra-side-reward-cell {
-    display: grid;
-    gap: 5px;
-  }
-
-  .ephyra-side-generation-control {
-    justify-content: flex-start;
+  .ephyra-side-map-reference {
+    order: -1;
   }
 }
 

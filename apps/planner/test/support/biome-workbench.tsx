@@ -15,6 +15,8 @@ import type {
   WorkspaceMixedBatchNode,
   WorkspaceOccurrenceWorkbenchNode,
   WorkspaceOrdinaryBatchNode,
+  WorkspaceRoomTab,
+  WorkspaceSideRoomsTab,
   WorkspaceTakeoverBatchNode,
 } from '@planner/projections/structured-workspace';
 import { createEditorSessionReducer } from '@planner/state/editorSessionSlice';
@@ -275,25 +277,55 @@ export function renderOccurrenceWorkbench(
   biomeKey: string,
   select: (biome: WorkspaceBiome) => WorkspaceOccurrenceWorkbenchNode | undefined,
   application?: PlannerApplication,
+  options: {
+    readonly findingNavigationRevision?: number;
+    readonly initialSideRoomsTab?: WorkspaceSideRoomsTab;
+    readonly initialSideRoomSlotKey?: string;
+    readonly initialTab?: WorkspaceRoomTab;
+  } = {},
 ) {
-  return renderProjectedHarness(
-    project,
-    routeKey,
-    biomeKey,
-    (biome, workspace) => {
-      const node = select(biome);
-      if (node === undefined) return <p>No occurrence workbench</p>;
-      return (
-        <OccurrenceWorkbench
-          {...(node.incomingDoor === undefined ? {} : { incomingDoor: node.incomingDoor })}
-          interactions={workspace.interactions}
-          {...(node.localVisit === undefined ? {} : { localVisit: node.localVisit })}
-          room={node.room}
-        />
+  let currentOptions = options;
+  const renderBiome: ProjectedHarnessProps['renderBiome'] = (biome, workspace) => {
+    const node = select(biome);
+    if (node === undefined) return <p>No occurrence workbench</p>;
+    return (
+      <OccurrenceWorkbench
+        {...(node.incomingDoor === undefined ? {} : { incomingDoor: node.incomingDoor })}
+        {...(currentOptions.findingNavigationRevision === undefined
+          ? {}
+          : { findingNavigationRevision: currentOptions.findingNavigationRevision })}
+        {...(currentOptions.initialSideRoomsTab === undefined
+          ? {}
+          : { initialSideRoomsTab: currentOptions.initialSideRoomsTab })}
+        {...(currentOptions.initialSideRoomSlotKey === undefined
+          ? {}
+          : { initialSideRoomSlotKey: currentOptions.initialSideRoomSlotKey })}
+        {...(currentOptions.initialTab === undefined
+          ? {}
+          : { initialTab: currentOptions.initialTab })}
+        interactions={workspace.interactions}
+        {...(node.localVisit === undefined ? {} : { localVisit: node.localVisit })}
+        room={node.room}
+      />
+    );
+  };
+  const view = renderProjectedHarness(project, routeKey, biomeKey, renderBiome, application);
+  return {
+    ...view,
+    rerenderOccurrence: (next: typeof options) => {
+      currentOptions = next;
+      view.rerender(
+        <Provider store={view.application.store}>
+          <ProjectedHarness
+            application={view.application}
+            biomeKey={biomeKey}
+            renderBiome={renderBiome}
+            routeKey={routeKey}
+          />
+        </Provider>,
       );
     },
-    application,
-  );
+  };
 }
 
 export function renderStaticOccurrenceWorkbench(
