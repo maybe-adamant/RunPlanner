@@ -36,7 +36,6 @@ import type {
 import type { CanonicalDecision } from '../../materialization/model';
 import { findingIdentityKey, ownerRegion, type FindingRegionEntry } from '../../finding-regions';
 import { bossDoorRewardStoreMissingFinding } from '../../completeness';
-import { fieldsOptionalRewardCountFindings } from '../../fields/optional-count';
 import type {
   RewardBranch,
   BiomeRewardSimulation,
@@ -1053,20 +1052,16 @@ export function evaluateBiomeRewardChronology(
       }
       case 'roomPrepared': {
         const room = rooms.get(semanticAddressKey(event.origin));
-        if (room?.kind === 'authored')
-          for (const finding of fieldsOptionalRewardCountFindings(catalog, room))
-            addRewardFinding(
-              findings,
-              finding,
-              ownerRegion(room.origin),
-              rewardFindingChronologyForRoom(
-                snapshot,
-                room.origin,
-                event.sequence,
-                'localRoomLifecycle',
-              ),
-            );
-        branches = applyRoomPreparedTransition(event, branches);
+        const transition = applyRoomPreparedTransition(
+          catalog,
+          snapshot,
+          event,
+          room?.kind === 'authored' ? room : undefined,
+          branches,
+        );
+        for (const finding of transition.findings)
+          addRewardFinding(findings, finding.finding, finding.region, finding.chronology);
+        branches = transition.branches;
         break;
       }
       case 'keepsakeRackUsed': {
