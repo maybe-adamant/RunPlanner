@@ -3,6 +3,7 @@ import { routeInitialProfile } from '../route-profile';
 import type { Catalog } from '../../catalog-schema';
 import { createInitialBiomeState, replaceBiomeStateField } from '../biomeState';
 import { assessStartingArcanaGrasp } from '../loadout';
+import { decodeRunModifiers, isNativeRunModifiers, routeRunModifiers } from '../run-modifiers';
 import { createDefaultAuthoredHexTree, normalizeAuthoredHexTree } from '../traits/hex-tree';
 import { resolveCompletionBoss } from '../completion-boss';
 import { createDefaultStartTopology } from '../topology/construction';
@@ -323,6 +324,27 @@ export function applyProjectStateCommand(
           ...route,
           loadout: { ...route.loadout, startingKeepsakeKey: command.keepsakeKey },
         },
+      };
+    }
+    case 'ReplaceRunModifiers': {
+      if (document.route.routeKey !== command.route.routeKey)
+        failCommand(command, `project is missing route ${command.route.routeKey}`);
+      const value = decodeRunModifiers(command.value, 'runModifiers');
+      const route = document.route;
+      const previous = routeRunModifiers(route.loadout);
+      const native = isNativeRunModifiers(value);
+      if (
+        previous.guaranteeEligibleCrits === value.guaranteeEligibleCrits &&
+        previous.guaranteeEligibleDoubleDamage === value.guaranteeEligibleDoubleDamage &&
+        previous.enemyGoldDropChanceMultiplier === value.enemyGoldDropChanceMultiplier &&
+        (!native || route.loadout.runModifiers === undefined)
+      )
+        return document;
+      const loadout = { ...route.loadout };
+      delete loadout.runModifiers;
+      return {
+        ...document,
+        route: { ...route, loadout: { ...loadout, ...(native ? {} : { runModifiers: value }) } },
       };
     }
     case 'ReplaceManualArcanaSelection': {

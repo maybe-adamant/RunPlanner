@@ -1,3 +1,5 @@
+import { decodeRunModifiers } from '../authored-project/run-modifiers';
+import { ProjectDocumentContractError } from '../authored-project/validation';
 import {
   EXECUTION_CATALOG_VERSION,
   EXECUTION_PLAN_FORMAT,
@@ -76,7 +78,7 @@ export function decodeExecutionPlan(value: unknown): ExecutionPlan {
       'resources',
       'occurrences',
     ],
-    ['displayName', 'olympusAetos'],
+    ['displayName', 'olympusAetos', 'runModifiers'],
     'execution plan',
   );
   if (record.format !== EXECUTION_PLAN_FORMAT) fail('execution plan.format is unsupported');
@@ -116,6 +118,15 @@ export function decodeExecutionPlan(value: unknown): ExecutionPlan {
     fail('execution plan.routeKey disagrees with extent');
   if (extent.terminalBiomeKey !== biomeKeys[biomeKeys.length - 1])
     fail('execution plan.extent.terminalBiomeKey disagrees with biomeKeys');
+  let runModifiers: ExecutionPlan['runModifiers'];
+  if ('runModifiers' in record) {
+    try {
+      runModifiers = decodeRunModifiers(record.runModifiers, 'execution plan.runModifiers');
+    } catch (error) {
+      if (error instanceof ProjectDocumentContractError) fail(error.message);
+      throw error;
+    }
+  }
   const decodedStartingLoadout = startingLoadout(record.startingLoadout);
   const starting = object(record.startingKeepsake, 'execution plan.startingKeepsake');
   exact(starting, [], ['keepsakeKey', 'equipResults'], 'execution plan.startingKeepsake');
@@ -162,6 +173,7 @@ export function decodeExecutionPlan(value: unknown): ExecutionPlan {
         }),
     routeKey: record.routeKey,
     startingLoadout: decodedStartingLoadout,
+    ...(runModifiers === undefined ? {} : { runModifiers }),
     startingKeepsake,
     extent: Object.freeze({
       kind: 'configuredPrefix' as const,
@@ -180,6 +192,7 @@ export function decodeExecutionPlan(value: unknown): ExecutionPlan {
     projectId: plan.projectId,
     routeKey: plan.routeKey,
     startingLoadout: plan.startingLoadout,
+    ...(plan.runModifiers === undefined ? {} : { runModifiers: plan.runModifiers }),
     startingKeepsake: plan.startingKeepsake,
     extent: plan.extent,
     selectedOccurrenceIds: plan.selectedOccurrenceIds,

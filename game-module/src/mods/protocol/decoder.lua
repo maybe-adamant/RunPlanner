@@ -77,6 +77,20 @@ local function startingKeepsake(value)
     return record
 end
 
+local function runModifiers(value)
+    local label = "execution plan.runModifiers"
+    local record, errorMessage = p.exact(value, {
+        "guaranteeEligibleCrits", "guaranteeEligibleDoubleDamage", "enemyGoldDropChanceMultiplier",
+    }, {}, label)
+    if not record then return nil, errorMessage end
+    if not p.bool(record.guaranteeEligibleCrits, label .. ".guaranteeEligibleCrits")
+        or not p.bool(record.guaranteeEligibleDoubleDamage, label .. ".guaranteeEligibleDoubleDamage")
+        or not p.num(record.enemyGoldDropChanceMultiplier, label .. ".enemyGoldDropChanceMultiplier", 1) then
+        return p.fail(label .. " contains invalid values")
+    end
+    return record
+end
+
 local function fingerprintBody(plan, decodedOccurrences)
     return {
         format = plan.format,
@@ -84,6 +98,7 @@ local function fingerprintBody(plan, decodedOccurrences)
         projectId = plan.projectId,
         routeKey = plan.routeKey,
         startingLoadout = plan.startingLoadout,
+        runModifiers = plan.runModifiers,
         startingKeepsake = plan.startingKeepsake,
         extent = plan.extent,
         selectedOccurrenceIds = plan.selectedOccurrenceIds,
@@ -134,7 +149,7 @@ function protocol.decode(value)
             "routeKey", "startingLoadout", "startingKeepsake", "extent", "selectedOccurrenceIds", "resources",
             "occurrences",
         },
-        { "displayName", "olympusAetos" },
+        { "displayName", "olympusAetos", "runModifiers" },
         "execution plan"
     )
     if not plan then return nil, errorMessage end
@@ -167,6 +182,10 @@ function protocol.decode(value)
     if ((plan.routeKey == "Underworld" or plan.routeKey == "FreshFile") and not underworld)
         or (plan.routeKey == "Surface" and not surface) then
         return p.fail("execution plan.routeKey disagrees with extent")
+    end
+    if plan.runModifiers ~= nil then
+        local _, modifiersError = runModifiers(plan.runModifiers)
+        if modifiersError then return nil, modifiersError end
     end
     local _, loadoutError = loadout.decode(plan.startingLoadout)
     if loadoutError then return nil, loadoutError end

@@ -53,6 +53,11 @@ import type {
 
 export type ProjectStateCommand =
   | {
+      readonly kind: 'ReplaceRunModifiers';
+      readonly route: RouteAddress;
+      readonly value: import('../model').RunModifiers;
+    }
+  | {
       readonly kind: 'ReplaceStartingReward';
       readonly reward: StartingRewardAddress;
       readonly value: ResolvedRewardOffer | null;
