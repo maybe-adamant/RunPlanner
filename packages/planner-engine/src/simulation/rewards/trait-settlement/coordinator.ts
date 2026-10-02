@@ -7,7 +7,7 @@ import {
   type TraitOfferContextTransition,
 } from '../../state/pending-trait-offers';
 import type { SimulationState } from '../../state/model';
-import type { Catalog } from '../../../catalog-schema';
+import type { Catalog, TraitSelectedDisposition } from '../../../catalog-schema';
 import { evaluateCallingCardOffer } from '../../keepsakes/reward-effects';
 import {
   createCirceResolutionAddress,
@@ -1245,6 +1245,308 @@ function withBoonRarityFacts(
     : resolveTraitOfferSource(catalog, generation, source.resolvedProviderKey, source);
 }
 
+/** One settled encounter offer before its screen completion is published. */
+interface EncounterOfferResult {
+  readonly branch: RewardBranchState;
+  readonly findingEmissions: readonly TraitFindingEmission[];
+  readonly blockedChild: ReachedTraitChildCheckpoint | undefined;
+  readonly candidateContact: ReachedTraitOfferCandidateContact | undefined;
+  readonly completion: TraitOfferScreenCompletion | undefined;
+}
+
+/** A selected encounter trait row applied to the pre-choice branch, before its child settles. */
+interface AppliedEncounterSelection {
+  readonly catalog: Catalog;
+  /** The pre-choice branch. */
+  readonly branch: RewardBranchState;
+  readonly offer: AuthoredTraitOfferTraits;
+  readonly selected: AuthoredTraitOfferTraits['options'][number] | undefined;
+  readonly owner: TraitOfferAddress;
+  readonly acquisitionRole: string;
+  readonly lifecyclePoint: string;
+  readonly sequence: number;
+  readonly findingChronology: FindingChronology | undefined;
+  readonly routedTraitContext: TraitOfferSourceContext;
+  readonly applied: RewardBranchState;
+  readonly appliedEmissions: readonly TraitFindingEmission[];
+  /** The applied acquisition's own blocked child, which a later child does not displace. */
+  readonly appliedBlockedChild: ReachedTraitChildCheckpoint | undefined;
+}
+
+/** A child disposition's settled branch; a rejected child replaces any earlier blocked child. */
+interface EncounterChildResult {
+  readonly branch: RewardBranchState;
+  readonly findingEmissions: readonly TraitFindingEmission[];
+  readonly blockedChild: ReachedTraitChildCheckpoint | undefined;
+}
+
+function rejectEncounterChild(
+  selection: AppliedEncounterSelection,
+  address: SemanticAddress,
+  findingEmissions: readonly TraitFindingEmission[],
+  code: TraitFindingCode,
+  traitKey: string | undefined,
+  detail?: string,
+): EncounterChildResult {
+  const { applied, lifecyclePoint, sequence, findingChronology } = selection;
+  return {
+    branch: applied,
+    blockedChild: Object.freeze({ address, branch: applied }),
+    findingEmissions: [
+      ...findingEmissions,
+      traitChildFindingEmission(
+        address,
+        lifecyclePoint,
+        sequence,
+        code,
+        traitKey,
+        detail,
+        findingChronology,
+      ),
+    ],
+  };
+}
+
+/**
+ * Circe's ordinary offer findings stay provisional until its authored child
+ * is valid, so the child remains the first blocking repair owner; a rejected
+ * child drops them.
+ */
+function settleCirce(
+  selection: AppliedEncounterSelection,
+  disposition: Extract<TraitSelectedDisposition, { readonly kind: 'circe' }>,
+): EncounterChildResult {
+  const { catalog, branch, offer, selected, owner, sequence, applied, appliedEmissions } =
+    selection;
+  const accepted = {
+    findingEmissions: appliedEmissions,
+    blockedChild: selection.appliedBlockedChild,
+  };
+  if (applied.state.traitHistory === branch.state.traitHistory)
+    return { ...accepted, branch: applied };
+  const resolution = selected?.circeResolution;
+  const acquisitionOrdinal = branch.state.reached.routePosition.ordinal;
+  const rejection = assessCirceChild(catalog, branch, disposition, resolution, acquisitionOrdinal);
+  if (rejection !== undefined)
+    return rejectEncounterChild(
+      selection,
+      createCirceResolutionAddress(owner, offer.selectedOptionKey),
+      [],
+      rejection.code,
+      selected?.traitKey,
+      rejection.detail,
+    );
+  if (selected === undefined) return { ...accepted, branch: applied };
+  return {
+    ...accepted,
+    branch: settleValidatedCirceChild(
+      catalog,
+      applied,
+      disposition,
+      resolution,
+      owner,
+      sequence,
+      acquisitionOrdinal,
+    ),
+  };
+}
+
+/** Echo's Boon Boon Boon settles its nested last-run offer through the Echo choice owner. */
+function settleEchoLastRunBoon(
+  selection: AppliedEncounterSelection,
+  selected: NonNullable<AppliedEncounterSelection['selected']>,
+): EncounterChildResult {
+  const { catalog, branch, offer, owner, lifecyclePoint, sequence, findingChronology, applied } =
+    selection;
+  const address = createEchoLastRunBoonAddress(owner, offer.selectedOptionKey);
+  const childAssessment = assessEchoBoonChild(
+    catalog,
+    replaceSimulationTraitHistory(branch.state, branch.state.traitHistory),
+    selection.routedTraitContext,
+    selected.echoLastRunBoon,
+  );
+  if (childAssessment.kind === 'rejected')
+    return rejectEncounterChild(
+      selection,
+      address,
+      selection.appliedEmissions,
+      childAssessment.rejection.code,
+      selected.traitKey,
+      childAssessment.rejection.detail,
+    );
+  const { offer: nestedOffer, outcome, lootHistorySource } = childAssessment;
+  const rewardHistory =
+    lootHistorySource === undefined
+      ? applied.state.rewardHistory
+      : recordLootTypeHistorySource(applied.state.rewardHistory, lootHistorySource);
+  const sourceApplied = Object.freeze({
+    ...applied,
+    state: Object.freeze({ ...applied.state, rewardHistory: rewardHistory }),
+  });
+  const nestedSettlement = applyEchoLastRunBoonForAcquisition(
+    catalog,
+    sourceApplied,
+    address,
+    nestedOffer,
+    outcome,
+    Object.freeze({
+      freshRarityOverride: outcome.effectiveRarity,
+      ordinarySlotReplacement: 'forbidden',
+    }),
+    lifecyclePoint,
+    sequence,
+    findingChronology,
+  );
+  const findingEmissions = [
+    ...selection.appliedEmissions,
+    ...entryEmissions(nestedSettlement.findingEntries),
+  ];
+  const nested = nestedSettlement.branch;
+  if (nested.state.traitHistory === applied.state.traitHistory)
+    return rejectEncounterChild(
+      selection,
+      address,
+      findingEmissions,
+      'echoLastRunBoonOptionUnavailable',
+      selected.traitKey,
+    );
+  return {
+    branch: nested,
+    findingEmissions,
+    blockedChild: selection.appliedBlockedChild ?? nestedSettlement.blockedChild,
+  };
+}
+
+/** Echo's Pom of Power settles its authored target from the pre-choice greatest-level domain. */
+function settleEchoPom(
+  selection: AppliedEncounterSelection,
+  selected: NonNullable<AppliedEncounterSelection['selected']>,
+  appliedTraitHistory: TraitHistoryState,
+): EncounterChildResult {
+  const { catalog, branch, offer, owner, acquisitionRole, lifecyclePoint, sequence, applied } =
+    selection;
+  const preChoiceTraitHistory = branch.state.traitHistory;
+  const address = createEchoPomTargetAddress(owner, offer.selectedOptionKey);
+  const domain = echoPomGreatestLevelTraitKeys(catalog, preChoiceTraitHistory);
+  const target = selected.echoPomTarget;
+  const reject = (code: TraitFindingCode, detail?: string) =>
+    rejectEncounterChild(
+      selection,
+      address,
+      selection.appliedEmissions,
+      code,
+      selected.traitKey,
+      detail,
+    );
+  if (!('echoPomTarget' in selected)) return reject('echoPomTargetMissing');
+  if (target === null)
+    return domain.length === 0
+      ? {
+          branch: applied,
+          findingEmissions: selection.appliedEmissions,
+          blockedChild: selection.appliedBlockedChild,
+        }
+      : reject('echoPomNoTargetUnavailable', domain.join(','));
+  if (target === undefined || !domain.includes(target))
+    return reject('echoPomTargetUnavailable', target);
+  const settled = settleEchoPomChild(
+    catalog,
+    applied,
+    appliedTraitHistory,
+    preChoiceTraitHistory,
+    address,
+    acquisitionRole,
+    sequence,
+    lifecyclePoint,
+    selected.traitKey,
+    target,
+  );
+  return settled === undefined
+    ? reject('echoPomTargetUnavailable', target)
+    : {
+        branch: settled,
+        findingEmissions: selection.appliedEmissions,
+        blockedChild: selection.appliedBlockedChild,
+      };
+}
+
+/** Applies a selected trait row, then settles the child its disposition authors. */
+function settleTraitsEncounterOffer(
+  catalog: Catalog,
+  branch: RewardBranchState,
+  origin: SemanticAddress,
+  offer: AuthoredTraitOfferTraits,
+  acquisitionRole: string,
+  lifecyclePoint: string,
+  sequence: number,
+  findingChronology: FindingChronology | undefined,
+  routedTraitContext: TraitOfferSourceContext,
+  directTraitSetBranchHistories: readonly TraitHistoryState[] | undefined,
+): EncounterOfferResult {
+  const selected = offer.options[optionIndex(offer.selectedOptionKey)];
+  const disposition =
+    selected === undefined
+      ? undefined
+      : catalog.traits.byKey[selected.traitKey]?.selectedDisposition;
+  // Record the exact pre-effect frontier before validating any authored child.
+  const appliedSettlement = applyTraitOfferForAcquisition(
+    catalog,
+    branch,
+    {
+      origin,
+      traitOffersByAcquisitionRole: Object.freeze({ [acquisitionRole]: offer }),
+      traitContext: routedTraitContext,
+    },
+    acquisitionRole,
+    lifecyclePoint,
+    sequence,
+    findingChronology,
+    directTraitSetBranchHistories === undefined ? {} : { directTraitSetBranchHistories },
+  );
+  const applied = appliedSettlement.branch;
+  const selection: AppliedEncounterSelection = Object.freeze({
+    catalog,
+    branch,
+    offer,
+    selected,
+    owner: createTraitOfferAddress(origin as TraitOfferOwnerAddress, acquisitionRole),
+    acquisitionRole,
+    lifecyclePoint,
+    sequence,
+    findingChronology,
+    routedTraitContext,
+    applied,
+    appliedEmissions: entryEmissions(appliedSettlement.findingEntries),
+    appliedBlockedChild: appliedSettlement.blockedChild,
+  });
+  const choiceApplied =
+    applied.state.traitHistory !== undefined &&
+    applied.state.traitHistory !== branch.state.traitHistory;
+  const child: EncounterChildResult =
+    disposition?.kind === 'circe'
+      ? settleCirce(selection, disposition)
+      : disposition?.kind === 'echo' &&
+          disposition.effect === 'lastRunBoon' &&
+          selected !== undefined &&
+          choiceApplied
+        ? settleEchoLastRunBoon(selection, selected)
+        : disposition?.kind === 'echo' &&
+            disposition.effect === 'doubleLevel' &&
+            selected !== undefined &&
+            choiceApplied
+          ? settleEchoPom(selection, selected, applied.state.traitHistory)
+          : {
+              branch: applied,
+              findingEmissions: selection.appliedEmissions,
+              blockedChild: selection.appliedBlockedChild,
+            };
+  return {
+    ...child,
+    candidateContact: appliedSettlement.candidateContact,
+    completion: appliedSettlement.completion,
+  };
+}
+
 /** Settles one encounter-local trait offer and returns its exact child checkpoint when blocked. */
 export function settleEncounterTraitOffer(
   catalog: Catalog,
@@ -1260,11 +1562,6 @@ export function settleEncounterTraitOffer(
   directTraitSetBranchHistories?: readonly TraitHistoryState[],
   unresolvedProviderKey?: string,
 ): EncounterTraitOfferSettlement {
-  const findingEmissions: TraitFindingEmission[] = [];
-  const complete = (
-    settlement: Omit<EncounterTraitOfferSettlement, 'findingEntries'>,
-  ): EncounterTraitOfferSettlement =>
-    Object.freeze({ ...settlement, findingEntries: reduceTraitFindingEmissions(findingEmissions) });
   const providerKey = offer?.giverKey ?? unresolvedProviderKey;
   if (providerKey === undefined)
     throw new Error('encounter trait offer settlement requires its known provider');
@@ -1287,231 +1584,54 @@ export function settleEncounterTraitOffer(
       sequence,
       findingChronology,
     );
-    findingEmissions.push(...entryEmissions(settlement.findingEntries));
-    return complete({ ...settlement, screenCompleted: false });
+    return Object.freeze({
+      ...settlement,
+      findingEntries: reduceTraitFindingEmissions(entryEmissions(settlement.findingEntries)),
+      screenCompleted: false,
+    });
   }
-  let blockedChild: EncounterTraitOfferSettlement['blockedChild'];
-  let candidateContact: EncounterTraitOfferSettlement['candidateContact'];
-  let completion: TraitOfferScreenCompletion | undefined;
-  const settledBranch = ((): RewardBranchState => {
-    if (offer.kind !== 'traits') {
-      const settlement = applyTraitOfferForAcquisition(
-        catalog,
-        branch,
-        {
+  const result: EncounterOfferResult =
+    offer.kind === 'traits'
+      ? settleTraitsEncounterOffer(
+          catalog,
+          branch,
           origin,
-          traitOffersByAcquisitionRole: Object.freeze({ [acquisitionRole]: offer }),
-          traitContext: routedTraitContext,
-        },
-        acquisitionRole,
-        lifecyclePoint,
-        sequence,
-        findingChronology,
-      );
-      findingEmissions.push(...entryEmissions(settlement.findingEntries));
-      candidateContact = settlement.candidateContact;
-      completion = settlement.completion;
-      return settlement.branch;
-    }
-    const selected = offer.options[optionIndex(offer.selectedOptionKey)];
-    const disposition =
-      selected === undefined
-        ? undefined
-        : catalog.traits.byKey[selected.traitKey]?.selectedDisposition;
-    const resolution = selected?.circeResolution;
-    const preChoiceTraitHistory = branch.state.traitHistory;
-    const owner = createTraitOfferAddress(origin as TraitOfferOwnerAddress, acquisitionRole);
-    const source = {
-      origin,
-      traitOffersByAcquisitionRole: Object.freeze({ [acquisitionRole]: offer }),
-      traitContext: routedTraitContext,
-    } as const;
-    // Record the exact pre-effect frontier before validating Circe's authored
-    // child. Circe's ordinary offer findings stay provisional until that child
-    // is valid, so the child remains the first blocking repair owner.
-    const appliedEmissions: TraitFindingEmission[] = [];
-    const appliedSettlement = applyTraitOfferForAcquisition(
-      catalog,
-      branch,
-      source,
-      acquisitionRole,
-      lifecyclePoint,
-      sequence,
-      findingChronology,
-      directTraitSetBranchHistories === undefined ? {} : { directTraitSetBranchHistories },
-    );
-    appliedEmissions.push(...entryEmissions(appliedSettlement.findingEntries));
-    // Circe's offer findings stay provisional until its child is valid, and a
-    // rejected child drops them; every other offer publishes them now.
-    const publishAppliedFindings = () => findingEmissions.push(...appliedEmissions.splice(0));
-    if (disposition?.kind !== 'circe') publishAppliedFindings();
-    candidateContact = appliedSettlement.candidateContact;
-    completion = appliedSettlement.completion;
-    const applied = appliedSettlement.branch;
-    blockedChild ??= appliedSettlement.blockedChild;
-    const rejectCirce = (code: TraitFindingCode, detail?: string): RewardBranchState => {
-      const address = createCirceResolutionAddress(owner, offer.selectedOptionKey);
-      blockedChild = Object.freeze({ address, branch: applied });
-      findingEmissions.push(
-        traitChildFindingEmission(
-          address,
+          offer,
+          acquisitionRole,
           lifecyclePoint,
           sequence,
-          code,
-          selected?.traitKey,
-          detail,
           findingChronology,
-        ),
-      );
-      return applied;
-    };
-    if (disposition?.kind === 'circe') {
-      if (applied.state.traitHistory === branch.state.traitHistory) {
-        publishAppliedFindings();
-        return applied;
-      }
-      const acquisitionOrdinal = branch.state.reached.routePosition.ordinal;
-      const rejection = assessCirceChild(
-        catalog,
-        branch,
-        disposition,
-        resolution,
-        acquisitionOrdinal,
-      );
-      if (rejection !== undefined) return rejectCirce(rejection.code, rejection.detail);
-    }
-    publishAppliedFindings();
-    if (
-      disposition?.kind === 'echo' &&
-      disposition.effect === 'lastRunBoon' &&
-      selected !== undefined &&
-      applied.state.traitHistory !== undefined &&
-      applied.state.traitHistory !== branch.state.traitHistory
-    ) {
-      const address = createEchoLastRunBoonAddress(owner, offer.selectedOptionKey);
-      const child = selected.echoLastRunBoon;
-      const reject = (code: TraitFindingCode, detail?: string): RewardBranchState => {
-        blockedChild = Object.freeze({ address, branch: applied });
-        findingEmissions.push(
-          traitChildFindingEmission(
-            address,
+          routedTraitContext,
+          directTraitSetBranchHistories,
+        )
+      : (() => {
+          // Gold and Chaos screens have no authored child to block on.
+          const settlement = applyTraitOfferForAcquisition(
+            catalog,
+            branch,
+            {
+              origin,
+              traitOffersByAcquisitionRole: Object.freeze({ [acquisitionRole]: offer }),
+              traitContext: routedTraitContext,
+            },
+            acquisitionRole,
             lifecyclePoint,
             sequence,
-            code,
-            selected.traitKey,
-            detail,
             findingChronology,
-          ),
-        );
-        return applied;
-      };
-      const childAssessment = assessEchoBoonChild(
-        catalog,
-        replaceSimulationTraitHistory(branch.state, preChoiceTraitHistory),
-        routedTraitContext,
-        child,
-      );
-      if (childAssessment.kind === 'rejected')
-        return reject(childAssessment.rejection.code, childAssessment.rejection.detail);
-      const { offer: nestedOffer, outcome, lootHistorySource } = childAssessment;
-      const rewardHistory =
-        lootHistorySource === undefined
-          ? applied.state.rewardHistory
-          : recordLootTypeHistorySource(applied.state.rewardHistory, lootHistorySource);
-      const sourceApplied = Object.freeze({
-        ...applied,
-        state: Object.freeze({ ...applied.state, rewardHistory: rewardHistory }),
-      });
-      const nestedSettlement = applyEchoLastRunBoonForAcquisition(
-        catalog,
-        sourceApplied,
-        address,
-        nestedOffer,
-        outcome,
-        Object.freeze({
-          freshRarityOverride: outcome.effectiveRarity,
-          ordinarySlotReplacement: 'forbidden',
-        }),
-        lifecyclePoint,
-        sequence,
-        findingChronology,
-      );
-      findingEmissions.push(...entryEmissions(nestedSettlement.findingEntries));
-      const nested = nestedSettlement.branch;
-      blockedChild ??= nestedSettlement.blockedChild;
-      if (nested.state.traitHistory === applied.state.traitHistory)
-        return reject('echoLastRunBoonOptionUnavailable');
-      return nested;
-    }
-    if (
-      disposition?.kind === 'echo' &&
-      disposition.effect === 'doubleLevel' &&
-      selected !== undefined &&
-      applied.state.traitHistory !== undefined &&
-      applied.state.traitHistory !== branch.state.traitHistory
-    ) {
-      const appliedTraitHistory = applied.state.traitHistory;
-      const domain = echoPomGreatestLevelTraitKeys(catalog, preChoiceTraitHistory);
-      const hasTarget = 'echoPomTarget' in selected;
-      const target = selected.echoPomTarget;
-      const reject = (code: TraitFindingCode, detail?: string): RewardBranchState => {
-        const address = createEchoPomTargetAddress(owner, offer.selectedOptionKey);
-        blockedChild = Object.freeze({ address, branch: applied });
-        findingEmissions.push(
-          traitChildFindingEmission(
-            address,
-            lifecyclePoint,
-            sequence,
-            code,
-            selected.traitKey,
-            detail,
-            findingChronology,
-          ),
-        );
-        return applied;
-      };
-      if (!hasTarget) return reject('echoPomTargetMissing');
-      if (target === null) {
-        return domain.length === 0
-          ? applied
-          : reject('echoPomNoTargetUnavailable', domain.join(','));
-      }
-      if (target === undefined || !domain.includes(target))
-        return reject('echoPomTargetUnavailable', target);
-      const settled = settleEchoPomChild(
-        catalog,
-        applied,
-        appliedTraitHistory,
-        preChoiceTraitHistory,
-        createEchoPomTargetAddress(owner, offer.selectedOptionKey),
-        acquisitionRole,
-        sequence,
-        lifecyclePoint,
-        selected.traitKey,
-        target,
-      );
-      return settled ?? reject('echoPomTargetUnavailable', target);
-    }
-    if (
-      applied.state.traitHistory === branch.state.traitHistory ||
-      disposition?.kind !== 'circe' ||
-      selected === undefined
-    )
-      return applied;
-    const acquisitionOrdinal = branch.state.reached.routePosition.ordinal;
-    return settleValidatedCirceChild(
-      catalog,
-      applied,
-      disposition,
-      resolution,
-      owner,
-      sequence,
-      acquisitionOrdinal,
-    );
-  })();
-  const published = blockedChild === undefined ? completion : undefined;
-  return complete({
-    branch: publishTraitOfferScreenCompletion(settledBranch, published),
+          );
+          return {
+            branch: settlement.branch,
+            findingEmissions: entryEmissions(settlement.findingEntries),
+            blockedChild: undefined,
+            candidateContact: settlement.candidateContact,
+            completion: settlement.completion,
+          };
+        })();
+  const { blockedChild, candidateContact } = result;
+  const published = blockedChild === undefined ? result.completion : undefined;
+  return Object.freeze({
+    branch: publishTraitOfferScreenCompletion(result.branch, published),
+    findingEntries: reduceTraitFindingEmissions(result.findingEmissions),
     ...(blockedChild === undefined ? {} : { blockedChild }),
     ...(candidateContact === undefined ? {} : { candidateContact }),
     screenCompleted: published !== undefined,
