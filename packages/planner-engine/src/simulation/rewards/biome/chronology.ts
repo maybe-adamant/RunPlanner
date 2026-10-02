@@ -83,6 +83,7 @@ import {
   lifecycleFindings,
   mergedFindings,
   settledFindings,
+  siteSettlementEmissions,
   type ChronologyEmission,
 } from './chronology-accumulator';
 import {
@@ -91,7 +92,6 @@ import {
 } from './generation/target-generation-completed';
 import { applyRoomCreatedTransition } from './generation/room-created';
 import { flushHubBoard } from './generation/hub-board';
-import { type AuthoredSiteSettlementResult } from './generation/authored-site-settlement';
 import { applyOutgoingGenerationTransition } from './generation/outgoing-generation';
 import { applyOfferPointMaterializedTransition } from './offer-lifecycle/offer-point-materialized';
 import { applyReachedOfferSettlement } from './offer-lifecycle/reached-settlement';
@@ -140,42 +140,6 @@ type CanonicalRewardSource = CanonicalRewardRoom | CanonicalHubRoom;
  * independently from the later six-room visit chronology.
  */
 type PendingHubBoardGeneration = GenerationPendingHubBoardGeneration;
-
-/** Ordered accumulator writes for one authored-site settlement. */
-function siteSettlementEmissions(
-  result: AuthoredSiteSettlementResult,
-  occurrenceOwner: SemanticAddress,
-): readonly ChronologyEmission[] {
-  return [
-    {
-      kind: 'findings',
-      rule: 'add',
-      entries: result.emissions.findings.flatMap((entry) => {
-        const evaluations = entry.levelResolutionEvaluations ?? [];
-        const added = {
-          finding: entry.finding,
-          atomicRegion: entry.atomicRegion,
-          chronology: entry.chronology,
-        };
-        return evaluations.length === 0
-          ? [added]
-          : evaluations.map((evaluation) => ({ ...added, levelResolutionEvaluation: evaluation }));
-      }),
-    },
-    { kind: 'acquisitionRoleFrontiers', frontiers: result.emissions.acquisitionRoleFrontiers },
-    { kind: 'timelineFacts', facts: result.emissions.timelineFacts },
-    {
-      kind: 'derivedAcquisitionEntryFrontiers',
-      frontiers: result.emissions.derivedEntryFrontiers,
-    },
-    {
-      kind: 'traitChildSettlements',
-      checkpoints: result.emissions.traitChildSettlements,
-      occurrenceOwner,
-    },
-    { kind: 'producerFrontiers', frontiers: result.producerFrontiers },
-  ];
-}
 
 const rewardFacts = createBiomeRewardFacts;
 
