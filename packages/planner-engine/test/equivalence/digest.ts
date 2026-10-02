@@ -45,7 +45,7 @@ export function equivalenceProducts(entry: EquivalenceEntry): EquivalenceProduct
   const project = entry.project();
   resetChronologyRecording();
   const assembly = simulateProjectAssembly(entry.catalog, project);
-  const traitChildSettlements = traitChildSettlementRecords();
+  const traitChildSettlements = traitChildSettlementRecords(assembly.evaluation);
   // `simulateProject` publishes exactly this assembly's evaluation.
   const simulation = canonicalDigest(assembly.evaluation);
   const plan = planSection(entry.catalog, assembly);

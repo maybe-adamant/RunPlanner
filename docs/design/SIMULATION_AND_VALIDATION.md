@@ -514,10 +514,11 @@ product, chronological owner, downstream consumers and primary tests.
 
 `npm run test:equivalence` is the behaviour-preservation witness for engine
 refactors: it compares digests of the simulation product, the encoded
-execution plan and a candidate-session probe against a committed baseline. No
-corpus project attaches a capture to a child emitted in the same step's
-leading emissions; the Echo encounter child attaches to a later exit-decision
-capture in two entries. Reachability of same-step attachment is a follow-up.
+execution plan and a candidate-session probe, including every settled trait
+child's attached Run State captures, against a committed baseline. No corpus
+project attaches a capture to a child emitted in the same step's leading
+emissions; the Echo encounter child attaches to a later exit-decision capture
+in one entry. Reachability of same-step attachment is a follow-up.
 
 Keep policy matrices at their owners. Retain representative real-plan
 witnesses across acquisition, maturity, upstream change, removal and Undo for
