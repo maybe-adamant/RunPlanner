@@ -28,6 +28,7 @@ import { SteadyGrowthEffectRow } from './SteadyGrowthEffectRow';
 export { TranscendentEmbryoEffectRow } from './TranscendentEmbryoEffectRow';
 import { TranscendentEmbryoEffectRow } from './TranscendentEmbryoEffectRow';
 import { LifecycleBoundaryRow } from './RoomLifecycleBoundaryRow';
+import { FieldsCageOrderControl } from './FieldsCageOrderControl';
 import { RoomActionAcquisitionRow } from './RoomActionAcquisitionRow';
 import { RoomActionInlineEditors } from './RoomActionInlineEditors';
 import { RoomActionOrderingControls } from './RoomActionOrderingControls';
@@ -274,11 +275,6 @@ export function RoomActionsWorkbench({
     if (interaction === undefined || proposal?.structurallyAuthorable !== true) return;
     executeIntent(interaction.intentFor(proposalKey));
   };
-  const applyFieldsCageSelection = (proposalKey: string): void => {
-    const proposal = interaction?.proposals.find((candidate) => candidate.key === proposalKey);
-    if (interaction === undefined || proposal?.kind !== 'move') return;
-    executeIntent(interaction.intentFor(proposalKey));
-  };
   const proposalForDrop = (
     actionKey: string,
     target: RoomActionDropTarget,
@@ -449,12 +445,7 @@ export function RoomActionsWorkbench({
           boundary={entry.boundary}
           dropIndex={entry.dropIndex}
           label={entry.label}
-          {...(entry.fieldsCageSlot === undefined
-            ? {}
-            : {
-                fieldsCageSlot: entry.fieldsCageSlot,
-                onSelectFieldsCage: applyFieldsCageSelection,
-              })}
+          {...(entry.fieldsCage === undefined ? {} : { fieldsCage: entry.fieldsCage })}
           {...(targetState === undefined ? {} : { dropState: targetState })}
         />
         {renderSupplement(entry.supplement)}
@@ -882,6 +873,13 @@ export function RoomActionsWorkbench({
       <p aria-live="polite" className="visually-hidden">
         {announcement}
       </p>
+      {actions.timeline.fieldsCageOrder === undefined || interaction === undefined ? null : (
+        <FieldsCageOrderControl
+          control={actions.timeline.fieldsCageOrder}
+          id={`${idPrefix ?? 'room-actions'}-cage-order`}
+          interaction={interaction}
+        />
+      )}
       <ol
         aria-label="Room timeline"
         className="room-action-list"

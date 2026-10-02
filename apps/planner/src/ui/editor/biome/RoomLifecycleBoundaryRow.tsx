@@ -1,5 +1,5 @@
 import type {
-  WorkspaceFieldsCageSlotControl,
+  WorkspaceFieldsCageLabel,
   WorkspaceRoomLifecycleBoundary,
 } from '@planner/projections/structured-workspace';
 import { useFindingTarget } from '@planner/ui/feedback/useFindingTarget';
@@ -10,15 +10,13 @@ export function LifecycleBoundaryRow({
   label,
   dropIndex,
   dropState,
-  fieldsCageSlot,
-  onSelectFieldsCage,
+  fieldsCage,
 }: {
   readonly boundary: WorkspaceRoomLifecycleBoundary;
   readonly label: string;
   readonly dropIndex: number;
   readonly dropState?: 'available' | 'unavailable';
-  readonly fieldsCageSlot?: WorkspaceFieldsCageSlotControl;
-  readonly onSelectFieldsCage?: (proposalKey: string) => void;
+  readonly fieldsCage?: WorkspaceFieldsCageLabel;
 }) {
   const findingTarget = useFindingTarget();
   return (
@@ -26,7 +24,6 @@ export function LifecycleBoundaryRow({
       aria-label={label}
       className="room-action-lifecycle-boundary"
       data-drop-position={dropState}
-      data-fields-cage-slot={fieldsCageSlot === undefined ? undefined : 'true'}
       data-lifecycle-boundary={boundary.key}
       data-room-action-drop-index={dropIndex}
     >
@@ -34,31 +31,10 @@ export function LifecycleBoundaryRow({
         ·
       </span>
       <strong>{label}</strong>
-      {fieldsCageSlot === undefined ? null : (
-        <label className="fields-cage-slot-control">
-          <span className="visually-hidden">Cage for encounter {fieldsCageSlot.slotOrdinal}</span>
-          <select
-            {...findingTarget(fieldsCageSlot.owner)}
-            aria-label={`Cage for encounter ${fieldsCageSlot.slotOrdinal}`}
-            onChange={(event) => {
-              const choice = fieldsCageSlot.choices.find(
-                (candidate) => candidate.value === event.target.value,
-              );
-              if (choice?.proposalKey !== undefined) onSelectFieldsCage?.(choice.proposalKey);
-            }}
-            value={fieldsCageSlot.selected}
-          >
-            {fieldsCageSlot.choices.map((choice) => (
-              <option
-                disabled={choice.proposalKey === undefined}
-                key={choice.value}
-                value={choice.value}
-              >
-                {choice.label}
-              </option>
-            ))}
-          </select>
-        </label>
+      {fieldsCage === undefined ? null : (
+        <span className="fields-cage-label" {...findingTarget(fieldsCage.owner)} tabIndex={-1}>
+          {fieldsCage.label}
+        </span>
       )}
     </li>
   );

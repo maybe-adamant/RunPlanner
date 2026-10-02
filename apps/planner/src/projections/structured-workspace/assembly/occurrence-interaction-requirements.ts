@@ -151,6 +151,9 @@ export function occurrenceInteractionRequirements(
         kind: 'roomActions' as const,
         owner: room.roomActions.owner,
         proposals: room.roomActions.proposals,
+        ...(room.roomActions.timeline.fieldsCageOrder === undefined
+          ? {}
+          : { fieldsCageOrder: true as const }),
       }),
     );
     for (const row of room.roomActions.repairRows) {
